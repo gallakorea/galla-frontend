@@ -15,7 +15,7 @@ function waitForSupabase() {
     await waitForSupabase();
 
     const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";  // ← 오타 수정됨
-    const SUPABASE_ANON_KEY = "sb_publishable_XrZu5f09bGbs2SDAZ_fw_uJVAq-9E";
+    const SUPABASE_ANON_KEY = "sb_publishable_XrZUsf09b6gBsDzSDAZ_fw_uJVqv-9E";
 
     const { createClient } = window.supabase;
 
