@@ -207,3 +207,7 @@ input:checked + .slider::before {
     filter: brightness(0) invert(1) !important;
 }
 
+.submit-btn {
+    position: relative;
+    z-index: 10000;
+}
