@@ -438,3 +438,7 @@ body {
   position: relative;
 }
 
+.nav-indicator {
+    display: none !important;
+}
+

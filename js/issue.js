@@ -70,20 +70,18 @@ function updateSupportUI() {
 updateSupportUI();
 
 /* ==========================================================================
-   HEADER ⋯ 메뉴
+   HEADER ⋯ 메뉴 (ID 수정된 정상 버전)
 ========================================================================== */
 const headerMoreBtn = document.querySelector(".more-header-btn");
-const headerMoreModal = document.getElementById("more-menu-modal");
+const headerMoreModal = document.getElementById("header-more-modal");
 
 headerMoreBtn.addEventListener("click", () => {
     headerMoreModal.hidden = false;
 });
 
-document.addEventListener("click", (e) => {
-    if (e.target.classList.contains("more-menu-backdrop")) {
-        headerMoreModal.hidden = true;
-    }
-    if (e.target.classList.contains("more-close")) {
+// 닫기 처리 — 배경 또는 닫기 버튼
+headerMoreModal.addEventListener("click", (e) => {
+    if (e.target === headerMoreModal || e.target.classList.contains("more-close")) {
         headerMoreModal.hidden = true;
     }
 });
@@ -236,7 +234,12 @@ function openReplyBox(commentElement, parentId, parentAuthor) {
     activeReplyBox = box;
 
     box.querySelector(".reply-submit").onclick = submitReply;
-    box.querySelector(".reply-cancel").onclick = () => box.remove();
+
+    // 수정된 취소 버튼
+    box.querySelector(".reply-cancel").onclick = () => {
+        box.remove();
+        activeReplyBox = null;
+    };
 }
 
 function submitReply() {
@@ -472,7 +475,7 @@ function renderAISummary() {
 }
 
 /* ==========================================================================
-   통계 실행 (※ 중요)
+   통계 실행
 ========================================================================== */
 renderGenderDualBar();
 renderAgeChart();
@@ -498,29 +501,3 @@ document.addEventListener("touchstart", (e) => startX = e.touches[0].clientX);
 document.addEventListener("touchend", (e) => {
     if (e.changedTouches[0].clientX - startX > 80) location.href = "index.html";
 });
-
-/* ==========================================================================
-   HEADER ⋯ 메뉴 (정상 작동 버전)
-========================================================================== */
-document.addEventListener("DOMContentLoaded", () => {
-    const headerMoreBtn = document.querySelector(".more-header-btn");
-    const headerMoreModal = document.getElementById("header-more-modal");
-
-    if (!headerMoreBtn || !headerMoreModal) return;
-
-    // 열기
-    headerMoreBtn.addEventListener("click", () => {
-        headerMoreModal.hidden = false;
-    });
-
-    // 닫기: 배경 클릭 + 닫기 버튼
-    headerMoreModal.addEventListener("click", (e) => {
-        if (
-            e.target.classList.contains("more-menu-backdrop") ||
-            e.target.classList.contains("more-close")
-        ) {
-            headerMoreModal.hidden = true;
-        }
-    });
-});
-

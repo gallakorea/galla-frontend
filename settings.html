@@ -25,7 +25,7 @@
     <section class="section">
         <div class="section-title">계정 정보</div>
 
-        <div class="card profile-card">
+        <div class="card profile-card" onclick="location.href='profile.html'">
             <img src="./assets/logo.png" class="profile-img">
             <div class="profile-info">
                 <div class="profile-name">익명의 사용자</div>
@@ -61,10 +61,10 @@
                 <span class="num">₩ 840,000</span>
             </div>
 
-            <button class="primary-btn">출금 요청</button>
+            <button class="primary-btn" onclick="location.href='withdraw.html'">출금 요청</button>
         </div>
 
-        <div class="card single-link">
+        <div class="card single-link" data-target="settlement.html">
             정산 내역 <span class="arrow">&gt;</span>
         </div>
     </section>
@@ -80,12 +80,12 @@
                 <span class="num">₩ 92,000</span>
             </div>
 
-            <button class="primary-btn">기부 사용처 보기</button>
+            <button class="primary-btn" onclick="location.href='donation.html'">기부 사용처 보기</button>
         </div>
     </section>
 
 
-    <!-- SECTION: 나의 활동 통계 -->
+    <!-- SECTION: 활동 통계 -->
     <section class="section">
         <div class="section-title">나의 활동 통계</div>
 
@@ -111,102 +111,72 @@
             </div>
         </div>
 
-        <div class="card report-card enhanced-galla-type" onclick="location.href='galla-type.html'">
+        <div class="card report-card enhanced-galla-type" data-target="galla-type.html">
+            <div class="report-title">나의 갈라치기 성향</div>
+            <div class="galla-type-badge">🔥 논리적 개척자형</div>
 
-    <div class="report-title">나의 갈라치기 성향</div>
+            <div class="ratio-box">
+                <div class="ratio-item">
+                    <div class="ratio-label">찬성</div>
+                    <div class="ratio-value pro">62%</div>
+                </div>
+                <div class="ratio-item">
+                    <div class="ratio-label">반대</div>
+                    <div class="ratio-value con">38%</div>
+                </div>
+            </div>
 
-    <!-- 메인 유형 배지 -->
-    <div class="galla-type-badge">🔥 논리적 개척자형</div>
+            <div class="categories">
+                선호 주제: 연애·결혼 / 직장·경력 / 생활·일상
+            </div>
 
-    <!-- 찬반 비율 -->
-    <div class="ratio-box">
-        <div class="ratio-item">
-            <div class="ratio-label">찬성</div>
-            <div class="ratio-value pro">62%</div>
+            <div class="type-desc">
+                새로운 이슈에 도전하며, 감정보다 논리를 우선하는 스타일입니다.
+            </div>
+
+            <div class="galla-tags">
+                <span>#논리적</span>
+                <span>#새로운이슈성향</span>
+                <span>#고집은약간</span>
+                <span>#직설화법</span>
+            </div>
+
+            <div class="arrow more">&gt;</div>
         </div>
-        <div class="ratio-item">
-            <div class="ratio-label">반대</div>
-            <div class="ratio-value con">38%</div>
-        </div>
-    </div>
 
-    <!-- 핵심 카테고리 -->
-    <div class="categories">
-        선호 주제: 연애·결혼 / 직장·경력 / 생활·일상
-    </div>
-
-    <!-- 유형 설명 -->
-    <div class="type-desc">
-        새로운 이슈에 도전하며, 감정보다 논리를 우선하는 스타일입니다.
-    </div>
-
-    <!-- MBTI 스타일 요약 태그 -->
-    <div class="galla-tags">
-        <span>#논리적</span>
-        <span>#새로운이슈성향</span>
-        <span>#고집은약간</span>
-        <span>#직설화법</span>
-    </div>
-
-    <div class="arrow more">&gt;</div>
-</div>
     </section>
 
 
 
-    <!-- ⭐⭐⭐ SECTION: 등급 · 성장 (Grade) → grade.html -->
+    <!-- SECTION: 등급 -->
     <section class="section">
         <div class="section-title">등급 · 성장</div>
 
-        <div class="card single-link" onclick="location.href='grade.html'">
+        <div class="card single-link" data-target="grade.html">
             내 등급 보기 <span class="arrow">&gt;</span>
         </div>
     </section>
 
 
-
-    <!-- ⭐⭐⭐ SECTION: 데일리 미션 (Quest) → quest.html -->
+    <!-- SECTION: 데일리 미션 -->
     <section class="section">
         <div class="section-title">데일리 미션</div>
 
-        <div class="card single-link" onclick="location.href='quest.html'">
+        <div class="card single-link" data-target="quest.html">
             오늘의 미션 보기 <span class="arrow">&gt;</span>
         </div>
     </section>
 
 
 
-    <!-- SECTION: 알림 설정 -->
-    <section class="section">
-        <div class="section-title">알림 설정</div>
-
-        <div class="card list-card toggles">
-            <div class="list-item">
-                <span>팔로우한 발의자 새 이슈</span>
-                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
-            </div>
-
-            <div class="list-item">
-                <span>내 댓글에 새 댓글</span>
-                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-            </div>
-
-            <div class="list-item">
-                <span>시스템 공지</span>
-                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
-            </div>
-        </div>
-    </section>
-
-
-    <!-- SECTION: 보안 설정 -->
+    <!-- SECTION: 보안 -->
     <section class="section">
         <div class="section-title">보안</div>
 
         <div class="card list-card">
-            <div class="list-item">비밀번호 변경 <span class="arrow">&gt;</span></div>
-            <div class="list-item">로그인 기록 <span class="arrow">&gt;</span></div>
-            <div class="list-item logout">로그아웃</div>
+            <div class="list-item" data-target="change-password.html">비밀번호 변경 <span class="arrow">&gt;</span></div>
+            <div class="list-item" data-target="login-history.html">로그인 기록 <span class="arrow">&gt;</span></div>
+            <div class="list-item logout" data-target="logout.html">로그아웃</div>
         </div>
     </section>
 
@@ -216,31 +186,41 @@
         <div class="section-title">앱 정보 / 고객센터</div>
 
         <div class="card list-card">
-            <div class="list-item">문의하기 <span class="arrow">&gt;</span></div>
+            <div class="list-item" data-target="support.html">문의하기 <span class="arrow">&gt;</span></div>
             <div class="list-item">버전 정보 <span class="value">v1.0.0</span></div>
-            <div class="list-item">서비스 이용약관 <span class="arrow">&gt;</span></div>
-            <div class="list-item">개인정보 처리방침 <span class="arrow">&gt;</span></div>
+            <div class="list-item" data-target="terms.html">서비스 이용약관 <span class="arrow">&gt;</span></div>
+            <div class="list-item" data-target="privacy.html">개인정보 처리방침 <span class="arrow">&gt;</span></div>
         </div>
     </section>
 
 
-    <!-- NAVIGATION -->
+    <!-- BOTTOM NAVIGATION -->
     <nav class="nav">
         <div class="nav-inner">
-
-            <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html"/>
-            <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html"/>
-            <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html"/>
-            <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html"/>
-            <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html"/>
-
+            <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
+            <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
+            <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
+            <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html">
+            <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
         </div>
     </nav>
 
 </div>
 
+<!-- JavaScript: 링크를 강제로 모두 작동하게 만듦 -->
+<script>
+document.querySelectorAll("[data-target]").forEach(el => {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => {
+        const to = el.dataset.target;
+        if (to) location.href = to;
+    });
+});
+</script>
+
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="./js/settings.js"></script>
+
 </body>
 </html>

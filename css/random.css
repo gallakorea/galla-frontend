@@ -191,3 +191,11 @@ html, body {
 .card {
     margin: 16px 16px 26px !important;
 }
+
+/* 랜덤 아이콘 인디케이터만 숨기기 */
+.bottom-nav .nav-item:nth-child(4) .nav-indicator {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>마이페이지 - GALLA</title>
-    <link rel="stylesheet" href="./css/mypage.css">
+    <link rel="stylesheet" href="css/mypage.css">
 </head>
 
 <body data-page="mypage">
@@ -14,22 +14,27 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-            <img src="./assets/logo.png" class="logo" />
-            <div class="setting-text" onclick="location.href='mypage-settings.html'">설정</div>
+
+            <!-- 로고 클릭 → 홈 이동 -->
+            <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
+
+            <!-- 설정 페이지 → settings.html -->
+            <div class="setting-text" onclick="location.href='settings.html'">설정</div>
         </div>
     </header>
 
     <!-- PROFILE -->
     <section class="profile-section">
-        <img src="./assets/logo.png" class="profile-img">
+        <img src="assets/logo.png" class="profile-img">
 
         <div class="profile-name">익명의 사용자</div>
 
         <div class="level-row">
-            <!-- 🔥 등급 페이지 진입 -->
+
+            <!-- 퀘스트 페이지 -->
             <span class="badge" onclick="location.href='quest.html'">🔥 매운 토론러</span>
 
-            <!-- 🔥 등급 페이지 진입 -->
+            <!-- 등급 페이지 -->
             <span class="level" onclick="location.href='grade.html'">Lv. 12</span>
         </div>
 
@@ -71,35 +76,39 @@
 
 <!-- NAVIGATION -->
 <nav class="bottom-nav">
-    <button class="nav-item" data-page="home" onclick="location.href='index.html'">
-        <img src="./assets/icons/nav-home.svg" class="nav-icon">
+
+    <button class="nav-item" onclick="location.href='index.html'" data-page="home">
+        <img src="assets/icons/nav-home.svg" class="nav-icon">
         <div class="nav-indicator"></div>
     </button>
 
-    <button class="nav-item" data-page="search" onclick="location.href='search.html'">
-        <img src="./assets/icons/nav-search.svg" class="nav-icon">
+    <button class="nav-item" onclick="location.href='search.html'" data-page="search">
+        <img src="assets/icons/nav-search.svg" class="nav-icon">
         <div class="nav-indicator"></div>
     </button>
 
-    <button class="nav-item" data-page="write" onclick="location.href='write.html'">
-        <img src="./assets/icons/nav-write.svg" class="nav-icon">
+    <button class="nav-item" onclick="location.href='write.html'" data-page="write">
+        <img src="assets/icons/nav-write.svg" class="nav-icon">
         <div class="nav-indicator"></div>
     </button>
 
-    <button class="nav-item" data-page="random" onclick="location.href='random.html'">
-        <img src="./assets/icons/nav-random.svg" class="nav-icon">
+    <button class="nav-item" onclick="location.href='random.html'" data-page="random">
+        <img src="assets/icons/nav-random.svg" class="nav-icon">
         <div class="nav-indicator"></div>
     </button>
 
-    <button class="nav-item" data-page="mypage" onclick="location.href='mypage.html'">
-        <img src="./assets/icons/nav-user.svg" class="nav-icon">
+    <button class="nav-item active" onclick="location.href='mypage.html'" data-page="mypage">
+        <img src="assets/icons/nav-user.svg" class="nav-icon">
         <div class="nav-indicator"></div>
     </button>
 </nav>
 
+<!-- Supabase -->
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
-<script src="./js/mypage.js"></script>
+
+<!-- My Page 기능 -->
+<script src="js/mypage.js"></script>
 
 </body>
 </html>

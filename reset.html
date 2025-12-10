@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>비밀번호 재설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/reset.css">
+    <link rel="stylesheet" href="css/reset.css">
 </head>
 
-<body>
+<body data-page="reset">
 
 <div id="app">
 
@@ -31,10 +31,10 @@
 
         <div class="input-group">
             <div class="input-label">아이디 (이메일)</div>
-            <input type="email" class="input-field" placeholder="example@galla.com">
+            <input type="email" class="input-field" placeholder="example@galla.com" id="resetEmail">
         </div>
 
-        <button class="reset-btn">재설정 링크 보내기</button>
+        <button class="reset-btn" id="resetBtn">재설정 링크 보내기</button>
 
         <div class="login-link">
             돌아가기 <span onclick="location.href='login.html'">로그인</span>
@@ -42,18 +42,68 @@
 
     </section>
 
-    <!-- NAVIGATION (이제 #app 안으로 이동) -->
+    <!-- NAVIGATION -->
     <nav class="bottom-nav">
-        <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
-        <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
-        <button class="nav-item"><img src="./assets/icons/nav-write.svg"></button>
-        <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
-        <button class="nav-item active"><img src="./assets/icons/nav-user.svg"></button>
+        <button class="nav-item" data-target="index.html">
+            <img src="assets/icons/nav-home.svg">
+            <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-target="search.html">
+            <img src="assets/icons/nav-search.svg">
+            <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-target="write.html">
+            <img src="assets/icons/nav-write.svg">
+            <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item" data-target="random.html">
+            <img src="assets/icons/nav-random.svg">
+            <div class="nav-indicator"></div>
+        </button>
+
+        <button class="nav-item active" data-target="mypage.html">
+            <img src="assets/icons/nav-user.svg">
+            <div class="nav-indicator"></div>
+        </button>
     </nav>
 
 </div>
 
+<!-- Supabase -->
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
+
+<!-- NAVIGATION -->
+<script>
+document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+        const target = item.dataset.target;
+        if (target) location.href = target;
+    });
+});
+</script>
+
+<!-- RESET PASSWORD LOGIC (기능 추가 가능) -->
+<script>
+document.getElementById("resetBtn").addEventListener("click", async () => {
+    const email = document.getElementById("resetEmail").value.trim();
+    if (!email) {
+        alert("이메일을 입력해주세요.");
+        return;
+    }
+
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+
+    if (error) {
+        alert("메일 전송 실패: " + error.message);
+    } else {
+        alert("비밀번호 재설정 링크가 이메일로 전송되었습니다.");
+    }
+});
+</script>
+
 </body>
 </html>

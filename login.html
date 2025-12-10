@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>로그인 - GALLA</title>
-    <link rel="stylesheet" href="./css/login.css">
+    <link rel="stylesheet" href="css/login.css">
 </head>
 
 <body>
@@ -14,8 +14,13 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
+
+            <!-- 뒤로가기 -->
             <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+
             <div class="header-title">로그인</div>
+
+            <!-- 우측 빈 영역 -->
             <div class="header-spacer"></div>
         </div>
     </header>
@@ -59,27 +64,30 @@
     <!-- NAVIGATION -->
     <nav class="bottom-nav">
         <button class="nav-item" onclick="location.href='index.html'">
-            <img src="./assets/icons/nav-home.svg">
+            <img src="assets/icons/nav-home.svg">
         </button>
         <button class="nav-item" onclick="location.href='search.html'">
-            <img src="./assets/icons/nav-search.svg">
+            <img src="assets/icons/nav-search.svg">
         </button>
         <button class="nav-item" onclick="location.href='write.html'">
-            <img src="./assets/icons/nav-write.svg">
+            <img src="assets/icons/nav-write.svg">
         </button>
         <button class="nav-item" onclick="location.href='random.html'">
-            <img src="./assets/icons/nav-random.svg">
+            <img src="assets/icons/nav-random.svg">
         </button>
         <button class="nav-item active" onclick="location.href='mypage.html'">
-            <img src="./assets/icons/nav-user.svg">
+            <img src="assets/icons/nav-user.svg">
         </button>
     </nav>
 
 </div>
 
+<!-- Supabase -->
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
-<script src="./js/login.js"></script>
+
+<!-- Login Logic -->
+<script src="js/login.js"></script>
 
 </body>
 </html>

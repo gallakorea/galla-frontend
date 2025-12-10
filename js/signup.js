@@ -1,6 +1,6 @@
-// -------------------------------
-// DOM ELEMENTS
-// -------------------------------
+/* -------------------------------
+   DOM
+-------------------------------- */
 const emailInput = document.getElementById("email");
 const pwInput = document.getElementById("password");
 const pw2Input = document.getElementById("password2");
@@ -10,22 +10,26 @@ const signupBtn = document.getElementById("signupBtn");
 
 let selectedRegion = null;
 
-// --------------------------------
-// 지역 선택 이벤트
-// --------------------------------
-document.querySelectorAll(".region-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-        document.querySelectorAll(".region-chip").forEach(c => c.classList.remove("active"));
-        chip.classList.add("active");
+/* -------------------------------
+   REGION SELECT
+-------------------------------- */
+const regionChips = document.querySelectorAll(".region-chip");
+const selectedRegionText = document.getElementById("selectedRegion");
 
+regionChips.forEach(chip => {
+    chip.addEventListener("click", () => {
+
+        regionChips.forEach(c => c.classList.remove("active"));
+
+        chip.classList.add("active");
         selectedRegion = chip.textContent.trim();
-        document.getElementById("selectedRegion").textContent = selectedRegion;
+        selectedRegionText.textContent = selectedRegion;
     });
 });
 
-// --------------------------------
-// 회원가입 버튼
-// --------------------------------
+/* -------------------------------
+   SIGNUP
+-------------------------------- */
 signupBtn.addEventListener("click", async () => {
 
     const email = emailInput.value.trim();
@@ -35,9 +39,6 @@ signupBtn.addEventListener("click", async () => {
     const phone = phoneInput.value.trim();
     const anonymous = document.getElementById("anonymous").checked;
 
-    // ---------------------------
-    // 입력 검증
-    // ---------------------------
     if (!email || !password || !password2 || !nickname) {
         alert("필수 항목을 입력해주세요.");
         return;
@@ -48,12 +49,8 @@ signupBtn.addEventListener("click", async () => {
         return;
     }
 
-    // ---------------------------
-    // Supabase Auth 회원가입
-    // ---------------------------
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password
+        email, password
     });
 
     if (signUpError) {
@@ -62,26 +59,21 @@ signupBtn.addEventListener("click", async () => {
     }
 
     const user = signUpData.user;
-
     if (!user) {
-        alert("회원가입 중 에러: 유저 정보 없음.");
+        alert("회원 정보 오류");
         return;
     }
 
-    // 새 유저 ID
     const userId = user.id;
 
-    // ---------------------------
-    // user_profiles 테이블에 추가 정보 저장
-    // ---------------------------
     const { error: profileError } = await supabase
         .from("user_profiles")
         .insert({
             user_id: userId,
-            nickname: nickname,
-            phone: phone || null,
+            nickname,
+            phone,
             region: selectedRegion,
-            anonymous: anonymous,
+            anonymous,
             level: 1,
             gp: 0,
             created_at: new Date()
@@ -93,5 +85,39 @@ signupBtn.addEventListener("click", async () => {
     }
 
     alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
-    window.location.href = "index.html";
+    location.href = "index.html";
+});
+
+/* ====================================================
+   🔙 뒤로가기 + 스크롤 복원
+==================================================== */
+function goBackWithScroll() {
+    sessionStorage.setItem("scrollRestore", "on");
+    history.back();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const shouldRestore = sessionStorage.getItem("scrollRestore");
+
+    if (shouldRestore === "on") {
+        const pos = sessionStorage.getItem("lastScrollPosition") || 0;
+        window.scrollTo(0, Number(pos));
+
+        sessionStorage.removeItem("scrollRestore");
+        sessionStorage.removeItem("lastScrollPosition");
+    }
+});
+
+window.addEventListener("scroll", () => {
+    sessionStorage.setItem("lastScrollPosition", window.scrollY);
+});
+
+/* -------------------------------
+   NAVIGATION CLICK
+-------------------------------- */
+document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const t = btn.dataset.target;
+        if (t) location.href = t;
+    });
 });

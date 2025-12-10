@@ -1,29 +1,52 @@
-/* GLOBAL */
 html, body {
     margin: 0;
     padding: 0;
-    background: #000;            /* ← 바깥 흰 여백 제거 */
+    background: #000;
     color: #eee;
     font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
-/* MAIN WRAPPER */
 #app {
     width: 100%;
-    max-width: 480px;            /* ← 중심 폭 유지 */
+    max-width: 480px;
     margin: 0 auto;
-    padding-bottom: 110px;       /* ← 네비 공간 */
-    background: #000;            /* 내부도 검정 */
+    padding-bottom: 110px;
+    background: #000;
 }
 
 /* HEADER */
 .header {
     background: #000;
     border-bottom: 1px solid #1a1a1a;
-    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 999;
 }
 
-/* GUIDE BOX */
+.header-inner {
+    height: 54px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.back-icon {
+    width: 22px;
+    cursor: pointer;
+    object-fit: contain;
+}
+
+.header-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.header-spacer {
+    width: 22px;
+}
+
+/* GUIDE */
 .signup-guide {
     width: 90%;
     margin: 18px auto;
@@ -32,11 +55,11 @@ html, body {
     border-radius: 12px;
     border: 1px solid #1d1d1d;
     font-size: 13px;
+    color: #ccc;
     line-height: 1.55;
-    color: #cfcfcf;
 }
 
-/* FORM SECTION */
+/* FORM */
 .section {
     width: 90%;
     margin: 0 auto;
@@ -47,13 +70,13 @@ html, body {
 }
 
 .input-label {
-    font-size: 13px;
     margin-bottom: 6px;
+    font-size: 13px;
 }
 
 .input-field {
-    width: 94%;
-    padding: 12px 14px;
+    width: 100%;
+    padding: 13px;
     background: #111;
     border: 1px solid #222;
     border-radius: 10px;
@@ -61,27 +84,32 @@ html, body {
     font-size: 14px;
 }
 
-/* REGION GRID */
+/* REGION */
 .region-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 10px;
+    margin: 10px 0;
 }
 
 .region-chip {
     background: #111;
     border: 1px solid #222;
-    padding: 10px 0;
+    padding: 12px 0;
     border-radius: 10px;
     font-size: 13px;
     text-align: center;
-    width: 94%;
-    margin: 0 auto;
+    color: #eee;
 }
 
-.region-chip.selected {
+.region-chip.active {
     background: #333;
-    border-color: #666;
+    border-color: #777;
+}
+
+.region-selected-text {
+    margin-top: 6px;
+    font-size: 13px;
 }
 
 /* TOGGLE */
@@ -98,32 +126,31 @@ html, body {
     height: 22px;
 }
 
-.switch input { display: none; }
+.switch input {
+    display: none;
+}
 
 .slider {
     position: absolute;
-    background-color: #444;
+    inset: 0;
+    background: #444;
     border-radius: 22px;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
 }
 
 .slider::before {
     content: "";
     position: absolute;
-    height: 18px;
     width: 18px;
+    height: 18px;
     left: 2px;
     bottom: 2px;
-    background: white;
+    background: #fff;
     border-radius: 50%;
-    transition: .3s;
+    transition: 0.25s;
 }
 
 input:checked + .slider {
-    background-color: #c7c7c7;
+    background: #ccc;
 }
 
 input:checked + .slider::before {
@@ -133,123 +160,44 @@ input:checked + .slider::before {
 /* GP REWARD */
 .reward-box {
     background: #111;
+    border: 1px solid #222;
     padding: 12px;
     border-radius: 10px;
-    border: 1px solid #222;
-    font-size: 13px;
-    margin-bottom: 22px;
     text-align: center;
+    font-size: 13px;
+    margin-bottom: 20px;
 }
 
 .reward-gp {
     color: #ffb84d;
-    font-weight: 700;
+    font-weight: bold;
 }
 
-/* SUBMIT BUTTON */
+/* SUBMIT */
 .submit-btn {
-    width: 94%;
-    margin: 0 auto;
-    background: #1a1a1a;
+    width: 100%;
     padding: 15px;
+    background: #1a1a1a;
     border-radius: 12px;
+    border: none;
     color: #fff;
     font-size: 15px;
-    border: none;
-    display: block;
 }
 
-/* BOTTOM NAV (index 동일 톤앤매너) */
+/* NAV */
 .bottom-nav {
     position: fixed;
     bottom: 0;
-    width: 100%;                       /* ← 전체 가로폭 채움 */
-    background: #000;
-    border-top: 1px solid #1a1a1a;
-
-    display: flex;
-    justify-content: center;
-    padding: 10px 0;
-}
-
-.bottom-nav-inner {
-    width: 100%;
-    max-width: 480px;                 /* ← 가운데 480 정렬 */
-    display: flex;
-    justify-content: space-around;
-}
-
-.bottom-nav img {
-    width: 24px;
-    opacity: 0.7;
-}
-
-.bottom-nav img.active {
-    opacity: 1;
-}
-
-/* HEADER 영역 */
-.header {
     width: 100%;
     max-width: 480px;
-    margin: 0 auto;
-    background: #000;
-    border-bottom: 1px solid #1a1a1a;
-    position: sticky;
-    top: 0;
-    z-index: 999;
-}
-
-.header-inner {
-    height: 54px;
-    padding: 0 16px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.back-icon {
-    width: 22px;          /* ← 아이콘 고정 크기 */
-    height: 22px;
-    object-fit: contain;
-    cursor: pointer;
-}
-
-.header-title {
-    font-size: 16px;
-    font-weight: 700;
-}
-
-.header-spacer {
-    width: 22px;          /* 오른쪽 균형 맞추기 */
-}
-
-/* ---------------------------- */
-/* 네비게이터 보호 코드 (중요)  */
-/* ---------------------------- */
-
-.bottom-nav,
-.nav,
-.nav-inner {
-    all: unset; /* 위험 — 기존 스타일 삭제 X */
-}
-
-/* 대신 override 방지용으로 최소 보정만 */
-.bottom-nav,
-.nav {
-    position: fixed;
-    bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
     background: #000;
     border-top: 1px solid #222;
     padding: 10px 0;
 }
 
-.nav-inner {
+.bottom-nav-inner {
     display: flex;
     justify-content: space-around;
 }
@@ -257,5 +205,5 @@ input:checked + .slider::before {
 .nav-icon {
     width: 26px;
     filter: brightness(0) invert(1) !important;
-    opacity: 1 !important;
 }
+

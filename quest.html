@@ -4,25 +4,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GALLA 퀘스트</title>
-    <link rel="stylesheet" href="./css/quest.css">
+    <link rel="stylesheet" href="css/quest.css">
 </head>
 
-<body>
+<body data-page="quest">
 
 <div id="app">
 
     <!-- HEADER -->
-<header class="header">
-    <div class="header-inner">
+    <header class="header">
+        <div class="header-inner">
 
-        <!-- 🔥 grade와 동일한 뒤로가기 아이콘 -->
-        <img src="./assets/icons/back.svg" class="back-btn" onclick="history.back()">
+            <!-- 뒤로가기 -->
+            <img src="assets/icons/back.svg" class="back-btn" onclick="history.back()">
 
-        <div class="header-title">데일리 퀘스트</div>
+            <div class="header-title">데일리 퀘스트</div>
 
-        <div class="header-spacer"></div>
-    </div>
-</header>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
 
     <section class="main">
 
@@ -42,7 +42,7 @@
         <h2 class="section-title">데일리 퀘스트</h2>
         <div id="daily-list" class="daily-list"></div>
 
-        <!-- TODAY REWARD (최적 위치) -->
+        <!-- TODAY REWARD -->
         <div class="today-reward">
             <div class="tr-header">🎁 오늘의 보상</div>
 
@@ -55,6 +55,7 @@
                 <div class="tr-bar-bg"></div>
                 <div class="tr-bar-fill" id="tr-bar-fill"></div>
             </div>
+
             <div id="tr-progress-text" class="tr-progress-text">0 / 0 GP</div>
 
             <button id="tr-claim-btn" class="tr-btn disabled">보상 받기</button>
@@ -86,20 +87,34 @@
     </section>
 
     <!-- ⭐ NAVIGATION -->
-<nav class="nav">
-    <div class="nav-inner">
-        <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
-        <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
-        <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
-        <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html">
-        <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
-    </div>
-</nav>
+    <nav class="nav">
+        <div class="nav-inner">
+            <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
+            <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
+            <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
+            <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html">
+            <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
+        </div>
+    </nav>
 
 </div>
 
+<!-- Supabase -->
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
-<script src="./js/quest.js"></script>
+
+<!-- Quest JS -->
+<script src="js/quest.js"></script>
+
+<!-- ⭐ NAVIGATION ACTION -->
+<script>
+document.querySelectorAll(".nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+        const target = item.dataset.target;
+        if (target) location.href = target;
+    });
+});
+</script>
+
 </body>
 </html>

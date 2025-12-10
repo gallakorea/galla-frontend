@@ -7,36 +7,43 @@
     <link rel="stylesheet" href="css/issue.css" />
 </head>
 
-<body>
+<body data-page="issue">
+
 <div id="app">
 
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-            <button class="back-btn">← <span class="back-text">뒤로</span></button>
-            <img src="assets/logo.png" alt="GALLA" class="logo" />
-            <button class="more-header-btn">⋯</button>
+
+            <!-- 뒤로가기 -->
+            <button class="back-btn" id="btn-back">← <span class="back-text">뒤로</span></button>
+
+            <!-- 로고 클릭 → 홈 이동 -->
+            <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
+
+            <!-- ⋯ 메뉴 -->
+            <button class="more-header-btn" id="header-more-btn">⋯</button>
         </div>
     </header>
 
     <!-- ISSUE HERO -->
     <section class="issue-hero">
         <div class="issue-category-time">
-            <span id="issue-category">세계·여행</span>
-            <span id="issue-time">6시간 전</span>
+            <span id="issue-category">카테고리</span>
+            <span id="issue-time"></span>
         </div>
 
-        <h1 id="issue-title">태국 치안 문제</h1>
-        <p id="issue-desc">태국 여행 중 혼불을 극명하게 갈리는 치안 논쟁</p>
+        <h1 id="issue-title"></h1>
+        <p id="issue-desc"></p>
 
         <div class="issue-author">
-            <span>작성자 · 한유저</span>
-            <button class="follow-btn">+ 팔로우</button>
+            <span id="issue-author">작성자 · 익명</span>
+            <button class="follow-btn" id="follow-btn">+ 팔로우</button>
         </div>
     </section>
 
     <!-- THUMB -->
-    <img src="assets/logo.png" class="issue-thumb" />
+    <img src="assets/logo.png" class="issue-thumb" id="issue-thumb" />
 
     <!-- SPEECH BUTTON -->
     <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
@@ -57,8 +64,8 @@
         </div>
 
         <div class="vote-percent">
-            <span id="vote-pro-text">46%</span>
-            <span id="vote-con-text">54%</span>
+            <span id="vote-pro-text">0%</span>
+            <span id="vote-con-text">0%</span>
         </div>
 
         <div class="vote-buttons">
@@ -77,8 +84,8 @@
         </div>
 
         <div class="support-stats">
-            <span id="sup-pro-amount">₩111,000</span>
-            <span id="sup-con-amount">₩199,000</span>
+            <span id="sup-pro-amount">₩0</span>
+            <span id="sup-con-amount">₩0</span>
         </div>
 
         <button class="support-btn" id="open-support-modal">💸 이 이슈 후원하기</button>
@@ -91,24 +98,17 @@
 
         <div class="ai-group">
             <p class="ai-sub">👍 찬성 측 기사</p>
-            <ul>
-                <li><a href="#">찬성 입장 기사 1</a></li>
-                <li><a href="#">찬성 입장 기사 2</a></li>
-            </ul>
+            <ul id="ai-news-pro"></ul>
         </div>
 
         <div class="ai-group">
             <p class="ai-sub">👎 반대 측 기사</p>
-            <ul>
-                <li><a href="#">반대 입장 기사 1</a></li>
-                <li><a href="#">반대 입장 기사 2</a></li>
-            </ul>
+            <ul id="ai-news-con"></ul>
         </div>
     </section>
 
     <!-- STATISTICS -->
     <section id="stats-section" class="stats-section">
-
         <div class="stats-header white-title">📊 여론 통계 인포그래픽</div>
 
         <h2 class="stat-title white-title">👥 성별 참여 비율</h2>
@@ -131,7 +131,6 @@
 
         <h2 class="stat-title white-title">🎙️ AI 종합 의견</h2>
         <div id="ai-summary" class="ai-summary"></div>
-
     </section>
 
     <!-- COMMENTS -->
@@ -159,8 +158,7 @@
             <div class="action-item" data-action="hide">🙈 관심 없음</div>
             <div class="action-item" data-action="mute">🥕 업데이트 안 보기</div>
             <div class="action-item" data-action="restrict">🪢 제한</div>
-            <div class="action-item" data-action="block">⛔ 차단하기</div>
-            <div class="action-item more-danger" data-action="report">🚨 신고하기</div>
+            <div class="action-item" more-danger data-action="report">🚨 신고하기</div>
             <button class="comment-close-btn" data-close>닫기</button>
         </div>
     </div>
@@ -179,13 +177,13 @@
     </div>
 </div>
 
-<!-- NAV -->
+<!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-    <div class="nav-item"><img src="assets/icons/nav-home.svg"></div>
-    <div class="nav-item"><img src="assets/icons/nav-search.svg"></div>
-    <div class="nav-item"><img src="assets/icons/nav-write.svg"></div>
-    <div class="nav-item"><img src="assets/icons/nav-random.svg"></div>
-    <div class="nav-item"><img src="assets/icons/nav-user.svg"></div>
+    <div class="nav-item" onclick="location.href='index.html'"><img src="assets/icons/nav-home.svg"></div>
+    <div class="nav-item" onclick="location.href='search.html'"><img src="assets/icons/nav-search.svg"></div>
+    <div class="nav-item" onclick="location.href='write.html'"><img src="assets/icons/nav-write.svg"></div>
+    <div class="nav-item" onclick="location.href='random.html'"><img src="assets/icons/nav-random.svg"></div>
+    <div class="nav-item" onclick="location.href='mypage.html'"><img src="assets/icons/nav-user.svg"></div>
 </nav>
 
 <!-- VIDEO MODAL -->
@@ -210,5 +208,31 @@
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="js/issue.js"></script>
+
+<script>
+/* --------------------------
+    뒤로가기 기능
+-------------------------- */
+document.getElementById("btn-back").addEventListener("click", () => {
+    if (document.referrer) history.back();
+    else location.href = "index.html";
+});
+
+/* --------------------------
+    ⋯ 메뉴 열기/닫기
+-------------------------- */
+const moreBtn = document.getElementById("header-more-btn");
+const moreModal = document.getElementById("header-more-modal");
+
+moreBtn.addEventListener("click", () => {
+    moreModal.hidden = false;
+});
+moreModal.addEventListener("click", (e) => {
+    if (e.target === moreModal || e.target.classList.contains("more-close")) {
+        moreModal.hidden = true;
+    }
+});
+</script>
+
 </body>
 </html>

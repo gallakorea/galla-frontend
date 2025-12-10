@@ -7,88 +7,107 @@
     <link rel="stylesheet" href="css/index.css" />
 </head>
 
-<body>
-    <div id="app">
+<body data-page="index">
+<div id="app">
 
-        <!-- HEADER -->
-        <header class="header">
-            <div class="header-inner">
-                <img src="assets/logo.png" alt="GALLA" class="logo" />
-                <div class="auth-buttons">
-                    <button class="open-modal" data-msg="로그인이 필요합니다">로그인</button>
-                    <button class="open-modal" data-msg="회원가입 준비 중입니다">회원가입</button>
-                </div>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
+
+            <div class="auth-buttons" id="authButtons">
+                <!-- 로그인 전 -->
+                <button onclick="location.href='login.html'" id="loginBtn">로그인</button>
+                <button onclick="location.href='signup.html'" id="signupBtn">회원가입</button>
+
+                <!-- 로그인 후 (JS에서 표시 전환) -->
+                <button onclick="location.href='mypage.html'" id="mypageBtn" style="display:none;">마이페이지</button>
             </div>
-        </header>
-
-        <!-- HERO -->
-        <section class="hero">
-            <h1 class="hero-title">지금, 대한민국의 진짜 여론</h1>
-            <p class="hero-desc">진영을 선택하고 의견을 던지고, 싸우고, 후원하라.</p>
-        </section>
-
-        <!-- CATEGORY -->
-        <section class="category-section">
-            <div class="chip-scroll">
-                <div class="chip active open-modal" data-msg="전체 선택">전체</div>
-                <div class="chip open-modal" data-msg="정치·사회">정치·사회</div>
-                <div class="chip open-modal" data-msg="경제·투자">경제·투자</div>
-                <div class="chip open-modal" data-msg="직장·경력">직장·경력</div>
-                <div class="chip open-modal" data-msg="연애·결혼">연애·결혼</div>
-                <div class="chip open-modal" data-msg="생활·일상">생활·일상</div>
-                <div class="chip open-modal" data-msg="패션·뷰티">패션·뷰티</div>
-                <div class="chip open-modal" data-msg="엔터·스포츠">엔터·스포츠</div>
-                <div class="chip open-modal" data-msg="세계·여행">세계·여행</div>
-                <div class="chip open-modal" data-msg="음식·맛집">음식·맛집</div>
-                <div class="chip open-modal" data-msg="19금 카테고리">19금</div>
-                <div class="chip open-modal" data-msg="기타">기타</div>
-            </div>
-        </section>
-
-        <!-- BEST -->
-        <section class="section">
-            <div class="section-title">🔥 베스트 갈라</div>
-            <div id="best-list"></div>
-            <button id="best-more" class="more-list-btn open-modal" data-msg="더보기">더보기</button>
-        </section>
-
-        <!-- RECOMMENDED -->
-        <section class="section">
-            <div class="section-title">⭐ 오늘의 추천 갈라</div>
-            <div id="recommend-list"></div>
-        </section>
-
-        <!-- NAVIGATION -->
-        <nav class="nav">
-            <div class="nav-inner">
-                <img src="assets/icons/nav-home.svg" class="nav-icon open-modal" data-msg="홈 화면" />
-                <img src="assets/icons/nav-search.svg" class="nav-icon open-modal" data-msg="검색" />
-                <img src="assets/icons/nav-write.svg" class="nav-icon open-modal" data-msg="글쓰기" />
-                <img src="assets/icons/nav-random.svg" class="nav-icon open-modal" data-msg="랜덤" />
-                <img src="assets/icons/nav-user.svg" class="nav-icon open-modal" data-msg="마이페이지" />
-            </div>
-        </nav>
-
-    </div>
-
-        <!-- MODAL -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <p id="modal-text"></p>
-            <button id="modal-close">닫기</button>
         </div>
-    </div>
+    </header>
 
-    <!-- 여기에 Supabase CDN & JS 넣기!!! -->
+    <!-- HERO -->
+    <section class="hero">
+        <h1 class="hero-title">지금, 대한민국의 진짜 여론</h1>
+        <p class="hero-desc">진영을 선택하고 의견을 던지고, 싸우고, 후원하라.</p>
+    </section>
 
-    <!-- SUPABASE CDN -->
-    <script src="https://esm.sh/@supabase/supabase-js@2"></script>
+    <!-- CATEGORY -->
+    <section class="category-section">
+        <div class="chip-scroll">
+            <div class="chip active" onclick="location.href='search.html?category=전체'">전체</div>
+            <div class="chip" onclick="location.href='search.html?category=정치·사회'">정치·사회</div>
+            <div class="chip" onclick="location.href='search.html?category=경제·투자'">경제·투자</div>
+            <div class="chip" onclick="location.href='search.html?category=직장·경력'">직장·경력</div>
+            <div class="chip" onclick="location.href='search.html?category=연애·결혼'">연애·결혼</div>
+            <div class="chip" onclick="location.href='search.html?category=생활·일상'">생활·일상</div>
+            <div class="chip" onclick="location.href='search.html?category=패션·뷰티'">패션·뷰티</div>
+            <div class="chip" onclick="location.href='search.html?category=엔터·스포츠'">엔터·스포츠</div>
+            <div class="chip" onclick="location.href='search.html?category=세계·여행'">세계·여행</div>
+            <div class="chip" onclick="location.href='search.html?category=음식·맛집'">음식·맛집</div>
+            <div class="chip" onclick="location.href='search.html?category=19금'">19금</div>
+            <div class="chip" onclick="location.href='search.html?category=기타'">기타</div>
+        </div>
+    </section>
 
-    <!-- Supabase client 생성 파일 -->
-    <script src="js/supabase.js"></script>
+    <!-- BEST -->
+    <section class="section">
+        <div class="section-title">🔥 베스트 갈라</div>
+        <div id="best-list"></div>
+        <button id="best-more" class="more-list-btn" onclick="location.href='search.html?type=best'">더보기</button>
+    </section>
 
-  
-    <!-- index 페이지 기능 -->
-    <script src="js/index.js"></script>
+    <!-- RECOMMENDED -->
+    <section class="section">
+        <div class="section-title">⭐ 오늘의 추천 갈라</div>
+        <div id="recommend-list"></div>
+    </section>
+
+    <!-- NAVIGATION -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <img src="assets/icons/nav-home.svg" class="nav-icon" onclick="location.href='index.html'" />
+            <img src="assets/icons/nav-search.svg" class="nav-icon" onclick="location.href='search.html'" />
+            <img src="assets/icons/nav-write.svg" class="nav-icon" onclick="location.href='write.html'" />
+            <img src="assets/icons/nav-random.svg" class="nav-icon" onclick="location.href='random.html'" />
+            <img src="assets/icons/nav-user.svg" class="nav-icon" onclick="location.href='mypage.html'" />
+        </div>
+    </nav>
+
+</div>
+
+<!-- Supabase JS -->
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+
+<script>
+// ----------------------------
+// 로그인 상태에 따른 UI 변경
+// ----------------------------
+document.addEventListener("DOMContentLoaded", async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+
+    const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
+    const mypageBtn = document.getElementById("mypageBtn");
+
+    if (session?.user) {
+        // 로그인 상태
+        loginBtn.style.display = "none";
+        signupBtn.style.display = "none";
+        mypageBtn.style.display = "inline-block";
+    } else {
+        // 로그아웃 상태
+        loginBtn.style.display = "inline-block";
+        signupBtn.style.display = "inline-block";
+        mypageBtn.style.display = "none";
+    }
+});
+</script>
+
+<!-- 기존 index.js 유지 -->
+<script src="js/index.js"></script>
+
 </body>
 </html>

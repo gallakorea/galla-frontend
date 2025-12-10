@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출금 요청 - GALLA</title>
     <link rel="stylesheet" href="./css/withdraw.css">
+
     <style>
-/* 출금 페이지 네비게이션 아이콘 강제 고정 (최우선 적용) */
-nav.bottom-nav img,
-nav.bottom-nav button img,
-.bottom-nav img,
-.bottom-nav .nav-item img,
-.bottom-nav * {
-    filter: none !important;
-    -webkit-filter: none !important;
-    mix-blend-mode: normal !important;
-    opacity: 1 !important;
-}
-</style>
+        /* 네비게이션 아이콘 반전 방지 */
+        nav.bottom-nav img,
+        nav.bottom-nav button img,
+        .bottom-nav img,
+        .bottom-nav .nav-item img {
+            filter: none !important;
+            -webkit-filter: none !important;
+            mix-blend-mode: normal !important;
+            opacity: 1 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -27,7 +27,7 @@ nav.bottom-nav button img,
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="goBackWithScroll()">
             <div class="header-title">출금 요청</div>
             <div class="header-spacer"></div>
         </div>
@@ -77,11 +77,10 @@ nav.bottom-nav button img,
             <input type="text" id="address" class="input-field" placeholder="실제 거주지 입력">
         </div>
 
-        <!-- 🔥 BANK SELECTION -->
+        <!-- BANK -->
         <div class="input-group">
             <div class="input-label">은행 선택</div>
             <select id="bank" class="input-field">
-
                 <option value="">은행 선택</option>
                 <option>국민은행</option>
                 <option>신한은행</option>
@@ -101,7 +100,6 @@ nav.bottom-nav button img,
                 <option>제주은행</option>
                 <option>전북은행</option>
                 <option>경남은행</option>
-
             </select>
         </div>
 
@@ -117,7 +115,7 @@ nav.bottom-nav button img,
             <input type="text" id="account" class="input-field" placeholder="숫자만 입력">
         </div>
 
-        <!-- WITHDRAW AMOUNT -->
+        <!-- AMOUNT -->
         <div class="input-group">
             <div class="input-label">출금 금액</div>
             <input type="number" id="amount" class="input-field" placeholder="20만원 이상부터 가능">
@@ -132,12 +130,50 @@ nav.bottom-nav button img,
 
 <!-- NAVIGATION -->
 <nav class="bottom-nav">
-    <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
-    <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
-    <button class="nav-item"><img src="./assets/icons/nav-write.svg"></button>
-    <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
-    <button class="nav-item active"><img src="./assets/icons/nav-user.svg"></button>
+    <button class="nav-item" data-target="index.html"><img src="./assets/icons/nav-home.svg"></button>
+    <button class="nav-item" data-target="search.html"><img src="./assets/icons/nav-search.svg"></button>
+    <button class="nav-item" data-target="write.html"><img src="./assets/icons/nav-write.svg"></button>
+    <button class="nav-item" data-target="random.html"><img src="./assets/icons/nav-random.svg"></button>
+    <button class="nav-item active" data-target="mypage.html"><img src="./assets/icons/nav-user.svg"></button>
 </nav>
+
+
+<script>
+/* ==========================================
+   🔹 뒤로 가기(스크롤 위치 포함)
+========================================== */
+function goBackWithScroll() {
+    sessionStorage.setItem("scrollRestore", "on");
+    history.back();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const restore = sessionStorage.getItem("scrollRestore");
+
+    if (restore === "on") {
+        const pos = sessionStorage.getItem("lastScrollPosition") || 0;
+        window.scrollTo(0, Number(pos));
+
+        sessionStorage.removeItem("scrollRestore");
+        sessionStorage.removeItem("lastScrollPosition");
+    }
+});
+
+window.addEventListener("scroll", () => {
+    sessionStorage.setItem("lastScrollPosition", window.scrollY);
+});
+
+
+/* ==========================================
+   🔹 네비 아이콘 → 링크 이동
+========================================== */
+document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const target = btn.dataset.target;
+        if (target) location.href = target;
+    });
+});
+</script>
 
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>

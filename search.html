@@ -8,27 +8,26 @@
   <link rel="stylesheet" href="./css/search.css" />
 </head>
 
-<body>
+<body data-page="search">
 <div id="app">
 
-        <!-- HEADER (index 동일 버전) -->
-        <header class="header">
-            <div class="header-inner">
-                <img src="assets/logo.png" alt="GALLA" class="logo" />
-                <div class="auth-buttons">
-                    <button class="open-modal" data-msg="로그인이 필요합니다">로그인</button>
-                    <button class="open-modal" data-msg="회원가입 준비 중입니다">회원가입</button>
-                </div>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/logo.png" alt="GALLA" class="logo" />
+            <div class="auth-buttons">
+                <button onclick="location.href='login.html'">로그인</button>
+                <button onclick="location.href='signup.html'">회원가입</button>
             </div>
-        </header>
+        </div>
+    </header>
 
     <main class="page-main search-page">
 
-        <!-- 🔥 오늘의 핫트렌드 -->
+        <!-- 🔥 오늘의 핫 트렌드 -->
         <section class="section-block">
             <h2 class="section-title">🔥 오늘의 핫 트렌드</h2>
             <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
-
             <div id="hot-trend-chips" class="hot-trend-chips"></div>
         </section>
 
@@ -36,7 +35,6 @@
         <section class="section-block">
             <h2 class="section-title ai-title">🔮 AI 유행예감</h2>
             <p class="section-sub">AI가 분석한 급상승 예감 이슈</p>
-
             <div id="ai-trend-list" class="ai-trend-list"></div>
         </section>
 
@@ -57,39 +55,50 @@
         <section class="section-block">
             <h2 class="section-title">📘 검색 결과</h2>
             <p class="section-sub" id="search-result-label">아직 검색 전입니다.</p>
-
             <div id="search-results" class="search-results-grid"></div>
         </section>
+
     </main>
 
+    <!-- ⭐ 고정 네비게이터 (절대 깨지지 않음) -->
+    <nav class="bottom-nav fixed-nav">
 
-    <!-- 🔥 BOTTOM NAV (아이콘 절대 변형 없음) -->
-    <nav class="bottom-nav">
-        <div class="nav-item" onclick="location.href='index.html'">
-            <img src="./assets/icons/nav-home.svg">
-        </div>
+        <button class="nav-item" data-target="index.html">
+            <img src="./assets/icons/nav-home.svg" />
+        </button>
 
-        <div class="nav-item bottom-active">
-            <img src="./assets/icons/nav-search.svg">
-        </div>
+        <button class="nav-item active" data-target="search.html">
+            <img src="./assets/icons/nav-search.svg" />
+        </button>
 
-        <div class="nav-item" onclick="location.href='write.html'">
-            <img src="./assets/icons/nav-write.svg">
-        </div>
+        <button class="nav-item" data-target="write.html">
+            <img src="./assets/icons/nav-write.svg" />
+        </button>
 
-        <div class="nav-item" onclick="location.href='random.html'">
-            <img src="./assets/icons/nav-random.svg">
-        </div>
+        <button class="nav-item" data-target="random.html">
+            <img src="./assets/icons/nav-random.svg" />
+        </button>
 
-        <div class="nav-item" onclick="location.href='mypage.html'">
-            <img src="./assets/icons/nav-user.svg">
-        </div>
+        <button class="nav-item" data-target="mypage.html">
+            <img src="./assets/icons/nav-user.svg" />
+        </button>
+
     </nav>
 
 </div>
 
+<script>
+document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const t = btn.dataset.target;
+        if (t) location.href = t;
+    });
+});
+</script>
+
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 <script src="./js/search.js"></script>
+
 </body>
 </html>

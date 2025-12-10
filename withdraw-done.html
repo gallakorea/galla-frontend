@@ -14,7 +14,7 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="goBackWithScroll()">
             <div class="header-title">출금 요청 완료</div>
             <div class="header-spacer"></div>
         </div>
@@ -44,7 +44,7 @@
 
 
 <!-- ============================= -->
-<!-- ⭐ 네비게이터 (index와 100% 동일) -->
+<!-- ⭐ 네비게이터 (index와 완전 동일) -->
 <!-- ============================= -->
 <nav class="nav">
     <div class="nav-inner">
@@ -74,13 +74,40 @@
 
 
 <script>
-    // 모든 네비 아이콘 클릭 이동 기능
-    document.querySelectorAll('.nav-item').forEach(icon => {
-        icon.addEventListener('click', () => {
-            const target = icon.dataset.target;
-            if (target) location.href = target;
-        });
+/* ==========================================
+   🔹 뒤로 가기 : 이전 페이지 + 스크롤 위치 복원
+========================================== */
+function goBackWithScroll() {
+    sessionStorage.setItem("scrollRestore", "on");
+    history.back();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const restore = sessionStorage.getItem("scrollRestore");
+
+    if (restore === "on") {
+        const pos = sessionStorage.getItem("lastScrollPosition") || 0;
+        window.scrollTo(0, Number(pos));
+
+        sessionStorage.removeItem("scrollRestore");
+        sessionStorage.removeItem("lastScrollPosition");
+    }
+});
+
+window.addEventListener("scroll", () => {
+    sessionStorage.setItem("lastScrollPosition", window.scrollY);
+});
+
+
+/* ==========================================
+   🔹 네비게이터 아이콘 클릭 → 페이지 이동
+========================================== */
+document.querySelectorAll(".nav-item").forEach(icon => {
+    icon.addEventListener("click", () => {
+        const target = icon.dataset.target;
+        if (target) location.href = target;
     });
+});
 </script>
 
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
