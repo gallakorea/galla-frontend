@@ -18,10 +18,9 @@ const selectedRegionText = document.getElementById("selectedRegion");
 
 regionChips.forEach(chip => {
     chip.addEventListener("click", () => {
-
         regionChips.forEach(c => c.classList.remove("active"));
-
         chip.classList.add("active");
+
         selectedRegion = chip.textContent.trim();
         selectedRegionText.textContent = selectedRegion;
     });
@@ -49,8 +48,10 @@ signupBtn.addEventListener("click", async () => {
         return;
     }
 
+    // SIGNUP
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email, password
+        email,
+        password
     });
 
     if (signUpError) {
@@ -60,18 +61,19 @@ signupBtn.addEventListener("click", async () => {
 
     const user = signUpData.user;
     if (!user) {
-        alert("회원 정보 오류");
+        alert("유저 생성 실패");
         return;
     }
 
     const userId = user.id;
 
+    // 프로필 생성
     const { error: profileError } = await supabase
         .from("user_profiles")
         .insert({
             user_id: userId,
             nickname,
-            phone,
+            phone: phone || null,
             region: selectedRegion,
             anonymous,
             level: 1,
@@ -86,38 +88,4 @@ signupBtn.addEventListener("click", async () => {
 
     alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
     location.href = "index.html";
-});
-
-/* ====================================================
-   🔙 뒤로가기 + 스크롤 복원
-==================================================== */
-function goBackWithScroll() {
-    sessionStorage.setItem("scrollRestore", "on");
-    history.back();
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-    const shouldRestore = sessionStorage.getItem("scrollRestore");
-
-    if (shouldRestore === "on") {
-        const pos = sessionStorage.getItem("lastScrollPosition") || 0;
-        window.scrollTo(0, Number(pos));
-
-        sessionStorage.removeItem("scrollRestore");
-        sessionStorage.removeItem("lastScrollPosition");
-    }
-});
-
-window.addEventListener("scroll", () => {
-    sessionStorage.setItem("lastScrollPosition", window.scrollY);
-});
-
-/* -------------------------------
-   NAVIGATION CLICK
--------------------------------- */
-document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const t = btn.dataset.target;
-        if (t) location.href = t;
-    });
 });
