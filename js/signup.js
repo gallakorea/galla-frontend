@@ -1,6 +1,5 @@
-/* -------------------------------
-   DOM
--------------------------------- */
+const supabase = window.supabaseClient;
+
 const emailInput = document.getElementById("email");
 const pwInput = document.getElementById("password");
 const pw2Input = document.getElementById("password2");
@@ -10,27 +9,19 @@ const signupBtn = document.getElementById("signupBtn");
 
 let selectedRegion = null;
 
-/* -------------------------------
-   REGION SELECT
--------------------------------- */
-const regionChips = document.querySelectorAll(".region-chip");
-const selectedRegionText = document.getElementById("selectedRegion");
-
-regionChips.forEach(chip => {
+// 지역 선택
+document.querySelectorAll(".region-chip").forEach(chip => {
     chip.addEventListener("click", () => {
-        regionChips.forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".region-chip")
+            .forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
-
         selectedRegion = chip.textContent.trim();
-        selectedRegionText.textContent = selectedRegion;
+        document.getElementById("selectedRegion").textContent = selectedRegion;
     });
 });
 
-/* -------------------------------
-   SIGNUP
--------------------------------- */
+// 회원가입 버튼 클릭
 signupBtn.addEventListener("click", async () => {
-
     const email = emailInput.value.trim();
     const password = pwInput.value.trim();
     const password2 = pw2Input.value.trim();
@@ -48,18 +39,18 @@ signupBtn.addEventListener("click", async () => {
         return;
     }
 
-    // SIGNUP
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // Supabase 회원 생성
+    const { data, error } = await supabase.auth.signUp({
         email,
         password
     });
 
-    if (signUpError) {
-        alert("회원가입 실패: " + signUpError.message);
+    if (error) {
+        alert("회원가입 실패: " + error.message);
         return;
     }
 
-    const user = signUpData.user;
+    const user = data.user;
     if (!user) {
         alert("유저 생성 실패");
         return;
@@ -67,7 +58,7 @@ signupBtn.addEventListener("click", async () => {
 
     const userId = user.id;
 
-    // 프로필 생성
+    // 프로필 저장
     const { error: profileError } = await supabase
         .from("user_profiles")
         .insert({
@@ -82,10 +73,10 @@ signupBtn.addEventListener("click", async () => {
         });
 
     if (profileError) {
-        alert("프로필 저장 오류: " + profileError.message);
+        alert("프로필 저장 실패: " + profileError.message);
         return;
     }
 
-    alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
+    alert("회원가입 성공! 인증 메일 확인하세요.");
     location.href = "index.html";
 });
