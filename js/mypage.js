@@ -1,15 +1,33 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-    /* 네비 active */
-    const current = document.body.dataset.page;
-    document.querySelectorAll(".nav-item").forEach(item => {
-        item.classList.toggle("active", item.dataset.page === current);
+    // ---------------------------
+    // 현재 페이지 정보
+    // ---------------------------
+    const currentPage = document.body.dataset.page;
+
+    // ---------------------------
+    // 하단 네비 active 적용
+    // ---------------------------
+    document.querySelectorAll(".bottom-nav .nav-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.page === currentPage);
     });
 
-    /* 탭 */
+    // ---------------------------
+    // 상단 nav (필요한 경우만 적용)
+    // ---------------------------
+    document.querySelectorAll(".nav-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.page === currentPage);
+    });
+
+    // ---------------------------
+    // 탭 렌더링 요소
+    // ---------------------------
     const tabs = document.querySelectorAll(".tab");
     const tabContent = document.getElementById("tabContent");
 
+    // ---------------------------
+    // tab 렌더링 함수들
+    // ---------------------------
     const renderMy = () => {
         tabContent.innerHTML = `
             <div class="thumb-card">
@@ -74,6 +92,9 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
     };
 
+    // ---------------------------
+    // 탭 클릭 이벤트
+    // ---------------------------
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
             tabs.forEach(t => t.classList.remove("active"));
@@ -81,37 +102,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const menu = tab.dataset.tab;
 
-            if(menu === "my") renderMy();
-            if(menu === "battle") renderBattle();
-            if(menu === "save") renderSave();
-            if(menu === "favorite") renderFavorite();
+            switch (menu) {
+                case "my": renderMy(); break;
+                case "battle": renderBattle(); break;
+                case "save": renderSave(); break;
+                case "favorite": renderFavorite(); break;
+            }
         });
     });
 
-    /* 기본 표시 */
+    // 기본 탭 로딩
     renderMy();
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-    const currentPage = document.body.dataset.page;
-    const navItems = document.querySelectorAll(".bottom-nav .nav-item");
-
-    navItems.forEach(item => {
-        item.classList.remove("active");
-        if (item.dataset.page === currentPage) {
-            item.classList.add("active");
-        }
-    });
-});
-
-
-document.addEventListener("DOMContentLoaded", () => {
-    const current = document.body.dataset.page;
-    document.querySelectorAll(".nav-item").forEach(item => {
-        if (item.dataset.page === current) {
-            item.classList.add("active");
-        } else {
-            item.classList.remove("active");
-        }
-    });
 });

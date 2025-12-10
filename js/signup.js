@@ -15,7 +15,6 @@ let selectedRegion = null;
 // --------------------------------
 document.querySelectorAll(".region-chip").forEach(chip => {
     chip.addEventListener("click", () => {
-
         document.querySelectorAll(".region-chip").forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
 
@@ -50,7 +49,7 @@ signupBtn.addEventListener("click", async () => {
     }
 
     // ---------------------------
-    // Supabase 회원가입
+    // Supabase Auth 회원가입
     // ---------------------------
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -62,29 +61,37 @@ signupBtn.addEventListener("click", async () => {
         return;
     }
 
-    // 새로 생성된 유저 UID
-    const userId = signUpData.user.id;
+    const user = signUpData.user;
+
+    if (!user) {
+        alert("회원가입 중 에러: 유저 정보 없음.");
+        return;
+    }
+
+    // 새 유저 ID
+    const userId = user.id;
 
     // ---------------------------
-    // users 테이블 추가 정보 저장
+    // user_profiles 테이블에 추가 정보 저장
     // ---------------------------
     const { error: profileError } = await supabase
-        .from("users")
+        .from("user_profiles")
         .insert({
-            id: userId,
-            email: email,
+            user_id: userId,
             nickname: nickname,
             phone: phone || null,
             region: selectedRegion,
-            is_anonymous: anonymous,
+            anonymous: anonymous,
+            level: 1,
+            gp: 0,
             created_at: new Date()
         });
 
     if (profileError) {
-        alert("유저 정보 저장 오류: " + profileError.message);
+        alert("프로필 저장 오류: " + profileError.message);
         return;
     }
 
-    alert("회원가입 완료! 메일 인증 후 로그인하세요.");
+    alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
     window.location.href = "index.html";
 });

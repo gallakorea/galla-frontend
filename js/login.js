@@ -15,21 +15,44 @@ loginBtn.addEventListener("click", async () => {
     }
 
     // Supabase 로그인 요청
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password
     });
 
-    if (error) {
-        console.log(error);
-        alert("로그인 실패: " + error.message);
+    if (loginError) {
+        console.log(loginError);
+        alert("로그인 실패: " + loginError.message);
         return;
     }
 
-    // 로그인 성공 → 유저 정보 저장
-    localStorage.setItem("galla_user", JSON.stringify(data.user));
+    const user = loginData.user;
 
-    // 성공 메시지 후 index로 이동
+    // ---------------------------------------------
+    // 로그인 성공 → user_profiles 불러오기
+    // ---------------------------------------------
+    const { data: profileData, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+    if (profileError) {
+        console.log(profileError);
+        alert("유저 프로필을 불러오지 못했습니다: " + profileError.message);
+        return;
+    }
+
+    // ---------------------------------------------
+    // 로컬 저장 (auth user + profile)
+    // ---------------------------------------------
+    const mergedUser = {
+        auth: user,
+        profile: profileData
+    };
+
+    localStorage.setItem("galla_user", JSON.stringify(mergedUser));
+
     alert("로그인 성공!");
     location.href = "index.html";
 });
@@ -41,7 +64,7 @@ loginBtn.addEventListener("click", async () => {
     const { data } = await supabase.auth.getSession();
     if (data?.session) {
         console.log("로그인 유지됨:", data.session.user);
-        // 자동으로 index로 보내고 싶으면 → 아래 주석 해제
+        // 자동 이동을 원하면 아래 주석 해제
         // location.href = "index.html";
     }
 })();
