@@ -80,3 +80,4 @@ signupBtn.addEventListener("click", async () => {
     alert("회원가입 성공! 인증 메일 확인하세요.");
     location.href = "index.html";
 });
+
