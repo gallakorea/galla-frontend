@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출금 요청 - GALLA</title>
+    <link rel="stylesheet" href="./css/withdraw.css">
+    <style>
+/* 출금 페이지 네비게이션 아이콘 강제 고정 (최우선 적용) */
+nav.bottom-nav img,
+nav.bottom-nav button img,
+.bottom-nav img,
+.bottom-nav .nav-item img,
+.bottom-nav * {
+    filter: none !important;
+    -webkit-filter: none !important;
+    mix-blend-mode: normal !important;
+    opacity: 1 !important;
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">출금 요청</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- GUIDE -->
+    <div class="withdraw-guide">
+        출금은 <strong>본인 인증</strong>이 필요합니다.<br>
+        주민등록증을 업로드하면 자동으로 정보가 인식됩니다.
+    </div>
+
+    <!-- FORM SECTION -->
+    <section class="section">
+
+        <!-- ID IMAGE -->
+        <div class="input-group">
+            <div class="input-label">주민등록증 사진 업로드</div>
+            <input type="file" accept="image/*" id="idImage" class="input-file">
+            <div class="file-hint">정면, 글자 선명하게 촬영해주세요.</div>
+        </div>
+
+        <!-- OCR BOX -->
+        <div class="ocr-box">
+            <div class="ocr-title">인식된 정보</div>
+
+            <div class="ocr-field">
+                <label>이름</label>
+                <input type="text" id="ocrName" disabled>
+            </div>
+
+            <div class="ocr-field">
+                <label>주민등록번호</label>
+                <input type="text" id="ocrRRN" disabled>
+            </div>
+
+            <div class="ocr-field">
+                <label>발급일자</label>
+                <input type="text" id="ocrIssue" disabled>
+            </div>
+
+            <div class="ocr-status" id="ocrStatus">OCR 대기중...</div>
+        </div>
+
+        <!-- ADDRESS -->
+        <div class="input-group">
+            <div class="input-label">실제 거주지 주소</div>
+            <input type="text" id="address" class="input-field" placeholder="실제 거주지 입력">
+        </div>
+
+        <!-- 🔥 BANK SELECTION -->
+        <div class="input-group">
+            <div class="input-label">은행 선택</div>
+            <select id="bank" class="input-field">
+
+                <option value="">은행 선택</option>
+                <option>국민은행</option>
+                <option>신한은행</option>
+                <option>우리은행</option>
+                <option>하나은행</option>
+                <option>기업은행</option>
+                <option>농협은행</option>
+                <option>수협은행</option>
+                <option>카카오뱅크</option>
+                <option>케이뱅크</option>
+                <option>토스뱅크</option>
+                <option>SC제일은행</option>
+                <option>씨티은행</option>
+                <option>부산은행</option>
+                <option>대구은행</option>
+                <option>광주은행</option>
+                <option>제주은행</option>
+                <option>전북은행</option>
+                <option>경남은행</option>
+
+            </select>
+        </div>
+
+        <!-- ACCOUNT HOLDER -->
+        <div class="input-group">
+            <div class="input-label">예금주 명</div>
+            <input type="text" id="holder" class="input-field" placeholder="예금주명 입력">
+        </div>
+
+        <!-- ACCOUNT NUMBER -->
+        <div class="input-group">
+            <div class="input-label">계좌번호</div>
+            <input type="text" id="account" class="input-field" placeholder="숫자만 입력">
+        </div>
+
+        <!-- WITHDRAW AMOUNT -->
+        <div class="input-group">
+            <div class="input-label">출금 금액</div>
+            <input type="number" id="amount" class="input-field" placeholder="20만원 이상부터 가능">
+        </div>
+
+        <!-- BUTTON -->
+        <button class="withdraw-btn" id="withdrawBtn">출금 요청하기</button>
+
+    </section>
+
+</div>
+
+<!-- NAVIGATION -->
+<nav class="bottom-nav">
+    <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-write.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-user.svg"></button>
+</nav>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/withdraw.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비밀번호 재설정 - GALLA</title>
+    <link rel="stylesheet" href="./css/reset.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">비밀번호 재설정</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- GUIDE -->
+    <div class="reset-guide">
+        가입된 이메일을 입력하면<br>
+        비밀번호 재설정 링크를 보내드립니다.
+    </div>
+
+    <!-- FORM SECTION -->
+    <section class="section">
+
+        <div class="input-group">
+            <div class="input-label">아이디 (이메일)</div>
+            <input type="email" class="input-field" placeholder="example@galla.com">
+        </div>
+
+        <button class="reset-btn">재설정 링크 보내기</button>
+
+        <div class="login-link">
+            돌아가기 <span onclick="location.href='login.html'">로그인</span>
+        </div>
+
+    </section>
+
+    <!-- NAVIGATION (이제 #app 안으로 이동) -->
+    <nav class="bottom-nav">
+        <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
+        <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
+        <button class="nav-item"><img src="./assets/icons/nav-write.svg"></button>
+        <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
+        <button class="nav-item active"><img src="./assets/icons/nav-user.svg"></button>
+    </nav>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+</body>
+</html>

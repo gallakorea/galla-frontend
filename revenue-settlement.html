@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정산 내역 - GALLA</title>
+    <link rel="stylesheet" href="./css/revenue-settlement.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">정산 내역</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- GUIDE -->
+    <div class="settle-guide">
+        GALLA 수익은 매월 1일 기준으로 정산됩니다.<br>
+        출금 가능 금액은 매월 5일 이후 업데이트됩니다.
+    </div>
+
+    <!-- SUMMARY SECTION -->
+    <section class="section">
+        <div class="summary-card">
+            <div class="sum-row">
+                <span>이번 달 총 수익</span>
+                <span class="num">₩ 1,240,000</span>
+            </div>
+            <div class="sum-row">
+                <span>출금 가능 금액</span>
+                <span class="num">₩ 840,000</span>
+            </div>
+
+            <button class="withdraw-btn" onclick="location.href='withdraw.html'">
+                출금 요청하기
+            </button>
+        </div>
+    </section>
+
+    <!-- DETAIL LIST -->
+    <section class="section">
+        <div class="section-title">📄 월별 정산 내역</div>
+
+        <div class="settle-list">
+
+            <div class="settle-item">
+                <div class="left">
+                    <div class="month">2025년 12월</div>
+                    <div class="desc">후원 금액 + 광고 보상</div>
+                </div>
+                <div class="amount">₩ 1,240,000</div>
+            </div>
+
+            <div class="settle-item">
+                <div class="left">
+                    <div class="month">2025년 11월</div>
+                    <div class="desc">후원 금액 + 광고 보상</div>
+                </div>
+                <div class="amount">₩ 980,000</div>
+            </div>
+
+            <div class="settle-item">
+                <div class="left">
+                    <div class="month">2025년 10월</div>
+                    <div class="desc">후원 금액 + 광고 보상</div>
+                </div>
+                <div class="amount">₩ 1,120,000</div>
+            </div>
+
+        </div>
+    </section>
+
+</div>
+
+<!-- NAVIGATION -->
+<nav class="galla-nav">
+    <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-write.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-user.svg"></button>
+</nav>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+</body>
+</html>

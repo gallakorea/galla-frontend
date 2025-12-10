@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GALLA - 이슈 상세</title>
+    <link rel="stylesheet" href="css/issue.css" />
+</head>
+
+<body>
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <button class="back-btn">← <span class="back-text">뒤로</span></button>
+            <img src="assets/logo.png" alt="GALLA" class="logo" />
+            <button class="more-header-btn">⋯</button>
+        </div>
+    </header>
+
+    <!-- ISSUE HERO -->
+    <section class="issue-hero">
+        <div class="issue-category-time">
+            <span id="issue-category">세계·여행</span>
+            <span id="issue-time">6시간 전</span>
+        </div>
+
+        <h1 id="issue-title">태국 치안 문제</h1>
+        <p id="issue-desc">태국 여행 중 혼불을 극명하게 갈리는 치안 논쟁</p>
+
+        <div class="issue-author">
+            <span>작성자 · 한유저</span>
+            <button class="follow-btn">+ 팔로우</button>
+        </div>
+    </section>
+
+    <!-- THUMB -->
+    <img src="assets/logo.png" class="issue-thumb" />
+
+    <!-- SPEECH BUTTON -->
+    <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
+
+    <!-- SUMMARY -->
+    <section class="issue-explain">
+        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+        <p id="issue-explain-text"></p>
+    </section>
+
+    <!-- VOTE -->
+    <section class="vote-section">
+        <div class="vote-title white-title">👍 찬반 투표 현황</div>
+
+        <div class="vote-bar">
+            <div class="vote-pro" id="vote-pro-bar"></div>
+            <div class="vote-con" id="vote-con-bar"></div>
+        </div>
+
+        <div class="vote-percent">
+            <span id="vote-pro-text">46%</span>
+            <span id="vote-con-text">54%</span>
+        </div>
+
+        <div class="vote-buttons">
+            <button class="btn-pro" id="btn-vote-pro">👍 찬성이오</button>
+            <button class="btn-con" id="btn-vote-con">👎 난 반댈세</button>
+        </div>
+    </section>
+
+    <!-- SUPPORT -->
+    <section class="support-section">
+        <div class="support-header white-title">⚔️ 후원 전쟁 현황</div>
+
+        <div class="support-bar">
+            <div class="sup-pro" id="sup-pro-bar"></div>
+            <div class="sup-con" id="sup-con-bar"></div>
+        </div>
+
+        <div class="support-stats">
+            <span id="sup-pro-amount">₩111,000</span>
+            <span id="sup-con-amount">₩199,000</span>
+        </div>
+
+        <button class="support-btn" id="open-support-modal">💸 이 이슈 후원하기</button>
+    </section>
+
+    <!-- AI NEWS -->
+    <section class="ai-news">
+        <h3 class="white-title">[AI 뉴스]</h3>
+        <p class="ai-tip">실제 서비스에서는 관련 기사 자동 크롤링 예정입니다.</p>
+
+        <div class="ai-group">
+            <p class="ai-sub">👍 찬성 측 기사</p>
+            <ul>
+                <li><a href="#">찬성 입장 기사 1</a></li>
+                <li><a href="#">찬성 입장 기사 2</a></li>
+            </ul>
+        </div>
+
+        <div class="ai-group">
+            <p class="ai-sub">👎 반대 측 기사</p>
+            <ul>
+                <li><a href="#">반대 입장 기사 1</a></li>
+                <li><a href="#">반대 입장 기사 2</a></li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- STATISTICS -->
+    <section id="stats-section" class="stats-section">
+
+        <div class="stats-header white-title">📊 여론 통계 인포그래픽</div>
+
+        <h2 class="stat-title white-title">👥 성별 참여 비율</h2>
+        <div id="gender-dual"></div>
+
+        <h2 class="stat-title white-title">🎂 나이대 참여 비율</h2>
+        <div id="age-chart"></div>
+
+        <h2 class="stat-title white-title">🗺️ 지역별 참여 히트맵</h2>
+        <div id="region-heatmap" class="region-heatmap"></div>
+
+        <h2 class="stat-title white-title">⚔️ 성별 찬반 비율</h2>
+        <div id="gender-vote"></div>
+
+        <h2 class="stat-title white-title">⚔️ 나이대 찬반 비율</h2>
+        <div id="age-vote"></div>
+
+        <h2 class="stat-title white-title">⚔️ 지역별 찬반 비율</h2>
+        <div id="region-vote"></div>
+
+        <h2 class="stat-title white-title">🎙️ AI 종합 의견</h2>
+        <div id="ai-summary" class="ai-summary"></div>
+
+    </section>
+
+    <!-- COMMENTS -->
+    <section class="comment-section" id="comment-section">
+        <h3 class="comment-title white-title">댓글</h3>
+
+        <div class="comment-sort">
+            <button class="sort-btn active" data-sort="latest">최신순</button>
+            <button class="sort-btn" data-sort="best">공감순</button>
+        </div>
+
+        <div class="main-reply-box">
+            <textarea id="main-reply" placeholder="댓글을 입력하세요..."></textarea>
+            <button id="main-reply-btn">등록</button>
+        </div>
+
+        <div id="comment-list" class="comment-list"></div>
+    </section>
+
+    <!-- 댓글 옵션 모달 -->
+    <div id="comment-action-modal" class="comment-action-modal" hidden>
+        <div class="comment-action-sheet">
+            <div class="action-item" data-action="copy">🔗 링크 복사</div>
+            <div class="action-item" data-action="save">📁 저장</div>
+            <div class="action-item" data-action="hide">🙈 관심 없음</div>
+            <div class="action-item" data-action="mute">🥕 업데이트 안 보기</div>
+            <div class="action-item" data-action="restrict">🪢 제한</div>
+            <div class="action-item" data-action="block">⛔ 차단하기</div>
+            <div class="action-item more-danger" data-action="report">🚨 신고하기</div>
+            <button class="comment-close-btn" data-close>닫기</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- 상단 ⋯ 메뉴 -->
+<div id="header-more-modal" class="more-menu-backdrop" hidden>
+    <div class="more-menu-box">
+        <div class="more-item">🎬 리믹스 만들기</div>
+        <div class="more-item">🚫 관심 없음</div>
+        <div class="more-item">⛔ 차단하기</div>
+        <div class="more-item">🔕 업데이트 안 보기</div>
+        <div class="more-item more-danger">🚨 신고하기</div>
+        <button class="more-close">닫기</button>
+    </div>
+</div>
+
+<!-- NAV -->
+<nav class="bottom-nav">
+    <div class="nav-item"><img src="assets/icons/nav-home.svg"></div>
+    <div class="nav-item"><img src="assets/icons/nav-search.svg"></div>
+    <div class="nav-item"><img src="assets/icons/nav-write.svg"></div>
+    <div class="nav-item"><img src="assets/icons/nav-random.svg"></div>
+    <div class="nav-item"><img src="assets/icons/nav-user.svg"></div>
+</nav>
+
+<!-- VIDEO MODAL -->
+<div class="speech-backdrop" hidden>
+    <div class="speech-sheet">
+        <div class="speech-header">
+            <span class="speech-title">1분 엘리베이터 스피치</span>
+            <button class="speech-close">✕</button>
+        </div>
+
+        <video id="speech-video" playsinline></video>
+
+        <div class="speech-controls">
+            <div class="play-icon" id="play-icon">▶</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="js/issue.js"></script>
+</body>
+</html>

@@ -1,0 +1,347 @@
+/***************************************************
+ * GLOBAL
+ ***************************************************/
+body {
+    margin: 0;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    color: #fff;
+}
+
+#app, .page-main, .search-page {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.section-block {
+    padding: 22px 16px;
+    border-bottom: 1px solid #0f0f0f;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #fff;
+}
+
+.section-sub {
+    font-size: 13px;
+    color: #ccc;
+    margin-top: 4px;
+}
+
+
+/***************************************************
+ * HEADER (issue/index 동일)
+ ***************************************************/
+.header {
+    background: #000;
+    border-bottom: 1px solid #111;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+}
+
+.header-inner {
+    width: 100%;
+    max-width: 480px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    position: relative;
+}
+
+.header-left {
+    width: 32px;
+}
+
+.logo-wrap {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.logo {
+    width: 105px;
+    height: auto;
+}
+
+.more-header-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    cursor: pointer;
+}
+
+
+/***************************************************
+ * HOT TRENDS
+ ***************************************************/
+.hot-trend-chips {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.hot-trend-chip {
+    padding: 7px 12px;
+    border-radius: 12px;
+    background: #14151f;
+    border: 1px solid rgba(255,225,140,.25);
+    color: #f6f6fa;
+    font-size: 12px;
+    cursor: pointer;
+    transition: .15s;
+    position: relative;
+}
+
+.hot-trend-chip:hover {
+    background: #191b28;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.5);
+}
+
+.hot-trend-chip::after {
+    content: "";
+    position: absolute;
+    left: 10px; right: 10px;
+    bottom: 5px;
+    height: 2px;
+    background: linear-gradient(90deg, #ffdf80, #ffb74d);
+    border-radius: 999px;
+    opacity: 0;
+    transform: scaleX(.6);
+    transition: .18s;
+}
+
+.hot-trend-chip:hover::after {
+    opacity: 1;
+    transform: scaleX(1);
+}
+
+
+/***************************************************
+ * AI 유행예감
+ ***************************************************/
+.ai-title { color: #fff; }
+
+.ai-trend-list {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ai-trend-card {
+    background: #11131f;
+    border-radius: 14px;
+    padding: 14px;
+    border: 1px solid #1f2438;
+    box-shadow: 0 4px 12px rgba(0,0,0,.45);
+    cursor: pointer;
+    transition: .15s;
+}
+
+.ai-trend-card:hover { transform: translateY(-3px); }
+
+.ai-trend-title {
+    font-size: 14px;
+    color: #f1f1f5;
+    font-weight: 700;
+}
+
+.ai-trend-meta {
+    font-size: 12px;
+    color: #b5b7c6;
+    margin: 5px 0;
+}
+
+.ai-trend-reason {
+    font-size: 12px;
+    line-height: 1.55;
+    color: #ffd87c;
+    background: rgba(255,214,120,.06);
+    border-left: 2px solid #ffd87c;
+    border-radius: 10px;
+    padding: 6px 10px;
+}
+
+
+/***************************************************
+ * SEARCH BAR
+ ***************************************************/
+.search-input-wrap {
+    margin-top: 12px;
+    position: relative;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #0b0c14;
+    border: 1px solid #1d1d1d;
+    color: #fff;
+    font-size: 14px;
+}
+
+.search-submit-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 6px 14px;
+    border-radius: 10px;
+    background: #ffe27a;
+    color: #000;
+    font-weight: 700;
+    font-size: 12px;
+    border: none;
+}
+
+
+/***************************************************
+ * SEARCH RESULTS
+ ***************************************************/
+.search-results-grid {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.search-card {
+    background: #11131f;
+    border-radius: 14px;
+    padding: 12px;
+    border: 1px solid #1f2438;
+    cursor: pointer;
+    transition: .15s;
+}
+
+.search-card:hover { transform: translateY(-3px); }
+
+.search-card-thumb img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.search-card-category {
+    font-size: 11px;
+    color: #9ca0b4;
+    margin-top: 5px;
+}
+
+.search-card-title {
+    font-size: 13px;
+    color: #f1f1f5;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.search-card-meta {
+    display: flex;
+    justify-content: space-between;
+    color: #c5c8dd;
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+
+/***************************************************
+ * BOTTOM NAV — 아이콘 변형 완전 차단
+ ***************************************************/
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #000;
+    border-top: 1px solid #111;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0;
+    z-index: 999;
+}
+
+.nav-item img {
+    width: 28px;
+    height: 28px;
+
+    /* 아이콘 왜곡 방지 모두 제거 */
+    filter: none !important;
+    -webkit-filter: none !important;
+    opacity: 1 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.header {
+    width: 100%;
+    background: #000;
+    border-bottom: 1px solid #111;
+    position: fixed;    /* ← 중요: sticky 제거 */
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    width: 100%;
+    max-width: 480px;
+    transition: transform 0.25s ease; /* ← 숨김/등장 부드럽게 */
+}
+
+/***************************************************
+ * HEADER — index.html 동일 버전
+ ***************************************************/
+.header {
+    width: 100%;
+    background: #000;
+    border-bottom: 1px solid #111;
+    display: flex;
+    justify-content: center;
+    position: relative;
+    top: 0;
+    z-index: 999;
+}
+
+.header-inner {
+    width: 100%;
+    max-width: 480px;
+    height: 54px !important;      /* ⬅ index와 동일하게 고정 */
+    padding: 0 16px !important;   /* ⬅ index padding 통일 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    width: 105px;
+    height: auto;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.auth-buttons button {
+    padding: 5px 10px;
+    background: #111;
+    color: #fff;
+    border-radius: 14px;
+    border: 1px solid #333;
+    font-size: 12px;
+}

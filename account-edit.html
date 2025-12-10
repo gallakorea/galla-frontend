@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>계정 정보 수정 - GALLA</title>
+    <link rel="stylesheet" href="./css/account-edit.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="back-btn" onclick="history.back()">←</div>
+            <div class="header-title">계정 정보 수정</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- PROFILE IMAGE -->
+    <section class="section">
+        <div class="profile-img-wrap">
+            <img src="./assets/logo.png" id="profilePreview" class="profile-img">
+            <label for="profileInput" class="change-photo">사진 변경</label>
+            <input type="file" id="profileInput" accept="image/*" hidden>
+        </div>
+    </section>
+
+    <!-- INPUTS -->
+    <section class="section">
+
+        <div class="input-group">
+            <div class="input-label">닉네임</div>
+            <input type="text" class="input-field" value="익명의 사용자">
+        </div>
+
+        <div class="input-group">
+            <div class="input-label">소개 문구</div>
+            <textarea class="input-field textarea">소개 문구가 여기에 표시됩니다.</textarea>
+        </div>
+
+        <div class="input-group readonly">
+            <div class="input-label">이메일</div>
+            <div class="input-value">user@galla.com</div>
+        </div>
+
+        <div class="input-group readonly">
+            <div class="input-label">전화번호</div>
+            <div class="input-value">010-1234-5678</div>
+        </div>
+
+    </section>
+
+    <!-- SAVE BUTTON -->
+    <section class="section">
+        <button class="save-btn">저장하기</button>
+    </section>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/account-edit.js"></script>
+</body>
+</html>

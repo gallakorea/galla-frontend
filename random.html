@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko" data-page="random">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>랜덤 갈라 뽑기 - GALLA</title>
+    <link rel="stylesheet" href="./css/random.css">
+    <link rel="stylesheet" href="./css/index.css">
+
+</head>
+
+<body data-page="random">
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="./assets/logo.png" class="logo" />
+            <div class="auth-btns">
+                <button class="open-modal" data-msg="로그인이 필요합니다">로그인</button>
+                <button class="open-modal" data-msg="회원가입 준비 중입니다">회원가입</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="random-hero">
+        <div class="tornado-icon">
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none"
+                stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16M2 8h20M5 12h14M7 16h10M9 20h6"/>
+            </svg>
+        </div>
+
+        <h1>랜덤 갈라 뽑기</h1>
+        <p>오늘 당신이 보게 될 논쟁은?</p>
+    </section>
+
+    <!-- SLOT -->
+    <section class="slot-area">
+        <div id="slot1" class="slot-box">정치</div>
+        <div id="slot2" class="slot-box">월급</div>
+        <div id="slot3" class="slot-box">세대</div>
+    </section>
+
+    <!-- RANDOM BUTTON -->
+    <div class="random-btn-wrap">
+        <button id="randomBtn" class="random-btn">
+            🎲 RANDOM 뽑기
+        </button>
+    </div>
+
+    <!-- 즉시 랜덤 (스크롤시만 노출) -->
+    <button id="floatingRandom" class="floating-random hidden">
+        ⭐ 즉시 랜덤
+    </button>
+
+    <!-- 화두 카드 -->
+    <section id="resultArea" class="result-area"></section>
+
+    <!-- 피드 -->
+    <section id="randomFeed" class="random-feed"></section>
+
+    <!-- NAV -->
+    <nav class="bottom-nav">
+
+        <button class="nav-item" data-page="home" onclick="location.href='index.html'">
+            <div class="nav-indicator"></div>
+            <img src="./assets/icons/nav-home.svg">
+        </button>
+
+        <button class="nav-item" data-page="search" onclick="location.href='search.html'">
+            <div class="nav-indicator"></div>
+            <img src="./assets/icons/nav-search.svg">
+        </button>
+
+        <button class="nav-item" data-page="write" onclick="location.href='write.html'">
+            <div class="nav-indicator"></div>
+            <img src="./assets/icons/nav-write.svg">
+        </button>
+
+        <button class="nav-item" data-page="random">
+            <div class="nav-indicator"></div>
+            <img src="./assets/icons/nav-random.svg">
+        </button>
+
+        <button class="nav-item" data-page="mypage" onclick="location.href='mypage.html'">
+            <div class="nav-indicator"></div>
+            <img src="./assets/icons/nav-user.svg">
+        </button>
+
+    </nav>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/random.js"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+/* RESET */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+}
+
+#app {
+    width: 100%;
+    max-width: 480px;
+    padding-bottom: 90px;
+}
+
+/* HEADER */
+.header {
+    position: sticky;
+    top: 0;
+    background: #000;
+    z-index: 99;
+    border-bottom: 1px solid #111;
+}
+.header-inner {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+}
+.back-icon {
+    width: 22px;
+    cursor: pointer;
+}
+.header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 700;
+}
+.header-spacer { width: 22px; }
+
+/* GUIDE */
+.login-guide {
+    background: #101010;
+    border: 1px solid #222;
+    padding: 16px;
+    margin: 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* FORM */
+.section { padding: 0 16px; }
+
+.input-group { margin-bottom: 18px; }
+.input-label {
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+.input-field {
+    width: 100%;
+    padding: 14px;
+    background: #0f0f0f;
+    border: 1px solid #222;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+}
+.input-field::placeholder { color: #555; }
+
+/* FORGOT */
+.forgot-row {
+    text-align: right;
+    font-size: 12px;
+    margin-top: -5px;
+    color: #aaa;
+}
+.forgot-row span { cursor: pointer; }
+
+/* LOGIN BUTTON */
+.login-btn {
+    width: 100%;
+    padding: 14px 0;
+    background: #fafafa;
+    color: #000;
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 10px;
+    margin: 10px 0 20px 0;
+    cursor: pointer;
+}
+
+/* SIGNUP */
+.signup-link {
+    text-align: center;
+    color: #aaa;
+    font-size: 13px;
+}
+.signup-link span {
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* BOTTOM NAV */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #000;
+    border-top: 1px solid #222;
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-around;
+    z-index: 999;
+}
+
+.bottom-nav .nav-item {
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.bottom-nav img {
+    width: 26px;
+    height: 26px;
+    display: block;
+    opacity: 0.55;
+}
+.bottom-nav .active img {
+    opacity: 1;
+}

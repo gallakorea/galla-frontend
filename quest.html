@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GALLA 퀘스트</title>
+    <link rel="stylesheet" href="./css/quest.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+<header class="header">
+    <div class="header-inner">
+
+        <!-- 🔥 grade와 동일한 뒤로가기 아이콘 -->
+        <img src="./assets/icons/back.svg" class="back-btn" onclick="history.back()">
+
+        <div class="header-title">데일리 퀘스트</div>
+
+        <div class="header-spacer"></div>
+    </div>
+</header>
+
+    <section class="main">
+
+        <!-- TOTAL PROGRESS RING -->
+        <div class="progress-wrapper">
+            <svg class="ring" width="160" height="160">
+                <circle class="ring-bg" cx="80" cy="80" r="70"/>
+                <circle class="ring-progress" cx="80" cy="80" r="70"/>
+            </svg>
+            <div class="ring-center">
+                <div id="progress-percent">0%</div>
+                <div class="progress-label">오늘의 임무 달성률</div>
+            </div>
+        </div>
+
+        <!-- DAILY QUESTS -->
+        <h2 class="section-title">데일리 퀘스트</h2>
+        <div id="daily-list" class="daily-list"></div>
+
+        <!-- TODAY REWARD (최적 위치) -->
+        <div class="today-reward">
+            <div class="tr-header">🎁 오늘의 보상</div>
+
+            <div class="tr-gp-total">
+                <div class="tr-label">예상 총 보상</div>
+                <div id="tr-total-gp" class="tr-total-gp">0 GP</div>
+            </div>
+
+            <div class="tr-bar-wrap">
+                <div class="tr-bar-bg"></div>
+                <div class="tr-bar-fill" id="tr-bar-fill"></div>
+            </div>
+            <div id="tr-progress-text" class="tr-progress-text">0 / 0 GP</div>
+
+            <button id="tr-claim-btn" class="tr-btn disabled">보상 받기</button>
+        </div>
+
+        <!-- WEEKLY QUESTS -->
+        <h2 class="section-title">주간 퀘스트</h2>
+        <div class="weekly-scroll">
+            <div id="weekly-list" class="weekly-list"></div>
+        </div>
+
+        <!-- SPECIAL EVENT -->
+        <h2 class="section-title-special">🔥 스페셜 이벤트</h2>
+        <div class="special-card">
+            <div class="special-bg"></div>
+            <div class="special-content">
+                <div class="special-title">🔥 이번 주 핫이슈 임무</div>
+                <p class="special-desc">가장 뜨거운 이슈에서 투표 + 댓글 5회 참여</p>
+                <button class="special-btn">+80 GP 보상 받기</button>
+            </div>
+        </div>
+
+        <!-- DAILY CHEST -->
+        <div class="reward-area">
+            <div class="reward-icon">🎁</div>
+            <button id="reward-btn" class="reward-btn">오늘 상자 열기 →</button>
+        </div>
+
+    </section>
+
+    <!-- ⭐ NAVIGATION -->
+<nav class="nav">
+    <div class="nav-inner">
+        <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
+        <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
+        <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
+        <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html">
+        <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
+    </div>
+</nav>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/quest.js"></script>
+</body>
+</html>

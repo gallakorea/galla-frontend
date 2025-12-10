@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>갈라리안 등급 - GALLA</title>
+    <link rel="stylesheet" href="./css/grade.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+<header class="header">
+    <div class="header-inner">
+
+        <!-- 🔥 로고 제거하고 뒤로가기 버튼 삽입 -->
+        <img src="./assets/icons/back.svg" class="back-btn" onclick="history.back()">
+
+        <div class="header-title">갈라리안 등급</div>
+
+        <div class="header-spacer"></div>
+    </div>
+</header>
+
+    <!-- CURRENT TIER -->
+    <section class="section">
+        <div class="section-title">나의 갈라리안</div>
+
+        <div class="card grade-main">
+            <div class="tier-name">VANGUARD</div>
+            <div class="tier-desc">
+                전장의 선봉에서 의견의 흐름을 바꾸는 정예 갈라리안입니다.
+            </div>
+
+            <div class="xp-bar">
+                <div class="xp-progress" style="width: 63%"></div>
+            </div>
+            <div class="xp-text">380 / 600 GP</div>
+
+            <div class="tier-aura vanguard-aura"></div>
+        </div>
+    </section>
+
+    <!-- NEXT TIER PROGRESS -->
+    <section class="section">
+        <div class="section-title">다음 단계까지 남은 진척도</div>
+
+        <div class="card next-tier-card">
+            <div class="next-row">
+                <div class="label">다음 등급</div>
+                <div class="value">AUTHORITY</div>
+            </div>
+
+            <div class="progress-item">
+                <div class="pi-label">GP 필요량</div>
+                <div class="pi-bar"><div class="fill" style="width:63%"></div></div>
+                <div class="pi-text">380 / 600</div>
+            </div>
+
+            <div class="progress-item">
+                <div class="pi-label">반응 수</div>
+                <div class="pi-bar"><div class="fill" style="width:60%"></div></div>
+                <div class="pi-text">30 / 50</div>
+            </div>
+
+            <div class="progress-item">
+                <div class="pi-label">상단 댓글 경험</div>
+                <div class="pi-bar"><div class="fill" style="width:40%"></div></div>
+                <div class="pi-text">2 / 5</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- WORLD LORE -->
+    <section class="section">
+        <div class="section-title">갈라리안 세계관</div>
+        <div class="card lore-card">
+            GALLA의 전장은 의견이 에너지(GP)로 변환되는 아레나입니다.<br>
+            모든 갈라리안은 Spark로 태어나 Breaker · Vanguard · Authority · Dominion을 거쳐
+            최종 형태 APEX로 진화합니다.
+        </div>
+    </section>
+
+    <!-- TIER STRUCTURE WITH PERKS -->
+    <section class="section">
+        <div class="section-title">등급 계층 & 핵심 혜택</div>
+
+        <div class="tiers-list">
+
+            <div class="tier-box spark">
+                <div class="tier-title">SPARK</div>
+                <div class="tier-sub">불씨 · 시작의 갈라리안</div>
+                <ul class="perk-list">
+                    <li>기본 상태</li>
+                    <li>GP 보너스 없음</li>
+                </ul>
+            </div>
+
+            <div class="tier-box breaker">
+                <div class="tier-title">BREAKER</div>
+                <div class="tier-sub">논리를 깨우는 각성자</div>
+                <ul class="perk-list">
+                    <li>댓글 충격파 강화</li>
+                    <li>GP +5%</li>
+                </ul>
+            </div>
+
+            <div class="tier-box vanguard">
+                <div class="tier-title">VANGUARD</div>
+                <div class="tier-sub">전투선의 선봉대</div>
+                <ul class="perk-list">
+                    <li>댓글 상단 노출 증가</li>
+                    <li>대표 뱃지 활성화</li>
+                </ul>
+            </div>
+
+            <div class="tier-box authority">
+                <div class="tier-title">AUTHORITY</div>
+                <div class="tier-sub">질서를 만드는 권력자</div>
+                <ul class="perk-list">
+                    <li>실버 오라</li>
+                    <li>발의글 추천 가중치 상승</li>
+                </ul>
+            </div>
+
+            <div class="tier-box dominion">
+                <div class="tier-title">DOMINION</div>
+                <div class="tier-sub">전장을 지배하는 존재</div>
+                <ul class="perk-list">
+                    <li>금빛 지배자 오라</li>
+                    <li>댓글 최상단 고정 48시간</li>
+                </ul>
+            </div>
+
+            <div class="tier-box apex">
+                <div class="tier-title">APEX</div>
+                <div class="tier-sub">초월자 · 에너지의 정점</div>
+                <ul class="perk-list">
+                    <li>전설 오라</li>
+                    <li>알고리즘 최우선 노출</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ABILITY STATS -->
+    <section class="section">
+        <div class="section-title">등급별 능력치</div>
+        <div class="card benefit-card">
+
+            <div class="benefit-item">
+                <span class="bt">SPARK</span><span class="bd">GP 0% · 기본</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="bt">BREAKER</span><span class="bd">GP +5% · 노출 +3%</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="bt">VANGUARD</span><span class="bd">GP +10% · 상단노출 +15%</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="bt">AUTHORITY</span><span class="bd">GP +18% · 추천가중치 +15%</span>
+            </div>
+
+            <div class="benefit-item">
+                <span class="bt">DOMINION</span><span class="bd">GP +28% · 최상단 48h</span>
+            </div>
+
+            <div class="benefit-item apex-benefit">
+                <span class="bt">APEX</span><span class="bd">GP +45% · 알고리즘 최우선</span>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ACHIEVEMENTS -->
+    <section class="section">
+        <div class="section-title">업적 도감</div>
+
+        <div class="card ach-card">
+            <div class="ach-item">
+                <span>🔥 첫 갈라 발의</span> <span class="ach-status done">획득</span>
+            </div>
+
+            <div class="ach-item">
+                <span>💬 댓글 50회 달성</span> <span class="ach-status done">획득</span>
+            </div>
+
+            <div class="ach-item">
+                <span>⚔️ 논쟁 상단 배치 5회</span> <span class="ach-status locked">미획득</span>
+            </div>
+
+            <div class="ach-item">
+                <span>📈 GP 10000 달성</span> <span class="ach-status locked">미획득</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- NAV -->
+    <nav class="nav">
+        <div class="nav-inner">
+            <img src="assets/icons/nav-home.svg" class="nav-item" data-target="index.html">
+            <img src="assets/icons/nav-search.svg" class="nav-item" data-target="search.html">
+            <img src="assets/icons/nav-write.svg" class="nav-item" data-target="write.html">
+            <img src="assets/icons/nav-random.svg" class="nav-item" data-target="random.html">
+            <img src="assets/icons/nav-user.svg" class="nav-item" data-target="mypage.html">
+        </div>
+    </nav>
+
+</div>
+
+
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/grade.js"></script>
+</body>
+</html>

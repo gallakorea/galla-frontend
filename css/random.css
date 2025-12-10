@@ -1,0 +1,193 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    overflow-x: hidden;
+    background:#000;
+    color:#fff;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+}
+
+#app {
+    width: 100%;
+    max-width: 480px;
+    padding-bottom: 160px;
+}
+
+/* HIDDEN */
+.hidden { display: none !important; }
+
+/* HEADER */
+.header {
+    background: #000;
+    border-bottom: 1px solid #111;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+}
+.header-inner {
+    height: 54px;
+    padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.logo { width: 105px; }
+
+/* HERO */
+.random-hero {
+    text-align: center;
+    padding: 26px 0 16px;
+}
+.tornado-icon { margin-bottom: 10px; }
+
+/* SLOT */
+.slot-area {
+    margin-top: 26px;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+.slot-box {
+    width: 96px;
+    height: 88px;
+    border-radius: 14px;
+    background: #111;
+    border: 1px solid #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+/* RANDOM BTN */
+.random-btn-wrap {
+    margin-top: 26px;
+    display: flex;
+    justify-content: center;
+}
+.random-btn {
+    width: 70%;
+    padding: 14px;
+    background: #2F80FF;
+    border-radius: 12px;
+    border:none;
+    color:#fff;
+    font-size:16px;
+    font-weight:700;
+}
+
+/* 즉시 랜덤 */
+.floating-random {
+    position: fixed;
+    right: 16px;
+    top: 46%;
+    z-index: 99999;
+    background:#FFE27A;
+    color:#111;
+    padding: 12px 18px;
+    border-radius: 22px;
+    border:none;
+    font-weight:700;
+    font-size:14px;
+}
+
+/* RESULT AREA */
+.result-area {
+    margin-top: 32px;
+    padding: 0 16px;
+}
+
+/* FEED (인덱스 동일 카드) */
+.random-feed .card {
+    background:#0d0d0d;
+    border:1px solid #1a1a1a;
+    border-radius:16px;
+    padding:16px;
+    margin:0 16px 22px;
+    color:#fff;
+}
+
+/* NAV */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left:50%;
+    transform:translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    padding: 12px 0;
+    background:#000;
+    border-top:1px solid #111;
+    display:flex;
+    justify-content: space-around;
+}
+
+.nav-item {
+    background:none;
+    border:none;
+    position:relative;
+}
+
+.nav-item img {
+    width: 26px;
+    filter:brightness(0) invert(1);
+}
+
+.nav-indicator {
+    width:100%;
+    height:3px;
+    background:transparent;
+    border-radius:999px;
+    position:absolute;
+    top:-6px;
+}
+
+.nav-item.active .nav-indicator {
+    background:var(--indicator-color,#FF4A4A);
+}
+
+/* HEADER FIX */
+.header {
+    background: #000;
+    border-bottom: 1px solid #111;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    width: 100%;
+}
+
+.header-inner {
+    height: 54px;
+    padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    white-space: nowrap; /* 줄바꿈 금지 */
+}
+
+.auth-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.auth-btns button {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #eee;
+    font-size: 12px;
+}
+
+.random-feed {
+    width: 100%;
+    padding: 0 0 60px 0;
+}
+
+.card {
+    margin: 16px 16px 26px !important;
+}

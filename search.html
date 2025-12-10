@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GALLA - 검색</title>
+
+  <link rel="stylesheet" href="./css/search.css" />
+</head>
+
+<body>
+<div id="app">
+
+        <!-- HEADER (index 동일 버전) -->
+        <header class="header">
+            <div class="header-inner">
+                <img src="assets/logo.png" alt="GALLA" class="logo" />
+                <div class="auth-buttons">
+                    <button class="open-modal" data-msg="로그인이 필요합니다">로그인</button>
+                    <button class="open-modal" data-msg="회원가입 준비 중입니다">회원가입</button>
+                </div>
+            </div>
+        </header>
+
+    <main class="page-main search-page">
+
+        <!-- 🔥 오늘의 핫트렌드 -->
+        <section class="section-block">
+            <h2 class="section-title">🔥 오늘의 핫 트렌드</h2>
+            <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
+
+            <div id="hot-trend-chips" class="hot-trend-chips"></div>
+        </section>
+
+        <!-- 🔮 AI 유행예감 -->
+        <section class="section-block">
+            <h2 class="section-title ai-title">🔮 AI 유행예감</h2>
+            <p class="section-sub">AI가 분석한 급상승 예감 이슈</p>
+
+            <div id="ai-trend-list" class="ai-trend-list"></div>
+        </section>
+
+        <!-- 🔍 검색 -->
+        <section class="section-block">
+            <h2 class="section-title">🔍 갈라치기 검색</h2>
+            <p class="section-sub">제목, 카테고리 기반 검색</p>
+
+            <form id="search-form" class="search-form">
+                <div class="search-input-wrap">
+                    <input id="search-input" class="search-input" placeholder="예: 야근 수당, 연애, 19금…" />
+                    <button class="search-submit-btn" type="submit">검색</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 📘 검색 결과 -->
+        <section class="section-block">
+            <h2 class="section-title">📘 검색 결과</h2>
+            <p class="section-sub" id="search-result-label">아직 검색 전입니다.</p>
+
+            <div id="search-results" class="search-results-grid"></div>
+        </section>
+    </main>
+
+
+    <!-- 🔥 BOTTOM NAV (아이콘 절대 변형 없음) -->
+    <nav class="bottom-nav">
+        <div class="nav-item" onclick="location.href='index.html'">
+            <img src="./assets/icons/nav-home.svg">
+        </div>
+
+        <div class="nav-item bottom-active">
+            <img src="./assets/icons/nav-search.svg">
+        </div>
+
+        <div class="nav-item" onclick="location.href='write.html'">
+            <img src="./assets/icons/nav-write.svg">
+        </div>
+
+        <div class="nav-item" onclick="location.href='random.html'">
+            <img src="./assets/icons/nav-random.svg">
+        </div>
+
+        <div class="nav-item" onclick="location.href='mypage.html'">
+            <img src="./assets/icons/nav-user.svg">
+        </div>
+    </nav>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/search.js"></script>
+</body>
+</html>

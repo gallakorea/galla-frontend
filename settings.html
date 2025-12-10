@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정 - GALLA</title>
+    <link rel="stylesheet" href="./css/settings.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="./assets/logo.png" class="logo">
+            <div class="header-title">설정</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+
+    <!-- SECTION: 계정 정보 -->
+    <section class="section">
+        <div class="section-title">계정 정보</div>
+
+        <div class="card profile-card">
+            <img src="./assets/logo.png" class="profile-img">
+            <div class="profile-info">
+                <div class="profile-name">익명의 사용자</div>
+                <div class="profile-desc">소개 문구가 여기에 표시됩니다.</div>
+            </div>
+            <div class="arrow">&gt;</div>
+        </div>
+
+        <div class="card list-card">
+            <div class="list-item">
+                <span>이메일</span>
+                <span class="value">user@galla.com</span>
+            </div>
+            <div class="list-item">
+                <span>전화번호</span>
+                <span class="value">010-1234-5678</span>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- SECTION: 지갑 / 정산 -->
+    <section class="section">
+        <div class="section-title">지갑 / 정산</div>
+
+        <div class="card wallet-card">
+            <div class="wallet-row">
+                <span>총 후원 수익</span>
+                <span class="num">₩ 1,240,000</span>
+            </div>
+            <div class="wallet-row">
+                <span>출금 가능 금액</span>
+                <span class="num">₩ 840,000</span>
+            </div>
+
+            <button class="primary-btn">출금 요청</button>
+        </div>
+
+        <div class="card single-link">
+            정산 내역 <span class="arrow">&gt;</span>
+        </div>
+    </section>
+
+
+    <!-- SECTION: 기부 현황 -->
+    <section class="section">
+        <div class="section-title">기부 현황</div>
+
+        <div class="card wallet-card">
+            <div class="wallet-row">
+                <span>내가 후원한 금액</span>
+                <span class="num">₩ 92,000</span>
+            </div>
+
+            <button class="primary-btn">기부 사용처 보기</button>
+        </div>
+    </section>
+
+
+    <!-- SECTION: 나의 활동 통계 -->
+    <section class="section">
+        <div class="section-title">나의 활동 통계</div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-num">12</div>
+                <div class="stat-label">🔥 만든 갈라</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-num">521</div>
+                <div class="stat-label">👍 찬성 수</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-num">198</div>
+                <div class="stat-label">👎 반대 수</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-num">74</div>
+                <div class="stat-label">💬 댓글 수</div>
+            </div>
+        </div>
+
+        <div class="card report-card enhanced-galla-type" onclick="location.href='galla-type.html'">
+
+    <div class="report-title">나의 갈라치기 성향</div>
+
+    <!-- 메인 유형 배지 -->
+    <div class="galla-type-badge">🔥 논리적 개척자형</div>
+
+    <!-- 찬반 비율 -->
+    <div class="ratio-box">
+        <div class="ratio-item">
+            <div class="ratio-label">찬성</div>
+            <div class="ratio-value pro">62%</div>
+        </div>
+        <div class="ratio-item">
+            <div class="ratio-label">반대</div>
+            <div class="ratio-value con">38%</div>
+        </div>
+    </div>
+
+    <!-- 핵심 카테고리 -->
+    <div class="categories">
+        선호 주제: 연애·결혼 / 직장·경력 / 생활·일상
+    </div>
+
+    <!-- 유형 설명 -->
+    <div class="type-desc">
+        새로운 이슈에 도전하며, 감정보다 논리를 우선하는 스타일입니다.
+    </div>
+
+    <!-- MBTI 스타일 요약 태그 -->
+    <div class="galla-tags">
+        <span>#논리적</span>
+        <span>#새로운이슈성향</span>
+        <span>#고집은약간</span>
+        <span>#직설화법</span>
+    </div>
+
+    <div class="arrow more">&gt;</div>
+</div>
+    </section>
+
+
+
+    <!-- ⭐⭐⭐ SECTION: 등급 · 성장 (Grade) → grade.html -->
+    <section class="section">
+        <div class="section-title">등급 · 성장</div>
+
+        <div class="card single-link" onclick="location.href='grade.html'">
+            내 등급 보기 <span class="arrow">&gt;</span>
+        </div>
+    </section>
+
+
+
+    <!-- ⭐⭐⭐ SECTION: 데일리 미션 (Quest) → quest.html -->
+    <section class="section">
+        <div class="section-title">데일리 미션</div>
+
+        <div class="card single-link" onclick="location.href='quest.html'">
+            오늘의 미션 보기 <span class="arrow">&gt;</span>
+        </div>
+    </section>
+
+
+
+    <!-- SECTION: 알림 설정 -->
+    <section class="section">
+        <div class="section-title">알림 설정</div>
+
+        <div class="card list-card toggles">
+            <div class="list-item">
+                <span>팔로우한 발의자 새 이슈</span>
+                <label class="switch"><input type="checkbox" checked><span class="slider"></span></label>
+            </div>
+
+            <div class="list-item">
+                <span>내 댓글에 새 댓글</span>
+                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            </div>
+
+            <div class="list-item">
+                <span>시스템 공지</span>
+                <label class="switch"><input type="checkbox"><span class="slider"></span></label>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- SECTION: 보안 설정 -->
+    <section class="section">
+        <div class="section-title">보안</div>
+
+        <div class="card list-card">
+            <div class="list-item">비밀번호 변경 <span class="arrow">&gt;</span></div>
+            <div class="list-item">로그인 기록 <span class="arrow">&gt;</span></div>
+            <div class="list-item logout">로그아웃</div>
+        </div>
+    </section>
+
+
+    <!-- SECTION: 고객센터 -->
+    <section class="section">
+        <div class="section-title">앱 정보 / 고객센터</div>
+
+        <div class="card list-card">
+            <div class="list-item">문의하기 <span class="arrow">&gt;</span></div>
+            <div class="list-item">버전 정보 <span class="value">v1.0.0</span></div>
+            <div class="list-item">서비스 이용약관 <span class="arrow">&gt;</span></div>
+            <div class="list-item">개인정보 처리방침 <span class="arrow">&gt;</span></div>
+        </div>
+    </section>
+
+
+    <!-- NAVIGATION -->
+    <nav class="nav">
+        <div class="nav-inner">
+
+            <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html"/>
+            <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html"/>
+            <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html"/>
+            <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html"/>
+            <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html"/>
+
+        </div>
+    </nav>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/settings.js"></script>
+</body>
+</html>

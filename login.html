@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 - GALLA</title>
+    <link rel="stylesheet" href="./css/login.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">로그인</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- LOGIN GUIDE -->
+    <div class="login-guide">
+        다시 만나 반갑습니다!<br>
+        계정으로 로그인하고 GP, 활동 기록, 보상을 이어가세요.
+    </div>
+
+    <!-- FORM -->
+    <section class="section">
+
+        <!-- EMAIL -->
+        <div class="input-group">
+            <div class="input-label">아이디 (이메일)</div>
+            <input type="email" id="email" class="input-field" placeholder="example@galla.com">
+        </div>
+
+        <!-- PASSWORD -->
+        <div class="input-group">
+            <div class="input-label">비밀번호</div>
+            <input type="password" id="password" class="input-field" placeholder="비밀번호 입력">
+        </div>
+
+        <!-- PASSWORD RESET -->
+        <div class="forgot-row">
+            <span onclick="location.href='reset.html'">비밀번호 재설정 ></span>
+        </div>
+
+        <!-- LOGIN BUTTON -->
+        <button class="login-btn" id="loginBtn">로그인</button>
+
+        <!-- SIGNUP LINK -->
+        <div class="signup-link">
+            계정이 없나요? <span onclick="location.href='signup.html'">회원가입</span>
+        </div>
+
+    </section>
+
+    <!-- NAVIGATION -->
+    <nav class="bottom-nav">
+        <button class="nav-item" onclick="location.href='index.html'">
+            <img src="./assets/icons/nav-home.svg">
+        </button>
+        <button class="nav-item" onclick="location.href='search.html'">
+            <img src="./assets/icons/nav-search.svg">
+        </button>
+        <button class="nav-item" onclick="location.href='write.html'">
+            <img src="./assets/icons/nav-write.svg">
+        </button>
+        <button class="nav-item" onclick="location.href='random.html'">
+            <img src="./assets/icons/nav-random.svg">
+        </button>
+        <button class="nav-item active" onclick="location.href='mypage.html'">
+            <img src="./assets/icons/nav-user.svg">
+        </button>
+    </nav>
+
+</div>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/login.js"></script>
+
+</body>
+</html>

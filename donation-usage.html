@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기부 사용처 - GALLA</title>
+    <link rel="stylesheet" href="./css/donation-usage.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">기부 사용처</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- SUMMARY -->
+    <section class="summary-section">
+        <div class="summary-card">
+            <div class="sum-row">
+                <span>총 기부 금액</span>
+                <span class="num">₩ 92,000</span>
+            </div>
+            <div class="sum-row">
+                <span>총 기부 횟수</span>
+                <span class="num">6회</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="history-section">
+        <div class="section-title">기부금 사용 내역</div>
+
+        <div class="usage-card">
+            <div class="usage-top">
+                <span class="usage-place">유기동물 보호센터</span>
+                <span class="usage-amount">₩ 20,000</span>
+            </div>
+            <div class="usage-desc">유기견 사료 및 의료비 지원</div>
+            <div class="usage-date">2025.02.02 사용</div>
+        </div>
+
+        <div class="usage-card">
+            <div class="usage-top">
+                <span class="usage-place">아동 복지 단체</span>
+                <span class="usage-amount">₩ 30,000</span>
+            </div>
+            <div class="usage-desc">위기아동 생활 지원</div>
+            <div class="usage-date">2025.01.15 사용</div>
+        </div>
+
+        <div class="usage-card">
+            <div class="usage-top">
+                <span class="usage-place">환경 보호 단체</span>
+                <span class="usage-amount">₩ 12,000</span>
+            </div>
+            <div class="usage-desc">정화 봉사 물품 구입</div>
+            <div class="usage-date">2024.12.11 사용</div>
+        </div>
+
+    </section>
+
+</div>
+
+<!-- ⭐ donation-usage 전용 네비게이터 -->
+<nav class="bottom-nav-usage">
+    <img src="./assets/icons/nav-home.svg" class="nav-icon-usage">
+    <img src="./assets/icons/nav-search.svg" class="nav-icon-usage">
+    <img src="./assets/icons/nav-write.svg" class="nav-icon-usage">
+    <img src="./assets/icons/nav-random.svg" class="nav-icon-usage">
+    <img src="./assets/icons/nav-user.svg" class="nav-icon-usage active">
+</nav>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+
+</body>
+</html>

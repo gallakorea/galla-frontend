@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출금 요청 완료 - GALLA</title>
+    <link rel="stylesheet" href="./css/withdraw-done.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">출금 요청 완료</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- ICON -->
+    <div class="done-icon">
+        <svg width="70" height="70" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="white" stroke-width="2"/>
+            <path d="M8 12l3 3 5-6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    </div>
+
+    <!-- TEXT -->
+    <div class="done-title">출금 요청이 접수되었습니다!</div>
+    <div class="done-desc">
+        GALLA는 매월 1회 정산을 진행합니다.<br>
+        이번에 요청하신 금액은 다음 정산월에 입금됩니다.
+    </div>
+
+    <!-- BUTTON -->
+    <button class="done-btn" onclick="location.href='settings.html'">
+        설정으로 돌아가기
+    </button>
+
+</div>
+
+
+<!-- ============================= -->
+<!-- ⭐ 네비게이터 (index와 100% 동일) -->
+<!-- ============================= -->
+<nav class="nav">
+    <div class="nav-inner">
+
+        <img src="assets/icons/nav-home.svg"
+             class="nav-icon nav-item"
+             data-target="index.html"/>
+
+        <img src="assets/icons/nav-search.svg"
+             class="nav-icon nav-item"
+             data-target="search.html"/>
+
+        <img src="assets/icons/nav-write.svg"
+             class="nav-icon nav-item"
+             data-target="write.html"/>
+
+        <img src="assets/icons/nav-random.svg"
+             class="nav-icon nav-item"
+             data-target="random.html"/>
+
+        <img src="assets/icons/nav-user.svg"
+             class="nav-icon nav-item active"
+             data-target="mypage.html"/>
+
+    </div>
+</nav>
+
+
+<script>
+    // 모든 네비 아이콘 클릭 이동 기능
+    document.querySelectorAll('.nav-item').forEach(icon => {
+        icon.addEventListener('click', () => {
+            const target = icon.dataset.target;
+            if (target) location.href = target;
+        });
+    });
+</script>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+
+</body>
+</html>

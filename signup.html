@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 - GALLA</title>
+
+    <!-- index.css를 가장 먼저 적용해야 네비게이터가 정상 오버라이드됨 -->
+    <link rel="stylesheet" href="./css/index.css">
+    <link rel="stylesheet" href="./css/signup.css">
+</head>
+
+<body>
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <div class="header-title">회원가입</div>
+            <div class="header-spacer"></div>
+        </div>
+    </header>
+
+    <!-- GUIDE BLOCK -->
+    <div class="signup-guide">
+        GALLA는 여론이 에너지(GP)로 변환되는 플랫폼입니다.<br>
+        모든 정보를 입력하면 추천·보상 기능이 강화되고,<br>
+        활동으로 획득한 GP는 향후 수익화 프로그램 참여에도 사용됩니다.
+    </div>
+
+    <!-- FORM SECTION -->
+    <section class="section">
+
+        <!-- EMAIL -->
+        <div class="input-group">
+            <div class="input-label">아이디 (이메일 주소) <span class="req">*</span></div>
+            <input type="email" id="email" class="input-field" placeholder="example@galla.com">
+        </div>
+
+        <!-- PASSWORD -->
+        <div class="input-group">
+            <div class="input-label">비밀번호 <span class="req">*</span></div>
+            <input type="password" id="password" class="input-field" placeholder="비밀번호 입력">
+        </div>
+
+        <!-- PASSWORD CHECK -->
+        <div class="input-group">
+            <div class="input-label">비밀번호 확인 <span class="req">*</span></div>
+            <input type="password" id="password2" class="input-field" placeholder="비밀번호 다시 입력">
+        </div>
+
+        <!-- NICKNAME -->
+        <div class="input-group">
+            <div class="input-label">닉네임 (활동명) <span class="req">*</span></div>
+            <input type="text" id="nickname" class="input-field" placeholder="갈라에서 사용할 이름">
+        </div>
+
+        <!-- PHONE -->
+        <div class="input-group">
+            <div class="input-label">
+                휴대폰 번호 <span class="sub">(선택 — 정산 시 필요)</span>
+            </div>
+            <input type="tel" id="phone" class="input-field" placeholder="010-0000-0000">
+        </div>
+
+        <!-- REGION -->
+        <div class="form-group">
+            <label class="form-label">사는 지역 (선택)</label>
+
+<div class="region-grid">
+    <div class="region-chip">서울</div>
+    <div class="region-chip">부산</div>
+    <div class="region-chip">대구</div>
+    <div class="region-chip">인천</div>
+    <div class="region-chip">광주</div>
+    <div class="region-chip">대전</div>
+    <div class="region-chip">울산</div>
+    <div class="region-chip">세종</div>
+    <div class="region-chip">경기</div>
+    <div class="region-chip">강원</div>
+    <div class="region-chip">충북</div>
+    <div class="region-chip">충남</div>
+    <div class="region-chip">전북</div>
+    <div class="region-chip">전남</div>
+    <div class="region-chip">경북</div>
+    <div class="region-chip">경남</div>
+    <div class="region-chip">제주</div>
+
+    <!-- 🔥 새로 추가된 해외 -->
+    <div class="region-chip">해외</div>
+</div>
+
+            <div class="region-selected-text">선택한 지역: 
+                <span id="selectedRegion">없음</span>
+            </div>
+        </div>
+
+        <!-- ANONYMOUS TOGGLE -->
+        <div class="toggle-row">
+            <span>익명으로 활동하기</span>
+            <label class="switch">
+                <input type="checkbox" id="anonymous">
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <!-- GP BONUS -->
+        <div class="reward-box">
+            모든 항목을 입력하면 <span class="reward-gp">+50 GP</span> 지급!
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        <button class="submit-btn" id="signupBtn">회원가입</button>
+
+    </section>
+
+</div>
+
+<!-- ⭐ NAV (index.html과 100% 동일) -->
+<nav class="nav">
+    <div class="nav-inner">
+        <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html"/>
+        <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html"/>
+        <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html"/>
+        <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html"/>
+        <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html"/>
+    </div>
+</nav>
+
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script src="./js/signup.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,231 @@
+/* -------------------------------------------------
+   ADMIN PAGE (관리자 대시보드)
+   - 통계 카드
+   - 탭(신고 / 유저 / 이슈)
+   - 리스트 테이블
+   - 검색 / 필터
+   - 상세 모달
+--------------------------------------------------- */
+
+.admin-page {
+    padding: 90px 18px 120px;
+}
+
+/* -------------------------------------------------
+   PAGE TITLE
+--------------------------------------------------- */
+.admin-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 22px;
+}
+
+/* -------------------------------------------------
+   DASHBOARD SUMMARY CARDS
+--------------------------------------------------- */
+.admin-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 26px;
+}
+
+.stat-card {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.stat-card-title {
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+
+.stat-card-value {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+/* -------------------------------------------------
+   TABS
+--------------------------------------------------- */
+.admin-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.admin-tab {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    font-size: 13.5px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.admin-tab.active {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+/* -------------------------------------------------
+   SEARCH BOX
+--------------------------------------------------- */
+.admin-search-box {
+    margin-bottom: 18px;
+}
+
+.admin-search-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: #fff;
+}
+
+.admin-search-input:focus {
+    outline: none;
+    border-color: var(--accent-yellow);
+}
+
+/* -------------------------------------------------
+   LIST TABLE
+--------------------------------------------------- */
+.admin-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.admin-row {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.admin-row-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.admin-row-meta {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 10px;
+}
+
+.admin-row-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    background: #222;
+    border: 1px solid #333;
+    cursor: pointer;
+}
+
+.btn-approve {
+    color: var(--accent-green);
+}
+
+.btn-reject {
+    color: var(--accent-red);
+}
+
+.btn-detail {
+    color: var(--accent-blue);
+}
+
+/* -------------------------------------------------
+   MODAL
+--------------------------------------------------- */
+.admin-modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(10,10,10,0.65);
+    visibility: hidden;
+    opacity: 0;
+    transition: 0.25s ease;
+    z-index: 800;
+}
+
+.admin-modal-overlay.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.admin-modal {
+    position: fixed;
+    top: 50%; left: 50%;
+    width: 85%;
+    max-width: 420px;
+    background: #141414;
+    border-radius: 16px;
+    padding: 20px;
+    transform: translate(-50%, -40%);
+    opacity: 0;
+    transition: .3s ease;
+    z-index: 900;
+}
+
+.admin-modal.active {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+}
+
+.admin-modal h3 {
+    font-size: 18px;
+    margin-bottom: 12px;
+}
+
+.admin-modal p {
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 16px;
+    line-height: 1.45;
+}
+
+.admin-modal-btns {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-modal-btns button {
+    flex: 1;
+    padding: 12px 0;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #222;
+    border: 1px solid #333;
+}
+
+.modal-close {
+    color: var(--accent-yellow);
+}
+
+.modal-action {
+    color: var(--accent-red);
+}
+
+/* -------------------------------------------------
+   Responsive
+--------------------------------------------------- */
+@media (min-width: 768px) {
+    .admin-page {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+}
