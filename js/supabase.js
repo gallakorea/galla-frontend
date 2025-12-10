@@ -1,6 +1,5 @@
-// supabase.js (Cloudflare-safe version)
+// supabase.js
 
-// Supabase 로드될 때까지 대기 (중요)
 function waitForSupabase() {
     return new Promise(resolve => {
         const timer = setInterval(() => {
@@ -15,12 +14,12 @@ function waitForSupabase() {
 (async () => {
     await waitForSupabase();
 
-const SUPABASE_URL = "https://bidqaquputnhkqepvdzrr.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_XrZu5f09bGbs2SDAZ_fw_uJVAq-9E";
+    const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";  // ← 오타 수정됨
+    const SUPABASE_ANON_KEY = "sb_publishable_XrZu5f09bGbs2SDAZ_fw_uJVAq-9E";
 
-const { createClient } = window.supabase;
+    const { createClient } = window.supabase;
 
-window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     console.log("Supabase 클라이언트 준비됨:", window.supabaseClient);
 })();
