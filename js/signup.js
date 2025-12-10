@@ -1,21 +1,18 @@
 // signup.js
 
-function waitForClient() {
-    return new Promise(resolve => {
-        const timer = setInterval(() => {
-            if (window.supabaseClient) {
-                clearInterval(timer);
-                resolve();
-            }
-        }, 20);
-    });
+async function waitForClient() {
+    console.log("[signup.js] supabaseClient 준비 대기중...");
+    while (!window.supabaseClient) {
+        await new Promise(r => setTimeout(r, 30));
+    }
+    console.log("[signup.js] supabaseClient 준비됨");
 }
 
 (async () => {
     await waitForClient();
-
     const supabase = window.supabaseClient;
 
+    // 요소 선택
     const emailInput = document.getElementById("email");
     const pwInput = document.getElementById("password");
     const pw2Input = document.getElementById("password2");
@@ -35,7 +32,6 @@ function waitForClient() {
     });
 
     signupBtn.addEventListener("click", async () => {
-
         const email = emailInput.value.trim();
         const password = pwInput.value.trim();
         const password2 = pw2Input.value.trim();
@@ -54,6 +50,8 @@ function waitForClient() {
         }
 
         try {
+            console.log("[signup.js] Auth.signUp 요청 시작");
+
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password
@@ -69,6 +67,8 @@ function waitForClient() {
                 alert("유저 생성 오류");
                 return;
             }
+
+            console.log("[signup.js] Auth 성공 — userId:", userId);
 
             const { error: profileError } = await supabase
                 .from("user_profiles")
@@ -93,6 +93,7 @@ function waitForClient() {
 
         } catch (err) {
             alert("에러 발생: " + err.message);
+            console.error(err);
         }
     });
 })();
