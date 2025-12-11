@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="./css/withdraw-done.css">
 </head>
 
-<body>
+<body data-page="mypage">
 
 <div id="app">
 
@@ -32,7 +32,7 @@
     <div class="done-title">출금 요청이 접수되었습니다!</div>
     <div class="done-desc">
         GALLA는 매월 1회 정산을 진행합니다.<br>
-        이번에 요청하신 금액은 다음 정산월에 입금됩니다.
+        요청하신 금액은 다음 정산월에 입금됩니다.
     </div>
 
     <!-- BUTTON -->
@@ -44,39 +44,57 @@
 
 
 <!-- ============================= -->
-<!-- ⭐ 네비게이터 (index와 완전 동일) -->
+<!-- ⭐ 통일된 네비게이터 -->
 <!-- ============================= -->
 <nav class="nav">
     <div class="nav-inner">
 
-        <img src="assets/icons/nav-home.svg"
-             class="nav-icon nav-item"
-             data-target="index.html"/>
-
-        <img src="assets/icons/nav-search.svg"
-             class="nav-icon nav-item"
-             data-target="search.html"/>
-
-        <img src="assets/icons/nav-write.svg"
-             class="nav-icon nav-item"
-             data-target="write.html"/>
-
-        <img src="assets/icons/nav-random.svg"
-             class="nav-icon nav-item"
-             data-target="random.html"/>
-
-        <img src="assets/icons/nav-user.svg"
-             class="nav-icon nav-item active"
-             data-target="mypage.html"/>
+        <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
+        <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
+        <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
+        <img src="assets/icons/nav-random.svg" class="nav-icon nav-item" data-target="random.html">
+        <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
 
     </div>
 </nav>
 
 
+<!-- ============================= -->
+<!-- 로그인 여부 체크 + supabase wait -->
+<!-- ============================= -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./js/supabase.js"></script>
+
 <script>
-/* ==========================================
-   🔹 뒤로 가기 : 이전 페이지 + 스크롤 위치 복원
-========================================== */
+/* Supabase 로딩 대기 */
+function waitForSupabaseClient() {
+    return new Promise(resolve => {
+        const timer = setInterval(() => {
+            if (window.supabaseClient) {
+                clearInterval(timer);
+                resolve(window.supabaseClient);
+            }
+        }, 20);
+    });
+}
+
+/* 비로그인 접근 차단 */
+(async () => {
+    const supabase = await waitForSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session?.user) {
+        alert("로그인이 필요한 서비스입니다.");
+        location.href = "login.html";
+    }
+})();
+</script>
+
+
+<!-- ============================= -->
+<!-- 뒤로가기 + 스크롤 복원 -->
+<!-- ============================= -->
+<script>
 function goBackWithScroll() {
     sessionStorage.setItem("scrollRestore", "on");
     history.back();
@@ -97,11 +115,13 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener("scroll", () => {
     sessionStorage.setItem("lastScrollPosition", window.scrollY);
 });
+</script>
 
 
-/* ==========================================
-   🔹 네비게이터 아이콘 클릭 → 페이지 이동
-========================================== */
+<!-- ============================= -->
+<!-- 네비게이터 이동 -->
+<!-- ============================= -->
+<script>
 document.querySelectorAll(".nav-item").forEach(icon => {
     icon.addEventListener("click", () => {
         const target = icon.dataset.target;
@@ -109,9 +129,6 @@ document.querySelectorAll(".nav-item").forEach(icon => {
     });
 });
 </script>
-
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
 
 </body>
 </html>

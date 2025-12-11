@@ -4,21 +4,25 @@
   <meta charset="UTF-8" />
   <title>새 갈라 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <link rel="stylesheet" href="./css/write.css" />
+  <link rel="stylesheet" href="./css/index.css" />
 </head>
 
-<body>
-<div class="app-root">
+<body data-page="write">
+<div id="app">
 
   <!-- HEADER -->
   <header class="header">
-    <div class="header-inner">
-      <img src="./assets/logo.png" alt="GALLA" class="logo" />
-      <div class="auth-buttons">
-        <button class="open-modal" data-msg="로그인이 필요합니다">로그인</button>
-        <button class="open-modal" data-msg="회원가입 준비 중입니다">회원가입</button>
+      <div class="header-inner">
+
+          <img src="./assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'">
+
+          <div class="auth-buttons" id="authArea">
+              <button onclick="location.href='login.html'">로그인</button>
+              <button onclick="location.href='signup.html'">회원가입</button>
+          </div>
       </div>
-    </div>
   </header>
 
   <!-- MAIN -->
@@ -42,7 +46,7 @@
       </section>
 
       <!-- FORM -->
-      <form class="write-form">
+      <form class="write-form" id="writeForm">
 
         <!-- Category -->
         <div class="field-block">
@@ -66,7 +70,7 @@
         <!-- Title -->
         <div class="field-block">
           <label class="field-label">제목 (필수)</label>
-          <input id="title" class="input-field" maxlength="80" required />
+          <input id="title" maxlength="80" class="input-field" required />
         </div>
 
         <!-- One-line -->
@@ -78,6 +82,7 @@
         <!-- Thumbnail -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일 (필수)</label>
+
           <input type="file" id="thumbnail" accept="image/*" hidden required />
           <button type="button" id="thumbnailBtn" class="file-btn input-field">
             썸네일 업로드
@@ -101,7 +106,7 @@
           </label>
 
           <textarea 
-            id="description" 
+            id="description"
             class="input-field textarea"
             maxlength="500"
             required></textarea>
@@ -131,37 +136,32 @@
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
     <button class="nav-item" data-target="index.html">
-      <div class="nav-indicator"></div>
       <img src="./assets/icons/nav-home.svg" />
     </button>
 
     <button class="nav-item" data-target="search.html">
-      <div class="nav-indicator"></div>
       <img src="./assets/icons/nav-search.svg" />
     </button>
 
     <button class="nav-item active" data-target="write.html">
-      <div class="nav-indicator"></div>
       <img src="./assets/icons/nav-write.svg" />
     </button>
 
     <button class="nav-item" data-target="random.html">
-      <div class="nav-indicator"></div>
       <img src="./assets/icons/nav-random.svg" />
     </button>
 
     <button class="nav-item" data-target="mypage.html">
-      <div class="nav-indicator"></div>
       <img src="./assets/icons/nav-user.svg" />
     </button>
   </nav>
 
 </div>
 
+<!-- =========================== -->
+<!-- 네비게이션 -->
+<!-- =========================== -->
 <script>
-/* ===========================
-   네비게이션 전부 작동하게
-=========================== */
 document.querySelectorAll(".nav-item").forEach(btn => {
   btn.addEventListener("click", () => {
     const t = btn.dataset.target;
@@ -170,8 +170,46 @@ document.querySelectorAll(".nav-item").forEach(btn => {
 });
 </script>
 
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
+<!-- =========================== -->
+<!-- Supabase -->
+<!-- =========================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./js/supabase.js"></script>
+
+<script>
+/* supabase 로딩 대기 */
+function waitForSupabase() {
+  return new Promise(resolve => {
+    const t = setInterval(() => {
+      if (window.supabaseClient) {
+        clearInterval(t);
+        resolve(window.supabaseClient);
+      }
+    }, 20);
+  });
+}
+
+(async () => {
+  const supabase = await waitForSupabase();
+  const { data } = await supabase.auth.getSession();
+
+  const authArea = document.getElementById("authArea");
+
+  /* 로그인 여부 */
+  if (!data.session?.user) {
+      authArea.innerHTML = `
+          <button onclick="location.href='login.html'">로그인</button>
+          <button onclick="location.href='signup.html'">회원가입</button>
+      `;
+  } else {
+      /* 로그인 상태 → 프로필 버튼으로 전환 */
+      authArea.innerHTML = `
+          <button onclick="location.href='mypage.html'">내 프로필</button>
+      `;
+  }
+})();
+</script>
+
 <script src="./js/write.js"></script>
 
 </body>

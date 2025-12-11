@@ -17,9 +17,15 @@
     <header class="header">
         <div class="header-inner">
             <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
-            <div class="auth-btns">
-                <button class="open-modal" data-msg="로그인이 필요합니다">로그인</button>
-                <button class="open-modal" data-msg="회원가입이 필요합니다">회원가입</button>
+
+            <!-- 로그인/로그아웃 자동 전환 -->
+            <div class="auth-buttons" id="authButtons">
+                <!-- 로그인 전 -->
+                <button onclick="location.href='login.html'" id="loginBtn">로그인</button>
+                <button onclick="location.href='signup.html'" id="signupBtn">회원가입</button>
+
+                <!-- 로그인 후 -->
+                <button onclick="location.href='mypage.html'" id="mypageBtn" style="display:none;">마이페이지</button>
             </div>
         </div>
     </header>
@@ -49,7 +55,7 @@
         <button id="randomBtn" class="random-btn">🎲 RANDOM 뽑기</button>
     </div>
 
-    <!-- 즉시 랜덤 버튼 (스크롤 시 표시) -->
+    <!-- 즉시 랜덤 버튼 -->
     <button id="floatingRandom" class="floating-random hidden">
         ⭐ 즉시 랜덤
     </button>
@@ -95,11 +101,65 @@
 <script src="js/supabase.js"></script>
 <script src="js/random.js"></script>
 
+<!-- ⭐ LOGIN 상태 UI 반영 -->
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+
+    const loginBtn = document.getElementById("loginBtn");
+    const signupBtn = document.getElementById("signupBtn");
+    const mypageBtn = document.getElementById("mypageBtn");
+
+    if (session?.user) {
+        // 로그인 상태 → 마이페이지 표시
+        loginBtn.style.display = "none";
+        signupBtn.style.display = "none";
+        mypageBtn.style.display = "inline-block";
+    } else {
+        // 로그아웃 상태 → 로그인/회원가입 표시
+        loginBtn.style.display = "inline-block";
+        signupBtn.style.display = "inline-block";
+        mypageBtn.style.display = "none";
+    }
+});
+</script>
+
+<!-- ⭐ RANDOM 버튼 클릭 시 로그인 필수 -->
+<script>
+document.getElementById("randomBtn").addEventListener("click", async () => {
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session?.user) {
+        alert("랜덤 뽑기는 로그인 후 이용 가능합니다.");
+        location.href = "login.html";
+        return;
+    }
+
+    // 로그인되어 있으면 실제 랜덤 실행
+    runRandom();
+});
+</script>
+
 <!-- ⭐ NAVIGATION HANDLER -->
 <script>
     document.querySelectorAll(".nav-item").forEach(item => {
-        item.addEventListener("click", () => {
+        item.addEventListener("click", async () => {
             const target = item.dataset.target;
+
+            // write / random / mypage → 로그인 필수
+            const needLogin = ["write.html", "random.html", "mypage.html"];
+
+            if (needLogin.includes(target)) {
+                const { data } = await supabase.auth.getSession();
+
+                if (!data.session?.user) {
+                    alert("로그인이 필요한 페이지입니다.");
+                    location.href = "login.html";
+                    return;
+                }
+            }
+
             if (target) location.href = target;
         });
     });

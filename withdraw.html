@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출금 요청 - GALLA</title>
+
     <link rel="stylesheet" href="./css/withdraw.css">
 
     <style>
         /* 네비게이션 아이콘 반전 방지 */
         nav.bottom-nav img,
-        nav.bottom-nav button img,
         .bottom-nav img,
         .bottom-nav .nav-item img {
             filter: none !important;
@@ -20,7 +20,7 @@
     </style>
 </head>
 
-<body>
+<body data-page="mypage">
 
 <div id="app">
 
@@ -138,10 +138,41 @@
 </nav>
 
 
+<!-- ========================================== -->
+<!-- Supabase + 로그인 체크 + 로딩 대기 -->
+<!-- ========================================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./js/supabase.js"></script>
+
 <script>
-/* ==========================================
-   🔹 뒤로 가기(스크롤 위치 포함)
-========================================== */
+function waitForSupabaseClient() {
+    return new Promise(resolve => {
+        const t = setInterval(() => {
+            if (window.supabaseClient) {
+                clearInterval(t);
+                resolve(window.supabaseClient);
+            }
+        }, 20);
+    });
+}
+
+/* 로그인 안 되어 있으면 접근 차단 */
+(async () => {
+    const supabase = await waitForSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session?.user) {
+        alert("로그인이 필요한 서비스입니다.");
+        location.href = "login.html";
+    }
+})();
+</script>
+
+
+<!-- ========================================== -->
+<!-- 뒤로가기 + 스크롤 복원 -->
+<!-- ========================================== -->
+<script>
 function goBackWithScroll() {
     sessionStorage.setItem("scrollRestore", "on");
     history.back();
@@ -149,11 +180,9 @@ function goBackWithScroll() {
 
 document.addEventListener("DOMContentLoaded", () => {
     const restore = sessionStorage.getItem("scrollRestore");
-
     if (restore === "on") {
         const pos = sessionStorage.getItem("lastScrollPosition") || 0;
         window.scrollTo(0, Number(pos));
-
         sessionStorage.removeItem("scrollRestore");
         sessionStorage.removeItem("lastScrollPosition");
     }
@@ -162,21 +191,22 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener("scroll", () => {
     sessionStorage.setItem("lastScrollPosition", window.scrollY);
 });
+</script>
 
 
-/* ==========================================
-   🔹 네비 아이콘 → 링크 이동
-========================================== */
+<!-- ========================================== -->
+<!-- 네비게이션 이동 -->
+<!-- ========================================== -->
+<script>
 document.querySelectorAll(".nav-item").forEach(btn => {
     btn.addEventListener("click", () => {
-        const target = btn.dataset.target;
-        if (target) location.href = target;
+        const to = btn.dataset.target;
+        if (to) location.href = to;
     });
 });
 </script>
 
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
+<!-- 실제 출금 로직 -->
 <script src="./js/withdraw.js"></script>
 
 </body>

@@ -4,59 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>계정 정보 수정 - GALLA</title>
+
     <link rel="stylesheet" href="./css/account-edit.css">
-
-    <style>
-        /* 네비 기본 스타일 (공통) */
-        nav.nav {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 480px;
-            background: #000;
-            border-top: 1px solid #1a1a1a;
-            padding: 10px 0;
-            display: flex;
-            justify-content: center;
-            z-index: 999;
-        }
-
-        .nav-inner {
-            width: 100%;
-            max-width: 480px;
-            display: flex;
-            justify-content: space-around;
-        }
-
-        .nav-icon {
-            width: 26px;
-            filter: brightness(0) invert(1);
-            opacity: 0.8;
-            cursor: pointer;
-        }
-
-        .nav-icon.active {
-            opacity: 1;
-        }
-
-        /* 페이지 하단 공간 확보 */
-        #app {
-            padding-bottom: 110px;
-        }
-    </style>
+    <link rel="stylesheet" href="./css/index.css">
 </head>
 
-<body>
+<body data-page="account-edit">
 
 <div id="app">
 
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
+
             <div class="back-btn" onclick="history.back()">←</div>
+
             <div class="header-title">계정 정보 수정</div>
+
             <div class="header-spacer"></div>
         </div>
     </header>
@@ -75,35 +39,35 @@
 
         <div class="input-group">
             <div class="input-label">닉네임</div>
-            <input type="text" class="input-field" value="익명의 사용자">
+            <input type="text" id="nickname" class="input-field">
         </div>
 
         <div class="input-group">
             <div class="input-label">소개 문구</div>
-            <textarea class="input-field textarea">소개 문구가 여기에 표시됩니다.</textarea>
+            <textarea id="bio" class="input-field textarea"></textarea>
         </div>
 
         <div class="input-group readonly">
             <div class="input-label">이메일</div>
-            <div class="input-value">user@galla.com</div>
+            <div class="input-value" id="emailField"></div>
         </div>
 
         <div class="input-group readonly">
             <div class="input-label">전화번호</div>
-            <div class="input-value">010-1234-5678</div>
+            <div class="input-value" id="phoneField"></div>
         </div>
 
     </section>
 
     <!-- SAVE BUTTON -->
     <section class="section">
-        <button class="save-btn">저장하기</button>
+        <button class="save-btn" id="saveBtn">저장하기</button>
     </section>
 
 </div>
 
 <!-- ============================= -->
-<!-- ⭐ NAVIGATION (모든 페이지 동일) -->
+<!-- ⭐ 통일된 NAVIGATION -->
 <!-- ============================= -->
 <nav class="nav">
     <div class="nav-inner">
@@ -132,26 +96,120 @@
 </nav>
 
 <script>
-    /* 네비게이터 링크 활성화 */
-    document.querySelectorAll(".nav-item").forEach(icon => {
-        icon.addEventListener("click", () => {
-            const target = icon.dataset.target;
-            if (target) location.href = target;
+/* ======================
+   네비게이터
+====================== */
+document.querySelectorAll(".nav-item").forEach(icon => {
+    icon.addEventListener("click", () => {
+        const t = icon.dataset.target;
+        if (t) location.href = t;
+    });
+});
+</script>
+
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./js/supabase.js"></script>
+
+<script>
+/* Supabase 로딩 대기 */
+function waitSupabase() {
+    return new Promise(resolve => {
+        const t = setInterval(() => {
+            if (window.supabaseClient) {
+                clearInterval(t);
+                resolve(window.supabaseClient);
+            }
+        }, 20);
+    });
+}
+
+(async () => {
+    const supabase = await waitSupabase();
+    const { data: sessionData } = await supabase.auth.getSession();
+
+    if (!sessionData.session?.user) {
+        alert("로그인이 필요합니다.");
+        location.href = "login.html";
+        return;
+    }
+
+    const user = sessionData.session.user;
+
+    /* ===========================
+       1) 기존 유저 정보 불러오기
+    ============================ */
+    document.getElementById("emailField").textContent = user.email;
+    document.getElementById("phoneField").textContent = user.user_metadata.phone || "-";
+
+    document.getElementById("nickname").value =
+        user.user_metadata.nickname || "익명의 사용자";
+
+    document.getElementById("bio").value =
+        user.user_metadata.bio || "";
+
+    if (user.user_metadata.avatar_url) {
+        document.getElementById("profilePreview").src = user.user_metadata.avatar_url;
+    }
+
+    /* ===========================
+       2) 프로필 이미지 업로드
+    ============================ */
+    const input = document.getElementById("profileInput");
+    const preview = document.getElementById("profilePreview");
+
+    input.addEventListener("change", async () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        preview.src = URL.createObjectURL(file);
+
+        const fileName = `${user.id}_${Date.now()}.jpg`;
+
+        const { data: storageData, error: storageError } =
+            await supabase.storage
+                .from("profile")
+                .upload(`avatars/${fileName}`, file, { upsert: true });
+
+        if (storageError) {
+            alert("이미지 업로드 실패");
+            return;
+        }
+
+        const { data: publicURL } = supabase.storage
+            .from("profile")
+            .getPublicUrl(`avatars/${fileName}`);
+
+        await supabase.auth.updateUser({
+            data: { avatar_url: publicURL.publicUrl }
         });
     });
 
-    /* 뒤로가기 개선: 이전 위치까지 복구 */
-    document.querySelector(".back-btn").addEventListener("click", () => {
-        if (document.referrer) {
-            history.back();
+    /* ===========================
+       3) 저장하기 버튼
+    ============================ */
+    document.getElementById("saveBtn").addEventListener("click", async () => {
+        const nickname = document.getElementById("nickname").value.trim();
+        const bio = document.getElementById("bio").value.trim();
+
+        const { error } = await supabase.auth.updateUser({
+            data: {
+                nickname,
+                bio
+            }
+        });
+
+        if (error) {
+            alert("저장 실패\n" + error.message);
         } else {
+            alert("저장되었습니다.");
             location.href = "mypage.html";
         }
     });
+
+})();
 </script>
 
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
 <script src="./js/account-edit.js"></script>
 
 </body>

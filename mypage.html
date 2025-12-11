@@ -14,48 +14,40 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-
-            <!-- 로고 클릭 → 홈 이동 -->
             <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
-
-            <!-- 설정 페이지 → settings.html -->
             <div class="setting-text" onclick="location.href='settings.html'">설정</div>
         </div>
     </header>
 
     <!-- PROFILE -->
     <section class="profile-section">
-        <img src="assets/logo.png" class="profile-img">
 
-        <div class="profile-name">익명의 사용자</div>
+        <img src="assets/logo.png" class="profile-img" id="profileImg">
+
+        <div class="profile-name" id="profileName">익명의 사용자</div>
 
         <div class="level-row">
-
-            <!-- 퀘스트 페이지 -->
-            <span class="badge" onclick="location.href='quest.html'">🔥 매운 토론러</span>
-
-            <!-- 등급 페이지 -->
-            <span class="level" onclick="location.href='grade.html'">Lv. 12</span>
+            <span class="badge" onclick="location.href='quest.html'" id="badgeText">🔥 매운 토론러</span>
+            <span class="level" onclick="location.href='grade.html'" id="levelText">Lv. 1</span>
         </div>
 
-        <div class="profile-desc">소개 문구가 여기에 표시됩니다.</div>
+        <div class="profile-desc" id="profileDesc">소개 문구가 여기에 표시됩니다.</div>
 
-        <!-- STATS -->
         <div class="stats-row">
             <div class="stat-unit">
-                <div class="stat-num">12</div>
+                <div class="stat-num" id="statDrop">0</div>
                 <div class="stat-label">My Drop</div>
             </div>
             <div class="stat-unit">
-                <div class="stat-num">4,210</div>
+                <div class="stat-num" id="statFollowers">0</div>
                 <div class="stat-label">팔로워</div>
             </div>
             <div class="stat-unit">
-                <div class="stat-num">2,443</div>
+                <div class="stat-num" id="statSupports">0</div>
                 <div class="stat-label">지지</div>
             </div>
             <div class="stat-unit">
-                <div class="stat-num">1,100</div>
+                <div class="stat-num" id="statOppose">0</div>
                 <div class="stat-label">반발</div>
             </div>
         </div>
@@ -109,6 +101,43 @@
 
 <!-- My Page 기능 -->
 <script src="js/mypage.js"></script>
+
+<script>
+/* ----------------------------------------------------------
+    로그인 상태 체크 및 유저 정보 로딩
+---------------------------------------------------------- */
+document.addEventListener("DOMContentLoaded", async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data?.session;
+
+    if (!session?.user) {
+        alert("로그인이 필요합니다.");
+        location.href = "login.html";
+        return;
+    }
+
+    const userId = session.user.id;
+
+    const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+    if (profile) {
+        document.getElementById("profileName").textContent = profile.nickname || "익명의 사용자";
+        document.getElementById("profileDesc").textContent = profile.bio || "소개 문구가 없습니다.";
+
+        document.getElementById("badgeText").textContent = profile.badge || "🔥 매운 토론러";
+        document.getElementById("levelText").textContent = "Lv. " + (profile.level || 1);
+
+        document.getElementById("statDrop").textContent = profile.gp || 0;
+        document.getElementById("statFollowers").textContent = profile.followers || 0;
+        document.getElementById("statSupports").textContent = profile.supports || 0;
+        document.getElementById("statOppose").textContent = profile.opposes || 0;
+    }
+});
+</script>
 
 </body>
 </html>

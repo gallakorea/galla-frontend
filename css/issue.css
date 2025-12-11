@@ -16,7 +16,8 @@ body {
 
 #app {
     width: 100%;
-    max-width: 480px;
+    max-width: 420px;
+    margin: 0 auto;
     padding-bottom: 140px;
 }
 
@@ -187,15 +188,8 @@ body {
     display: flex;
 }
 
-.vote-pro {
-    background: #0094ff;
-    transition: width .3s;
-}
-
-.vote-con {
-    background: #ff3b6b;
-    transition: width .3s;
-}
+.vote-pro { background: #0094ff; transition: width .3s; }
+.vote-con { background: #ff3b6b; transition: width .3s; }
 
 .vote-percent {
     margin-top: 8px;
@@ -253,15 +247,8 @@ body {
     display: flex;
 }
 
-.sup-pro {
-    background: #0094ff;
-    transition: width .3s;
-}
-
-.sup-con {
-    background: #ff4f6e;
-    transition: width .3s;
-}
+.sup-pro { background: #0094ff; transition: width .3s; }
+.sup-con { background: #ff4f6e; transition: width .3s; }
 
 .support-stats {
     margin-top: 8px;
@@ -317,12 +304,18 @@ body {
     padding: 26px 16px 40px;
     margin-top: 40px;
     background: #050505;
+
+    /** 핵심 — flex/grid 붕괴 방지 **/
+    display: block !important;
+}
+
+.stats-section > * {
+    width: 100% !important;
 }
 
 .stats-header {
     font-size: 20px;
     font-weight: 900;
-    color: #fff !important;
     margin-bottom: 22px;
 }
 
@@ -330,7 +323,6 @@ body {
     font-size: 17px;
     font-weight: 800;
     margin: 26px 0 12px;
-    color: #fff !important;
 }
 
 /* 성별 듀얼바 */
@@ -381,8 +373,8 @@ body {
 
 /* 지역 히트맵 */
 .region-heatmap {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
     gap: 10px;
 }
 
@@ -442,7 +434,6 @@ body {
 .comment-title {
     font-size: 18px;
     font-weight: 900;
-    color: #fff !important;
 }
 
 .comment-sort {
@@ -569,20 +560,19 @@ body {
 }
 
 /* ==========================================================
-   상단 ⋯ 메뉴 (정상 작동 버전)
+   상단 ⋯ 메뉴
 ========================================================== */
 .more-menu-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.55);
-    display: flex; /* ← display:none 제거 */
+    display: flex;
     justify-content: center;
     align-items: flex-end;
     z-index: 999999;
     backdrop-filter: blur(4px);
 }
 
-/* hidden 상태일 때만 안 보이도록 */
 .more-menu-backdrop[hidden] {
     display: none !important;
 }
@@ -670,7 +660,6 @@ body {
     cursor: pointer;
 }
 
-/* Slide animation */
 @keyframes slideUp {
     from { transform: translateY(40px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -680,95 +669,91 @@ body {
    스피치 영상 Bottom Sheet
 ========================================================== */
 .speech-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 999999;
-  display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 999999;
+    display: none;
 }
 
 .speech-backdrop:not([hidden]) {
-  display: block;
+    display: block;
 }
 
 .speech-sheet {
-  position: absolute;
-  bottom: -100%;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  height: 85%;
-  background: #000;
-  border-radius: 20px 20px 0 0;
-  overflow: hidden;
-  transition: bottom .35s ease;
+    position: absolute;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    height: 85%;
+    background: #000;
+    border-radius: 20px 20px 0 0;
+    overflow: hidden;
+    transition: bottom .35s ease;
 }
 
-/* 헤더 */
 .speech-header {
-  position: absolute;
-  top: 0;
-  width: 100%;
-  padding: 14px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 5;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    padding: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 5;
 }
 
 .speech-title {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
 }
 
 .speech-close {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #fff;
-  cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #fff;
+    cursor: pointer;
 }
 
-/* video */
 #speech-video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #000;
 }
 
-/* Play icon */
 .play-icon {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 60px;
-  color: rgba(255,255,255,0.8);
-  opacity: 0;
-  transition: opacity .25s;
-  pointer-events: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 60px;
+    color: rgba(255,255,255,0.8);
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
 }
 
-/* 진행바 */
 .progress-container {
-  position: absolute;
-  bottom: 16px;
-  left: 12px;
-  right: 12px;
-  height: 4px;
-  background: rgba(255,255,255,0.15);
-  border-radius: 3px;
+    position: absolute;
+    bottom: 16px;
+    left: 12px;
+    right: 12px;
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
 }
 
 .progress-bar {
-  height: 100%;
-  width: 0%;
-  background: #ffe27a;
-  border-radius: 3px;
-  transition: width .15s linear;
+    height: 100%;
+    width: 0%;
+    background: #ffe27a;
+    border-radius: 3px;
+    transition: width .15s linear;
 }
 
 /* ==========================================================
@@ -793,4 +778,3 @@ body {
     width: 26px;
     filter: brightness(0) invert(1);
 }
-

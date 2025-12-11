@@ -14,10 +14,17 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-            <img src="assets/logo.png" alt="GALLA" class="logo" />
-            <div class="auth-buttons">
+            <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'"/>
+
+            <!-- 로그인/회원가입 (로그아웃 상태) -->
+            <div class="auth-buttons" id="authBefore">
                 <button onclick="location.href='login.html'">로그인</button>
                 <button onclick="location.href='signup.html'">회원가입</button>
+            </div>
+
+            <!-- 마이페이지 (로그인 상태) -->
+            <div class="auth-buttons" id="authAfter" style="display:none;">
+                <button onclick="location.href='mypage.html'">마이페이지</button>
             </div>
         </div>
     </header>
@@ -60,7 +67,7 @@
 
     </main>
 
-    <!-- ⭐ 고정 네비게이터 (절대 깨지지 않음) -->
+    <!-- ⭐ 고정 네비게이터 -->
     <nav class="bottom-nav fixed-nav">
 
         <button class="nav-item" data-target="index.html">
@@ -87,17 +94,65 @@
 
 </div>
 
+<!-- ⭐ Supabase -->
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+
+
+<!-- ⭐ Supabase 로딩 대기 -->
 <script>
-document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const t = btn.dataset.target;
-        if (t) location.href = t;
+function waitForSupabaseClient() {
+    return new Promise(resolve => {
+        const timer = setInterval(() => {
+            if (window.supabaseClient) {
+                clearInterval(timer);
+                resolve(window.supabaseClient);
+            }
+        }, 20);
+    });
+}
+</script>
+
+
+<!-- ⭐ 로그인 UI 자동 전환 -->
+<script>
+(async () => {
+    const supabase = await waitForSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+
+    const loggedIn = !!data.session?.user;
+
+    document.getElementById("authBefore").style.display = loggedIn ? "none" : "flex";
+    document.getElementById("authAfter").style.display  = loggedIn ? "flex" : "none";
+})();
+</script>
+
+
+<!-- ⭐ 네비게이션 클릭 시 로그인 여부 체크 -->
+<script>
+document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.addEventListener("click", async () => {
+
+        const target = btn.dataset.target;
+        if (!target) return;
+
+        const supabase = await waitForSupabaseClient();
+        const { data } = await supabase.auth.getSession();
+
+        const needLogin = ["write.html", "random.html", "mypage.html"];
+
+        if (needLogin.includes(target) && !data.session?.user) {
+            alert("로그인이 필요한 기능입니다.");
+            return location.href = "login.html";
+        }
+
+        location.href = target;
     });
 });
 </script>
 
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
+
+<!-- 검색 기능 -->
 <script src="./js/search.js"></script>
 
 </body>

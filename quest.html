@@ -106,6 +106,35 @@
 <!-- Quest JS -->
 <script src="js/quest.js"></script>
 
+<!-- ⭐ Login Check + Load Profile -->
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+
+    /* 로그인 체크 */
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+
+    if (!session?.user) {
+        alert("로그인이 필요한 기능입니다.");
+        location.href = "login.html";
+        return;
+    }
+
+    const userId = session.user.id;
+
+    /* 유저 프로필 불러오기 */
+    const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .single();
+
+    console.log("프로필 로드됨:", profile);
+
+    /* 이후 quest.js에서 프로필 기반으로 GP, 진행도 업데이트 가능 */
+});
+</script>
+
 <!-- ⭐ NAVIGATION ACTION -->
 <script>
 document.querySelectorAll(".nav-item").forEach(item => {

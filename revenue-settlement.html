@@ -111,17 +111,59 @@
 
 </nav>
 
+<!-- ⭐ Supabase -->
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+
+<!-- ⭐ Supabase 로딩 대기 함수 -->
+<script>
+function waitForSupabaseClient() {
+    return new Promise(resolve => {
+        const timer = setInterval(() => {
+            if (window.supabaseClient) {
+                clearInterval(timer);
+                resolve(window.supabaseClient);
+            }
+        }, 20);
+    });
+}
+</script>
+
+<!-- ⭐ 페이지 진입 로그인 체크 -->
+<script>
+(async () => {
+    const supabase = await waitForSupabaseClient();
+    const { data } = await supabase.auth.getSession();
+
+    if (!data.session?.user) {
+        alert("로그인이 필요한 페이지입니다.");
+        location.href = "login.html";
+    }
+})();
+</script>
+
+<!-- ⭐ 네비게이션 로그인 체크 -->
 <script>
 document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const t = btn.dataset.target;
-        if (t) location.href = t;
+    btn.addEventListener("click", async () => {
+        const target = btn.dataset.target;
+        if (!target) return;
+
+        const supabase = await waitForSupabaseClient();
+        const { data } = await supabase.auth.getSession();
+
+        const needLogin = ["write.html", "random.html", "mypage.html", "revenue-settlement.html"];
+
+        if (needLogin.includes(target) && !data.session?.user) {
+            alert("로그인이 필요한 페이지입니다.");
+            location.href = "login.html";
+            return;
+        }
+
+        location.href = target;
     });
 });
 </script>
-
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
 
 </body>
 </html>

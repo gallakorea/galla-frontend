@@ -86,8 +86,43 @@
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 
-<!-- Login Logic -->
-<script src="js/login.js"></script>
+<!-- LOGIN LOGIC -->
+<script>
+document.addEventListener("DOMContentLoaded", async () => {
+    /* ----------------------------------------------------
+       01. 로그인 상태면 접근 금지 → mypage로 이동
+    ---------------------------------------------------- */
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user) {
+        location.replace("mypage.html");
+        return;
+    }
+
+    /* ----------------------------------------------------
+       02. 로그인 이벤트
+    ---------------------------------------------------- */
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (!email || !password) {
+            alert("이메일과 비밀번호를 입력해주세요.");
+            return;
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+        if (error) {
+            alert("로그인 실패: " + error.message);
+            return;
+        }
+
+        // 로그인 성공
+        alert("로그인 성공! 환영합니다.");
+        location.href = "index.html";
+    });
+});
+</script>
 
 </body>
 </html>
