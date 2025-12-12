@@ -9,65 +9,56 @@ document.addEventListener("DOMContentLoaded", () => {
 
   console.log("WRITE INIT");
 
-  const CF_ACCOUNT_ID   = window.CF_ACCOUNT_ID;
-  const CF_IMAGES_TOKEN = window.CF_IMAGES_TOKEN;
-  const CF_STREAM_TOKEN = window.CF_STREAM_TOKEN;
-
   const form = document.getElementById("writeForm");
   const thumbnail = document.getElementById("thumbnail");
   const thumbnailBtn = document.getElementById("thumbnailBtn");
   const video = document.getElementById("videoInput");
   const videoBtn = document.getElementById("videoBtn");
 
-  // ★ 버튼 정상 동작 부분
+  // 버튼 정상 동작
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
+  /* ===========================================
+     1) 백엔드에서 Cloudflare Direct Upload URL 발급
+  ============================================ */
+  async function getImageUploadURL() {
+    const res = await fetch(
+      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
+      { method: "POST" }
+    );
+    return await res.json();
+  }
+
+  async function getVideoUploadURL() {
+    const res = await fetch(
+      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-video-upload-url",
+      { method: "POST" }
+    );
+    return await res.json();
+  }
+
+  /* ===========================================
+     2) 이미지 업로드
+  ============================================ */
   async function uploadImage(file) {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/images/v1/direct_upload`,
-      {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${CF_IMAGES_TOKEN}` }
-      }
-    );
-
-    const json = await res.json();
-    const uploadURL = json.result.uploadURL;
-
-    const uploadRes = await fetch(uploadURL, {
-      method: "POST",
-      body: file
-    });
-
-    const uploaded = await uploadRes.json();
-    return uploaded.result.id;
+    const { uploadURL, imageId } = await getImageUploadURL();
+    await fetch(uploadURL, { method: "POST", body: file });
+    return imageId;
   }
 
+  /* ===========================================
+     3) 영상 업로드
+  ============================================ */
   async function uploadVideo(file) {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${CF_STREAM_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ maxDurationSeconds: 120 })
-      }
-    );
-
-    const json = await res.json();
-    const uploadURL = json.result.uploadURL;
-
-    await fetch(uploadURL, {
-      method: "PUT",
-      body: file
-    });
-
-    return json.result.uid;
+    const { uploadURL, videoId } = await getVideoUploadURL();
+    await fetch(uploadURL, { method: "PUT", body: file });
+    return videoId;
   }
 
+  /* ===========================================
+     4) FORM SUBMIT
+  ============================================ */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -111,7 +102,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       const json = await res.json();
-
       if (!res.ok) throw new Error(json.message);
 
       alert("갈라 생성 완료!");
