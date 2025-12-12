@@ -15,99 +15,85 @@ function waitForSupabase() {
 }
 
 /* ============================================================
-   Cloudflare Images Direct Upload (via Supabase Edge Function)
+   Cloudflare Images Direct Upload via Supabase Edge Function
 ============================================================ */
-async function requestImageDirectUploadURL() {
-    try {
-        const endpoint = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
+async function getImageDirectUploadUrl() {
+    const endpoint = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
 
-        const res = await fetch(endpoint, { method: "POST" });
-        const json = await res.json();
+    const res = await fetch(endpoint, { method: "POST" });
+    const json = await res.json();
 
-        console.log("[Images] DirectUpload URL Response:", json);
+    console.log("[DirectUpload][Images] Response:", json);
 
-        return json?.result?.uploadURL ?? null;
-    } catch (err) {
-        console.error("[Images] 요청 실패:", err);
-        return null;
-    }
+    return json?.result?.uploadURL ?? null;
 }
 
 async function uploadThumbnail(file) {
-    const uploadURL = await requestImageDirectUploadURL();
+    const uploadURL = await getImageDirectUploadUrl();
     if (!uploadURL) {
         alert("썸네일 업로드 URL 생성 실패");
         return null;
     }
 
-    console.log("[Images] Upload URL:", uploadURL);
+    console.log("[DirectUpload][Images] Upload URL:", uploadURL);
 
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(uploadURL, {
+    const uploadRes = await fetch(uploadURL, {
         method: "POST",
         body: formData
     });
 
-    const result = await res.json();
-    console.log("[Images] Upload Result:", result);
+    const result = await uploadRes.json();
+    console.log("[DirectUpload][Images] Upload result:", result);
 
     const imageId = result?.result?.id;
-    if (!imageId) {
-        alert("이미지 업로드 실패");
-        return null;
-    }
+    if (!imageId) return null;
 
     return `https://imagedelivery.net/WRQ-8xhWbU08j8o3OzxpFg/${imageId}/public`;
 }
 
-
 /* ============================================================
-   Cloudflare Stream Direct Upload (video)
+   Cloudflare Stream Direct Upload (Token 방식)
 ============================================================ */
-async function requestStreamUploadURL() {
+async function getStreamDirectUploadUrl() {
     const CF_ACCOUNT_ID = "8c46fbeae6e69848470dfacaaa8beb03";
-    const CF_STREAM_TOKEN = "YOUR_STREAM_TOKEN"; // ★ 반드시 실제 Stream Token으로 교체
+    const STREAM_TOKEN = "U4H8y1w1XbKoz3k2HsgrZmrW-YVmcLQVUHfKwJ-3";
 
-    try {
-        const res = await fetch(
-            `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
-            {
-                method: "POST",
-                headers: {
-                    Authorization: `Bearer ${CF_STREAM_TOKEN}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ maxDurationSeconds: 120 })
-            }
-        );
+    const res = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${STREAM_TOKEN}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ maxDurationSeconds: 120 })
+        }
+    );
 
-        const json = await res.json();
-        console.log("[Stream] DirectUpload URL Response:", json);
+    const json = await res.json();
+    console.log("[DirectUpload][Stream] Create URL:", json);
 
-        if (!json.success) return null;
+    if (!json.success) return null;
 
-        return {
-            uploadURL: json.result.uploadURL,
-            videoId: json.result.uid
-        };
-    } catch (err) {
-        console.error("[Stream] 요청 실패:", err);
-        return null;
-    }
+    return {
+        uploadURL: json.result.uploadURL,
+        videoId: json.result.uid
+    };
 }
 
 async function uploadVideo(file) {
-    const info = await requestStreamUploadURL();
-    if (!info) {
+    const data = await getStreamDirectUploadUrl();
+    if (!data) {
         alert("영상 업로드 URL 생성 실패");
         return null;
     }
 
-    const { uploadURL, videoId } = info;
+    const { uploadURL, videoId } = data;
 
-    console.log("[Stream] Upload URL:", uploadURL);
+    console.log("[DirectUpload][Stream] Upload URL:", uploadURL);
 
     const uploadRes = await fetch(uploadURL, {
         method: "PUT",
@@ -115,14 +101,13 @@ async function uploadVideo(file) {
     });
 
     if (!uploadRes.ok) {
-        console.error("[Stream] 업로드 실패:", await uploadRes.text());
+        console.error(await uploadRes.text());
         alert("Cloudflare Stream 업로드 실패");
         return null;
     }
 
     return `https://customer-WRQ-8xhWbU08j8o3OzxpFg.cloudflarestream.com/${videoId}/manifest/video.m3u8`;
 }
-
 
 /* ============================================================
    MAIN SCRIPT
@@ -176,7 +161,7 @@ async function uploadVideo(file) {
         /* -----------------------
            썸네일 업로드
         ----------------------- */
-        console.log("[Process] 썸네일 업로드 시작");
+        console.log("썸네일 업로드 중…");
         const thumbnailURL = await uploadThumbnail(thumbnailFile);
         if (!thumbnailURL) return alert("썸네일 업로드 실패");
 
@@ -186,11 +171,11 @@ async function uploadVideo(file) {
         let videoURL = null;
 
         if (videoFile) {
-            console.log("[Process] 영상 업로드 시작");
-
+            console.log("영상 업로드 중…");
             videoURL = await uploadVideo(videoFile);
+
             if (!videoURL) {
-                alert("영상 업로드 실패 (영상 없이 등록합니다)");
+                alert("영상 업로드 실패 (영상은 생략하고 등록할게요)");
                 videoURL = null;
             }
         }
