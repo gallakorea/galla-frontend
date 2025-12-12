@@ -1,5 +1,5 @@
 /* ----------------------------------------------------
-   0. Supabase 준비 대기 (signup.js와 동일)
+   0. Supabase Client 준비 대기 (signup.js 동일 구조)
 ---------------------------------------------------- */
 function waitForClient() {
     return new Promise(resolve => {
@@ -14,7 +14,9 @@ function waitForClient() {
 
 (async () => {
 
-    // Supabase 클라이언트 준비될 때까지 기다림
+    /* ----------------------------------------------------
+       Supabase 클라이언트 로드 대기
+    ---------------------------------------------------- */
     await waitForClient();
     const supabase = window.supabaseClient;
 
@@ -22,10 +24,16 @@ function waitForClient() {
     const pwInput = document.getElementById("password");
     const loginBtn = document.getElementById("loginBtn");
 
-    // ---------------------------------------------
-    // 로그인 처리
-    // ---------------------------------------------
+    if (!loginBtn) {
+        console.error("loginBtn 요소를 찾을 수 없습니다.");
+        return;
+    }
+
+    /* ----------------------------------------------------
+       1. 로그인 이벤트
+    ---------------------------------------------------- */
     loginBtn.addEventListener("click", async () => {
+
         const email = emailInput.value.trim();
         const password = pwInput.value.trim();
 
@@ -35,10 +43,8 @@ function waitForClient() {
         }
 
         // Supabase 로그인 요청
-        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
+        const { data: loginData, error: loginError } =
+            await supabase.auth.signInWithPassword({ email, password });
 
         if (loginError) {
             console.log(loginError);
@@ -48,9 +54,9 @@ function waitForClient() {
 
         const user = loginData.user;
 
-        // ---------------------------------------------
-        // user_profiles 가져오기
-        // ---------------------------------------------
+        /* ----------------------------------------------------
+           2. user_profiles 불러오기
+        ---------------------------------------------------- */
         const { data: profileData, error: profileError } = await supabase
             .from("user_profiles")
             .select("*")
@@ -59,26 +65,22 @@ function waitForClient() {
 
         if (profileError) {
             console.log(profileError);
-            alert("유저 프로필을 불러오지 못했습니다: " + profileError.message);
+            alert("프로필 조회 실패: " + profileError.message);
             return;
         }
 
-        // ---------------------------------------------
-        // 로컬 저장 (auth user + profile)
-        // ---------------------------------------------
-        const mergedUser = {
-            auth: user,
-            profile: profileData
-        };
+        /* ----------------------------------------------------
+           3. 로컬 저장
+        ---------------------------------------------------- */
+        const mergedUser = { auth: user, profile: profileData };
         localStorage.setItem("galla_user", JSON.stringify(mergedUser));
 
         alert("로그인 성공!");
 
-        // ---------------------------------------------
-        // 🔥 로그인 후 복귀 기능 추가
-        // ---------------------------------------------
+        /* ----------------------------------------------------
+           4. 로그인 후 복귀 기능
+        ---------------------------------------------------- */
         const returnTo = sessionStorage.getItem("returnTo");
-
         if (returnTo) {
             sessionStorage.removeItem("returnTo");
             location.href = returnTo;
@@ -89,18 +91,17 @@ function waitForClient() {
         location.href = "index.html";
     });
 
-    // ---------------------------------------------
-    // 자동 로그인 유지 (세션 유지 여부 체크)
-    // ---------------------------------------------
+    /* ----------------------------------------------------
+       5. 기존 세션 유지 체크
+    ---------------------------------------------------- */
     const { data } = await supabase.auth.getSession();
     if (data?.session) {
-        console.log("로그인 유지됨:", data.session.user);
+        console.log("이미 로그인된 상태:", data.session.user);
     }
 
-    /* =======================================================
-        🔥 로그인 필요 시 호출하는 전역 함수
-        - 현재 페이지 저장 → 로그인 페이지로 이동
-    ======================================================= */
+    /* ----------------------------------------------------
+       6. 로그인 필요 시 호출되는 전역 함수
+    ---------------------------------------------------- */
     window.requireLogin = function () {
         const current = location.pathname.replace("/", "");
         sessionStorage.setItem("returnTo", current);
