@@ -1,17 +1,17 @@
-// supabase.js
+// js/supabase.js
 
-document.addEventListener("DOMContentLoaded", async () => {
-    console.log("[supabase.js] DOM Loaded — 초기화 시작");
+console.log("[supabase.js] 로드됨 - 초기화 대기");
 
-    // supabase CDN이 로드될 때까지 기다림
+(async () => {
+
+    // Supabase CDN이 로딩될 때까지 대기
     while (!window.supabase || !window.supabase.createClient) {
-        console.log("[supabase.js] Supabase 라이브러리 로딩 대기중...");
-        await new Promise(r => setTimeout(r, 30));
+        console.log("[supabase.js] Supabase 라이브러리 대기중...");
+        await new Promise(r => setTimeout(r, 40));
     }
 
-    console.log("[supabase.js] Supabase 라이브러리 로드됨");
+    console.log("[supabase.js] Supabase 라이브러리 로드 완료");
 
-    // 프로젝트 URL / 키 (네가 제공한 것 그대로)
     const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_XrZUsf09b6gBsDzSDAZ_fw_uJVqv-9E";
 
@@ -21,5 +21,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         SUPABASE_ANON_KEY
     );
 
-    console.log("[supabase.js] Supabase 클라이언트 생성 완료:", window.supabaseClient);
-});
+    console.log("[supabase.js] Supabase 클라이언트 생성됨:", window.supabaseClient);
+
+})();

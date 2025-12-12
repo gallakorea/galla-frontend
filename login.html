@@ -11,7 +11,6 @@
 
 <div id="app">
 
-    <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
             <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
@@ -51,10 +50,18 @@
 
 </div>
 
-<!-- Supabase -->
+<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.8/dist/umd/supabase.js"></script>
+
+<!-- OUR SCRIPTS -->
 <script src="js/supabase.js"></script>
 <script src="js/login.js"></script>
+
+<!-- 디버그용 -->
+<script>
+console.log("[login.html] window.supabase =", window.supabase);
+console.log("[login.html] window.supabaseClient =", window.supabaseClient);
+</script>
 
 </body>
 </html>
