@@ -15,7 +15,6 @@
   <!-- HEADER -->
   <header class="header">
       <div class="header-inner">
-
           <img src="./assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'">
 
           <div class="auth-buttons" id="authArea">
@@ -83,7 +82,8 @@
         <div class="field-block">
           <label class="field-label">이슈 썸네일 (필수)</label>
 
-          <input type="file" id="thumbnail" accept="image/*" hidden required />
+          <!-- required 제거 완료 -->
+          <input type="file" id="thumbnail" accept="image/*" hidden />
           <button type="button" id="thumbnailBtn" class="file-btn input-field">
             썸네일 업로드
           </button>
@@ -92,6 +92,7 @@
         <!-- Video Upload -->
         <div class="field-block">
           <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
+
           <input type="file" id="videoInput" accept="video/*" hidden />
           <button type="button" id="openVideoEditor" class="file-btn input-field">
             영상 업로드 및 편집
@@ -173,13 +174,10 @@ document.querySelectorAll(".nav-item").forEach(btn => {
 <!-- =========================== -->
 <!-- Supabase -->
 <!-- =========================== -->
-<!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- 우리 프로젝트용 supabase.js -->
 <script src="./js/supabase.js"></script>
 
-<!-- write 페이지 전용 기능 -->
+<!-- write.js 단 1회만 로딩 -->
 <script src="./js/write.js"></script>
 
 <script>
@@ -208,15 +206,12 @@ function waitForSupabase() {
           <button onclick="location.href='signup.html'">회원가입</button>
       `;
   } else {
-      /* 로그인 상태 → 프로필 버튼으로 전환 */
       authArea.innerHTML = `
           <button onclick="location.href='mypage.html'">내 프로필</button>
       `;
   }
 })();
 </script>
-
-<script src="./js/write.js"></script>
 
 </body>
 </html>
