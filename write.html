@@ -5,8 +5,8 @@
   <title>새 갈라 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link rel="stylesheet" href="./css/write.css" />
   <link rel="stylesheet" href="./css/index.css" />
+  <link rel="stylesheet" href="./css/write.css" />
 </head>
 
 <body data-page="write">
@@ -29,6 +29,7 @@
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
+      <!-- FORM -->
       <form class="write-form" id="writeForm">
 
         <div class="field-block">
@@ -70,8 +71,8 @@
         <div class="field-block">
           <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
           <input type="file" id="videoInput" accept="video/*" hidden />
-          <button type="button" id="openVideoEditor" class="file-btn input-field">
-            영상 업로드 및 편집
+          <button type="button" id="videoBtn" class="file-btn input-field">
+            영상 업로드
           </button>
         </div>
 
@@ -80,7 +81,9 @@
             이슈 설명 (필수)
             <span class="desc-counter">0 / 500</span>
           </label>
+
           <textarea id="description" class="input-field textarea" maxlength="500" required></textarea>
+
           <button type="button" id="openAiModal" class="ai-main-btn">
             ✨ AI에게 글 다듬기
           </button>
@@ -123,31 +126,30 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- Cloudflare ENV (보안상 위험한 정보는 아님, 공개 가능한 토큰) -->
+<!-- Supabase JS -->
 <!-- ============================================================ -->
-<script>
-  window.CF_ACCOUNT_ID   = "8c46fbeae6e69848470dfacaaa8beb03";
-  window.CF_IMAGES_TOKEN = "pRDSyrfEv84NYnhN5HmcrhavHET8E8o54oI3kG5W";  // 이미지 토큰
-  window.CF_STREAM_TOKEN = "U4H8y1w1XbKoz3k2HsgrZmrW-YVmcLQVUHfKwJ-3";   // 스트림 토큰
-</script>
-
-<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./js/supabase.js"></script>
 
-<!-- write 기능 -->
+<!-- Write.js (썸네일 업로드 + 영상 업로드 + DB 저장) -->
 <script src="./js/write.js"></script>
 
+<!-- ============================================================ -->
+<!-- Login UI Loader -->
+<!-- ============================================================ -->
 <script>
-/* 로그인 UI 처리 */
 async function initAuthUI() {
-  const supabase = await window.supabaseClient;
+  while (!window.supabaseClient) {
+    await new Promise(r => setTimeout(r, 30));
+  }
+
+  const supabase = window.supabaseClient;
   const { data } = await supabase.auth.getSession();
-  const isLogin = data?.session?.user;
+  const user = data?.session?.user;
 
   const authArea = document.getElementById("authArea");
 
-  authArea.innerHTML = isLogin
+  authArea.innerHTML = user
     ? `<button onclick="location.href='mypage.html'">내 프로필</button>`
     : `
         <button onclick="location.href='login.html'">로그인</button>
