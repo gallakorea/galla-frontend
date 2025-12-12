@@ -1,5 +1,5 @@
 /* ----------------------------------------------------
-   0. Supabase Client 준비 대기 (signup.js 동일 구조)
+   Supabase Client 준비 대기
 ---------------------------------------------------- */
 function waitForClient() {
     return new Promise(resolve => {
@@ -14,25 +14,37 @@ function waitForClient() {
 
 (async () => {
 
-    /* ----------------------------------------------------
-       Supabase 클라이언트 로드 대기
-    ---------------------------------------------------- */
-    await waitForClient();
+    await waitForClient(); // supabase 로딩 완료될 때까지 기다림
     const supabase = window.supabaseClient;
 
+    console.log("LOGIN PAGE: supabaseClient ready:", supabase);
+
+    const loginBtn = document.getElementById("loginBtn");
     const emailInput = document.getElementById("email");
     const pwInput = document.getElementById("password");
-    const loginBtn = document.getElementById("loginBtn");
 
+    /* 안전장치 */
     if (!loginBtn) {
-        console.error("loginBtn 요소를 찾을 수 없습니다.");
+        console.error("ERROR: loginBtn not found.");
         return;
     }
 
     /* ----------------------------------------------------
-       1. 로그인 이벤트
+       로그인 상태면 mypage로 이동 (차단)
+    ---------------------------------------------------- */
+    const { data: sessionData } = await supabase.auth.getSession();
+
+    if (sessionData?.session?.user) {
+        location.replace("mypage.html");
+        return;
+    }
+
+    /* ----------------------------------------------------
+       로그인 버튼 이벤트 등록
     ---------------------------------------------------- */
     loginBtn.addEventListener("click", async () => {
+
+        console.log("로그인 버튼 클릭됨");
 
         const email = emailInput.value.trim();
         const password = pwInput.value.trim();
@@ -42,70 +54,16 @@ function waitForClient() {
             return;
         }
 
-        // Supabase 로그인 요청
         const { data: loginData, error: loginError } =
             await supabase.auth.signInWithPassword({ email, password });
 
         if (loginError) {
-            console.log(loginError);
             alert("로그인 실패: " + loginError.message);
             return;
         }
 
-        const user = loginData.user;
-
-        /* ----------------------------------------------------
-           2. user_profiles 불러오기
-        ---------------------------------------------------- */
-        const { data: profileData, error: profileError } = await supabase
-            .from("user_profiles")
-            .select("*")
-            .eq("user_id", user.id)
-            .single();
-
-        if (profileError) {
-            console.log(profileError);
-            alert("프로필 조회 실패: " + profileError.message);
-            return;
-        }
-
-        /* ----------------------------------------------------
-           3. 로컬 저장
-        ---------------------------------------------------- */
-        const mergedUser = { auth: user, profile: profileData };
-        localStorage.setItem("galla_user", JSON.stringify(mergedUser));
-
-        alert("로그인 성공!");
-
-        /* ----------------------------------------------------
-           4. 로그인 후 복귀 기능
-        ---------------------------------------------------- */
-        const returnTo = sessionStorage.getItem("returnTo");
-        if (returnTo) {
-            sessionStorage.removeItem("returnTo");
-            location.href = returnTo;
-            return;
-        }
-
-        // 기본 이동
+        alert("로그인 성공! 환영합니다.");
         location.href = "index.html";
     });
-
-    /* ----------------------------------------------------
-       5. 기존 세션 유지 체크
-    ---------------------------------------------------- */
-    const { data } = await supabase.auth.getSession();
-    if (data?.session) {
-        console.log("이미 로그인된 상태:", data.session.user);
-    }
-
-    /* ----------------------------------------------------
-       6. 로그인 필요 시 호출되는 전역 함수
-    ---------------------------------------------------- */
-    window.requireLogin = function () {
-        const current = location.pathname.replace("/", "");
-        sessionStorage.setItem("returnTo", current);
-        location.href = "login.html";
-    };
 
 })();

@@ -14,115 +14,47 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-
-            <!-- 뒤로가기 -->
             <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
-
             <div class="header-title">로그인</div>
-
-            <!-- 우측 빈 영역 -->
             <div class="header-spacer"></div>
         </div>
     </header>
 
-    <!-- LOGIN GUIDE -->
     <div class="login-guide">
         다시 만나 반갑습니다!<br>
         계정으로 로그인하고 GP, 활동 기록, 보상을 이어가세요.
     </div>
 
-    <!-- FORM -->
     <section class="section">
 
-        <!-- EMAIL -->
         <div class="input-group">
             <div class="input-label">아이디 (이메일)</div>
             <input type="email" id="email" class="input-field" placeholder="example@galla.com">
         </div>
 
-        <!-- PASSWORD -->
         <div class="input-group">
             <div class="input-label">비밀번호</div>
             <input type="password" id="password" class="input-field" placeholder="비밀번호 입력">
         </div>
 
-        <!-- PASSWORD RESET -->
         <div class="forgot-row">
             <span onclick="location.href='reset.html'">비밀번호 재설정 ></span>
         </div>
 
-        <!-- LOGIN BUTTON -->
         <button class="login-btn" id="loginBtn">로그인</button>
 
-        <!-- SIGNUP LINK -->
         <div class="signup-link">
             계정이 없나요? <span onclick="location.href='signup.html'">회원가입</span>
         </div>
 
     </section>
 
-    <!-- NAVIGATION -->
-    <nav class="bottom-nav">
-        <button class="nav-item" onclick="location.href='index.html'">
-            <img src="assets/icons/nav-home.svg">
-        </button>
-        <button class="nav-item" onclick="location.href='search.html'">
-            <img src="assets/icons/nav-search.svg">
-        </button>
-        <button class="nav-item" onclick="location.href='write.html'">
-            <img src="assets/icons/nav-write.svg">
-        </button>
-        <button class="nav-item" onclick="location.href='random.html'">
-            <img src="assets/icons/nav-random.svg">
-        </button>
-        <button class="nav-item active" onclick="location.href='mypage.html'">
-            <img src="assets/icons/nav-user.svg">
-        </button>
-    </nav>
-
 </div>
 
 <!-- Supabase -->
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
-
-<!-- LOGIN LOGIC -->
-<script>
-document.addEventListener("DOMContentLoaded", async () => {
-    /* ----------------------------------------------------
-       01. 로그인 상태면 접근 금지 → mypage로 이동
-    ---------------------------------------------------- */
-    const { data } = await supabase.auth.getSession();
-    if (data.session?.user) {
-        location.replace("mypage.html");
-        return;
-    }
-
-    /* ----------------------------------------------------
-       02. 로그인 이벤트
-    ---------------------------------------------------- */
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value.trim();
-
-        if (!email || !password) {
-            alert("이메일과 비밀번호를 입력해주세요.");
-            return;
-        }
-
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-        if (error) {
-            alert("로그인 실패: " + error.message);
-            return;
-        }
-
-        // 로그인 성공
-        alert("로그인 성공! 환영합니다.");
-        location.href = "index.html";
-    });
-});
-</script>
+<script src="js/login.js"></script>
 
 </body>
 </html>
