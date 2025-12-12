@@ -1,4 +1,4 @@
-console.log("write.js loaded");
+console.log("write.js loaded", Date.now());
 
 if (window.__WRITE_JS__) {
   console.warn("write.js already loaded - skipped");
@@ -22,8 +22,9 @@ document.addEventListener("DOMContentLoaded", () => {
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
-  /* Cloudflare Images */
   async function uploadImage(file) {
+    console.log("Uploading image...");
+
     const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/images/v1/direct_upload`,
       {
@@ -33,6 +34,8 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     const json = await res.json();
+    if (!json.success) throw new Error("Cloudflare Images URL 생성 실패");
+
     const uploadURL = json.result.uploadURL;
 
     const uploadRes = await fetch(uploadURL, {
@@ -41,11 +44,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const uploaded = await uploadRes.json();
+    console.log("Image upload result:", uploaded);
+
     return uploaded.result.id;
   }
 
-  /* Cloudflare Stream */
   async function uploadVideo(file) {
+    console.log("Uploading video...");
+
     const res = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
       {
@@ -69,19 +75,16 @@ document.addEventListener("DOMContentLoaded", () => {
     return json.result.uid;
   }
 
-  /* Submit */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    console.log("FORM SUBMIT");
 
     try {
       const supabase = window.supabaseClient;
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
 
-      if (!token) {
-        alert("로그인 해주세요");
-        return;
-      }
+      if (!token) throw new Error("로그인 필요");
 
       const thumbId = await uploadImage(thumbnail.files[0]);
       const videoId = video.files[0] ? await uploadVideo(video.files[0]) : null;
@@ -113,7 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       const json = await res.json();
-
       if (!res.ok) throw new Error(json.message);
 
       alert("갈라 생성 완료!");
