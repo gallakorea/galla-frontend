@@ -18,41 +18,44 @@ document.addEventListener("DOMContentLoaded", () => {
   videoBtn.onclick = () => video.click();
 
   /* -------------------- Cloudflare IMAGE Upload (FIXED) -------------------- */
-  async function uploadImage(file, token) {
-    console.log("Requesting image upload URL...");
+async function uploadImage(file) {
+  console.log("Requesting image upload URL...");
 
-    const res = await fetch(
-      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`    // ★★ 추가됨 ★★
-        }
-      }
-    );
+  const res = await fetch(
+    "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
+    { method: "POST" }
+  );
 
-    const json = await res.json();
-    const uploadURL = json?.result?.uploadURL;
-    if (!uploadURL) throw new Error("이미지 업로드 URL 없음");
+  const json = await res.json();
 
-    console.log("Uploading image…");
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const uploadRes = await fetch(uploadURL, {
-      method: "POST",
-      body: formData
-    });
-
-    const uploaded = await uploadRes.json();
-    if (!uploaded?.result?.id) {
-      console.error(uploaded);
-      throw new Error("이미지 업로드 실패");
-    }
-
-    return uploaded.result.id;
+  if (!json?.result?.uploadURL) {
+    console.error(json);
+    throw new Error("업로드 URL을 불러오지 못했습니다");
   }
+
+  const uploadURL = json.result.uploadURL;  
+  const imageId = json.result.id;  // 여기서 ID도 같이 온다
+
+  console.log("Uploading image… to:", uploadURL);
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const uploadRes = await fetch(uploadURL, {
+    method: "POST",
+    body: formData
+  });
+
+  const uploadedJson = await uploadRes.json().catch(() => ({}));
+
+  if (!uploadRes.ok) {
+    console.error("Upload error:", uploadedJson);
+    throw new Error("이미지 업로드 실패");
+  }
+
+  // v2에서는 업로드 후 추가 응답 없이 ID 그대로 사용
+  return imageId;
+}
 
   /* -------------------- Cloudflare VIDEO Upload (FIXED) -------------------- */
   async function uploadVideo(file, token) {
