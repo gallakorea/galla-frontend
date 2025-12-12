@@ -17,67 +17,29 @@ document.addEventListener("DOMContentLoaded", () => {
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
-  /* -------------------- Cloudflare IMAGE Upload (FIXED) -------------------- */
-async function uploadImage(file) {
-  console.log("Requesting image upload URL...");
-
-  const res = await fetch(
-    "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
-    { method: "POST" }
-  );
-
-  const json = await res.json();
-
-  if (!json?.result?.uploadURL) {
-    console.error(json);
-    throw new Error("업로드 URL을 불러오지 못했습니다");
-  }
-
-  const uploadURL = json.result.uploadURL;  
-  const imageId = json.result.id;  // 여기서 ID도 같이 온다
-
-  console.log("Uploading image… to:", uploadURL);
-
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const uploadRes = await fetch(uploadURL, {
-    method: "POST",
-    body: formData
-  });
-
-  const uploadedJson = await uploadRes.json().catch(() => ({}));
-
-  if (!uploadRes.ok) {
-    console.error("Upload error:", uploadedJson);
-    throw new Error("이미지 업로드 실패");
-  }
-
-  // v2에서는 업로드 후 추가 응답 없이 ID 그대로 사용
-  return imageId;
-}
-
-  /* -------------------- Cloudflare VIDEO Upload (FIXED) -------------------- */
-  async function uploadVideo(file, token) {
-    console.log("Requesting video upload URL...");
+  /* ========================================================================
+     Cloudflare IMAGE Upload (v2 완전 대응)
+     ======================================================================== */
+  async function uploadImage(file) {
+    console.log("Requesting image upload URL...");
 
     const res = await fetch(
-      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-video-upload-url",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`    // ★★ 추가됨 ★★
-        }
-      }
+      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
+      { method: "POST" }
     );
 
     const json = await res.json();
+    console.log("image upload URL response:", json);
+
     const uploadURL = json?.result?.uploadURL;
-    const uid = json?.result?.uid;
+    const imageId = json?.result?.id;
 
-    if (!uploadURL) throw new Error("비디오 업로드 URL 없음");
+    if (!uploadURL || !imageId) {
+      console.error("Cloudflare 이미지 업로드 URL 에러:", json);
+      throw new Error("이미지 업로드 URL 없음");
+    }
 
-    console.log("Uploading video…");
+    console.log("Uploading image… to:", uploadURL);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -88,14 +50,55 @@ async function uploadImage(file) {
     });
 
     if (!uploadRes.ok) {
-      console.error(await uploadRes.text());
+      console.error("이미지 업로드 실패:", await uploadRes.text());
+      throw new Error("이미지 업로드 실패");
+    }
+
+    // v2는 업로드 후 JSON을 안 줌 → ID는 처음에 받아온 걸 그대로 사용
+    console.log("Image uploaded successfully → ID:", imageId);
+    return imageId;
+  }
+
+  /* ========================================================================
+     Cloudflare VIDEO Upload (Direct Upload)
+     ======================================================================== */
+  async function uploadVideo(file) {
+    console.log("Requesting video upload URL...");
+
+    const res = await fetch(
+      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-video-upload-url",
+      { method: "POST" }
+    );
+
+    const json = await res.json();
+    console.log("video upload URL response:", json);
+
+    const uploadURL = json?.result?.uploadURL;
+    const uid = json?.result?.uid;
+
+    if (!uploadURL) throw new Error("비디오 업로드 URL 없음");
+
+    console.log("Uploading video…", uploadURL);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const uploadRes = await fetch(uploadURL, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!uploadRes.ok) {
+      console.error("Video upload failed:", await uploadRes.text());
       throw new Error("비디오 업로드 실패");
     }
 
     return uid;
   }
 
-  /* ----------------------------- SUBMIT ----------------------------- */
+  /* ========================================================================
+     FORM SUBMIT
+     ======================================================================== */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -112,15 +115,17 @@ async function uploadImage(file) {
       let thumbId = null;
       let videoId = null;
 
+      /* 썸네일 업로드 */
       if (thumbnail.files[0]) {
-        thumbId = await uploadImage(thumbnail.files[0], token);  // ★ token 전달
+        thumbId = await uploadImage(thumbnail.files[0]);
       } else {
         alert("썸네일은 필수입니다.");
         return;
       }
 
+      /* 비디오 업로드 (선택) */
       if (video.files[0]) {
-        videoId = await uploadVideo(video.files[0], token);      // ★ token 전달
+        videoId = await uploadVideo(video.files[0]);
       }
 
       const issue = {
