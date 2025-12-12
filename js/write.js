@@ -1,11 +1,6 @@
 console.log("[write.js] LOADED");
 
 /* ============================================================
-   상태 플래그 — 중복 업로드 방지
-============================================================ */
-let isUploading = false;
-
-/* ============================================================
    Supabase 로딩 대기
 ============================================================ */
 function waitForSupabase() {
@@ -22,83 +17,97 @@ function waitForSupabase() {
 /* ============================================================
    Cloudflare Images Direct Upload (via Supabase Edge Function)
 ============================================================ */
-async function getImageDirectUploadUrl() {
-    const endpoint = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
+async function requestImageDirectUploadURL() {
+    try {
+        const endpoint = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
 
-    const res = await fetch(endpoint, { method: "POST" });
-    const json = await res.json();
+        const res = await fetch(endpoint, { method: "POST" });
+        const json = await res.json();
 
-    console.log("[DirectUpload][Images] Response:", json);
+        console.log("[Images] DirectUpload URL Response:", json);
 
-    return json?.result?.uploadURL ?? null;
+        return json?.result?.uploadURL ?? null;
+    } catch (err) {
+        console.error("[Images] 요청 실패:", err);
+        return null;
+    }
 }
 
 async function uploadThumbnail(file) {
-    const uploadURL = await getImageDirectUploadUrl();
+    const uploadURL = await requestImageDirectUploadURL();
     if (!uploadURL) {
         alert("썸네일 업로드 URL 생성 실패");
         return null;
     }
 
-    console.log("[DirectUpload][Images] Upload URL:", uploadURL);
+    console.log("[Images] Upload URL:", uploadURL);
 
     const formData = new FormData();
     formData.append("file", file);
 
-    const uploadRes = await fetch(uploadURL, {
+    const res = await fetch(uploadURL, {
         method: "POST",
         body: formData
     });
 
-    const result = await uploadRes.json();
-    console.log("[DirectUpload][Images] Upload result:", result);
+    const result = await res.json();
+    console.log("[Images] Upload Result:", result);
 
     const imageId = result?.result?.id;
-    if (!imageId) return null;
+    if (!imageId) {
+        alert("이미지 업로드 실패");
+        return null;
+    }
 
     return `https://imagedelivery.net/WRQ-8xhWbU08j8o3OzxpFg/${imageId}/public`;
 }
 
+
 /* ============================================================
-   Cloudflare Stream Direct Upload (Client-Side)
+   Cloudflare Stream Direct Upload (video)
 ============================================================ */
-async function getStreamDirectUploadUrl() {
+async function requestStreamUploadURL() {
     const CF_ACCOUNT_ID = "8c46fbeae6e69848470dfacaaa8beb03";
-    const CF_STREAM_TOKEN = "pRDSyrfEv84NYnhN5HmcrhavHET8Eo54oI3kG5W";
+    const CF_STREAM_TOKEN = "YOUR_STREAM_TOKEN"; // ★ 반드시 실제 Stream Token으로 교체
 
-    const res = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${CF_STREAM_TOKEN}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ maxDurationSeconds: 120 })
-        }
-    );
+    try {
+        const res = await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${CF_STREAM_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ maxDurationSeconds: 120 })
+            }
+        );
 
-    const json = await res.json();
-    console.log("[DirectUpload][Stream] Create URL:", json);
+        const json = await res.json();
+        console.log("[Stream] DirectUpload URL Response:", json);
 
-    if (!json.success) return null;
+        if (!json.success) return null;
 
-    return {
-        uploadURL: json.result.uploadURL,
-        videoId: json.result.uid
-    };
+        return {
+            uploadURL: json.result.uploadURL,
+            videoId: json.result.uid
+        };
+    } catch (err) {
+        console.error("[Stream] 요청 실패:", err);
+        return null;
+    }
 }
 
 async function uploadVideo(file) {
-    const data = await getStreamDirectUploadUrl();
-    if (!data) {
+    const info = await requestStreamUploadURL();
+    if (!info) {
         alert("영상 업로드 URL 생성 실패");
         return null;
     }
 
-    const { uploadURL, videoId } = data;
+    const { uploadURL, videoId } = info;
 
-    console.log("[DirectUpload][Stream] Upload URL:", uploadURL);
+    console.log("[Stream] Upload URL:", uploadURL);
 
     const uploadRes = await fetch(uploadURL, {
         method: "PUT",
@@ -106,13 +115,14 @@ async function uploadVideo(file) {
     });
 
     if (!uploadRes.ok) {
-        console.error(await uploadRes.text());
+        console.error("[Stream] 업로드 실패:", await uploadRes.text());
         alert("Cloudflare Stream 업로드 실패");
         return null;
     }
 
     return `https://customer-WRQ-8xhWbU08j8o3OzxpFg.cloudflarestream.com/${videoId}/manifest/video.m3u8`;
 }
+
 
 /* ============================================================
    MAIN SCRIPT
@@ -133,6 +143,7 @@ async function uploadVideo(file) {
 
     /* FORM ELEMENTS */
     const form = document.getElementById("writeForm");
+
     const category = document.getElementById("category");
     const title = document.getElementById("title");
     const oneLine = document.getElementById("oneLine");
@@ -140,80 +151,78 @@ async function uploadVideo(file) {
 
     const thumbnailInput = document.getElementById("thumbnail");
     const thumbnailBtn = document.getElementById("thumbnailBtn");
+
     const videoInput = document.getElementById("videoInput");
 
     thumbnailBtn.addEventListener("click", () => thumbnailInput.click());
 
     /* ============================================================
-       FORM SUBMIT
+       SUBMIT
     ============================================================= */
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        // 중복 실행 방지
-        if (isUploading) {
-            console.warn("이미 업로드 중 — 중복 실행 방지됨");
-            return;
-        }
-        isUploading = true;
+        if (!category.value.trim()) return alert("카테고리를 선택하세요.");
+        if (!title.value.trim()) return alert("제목을 입력하세요.");
+        if (!oneLine.value.trim()) return alert("한 줄 코멘트를 입력하세요.");
+        if (!description.value.trim()) return alert("이슈 설명을 입력하세요.");
+        if (!thumbnailInput.files.length) return alert("썸네일을 업로드해주세요.");
 
-        try {
-            /* 입력 검증 */
-            if (!category.value.trim()) return alert("카테고리를 선택하세요.");
-            if (!title.value.trim()) return alert("제목을 입력하세요.");
-            if (!oneLine.value.trim()) return alert("한 줄 코멘트를 입력하세요.");
-            if (!description.value.trim()) return alert("이슈 설명을 입력하세요.");
-            if (!thumbnailInput.files.length) return alert("썸네일을 업로드해주세요.");
-            if (!confirm("정말 이 갈라를 발의하시겠습니까?")) return;
+        if (!confirm("정말 이 갈라를 발의하시겠습니까?")) return;
 
-            const thumbnailFile = thumbnailInput.files[0];
-            const videoFile = videoInput.files[0] ?? null;
+        const thumbnailFile = thumbnailInput.files[0];
+        const videoFile = videoInput.files[0] ?? null;
 
-            /* 썸네일 업로드 */
-            console.log("썸네일 업로드 시작…");
-            const thumbnailURL = await uploadThumbnail(thumbnailFile);
-            if (!thumbnailURL) return alert("썸네일 업로드 실패");
+        /* -----------------------
+           썸네일 업로드
+        ----------------------- */
+        console.log("[Process] 썸네일 업로드 시작");
+        const thumbnailURL = await uploadThumbnail(thumbnailFile);
+        if (!thumbnailURL) return alert("썸네일 업로드 실패");
 
-            /* 영상 업로드 (선택) */
-            let videoURL = null;
-            if (videoFile) {
-                console.log("영상 업로드 시작…");
-                videoURL = await uploadVideo(videoFile);
-                if (!videoURL) {
-                    alert("영상 업로드 실패 (영상 없이 진행)");
-                }
+        /* -----------------------
+           영상 업로드 (선택)
+        ----------------------- */
+        let videoURL = null;
+
+        if (videoFile) {
+            console.log("[Process] 영상 업로드 시작");
+
+            videoURL = await uploadVideo(videoFile);
+            if (!videoURL) {
+                alert("영상 업로드 실패 (영상 없이 등록합니다)");
+                videoURL = null;
             }
-
-            /* DB INSERT */
-            const payload = {
-                user_id: user.id,
-                category: category.value,
-                title: title.value.trim(),
-                one_line: oneLine.value.trim(),
-                description: description.value.trim(),
-                thumbnail_url: thumbnailURL,
-                video_url: videoURL,
-                status: "normal"
-            };
-
-            console.log("[INSERT] issues payload:", payload);
-
-            const { data, error } = await supabase
-                .from("issues")
-                .insert(payload)
-                .select("id")
-                .single();
-
-            if (error) {
-                console.error(error);
-                return alert("DB 저장 실패: " + error.message);
-            }
-
-            alert("발의가 완료되었습니다!");
-            location.href = `issue.html?id=${data.id}`;
-
-        } finally {
-            isUploading = false;
         }
+
+        /* -----------------------
+           Supabase Insert
+        ----------------------- */
+        const payload = {
+            user_id: user.id,
+            category: category.value,
+            title: title.value.trim(),
+            one_line: oneLine.value.trim(),
+            description: description.value.trim(),
+            thumbnail_url: thumbnailURL,
+            video_url: videoURL,
+            status: "normal"
+        };
+
+        console.log("[INSERT] issues payload:", payload);
+
+        const { data, error } = await supabase
+            .from("issues")
+            .insert(payload)
+            .select("id")
+            .single();
+
+        if (error) {
+            console.error(error);
+            return alert("DB 저장 실패: " + error.message);
+        }
+
+        alert("발의가 완료되었습니다!");
+        location.href = `issue.html?id=${data.id}`;
     });
 })();
