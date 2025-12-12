@@ -18,12 +18,17 @@ document.addEventListener("DOMContentLoaded", () => {
   videoBtn.onclick = () => video.click();
 
   /* -------------------- Cloudflare IMAGE Upload (FIXED) -------------------- */
-  async function uploadImage(file) {
+  async function uploadImage(file, token) {
     console.log("Requesting image upload URL...");
 
     const res = await fetch(
       "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
-      { method: "POST" }
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`    // ★★ 추가됨 ★★
+        }
+      }
     );
 
     const json = await res.json();
@@ -50,12 +55,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* -------------------- Cloudflare VIDEO Upload (FIXED) -------------------- */
-  async function uploadVideo(file) {
+  async function uploadVideo(file, token) {
     console.log("Requesting video upload URL...");
 
     const res = await fetch(
       "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-video-upload-url",
-      { method: "POST" }
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`    // ★★ 추가됨 ★★
+        }
+      }
     );
 
     const json = await res.json();
@@ -100,14 +110,14 @@ document.addEventListener("DOMContentLoaded", () => {
       let videoId = null;
 
       if (thumbnail.files[0]) {
-        thumbId = await uploadImage(thumbnail.files[0]);
+        thumbId = await uploadImage(thumbnail.files[0], token);  // ★ token 전달
       } else {
         alert("썸네일은 필수입니다.");
         return;
       }
 
       if (video.files[0]) {
-        videoId = await uploadVideo(video.files[0]);
+        videoId = await uploadVideo(video.files[0], token);      // ★ token 전달
       }
 
       const issue = {
