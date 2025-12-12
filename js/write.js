@@ -6,7 +6,6 @@ if (window.__WRITE_JS__) {
 window.__WRITE_JS__ = true;
 
 document.addEventListener("DOMContentLoaded", () => {
-
   console.log("WRITE INIT");
 
   const form = document.getElementById("writeForm");
@@ -15,50 +14,57 @@ document.addEventListener("DOMContentLoaded", () => {
   const video = document.getElementById("videoInput");
   const videoBtn = document.getElementById("videoBtn");
 
-  // 버튼 정상 동작
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
-  /* ===========================================
-     1) 백엔드에서 Cloudflare Direct Upload URL 발급
-  ============================================ */
-  async function getImageUploadURL() {
+  /* -------------------- Cloudflare IMAGE Upload -------------------- */
+  async function uploadImage(file) {
+    console.log("Requesting image upload URL...");
+
     const res = await fetch(
       "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
       { method: "POST" }
     );
-    return await res.json();
+
+    const json = await res.json();
+    const uploadURL = json?.result?.uploadURL;
+
+    console.log("Uploading image...");
+    const uploadRes = await fetch(uploadURL, {
+      method: "POST",
+      body: file
+    });
+
+    const uploaded = await uploadRes.json();
+    return uploaded.result.id;
   }
 
-  async function getVideoUploadURL() {
+  /* -------------------- Cloudflare VIDEO Upload -------------------- */
+  async function uploadVideo(file) {
+    console.log("Requesting video upload URL...");
+
     const res = await fetch(
       "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-video-upload-url",
-      { method: "POST" }
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxDurationSeconds: 120 })
+      }
     );
-    return await res.json();
+
+    const json = await res.json();
+    const uploadURL = json?.result?.uploadURL;
+
+    console.log("Uploading video...");
+    await fetch(uploadURL, {
+      method: "PUT",
+      body: file
+    });
+
+    return json.result.uid;
   }
 
-  /* ===========================================
-     2) 이미지 업로드
-  ============================================ */
-  async function uploadImage(file) {
-    const { uploadURL, imageId } = await getImageUploadURL();
-    await fetch(uploadURL, { method: "POST", body: file });
-    return imageId;
-  }
-
-  /* ===========================================
-     3) 영상 업로드
-  ============================================ */
-  async function uploadVideo(file) {
-    const { uploadURL, videoId } = await getVideoUploadURL();
-    await fetch(uploadURL, { method: "PUT", body: file });
-    return videoId;
-  }
-
-  /* ===========================================
-     4) FORM SUBMIT
-  ============================================ */
+  /* ----------------------------- SUBMIT ----------------------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -112,5 +118,4 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("오류: " + err.message);
     }
   });
-
 });
