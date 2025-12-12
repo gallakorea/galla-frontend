@@ -17,88 +17,61 @@ document.addEventListener("DOMContentLoaded", () => {
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
-  /* ========================================================================
-     Cloudflare IMAGE Upload (v2 완전 대응)
-     ======================================================================== */
+  /* -------------------- Supabase IMAGE Upload -------------------- */
   async function uploadImage(file) {
-    console.log("Requesting image upload URL...");
+    console.log("Uploading image to Supabase Storage...");
 
-    const res = await fetch(
-      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-image-upload-url",
-      { method: "POST" }
-    );
+    const supabase = window.supabaseClient;
 
-    const json = await res.json();
-    console.log("image upload URL response:", json);
+    const filePath = `thumbnails/${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from("issues")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
 
-    const uploadURL = json?.result?.uploadURL;
-    const imageId = json?.result?.id;
-
-    if (!uploadURL || !imageId) {
-      console.error("Cloudflare 이미지 업로드 URL 에러:", json);
-      throw new Error("이미지 업로드 URL 없음");
-    }
-
-    console.log("Uploading image… to:", uploadURL);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const uploadRes = await fetch(uploadURL, {
-      method: "POST",
-      body: formData
-    });
-
-    if (!uploadRes.ok) {
-      console.error("이미지 업로드 실패:", await uploadRes.text());
+    if (error) {
+      console.error(error);
       throw new Error("이미지 업로드 실패");
     }
 
-    // v2는 업로드 후 JSON을 안 줌 → ID는 처음에 받아온 걸 그대로 사용
-    console.log("Image uploaded successfully → ID:", imageId);
-    return imageId;
+    // Public URL 만들기
+    const { data: urlData } = supabase.storage
+      .from("issues")
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
   }
 
-  /* ========================================================================
-     Cloudflare VIDEO Upload (Direct Upload)
-     ======================================================================== */
+  /* -------------------- Supabase VIDEO Upload -------------------- */
   async function uploadVideo(file) {
-    console.log("Requesting video upload URL...");
+    console.log("Uploading video to Supabase Storage...");
 
-    const res = await fetch(
-      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/get-video-upload-url",
-      { method: "POST" }
-    );
+    const supabase = window.supabaseClient;
 
-    const json = await res.json();
-    console.log("video upload URL response:", json);
+    const filePath = `videos/${Date.now()}-${file.name}`;
+    const { data, error } = await supabase.storage
+      .from("issues")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
 
-    const uploadURL = json?.result?.uploadURL;
-    const uid = json?.result?.uid;
-
-    if (!uploadURL) throw new Error("비디오 업로드 URL 없음");
-
-    console.log("Uploading video…", uploadURL);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const uploadRes = await fetch(uploadURL, {
-      method: "POST",
-      body: formData
-    });
-
-    if (!uploadRes.ok) {
-      console.error("Video upload failed:", await uploadRes.text());
+    if (error) {
+      console.error(error);
       throw new Error("비디오 업로드 실패");
     }
 
-    return uid;
+    // Public URL 만들기
+    const { data: urlData } = supabase.storage
+      .from("issues")
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
   }
 
-  /* ========================================================================
-     FORM SUBMIT
-     ======================================================================== */
+  /* ----------------------------- SUBMIT ----------------------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -112,20 +85,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      let thumbId = null;
-      let videoId = null;
+      let thumbnailUrl = null;
+      let videoUrl = null;
 
-      /* 썸네일 업로드 */
       if (thumbnail.files[0]) {
-        thumbId = await uploadImage(thumbnail.files[0]);
+        thumbnailUrl = await uploadImage(thumbnail.files[0]);
       } else {
         alert("썸네일은 필수입니다.");
         return;
       }
 
-      /* 비디오 업로드 (선택) */
       if (video.files[0]) {
-        videoId = await uploadVideo(video.files[0]);
+        videoUrl = await uploadVideo(video.files[0]);
       }
 
       const issue = {
@@ -133,8 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title: document.getElementById("title").value,
         oneLine: document.getElementById("oneLine").value,
         description: document.getElementById("description").value,
-        thumbnail: thumbId,
-        video: videoId,
+        thumbnail: thumbnailUrl,
+        video: videoUrl,
         references: [
           document.getElementById("ref1").value || null,
           document.getElementById("ref2").value || null,
@@ -150,9 +121,9 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(issue)
+          body: JSON.stringify(issue),
         }
       );
 
