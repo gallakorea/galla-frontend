@@ -1,265 +1,201 @@
-document.addEventListener("DOMContentLoaded", () => {
+console.log("[write.js] loaded");
 
-  /***************************************************
-   * 1) 썸네일 업로드
-   ***************************************************/
-  const thumbnailBtn = document.getElementById("thumbnailBtn");
-  const thumbnailInput = document.getElementById("thumbnail");
+/* -----------------------------------------
+   환경 설정
+----------------------------------------- */
+const CF_ACCOUNT_ID = "8c46fbeae6e69848470dfacaaa8beb03";
+const CF_ACCOUNT_HASH = "WRQ-8xhWbU08j8o3OzxpFg";
+const CF_TOKEN = "pRDSyrfEv84NYnhN5HmcrhavHET8Eo54oI3kG5W"; // 네가 방금 생성한 Token
+const CF_IMAGE_URL = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/images/v1`;
+const CF_STREAM_DIRECT_UPLOAD = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`;
 
-  if (thumbnailBtn && thumbnailInput) {
+/* -----------------------------------------
+   Supabase 로딩 대기
+----------------------------------------- */
+function waitForSupabase() {
+    return new Promise(resolve => {
+        const t = setInterval(() => {
+            if (window.supabaseClient) {
+                clearInterval(t);
+                resolve(window.supabaseClient);
+            }
+        }, 20);
+    });
+}
+
+(async () => {
+    const supabase = await waitForSupabase();
+
+    /* -----------------------------------------
+       로그인 체크
+    ----------------------------------------- */
+    const session = await supabase.auth.getSession();
+    const user = session.data.session?.user;
+
+    if (!user) {
+        alert("발의를 하려면 로그인이 필요합니다.");
+        sessionStorage.setItem("returnTo", "write.html");
+        location.href = "login.html";
+        return;
+    }
+
+    /* -----------------------------------------
+       FORM ELEMENTS
+    ----------------------------------------- */
+    const form = document.getElementById("writeForm");
+    const category = document.getElementById("category");
+    const title = document.getElementById("title");
+    const oneLine = document.getElementById("oneLine");
+    const description = document.getElementById("description");
+
+    const thumbnailInput = document.getElementById("thumbnail");
+    const thumbnailBtn = document.getElementById("thumbnailBtn");
+    const videoInput = document.getElementById("videoInput");
+
     thumbnailBtn.addEventListener("click", () => thumbnailInput.click());
-  }
 
+    /* ============================================================
+       Cloudflare Images 업로드
+       결과: imageId + URL 반환
+    ============================================================ */
+    async function uploadThumbnailToCloudflare(file) {
+        const formData = new FormData();
+        formData.append("file", file);
 
-  /***************************************************
-   * 2) 영상 업로드 + 편집 모달
-   ***************************************************/
-  const videoModal = document.getElementById("videoModal");
-  const openVideoEditor = document.getElementById("openVideoEditor");
-  const videoInput = document.getElementById("videoInput");
-  const editVideo = document.getElementById("editVideo");
-  const closeVideoBtn = document.getElementById("videoCloseBtn");
-  const brightness = document.getElementById("brightness");
-  const volume = document.getElementById("volume");
+        const res = await fetch(CF_IMAGE_URL, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${CF_TOKEN}`
+            },
+            body: formData
+        });
 
-  if (videoModal) videoModal.style.display = "none";
+        const json = await res.json();
+        if (!json.success) {
+            console.error(json);
+            alert("Cloudflare 이미지 업로드 실패");
+            return null;
+        }
 
-  /* 영상 업로드 버튼 → 파일 선택 */
-  if (openVideoEditor && videoInput) {
-    openVideoEditor.addEventListener("click", () => videoInput.click());
-  }
-
-  /* 파일 선택 시 → 모달 열림 + 프리뷰 로드 */
-  if (videoInput && editVideo && videoModal) {
-    videoInput.addEventListener("change", () => {
-      if (!videoInput.files.length) return;
-
-      const url = URL.createObjectURL(videoInput.files[0]);
-      editVideo.src = url;
-
-      // iOS / WebView 안정성을 위해 load() + play() 조합 필요
-      editVideo.load();
-      setTimeout(() => {
-        editVideo.play().catch(() => {});
-      }, 200);
-
-      videoModal.style.display = "flex";
-    });
-  }
-
-  /* 영상 모달 닫기 */
-  if (closeVideoBtn && videoModal && editVideo) {
-    closeVideoBtn.addEventListener("click", () => {
-      videoModal.style.display = "none";
-      editVideo.pause();
-    });
-  }
-
-  /* 밝기 조절 */
-  if (brightness && editVideo) {
-    brightness.addEventListener("input", () => {
-      editVideo.style.filter = `brightness(${brightness.value}%)`;
-    });
-  }
-
-  /* 볼륨 조절 */
-  if (volume && editVideo) {
-    volume.addEventListener("input", () => {
-      editVideo.volume = volume.value / 100;
-    });
-  }
-
-
-  /***************************************************
-   * 3) 설명 글자수 카운터
-   ***************************************************/
-  const desc = document.getElementById("description");
-  const counter = document.querySelector(".desc-counter");
-
-  if (desc && counter) {
-    counter.textContent = `${desc.value.length} / 500`;
-
-    desc.addEventListener("input", () => {
-      counter.textContent = `${desc.value.length} / 500`;
-    });
-  }
-
-
-  /***************************************************
-   * 4) AI 도우미 모달
-   ***************************************************/
-  const aiModal = document.getElementById("aiModal");
-  const openAi = document.getElementById("openAiModal");
-  const closeAi = document.getElementById("aiCloseBtn");
-
-  const aiUserText = document.getElementById("aiUserText");
-  const aiImprovedText = document.getElementById("aiImprovedText");
-  const aiTags = document.getElementById("aiTags");
-
-  const aiStyleTabs = document.querySelectorAll(".ai-style-tabs button");
-  const aiSummaryBtns = document.querySelectorAll(".ai-summary-options button");
-  const applyAi = document.getElementById("applyAiText");
-
-  let selectedStyle = "basic";
-  let selectedOption = null;
-
-  if (aiModal) aiModal.style.display = "none";
-
-  /* AI 모달 열기 */
-  if (openAi && aiModal) {
-    openAi.addEventListener("click", () => {
-      aiUserText.value = desc.value;
-      aiImprovedText.value = "";
-      generateAITags(desc.value);
-      aiModal.style.display = "flex";
-    });
-  }
-
-  /* AI 모달 닫기 */
-  if (closeAi && aiModal) {
-    closeAi.addEventListener("click", () => {
-      aiModal.style.display = "none";
-    });
-  }
-
-
-  /***************************************************
-   * AI 태그 분석
-   ***************************************************/
-  function generateAITags(text) {
-    aiTags.innerHTML = "";
-    const tags = [];
-
-    if (text.length > 200) tags.push("내용 풍부");
-    if (text.includes("?")) tags.push("질문 포함");
-    if (text.match(/[.!]/)) tags.push("문장 구조 안정적");
-    if (text.length < 80) tags.push("짧은 글");
-
-    if (tags.length === 0) tags.push("분석 불가");
-
-    tags.forEach(t => {
-      const tagEl = document.createElement("span");
-      tagEl.classList.add("ai-tag");
-      tagEl.textContent = t;
-      aiTags.appendChild(tagEl);
-    });
-  }
-
-
-  /***************************************************
-   * AI 글 재작성 로직 (Dummy)
-   ***************************************************/
-  function aiRewrite(text, style = "basic", option = null) {
-    let output = text.trim();
-
-    const stylePresets = {
-      basic: "핵심 내용을 재정리했습니다.\n\n",
-      simple: "더 간결하게 다듬은 문장입니다.\n\n",
-      power: "논리적 강도를 크게 올린 버전입니다.\n\n",
-      emotional: "감정적 공감을 강화했습니다.\n\n",
-      expert: "전문가 시점에서 재작성했습니다.\n\n",
-      academic: "논문 구조로 정리했습니다.\n\n",
-    };
-
-    output = stylePresets[style] + output;
-
-    if (option === "3line") {
-      output = output.split(".").slice(0, 3).join(".") + " …";
+        const imageId = json.result.id;
+        return `https://imagedelivery.net/${CF_ACCOUNT_HASH}/${imageId}/public`;
     }
 
-    if (option === "bullet") {
-      const bullets = output.split(".").slice(0, 4);
-      output = bullets.map(b => "• " + b.trim()).join("\n");
+    /* ============================================================
+       Cloudflare Stream Direct Upload
+       1) Direct Upload URL 발급
+       2) 영상 업로드
+       3) videoId 반환
+    ============================================================ */
+    async function uploadVideoToCloudflare(file) {
+        console.log("[Stream] Direct Upload URL 요청 중…");
+
+        const initRes = await fetch(CF_STREAM_DIRECT_UPLOAD, {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${CF_TOKEN}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ maxDurationSeconds: 120 })
+        });
+
+        const initJson = await initRes.json();
+        if (!initJson.success) {
+            console.error(initJson);
+            alert("영상 업로드 URL 생성 실패");
+            return null;
+        }
+
+        const uploadURL = initJson.result.uploadURL;
+        const videoId = initJson.result.uid;
+
+        console.log("[Stream] Upload URL:", uploadURL);
+        console.log("[Stream] videoId:", videoId);
+
+        const uploadRes = await fetch(uploadURL, {
+            method: "PUT",
+            body: file
+        });
+
+        if (!uploadRes.ok) {
+            alert("Cloudflare Stream 업로드 실패");
+            return null;
+        }
+
+        // Cloudflare Stream 재생 URL
+        return `https://customer-${CF_ACCOUNT_HASH}.cloudflarestream.com/${videoId}/manifest/video.m3u8`;
     }
 
-    if (option === "counter") {
-      output += "\n\n반대 의견도 존재합니다:\n- 다른 시각에서는 이렇게 해석될 수 있습니다…";
-    }
+    /* ============================================================
+       FORM SUBMIT
+    ============================================================ */
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-    return output;
-  }
+        /* 필수 검증 */
+        if (!category.value.trim()) return alert("카테고리를 선택하세요.");
+        if (!title.value.trim()) return alert("제목을 입력하세요.");
+        if (!oneLine.value.trim()) return alert("한 줄 코멘트를 입력하세요.");
+        if (!description.value.trim()) return alert("이슈 설명을 입력하세요.");
+        if (!thumbnailInput.files.length) return alert("썸네일을 업로드해주세요.");
 
+        const ok = confirm("정말 이 갈라를 발의하시겠습니까?");
+        if (!ok) return;
 
-  /***************************************************
-   * 스타일 탭 클릭
-   ***************************************************/
-  aiStyleTabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      aiStyleTabs.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+        const thumbnailFile = thumbnailInput.files[0];
+        const videoFile = videoInput.files[0] ?? null;
 
-      selectedStyle = btn.dataset.style;
-      aiImprovedText.value = aiRewrite(aiUserText.value, selectedStyle, selectedOption);
+        /* -------------------------
+           썸네일 업로드
+        ------------------------- */
+        console.log("썸네일 업로드 시작…");
+        const thumbnailURL = await uploadThumbnailToCloudflare(thumbnailFile);
+
+        if (!thumbnailURL) {
+            alert("썸네일 업로드 실패");
+            return;
+        }
+
+        /* -------------------------
+           영상 업로드 (선택)
+        ------------------------- */
+        let videoURL = null;
+
+        if (videoFile) {
+            console.log("영상 업로드 시작…");
+            videoURL = await uploadVideoToCloudflare(videoFile);
+        }
+
+        /* -------------------------
+           DB INSERT
+        ------------------------- */
+        const payload = {
+            user_id: user.id,
+            category: category.value,
+            title: title.value.trim(),
+            one_line: oneLine.value.trim(),
+            description: description.value.trim(),
+            thumbnail_url: thumbnailURL,
+            video_url: videoURL,
+            status: "normal"
+        };
+
+        console.log("[INSERT] issues:", payload);
+
+        const { data, error } = await supabase
+            .from("issues")
+            .insert(payload)
+            .select("id")
+            .single();
+
+        if (error) {
+            console.error(error);
+            alert("DB 저장 실패: " + error.message);
+            return;
+        }
+
+        alert("발의가 완료되었습니다!");
+        location.href = `issue.html?id=${data.id}`;
     });
-  });
 
-  /***************************************************
-   * 요약 옵션 버튼
-   ***************************************************/
-  aiSummaryBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      selectedOption = btn.dataset.option;
-      aiImprovedText.value = aiRewrite(aiUserText.value, selectedStyle, selectedOption);
-    });
-  });
-
-  /***************************************************
-   * AI 적용 버튼
-   ***************************************************/
-  if (applyAi) {
-    applyAi.addEventListener("click", () => {
-      desc.value = aiImprovedText.value;
-      counter.textContent = `${desc.value.length} / 500`;
-      aiModal.style.display = "none";
-    });
-  }
-
-
-  /***************************************************
-   * 5) 하단 네비 인디케이터
-   ***************************************************/
-  const navItems = document.querySelectorAll(".nav-item");
-
-  navItems.forEach(item => {
-    item.addEventListener("click", () => {
-      navItems.forEach(i => i.classList.remove("active"));
-      item.classList.add("active");
-
-      const color = item.dataset.color || "#4A6CFF";
-      item.style.setProperty("--indicator-color", color);
-    });
-  });
-
-});
-
-videoInput?.addEventListener("change", () => {
-  if (!videoInput.files.length) return;
-
-  const file = videoInput.files[0];
-  const url = URL.createObjectURL(file);
-
-  editVideo.src = url;
-  editVideo.load();
-
-  editVideo.onloadedmetadata = () => {
-    // 세로형 비율 9:16 강제 적용
-    const naturalW = editVideo.videoWidth;
-    const naturalH = editVideo.videoHeight;
-
-    const targetRatio = 9 / 16;
-    const videoRatio = naturalW / naturalH;
-
-    // CSS 변환해서 세로형 화면에 맞춰서 보여줌
-    if (videoRatio > targetRatio) {
-      // 가로가 더 넓음 → 좌우 자르게 보임
-      editVideo.style.width = "100%";
-      editVideo.style.height = "auto";
-    } else {
-      // 세로 영상 → 상하 잘림
-      editVideo.style.height = "100%";
-      editVideo.style.width = "auto";
-    }
-  };
-
-  videoModal.style.display = "flex";
-});
+})();
