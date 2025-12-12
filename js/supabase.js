@@ -34,10 +34,10 @@ console.log("[supabase.js] 로드됨 - 초기화 대기");
     window.CF_ACCOUNT_ID = "8c46fbeae6e69848470dfacaaa8beb03";
 
     // Cloudflare Images 토큰 (너가 생성한 Read+Write)
-    window.CF_IMAGES_TOKEN = "여기에_네_CF_IMAGES_TOKEN_넣기";
+    window.CF_IMAGES_TOKEN = "r0LhwA1xxC-SfHIFN_8_Sw-Q_Zd3QBvWdQmEirRt";
 
     // Cloudflare Stream 토큰 (너가 방금 준 새 토큰)
-    window.CF_STREAM_TOKEN = "U4H8y1w1XbKoz3k2HsgrZmrW-YVmcLQVUHfKwJ-3";
+    window.CF_STREAM_TOKEN = "r0LhwA1xxC-SfHIFN_8_Sw-Q_Zd3QBvWdQmEirRt";
 
     console.log("[supabase.js] Cloudflare ENV 로드 완료", {
         CF_ACCOUNT_ID: window.CF_ACCOUNT_ID,
