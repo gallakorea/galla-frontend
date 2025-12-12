@@ -15,7 +15,7 @@ function waitForClient() {
 }
 
 (async () => {
-    await waitForClient(); // ← 이게 안 되면 버튼 클릭도 안 먹음
+    await waitForClient();
 
     const supabase = window.supabaseClient;
 
@@ -28,7 +28,23 @@ function waitForClient() {
         return;
     }
 
-    // 로그인 이벤트
+    /* ----------------------------------------------------
+       🔥 Enter 키로도 로그인 실행
+    ---------------------------------------------------- */
+    function handleEnter(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();     // 폼 자동 제출 방지
+            loginBtn.click();           // 버튼 클릭 실행
+        }
+    }
+
+    email.addEventListener("keypress", handleEnter);
+    pw.addEventListener("keypress", handleEnter);
+
+
+    /* ----------------------------------------------------
+       🔥 로그인 이벤트
+    ---------------------------------------------------- */
     loginBtn.addEventListener("click", async () => {
         console.log("[login.js] 로그인 버튼 클릭됨");
 
