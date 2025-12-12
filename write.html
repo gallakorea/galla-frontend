@@ -24,17 +24,14 @@
       </div>
   </header>
 
-  <!-- MAIN -->
   <main class="page-main">
     <div class="page-inner">
 
-      <!-- Hero -->
       <section class="section-block">
         <h1 class="write-main-title">새 갈라치기 만들기</h1>
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
-      <!-- Guide -->
       <section class="section-block write-guide-block">
         <ul class="write-guide-list">
           <li>갈라치기 주제 제목은 최대 80자 이내로 작성해주세요.</li>
@@ -47,7 +44,6 @@
       <!-- FORM -->
       <form class="write-form" id="writeForm">
 
-        <!-- Category -->
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
           <select id="category" class="input-field" required>
@@ -66,13 +62,11 @@
           </select>
         </div>
 
-        <!-- Title -->
         <div class="field-block">
           <label class="field-label">제목 (필수)</label>
           <input id="title" maxlength="80" class="input-field" required />
         </div>
 
-        <!-- One-line -->
         <div class="field-block">
           <label class="field-label">발의자 한 줄 코멘트 (필수)</label>
           <input id="oneLine" class="input-field" required />
@@ -81,25 +75,21 @@
         <!-- Thumbnail -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일 (필수)</label>
-
-          <!-- required 제거 완료 -->
           <input type="file" id="thumbnail" accept="image/*" hidden />
           <button type="button" id="thumbnailBtn" class="file-btn input-field">
             썸네일 업로드
           </button>
         </div>
 
-        <!-- Video Upload -->
+        <!-- Video -->
         <div class="field-block">
           <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
-
           <input type="file" id="videoInput" accept="video/*" hidden />
           <button type="button" id="openVideoEditor" class="file-btn input-field">
             영상 업로드 및 편집
           </button>
         </div>
 
-        <!-- Description -->
         <div class="field-block">
           <label class="field-label">
             이슈 설명 (필수)
@@ -117,7 +107,6 @@
           </button>
         </div>
 
-        <!-- References -->
         <div class="field-block">
           <label class="field-label">관련 기사·자료 링크 (선택)</label>
           <input type="url" id="ref1" class="input-field" placeholder="http:// 관련 링크 1" />
@@ -125,7 +114,6 @@
           <input type="url" id="ref3" class="input-field" placeholder="http:// 관련 링크 3" />
         </div>
 
-        <!-- Submit -->
         <div class="field-block submit-block">
           <button type="submit" class="primary-btn">갈라 발의하기</button>
         </div>
@@ -134,24 +122,19 @@
     </div>
   </main>
 
-  <!-- Bottom Navigation -->
   <nav class="bottom-nav">
     <button class="nav-item" data-target="index.html">
       <img src="./assets/icons/nav-home.svg" />
     </button>
-
     <button class="nav-item" data-target="search.html">
       <img src="./assets/icons/nav-search.svg" />
     </button>
-
     <button class="nav-item active" data-target="write.html">
       <img src="./assets/icons/nav-write.svg" />
     </button>
-
     <button class="nav-item" data-target="random.html">
       <img src="./assets/icons/nav-random.svg" />
     </button>
-
     <button class="nav-item" data-target="mypage.html">
       <img src="./assets/icons/nav-user.svg" />
     </button>
@@ -159,47 +142,20 @@
 
 </div>
 
-<!-- =========================== -->
-<!-- 네비게이션 -->
-<!-- =========================== -->
-<script>
-document.querySelectorAll(".nav-item").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const t = btn.dataset.target;
-    if (t) location.href = t;
-  });
-});
-</script>
-
-<!-- =========================== -->
-<!-- Supabase -->
-<!-- =========================== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./js/supabase.js"></script>
 
-<!-- write.js 단 1회만 로딩 -->
-<script src="./js/write.js"></script>
+<!-- write.js 단 1회 로드 -->
+<script src="./js/write.js" id="WRITE_JS"></script>
 
 <script>
-/* supabase 로딩 대기 */
-function waitForSupabase() {
-  return new Promise(resolve => {
-    const t = setInterval(() => {
-      if (window.supabaseClient) {
-        clearInterval(t);
-        resolve(window.supabaseClient);
-      }
-    }, 20);
-  });
-}
-
+/* 로그인 상태 UI */
 (async () => {
-  const supabase = await waitForSupabase();
+  const supabase = window.supabaseClient;
   const { data } = await supabase.auth.getSession();
 
   const authArea = document.getElementById("authArea");
 
-  /* 로그인 여부 */
   if (!data.session?.user) {
       authArea.innerHTML = `
           <button onclick="location.href='login.html'">로그인</button>
