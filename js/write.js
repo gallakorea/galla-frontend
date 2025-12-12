@@ -26,16 +26,34 @@ document.addEventListener("DOMContentLoaded", () => {
       { method: "POST" }
     );
 
+    if (!res.ok) {
+      throw new Error("Failed to get Image Upload URL");
+    }
+
     const json = await res.json();
     const uploadURL = json?.result?.uploadURL;
 
+    if (!uploadURL) {
+      throw new Error("Image uploadURL not found");
+    }
+
     console.log("Uploading image...");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
     const uploadRes = await fetch(uploadURL, {
       method: "POST",
-      body: file
+      body: formData
     });
 
     const uploaded = await uploadRes.json();
+
+    if (!uploaded?.result?.id) {
+      console.error(uploaded);
+      throw new Error("Cloudflare Images upload failed");
+    }
+
     return uploaded.result.id;
   }
 
@@ -52,14 +70,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
+    if (!res.ok) throw new Error("Failed to get Video Upload URL");
+
     const json = await res.json();
     const uploadURL = json?.result?.uploadURL;
 
+    if (!uploadURL) throw new Error("Video uploadURL not found");
+
     console.log("Uploading video...");
-    await fetch(uploadURL, {
+
+    const uploadRes = await fetch(uploadURL, {
       method: "PUT",
       body: file
     });
+
+    if (!uploadRes.ok) throw new Error("Cloudflare Stream upload failed");
 
     return json.result.uid;
   }
@@ -78,9 +103,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      const thumbId = await uploadImage(thumbnail.files[0]);
+      /* 1) 이미지 업로드 */
+      const thumbFile = thumbnail.files[0];
+      if (!thumbFile) throw new Error("썸네일은 필수입니다.");
+
+      const thumbId = await uploadImage(thumbFile);
+
+      /* 2) 비디오 업로드(선택) */
       const videoId = video.files[0] ? await uploadVideo(video.files[0]) : null;
 
+      /* 3) Issue payload 구성 */
       const issue = {
         category: document.getElementById("category").value,
         title: document.getElementById("title").value,
@@ -95,6 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
       };
 
+      /* 4) Supabase Edge Function 호출 */
       const res = await fetch(
         "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/create-issue",
         {
