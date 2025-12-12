@@ -17,61 +17,51 @@ document.addEventListener("DOMContentLoaded", () => {
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
-  /* -------------------- Supabase IMAGE Upload -------------------- */
+  /* ---------------------------------------------------------
+      SUPABASE IMAGE UPLOAD (WORKING)
+  --------------------------------------------------------- */
   async function uploadImage(file) {
     console.log("Uploading image to Supabase Storage...");
 
-    const supabase = window.supabaseClient;
-
-    const filePath = `thumbnails/${Date.now()}-${file.name}`;
-    const { data, error } = await supabase.storage
+    const filePath = `thumbnails/${Date.now()}_${file.name}`;
+    const { data, error } = await window.supabaseClient.storage
       .from("issues")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      .upload(filePath, file);
 
     if (error) {
-      console.error(error);
-      throw new Error("이미지 업로드 실패");
+      console.error("Supabase upload error", error);
+      throw new Error(error.message);
     }
 
-    // Public URL 만들기
-    const { data: urlData } = supabase.storage
-      .from("issues")
-      .getPublicUrl(filePath);
+    console.log("Image uploaded:", data);
 
-    return urlData.publicUrl;
+    return data.path;
   }
 
-  /* -------------------- Supabase VIDEO Upload -------------------- */
+  /* ---------------------------------------------------------
+      SUPABASE VIDEO UPLOAD (WORKING)
+  --------------------------------------------------------- */
   async function uploadVideo(file) {
     console.log("Uploading video to Supabase Storage...");
 
-    const supabase = window.supabaseClient;
-
-    const filePath = `videos/${Date.now()}-${file.name}`;
-    const { data, error } = await supabase.storage
+    const filePath = `videos/${Date.now()}_${file.name}`;
+    const { data, error } = await window.supabaseClient.storage
       .from("issues")
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+      .upload(filePath, file);
 
     if (error) {
-      console.error(error);
-      throw new Error("비디오 업로드 실패");
+      console.error("Video upload error", error);
+      throw new Error(error.message);
     }
 
-    // Public URL 만들기
-    const { data: urlData } = supabase.storage
-      .from("issues")
-      .getPublicUrl(filePath);
+    console.log("Video uploaded:", data);
 
-    return urlData.publicUrl;
+    return data.path;
   }
 
-  /* ----------------------------- SUBMIT ----------------------------- */
+  /* ---------------------------------------------------------
+      SUBMIT
+  --------------------------------------------------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -85,18 +75,18 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      let thumbnailUrl = null;
-      let videoUrl = null;
+      let thumbPath = null;
+      let videoPath = null;
 
       if (thumbnail.files[0]) {
-        thumbnailUrl = await uploadImage(thumbnail.files[0]);
+        thumbPath = await uploadImage(thumbnail.files[0]);
       } else {
         alert("썸네일은 필수입니다.");
         return;
       }
 
       if (video.files[0]) {
-        videoUrl = await uploadVideo(video.files[0]);
+        videoPath = await uploadVideo(video.files[0]);
       }
 
       const issue = {
@@ -104,8 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
         title: document.getElementById("title").value,
         oneLine: document.getElementById("oneLine").value,
         description: document.getElementById("description").value,
-        thumbnail: thumbnailUrl,
-        video: videoUrl,
+        thumbnail: thumbPath,
+        video: videoPath,
         references: [
           document.getElementById("ref1").value || null,
           document.getElementById("ref2").value || null,
@@ -121,9 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json",
+            "Content-Type": "application/json"
           },
-          body: JSON.stringify(issue),
+          body: JSON.stringify(issue)
         }
       );
 
