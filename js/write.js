@@ -1,213 +1,81 @@
-console.log("[write.js] LOADED");
+// write.js 최종본
 
-/* ============================================================
-   Supabase 로딩 대기
-============================================================ */
-function waitForSupabase() {
-    return new Promise(resolve => {
-        const t = setInterval(() => {
-            if (window.supabaseClient) {
-                clearInterval(t);
-                resolve(window.supabaseClient);
-            }
-        }, 20);
-    });
-}
+import { supabase } from "./supabaseClient.js";
 
-/* ============================================================
-   Cloudflare Images Direct Upload via Supabase Edge Function
-============================================================ */
-async function getImageDirectUploadUrl() {
-    const endpoint = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
+const videoInput = document.getElementById("videoUpload");
+let uploadedVideoURL = null;
 
-    const res = await fetch(endpoint, { method: "POST" });
-    const json = await res.json();
+// 1) 비디오 업로드 처리
+async function uploadVideoToCloudflare(file) {
+  console.log("비디오 업로드 시작");
 
-    console.log("[DirectUpload][Images] Response:", json);
-
-    return json?.result?.uploadURL ?? null;
-}
-
-async function uploadThumbnail(file) {
-    const uploadURL = await getImageDirectUploadUrl();
-    if (!uploadURL) {
-        alert("썸네일 업로드 URL 생성 실패");
-        return null;
+  // 1) Edge Function에서 Direct Upload URL 받기
+  const { data: direct, error } = await supabase.functions.invoke(
+    "cf-direct-upload",
+    {
+      body: { type: "video" },
     }
+  );
 
-    console.log("[DirectUpload][Images] Upload URL:", uploadURL);
+  if (error) {
+    console.error("Direct Upload Error:", error);
+    throw error;
+  }
 
-    const formData = new FormData();
-    formData.append("file", file);
+  const uploadURL = direct?.result?.uploadURL;
+  if (!uploadURL) throw new Error("Cloudflare uploadURL 없음");
 
-    const uploadRes = await fetch(uploadURL, {
-        method: "POST",
-        body: formData
-    });
+  console.log("업로드 URL:", uploadURL);
 
-    const result = await uploadRes.json();
-    console.log("[DirectUpload][Images] Upload result:", result);
+  // 2) Cloudflare로 실제 업로드 (브라우저 → Cloudflare)
+  const uploadRes = await fetch(uploadURL, {
+    method: "POST",
+    body: file,
+  });
 
-    const imageId = result?.result?.id;
-    if (!imageId) return null;
+  const uploaded = await uploadRes.json();
 
-    return `https://imagedelivery.net/WRQ-8xhWbU08j8o3OzxpFg/${imageId}/public`;
+  console.log("Cloudflare 업로드 결과:", uploaded);
+
+  if (!uploaded?.success) {
+    throw new Error("Cloudflare 업로드 실패");
+  }
+
+  // 3) 실제 영상 URL (playback)
+  return `https://videodelivery.net/${uploaded.result.uid}/manifest/video.m3u8`;
 }
 
-/* ============================================================
-   Cloudflare Stream Direct Upload (Token 방식)
-============================================================ */
-async function getStreamDirectUploadUrl() {
-    const CF_ACCOUNT_ID = "8c46fbeae6e69848470dfacaaa8beb03";
-    const STREAM_TOKEN = "U4H8y1w1XbKoz3k2HsgrZmrW-YVmcLQVUHfKwJ-3";
+// 2) 글쓰기 폼 전송
+async function submitIssue() {
+  const title = document.getElementById("title").value;
+  const content = document.getElementById("content").value;
 
-    const res = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${STREAM_TOKEN}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ maxDurationSeconds: 120 })
-        }
-    );
+  if (!title || !content) {
+    alert("제목과 내용을 입력하세요");
+    return;
+  }
 
-    const json = await res.json();
-    console.log("[DirectUpload][Stream] Create URL:", json);
+  let videoURL = null;
 
-    if (!json.success) return null;
+  // 영상이 선택된 경우 업로드 실행
+  if (videoInput.files.length > 0) {
+    videoURL = await uploadVideoToCloudflare(videoInput.files[0]);
+  }
 
-    return {
-        uploadURL: json.result.uploadURL,
-        videoId: json.result.uid
-    };
+  // Supabase DB Insert
+  const { data, error } = await supabase.from("issues").insert({
+    title,
+    content,
+    video_url: videoURL, // 영상 URL 저장
+  });
+
+  if (error) {
+    console.error(error);
+    alert("저장 실패");
+  } else {
+    alert("이슈가 등록되었습니다");
+    window.location.href = "/"; // 완료 후 홈 이동
+  }
 }
 
-async function uploadVideo(file) {
-    const data = await getStreamDirectUploadUrl();
-    if (!data) {
-        alert("영상 업로드 URL 생성 실패");
-        return null;
-    }
-
-    const { uploadURL, videoId } = data;
-
-    console.log("[DirectUpload][Stream] Upload URL:", uploadURL);
-
-    const uploadRes = await fetch(uploadURL, {
-        method: "PUT",
-        body: file
-    });
-
-    if (!uploadRes.ok) {
-        console.error(await uploadRes.text());
-        alert("Cloudflare Stream 업로드 실패");
-        return null;
-    }
-
-    return `https://customer-WRQ-8xhWbU08j8o3OzxpFg.cloudflarestream.com/${videoId}/manifest/video.m3u8`;
-}
-
-/* ============================================================
-   MAIN SCRIPT
-============================================================ */
-(async () => {
-    const supabase = await waitForSupabase();
-
-    /* 로그인 체크 */
-    const session = await supabase.auth.getSession();
-    const user = session.data.session?.user;
-
-    if (!user) {
-        alert("발의를 하려면 로그인이 필요합니다.");
-        sessionStorage.setItem("returnTo", "write.html");
-        location.href = "login.html";
-        return;
-    }
-
-    /* FORM ELEMENTS */
-    const form = document.getElementById("writeForm");
-
-    const category = document.getElementById("category");
-    const title = document.getElementById("title");
-    const oneLine = document.getElementById("oneLine");
-    const description = document.getElementById("description");
-
-    const thumbnailInput = document.getElementById("thumbnail");
-    const thumbnailBtn = document.getElementById("thumbnailBtn");
-
-    const videoInput = document.getElementById("videoInput");
-
-    thumbnailBtn.addEventListener("click", () => thumbnailInput.click());
-
-    /* ============================================================
-       SUBMIT
-    ============================================================= */
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        if (!category.value.trim()) return alert("카테고리를 선택하세요.");
-        if (!title.value.trim()) return alert("제목을 입력하세요.");
-        if (!oneLine.value.trim()) return alert("한 줄 코멘트를 입력하세요.");
-        if (!description.value.trim()) return alert("이슈 설명을 입력하세요.");
-        if (!thumbnailInput.files.length) return alert("썸네일을 업로드해주세요.");
-
-        if (!confirm("정말 이 갈라를 발의하시겠습니까?")) return;
-
-        const thumbnailFile = thumbnailInput.files[0];
-        const videoFile = videoInput.files[0] ?? null;
-
-        /* -----------------------
-           썸네일 업로드
-        ----------------------- */
-        console.log("썸네일 업로드 중…");
-        const thumbnailURL = await uploadThumbnail(thumbnailFile);
-        if (!thumbnailURL) return alert("썸네일 업로드 실패");
-
-        /* -----------------------
-           영상 업로드 (선택)
-        ----------------------- */
-        let videoURL = null;
-
-        if (videoFile) {
-            console.log("영상 업로드 중…");
-            videoURL = await uploadVideo(videoFile);
-
-            if (!videoURL) {
-                alert("영상 업로드 실패 (영상은 생략하고 등록할게요)");
-                videoURL = null;
-            }
-        }
-
-        /* -----------------------
-           Supabase Insert
-        ----------------------- */
-        const payload = {
-            user_id: user.id,
-            category: category.value,
-            title: title.value.trim(),
-            one_line: oneLine.value.trim(),
-            description: description.value.trim(),
-            thumbnail_url: thumbnailURL,
-            video_url: videoURL,
-            status: "normal"
-        };
-
-        console.log("[INSERT] issues payload:", payload);
-
-        const { data, error } = await supabase
-            .from("issues")
-            .insert(payload)
-            .select("id")
-            .single();
-
-        if (error) {
-            console.error(error);
-            return alert("DB 저장 실패: " + error.message);
-        }
-
-        alert("발의가 완료되었습니다!");
-        location.href = `issue.html?id=${data.id}`;
-    });
-})();
+document.getElementById("submitIssue").addEventListener("click", submitIssue);
