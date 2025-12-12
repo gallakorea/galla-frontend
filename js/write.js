@@ -1,7 +1,7 @@
 console.log("[write.js] LOADED");
 
 /* ============================================================
-   Supabase 로딩 대기
+   Supabase 준비 대기
 ============================================================ */
 function waitForSupabase() {
     return new Promise(resolve => {
@@ -15,15 +15,30 @@ function waitForSupabase() {
 }
 
 /* ============================================================
-   Cloudflare Images Direct Upload (via Supabase Edge Function)
+   Supabase Edge Function 호출 시 반드시 Authorization 필요
+============================================================ */
+function getAuthHeader() {
+    return {
+        Authorization: `Bearer ${window.supabaseClient.supabaseKey}`
+    };
+}
+
+/* ============================================================
+   Cloudflare Images Direct Upload (via Edge Function)
 ============================================================ */
 async function getImageDirectUploadUrl() {
-    const endpoint = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
+    const endpoint =
+        "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-direct-upload";
 
-    const res = await fetch(endpoint, { method: "POST" });
+    const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+            ...getAuthHeader()
+        }
+    });
+
     const json = await res.json();
-
-    console.log("[DirectUpload][Images] Response:", json);
+    console.log("[Images][DirectUpload] Response:", json);
 
     return json?.result?.uploadURL ?? null;
 }
@@ -35,7 +50,7 @@ async function uploadThumbnail(file) {
         return null;
     }
 
-    console.log("[DirectUpload][Images] Upload URL:", uploadURL);
+    console.log("[Images] Upload URL:", uploadURL);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -46,35 +61,32 @@ async function uploadThumbnail(file) {
     });
 
     const result = await uploadRes.json();
-    console.log("[DirectUpload][Images] Upload result:", result);
+    console.log("[Images] Upload Result:", result);
 
     const imageId = result?.result?.id;
     if (!imageId) return null;
 
+    // Cloudflare Images URL
     return `https://imagedelivery.net/WRQ-8xhWbU08j8o3OzxpFg/${imageId}/public`;
 }
 
 /* ============================================================
-   Cloudflare Stream Direct Upload (Edge Function 없이 v2)
-   → 이미 Cloudflare는 Direct Upload URL만 있으면 CORS 없이 가능
+   Cloudflare Stream Direct Upload (Edge Function)
 ============================================================ */
 async function getStreamDirectUploadUrl() {
-    const CF_ACCOUNT_ID = "8c46fbeae6e69848470dfacaaa8beb03";
+    const endpoint =
+        "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/cf-stream-upload";
 
-    const res = await fetch(
-        `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/stream/direct_upload`,
-        {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer pRDSyrfEv84NYnhN5HmcrhavHET8Eo54oI3kG5W`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ maxDurationSeconds: 120 })
+    const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+            ...getAuthHeader(),
+            "Content-Type": "application/json"
         }
-    );
+    });
 
     const json = await res.json();
-    console.log("[DirectUpload][Stream] Create URL:", json);
+    console.log("[Stream][DirectUpload] Response:", json);
 
     if (!json.success) return null;
 
@@ -93,7 +105,7 @@ async function uploadVideo(file) {
 
     const { uploadURL, videoId } = data;
 
-    console.log("[DirectUpload][Stream] Upload URL:", uploadURL);
+    console.log("[Stream] Upload URL:", uploadURL);
 
     const uploadRes = await fetch(uploadURL, {
         method: "PUT",
@@ -115,7 +127,7 @@ async function uploadVideo(file) {
 (async () => {
     const supabase = await waitForSupabase();
 
-    /* 로그인 체크 */
+    // 로그인 체크
     const session = await supabase.auth.getSession();
     const user = session.data.session?.user;
 
@@ -126,7 +138,7 @@ async function uploadVideo(file) {
         return;
     }
 
-    /* FORM ELEMENTS */
+    // FORM ELEMENTS
     const form = document.getElementById("writeForm");
 
     const category = document.getElementById("category");
@@ -136,13 +148,12 @@ async function uploadVideo(file) {
 
     const thumbnailInput = document.getElementById("thumbnail");
     const thumbnailBtn = document.getElementById("thumbnailBtn");
-
     const videoInput = document.getElementById("videoInput");
 
     thumbnailBtn.addEventListener("click", () => thumbnailInput.click());
 
     /* ============================================================
-       SUBMIT
+       SUBMIT 처리
     ============================================================= */
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -158,31 +169,25 @@ async function uploadVideo(file) {
         const thumbnailFile = thumbnailInput.files[0];
         const videoFile = videoInput.files[0] ?? null;
 
-        /* -----------------------
-           썸네일 업로드
-        ----------------------- */
-        console.log("썸네일 업로드 중…");
+        // 썸네일 업로드
+        console.log("썸네일 업로드 시작…");
         const thumbnailURL = await uploadThumbnail(thumbnailFile);
         if (!thumbnailURL) return alert("썸네일 업로드 실패");
 
-        /* -----------------------
-           영상 업로드 (선택)
-        ----------------------- */
+        // 영상 업로드 선택적 수행
         let videoURL = null;
 
         if (videoFile) {
-            console.log("영상 업로드 중…");
+            console.log("영상 업로드 시작…");
             videoURL = await uploadVideo(videoFile);
 
             if (!videoURL) {
-                alert("영상 업로드 실패 (영상은 생략하고 등록할게요)");
+                alert("영상 업로드 실패 — 영상 없이 등록합니다.");
                 videoURL = null;
             }
         }
 
-        /* -----------------------
-           Supabase Insert
-        ----------------------- */
+        // Supabase Insert
         const payload = {
             user_id: user.id,
             category: category.value,
