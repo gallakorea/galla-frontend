@@ -4,143 +4,70 @@
   <meta charset="UTF-8" />
   <title>새 갈라 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <link rel="stylesheet" href="./css/write.css" />
 </head>
-
 <body>
+
 <div class="app-root">
 
-  <!-- HEADER -->
-  <header class="header">
-    <div class="header-inner">
-      <img src="./assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
-      <div id="authArea" class="auth-buttons"></div>
-    </div>
-  </header>
+<header class="header">
+  <h1 class="logo">GALLA</h1>
+</header>
 
-  <!-- MAIN -->
-  <main class="page-main">
-    <div class="page-inner">
+<main class="page-main">
+<form id="writeForm" class="write-form">
 
-      <section class="section-block">
-        <h1 class="write-main-title">새 갈라치기 만들기</h1>
-        <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
-      </section>
+  <!-- CATEGORY -->
+  <label>카테고리 (필수)</label>
+  <select id="category" required>
+    <option value="">선택</option>
+    <option>정치·사회</option>
+    <option>경제·투자</option>
+    <option>직장·경력</option>
+    <option>연애·결혼</option>
+    <option>생활·일상</option>
+    <option>패션·뷰티</option>
+    <option>엔터·스포츠</option>
+    <option>세계·여행</option>
+    <option>음식·맛집</option>
+    <option>19금</option>
+    <option>기타</option>
+  </select>
 
-      <!-- FORM -->
-      <form id="writeForm" class="write-form">
+  <!-- TITLE -->
+  <label>제목 (필수)</label>
+  <input id="title" maxlength="80" required />
 
-        <!-- Category -->
-        <div class="field-block">
-          <label class="field-label">카테고리 (필수)</label>
-          <select id="category" class="input-field" required>
-            <option value="">카테고리를 선택하세요</option>
-            <option>정치·사회</option>
-            <option>경제·투자</option>
-            <option>직장·경력</option>
-            <option>연애·결혼</option>
-            <option>생활·일상</option>
-            <option>패션·뷰티</option>
-            <option>엔터·스포츠</option>
-            <option>세계·여행</option>
-            <option>음식·맛집</option>
-            <option>19금</option>
-            <option>기타</option>
-          </select>
-        </div>
+  <!-- ONE LINE -->
+  <label>발의자 한 줄 (필수)</label>
+  <input id="oneLine" required />
 
-        <!-- Title -->
-        <div class="field-block">
-          <label class="field-label">제목 (필수)</label>
-          <input id="title" class="input-field" maxlength="80" required />
-        </div>
+  <!-- THUMBNAIL -->
+  <label>썸네일 (필수)</label>
+  <input type="file" id="thumbnail" accept="image/*" hidden />
+  <button type="button" id="thumbnailBtn">이미지 업로드</button>
 
-        <!-- One line -->
-        <div class="field-block">
-          <label class="field-label">발의자 한 줄 (필수)</label>
-          <input id="oneLine" class="input-field" required />
-        </div>
+  <!-- VIDEO -->
+  <label>1분 엘리베이터 스피치 (선택)</label>
+  <input type="file" id="videoInput" accept="video/*" hidden />
+  <button type="button" id="videoBtn">영상 업로드</button>
 
-        <!-- Thumbnail -->
-        <div class="field-block">
-          <label class="field-label">썸네일 (필수)</label>
-          <input type="file" id="thumbnail" accept="image/*" hidden />
-          <button type="button" id="thumbnailBtn" class="file-btn">
-            이미지 업로드
-          </button>
-        </div>
+  <!-- DESCRIPTION -->
+  <label>이슈 설명 (필수) <span class="desc-counter">0 / 500</span></label>
+  <textarea id="description" maxlength="500" required></textarea>
 
-        <!-- Description -->
-        <div class="field-block">
-          <label class="field-label">
-            이슈 설명 (필수)
-            <span class="desc-counter">0 / 500</span>
-          </label>
+  <button type="button" id="openAiModal">✨ AI 글 다듬기</button>
 
-          <textarea
-            id="description"
-            class="input-field textarea"
-            maxlength="500"
-            placeholder="논쟁이 되는 상황과 핵심 쟁점을 적어주세요."
-            required
-          ></textarea>
+  <button type="submit" class="submit-btn">갈라 발의하기</button>
 
-          <button type="button" id="openAiModal" class="ai-main-btn">
-            ✨ AI 글 다듬기
-          </button>
-        </div>
+</form>
+</main>
 
-        <!-- References -->
-        <div class="field-block">
-          <label class="field-label">관련 기사·자료 (선택)</label>
-          <input type="url" class="input-field" placeholder="http:// 링크 1" />
-          <input type="url" class="input-field" placeholder="http:// 링크 2" />
-          <input type="url" class="input-field" placeholder="http:// 링크 3" />
-        </div>
+<!-- AI MODAL -->
+<div id="aiModal" class="modal hidden">
+  <div class="modal-box">
+    <h2>AI 글 다듬기</h2>
 
-        <!-- Submit -->
-        <div class="field-block submit-block">
-          <button type="submit" class="primary-btn">
-            갈라 발의하기
-          </button>
-        </div>
-
-      </form>
-    </div>
-  </main>
-
-  <!-- Bottom Navigation -->
-  <nav class="bottom-nav">
-    <button class="nav-item" data-target="index.html">
-      <img src="./assets/icons/nav-home.svg" />
-    </button>
-    <button class="nav-item" data-target="search.html">
-      <img src="./assets/icons/nav-search.svg" />
-    </button>
-    <button class="nav-item active" data-target="write.html">
-      <img src="./assets/icons/nav-write.svg" />
-    </button>
-    <button class="nav-item" data-target="random.html">
-      <img src="./assets/icons/nav-random.svg" />
-    </button>
-    <button class="nav-item" data-target="mypage.html">
-      <img src="./assets/icons/nav-user.svg" />
-    </button>
-  </nav>
-
-</div>
-
-<!-- ================= AI MODAL ================= -->
-<div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner">
-
-    <div class="ai-modal-header">
-      <h2>AI 글 다듬기</h2>
-      <button id="aiCloseBtn">✕</button>
-    </div>
-
-    <!-- Style -->
     <div class="ai-style-tabs">
       <button data-style="basic" class="active">기본</button>
       <button data-style="simple">간결</button>
@@ -149,37 +76,21 @@
       <button data-style="expert">전문가</button>
     </div>
 
-    <!-- Custom prompt -->
-    <div class="field-block">
-      <label class="field-label">AI에게 직접 요청 (선택)</label>
-      <input
-        id="aiCustomPrompt"
-        class="input-field"
-        placeholder="예: 중립적으로 정리해줘 / 찬반이 잘 갈리게"
-      />
+    <label>AI에게 직접 요청 (선택)</label>
+    <input id="aiCustomPrompt" placeholder="예: 반대 의견 포함해서 정리" />
+
+    <div class="ai-compare">
+      <textarea id="aiUserText"></textarea>
+      <textarea id="aiImprovedText"></textarea>
     </div>
 
-    <div class="ai-compare-wrap">
-      <div>
-        <h3>내가 쓴 글</h3>
-        <textarea id="aiUserText"></textarea>
-      </div>
-      <div>
-        <h3>AI 개선본</h3>
-        <textarea id="aiImprovedText"></textarea>
-      </div>
-    </div>
-
-    <div class="ai-modal-footer">
-      <button id="runAi" class="primary-btn">AI 실행</button>
-      <button id="applyAiText" class="apply-btn">적용</button>
-    </div>
-
+    <button id="runAi">AI 실행</button>
+    <button id="applyAiText">적용</button>
+    <button id="aiCloseBtn">닫기</button>
   </div>
 </div>
 
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="./js/supabase.js"></script>
 <script src="./js/write.js"></script>
 
