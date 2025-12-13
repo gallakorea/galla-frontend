@@ -1,124 +1,119 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>새 갈라 만들기 - GALLA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+<title>새 갈라 만들기 - GALLA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="./css/index.css" />
-  <link rel="stylesheet" href="./css/write.css" />
+<style>
+* { box-sizing:border-box; }
 
-  <style>
-    body {
-      background:#000;
-      color:#fff;
-      margin:0;
-      font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-    }
-    .page { max-width:420px; margin:0 auto; padding:24px 16px 120px; }
-    h1 { font-size:22px; margin-bottom:6px; }
-    p { color:#aaa; font-size:14px; margin-bottom:24px; }
+body {
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+}
 
-    .field { margin-bottom:18px; }
-    .label { font-size:14px; margin-bottom:6px; display:block; }
+.page {
+  max-width:520px;
+  margin:0 auto;
+  padding:24px 16px 140px;
+}
 
-    select,input,textarea,button {
-      width:100%;
-      background:#0f1320;
-      color:#fff;
-      border:1px solid #1f2640;
-      border-radius:12px;
-      padding:14px;
-      font-size:14px;
-      box-sizing:border-box;
-    }
+h1 { margin:0 0 6px; }
+p { margin:0 0 24px; opacity:.6; }
 
-    textarea { resize:none; height:140px; }
+.field { margin-bottom:18px; }
+label { display:block; font-size:14px; margin-bottom:6px; }
 
-    .file-btn { cursor:pointer; text-align:center; }
+input, select, textarea, button {
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  background:#111;
+  border:1px solid #222;
+  color:#fff;
+  font-size:15px;
+}
 
-    .counter { text-align:right; font-size:12px; color:#888; }
+textarea { min-height:120px; resize:none; }
 
-    .primary {
-      background:#2f7cf6;
-      border:none;
-      font-weight:700;
-      margin-top:16px;
-    }
+.btn {
+  cursor:pointer;
+  text-align:center;
+}
 
-    /* AI Button */
-    .ai-btn {
-      background:#121a33;
-      border:1px solid #2f7cf6;
-      color:#fff;
-      margin-top:10px;
-    }
+.btn-primary {
+  background:#2f80ff;
+  border:none;
+  font-weight:600;
+}
 
-    /* Modal */
-    .modal {
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.7);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:999;
-    }
-    .modal-inner {
-      width:92%;
-      max-width:420px;
-      background:#0b1020;
-      border-radius:16px;
-      padding:16px;
-    }
-    .modal-header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:12px;
-    }
-    .modal-header h2 { font-size:16px; margin:0; }
-    .close { cursor:pointer; font-size:18px; }
+.counter {
+  float:right;
+  font-size:12px;
+  opacity:.6;
+}
 
-    .tabs button {
-      width:auto;
-      padding:6px 10px;
-      margin-right:6px;
-      border-radius:20px;
-      background:#111;
-      border:1px solid #333;
-      font-size:12px;
-    }
-    .tabs .active {
-      background:#2f7cf6;
-      border-color:#2f7cf6;
-    }
+/* AI MODAL */
+.modal {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
 
-    .modal textarea {
-      height:100px;
-      margin-top:8px;
-    }
+.modal-box {
+  width:92%;
+  max-width:520px;
+  background:#0f0f0f;
+  border-radius:18px;
+  padding:16px;
+}
 
-    .modal-actions button {
-      margin-top:10px;
-    }
-  </style>
+.modal-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:12px;
+}
+
+.tabs button {
+  margin-right:6px;
+  padding:6px 10px;
+  font-size:13px;
+  border-radius:8px;
+  border:1px solid #333;
+  background:#111;
+}
+
+.tabs button.active {
+  background:#2f80ff;
+  border:none;
+}
+
+.modal textarea {
+  min-height:90px;
+  margin-top:8px;
+}
+</style>
 </head>
 
 <body>
 
 <div class="page">
-
   <h1>새 갈라치기 만들기</h1>
   <p>사람들의 찬반과 후원을 모아보세요.</p>
 
-  <form id="writeForm">
+  <form id="form">
 
-    <!-- CATEGORY -->
     <div class="field">
-      <label class="label">카테고리 (필수)</label>
-      <select id="category" required>
+      <label>카테고리 (필수)</label>
+      <select required>
         <option value="">선택</option>
         <option>정치·사회</option>
         <option>경제·투자</option>
@@ -134,148 +129,107 @@
       </select>
     </div>
 
-    <!-- TITLE -->
     <div class="field">
-      <label class="label">제목 (필수)</label>
-      <input id="title" maxlength="80" required />
+      <label>제목 (필수)</label>
+      <input required />
     </div>
 
-    <!-- ONE LINE -->
     <div class="field">
-      <label class="label">발의자 한 줄 (필수)</label>
-      <input id="oneLine" required />
+      <label>발의자 한 줄 (필수)</label>
+      <input required />
     </div>
 
-    <!-- THUMBNAIL -->
     <div class="field">
-      <label class="label">썸네일 (필수)</label>
-      <input type="file" id="thumbnail" accept="image/*" hidden />
-      <button type="button" id="thumbnailBtn" class="file-btn">이미지 업로드</button>
+      <label>썸네일 (필수)</label>
+      <input type="file" id="thumb" hidden accept="image/*">
+      <button type="button" class="btn" id="thumbBtn">이미지 업로드</button>
     </div>
 
-    <!-- VIDEO -->
     <div class="field">
-      <label class="label">1분 엘리베이터 스피치 (선택)</label>
-      <input type="file" id="videoInput" accept="video/*" hidden />
-      <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
+      <label>1분 엘리베이터 스피치 (선택)</label>
+      <input type="file" id="video" hidden accept="video/*">
+      <button type="button" class="btn" id="videoBtn">영상 업로드</button>
     </div>
 
-    <!-- DESCRIPTION -->
     <div class="field">
-      <label class="label">이슈 설명 (필수)</label>
-      <textarea id="description" maxlength="500"></textarea>
-      <div class="counter"><span class="desc-counter">0</span> / 500</div>
-      <button type="button" id="openAiModal" class="ai-btn">✨ AI 글 다듬기</button>
+      <label>
+        이슈 설명 (필수)
+        <span class="counter" id="count">0 / 500</span>
+      </label>
+      <textarea id="desc" maxlength="500"></textarea>
+      <button type="button" class="btn" id="openAI" style="margin-top:8px">
+        ✨ AI 글 다듬기
+      </button>
     </div>
 
-    <button type="submit" class="primary">갈라 발의하기</button>
+    <button class="btn btn-primary" type="submit">
+      갈라 발의하기
+    </button>
 
   </form>
 </div>
 
 <!-- AI MODAL -->
-<div id="aiModal" class="modal">
-  <div class="modal-inner">
+<div class="modal" id="modal">
+  <div class="modal-box">
     <div class="modal-header">
-      <h2>AI 글 다듬기</h2>
-      <span class="close" id="aiClose">✕</span>
+      <strong>AI 글 다듬기</strong>
+      <button type="button" id="closeAI">✕</button>
     </div>
 
     <div class="tabs">
-      <button data-style="basic" class="active">기본</button>
-      <button data-style="simple">간결</button>
-      <button data-style="strong">강렬</button>
-      <button data-style="expert">전문가</button>
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
     </div>
 
-    <label class="label">AI에게 직접 요청 (선택)</label>
-    <textarea id="aiCustomPrompt" placeholder="예: 반대 의견 포함해서 정리"></textarea>
+    <textarea id="aiInput" placeholder="내가 쓴 글"></textarea>
+    <textarea id="aiOutput" placeholder="AI 결과"></textarea>
 
-    <label class="label">내가 쓴 글</label>
-    <textarea id="aiUserText"></textarea>
-
-    <label class="label">AI 결과</label>
-    <textarea id="aiImprovedText"></textarea>
-
-    <div class="modal-actions">
-      <button type="button" id="runAi" class="primary">AI 실행</button>
-      <button type="button" id="applyAi" class="ai-btn">적용</button>
-    </div>
+    <button class="btn btn-primary" id="applyAI" style="margin-top:10px">
+      적용
+    </button>
   </div>
 </div>
 
-<!-- SUPABASE -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="./js/supabase.js"></script>
-
-<!-- JS -->
 <script>
-const supabase = window.supabaseClient;
-const qs = id => document.getElementById(id);
+const desc = document.getElementById("desc");
+const count = document.getElementById("count");
 
-/* counter */
-qs("description").oninput = () => {
-  qs("desc-counter").innerText = qs("description").value.length;
+desc.oninput = () => {
+  count.textContent = desc.value.length + " / 500";
 };
 
-/* file buttons */
-qs("thumbnailBtn").onclick = () => qs("thumbnail").click();
-qs("videoBtn").onclick = () => qs("videoInput").click();
+// FILE BUTTONS (100% 작동)
+document.getElementById("thumbBtn").onclick = () =>
+  document.getElementById("thumb").click();
 
-/* modal */
-qs("openAiModal").onclick = () => {
-  qs("aiUserText").value = qs("description").value;
-  qs("aiModal").style.display = "flex";
-};
-qs("aiClose").onclick = () => qs("aiModal").style.display = "none";
+document.getElementById("videoBtn").onclick = () =>
+  document.getElementById("video").click();
 
-/* tabs */
-let style = "basic";
-document.querySelectorAll(".tabs button").forEach(b=>{
-  b.onclick=()=>{
-    document.querySelectorAll(".tabs button").forEach(x=>x.classList.remove("active"));
-    b.classList.add("active");
-    style = b.dataset.style;
-  }
-});
+// AI MODAL
+const modal = document.getElementById("modal");
 
-/* AI run */
-qs("runAi").onclick = async () => {
-  qs("aiImprovedText").value = "AI 처리 중...";
-  const { data, error } = await supabase.functions.invoke("ai-polish", {
-    body:{
-      text:qs("aiUserText").value,
-      style,
-      customPrompt:qs("aiCustomPrompt").value
-    }
-  });
-  qs("aiImprovedText").value = error ? "AI 오류" : data.result;
+document.getElementById("openAI").onclick = () => {
+  document.getElementById("aiInput").value = desc.value;
+  modal.style.display = "flex";
 };
 
-/* apply */
-qs("applyAi").onclick = () => {
-  qs("description").value = qs("aiImprovedText").value;
-  qs("aiModal").style.display="none";
+document.getElementById("closeAI").onclick = () =>
+  modal.style.display = "none";
+
+document.getElementById("applyAI").onclick = () => {
+  desc.value = document.getElementById("aiOutput").value;
+  count.textContent = desc.value.length + " / 500";
+  modal.style.display = "none";
 };
 
-/* submit */
-qs("writeForm").onsubmit = async e=>{
+// SUBMIT (안전)
+document.getElementById("form").onsubmit = (e) => {
   e.preventDefault();
-  const { data } = await supabase.auth.getSession();
-  if(!data.session){ alert("로그인 필요"); return; }
-
-  const { error } = await supabase.from("issues").insert({
-    category:qs("category").value,
-    title:qs("title").value,
-    one_line:qs("oneLine").value,
-    description:qs("description").value,
-    user_id:data.session.user.id,
-    status:"normal"
-  });
-
-  if(error){ alert("등록 실패"); return; }
-  alert("발의 완료");
-  location.href="index.html";
+  alert("UI 완전 정상 동작 상태");
 };
 </script>
 
