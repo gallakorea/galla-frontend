@@ -580,3 +580,9 @@ body {
   width: 100%;
   position: relative;
 }
+
+/* 버튼 높이 시각 통일 (UI 유지용) */
+.ai-main-btn,
+.primary-btn {
+  min-height: 52px;
+}
