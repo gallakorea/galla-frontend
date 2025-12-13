@@ -105,10 +105,11 @@
 
 </div>
 
-<!-- AI MODAL -->
+<!-- AI MODAL (REWORKED – UI ONLY) -->
 <div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner ai-refined">
+  <div class="ai-modal-inner ai-modal-refined">
 
+    <!-- HEADER -->
     <div class="ai-modal-header">
       <div>
         <h2>AI 글 다듬기</h2>
@@ -117,6 +118,7 @@
       <button id="aiClose">✕</button>
     </div>
 
+    <!-- STYLE -->
     <div class="ai-style-tabs refined-tabs">
       <button data-style="basic" class="active">기본</button>
       <button data-style="simple">간결</button>
@@ -126,21 +128,40 @@
       <button data-style="academic">논문체</button>
     </div>
 
-    <div class="ai-custom-request">
-      <label class="field-label">AI에게 직접 요청 (선택)</label>
-      <input id="aiCustomPrompt" class="input-field" placeholder="예: 반대 의견 포함 / 감정 줄이기" />
+    <!-- CUSTOM PROMPT -->
+    <div class="ai-custom-block">
+      <label class="ai-label">AI에게 직접 요청 (선택)</label>
+      <input
+        id="aiCustomPrompt"
+        class="input-field"
+        placeholder="예: 반대 의견도 포함해서 정리 / 감정 표현 줄이기"
+      />
     </div>
 
-    <div class="ai-compare-wrap refined-compare">
-      <div class="ai-panel">
-        <span class="ai-panel-title">내가 쓴 글</span>
-        <textarea id="aiUserText"></textarea>
+    <!-- CONTENT -->
+    <div class="ai-content-block">
+      <div class="ai-box">
+        <span class="ai-box-label">내가 쓴 글</span>
+        <textarea id="aiUserText" placeholder="원문"></textarea>
       </div>
-      <div class="ai-panel">
-        <span class="ai-panel-title">AI 개선본</span>
-        <textarea id="aiResultText"></textarea>
+
+      <div class="ai-box">
+        <span class="ai-box-label">AI 개선본</span>
+        <textarea id="aiResultText" placeholder="AI 결과"></textarea>
       </div>
     </div>
+
+    <!-- ACTION -->
+    <button id="runAi" class="primary-btn ai-run-btn">
+      AI 실행
+    </button>
+
+    <button id="applyAi" class="primary-btn ai-apply-btn">
+      AI 적용하기
+    </button>
+
+  </div>
+</div>
 
     <button id="runAi" class="ai-main-btn refined-run">AI 실행</button>
 
