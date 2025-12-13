@@ -75,39 +75,3 @@ videoInput.addEventListener('change', (e) => {
   videoPreview.innerHTML = '<div>미리보기</div>';
   videoPreview.appendChild(video);
 });
-
-/* =========================
-   PREVIEW SUBMIT (추가)
-========================= */
-
-const writeForm = document.getElementById('writeForm');
-
-writeForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // 🔥 페이지 리셋 방지
-
-  const previewData = {
-    category: document.getElementById('category').value,
-    title: document.getElementById('title').value,
-    oneLine: document.getElementById('oneLine').value,
-    description: document.getElementById('description').value,
-    isAnonymous: document.getElementById('isAnonymous').checked,
-
-    thumbnailUrl: thumbnailInput.files[0]
-      ? URL.createObjectURL(thumbnailInput.files[0])
-      : null,
-
-    videoUrl: videoInput.files[0]
-      ? URL.createObjectURL(videoInput.files[0])
-      : null,
-
-    createdAt: new Date().toISOString()
-  };
-
-  sessionStorage.setItem(
-    'galla_preview',
-    JSON.stringify(previewData)
-  );
-
-  // 🔥 페이지 이동
-  location.href = 'preview.html';
-});

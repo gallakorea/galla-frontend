@@ -4,46 +4,49 @@
   <meta charset="UTF-8" />
   <title>미리보기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="css/issue.css" />
+  <link rel="stylesheet" href="css/preview.css" />
 </head>
 
 <body>
 <div id="app">
 
-  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <button class="back-btn" onclick="history.back()">← <span class="back-text">뒤로</span></button>
+      <button class="back-btn" onclick="history.back()">← 뒤로</button>
       <img src="assets/logo.png" class="logo" />
-      <div style="width:24px"></div>
+      <div></div>
     </div>
   </header>
 
-  <!-- ISSUE CARD (PREVIEW ONLY) -->
+  <!-- ISSUE HERO -->
   <section class="issue-hero">
     <div class="issue-category-time">
-      <span id="pv-category"></span>
-      <span id="pv-time">미리보기</span>
+      <span id="issue-category"></span>
     </div>
-
-    <h1 id="pv-title"></h1>
-    <p id="pv-desc"></p>
+    <h1 id="issue-title"></h1>
+    <p id="issue-desc"></p>
 
     <div class="issue-author">
-      <span id="pv-author"></span>
+      <span id="issue-author"></span>
     </div>
   </section>
 
-  <img id="pv-thumb" class="issue-thumb" style="display:none;" />
+  <img id="issue-thumb" class="issue-thumb" hidden />
 
-  <button id="pv-video-btn" class="speech-btn" style="display:none;">
+  <button class="speech-btn" id="speechBtn" hidden>
     🎥 1분 엘리베이터 스피치
   </button>
 
-  <!-- ACTION -->
-  <section style="padding:20px 16px;">
-    <button id="publishBtn" class="primary-btn">이 상태로 발행</button>
+  <section class="issue-explain">
+    <h3 class="white-title">📝 이슈 설명</h3>
+    <p id="issue-explain-text"></p>
   </section>
+
+  <!-- PREVIEW ACTIONS -->
+  <div class="preview-actions">
+    <button class="btn-publish" id="publishBtn">이대로 발행</button>
+    <button class="btn-edit" onclick="history.back()">수정하기</button>
+  </div>
 
 </div>
 
