@@ -1,810 +1,117 @@
-
-/***************************************************
- * GLOBAL LAYOUT
- ***************************************************/
 body {
   margin: 0;
   background: #000;
   color: #fff;
+  font-family: system-ui;
   display: flex;
   justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 .app-root {
   width: 100%;
   max-width: 480px;
-  margin: 0 auto;
-  padding-bottom: 110px; /* bottom nav space */
+  padding-bottom: 120px;
 }
 
-.page-main, .page-inner {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-/***************************************************
- * HEADER
- ***************************************************/
-.header {
-  width: 100%;
-  background: #000;
-  border-bottom: 1px solid #111;
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  display: flex;
-  justify-content: center;
-}
-
-.header-inner {
-  width: 100%;
-  max-width: 480px;
-  height: 54px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.logo {
-  width: 105px;
-}
-
-.auth-buttons button {
-  padding: 5px 10px;
-  background: #111;
-  color: #fff;
-  border-radius: 14px;
-  border: 1px solid #333;
-  font-size: 12px;
-}
-
-/***************************************************
- * SECTION DEFAULT
- ***************************************************/
-.section-block {
-  padding: 22px 16px;
-  border-bottom: 1px solid #0f0f0f;
-}
-
-.write-main-title {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.write-main-desc {
-  font-size: 13px;
-  color: #ccc;
-  margin-top: 6px;
-}
-
-/***************************************************
- * GUIDE LIST
- ***************************************************/
-.write-guide-block {
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 14px;
-}
-
-.write-guide-list {
-  padding: 12px 20px;
-  font-size: 12px;
-  line-height: 1.55;
-  list-style: disc;
-}
-
-/***************************************************
- * FORM FIELDS
- ***************************************************/
-.field-block {
-  padding: 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.field-label {
-  font-size: 14px;
-  font-weight: 700;
-  text-align: left !important;
-  padding-left: 2px;
-}
-
-/***************************************************
- * INPUT FIELD
- ***************************************************/
 .input-field {
   width: 100%;
-  max-width: 100%;
-  padding: 12px 14px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-.textarea {
-  min-height: 280px;
-  resize: vertical;
-  line-height: 1.55;
-}
-
-/***************************************************
- * FILE BUTTON
- ***************************************************/
-.file-btn {
-  text-align: center;
-  background: #11131f;
-  border: 1px solid #1f2435;
-  border-radius: 12px;
-  color: #fff;
   padding: 12px;
-}
-
-/***************************************************
- * DESCRIPTION COUNTER
- ***************************************************/
-.desc-counter {
-  color: #888;
-  font-size: 12px;
-  margin-left: 6px;
-}
-
-/***************************************************
- * AI MAIN BUTTON
- ***************************************************/
-.ai-main-btn {
-  margin-top: 8px;
-  width: 100%;
-  padding: 12px;
-  background: #2f80ff;
-  border-radius: 12px;
-  border: none;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/***************************************************
- * AI MODAL
- ***************************************************/
-.ai-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.ai-modal-inner {
-  width: 90%;
-  max-width: 480px;
-  background: #111;
-  border: 1px solid #222;
-  padding: 18px;
-  border-radius: 14px;
-}
-
-/* header */
-.ai-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ai-modal-header h2 {
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.ai-modal-header button {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 22px;
-}
-
-/* 분석 태그 */
-.ai-tags {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ai-tag {
-  background: #222;
-  padding: 5px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #aaa;
-}
-
-/***************************************************
- * STYLE TABS
- ***************************************************/
-.ai-style-tabs {
-  margin-top: 14px;
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-}
-
-.ai-style-tabs button {
-  padding: 7px 12px;
-  background: #191919;
-  border: 1px solid #333;
-  border-radius: 12px;
-  font-size: 12px;
-  color: #fff;
-}
-
-.ai-style-tabs button.active {
-  background: #ffe27a;
-  color: #111;
-  font-weight: 700;
-}
-
-/***************************************************
- * SUMMARY OPTIONS
- ***************************************************/
-.ai-summary-options {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-}
-
-.ai-summary-options button {
-  padding: 6px 12px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #ccc;
-}
-
-/***************************************************
- * AI COMPARE VIEW
- ***************************************************/
-.ai-compare-wrap {
-  margin-top: 14px;
-  display: flex;
-  gap: 10px;
-}
-
-.ai-compare-wrap textarea {
-  width: 50%;
-  height: 180px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-  padding: 10px;
-  font-size: 13px;
-  box-sizing: border-box;
-}
-
-/***************************************************
- * AI APPLY BUTTON
- ***************************************************/
-.apply-btn {
-  margin-top: 14px;
-  width: 100%;
-  background: #2f80ff;
-  color: #fff;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-/***************************************************
- * SUBMIT BUTTON
- ***************************************************/
-.primary-btn {
-  width: 100%;
-  padding: 16px;
-  background: #2f80ff;
-  border-radius: 999px;
-  color: #fff;
-  font-weight: 800;
-  font-size: 16px;
-  border: none;
-}
-
-/***************************************************
- * BOTTOM NAVIGATION
- ***************************************************/
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  background: #000;
-  border-top: 1px solid #111;
-  padding: 12px 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 9999;
-}
-
-.nav-item {
-  background: none;
-  border: none;
-  position: relative;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.nav-item img {
-  width: 28px;
-  height: 28px;
-  filter: brightness(0) invert(1);
-  opacity: 1;
-}
-
-.nav-indicator {
-  width: 100%;
-  height: 3px;
-  background: transparent;
-  border-radius: 999px;
-  position: absolute;
-  top: -8px;
-}
-
-.nav-item.active .nav-indicator {
-  background: var(--indicator-color, #4A6CFF);
-}
-
-/***************************************************
- * VIDEO MODAL
- ***************************************************/
-.video-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.75);
-  backdrop-filter: blur(6px);
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-}
-
-.video-modal-inner {
-  width: 90%;
-  max-width: 460px;
-  background: #111;
-  border-radius: 14px;
-  padding: 16px;
-}
-
-.video-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.video-modal-header button {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #fff;
-}
-
-#editVideo {
-  width: 100%;
-  border-radius: 10px;
-  background: #000;
-  margin-bottom: 12px;
-}
-
-/* sliders */
-.video-controls label {
-  font-size: 12px;
-  color: #ccc;
-}
-
-.video-controls input[type=range] {
-  width: 100%;
-  margin-bottom: 14px;
-}
-
-#videoModal video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;   /* 세로형 비율 강제 */
-  background: #000;
-  border-radius: 12px;
-}
-
-.video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-  position: relative;
-}
-
-
-/* ===============================
-   AI MODAL – REFINED ONLY
-   (기존 CSS 절대 수정 없음)
-================================ */
-
-/* 모달 최대 높이 제한 (화면 2/3) */
-.ai-modal-inner.refined {
-  max-height: 66vh;
-  overflow-y: auto;
-}
-
-/* 스타일 칩 – 흑백만 */
-.refined-tabs button {
-  background: #000;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 999px;
-}
-
-.refined-tabs button.active {
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-}
-
-/* 입력 영역 – 전폭 / 높이 절반 */
-.ai-textarea {
-  width: 100%;
-  min-height: 120px;
-  max-height: 180px;
-  resize: vertical;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  padding: 12px;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1.6;
-  box-sizing: border-box;
-}
-
-/* 버튼 영역 – 50:50 */
-.ai-modal-footer.split {
-  display: flex;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.ai-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  transition: background .15s, opacity .15s;
-}
-
-.ai-btn.ghost {
   background: #111;
   border: 1px solid #333;
-  color: #ccc;
-}
-
-.ai-btn.primary {
-  background: #2f80ff;
-  color: #fff;
-}
-
-.ai-btn:active {
-  opacity: .85;
-}
-
-/***************************************************
- * AI MODAL – FINAL REFINED (HTML 변경 없음)
- ***************************************************/
-
-/* 오버레이 */
-.ai-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-/* 모달 크기: 화면 2/3 이하 */
-.ai-modal-inner {
-  width: 92%;
-  max-width: 480px;
-  max-height: 66vh;               /* 🔥 핵심 */
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 18px;
-  padding: 20px;
-  overflow: hidden;               /* 내부만 스크롤 관리 */
-  display: flex;
-  flex-direction: column;
-}
-
-/* 헤더 */
-.ai-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.ai-modal-header h2 {
-  font-size: 17px;                /* 숨 막히지 않게 */
-  font-weight: 800;
-  letter-spacing: -0.2px;
-}
-
-.ai-modal-header button {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 22px;
-}
-
-/* 내용 스크롤 영역 */
-.ai-modal-inner > :not(.ai-modal-header):not(.ai-modal-footer) {
-  overflow-y: auto;
-}
-
-/***************************************************
- * STYLE TABS – 흑백, 여백 확보
- ***************************************************/
-.ai-style-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  overflow-x: auto;
-}
-
-.ai-style-tabs button {
-  padding: 6px 14px;
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 999px;
-  font-size: 12px;
-  color: #ccc;
-  white-space: nowrap;
-}
-
-.ai-style-tabs button.active {
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-}
-
-/***************************************************
- * CUSTOM PROMPT
- ***************************************************/
-.ai-custom-request input,
-#aiCustomPrompt {
-  width: 100%;
-  padding: 10px 12px;
-  background: #0b0c14;
-  border: 1px solid #222;
   border-radius: 12px;
   color: #fff;
-  font-size: 13px;
-  margin-bottom: 16px;
 }
 
-/***************************************************
- * TEXTAREA BLOCKS (전폭 / 높이 절반)
- ***************************************************/
-.ai-compare-wrap {
-  display: flex;
-  flex-direction: column;   /* 🔥 좌우 비교 제거 */
-  gap: 14px;
-}
-
-.ai-compare-wrap h3 {
-  font-size: 13px;
-  color: #aaa;
-  margin-bottom: 6px;
-}
-
-/* 입력 / 결과 공통 */
-#aiUserText,
-#aiResultText {
-  width: 100%;
-  min-height: 120px;        /* 🔥 이전의 절반 */
-  max-height: 160px;
-  resize: vertical;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 14px;
-  padding: 12px;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1.6;
-  box-sizing: border-box;
-}
-
-/***************************************************
- * FOOTER BUTTONS – 동일 크기 / 톤 통일
- ***************************************************/
-.ai-modal-footer {
-  margin-top: 14px;
-  display: flex;
-  gap: 10px;
-}
-
-.ai-modal-footer button {
-  flex: 1;                        /* 🔥 반반 */
-  padding: 12px 0;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 700;
-  border: 1px solid #333;
-  background: #1a1a1a;
-  color: #fff;
-  transition: all .15s ease;
-}
-
-/* 실행 */
-#runAi {
-  background: #1a1a1a;
-}
-
-/* 적용 */
-#applyAi {
-  background: #2f80ff;
-  border-color: #2f80ff;
-}
-
-/* 클릭 상태 */
-.ai-modal-footer button:active {
-  transform: scale(0.97);
-  opacity: 0.85;
-}
-
-/***************************************************
- * UPLOAD PREVIEW – 작게, 정돈
- ***************************************************/
-.upload-preview {
-  margin-top: 8px;
-  display: none;
-}
-
-.upload-preview img,
-.upload-preview video {
-  width: 96px;               /* 🔥 너무 크던 문제 해결 */
-  height: auto;
-  border-radius: 10px;
-  border: 1px solid #222;
-  background: #000;
-}
-
-/* ===== UPLOAD PREVIEW ===== */
-.upload-preview {
-  margin-top: 10px;
-  display: none;
-  position: relative;
-}
-
-.upload-preview img,
-.upload-preview video {
-  width: 100%;
-  max-width: 360px; /* 🔥 기존 대비 약 2.5배 */
-  border-radius: 14px;
-  border: 1px solid #222;
-  background: #000;
-}
-
-.preview-label {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  font-size: 11px;
-  padding: 4px 8px;
-  background: rgba(0,0,0,.7);
-  border-radius: 999px;
-  color: #fff;
-}
-
-/* ===== TOGGLE ===== */
-.toggle {
-  position: relative;
-  width: 42px;
-  height: 22px;
-}
-
-.toggle input {
-  display: none;
-}
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: #222;
-  border-radius: 999px;
+.file-btn, .ai-main-btn, .primary-btn {
   cursor: pointer;
 }
 
-.slider:before {
-  content: "";
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  top: 2px;
-  left: 2px;
-  background: #fff;
-  border-radius: 50%;
-  transition: .2s;
+.textarea {
+  min-height: 220px;
 }
 
-.toggle input:checked + .slider {
-  background: #2f80ff;
+.desc-counter {
+  font-size: 12px;
+  color: #888;
 }
 
-.toggle input:checked + .slider:before {
-  transform: translateX(20px);
+.upload-preview {
+  margin-top: 10px;
 }
 
-/* ===== AI MODAL TUNING ===== */
-.ai-modal-inner {
-  max-height: 66vh;
-  overflow-y: auto;
+.upload-preview img,
+.upload-preview video {
+  width: 250px;
+  border-radius: 12px;
+  border: 1px solid #333;
 }
 
-.ai-modal-inner h3 {
+.preview-label {
+  font-size: 12px;
+  color: #aaa;
   margin-bottom: 6px;
 }
 
-.ai-modal-inner textarea {
-  min-height: 120px;
-  line-height: 1.6;
-}
-
-.ai-modal-footer {
-  display: flex;
-  gap: 8px;
-}
-
-.ai-modal-footer button {
-  flex: 1;
+.anon-toggle {
+  margin-top: 10px;
   font-size: 14px;
 }
 
-/* 썸네일 / 영상 미리보기 */
-.upload-preview {
-  margin-top: 12px;
+.ai-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
   display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 99999;
 }
 
-.upload-preview small {
-  display: block;
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 6px;
+.ai-modal.show {
+  display: flex;
 }
 
-/* 🔥 기존 180px → 270px (1.5배) */
-.upload-preview img,
-.upload-preview video {
-  width: 270px;
-  max-width: 100%;
+.ai-modal-inner {
+  width: 92%;
+  max-width: 480px;
+  max-height: 65vh;
+  overflow-y: auto;
+  background: #111;
+  padding: 16px;
   border-radius: 14px;
-  border: 1px solid #222;
+}
+
+.ai-style-tabs button {
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;
+  color: #000;
+}
+
+.ai-textarea {
+  width: 100%;
+  height: 120px;
   background: #000;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: #fff;
+  padding: 10px;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  justify-content: space-around;
+  background: #000;
+  border-top: 1px solid #111;
 }
