@@ -21,7 +21,6 @@
   <main class="page-main">
     <div class="page-inner">
 
-      <!-- HERO -->
       <section class="section-block">
         <h1 class="write-main-title">새 갈라치기 만들기</h1>
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
@@ -31,23 +30,22 @@
       <section class="section-block write-guide-block">
         <ul class="write-guide-list">
           <li>제목은 최대 80자 이내</li>
-          <li>논쟁 포인트가 명확할수록 참여율 상승</li>
+          <li>논점이 명확할수록 참여율 상승</li>
           <li>AI로 글 다듬기 가능</li>
         </ul>
-
-        <!-- 익명 토글 -->
-        <div class="anon-toggle">
-          <span>익명으로 발의하기</span>
-          <label class="switch">
-            <input type="checkbox" id="anonymous" />
-            <span class="slider"></span>
-          </label>
-        </div>
       </section>
 
-      <form id="writeForm">
+      <!-- 익명 토글 (여기 위치 고정) -->
+      <div class="field-block anon-block">
+        <label class="anon-label">
+          익명으로 발의하기
+          <input type="checkbox" id="anonymousToggle" />
+          <span class="anon-slider"></span>
+        </label>
+      </div>
 
-        <!-- CATEGORY -->
+      <form id="writeForm" class="write-form">
+
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
           <select id="category" class="input-field" required>
@@ -66,73 +64,68 @@
           </select>
         </div>
 
-        <!-- TITLE -->
         <div class="field-block">
           <label class="field-label">제목</label>
           <input id="title" class="input-field" />
         </div>
 
-        <!-- ONE LINE -->
         <div class="field-block">
           <label class="field-label">발의자 한 줄</label>
           <input id="oneLine" class="input-field" />
         </div>
 
-        <!-- THUMBNAIL -->
+        <!-- 썸네일 -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일</label>
           <input type="file" id="thumbnail" hidden accept="image/*" />
           <button type="button" id="thumbnailBtn" class="file-btn">썸네일 업로드</button>
-          <div class="upload-preview" id="thumbPreview">
+          <div id="thumbnailPreview" class="upload-preview">
             <span>미리보기</span>
             <img />
           </div>
         </div>
 
-        <!-- VIDEO -->
+        <!-- 영상 -->
         <div class="field-block">
-          <label class="field-label">영상 (선택)</label>
+          <label class="field-label">엘리베이터 스피치</label>
           <input type="file" id="video" hidden accept="video/*" />
           <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
-          <div class="upload-preview" id="videoPreview">
+          <div id="videoPreview" class="upload-preview">
             <span>미리보기</span>
-            <video muted></video>
+            <video muted playsinline></video>
           </div>
         </div>
 
-        <!-- DESCRIPTION -->
+        <!-- 설명 -->
         <div class="field-block">
-          <label class="field-label">이슈 설명</label>
-          <textarea id="description" class="input-field textarea"></textarea>
+          <label class="field-label">이슈 설명 <span class="desc-counter">0 / 500</span></label>
+          <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
           <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
         </div>
 
-        <!-- LINKS -->
         <div class="field-block">
-          <label class="field-label">관련 링크</label>
+          <label class="field-label">관련 기사·자료</label>
           <input class="input-field" value="https://" />
           <input class="input-field" value="https://" />
           <input class="input-field" value="https://" />
         </div>
 
-        <!-- PREVIEW -->
         <div class="field-block">
-          <button type="button" class="primary-btn">미리보기</button>
+          <button type="button" class="primary-btn preview-btn">미리보기</button>
         </div>
 
       </form>
     </div>
   </main>
 
-  <!-- NAV -->
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="nav-item" data-target="index.html"><img src="./assets/icons/nav-home.svg" /></button>
-    <button class="nav-item" data-target="search.html"><img src="./assets/icons/nav-search.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-home.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-search.svg" /></button>
     <button class="nav-item active"><img src="./assets/icons/nav-write.svg" /></button>
-    <button class="nav-item" data-target="random.html"><img src="./assets/icons/nav-random.svg" /></button>
-    <button class="nav-item" data-target="mypage.html"><img src="./assets/icons/nav-user.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-random.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-user.svg" /></button>
   </nav>
-
 </div>
 
 <!-- AI MODAL -->
@@ -154,15 +147,19 @@
 
     <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
 
-    <label>내가 쓴 글</label>
-    <textarea class="ai-textarea"></textarea>
+    <div class="ai-block">
+      <label>내가 쓴 글</label>
+      <textarea id="aiUserText" class="ai-textarea"></textarea>
+    </div>
 
-    <label>AI 결과</label>
-    <textarea class="ai-textarea"></textarea>
+    <div class="ai-block">
+      <label>AI 결과</label>
+      <textarea id="aiResultText" class="ai-textarea"></textarea>
+    </div>
 
     <div class="ai-modal-footer">
-      <button class="ai-run-btn">AI 실행</button>
-      <button class="apply-btn">AI 적용하기</button>
+      <button id="runAi" class="btn-secondary">AI 실행</button>
+      <button id="applyAi" class="btn-primary">AI 적용하기</button>
     </div>
   </div>
 </div>

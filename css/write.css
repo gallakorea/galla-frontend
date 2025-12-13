@@ -390,63 +390,39 @@ body {
   filter: invert(1);
 }
 
-.ai-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 3000;
+body { margin:0; background:#000; color:#fff; font-family:system-ui }
+.app-root { max-width:480px; margin:auto; padding-bottom:110px }
+.input-field, textarea {
+  background:#0b0c14; border:1px solid #222; color:#fff;
+  border-radius:12px; padding:12px; width:100%;
 }
+.file-btn { background:#111; border:1px solid #333; padding:12px; border-radius:12px }
 
-.ai-modal-inner {
-  width: 92%;
-  max-width: 480px;
-  max-height: 66vh;
-  background: #111;
-  border-radius: 16px;
-  padding: 18px;
-  overflow-y: auto;
-}
-
-.ai-textarea {
-  width: 100%;
-  min-height: 120px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  padding: 12px;
-  color: #fff;
-}
-
-.ai-modal-footer {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.ai-run-btn,
-.apply-btn {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  font-weight: 700;
-}
-
-.ai-run-btn {
-  background: #1a1a1a;
-  color: #fff;
-}
-
-.apply-btn {
-  background: #2f80ff;
-  color: #fff;
-}
-
+.upload-preview { margin-top:8px }
 .upload-preview img,
 .upload-preview video {
-  max-width: 240px;
-  border-radius: 12px;
+  width:150%; max-width:260px; border-radius:12px;
+}
+
+.ai-modal {
+  position:fixed; inset:0; display:none;
+  justify-content:center; align-items:center;
+  background:rgba(0,0,0,.7);
+}
+.ai-modal-inner {
+  width:92%; max-width:480px;
+  max-height:66vh; overflow:auto;
+  background:#111; border-radius:16px; padding:16px;
+}
+
+.ai-textarea { min-height:120px }
+.ai-modal-footer { display:flex; gap:8px }
+.btn-primary { flex:1; background:#2f80ff; color:#fff; border-radius:12px }
+.btn-secondary { flex:1; background:#1a1a1a; color:#fff; border:1px solid #333 }
+
+.anon-label {
+  display:flex; justify-content:space-between; align-items:center;
+}
+.anon-slider {
+  width:42px; height:22px; background:#333; border-radius:999px;
 }
