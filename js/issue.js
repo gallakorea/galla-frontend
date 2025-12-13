@@ -1,503 +1,135 @@
-/* ==========================================================================
-   기본 데이터
-========================================================================== */
-let vote = { pro: 46, con: 54 };
-let support = { pro: 111000, con: 199000 };
-
-let comments = [
-    { id: 1, parent: null, author: "익명1", text: "태국은 아직도 충분히 안전합니다.", likes: 12, dislikes: 1, time: Date.now() },
-    { id: 2, parent: null, author: "익명2", text: "요즘 사건들 보면 위험하죠.", likes: 5, dislikes: 7, time: Date.now() - 100000 },
-    { id: 3, parent: 2, author: "익명3", text: "저는 반대 의견입니다.", likes: 2, dislikes: 0, time: Date.now() - 50000 }
-];
-
-let commentId = 100;
-let replyTarget = null;
+console.log("[issue.js] loaded");
 
 /* ==========================================================================
-   스크롤 복귀
+   0. 기본 유틸
 ========================================================================== */
-window.addEventListener("beforeunload", () => {
-    sessionStorage.setItem("issue-scroll", window.scrollY);
-});
-window.addEventListener("load", () => {
-    const lastScroll = sessionStorage.getItem("issue-scroll");
-    if (lastScroll) window.scrollTo(0, Number(lastScroll));
-});
-
-/* ==========================================================================
-   설명 자동 추가
-========================================================================== */
-document.querySelector(".issue-explain")?.insertAdjacentHTML(
-    "beforeend",
-    `
-    <p style="color:#ddd;">
-        이번 이슈는 최근 크게 떠오르는 "태국 치안 문제"에 대한 국내 이용자들의 의견 흐름을 정리한 것입니다.
-        20~40대가 주요 참여층이며 실제 서비스에서는 자동 데이터 크롤링 기반으로 분석됩니다.
-    </p>
-    `
-);
-
-/* ==========================================================================
-   투표 UI
-========================================================================== */
-function updateVoteUI() {
-    const total = vote.pro + vote.con;
-    const proPer = Math.round((vote.pro / total) * 100);
-    const conPer = 100 - proPer;
-
-    document.getElementById("vote-pro-bar").style.width = `${proPer}%`;
-    document.getElementById("vote-con-bar").style.width = `${conPer}%`;
-    document.getElementById("vote-pro-text").innerText = `${proPer}%`;
-    document.getElementById("vote-con-text").innerText = `${conPer}%`;
-}
-document.getElementById("btn-vote-pro").onclick = () => { vote.pro++; updateVoteUI(); };
-document.getElementById("btn-vote-con").onclick = () => { vote.con++; updateVoteUI(); };
-updateVoteUI();
-
-/* ==========================================================================
-   후원 UI
-========================================================================== */
-function updateSupportUI() {
-    const total = support.pro + support.con;
-    const proPer = (support.pro / total) * 100;
-    const conPer = 100 - proPer;
-
-    document.getElementById("sup-pro-bar").style.width = `${proPer}%`;
-    document.getElementById("sup-con-bar").style.width = `${conPer}%`;
-    document.getElementById("sup-pro-amount").innerText = "₩" + support.pro.toLocaleString();
-    document.getElementById("sup-con-amount").innerText = "₩" + support.con.toLocaleString();
-}
-updateSupportUI();
-
-/* ==========================================================================
-   HEADER ⋯ 메뉴 (ID 수정된 정상 버전)
-========================================================================== */
-const headerMoreBtn = document.querySelector(".more-header-btn");
-const headerMoreModal = document.getElementById("header-more-modal");
-
-headerMoreBtn.addEventListener("click", () => {
-    headerMoreModal.hidden = false;
-});
-
-// 닫기 처리 — 배경 또는 닫기 버튼
-headerMoreModal.addEventListener("click", (e) => {
-    if (e.target === headerMoreModal || e.target.classList.contains("more-close")) {
-        headerMoreModal.hidden = true;
-    }
-});
-
-/* ==========================================================================
-   댓글 렌더링
-========================================================================== */
-const listEl = document.getElementById("comment-list");
-
-document.getElementById("main-reply-btn").onclick = () => {
-    const txt = document.getElementById("main-reply").value.trim();
-    if (!txt) return;
-
-    comments.push({
-        id: commentId++,
-        parent: null,
-        author: "익명",
-        text: txt,
-        likes: 0,
-        dislikes: 0,
-        time: Date.now()
-    });
-
-    document.getElementById("main-reply").value = "";
-    renderComments();
-};
-
-function renderComments(sort = "latest") {
-    listEl.innerHTML = "";
-
-    let roots = comments.filter(c => c.parent === null);
-    roots.sort(sort === "latest"
-        ? (a, b) => b.time - a.time
-        : (a, b) => (b.likes - b.dislikes) - (a.likes - a.dislikes)
-    );
-
-    roots.forEach(root => {
-        renderCommentItem(root, 0);
-        renderReplies(root.id, 1);
-    });
-}
-
-function renderCommentItem(comment, depth) {
-    const div = document.createElement("div");
-    div.className = "comment-item";
-    if (depth > 0) div.classList.add("reply");
-
-    div.dataset.id = comment.id;
-
-    div.innerHTML = `
-        <div class="comment-header">
-            <span class="comment-author">${comment.author}</span>
-            <span class="comment-menu">⋯</span>
-        </div>
-
-        <div class="comment-text">${comment.text}</div>
-
-        <div class="comment-actions">
-            <span class="like-btn" data-id="${comment.id}">👍 ${comment.likes}</span>
-            <span class="dislike-btn" data-id="${comment.id}">👎 ${comment.dislikes}</span>
-            <span class="reply-btn" data-id="${comment.id}" data-author="${comment.author}">답글</span>
-            <span class="share-btn" data-id="${comment.id}">공유</span>
-        </div>
-    `;
-
-    listEl.appendChild(div);
-}
-
-function renderReplies(parentId, depth) {
-    comments
-        .filter(c => c.parent === parentId)
-        .sort((a, b) => a.time - b.time)
-        .forEach(c => {
-            renderCommentItem(c, depth);
-            renderReplies(c.id, depth + 1);
-        });
-}
-
-renderComments();
-
-/* 댓글 정렬 */
-document.querySelectorAll(".sort-btn").forEach(btn => {
-    btn.onclick = () => {
-        document.querySelectorAll(".sort-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        renderComments(btn.dataset.sort);
-    };
-});
-
-/* ==========================================================================
-   댓글 이벤트 핸들러
-========================================================================== */
-let activeReplyBox = null;
-let selectedCommentId = null;
-
-document.addEventListener("click", (e) => {
-    const id = Number(e.target.dataset.id);
-
-    if (e.target.classList.contains("like-btn")) {
-        comments.find(x => x.id === id).likes++;
-        renderComments();
-    }
-
-    if (e.target.classList.contains("dislike-btn")) {
-        comments.find(x => x.id === id).dislikes++;
-        renderComments();
-    }
-
-    if (e.target.classList.contains("reply-btn")) {
-        openReplyBox(e.target.closest(".comment-item"), id, e.target.dataset.author);
-    }
-
-    if (e.target.classList.contains("share-btn")) {
-        navigator.clipboard.writeText(`${location.href}#comment-${id}`);
-        alert("댓글 링크 복사됨");
-    }
-
-    if (e.target.classList.contains("comment-menu")) {
-        selectedCommentId = id;
-        document.getElementById("comment-action-modal").hidden = false;
-    }
-
-    if (e.target.dataset.close !== undefined ||
-        e.target.id === "comment-action-modal") {
-        document.getElementById("comment-action-modal").hidden = true;
-    }
-
-    if (e.target.classList.contains("action-item")) {
-        handleCommentAction(e.target.dataset.action, selectedCommentId);
-        document.getElementById("comment-action-modal").hidden = true;
-    }
-});
-
-/* 대댓글 박스 */
-function openReplyBox(commentElement, parentId, parentAuthor) {
-    replyTarget = parentId;
-
-    if (activeReplyBox) activeReplyBox.remove();
-
-    const box = document.createElement("div");
-    box.className = "reply-box";
-
-    box.innerHTML = `
-        <textarea class="reply-input">@${parentAuthor} </textarea>
-        <button class="reply-submit">등록</button>
-        <button class="reply-cancel">취소</button>
-    `;
-
-    commentElement.after(box);
-    activeReplyBox = box;
-
-    box.querySelector(".reply-submit").onclick = submitReply;
-
-    // 수정된 취소 버튼
-    box.querySelector(".reply-cancel").onclick = () => {
-        box.remove();
-        activeReplyBox = null;
-    };
-}
-
-function submitReply() {
-    const text = activeReplyBox.querySelector(".reply-input").value.trim();
-    if (!text) return;
-
-    comments.push({
-        id: commentId++,
-        parent: replyTarget,
-        author: "익명",
-        text,
-        likes: 0,
-        dislikes: 0,
-        time: Date.now()
-    });
-
-    activeReplyBox.remove();
-    activeReplyBox = null;
-    replyTarget = null;
-    renderComments();
+function qs(id) {
+  return document.getElementById(id);
 }
 
 /* ==========================================================================
-   댓글 옵션 기능
+   1. URL에서 issue id 읽기
 ========================================================================== */
-function handleCommentAction(action, id) {
-    switch (action) {
-        case "copy":
-            navigator.clipboard.writeText(`${location.href}#comment-${id}`);
-            alert("댓글 링크 복사됨");
-            break;
-        case "save":
-            alert("저장 완료 (더미)");
-            break;
-        case "hide":
-            alert("관심 없음 처리됨 (더미)");
-            break;
-        case "mute":
-            alert("업데이트 숨김 (더미)");
-            break;
-        case "restrict":
-            alert("제한됨 (더미)");
-            break;
-        case "block":
-            alert("차단됨 (더미)");
-            break;
-        case "report":
-            alert("신고됨 (더미)");
-            break;
-    }
+const params = new URLSearchParams(location.search);
+const issueId = params.get("id");
+
+if (!issueId) {
+  alert("잘못된 접근입니다.");
+  location.href = "index.html";
 }
 
 /* ==========================================================================
-   스피치 모달
+   2. Supabase 이슈 조회
 ========================================================================== */
-const speechBackdrop = document.querySelector(".speech-backdrop");
-const speechSheet = document.querySelector(".speech-sheet");
-const video = document.getElementById("speech-video");
-const playIcon = document.getElementById("play-icon");
-const progressBar = document.getElementById("progress-bar");
+(async function loadIssue() {
+  if (!window.supabaseClient) {
+    console.error("Supabase client not ready");
+    return;
+  }
 
-document.getElementById("open-video-modal").onclick = () => {
-    video.src = "/videos/speech_001.mp4";
-    speechBackdrop.hidden = false;
+  const supabase = window.supabaseClient;
 
-    setTimeout(() => {
-        speechSheet.style.bottom = "0";
-        video.play();
-    }, 20);
-};
+  const { data: issue, error } = await supabase
+    .from("issues")
+    .select("*")
+    .eq("id", issueId)
+    .single();
 
-document.querySelector(".speech-close").onclick = closeSpeech;
+  if (error || !issue) {
+    console.error(error);
+    alert("이슈를 불러올 수 없습니다.");
+    return;
+  }
 
-function closeSpeech() {
-    speechSheet.style.bottom = "-100%";
-    video.pause();
-    video.currentTime = 0;
-    setTimeout(() => speechBackdrop.hidden = true, 300);
-}
-
-video.addEventListener("click", () => {
-    if (video.paused) {
-        video.play();
-        showPlayIcon("▶");
-    } else {
-        video.pause();
-        showPlayIcon("❚❚");
-    }
-});
-
-function showPlayIcon(icon) {
-    playIcon.innerText = icon;
-    playIcon.style.opacity = 1;
-    setTimeout(() => playIcon.style.opacity = 0, 350);
-}
-
-video.addEventListener("timeupdate", () => {
-    progressBar.style.width = (video.currentTime / video.duration) * 100 + "%";
-});
-video.addEventListener("ended", () => closeSpeech());
+  renderIssue(issue);
+})();
 
 /* ==========================================================================
-   통계 데이터
+   3. 이슈 렌더링
 ========================================================================== */
-const statData = {
-    gender: { male: 56, female: 44 },
+function renderIssue(issue) {
+  // 카테고리 / 제목 / 설명
+  qs("issue-category").innerText = issue.category || "";
+  qs("issue-title").innerText = issue.title || "";
+  qs("issue-desc").innerText = issue.description || "";
 
-    age: {
-        "10대": 5,
-        "20대": 23,
-        "30대": 29,
-        "40대": 22,
-        "50대": 15,
-        "60+": 6
-    },
+  // 작성 시간
+  if (issue.created_at) {
+    qs("issue-time").innerText =
+      new Date(issue.created_at).toLocaleDateString();
+  }
 
-    region: {
-        "서울": 12, "경기": 18, "인천": 6,
-        "부산": 7, "대구": 5, "광주": 4,
-        "대전": 4, "울산": 3, "세종": 2,
-        "강원": 4, "충북": 3, "충남": 4,
-        "전북": 3, "전남": 3, "경북": 4,
-        "경남": 5, "제주": 3
-    },
+  // 작성자 (익명 고정)
+  qs("issue-author").innerText = "작성자 · 익명";
 
-    genderVote: {
-        "남성": [52, 48],
-        "여성": [49, 51]
-    },
+  // 썸네일
+  if (issue.thumbnail_url) {
+    const { data } = window.supabaseClient
+      .storage
+      .from("issues")
+      .getPublicUrl(issue.thumbnail_url);
 
-    ageVote: {
-        "10대": [50, 50],
-        "20대": [55, 45],
-        "30대": [48, 52],
-        "40대": [46, 54],
-        "50대": [49, 51],
-        "60+": [53, 47]
-    },
+    qs("issue-thumb").src = data.publicUrl;
+  }
 
-    regionVote: {
-        "서울": [51, 49],
-        "경기": [48, 52],
-        "인천": [50, 50],
-        "부산": [53, 47],
-        "대구": [47, 53],
-        "광주": [45, 55],
-        "대전": [52, 48],
-        "울산": [49, 51],
-        "세종": [50, 50],
-        "강원": [48, 52],
-        "충북": [51, 49],
-        "충남": [50, 50],
-        "전북": [47, 53],
-        "전남": [46, 54],
-        "경북": [52, 48],
-        "경남": [49, 51],
-        "제주": [50, 50]
-    }
-};
+  // 영상
+  if (issue.video_url) {
+    qs("open-video-modal").style.display = "block";
 
-/* ==========================================================================
-   통계 렌더링 함수
-========================================================================== */
-function renderGenderDualBar() {
-    const { male, female } = statData.gender;
-    document.getElementById("gender-dual").innerHTML = `
-        <div class="dual-bar-labels">
-            <span>남성 ${male}%</span>
-            <span>여성 ${female}%</span>
-        </div>
-        <div class="dual-bar">
-            <div class="dual-left" style="width:${male}%"></div>
-            <div class="dual-right" style="width:${female}%"></div>
-        </div>
-    `;
-}
+    const { data } = window.supabaseClient
+      .storage
+      .from("issues")
+      .getPublicUrl(issue.video_url);
 
-function renderAgeChart() {
-    const root = document.getElementById("age-chart");
-    root.innerHTML = "";
-    Object.entries(statData.age).forEach(([age, pct]) => {
-        root.innerHTML += `
-            <div class="age-row">
-                <div class="age-header">
-                    <span>${age}</span>
-                    <span>${pct}%</span>
-                </div>
-                <div class="age-bar">
-                    <div class="age-fill" style="width:${pct}%"></div>
-                </div>
-            </div>
-        `;
-    });
-}
+    const videoEl = document.getElementById("speech-video");
+    videoEl.src = data.publicUrl;
+    videoEl.controls = true;
+  } else {
+    qs("open-video-modal").style.display = "none";
+  }
 
-function renderRegionHeatmap() {
-    const root = document.getElementById("region-heatmap");
-    root.innerHTML = "";
-    const max = Math.max(...Object.values(statData.region));
-    Object.entries(statData.region).forEach(([name, pct]) => {
-        const intensity = Math.floor((pct / max) * 160 + 60);
-        const color = `rgb(${intensity},70,100)`;
-        root.innerHTML += `
-            <div class="region-cell" style="background:${color}">
-                ${name}<br>${pct}%
-            </div>
-        `;
-    });
-}
+  // 투표 수치
+  renderVote(issue.pro_count || 0, issue.con_count || 0);
 
-function renderVoteBars(target, dataObj) {
-    const root = document.getElementById(target);
-    root.innerHTML = "";
-    Object.entries(dataObj).forEach(([label, [pro, con]]) => {
-        root.innerHTML += `
-            <div class="vote-item">
-                <div class="vote-labels">
-                    <span>${label} · 찬성 ${pro}%</span>
-                    <span>반대 ${con}%</span>
-                </div>
-                <div class="vote-bar">
-                    <div class="vote-pro" style="width:${pro}%"></div>
-                    <div class="vote-con" style="width:${con}%"></div>
-                </div>
-            </div>
-        `;
-    });
-}
-
-function renderAISummary() {
-    document.getElementById("ai-summary").innerHTML =
-        "수도권 참여율이 높고 20~40대가 핵심 참여층입니다.<br>찬반은 크게 갈리지 않는 균형형 여론입니다.";
+  // 후원 수치
+  renderSupport(issue.sup_pro || 0, issue.sup_con || 0);
 }
 
 /* ==========================================================================
-   통계 실행
+   4. 투표 UI
 ========================================================================== */
-renderGenderDualBar();
-renderAgeChart();
-renderRegionHeatmap();
-renderVoteBars("gender-vote", statData.genderVote);
-renderVoteBars("age-vote", statData.ageVote);
-renderVoteBars("region-vote", statData.regionVote);
-renderAISummary();
+function renderVote(pro, con) {
+  const total = pro + con || 1;
+  const proPer = Math.round((pro / total) * 100);
+  const conPer = 100 - proPer;
+
+  qs("vote-pro-bar").style.width = `${proPer}%`;
+  qs("vote-con-bar").style.width = `${conPer}%`;
+  qs("vote-pro-text").innerText = `${proPer}%`;
+  qs("vote-con-text").innerText = `${conPer}%`;
+}
 
 /* ==========================================================================
-   네비게이션 이동
+   5. 후원 UI
 ========================================================================== */
-document.querySelectorAll(".nav-item")[0].onclick = () => location.href = "index.html";
-document.querySelectorAll(".nav-item")[1].onclick = () => location.href = "search.html";
-document.querySelectorAll(".nav-item")[2].onclick = () => location.href = "write.html";
-document.querySelectorAll(".nav-item")[3].onclick = () => location.href = "random.html";
-document.querySelectorAll(".nav-item")[4].onclick = () => location.href = "mypage.html";
+function renderSupport(pro, con) {
+  const total = pro + con || 1;
+  const proPer = (pro / total) * 100;
+  const conPer = 100 - proPer;
 
-document.querySelector(".back-btn").onclick = () => location.href = "index.html";
+  qs("sup-pro-bar").style.width = `${proPer}%`;
+  qs("sup-con-bar").style.width = `${conPer}%`;
+  qs("sup-pro-amount").innerText = "₩" + pro.toLocaleString();
+  qs("sup-con-amount").innerText = "₩" + con.toLocaleString();
+}
+
+/* ==========================================================================
+   6. 뒤로가기 / 스와이프
+========================================================================== */
+qs("btn-back").onclick = () => history.back();
 
 let startX = 0;
-document.addEventListener("touchstart", (e) => startX = e.touches[0].clientX);
-document.addEventListener("touchend", (e) => {
-    if (e.changedTouches[0].clientX - startX > 80) location.href = "index.html";
+document.addEventListener("touchstart", e => startX = e.touches[0].clientX);
+document.addEventListener("touchend", e => {
+  if (e.changedTouches[0].clientX - startX > 80) history.back();
 });
