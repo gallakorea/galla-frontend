@@ -1,92 +1,94 @@
-console.log("[write.js] stable loaded");
+console.log("[write.js] loaded");
 
-const qs = id => document.getElementById(id);
 const supabase = window.supabaseClient;
+const qs = (id) => document.getElementById(id);
 
-/* ===== Auth ===== */
-(async () => {
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) location.href = "login.html";
-})();
-
-/* ===== Counter ===== */
 const desc = qs("description");
 const counter = document.querySelector(".desc-counter");
-desc.oninput = () =>
+
+desc.addEventListener("input", () => {
   counter.innerText = `${desc.value.length} / 500`;
+});
 
-/* ===== Thumbnail ===== */
-let thumbnailFile = null;
-qs("thumbnailBtn").onclick = () => qs("thumbnail").click();
-qs("thumbnail").onchange = e => {
-  thumbnailFile = e.target.files[0];
-  qs("thumbnailBtn").innerText = "선택됨";
-};
-
-/* ===== AI MODAL ===== */
+/* ===== AI ===== */
 const aiModal = qs("aiModal");
-let aiStyle = "basic";
+const aiUserText = qs("aiUserText");
+const aiImprovedText = qs("aiImprovedText");
+const aiCustomPrompt = qs("aiCustomPrompt");
+
+let currentStyle = "basic";
 
 qs("openAiModal").onclick = () => {
-  qs("aiUserText").value = desc.value;
-  qs("aiResultText").value = "";
+  aiUserText.value = desc.value;
+  aiImprovedText.value = "";
   aiModal.style.display = "block";
 };
 
-qs("aiClose").onclick = () => aiModal.style.display = "none";
+qs("aiCloseBtn").onclick = () => {
+  aiModal.style.display = "none";
+};
 
-document.querySelectorAll(".ai-style-tabs button").forEach(btn => {
+document.querySelectorAll(".ai-style-tabs button").forEach((btn) => {
   btn.onclick = () => {
     document.querySelectorAll(".ai-style-tabs button")
       .forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-    aiStyle = btn.dataset.style;
+    currentStyle = btn.dataset.style;
   };
 });
 
-/* ===== AI 실행 ===== */
 qs("runAi").onclick = async () => {
+  aiImprovedText.value = "AI 처리 중...";
+
   const { data, error } = await supabase.functions.invoke("ai-polish", {
     body: {
-      text: qs("aiUserText").value,
-      style: aiStyle,
-      custom: qs("aiCustomPrompt").value
-    }
+      text: aiUserText.value,
+      style: currentStyle,
+      options: [],
+      customPrompt: aiCustomPrompt.value,
+    },
   });
 
   if (error) {
-    qs("aiResultText").value = "AI 오류";
+    aiImprovedText.value = "AI 오류 발생";
     return;
   }
 
-  qs("aiResultText").value = data.result;
+  aiImprovedText.value = data.result || "";
 };
 
-qs("applyAi").onclick = () => {
-  desc.value = qs("aiResultText").value;
+qs("applyAiText").onclick = () => {
+  desc.value = aiImprovedText.value;
   counter.innerText = `${desc.value.length} / 500`;
   aiModal.style.display = "none";
 };
 
-/* ===== Submit ===== */
-qs("writeForm").onsubmit = async e => {
+/* ===== SUBMIT ===== */
+qs("writeForm").onsubmit = async (e) => {
   e.preventDefault();
 
   const { data } = await supabase.auth.getSession();
-  const user = data.session.user;
+  if (!data.session) {
+    alert("로그인이 필요합니다");
+    return;
+  }
 
-  const thumbPath = `thumbnails/${user.id}_${Date.now()}.jpg`;
-  await supabase.storage.from("issues").upload(thumbPath, thumbnailFile);
-
-  await supabase.from("issues").insert({
+  const payload = {
     category: qs("category").value,
     title: qs("title").value,
     one_line: qs("oneLine").value,
     description: desc.value,
-    thumbnail_url: thumbPath,
-    user_id: user.id,
-    status: "normal"
-  });
+    user_id: data.session.user.id,
+    status: "normal",
+  };
 
+  const { error } = await supabase.from("issues").insert(payload);
+
+  if (error) {
+    alert("등록 실패");
+    return;
+  }
+
+  alert("갈라 발의 완료");
   location.href = "index.html";
 };
