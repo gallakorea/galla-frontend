@@ -28,7 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const { error } = await window.supabaseClient
       .storage
       .from("issues")
-      .upload(path, file, { contentType: file.type });
+      .upload(path, file, {
+        contentType: file.type,
+        upsert: false
+      });
 
     if (error) throw error;
     return path;
@@ -41,7 +44,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const { error } = await window.supabaseClient
       .storage
       .from("issues")
-      .upload(path, file, { contentType: file.type });
+      .upload(path, file, {
+        contentType: file.type,
+        upsert: false
+      });
 
     if (error) throw error;
     return path;
@@ -68,9 +74,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-      /* 입력값 */
-      const oneLine = document.getElementById("oneLine").value;
-      const description = document.getElementById("description").value;
+      /* 입력값 정리 */
+      const oneLine = document.getElementById("oneLine").value.trim();
+      const description = document.getElementById("description").value.trim();
 
       const finalDescription =
         `[발의자 한 줄]\n${oneLine}\n\n${description}`;
@@ -81,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("ref3").value || null
       ].filter(Boolean);
 
-      /* 1️⃣ issues INSERT */
+      /* 1️⃣ issues INSERT (DB 컬럼 100% 일치) */
       const { data: issue, error: insertError } = await supabase
         .from("issues")
         .insert({
