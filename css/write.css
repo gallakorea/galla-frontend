@@ -511,3 +511,186 @@ body {
 .ai-btn:active {
   opacity: .85;
 }
+
+/***************************************************
+ * AI MODAL – FINAL REFINED (HTML 변경 없음)
+ ***************************************************/
+
+/* 오버레이 */
+.ai-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* 모달 크기: 화면 2/3 이하 */
+.ai-modal-inner {
+  width: 92%;
+  max-width: 480px;
+  max-height: 66vh;               /* 🔥 핵심 */
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 18px;
+  padding: 20px;
+  overflow: hidden;               /* 내부만 스크롤 관리 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* 헤더 */
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ai-modal-header h2 {
+  font-size: 17px;                /* 숨 막히지 않게 */
+  font-weight: 800;
+  letter-spacing: -0.2px;
+}
+
+.ai-modal-header button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+}
+
+/* 내용 스크롤 영역 */
+.ai-modal-inner > :not(.ai-modal-header):not(.ai-modal-footer) {
+  overflow-y: auto;
+}
+
+/***************************************************
+ * STYLE TABS – 흑백, 여백 확보
+ ***************************************************/
+.ai-style-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.ai-style-tabs button {
+  padding: 6px 14px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #ccc;
+  white-space: nowrap;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;
+  color: #000;
+  font-weight: 700;
+}
+
+/***************************************************
+ * CUSTOM PROMPT
+ ***************************************************/
+.ai-custom-request input,
+#aiCustomPrompt {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/***************************************************
+ * TEXTAREA BLOCKS (전폭 / 높이 절반)
+ ***************************************************/
+.ai-compare-wrap {
+  display: flex;
+  flex-direction: column;   /* 🔥 좌우 비교 제거 */
+  gap: 14px;
+}
+
+.ai-compare-wrap h3 {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+/* 입력 / 결과 공통 */
+#aiUserText,
+#aiResultText {
+  width: 100%;
+  min-height: 120px;        /* 🔥 이전의 절반 */
+  max-height: 160px;
+  resize: vertical;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 12px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.6;
+  box-sizing: border-box;
+}
+
+/***************************************************
+ * FOOTER BUTTONS – 동일 크기 / 톤 통일
+ ***************************************************/
+.ai-modal-footer {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.ai-modal-footer button {
+  flex: 1;                        /* 🔥 반반 */
+  padding: 12px 0;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #fff;
+  transition: all .15s ease;
+}
+
+/* 실행 */
+#runAi {
+  background: #1a1a1a;
+}
+
+/* 적용 */
+#applyAi {
+  background: #2f80ff;
+  border-color: #2f80ff;
+}
+
+/* 클릭 상태 */
+.ai-modal-footer button:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+/***************************************************
+ * UPLOAD PREVIEW – 작게, 정돈
+ ***************************************************/
+.upload-preview {
+  margin-top: 8px;
+  display: none;
+}
+
+.upload-preview img,
+.upload-preview video {
+  width: 96px;               /* 🔥 너무 크던 문제 해결 */
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid #222;
+  background: #000;
+}
