@@ -1,40 +1,43 @@
 const $ = id => document.getElementById(id);
 
-/* COUNTER */
+/* 카운터 */
 $("description").addEventListener("input", e=>{
-  document.querySelector(".desc-counter").textContent =
+  document.querySelector(".desc-counter").innerText =
     `${e.target.value.length} / 500`;
 });
 
-/* FILE UPLOAD */
+/* 썸네일 */
 $("thumbnailBtn").onclick = ()=> $("thumbnail").click();
 $("thumbnail").onchange = e=>{
   const img = $("thumbPreview").querySelector("img");
   img.src = URL.createObjectURL(e.target.files[0]);
-  $("thumbPreview").style.display = "block";
+  $("thumbPreview").style.display="block";
 };
 
+/* 영상 */
 $("videoBtn").onclick = ()=> $("video").click();
 $("video").onchange = e=>{
   const v = $("videoPreview").querySelector("video");
   v.src = URL.createObjectURL(e.target.files[0]);
-  $("videoPreview").style.display = "block";
+  v.play();
+  $("videoPreview").style.display="block";
 };
 
-/* AI MODAL */
+/* AI 모달 */
 $("openAiModal").onclick = ()=>{
   $("aiUserText").value = $("description").value;
-  $("aiModal").classList.add("show");
+  $("aiModal").style.display="flex";
 };
-$("aiClose").onclick = ()=> $("aiModal").classList.remove("show");
+$("aiClose").onclick = ()=> $("aiModal").style.display="none";
+
+$("runAi").onclick = ()=>{
+  $("aiResultText").value =
+    `[AI 결과]\n` +
+    ($("aiPrompt").value ? `요청: ${$("aiPrompt").value}\n\n` : "") +
+    $("aiUserText").value;
+};
 
 $("applyAi").onclick = ()=>{
   $("description").value = $("aiResultText").value;
-  $("aiModal").classList.remove("show");
-};
-
-/* SUBMIT */
-$("writeForm").onsubmit = e=>{
-  e.preventDefault();
-  alert("미리보기 단계 (다음 단계에서 실제 발의)");
+  $("aiModal").style.display="none";
 };
