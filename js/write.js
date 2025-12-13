@@ -1,7 +1,7 @@
-console.log("[write.js] loaded - FINAL STABLE");
+console.log("[write.js] loaded - UI STABLE");
 
 /* =========================
-   SAFE QUERY
+   SAFE SELECTOR
 ========================= */
 const $ = (id) => document.getElementById(id);
 
@@ -13,10 +13,10 @@ const form = $("writeForm");
 const category = $("category");
 const titleInput = $("title");
 const oneLineInput = $("oneLine");
+
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
-/* FILES */
 const thumbInput = $("thumbnail");
 const thumbBtn = $("thumbnailBtn");
 
@@ -32,7 +32,7 @@ const aiImprovedText = $("aiImprovedText");
 const applyAiBtn = $("applyAiText");
 
 /* =========================
-   LAYOUT SAFETY (480px)
+   WIDTH / OVERFLOW FIX
 ========================= */
 document.documentElement.style.overflowX = "hidden";
 document.body.style.overflowX = "hidden";
@@ -42,16 +42,18 @@ document.body.style.overflowX = "hidden";
 ========================= */
 if (desc && counter) {
   counter.textContent = "0 / 500";
+
   desc.addEventListener("input", () => {
     counter.textContent = `${desc.value.length} / 500`;
   });
 }
 
 /* =========================
-   FILE BUTTONS
+   FILE BUTTONS (핵심)
 ========================= */
 if (thumbBtn && thumbInput) {
   thumbBtn.type = "button";
+
   thumbBtn.addEventListener("click", (e) => {
     e.preventDefault();
     thumbInput.click();
@@ -66,6 +68,7 @@ if (thumbBtn && thumbInput) {
 
 if (videoBtn && videoInput) {
   videoBtn.type = "button";
+
   videoBtn.addEventListener("click", (e) => {
     e.preventDefault();
     videoInput.click();
@@ -79,10 +82,11 @@ if (videoBtn && videoInput) {
 }
 
 /* =========================
-   AI MODAL (UI ONLY, 무한대기 없음)
+   AI MODAL (UI ONLY)
 ========================= */
 if (openAiBtn && aiModal) {
   openAiBtn.type = "button";
+
   openAiBtn.addEventListener("click", () => {
     aiUserText.value = desc.value || "";
     aiImprovedText.value = "";
@@ -99,6 +103,7 @@ if (aiCloseBtn) {
 
 if (applyAiBtn) {
   applyAiBtn.type = "button";
+
   applyAiBtn.addEventListener("click", () => {
     if (aiImprovedText.value.trim()) {
       desc.value = aiImprovedText.value;
@@ -108,7 +113,7 @@ if (applyAiBtn) {
   });
 }
 
-/* ESC로 모달 닫기 */
+/* ESC 키로 모달 닫기 */
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && aiModal.style.display === "flex") {
     aiModal.style.display = "none";
@@ -116,7 +121,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* =========================
-   BOTTOM NAVIGATION
+   BOTTOM NAV (복구)
 ========================= */
 document.querySelectorAll(".nav-item").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -126,7 +131,7 @@ document.querySelectorAll(".nav-item").forEach((btn) => {
 });
 
 /* =========================
-   FORM SUBMIT (에러 없이 동작)
+   FORM SUBMIT (UI 확인용)
 ========================= */
 if (form) {
   form.addEventListener("submit", (e) => {
@@ -153,7 +158,6 @@ if (form) {
       return;
     }
 
-    /* === 현재 단계: UI + 검증 정상 === */
-    alert("✅ 발의 버튼 정상 동작 상태\n(다음 단계: Supabase 업로드 연결)");
+    alert("✅ UI 기준 발의 버튼 정상 작동 상태");
   });
 }
