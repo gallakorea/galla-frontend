@@ -1,43 +1,21 @@
-const $ = id => document.getElementById(id);
+const aiModal = document.getElementById('aiModal');
+document.getElementById('openAiModal').onclick = () => aiModal.style.display = 'flex';
+document.getElementById('aiClose').onclick = () => aiModal.style.display = 'none';
 
-/* 카운터 */
-$("description").addEventListener("input", e=>{
-  document.querySelector(".desc-counter").innerText =
-    `${e.target.value.length} / 500`;
-});
-
-/* 썸네일 */
-$("thumbnailBtn").onclick = ()=> $("thumbnail").click();
-$("thumbnail").onchange = e=>{
-  const img = $("thumbPreview").querySelector("img");
+document.getElementById('thumbnailBtn').onclick = () => document.getElementById('thumbnail').click();
+document.getElementById('thumbnail').onchange = e => {
+  const img = document.querySelector('#thumbPreview img');
   img.src = URL.createObjectURL(e.target.files[0]);
-  $("thumbPreview").style.display="block";
+  document.getElementById('thumbPreview').style.display = 'block';
 };
 
-/* 영상 */
-$("videoBtn").onclick = ()=> $("video").click();
-$("video").onchange = e=>{
-  const v = $("videoPreview").querySelector("video");
-  v.src = URL.createObjectURL(e.target.files[0]);
-  v.play();
-  $("videoPreview").style.display="block";
+document.getElementById('videoBtn').onclick = () => document.getElementById('video').click();
+document.getElementById('video').onchange = e => {
+  const video = document.querySelector('#videoPreview video');
+  video.src = URL.createObjectURL(e.target.files[0]);
+  document.getElementById('videoPreview').style.display = 'block';
 };
 
-/* AI 모달 */
-$("openAiModal").onclick = ()=>{
-  $("aiUserText").value = $("description").value;
-  $("aiModal").style.display="flex";
-};
-$("aiClose").onclick = ()=> $("aiModal").style.display="none";
-
-$("runAi").onclick = ()=>{
-  $("aiResultText").value =
-    `[AI 결과]\n` +
-    ($("aiPrompt").value ? `요청: ${$("aiPrompt").value}\n\n` : "") +
-    $("aiUserText").value;
-};
-
-$("applyAi").onclick = ()=>{
-  $("description").value = $("aiResultText").value;
-  $("aiModal").style.display="none";
-};
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.onclick = () => location.href = btn.dataset.target;
+});
