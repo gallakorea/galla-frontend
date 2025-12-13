@@ -87,7 +87,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("ref3").value || null
       ].filter(Boolean);
 
-      /* 1️⃣ issues INSERT (DB 컬럼 100% 일치) */
+      /* 🔐 users 테이블에 Auth 유저 보장 (FK 해결 핵심) */
+      const { error: userUpsertError } = await supabase
+        .from("users")
+        .upsert({ id: user.id });
+
+      if (userUpsertError) throw userUpsertError;
+
+      /* 1️⃣ issues INSERT */
       const { data: issue, error: insertError } = await supabase
         .from("issues")
         .insert({
