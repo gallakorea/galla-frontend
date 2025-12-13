@@ -195,20 +195,26 @@
 
     <div class="ai-custom-wrap">
       <label class="ai-label">AI에게 직접 요청 (선택)</label>
-      <input id="aiCustomPrompt" class="input-field" placeholder="예: 반대 의견 포함, 공격적 표현 제거" />
+      <input
+        id="aiCustomPrompt"
+        class="input-field"
+        placeholder="예: 반대 의견 포함, 공격적인 표현 제거"
+      />
     </div>
 
-    <!-- 세로 비교 -->
+    <!-- 내가 쓴 글 -->
     <div class="ai-block">
       <label class="ai-label">내가 쓴 글</label>
       <textarea id="aiUserText" class="ai-textarea"></textarea>
     </div>
 
+    <!-- AI 결과 -->
     <div class="ai-block">
       <label class="ai-label">AI 결과</label>
       <textarea id="aiResultText" class="ai-textarea"></textarea>
     </div>
 
+    <!-- 버튼 -->
     <div class="ai-modal-footer split">
       <button id="runAi" class="ai-btn ghost">AI 실행</button>
       <button id="applyAi" class="ai-btn primary">AI 적용하기</button>

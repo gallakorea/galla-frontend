@@ -439,27 +439,19 @@ body {
   position: relative;
 }
 
-/* ===== 업로드 미리보기 ===== */
-.upload-preview {
-  margin-top: 8px;
-  display: none;
-}
 
-.upload-preview img,
-.upload-preview video {
-  max-width: 160px;
-  border-radius: 10px;
-  border: 1px solid #222;
-  background: #000;
-}
+/* ===============================
+   AI MODAL – REFINED ONLY
+   (기존 CSS 절대 수정 없음)
+================================ */
 
-/* ===== AI MODAL REFINED ===== */
+/* 모달 최대 높이 제한 (화면 2/3) */
 .ai-modal-inner.refined {
-  max-height: 66vh;               /* 🔥 화면의 2/3 */
+  max-height: 66vh;
   overflow-y: auto;
 }
 
-/* 흑백 칩 */
+/* 스타일 칩 – 흑백만 */
 .refined-tabs button {
   background: #000;
   border: 1px solid #333;
@@ -470,17 +462,26 @@ body {
 .refined-tabs button.active {
   background: #fff;
   color: #000;
+  font-weight: 700;
 }
 
-/* textarea 전폭 + 높이 절반 */
+/* 입력 영역 – 전폭 / 높이 절반 */
 .ai-textarea {
   width: 100%;
-  min-height: 120px;              /* 🔥 절반 */
+  min-height: 120px;
   max-height: 180px;
   resize: vertical;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 12px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.6;
+  box-sizing: border-box;
 }
 
-/* 버튼 정렬 */
+/* 버튼 영역 – 50:50 */
 .ai-modal-footer.split {
   display: flex;
   gap: 8px;
@@ -493,7 +494,7 @@ body {
   border-radius: 12px;
   font-size: 14px;
   font-weight: 700;
-  transition: background .15s;
+  transition: background .15s, opacity .15s;
 }
 
 .ai-btn.ghost {
