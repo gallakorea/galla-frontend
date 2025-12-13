@@ -1,3 +1,6 @@
+alert("🔥 NEW WRITE.JS ACTIVE — EDGE REMOVED");
+console.log("🔥 NEW WRITE.JS ACTIVE — EDGE REMOVED");
+
 console.log("write.js loaded");
 
 if (window.__WRITE_JS__) {
