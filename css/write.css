@@ -65,3 +65,34 @@ textarea {
   background: #000;
   border-top: 1px solid #111;
 }
+
+/* === AI MODAL REFINEMENT ONLY === */
+
+.ai-modal-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-style-tabs button {
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.ai-custom-request label {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.ai-custom-request input {
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  color: #fff;
+}
+
+.ai-compare-wrap textarea {
+  height: 160px;
+  font-size: 13px;
+}
