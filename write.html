@@ -12,6 +12,64 @@
       overflow-x: hidden;
       background: #000;
     }
+
+    /* ===== 추가 스타일 (기존 유지) ===== */
+    .upload-preview {
+      margin-top: 10px;
+      display: none;
+    }
+    .upload-preview span {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .upload-preview img,
+    .upload-preview video {
+      width: 100%;
+      max-width: 320px;
+      border-radius: 12px;
+      border: 1px solid #222;
+      background: #000;
+    }
+
+    .anon-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    /* AI MODAL SIZE FIX */
+    .ai-modal-inner {
+      max-height: 66vh;
+      overflow-y: auto;
+    }
+
+    .ai-block textarea {
+      min-height: 120px;
+    }
+
+    .ai-modal-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .ai-modal-footer button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      background: #111;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .ai-modal-footer button.primary {
+      background: #2f80ff;
+      border: none;
+    }
   </style>
 </head>
 
@@ -21,12 +79,7 @@
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <img
-        src="./assets/logo.png"
-        alt="GALLA"
-        class="logo"
-        onclick="location.href='index.html'"
-      />
+      <img src="./assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
       <div class="auth-buttons"></div>
     </div>
   </header>
@@ -35,23 +88,12 @@
   <main class="page-main">
     <div class="page-inner">
 
-      <!-- Hero -->
       <section class="section-block">
         <h1 class="write-main-title">새 갈라치기 만들기</h1>
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
-      <!-- Guide -->
-      <section class="section-block write-guide-block">
-        <ul class="write-guide-list">
-          <li>제목은 최대 80자 이내로 작성해주세요.</li>
-          <li>논쟁 포인트가 명확할수록 참여율이 높아집니다.</li>
-          <li>AI를 활용해 글을 다듬을 수 있습니다.</li>
-        </ul>
-      </section>
-
-      <!-- FORM -->
-      <form id="writeForm" class="write-form">
+      <form id="writeForm">
 
         <!-- Category -->
         <div class="field-block">
@@ -78,86 +120,61 @@
           <input id="title" class="input-field" maxlength="80" required />
         </div>
 
-        <!-- One-line -->
+        <!-- One line -->
         <div class="field-block">
-          <label class="field-label">발의자 한 줄 코멘트 (필수)</label>
-          <input id="oneLine" class="input-field" required />
+          <label class="field-label">발의자 한 줄 코멘트</label>
+          <input id="oneLine" class="input-field" />
+        </div>
+
+        <!-- Anonymous -->
+        <div class="field-block">
+          <label class="anon-toggle">
+            <input type="checkbox" id="anonymous" />
+            익명으로 발의하기
+          </label>
         </div>
 
         <!-- Thumbnail -->
         <div class="field-block">
-          <label class="field-label">이슈 썸네일 (필수)</label>
+          <label class="field-label">이슈 썸네일</label>
           <input type="file" id="thumbnail" accept="image/*" hidden />
-          <button type="button" id="thumbnailBtn" class="file-btn input-field">
-            썸네일 업로드
-          </button>
-
-          <!-- Thumbnail Preview -->
-          <div class="upload-preview" id="thumbPreview">
-            <span class="preview-label">미리보기</span>
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">썸네일 업로드</button>
+          <div id="thumbPreview" class="upload-preview">
+            <span>미리보기</span>
             <img />
           </div>
         </div>
 
         <!-- Video -->
         <div class="field-block">
-          <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
+          <label class="field-label">1분 엘리베이터 스피치</label>
           <input type="file" id="video" accept="video/*" hidden />
-          <button type="button" id="videoBtn" class="file-btn input-field">
-            영상 업로드
-          </button>
-
-          <!-- Video Preview -->
-          <div class="upload-preview" id="videoPreview">
-            <span class="preview-label">미리보기</span>
-            <video muted playsinline></video>
+          <button type="button" id="videoBtn" class="file-btn input-field">영상 업로드</button>
+          <div id="videoPreview" class="upload-preview">
+            <span>미리보기</span>
+            <video controls></video>
           </div>
         </div>
 
         <!-- Description -->
         <div class="field-block">
-          <label class="field-label">
-            이슈 설명 (필수)
-            <span class="desc-counter">0 / 500</span>
-          </label>
-
-          <textarea
-            id="description"
-            class="input-field textarea"
-            maxlength="500"
-            required
-          ></textarea>
-
-          <button
-            type="button"
-            id="openAiModal"
-            class="ai-main-btn"
-          >
-            ✨ AI에게 글 다듬기
-          </button>
+          <label class="field-label">이슈 설명 <span class="desc-counter">0 / 500</span></label>
+          <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
+          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
         </div>
 
         <!-- References -->
         <div class="field-block">
-          <label class="field-label">관련 기사·자료 링크 (선택)</label>
-          <input type="url" id="ref1" class="input-field" value="https://" />
-          <input type="url" id="ref2" class="input-field" value="https://" />
-          <input type="url" id="ref3" class="input-field" value="https://" />
-        </div>
-
-        <!-- Anonymous -->
-        <div class="field-block">
-          <label class="field-label">익명으로 발의하기</label>
-          <label class="toggle">
-            <input type="checkbox" id="anonymousToggle" />
-            <span class="slider"></span>
-          </label>
+          <label class="field-label">관련 기사·자료 링크</label>
+          <input class="input-field" value="https://" />
+          <input class="input-field" value="https://" />
+          <input class="input-field" value="https://" />
         </div>
 
         <!-- Submit -->
-        <div class="field-block submit-block">
-          <button type="submit" class="primary-btn">
-            갈라 미리보기
+        <div class="field-block">
+          <button type="button" class="primary-btn" onclick="alert('미리보기 화면')">
+            미리보기
           </button>
         </div>
 
@@ -167,26 +184,15 @@
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
-    <button class="nav-item" data-target="index.html">
-      <img src="./assets/icons/nav-home.svg" />
-    </button>
-    <button class="nav-item" data-target="search.html">
-      <img src="./assets/icons/nav-search.svg" />
-    </button>
-    <button class="nav-item active" data-target="write.html">
-      <img src="./assets/icons/nav-write.svg" />
-    </button>
-    <button class="nav-item" data-target="random.html">
-      <img src="./assets/icons/nav-random.svg" />
-    </button>
-    <button class="nav-item" data-target="mypage.html">
-      <img src="./assets/icons/nav-user.svg" />
-    </button>
+    <button class="nav-item" onclick="location.href='index.html'"><img src="./assets/icons/nav-home.svg" /></button>
+    <button class="nav-item" onclick="location.href='search.html'"><img src="./assets/icons/nav-search.svg" /></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-write.svg" /></button>
+    <button class="nav-item" onclick="location.href='random.html'"><img src="./assets/icons/nav-random.svg" /></button>
+    <button class="nav-item" onclick="location.href='mypage.html'"><img src="./assets/icons/nav-user.svg" /></button>
   </nav>
-
 </div>
 
-<!-- AI MODAL (구조 유지) -->
+<!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
 
@@ -196,44 +202,58 @@
     </div>
 
     <div class="ai-style-tabs">
-      <button data-style="basic" class="active">기본</button>
-      <button data-style="simple">간결</button>
-      <button data-style="power">강렬</button>
-      <button data-style="emotional">감성</button>
-      <button data-style="expert">전문가</button>
-      <button data-style="academic">논문체</button>
-    </div>
-
-    <div class="ai-custom-wrap">
-      <input
-        id="aiCustomPrompt"
-        class="input-field"
-        placeholder="AI에게 직접 요청 (예: 반대 의견 포함해서 정리)"
-      />
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
+      <button>논문체</button>
     </div>
 
     <div class="ai-block">
-      <label class="ai-label">내가 쓴 글</label>
-      <textarea id="aiUserText" class="ai-textarea"></textarea>
+      <label>AI에게 직접 요청 (선택)</label>
+      <input class="input-field" placeholder="예: 반대 의견 포함해서 정리" />
     </div>
 
     <div class="ai-block">
-      <label class="ai-label">AI 결과</label>
-      <textarea id="aiResultText" class="ai-textarea"></textarea>
+      <label>내가 쓴 글</label>
+      <textarea class="ai-textarea"></textarea>
+    </div>
+
+    <div class="ai-block">
+      <label>AI 결과</label>
+      <textarea class="ai-textarea"></textarea>
     </div>
 
     <div class="ai-modal-footer">
-      <button class="ai-run-btn">AI 실행</button>
-      <button id="applyAi" class="apply-btn">AI 적용하기</button>
+      <button>AI 실행</button>
+      <button class="primary">AI 적용하기</button>
     </div>
 
   </div>
 </div>
 
-<!-- Scripts -->
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="./js/supabase.js"></script>
-<script src="./js/write.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+
+  $('thumbnailBtn').onclick = () => $('thumbnail').click();
+  $('videoBtn').onclick = () => $('video').click();
+
+  $('thumbnail').onchange = e => {
+    const img = $('thumbPreview').querySelector('img');
+    img.src = URL.createObjectURL(e.target.files[0]);
+    $('thumbPreview').style.display = 'block';
+  };
+
+  $('video').onchange = e => {
+    const video = $('videoPreview').querySelector('video');
+    video.src = URL.createObjectURL(e.target.files[0]);
+    $('videoPreview').style.display = 'block';
+  };
+
+  $('openAiModal').onclick = () => $('aiModal').style.display = 'flex';
+  $('aiClose').onclick = () => $('aiModal').style.display = 'none';
+</script>
 
 </body>
 </html>
