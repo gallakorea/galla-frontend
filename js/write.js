@@ -1,113 +1,136 @@
-/* =========================
-   DOM ELEMENTS
-========================= */
-const body = document.body;
+document.addEventListener('DOMContentLoaded', () => {
 
-// AI Modal
-const aiModal = document.getElementById('aiModal');
-const openAiModalBtn = document.getElementById('openAiModal');
-const aiCloseBtn = document.getElementById('aiClose');
+  const body = document.body;
 
-// Thumbnail
-const thumbnailInput = document.getElementById('thumbnail');
-const thumbnailBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
+  /* =========================
+     DOM ELEMENTS
+  ========================= */
 
-// Video
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
+  const writeForm = document.getElementById('writeForm');
 
-/* =========================
-   AI MODAL OPEN / CLOSE
-========================= */
-openAiModalBtn.addEventListener('click', () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden'; // 🔥 스크롤 고정
-});
+  // AI Modal
+  const aiModal = document.getElementById('aiModal');
+  const openAiModalBtn = document.getElementById('openAiModal');
+  const aiCloseBtn = document.getElementById('aiClose');
 
-aiCloseBtn.addEventListener('click', () => {
-  aiModal.style.display = 'none';
-  body.style.overflow = ''; // 🔥 원복
-});
+  // Thumbnail
+  const thumbnailInput = document.getElementById('thumbnail');
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-// 배경 클릭 시 닫기 (선택)
-aiModal.addEventListener('click', (e) => {
-  if (e.target === aiModal) {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
+  // Video
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
+
+  /* =========================
+     AI MODAL OPEN / CLOSE
+  ========================= */
+
+  if (openAiModalBtn && aiModal) {
+    openAiModalBtn.addEventListener('click', () => {
+      aiModal.style.display = 'flex';
+      body.style.overflow = 'hidden';
+    });
   }
-});
 
-/* =========================
-   THUMBNAIL UPLOAD
-========================= */
-thumbnailBtn.addEventListener('click', () => {
-  thumbnailInput.click();
-});
+  if (aiCloseBtn && aiModal) {
+    aiCloseBtn.addEventListener('click', () => {
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    });
+  }
 
-thumbnailInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  if (aiModal) {
+    aiModal.addEventListener('click', (e) => {
+      if (e.target === aiModal) {
+        aiModal.style.display = 'none';
+        body.style.overflow = '';
+      }
+    });
+  }
 
-  const img = document.createElement('img');
-  img.src = URL.createObjectURL(file);
+  /* =========================
+     THUMBNAIL UPLOAD
+  ========================= */
 
-  thumbPreview.innerHTML = '<div>미리보기</div>';
-  thumbPreview.appendChild(img);
-});
+  if (thumbnailBtn && thumbnailInput) {
+    thumbnailBtn.addEventListener('click', () => {
+      thumbnailInput.click();
+    });
+  }
 
-/* =========================
-   VIDEO UPLOAD
-========================= */
-videoBtn.addEventListener('click', () => {
-  videoInput.click();
-});
+  if (thumbnailInput) {
+    thumbnailInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-videoInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
 
-  const video = document.createElement('video');
-  video.src = URL.createObjectURL(file);
-  video.controls = true;
+      thumbPreview.innerHTML = '<div>미리보기</div>';
+      thumbPreview.appendChild(img);
+    });
+  }
 
-  videoPreview.innerHTML = '<div>미리보기</div>';
-  videoPreview.appendChild(video);
-});
+  /* =========================
+     VIDEO UPLOAD
+  ========================= */
 
-/* =========================
-   PREVIEW SUBMIT (추가)
-========================= */
+  if (videoBtn && videoInput) {
+    videoBtn.addEventListener('click', () => {
+      videoInput.click();
+    });
+  }
 
-const writeForm = document.getElementById('writeForm');
+  if (videoInput) {
+    videoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-writeForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // 🔥 페이지 리셋 방지
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(file);
+      video.controls = true;
 
-  const previewData = {
-    category: document.getElementById('category').value,
-    title: document.getElementById('title').value,
-    oneLine: document.getElementById('oneLine').value,
-    description: document.getElementById('description').value,
-    isAnonymous: document.getElementById('isAnonymous').checked,
+      videoPreview.innerHTML = '<div>미리보기</div>';
+      videoPreview.appendChild(video);
+    });
+  }
 
-    thumbnailUrl: thumbnailInput.files[0]
-      ? URL.createObjectURL(thumbnailInput.files[0])
-      : null,
+  /* =========================
+     PREVIEW SUBMIT
+  ========================= */
 
-    videoUrl: videoInput.files[0]
-      ? URL.createObjectURL(videoInput.files[0])
-      : null,
+  if (!writeForm) return;
 
-    createdAt: new Date().toISOString()
-  };
+  writeForm.addEventListener('submit', (e) => {
+    e.preventDefault(); // 🔥 리셋 방지
 
-  sessionStorage.setItem(
-    'galla_preview',
-    JSON.stringify(previewData)
-  );
+    const previewData = {
+      category: document.getElementById('category')?.value || '',
+      title: document.getElementById('title')?.value || '',
+      oneLine: document.getElementById('oneLine')?.value || '',
+      description: document.getElementById('description')?.value || '',
+      isAnonymous: document.getElementById('isAnonymous')?.checked || false,
 
-  // 🔥 페이지 이동
-  location.href = 'preview.html';
+      thumbnailUrl: thumbnailInput?.files[0]
+        ? URL.createObjectURL(thumbnailInput.files[0])
+        : null,
+
+      videoUrl: videoInput?.files[0]
+        ? URL.createObjectURL(videoInput.files[0])
+        : null,
+
+      createdAt: new Date().toISOString()
+    };
+
+    sessionStorage.setItem(
+      'galla_preview',
+      JSON.stringify(previewData)
+    );
+
+    // ✅ 정상 이동
+    location.href = 'preview.html';
+  });
+
 });
