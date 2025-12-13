@@ -4,30 +4,49 @@
   <meta charset="UTF-8" />
   <title>미리보기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="./css/preview.css" />
+  <link rel="stylesheet" href="css/issue.css" />
 </head>
+
 <body>
+<div id="app">
 
-<div class="app-root">
-
+  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <h1>미리보기</h1>
+      <button class="back-btn" onclick="history.back()">← <span class="back-text">뒤로</span></button>
+      <img src="assets/logo.png" class="logo" />
+      <div style="width:24px"></div>
     </div>
   </header>
 
-  <main class="page-main">
-    <div id="previewCard"></div>
-
-    <div class="preview-actions">
-      <button id="backBtn">수정하기</button>
-      <button id="publishBtn">발행하기</button>
+  <!-- ISSUE CARD (PREVIEW ONLY) -->
+  <section class="issue-hero">
+    <div class="issue-category-time">
+      <span id="pv-category"></span>
+      <span id="pv-time">미리보기</span>
     </div>
-  </main>
+
+    <h1 id="pv-title"></h1>
+    <p id="pv-desc"></p>
+
+    <div class="issue-author">
+      <span id="pv-author"></span>
+    </div>
+  </section>
+
+  <img id="pv-thumb" class="issue-thumb" style="display:none;" />
+
+  <button id="pv-video-btn" class="speech-btn" style="display:none;">
+    🎥 1분 엘리베이터 스피치
+  </button>
+
+  <!-- ACTION -->
+  <section style="padding:20px 16px;">
+    <button id="publishBtn" class="primary-btn">이 상태로 발행</button>
+  </section>
 
 </div>
 
-<script src="./js/supabase.js"></script>
-<script src="./js/preview.js"></script>
+<script src="js/preview.js"></script>
 </body>
 </html>

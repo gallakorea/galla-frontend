@@ -1,18 +1,30 @@
-import { supabase } from './supabase.js';
+const data = JSON.parse(sessionStorage.getItem('galla_preview'));
 
-const data = JSON.parse(localStorage.getItem('galla_preview'));
-if (!data) location.href = 'write.html';
+if (!data) {
+  alert('미리보기 데이터가 없습니다.');
+  location.href = 'write.html';
+}
 
-const card = document.getElementById('previewCard');
+// 텍스트
+document.getElementById('pv-category').innerText = data.category;
+document.getElementById('pv-title').innerText = data.title;
+document.getElementById('pv-desc').innerText = data.description;
+document.getElementById('pv-author').innerText =
+  data.isAnonymous ? '작성자 · 익명' : '작성자 · 공개';
 
-card.innerHTML = `
-  <div class="issue-card">
-    ${data.thumbnailUrl ? `<img src="${data.thumbnailUrl}" />` : ''}
-    <h2>${data.title}</h2>
-    <p class="one-line">${data.oneLine}</p>
-    <p class="desc">${data.description}</p>
-    <span class="meta">
-      ${data.isAnonymous ? '익명' : '작성자 표시'}
-    </span>
-  </div>
-`;
+// 썸네일
+if (data.thumbnail) {
+  const img = document.getElementById('pv-thumb');
+  img.src = data.thumbnail;
+  img.style.display = 'block';
+}
+
+// 영상
+if (data.video) {
+  document.getElementById('pv-video-btn').style.display = 'block';
+}
+
+// 발행 (임시)
+document.getElementById('publishBtn').onclick = () => {
+  alert('다음 단계: Supabase insert');
+};
