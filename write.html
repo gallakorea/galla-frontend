@@ -36,10 +36,11 @@
         </ul>
       </section>
 
-      <!-- 익명 발의 -->
+      <!-- ✅ 익명 발의 (가이드 밖, 카테고리 위) -->
       <section class="section-block">
         <div class="anon-toggle">
           <span>익명으로 발의하기</span>
+
           <label class="switch">
             <input type="checkbox" id="isAnonymous" />
             <span class="slider"></span>
@@ -47,15 +48,13 @@
         </div>
       </section>
 
-      <!-- ======================
-           WRITE FORM
-      ====================== -->
       <form id="writeForm">
 
+        <!-- Category -->
         <div class="field-block">
-          <label class="field-label">카테고리</label>
+          <label class="field-label">카테고리 (필수)</label>
           <select id="category" class="input-field" required>
-            <option value="">카테고리 선택</option>
+            <option value="">카테고리를 선택하세요</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
             <option>직장·경력</option>
@@ -70,16 +69,19 @@
           </select>
         </div>
 
+        <!-- Title -->
         <div class="field-block">
           <label class="field-label">제목</label>
           <input id="title" class="input-field" maxlength="80" />
         </div>
 
+        <!-- One line -->
         <div class="field-block">
           <label class="field-label">발의자 한 줄</label>
           <input id="oneLine" class="input-field" />
         </div>
 
+        <!-- Thumbnail -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일</label>
           <input type="file" id="thumbnail" hidden accept="image/*" />
@@ -87,13 +89,15 @@
           <div id="thumbPreview" class="preview-box"></div>
         </div>
 
+        <!-- Video -->
         <div class="field-block">
-          <label class="field-label">1분 엘리베이터 스피치</label>
+          <label class="field-label">엘리베이터 스피치 (선택)</label>
           <input type="file" id="video" hidden accept="video/*" />
           <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
           <div id="videoPreview" class="preview-box"></div>
         </div>
 
+        <!-- Description -->
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
           <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
@@ -105,39 +109,6 @@
         </div>
 
       </form>
-
-      <!-- ======================
-           PREVIEW CARD
-      ====================== -->
-      <section id="previewSection" class="section-block" style="display:none">
-
-        <div class="issue-hero">
-          <div class="issue-category-time">
-            <span id="pv-category"></span>
-            <span>방금 전</span>
-          </div>
-
-          <h1 id="pv-title"></h1>
-          <p id="pv-desc"></p>
-
-          <div class="issue-author">
-            <span id="pv-author"></span>
-          </div>
-        </div>
-
-        <img id="pv-thumb" class="issue-thumb" />
-
-        <button id="pv-video-btn" class="speech-btn" style="display:none">
-          🎥 1분 엘리베이터 스피치
-        </button>
-
-        <div class="field-block">
-          <button type="button" id="backToEdit" class="file-btn">수정하기</button>
-          <button type="button" id="publishIssue" class="primary-btn">발행하기</button>
-        </div>
-
-      </section>
-
     </div>
   </main>
 
@@ -151,26 +122,15 @@
   </nav>
 </div>
 
-<!-- ======================
-     VIDEO MODAL (재사용)
-====================== -->
-<div class="speech-backdrop" hidden>
-  <div class="speech-sheet">
-    <div class="speech-header">
-      <span class="speech-title">1분 엘리베이터 스피치</span>
-      <button class="speech-close">✕</button>
-    </div>
-    <video id="speech-video" playsinline controls></video>
-  </div>
-</div>
-
-<!-- AI MODAL (기존 그대로) -->
+<!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
+
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
+
     <div class="ai-style-tabs">
       <button class="active">기본</button>
       <button>간결</button>
@@ -179,45 +139,20 @@
       <button>전문가</button>
       <button>논문체</button>
     </div>
+
     <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
+
     <label>내가 쓴 글</label>
     <textarea id="aiUserText" class="input-field textarea small"></textarea>
+
     <label>AI 결과</label>
     <textarea id="aiResultText" class="input-field textarea small"></textarea>
+
     <div class="ai-modal-footer">
       <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용하기</button>
     </div>
-  </div>
-</div>
 
-<!-- PREVIEW MODAL -->
-<div id="previewModal" class="preview-modal">
-  <div class="preview-inner">
-
-    <div class="preview-header">
-      <h2>이슈 미리보기</h2>
-      <button id="closePreview">✕</button>
-    </div>
-
-    <!-- 카드 영역 -->
-    <div class="preview-card">
-      <div class="preview-meta">
-        <span id="pv-category"></span>
-        <span id="pv-author"></span>
-      </div>
-
-      <h3 id="pv-title"></h3>
-      <p id="pv-oneline"></p>
-
-      <img id="pv-thumb" />
-
-      <video id="pv-video" controls></video>
-
-      <p id="pv-desc"></p>
-    </div>
-
-    <button class="primary-btn">이 상태로 발행</button>
   </div>
 </div>
 
