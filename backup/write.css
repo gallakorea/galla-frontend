@@ -709,15 +709,3 @@ body {
 .switch input:checked + .slider::before {
   transform: translateX(20px);
 }
-
-/* =========================
-   AI MODAL TEXTAREA SIZE FIX
-   (HEIGHT 50%)
-========================= */
-
-/* 내가 쓴 글 / AI 결과 */
-.ai-modal-inner textarea {
-  min-height: 55px;   /* 기존 110px → 55px */
-  max-height: 80px;   /* 기존 160px → 80px */
-  line-height: 1.6;
-}
