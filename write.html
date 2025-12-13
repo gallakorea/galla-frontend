@@ -20,7 +20,12 @@
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <img src="./assets/logo.png" class="logo" onclick="location.href='index.html'" />
+      <img
+        src="./assets/logo.png"
+        alt="GALLA"
+        class="logo"
+        onclick="location.href='index.html'"
+      />
       <div class="auth-buttons"></div>
     </div>
   </header>
@@ -44,13 +49,28 @@
         </ul>
       </section>
 
+      <!-- ✅ 익명 발의 토글 (설명란 바로 아래 / 카테고리 위) -->
+      <section class="section-block">
+        <label class="field-label" style="font-size:14px; font-weight:600; display:flex; align-items:center; gap:10px;">
+          익명으로 발의하기
+          <input
+            type="checkbox"
+            id="anonymousToggle"
+            style="transform: scale(1.15);"
+          />
+        </label>
+        <p style="font-size:12px; color:#888; margin-top:4px;">
+          닉네임 없이 익명으로 이슈를 발의합니다.
+        </p>
+      </section>
+
       <!-- FORM -->
-      <form id="writeForm">
+      <form id="writeForm" class="write-form">
 
         <!-- Category -->
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
-          <select class="input-field" required>
+          <select id="category" class="input-field" required>
             <option value="">카테고리를 선택하세요</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
@@ -69,25 +89,25 @@
         <!-- Title -->
         <div class="field-block">
           <label class="field-label">제목 (필수)</label>
-          <input class="input-field" maxlength="80" required />
+          <input id="title" class="input-field" maxlength="80" required />
         </div>
 
-        <!-- One line -->
+        <!-- One-line -->
         <div class="field-block">
           <label class="field-label">발의자 한 줄 코멘트 (필수)</label>
-          <input class="input-field" required />
+          <input id="oneLine" class="input-field" required />
         </div>
 
         <!-- Thumbnail -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일 (필수)</label>
           <input type="file" id="thumbnail" accept="image/*" hidden />
-          <button type="button" class="file-btn input-field"
-            onclick="document.getElementById('thumbnail').click()">썸네일 업로드</button>
-
-          <div class="upload-preview" id="thumbPreview">
-            <small>미리보기</small><br/>
-            <img id="thumbImg" />
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">
+            썸네일 업로드
+          </button>
+          <div class="upload-preview" id="thumbnailPreview">
+            <small>미리보기</small>
+            <img />
           </div>
         </div>
 
@@ -95,43 +115,46 @@
         <div class="field-block">
           <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
           <input type="file" id="video" accept="video/*" hidden />
-          <button type="button" class="file-btn input-field"
-            onclick="document.getElementById('video').click()">영상 업로드</button>
-
+          <button type="button" id="videoBtn" class="file-btn input-field">
+            영상 업로드
+          </button>
           <div class="upload-preview" id="videoPreview">
             <small>미리보기</small>
-            <video id="videoTag" controls></video>
+            <video controls></video>
           </div>
         </div>
 
         <!-- Description -->
         <div class="field-block">
-          <label class="field-label">이슈 설명 (필수)</label>
-          <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
-
-          <!-- ✅ 익명 발의 토글 (여기로 이동) -->
-          <label class="field-label" style="margin-top:10px; font-size:13px; font-weight:500;">
-            익명으로 발의하기
-            <input type="checkbox" style="margin-left:8px; transform:scale(1.1);" />
+          <label class="field-label">
+            이슈 설명 (필수)
+            <span class="desc-counter">0 / 500</span>
           </label>
+          <textarea
+            id="description"
+            class="input-field textarea"
+            maxlength="500"
+            required
+          ></textarea>
 
-          <!-- AI button -->
           <button type="button" id="openAiModal" class="ai-main-btn">
             ✨ AI에게 글 다듬기
           </button>
         </div>
 
-        <!-- Links -->
+        <!-- References -->
         <div class="field-block">
           <label class="field-label">관련 기사·자료 링크 (선택)</label>
-          <input class="input-field" value="https://" />
-          <input class="input-field" value="https://" />
-          <input class="input-field" value="https://" />
+          <input type="url" class="input-field" value="https://" />
+          <input type="url" class="input-field" value="https://" />
+          <input type="url" class="input-field" value="https://" />
         </div>
 
         <!-- Submit -->
-        <div class="field-block">
-          <button type="button" class="primary-btn">미리보기</button>
+        <div class="field-block submit-block">
+          <button type="button" class="primary-btn">
+            미리보기
+          </button>
         </div>
 
       </form>
@@ -140,11 +163,11 @@
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
-    <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
-    <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
-    <button class="nav-item active"><img src="./assets/icons/nav-write.svg"></button>
-    <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
-    <button class="nav-item"><img src="./assets/icons/nav-user.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-home.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-search.svg" /></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-write.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-random.svg" /></button>
+    <button class="nav-item"><img src="./assets/icons/nav-user.svg" /></button>
   </nav>
 
 </div>
