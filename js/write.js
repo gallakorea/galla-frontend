@@ -1,75 +1,75 @@
-console.log("[write.js] FINAL SAFE MODE");
+console.log("[write.js] FULL WORKING MODE");
 
 const $ = (id) => document.getElementById(id);
 
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
-/* 글자수 */
+/* counter */
 desc.addEventListener("input", () => {
   counter.textContent = `${desc.value.length} / 500`;
 });
 
-/* 파일 업로드 */
+/* thumbnail */
 $("thumbnailBtn").onclick = () => $("thumbnail").click();
+$("thumbnail").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  $("thumbPreview").src = URL.createObjectURL(file);
+  $("thumbPreview").style.display = "block";
+};
+
+/* video */
 $("videoBtn").onclick = () => $("video").click();
+$("video").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  $("videoPreview").src = URL.createObjectURL(file);
+  $("videoPreview").style.display = "block";
+};
 
-/* 네비 */
-document.querySelectorAll(".nav-item").forEach(btn => {
-  btn.onclick = () => location.href = btn.dataset.target;
-});
+/* AI modal */
+$("openAiModal").onclick = () => {
+  $("aiUserText").value = desc.value;
+  $("aiResultText").value = "";
+  $("aiModal").style.display = "flex";
+};
 
-/* AI MODAL */
-const aiModal = $("aiModal");
-const openAiBtn = $("openAiModal");
-const aiClose = $("aiClose");
-const aiUserText = $("aiUserText");
-const aiResultText = $("aiResultText");
-const aiCustomPrompt = $("aiCustomPrompt");
-const runAi = $("runAi");
-const applyAi = $("applyAi");
+$("aiClose").onclick = () => {
+  $("aiModal").style.display = "none";
+};
 
 let currentStyle = "basic";
-
-/* 스타일 탭 */
 document.querySelectorAll(".ai-style-tabs button").forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll(".ai-style-tabs button")
-      .forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".ai-style-tabs button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentStyle = btn.dataset.style;
   };
 });
 
-/* 모달 열기 */
-openAiBtn.onclick = () => {
-  aiUserText.value = desc.value || "";
-  aiResultText.value = "";
-  aiModal.style.display = "flex";
-};
-
-/* 닫기 */
-aiClose.onclick = () => aiModal.style.display = "none";
-
-/* AI 실행 (더미) */
-runAi.onclick = () => {
-  aiResultText.value =
+$("runAi").onclick = () => {
+  $("aiResultText").value =
     `[${currentStyle}]\n` +
-    (aiCustomPrompt.value ? `요청: ${aiCustomPrompt.value}\n\n` : "") +
-    aiUserText.value;
+    ($("aiCustomPrompt").value ? `요청: ${$("aiCustomPrompt").value}\n\n` : "") +
+    $("aiUserText").value;
 };
 
-/* 적용 */
-applyAi.onclick = () => {
-  if (aiResultText.value.trim()) {
-    desc.value = aiResultText.value;
+$("applyAi").onclick = () => {
+  if ($("aiResultText").value.trim()) {
+    desc.value = $("aiResultText").value;
     counter.textContent = `${desc.value.length} / 500`;
   }
-  aiModal.style.display = "none";
+  $("aiModal").style.display = "none";
 };
 
-/* 제출 */
+/* submit */
 $("writeForm").onsubmit = (e) => {
   e.preventDefault();
-  alert("✅ 발의 버튼 정상 작동");
+  alert("✅ 발의 UI / 버튼 / 미리보기 정상 작동");
 };
+
+/* nav */
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.onclick = () => location.href = btn.dataset.target;
+});
