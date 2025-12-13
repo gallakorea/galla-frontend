@@ -119,6 +119,7 @@
       <button id="aiClose">✕</button>
     </div>
 
+    <!-- 스타일 선택 -->
     <div class="ai-style-tabs">
       <button data-style="basic" class="active">기본</button>
       <button data-style="simple">간결</button>
@@ -128,15 +129,29 @@
       <button data-style="academic">논문체</button>
     </div>
 
-    <input id="aiCustomPrompt" class="input-field ai-prompt" placeholder="AI에게 직접 요청 (선택)" />
+    <!-- 커스텀 요청 -->
+    <div class="ai-custom-wrap">
+      <input
+        id="aiCustomPrompt"
+        class="input-field"
+        placeholder="AI에게 직접 요청 (선택) · 예: 반대 의견도 포함해줘"
+      />
+    </div>
 
-    <label class="ai-label">내가 쓴 글</label>
-    <textarea id="aiUserText"></textarea>
+    <!-- 내가 쓴 글 -->
+    <div class="ai-block">
+      <label class="ai-label">내가 쓴 글</label>
+      <textarea id="aiUserText" class="ai-textarea"></textarea>
+    </div>
 
-    <label class="ai-label">AI 결과</label>
-    <textarea id="aiResultText"></textarea>
+    <!-- AI 결과 -->
+    <div class="ai-block">
+      <label class="ai-label">AI 결과</label>
+      <textarea id="aiResultText" class="ai-textarea" placeholder="AI 결과가 여기에 표시됩니다"></textarea>
+    </div>
 
-    <div class="ai-actions">
+    <!-- 버튼 -->
+    <div class="ai-modal-actions">
       <button id="runAi" class="ai-run-btn">AI 실행</button>
       <button id="applyAi" class="apply-btn">AI 적용하기</button>
     </div>
