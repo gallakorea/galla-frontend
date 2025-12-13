@@ -1,8 +1,19 @@
-body {
+/***************************************************
+ GLOBAL
+***************************************************/
+* {
+  box-sizing: border-box;
+}
+
+html, body {
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: system-ui;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  overflow-x: hidden;
+}
+
+body {
   display: flex;
   justify-content: center;
 }
@@ -13,6 +24,63 @@ body {
   padding-bottom: 120px;
 }
 
+/***************************************************
+ HEADER
+***************************************************/
+.header {
+  position: sticky;
+  top: 0;
+  background: #000;
+  border-bottom: 1px solid #111;
+  z-index: 1000;
+}
+
+.header-inner {
+  height: 54px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  width: 100px;
+}
+
+/***************************************************
+ SECTION
+***************************************************/
+.section-block {
+  padding: 20px 16px;
+  border-bottom: 1px solid #111;
+}
+
+.write-main-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.write-main-desc {
+  font-size: 13px;
+  opacity: .7;
+  margin-top: 6px;
+}
+
+/***************************************************
+ FORM
+***************************************************/
+.field-block {
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .input-field {
   width: 100%;
   padding: 12px;
@@ -20,48 +88,197 @@ body {
   border: 1px solid #333;
   border-radius: 12px;
   color: #fff;
+  font-size: 14px;
 }
 
-.file-btn, .ai-main-btn, .primary-btn {
+textarea.input-field {
+  min-height: 220px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+/***************************************************
+ FILE / ACTION BUTTONS
+***************************************************/
+.file-btn,
+.ai-main-btn,
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+
+  /* 버튼 안 먹는 문제 방지 */
   pointer-events: auto !important;
-  z-index: 9999 !important;
   position: relative;
+  z-index: 5;
 }
 
+.primary-btn {
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 999px;
+}
+
+/***************************************************
+ DESCRIPTION COUNTER
+***************************************************/
+.desc-counter {
+  font-size: 12px;
+  opacity: .6;
+  margin-left: 6px;
+}
+
+/***************************************************
+ AI MODAL
+***************************************************/
 .ai-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
+  background: rgba(0,0,0,.75);
   display: none;
   justify-content: center;
   align-items: center;
+  z-index: 2000;
 }
 
 .ai-modal-inner {
-  width: 90%;
+  width: 92%;
   max-width: 480px;
   background: #111;
-  padding: 16px;
-  border-radius: 14px;
+  border: 1px solid #333;
+  border-radius: 16px;
+  padding: 18px;
 }
 
-textarea {
-  width: 100%;
-  height: 120px;
-  margin-top: 8px;
-  background: #000;
+/* header */
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-modal-header h2 {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.ai-modal-header button {
+  background: none;
+  border: none;
   color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/***************************************************
+ AI STYLE TABS
+***************************************************/
+.ai-style-tabs {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+
+.ai-style-tabs button {
+  padding: 6px 12px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.ai-style-tabs button.active {
+  color: #fff;
+  border-color: #fff;
+}
+
+/***************************************************
+ AI CUSTOM PROMPT
+***************************************************/
+#aiCustomPrompt {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px;
+  background: #000;
   border: 1px solid #333;
   border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
 }
 
+/***************************************************
+ AI COMPARE
+***************************************************/
+.ai-compare-wrap {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.ai-compare-wrap textarea {
+  flex: 1;
+  height: 160px;
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 10px;
+  color: #fff;
+  font-size: 13px;
+}
+
+/***************************************************
+ AI FOOTER
+***************************************************/
+.ai-modal-footer {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+}
+
+.apply-btn {
+  flex: 1;
+  padding: 14px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/***************************************************
+ BOTTOM NAV
+***************************************************/
 .bottom-nav {
   position: fixed;
   bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  display: flex;
-  justify-content: space-around;
   background: #000;
   border-top: 1px solid #111;
+  padding: 10px 0;
+  display: flex;
+  justify-content: space-around;
+  z-index: 9999;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.nav-item img {
+  width: 26px;
+  filter: invert(1);
 }
