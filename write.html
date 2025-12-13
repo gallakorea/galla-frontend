@@ -5,22 +5,6 @@
   <title>새 갈라 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <link rel="stylesheet" href="./css/write.css" />
-
-  <style>
-    html, body {
-      width: 100%;
-      margin: 0;
-      padding: 0;
-      background: #000;
-      overflow-x: hidden;
-    }
-
-    .app-root {
-      max-width: 480px;
-      margin: 0 auto;
-      background: #000;
-    }
-  </style>
 </head>
 
 <body>
@@ -47,7 +31,7 @@
 
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
-          <select id="category" class="input-field">
+          <select id="category" class="input-field" required>
             <option value="">선택</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
@@ -65,28 +49,24 @@
 
         <div class="field-block">
           <label class="field-label">제목 (필수)</label>
-          <input id="title" class="input-field" />
+          <input id="title" class="input-field" required />
         </div>
 
         <div class="field-block">
           <label class="field-label">발의자 한 줄 (필수)</label>
-          <input id="oneLine" class="input-field" />
+          <input id="oneLine" class="input-field" required />
         </div>
 
         <div class="field-block">
-          <label class="field-label">이슈 썸네일 (필수)</label>
-          <input type="file" id="thumbnail" hidden />
-          <button type="button" id="thumbnailBtn" class="file-btn input-field">
-            썸네일 업로드
-          </button>
+          <label class="field-label">썸네일 (필수)</label>
+          <input type="file" id="thumbnail" hidden accept="image/*" />
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">썸네일 업로드</button>
         </div>
 
         <div class="field-block">
-          <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
-          <input type="file" id="video" hidden />
-          <button type="button" id="videoBtn" class="file-btn input-field">
-            영상 업로드
-          </button>
+          <label class="field-label">영상 (선택)</label>
+          <input type="file" id="video" hidden accept="video/*" />
+          <button type="button" id="videoBtn" class="file-btn input-field">영상 업로드</button>
         </div>
 
         <div class="field-block">
@@ -95,10 +75,7 @@
             <span class="desc-counter">0 / 500</span>
           </label>
           <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
-
-          <button type="button" id="openAiModal" class="ai-main-btn">
-            ✨ AI에게 글 다듬기
-          </button>
+          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI 글 다듬기</button>
         </div>
 
         <div class="field-block submit-block">
@@ -109,67 +86,39 @@
     </div>
   </main>
 
-  <!-- Bottom Navigation (절대 변경 금지) -->
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="nav-item" data-target="index.html"><img src="./assets/icons/nav-home.svg" /></button>
-    <button class="nav-item" data-target="search.html"><img src="./assets/icons/nav-search.svg" /></button>
-    <button class="nav-item active" data-target="write.html"><img src="./assets/icons/nav-write.svg" /></button>
-    <button class="nav-item" data-target="random.html"><img src="./assets/icons/nav-random.svg" /></button>
-    <button class="nav-item" data-target="mypage.html"><img src="./assets/icons/nav-user.svg" /></button>
+    <button class="nav-item" onclick="location.href='index.html'"><img src="./assets/icons/nav-home.svg" /></button>
+    <button class="nav-item" onclick="location.href='search.html'"><img src="./assets/icons/nav-search.svg" /></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-write.svg" /></button>
+    <button class="nav-item" onclick="location.href='random.html'"><img src="./assets/icons/nav-random.svg" /></button>
+    <button class="nav-item" onclick="location.href='mypage.html'"><img src="./assets/icons/nav-user.svg" /></button>
   </nav>
 
 </div>
 
-<!-- AI MODAL (REFINED) -->
+<!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner refined">
-
+  <div class="ai-modal-inner">
     <div class="ai-modal-header">
-      <div>
-        <h2>AI 글 다듬기</h2>
-        <p class="ai-sub">톤 조정 · 논리 정리 · 표현 개선</p>
-      </div>
-      <button id="aiClose" class="ai-close">✕</button>
+      <h2>AI 글 다듬기</h2>
+      <button id="aiClose">✕</button>
     </div>
 
-    <!-- STYLE -->
-    <div class="ai-style-tabs refined">
-      <button data-style="basic" class="active">기본</button>
-      <button data-style="simple">간결</button>
-      <button data-style="power">강렬</button>
-      <button data-style="emotional">감성</button>
-      <button data-style="expert">전문가</button>
-      <button data-style="academic">논문체</button>
+    <div class="ai-style-tabs">
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
     </div>
 
-    <!-- CUSTOM PROMPT -->
-    <div class="ai-custom">
-      <label>AI에게 직접 요청 (선택)</label>
-      <input
-        type="text"
-        id="aiCustomPrompt"
-        placeholder="예: 반대 의견도 포함해서 정리해줘 / 감정 표현 줄여줘"
-      />
-    </div>
+    <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+    <textarea id="aiResultText" placeholder="AI 개선본"></textarea>
 
-    <!-- COMPARE -->
-    <div class="ai-compare-wrap refined">
-      <div class="ai-box-col">
-        <h3>내가 쓴 글</h3>
-        <textarea id="aiUserText" placeholder="원문"></textarea>
-      </div>
-      <div class="ai-box-col">
-        <h3>AI 개선본</h3>
-        <textarea id="aiResultText" placeholder="AI 결과"></textarea>
-      </div>
-    </div>
+    <textarea id="aiCustomPrompt" placeholder="AI에게 직접 요청 (선택)"></textarea>
 
-    <!-- ACTION -->
-    <div class="ai-modal-footer refined">
-      <button id="runAi" class="ai-run-btn">AI 실행</button>
-      <button id="applyAi" class="apply-btn">AI 적용하기</button>
-    </div>
-
+    <button id="applyAi" class="apply-btn">AI 적용하기</button>
   </div>
 </div>
 
