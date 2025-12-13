@@ -717,7 +717,7 @@ body {
 
 /* 내가 쓴 글 / AI 결과 */
 .ai-modal-inner textarea {
-  min-height: 55px;   /* 기존 110px → 55px */
-  max-height: 80px;   /* 기존 160px → 80px */
+  min-height: 110px;   /* 기존 110px → 55px */
+  max-height: 150px;   /* 기존 160px → 80px */
   line-height: 1.6;
 }
