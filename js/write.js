@@ -1,7 +1,7 @@
 console.log("[write.js] loaded - UI STABLE");
 
 /* =========================
-   SAFE SELECTOR
+   SAFE QUERY
 ========================= */
 const $ = (id) => document.getElementById(id);
 
@@ -11,12 +11,13 @@ const $ = (id) => document.getElementById(id);
 const form = $("writeForm");
 
 const category = $("category");
-const titleInput = $("title");
-const oneLineInput = $("oneLine");
+const title = $("title");
+const oneLine = $("oneLine");
 
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
+/* FILES */
 const thumbInput = $("thumbnail");
 const thumbBtn = $("thumbnailBtn");
 
@@ -29,16 +30,16 @@ const aiModal = $("aiModal");
 const aiCloseBtn = $("aiCloseBtn");
 const aiUserText = $("aiUserText");
 const aiImprovedText = $("aiImprovedText");
-const applyAiBtn = $("applyAiText");
+const applyAiText = $("applyAiText");
 
 /* =========================
-   WIDTH / OVERFLOW FIX
+   WIDTH / OVERFLOW FIX (480px)
 ========================= */
 document.documentElement.style.overflowX = "hidden";
 document.body.style.overflowX = "hidden";
 
 /* =========================
-   COUNTER
+   DESCRIPTION COUNTER
 ========================= */
 if (desc && counter) {
   counter.textContent = "0 / 500";
@@ -49,71 +50,88 @@ if (desc && counter) {
 }
 
 /* =========================
-   FILE BUTTONS (핵심)
+   THUMBNAIL BUTTON
 ========================= */
 if (thumbBtn && thumbInput) {
   thumbBtn.type = "button";
 
   thumbBtn.addEventListener("click", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     thumbInput.click();
   });
 
   thumbInput.addEventListener("change", () => {
-    if (thumbInput.files.length > 0) {
+    if (thumbInput.files && thumbInput.files.length > 0) {
       thumbBtn.textContent = "썸네일 선택됨";
     }
   });
 }
 
+/* =========================
+   VIDEO BUTTON
+========================= */
 if (videoBtn && videoInput) {
   videoBtn.type = "button";
 
   videoBtn.addEventListener("click", (e) => {
     e.preventDefault();
+    e.stopPropagation();
     videoInput.click();
   });
 
   videoInput.addEventListener("change", () => {
-    if (videoInput.files.length > 0) {
+    if (videoInput.files && videoInput.files.length > 0) {
       videoBtn.textContent = "영상 선택됨";
     }
   });
 }
 
 /* =========================
-   AI MODAL (UI ONLY)
+   AI MODAL OPEN
 ========================= */
 if (openAiBtn && aiModal) {
   openAiBtn.type = "button";
 
-  openAiBtn.addEventListener("click", () => {
+  openAiBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     aiUserText.value = desc.value || "";
     aiImprovedText.value = "";
     aiModal.style.display = "flex";
   });
 }
 
+/* =========================
+   AI MODAL CLOSE
+========================= */
 if (aiCloseBtn) {
   aiCloseBtn.type = "button";
-  aiCloseBtn.addEventListener("click", () => {
+
+  aiCloseBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     aiModal.style.display = "none";
   });
 }
 
-if (applyAiBtn) {
-  applyAiBtn.type = "button";
+/* =========================
+   AI APPLY (UI ONLY)
+========================= */
+if (applyAiText) {
+  applyAiText.type = "button";
 
-  applyAiBtn.addEventListener("click", () => {
-    if (aiImprovedText.value.trim()) {
+  applyAiText.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    if (aiImprovedText.value.trim().length > 0) {
       desc.value = aiImprovedText.value;
       counter.textContent = `${desc.value.length} / 500`;
     }
+
     aiModal.style.display = "none";
   });
 }
 
-/* ESC 키로 모달 닫기 */
+/* ESC → MODAL CLOSE */
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && aiModal.style.display === "flex") {
     aiModal.style.display = "none";
@@ -121,17 +139,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* =========================
-   BOTTOM NAV (복구)
-========================= */
-document.querySelectorAll(".nav-item").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const target = btn.dataset.target;
-    if (target) location.href = target;
-  });
-});
-
-/* =========================
-   FORM SUBMIT (UI 확인용)
+   FORM SUBMIT (UI STABLE)
 ========================= */
 if (form) {
   form.addEventListener("submit", (e) => {
@@ -141,11 +149,11 @@ if (form) {
       alert("카테고리를 선택하세요");
       return;
     }
-    if (!titleInput.value.trim()) {
+    if (!title.value.trim()) {
       alert("제목을 입력하세요");
       return;
     }
-    if (!oneLineInput.value.trim()) {
+    if (!oneLine.value.trim()) {
       alert("발의자 한 줄을 입력하세요");
       return;
     }
@@ -153,11 +161,17 @@ if (form) {
       alert("이슈 설명을 입력하세요");
       return;
     }
-    if (!thumbInput.files.length) {
-      alert("썸네일 이미지를 업로드하세요");
-      return;
-    }
 
-    alert("✅ UI 기준 발의 버튼 정상 작동 상태");
+    alert("✅ UI 기준 발의 버튼 정상 작동\n(다음 단계에서 Supabase 연동)");
   });
 }
+
+/* =========================
+   BOTTOM NAVIGATION
+========================= */
+document.querySelectorAll(".bottom-nav .nav-item").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.target;
+    if (target) location.href = target;
+  });
+});
