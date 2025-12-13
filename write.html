@@ -1,199 +1,143 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<title>새 갈라 만들기 - GALLA</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<link rel="stylesheet" href="./css/write.css" />
-
-<style>
-/* ===== 익명 토글 ===== */
-.anonymous-wrap {
-  padding: 18px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.toggle {
-  position: relative;
-  width: 44px;
-  height: 24px;
-}
-.toggle input {
-  display: none;
-}
-.toggle span {
-  position: absolute;
-  inset: 0;
-  background: #222;
-  border-radius: 999px;
-  transition: .25s;
-}
-.toggle span::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  background: #fff;
-  border-radius: 50%;
-  transition: .25s;
-}
-.toggle input:checked + span {
-  background: #2f80ff;
-}
-.toggle input:checked + span::after {
-  transform: translateX(20px);
-}
-
-/* ===== 미리보기 ===== */
-.upload-preview {
-  margin-top: 10px;
-  display: none;
-}
-.upload-preview small {
-  display: block;
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 6px;
-}
-.upload-preview img,
-.upload-preview video {
-  width: 180px;
-  border-radius: 12px;
-  border: 1px solid #222;
-  background: #000;
-}
-
-/* 버튼 클릭 방지 버그 차단 */
-button {
-  pointer-events: auto;
-  z-index: 5;
-  position: relative;
-}
-</style>
+  <meta charset="UTF-8" />
+  <title>새 갈라 만들기 - GALLA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="stylesheet" href="./css/write.css" />
 </head>
 
 <body>
 <div class="app-root">
 
-<header class="header">
-  <div class="header-inner">
-    <img src="./assets/logo.png" class="logo" />
+  <header class="header">
+    <div class="header-inner">
+      <img src="./assets/logo.png" class="logo" onclick="location.href='index.html'" />
+      <div class="auth-buttons"></div>
+    </div>
+  </header>
+
+  <main class="page-main">
+    <div class="page-inner">
+
+      <section class="section-block">
+        <h1 class="write-main-title">새 갈라치기 만들기</h1>
+        <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
+      </section>
+
+      <form id="writeForm" class="write-form">
+
+        <div class="field-block">
+          <label class="field-label">카테고리 (필수)</label>
+          <select id="category" class="input-field">
+            <option value="">카테고리 선택</option>
+            <option>정치·사회</option>
+            <option>경제·투자</option>
+            <option>직장·경력</option>
+            <option>연애·결혼</option>
+            <option>생활·일상</option>
+            <option>패션·뷰티</option>
+            <option>엔터·스포츠</option>
+            <option>세계·여행</option>
+            <option>음식·맛집</option>
+            <option>19금</option>
+            <option>기타</option>
+          </select>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">제목</label>
+          <input id="title" class="input-field" />
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">발의자 한 줄</label>
+          <input id="oneLine" class="input-field" />
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">썸네일</label>
+          <input type="file" id="thumbnail" hidden accept="image/*" />
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">
+            썸네일 업로드
+          </button>
+
+          <div id="thumbnailPreview" class="upload-preview">
+            <small>미리보기</small>
+            <img />
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">영상</label>
+          <input type="file" id="video" hidden accept="video/*" />
+          <button type="button" id="videoBtn" class="file-btn input-field">
+            영상 업로드
+          </button>
+
+          <div id="videoPreview" class="upload-preview">
+            <small>미리보기</small>
+            <video controls></video>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">
+            이슈 설명
+            <span class="desc-counter">0 / 500</span>
+          </label>
+          <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
+
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI에게 글 다듬기
+          </button>
+        </div>
+
+        <div class="field-block submit-block">
+          <button type="submit" class="primary-btn">갈라 발의하기</button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item" data-target="index.html"><img src="./assets/icons/nav-home.svg"></button>
+    <button class="nav-item" data-target="search.html"><img src="./assets/icons/nav-search.svg"></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-write.svg"></button>
+    <button class="nav-item" data-target="random.html"><img src="./assets/icons/nav-random.svg"></button>
+    <button class="nav-item" data-target="mypage.html"><img src="./assets/icons/nav-user.svg"></button>
+  </nav>
+</div>
+
+<!-- AI MODAL -->
+<div id="aiModal" class="ai-modal">
+  <div class="ai-modal-inner">
+    <div class="ai-modal-header">
+      <h2>AI 글 다듬기</h2>
+      <button id="aiClose">✕</button>
+    </div>
+
+    <div class="ai-style-tabs">
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+    </div>
+
+    <div class="ai-block">
+      <label>내가 쓴 글</label>
+      <textarea id="aiUserText" class="ai-textarea"></textarea>
+    </div>
+
+    <div class="ai-block">
+      <label>AI 결과</label>
+      <textarea id="aiResultText" class="ai-textarea"></textarea>
+    </div>
+
+    <button id="applyAi" class="apply-btn">AI 적용하기</button>
   </div>
-</header>
-
-<main class="page-main">
-<div class="page-inner">
-
-<section class="section-block">
-  <h1 class="write-main-title">새 갈라치기 만들기</h1>
-  <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
-</section>
-
-<section class="section-block write-guide-block">
-<ul class="write-guide-list">
-  <li>제목은 최대 80자 이내</li>
-  <li>논쟁 포인트가 명확할수록 참여율 증가</li>
-  <li>AI로 글을 다듬을 수 있음</li>
-</ul>
-</section>
-
-<!-- ✅ 익명 토글 (설명란 바로 아래) -->
-<section class="anonymous-wrap">
-  <span>익명으로 발의하기</span>
-  <label class="toggle">
-    <input type="checkbox" id="anonymousToggle">
-    <span></span>
-  </label>
-</section>
-
-<form id="writeForm">
-
-<div class="field-block">
-<label class="field-label">카테고리 (필수)</label>
-<select class="input-field">
-<option>직장·경력</option>
-</select>
 </div>
 
-<div class="field-block">
-<label class="field-label">이슈 썸네일 (필수)</label>
-<input type="file" id="thumbnail" accept="image/*" hidden>
-<button type="button" id="thumbnailBtn" class="file-btn input-field">썸네일 업로드</button>
-<div class="upload-preview" id="thumbnailPreview">
-<small>미리보기</small>
-<img>
-</div>
-</div>
-
-<div class="field-block">
-<label class="field-label">1분 엘리베이터 스피치 (선택)</label>
-<input type="file" id="video" accept="video/*" hidden>
-<button type="button" id="videoBtn" class="file-btn input-field">영상 업로드</button>
-<div class="upload-preview" id="videoPreview">
-<small>미리보기</small>
-<video controls></video>
-</div>
-</div>
-
-<div class="field-block">
-<label class="field-label">이슈 설명</label>
-<textarea class="input-field textarea" id="description"></textarea>
-<button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
-</div>
-
-<div class="field-block">
-<label class="field-label">관련 기사·자료 링크 (선택)</label>
-<input class="input-field" value="https://">
-<input class="input-field" value="https://">
-<input class="input-field" value="https://">
-</div>
-
-<div class="field-block">
-<button type="button" class="primary-btn">미리보기</button>
-</div>
-
-</form>
-</div>
-</main>
-
-</div>
-
-<!-- ===== JS (버튼 안 먹는 문제 해결 핵심) ===== -->
-<script>
-/* 썸네일 */
-thumbnailBtn.onclick = () => thumbnail.click();
-thumbnail.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const img = thumbnailPreview.querySelector("img");
-  img.src = URL.createObjectURL(f);
-  thumbnailPreview.style.display = "block";
-};
-
-/* 영상 */
-videoBtn.onclick = () => video.click();
-video.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const v = videoPreview.querySelector("video");
-  v.src = URL.createObjectURL(f);
-  videoPreview.style.display = "block";
-};
-
-/* 익명 토글 확인 */
-anonymousToggle.onchange = e => {
-  console.log("익명 발의:", e.target.checked);
-};
-
-/* AI 버튼 */
-openAiModal.onclick = () => {
-  alert("AI 모달 연결 준비됨");
-};
-</script>
-
+<script src="./js/write.js"></script>
 </body>
 </html>
