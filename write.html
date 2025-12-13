@@ -6,67 +6,112 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="./css/write.css" />
 </head>
-<body>
 
+<body>
 <div class="app-root">
 
-<header class="header">
-  <h1 class="logo">GALLA</h1>
-</header>
+  <header class="header">
+    <div class="header-inner">
+      <h1 class="logo">GALLA</h1>
+    </div>
+  </header>
 
-<main class="page-main">
-<form id="writeForm" class="write-form">
+  <main class="page-main">
+    <div class="page-inner">
 
-  <!-- CATEGORY -->
-  <label>카테고리 (필수)</label>
-  <select id="category" required>
-    <option value="">선택</option>
-    <option>정치·사회</option>
-    <option>경제·투자</option>
-    <option>직장·경력</option>
-    <option>연애·결혼</option>
-    <option>생활·일상</option>
-    <option>패션·뷰티</option>
-    <option>엔터·스포츠</option>
-    <option>세계·여행</option>
-    <option>음식·맛집</option>
-    <option>19금</option>
-    <option>기타</option>
-  </select>
+      <h2 class="write-main-title">새 갈라치기 만들기</h2>
+      <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
 
-  <!-- TITLE -->
-  <label>제목 (필수)</label>
-  <input id="title" maxlength="80" required />
+      <form id="writeForm" class="write-form">
 
-  <!-- ONE LINE -->
-  <label>발의자 한 줄 (필수)</label>
-  <input id="oneLine" required />
+        <!-- 카테고리 -->
+        <div class="field-block">
+          <label class="field-label">카테고리 (필수)</label>
+          <select id="category" class="input-field" required>
+            <option value="">선택</option>
+            <option>정치·사회</option>
+            <option>경제·투자</option>
+            <option>직장·경력</option>
+            <option>연애·결혼</option>
+            <option>생활·일상</option>
+            <option>패션·뷰티</option>
+            <option>엔터·스포츠</option>
+            <option>세계·여행</option>
+            <option>음식·맛집</option>
+            <option>19금</option>
+            <option>기타</option>
+          </select>
+        </div>
 
-  <!-- THUMBNAIL -->
-  <label>썸네일 (필수)</label>
-  <input type="file" id="thumbnail" accept="image/*" hidden />
-  <button type="button" id="thumbnailBtn">이미지 업로드</button>
+        <!-- 제목 -->
+        <div class="field-block">
+          <label class="field-label">제목 (필수)</label>
+          <input id="title" class="input-field" required />
+        </div>
 
-  <!-- VIDEO -->
-  <label>1분 엘리베이터 스피치 (선택)</label>
-  <input type="file" id="videoInput" accept="video/*" hidden />
-  <button type="button" id="videoBtn">영상 업로드</button>
+        <!-- 한 줄 -->
+        <div class="field-block">
+          <label class="field-label">발의자 한 줄 (필수)</label>
+          <input id="oneLine" class="input-field" required />
+        </div>
 
-  <!-- DESCRIPTION -->
-  <label>이슈 설명 (필수) <span class="desc-counter">0 / 500</span></label>
-  <textarea id="description" maxlength="500" required></textarea>
+        <!-- 썸네일 -->
+        <div class="field-block">
+          <label class="field-label">썸네일 (필수)</label>
+          <input type="file" id="thumbnail" accept="image/*" hidden />
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">
+            이미지 업로드
+          </button>
+        </div>
 
-  <button type="button" id="openAiModal">✨ AI 글 다듬기</button>
+        <!-- 영상 -->
+        <div class="field-block">
+          <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
+          <input type="file" id="videoInput" accept="video/*" hidden />
+          <button type="button" id="videoBtn" class="file-btn input-field">
+            영상 업로드
+          </button>
+        </div>
 
-  <button type="submit" class="submit-btn">갈라 발의하기</button>
+        <!-- 설명 -->
+        <div class="field-block">
+          <label class="field-label">
+            이슈 설명 (필수)
+            <span class="desc-counter">0 / 500</span>
+          </label>
 
-</form>
-</main>
+          <textarea
+            id="description"
+            class="input-field textarea"
+            maxlength="500"
+            required
+          ></textarea>
+
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI 글 다듬기
+          </button>
+        </div>
+
+        <div class="field-block submit-block">
+          <button type="submit" class="primary-btn">
+            갈라 발의하기
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+</div>
 
 <!-- AI MODAL -->
-<div id="aiModal" class="modal hidden">
-  <div class="modal-box">
-    <h2>AI 글 다듬기</h2>
+<div id="aiModal" class="ai-modal" style="display:none;">
+  <div class="ai-modal-inner">
+
+    <div class="ai-modal-header">
+      <h2>AI 글 다듬기</h2>
+      <button id="aiCloseBtn">✕</button>
+    </div>
 
     <div class="ai-style-tabs">
       <button data-style="basic" class="active">기본</button>
@@ -76,23 +121,25 @@
       <button data-style="expert">전문가</button>
     </div>
 
-    <label>AI에게 직접 요청 (선택)</label>
-    <input id="aiCustomPrompt" placeholder="예: 반대 의견 포함해서 정리" />
+    <textarea
+      id="aiCustomPrompt"
+      class="input-field"
+      placeholder="AI에게 직접 요청 (선택)"
+    ></textarea>
 
-    <div class="ai-compare">
-      <textarea id="aiUserText"></textarea>
-      <textarea id="aiImprovedText"></textarea>
+    <div class="ai-compare-wrap">
+      <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+      <textarea id="aiImprovedText" placeholder="AI 결과"></textarea>
     </div>
 
-    <button id="runAi">AI 실행</button>
-    <button id="applyAiText">적용</button>
-    <button id="aiCloseBtn">닫기</button>
+    <button id="runAi" class="primary-btn">AI 실행</button>
+    <button id="applyAiText" class="primary-btn">적용</button>
+
   </div>
 </div>
 
 <script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="./js/supabase.js"></script>
 <script src="./js/write.js"></script>
-
 </body>
 </html>
