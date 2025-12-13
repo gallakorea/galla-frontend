@@ -1,77 +1,103 @@
 /* =========================
-   DOM ELEMENTS
+   ELEMENTS
 ========================= */
-const body = document.body;
+const form = document.getElementById("writeForm");
+const preview = document.getElementById("previewSection");
 
-// AI Modal
-const aiModal = document.getElementById('aiModal');
-const openAiModalBtn = document.getElementById('openAiModal');
-const aiCloseBtn = document.getElementById('aiClose');
+const category = document.getElementById("category");
+const title = document.getElementById("title");
+const oneLine = document.getElementById("oneLine");
+const desc = document.getElementById("description");
+const isAnonymous = document.getElementById("isAnonymous");
 
-// Thumbnail
-const thumbnailInput = document.getElementById('thumbnail');
-const thumbnailBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
+const thumbInput = document.getElementById("thumbnail");
+const videoInput = document.getElementById("video");
 
-// Video
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
+const thumbPreview = document.getElementById("thumbPreview");
+const videoPreview = document.getElementById("videoPreview");
+
+/* preview fields */
+const pvCategory = document.getElementById("pv-category");
+const pvTitle = document.getElementById("pv-title");
+const pvDesc = document.getElementById("pv-desc");
+const pvAuthor = document.getElementById("pv-author");
+const pvThumb = document.getElementById("pv-thumb");
+const pvVideoBtn = document.getElementById("pv-video-btn");
+
+/* buttons */
+const previewBtn = form.querySelector(".primary-btn");
+const backBtn = document.getElementById("backToEdit");
+const publishBtn = document.getElementById("publishIssue");
 
 /* =========================
-   AI MODAL OPEN / CLOSE
+   FILE UPLOAD (PREVIEW)
 ========================= */
-openAiModalBtn.addEventListener('click', () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden'; // 🔥 스크롤 고정
-});
-
-aiCloseBtn.addEventListener('click', () => {
-  aiModal.style.display = 'none';
-  body.style.overflow = ''; // 🔥 원복
-});
-
-// 배경 클릭 시 닫기 (선택)
-aiModal.addEventListener('click', (e) => {
-  if (e.target === aiModal) {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  }
-});
-
-/* =========================
-   THUMBNAIL UPLOAD
-========================= */
-thumbnailBtn.addEventListener('click', () => {
-  thumbnailInput.click();
-});
-
-thumbnailInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const img = document.createElement('img');
-  img.src = URL.createObjectURL(file);
-
-  thumbPreview.innerHTML = '<div>미리보기</div>';
+document.getElementById("thumbnailBtn").onclick = () => thumbInput.click();
+thumbInput.onchange = e => {
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(e.target.files[0]);
+  thumbPreview.innerHTML = "미리보기";
   thumbPreview.appendChild(img);
-});
+};
+
+document.getElementById("videoBtn").onclick = () => videoInput.click();
+videoInput.onchange = e => {
+  const v = document.createElement("video");
+  v.src = URL.createObjectURL(e.target.files[0]);
+  v.controls = true;
+  videoPreview.innerHTML = "미리보기";
+  videoPreview.appendChild(v);
+};
 
 /* =========================
-   VIDEO UPLOAD
+   PREVIEW MODE
 ========================= */
-videoBtn.addEventListener('click', () => {
-  videoInput.click();
-});
+previewBtn.onclick = e => {
+  e.preventDefault();
 
-videoInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  // 바인딩
+  pvCategory.textContent = category.value;
+  pvTitle.textContent = title.value;
+  pvDesc.textContent = oneLine.value;
+  pvAuthor.textContent = isAnonymous.checked ? "작성자 · 익명" : "작성자 · 공개";
 
-  const video = document.createElement('video');
-  video.src = URL.createObjectURL(file);
-  video.controls = true;
+  // 썸네일
+  if (thumbInput.files[0]) {
+    pvThumb.src = URL.createObjectURL(thumbInput.files[0]);
+  }
 
-  videoPreview.innerHTML = '<div>미리보기</div>';
-  videoPreview.appendChild(video);
-});
+  // 영상
+  if (videoInput.files[0]) {
+    pvVideoBtn.style.display = "block";
+  }
+
+  // 전환
+  form.style.display = "none";
+  preview.style.display = "block";
+};
+
+/* =========================
+   BACK TO EDIT
+========================= */
+backBtn.onclick = () => {
+  preview.style.display = "none";
+  form.style.display = "block";
+};
+
+/* =========================
+   VIDEO MODAL (재사용)
+========================= */
+pvVideoBtn.onclick = () => {
+  const modal = document.querySelector(".speech-backdrop");
+  const video = document.getElementById("speech-video");
+  video.src = URL.createObjectURL(videoInput.files[0]);
+  modal.hidden = false;
+  modal.querySelector(".speech-sheet").style.bottom = "0";
+};
+
+/* =========================
+   PUBLISH (임시)
+========================= */
+publishBtn.onclick = async () => {
+  alert("✅ 발행 로직 연결 준비 완료\n(다음 단계: Supabase insert)");
+};
