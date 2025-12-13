@@ -60,15 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (thumbnailInput) {
+  if (thumbnailInput && thumbPreview) {
     thumbnailInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       const img = document.createElement('img');
       img.src = URL.createObjectURL(file);
+      img.style.maxWidth = '100%';
+      img.style.borderRadius = '12px';
 
-      thumbPreview.innerHTML = '<div>미리보기</div>';
+      thumbPreview.innerHTML = '';
       thumbPreview.appendChild(img);
     });
   }
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (videoInput) {
+  if (videoInput && videoPreview) {
     videoInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -91,46 +93,44 @@ document.addEventListener('DOMContentLoaded', () => {
       const video = document.createElement('video');
       video.src = URL.createObjectURL(file);
       video.controls = true;
+      video.style.width = '100%';
+      video.style.borderRadius = '12px';
 
-      videoPreview.innerHTML = '<div>미리보기</div>';
+      videoPreview.innerHTML = '';
       videoPreview.appendChild(video);
     });
   }
 
   /* =========================
-     PREVIEW SUBMIT
+     PREVIEW SUBMIT (핵심)
   ========================= */
 
   if (!writeForm) return;
 
   writeForm.addEventListener('submit', (e) => {
-    e.preventDefault(); // 🔥 리셋 방지
+    e.preventDefault(); // 🔥 리셋 절대 방지
 
-    const previewData = {
-      category: document.getElementById('category')?.value || '',
-      title: document.getElementById('title')?.value || '',
-      oneLine: document.getElementById('oneLine')?.value || '',
-      description: document.getElementById('description')?.value || '',
-      isAnonymous: document.getElementById('isAnonymous')?.checked || false,
+    const params = new URLSearchParams();
 
-      thumbnailUrl: thumbnailInput?.files[0]
-        ? URL.createObjectURL(thumbnailInput.files[0])
-        : null,
-
-      videoUrl: videoInput?.files[0]
-        ? URL.createObjectURL(videoInput.files[0])
-        : null,
-
-      createdAt: new Date().toISOString()
-    };
-
-    sessionStorage.setItem(
-      'galla_preview',
-      JSON.stringify(previewData)
+    params.set('category', document.getElementById('category')?.value || '');
+    params.set('title', document.getElementById('title')?.value || '');
+    params.set('oneLine', document.getElementById('oneLine')?.value || '');
+    params.set('description', document.getElementById('description')?.value || '');
+    params.set(
+      'isAnonymous',
+      document.getElementById('isAnonymous')?.checked ? '1' : '0'
     );
 
-    // ✅ 정상 이동
-    location.href = 'preview.html';
+    if (thumbnailInput?.files[0]) {
+      params.set('thumb', URL.createObjectURL(thumbnailInput.files[0]));
+    }
+
+    if (videoInput?.files[0]) {
+      params.set('video', URL.createObjectURL(videoInput.files[0]));
+    }
+
+    // ✅ 리뷰 페이지로 이동
+    location.href = `preview.html?${params.toString()}`;
   });
 
 });
