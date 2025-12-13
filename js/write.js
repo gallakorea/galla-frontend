@@ -5,22 +5,33 @@ const $ = (id) => document.getElementById(id);
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
-/* counter */
+/* 글자수 */
 desc.addEventListener("input", () => {
   counter.textContent = `${desc.value.length} / 500`;
 });
 
-/* file buttons */
+/* 썸네일 */
 $("thumbnailBtn").onclick = () => $("thumbnail").click();
+$("thumbnail").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const img = $("thumbPreview");
+  img.src = URL.createObjectURL(file);
+  img.style.display = "block";
+};
+
+/* 영상 */
 $("videoBtn").onclick = () => $("video").click();
+$("video").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const video = $("videoPreview");
+  video.src = URL.createObjectURL(file);
+  video.style.display = "block";
+};
 
-/* bottom nav */
-document.querySelectorAll(".nav-item").forEach(btn => {
-  btn.onclick = () => location.href = btn.dataset.target;
-});
-
-/* AI modal */
-let currentStyle = "basic";
+/* AI MODAL */
+let currentStyle = "기본";
 
 $("openAiModal").onclick = () => {
   $("aiUserText").value = desc.value;
@@ -41,21 +52,31 @@ document.querySelectorAll(".ai-style-tabs button").forEach(btn => {
   };
 });
 
+/* AI 실행 (더미 로직) */
 $("runAi").onclick = () => {
+  const prompt = $("aiCustomPrompt").value;
   $("aiResultText").value =
     `[${currentStyle}]\n` +
-    ($("aiCustomPrompt").value ? `요청: ${$("aiCustomPrompt").value}\n\n` : "") +
+    (prompt ? `요청: ${prompt}\n\n` : "") +
     $("aiUserText").value;
 };
 
+/* 적용 */
 $("applyAi").onclick = () => {
-  desc.value = $("aiResultText").value;
-  counter.textContent = `${desc.value.length} / 500`;
+  if ($("aiResultText").value.trim()) {
+    desc.value = $("aiResultText").value;
+    counter.textContent = `${desc.value.length} / 500`;
+  }
   $("aiModal").style.display = "none";
 };
 
-/* submit */
+/* 제출 */
 $("writeForm").onsubmit = (e) => {
   e.preventDefault();
-  alert("✅ UI / 버튼 / 모달 전부 정상 작동");
+  alert("✅ UI / 버튼 / 모달 / 미리보기 전부 정상 작동");
 };
+
+/* 하단 네비 */
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.onclick = () => location.href = btn.dataset.target;
+});
