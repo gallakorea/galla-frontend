@@ -18,18 +18,21 @@ document.addEventListener("DOMContentLoaded", () => {
   videoBtn.onclick = () => video.click();
 
   /* ============================================================
-     1) 이미지 업로드 → Supabase Storage (폴더 사용 X)
+     1) 이미지 업로드 → Supabase Storage
   ============================================================ */
   async function uploadImageToSupabase(file) {
     console.log("Uploading image to Supabase Storage...");
 
-    const ext = file.name.split(".").pop();
-    const fileName = `thumb_${Date.now()}.${ext}`; // ★ 슬래시(/) 절대 금지
+    const ext = file.name.split(".").pop().toLowerCase();
+    const fileName = `thumb_${Date.now()}.${ext}`; // ★ 슬래시 절대 금지
 
-    const { data, error } = await window.supabaseClient
+    const { error } = await window.supabaseClient
       .storage
       .from("issues")
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        contentType: file.type,
+        upsert: false
+      });
 
     if (error) {
       console.error("Supabase image upload error", error);
@@ -45,13 +48,16 @@ document.addEventListener("DOMContentLoaded", () => {
   async function uploadVideoToSupabase(file) {
     console.log("Uploading video to Supabase Storage...");
 
-    const ext = file.name.split(".").pop();
+    const ext = file.name.split(".").pop().toLowerCase();
     const fileName = `video_${Date.now()}.${ext}`;
 
-    const { data, error } = await window.supabaseClient
+    const { error } = await window.supabaseClient
       .storage
       .from("issues")
-      .upload(fileName, file);
+      .upload(fileName, file, {
+        contentType: file.type,
+        upsert: false
+      });
 
     if (error) {
       console.error("Supabase video upload error", error);
@@ -69,9 +75,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const supabase = window.supabaseClient;
-
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
 
       if (!token) {
         alert("로그인 해주세요");
@@ -81,26 +86,18 @@ document.addEventListener("DOMContentLoaded", () => {
       let thumbId = null;
       let videoId = null;
 
-      /* -----------------------------------------
-         썸네일 업로드
-      ----------------------------------------- */
-      if (thumbnail.files[0]) {
-        thumbId = await uploadImageToSupabase(thumbnail.files[0]);
-      } else {
+      /* 썸네일 */
+      if (!thumbnail.files[0]) {
         alert("썸네일 이미지를 업로드해야 합니다.");
         return;
       }
+      thumbId = await uploadImageToSupabase(thumbnail.files[0]);
 
-      /* -----------------------------------------
-         영상 업로드 (선택)
-      ----------------------------------------- */
+      /* 영상 (선택) */
       if (video.files[0]) {
         videoId = await uploadVideoToSupabase(video.files[0]);
       }
 
-      /* -----------------------------------------
-         DB로 보낼 Issue 데이터 구성
-      ----------------------------------------- */
       const issue = {
         category: document.getElementById("category").value,
         title: document.getElementById("title").value,
@@ -115,11 +112,8 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
       };
 
-      console.log("Sending issue to Edge Function:", issue);
+      console.log("Sending issue:", issue);
 
-      /* -----------------------------------------
-         Supabase Edge Function 호출 (create-issue)
-      ----------------------------------------- */
       const res = await fetch(
         "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/create-issue",
         {
@@ -134,7 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const json = await res.json();
       if (!res.ok) {
-        console.error("Create issue error:", json);
+        console.error(json);
         throw new Error(json.message || "Issue 생성 실패");
       }
 
