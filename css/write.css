@@ -581,47 +581,62 @@ body {
   position: relative;
 }
 
-/* 버튼 높이 시각 통일 (UI 유지용) */
-.ai-main-btn,
-.primary-btn {
-  min-height: 52px;
+/* === 기존 CSS 그대로 두고 아래만 추가 === */
+
+.ai-modal-inner.elegant {
+  background: #0e0e0e;
+  border-radius: 18px;
+  padding: 20px;
 }
 
-/* 기존 CSS 유지 + 아래만 추가 */
-
-.media-preview {
-  margin-top: 10px;
-  max-width: 120px;
-  max-height: 120px;
-  border-radius: 10px;
-  display: none;
+.ai-sub {
+  font-size: 12px;
+  color: #888;
 }
 
-.ai-prompt {
-  margin-top: 12px;
+.ai-style-tabs.minimal button {
+  border-radius: 999px;
 }
 
-.ai-label {
+.ai-block {
   margin-top: 14px;
+}
+
+.ai-block label {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.ai-textarea {
+  min-height: 120px;
+  background: #090909;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 12px;
   font-size: 13px;
-  color: #ccc;
 }
 
-.ai-actions {
-  margin-top: 14px;
-  display: flex;
-  gap: 10px;
+.ai-block.result .ai-textarea {
+  border-style: dashed;
 }
 
-.ai-run-btn {
-  flex: 1;
-  padding: 10px;
-  background: #1a1a1a;
+.ai-main-cta {
+  margin-top: 16px;
+  padding: 14px;
+  background: #2f80ff;
+  border-radius: 14px;
+  border: none;
+  color: #fff;
+  font-weight: 800;
+}
+
+.ai-apply-cta {
+  margin-top: 10px;
+  padding: 12px;
+  background: #111;
   border: 1px solid #333;
   color: #fff;
-  border-radius: 10px;
-}
-
-.apply-btn {
-  flex: 1;
+  border-radius: 14px;
 }
