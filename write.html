@@ -3,48 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <title>새 갈라 만들기 - GALLA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    * { box-sizing: border-box; }
-
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      width: 100%;
       background: #000;
       color: #fff;
       font-family: system-ui, -apple-system, BlinkMacSystemFont;
-      display: flex;
-      justify-content: center;
+      overflow-x: hidden;
     }
 
-    /* ===== APP FRAME ===== */
-    .app {
-      width: 100%;
+    .page-inner {
       max-width: 480px;
-      min-height: 100vh;
-      background: #000;
-      display: flex;
-      flex-direction: column;
-      position: relative;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px 16px 96px;
+      box-sizing: border-box;
     }
 
-    /* ===== HEADER ===== */
-    header {
-      padding: 16px;
-      font-size: 20px;
-      font-weight: 700;
-      border-bottom: 1px solid #111;
-    }
-
-    /* ===== MAIN ===== */
-    main {
-      flex: 1;
-      padding: 16px;
-      padding-bottom: 96px; /* 네비 공간 */
-    }
+    h1 { font-size: 22px; margin-bottom: 6px; }
+    p { font-size: 14px; opacity: .7; margin-bottom: 20px; }
 
     .field-block { margin-bottom: 18px; }
-    .field-label { font-size: 14px; margin-bottom: 6px; display: block; }
+    .field-label { font-size: 13px; margin-bottom: 6px; display: block; }
 
     input, select, textarea, button {
       width: 100%;
@@ -54,156 +38,122 @@
       border: 1px solid #222;
       color: #fff;
       font-size: 15px;
+      box-sizing: border-box;
     }
 
     textarea { min-height: 120px; resize: none; }
+
+    .file-btn {
+      text-align: center;
+      cursor: pointer;
+      background: #111;
+    }
 
     .primary-btn {
       background: #2f80ff;
       border: none;
       font-weight: 600;
-    }
-
-    .file-btn {
-      text-align: center;
-      cursor: pointer;
+      margin-top: 12px;
     }
 
     .desc-counter {
+      float: right;
       font-size: 12px;
       opacity: .6;
-      float: right;
     }
 
-    /* ===== AI MODAL ===== */
-    .ai-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.75);
-      z-index: 999;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .ai-box {
-      width: 90%;
-      max-width: 460px;
-      background: #0f0f0f;
-      border-radius: 16px;
-      padding: 16px;
-    }
-
-    /* ===== BOTTOM NAV ===== */
-    nav {
+    /* bottom nav */
+    .bottom-nav {
       position: fixed;
       bottom: 0;
-      width: 100%;
-      max-width: 480px;
-      height: 72px;
-      background: #050505;
-      border-top: 1px solid #111;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: #0b0b0b;
+      border-top: 1px solid #1c1c1c;
       display: flex;
       justify-content: space-around;
       align-items: center;
       z-index: 100;
     }
 
-    nav button {
+    .bottom-nav button {
       background: none;
       border: none;
-      color: #aaa;
-      font-size: 12px;
-    }
-
-    nav button.active {
-      color: #2f80ff;
-      font-weight: 600;
+      color: #fff;
+      font-size: 13px;
+      opacity: .7;
     }
   </style>
 </head>
 
 <body>
 
-<div class="app">
+<div class="page-inner">
+  <h1>새 갈라치기 만들기</h1>
+  <p>사람들의 찬반과 후원을 모아보세요.</p>
 
-  <!-- HEADER -->
-  <header>GALLA</header>
+  <form id="writeForm">
 
-  <!-- MAIN -->
-  <main>
+    <div class="field-block">
+      <label class="field-label">카테고리 (필수)</label>
+      <select id="category" required>
+        <option value="">선택</option>
+        <option>정치·사회</option>
+        <option>경제·투자</option>
+        <option>직장·경력</option>
+        <option>연애·결혼</option>
+        <option>생활·일상</option>
+        <option>패션·뷰티</option>
+        <option>엔터·스포츠</option>
+        <option>세계·여행</option>
+        <option>음식·맛집</option>
+        <option>19금</option>
+        <option>기타</option>
+      </select>
+    </div>
 
-    <h2>새 갈라치기 만들기</h2>
-    <p style="opacity:.7">사람들의 찬반과 후원을 모아보세요.</p>
+    <div class="field-block">
+      <label class="field-label">제목 (필수)</label>
+      <input id="title" required />
+    </div>
 
-    <form id="writeForm">
+    <div class="field-block">
+      <label class="field-label">발의자 한 줄 (필수)</label>
+      <input id="oneLine" required />
+    </div>
 
-      <div class="field-block">
-        <label class="field-label">카테고리 (필수)</label>
-        <select id="category" required>
-          <option value="">선택</option>
-          <option>정치·사회</option>
-          <option>경제·투자</option>
-          <option>직장·경력</option>
-          <option>연애·결혼</option>
-          <option>생활·일상</option>
-          <option>패션·뷰티</option>
-          <option>엔터·스포츠</option>
-          <option>세계·여행</option>
-          <option>음식·맛집</option>
-          <option>19금</option>
-          <option>기타</option>
-        </select>
-      </div>
+    <div class="field-block">
+      <label class="field-label">썸네일 (필수)</label>
+      <input type="file" id="thumbnail" hidden accept="image/*" />
+      <button type="button" id="thumbnailBtn" class="file-btn">이미지 업로드</button>
+    </div>
 
-      <div class="field-block">
-        <label class="field-label">제목 (필수)</label>
-        <input id="title" required />
-      </div>
+    <div class="field-block">
+      <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
+      <input type="file" id="video" hidden accept="video/*" />
+      <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
+    </div>
 
-      <div class="field-block">
-        <label class="field-label">발의자 한 줄 (필수)</label>
-        <input id="oneLine" required />
-      </div>
+    <div class="field-block">
+      <label class="field-label">
+        이슈 설명 (필수)
+        <span class="desc-counter">0 / 500</span>
+      </label>
+      <textarea id="description" maxlength="500" required></textarea>
+    </div>
 
-      <div class="field-block">
-        <label class="field-label">썸네일 (필수)</label>
-        <input type="file" id="thumbnail" hidden accept="image/*" />
-        <button type="button" id="thumbnailBtn" class="file-btn">이미지 업로드</button>
-      </div>
-
-      <div class="field-block">
-        <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
-        <input type="file" id="video" hidden accept="video/*" />
-        <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
-      </div>
-
-      <div class="field-block">
-        <label class="field-label">
-          이슈 설명 (필수)
-          <span class="desc-counter">0 / 500</span>
-        </label>
-        <textarea id="description" maxlength="500"></textarea>
-        <button type="button" id="openAiModal" class="file-btn" style="margin-top:8px">
-          ✨ AI 글 다듬기
-        </button>
-      </div>
-
-      <button class="primary-btn" type="submit">갈라 발의하기</button>
-
-    </form>
-  </main>
-
-  <!-- BOTTOM NAV -->
-  <nav>
-    <button onclick="location.href='index.html'">홈</button>
-    <button onclick="location.href='search.html'">검색</button>
-    <button class="active">발의</button>
-    <button onclick="location.href='random.html'">랜덤</button>
-    <button onclick="location.href='mypage.html'">마이</button>
-  </nav>
-
+    <button type="submit" class="primary-btn">갈라 발의하기</button>
+  </form>
 </div>
+
+<nav class="bottom-nav">
+  <button>홈</button>
+  <button>검색</button>
+  <button>작성</button>
+  <button>랜덤</button>
+  <button>마이</button>
+</nav>
 
 <script src="./js/write.js"></script>
 </body>
