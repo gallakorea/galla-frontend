@@ -376,3 +376,56 @@ body {
   min-height: 110px !important;
   max-height: 150px !important;
 }
+
+/***************************************************
+ * AI MODAL – ACTION BUTTON FIX (FINAL)
+ ***************************************************/
+
+/* 버튼 컨테이너 */
+.ai-modal-footer {
+  display: flex;
+  gap: 10px;
+}
+
+/* 두 버튼 동일 비율 */
+.ai-modal-footer button {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border .15s ease;
+}
+
+/* AI 실행 (서브 액션) */
+.ai-run-btn {
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+/* AI 적용하기 (메인 액션) */
+.apply-btn {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+}
+
+/* 눌렀을 때 공통 효과 */
+.ai-modal-footer button:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* 실행 중 / 선택 상태 */
+.ai-run-btn.active {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+}
+
+/* 적용 완료 상태 */
+.apply-btn.active {
+  background: #1f5edc;
+}

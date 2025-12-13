@@ -39,3 +39,27 @@ $("writeForm").onsubmit = (e) => {
   e.preventDefault();
   alert("✅ 정상 작동");
 };
+
+// AI 실행 버튼 상태
+runAi.onclick = () => {
+  runAi.classList.add("active");
+  applyAi.classList.remove("active");
+
+  aiResultText.value =
+    `[${currentStyle}]\n` +
+    (aiCustomPrompt.value ? `요청: ${aiCustomPrompt.value}\n\n` : "") +
+    aiUserText.value;
+};
+
+// AI 적용 버튼 상태
+applyAi.onclick = () => {
+  if (aiResultText.value.trim()) {
+    desc.value = aiResultText.value;
+    document.querySelector(".desc-counter").innerText =
+      `${desc.value.length} / 500`;
+  }
+
+  applyAi.classList.add("active");
+  runAi.classList.remove("active");
+  aiModal.style.display = "none";
+};
