@@ -651,3 +651,61 @@ body {
   border-radius: 10px;
 }
 
+/* =========================
+   ANON TOGGLE FINAL FIX
+========================= */
+
+/* 토글 래퍼 */
+.anon-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: #111;
+  border: 1px solid #222;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+/* 기본 checkbox 완전 제거 */
+.switch input {
+  display: none;
+}
+
+/* 토글 바 */
+.switch {
+  position: relative;
+  width: 46px;
+  height: 26px;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #333;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+/* 토글 원 */
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform .2s ease;
+}
+
+/* ON 상태 */
+.switch input:checked + .slider {
+  background: #2f80ff;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
+}
