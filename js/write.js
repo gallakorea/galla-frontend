@@ -1,7 +1,7 @@
-console.log("[write.js] loaded - stable");
+console.log("[write.js] loaded - FINAL STABLE");
 
 /* =========================
-   SAFE DOM GET
+   SAFE SELECTOR
 ========================= */
 const $ = (id) => document.getElementById(id);
 
@@ -17,28 +17,29 @@ const oneLine = $("oneLine");
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
+/* FILES */
 const thumbInput = $("thumbnail");
 const thumbBtn = $("thumbnailBtn");
 
-const videoInput = $("video");
+const videoInput = $("videoInput");
 const videoBtn = $("videoBtn");
 
-/* AI */
+/* AI MODAL */
 const openAiBtn = $("openAiModal");
 const aiModal = $("aiModal");
-const aiClose = document.getElementById("aiClose");
-const aiUser = $("aiUserText");
-const aiResult = $("aiResultText");
-const applyAi = $("applyAi");
+const aiCloseBtn = $("aiCloseBtn");
+const aiUserText = $("aiUserText");
+const aiImprovedText = $("aiImprovedText");
+const applyAiText = $("applyAiText");
 
 /* =========================
-   WIDTH / LAYOUT SAFETY
+   WIDTH SAFETY (480px 대응)
 ========================= */
-document.body.style.overflowX = "hidden";
 document.documentElement.style.overflowX = "hidden";
+document.body.style.overflowX = "hidden";
 
 /* =========================
-   COUNTER
+   DESCRIPTION COUNTER
 ========================= */
 if (desc && counter) {
   counter.textContent = "0 / 500";
@@ -49,7 +50,7 @@ if (desc && counter) {
 }
 
 /* =========================
-   FILE BUTTONS (중요)
+   THUMBNAIL BUTTON
 ========================= */
 if (thumbBtn && thumbInput) {
   thumbBtn.type = "button";
@@ -66,6 +67,9 @@ if (thumbBtn && thumbInput) {
   });
 }
 
+/* =========================
+   VIDEO BUTTON
+========================= */
 if (videoBtn && videoInput) {
   videoBtn.type = "button";
 
@@ -88,30 +92,37 @@ if (openAiBtn && aiModal) {
   openAiBtn.type = "button";
 
   openAiBtn.addEventListener("click", () => {
-    aiUser.value = desc.value || "";
-    aiResult.value = "";
+    aiUserText.value = desc.value || "";
+    aiImprovedText.value = "";
     aiModal.style.display = "flex";
   });
 }
 
-if (aiClose) {
-  aiClose.type = "button";
-  aiClose.addEventListener("click", () => {
+if (aiCloseBtn) {
+  aiCloseBtn.type = "button";
+  aiCloseBtn.addEventListener("click", () => {
     aiModal.style.display = "none";
   });
 }
 
-if (applyAi) {
-  applyAi.type = "button";
+if (applyAiText) {
+  applyAiText.type = "button";
 
-  applyAi.addEventListener("click", () => {
-    if (aiResult.value.trim()) {
-      desc.value = aiResult.value;
+  applyAiText.addEventListener("click", () => {
+    if (aiImprovedText.value.trim()) {
+      desc.value = aiImprovedText.value;
       counter.textContent = `${desc.value.length} / 500`;
     }
     aiModal.style.display = "none";
   });
 }
+
+/* ESC로 모달 닫기 */
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && aiModal.style.display === "flex") {
+    aiModal.style.display = "none";
+  }
+});
 
 /* =========================
    FORM SUBMIT (차단 없음)
@@ -136,16 +147,11 @@ if (form) {
       alert("이슈 설명을 입력하세요");
       return;
     }
+    if (!thumbInput.files.length) {
+      alert("썸네일을 업로드하세요");
+      return;
+    }
 
-    alert("✅ UI 기준 발의 버튼 정상 동작 상태");
+    alert("✅ UI 기준 발의하기 버튼 정상 동작 상태");
   });
 }
-
-/* =========================
-   ESC → MODAL CLOSE
-========================= */
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && aiModal.style.display === "flex") {
-    aiModal.style.display = "none";
-  }
-});
