@@ -321,3 +321,29 @@ body {
   color: #fff;
   font-size: 14px;
 }
+
+/***************************************************
+ * AI MODAL – TEXTAREA SIZE FINAL FIX
+ * (입력란 높이 절반 강제)
+ ***************************************************/
+
+/* AI 모달 안 textarea만 타겟 */
+.ai-modal textarea,
+.ai-textarea {
+  width: 100% !important;
+  min-height: 120px !important;   /* 🔥 기존 220~280 → 절반 */
+  max-height: 160px !important;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+/* 내가 쓴 글 / AI 결과 구분 유지 */
+.ai-block textarea {
+  min-height: 120px !important;
+  max-height: 160px !important;
+}
+
+/* 혹시 flex 때문에 늘어나는 경우 차단 */
+.ai-block {
+  flex: none !important;
+}
