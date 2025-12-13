@@ -1,8 +1,8 @@
-const $ = id => document.getElementById(id);
+console.log("[write.js] FULL SAFE VERSION");
 
-/* =====================
-   설명 글자수 카운터
-===================== */
+const $ = (id) => document.getElementById(id);
+
+/* ========= COUNTER ========= */
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
@@ -10,59 +10,32 @@ desc.addEventListener("input", () => {
   counter.textContent = `${desc.value.length} / 500`;
 });
 
-/* =====================
-   파일 버튼
-===================== */
+/* ========= FILE UPLOAD ========= */
 $("thumbnailBtn").onclick = () => $("thumbnail").click();
 $("videoBtn").onclick = () => $("video").click();
 
-/* =====================
-   업로드 미리보기
-===================== */
-$("thumbnail").onchange = e => {
+/* 썸네일 미리보기 */
+$("thumbnail").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const img = document.createElement("img");
+  const img = $("#thumbPreview img");
   img.src = URL.createObjectURL(file);
+  $("#thumbPreview").style.display = "block";
+});
 
-  let box = document.getElementById("thumbPreview");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "thumbPreview";
-    box.className = "upload-preview";
-    $("thumbnailBtn").after(box);
-  }
-
-  box.innerHTML = "";
-  box.appendChild(img);
-  box.style.display = "block";
-};
-
-$("video").onchange = e => {
+/* 영상 미리보기 */
+$("video").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const video = document.createElement("video");
+  const video = $("#videoPreview video");
   video.src = URL.createObjectURL(file);
-  video.controls = true;
+  video.load();
+  $("#videoPreview").style.display = "block";
+});
 
-  let box = document.getElementById("videoPreview");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "videoPreview";
-    box.className = "upload-preview";
-    $("videoBtn").after(box);
-  }
-
-  box.innerHTML = "";
-  box.appendChild(video);
-  box.style.display = "block";
-};
-
-/* =====================
-   AI MODAL
-===================== */
+/* ========= AI MODAL ========= */
 $("openAiModal").onclick = () => {
   $("aiUserText").value = desc.value;
   $("aiResultText").value = "";
@@ -73,42 +46,48 @@ $("aiClose").onclick = () => {
   $("aiModal").style.display = "none";
 };
 
-/* 스타일 선택 */
 let currentStyle = "basic";
 document.querySelectorAll(".ai-style-tabs button").forEach(btn => {
   btn.onclick = () => {
-    document
-      .querySelectorAll(".ai-style-tabs button")
+    document.querySelectorAll(".ai-style-tabs button")
       .forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentStyle = btn.dataset.style;
   };
 });
 
-/* AI 실행 (더미) */
-$("runAi").onclick = () => {
-  $("runAi").classList.add("active");
+/* AI 실행 (Mock) */
+const runBtn = document.createElement("button");
+runBtn.textContent = "AI 실행";
+runBtn.className = "ai-run-btn";
+runBtn.onclick = () => {
   $("aiResultText").value =
-    `[${currentStyle}]\n` +
-    ($("aiCustomPrompt").value
-      ? `요청: ${$("aiCustomPrompt").value}\n\n`
-      : "") +
-    $("aiUserText").value;
+    `[${currentStyle}]\n\n` + $("aiUserText").value;
 };
+document.querySelector(".ai-modal-footer").prepend(runBtn);
 
 /* 적용 */
 $("applyAi").onclick = () => {
-  if ($("aiResultText").value.trim()) {
-    desc.value = $("aiResultText").value;
-    counter.textContent = `${desc.value.length} / 500`;
-  }
+  desc.value = $("aiResultText").value;
+  counter.textContent = `${desc.value.length} / 500`;
   $("aiModal").style.display = "none";
 };
 
-/* =====================
-   제출
-===================== */
-$("writeForm").onsubmit = e => {
+/* ========= NAV ========= */
+document.querySelectorAll(".nav-item").forEach(btn => {
+  btn.onclick = () => location.href = btn.dataset.target;
+});
+
+/* ========= SUBMIT (PREVIEW) ========= */
+$("writeForm").onsubmit = (e) => {
   e.preventDefault();
-  alert("✅ 갈라 발의 UI 정상 작동");
+
+  const isAnonymous = $("anonymousToggle").checked;
+  alert(`미리보기 모드\n익명 발의: ${isAnonymous ? "ON" : "OFF"}`);
 };
+
+/* ========= DEFAULT URL ========= */
+["ref1","ref2","ref3"].forEach(id=>{
+  const input = $(id);
+  input.value = "https://";
+});

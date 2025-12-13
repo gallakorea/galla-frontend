@@ -88,26 +88,30 @@
         <div class="field-block">
           <label class="field-label">이슈 썸네일 (필수)</label>
           <input type="file" id="thumbnail" accept="image/*" hidden />
-          <button
-            type="button"
-            id="thumbnailBtn"
-            class="file-btn input-field"
-          >
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">
             썸네일 업로드
           </button>
+
+          <!-- Thumbnail Preview -->
+          <div class="upload-preview" id="thumbPreview">
+            <span class="preview-label">미리보기</span>
+            <img />
+          </div>
         </div>
 
         <!-- Video -->
         <div class="field-block">
           <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
           <input type="file" id="video" accept="video/*" hidden />
-          <button
-            type="button"
-            id="videoBtn"
-            class="file-btn input-field"
-          >
+          <button type="button" id="videoBtn" class="file-btn input-field">
             영상 업로드
           </button>
+
+          <!-- Video Preview -->
+          <div class="upload-preview" id="videoPreview">
+            <span class="preview-label">미리보기</span>
+            <video muted playsinline></video>
+          </div>
         </div>
 
         <!-- Description -->
@@ -136,15 +140,24 @@
         <!-- References -->
         <div class="field-block">
           <label class="field-label">관련 기사·자료 링크 (선택)</label>
-          <input type="url" id="ref1" class="input-field" />
-          <input type="url" id="ref2" class="input-field" />
-          <input type="url" id="ref3" class="input-field" />
+          <input type="url" id="ref1" class="input-field" value="https://" />
+          <input type="url" id="ref2" class="input-field" value="https://" />
+          <input type="url" id="ref3" class="input-field" value="https://" />
+        </div>
+
+        <!-- Anonymous -->
+        <div class="field-block">
+          <label class="field-label">익명으로 발의하기</label>
+          <label class="toggle">
+            <input type="checkbox" id="anonymousToggle" />
+            <span class="slider"></span>
+          </label>
         </div>
 
         <!-- Submit -->
         <div class="field-block submit-block">
           <button type="submit" class="primary-btn">
-            갈라 발의하기
+            갈라 미리보기
           </button>
         </div>
 
@@ -152,7 +165,7 @@
     </div>
   </main>
 
-  <!-- Bottom Navigation (복구 완료) -->
+  <!-- Bottom Navigation -->
   <nav class="bottom-nav">
     <button class="nav-item" data-target="index.html">
       <img src="./assets/icons/nav-home.svg" />
@@ -173,16 +186,16 @@
 
 </div>
 
-<!-- AI MODAL -->
+<!-- AI MODAL (구조 유지) -->
 <div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner refined">
+  <div class="ai-modal-inner">
 
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
 
-    <div class="ai-style-tabs refined-tabs">
+    <div class="ai-style-tabs">
       <button data-style="basic" class="active">기본</button>
       <button data-style="simple">간결</button>
       <button data-style="power">강렬</button>
@@ -192,30 +205,26 @@
     </div>
 
     <div class="ai-custom-wrap">
-      <label class="ai-label">AI에게 직접 요청 (선택)</label>
       <input
         id="aiCustomPrompt"
         class="input-field"
-        placeholder="예: 반대 의견 포함, 공격적인 표현 제거"
+        placeholder="AI에게 직접 요청 (예: 반대 의견 포함해서 정리)"
       />
     </div>
 
-    <!-- 내가 쓴 글 -->
     <div class="ai-block">
       <label class="ai-label">내가 쓴 글</label>
       <textarea id="aiUserText" class="ai-textarea"></textarea>
     </div>
 
-    <!-- AI 결과 -->
     <div class="ai-block">
       <label class="ai-label">AI 결과</label>
       <textarea id="aiResultText" class="ai-textarea"></textarea>
     </div>
 
-    <!-- 버튼 -->
-    <div class="ai-modal-footer split">
-      <button id="runAi" class="ai-btn ghost">AI 실행</button>
-      <button id="applyAi" class="ai-btn primary">AI 적용하기</button>
+    <div class="ai-modal-footer">
+      <button class="ai-run-btn">AI 실행</button>
+      <button id="applyAi" class="apply-btn">AI 적용하기</button>
     </div>
 
   </div>
@@ -227,4 +236,4 @@
 <script src="./js/write.js"></script>
 
 </body>
-</html> 
+</html>
