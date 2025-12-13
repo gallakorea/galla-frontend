@@ -1,57 +1,61 @@
-console.log("[write.js] FULL STABLE");
+console.log("[write.js] FULL SAFE MODE");
 
-const $ = id => document.getElementById(id);
-
-const desc = $("description");
-const counter = document.querySelector(".desc-counter");
+const $ = (id) => document.getElementById(id);
 
 /* counter */
-desc.addEventListener("input", () => {
-  counter.textContent = `${desc.value.length} / 500`;
+const desc = $("description");
+const counter = document.querySelector(".desc-counter");
+desc.oninput = () => counter.textContent = `${desc.value.length} / 500`;
+
+/* nav */
+document.querySelectorAll(".nav-item").forEach(btn=>{
+  btn.onclick = ()=> location.href = btn.dataset.target;
 });
 
-/* thumbnail */
-$("thumbnailBtn").addEventListener("click", () => $("thumbnail").click());
-$("thumbnail").addEventListener("change", e => {
+/* thumbnail preview */
+$("thumbnailBtn").onclick = ()=> $("thumbnail").click();
+$("thumbnail").onchange = e=>{
   const file = e.target.files[0];
-  if (!file) return;
-  $("thumbnailPreview").src = URL.createObjectURL(file);
-  $("thumbnailPreview").style.display = "block";
-});
+  if(file){
+    const img = $("thumbPreview");
+    img.src = URL.createObjectURL(file);
+    img.style.display = "block";
+  }
+};
 
-/* video */
-$("videoBtn").addEventListener("click", () => $("video").click());
-$("video").addEventListener("change", e => {
+/* video preview */
+$("videoBtn").onclick = ()=> $("video").click();
+$("video").onchange = e=>{
   const file = e.target.files[0];
-  if (!file) return;
-  $("videoPreview").src = URL.createObjectURL(file);
-  $("videoPreview").style.display = "block";
-});
+  if(file){
+    const v = $("videoPreview");
+    v.src = URL.createObjectURL(file);
+    v.style.display = "block";
+  }
+};
 
 /* AI modal */
 let style = "basic";
-$("openAiModal").addEventListener("click", () => {
+$("openAiModal").onclick = ()=>{
   $("aiUserText").value = desc.value;
   $("aiResultText").value = "";
   $("aiModal").style.display = "flex";
-});
+};
 
-$("aiClose").addEventListener("click", () => {
-  $("aiModal").style.display = "none";
-});
+$("aiClose").onclick = ()=> $("aiModal").style.display = "none";
 
-document.querySelectorAll(".ai-style-tabs button").forEach(btn=>{
-  btn.onclick = ()=>{
-    document.querySelectorAll(".ai-style-tabs button").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    style = btn.dataset.style;
+document.querySelectorAll(".ai-style-tabs button").forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll(".ai-style-tabs button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");
+    style = b.dataset.style;
   };
 });
 
 $("runAi").onclick = ()=>{
   $("aiResultText").value =
     `[${style}]\n` +
-    ($("aiCustomPrompt").value ? `요청: ${$("aiCustomPrompt").value}\n\n` : "") +
+    ($("aiCustomPrompt").value ? "요청: "+$("aiCustomPrompt").value+"\n\n" : "") +
     $("aiUserText").value;
 };
 
@@ -62,12 +66,7 @@ $("applyAi").onclick = ()=>{
 };
 
 /* submit */
-$("writeForm").addEventListener("submit", e=>{
+$("writeForm").onsubmit = e=>{
   e.preventDefault();
-  alert("✅ UI / 버튼 / 업로드 / AI 전부 정상");
-});
-
-/* nav */
-document.querySelectorAll(".nav-item").forEach(btn=>{
-  btn.onclick = ()=>location.href = btn.dataset.target;
-});
+  alert("✅ 발의 완료 (UI/JS 정상)");
+};
