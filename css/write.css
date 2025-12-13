@@ -640,3 +640,86 @@ body {
   color: #fff;
   border-radius: 14px;
 }
+
+/***************************************************
+ * AI MODAL – REFINED (톤앤매너 유지)
+ ***************************************************/
+.ai-modal-inner.refined {
+  background: #111;
+  border: 1px solid #222;
+}
+
+/* 탭 – 흑백만 */
+.refined-tabs button {
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+.refined-tabs button.active {
+  background: #fff;
+  color: #000;
+  font-weight: 700;
+}
+
+/* 직접 요청 */
+.ai-custom-prompt {
+  margin-top: 12px;
+}
+
+.ai-custom-prompt label {
+  font-size: 13px;
+  color: #bbb;
+}
+
+.ai-custom-prompt input {
+  margin-top: 6px;
+}
+
+/* 입력 블록 */
+.ai-block {
+  margin-top: 16px;
+}
+
+.ai-block label {
+  font-size: 13px;
+  color: #ccc;
+}
+
+/* textarea 전폭 + 충분한 높이 */
+.ai-block textarea {
+  width: 100%;
+  min-height: 180px;
+  max-height: 260px;
+  resize: vertical;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 12px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* 버튼 영역 */
+.refined-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ai-run-btn {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+.apply-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+}
