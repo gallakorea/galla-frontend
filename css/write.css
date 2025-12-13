@@ -554,3 +554,29 @@ body {
   border: 1px solid #222;
   background: #000;
 }
+
+/* ===== AI MODAL SAFE PATCH ===== */
+
+/* 오버레이가 절대 가로 넘지 못하게 */
+.ai-modal {
+  overflow-x: hidden;
+}
+
+/* 모달 내부를 확실히 480 기준으로 고정 */
+.ai-modal-inner {
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+}
+
+/* 모달 안 모든 버튼/요소가 viewport 기준으로 커지는 것 방지 */
+.ai-modal-inner * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 실행/적용 버튼이 화면 전체로 퍼지는 사고 방지 */
+.ai-modal-inner button {
+  width: 100%;
+  position: relative;
+}
