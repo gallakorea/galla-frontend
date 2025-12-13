@@ -156,3 +156,54 @@ if (writeForm) {
     alert('페이지 리셋 없이 미리보기 진입 성공');
   });
 }
+
+/************************************************
+ * PREVIEW MODAL RENDER
+ ************************************************/
+const previewModal = document.getElementById('previewModal');
+const closePreview = document.getElementById('closePreview');
+
+writeForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const category = categorySelect.value;
+  const titleVal = title.value;
+  const oneLineVal = oneLine.value;
+  const descVal = description.value;
+  const isAnon = isAnonymous.checked;
+
+  // 텍스트 바인딩
+  document.getElementById('pv-category').innerText = category;
+  document.getElementById('pv-author').innerText =
+    isAnon ? '작성자 · 익명' : '작성자 · 공개';
+
+  document.getElementById('pv-title').innerText = titleVal;
+  document.getElementById('pv-oneline').innerText = oneLineVal;
+  document.getElementById('pv-desc').innerText = descVal;
+
+  // 썸네일
+  const thumb = thumbnail.files[0];
+  const pvThumb = document.getElementById('pv-thumb');
+  if (thumb) {
+    pvThumb.src = URL.createObjectURL(thumb);
+    pvThumb.style.display = 'block';
+  } else {
+    pvThumb.style.display = 'none';
+  }
+
+  // 영상
+  const vid = video.files[0];
+  const pvVideo = document.getElementById('pv-video');
+  if (vid) {
+    pvVideo.src = URL.createObjectURL(vid);
+    pvVideo.style.display = 'block';
+  } else {
+    pvVideo.style.display = 'none';
+  }
+
+  previewModal.style.display = 'flex';
+});
+
+closePreview.onclick = () => {
+  previewModal.style.display = 'none';
+};

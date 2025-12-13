@@ -191,6 +191,36 @@
   </div>
 </div>
 
+<!-- PREVIEW MODAL -->
+<div id="previewModal" class="preview-modal">
+  <div class="preview-inner">
+
+    <div class="preview-header">
+      <h2>이슈 미리보기</h2>
+      <button id="closePreview">✕</button>
+    </div>
+
+    <!-- 카드 영역 -->
+    <div class="preview-card">
+      <div class="preview-meta">
+        <span id="pv-category"></span>
+        <span id="pv-author"></span>
+      </div>
+
+      <h3 id="pv-title"></h3>
+      <p id="pv-oneline"></p>
+
+      <img id="pv-thumb" />
+
+      <video id="pv-video" controls></video>
+
+      <p id="pv-desc"></p>
+    </div>
+
+    <button class="primary-btn">이 상태로 발행</button>
+  </div>
+</div>
+
 <script src="./js/write.js"></script>
 </body>
 </html>
