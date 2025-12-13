@@ -785,3 +785,26 @@ body {
   flex: 1;
   font-size: 14px;
 }
+
+/* 썸네일 / 영상 미리보기 */
+.upload-preview {
+  margin-top: 12px;
+  display: none;
+}
+
+.upload-preview small {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 6px;
+}
+
+/* 🔥 기존 180px → 270px (1.5배) */
+.upload-preview img,
+.upload-preview video {
+  width: 270px;
+  max-width: 100%;
+  border-radius: 14px;
+  border: 1px solid #222;
+  background: #000;
+}

@@ -91,3 +91,69 @@ $("writeForm").onsubmit = (e) => {
   const input = $(id);
   input.value = "https://";
 });
+
+console.log("[write.js] AI MODAL + UPLOAD PREVIEW SAFE");
+
+/* ========= DOM ========= */
+const $ = (id) => document.getElementById(id);
+
+const aiModal = $("aiModal");
+const openAiModal = $("openAiModal");
+const aiClose = $("aiClose");
+const aiUserText = $("aiUserText");
+const aiResultText = $("aiResultText");
+const desc = $("description");
+
+/* ========= AI MODAL ========= */
+openAiModal.onclick = () => {
+  aiUserText.value = desc.value || "";
+  aiResultText.value = "";
+  aiModal.style.display = "flex";
+};
+
+aiClose.onclick = () => {
+  aiModal.style.display = "none";
+};
+
+/* ========= STYLE TABS ========= */
+let currentStyle = "basic";
+document.querySelectorAll(".ai-style-tabs button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll(".ai-style-tabs button")
+      .forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentStyle = btn.dataset.style;
+  };
+});
+
+/* ========= APPLY AI ========= */
+$("applyAi").onclick = () => {
+  if (!aiResultText.value.trim()) return;
+  desc.value = aiResultText.value;
+  aiModal.style.display = "none";
+};
+
+/* ========= FILE UPLOAD ========= */
+/* 썸네일 */
+$("thumbnailBtn").onclick = () => $("thumbnail").click();
+$("thumbnail").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const preview = $("thumbnailPreview");
+  const img = preview.querySelector("img");
+  img.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+};
+
+/* 영상 */
+$("videoBtn").onclick = () => $("video").click();
+$("video").onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const preview = $("videoPreview");
+  const video = preview.querySelector("video");
+  video.src = URL.createObjectURL(file);
+  preview.style.display = "block";
+};
