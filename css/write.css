@@ -534,10 +534,9 @@ body {
 }
 
 /* =========================
-   AI MODAL FINAL FIX
+   AI MODAL — WORKING FINAL
 ========================= */
 
-/* 오버레이 */
 .ai-modal {
   position: fixed;
   inset: 0;
@@ -548,47 +547,40 @@ body {
   z-index: 2000;
 }
 
-/* 모달 박스 */
+/* 🔥 모달 박스 */
 .ai-modal-inner {
   width: 92%;
   max-width: 480px;
 
-  /* 🔥 핵심 */
-  max-height: 66vh;
-  overflow-y: auto;
+  /* 화면의 2/3 */
+  height: 66vh;
 
   background: #111;
   border: 1px solid #222;
   border-radius: 16px;
-  padding: 20px;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 16px;
   box-sizing: border-box;
 }
 
-/* 헤더 */
+/* 헤더 고정 */
 .ai-modal-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
-}
-
-.ai-modal-header h2 {
-  font-size: 17px;
-  font-weight: 800;
-}
-
-.ai-modal-header button {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #fff;
+  margin-bottom: 12px;
 }
 
 /* 스타일 칩 */
 .ai-style-tabs {
+  flex-shrink: 0;
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   overflow-x: auto;
 }
 
@@ -596,7 +588,6 @@ body {
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
-
   background: #000;
   border: 1px solid #333;
   color: #fff;
@@ -608,28 +599,20 @@ body {
   font-weight: 700;
 }
 
-/* 라벨 */
-.ai-modal-inner h3 {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 6px;
-  margin-top: 18px;
-  color: #ddd;
-}
-
-/* 텍스트 영역 */
-.ai-compare-wrap {
+/* 🔥 핵심: 본문 스크롤 영역 */
+.ai-modal-body {
+  flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
-/* 🔥 textarea 높이 대폭 축소 */
-.ai-compare-wrap textarea {
+/* textarea 공통 */
+.ai-modal-body textarea {
   width: 100%;
-  min-height: 110px;
-  max-height: 160px;
-  resize: vertical;
+  height: 120px;
+  resize: none;
 
   background: #0b0c14;
   border: 1px solid #222;
@@ -642,19 +625,28 @@ body {
   box-sizing: border-box;
 }
 
-/* 하단 버튼 */
+/* footer 고정 */
 .ai-modal-footer {
-  margin-top: 18px;
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-.apply-btn {
-  width: 100%;
+.btn-sub {
+  flex: 1;
+  background: #1a1a1a;
+  color: #fff;
+  border: 1px solid #333;
   padding: 12px;
-  border-radius: 12px;
-  border: none;
+  border-radius: 10px;
+}
 
+.btn-main {
+  flex: 1;
   background: #2f80ff;
   color: #fff;
-  font-size: 14px;
-  font-weight: 700;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
 }
