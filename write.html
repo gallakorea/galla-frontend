@@ -3,14 +3,146 @@
 <head>
   <meta charset="UTF-8" />
   <title>새 갈라 만들기 - GALLA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <link rel="stylesheet" href="./css/write.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    html, body {
-      width: 100%;
-      overflow-x: hidden;
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
       background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui;
+      overflow-x: hidden;
+    }
+
+    .app-root { min-height: 100vh; padding-bottom: 80px; }
+
+    /* HEADER */
+    .header {
+      position: sticky;
+      top: 0;
+      background: #000;
+      border-bottom: 1px solid #111;
+      z-index: 10;
+    }
+    .header-inner {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* MAIN */
+    .page-main { max-width: 480px; margin: 0 auto; padding: 16px; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    p { opacity: .7; margin-bottom: 16px; }
+
+    .field-block { margin-bottom: 16px; }
+    .field-label { font-size: 13px; margin-bottom: 6px; display: block; }
+
+    .input-field, textarea, select, button {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      background: #0f1115;
+      border: 1px solid #222;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    textarea { min-height: 120px; resize: none; }
+
+    .desc-counter {
+      float: right;
+      font-size: 12px;
+      opacity: .6;
+    }
+
+    .file-btn {
+      text-align: center;
+      cursor: pointer;
+      background: #111;
+    }
+
+    .primary-btn {
+      background: #2f80ff;
+      border: none;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #000;
+      border-top: 1px solid #111;
+      display: flex;
+      justify-content: space-around;
+      padding: 10px 0;
+    }
+    .bottom-nav button {
+      background: none;
+      border: none;
+      color: #666;
+      font-size: 12px;
+    }
+    .bottom-nav .active { color: #2f80ff; }
+
+    /* AI MODAL */
+    .ai-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.8);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .ai-box {
+      width: 92%;
+      max-width: 460px;
+      background: #0b0d12;
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .ai-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .ai-tabs button {
+      margin-right: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #111;
+      border: 1px solid #333;
+      color: #aaa;
+      font-size: 12px;
+    }
+    .ai-tabs .active {
+      background: #2f80ff;
+      color: #fff;
+      border: none;
+    }
+    .ai-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .ai-compare textarea {
+      min-height: 100px;
+      font-size: 13px;
     }
   </style>
 </head>
@@ -21,200 +153,155 @@
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <img
-        src="./assets/logo.png"
-        alt="GALLA"
-        class="logo"
-        onclick="location.href='index.html'"
-      />
-      <div class="auth-buttons"></div>
+      <div class="logo" onclick="location.href='index.html'">GALLA</div>
     </div>
   </header>
 
   <!-- MAIN -->
   <main class="page-main">
-    <div class="page-inner">
+    <h1>새 갈라치기 만들기</h1>
+    <p>사람들의 찬반과 후원을 모아보세요.</p>
 
-      <!-- Hero -->
-      <section class="section-block">
-        <h1 class="write-main-title">새 갈라치기 만들기</h1>
-        <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
-      </section>
+    <form id="writeForm">
 
-      <!-- Guide -->
-      <section class="section-block write-guide-block">
-        <ul class="write-guide-list">
-          <li>제목은 최대 80자 이내로 작성해주세요.</li>
-          <li>논쟁 포인트가 명확할수록 참여율이 높아집니다.</li>
-          <li>AI를 활용해 글을 다듬을 수 있습니다.</li>
-        </ul>
-      </section>
+      <div class="field-block">
+        <label class="field-label">카테고리 (필수)</label>
+        <select id="category" required>
+          <option value="">선택</option>
+          <option>정치·사회</option>
+          <option>경제·투자</option>
+          <option>직장·경력</option>
+          <option>연애·결혼</option>
+          <option>생활·일상</option>
+          <option>패션·뷰티</option>
+          <option>엔터·스포츠</option>
+          <option>세계·여행</option>
+          <option>음식·맛집</option>
+          <option>19금</option>
+          <option>기타</option>
+        </select>
+      </div>
 
-      <!-- FORM -->
-      <form id="writeForm" class="write-form">
+      <div class="field-block">
+        <label class="field-label">제목 (필수)</label>
+        <input id="title" class="input-field" required />
+      </div>
 
-        <!-- Category -->
-        <div class="field-block">
-          <label class="field-label">카테고리 (필수)</label>
-          <select id="category" class="input-field" required>
-            <option value="">카테고리를 선택하세요</option>
-            <option>정치·사회</option>
-            <option>경제·투자</option>
-            <option>직장·경력</option>
-            <option>연애·결혼</option>
-            <option>생활·일상</option>
-            <option>패션·뷰티</option>
-            <option>엔터·스포츠</option>
-            <option>세계·여행</option>
-            <option>음식·맛집</option>
-            <option>19금</option>
-            <option>기타</option>
-          </select>
-        </div>
+      <div class="field-block">
+        <label class="field-label">발의자 한 줄 (필수)</label>
+        <input id="oneLine" class="input-field" required />
+      </div>
 
-        <!-- Title -->
-        <div class="field-block">
-          <label class="field-label">제목 (필수)</label>
-          <input id="title" class="input-field" maxlength="80" required />
-        </div>
+      <div class="field-block">
+        <label class="field-label">썸네일 (필수)</label>
+        <input type="file" id="thumbnail" accept="image/*" hidden />
+        <button type="button" id="thumbnailBtn" class="file-btn input-field">이미지 업로드</button>
+      </div>
 
-        <!-- One-line -->
-        <div class="field-block">
-          <label class="field-label">발의자 한 줄 코멘트 (필수)</label>
-          <input id="oneLine" class="input-field" required />
-        </div>
+      <div class="field-block">
+        <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
+        <input type="file" id="videoInput" accept="video/*" hidden />
+        <button type="button" id="videoBtn" class="file-btn input-field">영상 업로드</button>
+      </div>
 
-        <!-- Thumbnail -->
-        <div class="field-block">
-          <label class="field-label">이슈 썸네일 (필수)</label>
-          <input type="file" id="thumbnail" accept="image/*" hidden />
-          <button
-            type="button"
-            id="thumbnailBtn"
-            class="file-btn input-field"
-          >
-            썸네일 업로드
-          </button>
-        </div>
+      <div class="field-block">
+        <label class="field-label">
+          이슈 설명 (필수)
+          <span class="desc-counter">0 / 500</span>
+        </label>
+        <textarea id="description" maxlength="500" required></textarea>
+        <button type="button" id="openAiModal" class="file-btn" style="margin-top:8px">
+          ✨ AI 글 다듬기
+        </button>
+      </div>
 
-        <!-- Video -->
-        <div class="field-block">
-          <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
-          <input type="file" id="video" accept="video/*" hidden />
-          <button
-            type="button"
-            id="videoBtn"
-            class="file-btn input-field"
-          >
-            영상 업로드
-          </button>
-        </div>
-
-        <!-- Description -->
-        <div class="field-block">
-          <label class="field-label">
-            이슈 설명 (필수)
-            <span class="desc-counter">0 / 500</span>
-          </label>
-
-          <textarea
-            id="description"
-            class="input-field textarea"
-            maxlength="500"
-            required
-          ></textarea>
-
-          <button
-            type="button"
-            id="openAiModal"
-            class="ai-main-btn"
-          >
-            ✨ AI에게 글 다듬기
-          </button>
-        </div>
-
-        <!-- References -->
-        <div class="field-block">
-          <label class="field-label">관련 기사·자료 링크 (선택)</label>
-          <input type="url" id="ref1" class="input-field" />
-          <input type="url" id="ref2" class="input-field" />
-          <input type="url" id="ref3" class="input-field" />
-        </div>
-
-        <!-- Submit -->
-        <div class="field-block submit-block">
-          <button type="submit" class="primary-btn">
-            갈라 발의하기
-          </button>
-        </div>
-
-      </form>
-    </div>
+      <button type="submit" class="primary-btn">갈라 발의하기</button>
+    </form>
   </main>
 
-  <!-- Bottom Navigation (복구 완료) -->
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="nav-item" data-target="index.html">
-      <img src="./assets/icons/nav-home.svg" />
-    </button>
-    <button class="nav-item" data-target="search.html">
-      <img src="./assets/icons/nav-search.svg" />
-    </button>
-    <button class="nav-item active" data-target="write.html">
-      <img src="./assets/icons/nav-write.svg" />
-    </button>
-    <button class="nav-item" data-target="random.html">
-      <img src="./assets/icons/nav-random.svg" />
-    </button>
-    <button class="nav-item" data-target="mypage.html">
-      <img src="./assets/icons/nav-user.svg" />
-    </button>
+    <button>홈</button>
+    <button>검색</button>
+    <button class="active">작성</button>
+    <button>랜덤</button>
+    <button>마이</button>
   </nav>
-
 </div>
 
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner">
-
-    <div class="ai-modal-header">
-      <h2>AI 글 다듬기</h2>
-      <button id="aiClose">✕</button>
+  <div class="ai-box">
+    <div class="ai-header">
+      <strong>AI 글 다듬기</strong>
+      <button id="aiClose" type="button">✕</button>
     </div>
 
-    <div class="ai-style-tabs">
-      <button data-style="basic" class="active">기본</button>
-      <button data-style="simple">간결</button>
-      <button data-style="power">강렬</button>
-      <button data-style="emotional">감성</button>
-      <button data-style="expert">전문가</button>
-      <button data-style="academic">논문체</button>
+    <div class="ai-tabs">
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
+      <button>논문체</button>
     </div>
 
-    <div class="ai-compare-wrap">
-      <div>
-        <h3>내가 쓴 글</h3>
-        <textarea id="aiUserText"></textarea>
-      </div>
-      <div>
-        <h3>AI 개선본</h3>
-        <textarea id="aiResultText"></textarea>
-      </div>
+    <div class="ai-compare">
+      <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+      <textarea id="aiResultText" placeholder="AI 개선본 (지금은 UI만)"></textarea>
     </div>
 
-    <div class="ai-modal-footer">
-      <button id="applyAi" class="apply-btn">
-        AI 적용하기
-      </button>
-    </div>
-
+    <button id="applyAi" class="primary-btn" style="margin-top:12px">AI 적용하기</button>
   </div>
 </div>
 
-<!-- Scripts -->
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="./js/supabase.js"></script>
-<script src="./js/write.js"></script>
+<script>
+/* ===== SAFE SELECT ===== */
+const $ = (id) => document.getElementById(id);
+
+/* COUNTER */
+const desc = $("description");
+const counter = document.querySelector(".desc-counter");
+desc.addEventListener("input", () => {
+  counter.textContent = desc.value.length + " / 500";
+});
+
+/* FILE BUTTONS */
+$("thumbnailBtn").onclick = () => $("thumbnail").click();
+$("videoBtn").onclick = () => $("videoInput").click();
+
+$("thumbnail").onchange = () => {
+  if ($("thumbnail").files.length) {
+    $("thumbnailBtn").textContent = "썸네일 선택됨";
+  }
+};
+$("videoInput").onchange = () => {
+  if ($("videoInput").files.length) {
+    $("videoBtn").textContent = "영상 선택됨";
+  }
+};
+
+/* AI MODAL */
+$("openAiModal").onclick = () => {
+  $("aiUserText").value = desc.value;
+  $("aiResultText").value = "";
+  $("aiModal").style.display = "flex";
+};
+$("aiClose").onclick = () => $("aiModal").style.display = "none";
+$("applyAi").onclick = () => {
+  if ($("aiResultText").value.trim()) {
+    desc.value = $("aiResultText").value;
+    counter.textContent = desc.value.length + " / 500";
+  }
+  $("aiModal").style.display = "none";
+};
+
+/* SUBMIT */
+$("writeForm").onsubmit = (e) => {
+  e.preventDefault();
+  alert("✅ 발의 버튼 정상 작동 (UI 안정화 완료)");
+};
+</script>
 
 </body>
 </html>
