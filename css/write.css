@@ -532,3 +532,159 @@ body {
   padding:12px;
   border-radius:10px;
 }
+
+/***************************************************
+ * AI MODAL – FINAL FIX (DO NOT TOUCH HTML)
+ ***************************************************/
+
+/* 오버레이 */
+.ai-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 모달 크기 제한 (화면 2/3 이하) */
+.ai-modal-inner {
+  width: 92%;
+  max-width: 480px;
+  max-height: 66vh;          /* ✅ 화면의 2/3 */
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 16px;
+  padding: 20px;
+  overflow-y: auto;          /* ✅ 내부 스크롤 */
+  box-sizing: border-box;
+}
+
+/* 헤더 */
+.ai-modal-header h2 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.ai-modal-header button {
+  font-size: 22px;
+  opacity: .8;
+}
+
+/* =========================
+   스타일 칩 (흑/백 통일)
+========================= */
+.ai-style-tabs {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.ai-style-tabs button {
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;          /* ✅ 흰색 */
+  color: #000;
+  border-color: #fff;
+  font-weight: 700;
+}
+
+/* =========================
+   직접 요청 인풋
+========================= */
+.ai-modal-inner input {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 13px;
+}
+
+/* =========================
+   비교 영역 (입력칸 크기 축소)
+========================= */
+.ai-compare-wrap {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;   /* ✅ 세로 비교 */
+  gap: 14px;
+}
+
+.ai-compare-wrap h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ccc;
+  margin-bottom: 6px;
+}
+
+/* textarea 공통 */
+.ai-compare-wrap textarea {
+  width: 100%;
+  min-height: 110px;        /* ✅ 기존보다 작게 */
+  max-height: 160px;
+  resize: vertical;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.6;         /* ✅ 숨통 */
+  color: #fff;
+  box-sizing: border-box;
+}
+
+/* AI 결과는 점선 */
+#aiResultText {
+  border-style: dashed;
+}
+
+/* =========================
+   버튼 영역 (톤 통일)
+========================= */
+.ai-modal-footer {
+  margin-top: 18px;
+  display: flex;
+  gap: 10px;
+}
+
+/* 실행 버튼 */
+#runAi,
+.ai-modal-footer button:first-child {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+/* 적용 버튼 */
+.apply-btn {
+  flex: 1;
+  background: #2f80ff;     /* 기존 메인 컬러 유지 */
+  color: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 버튼 눌림 상태 */
+.ai-modal-footer button:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
