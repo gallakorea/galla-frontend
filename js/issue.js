@@ -1,14 +1,14 @@
 console.log("[issue.js] loaded");
 
 /* ==========================================================================
-   0. 기본 유틸
+   0. Utils
 ========================================================================== */
 function qs(id) {
   return document.getElementById(id);
 }
 
 /* ==========================================================================
-   1. URL에서 issue id 읽기
+   1. URL → issue id
 ========================================================================== */
 const params = new URLSearchParams(location.search);
 const issueId = params.get("id");
@@ -19,7 +19,7 @@ if (!issueId) {
 }
 
 /* ==========================================================================
-   2. Supabase 이슈 조회
+   2. Load Issue
 ========================================================================== */
 (async function loadIssue() {
   if (!window.supabaseClient) {
@@ -42,27 +42,26 @@ if (!issueId) {
   }
 
   renderIssue(issue);
+  loadVotes(issue.id);
+  loadComments(issue.id);
 })();
 
 /* ==========================================================================
-   3. 이슈 렌더링
+   3. Render Issue
 ========================================================================== */
 function renderIssue(issue) {
-  // 카테고리 / 제목 / 설명
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
   qs("issue-desc").innerText = issue.description || "";
 
-  // 작성 시간
   if (issue.created_at) {
     qs("issue-time").innerText =
       new Date(issue.created_at).toLocaleDateString();
   }
 
-  // 작성자 (익명 고정)
   qs("issue-author").innerText = "작성자 · 익명";
 
-  // 썸네일
+  /* Thumbnail */
   if (issue.thumbnail_url) {
     const { data } = window.supabaseClient
       .storage
@@ -72,7 +71,7 @@ function renderIssue(issue) {
     qs("issue-thumb").src = data.publicUrl;
   }
 
-  // 영상
+  /* Video */
   if (issue.video_url) {
     qs("open-video-modal").style.display = "block";
 
@@ -81,22 +80,19 @@ function renderIssue(issue) {
       .from("issues")
       .getPublicUrl(issue.video_url);
 
-    const videoEl = document.getElementById("speech-video");
+    const videoEl = qs("speech-video");
     videoEl.src = data.publicUrl;
     videoEl.controls = true;
   } else {
     qs("open-video-modal").style.display = "none";
   }
 
-  // 투표 수치
   renderVote(issue.pro_count || 0, issue.con_count || 0);
-
-  // 후원 수치
   renderSupport(issue.sup_pro || 0, issue.sup_con || 0);
 }
 
 /* ==========================================================================
-   4. 투표 UI
+   4. Vote UI
 ========================================================================== */
 function renderVote(pro, con) {
   const total = pro + con || 1;
@@ -110,7 +106,7 @@ function renderVote(pro, con) {
 }
 
 /* ==========================================================================
-   5. 후원 UI
+   5. Support UI
 ========================================================================== */
 function renderSupport(pro, con) {
   const total = pro + con || 1;
@@ -124,12 +120,159 @@ function renderSupport(pro, con) {
 }
 
 /* ==========================================================================
-   6. 뒤로가기 / 스와이프
+   6. Voting (votes table 기준)
+   - votes 테이블 컬럼: issue_id, user_id, type ('pro' | 'con')
+   - Unique(issue_id, user_id)
+========================================================================== */
+async function loadVotes(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("votes")
+    .select("type")
+    .eq("issue_id", issueId);
+
+  if (error) {
+    console.error("vote load error", error);
+    return;
+  }
+
+  const pro = data.filter(v => v.type === "pro").length;
+  const con = data.filter(v => v.type === "con").length;
+
+  renderVote(pro, con);
+}
+
+async function vote(type) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+
+  if (!session.session) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+
+  const userId = session.session.user.id;
+
+  const { error } = await supabase
+    .from("votes")
+    .upsert(
+      {
+        issue_id: issueId,
+        user_id: userId,
+        type: type
+      },
+      { onConflict: "issue_id,user_id" }
+    );
+
+  if (error) {
+    console.error(error);
+    alert("투표 처리 중 오류가 발생했습니다.");
+    return;
+  }
+
+  loadVotes(issueId);
+}
+
+qs("btn-vote-pro").onclick = () => vote("pro");
+qs("btn-vote-con").onclick = () => vote("con");
+
+/* ==========================================================================
+   7. Comments
+========================================================================== */
+async function loadComments(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("issue_id", issueId)
+    .eq("status", "normal")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("comment load error", error);
+    return;
+  }
+
+  renderComments(data);
+}
+
+function renderComments(comments) {
+  const root = qs("comment-list");
+  root.innerHTML = "";
+
+  comments.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "comment-item";
+
+    div.innerHTML = `
+      <div class="comment-header">
+        <span class="comment-author">익명</span>
+      </div>
+      <div class="comment-text">${c.content}</div>
+    `;
+
+    root.appendChild(div);
+  });
+}
+
+qs("main-reply-btn").onclick = async () => {
+  const content = qs("main-reply").value.trim();
+  if (!content) return;
+
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+
+  if (!session.session) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("comments")
+    .insert({
+      issue_id: issueId,
+      user_id: session.session.user.id,
+      content: content,
+      status: "normal"
+    });
+
+  if (error) {
+    console.error(error);
+    alert("댓글 등록 실패");
+    return;
+  }
+
+  qs("main-reply").value = "";
+  loadComments(issueId);
+};
+
+/* ==========================================================================
+   8. Video Modal
+========================================================================== */
+const speechBackdrop = document.querySelector(".speech-backdrop");
+const speechSheet = document.querySelector(".speech-sheet");
+
+qs("open-video-modal").onclick = () => {
+  speechBackdrop.hidden = false;
+  setTimeout(() => speechSheet.style.bottom = "0", 10);
+};
+
+document.querySelector(".speech-close").onclick = () => {
+  speechSheet.style.bottom = "-100%";
+  setTimeout(() => speechBackdrop.hidden = true, 300);
+};
+
+/* ==========================================================================
+   9. Back / Swipe
 ========================================================================== */
 qs("btn-back").onclick = () => history.back();
 
 let startX = 0;
-document.addEventListener("touchstart", e => startX = e.touches[0].clientX);
+document.addEventListener("touchstart", e => {
+  startX = e.touches[0].clientX;
+});
 document.addEventListener("touchend", e => {
   if (e.changedTouches[0].clientX - startX > 80) history.back();
 });
