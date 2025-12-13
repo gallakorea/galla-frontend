@@ -534,157 +534,121 @@ body {
 }
 
 /***************************************************
- * AI MODAL – FINAL FIX (DO NOT TOUCH HTML)
+ * AI MODAL – SIZE & SPACING FINAL TUNE
  ***************************************************/
 
-/* 오버레이 */
-.ai-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  z-index: 2000;
-  justify-content: center;
-  align-items: center;
-}
-
-/* 모달 크기 제한 (화면 2/3 이하) */
+/* 모달 전체 크기 */
 .ai-modal-inner {
   width: 92%;
   max-width: 480px;
-  max-height: 66vh;          /* ✅ 화면의 2/3 */
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 16px;
-  padding: 20px;
-  overflow-y: auto;          /* ✅ 내부 스크롤 */
-  box-sizing: border-box;
+  max-height: 62vh;              /* 🔥 2/3보다 조금 여유 */
+  padding: 18px 18px 20px;
+  overflow: hidden;              /* 전체 스크롤 제거 */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;                     /* 숨통 */
+}
+
+/* 내부 스크롤 영역 분리 */
+.ai-modal-inner > * {
+  flex-shrink: 0;
 }
 
 /* 헤더 */
-.ai-modal-header h2 {
-  font-size: 18px;
-  font-weight: 800;
+.ai-modal-header {
+  margin-bottom: 4px;
 }
 
-.ai-modal-header button {
-  font-size: 22px;
-  opacity: .8;
+.ai-modal-header h2 {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
 }
 
 /* =========================
-   스타일 칩 (흑/백 통일)
+   스타일 칩 영역
 ========================= */
 .ai-style-tabs {
-  margin-top: 16px;
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  margin-top: 6px;
+  gap: 6px;
 }
 
 .ai-style-tabs button {
-  background: #000;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.ai-style-tabs button.active {
-  background: #fff;          /* ✅ 흰색 */
-  color: #000;
-  border-color: #fff;
-  font-weight: 700;
+  padding: 6px 12px;
+  font-size: 11.5px;
 }
 
 /* =========================
-   직접 요청 인풋
+   직접 요청 input
 ========================= */
 .ai-modal-inner input {
-  margin-top: 12px;
-  width: 100%;
-  padding: 10px 12px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 10px;
-  color: #fff;
+  padding: 9px 12px;
   font-size: 13px;
 }
 
 /* =========================
-   비교 영역 (입력칸 크기 축소)
+   비교 영역 – 핵심 조정
 ========================= */
 .ai-compare-wrap {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;   /* ✅ 세로 비교 */
-  gap: 14px;
+  margin-top: 6px;
+  gap: 10px;
 }
 
+/* 섹션 제목 */
 .ai-compare-wrap h3 {
-  font-size: 13px;
-  font-weight: 700;
-  color: #ccc;
-  margin-bottom: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #bbb;
+  margin-bottom: 4px;
 }
 
-/* textarea 공통 */
+/* textarea 크기 대폭 축소 */
 .ai-compare-wrap textarea {
-  width: 100%;
-  min-height: 110px;        /* ✅ 기존보다 작게 */
-  max-height: 160px;
-  resize: vertical;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  padding: 12px;
-  font-size: 14px;
-  line-height: 1.6;         /* ✅ 숨통 */
-  color: #fff;
-  box-sizing: border-box;
-}
-
-/* AI 결과는 점선 */
-#aiResultText {
-  border-style: dashed;
+  min-height: 80px;              /* 🔥 핵심 */
+  max-height: 120px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.55;             /* 여유 */
 }
 
 /* =========================
-   버튼 영역 (톤 통일)
+   AI 결과 영역 살짝 강조
+========================= */
+#aiResultText {
+  border-style: dashed;
+  opacity: 0.95;
+}
+
+/* =========================
+   버튼 영역
 ========================= */
 .ai-modal-footer {
-  margin-top: 18px;
+  margin-top: auto;              /* 🔥 아래로 밀착 */
   display: flex;
   gap: 10px;
 }
 
 /* 실행 버튼 */
-#runAi,
 .ai-modal-footer button:first-child {
-  flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 11px;
+  font-size: 13.5px;
 }
 
 /* 적용 버튼 */
 .apply-btn {
-  flex: 1;
-  background: #2f80ff;     /* 기존 메인 컬러 유지 */
-  color: #fff;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
+  padding: 11px;
+  font-size: 13.5px;
 }
 
-/* 버튼 눌림 상태 */
-.ai-modal-footer button:active {
-  transform: scale(0.98);
-  opacity: 0.9;
+/* =========================
+   모바일에서 더 안전하게
+========================= */
+@media (max-height: 700px) {
+  .ai-modal-inner {
+    max-height: 58vh;
+  }
+
+  .ai-compare-wrap textarea {
+    min-height: 70px;
+  }
 }
