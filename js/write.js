@@ -18,6 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
   thumbnailBtn.onclick = () => thumbnail.click();
   videoBtn.onclick = () => video.click();
 
+  /* ===============================
+     Storage Upload
+  =============================== */
   async function uploadThumbnail(issueId, file) {
     const ext = file.name.split(".").pop().toLowerCase();
     const path = `thumbnails/${issueId}.${ext}`;
@@ -44,6 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return path;
   }
 
+  /* ===============================
+     Submit
+  =============================== */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -62,6 +68,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
+      /* 입력값 */
+      const oneLine = document.getElementById("oneLine").value;
+      const description = document.getElementById("description").value;
+
+      const finalDescription =
+        `[발의자 한 줄]\n${oneLine}\n\n${description}`;
+
+      const tags = [
+        document.getElementById("ref1").value || null,
+        document.getElementById("ref2").value || null,
+        document.getElementById("ref3").value || null
+      ].filter(Boolean);
+
       /* 1️⃣ issues INSERT */
       const { data: issue, error: insertError } = await supabase
         .from("issues")
@@ -69,13 +88,8 @@ document.addEventListener("DOMContentLoaded", () => {
           user_id: user.id,
           category: document.getElementById("category").value,
           title: document.getElementById("title").value,
-          one_line: document.getElementById("oneLine").value,
-          description: document.getElementById("description").value,
-          references: [
-            document.getElementById("ref1").value || null,
-            document.getElementById("ref2").value || null,
-            document.getElementById("ref3").value || null
-          ]
+          description: finalDescription,
+          tags: tags
         })
         .select()
         .single();
@@ -83,15 +97,18 @@ document.addEventListener("DOMContentLoaded", () => {
       if (insertError) throw insertError;
 
       /* 2️⃣ Storage 업로드 */
-      const thumbnailPath = await uploadThumbnail(issue.id, thumbnail.files[0]);
-      let videoPath = null;
+      const thumbnailPath = await uploadThumbnail(
+        issue.id,
+        thumbnail.files[0]
+      );
 
+      let videoPath = null;
       if (video.files[0]) {
         videoPath = await uploadVideo(issue.id, video.files[0]);
       }
 
       /* 3️⃣ issues UPDATE */
-      await supabase
+      const { error: updateError } = await supabase
         .from("issues")
         .update({
           thumbnail_url: thumbnailPath,
@@ -99,11 +116,13 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .eq("id", issue.id);
 
+      if (updateError) throw updateError;
+
       alert("갈라 발행 완료");
       location.href = `/issue.html?id=${issue.id}`;
 
     } catch (err) {
-      console.error(err);
+      console.error("FINAL ERROR:", err);
       alert("오류 발생: " + err.message);
     }
   });
