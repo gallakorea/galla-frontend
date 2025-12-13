@@ -1,7 +1,7 @@
 console.log("[write.js] loaded - FINAL STABLE");
 
 /* =========================
-   SAFE SELECTOR
+   SAFE QUERY
 ========================= */
 const $ = (id) => document.getElementById(id);
 
@@ -11,9 +11,8 @@ const $ = (id) => document.getElementById(id);
 const form = $("writeForm");
 
 const category = $("category");
-const title = $("title");
-const oneLine = $("oneLine");
-
+const titleInput = $("title");
+const oneLineInput = $("oneLine");
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
 
@@ -30,31 +29,29 @@ const aiModal = $("aiModal");
 const aiCloseBtn = $("aiCloseBtn");
 const aiUserText = $("aiUserText");
 const aiImprovedText = $("aiImprovedText");
-const applyAiText = $("applyAiText");
+const applyAiBtn = $("applyAiText");
 
 /* =========================
-   WIDTH SAFETY (480px 대응)
+   LAYOUT SAFETY (480px)
 ========================= */
 document.documentElement.style.overflowX = "hidden";
 document.body.style.overflowX = "hidden";
 
 /* =========================
-   DESCRIPTION COUNTER
+   COUNTER
 ========================= */
 if (desc && counter) {
   counter.textContent = "0 / 500";
-
   desc.addEventListener("input", () => {
     counter.textContent = `${desc.value.length} / 500`;
   });
 }
 
 /* =========================
-   THUMBNAIL BUTTON
+   FILE BUTTONS
 ========================= */
 if (thumbBtn && thumbInput) {
   thumbBtn.type = "button";
-
   thumbBtn.addEventListener("click", (e) => {
     e.preventDefault();
     thumbInput.click();
@@ -67,12 +64,8 @@ if (thumbBtn && thumbInput) {
   });
 }
 
-/* =========================
-   VIDEO BUTTON
-========================= */
 if (videoBtn && videoInput) {
   videoBtn.type = "button";
-
   videoBtn.addEventListener("click", (e) => {
     e.preventDefault();
     videoInput.click();
@@ -86,11 +79,10 @@ if (videoBtn && videoInput) {
 }
 
 /* =========================
-   AI MODAL (UI ONLY)
+   AI MODAL (UI ONLY, 무한대기 없음)
 ========================= */
 if (openAiBtn && aiModal) {
   openAiBtn.type = "button";
-
   openAiBtn.addEventListener("click", () => {
     aiUserText.value = desc.value || "";
     aiImprovedText.value = "";
@@ -105,10 +97,9 @@ if (aiCloseBtn) {
   });
 }
 
-if (applyAiText) {
-  applyAiText.type = "button";
-
-  applyAiText.addEventListener("click", () => {
+if (applyAiBtn) {
+  applyAiBtn.type = "button";
+  applyAiBtn.addEventListener("click", () => {
     if (aiImprovedText.value.trim()) {
       desc.value = aiImprovedText.value;
       counter.textContent = `${desc.value.length} / 500`;
@@ -125,7 +116,17 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* =========================
-   FORM SUBMIT (차단 없음)
+   BOTTOM NAVIGATION
+========================= */
+document.querySelectorAll(".nav-item").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.target;
+    if (target) location.href = target;
+  });
+});
+
+/* =========================
+   FORM SUBMIT (에러 없이 동작)
 ========================= */
 if (form) {
   form.addEventListener("submit", (e) => {
@@ -135,11 +136,11 @@ if (form) {
       alert("카테고리를 선택하세요");
       return;
     }
-    if (!title.value.trim()) {
+    if (!titleInput.value.trim()) {
       alert("제목을 입력하세요");
       return;
     }
-    if (!oneLine.value.trim()) {
+    if (!oneLineInput.value.trim()) {
       alert("발의자 한 줄을 입력하세요");
       return;
     }
@@ -148,10 +149,11 @@ if (form) {
       return;
     }
     if (!thumbInput.files.length) {
-      alert("썸네일을 업로드하세요");
+      alert("썸네일 이미지를 업로드하세요");
       return;
     }
 
-    alert("✅ UI 기준 발의하기 버튼 정상 동작 상태");
+    /* === 현재 단계: UI + 검증 정상 === */
+    alert("✅ 발의 버튼 정상 동작 상태\n(다음 단계: Supabase 업로드 연결)");
   });
 }
