@@ -120,15 +120,15 @@
 
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner refined">
+  <div class="ai-modal-inner">
 
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
 
-    <!-- 스타일 선택 -->
-    <div class="ai-style-tabs refined-tabs">
+    <!-- 스타일 칩 -->
+    <div class="ai-style-tabs">
       <button data-style="basic" class="active">기본</button>
       <button data-style="simple">간결</button>
       <button data-style="power">강렬</button>
@@ -138,38 +138,36 @@
     </div>
 
     <!-- 직접 요청 -->
-    <div class="ai-custom-prompt">
-      <label>AI에게 직접 요청 (선택)</label>
+    <div class="ai-custom-wrap">
+      <label class="ai-label">AI에게 직접 요청 (선택)</label>
       <input
         id="aiCustomPrompt"
-        type="text"
-        placeholder="예: 반대 의견도 포함해서 정리"
         class="input-field"
+        placeholder="예: 반대 의견 포함, 공격적인 표현 제거"
       />
     </div>
 
     <!-- 내가 쓴 글 -->
     <div class="ai-block">
-      <label>내가 쓴 글</label>
+      <label class="ai-label">내가 쓴 글</label>
       <textarea
         id="aiUserText"
-        maxlength="500"
-        placeholder="현재 작성한 글이 자동으로 들어옵니다"
+        class="ai-textarea"
+        placeholder="원문"
       ></textarea>
     </div>
 
     <!-- AI 결과 -->
     <div class="ai-block">
-      <label>AI 결과</label>
+      <label class="ai-label">AI 결과</label>
       <textarea
         id="aiResultText"
-        maxlength="500"
-        placeholder="AI가 다듬은 결과가 표시됩니다"
+        class="ai-textarea"
+        placeholder="AI 결과"
       ></textarea>
     </div>
 
-    <!-- 버튼 -->
-    <div class="ai-modal-footer refined-footer">
+    <div class="ai-modal-footer">
       <button id="runAi" class="ai-run-btn">AI 실행</button>
       <button id="applyAi" class="apply-btn">AI 적용하기</button>
     </div>
