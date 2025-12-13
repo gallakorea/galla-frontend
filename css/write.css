@@ -347,3 +347,32 @@ body {
 .ai-block {
   flex: none !important;
 }
+
+/***************************************************
+ * AI MODAL – SIZE LIMIT FINAL (2/3 SCREEN MAX)
+ ***************************************************/
+
+/* 모달 오버레이는 그대로 */
+.ai-modal {
+  align-items: center;
+}
+
+/* 🔥 모달 크기 자체 제한 */
+.ai-modal-inner {
+  max-height: 66vh !important;   /* 화면의 2/3 */
+  height: auto !important;
+  overflow: hidden;             /* 내부 스크롤 방지 */
+  box-sizing: border-box;
+}
+
+/* 내부 콘텐츠가 커져도 넘치지 않게 */
+.ai-modal-inner > * {
+  max-width: 100%;
+}
+
+/* textarea는 이미 줄였지만 한번 더 안전하게 */
+.ai-modal textarea,
+.ai-textarea {
+  min-height: 110px !important;
+  max-height: 150px !important;
+}
