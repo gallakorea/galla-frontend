@@ -586,3 +586,42 @@ body {
 .primary-btn {
   min-height: 52px;
 }
+
+/* 기존 CSS 유지 + 아래만 추가 */
+
+.media-preview {
+  margin-top: 10px;
+  max-width: 120px;
+  max-height: 120px;
+  border-radius: 10px;
+  display: none;
+}
+
+.ai-prompt {
+  margin-top: 12px;
+}
+
+.ai-label {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.ai-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.ai-run-btn {
+  flex: 1;
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  border-radius: 10px;
+}
+
+.apply-btn {
+  flex: 1;
+}
