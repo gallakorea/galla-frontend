@@ -429,3 +429,58 @@ body {
 .apply-btn.active {
   background: #1f5edc;
 }
+
+/***************************************************
+ * AI MODAL BUTTON – TONE REFINEMENT
+ ***************************************************/
+.ai-modal-footer {
+  display: flex;
+  gap: 10px;
+}
+
+/* 공통 */
+.ai-modal-footer button {
+  flex: 1;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all .15s ease;
+}
+
+/* AI 실행 (서브 액션) */
+.ai-run-btn {
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  color: #ccc;
+}
+
+/* hover */
+.ai-run-btn:hover {
+  background: #1b1b1b;
+  color: #fff;
+}
+
+/* 실행 중 */
+.ai-run-btn.active {
+  background: #1f2435;
+  border-color: #2f80ff;
+  color: #fff;
+}
+
+/* AI 적용 (메인 액션) */
+.apply-btn {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+}
+
+/* hover */
+.apply-btn:hover {
+  background: #256de0;
+}
+
+/* 눌림 */
+.ai-modal-footer button:active {
+  transform: scale(0.97);
+}

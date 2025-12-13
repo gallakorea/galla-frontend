@@ -63,3 +63,41 @@ applyAi.onclick = () => {
   runAi.classList.remove("active");
   aiModal.style.display = "none";
 };
+
+/* =========================
+   UPLOAD PREVIEW
+========================= */
+
+// 썸네일
+const thumbInput = document.getElementById("thumbnail");
+const thumbPreview = document.getElementById("thumbPreview");
+
+thumbInput.addEventListener("change", () => {
+  const file = thumbInput.files[0];
+  if (!file) return;
+
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+
+  thumbPreview.innerHTML = "";
+  thumbPreview.appendChild(img);
+  thumbPreview.style.display = "block";
+});
+
+// 영상
+const videoInput = document.getElementById("video");
+const videoPreview = document.getElementById("videoPreview");
+
+videoInput.addEventListener("change", () => {
+  const file = videoInput.files[0];
+  if (!file) return;
+
+  const video = document.createElement("video");
+  video.src = URL.createObjectURL(file);
+  video.controls = true;
+  video.muted = true;
+
+  videoPreview.innerHTML = "";
+  videoPreview.appendChild(video);
+  videoPreview.style.display = "block";
+});
