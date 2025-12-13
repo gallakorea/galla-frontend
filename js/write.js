@@ -125,3 +125,34 @@ if (applyAiBtn) {
     document.body.style.overflow = '';
   });
 }
+
+/************************************************
+ * PREVIEW SUBMIT BLOCK (페이지 리셋 방지)
+ ************************************************/
+const writeForm = document.getElementById('writeForm');
+
+if (writeForm) {
+  writeForm.addEventListener('submit', (e) => {
+    e.preventDefault(); // 🔥 핵심: 페이지 리셋 차단
+
+    // === 여기서부터 미리보기용 데이터 수집 ===
+    const previewData = {
+      category: document.getElementById('category')?.value,
+      title: document.getElementById('title')?.value,
+      oneLine: document.getElementById('oneLine')?.value,
+      description: document.getElementById('description')?.value,
+      isAnonymous: document.getElementById('isAnonymous')?.checked || false,
+      thumbnail: document.getElementById('thumbnail')?.files?.[0] || null,
+      video: document.getElementById('video')?.files?.[0] || null,
+    };
+
+    console.log('🧪 PREVIEW DATA', previewData);
+
+    // 🔹 여기서 다음 단계:
+    // 1) 프리뷰 모달 띄우기
+    // 2) 또는 preview.html로 이동
+    // 3) 또는 issue 카드 DOM 렌더
+
+    alert('페이지 리셋 없이 미리보기 진입 성공');
+  });
+}
