@@ -1,142 +1,59 @@
-alert("🔥 NEW WRITE.JS ACTIVE — EDGE REMOVED");
-console.log("🔥 NEW WRITE.JS ACTIVE — EDGE REMOVED");
+/**
+ * GALLA Supabase Client Initializer
+ * - Cloudflare Pages (non-module)
+ * - Supabase CDN v2 사용
+ * - window.supabaseClient 단일 인스턴스
+ */
 
-console.log("write.js loaded");
+console.log("[supabase.js] 로드됨 - 초기화 대기");
 
-if (window.__WRITE_JS__) {
-  console.warn("write.js already loaded - skipped");
-}
-window.__WRITE_JS__ = true;
-
-document.addEventListener("DOMContentLoaded", () => {
-  const form = document.getElementById("writeForm");
-  const thumbnail = document.getElementById("thumbnail");
-  const thumbnailBtn = document.getElementById("thumbnailBtn");
-  const video = document.getElementById("videoInput");
-  const videoBtn = document.getElementById("videoBtn");
-
-  thumbnailBtn.onclick = () => thumbnail.click();
-  videoBtn.onclick = () => video.click();
-
-  /* ===============================
-     Storage Upload
-  =============================== */
-  async function uploadThumbnail(issueId, file) {
-    const ext = file.name.split(".").pop().toLowerCase();
-    const path = `thumbnails/${issueId}.${ext}`;
-
-    const { error } = await window.supabaseClient
-      .storage
-      .from("issues")
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false
-      });
-
-    if (error) throw error;
-    return path;
+(function initSupabase() {
+  // 중복 초기화 방지
+  if (window.supabaseClient) {
+    console.warn("[supabase.js] 이미 초기화됨 - 재사용");
+    return;
   }
 
-  async function uploadVideo(issueId, file) {
-    const ext = file.name.split(".").pop().toLowerCase();
-    const path = `videos/${issueId}.${ext}`;
-
-    const { error } = await window.supabaseClient
-      .storage
-      .from("issues")
-      .upload(path, file, {
-        contentType: file.type,
-        upsert: false
-      });
-
-    if (error) throw error;
-    return path;
+  // Supabase CDN 로드 확인
+  if (!window.supabase || !window.supabase.createClient) {
+    console.error("[supabase.js] Supabase CDN 로드 실패");
+    return;
   }
 
-  /* ===============================
-     Submit
-  =============================== */
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // === 프로젝트 고정 값 ===
+  const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
+  const SUPABASE_ANON_KEY =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
-    const supabase = window.supabaseClient;
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user;
-
-    if (!user) {
-      alert("로그인이 필요합니다");
-      return;
-    }
-
-    if (!thumbnail.files[0]) {
-      alert("썸네일은 필수입니다");
-      return;
-    }
-
-    try {
-      /* 입력값 정리 */
-      const oneLine = document.getElementById("oneLine").value.trim();
-      const description = document.getElementById("description").value.trim();
-
-      const finalDescription =
-        `[발의자 한 줄]\n${oneLine}\n\n${description}`;
-
-      const tags = [
-        document.getElementById("ref1").value || null,
-        document.getElementById("ref2").value || null,
-        document.getElementById("ref3").value || null
-      ].filter(Boolean);
-
-      /* 🔐 users 테이블에 Auth 유저 보장 (FK 해결 핵심) */
-      const { error: userUpsertError } = await supabase
-        .from("users")
-        .upsert({ id: user.id });
-
-      if (userUpsertError) throw userUpsertError;
-
-      /* 1️⃣ issues INSERT */
-      const { data: issue, error: insertError } = await supabase
-        .from("issues")
-        .insert({
-          user_id: user.id,
-          category: document.getElementById("category").value,
-          title: document.getElementById("title").value,
-          description: finalDescription,
-          tags: tags
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      /* 2️⃣ Storage 업로드 */
-      const thumbnailPath = await uploadThumbnail(
-        issue.id,
-        thumbnail.files[0]
-      );
-
-      let videoPath = null;
-      if (video.files[0]) {
-        videoPath = await uploadVideo(issue.id, video.files[0]);
+  try {
+    // Supabase Client 생성
+    window.supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
       }
+    );
 
-      /* 3️⃣ issues UPDATE */
-      const { error: updateError } = await supabase
-        .from("issues")
-        .update({
-          thumbnail_url: thumbnailPath,
-          video_url: videoPath
-        })
-        .eq("id", issue.id);
+    console.log("[supabase.js] Supabase 클라이언트 생성 완료");
 
-      if (updateError) throw updateError;
+    // 세션 로그 (디버그용)
+    window.supabaseClient.auth.getSession().then(({ data }) => {
+      if (data?.session?.user) {
+        console.log(
+          "[supabase.js] 로그인 유저:",
+          data.session.user.id
+        );
+      } else {
+        console.log("[supabase.js] 비로그인 상태");
+      }
+    });
 
-      alert("갈라 발행 완료");
-      location.href = `/issue.html?id=${issue.id}`;
-
-    } catch (err) {
-      console.error("FINAL ERROR:", err);
-      alert("오류 발생: " + err.message);
-    }
-  });
-});
+  } catch (err) {
+    console.error("[supabase.js] 초기화 실패:", err);
+  }
+})();
