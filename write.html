@@ -5,6 +5,14 @@
   <title>새 갈라 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <link rel="stylesheet" href="./css/write.css" />
+
+  <style>
+    html, body {
+      width: 100%;
+      overflow-x: hidden;
+      background: #000;
+    }
+  </style>
 </head>
 
 <body>
@@ -27,16 +35,9 @@
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
-      <section class="section-block write-guide-block">
-        <ul class="write-guide-list">
-          <li>제목은 최대 80자 이내</li>
-          <li>논쟁 포인트가 명확할수록 참여율이 높습니다</li>
-          <li>AI를 활용해 글을 다듬을 수 있습니다</li>
-        </ul>
-      </section>
+      <form id="writeForm">
 
-      <form id="writeForm" class="write-form">
-
+        <!-- CATEGORY -->
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
           <select id="category" class="input-field" required>
@@ -55,40 +56,51 @@
           </select>
         </div>
 
+        <!-- TITLE -->
         <div class="field-block">
           <label class="field-label">제목 (필수)</label>
-          <input id="title" class="input-field" maxlength="80" required />
+          <input id="title" class="input-field" required />
         </div>
 
+        <!-- ONE LINE -->
         <div class="field-block">
-          <label class="field-label">발의자 한 줄</label>
+          <label class="field-label">발의자 한 줄 (필수)</label>
           <input id="oneLine" class="input-field" required />
         </div>
 
+        <!-- THUMBNAIL -->
         <div class="field-block">
-          <label class="field-label">이슈 썸네일</label>
-          <input type="file" id="thumbnail" hidden accept="image/*" />
-          <button type="button" id="thumbnailBtn" class="file-btn input-field">썸네일 업로드</button>
+          <label class="field-label">이슈 썸네일 (필수)</label>
+          <input type="file" id="thumbnail" accept="image/*" hidden />
+          <button type="button" id="thumbnailBtn" class="file-btn input-field">
+            썸네일 업로드
+          </button>
+          <div id="thumbnailPreview" class="upload-preview"></div>
         </div>
 
+        <!-- VIDEO -->
         <div class="field-block">
-          <label class="field-label">1분 엘리베이터 스피치</label>
-          <input type="file" id="video" hidden accept="video/*" />
-          <button type="button" id="videoBtn" class="file-btn input-field">영상 업로드</button>
+          <label class="field-label">1분 엘리베이터 스피치 (선택)</label>
+          <input type="file" id="video" accept="video/*" hidden />
+          <button type="button" id="videoBtn" class="file-btn input-field">
+            영상 업로드
+          </button>
+          <div id="videoPreview" class="upload-preview"></div>
         </div>
 
+        <!-- DESCRIPTION -->
         <div class="field-block">
           <label class="field-label">
-            이슈 설명
+            이슈 설명 (필수)
             <span class="desc-counter">0 / 500</span>
           </label>
           <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
-          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI에게 글 다듬기
+          </button>
         </div>
 
-        <div class="field-block">
-          <button type="submit" class="primary-btn">갈라 발의하기</button>
-        </div>
+        <button type="submit" class="primary-btn">갈라 발의하기</button>
 
       </form>
     </div>
@@ -103,73 +115,6 @@
     <button class="nav-item" data-target="mypage.html"><img src="./assets/icons/nav-user.svg"></button>
   </nav>
 
-</div>
-
-<!-- AI MODAL (REWORKED – UI ONLY) -->
-<div id="aiModal" class="ai-modal">
-  <div class="ai-modal-inner ai-modal-refined">
-
-    <!-- HEADER -->
-    <div class="ai-modal-header">
-      <div>
-        <h2>AI 글 다듬기</h2>
-        <p class="ai-subtitle">톤 조정 · 논리 정리 · 표현 개선</p>
-      </div>
-      <button id="aiClose">✕</button>
-    </div>
-
-    <!-- STYLE -->
-    <div class="ai-style-tabs refined-tabs">
-      <button data-style="basic" class="active">기본</button>
-      <button data-style="simple">간결</button>
-      <button data-style="power">강렬</button>
-      <button data-style="emotional">감성</button>
-      <button data-style="expert">전문가</button>
-      <button data-style="academic">논문체</button>
-    </div>
-
-    <!-- CUSTOM PROMPT -->
-    <div class="ai-custom-block">
-      <label class="ai-label">AI에게 직접 요청 (선택)</label>
-      <input
-        id="aiCustomPrompt"
-        class="input-field"
-        placeholder="예: 반대 의견도 포함해서 정리 / 감정 표현 줄이기"
-      />
-    </div>
-
-    <!-- CONTENT -->
-    <div class="ai-content-block">
-      <div class="ai-box">
-        <span class="ai-box-label">내가 쓴 글</span>
-        <textarea id="aiUserText" placeholder="원문"></textarea>
-      </div>
-
-      <div class="ai-box">
-        <span class="ai-box-label">AI 개선본</span>
-        <textarea id="aiResultText" placeholder="AI 결과"></textarea>
-      </div>
-    </div>
-
-    <!-- ACTION -->
-    <button id="runAi" class="primary-btn ai-run-btn">
-      AI 실행
-    </button>
-
-    <button id="applyAi" class="primary-btn ai-apply-btn">
-      AI 적용하기
-    </button>
-
-  </div>
-</div>
-
-    <button id="runAi" class="ai-main-btn refined-run">AI 실행</button>
-
-    <div class="ai-modal-footer refined-footer">
-      <button id="applyAi" class="apply-btn">AI 적용하기</button>
-    </div>
-
-  </div>
 </div>
 
 <script src="./js/write.js"></script>

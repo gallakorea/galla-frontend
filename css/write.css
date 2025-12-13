@@ -540,3 +540,17 @@ body {
 .ai-apply-btn {
   margin-top: 10px;
 }
+
+.upload-preview {
+  margin-top: 10px;
+  display: none;
+}
+
+.upload-preview img,
+.upload-preview video {
+  max-width: 160px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #222;
+  background: #000;
+}

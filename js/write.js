@@ -1,10 +1,12 @@
-console.log("[write.js] FULL SAFE MODE");
+console.log("[write.js] RUNNING");
 
-const $ = id => document.getElementById(id);
+/* util */
+const $ = (id) => document.getElementById(id);
 
 /* counter */
 const desc = $("description");
 const counter = document.querySelector(".desc-counter");
+
 desc.addEventListener("input", () => {
   counter.textContent = `${desc.value.length} / 500`;
 });
@@ -13,45 +15,43 @@ desc.addEventListener("input", () => {
 $("thumbnailBtn").onclick = () => $("thumbnail").click();
 $("videoBtn").onclick = () => $("video").click();
 
-/* nav */
+/* thumbnail preview */
+$("thumbnail").addEventListener("change", () => {
+  const file = $("thumbnail").files[0];
+  if (!file) return;
+
+  const img = document.createElement("img");
+  img.src = URL.createObjectURL(file);
+
+  const wrap = $("thumbnailPreview");
+  wrap.innerHTML = "";
+  wrap.appendChild(img);
+  wrap.style.display = "block";
+});
+
+/* video preview */
+$("video").addEventListener("change", () => {
+  const file = $("video").files[0];
+  if (!file) return;
+
+  const video = document.createElement("video");
+  video.src = URL.createObjectURL(file);
+  video.controls = true;
+  video.muted = true;
+
+  const wrap = $("videoPreview");
+  wrap.innerHTML = "";
+  wrap.appendChild(video);
+  wrap.style.display = "block";
+});
+
+/* bottom nav */
 document.querySelectorAll(".nav-item").forEach(btn => {
   btn.onclick = () => location.href = btn.dataset.target;
 });
 
-/* AI modal */
-let currentStyle = "basic";
-
-$("openAiModal").onclick = () => {
-  $("aiUserText").value = desc.value;
-  $("aiResultText").value = "";
-  $("aiModal").style.display = "flex";
-};
-
-$("aiClose").onclick = () => $("aiModal").style.display = "none";
-
-document.querySelectorAll(".ai-style-tabs button").forEach(btn => {
-  btn.onclick = () => {
-    document.querySelectorAll(".ai-style-tabs button").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    currentStyle = btn.dataset.style;
-  };
-});
-
-$("runAi").onclick = () => {
-  $("aiResultText").value =
-    `[${currentStyle}]\n` +
-    ($("aiCustomPrompt").value ? `요청: ${$("aiCustomPrompt").value}\n\n` : "") +
-    $("aiUserText").value;
-};
-
-$("applyAi").onclick = () => {
-  desc.value = $("aiResultText").value;
-  counter.textContent = `${desc.value.length} / 500`;
-  $("aiModal").style.display = "none";
-};
-
 /* submit */
-$("writeForm").onsubmit = e => {
+$("writeForm").onsubmit = (e) => {
   e.preventDefault();
-  alert("✅ 모든 버튼 및 UI 정상 작동");
+  alert("✅ UI / 버튼 / 업로드 미리보기 정상 작동");
 };
