@@ -14,10 +14,11 @@ body {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  padding-bottom: 110px; /* bottom nav space */
+  padding-bottom: 110px;
 }
 
-.page-main, .page-inner {
+.page-main,
+.page-inner {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -61,7 +62,7 @@ body {
 }
 
 /***************************************************
- * SECTION DEFAULT
+ * SECTION
  ***************************************************/
 .section-block {
   padding: 22px 16px;
@@ -80,7 +81,7 @@ body {
 }
 
 /***************************************************
- * GUIDE LIST
+ * GUIDE
  ***************************************************/
 .write-guide-block {
   background: #111;
@@ -96,7 +97,7 @@ body {
 }
 
 /***************************************************
- * FORM FIELDS
+ * FORM
  ***************************************************/
 .field-block {
   padding: 20px 16px;
@@ -108,16 +109,11 @@ body {
 .field-label {
   font-size: 14px;
   font-weight: 700;
-  text-align: left !important;
   padding-left: 2px;
 }
 
-/***************************************************
- * INPUT FIELD
- ***************************************************/
 .input-field {
   width: 100%;
-  max-width: 100%;
   padding: 12px 14px;
   background: #0b0c14;
   border: 1px solid #222;
@@ -133,34 +129,25 @@ body {
   line-height: 1.55;
 }
 
-/***************************************************
- * FILE BUTTON
- ***************************************************/
 .file-btn {
-  text-align: center;
+  padding: 12px;
   background: #11131f;
   border: 1px solid #1f2435;
   border-radius: 12px;
   color: #fff;
-  padding: 12px;
+  text-align: center;
 }
 
-/***************************************************
- * DESCRIPTION COUNTER
- ***************************************************/
 .desc-counter {
   color: #888;
   font-size: 12px;
   margin-left: 6px;
 }
 
-/***************************************************
- * AI MAIN BUTTON
- ***************************************************/
 .ai-main-btn {
   margin-top: 8px;
-  width: 100%;
   padding: 12px;
+  width: 100%;
   background: #2f80ff;
   border-radius: 12px;
   border: none;
@@ -170,143 +157,7 @@ body {
 }
 
 /***************************************************
- * AI MODAL
- ***************************************************/
-.ai-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 2000;
-}
-
-.ai-modal-inner {
-  width: 90%;
-  max-width: 480px;
-  background: #111;
-  border: 1px solid #222;
-  padding: 18px;
-  border-radius: 14px;
-}
-
-/* header */
-.ai-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ai-modal-header h2 {
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.ai-modal-header button {
-  background: none;
-  border: none;
-  color: #fff;
-  font-size: 22px;
-}
-
-/* 분석 태그 */
-.ai-tags {
-  margin-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ai-tag {
-  background: #222;
-  padding: 5px 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #aaa;
-}
-
-/***************************************************
- * STYLE TABS
- ***************************************************/
-.ai-style-tabs {
-  margin-top: 14px;
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-}
-
-.ai-style-tabs button {
-  padding: 7px 12px;
-  background: #191919;
-  border: 1px solid #333;
-  border-radius: 12px;
-  font-size: 12px;
-  color: #fff;
-}
-
-.ai-style-tabs button.active {
-  background: #ffe27a;
-  color: #111;
-  font-weight: 700;
-}
-
-/***************************************************
- * SUMMARY OPTIONS
- ***************************************************/
-.ai-summary-options {
-  margin-top: 10px;
-  display: flex;
-  gap: 8px;
-}
-
-.ai-summary-options button {
-  padding: 6px 12px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 10px;
-  font-size: 12px;
-  color: #ccc;
-}
-
-/***************************************************
- * AI COMPARE VIEW
- ***************************************************/
-.ai-compare-wrap {
-  margin-top: 14px;
-  display: flex;
-  gap: 10px;
-}
-
-.ai-compare-wrap textarea {
-  width: 50%;
-  height: 180px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-  padding: 10px;
-  font-size: 13px;
-  box-sizing: border-box;
-}
-
-/***************************************************
- * AI APPLY BUTTON
- ***************************************************/
-.apply-btn {
-  margin-top: 14px;
-  width: 100%;
-  background: #2f80ff;
-  color: #fff;
-  padding: 12px;
-  border-radius: 12px;
-  border: none;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-/***************************************************
- * SUBMIT BUTTON
+ * PRIMARY BUTTON
  ***************************************************/
 .primary-btn {
   width: 100%;
@@ -320,7 +171,7 @@ body {
 }
 
 /***************************************************
- * BOTTOM NAVIGATION
+ * BOTTOM NAV
  ***************************************************/
 .bottom-nav {
   position: fixed;
@@ -334,398 +185,22 @@ body {
   padding: 12px 0;
   display: flex;
   justify-content: space-around;
-  align-items: center;
   z-index: 9999;
 }
 
 .nav-item {
   background: none;
   border: none;
-  position: relative;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 .nav-item img {
   width: 28px;
   height: 28px;
-  filter: brightness(0) invert(1);
-  opacity: 1;
-}
-
-.nav-indicator {
-  width: 100%;
-  height: 3px;
-  background: transparent;
-  border-radius: 999px;
-  position: absolute;
-  top: -8px;
-}
-
-.nav-item.active .nav-indicator {
-  background: var(--indicator-color, #4A6CFF);
+  filter: invert(1);
 }
 
 /***************************************************
- * VIDEO MODAL
- ***************************************************/
-.video-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.75);
-  backdrop-filter: blur(6px);
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
-}
-
-.video-modal-inner {
-  width: 90%;
-  max-width: 460px;
-  background: #111;
-  border-radius: 14px;
-  padding: 16px;
-}
-
-.video-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.video-modal-header button {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: #fff;
-}
-
-#editVideo {
-  width: 100%;
-  border-radius: 10px;
-  background: #000;
-  margin-bottom: 12px;
-}
-
-/* sliders */
-.video-controls label {
-  font-size: 12px;
-  color: #ccc;
-}
-
-.video-controls input[type=range] {
-  width: 100%;
-  margin-bottom: 14px;
-}
-
-#videoModal video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;   /* 세로형 비율 강제 */
-  background: #000;
-  border-radius: 12px;
-}
-
-.video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-  position: relative;
-}
-
-/* ===== AI MODAL REFINED (ADD ONLY) ===== */
-.ai-refined {
-  box-shadow: 0 20px 60px rgba(0,0,0,.6);
-}
-
-.ai-subtitle {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #aaa;
-}
-
-.ai-custom-request {
-  margin-top: 14px;
-}
-
-.ai-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ai-panel-title {
-  font-size: 12px;
-  color: #aaa;
-}
-
-.refined-run {
-  margin-top: 14px;
-}
-
-/* ===============================
-   AI MODAL – REFINED ONLY
-================================ */
-
-.ai-modal-refined {
-  background: linear-gradient(180deg, #111 0%, #0b0c14 100%);
-}
-
-.ai-subtitle {
-  font-size: 12px;
-  color: #888;
-  margin-top: 4px;
-}
-
-/* tabs */
-.refined-tabs {
-  margin-top: 16px;
-}
-
-.refined-tabs button {
-  background: #111;
-}
-
-.refined-tabs button.active {
-  background: #ffe27a;
-  color: #111;
-}
-
-/* custom prompt */
-.ai-custom-block {
-  margin-top: 16px;
-}
-
-.ai-label {
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
-  display: block;
-}
-
-/* content */
-.ai-content-block {
-  margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.ai-box {
-  display: flex;
-  flex-direction: column;
-}
-
-.ai-box-label {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 6px;
-}
-
-.ai-box textarea {
-  height: 140px;
-}
-
-/* buttons */
-.ai-run-btn {
-  margin-top: 18px;
-  background: #1f2435;
-}
-
-.ai-apply-btn {
-  margin-top: 10px;
-}
-
-.upload-preview {
-  margin-top: 10px;
-  display: none;
-}
-
-.upload-preview img,
-.upload-preview video {
-  max-width: 160px;
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid #222;
-  background: #000;
-}
-
-/* ===== AI MODAL SAFE PATCH ===== */
-
-/* 오버레이가 절대 가로 넘지 못하게 */
-.ai-modal {
-  overflow-x: hidden;
-}
-
-/* 모달 내부를 확실히 480 기준으로 고정 */
-.ai-modal-inner {
-  width: 100%;
-  max-width: 480px;
-  box-sizing: border-box;
-}
-
-/* 모달 안 모든 버튼/요소가 viewport 기준으로 커지는 것 방지 */
-.ai-modal-inner * {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* 실행/적용 버튼이 화면 전체로 퍼지는 사고 방지 */
-.ai-modal-inner button {
-  width: 100%;
-  position: relative;
-}
-
-/* === 기존 CSS 그대로 두고 아래만 추가 === */
-
-.ai-modal-inner.elegant {
-  background: #0e0e0e;
-  border-radius: 18px;
-  padding: 20px;
-}
-
-.ai-sub {
-  font-size: 12px;
-  color: #888;
-}
-
-.ai-style-tabs.minimal button {
-  border-radius: 999px;
-}
-
-.ai-block {
-  margin-top: 14px;
-}
-
-.ai-block label {
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
-  display: block;
-}
-
-.ai-textarea {
-  min-height: 120px;
-  background: #090909;
-  border: 1px solid #222;
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 13px;
-}
-
-.ai-block.result .ai-textarea {
-  border-style: dashed;
-}
-
-.ai-main-cta {
-  margin-top: 16px;
-  padding: 14px;
-  background: #2f80ff;
-  border-radius: 14px;
-  border: none;
-  color: #fff;
-  font-weight: 800;
-}
-
-.ai-apply-cta {
-  margin-top: 10px;
-  padding: 12px;
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 14px;
-}
-
-/***************************************************
- * AI MODAL – REFINED (톤앤매너 유지)
- ***************************************************/
-.ai-modal-inner.refined {
-  background: #111;
-  border: 1px solid #222;
-}
-
-/* 탭 – 흑백만 */
-.refined-tabs button {
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-}
-
-.refined-tabs button.active {
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-}
-
-/* 직접 요청 */
-.ai-custom-prompt {
-  margin-top: 12px;
-}
-
-.ai-custom-prompt label {
-  font-size: 13px;
-  color: #bbb;
-}
-
-.ai-custom-prompt input {
-  margin-top: 6px;
-}
-
-/* 입력 블록 */
-.ai-block {
-  margin-top: 16px;
-}
-
-.ai-block label {
-  font-size: 13px;
-  color: #ccc;
-}
-
-/* textarea 전폭 + 충분한 높이 */
-.ai-block textarea {
-  width: 100%;
-  min-height: 180px;
-  max-height: 260px;
-  resize: vertical;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  padding: 12px;
-  color: #fff;
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-/* 버튼 영역 */
-.refined-footer {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.ai-run-btn {
-  flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 14px;
-}
-
-.apply-btn {
-  flex: 1;
-  padding: 12px;
-  font-size: 14px;
-}
-
-/***************************************************
- * AI MODAL – REFINED ONLY
+ * AI MODAL (최종 단일 정의)
  ***************************************************/
 .ai-modal {
   position: fixed;
@@ -743,9 +218,10 @@ body {
   max-height: 90vh;
   background: #111;
   border: 1px solid #222;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 16px;
   overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .ai-modal-header {
@@ -766,7 +242,7 @@ body {
   color: #fff;
 }
 
-/* 스타일 칩 */
+/* 스타일 칩 – 흑백만 */
 .ai-style-tabs {
   margin-top: 12px;
   display: flex;
@@ -790,7 +266,7 @@ body {
   font-weight: 700;
 }
 
-/* 공통 블록 */
+/* AI 입력 영역 */
 .ai-block {
   margin-top: 14px;
   display: flex;
@@ -804,10 +280,10 @@ body {
   color: #ccc;
 }
 
-/* textarea */
 .ai-textarea {
   width: 100%;
   min-height: 220px;
+  max-height: 320px;
   resize: vertical;
   background: #0b0c14;
   border: 1px solid #222;
@@ -819,25 +295,29 @@ body {
   box-sizing: border-box;
 }
 
-/* 직접 요청 */
-.ai-custom-wrap {
-  margin-top: 12px;
-}
-
-/* 버튼 영역 */
+/* 버튼 */
 .ai-modal-footer {
   margin-top: 16px;
   display: flex;
-  flex-direction: column;
   gap: 8px;
 }
 
 .ai-run-btn {
-  width: 100%;
+  flex: 1;
   padding: 12px;
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.apply-btn {
+  flex: 1;
+  padding: 12px;
+  background: #2f80ff;
+  border-radius: 12px;
+  border: none;
   color: #fff;
   font-size: 14px;
 }
