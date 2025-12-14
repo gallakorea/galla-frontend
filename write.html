@@ -159,18 +159,43 @@
   </div>
 </div>
 
-<!-- VIDEO MODAL -->
-<div id="videoModal" class="speech-backdrop">
-  <div class="speech-sheet">
-    <div class="video-modal-header">
-      <span>1분 엘리베이터 스피치</span>
-      <button id="closeVideo">닫기</button>
+<!-- AI MODAL -->
+<div id="aiModal" class="ai-modal">
+  <div class="ai-modal-inner">
+
+    <!-- HEADER -->
+    <div class="ai-modal-header">
+      <h2>AI 글 다듬기</h2>
+      <button id="aiClose">✕</button>
     </div>
-    <div class="video-viewport">
-      <video id="speechVideo" controls playsinline></video>
+
+    <!-- STYLE TABS -->
+    <div class="ai-style-tabs">
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
+      <button>논문체</button>
     </div>
+
+    <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
+
+    <!-- BODY -->
+    <div class="ai-modal-body">
+      <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+      <textarea id="aiResultText" placeholder="AI 결과"></textarea>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="ai-modal-footer">
+      <button id="runAi" class="btn-sub">AI 실행</button>
+      <button id="applyAi" class="btn-main">AI 적용</button>
+    </div>
+
   </div>
 </div>
+
 
 <script src="./js/write.js"></script>
 </body>
