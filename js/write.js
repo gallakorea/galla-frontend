@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoInput = document.getElementById('video');
   const videoPreview = document.getElementById('videoPreview');
 
-  /* AI MODAL */
   openAiModal.addEventListener('click', () => {
     aiModal.style.display = 'flex';
     body.style.overflow = 'hidden';
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* THUMBNAIL */
   thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
   thumbnailInput.addEventListener('change', e => {
     const file = e.target.files[0];
@@ -43,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
     thumbPreview.appendChild(img);
   });
 
-  /* VIDEO */
   videoBtn.addEventListener('click', () => videoInput.click());
   videoInput.addEventListener('change', e => {
     const file = e.target.files[0];

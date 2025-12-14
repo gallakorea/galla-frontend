@@ -18,6 +18,7 @@
   </header>
 
   <main class="page-main">
+
     <section class="section-block">
       <h1 class="write-main-title">새 갈라치기 만들기</h1>
       <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
@@ -52,6 +53,11 @@
           <option>직장·경력</option>
           <option>연애·결혼</option>
           <option>생활·일상</option>
+          <option>패션·뷰티</option>
+          <option>엔터·스포츠</option>
+          <option>세계·여행</option>
+          <option>음식·맛집</option>
+          <option>19금</option>
           <option>기타</option>
         </select>
       </div>
@@ -62,11 +68,8 @@
       </div>
 
       <div class="field-block">
-        <label class="field-label">이슈 설명</label>
-        <textarea id="description" class="input-field textarea"></textarea>
-        <button type="button" id="openAiModal" class="ai-main-btn">
-          ✨ AI에게 글 다듬기
-        </button>
+        <label class="field-label">발의자 한 줄</label>
+        <input id="oneLine" class="input-field">
       </div>
 
       <div class="field-block">
@@ -81,6 +84,12 @@
         <input type="file" id="video" hidden accept="video/*">
         <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
         <div id="videoPreview" class="preview-box"></div>
+      </div>
+
+      <div class="field-block">
+        <label class="field-label">이슈 설명</label>
+        <textarea id="description" class="input-field textarea"></textarea>
+        <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
       </div>
 
       <div class="field-block">
@@ -101,10 +110,22 @@
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
+
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
+
+    <div class="ai-style-tabs">
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
+      <button>논문체</button>
+    </div>
+
+    <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
 
     <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
     <textarea id="aiResultText" placeholder="AI 결과"></textarea>
@@ -113,6 +134,7 @@
       <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용</button>
     </div>
+
   </div>
 </div>
 
