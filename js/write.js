@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+  const body = document.body;
+
   const previewBtn = document.getElementById('previewBtn');
+  const openAiModalBtn = document.getElementById('openAiModal');
+  const aiModal = document.getElementById('aiModal');
+  const aiCloseBtn = document.getElementById('aiClose');
 
   const category = document.getElementById('category');
   const title = document.getElementById('title');
@@ -10,6 +15,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const thumbnailInput = document.getElementById('thumbnail');
   const videoInput = document.getElementById('video');
+
+  /* AI MODAL */
+  openAiModalBtn.addEventListener('click', () => {
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  });
+
+  aiCloseBtn.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+
+  aiModal.addEventListener('click', (e) => {
+    if (e.target === aiModal) {
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    }
+  });
 
   function fileToBase64(file) {
     return new Promise(resolve => {
@@ -21,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   previewBtn.addEventListener('click', async () => {
 
-    /* ✅ JS에서 직접 필수값 검사 */
     if (!category.value || !title.value || !description.value) {
       alert('카테고리, 제목, 이슈 설명은 필수입니다.');
       return;
@@ -47,8 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     sessionStorage.setItem('galla_preview', JSON.stringify(data));
-
-    /* 🔥 여기까지 오면 100% 이동 */
     location.href = 'preview.html';
   });
 

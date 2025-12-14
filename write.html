@@ -42,9 +42,7 @@
         </div>
       </section>
 
-      <!-- ❌ submit 없음 -->
-      <form id="writeForm">
-
+      <form id="writeForm" onsubmit="return false;">
         <div class="field-block">
           <label class="field-label">카테고리</label>
           <select id="category" class="input-field">
@@ -90,12 +88,12 @@
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
           <textarea id="description" class="input-field textarea"></textarea>
-          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI에게 글 다듬기
+          </button>
         </div>
-
       </form>
 
-      <!-- ✅ JS가 100% 제어 -->
       <div class="field-block">
         <button id="previewBtn" type="button" class="primary-btn">
           미리보기
@@ -104,6 +102,16 @@
 
     </div>
   </main>
+</div>
+
+<!-- AI MODAL -->
+<div id="aiModal" class="ai-modal">
+  <div class="ai-modal-inner">
+    <div class="ai-modal-header">
+      <h2>AI 글 다듬기</h2>
+      <button id="aiClose">✕</button>
+    </div>
+  </div>
 </div>
 
 <script src="./js/write.js"></script>
