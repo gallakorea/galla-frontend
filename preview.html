@@ -3,53 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <title>미리보기 - GALLA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="css/preview.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <link rel="stylesheet" href="./css/preview.css" />
 </head>
 
 <body>
 <div id="app">
 
+  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <button class="back-btn" onclick="history.back()">← 뒤로</button>
-      <img src="assets/logo.png" class="logo" />
-      <div></div>
+      <button class="back-btn" id="backBtn">← 수정</button>
+      <img src="./assets/logo.png" class="logo" />
+      <div style="width:40px"></div>
     </div>
   </header>
 
   <!-- ISSUE HERO -->
   <section class="issue-hero">
     <div class="issue-category-time">
-      <span id="issue-category"></span>
+      <span id="preview-category"></span>
+      <span>미리보기</span>
     </div>
-    <h1 id="issue-title"></h1>
-    <p id="issue-desc"></p>
+
+    <h1 id="preview-title"></h1>
+    <p id="preview-oneline"></p>
 
     <div class="issue-author">
-      <span id="issue-author"></span>
+      <span id="preview-author"></span>
     </div>
   </section>
 
-  <img id="issue-thumb" class="issue-thumb" hidden />
+  <!-- THUMB -->
+  <img id="preview-thumb" class="issue-thumb" />
 
-  <button class="speech-btn" id="speechBtn" hidden>
+  <!-- VIDEO -->
+  <button id="videoBtn" class="speech-btn" style="display:none">
     🎥 1분 엘리베이터 스피치
   </button>
 
+  <!-- DESCRIPTION -->
   <section class="issue-explain">
     <h3 class="white-title">📝 이슈 설명</h3>
-    <p id="issue-explain-text"></p>
+    <p id="preview-desc"></p>
   </section>
 
-  <!-- PREVIEW ACTIONS -->
-  <div class="preview-actions">
-    <button class="btn-publish" id="publishBtn">이대로 발행</button>
-    <button class="btn-edit" onclick="history.back()">수정하기</button>
-  </div>
+  <!-- ACTION -->
+  <section class="action-section">
+    <button class="btn-secondary" id="editBtn">수정하러 가기</button>
+    <button class="btn-primary">이대로 발행</button>
+  </section>
 
 </div>
 
-<script src="js/preview.js"></script>
+<script src="./js/preview.js"></script>
 </body>
 </html>

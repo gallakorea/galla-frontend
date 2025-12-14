@@ -1,26 +1,41 @@
-const data = JSON.parse(sessionStorage.getItem('previewIssue'));
-if (!data) location.href = 'write.html';
+document.addEventListener('DOMContentLoaded', () => {
 
-document.getElementById('issue-category').innerText = data.category;
-document.getElementById('issue-title').innerText = data.title;
-document.getElementById('issue-desc').innerText = data.oneLine;
-document.getElementById('issue-explain-text').innerText = data.description;
+  const raw = sessionStorage.getItem('galla_preview');
 
-document.getElementById('issue-author').innerText =
-  data.isAnonymous ? '작성자 · 익명' : '작성자 · 나';
+  if (!raw) {
+    alert('미리보기 데이터가 없습니다.');
+    location.href = 'write.html';
+    return;
+  }
 
-if (data.thumb) {
-  const img = document.getElementById('issue-thumb');
-  img.src = data.thumb;
-  img.hidden = false;
-}
+  const data = JSON.parse(raw);
 
-if (data.video) {
-  document.getElementById('speechBtn').hidden = false;
-  // 실제 영상 재생은 다음 단계
-}
+  document.getElementById('preview-category').textContent = data.category || '';
+  document.getElementById('preview-title').textContent = data.title || '';
+  document.getElementById('preview-oneline').textContent = data.oneLine || '';
+  document.getElementById('preview-desc').textContent = data.description || '';
 
-document.getElementById('publishBtn').onclick = () => {
-  // 👉 여기서 supabase insert
-  alert('발행 처리 (다음 단계)');
-};
+  document.getElementById('preview-author').textContent =
+    data.isAnonymous ? '작성자 · 익명' : '작성자 · 공개';
+
+  /* 썸네일 */
+  if (data.thumbnailUrl) {
+    document.getElementById('preview-thumb').src = data.thumbnailUrl;
+  } else {
+    document.getElementById('preview-thumb').style.display = 'none';
+  }
+
+  /* 영상 */
+  if (data.videoUrl) {
+    const btn = document.getElementById('videoBtn');
+    btn.style.display = 'block';
+    btn.onclick = () => window.open(data.videoUrl);
+  }
+
+  /* 버튼 */
+  document.getElementById('backBtn').onclick =
+  document.getElementById('editBtn').onclick = () => {
+    history.back();
+  };
+
+});
