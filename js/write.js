@@ -1,51 +1,59 @@
-const $ = id => document.getElementById(id);
+document.addEventListener('DOMContentLoaded', () => {
 
-const form = $('writeForm');
-const aiModal = $('aiModal');
+  /* ===== AI MODAL ===== */
+  const aiModal = document.getElementById('aiModal');
+  const openAiModal = document.getElementById('openAiModal');
+  const aiClose = document.getElementById('aiClose');
 
-let thumbURL = null;
-let videoURL = null;
+  openAiModal?.addEventListener('click', () => {
+    aiModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  });
 
-/* AI MODAL */
-$('openAiModal').onclick = () => aiModal.style.display = 'flex';
-$('aiClose').onclick = () => aiModal.style.display = 'none';
+  aiClose?.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    document.body.style.overflow = '';
+  });
 
-$('applyAi').onclick = () => {
-  $('description').value = $('aiResultText').value;
-  aiModal.style.display = 'none';
-};
+  aiModal?.addEventListener('click', e => {
+    if (e.target === aiModal) {
+      aiModal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  });
 
-/* FILE UPLOAD */
-$('thumbnailBtn').onclick = () => $('thumbnail').click();
-$('videoBtn').onclick = () => $('video').click();
+  /* ===== FILE UPLOAD ===== */
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
+  const thumbnailInput = document.getElementById('thumbnail');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-$('thumbnail').onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  thumbURL = URL.createObjectURL(file);
-  $('thumbPreview').innerHTML = `<img src="${thumbURL}">`;
-};
+  thumbnailBtn?.addEventListener('click', () => thumbnailInput.click());
 
-$('video').onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  videoURL = URL.createObjectURL(file);
-  $('videoPreview').innerHTML = `<video src="${videoURL}" controls></video>`;
-};
+  thumbnailInput?.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-/* PREVIEW */
-form.onsubmit = e => {
-  e.preventDefault();
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    thumbPreview.innerHTML = '';
+    thumbPreview.appendChild(img);
+  });
 
-  sessionStorage.setItem('previewData', JSON.stringify({
-    category: $('category').value,
-    title: $('title').value,
-    oneLine: $('oneLine').value,
-    description: $('description').value,
-    isAnonymous: $('isAnonymous').checked,
-    thumbURL,
-    videoURL
-  }));
+  const videoBtn = document.getElementById('videoBtn');
+  const videoInput = document.getElementById('video');
+  const videoPreview = document.getElementById('videoPreview');
 
-  location.href = 'preview.html';
-};
+  videoBtn?.addEventListener('click', () => videoInput.click());
+
+  videoInput?.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.controls = true;
+    videoPreview.innerHTML = '';
+    videoPreview.appendChild(video);
+  });
+
+});

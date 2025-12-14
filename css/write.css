@@ -492,25 +492,6 @@ body {
   border-radius:12px;
 }
 
-/* AI modal */
-.ai-modal {
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.7);
-  justify-content:center;
-  align-items:center;
-}
-.ai-modal-inner {
-  width:92%;
-  max-width:480px;
-  max-height:66vh;
-  overflow-y:auto;
-  background:#111;
-  padding:16px;
-  border-radius:14px;
-}
-
 /* buttons */
 .ai-modal-footer {
   display:flex;
@@ -738,10 +719,50 @@ body {
 .ai-modal-inner {
   width: 92%;
   max-width: 480px;
-  max-height: 70vh;
+  height: 66vh;
+
   background: #111;
   border: 1px solid #222;
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 16px;
+
+  display: flex;
+  flex-direction: column;
+
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ai-modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   overflow-y: auto;
+}
+
+.ai-modal-body textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: none;
+
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 12px;
+
+  color: #fff;
+  font-size: 14px;
+}
+
+.ai-modal-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
