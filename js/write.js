@@ -13,139 +13,162 @@ const openAiBtn = document.getElementById('openAiModal');
 const closeAiBtn = document.getElementById('aiClose');
 
 if (openAiBtn && aiModal) {
-  openAiBtn.onclick = () => {
+  openAiBtn.addEventListener('click', () => {
     aiModal.style.display = 'flex';
     body.style.overflow = 'hidden';
-  };
+  });
 }
 
 if (closeAiBtn && aiModal) {
-  closeAiBtn.onclick = () => {
+  closeAiBtn.addEventListener('click', () => {
     aiModal.style.display = 'none';
     body.style.overflow = '';
-  };
+  });
 }
 
 /***************************************************
- * FILE UPLOAD – THUMBNAIL (IMAGE ONLY)
+ * FILE UPLOAD – THUMBNAIL
  ***************************************************/
 const thumbInput = document.getElementById('thumbnail');
 const thumbBtn = document.getElementById('thumbnailBtn');
 const thumbPreview = document.getElementById('thumbPreview');
 
 if (thumbBtn && thumbInput) {
-  thumbBtn.onclick = () => thumbInput.click();
+  thumbBtn.addEventListener('click', () => thumbInput.click());
 }
 
 if (thumbInput) {
-  thumbInput.onchange = e => {
+  thumbInput.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const url = URL.createObjectURL(file);
+
     thumbPreview.innerHTML = `
-      <img src="${URL.createObjectURL(file)}" class="preview-thumb-img">
+      <img src="${url}" class="preview-thumb-img" />
     `;
-  };
+  });
 }
 
 /***************************************************
- * FILE UPLOAD – VIDEO (9:16 ONLY)
+ * FILE UPLOAD – VIDEO
  ***************************************************/
 const videoInput = document.getElementById('video');
 const videoBtn = document.getElementById('videoBtn');
 const videoPreview = document.getElementById('videoPreview');
 
 if (videoBtn && videoInput) {
-  videoBtn.onclick = () => videoInput.click();
+  videoBtn.addEventListener('click', () => videoInput.click());
 }
 
 if (videoInput) {
-  videoInput.onchange = e => {
+  videoInput.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const url = URL.createObjectURL(file);
+
+    /* ❗ 미리보기에서는 비율 강제 안 함 */
     videoPreview.innerHTML = `
-      <div class="video-preview-wrap">
-        <video src="${URL.createObjectURL(file)}" muted playsinline></video>
-      </div>
+      <video src="${url}" muted playsinline></video>
     `;
-  };
+  });
 }
 
 /***************************************************
- * PREVIEW RENDER (ISSUE UI 1:1)
+ * PREVIEW RENDER
  ***************************************************/
-form.onsubmit = e => {
-  e.preventDefault();
+if (form && issuePreview) {
+  form.addEventListener('submit', e => {
+    e.preventDefault();
 
-  const category = document.getElementById('category').value;
-  const title = document.getElementById('title').value;
-  const oneLine = document.getElementById('oneLine').value;
-  const desc = document.getElementById('description').value;
-  const anon = document.getElementById('isAnonymous').checked;
+    const category = document.getElementById('category').value.trim();
+    const title = document.getElementById('title').value.trim();
+    const oneLine = document.getElementById('oneLine').value.trim();
+    const desc = document.getElementById('description').value.trim();
+    const anon = document.getElementById('isAnonymous').checked;
 
-  if (!category || !title || !desc) {
-    alert('필수 항목을 입력하세요');
-    return;
-  }
+    if (!category || !title || !desc) {
+      alert('필수 항목을 입력하세요');
+      return;
+    }
 
-  const thumbImg = thumbPreview.querySelector('img');
-  const videoEl = videoPreview.querySelector('video');
+    const thumbImg = thumbPreview.querySelector('img');
+    const videoEl = videoPreview.querySelector('video');
 
-  issuePreview.innerHTML = `
-    <section class="issue-preview">
+    issuePreview.innerHTML = `
+      <section class="issue-preview">
 
-      <div class="issue-meta">${category} · 방금 전</div>
+        <div class="issue-meta">${category} · 방금 전</div>
 
-      <h1 class="issue-title">${title}</h1>
+        <h1 class="issue-title">${escapeHtml(title)}</h1>
 
-      ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
+        ${oneLine ? `<p class="issue-one-line">${escapeHtml(oneLine)}</p>` : ''}
 
-      <div class="issue-author">
-        작성자 · ${anon ? '익명' : '사용자'}
-      </div>
+        <div class="issue-author">
+          작성자 · ${anon ? '익명' : '사용자'}
+        </div>
 
-      ${
-        thumbImg
-          ? `<img src="${thumbImg.src}" class="issue-thumb">`
-          : ''
-      }
+        ${
+          thumbImg
+            ? `<img src="${thumbImg.src}" class="preview-thumb-img" />`
+            : ''
+        }
 
-      ${
-        videoEl
-          ? `
-          <button class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>
-          `
-          : ''
-      }
+        ${
+          videoEl
+            ? `
+              <button type="button" class="speech-btn" id="openSpeech">
+                🎥 1분 엘리베이터 스피치
+              </button>
+            `
+            : ''
+        }
 
-      <section class="issue-summary">
-        <h3>📝 이 주제에 대한 핵심 요약</h3>
-        <p>${desc}</p>
+        <section class="issue-summary">
+          <h3>📝 이 주제에 대한 핵심 요약</h3>
+          <p>${escapeHtml(desc)}</p>
+        </section>
+
+        <div class="preview-actions">
+          <button type="button" id="editPreview">수정하기</button>
+          <button type="button" class="btn-publish">발행하기</button>
+        </div>
+
       </section>
+    `;
 
-      <div class="preview-actions">
-        <button id="editPreview">수정하기</button>
-        <button class="btn-publish">발행하기</button>
-      </div>
+    /* 수정하기 */
+    const editBtn = document.getElementById('editPreview');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => {
+        issuePreview.innerHTML = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
 
-    </section>
-  `;
+    /* 엘리베이터 스피치 (모달은 다음 단계) */
+    if (videoEl) {
+      const openSpeechBtn = document.getElementById('openSpeech');
+      if (openSpeechBtn) {
+        openSpeechBtn.addEventListener('click', () => {
+          alert('엘리베이터 스피치 모달은 다음 단계에서 연결됩니다.');
+        });
+      }
+    }
 
-  /* 수정하기 */
-  document.getElementById('editPreview').onclick = () => {
-    issuePreview.innerHTML = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    issuePreview.scrollIntoView({ behavior: 'smooth' });
+  });
+}
 
-  /* 스피치 버튼 (모달은 다음 단계) */
-  if (videoEl) {
-    document.getElementById('openSpeech').onclick = () => {
-      alert('엘리베이터 스피치 모달은 다음 단계에서 연결됩니다.');
-    };
-  }
-
-  issuePreview.scrollIntoView({ behavior: 'smooth' });
-};
+/***************************************************
+ * UTIL – XSS 최소 방어
+ ***************************************************/
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
