@@ -20,7 +20,7 @@ const videoPreview = document.getElementById('videoPreview');
 const previewBtn = document.getElementById('previewBtn');
 
 /***************************************************
- * AI MODAL
+ * AI MODAL (구조 유지)
  ***************************************************/
 const aiModal = document.getElementById('aiModal');
 const openAiBtn = document.getElementById('openAiModal');
@@ -51,34 +51,42 @@ applyAiBtn.onclick = () => {
 thumbBtn.onclick = () => thumbInput.click();
 
 thumbInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
 
   thumbPreview.innerHTML = `
     <div class="preview-label">미리보기</div>
-    <img src="${URL.createObjectURL(f)}" />
+    <img src="${url}" class="preview-thumb-img" />
   `;
 };
 
 /***************************************************
- * FILE UPLOAD – VIDEO (9:16)
+ * FILE UPLOAD – VIDEO (미리보기는 controls ❌)
  ***************************************************/
 videoBtn.onclick = () => videoInput.click();
 
 videoInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
 
   videoPreview.innerHTML = `
     <div class="preview-label">미리보기</div>
     <div class="video-viewport">
-      <video src="${URL.createObjectURL(f)}" controls playsinline></video>
+      <video
+        src="${url}"
+        muted
+        playsinline
+      ></video>
     </div>
   `;
 };
 
 /***************************************************
- * PREVIEW (ISSUE UI)
+ * PREVIEW (ISSUE PAGE 동일 UI)
  ***************************************************/
 previewBtn.onclick = () => {
   const category = categoryEl.value;
@@ -103,16 +111,22 @@ previewBtn.onclick = () => {
 
   preview.innerHTML = `
     <div class="issue-card">
+
       <div class="issue-meta">
-        <span class="issue-category">${category}</span> · 방금 전
+        <span class="issue-category">${category}</span>
+        · <span class="issue-time">방금 전</span>
       </div>
 
       <h1 class="issue-title">${title}</h1>
+
       ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
 
-      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
+      <div class="issue-author">
+        작성자 · ${anon ? '익명' : '사용자'}
+      </div>
 
       ${thumbImg ? `<img src="${thumbImg.src}" class="issue-thumb">` : ''}
+
       ${videoEl ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>` : ''}
 
       <div class="issue-summary">
@@ -124,23 +138,35 @@ previewBtn.onclick = () => {
         <button id="editPreview">수정하기</button>
         <button class="btn-publish">발행하기</button>
       </div>
+
     </div>
   `;
 
   form.after(preview);
   preview.scrollIntoView({ behavior: 'smooth' });
 
+  /***************************************************
+   * EDIT PREVIEW
+   ***************************************************/
   document.getElementById('editPreview').onclick = () => {
     preview.remove();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /***************************************************
+   * SPEECH MODAL (여기서만 controls ON)
+   ***************************************************/
   const speechBtn = preview.querySelector('.speech-btn');
   if (speechBtn && videoEl) {
     speechBtn.onclick = () => {
       const modal = document.getElementById('speechModal');
       const video = document.getElementById('speechVideo');
+
       video.src = videoEl.src;
+      video.controls = true;
+      video.muted = false;
+      video.currentTime = 0;
+
       modal.style.display = 'flex';
     };
   }
@@ -149,10 +175,15 @@ previewBtn.onclick = () => {
 /***************************************************
  * SPEECH MODAL CLOSE
  ***************************************************/
-document.getElementById('closeSpeech').onclick = () => {
-  const modal = document.getElementById('speechModal');
-  const video = document.getElementById('speechVideo');
-  video.pause();
-  video.src = '';
-  modal.style.display = 'none';
-};
+const closeSpeech = document.getElementById('closeSpeech');
+
+if (closeSpeech) {
+  closeSpeech.onclick = () => {
+    const modal = document.getElementById('speechModal');
+    const video = document.getElementById('speechVideo');
+
+    video.pause();
+    video.src = '';
+    modal.style.display = 'none';
+  };
+}
