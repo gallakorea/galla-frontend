@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -37,11 +36,10 @@
         </ul>
       </section>
 
-      <!-- ✅ 익명 발의 (가이드 밖, 카테고리 위) -->
+      <!-- 익명 -->
       <section class="section-block">
         <div class="anon-toggle">
           <span>익명으로 발의하기</span>
-
           <label class="switch">
             <input type="checkbox" id="isAnonymous" />
             <span class="slider"></span>
@@ -110,6 +108,10 @@
         </div>
 
       </form>
+
+      <!-- ✅ PREVIEW OUTPUT (ISSUE UI와 동일) -->
+      <section id="issuePreview" class="issue-preview"></section>
+
     </div>
   </main>
 
@@ -129,7 +131,7 @@
 
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
-      <button id="aiClose">✕</button>
+      <button id="aiClose">닫기</button>
     </div>
 
     <div class="ai-style-tabs">
@@ -157,6 +159,19 @@
   </div>
 </div>
 
+<!-- VIDEO MODAL -->
+<div id="videoModal" class="speech-backdrop">
+  <div class="speech-sheet">
+    <div class="video-modal-header">
+      <span>1분 엘리베이터 스피치</span>
+      <button id="closeVideo">닫기</button>
+    </div>
+    <div class="video-viewport">
+      <video id="speechVideo" controls playsinline></video>
+    </div>
+  </div>
+</div>
+
 <script src="./js/write.js"></script>
 </body>
-</html> 
+</html>
