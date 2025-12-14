@@ -721,3 +721,19 @@ body {
   max-height: 160px;   /* 기존 160px → 80px */
   line-height: 1.6;
 }
+
+/* 🔥 강제 클릭 복구 */
+.primary-btn {
+  position: relative;
+  z-index: 999999;
+  pointer-events: auto !important;
+}
+
+.page-main,
+.page-inner {
+  pointer-events: auto !important;
+}
+
+.bottom-nav {
+  pointer-events: none !important;
+}
