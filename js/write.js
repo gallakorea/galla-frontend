@@ -1,27 +1,94 @@
-const previewArea = document.getElementById('previewArea');
+/**************************************************
+ * DOM
+ **************************************************/
+const body = document.body;
+const writeForm = document.getElementById('writeForm');
 
+/* AI MODAL */
+const aiModal = document.getElementById('aiModal');
+const openAiModalBtn = document.getElementById('openAiModal');
+const aiCloseBtn = document.getElementById('aiClose');
+
+/* FILE */
 const thumbnailInput = document.getElementById('thumbnail');
+const thumbnailBtn = document.getElementById('thumbnailBtn');
+const thumbPreview = document.getElementById('thumbPreview');
+
 const videoInput = document.getElementById('video');
+const videoBtn = document.getElementById('videoBtn');
+const videoPreview = document.getElementById('videoPreview');
+
+/* PREVIEW */
+const previewBtn = document.getElementById('previewBtn');
+const previewArea = document.getElementById('previewArea');
 
 let thumbURL = '';
 let videoURL = '';
 
-document.getElementById('thumbnailBtn').onclick = () => thumbnailInput.click();
-document.getElementById('videoBtn').onclick = () => videoInput.click();
+/**************************************************
+ * ✅ AI MODAL OPEN / CLOSE (핵심 수정)
+ **************************************************/
+openAiModalBtn.addEventListener('click', () => {
+  aiModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+});
 
-thumbnailInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  thumbURL = URL.createObjectURL(f);
-};
+aiCloseBtn.addEventListener('click', () => {
+  aiModal.style.display = 'none';
+  body.style.overflow = '';
+});
 
-videoInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  videoURL = URL.createObjectURL(f);
-};
+/* 배경 클릭 시 닫기 */
+aiModal.addEventListener('click', (e) => {
+  if (e.target === aiModal) {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  }
+});
 
-document.getElementById('previewBtn').onclick = () => {
+/**************************************************
+ * THUMBNAIL
+ **************************************************/
+thumbnailBtn.addEventListener('click', () => {
+  thumbnailInput.click();
+});
+
+thumbnailInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  thumbURL = URL.createObjectURL(file);
+
+  thumbPreview.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = thumbURL;
+  thumbPreview.appendChild(img);
+});
+
+/**************************************************
+ * VIDEO
+ **************************************************/
+videoBtn.addEventListener('click', () => {
+  videoInput.click();
+});
+
+videoInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  videoURL = URL.createObjectURL(file);
+
+  videoPreview.innerHTML = '';
+  const video = document.createElement('video');
+  video.src = videoURL;
+  video.controls = true;
+  videoPreview.appendChild(video);
+});
+
+/**************************************************
+ * ✅ 미리보기 (이슈 카드 동일)
+ **************************************************/
+previewBtn.addEventListener('click', () => {
   const category = document.getElementById('category').value;
   const title = document.getElementById('title').value;
   const oneLine = document.getElementById('oneLine').value;
@@ -78,4 +145,4 @@ document.getElementById('previewBtn').onclick = () => {
   `;
 
   previewArea.scrollIntoView({ behavior: 'smooth' });
-};
+});
