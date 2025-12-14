@@ -1,5 +1,5 @@
 /***************************************************
- * GLOBAL LAYOUT
+ * GLOBAL
  ***************************************************/
 body {
   margin: 0;
@@ -14,11 +14,10 @@ body {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  padding-bottom: 120px; /* bottom nav space */
+  padding-bottom: 120px;
 }
 
-.page-main,
-.page-inner {
+.page-main, .page-inner {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -28,12 +27,11 @@ body {
  * HEADER
  ***************************************************/
 .header {
-  width: 100%;
-  background: #000;
-  border-bottom: 1px solid #111;
   position: sticky;
   top: 0;
   z-index: 999;
+  background: #000;
+  border-bottom: 1px solid #111;
   display: flex;
   justify-content: center;
 }
@@ -51,43 +49,13 @@ body {
 .logo { width: 105px; }
 
 /***************************************************
- * SECTION
+ * SECTION / FORM
  ***************************************************/
 .section-block {
   padding: 22px 16px;
   border-bottom: 1px solid #0f0f0f;
 }
 
-.write-main-title {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.write-main-desc {
-  font-size: 13px;
-  color: #ccc;
-  margin-top: 6px;
-}
-
-/***************************************************
- * GUIDE
- ***************************************************/
-.write-guide-block {
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 14px;
-}
-
-.write-guide-list {
-  padding: 12px 20px;
-  font-size: 12px;
-  line-height: 1.55;
-  list-style: disc;
-}
-
-/***************************************************
- * FORM
- ***************************************************/
 .field-block {
   padding: 20px 16px;
   display: flex;
@@ -100,9 +68,6 @@ body {
   font-weight: 700;
 }
 
-/***************************************************
- * INPUT
- ***************************************************/
 .input-field {
   width: 100%;
   padding: 12px 14px;
@@ -120,24 +85,16 @@ body {
   line-height: 1.55;
 }
 
-/***************************************************
- * FILE BUTTON
- ***************************************************/
 .file-btn {
   width: 100%;
   padding: 12px;
-  text-align: center;
   background: #11131f;
   border: 1px solid #1f2435;
   border-radius: 12px;
   color: #fff;
 }
 
-/***************************************************
- * BUTTONS
- ***************************************************/
 .ai-main-btn {
-  width: 100%;
   margin-top: 8px;
   padding: 12px;
   background: #2f80ff;
@@ -148,7 +105,6 @@ body {
 }
 
 .primary-btn {
-  width: 100%;
   padding: 16px;
   background: #2f80ff;
   border-radius: 999px;
@@ -159,81 +115,117 @@ body {
 }
 
 /***************************************************
- * ANON TOGGLE
- ***************************************************/
-.anon-toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #111;
-  border: 1px solid #222;
-  padding: 14px;
-  border-radius: 12px;
-}
-
-.switch {
-  position: relative;
-  width: 46px;
-  height: 26px;
-}
-
-.switch input { display: none; }
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: #333;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.slider::before {
-  content: "";
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  top: 3px;
-  left: 3px;
-  transition: .2s;
-}
-
-.switch input:checked + .slider {
-  background: #2f80ff;
-}
-
-.switch input:checked + .slider::before {
-  transform: translateX(20px);
-}
-
-/***************************************************
- * PREVIEW (🔥 핵심 수정 영역)
+ * PREVIEW (UPLOAD ONLY)
  ***************************************************/
 .preview-box {
   margin-top: 8px;
-  display: block;
+  position: relative;
 }
 
-/* ✅ 미리보기에서는 비율 강제 ❌ */
+/* 업로드 전엔 아무것도 표시 안 함 */
+.preview-box:empty {
+  display: none;
+}
+
+/* 썸네일 / 영상 공통 */
 .preview-box img,
 .preview-box video {
   width: 100%;
-  height: auto;              /* 🔥 위아래 간격 문제 해결 */
-  max-height: 360px;         /* 🔥 미리보기 최대 높이만 제한 */
-  object-fit: contain;       /* 🔥 잘리지 않음 */
+  height: auto;              /* 🔥 간격 문제 핵심 */
+  max-height: 360px;
+  object-fit: contain;
   border-radius: 12px;
   display: block;
   background: #000;
 }
 
+/* 미리보기 라벨 – 업로드 되었을 때만 */
+.preview-box.is-preview::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 5;
+  pointer-events: none;
+}
+
 /***************************************************
- * AI MODAL (FINAL)
+ * ISSUE PREVIEW (ISSUE UI 동일)
+ ***************************************************/
+.issue-preview {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.issue-title { font-size: 22px; font-weight: 800; }
+.issue-one-line { color: #ccc; margin: 6px 0; }
+.issue-author { font-size: 13px; color: #888; margin-bottom: 12px; }
+
+.issue-preview img {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border-radius: 14px;
+  display: block;
+  margin: 12px auto 0;
+  object-fit: cover;
+}
+
+.speech-btn {
+  all: unset;
+  width: 100%;
+  margin: 12px 0;
+  padding: 14px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.preview-actions button:first-child {
+  flex: 1;
+  padding: 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  border-radius: 12px;
+}
+
+.preview-actions button:last-child {
+  flex: 1;
+  padding: 14px;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/***************************************************
+ * AI MODAL (색상 통일)
  ***************************************************/
 .ai-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,.7);
   display: none;
   justify-content: center;
   align-items: center;
@@ -250,417 +242,32 @@ body {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
-.ai-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ai-style-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 14px 0;
-  overflow-x: auto;
-}
-
-.ai-style-tabs button {
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: #000;
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-}
-
-.ai-style-tabs button.active {
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-}
-
-.ai-modal-body {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.ai-modal-body textarea {
-  min-height: 120px;
-  resize: none;
-}
-
-.ai-modal-footer {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.btn-sub {
-  flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 12px;
-  border-radius: 10px;
-}
-
-.btn-main {
-  flex: 1;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  padding: 12px;
-  border-radius: 10px;
-}
-
-/***************************************************
- * VIDEO MODAL (🔥 9:16 강제는 여기서만)
- ***************************************************/
-.speech-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 4000;
-}
-
-.speech-sheet {
-  width: 100%;
-  max-width: 480px;
-  background: #111;
-  padding: 16px;
-  border-radius: 16px;
-}
-
-/* ✅ 엘리베이터 스피치 전용 */
-.video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;   /* 🔥 여기서만 사용 */
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
-}
-
-/***************************************************
- * BOTTOM NAV
- ***************************************************/
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  height: 64px;
-  background: #000;
-  border-top: 1px solid #111;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 9999;
-}
-
-.nav-item {
-  background: none;
-  border: none;
-}
-
-.nav-item img {
-  width: 28px;
-  height: 28px;
-  filter: brightness(0) invert(1);
-}
-
-/***************************************************
- * AI MODAL INPUT & CLOSE COLOR FIX (FINAL)
- ***************************************************/
-
-/* AI에게 직접 요청 input */
-.ai-modal input.input-field {
-  background: #0b0c14 !important;
-  color: #fff !important;
-  border: 1px solid #222 !important;
-  border-radius: 12px;
-}
-
-/* 내가 쓴 글 / AI 결과 textarea */
+.ai-modal input,
 .ai-modal textarea {
-  background: #0b0c14 !important;
-  color: #fff !important;
-  border: 1px solid #222 !important;
+  background: #0b0c14;
+  color: #fff;
+  border: 1px solid #222;
   border-radius: 12px;
 }
 
-/* placeholder 색 */
-.ai-modal input::placeholder,
-.ai-modal textarea::placeholder {
-  color: #777;
-}
-
-/* 닫기 버튼 */
 .ai-modal-header button {
-  background: #111 !important;
-  border: 1px solid #333 !important;
-  color: #fff !important;
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
-  font-weight: 600;
-}
-
-/* 닫기 버튼 hover */
-.ai-modal-header button:hover {
-  background: #1a1a1a;
 }
 
 /***************************************************
- * PREVIEW LABEL (썸네일 / 영상 공통)
- ***************************************************/
-
-/* 미리보기 래퍼 기준 */
-.preview-box,
-.video-viewport {
-  position: relative;
-}
-
-/* 라벨 공통 */
-.preview-box::after,
-.video-viewport::after {
-  content: "미리보기";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-
-  padding: 4px 8px;
-  border-radius: 8px;
-
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid #333;
-
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: -0.2px;
-
-  z-index: 5;
-  pointer-events: none; /* 클릭 방해 X */
-}
-
-/* 썸네일 / 영상 실제 요소 */
-.preview-box img,
-.preview-box video,
-.video-viewport img,
-.video-viewport video {
-  display: block;
-}
-
-/***************************************************
- * WRITE PREVIEW – FINAL TONE & MANNER FIX
- * (ISSUE UI와 100% 동일 기준)
- ***************************************************/
-
-/* ===== 미리보기 전체 래퍼 ===== */
-.issue-preview {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 16px;
-}
-
-/* ===== 썸네일 / 영상 공통 래퍼 ===== */
-.preview-media,
-.video-viewport {
-  width: 100%;
-  max-width: 480px;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-  position: relative;
-  margin: 12px 0;
-}
-
-/* 이미지 / 영상 */
-.preview-media img,
-.video-viewport img,
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  background: #000;
-}
-
-/* ===== 🔥 미리보기 배지 ===== */
-.preview-media::after,
-.video-viewport::after {
-  content: "미리보기";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.7);
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 5;
-}
-
-/* ===== 1분 엘리베이터 스피치 버튼 ===== */
-.speech-btn {
-  all: unset;
-  width: 100%;
-  box-sizing: border-box;
-
-  margin: 10px 0;
-  padding: 14px;
-
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 12px;
-
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-
-  cursor: pointer;
-}
-
-.speech-btn:active {
-  opacity: 0.85;
-}
-
-/* ===== 요약 영역 ===== */
-.issue-summary {
-  margin-top: 16px;
-}
-
-.issue-summary h3 {
-  font-size: 15px;
-  margin-bottom: 6px;
-}
-
-.issue-summary p {
-  font-size: 14px;
-  color: #ddd;
-  line-height: 1.6;
-}
-
-/* ===== 하단 액션 버튼 영역 ===== */
-.preview-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-/* 수정하기 */
-.preview-actions button:first-child {
-  flex: 1;
-  padding: 14px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-/* 발행하기 */
-.preview-actions button:last-child {
-  flex: 1;
-  padding: 14px;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-/* ===== 이미지/영상으로 인한 과도한 여백 방지 ===== */
-.issue-preview img,
-.issue-preview video {
-  margin: 0;
-  vertical-align: top;
-}
-
-/* =========================
-   PREVIEW BADGE – ONLY WHEN UPLOADED
-========================= */
-
-/* 기본 상태: 미리보기 배지 숨김 */
-.preview-media::after,
-.video-viewport::after {
-  content: none;
-}
-
-/* 업로드 되었을 때만 표시 */
-.preview-media[data-preview="true"]::after,
-.video-viewport[data-preview="true"]::after {
-  content: "미리보기";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.7);
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 5;
-}
-
-/* =========================
-   PREVIEW THUMBNAIL WIDTH FIX
-   (FINAL)
-========================= */
-
-/* 미리보기 썸네일 래퍼 */
-.issue-preview img.preview-thumb-img {
-  width: 100%;
-  max-width: 480px;     /* 🔥 핵심 */
-  height: auto;
-
-  display: block;
-  margin: 12px auto 0; /* 중앙 정렬 + 위 여백만 */
-  border-radius: 14px;
-
-  object-fit: cover;
-}
-
-.issue-preview {
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-/***************************************************
- * SPEECH VIDEO MODAL (9:16 FINAL)
+ * SPEECH MODAL (9:16 ONLY HERE)
  ***************************************************/
 .speech-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.8);
+  background: rgba(0,0,0,.8);
   display: none;
   justify-content: center;
   align-items: center;
@@ -675,63 +282,16 @@ body {
   border-radius: 16px;
 }
 
-/* 헤더 */
-.speech-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-.speech-header button {
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 10px;
-}
-
-/* 🔥 핵심: 9:16 뷰포트 */
-.video-viewport {
+.speech-sheet .video-viewport {
   width: 100%;
-  aspect-ratio: 9 / 16;
+  aspect-ratio: 9 / 16;   /* 🔥 여기서만 */
   background: #000;
   border-radius: 14px;
   overflow: hidden;
 }
 
-/* 🔥 가로/세로 전부 대응 */
-.video-viewport video {
+.speech-sheet video {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* 절대 잘리지 않음 */
-  background: #000;
-}
-
-/* =========================
-   PREVIEW LABEL (SINGLE)
-========================= */
-
-.preview-box {
-  position: relative;
-}
-
-/* 썸네일 / 영상 공통 */
-.preview-box.is-preview::after {
-  content: "미리보기";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-
-  padding: 4px 8px;
-  border-radius: 8px;
-
-  background: rgba(0,0,0,0.7);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-
-  z-index: 10;
+  object-fit: contain;
 }
