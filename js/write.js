@@ -1,38 +1,58 @@
-const aiModal = document.getElementById('aiModal');
-const openAiModal = document.getElementById('openAiModal');
-const aiClose = document.getElementById('aiClose');
+document.addEventListener('DOMContentLoaded', () => {
 
-openAiModal.onclick = () => {
-  aiModal.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-};
+  const body = document.body;
 
-aiClose.onclick = () => {
-  aiModal.style.display = 'none';
-  document.body.style.overflow = '';
-};
+  const aiModal = document.getElementById('aiModal');
+  const openAiModal = document.getElementById('openAiModal');
+  const aiClose = document.getElementById('aiClose');
 
-document.getElementById('thumbnailBtn').onclick = () =>
-  document.getElementById('thumbnail').click();
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
+  const thumbnailInput = document.getElementById('thumbnail');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-document.getElementById('videoBtn').onclick = () =>
-  document.getElementById('video').click();
+  const videoBtn = document.getElementById('videoBtn');
+  const videoInput = document.getElementById('video');
+  const videoPreview = document.getElementById('videoPreview');
 
-document.getElementById('thumbnail').onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const img = document.createElement('img');
-  img.src = URL.createObjectURL(file);
-  document.getElementById('thumbPreview').innerHTML = '';
-  document.getElementById('thumbPreview').appendChild(img);
-};
+  /* AI MODAL */
+  openAiModal.addEventListener('click', () => {
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  });
 
-document.getElementById('video').onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const video = document.createElement('video');
-  video.src = URL.createObjectURL(file);
-  video.controls = true;
-  document.getElementById('videoPreview').innerHTML = '';
-  document.getElementById('videoPreview').appendChild(video);
-};
+  aiClose.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+
+  aiModal.addEventListener('click', e => {
+    if (e.target === aiModal) {
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    }
+  });
+
+  /* THUMBNAIL */
+  thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
+  thumbnailInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    thumbPreview.innerHTML = '';
+    thumbPreview.appendChild(img);
+  });
+
+  /* VIDEO */
+  videoBtn.addEventListener('click', () => videoInput.click());
+  videoInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.controls = true;
+    videoPreview.innerHTML = '';
+    videoPreview.appendChild(video);
+  });
+
+});

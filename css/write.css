@@ -13,11 +13,13 @@ body {
   padding-bottom: 90px;
 }
 
+/* HEADER */
 .header {
   position: sticky;
   top: 0;
   background: #000;
   border-bottom: 1px solid #111;
+  z-index: 100;
 }
 
 .header-inner {
@@ -31,6 +33,7 @@ body {
   width: 100px;
 }
 
+/* SECTION */
 .section-block {
   padding: 20px 16px;
   border-bottom: 1px solid #111;
@@ -41,11 +44,17 @@ body {
   border-radius: 12px;
 }
 
+/* FORM */
 .field-block {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.field-label {
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .input-field,
@@ -81,6 +90,7 @@ textarea {
   color: #fff;
 }
 
+/* PREVIEW */
 .preview-box img,
 .preview-box video {
   width: 100%;
@@ -88,6 +98,49 @@ textarea {
   margin-top: 8px;
 }
 
+/* TOGGLE */
+.anon-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111;
+  border: 1px solid #222;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.switch {
+  width: 46px;
+  height: 26px;
+  position: relative;
+}
+.switch input { display: none; }
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #333;
+  border-radius: 999px;
+}
+.slider::before {
+  content:'';
+  width: 20px;
+  height: 20px;
+  background:#fff;
+  position:absolute;
+  top:3px;
+  left:3px;
+  border-radius:50%;
+  transition:.2s;
+}
+.switch input:checked + .slider {
+  background:#2f80ff;
+}
+.switch input:checked + .slider::before {
+  transform:translateX(20px);
+}
+
+/* BOTTOM NAV */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -98,8 +151,8 @@ textarea {
   justify-content: space-around;
   padding: 10px 0;
   border-top: 1px solid #111;
+  z-index: 200;
 }
-
 .bottom-nav img {
   width: 26px;
   filter: invert(1);
@@ -113,7 +166,7 @@ textarea {
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 10000;
+  z-index: 1000;
 }
 
 .ai-modal-inner {
@@ -138,6 +191,7 @@ textarea {
 .ai-modal-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .ai-modal-footer {
@@ -159,39 +213,4 @@ textarea {
   color: #fff;
   padding: 12px;
   border-radius: 10px;
-}
-
-/* toggle */
-.switch {
-  width: 46px;
-  height: 26px;
-  position: relative;
-}
-
-.switch input { display:none; }
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: #333;
-  border-radius: 999px;
-}
-
-.slider::before {
-  content:'';
-  width: 20px;
-  height: 20px;
-  background:#fff;
-  position:absolute;
-  top:3px;
-  left:3px;
-  border-radius:50%;
-  transition:.2s;
-}
-
-.switch input:checked + .slider {
-  background:#2f80ff;
-}
-.switch input:checked + .slider::before {
-  transform:translateX(20px);
 }
