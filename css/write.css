@@ -611,3 +611,61 @@ body {
   background: #000;
   border-radius: 12px;
 }
+
+/* =========================
+   ISSUE PREVIEW = ISSUE PAGE
+========================= */
+
+.issue-preview {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.issue-card {
+  padding: 16px;
+}
+
+.issue-meta {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+.issue-category {
+  margin-right: 6px;
+}
+
+.issue-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 8px 0;
+}
+
+.issue-one-line {
+  color: #ccc;
+  margin-bottom: 6px;
+}
+
+.issue-author {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+.issue-thumb {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 14px;
+  margin: 12px 0;
+  object-fit: cover;
+}
+
+.issue-summary h3 {
+  margin-top: 16px;
+  font-size: 15px;
+}
+
+.issue-summary p {
+  color: #ddd;
+  line-height: 1.6;
+}
