@@ -48,7 +48,7 @@
 
         <div class="field-block">
           <label class="field-label">카테고리</label>
-          <select id="category" class="input-field" required>
+          <select id="category" class="input-field">
             <option value="">선택</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
@@ -74,19 +74,23 @@
           <input id="oneLine" class="input-field" />
         </div>
 
+        <!-- 썸네일 업로드 -->
         <div class="field-block">
           <label class="field-label">썸네일</label>
           <input type="file" id="thumbnail" hidden accept="image/*" />
           <button type="button" id="thumbnailBtn" class="file-btn">썸네일 업로드</button>
-          <div id="thumbPreview" class="preview-box"></div>
         </div>
+        <!-- 🔥 미리보기 분리 -->
+        <div id="thumbPreview" class="preview-box"></div>
 
+        <!-- 영상 업로드 -->
         <div class="field-block">
           <label class="field-label">1분 엘리베이터 스피치</label>
           <input type="file" id="video" hidden accept="video/*" />
           <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
-          <div id="videoPreview" class="preview-box"></div>
         </div>
+        <!-- 🔥 미리보기 분리 -->
+        <div id="videoPreview" class="preview-box"></div>
 
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
@@ -115,10 +119,9 @@
   </nav>
 </div>
 
-<!-- AI MODAL (구조 절대 고정) -->
+<!-- AI MODAL (구조 고정) -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
-
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
@@ -144,7 +147,6 @@
       <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용</button>
     </div>
-
   </div>
 </div>
 
@@ -153,7 +155,7 @@
   <div class="speech-sheet">
     <div class="speech-header">
       <span>1분 엘리베이터 스피치</span>
-      <button id="closeSpeech">✕</button>
+      <button id="closeSpeech">닫기</button>
     </div>
     <video id="speechVideo" controls playsinline></video>
   </div>
