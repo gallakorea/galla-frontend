@@ -46,26 +46,36 @@ applyAiBtn.onclick = () => {
 };
 
 /***************************************************
- * FILE UPLOAD
+ * FILE UPLOAD (9:16 FIX)
  ***************************************************/
 thumbBtn.onclick = () => thumbInput.click();
 thumbInput.onchange = e => {
   const f = e.target.files[0];
   if (!f) return;
-  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+
+  const url = URL.createObjectURL(f);
+  thumbPreview.innerHTML = `
+    <div class="video-viewport">
+      <img src="${url}" alt="thumbnail">
+    </div>
+  `;
 };
 
 videoBtn.onclick = () => videoInput.click();
 videoInput.onchange = e => {
   const f = e.target.files[0];
   if (!f) return;
+
+  const url = URL.createObjectURL(f);
   videoPreview.innerHTML = `
-    <video src="${URL.createObjectURL(f)}" muted></video>
+    <div class="video-viewport">
+      <video src="${url}" muted playsinline></video>
+    </div>
   `;
 };
 
 /***************************************************
- * PREVIEW (ISSUE PAGE UI 100% 동일)
+ * PREVIEW (ISSUE PAGE UI 동일)
  ***************************************************/
 previewBtn.onclick = () => {
   const category = categoryEl.value;
@@ -79,7 +89,6 @@ previewBtn.onclick = () => {
     return;
   }
 
-  // 기존 미리보기 제거
   const old = document.querySelector('.issue-preview');
   if (old) old.remove();
 
@@ -99,11 +108,7 @@ previewBtn.onclick = () => {
 
       <h1 class="issue-title">${title}</h1>
 
-      ${
-        oneLine
-          ? `<p class="issue-one-line">${oneLine}</p>`
-          : ''
-      }
+      ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
 
       <div class="issue-author">
         작성자 · ${anon ? '익명' : '사용자'}
@@ -117,7 +122,9 @@ previewBtn.onclick = () => {
 
       ${
         videoEl
-          ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>`
+          ? `
+          <button class="speech-btn">🎥 1분 엘리베이터 스피치</button>
+          `
           : ''
       }
 
@@ -146,14 +153,16 @@ previewBtn.onclick = () => {
   };
 
   /***************************************************
-   * SPEECH MODAL
+   * SPEECH MODAL (9:16 FIX)
    ***************************************************/
   const speechBtn = preview.querySelector('.speech-btn');
   if (speechBtn && videoEl) {
     speechBtn.onclick = () => {
       const modal = document.getElementById('speechModal');
       const video = document.getElementById('speechVideo');
+
       video.src = videoEl.src;
+      video.style.objectFit = 'contain';
       modal.style.display = 'flex';
     };
   }

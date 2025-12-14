@@ -771,3 +771,87 @@ button:has(1분) {
 .speech-btn:active {
   opacity: 0.85;
 }
+
+/* =========================
+   VIDEO MODAL CLOSE BTN FIX
+   X → '닫기'
+========================= */
+.video-modal-header button {
+  all: unset;                 /* 기본 버튼 제거 */
+  cursor: pointer;
+
+  padding: 6px 12px;
+  border-radius: 999px;
+
+  background: #111;
+  border: 1px solid #333;
+
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 기존 X 문자 숨김 */
+.video-modal-header button::before {
+  content: "닫기";
+}
+
+/* 혹시 inner text가 X로 들어가 있으면 가림 */
+.video-modal-header button > * {
+  display: none;
+}
+
+.video-modal-header button:active {
+  opacity: 0.8;
+}
+
+/* 썸네일 미리보기 라벨 */
+.preview-box {
+  position: relative;
+}
+
+.preview-box.video::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+/* =========================
+   VIDEO 9:16 UNIFIED RULE
+========================= */
+
+/* 영상 공통 래퍼 (미리보기 / 스피치 동일) */
+.video-viewport {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 모든 영상 강제 규칙 */
+.video-viewport video,
+.issue-thumb video,
+.preview-box video,
+#speechVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* 🔥 가로 영상도 잘리지 않고 세로에 맞춤 */
+  background: #000;
+}
