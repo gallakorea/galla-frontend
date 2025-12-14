@@ -20,7 +20,7 @@ const videoPreview = document.getElementById('videoPreview');
 const previewBtn = document.getElementById('previewBtn');
 
 /***************************************************
- * AI MODAL
+ * AI MODAL (구조 절대 변경 없음)
  ***************************************************/
 const aiModal = document.getElementById('aiModal');
 const openAiBtn = document.getElementById('openAiModal');
@@ -32,10 +32,12 @@ const applyAiBtn = document.getElementById('applyAi');
 openAiBtn.onclick = () => {
   aiUserText.value = descEl.value;
   aiModal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
 };
 
 closeAiBtn.onclick = () => {
   aiModal.style.display = 'none';
+  document.body.style.overflow = '';
 };
 
 applyAiBtn.onclick = () => {
@@ -43,46 +45,43 @@ applyAiBtn.onclick = () => {
     descEl.value = aiResultText.value;
   }
   aiModal.style.display = 'none';
+  document.body.style.overflow = '';
 };
 
 /***************************************************
- * FILE UPLOAD — THUMBNAIL
+ * FILE UPLOAD — PREVIEW LABEL + 간격 문제 해결
  ***************************************************/
 thumbBtn.onclick = () => thumbInput.click();
-
 thumbInput.onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const url = URL.createObjectURL(file);
+  const f = e.target.files[0];
+  if (!f) return;
 
   thumbPreview.innerHTML = `
     <div class="preview-label">미리보기</div>
-    <img src="${url}" />
+    <img src="${URL.createObjectURL(f)}" />
   `;
 };
 
-/***************************************************
- * FILE UPLOAD — VIDEO
- ***************************************************/
 videoBtn.onclick = () => videoInput.click();
-
 videoInput.onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const url = URL.createObjectURL(file);
+  const f = e.target.files[0];
+  if (!f) return;
 
   videoPreview.innerHTML = `
     <div class="preview-label">미리보기</div>
     <div class="video-viewport">
-      <video src="${url}" muted playsinline></video>
+      <video
+        src="${URL.createObjectURL(f)}"
+        muted
+        playsinline
+        preload="metadata"
+      ></video>
     </div>
   `;
 };
 
 /***************************************************
- * PREVIEW (ISSUE PAGE UI)
+ * PREVIEW (ISSUE PAGE UI 동일)
  ***************************************************/
 previewBtn.onclick = () => {
   const category = categoryEl.value;
@@ -96,6 +95,7 @@ previewBtn.onclick = () => {
     return;
   }
 
+  // 기존 미리보기 제거
   const old = document.querySelector('.issue-preview');
   if (old) old.remove();
 
@@ -107,6 +107,7 @@ previewBtn.onclick = () => {
 
   preview.innerHTML = `
     <div class="issue-card">
+
       <div class="issue-meta">
         <span class="issue-category">${category}</span>
         · <span class="issue-time">방금 전</span>
@@ -120,7 +121,11 @@ previewBtn.onclick = () => {
         작성자 · ${anon ? '익명' : '사용자'}
       </div>
 
-      ${thumbImg ? `<img src="${thumbImg.src}" class="issue-thumb" />` : ''}
+      ${
+        thumbImg
+          ? `<img src="${thumbImg.src}" class="issue-thumb">`
+          : ''
+      }
 
       ${
         videoEl
@@ -137,24 +142,35 @@ previewBtn.onclick = () => {
         <button id="editPreview">수정하기</button>
         <button class="btn-publish">발행하기</button>
       </div>
+
     </div>
   `;
 
   form.after(preview);
   preview.scrollIntoView({ behavior: 'smooth' });
 
+  /***************************************************
+   * EDIT PREVIEW
+   ***************************************************/
   document.getElementById('editPreview').onclick = () => {
     preview.remove();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  /***************************************************
+   * SPEECH MODAL (9:16 + 가로영상 대응)
+   ***************************************************/
   const speechBtn = preview.querySelector('.speech-btn');
   if (speechBtn && videoEl) {
     speechBtn.onclick = () => {
       const modal = document.getElementById('speechModal');
       const video = document.getElementById('speechVideo');
+
       video.src = videoEl.src;
+      video.currentTime = 0;
+
       modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
     };
   }
 };
@@ -167,8 +183,10 @@ if (closeSpeech) {
   closeSpeech.onclick = () => {
     const modal = document.getElementById('speechModal');
     const video = document.getElementById('speechVideo');
+
     video.pause();
     video.src = '';
     modal.style.display = 'none';
+    document.body.style.overflow = '';
   };
 }
