@@ -1,34 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  const body = document.body;
-
   /* =========================
-     AI MODAL
+     ELEMENTS
   ========================= */
-  const aiModal = document.getElementById('aiModal');
-  const openAiModalBtn = document.getElementById('openAiModal');
-  const aiCloseBtn = document.getElementById('aiClose');
 
-  openAiModalBtn.addEventListener('click', () => {
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  });
+  const previewBtn = document.getElementById('previewBtn');
 
-  aiCloseBtn.addEventListener('click', () => {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  });
+  const category = document.getElementById('category');
+  const title = document.getElementById('title');
+  const oneLine = document.getElementById('oneLine');
+  const description = document.getElementById('description');
+  const isAnonymous = document.getElementById('isAnonymous');
 
-  aiModal.addEventListener('click', e => {
-    if (e.target === aiModal) {
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
-    }
-  });
-
-  /* =========================
-     FILE PREVIEW
-  ========================= */
   const thumbnailInput = document.getElementById('thumbnail');
   const thumbnailBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
@@ -36,6 +19,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoInput = document.getElementById('video');
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
+
+  const aiModal = document.getElementById('aiModal');
+  const openAiModalBtn = document.getElementById('openAiModal');
+  const aiCloseBtn = document.getElementById('aiClose');
+
+  /* =========================
+     AI MODAL
+  ========================= */
+
+  openAiModalBtn.addEventListener('click', () => {
+    aiModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  });
+
+  aiCloseBtn.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    document.body.style.overflow = '';
+  });
+
+  aiModal.addEventListener('click', (e) => {
+    if (e.target === aiModal) {
+      aiModal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  });
+
+  /* =========================
+     FILE PREVIEW
+  ========================= */
 
   thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
   videoBtn.addEventListener('click', () => videoInput.click());
@@ -60,29 +72,38 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================
-     PREVIEW 이동 (🔥 핵심)
+     FILE → BASE64
   ========================= */
-  const previewBtn = document.getElementById('previewBtn');
+
+  function fileToBase64(file) {
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /* =========================
+     PREVIEW (🔥 핵심)
+  ========================= */
 
   previewBtn.addEventListener('click', async () => {
 
+    if (!category.value || !title.value || !description.value) {
+      alert('카테고리, 제목, 이슈 설명은 필수입니다.');
+      return;
+    }
+
     const data = {
-      category: document.getElementById('category').value,
-      title: document.getElementById('title').value,
-      oneLine: document.getElementById('oneLine').value,
-      description: document.getElementById('description').value,
-      isAnonymous: document.getElementById('isAnonymous').checked,
+      category: category.value,
+      title: title.value,
+      oneLine: oneLine.value,
+      description: description.value,
+      isAnonymous: isAnonymous.checked,
       createdAt: new Date().toISOString(),
       thumbnailBase64: null,
       videoBase64: null
     };
-
-    const fileToBase64 = file =>
-      new Promise(res => {
-        const r = new FileReader();
-        r.onload = () => res(r.result);
-        r.readAsDataURL(file);
-      });
 
     if (thumbnailInput.files[0]) {
       data.thumbnailBase64 = await fileToBase64(thumbnailInput.files[0]);
@@ -94,7 +115,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sessionStorage.setItem('galla_preview', JSON.stringify(data));
 
-    location.href = 'preview.html';
+    /* ✅ 여기서 무조건 이동 */
+    window.location.href = 'preview.html';
   });
 
 });
