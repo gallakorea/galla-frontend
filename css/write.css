@@ -856,238 +856,132 @@ button:has(1분) {
   background: #000;
 }
 
-/* =========================
-   WRITE PREVIEW FIX (핵심)
-========================= */
-
-/* 썸네일 / 영상 미리보기 컨테이너 */
-.preview-box {
-  margin-top: 10px;
-}
-
-/* 썸네일 이미지 */
-.preview-thumb-img {
-  width: 100%;
-  max-width: 100%;
-  border-radius: 14px;
-  display: block;
-}
-
-/* 영상 미리보기 프레임 (9:16 고정) */
-.video-viewport {
-  width: 100%;
-  max-width: 480px;
-  aspect-ratio: 9 / 16;      /* 🔥 핵심 */
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-  position: relative;
-}
-
-/* 영상 자체 */
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;       /* 가로 영상도 세로 프레임에 맞춤 */
-  background: #000;
-  display: block;
-}
-
-.preview-label {
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
-}
-
-.preview-box img,
-.preview-box video {
-  display: block;
-  width: 100%;
-  border-radius: 12px;
-}
-
-.video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  overflow: hidden;
-  border-radius: 12px;
-}
-
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
- .preview-box {
-  margin-top: 8px;
-}
-
-.preview-box img,
-.preview-box video {
-  display: block;
-}
-
-.preview-box {
-  margin-top: 8px;
-  line-height: 0;          /* ⬅️ 이게 핵심 */
-}
-
-.preview-box .video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.preview-box video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;       /* 가로 영상도 세로에 맞게 */
-  display: block;          /* ⬅️ 하단 공백 제거 핵심 */
-}
-
-.preview-box img {
-  width: 100%;
-  display: block;
-}
-
-.preview-box {
-  margin-top: 8px;
-}
-
-.video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;   /* 가로 영상도 세로에 맞춤 */
-  display: block;      /* 🔥 하단 공백 제거 핵심 */
-}
-
-/* ===============================
-   WRITE PREVIEW – HARD RESET
-   =============================== */
-
-/* 미리보기 컨테이너 */
-.preview-box {
-  margin-top: 8px;
-  padding: 0;
-  line-height: 0;        /* 🔥 하단 여백 원인 제거 */
-}
-
-/* 썸네일 이미지 */
-.preview-box img {
-  display: block;        /* 🔥 inline-img 여백 제거 */
-  width: 100%;
-  max-width: 480px;
-  height: auto;
-  border-radius: 12px;
-  margin: 0;
-}
-
-/* 영상 래퍼 (9:16 고정) */
-.preview-box .video-viewport {
-  width: 100%;
-  max-width: 480px;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 12px;
-  overflow: hidden;
-  margin: 0;
-}
-
-/* 영상 자체 */
-.preview-box video {
-  display: block;        /* 🔥 핵심 */
-  width: 100%;
-  height: 100%;
-  object-fit: contain;   /* 🔥 가로 영상도 세로에 맞춤 */
-  background: #000;
-  margin: 0;
-  padding: 0;
-}
-
-/* 미리보기 라벨 */
-.preview-label {
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
-  line-height: normal;
-}
-
-/* ===============================
-   ISSUE PREVIEW (WRITE → ISSUE)
-   =============================== */
-
-.issue-thumb {
-  display: block;
-  width: 100%;
-  max-width: 480px;
-  border-radius: 14px;
-  margin: 12px 0;
-  object-fit: cover;
-}
-
-/* ===============================
-   1분 엘리베이터 스피치 버튼
-   =============================== */
-
-.speech-btn {
-  all: unset;
-  display: flex;
+/***************************************************
+ * AI MODAL – FINAL (ORIGINAL RESTORE)
+ * 디자인 / 색상 / 구조 고정
+ ***************************************************/
+.ai-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: none;
   justify-content: center;
   align-items: center;
+  z-index: 4000;
+}
 
-  width: 100%;
+.ai-modal-inner {
+  width: 92%;
+  max-width: 480px;
+  background: linear-gradient(180deg, #111 0%, #0b0c14 100%);
+  border: 1px solid #222;
+  border-radius: 20px;
+  padding: 20px;
   box-sizing: border-box;
+}
 
-  padding: 14px;
-  margin: 12px 0;
+/* HEADER */
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
+.ai-modal-header h2 {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.ai-modal-header button {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 999px;
   background: #111;
   border: 1px solid #333;
-  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
 
+/* STYLE TABS — BLACK / WHITE */
+.ai-style-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+  overflow-x: auto;
+}
+
+.ai-style-tabs button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #0b0c14;
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  font-weight: 700;
+}
+
+/* DIRECT INPUT */
+.ai-modal input.input-field {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 14px;
   color: #fff;
   font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
-.speech-btn:active {
-  opacity: 0.85;
+/* BODY */
+.ai-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.preview-label {
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
-}
-
-.preview-box {
-  margin-top: 8px;
-}
-
-.video-viewport {
+.ai-modal-body textarea {
   width: 100%;
-  max-width: 480px;
-  aspect-ratio: 9 / 16;
-  background: #000;
+  min-height: 120px;
+  resize: none;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 16px;
+  padding: 14px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* FOOTER */
+.ai-modal-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-sub {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 14px;
   border-radius: 14px;
-  overflow: hidden;
 }
 
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* 가로 영상도 세로에 맞춤 */
-  display: block;
+.btn-main {
+  flex: 1;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  padding: 14px;
+  border-radius: 14px;
 }
