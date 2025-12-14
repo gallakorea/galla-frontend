@@ -11,62 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbnailInput = document.getElementById('thumbnail');
   const videoInput = document.getElementById('video');
 
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const videoBtn = document.getElementById('videoBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
-  const videoPreview = document.getElementById('videoPreview');
-
-  const aiModal = document.getElementById('aiModal');
-  const openAiModalBtn = document.getElementById('openAiModal');
-  const aiCloseBtn = document.getElementById('aiClose');
-
   /* =========================
-     AI MODAL
-  ========================= */
-  openAiModalBtn.onclick = () => {
-    aiModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  };
-
-  aiCloseBtn.onclick = () => {
-    aiModal.style.display = 'none';
-    document.body.style.overflow = '';
-  };
-
-  aiModal.onclick = (e) => {
-    if (e.target === aiModal) {
-      aiModal.style.display = 'none';
-      document.body.style.overflow = '';
-    }
-  };
-
-  /* =========================
-     FILE PREVIEW
-  ========================= */
-  thumbnailBtn.onclick = () => thumbnailInput.click();
-  videoBtn.onclick = () => videoInput.click();
-
-  thumbnailInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    thumbPreview.innerHTML = '';
-    thumbPreview.appendChild(img);
-  };
-
-  videoInput.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.controls = true;
-    videoPreview.innerHTML = '';
-    videoPreview.appendChild(video);
-  };
-
-  /* =========================
-     BASE64 (썸네일만)
+     FILE → BASE64 (이미지만)
   ========================= */
   const fileToBase64 = (file) =>
     new Promise(resolve => {
@@ -76,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
   /* =========================
-     PREVIEW CLICK (🔥 핵심 수정)
+     PREVIEW
   ========================= */
   previewBtn.onclick = async () => {
 
@@ -85,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const data = {
+    const previewData = {
       category: category.value,
       title: title.value,
       oneLine: oneLine.value,
@@ -93,26 +39,30 @@ document.addEventListener('DOMContentLoaded', () => {
       isAnonymous: isAnonymous.checked,
       createdAt: new Date().toISOString(),
 
-      // ✅ 썸네일은 base64 OK
+      // ✅ 안전
       thumbnailBase64: null,
 
-      // 🔥 영상은 base64 ❌
+      // 🔥 핵심: 영상은 URL만
       videoPreviewUrl: null
     };
 
     if (thumbnailInput.files[0]) {
-      data.thumbnailBase64 = await fileToBase64(thumbnailInput.files[0]);
+      previewData.thumbnailBase64 =
+        await fileToBase64(thumbnailInput.files[0]);
     }
 
     if (videoInput.files[0]) {
-      // 🔥 핵심: sessionStorage-safe
-      data.videoPreviewUrl = URL.createObjectURL(videoInput.files[0]);
+      previewData.videoPreviewUrl =
+        URL.createObjectURL(videoInput.files[0]);
     }
 
     try {
-      sessionStorage.setItem('galla_preview', JSON.stringify(data));
+      sessionStorage.setItem(
+        'galla_preview',
+        JSON.stringify(previewData)
+      );
     } catch (e) {
-      alert('파일이 너무 큽니다. 영상 용량을 줄여주세요.');
+      alert('파일 용량이 너무 큽니다. 영상은 미리보기에서만 표시됩니다.');
       return;
     }
 
