@@ -13,9 +13,8 @@
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <button class="back-btn" id="backBtn">← 수정</button>
+      <button class="back-btn" onclick="history.back()">← 수정</button>
       <img src="./assets/logo.png" class="logo" />
-      <div style="width:40px"></div>
     </div>
   </header>
 
@@ -23,7 +22,7 @@
   <section class="issue-hero">
     <div class="issue-category-time">
       <span id="preview-category"></span>
-      <span>미리보기</span>
+      <span>· 미리보기</span>
     </div>
 
     <h1 id="preview-title"></h1>
@@ -32,13 +31,13 @@
     <div class="issue-author">
       <span id="preview-author"></span>
     </div>
+
+    <!-- THUMBNAIL -->
+    <img id="preview-thumb" class="issue-thumb" hidden />
   </section>
 
-  <!-- THUMB -->
-  <img id="preview-thumb" class="issue-thumb" />
-
   <!-- VIDEO -->
-  <button id="videoBtn" class="speech-btn" style="display:none">
+  <button id="speechBtn" class="speech-btn" hidden>
     🎥 1분 엘리베이터 스피치
   </button>
 
@@ -48,12 +47,24 @@
     <p id="preview-desc"></p>
   </section>
 
-  <!-- ACTION -->
-  <section class="action-section">
-    <button class="btn-secondary" id="editBtn">수정하러 가기</button>
-    <button class="btn-primary">이대로 발행</button>
+  <!-- ACTIONS -->
+  <section class="preview-actions">
+    <button class="btn-edit" onclick="history.back()">수정하러 가기</button>
+    <button class="btn-publish">이대로 발행</button>
   </section>
 
+</div>
+
+<!-- VIDEO SHEET -->
+<div id="speechBackdrop" class="speech-backdrop" hidden>
+  <div class="speech-sheet">
+    <div class="speech-header">
+      <span class="speech-title">1분 엘리베이터 스피치</span>
+      <button class="speech-close">✕</button>
+    </div>
+
+    <video id="speechVideo" controls></video>
+  </div>
 </div>
 
 <script src="./js/preview.js"></script>

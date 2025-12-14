@@ -1,139 +1,159 @@
-* { margin:0; padding:0; box-sizing:border-box; }
-
 body {
-  background:#000;
-  color:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
-  display:flex;
-  justify-content:center;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
 }
 
 #app {
-  width:100%;
-  max-width:420px;
-  padding-bottom:120px;
+  width: 100%;
+  max-width: 420px;
+  padding-bottom: 140px;
 }
 
 /* HEADER */
 .header {
-  position:sticky;
-  top:0;
-  background:#000;
-  border-bottom:1px solid #111;
-  z-index:10;
+  position: sticky;
+  top: 0;
+  background: #000;
+  border-bottom: 1px solid #111;
+  z-index: 10;
 }
 
 .header-inner {
-  height:54px;
-  padding:0 14px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  height: 54px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .back-btn {
-  background:none;
-  border:none;
-  color:#fff;
-  font-size:15px;
-  cursor:pointer;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 14px;
 }
 
-.logo {
-  width:86px;
-}
+.logo { width: 80px; }
 
 /* HERO */
 .issue-hero {
-  padding:20px 16px;
+  padding: 20px 16px;
 }
 
 .issue-category-time {
-  font-size:12px;
-  color:#888;
-  display:flex;
-  gap:10px;
+  font-size: 12px;
+  color: #888;
 }
 
-.issue-hero h1 {
-  margin-top:6px;
-  font-size:22px;
-  font-weight:900;
+#preview-title {
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 900;
 }
 
-.issue-hero p {
-  margin-top:6px;
-  font-size:14px;
-  color:#bbb;
+#preview-oneline {
+  margin-top: 6px;
+  font-size: 14px;
+  color: #bbb;
 }
 
 .issue-author {
-  margin-top:10px;
-  font-size:13px;
-  color:#ccc;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #ccc;
 }
 
 /* THUMB */
 .issue-thumb {
-  width:100%;
-  height:240px;
-  object-fit:contain;
-  background:#111;
-  border-radius:14px;
-  padding:12px;
-  border:1px solid #222;
+  margin-top: 14px;
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  background: #111;
+  border-radius: 14px;
+  border: 1px solid #222;
 }
 
 /* VIDEO */
 .speech-btn {
-  width:calc(100% - 32px);
-  margin:18px auto 0;
-  padding:14px;
-  border-radius:12px;
-  background:#171717;
-  border:1px solid #292929;
-  font-size:14px;
-  font-weight:700;
-  color:#fff;
-  cursor:pointer;
+  margin: 20px 16px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #171717;
+  border: 1px solid #292929;
+  font-weight: 700;
+  color: #fff;
+  width: calc(100% - 32px);
 }
 
-/* DESCRIPTION */
+/* DESC */
 .issue-explain {
-  padding:0 16px;
-  margin-top:26px;
+  padding: 0 16px;
+  margin-top: 20px;
 }
 
 .issue-explain p {
-  margin-top:8px;
-  font-size:14px;
-  line-height:1.55;
-  color:#ddd;
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #ddd;
 }
 
-/* ACTION */
-.action-section {
-  padding:24px 16px;
-  display:flex;
-  gap:12px;
+/* ACTIONS */
+.preview-actions {
+  margin: 30px 16px;
+  display: flex;
+  gap: 12px;
 }
 
-.btn-secondary {
-  flex:1;
-  padding:14px;
-  border-radius:14px;
-  background:#111;
-  border:1px solid #333;
-  color:#fff;
-  font-weight:700;
+.btn-edit {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
 }
 
-.btn-primary {
-  flex:1;
-  padding:14px;
-  border-radius:14px;
-  background:#2f80ff;
-  border:none;
-  color:#fff;
-  font-weight:900;
+.btn-publish {
+  flex: 1;
+  padding: 14px;
+  border-radius: 14px;
+  background: #2979ff;
+  border: none;
+  color: #fff;
+  font-weight: 800;
+}
+
+/* VIDEO SHEET */
+.speech-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  z-index: 999;
+}
+
+.speech-sheet {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  max-width: 420px;
+  height: 85%;
+  background: #000;
+  border-radius: 20px 20px 0 0;
+}
+
+.speech-header {
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+#speechVideo {
+  width: 100%;
+  height: calc(100% - 50px);
+  object-fit: contain;
 }

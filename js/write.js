@@ -1,38 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   const body = document.body;
-
-  /* =========================
-     DOM ELEMENTS
-  ========================= */
-
-  const previewBtn = document.getElementById('previewBtn');
-
-  // AI Modal
-  const aiModal = document.getElementById('aiModal');
-  const openAiModalBtn = document.getElementById('openAiModal');
-  const aiCloseBtn = document.getElementById('aiClose');
-
-  // Inputs
-  const category = document.getElementById('category');
-  const title = document.getElementById('title');
-  const oneLine = document.getElementById('oneLine');
-  const description = document.getElementById('description');
-  const isAnonymous = document.getElementById('isAnonymous');
-
-  // Thumbnail
-  const thumbnailInput = document.getElementById('thumbnail');
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
-
-  // Video
-  const videoInput = document.getElementById('video');
-  const videoBtn = document.getElementById('videoBtn');
-  const videoPreview = document.getElementById('videoPreview');
+  const writeForm = document.getElementById('writeForm');
 
   /* =========================
      AI MODAL
   ========================= */
+
+  const aiModal = document.getElementById('aiModal');
+  const openAiModalBtn = document.getElementById('openAiModal');
+  const aiCloseBtn = document.getElementById('aiClose');
 
   openAiModalBtn?.addEventListener('click', () => {
     aiModal.style.display = 'flex';
@@ -52,16 +29,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================
-     FILE UPLOAD
+     INPUTS
   ========================= */
 
-  thumbnailBtn?.addEventListener('click', () => {
-    thumbnailInput.click();
-  });
+  const category = document.getElementById('category');
+  const title = document.getElementById('title');
+  const oneLine = document.getElementById('oneLine');
+  const description = document.getElementById('description');
+  const isAnonymous = document.getElementById('isAnonymous');
 
-  videoBtn?.addEventListener('click', () => {
-    videoInput.click();
-  });
+  /* =========================
+     FILE UPLOAD + PREVIEW
+  ========================= */
+
+  const thumbnailInput = document.getElementById('thumbnail');
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
+
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
+
+  thumbnailBtn?.addEventListener('click', () => thumbnailInput.click());
+  videoBtn?.addEventListener('click', () => videoInput.click());
 
   thumbnailInput?.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -95,36 +85,51 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================
-     PREVIEW CLICK (🔥 핵심)
+     FILE → BASE64 (핵심)
   ========================= */
 
-  previewBtn?.addEventListener('click', () => {
+  function fileToBase64(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /* =========================
+     PREVIEW SUBMIT (🔥 최종)
+  ========================= */
+
+  writeForm?.addEventListener('submit', async (e) => {
+    e.preventDefault(); // ❌ 리셋 차단
 
     const previewData = {
-      category: category?.value || '',
-      title: title?.value || '',
-      oneLine: oneLine?.value || '',
-      description: description?.value || '',
-      isAnonymous: isAnonymous?.checked || false,
+      category: category.value,
+      title: title.value,
+      oneLine: oneLine.value,
+      description: description.value,
+      isAnonymous: isAnonymous.checked,
       createdAt: new Date().toISOString(),
-
-      thumbnailUrl: thumbnailInput?.files[0]
-        ? URL.createObjectURL(thumbnailInput.files[0])
-        : null,
-
-      videoUrl: videoInput?.files[0]
-        ? URL.createObjectURL(videoInput.files[0])
-        : null
+      thumbnailBase64: null,
+      videoBase64: null
     };
 
-    // 🔒 sessionStorage 저장 (URL 파라미터 ❌)
+    if (thumbnailInput.files[0]) {
+      previewData.thumbnailBase64 =
+        await fileToBase64(thumbnailInput.files[0]);
+    }
+
+    if (videoInput.files[0]) {
+      previewData.videoBase64 =
+        await fileToBase64(videoInput.files[0]);
+    }
+
     sessionStorage.setItem(
       'galla_preview',
       JSON.stringify(previewData)
     );
 
-    // ✅ 리셋 없는 이동
-    window.location.assign('preview.html');
+    location.href = 'preview.html';
   });
 
 });
