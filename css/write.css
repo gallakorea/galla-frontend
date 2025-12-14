@@ -669,3 +669,59 @@ body {
   color: #ddd;
   line-height: 1.6;
 }
+
+/***************************************************
+ * WRITE PREVIEW – FORCE APPLY (REAL DOM)
+ ***************************************************/
+
+/* 썸네일 */
+.preview-thumb-img {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 14px;
+  margin: 12px 0;
+  display: block;
+}
+
+/* 1분 엘리베이터 스피치 버튼 */
+.preview-actions + button,
+button:has(👥),
+button:has(1분) {
+  width: 100%;
+  padding: 14px;
+  margin: 10px 0;
+
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+/* 하단 액션 영역 */
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* 수정하기 */
+.preview-actions button:first-child {
+  flex: 1;
+  padding: 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  border-radius: 12px;
+}
+
+/* 발행하기 */
+.preview-actions button:last-child {
+  flex: 1;
+  padding: 14px;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+}
