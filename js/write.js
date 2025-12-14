@@ -46,7 +46,7 @@ applyAiBtn.onclick = () => {
 };
 
 /***************************************************
- * FILE UPLOAD (9:16 FIX)
+ * FILE UPLOAD – PREVIEW FIX (썸네일 / 영상)
  ***************************************************/
 thumbBtn.onclick = () => thumbInput.click();
 thumbInput.onchange = e => {
@@ -54,9 +54,11 @@ thumbInput.onchange = e => {
   if (!f) return;
 
   const url = URL.createObjectURL(f);
+
   thumbPreview.innerHTML = `
-    <div class="video-viewport">
-      <img src="${url}" alt="thumbnail">
+    <div class="preview-box">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">썸네일 미리보기</div>
+      <img src="${url}" class="preview-thumb-img">
     </div>
   `;
 };
@@ -67,15 +69,19 @@ videoInput.onchange = e => {
   if (!f) return;
 
   const url = URL.createObjectURL(f);
+
   videoPreview.innerHTML = `
-    <div class="video-viewport">
-      <video src="${url}" muted playsinline></video>
+    <div class="preview-box">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">영상 미리보기 (9:16)</div>
+      <div class="video-viewport">
+        <video src="${url}" muted playsinline></video>
+      </div>
     </div>
   `;
 };
 
 /***************************************************
- * PREVIEW (ISSUE PAGE UI 동일)
+ * PREVIEW (ISSUE UI 동일)
  ***************************************************/
 previewBtn.onclick = () => {
   const category = categoryEl.value;
@@ -122,9 +128,7 @@ previewBtn.onclick = () => {
 
       ${
         videoEl
-          ? `
-          <button class="speech-btn">🎥 1분 엘리베이터 스피치</button>
-          `
+          ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>`
           : ''
       }
 
@@ -145,7 +149,7 @@ previewBtn.onclick = () => {
   preview.scrollIntoView({ behavior: 'smooth' });
 
   /***************************************************
-   * EDIT PREVIEW
+   * EDIT
    ***************************************************/
   document.getElementById('editPreview').onclick = () => {
     preview.remove();
@@ -153,7 +157,7 @@ previewBtn.onclick = () => {
   };
 
   /***************************************************
-   * SPEECH MODAL (9:16 FIX)
+   * SPEECH MODAL (9:16 + 가로 영상 대응)
    ***************************************************/
   const speechBtn = preview.querySelector('.speech-btn');
   if (speechBtn && videoEl) {
