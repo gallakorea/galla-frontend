@@ -1,23 +1,28 @@
 /***************************************************
  * GLOBAL
  ***************************************************/
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: #000;
   color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   display: flex;
   justify-content: center;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 .app-root {
   width: 100%;
   max-width: 480px;
-  margin: 0 auto;
+  min-height: 100vh;
   padding-bottom: 120px;
 }
 
-.page-main, .page-inner {
+.page-main,
+.page-inner {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -29,7 +34,7 @@ body {
 .header {
   position: sticky;
   top: 0;
-  z-index: 999;
+  z-index: 1000;
   background: #000;
   border-bottom: 1px solid #111;
   display: flex;
@@ -43,21 +48,36 @@ body {
   padding: 0 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
-.logo { width: 105px; }
+.logo {
+  width: 105px;
+}
 
 /***************************************************
- * SECTION / FORM
+ * SECTION
  ***************************************************/
 .section-block {
-  padding: 22px 16px;
+  padding: 20px 16px;
   border-bottom: 1px solid #0f0f0f;
 }
 
+.write-main-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.write-main-desc {
+  font-size: 13px;
+  color: #ccc;
+  margin-top: 6px;
+}
+
+/***************************************************
+ * FORM
+ ***************************************************/
 .field-block {
-  padding: 20px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -68,7 +88,11 @@ body {
   font-weight: 700;
 }
 
-.input-field {
+/***************************************************
+ * INPUT
+ ***************************************************/
+.input-field,
+textarea {
   width: 100%;
   padding: 12px 14px;
   background: #0b0c14;
@@ -76,15 +100,22 @@ body {
   border-radius: 12px;
   color: #fff;
   font-size: 14px;
-  box-sizing: border-box;
 }
 
-.textarea {
-  min-height: 220px;
+textarea {
+  min-height: 200px;
   resize: vertical;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #777;
+}
+
+/***************************************************
+ * FILE BUTTON
+ ***************************************************/
 .file-btn {
   width: 100%;
   padding: 12px;
@@ -92,95 +123,182 @@ body {
   border: 1px solid #1f2435;
   border-radius: 12px;
   color: #fff;
+  text-align: center;
 }
 
+/***************************************************
+ * MAIN BUTTONS
+ ***************************************************/
 .ai-main-btn {
   margin-top: 8px;
   padding: 12px;
   background: #2f80ff;
-  border-radius: 12px;
   border: none;
+  border-radius: 12px;
   color: #fff;
   font-weight: 700;
 }
 
 .primary-btn {
+  margin-top: 8px;
   padding: 16px;
   background: #2f80ff;
-  border-radius: 999px;
   border: none;
+  border-radius: 999px;
   color: #fff;
   font-size: 16px;
   font-weight: 800;
 }
 
 /***************************************************
- * PREVIEW (UPLOAD ONLY)
+ * ANON TOGGLE
  ***************************************************/
-.preview-box {
-  margin-top: 8px;
-  position: relative;
+.anon-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111;
+  border: 1px solid #222;
+  padding: 14px;
+  border-radius: 12px;
 }
 
-/* 업로드 전엔 아무것도 표시 안 함 */
-.preview-box:empty {
+.switch {
+  position: relative;
+  width: 46px;
+  height: 26px;
+}
+
+.switch input {
   display: none;
 }
 
-/* 썸네일 / 영상 공통 */
-.preview-box img,
-.preview-box video {
-  width: 100%;
-  height: auto;              /* 🔥 간격 문제 핵심 */
-  max-height: 360px;
-  object-fit: contain;
-  border-radius: 12px;
-  display: block;
-  background: #000;
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #333;
+  border-radius: 999px;
+  cursor: pointer;
 }
 
-/* 미리보기 라벨 – 업로드 되었을 때만 */
-.preview-box.is-preview::after {
-  content: "미리보기";
+.slider::before {
+  content: "";
   position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.7);
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 5;
-  pointer-events: none;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: .2s;
+}
+
+.switch input:checked + .slider {
+  background: #2f80ff;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
 }
 
 /***************************************************
- * ISSUE PREVIEW (ISSUE UI 동일)
+ * PREVIEW BOX (업로드 전엔 비어있음)
  ***************************************************/
-.issue-preview {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 16px;
+.preview-box {
+  margin-top: 8px;
 }
 
-.issue-title { font-size: 22px; font-weight: 800; }
-.issue-one-line { color: #ccc; margin: 6px 0; }
-.issue-author { font-size: 13px; color: #888; margin-bottom: 12px; }
-
-.issue-preview img {
+/***************************************************
+ * PREVIEW MEDIA (ISSUE & WRITE 공통)
+ ***************************************************/
+.preview-thumb-img {
   width: 100%;
   max-width: 480px;
   height: auto;
-  border-radius: 14px;
   display: block;
   margin: 12px auto 0;
+  border-radius: 14px;
   object-fit: cover;
 }
 
+/***************************************************
+ * ISSUE PREVIEW
+ ***************************************************/
+.issue-preview {
+  padding: 16px;
+}
+
+.issue-meta {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.issue-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 6px 0;
+}
+
+.issue-one-line {
+  font-size: 14px;
+  color: #ccc;
+}
+
+.issue-author {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.issue-summary {
+  margin-top: 16px;
+}
+
+.issue-summary h3 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.issue-summary p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #ddd;
+}
+
+/***************************************************
+ * PREVIEW ACTIONS
+ ***************************************************/
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.preview-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.preview-actions button:first-child {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+.preview-actions button:last-child {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  font-weight: 700;
+}
+
+/***************************************************
+ * SPEECH BUTTON
+ ***************************************************/
 .speech-btn {
-  all: unset;
   width: 100%;
   margin: 12px 0;
   padding: 14px;
@@ -190,42 +308,15 @@ body {
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-}
-
-.preview-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.preview-actions button:first-child {
-  flex: 1;
-  padding: 14px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 12px;
-}
-
-.preview-actions button:last-child {
-  flex: 1;
-  padding: 14px;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  border-radius: 12px;
-  font-weight: 700;
 }
 
 /***************************************************
- * AI MODAL (색상 통일)
+ * AI MODAL
  ***************************************************/
 .ai-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
+  background: rgba(0,0,0,0.7);
   display: none;
   justify-content: center;
   align-items: center;
@@ -244,12 +335,10 @@ body {
   flex-direction: column;
 }
 
-.ai-modal input,
-.ai-modal textarea {
-  background: #0b0c14;
-  color: #fff;
-  border: 1px solid #222;
-  border-radius: 12px;
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .ai-modal-header button {
@@ -262,12 +351,64 @@ body {
 }
 
 /***************************************************
- * SPEECH MODAL (9:16 ONLY HERE)
+ * AI TABS
+ ***************************************************/
+.ai-style-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.ai-style-tabs button {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #000;
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;
+  color: #000;
+  font-weight: 700;
+}
+
+/***************************************************
+ * AI FOOTER
+ ***************************************************/
+.ai-modal-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.btn-sub {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.btn-main {
+  flex: 1;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+/***************************************************
+ * SPEECH MODAL (9:16)
  ***************************************************/
 .speech-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.8);
+  background: rgba(0,0,0,0.8);
   display: none;
   justify-content: center;
   align-items: center;
@@ -282,16 +423,53 @@ body {
   border-radius: 16px;
 }
 
-.speech-sheet .video-viewport {
+.speech-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.video-viewport {
   width: 100%;
-  aspect-ratio: 9 / 16;   /* 🔥 여기서만 */
+  aspect-ratio: 9 / 16;
   background: #000;
   border-radius: 14px;
   overflow: hidden;
 }
 
-.speech-sheet video {
+.video-viewport video {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/***************************************************
+ * BOTTOM NAV
+ ***************************************************/
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 64px;
+  background: #000;
+  border-top: 1px solid #111;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 9999;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+}
+
+.nav-item img {
+  width: 28px;
+  height: 28px;
+  filter: brightness(0) invert(1);
 }

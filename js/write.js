@@ -2,64 +2,46 @@ const body = document.body;
 const form = document.getElementById('writeForm');
 const issuePreview = document.getElementById('issuePreview');
 
-/***************************************************
- * AI MODAL
- ***************************************************/
+/* AI MODAL */
 const aiModal = document.getElementById('aiModal');
-const openAiBtn = document.getElementById('openAiModal');
-const closeAiBtn = document.getElementById('aiClose');
-
-openAiBtn.onclick = () => {
+document.getElementById('openAiModal').onclick = () => {
   aiModal.style.display = 'flex';
   body.style.overflow = 'hidden';
 };
-
-closeAiBtn.onclick = () => {
+document.getElementById('aiClose').onclick = () => {
   aiModal.style.display = 'none';
   body.style.overflow = '';
 };
 
-/***************************************************
- * THUMBNAIL UPLOAD
- ***************************************************/
+/* FILE UPLOAD */
 const thumbInput = document.getElementById('thumbnail');
-const thumbBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
-
-thumbBtn.onclick = () => thumbInput.click();
+const videoInput = document.getElementById('video');
+document.getElementById('thumbnailBtn').onclick = () => thumbInput.click();
+document.getElementById('videoBtn').onclick = () => videoInput.click();
 
 thumbInput.onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  thumbPreview.classList.add('is-preview');
-  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(file)}">`;
+  const f = e.target.files[0];
+  if (!f) return;
+  document.getElementById('thumbPreview').innerHTML = `
+    <div class="preview-media" data-preview="true">
+      <img src="${URL.createObjectURL(f)}" class="preview-thumb-img">
+    </div>`;
 };
-
-/***************************************************
- * VIDEO UPLOAD
- ***************************************************/
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
-
-videoBtn.onclick = () => videoInput.click();
 
 videoInput.onchange = e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  videoPreview.classList.add('is-preview');
-  videoPreview.innerHTML = `<video src="${URL.createObjectURL(file)}" muted playsinline></video>`;
+  const f = e.target.files[0];
+  if (!f) return;
+  document.getElementById('videoPreview').innerHTML = `
+    <div class="video-viewport" data-preview="true">
+      <video src="${URL.createObjectURL(f)}" muted></video>
+    </div>`;
 };
 
-/***************************************************
- * PREVIEW RENDER
- ***************************************************/
+/* PREVIEW */
 form.onsubmit = e => {
   e.preventDefault();
 
-  const category = document.getElementById('category').value;
+  const category = category.value;
   const title = document.getElementById('title').value;
   const oneLine = document.getElementById('oneLine').value;
   const desc = document.getElementById('description').value;
@@ -70,8 +52,8 @@ form.onsubmit = e => {
     return;
   }
 
-  const thumbImg = thumbPreview.querySelector('img');
-  const videoEl = videoPreview.querySelector('video');
+  const thumb = document.querySelector('#thumbPreview img');
+  const video = document.querySelector('#videoPreview video');
 
   issuePreview.innerHTML = `
     <section class="issue-preview">
@@ -80,14 +62,13 @@ form.onsubmit = e => {
       ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
       <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
-      ${thumbImg ? `<img src="${thumbImg.src}">` : ''}
+      ${thumb ? `<img src="${thumb.src}" class="preview-thumb-img">` : ''}
+      ${video ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
 
-      ${videoEl ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
-
-      <section class="issue-summary">
+      <div class="issue-summary">
         <h3>📝 이 주제에 대한 핵심 요약</h3>
         <p>${desc}</p>
-      </section>
+      </div>
 
       <div class="preview-actions">
         <button id="editPreview">수정하기</button>
@@ -101,5 +82,20 @@ form.onsubmit = e => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  if (video) {
+    document.getElementById('openSpeech').onclick = () => {
+      document.getElementById('speechVideo').src = video.src;
+      document.getElementById('speechModal').style.display = 'flex';
+      body.style.overflow = 'hidden';
+    };
+  }
+
   issuePreview.scrollIntoView({ behavior: 'smooth' });
+};
+
+/* SPEECH CLOSE */
+document.getElementById('closeSpeech').onclick = () => {
+  document.getElementById('speechVideo').pause();
+  document.getElementById('speechModal').style.display = 'none';
+  body.style.overflow = '';
 };
