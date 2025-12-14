@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* =========================
-     BASE64
+     BASE64 (썸네일만)
   ========================= */
   const fileToBase64 = (file) =>
     new Promise(resolve => {
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
   /* =========================
-     PREVIEW CLICK
+     PREVIEW CLICK (🔥 핵심 수정)
   ========================= */
   previewBtn.onclick = async () => {
 
@@ -92,8 +92,12 @@ document.addEventListener('DOMContentLoaded', () => {
       description: description.value,
       isAnonymous: isAnonymous.checked,
       createdAt: new Date().toISOString(),
+
+      // ✅ 썸네일은 base64 OK
       thumbnailBase64: null,
-      videoBase64: null
+
+      // 🔥 영상은 base64 ❌
+      videoPreviewUrl: null
     };
 
     if (thumbnailInput.files[0]) {
@@ -101,10 +105,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (videoInput.files[0]) {
-      data.videoBase64 = await fileToBase64(videoInput.files[0]);
+      // 🔥 핵심: sessionStorage-safe
+      data.videoPreviewUrl = URL.createObjectURL(videoInput.files[0]);
     }
 
-    sessionStorage.setItem('galla_preview', JSON.stringify(data));
+    try {
+      sessionStorage.setItem('galla_preview', JSON.stringify(data));
+    } catch (e) {
+      alert('파일이 너무 큽니다. 영상 용량을 줄여주세요.');
+      return;
+    }
 
     location.href = 'preview.html';
   };
