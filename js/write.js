@@ -20,6 +20,32 @@ const videoPreview = document.getElementById('videoPreview');
 const previewBtn = document.getElementById('previewBtn');
 
 /***************************************************
+ * AI MODAL
+ ***************************************************/
+const aiModal = document.getElementById('aiModal');
+const openAiBtn = document.getElementById('openAiModal');
+const closeAiBtn = document.getElementById('aiClose');
+const aiUserText = document.getElementById('aiUserText');
+const aiResultText = document.getElementById('aiResultText');
+const applyAiBtn = document.getElementById('applyAi');
+
+openAiBtn.onclick = () => {
+  aiUserText.value = descEl.value;
+  aiModal.style.display = 'flex';
+};
+
+closeAiBtn.onclick = () => {
+  aiModal.style.display = 'none';
+};
+
+applyAiBtn.onclick = () => {
+  if (aiResultText.value.trim()) {
+    descEl.value = aiResultText.value;
+  }
+  aiModal.style.display = 'none';
+};
+
+/***************************************************
  * FILE UPLOAD – THUMBNAIL
  ***************************************************/
 thumbBtn.onclick = () => thumbInput.click();
@@ -37,7 +63,7 @@ thumbInput.onchange = e => {
 };
 
 /***************************************************
- * FILE UPLOAD – VIDEO
+ * FILE UPLOAD – VIDEO (9:16 고정)
  ***************************************************/
 videoBtn.onclick = () => videoInput.click();
 
@@ -49,14 +75,19 @@ videoInput.onchange = e => {
     <div class="preview-box video">
       <div class="preview-label">미리보기</div>
       <div class="video-viewport">
-        <video src="${URL.createObjectURL(f)}" muted playsinline></video>
+        <video
+          src="${URL.createObjectURL(f)}"
+          muted
+          playsinline
+          controls
+        ></video>
       </div>
     </div>
   `;
 };
 
 /***************************************************
- * PREVIEW (ISSUE PAGE 동일 UI)
+ * PREVIEW (ISSUE PAGE UI 동일)
  ***************************************************/
 previewBtn.onclick = () => {
   const category = categoryEl.value;
@@ -79,20 +110,6 @@ previewBtn.onclick = () => {
   const preview = document.createElement('section');
   preview.className = 'issue-preview';
 
-  let mediaHTML = '';
-
-  // ✅ 썸네일만 있을 때
-  if (thumbImg && !videoEl) {
-    mediaHTML = `<img src="${thumbImg.src}" class="issue-thumb">`;
-  }
-
-  // ✅ 영상 있을 때만 video-viewport 생성
-  if (videoEl) {
-    mediaHTML = `
-      <button class="speech-btn">🎥 1분 엘리베이터 스피치</button>
-    `;
-  }
-
   preview.innerHTML = `
     <div class="issue-card">
 
@@ -111,7 +128,7 @@ previewBtn.onclick = () => {
 
       ${thumbImg ? `<img src="${thumbImg.src}" class="issue-thumb">` : ''}
 
-      ${mediaHTML}
+      ${videoEl ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>` : ''}
 
       <div class="issue-summary">
         <h3>📝 이 주제에 대한 핵심 요약</h3>
@@ -130,7 +147,7 @@ previewBtn.onclick = () => {
   preview.scrollIntoView({ behavior: 'smooth' });
 
   /***************************************************
-   * EDIT
+   * EDIT PREVIEW
    ***************************************************/
   document.getElementById('editPreview').onclick = () => {
     preview.remove();
@@ -147,6 +164,9 @@ previewBtn.onclick = () => {
       const video = document.getElementById('speechVideo');
 
       video.src = videoEl.src;
+      video.muted = false;
+      video.currentTime = 0;
+
       modal.style.display = 'flex';
     };
   }
@@ -156,6 +176,7 @@ previewBtn.onclick = () => {
  * SPEECH MODAL CLOSE
  ***************************************************/
 const closeSpeech = document.getElementById('closeSpeech');
+
 if (closeSpeech) {
   closeSpeech.onclick = () => {
     const modal = document.getElementById('speechModal');
