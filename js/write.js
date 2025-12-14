@@ -55,23 +55,30 @@ document.addEventListener('DOMContentLoaded', () => {
      FILE UPLOAD
   ========================= */
 
-  thumbnailBtn?.addEventListener('click', () => thumbnailInput.click());
-  videoBtn?.addEventListener('click', () => videoInput.click());
+  thumbnailBtn?.addEventListener('click', () => {
+    thumbnailInput.click();
+  });
 
-  thumbnailInput?.addEventListener('change', e => {
+  videoBtn?.addEventListener('click', () => {
+    videoInput.click();
+  });
+
+  thumbnailInput?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     img.style.width = '100%';
+    img.style.maxHeight = '220px';
+    img.style.objectFit = 'contain';
     img.style.borderRadius = '12px';
 
     thumbPreview.innerHTML = '';
     thumbPreview.appendChild(img);
   });
 
-  videoInput?.addEventListener('change', e => {
+  videoInput?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -79,6 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
     video.src = URL.createObjectURL(file);
     video.controls = true;
     video.style.width = '100%';
+    video.style.maxHeight = '220px';
+    video.style.objectFit = 'contain';
     video.style.borderRadius = '12px';
 
     videoPreview.innerHTML = '';
@@ -86,29 +95,36 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================
-     PREVIEW CLICK (핵심)
+     PREVIEW CLICK (🔥 핵심)
   ========================= */
 
   previewBtn?.addEventListener('click', () => {
 
-    const params = new URLSearchParams({
-      category: category.value,
-      title: title.value,
-      oneLine: oneLine.value,
-      description: description.value,
-      isAnonymous: isAnonymous.checked ? '1' : '0'
-    });
+    const previewData = {
+      category: category?.value || '',
+      title: title?.value || '',
+      oneLine: oneLine?.value || '',
+      description: description?.value || '',
+      isAnonymous: isAnonymous?.checked || false,
+      createdAt: new Date().toISOString(),
 
-    if (thumbnailInput.files[0]) {
-      params.set('thumb', URL.createObjectURL(thumbnailInput.files[0]));
-    }
+      thumbnailUrl: thumbnailInput?.files[0]
+        ? URL.createObjectURL(thumbnailInput.files[0])
+        : null,
 
-    if (videoInput.files[0]) {
-      params.set('video', URL.createObjectURL(videoInput.files[0]));
-    }
+      videoUrl: videoInput?.files[0]
+        ? URL.createObjectURL(videoInput.files[0])
+        : null
+    };
 
-    // ✅ 절대 리셋 없음
-    location.href = `preview.html?${params.toString()}`;
+    // 🔒 sessionStorage 저장 (URL 파라미터 ❌)
+    sessionStorage.setItem(
+      'galla_preview',
+      JSON.stringify(previewData)
+    );
+
+    // ✅ 리셋 없는 이동
+    window.location.assign('preview.html');
   });
 
 });

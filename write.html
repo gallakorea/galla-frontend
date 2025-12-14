@@ -36,11 +36,10 @@
         </ul>
       </section>
 
-      <!-- ✅ 익명 발의 (가이드 밖, 카테고리 위) -->
+      <!-- 익명 발의 -->
       <section class="section-block">
         <div class="anon-toggle">
           <span>익명으로 발의하기</span>
-
           <label class="switch">
             <input type="checkbox" id="isAnonymous" />
             <span class="slider"></span>
@@ -48,12 +47,13 @@
         </div>
       </section>
 
+      <!-- ❌ submit 쓰지 않는 form -->
       <form id="writeForm">
 
         <!-- Category -->
         <div class="field-block">
-          <label class="field-label">카테고리 (필수)</label>
-          <select id="category" class="input-field" required>
+          <label class="field-label">카테고리</label>
+          <select id="category" class="input-field">
             <option value="">카테고리를 선택하세요</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
@@ -101,14 +101,24 @@
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
           <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
-          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
-        </div>
-
-        <div class="field-block">
-          <button type="submit" class="primary-btn">미리보기</button>
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI에게 글 다듬기
+          </button>
         </div>
 
       </form>
+
+      <!-- ✅ 미리보기 버튼은 form 밖 -->
+      <div class="field-block">
+        <button
+          id="previewBtn"
+          type="button"
+          class="primary-btn"
+        >
+          미리보기
+        </button>
+      </div>
+
     </div>
   </main>
 
@@ -122,7 +132,7 @@
   </nav>
 </div>
 
-<!-- AI MODAL -->
+<!-- AI MODAL (그대로 유지) -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
 
