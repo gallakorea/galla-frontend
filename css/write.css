@@ -927,3 +927,28 @@ button:has(1분) {
 .preview-box video {
   display: block;
 }
+
+.preview-box {
+  margin-top: 8px;
+  line-height: 0;          /* ⬅️ 이게 핵심 */
+}
+
+.preview-box .video-viewport {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.preview-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;       /* 가로 영상도 세로에 맞게 */
+  display: block;          /* ⬅️ 하단 공백 제거 핵심 */
+}
+
+.preview-box img {
+  width: 100%;
+  display: block;
+}
