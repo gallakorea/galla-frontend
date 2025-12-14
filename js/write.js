@@ -1,59 +1,61 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* ===== AI MODAL ===== */
   const aiModal = document.getElementById('aiModal');
-  const openAiModal = document.getElementById('openAiModal');
-  const aiClose = document.getElementById('aiClose');
+  const openAi = document.getElementById('openAiModal');
+  const closeAi = document.getElementById('aiClose');
 
-  openAiModal?.addEventListener('click', () => {
+  openAi.onclick = () => {
     aiModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-  });
+  };
 
-  aiClose?.addEventListener('click', () => {
+  closeAi.onclick = () => {
     aiModal.style.display = 'none';
     document.body.style.overflow = '';
-  });
+  };
 
-  aiModal?.addEventListener('click', e => {
-    if (e.target === aiModal) {
-      aiModal.style.display = 'none';
-      document.body.style.overflow = '';
-    }
-  });
-
-  /* ===== FILE UPLOAD ===== */
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const thumbnailInput = document.getElementById('thumbnail');
+  const thumbBtn = document.getElementById('thumbnailBtn');
+  const thumbInput = document.getElementById('thumbnail');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  thumbnailBtn?.addEventListener('click', () => thumbnailInput.click());
-
-  thumbnailInput?.addEventListener('change', e => {
+  thumbBtn.onclick = () => thumbInput.click();
+  thumbInput.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
-
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     thumbPreview.innerHTML = '';
     thumbPreview.appendChild(img);
-  });
+  };
 
   const videoBtn = document.getElementById('videoBtn');
   const videoInput = document.getElementById('video');
   const videoPreview = document.getElementById('videoPreview');
 
-  videoBtn?.addEventListener('click', () => videoInput.click());
-
-  videoInput?.addEventListener('change', e => {
+  videoBtn.onclick = () => videoInput.click();
+  videoInput.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
-
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.controls = true;
+    const v = document.createElement('video');
+    v.src = URL.createObjectURL(file);
+    v.controls = true;
     videoPreview.innerHTML = '';
-    videoPreview.appendChild(video);
-  });
+    videoPreview.appendChild(v);
+  };
+
+  document.getElementById('previewBtn').onclick = () => {
+    const data = {
+      category: category.value,
+      title: title.value,
+      oneLine: oneLine.value,
+      description: description.value,
+      isAnonymous: isAnonymous.checked,
+      thumbnail: thumbInput.files[0] ? URL.createObjectURL(thumbInput.files[0]) : null,
+      video: videoInput.files[0] ? URL.createObjectURL(videoInput.files[0]) : null
+    };
+
+    sessionStorage.setItem('galla_preview', JSON.stringify(data));
+    location.href = 'preview.html';
+  };
 
 });

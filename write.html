@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>새 갈라 만들기 - GALLA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <link rel="stylesheet" href="./css/write.css" />
 </head>
-<body>
 
+<body>
 <div class="app-root">
 
   <header class="header">
@@ -17,7 +17,7 @@
   </header>
 
   <main class="page-main">
-    <form id="writeForm">
+    <div class="page-inner">
 
       <section class="section-block">
         <h1 class="write-main-title">새 갈라치기 만들기</h1>
@@ -26,75 +26,79 @@
 
       <section class="section-block write-guide-block">
         <ul class="write-guide-list">
-          <li>제목은 최대 80자</li>
-          <li>논쟁 포인트 명확</li>
-          <li>AI 글 다듬기 가능</li>
+          <li>제목은 최대 80자 이내</li>
+          <li>논쟁 포인트가 명확할수록 참여율 상승</li>
+          <li>AI로 글 다듬기 가능</li>
         </ul>
       </section>
 
       <section class="section-block">
         <div class="anon-toggle">
-          <span>익명으로 발의</span>
+          <span>익명으로 발의하기</span>
           <label class="switch">
-            <input type="checkbox" id="isAnonymous">
+            <input type="checkbox" id="isAnonymous" />
             <span class="slider"></span>
           </label>
         </div>
       </section>
 
-      <div class="field-block">
-        <label class="field-label">카테고리</label>
-        <select id="category" class="input-field" required>
-          <option value="">선택</option>
-          <option>정치·사회</option>
-          <option>경제·투자</option>
-          <option>직장·경력</option>
-          <option>연애·결혼</option>
-          <option>생활·일상</option>
-          <option>패션·뷰티</option>
-          <option>엔터·스포츠</option>
-          <option>세계·여행</option>
-          <option>음식·맛집</option>
-          <option>19금</option>
-          <option>기타</option>
-        </select>
-      </div>
+      <form id="writeForm">
+
+        <div class="field-block">
+          <label class="field-label">카테고리</label>
+          <select id="category" class="input-field">
+            <option value="">카테고리를 선택하세요</option>
+            <option>정치·사회</option>
+            <option>경제·투자</option>
+            <option>직장·경력</option>
+            <option>연애·결혼</option>
+            <option>생활·일상</option>
+            <option>패션·뷰티</option>
+            <option>엔터·스포츠</option>
+            <option>세계·여행</option>
+            <option>음식·맛집</option>
+            <option>19금</option>
+            <option>기타</option>
+          </select>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">제목</label>
+          <input id="title" class="input-field" maxlength="80" />
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">발의자 한 줄</label>
+          <input id="oneLine" class="input-field" />
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">이슈 썸네일</label>
+          <input type="file" id="thumbnail" hidden accept="image/*" />
+          <button type="button" id="thumbnailBtn" class="file-btn">썸네일 업로드</button>
+          <div id="thumbPreview" class="preview-box"></div>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">엘리베이터 스피치</label>
+          <input type="file" id="video" hidden accept="video/*" />
+          <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
+          <div id="videoPreview" class="preview-box"></div>
+        </div>
+
+        <div class="field-block">
+          <label class="field-label">이슈 설명</label>
+          <textarea id="description" class="input-field textarea"></textarea>
+          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
+        </div>
+
+      </form>
 
       <div class="field-block">
-        <label class="field-label">제목</label>
-        <input id="title" class="input-field" maxlength="80" required />
+        <button id="previewBtn" type="button" class="primary-btn">미리보기</button>
       </div>
 
-      <div class="field-block">
-        <label class="field-label">발의자 한 줄</label>
-        <input id="oneLine" class="input-field" />
-      </div>
-
-      <div class="field-block">
-        <label class="field-label">썸네일</label>
-        <input type="file" id="thumbnail" accept="image/*" hidden />
-        <button type="button" id="thumbnailBtn" class="file-btn">썸네일 업로드</button>
-        <div id="thumbPreview" class="preview-box"></div>
-      </div>
-
-      <div class="field-block">
-        <label class="field-label">영상</label>
-        <input type="file" id="video" accept="video/*" hidden />
-        <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
-        <div id="videoPreview" class="preview-box"></div>
-      </div>
-
-      <div class="field-block">
-        <label class="field-label">이슈 설명</label>
-        <textarea id="description" class="input-field textarea"></textarea>
-        <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
-      </div>
-
-      <div class="field-block">
-        <button type="submit" class="primary-btn">미리보기</button>
-      </div>
-
-    </form>
+    </div>
   </main>
 
   <nav class="bottom-nav">
@@ -104,7 +108,6 @@
     <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
     <button class="nav-item"><img src="./assets/icons/nav-user.svg"></button>
   </nav>
-
 </div>
 
 <!-- AI MODAL -->
@@ -114,8 +117,10 @@
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
-    <textarea id="aiUserText" class="input-field textarea"></textarea>
-    <textarea id="aiResultText" class="input-field textarea"></textarea>
+
+    <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+    <textarea id="aiResultText" placeholder="AI 결과"></textarea>
+
     <div class="ai-modal-footer">
       <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용</button>
