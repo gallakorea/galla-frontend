@@ -46,28 +46,35 @@ applyAiBtn.onclick = () => {
 };
 
 /***************************************************
- * FILE UPLOAD (9:16 FIX)
+ * FILE UPLOAD — THUMBNAIL
  ***************************************************/
 thumbBtn.onclick = () => thumbInput.click();
-thumbInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
 
-  const url = URL.createObjectURL(f);
+thumbInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+
   thumbPreview.innerHTML = `
-    <div class="video-viewport">
-      <img src="${url}" alt="thumbnail">
-    </div>
+    <div class="preview-label">미리보기</div>
+    <img src="${url}" />
   `;
 };
 
+/***************************************************
+ * FILE UPLOAD — VIDEO
+ ***************************************************/
 videoBtn.onclick = () => videoInput.click();
-videoInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
 
-  const url = URL.createObjectURL(f);
+videoInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+
   videoPreview.innerHTML = `
+    <div class="preview-label">미리보기</div>
     <div class="video-viewport">
       <video src="${url}" muted playsinline></video>
     </div>
@@ -75,7 +82,7 @@ videoInput.onchange = e => {
 };
 
 /***************************************************
- * PREVIEW (ISSUE PAGE UI 동일)
+ * PREVIEW (ISSUE PAGE UI)
  ***************************************************/
 previewBtn.onclick = () => {
   const category = categoryEl.value;
@@ -100,7 +107,6 @@ previewBtn.onclick = () => {
 
   preview.innerHTML = `
     <div class="issue-card">
-
       <div class="issue-meta">
         <span class="issue-category">${category}</span>
         · <span class="issue-time">방금 전</span>
@@ -114,17 +120,11 @@ previewBtn.onclick = () => {
         작성자 · ${anon ? '익명' : '사용자'}
       </div>
 
-      ${
-        thumbImg
-          ? `<img src="${thumbImg.src}" class="issue-thumb">`
-          : ''
-      }
+      ${thumbImg ? `<img src="${thumbImg.src}" class="issue-thumb" />` : ''}
 
       ${
         videoEl
-          ? `
-          <button class="speech-btn">🎥 1분 엘리베이터 스피치</button>
-          `
+          ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>`
           : ''
       }
 
@@ -137,32 +137,23 @@ previewBtn.onclick = () => {
         <button id="editPreview">수정하기</button>
         <button class="btn-publish">발행하기</button>
       </div>
-
     </div>
   `;
 
   form.after(preview);
   preview.scrollIntoView({ behavior: 'smooth' });
 
-  /***************************************************
-   * EDIT PREVIEW
-   ***************************************************/
   document.getElementById('editPreview').onclick = () => {
     preview.remove();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  /***************************************************
-   * SPEECH MODAL (9:16 FIX)
-   ***************************************************/
   const speechBtn = preview.querySelector('.speech-btn');
   if (speechBtn && videoEl) {
     speechBtn.onclick = () => {
       const modal = document.getElementById('speechModal');
       const video = document.getElementById('speechVideo');
-
       video.src = videoEl.src;
-      video.style.objectFit = 'contain';
       modal.style.display = 'flex';
     };
   }
