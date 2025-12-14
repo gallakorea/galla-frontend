@@ -9,15 +9,15 @@ body {
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   display: flex;
   justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 .app-root {
   width: 100%;
   max-width: 480px;
-  min-height: 100vh;
+  margin: 0 auto;
   padding-bottom: 120px;
 }
 
@@ -48,6 +48,7 @@ body {
   padding: 0 16px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .logo {
@@ -55,10 +56,10 @@ body {
 }
 
 /***************************************************
- * SECTION
+ * SECTION (🔥 가이드 포함 핵심)
  ***************************************************/
 .section-block {
-  padding: 20px 16px;
+  padding: 22px 16px;
   border-bottom: 1px solid #0f0f0f;
 }
 
@@ -74,10 +75,29 @@ body {
 }
 
 /***************************************************
+ * GUIDE (❗ 사라졌던 부분 복구)
+ ***************************************************/
+.write-guide-block {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+  margin: 0 16px 8px;
+}
+
+.write-guide-list {
+  margin: 0;
+  padding: 14px 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #ddd;
+  list-style: disc;
+}
+
+/***************************************************
  * FORM
  ***************************************************/
 .field-block {
-  padding: 16px;
+  padding: 18px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -91,8 +111,7 @@ body {
 /***************************************************
  * INPUT
  ***************************************************/
-.input-field,
-textarea {
+.input-field {
   width: 100%;
   padding: 12px 14px;
   background: #0b0c14;
@@ -102,15 +121,14 @@ textarea {
   font-size: 14px;
 }
 
-textarea {
-  min-height: 200px;
-  resize: vertical;
-  line-height: 1.6;
+.input-field::placeholder {
+  color: #777;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #777;
+.textarea {
+  min-height: 220px;
+  line-height: 1.55;
+  resize: vertical;
 }
 
 /***************************************************
@@ -118,40 +136,30 @@ textarea::placeholder {
  ***************************************************/
 .file-btn {
   width: 100%;
-  padding: 12px;
+  padding: 14px;
   background: #11131f;
   border: 1px solid #1f2435;
   border-radius: 12px;
   color: #fff;
-  text-align: center;
+  font-size: 14px;
 }
 
 /***************************************************
- * MAIN BUTTONS
+ * PRIMARY BUTTON
  ***************************************************/
-.ai-main-btn {
-  margin-top: 8px;
-  padding: 12px;
-  background: #2f80ff;
-  border: none;
-  border-radius: 12px;
-  color: #fff;
-  font-weight: 700;
-}
-
 .primary-btn {
-  margin-top: 8px;
+  width: 100%;
   padding: 16px;
   background: #2f80ff;
-  border: none;
   border-radius: 999px;
+  border: none;
   color: #fff;
   font-size: 16px;
   font-weight: 800;
 }
 
 /***************************************************
- * ANON TOGGLE
+ * ANON TOGGLE (🔥 정상)
  ***************************************************/
 .anon-toggle {
   display: flex;
@@ -159,8 +167,8 @@ textarea::placeholder {
   align-items: center;
   background: #111;
   border: 1px solid #222;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 16px;
+  border-radius: 14px;
 }
 
 .switch {
@@ -178,7 +186,7 @@ textarea::placeholder {
   inset: 0;
   background: #333;
   border-radius: 999px;
-  cursor: pointer;
+  transition: background .2s;
 }
 
 .slider::before {
@@ -190,7 +198,7 @@ textarea::placeholder {
   border-radius: 50%;
   top: 3px;
   left: 3px;
-  transition: .2s;
+  transition: transform .2s;
 }
 
 .switch input:checked + .slider {
@@ -202,112 +210,40 @@ textarea::placeholder {
 }
 
 /***************************************************
- * PREVIEW BOX (업로드 전엔 비어있음)
+ * PREVIEW (🔥 간격 원천 차단)
  ***************************************************/
 .preview-box {
   margin-top: 8px;
+  display: none;
 }
 
-/***************************************************
- * PREVIEW MEDIA (ISSUE & WRITE 공통)
- ***************************************************/
-.preview-thumb-img {
-  width: 100%;
-  max-width: 480px;
-  height: auto;
+.preview-box.is-visible {
   display: block;
-  margin: 12px auto 0;
-  border-radius: 14px;
-  object-fit: cover;
 }
 
-/***************************************************
- * ISSUE PREVIEW
- ***************************************************/
-.issue-preview {
-  padding: 16px;
-}
-
-.issue-meta {
-  font-size: 12px;
-  color: #aaa;
-}
-
-.issue-title {
-  font-size: 22px;
-  font-weight: 800;
-  margin: 6px 0;
-}
-
-.issue-one-line {
-  font-size: 14px;
-  color: #ccc;
-}
-
-.issue-author {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 10px;
-}
-
-.issue-summary {
-  margin-top: 16px;
-}
-
-.issue-summary h3 {
-  font-size: 15px;
-  margin-bottom: 6px;
-}
-
-.issue-summary p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #ddd;
-}
-
-/***************************************************
- * PREVIEW ACTIONS
- ***************************************************/
-.preview-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.preview-actions button {
-  flex: 1;
-  padding: 14px;
+.preview-box img,
+.preview-box video {
+  width: 100%;
+  height: auto;
+  max-height: 360px;
+  object-fit: contain;
   border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
+  background: #000;
+  display: block;
 }
 
-.preview-actions button:first-child {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-}
-
-.preview-actions button:last-child {
+/***************************************************
+ * AI BUTTON
+ ***************************************************/
+.ai-main-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 14px;
   background: #2f80ff;
+  border-radius: 12px;
   border: none;
   color: #fff;
   font-weight: 700;
-}
-
-/***************************************************
- * SPEECH BUTTON
- ***************************************************/
-.speech-btn {
-  width: 100%;
-  margin: 12px 0;
-  padding: 14px;
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 /***************************************************
@@ -350,14 +286,10 @@ textarea::placeholder {
   font-size: 12px;
 }
 
-/***************************************************
- * AI TABS
- ***************************************************/
 .ai-style-tabs {
   display: flex;
   gap: 8px;
-  margin: 12px 0;
-  overflow-x: auto;
+  margin: 14px 0;
 }
 
 .ai-style-tabs button {
@@ -376,76 +308,7 @@ textarea::placeholder {
 }
 
 /***************************************************
- * AI FOOTER
- ***************************************************/
-.ai-modal-footer {
-  display: flex;
-  gap: 8px;
-  margin-top: auto;
-}
-
-.btn-sub {
-  flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 12px;
-  border-radius: 10px;
-}
-
-.btn-main {
-  flex: 1;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  padding: 12px;
-  border-radius: 10px;
-}
-
-/***************************************************
- * SPEECH MODAL (9:16)
- ***************************************************/
-.speech-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.8);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 5000;
-}
-
-.speech-sheet {
-  width: 100%;
-  max-width: 480px;
-  background: #000;
-  padding: 16px;
-  border-radius: 16px;
-}
-
-.speech-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.video-viewport {
-  width: 100%;
-  aspect-ratio: 9 / 16;
-  background: #000;
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.video-viewport video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-/***************************************************
- * BOTTOM NAV
+ * BOTTOM NAV (🔥 복구)
  ***************************************************/
 .bottom-nav {
   position: fixed;
