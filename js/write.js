@@ -1,37 +1,27 @@
-/* =========================
-   WRITE PAGE FINAL JS (FIXED)
-========================= */
-
-/* ---------- AI MODAL ---------- */
 document.addEventListener('DOMContentLoaded', () => {
 
-  const body = document.body;
+  /* ========= AI MODAL ========= */
 
   const aiModal = document.getElementById('aiModal');
   const openAiModalBtn = document.getElementById('openAiModal');
   const aiCloseBtn = document.getElementById('aiClose');
 
-  // ✅ AI 모달 열기
-  openAiModalBtn?.addEventListener('click', () => {
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
+  openAiModalBtn.addEventListener('click', () => {
+    aiModal.classList.add('show');
   });
 
-  // ✅ AI 모달 닫기
-  aiCloseBtn?.addEventListener('click', () => {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
+  aiCloseBtn.addEventListener('click', () => {
+    aiModal.classList.remove('show');
   });
 
-  // 배경 클릭 시 닫기
-  aiModal?.addEventListener('click', (e) => {
+  aiModal.addEventListener('click', (e) => {
     if (e.target === aiModal) {
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
+      aiModal.classList.remove('show');
     }
   });
 
-  /* ---------- FILE PREVIEW ---------- */
+  /* ========= FILE PREVIEW ========= */
+
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
@@ -40,67 +30,59 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  thumbBtn?.addEventListener('click', () => thumbInput.click());
-  videoBtn?.addEventListener('click', () => videoInput.click());
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  videoBtn.addEventListener('click', () => videoInput.click());
 
-  thumbInput?.addEventListener('change', e => {
+  thumbInput.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
-    img.style.width = '100%';
-    img.style.borderRadius = '12px';
-
     thumbPreview.innerHTML = '';
     thumbPreview.appendChild(img);
   });
 
-  videoInput?.addEventListener('change', e => {
+  videoInput.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
-
     const video = document.createElement('video');
     video.src = URL.createObjectURL(file);
     video.controls = true;
-    video.style.width = '100%';
-    video.style.borderRadius = '12px';
-
     videoPreview.innerHTML = '';
     videoPreview.appendChild(video);
   });
 
+  /* ========= PREVIEW ========= */
+
+  document.getElementById('previewBtn').addEventListener('click', async () => {
+
+    const data = {
+      category: document.getElementById('category').value,
+      title: document.getElementById('title').value,
+      oneLine: document.getElementById('oneLine').value,
+      description: document.getElementById('description').value,
+      isAnonymous: document.getElementById('isAnonymous').checked,
+      createdAt: new Date().toISOString(),
+      thumbnailBase64: null,
+      videoBase64: null
+    };
+
+    const fileToBase64 = file =>
+      new Promise(res => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.readAsDataURL(file);
+      });
+
+    if (thumbInput.files[0]) {
+      data.thumbnailBase64 = await fileToBase64(thumbInput.files[0]);
+    }
+    if (videoInput.files[0]) {
+      data.videoBase64 = await fileToBase64(videoInput.files[0]);
+    }
+
+    sessionStorage.setItem('galla_preview', JSON.stringify(data));
+    location.href = 'preview.html';
+  });
+
 });
-
-/* ---------- PREVIEW 이동 (전역) ---------- */
-window.goPreview = async function () {
-  console.log('🔥 미리보기 버튼 클릭됨');
-
-  const data = {
-    category: document.getElementById('category')?.value || '',
-    title: document.getElementById('title')?.value || '',
-    oneLine: document.getElementById('oneLine')?.value || '',
-    description: document.getElementById('description')?.value || '',
-    isAnonymous: document.getElementById('isAnonymous')?.checked || false,
-    createdAt: new Date().toISOString(),
-    thumbnailBase64: null,
-    videoBase64: null
-  };
-
-  const thumbFile = document.getElementById('thumbnail')?.files[0];
-  const videoFile = document.getElementById('video')?.files[0];
-
-  const fileToBase64 = file =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    });
-
-  if (thumbFile) data.thumbnailBase64 = await fileToBase64(thumbFile);
-  if (videoFile) data.videoBase64 = await fileToBase64(videoFile);
-
-  sessionStorage.setItem('galla_preview', JSON.stringify(data));
-
-  location.href = 'preview.html';
-};

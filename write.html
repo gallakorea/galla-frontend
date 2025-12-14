@@ -43,9 +43,7 @@
         </div>
       </section>
 
-      <!-- FORM (submit 절대 안 씀) -->
       <form id="writeForm" onsubmit="return false;">
-
         <div class="field-block">
           <label class="field-label">카테고리</label>
           <select id="category" class="input-field">
@@ -91,24 +89,46 @@
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
           <textarea id="description" class="input-field textarea"></textarea>
-          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI에게 글 다듬기
+          </button>
         </div>
-
       </form>
 
-      <!-- 🔥 강제 onclick 버튼 -->
       <div class="field-block">
-        <button class="primary-btn" onclick="goPreview()">미리보기</button>
+        <button class="primary-btn" id="previewBtn">미리보기</button>
       </div>
 
     </div>
   </main>
 </div>
 
-<!-- AI MODAL -->
-<div id="aiModal" class="ai-modal" style="display:none">
+<!-- AI MODAL (기존 디자인 그대로) -->
+<div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
-    <button id="aiClose">✕</button>
+    <div class="ai-modal-header">
+      <h2>AI 글 다듬기</h2>
+      <button id="aiClose">✕</button>
+    </div>
+
+    <div class="ai-style-tabs">
+      <button class="active">기본</button>
+      <button>간결</button>
+      <button>강렬</button>
+      <button>감성</button>
+      <button>전문가</button>
+      <button>논문체</button>
+    </div>
+
+    <div class="ai-modal-body">
+      <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+      <textarea id="aiResultText" placeholder="AI 결과"></textarea>
+    </div>
+
+    <div class="ai-modal-footer">
+      <button class="btn-sub">AI 실행</button>
+      <button class="btn-main">AI 적용하기</button>
+    </div>
   </div>
 </div>
 
