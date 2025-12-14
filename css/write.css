@@ -892,3 +892,24 @@ button:has(1분) {
   background: #000;
   display: block;
 }
+
+/* =========================
+   VIDEO PREVIEW GAP FIX
+========================= */
+
+/* 미리보기 컨테이너 여백 제거 */
+.preview-box {
+  margin-top: 8px;
+  margin-bottom: 0 !important;
+}
+
+/* video inline gap 제거 */
+.preview-box video {
+  display: block;          /* 🔥 핵심 */
+  margin-bottom: 0;
+}
+
+/* 혹시 남아있을 경우 강제 차단 */
+.video-viewport {
+  margin-bottom: 0 !important;
+}
