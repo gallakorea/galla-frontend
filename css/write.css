@@ -467,3 +467,166 @@ body {
 .video-viewport video {
   display: block;
 }
+
+/***************************************************
+ * WRITE PREVIEW – FINAL TONE & MANNER FIX
+ * (ISSUE UI와 100% 동일 기준)
+ ***************************************************/
+
+/* ===== 미리보기 전체 래퍼 ===== */
+.issue-preview {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* ===== 썸네일 / 영상 공통 래퍼 ===== */
+.preview-media,
+.video-viewport {
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  margin: 12px 0;
+}
+
+/* 이미지 / 영상 */
+.preview-media img,
+.video-viewport img,
+.video-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+
+/* ===== 🔥 미리보기 배지 ===== */
+.preview-media::after,
+.video-viewport::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 5;
+}
+
+/* ===== 1분 엘리베이터 스피치 버튼 ===== */
+.speech-btn {
+  all: unset;
+  width: 100%;
+  box-sizing: border-box;
+
+  margin: 10px 0;
+  padding: 14px;
+
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  cursor: pointer;
+}
+
+.speech-btn:active {
+  opacity: 0.85;
+}
+
+/* ===== 요약 영역 ===== */
+.issue-summary {
+  margin-top: 16px;
+}
+
+.issue-summary h3 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.issue-summary p {
+  font-size: 14px;
+  color: #ddd;
+  line-height: 1.6;
+}
+
+/* ===== 하단 액션 버튼 영역 ===== */
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* 수정하기 */
+.preview-actions button:first-child {
+  flex: 1;
+  padding: 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 발행하기 */
+.preview-actions button:last-child {
+  flex: 1;
+  padding: 14px;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ===== 이미지/영상으로 인한 과도한 여백 방지 ===== */
+.issue-preview img,
+.issue-preview video {
+  margin: 0;
+  vertical-align: top;
+}
+
+/* =========================
+   PREVIEW BADGE – ONLY WHEN UPLOADED
+========================= */
+
+/* 기본 상태: 미리보기 배지 숨김 */
+.preview-media::after,
+.video-viewport::after {
+  content: none;
+}
+
+/* 업로드 되었을 때만 표시 */
+.preview-media[data-preview="true"]::after,
+.video-viewport[data-preview="true"]::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 5;
+}
