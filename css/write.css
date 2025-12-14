@@ -495,3 +495,22 @@ body {
   padding: 14px;
   border-radius: 14px;
 }
+
+/* =========================
+   AI MODAL TAB COLOR FIX
+   (BLACK / WHITE)
+========================= */
+
+.ai-style-tabs button {
+  background: #0b0c14;
+  border: 1px solid #333;
+  color: #fff;
+  font-weight: 500;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  font-weight: 700;
+}
