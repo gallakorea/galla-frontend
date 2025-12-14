@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-
   const previewBtn = document.getElementById('previewBtn');
 
   const category = document.getElementById('category');
@@ -9,23 +8,34 @@ document.addEventListener('DOMContentLoaded', () => {
   const isAnonymous = document.getElementById('isAnonymous');
 
   const thumbnailInput = document.getElementById('thumbnail');
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
+
   const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
 
-  /* =========================
-     FILE → BASE64 (이미지만)
-  ========================= */
-  const fileToBase64 = (file) =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    });
+  thumbnailBtn.onclick = () => thumbnailInput.click();
+  videoBtn.onclick = () => videoInput.click();
 
-  /* =========================
-     PREVIEW
-  ========================= */
-  previewBtn.onclick = async () => {
+  let thumbURL = null;
+  let videoURL = null;
 
+  thumbnailInput.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    thumbURL = URL.createObjectURL(file);
+    thumbPreview.innerHTML = `<img src="${thumbURL}">`;
+  };
+
+  videoInput.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    videoURL = URL.createObjectURL(file);
+    videoPreview.innerHTML = `<video src="${videoURL}" controls></video>`;
+  };
+
+  previewBtn.onclick = () => {
     if (!category.value || !title.value || !description.value) {
       alert('카테고리, 제목, 이슈 설명은 필수입니다.');
       return;
@@ -37,36 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
       oneLine: oneLine.value,
       description: description.value,
       isAnonymous: isAnonymous.checked,
-      createdAt: new Date().toISOString(),
-
-      // ✅ 안전
-      thumbnailBase64: null,
-
-      // 🔥 핵심: 영상은 URL만
-      videoPreviewUrl: null
+      thumbURL,
+      videoURL,
+      createdAt: Date.now()
     };
 
-    if (thumbnailInput.files[0]) {
-      previewData.thumbnailBase64 =
-        await fileToBase64(thumbnailInput.files[0]);
-    }
-
-    if (videoInput.files[0]) {
-      previewData.videoPreviewUrl =
-        URL.createObjectURL(videoInput.files[0]);
-    }
-
-    try {
-      sessionStorage.setItem(
-        'galla_preview',
-        JSON.stringify(previewData)
-      );
-    } catch (e) {
-      alert('파일 용량이 너무 큽니다. 영상은 미리보기에서만 표시됩니다.');
-      return;
-    }
-
+    sessionStorage.setItem('galla_preview', JSON.stringify(previewData));
     location.href = 'preview.html';
   };
-
 });
