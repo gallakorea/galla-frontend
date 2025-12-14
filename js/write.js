@@ -1,140 +1,105 @@
-/* =========================
-   DOM ELEMENTS
-========================= */
 const body = document.body;
-
-const writeForm = document.getElementById('writeForm');
+const form = document.getElementById('writeForm');
 const issuePreview = document.getElementById('issuePreview');
 
-// AI Modal
+/* AI MODAL */
 const aiModal = document.getElementById('aiModal');
-const openAiModalBtn = document.getElementById('openAiModal');
-const aiCloseBtn = document.getElementById('aiClose');
+document.getElementById('openAiModal').onclick = () => {
+  aiModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+};
+document.getElementById('aiClose').onclick = closeAi;
+function closeAi() {
+  aiModal.style.display = 'none';
+  body.style.overflow = '';
+}
 
-// Thumbnail
-const thumbnailInput = document.getElementById('thumbnail');
-const thumbnailBtn = document.getElementById('thumbnailBtn');
+/* FILE UPLOAD */
+const thumbInput = document.getElementById('thumbnail');
+const thumbBtn = document.getElementById('thumbnailBtn');
 const thumbPreview = document.getElementById('thumbPreview');
 
-// Video
+thumbBtn.onclick = () => thumbInput.click();
+thumbInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+};
+
 const videoInput = document.getElementById('video');
 const videoBtn = document.getElementById('videoBtn');
 const videoPreview = document.getElementById('videoPreview');
 
-/* =========================
-   AI MODAL
-========================= */
-openAiModalBtn.addEventListener('click', () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-});
+videoBtn.onclick = () => videoInput.click();
+videoInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
+};
 
-aiCloseBtn.addEventListener('click', () => {
-  aiModal.style.display = 'none';
-  body.style.overflow = '';
-});
-
-aiModal.addEventListener('click', (e) => {
-  if (e.target === aiModal) {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  }
-});
-
-/* =========================
-   FILE UPLOAD
-========================= */
-thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
-videoBtn.addEventListener('click', () => videoInput.click());
-
-thumbnailInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  thumbPreview.innerHTML = '';
-  const img = document.createElement('img');
-  img.src = URL.createObjectURL(file);
-  thumbPreview.appendChild(img);
-});
-
-videoInput.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  videoPreview.innerHTML = '';
-  const video = document.createElement('video');
-  video.src = URL.createObjectURL(file);
-  video.controls = true;
-  videoPreview.appendChild(video);
-});
-
-/* =========================
-   PREVIEW SUBMIT (🔥 단 하나)
-========================= */
-writeForm.addEventListener('submit', (e) => {
+/* PREVIEW */
+form.onsubmit = e => {
   e.preventDefault();
 
-  const category = document.getElementById('category').value;
-  const title = document.getElementById('title').value;
-  const oneLine = document.getElementById('oneLine').value;
-  const desc = document.getElementById('description').value;
-  const isAnon = document.getElementById('isAnonymous').checked;
+  const category = categoryEl.value;
+  const title = titleEl.value;
+  const oneLine = oneLineEl.value;
+  const desc = descEl.value;
+  const anon = document.getElementById('isAnonymous').checked;
 
-  if (!category || !title || !desc) {
-    alert('카테고리 / 제목 / 설명은 필수입니다.');
-    return;
-  }
+  if (!category || !title || !desc) return alert('필수 입력 누락');
 
   const thumbImg = thumbPreview.querySelector('img');
-  const thumbHtml = thumbImg
-    ? `<div class="issue-thumb-wrap">
-         <img src="${thumbImg.src}" />
-       </div>`
-    : '';
+  const videoEl = videoPreview.querySelector('video');
 
   issuePreview.innerHTML = `
     <section class="issue-preview">
+      <div class="issue-meta">${category} · 방금 전</div>
+      <h1 class="issue-title">${title}</h1>
+      <p class="issue-one-line">${oneLine}</p>
+      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
-      <div class="issue-hero">
-        <div style="font-size:12px;color:#aaa;">
-          ${category} · 방금 전
-        </div>
+      ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
 
-        <h1 style="margin-top:8px;">${title}</h1>
-        <p style="color:#ccc;font-size:14px;">${oneLine || ''}</p>
+      ${videoEl ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
 
-        <div style="font-size:12px;color:#888;margin-top:6px;">
-          작성자 · ${isAnon ? '익명' : '사용자'}
-        </div>
-      </div>
-
-      ${thumbHtml}
-
-      <section class="issue-explain">
-        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+      <section class="issue-summary">
+        <h3>📝 이 주제에 대한 핵심 요약</h3>
         <p>${desc}</p>
       </section>
 
       <div class="preview-actions">
-        <button type="button" id="editPreviewBtn" class="btn-sub">수정하기</button>
-        <button type="button" id="publishBtn" class="btn-main">발행하기</button>
+        <button id="editPreview">수정하기</button>
+        <button class="btn-publish">발행하기</button>
       </div>
-
     </section>
   `;
 
-  issuePreview.style.display = 'block';
-  issuePreview.scrollIntoView({ behavior: 'smooth' });
-
-  // 수정하기
-  document.getElementById('editPreviewBtn').addEventListener('click', () => {
-    issuePreview.style.display = 'none';
+  document.getElementById('editPreview').onclick = () => {
     issuePreview.innerHTML = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+    window.scrollTo({ top: 0 });
+  };
 
-  // 발행하기 (지금은 더미)
-  document.getElementById('publishBtn').addEventListener('click', () => {
-    alert('다음 단계: Supabase에 발행');
-  });
-});
+  if (videoEl) {
+    document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
+  }
+
+  issuePreview.scrollIntoView({ behavior: 'smooth' });
+};
+
+/* SPEECH MODAL */
+const speechModal = document.getElementById('speechModal');
+const speechVideo = document.getElementById('speechVideo');
+
+function openSpeech(src) {
+  speechVideo.src = src;
+  speechModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+  speechVideo.play();
+}
+
+document.getElementById('closeSpeech').onclick = () => {
+  speechVideo.pause();
+  speechModal.style.display = 'none';
+  body.style.overflow = '';
+};
