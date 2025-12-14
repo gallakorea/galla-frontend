@@ -725,3 +725,18 @@ button:has(1분) {
   color: #fff;
   border-radius: 12px;
 }
+
+.speech-btn {
+  width: 100%;
+  max-width: 480px;
+  padding: 14px;
+  margin: 12px 0;
+
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
