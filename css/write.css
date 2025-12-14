@@ -1054,3 +1054,22 @@ body {
   padding: 14px;
   border-radius: 12px;
 }
+
+/* AI 직접 입력란 복구 */
+.ai-modal input.input-field {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  box-sizing: border-box;
+  display: block;
+}
+
+/* AI 모달 내부 스크롤 안전 처리 */
+.ai-modal-inner {
+  overflow-y: auto;
+}
