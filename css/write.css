@@ -630,3 +630,82 @@ body {
   font-weight: 600;
   z-index: 5;
 }
+
+/* =========================
+   PREVIEW THUMBNAIL WIDTH FIX
+   (FINAL)
+========================= */
+
+/* 미리보기 썸네일 래퍼 */
+.issue-preview img.preview-thumb-img {
+  width: 100%;
+  max-width: 480px;     /* 🔥 핵심 */
+  height: auto;
+
+  display: block;
+  margin: 12px auto 0; /* 중앙 정렬 + 위 여백만 */
+  border-radius: 14px;
+
+  object-fit: cover;
+}
+
+.issue-preview {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/***************************************************
+ * SPEECH VIDEO MODAL (9:16 FINAL)
+ ***************************************************/
+.speech-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+}
+
+.speech-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #000;
+  padding: 16px;
+  border-radius: 16px;
+}
+
+/* 헤더 */
+.speech-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.speech-header button {
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+/* 🔥 핵심: 9:16 뷰포트 */
+.video-viewport {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* 🔥 가로/세로 전부 대응 */
+.video-viewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 절대 잘리지 않음 */
+  background: #000;
+}
