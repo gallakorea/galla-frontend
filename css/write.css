@@ -384,3 +384,86 @@ body {
   height: 28px;
   filter: brightness(0) invert(1);
 }
+
+/***************************************************
+ * AI MODAL INPUT & CLOSE COLOR FIX (FINAL)
+ ***************************************************/
+
+/* AI에게 직접 요청 input */
+.ai-modal input.input-field {
+  background: #0b0c14 !important;
+  color: #fff !important;
+  border: 1px solid #222 !important;
+  border-radius: 12px;
+}
+
+/* 내가 쓴 글 / AI 결과 textarea */
+.ai-modal textarea {
+  background: #0b0c14 !important;
+  color: #fff !important;
+  border: 1px solid #222 !important;
+  border-radius: 12px;
+}
+
+/* placeholder 색 */
+.ai-modal input::placeholder,
+.ai-modal textarea::placeholder {
+  color: #777;
+}
+
+/* 닫기 버튼 */
+.ai-modal-header button {
+  background: #111 !important;
+  border: 1px solid #333 !important;
+  color: #fff !important;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 닫기 버튼 hover */
+.ai-modal-header button:hover {
+  background: #1a1a1a;
+}
+
+/***************************************************
+ * PREVIEW LABEL (썸네일 / 영상 공통)
+ ***************************************************/
+
+/* 미리보기 래퍼 기준 */
+.preview-box,
+.video-viewport {
+  position: relative;
+}
+
+/* 라벨 공통 */
+.preview-box::after,
+.video-viewport::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid #333;
+
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+
+  z-index: 5;
+  pointer-events: none; /* 클릭 방해 X */
+}
+
+/* 썸네일 / 영상 실제 요소 */
+.preview-box img,
+.preview-box video,
+.video-viewport img,
+.video-viewport video {
+  display: block;
+}
