@@ -514,3 +514,100 @@ body {
   border-color: #fff;
   font-weight: 700;
 }
+
+/* =========================
+   VIDEO PREVIEW & MODAL SIZE FIX
+   (MAX 480px)
+========================= */
+
+/* 미리보기 썸네일 영상 */
+.preview-box video {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+}
+
+/* 스피치 모달 백드롭 */
+.speech-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+/* 스피치 모달 컨테이너 */
+.speech-sheet {
+  width: 100%;
+  max-width: 480px;     /* 🔥 핵심 */
+  margin: 0 auto;
+  background: #111;
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* 영상 뷰포트 */
+.speech-sheet video {
+  width: 100%;
+  max-width: 480px;     /* 🔥 핵심 */
+  height: auto;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #000;
+}
+
+/* =========================
+   SPEECH VIDEO HARD LIMIT (480px)
+========================= */
+
+/* 미리보기 영역 */
+.issue-preview video,
+.preview-box video {
+  width: 100% !important;
+  max-width: 480px !important;
+  height: auto !important;
+  max-height: 70vh !important;
+  object-fit: contain !important;
+  border-radius: 12px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* 스피치 모달 백드롭 */
+#speechModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 4000;
+}
+
+/* 스피치 모달 박스 */
+#speechModal .speech-sheet {
+  width: 100% !important;
+  max-width: 480px !important;   /* 🔥 핵심 */
+  margin: 0 auto;
+  background: #111;
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* 모달 안 video */
+#speechModal video {
+  width: 100% !important;
+  max-width: 480px !important;   /* 🔥 핵심 */
+  height: auto !important;
+  aspect-ratio: 9 / 16;
+  object-fit: contain !important;
+  background: #000;
+  border-radius: 12px;
+}

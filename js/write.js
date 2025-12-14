@@ -87,8 +87,26 @@ document.getElementById('aiClose').onclick = () => {
   body.style.overflow = '';
 };
 
-/* === SPEECH CLOSE === */
+/* ===== SPEECH VIDEO OPEN / CLOSE ===== */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.speech-btn');
+  if (!btn) return;
+
+  const videoEl = document.querySelector('#videoPreview video');
+  if (!videoEl) return;
+
+  const modal = document.getElementById('speechModal');
+  const modalVideo = document.getElementById('speechVideo');
+
+  modalVideo.src = videoEl.src;
+  modal.style.display = 'flex';
+  modalVideo.play();
+});
+
 document.getElementById('closeSpeech').onclick = () => {
-  document.getElementById('speechModal').style.display = 'none';
-  body.style.overflow = '';
+  const modal = document.getElementById('speechModal');
+  const modalVideo = document.getElementById('speechVideo');
+  modalVideo.pause();
+  modalVideo.src = '';
+  modal.style.display = 'none';
 };
