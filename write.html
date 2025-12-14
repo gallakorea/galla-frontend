@@ -118,11 +118,14 @@
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
+
+    <!-- HEADER -->
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
 
+    <!-- STYLE TABS -->
     <div class="ai-style-tabs">
       <button class="active">기본</button>
       <button>간결</button>
@@ -132,16 +135,20 @@
       <button>논문체</button>
     </div>
 
-    <textarea id="aiUserText" class="input-field textarea"></textarea>
-    <textarea id="aiResultText" class="input-field textarea"></textarea>
-
-    <div class="ai-modal-footer">
-      <button class="btn-sub">AI 실행</button>
-      <button class="btn-main">AI 적용</button>
+    <!-- BODY -->
+    <div class="ai-modal-body">
+      <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+      <textarea id="aiResultText" placeholder="AI 결과"></textarea>
     </div>
+
+    <!-- FOOTER -->
+    <div class="ai-modal-footer">
+      <button id="runAi" class="btn-sub">AI 실행</button>
+      <button id="applyAi" class="btn-main">AI 적용</button>
+    </div>
+
   </div>
 </div>
-
 <!-- SPEECH MODAL -->
 <div id="speechModal" class="speech-backdrop">
   <div class="speech-sheet">
