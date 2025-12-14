@@ -4,6 +4,13 @@
 const body = document.body;
 const writeForm = document.getElementById('writeForm');
 
+/* inputs */
+const categoryEl = document.getElementById('category');
+const titleEl = document.getElementById('title');
+const oneLineEl = document.getElementById('oneLine');
+const descEl = document.getElementById('description');
+const anonEl = document.getElementById('isAnonymous');
+
 /* AI MODAL */
 const aiModal = document.getElementById('aiModal');
 const openAiModalBtn = document.getElementById('openAiModal');
@@ -18,6 +25,13 @@ const videoInput = document.getElementById('video');
 const videoBtn = document.getElementById('videoBtn');
 const videoPreview = document.getElementById('videoPreview');
 
+/* PREVIEW */
+const previewSection = document.getElementById('previewSection');
+const previewCard = document.getElementById('previewCard');
+const publishBtn = document.getElementById('publishBtn');
+
+let previewPayload = null;
+
 /**************************************************
  * AI MODAL
  **************************************************/
@@ -31,7 +45,7 @@ aiCloseBtn.addEventListener('click', () => {
   body.style.overflow = '';
 });
 
-aiModal.addEventListener('click', (e) => {
+aiModal.addEventListener('click', e => {
   if (e.target === aiModal) {
     aiModal.style.display = 'none';
     body.style.overflow = '';
@@ -41,9 +55,7 @@ aiModal.addEventListener('click', (e) => {
 /**************************************************
  * THUMBNAIL
  **************************************************/
-thumbnailBtn.addEventListener('click', () => {
-  thumbnailInput.click();
-});
+thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
 
 thumbnailInput.addEventListener('change', e => {
   const file = e.target.files[0];
@@ -58,9 +70,7 @@ thumbnailInput.addEventListener('change', e => {
 /**************************************************
  * VIDEO
  **************************************************/
-videoBtn.addEventListener('click', () => {
-  videoInput.click();
-});
+videoBtn.addEventListener('click', () => videoInput.click());
 
 videoInput.addEventListener('change', e => {
   const file = e.target.files[0];
@@ -74,36 +84,69 @@ videoInput.addEventListener('change', e => {
 });
 
 /**************************************************
- * ✅ 미리보기 SUBMIT — 완전 안전 버전
+ * 🔥 INLINE PREVIEW (핵심)
  **************************************************/
-writeForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // 기본 submit 차단
+writeForm.addEventListener('submit', e => {
+  e.preventDefault();
 
-  const data = {
-    category: document.getElementById('category').value,
-    title: document.getElementById('title').value,
-    oneLine: document.getElementById('oneLine').value,
-    description: document.getElementById('description').value,
-    isAnonymous: document.getElementById('isAnonymous').checked,
-  };
+  const category = categoryEl.value;
+  const title = titleEl.value.trim();
+  const oneLine = oneLineEl.value.trim();
+  const description = descEl.value.trim();
+  const isAnonymous = anonEl.checked;
 
-  // 필수값 체크
-  if (!data.category || !data.title || !data.description) {
+  if (!category || !title || !description) {
     alert('카테고리, 제목, 이슈 설명은 필수입니다.');
     return;
   }
 
-  // 🔥 storage 안전 저장 (localStorage → sessionStorage → 메모리)
-  try {
-    localStorage.setItem('galla_preview', JSON.stringify(data));
-  } catch (err) {
-    try {
-      sessionStorage.setItem('galla_preview', JSON.stringify(data));
-    } catch (e) {
-      window.__GALLA_PREVIEW__ = data;
-    }
+  previewPayload = {
+    category,
+    title,
+    oneLine,
+    description,
+    isAnonymous,
+    thumbnailFile: thumbnailInput.files[0] || null,
+    videoFile: videoInput.files[0] || null
+  };
+
+  renderPreview(previewPayload);
+});
+
+/**************************************************
+ * PREVIEW RENDER
+ **************************************************/
+function renderPreview(data) {
+  previewCard.innerHTML = `
+    <div class="meta">
+      ${data.category} · ${data.isAnonymous ? '익명 발의' : '실명 발의'}
+    </div>
+    <h3>${data.title}</h3>
+    ${data.oneLine ? `<div class="meta">${data.oneLine}</div>` : ''}
+    <div>${data.description.replace(/\n/g,'<br>')}</div>
+  `;
+
+  if (data.thumbnailFile) {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(data.thumbnailFile);
+    previewCard.appendChild(img);
   }
 
-  // 🔥 무조건 이동
-  location.href = 'preview.html';
+  if (data.videoFile) {
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(data.videoFile);
+    video.controls = true;
+    previewCard.appendChild(video);
+  }
+
+  previewSection.style.display = 'block';
+  previewSection.scrollIntoView({ behavior:'smooth' });
+}
+
+/**************************************************
+ * PUBLISH (다음 단계)
+ **************************************************/
+publishBtn.addEventListener('click', () => {
+  if (!previewPayload) return;
+  alert('발행 로직 연결 준비 완료');
 });
