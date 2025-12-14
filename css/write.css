@@ -885,3 +885,55 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 .page-inner {
   padding-bottom: 0;
 }
+
+/* 핵심만 남김 – 이미 준 디자인 100% 유지 */
+
+body {
+  margin:0;
+  background:#000;
+  color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont;
+}
+
+.app-root {
+  max-width:480px;
+  margin:0 auto;
+  padding-bottom:120px;
+}
+
+.textarea { min-height:220px }
+.ai-modal .textarea { min-height:120px }
+
+.preview-thumb-img {
+  width:100%;
+  max-height:360px;
+  object-fit:cover;
+  border-radius:14px;
+}
+
+.speech-btn {
+  width:100%;
+  padding:14px;
+  background:#111;
+  border:1px solid #333;
+  color:#fff;
+  border-radius:12px;
+}
+
+.speech-backdrop {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  display:none;
+  justify-content:center;
+  align-items:center;
+  z-index:3000;
+}
+
+.speech-sheet {
+  width:90%;
+  max-width:420px;
+  background:#111;
+  padding:16px;
+  border-radius:16px;
+}
