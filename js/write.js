@@ -1,152 +1,81 @@
-/**************************************************
- * DOM
- **************************************************/
-const body = document.body;
-const writeForm = document.getElementById('writeForm');
+const previewArea = document.getElementById('previewArea');
 
-/* inputs */
-const categoryEl = document.getElementById('category');
-const titleEl = document.getElementById('title');
-const oneLineEl = document.getElementById('oneLine');
-const descEl = document.getElementById('description');
-const anonEl = document.getElementById('isAnonymous');
-
-/* AI MODAL */
-const aiModal = document.getElementById('aiModal');
-const openAiModalBtn = document.getElementById('openAiModal');
-const aiCloseBtn = document.getElementById('aiClose');
-
-/* FILE */
 const thumbnailInput = document.getElementById('thumbnail');
-const thumbnailBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
-
 const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
 
-/* PREVIEW */
-const previewSection = document.getElementById('previewSection');
-const previewCard = document.getElementById('previewCard');
-const publishBtn = document.getElementById('publishBtn');
+let thumbURL = '';
+let videoURL = '';
 
-let previewPayload = null;
+document.getElementById('thumbnailBtn').onclick = () => thumbnailInput.click();
+document.getElementById('videoBtn').onclick = () => videoInput.click();
 
-/**************************************************
- * AI MODAL
- **************************************************/
-openAiModalBtn.addEventListener('click', () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-});
+thumbnailInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  thumbURL = URL.createObjectURL(f);
+};
 
-aiCloseBtn.addEventListener('click', () => {
-  aiModal.style.display = 'none';
-  body.style.overflow = '';
-});
+videoInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  videoURL = URL.createObjectURL(f);
+};
 
-aiModal.addEventListener('click', e => {
-  if (e.target === aiModal) {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  }
-});
+document.getElementById('previewBtn').onclick = () => {
+  const category = document.getElementById('category').value;
+  const title = document.getElementById('title').value;
+  const oneLine = document.getElementById('oneLine').value;
+  const desc = document.getElementById('description').value;
+  const anon = document.getElementById('isAnonymous').checked;
 
-/**************************************************
- * THUMBNAIL
- **************************************************/
-thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
-
-thumbnailInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  thumbPreview.innerHTML = '';
-  const img = document.createElement('img');
-  img.src = URL.createObjectURL(file);
-  thumbPreview.appendChild(img);
-});
-
-/**************************************************
- * VIDEO
- **************************************************/
-videoBtn.addEventListener('click', () => videoInput.click());
-
-videoInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  videoPreview.innerHTML = '';
-  const video = document.createElement('video');
-  video.src = URL.createObjectURL(file);
-  video.controls = true;
-  videoPreview.appendChild(video);
-});
-
-/**************************************************
- * 🔥 INLINE PREVIEW (핵심)
- **************************************************/
-writeForm.addEventListener('submit', e => {
-  e.preventDefault();
-
-  const category = categoryEl.value;
-  const title = titleEl.value.trim();
-  const oneLine = oneLineEl.value.trim();
-  const description = descEl.value.trim();
-  const isAnonymous = anonEl.checked;
-
-  if (!category || !title || !description) {
+  if (!category || !title || !desc) {
     alert('카테고리, 제목, 이슈 설명은 필수입니다.');
     return;
   }
 
-  previewPayload = {
-    category,
-    title,
-    oneLine,
-    description,
-    isAnonymous,
-    thumbnailFile: thumbnailInput.files[0] || null,
-    videoFile: videoInput.files[0] || null
-  };
+  previewArea.innerHTML = `
+    <div style="background:#111;border:1px solid #222;border-radius:16px;padding:16px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">
+        ${category} · 방금 전
+      </div>
 
-  renderPreview(previewPayload);
-});
+      <h2 style="font-size:18px;font-weight:800;margin-bottom:6px;">
+        ${title}
+      </h2>
 
-/**************************************************
- * PREVIEW RENDER
- **************************************************/
-function renderPreview(data) {
-  previewCard.innerHTML = `
-    <div class="meta">
-      ${data.category} · ${data.isAnonymous ? '익명 발의' : '실명 발의'}
+      <div style="font-size:14px;color:#ccc;margin-bottom:10px;">
+        ${oneLine || ''}
+      </div>
+
+      ${thumbURL ? `<img src="${thumbURL}" style="width:100%;border-radius:12px;margin-bottom:12px;">` : ''}
+
+      ${videoURL ? `
+        <video src="${videoURL}" controls style="width:100%;border-radius:12px;margin-bottom:12px;"></video>
+      ` : ''}
+
+      <div style="font-size:14px;line-height:1.6;margin-bottom:12px;">
+        ${desc}
+      </div>
+
+      <div style="font-size:13px;color:#888;">
+        작성자 · ${anon ? '익명' : '본인'}
+      </div>
+
+      <button style="
+        width:100%;
+        margin-top:14px;
+        padding:14px;
+        background:#2f80ff;
+        border:none;
+        border-radius:999px;
+        color:#fff;
+        font-weight:800;
+        font-size:15px;
+      ">
+        이대로 발행하기
+      </button>
     </div>
-    <h3>${data.title}</h3>
-    ${data.oneLine ? `<div class="meta">${data.oneLine}</div>` : ''}
-    <div>${data.description.replace(/\n/g,'<br>')}</div>
   `;
 
-  if (data.thumbnailFile) {
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(data.thumbnailFile);
-    previewCard.appendChild(img);
-  }
-
-  if (data.videoFile) {
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(data.videoFile);
-    video.controls = true;
-    previewCard.appendChild(video);
-  }
-
-  previewSection.style.display = 'block';
-  previewSection.scrollIntoView({ behavior:'smooth' });
-}
-
-/**************************************************
- * PUBLISH (다음 단계)
- **************************************************/
-publishBtn.addEventListener('click', () => {
-  if (!previewPayload) return;
-  alert('발행 로직 연결 준비 완료');
-});
+  previewArea.scrollIntoView({ behavior: 'smooth' });
+};
