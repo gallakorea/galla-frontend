@@ -1,94 +1,24 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>미리보기 - GALLA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <link rel="stylesheet" href="./css/preview.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./css/write.css">
 </head>
-
 <body>
-<div id="app">
 
-  <!-- HEADER -->
-  <header class="header">
-    <div class="header-inner">
-      <button class="back-btn" onclick="history.back()">← 수정</button>
-      <img src="./assets/logo.png" class="logo" />
-    </div>
-  </header>
+<div class="app-root">
+  <main class="page-main" id="preview"></main>
 
-  <!-- ISSUE HERO -->
-  <section class="issue-hero">
-    <div class="issue-category-time">
-      <span id="preview-category"></span>
-      <span>· 미리보기</span>
-    </div>
-
-    <h1 id="preview-title"></h1>
-    <p id="preview-oneline"></p>
-
-    <div class="issue-author">
-      <span id="preview-author"></span>
-    </div>
-
-    <!-- THUMBNAIL -->
-    <img id="preview-thumb" class="issue-thumb" hidden />
-  </section>
-
-  <!-- VIDEO -->
-  <button id="speechBtn" class="speech-btn" hidden>
-    🎥 1분 엘리베이터 스피치
-  </button>
-
-  <!-- DESCRIPTION -->
-  <section class="issue-explain">
-    <h3 class="white-title">📝 이슈 설명</h3>
-    <p id="preview-desc"></p>
-  </section>
-
-  <!-- ACTIONS -->
-  <section class="preview-actions">
-    <button class="btn-edit" onclick="history.back()">수정하러 가기</button>
-    <button class="btn-publish">이대로 발행</button>
-  </section>
-
+  <nav class="bottom-nav">
+    <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
+    <button class="nav-item active"><img src="./assets/icons/nav-write.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-random.svg"></button>
+    <button class="nav-item"><img src="./assets/icons/nav-user.svg"></button>
+  </nav>
 </div>
-
-<!-- VIDEO SHEET -->
-<div id="speechBackdrop" class="speech-backdrop" hidden>
-  <div class="speech-sheet">
-    <div class="speech-header">
-      <span class="speech-title">1분 엘리베이터 스피치</span>
-      <button class="speech-close">✕</button>
-    </div>
-
-    <video id="speechVideo" controls></video>
-  </div>
-</div>
-
-<!-- Bottom Nav -->
-<nav class="bottom-nav">
-  <button class="nav-item" onclick="location.href='index.html'">
-    <img src="./assets/icons/nav-home.svg">
-  </button>
-
-  <button class="nav-item" onclick="location.href='search.html'">
-    <img src="./assets/icons/nav-search.svg">
-  </button>
-
-  <button class="nav-item">
-    <img src="./assets/icons/nav-write.svg">
-  </button>
-
-  <button class="nav-item" onclick="location.href='random.html'">
-    <img src="./assets/icons/nav-random.svg">
-  </button>
-
-  <button class="nav-item" onclick="location.href='mypage.html'">
-    <img src="./assets/icons/nav-user.svg">
-  </button>
-</nav>
 
 <script src="./js/preview.js"></script>
 </body>
