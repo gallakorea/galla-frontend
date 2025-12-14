@@ -108,8 +108,52 @@
           <button type="submit" class="primary-btn">미리보기</button>
         </div>
 
-        <!-- ISSUE PREVIEW (WRITE PAGE) -->
-        <section id="issuePreview"></section>
+      <!-- ISSUE PREVIEW (WRITE PAGE) -->
+      <section id="issuePreview" style="display:none;">
+
+        <section class="issue-preview">
+
+          <!-- HERO -->
+          <div class="issue-hero">
+            <div class="issue-category-time">
+              <span class="issue-category" id="previewCategory">카테고리</span>
+              <span class="issue-time">방금 전</span>
+            </div>
+
+            <h1 class="issue-title" id="previewTitle"></h1>
+            <p class="issue-desc" id="previewOneLine"></p>
+
+            <div class="issue-author">
+              <span id="previewAuthor">작성자 · 익명</span>
+            </div>
+          </div>
+
+          <!-- THUMB (🔥 크기 제한 핵심) -->
+          <div class="issue-thumb-wrap">
+            <img id="previewThumb" />
+          </div>
+
+          <!-- VIDEO BUTTON (있을 때만 노출) -->
+          <button id="previewSpeechBtn" class="speech-btn" style="display:none;">
+            🎥 1분 엘리베이터 스피치
+          </button>
+
+          <!-- SUMMARY -->
+          <section class="issue-explain">
+            <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+            <p id="previewDesc"></p>
+          </section>
+
+          <!-- ACTIONS -->
+          <div class="preview-actions">
+            <button type="button" id="editPreviewBtn" class="btn-sub">수정하기</button>
+            <button type="button" id="publishBtn" class="btn-main">발행하기</button>
+          </div>
+
+        </section>
+
+      </section>
+
 
       </form>
     </div>

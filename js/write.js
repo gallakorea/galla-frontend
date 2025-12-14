@@ -51,10 +51,9 @@ thumbnailInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
+  thumbPreview.innerHTML = '';
   const img = document.createElement('img');
   img.src = URL.createObjectURL(file);
-
-  thumbPreview.innerHTML = '';
   thumbPreview.appendChild(img);
 });
 
@@ -62,16 +61,15 @@ videoInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
+  videoPreview.innerHTML = '';
   const video = document.createElement('video');
   video.src = URL.createObjectURL(file);
   video.controls = true;
-
-  videoPreview.innerHTML = '';
   videoPreview.appendChild(video);
 });
 
 /* =========================
-   PREVIEW SUBMIT
+   PREVIEW SUBMIT (🔥 단 하나)
 ========================= */
 writeForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -80,6 +78,7 @@ writeForm.addEventListener('submit', (e) => {
   const title = document.getElementById('title').value;
   const oneLine = document.getElementById('oneLine').value;
   const desc = document.getElementById('description').value;
+  const isAnon = document.getElementById('isAnonymous').checked;
 
   if (!category || !title || !desc) {
     alert('카테고리 / 제목 / 설명은 필수입니다.');
@@ -88,33 +87,54 @@ writeForm.addEventListener('submit', (e) => {
 
   const thumbImg = thumbPreview.querySelector('img');
   const thumbHtml = thumbImg
-    ? `<div class="preview-thumb"><img src="${thumbImg.src}" /></div>`
+    ? `<div class="issue-thumb-wrap">
+         <img src="${thumbImg.src}" />
+       </div>`
     : '';
 
   issuePreview.innerHTML = `
-    <div class="preview-issue">
+    <section class="issue-preview">
+
+      <div class="issue-hero">
+        <div style="font-size:12px;color:#aaa;">
+          ${category} · 방금 전
+        </div>
+
+        <h1 style="margin-top:8px;">${title}</h1>
+        <p style="color:#ccc;font-size:14px;">${oneLine || ''}</p>
+
+        <div style="font-size:12px;color:#888;margin-top:6px;">
+          작성자 · ${isAnon ? '익명' : '사용자'}
+        </div>
+      </div>
+
       ${thumbHtml}
 
-      <div class="preview-header">
-        <div style="font-size:12px;color:#aaa;">${category}</div>
-        <h2 style="margin:8px 0;">${title}</h2>
-        <p style="color:#ccc;font-size:14px;">${oneLine}</p>
-      </div>
-
-      <div style="padding:16px;font-size:14px;line-height:1.6;">
-        ${desc}
-      </div>
+      <section class="issue-explain">
+        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+        <p>${desc}</p>
+      </section>
 
       <div class="preview-actions">
-        <button type="button" class="btn-edit" id="editPreview">수정하기</button>
-        <button type="button" class="btn-publish">발행하기</button>
+        <button type="button" id="editPreviewBtn" class="btn-sub">수정하기</button>
+        <button type="button" id="publishBtn" class="btn-main">발행하기</button>
       </div>
-    </div>
+
+    </section>
   `;
 
+  issuePreview.style.display = 'block';
+  issuePreview.scrollIntoView({ behavior: 'smooth' });
+
   // 수정하기
-  document.getElementById('editPreview').addEventListener('click', () => {
+  document.getElementById('editPreviewBtn').addEventListener('click', () => {
+    issuePreview.style.display = 'none';
     issuePreview.innerHTML = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // 발행하기 (지금은 더미)
+  document.getElementById('publishBtn').addEventListener('click', () => {
+    alert('다음 단계: Supabase에 발행');
   });
 });
