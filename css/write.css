@@ -740,3 +740,34 @@ button:has(1분) {
   font-size: 14px;
   font-weight: 600;
 }
+
+/* =========================
+   1분 엘리베이터 스피치 버튼 FIX (FINAL)
+========================= */
+.speech-btn {
+  all: unset;              /* 🔥 브라우저 기본 버튼 스타일 제거 */
+  display: flex;           /* 🔥 inline → block 문제 해결 */
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  width: 100%;
+  box-sizing: border-box;
+
+  padding: 14px;
+  margin: 12px 0;
+
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.speech-btn:active {
+  opacity: 0.85;
+}
