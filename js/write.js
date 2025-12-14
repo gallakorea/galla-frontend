@@ -1,12 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
 
   const body = document.body;
-  const writeForm = document.getElementById('writeForm');
 
   /* =========================
      AI MODAL
   ========================= */
-
   const aiModal = document.getElementById('aiModal');
   const openAiModalBtn = document.getElementById('openAiModal');
   const aiCloseBtn = document.getElementById('aiClose');
@@ -29,9 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================
-     FILE UPLOAD PREVIEW
+     FILE PREVIEW
   ========================= */
-
   const thumbnailInput = document.getElementById('thumbnail');
   const thumbnailBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
@@ -63,11 +60,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* =========================
-     🔥 PREVIEW SUBMIT (핵심)
+     PREVIEW BUTTON (🔥 핵심)
   ========================= */
+  const previewBtn = document.getElementById('previewBtn');
 
-  writeForm.addEventListener('submit', async (e) => {
-    e.preventDefault(); // ❌ 페이지 리로드 차단
+  previewBtn.addEventListener('click', async () => {
+
+    const fileToBase64 = (file) =>
+      new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
 
     const data = {
       category: document.getElementById('category').value,
@@ -80,25 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
       videoBase64: null
     };
 
-    const fileToBase64 = (file) =>
-      new Promise(resolve => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-      });
-
     if (thumbnailInput.files[0]) {
       data.thumbnailBase64 = await fileToBase64(thumbnailInput.files[0]);
     }
-
     if (videoInput.files[0]) {
       data.videoBase64 = await fileToBase64(videoInput.files[0]);
     }
 
-    // ✅ 리뷰 페이지에서 읽을 데이터 저장
     sessionStorage.setItem('galla_preview', JSON.stringify(data));
 
-    // ✅ 리뷰(미리보기) 페이지로 이동
+    // ✅ 여기서만 이동
     window.location.href = 'preview.html';
   });
 
