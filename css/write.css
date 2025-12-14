@@ -709,3 +709,29 @@ body {
   object-fit: contain; /* 절대 잘리지 않음 */
   background: #000;
 }
+
+/* =========================
+   PREVIEW LABEL (SINGLE)
+========================= */
+
+.preview-box {
+  position: relative;
+}
+
+/* 썸네일 / 영상 공통 */
+.preview-box.is-preview::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+
+  padding: 4px 8px;
+  border-radius: 8px;
+
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+
+  z-index: 10;
+}
