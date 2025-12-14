@@ -1,6 +1,11 @@
-/* ===== BASIC DOM ===== */
-const form = document.getElementById('writeForm');
+/* =====================
+   BASIC DOM
+===================== */
 const body = document.body;
+
+const form = document.getElementById('writeForm');
+const previewBtn = document.getElementById('previewBtn');
+const previewArea = document.getElementById('issuePreview');
 
 const categoryEl = document.getElementById('category');
 const titleEl = document.getElementById('title');
@@ -16,7 +21,9 @@ const videoInput = document.getElementById('video');
 const videoBtn = document.getElementById('videoBtn');
 const videoPreview = document.getElementById('videoPreview');
 
-/* ===== FILE UPLOAD ===== */
+/* =====================
+   FILE UPLOAD
+===================== */
 thumbBtn.onclick = () => thumbInput.click();
 thumbInput.onchange = e => {
   const f = e.target.files[0];
@@ -31,10 +38,10 @@ videoInput.onchange = e => {
   videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
 };
 
-/* ===== PREVIEW ===== */
-form.addEventListener('submit', e => {
-  e.preventDefault();
-
+/* =====================
+   PREVIEW (🔥 핵심)
+===================== */
+previewBtn.onclick = () => {
   const category = categoryEl.value;
   const title = titleEl.value;
   const oneLine = oneLineEl.value;
@@ -46,25 +53,21 @@ form.addEventListener('submit', e => {
     return;
   }
 
-  // 기존 미리보기 제거
-  const old = document.querySelector('.issue-preview');
-  if (old) old.remove();
+  previewArea.innerHTML = ''; // 항상 초기화
 
   const thumbImg = thumbPreview.querySelector('img');
   const videoEl = videoPreview.querySelector('video');
 
-  const preview = document.createElement('section');
-  preview.className = 'issue-preview';
-  preview.innerHTML = `
-    <div style="padding:16px">
-      <div style="font-size:12px;color:#aaa">${category} · 방금 전</div>
-      <h1 style="margin:8px 0">${title}</h1>
-      <p style="color:#ccc">${oneLine}</p>
-      <div style="font-size:13px;color:#888">작성자 · ${anon ? '익명' : '사용자'}</div>
+  previewArea.innerHTML = `
+    <section class="issue-preview">
+      <div class="issue-meta">${category} · 방금 전</div>
+      <h1 class="issue-title">${title}</h1>
+      <p class="issue-one-line">${oneLine}</p>
+      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
       ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
 
-      ${videoEl ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>` : ''}
+      ${videoEl ? `<button id="openSpeech" class="speech-btn">🎥 1분 엘리베이터 스피치</button>` : ''}
 
       <h3 style="margin-top:16px">📝 이 주제에 대한 핵심 요약</h3>
       <p>${desc}</p>
@@ -73,15 +76,56 @@ form.addEventListener('submit', e => {
         <button id="editPreview">수정하기</button>
         <button class="btn-publish">발행하기</button>
       </div>
-    </div>
+    </section>
   `;
 
-  form.after(preview);
-
   document.getElementById('editPreview').onclick = () => {
-    preview.remove();
+    previewArea.innerHTML = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  preview.scrollIntoView({ behavior: 'smooth' });
-});
+  if (videoEl) {
+    document.getElementById('openSpeech').onclick = () => {
+      openSpeech(videoEl.src);
+    };
+  }
+
+  previewArea.scrollIntoView({ behavior: 'smooth' });
+};
+
+/* =====================
+   SPEECH MODAL
+===================== */
+const speechModal = document.getElementById('speechModal');
+const speechVideo = document.getElementById('speechVideo');
+const closeSpeech = document.getElementById('closeSpeech');
+
+function openSpeech(src) {
+  speechVideo.src = src;
+  speechModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+  speechVideo.play();
+}
+
+closeSpeech.onclick = () => {
+  speechVideo.pause();
+  speechModal.style.display = 'none';
+  body.style.overflow = '';
+};
+
+/* =====================
+   AI MODAL (구조 유지)
+===================== */
+const aiModal = document.getElementById('aiModal');
+const openAiBtn = document.getElementById('openAiModal');
+const closeAiBtn = document.getElementById('aiClose');
+
+openAiBtn.onclick = () => {
+  aiModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+};
+
+closeAiBtn.onclick = () => {
+  aiModal.style.display = 'none';
+  body.style.overflow = '';
+};
