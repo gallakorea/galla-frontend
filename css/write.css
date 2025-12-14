@@ -406,3 +406,27 @@ body{margin:0;background:#000;color:#fff;display:flex;justify-content:center;fon
 .ai-modal-footer{display:flex;gap:8px}
 .btn-sub{flex:1;background:#1a1a1a;color:#fff;border:1px solid #333;padding:12px;border-radius:10px}
 .btn-main{flex:1;background:#2f80ff;color:#fff;border:none;padding:12px;border-radius:10px}
+
+/* ===============================
+   🔥 CLICK FORCE FIX (AI / UPLOAD)
+=============================== */
+.ai-main-btn,
+#thumbnailBtn,
+#videoBtn,
+#previewBtn {
+  position: relative;
+  z-index: 10001 !important;
+  pointer-events: auto !important;
+}
+
+/* 혹시 상위 레이어가 막는 경우 대비 */
+.field-block,
+.page-inner,
+.page-main {
+  pointer-events: auto !important;
+}
+
+/* 바텀 네비가 클릭 영역 먹는 것 방지 */
+.bottom-nav {
+  pointer-events: auto !important;
+}

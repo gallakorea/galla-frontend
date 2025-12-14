@@ -1,84 +1,79 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  const previewBtn = document.getElementById('previewBtn');
-  const category = document.getElementById('category');
-  const title = document.getElementById('title');
-  const oneLine = document.getElementById('oneLine');
-  const description = document.getElementById('description');
-  const isAnonymous = document.getElementById('isAnonymous');
-
-  const thumbnailInput = document.getElementById('thumbnail');
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
-
-  const videoInput = document.getElementById('video');
-  const videoBtn = document.getElementById('videoBtn');
-  const videoPreview = document.getElementById('videoPreview');
-
   const aiModal = document.getElementById('aiModal');
   const openAiModalBtn = document.getElementById('openAiModal');
   const aiCloseBtn = document.getElementById('aiClose');
 
-  openAiModalBtn.onclick = () => {
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
+  const thumbnailInput = document.getElementById('thumbnail');
+  const thumbPreview = document.getElementById('thumbPreview');
+
+  const videoBtn = document.getElementById('videoBtn');
+  const videoInput = document.getElementById('video');
+  const videoPreview = document.getElementById('videoPreview');
+
+  const previewBtn = document.getElementById('previewBtn');
+
+  /* =========================
+     AI MODAL
+  ========================= */
+  openAiModalBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     aiModal.style.display = 'flex';
     body.style.overflow = 'hidden';
-  };
-  aiCloseBtn.onclick = () => {
+  });
+
+  aiCloseBtn.addEventListener('click', () => {
     aiModal.style.display = 'none';
     body.style.overflow = '';
-  };
-  aiModal.onclick = (e) => {
+  });
+
+  aiModal.addEventListener('click', (e) => {
     if (e.target === aiModal) {
       aiModal.style.display = 'none';
       body.style.overflow = '';
     }
-  };
-
-  thumbnailBtn.onclick = () => thumbnailInput.click();
-  videoBtn.onclick = () => videoInput.click();
-
-  thumbnailInput.onchange = (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(f);
-    thumbPreview.innerHTML = '';
-    thumbPreview.appendChild(img);
-  };
-
-  videoInput.onchange = (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    const v = document.createElement('video');
-    v.src = URL.createObjectURL(f);
-    v.controls = true;
-    videoPreview.innerHTML = '';
-    videoPreview.appendChild(v);
-  };
-
-  const fileToBase64 = (file) => new Promise(res => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.readAsDataURL(file);
   });
 
-  previewBtn.onclick = async () => {
-    if (!category.value || !title.value || !description.value) return;
+  /* =========================
+     FILE UPLOAD
+  ========================= */
+  thumbnailBtn.addEventListener('click', () => {
+    thumbnailInput.click();
+  });
 
-    const data = {
-      category: category.value,
-      title: title.value,
-      oneLine: oneLine.value,
-      description: description.value,
-      isAnonymous: isAnonymous.checked,
-      createdAt: new Date().toISOString(),
-      thumbnailBase64: null,
-      videoBase64: null
-    };
+  thumbnailInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    if (thumbnailInput.files[0]) data.thumbnailBase64 = await fileToBase64(thumbnailInput.files[0]);
-    if (videoInput.files[0]) data.videoBase64 = await fileToBase64(videoInput.files[0]);
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
 
-    sessionStorage.setItem('galla_preview', JSON.stringify(data));
-    location.href = 'preview.html';
-  };
+    thumbPreview.innerHTML = '';
+    thumbPreview.appendChild(img);
+  });
+
+  videoBtn.addEventListener('click', () => {
+    videoInput.click();
+  });
+
+  videoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(file);
+    video.controls = true;
+
+    videoPreview.innerHTML = '';
+    videoPreview.appendChild(video);
+  });
+
+  /* =========================
+     PREVIEW (확인용 로그)
+  ========================= */
+  previewBtn.addEventListener('click', () => {
+    console.log('✅ 미리보기 클릭됨');
+  });
 });
