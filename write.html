@@ -10,7 +10,6 @@
 <body>
 <div class="app-root">
 
-  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
       <img src="./assets/logo.png" class="logo" onclick="location.href='index.html'" />
@@ -43,8 +42,8 @@
         </div>
       </section>
 
-      <!-- ❌ form 없음 -->
-      <div id="writeForm">
+      <!-- ❌ submit / required 사용 안 함 -->
+      <form id="writeForm" novalidate>
 
         <div class="field-block">
           <label class="field-label">카테고리</label>
@@ -96,9 +95,9 @@
           </button>
         </div>
 
-      </div>
+      </form>
 
-      <!-- 🔥 JS 전용 버튼 -->
+      <!-- ✅ JS 단독 제어 버튼 -->
       <div class="field-block">
         <button id="previewBtn" type="button" class="primary-btn">
           미리보기
@@ -109,13 +108,42 @@
   </main>
 </div>
 
-<!-- AI MODAL (디자인 그대로) -->
+<!-- AI MODAL (디자인 그대로, 구조만 보완) -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
+
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
+
+    <!-- 🔥 이게 없어서 깨졌던 거 -->
+    <div class="ai-modal-body">
+
+      <div class="ai-style-tabs">
+        <button class="active">기본</button>
+        <button>간결</button>
+        <button>강렬</button>
+        <button>감성</button>
+        <button>전문가</button>
+        <button>논문체</button>
+      </div>
+
+      <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
+
+      <label>내가 쓴 글</label>
+      <textarea id="aiUserText" class="input-field textarea small"></textarea>
+
+      <label>AI 결과</label>
+      <textarea id="aiResultText" class="input-field textarea small"></textarea>
+
+    </div>
+
+    <div class="ai-modal-footer">
+      <button id="runAi" class="btn-sub">AI 실행</button>
+      <button id="applyAi" class="btn-main">AI 적용하기</button>
+    </div>
+
   </div>
 </div>
 

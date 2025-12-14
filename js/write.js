@@ -1,9 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-  /* =========================
-     ELEMENTS
-  ========================= */
-
   const previewBtn = document.getElementById('previewBtn');
 
   const category = document.getElementById('category');
@@ -13,11 +9,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const isAnonymous = document.getElementById('isAnonymous');
 
   const thumbnailInput = document.getElementById('thumbnail');
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
-
   const videoInput = document.getElementById('video');
+
+  const thumbnailBtn = document.getElementById('thumbnailBtn');
   const videoBtn = document.getElementById('videoBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
   const videoPreview = document.getElementById('videoPreview');
 
   const aiModal = document.getElementById('aiModal');
@@ -27,41 +23,39 @@ document.addEventListener('DOMContentLoaded', () => {
   /* =========================
      AI MODAL
   ========================= */
-
-  openAiModalBtn.addEventListener('click', () => {
+  openAiModalBtn.onclick = () => {
     aiModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
-  });
+  };
 
-  aiCloseBtn.addEventListener('click', () => {
+  aiCloseBtn.onclick = () => {
     aiModal.style.display = 'none';
     document.body.style.overflow = '';
-  });
+  };
 
-  aiModal.addEventListener('click', (e) => {
+  aiModal.onclick = (e) => {
     if (e.target === aiModal) {
       aiModal.style.display = 'none';
       document.body.style.overflow = '';
     }
-  });
+  };
 
   /* =========================
      FILE PREVIEW
   ========================= */
+  thumbnailBtn.onclick = () => thumbnailInput.click();
+  videoBtn.onclick = () => videoInput.click();
 
-  thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
-  videoBtn.addEventListener('click', () => videoInput.click());
-
-  thumbnailInput.addEventListener('change', e => {
+  thumbnailInput.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     thumbPreview.innerHTML = '';
     thumbPreview.appendChild(img);
-  });
+  };
 
-  videoInput.addEventListener('change', e => {
+  videoInput.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const video = document.createElement('video');
@@ -69,25 +63,22 @@ document.addEventListener('DOMContentLoaded', () => {
     video.controls = true;
     videoPreview.innerHTML = '';
     videoPreview.appendChild(video);
-  });
+  };
 
   /* =========================
-     FILE → BASE64
+     BASE64
   ========================= */
-
-  function fileToBase64(file) {
-    return new Promise(resolve => {
+  const fileToBase64 = (file) =>
+    new Promise(resolve => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
       reader.readAsDataURL(file);
     });
-  }
 
   /* =========================
-     PREVIEW (🔥 핵심)
+     PREVIEW CLICK
   ========================= */
-
-  previewBtn.addEventListener('click', async () => {
+  previewBtn.onclick = async () => {
 
     if (!category.value || !title.value || !description.value) {
       alert('카테고리, 제목, 이슈 설명은 필수입니다.');
@@ -115,8 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     sessionStorage.setItem('galla_preview', JSON.stringify(data));
 
-    /* ✅ 여기서 무조건 이동 */
-    window.location.href = 'preview.html';
-  });
+    location.href = 'preview.html';
+  };
 
 });
