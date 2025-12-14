@@ -27,7 +27,7 @@ if (closeAiBtn && aiModal) {
 }
 
 /***************************************************
- * FILE UPLOAD – THUMBNAIL
+ * FILE UPLOAD – THUMBNAIL (IMAGE ONLY)
  ***************************************************/
 const thumbInput = document.getElementById('thumbnail');
 const thumbBtn = document.getElementById('thumbnailBtn');
@@ -43,15 +43,13 @@ if (thumbInput) {
     if (!file) return;
 
     thumbPreview.innerHTML = `
-      <div class="video-viewport">
-        <img src="${URL.createObjectURL(file)}" class="preview-thumb-img">
-      </div>
+      <img src="${URL.createObjectURL(file)}" class="preview-thumb-img">
     `;
   };
 }
 
 /***************************************************
- * FILE UPLOAD – VIDEO
+ * FILE UPLOAD – VIDEO (9:16 ONLY)
  ***************************************************/
 const videoInput = document.getElementById('video');
 const videoBtn = document.getElementById('videoBtn');
@@ -67,7 +65,7 @@ if (videoInput) {
     if (!file) return;
 
     videoPreview.innerHTML = `
-      <div class="video-viewport">
+      <div class="video-preview-wrap">
         <video src="${URL.createObjectURL(file)}" muted playsinline></video>
       </div>
     `;
@@ -75,7 +73,7 @@ if (videoInput) {
 }
 
 /***************************************************
- * PREVIEW RENDER
+ * PREVIEW RENDER (ISSUE UI 1:1)
  ***************************************************/
 form.onsubmit = e => {
   e.preventDefault();
@@ -98,6 +96,7 @@ form.onsubmit = e => {
     <section class="issue-preview">
 
       <div class="issue-meta">${category} · 방금 전</div>
+
       <h1 class="issue-title">${title}</h1>
 
       ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
@@ -108,11 +107,7 @@ form.onsubmit = e => {
 
       ${
         thumbImg
-          ? `
-          <div class="video-viewport">
-            <img src="${thumbImg.src}" class="preview-thumb-img">
-          </div>
-          `
+          ? `<img src="${thumbImg.src}" class="issue-thumb">`
           : ''
       }
 
@@ -145,10 +140,9 @@ form.onsubmit = e => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  /* 스피치 버튼 (모달 없으면 아무 것도 안 함) */
+  /* 스피치 버튼 (모달은 다음 단계) */
   if (videoEl) {
-    const openSpeechBtn = document.getElementById('openSpeech');
-    openSpeechBtn.onclick = () => {
+    document.getElementById('openSpeech').onclick = () => {
       alert('엘리베이터 스피치 모달은 다음 단계에서 연결됩니다.');
     };
   }

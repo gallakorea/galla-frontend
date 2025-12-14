@@ -379,33 +379,37 @@ body {
   filter: brightness(0) invert(1);
 }
 
-/* =========================
-   VIDEO PREVIEW GAP FIX (FINAL)
-   썸네일/영상 업로드 시 과도한 여백 제거
-========================= */
-
+/* ===== PREVIEW BOX RESET ===== */
 .preview-box {
   margin-top: 8px;
-  line-height: 0;          /* 🔥 핵심 */
+  font-size: 12px;
+  display: block;
 }
 
-/* 미리보기 video */
+/* ❌ 기존 max-height 제거 */
+.preview-box img,
 .preview-box video {
-  display: block;          /* 🔥 inline 요소 제거 */
+  width: 100%;
+  height: auto;
+  max-height: none;       /* 🔥 핵심 */
+  border-radius: 12px;
+  display: block;
+}
+
+/* ===== VIDEO PREVIEW (ISSUE RULE) ===== */
+.video-preview-wrap {
   width: 100%;
   max-width: 480px;
-  height: auto;
-
-  margin: 0;               /* 🔥 불필요 여백 제거 */
-  padding: 0;
-  border-radius: 12px;
-
+  aspect-ratio: 9 / 16;
   background: #000;
-  object-fit: contain;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-/* 혹시 이미지도 동일 문제 대비 */
-.preview-box img {
-  display: block;
-  margin: 0;
+/* 영상은 래퍼에 맞춤 */
+.video-preview-wrap video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
 }
