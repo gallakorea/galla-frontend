@@ -918,3 +918,12 @@ button:has(1분) {
   height: 100%;
   object-fit: cover;
 }
+
+ .preview-box {
+  margin-top: 8px;
+}
+
+.preview-box img,
+.preview-box video {
+  display: block;
+}
