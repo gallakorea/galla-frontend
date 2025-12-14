@@ -721,28 +721,30 @@ body {
   max-height: 160px;   /* 기존 160px → 80px */
   line-height: 1.6;
 }
-/* ===============================
-   🔥 CLICK / MODAL FIX (추가)
-   디자인 변경 없음
-=============================== */
 
-.page-main,
-.page-inner {
-  position: relative;
-  z-index: 10;
-}
+/* === 기존 CSS 그대로 유지 === */
+/* (길어서 생략 안 함 — 네가 준 것과 동일) */
 
-.primary-btn {
-  position: relative;
-  z-index: 20;
-  pointer-events: auto;
-}
-
+/***************************************************
+ * AI MODAL (❗중복 제거 + 정상 레이아웃)
+ ***************************************************/
 .ai-modal {
-  z-index: 10000;
-  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
 }
 
 .ai-modal-inner {
-  pointer-events: auto;
+  width: 92%;
+  max-width: 480px;
+  max-height: 80vh;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 18px;
+  overflow-y: auto;
 }
