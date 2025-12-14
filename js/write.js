@@ -1,143 +1,120 @@
-document.addEventListener('DOMContentLoaded', () => {
+/* =========================
+   DOM ELEMENTS
+========================= */
+const body = document.body;
 
-  const body = document.body;
+const writeForm = document.getElementById('writeForm');
+const issuePreview = document.getElementById('issuePreview');
 
-  /* =====================
-     ELEMENTS
-  ===================== */
-  const form = document.getElementById('writeForm');
-  const previewArea = document.getElementById('previewArea');
+// AI Modal
+const aiModal = document.getElementById('aiModal');
+const openAiModalBtn = document.getElementById('openAiModal');
+const aiCloseBtn = document.getElementById('aiClose');
 
-  const thumbnailInput = document.getElementById('thumbnail');
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
+// Thumbnail
+const thumbnailInput = document.getElementById('thumbnail');
+const thumbnailBtn = document.getElementById('thumbnailBtn');
+const thumbPreview = document.getElementById('thumbPreview');
 
-  const videoInput = document.getElementById('video');
-  const videoBtn = document.getElementById('videoBtn');
-  const videoPreview = document.getElementById('videoPreview');
+// Video
+const videoInput = document.getElementById('video');
+const videoBtn = document.getElementById('videoBtn');
+const videoPreview = document.getElementById('videoPreview');
 
-  const aiModal = document.getElementById('aiModal');
-  const openAiModalBtn = document.getElementById('openAiModal');
-  const aiCloseBtn = document.getElementById('aiClose');
+/* =========================
+   AI MODAL
+========================= */
+openAiModalBtn.addEventListener('click', () => {
+  aiModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+});
 
-  /* =====================
-     SAFETY CHECK
-  ===================== */
-  if (!form || !thumbnailBtn || !openAiModalBtn) {
-    console.error('필수 DOM 누락');
-    return;
-  }
+aiCloseBtn.addEventListener('click', () => {
+  aiModal.style.display = 'none';
+  body.style.overflow = '';
+});
 
-  /* =====================
-     AI MODAL
-  ===================== */
-  openAiModalBtn.addEventListener('click', () => {
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  });
-
-  aiCloseBtn.addEventListener('click', closeAi);
-  aiModal.addEventListener('click', (e) => {
-    if (e.target === aiModal) closeAi();
-  });
-
-  function closeAi() {
+aiModal.addEventListener('click', (e) => {
+  if (e.target === aiModal) {
     aiModal.style.display = 'none';
     body.style.overflow = '';
   }
+});
 
-  /* =====================
-     THUMBNAIL UPLOAD
-  ===================== */
-  thumbnailBtn.addEventListener('click', () => {
-    thumbnailInput.click();
-  });
+/* =========================
+   FILE UPLOAD
+========================= */
+thumbnailBtn.addEventListener('click', () => thumbnailInput.click());
+videoBtn.addEventListener('click', () => videoInput.click());
 
-  thumbnailInput.addEventListener('change', () => {
-    const file = thumbnailInput.files[0];
-    if (!file) return;
+thumbnailInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    thumbPreview.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    img.style.maxHeight = '240px';
-    img.style.objectFit = 'cover';
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
 
-    thumbPreview.appendChild(img);
-  });
+  thumbPreview.innerHTML = '';
+  thumbPreview.appendChild(img);
+});
 
-  /* =====================
-     VIDEO UPLOAD
-  ===================== */
-  videoBtn.addEventListener('click', () => {
-    videoInput.click();
-  });
+videoInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-  videoInput.addEventListener('change', () => {
-    const file = videoInput.files[0];
-    if (!file) return;
+  const video = document.createElement('video');
+  video.src = URL.createObjectURL(file);
+  video.controls = true;
 
-    videoPreview.innerHTML = '';
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.controls = true;
+  videoPreview.innerHTML = '';
+  videoPreview.appendChild(video);
+});
 
-    videoPreview.appendChild(video);
-  });
+/* =========================
+   PREVIEW SUBMIT
+========================= */
+writeForm.addEventListener('submit', (e) => {
+  e.preventDefault();
 
-  /* =====================
-     PREVIEW
-  ===================== */
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  const category = document.getElementById('category').value;
+  const title = document.getElementById('title').value;
+  const oneLine = document.getElementById('oneLine').value;
+  const desc = document.getElementById('description').value;
 
-    const data = {
-      category: document.getElementById('category').value,
-      title: document.getElementById('title').value,
-      oneLine: document.getElementById('oneLine').value,
-      desc: document.getElementById('description').value,
-    };
-
-    if (!data.category || !data.title || !data.desc) {
-      alert('카테고리 / 제목 / 설명 필수');
-      return;
-    }
-
-    renderPreview(data);
-  });
-
-  function renderPreview(data) {
-    previewArea.innerHTML = `
-      <div class="preview-issue">
-        <div class="preview-header">
-          <div style="font-size:12px;color:#888">${data.category} · 방금 전</div>
-          <h2>${data.title}</h2>
-          <p>${data.oneLine}</p>
-        </div>
-
-        ${thumbPreview.innerHTML ? `
-          <div class="preview-thumb">${thumbPreview.innerHTML}</div>` : ''}
-
-        <div class="preview-header">
-          <p>${data.desc}</p>
-        </div>
-
-        <div class="preview-actions">
-          <button id="editBtn" class="btn-edit">수정하기</button>
-          <button id="publishBtn" class="btn-publish">발행하기</button>
-        </div>
-      </div>
-    `;
-
-    document.getElementById('editBtn').onclick = () => {
-      previewArea.innerHTML = '';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    document.getElementById('publishBtn').onclick = () => {
-      console.log('발행 데이터', data);
-      alert('발행 로직 연결 예정');
-    };
+  if (!category || !title || !desc) {
+    alert('카테고리 / 제목 / 설명은 필수입니다.');
+    return;
   }
 
+  const thumbImg = thumbPreview.querySelector('img');
+  const thumbHtml = thumbImg
+    ? `<div class="preview-thumb"><img src="${thumbImg.src}" /></div>`
+    : '';
+
+  issuePreview.innerHTML = `
+    <div class="preview-issue">
+      ${thumbHtml}
+
+      <div class="preview-header">
+        <div style="font-size:12px;color:#aaa;">${category}</div>
+        <h2 style="margin:8px 0;">${title}</h2>
+        <p style="color:#ccc;font-size:14px;">${oneLine}</p>
+      </div>
+
+      <div style="padding:16px;font-size:14px;line-height:1.6;">
+        ${desc}
+      </div>
+
+      <div class="preview-actions">
+        <button type="button" class="btn-edit" id="editPreview">수정하기</button>
+        <button type="button" class="btn-publish">발행하기</button>
+      </div>
+    </div>
+  `;
+
+  // 수정하기
+  document.getElementById('editPreview').addEventListener('click', () => {
+    issuePreview.innerHTML = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 });
