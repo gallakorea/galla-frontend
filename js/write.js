@@ -1,111 +1,101 @@
-document.addEventListener('DOMContentLoaded', () => {
+/**************************************************
+ * DOM
+ **************************************************/
+const body = document.body;
+const writeForm = document.getElementById('writeForm');
 
-  /* =========================
-     DOM ELEMENTS
-  ========================= */
-  const body = document.body;
+/* AI MODAL */
+const aiModal = document.getElementById('aiModal');
+const openAiModalBtn = document.getElementById('openAiModal');
+const aiCloseBtn = document.getElementById('aiClose');
 
-  const writeForm = document.getElementById('writeForm');
+/* FILE */
+const thumbnailInput = document.getElementById('thumbnail');
+const thumbnailBtn = document.getElementById('thumbnailBtn');
+const thumbPreview = document.getElementById('thumbPreview');
 
-  // AI Modal
-  const aiModal = document.getElementById('aiModal');
-  const openAiModalBtn = document.getElementById('openAiModal');
-  const aiCloseBtn = document.getElementById('aiClose');
+const videoInput = document.getElementById('video');
+const videoBtn = document.getElementById('videoBtn');
+const videoPreview = document.getElementById('videoPreview');
 
-  // Thumbnail
-  const thumbnailInput = document.getElementById('thumbnail');
-  const thumbnailBtn = document.getElementById('thumbnailBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
+/**************************************************
+ * AI MODAL
+ **************************************************/
+openAiModalBtn.addEventListener('click', () => {
+  aiModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+});
 
-  // Video
-  const videoInput = document.getElementById('video');
-  const videoBtn = document.getElementById('videoBtn');
-  const videoPreview = document.getElementById('videoPreview');
+aiCloseBtn.addEventListener('click', () => {
+  aiModal.style.display = 'none';
+  body.style.overflow = '';
+});
 
-  /* =========================
-     AI MODAL OPEN / CLOSE
-  ========================= */
-  openAiModalBtn.addEventListener('click', () => {
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  });
-
-  aiCloseBtn.addEventListener('click', () => {
+aiModal.addEventListener('click', (e) => {
+  if (e.target === aiModal) {
     aiModal.style.display = 'none';
     body.style.overflow = '';
-  });
+  }
+});
 
-  aiModal.addEventListener('click', (e) => {
-    if (e.target === aiModal) {
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
-    }
-  });
+/**************************************************
+ * THUMBNAIL
+ **************************************************/
+thumbnailBtn.addEventListener('click', () => {
+  thumbnailInput.click();
+});
 
-  /* =========================
-     THUMBNAIL UPLOAD
-  ========================= */
-  thumbnailBtn.addEventListener('click', () => {
-    thumbnailInput.click();
-  });
+thumbnailInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-  thumbnailInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  thumbPreview.innerHTML = '';
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
+  thumbPreview.appendChild(img);
+});
 
-    thumbPreview.innerHTML = '';
+/**************************************************
+ * VIDEO
+ **************************************************/
+videoBtn.addEventListener('click', () => {
+  videoInput.click();
+});
 
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
+videoInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    thumbPreview.appendChild(img);
-  });
+  videoPreview.innerHTML = '';
+  const video = document.createElement('video');
+  video.src = URL.createObjectURL(file);
+  video.controls = true;
+  videoPreview.appendChild(video);
+});
 
-  /* =========================
-     VIDEO UPLOAD
-  ========================= */
-  videoBtn.addEventListener('click', () => {
-    videoInput.click();
-  });
+/**************************************************
+ * ✅ 미리보기 SUBMIT (핵심)
+ **************************************************/
+writeForm.addEventListener('submit', (e) => {
+  e.preventDefault(); // 🔥 기본 submit 차단
 
-  videoInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const data = {
+    category: document.getElementById('category').value,
+    title: document.getElementById('title').value,
+    oneLine: document.getElementById('oneLine').value,
+    description: document.getElementById('description').value,
+    isAnonymous: document.getElementById('isAnonymous').checked,
+  };
 
-    videoPreview.innerHTML = '';
+  // 필수 체크
+  if (!data.category || !data.title || !data.description) {
+    alert('카테고리, 제목, 이슈 설명은 필수입니다.');
+    return;
+  }
 
-    const video = document.createElement('video');
-    video.src = URL.createObjectURL(file);
-    video.controls = true;
+  // 🔥 미리보기용 임시 저장
+  localStorage.setItem('galla_preview', JSON.stringify(data));
 
-    videoPreview.appendChild(video);
-  });
-
-  /* =========================
-     🔥 PREVIEW SUBMIT (핵심)
-  ========================= */
-  writeForm.addEventListener('submit', (e) => {
-    e.preventDefault(); // 🔥 이게 없어서 지금까지 안 됐음
-
-    const data = {
-      category: document.getElementById('category').value,
-      title: document.getElementById('title').value,
-      oneLine: document.getElementById('oneLine').value,
-      description: document.getElementById('description').value,
-      isAnonymous: document.getElementById('isAnonymous').checked
-    };
-
-    // 필수 체크 (UI 안 건드리고 최소한만)
-    if (!data.category || !data.title) {
-      alert('카테고리와 제목은 필수입니다.');
-      return;
-    }
-
-    // 임시 저장 (미리보기 페이지에서 사용)
-    sessionStorage.setItem('galla_preview', JSON.stringify(data));
-
-    // 🔥 여기서 실제로 "넘어감"
-    location.href = 'preview.html';
-  });
-
+  // 🔥 미리보기 페이지 이동
+  location.href = 'preview.html';
 });
