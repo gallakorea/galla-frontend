@@ -6,20 +6,29 @@ const form = document.getElementById('writeForm');
 const issuePreview = document.getElementById('issuePreview');
 
 /***************************************************
+ * PREVIEW TARGETS (초기 숨김)
+ ***************************************************/
+const thumbPreview = document.getElementById('thumbPreview');
+const videoPreview = document.getElementById('videoPreview');
+
+thumbPreview.style.display = 'none';
+videoPreview.style.display = 'none';
+
+/***************************************************
  * AI MODAL
  ***************************************************/
 const aiModal = document.getElementById('aiModal');
 const openAiBtn = document.getElementById('openAiModal');
 const closeAiBtn = document.getElementById('aiClose');
 
-if (openAiBtn && aiModal) {
+if (openAiBtn) {
   openAiBtn.onclick = () => {
     aiModal.style.display = 'flex';
     body.style.overflow = 'hidden';
   };
 }
 
-if (closeAiBtn && aiModal) {
+if (closeAiBtn) {
   closeAiBtn.onclick = () => {
     aiModal.style.display = 'none';
     body.style.overflow = '';
@@ -27,57 +36,49 @@ if (closeAiBtn && aiModal) {
 }
 
 /***************************************************
- * FILE UPLOAD – THUMBNAIL
+ * THUMBNAIL UPLOAD
  ***************************************************/
 const thumbInput = document.getElementById('thumbnail');
 const thumbBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
 
-if (thumbBtn && thumbInput) {
-  thumbBtn.onclick = () => thumbInput.click();
-}
+thumbBtn.onclick = () => thumbInput.click();
 
-if (thumbInput && thumbPreview) {
-  thumbInput.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
+thumbInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    // 🔥 업로드 되었을 때만 DOM 생성
-    thumbPreview.innerHTML = `
-      <div class="preview-media" data-preview="true">
-        <img src="${URL.createObjectURL(file)}" class="preview-thumb-img">
-      </div>
-    `;
-  };
-}
+  thumbPreview.style.display = 'block';
+  thumbPreview.innerHTML = `
+    <div class="video-preview-wrap">
+      <div class="preview-label">미리보기</div>
+      <img src="${URL.createObjectURL(file)}" />
+    </div>
+  `;
+};
 
 /***************************************************
- * FILE UPLOAD – VIDEO
+ * VIDEO UPLOAD
  ***************************************************/
 const videoInput = document.getElementById('video');
 const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
 
-if (videoBtn && videoInput) {
-  videoBtn.onclick = () => videoInput.click();
-}
+videoBtn.onclick = () => videoInput.click();
 
-if (videoInput && videoPreview) {
-  videoInput.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
+videoInput.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-    // 🔥 업로드 되었을 때만 DOM 생성
-    videoPreview.innerHTML = `
-      <div class="video-viewport" data-preview="true">
-        <video src="${URL.createObjectURL(file)}" muted playsinline></video>
-      </div>
-    `;
-  };
-}
+  videoPreview.style.display = 'block';
+  videoPreview.innerHTML = `
+    <div class="video-preview-wrap">
+      <div class="preview-label">미리보기</div>
+      <video src="${URL.createObjectURL(file)}" muted playsinline></video>
+    </div>
+  `;
+};
 
 /***************************************************
- * PREVIEW RENDER (ISSUE UI 동일)
+ * PREVIEW SUBMIT
  ***************************************************/
 form.onsubmit = e => {
   e.preventDefault();
@@ -100,32 +101,19 @@ form.onsubmit = e => {
     <section class="issue-preview">
 
       <div class="issue-meta">${category} · 방금 전</div>
-
       <h1 class="issue-title">${title}</h1>
-
       ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
-
-      <div class="issue-author">
-        작성자 · ${anon ? '익명' : '사용자'}
-      </div>
+      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
       ${
         thumbImg
-          ? `
-          <div class="preview-media" data-preview="true">
-            <img src="${thumbImg.src}" class="preview-thumb-img">
-          </div>
-          `
+          ? `<img src="${thumbImg.src}" class="preview-thumb-img" />`
           : ''
       }
 
       ${
         videoEl
-          ? `
-          <button class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>
-          `
+          ? `<button class="speech-btn">🎥 1분 엘리베이터 스피치</button>`
           : ''
       }
 
@@ -142,28 +130,10 @@ form.onsubmit = e => {
     </section>
   `;
 
-  /***************************************************
-   * 수정하기
-   ***************************************************/
-  const editBtn = document.getElementById('editPreview');
-  if (editBtn) {
-    editBtn.onclick = () => {
-      issuePreview.innerHTML = '';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-  }
-
-  /***************************************************
-   * 엘리베이터 스피치 버튼
-   ***************************************************/
-  if (videoEl) {
-    const openSpeechBtn = document.getElementById('openSpeech');
-    if (openSpeechBtn) {
-      openSpeechBtn.onclick = () => {
-        alert('엘리베이터 스피치 모달은 다음 단계에서 연결됩니다.');
-      };
-    }
-  }
+  document.getElementById('editPreview').onclick = () => {
+    issuePreview.innerHTML = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   issuePreview.scrollIntoView({ behavior: 'smooth' });
 };
