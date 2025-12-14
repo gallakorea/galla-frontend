@@ -721,3 +721,68 @@ body {
   max-height: 160px;   /* 기존 160px → 80px */
   line-height: 1.6;
 }
+
+/* write preview 전용 썸네일 */
+.preview-issue-thumb {
+  width: 100%;
+  max-height: 220px;        /* 🔥 여기서 제한 */
+  object-fit: cover;
+  border-radius: 14px;
+  display: block;
+}
+
+/* ===== PREVIEW ISSUE CARD ===== */
+
+.preview-issue {
+  margin: 24px 16px;
+  border: 1px solid #222;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.preview-header {
+  padding: 16px;
+}
+
+.preview-header h2 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.preview-header p {
+  font-size: 14px;
+  color: #ccc;
+  margin-top: 6px;
+}
+
+.preview-thumb img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+}
+
+.preview-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.btn-edit {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+.btn-publish {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+}
