@@ -74,10 +74,10 @@ videoInput.addEventListener('change', e => {
 });
 
 /**************************************************
- * ✅ 미리보기 SUBMIT (핵심)
+ * ✅ 미리보기 SUBMIT — 완전 안전 버전
  **************************************************/
 writeForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // 🔥 기본 submit 차단
+  e.preventDefault(); // 기본 submit 차단
 
   const data = {
     category: document.getElementById('category').value,
@@ -87,15 +87,23 @@ writeForm.addEventListener('submit', (e) => {
     isAnonymous: document.getElementById('isAnonymous').checked,
   };
 
-  // 필수 체크
+  // 필수값 체크
   if (!data.category || !data.title || !data.description) {
     alert('카테고리, 제목, 이슈 설명은 필수입니다.');
     return;
   }
 
-  // 🔥 미리보기용 임시 저장
-  localStorage.setItem('galla_preview', JSON.stringify(data));
+  // 🔥 storage 안전 저장 (localStorage → sessionStorage → 메모리)
+  try {
+    localStorage.setItem('galla_preview', JSON.stringify(data));
+  } catch (err) {
+    try {
+      sessionStorage.setItem('galla_preview', JSON.stringify(data));
+    } catch (e) {
+      window.__GALLA_PREVIEW__ = data;
+    }
+  }
 
-  // 🔥 미리보기 페이지 이동
+  // 🔥 무조건 이동
   location.href = 'preview.html';
 });
