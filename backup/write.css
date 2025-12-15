@@ -975,3 +975,18 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 .preview-actions #publishPreview {
   background: #2f80ff;
 }
+
+/* =========================
+   DONATION SELECT & GUIDE
+========================= */
+.donation-guide {
+  background: #0f0f0f;
+  border: 1px solid #222;
+  border-radius: 14px;
+}
+
+.donation-guide-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #bbb;
+}
