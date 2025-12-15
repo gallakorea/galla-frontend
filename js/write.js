@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
   const form = document.getElementById('writeForm');
-  const issuePreview = document.createElement('section');
-  issuePreview.id = 'issuePreview';
-  form.after(issuePreview);
+  const issuePreview = document.getElementById('issuePreview');
 
+  /* ===============================
+     ELEMENTS (🔥 누락 원인 해결)
+  =============================== */
   const categoryEl = document.getElementById('category');
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
@@ -12,18 +13,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const anonEl = document.getElementById('isAnonymous');
 
   /* ===============================
-     AI MODAL (단순 열고 닫기만)
+     AI MODAL
   =============================== */
   const aiModal = document.getElementById('aiModal');
-  document.getElementById('openAiModal').onclick = () => {
+  const openAiBtn = document.getElementById('openAiModal');
+  const closeAiBtn = document.getElementById('aiClose');
+
+  openAiBtn.onclick = () => {
     aiModal.style.display = 'flex';
     body.style.overflow = 'hidden';
   };
-  document.getElementById('aiClose').onclick = closeAi;
-  function closeAi() {
+
+  closeAiBtn.onclick = () => {
     aiModal.style.display = 'none';
     body.style.overflow = '';
-  }
+  };
 
   /* ===============================
      FILE UPLOAD – THUMBNAIL
@@ -31,15 +35,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
+
   let thumbSrc = null;
 
   thumbBtn.onclick = () => thumbInput.click();
+
   thumbInput.onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    thumbSrc = URL.createObjectURL(f);
-    thumbPreview.innerHTML =
-      `<img src="${thumbSrc}" class="preview-thumb-img">`;
+    const file = e.target.files[0];
+    if (!file) return;
+
+    thumbSrc = URL.createObjectURL(file);
+
+    thumbPreview.innerHTML = `
+      <img src="${thumbSrc}" class="preview-thumb-img" />
+    `;
   };
 
   /* ===============================
@@ -48,47 +57,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoInput = document.getElementById('video');
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
+
   let videoSrc = null;
 
   videoBtn.onclick = () => videoInput.click();
+
   videoInput.onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    videoSrc = URL.createObjectURL(f);
-    videoPreview.innerHTML =
-      `<video src="${videoSrc}" muted playsinline></video>`;
+    const file = e.target.files[0];
+    if (!file) return;
+
+    videoSrc = URL.createObjectURL(file);
+
+    videoPreview.innerHTML = `
+      <video src="${videoSrc}" muted playsinline></video>
+    `;
   };
 
   /* ===============================
-     SPEECH VIDEO MODAL (🔥 동적 생성)
+     SPEECH MODAL (고정 DOM 사용)
   =============================== */
-  let speechModal = null;
-  let speechVideo = null;
+  const speechModal = document.getElementById('speechModal');
+  const speechVideo = document.getElementById('speechVideo');
+  const closeSpeechBtn = document.getElementById('closeSpeech');
 
   function openSpeech(src) {
-    if (!speechModal) {
-      speechModal = document.createElement('div');
-      speechModal.className = 'video-modal';
-      speechModal.innerHTML = `
-        <div class="video-modal-inner">
-          <div class="video-modal-header">
-            <span>1분 엘리베이터 스피치</span>
-            <button id="closeSpeech">✕</button>
-          </div>
-          <div class="video-viewport">
-            <video playsinline controls></video>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(speechModal);
-
-      speechVideo = speechModal.querySelector('video');
-      speechModal.querySelector('#closeSpeech').onclick = closeSpeech;
-      speechModal.onclick = e => {
-        if (e.target === speechModal) closeSpeech();
-      };
-    }
-
+    if (!src) return;
     speechVideo.src = src;
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
@@ -96,38 +89,44 @@ document.addEventListener('DOMContentLoaded', () => {
     speechVideo.play();
   }
 
-  function closeSpeech() {
+  closeSpeechBtn.onclick = () => {
     speechVideo.pause();
     speechVideo.src = '';
     speechModal.style.display = 'none';
     body.style.overflow = '';
-  }
+  };
 
   /* ===============================
-     PREVIEW SUBMIT
+     PREVIEW (🔥 정상 작동 핵심)
   =============================== */
   form.onsubmit = e => {
     e.preventDefault();
 
-    if (!categoryEl.value || !titleEl.value || !descEl.value) {
+    const category = categoryEl.value;
+    const title = titleEl.value;
+    const oneLine = oneLineEl.value;
+    const desc = descEl.value;
+    const anon = anonEl.checked;
+
+    if (!category || !title || !desc) {
       alert('필수 항목을 입력하세요');
       return;
     }
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
-        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
-        <h1 class="issue-title">${titleEl.value}</h1>
-        ${oneLineEl.value ? `<p class="issue-one-line">${oneLineEl.value}</p>` : ''}
-        <div class="issue-author">작성자 · ${anonEl.checked ? '익명' : '사용자'}</div>
+        <div class="issue-meta">${category} · 방금 전</div>
+        <h1 class="issue-title">${title}</h1>
+        ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
+        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
         ${thumbSrc ? `<img src="${thumbSrc}" class="preview-thumb-img">` : ''}
 
-        ${videoSrc ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+        ${videoSrc ? `<button class="speech-btn" id="openSpeechBtn">🎥 1분 엘리베이터 스피치</button>` : ''}
 
         <section class="issue-summary">
           <h3>📝 이 주제에 대한 핵심 요약</h3>
-          <p>${descEl.value}</p>
+          <p>${desc}</p>
         </section>
 
         <div class="preview-actions">
@@ -137,13 +136,17 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
+    /* 수정 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    /* 영상 */
     if (videoSrc) {
-      document.getElementById('openSpeech').onclick = () => openSpeech(videoSrc);
+      document.getElementById('openSpeechBtn').onclick = () => {
+        openSpeech(videoSrc);
+      };
     }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
