@@ -45,10 +45,11 @@
 
       <form id="writeForm">
 
+        <!-- 카테고리 (필수) -->
         <div class="field-block">
-          <label class="field-label">카테고리 (필수)</label>
+          <label class="field-label">카테고리 <span class="required">(필수)</span></label>
           <select id="category" class="input-field" required>
-            <option value="">카테고리를 선택하세요</option>
+            <option value="">논쟁 주제에 맞는 카테고리를 선택하세요</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
             <option>직장·경력</option>
@@ -63,37 +64,70 @@
           </select>
         </div>
 
+        <!-- 제목 (필수) -->
         <div class="field-block">
-          <label class="field-label">제목</label>
-          <input id="title" class="input-field" maxlength="80" />
+          <label class="field-label">제목 <span class="required">(필수)</span></label>
+          <input
+            id="title"
+            class="input-field"
+            maxlength="80"
+            placeholder="사람들이 찬반을 고민하게 만들 한 문장 제목 (최대 80자)"
+          />
         </div>
 
+        <!-- 한줄 요약 (필수) -->
         <div class="field-block">
-          <label class="field-label">발의자 한 줄</label>
-          <input id="oneLine" class="input-field" />
+          <label class="field-label">한줄 요약 <span class="required">(필수)</span></label>
+          <input
+            id="oneLine"
+            class="input-field"
+            placeholder="이 이슈를 한 문장으로 요약해 주세요"
+          />
         </div>
 
+        <!-- 이슈 썸네일 (필수) -->
         <div class="field-block">
-          <label class="field-label">이슈 썸네일</label>
+          <label class="field-label">이슈 썸네일 <span class="required">(필수)</span></label>
           <input type="file" id="thumbnail" hidden accept="image/*" />
-          <button type="button" id="thumbnailBtn" class="file-btn">썸네일 업로드</button>
+          <button type="button" id="thumbnailBtn" class="file-btn">
+            썸네일 업로드
+          </button>
+          <div class="guide-text">
+            피드와 공유 화면에 노출될 대표 이미지입니다 (권장 비율 16:9)
+          </div>
           <div id="thumbPreview" class="preview-box"></div>
         </div>
 
+        <!-- 1분 엘리베이터 스피치 (선택) -->
         <div class="field-block">
-          <label class="field-label">엘리베이터 스피치 (선택)</label>
+          <label class="field-label">
+            1분 엘리베이터 스피치 <span class="optional">(선택)</span>
+          </label>
           <input type="file" id="video" hidden accept="video/*" />
-          <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
+          <button type="button" id="videoBtn" class="file-btn">
+            영상 업로드
+          </button>
+          <div class="guide-text">
+            이슈를 직접 설명하는 1분 이내 세로 영상 (9:16 권장)
+          </div>
           <div id="videoPreview" class="preview-box"></div>
         </div>
 
+        <!-- 이슈 설명 (필수) -->
         <div class="field-block">
-          <label class="field-label">이슈 설명</label>
-          <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
-          <button type="button" id="openAiModal" class="ai-main-btn">✨ AI에게 글 다듬기</button>
+          <label class="field-label">이슈 설명 <span class="required">(필수)</span></label>
+          <textarea
+            id="description"
+            class="input-field textarea"
+            maxlength="500"
+            placeholder="왜 이 문제가 논쟁거리인지, 찬반이 갈리는 이유를 구체적으로 설명해 주세요"
+          ></textarea>
+          <button type="button" id="openAiModal" class="ai-main-btn">
+            ✨ AI에게 글 다듬기
+          </button>
         </div>
 
-                <!-- 기부 가이드 -->
+        <!-- 기부 가이드 -->
         <div class="field-block donation-guide">
           <p class="donation-guide-text">
             본 이슈를 통해 발생한 수익금의 일부는 선택하신 기부처에 전달됩니다.<br />
@@ -101,10 +135,9 @@
           </p>
         </div>
 
-
-                <!-- 기부처 선택 -->
+        <!-- 기부처 선택 (필수) -->
         <div class="field-block">
-          <label class="field-label">기부처 선택 (필수)</label>
+          <label class="field-label">기부처 선택 <span class="required">(필수)</span></label>
           <select id="donationTarget" class="input-field" required>
             <option value="">기부처를 선택하세요</option>
             <option>사회복지</option>
@@ -116,13 +149,18 @@
             <option>동물 보호</option>
             <option>헌혈·재능기부</option>
           </select>
+          <div class="guide-text">
+            선택한 기부처는 미리보기 및 발행 후 공개됩니다
+          </div>
         </div>
 
+        <!-- 미리보기 -->
         <div class="field-block">
           <button type="submit" class="primary-btn">미리보기</button>
         </div>
 
       </form>
+
 
       <!-- ✅ 미리보기 렌더 영역 -->
       <div id="issuePreview"></div>
