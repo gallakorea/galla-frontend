@@ -171,3 +171,87 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   };
 });
+
+import { supabase } from './supabase.js';
+
+window.publishIssueToDB = async function ({
+  category,
+  title,
+  oneLine,
+  description,
+  donationTarget,
+  isAnonymous,
+  thumbnailFile,
+  videoFile
+}) {
+  try {
+    /* 1️⃣ 로그인 체크 */
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      alert('로그인이 필요합니다');
+      return;
+    }
+
+    /* 2️⃣ 썸네일 업로드 */
+    let thumbnailUrl = null;
+    if (thumbnailFile) {
+      const thumbPath = `issues/${user.id}/${Date.now()}_thumb.jpg`;
+
+      const { error } = await supabase.storage
+        .from('thumbnails')
+        .upload(thumbPath, thumbnailFile);
+
+      if (error) throw error;
+
+      thumbnailUrl = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(thumbPath).data.publicUrl;
+    }
+
+    /* 3️⃣ 영상 업로드 (선택) */
+    let videoUrl = null;
+    if (videoFile) {
+      const videoPath = `issues/${user.id}/${Date.now()}_speech.mp4`;
+
+      const { error } = await supabase.storage
+        .from('videos')
+        .upload(videoPath, videoFile);
+
+      if (error) throw error;
+
+      videoUrl = supabase.storage
+        .from('videos')
+        .getPublicUrl(videoPath).data.publicUrl;
+    }
+
+    /* 4️⃣ issues 테이블 insert */
+    const { data, error } = await supabase
+      .from('issues')
+      .insert({
+        category,
+        title,
+        one_line: oneLine,
+        description,
+        donation_target: donationTarget,
+        is_anonymous: isAnonymous,
+        thumbnail_url: thumbnailUrl,
+        speech_video_url: videoUrl,
+        author_id: user.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    /* 5️⃣ issue 페이지 이동 */
+    window.location.href = `/issue.html?id=${data.id}`;
+
+  } catch (err) {
+    console.error(err);
+    alert('발행 중 오류가 발생했습니다');
+  }
+};
