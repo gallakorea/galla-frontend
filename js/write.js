@@ -1,88 +1,108 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
-  const $ = id => document.getElementById(id);
 
-  /* ================= 공통 ================= */
-  async function wait(ms = 30) {
-    return new Promise(r => setTimeout(r, ms));
-  }
+  const form = document.getElementById('writeForm');
+  const issuePreview = document.getElementById('issuePreview');
 
-  async function waitForSupabaseClient() {
-    while (!window.supabaseClient) {
-      await wait();
-    }
-  }
-
-  async function requireLogin() {
-    await waitForSupabaseClient();
-    const { data } = await window.supabaseClient.auth.getSession();
-    if (!data?.session) {
-      alert('로그인 후 글 작성이 가능합니다.');
-      location.href = '/login.html';
-      throw new Error('NOT_LOGGED_IN');
-    }
-  }
-
-  /* ================= DOM ================= */
-  const form = $('writeForm');
-  const issuePreview = $('issuePreview');
-
-  const categoryEl = $('category');
-  const titleEl = $('title');
-  const oneLineEl = $('oneLine');
-  const descEl = $('description');
-  const donationEl = $('donationTarget');
-  const anonEl = $('isAnonymous');
+  const categoryEl = document.getElementById('category');
+  const titleEl = document.getElementById('title');
+  const oneLineEl = document.getElementById('oneLine');
+  const descEl = document.getElementById('description');
+  const donationEl = document.getElementById('donationTarget'); // ✅ 추가
 
   /* ================= FILE ================= */
-  const thumbInput = $('thumbnail');
-  const thumbBtn = $('thumbnailBtn');
-  const thumbPreview = $('thumbPreview');
+  const thumbInput = document.getElementById('thumbnail');
+  const thumbBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-  const videoInput = $('video');
-  const videoBtn = $('videoBtn');
-  const videoPreview = $('videoPreview');
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+  });
 
-  let thumbFile = null;
-  let videoFile = null;
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
 
-  if (thumbBtn && thumbInput) {
-    thumbBtn.onclick = () => thumbInput.click();
-    thumbInput.onchange = e => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      thumbFile = f;
-      thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
-    };
-  }
+  videoBtn.addEventListener('click', () => videoInput.click());
+  videoInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
+  });
 
-  if (videoBtn && videoInput) {
-    videoBtn.onclick = () => videoInput.click();
-    videoInput.onchange = e => {
-      const f = e.target.files?.[0];
-      if (!f) return;
-      videoFile = f;
-      videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
-    };
-  }
+  /* ================= AI MODAL ================= */
+  const openAiBtn = document.getElementById('openAiModal');
+  const aiModal = document.getElementById('aiModal');
+  const aiClose = document.getElementById('aiClose');
+  const aiUserText = document.getElementById('aiUserText');
+  const aiResultText = document.getElementById('aiResultText');
+  const applyAi = document.getElementById('applyAi');
+
+  openAiBtn.addEventListener('click', e => {
+    e.preventDefault();
+    aiUserText.value = descEl.value;
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  });
+
+  aiClose.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+
+  applyAi.addEventListener('click', () => {
+    if (aiResultText.value) {
+      descEl.value = aiResultText.value;
+    }
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+
+  /* AI STYLE TABS */
+  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document
+        .querySelectorAll('.ai-style-tabs button')
+        .forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
 
   /* ================= PREVIEW ================= */
-  form.onsubmit = async e => {
+  form.addEventListener('submit', e => {
     e.preventDefault();
 
-    // ✅ 로그인 체크는 여기서만
-    try {
-      await requireLogin();
-    } catch {
+    // ✅ 필수 검증 (기부처 포함)
+    if (!categoryEl.value) {
+      alert('카테고리를 선택해주세요');
+      categoryEl.focus();
       return;
     }
 
-    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
-    if (!titleEl.value) return alert('제목을 입력해주세요');
-    if (!oneLineEl.value) return alert('한 줄 요약을 입력해주세요');
-    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
-    if (!donationEl.value) return alert('기부처를 선택해주세요');
-    if (!thumbFile) return alert('썸네일을 업로드해주세요');
+    if (!titleEl.value) {
+      alert('제목을 입력해주세요');
+      titleEl.focus();
+      return;
+    }
+
+    if (!descEl.value) {
+      alert('이슈 설명을 입력해주세요');
+      descEl.focus();
+      return;
+    }
+
+    if (!donationEl.value) {
+      alert('기부처를 선택해주세요');
+      donationEl.focus();
+      return;
+    }
+
+    const anon = document.getElementById('isAnonymous').checked;
+    const thumbImg = thumbPreview.querySelector('img');
+    const videoEl = videoPreview.querySelector('video');
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
@@ -92,11 +112,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
-        <div class="issue-author">
-          작성자 · ${anonEl?.checked ? '익명' : '사용자'}
-        </div>
+        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
-        <img src="${URL.createObjectURL(thumbFile)}" class="preview-thumb-img">
+        ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
+
+        ${videoEl ? `
+          <button type="button" class="speech-btn" id="openSpeech">
+            🎥 1분 엘리베이터 스피치
+          </button>` : ''}
 
         <section class="issue-summary">
           <p>${descEl.value}</p>
@@ -109,74 +132,44 @@ document.addEventListener('DOMContentLoaded', async () => {
       </section>
     `;
 
-    $('editPreview').onclick = () => {
+    /* 수정하기 */
+    document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    $('publishPreview').onclick = async e => {
-      const btn = e.target;
-      btn.disabled = true;
-      btn.textContent = '검사 중…';
-
-      const moderation = await runContentModeration({
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value
-      });
-
-      if (moderation.result === 'FAIL') {
-        alert(`🚫 발행 불가\n\n사유: ${moderation.reason}`);
-        btn.disabled = false;
-        btn.textContent = '발행하기';
-        return;
-      }
-
-      await publishIssue();
+    /* 발행하기 */
+    document.getElementById('publishPreview').onclick = () => {
+      alert('발행 로직 연결 예정');
     };
 
+    /* 영상 모달 */
+    if (videoEl) {
+      document.getElementById('openSpeech').onclick = () => {
+        openSpeech(videoEl.src);
+      };
+    }
+
     issuePreview.scrollIntoView({ behavior: 'smooth' });
-  };
+  });
 
-  /* ================= DB INSERT ================= */
-  async function publishIssue() {
-    const { error } = await window.supabaseClient
-      .from('issues')
-      .insert([{
-        category: categoryEl.value,
-        title: titleEl.value,
-        one_line: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anonEl?.checked || false
-      }]);
+  /* ================= VIDEO MODAL ================= */
+  const speechModal = document.getElementById('speechModal');
+  const speechVideo = document.getElementById('speechVideo');
+  const closeSpeech = document.getElementById('closeSpeech');
 
-    if (error) {
-      alert('❌ 발행 실패');
-      console.error(error);
-      return;
-    }
-
-    alert('🎉 발행 완료');
-    location.href = '/';
+  function openSpeech(src) {
+    speechVideo.src = src;
+    speechModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+    speechVideo.currentTime = 0;
+    speechVideo.play();
   }
+
+  closeSpeech.addEventListener('click', () => {
+    speechVideo.pause();
+    speechVideo.src = '';
+    speechModal.style.display = 'none';
+    body.style.overflow = '';
+  });
 });
-
-/* ================= 콘텐츠 적합성 검사 ================= */
-async function runContentModeration({ title, oneLine, description }) {
-  try {
-    const { data, error } =
-      await window.supabaseClient.functions.invoke(
-        'content-moderation',
-        { body: { title, oneLine, description } }
-      );
-
-    if (error) {
-      return { result: 'FAIL', reason: '콘텐츠 검사 실패' };
-    }
-
-    return data;
-  } catch {
-    return { result: 'FAIL', reason: '콘텐츠 검사 서버 오류' };
-  }
-}
