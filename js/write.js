@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('publishPreview').onclick = () => {
-      alert('✅ 프론트 정상\n다음 단계: DB insert 연결');
+      alert('✅ 여기까지 정상\n다음 단계: DB 연결');
     };
 
     if (videoFile) {
