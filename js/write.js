@@ -179,26 +179,20 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= 콘텐츠 적합성 검사 ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
-    const res = await fetch(
-      'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
+    const { data, error } = await window.supabaseClient.functions.invoke(
+      'content-moderation',
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // ✅ 핵심: Supabase Edge Function 호출 인증
-          'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({ title, oneLine, description })
+        body: { title, oneLine, description }
       }
     );
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+    if (error) {
+      console.error('[Moderation Error]', error);
+      throw error;
     }
 
-    return await res.json();
+    return data;
   } catch (e) {
-    console.error('[Moderation Error]', e);
     return {
       result: 'FAIL',
       reason: '콘텐츠 적합성 검사 서버 오류'
