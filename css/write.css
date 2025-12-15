@@ -1,6 +1,6 @@
 /***************************************************
- * RESET & BASE
- ***************************************************/
+ RESET & BASE
+***************************************************/
 * {
   box-sizing: border-box;
 }
@@ -13,10 +13,9 @@ body {
 }
 
 /***************************************************
- * APP LAYOUT
- ***************************************************/
+ APP LAYOUT
+***************************************************/
 .app-root {
-  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   padding-bottom: 120px;
@@ -25,12 +24,11 @@ body {
 .page-main,
 .page-inner {
   width: 100%;
-  margin: 0 auto;
 }
 
 /***************************************************
- * HEADER
- ***************************************************/
+ HEADER
+***************************************************/
 .header {
   position: sticky;
   top: 0;
@@ -40,8 +38,6 @@ body {
 }
 
 .header-inner {
-  max-width: 480px;
-  margin: 0 auto;
   height: 54px;
   padding: 0 16px;
   display: flex;
@@ -53,11 +49,11 @@ body {
 }
 
 /***************************************************
- * SECTION
- ***************************************************/
+ SECTION
+***************************************************/
 .section-block {
   padding: 22px 16px;
-  border-bottom: 1px solid #0f0f0f;
+  border-bottom: 1px solid #111;
 }
 
 .write-main-title {
@@ -67,13 +63,13 @@ body {
 
 .write-main-desc {
   font-size: 13px;
-  color: #ccc;
+  color: #aaa;
   margin-top: 6px;
 }
 
 /***************************************************
- * FORM
- ***************************************************/
+ FORM
+***************************************************/
 .field-block {
   padding: 16px;
   display: flex;
@@ -97,254 +93,151 @@ body {
 }
 
 .textarea {
-  min-height: 220px;
-  resize: vertical;
-  line-height: 1.55;
+  min-height: 200px;
 }
 
 /***************************************************
- * BUTTONS
- ***************************************************/
+ BUTTONS
+***************************************************/
 .file-btn {
-  width: 100%;
   padding: 14px;
-  background: linear-gradient(180deg, #141824, #0b0c14);
+  background: #111;
   border: 1px solid #222;
   border-radius: 14px;
   color: #fff;
-  font-size: 14px;
 }
 
-.ai-main-btn,
-.primary-btn {
-  width: 100%;
+.primary-btn,
+.ai-main-btn {
   padding: 16px;
   background: #2f80ff;
   border-radius: 999px;
   border: none;
   color: #fff;
-  font-size: 15px;
   font-weight: 800;
 }
 
 /***************************************************
- * ANON TOGGLE
- ***************************************************/
-.anon-toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #111;
-  border: 1px solid #222;
-  padding: 16px;
+ PREVIEW (FORM)
+***************************************************/
+.preview-box {
+  margin-top: 10px;
+}
+
+.preview-box img,
+.preview-box video {
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
   border-radius: 14px;
-}
-
-.switch {
-  position: relative;
-  width: 46px;
-  height: 26px;
-}
-
-.switch input {
-  display: none;
-}
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: #333;
-  border-radius: 999px;
-}
-
-.slider::before {
-  content: "";
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  transition: .2s;
-}
-
-.switch input:checked + .slider {
-  background: #2f80ff;
-}
-
-.switch input:checked + .slider::before {
-  transform: translateX(20px);
+  background: #000;
 }
 
 /***************************************************
- * AI MODAL (정리된 단일 정의)
- ***************************************************/
-.ai-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.7);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 3000;
-}
-
-.ai-modal-inner {
-  width: 92%;
-  max-width: 480px;
-  height: 66vh;
-  background: #111;
-  border-radius: 18px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.ai-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.ai-style-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-}
-
-.ai-style-tabs button {
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-}
-
-.ai-style-tabs button.active {
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-}
-
-.ai-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.ai-modal-body textarea {
-  min-height: 110px;
-  resize: none;
-}
-
-.ai-modal input,
-.ai-modal textarea {
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-  padding: 12px;
-}
-
-/***************************************************
- * ISSUE PREVIEW (🔥 최종 안정판)
- ***************************************************/
+ ISSUE PREVIEW
+***************************************************/
 .issue-preview {
-  max-width: 480px;
-  margin: 0 auto;
   padding: 16px;
 }
 
 .issue-preview .preview-media {
-  width: 100%;
-  margin: 12px auto;
+  margin: 12px 0;
   border-radius: 14px;
   overflow: hidden;
   background: #000;
   position: relative;
 }
 
-.issue-preview .preview-thumb-img {
+.issue-preview img {
   width: 100%;
-  height: auto;
   max-height: 420px;
   object-fit: cover;
-  display: block;
-}
-
-.issue-preview .preview-media::after {
-  content: "미리보기";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.7);
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 5;
-  pointer-events: none;
 }
 
 .issue-preview .speech-btn {
   width: 100%;
   margin: 12px 0;
   padding: 14px;
+  border-radius: 12px;
   background: #111;
   border: 1px solid #333;
-  border-radius: 12px;
-  color: #fff;
-}
-
-.issue-preview .preview-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.issue-preview .preview-actions button {
-  flex: 1;
-  padding: 14px;
-  border-radius: 12px;
-}
-
-.issue-preview .btn-publish {
-  background: #2f80ff;
-  border: none;
   color: #fff;
 }
 
 /***************************************************
- * BOTTOM NAV
- ***************************************************/
+ AI MODAL
+***************************************************/
+.ai-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+  display: none;
+  z-index: 3000;
+  justify-content: center;
+  align-items: center;
+}
+
+.ai-modal-inner {
+  width: 92%;
+  max-width: 480px;
+  height: 70vh;
+  background: #111;
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/***************************************************
+ SPEECH MODAL (🔥 핵심)
+***************************************************/
+#speechModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.85);
+  display: none;
+  z-index: 4000;
+  justify-content: center;
+  align-items: center;
+}
+
+.speech-sheet {
+  width: 100%;
+  max-width: 420px;
+  background: #000;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.speech-header {
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #222;
+}
+
+.video-viewport video {
+  width: 100%;
+  height: auto;
+  background: #000;
+}
+
+/***************************************************
+ BOTTOM NAV
+***************************************************/
 .bottom-nav {
   position: fixed;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 480px;
   width: 100%;
+  max-width: 480px;
   height: 64px;
   background: #000;
   border-top: 1px solid #111;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  z-index: 9999;
-}
-
-.nav-item {
-  background: none;
-  border: none;
-}
-
-.nav-item img {
-  width: 28px;
-  height: 28px;
-  filter: brightness(0) invert(1);
+  z-index: 5000;
 }
