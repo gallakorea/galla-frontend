@@ -1,105 +1,153 @@
-const body = document.body;
-const form = document.getElementById('writeForm');
-const issuePreview = document.getElementById('issuePreview');
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
 
-/* AI MODAL */
-const aiModal = document.getElementById('aiModal');
-document.getElementById('openAiModal').onclick = () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-};
-document.getElementById('aiClose').onclick = closeAi;
-function closeAi() {
-  aiModal.style.display = 'none';
-  body.style.overflow = '';
-}
+  const form = document.getElementById('writeForm');
+  const issuePreview = document.getElementById('issuePreview');
 
-/* FILE UPLOAD */
-const thumbInput = document.getElementById('thumbnail');
-const thumbBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
+  const categoryEl = document.getElementById('category');
+  const titleEl = document.getElementById('title');
+  const oneLineEl = document.getElementById('oneLine');
+  const descEl = document.getElementById('description');
 
-thumbBtn.onclick = () => thumbInput.click();
-thumbInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
-};
+  /* ================= FILE ================= */
+  const thumbInput = document.getElementById('thumbnail');
+  const thumbBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+  });
 
-videoBtn.onclick = () => videoInput.click();
-videoInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
-};
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
 
-/* PREVIEW */
-form.onsubmit = e => {
-  e.preventDefault();
+  videoBtn.addEventListener('click', () => videoInput.click());
+  videoInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
+  });
 
-  const category = categoryEl.value;
-  const title = titleEl.value;
-  const oneLine = oneLineEl.value;
-  const desc = descEl.value;
-  const anon = document.getElementById('isAnonymous').checked;
+  /* ================= AI MODAL (SAFE) ================= */
+  const openAiBtn = document.getElementById('openAiModal');
+  const aiModal = document.getElementById('aiModal');
 
-  if (!category || !title || !desc) return alert('필수 입력 누락');
+  if (openAiBtn && aiModal) {
+    const aiClose = document.getElementById('aiClose');
+    const aiUserText = document.getElementById('aiUserText');
+    const aiResultText = document.getElementById('aiResultText');
+    const applyAi = document.getElementById('applyAi');
 
-  const thumbImg = thumbPreview.querySelector('img');
-  const videoEl = videoPreview.querySelector('video');
+    openAiBtn.addEventListener('click', e => {
+      e.preventDefault();
+      if (aiUserText) aiUserText.value = descEl.value;
+      aiModal.style.display = 'flex';
+      body.style.overflow = 'hidden';
+    });
 
-  issuePreview.innerHTML = `
-    <section class="issue-preview">
-      <div class="issue-meta">${category} · 방금 전</div>
-      <h1 class="issue-title">${title}</h1>
-      <p class="issue-one-line">${oneLine}</p>
-      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
+    aiClose?.addEventListener('click', () => {
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    });
 
-      ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
-
-      ${videoEl ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
-
-      <section class="issue-summary">
-        <h3>📝 이 주제에 대한 핵심 요약</h3>
-        <p>${desc}</p>
-      </section>
-
-      <div class="preview-actions">
-        <button id="editPreview">수정하기</button>
-        <button class="btn-publish">발행하기</button>
-      </div>
-    </section>
-  `;
-
-  document.getElementById('editPreview').onclick = () => {
-    issuePreview.innerHTML = '';
-    window.scrollTo({ top: 0 });
-  };
-
-  if (videoEl) {
-    document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
+    applyAi?.addEventListener('click', () => {
+      if (aiResultText?.value) {
+        descEl.value = aiResultText.value;
+      }
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    });
   }
 
-  issuePreview.scrollIntoView({ behavior: 'smooth' });
-};
+  /* ================= PREVIEW ================= */
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    if (!categoryEl.value || !titleEl.value || !descEl.value) {
+      alert('필수 입력 누락');
+      return;
+    }
+
+    const anon = document.getElementById('isAnonymous').checked;
+    const thumbImg = thumbPreview.querySelector('img');
+    const videoEl = videoPreview.querySelector('video');
+
+    issuePreview.innerHTML = `
+      <section class="issue-preview">
+        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
+        <h1 class="issue-title">${titleEl.value}</h1>
+        <p class="issue-one-line">${oneLineEl.value}</p>
+        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
+
+        ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
+
+        ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+
+        <section class="issue-summary">
+          <p>${descEl.value}</p>
+        </section>
+      </section>
+    `;
+
+    if (videoEl) {
+      document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
+    }
+
+    issuePreview.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  /* ================= VIDEO MODAL ================= */
+  const speechModal = document.getElementById('speechModal');
+  const speechVideo = document.getElementById('speechVideo');
+  const closeSpeech = document.getElementById('closeSpeech');
+
+  function openSpeech(src) {
+    speechVideo.src = src;
+    speechModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+    speechVideo.play();
+  }
+
+  closeSpeech.addEventListener('click', () => {
+    speechVideo.pause();
+    speechModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+});
+
+/* AI STYLE TABS */
+const styleTabs = document.querySelectorAll('.ai-style-tabs button');
+
+styleTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    styleTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    // 선택된 스타일 값을 AI 실행 시 사용 가능
+    tab.dataset.selected = 'true';
+  });
+});
 
 /* SPEECH MODAL */
 const speechModal = document.getElementById('speechModal');
 const speechVideo = document.getElementById('speechVideo');
+const closeSpeechBtn = document.getElementById('closeSpeech');
 
 function openSpeech(src) {
   speechVideo.src = src;
   speechModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  speechVideo.currentTime = 0;
   speechVideo.play();
 }
 
-document.getElementById('closeSpeech').onclick = () => {
+closeSpeechBtn.onclick = () => {
   speechVideo.pause();
+  speechVideo.src = '';
   speechModal.style.display = 'none';
-  body.style.overflow = '';
+  document.body.style.overflow = '';
 };
