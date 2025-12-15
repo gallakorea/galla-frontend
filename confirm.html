@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <title>발행 확인</title>
+
+  <!-- 기존 톤앤매너 그대로 -->
+  <link rel="stylesheet" href="/css/base.css" />
+  <link rel="stylesheet" href="/css/write.css" />
+  <link rel="stylesheet" href="/css/issue.css" />
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- ✅ 헤더 (write / issue 동일) -->
+  <header class="app-header">
+    <h1>발행 전 최종 확인</h1>
+  </header>
+
+  <!-- ✅ 미리보기 (issue 페이지와 동일 구조) -->
+  <main id="preview" class="issue-page"></main>
+
+  <!-- ✅ 액션 버튼 -->
+  <div class="preview-actions fixed">
+    <button id="cancelPublish" class="btn secondary">돌아가기</button>
+    <button id="confirmPublish" class="btn primary">최종 발행</button>
+  </div>
+
+</div>
+
+<!-- ✅ 하단 네비게이션 (절대 변경 금지) -->
+<nav class="bottom-nav">
+  <!-- 기존 write / issue 와 동일한 마크업 그대로 복붙 -->
+</nav>
+
+<script src="/js/supabase.js"></script>
+<script src="/js/confirm.js"></script>
+</body>
+</html>
