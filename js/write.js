@@ -1,5 +1,25 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const body = document.body;
+
+  /* ================= 로그인 강제 (추가) ================= */
+  async function waitForSupabase() {
+    while (!window.supabaseClient) {
+      await new Promise(r => setTimeout(r, 30));
+    }
+  }
+
+  await waitForSupabase();
+
+  const { data: sessionData } = await window.supabaseClient.auth.getSession();
+  if (!sessionData?.session) {
+    alert('로그인 후 글 작성이 가능합니다.');
+    location.href = '/login.html';
+    return;
+  }
+
+  const accessToken = sessionData.session.access_token;
+
+  /* ================= 기존 코드 시작 ================= */
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -61,11 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
-  /* AI STYLE TABS */
   document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
     tab.addEventListener('click', () => {
-      document
-        .querySelectorAll('.ai-style-tabs button')
+      document.querySelectorAll('.ai-style-tabs button')
         .forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
     });
@@ -75,22 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    if (!categoryEl.value) {
-      alert('카테고리를 선택해주세요');
-      return;
-    }
-    if (!titleEl.value) {
-      alert('제목을 입력해주세요');
-      return;
-    }
-    if (!descEl.value) {
-      alert('이슈 설명을 입력해주세요');
-      return;
-    }
-    if (!donationEl.value) {
-      alert('기부처를 선택해주세요');
-      return;
-    }
+    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
+    if (!titleEl.value) return alert('제목을 입력해주세요');
+    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
+    if (!donationEl.value) return alert('기부처를 선택해주세요');
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
@@ -124,38 +130,39 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
-    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행하기 (여기만 추가됨) ================= */
+    /* ================= 발행하기 + 적정성 검사 (추가) ================= */
     document.getElementById('publishPreview').onclick = async () => {
-      // ✅ 1. 적정성 검사
-      const moderation = await runContentModeration({
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value
-      });
+      const res = await fetch(
+        'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            title: titleEl.value,
+            oneLine: oneLineEl.value,
+            description: descEl.value
+          })
+        }
+      );
 
-      if (moderation.result === 'FAIL') {
-        alert(`🚫 발행 불가\n\n사유: ${moderation.reason}`);
+      const data = await res.json();
+
+      if (data.result === 'FAIL') {
+        alert(`🚫 발행 불가\n\n사유: ${data.reason}`);
         return;
       }
 
-      if (moderation.result === 'WARNING') {
-        const ok = confirm(
-          `⚠️ 주의 콘텐츠\n\n사유: ${moderation.reason}\n\n그래도 발행하시겠습니까?`
-        );
-        if (!ok) return;
-      }
-
-      // ✅ 2. 여기서만 다음 단계
       alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
     };
 
-    /* 영상 모달 */
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(videoEl.src);
@@ -185,25 +192,3 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 });
-
-/* ================= 콘텐츠 적합성 검사 ================= */
-async function runContentModeration({ title, oneLine, description }) {
-  try {
-    const res = await fetch(
-      'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, oneLine, description })
-      }
-    );
-
-    if (!res.ok) {
-      return { result: 'FAIL', reason: '적정성 검사 실패' };
-    }
-
-    return await res.json();
-  } catch (e) {
-    return { result: 'FAIL', reason: '적정성 검사 서버 오류' };
-  }
-}
