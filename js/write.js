@@ -1,13 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
+  const issuePreview = document.getElementById('issuePreview');
 
   const category = document.getElementById('category');
   const title = document.getElementById('title');
   const oneLine = document.getElementById('oneLine');
   const desc = document.getElementById('description');
   const anon = document.getElementById('isAnonymous');
-  const previewBtn = document.getElementById('previewBtn');
-  const issuePreview = document.getElementById('issuePreview');
 
   /* AI MODAL */
   const aiModal = document.getElementById('aiModal');
@@ -20,73 +19,61 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   };
 
-  /* THUMBNAIL */
+  /* FILES */
   let thumbSrc = null;
+  let videoSrc = null;
+
   document.getElementById('thumbnailBtn').onclick = () =>
     document.getElementById('thumbnail').click();
 
   document.getElementById('thumbnail').onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    thumbSrc = URL.createObjectURL(f);
+    thumbSrc = URL.createObjectURL(e.target.files[0]);
     document.getElementById('thumbPreview').innerHTML =
       `<img src="${thumbSrc}">`;
   };
 
-  /* VIDEO */
-  let videoSrc = null;
   document.getElementById('videoBtn').onclick = () =>
     document.getElementById('video').click();
 
   document.getElementById('video').onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    videoSrc = URL.createObjectURL(f);
+    videoSrc = URL.createObjectURL(e.target.files[0]);
     document.getElementById('videoPreview').innerHTML =
-      `<video src="${videoSrc}" muted playsinline></video>`;
+      `<video src="${videoSrc}" muted></video>`;
   };
 
   /* PREVIEW */
-  previewBtn.onclick = () => {
+  document.getElementById('previewBtn').onclick = () => {
     if (!category.value || !title.value || !desc.value) {
-      alert('필수 항목을 입력하세요');
+      alert('필수 항목 입력');
       return;
     }
 
     issuePreview.innerHTML = `
-      <div class="issue-preview">
-        <h2>${title.value}</h2>
-        <p>${oneLine.value || ''}</p>
-        <p>작성자 · ${anon.checked ? '익명' : '사용자'}</p>
+      <section class="issue-preview">
+        <div class="issue-meta">${category.value}</div>
+        <h1>${title.value}</h1>
+        ${oneLine.value ? `<p>${oneLine.value}</p>` : ''}
+        <div>작성자 · ${anon.checked ? '익명' : '사용자'}</div>
         ${thumbSrc ? `<img src="${thumbSrc}">` : ''}
-        ${videoSrc ? `<button id="playSpeech" class="speech-btn">🎥 1분 엘리베이터 스피치</button>` : ''}
+        ${videoSrc ? `<button id="playSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
         <p>${desc.value}</p>
-        <button id="editPreview">수정하기</button>
-      </div>
+        <button id="editBtn">수정하기</button>
+      </section>
     `;
+
+    document.getElementById('editBtn').onclick = () => {
+      issuePreview.innerHTML = '';
+      window.scrollTo({ top: 0 });
+    };
 
     if (videoSrc) {
       document.getElementById('playSpeech').onclick = () => {
-        const m = document.getElementById('speechModal');
-        const v = document.getElementById('speechVideo');
+        const v = document.createElement('video');
         v.src = videoSrc;
-        m.style.display = 'flex';
-        body.style.overflow = 'hidden';
+        v.controls = true;
+        v.style.width = '100%';
+        issuePreview.appendChild(v);
       };
     }
-
-    document.getElementById('editPreview').onclick = () => {
-      issuePreview.innerHTML = '';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-  };
-
-  /* SPEECH CLOSE */
-  document.getElementById('closeSpeech').onclick = () => {
-    const m = document.getElementById('speechModal');
-    const v = document.getElementById('speechVideo');
-    v.pause(); v.src = '';
-    m.style.display = 'none';
-    body.style.overflow = '';
   };
 });

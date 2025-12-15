@@ -1,174 +1,137 @@
-* { box-sizing: border-box; }
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
 
-body {
-  margin: 0;
-  background: #000;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-}
+  const categoryEl = document.getElementById('category');
+  const titleEl = document.getElementById('title');
+  const oneLineEl = document.getElementById('oneLine');
+  const descEl = document.getElementById('description');
+  const anonEl = document.getElementById('isAnonymous');
+  const previewBtn = document.getElementById('previewBtn');
+  const issuePreview = document.getElementById('issuePreview');
 
-.app-root {
-  max-width: 480px;
-  margin: 0 auto;
-  padding-bottom: 120px;
-}
+  /* ===============================
+     AI MODAL
+  =============================== */
+  const aiModal = document.getElementById('aiModal');
+  const openAiBtn = document.getElementById('openAiModal');
+  const closeAiBtn = document.getElementById('aiClose');
 
-.header {
-  position: sticky;
-  top: 0;
-  background: #000;
-  border-bottom: 1px solid #111;
-  z-index: 1000;
-}
+  aiModal.style.display = 'none';
 
-.header-inner {
-  height: 54px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-}
+  openAiBtn.addEventListener('click', () => {
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  });
 
-.logo { width: 105px; }
+  closeAiBtn.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
 
-.section-block {
-  padding: 22px 16px;
-  border-bottom: 1px solid #111;
-}
+  /* ===============================
+     FILE UPLOAD – THUMBNAIL
+  =============================== */
+  const thumbInput = document.getElementById('thumbnail');
+  const thumbBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-.write-main-title { font-size: 20px; font-weight: 800; }
-.write-main-desc { font-size: 13px; color: #aaa; margin-top: 6px; }
+  let thumbSrc = null;
 
-/* GUIDE */
-.write-guide-block {
-  margin: 16px;
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 14px;
-}
-.write-guide-list {
-  padding: 14px 20px;
-  font-size: 12px;
-  line-height: 1.55;
-  color: #ccc;
-}
+  thumbBtn.onclick = () => thumbInput.click();
 
-/* FORM */
-.field-block {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.field-label { font-size: 14px; font-weight: 700; }
+  thumbInput.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-.input-field {
-  padding: 12px 14px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-}
+    thumbSrc = URL.createObjectURL(file);
 
-.textarea { min-height: 200px; }
+    thumbPreview.innerHTML = `
+      <div class="preview-media">
+        <img src="${thumbSrc}" class="preview-thumb-img">
+      </div>
+    `;
+  };
 
-.file-btn {
-  padding: 14px;
-  border-radius: 14px;
-  background: #111;
-  border: 1px solid #222;
-  color: #fff;
-}
+  /* ===============================
+     FILE UPLOAD – VIDEO
+     (❗️업로드만 가능 / 모달 재생 완전 제거)
+  =============================== */
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
 
-.primary-btn,
-.ai-main-btn {
-  padding: 16px;
-  border-radius: 999px;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  font-weight: 800;
-}
+  let videoSrc = null;
 
-/* TOGGLE */
-.anon-toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #111;
-  border: 1px solid #222;
-  padding: 16px;
-  border-radius: 14px;
-}
-.switch { width: 46px; height: 26px; position: relative; }
-.switch input { display: none; }
-.slider {
-  position: absolute;
-  inset: 0;
-  background: #333;
-  border-radius: 999px;
-}
-.slider::before {
-  content: "";
-  width: 20px; height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px; left: 3px;
-  transition: .2s;
-}
-.switch input:checked + .slider {
-  background: #2f80ff;
-}
-.switch input:checked + .slider::before {
-  transform: translateX(20px);
-}
+  videoBtn.onclick = () => videoInput.click();
 
-/* PREVIEW */
-.preview-box img,
-.preview-box video {
-  width: 100%;
-  max-height: 360px;
-  object-fit: contain;
-  border-radius: 14px;
-  background: #000;
-}
+  videoInput.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-/* AI MODAL */
-.ai-modal {
-  position: fixed;
-  inset: 0;
-  display: none;
-  background: rgba(0,0,0,.7);
-  z-index: 3000;
-  justify-content: center;
-  align-items: center;
-}
+    videoSrc = URL.createObjectURL(file);
 
-.ai-modal-inner {
-  width: 92%;
-  max-width: 480px;
-  height: 70vh;
-  background: #111;
-  border-radius: 18px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+    videoPreview.innerHTML = `
+      <div class="preview-box">
+        <video src="${videoSrc}" muted playsinline></video>
+      </div>
+    `;
+  };
 
-/* BOTTOM NAV */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  height: 64px;
-  background: #000;
-  border-top: 1px solid #111;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 5000;
-}
+  /* ===============================
+     PREVIEW RENDER
+     (🔥 스피치 버튼/모달 완전 제거)
+  =============================== */
+  previewBtn.addEventListener('click', () => {
+    if (!categoryEl.value || !titleEl.value || !descEl.value) {
+      alert('필수 항목을 입력하세요');
+      return;
+    }
+
+    issuePreview.innerHTML = `
+      <section class="issue-preview">
+
+        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
+        <h1 class="issue-title">${titleEl.value}</h1>
+
+        ${oneLineEl.value ? `<p class="issue-one-line">${oneLineEl.value}</p>` : ''}
+
+        <div class="issue-author">
+          작성자 · ${anonEl.checked ? '익명' : '사용자'}
+        </div>
+
+        ${
+          thumbSrc
+            ? `<div class="preview-media">
+                 <img src="${thumbSrc}" class="preview-thumb-img">
+               </div>`
+            : ''
+        }
+
+        <section class="issue-summary">
+          <h3>📝 이 주제에 대한 핵심 요약</h3>
+          <p>${descEl.value}</p>
+        </section>
+
+        <div class="preview-actions">
+          <button data-action="edit">수정하기</button>
+          <button class="btn-publish">발행하기</button>
+        </div>
+
+      </section>
+    `;
+
+    issuePreview.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  /* ===============================
+     EVENT DELEGATION
+  =============================== */
+  issuePreview.addEventListener('click', e => {
+    const action = e.target.dataset.action;
+
+    if (action === 'edit') {
+      issuePreview.innerHTML = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
+});
