@@ -1,84 +1,93 @@
-// write.js : 완전 동작
-
 const body = document.body;
-
 const form = document.getElementById('writeForm');
 const issuePreview = document.getElementById('issuePreview');
 
-const categoryEl = document.getElementById('category');
-const titleEl = document.getElementById('title');
-const oneLineEl = document.getElementById('oneLine');
-const descEl = document.getElementById('description');
-
-const thumbInput = document.getElementById('thumbnail');
-const thumbBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
-
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
-
-/* 파일 업로드 */
-thumbBtn.onclick = () => thumbInput.click();
-thumbInput.onchange = e => {
-  const f = e.target.files[0];
-  if (f) thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
-};
-
-videoBtn.onclick = () => videoInput.click();
-videoInput.onchange = e => {
-  const f = e.target.files[0];
-  if (f) videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
-};
-
-/* AI 모달 */
+/* AI MODAL */
 const aiModal = document.getElementById('aiModal');
 document.getElementById('openAiModal').onclick = () => {
   aiModal.style.display = 'flex';
   body.style.overflow = 'hidden';
 };
-document.getElementById('aiClose').onclick = () => {
+document.getElementById('aiClose').onclick = closeAi;
+function closeAi() {
   aiModal.style.display = 'none';
   body.style.overflow = '';
-};
-document.getElementById('applyAi').onclick = () => {
-  descEl.value = document.getElementById('aiResultText').value;
-  aiModal.style.display = 'none';
-  body.style.overflow = '';
+}
+
+/* FILE UPLOAD */
+const thumbInput = document.getElementById('thumbnail');
+const thumbBtn = document.getElementById('thumbnailBtn');
+const thumbPreview = document.getElementById('thumbPreview');
+
+thumbBtn.onclick = () => thumbInput.click();
+thumbInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
 };
 
-/* 미리보기 */
+const videoInput = document.getElementById('video');
+const videoBtn = document.getElementById('videoBtn');
+const videoPreview = document.getElementById('videoPreview');
+
+videoBtn.onclick = () => videoInput.click();
+videoInput.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
+};
+
+/* PREVIEW */
 form.onsubmit = e => {
   e.preventDefault();
 
-  if (!categoryEl.value || !titleEl.value || !descEl.value) {
-    alert('필수 입력 누락');
-    return;
-  }
-
+  const category = categoryEl.value;
+  const title = titleEl.value;
+  const oneLine = oneLineEl.value;
+  const desc = descEl.value;
   const anon = document.getElementById('isAnonymous').checked;
+
+  if (!category || !title || !desc) return alert('필수 입력 누락');
+
   const thumbImg = thumbPreview.querySelector('img');
   const videoEl = videoPreview.querySelector('video');
 
   issuePreview.innerHTML = `
     <section class="issue-preview">
-      <h2>${titleEl.value}</h2>
-      <p>${oneLineEl.value}</p>
-      <p>작성자 · ${anon ? '익명' : '사용자'}</p>
+      <div class="issue-meta">${category} · 방금 전</div>
+      <h1 class="issue-title">${title}</h1>
+      <p class="issue-one-line">${oneLine}</p>
+      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
+
       ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
-      ${videoEl ? `<button id="openSpeech" class="speech-btn">🎥 영상 보기</button>` : ''}
-      <p>${descEl.value}</p>
+
+      ${videoEl ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+
+      <section class="issue-summary">
+        <h3>📝 이 주제에 대한 핵심 요약</h3>
+        <p>${desc}</p>
+      </section>
+
+      <div class="preview-actions">
+        <button id="editPreview">수정하기</button>
+        <button class="btn-publish">발행하기</button>
+      </div>
     </section>
   `;
+
+  document.getElementById('editPreview').onclick = () => {
+    issuePreview.innerHTML = '';
+    window.scrollTo({ top: 0 });
+  };
 
   if (videoEl) {
     document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
   }
 
-  issuePreview.scrollIntoView({ behavior:'smooth' });
+  issuePreview.scrollIntoView({ behavior: 'smooth' });
 };
 
-/* 영상 모달 */
+/* SPEECH MODAL */
 const speechModal = document.getElementById('speechModal');
 const speechVideo = document.getElementById('speechVideo');
 

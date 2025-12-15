@@ -1,18 +1,20 @@
-<!-- write.html : 단독 실행 가능 -->
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <title>새 갈라 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <link rel="stylesheet" href="write.css" />
+  <link rel="stylesheet" href="./css/write.css" />
 </head>
+
 <body>
 <div class="app-root">
 
+  <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <img src="./assets/logo.png" class="logo" />
+      <img src="./assets/logo.png" class="logo" onclick="location.href='index.html'" />
       <div class="auth-buttons"></div>
     </div>
   </header>
@@ -20,11 +22,13 @@
   <main class="page-main">
     <div class="page-inner">
 
+      <!-- Hero -->
       <section class="section-block">
         <h1 class="write-main-title">새 갈라치기 만들기</h1>
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
+      <!-- Guide -->
       <section class="section-block write-guide-block">
         <ul class="write-guide-list">
           <li>제목은 최대 80자 이내</li>
@@ -33,11 +37,13 @@
         </ul>
       </section>
 
+      <!-- ✅ 익명 발의 (가이드 밖, 카테고리 위) -->
       <section class="section-block">
         <div class="anon-toggle">
           <span>익명으로 발의하기</span>
+
           <label class="switch">
-            <input type="checkbox" id="isAnonymous">
+            <input type="checkbox" id="isAnonymous" />
             <span class="slider"></span>
           </label>
         </div>
@@ -45,6 +51,7 @@
 
       <form id="writeForm">
 
+        <!-- Category -->
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
           <select id="category" class="input-field" required>
@@ -63,30 +70,35 @@
           </select>
         </div>
 
+        <!-- Title -->
         <div class="field-block">
           <label class="field-label">제목</label>
-          <input id="title" class="input-field" maxlength="80">
+          <input id="title" class="input-field" maxlength="80" />
         </div>
 
+        <!-- One line -->
         <div class="field-block">
           <label class="field-label">발의자 한 줄</label>
-          <input id="oneLine" class="input-field">
+          <input id="oneLine" class="input-field" />
         </div>
 
+        <!-- Thumbnail -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일</label>
-          <input type="file" id="thumbnail" hidden accept="image/*">
+          <input type="file" id="thumbnail" hidden accept="image/*" />
           <button type="button" id="thumbnailBtn" class="file-btn">썸네일 업로드</button>
           <div id="thumbPreview" class="preview-box"></div>
         </div>
 
+        <!-- Video -->
         <div class="field-block">
           <label class="field-label">엘리베이터 스피치 (선택)</label>
-          <input type="file" id="video" hidden accept="video/*">
+          <input type="file" id="video" hidden accept="video/*" />
           <button type="button" id="videoBtn" class="file-btn">영상 업로드</button>
           <div id="videoPreview" class="preview-box"></div>
         </div>
 
+        <!-- Description -->
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
           <textarea id="description" class="input-field textarea" maxlength="500"></textarea>
@@ -98,12 +110,10 @@
         </div>
 
       </form>
-
-      <div id="issuePreview"></div>
-
     </div>
   </main>
 
+  <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
     <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
@@ -113,8 +123,10 @@
   </nav>
 </div>
 
+<!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
+
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
@@ -129,31 +141,22 @@
       <button>논문체</button>
     </div>
 
+    <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
+
     <label>내가 쓴 글</label>
-    <textarea id="aiUserText" class="input-field textarea"></textarea>
+    <textarea id="aiUserText" class="input-field textarea small"></textarea>
 
     <label>AI 결과</label>
-    <textarea id="aiResultText" class="input-field textarea"></textarea>
+    <textarea id="aiResultText" class="input-field textarea small"></textarea>
 
     <div class="ai-modal-footer">
       <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용하기</button>
     </div>
+
   </div>
 </div>
 
-<div id="speechModal" class="video-modal">
-  <div class="video-modal-inner">
-    <div class="video-modal-header">
-      <span>1분 엘리베이터 스피치</span>
-      <button id="closeSpeech">✕</button>
-    </div>
-    <div class="video-viewport">
-      <video id="speechVideo" controls playsinline></video>
-    </div>
-  </div>
-</div>
-
-<script src="write.js"></script>
+<script src="./js/write.js"></script>
 </body>
-</html>
+</html> 
