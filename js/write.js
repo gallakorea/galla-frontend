@@ -1,9 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const body = document.body;
-
-  /* ================= 공통 유틸 ================= */
   const $ = id => document.getElementById(id);
-  const wait = (ms = 30) => new Promise(r => setTimeout(r, ms));
+
+  /* ================= 공통 ================= */
+  async function wait(ms = 30) {
+    return new Promise(r => setTimeout(r, ms));
+  }
 
   async function waitForSupabaseClient() {
     while (!window.supabaseClient) {
@@ -12,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function requireLogin() {
+    await waitForSupabaseClient();
     const { data } = await window.supabaseClient.auth.getSession();
     if (!data?.session) {
       alert('로그인 후 글 작성이 가능합니다.');
@@ -19,10 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       throw new Error('NOT_LOGGED_IN');
     }
   }
-
-  /* ================= Supabase 준비 ================= */
-  await waitForSupabaseClient();
-  await requireLogin(); // 🔥 비로그인 차단
 
   /* ================= DOM ================= */
   const form = $('writeForm');
@@ -67,48 +66,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  /* ================= AI MODAL (🔥 버튼 문제 해결 핵심) ================= */
-  const aiModal = $('aiModal');
-  const aiClose = $('aiClose');
-  const aiUserText = $('aiUserText');
-  const aiResultText = $('aiResultText');
-  const applyAi = $('applyAi');
-
-  // ✨ AI에게 다듬기 버튼 (ID 의존 ❌, 텍스트 기반 탐색)
-  const aiOpenBtn = [...document.querySelectorAll('button')]
-    .find(btn => btn.textContent.includes('AI에게'));
-
-  if (aiOpenBtn) {
-    aiOpenBtn.addEventListener('click', e => {
-      e.preventDefault();
-      aiUserText.value = descEl.value;
-      aiModal.style.display = 'flex';
-      body.style.overflow = 'hidden';
-    });
-  } else {
-    console.warn('⚠️ AI 버튼을 찾지 못했습니다.');
-  }
-
-  if (aiClose) {
-    aiClose.onclick = () => {
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
-    };
-  }
-
-  if (applyAi) {
-    applyAi.onclick = () => {
-      if (aiResultText.value) {
-        descEl.value = aiResultText.value;
-      }
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
-    };
-  }
-
   /* ================= PREVIEW ================= */
-  form.onsubmit = e => {
+  form.onsubmit = async e => {
     e.preventDefault();
+
+    // ✅ 로그인 체크는 여기서만
+    try {
+      await requireLogin();
+    } catch {
+      return;
+    }
 
     if (!categoryEl.value) return alert('카테고리를 선택해주세요');
     if (!titleEl.value) return alert('제목을 입력해주세요');
@@ -147,7 +114,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행 ================= */
     $('publishPreview').onclick = async e => {
       const btn = e.target;
       btn.disabled = true;
@@ -164,17 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = false;
         btn.textContent = '발행하기';
         return;
-      }
-
-      if (moderation.result === 'WARNING') {
-        const ok = confirm(
-          `⚠️ 주의 콘텐츠\n\n사유: ${moderation.reason}\n\n그래도 발행하시겠습니까?`
-        );
-        if (!ok) {
-          btn.disabled = false;
-          btn.textContent = '발행하기';
-          return;
-        }
       }
 
       await publishIssue();
@@ -197,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }]);
 
     if (error) {
-      alert('❌ 발행 실패 (DB 오류)');
+      alert('❌ 발행 실패');
       console.error(error);
       return;
     }
@@ -217,14 +172,11 @@ async function runContentModeration({ title, oneLine, description }) {
       );
 
     if (error) {
-      console.error('Moderation error:', error);
       return { result: 'FAIL', reason: '콘텐츠 검사 실패' };
     }
 
     return data;
-
-  } catch (e) {
-    console.error('Moderation exception:', e);
-    return { result: 'FAIL', reason: '콘텐츠 적합성 검사 서버 오류' };
+  } catch {
+    return { result: 'FAIL', reason: '콘텐츠 검사 서버 오류' };
   }
 }
