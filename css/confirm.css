@@ -1,0 +1,90 @@
+/* 모바일 퍼스트 */
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  padding-bottom: 90px;
+}
+
+/* 상단 */
+.top-header {
+  height: 56px;
+  border-bottom: 1px solid #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #000;
+}
+
+/* 본문 */
+.confirm-container {
+  padding: 20px 16px;
+}
+
+.confirm-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+/* 적합성 박스 */
+.moderation-box {
+  border: 1px solid #000;
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.moderation-box.loading {
+  opacity: 0.6;
+}
+
+.moderation-box.fail {
+  background: #f5f5f5;
+}
+
+.moderation-box.warning {
+  border-style: dashed;
+}
+
+.moderation-box.pass {
+  border-style: solid;
+}
+
+/* 버튼 */
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-actions button {
+  flex: 1;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-outline {
+  background: #fff;
+  border: 1px solid #000;
+  color: #000;
+}
+
+.btn-primary {
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+}
