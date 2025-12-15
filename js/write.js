@@ -1,100 +1,58 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const body = document.body;
-
-  const categoryEl = document.getElementById('category');
-  const titleEl = document.getElementById('title');
-  const oneLineEl = document.getElementById('oneLine');
-  const descEl = document.getElementById('description');
-  const anonEl = document.getElementById('isAnonymous');
-
-  const previewBtn = document.getElementById('previewBtn');
+  const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
 
-  /* ===============================
-     FILE UPLOAD – THUMBNAIL
-  =============================== */
+  const category = document.getElementById('category');
+  const title = document.getElementById('title');
+  const oneLine = document.getElementById('oneLine');
+  const desc = document.getElementById('description');
+  const anon = document.getElementById('isAnonymous');
+
+  /* 썸네일 */
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
   let thumbSrc = null;
 
-  thumbBtn.onclick = () => thumbInput.click();
-  thumbInput.onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    thumbSrc = URL.createObjectURL(f);
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    thumbSrc = URL.createObjectURL(file);
     thumbPreview.innerHTML = `<img src="${thumbSrc}" class="preview-thumb-img">`;
+  });
+
+  /* AI MODAL */
+  const aiModal = document.getElementById('aiModal');
+  document.getElementById('openAiModal').onclick = () => {
+    aiModal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+  document.getElementById('aiClose').onclick = () => {
+    aiModal.style.display = 'none';
+    document.body.style.overflow = '';
   };
 
-  /* ===============================
-     FILE UPLOAD – VIDEO
-  =============================== */
-  const videoInput = document.getElementById('video');
-  const videoBtn = document.getElementById('videoBtn');
-  const videoPreview = document.getElementById('videoPreview');
-  let videoSrc = null;
+  /* PREVIEW */
+  form.addEventListener('submit', e => {
+    e.preventDefault();
 
-  videoBtn.onclick = () => videoInput.click();
-  videoInput.onchange = e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    videoSrc = URL.createObjectURL(f);
-    videoPreview.innerHTML = `<video src="${videoSrc}" muted playsinline></video>`;
-  };
-
-  /* ===============================
-     SPEECH MODAL
-  =============================== */
-  const speechModal = document.getElementById('speechModal');
-  const speechVideo = document.getElementById('speechVideo');
-  const closeSpeechBtn = document.getElementById('closeSpeech');
-
-  function openSpeech(src) {
-    speechVideo.src = src;
-    speechModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-    speechVideo.currentTime = 0;
-    speechVideo.play();
-  }
-
-  closeSpeechBtn.onclick = () => {
-    speechVideo.pause();
-    speechVideo.src = '';
-    speechModal.style.display = 'none';
-    body.style.overflow = '';
-  };
-
-  /* ===============================
-     PREVIEW (🔥 여기서만 동작)
-  =============================== */
-  previewBtn.onclick = () => {
-    const category = categoryEl.value;
-    const title = titleEl.value;
-    const oneLine = oneLineEl.value;
-    const desc = descEl.value;
-    const anon = anonEl.checked;
-
-    if (!category || !title || !desc) {
+    if (!category.value || !title.value || !desc.value) {
       alert('필수 항목을 입력하세요');
       return;
     }
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
-        <div class="issue-meta">${category} · 방금 전</div>
-        <h1 class="issue-title">${title}</h1>
-        ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
-        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
-
+        <div class="issue-meta">${category.value} · 방금 전</div>
+        <h1 class="issue-title">${title.value}</h1>
+        ${oneLine.value ? `<p class="issue-one-line">${oneLine.value}</p>` : ''}
+        <div class="issue-author">작성자 · ${anon.checked ? '익명' : '사용자'}</div>
         ${thumbSrc ? `<img src="${thumbSrc}" class="preview-thumb-img">` : ''}
-
-        ${videoSrc ? `<button class="speech-btn" id="openSpeechBtn">🎥 1분 엘리베이터 스피치</button>` : ''}
-
         <section class="issue-summary">
           <h3>📝 이 주제에 대한 핵심 요약</h3>
-          <p>${desc}</p>
+          <p>${desc.value}</p>
         </section>
-
         <div class="preview-actions">
           <button id="editPreview">수정하기</button>
           <button class="btn-publish">발행하기</button>
@@ -107,12 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    if (videoSrc) {
-      document.getElementById('openSpeechBtn').onclick = () => {
-        openSpeech(videoSrc);
-      };
-    }
-
     issuePreview.scrollIntoView({ behavior: 'smooth' });
-  };
+  });
 });
