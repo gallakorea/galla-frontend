@@ -1,19 +1,6 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  /* ================= 로그인 강제 (최상단) ================= */
-  await waitForSupabaseClient();
-
-  const { data: sessionData } =
-    await window.supabaseClient.auth.getSession();
-
-  if (!sessionData.session) {
-    alert('로그인 후 글 작성이 가능합니다.');
-    location.href = '/login.html';
-    return;
-  }
-
-  /* ================= DOM ================= */
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
 
@@ -115,45 +102,53 @@ document.addEventListener('DOMContentLoaded', async () => {
       </section>
     `;
 
+    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행 (적정성 검사) ================= */
+    /* ================= 발행하기 + 적정성 검사 (유일한 추가 지점) ================= */
     document.getElementById('publishPreview').onclick = async () => {
-      const { data, error } =
-        await window.supabaseClient.functions.invoke(
-          'content-moderation',
-          {
-            body: {
-              title: titleEl.value,
-              oneLine: oneLineEl.value,
-              description: descEl.value
+      try {
+        const { data, error } =
+          await window.supabaseClient.functions.invoke(
+            'content-moderation',
+            {
+              body: {
+                title: titleEl.value,
+                oneLine: oneLineEl.value,
+                description: descEl.value
+              }
             }
-          }
-        );
+          );
 
-      if (error) {
-        alert('❌ 적정성 검사 서버 오류');
-        return;
+        if (error || !data) {
+          alert('🚫 적정성 검사 실패');
+          return;
+        }
+
+        if (data.result === 'FAIL') {
+          alert(`🚫 발행 불가\n\n사유: ${data.reason}`);
+          return;
+        }
+
+        if (data.result === 'WARNING') {
+          const ok = confirm(
+            `⚠️ 주의 콘텐츠\n\n사유: ${data.reason}\n\n그래도 발행하시겠습니까?`
+          );
+          if (!ok) return;
+        }
+
+        // 여기까지 오면 통과
+        alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
+      } catch (e) {
+        console.error(e);
+        alert('🚫 적정성 검사 서버 오류');
       }
-
-      if (data.result === 'FAIL') {
-        alert(`🚫 발행 불가\n\n사유: ${data.reason}`);
-        return;
-      }
-
-      if (data.result === 'WARNING') {
-        const ok = confirm(
-          `⚠️ 주의 콘텐츠\n\n사유: ${data.reason}\n\n그래도 발행하시겠습니까?`
-        );
-        if (!ok) return;
-      }
-
-      alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
     };
 
+    /* 영상 모달 */
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(videoEl.src);
@@ -183,10 +178,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     body.style.overflow = '';
   });
 });
-
-/* ================= 공통 ================= */
-async function waitForSupabaseClient() {
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 30));
-  }
-}
