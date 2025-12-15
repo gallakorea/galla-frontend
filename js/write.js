@@ -122,8 +122,28 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = () => {
-      alert('✅ 여기까지 정상\n다음 단계: DB 연결');
+    /* ================= 발행하기 (적합성 검사 포함) ================= */
+    document.getElementById('publishPreview').onclick = async () => {
+      const moderation = await runContentModeration({
+        title: titleEl.value,
+        oneLine: oneLineEl.value,
+        description: descEl.value
+      });
+
+      if (moderation.result === 'FAIL') {
+        alert(`🚫 발행 불가\n\n사유: ${moderation.reason}`);
+        return;
+      }
+
+      if (moderation.result === 'WARNING') {
+        const ok = confirm(
+          `⚠️ 주의 콘텐츠\n\n사유: ${moderation.reason}\n\n그래도 발행하시겠습니까?`
+        );
+        if (!ok) return;
+      }
+
+      alert('✅ 콘텐츠 적합성 검사 통과\n다음 단계: DB 저장');
+      // 👉 다음 단계에서 여기 publishIssue() 연결
     };
 
     if (videoFile) {
@@ -155,3 +175,26 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   };
 });
+
+/* ================= 콘텐츠 적합성 검사 ================= */
+async function runContentModeration({ title, oneLine, description }) {
+  try {
+    const res = await fetch(
+      'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, oneLine, description })
+      }
+    );
+
+    if (!res.ok) throw new Error();
+
+    return await res.json();
+  } catch {
+    return {
+      result: 'FAIL',
+      reason: '콘텐츠 적합성 검사 서버 오류'
+    };
+  }
+}
