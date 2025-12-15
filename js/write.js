@@ -1,101 +1,64 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const body = document.body;
-  const form = document.getElementById('writeForm');
+const body = document.body;
+const form = document.getElementById('writeForm');
+const issuePreview = document.getElementById('issuePreview');
 
-  const categoryEl = document.getElementById('category');
-  const titleEl = document.getElementById('title');
-  const oneLineEl = document.getElementById('oneLine');
-  const descEl = document.getElementById('description');
-  const anonEl = document.getElementById('isAnonymous');
+let thumbSrc = null;
+let videoSrc = null;
 
-  const issuePreview = document.createElement('section');
-  issuePreview.id = 'issuePreview';
-  form.after(issuePreview);
+/* FILE UPLOAD */
+thumbnailBtn.onclick = () => thumbnail.click();
+thumbnail.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  thumbSrc = URL.createObjectURL(f);
+  thumbPreview.innerHTML = `<img src="${thumbSrc}" class="preview-thumb-img">`;
+};
 
-  /* =========================
-     AI MODAL
-  ========================= */
-  const aiModal = document.getElementById('aiModal');
-  document.getElementById('openAiModal').onclick = () => {
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  };
-  document.getElementById('aiClose').onclick = () => {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  };
+videoBtn.onclick = () => video.click();
+video.onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  videoSrc = URL.createObjectURL(f);
+};
 
-  /* =========================
-     THUMBNAIL
-  ========================= */
-  const thumbInput = document.getElementById('thumbnail');
-  const thumbBtn = document.getElementById('thumbnailBtn');
-  const thumbPreview = document.getElementById('thumbPreview');
-  let thumbSrc = null;
+/* AI MODAL */
+openAiModal.onclick = () => {
+  aiModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+};
+aiClose.onclick = () => {
+  aiModal.style.display = 'none';
+  body.style.overflow = '';
+};
 
-  thumbBtn.onclick = () => thumbInput.click();
-  thumbInput.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    thumbSrc = URL.createObjectURL(file);
-    thumbPreview.innerHTML = `<img src="${thumbSrc}">`;
-  };
+/* PREVIEW */
+form.onsubmit = e => {
+  e.preventDefault();
 
-  /* =========================
-     VIDEO
-  ========================= */
-  const videoInput = document.getElementById('video');
-  const videoBtn = document.getElementById('videoBtn');
-  const videoPreview = document.getElementById('videoPreview');
-  let videoSrc = null;
+  issuePreview.innerHTML = `
+    <section class="issue-preview">
+      <h1>${title.value}</h1>
+      ${thumbSrc ? `<img src="${thumbSrc}" class="preview-thumb-img">` : ''}
+      ${videoSrc ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+      <p>${description.value}</p>
+      <button id="editPreview">수정하기</button>
+    </section>
+  `;
 
-  videoBtn.onclick = () => videoInput.click();
-  videoInput.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    videoSrc = URL.createObjectURL(file);
-    videoPreview.innerHTML = `<video src="${videoSrc}" muted></video>`;
-  };
+  editPreview.onclick = () => issuePreview.innerHTML = '';
+  if (videoSrc) openSpeech.onclick = () => openSpeechModal(videoSrc);
+};
 
-  /* =========================
-     PREVIEW RENDER
-  ========================= */
-  form.addEventListener('submit', e => {
-    e.preventDefault();
+/* SPEECH */
+function openSpeechModal(src) {
+  speechVideo.src = src;
+  speechModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+  speechVideo.play();
+}
 
-    if (!categoryEl.value || !titleEl.value || !descEl.value) {
-      alert('필수 항목을 입력하세요');
-      return;
-    }
-
-    issuePreview.innerHTML = `
-      <section class="issue-preview">
-        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
-        <h1 class="issue-title">${titleEl.value}</h1>
-        ${oneLineEl.value ? `<p class="issue-one-line">${oneLineEl.value}</p>` : ''}
-        <div class="issue-author">작성자 · ${anonEl.checked ? '익명' : '사용자'}</div>
-
-        ${thumbSrc ? `<img src="${thumbSrc}" class="preview-thumb-img">` : ''}
-
-        ${videoSrc ? `<div class="preview-box"><video src="${videoSrc}" controls></video></div>` : ''}
-
-        <section class="issue-summary">
-          <h3>📝 이 주제에 대한 핵심 요약</h3>
-          <p>${descEl.value}</p>
-        </section>
-
-        <div class="preview-actions">
-          <button id="editPreview">수정하기</button>
-          <button class="btn-publish">발행하기</button>
-        </div>
-      </section>
-    `;
-
-    document.getElementById('editPreview').onclick = () => {
-      issuePreview.innerHTML = '';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    issuePreview.scrollIntoView({ behavior: 'smooth' });
-  });
-});
+closeSpeech.onclick = () => {
+  speechVideo.pause();
+  speechModal.style.display = 'none';
+  body.style.overflow = '';
+};

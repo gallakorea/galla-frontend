@@ -1,13 +1,10 @@
-/* =====================
-   BASE
-===================== */
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  font-family: -apple-system,BlinkMacSystemFont,Helvetica,Arial;
 }
 
 .app-root {
@@ -16,13 +13,6 @@ body {
   padding-bottom: 120px;
 }
 
-.page-main, .page-inner {
-  width: 100%;
-}
-
-/* =====================
-   HEADER
-===================== */
 .header {
   position: sticky;
   top: 0;
@@ -35,34 +25,16 @@ body {
   height: 54px;
   padding: 0 16px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
 }
 
 .logo { width: 105px; }
 
-/* =====================
-   SECTION
-===================== */
 .section-block {
   padding: 22px 16px;
   border-bottom: 1px solid #111;
 }
 
-.write-main-title {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.write-main-desc {
-  font-size: 13px;
-  color: #ccc;
-  margin-top: 6px;
-}
-
-/* =====================
-   GUIDE
-===================== */
 .write-guide-block {
   background: #111;
   border: 1px solid #222;
@@ -72,13 +44,9 @@ body {
 .write-guide-list {
   padding: 14px 20px;
   font-size: 12px;
-  line-height: 1.55;
-  list-style: disc;
+  color: #ccc;
 }
 
-/* =====================
-   FORM
-===================== */
 .field-block {
   padding: 16px;
   display: flex;
@@ -86,152 +54,61 @@ body {
   gap: 8px;
 }
 
-.field-label {
-  font-size: 14px;
+.input-field {
+  padding: 12px;
+  border-radius: 12px;
+  background: #0b0c14;
+  border: 1px solid #222;
+  color: #fff;
+}
+
+.textarea { min-height: 220px; }
+
+.file-btn,.primary-btn,.ai-main-btn {
+  padding: 14px;
+  border-radius: 12px;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
   font-weight: 700;
 }
 
-.input-field {
+.preview-thumb-img {
   width: 100%;
-  padding: 12px 14px;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-}
-
-.textarea {
-  min-height: 220px;
-  line-height: 1.55;
-}
-
-/* =====================
-   FILE
-===================== */
-.file-btn {
-  padding: 12px;
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 12px;
-  color: #fff;
-}
-
-/* =====================
-   TOGGLE
-===================== */
-.anon-toggle {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #111;
-  border: 1px solid #222;
-  padding: 16px;
+  max-height: 320px;
+  object-fit: cover;
   border-radius: 14px;
 }
 
-.switch {
-  position: relative;
-  width: 46px;
-  height: 26px;
-}
-
-.switch input { display: none; }
-
-.slider {
-  position: absolute;
-  inset: 0;
-  background: #333;
-  border-radius: 999px;
-}
-
-.slider::before {
-  content: "";
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  transition: .2s;
-}
-
-.switch input:checked + .slider {
-  background: #2f80ff;
-}
-.switch input:checked + .slider::before {
-  transform: translateX(20px);
-}
-
-/* =====================
-   BUTTON
-===================== */
-.primary-btn,
-.ai-main-btn {
-  width: 100%;
+.speech-btn {
+  margin-top: 12px;
   padding: 14px;
-  background: #2f80ff;
-  border-radius: 999px;
-  border: none;
+  background: #111;
+  border: 1px solid #333;
   color: #fff;
-  font-weight: 800;
-}
-
-/* =====================
-   PREVIEW
-===================== */
-.preview-box img,
-.preview-box video {
-  width: 100%;
-  max-height: 240px;
   border-radius: 12px;
-  object-fit: cover;
 }
 
-/* =====================
-   AI MODAL (정상 동작)
-===================== */
-.ai-modal {
+.ai-modal,
+.speech-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.7);
   display: none;
   justify-content: center;
   align-items: center;
-  z-index: 3000;
+  z-index: 4000;
 }
 
-.ai-modal-inner {
-  width: 92%;
-  max-width: 480px;
-  height: 66vh;
+.ai-modal-inner,
+.speech-sheet {
+  width: 90%;
+  max-width: 420px;
   background: #111;
   border-radius: 16px;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
 }
 
-.ai-style-tabs {
-  display: flex;
-  gap: 8px;
-  margin: 10px 0;
-  overflow-x: auto;
-}
-
-.ai-style-tabs button.active {
-  background: #fff;
-  color: #000;
-}
-
-.ai-modal-footer {
-  display: flex;
-  gap: 8px;
-}
-
-/* =====================
-   BOTTOM NAV
-===================== */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -245,11 +122,4 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  z-index: 9999;
-}
-
-.nav-item img {
-  width: 28px;
-  height: 28px;
-  filter: brightness(0) invert(1);
 }
