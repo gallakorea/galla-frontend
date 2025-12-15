@@ -67,15 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   };
 
-  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
-    tab.onclick = () => {
-      document
-        .querySelectorAll('.ai-style-tabs button')
-        .forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    };
-  });
-
   /* ================= PREVIEW ================= */
   form.onsubmit = e => {
     e.preventDefault();
@@ -122,8 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행하기 (적합성 검사 포함) ================= */
-    document.getElementById('publishPreview').onclick = async () => {
+    /* ================= 발행하기 ================= */
+    document.getElementById('publishPreview').onclick = async e => {
+      const btn = e.target;
+      btn.disabled = true;
+      btn.textContent = '검사 중…';
+
       const moderation = await runContentModeration({
         title: titleEl.value,
         oneLine: oneLineEl.value,
@@ -132,6 +127,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (moderation.result === 'FAIL') {
         alert(`🚫 발행 불가\n\n사유: ${moderation.reason}`);
+        btn.disabled = false;
+        btn.textContent = '발행하기';
         return;
       }
 
@@ -139,11 +136,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const ok = confirm(
           `⚠️ 주의 콘텐츠\n\n사유: ${moderation.reason}\n\n그래도 발행하시겠습니까?`
         );
-        if (!ok) return;
+        if (!ok) {
+          btn.disabled = false;
+          btn.textContent = '발행하기';
+          return;
+        }
       }
 
-      alert('✅ 콘텐츠 적합성 검사 통과\n다음 단계: DB 저장');
-      // 👉 다음 단계에서 여기 publishIssue() 연결
+      await publishIssue();
     };
 
     if (videoFile) {
@@ -174,21 +174,57 @@ document.addEventListener('DOMContentLoaded', () => {
     speechModal.style.display = 'none';
     body.style.overflow = '';
   };
+
+  /* ================= DB INSERT ================= */
+  async function publishIssue() {
+    const { error } = await window.supabaseClient
+      .from('issues')
+      .insert([{
+        category: categoryEl.value,
+        title: titleEl.value,
+        one_line: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: anonEl.checked
+      }]);
+
+    if (error) {
+      alert('❌ 발행 실패: DB 오류');
+      console.error(error);
+      return;
+    }
+
+    alert('🎉 발행 완료');
+    location.href = '/';
+  }
 });
 
 /* ================= 콘텐츠 적합성 검사 ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
-    const { data, error } = await window.supabaseClient
-      .functions.invoke('content-moderation', {
-        body: { title, oneLine, description }
-      });
+    const res = await fetch(
+      'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title, oneLine, description })
+      }
+    );
 
-    if (error) throw error;
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        result: 'FAIL',
+        reason: data?.reason || '콘텐츠 검사 실패'
+      };
+    }
 
     return data;
   } catch (e) {
-    console.error('Moderation Error:', e);
+    console.error('[Moderation Error]', e);
     return {
       result: 'FAIL',
       reason: '콘텐츠 적합성 검사 서버 오류'
