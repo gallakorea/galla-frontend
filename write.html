@@ -38,7 +38,6 @@
 
       <form id="writeForm">
 
-        <!-- 카테고리 -->
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
           <select id="category" class="input-field" required>
@@ -57,13 +56,11 @@
           </select>
         </div>
 
-        <!-- 제목 -->
         <div class="field-block">
           <label class="field-label">제목</label>
           <input id="title" class="input-field" maxlength="80" />
         </div>
 
-        <!-- 한 줄 -->
         <div class="field-block">
           <label class="field-label">발의자 한 줄</label>
           <input id="oneLine" class="input-field" />
@@ -85,7 +82,6 @@
           <div id="videoPreview" class="preview-box"></div>
         </div>
 
-        <!-- 설명 -->
         <div class="field-block">
           <label class="field-label">이슈 설명</label>
           <textarea id="description" class="input-field textarea"></textarea>
@@ -95,16 +91,12 @@
         <div class="field-block">
           <button type="submit" class="primary-btn">미리보기</button>
         </div>
-
       </form>
 
-      <!-- 미리보기 결과 -->
       <section id="issuePreview"></section>
-
     </div>
   </main>
 
-  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
     <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
@@ -117,11 +109,14 @@
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
+
+    <!-- HEADER -->
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
-      <button id="aiClose">닫기</button>
+      <button id="aiClose">✕</button>
     </div>
 
+    <!-- STYLE TABS -->
     <div class="ai-style-tabs">
       <button class="active">기본</button>
       <button>간결</button>
@@ -132,31 +127,19 @@
     </div>
 
     <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
-    <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
-    <textarea id="aiResultText" placeholder="AI 결과"></textarea>
 
+    <!-- BODY -->
+    <div class="ai-modal-body">
+      <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
+      <textarea id="aiResultText" placeholder="AI 결과"></textarea>
+    </div>
+
+    <!-- FOOTER -->
     <div class="ai-modal-footer">
       <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용</button>
     </div>
-  </div>
-</div>
 
-<!-- SPEECH VIDEO MODAL -->
-<div id="speechModal" class="speech-backdrop">
-  <div class="speech-sheet">
-    <div class="speech-header">
-      <span>1분 엘리베이터 스피치</span>
-      <button id="closeSpeech">닫기</button>
-    </div>
-
-    <div class="video-viewport">
-      <video
-        id="speechVideo"
-        playsinline
-        controls
-      ></video>
-    </div>
   </div>
 </div>
 
