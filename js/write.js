@@ -1,3 +1,8 @@
+const categoryEl = document.getElementById('category');
+const titleEl = document.getElementById('title');
+const oneLineEl = document.getElementById('oneLine');
+const descEl = document.getElementById('description');
+
 const body = document.body;
 const form = document.getElementById('writeForm');
 const issuePreview = document.getElementById('issuePreview');
