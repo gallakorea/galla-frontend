@@ -1,25 +1,5 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
-
-  /* ================= 로그인 강제 (추가) ================= */
-  async function waitForSupabase() {
-    while (!window.supabaseClient) {
-      await new Promise(r => setTimeout(r, 30));
-    }
-  }
-
-  await waitForSupabase();
-
-  const { data: sessionData } = await window.supabaseClient.auth.getSession();
-  if (!sessionData?.session) {
-    alert('로그인 후 글 작성이 가능합니다.');
-    location.href = '/login.html';
-    return;
-  }
-
-  const accessToken = sessionData.session.access_token;
-
-  /* ================= 기존 코드 시작 ================= */
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -81,16 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     body.style.overflow = '';
   });
 
-  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.ai-style-tabs button')
-        .forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-
-  /* ================= PREVIEW ================= */
-  form.addEventListener('submit', e => {
+  /* ================= PREVIEW HANDLER ================= */
+  function handlePreview(e) {
     e.preventDefault();
 
     if (!categoryEl.value) return alert('카테고리를 선택해주세요');
@@ -135,32 +107,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행하기 + 적정성 검사 (추가) ================= */
-    document.getElementById('publishPreview').onclick = async () => {
-      const res = await fetch(
-        'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            title: titleEl.value,
-            oneLine: oneLineEl.value,
-            description: descEl.value
-          })
-        }
-      );
-
-      const data = await res.json();
-
-      if (data.result === 'FAIL') {
-        alert(`🚫 발행 불가\n\n사유: ${data.reason}`);
-        return;
-      }
-
-      alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
+    document.getElementById('publishPreview').onclick = () => {
+      alert('발행 로직 연결 예정');
     };
 
     if (videoEl) {
@@ -170,7 +118,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
-  });
+  }
+
+  /* ✅ submit + 버튼 클릭 둘 다 지원 */
+  form.addEventListener('submit', handlePreview);
+
+  const previewBtn = form.querySelector('button[type="submit"]');
+  if (previewBtn) {
+    previewBtn.addEventListener('click', handlePreview);
+  }
 
   /* ================= VIDEO MODAL ================= */
   const speechModal = document.getElementById('speechModal');
