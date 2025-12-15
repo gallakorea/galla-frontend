@@ -1021,3 +1021,84 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   margin-top: 6px;
   line-height: 1.4;
 }
+
+/* =========================
+   PREVIEW = ISSUE PAGE SCALE
+   (단일 기준 통일)
+========================= */
+
+.issue-preview {
+  padding: 16px;
+}
+
+/* 카테고리 · 시간 · 기부처 */
+.issue-meta {
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+/* 제목 */
+.issue-title {
+  font-size: 18px;      /* issue 페이지와 동일 */
+  font-weight: 800;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+/* 한줄 요약 */
+.issue-one-line {
+  font-size: 13px;
+  color: #bbb;
+  margin-bottom: 8px;
+}
+
+/* 작성자 */
+.issue-author {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 12px;
+}
+
+/* 썸네일 */
+.preview-thumb-img {
+  width: 100%;
+  height: 180px;        /* issue 카드 썸네일과 동일 */
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #222;
+  margin: 12px 0;
+}
+
+/* 1분 엘리베이터 스피치 버튼 */
+.speech-btn {
+  background: #161616;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #222;
+  text-align: center;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+/* 본문 */
+.issue-summary p {
+  font-size: 14px;      /* issue 상세 본문 */
+  line-height: 1.6;
+  color: #eee;
+}
+
+/* 수정 / 발행 버튼 */
+.preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.preview-actions button {
+  flex: 1;
+  padding: 14px 0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
