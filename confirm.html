@@ -5,62 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>발행 확인 · GALLA</title>
 
-  <!-- 공통 -->
-  <link rel="stylesheet" href="./css/base.css" />
-  <link rel="stylesheet" href="./css/confirm.css" />
+  <link rel="stylesheet" href="css/index.css" />
+  <link rel="stylesheet" href="css/confirm.css" />
 </head>
 
-<body>
-  <!-- 상단 헤더 -->
-  <header class="top-header">
-    <a href="index.html" class="logo">
-      GALLA
-    </a>
+<body data-page="confirm">
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <img src="assets/logo.png" alt="GALLA" class="logo"
+           onclick="location.href='index.html'" />
+
+      <div class="auth-buttons">
+        <button id="headerLoginBtn" onclick="location.href='login.html'">로그인</button>
+        <button id="headerSignupBtn" onclick="location.href='signup.html'">회원가입</button>
+        <button id="headerMypageBtn" onclick="location.href='mypage.html'" style="display:none;">마이페이지</button>
+      </div>
+    </div>
   </header>
 
-  <!-- 본문 -->
-  <main class="confirm-container">
+  <!-- CONTENT -->
+  <section class="confirm-section">
     <h1 class="confirm-title">발행 전 최종 확인</h1>
 
-    <div id="moderationBox" class="moderation-box loading">
+    <div id="moderationBox" class="confirm-box loading">
       콘텐츠 적합성 검사를 진행 중입니다…
     </div>
 
     <div class="confirm-actions">
-      <button id="backBtn" class="btn-outline">
-        돌아가기
-      </button>
-      <button id="publishBtn" class="btn-primary" disabled>
-        최종 발행
-      </button>
+      <button id="backBtn" class="btn-outline">돌아가기</button>
+      <button id="publishBtn" class="btn-primary" disabled>최종 발행</button>
     </div>
-  </main>
+  </section>
 
-  <!-- 하단 네비게이션 (write와 동일) -->
-  <nav class="bottom-nav">
-    <a href="index.html" class="nav-item">
-      <img src="./assets/icons/nav-home.svg" />
-    </a>
-
-    <a href="search.html" class="nav-item">
-      <img src="./assets/icons/nav-search.svg" />
-    </a>
-
-    <a href="write.html" class="nav-item active">
-      <img src="./assets/icons/nav-write.svg" />
-    </a>
-
-    <a href="random.html" class="nav-item">
-      <img src="./assets/icons/nav-random.svg" />
-    </a>
-
-    <a href="mypage.html" class="nav-item">
-      <img src="./assets/icons/nav-user.svg" />
-    </a>
+  <!-- NAVIGATION -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
+      <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
+      <img src="assets/icons/nav-write.svg" class="nav-icon active" data-target="write.html">
+      <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
+      <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
+    </div>
   </nav>
 
-  <!-- Supabase -->
-  <script src="./js/supabase.js"></script>
-  <script src="./js/confirm.js"></script>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/confirm.js"></script>
 </body>
 </html>
