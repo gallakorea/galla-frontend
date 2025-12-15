@@ -320,3 +320,100 @@ body {
   height: 28px;
   filter: brightness(0) invert(1);
 }
+
+/***************************************************
+ * AI MODAL – LAYOUT FIX (FINAL)
+ ***************************************************/
+.ai-modal-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 헤더 */
+.ai-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* ===== 탭 영역 ===== */
+.ai-style-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.ai-style-tabs button {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ai-style-tabs button.active {
+  background: #fff;
+  color: #000;
+  font-weight: 700;
+}
+
+/* ===== 입력 영역 ===== */
+.ai-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* input / textarea 공통 */
+.ai-modal-body input,
+.ai-modal-body textarea {
+  width: 100%;
+  background: #0b0c14;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 12px;
+  color: #fff;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+/* textarea 높이 */
+.ai-modal-body textarea {
+  min-height: 110px;
+  resize: none;
+}
+
+/* ===== 하단 버튼 ===== */
+.ai-modal-footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ai-modal-footer button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 실행 */
+#runAi {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+/* 적용 */
+#applyAi {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+}

@@ -1,190 +1,109 @@
 /***************************************************
  * BASIC
  ***************************************************/
-document.addEventListener("DOMContentLoaded", () => {
-  const body = document.body;
+const body = document.body;
 
-  const form = document.getElementById("writeForm");
-  const issuePreview = document.getElementById("issuePreview");
+/***************************************************
+ * AI MODAL OPEN / CLOSE (FIX)
+ ***************************************************/
+const aiModal = document.getElementById("aiModal");
+const openAiBtn = document.getElementById("openAiModal");
+const closeAiBtn = document.getElementById("aiClose");
 
-  const aiModal = document.getElementById("aiModal");
-  const speechModal = document.getElementById("speechModal");
+if (aiModal) {
+  aiModal.style.display = "none"; // 🔥 처음부터 열리는 문제 차단
+}
 
-  const openAiBtn = document.getElementById("openAiModal");
-  const closeAiBtn = document.getElementById("aiClose");
+openAiBtn?.addEventListener("click", () => {
+  aiModal.style.display = "flex";
+  body.style.overflow = "hidden";
+});
 
-  const thumbInput = document.getElementById("thumbnail");
-  const thumbBtn = document.getElementById("thumbnailBtn");
-  const thumbPreview = document.getElementById("thumbPreview");
-
-  const videoInput = document.getElementById("video");
-  const videoBtn = document.getElementById("videoBtn");
-  const videoPreview = document.getElementById("videoPreview");
-
-  const speechVideo = document.getElementById("speechVideo");
-  const closeSpeechBtn = document.getElementById("closeSpeech");
-
-  /* =========================
-     🔥 초기 상태 강제 정리
-  ========================= */
-  if (aiModal) aiModal.style.display = "none";
-  if (speechModal) speechModal.style.display = "none";
+closeAiBtn?.addEventListener("click", () => {
+  aiModal.style.display = "none";
   body.style.overflow = "";
+});
 
-  thumbPreview.innerHTML = "";
-  videoPreview.innerHTML = "";
-  issuePreview.innerHTML = "";
+/***************************************************
+ * AI TAB INTERACTION (FIX)
+ ***************************************************/
+const aiTabs = document.querySelectorAll(".ai-style-tabs button");
+const aiUserText = document.getElementById("aiUserText");
 
-  /* =========================
-     AI MODAL
-  ========================= */
-  if (openAiBtn && aiModal) {
-    openAiBtn.onclick = () => {
-      aiModal.style.display = "flex";
-      body.style.overflow = "hidden";
-    };
-  }
+aiTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    aiTabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
 
-  if (closeAiBtn && aiModal) {
-    closeAiBtn.onclick = () => {
-      aiModal.style.display = "none";
-      body.style.overflow = "";
-    };
-  }
-
-  /* =========================
-     FILE UPLOAD – THUMBNAIL
-  ========================= */
-  if (thumbBtn && thumbInput) {
-    thumbBtn.onclick = () => thumbInput.click();
-  }
-
-  if (thumbInput) {
-    thumbInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      thumbPreview.innerHTML = `
-        <div class="preview-box is-preview">
-          <img src="${URL.createObjectURL(file)}" class="preview-thumb-img">
-        </div>
-      `;
-    };
-  }
-
-  /* =========================
-     FILE UPLOAD – VIDEO
-  ========================= */
-  if (videoBtn && videoInput) {
-    videoBtn.onclick = () => videoInput.click();
-  }
-
-  if (videoInput) {
-    videoInput.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      videoPreview.innerHTML = `
-        <div class="preview-box is-preview">
-          <video src="${URL.createObjectURL(file)}" muted playsinline></video>
-        </div>
-      `;
-    };
-  }
-
-  /* =========================
-     PREVIEW RENDER
-  ========================= */
-  form.onsubmit = (e) => {
-    e.preventDefault();
-
-    const category = document.getElementById("category").value;
-    const title = document.getElementById("title").value;
-    const oneLine = document.getElementById("oneLine").value;
-    const desc = document.getElementById("description").value;
-    const anon = document.getElementById("isAnonymous").checked;
-
-    if (!category || !title || !desc) {
-      alert("필수 항목을 입력하세요");
-      return;
+    if (aiUserText) {
+      aiUserText.focus();
+      aiUserText.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
     }
+  });
+});
 
-    const thumbImg = thumbPreview.querySelector("img");
-    const videoEl = videoPreview.querySelector("video");
+/***************************************************
+ * THUMBNAIL UPLOAD + PREVIEW
+ ***************************************************/
+const thumbInput = document.getElementById("thumbnail");
+const thumbBtn = document.getElementById("thumbnailBtn");
+const thumbPreview = document.getElementById("thumbPreview");
 
-    issuePreview.innerHTML = `
-      <section class="issue-preview">
+thumbBtn?.addEventListener("click", () => thumbInput.click());
 
-        <div class="issue-meta">${category} · 방금 전</div>
-        <h1 class="issue-title">${title}</h1>
+thumbInput?.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-        ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ""}
+  thumbPreview.innerHTML = `
+    <div class="preview-box is-preview">
+      <img src="${URL.createObjectURL(file)}" class="preview-thumb-img" />
+    </div>
+  `;
+});
 
-        <div class="issue-author">
-          작성자 · ${anon ? "익명" : "사용자"}
-        </div>
+/***************************************************
+ * VIDEO UPLOAD (ELEVATOR SPEECH)
+ ***************************************************/
+const videoInput = document.getElementById("video");
+const videoBtn = document.getElementById("videoBtn");
+const videoPreview = document.getElementById("videoPreview");
 
-        ${
-          thumbImg
-            ? `
-          <div class="preview-media" data-preview="true">
-            <img src="${thumbImg.src}">
-          </div>`
-            : ""
-        }
+videoBtn?.addEventListener("click", () => videoInput.click());
 
-        ${
-          videoEl
-            ? `
-          <button class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>`
-            : ""
-        }
+videoInput?.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
 
-        <section class="issue-summary">
-          <h3>📝 이 주제에 대한 핵심 요약</h3>
-          <p>${desc}</p>
-        </section>
+  videoPreview.innerHTML = `
+    <div class="preview-box is-preview">
+      <video src="${URL.createObjectURL(file)}" muted playsinline></video>
+    </div>
+  `;
+});
 
-        <div class="preview-actions">
-          <button id="editPreview">수정하기</button>
-          <button class="btn-publish">발행하기</button>
-        </div>
+/***************************************************
+ * SPEECH MODAL (9:16 FINAL)
+ ***************************************************/
+const speechBackdrop = document.querySelector(".speech-backdrop");
 
-      </section>
-    `;
+document.addEventListener("click", e => {
+  if (e.target.classList.contains("speech-btn")) {
+    speechBackdrop.style.display = "flex";
+    body.style.overflow = "hidden";
 
-    /* 수정하기 */
-    document.getElementById("editPreview").onclick = () => {
-      issuePreview.innerHTML = "";
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    };
+    const video = speechBackdrop.querySelector("video");
+    video?.play();
+  }
 
-    /* =========================
-       SPEECH MODAL OPEN
-    ========================= */
-    if (videoEl) {
-      document.getElementById("openSpeech").onclick = () => {
-        speechVideo.src = videoEl.src;
-        speechModal.style.display = "flex";
-        body.style.overflow = "hidden";
-        speechVideo.play();
-      };
-    }
+  if (e.target.dataset.close === "speech") {
+    speechBackdrop.style.display = "none";
+    body.style.overflow = "";
 
-    issuePreview.scrollIntoView({ behavior: "smooth" });
-  };
-
-  /* =========================
-     SPEECH MODAL CLOSE
-  ========================= */
-  if (closeSpeechBtn) {
-    closeSpeechBtn.onclick = () => {
-      speechVideo.pause();
-      speechVideo.src = "";
-      speechModal.style.display = "none";
-      body.style.overflow = "";
-    };
+    const video = speechBackdrop.querySelector("video");
+    video?.pause();
   }
 });
