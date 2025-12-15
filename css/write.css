@@ -417,3 +417,98 @@ body {
   border: none;
   color: #fff;
 }
+
+/* =========================
+   ISSUE PREVIEW – FINAL FIX
+========================= */
+
+.issue-preview {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* 썸네일 래퍼 */
+.issue-preview .preview-media {
+  width: 100%;
+  max-width: 480px;
+  margin: 12px auto;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+}
+
+/* 썸네일 이미지 */
+.issue-preview .preview-thumb-img {
+  width: 100%;
+  height: auto;
+  max-height: 420px;     /* 🔥 크기 제한 */
+  object-fit: cover;
+  display: block;
+}
+
+.issue-preview .speech-btn {
+  width: 100%;
+  margin: 10px 0 14px;
+  padding: 14px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.issue-preview .speech-btn:active {
+  opacity: 0.85;
+}
+
+.issue-preview .preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* 수정하기 */
+.issue-preview .preview-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* 수정하기 */
+.issue-preview .preview-actions button:not(.btn-publish) {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+/* 발행하기 */
+.issue-preview .preview-actions .btn-publish {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  font-weight: 700;
+}
+
+.issue-preview .preview-media::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 5;
+}
