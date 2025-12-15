@@ -179,20 +179,16 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= 콘텐츠 적합성 검사 ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
-    const { data, error } = await window.supabaseClient.functions.invoke(
-      'content-moderation',
-      {
+    const { data, error } = await window.supabaseClient
+      .functions.invoke('content-moderation', {
         body: { title, oneLine, description }
-      }
-    );
+      });
 
-    if (error) {
-      console.error('[Moderation Error]', error);
-      throw error;
-    }
+    if (error) throw error;
 
     return data;
   } catch (e) {
+    console.error('Moderation Error:', e);
     return {
       result: 'FAIL',
       reason: '콘텐츠 적합성 검사 서버 오류'
