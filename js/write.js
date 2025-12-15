@@ -1,5 +1,21 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const body = document.body;
+
+  /* ================= Supabase 준비 ================= */
+  while (!window.supabaseClient) {
+    await new Promise(r => setTimeout(r, 30));
+  }
+
+  /* ================= 로그인 필수 ================= */
+  const {
+    data: { session }
+  } = await window.supabaseClient.auth.getSession();
+
+  if (!session) {
+    alert('로그인 후 글 작성이 가능합니다.');
+    location.href = '/login.html';
+    return;
+  }
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -61,36 +77,14 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
-  /* AI STYLE TABS */
-  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document
-        .querySelectorAll('.ai-style-tabs button')
-        .forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-
   /* ================= PREVIEW ================= */
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    if (!categoryEl.value) {
-      alert('카테고리를 선택해주세요');
-      return;
-    }
-    if (!titleEl.value) {
-      alert('제목을 입력해주세요');
-      return;
-    }
-    if (!descEl.value) {
-      alert('이슈 설명을 입력해주세요');
-      return;
-    }
-    if (!donationEl.value) {
-      alert('기부처를 선택해주세요');
-      return;
-    }
+    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
+    if (!titleEl.value) return alert('제목을 입력해주세요');
+    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
+    if (!donationEl.value) return alert('기부처를 선택해주세요');
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
@@ -124,15 +118,13 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
-    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행하기 (여기만 추가됨) ================= */
+    /* ================= 발행하기 (적정성 검사) ================= */
     document.getElementById('publishPreview').onclick = async () => {
-      // ✅ 1. 적정성 검사
       const moderation = await runContentModeration({
         title: titleEl.value,
         oneLine: oneLineEl.value,
@@ -151,16 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ok) return;
       }
 
-      // ✅ 2. 여기서만 다음 단계
       alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
     };
-
-    /* 영상 모달 */
-    if (videoEl) {
-      document.getElementById('openSpeech').onclick = () => {
-        openSpeech(videoEl.src);
-      };
-    }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   });
@@ -186,24 +170,37 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-/* ================= 콘텐츠 적합성 검사 ================= */
+/* ================= 콘텐츠 적합성 검사 (보안 핵심) ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
-    const res = await fetch(
-      'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, oneLine, description })
-      }
-    );
+    const {
+      data: { session }
+    } = await window.supabaseClient.auth.getSession();
 
-    if (!res.ok) {
+    if (!session) {
+      return { result: 'FAIL', reason: '로그인이 필요합니다' };
+    }
+
+    const { data, error } =
+      await window.supabaseClient.functions.invoke(
+        'content-moderation',
+        {
+          body: { title, oneLine, description },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      );
+
+    if (error) {
+      console.error(error);
       return { result: 'FAIL', reason: '적정성 검사 실패' };
     }
 
-    return await res.json();
+    return data;
+
   } catch (e) {
+    console.error(e);
     return { result: 'FAIL', reason: '적정성 검사 서버 오류' };
   }
 }
