@@ -3,10 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* ================= 공통 유틸 ================= */
   const $ = id => document.getElementById(id);
-
-  async function wait(ms = 30) {
-    return new Promise(r => setTimeout(r, ms));
-  }
+  const wait = (ms = 30) => new Promise(r => setTimeout(r, ms));
 
   async function waitForSupabaseClient() {
     while (!window.supabaseClient) {
@@ -70,21 +67,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   }
 
-  /* ================= AI MODAL ================= */
-  const openAiBtn = $('openAiModal');
+  /* ================= AI MODAL (🔥 버튼 문제 해결 핵심) ================= */
   const aiModal = $('aiModal');
   const aiClose = $('aiClose');
   const aiUserText = $('aiUserText');
   const aiResultText = $('aiResultText');
   const applyAi = $('applyAi');
 
-  if (openAiBtn) {
-    openAiBtn.onclick = e => {
+  // ✨ AI에게 다듬기 버튼 (ID 의존 ❌, 텍스트 기반 탐색)
+  const aiOpenBtn = [...document.querySelectorAll('button')]
+    .find(btn => btn.textContent.includes('AI에게'));
+
+  if (aiOpenBtn) {
+    aiOpenBtn.addEventListener('click', e => {
       e.preventDefault();
       aiUserText.value = descEl.value;
       aiModal.style.display = 'flex';
       body.style.overflow = 'hidden';
-    };
+    });
+  } else {
+    console.warn('⚠️ AI 버튼을 찾지 못했습니다.');
   }
 
   if (aiClose) {
@@ -108,11 +110,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   form.onsubmit = e => {
     e.preventDefault();
 
-    if (!categoryEl?.value) return alert('카테고리를 선택해주세요');
-    if (!titleEl?.value) return alert('제목을 입력해주세요');
-    if (!oneLineEl?.value) return alert('한 줄 요약을 입력해주세요');
-    if (!descEl?.value) return alert('이슈 설명을 입력해주세요');
-    if (!donationEl?.value) return alert('기부처를 선택해주세요');
+    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
+    if (!titleEl.value) return alert('제목을 입력해주세요');
+    if (!oneLineEl.value) return alert('한 줄 요약을 입력해주세요');
+    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
+    if (!donationEl.value) return alert('기부처를 선택해주세요');
     if (!thumbFile) return alert('썸네일을 업로드해주세요');
 
     issuePreview.innerHTML = `
@@ -128,11 +130,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
 
         <img src="${URL.createObjectURL(thumbFile)}" class="preview-thumb-img">
-
-        ${videoFile ? `
-          <button type="button" class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>` : ''}
 
         <section class="issue-summary">
           <p>${descEl.value}</p>
@@ -216,26 +213,18 @@ async function runContentModeration({ title, oneLine, description }) {
     const { data, error } =
       await window.supabaseClient.functions.invoke(
         'content-moderation',
-        {
-          body: { title, oneLine, description }
-        }
+        { body: { title, oneLine, description } }
       );
 
     if (error) {
       console.error('Moderation error:', error);
-      return {
-        result: 'FAIL',
-        reason: '콘텐츠 검사 실패'
-      };
+      return { result: 'FAIL', reason: '콘텐츠 검사 실패' };
     }
 
     return data;
 
   } catch (e) {
     console.error('Moderation exception:', e);
-    return {
-      result: 'FAIL',
-      reason: '콘텐츠 적합성 검사 서버 오류'
-    };
+    return { result: 'FAIL', reason: '콘텐츠 적합성 검사 서버 오류' };
   }
 }
