@@ -1,15 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  /* ===============================
-     BASIC ELEMENTS
-  =============================== */
   const categoryEl = document.getElementById('category');
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
   const anonEl = document.getElementById('isAnonymous');
-
   const previewBtn = document.getElementById('previewBtn');
   const issuePreview = document.getElementById('issuePreview');
 
@@ -41,9 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let thumbSrc = null;
 
-  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbBtn.onclick = () => thumbInput.click();
 
-  thumbInput.addEventListener('change', e => {
+  thumbInput.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -54,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <img src="${thumbSrc}" class="preview-thumb-img">
       </div>
     `;
-  });
+  };
 
   /* ===============================
      FILE UPLOAD – VIDEO
@@ -65,65 +61,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let videoSrc = null;
 
-  videoBtn.addEventListener('click', () => videoInput.click());
+  videoBtn.onclick = () => videoInput.click();
 
-  videoInput.addEventListener('change', e => {
+  videoInput.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
 
     videoSrc = URL.createObjectURL(file);
 
     videoPreview.innerHTML = `
-      <div class="preview-media" data-preview="true">
+      <div class="preview-box is-preview">
         <video src="${videoSrc}" muted playsinline></video>
       </div>
     `;
-  });
+  };
 
   /* ===============================
-     SPEECH VIDEO MODAL (🔥 JS ONLY)
+     SPEECH MODAL (🔥 동적 생성)
   =============================== */
   let speechModal = null;
   let speechVideo = null;
 
-  function createSpeechModal() {
-    speechModal = document.createElement('div');
-    speechModal.className = 'speech-backdrop';
-    speechModal.style.display = 'none';
+  function openSpeechModal(src) {
+    if (!src) return;
 
-    speechModal.innerHTML = `
-      <div class="speech-sheet">
-        <div class="speech-header">
-          <span>1분 엘리베이터 스피치</span>
-          <button class="close-speech">닫기</button>
+    if (!speechModal) {
+      speechModal = document.createElement('div');
+      speechModal.className = 'speech-backdrop';
+      speechModal.innerHTML = `
+        <div class="speech-sheet">
+          <div class="speech-header">
+            <span>1분 엘리베이터 스피치</span>
+            <button data-action="close-speech">닫기</button>
+          </div>
+          <div class="video-viewport">
+            <video playsinline controls></video>
+          </div>
         </div>
-        <div class="video-viewport">
-          <video playsinline controls></video>
-        </div>
-      </div>
-    `;
+      `;
+      document.body.appendChild(speechModal);
 
-    document.body.appendChild(speechModal);
-    speechVideo = speechModal.querySelector('video');
+      speechVideo = speechModal.querySelector('video');
 
-    speechModal.addEventListener('click', e => {
-      if (e.target === speechModal || e.target.classList.contains('close-speech')) {
-        closeSpeech();
-      }
-    });
-  }
-
-  function openSpeech(src) {
-    if (!speechModal) createSpeechModal();
+      speechModal.addEventListener('click', e => {
+        if (
+          e.target === speechModal ||
+          e.target.dataset.action === 'close-speech'
+        ) {
+          closeSpeechModal();
+        }
+      });
+    }
 
     speechVideo.src = src;
+    speechVideo.currentTime = 0;
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
-    speechVideo.currentTime = 0;
     speechVideo.play();
   }
 
-  function closeSpeech() {
+  function closeSpeechModal() {
     if (!speechModal) return;
     speechVideo.pause();
     speechVideo.src = '';
@@ -154,21 +151,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ${
           thumbSrc
-            ? `
-            <div class="preview-media" data-preview="true">
-              <img src="${thumbSrc}" class="preview-thumb-img">
-            </div>
-            `
+            ? `<div class="preview-media" data-preview="true">
+                 <img src="${thumbSrc}" class="preview-thumb-img">
+               </div>`
             : ''
         }
 
         ${
           videoSrc
-            ? `
-            <button class="speech-btn" data-action="play-speech">
-              🎥 1분 엘리베이터 스피치
-            </button>
-            `
+            ? `<button class="speech-btn" data-action="play-speech">
+                 🎥 1분 엘리베이터 스피치
+               </button>`
             : ''
         }
 
@@ -191,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ===============================
      EVENT DELEGATION (🔥 핵심)
   =============================== */
-  document.addEventListener('click', e => {
+  issuePreview.addEventListener('click', e => {
     const action = e.target.dataset.action;
 
     if (action === 'edit') {
@@ -199,8 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    if (action === 'play-speech' && videoSrc) {
-      openSpeech(videoSrc);
+    if (action === 'play-speech') {
+      openSpeechModal(videoSrc);
     }
   });
 });
