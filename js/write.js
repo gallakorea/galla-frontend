@@ -1,6 +1,17 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const body = document.body;
 
+  /* ================= 로그인 가드 ================= */
+  await waitForSupabaseClient();
+  const { data: sessionData } = await window.supabaseClient.auth.getSession();
+
+  if (!sessionData?.session) {
+    alert('로그인이 필요합니다');
+    location.href = '/login.html';
+    return;
+  }
+
+  /* ================= ELEMENT ================= */
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
 
@@ -113,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행하기 ================= */
+    /* ================= 발행 ================= */
     document.getElementById('publishPreview').onclick = async e => {
       const btn = e.target;
       btn.disabled = true;
@@ -202,23 +213,14 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= 콘텐츠 적합성 검사 ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
-    // 1️⃣ supabaseClient 준비
-    await waitForSupabaseClient();
-
-    // 2️⃣ auth 세션 준비될 때까지 대기 (🔥 중요)
-    await waitForSupabaseSession();
-
-    // 3️⃣ Edge Function 호출
     const { data, error } =
       await window.supabaseClient.functions.invoke(
         'content-moderation',
-        {
-          body: { title, oneLine, description }
-        }
+        { body: { title, oneLine, description } }
       );
 
     if (error) {
-      console.error('Moderation invoke error:', error);
+      console.error('Moderation error:', error);
       return {
         result: 'FAIL',
         reason: error.message || '콘텐츠 검사 실패'
@@ -236,16 +238,9 @@ async function runContentModeration({ title, oneLine, description }) {
   }
 }
 
+/* ================= UTIL ================= */
 async function waitForSupabaseClient() {
   while (!window.supabaseClient) {
     await new Promise(r => setTimeout(r, 30));
-  }
-}
-
-async function waitForSupabaseSession() {
-  while (true) {
-    const { data } = await window.supabaseClient.auth.getSession();
-    if (data?.session) break;
-    await new Promise(r => setTimeout(r, 50));
   }
 }
