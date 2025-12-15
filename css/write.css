@@ -1,5 +1,5 @@
-/* RESET */
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
   background: #000;
@@ -7,37 +7,50 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
-/* LAYOUT */
 .app-root {
   max-width: 480px;
   margin: 0 auto;
   padding-bottom: 120px;
 }
-.page-main, .page-inner { width: 100%; }
 
-/* HEADER */
 .header {
   position: sticky;
   top: 0;
-  z-index: 1000;
   background: #000;
   border-bottom: 1px solid #111;
+  z-index: 1000;
 }
+
 .header-inner {
   height: 54px;
   padding: 0 16px;
   display: flex;
   align-items: center;
 }
+
 .logo { width: 105px; }
 
-/* SECTION */
 .section-block {
   padding: 22px 16px;
   border-bottom: 1px solid #111;
 }
+
 .write-main-title { font-size: 20px; font-weight: 800; }
 .write-main-desc { font-size: 13px; color: #aaa; margin-top: 6px; }
+
+/* GUIDE */
+.write-guide-block {
+  margin: 16px;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+}
+.write-guide-list {
+  padding: 14px 20px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #ccc;
+}
 
 /* FORM */
 .field-block {
@@ -47,6 +60,7 @@ body {
   gap: 8px;
 }
 .field-label { font-size: 14px; font-weight: 700; }
+
 .input-field {
   padding: 12px 14px;
   background: #0b0c14;
@@ -54,26 +68,62 @@ body {
   border-radius: 12px;
   color: #fff;
 }
+
 .textarea { min-height: 200px; }
 
-/* BUTTON */
 .file-btn {
   padding: 14px;
+  border-radius: 14px;
   background: #111;
   border: 1px solid #222;
-  border-radius: 14px;
   color: #fff;
 }
-.primary-btn, .ai-main-btn {
+
+.primary-btn,
+.ai-main-btn {
   padding: 16px;
-  background: #2f80ff;
   border-radius: 999px;
+  background: #2f80ff;
   border: none;
   color: #fff;
   font-weight: 800;
 }
 
-/* PREVIEW (FORM) */
+/* TOGGLE */
+.anon-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #111;
+  border: 1px solid #222;
+  padding: 16px;
+  border-radius: 14px;
+}
+.switch { width: 46px; height: 26px; position: relative; }
+.switch input { display: none; }
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #333;
+  border-radius: 999px;
+}
+.slider::before {
+  content: "";
+  width: 20px; height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px; left: 3px;
+  transition: .2s;
+}
+.switch input:checked + .slider {
+  background: #2f80ff;
+}
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
+}
+
+/* PREVIEW */
 .preview-box img,
 .preview-box video {
   width: 100%;
@@ -83,39 +133,17 @@ body {
   background: #000;
 }
 
-/* ISSUE PREVIEW */
-.issue-preview { padding: 16px; }
-.preview-media {
-  margin: 12px 0;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #000;
-}
-.preview-thumb-img {
-  width: 100%;
-  max-height: 420px;
-  object-fit: cover;
-}
-.speech-btn {
-  width: 100%;
-  margin: 12px 0;
-  padding: 14px;
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 12px;
-  color: #fff;
-}
-
 /* AI MODAL */
 .ai-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.7);
   display: none;
+  background: rgba(0,0,0,.7);
   z-index: 3000;
   justify-content: center;
   align-items: center;
 }
+
 .ai-modal-inner {
   width: 92%;
   max-width: 480px;
@@ -126,26 +154,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-/* SPEECH MODAL */
-.speech-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.85);
-  display: none;
-  z-index: 4000;
-  justify-content: center;
-  align-items: center;
-}
-.speech-sheet {
-  width: 100%;
-  max-width: 420px;
-  background: #000;
-  border-radius: 16px;
-}
-.video-viewport video {
-  width: 100%;
 }
 
 /* BOTTOM NAV */

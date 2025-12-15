@@ -25,7 +25,16 @@
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
-      <!-- 익명 토글 -->
+      <!-- ✅ GUIDE 복구 -->
+      <div class="write-guide-block">
+        <ul class="write-guide-list">
+          <li>주제는 하나의 명확한 쟁점으로 작성하세요.</li>
+          <li>감정 표현보다는 주장과 이유를 구분해 주세요.</li>
+          <li>허위 사실, 특정인 비방은 제재 대상입니다.</li>
+        </ul>
+      </div>
+
+      <!-- 익명 토글 (스위치) -->
       <section class="section-block">
         <div class="anon-toggle">
           <span>익명으로 발의하기</span>
@@ -36,7 +45,7 @@
         </div>
       </section>
 
-      <form id="writeForm">
+      <form id="writeForm" onsubmit="return false;">
 
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
@@ -66,7 +75,6 @@
           <input id="oneLine" class="input-field" />
         </div>
 
-        <!-- 썸네일 -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일</label>
           <input type="file" id="thumbnail" hidden accept="image/*" />
@@ -74,7 +82,6 @@
           <div id="thumbPreview" class="preview-box"></div>
         </div>
 
-        <!-- 영상 -->
         <div class="field-block">
           <label class="field-label">엘리베이터 스피치 (선택)</label>
           <input type="file" id="video" hidden accept="video/*" />
@@ -94,11 +101,10 @@
       </form>
 
       <section id="issuePreview"></section>
-
     </div>
   </main>
 
-  <!-- BOTTOM NAV -->
+  <!-- BOTTOM NAV (정상 복구) -->
   <nav class="bottom-nav">
     <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
     <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
@@ -117,15 +123,15 @@
     </div>
 
     <div class="ai-style-tabs">
-      <button class="active">기본</button>
-      <button>간결</button>
-      <button>강렬</button>
-      <button>감성</button>
-      <button>전문가</button>
-      <button>논문체</button>
+      <button class="active" data-style="basic">기본</button>
+      <button data-style="short">간결</button>
+      <button data-style="strong">강렬</button>
+      <button data-style="emotional">감성</button>
+      <button data-style="expert">전문가</button>
+      <button data-style="paper">논문체</button>
     </div>
 
-    <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
+    <input id="aiPrompt" class="input-field" placeholder="AI에게 직접 요청 (선택)" />
 
     <div class="ai-modal-body">
       <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
@@ -133,20 +139,19 @@
     </div>
 
     <div class="ai-modal-footer">
-      <button class="btn-sub">AI 실행</button>
-      <button class="btn-main">AI 적용</button>
+      <button id="runAi" class="btn-sub">AI 실행</button>
+      <button id="applyAi" class="btn-main">AI 적용</button>
     </div>
   </div>
 </div>
 
-<!-- SPEECH VIDEO MODAL -->
+<!-- SPEECH MODAL -->
 <div id="speechModal" class="speech-backdrop">
   <div class="speech-sheet">
     <div class="speech-header">
       <span>1분 엘리베이터 스피치</span>
       <button id="closeSpeech">닫기</button>
     </div>
-
     <div class="video-viewport">
       <video id="speechVideo" playsinline controls></video>
     </div>
