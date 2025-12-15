@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
+  const donationEl = document.getElementById('donationTarget'); // ✅ 추가
 
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
@@ -63,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
   /* AI STYLE TABS */
   document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.ai-style-tabs button')
+      document
+        .querySelectorAll('.ai-style-tabs button')
         .forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
     });
@@ -73,8 +75,28 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    if (!categoryEl.value || !titleEl.value || !descEl.value) {
-      alert('필수 입력 누락');
+    // ✅ 필수 검증 (기부처 포함)
+    if (!categoryEl.value) {
+      alert('카테고리를 선택해주세요');
+      categoryEl.focus();
+      return;
+    }
+
+    if (!titleEl.value) {
+      alert('제목을 입력해주세요');
+      titleEl.focus();
+      return;
+    }
+
+    if (!descEl.value) {
+      alert('이슈 설명을 입력해주세요');
+      descEl.focus();
+      return;
+    }
+
+    if (!donationEl.value) {
+      alert('기부처를 선택해주세요');
+      donationEl.focus();
       return;
     }
 
@@ -84,7 +106,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
-        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
+        <div class="issue-meta">
+          ${categoryEl.value} · 방금 전 · 기부처: ${donationEl.value}
+        </div>
+
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
@@ -113,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* 발행하기 (나중에 연결) */
+    /* 발행하기 */
     document.getElementById('publishPreview').onclick = () => {
       alert('발행 로직 연결 예정');
     };
@@ -148,4 +173,3 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 });
-
