@@ -248,6 +248,11 @@
   </div>
 </div>
 
-<script src="./js/write.js"></script>
+<script type="module">
+  import { publishIssueToDB } from './js/write-publish.js';
+
+  window.publishIssueToDB = publishIssueToDB;
+</script>
+
 </body>
 </html>

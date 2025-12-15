@@ -117,15 +117,31 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
+    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    /* 발행하기 */
     document.getElementById('publishPreview').onclick = () => {
-      alert('✅ 여기까지 정상\n다음 단계: DB 연결');
+      if (typeof window.publishIssueToDB === 'function') {
+        window.publishIssueToDB({
+          category: categoryEl.value,
+          title: titleEl.value,
+          oneLine: oneLineEl.value,
+          description: descEl.value,
+          donationTarget: donationEl.value,
+          isAnonymous: anonEl.checked,
+          thumbnailFile: thumbFile,
+          videoFile: videoFile
+        });
+      } else {
+        alert('✅ 여기까지 정상\n다음 단계: DB 연결');
+      }
     };
 
+    /* 영상 모달 */
     if (videoFile) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(URL.createObjectURL(videoFile));
