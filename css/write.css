@@ -992,8 +992,9 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 }
 
 /* =========================
-   BOTTOM NAV FIX (GLOBAL MATCH)
+   BOTTOM NAV – MATCH INDEX
 ========================= */
+
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -1003,11 +1004,13 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   width: 100%;
   max-width: 480px;
 
-  height: 64px;              /* 🔥 기존 페이지와 동일 */
-  padding: 0;                /* 여백 제거 */
   background: #000;
-  border-top: 1px solid #111;
+  border-top: 1px solid #222;
 
+  /* ❌ height 제거 */
+  /* height: 64px; */
+
+  padding: 12px 0;          /* ✅ 인덱스와 동일 */
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -1015,24 +1018,23 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   z-index: 9999;
 }
 
-.nav-item {
-  flex: 1;
-  height: 100%;
+.bottom-nav .nav-item {
+  background: none;
+  border: none;
+  padding: 0;
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
 }
 
-.nav-item img {
-  width: 26px;
+.bottom-nav .nav-item img {
+  width: 26px;              /* ✅ 인덱스 nav-icon 과 동일 */
   height: 26px;
+  filter: brightness(0) invert(1);
 }
+
+#app { padding-bottom: 110px; }
 
 .app-root {
-  padding-bottom: 64px; /* 🔥 bottom-nav 높이와 정확히 일치 */
-}
-
-.nav-item.active img {
-  opacity: 1;
-  filter: brightness(1.2);
+  padding-bottom: 110px;
 }
