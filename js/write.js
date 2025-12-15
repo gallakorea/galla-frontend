@@ -1,33 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
-  const form = document.getElementById('writeForm');
-  const issuePreview = document.getElementById('issuePreview');
 
-  /* ===============================
-     ELEMENTS (🔥 누락 원인 해결)
-  =============================== */
   const categoryEl = document.getElementById('category');
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
   const anonEl = document.getElementById('isAnonymous');
 
-  /* ===============================
-     AI MODAL
-  =============================== */
-  const aiModal = document.getElementById('aiModal');
-  const openAiBtn = document.getElementById('openAiModal');
-  const closeAiBtn = document.getElementById('aiClose');
-
-  openAiBtn.onclick = () => {
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  };
-
-  closeAiBtn.onclick = () => {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  };
+  const previewBtn = document.getElementById('previewBtn');
+  const issuePreview = document.getElementById('issuePreview');
 
   /* ===============================
      FILE UPLOAD – THUMBNAIL
@@ -35,20 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
-
   let thumbSrc = null;
 
   thumbBtn.onclick = () => thumbInput.click();
-
   thumbInput.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    thumbSrc = URL.createObjectURL(file);
-
-    thumbPreview.innerHTML = `
-      <img src="${thumbSrc}" class="preview-thumb-img" />
-    `;
+    const f = e.target.files[0];
+    if (!f) return;
+    thumbSrc = URL.createObjectURL(f);
+    thumbPreview.innerHTML = `<img src="${thumbSrc}" class="preview-thumb-img">`;
   };
 
   /* ===============================
@@ -57,31 +32,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoInput = document.getElementById('video');
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
-
   let videoSrc = null;
 
   videoBtn.onclick = () => videoInput.click();
-
   videoInput.onchange = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    videoSrc = URL.createObjectURL(file);
-
-    videoPreview.innerHTML = `
-      <video src="${videoSrc}" muted playsinline></video>
-    `;
+    const f = e.target.files[0];
+    if (!f) return;
+    videoSrc = URL.createObjectURL(f);
+    videoPreview.innerHTML = `<video src="${videoSrc}" muted playsinline></video>`;
   };
 
   /* ===============================
-     SPEECH MODAL (고정 DOM 사용)
+     SPEECH MODAL
   =============================== */
   const speechModal = document.getElementById('speechModal');
   const speechVideo = document.getElementById('speechVideo');
   const closeSpeechBtn = document.getElementById('closeSpeech');
 
   function openSpeech(src) {
-    if (!src) return;
     speechVideo.src = src;
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
@@ -97,11 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ===============================
-     PREVIEW (🔥 정상 작동 핵심)
+     PREVIEW (🔥 여기서만 동작)
   =============================== */
-  form.onsubmit = e => {
-    e.preventDefault();
-
+  previewBtn.onclick = () => {
     const category = categoryEl.value;
     const title = titleEl.value;
     const oneLine = oneLineEl.value;
@@ -136,13 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
-    /* 수정 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* 영상 */
     if (videoSrc) {
       document.getElementById('openSpeechBtn').onclick = () => {
         openSpeech(videoSrc);
