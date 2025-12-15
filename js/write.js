@@ -183,15 +183,22 @@ async function runContentModeration({ title, oneLine, description }) {
       'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // ✅ 핵심: Supabase Edge Function 호출 인증
+          'Authorization': `Bearer ${window.SUPABASE_ANON_KEY}`
+        },
         body: JSON.stringify({ title, oneLine, description })
       }
     );
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
 
     return await res.json();
-  } catch {
+  } catch (e) {
+    console.error('[Moderation Error]', e);
     return {
       result: 'FAIL',
       reason: '콘텐츠 적합성 검사 서버 오류'
