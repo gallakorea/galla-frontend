@@ -32,36 +32,42 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
   });
 
-  /* ================= AI MODAL (SAFE) ================= */
+  /* ================= AI MODAL ================= */
   const openAiBtn = document.getElementById('openAiModal');
   const aiModal = document.getElementById('aiModal');
+  const aiClose = document.getElementById('aiClose');
+  const aiUserText = document.getElementById('aiUserText');
+  const aiResultText = document.getElementById('aiResultText');
+  const applyAi = document.getElementById('applyAi');
 
-  if (openAiBtn && aiModal) {
-    const aiClose = document.getElementById('aiClose');
-    const aiUserText = document.getElementById('aiUserText');
-    const aiResultText = document.getElementById('aiResultText');
-    const applyAi = document.getElementById('applyAi');
+  openAiBtn.addEventListener('click', e => {
+    e.preventDefault();
+    aiUserText.value = descEl.value;
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  });
 
-    openAiBtn.addEventListener('click', e => {
-      e.preventDefault();
-      if (aiUserText) aiUserText.value = descEl.value;
-      aiModal.style.display = 'flex';
-      body.style.overflow = 'hidden';
+  aiClose.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+
+  applyAi.addEventListener('click', () => {
+    if (aiResultText.value) {
+      descEl.value = aiResultText.value;
+    }
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
+
+  /* AI STYLE TABS */
+  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ai-style-tabs button')
+        .forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
     });
-
-    aiClose?.addEventListener('click', () => {
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
-    });
-
-    applyAi?.addEventListener('click', () => {
-      if (aiResultText?.value) {
-        descEl.value = aiResultText.value;
-      }
-      aiModal.style.display = 'none';
-      body.style.overflow = '';
-    });
-  }
+  });
 
   /* ================= PREVIEW ================= */
   form.addEventListener('submit', e => {
@@ -85,16 +91,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
 
-        ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+        ${videoEl ? `
+          <button type="button" class="speech-btn" id="openSpeech">
+            🎥 1분 엘리베이터 스피치
+          </button>` : ''}
 
         <section class="issue-summary">
           <p>${descEl.value}</p>
         </section>
+
+        <div class="preview-actions">
+          <button type="button" id="editPreview">수정하기</button>
+          <button type="button" id="publishPreview">발행하기</button>
+        </div>
       </section>
     `;
 
+    /* 수정하기 */
+    document.getElementById('editPreview').onclick = () => {
+      issuePreview.innerHTML = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    /* 발행하기 (나중에 연결) */
+    document.getElementById('publishPreview').onclick = () => {
+      alert('발행 로직 연결 예정');
+    };
+
+    /* 영상 모달 */
     if (videoEl) {
-      document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
+      document.getElementById('openSpeech').onclick = () => {
+        openSpeech(videoEl.src);
+      };
     }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
@@ -109,45 +137,15 @@ document.addEventListener('DOMContentLoaded', () => {
     speechVideo.src = src;
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
+    speechVideo.currentTime = 0;
     speechVideo.play();
   }
 
   closeSpeech.addEventListener('click', () => {
     speechVideo.pause();
+    speechVideo.src = '';
     speechModal.style.display = 'none';
     body.style.overflow = '';
   });
 });
 
-/* AI STYLE TABS */
-const styleTabs = document.querySelectorAll('.ai-style-tabs button');
-
-styleTabs.forEach(tab => {
-  tab.addEventListener('click', () => {
-    styleTabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-
-    // 선택된 스타일 값을 AI 실행 시 사용 가능
-    tab.dataset.selected = 'true';
-  });
-});
-
-/* SPEECH MODAL */
-const speechModal = document.getElementById('speechModal');
-const speechVideo = document.getElementById('speechVideo');
-const closeSpeechBtn = document.getElementById('closeSpeech');
-
-function openSpeech(src) {
-  speechVideo.src = src;
-  speechModal.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  speechVideo.currentTime = 0;
-  speechVideo.play();
-}
-
-closeSpeechBtn.onclick = () => {
-  speechVideo.pause();
-  speechVideo.src = '';
-  speechModal.style.display = 'none';
-  document.body.style.overflow = '';
-};
