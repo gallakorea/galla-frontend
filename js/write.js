@@ -2,19 +2,12 @@ const body = document.body;
 const form = document.getElementById('writeForm');
 const issuePreview = document.getElementById('issuePreview');
 
-/* AI MODAL */
-const aiModal = document.getElementById('aiModal');
-document.getElementById('openAiModal').onclick = () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-};
-document.getElementById('aiClose').onclick = closeAi;
-function closeAi() {
-  aiModal.style.display = 'none';
-  body.style.overflow = '';
-}
+const categoryEl = document.getElementById('category');
+const titleEl = document.getElementById('title');
+const oneLineEl = document.getElementById('oneLine');
+const descEl = document.getElementById('description');
 
-/* FILE UPLOAD */
+/* FILE */
 const thumbInput = document.getElementById('thumbnail');
 const thumbBtn = document.getElementById('thumbnailBtn');
 const thumbPreview = document.getElementById('thumbPreview');
@@ -38,7 +31,7 @@ videoInput.onchange = e => {
 };
 
 /* PREVIEW */
-form.onsubmit = e => {
+form.addEventListener('submit', e => {
   e.preventDefault();
 
   const category = categoryEl.value;
@@ -47,7 +40,10 @@ form.onsubmit = e => {
   const desc = descEl.value;
   const anon = document.getElementById('isAnonymous').checked;
 
-  if (!category || !title || !desc) return alert('필수 입력 누락');
+  if (!category || !title || !desc) {
+    alert('필수 입력 누락');
+    return;
+  }
 
   const thumbImg = thumbPreview.querySelector('img');
   const videoEl = videoPreview.querySelector('video');
@@ -64,30 +60,19 @@ form.onsubmit = e => {
       ${videoEl ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
 
       <section class="issue-summary">
-        <h3>📝 이 주제에 대한 핵심 요약</h3>
         <p>${desc}</p>
       </section>
-
-      <div class="preview-actions">
-        <button id="editPreview">수정하기</button>
-        <button class="btn-publish">발행하기</button>
-      </div>
     </section>
   `;
-
-  document.getElementById('editPreview').onclick = () => {
-    issuePreview.innerHTML = '';
-    window.scrollTo({ top: 0 });
-  };
 
   if (videoEl) {
     document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
   }
 
   issuePreview.scrollIntoView({ behavior: 'smooth' });
-};
+});
 
-/* SPEECH MODAL */
+/* VIDEO MODAL */
 const speechModal = document.getElementById('speechModal');
 const speechVideo = document.getElementById('speechVideo');
 
