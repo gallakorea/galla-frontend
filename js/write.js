@@ -202,23 +202,17 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= 콘텐츠 적합성 검사 ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
-    const res = await fetch(
-      'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
+    const { data, error } = await window.supabaseClient.functions.invoke(
+      'content-moderation',
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ title, oneLine, description })
+        body: { title, oneLine, description }
       }
     );
 
-    const data = await res.json();
-
-    if (!res.ok) {
+    if (error) {
       return {
         result: 'FAIL',
-        reason: data?.reason || '콘텐츠 검사 실패'
+        reason: error.message || '콘텐츠 검사 실패'
       };
     }
 
