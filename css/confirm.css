@@ -1,15 +1,46 @@
-@import "./write.css";
-
-/* CONFIRM ONLY */
-#moderationBox {
-  background:#111;
-  border:1px solid #222;
-  border-radius:14px;
-  padding:16px;
-  font-size:14px;
-  line-height:1.6;
+.confirm-result {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #ccc;
 }
 
-.m-pass { color:#2f80ff; }
-.m-warn { color:#ffe27a; }
-.m-fail { color:#ff4f6e; }
+.confirm-result.loading {
+  opacity: 0.6;
+}
+
+.confirm-result.pass {
+  border-color: #2f80ff;
+  color: #fff;
+}
+
+.confirm-result.warning {
+  border-color: #ffe27a;
+  color: #ffe27a;
+}
+
+.confirm-result.fail {
+  border-color: #ff4f6e;
+  color: #ff4f6e;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.confirm-actions button {
+  flex: 1;
+}
+
+.btn-outline {
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 16px;
+  border-radius: 999px;
+  font-weight: 700;
+}

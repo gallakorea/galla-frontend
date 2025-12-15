@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
-  const donationEl = document.getElementById('donationTarget'); // ✅ 추가
+  const donationEl = document.getElementById('donationTarget');
 
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
@@ -61,44 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
-  /* AI STYLE TABS */
-  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document
-        .querySelectorAll('.ai-style-tabs button')
-        .forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-
   /* ================= PREVIEW ================= */
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    // ✅ 필수 검증 (기부처 포함)
-    if (!categoryEl.value) {
-      alert('카테고리를 선택해주세요');
-      categoryEl.focus();
-      return;
-    }
-
-    if (!titleEl.value) {
-      alert('제목을 입력해주세요');
-      titleEl.focus();
-      return;
-    }
-
-    if (!descEl.value) {
-      alert('이슈 설명을 입력해주세요');
-      descEl.focus();
-      return;
-    }
-
-    if (!donationEl.value) {
-      alert('기부처를 선택해주세요');
-      donationEl.focus();
-      return;
-    }
+    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
+    if (!titleEl.value) return alert('제목을 입력해주세요');
+    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
+    if (!donationEl.value) return alert('기부처를 선택해주세요');
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
@@ -109,22 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="issue-meta">
           ${categoryEl.value} · 방금 전 · 예상 기부처: ${donationEl.value}
         </div>
-
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
-
         ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
-
-        ${videoEl ? `
-          <button type="button" class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>` : ''}
-
-        <section class="issue-summary">
-          <p>${descEl.value}</p>
-        </section>
-
+        ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+        <section class="issue-summary"><p>${descEl.value}</p></section>
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
           <button type="button" id="publishPreview">발행하기</button>
@@ -138,9 +98,24 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* 발행하기 */
+    /* ================= 발행하기 → confirm.html ================= */
     document.getElementById('publishPreview').onclick = () => {
-      alert('발행 로직 연결 예정');
+      const payload = {
+        category: categoryEl.value,
+        title: titleEl.value,
+        oneLine: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: anon
+        // ⚠️ 썸네일 / 영상 업로드는 다음 단계
+      };
+
+      sessionStorage.setItem(
+        'writePayload',
+        JSON.stringify(payload)
+      );
+
+      location.href = 'confirm.html';
     };
 
     /* 영상 모달 */

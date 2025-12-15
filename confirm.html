@@ -2,47 +2,75 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>발행 확인 - GALLA</title>
+  <title>발행 확인 · GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="./css/confirm.css" />
+
+  <link rel="stylesheet" href="css/write.css" />
+  <link rel="stylesheet" href="css/confirm.css" />
 </head>
+
 <body>
 <div class="app-root">
 
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <img src="./assets/logo.png" class="logo" onclick="location.href='index.html'" />
+      <img src="./assets/logo.png" class="logo"
+           onclick="location.href='index.html'" />
       <div class="auth-buttons"></div>
     </div>
   </header>
 
   <!-- MAIN -->
   <main class="page-main">
-    <section class="section-block">
-      <h1 class="write-main-title">발행 전 확인</h1>
-      <p class="write-main-desc">적정성 검사를 통과해야 발행할 수 있습니다.</p>
-    </section>
+    <div class="page-inner">
 
-    <section class="section-block" id="moderationBox"></section>
+      <section class="section-block">
+        <h1 class="write-main-title">발행 전 최종 확인</h1>
+        <p class="write-main-desc">
+          콘텐츠 적합성 검사를 진행한 후 발행됩니다.
+        </p>
+      </section>
 
-    <section class="section-block">
-      <button id="publishBtn" class="primary-btn">발행하기</button>
-    </section>
+      <section class="section-block">
+        <div id="moderationResult" class="confirm-result loading">
+          콘텐츠 적합성 검사를 진행 중입니다…
+        </div>
+      </section>
+
+      <section class="section-block confirm-actions">
+        <button id="backBtn" class="btn-outline">돌아가기</button>
+        <button id="publishBtn" class="primary-btn" disabled>
+          최종 발행
+        </button>
+      </section>
+
+    </div>
   </main>
 
-  <!-- BOTTOM NAV (write 동일) -->
+  <!-- BOTTOM NAV (WRITE와 동일) -->
   <nav class="bottom-nav">
-    <a href="index.html" class="nav-item"><img src="./assets/icons/nav-home.svg" /></a>
-    <a href="search.html" class="nav-item"><img src="./assets/icons/nav-search.svg" /></a>
-    <a href="write.html" class="nav-item active"><img src="./assets/icons/nav-write.svg" /></a>
-    <a href="random.html" class="nav-item"><img src="./assets/icons/nav-random.svg" /></a>
-    <a href="mypage.html" class="nav-item"><img src="./assets/icons/nav-user.svg" /></a>
+    <a href="index.html" class="nav-item">
+      <img src="./assets/icons/nav-home.svg" />
+    </a>
+    <a href="search.html" class="nav-item">
+      <img src="./assets/icons/nav-search.svg" />
+    </a>
+    <a href="write.html" class="nav-item active">
+      <img src="./assets/icons/nav-write.svg" />
+    </a>
+    <a href="random.html" class="nav-item">
+      <img src="./assets/icons/nav-random.svg" />
+    </a>
+    <a href="mypage.html" class="nav-item">
+      <img src="./assets/icons/nav-user.svg" />
+    </a>
   </nav>
 
 </div>
 
-<script src="./js/supabase.js"></script>
-<script src="./js/confirm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/supabase.js"></script>
+<script src="js/confirm.js"></script>
 </body>
 </html>
