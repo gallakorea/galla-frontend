@@ -1,95 +1,65 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const resultBox = document.getElementById("moderationResult");
-  const publishBtn = document.getElementById("publishBtn");
-  const backBtn = document.getElementById("backBtn");
+  const supabase = window.supabaseClient;
+  const box = document.getElementById("moderationBox");
+  const btn = document.getElementById("publishBtn");
 
-  /* write → confirm payload */
-  const raw = sessionStorage.getItem("writePayload");
-  if (!raw) {
-    alert("잘못된 접근입니다.");
+  const draft = JSON.parse(localStorage.getItem("galla_draft"));
+  if (!draft) {
+    alert("작성 정보가 없습니다.");
     location.href = "write.html";
     return;
   }
-  const payload = JSON.parse(raw);
 
-  /* supabase 대기 */
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 20));
-  }
-  const supabase = window.supabaseClient;
-
-  /* 로그인 확인 */
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) {
-    alert("로그인 후 발행 가능합니다.");
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
+    alert("로그인이 필요합니다.");
     location.href = "login.html";
     return;
   }
 
-  /* 적합성 검사 */
-  try {
-    const { data: res, error } =
-      await supabase.functions.invoke("content-moderation", {
-        body: {
-          title: payload.title,
-          oneLine: payload.oneLine,
-          description: payload.description
-        }
-      });
+  // 🔍 적정성 검사
+  const { data: res, error } = await supabase.functions.invoke(
+    "content-moderation",
+    { body: draft }
+  );
 
-    if (error) throw error;
-
-    if (res.result === "FAIL") {
-      resultBox.className = "confirm-result fail";
-      resultBox.innerHTML = `
-        <strong>발행 불가</strong><br/>
-        ${res.reason}
-      `;
-      return;
-    }
-
-    if (res.result === "WARNING") {
-      resultBox.className = "confirm-result warning";
-      resultBox.innerHTML = `
-        <strong>주의 콘텐츠</strong><br/>
-        ${res.reason}<br/><br/>
-        해당 내용은 누적 경고로 기록됩니다.
-      `;
-    }
-
-    if (res.result === "PASS") {
-      resultBox.className = "confirm-result pass";
-      resultBox.innerHTML = `
-        <strong>적합성 검사 통과</strong><br/>
-        발행이 가능합니다.
-      `;
-    }
-
-    publishBtn.disabled = false;
-
-  } catch (e) {
-    resultBox.className = "confirm-result fail";
-    resultBox.textContent = "적합성 검사 중 오류가 발생했습니다.";
+  if (error) {
+    box.innerHTML = `<p class="m-fail">서버 오류가 발생했습니다.</p>`;
+    btn.disabled = true;
+    return;
   }
 
-  backBtn.onclick = () => history.back();
+  // UI 분기
+  if (res.result === "PASS") {
+    box.innerHTML = `<p class="m-pass">✅ 적합한 콘텐츠입니다.</p>`;
+  }
 
-  publishBtn.onclick = async () => {
-    publishBtn.disabled = true;
-    publishBtn.textContent = "발행 중…";
+  if (res.result === "WARNING") {
+    box.innerHTML = `
+      <p class="m-warn">⚠️ 주의 콘텐츠</p>
+      <p>${res.reason}</p>
+      <p>경고는 누적됩니다.</p>
+    `;
+    await supabase
+      .from("user_profiles")
+      .update({ warning_count: supabase.rpc("inc_warning") })
+      .eq("id", sessionData.session.user.id);
+  }
 
-    const { error } = await supabase
-      .from("issues")
-      .insert([payload]);
+  if (res.result === "FAIL") {
+    box.innerHTML = `
+      <p class="m-fail">🚫 발행 불가</p>
+      <p>${res.reason}</p>
+    `;
+    btn.disabled = true;
+    return;
+  }
 
-    if (error) {
-      alert("발행 실패");
-      publishBtn.disabled = false;
-      publishBtn.textContent = "최종 발행";
-      return;
-    }
-
-    sessionStorage.removeItem("writePayload");
+  // 발행
+  btn.addEventListener("click", async () => {
+    // TODO: issues insert
+    alert("발행 완료 (DB 연결 단계)");
+    localStorage.removeItem("galla_draft");
     location.href = "index.html";
-  };
+  });
 });
