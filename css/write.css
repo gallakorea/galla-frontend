@@ -1,10 +1,5 @@
-/***************************************************
- RESET & BASE
-***************************************************/
-* {
-  box-sizing: border-box;
-}
-
+/* RESET */
+* { box-sizing: border-box; }
 body {
   margin: 0;
   background: #000;
@@ -12,23 +7,15 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
-/***************************************************
- APP LAYOUT
-***************************************************/
+/* LAYOUT */
 .app-root {
   max-width: 480px;
   margin: 0 auto;
   padding-bottom: 120px;
 }
+.page-main, .page-inner { width: 100%; }
 
-.page-main,
-.page-inner {
-  width: 100%;
-}
-
-/***************************************************
- HEADER
-***************************************************/
+/* HEADER */
 .header {
   position: sticky;
   top: 0;
@@ -36,69 +23,40 @@ body {
   background: #000;
   border-bottom: 1px solid #111;
 }
-
 .header-inner {
   height: 54px;
   padding: 0 16px;
   display: flex;
   align-items: center;
 }
+.logo { width: 105px; }
 
-.logo {
-  width: 105px;
-}
-
-/***************************************************
- SECTION
-***************************************************/
+/* SECTION */
 .section-block {
   padding: 22px 16px;
   border-bottom: 1px solid #111;
 }
+.write-main-title { font-size: 20px; font-weight: 800; }
+.write-main-desc { font-size: 13px; color: #aaa; margin-top: 6px; }
 
-.write-main-title {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.write-main-desc {
-  font-size: 13px;
-  color: #aaa;
-  margin-top: 6px;
-}
-
-/***************************************************
- FORM
-***************************************************/
+/* FORM */
 .field-block {
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
-.field-label {
-  font-size: 14px;
-  font-weight: 700;
-}
-
+.field-label { font-size: 14px; font-weight: 700; }
 .input-field {
-  width: 100%;
   padding: 12px 14px;
   background: #0b0c14;
   border: 1px solid #222;
   border-radius: 12px;
   color: #fff;
-  font-size: 14px;
 }
+.textarea { min-height: 200px; }
 
-.textarea {
-  min-height: 200px;
-}
-
-/***************************************************
- BUTTONS
-***************************************************/
+/* BUTTON */
 .file-btn {
   padding: 14px;
   background: #111;
@@ -106,9 +64,7 @@ body {
   border-radius: 14px;
   color: #fff;
 }
-
-.primary-btn,
-.ai-main-btn {
+.primary-btn, .ai-main-btn {
   padding: 16px;
   background: #2f80ff;
   border-radius: 999px;
@@ -117,13 +73,7 @@ body {
   font-weight: 800;
 }
 
-/***************************************************
- PREVIEW (FORM)
-***************************************************/
-.preview-box {
-  margin-top: 10px;
-}
-
+/* PREVIEW (FORM) */
 .preview-box img,
 .preview-box video {
   width: 100%;
@@ -133,40 +83,30 @@ body {
   background: #000;
 }
 
-/***************************************************
- ISSUE PREVIEW
-***************************************************/
-.issue-preview {
-  padding: 16px;
-}
-
-.issue-preview .preview-media {
+/* ISSUE PREVIEW */
+.issue-preview { padding: 16px; }
+.preview-media {
   margin: 12px 0;
   border-radius: 14px;
   overflow: hidden;
   background: #000;
-  position: relative;
 }
-
-.issue-preview img {
+.preview-thumb-img {
   width: 100%;
   max-height: 420px;
   object-fit: cover;
 }
-
-.issue-preview .speech-btn {
+.speech-btn {
   width: 100%;
   margin: 12px 0;
   padding: 14px;
-  border-radius: 12px;
   background: #111;
   border: 1px solid #333;
+  border-radius: 12px;
   color: #fff;
 }
 
-/***************************************************
- AI MODAL
-***************************************************/
+/* AI MODAL */
 .ai-modal {
   position: fixed;
   inset: 0;
@@ -176,7 +116,6 @@ body {
   justify-content: center;
   align-items: center;
 }
-
 .ai-modal-inner {
   width: 92%;
   max-width: 480px;
@@ -189,10 +128,8 @@ body {
   gap: 12px;
 }
 
-/***************************************************
- SPEECH MODAL (🔥 핵심)
-***************************************************/
-#speechModal {
+/* SPEECH MODAL */
+.speech-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,.85);
@@ -201,31 +138,17 @@ body {
   justify-content: center;
   align-items: center;
 }
-
 .speech-sheet {
   width: 100%;
   max-width: 420px;
   background: #000;
   border-radius: 16px;
-  overflow: hidden;
 }
-
-.speech-header {
-  padding: 12px;
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #222;
-}
-
 .video-viewport video {
   width: 100%;
-  height: auto;
-  background: #000;
 }
 
-/***************************************************
- BOTTOM NAV
-***************************************************/
+/* BOTTOM NAV */
 .bottom-nav {
   position: fixed;
   bottom: 0;
