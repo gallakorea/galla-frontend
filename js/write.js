@@ -39,6 +39,43 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
   };
 
+  /* ================= AI MODAL ================= */
+  const openAiBtn = document.getElementById('openAiModal');
+  const aiModal = document.getElementById('aiModal');
+  const aiClose = document.getElementById('aiClose');
+  const aiUserText = document.getElementById('aiUserText');
+  const aiResultText = document.getElementById('aiResultText');
+  const applyAi = document.getElementById('applyAi');
+
+  openAiBtn.onclick = e => {
+    e.preventDefault();
+    aiUserText.value = descEl.value;
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  };
+
+  aiClose.onclick = () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  };
+
+  applyAi.onclick = () => {
+    if (aiResultText.value) {
+      descEl.value = aiResultText.value;
+    }
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  };
+
+  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
+    tab.onclick = () => {
+      document
+        .querySelectorAll('.ai-style-tabs button')
+        .forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    };
+  });
+
   /* ================= PREVIEW ================= */
   form.onsubmit = e => {
     e.preventDefault();
@@ -85,18 +122,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = async () => {
-      await publishIssueToDB({
-        category: categoryEl.value,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donationTarget: donationEl.value,
-        isAnonymous: anonEl.checked,
-        thumbnailFile: thumbFile,
-        videoFile: videoFile
-      });
+    document.getElementById('publishPreview').onclick = () => {
+      alert('✅ 프론트 정상\n다음 단계: DB insert 연결');
     };
+
+    if (videoFile) {
+      document.getElementById('openSpeech').onclick = () => {
+        openSpeech(URL.createObjectURL(videoFile));
+      };
+    }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   };
@@ -121,69 +155,3 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   };
 });
-
-/* ================= DB PUBLISH ================= */
-
-async function publishIssueToDB({
-  category,
-  title,
-  oneLine,
-  description,
-  donationTarget,
-  isAnonymous,
-  thumbnailFile,
-  videoFile
-}) {
-  const supabase = window.supabaseClient;
-  if (!supabase) {
-    alert('Supabase 초기화 안됨');
-    return;
-  }
-
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert('로그인이 필요합니다');
-    return;
-  }
-
-  let thumbnailUrl = null;
-  if (thumbnailFile) {
-    const path = `issues/${user.id}/${Date.now()}_thumb.jpg`;
-    await supabase.storage.from('thumbnails').upload(path, thumbnailFile);
-    thumbnailUrl = supabase.storage.from('thumbnails').getPublicUrl(path).data.publicUrl;
-  }
-
-  let videoUrl = null;
-  if (videoFile) {
-    const path = `issues/${user.id}/${Date.now()}_speech.mp4`;
-    await supabase.storage.from('videos').upload(path, videoFile);
-    videoUrl = supabase.storage.from('videos').getPublicUrl(path).data.publicUrl;
-  }
-
-  const { data, error } = await supabase
-    .from('issues')
-    .insert({
-      category,
-      title,
-      one_line: oneLine,
-      description,
-      donation_target: donationTarget,
-      is_anonymous: isAnonymous,
-      thumbnail_url: thumbnailUrl,
-      speech_video_url: videoUrl,
-      author_id: user.id
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error(error);
-    alert('발행 실패');
-    return;
-  }
-
-  window.location.href = `/issue.html?id=${data.id}`;
-}
