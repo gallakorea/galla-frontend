@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const descEl = document.getElementById('description');
   const anonEl = document.getElementById('isAnonymous');
 
+  const previewBtn = document.getElementById('previewBtn');
+
   /* ===============================
      AI MODAL
   =============================== */
@@ -48,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     thumbPreview.innerHTML = `
       <div class="preview-media" data-preview="true">
-        <img src="${thumbSrc}" class="preview-thumb-img" />
+        <img src="${thumbSrc}" class="preview-thumb-img">
       </div>
     `;
   };
@@ -78,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   /* ===============================
-     SPEECH MODAL (항상 숨김 시작)
+     SPEECH MODAL (9:16)
   =============================== */
   const speechModal = document.getElementById('speechModal');
   const speechVideo = document.getElementById('speechVideo');
@@ -87,6 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
   speechModal.style.display = 'none';
 
   function openSpeechModal(src) {
+    if (!src) return;
+
     speechVideo.src = src;
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
@@ -108,11 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ===============================
-     PREVIEW RENDER
+     PREVIEW RENDER (🔥 submit ❌, click ✅)
   =============================== */
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-
+  previewBtn.addEventListener('click', () => {
     if (!categoryEl.value || !titleEl.value || !descEl.value) {
       alert('필수 항목을 입력하세요');
       return;
@@ -134,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
           thumbSrc
             ? `
             <div class="preview-media" data-preview="true">
-              <img src="${thumbSrc}" class="preview-thumb-img" />
+              <img src="${thumbSrc}" class="preview-thumb-img">
             </div>`
             : ''
         }
@@ -157,11 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
           <button id="editPreview">수정하기</button>
           <button class="btn-publish">발행하기</button>
         </div>
+
       </section>
     `;
 
-    const editBtn = document.getElementById('editPreview');
-    editBtn.onclick = () => {
+    document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
