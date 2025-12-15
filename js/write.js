@@ -131,3 +131,23 @@ styleTabs.forEach(tab => {
     tab.dataset.selected = 'true';
   });
 });
+
+/* SPEECH MODAL */
+const speechModal = document.getElementById('speechModal');
+const speechVideo = document.getElementById('speechVideo');
+const closeSpeechBtn = document.getElementById('closeSpeech');
+
+function openSpeech(src) {
+  speechVideo.src = src;
+  speechModal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  speechVideo.currentTime = 0;
+  speechVideo.play();
+}
+
+closeSpeechBtn.onclick = () => {
+  speechVideo.pause();
+  speechVideo.src = '';
+  speechModal.style.display = 'none';
+  document.body.style.overflow = '';
+};
