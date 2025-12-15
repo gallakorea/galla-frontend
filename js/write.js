@@ -1,19 +1,6 @@
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  /* ================= 로그인 강제 (최상단) ================= */
-  await waitForSupabaseClient();
-
-  const { data: sessionData } =
-    await window.supabaseClient.auth.getSession();
-
-  if (!sessionData.session) {
-    alert('로그인 후 글 작성이 가능합니다.');
-    location.href = '/login.html';
-    return;
-  }
-
-  /* ================= DOM ================= */
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
 
@@ -92,22 +79,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="issue-meta">
           ${categoryEl.value} · 방금 전 · 예상 기부처: ${donationEl.value}
         </div>
-
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
-
         ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
-
-        ${videoEl ? `
-          <button type="button" class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>` : ''}
-
-        <section class="issue-summary">
-          <p>${descEl.value}</p>
-        </section>
-
+        ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+        <section class="issue-summary"><p>${descEl.value}</p></section>
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
           <button type="button" id="publishPreview">발행하기</button>
@@ -120,38 +97,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행 (적정성 검사) ================= */
     document.getElementById('publishPreview').onclick = async () => {
-      const { data, error } =
-        await window.supabaseClient.functions.invoke(
-          'content-moderation',
-          {
-            body: {
-              title: titleEl.value,
-              oneLine: oneLineEl.value,
-              description: descEl.value
+      /* 🔒 로그인 + 적정성 검사 여기서만 */
+      try {
+        const { data } = await window.supabaseClient.auth.getSession();
+        if (!data.session) {
+          alert('로그인 후 발행 가능합니다.');
+          location.href = '/login.html';
+          return;
+        }
+
+        const { data: res, error } =
+          await window.supabaseClient.functions.invoke(
+            'content-moderation',
+            {
+              body: {
+                title: titleEl.value,
+                oneLine: oneLineEl.value,
+                description: descEl.value
+              }
             }
-          }
-        );
+          );
 
-      if (error) {
-        alert('❌ 적정성 검사 서버 오류');
-        return;
+        if (error) {
+          alert('❌ 적정성 검사 서버 오류');
+          return;
+        }
+
+        if (res.result === 'FAIL') {
+          alert(`🚫 발행 불가\n\n사유: ${res.reason}`);
+          return;
+        }
+
+        if (res.result === 'WARNING') {
+          const ok = confirm(
+            `⚠️ 주의 콘텐츠\n\n사유: ${res.reason}\n\n그래도 발행하시겠습니까?`
+          );
+          if (!ok) return;
+        }
+
+        alert('✅ 적정성 통과 (다음 단계: DB 저장)');
+      } catch (e) {
+        alert('브라우저 보안 설정으로 로그인 확인 불가');
       }
-
-      if (data.result === 'FAIL') {
-        alert(`🚫 발행 불가\n\n사유: ${data.reason}`);
-        return;
-      }
-
-      if (data.result === 'WARNING') {
-        const ok = confirm(
-          `⚠️ 주의 콘텐츠\n\n사유: ${data.reason}\n\n그래도 발행하시겠습니까?`
-        );
-        if (!ok) return;
-      }
-
-      alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
     };
 
     if (videoEl) {
@@ -183,10 +171,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     body.style.overflow = '';
   });
 });
-
-/* ================= 공통 ================= */
-async function waitForSupabaseClient() {
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 30));
-  }
-}
