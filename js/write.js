@@ -1,105 +1,151 @@
-const body = document.body;
-const form = document.getElementById('writeForm');
-const issuePreview = document.getElementById('issuePreview');
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
+  const form = document.getElementById('writeForm');
+  const issuePreview = document.createElement('section');
+  issuePreview.id = 'issuePreview';
+  form.after(issuePreview);
 
-/* AI MODAL */
-const aiModal = document.getElementById('aiModal');
-document.getElementById('openAiModal').onclick = () => {
-  aiModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-};
-document.getElementById('aiClose').onclick = closeAi;
-function closeAi() {
-  aiModal.style.display = 'none';
-  body.style.overflow = '';
-}
+  const categoryEl = document.getElementById('category');
+  const titleEl = document.getElementById('title');
+  const oneLineEl = document.getElementById('oneLine');
+  const descEl = document.getElementById('description');
+  const anonEl = document.getElementById('isAnonymous');
 
-/* FILE UPLOAD */
-const thumbInput = document.getElementById('thumbnail');
-const thumbBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
-
-thumbBtn.onclick = () => thumbInput.click();
-thumbInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
-};
-
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
-
-videoBtn.onclick = () => videoInput.click();
-videoInput.onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
-};
-
-/* PREVIEW */
-form.onsubmit = e => {
-  e.preventDefault();
-
-  const category = categoryEl.value;
-  const title = titleEl.value;
-  const oneLine = oneLineEl.value;
-  const desc = descEl.value;
-  const anon = document.getElementById('isAnonymous').checked;
-
-  if (!category || !title || !desc) return alert('필수 입력 누락');
-
-  const thumbImg = thumbPreview.querySelector('img');
-  const videoEl = videoPreview.querySelector('video');
-
-  issuePreview.innerHTML = `
-    <section class="issue-preview">
-      <div class="issue-meta">${category} · 방금 전</div>
-      <h1 class="issue-title">${title}</h1>
-      <p class="issue-one-line">${oneLine}</p>
-      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
-
-      ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
-
-      ${videoEl ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
-
-      <section class="issue-summary">
-        <h3>📝 이 주제에 대한 핵심 요약</h3>
-        <p>${desc}</p>
-      </section>
-
-      <div class="preview-actions">
-        <button id="editPreview">수정하기</button>
-        <button class="btn-publish">발행하기</button>
-      </div>
-    </section>
-  `;
-
-  document.getElementById('editPreview').onclick = () => {
-    issuePreview.innerHTML = '';
-    window.scrollTo({ top: 0 });
+  /* ===============================
+     AI MODAL (단순 열고 닫기만)
+  =============================== */
+  const aiModal = document.getElementById('aiModal');
+  document.getElementById('openAiModal').onclick = () => {
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
   };
-
-  if (videoEl) {
-    document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
+  document.getElementById('aiClose').onclick = closeAi;
+  function closeAi() {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
   }
 
-  issuePreview.scrollIntoView({ behavior: 'smooth' });
-};
+  /* ===============================
+     FILE UPLOAD – THUMBNAIL
+  =============================== */
+  const thumbInput = document.getElementById('thumbnail');
+  const thumbBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
+  let thumbSrc = null;
 
-/* SPEECH MODAL */
-const speechModal = document.getElementById('speechModal');
-const speechVideo = document.getElementById('speechVideo');
+  thumbBtn.onclick = () => thumbInput.click();
+  thumbInput.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    thumbSrc = URL.createObjectURL(f);
+    thumbPreview.innerHTML =
+      `<img src="${thumbSrc}" class="preview-thumb-img">`;
+  };
 
-function openSpeech(src) {
-  speechVideo.src = src;
-  speechModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-  speechVideo.play();
-}
+  /* ===============================
+     FILE UPLOAD – VIDEO
+  =============================== */
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
+  let videoSrc = null;
 
-document.getElementById('closeSpeech').onclick = () => {
-  speechVideo.pause();
-  speechModal.style.display = 'none';
-  body.style.overflow = '';
-};
+  videoBtn.onclick = () => videoInput.click();
+  videoInput.onchange = e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    videoSrc = URL.createObjectURL(f);
+    videoPreview.innerHTML =
+      `<video src="${videoSrc}" muted playsinline></video>`;
+  };
+
+  /* ===============================
+     SPEECH VIDEO MODAL (🔥 동적 생성)
+  =============================== */
+  let speechModal = null;
+  let speechVideo = null;
+
+  function openSpeech(src) {
+    if (!speechModal) {
+      speechModal = document.createElement('div');
+      speechModal.className = 'video-modal';
+      speechModal.innerHTML = `
+        <div class="video-modal-inner">
+          <div class="video-modal-header">
+            <span>1분 엘리베이터 스피치</span>
+            <button id="closeSpeech">✕</button>
+          </div>
+          <div class="video-viewport">
+            <video playsinline controls></video>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(speechModal);
+
+      speechVideo = speechModal.querySelector('video');
+      speechModal.querySelector('#closeSpeech').onclick = closeSpeech;
+      speechModal.onclick = e => {
+        if (e.target === speechModal) closeSpeech();
+      };
+    }
+
+    speechVideo.src = src;
+    speechModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+    speechVideo.currentTime = 0;
+    speechVideo.play();
+  }
+
+  function closeSpeech() {
+    speechVideo.pause();
+    speechVideo.src = '';
+    speechModal.style.display = 'none';
+    body.style.overflow = '';
+  }
+
+  /* ===============================
+     PREVIEW SUBMIT
+  =============================== */
+  form.onsubmit = e => {
+    e.preventDefault();
+
+    if (!categoryEl.value || !titleEl.value || !descEl.value) {
+      alert('필수 항목을 입력하세요');
+      return;
+    }
+
+    issuePreview.innerHTML = `
+      <section class="issue-preview">
+        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
+        <h1 class="issue-title">${titleEl.value}</h1>
+        ${oneLineEl.value ? `<p class="issue-one-line">${oneLineEl.value}</p>` : ''}
+        <div class="issue-author">작성자 · ${anonEl.checked ? '익명' : '사용자'}</div>
+
+        ${thumbSrc ? `<img src="${thumbSrc}" class="preview-thumb-img">` : ''}
+
+        ${videoSrc ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+
+        <section class="issue-summary">
+          <h3>📝 이 주제에 대한 핵심 요약</h3>
+          <p>${descEl.value}</p>
+        </section>
+
+        <div class="preview-actions">
+          <button id="editPreview">수정하기</button>
+          <button class="btn-publish">발행하기</button>
+        </div>
+      </section>
+    `;
+
+    document.getElementById('editPreview').onclick = () => {
+      issuePreview.innerHTML = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    if (videoSrc) {
+      document.getElementById('openSpeech').onclick = () => openSpeech(videoSrc);
+    }
+
+    issuePreview.scrollIntoView({ behavior: 'smooth' });
+  };
+});
