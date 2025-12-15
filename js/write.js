@@ -118,3 +118,16 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 });
+
+/* AI STYLE TABS */
+const styleTabs = document.querySelectorAll('.ai-style-tabs button');
+
+styleTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    styleTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+
+    // 선택된 스타일 값을 AI 실행 시 사용 가능
+    tab.dataset.selected = 'true';
+  });
+});
