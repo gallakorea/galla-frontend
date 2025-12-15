@@ -115,12 +115,15 @@
 
         <!-- 이슈 설명 (필수) -->
         <div class="field-block">
-          <label class="field-label">이슈 설명 <span class="required">(필수)</span></label>
+          <label class="field-label">
+            이슈 설명 <span class="required">(필수)</span>
+            <span class="char-limit">· 최대 500자</span>
+          </label>
           <textarea
             id="description"
             class="input-field textarea"
             maxlength="500"
-            placeholder="왜 이 문제가 논쟁거리인지, 찬반이 갈리는 이유를 구체적으로 설명해 주세요"
+            placeholder="왜 이 문제가 논쟁거리인지, 찬반이 갈리는 이유를 구체적으로 설명해 주세요 (최대 500자)"
           ></textarea>
           <button type="button" id="openAiModal" class="ai-main-btn">
             ✨ AI에게 글 다듬기
