@@ -202,6 +202,9 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ================= 콘텐츠 적합성 검사 ================= */
 async function runContentModeration({ title, oneLine, description }) {
   try {
+    // ✅ 여기 추가
+    await waitForSupabaseClient();
+
     const { data, error } =
       await window.supabaseClient.functions.invoke(
         'content-moderation',
@@ -226,5 +229,11 @@ async function runContentModeration({ title, oneLine, description }) {
       result: 'FAIL',
       reason: '콘텐츠 적합성 검사 서버 오류'
     };
+  }
+}
+
+async function waitForSupabaseClient() {
+  while (!window.supabaseClient) {
+    await new Promise(r => setTimeout(r, 30));
   }
 }
