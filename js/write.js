@@ -148,3 +148,41 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 });
+
+/* =========================
+   PREVIEW ACTION BUTTONS
+   (기존 GALLA 버튼 톤)
+========================= */
+.preview-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.preview-actions button {
+  flex: 1;
+  height: 48px;
+
+  background: #2f80ff;          /* 기존 메인 블루 */
+  color: #fff;
+
+  border: none;
+  border-radius: 14px;
+
+  font-size: 15px;
+  font-weight: 800;
+
+  cursor: pointer;
+}
+
+/* 보조 버튼 느낌 (수정하기) */
+.preview-actions #editPreview {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
+}
+
+/* 메인 액션 (발행하기) */
+.preview-actions #publishPreview {
+  background: #2f80ff;
+}
