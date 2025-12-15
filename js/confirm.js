@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const box = document.getElementById("moderationBox");
+  const resultBox = document.getElementById("moderationResult");
   const publishBtn = document.getElementById("publishBtn");
   const backBtn = document.getElementById("backBtn");
 
-  /* write → confirm 데이터 */
+  /* write → confirm payload */
   const raw = sessionStorage.getItem("writePayload");
   if (!raw) {
     alert("잘못된 접근입니다.");
@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   const payload = JSON.parse(raw);
 
-  /* Supabase 대기 */
+  /* supabase 대기 */
   while (!window.supabaseClient) {
     await new Promise(r => setTimeout(r, 20));
   }
@@ -40,30 +40,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (error) throw error;
 
     if (res.result === "FAIL") {
-      box.className = "confirm-box fail";
-      box.innerHTML = `<strong>발행 불가</strong><br/>${res.reason}`;
+      resultBox.className = "confirm-result fail";
+      resultBox.innerHTML = `
+        <strong>발행 불가</strong><br/>
+        ${res.reason}
+      `;
       return;
     }
 
     if (res.result === "WARNING") {
-      box.className = "confirm-box warning";
-      box.innerHTML = `
+      resultBox.className = "confirm-result warning";
+      resultBox.innerHTML = `
         <strong>주의 콘텐츠</strong><br/>
         ${res.reason}<br/><br/>
-        누적 경고로 기록됩니다.
+        해당 내용은 누적 경고로 기록됩니다.
       `;
     }
 
     if (res.result === "PASS") {
-      box.className = "confirm-box pass";
-      box.innerHTML = `<strong>적합성 검사 통과</strong><br/>발행 가능합니다.`;
+      resultBox.className = "confirm-result pass";
+      resultBox.innerHTML = `
+        <strong>적합성 검사 통과</strong><br/>
+        발행이 가능합니다.
+      `;
     }
 
     publishBtn.disabled = false;
 
-  } catch {
-    box.className = "confirm-box fail";
-    box.textContent = "적합성 검사 중 오류가 발생했습니다.";
+  } catch (e) {
+    resultBox.className = "confirm-result fail";
+    resultBox.textContent = "적합성 검사 중 오류가 발생했습니다.";
   }
 
   backBtn.onclick = () => history.back();

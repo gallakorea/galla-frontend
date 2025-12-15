@@ -1,71 +1,41 @@
-.confirm-section {
-  padding: 24px 16px;
-}
-
-.confirm-title {
-  font-size: 20px;
-  font-weight: 900;
-  margin-bottom: 16px;
-}
-
 /* 결과 박스 */
-.confirm-box {
-  background: #0d0d0d;
-  border: 1px solid #1a1a1a;
+.confirm-result {
+  background: #111;
+  border: 1px solid #222;
   border-radius: 14px;
-  padding: 18px 16px;
+  padding: 16px;
   font-size: 14px;
   line-height: 1.6;
   color: #ccc;
-  margin-bottom: 20px;
 }
 
-.confirm-box.loading {
+.confirm-result.loading {
   opacity: 0.6;
 }
 
-.confirm-box.pass {
-  border-color: #304ffe;
+.confirm-result.pass {
+  border-color: #2f80ff;
   color: #fff;
 }
 
-.confirm-box.warning {
-  border-style: dashed;
+.confirm-result.warning {
   border-color: #ffe27a;
   color: #ffe27a;
 }
 
-.confirm-box.fail {
-  border-color: #ff5252;
-  color: #ff5252;
+.confirm-result.fail {
+  border-color: #ff4f6e;
+  color: #ff4f6e;
 }
 
-/* 버튼 */
-.confirm-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.confirm-actions button {
-  flex: 1;
-  height: 46px;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.btn-outline {
+/* 뒤로가기 */
+.confirm-back-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 999px;
   background: #111;
-  color: #fff;
   border: 1px solid #333;
-}
-
-.btn-primary {
-  background: #fff;
-  color: #000;
-  border: none;
-}
-
-.btn-primary:disabled {
-  opacity: 0.4;
+  color: #fff;
+  font-weight: 700;
 }
