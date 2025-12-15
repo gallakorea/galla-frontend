@@ -92,33 +92,56 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
-    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ================= 발행하기 → confirm.html ================= */
-    document.getElementById('publishPreview').onclick = () => {
-      const payload = {
-        category: categoryEl.value,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anon
-        // ⚠️ 썸네일 / 영상 업로드는 다음 단계
-      };
+    document.getElementById('publishPreview').onclick = async () => {
+      /* 🔒 로그인 + 적정성 검사 여기서만 */
+      try {
+        const { data } = await window.supabaseClient.auth.getSession();
+        if (!data.session) {
+          alert('로그인 후 발행 가능합니다.');
+          location.href = '/login.html';
+          return;
+        }
 
-      sessionStorage.setItem(
-        'writePayload',
-        JSON.stringify(payload)
-      );
+        const { data: res, error } =
+          await window.supabaseClient.functions.invoke(
+            'content-moderation',
+            {
+              body: {
+                title: titleEl.value,
+                oneLine: oneLineEl.value,
+                description: descEl.value
+              }
+            }
+          );
 
-      location.href = 'confirm.html';
+        if (error) {
+          alert('❌ 적정성 검사 서버 오류');
+          return;
+        }
+
+        if (res.result === 'FAIL') {
+          alert(`🚫 발행 불가\n\n사유: ${res.reason}`);
+          return;
+        }
+
+        if (res.result === 'WARNING') {
+          const ok = confirm(
+            `⚠️ 주의 콘텐츠\n\n사유: ${res.reason}\n\n그래도 발행하시겠습니까?`
+          );
+          if (!ok) return;
+        }
+
+        alert('✅ 적정성 통과 (다음 단계: DB 저장)');
+      } catch (e) {
+        alert('브라우저 보안 설정으로 로그인 확인 불가');
+      }
     };
 
-    /* 영상 모달 */
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(videoEl.src);
