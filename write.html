@@ -40,7 +40,7 @@
 
         <div class="field-block">
           <label class="field-label">카테고리 (필수)</label>
-          <select id="category" class="input-field" required>
+          <select id="category" class="input-field">
             <option value="">선택</option>
             <option>정치·사회</option>
             <option>경제·투자</option>
@@ -89,21 +89,16 @@
         </div>
 
         <div class="field-block">
-          <button
-            type="button"
-            id="previewBtn"
-            class="primary-btn"
-          >
-            미리보기
-          </button>
+          <button type="button" id="previewBtn" class="primary-btn">미리보기</button>
         </div>
-
-              </form>
+      </form>
 
       <section id="issuePreview"></section>
+
     </div>
   </main>
 
+  <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-item"><img src="./assets/icons/nav-home.svg"></button>
     <button class="nav-item"><img src="./assets/icons/nav-search.svg"></button>
@@ -116,14 +111,11 @@
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
-
-    <!-- HEADER -->
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
 
-    <!-- STYLE TABS -->
     <div class="ai-style-tabs">
       <button class="active">기본</button>
       <button>간결</button>
@@ -135,21 +127,32 @@
 
     <input class="input-field" placeholder="AI에게 직접 요청 (선택)" />
 
-    <!-- BODY -->
     <div class="ai-modal-body">
       <textarea id="aiUserText" placeholder="내가 쓴 글"></textarea>
       <textarea id="aiResultText" placeholder="AI 결과"></textarea>
     </div>
 
-    <!-- FOOTER -->
     <div class="ai-modal-footer">
-      <button id="runAi" class="btn-sub">AI 실행</button>
-      <button id="applyAi" class="btn-main">AI 적용</button>
+      <button class="btn-sub">AI 실행</button>
+      <button class="btn-main">AI 적용</button>
     </div>
-
   </div>
 </div>
- 
+
+<!-- SPEECH VIDEO MODAL -->
+<div id="speechModal" class="speech-backdrop">
+  <div class="speech-sheet">
+    <div class="speech-header">
+      <span>1분 엘리베이터 스피치</span>
+      <button id="closeSpeech">닫기</button>
+    </div>
+
+    <div class="video-viewport">
+      <video id="speechVideo" playsinline controls></video>
+    </div>
+  </div>
+</div>
+
 <script src="./js/write.js"></script>
 </body>
 </html>
