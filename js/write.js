@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
-  /* ================= PREVIEW HANDLER ================= */
-  function handlePreview(e) {
+  /* ================= PREVIEW ================= */
+  form.addEventListener('submit', e => {
     e.preventDefault();
 
     if (!categoryEl.value) return alert('카테고리를 선택해주세요');
@@ -102,15 +102,53 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
+    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = () => {
-      alert('발행 로직 연결 예정');
+    /* ================= 발행하기 + 적정성 검사 (유일한 추가 지점) ================= */
+    document.getElementById('publishPreview').onclick = async () => {
+      try {
+        const { data, error } =
+          await window.supabaseClient.functions.invoke(
+            'content-moderation',
+            {
+              body: {
+                title: titleEl.value,
+                oneLine: oneLineEl.value,
+                description: descEl.value
+              }
+            }
+          );
+
+        if (error || !data) {
+          alert('🚫 적정성 검사 실패');
+          return;
+        }
+
+        if (data.result === 'FAIL') {
+          alert(`🚫 발행 불가\n\n사유: ${data.reason}`);
+          return;
+        }
+
+        if (data.result === 'WARNING') {
+          const ok = confirm(
+            `⚠️ 주의 콘텐츠\n\n사유: ${data.reason}\n\n그래도 발행하시겠습니까?`
+          );
+          if (!ok) return;
+        }
+
+        // 여기까지 오면 통과
+        alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
+      } catch (e) {
+        console.error(e);
+        alert('🚫 적정성 검사 서버 오류');
+      }
     };
 
+    /* 영상 모달 */
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(videoEl.src);
@@ -118,15 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
-  }
-
-  /* ✅ submit + 버튼 클릭 둘 다 지원 */
-  form.addEventListener('submit', handlePreview);
-
-  const previewBtn = form.querySelector('button[type="submit"]');
-  if (previewBtn) {
-    previewBtn.addEventListener('click', handlePreview);
-  }
+  });
 
   /* ================= VIDEO MODAL ================= */
   const speechModal = document.getElementById('speechModal');
