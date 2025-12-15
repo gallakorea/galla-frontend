@@ -1,104 +1,123 @@
-const body = document.body;
+document.addEventListener('DOMContentLoaded', () => {
+  const body = document.body;
 
-/* FORM */
-const form = document.getElementById('writeForm');
-const issuePreview = document.getElementById('issuePreview');
+  /* ========= ELEMENTS ========= */
+  const form = document.getElementById('writeForm');
+  const issuePreview = document.getElementById('issuePreview');
 
-/* INPUT ELEMENTS */
-const categoryEl = document.getElementById('category');
-const titleEl = document.getElementById('title');
-const oneLineEl = document.getElementById('oneLine');
-const descEl = document.getElementById('description');
-const anonEl = document.getElementById('isAnonymous');
+  const categoryEl = document.getElementById('category');
+  const titleEl = document.getElementById('title');
+  const oneLineEl = document.getElementById('oneLine');
+  const descEl = document.getElementById('description');
 
-/* THUMBNAIL */
-const thumbInput = document.getElementById('thumbnail');
-const thumbBtn = document.getElementById('thumbnailBtn');
-const thumbPreview = document.getElementById('thumbPreview');
+  /* ========= AI MODAL ========= */
+  const aiModal = document.getElementById('aiModal');
+  const openAiBtn = document.getElementById('openAiModal');
+  const closeAiBtn = document.getElementById('aiClose');
+  const aiUserText = document.getElementById('aiUserText');
+  const aiResultText = document.getElementById('aiResultText');
+  const applyAiBtn = document.getElementById('applyAi');
 
-thumbBtn.addEventListener('click', () => thumbInput.click());
+  openAiBtn.addEventListener('click', e => {
+    e.preventDefault();
+    aiUserText.value = descEl.value;
+    aiModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+  });
 
-thumbInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  thumbPreview.innerHTML = `<img src="${URL.createObjectURL(file)}">`;
-});
+  closeAiBtn.addEventListener('click', () => {
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
 
-/* VIDEO */
-const videoInput = document.getElementById('video');
-const videoBtn = document.getElementById('videoBtn');
-const videoPreview = document.getElementById('videoPreview');
+  applyAiBtn.addEventListener('click', () => {
+    if (aiResultText.value.trim()) {
+      descEl.value = aiResultText.value;
+    }
+    aiModal.style.display = 'none';
+    body.style.overflow = '';
+  });
 
-videoBtn.addEventListener('click', () => videoInput.click());
+  /* ========= FILE ========= */
+  const thumbInput = document.getElementById('thumbnail');
+  const thumbBtn = document.getElementById('thumbnailBtn');
+  const thumbPreview = document.getElementById('thumbPreview');
 
-videoInput.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  videoPreview.innerHTML = `<video src="${URL.createObjectURL(file)}" muted></video>`;
-});
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+  });
 
-/* PREVIEW SUBMIT */
-form.addEventListener('submit', e => {
-  e.preventDefault(); // ✅ 리셋 방지
+  const videoInput = document.getElementById('video');
+  const videoBtn = document.getElementById('videoBtn');
+  const videoPreview = document.getElementById('videoPreview');
 
-  const category = categoryEl.value.trim();
-  const title = titleEl.value.trim();
-  const oneLine = oneLineEl.value.trim();
-  const desc = descEl.value.trim();
-  const anon = anonEl.checked;
+  videoBtn.addEventListener('click', () => videoInput.click());
+  videoInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
+  });
 
-  if (!category || !title || !desc) {
-    alert('필수 입력 누락');
-    return;
-  }
+  /* ========= PREVIEW ========= */
+  form.addEventListener('submit', e => {
+    e.preventDefault();
 
-  const thumbImg = thumbPreview.querySelector('img');
-  const videoEl = videoPreview.querySelector('video');
+    const category = categoryEl.value;
+    const title = titleEl.value;
+    const oneLine = oneLineEl.value;
+    const desc = descEl.value;
+    const anon = document.getElementById('isAnonymous').checked;
 
-  issuePreview.innerHTML = `
-    <section class="issue-preview">
-      <div class="issue-meta">${category} · 방금 전</div>
-      <h1 class="issue-title">${title}</h1>
-      ${oneLine ? `<p class="issue-one-line">${oneLine}</p>` : ''}
-      <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
+    if (!category || !title || !desc) {
+      alert('필수 입력 누락');
+      return;
+    }
 
-      ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
+    const thumbImg = thumbPreview.querySelector('img');
+    const videoEl = videoPreview.querySelector('video');
 
-      ${
-        videoEl
-          ? `<button class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>`
-          : ''
-      }
+    issuePreview.innerHTML = `
+      <section class="issue-preview">
+        <div class="issue-meta">${category} · 방금 전</div>
+        <h1 class="issue-title">${title}</h1>
+        <p class="issue-one-line">${oneLine}</p>
+        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
-      <section class="issue-summary">
-        <p>${desc}</p>
+        ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
+
+        ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+
+        <section class="issue-summary">
+          <p>${desc}</p>
+        </section>
       </section>
-    </section>
-  `;
+    `;
 
-  if (videoEl) {
-    document.getElementById('openSpeech').addEventListener('click', () => {
-      openSpeech(videoEl.src);
-    });
+    if (videoEl) {
+      document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
+    }
+
+    issuePreview.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  /* ========= VIDEO MODAL ========= */
+  const speechModal = document.getElementById('speechModal');
+  const speechVideo = document.getElementById('speechVideo');
+  const closeSpeechBtn = document.getElementById('closeSpeech');
+
+  function openSpeech(src) {
+    speechVideo.src = src;
+    speechModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+    speechVideo.play();
   }
 
-  issuePreview.scrollIntoView({ behavior: 'smooth' });
-});
-
-/* VIDEO MODAL */
-const speechModal = document.getElementById('speechModal');
-const speechVideo = document.getElementById('speechVideo');
-const closeSpeechBtn = document.getElementById('closeSpeech');
-
-function openSpeech(src) {
-  speechVideo.src = src;
-  speechModal.style.display = 'flex';
-  body.style.overflow = 'hidden';
-  speechVideo.play();
-}
-
-closeSpeechBtn.addEventListener('click', () => {
-  speechVideo.pause();
-  speechModal.style.display = 'none';
-  body.style.overflow = '';
+  closeSpeechBtn.addEventListener('click', () => {
+    speechVideo.pause();
+    speechModal.style.display = 'none';
+    body.style.overflow = '';
+  });
 });
