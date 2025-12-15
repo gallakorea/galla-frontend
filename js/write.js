@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const body = document.body;
 
   const form = document.getElementById('writeForm');
@@ -15,51 +15,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  thumbBtn.addEventListener('click', () => thumbInput.click());
-  thumbInput.addEventListener('change', e => {
+  thumbBtn.onclick = () => thumbInput.click();
+  thumbInput.onchange = e => {
     const f = e.target.files[0];
     if (!f) return;
     thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
-  });
+  };
 
   const videoInput = document.getElementById('video');
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  videoBtn.addEventListener('click', () => videoInput.click());
-  videoInput.addEventListener('change', e => {
+  videoBtn.onclick = () => videoInput.click();
+  videoInput.onchange = e => {
     const f = e.target.files[0];
     if (!f) return;
     videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
-  });
-
-  /* ================= AI MODAL ================= */
-  const openAiBtn = document.getElementById('openAiModal');
-  const aiModal = document.getElementById('aiModal');
-  const aiClose = document.getElementById('aiClose');
-  const aiUserText = document.getElementById('aiUserText');
-  const aiResultText = document.getElementById('aiResultText');
-  const applyAi = document.getElementById('applyAi');
-
-  openAiBtn.addEventListener('click', e => {
-    e.preventDefault();
-    aiUserText.value = descEl.value;
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  });
-
-  aiClose.addEventListener('click', () => {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  });
-
-  applyAi.addEventListener('click', () => {
-    if (aiResultText.value) {
-      descEl.value = aiResultText.value;
-    }
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  });
+  };
 
   /* ================= PREVIEW ================= */
   form.addEventListener('submit', e => {
@@ -70,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!descEl.value) return alert('이슈 설명을 입력해주세요');
     if (!donationEl.value) return alert('기부처를 선택해주세요');
 
-    const anon = document.getElementById('isAnonymous').checked;
+    const anon = document.getElementById('isAnonymous')?.checked;
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
 
@@ -79,13 +51,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="issue-meta">
           ${categoryEl.value} · 방금 전 · 예상 기부처: ${donationEl.value}
         </div>
-        <h1 class="issue-title">${titleEl.value}</h1>
-        <p class="issue-one-line">${oneLineEl.value}</p>
-        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
-        ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
-        ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
-        <section class="issue-summary"><p>${descEl.value}</p></section>
-        <div class="preview-actions">
+
+        <h1>${titleEl.value}</h1>
+        <p>${oneLineEl.value}</p>
+        <div>작성자 · ${anon ? '익명' : '사용자'}</div>
+
+        ${thumbImg ? `<img src="${thumbImg.src}">` : ''}
+
+        ${videoEl ? `<button type="button" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
+
+        <p>${descEl.value}</p>
+
+        <div>
           <button type="button" id="editPreview">수정하기</button>
           <button type="button" id="publishPreview">발행하기</button>
         </div>
@@ -97,59 +74,52 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = async () => {
-      /* 🔒 로그인 + 적정성 검사 여기서만 */
-      try {
-        const { data } = await window.supabaseClient.auth.getSession();
-        if (!data.session) {
-          alert('로그인 후 발행 가능합니다.');
-          location.href = '/login.html';
-          return;
-        }
-
-        const { data: res, error } =
-          await window.supabaseClient.functions.invoke(
-            'content-moderation',
-            {
-              body: {
-                title: titleEl.value,
-                oneLine: oneLineEl.value,
-                description: descEl.value
-              }
-            }
-          );
-
-        if (error) {
-          alert('❌ 적정성 검사 서버 오류');
-          return;
-        }
-
-        if (res.result === 'FAIL') {
-          alert(`🚫 발행 불가\n\n사유: ${res.reason}`);
-          return;
-        }
-
-        if (res.result === 'WARNING') {
-          const ok = confirm(
-            `⚠️ 주의 콘텐츠\n\n사유: ${res.reason}\n\n그래도 발행하시겠습니까?`
-          );
-          if (!ok) return;
-        }
-
-        alert('✅ 적정성 통과 (다음 단계: DB 저장)');
-      } catch (e) {
-        alert('브라우저 보안 설정으로 로그인 확인 불가');
-      }
-    };
+    document.getElementById('publishPreview').onclick = handlePublish;
 
     if (videoEl) {
-      document.getElementById('openSpeech').onclick = () => {
-        openSpeech(videoEl.src);
-      };
+      document.getElementById('openSpeech').onclick = () => openSpeech(videoEl.src);
     }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   });
+
+  /* ================= 발행 처리 ================= */
+  async function handlePublish() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      alert('로그인이 필요합니다');
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        'https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/content-moderation',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            title: titleEl.value,
+            oneLine: oneLineEl.value,
+            description: descEl.value
+          })
+        }
+      );
+
+      const result = await res.json();
+
+      if (result.result === 'FAIL') {
+        alert(`🚫 발행 불가\n\n사유: ${result.reason}`);
+        return;
+      }
+
+      alert('✅ 적정성 통과\n(다음 단계: DB 저장)');
+    } catch {
+      alert('적정성 검사 서버 오류');
+    }
+  }
 
   /* ================= VIDEO MODAL ================= */
   const speechModal = document.getElementById('speechModal');
@@ -160,14 +130,13 @@ document.addEventListener('DOMContentLoaded', () => {
     speechVideo.src = src;
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
-    speechVideo.currentTime = 0;
     speechVideo.play();
   }
 
-  closeSpeech.addEventListener('click', () => {
+  closeSpeech.onclick = () => {
     speechVideo.pause();
     speechVideo.src = '';
     speechModal.style.display = 'none';
     body.style.overflow = '';
-  });
+  };
 });
