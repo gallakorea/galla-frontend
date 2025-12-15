@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  /* ========= ELEMENTS ========= */
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
 
@@ -10,35 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
 
-  /* ========= AI MODAL ========= */
-  const aiModal = document.getElementById('aiModal');
-  const openAiBtn = document.getElementById('openAiModal');
-  const closeAiBtn = document.getElementById('aiClose');
-  const aiUserText = document.getElementById('aiUserText');
-  const aiResultText = document.getElementById('aiResultText');
-  const applyAiBtn = document.getElementById('applyAi');
-
-  openAiBtn.addEventListener('click', e => {
-    e.preventDefault();
-    aiUserText.value = descEl.value;
-    aiModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-  });
-
-  closeAiBtn.addEventListener('click', () => {
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  });
-
-  applyAiBtn.addEventListener('click', () => {
-    if (aiResultText.value.trim()) {
-      descEl.value = aiResultText.value;
-    }
-    aiModal.style.display = 'none';
-    body.style.overflow = '';
-  });
-
-  /* ========= FILE ========= */
+  /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
@@ -61,29 +32,55 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
   });
 
-  /* ========= PREVIEW ========= */
+  /* ================= AI MODAL (SAFE) ================= */
+  const openAiBtn = document.getElementById('openAiModal');
+  const aiModal = document.getElementById('aiModal');
+
+  if (openAiBtn && aiModal) {
+    const aiClose = document.getElementById('aiClose');
+    const aiUserText = document.getElementById('aiUserText');
+    const aiResultText = document.getElementById('aiResultText');
+    const applyAi = document.getElementById('applyAi');
+
+    openAiBtn.addEventListener('click', e => {
+      e.preventDefault();
+      if (aiUserText) aiUserText.value = descEl.value;
+      aiModal.style.display = 'flex';
+      body.style.overflow = 'hidden';
+    });
+
+    aiClose?.addEventListener('click', () => {
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    });
+
+    applyAi?.addEventListener('click', () => {
+      if (aiResultText?.value) {
+        descEl.value = aiResultText.value;
+      }
+      aiModal.style.display = 'none';
+      body.style.overflow = '';
+    });
+  }
+
+  /* ================= PREVIEW ================= */
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    const category = categoryEl.value;
-    const title = titleEl.value;
-    const oneLine = oneLineEl.value;
-    const desc = descEl.value;
-    const anon = document.getElementById('isAnonymous').checked;
-
-    if (!category || !title || !desc) {
+    if (!categoryEl.value || !titleEl.value || !descEl.value) {
       alert('필수 입력 누락');
       return;
     }
 
+    const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
-        <div class="issue-meta">${category} · 방금 전</div>
-        <h1 class="issue-title">${title}</h1>
-        <p class="issue-one-line">${oneLine}</p>
+        <div class="issue-meta">${categoryEl.value} · 방금 전</div>
+        <h1 class="issue-title">${titleEl.value}</h1>
+        <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
         ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
@@ -91,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ${videoEl ? `<button type="button" class="speech-btn" id="openSpeech">🎥 1분 엘리베이터 스피치</button>` : ''}
 
         <section class="issue-summary">
-          <p>${desc}</p>
+          <p>${descEl.value}</p>
         </section>
       </section>
     `;
@@ -103,10 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   });
 
-  /* ========= VIDEO MODAL ========= */
+  /* ================= VIDEO MODAL ================= */
   const speechModal = document.getElementById('speechModal');
   const speechVideo = document.getElementById('speechVideo');
-  const closeSpeechBtn = document.getElementById('closeSpeech');
+  const closeSpeech = document.getElementById('closeSpeech');
 
   function openSpeech(src) {
     speechVideo.src = src;
@@ -115,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     speechVideo.play();
   }
 
-  closeSpeechBtn.addEventListener('click', () => {
+  closeSpeech.addEventListener('click', () => {
     speechVideo.pause();
     speechModal.style.display = 'none';
     body.style.overflow = '';
