@@ -13,7 +13,7 @@ body {
 }
 
 /***************************************************
- * APP LAYOUT (🔥 핵심 수정)
+ * APP LAYOUT
  ***************************************************/
 .app-root {
   width: 100%;
@@ -22,7 +22,6 @@ body {
   padding-bottom: 120px;
 }
 
-/* ❌ body flex 제거로 레이아웃 붕괴 방지 */
 .page-main,
 .page-inner {
   width: 100%;
@@ -47,7 +46,6 @@ body {
   padding: 0 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
 .logo {
@@ -55,7 +53,7 @@ body {
 }
 
 /***************************************************
- * SECTION COMMON
+ * SECTION
  ***************************************************/
 .section-block {
   padding: 22px 16px;
@@ -74,24 +72,6 @@ body {
 }
 
 /***************************************************
- * ✅ GUIDE BLOCK (복구 완료)
- ***************************************************/
-.write-guide-block {
-  margin: 16px;
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 14px;
-}
-
-.write-guide-list {
-  padding: 14px 20px;
-  font-size: 12px;
-  line-height: 1.55;
-  list-style: disc;
-  color: #ccc;
-}
-
-/***************************************************
  * FORM
  ***************************************************/
 .field-block {
@@ -106,9 +86,6 @@ body {
   font-weight: 700;
 }
 
-/***************************************************
- * INPUTS
- ***************************************************/
 .input-field {
   width: 100%;
   padding: 12px 14px;
@@ -126,7 +103,7 @@ body {
 }
 
 /***************************************************
- * FILE BUTTON
+ * BUTTONS
  ***************************************************/
 .file-btn {
   width: 100%;
@@ -138,9 +115,6 @@ body {
   font-size: 14px;
 }
 
-/***************************************************
- * PRIMARY BUTTONS
- ***************************************************/
 .ai-main-btn,
 .primary-btn {
   width: 100%;
@@ -154,7 +128,7 @@ body {
 }
 
 /***************************************************
- * ANON TOGGLE (정상)
+ * ANON TOGGLE
  ***************************************************/
 .anon-toggle {
   display: flex;
@@ -204,25 +178,7 @@ body {
 }
 
 /***************************************************
- * PREVIEW (간격 문제 해결)
- ***************************************************/
-.preview-box {
-  margin-top: 10px;
-}
-
-.preview-box img,
-.preview-box video {
-  width: 100%;
-  height: auto;
-  max-height: 360px;
-  object-fit: contain;
-  border-radius: 14px;
-  display: block;
-  background: #000;
-}
-
-/***************************************************
- * AI MODAL (톤앤매너 통일)
+ * AI MODAL (정리된 단일 정의)
  ***************************************************/
 .ai-modal {
   position: fixed;
@@ -243,6 +199,7 @@ body {
   padding: 18px;
   display: flex;
   flex-direction: column;
+  gap: 14px;
 }
 
 .ai-modal-header {
@@ -251,26 +208,16 @@ body {
   align-items: center;
 }
 
-.ai-modal-header button {
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
 .ai-style-tabs {
   display: flex;
   gap: 8px;
-  margin: 12px 0;
   overflow-x: auto;
 }
 
 .ai-style-tabs button {
   padding: 6px 14px;
   border-radius: 999px;
-  background: #000;
+  background: #111;
   border: 1px solid #333;
   color: #fff;
   font-size: 12px;
@@ -282,8 +229,19 @@ body {
   font-weight: 700;
 }
 
-.ai-modal textarea,
-.ai-modal input {
+.ai-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-modal-body textarea {
+  min-height: 110px;
+  resize: none;
+}
+
+.ai-modal input,
+.ai-modal textarea {
   background: #0b0c14;
   border: 1px solid #222;
   border-radius: 12px;
@@ -292,7 +250,77 @@ body {
 }
 
 /***************************************************
- * BOTTOM NAV (정상 고정)
+ * ISSUE PREVIEW (🔥 최종 안정판)
+ ***************************************************/
+.issue-preview {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.issue-preview .preview-media {
+  width: 100%;
+  margin: 12px auto;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  position: relative;
+}
+
+.issue-preview .preview-thumb-img {
+  width: 100%;
+  height: auto;
+  max-height: 420px;
+  object-fit: cover;
+  display: block;
+}
+
+.issue-preview .preview-media::after {
+  content: "미리보기";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid #333;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.issue-preview .speech-btn {
+  width: 100%;
+  margin: 12px 0;
+  padding: 14px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  color: #fff;
+}
+
+.issue-preview .preview-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.issue-preview .preview-actions button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+}
+
+.issue-preview .btn-publish {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+}
+
+/***************************************************
+ * BOTTOM NAV
  ***************************************************/
 .bottom-nav {
   position: fixed;
@@ -319,196 +347,4 @@ body {
   width: 28px;
   height: 28px;
   filter: brightness(0) invert(1);
-}
-
-/***************************************************
- * AI MODAL – LAYOUT FIX (FINAL)
- ***************************************************/
-.ai-modal-inner {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* 헤더 */
-.ai-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* ===== 탭 영역 ===== */
-.ai-style-tabs {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.ai-style-tabs button {
-  flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.ai-style-tabs button.active {
-  background: #fff;
-  color: #000;
-  font-weight: 700;
-}
-
-/* ===== 입력 영역 ===== */
-.ai-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-/* input / textarea 공통 */
-.ai-modal-body input,
-.ai-modal-body textarea {
-  width: 100%;
-  background: #0b0c14;
-  border: 1px solid #222;
-  border-radius: 12px;
-  padding: 12px;
-  color: #fff;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-/* textarea 높이 */
-.ai-modal-body textarea {
-  min-height: 110px;
-  resize: none;
-}
-
-/* ===== 하단 버튼 ===== */
-.ai-modal-footer {
-  display: flex;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.ai-modal-footer button {
-  flex: 1;
-  padding: 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* 실행 */
-#runAi {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-}
-
-/* 적용 */
-#applyAi {
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-}
-
-/* =========================
-   ISSUE PREVIEW – FINAL FIX
-========================= */
-
-.issue-preview {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 16px;
-  box-sizing: border-box;
-}
-
-/* 썸네일 래퍼 */
-.issue-preview .preview-media {
-  width: 100%;
-  max-width: 480px;
-  margin: 12px auto;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #000;
-  position: relative;
-}
-
-/* 썸네일 이미지 */
-.issue-preview .preview-thumb-img {
-  width: 100%;
-  height: auto;
-  max-height: 420px;     /* 🔥 크기 제한 */
-  object-fit: cover;
-  display: block;
-}
-
-.issue-preview .speech-btn {
-  width: 100%;
-  margin: 10px 0 14px;
-  padding: 14px;
-  background: #111;
-  border: 1px solid #333;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: center;
-}
-
-.issue-preview .speech-btn:active {
-  opacity: 0.85;
-}
-
-.issue-preview .preview-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-/* 수정하기 */
-.issue-preview .preview-actions button {
-  flex: 1;
-  padding: 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* 수정하기 */
-.issue-preview .preview-actions button:not(.btn-publish) {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-}
-
-/* 발행하기 */
-.issue-preview .preview-actions .btn-publish {
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  font-weight: 700;
-}
-
-.issue-preview .preview-media::after {
-  content: "미리보기";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.7);
-  border: 1px solid #333;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 5;
 }
