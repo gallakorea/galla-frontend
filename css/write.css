@@ -1164,11 +1164,11 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 }
 
 /* =========================================================
-   모달 전체 높이 유지 (스크롤 방지)
+   모달 전체 높이 – 여유 있게 확장
    ========================================================= */
 
 .ai-modal-inner {
-  height: 66vh;
-  max-height: 66vh;
-  overflow: hidden;           /* 스크롤 완전 차단 */
+  height: 74vh;        /* ⬅ 기존 66vh → 74vh */
+  max-height: 74vh;
+  overflow: hidden;    /* 스크롤은 여전히 차단 */
 }
