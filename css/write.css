@@ -1229,3 +1229,30 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   font-size: 15px;
   margin-top: 4px;
 }
+
+.ai-modal-inner {
+  width: calc(100% - 24px);
+  max-width: 480px;
+
+  /* 🔥 핵심 수정 */
+  height: calc(100vh - 96px);   /* 하단 네비 + 여유 */
+  max-height: calc(100vh - 96px);
+  min-height: calc(100vh - 120px);
+
+  padding: 20px 18px 20px;
+  background: #0f1115;
+  border-radius: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .ai-modal-inner {
+    height: calc(100dvh - 96px);
+    max-height: calc(100dvh - 96px);
+  }
+}
