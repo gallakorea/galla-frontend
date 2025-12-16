@@ -1185,27 +1185,6 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 }
 
 /* =========================================================
-   BUTTON COMPACT (숨통 트이게)
-   ========================================================= */
-
-.ai-modal .btn-sub,
-.ai-modal .btn-main {
-  height: 44px;
-  padding: 0 14px;
-  font-size: 14px;
-  border-radius: 10px;
-}
-
-/* 버튼 간격 정리 */
-.ai-modal .btn-sub {
-  margin: 12px 0 8px;
-}
-
-.ai-modal .btn-main {
-  margin-top: 10px;
-}
-
-/* =========================================================
    SELECT / INPUT COMPACT
    ========================================================= */
 
