@@ -1103,66 +1103,19 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   font-weight: 700;
 }
 
-/* ================= CONFIRM STEP ================= */
+/* =========================
+   WRITE PREVIEW THUMBNAIL
+   16:9 FIX (FINAL)
+========================= */
 
-.confirm-step {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 9000;
-  overflow-y: auto;
-}
+.preview-thumb-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;   /* 🔥 핵심 */
+  object-fit: cover;      /* 비율 유지 + 꽉 채우기 */
 
-.confirm-section {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 22px 16px 120px;
-}
-
-.confirm-title {
-  font-size: 20px;
-  font-weight: 800;
-  margin-bottom: 16px;
-}
-
-/* 결과 박스 */
-.confirm-box {
-  background: #111;
+  border-radius: 12px;
   border: 1px solid #222;
-  border-radius: 14px;
-  padding: 16px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #ccc;
-}
-
-.confirm-box.loading { opacity: .6; }
-.confirm-box.pass { border-color:#2f80ff; color:#fff; }
-.confirm-box.warning { border-color:#ffe27a; color:#ffe27a; }
-.confirm-box.fail { border-color:#ff4f6e; color:#ff4f6e; }
-
-.confirm-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.btn-outline {
-  flex: 1;
-  height: 48px;
   background: #111;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 14px;
-  font-weight: 700;
-}
 
-.btn-primary {
-  flex: 1;
-  height: 48px;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-  border-radius: 14px;
-  font-weight: 800;
+  display: block;
 }
