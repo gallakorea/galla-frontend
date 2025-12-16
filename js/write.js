@@ -26,7 +26,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  videoBtn.addEventListener('click', () => videoInput.click());
+  videoBtn.addEventListener('click', () => {
+  videoInput.value = ''; // 🔥 핵심: 이전 파일 선택 기록 초기화
+  videoInput.click();
+  });
 
   /* 🔥 여기만 수정됨 (영상 미리보기 안정화) */
   videoInput.addEventListener('change', e => {
