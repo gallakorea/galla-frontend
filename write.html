@@ -214,13 +214,17 @@
     </div>
 
     <div class="ai-style-tabs">
-      <button class="active" data-mood="neutral">중립적으로 정리</button>
-      <button data-mood="aggressive">공격적으로 밀기</button>
-      <button data-mood="cold">차갑게 분석</button>
-      <button data-mood="uncomfortable">불편하게 찌르기</button>
-      <button data-mood="gentle">온화하게 설득</button>
-      <button data-mood="ironic">비꼬듯 문제 제기</button>
-      <button data-mood="humorous">유머로 풀기</button>
+      <div class="ai-style-row">
+        <button class="active" data-mood="neutral">중립적으로 정리</button>
+        <button data-mood="cold">차갑게 분석</button>
+        <button data-mood="gentle">온화하게 설득</button>
+      </div>
+      <div class="ai-style-row">
+        <button data-mood="aggressive">공격적으로 밀기</button>
+        <button data-mood="uncomfortable">불편하게 찌르기</button>
+        <button data-mood="ironic">비꼬듯 문제 제기</button>
+        <button data-mood="humorous">유머로 풀기</button>
+      </div>
     </div>
 
     <input
@@ -235,6 +239,10 @@
       class="input-field textarea small"
     ></textarea>
 
+    <button id="runAi" class="btn-sub ai-run-btn">
+      AI 실행
+    </button>
+
     <label>AI 결과</label>
     <textarea
       id="aiResultText"
@@ -242,7 +250,6 @@
     ></textarea>
 
     <div class="ai-modal-footer">
-      <button id="runAi" class="btn-sub">AI 실행</button>
       <button id="applyAi" class="btn-main">AI 적용하기</button>
     </div>
 
