@@ -1,13 +1,12 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const body = document.body;
 
-  /* ================= SUPABASE (🔥 핵심) ================= */
+  /* ================= SUPABASE (🔥 필수 추가) ================= */
   while (!window.supabaseClient) {
     await new Promise(r => setTimeout(r, 20));
   }
   const supabase = window.supabaseClient;
 
-  /* ================= BASIC ================= */
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
 
@@ -22,23 +21,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  thumbBtn.onclick = () => thumbInput.click();
-  thumbInput.onchange = e => {
+  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
     thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
-  };
+  });
 
   const videoInput = document.getElementById('video');
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  videoBtn.onclick = () => {
+  videoBtn.addEventListener('click', () => {
     videoInput.value = '';
     videoInput.click();
-  };
+  });
 
-  videoInput.onchange = e => {
+  videoInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
 
@@ -50,7 +49,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     video.playsInline = true;
     video.load();
     videoPreview.appendChild(video);
-  };
+  });
 
   /* ================= AI MODAL ================= */
   const openAiBtn = document.getElementById('openAiModal');
@@ -61,28 +60,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const applyAi = document.getElementById('applyAi');
   const aiGenerateBtn = document.getElementById('aiGenerateBtn');
 
-  openAiBtn.onclick = e => {
+  openAiBtn.addEventListener('click', e => {
     e.preventDefault();
     aiUserText.value = descEl.value;
     aiModal.style.display = 'flex';
     body.style.overflow = 'hidden';
-  };
+  });
 
-  aiClose.onclick = () => {
+  aiClose.addEventListener('click', () => {
     aiModal.style.display = 'none';
     body.style.overflow = '';
-  };
+  });
 
-  applyAi.onclick = () => {
+  applyAi.addEventListener('click', () => {
     if (aiResultText.value) {
       descEl.value = aiResultText.value;
     }
     aiModal.style.display = 'none';
     body.style.overflow = '';
-  };
+  });
 
-  /* ================= AI GENERATE ================= */
-  aiGenerateBtn.onclick = async () => {
+  /* ================= AI GENERATE (🔥 핵심 추가) ================= */
+  aiGenerateBtn.addEventListener('click', async () => {
     aiGenerateBtn.disabled = true;
     aiGenerateBtn.textContent = 'AI 처리 중…';
 
@@ -101,28 +100,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       );
 
       if (error) throw error;
-      aiResultText.value = data.result;
+      aiResultText.value = data.result || '';
 
     } catch (e) {
       alert('AI 처리 실패');
+      console.error(e);
     }
 
     aiGenerateBtn.disabled = false;
     aiGenerateBtn.textContent = 'AI 다듬기';
-  };
+  });
 
-  /* ================= AI STYLE TABS ================= */
+  /* AI STYLE TABS */
   document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
-    tab.onclick = () => {
+    tab.addEventListener('click', () => {
       document
         .querySelectorAll('.ai-style-tabs button')
         .forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-    };
+    });
   });
 
   /* ================= PREVIEW ================= */
-  form.onsubmit = e => {
+  form.addEventListener('submit', e => {
     e.preventDefault();
 
     if (!categoryEl.value) return alert('카테고리를 선택해주세요');
@@ -139,11 +139,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         <div class="issue-meta">
           ${categoryEl.value} · 방금 전 · 예상 기부처: ${donationEl.value}
         </div>
+
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
-        ${thumbImg ? `<img src="${thumbImg.src}" />` : ''}
+        ${thumbImg ? `
+          <div class="preview-thumb-wrap">
+            <img src="${thumbImg.src}" />
+          </div>
+        ` : ''}
+
+        ${videoEl ? `
+          <button type="button" class="speech-btn" id="openSpeech">
+            🎥 1분 엘리베이터 스피치
+          </button>` : ''}
 
         <section class="issue-summary">
           <p>${descEl.value}</p>
@@ -175,6 +185,32 @@ document.addEventListener('DOMContentLoaded', async () => {
       location.href = 'confirm.html';
     };
 
+    if (videoEl) {
+      document.getElementById('openSpeech').onclick = () => {
+        openSpeech(videoEl.src);
+      };
+    }
+
     issuePreview.scrollIntoView({ behavior: 'smooth' });
-  };
+  });
+
+  /* ================= VIDEO MODAL ================= */
+  const speechModal = document.getElementById('speechModal');
+  const speechVideo = document.getElementById('speechVideo');
+  const closeSpeech = document.getElementById('closeSpeech');
+
+  function openSpeech(src) {
+    speechVideo.src = src;
+    speechModal.style.display = 'flex';
+    body.style.overflow = 'hidden';
+    speechVideo.currentTime = 0;
+    speechVideo.play();
+  }
+
+  closeSpeech.addEventListener('click', () => {
+    speechVideo.pause();
+    speechVideo.src = '';
+    speechModal.style.display = 'none';
+    body.style.overflow = '';
+  });
 });
