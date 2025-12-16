@@ -1258,28 +1258,26 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 }
 
 /* ================================
-   🔥 하단 네비게이션 높이 축소
+   🔥 하단 네비게이션 높이 최소화
+   (아이콘 크기 유지)
    ================================ */
 
 .bottom-nav {
-  height: 56px;                 /* 기존보다 확실히 줄임 */
-  padding: 6px 0;               /* 세로 여백 감소 */
+  height: 48px;          /* 🔥 더 줄임 (기존 56px → 48px) */
+  padding: 4px 0;        /* 🔥 상하 여백 최소화 */
 }
 
-/* 아이콘 자체 크기 조정 */
-.bottom-nav .nav-item img {
-  width: 22px;
-  height: 22px;
-}
-
-/* 아이콘 터치 영역은 유지 */
+/* 아이콘 터치 영역만 최소 유지 */
 .bottom-nav .nav-item {
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
-/* iOS safe-area 대응 (있다면 유지) */
+/* ✅ 아이콘 크기는 절대 건드리지 않음 */
+/* .bottom-nav .nav-item img  ← 수정 없음 */
+
+/* iOS safe-area 대응 */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .bottom-nav {
-    padding-bottom: calc(6px + env(safe-area-inset-bottom));
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
   }
 }
