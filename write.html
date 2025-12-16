@@ -199,41 +199,40 @@
   <div class="ai-modal-inner">
 
     <!-- HEADER -->
-    <div class="ai-modal-header">
-      <h2>AI 글 다듬기</h2>
-      <button id="aiClose">✕</button>
-    </div>
+<div class="ai-modal-header">
+  <h2>AI 글 다듬기</h2>
+  <button id="aiClose">✕</button>
+</div>
 
-    <!-- MODE SELECT -->
-    <label class="ai-label">AI 글 재구성 방식</label>
-    <select id="aiMood" class="input-field">
-      <option value="neutral">중립적으로 정리</option>
-      <option value="cold">차갑게 분석</option>
-      <option value="gentle">온화하게 설득</option>
-      <option value="aggressive">공격적으로 밀어붙이기</option>
-      <option value="uncomfortable">불편하게 찌르기</option>
-      <option value="ironic">비꼬듯 드러내기</option>
-      <option value="emotional">마음 건드리기</option>
-      <option value="humorous">유머로 풀기</option>
-      <option value="result-first">결과부터 제시</option>
-      <option value="cannot-ignore">외면하기 어렵게 시작</option>
-      <option value="custom">직접 입력하기</option>
-    </select>
+<!-- MODE SELECT -->
+<label class="ai-label">AI 글 재구성 방식</label>
+<select id="aiMood" class="input-field">
+  <option value="neutral">중립적으로 정리</option>
+  <option value="cold">차갑게 분석</option>
+  <option value="gentle">온화하게 설득</option>
+  <option value="aggressive">공격적으로 밀어붙이기</option>
+  <option value="uncomfortable">불편하게 찌르기</option>
+  <option value="ironic">비꼬듯 드러내기</option>
+  <option value="emotional">마음 건드리기</option>
+  <option value="humorous">유머로 풀기</option>
+  <option value="result-first">결과부터 제시</option>
+  <option value="cannot-ignore">외면하기 어렵게 시작</option>
+  <option value="custom">직접 입력하기</option>
+</select>
 
-    <!-- ✅ 여기 반드시 필요 -->
-    <div
-      id="aiCustomPromptWrap"
-      class="ai-custom-wrap"
-      style="display:none"
-    >
-      <label class="ai-label highlight">AI에게 직접 지시</label>
-      <textarea
-        id="aiPrompt"
-        class="input-field textarea compact"
-        placeholder="예: 논리 구조를 먼저 잡고, 반대 의견을 예상해 반박까지 포함해줘"
-      ></textarea>
-    </div>
-
+<!-- ✅ DIRECT CUSTOM PROMPT (custom 선택 시만 노출) -->
+<div
+  id="aiCustomPromptWrap"
+  class="ai-custom-wrap"
+  style="display: none;"
+>
+  <label class="ai-label highlight">AI에게 직접 지시</label>
+  <textarea
+    id="aiPrompt"
+    class="input-field textarea compact"
+    placeholder="예: 결론부터 제시하고, 핵심 근거 3가지를 논리적으로 정리해줘"
+  ></textarea>
+</div>
 
     <!-- 🔥 CUSTOM PROMPT (직접 입력) -->
     <div id="aiCustomPromptWrap" class="ai-custom-wrap" style="display:none;">

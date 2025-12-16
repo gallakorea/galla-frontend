@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const aiMoodSelect = document.getElementById('aiMood');
   const aiPromptInput = document.getElementById('aiPrompt');
+  const aiCustomWrap = document.getElementById('aiCustomPromptWrap');
 
   /* ================= STYLE MAP ================= */
   const STYLE_MAP = {
@@ -55,14 +56,31 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     custom: {
       label: '직접 입력',
-      prompt: '' // 사용자가 직접 입력
+      prompt: ''
     }
   };
+
+  /* ================= CUSTOM PROMPT 토글 ================= */
+  if (aiMoodSelect && aiCustomWrap) {
+    aiMoodSelect.addEventListener('change', () => {
+      if (aiMoodSelect.value === 'custom') {
+        aiCustomWrap.style.display = 'block';
+        aiPromptInput.focus();
+      } else {
+        aiCustomWrap.style.display = 'none';
+        aiPromptInput.value = '';
+      }
+    });
+  }
 
   function getSelectedPrompt() {
     const mood = aiMoodSelect?.value || 'neutral';
 
     if (mood === 'custom') {
+      if (!aiPromptInput.value.trim()) {
+        alert('AI에게 직접 지시할 내용을 입력해주세요.');
+        throw new Error('EMPTY_CUSTOM_PROMPT');
+      }
       return {
         label: '커스텀',
         prompt: aiPromptInput.value.trim()
@@ -86,7 +104,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const style = getSelectedPrompt();
+      let style;
+      try {
+        style = getSelectedPrompt();
+      } catch {
+        return;
+      }
 
       runAiBtn.disabled = true;
       runAiBtn.textContent = 'AI 처리 중…';
