@@ -27,10 +27,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoPreview = document.getElementById('videoPreview');
 
   videoBtn.addEventListener('click', () => videoInput.click());
+
+  /* 🔥 여기만 수정됨 (영상 미리보기 안정화) */
   videoInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
-    videoPreview.innerHTML = `<video src="${URL.createObjectURL(f)}" muted></video>`;
+
+    // 기존 미리보기 완전 초기화
+    videoPreview.innerHTML = '';
+
+    const video = document.createElement('video');
+    video.src = URL.createObjectURL(f);
+    video.muted = true;
+    video.controls = true;
+    video.playsInline = true;
+
+    // iOS / Chrome 안정화
+    video.load();
+
+    videoPreview.appendChild(video);
   });
 
   /* ================= AI MODAL ================= */
@@ -137,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* ✅ 발행하기 → confirm.html (여기만 삽입) */
+    /* 발행하기 → confirm.html */
     document.getElementById('publishPreview').onclick = () => {
       const payload = {
         category: categoryEl.value,
@@ -148,11 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         is_anonymous: anon
       };
 
-      sessionStorage.setItem(
-        'writePayload',
-        JSON.stringify(payload)
-      );
-
+      sessionStorage.setItem('writePayload', JSON.stringify(payload));
       location.href = 'confirm.html';
     };
 
