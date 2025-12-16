@@ -129,7 +129,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
-        ${thumbImg ? `<img src="${thumbImg.src}" class="preview-thumb-img">` : ''}
+        ${thumbImg ? `
+          <div class="preview-thumb-wrap">
+            <img src="${thumbImg.src}" />
+          </div>
+        ` : ''}
 
         ${videoEl ? `
           <button type="button" class="speech-btn" id="openSpeech">

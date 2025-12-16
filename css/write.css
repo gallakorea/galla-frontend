@@ -1108,14 +1108,19 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
    16:9 FIX (FINAL)
 ========================= */
 
-.preview-thumb-img {
+/* 썸네일 미리보기 16:9 고정 */
+.preview-thumb-wrap {
   width: 100%;
-  aspect-ratio: 16 / 9;   /* 🔥 핵심 */
-  object-fit: cover;      /* 비율 유지 + 꽉 채우기 */
-
-  border-radius: 12px;
-  border: 1px solid #222;
+  aspect-ratio: 16 / 9;
   background: #111;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #222;
+}
 
+.preview-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 핵심 */
   display: block;
 }
