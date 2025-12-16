@@ -1,33 +1,26 @@
-document.addEventListener('DOMContentLoaded', async () => {
-  /* ================= SUPABASE READY ================= */
-  let retry = 0;
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 20));
-    if (++retry > 100) {
-      console.error('[AI] Supabase not loaded');
-      return;
-    }
-  }
-  const supabase = window.supabaseClient;
-
-  /* ================= AI ELEMENTS ================= */
+(() => {
   const runAiBtn = document.getElementById('runAi');
   const aiUserText = document.getElementById('aiUserText');
   const aiResultText = document.getElementById('aiResultText');
 
   if (!runAiBtn) {
-    console.error('[AI] runAi button not found');
+    console.warn('[AI] runAi button not found');
     return;
   }
 
-  /* ================= AI RUN ================= */
   runAiBtn.addEventListener('click', async () => {
+    // ✅ 클릭 시점에 Supabase 확인
+    if (!window.supabaseClient) {
+      alert('AI 준비 중입니다. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
+    const supabase = window.supabaseClient;
+
     runAiBtn.disabled = true;
     runAiBtn.textContent = 'AI 처리 중…';
 
-    // 스타일 탭 (텍스트 기반으로 처리)
-    const activeTab =
-      document.querySelector('.ai-style-tabs .active');
+    const activeTab = document.querySelector('.ai-style-tabs .active');
     const style = activeTab ? activeTab.textContent : '기본';
 
     try {
@@ -53,4 +46,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     runAiBtn.disabled = false;
     runAiBtn.textContent = 'AI 실행';
   });
-});
+})();
