@@ -1125,48 +1125,37 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   display: block;
 }
 
-.ai-style-tabs {
+.ai-modal-inner {
+  max-height: 90vh;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 10px;
 }
 
-.ai-style-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.ai-style-tabs button {
-  padding: 6px 12px;
+.ai-label {
   font-size: 13px;
-  border-radius: 999px;
-  white-space: nowrap;
+  opacity: 0.8;
 }
 
-.ai-run-btn {
-  margin: 10px 0 14px;
+.input-field.compact {
+  height: 36px;
+  font-size: 13px;
 }
 
-.ai-modal-inner {
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
+.textarea.user-text {
+  min-height: 80px;
+  max-height: 110px;
 }
 
-.ai-modal-inner > *:not(.ai-modal-footer) {
-  flex-shrink: 0;
+.textarea.result-text {
+  min-height: 90px;
+  max-height: 130px;
 }
 
-.ai-modal-inner {
-  overflow-y: auto;
-  padding-bottom: 16px;
-}
-
-.ai-modal-footer {
-  position: sticky;
-  bottom: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0));
-  padding-top: 12px;
+.btn-sub.full,
+.btn-main.full {
+  width: 100%;
+  height: 44px;
+  margin-top: 6px;
 }

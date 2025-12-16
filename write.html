@@ -208,62 +208,60 @@
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
 
+    <!-- HEADER -->
     <div class="ai-modal-header">
       <h2>AI 글 다듬기</h2>
       <button id="aiClose">✕</button>
     </div>
 
-    <label class="field-label">AI 글 재구성 방식</label>
+    <!-- MODE SELECT -->
+    <label class="ai-label">AI 글 재구성 방식</label>
     <select id="aiMood" class="input-field">
-      <!-- 기본 논리 구조 -->
       <option value="neutral">중립적으로 정리</option>
       <option value="cold">차갑게 분석</option>
       <option value="gentle">온화하게 설득</option>
-
-      <!-- 공격 / 불편 계열 -->
       <option value="aggressive">공격적으로 밀어붙이기</option>
-      <option value="uncomfortable">불편하게 문제 제기</option>
+      <option value="uncomfortable">불편하게 찌르기</option>
       <option value="ironic">비꼬듯 드러내기</option>
-
-      <!-- 감정 / 전달 방식 -->
       <option value="emotional">마음 건드리기</option>
       <option value="humorous">유머로 풀기</option>
-
-      <!-- 현실 압박 -->
       <option value="urgent">위기부터 보여주기</option>
       <option value="realistic">현실적 손해 강조</option>
-
-      <!-- 🔥 결과 선제시 (핵심 추가) -->
       <option value="result-first">결과부터 제시</option>
       <option value="ending-spoiler">결말 먼저 까기</option>
       <option value="cannot-ignore">외면하기 어렵게 시작</option>
     </select>
 
+    <!-- OPTIONAL PROMPT -->
     <input
       id="aiPrompt"
-      class="input-field"
-      placeholder="AI에게 직접 요청 (선택)"
+      class="input-field compact"
+      placeholder="AI에게 추가로 요청 (선택)"
     />
 
-    <label>내가 쓴 글</label>
+    <!-- USER TEXT -->
+    <label class="ai-label">내가 쓴 글</label>
     <textarea
       id="aiUserText"
-      class="input-field textarea small"
+      class="input-field textarea user-text"
+      placeholder="정리하고 싶은 초안"
     ></textarea>
 
-    <button id="runAi" class="btn-sub ai-run-btn">
-      AI 실행
-    </button>
+    <!-- RUN -->
+    <button id="runAi" class="btn-sub full">AI 실행</button>
 
-    <label>AI 결과</label>
+    <!-- RESULT -->
+    <label class="ai-label">AI 결과</label>
     <textarea
       id="aiResultText"
-      class="input-field textarea small"
+      class="input-field textarea result-text"
+      placeholder="AI가 정리한 결과"
     ></textarea>
 
-    <div class="ai-modal-footer">
-      <button id="applyAi" class="btn-main">AI 적용하기</button>
-    </div>
+    <!-- APPLY -->
+    <button id="applyAi" class="btn-main full">
+      AI 적용하기
+    </button>
 
   </div>
 </div>
