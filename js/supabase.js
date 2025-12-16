@@ -37,3 +37,5 @@ console.log("[supabase.js] 로드됨 - 초기화 대기");
     // write.js는 Supabase Functions로부터 업로드 URL만 받으면 된다.
 
 })();
+
+window.supabaseClient = supabase;
