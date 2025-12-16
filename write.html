@@ -220,6 +220,21 @@
       <option value="custom">직접 입력하기</option>
     </select>
 
+    <!-- ✅ 여기 반드시 필요 -->
+    <div
+      id="aiCustomPromptWrap"
+      class="ai-custom-wrap"
+      style="display:none"
+    >
+      <label class="ai-label highlight">AI에게 직접 지시</label>
+      <textarea
+        id="aiPrompt"
+        class="input-field textarea compact"
+        placeholder="예: 논리 구조를 먼저 잡고, 반대 의견을 예상해 반박까지 포함해줘"
+      ></textarea>
+    </div>
+
+
     <!-- 🔥 CUSTOM PROMPT (직접 입력) -->
     <div id="aiCustomPromptWrap" class="ai-custom-wrap" style="display:none;">
       <label class="ai-label highlight">AI에게 직접 지시</label>

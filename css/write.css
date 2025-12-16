@@ -1125,37 +1125,96 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   display: block;
 }
 
+/* =========================================================
+   AI MODAL – SIZE / LAYOUT REFINEMENT (FINAL)
+   ========================================================= */
+
+/* 모달 전체 정렬 */
+.ai-modal {
+  align-items: center;
+}
+
+/* 모달 컨테이너 크기 제한 (화면 2/3 이하) */
 .ai-modal-inner {
-  max-height: 90vh;
-  padding: 16px;
+  width: 100%;
+  max-width: 480px;        /* 모바일 퍼스트 유지 */
+  height: 66vh;            /* 화면의 2/3 */
+  max-height: 66vh;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  padding: 16px;
+  overflow-y: auto;        /* 내부만 스크롤 */
+  box-sizing: border-box;
 }
 
-.ai-label {
+/* 내부 요소 줄어들지 않게 */
+.ai-modal-inner > * {
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   LABEL / SPACING
+   ========================================================= */
+
+.ai-modal .ai-label {
+  margin-top: 10px;
+  margin-bottom: 6px;
   font-size: 13px;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
-.input-field.compact {
-  height: 36px;
-  font-size: 13px;
+/* =========================================================
+   TEXTAREA SIZE (핵심)
+   ========================================================= */
+
+/* 내가 쓴 글 */
+.ai-modal textarea.user-text {
+  min-height: 120px;
+  resize: none;
 }
 
-.textarea.user-text {
-  min-height: 80px;
-  max-height: 110px;
+/* AI 결과 (더 크게) */
+.ai-modal textarea.result-text {
+  min-height: 160px;
+  resize: none;
 }
 
-.textarea.result-text {
-  min-height: 90px;
-  max-height: 130px;
+/* 공통 textarea 스타일 안정화 */
+.ai-modal textarea {
+  line-height: 1.5;
 }
 
-.btn-sub.full,
-.btn-main.full {
-  width: 100%;
+/* =========================================================
+   BUTTON COMPACT (숨통 트이게)
+   ========================================================= */
+
+.ai-modal .btn-sub,
+.ai-modal .btn-main {
   height: 44px;
-  margin-top: 6px;
+  padding: 0 14px;
+  font-size: 14px;
+  border-radius: 10px;
 }
+
+/* 버튼 간격 정리 */
+.ai-modal .btn-sub {
+  margin: 12px 0 8px;
+}
+
+.ai-modal .btn-main {
+  margin-top: 10px;
+}
+
+/* =========================================================
+   SELECT / INPUT COMPACT
+   ========================================================= */
+
+.ai-modal select.input-field,
+.ai-modal input.input-field {
+  height: 42px;
+  font-size: 14px;
+}
+
+/* =========================================================
+   END
+   ========================================================= */
