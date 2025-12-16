@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
-  const donationEl = document.getElementById('donationTarget'); // ✅ 추가
+  const donationEl = document.getElementById('donationTarget');
 
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
@@ -26,13 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  /* ✅🔥 핵심 수정: 클릭 시 value 초기화 */
   videoBtn.addEventListener('click', () => {
-    videoInput.value = '';   // ← 이 한 줄이 전부
+    videoInput.value = '';
     videoInput.click();
   });
 
-  /* 🔥 영상 미리보기 안정화 */
   videoInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
@@ -44,8 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
     video.muted = true;
     video.controls = true;
     video.playsInline = true;
-
     video.load();
+
     videoPreview.appendChild(video);
   });
 
@@ -56,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const aiUserText = document.getElementById('aiUserText');
   const aiResultText = document.getElementById('aiResultText');
   const applyAi = document.getElementById('applyAi');
+  const aiGenerateBtn = document.getElementById('aiGenerateBtn');
 
   openAiBtn.addEventListener('click', e => {
     e.preventDefault();
@@ -77,6 +76,37 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
+  /* ================= AI GENERATE (🔥 여기 추가됨) ================= */
+  aiGenerateBtn.addEventListener('click', async () => {
+    aiGenerateBtn.disabled = true;
+    aiGenerateBtn.textContent = 'AI 처리 중…';
+
+    const style =
+      document.querySelector('.ai-style-tabs .active')?.dataset.style || 'neutral';
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'ai-write-helper',
+        {
+          body: {
+            text: aiUserText.value,
+            style
+          }
+        }
+      );
+
+      if (error) throw error;
+
+      aiResultText.value = data.result;
+
+    } catch (e) {
+      alert('AI 처리 실패');
+    }
+
+    aiGenerateBtn.disabled = false;
+    aiGenerateBtn.textContent = 'AI 다듬기';
+  });
+
   /* AI STYLE TABS */
   document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -91,29 +121,10 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    if (!categoryEl.value) {
-      alert('카테고리를 선택해주세요');
-      categoryEl.focus();
-      return;
-    }
-
-    if (!titleEl.value) {
-      alert('제목을 입력해주세요');
-      titleEl.focus();
-      return;
-    }
-
-    if (!descEl.value) {
-      alert('이슈 설명을 입력해주세요');
-      descEl.focus();
-      return;
-    }
-
-    if (!donationEl.value) {
-      alert('기부처를 선택해주세요');
-      donationEl.focus();
-      return;
-    }
+    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
+    if (!titleEl.value) return alert('제목을 입력해주세요');
+    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
+    if (!donationEl.value) return alert('기부처를 선택해주세요');
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
