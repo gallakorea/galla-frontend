@@ -213,19 +213,31 @@
       <button id="aiClose">✕</button>
     </div>
 
-    <div class="ai-style-tabs">
-      <div class="ai-style-row">
-        <button class="active" data-mood="neutral">중립적으로 정리</button>
-        <button data-mood="cold">차갑게 분석</button>
-        <button data-mood="gentle">온화하게 설득</button>
-      </div>
-      <div class="ai-style-row">
-        <button data-mood="aggressive">공격적으로 밀기</button>
-        <button data-mood="uncomfortable">불편하게 찌르기</button>
-        <button data-mood="ironic">비꼬듯 문제 제기</button>
-        <button data-mood="humorous">유머로 풀기</button>
-      </div>
-    </div>
+    <label class="field-label">AI 글 재구성 방식</label>
+    <select id="aiMood" class="input-field">
+      <!-- 기본 논리 구조 -->
+      <option value="neutral">중립적으로 정리</option>
+      <option value="cold">차갑게 분석</option>
+      <option value="gentle">온화하게 설득</option>
+
+      <!-- 공격 / 불편 계열 -->
+      <option value="aggressive">공격적으로 밀어붙이기</option>
+      <option value="uncomfortable">불편하게 문제 제기</option>
+      <option value="ironic">비꼬듯 드러내기</option>
+
+      <!-- 감정 / 전달 방식 -->
+      <option value="emotional">마음 건드리기</option>
+      <option value="humorous">유머로 풀기</option>
+
+      <!-- 현실 압박 -->
+      <option value="urgent">위기부터 보여주기</option>
+      <option value="realistic">현실적 손해 강조</option>
+
+      <!-- 🔥 결과 선제시 (핵심 추가) -->
+      <option value="result-first">결과부터 제시</option>
+      <option value="ending-spoiler">결말 먼저 까기</option>
+      <option value="cannot-ignore">외면하기 어렵게 시작</option>
+    </select>
 
     <input
       id="aiPrompt"
