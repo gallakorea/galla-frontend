@@ -76,36 +76,49 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
-  /* ================= AI GENERATE (🔥 여기 추가됨) ================= */
-  aiGenerateBtn.addEventListener('click', async () => {
-    aiGenerateBtn.disabled = true;
-    aiGenerateBtn.textContent = 'AI 처리 중…';
+  /* ================= AI GENERATE ================= */
+  const aiGenerateBtn = document.getElementById("aiGenerateBtn");
 
-    const style =
-      document.querySelector('.ai-style-tabs .active')?.dataset.style || 'neutral';
+  if (aiGenerateBtn) {
+    aiGenerateBtn.onclick = async () => {
+      aiGenerateBtn.disabled = true;
+      aiGenerateBtn.textContent = "AI 처리 중…";
 
-    try {
-      const { data, error } = await supabase.functions.invoke(
-        'ai-write-helper',
-        {
-          body: {
-            text: aiUserText.value,
-            style
+      const style =
+        document.querySelector(".ai-style-tabs .active")?.dataset.style || "neutral";
+
+      console.log("[AI] 요청 시작", {
+        text: aiUserText.value,
+        style
+      });
+
+      try {
+        const { data, error } = await window.supabaseClient.functions.invoke(
+          "ai-write-helper",
+          {
+            body: {
+              text: aiUserText.value,
+              style
+            }
           }
-        }
-      );
+        );
 
-      if (error) throw error;
+        if (error) throw error;
 
-      aiResultText.value = data.result;
+        console.log("[AI] 응답", data);
+        aiResultText.value = data.result;
 
-    } catch (e) {
-      alert('AI 처리 실패');
-    }
+      } catch (e) {
+        console.error("[AI] 실패", e);
+        alert("AI 처리 실패");
+      }
 
-    aiGenerateBtn.disabled = false;
-    aiGenerateBtn.textContent = 'AI 다듬기';
-  });
+      aiGenerateBtn.disabled = false;
+      aiGenerateBtn.textContent = "AI 실행";
+    };
+  } else {
+    console.error("[AI] aiGenerateBtn not found");
+  }
 
   /* AI STYLE TABS */
   document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
