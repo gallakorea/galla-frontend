@@ -26,14 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  videoBtn.addEventListener('click', () => videoInput.click());
+  /* ✅🔥 핵심 수정: 클릭 시 value 초기화 */
+  videoBtn.addEventListener('click', () => {
+    videoInput.value = '';   // ← 이 한 줄이 전부
+    videoInput.click();
+  });
 
-  /* 🔥 여기만 수정됨 (영상 미리보기 안정화) */
+  /* 🔥 영상 미리보기 안정화 */
   videoInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
 
-    // 기존 미리보기 완전 초기화
     videoPreview.innerHTML = '';
 
     const video = document.createElement('video');
@@ -42,9 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     video.controls = true;
     video.playsInline = true;
 
-    // iOS / Chrome 안정화
     video.load();
-
     videoPreview.appendChild(video);
   });
 
@@ -146,13 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
-    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* 발행하기 → confirm.html */
     document.getElementById('publishPreview').onclick = () => {
       const payload = {
         category: categoryEl.value,
@@ -163,15 +162,10 @@ document.addEventListener('DOMContentLoaded', () => {
         is_anonymous: anon
       };
 
-- location.href = 'confirm.html';
-+ openConfirmStep(payload);
-};
-
       sessionStorage.setItem('writePayload', JSON.stringify(payload));
       location.href = 'confirm.html';
     };
 
-    /* 영상 모달 */
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(videoEl.src);
@@ -201,102 +195,3 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 });
-
-/* ================= CONFIRM STEP LOGIC ================= */
-
-async function openConfirmStep(payload) {
-  const step = document.getElementById('confirmStep');
-  const box = document.getElementById('moderationBox');
-  const backBtn = document.getElementById('confirmBackBtn');
-  const publishBtn = document.getElementById('confirmPublishBtn');
-
-  step.style.display = 'block';
-  document.body.style.overflow = 'hidden';
-
-  box.className = 'confirm-box loading';
-  box.textContent = '콘텐츠 적합성 검사를 진행 중입니다…';
-  publishBtn.disabled = true;
-
-  /* supabase 대기 */
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 20));
-  }
-  const supabase = window.supabaseClient;
-
-  /* 로그인 체크 */
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) {
-    alert('로그인 후 발행 가능합니다.');
-    location.href = 'login.html';
-    return;
-  }
-
-  /* 적합성 검사 */
-  try {
-    const { data: res, error } =
-      await supabase.functions.invoke('content-moderation', {
-        body: {
-          title: payload.title,
-          oneLine: payload.oneLine,
-          description: payload.description
-        }
-      });
-
-    if (error) throw error;
-
-    if (res.result === 'FAIL') {
-      box.className = 'confirm-box fail';
-      box.innerHTML = `<strong>발행 불가</strong><br>${res.reason}`;
-      return;
-    }
-
-    if (res.result === 'WARNING') {
-      box.className = 'confirm-box warning';
-      box.innerHTML = `
-        <strong>주의 콘텐츠</strong><br>
-        ${res.reason}<br><br>
-        해당 내용은 누적 경고로 기록됩니다.
-      `;
-    }
-
-    if (res.result === 'PASS') {
-      box.className = 'confirm-box pass';
-      box.innerHTML = `
-        <strong>적합성 검사 통과</strong><br>
-        발행이 가능합니다.
-      `;
-    }
-
-    publishBtn.disabled = false;
-
-  } catch (e) {
-    box.className = 'confirm-box fail';
-    box.textContent = '적합성 검사 중 오류가 발생했습니다.';
-    return;
-  }
-
-  /* 돌아가기 */
-  backBtn.onclick = () => {
-    step.style.display = 'none';
-    document.body.style.overflow = '';
-  };
-
-  /* 최종 발행 */
-  publishBtn.onclick = async () => {
-    publishBtn.disabled = true;
-    publishBtn.textContent = '발행 중…';
-
-    const { error } = await supabase
-      .from('issues')
-      .insert([payload]);
-
-    if (error) {
-      alert('발행 실패');
-      publishBtn.disabled = false;
-      publishBtn.textContent = '최종 발행';
-      return;
-    }
-
-    location.href = 'index.html';
-  };
-}
