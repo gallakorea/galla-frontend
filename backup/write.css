@@ -1124,3 +1124,160 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   object-fit: cover; /* 핵심 */
   display: block;
 }
+
+/* ================================
+   AI MODAL 레이아웃 리셋
+   ================================ */
+
+.ai-modal-inner {
+  width: calc(100% - 24px);
+  max-width: 480px;
+
+  height: 88vh;
+  max-height: 88vh;
+  min-height: 80vh;
+
+  padding: 20px 18px 20px;
+  background: #0f1115;
+  border-radius: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  overflow: hidden;
+}
+
+/* ================================
+   상단 헤더 고정
+   ================================ */
+
+.ai-modal-header {
+  flex: 0 0 auto;
+  margin-bottom: 4px;
+}
+
+/* ================================
+   셀렉트 (AI 재구성 방식)
+   ================================ */
+
+#aiMood {
+  height: 42px;
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+/* ================================
+   커스텀 프롬프트 (한 줄)
+   ================================ */
+
+.ai-custom-wrap {
+  flex: 0 0 auto;
+}
+
+.ai-custom-wrap #aiPrompt {
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+
+  padding: 8px 12px !important;
+  font-size: 14px;
+  line-height: 1.3;
+  resize: none;
+  overflow: hidden;
+}
+
+/* ================================
+   내가 쓴 글 (메인 입력)
+   ================================ */
+
+#aiUserText {
+  flex: 1 1 38%;
+  min-height: 160px;
+  padding: 14px;
+  font-size: 14px;
+}
+
+/* ================================
+   AI 실행 버튼 (유지)
+   ================================ */
+
+#runAi {
+  flex: 0 0 auto;
+  height: 44px;
+  font-size: 15px;
+}
+
+/* ================================
+   AI 결과 (두 번째 메인)
+   ================================ */
+
+#aiResultText {
+  flex: 1 1 32%;
+  min-height: 140px;
+  padding: 14px;
+  font-size: 14px;
+}
+
+/* ================================
+   적용 버튼 (유지)
+   ================================ */
+
+#applyAi {
+  flex: 0 0 auto;
+  height: 48px;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.ai-modal-inner {
+  width: calc(100% - 24px);
+  max-width: 480px;
+
+  /* 🔥 핵심 수정 */
+  height: calc(100vh - 96px);   /* 하단 네비 + 여유 */
+  max-height: calc(100vh - 96px);
+  min-height: calc(100vh - 120px);
+
+  padding: 20px 18px 20px;
+  background: #0f1115;
+  border-radius: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .ai-modal-inner {
+    height: calc(100dvh - 96px);
+    max-height: calc(100dvh - 96px);
+  }
+}
+
+/* ================================
+   🔥 하단 네비게이션 높이 최소화
+   (아이콘 크기 유지)
+   ================================ */
+
+.bottom-nav {
+  height: 45px;          /* 🔥 더 줄임 (기존 56px → 48px) */
+  padding: 4px 0;        /* 🔥 상하 여백 최소화 */
+}
+
+/* 아이콘 터치 영역만 최소 유지 */
+.bottom-nav .nav-item {
+  padding: 4px 0;
+}
+
+/* ✅ 아이콘 크기는 절대 건드리지 않음 */
+/* .bottom-nav .nav-item img  ← 수정 없음 */
+
+/* iOS safe-area 대응 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .bottom-nav {
+    padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  }
+}

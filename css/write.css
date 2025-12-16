@@ -1263,7 +1263,7 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
    ================================ */
 
 .bottom-nav {
-  height: 48px;          /* 🔥 더 줄임 (기존 56px → 48px) */
+  height: 45px;          /* 🔥 더 줄임 (기존 56px → 48px) */
   padding: 4px 0;        /* 🔥 상하 여백 최소화 */
 }
 
