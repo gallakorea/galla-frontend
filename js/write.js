@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
-          <button type="button" id="publishPreview">발행하기</button>
+          <button type="button" id="publishPreview">발행 전 적합성 검사</button>
         </div>
       </section>
     `;
