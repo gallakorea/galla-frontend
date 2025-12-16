@@ -1125,50 +1125,49 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   display: block;
 }
 
-/* 모달 전체 높이 */
+/* ================================
+   AI MODAL 완전 차단 레이어
+   ================================ */
+
+.ai-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999; /* 🔥 모든 UI 위 */
+  background: rgba(0, 0, 0, 0.6);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================================
+   모달 본체
+   ================================ */
+
 .ai-modal-inner {
-  height: 85vh;              /* 🔥 핵심 */
-  max-height: 85vh;
-  min-height: 70vh;
+  width: calc(100% - 24px);
+  max-width: 480px;
+
+  height: 82vh;          /* 🔥 핵심 */
+  max-height: 82vh;      /* 🔥 안전장치 */
+  min-height: 70vh;      /* 🔥 숨 막힘 방지 */
+
+  padding: 22px 20px 24px;
+
+  background: #0f1115;
+  border-radius: 16px;
 
   display: flex;
   flex-direction: column;
+  gap: 14px;
 
-  padding: 20px;
-  gap: 12px;
+  overflow: hidden;
 }
 
-/* 내가 쓴 글 */
-#aiUserText {
-  flex: 1.2;                 /* 🔥 가장 크게 */
-  min-height: 140px;
-}
+/* ================================
+   뒤 페이지 클릭/노출 차단
+   ================================ */
 
-/* AI 결과 */
-#aiResultText {
-  flex: 1;
-  min-height: 120px;
-}
-
-/* 실행 버튼 */
-#runAi {
-  height: 44px;              /* 원래 크기 */
-  flex-shrink: 0;
-}
-
-/* 적용 버튼 */
-#applyAi {
-  height: 48px;
-  flex-shrink: 0;
-}
-
-/* 셀렉트 */
-#aiMood {
-  height: 40px;
-  font-size: 14px;           /* 글자 짤림 방지 */
-}
-
-/* 내부 스크롤 완전 차단 */
-.ai-modal-inner * {
-  overflow: visible;
+body.modal-open {
+  overflow: hidden;
 }
