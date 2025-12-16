@@ -1126,98 +1126,57 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 }
 
 /* =========================================================
-   AI MODAL – NO SCROLL / ONE SCREEN FIT
+   AI MODAL – FINAL TUNE
    ========================================================= */
 
-/* 배경 */
-.ai-modal {
-  align-items: center;
-}
-
-/* 모달 본체 */
-.ai-modal-inner {
-  width: 100%;
-  max-width: 480px;
-  height: 66vh;                /* 화면 2/3 */
-  max-height: 66vh;
-
-  display: grid;
-  grid-template-rows:
-    auto    /* header */
-    auto    /* select */
-    auto    /* custom prompt */
-    1fr     /* user text */
-    auto    /* run button */
-    1.2fr   /* result */
-    auto;   /* apply */
-
-  gap: 8px;
-  padding: 14px;
-  box-sizing: border-box;
-
-  overflow: hidden;            /* 🔥 스크롤 완전 차단 */
+/* 셀렉트: 글자 잘림 방지 */
+.ai-modal select.input-field {
+  height: 44px;
+  font-size: 13px;            /* ↓ 글자 크기 줄임 */
+  padding: 0 12px;
+  line-height: 44px;
 }
 
 /* =========================================================
-   HEADER
-   ========================================================= */
-
-.ai-modal-header {
-  margin-bottom: 4px;
-}
-
-/* =========================================================
-   LABEL COMPACT
-   ========================================================= */
-
-.ai-modal .ai-label {
-  font-size: 12px;
-  margin: 2px 0 4px;
-  opacity: 0.8;
-}
-
-/* =========================================================
-   SELECT / INPUT
-   ========================================================= */
-
-.ai-modal select.input-field,
-.ai-modal input.input-field {
-  height: 40px;
-  font-size: 14px;
-}
-
-/* =========================================================
-   TEXTAREA – 핵심
-   ========================================================= */
-
-/* 내가 쓴 글 */
-.ai-modal textarea.user-text {
-  height: 100%;
-  min-height: 0;
-  resize: none;
-}
-
-/* AI 결과 */
-.ai-modal textarea.result-text {
-  height: 100%;
-  min-height: 0;
-  resize: none;
-}
-
-/* 공통 */
-.ai-modal textarea {
-  line-height: 1.45;
-  font-size: 14px;
-}
-
-/* =========================================================
-   BUTTON – 최대한 얇게
+   버튼 → 기존 스타일로 복구
    ========================================================= */
 
 .ai-modal .btn-sub,
 .ai-modal .btn-main {
-  height: 40px;
+  height: auto;               /* 고정 높이 제거 */
+  padding: 12px 16px;         /* write.css 기본값 느낌 */
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+/* =========================================================
+   입력 영역 2배 확대 (핵심)
+   ========================================================= */
+
+/* 내가 쓴 글 */
+.ai-modal textarea.user-text {
+  min-height: 140px;          /* 🔥 이전 대비 체감 2배 */
+  height: 100%;
+}
+
+/* AI 결과 */
+.ai-modal textarea.result-text {
+  min-height: 160px;          /* 결과는 더 크게 */
+  height: 100%;
+}
+
+/* 공통 textarea */
+.ai-modal textarea {
   font-size: 14px;
-  padding: 0;
-  border-radius: 10px;
+  line-height: 1.5;
+}
+
+/* =========================================================
+   모달 전체 높이 유지 (스크롤 방지)
+   ========================================================= */
+
+.ai-modal-inner {
+  height: 66vh;
+  max-height: 66vh;
+  overflow: hidden;           /* 스크롤 완전 차단 */
 }
