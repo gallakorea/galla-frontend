@@ -1132,10 +1132,10 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 .ai-modal {
   position: fixed;
   inset: 0;
-  z-index: 9999; /* 🔥 모든 UI 위 */
+  z-index: 9999;
   background: rgba(0, 0, 0, 0.6);
 
-  display: flex;
+  display: none;              /* 🔥 기본은 닫힘 */
   align-items: center;
   justify-content: center;
 }
