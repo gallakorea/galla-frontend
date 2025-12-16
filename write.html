@@ -194,16 +194,6 @@
   </nav>
 
 <!-- 🎥 SPEECH MODAL -->
-<div id="speechModal" class="video-modal">
-  <div class="video-modal-inner">
-    <div class="video-modal-header">
-      <span>1분 엘리베이터 스피치</span>
-      <button id="closeSpeech">✕</button>
-    </div>
-    <video id="speechVideo" controls></video>
-  </div>
-</div>
-
 <!-- AI MODAL -->
 <div id="aiModal" class="ai-modal">
   <div class="ai-modal-inner">
@@ -225,26 +215,27 @@
       <option value="ironic">비꼬듯 드러내기</option>
       <option value="emotional">마음 건드리기</option>
       <option value="humorous">유머로 풀기</option>
-      <option value="urgent">위기부터 보여주기</option>
-      <option value="realistic">현실적 손해 강조</option>
       <option value="result-first">결과부터 제시</option>
-      <option value="ending-spoiler">결말 먼저 까기</option>
       <option value="cannot-ignore">외면하기 어렵게 시작</option>
+      <option value="custom">직접 입력하기</option>
     </select>
 
-    <!-- OPTIONAL PROMPT -->
-    <input
-      id="aiPrompt"
-      class="input-field compact"
-      placeholder="AI에게 추가로 요청 (선택)"
-    />
+    <!-- 🔥 CUSTOM PROMPT (직접 입력) -->
+    <div id="aiCustomPromptWrap" class="ai-custom-wrap" style="display:none;">
+      <label class="ai-label highlight">AI에게 직접 지시</label>
+      <textarea
+        id="aiPrompt"
+        class="input-field textarea compact"
+        placeholder="예: 논리 구조를 먼저 세우고, 반대 의견을 예상해 반박까지 포함해줘"
+      ></textarea>
+    </div>
 
     <!-- USER TEXT -->
     <label class="ai-label">내가 쓴 글</label>
     <textarea
       id="aiUserText"
       class="input-field textarea user-text"
-      placeholder="정리하고 싶은 초안"
+      placeholder="개떡같이 써도 괜찮음. AI가 논리적으로 재구성함"
     ></textarea>
 
     <!-- RUN -->
@@ -255,7 +246,7 @@
     <textarea
       id="aiResultText"
       class="input-field textarea result-text"
-      placeholder="AI가 정리한 결과"
+      placeholder="AI가 논리적으로 재구성한 결과"
     ></textarea>
 
     <!-- APPLY -->
