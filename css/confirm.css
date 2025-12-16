@@ -1,46 +1,98 @@
-.confirm-result {
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+}
+
+.app-root {
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  padding-bottom: 110px;
+}
+
+/* HEADER */
+.header {
+  border-bottom: 1px solid #111;
+}
+.header-inner {
+  height: 54px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+}
+.logo { width: 105px; }
+
+/* MAIN */
+.confirm-main {
+  padding: 28px 16px;
+}
+
+.confirm-title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.confirm-desc {
+  font-size: 13px;
+  color: #aaa;
+  margin-top: 6px;
+}
+
+/* RESULT BOX */
+.confirm-box {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 14px;
   background: #111;
   border: 1px solid #222;
-  border-radius: 14px;
-  padding: 18px;
   font-size: 14px;
   line-height: 1.6;
-  color: #ccc;
 }
 
-.confirm-result.loading {
-  opacity: 0.6;
-}
+.confirm-box.loading { opacity: .6; }
 
-.confirm-result.pass {
+.confirm-box.pass {
   border-color: #2f80ff;
   color: #fff;
 }
 
-.confirm-result.warning {
+.confirm-box.warning {
   border-color: #ffe27a;
   color: #ffe27a;
 }
 
-.confirm-result.fail {
+.confirm-box.fail {
   border-color: #ff4f6e;
   color: #ff4f6e;
 }
 
+/* ACTIONS */
 .confirm-actions {
+  margin-top: 26px;
   display: flex;
   gap: 10px;
 }
 
-.confirm-actions button {
+.btn-sub {
   flex: 1;
-}
-
-.btn-outline {
-  background: #111;
+  background: #1a1a1a;
   border: 1px solid #333;
   color: #fff;
-  padding: 16px;
-  border-radius: 999px;
+  padding: 14px;
+  border-radius: 12px;
   font-weight: 700;
+}
+
+.btn-main {
+  flex: 1;
+  background: #2f80ff;
+  border: none;
+  color: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 800;
 }

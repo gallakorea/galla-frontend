@@ -1,8 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  const resultBox = document.getElementById("moderationResult");
-  const publishBtn = document.getElementById("publishBtn");
+  const box = document.getElementById("moderationBox");
   const backBtn = document.getElementById("backBtn");
+  const publishBtn = document.getElementById("publishBtn");
 
+  /* 1️⃣ write → confirm payload */
   const raw = sessionStorage.getItem("writePayload");
   if (!raw) {
     alert("잘못된 접근입니다.");
@@ -11,74 +12,105 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   const payload = JSON.parse(raw);
 
+  /* 2️⃣ supabase 준비 */
   while (!window.supabaseClient) {
     await new Promise(r => setTimeout(r, 20));
   }
   const supabase = window.supabaseClient;
 
-  const { data } = await supabase.auth.getSession();
-  if (!data.session) {
+  /* 3️⃣ 로그인 확인 */
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) {
     alert("로그인 후 발행 가능합니다.");
     location.href = "login.html";
     return;
   }
 
+  // 🔥 moderation 결과 저장용
+  let moderationStatus = "PASS";
+
+  /* 4️⃣ 적합성 검사 */
   try {
-    const { data: res, error } =
-      await supabase.functions.invoke("content-moderation", {
+    const { data, error } = await supabase.functions.invoke(
+      "content-moderation",
+      {
         body: {
           title: payload.title,
           oneLine: payload.oneLine,
           description: payload.description
         }
-      });
+      }
+    );
 
     if (error) throw error;
 
-    if (res.result === "FAIL") {
-      resultBox.className = "confirm-result fail";
-      resultBox.innerHTML = `
-        <strong>발행 불가</strong><br/>
-        ${res.reason}
+    if (data.result === "FAIL") {
+      box.className = "confirm-box fail";
+      box.innerHTML = `
+        <strong>🚫 발행 불가</strong><br/><br/>
+        ${data.reason}
       `;
       return;
     }
 
-    if (res.result === "WARNING") {
-      resultBox.className = "confirm-result warning";
-      resultBox.innerHTML = `
-        <strong>주의 콘텐츠</strong><br/>
-        ${res.reason}<br/><br/>
-        해당 내용은 누적 경고로 기록됩니다.
+    if (data.result === "WARNING") {
+      moderationStatus = "WARNING";
+
+      box.className = "confirm-box warning";
+      box.innerHTML = `
+        <strong>⚠️ 주의가 필요한 콘텐츠</strong><br/><br/>
+        ${data.reason}<br/><br/>
+        해당 내용은 경고 기록으로만 저장되며 발행은 가능합니다.
       `;
+
+      // ✅ WARNING 로그 기록
+      await supabase.from("moderation_logs").insert({
+        user_id: sessionData.session.user.id,
+        result: "WARNING",
+        reason: data.reason
+      });
     }
 
-    if (res.result === "PASS") {
-      resultBox.className = "confirm-result pass";
-      resultBox.innerHTML = `
-        <strong>적합성 검사 통과</strong><br/>
-        발행이 가능합니다.
+    if (data.result === "PASS") {
+      moderationStatus = "PASS";
+
+      box.className = "confirm-box pass";
+      box.innerHTML = `
+        <strong>✅ 적합성 검사 통과</strong><br/><br/>
+        콘텐츠 가이드라인에 부합합니다.
       `;
     }
 
     publishBtn.disabled = false;
 
   } catch (e) {
-    resultBox.className = "confirm-result fail";
-    resultBox.textContent = "적합성 검사 중 오류가 발생했습니다.";
+    box.className = "confirm-box fail";
+    box.textContent = "적합성 검사 중 오류가 발생했습니다.";
+    return;
   }
 
-  backBtn.onclick = () => history.back();
+  /* 5️⃣ 뒤로가기 */
+  backBtn.onclick = () => {
+    history.back();
+  };
 
+  /* 6️⃣ 최종 발행 → issue page 이동 (🔥 핵심) */
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
     publishBtn.textContent = "발행 중…";
 
-    const { error } = await supabase
+    const { data: inserted, error } = await supabase
       .from("issues")
-      .insert([payload]);
+      .insert([
+        {
+          ...payload,
+          moderation_status: moderationStatus
+        }
+      ])
+      .select()
+      .single();
 
-    if (error) {
+    if (error || !inserted) {
       alert("발행 실패");
       publishBtn.disabled = false;
       publishBtn.textContent = "최종 발행";
@@ -86,6 +118,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     sessionStorage.removeItem("writePayload");
-    location.href = "index.html";
+
+    // ✅ issue 상세 페이지로 이동
+    location.href = `issue.html?id=${inserted.id}`;
   };
 });

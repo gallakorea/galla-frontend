@@ -2,11 +2,10 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>발행 확인 · GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>발행 전 적합성 검사 · GALLA</title>
 
-  <link rel="stylesheet" href="css/write.css" />
-  <link rel="stylesheet" href="css/confirm.css" />
+  <link rel="stylesheet" href="./css/confirm.css" />
 </head>
 
 <body>
@@ -17,38 +16,29 @@
     <div class="header-inner">
       <img src="./assets/logo.png" class="logo"
            onclick="location.href='index.html'" />
-      <div class="auth-buttons"></div>
     </div>
   </header>
 
   <!-- MAIN -->
-  <main class="page-main">
-    <div class="page-inner">
+  <main class="confirm-main">
+    <h1 class="confirm-title">발행 전 적합성 검사</h1>
+    <p class="confirm-desc">
+      게시 전 콘텐츠 가이드라인 위반 여부를 검사합니다.
+    </p>
 
-      <section class="section-block">
-        <h1 class="write-main-title">발행 전 최종 확인</h1>
-        <p class="write-main-desc">
-          콘텐츠 적합성 검사를 진행한 후 발행됩니다.
-        </p>
-      </section>
+    <div id="moderationBox" class="confirm-box loading">
+      적합성 검사를 진행 중입니다…
+    </div>
 
-      <section class="section-block">
-        <div id="moderationResult" class="confirm-result loading">
-          콘텐츠 적합성 검사를 진행 중입니다…
-        </div>
-      </section>
-
-      <section class="section-block confirm-actions">
-        <button id="backBtn" class="btn-outline">돌아가기</button>
-        <button id="publishBtn" class="primary-btn" disabled>
-          최종 발행
-        </button>
-      </section>
-
+    <div class="confirm-actions">
+      <button id="backBtn" class="btn-sub">돌아가기</button>
+      <button id="publishBtn" class="btn-main" disabled>
+        최종 발행
+      </button>
     </div>
   </main>
 
-  <!-- BOTTOM NAV (WRITE와 동일) -->
+  <!-- BOTTOM NAV (write와 동일) -->
   <nav class="bottom-nav">
     <a href="index.html" class="nav-item">
       <img src="./assets/icons/nav-home.svg" />
@@ -69,8 +59,7 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase.js"></script>
-<script src="js/confirm.js"></script>
+<script src="./js/supabase.js"></script>
+<script src="./js/confirm.js"></script>
 </body>
 </html>
