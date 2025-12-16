@@ -1199,3 +1199,59 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   font-size: 15px;
   margin-top: 10px;
 }
+
+/* ================================
+   AI MODAL 안전 영역 재설정
+   ================================ */
+
+/* 하단 네비 높이 고려 (약 64px) */
+:root {
+  --bottom-nav-height: 64px;
+}
+
+/* 모달 외곽 */
+.ai-modal {
+  align-items: center;
+}
+
+/* 모달 본체 */
+.ai-modal-inner {
+  max-height: calc(85vh - var(--bottom-nav-height));
+  margin-bottom: var(--bottom-nav-height);
+  padding: 22px 20px 24px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  overflow: hidden; /* ❗ 내부 스크롤 완전 차단 */
+}
+
+/* ================================
+   입력 / 결과 영역 비중
+   ================================ */
+
+#aiUserText {
+  min-height: 150px;
+  flex-shrink: 0;
+}
+
+#aiResultText {
+  min-height: 170px;
+  flex-shrink: 0;
+}
+
+/* ================================
+   버튼 안정화
+   ================================ */
+
+#runAi {
+  height: 42px;
+  margin: 6px 0 4px;
+}
+
+#applyAi {
+  height: 52px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
