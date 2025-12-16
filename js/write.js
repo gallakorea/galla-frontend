@@ -8,7 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const titleEl = document.getElementById('title');
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
-  const donationEl = document.getElementById('donationTarget'); // ✅ 추가
+  const donationEl = document.getElementById('donationTarget');
+
+  /* ================= FILE STATE (🔥 추가) ================= */
+  let currentThumbURL = null;
+  let currentVideoURL = null;
 
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
@@ -16,10 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbPreview = document.getElementById('thumbPreview');
 
   thumbBtn.addEventListener('click', () => thumbInput.click());
+
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
-    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+
+    if (currentThumbURL) URL.revokeObjectURL(currentThumbURL);
+    currentThumbURL = URL.createObjectURL(f);
+
+    thumbPreview.innerHTML = `<img src="${currentThumbURL}">`;
+
+    // 🔥 상태 저장
+    sessionStorage.setItem('writeThumbURL', currentThumbURL);
   });
 
   const videoInput = document.getElementById('video');
@@ -27,28 +39,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoPreview = document.getElementById('videoPreview');
 
   videoBtn.addEventListener('click', () => {
-  videoInput.value = ''; // 🔥 핵심: 이전 파일 선택 기록 초기화
-  videoInput.click();
+    videoInput.value = ''; // 🔥 같은 영상 재선택 가능
+    videoInput.click();
   });
 
-  /* 🔥 여기만 수정됨 (영상 미리보기 안정화) */
   videoInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
 
-    // 기존 미리보기 완전 초기화
+    if (currentVideoURL) URL.revokeObjectURL(currentVideoURL);
+    currentVideoURL = URL.createObjectURL(f);
+
     videoPreview.innerHTML = '';
 
     const video = document.createElement('video');
-    video.src = URL.createObjectURL(f);
+    video.src = currentVideoURL;
     video.muted = true;
     video.controls = true;
     video.playsInline = true;
-
-    // iOS / Chrome 안정화
     video.load();
 
     videoPreview.appendChild(video);
+
+    // 🔥 상태 저장
+    sessionStorage.setItem('writeVideoURL', currentVideoURL);
   });
 
   /* ================= AI MODAL ================= */
@@ -93,29 +107,10 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    if (!categoryEl.value) {
-      alert('카테고리를 선택해주세요');
-      categoryEl.focus();
-      return;
-    }
-
-    if (!titleEl.value) {
-      alert('제목을 입력해주세요');
-      titleEl.focus();
-      return;
-    }
-
-    if (!descEl.value) {
-      alert('이슈 설명을 입력해주세요');
-      descEl.focus();
-      return;
-    }
-
-    if (!donationEl.value) {
-      alert('기부처를 선택해주세요');
-      donationEl.focus();
-      return;
-    }
+    if (!categoryEl.value) return alert('카테고리를 선택해주세요');
+    if (!titleEl.value) return alert('제목을 입력해주세요');
+    if (!descEl.value) return alert('이슈 설명을 입력해주세요');
+    if (!donationEl.value) return alert('기부처를 선택해주세요');
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
@@ -149,13 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
       </section>
     `;
 
-    /* 수정하기 */
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    /* 발행하기 → confirm.html */
     document.getElementById('publishPreview').onclick = () => {
       const payload = {
         category: categoryEl.value,
@@ -170,7 +163,6 @@ document.addEventListener('DOMContentLoaded', () => {
       location.href = 'confirm.html';
     };
 
-    /* 영상 모달 */
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
         openSpeech(videoEl.src);
@@ -199,4 +191,26 @@ document.addEventListener('DOMContentLoaded', () => {
     speechModal.style.display = 'none';
     body.style.overflow = '';
   });
+
+  /* ================= 🔁 CONFIRM → 돌아오기 복구 ================= */
+  const savedThumb = sessionStorage.getItem('writeThumbURL');
+  if (savedThumb) {
+    currentThumbURL = savedThumb;
+    thumbPreview.innerHTML = `<img src="${savedThumb}">`;
+  }
+
+  const savedVideo = sessionStorage.getItem('writeVideoURL');
+  if (savedVideo) {
+    currentVideoURL = savedVideo;
+
+    const video = document.createElement('video');
+    video.src = savedVideo;
+    video.muted = true;
+    video.controls = true;
+    video.playsInline = true;
+    video.load();
+
+    videoPreview.innerHTML = '';
+    videoPreview.appendChild(video);
+  }
 });
