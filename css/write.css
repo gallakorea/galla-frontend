@@ -1129,14 +1129,6 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
    AI MODAL – FINAL TUNE
    ========================================================= */
 
-/* 셀렉트: 글자 잘림 방지 */
-.ai-modal select.input-field {
-  height: 44px;
-  font-size: 13px;            /* ↓ 글자 크기 줄임 */
-  padding: 0 12px;
-  line-height: 44px;
-}
-
 /* =========================================================
    버튼 → 기존 스타일로 복구
    ========================================================= */
