@@ -26,9 +26,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 🔥 moderation 결과 저장용
-  let moderationStatus = "PASS";
-
   /* 4️⃣ 적합성 검사 */
   try {
     const { data, error } = await supabase.functions.invoke(
@@ -54,8 +51,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (data.result === "WARNING") {
-      moderationStatus = "WARNING";
-
       box.className = "confirm-box warning";
       box.innerHTML = `
         <strong>⚠️ 주의가 필요한 콘텐츠</strong><br/><br/>
@@ -63,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         해당 내용은 경고 기록으로만 저장되며 발행은 가능합니다.
       `;
 
-      // ✅ WARNING 로그 기록
+      // WARNING 로그만 기록
       await supabase.from("moderation_logs").insert({
         user_id: sessionData.session.user.id,
         result: "WARNING",
@@ -72,8 +67,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (data.result === "PASS") {
-      moderationStatus = "PASS";
-
       box.className = "confirm-box pass";
       box.innerHTML = `
         <strong>✅ 적합성 검사 통과</strong><br/><br/>
@@ -94,23 +87,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     history.back();
   };
 
-  /* 6️⃣ 최종 발행 → issue page 이동 (🔥 핵심) */
+  /* 6️⃣ 최종 발행 → issue 페이지로 이동 */
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
     publishBtn.textContent = "발행 중…";
 
-    const { data: inserted, error } = await supabase
+    const { data, error } = await supabase
       .from("issues")
-      .insert([
-        {
-          ...payload,
-          moderation_status: moderationStatus
-        }
-      ])
-      .select()
+      .insert([payload])
+      .select("id")
       .single();
 
-    if (error || !inserted) {
+    if (error || !data) {
       alert("발행 실패");
       publishBtn.disabled = false;
       publishBtn.textContent = "최종 발행";
@@ -119,7 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     sessionStorage.removeItem("writePayload");
 
-    // ✅ issue 상세 페이지로 이동
-    location.href = `issue.html?id=${inserted.id}`;
+    // ✅ 방금 발행한 이슈로 이동
+    location.href = `issue.html?id=${data.id}`;
   };
 });
