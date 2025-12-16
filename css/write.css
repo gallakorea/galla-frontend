@@ -1256,3 +1256,30 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
     max-height: calc(100dvh - 96px);
   }
 }
+
+/* ================================
+   🔥 하단 네비게이션 높이 축소
+   ================================ */
+
+.bottom-nav {
+  height: 56px;                 /* 기존보다 확실히 줄임 */
+  padding: 6px 0;               /* 세로 여백 감소 */
+}
+
+/* 아이콘 자체 크기 조정 */
+.bottom-nav .nav-item img {
+  width: 22px;
+  height: 22px;
+}
+
+/* 아이콘 터치 영역은 유지 */
+.bottom-nav .nav-item {
+  padding: 6px 0;
+}
+
+/* iOS safe-area 대응 (있다면 유지) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .bottom-nav {
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
+  }
+}
