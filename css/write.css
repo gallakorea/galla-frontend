@@ -1172,26 +1172,3 @@ body.modal-open {
   overflow: hidden;
 }
 
-/* ================================
-   AI MODAL 버튼 사이즈 정리
-   ================================ */
-
-.ai-modal-inner button {
-  height: 44px;                 /* ⬅️ 너무 크지도 작지도 않은 기준 */
-  font-size: 14px;
-  border-radius: 12px;
-}
-
-/* AI 실행 버튼 (서브) */
-.ai-modal-inner .btn-sub {
-  height: 42px;
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-/* AI 적용하기 버튼 (메인) */
-.ai-modal-inner .btn-main {
-  height: 46px;                 /* ⬅️ 살짝만 강조 */
-  font-size: 15px;
-  font-weight: 600;
-}
