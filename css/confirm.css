@@ -106,18 +106,25 @@ body {
 }
 
 /* =========================
-   CONFIRM PAGE FIX
+   CONFIRM PAGE HARD FIX
 ========================= */
 
-/* 하단 네비 공간 확보 */
-body[data-page="confirm"] #app {
-  padding-bottom: 120px; /* bottom-nav 높이 + 여유 */
+body[data-page="confirm"] {
+  display: block; /* flex 제거 */
 }
 
-/* 하단 네비 항상 하단 고정 */
+body[data-page="confirm"] .app-root {
+  padding-bottom: 140px;
+}
+
 body[data-page="confirm"] .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+
+  max-width: 480px;
+  margin: 0 auto;
+
+  transform: none;
 }
