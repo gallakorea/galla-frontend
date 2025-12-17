@@ -1,105 +1,114 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const backBtn = document.getElementById('backBtn');
+  const resultList = document.getElementById('resultList');
+  const overallBox = document.getElementById('overallBox');
   const publishBtn = document.getElementById('publishBtn');
+  const backBtn = document.getElementById('backBtn');
 
   const payloadRaw = sessionStorage.getItem('writePayload');
   if (!payloadRaw) {
     alert('작성 정보가 없습니다.');
-    history.back();
+    location.href = 'write.html';
     return;
   }
 
   const payload = JSON.parse(payloadRaw);
 
-  backBtn.onclick = () => history.back();
+  /* =========================
+     AI 적합성 검사 호출
+     ========================= */
+  const moderation = await runModerationCheck(
+    payload.title,
+    payload.oneLine,
+    payload.description
+  );
 
-  /* 1️⃣ 로컬 검사 */
-  const localResult = runLocalCheck(payload);
+  const fields = [
+    { key: 'title', label: '제목' },
+    { key: 'oneLine', label: '한 줄 요약' },
+    { key: 'description', label: '본문' },
+  ];
 
-  renderResult(localResult);
+  let hasFail = false;
+  let hasWarning = false;
 
-  /* 2️⃣ AI 검사 필요 여부 */
-  const needAi =
-    Object.values(localResult).some(v => v.result === 'WARNING');
+  fields.forEach(f => {
+    const res = moderation[f.key];
+    if (!res) return;
 
-  let finalResult = localResult;
+    if (res.result === 'FAIL') hasFail = true;
+    if (res.result === 'WARNING') hasWarning = true;
 
-  if (needAi) {
-    const aiResult = await runAiModeration(payload);
-    finalResult = aiResult;
-    renderResult(aiResult);
+    const div = document.createElement('div');
+    div.className = `result-item ${res.result.toLowerCase()}`;
+    div.innerHTML = `
+      <div class="result-title">${f.label} · ${res.result}</div>
+      <div class="result-reason">${res.reason}</div>
+    `;
+    resultList.appendChild(div);
+  });
+
+  /* =========================
+     OVERALL 안내
+     ========================= */
+  if (moderation.overall === 'FAIL') {
+    overallBox.innerHTML = `
+      ❌ 이 콘텐츠는 발행할 수 없습니다.<br/>
+      법적·사회적 위험이 명확한 표현이 포함되어 있습니다.
+    `;
+    publishBtn.disabled = true;
   }
 
-  /* 3️⃣ 발행 버튼 활성화 */
-  publishBtn.disabled = false;
+  if (moderation.overall === 'WARNING') {
+    overallBox.innerHTML = `
+      ⚠️ 일부 표현에 주의가 필요합니다.<br/>
+      본 콘텐츠는 공개되며, 모든 책임은 작성자에게 귀속됩니다.
+    `;
+    publishBtn.disabled = false;
+  }
+
+  if (moderation.overall === 'PASS') {
+    overallBox.innerHTML = `
+      ✅ 표현 위험 요소가 발견되지 않았습니다.
+    `;
+    publishBtn.disabled = false;
+  }
+
+  /* =========================
+     ACTION
+     ========================= */
+  backBtn.onclick = () => history.back();
 
   publishBtn.onclick = () => {
-    publishIssue(payload, finalResult);
+    publishIssue(payload, moderation);
   };
 });
 
-/* =====================
-   LOCAL CHECK (무료)
-===================== */
-function runLocalCheck(payload) {
-  return {
-    title: checkText(payload.title),
-    oneLine: checkText(payload.oneLine),
-    description: checkText(payload.description),
-  };
-}
-
-function checkText(text = '') {
-  if (/죽여|살해|사기꾼|범죄자/.test(text)) {
-    return { result: 'FAIL', reason: '위험한 표현 포함' };
-  }
-  if (/이다\.$|확실하다|명백하다/.test(text)) {
-    return { result: 'WARNING', reason: '단정적 표현 포함' };
-  }
-  return { result: 'PASS', reason: '' };
-}
-
-/* =====================
-   AI CHECK (조건부)
-===================== */
-async function runAiModeration(payload) {
-  try {
-    const { data } = await window.supabaseClient.functions.invoke(
+/* =========================
+   AI 호출
+   ========================= */
+async function runModerationCheck(title, oneLine, description) {
+  const { data, error } =
+    await window.supabaseClient.functions.invoke(
       'ai-moderation-check',
-      {
-        body: {
-          title: payload.title,
-          oneLine: payload.oneLine,
-          description: payload.description
-        }
-      }
+      { body: { title, oneLine, description } }
     );
-    return data;
-  } catch {
-    return runLocalCheck(payload);
+
+  if (error || !data) {
+    return {
+      overall: 'WARNING',
+      title: { result: 'WARNING', reason: '검사 실패' },
+      oneLine: { result: 'WARNING', reason: '검사 실패' },
+      description: { result: 'WARNING', reason: '검사 실패' },
+    };
   }
+
+  return data;
 }
 
-/* =====================
-   RENDER
-===================== */
-function renderResult(result) {
-  Object.entries(result).forEach(([key, value]) => {
-    const el = document.querySelector(`.result-item[data-key="${key}"]`);
-    if (!el) return;
-
-    el.classList.remove('loading', 'pass', 'warning', 'fail');
-    el.classList.add(value.result.toLowerCase());
-
-    el.querySelector('.result-status').textContent = value.result;
-    el.querySelector('.result-reason').textContent = value.reason || '';
-  });
-}
-
-/* =====================
-   PUBLISH (기존 로직 연결)
-===================== */
-async function publishIssue(payload, moderationResult) {
+/* =========================
+   실제 발행
+   ========================= */
+async function publishIssue(payload, moderation) {
   alert('정상적으로 발행되었습니다.');
   sessionStorage.removeItem('writePayload');
   location.href = 'index.html';

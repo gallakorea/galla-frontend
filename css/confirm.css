@@ -2,7 +2,7 @@ body {
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont;
   display: flex;
   justify-content: center;
 }
@@ -28,98 +28,64 @@ body {
 
 /* MAIN */
 .confirm-main {
-  padding: 28px 16px;
+  padding: 24px 16px;
 }
 
 .confirm-title {
   font-size: 20px;
   font-weight: 800;
 }
-
 .confirm-desc {
   font-size: 13px;
   color: #aaa;
   margin-top: 6px;
-  line-height: 1.5;
 }
 
 /* RESULT LIST */
 .result-list {
-  margin-top: 24px;
+  margin-top: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .result-item {
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 14px;
   padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #222;
+  background: #111;
 }
 
-.result-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.result-item.pass { border-color: #2f80ff; }
+.result-item.warning { border-color: #ffe27a; }
+.result-item.fail { border-color: #ff4f6e; }
 
-.result-label {
+.result-title {
   font-size: 14px;
-  font-weight: 700;
-}
-
-.result-status {
-  font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .result-reason {
-  margin-top: 8px;
   font-size: 13px;
+  margin-top: 6px;
   line-height: 1.5;
   color: #ccc;
 }
 
-/* STATES */
-.result-item.loading {
-  opacity: .6;
-}
-
-.result-item.pass {
-  border-color: #2f80ff;
-}
-.result-item.pass .result-status {
-  color: #2f80ff;
-}
-
-.result-item.warning {
-  border-color: #ffe27a;
-}
-.result-item.warning .result-status {
-  color: #ffe27a;
-}
-
-.result-item.fail {
-  border-color: #ff4f6e;
-}
-.result-item.fail .result-status {
-  color: #ff4f6e;
-}
-
-/* NOTICE */
-.confirm-notice {
-  margin-top: 22px;
-  font-size: 12px;
+/* OVERALL */
+.overall-box {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #0f0f0f;
+  border: 1px solid #222;
+  font-size: 13px;
   line-height: 1.6;
-  color: #888;
-  border-top: 1px dashed #222;
-  padding-top: 14px;
 }
 
-/* ACTIONS */
+/* ACTION */
 .confirm-actions {
-  margin-top: 26px;
+  margin-top: 24px;
   display: flex;
   gap: 10px;
 }
@@ -146,25 +112,4 @@ body {
 
 .btn-main:disabled {
   opacity: .4;
-}
-
-/* BOTTOM NAV */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  background: #000;
-  border-top: 1px solid #111;
-  padding: 12px 0;
-  display: flex;
-  justify-content: space-around;
-  z-index: 9999;
-}
-
-.nav-item img {
-  width: 26px;
-  filter: brightness(0) invert(1);
 }
