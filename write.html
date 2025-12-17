@@ -194,22 +194,21 @@
   </nav>
 
 <!-- 🎥 SPEECH MODAL -->
-<div id="speechModal" class="video-modal">
-  <div class="video-modal-inner">
-    <div class="video-modal-header">
-      <strong>1분 엘리베이터 스피치</strong>
-      <button id="closeSpeech">✕</button>
-    </div>
-
-    <div class="video-viewport">
-      <video
-        id="speechVideo"
-        playsinline
-        controls
-      ></video>
-    </div>
+<div id="speechModal" class="speech-modal" style="display:none;">
+  <div class="speech-modal-inner">
+    <button id="closeSpeech" class="speech-close">✕</button>
+    <video
+      id="speechVideo"
+      controls
+      playsinline
+      webkit-playsinline
+    ></video>
   </div>
 </div>
+
+<!-- AI MODAL -->
+<div id="aiModal" class="ai-modal">
+  <div class="ai-modal-inner">
 
     <!-- HEADER -->
 <div class="ai-modal-header">
