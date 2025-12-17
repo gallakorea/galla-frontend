@@ -1,4 +1,3 @@
-// js/write.draft.save.js
 document.addEventListener('DOMContentLoaded', () => {
   const issuePreview = document.getElementById('issuePreview');
   if (!issuePreview) return;
@@ -7,7 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = e.target.closest('#publishPreview');
     if (!btn) return;
 
+    // 🔥 write.js 기본 이동 완전 차단
     e.preventDefault();
+    e.stopImmediatePropagation();
 
     const originalText = btn.textContent;
     btn.disabled = true;
@@ -20,22 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         1️⃣ 로그인 세션 확인 (🔥 수정 핵심)
-         ❌ getUser() 사용 금지
-         ⭕ getSession()만 사용
+         1️⃣ 로그인 세션 확인 (단일 기준)
       ========================= */
-      const { data: sessionData } =
+      const { data } =
         await window.supabaseClient.auth.getSession();
 
-      const user = sessionData?.session?.user;
-
+      const user = data?.session?.user;
       if (!user) {
         alert('로그인이 필요합니다.');
         return;
       }
 
       /* =========================
-         2️⃣ write 페이지 값 수집
+         2️⃣ write 값 수집
       ========================= */
       const category = document.getElementById('category')?.value;
       const title = document.getElementById('title')?.value;
@@ -51,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         3️⃣ 파일 수집
+         3️⃣ 파일
       ========================= */
       const thumbFile =
         document.getElementById('thumbnail')?.files?.[0] || null;
@@ -61,56 +59,44 @@ document.addEventListener('DOMContentLoaded', () => {
       let thumbnail_url = null;
       let video_url = null;
 
-      /* =========================
-         4️⃣ 썸네일 업로드 (선택)
-      ========================= */
+      /* 썸네일 */
       if (thumbFile) {
-        const thumbExt = thumbFile.name.split('.').pop();
-        const thumbPath =
-          `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${thumbExt}`;
+        const ext = thumbFile.name.split('.').pop();
+        const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
 
-        const { error: uploadError } =
-          await window.supabaseClient.storage
+        await window.supabaseClient
+          .storage
+          .from('issues')
+          .upload(path, thumbFile);
+
+        thumbnail_url =
+          window.supabaseClient
+            .storage
             .from('issues')
-            .upload(thumbPath, thumbFile, { upsert: false });
-
-        if (uploadError) throw uploadError;
-
-        const { data } =
-          window.supabaseClient.storage
-            .from('issues')
-            .getPublicUrl(thumbPath);
-
-        thumbnail_url = data.publicUrl;
+            .getPublicUrl(path).data.publicUrl;
       }
 
-      /* =========================
-         5️⃣ 영상 업로드 (선택)
-      ========================= */
+      /* 영상 */
       if (videoFile) {
-        const videoExt = videoFile.name.split('.').pop();
-        const videoPath =
-          `drafts/${user.id}/video_${crypto.randomUUID()}.${videoExt}`;
+        const ext = videoFile.name.split('.').pop();
+        const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
 
-        const { error: uploadError } =
-          await window.supabaseClient.storage
+        await window.supabaseClient
+          .storage
+          .from('issues')
+          .upload(path, videoFile);
+
+        video_url =
+          window.supabaseClient
+            .storage
             .from('issues')
-            .upload(videoPath, videoFile, { upsert: false });
-
-        if (uploadError) throw uploadError;
-
-        const { data } =
-          window.supabaseClient.storage
-            .from('issues')
-            .getPublicUrl(videoPath);
-
-        video_url = data.publicUrl;
+            .getPublicUrl(path).data.publicUrl;
       }
 
       /* =========================
-         6️⃣ draft INSERT
+         4️⃣ draft 저장
       ========================= */
-      const { data: draft, error: insertError } =
+      const { data: draft, error } =
         await window.supabaseClient
           .from('issues')
           .insert([{
@@ -125,18 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
             video_url,
             status: 'draft',
             moderation_status: 'pending',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           }])
           .select('id')
           .single();
 
-      if (insertError || !draft?.id) {
-        throw insertError || new Error('draft 생성 실패');
+      if (error || !draft?.id) {
+        throw error || new Error('draft 생성 실패');
       }
 
       /* =========================
-         7️⃣ confirm 페이지로 이동 (URL 전달)
+         5️⃣ confirm 이동 (유일한 진입)
       ========================= */
       location.href = `confirm.html?draft=${draft.id}`;
 
