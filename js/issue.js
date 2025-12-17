@@ -61,27 +61,24 @@ function renderIssue(issue) {
 
   qs("issue-author").innerText = "작성자 · 익명";
 
-  /* Thumbnail */
+  /* ==========================
+    Thumbnail (🔥 FIX)
+  ========================== */
   if (issue.thumbnail_url) {
-    const { data } = window.supabaseClient
-      .storage
-      .from("issues")
-      .getPublicUrl(issue.thumbnail_url);
-
-    qs("issue-thumb").src = data.publicUrl;
+    qs("issue-thumb").src = issue.thumbnail_url;
+    qs("issue-thumb").style.display = "block";
+  } else {
+    qs("issue-thumb").style.display = "none";
   }
 
-  /* Video */
+  /* ==========================
+    Video (🔥 FIX)
+  ========================== */
   if (issue.video_url) {
     qs("open-video-modal").style.display = "block";
 
-    const { data } = window.supabaseClient
-      .storage
-      .from("issues")
-      .getPublicUrl(issue.video_url);
-
     const videoEl = qs("speech-video");
-    videoEl.src = data.publicUrl;
+    videoEl.src = issue.video_url;
     videoEl.controls = true;
   } else {
     qs("open-video-modal").style.display = "none";
