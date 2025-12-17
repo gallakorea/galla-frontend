@@ -132,3 +132,20 @@ const labelMap = {
   'check-oneline': '한줄 요약',
   'check-description': '본문',
 };
+
+/* =========================
+   CONFIRM PAGE FIX
+========================= */
+
+/* 하단 네비 공간 확보 */
+body[data-page="confirm"] #app {
+  padding-bottom: 120px; /* bottom-nav 높이 + 여유 */
+}
+
+/* 하단 네비 항상 하단 고정 */
+body[data-page="confirm"] .bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
