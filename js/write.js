@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
     speechModal.style.display = 'flex';
     body.style.overflow = 'hidden';
     speechVideo.currentTime = 0;
-    speechVideo.play();
+    speechVideo.play().catch(() => {});
   }
 
   closeSpeech.addEventListener('click', () => {
