@@ -205,44 +205,20 @@
 </div>
 
 <!-- MODE SELECT -->
-<!-- 🔥 AI 논쟁 입장 선택 (추가만 함) -->
-<label class="ai-label">AI 논쟁 입장 선택</label>
-<select id="aiStance" class="input-field">
-  <option value="neutral">입장 없이 쟁점만 정리</option>
-  <option value="pro">찬성 입장에서 주장 강화</option>
-  <option value="con">반대 입장에서 주장 강화</option>
-  <option value="dual">찬성·반대 양쪽 논리 모두 제시</option>
-  <option value="question">독자가 판단하게 질문형 구성</option>
+<label class="ai-label">AI 글 재구성 방식</label>
+<select id="aiMood" class="input-field">
+  <option value="neutral">중립적으로 정리</option>
+  <option value="cold">차갑게 분석</option>
+  <option value="gentle">온화하게 설득</option>
+  <option value="aggressive">공격적으로 밀어붙이기</option>
+  <option value="uncomfortable">불편하게 찌르기</option>
+  <option value="ironic">비꼬듯 드러내기</option>
+  <option value="emotional">마음 건드리기</option>
+  <option value="humorous">유머로 풀기</option>
+  <option value="result-first">결과부터 제시</option>
+  <option value="cannot-ignore">외면하기 어렵게 시작</option>
+  <option value="custom">직접 입력하기</option>
 </select>
-
-<label class="ai-label">어조 강도</label>
-
-<div class="ai-tone-radio-group">
-  <label class="ai-tone-option">
-    <input type="radio" name="aiTone" value="5">
-    <span>매우 공격적</span>
-  </label>
-
-  <label class="ai-tone-option">
-    <input type="radio" name="aiTone" value="4">
-    <span>공격적</span>
-  </label>
-
-  <label class="ai-tone-option">
-    <input type="radio" name="aiTone" value="3" checked>
-    <span>중간</span>
-  </label>
-
-  <label class="ai-tone-option">
-    <input type="radio" name="aiTone" value="2">
-    <span>온화한</span>
-  </label>
-
-  <label class="ai-tone-option">
-    <input type="radio" name="aiTone" value="1">
-    <span>매우 온화한</span>
-  </label>
-</div>
 
 <!-- ✅ DIRECT CUSTOM PROMPT (custom 선택 시만 노출) -->
 <div
@@ -273,7 +249,7 @@
     <textarea
       id="aiUserText"
       class="input-field textarea user-text"
-      placeholder="생각을 그대로 두서없이 적어주세요. 논리와 구조는 AI가 만듭니다."
+      placeholder="개떡같이 써도 괜찮음. AI가 논리적으로 재구성함"
     ></textarea>
 
     <!-- RUN -->
@@ -284,10 +260,7 @@
     <textarea
       id="aiResultText"
       class="input-field textarea result-text"
-      placeholder="※ 아래 내용은 원문의 감정적·주관적 표현을
-   ‘논쟁 가능한 쟁점 구조’로 재구성한 결과입니다.
-   최종 입장은 작성자에게 있으며,
-   GALLA는 특정 의견을 대변하지 않습니다."
+      placeholder="AI가 논리적으로 재구성한 결과"
     ></textarea>
 
     <!-- APPLY -->
