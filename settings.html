@@ -258,10 +258,8 @@ function waitForSupabaseClient() {
     }
 
     // 로그아웃
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-        await supabase.auth.signOut();
-        alert("로그아웃되었습니다.");
-        location.href = "index.html";
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+        window.gallaLogout();
     });
 })();
 </script>
