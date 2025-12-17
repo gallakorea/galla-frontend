@@ -22,16 +22,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  /* =====================
-     로그인 세션 확인
-  ===================== */
-  const { data: sessionData } = await supabase.auth.getSession();
-
-  if (!sessionData.session?.user) {
+/* =====================
+   🔥 세션 복원 대기 (Supabase v2 안정화)
+===================== */
+const {
+  data: { subscription }
+} = supabase.auth.onAuthStateChange((_event, session) => {
+  if (!session?.user) {
     alert('로그인이 필요합니다.');
     location.href = 'login.html';
     return;
   }
+
+  subscription.unsubscribe();
+});
 
   /* =====================
      draft ID (URL 기준) 🔥 핵심
