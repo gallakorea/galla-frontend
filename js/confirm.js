@@ -1,70 +1,89 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const backBtn = document.getElementById("backBtn");
-  const publishBtn = document.getElementById("publishBtn");
+document.addEventListener('DOMContentLoaded', async () => {
+  const draftId = sessionStorage.getItem('draft_id');
+  const backBtn = document.getElementById('backBtn');
+  const publishBtn = document.getElementById('publishBtn');
 
-  backBtn.addEventListener("click", () => {
+  if (!draftId) {
+    alert('임시 저장된 글이 없습니다.');
+    location.href = 'write.html';
+    return;
+  }
+
+  /* =========================
+     1️⃣ draft 불러오기
+  ========================= */
+  const { data: draft, error } =
+    await window.supabaseClient
+      .from('issues')
+      .select('*')
+      .eq('id', draftId)
+      .single();
+
+  if (error || !draft) {
+    alert('임시 글을 불러오지 못했습니다.');
+    return;
+  }
+
+  /* =========================
+     2️⃣ 적합성 검사 (현재는 MOCK)
+  ========================= */
+  renderResult('check-title', 'PASS', '문제 없음');
+  renderResult('check-oneline', 'PASS', '문제 없음');
+  renderResult('check-description', 'PASS', '문제 없음');
+
+  publishBtn.disabled = false;
+
+  /* =========================
+     3️⃣ 뒤로 가기
+  ========================= */
+  backBtn.onclick = () => {
     history.back();
-  });
+  };
 
-  publishBtn.addEventListener("click", async () => {
-    const payloadRaw = sessionStorage.getItem("writePayload");
-
-    if (!payloadRaw) {
-      alert("작성 데이터가 없습니다.");
-      return;
-    }
-
-    const payload = JSON.parse(payloadRaw);
-
-    if (!window.supabaseClient) {
-      alert("Supabase 연결 실패");
-      return;
-    }
-
+  /* =========================
+     4️⃣ 최종 발행
+  ========================= */
+  publishBtn.onclick = async () => {
     publishBtn.disabled = true;
-    publishBtn.textContent = "발행 중…";
+    publishBtn.textContent = '발행 중…';
 
-    try {
-      const {
-        data: { user },
-        error: authError,
-      } = await window.supabaseClient.auth.getUser();
+    const { error: updateError } =
+      await window.supabaseClient
+        .from('issues')
+        .update({
+          status: 'normal',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', draftId);
 
-      if (authError || !user) {
-        alert("로그인이 필요합니다.");
-        return;
-      }
-
-      /* ✅ issues INSERT */
-      const { data: issue, error } =
-        await window.supabaseClient
-          .from("issues")
-          .insert([{
-            user_id: user.id,
-            category: payload.category,
-            title: payload.title,
-            one_line: payload.oneLine,
-            description: payload.description,
-            donation_target: payload.donation_target,
-            is_anonymous: payload.is_anonymous,
-            status: "normal",
-            moderation_status: "unchecked",
-          }])
-          .select("id")
-          .single();
-
-      if (error) throw error;
-
-      sessionStorage.removeItem("writePayload");
-
-      /* ✅ 발행 후 해당 이슈 페이지로 이동 */
-      location.href = `issue.html?id=${issue.id}`;
-
-    } catch (e) {
-      console.error("[PUBLISH ERROR]", e);
-      alert("발행 중 오류가 발생했습니다.");
+    if (updateError) {
+      alert('발행 중 오류가 발생했습니다.');
       publishBtn.disabled = false;
-      publishBtn.textContent = "최종 발행";
+      publishBtn.textContent = '최종 발행';
+      return;
     }
-  });
+
+    sessionStorage.removeItem('draft_id');
+    location.href = `issue.html?id=${draftId}`;
+  };
 });
+
+/* =========================
+   UI 헬퍼
+========================= */
+function renderResult(id, result, reason) {
+  const el = document.getElementById(id);
+  el.classList.remove('loading');
+  el.classList.add(result.toLowerCase());
+
+  el.innerHTML = `
+    <strong>${labelMap[id]}</strong><br>
+    ${result} · ${reason}
+  `;
+}
+
+const labelMap = {
+  'check-title': '제목',
+  'check-oneline': '한줄 요약',
+  'check-description': '본문',
+};

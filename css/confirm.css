@@ -24,14 +24,11 @@ body {
   display: flex;
   align-items: center;
 }
-.logo {
-  width: 105px;
-  cursor: pointer;
-}
+.logo { width: 105px; }
 
 /* MAIN */
 .confirm-main {
-  padding: 28px 16px;
+  padding: 24px 16px;
 }
 
 .confirm-title {
@@ -46,10 +43,16 @@ body {
   line-height: 1.5;
 }
 
-/* RESULT BOX */
-.confirm-box {
+/* SECTION */
+.confirm-section {
   margin-top: 22px;
-  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirm-item {
+  padding: 16px;
   border-radius: 14px;
   background: #111;
   border: 1px solid #222;
@@ -57,9 +60,22 @@ body {
   line-height: 1.6;
 }
 
-.confirm-box.pass {
+.confirm-item.loading {
+  opacity: .5;
+}
+
+.confirm-item.pass {
   border-color: #2f80ff;
-  color: #fff;
+}
+
+.confirm-item.warning {
+  border-color: #ffe27a;
+  color: #ffe27a;
+}
+
+.confirm-item.fail {
+  border-color: #ff4f6e;
+  color: #ff4f6e;
 }
 
 /* ACTIONS */

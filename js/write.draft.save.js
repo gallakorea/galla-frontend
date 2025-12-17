@@ -1,13 +1,20 @@
-// js/write.draft.js
+// js/write.draft.save.js
 document.addEventListener('DOMContentLoaded', () => {
   const issuePreview = document.getElementById('issuePreview');
+  if (!issuePreview) return;
 
-  // preview 영역은 동적으로 생성되므로 delegation
+  /**
+   * write.js에서 미리보기 생성 후
+   * "발행 전 적합성 검사" 버튼 클릭을 가로챈다
+   */
   issuePreview.addEventListener('click', async (e) => {
     const btn = e.target.closest('#publishPreview');
     if (!btn) return;
 
+    e.preventDefault();
+
     btn.disabled = true;
+    const originalText = btn.textContent;
     btn.textContent = '임시 저장 중…';
 
     try {
@@ -17,12 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         1️⃣ 사용자 확인
+         1️⃣ 로그인 유저 확인
       ========================= */
-      const { data: { user } } =
-        await window.supabaseClient.auth.getUser();
+      const {
+        data: { user },
+        error: authError,
+      } = await window.supabaseClient.auth.getUser();
 
-      if (!user) {
+      if (authError || !user) {
         alert('로그인이 필요합니다.');
         return;
       }
@@ -32,10 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ========================= */
       const category = document.getElementById('category')?.value;
       const title = document.getElementById('title')?.value;
-      const oneLine = document.getElementById('oneLine')?.value;
+      const oneLine = document.getElementById('oneLine')?.value || null;
       const description = document.getElementById('description')?.value;
       const donationTarget = document.getElementById('donationTarget')?.value;
-      const isAnonymous = document.getElementById('isAnonymous')?.checked;
+      const isAnonymous = document.getElementById('isAnonymous')?.checked ?? false;
 
       if (!category || !title || !description || !donationTarget) {
         alert('필수 항목이 누락되었습니다.');
@@ -43,26 +52,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         3️⃣ 파일 가져오기
+         3️⃣ 파일 수집 (input 그대로)
       ========================= */
-      const thumbFile = document.getElementById('thumbnail')?.files?.[0] || null;
-      const videoFile = document.getElementById('video')?.files?.[0] || null;
+      const thumbFile =
+        document.getElementById('thumbnail')?.files?.[0] || null;
+      const videoFile =
+        document.getElementById('video')?.files?.[0] || null;
 
       let thumbnail_url = null;
       let video_url = null;
 
       /* =========================
-         4️⃣ 썸네일 업로드
+         4️⃣ 썸네일 업로드 (선택)
       ========================= */
       if (thumbFile) {
-        const thumbPath = `drafts/${user.id}/${crypto.randomUUID()}.${thumbFile.name.split('.').pop()}`;
+        const thumbExt = thumbFile.name.split('.').pop();
+        const thumbPath =
+          `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${thumbExt}`;
 
-        const { error } =
+        const { error: uploadError } =
           await window.supabaseClient.storage
             .from('issues')
             .upload(thumbPath, thumbFile, { upsert: false });
 
-        if (error) throw error;
+        if (uploadError) throw uploadError;
 
         const { data } =
           window.supabaseClient.storage
@@ -76,14 +89,16 @@ document.addEventListener('DOMContentLoaded', () => {
          5️⃣ 영상 업로드 (선택)
       ========================= */
       if (videoFile) {
-        const videoPath = `drafts/${user.id}/${crypto.randomUUID()}.${videoFile.name.split('.').pop()}`;
+        const videoExt = videoFile.name.split('.').pop();
+        const videoPath =
+          `drafts/${user.id}/video_${crypto.randomUUID()}.${videoExt}`;
 
-        const { error } =
+        const { error: uploadError } =
           await window.supabaseClient.storage
             .from('issues')
             .upload(videoPath, videoFile, { upsert: false });
 
-        if (error) throw error;
+        if (uploadError) throw uploadError;
 
         const { data } =
           window.supabaseClient.storage
@@ -110,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             thumbnail_url,
             video_url,
             status: 'draft',
+            moderation_status: 'pending',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }])
@@ -129,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('임시 저장 중 오류가 발생했습니다.');
     } finally {
       btn.disabled = false;
-      btn.textContent = '발행 전 적합성 검사';
+      btn.textContent = originalText;
     }
   });
 });
