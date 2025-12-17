@@ -1,48 +1,37 @@
-/* =========================================================
-   BASE
-========================================================= */
+/* BASE */
 body {
   margin: 0;
   background: #000;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-
-  /* ❗ 기본은 flex 유지 (다른 페이지용) */
-  display: flex;
-  justify-content: center;
 }
 
-/* =========================================================
-   APP ROOT
-========================================================= */
+/* confirm 페이지에서는 flex 절대 금지 */
+body[data-page="confirm"] {
+  display: block;
+}
+
+/* APP ROOT */
 .app-root {
-  width: 100%;
   max-width: 480px;
+  margin: 0 auto;
   min-height: 100vh;
-  padding-bottom: 110px; /* 기본값 */
+  padding-bottom: 140px; /* 하단 네비 공간 */
 }
 
-/* =========================================================
-   HEADER
-========================================================= */
+/* HEADER */
 .header {
   border-bottom: 1px solid #111;
 }
-
 .header-inner {
   height: 54px;
   padding: 0 16px;
   display: flex;
   align-items: center;
 }
+.logo { width: 105px; }
 
-.logo {
-  width: 105px;
-}
-
-/* =========================================================
-   MAIN
-========================================================= */
+/* MAIN */
 .confirm-main {
   padding: 24px 16px;
 }
@@ -56,12 +45,9 @@ body {
   font-size: 13px;
   color: #aaa;
   margin-top: 6px;
-  line-height: 1.5;
 }
 
-/* =========================================================
-   SECTION
-========================================================= */
+/* SECTION */
 .confirm-section {
   margin-top: 22px;
   display: flex;
@@ -75,93 +61,39 @@ body {
   background: #111;
   border: 1px solid #222;
   font-size: 14px;
-  line-height: 1.6;
 }
 
-.confirm-item.loading {
-  opacity: 0.5;
-}
+.confirm-item.loading { opacity: .5; }
+.confirm-item.pass { border-color: #2f80ff; }
 
-.confirm-item.pass {
-  border-color: #2f80ff;
-}
-
-.confirm-item.warning {
-  border-color: #ffe27a;
-  color: #ffe27a;
-}
-
-.confirm-item.fail {
-  border-color: #ff4f6e;
-  color: #ff4f6e;
-}
-
-/* =========================================================
-   ACTIONS
-========================================================= */
+/* ACTIONS */
 .confirm-actions {
   margin-top: 26px;
   display: flex;
   gap: 10px;
 }
 
-.btn-sub {
+.btn-sub, .btn-main {
   flex: 1;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-  padding: 14px;
-  border-radius: 12px;
-  font-weight: 700;
-}
-
-.btn-main {
-  flex: 1;
-  background: #2f80ff;
-  border: none;
-  color: #fff;
   padding: 14px;
   border-radius: 12px;
   font-weight: 800;
 }
 
-/* =========================================================
-   CONFIRM PAGE — HARD FIX (핵심)
-========================================================= */
-
-/* 🔥 confirm 페이지에서는 body flex 완전 해제 */
-body[data-page="confirm"] {
-  display: block;
+.btn-sub {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #fff;
 }
 
-/* 🔥 콘텐츠 영역 정확히 중앙 + 네비 공간 확보 */
-body[data-page="confirm"] .app-root {
-  margin: 0 auto;
-  padding-bottom: 140px; /* bottom-nav 높이 + 여유 */
-}
-
-/* 🔥 하단 네비: viewport 기준 고정 (안 깨짐) */
-body[data-page="confirm"] .bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 100%;
-  max-width: 480px;
-
-  background: #000;
-  border-top: 1px solid #111;
-  z-index: 9999;
-}
-
-/* ===== confirm page HTML 구조 수술 ===== */
-body[data-page="confirm"] {
-  display: block;
+.btn-main {
+  background: #2f80ff;
+  border: none;
+  color: #fff;
 }
 
 /* =========================
-   BOTTOM NAV SVG HARD FIX
+   🔥 BOTTOM NAV (핵심)
 ========================= */
 .bottom-nav {
   position: fixed;
@@ -179,14 +111,14 @@ body[data-page="confirm"] {
 }
 
 .nav-item {
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
 }
 
-/* 🔥 핵심: SVG 폭주 차단 */
+/* 🔥 SVG 폭주 차단 */
 .nav-item img {
   width: 26px;
   height: 26px;
