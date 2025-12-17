@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>발행 전 적합성 검사 · GALLA</title>
+
   <link rel="stylesheet" href="./css/confirm.css" />
 </head>
 
@@ -13,8 +14,11 @@
   <!-- HEADER -->
   <header class="header">
     <div class="header-inner">
-      <img src="./assets/logo.png" class="logo"
-           onclick="location.href='index.html'" />
+      <img
+        src="./assets/logo.png"
+        class="logo"
+        onclick="location.href='index.html'"
+      />
     </div>
   </header>
 
@@ -22,19 +26,18 @@
   <main class="confirm-main">
     <h1 class="confirm-title">발행 전 적합성 검사</h1>
     <p class="confirm-desc">
-      본 검사는 콘텐츠의 <b>표현 위험 요소</b>를 안내하기 위한 절차입니다.
+      본 검사는 콘텐츠의 표현 위험 요소를 안내하기 위한 절차이며,<br />
+      최종 발행 책임은 작성자 본인에게 있습니다.
     </p>
 
-    <!-- 검사 결과 -->
-    <div id="resultList" class="result-list"></div>
+    <div id="moderationBox" class="confirm-box pass">
+      ✔ 현재 AI 자동 검사는 비활성화되어 있습니다.<br />
+      본 콘텐츠는 즉시 발행할 수 있습니다.
+    </div>
 
-    <!-- 종합 안내 -->
-    <div id="overallBox" class="overall-box"></div>
-
-    <!-- ACTION -->
     <div class="confirm-actions">
       <button id="backBtn" class="btn-sub">돌아가기</button>
-      <button id="publishBtn" class="btn-main" disabled>
+      <button id="publishBtn" class="btn-main">
         최종 발행
       </button>
     </div>
@@ -42,11 +45,21 @@
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <a href="index.html" class="nav-item"><img src="./assets/icons/nav-home.svg" /></a>
-    <a href="search.html" class="nav-item"><img src="./assets/icons/nav-search.svg" /></a>
-    <a href="write.html" class="nav-item active"><img src="./assets/icons/nav-write.svg" /></a>
-    <a href="random.html" class="nav-item"><img src="./assets/icons/nav-random.svg" /></a>
-    <a href="mypage.html" class="nav-item"><img src="./assets/icons/nav-user.svg" /></a>
+    <a href="index.html" class="nav-item">
+      <img src="./assets/icons/nav-home.svg" />
+    </a>
+    <a href="search.html" class="nav-item">
+      <img src="./assets/icons/nav-search.svg" />
+    </a>
+    <a href="write.html" class="nav-item active">
+      <img src="./assets/icons/nav-write.svg" />
+    </a>
+    <a href="random.html" class="nav-item">
+      <img src="./assets/icons/nav-random.svg" />
+    </a>
+    <a href="mypage.html" class="nav-item">
+      <img src="./assets/icons/nav-user.svg" />
+    </a>
   </nav>
 
 </div>

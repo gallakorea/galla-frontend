@@ -2,7 +2,7 @@ body {
   margin: 0;
   background: #000;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   display: flex;
   justify-content: center;
 }
@@ -24,68 +24,47 @@ body {
   display: flex;
   align-items: center;
 }
-.logo { width: 105px; }
+.logo {
+  width: 105px;
+  cursor: pointer;
+}
 
 /* MAIN */
 .confirm-main {
-  padding: 24px 16px;
+  padding: 28px 16px;
 }
 
 .confirm-title {
   font-size: 20px;
   font-weight: 800;
 }
+
 .confirm-desc {
   font-size: 13px;
   color: #aaa;
   margin-top: 6px;
-}
-
-/* RESULT LIST */
-.result-list {
-  margin-top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.result-item {
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid #222;
-  background: #111;
-}
-
-.result-item.pass { border-color: #2f80ff; }
-.result-item.warning { border-color: #ffe27a; }
-.result-item.fail { border-color: #ff4f6e; }
-
-.result-title {
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.result-reason {
-  font-size: 13px;
-  margin-top: 6px;
   line-height: 1.5;
-  color: #ccc;
 }
 
-/* OVERALL */
-.overall-box {
-  margin-top: 20px;
-  padding: 16px;
+/* RESULT BOX */
+.confirm-box {
+  margin-top: 22px;
+  padding: 18px;
   border-radius: 14px;
-  background: #0f0f0f;
+  background: #111;
   border: 1px solid #222;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
 }
 
-/* ACTION */
+.confirm-box.pass {
+  border-color: #2f80ff;
+  color: #fff;
+}
+
+/* ACTIONS */
 .confirm-actions {
-  margin-top: 24px;
+  margin-top: 26px;
   display: flex;
   gap: 10px;
 }
@@ -108,8 +87,4 @@ body {
   padding: 14px;
   border-radius: 12px;
   font-weight: 800;
-}
-
-.btn-main:disabled {
-  opacity: .4;
 }
