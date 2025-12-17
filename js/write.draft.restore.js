@@ -1,12 +1,27 @@
 // js/write.draft.restore.js
 document.addEventListener('DOMContentLoaded', async () => {
-  const draftId = sessionStorage.getItem('draft_id');
-  if (!draftId) return; // draft 없으면 아무 것도 안 함
+  console.log('[DRAFT RESTORE] Loaded');
 
+  /* =========================
+     0️⃣ draft_id를 URL에서 읽는다 (🔥 핵심)
+  ========================= */
+  const params = new URLSearchParams(location.search);
+  const draftId = params.get('draft');
+
+  if (!draftId) {
+    console.log('[DRAFT RESTORE] draft 파라미터 없음');
+    return;
+  }
+
+  /* =========================
+     Supabase client 확인
+  ========================= */
   if (!window.supabaseClient) {
     console.error('[DRAFT RESTORE] Supabase 연결 실패');
     return;
   }
+
+  let currentDraft = null; // 🔥 cleanup 용으로 저장
 
   try {
     /* =========================
@@ -21,10 +36,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         .single();
 
     if (error || !draft) {
-      console.warn('[DRAFT RESTORE] draft 없음');
-      sessionStorage.removeItem('draft_id');
+      console.warn('[DRAFT RESTORE] draft 없음 또는 상태 불일치');
       return;
     }
+
+    currentDraft = draft; // 🔥 전역 보관
 
     /* =========================
        2️⃣ write 폼 필드 복원
@@ -51,9 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (draft.thumbnail_url) {
       const thumbPreview = document.getElementById('thumbPreview');
       if (thumbPreview) {
-        thumbPreview.innerHTML = `
-          <img src="${draft.thumbnail_url}" />
-        `;
+        thumbPreview.innerHTML = `<img src="${draft.thumbnail_url}" />`;
       }
     }
 
@@ -75,12 +89,50 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    /* =========================
-       5️⃣ UX 안내 (조용히)
-    ========================= */
-    console.log('[DRAFT RESTORE] 임시 저장 글 복원 완료');
+    console.log('[DRAFT RESTORE] draft 복원 완료:', draftId);
 
   } catch (err) {
     console.error('[DRAFT RESTORE ERROR]', err);
   }
+
+  /* =================================================
+     🚨 페이지 이탈 시 draft + storage 자동 정리
+     (작성 취소 버튼 없이 이탈 = 삭제)
+  ================================================= */
+  window.addEventListener('beforeunload', () => {
+    if (!currentDraft) return;
+
+    try {
+      const paths = [];
+
+      if (currentDraft.thumbnail_url) {
+        paths.push(
+          currentDraft.thumbnail_url.split('/storage/v1/object/public/issues/')[1]
+        );
+      }
+
+      if (currentDraft.video_url) {
+        paths.push(
+          currentDraft.video_url.split('/storage/v1/object/public/issues/')[1]
+        );
+      }
+
+      if (paths.length > 0) {
+        window.supabaseClient
+          .storage
+          .from('issues')
+          .remove(paths);
+      }
+
+      window.supabaseClient
+        .from('issues')
+        .delete()
+        .eq('id', currentDraft.id);
+
+      console.log('[DRAFT CLEANUP] draft + files removed');
+
+    } catch (e) {
+      console.warn('[DRAFT CLEANUP FAIL]', e);
+    }
+  });
 });

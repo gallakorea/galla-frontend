@@ -44,7 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const oneLine = document.getElementById('oneLine')?.value || null;
       const description = document.getElementById('description')?.value;
       const donationTarget = document.getElementById('donationTarget')?.value;
-      const isAnonymous = document.getElementById('isAnonymous')?.checked ?? false;
+      const isAnonymous =
+        document.getElementById('isAnonymous')?.checked ?? false;
 
       if (!category || !title || !description || !donationTarget) {
         alert('필수 항목이 누락되었습니다.');
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         3️⃣ 파일 수집 (input 그대로)
+         3️⃣ 파일 수집
       ========================= */
       const thumbFile =
         document.getElementById('thumbnail')?.files?.[0] || null;
@@ -135,10 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (insertError) throw insertError;
 
       /* =========================
-         7️⃣ draft_id 저장 후 이동
+         7️⃣ URL로 draft_id 전달 (핵심 수정)
       ========================= */
-      sessionStorage.setItem('draft_id', draft.id);
-      location.href = 'confirm.html';
+      location.href = `confirm.html?draft=${draft.id}`;
 
     } catch (err) {
       console.error('[DRAFT SAVE ERROR]', err);
