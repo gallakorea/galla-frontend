@@ -16,14 +16,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
   const supabase = await waitForSupabase();
-
   if (!supabase) {
     alert('Supabase 초기화 실패');
     return;
   }
 
   /* =====================
-     🔐 세션 즉시 확인 (🔥 핵심 수술)
+     🔐 세션 확인
   ===================== */
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData?.session?.user;
@@ -35,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     draft ID (URL 기준)
+     draft ID
   ===================== */
   const params = new URLSearchParams(location.search);
   const draftId = params.get('draft');
@@ -50,15 +49,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     1️⃣ draft 불러오기
+     draft 로드
   ===================== */
-  const { data: draft, error } =
-    await supabase
-      .from('issues')
-      .select('*')
-      .eq('id', draftId)
-      .eq('status', 'draft')
-      .single();
+  const { data: draft, error } = await supabase
+    .from('issues')
+    .select('*')
+    .eq('id', draftId)
+    .eq('status', 'draft')
+    .single();
 
   if (error || !draft) {
     alert('임시 글을 불러오지 못했습니다.');
@@ -67,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     2️⃣ 적합성 검사 (MOCK)
+     MOCK 검사 결과
   ===================== */
   renderResult('check-title', 'PASS', '문제 없음');
   renderResult('check-oneline', 'PASS', '문제 없음');
@@ -76,28 +74,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   publishBtn.disabled = false;
 
   /* =====================
-     3️⃣ 뒤로 가기 (draft 유지)
+     뒤로가기
   ===================== */
   backBtn.onclick = () => {
     location.href = `write.html?draft=${draftId}`;
   };
 
   /* =====================
-     4️⃣ 최종 발행
+     최종 발행
   ===================== */
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
     publishBtn.textContent = '발행 중…';
 
-    const { error: updateError } =
-      await supabase
-        .from('issues')
-        .update({
-          status: 'normal',
-          moderation_status: 'pending',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', draftId);
+    const { error: updateError } = await supabase
+      .from('issues')
+      .update({
+        status: 'normal',
+        moderation_status: 'pending',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', draftId);
 
     if (updateError) {
       console.error('[PUBLISH ERROR]', updateError);
@@ -112,7 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 /* =====================
-   UI 헬퍼
+   UI Helper
 ===================== */
 function renderResult(id, result, reason) {
   const el = document.getElementById(id);
@@ -132,20 +129,3 @@ const labelMap = {
   'check-oneline': '한줄 요약',
   'check-description': '본문',
 };
-
-/* =========================
-   CONFIRM PAGE FIX
-========================= */
-
-/* 하단 네비 공간 확보 */
-body[data-page="confirm"] #app {
-  padding-bottom: 120px; /* bottom-nav 높이 + 여유 */
-}
-
-/* 하단 네비 항상 하단 고정 */
-body[data-page="confirm"] .bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-}
