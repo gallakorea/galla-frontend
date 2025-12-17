@@ -212,9 +212,6 @@ document.querySelectorAll("[data-target]").forEach(el => {
 });
 </script>
 
-<!-- Supabase -->
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
 
 <!-- Supabase 로딩 대기 -->
 <script>
@@ -264,10 +261,10 @@ function waitForSupabaseClient() {
 })();
 </script>
 
-<!-- Supabase SDK (단 1회만!) -->
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
+<!-- Supabase SDK (단 1회) -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-<!-- Supabase client 생성 -->
+<!-- Supabase Client 생성 -->
 <script src="js/supabase.js"></script>
 
 <!-- Settings 페이지 로직 -->
