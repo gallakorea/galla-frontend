@@ -1,32 +1,48 @@
+/* =========================================================
+   BASE
+========================================================= */
 body {
   margin: 0;
   background: #000;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+
+  /* ❗ 기본은 flex 유지 (다른 페이지용) */
   display: flex;
   justify-content: center;
 }
 
+/* =========================================================
+   APP ROOT
+========================================================= */
 .app-root {
   width: 100%;
   max-width: 480px;
   min-height: 100vh;
-  padding-bottom: 110px;
+  padding-bottom: 110px; /* 기본값 */
 }
 
-/* HEADER */
+/* =========================================================
+   HEADER
+========================================================= */
 .header {
   border-bottom: 1px solid #111;
 }
+
 .header-inner {
   height: 54px;
   padding: 0 16px;
   display: flex;
   align-items: center;
 }
-.logo { width: 105px; }
 
-/* MAIN */
+.logo {
+  width: 105px;
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
 .confirm-main {
   padding: 24px 16px;
 }
@@ -43,7 +59,9 @@ body {
   line-height: 1.5;
 }
 
-/* SECTION */
+/* =========================================================
+   SECTION
+========================================================= */
 .confirm-section {
   margin-top: 22px;
   display: flex;
@@ -61,7 +79,7 @@ body {
 }
 
 .confirm-item.loading {
-  opacity: .5;
+  opacity: 0.5;
 }
 
 .confirm-item.pass {
@@ -78,7 +96,9 @@ body {
   color: #ff4f6e;
 }
 
-/* ACTIONS */
+/* =========================================================
+   ACTIONS
+========================================================= */
 .confirm-actions {
   margin-top: 26px;
   display: flex;
@@ -105,26 +125,32 @@ body {
   font-weight: 800;
 }
 
-/* =========================
-   CONFIRM PAGE HARD FIX
-========================= */
+/* =========================================================
+   CONFIRM PAGE — HARD FIX (핵심)
+========================================================= */
 
+/* 🔥 confirm 페이지에서는 body flex 완전 해제 */
 body[data-page="confirm"] {
-  display: block; /* flex 제거 */
+  display: block;
 }
 
+/* 🔥 콘텐츠 영역 정확히 중앙 + 네비 공간 확보 */
 body[data-page="confirm"] .app-root {
-  padding-bottom: 140px;
+  margin: 0 auto;
+  padding-bottom: 140px; /* bottom-nav 높이 + 여유 */
 }
 
+/* 🔥 하단 네비: viewport 기준 고정 (안 깨짐) */
 body[data-page="confirm"] .bottom-nav {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
 
+  width: 100%;
   max-width: 480px;
-  margin: 0 auto;
 
-  transform: none;
+  background: #000;
+  border-top: 1px solid #111;
+  z-index: 9999;
 }
