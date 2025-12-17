@@ -1281,3 +1281,56 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
     padding-bottom: calc(4px + env(safe-area-inset-bottom));
   }
 }
+
+/* =========================
+   SPEECH MODAL FIX (FINAL)
+========================= */
+
+.speech-modal {
+  position: fixed;
+  inset: 0;
+  display: none;                /* JS에서 flex로 제어 */
+  justify-content: center;
+  align-items: center;
+
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(6px);
+
+  z-index: 10050;               /* 🔥 bottom-nav(9999)보다 위 */
+}
+
+.speech-modal-inner {
+  width: 92%;
+  max-width: 420px;
+
+  max-height: calc(100vh - 80px);   /* 하단 네비 여유 */
+  background: #111;
+
+  border-radius: 16px;
+  padding: 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 닫기 버튼 */
+.speech-close {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* 영상 영역 (9:16 고정) */
+#speechVideo {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  max-height: 70vh;
+
+  background: #000;
+  border-radius: 12px;
+  object-fit: contain;
+}
