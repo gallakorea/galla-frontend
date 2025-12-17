@@ -20,14 +20,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         1️⃣ 로그인 유저 확인
+         1️⃣ 로그인 세션 확인 (🔥 수정 핵심)
+         ❌ getUser() 사용 금지
+         ⭕ getSession()만 사용
       ========================= */
-      const {
-        data: { user },
-        error: authError,
-      } = await window.supabaseClient.auth.getUser();
+      const { data: sessionData } =
+        await window.supabaseClient.auth.getSession();
 
-      if (authError || !user) {
+      const user = sessionData?.session?.user;
+
+      if (!user) {
         alert('로그인이 필요합니다.');
         return;
       }
@@ -134,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         7️⃣ URL로 draft 전달 (🔥 핵심)
+         7️⃣ confirm 페이지로 이동 (URL 전달)
       ========================= */
       location.href = `confirm.html?draft=${draft.id}`;
 
