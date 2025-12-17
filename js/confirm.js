@@ -22,23 +22,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-/* =====================
-   🔥 세션 복원 대기 (Supabase v2 안정화)
-===================== */
-const {
-  data: { subscription }
-} = supabase.auth.onAuthStateChange((_event, session) => {
-  if (!session?.user) {
+  /* =====================
+     🔐 세션 즉시 확인 (🔥 핵심 수술)
+  ===================== */
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+
+  if (!user) {
     alert('로그인이 필요합니다.');
     location.href = 'login.html';
     return;
   }
 
-  subscription.unsubscribe();
-});
-
   /* =====================
-     draft ID (URL 기준) 🔥 핵심
+     draft ID (URL 기준)
   ===================== */
   const params = new URLSearchParams(location.search);
   const draftId = params.get('draft');
@@ -70,7 +67,7 @@ const {
   }
 
   /* =====================
-     2️⃣ 적합성 검사 (현재 MOCK)
+     2️⃣ 적합성 검사 (MOCK)
   ===================== */
   renderResult('check-title', 'PASS', '문제 없음');
   renderResult('check-oneline', 'PASS', '문제 없음');
@@ -97,11 +94,13 @@ const {
         .from('issues')
         .update({
           status: 'normal',
+          moderation_status: 'pending',
           updated_at: new Date().toISOString(),
         })
         .eq('id', draftId);
 
     if (updateError) {
+      console.error('[PUBLISH ERROR]', updateError);
       alert('발행 중 오류가 발생했습니다.');
       publishBtn.disabled = false;
       publishBtn.textContent = '최종 발행';
@@ -133,49 +132,3 @@ const labelMap = {
   'check-oneline': '한줄 요약',
   'check-description': '본문',
 };
-
-/* =========================
-   🚨 이탈 시 draft 자동 삭제
-========================= */
-let isPublishing = false;
-
-async function deleteDraftAndFiles(draft) {
-  try {
-    if (!window.supabaseClient || !draft) return;
-
-    // 1️⃣ storage 파일 삭제
-    const paths = [];
-
-    if (draft.thumbnail_url) {
-      paths.push(
-        draft.thumbnail_url.split('/storage/v1/object/public/issues/')[1]
-      );
-    }
-
-    if (draft.video_url) {
-      paths.push(
-        draft.video_url.split('/storage/v1/object/public/issues/')[1]
-      );
-    }
-
-    if (paths.length > 0) {
-      await window.supabaseClient
-        .storage
-        .from('issues')
-        .remove(paths);
-    }
-
-    // 2️⃣ draft row 삭제
-    await window.supabaseClient
-      .from('issues')
-      .delete()
-      .eq('id', draft.id)
-      .eq('status', 'draft');
-
-    sessionStorage.removeItem('draft_id');
-    console.log('[DRAFT CLEANUP] 완료');
-
-  } catch (e) {
-    console.error('[DRAFT CLEANUP ERROR]', e);
-  }
-}

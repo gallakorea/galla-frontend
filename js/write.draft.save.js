@@ -130,9 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         5️⃣ confirm 이동 (🔥 beforeunload 차단)
+         5️⃣ confirm 이동 (🔥 핵심 수술)
+         👉 beforeunload draft 삭제 차단
       ========================= */
-      window.__DRAFT_NAVIGATING__ = true;
+      window.__ALLOW_DRAFT_EXIT__ = true;   // ✅ 이 줄이 핵심
       location.href = `confirm.html?draft=${draft.id}`;
 
     } catch (err) {
