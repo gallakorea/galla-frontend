@@ -179,23 +179,30 @@ document.addEventListener('DOMContentLoaded', () => {
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   });
 
-  /* ================= VIDEO MODAL ================= */
-  const speechModal = document.getElementById('speechModal');
-  const speechVideo = document.getElementById('speechVideo');
-  const closeSpeech = document.getElementById('closeSpeech');
+/* ================= VIDEO MODAL ================= */
+const speechModal = document.getElementById('speechModal');
+const speechVideo = document.getElementById('speechVideo');
+const closeSpeech = document.getElementById('closeSpeech');
 
-  function openSpeech(src) {
-    speechVideo.src = src;
-    speechModal.style.display = 'flex';
-    body.style.overflow = 'hidden';
-    speechVideo.currentTime = 0;
-    speechVideo.play();
+function openSpeech(src) {
+  // 🔥 방어 코드
+  if (!speechModal || !speechVideo) {
+    alert('영상 재생 기능은 준비 중입니다.');
+    return;
   }
 
+  speechVideo.src = src;
+  speechModal.style.display = 'flex';
+  body.style.overflow = 'hidden';
+  speechVideo.currentTime = 0;
+  speechVideo.play();
+}
+
+if (closeSpeech && speechVideo && speechModal) {
   closeSpeech.addEventListener('click', () => {
     speechVideo.pause();
     speechVideo.src = '';
     speechModal.style.display = 'none';
     body.style.overflow = '';
   });
-});
+}
