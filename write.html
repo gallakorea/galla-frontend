@@ -215,17 +215,33 @@
   <option value="question">독자가 판단하게 질문형 구성</option>
 </select>
 
-<p class="ai-tip">
-  ※ 입장은 글의 논리 구조에만 영향을 주며, 발행 시 표시되지 않습니다.
-</p>
-
 <label class="ai-label">어조 강도</label>
-<div class="ai-tone-group">
-  <button data-tone="5">매우 공격적</button>
-  <button data-tone="4">공격적</button>
-  <button data-tone="3" class="active">중간</button>
-  <button data-tone="2">온화한</button>
-  <button data-tone="1">매우 온화한</button>
+
+<div class="ai-tone-radio-group">
+  <label class="ai-tone-option">
+    <input type="radio" name="aiTone" value="5">
+    <span>매우 공격적</span>
+  </label>
+
+  <label class="ai-tone-option">
+    <input type="radio" name="aiTone" value="4">
+    <span>공격적</span>
+  </label>
+
+  <label class="ai-tone-option">
+    <input type="radio" name="aiTone" value="3" checked>
+    <span>중간</span>
+  </label>
+
+  <label class="ai-tone-option">
+    <input type="radio" name="aiTone" value="2">
+    <span>온화한</span>
+  </label>
+
+  <label class="ai-tone-option">
+    <input type="radio" name="aiTone" value="1">
+    <span>매우 온화한</span>
+  </label>
 </div>
 
 <!-- ✅ DIRECT CUSTOM PROMPT (custom 선택 시만 노출) -->
