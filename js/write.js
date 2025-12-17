@@ -157,6 +157,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('publishPreview').onclick = () => {
+      /* 🔥 draft 저장 흐름이면 write.js는 이동 관여 금지 */
+      if (window.__DRAFT_MODE__ === true) {
+        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
+        return;
+      }
+
       const payload = {
         category: categoryEl.value,
         title: titleEl.value,

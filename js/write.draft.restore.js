@@ -1,9 +1,8 @@
-// js/write.draft.restore.js
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[DRAFT RESTORE] Loaded');
 
   /* =========================
-     0️⃣ draft_id를 URL에서 읽는다 (🔥 핵심)
+     0️⃣ draft_id를 URL에서 읽는다
   ========================= */
   const params = new URLSearchParams(location.search);
   const draftId = params.get('draft');
@@ -21,7 +20,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  let currentDraft = null; // 🔥 cleanup 용으로 저장
+  let currentDraft = null;          // 🔥 실제 draft
+  let isNavigating = false;         // 🔥 정상 이동 플래그
+
+  /* =========================
+     🔥 정상 이동 감지 (confirm / publish)
+  ========================= */
+  window.addEventListener('pagehide', () => {
+    isNavigating = true;
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (window.__DRAFT_NAVIGATING__ === true) {
+      isNavigating = true;
+    }
+  });
 
   try {
     /* =========================
@@ -40,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    currentDraft = draft; // 🔥 전역 보관
+    currentDraft = draft;
 
     /* =========================
        2️⃣ write 폼 필드 복원
@@ -96,40 +109,48 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =================================================
-     🚨 페이지 이탈 시 draft + storage 자동 정리
-     (작성 취소 버튼 없이 이탈 = 삭제)
+     🚨 진짜 이탈 시에만 draft + storage 삭제
+     - 새로고침
+     - 탭 닫기
+     - URL 직접 변경
+     ❌ confirm / publish 이동은 제외
   ================================================= */
-  window.addEventListener('beforeunload', () => {
+  window.addEventListener('beforeunload', async () => {
     if (!currentDraft) return;
+    if (isNavigating) {
+      console.log('[DRAFT CLEANUP] 정상 이동 → 삭제 스킵');
+      return;
+    }
 
     try {
       const paths = [];
 
       if (currentDraft.thumbnail_url) {
-        paths.push(
-          currentDraft.thumbnail_url.split('/storage/v1/object/public/issues/')[1]
-        );
+        const p = currentDraft.thumbnail_url
+          .split('/storage/v1/object/public/issues/')[1];
+        if (p) paths.push(p);
       }
 
       if (currentDraft.video_url) {
-        paths.push(
-          currentDraft.video_url.split('/storage/v1/object/public/issues/')[1]
-        );
+        const p = currentDraft.video_url
+          .split('/storage/v1/object/public/issues/')[1];
+        if (p) paths.push(p);
       }
 
       if (paths.length > 0) {
-        window.supabaseClient
+        await window.supabaseClient
           .storage
           .from('issues')
           .remove(paths);
       }
 
-      window.supabaseClient
+      await window.supabaseClient
         .from('issues')
         .delete()
-        .eq('id', currentDraft.id);
+        .eq('id', currentDraft.id)
+        .eq('status', 'draft');
 
-      console.log('[DRAFT CLEANUP] draft + files removed');
+      console.log('[DRAFT CLEANUP] draft + files 완전 삭제');
 
     } catch (e) {
       console.warn('[DRAFT CLEANUP FAIL]', e);
