@@ -40,23 +40,82 @@ body {
   font-size: 13px;
   color: #aaa;
   margin-top: 6px;
+  line-height: 1.5;
 }
 
-/* RESULT BOX */
-.confirm-box {
-  margin-top: 22px;
-  padding: 18px;
-  border-radius: 14px;
+/* RESULT LIST */
+.result-list {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.result-item {
   background: #111;
   border: 1px solid #222;
-  font-size: 14px;
-  line-height: 1.6;
+  border-radius: 14px;
+  padding: 14px;
 }
 
-.confirm-box.loading { opacity: .6; }
-.confirm-box.pass { border-color: #2f80ff; }
-.confirm-box.warning { border-color: #ffe27a; color:#ffe27a; }
-.confirm-box.fail { border-color: #ff4f6e; color:#ff4f6e; }
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.result-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.result-status {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.result-reason {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #ccc;
+}
+
+/* STATES */
+.result-item.loading {
+  opacity: .6;
+}
+
+.result-item.pass {
+  border-color: #2f80ff;
+}
+.result-item.pass .result-status {
+  color: #2f80ff;
+}
+
+.result-item.warning {
+  border-color: #ffe27a;
+}
+.result-item.warning .result-status {
+  color: #ffe27a;
+}
+
+.result-item.fail {
+  border-color: #ff4f6e;
+}
+.result-item.fail .result-status {
+  color: #ff4f6e;
+}
+
+/* NOTICE */
+.confirm-notice {
+  margin-top: 22px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #888;
+  border-top: 1px dashed #222;
+  padding-top: 14px;
+}
 
 /* ACTIONS */
 .confirm-actions {
@@ -83,4 +142,29 @@ body {
   padding: 14px;
   border-radius: 12px;
   font-weight: 800;
+}
+
+.btn-main:disabled {
+  opacity: .4;
+}
+
+/* BOTTOM NAV */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #000;
+  border-top: 1px solid #111;
+  padding: 12px 0;
+  display: flex;
+  justify-content: space-around;
+  z-index: 9999;
+}
+
+.nav-item img {
+  width: 26px;
+  filter: brightness(0) invert(1);
 }
