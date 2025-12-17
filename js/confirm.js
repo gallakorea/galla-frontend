@@ -1,71 +1,76 @@
-// confirmation.js
-document.addEventListener('DOMContentLoaded', () => {
-  const publishBtn = document.getElementById('publishConfirmBtn');
-  const cancelBtn = document.getElementById('cancelConfirmBtn');
+document.addEventListener('DOMContentLoaded', async () => {
+  const publishBtn = document.getElementById('publishBtn');
+  const backBtn = document.getElementById('backBtn');
+  const box = document.getElementById('moderationBox');
 
-  if (!publishBtn) {
-    console.error('[CONFIRM] publish 버튼 없음');
+  if (!publishBtn || !box) {
+    console.error('[CONFIRM] 필수 DOM 없음');
     return;
   }
 
-  publishBtn.addEventListener('click', async () => {
-    const payloadRaw = sessionStorage.getItem('writePayload');
-
-    if (!payloadRaw) {
-      alert('작성 정보가 없습니다.');
-      return;
-    }
-
-    const payload = JSON.parse(payloadRaw);
-
-    if (!payload.description || !payload.description.trim()) {
-      alert('내용이 비어 있습니다.');
-      return;
-    }
-
-    publishBtn.disabled = true;
-    publishBtn.textContent = '적정성 검사 중…';
-
-    /* =========================
-       1️⃣ AI 적정성 검사
-       ========================= */
-    const moderation = await runModerationCheck(payload.description);
-
-    publishBtn.disabled = false;
-    publishBtn.textContent = '발행하기';
-
-    /* =========================
-       2️⃣ 결과 분기
-       ========================= */
-    if (moderation.result === 'FAIL') {
-      showFailModal(moderation.reason);
-      return;
-    }
-
-    if (moderation.result === 'WARNING') {
-      showWarningModal(moderation.reason, () => {
-        publishIssue(payload, 'warning', moderation);
-      });
-      return;
-    }
-
-    // PASS
-    publishIssue(payload, 'pass', moderation);
-  });
-
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', () => {
-      history.back();
-    });
+  const payloadRaw = sessionStorage.getItem('writePayload');
+  if (!payloadRaw) {
+    box.textContent = '작성 정보가 없습니다.';
+    box.className = 'confirm-box fail';
+    return;
   }
+
+  const payload = JSON.parse(payloadRaw);
+
+  /* =====================
+     1️⃣ 자동 적합성 검사
+     ===================== */
+  box.textContent = 'AI 적합성 검사를 진행 중입니다…';
+
+  const moderation = await runModerationCheck(payload.description);
+
+  box.classList.remove('loading');
+
+  if (moderation.result === 'FAIL') {
+    box.classList.add('fail');
+    box.textContent = `❌ 발행 불가\n\n사유: ${moderation.reason}`;
+    return;
+  }
+
+  if (moderation.result === 'WARNING') {
+    box.classList.add('warning');
+    box.textContent = `⚠️ 표현 주의\n\n${moderation.reason}`;
+    publishBtn.disabled = false;
+    publishBtn.textContent = '주의 후 발행';
+  }
+
+  if (moderation.result === 'PASS') {
+    box.classList.add('pass');
+    box.textContent = '✅ 발행 가능합니다.';
+    publishBtn.disabled = false;
+  }
+
+  /* =====================
+     2️⃣ 버튼 이벤트
+     ===================== */
+  publishBtn.onclick = () => {
+    if (moderation.result === 'WARNING') {
+      const ok = confirm(
+`⚠️ 표현 주의 안내
+
+${moderation.reason}
+
+계속 발행하시겠습니까?`
+      );
+      if (!ok) return;
+    }
+    publishIssue(payload, moderation);
+  };
+
+  backBtn.onclick = () => history.back();
 });
 
-/* =========================
-   AI 적정성 검사 호출
-   ========================= */
+/* =====================
+   AI 적합성 검사
+   ===================== */
 async function runModerationCheck(text) {
   if (!window.supabaseClient) {
-    return { result: 'FAIL', reason: 'Supabase 연결 실패' };
+    return { result: 'WARNING', reason: 'AI 검사 연결 실패' };
   }
 
   try {
@@ -82,63 +87,25 @@ async function runModerationCheck(text) {
     console.error('[MODERATION ERROR]', e);
     return {
       result: 'WARNING',
-      reason: '적정성 판정 중 오류 발생',
+      reason: '적합성 검사 중 오류 발생',
     };
   }
 }
 
-/* =========================
-   FAIL 처리
-   ========================= */
-function showFailModal(reason) {
-  alert(
-    `❌ 발행이 보류되었습니다.\n\n사유: ${reason}\n\n표현을 수정한 뒤 다시 시도해주세요.`
-  );
-}
-
-/* =========================
-   WARNING 처리
-   ========================= */
-function showWarningModal(reason, onConfirm) {
-  const ok = confirm(
-`⚠️ 표현 주의 안내
-
-${reason}
-
-이 글은 공개되며,
-법적·사회적 책임은 작성자에게 있습니다.
-
-계속 발행하시겠습니까?`
-  );
-
-  if (ok && typeof onConfirm === 'function') {
-    onConfirm();
-  }
-}
-
-/* =========================
-   ✅ 실제 발행 + moderation_logs 기록
-   ========================= */
-async function publishIssue(payload, moderationStatus, moderation) {
-  if (!window.supabaseClient) {
-    alert('Supabase 연결 실패');
-    return;
-  }
-
+/* =====================
+   실제 발행
+   ===================== */
+async function publishIssue(payload, moderation) {
   try {
-    /* 1️⃣ 로그인 유저 */
-    const {
-      data: { user },
-      error: authError
-    } = await window.supabaseClient.auth.getUser();
+    const { data: { user } } =
+      await window.supabaseClient.auth.getUser();
 
-    if (authError || !user) {
+    if (!user) {
       alert('로그인이 필요합니다.');
       return;
     }
 
-    /* 2️⃣ issues insert */
-    const { data: issueRow, error: issueError } =
+    const { data: issue, error } =
       await window.supabaseClient
         .from('issues')
         .insert([{
@@ -146,31 +113,23 @@ async function publishIssue(payload, moderationStatus, moderation) {
           category: payload.category,
           title: payload.title,
           description: payload.description,
-          thumbnail_url: payload.thumbnail_url ?? null,
-          video_url: payload.video_url ?? null,
-          tags: payload.tags ?? null,
-          status: 'normal',
-          moderation_status: moderationStatus,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          moderation_status: moderation.result.toLowerCase(),
         }])
         .select('id')
         .single();
 
-    if (issueError) throw issueError;
+    if (error) throw error;
 
-    /* 3️⃣ moderation_logs insert (내부 기록용) */
     await window.supabaseClient
       .from('moderation_logs')
       .insert([{
-        issue_id: issueRow.id,
+        issue_id: issue.id,
         user_id: user.id,
         result: moderation.result,
         reason: moderation.reason,
         content_snapshot: payload.description,
       }]);
 
-    /* 4️⃣ 완료 */
     sessionStorage.removeItem('writePayload');
     alert('정상적으로 발행되었습니다.');
     location.href = 'index.html';

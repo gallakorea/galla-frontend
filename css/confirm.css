@@ -54,21 +54,9 @@ body {
 }
 
 .confirm-box.loading { opacity: .6; }
-
-.confirm-box.pass {
-  border-color: #2f80ff;
-  color: #fff;
-}
-
-.confirm-box.warning {
-  border-color: #ffe27a;
-  color: #ffe27a;
-}
-
-.confirm-box.fail {
-  border-color: #ff4f6e;
-  color: #ff4f6e;
-}
+.confirm-box.pass { border-color: #2f80ff; }
+.confirm-box.warning { border-color: #ffe27a; color:#ffe27a; }
+.confirm-box.fail { border-color: #ff4f6e; color:#ff4f6e; }
 
 /* ACTIONS */
 .confirm-actions {
