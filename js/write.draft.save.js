@@ -3,18 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const issuePreview = document.getElementById('issuePreview');
   if (!issuePreview) return;
 
-  /**
-   * write.js에서 미리보기 생성 후
-   * "발행 전 적합성 검사" 버튼 클릭을 가로챈다
-   */
   issuePreview.addEventListener('click', async (e) => {
     const btn = e.target.closest('#publishPreview');
     if (!btn) return;
 
     e.preventDefault();
 
-    btn.disabled = true;
     const originalText = btn.textContent;
+    btn.disabled = true;
     btn.textContent = '임시 저장 중…';
 
     try {
@@ -133,10 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
           .select('id')
           .single();
 
-      if (insertError) throw insertError;
+      if (insertError || !draft?.id) {
+        throw insertError || new Error('draft 생성 실패');
+      }
 
       /* =========================
-         7️⃣ URL로 draft_id 전달 (핵심 수정)
+         7️⃣ URL로 draft 전달 (🔥 핵심)
       ========================= */
       location.href = `confirm.html?draft=${draft.id}`;
 
