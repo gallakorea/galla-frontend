@@ -25,15 +25,6 @@
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
-            <!-- 🔥 REMIX ORIGIN (추가) -->
-      <section class="section-block remix-origin">
-        <div class="remix-label">🔥 이 이슈에 참전 중</div>
-        <div class="remix-origin-title">
-          청소년 스마트폰 사용 제한, 법으로 막아야 할까?
-        </div>
-      </section>
-
-
       <section class="section-block write-guide-block">
         <ul class="write-guide-list">
           <li>제목은 최대 80자 이내</li>
@@ -53,26 +44,6 @@
       </section>
 
       <form id="writeForm">
-
-                <!-- 🔥 REMIX STANCE (추가) -->
-        <div class="field-block remix-stance">
-          <label class="field-label">
-            참전 진영 선택 <span class="required">(필수)</span>
-          </label>
-
-          <div class="remix-stance-buttons">
-            <button type="button" data-stance="pro" class="stance-btn">
-              👍 찬성 진영으로 참전
-            </button>
-            <button type="button" data-stance="con" class="stance-btn">
-              👎 반대 진영으로 참전
-            </button>
-          </div>
-
-          <div class="guide-text">
-            이 선택은 발행 후 변경할 수 없습니다
-          </div>
-        </div>
 
         <!-- 카테고리 (필수) -->
         <div class="field-block">
@@ -253,9 +224,8 @@
   <button id="aiClose">✕</button>
 </div>
 
-<!-- 🔥 여기 추가 -->
-<div class="ai-modal-body">
-
+<!-- MODE SELECT -->
+<!-- 🔥 AI 논쟁 입장 선택 (추가만 함) -->
 <label class="ai-label">AI 논쟁 입장 선택</label>
 <select id="aiStance" class="input-field">
   <option value="neutral">입장 없이 쟁점만 정리</option>
@@ -308,7 +278,17 @@
   ></textarea>
 </div>
 
-       <!-- USER TEXT -->
+    <!-- 🔥 CUSTOM PROMPT (직접 입력) -->
+    <div id="aiCustomPromptWrap" class="ai-custom-wrap" style="display:none;">
+      <label class="ai-label highlight">AI에게 직접 지시</label>
+      <textarea
+        id="aiPrompt"
+        class="input-field textarea compact"
+        placeholder="예: 논리 구조를 먼저 세우고, 반대 의견을 예상해 반박까지 포함해줘"
+      ></textarea>
+    </div>
+
+    <!-- USER TEXT -->
     <label class="ai-label">내가 쓴 글</label>
     <textarea
       id="aiUserText"
@@ -329,8 +309,6 @@
       class="input-field textarea result-text"
       placeholder="AI가 논리적으로 재구성한 결과"
     ></textarea>
-
-    </div>
 
     <!-- APPLY -->
     <button id="applyAi" class="btn-main full">

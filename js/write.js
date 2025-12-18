@@ -77,16 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
     body.style.overflow = '';
   });
 
-  /* AI STYLE TABS */
-  document.querySelectorAll('.ai-style-tabs button').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document
-        .querySelectorAll('.ai-style-tabs button')
-        .forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-    });
-  });
-
   /* ================= PREVIEW ================= */
   form.addEventListener('submit', e => {
     e.preventDefault();
@@ -157,12 +147,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('publishPreview').onclick = () => {
-      /* 🔥 draft 저장 흐름이면 write.js는 이동 관여 금지 */
-      if (window.__DRAFT_MODE__ === true) {
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+      const isDraftMode = window.__DRAFT_MODE__ === true;
+
+      if (isDraftMode) {
         console.log('[write.js] DRAFT MODE → confirm 이동 차단');
         return;
       }
 
+      // ⬇️ 아래부터는 "정상 발행 흐름"만 실행
       const payload = {
         category: categoryEl.value,
         title: titleEl.value,
