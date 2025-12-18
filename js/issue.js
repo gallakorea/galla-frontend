@@ -273,3 +273,16 @@ document.addEventListener("touchstart", e => {
 document.addEventListener("touchend", e => {
   if (e.changedTouches[0].clientX - startX > 80) history.back();
 });
+
+/* ==========================================================================
+   10. Remix / Battle (Stub)
+========================================================================== */
+qs("btn-remix-pro").onclick = () => {
+  alert("찬성 진영 참전 (리믹스 작성 화면으로 연결 예정)");
+  // location.href = `write.html?remix=pro&issue=${issueId}`;
+};
+
+qs("btn-remix-con").onclick = () => {
+  alert("반대 진영 참전 (리믹스 작성 화면으로 연결 예정)");
+  // location.href = `write.html?remix=con&issue=${issueId}`;
+};

@@ -81,30 +81,88 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   /* =====================
-     최종 발행
+     🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
     publishBtn.textContent = '발행 중…';
 
-    const { error: updateError } = await supabase
-      .from('issues')
-      .update({
-        status: 'normal',
-        moderation_status: 'pending',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', draftId);
+    try {
+      const updates = {};
+      const removePaths = [];
 
-    if (updateError) {
-      console.error('[PUBLISH ERROR]', updateError);
+      /* ---------- 썸네일 이동 ---------- */
+      if (draft.thumbnail_url) {
+        const oldPath =
+          draft.thumbnail_url.split('/storage/v1/object/public/issues/')[1];
+
+        const ext = oldPath.split('.').pop();
+        const newPath = `public/${draft.id}/thumbnail.${ext}`;
+
+        const { error: copyErr } = await supabase
+          .storage
+          .from('issues')
+          .copy(oldPath, newPath);
+
+        if (copyErr) throw copyErr;
+
+        updates.thumbnail_url =
+          supabase.storage.from('issues').getPublicUrl(newPath).data.publicUrl;
+
+        removePaths.push(oldPath);
+      }
+
+      /* ---------- 영상 이동 ---------- */
+      if (draft.video_url) {
+        const oldPath =
+          draft.video_url.split('/storage/v1/object/public/issues/')[1];
+
+        const ext = oldPath.split('.').pop();
+        const newPath = `public/${draft.id}/video.${ext}`;
+
+        const { error: copyErr } = await supabase
+          .storage
+          .from('issues')
+          .copy(oldPath, newPath);
+
+        if (copyErr) throw copyErr;
+
+        updates.video_url =
+          supabase.storage.from('issues').getPublicUrl(newPath).data.publicUrl;
+
+        removePaths.push(oldPath);
+      }
+
+      /* ---------- DB 상태 변경 ---------- */
+      const { error: updateError } = await supabase
+        .from('issues')
+        .update({
+          ...updates,
+          status: 'normal',
+          moderation_status: 'pending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', draft.id);
+
+      if (updateError) throw updateError;
+
+      /* ---------- draft 파일 제거 ---------- */
+      if (removePaths.length > 0) {
+        await supabase
+          .storage
+          .from('issues')
+          .remove(removePaths);
+      }
+
+      /* ---------- 완료 ---------- */
+      location.href = `issue.html?id=${draft.id}`;
+
+    } catch (err) {
+      console.error('[PUBLISH ERROR]', err);
       alert('발행 중 오류가 발생했습니다.');
       publishBtn.disabled = false;
       publishBtn.textContent = '최종 발행';
-      return;
     }
-
-    location.href = `issue.html?id=${draftId}`;
   };
 });
 
