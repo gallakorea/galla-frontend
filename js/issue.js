@@ -33,7 +33,7 @@ if (!issueId) {
     .from("issues")
     .select("*")
     .eq("id", issueId)
-    .single();
+    .maybeSingle();
 
   if (error || !issue) {
     console.error(error);
@@ -44,6 +44,11 @@ if (!issueId) {
   renderIssue(issue);
   loadVotes(issue.id);
   loadComments(issue.id);
+  checkRemixStatus(issue.id);
+  loadRemixCounts(issue.id);
+  checkVoteStatus(issue.id);
+  loadSupportStats(issue.id); // ✅ 여기 추가
+
 })();
 
 /* ==========================================================================
@@ -117,6 +122,86 @@ function renderSupport(pro, con) {
 }
 
 /* ==========================================================================
+   5-1. Support Stats Load  👈 여기다 붙여라
+========================================================================== */
+async function loadSupportStats(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("supports")
+    .select("stance, amount")
+    .eq("issue_id", issueId);
+
+  if (error) {
+    console.error("support load error", error);
+    return;
+  }
+
+  let pro = 0;
+  let con = 0;
+
+  data.forEach(s => {
+    if (s.stance === "pro") pro += s.amount;
+    if (s.stance === "con") con += s.amount;
+  });
+
+  renderSupport(pro, con);
+}
+
+/* ==========================================================================
+   5-2. Support Modal (TEMP)
+========================================================================== */
+qs("open-support-modal").onclick = () => {
+  openSupportModal();
+};
+
+function openSupportModal() {
+  const stance = confirm(
+    "찬성 진영으로 후원할까요?\n취소하면 반대 진영입니다."
+  )
+    ? "pro"
+    : "con";
+
+  const amount = Number(prompt("후원 금액을 입력하세요 (원)"));
+  if (!amount || amount <= 0) return;
+
+  submitSupport(stance, amount);
+}
+
+/* ==========================================================================
+   5-3. Support DB Insert
+   👉 👇 여기
+========================================================================== */
+async function submitSupport(stance, amount) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+
+  if (!session.session) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("supports")
+    .insert({
+      issue_id: issueId,
+      user_id: session.session.user.id,
+      stance,
+      amount
+    });
+
+  if (error) {
+    console.error(error);
+    alert("후원 실패");
+    return;
+  }
+
+  // ✅ 즉시 UI 갱신
+  loadSupportStats(issueId);
+}
+
+
+/* ==========================================================================
    6. Voting (votes table 기준)
    - votes 테이블 컬럼: issue_id, user_id, type ('pro' | 'con')
    - Unique(issue_id, user_id)
@@ -169,10 +254,45 @@ async function vote(type) {
   }
 
   loadVotes(issueId);
+  checkVoteStatus(issueId); // ✅ 추가
 }
 
 qs("btn-vote-pro").onclick = () => vote("pro");
 qs("btn-vote-con").onclick = () => vote("con");
+
+/* ==========================================================================
+   6-1. Vote Status Check (내 투표 여부)
+========================================================================== */
+async function checkVoteStatus(issueId) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return;
+
+  const { data } = await supabase
+    .from("votes")
+    .select("type")
+    .eq("issue_id", issueId)
+    .eq("user_id", session.session.user.id)
+    .maybeSingle();
+
+  if (!data) return;
+
+  applyVoteDisabledUI(data.type);
+}
+
+function applyVoteDisabledUI(type) {
+  const proBtn = qs("btn-vote-pro");
+  const conBtn = qs("btn-vote-con");
+
+  proBtn.classList.add("disabled");
+  conBtn.classList.add("disabled");
+
+  if (type === "pro") {
+    proBtn.innerText = "👍 이미 찬성했습니다";
+  } else {
+    conBtn.innerText = "👎 이미 반대했습니다";
+  }
+}
 
 /* ==========================================================================
    7. Comments
@@ -275,14 +395,113 @@ document.addEventListener("touchend", e => {
 });
 
 /* ==========================================================================
-   10. Remix / Battle (Stub)
+   9-1. Remix Join Status Check
 ========================================================================== */
+async function checkRemixStatus(issueId) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+
+  if (!session.session) return; // 비로그인 → 무시
+
+  const userId = session.session.user.id;
+
+  const { data, error } = await supabase
+    .from("remixes") // ⚠️ 실제 테이블명 확인
+    .select("remix_stance")
+    .eq("issue_id", issueId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data) return;
+
+  applyRemixJoinedUI(data.remix_stance);
+}
+
+function applyRemixJoinedUI(stance) {
+  if (document.querySelector(".remix-joined-text")) return;
+
+  const proBtn = qs("btn-remix-pro");
+  const conBtn = qs("btn-remix-con");
+  const actionWrap = document.querySelector(".remix-actions");
+
+  if (!proBtn || !conBtn || !actionWrap) return;
+
+  proBtn.onclick = null;
+  conBtn.onclick = null;
+
+  proBtn.classList.add("disabled");
+  conBtn.classList.add("disabled");
+
+  actionWrap.insertAdjacentHTML(
+    "afterend",
+    stance === "pro"
+      ? `<div class="remix-joined-text pro">
+           이미 🔵 <strong>찬성 진영</strong>에 합류했습니다
+         </div>`
+      : `<div class="remix-joined-text con">
+           이미 🔴 <strong>반대 진영</strong>에 합류했습니다
+         </div>`
+  );
+}
+
+/* ==========================================================================
+   9-2. Remix Count Load
+========================================================================== */
+async function loadRemixCounts(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("remixes")
+    .select("remix_stance")
+    .eq("issue_id", issueId);
+
+  if (error) {
+    console.error("remix count load error", error);
+    return;
+  }
+
+  const proCount = data.filter(r => r.remix_stance === "pro").length;
+  const conCount = data.filter(r => r.remix_stance === "con").length;
+
+  const proEl = qs("remix-pro-count");
+  const conEl = qs("remix-con-count");
+
+  if (proEl) {
+    proEl.innerText = `참전 ${proCount} · 리믹스 ${proCount}`;
+  }
+
+  if (conEl) {
+    conEl.innerText = `참전 ${conCount} · 리믹스 ${conCount}`;
+  }
+}
+
+/* ==========================================================================
+   10. Remix / Battle (ACTIVE)
+========================================================================== */
+
+function goRemix(stance) {
+  // stance: 'pro' | 'con'
+
+  const remixContext = {
+    origin_issue_id: issueId,
+    remix_stance: stance,
+    from: "issue"
+  };
+
+  // 🔥 세션에 저장 (write-remix에서 읽음)
+  sessionStorage.setItem(
+    "remixContext",
+    JSON.stringify(remixContext)
+  );
+
+  // 🔥 리믹스 전용 작성 페이지로 이동
+  location.href = "write-remix.html";
+}
+
 qs("btn-remix-pro").onclick = () => {
-  alert("찬성 진영 참전 (리믹스 작성 화면으로 연결 예정)");
-  // location.href = `write.html?remix=pro&issue=${issueId}`;
+  goRemix("pro");
 };
 
 qs("btn-remix-con").onclick = () => {
-  alert("반대 진영 참전 (리믹스 작성 화면으로 연결 예정)");
-  // location.href = `write.html?remix=con&issue=${issueId}`;
+  goRemix("con");
 };

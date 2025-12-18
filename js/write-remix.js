@@ -1,5 +1,22 @@
+// 🔥 REMIX STATE (write-remix 전용)
+
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
+
+    /* ================= REMIX CONTEXT (고정값) ================= */
+  const remixContext = JSON.parse(
+    sessionStorage.getItem('remixContext')
+  );
+
+  if (!remixContext) {
+    alert('잘못된 접근입니다.');
+    location.href = 'index.html';
+    return;
+  }
+
+  // 🔒 이 페이지에서는 "읽기 전용"
+  const remixStance = remixContext.remix_stance; // 'pro' | 'con'
+  const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -155,14 +172,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // ⬇️ 아래부터는 "정상 발행 흐름"만 실행
       const payload = {
         category: categoryEl.value,
         title: titleEl.value,
         oneLine: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
-        is_anonymous: anon
+        is_anonymous: anon,
+
+        // 🔥 REMIX META (고정)
+        remix_stance: remixStance,
+        remix_origin_issue_id: remixOriginIssueId
       };
 
       sessionStorage.setItem('writePayload', JSON.stringify(payload));
