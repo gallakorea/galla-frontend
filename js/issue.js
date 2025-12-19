@@ -60,27 +60,28 @@ function renderIssue(issue) {
   qs("issue-title").innerText = issue.title || "";
   qs("issue-desc").innerText = issue.one_line || "";
 
-  /* 핵심 요약 + 더 보기 */
-  const explainWrap = qs("issue-explain-text");
-  if (explainWrap) {
-    const textSpan = explainWrap.querySelector(".text");
-    const moreSpan = explainWrap.querySelector(".inline-more");
+/* 핵심 요약 + 더 보기 */
+const explainWrap = qs("issue-explain-text");
+if (explainWrap) {
+  const textSpan = explainWrap.querySelector(".text");
+  const moreSpan = explainWrap.querySelector(".inline-more");
 
-    if (textSpan) textSpan.textContent = issue.description || "";
+  if (textSpan) textSpan.textContent = issue.description || "";
 
-    if (textSpan && moreSpan) {
-      requestAnimationFrame(() => {
-        if (explainWrap.scrollHeight > explainWrap.clientHeight) {
-          explainWrap.classList.add("has-more");
-        }
-      });
+  if (textSpan && moreSpan) {
+    requestAnimationFrame(() => {
+      // 🔥 여기 핵심 수정
+      if (textSpan.scrollHeight > textSpan.clientHeight) {
+        explainWrap.classList.add("has-more");
+      }
+    });
 
-      moreSpan.onclick = e => {
-        e.stopPropagation();
-        explainWrap.classList.add("expanded");
-      };
-    }
+    moreSpan.onclick = e => {
+      e.stopPropagation();
+      explainWrap.classList.add("expanded");
+    };
   }
+}
 
   if (issue.created_at) {
     qs("issue-time").innerText =
