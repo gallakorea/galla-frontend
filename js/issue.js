@@ -277,8 +277,8 @@ async function support(stance, amount) {
 
   alert(
     stance === "pro"
-      ? "👍 찬성 진영에 후원했습니다."
-      : "👎 반대 진영에 후원했습니다."
+      ? "👍 찬성 진영을 지원했습니다."
+      : "👎 반대 진영을 지원했습니다."
   );
 }
 
@@ -322,7 +322,7 @@ async function loadMySupportStatus(issueId) {
   const stance = data[0].stance;
 
   qs("support-status-text").innerText =
-    `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 후원했습니다.`;
+    `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
 }
 
 /* ==========================================================================
@@ -481,81 +481,94 @@ async function checkAuthorSupport(issueId) {
 }
 
 /* ==========================================================================
-   11. Support Modal (SAFE)
+   11. Push (밀어주기) Modal Logic
 ========================================================================== */
 document.addEventListener("DOMContentLoaded", () => {
-  const supportModal = document.getElementById("support-modal");
-  if (!supportModal) return; // ✅ 핵심 방어
+  const modal = document.getElementById("support-modal");
+  if (!modal) return;
 
-  const supportClose = document.getElementById("support-modal-close");
-  const supportConfirm = document.getElementById("support-confirm-btn");
-  const supportTitle = document.getElementById("support-modal-title");
-  const supportProBtn = document.getElementById("support-pro-btn");
-  const supportConBtn = document.getElementById("support-con-btn");
-  const customAmountInput = document.getElementById("support-custom-amount");
+  const titleEl = document.getElementById("support-modal-title");
+  const closeBtn = modal.querySelector(".modal-close");
+  const confirmBtn = modal.querySelector(".support-confirm");
 
-  let currentSupportSide = null;
-  let selectedAmount = null;
+  const proBtn = document.getElementById("support-pro-btn");
+  const conBtn = document.getElementById("support-con-btn");
 
-  function openSupportModal(side) {
-    currentSupportSide = side;
-    supportTitle.textContent =
-      side === "pro" ? "👍 찬성 진영 후원" : "👎 반대 진영 후원";
-    supportModal.hidden = false;
+  const levelButtons = modal.querySelectorAll(".support-level");
+
+  let currentStance = null;   // "pro" | "con"
+  let selectedLevel = null;   // 1 ~ 4
+
+  // 🔥 단계 → 금액 매핑 (지금은 임시, 나중에 조정 가능)
+  const LEVEL_AMOUNT_MAP = {
+    1: 1000,    // 돌
+    2: 5000,    // 집중 사격
+    3: 10000,   // 무장 화력
+    4: 50000    // 전면 개입
+  };
+
+  /* --------------------------
+     모달 열기
+  -------------------------- */
+  function openModal(stance) {
+    currentStance = stance;
+    selectedLevel = null;
+    confirmBtn.disabled = true;
+
+    titleEl.textContent =
+      stance === "pro"
+        ? "👍 찬성 진영에 힘을 싣습니다"
+        : "👎 반대 진영에 힘을 싣습니다";
+
+    levelButtons.forEach(btn => btn.classList.remove("selected"));
+
+    modal.hidden = false;
   }
 
-
-
-  // 🔘 진영 버튼
-  if (supportProBtn) {
-    supportProBtn.onclick = () => openSupportModal("pro");
+  /* --------------------------
+     모달 닫기
+  -------------------------- */
+  function closeModal() {
+    modal.hidden = true;
+    currentStance = null;
+    selectedLevel = null;
   }
 
-  if (supportConBtn) {
-    supportConBtn.onclick = () => openSupportModal("con");
-  }
+  /* --------------------------
+     진영 버튼
+  -------------------------- */
+  proBtn?.addEventListener("click", () => openModal("pro"));
+  conBtn?.addEventListener("click", () => openModal("con"));
 
-  // ❌ 닫기
-  if (supportClose) {
-    supportClose.onclick = () => {
-      supportModal.hidden = true;
-      resetSupportModal();
-    };
-  }
+  /* --------------------------
+     단계 선택
+  -------------------------- */
+  levelButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      levelButtons.forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
 
-  // 💰 금액 버튼
-  document.querySelectorAll(".support-amounts button").forEach(btn => {
-    btn.onclick = () => {
-      selectedAmount = Number(btn.dataset.amount);
-      supportConfirm.disabled = false;
-    };
+      selectedLevel = Number(btn.dataset.level);
+      confirmBtn.disabled = false;
+    });
   });
 
-  // ✍️ 직접 입력
-  if (customAmountInput) {
-    customAmountInput.oninput = (e) => {
-      selectedAmount = Number(e.target.value);
-      supportConfirm.disabled = !selectedAmount;
-    };
-  }
+  /* --------------------------
+     실행
+  -------------------------- */
+  confirmBtn.addEventListener("click", async () => {
+    if (!currentStance || !selectedLevel) return;
 
-  function resetSupportModal() {
-    selectedAmount = null;
-    supportConfirm.disabled = true;
-    if (customAmountInput) customAmountInput.value = "";
-  }
+    const amount = LEVEL_AMOUNT_MAP[selectedLevel];
+    if (!amount) return;
 
-    // ✅ 후원 확정 버튼 (유일한 실행 지점)
-  if (supportConfirm) {
-    supportConfirm.onclick = async () => {
-      if (!currentSupportSide || !selectedAmount) return;
+    await support(currentStance, amount);
 
-      await support(currentSupportSide, selectedAmount);
+    closeModal();
+  });
 
-      supportModal.hidden = true;
-      resetSupportModal();
-    };
-  }
-
+  /* --------------------------
+     닫기 버튼
+  -------------------------- */
+  closeBtn?.addEventListener("click", closeModal);
 });
-
