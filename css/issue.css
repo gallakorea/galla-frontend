@@ -980,3 +980,13 @@ body {
 .clamp-text.expanded .inline-more {
   display: none;
 }
+
+/* 더 보기 자리 확보 */
+.clamp-text .text {
+  padding-right: 56px; /* ← 핵심 */
+}
+
+/* expanded 되면 원복 */
+.clamp-text.expanded .text {
+  padding-right: 0;
+}
