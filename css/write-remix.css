@@ -1340,24 +1340,39 @@ select.locked {
   cursor: not-allowed;
 }
 
-/* select를 input처럼 보이게 */
-.select-wrap select {
-  width: 100%;
-  padding: 14px 12px;
-  border-radius: 12px;
-  background: #111;
-  color: #fff;
-  border: 1px solid #222;
-  font-size: 14px;
+/* ===============================
+   SELECT = INPUT 완전 통합
+================================ */
+
+.select-wrap {
+  position: relative;
+}
+
+/* select 자체는 input-field 스타일 그대로 */
+.select-wrap select.input-field {
   appearance: none;
+  -webkit-appearance: none;
+  padding-right: 42px; /* 화살표 공간 */
+}
+
+/* ▼ 커스텀 화살표 */
+.select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #777;
+  pointer-events: none;
 }
 
 /* 🔒 remix 고정 상태 */
-.select-wrap.locked select,
-.select-wrap select:disabled {
-  background: #1a1a1a;
-  color: #aaa;
-  border-color: #333;
+.select-wrap.locked select {
   cursor: not-allowed;
-  opacity: 1; /* ⭐ 이거 없으면 계속 회색됨 */
+  opacity: 1; /* ⭐ 이거 없으면 회색으로 깨짐 */
+}
+
+.select-wrap.locked::after {
+  color: #444;
 }
