@@ -857,3 +857,77 @@ body {
     color: #888;
     line-height: 1.4;
 }
+
+/* REMIX JOINED STATE */
+.remix-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.remix-joined-text {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.remix-joined-text.pro {
+  background: rgba(0,148,255,0.15);
+  color: #4da3ff;
+  border: 1px solid #3356ff;
+}
+
+.remix-joined-text.con {
+  background: rgba(255,79,110,0.15);
+  color: #ff6b8a;
+  border: 1px solid #ff4f6e;
+}
+
+/* ==========================
+   Author Support (UI Only)
+========================== */
+.author-support {
+  margin: 24px 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #141414;
+  border: 1px solid #222;
+}
+
+.author-support-header {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.author-support-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.9;
+  margin-bottom: 12px;
+}
+
+.author-support-btn {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  background: #333;
+  color: #888;
+}
+
+.author-support-btn:disabled {
+  cursor: not-allowed;
+}
+
+.author-support-hint {
+  margin-top: 8px;
+  font-size: 11px;
+  opacity: 0.5;
+  text-align: center;
+}

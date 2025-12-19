@@ -47,7 +47,8 @@ if (!issueId) {
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
   checkVoteStatus(issue.id);
-  loadSupportStats(issue.id); // ✅ 여기 추가
+  loadSupportStats(issue.id);
+  loadMySupportStatus(issue.id); // ✅ 여기 추가
 
 })();
 
@@ -149,6 +150,44 @@ async function loadSupportStats(issueId) {
 }
 
 /* ==========================================================================
+   5-1-1. My Support Status Text
+========================================================================== */
+function renderMySupportText(stance, amount) {
+  const el = qs("support-status-text");
+  if (!el) return;
+
+  const label = stance === "pro" ? "찬성" : "반대";
+  el.innerText =
+    `${label} 진영에 ₩${amount.toLocaleString()} 후원으로 힘을 실어 주었습니다.`;
+}
+
+/* ==========================================================================
+   5-1-2. My Support Status Load (누적)
+========================================================================== */
+async function loadMySupportStatus(issueId) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return;
+
+  const { data, error } = await supabase
+    .from("supports")
+    .select("stance, amount")
+    .eq("issue_id", issueId)
+    .eq("user_id", session.session.user.id);
+
+  if (error || !data || data.length === 0) return;
+
+  let total = 0;
+  const stance = data[0].stance;
+
+  data.forEach(s => {
+    total += s.amount;
+  });
+
+  renderMySupportText(stance, total);
+}
+
+/* ==========================================================================
    5-2. Support Modal (TEMP)
 ========================================================================== */
 qs("open-support-modal").onclick = () => {
@@ -198,6 +237,7 @@ async function submitSupport(stance, amount) {
 
   // ✅ 즉시 UI 갱신
   loadSupportStats(issueId);
+  loadMySupportStatus(issueId);   // ✅ 내 후원 문구 즉시 반영
 }
 
 
