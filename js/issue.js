@@ -69,13 +69,16 @@ function renderIssue(issue) {
      핵심 요약 + 더 보기 (정답)
   =============================== */
   const explainWrap = qs("issue-explain-text");
-  if (!explainWrap) return;
+  if (!explainWrap) {
+    console.error("❌ #issue-explain-text 없음");
+    return;
+  }
 
   const textSpan = explainWrap.querySelector(".text");
   const moreSpan = explainWrap.querySelector(".inline-more");
 
   if (!textSpan || !moreSpan) {
-    console.error("❌ explain DOM 구조 깨짐");
+    console.error("❌ explain DOM 구조 깨짐", explainWrap.innerHTML);
     return;
   }
 
