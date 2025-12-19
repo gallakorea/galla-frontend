@@ -285,40 +285,6 @@
     </div>
 </div>
 
-<!-- Supabase CDN (non-module, GALLA 표준) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- Supabase Client Initializer -->
-<script src="js/supabase.js"></script>
-
-<!-- Issue Page Logic -->
-<script src="js/issue.js"></script>
-
-<script>
-/* --------------------------
-    뒤로가기 기능
--------------------------- */
-document.getElementById("btn-back").addEventListener("click", () => {
-    if (document.referrer) history.back();
-    else location.href = "index.html";
-});
-
-/* --------------------------
-    ⋯ 메뉴 열기/닫기
--------------------------- */
-const moreBtn = document.getElementById("header-more-btn");
-const moreModal = document.getElementById("header-more-modal");
-
-moreBtn.addEventListener("click", () => {
-    moreModal.hidden = false;
-});
-moreModal.addEventListener("click", (e) => {
-    if (e.target === moreModal || e.target.classList.contains("more-close")) {
-        moreModal.hidden = true;
-    }
-});
-</script>
-
   </div> <!-- #app 끝 -->
 
   <!-- =========================
@@ -363,7 +329,39 @@ moreModal.addEventListener("click", (e) => {
     </div>
   </div>
 
-</body>
+<!-- Supabase CDN (non-module, GALLA 표준) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Supabase Client Initializer -->
+<script src="js/supabase.js"></script>
+
+<!-- Issue Page Logic -->
+<script src="js/issue.js"></script>
+
+<script>
+/* --------------------------
+    뒤로가기 기능
+-------------------------- */
+document.getElementById("btn-back").addEventListener("click", () => {
+    if (document.referrer) history.back();
+    else location.href = "index.html";
+});
+
+/* --------------------------
+    ⋯ 메뉴 열기/닫기
+-------------------------- */
+const moreBtn = document.getElementById("header-more-btn");
+const moreModal = document.getElementById("header-more-modal");
+
+moreBtn.addEventListener("click", () => {
+    moreModal.hidden = false;
+});
+moreModal.addEventListener("click", (e) => {
+    if (e.target === moreModal || e.target.classList.contains("more-close")) {
+        moreModal.hidden = true;
+    }
+});
+</script>
 
 </body>
 </html>
