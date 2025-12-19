@@ -62,22 +62,28 @@ function renderIssue(issue) {
 
 /* 핵심 요약 + 더 보기 */
 const explainWrap = qs("issue-explain-text");
+
 if (explainWrap) {
-  const textEl = explainWrap.querySelector(".ig-text");
-  const moreEl = explainWrap.querySelector(".ig-more");
+  const textSpan = explainWrap.querySelector(".ig-text");
+  const moreSpan = explainWrap.querySelector(".ig-more");
 
-  if (textEl) textEl.textContent = issue.description || "";
+  if (textSpan) {
+    textSpan.textContent = issue.description || "";
+  }
 
-  requestAnimationFrame(() => {
-    if (textEl.scrollHeight > textEl.clientHeight) {
-      explainWrap.classList.add("has-more");
-    }
-  });
+  if (textSpan && moreSpan) {
+    requestAnimationFrame(() => {
+      // 🔥 정확한 기준
+      if (textSpan.scrollHeight > textSpan.clientHeight) {
+        explainWrap.classList.add("has-more");
+      }
+    });
 
-  moreEl.onclick = e => {
-    e.stopPropagation();
-    explainWrap.classList.add("expanded");
-  };
+    moreSpan.onclick = e => {
+      e.stopPropagation();
+      explainWrap.classList.add("expanded");
+    };
+  }
 }
 
   if (issue.created_at) {
