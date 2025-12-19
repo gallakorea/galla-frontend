@@ -359,5 +359,51 @@ moreModal.addEventListener("click", (e) => {
 });
 </script>
 
+  </div> <!-- #app 끝 -->
+
+  <!-- =========================
+       밀어주기 모달 (HTML)
+       ========================= -->
+  <div id="support-modal" class="support-modal" hidden>
+    <div class="support-modal-sheet">
+      <button id="support-modal-close" class="modal-close">×</button>
+
+      <h3 id="support-modal-title">
+        👍 찬성 진영에 힘을 보탭니다
+      </h3>
+
+      <p class="support-desc">
+        선택한 진영의 전황에 직접 반영됩니다.<br />
+        밀어주기의 일부는 이 이슈를 만든 크리에이터의 보상과<br />
+        사회적 보탬으로 사용됩니다.
+      </p>
+
+      <div class="support-levels">
+        <button class="support-level" data-level="1">
+          🟢 돌을 던집니다
+        </button>
+        <button class="support-level" data-level="2">
+          🔵 집중 사격을 합니다
+        </button>
+        <button class="support-level" data-level="3">
+          🟣 무장 화력을 투입합니다
+        </button>
+        <button class="support-level" data-level="4">
+          🟠 전면 개입합니다
+        </button>
+      </div>
+
+      <button
+        id="support-confirm-btn"
+        class="support-confirm"
+        disabled
+      >
+        이 선택을 실행합니다
+      </button>
+    </div>
+  </div>
+
+</body>
+
 </body>
 </html>
