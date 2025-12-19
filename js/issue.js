@@ -70,6 +70,17 @@ function renderIssue(issue) {
   // ✅ 본문 설명 → description
   qs("issue-explain-text").innerText = issue.description || "";
 
+    /* 🔥 Instagram 스타일 더 보기 */
+  const explainEl = qs("issue-explain-text");
+  const moreEl = explainEl.querySelector(".inline-more");
+
+  if (moreEl) {
+    moreEl.onclick = (e) => {
+      e.stopPropagation();
+      explainEl.classList.add("expanded");
+    };
+  }
+
   if (issue.created_at) {
     qs("issue-time").innerText =
       new Date(issue.created_at).toLocaleDateString();
@@ -93,24 +104,6 @@ function renderIssue(issue) {
     qs("open-video-modal").style.display = "none";
   }
 }
-
-  /* 🔥 Instagram 스타일 더 보기 (텍스트만 클릭) */
-  const explainEl = qs("issue-explain-text");
-  const moreEl = explainEl?.querySelector(".inline-more");
-
-  if (explainEl && moreEl) {
-    // 3줄 초과 시에만 노출
-    setTimeout(() => {
-      if (explainEl.scrollHeight > explainEl.clientHeight) {
-        moreEl.style.display = "inline";
-      }
-    }, 0);
-
-    moreEl.onclick = (e) => {
-      e.stopPropagation();
-      explainEl.classList.add("expanded");
-    };
-  }
 
 /* ==========================================================================
    4. Vote UI
