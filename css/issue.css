@@ -985,3 +985,46 @@ body {
 .clamp-text.expanded .inline-more {
   display: none;
 }
+
+.clamp-text {
+  position: relative;
+  line-height: 1.5;
+}
+
+/* 🔒 실제로 줄을 자르는 건 text만 */
+.clamp-text .text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* 더 보기 기본 숨김 */
+.clamp-text .inline-more {
+  display: none;
+}
+
+/* 줄이 넘칠 때만 노출 */
+.clamp-text.has-more .inline-more {
+  display: inline;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding-left: 6px;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0),
+    rgba(0,0,0,0.9) 40%
+  );
+  color: #aaa;
+  cursor: pointer;
+}
+
+/* 펼친 상태 */
+.clamp-text.expanded .text {
+  -webkit-line-clamp: unset;
+}
+
+.clamp-text.expanded .inline-more {
+  display: none;
+}
