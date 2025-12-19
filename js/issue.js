@@ -250,15 +250,7 @@ async function checkVoteStatus(issueId) {
    Support Actions (Pro / Con)
 ========================================================================== */
 
-qs("support-pro-btn")?.addEventListener("click", () => {
-  support("pro");
-});
-
-qs("support-con-btn")?.addEventListener("click", () => {
-  support("con");
-});
-
-async function support(stance) {
+async function support(stance, amount) {
   const supabase = window.supabaseClient;
   const { data: session } = await supabase.auth.getSession();
 
@@ -266,8 +258,6 @@ async function support(stance) {
     alert("로그인이 필요합니다.");
     return;
   }
-
-  const amount = 1000; // 🔥 MVP 고정 금액 (나중에 선택 UI로 확장)
 
   const { error } = await supabase.from("supports").insert({
     issue_id: issueId,
@@ -282,7 +272,6 @@ async function support(stance) {
     return;
   }
 
-  // ✅ 즉시 UI 반영
   loadSupportStats(issueId);
   loadMySupportStatus(issueId);
 
@@ -292,8 +281,6 @@ async function support(stance) {
       : "👎 반대 진영에 후원했습니다."
   );
 }
-
-
 
 /* ==========================================================================
    5. Support
@@ -557,35 +544,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-function openSupportModal(side) {
-  currentSupportSide = side;
-  supportTitle.textContent =
-    side === "pro" ? "👍 찬성 진영 후원" : "👎 반대 진영 후원";
-  supportModal.hidden = false;
-}
+  // ✅ 후원 확정 버튼
+  if (supportConfirm) {
+    supportConfirm.onclick = async () => {
+      if (!currentSupportSide || !selectedAmount) return;
 
-// 닫기
-supportClose.onclick = () => {
-  supportModal.hidden = true;
-  resetSupportModal();
-};
+      await support(currentSupportSide, selectedAmount);
 
-// 금액 버튼
-document.querySelectorAll(".support-amounts button").forEach(btn => {
-  btn.onclick = () => {
-    selectedAmount = btn.dataset.amount;
-    supportConfirm.disabled = false;
-  };
-});
-
-// 직접 입력
-document.getElementById("support-custom-amount").oninput = (e) => {
-  selectedAmount = e.target.value;
-  supportConfirm.disabled = !selectedAmount;
-};
-
-function resetSupportModal() {
-  selectedAmount = null;
-  supportConfirm.disabled = true;
-  document.getElementById("support-custom-amount").value = "";
-}
+      supportModal.hidden = true;
+      resetSupportModal();
+    };
+  }
