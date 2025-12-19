@@ -69,25 +69,26 @@
 
         <!-- 카테고리 (필수) -->
         <div class="field-block">
-          <label class="field-label">카테고리 <span class="required">(필수)</span></label>
-          <select id="category" name="category">
-          <!-- 🔒 remix 전용 안내 -->
-          <option value="" disabled>
-            리믹스에서는 카테고리를 변경할 수 없습니다
-          </option>
+          <label class="field-label">
+            카테고리 <span class="required">(필수)</span>
+          </label>
 
-          <option value="정치·사회">정치·사회</option>
-          <option value="경제·투자">경제·투자</option>
-          <option value="직장·경력">직장·경력</option>
-          <option value="연애·결혼">연애·결혼</option>
-          <option value="생활·일상">생활·일상</option>
-          <option value="패션·뷰티">패션·뷰티</option>
-          <option value="엔터·스포츠">엔터·스포츠</option>
-          <option value="세계·여행">세계·여행</option>
-          <option value="음식·맛집">음식·맛집</option>
-          <option value="19금">19금</option>
-          <option value="기타">기타</option>
-        </select>
+          <!-- 🔥 이 div를 추가 -->
+          <div class="select-wrap locked">
+            <select id="category" name="category" disabled>
+              <option value="정치·사회">정치·사회</option>
+              <option value="경제·투자">경제·투자</option>
+              <option value="직장·경력">직장·경력</option>
+              <option value="연애·결혼">연애·결혼</option>
+              <option value="생활·일상">생활·일상</option>
+              <option value="패션·뷰티">패션·뷰티</option>
+              <option value="엔터·스포츠">엔터·스포츠</option>
+              <option value="세계·여행">세계·여행</option>
+              <option value="음식·맛집">음식·맛집</option>
+              <option value="19금">19금</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
         </div>
 
         <!-- 제목 (필수) -->

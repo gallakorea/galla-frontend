@@ -1340,11 +1340,8 @@ select.locked {
   cursor: not-allowed;
 }
 
-/* ===============================
-   Category Locked (Remix)
-================================ */
-
-select#category {
+/* select를 input처럼 보이게 */
+.select-wrap select {
   width: 100%;
   padding: 14px 12px;
   border-radius: 12px;
@@ -1356,22 +1353,11 @@ select#category {
 }
 
 /* 🔒 remix 고정 상태 */
-select#category.locked,
-select#category:disabled {
+.select-wrap.locked select,
+.select-wrap select:disabled {
   background: #1a1a1a;
   color: #aaa;
-  border: 1px solid #333;
+  border-color: #333;
   cursor: not-allowed;
-  opacity: 1; /* ← 중요 (기본 disabled opacity 제거) */
-}
-
-/* 화살표 제거 (disabled일 때 특히 중요) */
-select#category:disabled {
-  background-image: none;
-}
-
-/* 포커스 방지 */
-select#category:disabled:focus {
-  outline: none;
-  box-shadow: none;
+  opacity: 1; /* ⭐ 이거 없으면 계속 회색됨 */
 }
