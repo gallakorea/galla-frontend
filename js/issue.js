@@ -7,6 +7,9 @@ function qs(id) {
   return document.getElementById(id);
 }
 
+/* 🔥 이 줄 추가 */
+let issueAuthorId = null;
+
 /* ==========================================================================
    1. URL → issue id
 ========================================================================== */
@@ -48,7 +51,8 @@ if (!issueId) {
   loadRemixCounts(issue.id);
   checkVoteStatus(issue.id);
   loadSupportStats(issue.id);
-  loadMySupportStatus(issue.id); // ✅ 여기 추가
+  loadMySupportStatus(issue.id);
+  checkAuthorSupport(issue.id); // 🔥 발의자 응원 상태 확인
 
 })();
 
@@ -56,6 +60,8 @@ if (!issueId) {
    3. Render Issue
 ========================================================================== */
 function renderIssue(issue) {
+  issueAuthorId = issue.user_id; // 🔥 이 줄 추가
+  
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
   qs("issue-desc").innerText = issue.description || "";
@@ -91,7 +97,6 @@ function renderIssue(issue) {
   }
 
   renderVote(issue.pro_count || 0, issue.con_count || 0);
-  renderSupport(issue.sup_pro || 0, issue.sup_con || 0);
 }
 
 /* ==========================================================================
@@ -240,6 +245,37 @@ async function submitSupport(stance, amount) {
   loadMySupportStatus(issueId);   // ✅ 내 후원 문구 즉시 반영
 }
 
+/* ==========================================================================
+   5-4. Author Support (발의자 응원)
+========================================================================== */
+async function checkAuthorSupport(issueId) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return;
+
+  if (!issueAuthorId) return; // 안전장치
+
+  const { data } = await supabase
+    .from("author_supports")
+    .select("id")
+    .eq("issue_id", issueId)
+    .eq("author_id", issueAuthorId)
+    .eq("user_id", session.session.user.id)
+    .maybeSingle();
+
+  if (data) {
+    applyAuthorSupportDoneUI();
+  }
+}
+
+function applyAuthorSupportDoneUI() {
+  const btn = document.getElementById("author-support-btn");
+  if (!btn) return;
+
+  btn.disabled = true;
+  btn.innerText = "🔥 이미 응원했습니다";
+  btn.classList.add("disabled");
+}
 
 /* ==========================================================================
    6. Voting (votes table 기준)
@@ -545,3 +581,37 @@ qs("btn-remix-pro").onclick = () => {
 qs("btn-remix-con").onclick = () => {
   goRemix("con");
 };
+
+/* ==========================================================================
+   11. Author Support Click → DB INSERT
+========================================================================== */
+
+document
+  .getElementById("author-support-btn")
+  ?.addEventListener("click", async () => {
+    const supabase = window.supabaseClient;
+    const { data: session } = await supabase.auth.getSession();
+
+    if (!session.session) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    if (!issueAuthorId) return;
+
+    const { error } = await supabase
+      .from("author_supports")
+      .insert({
+        issue_id: issueId,
+        author_id: issueAuthorId,
+        user_id: session.session.user.id
+      });
+
+    if (error) {
+      console.error(error);
+      alert("이미 응원했거나 오류가 발생했습니다.");
+      return;
+    }
+
+    applyAuthorSupportDoneUI();
+  });
