@@ -60,7 +60,7 @@ function renderIssue(issue) {
   qs("issue-title").innerText = issue.title || "";
   qs("issue-desc").innerText = issue.one_line || "";
 
-/* 핵심 요약 + 더 보기 */
+/* 핵심 요약 + Instagram 방식 더 보기 */
 const explainWrap = qs("issue-explain-text");
 
 if (explainWrap) {
@@ -73,8 +73,24 @@ if (explainWrap) {
 
   if (textSpan && moreSpan) {
     requestAnimationFrame(() => {
-      // 🔥 정확한 기준
-      if (textSpan.scrollHeight > textSpan.clientHeight) {
+      // 1️⃣ 원래 상태 저장
+      const prevClamp = textSpan.style.webkitLineClamp;
+
+      // 2️⃣ clamp 해제
+      textSpan.style.webkitLineClamp = "unset";
+
+      // 3️⃣ 실제 전체 높이
+      const fullHeight = textSpan.scrollHeight;
+
+      // 4️⃣ clamp 복구
+      textSpan.style.webkitLineClamp = prevClamp || "3";
+
+      // 5️⃣ 3줄 높이 계산
+      const lineHeight = parseFloat(getComputedStyle(textSpan).lineHeight);
+      const clampHeight = lineHeight * 3;
+
+      // 6️⃣ 비교
+      if (fullHeight > clampHeight + 1) {
         explainWrap.classList.add("has-more");
       }
     });
