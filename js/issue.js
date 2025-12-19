@@ -45,7 +45,6 @@ if (!issueId) {
   }
 
   renderIssue(issue);
-  loadVotes(issue.id);
   loadComments(issue.id);
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
