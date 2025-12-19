@@ -92,6 +92,29 @@ function renderIssue(issue) {
   } else {
     qs("open-video-modal").style.display = "none";
   }
+
+  /* ================================
+     🔥 핵심 요약 더보기 (여기에!)
+  ================================ */
+  setTimeout(() => {
+    const textEl = qs("issue-explain-text");
+    const moreBtn = qs("issue-explain-more");
+
+    if (!textEl || !moreBtn) return;
+
+    // 실제로 3줄 초과일 때만 더 보기 노출
+    if (textEl.scrollHeight > textEl.clientHeight) {
+      moreBtn.hidden = false;
+    }
+
+    moreBtn.onclick = () => {
+      textEl.classList.toggle("expanded");
+      moreBtn.innerText =
+        textEl.classList.contains("expanded")
+          ? "접기"
+          : "더 보기";
+    };
+  }, 0);
 }
 
 /* ==========================================================================

@@ -931,3 +931,29 @@ body {
   opacity: 0.5;
   text-align: center;
 }
+
+/* 핵심 요약 - 3줄 제한 */
+#issue-explain-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;        /* 👈 핵심 */
+  -webkit-box-orient: vertical;
+  line-height: 1.6;
+  white-space: normal;
+}
+
+/* 펼쳤을 때 */
+#issue-explain-text.expanded {
+  -webkit-line-clamp: unset;
+}
+
+/* 더 보기 버튼 */
+.more-btn {
+  margin-top: 6px;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+}
