@@ -48,13 +48,14 @@
     <!-- SPEECH BUTTON -->
     <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
 
+    <!-- SUMMARY -->
+    <section class="issue-explain">
+        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+        <p id="issue-explain-text"></p>
+    </section>
+
     <!-- VOTE -->
     <section class="vote-section">
-        <div class="vote-buttons">
-            <button class="btn-pro" id="btn-vote-pro">👍 찬성이오</button>
-            <button class="btn-con" id="btn-vote-con">👎 난 반댈세</button>
-        </div>
-
         <div class="vote-title white-title">👍 찬반 투표 현황</div>
 
         <div class="vote-bar">
@@ -67,23 +68,36 @@
             <span id="vote-con-text">0%</span>
         </div>
 
+        <div class="vote-buttons">
+            <button class="btn-pro" id="btn-vote-pro">👍 찬성이오</button>
+            <button class="btn-con" id="btn-vote-con">👎 난 반댈세</button>
+        </div>
     </section>
 
-    <!-- SUMMARY -->
-    <section class="issue-explain">
-        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
-        <p id="issue-explain-text"></p>
-    </section>
+<!-- AUTHOR SUPPORT (UI ONLY) -->
+<section class="author-support">
+    <div class="author-support-header">
+        ✍️ 이 이슈의 발의자
+    </div>
+
+    <div class="author-support-body">
+        <p class="author-support-desc">
+            이 주제를 세상에 던진 사람에게<br>
+            응원과 지지를 보낼 수 있습니다.
+        </p>
+
+        <button class="author-support-btn" disabled>
+            🙌 발의자 응원하기
+        </button>
+
+        <p class="author-support-hint">
+            ※ 기능은 곧 열립니다
+        </p>
+    </div>
+</section>
 
     <!-- SUPPORT -->
     <section class="support-section">
-
-        <p id="support-status-text" class="support-status-text"></p>
-
-        <button class="support-btn" id="open-support-modal">
-            💸 이 이슈 후원하기
-        </button>
-
         <div class="support-header white-title">⚔️ 후원 전쟁 현황</div>
 
         <div class="support-bar">
@@ -96,6 +110,14 @@
             <span id="sup-con-amount">₩0</span>
         </div>
 
+        <p id="support-status-text" class="support-status-text"></p>
+
+        <button class="support-btn" id="open-support-modal">
+            💸 이 이슈 후원하기
+        </button>
+
+        <!-- 🔥 여기 추가 -->
+        <div id="support-status-text" class="support-status"></div>
     </section>
 
         <!-- REMIX / BATTLE -->
@@ -131,28 +153,6 @@
             참전은 의견 콘텐츠를 생성합니다.<br>
             단순 투표가 아닌, 진영에 합류하는 행위입니다.
         </p>
-    </section>
-
-        <!-- AUTHOR SUPPORT (UI ONLY) -->
-    <section class="author-support">
-        <div class="author-support-header">
-            ✍️ 이 이슈의 발의자
-        </div>
-
-        <div class="author-support-body">
-            <p class="author-support-desc">
-                이 주제를 세상에 던진 사람에게<br>
-                응원과 지지를 보낼 수 있습니다.
-            </p>
-
-            <button class="author-support-btn" id="author-support-btn" disabled>
-                🙌 발의자 응원하기
-            </button>
-
-            <p class="author-support-hint">
-                ※ 기능은 곧 열립니다
-            </p>
-        </div>
     </section>
 
     <!-- AI NEWS -->
@@ -232,6 +232,7 @@
 <!-- 상단 ⋯ 메뉴 -->
 <div id="header-more-modal" class="more-menu-backdrop" hidden>
     <div class="more-menu-box">
+        <div class="more-item">🎬 리믹스 만들기</div>
         <div class="more-item">🚫 관심 없음</div>
         <div class="more-item">⛔ 차단하기</div>
         <div class="more-item">🔕 업데이트 안 보기</div>
