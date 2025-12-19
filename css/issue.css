@@ -1146,3 +1146,43 @@ body {
   overflow: hidden;
   display: flex;
 }
+
+/* =========================
+   Push Modals (FIX)
+========================= */
+
+/* 전체 배경 */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;               /* top/right/bottom/left = 0 */
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 모달 본체 */
+.modal-sheet {
+  position: relative;
+  width: 92%;
+  max-width: 420px;
+
+  background: #111;
+  border-radius: 16px;
+  padding: 20px;
+
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+
+/* 닫기 버튼 */
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 20px;
+  background: none;
+  border: none;
+  color: #fff;
+}
