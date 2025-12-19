@@ -41,6 +41,7 @@ if (!issueId) {
   }
 
   renderIssue(issue);
+  loadVoteStats(issue.id);   // 🔥 반드시 추가
   loadComments(issue.id);
   checkVoteStatus(issue.id);
   loadSupportStats(issue.id);
@@ -130,6 +131,45 @@ if (explainWrap) {
     }
   }
 }
+
+/* ==========================================================================
+   Vote Stats (🔥 빠져 있던 핵심)
+========================================================================== */
+async function loadVoteStats(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("votes")
+    .select("type")
+    .eq("issue_id", issueId);
+
+  if (error) {
+    console.error("vote stats error", error);
+    return;
+  }
+
+  let pro = 0;
+  let con = 0;
+
+  data.forEach(v => {
+    if (v.type === "pro") pro++;
+    if (v.type === "con") con++;
+  });
+
+  const total = pro + con;
+
+  const proPercent = total ? Math.round((pro / total) * 100) : 0;
+  const conPercent = total ? 100 - proPercent : 0;
+
+  // bar
+  qs("vote-pro-bar").style.width = `${proPercent}%`;
+  qs("vote-con-bar").style.width = `${conPercent}%`;
+
+  // text
+  qs("vote-pro-text").innerText = `${proPercent}%`;
+  qs("vote-con-text").innerText = `${conPercent}%`;
+}
+
 
 /* ==========================================================================
    4. Vote
