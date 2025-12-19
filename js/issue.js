@@ -64,8 +64,13 @@ function renderIssue(issue) {
   
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
-  qs("issue-desc").innerText = issue.description || "";
 
+  // ✅ 한 줄 요약
+  qs("issue-desc").innerText = issue.summary || "";
+
+  // ✅ 이슈 설명 (본문)
+  qs("issue-explain-text").innerText = issue.description || "";
+  
   if (issue.created_at) {
     qs("issue-time").innerText =
       new Date(issue.created_at).toLocaleDateString();
@@ -158,7 +163,7 @@ async function loadSupportStats(issueId) {
    5-1-1. My Support Status Text
 ========================================================================== */
 function renderMySupportText(stance, amount) {
-  const el = qs("support-status-text");
+  const el = qs("my-support-status-text");
   if (!el) return;
 
   const label = stance === "pro" ? "찬성" : "반대";
@@ -609,7 +614,12 @@ document
 
     if (error) {
       console.error(error);
-      alert("이미 응원했거나 오류가 발생했습니다.");
+
+      if (error.code === "23505") {
+        alert("이미 발의자를 응원했습니다.");
+      } else {
+        alert("응원 중 오류가 발생했습니다.");
+      }
       return;
     }
 
