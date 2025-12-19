@@ -21,6 +21,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
+  const stanceBox = document.getElementById('remixStanceBox');
+const guideText = document.getElementById('remixGuideText');
+
+if (remixStance === 'pro') {
+  stanceBox.classList.add('pro');
+  stanceBox.innerHTML = `👍 <strong>찬성 진영</strong>으로 참전했습니다`;
+
+  guideText.innerHTML = `
+    이 글은 위 이슈의 <strong>찬성 논점</strong>을 강화하거나
+    새로운 근거를 제시하기 위한 글입니다.
+    <br />
+    <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
+  `;
+}
+
+if (remixStance === 'con') {
+  stanceBox.classList.add('con');
+  stanceBox.innerHTML = `👎 <strong>반대 진영</strong>으로 참전했습니다`;
+
+  guideText.innerHTML = `
+    이 글은 위 이슈의 <strong>반대 논점</strong>을 강화하거나
+    새로운 반론을 제시하기 위한 글입니다.
+    <br />
+    <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
+  `;
+}
   const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
