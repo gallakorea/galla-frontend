@@ -293,14 +293,7 @@ async function support(stance) {
   );
 }
 
-/* ================================
-   SUPPORT SECTION WRAP (FIX)
-================================ */
 
-.support-section {
-  padding: 0 16px;
-  margin-top: 32px;
-}
 
 /* ==========================================================================
    5. Support
@@ -498,4 +491,53 @@ async function checkAuthorSupport(issueId) {
     btn.disabled = true;
     btn.innerText = "🔥 이미 응원했습니다";
   }
+}
+
+const supportModal = document.getElementById("support-modal");
+const supportClose = document.getElementById("support-modal-close");
+const supportConfirm = document.getElementById("support-confirm-btn");
+const supportTitle = document.getElementById("support-modal-title");
+
+let currentSupportSide = null;
+let selectedAmount = null;
+
+// 버튼 클릭
+document.getElementById("support-pro-btn").onclick = () => {
+  openSupportModal("pro");
+};
+document.getElementById("support-con-btn").onclick = () => {
+  openSupportModal("con");
+};
+
+function openSupportModal(side) {
+  currentSupportSide = side;
+  supportTitle.textContent =
+    side === "pro" ? "👍 찬성 진영 후원" : "👎 반대 진영 후원";
+  supportModal.hidden = false;
+}
+
+// 닫기
+supportClose.onclick = () => {
+  supportModal.hidden = true;
+  resetSupportModal();
+};
+
+// 금액 버튼
+document.querySelectorAll(".support-amounts button").forEach(btn => {
+  btn.onclick = () => {
+    selectedAmount = btn.dataset.amount;
+    supportConfirm.disabled = false;
+  };
+});
+
+// 직접 입력
+document.getElementById("support-custom-amount").oninput = (e) => {
+  selectedAmount = e.target.value;
+  supportConfirm.disabled = !selectedAmount;
+};
+
+function resetSupportModal() {
+  selectedAmount = null;
+  supportConfirm.disabled = true;
+  document.getElementById("support-custom-amount").value = "";
 }

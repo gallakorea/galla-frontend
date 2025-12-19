@@ -814,6 +814,92 @@ body {
     transition: width .15s linear;
 }
 
+
+/* ==========================================================
+   SUPPORT MODAL
+========================================================== */
+
+.support-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  z-index: 999999;
+  display: none;
+}
+
+.support-backdrop:not([hidden]) {
+  display: block;
+}
+
+.support-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #0b0b0b;
+  border-radius: 22px 22px 0 0;
+  padding: 16px;
+  border: 1px solid #222;
+}
+
+.support-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.support-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.support-amounts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.support-amounts button {
+  padding: 12px 0;
+  border-radius: 12px;
+  background: #111;
+  border: 1px solid #333;
+  color: #ffe27a;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+#support-custom-amount {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+}
+
+#support-confirm-btn {
+  margin-top: 6px;
+  padding: 14px 0;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 900;
+  background: #ffe27a;
+  color: #000;
+  cursor: pointer;
+}
+
+#support-confirm-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* ==========================================================
    BOTTOM NAV
 ========================================================== */
