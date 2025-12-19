@@ -354,14 +354,41 @@ function applyVoteDisabledUI(type) {
   const proBtn = qs("btn-vote-pro");
   const conBtn = qs("btn-vote-con");
 
+  // 🔒 1. 실제 클릭 차단
+  proBtn.disabled = true;
+  conBtn.disabled = true;
+
+  // 🔒 2. 이벤트 제거 (이중 안전장치)
+  proBtn.onclick = null;
+  conBtn.onclick = null;
+
+  // 🔒 3. 시각 처리
   proBtn.classList.add("disabled");
   conBtn.classList.add("disabled");
 
   if (type === "pro") {
-    proBtn.innerText = "👍 이미 찬성했습니다";
+    proBtn.innerText = "👍 투표 완료";
+    conBtn.innerText = "👎 난 반댈세";
   } else {
-    conBtn.innerText = "👎 이미 반대했습니다";
+    conBtn.innerText = "👎 투표 완료";
+    proBtn.innerText = "👍 찬성이오";
   }
+
+  // 🔒 4. 상태 문구 표시
+  renderVotedText(type);
+}
+
+/* ==========================================================================
+   6-2. Vote Status Text (투표 완료 문구)
+========================================================================== */
+function renderVotedText(type) {
+  const el = document.getElementById("vote-status-text");
+  if (!el) return;
+
+  el.innerText =
+    type === "pro"
+      ? "👍 찬성으로 투표하셨습니다."
+      : "👎 반대로 투표하셨습니다.";
 }
 
 /* ==========================================================================
