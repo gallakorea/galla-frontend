@@ -7,8 +7,8 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-/* 🔥 이 줄 추가 */
 let issueAuthorId = null;
+let votingInProgress = false;
 
 /* ==========================================================================
    1. URL → issue id
@@ -25,10 +25,7 @@ if (!issueId) {
    2. Load Issue
 ========================================================================== */
 (async function loadIssue() {
-  if (!window.supabaseClient) {
-    console.error("Supabase client not ready");
-    return;
-  }
+  if (!window.supabaseClient) return;
 
   const supabase = window.supabaseClient;
 
@@ -39,20 +36,18 @@ if (!issueId) {
     .maybeSingle();
 
   if (error || !issue) {
-    console.error(error);
     alert("이슈를 불러올 수 없습니다.");
     return;
   }
 
   renderIssue(issue);
   loadComments(issue.id);
-  checkRemixStatus(issue.id);
-  loadRemixCounts(issue.id);
   checkVoteStatus(issue.id);
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
-  checkAuthorSupport(issue.id); // 🔥 발의자 응원 상태 확인
-
+  checkAuthorSupport(issue.id);
+  checkRemixStatus(issue.id);
+  loadRemixCounts(issue.id);
 })();
 
 /* ==========================================================================
@@ -65,39 +60,27 @@ function renderIssue(issue) {
   qs("issue-title").innerText = issue.title || "";
   qs("issue-desc").innerText = issue.one_line || "";
 
-  /* ===============================
-     핵심 요약 + 더 보기 (정답)
-  =============================== */
+  /* 핵심 요약 + 더 보기 */
   const explainWrap = qs("issue-explain-text");
-  if (!explainWrap) {
-    console.error("❌ #issue-explain-text 없음");
-    return;
-  }
+  if (explainWrap) {
+    const textSpan = explainWrap.querySelector(".text");
+    const moreSpan = explainWrap.querySelector(".inline-more");
 
-  const textSpan = explainWrap.querySelector(".text");
-  const moreSpan = explainWrap.querySelector(".inline-more");
+    if (textSpan) textSpan.textContent = issue.description || "";
 
-  if (!textSpan || !moreSpan) {
-    console.error("❌ explain DOM 구조 깨짐", explainWrap.innerHTML);
-    return;
-  }
+    if (textSpan && moreSpan) {
+      requestAnimationFrame(() => {
+        if (explainWrap.scrollHeight > explainWrap.clientHeight) {
+          explainWrap.classList.add("has-more");
+        }
+      });
 
-  // 텍스트는 span.text 에만 삽입
-  textSpan.textContent = issue.description || "";
-
-  // 3줄 초과 시 더 보기 노출
-  requestAnimationFrame(() => {
-    if (explainWrap.scrollHeight > explainWrap.clientHeight) {
-      explainWrap.classList.add("has-more");
+      moreSpan.onclick = e => {
+        e.stopPropagation();
+        explainWrap.classList.add("expanded");
+      };
     }
-  });
-
-  moreSpan.onclick = (e) => {
-    e.stopPropagation();
-    explainWrap.classList.add("expanded");
-  };
-
-  /* =============================== */
+  }
 
   if (issue.created_at) {
     qs("issue-time").innerText =
@@ -107,212 +90,33 @@ function renderIssue(issue) {
   qs("issue-author").innerText = "작성자 · 익명";
 
   /* 썸네일 */
-  if (issue.thumbnail_url) {
-    qs("issue-thumb").src = issue.thumbnail_url;
-    qs("issue-thumb").style.display = "block";
-  } else {
-    qs("issue-thumb").style.display = "none";
+  const thumb = qs("issue-thumb");
+  if (thumb) {
+    if (issue.thumbnail_url) {
+      thumb.src = issue.thumbnail_url;
+      thumb.style.display = "block";
+    } else {
+      thumb.style.display = "none";
+    }
   }
 
   /* 영상 */
-  if (issue.video_url) {
-    qs("open-video-modal").style.display = "block";
-    qs("speech-video").src = issue.video_url;
-  } else {
-    qs("open-video-modal").style.display = "none";
+  const videoBtn = qs("open-video-modal");
+  const videoEl = qs("speech-video");
+
+  if (videoBtn && videoEl) {
+    if (issue.video_url) {
+      videoBtn.style.display = "block";
+      videoEl.src = issue.video_url;
+    } else {
+      videoBtn.style.display = "none";
+    }
   }
 }
 
 /* ==========================================================================
-   4. Vote UI
+   4. Vote
 ========================================================================== */
-function renderVote(pro, con) {
-  const total = pro + con || 1;
-  const proPer = Math.round((pro / total) * 100);
-  const conPer = 100 - proPer;
-
-  qs("vote-pro-bar").style.width = `${proPer}%`;
-  qs("vote-con-bar").style.width = `${conPer}%`;
-  qs("vote-pro-text").innerText = `${proPer}%`;
-  qs("vote-con-text").innerText = `${conPer}%`;
-}
-
-/* ==========================================================================
-   5. Support UI
-========================================================================== */
-function renderSupport(pro, con) {
-  const total = pro + con || 1;
-  const proPer = (pro / total) * 100;
-  const conPer = 100 - proPer;
-
-  qs("sup-pro-bar").style.width = `${proPer}%`;
-  qs("sup-con-bar").style.width = `${conPer}%`;
-  qs("sup-pro-amount").innerText = "₩" + pro.toLocaleString();
-  qs("sup-con-amount").innerText = "₩" + con.toLocaleString();
-}
-
-/* ==========================================================================
-   5-1. Support Stats Load  👈 여기다 붙여라
-========================================================================== */
-async function loadSupportStats(issueId) {
-  const supabase = window.supabaseClient;
-
-  const { data, error } = await supabase
-    .from("supports")
-    .select("stance, amount")
-    .eq("issue_id", issueId);
-
-  if (error) {
-    console.error("support load error", error);
-    return;
-  }
-
-  let pro = 0;
-  let con = 0;
-
-  data.forEach(s => {
-    if (s.stance === "pro") pro += s.amount;
-    if (s.stance === "con") con += s.amount;
-  });
-
-  renderSupport(pro, con);
-}
-
-/* ==========================================================================
-   5-1-1. My Support Status Text
-========================================================================== */
-function renderMySupportText(stance, amount) {
-  const el = qs("support-status-text");
-  if (!el) return;
-
-  const label = stance === "pro" ? "찬성" : "반대";
-  el.innerText =
-    `${label} 진영에 ₩${amount.toLocaleString()} 후원으로 힘을 실어 주었습니다.`;
-}
-
-/* ==========================================================================
-   5-1-2. My Support Status Load (누적)
-========================================================================== */
-async function loadMySupportStatus(issueId) {
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return;
-
-  const { data, error } = await supabase
-    .from("supports")
-    .select("stance, amount")
-    .eq("issue_id", issueId)
-    .eq("user_id", session.session.user.id);
-
-  if (error || !data || data.length === 0) return;
-
-  let total = 0;
-  const stance = data[0].stance;
-
-  data.forEach(s => {
-    total += s.amount;
-  });
-
-  renderMySupportText(stance, total);
-}
-
-/* ==========================================================================
-   5-2. Support Modal (TEMP)
-========================================================================== */
-qs("open-support-modal").onclick = () => {
-  openSupportModal();
-};
-
-function openSupportModal() {
-  const stance = confirm(
-    "찬성 진영으로 후원할까요?\n취소하면 반대 진영입니다."
-  )
-    ? "pro"
-    : "con";
-
-  const amount = Number(prompt("후원 금액을 입력하세요 (원)"));
-  if (!amount || amount <= 0) return;
-
-  submitSupport(stance, amount);
-}
-
-/* ==========================================================================
-   5-3. Support DB Insert
-   👉 👇 여기
-========================================================================== */
-async function submitSupport(stance, amount) {
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-
-  if (!session.session) {
-    alert("로그인이 필요합니다.");
-    return;
-  }
-
-  const { error } = await supabase
-    .from("supports")
-    .insert({
-      issue_id: issueId,
-      user_id: session.session.user.id,
-      stance,
-      amount
-    });
-
-  if (error) {
-    console.error(error);
-    alert("후원 실패");
-    return;
-  }
-
-  // ✅ 즉시 UI 갱신
-  loadSupportStats(issueId);
-  loadMySupportStatus(issueId);   // ✅ 내 후원 문구 즉시 반영
-}
-
-/* ==========================================================================
-   5-4. Author Support (발의자 응원)
-========================================================================== */
-async function checkAuthorSupport(issueId) {
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return;
-
-  if (!issueAuthorId) return; // 안전장치
-
-  const { data } = await supabase
-    .from("author_supports")
-    .select("id")
-    .eq("issue_id", issueId)
-    .eq("author_id", issueAuthorId)
-    .eq("user_id", session.session.user.id)
-    .maybeSingle();
-
-  if (data) {
-    applyAuthorSupportDoneUI();
-  }
-}
-
-function applyAuthorSupportDoneUI() {
-  const btn = document.getElementById("author-support-btn");
-  if (!btn) return;
-
-  btn.disabled = true;
-  btn.innerText = "🔥 이미 응원했습니다";
-  btn.classList.add("disabled");
-}
-
-/* ==========================================================================
-   6. Voting (votes table 기준)
-   - votes 테이블 컬럼: issue_id, user_id, type ('pro' | 'con')
-   - Unique(issue_id, user_id)
-========================================================================== */
-/* ==========================================================================
-   6. Voting (votes table 기준)
-========================================================================== */
-
-/* 🔥 연타/중복 방지 플래그 (loadVotes 위에 선언) */
-let votingInProgress = false;
-
 async function vote(type) {
   if (votingInProgress) return;
   votingInProgress = true;
@@ -326,41 +130,25 @@ async function vote(type) {
     return;
   }
 
-  const userId = session.session.user.id;
-
-  const { error } = await supabase
-    .from("votes")
-    .insert({
-      issue_id: issueId,
-      user_id: userId,
-      type
-    });
+  const { error } = await supabase.from("votes").insert({
+    issue_id: issueId,
+    user_id: session.session.user.id,
+    type
+  });
 
   votingInProgress = false;
 
-  if (error) {
-    if (error.code === "23505") {
-      alert("이미 투표했습니다.");
-      checkVoteStatus(issueId);
-      return;
-    }
-
+  if (error && error.code !== "23505") {
     console.error(error);
-    alert("투표 중 오류가 발생했습니다.");
     return;
   }
 
-  loadVotes(issueId);
   checkVoteStatus(issueId);
 }
 
-/* 버튼 연결 */
-qs("btn-vote-pro").onclick = () => vote("pro");
-qs("btn-vote-con").onclick = () => vote("con");
+qs("btn-vote-pro")?.addEventListener("click", () => vote("pro"));
+qs("btn-vote-con")?.addEventListener("click", () => vote("con"));
 
-/* ==========================================================================
-   6-1. Vote Status Check (내 투표 여부)
-========================================================================== */
 async function checkVoteStatus(issueId) {
   const supabase = window.supabaseClient;
   const { data: session } = await supabase.auth.getSession();
@@ -375,297 +163,208 @@ async function checkVoteStatus(issueId) {
 
   if (!data) return;
 
-  applyVoteDisabledUI(data.type);
-}
-
-function applyVoteDisabledUI(type) {
   const proBtn = qs("btn-vote-pro");
   const conBtn = qs("btn-vote-con");
 
-  // 🔒 1. 실제 클릭 차단
   proBtn.disabled = true;
   conBtn.disabled = true;
 
-  // 🔒 2. 이벤트 제거 (이중 안전장치)
-  proBtn.onclick = null;
-  conBtn.onclick = null;
-
-  // 🔒 3. 시각 처리
   proBtn.classList.add("disabled");
   conBtn.classList.add("disabled");
 
-  if (type === "pro") {
-    proBtn.innerText = "👍 투표 완료";
-    conBtn.innerText = "👎 난 반댈세";
-  } else {
-    conBtn.innerText = "👎 투표 완료";
-    proBtn.innerText = "👍 찬성이오";
-  }
+  if (data.type === "pro") proBtn.innerText = "👍 투표 완료";
+  else conBtn.innerText = "👎 투표 완료";
 
-  // 🔒 4. 상태 문구 표시
-  renderVotedText(type);
-}
-
-/* ==========================================================================
-   6-2. Vote Status Text (투표 완료 문구)
-========================================================================== */
-function renderVotedText(type) {
-  const el = document.getElementById("vote-status-text");
-  if (!el) return;
-
-  el.innerText =
-    type === "pro"
+  qs("vote-status-text").innerText =
+    data.type === "pro"
       ? "👍 찬성으로 투표하셨습니다."
       : "👎 반대로 투표하셨습니다.";
 }
 
 /* ==========================================================================
-   7. Comments
+   5. Support
+========================================================================== */
+async function loadSupportStats(issueId) {
+  const supabase = window.supabaseClient;
+  const { data } = await supabase
+    .from("supports")
+    .select("stance, amount")
+    .eq("issue_id", issueId);
+
+  let pro = 0, con = 0;
+  data?.forEach(s => {
+    if (s.stance === "pro") pro += s.amount;
+    if (s.stance === "con") con += s.amount;
+  });
+
+  const total = pro + con || 1;
+  qs("sup-pro-bar").style.width = `${(pro / total) * 100}%`;
+  qs("sup-con-bar").style.width = `${(con / total) * 100}%`;
+  qs("sup-pro-amount").innerText = `₩${pro.toLocaleString()}`;
+  qs("sup-con-amount").innerText = `₩${con.toLocaleString()}`;
+}
+
+async function loadMySupportStatus(issueId) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return;
+
+  const { data } = await supabase
+    .from("supports")
+    .select("stance, amount")
+    .eq("issue_id", issueId)
+    .eq("user_id", session.session.user.id);
+
+  if (!data || data.length === 0) return;
+
+  const total = data.reduce((s, v) => s + v.amount, 0);
+  const stance = data[0].stance;
+
+  qs("support-status-text").innerText =
+    `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 후원했습니다.`;
+}
+
+/* ==========================================================================
+   6. Comments
 ========================================================================== */
 async function loadComments(issueId) {
   const supabase = window.supabaseClient;
-
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("comments")
     .select("*")
     .eq("issue_id", issueId)
     .eq("status", "normal")
     .order("created_at", { ascending: true });
 
-  if (error) {
-    console.error("comment load error", error);
-    return;
-  }
-
-  renderComments(data);
-}
-
-function renderComments(comments) {
   const root = qs("comment-list");
   root.innerHTML = "";
 
-  comments.forEach(c => {
+  data?.forEach(c => {
     const div = document.createElement("div");
     div.className = "comment-item";
-
     div.innerHTML = `
-      <div class="comment-header">
-        <span class="comment-author">익명</span>
-      </div>
+      <div class="comment-header"><span>익명</span></div>
       <div class="comment-text">${c.content}</div>
     `;
-
     root.appendChild(div);
   });
 }
 
-qs("main-reply-btn").onclick = async () => {
+qs("main-reply-btn")?.addEventListener("click", async () => {
   const content = qs("main-reply").value.trim();
   if (!content) return;
 
   const supabase = window.supabaseClient;
   const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return alert("로그인이 필요합니다.");
 
-  if (!session.session) {
-    alert("로그인이 필요합니다.");
-    return;
-  }
-
-  const { error } = await supabase
-    .from("comments")
-    .insert({
-      issue_id: issueId,
-      user_id: session.session.user.id,
-      content: content,
-      status: "normal"
-    });
-
-  if (error) {
-    console.error(error);
-    alert("댓글 등록 실패");
-    return;
-  }
+  await supabase.from("comments").insert({
+    issue_id: issueId,
+    user_id: session.session.user.id,
+    content,
+    status: "normal"
+  });
 
   qs("main-reply").value = "";
   loadComments(issueId);
-};
+});
 
 /* ==========================================================================
-   8. Video Modal
+   7. Video Modal
 ========================================================================== */
 const speechBackdrop = document.querySelector(".speech-backdrop");
 const speechSheet = document.querySelector(".speech-sheet");
 
-qs("open-video-modal").onclick = () => {
+qs("open-video-modal")?.addEventListener("click", () => {
   speechBackdrop.hidden = false;
-  setTimeout(() => speechSheet.style.bottom = "0", 10);
-};
+  setTimeout(() => (speechSheet.style.bottom = "0"), 10);
+});
 
-document.querySelector(".speech-close").onclick = () => {
+document.querySelector(".speech-close")?.addEventListener("click", () => {
   speechSheet.style.bottom = "-100%";
-  setTimeout(() => speechBackdrop.hidden = true, 300);
-};
+  setTimeout(() => (speechBackdrop.hidden = true), 300);
+});
 
 /* ==========================================================================
-   9. Back / Swipe
+   8. Remix
 ========================================================================== */
-qs("btn-back").onclick = () => history.back();
+async function checkRemixStatus(issueId) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) return;
+
+  const { data } = await supabase
+    .from("remixes")
+    .select("remix_stance")
+    .eq("issue_id", issueId)
+    .eq("user_id", session.session.user.id)
+    .maybeSingle();
+
+  if (!data) return;
+
+  applyRemixJoinedUI(data.remix_stance);
+}
+
+async function loadRemixCounts(issueId) {
+  const supabase = window.supabaseClient;
+  const { data } = await supabase
+    .from("remixes")
+    .select("remix_stance")
+    .eq("issue_id", issueId);
+
+  const pro = data?.filter(r => r.remix_stance === "pro").length || 0;
+  const con = data?.filter(r => r.remix_stance === "con").length || 0;
+
+  qs("remix-pro-count").innerText = `참전 ${pro} · 리믹스 ${pro}`;
+  qs("remix-con-count").innerText = `참전 ${con} · 리믹스 ${con}`;
+}
+
+function applyRemixJoinedUI(stance) {
+  qs("btn-remix-pro").disabled = true;
+  qs("btn-remix-con").disabled = true;
+}
+
+qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
+qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
+
+function goRemix(stance) {
+  sessionStorage.setItem(
+    "remixContext",
+    JSON.stringify({ origin_issue_id: issueId, remix_stance: stance })
+  );
+  location.href = "write-remix.html";
+}
+
+/* ==========================================================================
+   9. Back + Swipe
+========================================================================== */
+qs("btn-back")?.addEventListener("click", () => history.back());
 
 let startX = 0;
-document.addEventListener("touchstart", e => {
-  startX = e.touches[0].clientX;
-});
+document.addEventListener("touchstart", e => (startX = e.touches[0].clientX));
 document.addEventListener("touchend", e => {
   if (e.changedTouches[0].clientX - startX > 80) history.back();
 });
 
 /* ==========================================================================
-   9-1. Remix Join Status Check
+   10. Author Support
 ========================================================================== */
-async function checkRemixStatus(issueId) {
+async function checkAuthorSupport(issueId) {
   const supabase = window.supabaseClient;
   const { data: session } = await supabase.auth.getSession();
+  if (!session.session || !issueAuthorId) return;
 
-  if (!session.session) return; // 비로그인 → 무시
-
-  const userId = session.session.user.id;
-
-  const { data, error } = await supabase
-    .from("remixes") // ⚠️ 실제 테이블명 확인
-    .select("remix_stance")
+  const { data } = await supabase
+    .from("author_supports")
+    .select("id")
     .eq("issue_id", issueId)
-    .eq("user_id", userId)
+    .eq("author_id", issueAuthorId)
+    .eq("user_id", session.session.user.id)
     .maybeSingle();
 
-  if (error || !data) return;
-
-  applyRemixJoinedUI(data.remix_stance);
-}
-
-function applyRemixJoinedUI(stance) {
-  if (document.querySelector(".remix-joined-text")) return;
-
-  const proBtn = qs("btn-remix-pro");
-  const conBtn = qs("btn-remix-con");
-  const actionWrap = document.querySelector(".remix-actions");
-
-  if (!proBtn || !conBtn || !actionWrap) return;
-
-  proBtn.onclick = null;
-  conBtn.onclick = null;
-
-  proBtn.classList.add("disabled");
-  conBtn.classList.add("disabled");
-
-  actionWrap.insertAdjacentHTML(
-    "afterend",
-    stance === "pro"
-      ? `<div class="remix-joined-text pro">
-           이미 🔵 <strong>찬성 진영</strong>에 합류했습니다
-         </div>`
-      : `<div class="remix-joined-text con">
-           이미 🔴 <strong>반대 진영</strong>에 합류했습니다
-         </div>`
-  );
-}
-
-/* ==========================================================================
-   9-2. Remix Count Load
-========================================================================== */
-async function loadRemixCounts(issueId) {
-  const supabase = window.supabaseClient;
-
-  const { data, error } = await supabase
-    .from("remixes")
-    .select("remix_stance")
-    .eq("issue_id", issueId);
-
-  if (error) {
-    console.error("remix count load error", error);
-    return;
-  }
-
-  const proCount = data.filter(r => r.remix_stance === "pro").length;
-  const conCount = data.filter(r => r.remix_stance === "con").length;
-
-  const proEl = qs("remix-pro-count");
-  const conEl = qs("remix-con-count");
-
-  if (proEl) {
-    proEl.innerText = `참전 ${proCount} · 리믹스 ${proCount}`;
-  }
-
-  if (conEl) {
-    conEl.innerText = `참전 ${conCount} · 리믹스 ${conCount}`;
+  if (data) {
+    const btn = qs("author-support-btn");
+    btn.disabled = true;
+    btn.innerText = "🔥 이미 응원했습니다";
   }
 }
-
-/* ==========================================================================
-   10. Remix / Battle (ACTIVE)
-========================================================================== */
-
-function goRemix(stance) {
-  // stance: 'pro' | 'con'
-
-  const remixContext = {
-    origin_issue_id: issueId,
-    remix_stance: stance,
-    from: "issue"
-  };
-
-  // 🔥 세션에 저장 (write-remix에서 읽음)
-  sessionStorage.setItem(
-    "remixContext",
-    JSON.stringify(remixContext)
-  );
-
-  // 🔥 리믹스 전용 작성 페이지로 이동
-  location.href = "write-remix.html";
-}
-
-qs("btn-remix-pro").onclick = () => {
-  goRemix("pro");
-};
-
-qs("btn-remix-con").onclick = () => {
-  goRemix("con");
-};
-
-/* ==========================================================================
-   11. Author Support Click → DB INSERT
-========================================================================== */
-
-document
-  .getElementById("author-support-btn")
-  ?.addEventListener("click", async () => {
-    const supabase = window.supabaseClient;
-    const { data: session } = await supabase.auth.getSession();
-
-    if (!session.session) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-
-    if (!issueAuthorId) return;
-
-    const { error } = await supabase
-      .from("author_supports")
-      .insert({
-        issue_id: issueId,
-        author_id: issueAuthorId,
-        user_id: session.session.user.id
-      });
-
-    if (error) {
-      console.error(error);
-
-      if (error.code === "23505") {
-        alert("이미 발의자를 응원했습니다.");
-      } else {
-        alert("응원 중 오류가 발생했습니다.");
-      }
-      return;
-    }
-
-    applyAuthorSupportDoneUI();
-  });
