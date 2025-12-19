@@ -285,27 +285,7 @@ function applyAuthorSupportDoneUI() {
 /* 🔥 연타/중복 방지 플래그 (loadVotes 위에 선언) */
 let votingInProgress = false;
 
-async function loadVotes(issueId) {
-  const supabase = window.supabaseClient;
-
-  const { data, error } = await supabase
-    .from("votes")
-    .select("type")
-    .eq("issue_id", issueId);
-
-  if (error) {
-    console.error("vote load error", error);
-    return;
-  }
-
-  const pro = data.filter(v => v.type === "pro").length;
-  const con = data.filter(v => v.type === "con").length;
-
-  renderVote(pro, con);
-}
-
 async function vote(type) {
-  /* 🔥 이미 처리 중이면 즉시 차단 */
   if (votingInProgress) return;
   votingInProgress = true;
 
@@ -322,24 +302,28 @@ async function vote(type) {
 
   const { error } = await supabase
     .from("votes")
-    .upsert(
-      {
-        issue_id: issueId,
-        user_id: userId,
-        type: type
-      },
-      { onConflict: "issue_id,user_id" }
-    );
+    .insert({
+      issue_id: issueId,
+      user_id: userId,
+      type: type
+    });
 
   votingInProgress = false;
 
   if (error) {
     console.error(error);
-    alert("이미 투표했거나 오류가 발생했습니다.");
+
+    // ✅ 이미 투표한 경우 (unique violation)
+    if (error.code === "23505") {
+      alert("이미 투표하셨습니다. 투표는 변경할 수 없습니다.");
+      checkVoteStatus(issueId);
+      return;
+    }
+
+    alert("투표 중 오류가 발생했습니다.");
     return;
   }
 
-  /* ✅ 즉시 UI 갱신 */
   loadVotes(issueId);
   checkVoteStatus(issueId);
 }
