@@ -247,6 +247,54 @@ async function checkVoteStatus(issueId) {
 }
 
 /* ==========================================================================
+   Support Actions (Pro / Con)
+========================================================================== */
+
+qs("support-pro-btn")?.addEventListener("click", () => {
+  support("pro");
+});
+
+qs("support-con-btn")?.addEventListener("click", () => {
+  support("con");
+});
+
+async function support(stance) {
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+
+  if (!session.session) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+
+  const amount = 1000; // 🔥 MVP 고정 금액 (나중에 선택 UI로 확장)
+
+  const { error } = await supabase.from("supports").insert({
+    issue_id: issueId,
+    user_id: session.session.user.id,
+    stance,
+    amount
+  });
+
+  if (error) {
+    console.error("support error", error);
+    alert("후원에 실패했습니다.");
+    return;
+  }
+
+  // ✅ 즉시 UI 반영
+  loadSupportStats(issueId);
+  loadMySupportStatus(issueId);
+
+  alert(
+    stance === "pro"
+      ? "👍 찬성 진영에 후원했습니다."
+      : "👎 반대 진영에 후원했습니다."
+  );
+}
+
+
+/* ==========================================================================
    5. Support
 ========================================================================== */
 async function loadSupportStats(issueId) {
