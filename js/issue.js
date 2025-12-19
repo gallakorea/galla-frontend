@@ -10,6 +10,9 @@ function qs(id) {
 let issueAuthorId = null;
 let votingInProgress = false;
 
+// ✅ 추가
+let currentIssue = null;
+
 /* ==========================================================================
    1. URL → issue id
 ========================================================================== */
@@ -55,6 +58,7 @@ if (!issueId) {
    3. Render Issue
 ========================================================================== */
 function renderIssue(issue) {
+  currentIssue = issue;   // ✅ 이 줄 추가
   issueAuthorId = issue.user_id;
 
   qs("issue-category").innerText = issue.category || "";
@@ -385,14 +389,20 @@ qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
 qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
 
 function goRemix(stance) {
+  if (!currentIssue) {
+    alert("이슈 정보를 불러오지 못했습니다.");
+    return;
+  }
+
   sessionStorage.setItem(
-    'remixContext',
+    "remixContext",
     JSON.stringify({
-      origin_issue_id: issueId,
+      origin_issue_id: currentIssue.id,
       remix_stance: stance,
-      category: issue.category   // 🔥 이게 핵심
+      category: currentIssue.category
     })
   );
+
   location.href = "write-remix.html";
 }
 
