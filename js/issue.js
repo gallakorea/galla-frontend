@@ -204,7 +204,11 @@ async function vote(type) {
     return;
   }
 
+  // ✅ 1️⃣ 버튼 상태 갱신
   checkVoteStatus(issueId);
+
+  // ✅ 2️⃣ 현황표 즉시 갱신 (🔥 이 줄이 핵심)
+  loadVoteStats(issueId);
 }
 
 qs("btn-vote-pro")?.addEventListener("click", () => vote("pro"));
