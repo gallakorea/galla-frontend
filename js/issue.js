@@ -70,8 +70,11 @@ if (explainWrap) {
 
   if (textSpan && moreSpan) {
     requestAnimationFrame(() => {
-      // 🔥 여기 핵심 수정
-      if (textSpan.scrollHeight > textSpan.clientHeight) {
+      // 🔒 line-clamp이 실제 적용된 뒤 한 번 더 측정
+      const needsMore =
+        textSpan.scrollHeight - textSpan.clientHeight > 1;
+
+      if (needsMore) {
         explainWrap.classList.add("has-more");
       }
     });
