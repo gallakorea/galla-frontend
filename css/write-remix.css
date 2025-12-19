@@ -1340,3 +1340,65 @@ select.locked {
   cursor: not-allowed;
 }
 
+/* ===============================
+   REMIX CONTEXT BOX
+================================ */
+
+.remix-context-box {
+  background: linear-gradient(180deg, #141414, #0f0f0f);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px 16px 18px;
+  margin-bottom: 18px;
+}
+
+.remix-badge {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffb703;
+  margin-bottom: 6px;
+}
+
+.remix-origin-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.remix-stance-confirm {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.remix-stance-confirm.pro {
+  color: #4da3ff;
+}
+
+.remix-stance-confirm.con {
+  color: #ff5a5a;
+}
+
+.remix-guide-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d0d0d0;
+}
+
+.remix-guide-text .muted {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #888;
+}
+
+.remix-context-box {
+  background: linear-gradient(180deg, #141414, #0f0f0f);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
