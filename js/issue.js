@@ -63,16 +63,21 @@ function renderIssue(issue) {
 
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
-
-  // ✅ 한 줄 요약 → one_line
   qs("issue-desc").innerText = issue.one_line || "";
 
-  // ✅ 본문 설명 → description
-  qs("issue-explain-text").innerText = issue.description || "";
-
-    /* 🔥 Instagram 스타일 더 보기 */
   const explainEl = qs("issue-explain-text");
+
+  // 본문 삽입 (span 유지)
+  explainEl.insertAdjacentText("afterbegin", issue.description || "");
+
   const moreEl = explainEl.querySelector(".inline-more");
+
+  // 🔥 3줄 초과 시 더 보기 활성화
+  requestAnimationFrame(() => {
+    if (explainEl.scrollHeight > explainEl.clientHeight) {
+      explainEl.classList.add("has-more");
+    }
+  });
 
   if (moreEl) {
     moreEl.onclick = (e) => {
@@ -88,7 +93,7 @@ function renderIssue(issue) {
 
   qs("issue-author").innerText = "작성자 · 익명";
 
-  // 썸네일
+  /* 썸네일 */
   if (issue.thumbnail_url) {
     qs("issue-thumb").src = issue.thumbnail_url;
     qs("issue-thumb").style.display = "block";
@@ -96,7 +101,7 @@ function renderIssue(issue) {
     qs("issue-thumb").style.display = "none";
   }
 
-  // 영상
+  /* 영상 */
   if (issue.video_url) {
     qs("open-video-modal").style.display = "block";
     qs("speech-video").src = issue.video_url;

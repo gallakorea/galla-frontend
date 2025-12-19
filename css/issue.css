@@ -933,7 +933,7 @@ body {
 }
 
 /* ================================
-   Instagram 더 보기 (정확 구현)
+   Instagram 더 보기 (정답)
 ================================ */
 
 .clamp-text {
@@ -943,25 +943,15 @@ body {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   line-height: 1.6;
-  color: #fff;
 }
 
-/* … 처리 */
-.clamp-text::after {
-  content: "…";
-  position: absolute;
-  bottom: 0;
-  right: 48px; /* 👈 더 보기 공간 확보 */
-  color: #aaa;
-}
-
-/* 더 보기 텍스트 (실제 클릭 대상) */
+/* 더 보기 */
 .inline-more {
   position: absolute;
   bottom: 0;
   right: 0;
-  color: #aaa;
   font-size: 14px;
+  color: #aaa;
   cursor: pointer;
   background: linear-gradient(
     to right,
@@ -972,13 +962,16 @@ body {
   display: none;
 }
 
-/* 펼쳐진 상태 */
-.clamp-text.expanded {
-  -webkit-line-clamp: unset;
+/* 3줄 초과일 때만 표시 */
+.clamp-text.has-more .inline-more {
+  display: inline;
 }
 
-.clamp-text.expanded::after {
-  content: "";
+/* 펼침 */
+.clamp-text.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
 }
 
 .clamp-text.expanded .inline-more {
