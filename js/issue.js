@@ -493,21 +493,69 @@ async function checkAuthorSupport(issueId) {
   }
 }
 
-const supportModal = document.getElementById("support-modal");
-const supportClose = document.getElementById("support-modal-close");
-const supportConfirm = document.getElementById("support-confirm-btn");
-const supportTitle = document.getElementById("support-modal-title");
+/* ==========================================================================
+   11. Support Modal (SAFE)
+========================================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+  const supportModal = document.getElementById("support-modal");
+  if (!supportModal) return; // ✅ 핵심 방어
 
-let currentSupportSide = null;
-let selectedAmount = null;
+  const supportClose = document.getElementById("support-modal-close");
+  const supportConfirm = document.getElementById("support-confirm-btn");
+  const supportTitle = document.getElementById("support-modal-title");
+  const supportProBtn = document.getElementById("support-pro-btn");
+  const supportConBtn = document.getElementById("support-con-btn");
+  const customAmountInput = document.getElementById("support-custom-amount");
 
-// 버튼 클릭
-document.getElementById("support-pro-btn").onclick = () => {
-  openSupportModal("pro");
-};
-document.getElementById("support-con-btn").onclick = () => {
-  openSupportModal("con");
-};
+  let currentSupportSide = null;
+  let selectedAmount = null;
+
+  function openSupportModal(side) {
+    currentSupportSide = side;
+    supportTitle.textContent =
+      side === "pro" ? "👍 찬성 진영 후원" : "👎 반대 진영 후원";
+    supportModal.hidden = false;
+  }
+
+  // 🔘 진영 버튼
+  if (supportProBtn) {
+    supportProBtn.onclick = () => openSupportModal("pro");
+  }
+
+  if (supportConBtn) {
+    supportConBtn.onclick = () => openSupportModal("con");
+  }
+
+  // ❌ 닫기
+  if (supportClose) {
+    supportClose.onclick = () => {
+      supportModal.hidden = true;
+      resetSupportModal();
+    };
+  }
+
+  // 💰 금액 버튼
+  document.querySelectorAll(".support-amounts button").forEach(btn => {
+    btn.onclick = () => {
+      selectedAmount = Number(btn.dataset.amount);
+      supportConfirm.disabled = false;
+    };
+  });
+
+  // ✍️ 직접 입력
+  if (customAmountInput) {
+    customAmountInput.oninput = (e) => {
+      selectedAmount = Number(e.target.value);
+      supportConfirm.disabled = !selectedAmount;
+    };
+  }
+
+  function resetSupportModal() {
+    selectedAmount = null;
+    supportConfirm.disabled = true;
+    if (customAmountInput) customAmountInput.value = "";
+  }
+});
 
 function openSupportModal(side) {
   currentSupportSide = side;

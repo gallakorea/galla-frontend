@@ -819,17 +819,26 @@ body {
    SUPPORT MODAL
 ========================================================== */
 
+/* ==========================================================
+   SUPPORT MODAL (GALLA STANDARD)
+========================================================== */
+
 .support-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.65);
   backdrop-filter: blur(4px);
   z-index: 999999;
-  display: none;
+
+  /* 기본은 flex */
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
 }
 
-.support-backdrop:not([hidden]) {
-  display: block;
+/* hidden 속성으로만 제어 */
+.support-backdrop[hidden] {
+  display: none !important;
 }
 
 .support-sheet {
@@ -1112,4 +1121,28 @@ body {
 
 .ig-clamp.expanded .ig-more {
   display: none;
+}
+
+/* ==========================
+   VOTE BAR SCOPE FIX
+========================== */
+
+/* 투표 섹션 전용 */
+.vote-section .vote-bar {
+  width: 100%;
+  height: 16px;
+  background: #222;
+  border-radius: 40px;
+  overflow: hidden;
+  display: flex;
+}
+
+/* 통계 섹션 전용 */
+.stats-section .vote-bar {
+  width: 100%;
+  height: 16px;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
 }

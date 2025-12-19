@@ -134,11 +134,11 @@
         <p id="support-status-text" class="support-status-text"></p>
 
         <div class="support-actions">
-        <button class="support-btn pro" id="support-pro-btn">
+        <button class="support-btn gold pro" id="support-pro-btn">
             👍 찬성 진영 후원
         </button>
 
-        <button class="support-btn con" id="support-con-btn">
+        <button class="support-btn gold con" id="support-con-btn">
             👎 반대 진영 후원
         </button>
         </div>
@@ -284,6 +284,46 @@
         </div>
     </div>
 </div>
+
+<!-- SUPPORT MODAL -->
+<div id="support-modal" class="support-backdrop" hidden>
+  <div class="support-sheet">
+
+    <div class="support-modal-header">
+      <span id="support-modal-title">후원하기</span>
+      <button id="support-modal-close">✕</button>
+    </div>
+
+    <div class="support-modal-body">
+      <p id="support-modal-desc">
+        선택한 진영의 전황에 직접 반영됩니다.
+      </p>
+
+      <div class="support-amounts">
+        <button data-amount="1000">₩1,000</button>
+        <button data-amount="5000">₩5,000</button>
+        <button data-amount="10000">₩10,000</button>
+        <button data-amount="50000">₩50,000</button>
+      </div>
+
+      <input
+        type="number"
+        id="support-custom-amount"
+        placeholder="직접 입력 (₩)"
+      />
+
+      <button id="support-confirm-btn" disabled>
+        후원하기
+      </button>
+
+      <p class="support-hint">
+        결제는 다음 단계에서 진행됩니다.
+      </p>
+    </div>
+
+  </div>
+</div>
+
 
 <!-- Supabase CDN (non-module, GALLA 표준) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
