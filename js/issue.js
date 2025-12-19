@@ -572,3 +572,27 @@ document.addEventListener("DOMContentLoaded", () => {
   -------------------------- */
   closeBtn?.addEventListener("click", closeModal);
 });
+
+/* ==========================================================================
+   Push Modals Flow (STEP 1 → STEP 2)
+========================================================================== */
+document.addEventListener("DOMContentLoaded", () => {
+  const intentModal = document.getElementById("push-intent-modal");
+  const levelModal  = document.getElementById("push-level-modal");
+
+  const nextBtn = document.getElementById("push-intent-next");
+
+  // STEP 1 → STEP 2
+  nextBtn?.addEventListener("click", () => {
+    intentModal.hidden = true;
+    levelModal.hidden = false;
+  });
+
+  // 공통 닫기
+  document.querySelectorAll("[data-close]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      intentModal.hidden = true;
+      levelModal.hidden = true;
+    });
+  });
+});
