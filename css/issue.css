@@ -1,997 +1,150 @@
-/* RESET */
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* ==========================================================
+   RESET
+========================================================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 html, body {
-    width: 100%;
-    background: #000;
-    color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-    overflow-x: hidden;
+  width: 100%;
+  background: #000;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  overflow-x: hidden;
 }
 
 body {
-    display: flex;
-    justify-content: center;
+  display: flex;
+  justify-content: center;
 }
 
 #app {
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-    padding-bottom: 140px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding-bottom: 140px;
 }
 
 /* ==========================================================
    HEADER
 ========================================================== */
 .header {
-    width: 100%;
-    background: #000;
-    border-bottom: 1px solid #111;
-    position: sticky;
-    top: 0;
-    z-index: 999;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+  background: #000;
+  border-bottom: 1px solid #111;
 }
 
 .header-inner {
-    height: 54px;
-    padding: 0 14px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  height: 54px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .back-btn {
-    color: #fff;
-    border: none;
-    background: none;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
 }
 
 .back-text {
-    font-size: 13px;
-    color: #ccc;
+  font-size: 13px;
+  color: #ccc;
 }
 
 .more-header-btn {
-    background: none;
-    border: none;
-    font-size: 26px;
-    color: #fff;
-    cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 26px;
+  color: #fff;
+  cursor: pointer;
 }
 
 .logo {
-    width: 86px;
+  width: 86px;
 }
 
 /* ==========================================================
    ISSUE HERO
 ========================================================== */
 .issue-hero {
-    padding: 20px 16px 14px;
+  padding: 20px 16px 14px;
 }
 
 .issue-category-time {
-    display: flex;
-    gap: 10px;
-    font-size: 12px;
-    color: #888;
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #888;
 }
 
 #issue-title {
-    margin-top: 6px;
-    font-size: 22px;
-    font-weight: 900;
-    color: #fff;
+  margin-top: 6px;
+  font-size: 22px;
+  font-weight: 900;
 }
 
 #issue-desc {
-    margin-top: 6px;
-    font-size: 14px;
-    color: #bbb;
-    line-height: 1.4;
+  margin-top: 6px;
+  font-size: 14px;
+  color: #bbb;
+  line-height: 1.4;
 }
 
 .issue-author {
-    margin-top: 10px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: #ddd;
-}
-
-.follow-btn {
-    padding: 5px 12px;
-    font-size: 11px;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 12px;
-    color: #fff;
-    cursor: pointer;
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #ddd;
 }
 
 /* ==========================================================
    THUMBNAIL
 ========================================================== */
 .issue-thumb {
-    width: 100%;
-    height: 240px;
-    object-fit: contain;
-    background: #111;
-    border-radius: 14px;
-    padding: 12px;
-    border: 1px solid #222;
-    margin-top: 12px;
-}
-
-/* ==========================================================
-   스피치 버튼
-========================================================== */
-.speech-btn {
-    width: calc(100% - 32px);
-    margin: 18px auto 0;
-    background: #171717;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid #292929;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    display: block;
-    color: #fff !important;
+  width: 100%;
+  height: 240px;
+  object-fit: contain;
+  background: #111;
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid #222;
+  margin-top: 12px;
 }
 
 /* ==========================================================
    SUMMARY
 ========================================================== */
 .issue-explain {
-    padding: 0 16px;
-    margin-top: 26px;
+  padding: 0 16px;
+  margin-top: 26px;
 }
 
 .white-title {
-    color: #fff !important;
-}
-
-.issue-explain p {
-    font-size: 14px;
-    color: #ddd;
-    line-height: 1.55;
+  color: #fff;
 }
 
 /* ==========================================================
-   VOTE SECTION
+   Instagram-style 더 보기 (정밀 고정 버전)
 ========================================================== */
-.vote-section {
-    margin-top: 32px;
-    padding: 0 16px;
-}
-
-.vote-title {
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 12px;
-}
-
-.vote-bar {
-    width: 100%;
-    height: 16px;
-    background: #222;
-    border-radius: 40px;
-    overflow: hidden;
-    display: flex;
-}
-
-.vote-pro { background: #0094ff; transition: width .3s; }
-.vote-con { background: #ff3b6b; transition: width .3s; }
-
-.vote-percent {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #aaa;
-    display: flex;
-    justify-content: space-between;
-}
-
-.vote-buttons {
-    display: flex;
-    gap: 12px;
-    margin-top: 14px;
-}
-
-.btn-pro, .btn-con {
-    flex: 1;
-    padding: 14px 0;
-    border-radius: 14px;
-    font-size: 15px;
-    font-weight: 800;
-    cursor: pointer;
-    color: #fff;
-}
-
-.btn-pro {
-    background: #1d2c7a;
-    border: 1px solid #3356ff;
-}
-
-.btn-con {
-    background: #6e1a1a;
-    border: 1px solid #ff4444;
-}
-
-/* ==========================================================
-   SUPPORT SECTION
-========================================================== */
-.support-section {
-    margin-top: 36px;
-    padding: 0 16px;
-}
-
-.support-header {
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.support-bar {
-    width: 100%;
-    height: 16px;
-    background: #222;
-    border-radius: 40px;
-    overflow: hidden;
-    display: flex;
-}
-
-.sup-pro { background: #0094ff; transition: width .3s; }
-.sup-con { background: #ff4f6e; transition: width .3s; }
-
-.support-stats {
-    margin-top: 8px;
-    font-size: 13px;
-    color: #ccc;
-    display: flex;
-    justify-content: space-between;
-}
-
-.support-btn {
-    width: 100%;
-    margin-top: 16px;
-    padding: 14px;
-    border-radius: 14px;
-    background: #ffe27a;
-    color: #111;
-    font-size: 15px;
-    font-weight: 900;
-    cursor: pointer;
-}
-
-/* ==========================================================
-   AI 뉴스
-========================================================== */
-.ai-news {
-    padding: 0 16px;
-    margin-top: 38px;
-}
-
-.ai-news h3 {
-    color: #fff !important;
-    font-size: 18px;
-    font-weight: 900;
-}
-
-.ai-tip {
-    color: #aaa;
-    font-size: 13px;
-    margin-top: 6px;
-}
-
-.ai-sub {
-    color: #eee;
-    font-weight: 700;
-    font-size: 15px;
-    margin-top: 16px;
-}
-
-/* ==========================================================
-   통계 SECTION
-========================================================== */
-.stats-section {
-    padding: 26px 16px 40px;
-    margin-top: 40px;
-    background: #050505;
-
-    /** 핵심 — flex/grid 붕괴 방지 **/
-    display: block !important;
-}
-
-.stats-section > * {
-    width: 100% !important;
-}
-
-.stats-header {
-    font-size: 20px;
-    font-weight: 900;
-    margin-bottom: 22px;
-}
-
-.stat-title {
-    font-size: 17px;
-    font-weight: 800;
-    margin: 26px 0 12px;
-}
-
-/* 성별 듀얼바 */
-.dual-bar-labels {
-    display: flex;
-    justify-content: space-between;
-    color: #bbb;
-    font-size: 14px;
-}
-
-.dual-bar {
-    width: 100%;
-    height: 20px;
-    background: #111;
-    border-radius: 12px;
-    border: 1px solid #222;
-    margin-top: 6px;
-    overflow: hidden;
-    display: flex;
-}
-
-.dual-left { background: #4da3ff; }
-.dual-right { background: #ff79a8; }
-
-/* 나이대 */
-.age-row { margin-bottom: 18px; }
-
-.age-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #ccc;
-}
-
-.age-bar {
-    width: 100%;
-    height: 16px;
-    background: #111;
-    border-radius: 10px;
-    border: 1px solid #222;
-    overflow: hidden;
-}
-
-.age-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ffe27a, #ffcf48);
-}
-
-/* 지역 히트맵 */
-.region-heatmap {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 10px;
-}
-
-.region-cell {
-    padding: 14px 8px;
-    border-radius: 12px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: #fff;
-    border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* 찬반 바 */
-.vote-item { margin-bottom: 18px; }
-
-.vote-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #ccc;
-}
-
-.vote-bar {
-    width: 100%;
-    height: 16px;
-    border-radius: 12px;
-    border: 1px solid #222;
-    background: #111;
-    overflow: hidden;
-    display: flex;
-}
-
-.vote-pro { background: #4da3ff; }
-.vote-con { background: #ff6767; }
-
-/* AI Summary */
-.ai-summary {
-    margin-top: 16px;
-    padding: 18px;
-    border-radius: 14px;
-    background: #111;
-    border: 1px solid #222;
-    color: #ddd;
-    font-size: 14px;
-    line-height: 1.55;
-}
-
-/* ==========================================================
-   COMMENTS
-========================================================== */
-.comment-section {
-    padding: 0 16px;
-    margin-top: 40px;
-}
-
-.comment-title {
-    font-size: 18px;
-    font-weight: 900;
-}
-
-.comment-sort {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-}
-
-.sort-btn {
-    padding: 6px 12px;
-    background: #111;
-    border-radius: 12px;
-    border: 1px solid #333;
-    color: #aaa;
-    cursor: pointer;
-}
-
-.sort-btn.active {
-    background: #ffe27a;
-    color: #000;
-}
-
-/* 메인 댓글 입력 */
-.main-reply-box {
-    margin-top: 16px;
-    display: flex;
-    gap: 10px;
-}
-
-#main-reply {
-    flex: 1;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 10px;
-    padding: 10px;
-    color: #fff;
-    font-size: 14px;
-}
-
-#main-reply-btn {
-    padding: 0 14px;
-    background: #ffe27a;
-    border-radius: 10px;
-    color: #000;
-    font-weight: 900;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.comment-item {
-    background: #111;
-    border-radius: 14px;
-    padding: 14px;
-    margin-top: 14px;
-    border: 1px solid #222;
-}
-
-.comment-item.reply {
-    margin-left: 20px;
-    background: #151515;
-}
-
-.comment-header {
-    font-size: 13px;
-    color: #ccc;
-    display: flex;
-    justify-content: space-between;
-}
-
-.comment-text {
-    margin-top: 6px;
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.comment-actions {
-    margin-top: 10px;
-    display: flex;
-    gap: 12px;
-    font-size: 13px;
-    color: #aaa;
-}
-
-.like-btn, .dislike-btn, .reply-btn, .share-btn, .comment-menu {
-    cursor: pointer;
-}
-
-/* 대댓글 입력 */
-.reply-box {
-    margin-top: 10px;
-    background: #111;
-    border: 1px solid #333;
-    border-radius: 10px;
-    padding: 10px;
-}
-
-.reply-input {
-    width: 100%;
-    background: #000;
-    border: 1px solid #333;
-    border-radius: 8px;
-    padding: 8px;
-    color: #fff;
-    font-size: 14px;
-}
-
-.reply-submit, .reply-cancel {
-    margin-top: 8px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-
-.reply-submit {
-    background: #ffe27a;
-    color: #111;
-}
-
-.reply-cancel {
-    background: #333;
-    color: #aaa;
-}
-
-/* ==========================================================
-   상단 ⋯ 메뉴
-========================================================== */
-.more-menu-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    z-index: 999999;
-    backdrop-filter: blur(4px);
-}
-
-.more-menu-backdrop[hidden] {
-    display: none !important;
-}
-
-.more-menu-box {
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #111;
-    border-radius: 18px 18px 0 0;
-    padding: 16px 0;
-    box-shadow: 0 -2px 18px rgba(0,0,0,0.4);
-}
-
-.more-item {
-    padding: 16px 20px;
-    font-size: 15px;
-    color: #fff;
-    border-bottom: 1px solid #222;
-}
-
-.more-item.more-danger {
-    color: #ff4f4f;
-}
-
-.more-close {
-    width: 100%;
-    padding: 18px 0;
-    background: #222;
-    color: #fff;
-    border: none;
-    font-size: 16px;
-}
-
-/* ==========================================================
-   댓글 ⋯ 옵션 모달
-========================================================== */
-.comment-action-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(4px);
-    display: none;
-    justify-content: center;
-    align-items: flex-end;
-    z-index: 999999;
-}
-
-.comment-action-modal:not([hidden]) {
-    display: flex;
-}
-
-.comment-action-sheet {
-    width: 100%;
-    max-width: 480px;
-    background: #111;
-    border-radius: 22px 22px 0 0;
-    padding: 12px 0 18px;
-    border: 1px solid #222;
-    animation: slideUp .2s ease-out;
-}
-
-.action-item {
-    font-size: 15px;
-    padding: 16px;
-    color: #eee;
-    border-bottom: 1px solid #222;
-    cursor: pointer;
-}
-
-.action-item.more-danger {
-    color: #ff4f4f;
-}
-
-.comment-close-btn {
-    width: 100%;
-    padding: 16px 0;
-    background: none;
-    color: #ffe27a;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(40px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-/* ==========================================================
-   스피치 영상 Bottom Sheet
-========================================================== */
-.speech-backdrop {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 999999;
-    display: none;
-}
-
-.speech-backdrop:not([hidden]) {
-    display: block;
-}
-
-.speech-sheet {
-    position: absolute;
-    bottom: -100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    height: 85%;
-    background: #000;
-    border-radius: 20px 20px 0 0;
-    overflow: hidden;
-    transition: bottom .35s ease;
-}
-
-.speech-header {
-    position: absolute;
-    top: 0;
-    width: 100%;
-    padding: 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    z-index: 5;
-}
-
-.speech-title {
-    color: #fff;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.speech-close {
-    background: none;
-    border: none;
-    font-size: 22px;
-    color: #fff;
-    cursor: pointer;
-}
-
-#speech-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #000;
-}
-
-.play-icon {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 60px;
-    color: rgba(255,255,255,0.8);
-    opacity: 0;
-    transition: opacity .25s;
-    pointer-events: none;
-}
-
-.progress-container {
-    position: absolute;
-    bottom: 16px;
-    left: 12px;
-    right: 12px;
-    height: 4px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 3px;
-}
-
-.progress-bar {
-    height: 100%;
-    width: 0%;
-    background: #ffe27a;
-    border-radius: 3px;
-    transition: width .15s linear;
-}
-
-/* ==========================================================
-   BOTTOM NAV
-========================================================== */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #000;
-    border-top: 1px solid #111;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-    z-index: 9999;
-}
-
-.nav-item img {
-    width: 26px;
-    filter: brightness(0) invert(1);
-}
-
-/* ==========================================================
-   REMIX / BATTLE
-========================================================== */
-.remix-section {
-    margin-top: 40px;
-    padding: 0 16px;
-}
-
-.remix-header {
-    font-size: 16px;
-    font-weight: 800;
-}
-
-.remix-stats {
-    margin-top: 14px;
-    display: flex;
-    gap: 12px;
-}
-
-.remix-side {
-    flex: 1;
-    padding: 14px;
-    border-radius: 14px;
-    background: #111;
-    border: 1px solid #222;
-}
-
-.remix-side.pro {
-    border-color: #3356ff;
-}
-
-.remix-side.con {
-    border-color: #ff4f6e;
-}
-
-.remix-title {
-    font-size: 14px;
-    font-weight: 800;
-}
-
-.remix-count {
-    margin-top: 6px;
-    font-size: 13px;
-    color: #ccc;
-}
-
-.remix-actions {
-    margin-top: 16px;
-    display: flex;
-    gap: 12px;
-}
-
-.remix-btn {
-    flex: 1;
-    padding: 14px 0;
-    border-radius: 14px;
-    font-size: 14px;
-    font-weight: 900;
-    cursor: pointer;
-    color: #fff;
-}
-
-.remix-btn.pro {
-    background: #1d2c7a;
-    border: 1px solid #3356ff;
-}
-
-.remix-btn.con {
-    background: #6e1a1a;
-    border: 1px solid #ff4f4f;
-}
-
-.remix-desc {
-    margin-top: 12px;
-    font-size: 12px;
-    color: #888;
-    line-height: 1.4;
-}
-
-/* REMIX JOINED STATE */
-.remix-btn.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.remix-joined-text {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.remix-joined-text.pro {
-  background: rgba(0,148,255,0.15);
-  color: #4da3ff;
-  border: 1px solid #3356ff;
-}
-
-.remix-joined-text.con {
-  background: rgba(255,79,110,0.15);
-  color: #ff6b8a;
-  border: 1px solid #ff4f6e;
-}
-
-/* ==========================
-   Author Support (UI Only)
-========================== */
-.author-support {
-  margin: 24px 16px;
-  padding: 16px;
-  border-radius: 12px;
-  background: #141414;
-  border: 1px solid #222;
-}
-
-.author-support-header {
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.author-support-desc {
-  font-size: 13px;
-  line-height: 1.4;
-  opacity: 0.9;
-  margin-bottom: 12px;
-}
-
-.author-support-btn {
-  width: 100%;
-  padding: 12px 0;
-  border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  font-weight: 600;
-  background: #333;
-  color: #888;
-}
-
-.author-support-btn:disabled {
-  cursor: not-allowed;
-}
-
-.author-support-hint {
-  margin-top: 8px;
-  font-size: 11px;
-  opacity: 0.5;
-  text-align: center;
-}
-
-/* ================================
-   Instagram 더 보기 (정답)
-================================ */
 
 .clamp-text {
   position: relative;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
   line-height: 1.6;
-
-  /* 🔥 핵심 */
-  padding-right: 52px;
 }
 
-/* 더 보기 */
-.inline-more {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-
-  font-size: 14px;
-  color: #aaa;
-  cursor: pointer;
-
-  background: linear-gradient(
-    to right,
-    rgba(0,0,0,0),
-    rgba(0,0,0,1) 55%
-  );
-
-  padding-left: 10px;
-  padding-right: 2px;
-
-  display: none;
-}
-
-/* 3줄 초과일 때만 표시 */
-.clamp-text.has-more .inline-more {
-  display: inline;
-}
-
-/* 펼침 */
-.clamp-text.expanded {
-  -webkit-line-clamp: unset;
-  overflow: visible;
-  padding-right: 0;
-}
-
-.clamp-text.expanded .inline-more {
-  display: none;
-}
-
-.clamp-text {
-  position: relative;
-  line-height: 1.5;
-}
-
-/* 🔒 실제로 줄을 자르는 건 text만 */
+/* 실제 텍스트만 clamp */
 .clamp-text .text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1002,22 +155,23 @@ body {
 /* 더 보기 기본 숨김 */
 .clamp-text .inline-more {
   display: none;
-}
-
-/* 줄이 넘칠 때만 노출 */
-.clamp-text.has-more .inline-more {
-  display: inline;
   position: absolute;
   right: 0;
   bottom: 0;
-  padding-left: 6px;
+  font-size: 14px;
+  color: #aaa;
+  cursor: pointer;
+  padding-left: 10px;
   background: linear-gradient(
     to right,
     rgba(0,0,0,0),
-    rgba(0,0,0,0.9) 40%
+    rgba(0,0,0,0.9) 45%
   );
-  color: #aaa;
-  cursor: pointer;
+}
+
+/* 3줄 초과 시에만 표시 */
+.clamp-text.has-more .inline-more {
+  display: inline;
 }
 
 /* 펼친 상태 */
@@ -1027,4 +181,179 @@ body {
 
 .clamp-text.expanded .inline-more {
   display: none;
+}
+
+/* ==========================================================
+   VOTE SECTION (실제 투표 UI)
+========================================================== */
+.vote-section {
+  margin-top: 32px;
+  padding: 0 16px;
+}
+
+.vote-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.vote-bar {
+  width: 100%;
+  height: 16px;
+  background: #222;
+  border-radius: 40px;
+  overflow: hidden;
+  display: flex;
+}
+
+.vote-pro {
+  background: #0094ff;
+  transition: width .3s;
+}
+
+.vote-con {
+  background: #ff3b6b;
+  transition: width .3s;
+}
+
+.vote-percent {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #aaa;
+  display: flex;
+  justify-content: space-between;
+}
+
+.vote-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.btn-pro,
+.btn-con {
+  flex: 1;
+  padding: 14px 0;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  color: #fff;
+}
+
+.btn-pro {
+  background: #1d2c7a;
+  border: 1px solid #3356ff;
+}
+
+.btn-con {
+  background: #6e1a1a;
+  border: 1px solid #ff4444;
+}
+
+.btn-pro.disabled,
+.btn-con.disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+/* ==========================================================
+   SUPPORT SECTION
+========================================================== */
+.support-section {
+  margin-top: 36px;
+  padding: 0 16px;
+}
+
+.support-bar {
+  width: 100%;
+  height: 16px;
+  background: #222;
+  border-radius: 40px;
+  overflow: hidden;
+  display: flex;
+}
+
+.sup-pro {
+  background: #0094ff;
+  transition: width .3s;
+}
+
+.sup-con {
+  background: #ff4f6e;
+  transition: width .3s;
+}
+
+/* ==========================================================
+   STATS SECTION (완전 분리)
+========================================================== */
+.stats-section {
+  padding: 26px 16px 40px;
+  margin-top: 40px;
+  background: #050505;
+}
+
+.stats-header {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 22px;
+}
+
+/* 통계 전용 투표 바 */
+.stats-vote-bar {
+  width: 100%;
+  height: 16px;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  border: 1px solid #222;
+}
+
+.stats-vote-pro {
+  background: #4da3ff;
+}
+
+.stats-vote-con {
+  background: #ff6767;
+}
+
+/* ==========================================================
+   COMMENTS
+========================================================== */
+.comment-section {
+  padding: 0 16px;
+  margin-top: 40px;
+}
+
+.comment-item {
+  background: #111;
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 14px;
+  border: 1px solid #222;
+}
+
+.comment-text {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* ==========================================================
+   BOTTOM NAV
+========================================================== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: #000;
+  border-top: 1px solid #111;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  z-index: 9999;
 }
