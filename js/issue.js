@@ -504,6 +504,8 @@ document.addEventListener("DOMContentLoaded", () => {
     supportModal.hidden = false;
   }
 
+
+
   // 🔘 진영 버튼
   if (supportProBtn) {
     supportProBtn.onclick = () => openSupportModal("pro");
@@ -542,9 +544,8 @@ document.addEventListener("DOMContentLoaded", () => {
     supportConfirm.disabled = true;
     if (customAmountInput) customAmountInput.value = "";
   }
-});
 
-  // ✅ 후원 확정 버튼
+    // ✅ 후원 확정 버튼 (유일한 실행 지점)
   if (supportConfirm) {
     supportConfirm.onclick = async () => {
       if (!currentSupportSide || !selectedAmount) return;
@@ -555,3 +556,6 @@ document.addEventListener("DOMContentLoaded", () => {
       resetSupportModal();
     };
   }
+
+});
+
