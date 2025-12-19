@@ -73,30 +73,27 @@ if (explainWrap) {
 
   if (textSpan && moreSpan) {
     requestAnimationFrame(() => {
-      // 1️⃣ 원래 상태 저장
-      const prevClamp = textSpan.style.webkitLineClamp;
+      // 🔥 클론으로 실제 전체 높이 측정
+      const clone = textSpan.cloneNode(true);
+      clone.style.position = "absolute";
+      clone.style.visibility = "hidden";
+      clone.style.webkitLineClamp = "unset";
+      clone.style.maxHeight = "none";
+      clone.style.pointerEvents = "none";
 
-      // 2️⃣ clamp 해제
-      textSpan.style.webkitLineClamp = "unset";
+      explainWrap.appendChild(clone);
 
-      // 3️⃣ 실제 전체 높이
-      const fullHeight = textSpan.scrollHeight;
+      const isOverflow =
+        clone.scrollHeight > textSpan.clientHeight + 2;
 
-      // 4️⃣ clamp 복구
-      textSpan.style.webkitLineClamp = prevClamp || "3";
+      explainWrap.removeChild(clone);
 
-      // 5️⃣ 3줄 높이 계산
-      const lineHeight = parseFloat(getComputedStyle(textSpan).lineHeight);
-      const clampHeight = lineHeight * 3;
-
-      // 6️⃣ 비교
-      if (fullHeight > clampHeight + 1) {
+      if (isOverflow) {
         explainWrap.classList.add("has-more");
       }
     });
 
-    moreSpan.onclick = e => {
-      e.stopPropagation();
+    moreSpan.onclick = () => {
       explainWrap.classList.add("expanded");
     };
   }

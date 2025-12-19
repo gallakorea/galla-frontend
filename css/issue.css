@@ -932,65 +932,40 @@ body {
   text-align: center;
 }
 /* ================================
-   Instagram-style 더 보기 (REAL FIX)
+   Instagram REAL Clamp (FINAL)
 ================================ */
 
 .ig-clamp {
-  position: relative;
   font-size: 14px;
   line-height: 1.6;
   color: #ddd;
 }
 
-/* 텍스트 3줄 제한 */
 .ig-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
+  word-break: break-word;
 }
 
-/* 🔥 마지막 줄 가리는 그라데이션 */
-.ig-clamp::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 96px;
-  height: 1.6em;
-  background: linear-gradient(
-    to right,
-    rgba(0,0,0,0),
-    rgba(0,0,0,1) 60%
-  );
-  pointer-events: none;
-  display: none;
-}
-
-/* 더 보기 */
 .ig-more {
-  position: absolute;
-  right: 0;
-  bottom: 0;
+  display: none;
+  margin-left: 6px;
   font-size: 14px;
   color: #aaa;
   cursor: pointer;
-  background: #000;
-  padding-left: 6px;
+  white-space: nowrap;
 }
 
-/* 넘칠 때만 */
-.ig-clamp.has-more::after,
 .ig-clamp.has-more .ig-more {
-  display: block;
+  display: inline;
 }
 
-/* 펼친 상태 */
 .ig-clamp.expanded .ig-text {
   -webkit-line-clamp: unset;
 }
 
-.ig-clamp.expanded::after,
 .ig-clamp.expanded .ig-more {
   display: none;
 }
