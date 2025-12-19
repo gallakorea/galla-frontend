@@ -226,26 +226,25 @@ body {
 }
 
 /* ================================
-   SUPPORT ACTIONS (UPGRADE)
+   SUPPORT ACTIONS (FINAL)
 ================================ */
 
 .support-actions {
   display: flex;
   gap: 12px;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
 .support-btn {
   flex: 1;
-  padding: 14px 12px;
+  padding: 14px 0;
   border-radius: 14px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
 
   background: linear-gradient(180deg, #0d0d0d, #161616);
-  border: 1.5px solid rgba(255, 215, 120, 0.55); /* GOLD FRAME */
-
+  border: 1.5px solid rgba(255, 215, 120, 0.55); /* gold frame */
   transition: all .2s ease;
 }
 
@@ -270,13 +269,6 @@ body {
   box-shadow:
     0 0 0 1px rgba(255,123,123,0.35),
     0 0 18px rgba(255,215,120,0.25);
-}
-
-.support-sub {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #888;
-  text-align: center;
 }
 
 /* ==========================================================
