@@ -293,6 +293,14 @@ async function support(stance) {
   );
 }
 
+/* ================================
+   SUPPORT SECTION WRAP (FIX)
+================================ */
+
+.support-section {
+  padding: 0 16px;
+  margin-top: 32px;
+}
 
 /* ==========================================================================
    5. Support
