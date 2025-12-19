@@ -305,21 +305,19 @@ async function vote(type) {
     .insert({
       issue_id: issueId,
       user_id: userId,
-      type: type
+      type
     });
 
   votingInProgress = false;
 
   if (error) {
-    console.error(error);
-
-    // ✅ 이미 투표한 경우 (unique violation)
     if (error.code === "23505") {
-      alert("이미 투표하셨습니다. 투표는 변경할 수 없습니다.");
+      alert("이미 투표했습니다.");
       checkVoteStatus(issueId);
       return;
     }
 
+    console.error(error);
     alert("투표 중 오류가 발생했습니다.");
     return;
   }
