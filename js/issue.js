@@ -278,6 +278,13 @@ function applyAuthorSupportDoneUI() {
    - votes 테이블 컬럼: issue_id, user_id, type ('pro' | 'con')
    - Unique(issue_id, user_id)
 ========================================================================== */
+/* ==========================================================================
+   6. Voting (votes table 기준)
+========================================================================== */
+
+/* 🔥 연타/중복 방지 플래그 (loadVotes 위에 선언) */
+let votingInProgress = false;
+
 async function loadVotes(issueId) {
   const supabase = window.supabaseClient;
 
@@ -298,11 +305,16 @@ async function loadVotes(issueId) {
 }
 
 async function vote(type) {
+  /* 🔥 이미 처리 중이면 즉시 차단 */
+  if (votingInProgress) return;
+  votingInProgress = true;
+
   const supabase = window.supabaseClient;
   const { data: session } = await supabase.auth.getSession();
 
   if (!session.session) {
     alert("로그인이 필요합니다.");
+    votingInProgress = false;
     return;
   }
 
@@ -319,16 +331,20 @@ async function vote(type) {
       { onConflict: "issue_id,user_id" }
     );
 
+  votingInProgress = false;
+
   if (error) {
     console.error(error);
-    alert("투표 처리 중 오류가 발생했습니다.");
+    alert("이미 투표했거나 오류가 발생했습니다.");
     return;
   }
 
+  /* ✅ 즉시 UI 갱신 */
   loadVotes(issueId);
-  checkVoteStatus(issueId); // ✅ 추가
+  checkVoteStatus(issueId);
 }
 
+/* 버튼 연결 */
 qs("btn-vote-pro").onclick = () => vote("pro");
 qs("btn-vote-con").onclick = () => vote("con");
 
