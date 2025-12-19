@@ -816,100 +816,6 @@ body {
 
 
 /* ==========================================================
-   SUPPORT MODAL
-========================================================== */
-
-/* ==========================================================
-   SUPPORT MODAL (GALLA STANDARD)
-========================================================== */
-
-.support-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  backdrop-filter: blur(4px);
-  z-index: 999999;
-
-  /* 기본은 flex */
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-}
-
-/* hidden 속성으로만 제어 */
-.support-backdrop[hidden] {
-  display: none !important;
-}
-
-.support-sheet {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  background: #0b0b0b;
-  border-radius: 22px 22px 0 0;
-  padding: 16px;
-  border: 1px solid #222;
-}
-
-.support-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 16px;
-  font-weight: 800;
-  margin-bottom: 12px;
-}
-
-.support-modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.support-amounts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-}
-
-.support-amounts button {
-  padding: 12px 0;
-  border-radius: 12px;
-  background: #111;
-  border: 1px solid #333;
-  color: #ffe27a;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-#support-custom-amount {
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #333;
-  background: #111;
-  color: #fff;
-}
-
-#support-confirm-btn {
-  margin-top: 6px;
-  padding: 14px 0;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 900;
-  background: #ffe27a;
-  color: #000;
-  cursor: pointer;
-}
-
-#support-confirm-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* ==========================================================
    BOTTOM NAV
 ========================================================== */
 .bottom-nav {
@@ -1154,26 +1060,24 @@ body {
 /* 전체 배경 */
 .modal-backdrop {
   position: fixed;
-  inset: 0;               /* top/right/bottom/left = 0 */
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 9999;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 999999;
 
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: flex-end;   /* 🔥 핵심 */
 }
 
 /* 모달 본체 */
 .modal-sheet {
-  position: relative;
-  width: 92%;
-  max-width: 420px;
+  width: 100%;
+  max-width: 480px;
 
   background: #111;
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 22px 22px 0 0; /* 🔥 */
 
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  padding: 20px;
 }
 
 /* 닫기 버튼 */
@@ -1185,4 +1089,14 @@ body {
   background: none;
   border: none;
   color: #fff;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+
+  background: #111;
+  border-radius: 22px 22px 0 0; /* 🔥 */
+
+  padding: 20px;
 }
