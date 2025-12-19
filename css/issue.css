@@ -931,62 +931,53 @@ body {
   opacity: 0.5;
   text-align: center;
 }
-
 /* ================================
-   Instagram-style 더 보기 (MIN FIX)
+   Instagram-style 더 보기 (FINAL)
 ================================ */
 
 /* 컨테이너 */
-.clamp-text {
+.ig-clamp {
   position: relative;
+  font-size: 14px;
   line-height: 1.6;
+  color: #ddd;
 }
 
-/* 실제 줄 제한은 text만 */
-.clamp-text .text {
+/* 텍스트 (3줄까지만 자름) */
+.ig-text {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
 
-/* 더 보기 기본 숨김 */
-.clamp-text .inline-more {
+/* 더 보기 */
+.ig-more {
   display: none;
   position: absolute;
   right: 0;
   bottom: 0;
+  padding-left: 8px;
   font-size: 14px;
   color: #aaa;
   cursor: pointer;
-  padding-left: 8px;
   background: linear-gradient(
     to right,
     rgba(0,0,0,0),
-    rgba(0,0,0,0.9) 50%
+    rgba(0,0,0,0.9) 40%
   );
 }
 
 /* 넘칠 때만 표시 */
-.clamp-text.has-more .inline-more {
+.ig-clamp.has-more .ig-more {
   display: inline;
 }
 
-/* 펼침 */
-.clamp-text.expanded .text {
+/* 펼친 상태 */
+.ig-clamp.expanded .ig-text {
   -webkit-line-clamp: unset;
 }
 
-.clamp-text.expanded .inline-more {
+.ig-clamp.expanded .ig-more {
   display: none;
-}
-
-/* 더 보기 자리 확보 */
-.clamp-text .text {
-  padding-right: 56px; /* ← 핵심 */
-}
-
-/* expanded 되면 원복 */
-.clamp-text.expanded .text {
-  padding-right: 0;
 }

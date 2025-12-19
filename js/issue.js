@@ -63,27 +63,21 @@ function renderIssue(issue) {
 /* 핵심 요약 + 더 보기 */
 const explainWrap = qs("issue-explain-text");
 if (explainWrap) {
-  const textSpan = explainWrap.querySelector(".text");
-  const moreSpan = explainWrap.querySelector(".inline-more");
+  const textEl = explainWrap.querySelector(".ig-text");
+  const moreEl = explainWrap.querySelector(".ig-more");
 
-  if (textSpan) textSpan.textContent = issue.description || "";
+  if (textEl) textEl.textContent = issue.description || "";
 
-  if (textSpan && moreSpan) {
-    requestAnimationFrame(() => {
-      // 🔒 line-clamp이 실제 적용된 뒤 한 번 더 측정
-      const needsMore =
-        textSpan.scrollHeight - textSpan.clientHeight > 1;
+  requestAnimationFrame(() => {
+    if (textEl.scrollHeight > textEl.clientHeight) {
+      explainWrap.classList.add("has-more");
+    }
+  });
 
-      if (needsMore) {
-        explainWrap.classList.add("has-more");
-      }
-    });
-
-    moreSpan.onclick = e => {
-      e.stopPropagation();
-      explainWrap.classList.add("expanded");
-    };
-  }
+  moreEl.onclick = e => {
+    e.stopPropagation();
+    explainWrap.classList.add("expanded");
+  };
 }
 
   if (issue.created_at) {
