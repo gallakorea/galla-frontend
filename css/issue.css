@@ -943,6 +943,9 @@ body {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   line-height: 1.6;
+
+  /* 🔥 핵심 */
+  padding-right: 52px;
 }
 
 /* 더 보기 */
@@ -950,15 +953,20 @@ body {
   position: absolute;
   bottom: 0;
   right: 0;
+
   font-size: 14px;
   color: #aaa;
   cursor: pointer;
+
   background: linear-gradient(
     to right,
     rgba(0,0,0,0),
-    rgba(0,0,0,0.9) 40%
+    rgba(0,0,0,1) 55%
   );
-  padding-left: 6px;
+
+  padding-left: 10px;
+  padding-right: 2px;
+
   display: none;
 }
 
@@ -969,9 +977,9 @@ body {
 
 /* 펼침 */
 .clamp-text.expanded {
-  display: block;
   -webkit-line-clamp: unset;
   overflow: visible;
+  padding-right: 0;
 }
 
 .clamp-text.expanded .inline-more {

@@ -65,26 +65,33 @@ function renderIssue(issue) {
   qs("issue-title").innerText = issue.title || "";
   qs("issue-desc").innerText = issue.one_line || "";
 
+  /* ===============================
+     🔥 Instagram 스타일 더 보기
+  =============================== */
+
   const explainEl = qs("issue-explain-text");
-
-  // 본문 삽입 (span 유지)
-  explainEl.insertAdjacentText("afterbegin", issue.description || "");
-
+  const textEl = explainEl.querySelector(".text");
   const moreEl = explainEl.querySelector(".inline-more");
 
-  // 🔥 3줄 초과 시 더 보기 활성화
-  requestAnimationFrame(() => {
-    if (explainEl.scrollHeight > explainEl.clientHeight) {
+  // 1️⃣ 본문 텍스트만 주입 (span 유지)
+  textEl.textContent = issue.description || "";
+
+  // 2️⃣ 3줄 초과 여부 체크 → 더 보기 표시
+  setTimeout(() => {
+    if (explainEl.scrollHeight > explainEl.clientHeight + 1) {
       explainEl.classList.add("has-more");
     }
-  });
+  }, 0);
 
-  if (moreEl) {
-    moreEl.onclick = (e) => {
-      e.stopPropagation();
-      explainEl.classList.add("expanded");
-    };
-  }
+  // 3️⃣ 더 보기 클릭 → 펼치기
+  moreEl.onclick = (e) => {
+    e.stopPropagation();
+    explainEl.classList.add("expanded");
+  };
+
+  /* ===============================
+     기타 기존 로직 (그대로)
+  =============================== */
 
   if (issue.created_at) {
     qs("issue-time").innerText =
