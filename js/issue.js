@@ -60,17 +60,17 @@ if (!issueId) {
    3. Render Issue
 ========================================================================== */
 function renderIssue(issue) {
-  issueAuthorId = issue.user_id; // 🔥 이 줄 추가
-  
+  issueAuthorId = issue.user_id;
+
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
 
-  // ✅ 한 줄 요약
-  qs("issue-desc").innerText = issue.summary || "";
+  // ✅ 한 줄 요약 → one_line
+  qs("issue-desc").innerText = issue.one_line || "";
 
-  // ✅ 이슈 설명 (본문)
+  // ✅ 본문 설명 → description
   qs("issue-explain-text").innerText = issue.description || "";
-  
+
   if (issue.created_at) {
     qs("issue-time").innerText =
       new Date(issue.created_at).toLocaleDateString();
@@ -78,9 +78,7 @@ function renderIssue(issue) {
 
   qs("issue-author").innerText = "작성자 · 익명";
 
-  /* ==========================
-    Thumbnail (🔥 FIX)
-  ========================== */
+  // 썸네일
   if (issue.thumbnail_url) {
     qs("issue-thumb").src = issue.thumbnail_url;
     qs("issue-thumb").style.display = "block";
@@ -88,20 +86,13 @@ function renderIssue(issue) {
     qs("issue-thumb").style.display = "none";
   }
 
-  /* ==========================
-    Video (🔥 FIX)
-  ========================== */
+  // 영상
   if (issue.video_url) {
     qs("open-video-modal").style.display = "block";
-
-    const videoEl = qs("speech-video");
-    videoEl.src = issue.video_url;
-    videoEl.controls = true;
+    qs("speech-video").src = issue.video_url;
   } else {
     qs("open-video-modal").style.display = "none";
   }
-
-  renderVote(issue.pro_count || 0, issue.con_count || 0);
 }
 
 /* ==========================================================================
@@ -163,7 +154,7 @@ async function loadSupportStats(issueId) {
    5-1-1. My Support Status Text
 ========================================================================== */
 function renderMySupportText(stance, amount) {
-  const el = qs("my-support-status-text");
+  const el = qs("support-status-text");
   if (!el) return;
 
   const label = stance === "pro" ? "찬성" : "반대";
