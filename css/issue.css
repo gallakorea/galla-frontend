@@ -1100,3 +1100,10 @@ body {
 
   padding: 20px;
 }
+
+/* =========================
+   modal-backdrop hidden FIX
+========================= */
+.modal-backdrop[hidden] {
+  display: none !important;
+}
