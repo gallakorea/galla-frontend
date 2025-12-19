@@ -8,7 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.getItem('remixContext')
   );
 
-  if (!remixContext) {
+  if (
+    !remixContext ||
+    !remixContext.origin_issue_id ||
+    !remixContext.remix_stance ||
+    !remixContext.category
+  ) {
     alert('잘못된 접근입니다.');
     location.href = 'index.html';
     return;
@@ -26,6 +31,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
   const donationEl = document.getElementById('donationTarget'); // ✅ 추가
+
+  /* ================= CATEGORY LOCK (REMIX) ================= */
+  categoryEl.value = remixContext.category;   // 원본 이슈 카테고리
+  categoryEl.disabled = true;                 // 선택 불가
+  categoryEl.classList.add('locked');          // UX용
 
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
@@ -98,12 +108,6 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', e => {
     e.preventDefault();
 
-    if (!categoryEl.value) {
-      alert('카테고리를 선택해주세요');
-      categoryEl.focus();
-      return;
-    }
-
     if (!titleEl.value) {
       alert('제목을 입력해주세요');
       titleEl.focus();
@@ -173,14 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const payload = {
-        category: categoryEl.value,
+        category: remixContext.category, // 🔒 반드시 context 기준
         title: titleEl.value,
         oneLine: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
         is_anonymous: anon,
 
-        // 🔥 REMIX META (고정)
         remix_stance: remixStance,
         remix_origin_issue_id: remixOriginIssueId
       };

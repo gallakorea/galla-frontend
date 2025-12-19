@@ -1335,14 +1335,7 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   object-fit: contain;
 }
 
-.remix-stance-confirm.pro {
-  background: rgba(47,128,255,0.15);
-  border: 1px solid rgba(47,128,255,0.4);
-  color: #8fb7ff;
-}
-
-.remix-stance-confirm.con {
-  background: rgba(255,80,80,0.15);
-  border: 1px solid rgba(255,80,80,0.4);
-  color: #ff9a9a;
+select.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

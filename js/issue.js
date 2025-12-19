@@ -386,8 +386,12 @@ qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
 
 function goRemix(stance) {
   sessionStorage.setItem(
-    "remixContext",
-    JSON.stringify({ origin_issue_id: issueId, remix_stance: stance })
+    'remixContext',
+    JSON.stringify({
+      origin_issue_id: issueId,
+      remix_stance: stance,
+      category: issue.category   // 🔥 이게 핵심
+    })
   );
   location.href = "write-remix.html";
 }
