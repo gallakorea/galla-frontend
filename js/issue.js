@@ -482,18 +482,21 @@ async function checkAuthorSupport(issueId) {
 
 const supportModal = document.getElementById("support-modal");
 
+/* 찬성 */
 document.getElementById("support-pro-btn")?.addEventListener("click", () => {
   console.log("support pro click");
-  supportModal.classList.add("active");
+  supportModal.hidden = false;
 });
 
+/* 반대 */
 document.getElementById("support-con-btn")?.addEventListener("click", () => {
   console.log("support con click");
-  supportModal.classList.add("active");
+  supportModal.hidden = false;
 });
 
+/* 닫기 (X 버튼 / 배경 클릭) */
 supportModal?.addEventListener("click", (e) => {
   if (e.target === supportModal || e.target.hasAttribute("data-close")) {
-    supportModal.classList.remove("active");
+    supportModal.hidden = true;
   }
 });
