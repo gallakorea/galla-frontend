@@ -479,35 +479,3 @@ async function checkAuthorSupport(issueId) {
     btn.innerText = "🔥 이미 응원했습니다";
   }
 }
-
-/* =========================
-   SUPPORT PUSH MODAL OPEN
-========================= */
-
-const pushModal = document.getElementById("push-level-modal");
-const supportProBtn = document.getElementById("support-pro-btn");
-const supportConBtn = document.getElementById("support-con-btn");
-
-/* 찬성 밀어주기 */
-supportProBtn?.addEventListener("click", () => {
-  document.getElementById("push-level-title").innerText =
-    "👍 찬성 진영에 개입합니다";
-  pushModal.hidden = false;
-});
-
-/* 반대 밀어주기 */
-supportConBtn?.addEventListener("click", () => {
-  document.getElementById("push-level-title").innerText =
-    "👎 반대 진영에 개입합니다";
-  pushModal.hidden = false;
-});
-
-/* 모달 닫기 */
-pushModal?.addEventListener("click", (e) => {
-  if (
-    e.target === pushModal ||
-    e.target.hasAttribute("data-close")
-  ) {
-    pushModal.hidden = true;
-  }
-});
