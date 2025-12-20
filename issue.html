@@ -143,6 +143,7 @@
         </button>
         </div>
 
+
         <p class="support-sub">
         선택한 진영의 전황에 직접 반영됩니다
         </p>
@@ -287,53 +288,64 @@
 </div> <!-- #app 끝 -->
 
 <!-- =========================
-     Push Level Modal (STEP 2)
-     ========================= -->
-<div id="push-level-modal" class="modal-backdrop" hidden>
-  <div class="modal-sheet">
-    <button class="modal-close" data-close>×</button>
+   SUPPORT MODAL (CENTER)
+========================= -->
+<div id="support-modal" class="support-modal" hidden>
+  <div class="support-modal-box">
+    <button class="support-close" data-close>✕</button>
 
-    <h3 id="push-level-title" class="modal-title">
-      👎 반대 진영에 개입합니다
-    </h3>
+    <h2 class="support-title">
+      이 진영에 보탬을 더합니다
+    </h2>
 
-    <p class="modal-desc subtle">
-      개입의 강도를 선택하세요
+    <p class="support-desc">
+      이 보탬은 승부를 가르는 행위가 아닙니다.<br>
+      이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.
     </p>
 
-    <div class="push-level-list">
-    <button class="push-level" data-level="1" data-amount="1000">
-    가볍게 보탬
-    <span class="amount">₩1,000</span>
-    </button>
+    <!-- 보탬 선택 -->
+    <div class="support-levels">
+      <button class="support-level" data-level="1">
+        <span class="level-title">🤏 작은 보탬</span>
+        <span class="level-desc">댓글·추천에서 기본 표식이 부여됩니다</span>
+      </button>
 
-    <button class="push-level" data-level="2" data-amount="5000">
-    확실한 보탬
-    <span class="amount">₩5,000</span>
-    </button>
+      <button class="support-level" data-level="2">
+        <span class="level-title">💪 분명한 보탬</span>
+        <span class="level-desc">댓글 상단 노출 + 추천 반영 우선</span>
+      </button>
 
-    <button class="push-level" data-level="3" data-amount="10000">
-    강한 보탬
-    <span class="amount">₩10,000</span>
-    </button>
+      <button class="support-level" data-level="3">
+        <span class="level-title">🔥 강한 보탬</span>
+        <span class="level-desc">훈장 표식 + 진영 전황 기여도 강조</span>
+      </button>
 
-    <button class="push-level" data-level="4" data-amount="50000">
-    전면 보탬
-    <span class="amount">₩50,000</span>
-    </button>
+      <button class="support-level highlight" data-level="4">
+        <span class="level-title">⚔️ 결정적 보탬</span>
+        <span class="level-desc">
+          고정 댓글 권한 · 진영 전세 수치 반영 강화
+        </span>
+      </button>
     </div>
 
-    <p class="modal-footnote">
-      밀어주기의 일부는 이 이슈를 만든 크리에이터의 보상과<br>
-      사회적 보탬으로 사용됩니다
+    <!-- 직접 입력 -->
+    <div class="support-custom">
+      <label>직접 금액 입력</label>
+      <input type="number" placeholder="₩ 직접 입력" />
+      <p class="support-custom-desc">
+        직접 입력 보탬은 최상위 훈장과<br>
+        모든 댓글·추천 영역에서 최우선 표시됩니다.
+      </p>
+    </div>
+
+    <!-- 푸터 -->
+    <p class="support-footnote">
+      지원해 주신 보탬은 이 이슈를 만든 크리에이터와,<br>
+      사회에 도움이 필요한 곳에 함께 사용될 예정입니다.
     </p>
 
-    <button
-      id="push-confirm-btn"
-      class="btn-primary full"
-      disabled
-    >
-      이 선택을 실행합니다
+    <button class="support-confirm" disabled>
+      이 보탬을 실행합니다
     </button>
   </div>
 </div>

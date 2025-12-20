@@ -276,3 +276,24 @@ document.addEventListener("touchstart", e => {
 document.addEventListener("touchend", e => {
   if (e.changedTouches[0].clientX - startX > 80) history.back();
 });
+
+
+
+
+const supportModal = document.getElementById("support-modal");
+const supportProBtn = document.getElementById("support-pro-btn");
+const supportConBtn = document.getElementById("support-con-btn");
+
+supportProBtn?.addEventListener("click", () => {
+  supportModal.hidden = false;
+});
+
+supportConBtn?.addEventListener("click", () => {
+  supportModal.hidden = false;
+});
+
+supportModal?.addEventListener("click", (e) => {
+  if (e.target === supportModal || e.target.hasAttribute("data-close")) {
+    supportModal.hidden = true;
+  }
+});
