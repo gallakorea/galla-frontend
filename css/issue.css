@@ -1179,22 +1179,18 @@ body {
   border: 1px solid #333;
 }
 
-/* 🔥 모든 오버레이 완전 차단 */
-.speech-backdrop[hidden],
-.more-menu-backdrop[hidden],
-.comment-action-modal[hidden],
-.support-modal[hidden] {
+/* hidden 기본 동작만 사용 */
+[hidden] {
   display: none !important;
-  pointer-events: none !important;
 }
 
+/* 오버레이 기본 */
 .speech-backdrop,
 .more-menu-backdrop,
 .comment-action-modal,
 .support-modal {
   pointer-events: auto;
 }
-
 .support-section {
   position: relative;
   z-index: 10;
@@ -1279,11 +1275,6 @@ body {
   box-sizing: border-box;
 }
 
-[hidden] {
-  display: none !important;
-  pointer-events: none !important;
-}
-
 /* 🔥 기본 오버레이 완전 차단 */
 .speech-backdrop,
 .more-menu-backdrop,
@@ -1300,4 +1291,47 @@ body {
 .support-modal.active {
   display: flex;
   pointer-events: auto;
+}
+
+/* =========================
+   REMIX CARD (SEPARATE BOX)
+========================= */
+.remix-card {
+  margin: 36px 16px 0;
+  padding: 18px 16px 20px;
+  background: #0b0b0b;
+  border-radius: 18px;
+  border: 1px solid #1f1f1f;
+  width: calc(100% - 32px);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 5;
+}
+
+/* 안내 박스 */
+.remix-guide {
+  margin-top: 14px;
+  padding: 14px;
+  background: #111;
+  border-radius: 14px;
+  border: 1px solid #222;
+}
+
+.remix-guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.remix-guide-text {
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.4;
+}
+
+.remix-btn,
+.support-btn {
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 20;
 }
