@@ -1275,15 +1275,6 @@ body {
   box-sizing: border-box;
 }
 
-/* 🔥 기본 오버레이 완전 차단 */
-.speech-backdrop,
-.more-menu-backdrop,
-.comment-action-modal,
-.support-modal {
-  display: none;
-  pointer-events: none;
-}
-
 /* 🔥 열릴 때만 활성 */
 .speech-backdrop.active,
 .more-menu-backdrop.active,
