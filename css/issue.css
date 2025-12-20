@@ -1043,7 +1043,7 @@ body {
 
   display: flex;
   justify-content: center;
-  align-items: flex-end;   /* 🔥 핵심 */
+  align-items: center;  /* 🔥 핵심 */
 }
 
 /* 닫기 버튼 */
