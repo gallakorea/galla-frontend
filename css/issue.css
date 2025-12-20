@@ -1249,3 +1249,32 @@ body {
 .support-modal {
   pointer-events: auto;
 }
+
+/* =========================
+   SUPPORT SECTION – LAYOUT FIX
+========================= */
+.support-section {
+  margin: 36px 16px 0;
+  padding: 18px 16px 20px;
+  background: #0b0b0b;
+  border-radius: 18px;
+  border: 1px solid #1f1f1f;
+
+  /* 🔥 기준선 복구 */
+  width: calc(100% - 32px);
+  max-width: 100%;
+  box-sizing: border-box;
+
+  position: relative;
+  z-index: 10;
+}
+
+.support-guide {
+  margin-top: 14px;
+  padding: 14px 14px 15px;
+  border-radius: 14px;
+  background: #111;
+  border: 1px solid #222;
+  width: 100%;
+  box-sizing: border-box;
+}
