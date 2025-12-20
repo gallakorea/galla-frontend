@@ -239,7 +239,7 @@
             <div class="action-item" data-action="hide">🙈 관심 없음</div>
             <div class="action-item" data-action="mute">🥕 업데이트 안 보기</div>
             <div class="action-item" data-action="restrict">🪢 제한</div>
-            <div class="action-item" more-danger data-action="report">🚨 신고하기</div>
+            <div class="action-item more-danger" data-action="report">🚨 신고하기</div>
             <button class="comment-close-btn" data-close>닫기</button>
         </div>
     </div>
@@ -289,33 +289,6 @@
 </div> <!-- #app 끝 -->
 
 <!-- =========================
-     Push Intent Modal (STEP 1)
-     ========================= -->
-<div id="push-intent-modal" class="modal-backdrop" hidden>
-  <div class="modal-sheet">
-    <button class="modal-close" data-close>×</button>
-
-    <h3 class="modal-title">
-      👎 반대 진영에 개입합니다
-    </h3>
-
-    <p class="modal-desc">
-      이 선택은 <strong>결과를 바꾸지 않습니다</strong><br>
-      하지만 <strong>판의 압박을 바꿉니다</strong>
-    </p>
-
-    <div class="modal-actions">
-      <button class="btn-secondary" data-close>
-        취소
-      </button>
-      <button id="push-intent-next" class="btn-primary">
-        계속하기
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- =========================
      Push Level Modal (STEP 2)
      ========================= -->
 <div id="push-level-modal" class="modal-backdrop" hidden>
@@ -331,24 +304,25 @@
     </p>
 
     <div class="push-level-list">
-      <button class="push-level" data-level="1" data-amount="1000">
-        🟢 돌을 던집니다
-        <span class="amount">₩1,000</span>
-      </button>
+    <button class="push-level" data-level="1" data-amount="1000">
+    가볍게 보탬
+    <span class="amount">₩1,000</span>
+    </button>
 
-      <button class="push-level" data-level="2" data-amount="5000">
-        🔵 집중 사격을 합니다
-        <span class="amount">₩5,000</span>
-      </button>
+    <button class="push-level" data-level="2" data-amount="5000">
+    확실한 보탬
+    <span class="amount">₩5,000</span>
+    </button>
 
-      <button class="push-level" data-level="3" data-amount="10000">
-        🟣 무장 화력을 투입합니다
-        <span class="amount">₩10,000</span>
-      </button>
+    <button class="push-level" data-level="3" data-amount="10000">
+    강한 보탬
+    <span class="amount">₩10,000</span>
+    </button>
 
-      <button class="push-level" data-level="4" data-amount="50000">
-        🟠 전면 개입합니다
-        <span class="amount">₩50,000</span>
+    <button class="push-level" data-level="4" data-amount="50000">
+    전면 보탬
+    <span class="amount">₩50,000</span>
+    </button>="amount">₩50,000</span>
       </button>
     </div>
 

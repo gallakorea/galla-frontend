@@ -481,30 +481,6 @@ async function checkAuthorSupport(issueId) {
 }
 
 /* ==========================================================================
-   Push Modals Flow (STEP 1 → STEP 2)
-========================================================================== */
-document.addEventListener("DOMContentLoaded", () => {
-  const intentModal = document.getElementById("push-intent-modal");
-  const levelModal  = document.getElementById("push-level-modal");
-
-  const nextBtn = document.getElementById("push-intent-next");
-
-  // STEP 1 → STEP 2
-  nextBtn?.addEventListener("click", () => {
-    intentModal.hidden = true;
-    levelModal.hidden = false;
-  });
-
-  // 공통 닫기
-  document.querySelectorAll("[data-close]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      intentModal.hidden = true;
-      levelModal.hidden = true;
-    });
-  });
-});
-
-/* ==========================================================================
    Push Modal Open Trigger (ENTRY POINT)
 ========================================================================== */
 document.addEventListener("DOMContentLoaded", () => {
@@ -520,7 +496,7 @@ document.addEventListener("DOMContentLoaded", () => {
     intentModal.hidden = false;
     intentModal
       .querySelector(".modal-title")
-      .innerText = "👍 찬성 진영에 개입합니다";
+      .innerText = "👍 찬성 진영에 나의 힘을 보탬니다";
   });
 
   // 반대 밀어주기
@@ -528,6 +504,6 @@ document.addEventListener("DOMContentLoaded", () => {
     intentModal.hidden = false;
     intentModal
       .querySelector(".modal-title")
-      .innerText = "👎 반대 진영에 개입합니다";
+      .innerText = "👎 반대 진영에 힘을 보탬을 줍니다";
   });
 });

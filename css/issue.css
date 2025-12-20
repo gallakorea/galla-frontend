@@ -30,7 +30,7 @@ body {
     border-bottom: 1px solid #111;
     position: sticky;
     top: 0;
-    z-index: 999;
+    z-index: 100;
 }
 
 .header-inner {
@@ -179,18 +179,6 @@ body {
     margin-bottom: 12px;
 }
 
-.vote-bar {
-    width: 100%;
-    height: 16px;
-    background: #222;
-    border-radius: 40px;
-    overflow: hidden;
-    display: flex;
-}
-
-.vote-pro { background: #0094ff; transition: width .3s; }
-.vote-con { background: #ff3b6b; transition: width .3s; }
-
 .vote-percent {
     margin-top: 8px;
     font-size: 13px;
@@ -235,19 +223,6 @@ body {
   margin-top: 16px;
 }
 
-.support-btn {
-  flex: 1;
-  padding: 14px 0;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-
-  background: linear-gradient(180deg, #0d0d0d, #161616);
-  border: 1.5px solid rgba(255, 215, 120, 0.55); /* gold frame */
-  transition: all .2s ease;
-}
-
 /* 찬성 */
 .support-btn.pro {
   color: #6fb2ff;
@@ -258,17 +233,17 @@ body {
   color: #ff7b7b;
 }
 
-/* Hover */
-.support-btn.pro:hover {
-  box-shadow:
-    0 0 0 1px rgba(111,178,255,0.35),
-    0 0 18px rgba(255,215,120,0.25);
+.support-btn {
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
 }
 
-.support-btn.con:hover {
-  box-shadow:
-    0 0 0 1px rgba(255,123,123,0.35),
-    0 0 18px rgba(255,215,120,0.25);
+.support-btn.pro { color: #6fb2ff; }
+.support-btn.con { color: #ff7b7b; }
+
+.support-btn:hover {
+  background: #151515;
 }
 
 /* ================================
@@ -466,9 +441,6 @@ body {
     display: flex;
 }
 
-.vote-pro { background: #4da3ff; }
-.vote-con { background: #ff6767; }
-
 /* AI Summary */
 .ai-summary {
     margin-top: 16px;
@@ -627,7 +599,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: flex-end;
-    z-index: 999999;
+    z-index: 1000;
     backdrop-filter: blur(4px);
 }
 
@@ -679,7 +651,7 @@ body {
     display: none;
     justify-content: center;
     align-items: flex-end;
-    z-index: 999999;
+    z-index: 1000;
 }
 
 .comment-action-modal:not([hidden]) {
@@ -730,7 +702,7 @@ body {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.7);
-    z-index: 999999;
+    z-index: 2000;
     display: none;
 }
 
@@ -830,7 +802,7 @@ body {
     display: flex;
     justify-content: space-around;
     padding: 10px 0;
-    z-index: 9999;
+    z-index: 200;
 }
 
 .nav-item img {
@@ -1043,6 +1015,9 @@ body {
   display: flex;
 }
 
+.vote-section .vote-pro { background: #0094ff; }
+.vote-section .vote-con { background: #ff3b6b; }
+
 /* 통계 섹션 전용 */
 .stats-section .vote-bar {
   width: 100%;
@@ -1053,6 +1028,9 @@ body {
   display: flex;
 }
 
+.stats-section .vote-pro { background: #4da3ff; }
+.stats-section .vote-con { background: #ff6767; }
+
 /* =========================
    Push Modals (FIX)
 ========================= */
@@ -1062,22 +1040,11 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.6);
-  z-index: 999999;
+  z-index: 2000;
 
   display: flex;
   justify-content: center;
   align-items: flex-end;   /* 🔥 핵심 */
-}
-
-/* 모달 본체 */
-.modal-sheet {
-  width: 100%;
-  max-width: 480px;
-
-  background: #111;
-  border-radius: 22px 22px 0 0; /* 🔥 */
-
-  padding: 20px;
 }
 
 /* 닫기 버튼 */
@@ -1091,13 +1058,15 @@ body {
   color: #fff;
 }
 
+
+/* =========================
+   PUSH MODAL ONLY
+========================= */
 .modal-sheet {
   width: 100%;
   max-width: 480px;
-
   background: #111;
-  border-radius: 22px 22px 0 0; /* 🔥 */
-
+  border-radius: 22px 22px 0 0;
   padding: 20px;
 }
 
@@ -1106,4 +1075,10 @@ body {
 ========================= */
 .modal-backdrop[hidden] {
   display: none !important;
+}
+
+.push-level {
+  padding: 16px 14px;
+  text-align: left;
+  line-height: 1.4;
 }
