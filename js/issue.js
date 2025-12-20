@@ -479,3 +479,21 @@ async function checkAuthorSupport(issueId) {
     btn.innerText = "🔥 이미 응원했습니다";
   }
 }
+
+const supportModal = document.getElementById("support-modal");
+
+document.getElementById("support-pro-btn")?.addEventListener("click", () => {
+  console.log("support pro click");
+  supportModal.classList.add("active");
+});
+
+document.getElementById("support-con-btn")?.addEventListener("click", () => {
+  console.log("support con click");
+  supportModal.classList.add("active");
+});
+
+supportModal?.addEventListener("click", (e) => {
+  if (e.target === supportModal || e.target.hasAttribute("data-close")) {
+    supportModal.classList.remove("active");
+  }
+});
