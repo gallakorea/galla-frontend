@@ -480,30 +480,34 @@ async function checkAuthorSupport(issueId) {
   }
 }
 
-/* ==========================================================================
-   Push Modal Open Trigger (ENTRY POINT)
-========================================================================== */
-document.addEventListener("DOMContentLoaded", () => {
-  const intentModal = document.getElementById("push-intent-modal");
+/* =========================
+   SUPPORT PUSH MODAL OPEN
+========================= */
 
-  const proBtn = document.getElementById("support-pro-btn");
-  const conBtn = document.getElementById("support-con-btn");
+const pushModal = document.getElementById("push-level-modal");
+const supportProBtn = document.getElementById("support-pro-btn");
+const supportConBtn = document.getElementById("support-con-btn");
 
-  if (!intentModal) return;
+/* 찬성 밀어주기 */
+supportProBtn?.addEventListener("click", () => {
+  document.getElementById("push-level-title").innerText =
+    "👍 찬성 진영에 개입합니다";
+  pushModal.hidden = false;
+});
 
-  // 찬성 밀어주기
-  proBtn?.addEventListener("click", () => {
-    intentModal.hidden = false;
-    intentModal
-      .querySelector(".modal-title")
-      .innerText = "👍 찬성 진영에 나의 힘을 보탬니다";
-  });
+/* 반대 밀어주기 */
+supportConBtn?.addEventListener("click", () => {
+  document.getElementById("push-level-title").innerText =
+    "👎 반대 진영에 개입합니다";
+  pushModal.hidden = false;
+});
 
-  // 반대 밀어주기
-  conBtn?.addEventListener("click", () => {
-    intentModal.hidden = false;
-    intentModal
-      .querySelector(".modal-title")
-      .innerText = "👎 반대 진영에 힘을 보탬을 줍니다";
-  });
+/* 모달 닫기 */
+pushModal?.addEventListener("click", (e) => {
+  if (
+    e.target === pushModal ||
+    e.target.hasAttribute("data-close")
+  ) {
+    pushModal.hidden = true;
+  }
 });
