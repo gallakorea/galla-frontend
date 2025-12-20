@@ -1288,10 +1288,6 @@ body {
 .speech-backdrop.active,
 .more-menu-backdrop.active,
 .comment-action-modal.active,
-.support-modal.active {
-  display: flex;
-  pointer-events: auto;
-}
 
 /* =========================
    REMIX CARD (SEPARATE BOX)
