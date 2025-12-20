@@ -10,8 +10,7 @@ html, body {
 }
 
 body {
-    display: flex;
-    justify-content: center;
+    background: #000;
 }
 
 #app {
@@ -1081,4 +1080,30 @@ body {
   padding: 16px 14px;
   text-align: left;
   line-height: 1.4;
+}
+
+.remix-section,
+.support-section {
+  margin-top: 40px;
+  padding: 20px 16px;
+  background: #0b0b0b;
+  border-radius: 18px;
+  border: 1px solid #1f1f1f;
+}
+
+.support-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.support-btn {
+  flex: 1;
+  padding: 16px 0;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
+  background: #111;
+  border: 1px solid #333;
+  color: #fff;
 }
