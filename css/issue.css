@@ -1107,3 +1107,10 @@ body {
   border: 1px solid #333;
   color: #fff;
 }
+
+.support-btn.gold {
+  border: 1.5px solid rgba(255, 215, 120, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(255,215,120,0.25),
+    0 0 20px rgba(255,215,120,0.18);
+}
