@@ -297,3 +297,42 @@ supportModal?.addEventListener("click", (e) => {
     supportModal.hidden = true;
   }
 });
+
+/* =========================
+   SUPPORT CONFIRM (FIXED)
+========================= */
+
+let selectedSupportLevel = null;
+
+function bindSupportLevelEvents() {
+  document.querySelectorAll(".support-level").forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll(".support-level")
+        .forEach(b => b.classList.remove("active"));
+
+      btn.classList.add("active");
+      selectedSupportLevel = btn.dataset.level;
+
+      const confirmBtn = document.querySelector(".support-confirm");
+      if (confirmBtn) confirmBtn.disabled = false;
+    };
+  });
+}
+
+// 모달 열릴 때 바인딩
+supportProBtn?.addEventListener("click", () => {
+  supportModal.hidden = false;
+  bindSupportLevelEvents();
+});
+
+supportConBtn?.addEventListener("click", () => {
+  supportModal.hidden = false;
+  bindSupportLevelEvents();
+});
+
+// confirm 클릭
+document.querySelector(".support-confirm")?.addEventListener("click", () => {
+  if (!selectedSupportLevel) return;
+
+  alert(`보탬 단계 ${selectedSupportLevel} 실행`);
+});
