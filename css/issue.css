@@ -1503,3 +1503,15 @@ body {
 .ai-news-item:last-child {
   border-bottom: none;
 }
+
+/* AI 논점 카드 크기 통일 */
+.ai-argument .ai-box {
+  padding: 16px;
+}
+
+/* 내부 그룹 박스 제거 */
+.ai-argument .ai-group {
+  background: transparent;
+  padding: 0;
+  margin-top: 12px;
+}

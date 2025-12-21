@@ -131,31 +131,27 @@ data
     if (n.stance === "pro") newsProRoot.appendChild(li);
     if (n.stance === "con") newsConRoot.appendChild(li);
   });
-      // 🔥 뉴스 자동 펼침 / 접힘 판단
-    const proNewsCount = data.filter(
-      n => n.mode === "news" && n.stance === "pro"
-    ).length;
 
-    const conNewsCount = data.filter(
-      n => n.mode === "news" && n.stance === "con"
-    ).length;
-
-    const shouldCollapse =
-      proNewsCount === 0 ||
-      conNewsCount === 0 ||
-      Math.abs(proNewsCount - conNewsCount) >= 2;
-
-    if (shouldCollapse) {
-      document
-        .querySelectorAll(".ai-news-item")
-        .forEach(el => el.classList.add("collapsed"));
-    }
+    const hasNews = data.some(n => n.mode === "news");
 
         // ✅ [여기!] 뉴스 자체가 하나도 없을 때 섹션 숨김
-    const hasNews = data.some(n => n.mode === "news");
+    const aiNewsSection = document.querySelector(".ai-news");
+    const emptyMsg = document.getElementById("ai-news-empty");
+
     if (!hasNews) {
-      document.querySelector(".ai-news")?.setAttribute("hidden", "");
+      emptyMsg?.removeAttribute("hidden");
+
+      // 🔥 뉴스 리스트 숨김
+      qs("ai-news-pro")?.setAttribute("hidden", "");
+      qs("ai-news-con")?.setAttribute("hidden", "");
+    } else {
+      emptyMsg?.setAttribute("hidden", "");
+
+      // 🔥 뉴스 리스트 복구
+      qs("ai-news-pro")?.removeAttribute("hidden");
+      qs("ai-news-con")?.removeAttribute("hidden");
     }
+
 } 
 /* ==========================================================================
    1. URL → issue id
