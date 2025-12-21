@@ -96,13 +96,18 @@ data
     const li = document.createElement("li");
     li.className = "ai-news-item";
 
-    // 🔥 출처 라벨 결정
-    const sourceLabel =
-      n.source === "naver"
-        ? "네이버 뉴스"
-        : n.source === "gnews"
-        ? "해외 언론"
-        : "기타 출처";
+    // 🔥 출처 라벨 매핑 (최소 안전 보완)
+    const sourceMap = {
+      naver: "네이버 뉴스",
+      gnews: "해외 언론",
+      google: "구글 뉴스",
+      reuters: "Reuters",
+      ap: "AP",
+      cnn: "CNN",
+      bbc: "BBC"
+    };
+
+    const sourceLabel = sourceMap[n.source] || "기타 출처";
 
     li.innerHTML = `
       <div class="ai-news-meta">
@@ -119,15 +124,25 @@ data
     if (n.stance === "pro") proRoot.appendChild(li);
     if (n.stance === "con") conRoot.appendChild(li);
   });
-  
-    // 🔥 STEP 4. 뉴스가 하나도 없을 때 처리 (여기!)
-  const hasNews = data?.some(n => n.mode === "news");
+      // 🔥 뉴스 자동 펼침 / 접힘 판단
+    const proNewsCount = data.filter(
+      n => n.mode === "news" && n.stance === "pro"
+    ).length;
 
-  if (!hasNews) {
-    document
-      .querySelectorAll(".ai-news-title")
-      .forEach(el => el.setAttribute("hidden", ""));
-  }
+    const conNewsCount = data.filter(
+      n => n.mode === "news" && n.stance === "con"
+    ).length;
+
+    const shouldCollapse =
+      proNewsCount === 0 ||
+      conNewsCount === 0 ||
+      Math.abs(proNewsCount - conNewsCount) >= 2;
+
+    if (shouldCollapse) {
+      document
+        .querySelectorAll(".ai-news-item")
+        .forEach(el => el.classList.add("collapsed"));
+    }
 
 } 
 /* ==========================================================================
