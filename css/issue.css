@@ -1102,7 +1102,7 @@ body {
 
 .support-custom-desc {
   font-size: 12px;
-  color: #888;
+  color: #bdbdbd; /* 기존 #888 → 밝게 */
   margin-top: 6px;
 }
 
@@ -1111,7 +1111,7 @@ body {
   margin-top: 16px;
   font-size: 12px;
   line-height: 1.5;
-  color: #999;
+  color: #b0b0b0;
   text-align: center;
 }
 
@@ -1335,6 +1335,7 @@ body {
 }
 
 .support-confirm:disabled {
-  background: #555;
-  color: #222;
+  background: #2a2a2a;
+  color: #9a9a9a;
+  opacity: 1;
 }

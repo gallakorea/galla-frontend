@@ -499,3 +499,19 @@ supportModal?.addEventListener("click", (e) => {
     supportModal.setAttribute("hidden", "");
   }
 });
+
+// 보탬 레벨 선택
+document.querySelectorAll('.support-level').forEach(level => {
+  level.addEventListener('click', () => {
+    // 기존 active 제거
+    document.querySelectorAll('.support-level.active')
+      .forEach(el => el.classList.remove('active'));
+
+    // 클릭한 항목 active
+    level.classList.add('active');
+
+    // 실행 버튼 활성화
+    const confirmBtn = document.querySelector('.support-confirm');
+    if (confirmBtn) confirmBtn.disabled = false;
+  });
+});
