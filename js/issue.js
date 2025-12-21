@@ -65,7 +65,12 @@ async function loadAiNews(issueId) {
 
   data?.forEach(n => {
     const li = document.createElement("li");
-    li.innerHTML = `<b>${n.title}</b><br>${n.summary}`;
+    li.innerHTML = `
+  <a href="${n.link}" target="_blank" rel="noopener noreferrer">
+    <b>${n.title}</b>
+  </a>
+  <br>${n.summary}
+`;
 
     if (n.stance === "pro") proRoot.appendChild(li);
     if (n.stance === "con") conRoot.appendChild(li);
@@ -208,9 +213,9 @@ async function loadVoteStats(issueId) {
   const supabase = window.supabaseClient;
 
   const { data, error } = await supabase
-    .from("votes")
-    .select("type")
-    .eq("issue_id", issueId);
+  .from("ai_news")
+  .select("stance, title, summary, link")
+  .eq("issue_id", issueId);
 
   if (error) {
     console.error("vote stats error", error);
