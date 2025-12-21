@@ -1134,11 +1134,6 @@ body {
   cursor: not-allowed;
 }
 
-.support-level.active {
-  border-color: #ffe27a;
-  background: #1a1a1a;
-}
-
 /* hidden 기본 동작만 사용 */
 [hidden] {
   display: none !important;
@@ -1150,10 +1145,6 @@ body {
 .comment-action-modal,
 .support-modal {
   pointer-events: auto;
-}
-.support-section {
-  position: relative;
-  z-index: 10;
 }
 
 /* =========================
@@ -1233,7 +1224,9 @@ body {
 /* 🔥 열릴 때만 활성 */
 .speech-backdrop.active,
 .more-menu-backdrop.active,
-.comment-action-modal.active,
+.comment-action-modal.active {
+  pointer-events: auto;
+}
 
 /* =========================
    REMIX CARD (SEPARATE BOX)
