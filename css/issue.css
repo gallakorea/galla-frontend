@@ -1064,10 +1064,6 @@ body {
   border-color: #555;
 }
 
-.support-level.highlight {
-  border-color: rgba(255,214,120,0.6);
-}
-
 .level-title {
   display: block;
   font-size: 15px;
@@ -1130,7 +1126,9 @@ body {
 }
 
 .support-confirm:disabled {
-  opacity: 0.4;
+  background: #2b2b2b;
+  color: #bdbdbd;
+  opacity: 1;
   cursor: not-allowed;
 }
 
@@ -1320,12 +1318,12 @@ body {
 }
 
 .support-custom-desc {
-  color: #a0a0a0;
+  color: #cfcfcf;
 }
 
 /* 하단 안내 */
 .support-footnote {
-  color: #9a9a9a;
+  color: #c2c2c2;
 }
 
 /* 실행 버튼 */
@@ -1334,8 +1332,19 @@ body {
   background: #ffe27a;
 }
 
-.support-confirm:disabled {
-  background: #2a2a2a;
-  color: #9a9a9a;
-  opacity: 1;
+/* =========================
+   SUPPORT LEVEL ACTIVE (FINAL)
+========================= */
+.support-level.active {
+  border-color: #ffe27a;
+  background: #161616;
+  box-shadow: 0 0 0 1px rgba(255,226,122,0.6);
+}
+
+.support-level.active .level-title {
+  color: #ffe27a;
+}
+
+.support-level.active .level-desc {
+  color: #e6c96a;
 }

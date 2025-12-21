@@ -503,6 +503,7 @@ supportModal?.addEventListener("click", (e) => {
 // 보탬 레벨 선택
 document.querySelectorAll('.support-level').forEach(level => {
   level.addEventListener('click', () => {
+    level.classList.remove('highlight');
     // 기존 active 제거
     document.querySelectorAll('.support-level.active')
       .forEach(el => el.classList.remove('active'));
