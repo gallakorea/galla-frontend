@@ -55,20 +55,28 @@ async function loadAiNews(issueId) {
   qs("ai-skeleton-pro")?.setAttribute("hidden", "");
   qs("ai-skeleton-con")?.setAttribute("hidden", "");
 
-  const proRoot = qs("ai-news-pro");
-  const conRoot = qs("ai-news-con");
+  // 🔥 논점 루트
+  const argProRoot = qs("ai-argument-pro");
+  const argConRoot = qs("ai-argument-con");
 
-  if (!proRoot || !conRoot) return;
+  // 🔥 뉴스 루트
+  const newsProRoot = qs("ai-news-pro");
+  const newsConRoot = qs("ai-news-con");
 
-  proRoot.innerHTML = "";
-  conRoot.innerHTML = "";
+  if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
+
+  argProRoot.innerHTML = "";
+  argConRoot.innerHTML = "";
+  newsProRoot.innerHTML = "";
+  newsConRoot.innerHTML = "";
 
   // 🔥 최소 안전장치: 데이터가 아예 없을 때
 if (!data || data.length === 0) {
   proRoot.innerHTML =
-    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
-  conRoot.innerHTML =
-    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+    argProRoot.innerHTML =
+      `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+    argConRoot.innerHTML =
+      `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
   return;
 }
 
@@ -85,8 +93,8 @@ data
       <div class="ai-argument">${n.summary}</div>
     `;
 
-    if (n.stance === "pro") proRoot.appendChild(li);
-    if (n.stance === "con") conRoot.appendChild(li);
+    if (n.stance === "pro") argProRoot.appendChild(li);
+    if (n.stance === "con") argConRoot.appendChild(li);
   });
 
 // 2️⃣ 뉴스는 아래에
@@ -121,8 +129,8 @@ data
       <div class="ai-news-summary">${n.summary}</div>
     `;
 
-    if (n.stance === "pro") proRoot.appendChild(li);
-    if (n.stance === "con") conRoot.appendChild(li);
+    if (n.stance === "pro") newsProRoot.appendChild(li);
+    if (n.stance === "con") newsConRoot.appendChild(li);
   });
       // 🔥 뉴스 자동 펼침 / 접힘 판단
     const proNewsCount = data.filter(
@@ -144,6 +152,11 @@ data
         .forEach(el => el.classList.add("collapsed"));
     }
 
+        // ✅ [여기!] 뉴스 자체가 하나도 없을 때 섹션 숨김
+    const hasNews = data.some(n => n.mode === "news");
+    if (!hasNews) {
+      document.querySelector(".ai-news")?.setAttribute("hidden", "");
+    }
 } 
 /* ==========================================================================
    1. URL → issue id
