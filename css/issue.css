@@ -1322,3 +1322,66 @@ body {
   position: relative;
   z-index: 20;
 }
+
+/* =========================
+   SUPPORT MODAL TEXT FIX
+========================= */
+
+/* 모달 기본 텍스트 컬러 */
+.support-modal-box {
+  color: #eaeaea;
+}
+
+/* 제목 */
+.support-title {
+  color: #ffffff;
+}
+
+/* 상단 설명 */
+.support-desc {
+  color: #d0d0d0;
+}
+
+/* 보탬 카드 */
+.support-level {
+  color: #eaeaea;
+}
+
+.support-level .level-title {
+  color: #ffffff;
+}
+
+.support-level .level-desc {
+  color: #b5b5b5;
+}
+
+/* 활성 선택 */
+.support-level.active {
+  border-color: #ffe27a;
+  background: #161616;
+}
+
+/* 직접 입력 */
+.support-custom label {
+  color: #d0d0d0;
+}
+
+.support-custom-desc {
+  color: #a0a0a0;
+}
+
+/* 하단 안내 */
+.support-footnote {
+  color: #9a9a9a;
+}
+
+/* 실행 버튼 */
+.support-confirm {
+  color: #000;
+  background: #ffe27a;
+}
+
+.support-confirm:disabled {
+  background: #555;
+  color: #222;
+}
