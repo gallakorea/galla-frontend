@@ -1450,20 +1450,56 @@ body {
   display: inline-block;
 }
 
-.ai-argument-item {
-  padding: 14px;
+/* =========================
+   AI BOX (공통 카드)
+========================= */
+.ai-box {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 16px;
+  margin: 24px 0;
+}
+
+/* 헤더 */
+.ai-box-header {
   margin-bottom: 12px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.06);
 }
 
-.ai-argument-badge {
+.ai-box-header .ai-tip {
   font-size: 12px;
-  opacity: 0.7;
-  margin-bottom: 6px;
+  color: #aaa;
+  margin-top: 4px;
 }
 
-.ai-argument-title {
-  font-weight: 600;
-  margin-bottom: 4px;
+/* 본문 */
+.ai-box-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 그룹 */
+.ai-group {
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+/* 논점 아이템 */
+.ai-argument-item {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  margin-bottom: 8px;
+}
+
+/* 뉴스 아이템 */
+.ai-news-item {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.ai-news-item:last-child {
+  border-bottom: none;
 }

@@ -72,11 +72,10 @@ async function loadAiNews(issueId) {
 
   // 🔥 최소 안전장치: 데이터가 아예 없을 때
 if (!data || data.length === 0) {
-  proRoot.innerHTML =
-    argProRoot.innerHTML =
-      `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
-    argConRoot.innerHTML =
-      `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+  argProRoot.innerHTML =
+    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+  argConRoot.innerHTML =
+    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
   return;
 }
 
