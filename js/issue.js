@@ -14,6 +14,65 @@ let votingInProgress = false;
 let currentIssue = null;
 
 /* ==========================================================================
+   AI News (Generate + Load)
+========================================================================== */
+
+async function callAiNewsAndLoad(issueId) {
+    // 🔥 AI 뉴스 로딩 시작 → 스켈레톤 표시
+  qs("ai-skeleton-pro")?.removeAttribute("hidden");
+  qs("ai-skeleton-con")?.removeAttribute("hidden");
+  const supabase = window.supabaseClient;
+
+  const { error } = await supabase.functions.invoke(
+    "generate-ai-news",
+    {
+      body: { issue_id: issueId }
+    }
+  );
+
+  if (error) {
+    console.error("AI news invoke error", error);
+    return;
+  }
+
+  // ✅ 생성이 끝난 뒤에 로드
+  await loadAiNews(issueId);
+}
+
+async function loadAiNews(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("ai_news")
+    .select("stance, title, summary")
+    .eq("issue_id", issueId);
+
+  if (error) {
+    console.error("loadAiNews error", error);
+    return;
+  }
+    // ✅ AI 뉴스 로드 완료 → 스켈레톤 제거
+  qs("ai-skeleton-pro")?.setAttribute("hidden", "");
+  qs("ai-skeleton-con")?.setAttribute("hidden", "");
+
+  const proRoot = qs("ai-news-pro");
+  const conRoot = qs("ai-news-con");
+
+  if (!proRoot || !conRoot) return;
+
+  proRoot.innerHTML = "";
+  conRoot.innerHTML = "";
+
+  data?.forEach(n => {
+    const li = document.createElement("li");
+    li.innerHTML = `<b>${n.title}</b><br>${n.summary}`;
+
+    if (n.stance === "pro") proRoot.appendChild(li);
+    if (n.stance === "con") conRoot.appendChild(li);
+  });
+}
+
+/* ==========================================================================
    1. URL → issue id
 ========================================================================== */
 const params = new URLSearchParams(location.search);
@@ -44,6 +103,12 @@ if (!issueId) {
   }
 
   renderIssue(issue);
+// 🔥 AI 뉴스 생성 + 로드 (정상 버전)
+if (issue.status === "normal") {
+  await callAiNewsAndLoad(issue.id);
+}
+
+
   loadVoteStats(issue.id);   // 🔥 반드시 추가
   loadComments(issue.id);
   checkVoteStatus(issue.id);
@@ -516,3 +581,4 @@ document.querySelectorAll('.support-level').forEach(level => {
     if (confirmBtn) confirmBtn.disabled = false;
   });
 });
+
