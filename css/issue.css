@@ -222,38 +222,9 @@ body {
   margin-top: 16px;
 }
 
-/* 찬성 */
-.support-btn.pro {
-  color: #6fb2ff;
-}
-
-/* 반대 */
-.support-btn.con {
-  color: #ff7b7b;
-}
-
-.support-btn {
-  background: #111;
-  border: 1px solid #333;
-  color: #fff;
-}
-
-.support-btn.pro { color: #6fb2ff; }
-.support-btn.con { color: #ff7b7b; }
-
-.support-btn:hover {
-  background: #151515;
-}
-
 /* ================================
    SUPPORT SECTION WRAP (FIX)
 ================================ */
-
-.support-section {
-  padding: 0 16px;
-  margin-top: 32px;
-}
-
 /* SUPPORT HEADER */
 .support-header {
   font-size: 16px;
@@ -1168,17 +1139,6 @@ body {
   background: #1a1a1a;
 }
 
-.support-btn {
-  flex: 1;
-  padding: 14px 0;
-  border-radius: 14px;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  background: #111;
-  border: 1px solid #333;
-}
-
 /* hidden 기본 동작만 사용 */
 [hidden] {
   display: none !important;
@@ -1234,11 +1194,6 @@ body {
 /* =========================
    GLOBAL OVERLAY CLICK FIX
 ========================= */
-[hidden] {
-  display: none !important;
-  pointer-events: none !important;
-}
-
 .speech-backdrop,
 .more-menu-backdrop,
 .comment-action-modal,
@@ -1359,6 +1314,11 @@ body {
 .support-level.active {
   border-color: #ffe27a;
   background: #161616;
+  color: #ffe27a; /* 🔥 핵심 */
+}
+
+.support-level.active .level-title {
+  color: #ffe27a;
 }
 
 /* 직접 입력 */
