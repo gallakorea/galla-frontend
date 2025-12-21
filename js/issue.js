@@ -44,7 +44,7 @@ async function loadAiNews(issueId) {
 
   const { data, error } = await supabase
     .from("ai_news")
-    .select("stance, title, summary")
+    .select("stance, title, summary, link")
     .eq("issue_id", issueId);
 
   if (error) {
@@ -110,7 +110,19 @@ if (!issueId) {
   renderIssue(issue);
 // 🔥 AI 뉴스 생성 + 로드 (정상 버전)
 if (issue.status === "normal") {
-  await callAiNewsAndLoad(issue.id);
+  const { data: existing } = await supabase
+    .from("ai_news")
+    .select("id")
+    .eq("issue_id", issue.id)
+    .limit(1);
+
+  if (!existing || existing.length === 0) {
+    // 🔥 아직 AI 뉴스 없음 → 생성
+    await callAiNewsAndLoad(issue.id);
+  } else {
+    // ✅ 이미 있음 → 그냥 로드
+    await loadAiNews(issue.id);
+  }
 }
 
 
@@ -207,15 +219,15 @@ if (explainWrap) {
 }
 
 /* ==========================================================================
-   Vote Stats (🔥 빠져 있던 핵심)
+   Vote Stats
 ========================================================================== */
 async function loadVoteStats(issueId) {
   const supabase = window.supabaseClient;
 
   const { data, error } = await supabase
-  .from("ai_news")
-  .select("stance, title, summary, link")
-  .eq("issue_id", issueId);
+    .from("votes")
+    .select("type")
+    .eq("issue_id", issueId);
 
   if (error) {
     console.error("vote stats error", error);
@@ -231,19 +243,14 @@ async function loadVoteStats(issueId) {
   });
 
   const total = pro + con;
-
   const proPercent = total ? Math.round((pro / total) * 100) : 0;
   const conPercent = total ? 100 - proPercent : 0;
 
-  // bar
   qs("vote-pro-bar").style.width = `${proPercent}%`;
   qs("vote-con-bar").style.width = `${conPercent}%`;
-
-  // text
   qs("vote-pro-text").innerText = `${proPercent}%`;
   qs("vote-con-text").innerText = `${conPercent}%`;
 }
-
 
 /* ==========================================================================
    4. Vote
