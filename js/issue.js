@@ -42,9 +42,9 @@ async function callAiNewsAndLoad(issueId) {
 async function loadAiNews(issueId) {
   const supabase = window.supabaseClient;
 
-  const { data, error } = await supabase
+    const { data, error } = await supabase
     .from("ai_news")
-    .select("stance, title, summary, link")
+    .select("stance, title, summary, link, mode, source")
     .eq("issue_id", issueId);
 
   if (error) {
@@ -63,20 +63,73 @@ async function loadAiNews(issueId) {
   proRoot.innerHTML = "";
   conRoot.innerHTML = "";
 
-  data?.forEach(n => {
+  // 🔥 최소 안전장치: 데이터가 아예 없을 때
+if (!data || data.length === 0) {
+  proRoot.innerHTML =
+    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+  conRoot.innerHTML =
+    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+  return;
+}
+
+// 1️⃣ 논점 먼저
+data
+  .filter(n => n.mode === "argument")
+  .forEach(n => {
     const li = document.createElement("li");
+    li.className = "ai-argument-item";
+
     li.innerHTML = `
-  <a href="${n.link}" target="_blank" rel="noopener noreferrer">
-    <b>${n.title}</b>
-  </a>
-  <br>${n.summary}
-`;
+      <div class="ai-argument-badge">AI 논점</div>
+      <div class="ai-argument-title">${n.title}</div>
+      <div class="ai-argument">${n.summary}</div>
+    `;
 
     if (n.stance === "pro") proRoot.appendChild(li);
     if (n.stance === "con") conRoot.appendChild(li);
   });
-}
 
+// 2️⃣ 뉴스는 아래에
+data
+  .filter(n => n.mode === "news")
+  .forEach(n => {
+    const li = document.createElement("li");
+    li.className = "ai-news-item";
+
+    // 🔥 출처 라벨 결정
+    const sourceLabel =
+      n.source === "naver"
+        ? "네이버 뉴스"
+        : n.source === "gnews"
+        ? "해외 언론"
+        : "기타 출처";
+
+    li.innerHTML = `
+      <div class="ai-news-meta">
+        <span class="ai-news-source">${sourceLabel}</span>
+      </div>
+
+      <a href="${n.link}" target="_blank" rel="noopener noreferrer">
+        <b>${n.title}</b>
+      </a>
+
+      <div class="ai-news-summary">${n.summary}</div>
+    `;
+
+    if (n.stance === "pro") proRoot.appendChild(li);
+    if (n.stance === "con") conRoot.appendChild(li);
+  });
+  
+    // 🔥 STEP 4. 뉴스가 하나도 없을 때 처리 (여기!)
+  const hasNews = data?.some(n => n.mode === "news");
+
+  if (!hasNews) {
+    document
+      .querySelectorAll(".ai-news-title")
+      .forEach(el => el.setAttribute("hidden", ""));
+  }
+
+} 
 /* ==========================================================================
    1. URL → issue id
 ========================================================================== */
