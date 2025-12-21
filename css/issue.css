@@ -1515,3 +1515,31 @@ body {
   padding: 0;
   margin-top: 12px;
 }
+
+.ai-argument-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+  margin-bottom: 10px;
+}
+
+.ai-argument-item {
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+  margin-bottom: 10px;
+}
+
+.ai-argument-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.ai-argument-desc {
+  font-size: 13px;
+  color: #ccc;
+  line-height: 1.5;
+}
+
