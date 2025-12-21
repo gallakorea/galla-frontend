@@ -43,7 +43,8 @@ async function loadAiNews(issueId) {
     const { data, error } = await supabase
     .from("ai_news")
     .select("stance, title, summary, link, mode, source")
-    .eq("issue_id", issueId);
+    .eq("issue_id", issueId)
+    .order("created_at", { ascending: true });
 
   if (error) {
     console.error("loadAiNews error", error);
@@ -53,25 +54,22 @@ async function loadAiNews(issueId) {
   qs("ai-skeleton-pro")?.setAttribute("hidden", "");
   qs("ai-skeleton-con")?.setAttribute("hidden", "");
 
-  // 🔥 논점 루트
-  const argProRoot = qs("ai-argument-pro");
-  const argConRoot = qs("ai-argument-con");
+// 🔥 논점 루트 (누락돼 있었음)
+  const argProRoot = qs("ai-argument-pro-line");
+  const argConRoot = qs("ai-argument-con-line");
 
   // 🔥 뉴스 루트
   const newsProRoot = qs("ai-news-pro");
   const newsConRoot = qs("ai-news-con");
 
-  if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
-
+if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
   newsProRoot.innerHTML = "";
   newsConRoot.innerHTML = "";
 
   // 🔥 최소 안전장치: 데이터가 아예 없을 때
 if (!data || data.length === 0) {
-  argProRoot.innerHTML =
-    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
-  argConRoot.innerHTML =
-    `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+  argProRoot.textContent = "👍 AI가 논점을 정리 중입니다.";
+  argConRoot.textContent = "👎 AI가 논점을 정리 중입니다.";
 
   // ✅ 뉴스 섹션도 같이 숨김
   document.querySelector(".ai-news")?.setAttribute("hidden", "");
@@ -150,16 +148,46 @@ data
       }
     }
 } 
+
+/* ==========================================================================
+   AI News Wait (Polling)
+========================================================================== */
+async function waitForAiNews(issueId, retry = 5) {
+  const supabase = window.supabaseClient;
+
+  for (let i = 0; i < retry; i++) {
+    const { data, error } = await supabase
+      .from("ai_news")
+      .select("id")
+      .eq("issue_id", issueId)
+      .limit(1);
+
+    if (error) {
+      console.error("waitForAiNews error", error);
+      return false;
+    }
+
+    if (data && data.length > 0) {
+      return true;
+    }
+
+    await new Promise(r => setTimeout(r, 700));
+  }
+
+  return false;
+}
+
 /* ==========================================================================
    1. URL → issue id
 ========================================================================== */
 const params = new URLSearchParams(location.search);
-const issueId = params.get("id");
+const issueId = Number(params.get("id"));
 
-if (!issueId) {
-  alert("잘못된 접근입니다.");
+if (!issueId || Number.isNaN(issueId)) {
+  alert("잘못된 이슈 접근입니다.");
   location.href = "index.html";
 }
+
 
 /* ==========================================================================
    2. Load Issue
@@ -182,11 +210,9 @@ if (!issueId) {
 
 renderIssue(issue);
 
-let needDelayLoad = false;
+let needGenerate = false;
 
-/* ===============================
-   1️⃣ 논점 생성 (이미 없을 때만)
-=============================== */
+// 1️⃣ 논점 체크
 const { data: existingArgs } = await supabase
   .from("ai_news")
   .select("id")
@@ -202,43 +228,30 @@ if (!existingArgs || existingArgs.length === 0) {
       summary: issue.description || issue.one_line
     }
   });
-
-  // 👇 이 플래그가 핵심
-  needDelayLoad = true;
+  needGenerate = true;
 }
 
+// 2️⃣ 뉴스 체크
+const { data: existingNews } = await supabase
+  .from("ai_news")
+  .select("id")
+  .eq("issue_id", issue.id)
+  .eq("mode", "news")
+  .limit(1);
 
-
-/* ===============================
-   2️⃣ 뉴스 생성 (있을 때만)
-=============================== */
-
-// 🔥 이 줄이 반드시 필요
-if (needDelayLoad) {
-  await new Promise(r => setTimeout(r, 600));
+if (!existingNews || existingNews.length === 0) {
+  await supabase.functions.invoke("generate-ai-news", {
+    body: { issue_id: issue.id }
+  });
+  needGenerate = true;
 }
 
-if (issue.status === "normal") {
-  const { data: existing } = await supabase
-    .from("ai_news")
-    .select("id")
-    .eq("issue_id", issue.id)
-    .eq("mode", "news")
-    .limit(1);
-
-  if (!existing || existing.length === 0) {
-    await callAiNewsAndLoad(issue.id);
-
-    // ✅ 여기 딱 2줄 추가
-    await new Promise(r => setTimeout(r, 800));
-    await loadAiNews(issue.id);
-
-  } else {
-    await loadAiNews(issue.id);
-  }
-} else {
-  await loadAiNews(issue.id);
+if (needGenerate) {
+  await waitForAiNews(issue.id);
 }
+
+await loadAiNews(issue.id);
+
 
   loadVoteStats(issue.id);   // 🔥 반드시 추가
   loadComments(issue.id);
