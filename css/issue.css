@@ -1543,3 +1543,40 @@ body {
   line-height: 1.5;
 }
 
+/* =========================
+   AI ARGUMENT CARD
+========================= */
+
+.ai-argument-card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 18px;
+  margin: 20px 16px;
+}
+
+.ai-argument-card h3 {
+  margin-bottom: 14px;
+}
+
+.argument {
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.argument + .argument {
+  margin-top: 10px;
+}
+
+.argument.pro {
+  border-left: 4px solid #3b82f6;
+  background: #0d1624;
+}
+
+.argument.con {
+  border-left: 4px solid #ef4444;
+  background: #240d0d;
+}
