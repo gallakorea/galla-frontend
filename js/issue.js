@@ -35,8 +35,6 @@ async function callAiNewsAndLoad(issueId) {
     return;
   }
 
-  // ✅ 생성이 끝난 뒤에 로드
-  await loadAiNews(issueId);
 }
 
 async function loadAiNews(issueId) {
@@ -65,8 +63,6 @@ async function loadAiNews(issueId) {
 
   if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
 
-  argProRoot.innerHTML = "";
-  argConRoot.innerHTML = "";
   newsProRoot.innerHTML = "";
   newsConRoot.innerHTML = "";
 
@@ -76,25 +72,36 @@ if (!data || data.length === 0) {
     `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
   argConRoot.innerHTML =
     `<li><div class="ai-argument">AI가 논점을 정리 중입니다.</div></li>`;
+
+  // ✅ 뉴스 섹션도 같이 숨김
+  document.querySelector(".ai-news")?.setAttribute("hidden", "");
   return;
 }
 
-// 1️⃣ 논점 먼저
-data
-  .filter(n => n.mode === "argument")
-  .forEach(n => {
-    const li = document.createElement("li");
-    li.className = "ai-argument-item";
+// 🔥 논점 (argument) — 한 줄씩만 사용
+const proLine = qs("ai-argument-pro-line");
+const conLine = qs("ai-argument-con-line");
 
-    li.innerHTML = `
-      <div class="ai-argument-badge">AI 논점</div>
-      <div class="ai-argument-title">${n.title}</div>
-      <div class="ai-argument">${n.summary}</div>
-    `;
+const proArg = data.find(
+  n => n.mode === "argument" && n.stance === "pro"
+);
 
-    if (n.stance === "pro") argProRoot.appendChild(li);
-    if (n.stance === "con") argConRoot.appendChild(li);
-  });
+const conArg = data.find(
+  n => n.mode === "argument" && n.stance === "con"
+);
+
+if (proLine) {
+  proLine.textContent = proArg
+    ? `👍 ${proArg.title}`
+    : "👍 아직 정리된 찬성 논점이 없습니다";
+}
+
+if (conLine) {
+  conLine.textContent = conArg
+    ? `👎 ${conArg.title}`
+    : "👎 아직 정리된 반대 논점이 없습니다";
+}
+
 
 // 2️⃣ 뉴스는 아래에
 data
@@ -133,25 +140,15 @@ data
   });
 
     const hasNews = data.some(n => n.mode === "news");
-
-        // ✅ [여기!] 뉴스 자체가 하나도 없을 때 섹션 숨김
     const aiNewsSection = document.querySelector(".ai-news");
-    const emptyMsg = document.getElementById("ai-news-empty");
 
-    if (!hasNews) {
-      emptyMsg?.removeAttribute("hidden");
-
-      // 🔥 뉴스 리스트 숨김
-      qs("ai-news-pro")?.setAttribute("hidden", "");
-      qs("ai-news-con")?.setAttribute("hidden", "");
-    } else {
-      emptyMsg?.setAttribute("hidden", "");
-
-      // 🔥 뉴스 리스트 복구
-      qs("ai-news-pro")?.removeAttribute("hidden");
-      qs("ai-news-con")?.removeAttribute("hidden");
+    if (aiNewsSection) {
+      if (!hasNews) {
+        aiNewsSection.setAttribute("hidden", "");
+      } else {
+        aiNewsSection.removeAttribute("hidden");
+      }
     }
-
 } 
 /* ==========================================================================
    1. URL → issue id
@@ -183,24 +180,65 @@ if (!issueId) {
     return;
   }
 
-  renderIssue(issue);
-// 🔥 AI 뉴스 생성 + 로드 (정상 버전)
+renderIssue(issue);
+
+let needDelayLoad = false;
+
+/* ===============================
+   1️⃣ 논점 생성 (이미 없을 때만)
+=============================== */
+const { data: existingArgs } = await supabase
+  .from("ai_news")
+  .select("id")
+  .eq("issue_id", issue.id)
+  .eq("mode", "argument")
+  .limit(1);
+
+if (!existingArgs || existingArgs.length === 0) {
+  await supabase.functions.invoke("generate-ai-arguments", {
+    body: {
+      issue_id: issue.id,
+      title: issue.title,
+      summary: issue.description || issue.one_line
+    }
+  });
+
+  // 👇 이 플래그가 핵심
+  needDelayLoad = true;
+}
+
+
+
+/* ===============================
+   2️⃣ 뉴스 생성 (있을 때만)
+=============================== */
+
+// 🔥 이 줄이 반드시 필요
+if (needDelayLoad) {
+  await new Promise(r => setTimeout(r, 600));
+}
+
 if (issue.status === "normal") {
   const { data: existing } = await supabase
     .from("ai_news")
     .select("id")
     .eq("issue_id", issue.id)
+    .eq("mode", "news")
     .limit(1);
 
   if (!existing || existing.length === 0) {
-    // 🔥 아직 AI 뉴스 없음 → 생성
     await callAiNewsAndLoad(issue.id);
+
+    // ✅ 여기 딱 2줄 추가
+    await new Promise(r => setTimeout(r, 800));
+    await loadAiNews(issue.id);
+
   } else {
-    // ✅ 이미 있음 → 그냥 로드
     await loadAiNews(issue.id);
   }
+} else {
+  await loadAiNews(issue.id);
 }
-
 
   loadVoteStats(issue.id);   // 🔥 반드시 추가
   loadComments(issue.id);
