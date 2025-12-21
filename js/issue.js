@@ -36,13 +36,12 @@ async function callAiNewsAndLoad(issueId) {
   }
 
 }
-
 async function loadAiNews(issueId) {
   const supabase = window.supabaseClient;
 
-    const { data, error } = await supabase
+  const { data, error } = await supabase
     .from("ai_news")
-    .select("stance, title, summary, link, mode, source")
+    .select("id, stance, title, summary, link, mode, source, trust_score")
     .eq("issue_id", issueId)
     .order("created_at", { ascending: true });
 
@@ -50,104 +49,122 @@ async function loadAiNews(issueId) {
     console.error("loadAiNews error", error);
     return;
   }
-    // ✅ AI 뉴스 로드 완료 → 스켈레톤 제거
+
   qs("ai-skeleton-pro")?.setAttribute("hidden", "");
   qs("ai-skeleton-con")?.setAttribute("hidden", "");
 
-// 🔥 논점 루트 (누락돼 있었음)
   const argProRoot = qs("ai-argument-pro-line");
   const argConRoot = qs("ai-argument-con-line");
-
-  // 🔥 뉴스 루트
   const newsProRoot = qs("ai-news-pro");
   const newsConRoot = qs("ai-news-con");
 
-if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
+  if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
+
   newsProRoot.innerHTML = "";
   newsConRoot.innerHTML = "";
 
-  // 🔥 최소 안전장치: 데이터가 아예 없을 때
-if (!data || data.length === 0) {
-  argProRoot.textContent = "👍 AI가 논점을 정리 중입니다.";
-  argConRoot.textContent = "👎 AI가 논점을 정리 중입니다.";
+  if (!data || data.length === 0) {
+    argProRoot.textContent = "👍 AI가 논점을 정리 중입니다.";
+    argConRoot.textContent = "👎 AI가 논점을 정리 중입니다.";
+    document.querySelector(".ai-news")?.setAttribute("hidden", "");
+    return;
+  }
 
-  // ✅ 뉴스 섹션도 같이 숨김
-  document.querySelector(".ai-news")?.setAttribute("hidden", "");
-  return;
-}
+  // 1️⃣ 논점: 진영당 1개
+  const proArg = data.find(n => n.mode === "argument" && n.stance === "pro");
+  const conArg = data.find(n => n.mode === "argument" && n.stance === "con");
 
-// 🔥 논점 (argument) — 한 줄씩만 사용
-const proLine = qs("ai-argument-pro-line");
-const conLine = qs("ai-argument-con-line");
-
-const proArg = data.find(
-  n => n.mode === "argument" && n.stance === "pro"
-);
-
-const conArg = data.find(
-  n => n.mode === "argument" && n.stance === "con"
-);
-
-if (proLine) {
-  proLine.textContent = proArg
+  argProRoot.textContent = proArg
     ? `👍 ${proArg.title}`
-    : "👍 아직 정리된 찬성 논점이 없습니다";
-}
+    : "👍 찬성 논점이 아직 없습니다";
 
-if (conLine) {
-  conLine.textContent = conArg
+  argConRoot.textContent = conArg
     ? `👎 ${conArg.title}`
-    : "👎 아직 정리된 반대 논점이 없습니다";
-}
+    : "👎 반대 논점이 아직 없습니다";
 
+  // 2️⃣ 뉴스: 진영당 최대 3개
+  const sourceMap = {
+    naver: "네이버 뉴스",
+    gnews: "해외 언론",
+    google: "구글 뉴스",
+    reuters: "Reuters",
+    ap: "AP",
+    cnn: "CNN",
+    bbc: "BBC"
+  };
 
-// 2️⃣ 뉴스는 아래에
-data
-  .filter(n => n.mode === "news")
-  .forEach(n => {
-    const li = document.createElement("li");
-    li.className = "ai-news-item";
+  const proNews = data
+    .filter(n => n.mode === "news" && n.stance === "pro")
+    .slice(0, 3);
 
-    // 🔥 출처 라벨 매핑 (최소 안전 보완)
-    const sourceMap = {
-      naver: "네이버 뉴스",
-      gnews: "해외 언론",
-      google: "구글 뉴스",
-      reuters: "Reuters",
-      ap: "AP",
-      cnn: "CNN",
-      bbc: "BBC"
-    };
+  const conNews = data
+    .filter(n => n.mode === "news" && n.stance === "con")
+    .slice(0, 3);
 
-    const sourceLabel = sourceMap[n.source] || "기타 출처";
+  /* ===============================
+     뉴스 렌더링 함수
+  =============================== */
+  const renderNews = (root, list) => {
+    root.innerHTML = "";
 
-    li.innerHTML = `
-      <div class="ai-news-meta">
-        <span class="ai-news-source">${sourceLabel}</span>
-      </div>
+    list.forEach(n => {
+      const li = document.createElement("li");
+      li.className = "ai-news-item";
 
-      <a href="${n.link}" target="_blank" rel="noopener noreferrer">
-        <b>${n.title}</b>
-      </a>
+      li.innerHTML = `
+        <div class="ai-news-meta">
+          <span class="ai-news-source">
+            ${sourceMap[n.source] || "기타 출처"}
+          </span>
+          <span class="ai-news-badge">
+            신뢰도 ${n.trust_score ?? 80}%
+          </span>
+        </div>
 
-      <div class="ai-news-summary">${n.summary}</div>
-    `;
+        <a href="${n.link}"
+           target="_blank"
+           rel="noopener noreferrer"
+           data-news-id="${n.id}">
+          <b>${n.title}</b>
+        </a>
 
-    if (n.stance === "pro") newsProRoot.appendChild(li);
-    if (n.stance === "con") newsConRoot.appendChild(li);
-  });
+        <div class="ai-news-summary">${n.summary}</div>
+      `;
 
-    const hasNews = data.some(n => n.mode === "news");
-    const aiNewsSection = document.querySelector(".ai-news");
-
-    if (aiNewsSection) {
-      if (!hasNews) {
-        aiNewsSection.setAttribute("hidden", "");
-      } else {
-        aiNewsSection.removeAttribute("hidden");
+      const link = li.querySelector("a");
+      if (link) {
+        link.addEventListener("click", async () => {
+          try {
+            const supabase = window.supabaseClient;
+            await supabase.rpc("increment_ai_news_click", {
+              news_id: n.id
+            });
+          } catch (e) {
+            console.error("news click log error", e);
+          }
+        });
       }
-    }
-} 
+
+      root.appendChild(li);
+    });
+  };
+
+  /* ===============================
+     ✅ 여기서 반드시 실행 (이게 빠졌었음)
+  =============================== */
+  renderNews(newsProRoot, proNews);
+  renderNews(newsConRoot, conNews);
+
+  // 뉴스가 하나라도 있으면 섹션 표시
+  const hasNews = proNews.length > 0 || conNews.length > 0;
+  const aiNewsSection = document.querySelector(".ai-news");
+
+  if (aiNewsSection) {
+    if (hasNews) aiNewsSection.removeAttribute("hidden");
+    else aiNewsSection.setAttribute("hidden", "");
+  }
+}
+ // loadAiNews 끝
 
 /* ==========================================================================
    AI News Wait (Polling)
