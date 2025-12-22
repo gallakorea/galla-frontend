@@ -9,6 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const oneLineEl = document.getElementById('oneLine');
   const descEl = document.getElementById('description');
   const donationEl = document.getElementById('donationTarget'); // ✅ 추가
+  const authorStanceEls = document.querySelectorAll(
+  'input[name="authorStance"]'
+);
 
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
@@ -105,6 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const authorStance = [...authorStanceEls].find(r => r.checked)?.value;
+
+    if (!authorStance) {
+      alert('이 이슈에 대한 나의 입장을 선택해주세요');
+      return;
+    }
+
+
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
@@ -118,6 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
+       
+        <div class="issue-author-stance">
+          발의자 입장 · ${authorStance === 'pro' ? '찬성' : '반대'}
+        </div>
 
         ${thumbImg ? `
           <div class="preview-thumb-wrap">
@@ -162,7 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
         oneLine: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
-        is_anonymous: anon
+        is_anonymous: anon,
+        author_stance: authorStance   // ✅ 이 줄
       };
 
       sessionStorage.setItem('writePayload', JSON.stringify(payload));

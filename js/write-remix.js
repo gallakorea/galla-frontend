@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
   const stanceBox = document.getElementById('remixStanceBox');
-const guideText = document.getElementById('remixGuideText');
+  const guideText = document.getElementById('remixGuideText');
 
 if (remixStance === 'pro') {
   stanceBox.classList.add('pro');
@@ -203,13 +203,14 @@ if (remixStance === 'con') {
       }
 
       const payload = {
-        category: remixContext.category, // 🔒 반드시 context 기준
+        category: remixContext.category,
         title: titleEl.value,
         oneLine: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
         is_anonymous: anon,
 
+        author_stance: remixStance,        // 🔥 반드시 추가
         remix_stance: remixStance,
         remix_origin_issue_id: remixOriginIssueId
       };
