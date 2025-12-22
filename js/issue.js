@@ -17,72 +17,55 @@ let currentIssue = null;
    AI News (Generate + Load)
 ========================================================================== */
 
-async function callAiNewsAndLoad(issueId) {
-    // 🔥 AI 뉴스 로딩 시작 → 스켈레톤 표시
-  qs("ai-skeleton-pro")?.removeAttribute("hidden");
-  qs("ai-skeleton-con")?.removeAttribute("hidden");
-  const supabase = window.supabaseClient;
-
-  const { error } = await supabase.functions.invoke(
-    "generate-ai-news",
-    {
-      body: { issue_id: issueId }
-    }
-  );
-
-  if (error) {
-    console.error("AI news invoke error", error);
-    return;
-  }
-
-}
 async function loadAiNews(issueId) {
   const supabase = window.supabaseClient;
 
   const { data, error } = await supabase
     .from("ai_news")
-    .select("id, stance, title, summary, link, mode, source, trust_score")
+    .select("id, stance, title, summary, link, source, trust_score")
     .eq("issue_id", issueId)
-    .order("created_at", { ascending: true });
+    .eq("mode", "news")
+    .order("id");
 
-  if (error) {
-    console.error("loadAiNews error", error);
-    return;
-  }
-
-  qs("ai-skeleton-pro")?.setAttribute("hidden", "");
-  qs("ai-skeleton-con")?.setAttribute("hidden", "");
-
-  const argProRoot = qs("ai-argument-pro-line");
-  const argConRoot = qs("ai-argument-con-line");
-  const newsProRoot = qs("ai-news-pro");
-  const newsConRoot = qs("ai-news-con");
-
-  if (!argProRoot || !argConRoot || !newsProRoot || !newsConRoot) return;
-
-  newsProRoot.innerHTML = "";
-  newsConRoot.innerHTML = "";
+  if (error) return;
 
   if (!data || data.length === 0) {
-    argProRoot.textContent = "👍 AI가 논점을 정리 중입니다.";
-    argConRoot.textContent = "👎 AI가 논점을 정리 중입니다.";
-    document.querySelector(".ai-news")?.setAttribute("hidden", "");
+    qs("ai-skeleton-pro")?.removeAttribute("hidden");
+    qs("ai-skeleton-con")?.removeAttribute("hidden");
     return;
   }
 
-  // 1️⃣ 논점: 진영당 1개
-  const proArg = data.find(n => n.mode === "argument" && n.stance === "pro");
-  const conArg = data.find(n => n.mode === "argument" && n.stance === "con");
+  const proNews = [];
+  const conNews = [];
 
-  argProRoot.textContent = proArg
-    ? `👍 ${proArg.title}`
-    : "👍 찬성 논점이 아직 없습니다";
+  data.forEach(n => {
+    if (n.stance === "pro") proNews.push(n);
+    else if (n.stance === "con") conNews.push(n);
+  });
 
-  argConRoot.textContent = conArg
-    ? `👎 ${conArg.title}`
-    : "👎 반대 논점이 아직 없습니다";
+  renderNews(qs("ai-news-pro"), proNews.slice(0, 3));
+  renderNews(qs("ai-news-con"), conNews.slice(0, 3));
 
-  // 2️⃣ 뉴스: 진영당 최대 3개
+// 찬성
+if (proNews.length === 0) {
+  qs("ai-skeleton-pro")?.removeAttribute("hidden");
+} else {
+  qs("ai-skeleton-pro")?.setAttribute("hidden", "");
+}
+
+// 반대
+if (conNews.length === 0) {
+  qs("ai-skeleton-con")?.removeAttribute("hidden");
+} else {
+  qs("ai-skeleton-con")?.setAttribute("hidden", "");
+}
+
+  const aiNewsSection = document.querySelector(".ai-news");
+  if (aiNewsSection) aiNewsSection.removeAttribute("hidden");
+}
+
+// 2️⃣ 뉴스: 진영당 최대 3개
+
   const sourceMap = {
     naver: "네이버 뉴스",
     gnews: "해외 언론",
@@ -93,18 +76,11 @@ async function loadAiNews(issueId) {
     bbc: "BBC"
   };
 
-  const proNews = data
-    .filter(n => n.mode === "news" && n.stance === "pro")
-    .slice(0, 3);
-
-  const conNews = data
-    .filter(n => n.mode === "news" && n.stance === "con")
-    .slice(0, 3);
-
   /* ===============================
      뉴스 렌더링 함수
   =============================== */
   const renderNews = (root, list) => {
+    if (!root) return;   // 🔥 이 줄 추가
     root.innerHTML = "";
 
     list.forEach(n => {
@@ -149,46 +125,32 @@ async function loadAiNews(issueId) {
     });
   };
 
-  /* ===============================
-     ✅ 여기서 반드시 실행 (이게 빠졌었음)
-  =============================== */
-  renderNews(newsProRoot, proNews);
-  renderNews(newsConRoot, conNews);
-
-  // 뉴스가 하나라도 있으면 섹션 표시
-  const hasNews = proNews.length > 0 || conNews.length > 0;
-  const aiNewsSection = document.querySelector(".ai-news");
-
-  if (aiNewsSection) {
-    if (hasNews) aiNewsSection.removeAttribute("hidden");
-    else aiNewsSection.setAttribute("hidden", "");
-  }
-}
  // loadAiNews 끝
 
 /* ==========================================================================
    AI News Wait (Polling)
 ========================================================================== */
-async function waitForAiNews(issueId, retry = 5) {
+async function waitForAiNews(issueId, retry = 8) {
   const supabase = window.supabaseClient;
 
   for (let i = 0; i < retry; i++) {
     const { data, error } = await supabase
       .from("ai_news")
-      .select("id")
-      .eq("issue_id", issueId)
-      .limit(1);
+      .select("mode")
+      .eq("issue_id", issueId);
 
     if (error) {
       console.error("waitForAiNews error", error);
       return false;
     }
 
-    if (data && data.length > 0) {
-      return true;
-    }
+  const hasNews = data?.some(d => d.mode === "news");
 
-    await new Promise(r => setTimeout(r, 700));
+  if (hasNews) {
+    return true;
+  }
+
+    await new Promise(r => setTimeout(r, 800));
   }
 
   return false;
@@ -229,7 +191,7 @@ renderIssue(issue);
 
 let needGenerate = false;
 
-// 1️⃣ 논점 체크
+// 1️⃣ 논점 체크 (🔥 반드시 필요)
 const { data: existingArgs } = await supabase
   .from("ai_news")
   .select("id")
@@ -241,12 +203,14 @@ if (!existingArgs || existingArgs.length === 0) {
   await supabase.functions.invoke("generate-ai-arguments", {
     body: {
       issue_id: issue.id,
+      author_stance: issue.author_stance,
       title: issue.title,
-      summary: issue.description || issue.one_line
+      description: issue.description || issue.one_line
     }
   });
   needGenerate = true;
 }
+
 
 // 2️⃣ 뉴스 체크
 const { data: existingNews } = await supabase
@@ -257,9 +221,14 @@ const { data: existingNews } = await supabase
   .limit(1);
 
 if (!existingNews || existingNews.length === 0) {
-  await supabase.functions.invoke("generate-ai-news", {
-    body: { issue_id: issue.id }
-  });
+await supabase.functions.invoke("generate-ai-news", {
+  body: {
+    issue_id: issue.id,
+    author_stance: issue.author_stance,   // 🔥 필수
+    title: issue.title,
+    description: issue.description || issue.one_line
+  }
+});
   needGenerate = true;
 }
 
@@ -268,6 +237,11 @@ if (needGenerate) {
 }
 
 await loadAiNews(issue.id);
+
+// 🔥 0.8초 뒤 한 번 더 로드 (DB 반영 지연 대응)
+setTimeout(() => {
+  loadAiNews(issue.id);
+}, 800);
 
 
   loadVoteStats(issue.id);   // 🔥 반드시 추가
@@ -556,7 +530,7 @@ async function loadComments(issueId) {
     .select("*")
     .eq("issue_id", issueId)
     .eq("status", "normal")
-    .order("created_at", { ascending: true });
+    .order("id", { ascending: true });
 
   const root = qs("comment-list");
   root.innerHTML = "";
