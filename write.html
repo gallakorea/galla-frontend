@@ -85,6 +85,28 @@
           />
         </div>
 
+        <!-- ✅ 나의 입장 (필수) : 한줄요약 바로 아래 추가 -->
+        <div class="field-block" id="authorStanceBlock">
+          <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
+
+          <div class="ai-tone-radio-group" style="margin-top: 10px;">
+            <label class="ai-tone-option">
+              <input type="radio" name="authorStance" value="pro" required />
+              <span>찬성 (pro)</span>
+            </label>
+
+            <label class="ai-tone-option">
+              <input type="radio" name="authorStance" value="con" required />
+              <span>반대 (con)</span>
+            </label>
+          </div>
+
+          <!-- 프론트 노출 최소화용 가이드 (원하면 삭제 가능) -->
+          <div class="guide-text" style="margin-top: 8px;">
+            이 선택은 공개되지 않으며, AI 논점/뉴스를 정렬하는 기준값으로만 사용됩니다.
+          </div>
+        </div>
+
         <!-- 이슈 썸네일 (필수) -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일 <span class="required">(필수)</span></label>
