@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
       /* =========================
          2️⃣ write 값 수집
       ========================= */
+      const authorStance =
+        document.querySelector('input[name="authorStance"]:checked')?.value;
+
+      if (!authorStance) {
+        alert('이 이슈에 대한 나의 입장을 선택해주세요');
+        return;
+      }
       const category = document.getElementById('category')?.value;
       const title = document.getElementById('title')?.value;
       const oneLine = document.getElementById('oneLine')?.value || null;
@@ -115,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             description,
             donation_target: donationTarget,
             is_anonymous: isAnonymous,
+            author_stance: authorStance, // 🔥 반드시 필요
             thumbnail_url,
             video_url,
             status: 'draft',

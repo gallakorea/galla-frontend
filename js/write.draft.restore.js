@@ -51,6 +51,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const anonEl = document.getElementById('isAnonymous');
     if (anonEl) anonEl.checked = !!draft.is_anonymous;
 
+    // 🔥 author_stance 복원 (필수)
+    if (draft.author_stance) {
+      const stanceEl = document.querySelector(
+        `input[name="authorStance"][value="${draft.author_stance}"]`
+      );
+      if (stanceEl) stanceEl.checked = true;
+    }
+
     if (draft.thumbnail_url) {
       const thumbPreview = document.getElementById('thumbPreview');
       if (thumbPreview) {
