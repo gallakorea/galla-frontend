@@ -17,55 +17,6 @@ let currentIssue = null;
    AI News (Generate + Load)
 ========================================================================== */
 
-async function loadAiNews(issueId) {
-  const supabase = window.supabaseClient;
-
-  const { data, error } = await supabase
-    .from("ai_news")
-    .select("id, stance, title, summary, link, source, trust_score")
-    .eq("issue_id", issueId)
-    .eq("mode", "news")
-    .order("id");
-
-  if (error) return;
-
-  if (!data || data.length === 0) {
-    qs("ai-skeleton-pro")?.removeAttribute("hidden");
-    qs("ai-skeleton-con")?.removeAttribute("hidden");
-    return;
-  }
-
-  const proNews = [];
-  const conNews = [];
-
-  data.forEach(n => {
-    if (n.stance === "pro") proNews.push(n);
-    else if (n.stance === "con") conNews.push(n);
-  });
-
-  renderNews(qs("ai-news-pro"), proNews.slice(0, 3));
-  renderNews(qs("ai-news-con"), conNews.slice(0, 3));
-
-// 찬성
-if (proNews.length === 0) {
-  qs("ai-skeleton-pro")?.removeAttribute("hidden");
-} else {
-  qs("ai-skeleton-pro")?.setAttribute("hidden", "");
-}
-
-// 반대
-if (conNews.length === 0) {
-  qs("ai-skeleton-con")?.removeAttribute("hidden");
-} else {
-  qs("ai-skeleton-con")?.setAttribute("hidden", "");
-}
-
-  const aiNewsSection = document.querySelector(".ai-news");
-  if (aiNewsSection) aiNewsSection.removeAttribute("hidden");
-}
-
-// 2️⃣ 뉴스: 진영당 최대 3개
-
   const sourceMap = {
     naver: "네이버 뉴스",
     gnews: "해외 언론",
@@ -125,34 +76,115 @@ if (conNews.length === 0) {
     });
   };
 
- // loadAiNews 끝
+
+async function loadAiNews(issueId) {
+  const supabase = window.supabaseClient;
+
+const { data, error } = await supabase
+  .from("ai_news")
+  .select("id, stance, title, summary, link, source, trust_score")
+  .eq("issue_id", issueId)
+  .eq("mode", "news")
+  .order("id");
+
+if (error) {
+  console.error("[loadAiNews ERROR]", error);
+  qs("ai-skeleton-pro")?.removeAttribute("hidden");
+  qs("ai-skeleton-con")?.removeAttribute("hidden");
+  return;
+}
+
+  const proNews = [];
+  const conNews = [];
+
+  data.forEach(n => {
+    if (n.stance === "pro") proNews.push(n);
+    else if (n.stance === "con") conNews.push(n);
+  });
+
+  renderNews(qs("ai-news-pro"), proNews.slice(0, 3));
+  renderNews(qs("ai-news-con"), conNews.slice(0, 3));
+
+// 찬성
+if (proNews.length === 0) {
+  qs("ai-skeleton-pro")?.removeAttribute("hidden");
+} else {
+  qs("ai-skeleton-pro")?.setAttribute("hidden", "");
+}
+
+// 반대
+if (conNews.length === 0) {
+  qs("ai-skeleton-con")?.removeAttribute("hidden");
+} else {
+  qs("ai-skeleton-con")?.setAttribute("hidden", "");
+}
+
+  const aiNewsSection = document.querySelector(".ai-news");
+  if (aiNewsSection) aiNewsSection.removeAttribute("hidden");
+}
+
+/* ==========================================================================
+   AI Argument Load
+========================================================================== */
+async function loadAiArguments(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("ai_news")
+    .select("id, stance, title, summary")
+    .eq("issue_id", issueId)
+    .eq("mode", "argument")
+    .order("id");
+
+  if (error) {
+    console.error("[loadAiArguments ERROR]", error);
+    return;
+  }
+
+  const pro = data.filter(d => d.stance === "pro")[0];
+  const con = data.filter(d => d.stance === "con")[0];
+
+  // 🔴 DOM ID는 반드시 존재해야 함
+  if (pro && qs("ai-arg-pro")) {
+    qs("ai-arg-pro").innerHTML = `
+      <h4>${pro.title}</h4>
+      <p>${pro.summary}</p>
+    `;
+  }
+
+  if (con && qs("ai-arg-con")) {
+    qs("ai-arg-con").innerHTML = `
+      <h4>${con.title}</h4>
+      <p>${con.summary}</p>
+    `;
+  }
+
+  document.querySelector(".ai-argument")?.removeAttribute("hidden");
+}
+
 
 /* ==========================================================================
    AI News Wait (Polling)
 ========================================================================== */
-async function waitForAiNews(issueId, retry = 8) {
+async function waitForAiMode(issueId, mode, retry = 10) {
   const supabase = window.supabaseClient;
 
   for (let i = 0; i < retry; i++) {
     const { data, error } = await supabase
       .from("ai_news")
-      .select("mode")
-      .eq("issue_id", issueId);
+      .select("id")
+      .eq("issue_id", issueId)
+      .eq("mode", mode)
+      .limit(1);
 
     if (error) {
-      console.error("waitForAiNews error", error);
+      console.error(`[waitForAiMode ${mode} ERROR]`, error);
       return false;
     }
 
-  const hasNews = data?.some(d => d.mode === "news");
-
-  if (hasNews) {
-    return true;
-  }
-
+    if (data && data.length > 0) return true;
     await new Promise(r => setTimeout(r, 800));
   }
-
   return false;
 }
 
@@ -189,9 +221,10 @@ if (!issueId || Number.isNaN(issueId)) {
 
 renderIssue(issue);
 
-let needGenerate = false;
+let needArgs = false;
+let needNews = false;
 
-// 1️⃣ 논점 체크 (🔥 반드시 필요)
+// 1️⃣ 논점(argument) 체크
 const { data: existingArgs } = await supabase
   .from("ai_news")
   .select("id")
@@ -208,11 +241,10 @@ if (!existingArgs || existingArgs.length === 0) {
       description: issue.description || issue.one_line
     }
   });
-  needGenerate = true;
+  needArgs = true;
 }
 
-
-// 2️⃣ 뉴스 체크
+// 2️⃣ 뉴스(news) 체크
 const { data: existingNews } = await supabase
   .from("ai_news")
   .select("id")
@@ -221,28 +253,30 @@ const { data: existingNews } = await supabase
   .limit(1);
 
 if (!existingNews || existingNews.length === 0) {
-await supabase.functions.invoke("generate-ai-news", {
-  body: {
-    issue_id: issue.id,
-    author_stance: issue.author_stance,   // 🔥 필수
-    title: issue.title,
-    description: issue.description || issue.one_line
-  }
-});
-  needGenerate = true;
+  await supabase.functions.invoke("generate-ai-news", {
+    body: {
+      issue_id: issue.id,
+      author_stance: issue.author_stance,
+      title: issue.title,
+      description: issue.description || issue.one_line
+    }
+  });
+  needNews = true;
 }
 
-if (needGenerate) {
-  await waitForAiNews(issue.id);
-}
+// 3️⃣ 생성 대기
+if (needArgs) await waitForAiMode(issue.id, "argument");
+if (needNews) await waitForAiMode(issue.id, "news");
 
+// 4️⃣ 로드
+await loadAiArguments(issue.id);
 await loadAiNews(issue.id);
 
-// 🔥 0.8초 뒤 한 번 더 로드 (DB 반영 지연 대응)
+// 5️⃣ 보조 재호출 (DB 지연 대비)
 setTimeout(() => {
+  loadAiArguments(issue.id);
   loadAiNews(issue.id);
 }, 800);
-
 
   loadVoteStats(issue.id);   // 🔥 반드시 추가
   loadComments(issue.id);
