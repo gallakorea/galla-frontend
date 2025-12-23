@@ -1,5 +1,6 @@
 import { loadAiArguments } from "./issue-argument.js";
 import { loadAiNews } from "./issue-news.js";
+import { loadStats } from "./issue.stats.js";
 
 console.log("[issue.js] loaded");
 
@@ -15,6 +16,7 @@ let votingInProgress = false;
 
 // ✅ 추가
 let currentIssue = null;
+
 
 /* ==========================================================================
    1. URL → issue id
@@ -49,8 +51,6 @@ if (!issueId || Number.isNaN(issueId)) {
 
 renderIssue(issue);
 
-window.issueId = issue.id;
-window.currentIssue = issue;
 
 /* ===============================
   AI ARGUMENT (논점)
@@ -65,6 +65,8 @@ if (typeof loadAiArguments === "function") {
 if (typeof loadAiNews === "function") {
   loadAiNews(issue);
 }
+/* 🔥 통계 */
+  loadStats(issue.id);
 
   /* ===============================
     REST
