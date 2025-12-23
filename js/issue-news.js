@@ -1,6 +1,11 @@
 console.log("[issue-news.js] loaded");
 
 /* ==========================================================================
+   Internal State (중복 호출 방지)
+========================================================================== */
+let generating = false;
+
+/* ==========================================================================
    Public Entry
 ========================================================================== */
 export async function loadAiNews(issue, retry = false) {
@@ -20,12 +25,16 @@ export async function loadAiNews(issue, retry = false) {
     return;
   }
 
-  // 2️⃣ 없으면 생성 요청 → 1회 재시도
+  // 2️⃣ 뉴스가 없는 경우
   if (!data || data.length === 0) {
-    console.log("[issue-news] no news → invoke generate-ai-news");
+    console.log(
+      `[issue-news] no news → invoke generate-ai-news (retry=${retry})`
+    );
 
-    // 최초 진입 시에만 생성 요청
-    if (!retry) {
+    // 최초 1회만 생성 요청
+    if (!retry && !generating) {
+      generating = true;
+
       supabase.functions.invoke("generate-ai-news", {
         body: {
           issue_id: issue.id,
@@ -43,8 +52,18 @@ export async function loadAiNews(issue, retry = false) {
     return;
   }
 
-  // 3️⃣ 있으면 바로 렌더
-  render(data);
+  // 3️⃣ 데이터 유효성 필터링
+  const valid = data.filter(
+    n => n.title && n.link && (n.stance === "pro" || n.stance === "con")
+  );
+
+  if (valid.length === 0) {
+    console.warn("[issue-news] fetched but no valid rows");
+    return;
+  }
+
+  // 4️⃣ 렌더
+  render(valid);
 }
 
 /* ==========================================================================
@@ -57,7 +76,8 @@ function render(list) {
   draw("ai-news-pro", pro);
   draw("ai-news-con", con);
 
-  document.querySelector(".ai-news")?.removeAttribute("hidden");
+  const root = document.querySelector(".ai-news");
+  if (root) root.removeAttribute("hidden");
 }
 
 function draw(containerId, list) {
@@ -77,7 +97,10 @@ function draw(containerId, list) {
       </div>
     `;
 
-    item.onclick = () => window.open(n.link, "_blank", "noopener");
+    item.onclick = () => {
+      window.open(n.link, "_blank", "noopener,noreferrer");
+    };
+
     root.appendChild(item);
   });
 }
