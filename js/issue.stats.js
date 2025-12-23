@@ -10,31 +10,68 @@ const MIN_PARTICIPANTS = 100;
 /**
  * entry
  */
+/**
+ * entry
+ */
 export async function loadStats(issueId) {
-  const supabase = window.supabaseClient;
-  if (!supabase || !issueId) return;
+  console.log("[issue.stats] dummy mode");
 
-  // 🔹 통계 데이터 (뷰 또는 집계 테이블 기준)
-  const { data, error } = await supabase
-    .from("issue_stats_view")
-    .select("*")
-    .eq("issue_id", issueId)
-    .single();
+  // 🔥 UI 작업용 더미 데이터
+  const DUMMY_STATS = {
+    pro_count: 62,
+    con_count: 58,
 
-  if (error || !data) {
-    lockStats(0);
-    return;
-  }
+    gender: {
+      male: 54,
+      female: 46
+    },
 
-  const total = (data.pro_count || 0) + (data.con_count || 0);
+    age: [
+      { label: "10대", percent: 8 },
+      { label: "20대", percent: 27 },
+      { label: "30대", percent: 31 },
+      { label: "40대", percent: 22 },
+      { label: "50대+", percent: 12 }
+    ],
 
-  if (total < MIN_PARTICIPANTS) {
-    lockStats(total);
-    return;
-  }
+    region: [
+      { name: "서울", percent: 38 },
+      { name: "경기", percent: 29 },
+      { name: "부산", percent: 11 },
+      { name: "대구", percent: 7 },
+      { name: "기타", percent: 15 }
+    ],
 
+    gender_vote: [
+      { label: "남성", pro: 57, con: 43 },
+      { label: "여성", pro: 48, con: 52 }
+    ],
+
+    age_vote: [
+      { label: "20대", pro: 51, con: 49 },
+      { label: "30대", pro: 63, con: 37 },
+      { label: "40대", pro: 45, con: 55 }
+    ],
+
+    region_vote: [
+      { label: "서울", pro: 59, con: 41 },
+      { label: "경기", pro: 52, con: 48 },
+      { label: "부산", pro: 44, con: 56 }
+    ],
+
+    ai_summary: `
+이 이슈는 전반적으로 찬성 의견이 우세하지만,
+연령대와 지역에 따라 반대 의견의 결집도 또한 뚜렷하게 나타난다.
+특히 40대 이상과 일부 지역에서는 반대 진영의 응집력이 강한 편이다.
+`
+  };
+
+  // ✅ 항상 공개 상태
   unlockStats();
-  renderAllStats(data);
+  renderAllStats(DUMMY_STATS);
+
+  // ⛔️ 실데이터 로직 차단
+  return;
 }
 
 /* ======================================================
