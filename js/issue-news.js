@@ -1,8 +1,8 @@
 console.log("[issue-news.js] loaded");
 
-let generating = false;
+let requested = false;
 
-export async function loadAiNews(issue, retry = false) {
+export async function loadAiNews(issue) {
   const supabase = window.supabaseClient;
   if (!supabase || !issue?.id) return;
 
@@ -18,40 +18,37 @@ export async function loadAiNews(issue, retry = false) {
     return;
   }
 
-  if (!data || data.length === 0) {
-    console.log(
-      `[issue-news] no news → invoke generate-ai-news (retry=${retry})`
+  // ✅ 이미 뉴스가 있으면 바로 렌더
+  if (data && data.length > 0) {
+    const valid = data.filter(
+      n =>
+        n.title &&
+        n.link &&
+        (n.stance === "pro" || n.stance === "con")
     );
 
-    if (!retry && !generating) {
-      generating = true;
-
-      await supabase.functions.invoke("generate-ai-news", {
-        body: {
-          issue_id: issue.id,
-          title: issue.title,
-          description: issue.description || issue.one_line,
-        },
-      });
-
-      setTimeout(() => {
-        loadAiNews(issue, true);
-      }, 2000);
+    if (valid.length > 0) {
+      render(valid);
     }
-
     return;
   }
 
-  const valid = data.filter(
-    n => n.title && n.link && (n.stance === "pro" || n.stance === "con")
-  );
+  // ❗ 단 한 번만 생성 요청
+  if (requested) return;
+  requested = true;
 
-  if (valid.length === 0) {
-    console.warn("[issue-news] fetched but no valid rows");
-    return;
-  }
+  console.log("[issue-news] no news → invoke generate-ai-news");
 
-  render(valid);
+  await supabase.functions.invoke("generate-ai-news", {
+    body: {
+      issue_id: issue.id,
+      title: issue.title,
+      description: issue.description || issue.one_line,
+    },
+  });
+
+  // 🔁 2초 후 재조회
+  setTimeout(() => loadAiNews(issue), 2000);
 }
 
 function render(list) {
