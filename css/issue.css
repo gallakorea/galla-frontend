@@ -1625,3 +1625,88 @@ body {
   text-align: center;
   color: #aaa;
 }
+
+.stats-card {
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+/* ===== 성별 도넛 ===== */
+.gender-donut {
+  position: relative;
+  width: 160px;
+  margin: 0 auto;
+}
+.gender-donut svg {
+  transform: rotate(-90deg);
+}
+.donut-bg {
+  fill: none;
+  stroke: #222;
+  stroke-width: 12;
+}
+.donut-fg {
+  fill: none;
+  stroke: #4da3ff;
+  stroke-width: 12;
+  stroke-dasharray: 314;
+  stroke-dashoffset: 144;
+}
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== 연령 누적 바 ===== */
+.age-stacked-bar {
+  display: flex;
+  height: 18px;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.age-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #000;
+}
+.age-30 {
+  background: #ffd36a;
+}
+
+/* ===== 디버징 바 ===== */
+.diverging-row {
+  margin-bottom: 12px;
+}
+.diverging-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.bar-pro {
+  background: #4da3ff;
+}
+.bar-con {
+  background: #ff6b6b;
+}
+
+/* ===== 비교 바 ===== */
+.compare-row {
+  margin-bottom: 10px;
+}
+.compare-bars {
+  display: flex;
+  gap: 6px;
+}
+.compare-bars div {
+  height: 12px;
+  border-radius: 6px;
+}

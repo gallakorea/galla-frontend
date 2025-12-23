@@ -210,38 +210,67 @@
     </section>
 
     <!-- STATISTICS -->
-    <section id="stats-section" class="stats-section">
+<section id="stats-section" class="stats-section">
 
-        <div class="stats-header white-title">
-            📊 여론 통계 인포그래픽
-        </div>
+  <div class="stats-header white-title">
+    📊 여론 통계 인포그래픽
+  </div>
 
-        <!-- ✅ 이 래퍼가 핵심 -->
-        <div class="stats-content">
+  <!-- 성별 분포 : 도넛 -->
+  <div class="stats-card">
+    <h3 class="stat-title">👥 성별 참여 비율</h3>
+    <div class="gender-donut">
+      <svg viewBox="0 0 120 120">
+        <circle class="donut-bg" cx="60" cy="60" r="50" />
+        <circle class="donut-fg" cx="60" cy="60" r="50" />
+      </svg>
+      <div class="donut-center">
+        <span class="donut-main">54 : 46</span>
+        <span class="donut-sub">참여 성비</span>
+      </div>
+    </div>
+  </div>
 
-            <h2 class="stat-title white-title">👥 성별 참여 비율</h2>
-            <div id="gender-dual"></div>
+  <!-- 연령 분포 : 100% 누적 바 -->
+  <div class="stats-card">
+    <h3 class="stat-title">🎂 나이대 참여 비율</h3>
+    <div id="age-stacked-bar" class="age-stacked-bar"></div>
+    <p class="stat-interpret">
+      참여자의 중심은 <b>30~40대 (53%)</b>
+    </p>
+  </div>
 
-            <h2 class="stat-title white-title">🎂 나이대 참여 비율</h2>
-            <div id="age-chart"></div>
+  <!-- 지역 분포 : 기존 히트맵 유지 -->
+  <div class="stats-card">
+    <h3 class="stat-title">🗺️ 지역별 참여 분포</h3>
+    <div id="region-heatmap" class="region-heatmap"></div>
+  </div>
 
-            <h2 class="stat-title white-title">🗺️ 지역별 참여 히트맵</h2>
-            <div id="region-heatmap" class="region-heatmap"></div>
+  <!-- 성별 × 찬반 -->
+  <div class="stats-card">
+    <h3 class="stat-title">⚔️ 성별 찬반 비율</h3>
+    <div id="gender-vote" class="diverging-list"></div>
+  </div>
 
-            <h2 class="stat-title white-title">⚔️ 성별 찬반 비율</h2>
-            <div id="gender-vote"></div>
+  <!-- 연령 × 찬반 -->
+  <div class="stats-card">
+    <h3 class="stat-title">⚔️ 나이대 찬반 비율</h3>
+    <div id="age-vote" class="diverging-list"></div>
+  </div>
 
-            <h2 class="stat-title white-title">⚔️ 나이대 찬반 비율</h2>
-            <div id="age-vote"></div>
+  <!-- 지역 × 찬반 -->
+  <div class="stats-card">
+    <h3 class="stat-title">⚔️ 지역별 찬반 비율</h3>
+    <div id="region-vote" class="compare-list"></div>
+  </div>
 
-            <h2 class="stat-title white-title">⚔️ 지역별 찬반 비율</h2>
-            <div id="region-vote"></div>
+  <!-- AI 요약 -->
+  <div class="stats-card">
+    <h3 class="stat-title">🎙️ AI 종합 의견</h3>
+    <div id="ai-summary" class="ai-summary"></div>
+  </div>
 
-            <h2 class="stat-title white-title">🎙️ AI 종합 의견</h2>
-            <div id="ai-summary" class="ai-summary"></div>
-
-        </div>
-    </section>
+</section>
 
         <!-- AUTHOR SUPPORT (UI ONLY) -->
     <section class="author-support">

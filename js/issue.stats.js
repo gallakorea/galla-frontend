@@ -13,19 +13,9 @@ const MIN_PARTICIPANTS = 100;
 /**
  * entry
  */
-export async function loadStats(issueId) {
-  console.log("[issue.stats] dummy mode");
-
-  // 🔥 UI 작업용 더미 데이터
-  const DUMMY_STATS = {
-    pro_count: 62,
-    con_count: 58,
-
-    gender: {
-      male: 54,
-      female: 46
-    },
-
+export function loadStats(issueId) {
+  const data = {
+    gender: { male: 54, female: 46 },
     age: [
       { label: "10대", percent: 8 },
       { label: "20대", percent: 27 },
@@ -33,7 +23,6 @@ export async function loadStats(issueId) {
       { label: "40대", percent: 22 },
       { label: "50대+", percent: 12 }
     ],
-
     region: [
       { name: "서울", percent: 38 },
       { name: "경기", percent: 29 },
@@ -41,37 +30,83 @@ export async function loadStats(issueId) {
       { name: "대구", percent: 7 },
       { name: "기타", percent: 15 }
     ],
-
     gender_vote: [
       { label: "남성", pro: 57, con: 43 },
       { label: "여성", pro: 48, con: 52 }
     ],
-
     age_vote: [
       { label: "20대", pro: 51, con: 49 },
       { label: "30대", pro: 63, con: 37 },
       { label: "40대", pro: 45, con: 55 }
     ],
-
     region_vote: [
       { label: "서울", pro: 59, con: 41 },
       { label: "경기", pro: 52, con: 48 },
       { label: "부산", pro: 44, con: 56 }
     ],
-
-    ai_summary: `
-이 이슈는 전반적으로 찬성 의견이 우세하지만,
-연령대와 지역에 따라 반대 의견의 결집도 또한 뚜렷하게 나타난다.
-특히 40대 이상과 일부 지역에서는 반대 진영의 응집력이 강한 편이다.
-`
+    ai_summary: "전반적으로 찬성 의견이 우세하나, 연령과 지역에 따라 반대 결집도도 뚜렷합니다."
   };
 
-  // ✅ 항상 공개 상태
-  unlockStats();
-  renderAllStats(DUMMY_STATS);
+  renderAgeStack(data.age);
+  renderRegion(data.region);
+  renderDiverging("gender-vote", data.gender_vote);
+  renderDiverging("age-vote", data.age_vote);
+  renderCompare("region-vote", data.region_vote);
+  document.getElementById("ai-summary").innerText = data.ai_summary;
+}
 
-  // ⛔️ 실데이터 로직 차단
-  return;
+function renderAgeStack(age) {
+  const root = document.getElementById("age-stacked-bar");
+  root.innerHTML = "";
+  age.forEach(a => {
+    const div = document.createElement("div");
+    div.className = `age-seg ${a.label === "30대" ? "age-30" : ""}`;
+    div.style.width = `${a.percent}%`;
+    div.textContent = a.percent + "%";
+    root.appendChild(div);
+  });
+}
+
+function renderRegion(region) {
+  const root = document.getElementById("region-heatmap");
+  root.innerHTML = "";
+  region.forEach(r => {
+    const d = document.createElement("div");
+    d.className = "region-cell";
+    d.style.background = `rgba(255,200,80,${r.percent/100})`;
+    d.innerHTML = `${r.name}<br>${r.percent}%`;
+    root.appendChild(d);
+  });
+}
+
+function renderDiverging(id, rows) {
+  const root = document.getElementById(id);
+  root.innerHTML = "";
+  rows.forEach(r => {
+    root.innerHTML += `
+      <div class="diverging-row">
+        <div>${r.label}</div>
+        <div class="diverging-bar">
+          <div class="bar-con" style="width:${r.con}%"></div>
+          <div class="bar-pro" style="width:${r.pro}%"></div>
+        </div>
+      </div>`;
+  });
+}
+
+function renderCompare(id, rows) {
+  const root = document.getElementById(id);
+  root.innerHTML = "";
+  rows.forEach(r => {
+    root.innerHTML += `
+      <div class="compare-row">
+        <div>${r.label}</div>
+        <div class="compare-bars">
+          <div style="width:${r.pro}%;background:#4da3ff"></div>
+          <div style="width:${r.con}%;background:#ff6b6b"></div>
+        </div>
+      </div>`;
+  });
 }
 
 /* ======================================================
