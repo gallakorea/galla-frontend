@@ -1,6 +1,7 @@
 import { loadAiArguments } from "./issue-argument.js";
 import { loadAiNews } from "./issue-news.js";
 import { loadStats } from "./issue.stats.js";
+import { loadFactionComments } from "./issue.comments.js";
 
 console.log("[issue.js] loaded");
 
@@ -71,6 +72,7 @@ if (typeof loadAiNews === "function") {
   /* ===============================
     REST
   ================================ */
+  loadFactionComments();
   loadVoteStats(issue.id);
   loadComments(issue.id);
   checkVoteStatus(issue.id);

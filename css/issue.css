@@ -1607,179 +1607,107 @@ body {
   opacity: 0.6;
 }
 
-.battle-comments {
-  margin-top: 40px;
+/* =========================
+   FACTION COMMENTS
+========================= */
+
+.faction-comments {
+  margin-top: 32px;
 }
 
-.battle-columns {
-  display: flex;
-  gap: 12px;
+.faction {
+  margin-bottom: 48px;
 }
 
-.battle-side {
-  flex: 1;
-  padding: 12px;
-  border-radius: 14px;
+.faction-pro {
+  border-top: 2px solid rgba(80,160,255,0.4);
+  padding-top: 16px;
 }
 
-.battle-side.pro {
-  background: linear-gradient(180deg, #0a1a2f, #050c16);
-  border: 1px solid rgba(77,163,255,0.25);
+.faction-con {
+  border-top: 2px solid rgba(255,90,90,0.4);
+  padding-top: 16px;
 }
 
-.battle-side.con {
-  background: linear-gradient(180deg, #2a0a0a, #140505);
-  border: 1px solid rgba(255,107,107,0.25);
-}
+/* ===== BILLBOARD ===== */
 
 .billboard {
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.4);
-  box-shadow: 0 0 20px rgba(255,255,255,0.05);
-}
-
-.billboard-title {
-  font-weight: 700;
-  font-size: 14px;
-  margin-bottom: 10px;
-  opacity: 0.9;
-}
-
-.billboard-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent);
+  border-radius: 14px;
   padding: 14px;
-  border-radius: 10px;
-  position: relative;
+  margin-bottom: 20px;
 }
 
-.billboard-card.enemy {
-  border: 1px solid rgba(255,80,80,0.6);
-  background: linear-gradient(135deg, rgba(255,80,80,0.12), rgba(0,0,0,0.6));
-  animation: enemyPulse 2.4s infinite;
-}
-
-@keyframes enemyPulse {
-  0% { box-shadow: 0 0 0 rgba(255,80,80,0.3); }
-  50% { box-shadow: 0 0 16px rgba(255,80,80,0.7); }
-  100% { box-shadow: 0 0 0 rgba(255,80,80,0.3); }
-}
-
-.billboard-tag {
-  font-size: 11px;
-  color: #ff6b6b;
-  margin-bottom: 6px;
-}
-
-.comment-card {
-  padding: 12px;
-  border-radius: 10px;
+.billboard-header {
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
   margin-bottom: 10px;
+}
+
+.billboard-list .comment {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.billboard-more {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* ===== COMMENTS ===== */
+
+.comment {
   background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
 }
 
-.comment-card.pro {
-  border-left: 3px solid #4da3ff;
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  opacity: 0.8;
 }
 
-.comment-card.con {
-  border-left: 3px solid #ff6b6b;
-}
-
-.comment-card.enemy {
-  border: 1px dashed rgba(255,107,107,0.7);
-  background: rgba(255,107,107,0.08);
-  animation: shake 0.25s linear 1;
-}
-
-@keyframes shake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-2px); }
-  50% { transform: translateX(2px); }
-  75% { transform: translateX(-2px); }
-  100% { transform: translateX(0); }
-}
-
-.role-tag {
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-
-.role-tag.pro {
-  background: rgba(77,163,255,0.2);
-  color: #4da3ff;
-}
-
-.role-tag.con {
-  background: rgba(255,107,107,0.2);
-  color: #ff6b6b;
-}
-
-.role-tag.enemy {
-  background: rgba(255,80,80,0.35);
-  color: #fff;
-}
-
-.sub-tag {
-  font-size: 10px;
-  color: #ff9a9a;
-  margin-left: 6px;
+.comment-body {
+  margin: 8px 0;
+  line-height: 1.45;
 }
 
 .comment-actions {
   display: flex;
+  gap: 10px;
+  font-size: 13px;
+}
+
+/* ===== INPUT ===== */
+
+.comment-input {
+  display: flex;
   gap: 8px;
-  margin-top: 8px;
-}
-
-.comment-actions button {
-  flex: 1;
-  font-size: 11px;
-  padding: 6px 0;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  background: rgba(255,255,255,0.06);
-  color: #ddd;
-}
-
-.comment-actions button:hover {
-  background: rgba(255,255,255,0.14);
+  margin-top: 12px;
 }
 
 .comment-input textarea {
-  width: 100%;
-  background: rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
+  flex: 1;
+  border-radius: 10px;
   padding: 8px;
+  background: rgba(255,255,255,0.05);
   color: #fff;
 }
 
-.comment-input.pro textarea {
-  border-color: rgba(77,163,255,0.4);
-}
-
-.comment-input.con textarea {
-  border-color: rgba(255,107,107,0.4);
-}
-
 .comment-input button {
-  width: 100%;
-  margin-top: 6px;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
   border: none;
-  font-weight: 700;
 }
 
-.comment-input.pro button {
-  background: #4da3ff;
-  color: #000;
-}
-
-.comment-input.con button {
-  background: #ff6b6b;
-  color: #000;
-}
+.btn-pro { background: #4da3ff; }
+.btn-con { background: #ff6b6b; }
