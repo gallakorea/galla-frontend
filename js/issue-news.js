@@ -1,12 +1,19 @@
 console.log("[issue-news.js] loaded");
 
-let requested = false;
+/**
+ * 이 세션에서 generate를 시도한 issue id 기록
+ * → 새로고침하면 초기화됨
+ */
+let requestedIssueId = null;
 
 export async function loadAiNews(issue) {
   try {
     const supabase = window.supabaseClient;
     if (!supabase || !issue?.id) return;
 
+    /* ==================================================
+       1️⃣ DB 조회 (news 모드만)
+    ================================================== */
     const { data, error } = await supabase
       .from("ai_news")
       .select("stance, title, link, source, created_at")
@@ -20,9 +27,9 @@ export async function loadAiNews(issue) {
     }
 
     /* ==================================================
-       1️⃣ DB에 뉴스가 있으면 → 무조건 렌더
+       2️⃣ DB에 뉴스가 있으면 → 무조건 렌더
     ================================================== */
-    if (data && data.length > 0) {
+    if (Array.isArray(data) && data.length > 0) {
       const valid = data.filter(
         n =>
           n.title &&
@@ -37,17 +44,22 @@ export async function loadAiNews(issue) {
     }
 
     /* ==================================================
-       2️⃣ 여기부터는 생성 로직 (단 1회)
+       3️⃣ 뉴스 없음 → 생성 로직 (이슈당 1회)
     ================================================== */
-    if (requested) {
+    if (requestedIssueId === issue.id) {
       console.log(
         `[issue-news] already requested generate (issue=${issue.id})`
       );
       return;
     }
 
-    requested = true;
+    requestedIssueId = issue.id;
     console.log("[issue-news] no news → invoke generate-ai-news");
+
+    // skeleton 안내 텍스트 유지 (UX 안정)
+    document.querySelector("#ai-skeleton-pro .sk-line")?.replaceWith(
+      document.createTextNode("관련 뉴스를 수집 중입니다…")
+    );
 
     await supabase.functions.invoke("generate-ai-news", {
       body: {
@@ -57,11 +69,13 @@ export async function loadAiNews(issue) {
       },
     });
 
-    // 🔁 생성 후 재조회
+    /* ==================================================
+       4️⃣ 생성 후 재조회 (단순 폴링 1회)
+    ================================================== */
     setTimeout(() => loadAiNews(issue), 2000);
 
   } catch (e) {
-    // 🔥 다른 기능에 영향 안 주도록 고립
+    // 🔥 다른 기능 절대 방해하지 않도록 고립
     console.error("[issue-news] fatal but isolated error", e);
   }
 }
@@ -71,7 +85,7 @@ export async function loadAiNews(issue) {
 ================================================== */
 function render(list) {
   try {
-    // 🔥 skeleton 제거 (핵심)
+    // skeleton 제거
     document.getElementById("ai-skeleton-pro")?.remove();
     document.getElementById("ai-skeleton-con")?.remove();
 
@@ -81,8 +95,7 @@ function render(list) {
     draw("ai-news-pro", pro);
     draw("ai-news-con", con);
 
-    const section = document.querySelector(".ai-news");
-    section?.removeAttribute("hidden");
+    document.querySelector(".ai-news")?.removeAttribute("hidden");
 
   } catch (e) {
     console.error("[issue-news] render error", e);
@@ -104,7 +117,7 @@ function draw(containerId, list) {
 
     item.innerHTML = `
       <div class="ai-news-card">
-        <div class="ai-news-source">${n.source}</div>
+        <div class="ai-news-source">${n.source ?? "news"}</div>
         <div class="ai-news-title">${n.title}</div>
       </div>
     `;
