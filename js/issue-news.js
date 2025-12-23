@@ -15,12 +15,12 @@ export async function loadAiNews(issue) {
     .select("*")
     .eq("issue_id", issue.id)
     .eq("mode", "news")
-    .eq("status", "done");
 
   if (rows && rows.length >= 2) {
     render(rows);
     return;
   }
+
 
   /* ==================================================
      2) job 상태 조회
