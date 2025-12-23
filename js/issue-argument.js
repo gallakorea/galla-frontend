@@ -33,6 +33,7 @@ export async function loadAiArguments(issue) {
   if (!pro || !con) {
     await generateAiArguments(issue);
     await waitForArguments(issue.id);
+    return loadAiArguments(issue); // 🔥 이 줄 추가
   }
 
   /* 3️⃣ DOM 렌더 */
