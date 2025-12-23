@@ -45,29 +45,41 @@ function lockStats(total) {
   const section = document.getElementById("stats-section");
   if (!section) return;
 
-  // 기존 내용 숨김
-  Array.from(section.children).forEach(el => el.hidden = true);
+  // ✅ 섹션 자체를 접힘 상태로
+  section.classList.add("collapsed");
+  section.setAttribute("data-locked", "true");
 
-  // 🔹 안내 박스 생성 or 재사용
+  // 헤더 상태 표시
+  const header = section.querySelector(".stats-header");
+  if (header) {
+    header.querySelector(".stats-status")?.remove();
+    const badge = document.createElement("span");
+    badge.className = "stats-status";
+    badge.innerText = "준비 중";
+    header.appendChild(badge);
+  }
+
+  // 기존 내용 숨김
+  Array.from(section.querySelectorAll(".stats-content"))
+    .forEach(el => el.hidden = true);
+
+  // 안내 박스
   let box = document.getElementById("stats-locked-box");
   if (!box) {
     box = document.createElement("div");
     box.id = "stats-locked-box";
-    box.className = "ai-news-placeholder";
+    box.className = "stats-locked-box";
     section.appendChild(box);
   }
 
   box.innerHTML = `
-    <div class="ai-news-placeholder-title">
+    <div class="stats-locked-title">
       아직 통계가 공개되지 않았습니다
     </div>
-    <div class="ai-news-placeholder-desc">
+    <div class="stats-locked-desc">
       현재 참여자 <b>${total}명</b><br/>
       참여자가 100명 이상일 경우<br/>
       여론 통계가 공개됩니다.
-    </div>
-    <div class="ai-news-placeholder-sub">
-      더 많은 참여로 여론을 만들어 주세요.
     </div>
   `;
 }
@@ -76,10 +88,14 @@ function unlockStats() {
   const section = document.getElementById("stats-section");
   if (!section) return;
 
-  const box = document.getElementById("stats-locked-box");
-  if (box) box.remove();
+  section.classList.remove("collapsed");
+  section.removeAttribute("data-locked");
 
-  Array.from(section.children).forEach(el => el.hidden = false);
+  section.querySelector(".stats-status")?.remove();
+  document.getElementById("stats-locked-box")?.remove();
+
+  Array.from(section.querySelectorAll(".stats-content"))
+    .forEach(el => el.hidden = false);
 }
 
 /* ======================================================
