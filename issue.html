@@ -273,30 +273,64 @@
 <section class="faction-comments">
 
   <!-- 🔵 찬성 진영 -->
-  <section class="faction faction-pro">
+  <section class="battle-comments">
+
+  <!-- ===============================
+       🔵 찬성 진영
+  =============================== -->
+
+  <div class="camp camp-pro">
+
+    <!-- 경계선 -->
+    <div class="camp-border pro">🔵 찬성 진영</div>
 
     <!-- BILLBOARD -->
     <div class="billboard billboard-pro">
       <div class="billboard-header">
-        🔵 찬성 진영 BILLBOARD
-        <span class="billboard-rank">TOP 10</span>
+        🔥 찬성 진영 BILLBOARD
+        <span class="billboard-sub">TOP 10 · 진영의 얼굴</span>
       </div>
 
       <div class="billboard-list">
-        <!-- billboard item -->
+
         <div class="billboard-item">
           <p class="billboard-text">
-            이 정책은 장기적으로 반드시 필요합니다.
+            이 정책은 지금은 불편해 보여도 장기적으로 반드시 필요합니다.
           </p>
+
           <div class="billboard-meta">
-            ❤️ 842 · ⚔️ 103
-            <span class="badge invade">상대 진영 침투</span>
+            ❤️ 1,248 · 💬 182
+          </div>
+
+          <!-- 🔥 아이템 버튼 -->
+          <div class="billboard-actions">
+            <button class="item-btn boost">📢 확성</button>
+            <button class="item-btn pin">📌 고정</button>
+            <button class="item-btn shield">🛡 방어</button>
+            <button class="item-btn invade">⚔ 침투</button>
           </div>
         </div>
-        <!-- repeat -->
+
+        <div class="billboard-item">
+          <p class="billboard-text">
+            반대 측은 감정만 있고 대안은 없습니다.
+          </p>
+
+          <div class="billboard-meta">
+            ❤️ 987 · 💬 96
+          </div>
+
+          <div class="billboard-actions">
+            <button class="item-btn boost">📢</button>
+            <button class="item-btn pin">📌</button>
+            <button class="item-btn shield">🛡</button>
+            <button class="item-btn invade">⚔</button>
+          </div>
+        </div>
+
       </div>
 
-      <!-- pagination -->
+      <!-- 페이지네이션 -->
       <div class="billboard-pages">
         <button class="page active">1</button>
         <button class="page">2</button>
@@ -304,62 +338,69 @@
       </div>
     </div>
 
-    <!-- COMMENT THREAD -->
-    <div class="comment-thread">
-      <h4 class="thread-title">찬성 진영 댓글</h4>
+    <!-- 일반 댓글 -->
+    <div class="thread">
 
-      <div class="comment-item pro">
-        <div class="comment-badge">🔵 찬성</div>
+      <div class="comment pro">
+        <div class="comment-badge pro">🔵 찬성</div>
         <div class="comment-body">
-          이 정책은 필요합니다.
-          <div class="comment-actions">
-            ❤️ 52 · ⚔️ 도전
-          </div>
+          솔직히 이 정도 변화는 감수해야 한다고 봅니다.
+          <div class="comment-meta">❤️ 84 · 💬 답글</div>
         </div>
 
-        <!-- 대댓글 -->
-        <div class="comment-reply con">
-          <div class="comment-badge">🔴 반대 침투</div>
+        <div class="reply con">
+          <div class="comment-badge con">🔴 반대 침투</div>
           <div class="comment-body">
-            전혀 동의할 수 없습니다.
-            <div class="comment-actions">
-              ❤️ 211
-            </div>
+            왜 그 감수는 항상 특정 계층 몫인가요?
+            <div class="comment-meta">❤️ 312</div>
           </div>
         </div>
       </div>
 
-      <!-- 입력 -->
-      <div class="comment-input">
-        <textarea placeholder="찬성 진영에 의견 남기기"></textarea>
-        <button class="btn-pro">등록</button>
+      <div class="comment neutral">
+        <div class="comment-badge neutral">⚪ 미투표</div>
+        <div class="comment-body">
+          아직 판단이 어렵습니다. 양쪽 주장 다 봐야 할 듯.
+          <div class="comment-meta">❤️ 22</div>
+        </div>
       </div>
-    </div>
-  </section>
 
-  <!-- ⚔️ 전선 경계 -->
-  <div class="faction-divider">
-    ⚔️ 전선 경계
+      <div class="comment-input pro">
+        <textarea placeholder="🔵 찬성 진영에 의견 남기기"></textarea>
+        <button>등록</button>
+      </div>
+
+    </div>
   </div>
 
-  <!-- 🔴 반대 진영 -->
-  <section class="faction faction-con">
+  <!-- ===============================
+       🔴 반대 진영
+  =============================== -->
 
-    <!-- BILLBOARD -->
+  <div class="camp camp-con">
+
+    <div class="camp-border con">🔴 반대 진영</div>
+
     <div class="billboard billboard-con">
       <div class="billboard-header">
-        🔴 반대 진영 BILLBOARD
-        <span class="billboard-rank">TOP 10</span>
+        🔥 반대 진영 BILLBOARD
+        <span class="billboard-sub">TOP 10 · 저항의 상징</span>
       </div>
 
       <div class="billboard-list">
         <div class="billboard-item">
           <p class="billboard-text">
-            구조적으로 문제가 큽니다.
+            이 정책은 결국 약자에게 모든 부담을 떠넘깁니다.
           </p>
           <div class="billboard-meta">
-            ❤️ 1,203 · ⚔️ 88
-            <span class="badge defend">확성기</span>
+            ❤️ 1,402 · 💬 221
+          </div>
+
+          <div class="billboard-actions">
+            <button class="item-btn boost">📢</button>
+            <button class="item-btn pin">📌</button>
+            <button class="item-btn shield">🛡</button>
+            <button class="item-btn invade">⚔</button>
           </div>
         </div>
       </div>
@@ -370,27 +411,24 @@
       </div>
     </div>
 
-    <!-- COMMENT THREAD -->
-    <div class="comment-thread">
-      <h4 class="thread-title">반대 진영 댓글</h4>
-
-      <div class="comment-item con">
-        <div class="comment-badge">🔴 반대</div>
+    <div class="thread">
+      <div class="comment con">
+        <div class="comment-badge con">🔴 반대</div>
         <div class="comment-body">
-          사회적 비용이 너무 큽니다.
-          <div class="comment-actions">
-            ❤️ 94 · ⚔️ 도전
-          </div>
+          찬성 쪽은 항상 장기적이라는 말로 현재 고통을 무시합니다.
+          <div class="comment-meta">❤️ 91</div>
         </div>
       </div>
 
-      <div class="comment-input">
-        <textarea placeholder="반대 진영에 의견 남기기"></textarea>
-        <button class="btn-con">등록</button>
+      <div class="comment-input con">
+        <textarea placeholder="🔴 반대 진영에 의견 남기기"></textarea>
+        <button>등록</button>
       </div>
     </div>
 
-  </section>
+  </div>
+
+</section>
 
 </section>
 

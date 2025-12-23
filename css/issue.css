@@ -1607,130 +1607,123 @@ body {
   opacity: 0.6;
 }
 
-/* =========================
-   FACTION COMMENTS
-========================= */
-.faction-comments {
+.battle-comments {
   margin-top: 40px;
 }
 
-/* 진영 영역 */
-.faction {
-  padding: 16px;
-}
-
-.faction-pro {
-  background: linear-gradient(180deg, #081a2b, #050d16);
-}
-
-.faction-con {
-  background: linear-gradient(180deg, #2b0b0b, #140505);
-}
-
-/* 전선 경계 */
-.faction-divider {
+/* 진영 경계 */
+.camp-border {
+  padding: 10px;
+  font-weight: 700;
   text-align: center;
-  padding: 20px 0;
-  font-weight: bold;
-  color: #999;
-  background: radial-gradient(circle, rgba(255,255,255,0.08), transparent);
+  letter-spacing: 1px;
 }
+.camp-border.pro { background:#0a2a5e; }
+.camp-border.con { background:#5e0a0a; }
 
-/* =========================
-   BILLBOARD
-========================= */
+/* BILLBOARD */
 .billboard {
-  border-radius: 14px;
   padding: 14px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 20px rgba(255,255,255,0.1);
+  margin: 12px;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(0,0,0,.5);
 }
-
-.billboard-pro {
-  background: linear-gradient(135deg, #0d3b66, #021726);
-}
-
-.billboard-con {
-  background: linear-gradient(135deg, #6a1111, #2a0505);
-}
+.billboard-pro { background:linear-gradient(135deg,#0b2c5f,#081c3a); }
+.billboard-con { background:linear-gradient(135deg,#5c0b0b,#3a0808); }
 
 .billboard-header {
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 800;
   margin-bottom: 10px;
+}
+.billboard-sub {
+  font-size: 12px;
+  opacity:.7;
 }
 
 .billboard-item {
-  background: rgba(0,0,0,0.4);
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 8px;
+  background:rgba(0,0,0,.35);
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:10px;
+}
+
+.billboard-text {
+  font-size:14px;
+  line-height:1.4;
 }
 
 .billboard-meta {
-  font-size: 12px;
-  opacity: 0.85;
+  font-size:12px;
+  opacity:.8;
+  margin-top:6px;
 }
 
-/* pagination */
-.billboard-pages {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 10px;
+.billboard-actions {
+  display:flex;
+  gap:6px;
+  margin-top:8px;
 }
 
-.billboard-pages .page {
-  background: #111;
-  color: #fff;
-  border-radius: 6px;
-  padding: 4px 8px;
+.item-btn {
+  flex:1;
+  font-size:11px;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  background:#222;
+  color:#fff;
+}
+.item-btn:hover { transform:scale(1.05); }
+
+/* 댓글 */
+.thread { padding: 10px 14px; }
+
+.comment {
+  background:#111;
+  border-radius:10px;
+  padding:10px;
+  margin-bottom:8px;
 }
 
-/* =========================
-   COMMENTS
-========================= */
-.comment-thread {
-  margin-top: 10px;
-}
-
-.comment-item {
-  background: rgba(0,0,0,0.4);
-  border-radius: 10px;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-
-.comment-reply {
-  margin-left: 16px;
-  margin-top: 8px;
-  border-left: 2px solid rgba(255,255,255,0.1);
-  padding-left: 8px;
-}
+.comment.pro { border-left:4px solid #2b7cff; }
+.comment.con { border-left:4px solid #ff4b4b; }
 
 .comment-badge {
-  font-size: 12px;
-  opacity: 0.8;
+  font-size:11px;
+  opacity:.8;
+  margin-bottom:4px;
 }
 
-.comment-actions {
-  font-size: 12px;
-  opacity: 0.7;
-  margin-top: 6px;
+.comment-body {
+  font-size:14px;
 }
 
-/* input */
+.comment-meta {
+  font-size:11px;
+  opacity:.6;
+  margin-top:4px;
+}
+
+.reply {
+  margin-top:6px;
+  padding-left:10px;
+  border-left:2px dashed rgba(255,255,255,.2);
+}
+
+/* 입력 */
 .comment-input textarea {
-  width: 100%;
-  background: #111;
-  border-radius: 8px;
-  padding: 8px;
-  color: #fff;
+  width:100%;
+  min-height:60px;
+  background:#000;
+  color:#fff;
+  border-radius:8px;
+  border:1px solid #333;
 }
-
-.btn-pro {
-  background: #4da3ff;
-}
-
-.btn-con {
-  background: #ff6b6b;
+.comment-input button {
+  width:100%;
+  margin-top:6px;
+  padding:8px;
+  font-weight:700;
 }
