@@ -7,82 +7,47 @@ export async function loadAiNews(issue) {
   const supabase = window.supabaseClient;
   if (!supabase || !issue?.id) return;
 
-  await ensureNews(supabase, issue);
-  await loadNews(supabase, issue.id);
-}
-
-/* ==========================================================================
-   1. 뉴스 존재 확인 → 없으면 생성
-========================================================================== */
-async function ensureNews(supabase, issue) {
-  const { data } = await supabase
-    .from("ai_news")
-    .select("stance")
-    .eq("issue_id", issue.id)
-    .eq("mode", "news")
-
-  const hasPro = data?.some(n => n.stance === "pro");
-  const hasCon = data?.some(n => n.stance === "con");
-
-// 👉 찬/반 둘 다 있을 때만 생성 안 함
-if (hasPro && hasCon) return;
-
-  await supabase.functions.invoke("generate-ai-news", {
-    body: {
-      issue_id: issue.id,
-      title: issue.title,
-      description: issue.description || issue.one_line
-    }
-  });
-
-  await waitForNews(supabase, issue.id);
-}
-
-async function waitForNews(supabase, issueId, retry = 10) {
-  for (let i = 0; i < retry; i++) {
-    const { data } = await supabase
-      .from("ai_news")
-      .select("stance")
-      .eq("issue_id", issueId)
-      .eq("mode", "news");
-
-    const pro = data?.some(n => n.stance === "pro");
-    const con = data?.some(n => n.stance === "con");
-
-    if (pro && con) return true;
-    await new Promise(r => setTimeout(r, 800));
-  }
-
-  console.warn("[issue-news] timeout");
-  return false;
-}
-
-/* ==========================================================================
-   2. 뉴스 로드
-========================================================================== */
-async function loadNews(supabase, issueId) {
+  // 1️⃣ 이미 생성된 뉴스 조회
   const { data } = await supabase
     .from("ai_news")
     .select("stance, title, link, source")
-    .eq("issue_id", issueId)
+    .eq("issue_id", issue.id)
     .eq("mode", "news")
     .order("id", { ascending: true });
 
-  if (!data) return;
+  // 2️⃣ 없으면 생성 요청만 보내고 종료 (기다리지 않음)
+  if (!data || data.length === 0) {
+    console.log("[issue-news] no news → invoke generate-ai-news");
 
-  const pro = data.filter(n => n.stance === "pro");
-  const con = data.filter(n => n.stance === "con");
+    supabase.functions.invoke("generate-ai-news", {
+      body: {
+        issue_id: issue.id,
+        title: issue.title,
+        description: issue.description || issue.one_line,
+      },
+    });
 
-  renderNews("ai-news-pro", pro);
-  renderNews("ai-news-con", con);
+    return; // 🔴 여기서 끝 (다음 진입 때 로드됨)
+  }
+
+  // 3️⃣ 있으면 바로 렌더
+  render(data);
+}
+
+/* ==========================================================================
+   Render
+========================================================================== */
+function render(list) {
+  const pro = list.filter(n => n.stance === "pro");
+  const con = list.filter(n => n.stance === "con");
+
+  draw("ai-news-pro", pro);
+  draw("ai-news-con", con);
 
   document.querySelector(".ai-news")?.removeAttribute("hidden");
 }
 
-/* ==========================================================================
-   3. Render
-========================================================================== */
-function renderNews(containerId, list) {
+function draw(containerId, list) {
   const root = document.getElementById(containerId);
   if (!root) return;
 
