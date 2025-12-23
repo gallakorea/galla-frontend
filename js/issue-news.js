@@ -8,19 +8,14 @@ export async function loadAiNews(issue) {
   if (!supabase || !issue?.id) return;
 
   /* ==================================================
-     1) done 뉴스 먼저 조회
+     1) done 뉴스 조회
   ================================================== */
-  const { data: rows, error: rowsErr } = await supabase
+  const { data: rows } = await supabase
     .from("ai_news")
     .select("*")
     .eq("issue_id", issue.id)
     .eq("mode", "news")
     .eq("status", "done");
-
-  if (rowsErr) {
-    console.error("[issue-news] ai_news fetch error", rowsErr);
-    return;
-  }
 
   if (rows && rows.length >= 2) {
     render(rows);
@@ -28,42 +23,42 @@ export async function loadAiNews(issue) {
   }
 
   /* ==================================================
-     2) job 상태 확인
+     2) job 상태 조회
+     ⚠️ row 자체가 없을 수 있음
   ================================================== */
-  const { data: jobs, error: jobsErr } = await supabase
+  const { data: jobs } = await supabase
     .from("ai_news_jobs")
     .select("status")
     .eq("issue_id", issue.id)
     .eq("mode", "news")
     .limit(1);
 
-  if (jobsErr) {
-    console.error("[issue-news] ai_news_jobs fetch error", jobsErr);
-    return;
-  }
-
-  const status = jobs?.[0]?.status ?? "none";
+  const job = jobs?.[0];
 
   /* ==================================================
-     3) 기사 부족 → UX 카드 노출 (핵심)
+     🔥 핵심 분기
   ================================================== */
-  if (status === "insufficient") {
+
+  // ✅ job row 자체가 없음 → 기사 없음 취급
+  if (!job) {
     renderInsufficient();
     return;
   }
 
-  /* ==================================================
-     4) pending → 폴링
-  ================================================== */
-  if (status === "pending") {
+  // ✅ 기사 부족 확정
+  if (job.status === "insufficient") {
+    renderInsufficient();
+    return;
+  }
+
+  // ⏳ 생성 중
+  if (job.status === "pending") {
     poll(issue, 2000);
     return;
   }
 
-  /* ==================================================
-     5) failed / none → 단 1회만 생성 요청
-  ================================================== */
-  if ((status === "failed" || status === "none") && !requested) {
+  // ❌ 실패했거나 처음인데, 자동 생성은 1회만
+  if ((job.status === "failed" || job.status === "none") && !requested) {
     requested = true;
 
     await supabase.functions.invoke("generate-ai-news", {
@@ -79,7 +74,7 @@ export async function loadAiNews(issue) {
 }
 
 /* ==================================================
-   Poll helper
+   Poll
 ================================================== */
 function poll(issue, ms) {
   if (polling) return;
@@ -98,8 +93,8 @@ function render(list) {
   document.getElementById("ai-skeleton-pro")?.remove();
   document.getElementById("ai-skeleton-con")?.remove();
 
-  draw("ai-news-pro", list.filter((n) => n.stance === "pro"));
-  draw("ai-news-con", list.filter((n) => n.stance === "con"));
+  draw("ai-news-pro", list.filter(n => n.stance === "pro"));
+  draw("ai-news-con", list.filter(n => n.stance === "con"));
 
   document.querySelector(".ai-news")?.removeAttribute("hidden");
 }
@@ -107,6 +102,9 @@ function render(list) {
 function renderInsufficient() {
   document.getElementById("ai-skeleton-pro")?.remove();
   document.getElementById("ai-skeleton-con")?.remove();
+
+  const section = document.querySelector(".ai-news");
+  if (section) section.removeAttribute("hidden");
 
   const pro = document.getElementById("ai-news-pro");
   const con = document.getElementById("ai-news-con");
@@ -138,7 +136,7 @@ function draw(id, list) {
 
   root.innerHTML = "";
 
-  list.slice(0, 3).forEach((n) => {
+  list.slice(0, 3).forEach(n => {
     const el = document.createElement("div");
     el.className = "ai-news-item";
     el.innerHTML = `
@@ -147,9 +145,7 @@ function draw(id, list) {
         <div class="ai-news-title">${n.title}</div>
       </div>
     `;
-    el.onclick = () =>
-      window.open(n.link, "_blank", "noopener,noreferrer");
-
+    el.onclick = () => window.open(n.link, "_blank", "noopener,noreferrer");
     root.appendChild(el);
   });
 }
