@@ -1710,3 +1710,47 @@ body {
   height: 12px;
   border-radius: 6px;
 }
+
+.age-stacked-bar {
+  display: flex;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #222;
+}
+.age-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #000;
+  background: #aaa;
+}
+.age-focus {
+  background: #ffcc66;
+}
+
+.diverging-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 90px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.diverging-bar {
+  position: relative;
+  height: 8px;
+  background: #222;
+}
+.bar-pro {
+  position: absolute;
+  right: 0;
+  height: 100%;
+  background: #4da3ff;
+}
+.bar-con {
+  position: absolute;
+  left: 0;
+  height: 100%;
+  background: #ff6b6b;
+}
