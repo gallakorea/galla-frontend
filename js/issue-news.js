@@ -111,13 +111,7 @@ function renderNews(containerId, list) {
 }
 
 function resolveSource(source) {
-  const map = {
-    naver: "네이버",
-    google: "구글 뉴스",
-    reuters: "Reuters",
-    bbc: "BBC",
-    cnn: "CNN",
-    ap: "AP"
-  };
-  return map[source] || "언론";
+  if (source === "naver") return "네이버 뉴스";
+  if (source === "google") return "Google 뉴스";
+  return "뉴스";
 }
