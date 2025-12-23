@@ -19,7 +19,9 @@ export async function loadAiNews(issue) {
       return;
     }
 
-    // ✅ DB에 있으면 무조건 렌더 (다른 API 에러 무시)
+    /* ==================================================
+       1️⃣ DB에 뉴스가 있으면 → 무조건 렌더
+    ================================================== */
     if (data && data.length > 0) {
       const valid = data.filter(
         n =>
@@ -34,7 +36,9 @@ export async function loadAiNews(issue) {
       }
     }
 
-    // ❗ 여기부터는 "생성 로직"
+    /* ==================================================
+       2️⃣ 여기부터는 생성 로직 (단 1회)
+    ================================================== */
     if (requested) {
       console.log(
         `[issue-news] already requested generate (issue=${issue.id})`
@@ -57,25 +61,37 @@ export async function loadAiNews(issue) {
     setTimeout(() => loadAiNews(issue), 2000);
 
   } catch (e) {
-    // 🔥 이게 제일 중요
+    // 🔥 다른 기능에 영향 안 주도록 고립
     console.error("[issue-news] fatal but isolated error", e);
   }
 }
 
+/* ==================================================
+   RENDER
+================================================== */
 function render(list) {
   try {
+    // 🔥 skeleton 제거 (핵심)
+    document.getElementById("ai-skeleton-pro")?.remove();
+    document.getElementById("ai-skeleton-con")?.remove();
+
     const pro = list.filter(n => n.stance === "pro");
     const con = list.filter(n => n.stance === "con");
 
     draw("ai-news-pro", pro);
     draw("ai-news-con", con);
 
-    document.querySelector(".ai-news")?.removeAttribute("hidden");
+    const section = document.querySelector(".ai-news");
+    section?.removeAttribute("hidden");
+
   } catch (e) {
     console.error("[issue-news] render error", e);
   }
 }
 
+/* ==================================================
+   DRAW
+================================================== */
 function draw(containerId, list) {
   const root = document.getElementById(containerId);
   if (!root) return;
