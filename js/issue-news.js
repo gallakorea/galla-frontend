@@ -100,6 +100,7 @@ function render(list) {
 }
 
 function renderInsufficient() {
+  // 스켈레톤 제거
   document.getElementById("ai-skeleton-pro")?.remove();
   document.getElementById("ai-skeleton-con")?.remove();
 
@@ -108,17 +109,17 @@ function renderInsufficient() {
 
   section.removeAttribute("hidden");
 
-  // 🔥 핵심: 찬성/반대 영역은 비운다
+  // 👍👎 기존 찬반 기사 영역 제거
   const pro = document.getElementById("ai-news-pro");
   const con = document.getElementById("ai-news-con");
 
-  if (pro) pro.innerHTML = "";
-  if (con) con.innerHTML = "";
+  if (pro) pro.remove();
+  if (con) con.remove();
 
-  // 🔥 기존 메시지 제거 후, 상단에 단독 삽입
-  const old = section.querySelector(".ai-news-placeholder");
-  if (old) old.remove();
+  // 중복 삽입 방지
+  if (section.querySelector(".ai-news-placeholder")) return;
 
+  // 🔥 관련 뉴스 근거 카드 내부에 메시지 삽입
   const placeholder = document.createElement("div");
   placeholder.className = "ai-news-placeholder";
   placeholder.innerHTML = `
@@ -135,8 +136,7 @@ function renderInsufficient() {
     </div>
   `;
 
-  // 🔥 찬/반 리스트 위에 삽입
-  section.prepend(placeholder);
+  section.appendChild(placeholder);
 }
 
 function draw(id, list) {
