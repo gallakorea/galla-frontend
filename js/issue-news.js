@@ -111,7 +111,5 @@ function renderNews(containerId, list) {
 }
 
 function resolveSource(source) {
-  if (source === "naver") return "네이버 뉴스";
-  if (source === "google") return "Google 뉴스";
-  return "뉴스";
+  return source || "언론사";
 }
