@@ -48,12 +48,6 @@
     <!-- SPEECH BUTTON -->
     <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
 
-    <!-- SUMMARY -->
-    <section class="issue-explain">
-        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
-        <p id="issue-explain-text"></p>
-    </section>
-
     <!-- VOTE -->
     <section class="vote-section">
         <div class="vote-title white-title">👍 찬반 투표 현황</div>
@@ -72,43 +66,162 @@
             <button class="btn-pro" id="btn-vote-pro">👍 찬성이오</button>
             <button class="btn-con" id="btn-vote-con">👎 난 반댈세</button>
         </div>
+
+        <!-- ✅ 이 줄 추가 (없어서 UX가 깨졌음) -->
+        <p id="vote-status-text" class="vote-status-text"></p>
     </section>
 
-    <!-- SUPPORT -->
+    <!-- SUMMARY -->
+    <section class="issue-explain">
+        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+
+        <!-- 🔥 여기 하나만 존재해야 함 -->
+    <p id="issue-explain-text" class="ig-clamp">
+    <span class="ig-text"></span>
+    <span class="ig-more">더 보기</span>
+    </p>
+    </section>
+
+    <!-- AI ARGUMENT CARD -->
+    <section class="ai-argument-card" id="ai-argument-card" hidden>
+    <h3 class="white-title">🧠 AI 논점 정리</h3>
+
+    <div class="argument pro" id="ai-argument-pro-line">
+        👍 논점을 불러오는 중입니다…
+    </div>
+
+    <div class="argument con" id="ai-argument-con-line">
+        👎 논점을 불러오는 중입니다…
+    </div>
+    </section>
+
+    <!-- REMIX / BATTLE -->
+    <section class="remix-section remix-card">
+
+    <div class="remix-header white-title">⚔️ 진영 전투 현황</div>
+
+    <div class="remix-stats">
+        <div class="remix-side pro">
+        <p class="remix-title">🔵 찬성 진영</p>
+        <p class="remix-count" id="remix-pro-count">
+            참전 0 · 리믹스 0
+        </p>
+        </div>
+
+        <div class="remix-side con">
+        <p class="remix-title">🔴 반대 진영</p>
+        <p class="remix-count" id="remix-con-count">
+            참전 0 · 리믹스 0
+        </p>
+        </div>
+    </div>
+
+    <div class="remix-actions">
+        <button class="remix-btn pro" id="btn-remix-pro" type="button">
+        🛡️ 찬성 입장으로 참전
+        </button>
+        <button class="remix-btn con" id="btn-remix-con" type="button">
+        ⚔️ 반대 입장으로 맞서기
+        </button>
+    </div>
+
+    <div class="remix-guide">
+        <p class="remix-guide-title">ⓘ 안내</p>
+        <p class="remix-guide-text">
+        참전은 의견 콘텐츠를 생성합니다.<br>
+        단순 투표가 아닌 <b>진영에 합류하는 행위</b>입니다.
+        </p>
+    </div>
+
+    </section>
+
+        <!-- SUPPORT -->
     <section class="support-section">
-        <div class="support-header white-title">⚔️ 후원 전쟁 현황</div>
+
+        <div class="support-header white-title">⚔️ 진영 밀어주기 현황</div>
 
         <div class="support-bar">
-            <div class="sup-pro" id="sup-pro-bar"></div>
-            <div class="sup-con" id="sup-con-bar"></div>
+        <div id="sup-pro-bar" class="sup-pro" style="width:0%"></div>
+        <div id="sup-con-bar" class="sup-con" style="width:0%"></div>
         </div>
 
         <div class="support-stats">
-            <span id="sup-pro-amount">₩0</span>
-            <span id="sup-con-amount">₩0</span>
+        <span id="sup-pro-amount">₩0</span>
+        <span id="sup-con-amount">₩0</span>
         </div>
 
-        <button class="support-btn" id="open-support-modal">💸 이 이슈 후원하기</button>
+        <p id="support-status-text" class="support-status-text"></p>
+
+        <div class="support-actions">
+        <button id="support-pro-btn" class="support-btn pro" type="button">
+            👍 찬성 진영 밀어주기
+        </button>
+        <button id="support-con-btn" class="support-btn con" type="button">
+            👎 반대 진영 밀어주기
+        </button>
+        </div>
+
+        <div class="support-guide">
+        <p class="support-guide-title">ⓘ 안내</p>
+        <p class="support-guide-text">
+            진영 밀어주기는 단순 후원이 아닙니다.<br>
+            선택한 진영의 <b>전황 수치와 노출 우선순위</b>에 직접 반영됩니다.
+        </p>
+        </div>
+
     </section>
 
-    <!-- AI NEWS -->
-    <section class="ai-news">
-        <h3 class="white-title">[AI 뉴스]</h3>
-        <p class="ai-tip">실제 서비스에서는 관련 기사 자동 크롤링 예정입니다.</p>
+       <!-- AI NEWS -->
+    <section class="ai-news" hidden>
 
+    <div class="ai-box ai-news-box">
+        <div class="ai-box-header">
+        <h3 class="white-title">📰 관련 뉴스 근거</h3>
+        <p class="ai-tip">
+            AI 논점을 뒷받침하거나 반박하는 실제 기사들입니다.
+        </p>
+        </div>
+
+        <div class="ai-box-body">
         <div class="ai-group">
             <p class="ai-sub">👍 찬성 측 기사</p>
-            <ul id="ai-news-pro"></ul>
+
+            <div class="ai-skeleton" id="ai-skeleton-pro">
+            <div class="sk-line"></div>
+            <div class="sk-line short"></div>
+            </div>
+
+            <div id="ai-news-pro" class="ai-news-list"></div>
         </div>
 
         <div class="ai-group">
             <p class="ai-sub">👎 반대 측 기사</p>
-            <ul id="ai-news-con"></ul>
+
+            <div class="ai-skeleton" id="ai-skeleton-con">
+            <div class="sk-line"></div>
+            <div class="sk-line short"></div>
+            </div>
+
+            <div id="ai-news-con" class="ai-news-list"></div>
         </div>
+        </div>
+    </div>
+
     </section>
 
     <!-- STATISTICS -->
     <section id="stats-section" class="stats-section">
+        <!-- 🔒 통계 잠금 안내 (100명 미만) -->
+        <div id="stats-locked" class="ai-news-placeholder" hidden>
+        <div class="ai-news-placeholder-title">
+            아직 통계가 공개되지 않았습니다
+        </div>
+        <div class="ai-news-placeholder-desc">
+            참여자가 100명 이상 모이면<br>
+            여론 통계가 자동으로 공개됩니다.
+        </div>
+        </div>
+
         <div class="stats-header white-title">📊 여론 통계 인포그래픽</div>
 
         <h2 class="stat-title white-title">👥 성별 참여 비율</h2>
@@ -131,6 +244,28 @@
 
         <h2 class="stat-title white-title">🎙️ AI 종합 의견</h2>
         <div id="ai-summary" class="ai-summary"></div>
+    </section>
+
+        <!-- AUTHOR SUPPORT (UI ONLY) -->
+    <section class="author-support">
+        <div class="author-support-header">
+            ✍️ 이 이슈의 발의자
+        </div>
+
+        <div class="author-support-body">
+            <p class="author-support-desc">
+                이 주제를 세상에 던진 사람에게<br>
+                응원과 지지를 보낼 수 있습니다.
+            </p>
+
+            <button id="author-support-btn" class="author-support-btn" disabled>
+                🙌 발의자 응원하기
+            </button>
+
+            <p class="author-support-hint">
+                ※ 기능은 곧 열립니다
+            </p>
+        </div>
     </section>
 
     <!-- COMMENTS -->
@@ -158,7 +293,7 @@
             <div class="action-item" data-action="hide">🙈 관심 없음</div>
             <div class="action-item" data-action="mute">🥕 업데이트 안 보기</div>
             <div class="action-item" data-action="restrict">🪢 제한</div>
-            <div class="action-item" more-danger data-action="report">🚨 신고하기</div>
+            <div class="action-item more-danger" data-action="report">🚨 신고하기</div>
             <button class="comment-close-btn" data-close>닫기</button>
         </div>
     </div>
@@ -203,6 +338,69 @@
             </div>
         </div>
     </div>
+</div> <!-- #app 끝 -->
+
+<!-- =========================
+   SUPPORT MODAL (CENTER)
+========================= -->
+<div id="support-modal" class="support-modal" hidden>
+  <div class="support-modal-box">
+    <button class="support-close" data-close>✕</button>
+
+    <h2 class="support-title">
+      이 진영에 보탬을 더합니다
+    </h2>
+
+    <p class="support-desc">
+      이 보탬은 승부를 가르는 행위가 아닙니다.<br>
+      이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.
+    </p>
+
+    <!-- 보탬 선택 -->
+    <div class="support-levels">
+      <button class="support-level" data-level="1">
+        <span class="level-title">🤏 작은 보탬</span>
+        <span class="level-desc">댓글·추천에서 기본 표식이 부여됩니다</span>
+      </button>
+
+      <button class="support-level" data-level="2">
+        <span class="level-title">💪 분명한 보탬</span>
+        <span class="level-desc">댓글 상단 노출 + 추천 반영 우선</span>
+      </button>
+
+      <button class="support-level" data-level="3">
+        <span class="level-title">🔥 강한 보탬</span>
+        <span class="level-desc">훈장 표식 + 진영 전황 기여도 강조</span>
+      </button>
+
+      <button class="support-level" data-level="4">
+        <span class="level-title">⚔️ 결정적 보탬</span>
+        <span class="level-desc">
+          고정 댓글 권한 · 진영 전세 수치 반영 강화
+        </span>
+      </button>
+    </div>
+
+    <!-- 직접 입력 -->
+    <div class="support-custom">
+      <label>직접 금액 입력</label>
+      <input type="number" placeholder="₩ 직접 입력" />
+      <p class="support-custom-desc">
+        직접 입력 보탬은 최상위 훈장과<br>
+        모든 댓글·추천 영역에서 최우선 표시됩니다.
+      </p>
+    </div>
+
+    <!-- 푸터 -->
+    <p class="support-footnote">
+      지원해 주신 보탬은 이 이슈를 만든 크리에이터와,<br>
+      사회에 도움이 필요한 곳에 함께 사용될 예정입니다.
+    </p>
+
+    <button class="support-confirm" disabled>
+      이 보탬을 실행합니다
+    </button>
+  </div>
 </div>
 
 <!-- Supabase CDN (non-module, GALLA 표준) -->
@@ -212,7 +410,7 @@
 <script src="js/supabase.js"></script>
 
 <!-- Issue Page Logic -->
-<script src="js/issue.js"></script>
+<script type="module" src="js/issue.js"></script>
 
 <script>
 /* --------------------------

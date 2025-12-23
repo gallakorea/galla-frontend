@@ -268,37 +268,138 @@
         </div>
     </section>
 
-    <!-- COMMENTS -->
-    <section class="comment-section" id="comment-section">
-        <h3 class="comment-title white-title">댓글</h3>
+    <!-- BATTLE COMMENTS -->
+    <section class="battle-comments">
 
-        <div class="comment-sort">
-            <button class="sort-btn active" data-sort="latest">최신순</button>
-            <button class="sort-btn" data-sort="best">공감순</button>
+    <h3 class="white-title">💬 진영 토론</h3>
+
+    <div class="battle-columns">
+
+        <!-- =========================
+            👍 찬성 진영
+        ========================== -->
+        <section class="comment-side pro">
+
+        <!-- BILLBOARD -->
+        <div class="billboard pro">
+            <div class="billboard-header">
+            👍 찬성 진영 BILLBOARD
+            </div>
+
+            <div class="billboard-body enemy">
+            <span class="billboard-badge enemy">⚔️ 적진 침투</span>
+
+            <p class="billboard-text">
+                이 논리는 데이터 없이 감정에 기대고 있습니다.
+            </p>
+
+            <div class="billboard-meta">
+                <span>👎 반대 진영</span>
+                <span>❤️ 842 · ⚔️ 103</span>
+            </div>
+
+            <div class="billboard-actions">
+                <button class="btn-item">🛡️ 끌어내리기</button>
+                <button class="btn-reply">반박</button>
+            </div>
+            </div>
         </div>
 
-        <div class="main-reply-box">
-            <textarea id="main-reply" placeholder="댓글을 입력하세요..."></textarea>
-            <button id="main-reply-btn">등록</button>
+        <!-- COMMENT LIST -->
+        <div class="comment-list">
+
+            <div class="comment-item pro">
+            <div class="comment-header">
+                <span class="badge pro">👍 찬성</span>
+            </div>
+            <p class="comment-text">
+                이 정책은 장기적으로 필요합니다.
+            </p>
+            <div class="comment-actions">
+                <button>❤️ 52</button>
+                <button>⚔️ 도전</button>
+                <button>📌 빌보드</button>
+            </div>
+            </div>
+
+            <div class="comment-item enemy">
+            <div class="comment-header">
+                <span class="badge enemy">👎 반대 · 침투</span>
+            </div>
+            <p class="comment-text">
+                전제부터 잘못된 주장입니다.
+            </p>
+            <div class="comment-actions">
+                <button>❤️ 211</button>
+                <button>⚔️ 도전</button>
+            </div>
+            </div>
+
         </div>
 
-        <div id="comment-list" class="comment-list"></div>
-    </section>
-
-    <!-- 댓글 옵션 모달 -->
-    <div id="comment-action-modal" class="comment-action-modal" hidden>
-        <div class="comment-action-sheet">
-            <div class="action-item" data-action="copy">🔗 링크 복사</div>
-            <div class="action-item" data-action="save">📁 저장</div>
-            <div class="action-item" data-action="hide">🙈 관심 없음</div>
-            <div class="action-item" data-action="mute">🥕 업데이트 안 보기</div>
-            <div class="action-item" data-action="restrict">🪢 제한</div>
-            <div class="action-item more-danger" data-action="report">🚨 신고하기</div>
-            <button class="comment-close-btn" data-close>닫기</button>
+        <!-- INPUT -->
+        <div class="comment-input">
+            <textarea placeholder="찬성 진영에 의견 남기기"></textarea>
+            <button>등록</button>
         </div>
+
+        </section>
+
+        <!-- =========================
+            👎 반대 진영
+        ========================== -->
+        <section class="comment-side con">
+
+        <!-- BILLBOARD -->
+        <div class="billboard con">
+            <div class="billboard-header">
+            👎 반대 진영 BILLBOARD
+            </div>
+
+            <div class="billboard-body own">
+            <p class="billboard-text">
+                이 정책은 사회적 비용만 키웁니다.
+            </p>
+
+            <div class="billboard-meta">
+                <span>👎 반대 진영</span>
+                <span>❤️ 1,203 · ⚔️ 88</span>
+            </div>
+
+            <div class="billboard-actions">
+                <button class="btn-item">🔥 확성기</button>
+                <button class="btn-reply">지지</button>
+            </div>
+            </div>
+        </div>
+
+        <!-- COMMENT LIST -->
+        <div class="comment-list">
+            <div class="comment-item con">
+            <div class="comment-header">
+                <span class="badge con">👎 반대</span>
+            </div>
+            <p class="comment-text">
+                구조적으로 문제가 큽니다.
+            </p>
+            <div class="comment-actions">
+                <button>❤️ 94</button>
+                <button>⚔️ 도전</button>
+                <button>📌 빌보드</button>
+            </div>
+            </div>
+        </div>
+
+        <!-- INPUT -->
+        <div class="comment-input">
+            <textarea placeholder="반대 진영에 의견 남기기"></textarea>
+            <button>등록</button>
+        </div>
+
+        </section>
+
     </div>
-
-</div>
+    </section>
 
 <!-- 상단 ⋯ 메뉴 -->
 <div id="header-more-modal" class="more-menu-backdrop" hidden>
