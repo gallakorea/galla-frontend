@@ -1580,3 +1580,29 @@ body {
   border-left: 4px solid #ef4444;
   background: #240d0d;
 }
+
+.ai-news-placeholder {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px dashed rgba(255,255,255,0.15);
+  text-align: center;
+}
+
+.ai-news-placeholder-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.ai-news-placeholder-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.ai-news-placeholder-sub {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: 0.6;
+}
