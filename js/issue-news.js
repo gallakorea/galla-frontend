@@ -107,36 +107,30 @@ function renderInsufficient() {
   const section = document.querySelector(".ai-news");
   if (!section) return;
 
-  section.removeAttribute("hidden");
-
-  // 👍👎 기존 찬반 기사 영역 제거
-  const pro = document.getElementById("ai-news-pro");
-  const con = document.getElementById("ai-news-con");
-
-  if (pro) pro.remove();
-  if (con) con.remove();
-
-  // 중복 삽입 방지
-  if (section.querySelector(".ai-news-placeholder")) return;
-
-  // 🔥 관련 뉴스 근거 카드 내부에 메시지 삽입
-  const placeholder = document.createElement("div");
-  placeholder.className = "ai-news-placeholder";
-  placeholder.innerHTML = `
-    <div class="ai-news-placeholder-title">
-      아직 언론에서 충분히 다뤄지지 않은 논점입니다
+  // 🔥 핵심: 내부를 통째로 교체
+  section.innerHTML = `
+    <div class="ai-news-header">
+      📰 관련 뉴스 근거
     </div>
-    <div class="ai-news-placeholder-desc">
-      이 이슈는 의견과 논점은 존재하지만,<br/>
-      복수의 언론 보도가 확인되기 전까지는<br/>
-      뉴스 영역이 활성화되지 않습니다.
-    </div>
-    <div class="ai-news-placeholder-sub">
-      언론 보도가 축적되면 자동으로 반영됩니다.
+
+    <div class="ai-news-insufficient">
+      <div class="ai-news-placeholder">
+        <div class="ai-news-placeholder-title">
+          아직 언론에서 충분히 다뤄지지 않은 논점입니다
+        </div>
+        <div class="ai-news-placeholder-desc">
+          이 이슈는 의견과 논점은 존재하지만,<br/>
+          복수의 언론 보도가 확인되기 전까지는<br/>
+          뉴스 영역이 활성화되지 않습니다.
+        </div>
+        <div class="ai-news-placeholder-sub">
+          언론 보도가 축적되면 자동으로 반영됩니다.
+        </div>
+      </div>
     </div>
   `;
 
-  section.appendChild(placeholder);
+  section.removeAttribute("hidden");
 }
 
 function draw(id, list) {
