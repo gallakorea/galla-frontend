@@ -1,0 +1,100 @@
+#battle-zone{background:#000;color:#fff;padding:14px;font-family:system-ui}
+
+.army-label{font-weight:700;margin-bottom:6px}
+.pro{color:#5bbcff}
+.con{color:#ff6b6b}
+
+.battle-divider{
+  height:2px;margin:18px 0;
+  background:linear-gradient(90deg,#5bbcff,#ff6b6b);
+  box-shadow:0 0 12px rgba(255,255,255,.25)
+}
+
+.billboard{
+  border-radius:10px;padding:12px;margin-bottom:10px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.85)),
+    repeating-linear-gradient(45deg,#050505,#050505 6px,#0a0a0a 6px,#0a0a0a 12px);
+  box-shadow:0 0 40px rgba(255,255,255,.35)
+}
+
+.billboard-title{
+  font-size:11px;letter-spacing:3px;
+  margin-bottom:10px;opacity:.9
+}
+
+.comment{
+  border-radius:8px;border:1px solid rgba(255,255,255,.15);
+  padding:8px;margin-bottom:6px;
+  background:linear-gradient(180deg,#111,#020202)
+}
+
+.billboard .comment{
+  background:linear-gradient(180deg,#1a1a1a,#020202)
+}
+
+.head{display:flex;justify-content:space-between;font-size:11px}
+.user{display:flex;gap:6px}
+.anon{font-size:10px;padding:1px 5px;border-radius:4px;background:#333;opacity:.7}
+
+.body{font-size:13px;margin:6px 0}
+
+.actions, .reply-actions{
+  font-size:12px;opacity:.75;display:flex;gap:10px;cursor:pointer
+}
+
+.replies{
+  margin-top:6px;
+  border-left:1px solid rgba(255,255,255,.2);
+  padding-left:8px
+}
+
+.reply{font-size:12px;margin-top:6px;opacity:.9}
+
+.reply-meta{font-size:10px;opacity:.6;margin-top:4px}
+
+.more{cursor:pointer;font-size:11px;color:#aaa;margin-top:4px}
+
+.pager-wrap{
+  display:flex;justify-content:center;margin:12px 0
+}
+
+.pager{
+  display:flex;gap:8px;
+  padding:6px 10px;border-radius:10px;
+  background:rgba(255,255,255,.05);
+  box-shadow:0 0 16px rgba(255,255,255,.2)
+}
+
+.pager button{
+  min-width:32px;height:30px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.06);
+  color:#fff;font-size:13px;
+  cursor:pointer;transition:.2s
+}
+
+.pager button:hover{background:rgba(255,255,255,.2)}
+
+.pager button.active{
+  background:linear-gradient(180deg,#ffffff33,#ffffff10);
+  box-shadow:0 0 10px rgba(255,255,255,.5);
+  font-weight:700
+}
+
+.comment-war-header{
+  margin:20px 0 12px;
+  padding:14px;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.9)),
+    repeating-linear-gradient(45deg,#060606,#060606 6px,#0c0c0c 6px,#0c0c0c 12px);
+  box-shadow:0 0 40px rgba(255,255,255,.35);
+}
+
+.comment-war-title{
+  font-size:15px;font-weight:800;letter-spacing:3px
+}
+
+.comment-war-sub{margin-top:6px;font-size:11px;opacity:.7}

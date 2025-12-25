@@ -270,171 +270,492 @@
 <!-- =========================
    FACTION COMMENT ZONE
 ========================= -->
-<section class="debate-comments">
 
-  <!-- ===============================
-       🔵 찬성 진영
-  =============================== -->
-  <div class="camp pro">
+<!-- ================= COMMENT WAR HEADER ================= -->
+<section class="comment-war-header">
+  <div class="comment-war-title">⚔️ 찬반 댓글 전쟁</div>
+  <div class="comment-war-sub">
+    이 이슈에 대한 찬성과 반대 진영의 실시간 교전 상황입니다.
+  </div>
+</section>
 
-    <div class="camp-title">찬성 진영</div>
 
-    <!-- BILLBOARD -->
-    <div class="billboard pro">
-      <div class="billboard-head">
-        BILLBOARD · TOP 10
-      </div>
+<!-- ================= 전황표 ================= -->
+<div class="war-dashboard">
+  <div class="war-title">⚔ 전황표</div>
 
-      <div class="billboard-list">
-        <!-- item -->
-        <div class="bb-item">
-          <p class="bb-text">
-            이 정책은 불편하지만 장기적으로는 반드시 필요합니다.
-          </p>
-          <div class="bb-meta">
-            👍 1,248 · 💬 182
-          </div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">
-            반대 측은 감정만 있고 현실적인 대안이 없습니다.
-          </p>
-          <div class="bb-meta">👍 987 · 💬 96</div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">지금 안 하면 더 큰 비용을 치르게 됩니다.</p>
-          <div class="bb-meta">👍 812</div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">미래 세대를 위해서라도 필요합니다.</p>
-          <div class="bb-meta">👍 640</div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">단기 인기보다 구조 개혁이 중요합니다.</p>
-          <div class="bb-meta">👍 512</div>
-        </div>
-      </div>
-
-      <!-- pagination -->
-      <div class="bb-pages">
-        <button class="active">1</button>
-        <button>2</button>
-        <button>3</button>
-      </div>
+  <div class="war-grid">
+    <div class="war-box pro">
+      <div class="war-label">찬성 진영</div>
+      <div class="war-stat">총 댓글 <b>284</b></div>
+      <div class="war-sub">동진영 212 · 적진 72</div>
     </div>
 
-    <!-- COMMENTS -->
-    <div class="thread">
+    <div class="war-box neutral">
+      <div class="war-label">전체 전장</div>
+      <div class="war-stat">총 교전 <b>601</b></div>
+      <div class="war-sub">공격 1,842 · 지원 931 · 방어 764</div>
+    </div>
 
-      <div class="comment pro">
-        <div class="c-head">
-          <span class="c-badge pro">찬성</span>
-          <span class="c-more">⋯</span>
-        </div>
-
-        <p class="c-text">
-          솔직히 이 정도 변화는 감수해야 한다고 봅니다.
-        </p>
-
-        <div class="c-actions">
-          <button>👍 84</button>
-          <button>👎 12</button>
-          <button>💬 답글</button>
-          <button>🔗 공유</button>
-        </div>
-
-        <!-- reply -->
-        <div class="reply con">
-          <span class="c-badge con">반대</span>
-          <p class="c-text">
-            왜 그 감수는 항상 특정 계층 몫인가요?
-          </p>
-          <div class="c-actions">
-            <button>👍 312</button>
-            <button>👎 44</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="comment neutral">
-        <div class="c-head">
-          <span class="c-badge neutral">미투표</span>
-          <span class="c-more">⋯</span>
-        </div>
-
-        <p class="c-text">
-          아직 판단이 어렵습니다. 더 지켜보고 싶네요.
-        </p>
-
-        <div class="c-actions">
-          <button>👍 22</button>
-          <button>💬 답글</button>
-        </div>
-      </div>
-
-      <!-- input -->
-      <div class="comment-input">
-        <textarea placeholder="찬성 진영에 의견을 남겨보세요"></textarea>
-        <button>등록</button>
-      </div>
-
+    <div class="war-box con">
+      <div class="war-label">반대 진영</div>
+      <div class="war-stat">총 댓글 <b>317</b></div>
+      <div class="war-sub">동진영 241 · 적진 76</div>
     </div>
   </div>
+</div>
 
-  <!-- ===============================
-       🔴 반대 진영
-  =============================== -->
-  <div class="camp con">
+<section id="battle-zone">
 
-    <div class="camp-title">반대 진영</div>
+<style>
+#battle-zone{background:#000;color:#fff;padding:14px;font-family:system-ui}
 
-    <div class="billboard con">
-      <div class="billboard-head">
-        BILLBOARD · TOP 10
-      </div>
+/* ================= BASIC ================= */
+.army-label{font-weight:700;margin-bottom:6px}
+.pro{color:#5bbcff}
+.con{color:#ff6b6b}
 
-      <div class="billboard-list">
-        <div class="bb-item">
-          <p class="bb-text">
-            이 정책은 결국 약자에게 부담을 전가합니다.
-          </p>
-          <div class="bb-meta">👍 1,402 · 💬 221</div>
+.battle-divider{
+  height:2px;margin:18px 0;
+  background:linear-gradient(90deg,#5bbcff,#ff6b6b);
+  box-shadow:0 0 12px rgba(255,255,255,.25)
+}
+
+/* ================= BILLBOARD ================= */
+.billboard{
+  border-radius:10px;padding:12px;margin-bottom:10px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.85)),
+    repeating-linear-gradient(45deg,#050505,#050505 6px,#0a0a0a 6px,#0a0a0a 12px);
+  box-shadow:0 0 40px rgba(255,255,255,.35)
+}
+.billboard-title{
+  font-size:11px;letter-spacing:3px;
+  margin-bottom:10px;opacity:.9
+}
+
+/* ================= COMMENT ================= */
+.comment{
+  border-radius:8px;border:1px solid rgba(255,255,255,.15);
+  padding:8px;margin-bottom:6px;
+  background:linear-gradient(180deg,#111,#020202)
+}
+.billboard .comment{
+  background:linear-gradient(180deg,#1a1a1a,#020202)
+}
+
+.head{display:flex;justify-content:space-between;font-size:11px}
+.user{display:flex;gap:6px}
+.anon{font-size:10px;padding:1px 5px;border-radius:4px;background:#333;opacity:.7}
+
+.hp-wrap{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.hp-bar{
+  width:50px;
+  height:5px;
+  background:#222;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.hp-fill{
+  height:100%;
+  background:linear-gradient(90deg,#00ffaa,#00cc66);
+  box-shadow:0 0 6px rgba(0,255,170,.6);
+}
+
+.hp-text{
+  font-size:10px;
+  opacity:.85;
+  min-width:22px;
+  text-align:right;
+}
+
+/* ================= BODY ================= */
+.body{font-size:13px;margin:6px 0}
+.actions{font-size:12px;opacity:.75;display:flex;gap:10px}
+
+/* ================= THREAD ================= */
+.replies{
+  margin-top:6px;
+  border-left:1px solid rgba(255,255,255,.2);
+  padding-left:8px
+}
+.reply{font-size:12px;margin-top:4px;opacity:.85}
+.reply-meta{font-size:10px;opacity:.6;margin-top:4px}
+.more{cursor:pointer;font-size:11px;color:#aaa;margin-top:4px}
+
+/* ================= PAGING ================= */
+.pager-wrap{
+  display:flex;justify-content:center;margin:12px 0
+}
+.pager{
+  display:flex;gap:8px;
+  padding:6px 10px;border-radius:10px;
+  background:rgba(255,255,255,.05);
+  box-shadow:0 0 16px rgba(255,255,255,.2)
+}
+.pager button{
+  min-width:32px;height:30px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.06);
+  color:#fff;font-size:13px;
+  cursor:pointer;transition:.2s
+}
+.pager button:hover{background:rgba(255,255,255,.2)}
+.pager button.active{
+  background:linear-gradient(180deg,#ffffff33,#ffffff10);
+  box-shadow:0 0 10px rgba(255,255,255,.5);
+  font-weight:700
+}
+
+/* ================= 전황표 ================= */
+.war-dashboard{
+  margin-bottom:18px;
+  padding:12px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#0e0e0e,#030303);
+  box-shadow:0 0 40px rgba(255,255,255,.25);
+}
+
+.war-title{
+  font-size:12px;
+  letter-spacing:3px;
+  opacity:.8;
+  margin-bottom:10px;
+}
+
+.war-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+
+.war-box{
+  padding:10px;
+  border-radius:10px;
+  background:linear-gradient(180deg,#1a1a1a,#050505);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 0 16px rgba(255,255,255,.2);
+}
+
+.war-box.pro{box-shadow:0 0 18px rgba(91,188,255,.35)}
+.war-box.con{box-shadow:0 0 18px rgba(255,107,107,.35)}
+
+.war-label{font-size:11px;opacity:.7}
+.war-stat{font-size:14px;margin:6px 0}
+.war-sub{font-size:10px;opacity:.6}
+
+/* ================= COMMENT WAR HEADER ================= */
+.comment-war-header{
+  margin:20px 0 12px;
+  padding:14px 14px 12px;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.9)),
+    repeating-linear-gradient(45deg,#060606,#060606 6px,#0c0c0c 6px,#0c0c0c 12px);
+  box-shadow:0 0 40px rgba(255,255,255,.35);
+}
+
+.comment-war-title{
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:3px;
+  text-shadow:0 0 12px rgba(255,255,255,.5);
+}
+
+.comment-war-sub{
+  margin-top:6px;
+  font-size:11px;
+  opacity:.7;
+}
+
+.reply-actions{
+  margin-top:4px;
+  display:flex;
+  gap:10px;
+  font-size:11px;
+  opacity:.7;
+}
+
+.sub-reply-input{
+  margin-top:6px;
+  display:flex;
+  gap:6px;
+}
+
+.sub-reply-input input{
+  flex:1;
+  background:#111;
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;
+  padding:4px;
+  border-radius:4px;
+  font-size:11px;
+}
+
+.sub-reply-input button{
+  background:#222;
+  border:1px solid rgba(255,255,255,.3);
+  color:#fff;
+  padding:4px 8px;
+  border-radius:4px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+}
+
+.action-more{
+  margin-left:auto;
+  position:relative;
+  cursor:pointer;
+  padding:0 4px;
+  opacity:.6;
+}
+
+.action-more:hover{opacity:1}
+
+.action-menu{
+  position:absolute;
+  right:0;
+  top:16px;
+  background:#111;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:6px;
+  overflow:hidden;
+  display:none;
+  z-index:30;
+  box-shadow:0 0 12px rgba(255,255,255,.25);
+}
+
+.action-more:hover .action-menu{
+  display:block;
+}
+
+.action-menu div{
+  padding:6px 10px;
+  font-size:11px;
+  white-space:nowrap;
+}
+
+.action-menu div:hover{
+  background:rgba(255,255,255,.1);
+}
+
+/* ================= HP SUPPORT EFFECT ================= */
+.hp-support-glow{
+  position:absolute;
+  inset:0;
+  box-shadow:0 0 10px rgba(0,255,170,.9);
+  animation: supportPulse .9s ease-out;
+  pointer-events:none;
+}
+
+@keyframes supportPulse{
+  from{opacity:1}
+  to{opacity:0}
+}
+
+.hp-bar{
+  position:relative;   /* ← 이 줄 추가 */
+  width:50px;
+  height:5px;
+  background:#222;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+</style>
+
+<div class="army-label pro">🔵 찬성 진영 · 댓글 284</div>
+
+<div class="billboard">
+  <div class="billboard-title">PRO BILLBOARD — 전황 최전선</div>
+  <div id="pro-bb"></div>
+  <div class="pager-wrap"><div class="pager" id="pro-bb-pager"></div></div>
+</div>
+
+<div class="billboard-title" style="margin-top:14px">PRO FRONTLINE — 교전 구역</div>
+<div id="pro-thread"></div>
+<div class="pager-wrap"><div class="pager" id="pro-th-pager"></div></div>
+
+<div class="battle-divider"></div>
+
+<div class="army-label con">🔴 반대 진영 · 댓글 317</div>
+
+<div class="billboard">
+  <div class="billboard-title">BILLBOARD — 전황 최전선</div>
+  <div id="con-bb"></div>
+  <div class="pager-wrap"><div class="pager" id="con-bb-pager"></div></div>
+</div>
+
+<div class="billboard-title" style="margin-top:14px">CON FRONTLINE — 교전 구역</div>
+<div id="con-thread"></div>
+<div class="pager-wrap"><div class="pager" id="con-th-pager"></div></div>
+
+<script>
+const PAGE_SIZE_BB=5, PAGE_SIZE_TH=4;
+
+const state={
+  pro:{bb:1,th:1,data:[]},
+  con:{bb:1,th:1,data:[]}
+}
+
+function user(){
+  const anon = Math.random() > .6;
+  const level = Math.floor(Math.random()*30) + 1;
+  return {
+    name: anon ? "익명" : "User" + Math.floor(Math.random()*1000),
+    anon,
+    level
+  }
+}
+
+function comment(side){
+  return{
+    side,
+    user:user(),
+    hp:Math.floor(Math.random()*40)+50,
+    text:"이 정책은 장기적으로 반드시 필요한 선택입니다.",
+    replies:Math.floor(Math.random()*8)+1,
+    atk:Math.floor(Math.random()*5),
+    sup:Math.floor(Math.random()*5),
+    def:Math.floor(Math.random()*5)
+  }
+}
+
+function makeReply(hp,text,side){
+  return `
+  <div class="reply" data-hp="${hp}">
+    <div class="head">
+      <div class="user">익명</div>
+      <div class="hp-wrap">
+        <div class="hp-bar">
+          <div class="hp-fill" style="width:${hp}%"></div>
         </div>
-
-        <div class="bb-item">
-          <p class="bb-text">
-            항상 ‘장기적’이라는 말로 현재 고통을 무시합니다.
-          </p>
-          <div class="bb-meta">👍 978</div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">책임은 국민에게, 이익은 위로.</p>
-          <div class="bb-meta">👍 744</div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">결국 또 세금입니다.</p>
-          <div class="bb-meta">👍 631</div>
-        </div>
-
-        <div class="bb-item">
-          <p class="bb-text">다른 선택지는 왜 논의 안 하나요?</p>
-          <div class="bb-meta">👍 509</div>
-        </div>
-      </div>
-
-      <div class="bb-pages">
-        <button class="active">1</button>
-        <button>2</button>
+        <span class="hp-text">HP ${hp}</span>
       </div>
     </div>
 
-  </div>
+    <div class="body">└ ${text}</div>
+
+    <div class="reply-actions" data-side="${side}">
+      ❤4 👎1 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
+    </div>
+  </div>`;
+}
+
+function make(c){
+  const replyHP1 = Math.floor(Math.random()*40)+50;
+  const replyHP2 = Math.floor(Math.random()*40)+50;
+
+  return `
+  <div class="comment" data-hp="${c.hp}">
+    <div class="head">
+      <div class="user">
+        ${c.user.name}
+        <span class="level-badge">Lv.${c.user.level}</span>
+        ${c.user.anon?'<span class="anon">익명 · HP -20%</span>':''}
+      </div>
+      <div class="hp-wrap">
+        <div class="hp-bar">
+          <div class="hp-fill" style="width:${c.hp}%"></div>
+        </div>
+        <span class="hp-text">HP ${c.hp}</span>
+      </div>
+    </div>
+
+    <div class="body">${c.text}</div>
+
+    <div class="actions" data-side="${c.side}">
+      ❤12 👎3 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
+    </div>
+
+    <div class="reply-meta">💬 ${c.replies} · ⚔ ${c.atk} · 🛡 ${c.def} · 💣 ${c.sup}</div>
+
+    <div class="replies">
+
+      ${makeReply(replyHP1, "상대 진영 반박: 전혀 동의할 수 없습니다.", c.side)}
+      ${makeReply(replyHP2, "같은 진영 지원: 좋은 의견입니다.", c.side)}
+
+      ${c.replies>2?`<div class="more">+ ${c.replies-2}개 더보기</div>`:""}
+    </div>
+  </div>`;
+}
+
+function render(side){
+  const s=state[side];
+
+  const bb=document.getElementById(side+"-bb");
+  bb.innerHTML=s.data.slice((s.bb-1)*PAGE_SIZE_BB,s.bb*PAGE_SIZE_BB).map(make).join("");
+
+  const th=document.getElementById(side+"-thread");
+  th.innerHTML=s.data.slice(5+(s.th-1)*PAGE_SIZE_TH,5+s.th*PAGE_SIZE_TH).map(make).join("");
+
+  buildPager(side,"bb",PAGE_SIZE_BB);
+  buildPager(side,"th",PAGE_SIZE_TH);
+}
+
+function buildPager(side,type,size){
+  const pager=document.getElementById(`${side}-${type}-pager`);
+  const s=state[side];
+  const total=Math.ceil((s.data.length-5)/size);
+  pager.innerHTML="";
+  for(let i=1;i<=total;i++){
+    const b=document.createElement("button");
+    b.textContent=i;
+    if(s[type]===i) b.classList.add("active");
+    b.onclick=()=>{s[type]=i;render(side);}
+    pager.appendChild(b);
+  }
+}
+
+function init(side){
+  state[side].data = Array.from({length:30}, () => comment(side));
+  render(side);
+}
+
+init("pro");init("con");
+
+document.addEventListener("click", e=>{
+  if(e.target.closest(".reply-actions")){
+    const reply = e.target.closest(".reply");
+    const box = reply.querySelector(".sub-reply-input");
+    box.hidden = !box.hidden;
+  }
+});
+
+document.addEventListener("click", e=>{
+  if(!e.target.classList.contains("action-support")) return;
+
+  const unit = e.target.closest(".comment, .reply");
+  let hp = Number(unit.dataset.hp);
+  hp = Math.min(hp + 12, 100);
+  unit.dataset.hp = hp;
+
+  const fill = unit.querySelector(".hp-fill");
+  fill.style.width = hp + "%";
+
+  const text = unit.querySelector(".hp-text");
+  text.textContent = "HP " + hp;
+
+  const bar = unit.querySelector(".hp-bar");
+  const glow = document.createElement("div");
+  glow.className = "hp-support-glow";
+  bar.appendChild(glow);
+
+  setTimeout(()=>glow.remove(),900);
+});
+</script>
 
 </section>
 
@@ -546,20 +867,52 @@ document.getElementById("btn-back").addEventListener("click", () => {
     if (document.referrer) history.back();
     else location.href = "index.html";
 });
+</script>
 
-/* --------------------------
-    ⋯ 메뉴 열기/닫기
--------------------------- */
-const moreBtn = document.getElementById("header-more-btn");
-const moreModal = document.getElementById("header-more-modal");
+<script>
+/* ==============================
+   SUPPORT MODAL OPEN / CLOSE
+============================== */
 
-moreBtn.addEventListener("click", () => {
-    moreModal.hidden = false;
+const supportModal = document.getElementById("support-modal");
+
+document.addEventListener("click", (e) => {
+
+  // 닫기 버튼
+  if (e.target.matches("[data-close]")) {
+    supportModal.hidden = true;
+    return;
+  }
+
+  // 모달 바깥 클릭
+  if (e.target === supportModal) {
+    supportModal.hidden = true;
+  }
+
 });
-moreModal.addEventListener("click", (e) => {
-    if (e.target === moreModal || e.target.classList.contains("more-close")) {
-        moreModal.hidden = true;
-    }
+</script>
+
+<script>
+/* ==============================
+   SUPPORT BUTTON → MODAL OPEN
+============================== */
+
+document.addEventListener("click", (e) => {
+  const supportBtn = e.target.closest(".action-support");
+  if (!supportBtn) return;
+
+  const modal = document.getElementById("support-modal");
+  if (!modal) return;
+
+  modal.hidden = false;
+
+  // 진영 정보 추출
+  const box = supportBtn.closest(".actions, .reply-actions");
+  const side = box?.dataset?.side || "pro";
+
+  modal.dataset.side = side;
+  modal.classList.remove("pro", "con");
+  modal.classList.add(side);
 });
 </script>
 
