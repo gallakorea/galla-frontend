@@ -25,7 +25,7 @@ export async function initCommentSystem(issueId) {
   }
 
   await loadComments(CURRENT_ISSUE_ID);
-  await loadWarStats(CURRENT_ISSUE_ID);
+  await loadWarStats();
   renderSide("pro");
   renderSide("con");
   renderWarDashboard();
@@ -297,7 +297,7 @@ function bindEvents() {
     renderSide("pro");
     renderSide("con");
 
-    await loadWarStats(CURRENT_ISSUE_ID);
+    await loadWarStats();
     renderWarDashboard();
   });
 
