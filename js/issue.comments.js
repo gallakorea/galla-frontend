@@ -1,6 +1,8 @@
 export async function initCommentSystem(issueId) {
   console.log("💬 initCommentSystem:", issueId);
 
+  await new Promise(r => requestAnimationFrame(r));
+
   const zone = document.getElementById("battle-zone");
   if (!zone) {
     console.warn("❌ battle-zone not found");
@@ -105,6 +107,11 @@ function makeComment(c) {
   </div>`;
 }
 
+async function loadComments(issueId) {
+  state.pro.data = Array.from({ length: 30 }, () => createComment("pro"));
+  state.con.data = Array.from({ length: 30 }, () => createComment("con"));
+}
+
 /* ======================
    Engine
 ====================== */
@@ -140,35 +147,25 @@ function buildPager(side, type, size) {
    Interaction
 ====================== */
 
-document.addEventListener("click", e => {
-  if (!e.target.classList.contains("action-support")) return;
+function bindEvents() {
+  document.addEventListener("click", e => {
+    if (!e.target.classList.contains("action-support")) return;
 
-  const unit = e.target.closest(".comment, .reply");
-  let hp = Number(unit.dataset.hp);
-  hp = Math.min(hp + 12, 100);
-  unit.dataset.hp = hp;
+    const unit = e.target.closest(".comment, .reply");
+    let hp = Number(unit.dataset.hp);
+    hp = Math.min(hp + 12, 100);
+    unit.dataset.hp = hp;
 
-  const fill = unit.querySelector(".hp-fill");
-  const text = unit.querySelector(".hp-text");
+    const fill = unit.querySelector(".hp-fill");
+    const text = unit.querySelector(".hp-text");
 
-  fill.style.width = hp + "%";
-  text.textContent = "HP " + hp;
+    fill.style.width = hp + "%";
+    text.textContent = "HP " + hp;
 
-  const bar = unit.querySelector(".hp-bar");
-  const glow = document.createElement("div");
-  glow.className = "hp-support-glow";
-  bar.appendChild(glow);
-  setTimeout(() => glow.remove(), 900);
-});
-
-/* ======================
-   Init
-====================== */
-
-function init(side) {
-  state[side].data = Array.from({ length: 30 }, () => createComment(side));
-  renderSide(side);
+    const bar = unit.querySelector(".hp-bar");
+    const glow = document.createElement("div");
+    glow.className = "hp-support-glow";
+    bar.appendChild(glow);
+    setTimeout(() => glow.remove(), 900);
+  });
 }
-
-init("pro");
-init("con");
