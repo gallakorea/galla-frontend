@@ -5,19 +5,7 @@ export async function loadCommentsAPI(issueId) {
 
   const { data, error } = await supabase
     .from("comments")
-    .select(`
-      id,
-      content,
-      hp,
-      faction,
-      attack_count,
-      defense_count,
-      support_count,
-      created_at,
-      is_anonymous,
-      parent_id,
-      user:users(username)
-    `)
+    .select("*")               // ← 조인 제거
     .eq("issue_id", Number(issueId))
     .order("created_at", { ascending: false });
 
