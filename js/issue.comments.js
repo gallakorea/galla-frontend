@@ -1,3 +1,16 @@
+// ============================
+// 🧩 Comment Text Renderer
+// ============================
+function renderCommentText(text) {
+  if (!text) return "";
+
+  return text.replace(
+    /\[gif:(.*?)\]/g,
+    (_, url) => `<img src="${url}" class="comment-gif">`
+  );
+}
+
+
 export async function initCommentSystem(issueId) {
   console.log("💬 initCommentSystem:", issueId);
 
