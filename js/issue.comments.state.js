@@ -28,12 +28,14 @@ export function getBattleStats() {
 ========================= */
 function recalcBattleStats() {
   const stats = {
-    pro: { same: 0, enemy: 0 },
-    con: { same: 0, enemy: 0 }
+    pro: { total: 0, same: 0, enemy: 0 },
+    con: { total: 0, same: 0, enemy: 0 }
   };
 
   comments.forEach(c => {
     if (c.hp <= 0) return;
+
+    stats[c.faction].total++;
 
     if (c.faction === "pro") {
       stats.pro.same++;
