@@ -68,19 +68,3 @@ export function applyCombatLogic(comments) {
   });
 }
 
-export function calculateBattleStats(comments) {
-  const stats = {
-    total: comments.length,
-    pro: { total: 0, same: 0, enemy: 0 },
-    con: { total: 0, same: 0, enemy: 0 }
-  };
-
-  comments.forEach(c => stats[c.faction].total++);
-
-  stats.pro.same = stats.pro.total;
-  stats.con.same = stats.con.total;
-  stats.pro.enemy = stats.con.same;
-  stats.con.enemy = stats.pro.same;
-
-  return stats;
-}

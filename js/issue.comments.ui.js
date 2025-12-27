@@ -8,7 +8,6 @@ import {
 } from "./issue.comments.engine.js";
 
 import { getComments, setComments, getBattleStats } from "./issue.comments.state.js";
-import { calculateBattleStats } from "./issue.comments.engine.js";
 
 export function renderBattleDashboard(stats) {
   if (!stats) return;
