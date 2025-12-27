@@ -1,7 +1,7 @@
 import { loadAiArguments } from "./issue-argument.js";
 import { loadAiNews } from "./issue-news.js";
 import { loadStats } from "./issue.stats.js";
-import { startCommentSystem } from "./issue.comments.bootstrap.js";
+import { initCommentSystem } from "./issue.comments.js";
 
 
 console.log("[issue.js] loaded");
@@ -53,7 +53,7 @@ if (!issueId || Number.isNaN(issueId)) {
 
 renderIssue(issue);
 
-await startCommentSystem(issue.id);
+await initCommentSystem(issue.id);
 
 /* ===============================
   AI ARGUMENT (논점)
