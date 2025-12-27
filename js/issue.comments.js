@@ -189,6 +189,7 @@ function buildPager(side, type, size) {
     b.onclick = () => { s[type] = i; renderSide(side); };
     pager.appendChild(b);
   }
+}
 
   function renderWarDashboard() {
   document.querySelector(".war-box.pro .war-stat b").innerText = warStats.pro.total;
@@ -199,9 +200,6 @@ function buildPager(side, type, size) {
 
   document.querySelector(".war-box.neutral .war-sub").innerText =
     `공격 ${warStats.global.attack} · 지원 ${warStats.global.support} · 방어 ${warStats.global.defend}`;
-}
-
-
 }
 
 /* ======================
