@@ -191,14 +191,26 @@ function buildPager(side, type, size) {
   }
 }
 
-  function renderWarDashboard() {
-  document.querySelector(".war-box.pro .war-stat b").innerText = warStats.pro.total;
-  document.querySelector(".war-box.con .war-stat b").innerText = warStats.con.total;
+function renderWarDashboard() {
+  const pro = document.querySelector(".war-box.pro .war-stat b");
+  const con = document.querySelector(".war-box.con .war-stat b");
+  const neutral = document.querySelector(".war-box.neutral .war-stat b");
+  const sub = document.querySelector(".war-box.neutral .war-sub");
 
-  document.querySelector(".war-box.neutral .war-stat b").innerText =
-    warStats.global.attack + warStats.global.support + warStats.global.defend;
+  if (!pro || !con || !neutral || !sub) {
+    console.warn("⚠️ war dashboard UI not ready");
+    return;
+  }
 
-  document.querySelector(".war-box.neutral .war-sub").innerText =
+  pro.innerText = warStats.pro.total;
+  con.innerText = warStats.con.total;
+
+  neutral.innerText =
+    warStats.global.attack +
+    warStats.global.support +
+    warStats.global.defend;
+
+  sub.innerText =
     `공격 ${warStats.global.attack} · 지원 ${warStats.global.support} · 방어 ${warStats.global.defend}`;
 }
 
