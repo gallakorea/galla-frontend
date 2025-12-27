@@ -365,6 +365,7 @@ async function loadComments(issueId) {
     .order("id", { ascending: true });
 
   const root = qs("comment-list");
+  if (!root) return;
   root.innerHTML = "";
 
   data?.forEach(c => {
