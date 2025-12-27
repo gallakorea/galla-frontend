@@ -81,7 +81,6 @@ if (typeof loadAiNews === "function") {
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
 
-  await startCommentSystem(issue.id);
 })();
 
 /* ==========================================================================
@@ -507,5 +506,10 @@ window.addEventListener("DOMContentLoaded", () => {
       if (confirmBtn) confirmBtn.disabled = false;
     });
   });
+});
+
+window.addEventListener("DOMContentLoaded", async () => {
+  if (!currentIssue) return;
+  await startCommentSystem(currentIssue.id);
 });
 

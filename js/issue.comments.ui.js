@@ -13,22 +13,28 @@ import { calculateBattleStats } from "./issue.comments.engine.js";
 export function renderBattleDashboard(stats) {
   if (!stats) return;
 
-  const proBox = document.getElementById("battle-pro");
-  const conBox = document.getElementById("battle-con");
+  const proBox = document.querySelector(".war-box.pro");
+  const conBox = document.querySelector(".war-box.con");
 
   if (!proBox || !conBox) return;
 
-  proBox.innerHTML = `
-    <strong>찬성 진영</strong><br>
-    병력: ${stats.pro.same}<br>
-    적군: ${stats.pro.enemy}
-  `;
+  // 찬성 진영
+  const proStat = proBox.querySelector(".war-stat");
+  const proSub  = proBox.querySelector(".war-sub");
 
-  conBox.innerHTML = `
-    <strong>반대 진영</strong><br>
-    병력: ${stats.con.same}<br>
-    적군: ${stats.con.enemy}
-  `;
+  if (proStat && proSub) {
+    proStat.innerHTML = `총 댓글 <b>${stats.pro.total}</b>`;
+    proSub.textContent = `동진영 ${stats.pro.same} · 적진 ${stats.pro.enemy}`;
+  }
+
+  // 반대 진영
+  const conStat = conBox.querySelector(".war-stat");
+  const conSub  = conBox.querySelector(".war-sub");
+
+  if (conStat && conSub) {
+    conStat.innerHTML = `총 댓글 <b>${stats.con.total}</b>`;
+    conSub.textContent = `동진영 ${stats.con.same} · 적진 ${stats.con.enemy}`;
+  }
 }
 
 const PAGE_SIZE_BB = 5, PAGE_SIZE_TH = 4;
@@ -88,6 +94,11 @@ function render(side) {
 }
 
 export function renderCommentsUI(comments) {
+  if (!document.getElementById("pro-bb")) {
+    console.warn("⏳ Comment DOM not ready");
+    return;
+  }
+
   state.pro.data = comments.filter(c => c.faction === "pro");
   state.con.data = comments.filter(c => c.faction === "con");
 
