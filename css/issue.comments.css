@@ -456,3 +456,76 @@ body{
   border-color:#ff6b6b;
   box-shadow:0 0 12px rgba(255,107,107,.6);
 }
+
+#app {
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.battle-input-bar {
+  position: fixed;
+  bottom: 56px; /* bottom-nav 높이 */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+
+  background: linear-gradient(180deg, rgba(10,10,10,.95), rgba(0,0,0,.95));
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(255,255,255,.15);
+  padding: 8px 10px 10px;
+  box-shadow: 0 -8px 20px rgba(0,0,0,.6);
+  z-index: 90;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#battle-comment-input {
+  width: 100%;
+  background: #070707;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 8px;
+  color: #fff;
+  padding: 10px;
+  font-size: 14px;
+  box-shadow: inset 0 0 12px rgba(255,255,255,.08);
+}
+
+.battle-input-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.side-btn, .submit-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: linear-gradient(180deg,#1b1b1b,#050505);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(255,255,255,.15);
+}
+
+.side-btn.pro.active { box-shadow: 0 0 16px rgba(91,188,255,.7); }
+.side-btn.con.active { box-shadow: 0 0 16px rgba(255,107,107,.7); }
+
+.submit-btn {
+  max-width: 60px;
+  background: linear-gradient(180deg,#ff9b2f,#ff6a00);
+  color: #000;
+}
+
+#battle-zone {
+  padding-bottom: 140px; /* 입력창 + 네비 공간 확보 */
+}
