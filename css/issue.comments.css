@@ -381,3 +381,78 @@ body{
 .submit-btn{
   opacity:.9;
 }
+
+.battle-input-bar{
+  position:fixed;
+  bottom:56px; /* 네비게이션 바로 위 */
+  left:0;
+  right:0;
+  padding:8px 10px 10px;
+  background:linear-gradient(180deg,rgba(0,0,0,.85),#000);
+  border-top:1px solid rgba(255,255,255,.15);
+  box-shadow:0 -10px 30px rgba(0,0,0,.9);
+  z-index:90;
+}
+
+.battle-input-top{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+#battle-comment-input{
+  flex:1;
+  height:38px;
+  padding:0 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.25);
+  background:#050505;
+  color:#fff;
+  font-size:13px;
+}
+
+.gif-btn,
+.submit-btn{
+  width:42px;
+  height:38px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.35);
+  background:linear-gradient(180deg,#111,#020202);
+  color:#fff;
+  font-size:14px;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(255,255,255,.25);
+}
+
+.submit-btn{
+  background:linear-gradient(180deg,#ff8a00,#ff4500);
+  box-shadow:0 0 16px rgba(255,120,0,.55);
+}
+
+.battle-input-bottom{
+  display:flex;
+  gap:10px;
+  margin-top:6px;
+}
+
+.side-btn{
+  flex:1;
+  height:34px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.25);
+  background:linear-gradient(180deg,#0f0f0f,#030303);
+  color:#fff;
+  font-size:12px;
+  cursor:pointer;
+  box-shadow:0 0 8px rgba(255,255,255,.2);
+}
+
+.side-btn.pro.active{
+  border-color:#5bbcff;
+  box-shadow:0 0 12px rgba(91,188,255,.6);
+}
+
+.side-btn.con.active{
+  border-color:#ff6b6b;
+  box-shadow:0 0 12px rgba(255,107,107,.6);
+}

@@ -336,16 +336,22 @@
     </section>
 
 <!-- BATTLE COMMENT INPUT -->
-<div class="battle-input-wrapper">
-  <input id="battle-comment-input" placeholder="이 전투에 대한 의견을 입력하세요..." />
+<div class="battle-input-bar">
 
-  <div class="battle-input-actions">
+  <div class="battle-input-top">
+    <input id="battle-comment-input" placeholder="이 전투에 대한 의견을 입력하세요..." />
+
+    <button class="gif-btn">GIF</button>
+    <button id="battle-comment-submit" class="submit-btn">⚔️</button>
+  </div>
+
+  <div class="battle-input-bottom">
     <button class="side-btn pro active" data-side="pro">🔵 찬성</button>
     <button class="side-btn con" data-side="con">🔴 반대</button>
-    <button id="battle-comment-submit" class="submit-btn">⚔️ 전투 투입</button>
   </div>
 
   <input type="hidden" id="battle-side-select" value="pro" />
+
 </div>
 
 <!-- BOTTOM NAV -->
