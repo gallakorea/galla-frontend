@@ -1,3 +1,5 @@
+let CURRENT_ISSUE_ID = null;
+
 // ============================
 // 🧩 Comment Text Renderer
 // ============================
@@ -12,6 +14,7 @@ function renderCommentText(text) {
 
 
 export async function initCommentSystem(issueId) {
+  CURRENT_ISSUE_ID = issueId;
   console.log("💬 initCommentSystem:", issueId);
 
   await new Promise(r => requestAnimationFrame(r));
@@ -73,17 +76,6 @@ function createComment(side) {
     sup: Math.floor(Math.random() * 5),
     def: Math.floor(Math.random() * 5)
   };
-}
-
-// ============================
-// 🧩 Comment Text Renderer
-// ============================
-function renderCommentText(text) {
-  if (!text) return "";
-  return text.replace(
-    /\[gif:(.*?)\]/g,
-    (_, url) => `<img src="${url}" class="comment-gif">`
-  );
 }
 
 /* ======================
@@ -294,7 +286,7 @@ function bindEvents() {
     }
 
     await supabase.from("comments").insert({
-      issue_id: issueId,
+      issue_id: CURRENT_ISSUE_ID,
       user_id: session.session.user.id,
       side,
       text,
