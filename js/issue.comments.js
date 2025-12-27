@@ -1,3 +1,18 @@
+export async function initCommentSystem(issueId) {
+  console.log("💬 initCommentSystem:", issueId);
+
+  const zone = document.getElementById("battle-zone");
+  if (!zone) {
+    console.warn("❌ battle-zone not found");
+    return;
+  }
+
+  await loadComments(issueId);
+  renderSide("pro");
+  renderSide("con");
+  bindEvents();
+}
+
 /* =========================================================
    GALLA — Issue Comment Battle System
    UI + Logic FULL VERSION
