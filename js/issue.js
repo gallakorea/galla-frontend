@@ -505,7 +505,11 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!panel.hidden) {
       const gifs = await searchGif("battle");
       panel.innerHTML = gifs.map(g =>
-        `<img src="${g.media_formats.gif.url}" class="gif-thumb">`
+        `<img
+          src="${g.media_formats.gif.url}"
+          class="gif-thumb"
+          data-url="${g.media_formats.gif.url}"
+        >`
       ).join("");
     }
   });
@@ -543,3 +547,21 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// ============================
+// GIF 선택 → 입력창 삽입
+// ============================
+
+document.addEventListener("click", (e) => {
+  const img = e.target.closest(".gif-thumb");
+  if (!img) return;
+
+  const url = img.dataset.url;
+
+  const input = document.getElementById("battle-comment-input");
+  if (!input) return;
+
+  input.value += ` [gif:${url}] `;
+
+  // 패널 닫기
+  document.getElementById("gif-panel").hidden = true;
+});

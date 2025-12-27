@@ -76,7 +76,7 @@ function makeReply(hp, text, side) {
         <span class="hp-text">HP ${hp}</span>
       </div>
     </div>
-    <div class="body">└ ${text}</div>
+    <div class="body">└ ${renderCommentText(text)}</div>
     <div class="reply-actions" data-side="${side}">
       ❤4 👎1 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
     </div>
@@ -99,7 +99,7 @@ function makeComment(c) {
       </div>
     </div>
 
-    <div class="body">${c.text}</div>
+    <div class="body">${renderCommentText(c.text)}</div>
 
     <div class="actions" data-side="${c.side}">
       ❤12 👎3 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗

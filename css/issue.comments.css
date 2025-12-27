@@ -556,3 +556,10 @@ body{
 .gif-thumb:hover {
   transform: scale(1.05);
 }
+
+.comment-gif {
+  max-width: 140px;
+  border-radius: 10px;
+  display: block;
+  margin-top: 6px;
+}
