@@ -33,7 +33,7 @@ function recalcBattleStats() {
   };
 
   comments.forEach(c => {
-    if (c.hp <= 0) return;
+    if ((c.hp ?? 100) <= 0) return;
 
     stats[c.faction].total++;
 
