@@ -219,6 +219,16 @@ function renderWarDashboard() {
 ====================== */
 
 function bindEvents() {
+
+    // 🔵🔴 진영 선택 버튼 동작
+  document.querySelectorAll(".side-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("battle-side-select").value = btn.dataset.side;
+    });
+  });
+
   document.addEventListener("click", e => {
     if (!e.target.classList.contains("action-support")) return;
 

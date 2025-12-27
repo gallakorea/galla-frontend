@@ -248,34 +248,45 @@
 
 .battle-input-bar {
   position: fixed;
-  bottom: 60px; /* bottom-nav 위 */
+  bottom: 64px; /* bottom-nav 위 */
   left: 0;
-  width: 100%;
-  max-width: 480px;
-  background: #0f0f0f;
+  right: 0;
+  background: rgba(10,10,10,0.95);
+  backdrop-filter: blur(8px);
   padding: 10px;
-  border-top: 1px solid #222;
   z-index: 999;
 }
 
 .battle-input-bar input {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  background: #111;
+  padding: 12px;
+  border-radius: 10px;
   border: 1px solid #333;
-  color: white;
+  background: #111;
+  color: #fff;
+  margin-bottom: 8px;
 }
 
 .battle-input-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 8px;
 }
 
-.battle-input-actions button {
+.side-btn,
+.submit-btn {
   flex: 1;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 10px;
+  border-radius: 10px;
   font-weight: 600;
+  border: none;
+}
+
+.side-btn.pro { background: #143cff; color: #fff; }
+.side-btn.con { background: #ff2d2d; color: #fff; opacity: .6; }
+
+.side-btn.active { opacity: 1; }
+
+.submit-btn {
+  background: linear-gradient(135deg,#ff9f00,#ff4500);
+  color: #000;
 }
