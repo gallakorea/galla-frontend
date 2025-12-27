@@ -72,7 +72,6 @@ if (typeof loadAiNews === "function") {
     REST
   ================================ */
   loadVoteStats(issue.id);
-  loadComments(issue.id);
   checkVoteStatus(issue.id);
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
@@ -351,52 +350,6 @@ async function loadMySupportStatus(issueId) {
   qs("support-status-text").innerText =
     `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
 }
-
-/* ==========================================================================
-   6. Comments
-========================================================================== */
-async function loadComments(issueId) {
-  const supabase = window.supabaseClient;
-  const { data } = await supabase
-    .from("comments")
-    .select("*")
-    .eq("issue_id", issueId)
-    .eq("status", "normal")
-    .order("id", { ascending: true });
-
-  const root = qs("comment-list");
-  if (!root) return;
-  root.innerHTML = "";
-
-  data?.forEach(c => {
-    const div = document.createElement("div");
-    div.className = "comment-item";
-    div.innerHTML = `
-      <div class="comment-header"><span>익명</span></div>
-      <div class="comment-text">${c.content}</div>
-    `;
-    root.appendChild(div);
-  });
-}
-
-qs("main-reply-btn")?.addEventListener("click", async () => {
-  const content = qs("main-reply").value.trim();
-  if (!content) return;
-
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return alert("로그인이 필요합니다.");
-
-  await supabase.from("comments").insert({
-    issue_id: issueId,
-    user_id: session.session.user.id,
-    content,
-    status: "normal"
-  });
-
-  qs("main-reply").value = "";
-  loadComments(issueId);
-});
 
 /* ==========================================================================
    7. Video Modal
