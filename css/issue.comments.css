@@ -529,3 +529,30 @@ body{
 #battle-zone {
   padding-bottom: 140px; /* 입력창 + 네비 공간 확보 */
 }
+
+.gif-panel {
+  position: fixed;
+  bottom: 92px;
+  left: 0;
+  right: 0;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #0a0a0a;
+  border-top: 1px solid rgba(255,255,255,.2);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  z-index: 999;
+}
+
+.gif-thumb {
+  width: 100%;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: .15s;
+}
+
+.gif-thumb:hover {
+  transform: scale(1.05);
+}

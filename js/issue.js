@@ -21,6 +21,24 @@ let currentIssue = null;
 
 
 /* ==========================================================================
+   0-1. GIF
+========================================================================== */
+async function searchGif(query) {
+  const { data, error } = await window.supabaseClient.functions.invoke(
+    "gif-search",
+    { body: { q: query } }
+  );
+
+  if (error) {
+    console.error("GIF search error:", error);
+    return [];
+  }
+
+  return data.results;
+}
+
+
+/* ==========================================================================
    1. URL → issue id
 ========================================================================== */
 const params = new URLSearchParams(location.search);
@@ -476,6 +494,22 @@ async function checkAuthorSupport(issueId) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  
+    /* ==============================
+     🎞 GIF 버튼 연동 — 여기
+  ============================== */
+  document.querySelector(".gif-btn")?.addEventListener("click", async () => {
+    const panel = document.getElementById("gif-panel");
+    panel.hidden = !panel.hidden;
+
+    if (!panel.hidden) {
+      const gifs = await searchGif("battle");
+      panel.innerHTML = gifs.map(g =>
+        `<img src="${g.media_formats.gif.url}" class="gif-thumb">`
+      ).join("");
+    }
+  });
+  
   const supportModal = document.getElementById("support-modal");
   if (!supportModal) return;
 
