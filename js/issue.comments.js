@@ -5,7 +5,6 @@ let CURRENT_ISSUE_ID = null;
 // ============================
 function renderCommentText(text) {
   if (!text) return "";
-
   return text.replace(
     /\[gif:(.*?)\]/g,
     (_, url) => `<img src="${url}" class="comment-gif">`
@@ -25,13 +24,12 @@ export async function initCommentSystem(issueId) {
     return;
   }
 
-  await loadComments(issueId);
-  await loadWarStats(issueId);   // 🔥 여기
+  await loadComments(CURRENT_ISSUE_ID);
+  await loadWarStats(CURRENT_ISSUE_ID);
   renderSide("pro");
   renderSide("con");
-  renderWarDashboard();         // 🔥 여기
+  renderWarDashboard();
   bindEvents();
-
 }
 
 /* =========================================================
@@ -295,11 +293,11 @@ function bindEvents() {
 
     document.getElementById("battle-comment-input").value = "";
 
-    await loadComments(issueId);
+    await loadComments(CURRENT_ISSUE_ID);
     renderSide("pro");
     renderSide("con");
 
-    await loadWarStats(issueId);
+    await loadWarStats(CURRENT_ISSUE_ID);
     renderWarDashboard();
   });
 
