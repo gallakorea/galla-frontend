@@ -45,6 +45,12 @@ const state = {
 function make(c) {
   const baseHP = computeInitialHP(c);
 
+  const displayName = c.is_anonymous
+    ? "익명"
+    : (c.nickname || "사용자");
+
+  const level = c.user_level || 1;
+
   return `
 <div class="comment"
      data-id="${c.id}"
@@ -54,7 +60,7 @@ function make(c) {
 
   <div class="head">
     <div class="user">
-      ${c.user?.username ?? "익명"} Lv.${c.user_level ?? 1}
+      ${displayName} Lv.${level}
       ${c.is_anonymous ? `<span class="anon">익명 · HP -20%</span>` : ``}
     </div>
 
