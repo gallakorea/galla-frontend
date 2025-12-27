@@ -6,7 +6,6 @@
     <title>GALLA - 이슈 상세</title>
     <link rel="stylesheet" href="css/issue.css" />
     <link rel="stylesheet" href="css/issue.comments.css" />
-    <link rel="stylesheet" href="css/issue.comments.battle.css" />
 </head>
 
 <body data-page="issue">
@@ -248,43 +247,6 @@
         <div id="ai-summary" class="ai-summary"></div>
     </section>
     
-    <!-- BATTLE DASHBOARD -->
-    <section class="battle-zone">
-      <div class="battle-header">⚔️ 찬반 댓글 전쟁</div>
-
-      <div class="battle-stats">
-
-        <div id="battle-pro" class="battle-box pro">
-          <div class="war-stat">총 댓글 <b>0</b></div>
-          <div class="war-sub">동진영 0 · 적진 0</div>
-        </div>
-
-        <div id="battle-con" class="battle-box con">
-          <div class="war-stat">총 댓글 <b>0</b></div>
-          <div class="war-sub">동진영 0 · 적진 0</div>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- COMMENT FIELDS -->
-    <section class="comment-battle-zone">
-      <div class="comment-column">
-        <h3 class="column-title">🔵 찬성 진영</h3>
-        <div id="pro-bb" class="comment-list"></div>
-      </div>
-
-      <div class="comment-column">
-        <h3 class="column-title">🔴 반대 진영</h3>
-        <div id="con-bb" class="comment-list"></div>
-      </div>
-    </section>
-
-
-        <!-- COMMENT SYSTEM ROOT -->
-    <section id="comment-zone"></section>
-    <div id="comment-modal-root"></div>
-
         <!-- AUTHOR SUPPORT (UI ONLY) -->
     <section class="author-support">
         <div class="author-support-header">
@@ -306,6 +268,8 @@
             </p>
         </div>
     </section>
+
+    <script src="js/issue.comments.js"></script>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">

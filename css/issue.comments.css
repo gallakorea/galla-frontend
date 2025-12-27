@@ -1,5 +1,6 @@
 #battle-zone{background:#000;color:#fff;padding:14px;font-family:system-ui}
 
+/* ================= BASIC ================= */
 .army-label{font-weight:700;margin-bottom:6px}
 .pro{color:#5bbcff}
 .con{color:#ff6b6b}
@@ -10,6 +11,7 @@
   box-shadow:0 0 12px rgba(255,255,255,.25)
 }
 
+/* ================= BILLBOARD ================= */
 .billboard{
   border-radius:10px;padding:12px;margin-bottom:10px;
   background:
@@ -17,18 +19,17 @@
     repeating-linear-gradient(45deg,#050505,#050505 6px,#0a0a0a 6px,#0a0a0a 12px);
   box-shadow:0 0 40px rgba(255,255,255,.35)
 }
-
 .billboard-title{
   font-size:11px;letter-spacing:3px;
   margin-bottom:10px;opacity:.9
 }
 
+/* ================= COMMENT ================= */
 .comment{
   border-radius:8px;border:1px solid rgba(255,255,255,.15);
   padding:8px;margin-bottom:6px;
   background:linear-gradient(180deg,#111,#020202)
 }
-
 .billboard .comment{
   background:linear-gradient(180deg,#1a1a1a,#020202)
 }
@@ -37,35 +38,58 @@
 .user{display:flex;gap:6px}
 .anon{font-size:10px;padding:1px 5px;border-radius:4px;background:#333;opacity:.7}
 
-.body{font-size:13px;margin:6px 0}
-
-.actions, .reply-actions{
-  font-size:12px;opacity:.75;display:flex;gap:10px;cursor:pointer
+.hp-wrap{
+  display:flex;
+  align-items:center;
+  gap:6px;
 }
 
+.hp-bar{
+  position:relative;
+  width:50px;
+  height:5px;
+  background:#222;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.hp-fill{
+  height:100%;
+  background:linear-gradient(90deg,#00ffaa,#00cc66);
+  box-shadow:0 0 6px rgba(0,255,170,.6);
+}
+
+.hp-text{
+  font-size:10px;
+  opacity:.85;
+  min-width:22px;
+  text-align:right;
+}
+
+/* ================= BODY ================= */
+.body{font-size:13px;margin:6px 0}
+.actions{font-size:12px;opacity:.75;display:flex;gap:10px}
+
+/* ================= THREAD ================= */
 .replies{
   margin-top:6px;
   border-left:1px solid rgba(255,255,255,.2);
   padding-left:8px
 }
-
-.reply{font-size:12px;margin-top:6px;opacity:.9}
-
+.reply{font-size:12px;margin-top:4px;opacity:.85}
 .reply-meta{font-size:10px;opacity:.6;margin-top:4px}
-
 .more{cursor:pointer;font-size:11px;color:#aaa;margin-top:4px}
 
+/* ================= PAGING ================= */
 .pager-wrap{
   display:flex;justify-content:center;margin:12px 0
 }
-
 .pager{
   display:flex;gap:8px;
   padding:6px 10px;border-radius:10px;
   background:rgba(255,255,255,.05);
   box-shadow:0 0 16px rgba(255,255,255,.2)
 }
-
 .pager button{
   min-width:32px;height:30px;
   border-radius:6px;
@@ -74,18 +98,54 @@
   color:#fff;font-size:13px;
   cursor:pointer;transition:.2s
 }
-
 .pager button:hover{background:rgba(255,255,255,.2)}
-
 .pager button.active{
   background:linear-gradient(180deg,#ffffff33,#ffffff10);
   box-shadow:0 0 10px rgba(255,255,255,.5);
   font-weight:700
 }
 
+/* ================= 전황표 ================= */
+.war-dashboard{
+  margin-bottom:18px;
+  padding:12px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#0e0e0e,#030303);
+  box-shadow:0 0 40px rgba(255,255,255,.25);
+}
+
+.war-title{
+  font-size:12px;
+  letter-spacing:3px;
+  opacity:.8;
+  margin-bottom:10px;
+}
+
+.war-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+
+.war-box{
+  padding:10px;
+  border-radius:10px;
+  background:linear-gradient(180deg,#1a1a1a,#050505);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 0 16px rgba(255,255,255,.2);
+}
+
+.war-box.pro{box-shadow:0 0 18px rgba(91,188,255,.35)}
+.war-box.con{box-shadow:0 0 18px rgba(255,107,107,.35)}
+
+.war-label{font-size:11px;opacity:.7}
+.war-stat{font-size:14px;margin:6px 0}
+.war-sub{font-size:10px;opacity:.6}
+
+/* ================= COMMENT WAR HEADER ================= */
 .comment-war-header{
   margin:20px 0 12px;
-  padding:14px;
+  padding:14px 14px 12px;
   border-radius:14px;
   background:
     linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.9)),
@@ -94,40 +154,94 @@
 }
 
 .comment-war-title{
-  font-size:15px;font-weight:800;letter-spacing:3px
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:3px;
+  text-shadow:0 0 12px rgba(255,255,255,.5);
 }
 
-.comment-war-sub{margin-top:6px;font-size:11px;opacity:.7}
-
-/* ==============================
-   COMMENT BATTLE EFFECTS
-============================== */
-
-.comment.hit {
-  animation: hitShake .25s ease;
+.comment-war-sub{
+  margin-top:6px;
+  font-size:11px;
+  opacity:.7;
 }
 
-.comment.heal {
-  animation: healPulse .35s ease;
+.reply-actions{
+  margin-top:4px;
+  display:flex;
+  gap:10px;
+  font-size:11px;
+  opacity:.7;
 }
 
-.comment.dead {
-  filter: grayscale(1);
-  opacity: .45;
+.sub-reply-input{
+  margin-top:6px;
+  display:flex;
+  gap:6px;
 }
 
-/* 타격 흔들림 */
-@keyframes hitShake {
-  0% { transform: translateX(0) }
-  25% { transform: translateX(-3px) }
-  50% { transform: translateX(3px) }
-  75% { transform: translateX(-2px) }
-  100% { transform: translateX(0) }
+.sub-reply-input input{
+  flex:1;
+  background:#111;
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;
+  padding:4px;
+  border-radius:4px;
+  font-size:11px;
 }
 
-/* 회복 빛 효과 */
-@keyframes healPulse {
-  0% { box-shadow: 0 0 0 rgba(0,255,0,0) }
-  50% { box-shadow: 0 0 18px rgba(0,255,0,.6) }
-  100% { box-shadow: 0 0 0 rgba(0,255,0,0) }
+.sub-reply-input button{
+  background:#222;
+  border:1px solid rgba(255,255,255,.3);
+  color:#fff;
+  padding:4px 8px;
+  border-radius:4px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+.action-more{
+  margin-left:auto;
+  position:relative;
+  cursor:pointer;
+  padding:0 4px;
+  opacity:.6;
+}
+
+.action-more:hover{opacity:1}
+
+.action-menu{
+  position:absolute;
+  right:0;
+  top:16px;
+  background:#111;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:6px;
+  overflow:hidden;
+  display:none;
+  z-index:30;
+  box-shadow:0 0 12px rgba(255,255,255,.25);
+}
+
+.action-more:hover .action-menu{display:block}
+
+.action-menu div{
+  padding:6px 10px;
+  font-size:11px;
+  white-space:nowrap;
+}
+
+.action-menu div:hover{background:rgba(255,255,255,.1)}
+
+.hp-support-glow{
+  position:absolute;
+  inset:0;
+  box-shadow:0 0 10px rgba(0,255,170,.9);
+  animation:supportPulse .9s ease-out;
+  pointer-events:none;
+}
+
+@keyframes supportPulse{
+  from{opacity:1}
+  to{opacity:0}
 }
