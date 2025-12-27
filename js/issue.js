@@ -309,10 +309,15 @@ async function support(stance, amount) {
 ========================================================================== */
 async function loadSupportStats(issueId) {
   const supabase = window.supabaseClient;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("supports")
     .select("stance, amount")
     .eq("issue_id", issueId);
+
+  if (error) {
+    console.warn("support stats skipped:", error.message);
+    return;
+  }
 
   let pro = 0, con = 0;
   data?.forEach(s => {
@@ -430,16 +435,26 @@ async function checkRemixStatus(issueId) {
 
 async function loadRemixCounts(issueId) {
   const supabase = window.supabaseClient;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("remixes")
     .select("remix_stance")
     .eq("issue_id", issueId);
 
+  if (error) {
+    console.warn("remix count skipped:", error.message);
+    return;
+  }
+
   const pro = data?.filter(r => r.remix_stance === "pro").length || 0;
   const con = data?.filter(r => r.remix_stance === "con").length || 0;
 
-  qs("remix-pro-count").innerText = `참전 ${pro} · 리믹스 ${pro}`;
-  qs("remix-con-count").innerText = `참전 ${con} · 리믹스 ${con}`;
+  const proEl = document.getElementById("remix-pro-count");
+  const conEl = document.getElementById("remix-con-count");
+
+  if (!proEl || !conEl) return;
+
+  proEl.innerText = `참전 ${pro} · 리믹스 ${pro}`;
+  conEl.innerText = `참전 ${con} · 리믹스 ${con}`;
 }
 
 function applyRemixJoinedUI(stance) {
