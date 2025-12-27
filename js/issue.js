@@ -1,7 +1,6 @@
 import { loadAiArguments } from "./issue-argument.js";
 import { loadAiNews } from "./issue-news.js";
 import { loadStats } from "./issue.stats.js";
-import { loadFactionComments } from "./issue.comments.js";
 
 console.log("[issue.js] loaded");
 
@@ -72,7 +71,6 @@ if (typeof loadAiNews === "function") {
   /* ===============================
     REST
   ================================ */
-  loadFactionComments();
   loadVoteStats(issue.id);
   loadComments(issue.id);
   checkVoteStatus(issue.id);
@@ -504,42 +502,37 @@ async function checkAuthorSupport(issueId) {
   }
 }
 
-const supportModal = document.getElementById("support-modal");
+window.addEventListener("DOMContentLoaded", () => {
+  const supportModal = document.getElementById("support-modal");
+  if (!supportModal) return;
 
-/* 열기 */
-document.getElementById("support-pro-btn")?.addEventListener("click", () => {
-  console.log("support pro click");
-  supportModal.removeAttribute("hidden");
-});
+  /* 열기 */
+  document.getElementById("support-pro-btn")?.addEventListener("click", () => {
+    supportModal.removeAttribute("hidden");
+  });
 
-document.getElementById("support-con-btn")?.addEventListener("click", () => {
-  console.log("support con click");
-  supportModal.removeAttribute("hidden");
-});
+  document.getElementById("support-con-btn")?.addEventListener("click", () => {
+    supportModal.removeAttribute("hidden");
+  });
 
-/* 닫기 */
-supportModal?.addEventListener("click", (e) => {
-  if (e.target === supportModal || e.target.hasAttribute("data-close")) {
-    supportModal.setAttribute("hidden", "");
-  }
-});
+  /* 닫기 */
+  supportModal.addEventListener("click", (e) => {
+    if (e.target === supportModal || e.target.hasAttribute("data-close")) {
+      supportModal.setAttribute("hidden", "");
+    }
+  });
 
-// 보탬 레벨 선택
-document.querySelectorAll('.support-level').forEach(level => {
-  level.addEventListener('click', () => {
-    level.classList.remove('highlight');
-    // 기존 active 제거
-    document.querySelectorAll('.support-level.active')
-      .forEach(el => el.classList.remove('active'));
+  // 보탬 레벨 선택
+  document.querySelectorAll(".support-level").forEach(level => {
+    level.addEventListener("click", () => {
+      document.querySelectorAll(".support-level.active")
+        .forEach(el => el.classList.remove("active"));
 
-    // 클릭한 항목 active
-    level.classList.add('active');
+      level.classList.add("active");
 
-    // 실행 버튼 활성화
-    const confirmBtn = document.querySelector('.support-confirm');
-    if (confirmBtn) confirmBtn.disabled = false;
+      const confirmBtn = document.querySelector(".support-confirm");
+      if (confirmBtn) confirmBtn.disabled = false;
+    });
   });
 });
-
-
 
