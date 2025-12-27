@@ -121,8 +121,20 @@ function renderSide(side) {
   const bb = document.getElementById(side + "-bb");
   const th = document.getElementById(side + "-thread");
 
-  bb.innerHTML = s.data.slice((s.bb - 1) * PAGE_SIZE_BB, s.bb * PAGE_SIZE_BB).map(makeComment).join("");
-  th.innerHTML = s.data.slice(5 + (s.th - 1) * PAGE_SIZE_TH, 5 + s.th * PAGE_SIZE_TH).map(makeComment).join("");
+  if (!bb || !th) {
+    console.warn("renderSide target missing:", side);
+    return;
+  }
+
+  bb.innerHTML = s.data
+    .slice((s.bb - 1) * PAGE_SIZE_BB, s.bb * PAGE_SIZE_BB)
+    .map(makeComment)
+    .join("");
+
+  th.innerHTML = s.data
+    .slice(5 + (s.th - 1) * PAGE_SIZE_TH, 5 + s.th * PAGE_SIZE_TH)
+    .map(makeComment)
+    .join("");
 
   buildPager(side, "bb", PAGE_SIZE_BB);
   buildPager(side, "th", PAGE_SIZE_TH);
