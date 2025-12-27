@@ -134,7 +134,7 @@ document.addEventListener("click", async e => {
     // 💥 공격 이펙트
     const targetEl = document.querySelector(`.comment[data-id="${updated.id}"]`);
     targetEl?.classList.add("hit");
-    setTimeout(() => targetEl?.classList.remove("hit"), 250);
+    setTimeout(() => targetEl?.classList.remove("hit"), 300);
 
     data = data.map(c => c.id === updated.id ? updated : c);
   }
@@ -150,13 +150,17 @@ document.addEventListener("click", async e => {
     data = data.map(c => c.id === updated.id ? updated : c);
   }
 
-  // 💣 SUPPORT
-  if (e.target.classList.contains("action-support")) {
-    const self = data.find(c => c.id === id);
-    updated = await applySupport(self);
+// 💣 SUPPORT
+if (e.target.classList.contains("action-support")) {
+  const self = data.find(c => c.id === id);
+  updated = await applySupport(self);
 
-    data = data.map(c => c.id === updated.id ? updated : c);
-  }
+  // ✨ 회복 이펙트
+  unitEl.classList.add("heal");
+  setTimeout(() => unitEl.classList.remove("heal"), 350);
+
+  data = data.map(c => c.id === updated.id ? updated : c);
+}
 
   setComments(data);
   renderCommentsUI(data);
