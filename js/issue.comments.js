@@ -239,4 +239,42 @@ function bindEvents() {
     bar.appendChild(glow);
     setTimeout(() => glow.remove(), 900);
   });
+
+    document.getElementById("battle-comment-submit")
+    ?.addEventListener("click", async () => {
+
+    const text = document.getElementById("battle-comment-input").value.trim();
+    const side = document.getElementById("battle-side-select").value;
+
+    if (!text) {
+      alert("의견을 입력하세요.");
+      return;
+    }
+
+    const supabase = window.supabaseClient;
+    const { data: session } = await supabase.auth.getSession();
+
+    if (!session.session) {
+      alert("로그인이 필요합니다.");
+      return;
+    }
+
+    await supabase.from("comments").insert({
+      issue_id: issueId,
+      user_id: session.session.user.id,
+      side,
+      text,
+      hp: 80
+    });
+
+    document.getElementById("battle-comment-input").value = "";
+
+    await loadComments(issueId);
+    renderSide("pro");
+    renderSide("con");
+
+    await loadWarStats(issueId);
+    renderWarDashboard();
+  });
+
 }
