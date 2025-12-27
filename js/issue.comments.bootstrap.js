@@ -1,6 +1,6 @@
 import { getComments, setComments } from "./issue.comments.state.js";
 import { renderCommentsUI, renderBattleDashboard } from "./issue.comments.ui.js";
-import { calculateBattleStats, applyCombatLogic } from "./issue.comments.engine.js";
+import { getBattleStats } from "./issue.comments.state.js";
 import { loadCommentsAPI } from "./issue.comments.api.js";
 
 export async function startCommentSystem(issueId) {
@@ -28,7 +28,6 @@ export async function startCommentSystem(issueId) {
 
   setComments(initialized);
   renderCommentsUI(initialized);
+  renderBattleDashboard(getBattleStats());
 
-  const stats = calculateBattleStats(initialized);
-  renderBattleDashboard(stats);
 }
