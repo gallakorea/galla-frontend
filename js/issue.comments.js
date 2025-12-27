@@ -10,15 +10,23 @@ export async function initCommentSystem(issueId) {
   }
 
   await loadComments(issueId);
+  await loadWarStats(issueId);   // 🔥 여기
   renderSide("pro");
   renderSide("con");
+  renderWarDashboard();         // 🔥 여기
   bindEvents();
+
 }
 
 /* =========================================================
    GALLA — Issue Comment Battle System
    UI + Logic FULL VERSION
 ========================================================= */
+let warStats = {
+  pro: { total: 0, own: 0, enemy: 0 },
+  con: { total: 0, own: 0, enemy: 0 },
+  global: { attack: 0, support: 0, defend: 0 }
+};
 
 const PAGE_SIZE_BB = 5, PAGE_SIZE_TH = 4;
 
@@ -112,6 +120,34 @@ async function loadComments(issueId) {
   state.con.data = Array.from({ length: 30 }, () => createComment("con"));
 }
 
+async function loadWarStats(issueId) {
+  const supabase = window.supabaseClient;
+
+  const { data, error } = await supabase
+    .from("comment_actions")
+    .select("side, action_type");
+
+  if (error) {
+    console.error("war stats load failed", error);
+    return;
+  }
+
+  warStats = {
+    pro: { total: 0, own: 0, enemy: 0 },
+    con: { total: 0, own: 0, enemy: 0 },
+    global: { attack: 0, support: 0, defend: 0 }
+  };
+
+  data.forEach(row => {
+    if (row.side === "pro") warStats.pro.total++;
+    if (row.side === "con") warStats.con.total++;
+
+    if (row.action_type === "attack") warStats.global.attack++;
+    if (row.action_type === "support") warStats.global.support++;
+    if (row.action_type === "defend") warStats.global.defend++;
+  });
+}
+
 /* ======================
    Engine
 ====================== */
@@ -153,6 +189,19 @@ function buildPager(side, type, size) {
     b.onclick = () => { s[type] = i; renderSide(side); };
     pager.appendChild(b);
   }
+
+  function renderWarDashboard() {
+  document.querySelector(".war-box.pro .war-stat b").innerText = warStats.pro.total;
+  document.querySelector(".war-box.con .war-stat b").innerText = warStats.con.total;
+
+  document.querySelector(".war-box.neutral .war-stat b").innerText =
+    warStats.global.attack + warStats.global.support + warStats.global.defend;
+
+  document.querySelector(".war-box.neutral .war-sub").innerText =
+    `공격 ${warStats.global.attack} · 지원 ${warStats.global.support} · 방어 ${warStats.global.defend}`;
+}
+
+
 }
 
 /* ======================
