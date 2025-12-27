@@ -1,6 +1,8 @@
 import { loadAiArguments } from "./issue-argument.js";
 import { loadAiNews } from "./issue-news.js";
 import { loadStats } from "./issue.stats.js";
+import { startCommentSystem } from "./issue.comments.bootstrap.js";
+
 
 console.log("[issue.js] loaded");
 
@@ -78,6 +80,8 @@ if (typeof loadAiNews === "function") {
   checkAuthorSupport(issue.id);
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
+
+  await startCommentSystem(issue.id);
 })();
 
 /* ==========================================================================
