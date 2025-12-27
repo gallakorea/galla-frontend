@@ -245,3 +245,37 @@
   from{opacity:1}
   to{opacity:0}
 }
+
+.battle-input-bar {
+  position: fixed;
+  bottom: 60px; /* bottom-nav 위 */
+  left: 0;
+  width: 100%;
+  max-width: 480px;
+  background: #0f0f0f;
+  padding: 10px;
+  border-top: 1px solid #222;
+  z-index: 999;
+}
+
+.battle-input-bar input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+}
+
+.battle-input-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.battle-input-actions button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
