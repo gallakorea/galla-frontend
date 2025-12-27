@@ -7,6 +7,14 @@ export async function startCommentSystem(issueId) {
   console.log("🚀 startCommentSystem:", issueId);
 
   const raw = await loadCommentsAPI(issueId);
+
+  if (!raw.length) {
+  raw.push(
+    { id: -1, faction: "pro", content: "첫 번째 찬성 전사", user_level: 1, is_anonymous: true },
+    { id: -2, faction: "con", content: "첫 번째 반대 전사", user_level: 1, is_anonymous: true }
+  );
+}
+
   console.log("📦 RAW:", raw);
 
   // 🛑 최초 로딩에서는 전투 로직 적용 금지

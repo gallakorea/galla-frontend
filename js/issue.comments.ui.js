@@ -13,8 +13,8 @@ import { calculateBattleStats } from "./issue.comments.engine.js";
 export function renderBattleDashboard(stats) {
   if (!stats) return;
 
-  const proBox = document.querySelector(".war-box.pro");
-  const conBox = document.querySelector(".war-box.con");
+  const proBox = document.getElementById("battle-pro");
+  const conBox = document.getElementById("battle-con");
 
   if (!proBox || !conBox) return;
 
