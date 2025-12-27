@@ -172,6 +172,12 @@ if (e.target.classList.contains("action-support")) {
     if (c && c.hp <= 0) el.classList.add("dead");
   });
 
+  // 🧹 전사 유닛 전장 이탈
+  data = data.filter(c => c.hp > 0);
+
+  setComments(data);
+  renderCommentsUI(data);
+
   // 📊 전황 동기화
   const liveStats = getBattleStats();
   renderBattleDashboard(liveStats);
