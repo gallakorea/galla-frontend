@@ -53,6 +53,7 @@ if (!issueId || Number.isNaN(issueId)) {
 
 renderIssue(issue);
 
+await startCommentSystem(issue.id);
 
 /* ===============================
   AI ARGUMENT (논점)
@@ -506,10 +507,5 @@ window.addEventListener("DOMContentLoaded", () => {
       if (confirmBtn) confirmBtn.disabled = false;
     });
   });
-});
-
-window.addEventListener("DOMContentLoaded", async () => {
-  if (!currentIssue) return;
-  await startCommentSystem(currentIssue.id);
 });
 
