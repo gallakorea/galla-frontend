@@ -1,4 +1,5 @@
-let CURRENT_ISSUE_ID = null;
+let BATTLE_MODE = null;
+// BATTLE_MODE = { type: "attack"|"defend", targetEl: HTMLElement, targetUser: string, targetSide: "pro"|"con" }
 
 // ============================
 // 🧩 Comment Text Renderer
@@ -99,18 +100,6 @@ function makeReply(hp, text, side) {
         <span class="action-support">💣지원</span>
       </div>
   </div>`;
-}
-
-function makeBattleReplyInput(type) {
-  return `
-    <div class="battle-reply-box">
-      <div class="battle-input-row">
-        <span class="battle-tag">${type === "attack" ? "⚔ 공격" : "🛡 방어"}</span>
-        <input class="battle-reply-input" placeholder="논리를 입력하세요">
-        <button class="battle-reply-send" data-type="${type}">전송</button>
-      </div>
-    </div>
-  `;
 }
 
 function makeComment(c) {
@@ -272,35 +261,44 @@ function renderWarDashboard() {
 function bindEvents() {
   document.addEventListener("click", e => {
 
-    // 🧾 전투 대댓글 전송
-    if (e.target.classList.contains("battle-reply-send")) {
-      const box = e.target.closest(".battle-reply-box");
-      const text = box.querySelector(".battle-reply-input").value.trim();
-      const type = e.target.dataset.type;
+  // ⚔🛡 전투 버튼 클릭 → 하단 입력창으로 통일
+  if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
+    const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
 
-      if (!text) return;
+    // comment 또는 reply 어디서 눌러도 잡히게
+    const targetEl = e.target.closest(".comment") || e.target.closest(".reply");
+    if (!targetEl) return;
 
-      const reply = `
-        <div class="reply ${type}">
-          <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b> — ${text}
-        </div>
-      `;
+    // 표시용 유저명 (comment면 .head .user / reply면 .head .user)
+    const userEl = targetEl.querySelector(".head .user");
+    const targetUser = userEl ? userEl.textContent.trim() : "익명";
 
-      box.insertAdjacentHTML("beforebegin", reply);
-      box.remove();
-      return;
-    }
+    // comment의 side는 c.side로 이미 내려오고(렌더링 데이터), DOM엔 없으니 reply-actions의 data-side 우선 사용
+    const sideFromAttr =
+      targetEl.getAttribute("data-side") ||
+      targetEl.querySelector("[data-side]")?.getAttribute("data-side") ||
+      targetEl.closest(".comment")?.querySelector(".reply-actions")?.getAttribute("data-side");
 
+    // comment쪽은 makeComment에서 data-side를 심어주는게 가장 안정적이지만, 지금은 최소 동작만
+    const targetSide = sideFromAttr || document.getElementById("battle-side-select")?.value || "pro";
 
-    // ⚔🛡 전투 버튼 클릭 → 입력창 표시
-    if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
-      const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
-      const comment = e.target.closest(".comment");
+    BATTLE_MODE = { type, targetEl, targetUser, targetSide };
 
-      comment.querySelectorAll(".battle-reply-box").forEach(b => b.remove());
-      comment.insertAdjacentHTML("beforeend", makeBattleReplyInput(type));
-      return;
-}
+    // 하단 입력창 세팅
+    const input = document.getElementById("battle-comment-input");
+    if (!input) return;
+
+    input.value = `@${targetUser} ${type === "attack" ? "⚔ 공격" : "🛡 방어"} → `;
+    input.focus();
+
+    // 전투 중엔 진영 선택 비활성(숨김)
+    document.querySelectorAll(".side-btn").forEach(b => (b.style.display = "none"));
+
+    // hidden select도 변경 금지(댓글/대댓글은 진영 따라가야 함)
+    // document.getElementById("battle-side-select").value = targetSide;  // 필요 시 사용
+    return;
+  }
+
     // 💣 지원
     if (e.target.classList.contains("action-support")) {
       const unit = e.target.closest(".reply") || e.target.closest(".comment");
@@ -348,32 +346,6 @@ function bindEvents() {
       return;
     }
 
-    // 🧾 대댓글 좋아요
-if (e.target.closest(".reply") && e.target.classList.contains("like")) {
-  const el = e.target;
-  const isActive = el.classList.toggle("active-like");
-
-  const other = el.parentElement.querySelector(".dislike");
-  other?.classList.remove("active-dislike");
-
-  let n = Number(el.textContent.replace("👍", ""));
-  el.textContent = "👍" + (isActive ? n + 1 : n - 1);
-  return;
-}
-
-  // 🧾 대댓글 싫어요
-  if (e.target.closest(".reply") && e.target.classList.contains("dislike")) {
-    const el = e.target;
-    const isActive = el.classList.toggle("active-dislike");
-
-    const other = el.parentElement.querySelector(".like");
-    other?.classList.remove("active-like");
-
-    let n = Number(el.textContent.replace("👎", ""));
-    el.textContent = "👎" + (isActive ? n + 1 : n - 1);
-    return;
-  }
-
     // ⋯ 메뉴
     if (e.target.classList.contains("action-more")) {
       alert("신고 / 차단 기능은 다음 단계에서 연결됩니다.");
@@ -413,6 +385,64 @@ if (e.target.closest(".reply") && e.target.classList.contains("like")) {
 
     document.getElementById("battle-comment-submit")
     ?.addEventListener("click", async () => {
+
+  const input = document.getElementById("battle-comment-input");
+  if (!input) return;
+
+  // ✅ 전투 모드면: 댓글/대댓글 내부로 reply HTML 삽입하고 종료
+  if (BATTLE_MODE) {
+    const { type, targetEl, targetUser, targetSide } = BATTLE_MODE;
+
+    // "@유저 ⚔ 공격 → " 프리픽스 제거
+    const raw = input.value.trim();
+    const text = raw.replace(/^@.*?→\s*/, "").trim();
+
+    if (!text) {
+      alert("의견을 입력하세요.");
+      return;
+    }
+
+    // targetEl이 reply면, 해당 reply가 들어있는 comment의 replies에 삽입해야 UX가 맞음
+    const parentComment = targetEl.classList.contains("comment") ? targetEl : targetEl.closest(".comment");
+    const repliesBox = parentComment?.querySelector(".replies");
+    if (!repliesBox) return;
+
+    // replies 펼치기
+    repliesBox.hidden = false;
+    const toggleBtn = parentComment.querySelector(".reply-toggle");
+    if (toggleBtn) toggleBtn.innerText = "답글 숨기기";
+
+    // ✅ reply 추가 (makeReply 스타일과 맞춰 최소 구조)
+    const hp = Math.floor(Math.random() * 40) + 50;
+    const replyHtml = `
+      <div class="reply" data-hp="${hp}">
+        <div class="head">
+          <div class="user">익명</div>
+          <div class="hp-wrap">
+            <div class="hp-bar"><div class="hp-fill" style="width:${hp}%"></div></div>
+            <span class="hp-text">HP ${hp}</span>
+          </div>
+        </div>
+        <div class="body">└ <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b> @${targetUser}: ${renderCommentText(text)}</div>
+        <div class="reply-actions" data-side="${targetSide}">
+          <span class="like">👍0</span>
+          <span class="dislike">👎0</span>
+          <span class="action-attack">⚔공격</span>
+          <span class="action-defend">🛡방어</span>
+          <span class="action-support">💣지원</span>
+        </div>
+      </div>
+    `;
+
+  repliesBox.insertAdjacentHTML("afterbegin", replyHtml);
+
+  // 상태 초기화 + UI 복귀
+  BATTLE_MODE = null;
+  input.value = "";
+  document.querySelectorAll(".side-btn").forEach(b => (b.style.display = ""));
+  return; // ✅ 여기서 종료 (DB insert 안 함)
+}
+    
 
     const text = document.getElementById("battle-comment-input").value.trim();
     const side = document.getElementById("battle-side-select").value;
