@@ -12,7 +12,7 @@ export async function loadStats(issueId) {
   const supabase = window.supabaseClient;
 
   const { count: total, error } = await supabase
-    .from("comments")
+    .from("votes")          // 🔥 투표 기준으로 변경
     .select("id", { count: "exact", head: true })
     .eq("issue_id", issueId);
 
