@@ -503,6 +503,18 @@ document.addEventListener("click", (e) => {
 
   modal.hidden = false;
 
+  // ====== 분기 처리 추가 ======
+modal.dataset.mode = "side";
+
+modal.classList.remove("author", "pro", "con");
+modal.classList.add(side);
+
+modal.querySelector(".support-title").innerText = "이 진영에 보탬을 더합니다";
+modal.querySelector(".support-desc").innerHTML =
+  "이 보탬은 승부를 가르는 행위가 아닙니다.<br>이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.";
+  
+
+
   // 진영 정보 추출
   const box = supportBtn.closest(".actions, .reply-actions");
   const side = box?.dataset?.side || "pro";
@@ -510,6 +522,30 @@ document.addEventListener("click", (e) => {
   modal.dataset.side = side;
   modal.classList.remove("pro", "con");
   modal.classList.add(side);
+});
+</script>
+
+<script>
+/* ==============================
+   AUTHOR SUPPORT BUTTON
+============================== */
+
+document.getElementById("author-support-btn")?.addEventListener("click", () => {
+  const modal = document.getElementById("support-modal");
+  if (!modal) return;
+
+  modal.hidden = false;
+
+  // 발의자 응원 모드 표시
+  modal.dataset.mode = "author";
+
+  modal.classList.remove("pro", "con");
+  modal.classList.add("author");
+
+  // 제목/문구 교체
+  modal.querySelector(".support-title").innerText = "이 이슈를 만든 사람을 응원합니다";
+  modal.querySelector(".support-desc").innerHTML =
+    "이 보탬은 특정 진영이 아닌,<br><b>이 주제를 세상에 던진 사람에게 전달됩니다.</b>";
 });
 </script>
 

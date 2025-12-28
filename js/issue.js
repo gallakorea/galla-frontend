@@ -571,3 +571,4 @@ document.addEventListener("click", (e) => {
   // 패널 닫기
   document.getElementById("gif-panel").hidden = true;
 });
+
