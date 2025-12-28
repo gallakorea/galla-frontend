@@ -629,3 +629,38 @@ body{
   border-radius: 10px !important;
   background: rgba(255,255,255,.03) !important;
 }
+
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.actions button {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 4px 8px;
+  color: #eee;
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.like, .dislike, .action-support, .action-share, .action-more {
+  cursor: pointer;
+  user-select: none;
+}
+
+.reply-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: .9;
+}
