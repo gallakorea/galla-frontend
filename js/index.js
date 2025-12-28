@@ -196,6 +196,19 @@ function attachEvents() {
             if (url) location.href = url;
         });
     });
+
+    // ⚔️ 전황표 & 💬 댓글 아이콘 → 댓글 전쟁 위치로 이동
+    document.querySelectorAll(".goto-comments").forEach(el => {
+        el.addEventListener("click", e => {
+            e.stopPropagation();
+
+            const card = el.closest(".card");
+            const id = card.dataset.id;
+
+            location.href = `issue.html?id=${id}#comments`;
+        });
+    });
+
 }
 
 // =========================================
