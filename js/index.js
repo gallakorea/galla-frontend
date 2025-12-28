@@ -166,7 +166,6 @@ async function loadData() {
             user_id,
             thumbnail_url
         `)
-        .eq("status", "published")
         .order("created_at", { ascending: false });
 
     if (error) {
