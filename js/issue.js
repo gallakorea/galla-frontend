@@ -236,7 +236,6 @@ async function vote(type) {
 
   const { error } = await supabase.from("votes").insert({
     issue_id: issueId,
-    user_id: session.session.user.id,
     type
   });
 
