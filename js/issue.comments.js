@@ -22,6 +22,15 @@ function getMySide() {
   return document.getElementById("battle-side-select")?.value || null;
 }
 
+// 🧪 초기 테스트용 기본 진영 세팅
+document.addEventListener("DOMContentLoaded", () => {
+  const select = document.getElementById("battle-side-select");
+  if (select && !select.value) {
+    select.value = "pro";        // 기본: 찬성 진영
+    console.log("🧭 MySide forced to:", select.value);
+  }
+});
+
 function getUnitSide(el) {
   // 1️⃣ reply 자신의 진영을 최우선으로 판정
   const replyActions = el.closest(".reply")?.querySelector(".reply-actions");
