@@ -706,3 +706,22 @@ body{
 
 .enemy-user { color: #ff6b6b; }
 .enemy-level { color: #ff6b6b; border-color: #ff6b6b; }
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.side-icon {
+  font-size: 14px;
+  opacity: .85;
+}
+
+.ally-user { color: #4fc3f7; }
+.ally-level { color: #4fc3f7; border-color: #4fc3f7; }
+.ally-icon { color: #4fc3f7; }
+
+.enemy-user { color: #ff6b6b; }
+.enemy-level { color: #ff6b6b; border-color: #ff6b6b; }
+.enemy-icon { color: #ff6b6b; }

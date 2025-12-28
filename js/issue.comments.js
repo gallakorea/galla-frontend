@@ -130,7 +130,10 @@ let battleButtons = isMySide
   return `
     <div class="comment" data-hp="${c.hp}" data-side="${c.side}">
     <div class="head">
-      <div class="user">${c.user.name} <span class="level-badge">Lv.${c.user.level}</span>
+      <div class="user">
+        <span class="side-icon"></span>
+        <span class="user-name">${c.user.name}</span>
+        <span class="level-badge">Lv.${c.user.level}</span>
         ${c.user.anon ? `<span class="anon">익명 · HP -20%</span>` : ``}
       </div>
       <div class="hp-wrap">
@@ -485,25 +488,31 @@ function bindEvents() {
 
 function applySideColoring() {
   const mySide = document.getElementById("battle-side-select")?.value;
-
   if (!mySide) return;
 
   document.querySelectorAll(".comment").forEach(comment => {
     const side = comment.dataset.side;
     const user = comment.querySelector(".user");
+    const name = comment.querySelector(".user-name");
     const level = comment.querySelector(".level-badge");
+    const icon = comment.querySelector(".side-icon");
 
-    if (!user || !level) return;
+    if (!user || !name || !level || !icon) return;
 
-    user.classList.remove("ally-user", "enemy-user");
+    name.classList.remove("ally-user", "enemy-user");
     level.classList.remove("ally-level", "enemy-level");
+    icon.classList.remove("ally-icon", "enemy-icon");
 
     if (side === mySide) {
-      user.classList.add("ally-user");
+      name.classList.add("ally-user");
       level.classList.add("ally-level");
+      icon.classList.add("ally-icon");
+      icon.textContent = "🛡";
     } else {
-      user.classList.add("enemy-user");
+      name.classList.add("enemy-user");
       level.classList.add("enemy-level");
+      icon.classList.add("enemy-icon");
+      icon.textContent = "⚔";
     }
   });
 }
