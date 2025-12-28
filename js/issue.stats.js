@@ -1,125 +1,183 @@
 console.log("[issue.stats.js] loaded");
 
 /**
- * 정책
- * - 참여자 100명 미만: 통계 비공개 + 안내 메시지
- * - 참여자 100명 이상: 전체 통계 렌더
+ * 테스트 정책 (고정)
+ * - 참여자 2명 미만: 통계 비공개(안내만)
+ * - 참여자 2명 이상: 성별 참여 비율만 공개 + 나머지는 "더 보기"로 펼침
  */
 const MIN_PARTICIPANTS = 2;
 
-/**
- * entry
- */
-/**
- * entry
- */
 export async function loadStats(issueId) {
-  console.log("[issue.stats] live mode");
-
   const supabase = window.supabaseClient;
 
-  // 1️⃣ 총 참여자 수
-  const { count: total } = await supabase
+  const { count: total, error } = await supabase
     .from("comments")
     .select("id", { count: "exact", head: true })
     .eq("issue_id", issueId);
 
-  if (!total || total < MIN_PARTICIPANTS) {
-    lockStats(total || 0);
+  if (error) {
+    console.error("[issue.stats] count error:", error);
+    lockAllStats(0);
     return;
   }
 
-  unlockStats();
+  // 0~1명 → 안내만
+  if (!total || total < MIN_PARTICIPANTS) {
+    lockAllStats(total || 0);
+    return;
+  }
 
-  // 2️⃣ 찬반 집계
-  const { data: votes } = await supabase
-    .from("comments")
-    .select("side")
-    .eq("issue_id", issueId);
+  // 2명 이상 → 성별만 + 더보기
+  unlockBasicStats();
 
-  const pro = votes.filter(v => v.side === "pro").length;
-  const con = votes.filter(v => v.side === "con").length;
-
-  // 3️⃣ 기본 통계 객체 생성
+  // ✅ 임시 더미 데이터 (UI 테스트용)
   const stats = {
-    pro_count: pro,
-    con_count: con,
-    gender: { male: 0, female: 0 },
-    age: [],
-    region: [],
-    gender_vote: [],
-    age_vote: [],
-    region_vote: [],
-    ai_summary: "AI 분석을 생성 중입니다..."
+    gender: { male: 54, female: 46 },
+    age: [
+      { label: "20대", percent: 40 },
+      { label: "30대", percent: 60 }
+    ],
+    region: [
+      { name: "서울", percent: 60 },
+      { name: "부산", percent: 40 }
+    ],
+    gender_vote: [{ label: "남성", pro: 55, con: 45 }],
+    age_vote: [{ label: "20대", pro: 60, con: 40 }],
+    region_vote: [{ label: "서울", pro: 70, con: 30 }],
+    ai_summary: "AI 분석을 준비 중입니다."
   };
 
   renderAllStats(stats);
 }
 
 /* ======================================================
+   UI SELECTORS (issue.html 구조에 맞춤)
+====================================================== */
+
+function qs(sel) {
+  return document.querySelector(sel);
+}
+
+function qsa(sel) {
+  return Array.from(document.querySelectorAll(sel));
+}
+
+// 통계 카테고리 제목들(현재 HTML에서는 h2.stat-title)
+function getStatTitles() {
+  return qsa("#stats-section h2.stat-title");
+}
+
+// 통계 콘텐츠 블록들(현재 HTML id들)
+function getStatContents() {
+  return qsa([
+    "#gender-dual",
+    "#age-chart",
+    "#region-heatmap",
+    "#gender-vote",
+    "#age-vote",
+    "#region-vote",
+    "#ai-summary"
+  ].join(","));
+}
+
+function ensureMoreButton() {
+  const section = qs("#stats-section");
+  if (!section) return null;
+
+  let btn = qs("#stats-more-btn");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "stats-more-btn";
+    btn.type = "button";
+    btn.className = "stats-more-btn";
+    btn.textContent = "더 보기";
+    btn.addEventListener("click", () => unlockAllStats());
+    section.appendChild(btn);
+  }
+  return btn;
+}
+
+/* ======================================================
    LOCK / UNLOCK
 ====================================================== */
 
-function lockStats(total) {
-  const section = document.getElementById("stats-section");
-  if (!section) return;
+function lockAllStats(total) {
+  const locked = qs("#stats-locked");
+  const header = qs("#stats-section .stats-header");
+  const titles = getStatTitles();
+  const contents = getStatContents();
+  const moreBtn = qs("#stats-more-btn");
 
-  // ✅ 섹션 자체를 접힘 상태로
-  section.classList.add("collapsed");
-  section.setAttribute("data-locked", "true");
+  // 안내문 표시 + 문구 업데이트(참여자 수 반영)
+  if (locked) {
+    locked.hidden = false;
 
-  // 헤더 상태 표시
-  const header = section.querySelector(".stats-header");
-  if (header) {
-    header.querySelector(".stats-status")?.remove();
-    const badge = document.createElement("span");
-    badge.className = "stats-status";
-    badge.innerText = "준비 중";
-    header.appendChild(badge);
+    // 기존 안내 구조를 유지하면서 desc만 갱신
+    const desc = locked.querySelector(".ai-news-placeholder-desc");
+    if (desc) {
+      desc.innerHTML = `
+        현재 참여자 <b>${total}명</b><br>
+        참여자가 <b>${MIN_PARTICIPANTS}명 이상</b> 모이면<br>
+        여론 통계가 공개됩니다.
+      `;
+    }
   }
 
-  // 모든 통계 UI 숨김 (항목 텍스트 + 차트 전부)
-  Array.from(section.querySelectorAll(".stats-item, .stats-content"))
-    .forEach(el => el.hidden = true);
+  // 통계 헤더/카테고리/콘텐츠 전부 숨김
+  if (header) header.hidden = true;
+  titles.forEach(el => (el.hidden = true));
+  contents.forEach(el => (el.hidden = true));
 
-  // 안내 박스
-  let box = document.getElementById("stats-locked-box");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "stats-locked-box";
-    box.className = "stats-locked-box";
-    section.appendChild(box);
-  }
-
-  box.innerHTML = `
-    <div class="stats-locked-title">
-      아직 통계가 공개되지 않았습니다
-    </div>
-    <div class="stats-locked-desc">
-      현재 참여자 <b>${total}명</b><br/>
-      참여자가 100명 이상일 경우<br/>
-      여론 통계가 공개됩니다.
-    </div>
-  `;
+  // 더 보기 버튼 숨김
+  if (moreBtn) moreBtn.hidden = true;
 }
 
-function unlockStats() {
-  const section = document.getElementById("stats-section");
-  if (!section) return;
+function unlockBasicStats() {
+  const locked = qs("#stats-locked");
+  const header = qs("#stats-section .stats-header");
+  const titles = getStatTitles();
+  const contents = getStatContents();
 
-  section.classList.remove("collapsed");
-  section.removeAttribute("data-locked");
+  // 안내 숨김
+  if (locked) locked.hidden = true;
 
-  section.querySelector(".stats-status")?.remove();
-  document.getElementById("stats-locked-box")?.remove();
+  // 헤더는 표시
+  if (header) header.hidden = false;
 
-  // 모든 통계 UI 다시 표시
-  Array.from(section.querySelectorAll(".stats-item, .stats-content"))
-    .forEach(el => el.hidden = false);
+  // 일단 전부 숨김
+  titles.forEach(el => (el.hidden = true));
+  contents.forEach(el => (el.hidden = true));
 
+  // ✅ "성별 참여 비율" 타이틀 + 콘텐츠만 표시
+  // HTML 순서상 첫 번째 stat-title이 성별 참여 비율이므로 그 타이틀만 켬
+  if (titles[0]) titles[0].hidden = false;
+
+  const genderDual = qs("#gender-dual");
+  if (genderDual) genderDual.hidden = false;
+
+  // 더 보기 버튼 표시
+  const btn = ensureMoreButton();
+  if (btn) btn.hidden = false;
 }
+
+function unlockAllStats() {
+  const locked = qs("#stats-locked");
+  const header = qs("#stats-section .stats-header");
+  const titles = getStatTitles();
+  const contents = getStatContents();
+  const btn = qs("#stats-more-btn");
+
+  if (locked) locked.hidden = true;
+  if (header) header.hidden = false;
+
+  titles.forEach(el => (el.hidden = false));
+  contents.forEach(el => (el.hidden = false));
+
+  if (btn) btn.hidden = true;
+}
+
 /* ======================================================
-   RENDER ALL
+   RENDER ALL (기존 유지)
 ====================================================== */
 
 function renderAllStats(data) {
@@ -132,12 +190,8 @@ function renderAllStats(data) {
   renderAiSummary(data.ai_summary);
 }
 
-/* ======================================================
-   GENDER
-====================================================== */
-
 function renderGender(gender) {
-  const root = document.getElementById("gender-dual");
+  const root = qs("#gender-dual");
   if (!root || !gender) return;
 
   root.innerHTML = `
@@ -152,16 +206,11 @@ function renderGender(gender) {
   `;
 }
 
-/* ======================================================
-   AGE
-====================================================== */
-
 function renderAge(age) {
-  const root = document.getElementById("age-chart");
+  const root = qs("#age-chart");
   if (!root || !age) return;
 
   root.innerHTML = "";
-
   age.forEach(row => {
     const el = document.createElement("div");
     el.className = "age-row";
@@ -178,24 +227,16 @@ function renderAge(age) {
   });
 }
 
-/* ======================================================
-   REGION HEATMAP
-====================================================== */
-
 function renderRegion(region) {
-  const root = document.getElementById("region-heatmap");
+  const root = qs("#region-heatmap");
   if (!root || !region) return;
 
   root.innerHTML = "";
-
   region.forEach(r => {
     const el = document.createElement("div");
     el.className = "region-cell";
     el.style.background = heatColor(r.percent);
-    el.innerHTML = `
-      ${r.name}<br/>
-      ${r.percent}%
-    `;
+    el.innerHTML = `${r.name}<br/>${r.percent}%`;
     root.appendChild(el);
   });
 }
@@ -205,28 +246,21 @@ function heatColor(p) {
   return `rgba(255, 200, 80, ${alpha})`;
 }
 
-/* ======================================================
-   VOTE BREAKDOWN
-====================================================== */
-
 function renderGenderVote(data) {
-  renderVoteBar("gender-vote", data);
+  renderVoteBar("#gender-vote", data);
 }
-
 function renderAgeVote(data) {
-  renderVoteBar("age-vote", data);
+  renderVoteBar("#age-vote", data);
 }
-
 function renderRegionVote(data) {
-  renderVoteBar("region-vote", data);
+  renderVoteBar("#region-vote", data);
 }
 
-function renderVoteBar(id, rows) {
-  const root = document.getElementById(id);
+function renderVoteBar(selector, rows) {
+  const root = qs(selector);
   if (!root || !rows) return;
 
   root.innerHTML = "";
-
   rows.forEach(r => {
     const el = document.createElement("div");
     el.className = "vote-item";
@@ -244,13 +278,8 @@ function renderVoteBar(id, rows) {
   });
 }
 
-/* ======================================================
-   AI SUMMARY
-====================================================== */
-
 function renderAiSummary(text) {
-  const root = document.getElementById("ai-summary");
+  const root = qs("#ai-summary");
   if (!root) return;
-
   root.innerHTML = text || "AI 종합 의견을 분석 중입니다.";
 }
