@@ -215,6 +215,8 @@ function renderSide(side) {
 
   buildPager(side, "bb", PAGE_SIZE_BB);
   buildPager(side, "th", PAGE_SIZE_TH);
+
+  applySideColoring();
 }
 
 function buildPager(side, type, size) {
@@ -479,4 +481,29 @@ function bindEvents() {
     renderWarDashboard();
   });
 
+}
+
+function applySideColoring() {
+  const mySide = document.getElementById("battle-side-select")?.value;
+
+  if (!mySide) return;
+
+  document.querySelectorAll(".comment").forEach(comment => {
+    const side = comment.dataset.side;
+    const user = comment.querySelector(".user");
+    const level = comment.querySelector(".level-badge");
+
+    if (!user || !level) return;
+
+    user.classList.remove("ally-user", "enemy-user");
+    level.classList.remove("ally-level", "enemy-level");
+
+    if (side === mySide) {
+      user.classList.add("ally-user");
+      level.classList.add("ally-level");
+    } else {
+      user.classList.add("enemy-user");
+      level.classList.add("enemy-level");
+    }
+  });
 }
