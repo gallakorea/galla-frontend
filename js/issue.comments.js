@@ -23,9 +23,15 @@ function getMySide() {
 }
 
 function getUnitSide(el) {
-  return el.closest(".comment")?.dataset.side ||
-         el.querySelector(".reply-actions")?.dataset.side ||
-         null;
+  // 1️⃣ reply면 reply 자신의 진영을 우선
+  const replySide = el.querySelector(".reply-actions")?.dataset.side;
+  if (replySide) return replySide;
+
+  // 2️⃣ 아니면 부모 comment 진영
+  const commentSide = el.closest(".comment")?.dataset.side;
+  if (commentSide) return commentSide;
+
+  return null;
 }
 
 function getRelation(targetEl) {
@@ -262,6 +268,7 @@ function buildPager(side, type, size) {
     pager.appendChild(b);
   }
 }
+
 
 function renderWarDashboard() {
   const pro = document.querySelector(".war-box.pro .war-stat b");
