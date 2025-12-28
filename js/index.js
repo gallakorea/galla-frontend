@@ -44,11 +44,13 @@ function renderCard(data) {
     const proPct = Math.round((data.pro / total) * 100);
     const conPct = 100 - proPct;
 
-    const sTotal = data.supPro + data.supCon || 1;
-    const sProPct = (data.supPro / sTotal) * 100;
-    const sConPct = (data.supCon / sTotal) * 100;
-
     const voted = voteMemory[data.id];
+
+    const w = data.war || {
+    pro:{total:0,same:0,oppo:0},
+    con:{total:0,same:0,oppo:0},
+    atk:0, def:0, sup:0
+    };
 
     return `
     <div class="card" data-id="${data.id}">
@@ -71,7 +73,9 @@ function renderCard(data) {
 
         <img src="${data.thumb || "assets/logo.png"}" class="card-thumb" />
 
-        <div class="speech-btn open-modal" data-msg="엘리베이터 스피치 기능 준비 중">🎥 1분 엘리베이터 스피치</div>
+        <div class="speech-btn open-modal" data-msg="엘리베이터 스피치 기능 준비 중">
+          🎥 1분 엘리베이터 스피치
+        </div>
 
         <div class="vote-title">👍 찬반 투표 현황</div>
 
@@ -90,20 +94,39 @@ function renderCard(data) {
             <button class="btn-con vote-btn ${voted === "con" ? "active-vote" : ""}" data-type="con">👎 난 반댈세</button>
         </div>
 
-        <div class="support-box">
-            <div class="support-title">⚔️ 후원 전쟁 현황</div>
+        <!-- ⚔️ COMMENT WAR DASHBOARD -->
+        <div class="war-dashboard">
+          <div class="war-title">⚔ 전황표</div>
 
-            <div class="support-bar">
-                <div class="sup-pro" style="width:${sProPct}%"></div>
-                <div class="sup-con" style="width:${sConPct}%"></div>
+          <div class="war-grid">
+            <div class="war-box pro">
+  <div class="war-label">찬성 진영</div>
+  <div class="war-stat">총 댓글 <b class="stat-pro-total">${w.pro.total}</b></div>
+  <div class="war-sub">
+    동진영 <span class="stat-pro-same">${w.pro.same}</span> ·
+    적진 <span class="stat-pro-oppo">${w.pro.oppo}</span>
+  </div>
+</div>
+
+            <div class="war-box neutral">
+            <div class="war-label">전체 전장</div>
+            <div class="war-stat">총 교전 <b class="stat-total">${w.atk + w.def + w.sup}</b></div>
+            <div class="war-sub">
+                공격 <span class="stat-atk">${w.atk}</span> ·
+                지원 <span class="stat-sup">${w.sup}</span> ·
+                방어 <span class="stat-def">${w.def}</span>
+            </div>
             </div>
 
-            <div class="support-stats">
-                <span>₩${data.supPro.toLocaleString()}</span>
-                <span>₩${data.supCon.toLocaleString()}</span>
+            <div class="war-box con">
+            <div class="war-label">반대 진영</div>
+            <div class="war-stat">총 댓글 <b class="stat-con-total">${w.con.total}</b></div>
+            <div class="war-sub">
+                동진영 <span class="stat-con-same">${w.con.same}</span> ·
+                적진 <span class="stat-con-oppo">${w.con.oppo}</span>
             </div>
-
-            <div class="support-btn open-modal" data-msg="후원 기능 준비 중">⚔️ 이 이슈 후원하기</div>
+            </div>
+          </div>
         </div>
 
         <div class="card-footer">
@@ -200,9 +223,67 @@ async function loadData() {
         thumb: row.thumbnail_url
     }));
 
+    const issueIds = cards.map(c => c.id);
+    const warMap = await loadWarData(issueIds);
+
+    cards = cards.map(c => ({
+        ...c,
+        war: warMap[c.id]
+    }));
+
+
     loadBest();
     loadRecommend();
 }
+
+// =========================================
+// ⚔️ WAR DATA FETCHER
+// =========================================
+async function loadWarData(issueIds) {
+    const supabase = window.supabaseClient;
+
+    const { data, error } = await supabase
+        .from("comments")
+        .select("issue_id, stance, action_type")
+        .in("issue_id", issueIds);
+
+    if (error) {
+        console.error("war data error:", error);
+        return {};
+    }
+
+    const warMap = {};
+    issueIds.forEach(id => {
+        warMap[id] = {
+            pro: { total: 0, same: 0, oppo: 0 },
+            con: { total: 0, same: 0, oppo: 0 },
+            atk: 0, def: 0, sup: 0
+        };
+    });
+
+    data.forEach(row => {
+        const w = warMap[row.issue_id];
+        if (!w) return;
+
+        const s = row.stance;
+        w[s].total++;
+
+        if (row.action_type === "attack") w.atk++;
+        if (row.action_type === "defense") w.def++;
+        if (row.action_type === "support") w.sup++;
+
+        if (row.action_type === "attack") {
+            if (s === "pro") w.pro.oppo++;
+            else w.con.oppo++;
+        } else {
+            if (s === "pro") w.pro.same++;
+            else w.con.same++;
+        }
+    });
+
+    return warMap;
+}
+
 
 // =========================================
 // 🔥 LOADERS
