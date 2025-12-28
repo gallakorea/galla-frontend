@@ -388,7 +388,13 @@ function bindEvents() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      document.getElementById("battle-side-select").value = btn.dataset.side;
+
+      const side = btn.dataset.side;
+      document.getElementById("battle-side-select").value = side;
+
+      // 🔥 핵심: 진영 선택 후 전체 재렌더
+      renderSide("pro");
+      renderSide("con");
     });
   });
 
