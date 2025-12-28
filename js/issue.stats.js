@@ -78,8 +78,8 @@ function lockStats(total) {
     header.appendChild(badge);
   }
 
-  // 기존 내용 숨김
-  Array.from(section.querySelectorAll(".stats-content"))
+  // 모든 통계 UI 숨김 (항목 텍스트 + 차트 전부)
+  Array.from(section.querySelectorAll(".stats-item, .stats-content"))
     .forEach(el => el.hidden = true);
 
   // 안내 박스
@@ -113,9 +113,9 @@ function unlockStats() {
   section.querySelector(".stats-status")?.remove();
   document.getElementById("stats-locked-box")?.remove();
 
-  Array.from(section.querySelectorAll(".stats-content"))
+  // 모든 통계 UI 다시 표시
+  Array.from(section.querySelectorAll(".stats-item, .stats-content"))
     .forEach(el => el.hidden = false);
-}
 
 /* ======================================================
    RENDER ALL
