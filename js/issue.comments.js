@@ -23,18 +23,26 @@ function getMySide() {
 }
 
 function getUnitSide(el) {
-  // 1️⃣ reply면 reply 자신의 진영을 우선
-  const replySide = el.querySelector(".reply-actions")?.dataset.side;
+  // 1️⃣ reply 자신의 진영을 최우선으로 판정
+  const replyActions = el.closest(".reply")?.querySelector(".reply-actions");
+  const replySide = replyActions?.dataset.side;
   if (replySide) return replySide;
 
-  // 2️⃣ 아니면 부모 comment 진영
-  const commentSide = el.closest(".comment")?.dataset.side;
+  // 2️⃣ 그 다음 부모 comment 진영
+  const commentEl = el.closest(".comment");
+  const commentSide = commentEl?.dataset.side;
   if (commentSide) return commentSide;
 
   return null;
 }
 
 function getRelation(targetEl) {
+  console.log("🧭 Relation Check", {
+    mySide: getMySide(),
+    targetSide: getUnitSide(targetEl),
+    el: targetEl
+  });
+
   const mySide = getMySide();
   const targetSide = getUnitSide(targetEl);
 
@@ -252,6 +260,7 @@ function renderSide(side) {
   buildPager(side, "bb", PAGE_SIZE_BB);
   buildPager(side, "th", PAGE_SIZE_TH);
   enforceBattleButtons();
+  setTimeout(enforceBattleButtons, 0);
 }
 
 function buildPager(side, type, size) {
