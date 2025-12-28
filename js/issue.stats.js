@@ -5,7 +5,7 @@ console.log("[issue.stats.js] loaded");
  * - 참여자 100명 미만: 통계 비공개 + 안내 메시지
  * - 참여자 100명 이상: 전체 통계 렌더
  */
-const MIN_PARTICIPANTS = 100;
+const MIN_PARTICIPANTS = 2;
 
 /**
  * entry
