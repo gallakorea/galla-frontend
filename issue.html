@@ -490,6 +490,7 @@ document.addEventListener("click", (e) => {
 </script>
 
 <script>
+
 /* ==============================
    SUPPORT BUTTON → MODAL OPEN
 ============================== */
@@ -501,27 +502,24 @@ document.addEventListener("click", (e) => {
   const modal = document.getElementById("support-modal");
   if (!modal) return;
 
-  modal.hidden = false;
-
-  // ====== 분기 처리 추가 ======
-modal.dataset.mode = "side";
-
-modal.classList.remove("author", "pro", "con");
-modal.classList.add(side);
-
-modal.querySelector(".support-title").innerText = "이 진영에 보탬을 더합니다";
-modal.querySelector(".support-desc").innerHTML =
-  "이 보탬은 승부를 가르는 행위가 아닙니다.<br>이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.";
-  
-
-
-  // 진영 정보 추출
+  // 진영 정보 먼저 추출
   const box = supportBtn.closest(".actions, .reply-actions");
   const side = box?.dataset?.side || "pro";
 
+  modal.hidden = false;
+
+  // ====== 진영 후원 모드 ======
+  modal.dataset.mode = "side";
   modal.dataset.side = side;
-  modal.classList.remove("pro", "con");
+
+  modal.classList.remove("author", "pro", "con");
   modal.classList.add(side);
+
+  modal.querySelector(".support-title").innerText =
+    "이 진영에 보탬을 더합니다";
+
+  modal.querySelector(".support-desc").innerHTML =
+    "이 보탬은 승부를 가르는 행위가 아닙니다.<br>이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.";
 });
 </script>
 
