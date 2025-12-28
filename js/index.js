@@ -156,16 +156,17 @@ function attachEvents() {
 async function loadData() {
     const supabase = window.supabaseClient;
 
-    // 1️⃣ Issues + Users
+    // 1️⃣ Issues
     const { data: issues, error } = await supabase
         .from("issues")
         .select(`
             id, title, description, category, created_at,
-            pro_votes, con_votes,
+            pro_count, con_count,
             sup_pro, sup_con,
             user_id,
-            issue_thumbnails (url)
+            thumbnail_url
         `)
+        .eq("status", "published")
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -174,7 +175,7 @@ async function loadData() {
     }
 
     // 2️⃣ User Profiles
-    const userIds = [...new Set(issues.map(i => i.user_id))];
+    const userIds = [...new Set(issues.map(i => i.user_id).filter(Boolean))];
 
     const { data: profiles } = await supabase
         .from("user_profiles")
@@ -182,7 +183,7 @@ async function loadData() {
         .in("user_id", userIds);
 
     const profileMap = {};
-    profiles.forEach(p => profileMap[p.user_id] = p);
+    profiles?.forEach(p => profileMap[p.user_id] = p);
 
     // 3️⃣ Merge
     cards = issues.map(row => ({
@@ -193,11 +194,11 @@ async function loadData() {
         time: new Date(row.created_at).toLocaleDateString(),
         title: row.title,
         desc: row.description,
-        pro: row.pro_votes,
-        con: row.con_votes,
+        pro: row.pro_count,
+        con: row.con_count,
         supPro: row.sup_pro,
         supCon: row.sup_con,
-        thumb: row.issue_thumbnails?.[0]?.url
+        thumb: row.thumbnail_url
     }));
 
     loadBest();
