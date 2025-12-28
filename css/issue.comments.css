@@ -563,3 +563,28 @@ body{
   display: block;
   margin-top: 6px;
 }
+
+.replies {
+  margin-top: 10px;
+  padding-left: 14px;
+  border-left: 2px solid rgba(255,255,255,.08);
+}
+
+.reply {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.03);
+}
+
+.reply .body {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.reply-actions {
+  margin-top: 8px;
+  font-size: 12px;
+  opacity: .85;
+}

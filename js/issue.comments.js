@@ -242,14 +242,26 @@ function renderWarDashboard() {
 
 function bindEvents() {
   document.addEventListener("click", e => {
-  if (!e.target.classList.contains("reply-toggle")) return;
+    const btn = e.target.closest(".reply-toggle");
+    if (!btn) return;
 
-  const comment = e.target.closest(".comment");
-  const replies = comment.querySelector(".replies");
+    const currentComment = btn.closest(".comment");
+    const currentReplies = currentComment.querySelector(".replies");
 
-  replies.hidden = !replies.hidden;
-  e.target.innerText = replies.hidden ? "답글 보기" : "답글 숨기기";
-});
+    // 🔒 이미 열려있는 다른 대댓글 전부 닫기
+    document.querySelectorAll(".comment .replies").forEach(r => {
+      if (r !== currentReplies) {
+        r.hidden = true;
+        const b = r.closest(".comment").querySelector(".reply-toggle");
+        if (b) b.innerText = "답글 보기";
+      }
+    });
+
+    // 🔁 현재 것 토글
+    const isOpen = !currentReplies.hidden;
+    currentReplies.hidden = isOpen;
+    btn.innerText = isOpen ? "답글 보기" : "답글 숨기기";
+  });
 
     // 🔵🔴 진영 선택 버튼 동작
   document.querySelectorAll(".side-btn").forEach(btn => {
