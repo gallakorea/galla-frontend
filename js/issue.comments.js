@@ -14,6 +14,28 @@ function renderCommentText(text) {
   );
 }
 
+// ============================
+// 🧭 Side / Relation Engine
+// ============================
+
+function getMySide() {
+  return document.getElementById("battle-side-select")?.value || null;
+}
+
+function getUnitSide(el) {
+  return el.closest(".comment")?.dataset.side ||
+         el.querySelector(".reply-actions")?.dataset.side ||
+         null;
+}
+
+function getRelation(targetEl) {
+  const mySide = getMySide();
+  const targetSide = getUnitSide(targetEl);
+
+  if (!mySide || !targetSide) return "neutral";
+  if (mySide === targetSide) return "ally";
+  return "enemy";
+}
 
 export async function initCommentSystem(issueId) {
   window.CURRENT_ISSUE_ID = issueId;
@@ -223,6 +245,7 @@ function renderSide(side) {
 
   buildPager(side, "bb", PAGE_SIZE_BB);
   buildPager(side, "th", PAGE_SIZE_TH);
+  enforceBattleButtons();
 }
 
 function buildPager(side, type, size) {
@@ -266,6 +289,23 @@ function renderWarDashboard() {
 /* ======================
    Interaction
 ====================== */
+
+function enforceBattleButtons() {
+  document.querySelectorAll(".comment, .reply").forEach(unit => {
+    const relation = getRelation(unit);
+
+    const attack = unit.querySelector(".action-attack");
+    const defend = unit.querySelector(".action-defend");
+
+    if (relation === "ally") {
+      attack?.remove();
+    } 
+    else if (relation === "enemy") {
+      defend?.remove();
+    }
+  });
+}
+
 
 function bindEvents() {
   document.addEventListener("click", e => {
