@@ -94,8 +94,8 @@ function makeReply(hp, text, side) {
       <div class="reply-actions" data-side="${side}">
         <span class="like">👍4</span>
         <span class="dislike">👎1</span>
-        <button class="action-attack">⚔공격</button>
-        <button class="action-defend">🛡방어</button>
+        <span class="action-attack">⚔공격</span>
+        <span class="action-defend">🛡방어</span>
         <span class="action-support">💣지원</span>
       </div>
   </div>`;
@@ -122,13 +122,10 @@ function makeComment(c) {
   const selectedSide = document.getElementById("battle-side-select")?.value;
   const isMySide = c.side === selectedSide;
 
-  let battleButtons = "";
-
-  if (isMySide) {
-    battleButtons = `<button class="action-defend">🛡방어</button>`;
-  } else {
-    battleButtons = `<button class="action-attack">⚔공격</button>`;
-  }
+  let battleButtons = `
+    <span class="action-attack">⚔공격</span>
+    <span class="action-defend">🛡방어</span>
+  `;
 
   const actionUI = `
     <div class="actions">
