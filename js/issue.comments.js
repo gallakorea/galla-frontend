@@ -92,7 +92,7 @@ function makeReply(hp, text, side) {
     </div>
     <div class="body">└ ${renderCommentText(text)}</div>
     <div class="reply-actions" data-side="${side}">
-      ❤4 👎1 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
+      👍4 👎1 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
     </div>
   </div>`;
 }
@@ -107,7 +107,7 @@ function makeComment(c) {
 
   const actionUI = `
   <div class="actions" data-side="${c.side}">
-    <span class="like">❤12</span>
+    <span class="like">👍12</span>
     <span class="dislike">👎3</span>
 
     <button class="action-attack" ${disableAttack ? "disabled" : ""}>⚔공격</button>
@@ -276,15 +276,27 @@ function bindEvents() {
 
     // 👍 좋아요
     if (e.target.classList.contains("like")) {
-      const n = Number(e.target.textContent.replace("❤", "")) + 1;
-      e.target.textContent = "❤" + n;
+      const el = e.target;
+      const isActive = el.classList.toggle("active-like");
+
+      const other = el.parentElement.querySelector(".dislike");
+      other.classList.remove("active-dislike");
+
+      let n = Number(el.textContent.replace("👍", ""));
+      el.textContent = "👍" + (isActive ? n + 1 : n - 1);
       return;
     }
 
     // 👎 싫어요
     if (e.target.classList.contains("dislike")) {
-      const n = Number(e.target.textContent.replace("👎", "")) + 1;
-      e.target.textContent = "👎" + n;
+      const el = e.target;
+      const isActive = el.classList.toggle("active-dislike");
+
+      const other = el.parentElement.querySelector(".like");
+      other.classList.remove("active-like");
+
+      let n = Number(el.textContent.replace("👎", ""));
+      el.textContent = "👎" + (isActive ? n + 1 : n - 1);
       return;
     }
 

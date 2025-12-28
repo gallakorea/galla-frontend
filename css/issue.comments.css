@@ -664,3 +664,19 @@ body{
   font-size: 13px;
   opacity: .9;
 }
+
+.like, .dislike {
+  transition: all .15s ease;
+}
+
+.active-like {
+  color: #4da3ff;
+  text-shadow: 0 0 6px rgba(77,163,255,.8);
+  font-weight: 600;
+}
+
+.active-dislike {
+  color: #ff5c5c;
+  text-shadow: 0 0 6px rgba(255,92,92,.8);
+  font-weight: 600;
+}
