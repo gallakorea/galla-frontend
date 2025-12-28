@@ -303,7 +303,7 @@ function bindEvents() {
 }
     // 💣 지원
     if (e.target.classList.contains("action-support")) {
-      const unit = e.target.closest(".comment, .reply");
+      const unit = e.target.closest(".reply") || e.target.closest(".comment");
       let hp = Number(unit.dataset.hp);
       hp = Math.min(hp + 12, 100);
       unit.dataset.hp = hp;
@@ -347,6 +347,32 @@ function bindEvents() {
       el.textContent = "👎" + (isActive ? n + 1 : n - 1);
       return;
     }
+
+    // 🧾 대댓글 좋아요
+if (e.target.closest(".reply") && e.target.classList.contains("like")) {
+  const el = e.target;
+  const isActive = el.classList.toggle("active-like");
+
+  const other = el.parentElement.querySelector(".dislike");
+  other?.classList.remove("active-dislike");
+
+  let n = Number(el.textContent.replace("👍", ""));
+  el.textContent = "👍" + (isActive ? n + 1 : n - 1);
+  return;
+}
+
+  // 🧾 대댓글 싫어요
+  if (e.target.closest(".reply") && e.target.classList.contains("dislike")) {
+    const el = e.target;
+    const isActive = el.classList.toggle("active-dislike");
+
+    const other = el.parentElement.querySelector(".like");
+    other?.classList.remove("active-like");
+
+    let n = Number(el.textContent.replace("👎", ""));
+    el.textContent = "👎" + (isActive ? n + 1 : n - 1);
+    return;
+  }
 
     // ⋯ 메뉴
     if (e.target.classList.contains("action-more")) {

@@ -680,3 +680,25 @@ body{
   text-shadow: 0 0 6px rgba(255,92,92,.8);
   font-weight: 600;
 }
+
+.reply-actions .action-attack,
+.actions .action-attack {
+  background: #ff3b3b;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reply-actions .action-defend,
+.actions .action-defend {
+  background: #2f6bff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
