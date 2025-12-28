@@ -97,26 +97,35 @@ function makeReply(hp, text, side) {
   </div>`;
 }
 
+function makeBattleReplyInput(type) {
+  return `
+    <div class="battle-reply-box">
+      <input class="battle-reply-input" 
+             placeholder="${type === "attack" ? "⚔ 공격 논리를 입력하세요" : "🛡 방어 논리를 입력하세요"}">
+      <button class="battle-reply-send" data-type="${type}">전송</button>
+    </div>
+  `;
+}
+
 function makeComment(c) {
   const r1 = Math.floor(Math.random() * 40) + 50;
   const r2 = Math.floor(Math.random() * 40) + 50;
 
   const myVote = window.MY_VOTE_TYPE;
-  const disableAttack = myVote === "pro";
-  const disableDefend = myVote === "con";
+
+let battleButtons = `
+  <button class="action-attack">⚔공격</button>
+  <button class="action-defend">🛡방어</button>
+`;
 
   const actionUI = `
-  <div class="actions" data-side="${c.side}">
-    <span class="like">👍12</span>
-    <span class="dislike">👎3</span>
-
-    <button class="action-attack" ${disableAttack ? "disabled" : ""}>⚔공격</button>
-    <button class="action-defend" ${disableDefend ? "disabled" : ""}>🛡방어</button>
-
-    <span class="action-support">💣지원</span>
-    <span class="action-share">🔗</span>
-    <span class="action-more">⋯</span>
-  </div>
+    <div class="actions">
+      <span class="like">👍12</span>
+      <span class="dislike">👎3</span>
+      ${battleButtons}
+      <span class="action-support">💣지원</span>
+      <span class="action-more">⋯</span>
+    </div>
   `;
 
   return `
@@ -253,7 +262,37 @@ function renderWarDashboard() {
 
 function bindEvents() {
   document.addEventListener("click", e => {
-        // 💣 지원
+
+    // 🧾 전투 대댓글 전송
+    if (e.target.classList.contains("battle-reply-send")) {
+      const box = e.target.closest(".battle-reply-box");
+      const text = box.querySelector(".battle-reply-input").value.trim();
+      const type = e.target.dataset.type;
+
+      if (!text) return;
+
+      const reply = `
+        <div class="reply ${type}">
+          <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b> — ${text}
+        </div>
+      `;
+
+      box.insertAdjacentHTML("beforebegin", reply);
+      box.remove();
+      return;
+    }
+
+
+    // ⚔🛡 전투 버튼 클릭 → 입력창 표시
+    if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
+      const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
+      const comment = e.target.closest(".comment");
+
+      comment.querySelectorAll(".battle-reply-box").forEach(b => b.remove());
+      comment.insertAdjacentHTML("beforeend", makeBattleReplyInput(type));
+      return;
+}
+    // 💣 지원
     if (e.target.classList.contains("action-support")) {
       const unit = e.target.closest(".comment, .reply");
       let hp = Number(unit.dataset.hp);
@@ -300,28 +339,6 @@ function bindEvents() {
       return;
     }
 
-    // ⚔ 공격
-    if (e.target.classList.contains("action-attack")) {
-      const unit = e.target.closest(".comment, .reply");
-      let hp = Number(unit.dataset.hp);
-      hp = Math.max(hp - 10, 0);
-      unit.dataset.hp = hp;
-      unit.querySelector(".hp-fill").style.width = hp + "%";
-      unit.querySelector(".hp-text").textContent = "HP " + hp;
-      return;
-    }
-
-    // 🛡 방어
-    if (e.target.classList.contains("action-defend")) {
-      const unit = e.target.closest(".comment, .reply");
-      let hp = Number(unit.dataset.hp);
-      hp = Math.min(hp + 6, 100);
-      unit.dataset.hp = hp;
-      unit.querySelector(".hp-fill").style.width = hp + "%";
-      unit.querySelector(".hp-text").textContent = "HP " + hp;
-      return;
-    }
-
     // ⋯ 메뉴
     if (e.target.classList.contains("action-more")) {
       alert("신고 / 차단 기능은 다음 단계에서 연결됩니다.");
@@ -348,6 +365,7 @@ function bindEvents() {
     currentReplies.hidden = isOpen;
     btn.innerText = isOpen ? "답글 보기" : "답글 숨기기";
   });
+
 
     // 🔵🔴 진영 선택 버튼 동작
   document.querySelectorAll(".side-btn").forEach(btn => {
