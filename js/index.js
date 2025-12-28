@@ -179,14 +179,16 @@ function attachEvents() {
         };
     });
 
-    // ⚔️ 전황표 + 💬 댓글 아이콘 → 댓글 섹션 이동
+    // ⚔️ 전황표 & 💬 댓글 아이콘 → 전쟁 위치로 이동
     document.querySelectorAll(".goto-comments").forEach(el => {
-        el.addEventListener("click", e => {
-            e.stopPropagation();
-            const card = el.closest(".card");
-            const id = card.dataset.id;
-            location.href = `issue.html?id=${id}#comments`;
-        });
+    el.onclick = e => {
+        e.stopPropagation();
+
+        const card = el.closest(".card");
+        const id = card.dataset.id;
+
+        location.href = `issue.html?id=${id}#battle-zone`;
+    };
     });
 
     // 🧭 카드 전체 클릭 → 이슈 페이지
@@ -194,18 +196,6 @@ function attachEvents() {
         card.addEventListener("click", () => {
             const url = card.dataset.link;
             if (url) location.href = url;
-        });
-    });
-
-    // ⚔️ 전황표 & 💬 댓글 아이콘 → 댓글 전쟁 위치로 이동
-    document.querySelectorAll(".goto-comments").forEach(el => {
-        el.addEventListener("click", e => {
-            e.stopPropagation();
-
-            const card = el.closest(".card");
-            const id = card.dataset.id;
-
-            location.href = `issue.html?id=${id}#comments`;
         });
     });
 
