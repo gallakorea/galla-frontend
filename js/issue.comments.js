@@ -200,8 +200,32 @@ let battleButtons = isMySide
 }
 
 async function loadComments(issueId) {
-  state.pro.data = Array.from({ length: 30 }, () => createComment("pro"));
-  state.con.data = Array.from({ length: 30 }, () => createComment("con"));
+
+  state.pro.data = [
+    {
+      side: "pro",
+      user: { name: "찬성유저", anon: false, level: 12 },
+      hp: 80,
+      text: "찬성측 첫 번째 댓글",
+      replies: 2,
+      atk: 1,
+      sup: 0,
+      def: 3
+    }
+  ];
+
+  state.con.data = [
+    {
+      side: "con",
+      user: { name: "반대유저", anon: false, level: 15 },
+      hp: 70,
+      text: "반대측 첫 번째 댓글",
+      replies: 2,
+      atk: 2,
+      sup: 1,
+      def: 0
+    }
+  ];
 }
 
 
