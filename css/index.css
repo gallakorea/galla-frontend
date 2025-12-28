@@ -372,3 +372,53 @@ body {
     color: #ffffff;
 }
 
+/* ==========================
+   INDEX WAR DASHBOARD
+========================== */
+
+.war-dashboard {
+  background: #0b0b0b;
+  border: 1px solid #222;
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.war-title {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.war-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.war-box {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.war-box.pro { border-color: #3356ff; }
+.war-box.con { border-color: #ff4f6e; }
+
+.war-label {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+.war-stat {
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.war-sub {
+  margin-top: 2px;
+  font-size: 10px;
+  opacity: 0.6;
+}
