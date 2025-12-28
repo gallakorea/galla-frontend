@@ -8,6 +8,7 @@ console.log("[issue.stats.js] loaded");
 const MIN_PARTICIPANTS = 2;
 
 export async function loadStats(issueId) {
+  lockAllStats(0);   // ← 🔥 이 줄을 여기 추가
   const supabase = window.supabaseClient;
 
   const { count: total, error } = await supabase
