@@ -163,11 +163,11 @@ async function loadData() {
         pro_votes, con_votes,
         sup_pro, sup_con,
         users!inner (
-            id,
-            user_profiles!inner (
-                nickname,
-                level
-            )
+        id,
+        user_profiles!inner (
+            nickname,
+            level
+        )
         ),
         issue_thumbnails (url)
     `)
