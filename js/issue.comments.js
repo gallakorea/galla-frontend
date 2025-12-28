@@ -102,11 +102,22 @@ function makeComment(c) {
   const r2 = Math.floor(Math.random() * 40) + 50;
 
   const myVote = window.MY_VOTE_TYPE;
+  const disableAttack = myVote === "pro";
+  const disableDefend = myVote === "con";
 
-  let actionUI = "";
-  if (myVote === "pro") actionUI = "🛡 방어";
-  else if (myVote === "con") actionUI = "⚔ 공격";
-  else actionUI = "💬 댓글";
+  const actionUI = `
+  <div class="actions" data-side="${c.side}">
+    <span class="like">❤12</span>
+    <span class="dislike">👎3</span>
+
+    <button class="action-attack" ${disableAttack ? "disabled" : ""}>⚔공격</button>
+    <button class="action-defend" ${disableDefend ? "disabled" : ""}>🛡방어</button>
+
+    <span class="action-support">💣지원</span>
+    <span class="action-share">🔗</span>
+    <span class="action-more">⋯</span>
+  </div>
+  `;
 
   return `
   <div class="comment" data-hp="${c.hp}">
@@ -122,7 +133,7 @@ function makeComment(c) {
 
     <div class="body">${renderCommentText(c.text)}</div>
 
-    <div class="actions">${actionUI}</div>
+    ${actionUI}
 
     <div class="reply-meta">💬 ${c.replies} · ⚔ ${c.atk} · 🛡 ${c.def} · 💣 ${c.sup}</div>
 
@@ -242,6 +253,69 @@ function renderWarDashboard() {
 
 function bindEvents() {
   document.addEventListener("click", e => {
+        // 💣 지원
+    if (e.target.classList.contains("action-support")) {
+      const unit = e.target.closest(".comment, .reply");
+      let hp = Number(unit.dataset.hp);
+      hp = Math.min(hp + 12, 100);
+      unit.dataset.hp = hp;
+
+      const fill = unit.querySelector(".hp-fill");
+      const text = unit.querySelector(".hp-text");
+
+      fill.style.width = hp + "%";
+      text.textContent = "HP " + hp;
+
+      const bar = unit.querySelector(".hp-bar");
+      const glow = document.createElement("div");
+      glow.className = "hp-support-glow";
+      bar.appendChild(glow);
+      setTimeout(() => glow.remove(), 900);
+      return;
+    }
+
+    // 👍 좋아요
+    if (e.target.classList.contains("like")) {
+      const n = Number(e.target.textContent.replace("❤", "")) + 1;
+      e.target.textContent = "❤" + n;
+      return;
+    }
+
+    // 👎 싫어요
+    if (e.target.classList.contains("dislike")) {
+      const n = Number(e.target.textContent.replace("👎", "")) + 1;
+      e.target.textContent = "👎" + n;
+      return;
+    }
+
+    // ⚔ 공격
+    if (e.target.classList.contains("action-attack")) {
+      const unit = e.target.closest(".comment, .reply");
+      let hp = Number(unit.dataset.hp);
+      hp = Math.max(hp - 10, 0);
+      unit.dataset.hp = hp;
+      unit.querySelector(".hp-fill").style.width = hp + "%";
+      unit.querySelector(".hp-text").textContent = "HP " + hp;
+      return;
+    }
+
+    // 🛡 방어
+    if (e.target.classList.contains("action-defend")) {
+      const unit = e.target.closest(".comment, .reply");
+      let hp = Number(unit.dataset.hp);
+      hp = Math.min(hp + 6, 100);
+      unit.dataset.hp = hp;
+      unit.querySelector(".hp-fill").style.width = hp + "%";
+      unit.querySelector(".hp-text").textContent = "HP " + hp;
+      return;
+    }
+
+    // ⋯ 메뉴
+    if (e.target.classList.contains("action-more")) {
+      alert("신고 / 차단 기능은 다음 단계에서 연결됩니다.");
+      return;
+    }
+
     const btn = e.target.closest(".reply-toggle");
     if (!btn) return;
 
@@ -270,27 +344,6 @@ function bindEvents() {
       btn.classList.add("active");
       document.getElementById("battle-side-select").value = btn.dataset.side;
     });
-  });
-
-  document.addEventListener("click", e => {
-    if (!e.target.classList.contains("action-support")) return;
-
-    const unit = e.target.closest(".comment, .reply");
-    let hp = Number(unit.dataset.hp);
-    hp = Math.min(hp + 12, 100);
-    unit.dataset.hp = hp;
-
-    const fill = unit.querySelector(".hp-fill");
-    const text = unit.querySelector(".hp-text");
-
-    fill.style.width = hp + "%";
-    text.textContent = "HP " + hp;
-
-    const bar = unit.querySelector(".hp-bar");
-    const glow = document.createElement("div");
-    glow.className = "hp-support-glow";
-    bar.appendChild(glow);
-    setTimeout(() => glow.remove(), 900);
   });
 
     document.getElementById("battle-comment-submit")
