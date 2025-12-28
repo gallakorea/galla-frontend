@@ -1617,3 +1617,11 @@ body {
   color: #fff;
   font-weight: 700;
 }
+
+.stats-section { 
+  display: block !important; 
+}
+
+.ai-news[hidden] { 
+  display: none !important; 
+}
