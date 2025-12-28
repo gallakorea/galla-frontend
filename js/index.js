@@ -157,14 +157,14 @@ async function loadData() {
     const supabase = window.supabaseClient;
 
     const { data, error } = await supabase
-        .from("issues")
-        .select(`
-            id, title, description, category, created_at,
-            pro_votes, con_votes,
-            sup_pro, sup_con,
-            user_profiles (nickname, level),
-            thumbnails:issue_thumbnails(url)
-        `)
+    .from("issues")
+    .select(`
+        id, title, description, category, created_at,
+        pro_votes, con_votes,
+        sup_pro, sup_con,
+        user:user_profiles!issues_user_id_fkey (nickname, level),
+        thumbnails:issue_thumbnails(url)
+    `)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -175,8 +175,8 @@ async function loadData() {
     cards = data.map(row => ({
         id: row.id,
         category: row.category,
-        author: row.user_profiles.nickname,
-        level: row.user_profiles.level || 1,
+        author: row.user.nickname,
+        level: row.user.level || 1,
         time: new Date(row.created_at).toLocaleDateString(),
         title: row.title,
         desc: row.description,
