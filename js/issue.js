@@ -72,6 +72,7 @@ if (!issueId || Number.isNaN(issueId)) {
 renderIssue(issue);
 
 await initCommentSystem(issue.id);
+forceBattleScrollWithRetry();
 
 /* ===============================
   AI ARGUMENT (논점)
@@ -572,3 +573,33 @@ document.addEventListener("click", (e) => {
   document.getElementById("gif-panel").hidden = true;
 });
 
+// ================================
+// HASH SCROLL FIX (Index → Issue)
+// ================================
+
+function forceBattleScroll() {
+  if (location.hash !== "#battle-zone") return;
+
+  const el = document.getElementById("battle-zone");
+  if (!el) return;
+
+  const y = el.getBoundingClientRect().top + window.pageYOffset - 12;
+  window.scrollTo({ top: y, behavior: "smooth" });
+}
+
+function forceBattleScrollWithRetry() {
+  if (location.hash !== "#battle-zone") return;
+
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+
+    const el = document.getElementById("battle-zone");
+    if (el) {
+      clearInterval(timer);
+      setTimeout(forceBattleScroll, 120);
+    }
+
+    if (tries > 25) clearInterval(timer);
+  }, 100);
+}
