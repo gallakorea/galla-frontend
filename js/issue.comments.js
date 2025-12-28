@@ -386,6 +386,7 @@ function bindEvents() {
       document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.getElementById("battle-side-select").value = btn.dataset.side;
+      applySideColoring();
     });
   });
 
@@ -490,29 +491,42 @@ function applySideColoring() {
   const mySide = document.getElementById("battle-side-select")?.value;
   if (!mySide) return;
 
-  document.querySelectorAll(".comment").forEach(comment => {
-    const side = comment.dataset.side;
-    const user = comment.querySelector(".user");
-    const name = comment.querySelector(".user-name");
-    const level = comment.querySelector(".level-badge");
-    const icon = comment.querySelector(".side-icon");
+  document.querySelectorAll(".comment, .reply").forEach(unit => {
+    const side =
+      unit.dataset.side ||
+      unit.querySelector(".reply-actions")?.dataset.side;
 
-    if (!user || !name || !level || !icon) return;
+    if (!side) return;
+
+    const user = unit.querySelector(".user");
+    const name = unit.querySelector(".user-name") || user;
+    const level = unit.querySelector(".level-badge");
+    const icon = unit.querySelector(".side-icon");
+
+    if (!user) return;
+
+    // 아이콘이 reply에는 없을 수 있으므로 없으면 생성
+    let realIcon = icon;
+    if (!realIcon) {
+      realIcon = document.createElement("span");
+      realIcon.className = "side-icon";
+      user.prepend(realIcon);
+    }
 
     name.classList.remove("ally-user", "enemy-user");
-    level.classList.remove("ally-level", "enemy-level");
-    icon.classList.remove("ally-icon", "enemy-icon");
+    level?.classList.remove("ally-level", "enemy-level");
+    realIcon.classList.remove("ally-icon", "enemy-icon");
 
     if (side === mySide) {
       name.classList.add("ally-user");
-      level.classList.add("ally-level");
-      icon.classList.add("ally-icon");
-      icon.textContent = "🛡";
+      level?.classList.add("ally-level");
+      realIcon.classList.add("ally-icon");
+      realIcon.textContent = "🛡";
     } else {
       name.classList.add("enemy-user");
-      level.classList.add("enemy-level");
-      icon.classList.add("enemy-icon");
-      icon.textContent = "⚔";
+      level?.classList.add("enemy-level");
+      realIcon.classList.add("enemy-icon");
+      realIcon.textContent = "⚔";
     }
   });
 }
