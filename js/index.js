@@ -95,7 +95,7 @@ function renderCard(data) {
         </div>
 
         <!-- ⚔️ COMMENT WAR DASHBOARD -->
-        <div class="war-dashboard">
+        <div class="war-dashboard goto-comments">
           <div class="war-title">⚔ 전황표</div>
 
           <div class="war-grid">
@@ -131,7 +131,7 @@ function renderCard(data) {
 
         <div class="card-footer">
             <div class="footer-icons">
-                <img src="assets/icons/icon-comment.svg" class="open-modal" data-msg="댓글 준비 중"/>
+                <img src="assets/icons/icon-comment.svg" class="goto-comments"/>
                 <img src="assets/icons/icon-bookmark.svg" class="open-modal" data-msg="북마크 준비 중"/>
                 <img src="assets/icons/icon-share.svg" class="open-modal" data-msg="공유 준비 중"/>
             </div>
@@ -149,8 +149,11 @@ function renderCard(data) {
 // =========================================
 function attachEvents() {
 
+    // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
-        btn.onclick = () => {
+        btn.onclick = e => {
+            e.stopPropagation();
+
             const type = btn.dataset.type;
             const card = btn.closest(".card");
             const id = Number(card.dataset.id);
@@ -168,22 +171,27 @@ function attachEvents() {
         };
     });
 
+    // 모달
     document.querySelectorAll(".open-modal").forEach(el => {
-        el.onclick = () => openModal(el.dataset.msg);
+        el.onclick = e => {
+            e.stopPropagation();
+            openModal(el.dataset.msg);
+        };
     });
 
-    // 🧭 CARD CLICK → ISSUE PAGE
+    // ⚔️ 전황표 + 💬 댓글 아이콘 → 댓글 섹션 이동
+    document.querySelectorAll(".goto-comments").forEach(el => {
+        el.addEventListener("click", e => {
+            e.stopPropagation();
+            const card = el.closest(".card");
+            const id = card.dataset.id;
+            location.href = `issue.html?id=${id}#comments`;
+        });
+    });
+
+    // 🧭 카드 전체 클릭 → 이슈 페이지
     document.querySelectorAll(".card").forEach(card => {
-        card.addEventListener("click", e => {
-
-            if (
-                e.target.closest(".vote-btn") ||
-                e.target.closest(".follow-btn") ||
-                e.target.closest(".open-modal") ||
-                e.target.closest(".footer-icons") ||
-                e.target.closest(".more-btn")
-            ) return;
-
+        card.addEventListener("click", () => {
             const url = card.dataset.link;
             if (url) location.href = url;
         });
