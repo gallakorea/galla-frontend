@@ -84,6 +84,13 @@ function createComment(side) {
 ====================== */
 
 function makeReply(hp, text, side) {
+  const selectedSide = document.getElementById("battle-side-select")?.value;
+  const isMySide = side === selectedSide;
+
+  const battleButtons = isMySide
+    ? `<span class="action-defend">🛡방어</span>`
+    : `<span class="action-attack">⚔공격</span>`;
+
   return `
   <div class="reply" data-hp="${hp}">
     <div class="head">
@@ -93,14 +100,15 @@ function makeReply(hp, text, side) {
         <span class="hp-text">HP ${hp}</span>
       </div>
     </div>
+
     <div class="body">└ ${renderCommentText(text)}</div>
-      <div class="reply-actions" data-side="${side}">
-        <span class="like">👍4</span>
-        <span class="dislike">👎1</span>
-        <span class="action-attack">⚔공격</span>
-        <span class="action-defend">🛡방어</span>
-        <span class="action-support">💣지원</span>
-      </div>
+
+    <div class="reply-actions" data-side="${side}">
+      <span class="like">👍4</span>
+      <span class="dislike">👎1</span>
+      ${battleButtons}
+      <span class="action-support">💣지원</span>
+    </div>
   </div>`;
 }
 
@@ -415,6 +423,15 @@ function bindEvents() {
 
     // ✅ reply 추가 (makeReply 스타일과 맞춰 최소 구조)
     const hp = Math.floor(Math.random() * 40) + 50;
+
+
+    const selectedSide = document.getElementById("battle-side-select")?.value;
+    const isMySide = targetSide === selectedSide;
+
+    const battleButtons = isMySide
+      ? `<span class="action-defend">🛡방어</span>`
+      : `<span class="action-attack">⚔공격</span>`;
+
     const replyHtml = `
       <div class="reply" data-hp="${hp}">
         <div class="head">
@@ -424,12 +441,16 @@ function bindEvents() {
             <span class="hp-text">HP ${hp}</span>
           </div>
         </div>
-        <div class="body">└ <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b> @${targetUser}: ${renderCommentText(text)}</div>
+
+        <div class="body">
+          └ <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b>
+          @${targetUser}: ${renderCommentText(text)}
+        </div>
+
         <div class="reply-actions" data-side="${targetSide}">
           <span class="like">👍0</span>
           <span class="dislike">👎0</span>
-          <span class="action-attack">⚔공격</span>
-          <span class="action-defend">🛡방어</span>
+          ${battleButtons}
           <span class="action-support">💣지원</span>
         </div>
       </div>
