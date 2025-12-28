@@ -461,10 +461,7 @@ function bindEvents() {
       return;
     }
 
-    const text = document.getElementById("battle-comment-input").value.trim();
-    const side = document.getElementById("battle-side-select").value;
-
-    // 🔍 여기에 붙이세요
+    // 🔍 여기만 남기고
     console.log({
       issue_id: window.CURRENT_ISSUE_ID,
       user_id: session.session.user.id,
@@ -472,15 +469,6 @@ function bindEvents() {
       text,
       hp: 80
     });
-
-    await supabase.from("comments").insert({
-      issue_id: window.CURRENT_ISSUE_ID,
-      user_id: session.session.user.id,
-      side,
-      text,
-      hp: 80
-    });
-
 
     document.getElementById("battle-comment-input").value = "";
 
