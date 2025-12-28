@@ -53,7 +53,7 @@ function renderCard(data) {
     };
 
     return `
-    <div class="card" data-id="${data.id}">
+    <div class="card" data-id="${data.id}" data-link="issue.html?id=${data.id}">
 
         <div class="card-top">
             <span>${data.category}</span>
@@ -170,6 +170,23 @@ function attachEvents() {
 
     document.querySelectorAll(".open-modal").forEach(el => {
         el.onclick = () => openModal(el.dataset.msg);
+    });
+
+    // 🧭 CARD CLICK → ISSUE PAGE
+    document.querySelectorAll(".card").forEach(card => {
+        card.addEventListener("click", e => {
+
+            if (
+                e.target.closest(".vote-btn") ||
+                e.target.closest(".follow-btn") ||
+                e.target.closest(".open-modal") ||
+                e.target.closest(".footer-icons") ||
+                e.target.closest(".more-btn")
+            ) return;
+
+            const url = card.dataset.link;
+            if (url) location.href = url;
+        });
     });
 }
 
