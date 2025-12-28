@@ -249,8 +249,15 @@ async function vote(type) {
   // ✅ 1️⃣ 버튼 상태 갱신
   checkVoteStatus(issueId);
 
-  // ✅ 2️⃣ 현황표 즉시 갱신 (🔥 이 줄이 핵심)
+  window.MY_VOTE_TYPE = data.type;
+  if (!data) window.MY_VOTE_TYPE = null;
+
   loadVoteStats(issueId);
+
+  // 🔥 댓글 전장 UI 재렌더링
+  import("./issue.comments.js").then(m => {
+    m.initCommentSystem(issueId);
+  });
 }
 
 qs("btn-vote-pro")?.addEventListener("click", () => vote("pro"));

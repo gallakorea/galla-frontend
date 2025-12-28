@@ -101,13 +101,6 @@ function makeComment(c) {
   const r1 = Math.floor(Math.random() * 40) + 50;
   const r2 = Math.floor(Math.random() * 40) + 50;
 
-  const myVote = window.MY_VOTE_TYPE;
-
-  let actionUI = "";
-  if (myVote === "pro") actionUI = "🛡 방어";
-  else if (myVote === "con") actionUI = "⚔ 공격";
-  else actionUI = "💬 댓글";
-
   return `
   <div class="comment" data-hp="${c.hp}">
     <div class="head">
@@ -122,13 +115,13 @@ function makeComment(c) {
 
     <div class="body">${renderCommentText(c.text)}</div>
 
-    <div class="actions">${actionUI}</div>
+    <div class="actions" data-side="${c.side}">
+      ❤12 👎3 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
+    </div>
 
     <div class="reply-meta">💬 ${c.replies} · ⚔ ${c.atk} · 🛡 ${c.def} · 💣 ${c.sup}</div>
 
-    <button class="reply-toggle">답글 보기</button>
-
-    <div class="replies" hidden>
+    <div class="replies">
       ${makeReply(r1, "상대 진영 반박: 전혀 동의할 수 없습니다.", c.side)}
       ${makeReply(r2, "같은 진영 지원: 좋은 의견입니다.", c.side)}
       ${c.replies > 2 ? `<div class="more">+ ${c.replies - 2}개 더보기</div>` : ""}
@@ -140,7 +133,6 @@ async function loadComments(issueId) {
   state.pro.data = Array.from({ length: 30 }, () => createComment("pro"));
   state.con.data = Array.from({ length: 30 }, () => createComment("con"));
 }
-
 
 async function loadWarStats(issueId) {
   const supabase = window.supabaseClient;
@@ -241,15 +233,6 @@ function renderWarDashboard() {
 ====================== */
 
 function bindEvents() {
-  document.addEventListener("click", e => {
-  if (!e.target.classList.contains("reply-toggle")) return;
-
-  const comment = e.target.closest(".comment");
-  const replies = comment.querySelector(".replies");
-
-  replies.hidden = !replies.hidden;
-  e.target.innerText = replies.hidden ? "답글 보기" : "답글 숨기기";
-});
 
     // 🔵🔴 진영 선택 버튼 동작
   document.querySelectorAll(".side-btn").forEach(btn => {
