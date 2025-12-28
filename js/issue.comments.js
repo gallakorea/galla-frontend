@@ -14,46 +14,6 @@ function renderCommentText(text) {
   );
 }
 
-// ============================
-// 🧭 Side / Relation Engine
-// ============================
-
-function getMySide() {
-  return document.getElementById("battle-side-select")?.value || null;
-}
-
-// 🧪 초기 테스트용 기본 진영 세팅
-document.addEventListener("DOMContentLoaded", () => {
-  const select = document.getElementById("battle-side-select");
-  if (select && !select.value) {
-    select.value = "pro";        // 기본: 찬성 진영
-    console.log("🧭 MySide forced to:", select.value);
-  }
-});
-
-function getUnitSide(el) {
-  const reply = el.closest(".reply");
-  if (reply) {
-    const side = reply.querySelector(".reply-actions")?.dataset.side;
-    if (side) return side;
-  }
-
-  const comment = el.closest(".comment");
-  if (comment) {
-    return comment.dataset.side;
-  }
-
-  return null;
-}
-
-function getRelation(el) {
-  const mySide = document.getElementById("battle-side-select")?.value;
-  const targetSide = getUnitSide(el);
-
-  if (!mySide || !targetSide) return "neutral";
-  if (mySide === targetSide) return "ally";
-  return "enemy";
-}
 
 export async function initCommentSystem(issueId) {
   window.CURRENT_ISSUE_ID = issueId;
@@ -124,30 +84,23 @@ function createComment(side) {
 ====================== */
 
 function makeReply(hp, text, side) {
-let battleButtons = `
-  <span class="action-attack">⚔공격</span>
-  <span class="action-defend">🛡방어</span>
-`;
-
   return `
   <div class="reply" data-hp="${hp}">
     <div class="head">
-    <div class="side-tag ${side}">${side === "pro" ? "찬성 진영" : "반대 진영"}</div>
       <div class="user">익명</div>
       <div class="hp-wrap">
         <div class="hp-bar"><div class="hp-fill" style="width:${hp}%"></div></div>
         <span class="hp-text">HP ${hp}</span>
       </div>
     </div>
-
     <div class="body">└ ${renderCommentText(text)}</div>
-
-    <div class="reply-actions" data-side="${side}">
-      <span class="like">👍4</span>
-      <span class="dislike">👎1</span>
-      ${battleButtons}
-      <span class="action-support">💣지원</span>
-    </div>
+      <div class="reply-actions" data-side="${side}">
+        <span class="like">👍4</span>
+        <span class="dislike">👎1</span>
+        <span class="action-attack">⚔공격</span>
+        <span class="action-defend">🛡방어</span>
+        <span class="action-support">💣지원</span>
+      </div>
   </div>`;
 }
 
@@ -157,10 +110,12 @@ function makeComment(c) {
 
   const myVote = window.MY_VOTE_TYPE;
 
-const battleButtons = `
-  <span class="action-attack">⚔공격</span>
-  <span class="action-defend">🛡방어</span>
-`;
+  const selectedSide = document.getElementById("battle-side-select")?.value;
+  const isMySide = c.side === selectedSide;
+
+let battleButtons = isMySide
+  ? `<span class="action-defend">🛡방어</span>`
+  : `<span class="action-attack">⚔공격</span>`;
 
   const actionUI = `
     <div class="actions">
@@ -175,7 +130,6 @@ const battleButtons = `
   return `
     <div class="comment" data-hp="${c.hp}" data-side="${c.side}">
     <div class="head">
-    <div class="side-tag ${c.side}">${c.side === "pro" ? "찬성 진영" : "반대 진영"}</div>
       <div class="user">${c.user.name} <span class="level-badge">Lv.${c.user.level}</span>
         ${c.user.anon ? `<span class="anon">익명 · HP -20%</span>` : ``}
       </div>
@@ -261,8 +215,6 @@ function renderSide(side) {
 
   buildPager(side, "bb", PAGE_SIZE_BB);
   buildPager(side, "th", PAGE_SIZE_TH);
-  enforceBattleButtons();
-  setTimeout(enforceBattleButtons, 0);
 }
 
 function buildPager(side, type, size) {
@@ -279,7 +231,6 @@ function buildPager(side, type, size) {
     pager.appendChild(b);
   }
 }
-
 
 function renderWarDashboard() {
   const pro = document.querySelector(".war-box.pro .war-stat b");
@@ -307,19 +258,6 @@ function renderWarDashboard() {
 /* ======================
    Interaction
 ====================== */
-
-function enforceBattleButtons() {
-  document.querySelectorAll(".comment, .reply").forEach(unit => {
-    const relation = getRelation(unit);
-
-    const attack = unit.querySelector(".action-attack");
-    const defend = unit.querySelector(".action-defend");
-
-    if (relation === "ally") attack?.remove();
-    if (relation === "enemy") defend?.remove();
-  });
-}
-
 
 function bindEvents() {
   document.addEventListener("click", e => {
@@ -442,13 +380,7 @@ function bindEvents() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-
-      const side = btn.dataset.side;
-      document.getElementById("battle-side-select").value = side;
-
-      // 🔥 핵심: 진영 선택 후 전체 재렌더
-      renderSide("pro");
-      renderSide("con");
+      document.getElementById("battle-side-select").value = btn.dataset.side;
     });
   });
 
@@ -483,13 +415,6 @@ function bindEvents() {
 
     // ✅ reply 추가 (makeReply 스타일과 맞춰 최소 구조)
     const hp = Math.floor(Math.random() * 40) + 50;
-
-
-const battleButtons = `
-  <span class="action-attack">⚔공격</span>
-  <span class="action-defend">🛡방어</span>
-`;
-
     const replyHtml = `
       <div class="reply" data-hp="${hp}">
         <div class="head">
@@ -499,16 +424,12 @@ const battleButtons = `
             <span class="hp-text">HP ${hp}</span>
           </div>
         </div>
-
-        <div class="body">
-          └ <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b>
-          @${targetUser}: ${renderCommentText(text)}
-        </div>
-
+        <div class="body">└ <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b> @${targetUser}: ${renderCommentText(text)}</div>
         <div class="reply-actions" data-side="${targetSide}">
           <span class="like">👍0</span>
           <span class="dislike">👎0</span>
-          ${battleButtons}
+          <span class="action-attack">⚔공격</span>
+          <span class="action-defend">🛡방어</span>
           <span class="action-support">💣지원</span>
         </div>
       </div>
@@ -540,8 +461,7 @@ const battleButtons = `
       return;
     }
 
-    // 🔍 여기만 남기고
-    console.log({
+    await supabase.from("comments").insert({
       issue_id: window.CURRENT_ISSUE_ID,
       user_id: session.session.user.id,
       side,
