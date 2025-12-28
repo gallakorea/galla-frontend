@@ -162,9 +162,12 @@ async function loadData() {
         id, title, description, category, created_at,
         pro_votes, con_votes,
         sup_pro, sup_con,
-        users (
-        id,
-        user_profiles (nickname, level)
+        users!inner (
+            id,
+            user_profiles!inner (
+                nickname,
+                level
+            )
         ),
         issue_thumbnails (url)
     `)
