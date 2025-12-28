@@ -132,6 +132,7 @@ let battleButtons = `
   return `
   <div class="reply" data-hp="${hp}">
     <div class="head">
+    <div class="side-tag ${side}">${side === "pro" ? "찬성 진영" : "반대 진영"}</div>
       <div class="user">익명</div>
       <div class="hp-wrap">
         <div class="hp-bar"><div class="hp-fill" style="width:${hp}%"></div></div>
@@ -174,6 +175,7 @@ const battleButtons = `
   return `
     <div class="comment" data-hp="${c.hp}" data-side="${c.side}">
     <div class="head">
+    <div class="side-tag ${c.side}">${c.side === "pro" ? "찬성 진영" : "반대 진영"}</div>
       <div class="user">${c.user.name} <span class="level-badge">Lv.${c.user.level}</span>
         ${c.user.anon ? `<span class="anon">익명 · HP -20%</span>` : ``}
       </div>

@@ -700,3 +700,14 @@ body{
   font-weight: 600;
   cursor: pointer;
 }
+
+.side-tag {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.side-tag.pro { background: rgba(0,140,255,.15); color:#5ab7ff; }
+.side-tag.con { background: rgba(255,80,80,.15); color:#ff7a7a; }
