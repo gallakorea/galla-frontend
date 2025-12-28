@@ -129,12 +129,10 @@ function createComment(side) {
 ====================== */
 
 function makeReply(hp, text, side) {
-  const selectedSide = document.getElementById("battle-side-select")?.value;
-  const isMySide = side === selectedSide;
-
-  const battleButtons = isMySide
-    ? `<span class="action-defend">🛡방어</span>`
-    : `<span class="action-attack">⚔공격</span>`;
+let battleButtons = `
+  <span class="action-attack">⚔공격</span>
+  <span class="action-defend">🛡방어</span>
+`;
 
   return `
   <div class="reply" data-hp="${hp}">
@@ -163,12 +161,10 @@ function makeComment(c) {
 
   const myVote = window.MY_VOTE_TYPE;
 
-  const selectedSide = document.getElementById("battle-side-select")?.value;
-  const isMySide = c.side === selectedSide;
-
-let battleButtons = isMySide
-  ? `<span class="action-defend">🛡방어</span>`
-  : `<span class="action-attack">⚔공격</span>`;
+const battleButtons = `
+  <span class="action-attack">⚔공격</span>
+  <span class="action-defend">🛡방어</span>
+`;
 
   const actionUI = `
     <div class="actions">
