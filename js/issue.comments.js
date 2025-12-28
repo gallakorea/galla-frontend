@@ -1,3 +1,5 @@
+window.CURRENT_ISSUE_ID = null;
+
 let BATTLE_MODE = null;
 // BATTLE_MODE = { type: "attack"|"defend", targetEl: HTMLElement, targetUser: string, targetSide: "pro"|"con" }
 
@@ -14,7 +16,7 @@ function renderCommentText(text) {
 
 
 export async function initCommentSystem(issueId) {
-  CURRENT_ISSUE_ID = issueId;
+  window.CURRENT_ISSUE_ID = issueId;
   console.log("💬 initCommentSystem:", issueId);
 
   await new Promise(r => requestAnimationFrame(r));
@@ -25,7 +27,7 @@ export async function initCommentSystem(issueId) {
     return;
   }
 
-  await loadComments(CURRENT_ISSUE_ID);
+  await loadComments(window.CURRENT_ISSUE_ID);
   await loadWarStats();
   renderSide("pro");
   renderSide("con");
@@ -111,10 +113,9 @@ function makeComment(c) {
   const selectedSide = document.getElementById("battle-side-select")?.value;
   const isMySide = c.side === selectedSide;
 
-  let battleButtons = `
-    <span class="action-attack">⚔공격</span>
-    <span class="action-defend">🛡방어</span>
-  `;
+let battleButtons = isMySide
+  ? `<span class="action-defend">🛡방어</span>`
+  : `<span class="action-attack">⚔공격</span>`;
 
   const actionUI = `
     <div class="actions">
@@ -127,7 +128,7 @@ function makeComment(c) {
   `;
 
   return `
-  <div class="comment" data-hp="${c.hp}">
+    <div class="comment" data-hp="${c.hp}" data-side="${c.side}">
     <div class="head">
       <div class="user">${c.user.name} <span class="level-badge">Lv.${c.user.level}</span>
         ${c.user.anon ? `<span class="anon">익명 · HP -20%</span>` : ``}
@@ -461,7 +462,7 @@ function bindEvents() {
     }
 
     await supabase.from("comments").insert({
-      issue_id: CURRENT_ISSUE_ID,
+      issue_id: window.CURRENT_ISSUE_ID,
       user_id: session.session.user.id,
       side,
       text,
@@ -470,7 +471,7 @@ function bindEvents() {
 
     document.getElementById("battle-comment-input").value = "";
 
-    await loadComments(CURRENT_ISSUE_ID);
+    await loadComments(window.CURRENT_ISSUE_ID);
     renderSide("pro");
     renderSide("con");
 
