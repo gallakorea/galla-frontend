@@ -151,46 +151,53 @@ function attachEvents() {
 }
 
 // =========================================
-// 🔥 DATA FETCH
+// 🔥 DATA FETCH — CACHE SAFE MODE
 // =========================================
 async function loadData() {
     const supabase = window.supabaseClient;
 
-    const { data, error } = await supabase
-    .from("issues")
-    .select(`
-        id, title, description, category, created_at,
-        pro_votes, con_votes,
-        sup_pro, sup_con,
-        users!inner (
-        id,
-        user_profiles!inner (
-            nickname,
-            level
-        )
-        ),
-        issue_thumbnails (url)
-    `)
-    .order("created_at", { ascending: false });
+    // 1️⃣ Issues + Users
+    const { data: issues, error } = await supabase
+        .from("issues")
+        .select(`
+            id, title, description, category, created_at,
+            pro_votes, con_votes,
+            sup_pro, sup_con,
+            user_id,
+            issue_thumbnails (url)
+        `)
+        .order("created_at", { ascending: false });
 
     if (error) {
         console.error(error);
         return;
     }
 
-    cards = data.map(row => ({
-    id: row.id,
-    category: row.category,
-    author: row.users?.user_profiles?.nickname || "익명",
-    level: row.users?.user_profiles?.level || 1,
-    time: new Date(row.created_at).toLocaleDateString(),
-    title: row.title,
-    desc: row.description,
-    pro: row.pro_votes,
-    con: row.con_votes,
-    supPro: row.sup_pro,
-    supCon: row.sup_con,
-    thumb: row.issue_thumbnails?.[0]?.url
+    // 2️⃣ User Profiles
+    const userIds = [...new Set(issues.map(i => i.user_id))];
+
+    const { data: profiles } = await supabase
+        .from("user_profiles")
+        .select("user_id, nickname, level")
+        .in("user_id", userIds);
+
+    const profileMap = {};
+    profiles.forEach(p => profileMap[p.user_id] = p);
+
+    // 3️⃣ Merge
+    cards = issues.map(row => ({
+        id: row.id,
+        category: row.category,
+        author: profileMap[row.user_id]?.nickname || "익명",
+        level: profileMap[row.user_id]?.level || 1,
+        time: new Date(row.created_at).toLocaleDateString(),
+        title: row.title,
+        desc: row.description,
+        pro: row.pro_votes,
+        con: row.con_votes,
+        supPro: row.sup_pro,
+        supCon: row.sup_con,
+        thumb: row.issue_thumbnails?.[0]?.url
     }));
 
     loadBest();
