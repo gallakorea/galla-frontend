@@ -32,28 +32,23 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function getUnitSide(el) {
-  // 1️⃣ reply 자신의 진영을 최우선으로 판정
-  const replyActions = el.closest(".reply")?.querySelector(".reply-actions");
-  const replySide = replyActions?.dataset.side;
-  if (replySide) return replySide;
+  const reply = el.closest(".reply");
+  if (reply) {
+    const side = reply.querySelector(".reply-actions")?.dataset.side;
+    if (side) return side;
+  }
 
-  // 2️⃣ 그 다음 부모 comment 진영
-  const commentEl = el.closest(".comment");
-  const commentSide = commentEl?.dataset.side;
-  if (commentSide) return commentSide;
+  const comment = el.closest(".comment");
+  if (comment) {
+    return comment.dataset.side;
+  }
 
   return null;
 }
 
-function getRelation(targetEl) {
-  console.log("🧭 Relation Check", {
-    mySide: getMySide(),
-    targetSide: getUnitSide(targetEl),
-    el: targetEl
-  });
-
-  const mySide = getMySide();
-  const targetSide = getUnitSide(targetEl);
+function getRelation(el) {
+  const mySide = document.getElementById("battle-side-select")?.value;
+  const targetSide = getUnitSide(el);
 
   if (!mySide || !targetSide) return "neutral";
   if (mySide === targetSide) return "ally";
@@ -318,12 +313,8 @@ function enforceBattleButtons() {
     const attack = unit.querySelector(".action-attack");
     const defend = unit.querySelector(".action-defend");
 
-    if (relation === "ally") {
-      attack?.remove();
-    } 
-    else if (relation === "enemy") {
-      defend?.remove();
-    }
+    if (relation === "ally") attack?.remove();
+    if (relation === "enemy") defend?.remove();
   });
 }
 
@@ -492,12 +483,10 @@ function bindEvents() {
     const hp = Math.floor(Math.random() * 40) + 50;
 
 
-    const selectedSide = document.getElementById("battle-side-select")?.value;
-    const isMySide = targetSide === selectedSide;
-
-    const battleButtons = isMySide
-      ? `<span class="action-defend">🛡방어</span>`
-      : `<span class="action-attack">⚔공격</span>`;
+const battleButtons = `
+  <span class="action-attack">⚔공격</span>
+  <span class="action-defend">🛡방어</span>
+`;
 
     const replyHtml = `
       <div class="reply" data-hp="${hp}">
