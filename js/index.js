@@ -162,10 +162,13 @@ async function loadData() {
         id, title, description, category, created_at,
         pro_votes, con_votes,
         sup_pro, sup_con,
-        user:user_profiles!issues_user_id_fkey (nickname, level),
-        thumbnails:issue_thumbnails(url)
+        users (
+        id,
+        user_profiles (nickname, level)
+        ),
+        issue_thumbnails (url)
     `)
-        .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
     if (error) {
         console.error(error);
@@ -173,18 +176,18 @@ async function loadData() {
     }
 
     cards = data.map(row => ({
-        id: row.id,
-        category: row.category,
-        author: row.user.nickname,
-        level: row.user.level || 1,
-        time: new Date(row.created_at).toLocaleDateString(),
-        title: row.title,
-        desc: row.description,
-        pro: row.pro_votes,
-        con: row.con_votes,
-        supPro: row.sup_pro,
-        supCon: row.sup_con,
-        thumb: row.thumbnails?.[0]?.url
+    id: row.id,
+    category: row.category,
+    author: row.users?.user_profiles?.nickname || "익명",
+    level: row.users?.user_profiles?.level || 1,
+    time: new Date(row.created_at).toLocaleDateString(),
+    title: row.title,
+    desc: row.description,
+    pro: row.pro_votes,
+    con: row.con_votes,
+    supPro: row.sup_pro,
+    supCon: row.sup_con,
+    thumb: row.issue_thumbnails?.[0]?.url
     }));
 
     loadBest();
