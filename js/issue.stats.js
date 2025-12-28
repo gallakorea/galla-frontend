@@ -117,6 +117,7 @@ function unlockStats() {
   Array.from(section.querySelectorAll(".stats-item, .stats-content"))
     .forEach(el => el.hidden = false);
 
+}
 /* ======================================================
    RENDER ALL
 ====================================================== */
