@@ -91,9 +91,12 @@ function makeReply(hp, text, side) {
       </div>
     </div>
     <div class="body">└ ${renderCommentText(text)}</div>
-    <div class="reply-actions" data-side="${side}">
-      👍4 👎1 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
-    </div>
+      <div class="reply-actions" data-side="${side}">
+        👍4 👎1
+        <button class="action-attack">⚔공격</button>
+        <button class="action-defend">🛡방어</button>
+        <span class="action-support">💣지원</span>
+      </div>
   </div>`;
 }
 
@@ -113,10 +116,16 @@ function makeComment(c) {
 
   const myVote = window.MY_VOTE_TYPE;
 
-let battleButtons = `
-  <button class="action-attack">⚔공격</button>
-  <button class="action-defend">🛡방어</button>
-`;
+  const selectedSide = document.getElementById("battle-side-select")?.value;
+  const isMySide = c.side === selectedSide;
+
+  let battleButtons = "";
+
+  if (isMySide) {
+    battleButtons = `<button class="action-defend">🛡방어</button>`;
+  } else {
+    battleButtons = `<button class="action-attack">⚔공격</button>`;
+  }
 
   const actionUI = `
     <div class="actions">
