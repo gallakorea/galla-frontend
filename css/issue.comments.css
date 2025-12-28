@@ -681,24 +681,23 @@ body{
   font-weight: 600;
 }
 
-.reply-actions .action-attack,
-.actions .action-attack {
-  background: #ff3b3b;
-  color: #fff;
-  border: none;
+.action-attack,
+.action-defend {
+  background: transparent;
+  border: 1px solid #333;
+  color: #ccc;
   border-radius: 6px;
   padding: 4px 10px;
-  font-weight: 700;
-  cursor: pointer;
+  font-weight: 600;
 }
 
-.reply-actions .action-defend,
-.actions .action-defend {
-  background: #2f6bff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 10px;
-  font-weight: 700;
-  cursor: pointer;
+.battle-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.battle-tag {
+  font-size: 12px;
+  opacity: 0.7;
 }

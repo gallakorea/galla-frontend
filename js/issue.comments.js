@@ -92,7 +92,8 @@ function makeReply(hp, text, side) {
     </div>
     <div class="body">└ ${renderCommentText(text)}</div>
       <div class="reply-actions" data-side="${side}">
-        👍4 👎1
+        <span class="like">👍4</span>
+        <span class="dislike">👎1</span>
         <button class="action-attack">⚔공격</button>
         <button class="action-defend">🛡방어</button>
         <span class="action-support">💣지원</span>
@@ -103,9 +104,11 @@ function makeReply(hp, text, side) {
 function makeBattleReplyInput(type) {
   return `
     <div class="battle-reply-box">
-      <input class="battle-reply-input" 
-             placeholder="${type === "attack" ? "⚔ 공격 논리를 입력하세요" : "🛡 방어 논리를 입력하세요"}">
-      <button class="battle-reply-send" data-type="${type}">전송</button>
+      <div class="battle-input-row">
+        <span class="battle-tag">${type === "attack" ? "⚔ 공격" : "🛡 방어"}</span>
+        <input class="battle-reply-input" placeholder="논리를 입력하세요">
+        <button class="battle-reply-send" data-type="${type}">전송</button>
+      </div>
     </div>
   `;
 }
