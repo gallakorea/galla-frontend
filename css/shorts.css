@@ -93,10 +93,6 @@ html.shorts-open, body.shorts-open{
   touch-action: none;
 }
 
-#shortsOverlay {
-  z-index: 90;
-}
-
 .nav {
   position: fixed;
   bottom: 0;
@@ -109,4 +105,21 @@ html.shorts-open, body.shorts-open{
 
 .shorts-video-wrap {
   padding-bottom: 70px;
+}
+
+#shortsOverlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 900;
+}
+
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  z-index: 1000;
 }
