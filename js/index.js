@@ -6,10 +6,17 @@ let bestList;
 let recommendList;
 let bestMore;
 
+let speechBackdrop;
+let speechVideo;
+
 document.addEventListener("DOMContentLoaded", async () => {
     bestList = document.getElementById("best-list");
     recommendList = document.getElementById("recommend-list");
     bestMore = document.getElementById("best-more");
+
+    // ✅ 여기 추가
+    speechBackdrop = document.querySelector(".speech-backdrop");
+    speechVideo = document.getElementById("speech-video");
 
     // 🔥 Supabase 준비 대기
     while (!window.supabaseClient) {
@@ -388,12 +395,9 @@ document.getElementById("modal-close").onclick = () => {
     document.getElementById("modal").style.display = "none";
 };
 
-const speechBackdrop = document.querySelector(".speech-backdrop");
-const speechVideo = document.getElementById("speech-video");
-
 function openSpeech() {
     const item = speechList[speechIndex];
-    if (!item) return;
+    if (!item || !speechBackdrop || !speechVideo) return;
 
     speechBackdrop.hidden = false;
     document.body.style.overflow = "hidden";
