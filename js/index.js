@@ -384,6 +384,9 @@ document.getElementById("modal-close").onclick = () => {
 
 function openSpeech() {
     document.body.classList.add("shorts-mode");
+
+    document.documentElement.scrollTop = 0;   // 🔥 배경 스크롤 강제 정지
+
     speechModal.classList.add("active");
     playSpeech();
 }
@@ -465,7 +468,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const endY = e.changedTouches[0].clientY;
         const diff = startY - endY;
 
-        if (Math.abs(diff) < 120) return;   // 짧은 드래그 무시
+        if (Math.abs(diff) < 160) return;   // 짧은 드래그 무시
 
         isLocked = true;
 
@@ -483,9 +486,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     closeBtn.onclick = () => {
+        speechVideo.pause();
+
         speechModal.classList.remove("active");
         document.body.classList.remove("shorts-mode");
-        speechVideo.pause();
+
+        document.body.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
     };
 
 });
