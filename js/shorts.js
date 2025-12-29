@@ -14,6 +14,18 @@ function ensureShortsDOM() {
   return !!(overlay && videoPrev && videoCur && videoNext && backBtn);
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+  if (!ensureShortsDOM()) {
+    console.error("[SHORTS] DOM not ready on load");
+    return;
+  }
+
+  if (!overlay._bound) {
+    bindShortsEvents();
+    overlay._bound = true;
+  }
+});
+
 let shortsList = [];
 let shortsIndex = 0;
 
@@ -35,8 +47,7 @@ function openShorts(list, startId) {
 
   // ⬇️ 이 블록을 이 위치에 정확히 추가
   if (!ensureShortsDOM()) {
-    console.warn("[SHORTS] Waiting for DOM...");
-    setTimeout(() => openShorts(list, startId), 50);
+    console.error("[SHORTS] Shorts DOM missing");
     return;
   }
 
