@@ -5,37 +5,14 @@ let overlay, backBtn;
 let videoPrev, videoCur, videoNext;
 
 function ensureShortsDOM() {
-  if (overlay && videoPrev && videoCur && videoNext && backBtn) return true;
-
   overlay   = document.getElementById("shortsOverlay");
   videoPrev = document.getElementById("videoPrev");
   videoCur  = document.getElementById("shortsVideo");
   videoNext = document.getElementById("videoNext");
   backBtn   = document.getElementById("shortsBack");
 
-  if (!overlay || !videoPrev || !videoCur || !videoNext || !backBtn) {
-    console.error("[SHORTS] DOM not ready (deferred)");
-    return false;
-  }
-
-  bindShortsEvents();
-  return true;
+  return !!(overlay && videoPrev && videoCur && videoNext && backBtn);
 }
-
-document.addEventListener("DOMContentLoaded", () => {
-  overlay = document.getElementById("shortsOverlay");
-  videoPrev = document.getElementById("videoPrev");
-  videoCur  = document.getElementById("shortsVideo");
-  videoNext = document.getElementById("videoNext");
-  backBtn   = document.getElementById("shortsBack");
-
-  if (!overlay || !videoPrev || !videoCur || !videoNext || !backBtn) {
-    console.error("[SHORTS] DOM not ready");
-    return;
-  }
-
-  bindShortsEvents();
-});
 
 let shortsList = [];
 let shortsIndex = 0;
@@ -56,7 +33,18 @@ function wheelLock(ms = 450) {
 
 function openShorts(list, startId) {
 
-  if (!ensureShortsDOM()) return;
+  // ⬇️ 이 블록을 이 위치에 정확히 추가
+  if (!ensureShortsDOM()) {
+    console.warn("[SHORTS] Waiting for DOM...");
+    setTimeout(() => openShorts(list, startId), 50);
+    return;
+  }
+
+  // 이벤트는 단 한 번만 바인딩
+  if (!overlay._bound) {
+    bindShortsEvents();
+    overlay._bound = true;
+  }
 
   if (!Array.isArray(list)) {
     console.error("[SHORTS] invalid list:", list);
