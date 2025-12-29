@@ -23,9 +23,9 @@ function wheelLock(ms = 450) {
 }
 
 function openShorts(list, startId) {
-  // list: cards 배열, startId: issue id
+
   if (!Array.isArray(list)) {
-    console.error("[shorts] list must be array");
+    console.error("[SHORTS] invalid list:", list);
     return;
   }
 

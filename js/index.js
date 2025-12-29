@@ -5,6 +5,7 @@
 let bestList;
 let recommendList;
 let bestMore;
+let cards = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
     bestList = document.getElementById("best-list");
