@@ -16,7 +16,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         await new Promise(r => setTimeout(r, 30));
     }
 
-    loadData();
+    await loadData();
+    SpeechPlayer.init();
+
 });
 
 // 스크롤 복원
@@ -157,6 +159,14 @@ function renderCard(data) {
 // =========================================
 function attachEvents() {
 
+    // 🎥 1분 엘리베이터 스피치
+    document.querySelectorAll(".speech-btn").forEach(btn => {
+    btn.onclick = e => {
+        e.stopPropagation();
+        SpeechPlayer.open(cards, btn.dataset.index);
+    };
+    });
+
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = e => {
@@ -270,9 +280,9 @@ async function loadData() {
         war: warMap[c.id]
     }));
 
-
     loadBest();
     loadRecommend();
+    return true;
 }
 
 // =========================================
