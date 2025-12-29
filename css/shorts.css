@@ -1,75 +1,64 @@
-/* 🎥 Shorts Style Fullscreen */
+/* =========================================
+   GALLA SHORTS PLAYER (FINAL STABLE)
+========================================= */
 
-.speech-actions {
-    position: absolute;
-    bottom: 14px;
-    left: 0;
-    right: 0;
-    display: flex;
-    gap: 12px;
-    padding: 0 12px;
-    pointer-events: auto;
-}
-
-#speech-loading {
-    position: absolute;
-    inset: 0;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* ====== GALLA SHORTS MODE ====== */
-
-#speech-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* ===========================
-   VIDEO HARD FIX
-=========================== */
-
-.speech-sheet {
-  bottom: 0 !important;
-  height: 100vh !important;
-}
-
-#speech-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* === HARD OVERRIDE FOR SHORTS === */
-
-.speech-backdrop {
-  position: fixed !important;
-  inset: 0 !important;
-  background: black !important;
-  z-index: 999999 !important;
+/* hidden 속성은 무조건 숨김 */
+.speech-backdrop[hidden] {
   display: none !important;
 }
 
+/* 기본 상태: 완전히 숨김 */
+.speech-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 999999;
+  display: none;
+}
+
+/* 열릴 때만 표시 */
 .speech-backdrop.active {
-  display: block !important;
+  display: block;
 }
 
+/* 비디오 시트 */
 .speech-sheet {
-  position: absolute !important;
-  inset: 0 !important;
+  position: absolute;
+  inset: 0;
 }
 
+/* 비디오 */
 #speech-video {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 로딩 */
+#speech-loading {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 하단 액션 */
+.speech-actions {
+  position: absolute;
+  bottom: 14px;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  padding: 0 12px;
+  pointer-events: auto;
+}
+
+/* 네비는 항상 최상단 */
+.nav {
+  z-index: 1000000000;
 }
