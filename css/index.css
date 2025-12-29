@@ -422,3 +422,15 @@ body {
   font-size: 10px;
   opacity: 0.6;
 }
+
+.card-thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.card {
+  overflow: hidden;
+}
