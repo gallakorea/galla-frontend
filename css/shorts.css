@@ -1,16 +1,5 @@
 /* 🎥 Shorts Style Fullscreen */
 
-#speech-modal {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    transform: translateY(100%);
-    transition: transform 0.35s ease;
-}
-
 .speech-actions {
     position: absolute;
     bottom: 14px;
@@ -33,17 +22,6 @@
 
 /* ====== GALLA SHORTS MODE ====== */
 
-body.shorts-mode {
-    overflow: hidden;
-}
-
-#speech-modal.active {
-    position: fixed;
-    inset: 0;
-    background: black;
-    z-index: 9999;
-}
-
 #speech-video {
   position: absolute;
   inset: 0;
@@ -61,8 +39,31 @@ body.shorts-mode {
   height: 100vh !important;
 }
 
+#speech-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ===== GALLA SHORTS FULLSCREEN ===== */
+
 .speech-backdrop {
-  display: block !important;
+  position: fixed;
+  inset: 0;
+  background: black;
+  z-index: 9999;
+  display: none;
+}
+
+.speech-backdrop.active {
+  display: block;
+}
+
+.speech-sheet {
+  position: absolute;
+  inset: 0;
 }
 
 #speech-video {
