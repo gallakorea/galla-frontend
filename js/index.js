@@ -39,6 +39,7 @@ let speechList = [];
 let speechModal;
 let speechVideo;
 let preloadVideo;
+let speechLoading;
 
 // =========================================
 // 🔥 CARD RENDERER
