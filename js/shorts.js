@@ -14,18 +14,6 @@ function ensureShortsDOM() {
   return !!(overlay && videoPrev && videoCur && videoNext && backBtn);
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (!ensureShortsDOM()) {
-    console.error("[SHORTS] DOM not ready on load");
-    return;
-  }
-
-  if (!overlay._bound) {
-    bindShortsEvents();
-    overlay._bound = true;
-  }
-});
-
 let shortsList = [];
 let shortsIndex = 0;
 
