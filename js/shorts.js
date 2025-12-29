@@ -19,16 +19,11 @@ let shortsIndex = 0;
 
 let touchStartY = 0;
 let locked = false;
-let wheelLocked = false;
+
 
 function lock(ms = 450) {
   locked = true;
   setTimeout(() => (locked = false), ms);
-}
-
-function wheelLock(ms = 450) {
-  wheelLocked = true;
-  setTimeout(() => (wheelLocked = false), ms);
 }
 
 async function openShorts(list, startId) {
@@ -163,14 +158,20 @@ overlay.addEventListener("touchend", (e) => {
 /* =========================
    PC Mouse Wheel (1 step)
 ========================= */
-overlay.addEventListener("wheel", (e) => {
-  // 오버레이에서만 스크롤을 막고 1칸씩 넘김
-  e.preventDefault();
-  if (wheelLocked || locked) return;
+let wheelDelta = 0;
 
-  wheelLock();
-  if (e.deltaY > 0) next();
+overlay.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  if (locked) return;
+
+  wheelDelta += e.deltaY;
+
+  if (Math.abs(wheelDelta) < 80) return;
+
+  if (wheelDelta > 0) next();
   else prev();
+
+  wheelDelta = 0;
 }, { passive: false });
 
 /* =========================

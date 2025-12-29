@@ -116,7 +116,7 @@ html.shorts-open, body.shorts-open{
   position: fixed;
   inset: 0;
   background: #000;
-  z-index: 999999;
+  z-index: 900;        /* 🔥 네비보다 낮게 */
   display: flex;
   justify-content: center;
   align-items: center;
