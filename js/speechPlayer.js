@@ -62,9 +62,10 @@ function playSpeech() {
 function closeSpeechPlayer() {
   videoEl.pause();
   videoEl.src = "";
+
   backdrop.classList.remove("active");
   backdrop.hidden = true;
-  document.body.style.overflow = "";
+  document.body.style.overflow = "hidden";
 }
 
 window.SpeechPlayer = {

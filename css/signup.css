@@ -211,3 +211,18 @@ input:checked + .slider::before {
     position: relative;
     z-index: 10000;
 }
+
+.speech-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: black;
+  z-index: 2147483647;
+  display: none;
+}
+
+.speech-backdrop.active {
+  display: block;
+}
