@@ -144,33 +144,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 <script src="js/index.js"></script>
 
-<div id="speech-modal" class="speech-modal hidden">
-  <div class="speech-header">
-    <button id="speech-close">✕</button>
+<div id="speech-modal">
+  <video id="speech-video" playsinline></video>
+
+  <div id="speech-loading">
+    <div class="loader"></div>
   </div>
 
-  <div id="speech-loading" class="speech-loading">
-  <div class="spinner"></div>
-  <p>영상 불러오는 중…</p>
+  <div class="speech-actions">
+    <button class="btn-pro">👍 찬성이오</button>
+    <button class="btn-con">👎 난 반댈세</button>
   </div>
-  
-  <video id="speech-video" autoplay playsinline controls></video>
 
-    <div id="speech-modal">
-        <video id="speech-video" playsinline></video>
-
-        <div id="speech-loading">
-            <div class="loader"></div>
-        </div>
-
-        <div class="speech-actions">
-            <button class="btn-pro">👍 찬성이오</button>
-            <button class="btn-con">👎 난 반댈세</button>
-        </div>
-
-        <button id="speech-close">✕</button>
-    </div>
-
+  <button id="speech-close">✕</button>
+</div>
 
 </body>
 </html>
