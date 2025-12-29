@@ -144,5 +144,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 <script src="js/index.js"></script>
 
+<div id="speech-modal" class="speech-modal hidden">
+  <div class="speech-header">
+    <button id="speech-close">✕</button>
+  </div>
+
+  <video id="speech-video" autoplay playsinline controls></video>
+
+  <div class="speech-actions">
+    <button class="btn-pro">👍 찬성이오</button>
+    <button class="btn-con">👎 난 반댈세</button>
+  </div>
+</div>
+
+
 </body>
 </html>

@@ -33,7 +33,8 @@ const voteMemory = JSON.parse(localStorage.getItem("votes") || "{}");
 // =========================================
 // 🔥 GLOBAL DATA STORE
 // =========================================
-let cards = [];
+let speechIndex = 0;
+let speechList = [];
 
 // =========================================
 // 🔥 CARD RENDERER
@@ -73,7 +74,7 @@ function renderCard(data) {
 
         <img src="${data.thumb || "assets/logo.png"}" class="card-thumb" />
 
-        <div class="speech-btn open-modal" data-msg="엘리베이터 스피치 기능 준비 중">
+        <div class="speech-btn" data-index="${data.id}">
           🎥 1분 엘리베이터 스피치
         </div>
 
@@ -198,6 +199,19 @@ function attachEvents() {
             if (url) location.href = url;
         });
     });
+
+    // 🎥 1분 스피치 클릭
+    document.querySelectorAll(".speech-btn").forEach(btn => {
+        btn.onclick = e => {
+            e.stopPropagation();
+
+            speechList = cards.filter(c => c.video_url);
+            speechIndex = speechList.findIndex(c => c.id == btn.dataset.index);
+
+            openSpeech();
+        };
+    });
+
 
 }
 
