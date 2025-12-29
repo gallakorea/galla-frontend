@@ -489,3 +489,24 @@ body.shorts-mode {
   height: 100%;
   object-fit: cover;
 }
+
+/* ===========================
+   VIDEO HARD FIX
+=========================== */
+
+.speech-sheet {
+  bottom: 0 !important;
+  height: 100vh !important;
+}
+
+.speech-backdrop {
+  display: block !important;
+}
+
+#speech-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

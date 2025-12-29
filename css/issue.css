@@ -1637,8 +1637,3 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
-
-.support-modal.author .support-title { color:#ffd56a; }
-.support-modal.author .support-confirm {
-  background: linear-gradient(90deg,#ffb347,#ffcc33);
-}
