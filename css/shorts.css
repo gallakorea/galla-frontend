@@ -185,43 +185,56 @@ body.shorts-open #app {
   opacity: 0.6;
 }
 
+/* ===============================
+   Shorts Vote HUD
+================================ */
+
 .shorts-vote {
   position: absolute;
-  bottom: 84px; /* 네비 위 */
   left: 50%;
+  bottom: 90px;                 /* 네비게이션 위 */
   transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 420px;
   display: flex;
-  gap: 10px;
-  z-index: 20;
+  gap: 12px;
+  z-index: 10000;
 }
 
-.vote-btn {
-  min-width: 140px;
-  padding: 12px 14px;
+.shorts-vote .vote-btn {
+  flex: 1;
+  padding: 14px 0;
   border-radius: 14px;
-  border: none;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  backdrop-filter: blur(6px);
   transition: all .2s ease;
 }
 
-.vote-btn.pro {
-  background: linear-gradient(145deg, #1d4ed8, #1e3a8a);
-  color: #fff;
+/* 찬성 */
+.shorts-vote .pro {
+  border-color: #2d6cff;
+}
+.shorts-vote .pro.active-vote {
+  background: linear-gradient(135deg, #1e5eff, #3b7cff);
+  border-color: transparent;
 }
 
-.vote-btn.con {
-  background: linear-gradient(145deg, #7f1d1d, #450a0a);
-  color: #fff;
+/* 반대 */
+.shorts-vote .con {
+  border-color: #ff4b4b;
+}
+.shorts-vote .con.active-vote {
+  background: linear-gradient(135deg, #ff3b3b, #ff6464);
+  border-color: transparent;
 }
 
-.vote-btn.active-vote {
-  box-shadow: 0 0 0 3px #fff inset;
-  transform: scale(1.05);
-}
-
-.vote-btn.locked {
+/* 잠금 상태 */
+.shorts-vote .locked {
   opacity: .35;
   pointer-events: none;
 }
