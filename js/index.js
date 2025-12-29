@@ -205,8 +205,13 @@ function attachEvents() {
         btn.onclick = e => {
             e.stopPropagation();
 
-            speechList = cards.filter(c => c.video_url);
+            speechList = cards.filter(c => c.video_url && c.video_url.trim() !== "");
+            if (speechList.length === 0) {
+                alert("등록된 영상이 없습니다.");
+                return;
+            }
             speechIndex = speechList.findIndex(c => c.id == btn.dataset.index);
+            if (speechIndex === -1) speechIndex = 0;
 
             openSpeech();
         };
@@ -229,7 +234,8 @@ async function loadData() {
         pro_count, con_count,
         sup_pro, sup_con,
         user_id,
-        thumbnail_url
+        thumbnail_url,
+        video_url
     `)
         .order("created_at", { ascending: false });
 
@@ -263,7 +269,8 @@ async function loadData() {
         con: row.con_count,
         supPro: row.sup_pro,
         supCon: row.sup_con,
-        thumb: row.thumbnail_url
+        thumb: row.thumbnail_url,
+        video_url: row.video_url
     }));
 
     const issueIds = cards.map(c => c.id);
@@ -370,6 +377,55 @@ function openModal(msg) {
 document.getElementById("modal-close").onclick = () => {
     document.getElementById("modal").style.display = "none";
 };
+
+const speechModal = document.getElementById("speech-modal");
+const speechVideo = document.getElementById("speech-video");
+const speechLoading = document.getElementById("speech-loading");
+
+function openSpeech() {
+    speechModal.classList.remove("hidden");
+    speechLoading.classList.remove("hidden");
+    playSpeech();
+}
+
+function playSpeech() {
+    const item = speechList[speechIndex];
+
+    speechLoading.classList.remove("hidden");
+
+    speechVideo.src = item.video_url;
+    speechVideo.load();
+
+    speechVideo.onloadeddata = () => {
+        speechLoading.classList.add("hidden");
+        speechVideo.play();
+    };
+}
+
+let startY = 0;
+
+speechVideo.addEventListener("touchstart", e => {
+    startY = e.touches[0].clientY;
+});
+
+speechVideo.addEventListener("touchend", e => {
+    const diff = startY - e.changedTouches[0].clientY;
+
+    if (diff > 60 && speechIndex < speechList.length - 1) {
+        speechIndex++;
+        playSpeech();
+    }
+    if (diff < -60 && speechIndex > 0) {
+        speechIndex--;
+        playSpeech();
+    }
+});
+
+document.getElementById("speech-close").onclick = () => {
+    speechModal.classList.add("hidden");
+    speechVideo.pause();
+};
+
 
 // INIT
 loadData();
