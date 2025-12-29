@@ -383,8 +383,11 @@ document.getElementById("modal-close").onclick = () => {
 };
 
 function openSpeech() {
-    speechModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+
+    speechModal.classList.add("active");
     speechLoading.classList.remove("hidden");
+
     playSpeech();
 }
 
@@ -468,7 +471,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     closeBtn.onclick = () => {
-        speechModal.classList.add("hidden");
+        speechModal.classList.remove("active");
+        document.body.style.overflow = "";
         speechVideo.pause();
     };
 

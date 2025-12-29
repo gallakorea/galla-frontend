@@ -153,14 +153,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   <div class="spinner"></div>
   <p>영상 불러오는 중…</p>
   </div>
+  
+  <video id="speech-video" autoplay playsinline controls></video>
 
-  <video id="speech-video" autoplay playsinline></video>
+    <div id="speech-modal">
+        <video id="speech-video" playsinline></video>
 
-  <div class="speech-actions">
-    <button class="btn-pro">👍 찬성이오</button>
-    <button class="btn-con">👎 난 반댈세</button>
-  </div>
-</div>
+        <div id="speech-loading">
+            <div class="loader"></div>
+        </div>
+
+        <div class="speech-actions">
+            <button class="btn-pro">👍 찬성이오</button>
+            <button class="btn-con">👎 난 반댈세</button>
+        </div>
+
+        <button id="speech-close">✕</button>
+    </div>
 
 
 </body>
