@@ -75,7 +75,7 @@ function openShorts(list, startId) {
 
   // iOS/모바일 안전
   videoCur.playsInline = true;
-  videoCur.muted = false;
+  videoCur.muted = true;   // 자동재생 안정화
 
   videoPrev.preload = "auto";
   videoCur.preload  = "auto";
@@ -94,7 +94,7 @@ function closeShorts() {
   videoPrev.pause();
   videoNext.pause();
 
-
+ 
   videoCur.removeAttribute("src");
   videoPrev.removeAttribute("src");
   videoNext.removeAttribute("src");
