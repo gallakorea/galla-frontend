@@ -10,12 +10,11 @@ html, body {
 }
 
 body {
-    display: flex;
-    justify-content: center;
+    display: block;
 }
 
-/* APP */
 #app {
+    margin: 0 auto;
     width: 100%;
     max-width: 480px;
     min-height: 100vh;

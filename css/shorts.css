@@ -47,29 +47,29 @@
   object-fit: cover;
 }
 
-/* ===== GALLA SHORTS FULLSCREEN ===== */
+/* === HARD OVERRIDE FOR SHORTS === */
 
 .speech-backdrop {
-  position: fixed;
-  inset: 0;
-  background: black;
-  z-index: 9999;
-  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  background: black !important;
+  z-index: 999999 !important;
+  display: none !important;
 }
 
 .speech-backdrop.active {
-  display: block;
+  display: block !important;
 }
 
 .speech-sheet {
-  position: absolute;
-  inset: 0;
+  position: absolute !important;
+  inset: 0 !important;
 }
 
 #speech-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
