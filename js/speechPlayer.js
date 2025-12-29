@@ -42,10 +42,9 @@ function openSpeechPlayer(list, startId) {
   speechIndex = speechList.findIndex(v => v.id == startId);
   if (speechIndex < 0) speechIndex = 0;
 
-  backdrop.classList.add("active");   // 🔥 추가
-
-  document.body.style.overflow = "hidden";
   backdrop.hidden = false;
+  backdrop.classList.add("active");
+  document.body.style.overflow = "hidden";
 
   playSpeech();
 }
@@ -62,6 +61,7 @@ function playSpeech() {
 function closeSpeechPlayer() {
   videoEl.pause();
   videoEl.src = "";
+  backdrop.classList.remove("active");
   backdrop.hidden = true;
   document.body.style.overflow = "";
 }
