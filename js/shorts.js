@@ -1,14 +1,17 @@
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
-let overlay, videoEl, backBtn;
+let overlay, backBtn;
+let videoPrev, videoCur, videoNext;
 
 document.addEventListener("DOMContentLoaded", () => {
   overlay = document.getElementById("shortsOverlay");
-  videoEl = document.getElementById("shortsVideo");
-  backBtn = document.getElementById("shortsBack");
+  videoPrev = document.getElementById("videoPrev");
+  videoCur  = document.getElementById("shortsVideo");
+  videoNext = document.getElementById("videoNext");
+  backBtn   = document.getElementById("shortsBack");
 
-  if (!overlay || !videoEl || !backBtn) {
+  if (!overlay || !videoPrev || !videoCur || !videoNext || !backBtn) {
     console.error("[SHORTS] DOM not ready");
     return;
   }
@@ -52,18 +55,25 @@ function openShorts(list, startId) {
   document.body.style.overflow = "hidden";
 
   // iOS/모바일 안전
-  videoEl.playsInline = true;
-  videoEl.muted = false;
+  videoCur.playsInline = true;
+  videoCur.muted = false;
 
-  playCurrent();
+  videoPrev.preload = "auto";
+  videoCur.preload  = "auto";
+  videoNext.preload = "auto";
+  loadVideos();
+  resetPositions();
+
 }
 
 function closeShorts() {
   try {
-    videoEl.pause();
+  videoCur.pause();
   } catch (e) {}
-  videoEl.removeAttribute("src");
-  videoEl.load();
+
+  videoCur.pause();
+  videoCur.removeAttribute("src");
+  videoCur.load();
 
   overlay.hidden = true;
   document.body.classList.remove("shorts-open");
@@ -71,24 +81,29 @@ function closeShorts() {
   document.body.style.overflow = "";
 }
 
-function playCurrent() {
-  const item = shortsList[shortsIndex];
-  if (!item) return;
+function loadVideos() {
+  const cur = shortsList[shortsIndex];
+  const prev = shortsList[shortsIndex - 1];
+  const next = shortsList[shortsIndex + 1];
 
-  // 재생 안정화: src 교체 → load → play
-  videoEl.src = item.video_url;
-  videoEl.load();
+  if (prev) videoPrev.src = prev.video_url;
+  if (cur)  videoCur.src  = cur.video_url;
+  if (next) videoNext.src = next.video_url;
 
-  const p = videoEl.play();
-  if (p && typeof p.catch === "function") {
-    p.catch(() => {
-      // 자동재생 정책 등으로 실패 시 대비
-      // 필요하면 muted=true로 fallback 가능
-    });
-  }
+  videoCur.load();
+  videoCur.play();
+  const p = videoCur.play();
+  if (p && typeof p.catch === "function") p.catch(() => {});
+}
 
-  // UI(시간/좋아요 등) 나중에 실제 데이터 바인딩 가능
-  // document.querySelector(".shorts-time").textContent = "5:05";
+function resetPositions() {
+  videoPrev.style.transition = "none";
+  videoCur.style.transition = "none";
+  videoNext.style.transition = "none";
+
+  videoPrev.style.transform = "translateY(-100%)";
+  videoCur.style.transform  = "translateY(0)";
+  videoNext.style.transform = "translateY(100%)";
 }
 
 function next() {
@@ -96,7 +111,7 @@ function next() {
   if (shortsIndex >= shortsList.length - 1) return;
   lock();
   shortsIndex += 1;
-  playCurrent();
+  slideUp();
 }
 
 function prev() {
@@ -104,7 +119,7 @@ function prev() {
   if (shortsIndex <= 0) return;
   lock();
   shortsIndex -= 1;
-  playCurrent();
+  slideDown();
 }
 
 function bindShortsEvents() {
@@ -171,4 +186,36 @@ if (backBtn) backBtn.onclick = closeShorts;
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
 
+}
+
+function slideUp() {
+  videoPrev.style.transition =
+  videoCur.style.transition =
+  videoNext.style.transition = "transform 0.35s ease";
+
+  videoPrev.style.transform = "translateY(-200%)";
+  videoCur.style.transform  = "translateY(-100%)";
+  videoNext.style.transform = "translateY(0)";
+
+  setTimeout(() => {
+    shortsIndex = Math.min(shortsIndex, shortsList.length - 1);
+    loadVideos();
+    resetPositions();
+  }, 350);
+}
+
+function slideDown() {
+  videoPrev.style.transition =
+  videoCur.style.transition =
+  videoNext.style.transition = "transform 0.35s ease";
+
+  videoPrev.style.transform = "translateY(0)";
+  videoCur.style.transform  = "translateY(100%)";
+  videoNext.style.transform = "translateY(200%)";
+
+  setTimeout(() => {
+    shortsIndex = Math.max(shortsIndex, 0);
+    loadVideos();
+    resetPositions();
+  }, 350);
 }

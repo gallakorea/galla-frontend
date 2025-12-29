@@ -144,3 +144,22 @@ body.shorts-open .header {
 body.shorts-open #app {
   padding-top: 0 !important;
 }
+
+.shorts-video-wrap {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.shorts-video-wrap video {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: black;
+  transition: transform 0.35s ease;
+}
+
+#videoPrev { transform: translateY(-100%); }
+#shortsVideo { transform: translateY(0); }
+#videoNext { transform: translateY(100%); }
