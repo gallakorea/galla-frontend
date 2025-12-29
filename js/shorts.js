@@ -64,8 +64,21 @@ async function openShorts(list, startId) {
   videoPrev.preload = "auto";
   videoCur.preload  = "auto";
   videoNext.preload = "auto";
+
   loadVideos();
   resetPositions();
+
+  // =========================
+  // Shorts Vote HUD reset
+  // =========================
+  window.__shortsVote = null;
+
+  const shortsPro = document.getElementById("shortsPro");
+  const shortsCon = document.getElementById("shortsCon");
+  if (shortsPro && shortsCon) {
+    shortsPro.classList.remove("active-vote", "locked");
+    shortsCon.classList.remove("active-vote", "locked");
+  }
 
 }
 
@@ -203,6 +216,35 @@ if (backBtn) backBtn.onclick = closeShorts;
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
 
+/* =========================
+   Shorts Vote HUD (Pro/Con)
+========================= */
+const shortsPro = document.getElementById("shortsPro");
+const shortsCon = document.getElementById("shortsCon");
+
+// 버튼이 없는 페이지에서도 shorts.js가 로드될 수 있으니 안전 처리
+if (shortsPro && shortsCon) {
+  // 바인딩 중복 방지
+  if (!overlay._voteBound) {
+    overlay._voteBound = true;
+
+    shortsPro.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.__shortsVote) return;
+      window.__shortsVote = "pro";
+      shortsPro.classList.add("active-vote");
+      shortsCon.classList.add("locked");
+    });
+
+    shortsCon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.__shortsVote) return;
+      window.__shortsVote = "con";
+      shortsCon.classList.add("active-vote");
+      shortsPro.classList.add("locked");
+    });
+  }
+}
 }
 
 function slideUp() {
@@ -236,3 +278,4 @@ function slideDown() {
     resetPositions();
   }, 350);
 }
+
