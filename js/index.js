@@ -297,9 +297,9 @@ async function loadData() {
 async function loadWarData(issueIds) {
     const supabase = window.supabaseClient;
 
-    const { data, error } = await supabase
+        const { data, error } = await supabase
         .from("comments")
-        .select("issue_id, stance, action_type")
+        .select("issue_id, faction, attack_count, defense_count, support_count")
         .in("issue_id", issueIds);
 
     if (error) {
@@ -320,20 +320,21 @@ async function loadWarData(issueIds) {
         const w = warMap[row.issue_id];
         if (!w) return;
 
-        const s = row.stance;
-        w[s].total++;
+    const f = row.faction;   // 'pro' or 'con'
 
-        if (row.action_type === "attack") w.atk++;
-        if (row.action_type === "defense") w.def++;
-        if (row.action_type === "support") w.sup++;
+    if (!w[f]) return;
 
-        if (row.action_type === "attack") {
-            if (s === "pro") w.pro.oppo++;
-            else w.con.oppo++;
-        } else {
-            if (s === "pro") w.pro.same++;
-            else w.con.same++;
-        }
+    w[f].total++;
+
+    w.atk += row.attack_count || 0;
+    w.def += row.defense_count || 0;
+    w.sup += row.support_count || 0;
+
+    // 공격은 적진, 방어/지원은 동진영으로 집계
+    w[f].same += (row.defense_count || 0) + (row.support_count || 0);
+
+    const enemy = f === "pro" ? "con" : "pro";
+    w[enemy].oppo += row.attack_count || 0;
     });
 
     return warMap;
