@@ -162,9 +162,7 @@ function attachEvents() {
     btn.onclick = e => {
         e.stopPropagation();
         const id = Number(btn.dataset.index);
-        const item = cards.find(c => c.id === id);
-        if (!item?.video_url) return;
-        openShorts(item.video_url);
+        openShorts(cards, id); // ✅ 리스트 기반으로 열기
     };
     });
 
