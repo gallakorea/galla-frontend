@@ -69,7 +69,7 @@ function renderCard(data) {
         </div>
 
         <div class="card-title">${data.title}</div>
-        <div class="card-desc">${data.desc}</div>
+        <div class="card-desc">${data.oneLine || ""}</div>
 
         <img src="${data.thumb || "assets/logo.png"}" class="card-thumb" />
 
@@ -243,6 +243,7 @@ async function loadData() {
         level: profileMap[row.user_id]?.level || 1,
         time: new Date(row.created_at).toLocaleDateString(),
         title: row.title,
+        oneLine: row.one_line,          // 🔥 추가
         desc: row.description,
         pro: row.pro_count,
         con: row.con_count,
