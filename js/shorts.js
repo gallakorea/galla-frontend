@@ -72,8 +72,17 @@ function closeShorts() {
   } catch (e) {}
 
   videoCur.pause();
+  videoPrev.pause();
+  videoNext.pause();
+
+
   videoCur.removeAttribute("src");
+  videoPrev.removeAttribute("src");
+  videoNext.removeAttribute("src");
+
   videoCur.load();
+  videoPrev.load();
+  videoNext.load();
 
   overlay.hidden = true;
   document.body.classList.remove("shorts-open");
@@ -91,7 +100,6 @@ function loadVideos() {
   if (next) videoNext.src = next.video_url;
 
   videoCur.load();
-  videoCur.play();
   const p = videoCur.play();
   if (p && typeof p.catch === "function") p.catch(() => {});
 }
