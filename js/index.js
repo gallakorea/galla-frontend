@@ -36,6 +36,10 @@ const voteMemory = JSON.parse(localStorage.getItem("votes") || "{}");
 let speechIndex = 0;
 let speechList = [];
 
+let speechModal;
+let speechVideo;
+let preloadVideo;
+
 // =========================================
 // 🔥 CARD RENDERER
 // =========================================
@@ -378,10 +382,6 @@ document.getElementById("modal-close").onclick = () => {
     document.getElementById("modal").style.display = "none";
 };
 
-const speechModal = document.getElementById("speech-modal");
-const speechVideo = document.getElementById("speech-video");
-const speechLoading = document.getElementById("speech-loading");
-
 function openSpeech() {
     speechModal.classList.remove("hidden");
     speechLoading.classList.remove("hidden");
@@ -403,60 +403,16 @@ function playSpeech() {
     };
 }
 
-let startY = 0;
-let lastY = 0;
-let isDragging = false;
-let preloadVideo = document.createElement("video");
-preloadVideo.muted = true;
-preloadVideo.playsInline = true;
-preloadVideo.preload = "auto";
-
 function preloadNext() {
     const next = speechList[speechIndex + 1];
-    if (next) {
-        preloadVideo.src = next.video_url;
-        preloadVideo.load();
-    }
+    if (!next) return;
+
+    preloadVideo.src = next.video_url;
+    preloadVideo.load();
 }
-
-speechVideo.addEventListener("touchstart", e => {
-    startY = e.touches[0].clientY;
-    lastY = startY;
-    isDragging = true;
-});
-
-speechVideo.addEventListener("touchmove", e => {
-    if (!isDragging) return;
-    lastY = e.touches[0].clientY;
-});
-
-speechVideo.addEventListener("touchend", () => {
-    isDragging = false;
-
-    const diff = startY - lastY;
-
-    // 관성 스와이프 감지
-    if (diff > 50 && speechIndex < speechList.length - 1) {
-        speechIndex++;
-        playSpeech();
-    } 
-    else if (diff < -50 && speechIndex > 0) {
-        speechIndex--;
-        playSpeech();
-    }
-});
-
-document.getElementById("speech-close").onclick = () => {
-    speechModal.classList.add("hidden");
-    speechVideo.pause();
-};
-
 
 // INIT
 loadData();
-
-document.querySelector(".speech-actions .btn-pro").onclick = () => handleSpeechVote("pro");
-document.querySelector(".speech-actions .btn-con").onclick = () => handleSpeechVote("con");
 
 function handleSpeechVote(type) {
     const current = speechList[speechIndex];
@@ -473,3 +429,47 @@ function handleSpeechVote(type) {
 
     refreshCard(current.id);
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    speechModal = document.getElementById("speech-modal");
+    speechVideo = document.getElementById("speech-video");
+    speechLoading = document.getElementById("speech-loading");
+
+    const closeBtn = document.getElementById("speech-close");
+    const proBtn = document.querySelector(".speech-actions .btn-pro");
+    const conBtn = document.querySelector(".speech-actions .btn-con");
+
+    preloadVideo = document.createElement("video");
+    preloadVideo.muted = true;
+    preloadVideo.playsInline = true;
+    preloadVideo.preload = "auto";
+
+    let startY = 0;
+
+    proBtn.onclick = () => handleSpeechVote("pro");
+    conBtn.onclick = () => handleSpeechVote("con");
+
+    speechVideo.addEventListener("touchstart", e => {
+        startY = e.touches[0].clientY;
+    });
+
+    speechVideo.addEventListener("touchend", e => {
+        const diff = startY - e.changedTouches[0].clientY;
+
+        if (diff > 60 && speechIndex < speechList.length - 1) {
+            speechIndex++;
+            playSpeech();
+        }
+        if (diff < -60 && speechIndex > 0) {
+            speechIndex--;
+            playSpeech();
+        }
+    });
+
+    closeBtn.onclick = () => {
+        speechModal.classList.add("hidden");
+        speechVideo.pause();
+    };
+
+});
