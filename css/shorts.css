@@ -184,3 +184,44 @@ body.shorts-open #app {
   pointer-events: none;
   opacity: 0.6;
 }
+
+.shorts-vote {
+  position: absolute;
+  bottom: 84px; /* 네비 위 */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+}
+
+.vote-btn {
+  min-width: 140px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.vote-btn.pro {
+  background: linear-gradient(145deg, #1d4ed8, #1e3a8a);
+  color: #fff;
+}
+
+.vote-btn.con {
+  background: linear-gradient(145deg, #7f1d1d, #450a0a);
+  color: #fff;
+}
+
+.vote-btn.active-vote {
+  box-shadow: 0 0 0 3px #fff inset;
+  transform: scale(1.05);
+}
+
+.vote-btn.locked {
+  opacity: .35;
+  pointer-events: none;
+}
