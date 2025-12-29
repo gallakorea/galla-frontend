@@ -4,6 +4,24 @@
 let overlay, backBtn;
 let videoPrev, videoCur, videoNext;
 
+function ensureShortsDOM() {
+  if (overlay && videoPrev && videoCur && videoNext && backBtn) return true;
+
+  overlay   = document.getElementById("shortsOverlay");
+  videoPrev = document.getElementById("videoPrev");
+  videoCur  = document.getElementById("shortsVideo");
+  videoNext = document.getElementById("videoNext");
+  backBtn   = document.getElementById("shortsBack");
+
+  if (!overlay || !videoPrev || !videoCur || !videoNext || !backBtn) {
+    console.error("[SHORTS] DOM not ready (deferred)");
+    return false;
+  }
+
+  bindShortsEvents();
+  return true;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   overlay = document.getElementById("shortsOverlay");
   videoPrev = document.getElementById("videoPrev");
@@ -37,6 +55,8 @@ function wheelLock(ms = 450) {
 }
 
 function openShorts(list, startId) {
+
+  if (!ensureShortsDOM()) return;
 
   if (!Array.isArray(list)) {
     console.error("[SHORTS] invalid list:", list);
