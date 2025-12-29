@@ -436,3 +436,11 @@ body {
 .card {
   overflow: hidden;
 }
+
+.nav {
+  z-index: 1000000000;
+}
+
+.speech-backdrop {
+  z-index: 999999;
+}
