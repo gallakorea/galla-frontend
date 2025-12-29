@@ -134,3 +134,13 @@ html.shorts-open, body.shorts-open{
   display: none !important;
   pointer-events: none !important;
 }
+
+/* 쇼츠 열리면 헤더 숨김(영상이 맨 위까지 차게) */
+body.shorts-open .header {
+  display: none !important;
+}
+
+/* 쇼츠 열리면 #app 여백/패딩 영향 최소화(안전) */
+body.shorts-open #app {
+  padding-top: 0 !important;
+}
