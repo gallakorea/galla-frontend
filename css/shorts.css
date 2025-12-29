@@ -82,11 +82,6 @@
   opacity: 0.95;
 }
 
-/* 오버레이 열리면 하단 nav 숨기고 싶으면 */
-body.shorts-open .nav{
-  display: none !important;
-}
-
 /* 오버레이 열리면 바닥 스크롤 완전 차단 안전장치 */
 html.shorts-open, body.shorts-open{
   overscroll-behavior: none;
@@ -121,5 +116,21 @@ html.shorts-open, body.shorts-open{
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  z-index: 1000;
+  z-index: 1000;       /* ⬅ 항상 위 */
+}
+
+#shortsOverlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 10;          /* ⬅ 낮게 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+#shortsOverlay[hidden] {
+  display: none !important;
+  pointer-events: none !important;
 }
