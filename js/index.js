@@ -209,14 +209,14 @@ async function loadData() {
 
     // 1️⃣ Issues
     const { data: issues, error } = await supabase
-        .from("issues")
-        .select(`
-            id, title, description, category, created_at,
-            pro_count, con_count,
-            sup_pro, sup_con,
-            user_id,
-            thumbnail_url
-        `)
+    .from("issues")
+    .select(`
+        id, title, one_line, description, category, created_at,
+        pro_count, con_count,
+        sup_pro, sup_con,
+        user_id,
+        thumbnail_url
+    `)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -244,7 +244,7 @@ async function loadData() {
         time: new Date(row.created_at).toLocaleDateString(),
         title: row.title,
         oneLine: row.one_line,          // 🔥 추가
-        desc: row.description,
+        desc: row.one_line,
         pro: row.pro_count,
         con: row.con_count,
         supPro: row.sup_pro,
