@@ -6,17 +6,10 @@ let bestList;
 let recommendList;
 let bestMore;
 
-let speechBackdrop;
-let speechVideo;
-
 document.addEventListener("DOMContentLoaded", async () => {
     bestList = document.getElementById("best-list");
     recommendList = document.getElementById("recommend-list");
     bestMore = document.getElementById("best-more");
-
-    // ✅ 여기 추가
-    speechBackdrop = document.querySelector(".speech-backdrop");
-    speechVideo = document.getElementById("speech-video");
 
     // 🔥 Supabase 준비 대기
     while (!window.supabaseClient) {
@@ -49,12 +42,6 @@ const moreIcon = `
 
 // ▼ 투표 기록
 const voteMemory = JSON.parse(localStorage.getItem("votes") || "{}");
-
-// =========================================
-// 🔥 GLOBAL DATA STORE
-// =========================================
-let speechIndex = 0;
-let speechList = [];
 
 // =========================================
 // 🔥 CARD RENDERER
@@ -220,20 +207,6 @@ function attachEvents() {
         });
     });
 
-    // 🎥 1분 스피치 클릭
-    document.querySelectorAll(".speech-btn").forEach(btn => {
-        btn.onclick = e => {
-            e.stopPropagation();
-
-            speechList = cards.filter(c => c.video_url);
-            speechIndex = speechList.findIndex(c => c.id == btn.dataset.index);
-            if (speechIndex === -1) speechIndex = 0;
-
-            openSpeech();
-        };
-    });
-
-
 }
 
 // =========================================
@@ -395,21 +368,3 @@ document.getElementById("modal-close").onclick = () => {
     document.getElementById("modal").style.display = "none";
 };
 
-function openSpeech() {
-    const item = speechList[speechIndex];
-    if (!item || !speechBackdrop || !speechVideo) return;
-
-    speechBackdrop.hidden = false;
-    document.body.style.overflow = "hidden";
-
-    speechVideo.src = item.video_url;
-    speechVideo.load();
-    speechVideo.play();
-}
-
-function closeSpeech() {
-    speechVideo.pause();
-    speechVideo.src = "";
-    speechBackdrop.hidden = true;
-    document.body.style.overflow = "";
-}

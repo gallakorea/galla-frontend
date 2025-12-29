@@ -6,6 +6,7 @@
     <title>GALLA</title>
 
     <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet" href="css/shorts.css" />
 </head>
 
 <body data-page="index">
@@ -79,6 +80,12 @@
 
 </div>   <!-- #app 닫힘 -->
 
+<div class="speech-backdrop" hidden>
+  <div class="speech-sheet">
+    <video id="speech-video"></video>
+  </div>
+</div>
+
 <!-- 🔴 여기부터 추가 -->
 <div id="modal" class="modal">
     <div class="modal-content">
@@ -142,13 +149,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 </script>
 
+<script src="js/speechPlayer.js"></script>
 <script src="js/index.js"></script>
-
-<div class="speech-backdrop" hidden>
-  <div class="speech-sheet">
-    <video id="speech-video" playsinline></video>
-  </div>
-</div>
 
 </body>
 </html>
