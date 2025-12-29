@@ -385,6 +385,14 @@ document.getElementById("modal-close").onclick = () => {
 function openSpeech() {
     document.body.style.overflow = "hidden";
 
+    // 쇼츠 레이아웃 세팅
+    speechModal.style.position = "fixed";
+    speechModal.style.top = "0";
+    speechModal.style.left = "0";
+    speechModal.style.width = "100vw";
+    speechModal.style.height = "calc(100vh - 64px)";  // ⬅ 하단 네비 남김
+    speechModal.style.zIndex = "9000";
+
     speechModal.classList.add("active");
     speechLoading.classList.remove("hidden");
 
@@ -437,6 +445,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     speechModal = document.getElementById("speech-modal");
     speechVideo = document.getElementById("speech-video");
+    speechVideo.style.width = "100%";
+    speechVideo.style.height = "100%";
+    speechVideo.style.objectFit = "cover";
+    speechVideo.style.position = "absolute";
+    speechVideo.style.top = "0";
+    speechVideo.style.left = "0";
+    
     speechLoading = document.getElementById("speech-loading");
 
     const closeBtn = document.getElementById("speech-close");
@@ -449,29 +464,43 @@ document.addEventListener("DOMContentLoaded", () => {
     preloadVideo.preload = "auto";
 
     let startY = 0;
-
-    proBtn.onclick = () => handleSpeechVote("pro");
-    conBtn.onclick = () => handleSpeechVote("con");
+    let isLocked = false;
 
     speechVideo.addEventListener("touchstart", e => {
         startY = e.touches[0].clientY;
     });
 
     speechVideo.addEventListener("touchend", e => {
-        const diff = startY - e.changedTouches[0].clientY;
+        if (isLocked) return;
 
-        if (diff > 60 && speechIndex < speechList.length - 1) {
+        const endY = e.changedTouches[0].clientY;
+        const diff = startY - endY;
+
+        if (Math.abs(diff) < 80) return;   // 짧은 드래그 무시
+
+        isLocked = true;
+
+        if (diff > 0 && speechIndex < speechList.length - 1) {
             speechIndex++;
-            playSpeech();
-        }
-        if (diff < -60 && speechIndex > 0) {
+        } else if (diff < 0 && speechIndex > 0) {
             speechIndex--;
-            playSpeech();
         }
+
+        playSpeech();
+
+        setTimeout(() => {
+            isLocked = false;
+        }, 400);
     });
 
     closeBtn.onclick = () => {
         speechModal.classList.remove("active");
+
+        speechModal.style.position = "";
+        speechModal.style.width = "";
+        speechModal.style.height = "";
+        speechModal.style.zIndex = "";
+
         document.body.style.overflow = "";
         speechVideo.pause();
     };
