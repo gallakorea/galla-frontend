@@ -1,9 +1,20 @@
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
-const overlay = document.getElementById("shortsOverlay");
-const videoEl = document.getElementById("shortsVideo");
-const backBtn = document.getElementById("shortsBack");
+let overlay, videoEl, backBtn;
+
+document.addEventListener("DOMContentLoaded", () => {
+  overlay = document.getElementById("shortsOverlay");
+  videoEl = document.getElementById("shortsVideo");
+  backBtn = document.getElementById("shortsBack");
+
+  if (!overlay || !videoEl || !backBtn) {
+    console.error("[SHORTS] DOM not ready");
+    return;
+  }
+
+  bindShortsEvents();
+});
 
 let shortsList = [];
 let shortsIndex = 0;
@@ -96,6 +107,8 @@ function prev() {
   playCurrent();
 }
 
+function bindShortsEvents() {
+
 /* =========================
    Mobile Touch Swipe (1 step)
 ========================= */
@@ -157,3 +170,5 @@ if (backBtn) backBtn.onclick = closeShorts;
 // 외부에서 호출
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
+
+}
