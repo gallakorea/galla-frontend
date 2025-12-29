@@ -399,23 +399,48 @@ function playSpeech() {
     speechVideo.onloadeddata = () => {
         speechLoading.classList.add("hidden");
         speechVideo.play();
+        preloadNext();   // 🔥 다음 영상 미리 로드
     };
 }
 
 let startY = 0;
+let lastY = 0;
+let isDragging = false;
+let preloadVideo = document.createElement("video");
+preloadVideo.muted = true;
+preloadVideo.playsInline = true;
+preloadVideo.preload = "auto";
+
+function preloadNext() {
+    const next = speechList[speechIndex + 1];
+    if (next) {
+        preloadVideo.src = next.video_url;
+        preloadVideo.load();
+    }
+}
 
 speechVideo.addEventListener("touchstart", e => {
     startY = e.touches[0].clientY;
+    lastY = startY;
+    isDragging = true;
 });
 
-speechVideo.addEventListener("touchend", e => {
-    const diff = startY - e.changedTouches[0].clientY;
+speechVideo.addEventListener("touchmove", e => {
+    if (!isDragging) return;
+    lastY = e.touches[0].clientY;
+});
 
-    if (diff > 60 && speechIndex < speechList.length - 1) {
+speechVideo.addEventListener("touchend", () => {
+    isDragging = false;
+
+    const diff = startY - lastY;
+
+    // 관성 스와이프 감지
+    if (diff > 50 && speechIndex < speechList.length - 1) {
         speechIndex++;
         playSpeech();
-    }
-    if (diff < -60 && speechIndex > 0) {
+    } 
+    else if (diff < -50 && speechIndex > 0) {
         speechIndex--;
         playSpeech();
     }

@@ -149,7 +149,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     <button id="speech-close">✕</button>
   </div>
 
-  <video id="speech-video" autoplay playsinline controls></video>
+  <div id="speech-loading" class="speech-loading">
+  <div class="spinner"></div>
+  <p>영상 불러오는 중…</p>
+  </div>
+
+  <video id="speech-video" autoplay playsinline></video>
 
   <div class="speech-actions">
     <button class="btn-pro">👍 찬성이오</button>
