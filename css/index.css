@@ -483,3 +483,38 @@ body {
     justify-content: center;
     align-items: center;
 }
+
+/* ====== GALLA SHORTS MODE ====== */
+
+body.shorts-mode {
+    overflow: hidden;
+}
+
+/* 배경 UI 전부 숨김 */
+body.shorts-mode header,
+body.shorts-mode .category-bar,
+body.shorts-mode .best-section,
+body.shorts-mode .recommend-section,
+body.shorts-mode .card,
+body.shorts-mode .footer {
+    display: none !important;
+}
+
+/* 하단 네비는 유지 */
+body.shorts-mode .bottom-nav {
+    display: flex !important;
+}
+
+/* 영상 진짜 풀스크린 */
+#speech-modal.active {
+    position: fixed;
+    inset: 0;
+    background: black;
+    z-index: 9999;
+}
+
+#speech-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}

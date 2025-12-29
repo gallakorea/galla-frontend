@@ -383,19 +383,8 @@ document.getElementById("modal-close").onclick = () => {
 };
 
 function openSpeech() {
-    document.body.style.overflow = "hidden";
-
-    // 쇼츠 레이아웃 세팅
-    speechModal.style.position = "fixed";
-    speechModal.style.top = "0";
-    speechModal.style.left = "0";
-    speechModal.style.width = "100vw";
-    speechModal.style.height = "calc(100vh - 64px)";  // ⬅ 하단 네비 남김
-    speechModal.style.zIndex = "9000";
-
+    document.body.classList.add("shorts-mode");
     speechModal.classList.add("active");
-    speechLoading.classList.remove("hidden");
-
     playSpeech();
 }
 
@@ -476,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const endY = e.changedTouches[0].clientY;
         const diff = startY - endY;
 
-        if (Math.abs(diff) < 80) return;   // 짧은 드래그 무시
+        if (Math.abs(diff) < 120) return;   // 짧은 드래그 무시
 
         isLocked = true;
 
@@ -490,18 +479,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setTimeout(() => {
             isLocked = false;
-        }, 400);
+        }, 600);
     });
 
     closeBtn.onclick = () => {
         speechModal.classList.remove("active");
-
-        speechModal.style.position = "";
-        speechModal.style.width = "";
-        speechModal.style.height = "";
-        speechModal.style.zIndex = "";
-
-        document.body.style.overflow = "";
+        document.body.classList.remove("shorts-mode");
         speechVideo.pause();
     };
 
