@@ -36,11 +36,6 @@ const voteMemory = JSON.parse(localStorage.getItem("votes") || "{}");
 let speechIndex = 0;
 let speechList = [];
 
-let speechModal;
-let speechVideo;
-let preloadVideo;
-let speechLoading;
-
 // =========================================
 // 🔥 CARD RENDERER
 // =========================================
@@ -210,11 +205,7 @@ function attachEvents() {
         btn.onclick = e => {
             e.stopPropagation();
 
-            speechList = cards.filter(c => c.video_url && c.video_url.trim() !== "");
-            if (speechList.length === 0) {
-                alert("등록된 영상이 없습니다.");
-                return;
-            }
+            speechList = cards.filter(c => c.video_url);
             speechIndex = speechList.findIndex(c => c.id == btn.dataset.index);
             if (speechIndex === -1) speechIndex = 0;
 
@@ -384,117 +375,24 @@ document.getElementById("modal-close").onclick = () => {
     document.getElementById("modal").style.display = "none";
 };
 
+const speechBackdrop = document.querySelector(".speech-backdrop");
+const speechVideo = document.getElementById("speech-video");
+
 function openSpeech() {
-    document.body.classList.add("shorts-mode");
-
-    document.documentElement.scrollTop = 0;   // 🔥 배경 스크롤 강제 정지
-
-    speechModal.classList.add("active");
-    playSpeech();
-}
-
-function playSpeech() {
     const item = speechList[speechIndex];
+    if (!item) return;
 
-    speechLoading.classList.remove("hidden");
+    speechBackdrop.hidden = false;
+    document.body.style.overflow = "hidden";
 
     speechVideo.src = item.video_url;
     speechVideo.load();
-
-    speechVideo.onloadeddata = () => {
-        speechLoading.classList.add("hidden");
-        speechVideo.play();
-        preloadNext();   // 🔥 다음 영상 미리 로드
-    };
+    speechVideo.play();
 }
 
-function preloadNext() {
-    const next = speechList[speechIndex + 1];
-    if (!next) return;
-
-    preloadVideo.src = next.video_url;
-    preloadVideo.load();
+function closeSpeech() {
+    speechVideo.pause();
+    speechVideo.src = "";
+    speechBackdrop.hidden = true;
+    document.body.style.overflow = "";
 }
-
-// INIT
-loadData();
-
-function handleSpeechVote(type) {
-    const current = speechList[speechIndex];
-
-    if (!current || voteMemory[current.id]) return;
-
-    const data = cards.find(c => c.id === current.id);
-
-    if (type === "pro") data.pro++;
-    else data.con++;
-
-    voteMemory[current.id] = type;
-    localStorage.setItem("votes", JSON.stringify(voteMemory));
-
-    refreshCard(current.id);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    speechModal = document.getElementById("speech-modal");
-    speechVideo = document.getElementById("speech-video");
-    speechVideo.style.width = "100%";
-    speechVideo.style.height = "100%";
-    speechVideo.style.objectFit = "cover";
-    speechVideo.style.position = "absolute";
-    speechVideo.style.top = "0";
-    speechVideo.style.left = "0";
-    
-    speechLoading = document.getElementById("speech-loading");
-
-    const closeBtn = document.getElementById("speech-close");
-    const proBtn = document.querySelector(".speech-actions .btn-pro");
-    const conBtn = document.querySelector(".speech-actions .btn-con");
-
-    preloadVideo = document.createElement("video");
-    preloadVideo.muted = true;
-    preloadVideo.playsInline = true;
-    preloadVideo.preload = "auto";
-
-    let startY = 0;
-    let isLocked = false;
-
-    speechVideo.addEventListener("touchstart", e => {
-        startY = e.touches[0].clientY;
-    });
-
-    speechVideo.addEventListener("touchend", e => {
-        if (isLocked) return;
-
-        const endY = e.changedTouches[0].clientY;
-        const diff = startY - endY;
-
-        if (Math.abs(diff) < 160) return;   // 짧은 드래그 무시
-
-        isLocked = true;
-
-        if (diff > 0 && speechIndex < speechList.length - 1) {
-            speechIndex++;
-        } else if (diff < 0 && speechIndex > 0) {
-            speechIndex--;
-        }
-
-        playSpeech();
-
-        setTimeout(() => {
-            isLocked = false;
-        }, 600);
-    });
-
-    closeBtn.onclick = () => {
-        speechVideo.pause();
-
-        speechModal.classList.remove("active");
-        document.body.classList.remove("shorts-mode");
-
-        document.body.scrollTop = 0;
-        document.documentElement.scrollTop = 0;
-    };
-
-});
