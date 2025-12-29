@@ -2,9 +2,22 @@
  *  INDEX.JS — GALLA FINAL REAL DATA VERSION
  ********************************************/
 
-const bestList = document.getElementById("best-list");
-const recommendList = document.getElementById("recommend-list");
-const bestMore = document.getElementById("best-more");
+let bestList;
+let recommendList;
+let bestMore;
+
+document.addEventListener("DOMContentLoaded", async () => {
+    bestList = document.getElementById("best-list");
+    recommendList = document.getElementById("recommend-list");
+    bestMore = document.getElementById("best-more");
+
+    // 🔥 Supabase 준비 대기
+    while (!window.supabaseClient) {
+        await new Promise(r => setTimeout(r, 30));
+    }
+
+    loadData();
+});
 
 // 스크롤 복원
 if (localStorage.getItem("scrollPos")) {
