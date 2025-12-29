@@ -58,6 +58,7 @@ function playSpeech() {
   videoEl.play();
 }
 
+
 function closeSpeechPlayer() {
   videoEl.pause();
   videoEl.src = "";
