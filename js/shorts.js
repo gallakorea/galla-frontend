@@ -31,9 +31,10 @@ function wheelLock(ms = 450) {
   setTimeout(() => (wheelLocked = false), ms);
 }
 
-function openShorts(list, startId) {
+async function openShorts(list, startId) {
 
-  // ⬇️ 이 블록을 이 위치에 정확히 추가
+  await new Promise(r => requestAnimationFrame(() => r()));
+
   if (!ensureShortsDOM()) {
     console.error("[SHORTS] Shorts DOM missing");
     return;
