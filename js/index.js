@@ -454,3 +454,22 @@ document.getElementById("speech-close").onclick = () => {
 
 // INIT
 loadData();
+
+document.querySelector(".speech-actions .btn-pro").onclick = () => handleSpeechVote("pro");
+document.querySelector(".speech-actions .btn-con").onclick = () => handleSpeechVote("con");
+
+function handleSpeechVote(type) {
+    const current = speechList[speechIndex];
+
+    if (!current || voteMemory[current.id]) return;
+
+    const data = cards.find(c => c.id === current.id);
+
+    if (type === "pro") data.pro++;
+    else data.con++;
+
+    voteMemory[current.id] = type;
+    localStorage.setItem("votes", JSON.stringify(voteMemory));
+
+    refreshCard(current.id);
+}
