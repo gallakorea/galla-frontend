@@ -17,8 +17,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await loadData();
-    SpeechPlayer.init();
-
 });
 
 // 스크롤 복원
@@ -163,7 +161,10 @@ function attachEvents() {
     document.querySelectorAll(".speech-btn").forEach(btn => {
     btn.onclick = e => {
         e.stopPropagation();
-        SpeechPlayer.open(cards, btn.dataset.index);
+        const id = Number(btn.dataset.index);
+        const item = cards.find(c => c.id === id);
+        if (!item?.video_url) return;
+        openShorts(item.video_url);
     };
     });
 

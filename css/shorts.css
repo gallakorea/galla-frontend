@@ -1,129 +1,44 @@
-/* =========================================
-   GALLA SHORTS PLAYER (FINAL STABLE)
-========================================= */
-
-/* hidden 속성은 무조건 숨김 */
-.speech-backdrop[hidden] {
-  display: none !important;
-}
-
-/* 기본 상태: 완전히 숨김 */
-.speech-backdrop {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 999999;
-  display: none;
-}
-
-/* 열릴 때만 표시 */
-.speech-backdrop.active {
-  display: block;
-}
-
-/* 비디오 시트 */
-.speech-sheet {
-  position: absolute;
-  inset: 0;
-}
-
-/* 비디오 */
-#speech-video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* 로딩 */
-#speech-loading {
-  position: absolute;
-  inset: 0;
-  background: #000;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* 하단 액션 */
-.speech-actions {
-  position: absolute;
-  bottom: 14px;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 12px;
-  padding: 0 12px;
-  pointer-events: auto;
-}
-
-/* 네비는 항상 최상단 */
-.nav {
-  z-index: 1000000000;
-}
-
-/* === GALLA SHORTS FULLSCREEN === */
-
-#shorts {
+#shortsOverlay {
   position: fixed;
   inset: 0;
   background: black;
   z-index: 999999;
 }
 
-#shorts[hidden] { display: none; }
+#shortsOverlay[hidden] {
+  display: none;
+}
+
+.shorts-video-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 
 #shortsVideo {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.shorts-ui {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* Top bar */
 .shorts-top {
   position: absolute;
-  top: 16px;
+  top: 12px;
   left: 12px;
   right: 12px;
   display: flex;
   justify-content: space-between;
-  pointer-events: auto;
   color: white;
+  font-size: 14px;
 }
 
-/* Right buttons */
-.shorts-right {
+.shorts-actions {
   position: absolute;
   right: 12px;
-  bottom: 120px;
+  bottom: 80px;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  text-align: center;
   color: white;
-  pointer-events: auto;
-}
-
-.shorts-action span {
-  display: block;
-  font-size: 12px;
-}
-
-/* Bottom text */
-.shorts-bottom {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 32px;
-  color: white;
-  pointer-events: auto;
+  font-size: 18px;
 }

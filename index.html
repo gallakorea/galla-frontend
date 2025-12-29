@@ -80,37 +80,23 @@
 
 </div>   <!-- #app 닫힘 -->
 
-<div class="speech-backdrop">
-  <div class="speech-sheet">
-    <video id="speech-video"></video>
-  </div>
-</div>
-
-<!-- GALLA SHORTS PLAYER -->
-<div id="shorts" hidden>
-  <video id="shortsVideo" autoplay playsinline></video>
-
-  <div class="shorts-ui">
+<!-- 🔥 SHORTS OVERLAY -->
+<div id="shortsOverlay" hidden>
+  <div class="shorts-video-wrap">
+    <video id="shortsVideo" playsinline></video>
 
     <div class="shorts-top">
-      <button id="shortsClose">←</button>
-      <div class="shorts-camera">📷</div>
+      <button id="shortsBack">←</button>
+      <div class="shorts-time">5:05</div>
     </div>
 
-    <div class="shorts-right">
-      <div class="shorts-action">❤️<span>894</span></div>
-      <div class="shorts-action">💬<span>52</span></div>
-      <div class="shorts-action">📤</div>
+    <div class="shorts-actions">
+      <div>❤️ 272</div>
+      <div>💬</div>
+      <div>📤</div>
     </div>
-
-    <div class="shorts-bottom">
-      <div class="shorts-user">@galla</div>
-      <div class="shorts-caption">영상 설명이 여기에 표시됩니다</div>
-    </div>
-
   </div>
 </div>
-
 
 <!-- 🔴 여기부터 추가 -->
 <div id="modal" class="modal">
@@ -175,8 +161,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 </script>
 
-<script src="js/speechPlayer.js"></script>
 <script src="js/index.js"></script>
+<script src="js/shorts.js"></script>
 
 </body>
 </html>
