@@ -133,12 +133,12 @@ async function openShorts(list, startId) {
       await videoCur.play();
       videoCur.muted = false; // 🔥 이 줄 추가
     } catch {}
-    // 🔥 INITIAL VOTE SYNC (first open fix)
-    window.currentIssue = shortsList[shortsIndex];
-    if (typeof window.GALLA_CHECK_VOTE === "function") {
-      const initialVote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-      applyShortsVoteState(initialVote);
-    }
+  }
+  // 🔥 INITIAL VOTE SYNC (ALWAYS, even when src is already set)
+  window.currentIssue = shortsList[shortsIndex];
+  if (typeof window.GALLA_CHECK_VOTE === "function") {
+    const initialVote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    applyShortsVoteState(initialVote);
   }
 
 
