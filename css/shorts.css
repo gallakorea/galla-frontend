@@ -209,6 +209,7 @@ body.shorts-open #app {
   bottom: calc(90px + env(safe-area-inset-bottom));
 }
 
-.nav {
-  bottom: env(safe-area-inset-bottom);
+/* ===== INDEX NAV HOTFIX (scope limit) ===== */
+body:not(.shorts-open) .nav {
+  bottom: 0 !important;
 }
