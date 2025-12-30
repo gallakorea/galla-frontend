@@ -184,8 +184,8 @@ async function openShorts(list, startId) {
       retry++;
     }
 
-    // 명시적으로 '미투표' 상태 확정 시에만 초기화
-    applyShortsVoteState(null);
+    // 명시적으로 '미투표' 상태 확정 시에만 초기화하지 않고 no-op return
+    return;
   })();
 
 

@@ -27,9 +27,8 @@ async function vote(issueId, type) {
     await new Promise(r => setTimeout(r, 100));
   }
   if (!session) {
-    alert("로그인이 필요합니다.");
     votingInProgress = false;
-    return;
+    return "__SESSION_PENDING__";
   }
 
   const userId = session.user.id;
@@ -125,9 +124,6 @@ async function checkVoteStatus(issueId) {
     await new Promise(r => setTimeout(r, 100));
   }
   if (!session) {
-    setTimeout(() => {
-      checkVoteStatus(issueId);
-    }, 300);
     return "__SESSION_PENDING__";
   }
 
