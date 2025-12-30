@@ -162,26 +162,25 @@ body.shorts-open {
 }
 
 /* =========================
-   SHORTS OVERLAY (FINAL)
+   POINTER EVENTS FIX (CRITICAL)
 ========================= */
+
+/* overlay는 이벤트를 먹지 않는다 */
 #shortsOverlay {
-  position: fixed;
+  pointer-events: none;
+}
 
-  /* 🔥 노치 / 상태바 포함 최상단 */
-  top: env(safe-area-inset-top);
-  left: 0;
-  right: 0;
+/* 영상 영역은 스와이프/휠 이벤트 허용 */
+.shorts-video-wrap,
+#videoPrev,
+#shortsVideo,
+#videoNext {
+  pointer-events: auto;
+}
 
-  /* 🔥 하단 네비는 절대 침범 금지 */
-  bottom: var(--bottom-nav-h);
-
-  /* 🔥 iOS Safari 실제 viewport */
-  height: calc(var(--vh, 1vh) * 100 - var(--bottom-nav-h));
-
-  background: #000;
-  z-index: 9999;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
+/* UI 버튼은 클릭 가능해야 함 */
+.shorts-top,
+.shorts-vote,
+.shorts-actions {
+  pointer-events: auto;
 }
