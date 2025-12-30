@@ -1,3 +1,12 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
 /* 🔥 HIDDEN SAFETY */
 #shortsOverlay[hidden] {
   display: none !important;
@@ -167,12 +176,13 @@
   pointer-events: auto;
 }
 
-/* =========================
-   SHORTS OVERLAY (SINGLE SOURCE)
-========================= */
 #shortsOverlay {
   position: fixed;
-  inset: 0;              /* 🔥 화면 맨 위 끝 ~ 맨 아래 끝 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;                /* 기본 */
+  height: calc(var(--vh, 1vh) * 100); /* iOS 실제 화면 높이 */
   background: #000;
   z-index: 900;
 }
