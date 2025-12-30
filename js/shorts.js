@@ -486,9 +486,6 @@ window.addEventListener("keydown", (e) => {
 ========================= */
 if (backBtn) backBtn.onclick = closeShorts;
 
-// 외부에서 호출
-window.openShorts = openShorts;
-window.closeShorts = closeShorts;
 
 
 /* =========================
@@ -661,3 +658,7 @@ document.addEventListener("visibilitychange", async () => {
   }
 });
 }
+
+// 🔥 expose shorts controls globally (index page needs this)
+window.openShorts = openShorts;
+window.closeShorts = closeShorts;
