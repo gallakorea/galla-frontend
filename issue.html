@@ -447,16 +447,14 @@
   </div>
 </div>
 
-<!-- Supabase CDN (non-module, GALLA 표준) -->
+<!-- Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- Supabase Client Initializer -->
 <script src="js/supabase.js"></script>
 
-<!-- Issue Page Logic -->
-<script type="module" src="js/issue.js"></script>
+<!-- 전역 Core (window.* 정의) -->
+<script src="js/vote.core.js"></script>
 
-<script src="js/vote.core.js"></script> <!-- ✅ 추가 -->
+<!-- Issue Page Logic (단 한 번!) -->
 <script type="module" src="js/issue.js"></script>
 
 <script>
