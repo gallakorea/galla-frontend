@@ -137,6 +137,7 @@ async function openShorts(list, startId) {
   const shortsCon = document.querySelector('.shorts-vote .con');
 
   if (shortsPro && shortsCon && !overlay._voteBound) {
+    // 🔥 always reset UI on open
     shortsPro.classList.remove("active-vote", "locked");
     shortsCon.classList.remove("active-vote", "locked");
 
@@ -147,11 +148,14 @@ async function openShorts(list, startId) {
       if (!window.currentIssue) return;
       if (shortsPro.classList.contains("locked")) return;
 
-      shortsPro.classList.add("active-vote", "locked");
-      shortsCon.classList.add("locked");
+      if (typeof window.GALLA_VOTE !== "function") return;
 
-      if (typeof window.GALLA_VOTE === "function") {
-        await window.GALLA_VOTE(window.currentIssue.id, "pro");
+      await window.GALLA_VOTE(window.currentIssue.id, "pro");
+
+      // 🔥 re-sync from DB (single source of truth)
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+        applyShortsVoteState(result);
       }
     };
 
@@ -160,11 +164,14 @@ async function openShorts(list, startId) {
       if (!window.currentIssue) return;
       if (shortsCon.classList.contains("locked")) return;
 
-      shortsCon.classList.add("active-vote", "locked");
-      shortsPro.classList.add("locked");
+      if (typeof window.GALLA_VOTE !== "function") return;
 
-      if (typeof window.GALLA_VOTE === "function") {
-        await window.GALLA_VOTE(window.currentIssue.id, "con");
+      await window.GALLA_VOTE(window.currentIssue.id, "con");
+
+      // 🔥 re-sync from DB (single source of truth)
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+        applyShortsVoteState(result);
       }
     };
   }
