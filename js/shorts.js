@@ -1,6 +1,15 @@
 // shorts.js — SAFE PAGE GUARD
 const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
 
+// 🚫 If not shorts page, expose API only and stop execution
+if (!IS_SHORTS_PAGE) {
+  window.openShorts = function(list, startId) {
+    console.warn("[SHORTS] openShorts called on non-shorts page");
+  };
+  window.closeShorts = function() {};
+  return;
+}
+
 
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
