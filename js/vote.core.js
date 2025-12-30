@@ -40,6 +40,7 @@ async function vote(issueId, type) {
   }
 
   // 상태 + 통계 + 전장 UI 동기화
+  await loadVoteStats(issueId);   // 🔧 퍼센트/바 즉시 갱신
   await checkVoteStatus(issueId);
 
   // 댓글 전장 재초기화 (기존 기능 복원)
