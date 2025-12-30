@@ -1,14 +1,18 @@
 // shorts.js — SAFE PAGE GUARD
 const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
 
-// 🚫 If not shorts page, expose API only and stop execution
+// 항상 API는 노출한다 (index에서 호출 가능)
+window.openShorts = window.openShorts || function () {
+  console.warn("[SHORTS] openShorts called before shorts page is ready");
+};
+window.closeShorts = window.closeShorts || function () {};
+
+// shorts 페이지가 아니면 나머지 로직은 실행하지 않는다
 if (!IS_SHORTS_PAGE) {
-  window.openShorts = function(list, startId) {
-    console.warn("[SHORTS] openShorts called on non-shorts page");
-  };
-  window.closeShorts = function() {};
-  return;
+  console.info("[SHORTS] loaded on non-shorts page (API only)");
 }
+
+if (IS_SHORTS_PAGE) {
 
 
 // Helper to apply Shorts vote state to vote buttons
