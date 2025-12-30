@@ -124,7 +124,12 @@ async function checkVoteStatus(issueId) {
     }
     await new Promise(r => setTimeout(r, 100));
   }
-  if (!session) return "__SESSION_PENDING__";
+  if (!session) {
+    setTimeout(() => {
+      checkVoteStatus(issueId);
+    }, 300);
+    return "__SESSION_PENDING__";
+  }
 
   const { data } = await supabase
     .from("votes")
