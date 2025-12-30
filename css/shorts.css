@@ -33,7 +33,8 @@ body[data-page="shorts"] {
 /* ✅ 수정 후 */
 .shorts-video-wrap {
   position: relative;
-  height: 100svh;     /* 🔥 이 줄 추가 */
+  width: 480px;     /* 🔥 이 줄이 핵심 */
+  height: 100svh;
   overflow: hidden;
 }
 
@@ -44,12 +45,8 @@ body[data-page="shorts"] {
   position: absolute;
   inset: 0;
 
+  width: 100%;      /* 🔥 기준은 wrap */
   height: 100%;
-  width: auto;           /* 🔥 중요 */
-  min-width: 480px;      /* 🔥 여기서만 480 기준 */
-  
-  left: 50%;
-  transform: translateX(-50%);
 
   object-fit: cover;
   background: #000;
