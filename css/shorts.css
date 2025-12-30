@@ -193,9 +193,6 @@ body[data-page="shorts"] {
   height: 100svh;
   background: #000;
   z-index: 900;
-
-  display: flex;
-  justify-content: center; /* 🔥 가로 중앙 정렬 */
 }
 
 /* =========================
