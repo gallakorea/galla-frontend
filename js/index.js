@@ -161,8 +161,20 @@ function attachEvents() {
     document.querySelectorAll(".speech-btn").forEach(btn => {
     btn.onclick = e => {
         e.stopPropagation();
+
         const id = Number(btn.dataset.index);
-        openShorts(cards, id); // ✅ 리스트 기반으로 열기
+
+        /* ===============================
+        🔥 AUTOPLAY UNLOCK (중요)
+        사용자 제스처 컨텍스트 확보
+        =============================== */
+        const unlock = document.createElement("video");
+        unlock.muted = true;
+        unlock.playsInline = true;
+        unlock.play().catch(() => {});
+
+        // 쇼츠 진입
+        openShorts(cards, id);
     };
     });
 
