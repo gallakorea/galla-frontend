@@ -181,36 +181,48 @@ async function openShorts(list, startId) {
     shortsPro.onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
+
       if (!window.currentIssue) return;
       if (shortsPro.classList.contains("locked")) return;
-
       if (typeof window.GALLA_VOTE !== "function") return;
 
-      await window.GALLA_VOTE(window.currentIssue.id, "pro");
+      // 🔒 투표 중 UI만 잠금 (스크롤/영상은 유지)
+      const stage = document.querySelector(".shorts-stage");
+      if (stage) stage.style.pointerEvents = "none";
 
-      // 🔥 re-sync from DB (single source of truth)
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-        applyShortsVoteState(result);
+      try {
+        await window.GALLA_VOTE(window.currentIssue.id, "pro");
+
+        if (typeof window.GALLA_CHECK_VOTE === "function") {
+          const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+          applyShortsVoteState(result);
+        }
+      } finally {
+        if (stage) stage.style.pointerEvents = "";
       }
     };
 
     shortsCon.onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
+
       if (!window.currentIssue) return;
       if (shortsCon.classList.contains("locked")) return;
-
       if (typeof window.GALLA_VOTE !== "function") return;
 
-      await window.GALLA_VOTE(window.currentIssue.id, "con");
+      // 🔒 투표 중 UI만 잠금 (스크롤/영상은 유지)
+      const stage = document.querySelector(".shorts-stage");
+      if (stage) stage.style.pointerEvents = "none";
 
-      // 🔥 re-sync from DB (single source of truth)
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-        applyShortsVoteState(result);
+      try {
+        await window.GALLA_VOTE(window.currentIssue.id, "con");
+
+        if (typeof window.GALLA_CHECK_VOTE === "function") {
+          const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+          applyShortsVoteState(result);
+        }
+      } finally {
+        if (stage) stage.style.pointerEvents = "";
       }
     };
   }
@@ -290,8 +302,10 @@ function prev() {
 function bindShortsEvents() {
 
 overlay.addEventListener("click", (e) => {
+  // 투표 버튼은 막지 않는다
+  if (e.target.closest(".shorts-vote")) return;
+
   e.stopPropagation();
-  e.stopImmediatePropagation();
 }, true);
 
 /* =========================
