@@ -193,6 +193,9 @@ body[data-page="shorts"] {
   height: 100svh;
   background: #000;
   z-index: 900;
+
+  display: flex;
+  justify-content: center; /* 🔥 가로 중앙 정렬 */
 }
 
 /* =========================
@@ -207,28 +210,3 @@ body[data-page="shorts"] {
   overflow: hidden;
 }
 
-/* =========================
-   FORCE PORTRAIT MODE
-   (Landscape Disabled)
-========================= */
-@media screen and (orientation: landscape) {
-  #shortsOverlay {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .shorts-stage {
-    width: 100%;
-    max-width: 480px;
-    height: 100svh;         /* 🔥 여전히 세로 기준 */
-    transform: rotate(0deg);
-  }
-
-  /* 가로 화면에서도 세로 비율 강제 */
-  .shorts-video-wrap {
-    aspect-ratio: 9 / 16;
-    width: 100%;
-    height: 100%;
-  }
-}
