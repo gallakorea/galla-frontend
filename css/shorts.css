@@ -4,27 +4,6 @@
 }
 
 /* =========================
-   SHORTS OVERLAY
-========================= */
-
-#shortsOverlay {
-  position: fixed;
-  inset: 0;
-
-  /* 🔥 iOS Safari 실 viewport 강제 */
-  height: calc(var(--vh, 1vh) * 100);
-
-  background: #000;
-  z-index: 900;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* =========================
    SHORTS VIDEO WRAP
 ========================= */
 
@@ -168,3 +147,39 @@
 
 /* ❗ nav는 index.css가 책임진다 */
 /* ❗ shorts.css에서는 nav를 숨기거나 덮지 않는다 */
+
+/* =========================
+   iOS SAFARI FULL BLEED FIX
+========================= */
+
+html.shorts-open,
+body.shorts-open {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* =========================
+   SHORTS OVERLAY (SINGLE SOURCE OF TRUTH)
+========================= */
+#shortsOverlay {
+  position: fixed;
+
+  /* 🔥 노치/시계 포함 최상단까지 */
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  /* 🔥 iOS Safari 실제 viewport */
+  height: calc(var(--vh, 1vh) * 100);
+
+  background: #000;
+  z-index: 9999;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
