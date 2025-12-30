@@ -26,6 +26,7 @@ function applyShortsVoteState(result) {
     shortsCon.classList.add("active-vote", "locked");
     shortsPro.classList.add("locked");
   }
+}
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 🔧 wait until vote core & session are ready (shorts first-load fix)
 async function waitForVoteReady(timeout = 3500) {
@@ -650,7 +651,6 @@ document.addEventListener("visibilitychange", async () => {
     applyShortsVoteState(result);
   }
 });
-}
 
 // 🔥 expose shorts controls globally (index + shorts)
 window.openShorts = openShorts;
