@@ -189,10 +189,15 @@ body[data-page="shorts"] {
 #shortsOverlay {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100svh;
   background: #000;
   z-index: 900;
+
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+
+  /* ❌ width 절대 주지 마라 */
+  /* width: 100vw; ← 이게 폭 풀리는 원인 */
 }
 
 /* =========================
