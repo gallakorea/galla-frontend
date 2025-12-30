@@ -313,6 +313,40 @@ if (shortsPro && shortsCon && !overlay._voteBound) {
     }
   };
 }
+
+/* =========================
+   TAP / DOUBLE TAP CONTROL
+========================= */
+
+let tapTimer = null;
+let lastTap = 0;
+
+overlay.addEventListener("click", () => {
+  const now = Date.now();
+  const delta = now - lastTap;
+
+  // Double tap → toggle 2x speed
+  if (delta < 300) {
+    if (tapTimer) {
+      clearTimeout(tapTimer);
+      tapTimer = null;
+    }
+
+    videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
+    lastTap = 0;
+    return;
+  }
+
+  lastTap = now;
+  tapTimer = setTimeout(() => {
+    if (videoCur.paused) {
+      videoCur.play().catch(() => {});
+    } else {
+      videoCur.pause();
+    }
+    tapTimer = null;
+  }, 300);
+});
 }
 
 function slideUp() {
@@ -397,37 +431,4 @@ function slideDown() {
     window.currentIssue = shortsList[shortsIndex];
     window.GALLA_CHECK_VOTE(window.currentIssue.id);
   }, 350);
-  /* =========================
-     TAP / DOUBLE TAP CONTROL
-  ========================= */
-
-  let tapTimer = null;
-  let lastTap = 0;
-
-  overlay.addEventListener("click", () => {
-    const now = Date.now();
-    const delta = now - lastTap;
-
-    // Double tap: playback speed toggle
-    if (delta < 300) {
-      if (tapTimer) {
-        clearTimeout(tapTimer);
-        tapTimer = null;
-      }
-
-      videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
-      lastTap = 0;
-      return;
-    }
-
-    lastTap = now;
-    tapTimer = setTimeout(() => {
-      if (videoCur.paused) {
-        videoCur.play().catch(() => {});
-      } else {
-        videoCur.pause();
-      }
-      tapTimer = null;
-    }, 300);
-  });
 }
