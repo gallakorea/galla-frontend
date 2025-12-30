@@ -20,6 +20,21 @@ function applyShortsVoteState(result) {
   }
 }
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
+// 🔧 wait until vote core & session are ready (shorts first-load fix)
+async function waitForVoteReady(timeout = 1500) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (
+      typeof window.GALLA_CHECK_VOTE === "function" &&
+      window.supabaseClient
+    ) {
+      const { data } = await window.supabaseClient.auth.getSession();
+      if (data?.session) return true;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return false;
+}
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
 let overlay, backBtn;
@@ -134,12 +149,16 @@ async function openShorts(list, startId) {
       videoCur.muted = false; // 🔥 이 줄 추가
     } catch {}
   }
-  // 🔥 INITIAL VOTE SYNC (ALWAYS, even when src is already set)
+  // 🔥 INITIAL VOTE SYNC (first shorts guaranteed)
   window.currentIssue = shortsList[shortsIndex];
-  if (typeof window.GALLA_CHECK_VOTE === "function") {
-    const initialVote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-    applyShortsVoteState(initialVote);
-  }
+
+  (async () => {
+    const ready = await waitForVoteReady();
+    if (!ready) return;
+
+    const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    applyShortsVoteState(vote);
+  })();
 
 
   // =========================
