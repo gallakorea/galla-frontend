@@ -163,6 +163,23 @@ async function applyVoteUI(cardEl, stance) {
     btnCon.disabled = true;
 }
 
+async function syncVoteWithRetry(cardEl, id, retry = 0) {
+    if (retry > 10) return;
+
+    const stance = await window.GALLA_CHECK_VOTE(id);
+
+    if (stance === "__SESSION_PENDING__") {
+        setTimeout(() => {
+            syncVoteWithRetry(cardEl, id, retry + 1);
+        }, 300);
+        return;
+    }
+
+    if (stance === "pro" || stance === "con") {
+        await applyVoteUI(cardEl, stance);
+    }
+}
+
 async function attachEvents() {
 
     // 🎥 1분 엘리베이터 스피치
@@ -239,10 +256,7 @@ async function attachEvents() {
         const cardsEls = document.querySelectorAll(".card");
         for (const cardEl of cardsEls) {
             const id = Number(cardEl.dataset.id);
-            const stance = await window.GALLA_CHECK_VOTE(id);
-            if (stance === "pro" || stance === "con") {
-                await applyVoteUI(cardEl, stance);
-            }
+            syncVoteWithRetry(cardEl, id);
         }
     }
 }

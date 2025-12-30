@@ -1,5 +1,7 @@
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
+  // session pending / unknown 상태에서는 UI를 건드리지 않는다
+  if (result === "__SESSION_PENDING__") return;
   const shortsPro =
     document.getElementById("shortsPro") ||
     document.querySelector(".shorts-vote .pro");
@@ -163,13 +165,27 @@ async function openShorts(list, startId) {
   window.currentIssue = shortsList[shortsIndex];
 
   (async () => {
-    // wait until vote core + session are ready
     const ready = await waitForVoteReady();
     if (!ready || !window.currentIssue) return;
 
-    // single source of truth: STRING result
-    const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-    applyShortsVoteState(vote);
+    let result = "__SESSION_PENDING__";
+    let retry = 0;
+
+    while (retry < 12) {
+      result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+
+      if (result === "pro" || result === "con") {
+        applyShortsVoteState(result);
+        return;
+      }
+
+      // 세션은 준비됐으나 아직 DB 반영/조회 지연인 경우 재시도
+      await new Promise(r => setTimeout(r, 120));
+      retry++;
+    }
+
+    // 명시적으로 '미투표' 상태 확정 시에만 초기화
+    applyShortsVoteState(null);
   })();
 
 
@@ -547,7 +563,9 @@ function slideUp() {
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       const voteResult = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-      applyShortsVoteState(voteResult);
+      if (voteResult !== "__SESSION_PENDING__") {
+        applyShortsVoteState(voteResult);
+      }
     }
   }, 350);
 }
@@ -604,7 +622,22 @@ function slideDown() {
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       const voteResult = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-      applyShortsVoteState(voteResult);
+      if (voteResult !== "__SESSION_PENDING__") {
+        applyShortsVoteState(voteResult);
+      }
     }
   }, 350);
 }
+
+
+// 모바일에서 백그라운드 복귀 시 투표 상태 재동기화
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible") return;
+  if (!window.currentIssue) return;
+  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+
+  const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+  if (result !== "__SESSION_PENDING__") {
+    applyShortsVoteState(result);
+  }
+});

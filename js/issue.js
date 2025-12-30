@@ -119,9 +119,9 @@ if (typeof loadAiNews === "function") {
     REST
   ================================ */
   loadVoteStats(issue.id);
-  const voteCheckResult = await window.GALLA_CHECK_VOTE(issue.id); // ✅ 반드시 추가, await
-  if (voteCheckResult && (voteCheckResult.stance === "pro" || voteCheckResult.stance === "con")) {
-    applyVoteUI(voteCheckResult.stance);
+  const voteCheckResult = await window.GALLA_CHECK_VOTE(issue.id);
+  if (voteCheckResult === "pro" || voteCheckResult === "con") {
+    applyVoteUI(voteCheckResult);
   }
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
