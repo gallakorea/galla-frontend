@@ -179,7 +179,9 @@ async function openShorts(list, startId) {
     overlay._voteBound = true;
 
     shortsPro.onclick = async (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       if (!window.currentIssue) return;
       if (shortsPro.classList.contains("locked")) return;
 
@@ -195,7 +197,9 @@ async function openShorts(list, startId) {
     };
 
     shortsCon.onclick = async (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       if (!window.currentIssue) return;
       if (shortsCon.classList.contains("locked")) return;
 
@@ -284,6 +288,11 @@ function prev() {
 }
 
 function bindShortsEvents() {
+
+overlay.addEventListener("click", (e) => {
+  e.stopPropagation();
+  e.stopImmediatePropagation();
+}, true);
 
 /* =========================
    Mobile Touch Swipe (1 step)
