@@ -2,15 +2,17 @@
 function applyShortsVoteState(result) {
   const shortsPro =
     document.getElementById("shortsPro") ||
-    document.querySelector('.shorts-vote .pro');
+    document.querySelector(".shorts-vote .pro");
   const shortsCon =
     document.getElementById("shortsCon") ||
-    document.querySelector('.shorts-vote .con');
+    document.querySelector(".shorts-vote .con");
   if (!shortsPro || !shortsCon) return;
 
+  // reset
   shortsPro.classList.remove("active-vote", "locked");
   shortsCon.classList.remove("active-vote", "locked");
 
+  // IMPORTANT: result is a STRING: "pro" | "con" | null
   if (result === "pro") {
     shortsPro.classList.add("active-vote", "locked");
     shortsCon.classList.add("locked");
@@ -55,6 +57,8 @@ let shortsList = [];
 let shortsIndex = 0;
 
 let touchStartY = 0;
+let touchStartX = 0;
+let draggingX = false;
 let locked = false;
 
 /* =========================
@@ -159,9 +163,11 @@ async function openShorts(list, startId) {
   window.currentIssue = shortsList[shortsIndex];
 
   (async () => {
+    // wait until vote core + session are ready
     const ready = await waitForVoteReady();
-    if (!ready) return;
+    if (!ready || !window.currentIssue) return;
 
+    // single source of truth: STRING result
     const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
     applyShortsVoteState(vote);
   })();
@@ -336,11 +342,23 @@ overlay.addEventListener("touchstart", (e) => {
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
-let touchStartX = 0;
-
+// 좌/우 스와이프 준비
 overlay.addEventListener("touchstart", (e) => {
   if (!e.touches || !e.touches[0]) return;
   touchStartX = e.touches[0].clientX;
+  draggingX = true;
+  videoCur.style.transition = "none";
+}, { passive: true });
+
+// 좌/우 스와이프 중 카드 이동
+overlay.addEventListener("touchmove", (e) => {
+  if (!draggingX || !e.touches || !e.touches[0]) return;
+
+  const diffX = e.touches[0].clientX - touchStartX;
+
+  // 좌우 스와이프 시 카드처럼 이동
+  videoCur.style.transform = `translateX(${diffX}px)`;
+  overlay.style.background = "rgba(0,0,0,0.85)";
 }, { passive: true });
 
 overlay.addEventListener("touchend", (e) => {
@@ -355,13 +373,37 @@ overlay.addEventListener("touchend", (e) => {
   else prev();           // 아래로 스와이프 = 이전
 }, { passive: true });
 
+// 좌/우 스와이프 종료/복귀
 overlay.addEventListener("touchend", (e) => {
-  if (!e.changedTouches || !e.changedTouches[0]) return;
+  if (!draggingX || !e.changedTouches || !e.changedTouches[0]) return;
+
+  draggingX = false;
+
   const diffX = e.changedTouches[0].clientX - touchStartX;
 
-  // 👉 swipe right to exit shorts
-  if (diffX > 80) {
-    closeShorts();
+  // 임계값
+  if (Math.abs(diffX) > 90) {
+    // 카드가 밀리며 종료
+    videoCur.style.transition = "transform 0.25s ease";
+    videoCur.style.transform =
+      diffX > 0 ? "translateX(120%)" : "translateX(-120%)";
+
+    setTimeout(() => {
+      videoCur.style.transform = "";
+      videoCur.style.transition = "";
+      overlay.style.background = "";
+      closeShorts();
+    }, 220);
+
+  } else {
+    // 취소 → 원위치
+    videoCur.style.transition = "transform 0.25s ease";
+    videoCur.style.transform = "translateX(0)";
+    overlay.style.background = "";
+
+    setTimeout(() => {
+      videoCur.style.transition = "";
+    }, 250);
   }
 }, { passive: true });
 
