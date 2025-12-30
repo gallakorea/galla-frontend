@@ -145,11 +145,26 @@ async function checkVoteStatus(issueId) {
   const shortsCon = document.getElementById("shortsCon");
 
   if (shortsPro && shortsCon) {
+    // 공통 잠금
     shortsPro.classList.add("locked");
     shortsCon.classList.add("locked");
 
-    if (data.type === "pro") shortsPro.classList.add("active-vote");
-    if (data.type === "con") shortsCon.classList.add("active-vote");
+    shortsPro.disabled = true;
+    shortsCon.disabled = true;
+
+    // 기존 상태 초기화
+    shortsPro.classList.remove("active-vote");
+    shortsCon.classList.remove("active-vote");
+
+    if (data.type === "pro") {
+      shortsPro.classList.add("active-vote");
+      shortsPro.innerText = "👍 투표 완료";
+    }
+
+    if (data.type === "con") {
+      shortsCon.classList.add("active-vote");
+      shortsCon.innerText = "👎 투표 완료";
+    }
   }
 }
 
