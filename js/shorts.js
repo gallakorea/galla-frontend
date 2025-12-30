@@ -15,7 +15,6 @@ if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
 
 let overlay, backBtn;
 let videoPrev, videoCur, videoNext;
-const shortsVoteMemory = {};
 
 function ensureShortsDOM() {
   overlay   = document.getElementById("shortsOverlay");
@@ -84,7 +83,6 @@ async function openShorts(list, startId) {
   // =========================
   // Shorts Vote HUD reset
   // =========================
-  window.__shortsVote = null;
 
   const shortsPro = document.getElementById("shortsPro");
   const shortsCon = document.getElementById("shortsCon");
@@ -253,7 +251,7 @@ if (shortsPro && shortsCon && !overlay._voteBound) {
       return;
     }
 
-    await window.GALLA_VOTE("pro");
+    await window.GALLA_VOTE(window.currentIssue.id, "pro");
 
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       await window.GALLA_CHECK_VOTE(window.currentIssue.id);
@@ -269,14 +267,13 @@ if (shortsPro && shortsCon && !overlay._voteBound) {
       return;
     }
 
-    await window.GALLA_VOTE("con");
+    await window.GALLA_VOTE(window.currentIssue.id, "con");
 
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       await window.GALLA_CHECK_VOTE(window.currentIssue.id);
     }
   };
 }
-
 }
 
 function slideUp() {
