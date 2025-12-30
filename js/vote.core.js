@@ -24,8 +24,11 @@ async function vote(issueId, type) {
     return;
   }
 
+  const userId = session.session.user.id;
+
   const { error } = await supabase.from("votes").insert({
     issue_id: issueId,
+    user_id: userId,   // 🔥 이 줄이 지금 없어서 막힌 거다
     type
   });
 
