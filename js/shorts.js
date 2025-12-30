@@ -388,16 +388,18 @@ function slideDown() {
   }, 350);
 }
 
+
+
+
+// 🔥 [임시 강제 실행 — 정상화 확인용]
 document.addEventListener("DOMContentLoaded", () => {
   openShorts(
     [
       {
         id: 1,
-        video_url: "https://YOUR_VIDEO_URL.mp4"
+        video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
       }
     ],
     1
   );
 });
-
-
