@@ -294,7 +294,26 @@ async function checkVoteStatus(issueId) {
     data.type === "pro"
       ? "👍 찬성으로 투표하셨습니다."
       : "👎 반대로 투표하셨습니다.";
-}
+
+// ================================
+// Shorts Vote UI Sync (추가)
+// ================================
+const shortsPro = document.getElementById("shortsPro");
+const shortsCon = document.getElementById("shortsCon");
+
+if (shortsPro && shortsCon) {
+  shortsPro.classList.add("locked");
+  shortsCon.classList.add("locked");
+
+  if (data.type === "pro") {
+    shortsPro.classList.add("active-vote");
+  }
+  if (data.type === "con") {
+    shortsCon.classList.add("active-vote");
+  }
+}  
+    
+    }
 
 /* ==========================================================================
    Support Actions (Pro / Con)
