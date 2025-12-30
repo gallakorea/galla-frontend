@@ -23,7 +23,7 @@ export async function initCommentSystem(issueId) {
 
   const zone = document.getElementById("battle-zone");
   if (!zone) {
-    console.warn("❌ battle-zone not found");
+    console.warn("[comments] battle-zone not found");
     return;
   }
 
