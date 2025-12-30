@@ -17,6 +17,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await loadData();
+
+// 🔥🔥🔥 모바일 세션 복구 이후 1회 강제 재동기화
+    setTimeout(() => {
+        if (typeof window.GALLA_CHECK_VOTE === "function") {
+            document.querySelectorAll(".card").forEach(cardEl => {
+                const id = Number(cardEl.dataset.id);
+                syncVoteWithRetry(cardEl, id);
+            });
+        }
+    }, 1200);
 });
 
 // 스크롤 복원
@@ -167,6 +177,14 @@ async function syncVoteWithRetry(cardEl, id, retry = 0) {
     if (retry > 10) return;
 
     const stance = await window.GALLA_CHECK_VOTE(id);
+
+    // 🔥 모바일 초기 로드: 세션 아직 안 붙은 상태
+    if (stance === null) {
+        setTimeout(() => {
+            syncVoteWithRetry(cardEl, id, retry + 1);
+        }, 300);
+        return;
+    }
 
     if (stance === "__SESSION_PENDING__") {
         setTimeout(() => {

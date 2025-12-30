@@ -18,6 +18,21 @@ let issueAuthorId = null;
 // ✅ 추가
 let currentIssue = null;
 
+// 🔥 모바일/새로고침 대응: 투표 상태 강제 초기 동기화
+async function forceInitialVoteSync(issueId) {
+  if (!issueId) return;
+  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+
+  try {
+    const result = await window.GALLA_CHECK_VOTE(issueId);
+    if (result === "pro" || result === "con") {
+      applyVoteUI(result);
+    }
+  } catch (e) {
+    console.warn("[VOTE] initial sync skipped:", e);
+  }
+}
+
 // ✅ 추가: applyVoteUI helper function
 function applyVoteUI(stance) {
   const btnPro = qs("btn-vote-pro");
@@ -95,6 +110,9 @@ if (!issueId || Number.isNaN(issueId)) {
   }
 
 renderIssue(issue);
+
+// 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)
+await forceInitialVoteSync(issue.id);
 
 await initCommentSystem(issue.id);
 forceBattleScrollWithRetry();
