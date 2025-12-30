@@ -8,7 +8,6 @@
 
   <!-- Shorts only -->
   <link rel="stylesheet" href="css/shorts.css" />
-  <link rel="stylesheet" href="css/index.css" />
 </head>
 
 <body data-page="shorts">
@@ -40,6 +39,17 @@
     </div>
   </div>
 
+  <!-- ✅ 네비는 여기, overlay 안 -->
+  <nav class="nav shorts-nav">
+    <div class="nav-inner">
+      <img src="assets/icons/nav-home.svg"  class="nav-icon" data-target="index.html">
+      <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
+      <img src="assets/icons/nav-write.svg"  class="nav-icon" data-target="write.html">
+      <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
+      <img src="assets/icons/nav-user.svg"   class="nav-icon" data-target="mypage.html">
+    </div>
+  </nav>
+
 </div>
 
 <!-- =========================
@@ -57,15 +67,6 @@
 <script type="module" src="js/shorts.js"></script>
 
 <!-- NAVIGATION -->
-<nav class="nav">
-  <div class="nav-inner">
-    <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
-    <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
-    <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
-    <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
-    <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
-  </div>
-</nav>
 
 <script>
   document.querySelectorAll(".nav-icon").forEach(icon => {
