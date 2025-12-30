@@ -100,13 +100,13 @@ async function loadVoteStats(issueId) {
    Vote Status Sync (Issue + Shorts)
 ========================================================================== */
 async function checkVoteStatus(issueId) {
-  if (!issueId) return;
+  if (!issueId) return null;
 
   const supabase = window.supabaseClient;
-  if (!supabase) return;
+  if (!supabase) return null;
 
   const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return;
+  if (!session.session) return null;
 
   const { data } = await supabase
     .from("votes")
@@ -115,7 +115,7 @@ async function checkVoteStatus(issueId) {
     .eq("user_id", session.session.user.id)
     .maybeSingle();
 
-  if (!data) return;
+  if (!data) return null;
 
   /* ========= Issue Page ========= */
   const proBtn = document.getElementById("btn-vote-pro");
@@ -166,6 +166,7 @@ async function checkVoteStatus(issueId) {
       shortsCon.innerText = "👎 투표 완료";
     }
   }
+  return data.type;
 }
 
 /* ==========================================================================
