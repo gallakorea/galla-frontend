@@ -24,17 +24,24 @@ function applyVoteUI(stance) {
   const btnCon = qs("btn-vote-con");
   if (!btnPro || !btnCon) return;
 
+  // reset
   btnPro.classList.remove("active-vote");
   btnCon.classList.remove("active-vote");
+  btnPro.disabled = false;
+  btnCon.disabled = false;
 
+  // lock only if already voted
   if (stance === "pro") {
     btnPro.classList.add("active-vote");
-  } else if (stance === "con") {
-    btnCon.classList.add("active-vote");
+    btnPro.disabled = true;
+    btnCon.disabled = true;
   }
 
-  btnPro.disabled = true;
-  btnCon.disabled = true;
+  if (stance === "con") {
+    btnCon.classList.add("active-vote");
+    btnPro.disabled = true;
+    btnCon.disabled = true;
+  }
 }
 
 
@@ -246,14 +253,22 @@ async function loadVoteStats(issueId) {
 
 qs("btn-vote-pro")?.addEventListener("click", async () => {
   if (!issueId) return;
+
   await window.GALLA_VOTE(issueId, "pro");
-  applyVoteUI("pro");
+
+  const result = await window.GALLA_CHECK_VOTE(issueId);
+  applyVoteUI(result?.stance || null);
+  loadVoteStats(issueId);
 });
 
 qs("btn-vote-con")?.addEventListener("click", async () => {
   if (!issueId) return;
+
   await window.GALLA_VOTE(issueId, "con");
-  applyVoteUI("con");
+
+  const result = await window.GALLA_CHECK_VOTE(issueId);
+  applyVoteUI(result?.stance || null);
+  loadVoteStats(issueId);
 });
 
 /* ==========================================================================
