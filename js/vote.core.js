@@ -17,14 +17,22 @@ async function vote(issueId, type) {
     return;
   }
 
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) {
+  let session = null;
+  for (let i = 0; i < 10; i++) {
+    const res = await supabase.auth.getSession();
+    if (res.data && res.data.session) {
+      session = res.data.session;
+      break;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  if (!session) {
     alert("로그인이 필요합니다.");
     votingInProgress = false;
     return;
   }
 
-  const userId = session.session.user.id;
+  const userId = session.user.id;
 
   const { error } = await supabase.from("votes").insert({
     issue_id: issueId,
@@ -107,14 +115,22 @@ async function checkVoteStatus(issueId) {
   const supabase = window.supabaseClient;
   if (!supabase) return null;
 
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return null;
+  let session = null;
+  for (let i = 0; i < 10; i++) {
+    const res = await supabase.auth.getSession();
+    if (res.data && res.data.session) {
+      session = res.data.session;
+      break;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  if (!session) return "__SESSION_PENDING__";
 
   const { data } = await supabase
     .from("votes")
     .select("type")
     .eq("issue_id", issueId)
-    .eq("user_id", session.session.user.id)
+    .eq("user_id", session.user.id)
     .maybeSingle();
 
   if (!data) return null;
