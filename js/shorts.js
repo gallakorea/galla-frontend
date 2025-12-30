@@ -121,6 +121,12 @@ async function openShorts(list, startId) {
 
   overlay.hidden = false;
 
+  // 🔥 history stack for returning to previous screen (not index)
+  if (!overlay._historyPushed) {
+    history.pushState({ shorts: true }, "");
+    overlay._historyPushed = true;
+  }
+
   // 🔴 iOS에서 뒤 스크롤 완전 차단
   lockIOSScroll();
 
@@ -252,6 +258,13 @@ function closeShorts() {
   document.body.classList.remove("shorts-open");
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
+
+  // 🔥 return to previous screen instead of forcing index
+  if (history.state && history.state.shorts) {
+    history.back();
+  }
+
+  overlay._historyPushed = false;
 }
 
 function loadVideos() {
@@ -301,6 +314,13 @@ function prev() {
 
 function bindShortsEvents() {
 
+  // 🔥 system back button (browser / mobile) closes shorts
+  window.addEventListener("popstate", () => {
+    if (overlay && !overlay.hidden) {
+      closeShorts();
+    }
+  });
+
 overlay.addEventListener("click", (e) => {
   // 투표 버튼은 막지 않는다
   if (e.target.closest(".shorts-vote")) return;
@@ -316,6 +336,13 @@ overlay.addEventListener("touchstart", (e) => {
   touchStartY = e.touches[0].clientY;
 }, { passive: true });
 
+let touchStartX = 0;
+
+overlay.addEventListener("touchstart", (e) => {
+  if (!e.touches || !e.touches[0]) return;
+  touchStartX = e.touches[0].clientX;
+}, { passive: true });
+
 overlay.addEventListener("touchend", (e) => {
   if (locked) return;
   const endY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : touchStartY;
@@ -326,6 +353,16 @@ overlay.addEventListener("touchend", (e) => {
 
   if (diff > 0) next();  // 위로 스와이프 = 다음
   else prev();           // 아래로 스와이프 = 이전
+}, { passive: true });
+
+overlay.addEventListener("touchend", (e) => {
+  if (!e.changedTouches || !e.changedTouches[0]) return;
+  const diffX = e.changedTouches[0].clientX - touchStartX;
+
+  // 👉 swipe right to exit shorts
+  if (diffX > 80) {
+    closeShorts();
+  }
 }, { passive: true });
 
 /* =========================
