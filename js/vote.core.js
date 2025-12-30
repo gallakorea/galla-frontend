@@ -43,12 +43,14 @@ async function vote(issueId, type) {
   await loadVoteStats(issueId);   // 🔧 퍼센트/바 즉시 갱신
   await checkVoteStatus(issueId);
 
-  // 댓글 전장 재초기화 (기존 기능 복원)
-  import("./issue.comments.js").then(m => {
-    if (typeof m.initCommentSystem === "function") {
-      m.initCommentSystem(issueId);
-    }
-  });
+  // 댓글 전장 재초기화 (이슈 페이지에서만 실행)
+  if (document.body?.dataset?.page === "issue") {
+    import("./issue.comments.js").then(m => {
+      if (typeof m.initCommentSystem === "function") {
+        m.initCommentSystem(issueId);
+      }
+    });
+  }
 }
 
 /* ==========================================================================
