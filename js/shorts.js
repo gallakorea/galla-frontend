@@ -5,24 +5,6 @@ let overlay, backBtn;
 
 let videoPrev, videoCur, videoNext;
 
-// Helper: Apply Shorts Vote UI state
-function applyShortsVoteUI(vote) {
-  const pro = document.getElementById("shortsPro");
-  const con = document.getElementById("shortsCon");
-  if (!pro || !con) return;
-
-  pro.classList.remove("active-vote", "locked");
-  con.classList.remove("active-vote", "locked");
-
-  if (vote === "pro") {
-    pro.classList.add("active-vote");
-    con.classList.add("locked");
-  } else if (vote === "con") {
-    con.classList.add("active-vote");
-    pro.classList.add("locked");
-  }
-}
-
 function ensureShortsDOM() {
   overlay   = document.getElementById("shortsOverlay");
   videoPrev = document.getElementById("videoPrev");
@@ -136,8 +118,8 @@ async function openShorts(list, startId) {
   // Shorts Vote HUD reset
   // =========================
 
-  const shortsPro = document.getElementById("shortsPro");
-  const shortsCon = document.getElementById("shortsCon");
+  const shortsPro = document.querySelector('.shorts-vote .pro');
+  const shortsCon = document.querySelector('.shorts-vote .con');
   if (shortsPro && shortsCon) {
     shortsPro.classList.remove("active-vote", "locked");
     shortsCon.classList.remove("active-vote", "locked");
@@ -146,8 +128,7 @@ async function openShorts(list, startId) {
   window.currentIssue = shortsList[shortsIndex];
 
   if (typeof window.GALLA_CHECK_VOTE === "function") {
-    const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-    applyShortsVoteUI(vote);
+    await window.GALLA_CHECK_VOTE(window.currentIssue.id);
   }
 
 }
@@ -295,8 +276,8 @@ window.closeShorts = closeShorts;
 /* =========================
    Shorts Vote HUD (DB 연동)
 ========================= */
-const shortsPro = document.getElementById("shortsPro");
-const shortsCon = document.getElementById("shortsCon");
+const shortsPro = document.querySelector('.shorts-vote .pro');
+const shortsCon = document.querySelector('.shorts-vote .con');
 
 if (shortsPro && shortsCon && !overlay._voteBound) {
   overlay._voteBound = true;
@@ -433,8 +414,8 @@ function slideUp() {
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
-    const shortsPro = document.getElementById("shortsPro");
-    const shortsCon = document.getElementById("shortsCon");
+    const shortsPro = document.querySelector('.shorts-vote .pro');
+    const shortsCon = document.querySelector('.shorts-vote .con');
 
     // 🔥 Shorts vote UI reset (critical)
     if (shortsPro && shortsCon) {
@@ -444,8 +425,7 @@ function slideUp() {
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
-      const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-      applyShortsVoteUI(vote);
+      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
     }
   }, 350);
 }
@@ -486,8 +466,8 @@ function slideDown() {
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
-    const shortsPro = document.getElementById("shortsPro");
-    const shortsCon = document.getElementById("shortsCon");
+    const shortsPro = document.querySelector('.shorts-vote .pro');
+    const shortsCon = document.querySelector('.shorts-vote .con');
 
     // 🔥 Shorts vote UI reset (critical)
     if (shortsPro && shortsCon) {
@@ -497,8 +477,7 @@ function slideDown() {
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
-      const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-      applyShortsVoteUI(vote);
+      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
     }
   }, 350);
 }
