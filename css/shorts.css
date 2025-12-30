@@ -149,19 +149,6 @@
 /* ❗ shorts.css에서는 nav를 숨기거나 덮지 않는다 */
 
 /* =========================
-   iOS SAFARI FULL BLEED FIX
-========================= */
-
-html.shorts-open,
-body.shorts-open {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* =========================
    POINTER EVENTS FIX (CRITICAL)
 ========================= */
 
