@@ -10,14 +10,19 @@ body[data-page="shorts"] .header {
   display: none !important;
 }
 
-html, body {
+/* =========================
+   GLOBAL RESET (shorts only)
+========================= */
+body[data-page="shorts"],
+body[data-page="shorts"] html {
   margin: 0;
   padding: 0;
-  width: 100%;
-  height: 100%;
   background: #000;
   overflow: hidden;
+  height: 100%;
 }
+
+
 
 /* 🔥 HIDDEN SAFETY */
 #shortsOverlay[hidden] {
