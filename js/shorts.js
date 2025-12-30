@@ -1,14 +1,20 @@
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
-  const shortsPro = document.querySelector('.shorts-vote .pro');
-  const shortsCon = document.querySelector('.shorts-vote .con');
+  const shortsPro =
+    document.getElementById("shortsPro") ||
+    document.querySelector('.shorts-vote .pro');
+  const shortsCon =
+    document.getElementById("shortsCon") ||
+    document.querySelector('.shorts-vote .con');
   if (!shortsPro || !shortsCon) return;
+
   shortsPro.classList.remove("active-vote", "locked");
   shortsCon.classList.remove("active-vote", "locked");
-  if (result?.stance === "pro") {
+
+  if (result === "pro") {
     shortsPro.classList.add("active-vote", "locked");
     shortsCon.classList.add("locked");
-  } else if (result?.stance === "con") {
+  } else if (result === "con") {
     shortsCon.classList.add("active-vote", "locked");
     shortsPro.classList.add("locked");
   }
@@ -133,8 +139,12 @@ async function openShorts(list, startId) {
   // =========================
   // Shorts Vote HUD binding (SAFE)
   // =========================
-  const shortsPro = document.querySelector('.shorts-vote .pro');
-  const shortsCon = document.querySelector('.shorts-vote .con');
+  const shortsPro =
+    document.getElementById("shortsPro") ||
+    document.querySelector('.shorts-vote .pro');
+  const shortsCon =
+    document.getElementById("shortsCon") ||
+    document.querySelector('.shorts-vote .con');
 
   if (shortsPro && shortsCon && !overlay._voteBound) {
     // 🔥 always reset UI on open
@@ -394,8 +404,12 @@ function slideUp() {
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
-    const shortsPro = document.querySelector('.shorts-vote .pro');
-    const shortsCon = document.querySelector('.shorts-vote .con');
+    const shortsPro =
+      document.getElementById("shortsPro") ||
+      document.querySelector('.shorts-vote .pro');
+    const shortsCon =
+      document.getElementById("shortsCon") ||
+      document.querySelector('.shorts-vote .con');
 
     // 🔥 Shorts vote UI reset (critical)
     if (shortsPro && shortsCon) {
@@ -447,8 +461,12 @@ function slideDown() {
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
-    const shortsPro = document.querySelector('.shorts-vote .pro');
-    const shortsCon = document.querySelector('.shorts-vote .con');
+    const shortsPro =
+      document.getElementById("shortsPro") ||
+      document.querySelector('.shorts-vote .pro');
+    const shortsCon =
+      document.getElementById("shortsCon") ||
+      document.querySelector('.shorts-vote .con');
 
     // 🔥 Shorts vote UI reset (critical)
     if (shortsPro && shortsCon) {
