@@ -1,6 +1,11 @@
 // shorts.js — SAFE PAGE GUARD (index/issue allowed)
 if (document.body.dataset.page !== "shorts") {
-  console.warn("[SHORTS] loaded on non-shorts page (deferred execution)");
+  // 전역 함수만 노출하고 나머지 로직은 실행 차단
+  window.openShorts = openShorts;
+  window.closeShorts = closeShorts;
+  window.__SHORTS_GUARDED__ = true;
+  console.warn("[SHORTS] loaded on non-shorts page (guarded)");
+  return;
 }
 
 // Helper to apply Shorts vote state to vote buttons
