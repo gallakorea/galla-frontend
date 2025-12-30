@@ -603,3 +603,6 @@ function forceBattleScrollWithRetry() {
     if (tries > 25) clearInterval(timer);
   }, 100);
 }
+
+window.GALLA_VOTE = vote;
+window.GALLA_CHECK_VOTE = checkVoteStatus;

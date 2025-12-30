@@ -3,6 +3,7 @@
 
 let overlay, backBtn;
 let videoPrev, videoCur, videoNext;
+const shortsVoteMemory = {};
 
 function ensureShortsDOM() {
   overlay   = document.getElementById("shortsOverlay");
@@ -79,6 +80,9 @@ async function openShorts(list, startId) {
     shortsPro.classList.remove("active-vote", "locked");
     shortsCon.classList.remove("active-vote", "locked");
   }
+
+  window.currentIssue = shortsList[shortsIndex];
+  await window.GALLA_CHECK_VOTE(window.currentIssue.id);
 
 }
 
@@ -217,34 +221,29 @@ window.openShorts = openShorts;
 window.closeShorts = closeShorts;
 
 /* =========================
-   Shorts Vote HUD (Pro/Con)
+   Shorts Vote HUD (DB 연동)
 ========================= */
 const shortsPro = document.getElementById("shortsPro");
 const shortsCon = document.getElementById("shortsCon");
 
-// 버튼이 없는 페이지에서도 shorts.js가 로드될 수 있으니 안전 처리
-if (shortsPro && shortsCon) {
-  // 바인딩 중복 방지
-  if (!overlay._voteBound) {
-    overlay._voteBound = true;
+if (shortsPro && shortsCon && !overlay._voteBound) {
+  overlay._voteBound = true;
 
-    shortsPro.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (window.__shortsVote) return;
-      window.__shortsVote = "pro";
-      shortsPro.classList.add("active-vote");
-      shortsCon.classList.add("locked");
-    });
+  shortsPro.onclick = async (e) => {
+    e.stopPropagation();
+    if (!window.currentIssue) return;
+    await window.GALLA_VOTE("pro");
+    await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+  };
 
-    shortsCon.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (window.__shortsVote) return;
-      window.__shortsVote = "con";
-      shortsCon.classList.add("active-vote");
-      shortsPro.classList.add("locked");
-    });
-  }
+  shortsCon.onclick = async (e) => {
+    e.stopPropagation();
+    if (!window.currentIssue) return;
+    await window.GALLA_VOTE("con");
+    await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+  };
 }
+
 }
 
 function slideUp() {
@@ -260,6 +259,10 @@ function slideUp() {
     shortsIndex = Math.min(shortsIndex, shortsList.length - 1);
     loadVideos();
     resetPositions();
+
+    window.currentIssue = shortsList[shortsIndex];
+    window.GALLA_CHECK_VOTE(window.currentIssue.id);
+
   }, 350);
 }
 
@@ -276,6 +279,11 @@ function slideDown() {
     shortsIndex = Math.max(shortsIndex, 0);
     loadVideos();
     resetPositions();
+
+    window.currentIssue = shortsList[shortsIndex];
+    window.GALLA_CHECK_VOTE(window.currentIssue.id);
   }, 350);
+
 }
+
 
