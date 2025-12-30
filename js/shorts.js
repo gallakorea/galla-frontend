@@ -1,3 +1,18 @@
+// Helper to apply Shorts vote state to vote buttons
+function applyShortsVoteState(result) {
+  const shortsPro = document.querySelector('.shorts-vote .pro');
+  const shortsCon = document.querySelector('.shorts-vote .con');
+  if (!shortsPro || !shortsCon) return;
+  shortsPro.classList.remove("active-vote", "locked");
+  shortsCon.classList.remove("active-vote", "locked");
+  if (result?.stance === "pro") {
+    shortsPro.classList.add("active-vote", "locked");
+    shortsCon.classList.add("locked");
+  } else if (result?.stance === "con") {
+    shortsCon.classList.add("active-vote", "locked");
+    shortsPro.classList.add("locked");
+  }
+}
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
@@ -114,21 +129,44 @@ async function openShorts(list, startId) {
     } catch {}
   }
 
-  // =========================
-  // Shorts Vote HUD reset
-  // =========================
 
+  // =========================
+  // Shorts Vote HUD binding (SAFE)
+  // =========================
   const shortsPro = document.querySelector('.shorts-vote .pro');
   const shortsCon = document.querySelector('.shorts-vote .con');
-  if (shortsPro && shortsCon) {
+
+  if (shortsPro && shortsCon && !overlay._voteBound) {
     shortsPro.classList.remove("active-vote", "locked");
     shortsCon.classList.remove("active-vote", "locked");
-  }
 
-  window.currentIssue = shortsList[shortsIndex];
+    overlay._voteBound = true;
 
-  if (typeof window.GALLA_CHECK_VOTE === "function") {
-    await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    shortsPro.onclick = async (e) => {
+      e.stopPropagation();
+      if (!window.currentIssue) return;
+      if (shortsPro.classList.contains("locked")) return;
+
+      shortsPro.classList.add("active-vote", "locked");
+      shortsCon.classList.add("locked");
+
+      if (typeof window.GALLA_VOTE === "function") {
+        await window.GALLA_VOTE(window.currentIssue.id, "pro");
+      }
+    };
+
+    shortsCon.onclick = async (e) => {
+      e.stopPropagation();
+      if (!window.currentIssue) return;
+      if (shortsCon.classList.contains("locked")) return;
+
+      shortsCon.classList.add("active-vote", "locked");
+      shortsPro.classList.add("locked");
+
+      if (typeof window.GALLA_VOTE === "function") {
+        await window.GALLA_VOTE(window.currentIssue.id, "con");
+      }
+    };
   }
 
 }
@@ -273,71 +311,6 @@ if (backBtn) backBtn.onclick = closeShorts;
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
 
-/* =========================
-   Shorts Vote HUD (DB 연동)
-========================= */
-const shortsPro = document.querySelector('.shorts-vote .pro');
-const shortsCon = document.querySelector('.shorts-vote .con');
-
-if (shortsPro && shortsCon && !overlay._voteBound) {
-  overlay._voteBound = true;
-
-  shortsPro.onclick = async (e) => {
-    e.stopPropagation();
-    if (!window.currentIssue) return;
-
-    // 이미 잠겨 있으면 무시
-    if (shortsPro.classList.contains("locked")) return;
-
-    // 즉시 UI 반영 (낙관적 업데이트)
-    shortsPro.classList.add("active-vote", "locked");
-    shortsCon.classList.add("locked");
-
-    if (typeof window.GALLA_VOTE !== "function") {
-      console.error("[SHORTS] GALLA_VOTE not found");
-      return;
-    }
-
-    try {
-      await window.GALLA_VOTE(window.currentIssue.id, "pro");
-    } catch (err) {
-      console.error("[SHORTS] vote error", err);
-    }
-
-    // DB 기준 최종 동기화
-    if (typeof window.GALLA_CHECK_VOTE === "function") {
-      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-    }
-  };
-
-  shortsCon.onclick = async (e) => {
-    e.stopPropagation();
-    if (!window.currentIssue) return;
-
-    // 이미 잠겨 있으면 무시
-    if (shortsCon.classList.contains("locked")) return;
-
-    // 즉시 UI 반영 (낙관적 업데이트)
-    shortsCon.classList.add("active-vote", "locked");
-    shortsPro.classList.add("locked");
-
-    if (typeof window.GALLA_VOTE !== "function") {
-      console.error("[SHORTS] GALLA_VOTE not found");
-      return;
-    }
-
-    try {
-      await window.GALLA_VOTE(window.currentIssue.id, "con");
-    } catch (err) {
-      console.error("[SHORTS] vote error", err);
-    }
-
-    // DB 기준 최종 동기화
-    if (typeof window.GALLA_CHECK_VOTE === "function") {
-      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-    }
-  };
-}
 
 /* =========================
    TAP / DOUBLE TAP CONTROL
@@ -425,7 +398,8 @@ function slideUp() {
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
-      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      const voteResult = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      applyShortsVoteState(voteResult);
     }
   }, 350);
 }
@@ -477,7 +451,8 @@ function slideDown() {
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
-      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      const voteResult = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      applyShortsVoteState(voteResult);
     }
   }, 350);
 }

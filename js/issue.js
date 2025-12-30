@@ -18,6 +18,25 @@ let issueAuthorId = null;
 // ✅ 추가
 let currentIssue = null;
 
+// ✅ 추가: applyVoteUI helper function
+function applyVoteUI(stance) {
+  const btnPro = qs("btn-vote-pro");
+  const btnCon = qs("btn-vote-con");
+  if (!btnPro || !btnCon) return;
+
+  btnPro.classList.remove("active-vote");
+  btnCon.classList.remove("active-vote");
+
+  if (stance === "pro") {
+    btnPro.classList.add("active-vote");
+  } else if (stance === "con") {
+    btnCon.classList.add("active-vote");
+  }
+
+  btnPro.disabled = true;
+  btnCon.disabled = true;
+}
+
 
 /* ==========================================================================
    0-1. GIF
@@ -93,7 +112,10 @@ if (typeof loadAiNews === "function") {
     REST
   ================================ */
   loadVoteStats(issue.id);
-  window.GALLA_CHECK_VOTE(issue.id); // ✅ 반드시 추가
+  const voteCheckResult = await window.GALLA_CHECK_VOTE(issue.id); // ✅ 반드시 추가, await
+  if (voteCheckResult && (voteCheckResult.stance === "pro" || voteCheckResult.stance === "con")) {
+    applyVoteUI(voteCheckResult.stance);
+  }
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
   checkAuthorSupport(issue.id);
@@ -222,14 +244,16 @@ async function loadVoteStats(issueId) {
    4. Vote
 ========================================================================== */
 
-qs("btn-vote-pro")?.addEventListener("click", () => {
+qs("btn-vote-pro")?.addEventListener("click", async () => {
   if (!issueId) return;
-  window.GALLA_VOTE(issueId, "pro");
+  await window.GALLA_VOTE(issueId, "pro");
+  applyVoteUI("pro");
 });
 
-qs("btn-vote-con")?.addEventListener("click", () => {
+qs("btn-vote-con")?.addEventListener("click", async () => {
   if (!issueId) return;
-  window.GALLA_VOTE(issueId, "con");
+  await window.GALLA_VOTE(issueId, "con");
+  applyVoteUI("con");
 });
 
 /* ==========================================================================

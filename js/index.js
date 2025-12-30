@@ -40,9 +40,6 @@ const moreIcon = `
 </svg>
 `;
 
-// ▼ 투표 기록
-const voteMemory = JSON.parse(localStorage.getItem("votes") || "{}");
-
 // =========================================
 // 🔥 CARD RENDERER
 // =========================================
@@ -51,8 +48,6 @@ function renderCard(data) {
     const total = data.pro + data.con || 1;
     const proPct = Math.round((data.pro / total) * 100);
     const conPct = 100 - proPct;
-
-    const voted = voteMemory[data.id];
 
     const w = data.war || {
     pro:{total:0,same:0,oppo:0},
@@ -98,8 +93,8 @@ function renderCard(data) {
         </div>
 
         <div class="vote-buttons">
-            <button class="btn-pro vote-btn ${voted === "pro" ? "active-vote" : ""}" data-type="pro">👍 찬성이오</button>
-            <button class="btn-con vote-btn ${voted === "con" ? "active-vote" : ""}" data-type="con">👎 난 반댈세</button>
+            <button class="btn-pro vote-btn" data-type="pro">👍 찬성이오</button>
+            <button class="btn-con vote-btn" data-type="con">👎 난 반댈세</button>
         </div>
 
         <!-- ⚔️ COMMENT WAR DASHBOARD -->
@@ -155,7 +150,20 @@ function renderCard(data) {
 // =========================================
 // 🔥 EVENTS
 // =========================================
-function attachEvents() {
+
+async function applyVoteUI(cardEl, stance) {
+    const btnPro = cardEl.querySelector(".btn-pro");
+    const btnCon = cardEl.querySelector(".btn-con");
+    if (stance === "pro") {
+        btnPro.classList.add("active-vote");
+    } else if (stance === "con") {
+        btnCon.classList.add("active-vote");
+    }
+    btnPro.disabled = true;
+    btnCon.disabled = true;
+}
+
+async function attachEvents() {
 
     // 🎥 1분 엘리베이터 스피치
     document.querySelectorAll(".speech-btn").forEach(btn => {
@@ -180,23 +188,21 @@ function attachEvents() {
 
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
-        btn.onclick = e => {
+        btn.onclick = async e => {
             e.stopPropagation();
 
             const type = btn.dataset.type;
             const card = btn.closest(".card");
             const id = Number(card.dataset.id);
 
-            if (voteMemory[id]) return;
+            // 🔥 DB 기반 투표
+            if (typeof window.GALLA_VOTE !== "function") {
+                console.error("[INDEX] GALLA_VOTE not found");
+                return;
+            }
 
-            const data = cards.find(c => c.id === id);
-            if (type === "pro") data.pro++;
-            else data.con++;
-
-            voteMemory[id] = type;
-            localStorage.setItem("votes", JSON.stringify(voteMemory));
-
-            refreshCard(id);
+            await window.GALLA_VOTE(id, type);
+            await applyVoteUI(card, type);
         };
     });
 
@@ -228,6 +234,17 @@ function attachEvents() {
         });
     });
 
+    // After attaching events, check votes and apply UI
+    if (typeof window.GALLA_CHECK_VOTE === "function") {
+        const cardsEls = document.querySelectorAll(".card");
+        for (const cardEl of cardsEls) {
+            const id = Number(cardEl.dataset.id);
+            const stance = await window.GALLA_CHECK_VOTE(id);
+            if (stance === "pro" || stance === "con") {
+                await applyVoteUI(cardEl, stance);
+            }
+        }
+    }
 }
 
 // =========================================
@@ -349,11 +366,20 @@ async function loadWarData(issueIds) {
 // =========================================
 // 🔥 LOADERS
 // =========================================
-function refreshCard(id) {
+async function refreshCard(id) {
     const data = cards.find(c => c.id === id);
     const el = document.querySelector(`.card[data-id="${id}"]`);
     el.outerHTML = renderCard(data);
     attachEvents();
+    if (typeof window.GALLA_CHECK_VOTE === "function") {
+        const cardEl = document.querySelector(`.card[data-id="${id}"]`);
+        if (cardEl) {
+            const stance = await window.GALLA_CHECK_VOTE(id);
+            if (stance === "pro" || stance === "con") {
+                await applyVoteUI(cardEl, stance);
+            }
+        }
+    }
 }
 
 function loadBest() {
