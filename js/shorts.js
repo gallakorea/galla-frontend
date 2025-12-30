@@ -331,9 +331,14 @@ function slideUp() {
     videoCur  = videoNext;
     videoNext = oldPrev;
 
-    shortsIndex = Math.min(shortsIndex, shortsList.length - 1);
+    // ✅ [이 블록을 여기! 무조건 여기!]
+    const cur = shortsList[shortsIndex];
+    if (cur && videoCur.src !== cur.video_url) {
+      videoCur.src = cur.video_url;
+      videoCur.load();
+    }
 
-    // 🔥 다음 영상 미리 로드
+    // 다음 영상 preload
     const upcoming = shortsList[shortsIndex + 1];
     if (upcoming) {
       videoNext.src = upcoming.video_url;
@@ -342,14 +347,12 @@ function slideUp() {
 
     resetPositions();
 
-    // 🔥 이제서야 play
     try {
       await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
     window.GALLA_CHECK_VOTE(window.currentIssue.id);
-
   }, 350);
 }
 
@@ -368,7 +371,12 @@ function slideDown() {
     videoCur  = videoPrev;
     videoPrev = oldNext;
 
-    shortsIndex = Math.max(shortsIndex, 0);
+    // ✅ [이거 빠져 있어서 지금 터진 거다]
+    const cur = shortsList[shortsIndex];
+    if (cur && videoCur.src !== cur.video_url) {
+      videoCur.src = cur.video_url;
+      videoCur.load();
+    }
 
     const upcoming = shortsList[shortsIndex - 1];
     if (upcoming) {
@@ -384,22 +392,5 @@ function slideDown() {
 
     window.currentIssue = shortsList[shortsIndex];
     window.GALLA_CHECK_VOTE(window.currentIssue.id);
-
   }, 350);
 }
-
-
-
-
-// 🔥 [임시 강제 실행 — 정상화 확인용]
-document.addEventListener("DOMContentLoaded", () => {
-  openShorts(
-    [
-      {
-        id: 1,
-        video_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-      }
-    ],
-    1
-  );
-});
