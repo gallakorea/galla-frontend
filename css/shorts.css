@@ -165,11 +165,6 @@ body.shorts-open {
    POINTER EVENTS FIX (CRITICAL)
 ========================= */
 
-/* overlay는 이벤트를 먹지 않는다 */
-#shortsOverlay {
-  pointer-events: none;
-}
-
 /* 영상 영역은 스와이프/휠 이벤트 허용 */
 .shorts-video-wrap,
 #videoPrev,
@@ -182,5 +177,13 @@ body.shorts-open {
 .shorts-top,
 .shorts-vote,
 .shorts-actions {
+  pointer-events: auto;
+}
+
+#shortsOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
   pointer-events: auto;
 }
