@@ -19,11 +19,17 @@
   ========================= -->
   <div id="shortsOverlay">
 
-    <div class="shorts-video-wrap">
-      <video id="videoPrev" playsinline></video>
-      <video id="shortsVideo" playsinline></video>
-      <video id="videoNext" playsinline></video>
+    <!-- 🔥 [추가] 가로 480 제한용 스테이지 -->
+    <div class="shorts-stage">
 
+      <!-- 🔥 영상은 이제 "순수 height 100%" -->
+      <div class="shorts-video-wrap">
+        <video id="videoPrev" playsinline></video>
+        <video id="shortsVideo" playsinline></video>
+        <video id="videoNext" playsinline></video>
+      </div>
+
+      <!-- UI -->
       <div class="shorts-top">
         <button id="shortsBack">←</button>
         <div class="shorts-time">5:05</div>
@@ -39,9 +45,10 @@
         <button class="vote-btn pro">👍 찬성이오</button>
         <button class="vote-btn con">👎 난 반댈세</button>
       </div>
-    </div>
 
-    <!-- ✅ 네비는 overlay 안, 모양 그대로 -->
+    </div> <!-- 🔥 shorts-stage 끝 -->
+
+    <!-- 네비는 그대로 -->
     <nav class="nav">
       <div class="nav-inner">
         <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
@@ -54,7 +61,7 @@
 
   </div>
 
-  <!-- scripts -->
   <script type="module" src="js/shorts.js"></script>
 </body>
+
 </html>

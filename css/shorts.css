@@ -194,3 +194,14 @@ body[data-page="shorts"] {
   background: #000;
   z-index: 900;
 }
+
+/* =========================
+   SHORTS STAGE (WIDTH 480 ONLY)
+========================= */
+.shorts-stage {
+  position: relative;
+  width: 100%;
+  max-width: 480px;   /* 🔥 가로 제한은 여기서만 */
+  height: 100%;
+  margin: 0 auto;     /* 좌우 중앙 */
+}

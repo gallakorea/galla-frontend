@@ -1,18 +1,6 @@
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
-function fixIOSHeight() {
-  document.documentElement.style.setProperty(
-    "--vh",
-    `${window.innerHeight * 0.01}px`
-  );
-}
-
-if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-  fixIOSHeight();
-  window.addEventListener("resize", fixIOSHeight);
-}
-
 let overlay, backBtn;
 let videoPrev, videoCur, videoNext;
 
