@@ -3,6 +3,18 @@ console.log("[vote.core] loaded");
 
 let votingInProgress = false;
 
+async function waitForSessionGuaranteed(timeout = 5000) {
+  const supabase = window.supabaseClient;
+  const start = Date.now();
+
+  while (Date.now() - start < timeout) {
+    const { data } = await supabase.auth.getSession();
+    if (data?.session) return data.session;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return null;
+}
+
 /* ==========================================================================
    Vote Action (공통)
 ========================================================================== */
@@ -114,11 +126,9 @@ async function checkVoteStatus(issueId) {
   const supabase = window.supabaseClient;
   if (!supabase) return null;
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const session = sessionData?.session;
-
-  // 🔥 모바일 세션 미복원 상태: UI 건드리지 않음
+  const session = await waitForSessionGuaranteed();
   if (!session) {
+    console.warn("[VOTE] session not recovered in time");
     return null;
   }
 
@@ -213,3 +223,57 @@ async function checkVoteStatus(issueId) {
 window.GALLA_VOTE = vote;
 window.GALLA_CHECK_VOTE = checkVoteStatus;
 window.GALLA_LOAD_VOTE_STATS = loadVoteStats;
+
+/* ==========================================================================
+   🔥 MOBILE SESSION RECOVERY FIX
+   세션이 늦게 복원되는 모바일 환경에서 투표 UI 재동기화
+========================================================================== */
+if (window.supabaseClient && !window.__GALLA_AUTH_WATCHER__) {
+  window.__GALLA_AUTH_WATCHER__ = true;
+
+  window.supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    if (!session) return;
+
+    // 현재 컨텍스트에서 issue id 추론 (issue / index / shorts 공통)
+    const issueId =
+      window.currentIssue?.id ||
+      document.body?.dataset?.issueId ||
+      document.querySelector('.card[data-id]')?.dataset?.id;
+
+    if (!issueId) return;
+
+    try {
+      await window.GALLA_CHECK_VOTE(Number(issueId));
+    } catch (e) {
+      console.error('[VOTE] auth recovery sync error', e);
+    }
+  });
+}
+
+// ==========================================================================
+// 🔥 FORCE RE-SYNC ON PAGE LOAD / VISIBILITY RESTORE (MOBILE CRITICAL)
+// ==========================================================================
+async function forceVoteResync() {
+  const issueId =
+    window.currentIssue?.id ||
+    document.body?.dataset?.issueId ||
+    document.querySelector('.card[data-id]')?.dataset?.id;
+
+  if (!issueId) return;
+
+  try {
+    await window.GALLA_CHECK_VOTE(Number(issueId));
+  } catch (e) {
+    console.error("[VOTE] force resync error", e);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(forceVoteResync, 0);
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    setTimeout(forceVoteResync, 0);
+  }
+});
