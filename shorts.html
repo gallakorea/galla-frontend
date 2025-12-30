@@ -2,79 +2,56 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>GALLA Shorts</title>
 
-  <!-- Shorts only -->
+  <!-- Shorts 전용 CSS만 -->
   <link rel="stylesheet" href="css/shorts.css" />
 </head>
 
 <body data-page="shorts">
 
-<!-- =========================
-     SHORTS OVERLAY
-========================= -->
-<div id="shortsOverlay">
+  <!-- =========================
+       SHORTS OVERLAY (FULLSCREEN)
+  ========================= -->
+  <div id="shortsOverlay">
 
-  <div class="shorts-video-wrap">
-    <video id="videoPrev" playsinline></video>
-    <video id="shortsVideo" playsinline></video>
-    <video id="videoNext" playsinline></video>
+    <div class="shorts-video-wrap">
+      <video id="videoPrev" playsinline></video>
+      <video id="shortsVideo" playsinline></video>
+      <video id="videoNext" playsinline></video>
 
-    <div class="shorts-top">
-      <button id="shortsBack">←</button>
-      <div class="shorts-time">5:05</div>
+      <div class="shorts-top">
+        <button id="shortsBack">←</button>
+        <div class="shorts-time">5:05</div>
+      </div>
+
+      <div class="shorts-actions">
+        <div>❤️</div>
+        <div>💬</div>
+        <div>📤</div>
+      </div>
+
+      <div class="shorts-vote">
+        <button class="vote-btn pro">👍 찬성이오</button>
+        <button class="vote-btn con">👎 난 반댈세</button>
+      </div>
     </div>
 
-    <div class="shorts-actions">
-      <div>❤️ <span id="shorts-like-count">0</span></div>
-      <div>💬</div>
-      <div>📤</div>
-    </div>
+    <!-- ✅ 네비는 overlay 안, 모양 그대로 -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
+        <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
+        <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
+        <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
+        <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
+      </div>
+    </nav>
 
-    <div class="shorts-vote">
-      <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
-      <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
-    </div>
   </div>
 
-  <!-- ✅ 네비는 여기, overlay 안 -->
-  <nav class="nav shorts-nav">
-    <div class="nav-inner">
-      <img src="assets/icons/nav-home.svg"  class="nav-icon" data-target="index.html">
-      <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
-      <img src="assets/icons/nav-write.svg"  class="nav-icon" data-target="write.html">
-      <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
-      <img src="assets/icons/nav-user.svg"   class="nav-icon" data-target="mypage.html">
-    </div>
-  </nav>
-
-</div>
-
-<!-- =========================
-     CORE SCRIPTS (순서 중요)
-========================= -->
-
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
-
-<!-- 🔥 Vote Core (반드시 먼저) -->
-<script src="js/vote.core.js"></script>
-
-<!-- Shorts Logic -->
-<script type="module" src="js/shorts.js"></script>
-
-<!-- NAVIGATION -->
-
-<script>
-  document.querySelectorAll(".nav-icon").forEach(icon => {
-    icon.addEventListener("click", () => {
-      location.href = icon.dataset.target;
-    });
-  });
-</script>
-
+  <!-- scripts -->
+  <script type="module" src="js/shorts.js"></script>
 </body>
 </html>

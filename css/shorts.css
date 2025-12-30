@@ -168,43 +168,11 @@
 }
 
 /* =========================
-   SHORTS OVERLAY (FINAL)
+   SHORTS OVERLAY (SINGLE SOURCE)
 ========================= */
 #shortsOverlay {
   position: fixed;
-  inset: 0;              /* 🔥 화면 맨 위부터 맨 아래까지 완전 덮기 */
-  background: #000;
-  z-index: 900;          /* nav보다 낮게 */
-}
-
-
-.nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  z-index: 1000; /* 🔥 overlay보다 위 */
-}
-
-/* =========================
-   SHORTS OVERLAY (FINAL)
-========================= */
-#shortsOverlay {
-  position: fixed;
-  inset: 0;
+  inset: 0;              /* 🔥 화면 맨 위 끝 ~ 맨 아래 끝 */
   background: #000;
   z-index: 900;
-}
-
-/* 네비는 기존 그대로 */
-.nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  z-index: 1000;
 }
