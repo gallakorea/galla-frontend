@@ -162,19 +162,21 @@ body.shorts-open {
 }
 
 /* =========================
-   SHORTS OVERLAY (SINGLE SOURCE OF TRUTH)
+   SHORTS OVERLAY (FINAL)
 ========================= */
 #shortsOverlay {
   position: fixed;
 
-  /* 🔥 노치/시계 포함 최상단까지 */
+  /* 🔥 노치 / 상태바 포함 최상단 */
   top: env(safe-area-inset-top);
   left: 0;
   right: 0;
-  bottom: 0;
+
+  /* 🔥 하단 네비는 절대 침범 금지 */
+  bottom: var(--bottom-nav-h);
 
   /* 🔥 iOS Safari 실제 viewport */
-  height: calc(var(--vh, 1vh) * 100);
+  height: calc(var(--vh, 1vh) * 100 - var(--bottom-nav-h));
 
   background: #000;
   z-index: 9999;
