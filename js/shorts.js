@@ -1,7 +1,6 @@
-// shorts.js — HARD PAGE GUARD
+// shorts.js — SAFE PAGE GUARD (index/issue allowed)
 if (document.body.dataset.page !== "shorts") {
-  console.warn("[SHORTS] blocked on non-shorts page");
-  throw new Error("SHORTS_SCRIPT_BLOCKED");
+  console.warn("[SHORTS] loaded on non-shorts page (deferred execution)");
 }
 
 // Helper to apply Shorts vote state to vote buttons
