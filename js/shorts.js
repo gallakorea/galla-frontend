@@ -659,6 +659,8 @@ document.addEventListener("visibilitychange", async () => {
 });
 }
 
-// 🔥 expose shorts controls globally (index page needs this)
-window.openShorts = openShorts;
-window.closeShorts = closeShorts;
+// 🔥 expose shorts controls globally (shorts page only)
+if (IS_SHORTS_PAGE) {
+  window.openShorts = openShorts;
+  window.closeShorts = closeShorts;
+}
