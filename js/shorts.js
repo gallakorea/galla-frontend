@@ -1,12 +1,7 @@
 // shorts.js — SAFE PAGE GUARD
 const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
 
-if (!IS_SHORTS_PAGE) {
-  window.__SHORTS_GUARDED__ = true;
-  console.warn("[SHORTS] loaded on non-shorts page (guarded)");
-}
-
-if (IS_SHORTS_PAGE) {
+{
 
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
@@ -659,8 +654,6 @@ document.addEventListener("visibilitychange", async () => {
 });
 }
 
-// 🔥 expose shorts controls globally (shorts page only)
-if (IS_SHORTS_PAGE) {
-  window.openShorts = openShorts;
-  window.closeShorts = closeShorts;
-}
+// 🔥 expose shorts controls globally (index + shorts)
+window.openShorts = openShorts;
+window.closeShorts = closeShorts;
