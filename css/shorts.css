@@ -33,7 +33,7 @@ body[data-page="shorts"] {
 /* ✅ 수정 후 */
 .shorts-video-wrap {
   position: relative;
-  height: 100%;
+  height: 100svh;     /* 🔥 이 줄 추가 */
   overflow: hidden;
 }
 
@@ -208,10 +208,8 @@ body[data-page="shorts"] {
 ========================= */
 .shorts-stage {
   position: relative;
-  width: 100%;
-  max-width: 480px;   /* ✅ 가로 제한은 여기서만 */
-  height: 100%;
-  margin: 0 auto;     /* 좌우 중앙 */
+  width: 480px;       /* 🔥 max-width 쓰지 마라 */
+  height: 100svh;     /* 🔥 핵심 */
+  margin: 0 auto;
   overflow: hidden;
 }
-
