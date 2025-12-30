@@ -114,17 +114,12 @@ async function checkVoteStatus(issueId) {
   const supabase = window.supabaseClient;
   if (!supabase) return null;
 
-  let session = null;
-  for (let i = 0; i < 10; i++) {
-    const res = await supabase.auth.getSession();
-    if (res.data && res.data.session) {
-      session = res.data.session;
-      break;
-    }
-    await new Promise(r => setTimeout(r, 100));
-  }
+  const { data: sessionData } = await supabase.auth.getSession();
+  const session = sessionData?.session;
+
+  // 🔥 모바일 세션 미복원 상태: UI 건드리지 않음
   if (!session) {
-    return "__SESSION_PENDING__";
+    return null;
   }
 
   const { data } = await supabase
