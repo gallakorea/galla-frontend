@@ -42,14 +42,10 @@ body[data-page="shorts"] {
 #shortsVideo,
 #videoNext {
   position: absolute;
-  top: 0;
-  left: 50%;
+  inset: 0;
 
-  height: 100%;        /* 🔥 높이 기준 */
-  width: auto;         /* 🔥 가로는 영상 비율 */
-  min-width: 480px;    /* 🔥 최소 480 보장 */
-
-  transform: translateX(-50%);
+  width: 100%;
+  height: 100%;
 
   object-fit: cover;
   background: #000;
