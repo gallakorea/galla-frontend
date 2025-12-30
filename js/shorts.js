@@ -1,3 +1,9 @@
+// shorts.js — HARD PAGE GUARD
+if (document.body.dataset.page !== "shorts") {
+  console.warn("[SHORTS] blocked on non-shorts page");
+  throw new Error("SHORTS_SCRIPT_BLOCKED");
+}
+
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
   // session pending / unknown 상태에서는 UI를 건드리지 않는다
