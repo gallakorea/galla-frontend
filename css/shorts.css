@@ -78,9 +78,9 @@ html.shorts-open, body.shorts-open{
   position: fixed;
   inset: 0;
   background: #000;
-  z-index: 900;        /* 🔥 네비보다 낮게 */
+  z-index: 900;
   display: flex;
-  justify-content: center;
+  justify-content: center;   /* ⬅ 가운데 정렬 */
   align-items: center;
   overflow: hidden;
 }
@@ -202,7 +202,12 @@ body.shorts-open #app {
 }
 
 .shorts-video-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;   /* 🔥 이 줄이 핵심 */
   height: 100%;
+  background: #000;
+  overflow: hidden;
 }
 
 .shorts-vote {
@@ -215,6 +220,15 @@ body:not(.shorts-open) .nav {
 }
 
 /* ===== iOS Safari TOP SAFE FIX ===== */
+#shortsOverlay {
+  top: 0;
+  inset: 0;
+}
+
+#shortsOverlay {
+  height: 100dvh;
+}
+
 #shortsOverlay {
   top: 0;
   inset: 0;
