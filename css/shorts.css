@@ -1,9 +1,41 @@
-/* css/shorts.css — Instagram Reels-like overlay (480px max) */
+/* =========================
+   SHORTS OVERLAY
+========================= */
 
-#shortsOverlay[hidden] { display: none !important; }
+#shortsOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
 
-/* 영상 */
-#shortsVideo{
+  /* ✅ 네비게이션 높이만큼 반드시 띄운다 */
+  bottom: 64px;
+
+  background: #000;
+  z-index: 900;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* =========================
+   SHORTS VIDEO WRAP
+========================= */
+
+.shorts-video-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* 3단 버퍼 구조 */
+#videoPrev,
+#shortsVideo,
+#videoNext {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -12,224 +44,122 @@
   background: #000;
 }
 
-/* 상단 UI */
-#shortsOverlay .shorts-top{
+#videoPrev { transform: translateY(-100%); }
+#videoNext { transform: translateY(100%); }
+
+/* =========================
+   TOP BAR
+========================= */
+
+.shorts-top {
   position: absolute;
   top: 12px;
   left: 12px;
   right: 12px;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  z-index: 10;
   pointer-events: auto;
 }
 
-#shortsBack{
-  background: transparent;
+#shortsBack {
+  background: rgba(0,0,0,0.6);
   border: none;
   color: #fff;
-  font-size: 22px;
-  line-height: 1;
-  padding: 6px 8px;
+  font-size: 20px;
+  padding: 6px 10px;
+  border-radius: 10px;
 }
 
-#shortsOverlay .shorts-time{
-  color: #fff;
+.shorts-time {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* =========================
+   ACTION ICONS (RIGHT)
+========================= */
+
+.shorts-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 120px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
   font-size: 14px;
+  z-index: 10;
+}
+
+.shorts-actions div {
+  text-align: center;
   opacity: 0.9;
 }
 
-/* 우측 액션 (인스타 느낌) */
-#shortsOverlay .shorts-actions{
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-10%);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  color: #fff;
-  font-size: 14px;
-  text-align: center;
-  pointer-events: auto;
-}
-
-#shortsOverlay .shorts-actions > div{
-  opacity: 0.95;
-}
-
-/* 오버레이 열리면 바닥 스크롤 완전 차단 안전장치 */
-html.shorts-open, body.shorts-open{
-  overscroll-behavior: none;
-  touch-action: none;
-}
-
-.nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  z-index: 1000;       /* ⬅ 항상 위 */
-}
-
-#shortsOverlay {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 900;
-  display: flex;
-  justify-content: center;   /* ⬅ 가운데 정렬 */
-  align-items: center;
-  overflow: hidden;
-}
-
-#shortsOverlay[hidden] {
-  display: none !important;
-  pointer-events: none !important;
-}
-
-/* 쇼츠 열리면 헤더 숨김(영상이 맨 위까지 차게) */
-body.shorts-open .header {
-  display: none !important;
-}
-
-/* 쇼츠 열리면 #app 여백/패딩 영향 최소화(안전) */
-body.shorts-open #app {
-  padding-top: 0 !important;
-}
-
-.shorts-video-wrap video {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  background: black;
-  transition: transform 0.35s ease;
-}
-
-#videoPrev { transform: translateY(-100%); }
-#shortsVideo { transform: translateY(0); }
-#videoNext { transform: translateY(100%); }
-
-/* Shorts Vote HUD */
-
-.shorts-vote-bar {
-  position: fixed;
-  bottom: 70px;               /* 네비 바로 위 */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  display: flex;
-  gap: 10px;
-  padding: 10px;
-  z-index: 1000001;
-}
-
-.shorts-vote-bar .vote-btn {
-  flex: 1;
-  padding: 14px 0;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.shorts-vote-bar .locked {
-  pointer-events: none;
-  opacity: 0.6;
-}
-
-/* ===============================
-   Shorts Vote HUD
-================================ */
+/* =========================
+   SHORTS VOTE
+========================= */
 
 .shorts-vote {
   position: absolute;
-  left: 50%;
-  bottom: 90px;                 /* 네비게이션 위 */
-  transform: translateX(-50%);
-  width: calc(100% - 32px);
-  max-width: 420px;
+  left: 12px;
+  right: 12px;
+  bottom: 24px;
+
   display: flex;
   gap: 12px;
-  z-index: 10000;
+  z-index: 10;
 }
 
 .shorts-vote .vote-btn {
   flex: 1;
   padding: 14px 0;
   border-radius: 14px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
+
+  font-size: 14px;
+  font-weight: 800;
+
   border: 1px solid transparent;
-  background: rgba(255,255,255,0.08);
-  color: #fff;
-  backdrop-filter: blur(6px);
-  transition: all .2s ease;
+  cursor: pointer;
 }
 
-/* 찬성 */
+/* PRO */
 .shorts-vote .pro {
-  border-color: #2d6cff;
-}
-.shorts-vote .pro.active-vote {
-  background: linear-gradient(135deg, #1e5eff, #3b7cff);
-  border-color: transparent;
+  background: #1a1f3c;
+  border-color: #304ffe;
+  color: #fff;
 }
 
-/* 반대 */
+/* CON */
 .shorts-vote .con {
-  border-color: #ff4b4b;
-}
-.shorts-vote .con.active-vote {
-  background: linear-gradient(135deg, #ff3b3b, #ff6464);
-  border-color: transparent;
+  background: #3c1a1a;
+  border-color: #ff5252;
+  color: #fff;
 }
 
-/* 잠금 상태 */
+/* =========================
+   VOTE STATES
+========================= */
+
+.shorts-vote .active-vote {
+  background: #ffe27a !important;
+  color: #111 !important;
+  border-color: #ffe27a !important;
+}
+
 .shorts-vote .locked {
-  opacity: .35;
+  opacity: 0.6;
   pointer-events: none;
 }
 
-/* ===== iOS Safari REAL FINAL FIX ===== */
+/* =========================
+   SAFETY: NAV NEVER BLOCKED
+========================= */
 
-#shortsOverlay {
-  height: 100dvh;
-}
-
-.shorts-video-wrap {
-  position: relative;
-  width: 100%;
-  max-width: 480px;   /* 🔥 이 줄이 핵심 */
-  height: 100%;
-  background: #000;
-  overflow: hidden;
-}
-
-.shorts-vote {
-  bottom: calc(90px + env(safe-area-inset-bottom));
-}
-
-/* ===== INDEX NAV HOTFIX (scope limit) ===== */
-body:not(.shorts-open) .nav {
-  bottom: 0 !important;
-}
-
-/* ===== iOS Safari TOP SAFE FIX ===== */
-#shortsOverlay {
-  top: 0;
-  inset: 0;
-}
-
-#shortsOverlay {
-  height: 100dvh;
-}
-
-#shortsOverlay {
-  top: 0;
-  inset: 0;
-}
+/* ❗ nav는 index.css가 책임진다 */
+/* ❗ shorts.css에서는 nav를 숨기거나 덮지 않는다 */
