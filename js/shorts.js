@@ -2,7 +2,26 @@
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
 let overlay, backBtn;
+
 let videoPrev, videoCur, videoNext;
+
+// Helper: Apply Shorts Vote UI state
+function applyShortsVoteUI(vote) {
+  const pro = document.getElementById("shortsPro");
+  const con = document.getElementById("shortsCon");
+  if (!pro || !con) return;
+
+  pro.classList.remove("active-vote", "locked");
+  con.classList.remove("active-vote", "locked");
+
+  if (vote === "pro") {
+    pro.classList.add("active-vote");
+    con.classList.add("locked");
+  } else if (vote === "con") {
+    con.classList.add("active-vote");
+    pro.classList.add("locked");
+  }
+}
 
 function ensureShortsDOM() {
   overlay   = document.getElementById("shortsOverlay");
@@ -127,7 +146,8 @@ async function openShorts(list, startId) {
   window.currentIssue = shortsList[shortsIndex];
 
   if (typeof window.GALLA_CHECK_VOTE === "function") {
-    await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    applyShortsVoteUI(vote);
   }
 
 }
@@ -424,7 +444,8 @@ function slideUp() {
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
-      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      applyShortsVoteUI(vote);
     }
   }, 350);
 }
@@ -476,7 +497,8 @@ function slideDown() {
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
-      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      const vote = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+      applyShortsVoteUI(vote);
     }
   }, 350);
 }
