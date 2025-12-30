@@ -220,8 +220,23 @@ async function attachEvents() {
         unlock.playsInline = true;
         unlock.play().catch(() => {});
 
-        // 쇼츠 진입
-        openShorts(cards, id);
+        // 🔥 shorts.js를 필요할 때만 동적 로드
+        if (!window.__SHORTS_LOADED__) {
+          import("./shorts.js").then(() => {
+            window.__SHORTS_LOADED__ = true;
+            if (typeof window.openShorts === "function") {
+              window.openShorts(cards, id);
+            } else {
+              console.error("[INDEX] openShorts not found after import");
+            }
+          });
+        } else {
+          if (typeof window.openShorts === "function") {
+            window.openShorts(cards, id);
+          } else {
+            console.error("[INDEX] openShorts not found");
+          }
+        }
     };
     });
 
