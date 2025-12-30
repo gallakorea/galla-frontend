@@ -2,20 +2,6 @@
 
 #shortsOverlay[hidden] { display: none !important; }
 
-#shortsOverlay{
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 9999999;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  /* overlay 자체는 스크롤 없어야 함 */
-  overflow: hidden;
-}
-
 /* 영상 */
 #shortsVideo{
   position: absolute;
@@ -78,16 +64,6 @@ html.shorts-open, body.shorts-open{
   touch-action: none;
 }
 
-.nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  z-index: 100;
-}
-
 .shorts-video-wrap {
   padding-bottom: 70px;
 }
@@ -106,7 +82,7 @@ html.shorts-open, body.shorts-open{
   position: fixed;
   inset: 0;
   background: #000;
-  z-index: 900;        /* 🔥 네비보다 낮게 */
+  z-index: 9999999;        /* 🔥 네비보다 낮게 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -230,16 +206,6 @@ body.shorts-open #app {
 .nav {
   padding-bottom: env(safe-area-inset-bottom);
 }
-
-#shortsOverlay {
-  height: calc(var(--vh, 1vh) * 100);
-}
-
-.shorts-video-wrap {
-  height: calc(var(--vh, 1vh) * 100);
-}
-
-/* ===== iOS Safari Height Fix (FINAL) ===== */
 
 #shortsOverlay {
   height: calc(var(--vh, 1vh) * 100);
