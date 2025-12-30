@@ -150,17 +150,22 @@ function closeShorts() {
 }
 
 function loadVideos() {
-  const cur = shortsList[shortsIndex];
+  const cur  = shortsList[shortsIndex];
   const prev = shortsList[shortsIndex - 1];
   const next = shortsList[shortsIndex + 1];
 
-  if (prev) videoPrev.src = prev.video_url;
-  if (cur)  videoCur.src  = cur.video_url;
-  if (next) videoNext.src = next.video_url;
+  // 🔥 화면에 안 보이는 것만 미리 로드
+  if (prev && videoPrev.src !== prev.video_url) {
+    videoPrev.src = prev.video_url;
+    videoPrev.load();
+  }
 
-  videoCur.load();
-  const p = videoCur.play();
-  if (p && typeof p.catch === "function") p.catch(() => {});
+  if (next && videoNext.src !== next.video_url) {
+    videoNext.src = next.video_url;
+    videoNext.load();
+  }
+
+  // 🔥 현재 영상은 src를 여기서 바꾸지 않는다
 }
 
 function resetPositions() {
@@ -311,10 +316,28 @@ function slideUp() {
   videoCur.style.transform  = "translateY(-100%)";
   videoNext.style.transform = "translateY(0)";
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    // 🔥 videoNext → videoCur로 승격
+    const oldPrev = videoPrev;
+    videoPrev = videoCur;
+    videoCur  = videoNext;
+    videoNext = oldPrev;
+
     shortsIndex = Math.min(shortsIndex, shortsList.length - 1);
-    loadVideos();
+
+    // 🔥 다음 영상 미리 로드
+    const upcoming = shortsList[shortsIndex + 1];
+    if (upcoming) {
+      videoNext.src = upcoming.video_url;
+      videoNext.load();
+    }
+
     resetPositions();
+
+    // 🔥 이제서야 play
+    try {
+      await videoCur.play();
+    } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
     window.GALLA_CHECK_VOTE(window.currentIssue.id);
@@ -331,15 +354,30 @@ function slideDown() {
   videoCur.style.transform  = "translateY(100%)";
   videoNext.style.transform = "translateY(200%)";
 
-  setTimeout(() => {
+  setTimeout(async () => {
+    const oldNext = videoNext;
+    videoNext = videoCur;
+    videoCur  = videoPrev;
+    videoPrev = oldNext;
+
     shortsIndex = Math.max(shortsIndex, 0);
-    loadVideos();
+
+    const upcoming = shortsList[shortsIndex - 1];
+    if (upcoming) {
+      videoPrev.src = upcoming.video_url;
+      videoPrev.load();
+    }
+
     resetPositions();
+
+    try {
+      await videoCur.play();
+    } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
     window.GALLA_CHECK_VOTE(window.currentIssue.id);
-  }, 350);
 
+  }, 350);
 }
 
 
