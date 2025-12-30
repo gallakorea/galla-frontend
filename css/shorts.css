@@ -213,3 +213,9 @@ body.shorts-open #app {
 body:not(.shorts-open) .nav {
   bottom: 0 !important;
 }
+
+/* ===== iOS Safari TOP SAFE FIX ===== */
+#shortsOverlay {
+  top: 0;
+  inset: 0;
+}
