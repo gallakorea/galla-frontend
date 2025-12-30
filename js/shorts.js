@@ -285,13 +285,25 @@ if (shortsPro && shortsCon && !overlay._voteBound) {
     e.stopPropagation();
     if (!window.currentIssue) return;
 
+    // 이미 잠겨 있으면 무시
+    if (shortsPro.classList.contains("locked")) return;
+
+    // 즉시 UI 반영 (낙관적 업데이트)
+    shortsPro.classList.add("active-vote", "locked");
+    shortsCon.classList.add("locked");
+
     if (typeof window.GALLA_VOTE !== "function") {
       console.error("[SHORTS] GALLA_VOTE not found");
       return;
     }
 
-    await window.GALLA_VOTE(window.currentIssue.id, "pro");
+    try {
+      await window.GALLA_VOTE(window.currentIssue.id, "pro");
+    } catch (err) {
+      console.error("[SHORTS] vote error", err);
+    }
 
+    // DB 기준 최종 동기화
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       await window.GALLA_CHECK_VOTE(window.currentIssue.id);
     }
@@ -301,13 +313,25 @@ if (shortsPro && shortsCon && !overlay._voteBound) {
     e.stopPropagation();
     if (!window.currentIssue) return;
 
+    // 이미 잠겨 있으면 무시
+    if (shortsCon.classList.contains("locked")) return;
+
+    // 즉시 UI 반영 (낙관적 업데이트)
+    shortsCon.classList.add("active-vote", "locked");
+    shortsPro.classList.add("locked");
+
     if (typeof window.GALLA_VOTE !== "function") {
       console.error("[SHORTS] GALLA_VOTE not found");
       return;
     }
 
-    await window.GALLA_VOTE(window.currentIssue.id, "con");
+    try {
+      await window.GALLA_VOTE(window.currentIssue.id, "con");
+    } catch (err) {
+      console.error("[SHORTS] vote error", err);
+    }
 
+    // DB 기준 최종 동기화
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       await window.GALLA_CHECK_VOTE(window.currentIssue.id);
     }
