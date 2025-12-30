@@ -124,7 +124,7 @@ async function checkVoteStatus(issueId) {
   if (!issueId) return null;
 
   const supabase = window.supabaseClient;
-  if (!supabase) return null;
+  if (!supabase) return "__SESSION_PENDING__";
 
   const session = await waitForSessionGuaranteed();
   if (!session) {
@@ -138,7 +138,7 @@ async function checkVoteStatus(issueId) {
     .eq("user_id", session.user.id)
     .maybeSingle();
 
-  if (!data) return "__NO_VOTE__";
+  if (!data) return null;
 
   /* ========= Issue Page ========= */
   const proBtn = document.getElementById("btn-vote-pro");
@@ -213,13 +213,13 @@ async function checkVoteStatus(issueId) {
         conBtn.classList.add('active-vote');
       }
     });
-  return data?.type || "__NO_VOTE__";
+  return data.type;
 }
 
 /* ==========================================================================
    Global Export (기존 호출부 유지)
 ========================================================================== */
-window.GALLA_VOTE = vote;
+window.GALLA_VOTE = vote; 
 window.GALLA_CHECK_VOTE = checkVoteStatus;
 window.GALLA_LOAD_VOTE_STATS = loadVoteStats;
 
