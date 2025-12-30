@@ -13,15 +13,13 @@ body[data-page="shorts"] .header {
 /* =========================
    GLOBAL RESET (shorts only)
 ========================= */
-body[data-page="shorts"],
-body[data-page="shorts"] html {
+html,
+body[data-page="shorts"] {
   margin: 0;
   padding: 0;
   background: #000;
   overflow: hidden;
 }
-
-
 
 /* 🔥 HIDDEN SAFETY */
 #shortsOverlay[hidden] {
@@ -50,15 +48,6 @@ body[data-page="shorts"] html {
   height: 100%;
   object-fit: cover;
   background: #000;
-}
-
-/* ⬇️ translateX를 포함해서 써야 함 */
-#videoPrev {
-  transform: translateX(-50%) translateY(-100%);
-}
-
-#videoNext {
-  transform: translateX(-50%) translateY(100%);
 }
 
 /* =========================
@@ -204,16 +193,4 @@ body[data-page="shorts"] html {
   height: 100svh;   /* 🔥 핵심: iOS 실제 화면 */
   background: #000;
   z-index: 900;
-}
-
-/* =========================
-   RESET HEADER OFFSET (CRITICAL)
-========================= */
-body[data-page="shorts"] {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-}
-
-body[data-page="shorts"] > * {
-  margin-top: 0 !important;
 }
