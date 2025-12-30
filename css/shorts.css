@@ -16,16 +16,6 @@
   overflow: hidden;
 }
 
-/* 480px 고정 래퍼 */
-#shortsOverlay .shorts-video-wrap{
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  height: 100vh;
-  background: #000;
-  overflow: hidden;
-}
-
 /* 영상 */
 #shortsVideo{
   position: absolute;
@@ -138,12 +128,6 @@ body.shorts-open #app {
   padding-top: 0 !important;
 }
 
-.shorts-video-wrap {
-  position: relative;
-  height: 100vh;
-  overflow: hidden;
-}
-
 .shorts-video-wrap video {
   position: absolute;
   width: 100%;
@@ -237,4 +221,30 @@ body.shorts-open #app {
 .shorts-vote .locked {
   opacity: .35;
   pointer-events: none;
+}
+
+/* ===============================
+   iOS Safari Layout Fix
+=============================== */
+#shortsOverlay,
+.nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+#shortsOverlay {
+  height: calc(var(--vh, 1vh) * 100);
+}
+
+.shorts-video-wrap {
+  height: calc(var(--vh, 1vh) * 100);
+}
+
+/* ===== iOS Safari Height Fix (FINAL) ===== */
+
+#shortsOverlay {
+  height: calc(var(--vh, 1vh) * 100);
+}
+
+.shorts-video-wrap {
+  height: calc(var(--vh, 1vh) * 100);
 }
