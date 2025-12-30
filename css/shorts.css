@@ -169,8 +169,13 @@
 
 #shortsOverlay {
   position: fixed;
-  inset: 0;
-  z-index: 9999;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  /* 🔥 네비 높이만큼 비워둔다 */
+  bottom: 88px;
+
+  z-index: 900;   /* nav(1000)보다 낮게 */
   background: #000;
-  pointer-events: auto;
 }
