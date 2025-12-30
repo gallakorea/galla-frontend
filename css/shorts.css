@@ -33,7 +33,7 @@ body[data-page="shorts"] {
 /* ✅ 수정 후 */
 .shorts-video-wrap {
   position: relative;
-  width: 480px;     /* 🔥 이 줄이 핵심 */
+  width: 100%;     /* 🔥 이 줄이 핵심 */
   height: 100svh;
   overflow: hidden;
 }

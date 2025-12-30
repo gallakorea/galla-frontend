@@ -95,12 +95,23 @@ async function openShorts(list, startId) {
   videoCur.playsInline = true;
   videoCur.muted = true;   // 자동재생 안정화
 
-  videoPrev.preload = "auto";
+  videoPrev.preload = "metadata";
   videoCur.preload  = "auto";
-  videoNext.preload = "auto";
+  videoNext.preload = "metadata";
 
   loadVideos();
   resetPositions();
+
+  // 🔥 [필수] 최초 진입 시 현재 영상 src 세팅 (딱 1번만)
+  const cur = shortsList[shortsIndex];
+  if (cur && videoCur.src !== cur.video_url) {
+    videoCur.src = cur.video_url;
+    videoCur.load();
+    try {
+      await videoCur.play();
+      videoCur.muted = false; // 🔥 이 줄 추가
+    } catch {}
+  }
 
   // =========================
   // Shorts Vote HUD reset
@@ -122,15 +133,13 @@ async function openShorts(list, startId) {
 }
 
 function closeShorts() {
-  try {
-  videoCur.pause();
-  } catch (e) {}
+  try { videoCur.pause(); } catch {}
 
   videoCur.pause();
   videoPrev.pause();
   videoNext.pause();
 
- 
+  // 🔥 [필수] src 완전 정리
   videoCur.removeAttribute("src");
   videoPrev.removeAttribute("src");
   videoNext.removeAttribute("src");
@@ -141,7 +150,6 @@ function closeShorts() {
 
   overlay.hidden = true;
 
-  // 🔓 iOS 스크롤 복구
   unlockIOSScroll();
 
   document.body.classList.remove("shorts-open");
@@ -379,5 +387,17 @@ function slideDown() {
 
   }, 350);
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  openShorts(
+    [
+      {
+        id: 1,
+        video_url: "https://YOUR_VIDEO_URL.mp4"
+      }
+    ],
+    1
+  );
+});
 
 
