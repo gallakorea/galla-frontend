@@ -1,12 +1,12 @@
-// shorts.js — SAFE PAGE GUARD (index/issue allowed)
-if (document.body.dataset.page !== "shorts") {
-  // 전역 함수만 노출하고 나머지 로직은 실행 차단
-  window.openShorts = openShorts;
-  window.closeShorts = closeShorts;
+// shorts.js — SAFE PAGE GUARD
+const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
+
+if (!IS_SHORTS_PAGE) {
   window.__SHORTS_GUARDED__ = true;
   console.warn("[SHORTS] loaded on non-shorts page (guarded)");
-  return;
 }
+
+if (IS_SHORTS_PAGE) {
 
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
@@ -660,3 +660,4 @@ document.addEventListener("visibilitychange", async () => {
     applyShortsVoteState(result);
   }
 });
+}
