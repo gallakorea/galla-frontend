@@ -30,13 +30,12 @@ body[data-page="shorts"] {
    SHORTS VIDEO WRAP
 ========================= */
 
+/* ✅ 수정 후 */
 .shorts-video-wrap {
   position: relative;
   width: 100%;
-  max-width: 480px;   /* ✅ 보이는 영역 제한 */
   height: 100%;
-  margin: 0 auto;
-  overflow: hidden;   /* ✅ 480 밖 영상 잘림 */
+  overflow: hidden;
 }
 
 /* 3단 버퍼 구조 */
@@ -191,10 +190,45 @@ body[data-page="shorts"] {
   position: fixed;
   inset: 0;
   width: 100vw;
-  height: 100svh;          /* Safari 실제 화면 */
+  height: 100svh;
   background: #000;
   z-index: 900;
+}
 
-  display: flex;           /* 🔥 추가 */
-  justify-content: center; /* 🔥 가로 중앙 */
+/* =========================
+   SHORTS STAGE (480 ONLY)
+========================= */
+.shorts-stage {
+  position: relative;
+  width: 100%;
+  max-width: 480px;   /* ✅ 가로 제한은 여기서만 */
+  height: 100%;
+  margin: 0 auto;     /* 좌우 중앙 */
+  overflow: hidden;
+}
+
+/* =========================
+   FORCE PORTRAIT MODE
+   (Landscape Disabled)
+========================= */
+@media screen and (orientation: landscape) {
+  #shortsOverlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shorts-stage {
+    width: 100%;
+    max-width: 480px;
+    height: 100svh;         /* 🔥 여전히 세로 기준 */
+    transform: rotate(0deg);
+  }
+
+  /* 가로 화면에서도 세로 비율 강제 */
+  .shorts-video-wrap {
+    aspect-ratio: 9 / 16;
+    width: 100%;
+    height: 100%;
+  }
 }
