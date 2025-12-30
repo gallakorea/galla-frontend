@@ -457,3 +457,11 @@ body.shorts-open {
 .nav {
   z-index: 1000;
 }
+
+/* =========================
+   HIDE HEADER WHEN SHORTS OPEN
+========================= */
+body.shorts-open header,
+body.shorts-open .header {
+  display: none !important;
+}
