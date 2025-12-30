@@ -13,7 +13,6 @@ body[data-page="shorts"] .header {
 /* =========================
    GLOBAL RESET (shorts only)
 ========================= */
-html,
 body[data-page="shorts"] {
   margin: 0;
   padding: 0;
@@ -43,15 +42,18 @@ body[data-page="shorts"] {
 #shortsVideo,
 #videoNext {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 50%;
 
-  width: 100%;      /* 🔥 기준은 wrap */
-  height: 100%;
+  height: 100%;        /* 🔥 높이 기준 */
+  width: auto;         /* 🔥 가로는 영상 비율 */
+  min-width: 480px;    /* 🔥 최소 480 보장 */
+
+  transform: translateX(-50%);
 
   object-fit: cover;
   background: #000;
 }
-
 /* =========================
    TOP BAR
 ========================= */
