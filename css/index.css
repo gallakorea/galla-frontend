@@ -442,3 +442,18 @@ body {
 .speech-backdrop {
   z-index: 999999;
 }
+
+/* 쇼츠 열릴 때 index 레이아웃 제거 */
+body.shorts-open #app {
+  padding-bottom: 0 !important;
+}
+
+/* 쇼츠 열릴 때 스크롤 완전 차단 */
+body.shorts-open {
+  overflow: hidden !important;
+}
+
+/* 네비는 항상 쇼츠 위 */
+.nav {
+  z-index: 1000;
+}

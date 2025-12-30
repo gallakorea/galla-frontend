@@ -32,6 +32,36 @@ let shortsIndex = 0;
 let touchStartY = 0;
 let locked = false;
 
+/* =========================
+   iOS SCROLL HARD LOCK (필수)
+========================= */
+let scrollY = 0;
+
+function preventScroll(e) {
+  e.preventDefault();
+}
+
+function lockIOSScroll() {
+  // 터치 스크롤 전파 차단
+  document.addEventListener("touchmove", preventScroll, { passive: false });
+
+  // body 자체를 fixed로 못 박음
+  scrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.width = "100%";
+}
+
+function unlockIOSScroll() {
+  document.removeEventListener("touchmove", preventScroll);
+
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.width = "";
+
+  window.scrollTo(0, scrollY);
+}
+
 
 function lock(ms = 450) {
   locked = true;
@@ -65,6 +95,10 @@ async function openShorts(list, startId) {
   shortsIndex = idx >= 0 ? idx : 0;
 
   overlay.hidden = false;
+
+  // 🔴 iOS에서 뒤 스크롤 완전 차단
+  lockIOSScroll();
+
   document.body.classList.add("shorts-open");
   document.documentElement.classList.add("shorts-open");
   document.body.style.overflow = "hidden";
@@ -118,6 +152,10 @@ function closeShorts() {
   videoNext.load();
 
   overlay.hidden = true;
+
+  // 🔓 iOS 스크롤 복구
+  unlockIOSScroll();
+
   document.body.classList.remove("shorts-open");
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";

@@ -9,12 +9,10 @@
 
 #shortsOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
 
-  /* ✅ 네비게이션 높이만큼 반드시 띄운다 */
-  bottom: 64px;
+  /* 🔥 iOS Safari 실 viewport 강제 */
+  height: calc(var(--vh, 1vh) * 100);
 
   background: #000;
   z-index: 900;
@@ -22,6 +20,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
+
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* =========================
@@ -114,7 +114,7 @@
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 24px;
+  bottom: calc(24px + 64px); /* ✅ 네비 위로 안전하게 */
 
   display: flex;
   gap: 12px;
