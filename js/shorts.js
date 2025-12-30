@@ -389,7 +389,19 @@ function slideUp() {
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
-    window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    const shortsPro = document.getElementById("shortsPro");
+    const shortsCon = document.getElementById("shortsCon");
+
+    // 🔥 Shorts vote UI reset (critical)
+    if (shortsPro && shortsCon) {
+      shortsPro.classList.remove("active-vote", "locked");
+      shortsCon.classList.remove("active-vote", "locked");
+    }
+
+    // 🔥 Re-sync vote state from DB
+    if (typeof window.GALLA_CHECK_VOTE === "function") {
+      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    }
   }, 350);
 }
 
@@ -429,6 +441,18 @@ function slideDown() {
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
-    window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    const shortsPro = document.getElementById("shortsPro");
+    const shortsCon = document.getElementById("shortsCon");
+
+    // 🔥 Shorts vote UI reset (critical)
+    if (shortsPro && shortsCon) {
+      shortsPro.classList.remove("active-vote", "locked");
+      shortsCon.classList.remove("active-vote", "locked");
+    }
+
+    // 🔥 Re-sync vote state from DB
+    if (typeof window.GALLA_CHECK_VOTE === "function") {
+      await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    }
   }, 350);
 }
