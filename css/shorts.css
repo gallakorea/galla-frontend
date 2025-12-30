@@ -34,10 +34,10 @@ body[data-page="shorts"] html {
 ========================= */
 
 .shorts-video-wrap {
-  position: relative;
+  position: absolute;      /* 🔥 relative → absolute */
+  inset: 0;                /* 🔥 화면 전체 기준 */
   width: 100%;
   max-width: 480px;
-  height: 100%;
   margin: 0 auto;
   overflow: hidden;
 }
@@ -47,15 +47,24 @@ body[data-page="shorts"] html {
 #shortsVideo,
 #videoNext {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 50%;
   width: 100%;
   height: 100%;
+  max-width: 480px;
+  transform: translateX(-50%);
   object-fit: cover;
   background: #000;
 }
 
-#videoPrev { transform: translateY(-100%); }
-#videoNext { transform: translateY(100%); }
+/* ⬇️ translateX를 포함해서 써야 함 */
+#videoPrev {
+  transform: translateX(-50%) translateY(-100%);
+}
+
+#videoNext {
+  transform: translateX(-50%) translateY(100%);
+}
 
 /* =========================
    TOP BAR
@@ -63,7 +72,7 @@ body[data-page="shorts"] html {
 
 .shorts-top {
   position: absolute;
-  top: 12px;
+  top: calc(env(safe-area-inset-top) + 12px); /* 🔥 핵심 */
   left: 12px;
   right: 12px;
 
