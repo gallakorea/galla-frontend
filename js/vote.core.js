@@ -166,6 +166,30 @@ async function checkVoteStatus(issueId) {
       shortsCon.innerText = "👎 투표 완료";
     }
   }
+  /* ========= Index Cards ========= */
+  document
+    .querySelectorAll(`.card[data-id="${issueId}"]`)
+    .forEach(card => {
+      const proBtn = card.querySelector('.btn-pro');
+      const conBtn = card.querySelector('.btn-con');
+
+      if (!proBtn || !conBtn) return;
+
+      // 공통 잠금
+      proBtn.disabled = true;
+      conBtn.disabled = true;
+
+      proBtn.classList.remove('active-vote');
+      conBtn.classList.remove('active-vote');
+
+      if (data.type === 'pro') {
+        proBtn.classList.add('active-vote');
+      }
+
+      if (data.type === 'con') {
+        conBtn.classList.add('active-vote');
+      }
+    });
   return data.type;
 }
 
