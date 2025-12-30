@@ -1,3 +1,15 @@
+/* =========================
+   FORCE HIDE LEGACY HEADER
+   (shorts page only)
+========================= */
+body[data-page="shorts"] header {
+  display: none !important;
+}
+
+body[data-page="shorts"] .header {
+  display: none !important;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -185,4 +197,16 @@ html, body {
   height: calc(var(--vh, 1vh) * 100); /* iOS 실제 화면 높이 */
   background: #000;
   z-index: 900;
+}
+
+/* =========================
+   RESET HEADER OFFSET (CRITICAL)
+========================= */
+body[data-page="shorts"] {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+body[data-page="shorts"] > * {
+  margin-top: 0 !important;
 }
