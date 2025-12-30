@@ -1,6 +1,8 @@
 import { loadAiArguments } from "./issue-argument.js";
 import { loadAiNews } from "./issue-news.js";
 import { loadStats } from "./issue.stats.js";
+import { initCommentSystem } from "./issue.comments.js";
+
 
 console.log("[issue.js] loaded");
 
@@ -16,6 +18,24 @@ let votingInProgress = false;
 
 // ✅ 추가
 let currentIssue = null;
+
+
+/* ==========================================================================
+   0-1. GIF
+========================================================================== */
+async function searchGif(query) {
+  const { data, error } = await window.supabaseClient.functions.invoke(
+    "gif-search",
+    { body: { q: query } }
+  );
+
+  if (error) {
+    console.error("GIF search error:", error);
+    return [];
+  }
+
+  return data.results;
+}
 
 
 /* ==========================================================================
@@ -51,6 +71,8 @@ if (!issueId || Number.isNaN(issueId)) {
 
 renderIssue(issue);
 
+await initCommentSystem(issue.id);
+forceBattleScrollWithRetry();
 
 /* ===============================
   AI ARGUMENT (논점)
@@ -72,13 +94,13 @@ if (typeof loadAiNews === "function") {
     REST
   ================================ */
   loadVoteStats(issue.id);
-  loadComments(issue.id);
   checkVoteStatus(issue.id);
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
   checkAuthorSupport(issue.id);
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
+
 })();
 
 /* ==========================================================================
@@ -215,7 +237,6 @@ async function vote(type) {
 
   const { error } = await supabase.from("votes").insert({
     issue_id: issueId,
-    user_id: session.session.user.id,
     type
   });
 
@@ -229,8 +250,15 @@ async function vote(type) {
   // ✅ 1️⃣ 버튼 상태 갱신
   checkVoteStatus(issueId);
 
-  // ✅ 2️⃣ 현황표 즉시 갱신 (🔥 이 줄이 핵심)
+  window.MY_VOTE_TYPE = data.type;
+  if (!data) window.MY_VOTE_TYPE = null;
+
   loadVoteStats(issueId);
+
+  // 🔥 댓글 전장 UI 재렌더링
+  import("./issue.comments.js").then(m => {
+    m.initCommentSystem(issueId);
+  });
 }
 
 qs("btn-vote-pro")?.addEventListener("click", () => vote("pro"));
@@ -266,7 +294,26 @@ async function checkVoteStatus(issueId) {
     data.type === "pro"
       ? "👍 찬성으로 투표하셨습니다."
       : "👎 반대로 투표하셨습니다.";
-}
+
+// ================================
+// Shorts Vote UI Sync (추가)
+// ================================
+const shortsPro = document.getElementById("shortsPro");
+const shortsCon = document.getElementById("shortsCon");
+
+if (shortsPro && shortsCon) {
+  shortsPro.classList.add("locked");
+  shortsCon.classList.add("locked");
+
+  if (data.type === "pro") {
+    shortsPro.classList.add("active-vote");
+  }
+  if (data.type === "con") {
+    shortsCon.classList.add("active-vote");
+  }
+}  
+    
+    }
 
 /* ==========================================================================
    Support Actions (Pro / Con)
@@ -309,10 +356,15 @@ async function support(stance, amount) {
 ========================================================================== */
 async function loadSupportStats(issueId) {
   const supabase = window.supabaseClient;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("supports")
     .select("stance, amount")
     .eq("issue_id", issueId);
+
+  if (error) {
+    console.warn("support stats skipped:", error.message);
+    return;
+  }
 
   let pro = 0, con = 0;
   data?.forEach(s => {
@@ -346,51 +398,6 @@ async function loadMySupportStatus(issueId) {
   qs("support-status-text").innerText =
     `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
 }
-
-/* ==========================================================================
-   6. Comments
-========================================================================== */
-async function loadComments(issueId) {
-  const supabase = window.supabaseClient;
-  const { data } = await supabase
-    .from("comments")
-    .select("*")
-    .eq("issue_id", issueId)
-    .eq("status", "normal")
-    .order("id", { ascending: true });
-
-  const root = qs("comment-list");
-  root.innerHTML = "";
-
-  data?.forEach(c => {
-    const div = document.createElement("div");
-    div.className = "comment-item";
-    div.innerHTML = `
-      <div class="comment-header"><span>익명</span></div>
-      <div class="comment-text">${c.content}</div>
-    `;
-    root.appendChild(div);
-  });
-}
-
-qs("main-reply-btn")?.addEventListener("click", async () => {
-  const content = qs("main-reply").value.trim();
-  if (!content) return;
-
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return alert("로그인이 필요합니다.");
-
-  await supabase.from("comments").insert({
-    issue_id: issueId,
-    user_id: session.session.user.id,
-    content,
-    status: "normal"
-  });
-
-  qs("main-reply").value = "";
-  loadComments(issueId);
-});
 
 /* ==========================================================================
    7. Video Modal
@@ -430,16 +437,26 @@ async function checkRemixStatus(issueId) {
 
 async function loadRemixCounts(issueId) {
   const supabase = window.supabaseClient;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("remixes")
     .select("remix_stance")
     .eq("issue_id", issueId);
 
+  if (error) {
+    console.warn("remix count skipped:", error.message);
+    return;
+  }
+
   const pro = data?.filter(r => r.remix_stance === "pro").length || 0;
   const con = data?.filter(r => r.remix_stance === "con").length || 0;
 
-  qs("remix-pro-count").innerText = `참전 ${pro} · 리믹스 ${pro}`;
-  qs("remix-con-count").innerText = `참전 ${con} · 리믹스 ${con}`;
+  const proEl = document.getElementById("remix-pro-count");
+  const conEl = document.getElementById("remix-con-count");
+
+  if (!proEl || !conEl) return;
+
+  proEl.innerText = `참전 ${pro} · 리믹스 ${pro}`;
+  conEl.innerText = `참전 ${con} · 리믹스 ${con}`;
 }
 
 function applyRemixJoinedUI(stance) {
@@ -502,40 +519,109 @@ async function checkAuthorSupport(issueId) {
   }
 }
 
-const supportModal = document.getElementById("support-modal");
+window.addEventListener("DOMContentLoaded", () => {
+  
+    /* ==============================
+     🎞 GIF 버튼 연동 — 여기
+  ============================== */
+  document.querySelector(".gif-btn")?.addEventListener("click", async () => {
+    const panel = document.getElementById("gif-panel");
+    panel.hidden = !panel.hidden;
 
-/* 열기 */
-document.getElementById("support-pro-btn")?.addEventListener("click", () => {
-  console.log("support pro click");
-  supportModal.removeAttribute("hidden");
-});
+    if (!panel.hidden) {
+      const gifs = await searchGif("battle");
+      panel.innerHTML = gifs.map(g =>
+        `<img
+          src="${g.media_formats.gif.url}"
+          class="gif-thumb"
+          data-url="${g.media_formats.gif.url}"
+        >`
+      ).join("");
+    }
+  });
+  
+  const supportModal = document.getElementById("support-modal");
+  if (!supportModal) return;
 
-document.getElementById("support-con-btn")?.addEventListener("click", () => {
-  console.log("support con click");
-  supportModal.removeAttribute("hidden");
-});
+  /* 열기 */
+  document.getElementById("support-pro-btn")?.addEventListener("click", () => {
+    supportModal.removeAttribute("hidden");
+  });
 
-/* 닫기 */
-supportModal?.addEventListener("click", (e) => {
-  if (e.target === supportModal || e.target.hasAttribute("data-close")) {
-    supportModal.setAttribute("hidden", "");
-  }
-});
+  document.getElementById("support-con-btn")?.addEventListener("click", () => {
+    supportModal.removeAttribute("hidden");
+  });
 
-// 보탬 레벨 선택
-document.querySelectorAll('.support-level').forEach(level => {
-  level.addEventListener('click', () => {
-    level.classList.remove('highlight');
-    // 기존 active 제거
-    document.querySelectorAll('.support-level.active')
-      .forEach(el => el.classList.remove('active'));
+  /* 닫기 */
+  supportModal.addEventListener("click", (e) => {
+    if (e.target === supportModal || e.target.hasAttribute("data-close")) {
+      supportModal.setAttribute("hidden", "");
+    }
+  });
 
-    // 클릭한 항목 active
-    level.classList.add('active');
+  // 보탬 레벨 선택
+  document.querySelectorAll(".support-level").forEach(level => {
+    level.addEventListener("click", () => {
+      document.querySelectorAll(".support-level.active")
+        .forEach(el => el.classList.remove("active"));
 
-    // 실행 버튼 활성화
-    const confirmBtn = document.querySelector('.support-confirm');
-    if (confirmBtn) confirmBtn.disabled = false;
+      level.classList.add("active");
+
+      const confirmBtn = document.querySelector(".support-confirm");
+      if (confirmBtn) confirmBtn.disabled = false;
+    });
   });
 });
 
+// ============================
+// GIF 선택 → 입력창 삽입
+// ============================
+
+document.addEventListener("click", (e) => {
+  const img = e.target.closest(".gif-thumb");
+  if (!img) return;
+
+  const url = img.dataset.url;
+
+  const input = document.getElementById("battle-comment-input");
+  if (!input) return;
+
+  input.value += ` [gif:${url}] `;
+
+  // 패널 닫기
+  document.getElementById("gif-panel").hidden = true;
+});
+
+// ================================
+// HASH SCROLL FIX (Index → Issue)
+// ================================
+
+function forceBattleScroll() {
+  if (location.hash !== "#battle-zone") return;
+
+  const el = document.getElementById("battle-zone");
+  if (!el) return;
+
+  const y = el.getBoundingClientRect().top + window.pageYOffset - 12;
+  window.scrollTo({ top: y, behavior: "smooth" });
+}
+
+function forceBattleScrollWithRetry() {
+  if (location.hash !== "#battle-zone") return;
+
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries++;
+
+    const el = document.getElementById("battle-zone");
+    if (el) {
+      clearInterval(timer);
+      setTimeout(forceBattleScroll, 120);
+    }
+
+    if (tries > 25) clearInterval(timer);
+  }, 100);
+}
+
+window.GALLA_VOTE = vote;
+window.GALLA_CHECK_VOTE = checkVoteStatus;

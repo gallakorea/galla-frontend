@@ -14,7 +14,6 @@ function qs(id) {
 }
 
 let issueAuthorId = null;
-let votingInProgress = false;
 
 // ✅ 추가
 let currentIssue = null;
@@ -94,7 +93,7 @@ if (typeof loadAiNews === "function") {
     REST
   ================================ */
   loadVoteStats(issue.id);
-  checkVoteStatus(issue.id);
+  window.GALLA_CHECK_VOTE(issue.id); // ✅ 반드시 추가
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
   checkAuthorSupport(issue.id);
@@ -222,98 +221,16 @@ async function loadVoteStats(issueId) {
 /* ==========================================================================
    4. Vote
 ========================================================================== */
-async function vote(type) {
-  if (votingInProgress) return;
-  votingInProgress = true;
 
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
+qs("btn-vote-pro")?.addEventListener("click", () => {
+  if (!issueId) return;
+  window.GALLA_VOTE(issueId, "pro");
+});
 
-  if (!session.session) {
-    alert("로그인이 필요합니다.");
-    votingInProgress = false;
-    return;
-  }
-
-  const { error } = await supabase.from("votes").insert({
-    issue_id: issueId,
-    type
-  });
-
-  votingInProgress = false;
-
-  if (error && error.code !== "23505") {
-    console.error(error);
-    return;
-  }
-
-  // ✅ 1️⃣ 버튼 상태 갱신
-  checkVoteStatus(issueId);
-
-  window.MY_VOTE_TYPE = data.type;
-  if (!data) window.MY_VOTE_TYPE = null;
-
-  loadVoteStats(issueId);
-
-  // 🔥 댓글 전장 UI 재렌더링
-  import("./issue.comments.js").then(m => {
-    m.initCommentSystem(issueId);
-  });
-}
-
-qs("btn-vote-pro")?.addEventListener("click", () => vote("pro"));
-qs("btn-vote-con")?.addEventListener("click", () => vote("con"));
-
-async function checkVoteStatus(issueId) {
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-  if (!session.session) return;
-
-  const { data } = await supabase
-    .from("votes")
-    .select("type")
-    .eq("issue_id", issueId)
-    .eq("user_id", session.session.user.id)
-    .maybeSingle();
-
-  if (!data) return;
-
-  const proBtn = qs("btn-vote-pro");
-  const conBtn = qs("btn-vote-con");
-
-  proBtn.disabled = true;
-  conBtn.disabled = true;
-
-  proBtn.classList.add("disabled");
-  conBtn.classList.add("disabled");
-
-  if (data.type === "pro") proBtn.innerText = "👍 투표 완료";
-  else conBtn.innerText = "👎 투표 완료";
-
-  qs("vote-status-text").innerText =
-    data.type === "pro"
-      ? "👍 찬성으로 투표하셨습니다."
-      : "👎 반대로 투표하셨습니다.";
-
-// ================================
-// Shorts Vote UI Sync (추가)
-// ================================
-const shortsPro = document.getElementById("shortsPro");
-const shortsCon = document.getElementById("shortsCon");
-
-if (shortsPro && shortsCon) {
-  shortsPro.classList.add("locked");
-  shortsCon.classList.add("locked");
-
-  if (data.type === "pro") {
-    shortsPro.classList.add("active-vote");
-  }
-  if (data.type === "con") {
-    shortsCon.classList.add("active-vote");
-  }
-}  
-    
-    }
+qs("btn-vote-con")?.addEventListener("click", () => {
+  if (!issueId) return;
+  window.GALLA_VOTE(issueId, "con");
+});
 
 /* ==========================================================================
    Support Actions (Pro / Con)
@@ -622,6 +539,3 @@ function forceBattleScrollWithRetry() {
     if (tries > 25) clearInterval(timer);
   }, 100);
 }
-
-window.GALLA_VOTE = vote;
-window.GALLA_CHECK_VOTE = checkVoteStatus;
