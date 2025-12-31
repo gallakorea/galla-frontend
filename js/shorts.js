@@ -385,6 +385,7 @@ function prev() {
 function bindShortsEvents() {
 
   gestureLayer.style.pointerEvents = "auto";
+  gestureLayer.classList.add("passive");
   gestureLayer.style.touchAction = "none";
 
   // 🔥 [CRITICAL FIX]
@@ -400,14 +401,13 @@ function bindShortsEvents() {
   window.addEventListener("touchstart", forceFocus, { once: true });
   window.addEventListener("mousedown", forceFocus, { once: true });
 
-  // =========================
-// KEYBOARD (Arrow ↑↓, Esc)
 // =========================
-const stage = document.querySelector(".shorts-stage");
-if (stage && !stage._keyBound) {
-  stage._keyBound = true;
+// KEYBOARD (GLOBAL, RELIABLE)
+// =========================
+if (!window._shortsKeyBound) {
+  window._shortsKeyBound = true;
 
-  stage.addEventListener("keydown", (e) => {
+  window.addEventListener("keydown", (e) => {
     if (!overlay || overlay.hidden) return;
 
     if (e.key === "ArrowDown") {
@@ -422,7 +422,7 @@ if (stage && !stage._keyBound) {
 
     if (e.key === "Escape") {
       e.preventDefault();
-      closeShorts();
+      closeShorts(true);
     }
   });
 }
@@ -434,6 +434,8 @@ if (stage && !stage._keyBound) {
 
   gestureLayer.addEventListener("touchstart", (e) => {
     if (!e.touches || !e.touches[0]) return;
+
+    gestureLayer.classList.remove("passive"); // ← ★ 반드시 여기
 
     touching = true;
     startX = e.touches[0].clientX;
@@ -489,6 +491,8 @@ gestureLayer.addEventListener("touchend", (e) => {
     return;
   }
 
+  gestureLayer.classList.add("passive");
+
   // HORIZONTAL → CLOSE
   if (ax > ay && ax > 80) {
     videoCur.style.transition = "transform .25s ease";
@@ -515,17 +519,19 @@ gestureLayer.addEventListener("touchend", (e) => {
 // =========================
 // PC / Trackpad Wheel (GLOBAL)
 // =========================
-window.addEventListener("wheel", (e) => {
-  if (!overlay || overlay.hidden) return;
-  if (locked) return;
+if (!window._shortsWheelBound) {
+  window._shortsWheelBound = true;
 
-  if (Math.abs(e.deltaY) < 80) return;
+  window.addEventListener("wheel", (e) => {
+    if (!overlay || overlay.hidden) return;
+    if (locked) return;
 
-  e.preventDefault();
-  e.deltaY > 0 ? next() : prev();
-}, { passive: false });
+    if (Math.abs(e.deltaY) < 80) return;
 
-
+    e.preventDefault();
+    e.deltaY > 0 ? next() : prev();
+  }, { passive: false });
+}
 /* =========================
    UI Buttons
 ========================= */
