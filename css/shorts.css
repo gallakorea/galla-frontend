@@ -10,7 +10,7 @@ body[data-page="shorts"] {
   margin: 0;
   padding: 0;
   background: #000;
-  overflow: hidden; /* body scroll locked, container scroll only */
+  /* overflow: hidden;  body scroll locked, container scroll only  -- removed as per instructions */
 }
 
 /* legacy header force hide */
@@ -23,19 +23,21 @@ body[data-page="shorts"] .header {
    OVERLAY (SCROLL CONTAINER)
 ------------------------- */
 #shortsOverlay {
-  position: absolute;   /* 🔥 fixed → absolute */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  
+  position: fixed;          /* 반드시 fixed */
+  inset: 0;
+
   background: #000;
   z-index: 999;
 
-  overflow-y: scroll;
-  overscroll-behavior: contain;
+  overflow-y: auto;
+  overflow-x: hidden;
+
   scroll-snap-type: y mandatory;
+  scroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+
+  touch-action: pan-y;
 }
 
 /* hidden safety */
@@ -48,9 +50,10 @@ body[data-page="shorts"] .header {
 ------------------------- */
 .short {
   position: relative;
-  height: 100svh;
+  height: 100dvh;            /* 🔥 핵심: viewport 정확 고정 */
   width: 100%;
   scroll-snap-align: start;
+  scroll-snap-stop: always;  /* 🔥 반드시 한 장씩 멈춤 */
   background: #000;
 }
 
@@ -66,6 +69,8 @@ body[data-page="shorts"] .header {
 
   object-fit: cover;
   background: #000;
+
+  pointer-events: none; /* 스크롤 방해 차단 */
 }
 
 /* -------------------------

@@ -1,4 +1,4 @@
-/* shorts.js — TRUE Reels / Shorts (FIXED AUDIO + SCROLL) */
+/* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
 
 let overlay = null;
@@ -12,9 +12,9 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-function pauseAll(except = null) {
-  document.querySelectorAll(".short video").forEach(v => {
-    if (v === except) return;
+function hardPauseAll(exceptIndex = null) {
+  document.querySelectorAll(".short video").forEach((v, i) => {
+    if (i === exceptIndex) return;
     try {
       v.pause();
       v.currentTime = 0;
@@ -23,8 +23,9 @@ function pauseAll(except = null) {
   });
 }
 
-function playAt(index) {
+function playOnly(index) {
   if (!overlay) return;
+  if (currentIndex === index) return;
 
   const wrap = overlay.querySelector(`.short[data-index="${index}"]`);
   if (!wrap) return;
@@ -32,10 +33,9 @@ function playAt(index) {
   const video = wrap.querySelector("video");
   if (!video) return;
 
-  if (currentIndex === index) return;
   currentIndex = index;
 
-  pauseAll(video);
+  hardPauseAll(index);
 
   video.muted = true;
   video.currentTime = 0;
@@ -49,25 +49,36 @@ function playAt(index) {
 }
 
 /* =========================
-   OBSERVER
+   OBSERVER (CORE)
 ========================= */
+function getMostVisibleEntry(entries) {
+  let best = null;
+  let maxRatio = 0;
+  entries.forEach(e => {
+    if (e.intersectionRatio > maxRatio) {
+      maxRatio = e.intersectionRatio;
+      best = e;
+    }
+  });
+  return best;
+}
+
 function setupObserver() {
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
+  if (observer) observer.disconnect();
 
   observer = new IntersectionObserver(
     entries => {
-      entries.forEach(entry => {
-        if (!entry.isIntersecting) return;
-        const idx = Number(entry.target.dataset.index);
-        playAt(idx);
-      });
+      const best = getMostVisibleEntry(entries);
+      if (!best) return;
+
+      if (best.intersectionRatio < 0.6) return;
+
+      const idx = Number(best.target.dataset.index);
+      playOnly(idx);
     },
     {
-      root: overlay,
-      threshold: 0.75
+      root: null,
+      threshold: [0.25, 0.5, 0.6, 0.75, 0.9]
     }
   );
 
@@ -80,7 +91,7 @@ function setupObserver() {
 function openShorts(list, startId) {
   overlay = qs("shortsOverlay");
   if (!overlay) {
-    console.error("[SHORTS] overlay not found");
+    console.error("[SHORTS] overlay missing");
     return;
   }
 
@@ -116,11 +127,13 @@ function openShorts(list, startId) {
       : 0;
 
   requestAnimationFrame(() => {
-    const target = overlay.querySelector(`.short[data-index="${startIndex}"]`);
-    if (target) target.scrollIntoView({ block: "start" });
+    overlay.scrollTo({
+      top: startIndex * window.innerHeight,
+      behavior: "instant"
+    });
 
     setupObserver();
-    playAt(startIndex);
+    playOnly(startIndex);
   });
 }
 
@@ -128,13 +141,10 @@ function openShorts(list, startId) {
    CLOSE SHORTS
 ========================= */
 function closeShorts() {
-  pauseAll();
+  hardPauseAll();
   currentIndex = -1;
 
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
+  if (observer) observer.disconnect();
 
   if (overlay) {
     overlay.hidden = true;
