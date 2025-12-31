@@ -186,13 +186,24 @@ async function openShorts(list, startId) {
   // 🔥 [필수] 최초 진입 시 현재 영상 src 세팅 (딱 1번만)
   const cur = shortsList[shortsIndex];
   if (cur) {
-    videoCur.pause();
-    videoCur.setAttribute("playsinline", "");
-    videoCur.muted = true;
-    videoCur.src = cur.video_url;
-    await videoCur.play().catch(() => {});
-    videoCur.muted = false;
+    try {
+      videoCur.pause();
+      videoCur.removeAttribute("src");
+      videoCur.load();
+
+      videoCur.setAttribute("playsinline", "");
+      videoCur.setAttribute("webkit-playsinline", "");
+      videoCur.muted = true;
+      videoCur.src = cur.video_url;
+      videoCur.load();
+
+      await videoCur.play();   // ❗ 반드시 await
+      videoCur.muted = false;  // 재생 성공 후 unmute
+    } catch (e) {
+      console.warn("[SHORTS] autoplay retry", e);
+    }
   }
+  console.info("[SHORTS] opened", videoCur.src);
   // 🔥 INITIAL VOTE SYNC (first shorts guaranteed)
   window.currentIssue = shortsList[shortsIndex];
 
@@ -322,6 +333,7 @@ function closeShorts(shouldGoBack = true) {
 
   isFromPopstate = false;
   isClosing = false;
+  overlay.style.pointerEvents = "auto";
 }
 
 function loadVideos() {
@@ -371,14 +383,6 @@ function prev() {
 
 function bindShortsEvents() {
 
-  overlay.addEventListener("click", (e) => {
-    // ❗ 뒤로가기 버튼은 절대 막지 않는다
-    if (e.target.closest("#shortsBack")) return;
-    if (e.target.closest(".shorts-vote")) return;
-
-    e.stopPropagation();
-  }, true);
-
   /* =========================
      Unified Touch Swipe Handler
   ========================= */
@@ -390,7 +394,7 @@ function bindShortsEvents() {
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     videoCur.style.transition = "none";
-  }, { passive: false });
+  });
 
   overlay.addEventListener("touchmove", (e) => {
     if (!touching || !e.touches[0]) return;
@@ -401,7 +405,7 @@ function bindShortsEvents() {
       e.preventDefault();
       videoCur.style.transform = `translateX(${dx}px)`;
     }
-  }, { passive: false });
+  });
 
   overlay.addEventListener("touchend", (e) => {
     if (!touching) return;
@@ -427,7 +431,7 @@ function bindShortsEvents() {
     }
 
     videoCur.style.transform = "translateX(0)";
-  }, { passive: false });
+  });
 
 /* =========================
    PC Mouse Wheel (1 step)
