@@ -30,6 +30,7 @@ body[data-page="shorts"] .header {
 
   width: 100%;
   max-width: 480px;
+  height: 100svh;
 
   background: #000;
   z-index: 999;
@@ -37,19 +38,23 @@ body[data-page="shorts"] .header {
   overflow-y: scroll;
   overflow-x: hidden;
 
-  /* 릴스/쇼츠 스냅 핵심 */
   scroll-snap-type: y mandatory;
+  scroll-snap-points-y: repeat(100%);
   scroll-behavior: auto;
   overscroll-behavior: none;
 
-  /* PC 휠 관성 제거 */
-  -webkit-overflow-scrolling: auto;
+  scroll-padding-top: env(safe-area-inset-top);
+  scroll-padding-bottom: calc(64px + env(safe-area-inset-bottom));
 
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+
+  -webkit-overflow-scrolling: auto;
   touch-action: pan-y;
 
-  /* 스크롤바 완전 제거 */
   scrollbar-width: none;
   -ms-overflow-style: none;
+  scrollbar-gutter: stable both-edges;
 }
 
 #shortsOverlay::-webkit-scrollbar {
@@ -62,16 +67,11 @@ body[data-page="shorts"] .header {
 .short {
   position: relative;
   width: 100%;
-
-  height: calc(
-    100svh
-    - env(safe-area-inset-top)
-    - env(safe-area-inset-bottom)
-    - 64px /* 하단 네비 고정 높이 */
-  );
+  height: 100%;
 
   scroll-snap-align: start;
   scroll-snap-stop: always;
+
   background: #000;
 }
 
