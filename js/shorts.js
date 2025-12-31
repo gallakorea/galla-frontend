@@ -204,8 +204,7 @@ async function openShorts(list, startId) {
     }
   }
   console.info("[SHORTS] opened", videoCur.src);
-  // 🔥 키보드 입력을 받기 위해 body에 포커스 강제
-  document.body.focus();
+
   // 🔥 INITIAL VOTE SYNC (first shorts guaranteed)
   window.currentIssue = shortsList[shortsIndex];
 
@@ -391,17 +390,42 @@ function bindShortsEvents() {
   // 🔥 [CRITICAL FIX]
   // 최초 사용자 인터랙션 시 포커스 강제 획득
   const forceFocus = () => {
-  const stage = document.querySelector(".shorts-stage");
-  if (stage) stage.focus();
-
-    window.removeEventListener("pointerdown", forceFocus);
-    window.removeEventListener("touchstart", forceFocus);
-    window.removeEventListener("mousedown", forceFocus);
+    const stage = document.querySelector(".shorts-stage");
+    if (stage && stage.tabIndex >= 0) {
+      stage.focus({ preventScroll: true });
+    }
   };
 
   window.addEventListener("pointerdown", forceFocus, { once: true });
   window.addEventListener("touchstart", forceFocus, { once: true });
   window.addEventListener("mousedown", forceFocus, { once: true });
+
+  // =========================
+// KEYBOARD (Arrow ↑↓, Esc)
+// =========================
+const stage = document.querySelector(".shorts-stage");
+if (stage && !stage._keyBound) {
+  stage._keyBound = true;
+
+  stage.addEventListener("keydown", (e) => {
+    if (!overlay || overlay.hidden) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      next();
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      prev();
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeShorts();
+    }
+  });
+}
 
   /* =========================
      Unified Touch Swipe Handler
@@ -501,25 +525,6 @@ window.addEventListener("wheel", (e) => {
   e.deltaY > 0 ? next() : prev();
 }, { passive: false });
 
-/* =========================
-   Keyboard (↑↓, Esc)
-========================= */
-window.addEventListener("keydown", (e) => {
-  if (!overlay || overlay.hidden) return;
-
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    next();
-  }
-  if (e.key === "ArrowUp") {
-    e.preventDefault();
-    prev();
-  }
-  if (e.key === "Escape") {
-    e.preventDefault();
-    closeShorts();
-  }
-});
 
 /* =========================
    UI Buttons
