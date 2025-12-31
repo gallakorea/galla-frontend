@@ -3,67 +3,58 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport"
-      content="width=device-width,
-               initial-scale=1.0,
-               viewport-fit=cover">
+        content="width=device-width,
+                 initial-scale=1.0,
+                 viewport-fit=cover">
   <title>GALLA Shorts</title>
 
-  <!-- Shorts 전용 CSS만 -->
   <link rel="stylesheet" href="css/index.css" />
   <link rel="stylesheet" href="css/shorts.css" />
 </head>
 
-<div class="shorts-stage" tabindex="0">
+<body data-page="shorts">
 
   <!-- =========================
        SHORTS OVERLAY (FULLSCREEN)
   ========================= -->
   <div id="shortsOverlay" hidden>
 
-  <!-- 🔥 가로 480 제한 스테이지 -->
-  <div class="shorts-stage">
+    <!-- 🔥 480px STAGE (FOCUS TARGET) -->
+    <div class="shorts-stage" tabindex="0">
 
-    <!-- 🔥 제스처 전용 레이어 (고정, transform 영향 없음) -->
-    <div class="shorts-gesture-layer"></div>
+      <!-- 제스처 레이어 -->
+      <div class="shorts-gesture-layer"></div>
 
-    <!-- 영상 -->
-    <div class="shorts-video-wrap">
-      <video id="videoPrev" playsinline webkit-playsinline muted preload="auto"></video>
-      <video id="shortsVideo"
-             playsinline
-             webkit-playsinline
-             muted
-             autoplay
-             preload="auto"></video>
-      <video id="videoNext" playsinline webkit-playsinline muted preload="auto"></video>
+      <!-- 영상 -->
+      <div class="shorts-video-wrap">
+        <video id="videoPrev" playsinline webkit-playsinline muted preload="auto"></video>
+        <video id="shortsVideo" playsinline webkit-playsinline muted autoplay preload="auto"></video>
+        <video id="videoNext" playsinline webkit-playsinline muted preload="auto"></video>
+      </div>
+
+      <!-- TOP -->
+      <div class="shorts-top">
+        <button id="shortsBack">←</button>
+        <div class="shorts-time">5:05</div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="shorts-actions">
+        <div>❤️</div>
+        <div>💬</div>
+        <div>📤</div>
+      </div>
+
+      <!-- VOTE -->
+      <div class="shorts-vote">
+        <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
+        <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
+      </div>
 
     </div>
+  </div>
 
-    <!-- UI -->
-    <div class="shorts-top">
-      <button id="shortsBack">←</button>
-      <div class="shorts-time">5:05</div>
-    </div>
-
-    <div class="shorts-actions">
-      <div>❤️</div>
-      <div>💬</div>
-      <div>📤</div>
-    </div>
-
-    <!-- =========================
-         SHORTS VOTE
-    ========================= -->
-    <div class="shorts-vote">
-      <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
-      <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
-    </div>
-
-  </div> <!-- /.shorts-stage -->
-
-  <!-- =========================
-       SHORTS BOTTOM NAV
-  ========================= -->
+  <!-- NAV -->
   <nav class="nav">
     <div class="nav-inner">
       <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
@@ -74,18 +65,11 @@
     </div>
   </nav>
 
-</div> <!-- /#shortsOverlay -->
-
-<!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="js/supabase.js"></script>
-
-<!-- Vote Core -->
-<script src="js/vote.core.js"></script>
-
-<!-- Shorts -->
-<script type="module" src="js/shorts.js"></script>
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/vote.core.js"></script>
+  <script type="module" src="js/shorts.js"></script>
 
 </body>
-
 </html>
