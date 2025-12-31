@@ -1,46 +1,63 @@
-/* =========================
-   FORCE HIDE LEGACY HEADER
-   (shorts page only)
-========================= */
-body[data-page="shorts"] header {
-  display: none !important;
-}
+/* =========================================================
+   GALLA SHORTS — REAL REELS / SHORTS ENGINE (CSS)
+   Native Scroll + Scroll Snap (NO TRANSFORM)
+========================================================= */
 
-body[data-page="shorts"] .header {
-  display: none !important;
-}
-
-/* =========================
-   GLOBAL RESET (shorts only)
-========================= */
+/* -------------------------
+   PAGE ISOLATION
+------------------------- */
 body[data-page="shorts"] {
   margin: 0;
   padding: 0;
   background: #000;
-  overflow: hidden;
+  overflow: hidden; /* body scroll locked, container scroll only */
 }
 
-/* 🔥 HIDDEN SAFETY */
+/* legacy header force hide */
+body[data-page="shorts"] header,
+body[data-page="shorts"] .header {
+  display: none !important;
+}
+
+/* -------------------------
+   OVERLAY (SCROLL CONTAINER)
+------------------------- */
+#shortsOverlay {
+  position: absolute;   /* 🔥 fixed → absolute */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  
+  background: #000;
+  z-index: 999;
+
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* hidden safety */
 #shortsOverlay[hidden] {
   display: none !important;
 }
 
-/* =========================
-   SHORTS VIDEO WRAP
-========================= */
-
-/* ✅ 수정 후 */
-.shorts-video-wrap {
+/* -------------------------
+   SINGLE SHORT ITEM
+------------------------- */
+.short {
   position: relative;
-  width: 480px;
   height: 100svh;
-  overflow: hidden;
+  width: 100%;
+  scroll-snap-align: start;
+  background: #000;
 }
 
-/* 3단 버퍼 구조 */
-#videoPrev,
-#shortsVideo,
-#videoNext {
+/* -------------------------
+   VIDEO
+------------------------- */
+.short video {
   position: absolute;
   inset: 0;
 
@@ -50,13 +67,13 @@ body[data-page="shorts"] {
   object-fit: cover;
   background: #000;
 }
-/* =========================
-   TOP BAR
-========================= */
 
+/* -------------------------
+   TOP BAR
+------------------------- */
 .shorts-top {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 12px); /* 🔥 핵심 */
+  top: calc(env(safe-area-inset-top) + 12px);
   left: 12px;
   right: 12px;
 
@@ -77,15 +94,9 @@ body[data-page="shorts"] {
   border-radius: 10px;
 }
 
-.shorts-time {
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* =========================
+/* -------------------------
    ACTION ICONS (RIGHT)
-========================= */
-
+------------------------- */
 .shorts-actions {
   position: absolute;
   right: 12px;
@@ -95,28 +106,23 @@ body[data-page="shorts"] {
   flex-direction: column;
   gap: 16px;
 
-  font-size: 14px;
   z-index: 10;
+  pointer-events: auto;
 }
 
-.shorts-actions div {
-  text-align: center;
-  opacity: 0.9;
-}
-
-/* =========================
-   SHORTS VOTE
-========================= */
-
+/* -------------------------
+   VOTE BAR
+------------------------- */
 .shorts-vote {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: calc(24px + 64px); /* ✅ 네비 위로 안전하게 */
+  bottom: calc(24px + 64px);
 
   display: flex;
   gap: 12px;
   z-index: 10;
+  pointer-events: auto;
 }
 
 .shorts-vote .vote-btn {
@@ -126,9 +132,8 @@ body[data-page="shorts"] {
 
   font-size: 14px;
   font-weight: 800;
-
-  border: 1px solid transparent;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 /* PRO */
@@ -145,10 +150,7 @@ body[data-page="shorts"] {
   color: #fff;
 }
 
-/* =========================
-   VOTE STATES
-========================= */
-
+/* active / locked */
 .shorts-vote .active-vote {
   background: #ffe27a !important;
   color: #111 !important;
@@ -158,48 +160,4 @@ body[data-page="shorts"] {
 .shorts-vote .locked {
   opacity: 0.6;
   pointer-events: none;
-}
-
-/* =========================
-   SAFETY: NAV NEVER BLOCKED
-========================= */
-
-/* ❗ nav는 index.css가 책임진다 */
-/* ❗ shorts.css에서는 nav를 숨기거나 덮지 않는다 */
-
-/* =========================
-   POINTER EVENTS FIX (CRITICAL)
-========================= */
-
-
-/* UI 버튼은 클릭 가능해야 함 */
-.shorts-top,
-.shorts-vote,
-.shorts-actions {
-  pointer-events: auto;
-}
-
-#shortsOverlay {
-  position: fixed;
-  inset: 0;
-  background: #000;
-  z-index: 900;
-
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-
-  /* ❌ width 절대 주지 마라 */
-  /* width: 100vw; ← 이게 폭 풀리는 원인 */
-}
-
-/* =========================
-   SHORTS STAGE (480 ONLY)
-========================= */
-.shorts-stage {
-  position: relative;
-  width: 480px;       /* 🔥 max-width 쓰지 마라 */
-  height: 100svh;     /* 🔥 핵심 */
-  margin: 0 auto;
-  overflow: hidden;
 }

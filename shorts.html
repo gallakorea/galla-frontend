@@ -2,65 +2,66 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-      content="width=device-width,
-               initial-scale=1.0,
-               viewport-fit=cover">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
   <title>GALLA Shorts</title>
 
-  <!-- Shorts 전용 CSS만 -->
+  <!-- Shorts 전용 CSS -->
   <link rel="stylesheet" href="css/shorts.css" />
 </head>
 
 <body data-page="shorts">
 
   <!-- =========================
-       SHORTS OVERLAY (FULLSCREEN)
+       SHORTS OVERLAY (REAL SCROLL)
   ========================= -->
   <div id="shortsOverlay">
 
-  <!-- 🔥 가로 480 제한 스테이지 -->
-  <div class="shorts-stage">
+    <!-- 🔥 하나의 short = 하나의 화면 (100svh) -->
+    <!-- JS에서 이 .short들을 동적으로 생성/주입 -->
 
-    <!-- 영상 -->
-    <div class="shorts-video-wrap">
-      <video id="videoPrev" playsinline preload="auto"></video>
-      <video id="shortsVideo" playsinline preload="auto"></video>
-      <video id="videoNext" playsinline preload="auto"></video>
-    </div>
+    <!-- SAMPLE (구조 예시) -->
+    <!--
+    <section class="short" data-id="1">
+      <video
+        src=""
+        playsinline
+        muted
+        preload="metadata"
+      ></video>
 
-    <!-- UI -->
-    <div class="shorts-top">
-      <button id="shortsBack">←</button>
-      <div class="shorts-time">5:05</div>
-    </div>
-
-    <div class="shorts-actions">
-      <div>❤️</div>
-      <div>💬</div>
-      <div>📤</div>
-    </div>
-
-    <div class="shorts-vote">
-      <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
-      <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
-    </div>
-
-    <!-- ✅ nav를 여기로 이동 -->
-    <nav class="nav">
-      <div class="nav-inner">
-        <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
-        <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
-        <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
-        <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
-        <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
+      <div class="shorts-top">
+        <button class="shorts-back">←</button>
       </div>
-    </nav>
+
+      <div class="shorts-actions">
+        <div>❤️</div>
+        <div>💬</div>
+        <div>📤</div>
+      </div>
+
+      <div class="shorts-vote">
+        <button class="vote-btn pro">👍 찬성이오</button>
+        <button class="vote-btn con">👎 난 반댈세</button>
+      </div>
+    </section>
+    -->
 
   </div>
-</div>
+
+  <!-- 하단 네비 (고정) -->
+  <nav class="nav">
+    <div class="nav-inner">
+      <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
+      <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
+      <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
+      <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
+      <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
+    </div>
+  </nav>
 
   <script type="module" src="js/shorts.js"></script>
 </body>
-
 </html>
