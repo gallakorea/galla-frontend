@@ -180,14 +180,12 @@ body[data-page="shorts"] {
 
 #shortsOverlay {
   position: fixed;
-  inset: 0;            /* ✅ 전체 화면 원복 */
+  inset: 0;
   z-index: 400;
 
   display: flex;
   justify-content: center;
   align-items: stretch;
-
-  /* ❌ width 절대 주지 마라 */
 }
 
 /* =========================
@@ -195,8 +193,28 @@ body[data-page="shorts"] {
 ========================= */
 .shorts-stage {
   position: relative;
-  width: 480px;       /* 🔥 max-width 쓰지 마라 */
-  height: 100svh;     /* 🔥 핵심 */
+  width: 480px;
+  height: calc(100svh - 64px); /* 🔥 bottom nav height excluded */
   margin: 0 auto;
   overflow: hidden;
+}
+
+/* =========================
+   FORCE BOTTOM NAV VISIBILITY (SHORTS)
+========================= */
+body[data-page="shorts"] .nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 64px;
+  z-index: 600; /* 🔥 must be above shortsOverlay */
+  background: #000;
+}
+
+body[data-page="shorts"] .nav-inner {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
 }
