@@ -174,28 +174,30 @@ window.addEventListener("keydown", e => {
 });
 
 /* =========================
-   WHEEL SNAP (DESKTOP)
+   WHEEL (DESKTOP — SMOOTH SNAP)
 ========================= */
-let wheelLock = false;
+let wheelAccum = 0;
+let wheelTimer = null;
+
 window.addEventListener("wheel", e => {
   if (!overlay || overlay.hidden) return;
 
-  e.preventDefault(); // 기본 스크롤 차단
+  // 기본 스크롤 허용 (자연스러운 감속)
+  wheelAccum += e.deltaY;
 
-  if (wheelLock) return;
-  wheelLock = true;
+  if (wheelTimer) return;
 
-  const dir = e.deltaY > 0 ? 1 : -1;
-  overlay.scrollBy({
-    top: dir * window.innerHeight,
-    behavior: "instant"
-  });
+  wheelTimer = setTimeout(() => {
+    const dir = wheelAccum > 0 ? 1 : -1;
+    wheelAccum = 0;
+    wheelTimer = null;
 
-  // 연속 스크롤 방지(뻑뻑함)
-  setTimeout(() => {
-    wheelLock = false;
-  }, 350);
-}, { passive: false });
+    overlay.scrollBy({
+      top: dir * window.innerHeight,
+      behavior: "smooth"
+    });
+  }, 120);
+}, { passive: true });
 
 /* =========================
    EXPORT

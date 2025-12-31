@@ -24,8 +24,7 @@ body[data-page="shorts"] .header {
 ------------------------- */
 #shortsOverlay {
   position: fixed;
-  top: env(safe-area-inset-top);
-  bottom: env(safe-area-inset-bottom);
+  inset: 0;
   left: 50%;
   transform: translateX(-50%);
 
@@ -35,20 +34,26 @@ body[data-page="shorts"] .header {
   background: #000;
   z-index: 999;
 
-  overflow-y: auto;
+  overflow-y: scroll;
   overflow-x: hidden;
 
+  /* 릴스/쇼츠 스냅 핵심 */
   scroll-snap-type: y mandatory;
   scroll-behavior: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+  overscroll-behavior: none;
+
+  /* PC 휠 관성 제거 */
+  -webkit-overflow-scrolling: auto;
 
   touch-action: pan-y;
+
+  /* 스크롤바 완전 제거 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-/* hidden safety */
-#shortsOverlay[hidden] {
-  display: none !important;
+#shortsOverlay::-webkit-scrollbar {
+  display: none;
 }
 
 /* -------------------------
@@ -56,14 +61,17 @@ body[data-page="shorts"] .header {
 ------------------------- */
 .short {
   position: relative;
+  width: 100%;
+
   height: calc(
     100svh
     - env(safe-area-inset-top)
     - env(safe-area-inset-bottom)
+    - 64px /* 하단 네비 고정 높이 */
   );
-  width: 100%;
+
   scroll-snap-align: start;
-  scroll-snap-stop: always;  /* 🔥 반드시 한 장씩 멈춤 */
+  scroll-snap-stop: always;
   background: #000;
 }
 
@@ -81,6 +89,8 @@ body[data-page="shorts"] .header {
   background: #000;
 
   pointer-events: none; /* 스크롤 방해 차단 */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* -------------------------
@@ -175,4 +185,9 @@ body[data-page="shorts"] .header {
 .shorts-vote .locked {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* 하단 네비 safe-area 보정 (iPhone 홈바 겹침 방지) */
+.nav {
+  padding-bottom: env(safe-area-inset-bottom);
 }
