@@ -107,7 +107,7 @@ function ensureShortsDOM() {
   videoNext = document.getElementById("videoNext");
   backBtn   = document.getElementById("shortsBack");
 
-  gestureLayer = document.querySelector(".shorts-gesture-layer") || overlay;
+  gestureLayer = document.querySelector(".shorts-stage");
 
   if (videoCur) videoCur.style.pointerEvents = "none";
   if (videoPrev) videoPrev.style.pointerEvents = "none";

@@ -172,15 +172,6 @@ body[data-page="shorts"] {
    POINTER EVENTS FIX (CRITICAL)
 ========================= */
 
-/* 🔥 제스처 전용 레이어 */
-.shorts-gesture-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: auto;
-  touch-action: none;
-}
-
 /* UI 버튼은 클릭 가능해야 함 */
 .shorts-top,
 .shorts-vote,
@@ -212,4 +203,5 @@ body[data-page="shorts"] {
   margin: 0 auto;
   overflow: hidden;
   touch-action: none;
+  pointer-events: auto;
 }
