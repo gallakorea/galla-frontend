@@ -281,16 +281,6 @@ async function openShorts(list, startId) {
     };
   }
 
-  // Fallback sync at the end of openShorts
-  setTimeout(async () => {
-    if (!window.currentIssue) return;
-    if (typeof window.GALLA_CHECK_VOTE !== "function") return;
-
-    const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-    if (result === "pro" || result === "con") {
-      applyShortsVoteState(result);
-    }
-  }, 600);
 
 }
 
@@ -664,17 +654,6 @@ function slideDown() {
 }
 
 
-// 모바일에서 백그라운드 복귀 시 투표 상태 재동기화
-document.addEventListener("visibilitychange", async () => {
-  if (document.visibilityState !== "visible") return;
-  if (!window.currentIssue) return;
-  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
-
-  const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
-  if (result !== "__SESSION_PENDING__") {
-    applyShortsVoteState(result);
-  }
-});
 
 // 🔥 expose shorts controls globally (index + shorts)
 window.openShorts = openShorts;
