@@ -207,7 +207,8 @@ async function attachEvents() {
     // 🎥 1분 엘리베이터 스피치
     document.querySelectorAll(".speech-btn").forEach(btn => {
     btn.onclick = e => {
-        e.stopPropagation();
+        e.preventDefault();
+        e.stopImmediatePropagation();
 
         const id = Number(btn.dataset.index);
 
@@ -229,7 +230,7 @@ async function attachEvents() {
 
         const open = () => {
           if (typeof window.openShorts === "function") {
-            window.openShorts([target], id);
+            window.openShorts([target], target.id);
           } else {
             console.error("[INDEX] openShorts not found");
           }
@@ -241,7 +242,8 @@ async function attachEvents() {
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
-            e.stopPropagation();
+            e.preventDefault();
+            e.stopImmediatePropagation();
 
             const type = btn.dataset.type;
             const card = btn.closest(".card");
@@ -261,7 +263,8 @@ async function attachEvents() {
     // 모달
     document.querySelectorAll(".open-modal").forEach(el => {
         el.onclick = e => {
-            e.stopPropagation();
+            e.preventDefault();
+            e.stopImmediatePropagation();
             openModal(el.dataset.msg);
         };
     });

@@ -150,8 +150,13 @@ async function openShorts(list, startId) {
   shortsList = list.filter(v => v && v.video_url);
   if (!shortsList.length) return;
 
-  const idx = shortsList.findIndex(v => Number(v.id) === Number(startId));
-  shortsIndex = idx >= 0 ? idx : 0;
+  // 🔥 정확한 영상 매칭 보장
+  if (shortsList.length === 1) {
+    shortsIndex = 0;
+  } else {
+    const idx = shortsList.findIndex(v => Number(v.id) === Number(startId));
+    shortsIndex = idx >= 0 ? idx : 0;
+  }
 
   overlay.hidden = false;
 
