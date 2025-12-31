@@ -180,7 +180,10 @@ body[data-page="shorts"] {
 
 #shortsOverlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 64px; /* 하단 네비 영역 확보 */
   z-index: 400;
 
   display: flex;
@@ -197,24 +200,4 @@ body[data-page="shorts"] {
   height: calc(100svh - 64px); /* 🔥 bottom nav height excluded */
   margin: 0 auto;
   overflow: hidden;
-}
-
-/* =========================
-   FORCE BOTTOM NAV VISIBILITY (SHORTS)
-========================= */
-body[data-page="shorts"] .nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 64px;
-  z-index: 600; /* 🔥 must be above shortsOverlay */
-  background: #000;
-}
-
-body[data-page="shorts"] .nav-inner {
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-around;
 }
