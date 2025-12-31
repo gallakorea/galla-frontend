@@ -416,32 +416,64 @@ function bindShortsEvents() {
     }
   }, { passive: false });
 
+  /* =========================
+     TOUCH END (SWIPE + TAP UNIFIED)
+  ========================= */
+  let lastTap = 0;
+
   gestureLayer.addEventListener("touchend", (e) => {
     if (!touching) return;
     touching = false;
 
-    const dx = e.changedTouches[0].clientX - startX;
-    const dy = e.changedTouches[0].clientY - startY;
+    e.preventDefault();
+
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
     const ax = Math.abs(dx);
     const ay = Math.abs(dy);
 
     videoCur.style.transition = "transform .25s ease";
 
+    // 1️⃣ Horizontal swipe → close
     if (ax > ay && ax > 80) {
-      videoCur.style.transform = dx > 0 ? "translateX(120%)" : "translateX(-120%)";
+      videoCur.style.transform = dx > 0
+        ? "translateX(120%)"
+        : "translateX(-120%)";
       setTimeout(() => closeShorts(true), 220);
       return;
     }
 
+    // 2️⃣ Vertical swipe → next / prev
     if (ay > ax && ay > 80) {
       videoCur.style.transform = "translateX(0)";
-      videoCur.style.transition = "";
       dy < 0 ? next() : prev();
       return;
     }
 
+    // 3️⃣ Tap / Double Tap
+    const now = Date.now();
+    const delta = now - lastTap;
+
+    if (delta > 0 && delta < 300) {
+      videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
+      lastTap = 0;
+      return;
+    }
+
+    lastTap = now;
+
+    setTimeout(() => {
+      if (lastTap && Date.now() - lastTap >= 300) {
+        videoCur.paused
+          ? videoCur.play().catch(() => {})
+          : videoCur.pause();
+        lastTap = 0;
+      }
+    }, 300);
+
     videoCur.style.transform = "translateX(0)";
-  });
+  }, { passive: false });
 /* =========================
    PC Mouse Wheel (1 step)
 ========================= */
@@ -489,38 +521,7 @@ window.addEventListener("keydown", (e) => {
       closeShorts(true);
     };
   }
-/* =========================
-   TAP / DOUBLE TAP CONTROL
-========================= */
-
-let lastTap = 0;
-
-gestureLayer.addEventListener("touchend", (e) => {
-  e.preventDefault();
-
-  const now = Date.now();
-  const delta = now - lastTap;
-
-  // Double tap → 2x speed toggle
-  if (delta > 0 && delta < 300) {
-    videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
-    lastTap = 0;
-    return;
-  }
-
-  lastTap = now;
-
-  setTimeout(() => {
-    if (lastTap && Date.now() - lastTap >= 300) {
-      if (videoCur.paused) {
-        videoCur.play().catch(() => {});
-      } else {
-        videoCur.pause();
-      }
-      lastTap = 0;
-    }
-  }, 300);
-}, { passive: false });
+// (TAP / DOUBLE TAP CONTROL block removed: now unified above)
 }
 
 function slideUp() {
