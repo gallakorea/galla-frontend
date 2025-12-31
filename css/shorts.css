@@ -1,5 +1,17 @@
 /* =========================
-   SHORTS PAGE BASE
+   FORCE HIDE LEGACY HEADER
+   (shorts page only)
+========================= */
+body[data-page="shorts"] header {
+  display: none !important;
+}
+
+body[data-page="shorts"] .header {
+  display: none !important;
+}
+
+/* =========================
+   GLOBAL RESET (shorts only)
 ========================= */
 body[data-page="shorts"] {
   margin: 0;
@@ -8,51 +20,24 @@ body[data-page="shorts"] {
   overflow: hidden;
 }
 
-/* =========================
-   OVERLAY (ROOT)
-========================= */
-#shortsOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 400;
-
-  display: flex;
-  justify-content: center;
-
-  pointer-events: auto;   /* 🔥 반드시 auto */
-  touch-action: none;
-}
-
+/* 🔥 HIDDEN SAFETY */
 #shortsOverlay[hidden] {
   display: none !important;
 }
 
 /* =========================
-   STAGE (480px)
+   SHORTS VIDEO WRAP
 ========================= */
-.shorts-stage {
+
+/* ✅ 수정 후 */
+.shorts-video-wrap {
   position: relative;
   width: 480px;
   height: 100svh;
-
-  margin: 0 auto;
-  overflow: hidden;
-
-  pointer-events: auto;
-  touch-action: none;
-}
-
-/* =========================
-   VIDEO WRAP
-========================= */
-.shorts-video-wrap {
-  position: relative;     /* 🔥 기준점 */
-  width: 100%;
-  height: 100%;
   overflow: hidden;
 }
 
-/* videos */
+/* 3단 버퍼 구조 */
 #videoPrev,
 #shortsVideo,
 #videoNext {
@@ -61,37 +46,17 @@ body[data-page="shorts"] {
 
   width: 100%;
   height: 100%;
+
   object-fit: cover;
-
   background: #000;
-  pointer-events: none;   /* 🔥 영상은 터치 받지 않음 */
 }
-
-/* =========================
-   GESTURE LAYER (CRITICAL)
-========================= */
-.shorts-gesture-layer {
-  position: absolute;
-  inset: 0;
-
-  z-index: 5;             /* video 위 */
-  background: transparent;
-
-  pointer-events: auto;  /* 🔥 기본은 이벤트 받음 */
-  touch-action: none;
-}
-
-/* 제스처 비활성 시 */
-.shorts-gesture-layer.passive {
-  pointer-events: none;  /* 🔥 UI 클릭 통과 */
-}
-
 /* =========================
    TOP BAR
 ========================= */
+
 .shorts-top {
   position: absolute;
-  top: calc(env(safe-area-inset-top) + 12px);
+  top: calc(env(safe-area-inset-top) + 12px); /* 🔥 핵심 */
   left: 12px;
   right: 12px;
 
@@ -112,9 +77,15 @@ body[data-page="shorts"] {
   border-radius: 10px;
 }
 
+.shorts-time {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
 /* =========================
-   ACTION ICONS
+   ACTION ICONS (RIGHT)
 ========================= */
+
 .shorts-actions {
   position: absolute;
   right: 12px;
@@ -124,24 +95,28 @@ body[data-page="shorts"] {
   flex-direction: column;
   gap: 16px;
 
+  font-size: 14px;
   z-index: 10;
-  pointer-events: auto;
+}
+
+.shorts-actions div {
+  text-align: center;
+  opacity: 0.9;
 }
 
 /* =========================
-   VOTE
+   SHORTS VOTE
 ========================= */
+
 .shorts-vote {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: calc(24px + 64px);
+  bottom: calc(24px + 64px); /* ✅ 네비 위로 안전하게 */
 
   display: flex;
   gap: 12px;
-
   z-index: 10;
-  pointer-events: auto;
 }
 
 .shorts-vote .vote-btn {
@@ -151,13 +126,80 @@ body[data-page="shorts"] {
 
   font-size: 14px;
   font-weight: 800;
+
+  border: 1px solid transparent;
   cursor: pointer;
 }
 
+/* PRO */
+.shorts-vote .pro {
+  background: #1a1f3c;
+  border-color: #304ffe;
+  color: #fff;
+}
+
+/* CON */
+.shorts-vote .con {
+  background: #3c1a1a;
+  border-color: #ff5252;
+  color: #fff;
+}
+
 /* =========================
-   HARD GUARD
+   VOTE STATES
 ========================= */
-body:not([data-page="shorts"]) #shortsOverlay {
-  display: none !important;
-  pointer-events: none !important;
+
+.shorts-vote .active-vote {
+  background: #ffe27a !important;
+  color: #111 !important;
+  border-color: #ffe27a !important;
+}
+
+.shorts-vote .locked {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* =========================
+   SAFETY: NAV NEVER BLOCKED
+========================= */
+
+/* ❗ nav는 index.css가 책임진다 */
+/* ❗ shorts.css에서는 nav를 숨기거나 덮지 않는다 */
+
+/* =========================
+   POINTER EVENTS FIX (CRITICAL)
+========================= */
+
+
+/* UI 버튼은 클릭 가능해야 함 */
+.shorts-top,
+.shorts-vote,
+.shorts-actions {
+  pointer-events: auto;
+}
+
+#shortsOverlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 900;
+
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+
+  /* ❌ width 절대 주지 마라 */
+  /* width: 100vw; ← 이게 폭 풀리는 원인 */
+}
+
+/* =========================
+   SHORTS STAGE (480 ONLY)
+========================= */
+.shorts-stage {
+  position: relative;
+  width: 480px;       /* 🔥 max-width 쓰지 마라 */
+  height: 100svh;     /* 🔥 핵심 */
+  margin: 0 auto;
+  overflow: hidden;
 }

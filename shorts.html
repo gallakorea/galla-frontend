@@ -3,72 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport"
-        content="width=device-width,
-                 initial-scale=1.0,
-                 viewport-fit=cover">
+      content="width=device-width,
+               initial-scale=1.0,
+               viewport-fit=cover">
   <title>GALLA Shorts</title>
 
-  <link rel="stylesheet" href="css/index.css" />
+  <!-- Shorts 전용 CSS만 -->
   <link rel="stylesheet" href="css/shorts.css" />
 </head>
 
-<body data-page="shorts" tabindex="0">
+<body data-page="shorts">
 
   <!-- =========================
        SHORTS OVERLAY (FULLSCREEN)
   ========================= -->
-  <div id="shortsOverlay" hidden>
+  <div id="shortsOverlay">
 
-    <div class="shorts-stage" tabindex="0">
+  <!-- 🔥 가로 480 제한 스테이지 -->
+  <div class="shorts-stage">
 
-      <!-- 영상 + 제스처 영역 -->
-      <div class="shorts-video-wrap">
-
-        <video id="videoPrev" playsinline webkit-playsinline muted preload="auto"></video>
-        <video id="shortsVideo" playsinline webkit-playsinline muted autoplay preload="auto"></video>
-        <video id="videoNext" playsinline webkit-playsinline muted preload="auto"></video>
-
-        <!-- 🔥 제스처 레이어는 반드시 여기 -->
-        <div class="shorts-gesture-layer"></div>
-
-      </div>
-
-      <!-- UI는 제스처 레이어 밖 -->
-      <div class="shorts-top">
-        <button id="shortsBack">←</button>
-        <div class="shorts-time">5:05</div>
-      </div>
-
-      <div class="shorts-actions">
-        <div>❤️</div>
-        <div>💬</div>
-        <div>📤</div>
-      </div>
-
-      <div class="shorts-vote">
-        <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
-        <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
-      </div>
-
+    <!-- 영상 -->
+    <div class="shorts-video-wrap">
+      <video id="videoPrev" playsinline preload="auto"></video>
+      <video id="shortsVideo" playsinline preload="auto"></video>
+      <video id="videoNext" playsinline preload="auto"></video>
     </div>
+
+    <!-- UI -->
+    <div class="shorts-top">
+      <button id="shortsBack">←</button>
+      <div class="shorts-time">5:05</div>
+    </div>
+
+    <div class="shorts-actions">
+      <div>❤️</div>
+      <div>💬</div>
+      <div>📤</div>
+    </div>
+
+    <div class="shorts-vote">
+      <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
+      <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
+    </div>
+
+    <!-- ✅ nav를 여기로 이동 -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
+        <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
+        <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
+        <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
+        <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
+      </div>
+    </nav>
+
   </div>
+</div>
 
-  <!-- NAV -->
-  <nav class="nav">
-    <div class="nav-inner">
-      <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
-      <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
-      <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
-      <img src="assets/icons/nav-random.svg" class="nav-icon" data-target="random.html">
-      <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
-    </div>
-  </nav>
-
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/vote.core.js"></script>
   <script type="module" src="js/shorts.js"></script>
-
 </body>
+
 </html>

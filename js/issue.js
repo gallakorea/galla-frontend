@@ -6,21 +6,6 @@ import { initCommentSystem } from "./issue.comments.js";
 
 console.log("[issue.js] loaded");
 
-// 🔥 모바일 세션 지연 대응 (외과적 추가)
-async function waitForSessionReady(timeout = 2500) {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    if (!window.supabaseClient) {
-      await new Promise(r => setTimeout(r, 50));
-      continue;
-    }
-    const { data } = await window.supabaseClient.auth.getSession();
-    if (data?.session) return true;
-    await new Promise(r => setTimeout(r, 120));
-  }
-  return false;
-}
-
 /* ==========================================================================
    0. Utils
 ========================================================================== */
@@ -32,25 +17,6 @@ let issueAuthorId = null;
 
 // ✅ 추가
 let currentIssue = null;
-
-// 🔥 모바일/새로고침 대응: 투표 상태 강제 초기 동기화
-async function forceInitialVoteSync(issueId) {
-  if (!issueId) return;
-  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
-
-  // 🔥 핵심: 세션 준비될 때까지 대기 (모바일 필수)
-  const ready = await waitForSessionReady();
-  if (!ready) return;
-
-  try {
-    const result = await window.GALLA_CHECK_VOTE(issueId);
-    if (result === "pro" || result === "con") {
-      applyVoteUI(result);
-    }
-  } catch (e) {
-    console.warn("[VOTE] initial sync skipped:", e);
-  }
-}
 
 // ✅ 추가: applyVoteUI helper function
 function applyVoteUI(stance) {
@@ -129,9 +95,6 @@ if (!issueId || Number.isNaN(issueId)) {
   }
 
 renderIssue(issue);
-
-// 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)
-await forceInitialVoteSync(issue.id);
 
 await initCommentSystem(issue.id);
 forceBattleScrollWithRetry();

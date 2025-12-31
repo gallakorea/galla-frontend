@@ -76,11 +76,9 @@ function renderCard(data) {
 
         <img src="${data.thumb || "assets/logo.png"}" class="card-thumb" />
 
-        ${data.video_url ? `
         <div class="speech-btn" data-index="${data.id}">
           🎥 1분 엘리베이터 스피치
         </div>
-        ` : ``}
 
         <div class="vote-title">👍 찬반 투표 현황</div>
 
@@ -153,18 +151,6 @@ function renderCard(data) {
 // 🔥 EVENTS
 // =========================================
 
-async function waitForSessionReady(timeout = 2500) {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    if (window.supabaseClient) {
-      const { data } = await window.supabaseClient.auth.getSession();
-      if (data?.session) return true;
-    }
-    await new Promise(r => setTimeout(r, 100));
-  }
-  return false;
-}
-
 async function applyVoteUI(cardEl, stance) {
     const btnPro = cardEl.querySelector(".btn-pro");
     const btnCon = cardEl.querySelector(".btn-con");
@@ -178,19 +164,9 @@ async function applyVoteUI(cardEl, stance) {
 }
 
 async function syncVoteWithRetry(cardEl, id, retry = 0) {
-    if (retry === 0) {
-      const ready = await waitForSessionReady();
-      if (!ready) return;
-    }
-    const stance = await window.GALLA_CHECK_VOTE(id);
+    if (retry > 10) return;
 
-    // 🔥 모바일 초기 로드: 세션 아직 안 붙은 상태
-    if (stance === null) {
-        setTimeout(() => {
-            syncVoteWithRetry(cardEl, id, retry + 1);
-        }, 300);
-        return;
-    }
+    const stance = await window.GALLA_CHECK_VOTE(id);
 
     if (stance === "__SESSION_PENDING__") {
         setTimeout(() => {
@@ -209,8 +185,7 @@ async function attachEvents() {
     // 🎥 1분 엘리베이터 스피치
     document.querySelectorAll(".speech-btn").forEach(btn => {
     btn.onclick = e => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
+        e.stopPropagation();
 
         const id = Number(btn.dataset.index);
 
@@ -223,29 +198,15 @@ async function attachEvents() {
         unlock.playsInline = true;
         unlock.play().catch(() => {});
 
-        // 🔥 shorts.js를 필요할 때만 동적 로드
-        const target = cards.find(c => Number(c.id) === id);
-        if (!target || !target.video_url) {
-          console.warn("[INDEX] no video for issue", id);
-          return;
-        }
-
-        const open = () => {
-          if (typeof window.openShorts === "function") {
-            window.openShorts([target], target.id);
-          } else {
-            console.error("[INDEX] openShorts not found");
-          }
-        };
-        open();
+        // 쇼츠 진입
+        openShorts(cards, id);
     };
     });
 
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
-            e.preventDefault();
-            e.stopImmediatePropagation();
+            e.stopPropagation();
 
             const type = btn.dataset.type;
             const card = btn.closest(".card");
@@ -265,8 +226,7 @@ async function attachEvents() {
     // 모달
     document.querySelectorAll(".open-modal").forEach(el => {
         el.onclick = e => {
-            e.preventDefault();
-            e.stopImmediatePropagation();
+            e.stopPropagation();
             openModal(el.dataset.msg);
         };
     });

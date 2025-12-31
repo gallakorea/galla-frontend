@@ -465,11 +465,3 @@ body.shorts-open header,
 body.shorts-open .header {
   display: none !important;
 }
-
-body[data-page="index"],
-body[data-page="issue"] {
-  position: static !important;
-  overflow-x: hidden !important;
-  overflow-y: auto !important;
-  touch-action: pan-y !important;
-}

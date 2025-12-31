@@ -1,60 +1,7 @@
-// shorts.js — SAFE PAGE GUARD
-const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
-
-/* =========================
-   iOS SCROLL HARD LOCK
-========================= */
-let __scrollY = 0;
-
-function lockIOSScroll() {
-  __scrollY = window.scrollY || 0;
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${__scrollY}px`;
-  document.body.style.left = "0";
-  document.body.style.right = "0";
-  document.body.style.width = "100%";
-}
-
-function unlockIOSScroll() {
-  const y = Math.abs(parseInt(document.body.style.top || "0", 10)) || __scrollY;
-  document.body.style.position = "";
-  document.body.style.top = "";
-  document.body.style.left = "";
-  document.body.style.right = "";
-  document.body.style.width = "";
-  window.scrollTo(0, y);
-}
-
-/**
- * Global API
- * - shorts 페이지가 아니면 shorts.html로 이동
- * - shorts 페이지에서는 실제 openShorts 구현이 아래에서 덮어씀
- */
-window.openShorts = function (list, startId) {
-  if (!IS_SHORTS_PAGE) {
-    const params = new URLSearchParams();
-    if (startId != null) params.set("start", startId);
-    sessionStorage.setItem("__SHORTS_LIST__", JSON.stringify(list || []));
-    location.href = `/shorts.html?${params.toString()}`;
-    return;
-  }
-};
-
-window.closeShorts = window.closeShorts || function () {};
-
-// shorts 페이지가 아니면 나머지 로직은 실행하지 않는다
-if (!IS_SHORTS_PAGE) {
-  console.info("[SHORTS] loaded on non-shorts page (API only)");
-  // API만 노출하고 나머지 로직 실행하지 않음
-  // 바로 리턴하여 아래 코드 실행 방지
-} else {
-
-
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
-  // ❗ 확정된 값이 아니면 UI를 절대 건드리지 않는다
-  if (result !== "pro" && result !== "con") return;
-
+  // session pending / unknown 상태에서는 UI를 건드리지 않는다
+  if (result === "__SESSION_PENDING__") return;
   const shortsPro =
     document.getElementById("shortsPro") ||
     document.querySelector(".shorts-vote .pro");
@@ -67,17 +14,18 @@ function applyShortsVoteState(result) {
   shortsPro.classList.remove("active-vote", "locked");
   shortsCon.classList.remove("active-vote", "locked");
 
+  // IMPORTANT: result is a STRING: "pro" | "con" | null
   if (result === "pro") {
     shortsPro.classList.add("active-vote", "locked");
     shortsCon.classList.add("locked");
-  } else {
+  } else if (result === "con") {
     shortsCon.classList.add("active-vote", "locked");
     shortsPro.classList.add("locked");
   }
 }
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 🔧 wait until vote core & session are ready (shorts first-load fix)
-async function waitForVoteReady(timeout = 3500) {
+async function waitForVoteReady(timeout = 1500) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     if (
@@ -85,18 +33,15 @@ async function waitForVoteReady(timeout = 3500) {
       window.supabaseClient
     ) {
       const { data } = await window.supabaseClient.auth.getSession();
-      if (data?.session?.user) return true;
+      if (data?.session) return true;
     }
-    await new Promise(r => setTimeout(r, 80));
+    await new Promise(r => setTimeout(r, 50));
   }
   return false;
 }
 // 요구사항: 모바일 스와이프 1칸, PC 휠 1칸, 키보드 ↑↓ 1칸, 480px 고정
 
-let overlay, backBtn, gestureLayer;
-
-let isClosing = false;          // 중복 close 방지
-let isFromPopstate = false;    // popstate로 닫히는지 여부
+let overlay, backBtn;
 
 let videoPrev, videoCur, videoNext;
 
@@ -107,13 +52,7 @@ function ensureShortsDOM() {
   videoNext = document.getElementById("videoNext");
   backBtn   = document.getElementById("shortsBack");
 
-  gestureLayer = document.querySelector(".shorts-gesture-layer");
-
-  if (videoCur) videoCur.style.pointerEvents = "none";
-  if (videoPrev) videoPrev.style.pointerEvents = "none";
-  if (videoNext) videoNext.style.pointerEvents = "none";
-
-  return !!(overlay && videoPrev && videoCur && videoNext && backBtn && gestureLayer);
+  return !!(overlay && videoPrev && videoCur && videoNext && backBtn);
 }
 
 let shortsList = [];
@@ -124,6 +63,35 @@ let touchStartX = 0;
 let draggingX = false;
 let locked = false;
 
+/* =========================
+   iOS SCROLL HARD LOCK (필수)
+========================= */
+let scrollY = 0;
+
+function preventScroll(e) {
+  e.preventDefault();
+}
+
+function lockIOSScroll() {
+  // 터치 스크롤 전파 차단
+  document.addEventListener("touchmove", preventScroll, { passive: false });
+
+  // body 자체를 fixed로 못 박음
+  scrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.width = "100%";
+}
+
+function unlockIOSScroll() {
+  document.removeEventListener("touchmove", preventScroll);
+
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.width = "";
+
+  window.scrollTo(0, scrollY);
+}
 
 
 function lock(ms = 450) {
@@ -154,17 +122,16 @@ async function openShorts(list, startId) {
   shortsList = list.filter(v => v && v.video_url);
   if (!shortsList.length) return;
 
-  // 🔥 정확한 영상 매칭 보장
-  if (shortsList.length === 1) {
-    shortsIndex = 0;
-  } else {
-    const idx = shortsList.findIndex(v => Number(v.id) === Number(startId));
-    shortsIndex = idx >= 0 ? idx : 0;
-  }
+  const idx = shortsList.findIndex(v => Number(v.id) === Number(startId));
+  shortsIndex = idx >= 0 ? idx : 0;
 
   overlay.hidden = false;
-  overlay.style.pointerEvents = "auto";
-  isClosing = false;
+
+  // 🔥 history stack for returning to previous screen (not index)
+  if (!overlay._historyPushed) {
+    history.pushState({ shorts: true }, "");
+    overlay._historyPushed = true;
+  }
 
   // 🔴 iOS에서 뒤 스크롤 완전 차단
   lockIOSScroll();
@@ -186,25 +153,14 @@ async function openShorts(list, startId) {
 
   // 🔥 [필수] 최초 진입 시 현재 영상 src 세팅 (딱 1번만)
   const cur = shortsList[shortsIndex];
-  if (cur) {
+  if (cur && videoCur.src !== cur.video_url) {
+    videoCur.src = cur.video_url;
+    videoCur.load();
     try {
-      videoCur.pause();
-      videoCur.removeAttribute("src");
-      videoCur.load();
-
-      videoCur.setAttribute("playsinline", "");
-      videoCur.setAttribute("webkit-playsinline", "");
-      videoCur.muted = true;
-      videoCur.src = cur.video_url;
-      videoCur.load();
-
-      videoCur.play().catch(() => {});
-    } catch (e) {
-      console.warn("[SHORTS] autoplay retry", e);
-    }
+      await videoCur.play();
+      videoCur.muted = false; // 🔥 이 줄 추가
+    } catch {}
   }
-  console.info("[SHORTS] opened", videoCur.src);
-
   // 🔥 INITIAL VOTE SYNC (first shorts guaranteed)
   window.currentIssue = shortsList[shortsIndex];
 
@@ -215,7 +171,7 @@ async function openShorts(list, startId) {
     let result = "__SESSION_PENDING__";
     let retry = 0;
 
-    while (retry < 20) {
+    while (retry < 12) {
       result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
 
       if (result === "pro" || result === "con") {
@@ -223,9 +179,13 @@ async function openShorts(list, startId) {
         return;
       }
 
-      await new Promise(r => setTimeout(r, 150));
+      // 세션은 준비됐으나 아직 DB 반영/조회 지연인 경우 재시도
+      await new Promise(r => setTimeout(r, 120));
       retry++;
     }
+
+    // 명시적으로 '미투표' 상태 확정 시에만 초기화하지 않고 no-op return
+    return;
   })();
 
 
@@ -240,11 +200,9 @@ async function openShorts(list, startId) {
     document.querySelector('.shorts-vote .con');
 
   if (shortsPro && shortsCon && !overlay._voteBound) {
-    // 🔥 only reset UI on open if session is not ready
-    if (!window.supabaseClient) {
-      shortsPro.classList.remove("active-vote", "locked");
-      shortsCon.classList.remove("active-vote", "locked");
-    }
+    // 🔥 always reset UI on open
+    shortsPro.classList.remove("active-vote", "locked");
+    shortsCon.classList.remove("active-vote", "locked");
 
     overlay._voteBound = true;
 
@@ -297,34 +255,25 @@ async function openShorts(list, startId) {
     };
   }
 
-
 }
 
-function closeShorts(shouldGoBack = true) {
-  if (isClosing) return;
-  isClosing = true;
-  overlay.style.pointerEvents = "none";
+function closeShorts() {
   try { videoCur.pause(); } catch {}
 
-  if (videoCur) videoCur.pause();
-  if (videoPrev) videoPrev.pause();
-  if (videoNext) videoNext.pause();
+  videoCur.pause();
+  videoPrev.pause();
+  videoNext.pause();
 
   // 🔥 [필수] src 완전 정리
-  if (videoCur) {
-    videoCur.removeAttribute("src");
-    videoCur.load();
-  }
-  if (videoPrev) {
-    videoPrev.removeAttribute("src");
-    videoPrev.load();
-  }
-  if (videoNext) {
-    videoNext.removeAttribute("src");
-    videoNext.load();
-  }
+  videoCur.removeAttribute("src");
+  videoPrev.removeAttribute("src");
+  videoNext.removeAttribute("src");
 
-  if (overlay) overlay.hidden = true;
+  videoCur.load();
+  videoPrev.load();
+  videoNext.load();
+
+  overlay.hidden = true;
 
   unlockIOSScroll();
 
@@ -332,9 +281,12 @@ function closeShorts(shouldGoBack = true) {
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
 
-  isFromPopstate = false;
-  isClosing = false;
-  overlay.style.pointerEvents = "auto";
+  // 🔥 return to previous screen instead of forcing index
+  if (history.state && history.state.shorts) {
+    history.back();
+  }
+
+  overlay._historyPushed = false;
 }
 
 function loadVideos() {
@@ -384,169 +336,178 @@ function prev() {
 
 function bindShortsEvents() {
 
-  gestureLayer.style.pointerEvents = "auto";
-  gestureLayer.classList.remove("passive");
-  gestureLayer.style.touchAction = "none";
-
-  // 🔥 [CRITICAL FIX]
-  // 최초 사용자 인터랙션 시 포커스 강제 획득
-  const forceFocus = () => {
-    const stage = document.querySelector(".shorts-stage");
-    if (stage && stage.tabIndex >= 0) {
-      stage.focus({ preventScroll: true });
-    }
-  };
-
-  window.addEventListener("pointerdown", forceFocus, { once: true });
-  window.addEventListener("touchstart", forceFocus, { once: true });
-  window.addEventListener("mousedown", forceFocus, { once: true });
-
-// =========================
-// KEYBOARD (GLOBAL, RELIABLE)
-// =========================
-if (!window._shortsKeyBound) {
-  window._shortsKeyBound = true;
-
-  window.addEventListener("keydown", (e) => {
-    if (!overlay || overlay.hidden) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      next();
-    }
-
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      prev();
-    }
-
-    if (e.key === "Escape") {
-      e.preventDefault();
-      closeShorts(true);
+  // 🔥 system back button (browser / mobile) closes shorts
+  window.addEventListener("popstate", () => {
+    if (overlay && !overlay.hidden) {
+      closeShorts();
     }
   });
-}
 
-  /* =========================
-     Unified Touch Swipe Handler
-  ========================= */
-  let startX = 0, startY = 0, touching = false;
+overlay.addEventListener("click", (e) => {
+  // 투표 버튼은 막지 않는다
+  if (e.target.closest(".shorts-vote")) return;
 
-  gestureLayer.addEventListener("touchstart", (e) => {
-    if (!e.touches || !e.touches[0]) return;
+  e.stopPropagation();
+}, true);
 
-    gestureLayer.classList.remove("passive"); // ← ★ 반드시 여기
+/* =========================
+   Mobile Touch Swipe (1 step)
+========================= */
+overlay.addEventListener("touchstart", (e) => {
+  if (!e.touches || !e.touches[0]) return;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
 
-    touching = true;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    videoCur.style.transition = "none";
-
-    if (videoCur && videoCur.paused) {
-      videoCur.muted = true;
-      videoCur.play().catch(() => {});
-    }
-  }, { passive: false });
-
-  gestureLayer.addEventListener("touchmove", (e) => {
-    if (!touching || !e.touches[0]) return;
-
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      videoCur.style.transform = `translateX(${dx}px)`;
-    }
-  }, { passive: false });
-
-
-
-let lastTap = 0;
-
-gestureLayer.addEventListener("touchend", (e) => {
-  if (!touching) return;
-  touching = false;
-
-  const dx = e.changedTouches[0].clientX - startX;
-  const dy = e.changedTouches[0].clientY - startY;
-  const ax = Math.abs(dx);
-  const ay = Math.abs(dy);
-  const now = Date.now();
-
-  // TAP / DOUBLE TAP
-  if (ax < 10 && ay < 10) {
-    if (now - lastTap < 300) {
-      videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
-      lastTap = 0;
-      return;
-    }
-
-    lastTap = now;
-    setTimeout(() => {
-      if (lastTap && Date.now() - lastTap >= 300) {
-        videoCur.paused ? videoCur.play() : videoCur.pause();
-        lastTap = 0;
-      }
-    }, 300);
-    return;
-  }
-
-  gestureLayer.classList.add("passive");
-
-  // HORIZONTAL → CLOSE
-  if (ax > ay && ax > 80) {
-    videoCur.style.transition = "transform .25s ease";
-    videoCur.style.transform =
-      dx > 0 ? "translateX(120%)" : "translateX(-120%)";
-    setTimeout(() => closeShorts(true), 220);
-    return;
-  }
-
-  // VERTICAL → NEXT / PREV
-  if (ay > ax && ay > 80) {
-    videoCur.style.transition = "none";
-    videoCur.style.transform = "translate(0, 0)";
-    dy < 0 ? next() : prev();
-    return;
-  }
-
-  // RESET
+// 좌/우 스와이프 준비
+overlay.addEventListener("touchstart", (e) => {
+  if (!e.touches || !e.touches[0]) return;
+  touchStartX = e.touches[0].clientX;
+  draggingX = true;
   videoCur.style.transition = "none";
-  videoCur.style.transform = "translate(0, 0)";
+}, { passive: true });
+
+// 좌/우 스와이프 중 카드 이동
+overlay.addEventListener("touchmove", (e) => {
+  if (!draggingX || !e.touches || !e.touches[0]) return;
+
+  const diffX = e.touches[0].clientX - touchStartX;
+
+  // 좌우 스와이프 시 카드처럼 이동
+  videoCur.style.transform = `translateX(${diffX}px)`;
+  overlay.style.background = "rgba(0,0,0,0.85)";
+}, { passive: true });
+
+overlay.addEventListener("touchend", (e) => {
+  if (locked) return;
+  const endY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : touchStartY;
+  const diff = touchStartY - endY;
+
+  // 임계값: 너무 민감하면 쭉 내려가는 느낌 남
+  if (Math.abs(diff) < 90) return;
+
+  if (diff > 0) next();  // 위로 스와이프 = 다음
+  else prev();           // 아래로 스와이프 = 이전
+}, { passive: true });
+
+// 좌/우 스와이프 종료/복귀
+overlay.addEventListener("touchend", (e) => {
+  if (!draggingX || !e.changedTouches || !e.changedTouches[0]) return;
+
+  draggingX = false;
+
+  const diffX = e.changedTouches[0].clientX - touchStartX;
+
+  // 임계값
+  if (Math.abs(diffX) > 90) {
+    // 카드가 밀리며 종료
+    videoCur.style.transition = "transform 0.25s ease";
+    videoCur.style.transform =
+      diffX > 0 ? "translateX(120%)" : "translateX(-120%)";
+
+    setTimeout(() => {
+      videoCur.style.transform = "";
+      videoCur.style.transition = "";
+      overlay.style.background = "";
+      closeShorts();
+    }, 220);
+
+  } else {
+    // 취소 → 원위치
+    videoCur.style.transition = "transform 0.25s ease";
+    videoCur.style.transform = "translateX(0)";
+    overlay.style.background = "";
+
+    setTimeout(() => {
+      videoCur.style.transition = "";
+    }, 250);
+  }
+}, { passive: true });
+
+/* =========================
+   PC Mouse Wheel (1 step)
+========================= */
+let wheelDelta = 0;
+
+overlay.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  if (locked) return;
+
+  wheelDelta += e.deltaY;
+
+  if (Math.abs(wheelDelta) < 80) return;
+
+  if (wheelDelta > 0) next();
+  else prev();
+
+  wheelDelta = 0;
 }, { passive: false });
 
+/* =========================
+   Keyboard (↑↓, Esc)
+========================= */
+window.addEventListener("keydown", (e) => {
+  if (overlay.hidden) return;
 
-// =========================
-// PC / Trackpad Wheel (GLOBAL)
-// =========================
-if (!window._shortsWheelBound) {
-  window._shortsWheelBound = true;
-
-  window.addEventListener("wheel", (e) => {
-    if (!overlay || overlay.hidden) return;
-    if (locked) return;
-
-    if (Math.abs(e.deltaY) < 80) return;
-
+  if (e.key === "ArrowDown") {
     e.preventDefault();
-    e.deltaY > 0 ? next() : prev();
-  }, { passive: false });
-}
+    next();
+  }
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    prev();
+  }
+  if (e.key === "Escape") {
+    e.preventDefault();
+    closeShorts();
+  }
+});
+
 /* =========================
    UI Buttons
 ========================= */
-  if (backBtn) {
-    backBtn.onclick = () => {
-      closeShorts(true);
-    };
+if (backBtn) backBtn.onclick = closeShorts;
+
+// 외부에서 호출
+window.openShorts = openShorts;
+window.closeShorts = closeShorts;
+
+
+/* =========================
+   TAP / DOUBLE TAP CONTROL
+========================= */
+
+let tapTimer = null;
+let lastTap = 0;
+
+overlay.addEventListener("click", () => {
+  const now = Date.now();
+  const delta = now - lastTap;
+
+  // Double tap → toggle 2x speed
+  if (delta < 300) {
+    if (tapTimer) {
+      clearTimeout(tapTimer);
+      tapTimer = null;
+    }
+
+    videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
+    lastTap = 0;
+    return;
   }
 
+  lastTap = now;
+  tapTimer = setTimeout(() => {
+    if (videoCur.paused) {
+      videoCur.play().catch(() => {});
+    } else {
+      videoCur.pause();
+    }
+    tapTimer = null;
+  }, 300);
+});
 }
 
 function slideUp() {
-  videoCur.style.transition = "none";
-  videoCur.style.transform = "translate(0, 0)";
-
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";
@@ -576,12 +537,13 @@ function slideUp() {
       videoNext.load();
     }
 
+    
+
     resetPositions();
 
     try {
-      videoCur.muted = true;
-      await videoCur.play().catch(() => {});
       videoCur.muted = false;
+      await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
@@ -591,6 +553,12 @@ function slideUp() {
     const shortsCon =
       document.getElementById("shortsCon") ||
       document.querySelector('.shorts-vote .con');
+
+    // 🔥 Shorts vote UI reset (critical)
+    if (shortsPro && shortsCon) {
+      shortsPro.classList.remove("active-vote", "locked");
+      shortsCon.classList.remove("active-vote", "locked");
+    }
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
@@ -603,9 +571,6 @@ function slideUp() {
 }
 
 function slideDown() {
-  videoCur.style.transition = "none";
-  videoCur.style.transform = "translate(0, 0)";
-
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";
@@ -636,9 +601,8 @@ function slideDown() {
     resetPositions();
 
     try {
-      videoCur.muted = true;
-      await videoCur.play().catch(() => {});
       videoCur.muted = false;
+      await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
@@ -648,6 +612,12 @@ function slideDown() {
     const shortsCon =
       document.getElementById("shortsCon") ||
       document.querySelector('.shorts-vote .con');
+
+    // 🔥 Shorts vote UI reset (critical)
+    if (shortsPro && shortsCon) {
+      shortsPro.classList.remove("active-vote", "locked");
+      shortsCon.classList.remove("active-vote", "locked");
+    }
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
@@ -660,45 +630,14 @@ function slideDown() {
 }
 
 
+// 모바일에서 백그라운드 복귀 시 투표 상태 재동기화
+document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible") return;
+  if (!window.currentIssue) return;
+  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
-// 🔥 expose shorts controls globally (index + shorts)
-window.openShorts = openShorts;
-window.closeShorts = closeShorts;
-// =========================
-// DIRECT SHORTS PAGE BOOTSTRAP
-// =========================
-(function bootstrapShortsPage() {
-  const params = new URLSearchParams(location.search);
-  const startId = params.get("start");
-
-  let list = [];
-  try {
-    list = JSON.parse(sessionStorage.getItem("__SHORTS_LIST__") || "[]");
-  } catch (e) {
-    console.error("[SHORTS] session list parse error", e);
-    return;
+  const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+  if (result !== "__SESSION_PENDING__") {
+    applyShortsVoteState(result);
   }
-
-  if (!list.length) {
-    console.warn("[SHORTS] no shorts list in sessionStorage");
-    return;
-  }
-
-  const tryBoot = () => {
-    if (typeof window.openShorts === "function" && document.getElementById("shortsOverlay")) {
-      window.openShorts(list, startId);
-    } else {
-      requestAnimationFrame(tryBoot);
-    }
-  };
-
-  tryBoot();
-})();
-  // Add popstate handler to close shorts overlay if open
-  window.addEventListener("popstate", () => {
-    const overlay = document.getElementById("shortsOverlay");
-    if (overlay && !overlay.hidden) {
-      closeShorts(false);
-    }
-  });
-}
+});
