@@ -107,7 +107,7 @@ function ensureShortsDOM() {
   videoNext = document.getElementById("videoNext");
   backBtn   = document.getElementById("shortsBack");
 
-  gestureLayer = document.querySelector(".shorts-gesture-layer");
+  gestureLayer = document.querySelector(".shorts-gesture-layer") || overlay;
 
   if (videoCur) videoCur.style.pointerEvents = "none";
   if (videoPrev) videoPrev.style.pointerEvents = "none";
@@ -382,6 +382,7 @@ function prev() {
 }
 
 function bindShortsEvents() {
+  console.log("[SHORTS] bindShortsEvents attached to", gestureLayer);
 
   gestureLayer.style.pointerEvents = "auto";
   gestureLayer.style.touchAction = "none";
@@ -390,29 +391,27 @@ function bindShortsEvents() {
      STEP 1 — VERTICAL SWIPE ONLY (STABLE)
      ========================= */
   let startY = 0;
-  let isTouching = false;
 
   gestureLayer.addEventListener("touchstart", (e) => {
     if (!e.touches || !e.touches[0]) return;
-    isTouching = true;
     startY = e.touches[0].clientY;
   }, { passive: true });
 
   gestureLayer.addEventListener("touchend", (e) => {
-    if (!isTouching) return;
-    isTouching = false;
-
     if (!e.changedTouches || !e.changedTouches[0]) return;
     const endY = e.changedTouches[0].clientY;
     const dy = endY - startY;
 
-    // 최소 이동 거리
-    if (Math.abs(dy) < 60) return;
+    console.log("[SHORTS] swipe dy:", dy);
+
+    if (Math.abs(dy) < 50) return;
 
     if (dy < 0) {
-      next();   // 위로 스와이프 → 다음
+      console.log("[SHORTS] NEXT");
+      next();
     } else {
-      prev();   // 아래로 스와이프 → 이전
+      console.log("[SHORTS] PREV");
+      prev();
     }
   }, { passive: true });
 /* =========================
