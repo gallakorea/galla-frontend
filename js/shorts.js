@@ -413,35 +413,66 @@ function bindShortsEvents() {
 
     if (Math.abs(dx) > Math.abs(dy)) {
       videoCur.style.transform = `translateX(${dx}px)`;
+    } else {
+      videoCur.style.transform = `translateY(${dy * 0.3}px)`;
     }
   }, { passive: false });
 
-  gestureLayer.addEventListener("touchend", (e) => {
-    if (!touching) return;
-    touching = false;
 
-    const dx = e.changedTouches[0].clientX - startX;
-    const dy = e.changedTouches[0].clientY - startY;
-    const ax = Math.abs(dx);
-    const ay = Math.abs(dy);
 
+let lastTap = 0;
+
+gestureLayer.addEventListener("touchend", (e) => {
+  if (!touching) return;
+  touching = false;
+
+  const dx = e.changedTouches[0].clientX - startX;
+  const dy = e.changedTouches[0].clientY - startY;
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+  const now = Date.now();
+
+  // TAP / DOUBLE TAP
+  if (ax < 10 && ay < 10) {
+    if (now - lastTap < 300) {
+      videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
+      lastTap = 0;
+      return;
+    }
+
+    lastTap = now;
+    setTimeout(() => {
+      if (lastTap && Date.now() - lastTap >= 300) {
+        videoCur.paused ? videoCur.play() : videoCur.pause();
+        lastTap = 0;
+      }
+    }, 300);
+    return;
+  }
+
+  // HORIZONTAL → CLOSE
+  if (ax > ay && ax > 80) {
     videoCur.style.transition = "transform .25s ease";
+    videoCur.style.transform =
+      dx > 0 ? "translateX(120%)" : "translateX(-120%)";
+    setTimeout(() => closeShorts(true), 220);
+    return;
+  }
 
-    if (ax > ay && ax > 80) {
-      videoCur.style.transform = dx > 0 ? "translateX(120%)" : "translateX(-120%)";
-      setTimeout(() => closeShorts(true), 220);
-      return;
-    }
+  // VERTICAL → NEXT / PREV
+  if (ay > ax && ay > 80) {
+    videoCur.style.transition = "none";
+    videoCur.style.transform = "translate(0, 0)";
+    dy < 0 ? next() : prev();
+    return;
+  }
 
-    if (ay > ax && ay > 80) {
-      videoCur.style.transform = "translateX(0)";
-      videoCur.style.transition = "";
-      dy < 0 ? next() : prev();
-      return;
-    }
+  // RESET
+  videoCur.style.transition = "none";
+  videoCur.style.transform = "translate(0, 0)";
+}, { passive: false });
 
-    videoCur.style.transform = "translateX(0)";
-  });
+
 /* =========================
    PC Mouse Wheel (1 step)
 ========================= */
@@ -489,41 +520,13 @@ window.addEventListener("keydown", (e) => {
       closeShorts(true);
     };
   }
-/* =========================
-   TAP / DOUBLE TAP CONTROL
-========================= */
 
-let lastTap = 0;
-
-gestureLayer.addEventListener("touchend", (e) => {
-  e.preventDefault();
-
-  const now = Date.now();
-  const delta = now - lastTap;
-
-  // Double tap → 2x speed toggle
-  if (delta > 0 && delta < 300) {
-    videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
-    lastTap = 0;
-    return;
-  }
-
-  lastTap = now;
-
-  setTimeout(() => {
-    if (lastTap && Date.now() - lastTap >= 300) {
-      if (videoCur.paused) {
-        videoCur.play().catch(() => {});
-      } else {
-        videoCur.pause();
-      }
-      lastTap = 0;
-    }
-  }, 300);
-}, { passive: false });
 }
 
 function slideUp() {
+  videoCur.style.transition = "none";
+  videoCur.style.transform = "translate(0, 0)";
+
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";
@@ -580,6 +583,9 @@ function slideUp() {
 }
 
 function slideDown() {
+  videoCur.style.transition = "none";
+  videoCur.style.transform = "translate(0, 0)";
+  
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";
