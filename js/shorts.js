@@ -162,7 +162,8 @@ async function openShorts(list, startId) {
   }
 
   overlay.hidden = false;
-
+  overlay.style.pointerEvents = "auto";
+  isClosing = false;
 
   // 🔴 iOS에서 뒤 스크롤 완전 차단
   lockIOSScroll();
@@ -184,13 +185,13 @@ async function openShorts(list, startId) {
 
   // 🔥 [필수] 최초 진입 시 현재 영상 src 세팅 (딱 1번만)
   const cur = shortsList[shortsIndex];
-  if (cur && videoCur.src !== cur.video_url) {
+  if (cur) {
+    videoCur.pause();
+    videoCur.setAttribute("playsinline", "");
+    videoCur.muted = true;
     videoCur.src = cur.video_url;
-    videoCur.load();
-    try {
-      await videoCur.play();
-      videoCur.muted = false; // 🔥 이 줄 추가
-    } catch {}
+    await videoCur.play().catch(() => {});
+    videoCur.muted = false;
   }
   // 🔥 INITIAL VOTE SYNC (first shorts guaranteed)
   window.currentIssue = shortsList[shortsIndex];
@@ -290,6 +291,7 @@ async function openShorts(list, startId) {
 function closeShorts(shouldGoBack = true) {
   if (isClosing) return;
   isClosing = true;
+  overlay.style.pointerEvents = "none";
   try { videoCur.pause(); } catch {}
 
   if (videoCur) videoCur.pause();
@@ -317,7 +319,6 @@ function closeShorts(shouldGoBack = true) {
   document.body.classList.remove("shorts-open");
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
-
 
   isFromPopstate = false;
   isClosing = false;
@@ -378,82 +379,55 @@ function bindShortsEvents() {
     e.stopPropagation();
   }, true);
 
-/* =========================
-   Unified Touch Swipe Handler (FIXED)
-   - up/down: next/prev
-   - left/right: close (card)
-========================= */
+  /* =========================
+     Unified Touch Swipe Handler
+  ========================= */
+  let startX = 0, startY = 0, touching = false;
 
-let startX = 0;
-let startY = 0;
-let isTouching = false;
+  overlay.addEventListener("touchstart", (e) => {
+    if (!e.touches[0]) return;
+    touching = true;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    videoCur.style.transition = "none";
+  }, { passive: false });
 
-overlay.addEventListener("touchstart", (e) => {
-  if (!e.touches || !e.touches[0]) return;
+  overlay.addEventListener("touchmove", (e) => {
+    if (!touching || !e.touches[0]) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
 
-  const t = e.touches[0];
-  startX = t.clientX;
-  startY = t.clientY;
-  isTouching = true;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      e.preventDefault();
+      videoCur.style.transform = `translateX(${dx}px)`;
+    }
+  }, { passive: false });
 
-  videoCur.style.transition = "none";
-}, { passive: false });
+  overlay.addEventListener("touchend", (e) => {
+    if (!touching) return;
+    touching = false;
 
-overlay.addEventListener("touchmove", (e) => {
-  if (!isTouching || !e.touches || !e.touches[0]) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
 
-  const t = e.touches[0];
-  const diffX = t.clientX - startX;
-  const diffY = t.clientY - startY;
+    videoCur.style.transition = "transform .25s ease";
 
-  // 좌우가 더 크면 카드 이동
-  if (Math.abs(diffX) > Math.abs(diffY)) {
-    e.preventDefault();
-    videoCur.style.transform = `translateX(${diffX}px)`;
-  }
-}, { passive: false });
+    if (ax > ay && ax > 80) {
+      videoCur.style.transform = dx > 0 ? "translateX(120%)" : "translateX(-120%)";
+      setTimeout(() => closeShorts(true), 220);
+      return;
+    }
 
-overlay.addEventListener("touchend", (e) => {
-  if (!isTouching) return;
-  isTouching = false;
-
-  const t = e.changedTouches && e.changedTouches[0];
-  if (!t) return;
-
-  const diffX = t.clientX - startX;
-  const diffY = t.clientY - startY;
-  const absX = Math.abs(diffX);
-  const absY = Math.abs(diffY);
-
-  videoCur.style.transition = "transform 0.25s ease";
-
-  // 좌우 스와이프 → 닫기
-  if (absX > absY && absX > 80) {
-    videoCur.style.transform =
-      diffX > 0 ? "translateX(120%)" : "translateX(-120%)";
-
-    setTimeout(() => {
+    if (ay > ax && ay > 80) {
       videoCur.style.transform = "";
-      videoCur.style.transition = "";
-      closeShorts(true);
-    }, 220);
-    return;
-  }
+      dy < 0 ? next() : prev();
+      return;
+    }
 
-  // 상하 스와이프 → 다음/이전
-  if (absY > absX && absY > 80) {
-    videoCur.style.transform = "";
-    if (diffY < 0) next();   // 위
-    else prev();             // 아래
-    return;
-  }
-
-  // 취소 → 원위치
-  videoCur.style.transform = "translateX(0)";
-  setTimeout(() => {
-    videoCur.style.transition = "";
-  }, 250);
-}, { passive: false });
+    videoCur.style.transform = "translateX(0)";
+  }, { passive: false });
 
 /* =========================
    PC Mouse Wheel (1 step)
@@ -498,17 +472,7 @@ window.addEventListener("keydown", (e) => {
    UI Buttons
 ========================= */
 if (backBtn) {
-  backBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // 🔥 history 건드리지 않고 즉시 이전 페이지로 복귀
-    if (document.referrer) {
-      location.href = document.referrer;
-    } else {
-      location.href = "/index.html";
-    }
-  }, true);
+  backBtn.onclick = () => history.back();
 }
 
 /* =========================
