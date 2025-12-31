@@ -1,10 +1,21 @@
 // shorts.js — SAFE PAGE GUARD
 const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
 
-// 항상 API는 노출한다 (index에서 호출 가능)
-window.openShorts = window.openShorts || function () {
-  console.warn("[SHORTS] openShorts called before shorts page is ready");
+/**
+ * Global API
+ * - shorts 페이지가 아니면 shorts.html로 이동
+ * - shorts 페이지에서는 실제 openShorts 구현이 아래에서 덮어씀
+ */
+window.openShorts = function (list, startId) {
+  if (!IS_SHORTS_PAGE) {
+    const params = new URLSearchParams();
+    if (startId != null) params.set("start", startId);
+    sessionStorage.setItem("__SHORTS_LIST__", JSON.stringify(list || []));
+    location.href = `/shorts.html?${params.toString()}`;
+    return;
+  }
 };
+
 window.closeShorts = window.closeShorts || function () {};
 
 // shorts 페이지가 아니면 나머지 로직은 실행하지 않는다
