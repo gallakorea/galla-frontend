@@ -104,23 +104,16 @@ function preventScroll(e) {
 }
 
 function lockIOSScroll() {
-  // 터치 스크롤 전파 차단
-  document.addEventListener("touchmove", preventScroll, { passive: false });
-
-  // body 자체를 fixed로 못 박음
   scrollY = window.scrollY;
-  document.body.style.position = "";;
+  document.body.style.position = "fixed";
   document.body.style.top = `-${scrollY}px`;
   document.body.style.width = "100%";
 }
 
 function unlockIOSScroll() {
-  document.removeEventListener("touchmove", preventScroll);
-
   document.body.style.position = "";
   document.body.style.top = "";
   document.body.style.width = "";
-
   window.scrollTo(0, scrollY);
 }
 
@@ -390,22 +383,30 @@ function bindShortsEvents() {
 
   overlay.addEventListener("touchstart", (e) => {
     if (!e.touches[0]) return;
+
     touching = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     videoCur.style.transition = "none";
-  });
+
+    // ✅ iOS: 첫 사용자 제스처에서 반드시 재생 트리거
+    if (videoCur && videoCur.paused) {
+      videoCur.muted = false;
+      videoCur.play().catch(() => {});
+    }
+  }, { passive: true });
 
   overlay.addEventListener("touchmove", (e) => {
     if (!touching || !e.touches[0]) return;
+
     const dx = e.touches[0].clientX - startX;
     const dy = e.touches[0].clientY - startY;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      e.preventDefault();
+      e.preventDefault(); // ❗ 여기서만 차단
       videoCur.style.transform = `translateX(${dx}px)`;
     }
-  });
+  }, { passive: false });
 
   overlay.addEventListener("touchend", (e) => {
     if (!touching) return;
@@ -425,7 +426,8 @@ function bindShortsEvents() {
     }
 
     if (ay > ax && ay > 80) {
-      videoCur.style.transform = "";
+      videoCur.style.transform = "translateX(0)";
+      videoCur.style.transition = "";
       dy < 0 ? next() : prev();
       return;
     }
@@ -476,7 +478,10 @@ window.addEventListener("keydown", (e) => {
    UI Buttons
 ========================= */
 if (backBtn) {
-  backBtn.onclick = () => history.back();
+  backBtn.onclick = () => {
+    closeShorts(false);
+    history.back();
+  };
 }
 
 /* =========================
