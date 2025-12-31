@@ -181,8 +181,10 @@ body[data-page="shorts"] {
 
 #shortsOverlay {
   position: fixed;
-  inset: 0;
-  background: #000;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 64px;   /* 🔥 하단 네비 높이만큼 비움 */
   z-index: 400;
 
   display: flex;

@@ -106,7 +106,7 @@ function lockIOSScroll() {
 
   // body 자체를 fixed로 못 박음
   scrollY = window.scrollY;
-  document.body.style.position = "fixed";
+  document.body.style.position = "";;
   document.body.style.top = `-${scrollY}px`;
   document.body.style.width = "100%";
 }
