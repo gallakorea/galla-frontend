@@ -94,28 +94,6 @@ let touchStartX = 0;
 let draggingX = false;
 let locked = false;
 
-/* =========================
-   iOS SCROLL HARD LOCK (필수)
-========================= */
-let scrollY = 0;
-
-function preventScroll(e) {
-  e.preventDefault();
-}
-
-function lockIOSScroll() {
-  scrollY = window.scrollY;
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${scrollY}px`;
-  document.body.style.width = "100%";
-}
-
-function unlockIOSScroll() {
-  document.body.style.position = "";
-  document.body.style.top = "";
-  document.body.style.width = "";
-  window.scrollTo(0, scrollY);
-}
 
 
 function lock(ms = 450) {
@@ -191,9 +169,6 @@ async function openShorts(list, startId) {
       videoCur.load();
 
       videoCur.play().catch(() => {});
-      setTimeout(() => {
-        videoCur.muted = false;
-      }, 120);
     } catch (e) {
       console.warn("[SHORTS] autoplay retry", e);
     }
@@ -391,15 +366,13 @@ function bindShortsEvents() {
     startY = e.touches[0].clientY;
     videoCur.style.transition = "none";
 
-    // 🔥 iOS 규칙: 제스처 시 muted 상태로 즉시 play
+    // iOS: play + unmute MUST happen inside gesture
     if (videoCur && videoCur.paused) {
       videoCur.muted = true;
       videoCur.play().catch(() => {});
-      setTimeout(() => {
-        videoCur.muted = false;
-      }, 120);
+      videoCur.muted = false;
     }
-  }, { passive: true });
+  }, { passive: false });
 
   overlay.addEventListener("touchmove", (e) => {
     if (!touching || !e.touches[0]) return;
@@ -559,8 +532,9 @@ function slideUp() {
     resetPositions();
 
     try {
+      videoCur.muted = true;
+      await videoCur.play().catch(() => {});
       videoCur.muted = false;
-      await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
@@ -613,8 +587,9 @@ function slideDown() {
     resetPositions();
 
     try {
+      videoCur.muted = true;
+      await videoCur.play().catch(() => {});
       videoCur.muted = false;
-      await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
