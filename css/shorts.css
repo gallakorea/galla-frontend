@@ -25,12 +25,12 @@ body[data-page="shorts"] .header {
 #shortsOverlay {
   position: fixed;
   inset: 0;
-  left: 50%;
-  transform: translateX(-50%);
 
   width: 100%;
   max-width: 480px;
   height: 100dvh;
+
+  margin: 0 auto;
 
   background: #000;
   z-index: 999;
