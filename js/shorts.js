@@ -28,8 +28,9 @@ if (IS_SHORTS_PAGE) {
 
 // Helper to apply Shorts vote state to vote buttons
 function applyShortsVoteState(result) {
-  // session pending / unknown 상태에서는 UI를 건드리지 않는다
-  if (result === "__SESSION_PENDING__") return;
+  // ❗ 확정된 값이 아니면 UI를 절대 건드리지 않는다
+  if (result !== "pro" && result !== "con") return;
+
   const shortsPro =
     document.getElementById("shortsPro") ||
     document.querySelector(".shorts-vote .pro");
@@ -42,11 +43,10 @@ function applyShortsVoteState(result) {
   shortsPro.classList.remove("active-vote", "locked");
   shortsCon.classList.remove("active-vote", "locked");
 
-  // IMPORTANT: result is a STRING: "pro" | "con" | null
   if (result === "pro") {
     shortsPro.classList.add("active-vote", "locked");
     shortsCon.classList.add("locked");
-  } else if (result === "con") {
+  } else {
     shortsCon.classList.add("active-vote", "locked");
     shortsPro.classList.add("locked");
   }
@@ -578,11 +578,6 @@ function slideUp() {
       document.getElementById("shortsCon") ||
       document.querySelector('.shorts-vote .con');
 
-    // 🔥 Shorts vote UI reset (critical)
-    if (shortsPro && shortsCon) {
-      shortsPro.classList.remove("active-vote", "locked");
-      shortsCon.classList.remove("active-vote", "locked");
-    }
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
@@ -637,11 +632,6 @@ function slideDown() {
       document.getElementById("shortsCon") ||
       document.querySelector('.shorts-vote .con');
 
-    // 🔥 Shorts vote UI reset (critical)
-    if (shortsPro && shortsCon) {
-      shortsPro.classList.remove("active-vote", "locked");
-      shortsCon.classList.remove("active-vote", "locked");
-    }
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
