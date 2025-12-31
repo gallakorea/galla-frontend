@@ -1,4 +1,4 @@
-/* shorts.js — TRUE REELS / SHORTS ENGINE (STABLE) */
+/* shorts.js — TRUE Reels / Shorts (FIXED AUDIO + SCROLL) */
 (function () {
 
 let overlay = null;
@@ -6,13 +6,13 @@ let observer = null;
 let currentIndex = -1;
 
 /* =========================
-   HELPERS
+   UTILS
 ========================= */
 function qs(id) {
   return document.getElementById(id);
 }
 
-function stopAll(except = null) {
+function pauseAll(except = null) {
   document.querySelectorAll(".short video").forEach(v => {
     if (v === except) return;
     try {
@@ -23,18 +23,19 @@ function stopAll(except = null) {
   });
 }
 
-function activateVideo(index) {
+function playAt(index) {
+  if (!overlay) return;
+
   const wrap = overlay.querySelector(`.short[data-index="${index}"]`);
   if (!wrap) return;
 
   const video = wrap.querySelector("video");
   if (!video) return;
 
-  if (currentIndex === index && !video.paused) return;
-
+  if (currentIndex === index) return;
   currentIndex = index;
 
-  stopAll(video);
+  pauseAll(video);
 
   video.muted = true;
   video.currentTime = 0;
@@ -56,28 +57,17 @@ function setupObserver() {
     observer = null;
   }
 
-  stopAll();
-
   observer = new IntersectionObserver(
     entries => {
       entries.forEach(entry => {
-        const video = entry.target.querySelector("video");
-        if (!video) return;
-
-        if (entry.isIntersecting) {
-          const idx = Number(entry.target.dataset.index);
-          activateVideo(idx);
-        } else {
-          try {
-            video.pause();
-            video.muted = true;
-          } catch {}
-        }
+        if (!entry.isIntersecting) return;
+        const idx = Number(entry.target.dataset.index);
+        playAt(idx);
       });
     },
     {
       root: overlay,
-      threshold: 0.8
+      threshold: 0.75
     }
   );
 
@@ -85,12 +75,12 @@ function setupObserver() {
 }
 
 /* =========================
-   OPEN
+   OPEN SHORTS
 ========================= */
 function openShorts(list, startId) {
   overlay = qs("shortsOverlay");
   if (!overlay) {
-    console.error("[SHORTS] overlay missing");
+    console.error("[SHORTS] overlay not found");
     return;
   }
 
@@ -130,15 +120,15 @@ function openShorts(list, startId) {
     if (target) target.scrollIntoView({ block: "start" });
 
     setupObserver();
-    activateVideo(startIndex);
+    playAt(startIndex);
   });
 }
 
 /* =========================
-   CLOSE
+   CLOSE SHORTS
 ========================= */
 function closeShorts() {
-  stopAll();
+  pauseAll();
   currentIndex = -1;
 
   if (observer) {
