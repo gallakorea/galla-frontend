@@ -138,57 +138,61 @@ body[data-page="shorts"] .header {
 /* -------------------------
    VOTE BAR
 ------------------------- */
-.shorts-vote {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-
-  bottom: calc(58px + env(safe-area-inset-bottom) + 12px);
-
-  width: calc(100% - 24px);
-  max-width: 480px;
-
-  display: flex;
-  gap: 12px;
-
-  z-index: 10010;
-  pointer-events: auto;
-}
-
+/* =========================
+   VOTE BAR — PREMIUM MINIMAL
+========================= */
 .shorts-vote .vote-btn {
   flex: 1;
   padding: 14px 0;
-  border-radius: 14px;
+  border-radius: 999px;
 
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+
+  border: 1px solid rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.92);
+
   cursor: pointer;
-  border: 1px solid transparent;
+  transition: 
+    background .18s ease,
+    border-color .18s ease,
+    color .18s ease,
+    transform .12s ease;
 }
 
 /* PRO */
 .shorts-vote .pro {
-  background: #1a1f3c;
-  border-color: #304ffe;
-  color: #fff;
+  border-color: rgba(90,120,255,0.55);
+  color: #cdd7ff;
 }
 
 /* CON */
 .shorts-vote .con {
-  background: #3c1a1a;
-  border-color: #ff5252;
-  color: #fff;
+  border-color: rgba(255,90,90,0.55);
+  color: #ffd2d2;
 }
 
-/* active / locked */
+/* hover / press */
+.shorts-vote .vote-btn:active {
+  transform: scale(0.97);
+}
+
+/* active / selected */
 .shorts-vote .active-vote {
-  background: #ffe27a !important;
-  color: #111 !important;
-  border-color: #ffe27a !important;
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.75);
+  color: #ffffff;
+  font-weight: 800;
 }
 
+/* locked */
 .shorts-vote .locked {
-  opacity: 0.6;
+  opacity: 0.55;
   pointer-events: none;
 }
 
