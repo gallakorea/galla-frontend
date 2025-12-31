@@ -382,12 +382,23 @@ function bindShortsEvents() {
     closeShorts(false); // 여기서는 history.back 절대 호출 안 함
   });
 
-overlay.addEventListener("click", (e) => {
-  // 투표 버튼은 막지 않는다
-  if (e.target.closest(".shorts-vote")) return;
+  window.addEventListener("popstate", () => {
+    // ❗ 안전장치: overlay가 닫혔는데도 body가 잠겨 있으면 복구
+    if (overlay && overlay.hidden) {
+      unlockIOSScroll();
+      document.body.classList.remove("shorts-open");
+      document.documentElement.classList.remove("shorts-open");
+      document.body.style.overflow = "";
+    }
+  });
 
-  e.stopPropagation();
-}, true);
+  overlay.addEventListener("click", (e) => {
+    // ❗ 뒤로가기 버튼은 절대 막지 않는다
+    if (e.target.closest("#shortsBack")) return;
+    if (e.target.closest(".shorts-vote")) return;
+
+    e.stopPropagation();
+  }, true);
 
 /* =========================
    Mobile Touch Swipe (1 step)
@@ -505,11 +516,14 @@ window.addEventListener("keydown", (e) => {
    UI Buttons
 ========================= */
 if (backBtn) {
-  backBtn.onclick = (e) => {
+  backBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    closeShorts(true); // 내부에서 history.back 1회만 발생
-  };
+
+    // ❗ 명시적으로 사용자 액션임을 보장
+    isFromPopstate = false;
+    closeShorts(true);
+  }, true);
 }
 
 /* =========================
