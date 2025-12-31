@@ -1,117 +1,103 @@
-// shorts.js — FORCE GLOBAL MODE
+/* shorts.js — STABLE GLOBAL REELS ENGINE */
 (function () {
 
 /* =========================================================
-   GALLA Shorts — TRUE Reels/Shorts Scroll Physics Version
-   - Native scroll (finger-follow)
-   - scroll-snap
-   - iOS physics
-   - one video plays at a time
+   STATE
 ========================================================= */
-
-/* =========================
-   DOM
-========================= */
-let overlay;
+let overlay = null;
+let observer = null;
 let shortsList = [];
 let currentIndex = -1;
-let observer;
 let currentVideo = null;
 
-/* =========================
-   Helpers
-========================= */
+/* =========================================================
+   UTILS
+========================================================= */
 function qs(id) {
   return document.getElementById(id);
 }
 
+function stopCurrentVideo() {
+  if (!currentVideo) return;
+  try {
+    currentVideo.pause();
+    currentVideo.muted = true;
+    currentVideo.currentTime = currentVideo.currentTime; // iOS audio kill
+  } catch {}
+  currentVideo = null;
+}
+
 function playVideoAt(index) {
-  const video = document.querySelector(
-    `.short[data-index="${index}"] video`
-  );
+  const wrap = document.querySelector(`.short[data-index="${index}"]`);
+  if (!wrap) return;
+
+  const video = wrap.querySelector("video");
   if (!video) return;
 
-  // 🔥 이전 영상 audio focus 완전 제거
-  if (currentVideo && currentVideo !== video) {
-    try {
-      currentVideo.pause();
-      currentVideo.muted = true;
+  if (currentVideo === video) return;
 
-      // iOS / Safari audio session kill
-      currentVideo.currentTime = currentVideo.currentTime;
-    } catch {}
-  }
+  stopCurrentVideo();
 
+  currentIndex = index;
   currentVideo = video;
 
-  // 항상 muted 상태에서 재생 시작
   video.muted = true;
+  video.currentTime = 0;
 
   const p = video.play();
   if (p && typeof p.then === "function") {
     p.then(() => {
-      // ✅ 현재 영상만 소리 허용
       video.muted = false;
     }).catch(() => {});
   }
 }
 
-/* =========================
-   Scroll Observer (CORE)
-========================= */
+/* =========================================================
+   INTERSECTION OBSERVER
+========================================================= */
 function setupObserver() {
   if (observer) {
     observer.disconnect();
     observer = null;
   }
+
   observer = new IntersectionObserver(
     entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const index = Number(entry.target.dataset.index);
-          if (index !== currentIndex) {
-            currentIndex = index;
-            playVideoAt(index);
-          }
+          const idx = Number(entry.target.dataset.index);
+          playVideoAt(idx);
         }
       });
     },
     {
       root: overlay,
-      threshold: 0.8
+      threshold: 0.75
     }
   );
 
   document.querySelectorAll(".short").forEach(el => observer.observe(el));
 }
 
-/* =========================
-   Open Shorts (ENTRY)
-========================= */
+/* =========================================================
+   OPEN SHORTS
+========================================================= */
 function openShorts(list, startId) {
   overlay = qs("shortsOverlay");
-
   if (!overlay) {
-    console.error("[SHORTS] shortsOverlay not found in DOM");
+    console.error("[SHORTS] overlay not found");
     return;
   }
 
-  // 🔥 SHOW OVERLAY (CRITICAL)
+  overlay.innerHTML = "";
   overlay.hidden = false;
   overlay.style.display = "block";
-
-  // 기존 observer 중복 방지
-  if (observer) {
-    observer.disconnect();
-    observer = null;
-  }
-
-  overlay.innerHTML = "";
-  shortsList = list.filter(v => v && v.video_url);
-
-  if (!shortsList.length) return;
+  overlay.scrollTop = 0;
 
   document.body.style.overflow = "hidden";
+
+  shortsList = list.filter(v => v && v.video_url);
+  if (!shortsList.length) return;
 
   shortsList.forEach((item, i) => {
     const wrap = document.createElement("div");
@@ -122,8 +108,8 @@ function openShorts(list, startId) {
     video.src = item.video_url;
     video.playsInline = true;
     video.preload = "auto";
-    video.muted = true;
     video.loop = true;
+    video.muted = true;
 
     wrap.appendChild(video);
     overlay.appendChild(wrap);
@@ -135,38 +121,39 @@ function openShorts(list, startId) {
       : 0;
 
   requestAnimationFrame(() => {
-    const target = overlay.querySelector(
-      `.short[data-index="${startIndex}"]`
-    );
-    if (target) {
-      target.scrollIntoView({ behavior: "auto" });
-    }
+    const target = overlay.querySelector(`.short[data-index="${startIndex}"]`);
+    if (target) target.scrollIntoView({ behavior: "auto" });
+    setupObserver();
+    playVideoAt(startIndex);
   });
-
-  setupObserver();
 }
 
-/* =========================
-   Close Shorts
-========================= */
+/* =========================================================
+   CLOSE SHORTS
+========================================================= */
 function closeShorts() {
-  currentVideo = null;
+  stopCurrentVideo();
+
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
 
   if (overlay) {
     overlay.hidden = true;
     overlay.style.display = "none";
+    overlay.innerHTML = "";
   }
 
   document.body.style.overflow = "";
-
-  if (observer) observer.disconnect();
+  currentIndex = -1;
 }
 
-/* =========================
-   Keyboard Support
-========================= */
+/* =========================================================
+   KEYBOARD SUPPORT (DESKTOP)
+========================================================= */
 window.addEventListener("keydown", e => {
-  if (!overlay) return;
+  if (!overlay || overlay.hidden) return;
 
   if (e.key === "ArrowDown") {
     overlay.scrollBy({ top: window.innerHeight, behavior: "smooth" });
@@ -179,12 +166,10 @@ window.addEventListener("keydown", e => {
   }
 });
 
-/* =========================
-   Expose
-========================= */
+/* =========================================================
+   EXPORT
+========================================================= */
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
 
-window.openShorts = openShorts;
-window.closeShorts = closeShorts;
 })();
