@@ -1,46 +1,40 @@
-/* shorts.js — STABLE GLOBAL REELS ENGINE */
+/* shorts.js — TRUE REELS / SHORTS ENGINE (STABLE) */
 (function () {
 
-/* =========================================================
-   STATE
-========================================================= */
 let overlay = null;
 let observer = null;
-let shortsList = [];
 let currentIndex = -1;
-let currentVideo = null;
-let helperArray = [];
 
-/* =========================================================
-   UTILS
-========================================================= */
+/* =========================
+   HELPERS
+========================= */
 function qs(id) {
   return document.getElementById(id);
 }
 
-function stopAllVideos(except = null) {
+function stopAll(except = null) {
   document.querySelectorAll(".short video").forEach(v => {
     if (v === except) return;
     try {
       v.pause();
+      v.currentTime = 0;
       v.muted = true;
     } catch {}
   });
 }
 
-function playVideoAt(index) {
-  const wrap = document.querySelector(`.short[data-index="${index}"]`);
+function activateVideo(index) {
+  const wrap = overlay.querySelector(`.short[data-index="${index}"]`);
   if (!wrap) return;
 
   const video = wrap.querySelector("video");
   if (!video) return;
 
-  if (currentVideo === video) return;
-
-  stopAllVideos(video);
+  if (currentIndex === index && !video.paused) return;
 
   currentIndex = index;
-  currentVideo = video;
+
+  stopAll(video);
 
   video.muted = true;
   video.currentTime = 0;
@@ -53,9 +47,9 @@ function playVideoAt(index) {
   }
 }
 
-/* =========================================================
-   INTERSECTION OBSERVER
-========================================================= */
+/* =========================
+   OBSERVER
+========================= */
 function setupObserver() {
   if (observer) {
     observer.disconnect();
@@ -67,26 +61,26 @@ function setupObserver() {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const idx = Number(entry.target.dataset.index);
-          playVideoAt(idx);
+          activateVideo(idx);
         }
       });
     },
     {
       root: overlay,
-      threshold: 0.6
+      threshold: 0.65
     }
   );
 
-  document.querySelectorAll(".short").forEach(el => observer.observe(el));
+  overlay.querySelectorAll(".short").forEach(el => observer.observe(el));
 }
 
-/* =========================================================
-   OPEN SHORTS
-========================================================= */
+/* =========================
+   OPEN
+========================= */
 function openShorts(list, startId) {
   overlay = qs("shortsOverlay");
   if (!overlay) {
-    console.error("[SHORTS] overlay not found");
+    console.error("[SHORTS] overlay missing");
     return;
   }
 
@@ -97,11 +91,11 @@ function openShorts(list, startId) {
 
   document.body.style.overflow = "hidden";
 
-  shortsList = list.filter(v => v && v.video_url);
-  if (!shortsList.length) return;
+  const shorts = list.filter(v => v && v.video_url);
+  if (!shorts.length) return;
 
-  shortsList.forEach((item, i) => {
-    const wrap = document.createElement("div");
+  shorts.forEach((item, i) => {
+    const wrap = document.createElement("section");
     wrap.className = "short";
     wrap.dataset.index = i;
 
@@ -117,24 +111,25 @@ function openShorts(list, startId) {
   });
 
   const startIndex =
-    shortsList.findIndex(v => Number(v.id) === Number(startId)) >= 0
-      ? shortsList.findIndex(v => Number(v.id) === Number(startId))
+    shorts.findIndex(v => Number(v.id) === Number(startId)) >= 0
+      ? shorts.findIndex(v => Number(v.id) === Number(startId))
       : 0;
 
   requestAnimationFrame(() => {
     const target = overlay.querySelector(`.short[data-index="${startIndex}"]`);
-    if (target) target.scrollIntoView({ behavior: "auto" });
+    if (target) target.scrollIntoView({ block: "start" });
+
     setupObserver();
-    playVideoAt(startIndex);
+    activateVideo(startIndex);
   });
 }
 
-/* =========================================================
-   CLOSE SHORTS
-========================================================= */
+/* =========================
+   CLOSE
+========================= */
 function closeShorts() {
-  stopAllVideos();
-  currentVideo = null;
+  stopAll();
+  currentIndex = -1;
 
   if (observer) {
     observer.disconnect();
@@ -148,12 +143,11 @@ function closeShorts() {
   }
 
   document.body.style.overflow = "";
-  currentIndex = -1;
 }
 
-/* =========================================================
-   KEYBOARD SUPPORT (DESKTOP)
-========================================================= */
+/* =========================
+   KEYBOARD (DESKTOP)
+========================= */
 window.addEventListener("keydown", e => {
   if (!overlay || overlay.hidden) return;
 
@@ -168,9 +162,9 @@ window.addEventListener("keydown", e => {
   }
 });
 
-/* =========================================================
+/* =========================
    EXPORT
-========================================================= */
+========================= */
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
 
