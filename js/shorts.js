@@ -158,6 +158,7 @@ function closeShorts() {
 /* =========================
    KEYBOARD (DESKTOP)
 ========================= */
+
 window.addEventListener("keydown", e => {
   if (!overlay || overlay.hidden) return;
 
@@ -171,6 +172,30 @@ window.addEventListener("keydown", e => {
     closeShorts();
   }
 });
+
+/* =========================
+   WHEEL SNAP (DESKTOP)
+========================= */
+let wheelLock = false;
+window.addEventListener("wheel", e => {
+  if (!overlay || overlay.hidden) return;
+
+  e.preventDefault(); // 기본 스크롤 차단
+
+  if (wheelLock) return;
+  wheelLock = true;
+
+  const dir = e.deltaY > 0 ? 1 : -1;
+  overlay.scrollBy({
+    top: dir * window.innerHeight,
+    behavior: "instant"
+  });
+
+  // 연속 스크롤 방지(뻑뻑함)
+  setTimeout(() => {
+    wheelLock = false;
+  }, 350);
+}, { passive: false });
 
 /* =========================
    EXPORT
