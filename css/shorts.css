@@ -224,3 +224,11 @@ body[data-page="shorts"] {
 body:focus {
   outline: none;
 }
+
+/* =========================
+   HARD GUARD: NON-SHORTS PAGE
+========================= */
+body:not([data-page="shorts"]) #shortsOverlay {
+  display: none !important;
+  pointer-events: none !important;
+}
