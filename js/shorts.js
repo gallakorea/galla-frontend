@@ -162,7 +162,7 @@ async function openShorts(list, startId) {
 
   // 🔥 history stack for returning to previous screen (not index)
   if (!overlay._historyPushed) {
-    history.pushState({ shorts: true }, "");
+    history.replaceState({ shorts: true }, "");
     overlay._historyPushed = true;
   }
 
