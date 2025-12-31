@@ -22,7 +22,7 @@ function qs(id) {
 }
 
 function pauseAll() {
-  document.querySelectorAll(".short video").forEach(v => {
+  overlay.querySelectorAll("video").forEach(v => {
     try { v.pause(); } catch {}
   });
 }
@@ -96,18 +96,28 @@ function openShorts(list, startId) {
   document.body.classList.add("shorts-open");
   document.documentElement.classList.add("shorts-open");
   document.body.style.overflow = "hidden";
+  overlay.style.pointerEvents = "auto";
 
   shortsList.forEach((item, i) => {
     const wrap = document.createElement("div");
     wrap.className = "short";
     wrap.dataset.index = i;
+    wrap.style.pointerEvents = "none";
 
     const video = document.createElement("video");
+    video.style.pointerEvents = "none";
     video.src = item.video_url;
     video.playsInline = true;
     video.preload = "auto";
     video.muted = true;
     video.loop = true;
+
+    const uiLayer = document.createElement("div");
+    uiLayer.className = "short-ui-layer";
+    uiLayer.style.position = "absolute";
+    uiLayer.style.inset = "0";
+    uiLayer.style.pointerEvents = "auto";
+    wrap.appendChild(uiLayer);
 
     wrap.appendChild(video);
     overlay.appendChild(wrap);
@@ -139,6 +149,7 @@ function closeShorts() {
   document.body.classList.remove("shorts-open");
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
+  overlay.style.pointerEvents = "";
 
   if (observer) observer.disconnect();
 }
