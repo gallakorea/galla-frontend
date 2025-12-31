@@ -83,6 +83,11 @@ function ensureShortsDOM() {
   videoNext = document.getElementById("videoNext");
   backBtn   = document.getElementById("shortsBack");
 
+  if (videoCur) {
+    // Prevent video element from swallowing touch events on mobile
+    videoCur.style.pointerEvents = "none";
+  }
+
   return !!(overlay && videoPrev && videoCur && videoNext && backBtn);
 }
 
@@ -94,28 +99,6 @@ let touchStartX = 0;
 let draggingX = false;
 let locked = false;
 
-/* =========================
-   iOS SCROLL HARD LOCK (필수)
-========================= */
-let scrollY = 0;
-
-function preventScroll(e) {
-  e.preventDefault();
-}
-
-function lockIOSScroll() {
-  scrollY = window.scrollY;
-  document.body.style.position = "fixed";
-  document.body.style.top = `-${scrollY}px`;
-  document.body.style.width = "100%";
-}
-
-function unlockIOSScroll() {
-  document.body.style.position = "";
-  document.body.style.top = "";
-  document.body.style.width = "";
-  window.scrollTo(0, scrollY);
-}
 
 
 function lock(ms = 450) {
@@ -191,9 +174,6 @@ async function openShorts(list, startId) {
       videoCur.load();
 
       videoCur.play().catch(() => {});
-      setTimeout(() => {
-        videoCur.muted = false;
-      }, 120);
     } catch (e) {
       console.warn("[SHORTS] autoplay retry", e);
     }
@@ -378,6 +358,10 @@ function prev() {
 
 function bindShortsEvents() {
 
+  // Force overlay to capture gestures on mobile (iOS/Android)
+  overlay.style.pointerEvents = "auto";
+  overlay.style.touchAction = "none"; // disable native pan/zoom so JS receives swipes
+
   /* =========================
      Unified Touch Swipe Handler
   ========================= */
@@ -391,13 +375,11 @@ function bindShortsEvents() {
     startY = e.touches[0].clientY;
     videoCur.style.transition = "none";
 
-    // 🔥 iOS 규칙: 제스처 시 muted 상태로 즉시 play
+    // iOS: play + unmute MUST happen inside gesture
     if (videoCur && videoCur.paused) {
       videoCur.muted = true;
       videoCur.play().catch(() => {});
-      setTimeout(() => {
-        videoCur.muted = false;
-      }, 120);
+      videoCur.muted = false;
     }
   }, { passive: true });
 
@@ -408,7 +390,6 @@ function bindShortsEvents() {
     const dy = e.touches[0].clientY - startY;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      e.preventDefault(); // ❗ 여기서만 차단
       videoCur.style.transform = `translateX(${dx}px)`;
     }
   }, { passive: false });
@@ -559,8 +540,9 @@ function slideUp() {
     resetPositions();
 
     try {
+      videoCur.muted = true;
+      await videoCur.play().catch(() => {});
       videoCur.muted = false;
-      await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
@@ -613,8 +595,9 @@ function slideDown() {
     resetPositions();
 
     try {
+      videoCur.muted = true;
+      await videoCur.play().catch(() => {});
       videoCur.muted = false;
-      await videoCur.play();
     } catch {}
 
     window.currentIssue = shortsList[shortsIndex];
