@@ -81,6 +81,9 @@ function setupObserver() {
 ========================= */
 function openShorts(list, startId) {
   overlay = qs("shortsOverlay");
+  // 🔥 SHOW OVERLAY (CRITICAL)
+  overlay.hidden = false;
+  overlay.style.display = "block";
   // 기존 observer 중복 방지
   if (observer) {
     observer.disconnect();
@@ -96,8 +99,6 @@ function openShorts(list, startId) {
 
   if (!shortsList.length) return;
 
-  document.body.classList.add("shorts-open");
-  document.documentElement.classList.add("shorts-open");
   document.body.style.overflow = "hidden";
 
   shortsList.forEach((item, i) => {
@@ -139,8 +140,11 @@ function openShorts(list, startId) {
 function closeShorts() {
   pauseAll();
 
-  document.body.classList.remove("shorts-open");
-  document.documentElement.classList.remove("shorts-open");
+  if (overlay) {
+    overlay.hidden = true;
+    overlay.style.display = "none";
+  }
+
   document.body.style.overflow = "";
 
   if (observer) observer.disconnect();
