@@ -221,22 +221,20 @@ async function attachEvents() {
         unlock.play().catch(() => {});
 
         // 🔥 shorts.js를 필요할 때만 동적 로드
-        if (!window.__SHORTS_LOADED__) {
-          import("./shorts.js").then(() => {
-            window.__SHORTS_LOADED__ = true;
-            if (typeof window.openShorts === "function") {
-              window.openShorts(cards, id);
-            } else {
-              console.error("[INDEX] openShorts not found after import");
-            }
-          });
-        } else {
+        const target = cards.find(c => Number(c.id) === id);
+        if (!target || !target.video_url) {
+          console.warn("[INDEX] no video for issue", id);
+          return;
+        }
+
+        const open = () => {
           if (typeof window.openShorts === "function") {
-            window.openShorts(cards, id);
+            window.openShorts([target], id);
           } else {
             console.error("[INDEX] openShorts not found");
           }
-        }
+        };
+        open();
     };
     });
 
