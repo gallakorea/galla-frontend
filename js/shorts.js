@@ -679,4 +679,34 @@ document.addEventListener("visibilitychange", async () => {
 // 🔥 expose shorts controls globally (index + shorts)
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
+// =========================
+// DIRECT SHORTS PAGE BOOTSTRAP
+// =========================
+(function bootstrapShortsPage() {
+  const params = new URLSearchParams(location.search);
+  const startId = params.get("start");
+
+  let list = [];
+  try {
+    list = JSON.parse(sessionStorage.getItem("__SHORTS_LIST__") || "[]");
+  } catch (e) {
+    console.error("[SHORTS] session list parse error", e);
+    return;
+  }
+
+  if (!list.length) {
+    console.warn("[SHORTS] no shorts list in sessionStorage");
+    return;
+  }
+
+  const tryBoot = () => {
+    if (typeof window.openShorts === "function" && document.getElementById("shortsOverlay")) {
+      window.openShorts(list, startId);
+    } else {
+      requestAnimationFrame(tryBoot);
+    }
+  };
+
+  tryBoot();
+})();
 }
