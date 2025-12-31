@@ -365,6 +365,10 @@ overlay.addEventListener("click", (e) => {
 overlay.addEventListener("touchstart", (e) => {
   if (!e.touches || !e.touches[0]) return;
   touchStartY = e.touches[0].clientY;
+  // drag-follow start
+  videoCur.style.transition = "none";
+  videoPrev.style.transition = "none";
+  videoNext.style.transition = "none";
 }, { passive: true });
 
 // 좌/우 스와이프 준비
@@ -386,16 +390,40 @@ overlay.addEventListener("touchmove", (e) => {
   overlay.style.background = "rgba(0,0,0,0.85)";
 }, { passive: true });
 
+// 🔥 Vertical drag-follow (Reels-style)
+overlay.addEventListener("touchmove", (e) => {
+  if (!e.touches || !e.touches[0]) return;
+  const currentY = e.touches[0].clientY;
+  const diffY = currentY - touchStartY;
+
+  // current follows finger
+  videoCur.style.transform = `translateY(${diffY}px)`;
+
+  // next & prev stick naturally
+  if (diffY < 0) {
+    videoNext.style.transform = `translateY(${window.innerHeight + diffY}px)`;
+  } else {
+    videoPrev.style.transform = `translateY(${-window.innerHeight + diffY}px)`;
+  }
+}, { passive: true });
+
 overlay.addEventListener("touchend", (e) => {
   if (locked) return;
-  const endY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : touchStartY;
+  const endY = e.changedTouches?.[0]?.clientY ?? touchStartY;
   const diff = touchStartY - endY;
 
-  // 임계값: 너무 민감하면 쭉 내려가는 느낌 남
-  if (Math.abs(diff) < 90) return;
+  // snap threshold
+  if (Math.abs(diff) > 90) {
+    if (diff > 0) next();
+    else prev();
+  } else {
+    // cancel → snap back
+    videoCur.style.transition =
+    videoPrev.style.transition =
+    videoNext.style.transition = "transform 0.25s ease";
 
-  if (diff > 0) next();  // 위로 스와이프 = 다음
-  else prev();           // 아래로 스와이프 = 이전
+    resetPositions();
+  }
 }, { passive: true });
 
 // 좌/우 스와이프 종료/복귀
