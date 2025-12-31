@@ -162,7 +162,7 @@ async function openShorts(list, startId) {
 
   // 🔥 history stack for returning to previous screen (not index)
   if (!overlay._historyPushed) {
-    history.pushState({ shorts: true }, "");
+    history.pushState({ shorts: true }, document.title);
     overlay._historyPushed = true;
   }
 
@@ -500,7 +500,7 @@ if (backBtn) {
   backBtn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    closeShorts(true); // 🔥 무조건 이전 화면
+    closeShorts(true);
   };
 }
 
