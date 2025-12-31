@@ -1,198 +1,154 @@
 /* ===================================================
-   GALLA SHORTS — MINIMAL CORE
-   ONLY: UP / DOWN (touch + wheel)
-   NO TAP / NO VOTE / NO SIDE / NO LEGACY
+   GALLA SHORTS — STEP 1
+   ONLY: UP / DOWN MOVE
 =================================================== */
 
-const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
-if (!IS_SHORTS_PAGE) {
-  console.log("[SHORTS] not shorts page — exit");
-  return;
-}
+(function () {
 
-/* =========================
-   DOM
-========================= */
-const overlay = document.getElementById("shortsOverlay");
-const stage = document.querySelector(".shorts-stage");
-const gestureLayer = document.querySelector(".shorts-gesture-layer");
-
-const videoPrev = document.getElementById("videoPrev");
-const videoCur  = document.getElementById("shortsVideo");
-const videoNext = document.getElementById("videoNext");
-
-if (!overlay || !stage || !gestureLayer || !videoCur) {
-  console.error("[SHORTS] DOM missing");
-  throw new Error("Shorts DOM missing");
-}
-
-console.log("[SHORTS] minimal shorts.js loaded");
-
-/* =========================
-   STATE
-========================= */
-let list = [];
-let index = 0;
-let locked = false;
-
-/* =========================
-   LOCK
-========================= */
-function lock(ms = 400) {
-  locked = true;
-  setTimeout(() => locked = false, ms);
-}
-
-/* =========================
-   VIDEO LOAD
-========================= */
-function loadVideos() {
-  const cur  = list[index];
-  const prev = list[index - 1];
-  const next = list[index + 1];
-
-  if (cur) {
-    videoCur.src = cur.video_url;
-    videoCur.load();
-    videoCur.play().catch(() => {});
+  const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
+  if (!IS_SHORTS_PAGE) {
+    console.log("[SHORTS] not shorts page");
+    return;
   }
 
-  if (prev) {
-    videoPrev.src = prev.video_url;
-    videoPrev.load();
-  } else {
-    videoPrev.removeAttribute("src");
+  console.log("[SHORTS] shorts.js loaded");
+
+  /* =========================
+     DOM
+  ========================= */
+  const overlay = document.getElementById("shortsOverlay");
+  const stage = document.querySelector(".shorts-stage");
+  const gestureLayer = document.querySelector(".shorts-gesture-layer");
+
+  const videoPrev = document.getElementById("videoPrev");
+  const videoCur  = document.getElementById("shortsVideo");
+  const videoNext = document.getElementById("videoNext");
+
+  if (!overlay || !stage || !gestureLayer || !videoCur) {
+    console.error("[SHORTS] DOM missing");
+    return;
   }
 
-  if (next) {
-    videoNext.src = next.video_url;
-    videoNext.load();
-  } else {
-    videoNext.removeAttribute("src");
+  /* =========================
+     STATE
+  ========================= */
+  let list = [];
+  let index = 0;
+  let locked = false;
+
+  function lock(ms = 400) {
+    locked = true;
+    setTimeout(() => locked = false, ms);
   }
 
-  resetPos();
-}
+  /* =========================
+     LOAD
+  ========================= */
+  function resetPos() {
+    videoPrev.style.transition =
+    videoCur.style.transition =
+    videoNext.style.transition = "none";
 
-/* =========================
-   POSITION RESET
-========================= */
-function resetPos() {
-  videoPrev.style.transition =
-  videoCur.style.transition =
-  videoNext.style.transition = "none";
+    videoPrev.style.transform = "translateY(-100%)";
+    videoCur.style.transform  = "translateY(0)";
+    videoNext.style.transform = "translateY(100%)";
+  }
 
-  videoPrev.style.transform = "translateY(-100%)";
-  videoCur.style.transform  = "translateY(0)";
-  videoNext.style.transform = "translateY(100%)";
-}
+  function loadVideos() {
+    const cur  = list[index];
+    const prev = list[index - 1];
+    const next = list[index + 1];
 
-/* =========================
-   MOVE
-========================= */
-function next() {
-  if (locked) return;
-  if (index >= list.length - 1) return;
-  lock();
+    if (cur) {
+      videoCur.src = cur.video_url;
+      videoCur.load();
+      videoCur.play().catch(() => {});
+    }
 
-  index++;
-  slideUp();
-}
+    if (prev) {
+      videoPrev.src = prev.video_url;
+      videoPrev.load();
+    } else {
+      videoPrev.removeAttribute("src");
+    }
 
-function prev() {
-  if (locked) return;
-  if (index <= 0) return;
-  lock();
+    if (next) {
+      videoNext.src = next.video_url;
+      videoNext.load();
+    } else {
+      videoNext.removeAttribute("src");
+    }
 
-  index--;
-  slideDown();
-}
+    resetPos();
+  }
 
-/* =========================
-   SLIDE
-========================= */
-function slideUp() {
-  videoPrev.style.transition =
-  videoCur.style.transition =
-  videoNext.style.transition = "transform .3s ease";
+  /* =========================
+     MOVE
+  ========================= */
+  function next() {
+    if (locked) return;
+    if (index >= list.length - 1) return;
+    lock();
 
-  videoPrev.style.transform = "translateY(-200%)";
-  videoCur.style.transform  = "translateY(-100%)";
-  videoNext.style.transform = "translateY(0)";
+    index++;
 
-  setTimeout(() => {
-    const tmp = videoPrev;
-    videoPrev = videoCur;
-    videoCur  = videoNext;
-    videoNext = tmp;
+    videoPrev.style.transition =
+    videoCur.style.transition =
+    videoNext.style.transition = "transform .3s ease";
 
-    loadVideos();
-  }, 300);
-}
+    videoPrev.style.transform = "translateY(-200%)";
+    videoCur.style.transform  = "translateY(-100%)";
+    videoNext.style.transform = "translateY(0)";
 
-function slideDown() {
-  videoPrev.style.transition =
-  videoCur.style.transition =
-  videoNext.style.transition = "transform .3s ease";
+    setTimeout(loadVideos, 300);
+  }
 
-  videoPrev.style.transform = "translateY(0)";
-  videoCur.style.transform  = "translateY(100%)";
-  videoNext.style.transform = "translateY(200%)";
+  function prev() {
+    if (locked) return;
+    if (index <= 0) return;
+    lock();
 
-  setTimeout(() => {
-    const tmp = videoNext;
-    videoNext = videoCur;
-    videoCur  = videoPrev;
-    videoPrev = tmp;
+    index--;
 
-    loadVideos();
-  }, 300);
-}
+    videoPrev.style.transition =
+    videoCur.style.transition =
+    videoNext.style.transition = "transform .3s ease";
 
-/* =========================
-   EVENTS
-========================= */
-function bindEvents() {
-  console.log("[SHORTS] bindEvents");
+    videoPrev.style.transform = "translateY(0)";
+    videoCur.style.transform  = "translateY(100%)";
+    videoNext.style.transform = "translateY(200%)";
 
+    setTimeout(loadVideos, 300);
+  }
+
+  /* =========================
+     EVENTS
+  ========================= */
   gestureLayer.style.pointerEvents = "auto";
   gestureLayer.style.touchAction = "none";
 
-  /* ----- TOUCH ----- */
   let startY = 0;
   let deltaY = 0;
-  let active = false;
+  let touching = false;
 
   gestureLayer.addEventListener("touchstart", (e) => {
-    if (!e.touches[0]) return;
-    active = true;
+    touching = true;
     startY = e.touches[0].clientY;
     deltaY = 0;
   }, { passive: false });
 
   gestureLayer.addEventListener("touchmove", (e) => {
-    if (!active || !e.touches[0]) return;
+    if (!touching) return;
     deltaY = e.touches[0].clientY - startY;
   }, { passive: false });
 
   gestureLayer.addEventListener("touchend", () => {
-    if (!active) return;
-    active = false;
-
+    touching = false;
     if (Math.abs(deltaY) < 60) return;
-
-    if (deltaY < 0) {
-      console.log("[SHORTS] swipe UP");
-      next();
-    } else {
-      console.log("[SHORTS] swipe DOWN");
-      prev();
-    }
+    deltaY < 0 ? next() : prev();
   });
 
-  /* ----- WHEEL ----- */
   let wheelAcc = 0;
-
   gestureLayer.addEventListener("wheel", (e) => {
     e.preventDefault();
     if (locked) return;
@@ -200,22 +156,13 @@ function bindEvents() {
     wheelAcc += e.deltaY;
     if (Math.abs(wheelAcc) < 80) return;
 
-    if (wheelAcc > 0) {
-      console.log("[SHORTS] wheel DOWN");
-      next();
-    } else {
-      console.log("[SHORTS] wheel UP");
-      prev();
-    }
-
+    wheelAcc > 0 ? next() : prev();
     wheelAcc = 0;
   }, { passive: false });
-}
 
-/* =========================
-   BOOTSTRAP
-========================= */
-(function boot() {
+  /* =========================
+     BOOT
+  ========================= */
   try {
     list = JSON.parse(sessionStorage.getItem("__SHORTS_LIST__") || "[]")
       .filter(v => v && v.video_url);
@@ -224,11 +171,11 @@ function bindEvents() {
   }
 
   if (!list.length) {
-    console.warn("[SHORTS] empty list");
+    console.warn("[SHORTS] no shorts list");
     return;
   }
 
   overlay.hidden = false;
-  bindEvents();
   loadVideos();
+
 })();
