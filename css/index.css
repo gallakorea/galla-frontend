@@ -280,12 +280,15 @@ body {
     max-width: 480px;
     background: #000;
     border-top: 1px solid #222;
-    padding: 12px 0;
+    padding: 0;
+    height: 84px;
 }
 
 .nav-inner {
     display: flex;
     justify-content: space-around;
+    height: 100%;
+    align-items: center;
 }
 
 .nav-icon {
