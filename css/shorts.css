@@ -32,9 +32,7 @@ body[data-page="shorts"] {
 .shorts-video-wrap {
   position: relative;
   width: 480px;
-  height: 100%;
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
+  height: 100svh;
   box-sizing: border-box;
   overflow: hidden;
 }
@@ -192,6 +190,7 @@ body[data-page="shorts"] {
   display: flex;
   justify-content: center;
   align-items: stretch;
+  touch-action: none;
 }
 
 /* =========================
@@ -203,4 +202,5 @@ body[data-page="shorts"] {
   height: 100svh; /* 🔥 bottom nav height excluded */
   margin: 0 auto;
   overflow: hidden;
+  touch-action: none;
 }
