@@ -163,30 +163,27 @@ body[data-page="shorts"] .header {
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-
-  background: transparent;          /* 🔥 배경 제거 */
-  border: 2px solid currentColor;   /* 색상은 텍스트 기준 */
-  color: #fff;
-
-  backdrop-filter: blur(2px);
+  border: 1px solid transparent;
 }
 
 /* PRO */
 .shorts-vote .pro {
-  color: #5c7cff;                   /* 블루 계열 */
-  border-color: #5c7cff;
+  background: #1a1f3c;
+  border-color: #304ffe;
+  color: #fff;
 }
 
 /* CON */
 .shorts-vote .con {
-  color: #ff6b6b;                   /* 레드 계열 */
-  border-color: #ff6b6b;
+  background: #3c1a1a;
+  border-color: #ff5252;
+  color: #fff;
 }
 
 /* active / locked */
 .shorts-vote .active-vote {
-  background: transparent !important;
-  color: #ffe27a !important;
+  background: #ffe27a !important;
+  color: #111 !important;
   border-color: #ffe27a !important;
 }
 
