@@ -1,181 +1,148 @@
-/* ===================================================
-   GALLA SHORTS — STEP 1
-   ONLY: UP / DOWN MOVE
-=================================================== */
+// shorts.js — SCROLL ONLY (index + shorts 공용)
+// ❌ UI / 투표 / 네비 절대 터치 안 함
 
-(function () {
+console.log("[SHORTS] boot");
 
-  const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
-  if (!IS_SHORTS_PAGE) {
-    console.log("[SHORTS] not shorts page");
-    return;
-  }
+const overlay = document.getElementById("shortsOverlay");
+const stage = document.querySelector(".shorts-stage");
+const gestureLayer = document.querySelector(".shorts-gesture-layer");
 
-  console.log("[SHORTS] shorts.js loaded");
+const videoPrev = document.getElementById("videoPrev");
+const videoCur  = document.getElementById("shortsVideo");
+const videoNext = document.getElementById("videoNext");
 
-  /* =========================
-     DOM
-  ========================= */
-  const overlay = document.getElementById("shortsOverlay");
-  const stage = document.querySelector(".shorts-stage");
-  const gestureLayer = document.querySelector(".shorts-gesture-layer");
+if (!overlay || !gestureLayer || !videoCur) {
+  console.warn("[SHORTS] DOM missing");
+  return;
+}
 
-  const videoPrev = document.getElementById("videoPrev");
-  const videoCur  = document.getElementById("shortsVideo");
-  const videoNext = document.getElementById("videoNext");
+let shortsList = [];
+let index = 0;
+let locked = false;
+let wheelAcc = 0;
 
-  if (!overlay || !stage || !gestureLayer || !videoCur) {
-    console.error("[SHORTS] DOM missing");
-    return;
-  }
+/* =========================
+   BASIC HELPERS
+========================= */
+function lock(ms = 500) {
+  locked = true;
+  setTimeout(() => locked = false, ms);
+}
 
-  /* =========================
-     STATE
-  ========================= */
-  let list = [];
-  let index = 0;
-  let locked = false;
+function resetPos() {
+  videoPrev.style.transition = "none";
+  videoCur.style.transition  = "none";
+  videoNext.style.transition = "none";
 
-  function lock(ms = 400) {
-    locked = true;
-    setTimeout(() => locked = false, ms);
-  }
+  videoPrev.style.transform = "translateY(-100%)";
+  videoCur.style.transform  = "translateY(0)";
+  videoNext.style.transform = "translateY(100%)";
+}
 
-  /* =========================
-     LOAD
-  ========================= */
-  function resetPos() {
-    videoPrev.style.transition =
-    videoCur.style.transition =
-    videoNext.style.transition = "none";
+function applySrc() {
+  const cur  = shortsList[index];
+  const prev = shortsList[index - 1];
+  const next = shortsList[index + 1];
 
-    videoPrev.style.transform = "translateY(-100%)";
-    videoCur.style.transform  = "translateY(0)";
-    videoNext.style.transform = "translateY(100%)";
-  }
+  if (prev) videoPrev.src = prev.video_url;
+  if (cur)  videoCur.src  = cur.video_url;
+  if (next) videoNext.src = next.video_url;
 
-  function loadVideos() {
-    const cur  = list[index];
-    const prev = list[index - 1];
-    const next = list[index + 1];
+  videoCur.play().catch(()=>{});
+}
 
-    if (cur) {
-      videoCur.src = cur.video_url;
-      videoCur.load();
-      videoCur.play().catch(() => {});
-    }
+/* =========================
+   SLIDE
+========================= */
+function slideUp() {
+  if (locked || index >= shortsList.length - 1) return;
+  lock();
+  index++;
 
-    if (prev) {
-      videoPrev.src = prev.video_url;
-      videoPrev.load();
-    } else {
-      videoPrev.removeAttribute("src");
-    }
+  videoPrev.style.transition =
+  videoCur.style.transition =
+  videoNext.style.transition = "transform .35s ease";
 
-    if (next) {
-      videoNext.src = next.video_url;
-      videoNext.load();
-    } else {
-      videoNext.removeAttribute("src");
-    }
+  videoPrev.style.transform = "translateY(-200%)";
+  videoCur.style.transform  = "translateY(-100%)";
+  videoNext.style.transform = "translateY(0)";
 
+  setTimeout(() => {
+    const tmp = videoPrev;
+    videoPrev = videoCur;
+    videoCur  = videoNext;
+    videoNext = tmp;
+
+    applySrc();
     resetPos();
-  }
+  }, 350);
+}
 
-  /* =========================
-     MOVE
-  ========================= */
-  function next() {
-    if (locked) return;
-    if (index >= list.length - 1) return;
-    lock();
+function slideDown() {
+  if (locked || index <= 0) return;
+  lock();
+  index--;
 
-    index++;
+  videoPrev.style.transition =
+  videoCur.style.transition =
+  videoNext.style.transition = "transform .35s ease";
 
-    videoPrev.style.transition =
-    videoCur.style.transition =
-    videoNext.style.transition = "transform .3s ease";
+  videoPrev.style.transform = "translateY(0)";
+  videoCur.style.transform  = "translateY(100%)";
+  videoNext.style.transform = "translateY(200%)";
 
-    videoPrev.style.transform = "translateY(-200%)";
-    videoCur.style.transform  = "translateY(-100%)";
-    videoNext.style.transform = "translateY(0)";
+  setTimeout(() => {
+    const tmp = videoNext;
+    videoNext = videoCur;
+    videoCur  = videoPrev;
+    videoPrev = tmp;
 
-    setTimeout(loadVideos, 300);
-  }
+    applySrc();
+    resetPos();
+  }, 350);
+}
 
-  function prev() {
-    if (locked) return;
-    if (index <= 0) return;
-    lock();
+/* =========================
+   INPUTS
+========================= */
 
-    index--;
+// PC / 트랙패드
+gestureLayer.addEventListener("wheel", e => {
+  e.preventDefault();
+  if (locked) return;
 
-    videoPrev.style.transition =
-    videoCur.style.transition =
-    videoNext.style.transition = "transform .3s ease";
+  wheelAcc += e.deltaY;
+  if (Math.abs(wheelAcc) < 60) return;
 
-    videoPrev.style.transform = "translateY(0)";
-    videoCur.style.transform  = "translateY(100%)";
-    videoNext.style.transform = "translateY(200%)";
+  wheelAcc > 0 ? slideUp() : slideDown();
+  wheelAcc = 0;
+}, { passive:false });
 
-    setTimeout(loadVideos, 300);
-  }
+// 모바일
+let startY = 0;
 
-  /* =========================
-     EVENTS
-  ========================= */
-  gestureLayer.style.pointerEvents = "auto";
-  gestureLayer.style.touchAction = "none";
+gestureLayer.addEventListener("touchstart", e => {
+  startY = e.touches[0].clientY;
+}, { passive:true });
 
-  let startY = 0;
-  let deltaY = 0;
-  let touching = false;
+gestureLayer.addEventListener("touchend", e => {
+  const dy = e.changedTouches[0].clientY - startY;
+  if (Math.abs(dy) < 60) return;
 
-  gestureLayer.addEventListener("touchstart", (e) => {
-    touching = true;
-    startY = e.touches[0].clientY;
-    deltaY = 0;
-  }, { passive: false });
+  dy < 0 ? slideUp() : slideDown();
+}, { passive:true });
 
-  gestureLayer.addEventListener("touchmove", (e) => {
-    if (!touching) return;
-    deltaY = e.touches[0].clientY - startY;
-  }, { passive: false });
-
-  gestureLayer.addEventListener("touchend", () => {
-    touching = false;
-    if (Math.abs(deltaY) < 60) return;
-    deltaY < 0 ? next() : prev();
-  });
-
-  let wheelAcc = 0;
-  gestureLayer.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    if (locked) return;
-
-    wheelAcc += e.deltaY;
-    if (Math.abs(wheelAcc) < 80) return;
-
-    wheelAcc > 0 ? next() : prev();
-    wheelAcc = 0;
-  }, { passive: false });
-
-  /* =========================
-     BOOT
-  ========================= */
-  try {
-    list = JSON.parse(sessionStorage.getItem("__SHORTS_LIST__") || "[]")
-      .filter(v => v && v.video_url);
-  } catch {
-    list = [];
-  }
-
-  if (!list.length) {
-    console.warn("[SHORTS] no shorts list");
-    return;
-  }
+/* =========================
+   OPEN SHORTS (index용)
+========================= */
+window.openShorts = function(list, start = 0) {
+  shortsList = list || [];
+  index = Math.max(0, shortsList.findIndex(v => v.id == start));
+  if (index < 0) index = 0;
 
   overlay.hidden = false;
-  loadVideos();
+  applySrc();
+  resetPos();
+};
 
-})();
+console.log("[SHORTS] ready");
