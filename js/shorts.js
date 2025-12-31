@@ -1,6 +1,30 @@
 // shorts.js — SAFE PAGE GUARD
 const IS_SHORTS_PAGE = document.body.dataset.page === "shorts";
 
+/* =========================
+   iOS SCROLL HARD LOCK
+========================= */
+let __scrollY = 0;
+
+function lockIOSScroll() {
+  __scrollY = window.scrollY || 0;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${__scrollY}px`;
+  document.body.style.left = "0";
+  document.body.style.right = "0";
+  document.body.style.width = "100%";
+}
+
+function unlockIOSScroll() {
+  const y = Math.abs(parseInt(document.body.style.top || "0", 10)) || __scrollY;
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
+  document.body.style.width = "";
+  window.scrollTo(0, y);
+}
+
 /**
  * Global API
  * - shorts 페이지가 아니면 shorts.html로 이동
@@ -83,10 +107,7 @@ function ensureShortsDOM() {
   videoNext = document.getElementById("videoNext");
   backBtn   = document.getElementById("shortsBack");
 
-  if (videoCur) {
-    // Prevent video element from swallowing touch events on mobile
-    videoCur.style.pointerEvents = "none";
-  }
+  if (videoCur) videoCur.style.pointerEvents = "auto";
 
   return !!(overlay && videoPrev && videoCur && videoNext && backBtn);
 }
@@ -358,9 +379,8 @@ function prev() {
 
 function bindShortsEvents() {
 
-  // Force overlay to capture gestures on mobile (iOS/Android)
   overlay.style.pointerEvents = "auto";
-  overlay.style.touchAction = "none"; // disable native pan/zoom so JS receives swipes
+  overlay.style.touchAction = "none";
 
   /* =========================
      Unified Touch Swipe Handler
@@ -375,13 +395,11 @@ function bindShortsEvents() {
     startY = e.touches[0].clientY;
     videoCur.style.transition = "none";
 
-    // iOS: play + unmute MUST happen inside gesture
     if (videoCur && videoCur.paused) {
       videoCur.muted = true;
       videoCur.play().catch(() => {});
-      videoCur.muted = false;
     }
-  }, { passive: true });
+  }, { passive: false });
 
   overlay.addEventListener("touchmove", (e) => {
     if (!touching || !e.touches[0]) return;
@@ -463,12 +481,11 @@ window.addEventListener("keydown", (e) => {
 /* =========================
    UI Buttons
 ========================= */
-if (backBtn) {
-  backBtn.onclick = () => {
-    closeShorts(false);
-    history.back();
-  };
-}
+  if (backBtn) {
+    backBtn.onclick = () => {
+      closeShorts(true);
+    };
+  }
 
 /* =========================
    TAP / DOUBLE TAP CONTROL
@@ -535,8 +552,6 @@ function slideUp() {
       videoNext.load();
     }
 
-    
-
     resetPositions();
 
     try {
@@ -552,7 +567,6 @@ function slideUp() {
     const shortsCon =
       document.getElementById("shortsCon") ||
       document.querySelector('.shorts-vote .con');
-
 
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
@@ -608,7 +622,6 @@ function slideDown() {
       document.getElementById("shortsCon") ||
       document.querySelector('.shorts-vote .con');
 
-
     // 🔥 Re-sync vote state from DB
     if (typeof window.GALLA_CHECK_VOTE === "function") {
       const voteResult = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
@@ -654,4 +667,11 @@ window.closeShorts = closeShorts;
 
   tryBoot();
 })();
+  // Add popstate handler to close shorts overlay if open
+  window.addEventListener("popstate", () => {
+    const overlay = document.getElementById("shortsOverlay");
+    if (overlay && !overlay.hidden) {
+      closeShorts(false);
+    }
+  });
 }
