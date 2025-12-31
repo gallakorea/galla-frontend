@@ -56,18 +56,28 @@ function setupObserver() {
     observer = null;
   }
 
+  stopAll();
+
   observer = new IntersectionObserver(
     entries => {
       entries.forEach(entry => {
+        const video = entry.target.querySelector("video");
+        if (!video) return;
+
         if (entry.isIntersecting) {
           const idx = Number(entry.target.dataset.index);
           activateVideo(idx);
+        } else {
+          try {
+            video.pause();
+            video.muted = true;
+          } catch {}
         }
       });
     },
     {
       root: overlay,
-      threshold: 0.65
+      threshold: 0.8
     }
   );
 
