@@ -165,7 +165,7 @@ async function openShorts(list, startId) {
 
   // 🔥 history stack for returning to previous screen (not index)
   if (!overlay._historyPushed) {
-    history.pushState({ shorts: true }, "", location.href);
+    history.pushState({ shorts: true }, "");
     overlay._historyPushed = true;
   }
 
@@ -318,11 +318,11 @@ function closeShorts(shouldGoBack = true) {
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
 
-  if (shouldGoBack && !isFromPopstate && overlay._historyPushed) {
-    history.back(); // 사용자 액션(버튼/스와이프)일 때만 1회
+  if (shouldGoBack && overlay._historyPushed) {
+    overlay._historyPushed = false;
+    history.back(); // 항상 1회만
   }
 
-  overlay._historyPushed = false;
   isFromPopstate = false;
   isClosing = false;
 }
@@ -373,13 +373,12 @@ function prev() {
 }
 
 function bindShortsEvents() {
-
   // 🔥 system back button (browser / mobile) closes shorts
   window.addEventListener("popstate", () => {
     if (!overlay || overlay.hidden) return;
 
-    isFromPopstate = true;
-    closeShorts(false); // 여기서는 history.back 절대 호출 안 함
+    overlay._historyPushed = false;
+    closeShorts(false);
   });
 
   window.addEventListener("popstate", () => {
