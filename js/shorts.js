@@ -117,7 +117,23 @@ function openShorts(list, startId) {
     video.loop = true;
     video.muted = true;
 
+    /* ===== VOTE BAR (ABOVE NAV) ===== */
+    const voteBar = document.createElement("div");
+    voteBar.className = "shorts-vote";
+
+    const btnPro = document.createElement("button");
+    btnPro.className = "vote-btn pro";
+    btnPro.textContent = "👍 찬성이오";
+
+    const btnCon = document.createElement("button");
+    btnCon.className = "vote-btn con";
+    btnCon.textContent = "👎 난 반댈세";
+
+    voteBar.appendChild(btnPro);
+    voteBar.appendChild(btnCon);
+
     wrap.appendChild(video);
+    wrap.appendChild(voteBar);
     overlay.appendChild(wrap);
   });
 

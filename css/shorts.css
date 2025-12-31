@@ -139,14 +139,19 @@ body[data-page="shorts"] .header {
    VOTE BAR
 ------------------------- */
 .shorts-vote {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(24px + 64px);
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+
+  bottom: calc(58px + env(safe-area-inset-bottom) + 12px);
+
+  width: calc(100% - 24px);
+  max-width: 480px;
 
   display: flex;
   gap: 12px;
-  z-index: 10;
+
+  z-index: 10010;
   pointer-events: auto;
 }
 
