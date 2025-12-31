@@ -183,7 +183,7 @@ body[data-page="shorts"] {
   position: fixed;
   inset: 0;
   background: #000;
-  z-index: 900;
+  z-index: 400;
 
   display: flex;
   justify-content: center;

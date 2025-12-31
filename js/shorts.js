@@ -21,9 +21,9 @@ window.closeShorts = window.closeShorts || function () {};
 // shorts 페이지가 아니면 나머지 로직은 실행하지 않는다
 if (!IS_SHORTS_PAGE) {
   console.info("[SHORTS] loaded on non-shorts page (API only)");
-}
-
-if (IS_SHORTS_PAGE) {
+  // API만 노출하고 나머지 로직 실행하지 않음
+  // 바로 리턴하여 아래 코드 실행 방지
+} else {
 
 
 // Helper to apply Shorts vote state to vote buttons
@@ -162,7 +162,7 @@ async function openShorts(list, startId) {
 
   // 🔥 history stack for returning to previous screen (not index)
   if (!overlay._historyPushed) {
-    history.replaceState({ shorts: true }, "");
+    history.pushState({ shorts: true }, "");
     overlay._historyPushed = true;
   }
 
@@ -289,7 +289,7 @@ async function openShorts(list, startId) {
 
 }
 
-function closeShorts() {
+function closeShorts(shouldGoBack = true) {
   try { videoCur.pause(); } catch {}
 
   videoCur.pause();
@@ -314,10 +314,9 @@ function closeShorts() {
   document.body.style.overflow = "";
 
   // 🔥 return to previous screen instead of forcing index
-  if (history.state && history.state.shorts) {
+  if (shouldGoBack && history.state && history.state.shorts) {
     history.back();
   }
-
   overlay._historyPushed = false;
 }
 
@@ -371,7 +370,7 @@ function bindShortsEvents() {
   // 🔥 system back button (browser / mobile) closes shorts
   window.addEventListener("popstate", () => {
     if (overlay && !overlay.hidden) {
-      closeShorts();
+      closeShorts(false);
     }
   });
 
