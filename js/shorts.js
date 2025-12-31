@@ -81,17 +81,20 @@ function setupObserver() {
 ========================= */
 function openShorts(list, startId) {
   overlay = qs("shortsOverlay");
+
+  if (!overlay) {
+    console.error("[SHORTS] shortsOverlay not found in DOM");
+    return;
+  }
+
   // 🔥 SHOW OVERLAY (CRITICAL)
   overlay.hidden = false;
   overlay.style.display = "block";
+
   // 기존 observer 중복 방지
   if (observer) {
     observer.disconnect();
     observer = null;
-  }
-  if (!overlay) {
-    console.error("[SHORTS] overlay missing");
-    return;
   }
 
   overlay.innerHTML = "";
