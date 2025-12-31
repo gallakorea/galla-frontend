@@ -25,36 +25,32 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-function pauseAll() {
-  document.querySelectorAll(".short video").forEach(v => {
-    try { v.pause(); } catch {}
-  });
-}
-
 function playVideoAt(index) {
   const video = document.querySelector(
     `.short[data-index="${index}"] video`
   );
   if (!video) return;
 
-  // 🔥 이전 영상 완전 정지
+  // 🔥 이전 영상 audio focus 완전 제거
   if (currentVideo && currentVideo !== video) {
     try {
       currentVideo.pause();
-      currentVideo.currentTime = currentVideo.currentTime; // Safari 안정화
       currentVideo.muted = true;
+
+      // iOS / Safari audio session kill
+      currentVideo.currentTime = currentVideo.currentTime;
     } catch {}
   }
 
   currentVideo = video;
 
-  // 항상 muted 상태에서 시작
+  // 항상 muted 상태에서 재생 시작
   video.muted = true;
 
   const p = video.play();
   if (p && typeof p.then === "function") {
     p.then(() => {
-      // 🔥 현재 영상만 unmute
+      // ✅ 현재 영상만 소리 허용
       video.muted = false;
     }).catch(() => {});
   }
@@ -154,7 +150,6 @@ function openShorts(list, startId) {
    Close Shorts
 ========================= */
 function closeShorts() {
-  pauseAll();
   currentVideo = null;
 
   if (overlay) {
