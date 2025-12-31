@@ -387,93 +387,34 @@ function bindShortsEvents() {
   gestureLayer.style.touchAction = "none";
 
   /* =========================
-     Unified Touch Swipe Handler
-  ========================= */
-  let startX = 0, startY = 0, touching = false;
+     STEP 1 — VERTICAL SWIPE ONLY (STABLE)
+     ========================= */
+  let startY = 0;
+  let isTouching = false;
 
   gestureLayer.addEventListener("touchstart", (e) => {
     if (!e.touches || !e.touches[0]) return;
-
-    touching = true;
-    startX = e.touches[0].clientX;
+    isTouching = true;
     startY = e.touches[0].clientY;
-    videoCur.style.transition = "none";
-
-    if (videoCur && videoCur.paused) {
-      videoCur.muted = true;
-      videoCur.play().catch(() => {});
-    }
-  }, { passive: false });
-
-  gestureLayer.addEventListener("touchmove", (e) => {
-    if (!touching || !e.touches[0]) return;
-
-    const dx = e.touches[0].clientX - startX;
-    const dy = e.touches[0].clientY - startY;
-
-    if (Math.abs(dx) > Math.abs(dy)) {
-      videoCur.style.transform = `translateX(${dx}px)`;
-    }
-  }, { passive: false });
-
-  /* =========================
-     TOUCH END (SWIPE + TAP UNIFIED)
-  ========================= */
-  let lastTap = 0;
+  }, { passive: true });
 
   gestureLayer.addEventListener("touchend", (e) => {
-    if (!touching) return;
-    touching = false;
+    if (!isTouching) return;
+    isTouching = false;
 
-    e.preventDefault();
+    if (!e.changedTouches || !e.changedTouches[0]) return;
+    const endY = e.changedTouches[0].clientY;
+    const dy = endY - startY;
 
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-    const ax = Math.abs(dx);
-    const ay = Math.abs(dy);
+    // 최소 이동 거리
+    if (Math.abs(dy) < 60) return;
 
-    videoCur.style.transition = "transform .25s ease";
-
-    // 1️⃣ Horizontal swipe → close
-    if (ax > ay && ax > 80) {
-      videoCur.style.transform = dx > 0
-        ? "translateX(120%)"
-        : "translateX(-120%)";
-      setTimeout(() => closeShorts(true), 220);
-      return;
+    if (dy < 0) {
+      next();   // 위로 스와이프 → 다음
+    } else {
+      prev();   // 아래로 스와이프 → 이전
     }
-
-    // 2️⃣ Vertical swipe → next / prev
-    if (ay > ax && ay > 80) {
-      videoCur.style.transform = "translateX(0)";
-      dy < 0 ? next() : prev();
-      return;
-    }
-
-    // 3️⃣ Tap / Double Tap
-    const now = Date.now();
-    const delta = now - lastTap;
-
-    if (delta > 0 && delta < 300) {
-      videoCur.playbackRate = videoCur.playbackRate === 1 ? 2 : 1;
-      lastTap = 0;
-      return;
-    }
-
-    lastTap = now;
-
-    setTimeout(() => {
-      if (lastTap && Date.now() - lastTap >= 300) {
-        videoCur.paused
-          ? videoCur.play().catch(() => {})
-          : videoCur.pause();
-        lastTap = 0;
-      }
-    }, 300);
-
-    videoCur.style.transform = "translateX(0)";
-  }, { passive: false });
+  }, { passive: true });
 /* =========================
    PC Mouse Wheel (1 step)
 ========================= */
