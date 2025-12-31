@@ -516,7 +516,17 @@ overlay.addEventListener("click", () => {
 });
 }
 
+
 function slideUp() {
+
+  // 🔥 [릴스 핵심] 다음 영상 미리 재생 (애니메이션 시작 전)
+if (videoNext && videoNext.src) {
+  try {
+    videoNext.muted = true;
+    videoNext.play().catch(() => {});
+  } catch {}
+}
+
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";
@@ -532,7 +542,7 @@ function slideUp() {
     videoCur  = videoNext;
     videoNext = oldPrev;
 
-    // ✅ [이 블록을 여기! 무조건 여기!]
+    // 🔒 현재 영상 src 보장 (릴스 필수)
     const cur = shortsList[shortsIndex];
     if (cur && videoCur.src !== cur.video_url) {
       videoCur.src = cur.video_url;
@@ -546,9 +556,12 @@ function slideUp() {
       videoNext.load();
     }
 
-    
+    videoNext.muted = true;
+    videoNext.play().catch(() => {});
 
-    resetPositions();
+     requestAnimationFrame(() => {
+     resetPositions();
+     });
 
     try {
       videoCur.muted = false;
@@ -580,6 +593,15 @@ function slideUp() {
 }
 
 function slideDown() {
+
+    // 🔥 이전 영상 미리 재생 (애니메이션 전에)
+  if (videoPrev && videoPrev.src) {
+    try {
+      videoPrev.muted = true;
+      videoPrev.play().catch(() => {});
+    } catch {}
+  }
+
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";
@@ -594,20 +616,18 @@ function slideDown() {
     videoCur  = videoPrev;
     videoPrev = oldNext;
 
-    // ✅ [이거 빠져 있어서 지금 터진 거다]
-    const cur = shortsList[shortsIndex];
-    if (cur && videoCur.src !== cur.video_url) {
-      videoCur.src = cur.video_url;
-      videoCur.load();
-    }
-
     const upcoming = shortsList[shortsIndex - 1];
     if (upcoming) {
       videoPrev.src = upcoming.video_url;
       videoPrev.load();
     }
 
-    resetPositions();
+    videoPrev.muted = true;
+    videoPrev.play().catch(() => {});
+
+    requestAnimationFrame(() => {
+      resetPositions();
+    });
 
     try {
       videoCur.muted = false;
