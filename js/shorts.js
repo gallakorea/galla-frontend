@@ -163,8 +163,8 @@ async function openShorts(list, startId) {
 
   overlay.hidden = false;
 
-  // 🔥 history stack for returning to previous screen (not index)
-  if (!overlay._historyPushed) {
+  // 🔥 history stack (ONLY when opening shorts from another page)
+  if (!IS_SHORTS_PAGE && !overlay._historyPushed) {
     history.pushState({ shorts: true }, "");
     overlay._historyPushed = true;
   }
@@ -297,20 +297,25 @@ function closeShorts(shouldGoBack = true) {
   isClosing = true;
   try { videoCur.pause(); } catch {}
 
-  videoCur.pause();
-  videoPrev.pause();
-  videoNext.pause();
+  if (videoCur) videoCur.pause();
+  if (videoPrev) videoPrev.pause();
+  if (videoNext) videoNext.pause();
 
   // 🔥 [필수] src 완전 정리
-  videoCur.removeAttribute("src");
-  videoPrev.removeAttribute("src");
-  videoNext.removeAttribute("src");
+  if (videoCur) {
+    videoCur.removeAttribute("src");
+    videoCur.load();
+  }
+  if (videoPrev) {
+    videoPrev.removeAttribute("src");
+    videoPrev.load();
+  }
+  if (videoNext) {
+    videoNext.removeAttribute("src");
+    videoNext.load();
+  }
 
-  videoCur.load();
-  videoPrev.load();
-  videoNext.load();
-
-  overlay.hidden = true;
+  if (overlay) overlay.hidden = true;
 
   unlockIOSScroll();
 
