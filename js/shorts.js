@@ -9,6 +9,7 @@ let observer = null;
 let shortsList = [];
 let currentIndex = -1;
 let currentVideo = null;
+let helperArray = [];
 
 /* =========================================================
    UTILS
@@ -17,14 +18,14 @@ function qs(id) {
   return document.getElementById(id);
 }
 
-function stopCurrentVideo() {
-  if (!currentVideo) return;
-  try {
-    currentVideo.pause();
-    currentVideo.muted = true;
-    currentVideo.currentTime = currentVideo.currentTime; // iOS audio kill
-  } catch {}
-  currentVideo = null;
+function stopAllVideos(except = null) {
+  document.querySelectorAll(".short video").forEach(v => {
+    if (v === except) return;
+    try {
+      v.pause();
+      v.muted = true;
+    } catch {}
+  });
 }
 
 function playVideoAt(index) {
@@ -36,7 +37,7 @@ function playVideoAt(index) {
 
   if (currentVideo === video) return;
 
-  stopCurrentVideo();
+  stopAllVideos(video);
 
   currentIndex = index;
   currentVideo = video;
@@ -72,7 +73,7 @@ function setupObserver() {
     },
     {
       root: overlay,
-      threshold: 0.75
+      threshold: 0.6
     }
   );
 
@@ -132,7 +133,8 @@ function openShorts(list, startId) {
    CLOSE SHORTS
 ========================================================= */
 function closeShorts() {
-  stopCurrentVideo();
+  stopAllVideos();
+  currentVideo = null;
 
   if (observer) {
     observer.disconnect();
