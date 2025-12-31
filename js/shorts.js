@@ -71,6 +71,9 @@ async function waitForVoteReady(timeout = 3500) {
 
 let overlay, backBtn;
 
+let isClosing = false;          // 중복 close 방지
+let isFromPopstate = false;    // popstate로 닫히는지 여부
+
 let videoPrev, videoCur, videoNext;
 
 function ensureShortsDOM() {
@@ -162,7 +165,7 @@ async function openShorts(list, startId) {
 
   // 🔥 history stack for returning to previous screen (not index)
   if (!overlay._historyPushed) {
-    history.pushState({ shorts: true }, document.title);
+    history.pushState({ shorts: true }, "", location.href);
     overlay._historyPushed = true;
   }
 
@@ -290,6 +293,8 @@ async function openShorts(list, startId) {
 }
 
 function closeShorts(shouldGoBack = true) {
+  if (isClosing) return;
+  isClosing = true;
   try { videoCur.pause(); } catch {}
 
   videoCur.pause();
@@ -313,11 +318,13 @@ function closeShorts(shouldGoBack = true) {
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
 
-  // 🔥 return to previous screen instead of forcing index
-  if (shouldGoBack && history.state && history.state.shorts) {
-    history.back();
+  if (shouldGoBack && !isFromPopstate && overlay._historyPushed) {
+    history.back(); // 사용자 액션(버튼/스와이프)일 때만 1회
   }
+
   overlay._historyPushed = false;
+  isFromPopstate = false;
+  isClosing = false;
 }
 
 function loadVideos() {
@@ -369,9 +376,10 @@ function bindShortsEvents() {
 
   // 🔥 system back button (browser / mobile) closes shorts
   window.addEventListener("popstate", () => {
-    if (overlay && !overlay.hidden) {
-      closeShorts(false);
-    }
+    if (!overlay || overlay.hidden) return;
+
+    isFromPopstate = true;
+    closeShorts(false); // 여기서는 history.back 절대 호출 안 함
   });
 
 overlay.addEventListener("click", (e) => {
@@ -500,7 +508,7 @@ if (backBtn) {
   backBtn.onclick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    closeShorts(true);
+    closeShorts(true); // 내부에서 history.back 1회만 발생
   };
 }
 
