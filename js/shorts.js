@@ -204,6 +204,8 @@ async function openShorts(list, startId) {
     }
   }
   console.info("[SHORTS] opened", videoCur.src);
+  // 🔥 키보드 입력을 받기 위해 body에 포커스 강제
+  document.body.focus();
   // 🔥 INITIAL VOTE SYNC (first shorts guaranteed)
   window.currentIssue = shortsList[shortsIndex];
 
@@ -386,6 +388,21 @@ function bindShortsEvents() {
   gestureLayer.style.pointerEvents = "auto";
   gestureLayer.style.touchAction = "none";
 
+  // 🔥 [CRITICAL FIX]
+  // 최초 사용자 인터랙션 시 포커스 강제 획득
+  const forceFocus = () => {
+  const stage = document.querySelector(".shorts-stage");
+  if (stage) stage.focus();
+
+    window.removeEventListener("pointerdown", forceFocus);
+    window.removeEventListener("touchstart", forceFocus);
+    window.removeEventListener("mousedown", forceFocus);
+  };
+
+  window.addEventListener("pointerdown", forceFocus, { once: true });
+  window.addEventListener("touchstart", forceFocus, { once: true });
+  window.addEventListener("mousedown", forceFocus, { once: true });
+
   /* =========================
      Unified Touch Swipe Handler
   ========================= */
@@ -413,8 +430,6 @@ function bindShortsEvents() {
 
     if (Math.abs(dx) > Math.abs(dy)) {
       videoCur.style.transform = `translateX(${dx}px)`;
-    } else {
-      videoCur.style.transform = `translateY(${dy * 0.3}px)`;
     }
   }, { passive: false });
 
@@ -473,30 +488,24 @@ gestureLayer.addEventListener("touchend", (e) => {
 }, { passive: false });
 
 
-/* =========================
-   PC Mouse Wheel (1 step)
-========================= */
-let wheelDelta = 0;
-
-gestureLayer.addEventListener("wheel", (e) => {
-  e.preventDefault();
+// =========================
+// PC / Trackpad Wheel (GLOBAL)
+// =========================
+window.addEventListener("wheel", (e) => {
+  if (!overlay || overlay.hidden) return;
   if (locked) return;
 
-  wheelDelta += e.deltaY;
+  if (Math.abs(e.deltaY) < 80) return;
 
-  if (Math.abs(wheelDelta) < 80) return;
-
-  if (wheelDelta > 0) next();
-  else prev();
-
-  wheelDelta = 0;
+  e.preventDefault();
+  e.deltaY > 0 ? next() : prev();
 }, { passive: false });
 
 /* =========================
    Keyboard (↑↓, Esc)
 ========================= */
 window.addEventListener("keydown", (e) => {
-  if (overlay.hidden) return;
+  if (!overlay || overlay.hidden) return;
 
   if (e.key === "ArrowDown") {
     e.preventDefault();
@@ -585,7 +594,7 @@ function slideUp() {
 function slideDown() {
   videoCur.style.transition = "none";
   videoCur.style.transform = "translate(0, 0)";
-  
+
   videoPrev.style.transition =
   videoCur.style.transition =
   videoNext.style.transition = "transform 0.35s ease";

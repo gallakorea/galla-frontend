@@ -214,3 +214,7 @@ body[data-page="shorts"] {
   touch-action: none;
   pointer-events: auto;
 }
+
+body:focus {
+  outline: none;
+}
