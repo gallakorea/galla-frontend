@@ -1,3 +1,6 @@
+// shorts.js — FORCE GLOBAL MODE
+(function () {
+
 /* =========================================================
    GALLA Shorts — TRUE Reels/Shorts Scroll Physics Version
    - Native scroll (finger-follow)
@@ -165,3 +168,7 @@ window.addEventListener("keydown", e => {
 ========================= */
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
+
+window.openShorts = openShorts;
+window.closeShorts = closeShorts;
+})();
