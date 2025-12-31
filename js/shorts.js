@@ -379,76 +379,84 @@ function bindShortsEvents() {
   }, true);
 
 /* =========================
-   Mobile Touch Swipe (1 step)
+   Unified Touch Swipe Handler
+   - up/down: next/prev
+   - left/right: close (card)
 ========================= */
-overlay.addEventListener("touchstart", (e) => {
-  if (!e.touches || !e.touches[0]) return;
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
 
-// 좌/우 스와이프 준비
+let touchStartTime = 0;
+
 overlay.addEventListener("touchstart", (e) => {
   if (!e.touches || !e.touches[0]) return;
-  touchStartX = e.touches[0].clientX;
+
+  const t = e.touches[0];
+  touchStartX = t.clientX;
+  touchStartY = t.clientY;
+  touchStartTime = Date.now();
+
   draggingX = true;
   videoCur.style.transition = "none";
 }, { passive: true });
 
-// 좌/우 스와이프 중 카드 이동
 overlay.addEventListener("touchmove", (e) => {
   if (!draggingX || !e.touches || !e.touches[0]) return;
 
-  const diffX = e.touches[0].clientX - touchStartX;
+  const t = e.touches[0];
+  const diffX = t.clientX - touchStartX;
+  const diffY = t.clientY - touchStartY;
 
-  // 좌우 스와이프 시 카드처럼 이동
-  videoCur.style.transform = `translateX(${diffX}px)`;
-  overlay.style.background = "rgba(0,0,0,0.85)";
+  // 좌우 이동만 시각적으로 반영 (카드 느낌)
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    videoCur.style.transform = `translateX(${diffX}px)`;
+    overlay.style.background = "rgba(0,0,0,0.85)";
+  }
 }, { passive: true });
 
 overlay.addEventListener("touchend", (e) => {
-  if (locked) return;
-  const endY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : touchStartY;
-  const diff = touchStartY - endY;
-
-  // 임계값: 너무 민감하면 쭉 내려가는 느낌 남
-  if (Math.abs(diff) < 90) return;
-
-  if (diff > 0) next();  // 위로 스와이프 = 다음
-  else prev();           // 아래로 스와이프 = 이전
-}, { passive: true });
-
-// 좌/우 스와이프 종료/복귀
-overlay.addEventListener("touchend", (e) => {
-  if (!draggingX || !e.changedTouches || !e.changedTouches[0]) return;
-
+  if (!draggingX) return;
   draggingX = false;
 
-  const diffX = e.changedTouches[0].clientX - touchStartX;
+  const t = e.changedTouches && e.changedTouches[0];
+  if (!t) return;
 
-  // 임계값
-  if (Math.abs(diffX) > 90) {
-    // 카드가 밀리며 종료
-    videoCur.style.transition = "transform 0.25s ease";
-    videoCur.style.transform =
-      diffX > 0 ? "translateX(120%)" : "translateX(-120%)";
+  const diffX = t.clientX - touchStartX;
+  const diffY = t.clientY - touchStartY;
+  const absX = Math.abs(diffX);
+  const absY = Math.abs(diffY);
+
+  videoCur.style.transition = "transform 0.25s ease";
+
+  // 좌우 스와이프 → 닫기
+  if (absX > absY && absX > 90) {
+    videoCur.style.transform = diffX > 0
+      ? "translateX(120%)"
+      : "translateX(-120%)";
 
     setTimeout(() => {
       videoCur.style.transform = "";
       videoCur.style.transition = "";
       overlay.style.background = "";
-      closeShorts(true); // 🔥 카드처럼 닫히며 이전 화면
+      closeShorts(true);
     }, 220);
+    return;
+  }
 
-  } else {
-    // 취소 → 원위치
-    videoCur.style.transition = "transform 0.25s ease";
-    videoCur.style.transform = "translateX(0)";
+  // 상하 스와이프 → 다음/이전
+  if (absY > absX && absY > 90) {
+    videoCur.style.transform = "";
     overlay.style.background = "";
 
-    setTimeout(() => {
-      videoCur.style.transition = "";
-    }, 250);
+    if (diffY < 0) next();   // 위 → 다음
+    else prev();             // 아래 → 이전
+    return;
   }
+
+  // 취소 → 원위치
+  videoCur.style.transform = "translateX(0)";
+  overlay.style.background = "";
+  setTimeout(() => {
+    videoCur.style.transition = "";
+  }, 250);
 }, { passive: true });
 
 /* =========================
