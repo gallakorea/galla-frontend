@@ -23,9 +23,6 @@
   <!-- 🔥 가로 480 제한 스테이지 -->
   <div class="shorts-stage">
 
-    <!-- 🔥 제스처 전용 레이어 (고정, transform 영향 없음) -->
-    <div class="shorts-gesture-layer"></div>
-
     <!-- 영상 -->
     <div class="shorts-video-wrap">
       <video id="videoPrev" playsinline webkit-playsinline muted preload="auto"></video>
@@ -36,7 +33,8 @@
              autoplay
              preload="auto"></video>
       <video id="videoNext" playsinline webkit-playsinline muted preload="auto"></video>
-
+      <!-- 🔥 제스처 전용 레이어 (고정, transform 영향 없음) -->
+      <div class="shorts-gesture-layer"></div>
     </div>
 
     <!-- UI -->

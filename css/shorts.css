@@ -35,6 +35,7 @@ body[data-page="shorts"] {
   height: 100svh;
   box-sizing: border-box;
   overflow: hidden;
+  pointer-events: auto;
 }
 
 /* 3단 버퍼 구조 */
@@ -50,6 +51,17 @@ body[data-page="shorts"] {
   object-fit: cover;
   background: #000;
   pointer-events: none;
+}
+
+.shorts-video-wrap > * {
+  pointer-events: none;
+}
+
+.shorts-video-wrap > .shorts-gesture-layer,
+.shorts-video-wrap .shorts-top,
+.shorts-video-wrap .shorts-vote,
+.shorts-video-wrap .shorts-actions {
+  pointer-events: auto;
 }
 /* =========================
    TOP BAR
@@ -213,4 +225,9 @@ body[data-page="shorts"] {
   overflow: hidden;
   touch-action: none;
   pointer-events: auto;
+}
+
+body[data-page="shorts"] .nav {
+  pointer-events: auto;
+  z-index: 20;
 }
