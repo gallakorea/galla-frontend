@@ -180,10 +180,7 @@ body[data-page="shorts"] {
 
 #shortsOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 64px;   /* 🔥 하단 네비 높이만큼 비움 */
+  inset: 0;            /* ✅ 전체 화면 원복 */
   z-index: 400;
 
   display: flex;
@@ -191,7 +188,6 @@ body[data-page="shorts"] {
   align-items: stretch;
 
   /* ❌ width 절대 주지 마라 */
-  /* width: 100vw; ← 이게 폭 풀리는 원인 */
 }
 
 /* =========================
