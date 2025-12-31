@@ -232,3 +232,15 @@ body:not([data-page="shorts"]) #shortsOverlay {
   display: none !important;
   pointer-events: none !important;
 }
+
+body.shorts-open {
+  overflow: hidden;
+}
+
+.shorts-gesture-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;              /* video 위, UI 아래 */
+  background: transparent;
+  touch-action: none;
+}

@@ -19,33 +19,32 @@
   ========================= -->
   <div id="shortsOverlay" hidden>
 
-    <!-- 🔥 480px STAGE (FOCUS TARGET) -->
     <div class="shorts-stage" tabindex="0">
 
-      <!-- 제스처 레이어 -->
-      <div class="shorts-gesture-layer"></div>
-
-      <!-- 영상 -->
+      <!-- 영상 + 제스처 영역 -->
       <div class="shorts-video-wrap">
+
         <video id="videoPrev" playsinline webkit-playsinline muted preload="auto"></video>
         <video id="shortsVideo" playsinline webkit-playsinline muted autoplay preload="auto"></video>
         <video id="videoNext" playsinline webkit-playsinline muted preload="auto"></video>
+
+        <!-- 🔥 제스처 레이어는 반드시 여기 -->
+        <div class="shorts-gesture-layer"></div>
+
       </div>
 
-      <!-- TOP -->
+      <!-- UI는 제스처 레이어 밖 -->
       <div class="shorts-top">
         <button id="shortsBack">←</button>
         <div class="shorts-time">5:05</div>
       </div>
 
-      <!-- ACTIONS -->
       <div class="shorts-actions">
         <div>❤️</div>
         <div>💬</div>
         <div>📤</div>
       </div>
 
-      <!-- VOTE -->
       <div class="shorts-vote">
         <button id="shortsPro" class="vote-btn pro">👍 찬성이오</button>
         <button id="shortsCon" class="vote-btn con">👎 난 반댈세</button>
