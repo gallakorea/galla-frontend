@@ -23,8 +23,14 @@ body[data-page="shorts"] .header {
    OVERLAY (SCROLL CONTAINER)
 ------------------------- */
 #shortsOverlay {
-  position: fixed;          /* 반드시 fixed */
-  inset: 0;
+  position: fixed;
+  top: env(safe-area-inset-top);
+  bottom: env(safe-area-inset-bottom);
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 100%;
+  max-width: 480px;
 
   background: #000;
   z-index: 999;
@@ -50,7 +56,11 @@ body[data-page="shorts"] .header {
 ------------------------- */
 .short {
   position: relative;
-  height: 100dvh;            /* 🔥 핵심: viewport 정확 고정 */
+  height: calc(
+    100svh
+    - env(safe-area-inset-top)
+    - env(safe-area-inset-bottom)
+  );
   width: 100%;
   scroll-snap-align: start;
   scroll-snap-stop: always;  /* 🔥 반드시 한 장씩 멈춤 */
