@@ -25,7 +25,7 @@ function applyShortsVoteState(result) {
 }
 // js/shorts.js — Instagram Reels-like (Snap 1-step)
 // 🔧 wait until vote core & session are ready (shorts first-load fix)
-async function waitForVoteReady(timeout = 1500) {
+async function waitForVoteReady(timeout = 3500) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     if (
@@ -33,9 +33,9 @@ async function waitForVoteReady(timeout = 1500) {
       window.supabaseClient
     ) {
       const { data } = await window.supabaseClient.auth.getSession();
-      if (data?.session) return true;
+      if (data?.session?.user) return true;
     }
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 80));
   }
   return false;
 }
@@ -171,7 +171,7 @@ async function openShorts(list, startId) {
     let result = "__SESSION_PENDING__";
     let retry = 0;
 
-    while (retry < 12) {
+    while (retry < 20) {
       result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
 
       if (result === "pro" || result === "con") {
@@ -179,13 +179,9 @@ async function openShorts(list, startId) {
         return;
       }
 
-      // 세션은 준비됐으나 아직 DB 반영/조회 지연인 경우 재시도
-      await new Promise(r => setTimeout(r, 120));
+      await new Promise(r => setTimeout(r, 150));
       retry++;
     }
-
-    // 명시적으로 '미투표' 상태 확정 시에만 초기화하지 않고 no-op return
-    return;
   })();
 
 
@@ -200,9 +196,11 @@ async function openShorts(list, startId) {
     document.querySelector('.shorts-vote .con');
 
   if (shortsPro && shortsCon && !overlay._voteBound) {
-    // 🔥 always reset UI on open
-    shortsPro.classList.remove("active-vote", "locked");
-    shortsCon.classList.remove("active-vote", "locked");
+    // 🔥 only reset UI on open if session is not ready
+    if (!window.supabaseClient) {
+      shortsPro.classList.remove("active-vote", "locked");
+      shortsCon.classList.remove("active-vote", "locked");
+    }
 
     overlay._voteBound = true;
 
@@ -254,6 +252,17 @@ async function openShorts(list, startId) {
       }
     };
   }
+
+  // Fallback sync at the end of openShorts
+  setTimeout(async () => {
+    if (!window.currentIssue) return;
+    if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+
+    const result = await window.GALLA_CHECK_VOTE(window.currentIssue.id);
+    if (result === "pro" || result === "con") {
+      applyShortsVoteState(result);
+    }
+  }, 600);
 
 }
 

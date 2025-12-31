@@ -151,6 +151,18 @@ function renderCard(data) {
 // 🔥 EVENTS
 // =========================================
 
+async function waitForSessionReady(timeout = 2500) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (window.supabaseClient) {
+      const { data } = await window.supabaseClient.auth.getSession();
+      if (data?.session) return true;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return false;
+}
+
 async function applyVoteUI(cardEl, stance) {
     const btnPro = cardEl.querySelector(".btn-pro");
     const btnCon = cardEl.querySelector(".btn-con");
@@ -164,9 +176,19 @@ async function applyVoteUI(cardEl, stance) {
 }
 
 async function syncVoteWithRetry(cardEl, id, retry = 0) {
-    if (retry > 10) return;
-
+    if (retry === 0) {
+      const ready = await waitForSessionReady();
+      if (!ready) return;
+    }
     const stance = await window.GALLA_CHECK_VOTE(id);
+
+    // 🔥 모바일 초기 로드: 세션 아직 안 붙은 상태
+    if (stance === null) {
+        setTimeout(() => {
+            syncVoteWithRetry(cardEl, id, retry + 1);
+        }, 300);
+        return;
+    }
 
     if (stance === "__SESSION_PENDING__") {
         setTimeout(() => {

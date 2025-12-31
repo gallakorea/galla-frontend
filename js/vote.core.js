@@ -128,8 +128,7 @@ async function checkVoteStatus(issueId) {
 
   const session = await waitForSessionGuaranteed();
   if (!session) {
-    console.warn("[VOTE] session not recovered in time");
-    return null;
+    return "__SESSION_PENDING__";
   }
 
   const { data } = await supabase
@@ -139,7 +138,7 @@ async function checkVoteStatus(issueId) {
     .eq("user_id", session.user.id)
     .maybeSingle();
 
-  if (!data) return null;
+  if (!data) return "__NO_VOTE__";
 
   /* ========= Issue Page ========= */
   const proBtn = document.getElementById("btn-vote-pro");
@@ -214,7 +213,7 @@ async function checkVoteStatus(issueId) {
         conBtn.classList.add('active-vote');
       }
     });
-  return data.type;
+  return data?.type || "__NO_VOTE__";
 }
 
 /* ==========================================================================
@@ -254,22 +253,41 @@ if (window.supabaseClient && !window.__GALLA_AUTH_WATCHER__) {
 // 🔥 FORCE RE-SYNC ON PAGE LOAD / VISIBILITY RESTORE (MOBILE CRITICAL)
 // ==========================================================================
 async function forceVoteResync() {
-  const issueId =
-    window.currentIssue?.id ||
-    document.body?.dataset?.issueId ||
-    document.querySelector('.card[data-id]')?.dataset?.id;
+  // 🔥 Shorts / Issue 단일 컨텍스트
+  if (window.currentIssue?.id || document.body?.dataset?.issueId) {
+    const issueId =
+      window.currentIssue?.id ||
+      document.body?.dataset?.issueId;
 
-  if (!issueId) return;
+    if (!issueId) return;
 
-  try {
-    await window.GALLA_CHECK_VOTE(Number(issueId));
-  } catch (e) {
-    console.error("[VOTE] force resync error", e);
+    try {
+      await window.GALLA_CHECK_VOTE(Number(issueId));
+    } catch (e) {
+      console.error("[VOTE] force resync error", e);
+    }
+    return;
+  }
+
+  // 🔥 Index: 모든 카드에 대해 투표 상태 재동기화
+  const cards = document.querySelectorAll('.card[data-id]');
+  if (!cards.length) return;
+
+  for (const card of cards) {
+    const id = Number(card.dataset.id);
+    if (!id) continue;
+
+    try {
+      await window.GALLA_CHECK_VOTE(id);
+    } catch (e) {
+      console.error("[VOTE] index resync error", e);
+    }
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(forceVoteResync, 0);
+  setTimeout(forceVoteResync, 800); // 🔥 모바일 세션 복원 지연 대응
 });
 
 document.addEventListener("visibilitychange", () => {
