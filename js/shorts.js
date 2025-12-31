@@ -439,7 +439,7 @@ overlay.addEventListener("touchend", (e) => {
       videoCur.style.transform = "";
       videoCur.style.transition = "";
       overlay.style.background = "";
-      closeShorts();
+      closeShorts(true); // 🔥 카드처럼 닫히며 이전 화면
     }, 220);
 
   } else {
@@ -496,9 +496,13 @@ window.addEventListener("keydown", (e) => {
 /* =========================
    UI Buttons
 ========================= */
-if (backBtn) backBtn.onclick = closeShorts;
-
-
+if (backBtn) {
+  backBtn.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeShorts(true); // 🔥 무조건 이전 화면
+  };
+}
 
 /* =========================
    TAP / DOUBLE TAP CONTROL
