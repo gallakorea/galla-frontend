@@ -190,8 +190,10 @@ async function openShorts(list, startId) {
       videoCur.src = cur.video_url;
       videoCur.load();
 
-      await videoCur.play();   // ❗ 반드시 await
-      videoCur.muted = false;  // 재생 성공 후 unmute
+      videoCur.play().catch(() => {});
+      setTimeout(() => {
+        videoCur.muted = false;
+      }, 120);
     } catch (e) {
       console.warn("[SHORTS] autoplay retry", e);
     }
@@ -382,17 +384,20 @@ function bindShortsEvents() {
   let startX = 0, startY = 0, touching = false;
 
   overlay.addEventListener("touchstart", (e) => {
-    if (!e.touches[0]) return;
+    if (!e.touches || !e.touches[0]) return;
 
     touching = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     videoCur.style.transition = "none";
 
-    // ✅ iOS: 첫 사용자 제스처에서 반드시 재생 트리거
+    // 🔥 iOS 규칙: 제스처 시 muted 상태로 즉시 play
     if (videoCur && videoCur.paused) {
-      videoCur.muted = false;
+      videoCur.muted = true;
       videoCur.play().catch(() => {});
+      setTimeout(() => {
+        videoCur.muted = false;
+      }, 120);
     }
   }, { passive: true });
 
