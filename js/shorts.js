@@ -379,85 +379,81 @@ function bindShortsEvents() {
   }, true);
 
 /* =========================
-   Unified Touch Swipe Handler
+   Unified Touch Swipe Handler (FIXED)
    - up/down: next/prev
    - left/right: close (card)
 ========================= */
 
-let touchStartTime = 0;
+let startX = 0;
+let startY = 0;
+let isTouching = false;
 
 overlay.addEventListener("touchstart", (e) => {
   if (!e.touches || !e.touches[0]) return;
 
   const t = e.touches[0];
-  touchStartX = t.clientX;
-  touchStartY = t.clientY;
-  touchStartTime = Date.now();
+  startX = t.clientX;
+  startY = t.clientY;
+  isTouching = true;
 
-  draggingX = true;
   videoCur.style.transition = "none";
-}, { passive: true });
+}, { passive: false });
 
 overlay.addEventListener("touchmove", (e) => {
-  if (!draggingX || !e.touches || !e.touches[0]) return;
+  if (!isTouching || !e.touches || !e.touches[0]) return;
 
   const t = e.touches[0];
-  const diffX = t.clientX - touchStartX;
-  const diffY = t.clientY - touchStartY;
+  const diffX = t.clientX - startX;
+  const diffY = t.clientY - startY;
 
-  // 좌우 이동만 시각적으로 반영 (카드 느낌)
+  // 좌우가 더 크면 카드 이동
   if (Math.abs(diffX) > Math.abs(diffY)) {
+    e.preventDefault();
     videoCur.style.transform = `translateX(${diffX}px)`;
-    overlay.style.background = "rgba(0,0,0,0.85)";
   }
-}, { passive: true });
+}, { passive: false });
 
 overlay.addEventListener("touchend", (e) => {
-  if (!draggingX) return;
-  draggingX = false;
+  if (!isTouching) return;
+  isTouching = false;
 
   const t = e.changedTouches && e.changedTouches[0];
   if (!t) return;
 
-  const diffX = t.clientX - touchStartX;
-  const diffY = t.clientY - touchStartY;
+  const diffX = t.clientX - startX;
+  const diffY = t.clientY - startY;
   const absX = Math.abs(diffX);
   const absY = Math.abs(diffY);
 
   videoCur.style.transition = "transform 0.25s ease";
 
   // 좌우 스와이프 → 닫기
-  if (absX > absY && absX > 90) {
-    videoCur.style.transform = diffX > 0
-      ? "translateX(120%)"
-      : "translateX(-120%)";
+  if (absX > absY && absX > 80) {
+    videoCur.style.transform =
+      diffX > 0 ? "translateX(120%)" : "translateX(-120%)";
 
     setTimeout(() => {
       videoCur.style.transform = "";
       videoCur.style.transition = "";
-      overlay.style.background = "";
       closeShorts(true);
     }, 220);
     return;
   }
 
   // 상하 스와이프 → 다음/이전
-  if (absY > absX && absY > 90) {
+  if (absY > absX && absY > 80) {
     videoCur.style.transform = "";
-    overlay.style.background = "";
-
-    if (diffY < 0) next();   // 위 → 다음
-    else prev();             // 아래 → 이전
+    if (diffY < 0) next();   // 위
+    else prev();             // 아래
     return;
   }
 
   // 취소 → 원위치
   videoCur.style.transform = "translateX(0)";
-  overlay.style.background = "";
   setTimeout(() => {
     videoCur.style.transition = "";
   }, 250);
-}, { passive: true });
+}, { passive: false });
 
 /* =========================
    PC Mouse Wheel (1 step)
