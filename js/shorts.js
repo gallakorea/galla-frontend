@@ -385,7 +385,7 @@ function prev() {
 function bindShortsEvents() {
 
   gestureLayer.style.pointerEvents = "auto";
-  gestureLayer.classList.add("passive");
+  gestureLayer.classList.remove("passive");
   gestureLayer.style.touchAction = "none";
 
   // 🔥 [CRITICAL FIX]

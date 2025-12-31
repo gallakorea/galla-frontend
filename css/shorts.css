@@ -205,7 +205,7 @@ body[data-page="shorts"] {
   justify-content: center;
   align-items: stretch;
   touch-action: none;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 /* =========================
