@@ -163,11 +163,6 @@ async function openShorts(list, startId) {
 
   overlay.hidden = false;
 
-  // 🔥 history stack (ONLY when opening shorts from another page)
-  if (!IS_SHORTS_PAGE && !overlay._historyPushed) {
-    history.pushState({ shorts: true }, "");
-    overlay._historyPushed = true;
-  }
 
   // 🔴 iOS에서 뒤 스크롤 완전 차단
   lockIOSScroll();
@@ -323,10 +318,6 @@ function closeShorts(shouldGoBack = true) {
   document.documentElement.classList.remove("shorts-open");
   document.body.style.overflow = "";
 
-  if (shouldGoBack && overlay._historyPushed) {
-    overlay._historyPushed = false;
-    history.back(); // 항상 1회만
-  }
 
   isFromPopstate = false;
   isClosing = false;
@@ -378,23 +369,6 @@ function prev() {
 }
 
 function bindShortsEvents() {
-  // 🔥 system back button (browser / mobile) closes shorts
-  window.addEventListener("popstate", () => {
-    if (!overlay || overlay.hidden) return;
-
-    overlay._historyPushed = false;
-    closeShorts(false);
-  });
-
-  window.addEventListener("popstate", () => {
-    // ❗ 안전장치: overlay가 닫혔는데도 body가 잠겨 있으면 복구
-    if (overlay && overlay.hidden) {
-      unlockIOSScroll();
-      document.body.classList.remove("shorts-open");
-      document.documentElement.classList.remove("shorts-open");
-      document.body.style.overflow = "";
-    }
-  });
 
   overlay.addEventListener("click", (e) => {
     // ❗ 뒤로가기 버튼은 절대 막지 않는다
@@ -524,9 +498,12 @@ if (backBtn) {
     e.preventDefault();
     e.stopPropagation();
 
-    // ❗ 명시적으로 사용자 액션임을 보장
-    isFromPopstate = false;
-    closeShorts(true);
+    // 🔥 history 건드리지 않고 즉시 이전 페이지로 복귀
+    if (document.referrer) {
+      location.href = document.referrer;
+    } else {
+      location.href = "/index.html";
+    }
   }, true);
 }
 
