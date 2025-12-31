@@ -16,6 +16,7 @@ let overlay;
 let shortsList = [];
 let currentIndex = -1;
 let observer;
+let currentVideo = null;
 
 /* =========================
    Helpers
@@ -31,18 +32,30 @@ function pauseAll() {
 }
 
 function playVideoAt(index) {
-  const item = document.querySelector(`.short[data-index="${index}"] video`);
-  if (!item) return;
+  const video = document.querySelector(
+    `.short[data-index="${index}"] video`
+  );
+  if (!video) return;
 
-  pauseAll();
+  // 🔥 이전 영상 완전 정지
+  if (currentVideo && currentVideo !== video) {
+    try {
+      currentVideo.pause();
+      currentVideo.currentTime = currentVideo.currentTime; // Safari 안정화
+      currentVideo.muted = true;
+    } catch {}
+  }
 
-  // iOS/Safari 안정화: 먼저 muted 상태로 재생
-  item.muted = true;
-  const p = item.play();
+  currentVideo = video;
+
+  // 항상 muted 상태에서 시작
+  video.muted = true;
+
+  const p = video.play();
   if (p && typeof p.then === "function") {
     p.then(() => {
-      // 재생 시작 후 unmute
-      item.muted = false;
+      // 🔥 현재 영상만 unmute
+      video.muted = false;
     }).catch(() => {});
   }
 }
@@ -69,7 +82,7 @@ function setupObserver() {
     },
     {
       root: overlay,
-      threshold: 0.6
+      threshold: 0.8
     }
   );
 
@@ -142,6 +155,7 @@ function openShorts(list, startId) {
 ========================= */
 function closeShorts() {
   pauseAll();
+  currentVideo = null;
 
   if (overlay) {
     overlay.hidden = true;
