@@ -668,3 +668,4 @@ document.addEventListener("visibilitychange", async () => {
 // 🔥 expose shorts controls globally (index + shorts)
 window.openShorts = openShorts;
 window.closeShorts = closeShorts;
+}
