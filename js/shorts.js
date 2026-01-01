@@ -128,10 +128,12 @@ function openShorts(list, startId) {
 
     const btnPro = document.createElement("button");
     btnPro.className = "vote-btn pro";
+    btnPro.dataset.issueId = item.id;
     btnPro.textContent = "👍 찬성이오";
 
     const btnCon = document.createElement("button");
     btnCon.className = "vote-btn con";
+    btnCon.dataset.issueId = item.id;
     btnCon.textContent = "👎 난 반댈세";
 
     voteBar.appendChild(btnPro);
@@ -227,26 +229,36 @@ async function syncVoteState(issueId) {
   if (!issueId) return;
   if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
-  resetVoteUI();
+  resetVoteUI(issueId);
 
   const stance = await window.GALLA_CHECK_VOTE(issueId);
   if (stance === "pro" || stance === "con") {
-    lockVoteUI(stance);
+    lockVoteUI(issueId, stance);
   }
 }
 
-function resetVoteUI() {
-  document.querySelectorAll(".shorts-vote .vote-btn").forEach(btn => {
-    btn.classList.remove("active-vote", "locked");
-  });
+function resetVoteUI(issueId) {
+  if (!issueId) return;
+  document
+    .querySelectorAll(`.short[data-issue-id="${issueId}"] .vote-btn`)
+    .forEach(btn => {
+      btn.classList.remove("active-vote", "locked");
+    });
 }
 
-function lockVoteUI(type) {
-  document.querySelectorAll(".shorts-vote .vote-btn").forEach(btn => {
+function lockVoteUI(issueId, type) {
+  if (!issueId) return;
+
+  const wrap = document.querySelector(
+    `.short[data-issue-id="${issueId}"]`
+  );
+  if (!wrap) return;
+
+  wrap.querySelectorAll(".vote-btn").forEach(btn => {
     btn.classList.add("locked");
   });
 
-  const target = document.querySelector(`.shorts-vote .${type}`);
+  const target = wrap.querySelector(`.vote-btn.${type}`);
   if (target) target.classList.add("active-vote");
 }
 
@@ -264,7 +276,7 @@ document.addEventListener("click", async e => {
   }
 
   await window.GALLA_VOTE(currentIssueId, type);
-  lockVoteUI(type);
+  lockVoteUI(currentIssueId, type);
 });
 
 /* =========================
