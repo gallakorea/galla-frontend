@@ -136,14 +136,15 @@ body[data-page="shorts"] .header {
 }
 
 /* -------------------------
-   VOTE BAR
+   VOTE BAR (ALWAYS ABOVE BOTTOM NAV)
 ------------------------- */
 .shorts-vote {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
 
-  bottom: calc(58px + env(safe-area-inset-bottom) + 12px);
+  /* 🔥 하단 네비 높이(58px) + safe-area + 여백 */
+  bottom: calc(58px + env(safe-area-inset-bottom) + 8px);
 
   width: calc(100% - 24px);
   max-width: 480px;
