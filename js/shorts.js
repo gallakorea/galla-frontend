@@ -4,6 +4,7 @@
 let overlay = null;
 let observer = null;
 let currentIndex = -1;
+let currentIssueId = null;
 
 /* =========================
    UTILS
@@ -74,6 +75,9 @@ function setupObserver() {
       if (best.intersectionRatio < 0.6) return;
 
       const idx = Number(best.target.dataset.index);
+      const issueId = Number(best.target.dataset.issueId);
+      currentIssueId = issueId;
+      syncVoteState(issueId);
       playOnly(idx);
     },
     {
@@ -109,6 +113,7 @@ function openShorts(list, startId) {
     const wrap = document.createElement("section");
     wrap.className = "short";
     wrap.dataset.index = i;
+    wrap.dataset.issueId = item.id;
 
     const video = document.createElement("video");
     video.src = item.video_url;
@@ -214,6 +219,53 @@ window.addEventListener("wheel", e => {
     });
   }, 120);
 }, { passive: true });
+
+/* =========================
+   VOTE (DB SYNC)
+========================= */
+async function syncVoteState(issueId) {
+  if (!issueId) return;
+  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+
+  resetVoteUI();
+
+  const stance = await window.GALLA_CHECK_VOTE(issueId);
+  if (stance === "pro" || stance === "con") {
+    lockVoteUI(stance);
+  }
+}
+
+function resetVoteUI() {
+  document.querySelectorAll(".shorts-vote .vote-btn").forEach(btn => {
+    btn.classList.remove("active-vote", "locked");
+  });
+}
+
+function lockVoteUI(type) {
+  document.querySelectorAll(".shorts-vote .vote-btn").forEach(btn => {
+    btn.classList.add("locked");
+  });
+
+  const target = document.querySelector(`.shorts-vote .${type}`);
+  if (target) target.classList.add("active-vote");
+}
+
+/* 클릭 이벤트 (단일 바) */
+document.addEventListener("click", async e => {
+  const btn = e.target.closest(".shorts-vote .vote-btn");
+  if (!btn) return;
+  if (!currentIssueId) return;
+
+  const type = btn.classList.contains("pro") ? "pro" : "con";
+
+  if (typeof window.GALLA_VOTE !== "function") {
+    console.error("[SHORTS] GALLA_VOTE missing");
+    return;
+  }
+
+  await window.GALLA_VOTE(currentIssueId, type);
+  lockVoteUI(type);
+});
 
 /* =========================
    EXPORT
