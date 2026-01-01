@@ -163,30 +163,33 @@ async function checkVoteStatus(issueId) {
     }
   }
 
-  /* ========= Shorts ========= */
-  const shortsPro = document.getElementById("shortsPro");
-  const shortsCon = document.getElementById("shortsCon");
+  /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
+  const activeShort = document.querySelector(`.short[data-issue-id="${issueId}"]`);
+  if (activeShort) {
+    const proBtn = activeShort.querySelector('.shorts-vote .vote-btn.pro');
+    const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
 
-  if (shortsPro && shortsCon) {
-    // 공통 잠금
-    shortsPro.classList.add("locked");
-    shortsCon.classList.add("locked");
+    if (proBtn && conBtn) {
+      // 공통 잠금
+      proBtn.disabled = true;
+      conBtn.disabled = true;
 
-    shortsPro.disabled = true;
-    shortsCon.disabled = true;
+      proBtn.classList.add("locked");
+      conBtn.classList.add("locked");
 
-    // 기존 상태 초기화
-    shortsPro.classList.remove("active-vote");
-    shortsCon.classList.remove("active-vote");
+      // 초기화
+      proBtn.classList.remove("active-vote");
+      conBtn.classList.remove("active-vote");
 
-    if (data.type === "pro") {
-      shortsPro.classList.add("active-vote");
-      shortsPro.innerText = "👍 투표 완료";
-    }
+      if (data.type === "pro") {
+        proBtn.classList.add("active-vote");
+        proBtn.innerText = "👍 투표 완료";
+      }
 
-    if (data.type === "con") {
-      shortsCon.classList.add("active-vote");
-      shortsCon.innerText = "👎 투표 완료";
+      if (data.type === "con") {
+        conBtn.classList.add("active-vote");
+        conBtn.innerText = "👎 투표 완료";
+      }
     }
   }
   /* ========= Index Cards ========= */
