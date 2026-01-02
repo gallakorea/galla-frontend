@@ -1,10 +1,11 @@
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
 
-  // 🔥 index / shorts 아닌 페이지에서는 즉시 종료
   const page = document.body?.dataset?.page;
-  if (page !== "shorts") return;
 
+  // ❌ 함수 정의는 막지 말고
+  // ⛔ observer / 이벤트만 shorts 페이지에서만 동작
+  
   let overlay = null;
   let observer = null;
   let currentIndex = -1;
