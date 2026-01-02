@@ -178,20 +178,25 @@ function openShorts(list, startId) {
         `.short[data-index="${startIndex}"]`
       );
       if (!firstShort) return;
-
       const issueId = Number(firstShort.dataset.issueId);
       if (!issueId) return;
 
       if (typeof window.GALLA_CHECK_VOTE === "function") {
+        // 1️⃣ 현재 보이는 쇼츠
         await window.GALLA_CHECK_VOTE(issueId);
-      }
 
-      // 🔥 세션 지연 대비 재동기화
-      setTimeout(() => {
-        if (typeof window.GALLA_CHECK_VOTE === "function") {
-          window.GALLA_CHECK_VOTE(issueId);
-        }
-      }, 600);
+        // 2️⃣ 🔥 쇼츠 DOM 전체 강제 재동기화 (핵심)
+        setTimeout(() => {
+          document
+            .querySelectorAll('.short[data-issue-id]')
+            .forEach(shortEl => {
+              const id = Number(shortEl.dataset.issueId);
+              if (id) {
+                window.GALLA_CHECK_VOTE(id);
+              }
+            });
+        }, 0);
+      }
     })();
   });
 
