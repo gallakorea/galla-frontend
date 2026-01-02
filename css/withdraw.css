@@ -1,0 +1,183 @@
+/* RESET */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+}
+
+#app {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: 90px;
+}
+
+/* HEADER */
+.header {
+    position: sticky;
+    top: 0;
+    background: #000;
+    border-bottom: 1px solid #111;
+    z-index: 99;
+}
+.header-inner {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+}
+.back-icon {
+    width: 22px;
+    cursor: pointer;
+}
+.header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 700;
+}
+.header-spacer { width: 22px; }
+
+/* GUIDE */
+.withdraw-guide {
+    background: #101010;
+    border: 1px solid #222;
+    padding: 16px;
+    margin: 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* FORM */
+.section { padding: 0 16px; }
+.input-group { margin-bottom: 20px; }
+.input-label { font-size: 13px; margin-bottom: 6px; }
+
+.input-file {
+    width: 100%;
+    padding: 12px;
+    background: #0f0f0f;
+    border: 1px solid #222;
+    border-radius: 12px;
+    color: #fff;
+}
+
+.file-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #777;
+}
+
+/* OCR BOX */
+.ocr-box {
+    background: #0f0f0f;
+    border: 1px solid #222;
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 22px;
+}
+.ocr-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+.ocr-field {
+    margin-bottom: 12px;
+}
+.ocr-field label {
+    display: block;
+    font-size: 12px;
+    color: #aaa;
+}
+.ocr-field input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 4px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    color: #999;
+}
+.ocr-status {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #62a0ff;
+}
+
+/* ADDRESS + AMOUNT */
+.input-field {
+    width: 100%;
+    padding: 14px;
+    background: #0f0f0f;
+    border: 1px solid #222;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+}
+.input-field::placeholder {
+    color: #555;
+}
+
+/* BUTTON */
+.withdraw-btn {
+    width: 100%;
+    padding: 14px 0;
+    background: #fff;
+    color: #000;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+/* =============================== */
+/* NAVIGATION — Fixed bottom nav   */
+/* =============================== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #000;
+    border-top: 1px solid #222;
+    padding: 10px 0;
+    display: flex;
+    justify-content: space-around;
+    z-index: 9999;
+}
+.bottom-nav button {
+    background: none;
+    border: none;
+    padding: 0;
+}
+.bottom-nav img {
+    width: 26px;
+    height: 26px;
+}
+
+/* 기본 filter 제거 */
+.bottom-nav img {
+    filter: none !important;
+    -webkit-filter: none !important;
+    mix-blend-mode: normal !important;
+    opacity: 1 !important;
+}
+
+/* active */
+.bottom-nav .active img {
+    opacity: 1 !important;
+}
+
+/* 부모에서 filter 강제로 차단 */
+.bottom-nav,
+.bottom-nav * {
+    filter: none !important;
+    -webkit-filter: none !important;
+    mix-blend-mode: normal !important;
+}
+

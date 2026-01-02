@@ -1,0 +1,109 @@
+/* RESET */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+}
+
+#app {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    padding-bottom: 120px;
+    text-align: center;
+}
+
+/* HEADER */
+.header {
+    position: sticky;
+    top: 0;
+    background: #000;
+    border-bottom: 1px solid #111;
+    z-index: 99;
+}
+.header-inner {
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+}
+.back-icon {
+    width: 22px;
+    cursor: pointer;
+}
+.header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 17px;
+    font-weight: 700;
+}
+.header-spacer { width: 22px; }
+
+/* MAIN ICON */
+.done-icon {
+    display: flex;
+    justify-content: center;
+    margin-top: 50px;
+    margin-bottom: 24px;
+}
+.done-icon svg {
+    width: 72px;
+    height: 72px;
+}
+
+/* TEXT */
+.done-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.done-desc {
+    font-size: 14px;
+    color: #bbb;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+/* BUTTON */
+.done-btn {
+    width: 88%;
+    padding: 14px 0;
+    background: #fff;
+    color: #000;
+    font-size: 15px;
+    font-weight: 700;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    margin: 0 auto;
+}
+
+/* ============================= */
+/* ⭐ index.html과 동일한 네비게이터 */
+/* ============================= */
+.nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+    background: #000;
+    border-top: 1px solid #222;
+    padding: 12px 0;
+    z-index: 2000;
+}
+.nav-inner {
+    display: flex;
+    justify-content: space-around;
+}
+.nav-icon {
+    width: 26px;
+    /* index에서 정상 적용되던 방식 그대로 */
+    filter: brightness(0) invert(1) !important;
+    opacity: 1 !important;
+}
+

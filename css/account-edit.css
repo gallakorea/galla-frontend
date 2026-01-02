@@ -1,0 +1,106 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* HEADER */
+.header {
+    position: sticky;
+    top: 0;
+    background: #000;
+    border-bottom: 1px solid #111;
+    z-index: 999;
+}
+.header-inner {
+    height: 50px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.back-btn {
+    font-size: 20px;
+    cursor: pointer;
+}
+.header-title {
+    font-size: 17px;
+    font-weight: 700;
+}
+.header-spacer {
+    width: 24px;
+}
+
+/* SECTION */
+.section {
+    padding: 22px 16px;
+}
+
+/* PROFILE IMAGE */
+.profile-img-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.profile-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #222;
+    object-fit: cover;
+}
+.change-photo {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #4aa3ff;
+    cursor: pointer;
+}
+
+/* INPUT */
+.input-group {
+    margin-bottom: 22px;
+}
+.input-label {
+    font-size: 14px;
+    color: #aaa;
+    margin-bottom: 6px;
+}
+.input-field {
+    width: 100%;
+    padding: 12px;
+    background: #0d0d0d;
+    border: 1px solid #1c1c1c;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 15px;
+}
+.input-field.textarea {
+    height: 90px;
+    resize: none;
+}
+
+.readonly .input-value {
+    background: #0d0d0d;
+    border: 1px solid #1c1c1c;
+    padding: 12px;
+    border-radius: 12px;
+    color: #777;
+}
+
+/* SAVE BUTTON */
+.save-btn {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #000;
+    background: #ffe27a;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
