@@ -163,6 +163,7 @@ async function checkVoteStatus(issueId) {
     }
   }
 
+  
 /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
   const activeShort = document.querySelector(
     `.short[data-issue-id="${issueId}"]:not([hidden])`
