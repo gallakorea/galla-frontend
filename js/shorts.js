@@ -193,15 +193,31 @@ console.log("[shorts] loaded");
      CLOSE (ESC / BACK)
   ========================================================= */
   function closeShorts() {
+    // body 스크롤 복구
     document.body.style.overflow = "";
+
+    // 쇼츠 내용 제거
     overlay.innerHTML = "";
     overlay.scrollTop = 0;
-    if (observer) observer.disconnect();
+
+    // observer 해제
+    if (observer) {
+  observer.disconnect();
+  observer = null;
+}
+
+    // 🔥🔥🔥 vote bar 제거 (이게 빠져 있었음)
+    const bar = document.querySelector(".shorts-vote");
+    if (bar) bar.remove();
+
+    // 현재 쇼츠 상태 초기화
+    window.__CURRENT_SHORT_ISSUE_ID__ = null;
   }
 
   window.closeShorts = closeShorts;
 
   window.addEventListener("keydown", e => {
-    if (e.key === "Escape") closeShorts();
+    if (e.key !== "Escape") return;
+    if (!overlay.innerHTML.trim()) return; // 쇼츠 열려 있을 때만
+    closeShorts();
   });
-})();
