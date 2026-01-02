@@ -9,6 +9,13 @@ console.log("[shorts] loaded");
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
 
+  // 🔥 shorts 전용 페이지에서는 overlay를 기본 활성화
+  if (document.body?.dataset?.page === "shorts") {
+    overlay.style.display = "block";
+    overlay.style.visibility = "visible";
+    overlay.classList.add("active");
+  }
+
   let observer = null;
   let currentIndex = -1;
   let shortsData = [];
@@ -208,10 +215,14 @@ console.log("[shorts] loaded");
 
     // overlay 상태 정리
     overlay.classList.remove("active");
-    overlay.style.display = "none";
-    overlay.style.visibility = "hidden";
-    overlay.innerHTML = "";
-    overlay.scrollTop = 0;
+
+    // shorts 전용 페이지에서는 overlay를 닫지 않음
+    if (document.body?.dataset?.page !== "shorts") {
+      overlay.style.display = "none";
+      overlay.style.visibility = "hidden";
+      overlay.innerHTML = "";
+      overlay.scrollTop = 0;
+    }
 
     // observer 해제
     if (observer) {
