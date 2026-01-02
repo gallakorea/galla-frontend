@@ -278,8 +278,6 @@ document.addEventListener("click", async e => {
 
   await window.GALLA_VOTE(issueId, type);
 
-  // ✅ 딱 한 번만 동기화
-  await window.GALLA_CHECK_VOTE(issueId);
   });
 
 /* =========================
