@@ -160,6 +160,15 @@ function openShorts(list, startId) {
     overlay.appendChild(wrap);
   });
 
+  // 🔥 FIX: 쇼츠 DOM 생성 직후 전체 투표 상태 동기화 (이미 투표된 콘텐츠)
+  requestAnimationFrame(() => {
+    if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+    overlay.querySelectorAll('.short[data-issue-id]').forEach(el => {
+      const id = Number(el.dataset.issueId);
+      if (id) window.GALLA_CHECK_VOTE(id);
+    });
+  });
+
   // 🔥 FIX: 쇼츠 DOM 생성 직후 투표 상태 강제 동기화
   requestAnimationFrame(() => {
     setTimeout(() => {
@@ -288,6 +297,14 @@ document.addEventListener("click", async e => {
   // 🔥 버튼 기준으로 issueId를 직접 사용 (observer 의존 제거)
   const issueId = Number(btn.dataset.issueId);
   if (!issueId) return;
+
+  // 🔒 이미 투표된 상태면 쇼츠에서 재투표 차단 (반대 클릭 착시 방지)
+  if (typeof window.GALLA_CHECK_VOTE === "function") {
+    const existing = await window.GALLA_CHECK_VOTE(issueId);
+    if (existing === "pro" || existing === "con") {
+      return;
+    }
+  }
 
   const type = btn.classList.contains("pro") ? "pro" : "con";
 
