@@ -166,6 +166,9 @@ async function checkVoteStatus(issueId) {
 {
   const activeIssueId = window.__CURRENT_SHORT_ISSUE_ID__;
 
+  // 🔥 핵심 가드 (이 줄이 없어서 지금까지 다 깨졌음)
+  if (Number(activeIssueId) !== Number(issueId)) return;
+
   const shortEl = document.querySelector(
     `.short[data-issue-id="${activeIssueId}"]`
   );
@@ -183,10 +186,6 @@ async function checkVoteStatus(issueId) {
   proBtn.innerText = "👍 찬성이오";
   conBtn.innerText = "👎 난 반댈세";
 
-  // ✅ 여기 딱 한 줄 추가
-  if (!data) return "__NO_VOTE__";
-
-  // DB 결과 단일 반영
   if (data.type === "pro") {
     proBtn.disabled = true;
     conBtn.disabled = true;
