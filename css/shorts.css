@@ -194,13 +194,21 @@ body[data-page="shorts"] .header {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* ================================
+   SHORTS PAGE — BOTTOM NAV FIX
+================================= */
 body[data-page="shorts"] .nav {
-  display: none !important;
-}
-
-/* shorts 단독 페이지에서는 앱 레이아웃 유지 */
-body[data-page="shorts"]:not(.shorts-open) .nav {
   display: flex !important;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  height: 58px;
+  z-index: 9000;
+
+  background: #000;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 body[data-page="shorts"]:not(.shorts-open) {
