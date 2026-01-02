@@ -160,6 +160,14 @@ function openShorts(list, startId) {
     wrap.appendChild(video);
     wrap.appendChild(voteBar);
     overlay.appendChild(wrap);
+
+    // ✅ 쇼츠 DOM 생성 직후 투표 상태 동기화
+  queueMicrotask(() => {
+  if (typeof window.GALLA_CHECK_VOTE === "function") {
+    window.GALLA_CHECK_VOTE(Number(item.id));
+  }
+});
+
   });
 
   const startIndex =
