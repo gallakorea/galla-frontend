@@ -24,7 +24,10 @@ console.log("[shorts] loaded");
   ========================================================= */
   window.openShorts = function (list, startId = null) {
     if (!overlay) return;
+
     overlay.innerHTML = "";
+    overlay.classList.add("active");
+    document.body.classList.add("shorts-open");
     overlay.style.display = "block";
     overlay.style.visibility = "visible";
 
@@ -33,7 +36,6 @@ console.log("[shorts] loaded");
     if (!shortsData.length) return;
 
     // overlay 활성화 (CSS 상태 기반)
-    overlay.classList.add("active");
     overlay.style.visibility = "visible";
 
     // body 스크롤 상태 백업 후 lock
@@ -203,32 +205,20 @@ console.log("[shorts] loaded");
      CLOSE (ESC / BACK)
   ========================================================= */
   function closeShorts() {
-    // body 스크롤 완전 복구
-    document.body.style.overflow =
-      overlay.__prevBodyOverflow ?? "";
+    document.body.classList.remove("shorts-open");
 
-    // overlay 상태 정리
     overlay.classList.remove("active");
+    overlay.innerHTML = "";
+    overlay.scrollTop = 0;
 
-    // shorts 전용 페이지에서는 overlay를 닫지 않음
-    if (document.body?.dataset?.page !== "shorts") {
-      overlay.style.display = "none";
-      overlay.style.visibility = "hidden";
-      overlay.innerHTML = "";
-      overlay.scrollTop = 0;
-    }
-
-    // observer 해제
     if (observer) {
       observer.disconnect();
       observer = null;
     }
 
-    // 🔥🔥🔥 vote bar 제거 (이게 빠져 있었음)
     const bar = document.querySelector(".shorts-vote");
     if (bar) bar.remove();
 
-    // 현재 쇼츠 상태 초기화
     window.__CURRENT_SHORT_ISSUE_ID__ = null;
   }
 
