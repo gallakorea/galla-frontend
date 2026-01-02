@@ -79,7 +79,8 @@ function setupObserver() {
       const issueId = Number(best.target.dataset.issueId);
       
       window.__CURRENT_SHORT_INDEX__ = idx;
-      
+      window.__GALLA_SHORTS_STATE__.currentIndex = idx;
+
       currentIssueId = issueId;
       syncVoteState(issueId);
       playOnly(idx);
@@ -270,7 +271,5 @@ window.closeShorts = closeShorts;
 
 // 🔥 현재 활성 쇼츠 index 외부 노출 (vote.core.js용)
 window.__GALLA_SHORTS_STATE__ = {
-  get currentIndex() {
-    return currentIndex;
-  }
+  currentIndex: -1
 };
