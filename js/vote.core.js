@@ -164,34 +164,38 @@ async function checkVoteStatus(issueId) {
   }
 
 /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
-const activeShort = document.querySelector(
-  `.short[data-issue-id="${issueId}"]:not([hidden])`
-);
+const activeIndex = window.__GALLA_ACTIVE_SHORT_INDEX__;
 
-if (activeShort) {
-  const proBtn = activeShort.querySelector('.shorts-vote .vote-btn.pro');
-  const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
+if (activeIndex !== undefined) {
+  const activeShort = document.querySelector(
+    `.short[data-index="${activeIndex}"][data-issue-id="${issueId}"]`
+  );
 
-  if (proBtn && conBtn) {
-    // 공통 잠금
-    proBtn.disabled = true;
-    conBtn.disabled = true;
+  if (activeShort) {
+    const proBtn = activeShort.querySelector('.shorts-vote .vote-btn.pro');
+    const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
 
-    proBtn.classList.add("locked");
-    conBtn.classList.add("locked");
+    if (proBtn && conBtn) {
+      // 공통 잠금
+      proBtn.disabled = true;
+      conBtn.disabled = true;
 
-    // 초기화
-    proBtn.classList.remove("active-vote");
-    conBtn.classList.remove("active-vote");
+      proBtn.classList.add("locked");
+      conBtn.classList.add("locked");
 
-    if (data.type === "pro") {
-      proBtn.classList.add("active-vote");
-      proBtn.innerText = "👍 투표 완료";
-    }
+      // 초기화
+      proBtn.classList.remove("active-vote");
+      conBtn.classList.remove("active-vote");
 
-    if (data.type === "con") {
-      conBtn.classList.add("active-vote");
-      conBtn.innerText = "👎 투표 완료";
+      if (data.type === "pro") {
+        proBtn.classList.add("active-vote");
+        proBtn.innerText = "👍 투표 완료";
+      }
+
+      if (data.type === "con") {
+        conBtn.classList.add("active-vote");
+        conBtn.innerText = "👎 투표 완료";
+      }
     }
   }
 }

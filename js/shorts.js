@@ -77,6 +77,9 @@ function setupObserver() {
 
       const idx = Number(best.target.dataset.index);
       const issueId = Number(best.target.dataset.issueId);
+      
+      window.__CURRENT_SHORT_INDEX__ = idx;
+      
       currentIssueId = issueId;
       syncVoteState(issueId);
       playOnly(idx);
