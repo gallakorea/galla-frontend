@@ -82,6 +82,8 @@ function setupObserver() {
 
       const idx = Number(best.target.dataset.index);
       const issueId = Number(best.target.dataset.issueId);
+
+      window.__CURRENT_SHORT_ISSUE_ID__ = issueId; // ✅ 이 줄 추가
       
       window.__CURRENT_SHORT_INDEX__ = idx;
       window.__GALLA_SHORTS_STATE__.currentIndex = idx;
