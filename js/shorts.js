@@ -167,6 +167,10 @@ function openShorts(list, startId) {
       ? shorts.findIndex(v => Number(v.id) === Number(startId))
       : 0;
 
+  const firstIssueId = Number(shorts[startIndex].id);
+  window.__CURRENT_SHORT_ISSUE_ID__ = firstIssueId; // 🔥 필수
+
+
   requestAnimationFrame(() => {
     (async () => {
       overlay.scrollTo({
