@@ -164,21 +164,17 @@ async function checkVoteStatus(issueId) {
   }
 
   
-/* ========= Shorts (ACTIVE SHORT ONLY) ========= */
-  const activeShort = document.querySelector(
-    `.short[data-issue-id="${issueId}"]:not([hidden])`
-  );
+  /* ========= Shorts (ISSUE ID 기준 – FIX) ========= */
+  document
+    .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
+    .forEach(shortEl => {
+      const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
+      const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
 
-  if (activeShort) {
-    const proBtn = activeShort.querySelector('.shorts-vote .vote-btn.pro');
-    const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
+      if (!proBtn || !conBtn) return;
 
-    if (proBtn && conBtn) {
       proBtn.disabled = true;
       conBtn.disabled = true;
-
-      proBtn.classList.add("locked");
-      conBtn.classList.add("locked");
 
       proBtn.classList.remove("active-vote");
       conBtn.classList.remove("active-vote");
@@ -192,8 +188,7 @@ async function checkVoteStatus(issueId) {
         conBtn.classList.add("active-vote");
         conBtn.innerText = "👎 투표 완료";
       }
-    }
-  }
+    });
 
   /* ========= Index Cards ========= */
   document
