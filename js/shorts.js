@@ -164,28 +164,36 @@ function openShorts(list, startId) {
       ? shorts.findIndex(v => Number(v.id) === Number(startId))
       : 0;
 
-  requestAnimationFrame(async () => {
-    overlay.scrollTo({
-      top: startIndex * window.innerHeight,
-      behavior: "instant"
-    });
+  requestAnimationFrame(() => {
+    (async () => {
+      overlay.scrollTo({
+        top: startIndex * window.innerHeight,
+        behavior: "instant"
+      });
 
-    setupObserver();
-    playOnly(startIndex);
+      setupObserver();
+      playOnly(startIndex);
 
-    // 🔥 [핵심] 최초 노출 쇼츠 투표 상태 강제 동기화
-    const firstShort = overlay.querySelector(
-      `.short[data-index="${startIndex}"]`
-    );
+      const firstShort = overlay.querySelector(
+        `.short[data-index="${startIndex}"]`
+      );
+      if (!firstShort) return;
 
-    if (firstShort) {
       const issueId = Number(firstShort.dataset.issueId);
-      if (issueId && typeof window.GALLA_CHECK_VOTE === "function") {
-        await window.GALLA_CHECK_VOTE(issueId); // ← 이게 없어서 첫 화면이 항상 미투표
+      if (!issueId) return;
+
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        await window.GALLA_CHECK_VOTE(issueId);
       }
-    }
+
+      // 🔥 세션 지연 대비 재동기화
+      setTimeout(() => {
+        if (typeof window.GALLA_CHECK_VOTE === "function") {
+          window.GALLA_CHECK_VOTE(issueId);
+        }
+      }, 600);
+    })();
   });
-}
 
 /* =========================
    CLOSE SHORTS
