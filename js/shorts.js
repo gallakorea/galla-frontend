@@ -3,40 +3,10 @@
    Native Scroll + Scroll Snap (NO TRANSFORM)
 ========================================================= */
 
-// shorts.js 상단
-document.addEventListener("DOMContentLoaded", async () => {
-  const isShortsPage = document.body?.dataset?.page === "shorts";
-
-  // 🔥 Supabase 준비 대기
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 30));
-  }
-
-  let startId = null;
-
-  const saved = sessionStorage.getItem("__OPEN_SHORTS__");
-  if (saved) {
-    sessionStorage.removeItem("__OPEN_SHORTS__");
-    try {
-      startId = JSON.parse(saved)?.startId ?? null;
-    } catch {}
-  }
-
-  // 🔥 쇼츠 데이터 로드 (fallback 포함)
-  const { data } = await window.supabaseClient
-    .from("issues")
-    .select("id, video_url")
-    .not("video_url", "is", null)
-    .order("created_at", { ascending: false });
-
-  if (!data || !data.length) return;
-
-  // 👉 startId 없으면 첫 번째 쇼츠
-  if (isShortsPage) {
-    window.openShorts(data, startId ?? data[0].id);
-  }
+document.addEventListener("DOMContentLoaded", () => {
+  // Shorts must open ONLY via explicit openShorts() call (e.g. from index speech button)
+  // No auto-fetch or auto-open here
 });
-
 
 console.log("[shorts] loaded");
 
@@ -57,11 +27,14 @@ console.log("[shorts] loaded");
         window.openShorts(list, startId) 호출
   ========================================================= */
   window.openShorts = function (list, startId = null) {
+    if (!overlay) return;
     shortsData = list.filter(v => v && v.video_url);
     if (!shortsData.length) return;
 
     overlay.innerHTML = "";
     document.body.style.overflow = "hidden";
+    overlay.style.display = "block";
+    overlay.style.visibility = "visible";
     overlay.classList.add("active");
 
     shortsData.forEach((item, i) => {
@@ -232,6 +205,8 @@ console.log("[shorts] loaded");
 
     // 쇼츠 내용 제거
     overlay.innerHTML = "";
+    overlay.style.display = "none";
+    overlay.style.visibility = "hidden";
     overlay.scrollTop = 0;
 
     // observer 해제
