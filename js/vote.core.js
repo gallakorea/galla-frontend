@@ -162,40 +162,49 @@ async function checkVoteStatus(issueId) {
 }
 
   
-/* ========= Shorts (FORCE SYNC BY ISSUE ID) ========= */
-document
-  .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
-  .forEach(shortEl => {
-    const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
-    const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
-    if (!proBtn || !conBtn) return;
+/* ========= Shorts (ACTIVE SHORT ONLY — FIX) ========= */
+{
+  const activeIssueId = window.__CURRENT_SHORT_ISSUE_ID__;
+  const activeIndex = window.__CURRENT_SHORT_INDEX__;
 
-    // 초기화
-    proBtn.disabled = false;
-    conBtn.disabled = false;
+  if (Number(activeIssueId) !== Number(issueId)) return;
+  if (activeIndex == null || activeIndex < 0) return;
 
-    proBtn.classList.remove("active-vote");
-    conBtn.classList.remove("active-vote");
+  const shortEl = document.querySelector(
+    `.short[data-issue-id="${activeIssueId}"][data-index="${activeIndex}"]`
+  );
+  if (!shortEl) return;
 
-    proBtn.innerText = "👍 찬성이오";
-    conBtn.innerText = "👎 난 반댈세";
+  const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
+  const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
+  if (!proBtn || !conBtn) return;
 
-    // DB 결과 강제 반영
-    if (data.type === "pro") {
-      proBtn.disabled = true;
-      conBtn.disabled = true;
-      proBtn.classList.add("active-vote");
-      proBtn.innerText = "👍 투표 완료";
-    }
+  // 🔥 무조건 초기화
+  proBtn.disabled = false;
+  conBtn.disabled = false;
 
-    if (data.type === "con") {
-      proBtn.disabled = true;
-      conBtn.disabled = true;
-      conBtn.classList.add("active-vote");
-      conBtn.innerText = "👎 투표 완료";
-    }
-  });
-  
+  proBtn.classList.remove("active-vote");
+  conBtn.classList.remove("active-vote");
+
+  proBtn.innerText = "👍 찬성이오";
+  conBtn.innerText = "👎 난 반댈세";
+
+  // 🔥 DB 결과 단 하나만 반영
+  if (data.type === "pro") {
+    proBtn.disabled = true;
+    conBtn.disabled = true;
+    proBtn.classList.add("active-vote");
+    proBtn.innerText = "👍 투표 완료";
+  }
+
+  if (data.type === "con") {
+    proBtn.disabled = true;
+    conBtn.disabled = true;
+    conBtn.classList.add("active-vote");
+    conBtn.innerText = "👎 투표 완료";
+  }
+}
+
   /* ========= Index Cards ========= */
   document
     .querySelectorAll(`.card[data-id="${issueId}"]`)
