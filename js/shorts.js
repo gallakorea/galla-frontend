@@ -163,13 +163,13 @@ console.log("[shorts] loaded");
       const video = el.querySelector("video");
       if (!video) return;
 
-      if (i === index) {
-        video.currentTime = 0;
-        video.muted = true;
-        const p = video.play();
-        if (p?.then) {
-          p.then(() => (video.muted = false)).catch(() => {});
-        }
+if (i === index) {
+  video.currentTime = 0;
+
+  // 🔒 처음엔 항상 muted
+  video.muted = true;
+  video.play().catch(() => {});
+}
 
         const issueId = Number(el.dataset.issueId);
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
