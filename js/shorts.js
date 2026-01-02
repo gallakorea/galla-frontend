@@ -230,39 +230,8 @@ async function syncVoteState(issueId) {
   if (!issueId) return;
   if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
-  resetVoteUI();
-
-  const stance = await window.GALLA_CHECK_VOTE(issueId);
-  if (stance === "pro" || stance === "con") {
-    lockVoteUI(stance);
-  }
-}
-
-function getCurrentVoteBar() {
-  if (!overlay || currentIndex < 0) return null;
-  const wrap = overlay.querySelector(`.short[data-index="${currentIndex}"]`);
-  return wrap ? wrap.querySelector(".shorts-vote") : null;
-}
-
-function resetVoteUI() {
-  const bar = getCurrentVoteBar();
-  if (!bar) return;
-
-  bar.querySelectorAll(".vote-btn").forEach(btn => {
-    btn.classList.remove("active-vote", "locked");
-  });
-}
-
-function lockVoteUI(type) {
-  const bar = getCurrentVoteBar();
-  if (!bar) return;
-
-  bar.querySelectorAll(".vote-btn").forEach(btn => {
-    btn.classList.add("locked");
-  });
-
-  const target = bar.querySelector(`.vote-btn.${type}`);
-  if (target) target.classList.add("active-vote");
+  // UI 상태는 vote.core.js 에서 단일 책임으로 처리
+  await window.GALLA_CHECK_VOTE(issueId);
 }
 
 /* 클릭 이벤트 (단일 바) */
@@ -279,7 +248,7 @@ document.addEventListener("click", async e => {
   }
 
   await window.GALLA_VOTE(currentIssueId, type);
-  lockVoteUI(type);
+  // UI 반영은 vote.core.js에서 처리됨
 });
 
 /* =========================
