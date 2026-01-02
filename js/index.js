@@ -241,7 +241,6 @@ async function attachEvents() {
             }
 
             await window.GALLA_VOTE(id, type);
-            await applyVoteUI(card, type);
         };
     });
 
