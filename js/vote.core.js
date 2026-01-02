@@ -164,11 +164,8 @@ async function checkVoteStatus(issueId) {
   }
 
 /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
-const activeIndex = window.__GALLA_SHORTS_STATE__?.currentIndex;
-
-if (typeof activeIndex === "number" && activeIndex >= 0) {
   const activeShort = document.querySelector(
-    `.short[data-index="${activeIndex}"][data-issue-id="${issueId}"]`
+    `.short[data-issue-id="${issueId}"]:not([hidden])`
   );
 
   if (activeShort) {
@@ -196,7 +193,6 @@ if (typeof activeIndex === "number" && activeIndex >= 0) {
       }
     }
   }
-}
 
   /* ========= Index Cards ========= */
   document
