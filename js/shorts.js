@@ -3,6 +3,27 @@
    Native Scroll + Scroll Snap (NO TRANSFORM)
 ========================================================= */
 
+// shorts.js 상단
+document.addEventListener("DOMContentLoaded", async () => {
+  const saved = sessionStorage.getItem("__OPEN_SHORTS__");
+  if (!saved) return;
+
+  sessionStorage.removeItem("__OPEN_SHORTS__");
+  const { startId } = JSON.parse(saved);
+
+  // ⚠️ 여기서 shorts 데이터 로딩
+  // 임시 예시 — 실제론 supabase fetch
+  const { data } = await window.supabaseClient
+    .from("issues")
+    .select("id, video_url")
+    .not("video_url", "is", null);
+
+  if (!data || !data.length) return;
+
+  window.openShorts(data, startId);
+});
+
+
 console.log("[shorts] loaded");
 
 (function () {
