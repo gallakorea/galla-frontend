@@ -134,8 +134,6 @@ async function checkVoteStatus(issueId) {
     .eq("user_id", session.user.id)
     .maybeSingle();
 
-  if (!data) return "__NO_VOTE__";
-
 /* ========= Issue Page ========= */
 {
   const issueProBtn = document.getElementById("btn-vote-pro");
@@ -184,6 +182,9 @@ async function checkVoteStatus(issueId) {
   proBtn.innerText = "👍 찬성이오";
   conBtn.innerText = "👎 난 반댈세";
 
+  // ✅ 여기 딱 한 줄 추가
+  if (!data) return "__NO_VOTE__";
+  
   // DB 결과 단일 반영
   if (data.type === "pro") {
     proBtn.disabled = true;
