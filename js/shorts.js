@@ -9,12 +9,6 @@ console.log("[shorts] loaded");
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
 
-  // 🔥 shorts 전용 페이지에서는 overlay를 기본 활성화
-  if (document.body?.dataset?.page === "shorts") {
-    overlay.style.display = "block";
-    overlay.style.visibility = "visible";
-    overlay.classList.add("active");
-  }
 
   let observer = null;
   let currentIndex = -1;
