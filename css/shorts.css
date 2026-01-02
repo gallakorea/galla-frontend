@@ -24,17 +24,15 @@ body[data-page="shorts"] .header {
 ------------------------- */
 #shortsOverlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 58px;
 
   width: 100vw;
-  height: 100vh;
-  margin: 0;
-  
   background: #000;
 
-  z-index: 10000;
-
-  display: none;
+  z-index: 8000;
 
   overflow-y: scroll;
   overflow-x: hidden;
@@ -67,7 +65,7 @@ body[data-page="shorts"] .header {
 .short {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  height: calc(100vh - 58px);
 
   scroll-snap-align: start;
   scroll-snap-stop: always;
@@ -210,12 +208,21 @@ body[data-page="shorts"] .nav {
 /* ================================
    SHORTS OPEN — HIDE NAV
 ================================= */
-body.shorts-open .nav {
-  display: none !important;
-}
-
 body[data-page="shorts"]:not(.shorts-open) {
   max-width: 480px;
   margin: 0 auto;
   background: #000;
+}
+
+/* ================================
+   NAV — ALWAYS VISIBLE (ALL PAGES)
+================================ */
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 58px;
+  background: #000;
+  z-index: 9000;
 }
