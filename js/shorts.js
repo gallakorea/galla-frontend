@@ -5,7 +5,7 @@
 
   // ❌ 함수 정의는 막지 말고
   // ⛔ observer / 이벤트만 shorts 페이지에서만 동작
-  
+
   let overlay = null;
   let observer = null;
   let currentIndex = -1;
@@ -86,9 +86,13 @@ function setupObserver() {
       window.__CURRENT_SHORT_INDEX__ = idx;
       window.__GALLA_SHORTS_STATE__.currentIndex = idx;
 
-      currentIssueId = issueId;
+    currentIssueId = issueId;
+    playOnly(idx);
+
+    // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
+    requestAnimationFrame(() => {
       syncVoteState(issueId);
-      playOnly(idx);
+    });
     },
     {
       root: null,
@@ -177,7 +181,6 @@ function openShorts(list, startId) {
     if (firstShort) {
       const issueId = Number(firstShort.dataset.issueId);
       if (issueId && typeof window.GALLA_CHECK_VOTE === "function") {
-        await window.GALLA_CHECK_VOTE(issueId);
       }
     }
   });
