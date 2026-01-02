@@ -5,6 +5,7 @@
 
 // shorts.js 상단
 document.addEventListener("DOMContentLoaded", async () => {
+  const isShortsPage = document.body?.dataset?.page === "shorts";
 
   // 🔥 Supabase 준비 대기
   while (!window.supabaseClient) {
@@ -31,7 +32,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!data || !data.length) return;
 
   // 👉 startId 없으면 첫 번째 쇼츠
-  window.openShorts(data, startId ?? data[0].id);
+  if (isShortsPage) {
+    window.openShorts(data, startId ?? data[0].id);
+  }
 });
 
 
@@ -59,6 +62,7 @@ console.log("[shorts] loaded");
 
     overlay.innerHTML = "";
     document.body.style.overflow = "hidden";
+    overlay.classList.add("active");
 
     shortsData.forEach((item, i) => {
       const section = document.createElement("section");
@@ -159,17 +163,15 @@ console.log("[shorts] loaded");
     if (index === currentIndex) return;
 
     const shorts = overlay.querySelectorAll(".short");
+
     shorts.forEach((el, i) => {
       const video = el.querySelector("video");
       if (!video) return;
 
-if (i === index) {
-  video.currentTime = 0;
-
-  // 🔒 처음엔 항상 muted
-  video.muted = true;
-  video.play().catch(() => {});
-}
+      if (i === index) {
+        video.currentTime = 0;
+        video.muted = true;
+        video.play().catch(() => {});
 
         const issueId = Number(el.dataset.issueId);
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
@@ -234,9 +236,11 @@ if (i === index) {
 
     // observer 해제
     if (observer) {
-  observer.disconnect();
-  observer = null;
-}
+      observer.disconnect();
+      observer = null;
+    }
+
+    overlay.classList.remove("active");
 
     // 🔥🔥🔥 vote bar 제거 (이게 빠져 있었음)
     const bar = document.querySelector(".shorts-vote");

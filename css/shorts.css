@@ -32,7 +32,10 @@ body[data-page="shorts"] .header {
 
   margin: 0 auto;
   background: #000;
-  z-index: 999;
+
+  z-index: 10000;
+
+  display: none;
 
   overflow-y: scroll;
   overflow-x: hidden;
@@ -51,6 +54,10 @@ body[data-page="shorts"] .header {
   -ms-overflow-style: none;
   scrollbar-gutter: auto;
   scroll-snap-stop: always;
+}
+
+#shortsOverlay.active {
+  display: block;
 }
 
 #shortsOverlay::-webkit-scrollbar {
