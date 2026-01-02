@@ -1,10 +1,14 @@
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
 
-let overlay = null;
-let observer = null;
-let currentIndex = -1;
-let currentIssueId = null;
+  // 🔥 index / shorts 아닌 페이지에서는 즉시 종료
+  const page = document.body?.dataset?.page;
+  if (page !== "shorts") return;
+
+  let overlay = null;
+  let observer = null;
+  let currentIndex = -1;
+  let currentIssueId = null;
 
 /* =========================
    UTILS
