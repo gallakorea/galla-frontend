@@ -164,9 +164,9 @@ async function checkVoteStatus(issueId) {
   }
 
 /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
-const activeIndex = window.__GALLA_ACTIVE_SHORT_INDEX__;
+const activeIndex = window.__GALLA_SHORTS_STATE__?.currentIndex;
 
-if (activeIndex !== undefined) {
+if (typeof activeIndex === "number" && activeIndex >= 0) {
   const activeShort = document.querySelector(
     `.short[data-index="${activeIndex}"][data-issue-id="${issueId}"]`
   );
@@ -176,14 +176,12 @@ if (activeIndex !== undefined) {
     const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
 
     if (proBtn && conBtn) {
-      // 공통 잠금
       proBtn.disabled = true;
       conBtn.disabled = true;
 
       proBtn.classList.add("locked");
       conBtn.classList.add("locked");
 
-      // 초기화
       proBtn.classList.remove("active-vote");
       conBtn.classList.remove("active-vote");
 
