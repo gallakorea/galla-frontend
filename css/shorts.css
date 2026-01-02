@@ -31,7 +31,6 @@ body[data-page="shorts"] .header {
   height: 100dvh;
 
   margin: 0 auto;
-
   background: #000;
   z-index: 999;
 
@@ -39,9 +38,7 @@ body[data-page="shorts"] .header {
   overflow-x: hidden;
 
   scroll-snap-type: y mandatory;
-  scroll-snap-points-y: repeat(100%);
   scroll-behavior: auto;
-  overscroll-behavior: none;
 
   overscroll-behavior-y: contain;
 
