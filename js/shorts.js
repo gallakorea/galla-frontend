@@ -252,6 +252,9 @@ document.addEventListener("click", async e => {
 
   await window.GALLA_VOTE(issueId, type);
 
+  // 🔥 이 줄만 추가
+  await window.GALLA_CHECK_VOTE(issueId);
+
   // 🔥 투표 후 UI 즉시 재동기화
   if (typeof window.GALLA_CHECK_VOTE === "function") {
     await window.GALLA_CHECK_VOTE(issueId);
