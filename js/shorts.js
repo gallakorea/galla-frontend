@@ -26,8 +26,14 @@ console.log("[shorts] loaded");
     if (!overlay) return;
 
     overlay.innerHTML = "";
-    overlay.classList.add("active");
-    document.body.classList.add("shorts-open");
+    const isStandalone = document.body?.dataset?.page === "shorts";
+
+    // ❗ overlay 방식에서만 shorts-open 사용
+    if (!isStandalone) {
+      document.body.classList.add("shorts-open");
+    } else {
+      document.body.classList.remove("shorts-open");
+    }
     overlay.style.display = "block";
     overlay.style.visibility = "visible";
 
@@ -39,8 +45,10 @@ console.log("[shorts] loaded");
     overlay.style.visibility = "visible";
 
     // body 스크롤 상태 백업 후 lock
-    overlay.__prevBodyOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (!isStandalone) {
+      overlay.__prevBodyOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
 
     shortsData.forEach((item, i) => {
       const section = document.createElement("section");
@@ -205,7 +213,14 @@ console.log("[shorts] loaded");
      CLOSE (ESC / BACK)
   ========================================================= */
   function closeShorts() {
-    document.body.classList.remove("shorts-open");
+    const isStandalone = document.body?.dataset?.page === "shorts";
+
+    if (!isStandalone) {
+      document.body.classList.remove("shorts-open");
+      if (overlay.__prevBodyOverflow !== undefined) {
+        document.body.style.overflow = overlay.__prevBodyOverflow;
+      }
+    }
 
     overlay.classList.remove("active");
     overlay.innerHTML = "";
@@ -230,10 +245,17 @@ console.log("[shorts] loaded");
     closeShorts();
   });
 
+  window.addEventListener("popstate", () => {
+    if (document.body.classList.contains("shorts-open")) {
+      closeShorts();
+    }
+  });
+
 /* =========================================================
    AUTO BOOTSTRAP FOR /shorts PAGE
    (standalone entry)
 ========================================================= */
+console.log("[shorts] standalone page detected:", document.body?.dataset?.page === "shorts");
 document.addEventListener("DOMContentLoaded", () => {
   // shorts 단독 페이지인 경우만 자동 실행
   if (document.body?.dataset?.page !== "shorts") return;
