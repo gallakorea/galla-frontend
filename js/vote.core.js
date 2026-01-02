@@ -54,13 +54,14 @@ async function vote(issueId, type) {
   votingInProgress = false;
 
   if (error) {
-    // ✅ 이미 투표된 상태 (409 / 23505)
-    if (error.code === "23505" || error.code === "409") {
-      await checkVoteStatus(issueId); // DB 기준으로만 UI 복원
+  if (error.code === "23505" || error.status === 409) {
+      await checkVoteStatus(issueId);
+      votingInProgress = false;
       return;
     }
 
     console.error("[VOTE] insert error", error);
+    votingInProgress = false;
     return;
   }
 

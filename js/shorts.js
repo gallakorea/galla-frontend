@@ -273,7 +273,7 @@ async function syncVoteState(issueId) {
 /* 클릭 이벤트 (단일 바) */
 document.addEventListener("click", async e => {
   const btn = e.target.closest(".shorts-vote .vote-btn");
-  if (!btn) return;
+  if (!btn || btn.disabled) return;
 
   // 🔥 버튼 기준으로 issueId를 직접 사용 (observer 의존 제거)
   const issueId = Number(btn.dataset.issueId);
