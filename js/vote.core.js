@@ -165,7 +165,6 @@ async function checkVoteStatus(issueId) {
 /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
 {
   const activeIssueId = window.__CURRENT_SHORT_ISSUE_ID__;
-  if (Number(activeIssueId) !== Number(issueId)) return;
 
   const shortEl = document.querySelector(
     `.short[data-issue-id="${activeIssueId}"]`

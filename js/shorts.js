@@ -93,9 +93,12 @@ function setupObserver() {
     playOnly(idx);
 
     // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
-    requestAnimationFrame(() => {
-      syncVoteState(issueId);
+    queueMicrotask(() => {
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        window.GALLA_CHECK_VOTE(issueId);
+      }
     });
+
     },
     {
       root: null,
@@ -160,13 +163,6 @@ function openShorts(list, startId) {
     wrap.appendChild(video);
     wrap.appendChild(voteBar);
     overlay.appendChild(wrap);
-
-    // ✅ 쇼츠 DOM 생성 직후 투표 상태 동기화
-  queueMicrotask(() => {
-  if (typeof window.GALLA_CHECK_VOTE === "function") {
-    window.GALLA_CHECK_VOTE(Number(item.id));
-  }
-});
 
   });
 
@@ -271,13 +267,6 @@ window.addEventListener("wheel", e => {
 /* =========================
    VOTE (DB SYNC)
 ========================= */
-async function syncVoteState(issueId) {
-  if (!issueId) return;
-  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
-
-  // UI 상태는 vote.core.js 에서 단일 책임으로 처리
-  await window.GALLA_CHECK_VOTE(issueId);
-}
 
 /* 클릭 이벤트 (단일 바) */
 document.addEventListener("click", async e => {
@@ -288,7 +277,7 @@ document.addEventListener("click", async e => {
   const issueId = Number(btn.dataset.issueId);
   if (!issueId) return;
 
-  // 🔒 이미 투표된 상태면 쇼츠에서 재투표 차단 (반대 클릭 착시 방지)
+  // 🔒 이미 투표된 상태면 쇼츠에서 재투표 차단
   if (typeof window.GALLA_CHECK_VOTE === "function") {
     const existing = await window.GALLA_CHECK_VOTE(issueId);
     if (existing === "pro" || existing === "con") {
@@ -297,12 +286,6 @@ document.addEventListener("click", async e => {
   }
 
   const type = btn.classList.contains("pro") ? "pro" : "con";
-
-  if (typeof window.GALLA_VOTE !== "function") {
-    console.error("[SHORTS] GALLA_VOTE missing");
-    return;
-  }
-
   await window.GALLA_VOTE(issueId, type);
 
   });
