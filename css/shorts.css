@@ -31,6 +31,8 @@ body[data-page="shorts"] .header {
   margin: 0;
   
   background: #000;
+  visibility: hidden;
+  pointer-events: none;
 
   z-index: 10000;
 
@@ -57,6 +59,8 @@ body[data-page="shorts"] .header {
 
 #shortsOverlay.active {
   display: block;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 #shortsOverlay::-webkit-scrollbar {
@@ -76,6 +80,7 @@ body[data-page="shorts"] .header {
   scroll-snap-stop: always;
 
   background: #000;
+  overflow: hidden;
 }
 
 /* -------------------------
@@ -194,10 +199,6 @@ body[data-page="shorts"] .header {
 /* 하단 네비 safe-area 보정 (iPhone 홈바 겹침 방지) */
 .nav {
   padding-bottom: env(safe-area-inset-bottom);
-}
-
-body[data-page="shorts"] .nav {
-  height: 58px;
 }
 
 body[data-page="shorts"] .nav {

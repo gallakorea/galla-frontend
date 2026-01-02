@@ -27,9 +27,13 @@ console.log("[shorts] loaded");
     if (!shortsData.length) return;
 
     overlay.innerHTML = "";
-    document.body.style.overflow = "hidden";
-    overlay.style.display = "block";
+    // overlay 활성화 (CSS 상태 기반)
+    overlay.classList.add("active");
     overlay.style.visibility = "visible";
+
+    // body 스크롤 상태 백업 후 lock
+    overlay.__prevBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
     shortsData.forEach((item, i) => {
       const section = document.createElement("section");
@@ -194,14 +198,15 @@ console.log("[shorts] loaded");
      CLOSE (ESC / BACK)
   ========================================================= */
   function closeShorts() {
-    // body 스크롤 복구
-    document.body.style.overflow = "";
+    // body 스크롤 완전 복구
+    document.body.style.overflow =
+      overlay.__prevBodyOverflow ?? "";
 
-    // 쇼츠 내용 제거 및 overlay reset
+    // overlay 상태 정리
+    overlay.classList.remove("active");
+    overlay.style.visibility = "hidden";
     overlay.innerHTML = "";
     overlay.scrollTop = 0;
-    overlay.style.display = "none";
-    overlay.style.visibility = "hidden";
 
     // observer 해제
     if (observer) {
