@@ -24,20 +24,28 @@ async function vote(issueId, type) {
 
   const supabase = window.supabaseClient;
   if (!supabase) {
-    console.error("[VOTE] supabase not ready");
     votingInProgress = false;
     return;
   }
 
+  // 🔥 이미 투표했는지 선확인 (중복 insert 방지)
+  const existing = await window.GALLA_CHECK_VOTE(issueId);
+  if (existing === "pro" || existing === "con") {
+    votingInProgress = false;
+    return;
+  }
+
+  // 🔐 세션 확보
   let session = null;
   for (let i = 0; i < 10; i++) {
     const res = await supabase.auth.getSession();
-    if (res.data && res.data.session) {
+    if (res.data?.session) {
       session = res.data.session;
       break;
     }
     await new Promise(r => setTimeout(r, 100));
   }
+
   if (!session) {
     votingInProgress = false;
     return "__SESSION_PENDING__";
@@ -54,29 +62,16 @@ async function vote(issueId, type) {
   votingInProgress = false;
 
   if (error) {
-  if (error.code === "23505" || error.status === 409) {
-      await checkVoteStatus(issueId);
-      votingInProgress = false;
+    if (error.code === "23505" || error.status === 409) {
+      await window.GALLA_CHECK_VOTE(issueId);
       return;
     }
-
     console.error("[VOTE] insert error", error);
-    votingInProgress = false;
     return;
   }
 
-  // ✅ 정상 투표 성공일 때만 UI 갱신
   await loadVoteStats(issueId);
-  await checkVoteStatus(issueId);
-
-  // 댓글 전장 재초기화 (이슈 페이지에서만 실행)
-  if (document.body?.dataset?.page === "issue") {
-    import("./issue.comments.js").then(m => {
-      if (typeof m.initCommentSystem === "function") {
-        m.initCommentSystem(issueId);
-      }
-    });
-  }
+  await window.GALLA_CHECK_VOTE(issueId);
 }
 
 /* ==========================================================================
