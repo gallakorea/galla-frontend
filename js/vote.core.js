@@ -171,40 +171,40 @@ async function checkVoteStatus(issueId) {
   }
 
   
-  /* ========= Shorts (ISSUE ID 기준 – FIX) ========= */
-  document
-    .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
-    .forEach(shortEl => {
-      const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
-      const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
+/* ========= Shorts (ISSUE ID 기준 – FINAL FIX) ========= */
+document
+  .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
+  .forEach(shortEl => {
+    const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
+    const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
 
-      if (!proBtn || !conBtn) return;
+    if (!proBtn || !conBtn) return;
 
-      // 🔥 1️⃣ 상태 완전 초기화 (이게 핵심)
-      proBtn.disabled = false;
-      conBtn.disabled = false;
+    // 1️⃣ 완전 초기화
+    proBtn.disabled = false;
+    conBtn.disabled = false;
 
-      proBtn.classList.remove("active-vote");
-      conBtn.classList.remove("active-vote");
+    proBtn.classList.remove("active-vote");
+    conBtn.classList.remove("active-vote");
 
-      proBtn.innerText = "👍 찬성이오";
-      conBtn.innerText = "👎 난 반댈세";
+    proBtn.innerText = "👍 찬성이오";
+    conBtn.innerText = "👎 난 반댈세";
 
-      // 🔥 2️⃣ DB 기준으로 정확히 반영
-      if (data.type === "pro") {
-        proBtn.disabled = true;
-        conBtn.disabled = true;
-        proBtn.classList.add("active-vote");
-        proBtn.innerText = "👍 투표 완료";
-      }
+    // 2️⃣ DB 기준 단 하나만 완료 처리
+    if (data.type === "pro") {
+      proBtn.disabled = true;
+      conBtn.disabled = true;
+      proBtn.classList.add("active-vote");
+      proBtn.innerText = "👍 투표 완료";
+    }
 
-      if (data.type === "con") {
-        proBtn.disabled = true;
-        conBtn.disabled = true;
-        conBtn.classList.add("active-vote");
-        conBtn.innerText = "👎 투표 완료";
-      }
-    });
+    if (data.type === "con") {
+      proBtn.disabled = true;
+      conBtn.disabled = true;
+      conBtn.classList.add("active-vote");
+      conBtn.innerText = "👎 투표 완료";
+    }
+  });
 
   /* ========= Index Cards ========= */
   document
