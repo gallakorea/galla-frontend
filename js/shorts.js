@@ -229,36 +229,38 @@ async function syncVoteState(issueId) {
   if (!issueId) return;
   if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
-  resetVoteUI(issueId);
+  resetVoteUI();
 
   const stance = await window.GALLA_CHECK_VOTE(issueId);
   if (stance === "pro" || stance === "con") {
-    lockVoteUI(issueId, stance);
+    lockVoteUI(stance);
   }
 }
 
-function resetVoteUI(issueId) {
-  if (!issueId) return;
-  document
-    .querySelectorAll(`.short[data-issue-id="${issueId}"] .vote-btn`)
-    .forEach(btn => {
-      btn.classList.remove("active-vote", "locked");
-    });
+function getCurrentVoteBar() {
+  if (!overlay || currentIndex < 0) return null;
+  const wrap = overlay.querySelector(`.short[data-index="${currentIndex}"]`);
+  return wrap ? wrap.querySelector(".shorts-vote") : null;
 }
 
-function lockVoteUI(issueId, type) {
-  if (!issueId) return;
+function resetVoteUI() {
+  const bar = getCurrentVoteBar();
+  if (!bar) return;
 
-  const wrap = document.querySelector(
-    `.short[data-issue-id="${issueId}"]`
-  );
-  if (!wrap) return;
+  bar.querySelectorAll(".vote-btn").forEach(btn => {
+    btn.classList.remove("active-vote", "locked");
+  });
+}
 
-  wrap.querySelectorAll(".vote-btn").forEach(btn => {
+function lockVoteUI(type) {
+  const bar = getCurrentVoteBar();
+  if (!bar) return;
+
+  bar.querySelectorAll(".vote-btn").forEach(btn => {
     btn.classList.add("locked");
   });
 
-  const target = wrap.querySelector(`.vote-btn.${type}`);
+  const target = bar.querySelector(`.vote-btn.${type}`);
   if (target) target.classList.add("active-vote");
 }
 
