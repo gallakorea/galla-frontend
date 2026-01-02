@@ -1,257 +1,304 @@
-/* =========================================================
-   GALLA SHORTS — REAL REELS / SHORTS ENGINE (JS)
-   Native Scroll + Scroll Snap (NO TRANSFORM)
-========================================================= */
-
-// shorts.js 상단
-document.addEventListener("DOMContentLoaded", async () => {
-
-  // 🔥 Supabase 준비 대기
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 30));
-  }
-
-  let startId = null;
-
-  const saved = sessionStorage.getItem("__OPEN_SHORTS__");
-  if (saved) {
-    sessionStorage.removeItem("__OPEN_SHORTS__");
-    try {
-      startId = JSON.parse(saved)?.startId ?? null;
-    } catch {}
-  }
-
-  // 🔥 쇼츠 데이터 로드 (fallback 포함)
-  const { data } = await window.supabaseClient
-    .from("issues")
-    .select("id, video_url")
-    .not("video_url", "is", null)
-    .order("created_at", { ascending: false });
-
-  if (!data || !data.length) return;
-
-  // 👉 startId 없으면 첫 번째 쇼츠
-  window.openShorts(data, startId ?? data[0].id);
-});
-
-
-console.log("[shorts] loaded");
-
+/* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
-  const overlay = document.getElementById("shortsOverlay");
-  if (!overlay) return;
 
+  const page = document.body?.dataset?.page;
+
+  // ❌ 함수 정의는 막지 말고
+  // ⛔ observer / 이벤트만 shorts 페이지에서만 동작
+
+  let overlay = null;
   let observer = null;
   let currentIndex = -1;
-  let shortsData = [];
+  let currentIssueId = null;
 
-  // 🔥 외부(vote.core.js)에서 참조
-  window.__CURRENT_SHORT_ISSUE_ID__ = null;
+/* =========================
+   UTILS
+========================= */
+function qs(id) {
+  return document.getElementById(id);
+}
 
-  /* =========================================================
-     SHORTS DATA LOAD (임시)
-     👉 실제로는 index / issue 페이지에서
-        window.openShorts(list, startId) 호출
-  ========================================================= */
-  window.openShorts = function (list, startId = null) {
-    shortsData = list.filter(v => v && v.video_url);
-    if (!shortsData.length) return;
+function hardPauseAll(exceptIndex = null) {
+  document.querySelectorAll(".short video").forEach((v, i) => {
+    if (i === exceptIndex) return;
+    try {
+      v.pause();
+      v.currentTime = 0;
+      v.muted = true;
+    } catch {}
+  });
+}
 
-    overlay.innerHTML = "";
-    document.body.style.overflow = "hidden";
+function playOnly(index) {
+  if (!overlay) return;
+  if (currentIndex === index) return;
 
-    shortsData.forEach((item, i) => {
-      const section = document.createElement("section");
-      section.className = "short";
-      section.dataset.index = i;
-      section.dataset.issueId = item.id;
-      section.setAttribute("data-issue-id", item.id);
+  const wrap = overlay.querySelector(`.short[data-index="${index}"]`);
+  if (!wrap) return;
 
-      const video = document.createElement("video");
-      video.src = item.video_url;
-      video.playsInline = true;
-      video.preload = "metadata";
-      video.muted = true;
-      video.loop = true;
+  const video = wrap.querySelector("video");
+  if (!video) return;
 
-      // 🔥 탭 제어 (모바일)
-      let tapTimer = null;
-      let tapCount = 0;
+  currentIndex = index;
+  window.__GALLA_SHORTS_STATE__.currentIndex = index;
 
-      section.addEventListener("click", () => {
-        tapCount++;
+  hardPauseAll(index);
 
-        if (tapCount === 1) {
-          tapTimer = setTimeout(() => {
-            if (video.paused) video.play();
-            else video.pause();
-            tapCount = 0;
-          }, 250);
-        }
+  video.muted = true;
+  video.currentTime = 0;
 
-        if (tapCount === 2) {
-          clearTimeout(tapTimer);
-          video.playbackRate = video.playbackRate === 1 ? 2 : 1;
-          tapCount = 0;
-        }
-      });
+  const p = video.play();
+  if (p && typeof p.then === "function") {
+    p.then(() => {
+      video.muted = false;
+    }).catch(() => {});
+  }
+}
 
-      section.appendChild(video);
-      overlay.appendChild(section);
+/* =========================
+   OBSERVER (CORE)
+========================= */
+function getMostVisibleEntry(entries) {
+  let best = null;
+  let maxRatio = 0;
+  entries.forEach(e => {
+    if (e.intersectionRatio > maxRatio) {
+      maxRatio = e.intersectionRatio;
+      best = e;
+    }
+  });
+  return best;
+}
+
+function setupObserver() {
+  if (observer) observer.disconnect();
+
+  observer = new IntersectionObserver(
+    entries => {
+      const best = getMostVisibleEntry(entries);
+      if (!best) return;
+
+      if (best.intersectionRatio < 0.6) return;
+
+      const idx = Number(best.target.dataset.index);
+      const issueId = Number(best.target.dataset.issueId);
+
+      window.__CURRENT_SHORT_ISSUE_ID__ = issueId; // ✅ 이 줄 추가
+      
+      window.__CURRENT_SHORT_INDEX__ = idx;
+      window.__GALLA_SHORTS_STATE__.currentIndex = idx;
+
+    currentIssueId = issueId;
+    window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+    playOnly(idx);
+
+    // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
+    queueMicrotask(() => {
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        window.GALLA_CHECK_VOTE(issueId);
+      }
     });
 
-    // 🔥 투표 바 (단일)
-    injectVoteBar();
-
-    // 시작 위치
-    let startIndex = 0;
-    if (startId) {
-      const found = shortsData.findIndex(v => Number(v.id) === Number(startId));
-      if (found >= 0) startIndex = found;
+    },
+    {
+      root: null,
+      threshold: [0.25, 0.5, 0.6, 0.75, 0.9]
     }
+  );
 
-    requestAnimationFrame(() => {
+  overlay.querySelectorAll(".short").forEach(el => observer.observe(el));
+}
+
+/* =========================
+   OPEN SHORTS
+========================= */
+function openShorts(list, startId) {
+  overlay = qs("shortsOverlay");
+  if (!overlay) {
+    console.error("[SHORTS] overlay missing");
+    return;
+  }
+
+  overlay.innerHTML = "";
+  overlay.hidden = false;
+  overlay.style.display = "block";
+  overlay.scrollTop = 0;
+
+  document.body.style.overflow = "hidden";
+
+  const shorts = list.filter(v => v && v.video_url);
+  if (!shorts.length) return;
+
+  shorts.forEach((item, i) => {
+    const wrap = document.createElement("section");
+    wrap.className = "short";
+    wrap.dataset.index = i;
+    wrap.dataset.issueId = item.id;      // JS용
+    wrap.setAttribute("data-issue-id", item.id); // 🔥 DOM selector용
+
+    const video = document.createElement("video");
+    video.src = item.video_url;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.loop = true;
+    video.muted = true;
+
+    /* ===== VOTE BAR (ABOVE NAV) ===== */
+    const voteBar = document.createElement("div");
+    voteBar.className = "shorts-vote";
+
+    const btnPro = document.createElement("button");
+    btnPro.className = "vote-btn pro";
+    btnPro.dataset.issueId = item.id;
+    btnPro.textContent = "👍 찬성이오";
+
+    const btnCon = document.createElement("button");
+    btnCon.className = "vote-btn con";
+    btnCon.dataset.issueId = item.id;
+    btnCon.textContent = "👎 난 반댈세";
+
+    voteBar.appendChild(btnPro);
+    voteBar.appendChild(btnCon);
+
+    wrap.appendChild(video);
+    wrap.appendChild(voteBar);
+    overlay.appendChild(wrap);
+
+  });
+
+  const startIndex =
+    shorts.findIndex(v => Number(v.id) === Number(startId)) >= 0
+      ? shorts.findIndex(v => Number(v.id) === Number(startId))
+      : 0;
+
+  const firstIssueId = Number(shorts[startIndex].id);
+  window.__CURRENT_SHORT_ISSUE_ID__ = firstIssueId; // 🔥 필수
+
+
+  requestAnimationFrame(() => {
+    (async () => {
       overlay.scrollTo({
         top: startIndex * window.innerHeight,
         behavior: "instant"
       });
+
       setupObserver();
-      activateShort(startIndex);
-    });
-  };
+      playOnly(startIndex);
 
-  /* =========================================================
-     INTERSECTION OBSERVER
-  ========================================================= */
-  function setupObserver() {
-    if (observer) observer.disconnect();
+      const firstShort = overlay.querySelector(
+        `.short[data-index="${startIndex}"]`
+      );
+      if (!firstShort) return;
+      const issueId = Number(firstShort.dataset.issueId);
+      if (!issueId) return;
 
-    observer = new IntersectionObserver(
-      entries => {
-        let best = null;
-        let maxRatio = 0;
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        // 1️⃣ 현재 보이는 쇼츠
+        await window.GALLA_CHECK_VOTE(issueId);
 
-        entries.forEach(e => {
-          if (e.intersectionRatio > maxRatio) {
-            maxRatio = e.intersectionRatio;
-            best = e;
-          }
-        });
-
-        if (!best || best.intersectionRatio < 0.6) return;
-
-        const index = Number(best.target.dataset.index);
-        activateShort(index);
-      },
-      {
-        root: overlay,
-        threshold: [0.25, 0.5, 0.6, 0.75, 0.9]
       }
-    );
-
-    overlay.querySelectorAll(".short").forEach(el => observer.observe(el));
-  }
-
-  /* =========================================================
-     ACTIVATE SHORT (PLAY ONE ONLY)
-  ========================================================= */
-  function activateShort(index) {
-    if (index === currentIndex) return;
-
-    const shorts = overlay.querySelectorAll(".short");
-    shorts.forEach((el, i) => {
-      const video = el.querySelector("video");
-      if (!video) return;
-
-if (i === index) {
-  video.currentTime = 0;
-
-  // 🔒 처음엔 항상 muted
-  video.muted = true;
-  video.play().catch(() => {});
-}
-
-        const issueId = Number(el.dataset.issueId);
-        window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
-
-        if (window.GALLA_CHECK_VOTE) {
-          queueMicrotask(() => window.GALLA_CHECK_VOTE(issueId));
-        }
-      } else {
-        video.pause();
-        video.currentTime = 0;
-        video.muted = true;
-      }
-    });
-
-    currentIndex = index;
-  }
-
-  /* =========================================================
-     VOTE BAR (FIXED, SINGLE INSTANCE)
-  ========================================================= */
-  function injectVoteBar() {
-    if (document.querySelector(".shorts-vote")) return;
-
-    const bar = document.createElement("div");
-    bar.className = "shorts-vote";
-
-    const pro = document.createElement("button");
-    pro.className = "vote-btn pro";
-    pro.innerText = "👍 찬성이오";
-
-    const con = document.createElement("button");
-    con.className = "vote-btn con";
-    con.innerText = "👎 난 반댈세";
-
-    pro.addEventListener("click", async () => {
-      const id = window.__CURRENT_SHORT_ISSUE_ID__;
-      if (!id || !window.GALLA_VOTE) return;
-      await window.GALLA_VOTE(id, "pro");
-    });
-
-    con.addEventListener("click", async () => {
-      const id = window.__CURRENT_SHORT_ISSUE_ID__;
-      if (!id || !window.GALLA_VOTE) return;
-      await window.GALLA_VOTE(id, "con");
-    });
-
-    bar.appendChild(pro);
-    bar.appendChild(con);
-    document.body.appendChild(bar);
-  }
-
-  /* =========================================================
-     CLOSE (ESC / BACK)
-  ========================================================= */
-  function closeShorts() {
-    // body 스크롤 복구
-    document.body.style.overflow = "";
-
-    // 쇼츠 내용 제거
-    overlay.innerHTML = "";
-    overlay.scrollTop = 0;
-
-    // observer 해제
-    if (observer) {
-  observer.disconnect();
-  observer = null;
-}
-
-    // 🔥🔥🔥 vote bar 제거 (이게 빠져 있었음)
-    const bar = document.querySelector(".shorts-vote");
-    if (bar) bar.remove();
-
-    // 현재 쇼츠 상태 초기화
-    window.__CURRENT_SHORT_ISSUE_ID__ = null;
-  }
-
-  window.closeShorts = closeShorts;
-
-  window.addEventListener("keydown", e => {
-    if (e.key !== "Escape") return;
-    if (!overlay.innerHTML.trim()) return; // 쇼츠 열려 있을 때만
-    closeShorts();
+    })();
   });
 
-  })();   // ← 이게 반드시 있어야 함
+}
+
+/* =========================
+   CLOSE SHORTS
+========================= */
+function closeShorts() {
+  hardPauseAll();
+  currentIndex = -1;
+
+  if (observer) observer.disconnect();
+
+  if (overlay) {
+    overlay.hidden = true;
+    overlay.style.display = "none";
+    overlay.innerHTML = "";
+  }
+
+  document.body.style.overflow = "";
+}
+
+/* =========================
+   KEYBOARD (DESKTOP)
+========================= */
+
+window.addEventListener("keydown", e => {
+  if (!overlay || overlay.hidden) return;
+
+  if (e.key === "ArrowDown") {
+    overlay.scrollBy({ top: window.innerHeight, behavior: "smooth" });
+  }
+  if (e.key === "ArrowUp") {
+    overlay.scrollBy({ top: -window.innerHeight, behavior: "smooth" });
+  }
+  if (e.key === "Escape") {
+    closeShorts();
+  }
+});
+
+/* =========================
+   WHEEL (DESKTOP — SMOOTH SNAP)
+========================= */
+let wheelAccum = 0;
+let wheelTimer = null;
+
+window.addEventListener("wheel", e => {
+  if (!overlay || overlay.hidden) return;
+
+  // 기본 스크롤 허용 (자연스러운 감속)
+  wheelAccum += e.deltaY;
+
+  if (wheelTimer) return;
+
+  wheelTimer = setTimeout(() => {
+    const dir = wheelAccum > 0 ? 1 : -1;
+    wheelAccum = 0;
+    wheelTimer = null;
+
+    overlay.scrollBy({
+      top: dir * window.innerHeight,
+      behavior: "smooth"
+    });
+  }, 120);
+}, { passive: true });
+
+/* =========================
+   VOTE (DB SYNC)
+========================= */
+
+/* 클릭 이벤트 (단일 바) */
+document.addEventListener("click", async e => {
+  const btn = e.target.closest(".shorts-vote .vote-btn");
+  if (!btn || btn.disabled) return;
+
+  // 🔥 버튼 기준으로 issueId를 직접 사용 (observer 의존 제거)
+  const issueId = Number(btn.dataset.issueId);
+  if (!issueId) return;
+
+  // 🔒 이미 투표된 상태면 쇼츠에서 재투표 차단
+  if (typeof window.GALLA_CHECK_VOTE === "function") {
+    const existing = await window.GALLA_CHECK_VOTE(issueId);
+    if (existing === "pro" || existing === "con") {
+      return;
+    }
+  }
+
+  const type = btn.classList.contains("pro") ? "pro" : "con";
+  await window.GALLA_VOTE(issueId, type);
+
+  });
+
+/* =========================
+   EXPORT
+========================= */
+window.openShorts = openShorts;
+window.closeShorts = closeShorts;
+
+})();
+
+// 🔥 현재 활성 쇼츠 index 외부 노출 (vote.core.js용)
+window.__GALLA_SHORTS_STATE__ = {
+  currentIndex: -1
+};
