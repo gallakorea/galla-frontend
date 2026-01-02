@@ -9,9 +9,6 @@ console.log("[shorts] loaded");
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
 
-  overlay.style.display = "none";
-  overlay.style.visibility = "hidden";
-
   let observer = null;
   let currentIndex = -1;
   let shortsData = [];
