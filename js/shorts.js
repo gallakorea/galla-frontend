@@ -195,6 +195,8 @@ function openShorts(list, startId) {
     })();
   });
 
+}
+
 /* =========================
    CLOSE SHORTS
 ========================= */
