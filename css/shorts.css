@@ -31,12 +31,12 @@ body[data-page="shorts"] .header {
   margin: 0;
   
   background: #000;
-  visibility: hidden;
-  pointer-events: none;
-
+  
   z-index: 10000;
 
-  display: none;
+  display: block;
+  visibility: visible;
+  pointer-events: auto;
 
   overflow-y: scroll;
   overflow-x: hidden;
@@ -55,12 +55,6 @@ body[data-page="shorts"] .header {
   -ms-overflow-style: none;
   scrollbar-gutter: auto;
   scroll-snap-stop: always;
-}
-
-#shortsOverlay.active {
-  display: block;
-  visibility: visible;
-  pointer-events: auto;
 }
 
 #shortsOverlay::-webkit-scrollbar {
