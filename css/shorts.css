@@ -195,20 +195,23 @@ body[data-page="shorts"] .header {
 }
 
 /* ================================
-   SHORTS PAGE — BOTTOM NAV FIX
+   NAV — DEFAULT (INDEX / ISSUE)
 ================================= */
-body[data-page="shorts"] .nav {
-  display: flex !important;
+.nav {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-
   height: 58px;
   z-index: 9000;
-
   background: #000;
-  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ================================
+   SHORTS OPEN — HIDE NAV
+================================= */
+body.shorts-open .nav {
+  display: none !important;
 }
 
 body[data-page="shorts"]:not(.shorts-open) {
