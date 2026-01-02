@@ -47,19 +47,25 @@ async function vote(issueId, type) {
 
   const { error } = await supabase.from("votes").insert({
     issue_id: issueId,
-    user_id: userId,   // 🔥 이 줄이 지금 없어서 막힌 거다
+    user_id: userId,
     type
   });
 
   votingInProgress = false;
 
-  if (error && error.code !== "23505") {
+  if (error) {
+    // ✅ 이미 투표된 상태 (409 / 23505)
+    if (error.code === "23505" || error.code === "409") {
+      await checkVoteStatus(issueId); // DB 기준으로만 UI 복원
+      return;
+    }
+
     console.error("[VOTE] insert error", error);
     return;
   }
 
-  // 상태 + 통계 + 전장 UI 동기화
-  await loadVoteStats(issueId);   // 🔧 퍼센트/바 즉시 갱신
+  // ✅ 정상 투표 성공일 때만 UI 갱신
+  await loadVoteStats(issueId);
   await checkVoteStatus(issueId);
 
   // 댓글 전장 재초기화 (이슈 페이지에서만 실행)

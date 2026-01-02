@@ -181,6 +181,7 @@ function openShorts(list, startId) {
     if (firstShort) {
       const issueId = Number(firstShort.dataset.issueId);
       if (issueId && typeof window.GALLA_CHECK_VOTE === "function") {
+        await window.GALLA_CHECK_VOTE(issueId); // ← 이게 없어서 첫 화면이 항상 미투표
       }
     }
   });
