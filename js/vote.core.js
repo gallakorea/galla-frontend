@@ -28,12 +28,6 @@ async function vote(issueId, type) {
     return;
   }
 
-  // 🔥 이미 투표했는지 선확인 (중복 insert 방지)
-  const existing = await window.GALLA_CHECK_VOTE(issueId);
-  if (existing === "pro" || existing === "con") {
-    votingInProgress = false;
-    return;
-  }
 
   // 🔐 세션 확보
   let session = null;
@@ -168,42 +162,37 @@ async function checkVoteStatus(issueId) {
 }
 
   
-/* ========= Shorts (ISSUE ID DIRECT SYNC) ========= */
-{
-  const shortEl = document.querySelector(
-    `.short[data-issue-id="${issueId}"]`
-  );
-  if (!shortEl) return;
+/* ========= Shorts (ISSUE ID SYNC – ALWAYS APPLY) ========= */
+document
+  .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
+  .forEach(shortEl => {
+    const shortProBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
+    const shortConBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
+    if (!shortProBtn || !shortConBtn) return;
 
-  const shortProBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
-  const shortConBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
-  if (!shortProBtn || !shortConBtn) return;
+    // 초기화
+    shortProBtn.disabled = false;
+    shortConBtn.disabled = false;
 
-  // 초기화
-  shortProBtn.disabled = false;
-  shortConBtn.disabled = false;
+    shortProBtn.classList.remove("active-vote");
+    shortConBtn.classList.remove("active-vote");
 
-  shortProBtn.classList.remove("active-vote");
-  shortConBtn.classList.remove("active-vote");
+    shortProBtn.innerText = "👍 찬성이오";
+    shortConBtn.innerText = "👎 난 반댈세";
 
-  shortProBtn.innerText = "👍 찬성이오";
-  shortConBtn.innerText = "👎 난 반댈세";
-
-  // DB 기준 반영
-  if (data.type === "pro") {
-    shortProBtn.disabled = true;
-    shortConBtn.disabled = true;
-    shortProBtn.classList.add("active-vote");
-    shortProBtn.innerText = "👍 투표 완료";
-  }
-
-  if (data.type === "con") {
-    shortProBtn.disabled = true;
-    shortConBtn.disabled = true;
-    shortConBtn.classList.add("active-vote");
-    shortConBtn.innerText = "👎 투표 완료";
-  }
-}
+    // DB 기준 반영
+    if (data.type === "pro") {
+      shortProBtn.disabled = true;
+      shortConBtn.disabled = true;
+      shortProBtn.classList.add("active-vote");
+      shortProBtn.innerText = "👍 투표 완료";
+    } else if (data.type === "con") {
+      shortProBtn.disabled = true;
+      shortConBtn.disabled = true;
+      shortConBtn.classList.add("active-vote");
+      shortConBtn.innerText = "👎 투표 완료";
+    }
+  });
 
   /* ========= Index Cards ========= */
   document
