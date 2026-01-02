@@ -3,16 +3,14 @@
    Native Scroll + Scroll Snap (NO TRANSFORM)
 ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Shorts must open ONLY via explicit openShorts() call (e.g. from index speech button)
-  // No auto-fetch or auto-open here
-});
-
 console.log("[shorts] loaded");
 
 (function () {
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
+
+  overlay.style.display = "none";
+  overlay.style.visibility = "hidden";
 
   let observer = null;
   let currentIndex = -1;
@@ -35,7 +33,6 @@ console.log("[shorts] loaded");
     document.body.style.overflow = "hidden";
     overlay.style.display = "block";
     overlay.style.visibility = "visible";
-    overlay.classList.add("active");
 
     shortsData.forEach((item, i) => {
       const section = document.createElement("section");
@@ -203,19 +200,17 @@ console.log("[shorts] loaded");
     // body 스크롤 복구
     document.body.style.overflow = "";
 
-    // 쇼츠 내용 제거
+    // 쇼츠 내용 제거 및 overlay reset
     overlay.innerHTML = "";
+    overlay.scrollTop = 0;
     overlay.style.display = "none";
     overlay.style.visibility = "hidden";
-    overlay.scrollTop = 0;
 
     // observer 해제
     if (observer) {
       observer.disconnect();
       observer = null;
     }
-
-    overlay.classList.remove("active");
 
     // 🔥🔥🔥 vote bar 제거 (이게 빠져 있었음)
     const bar = document.querySelector(".shorts-vote");
