@@ -147,19 +147,20 @@ async function checkVoteStatus(issueId) {
 
   if (!data) return "__NO_VOTE__";
 
-  /* ========= Issue Page ========= */
-  const proBtn = document.getElementById("btn-vote-pro");
-  const conBtn = document.getElementById("btn-vote-con");
+/* ========= Issue Page ========= */
+{
+  const issueProBtn = document.getElementById("btn-vote-pro");
+  const issueConBtn = document.getElementById("btn-vote-con");
 
-  if (proBtn && conBtn) {
-    proBtn.disabled = true;
-    conBtn.disabled = true;
+  if (issueProBtn && issueConBtn) {
+    issueProBtn.disabled = true;
+    issueConBtn.disabled = true;
 
-    proBtn.classList.add("disabled");
-    conBtn.classList.add("disabled");
+    issueProBtn.classList.add("disabled");
+    issueConBtn.classList.add("disabled");
 
-    if (data.type === "pro") proBtn.innerText = "👍 투표 완료";
-    if (data.type === "con") conBtn.innerText = "👎 투표 완료";
+    if (data.type === "pro") issueProBtn.innerText = "👍 투표 완료";
+    if (data.type === "con") issueConBtn.innerText = "👎 투표 완료";
 
     const status = document.getElementById("vote-status-text");
     if (status) {
@@ -169,42 +170,49 @@ async function checkVoteStatus(issueId) {
           : "👎 반대로 투표하셨습니다.";
     }
   }
+}
 
   
-/* ========= Shorts (ISSUE ID 기준 – FINAL FIX) ========= */
-document
-  .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
-  .forEach(shortEl => {
-    const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
-    const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
+/* ========= Shorts (ACTIVE SHORT ONLY) ========= */
+{
+  const activeIssueId = window.__CURRENT_SHORT_ISSUE_ID__;
 
-    if (!proBtn || !conBtn) return;
+  if (Number(activeIssueId) === Number(issueId)) {
+    const shortEl = document.querySelector(
+      `.short[data-issue-id="${activeIssueId}"]`
+    );
+    if (!shortEl) return;
 
-    // 1️⃣ 완전 초기화
-    proBtn.disabled = false;
-    conBtn.disabled = false;
+    const shortProBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
+    const shortConBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
+    if (!shortProBtn || !shortConBtn) return;
 
-    proBtn.classList.remove("active-vote");
-    conBtn.classList.remove("active-vote");
+    // 초기화
+    shortProBtn.disabled = false;
+    shortConBtn.disabled = false;
 
-    proBtn.innerText = "👍 찬성이오";
-    conBtn.innerText = "👎 난 반댈세";
+    shortProBtn.classList.remove("active-vote");
+    shortConBtn.classList.remove("active-vote");
 
-    // 2️⃣ DB 기준 단 하나만 완료 처리
+    shortProBtn.innerText = "👍 찬성이오";
+    shortConBtn.innerText = "👎 난 반댈세";
+
+    // DB 기준 반영
     if (data.type === "pro") {
-      proBtn.disabled = true;
-      conBtn.disabled = true;
-      proBtn.classList.add("active-vote");
-      proBtn.innerText = "👍 투표 완료";
+      shortProBtn.disabled = true;
+      shortConBtn.disabled = true;
+      shortProBtn.classList.add("active-vote");
+      shortProBtn.innerText = "👍 투표 완료";
     }
 
     if (data.type === "con") {
-      proBtn.disabled = true;
-      conBtn.disabled = true;
-      conBtn.classList.add("active-vote");
-      conBtn.innerText = "👎 투표 완료";
+      shortProBtn.disabled = true;
+      shortConBtn.disabled = true;
+      shortConBtn.classList.add("active-vote");
+      shortConBtn.innerText = "👎 투표 완료";
     }
-  });
+  }
+}
 
   /* ========= Index Cards ========= */
   document

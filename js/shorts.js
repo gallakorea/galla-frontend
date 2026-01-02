@@ -87,6 +87,7 @@ function setupObserver() {
       window.__GALLA_SHORTS_STATE__.currentIndex = idx;
 
     currentIssueId = issueId;
+    window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     playOnly(idx);
 
     // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
@@ -185,17 +186,6 @@ function openShorts(list, startId) {
         // 1️⃣ 현재 보이는 쇼츠
         await window.GALLA_CHECK_VOTE(issueId);
 
-        // 2️⃣ 🔥 쇼츠 DOM 전체 강제 재동기화 (핵심)
-        setTimeout(() => {
-          document
-            .querySelectorAll('.short[data-issue-id]')
-            .forEach(shortEl => {
-              const id = Number(shortEl.dataset.issueId);
-              if (id) {
-                window.GALLA_CHECK_VOTE(id);
-              }
-            });
-        }, 0);
       }
     })();
   });
