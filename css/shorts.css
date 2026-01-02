@@ -64,6 +64,7 @@ body[data-page="shorts"] .header {
   display: none;
 }
 
+
 /* -------------------------
    SINGLE SHORT ITEM
 ------------------------- */
@@ -205,3 +206,4 @@ body[data-page="shorts"] .header {
 body[data-page="shorts"] .nav {
   height: 58px;
 }
+
