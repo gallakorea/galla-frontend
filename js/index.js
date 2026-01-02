@@ -211,14 +211,17 @@ async function attachEvents() {
 
         const id = Number(btn.dataset.index);
 
-        // 🎥 사용자 제스처 유지용 (자동재생 unlock)
+        /* ===============================
+        🔥 AUTOPLAY UNLOCK (중요)
+        사용자 제스처 컨텍스트 확보
+        =============================== */
         const unlock = document.createElement("video");
         unlock.muted = true;
         unlock.playsInline = true;
         unlock.play().catch(() => {});
 
-        // ✅ shorts 페이지로 이동만 한다
-        location.href = `shorts.html?issue=${id}`;
+        // 쇼츠 진입
+        openShorts(cards, id);
     };
     });
 
