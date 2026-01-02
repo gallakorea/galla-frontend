@@ -195,11 +195,11 @@ body[data-page="shorts"] .header {
 }
 
 /* ================================
-   NAV — DEFAULT (INDEX / ISSUE)
+   NAV — SHORTS PAGE BASELINE ONLY
 ================================= */
-.nav {
+body[data-page="shorts"] .nav {
   position: fixed;
-  left: 0;
+  left: 0; 
   right: 0;
   bottom: 0;
   height: 58px;
