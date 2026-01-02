@@ -35,6 +35,7 @@ function playOnly(index) {
   if (!video) return;
 
   currentIndex = index;
+  window.__GALLA_SHORTS_STATE__.currentIndex = index;
 
   hardPauseAll(index);
 
