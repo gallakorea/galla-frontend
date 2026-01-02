@@ -197,21 +197,15 @@ body[data-page="shorts"] .header {
 ================================= */
 body[data-page="shorts"] .nav {
   position: fixed;
-  left: 0; 
+  left: 0;
   right: 0;
   bottom: 0;
   height: 58px;
   z-index: 9000;
   background: #000;
-}
-
-/* ================================
-   SHORTS OPEN — HIDE NAV
-================================= */
-body[data-page="shorts"]:not(.shorts-open) {
-  max-width: 480px;
-  margin: 0 auto;
-  background: #000;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 /* ================================
@@ -224,5 +218,13 @@ body[data-page="shorts"]:not(.shorts-open) {
   bottom: 0;
   height: 58px;
   background: #000;
+  z-index: 9000;
+}
+
+#shortsOverlay {
+  z-index: 8000;
+}
+
+.nav {
   z-index: 9000;
 }
