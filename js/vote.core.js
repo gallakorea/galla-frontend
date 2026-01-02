@@ -163,23 +163,16 @@ async function checkVoteStatus(issueId) {
     }
   }
 
-  /* ========= Shorts (ACTIVE SHORT ONLY) ========= */
+/* ========= Shorts (ACTIVE SHORT ONLY) ========= */
+const activeShort = document.querySelector(
+  `.short[data-issue-id="${issueId}"]:not([hidden])`
+);
 
-  // 🔥 shorts.js 에서 관리 중인 현재 index 사용
-  const idx = window.__GALLA_SHORTS_STATE__?.currentIndex;
+if (activeShort) {
+  const proBtn = activeShort.querySelector('.shorts-vote .vote-btn.pro');
+  const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
 
-  const activeShort = document.querySelector(
-    idx !== undefined
-      ? `.short[data-issue-id="${issueId}"][data-index="${idx}"]`
-      : `.short[data-issue-id="${issueId}"]`
-  );
-
-  if (activeShort) {
-    const proBtn = activeShort.querySelector('.shorts-vote .vote-btn.pro');
-    const conBtn = activeShort.querySelector('.shorts-vote .vote-btn.con');
-
-    if (!proBtn || !conBtn) return;
-
+  if (proBtn && conBtn) {
     // 공통 잠금
     proBtn.disabled = true;
     conBtn.disabled = true;
@@ -201,6 +194,8 @@ async function checkVoteStatus(issueId) {
       conBtn.innerText = "👎 투표 완료";
     }
   }
+}
+
   /* ========= Index Cards ========= */
   document
     .querySelectorAll(`.card[data-id="${issueId}"]`)
