@@ -5,28 +5,33 @@
 
 // shorts.js 상단
 document.addEventListener("DOMContentLoaded", async () => {
-  const saved = sessionStorage.getItem("__OPEN_SHORTS__");
-  if (!saved) return;
 
-  sessionStorage.removeItem("__OPEN_SHORTS__");
-  const { startId } = JSON.parse(saved);
-
-  // 🔥 supabase 완전 준비 대기
-  while (
-    !window.supabaseClient ||
-    typeof window.supabaseClient.from !== "function"
-  ) {
-    await new Promise(r => setTimeout(r, 50));
+  // 🔥 Supabase 준비 대기
+  while (!window.supabaseClient) {
+    await new Promise(r => setTimeout(r, 30));
   }
 
+  let startId = null;
+
+  const saved = sessionStorage.getItem("__OPEN_SHORTS__");
+  if (saved) {
+    sessionStorage.removeItem("__OPEN_SHORTS__");
+    try {
+      startId = JSON.parse(saved)?.startId ?? null;
+    } catch {}
+  }
+
+  // 🔥 쇼츠 데이터 로드 (fallback 포함)
   const { data } = await window.supabaseClient
     .from("issues")
     .select("id, video_url")
-    .not("video_url", "is", null);
+    .not("video_url", "is", null)
+    .order("created_at", { ascending: false });
 
   if (!data || !data.length) return;
 
-  window.openShorts(data, startId);
+  // 👉 startId 없으면 첫 번째 쇼츠
+  window.openShorts(data, startId ?? data[0].id);
 });
 
 
