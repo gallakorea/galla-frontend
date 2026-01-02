@@ -11,8 +11,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   sessionStorage.removeItem("__OPEN_SHORTS__");
   const { startId } = JSON.parse(saved);
 
-  // ⚠️ 여기서 shorts 데이터 로딩
-  // 임시 예시 — 실제론 supabase fetch
+  // 🔥 supabase 완전 준비 대기
+  while (
+    !window.supabaseClient ||
+    typeof window.supabaseClient.from !== "function"
+  ) {
+    await new Promise(r => setTimeout(r, 50));
+  }
+
   const { data } = await window.supabaseClient
     .from("issues")
     .select("id, video_url")
