@@ -180,18 +180,27 @@ async function checkVoteStatus(issueId) {
 
       if (!proBtn || !conBtn) return;
 
-      proBtn.disabled = true;
-      conBtn.disabled = true;
+      // 🔥 1️⃣ 상태 완전 초기화 (이게 핵심)
+      proBtn.disabled = false;
+      conBtn.disabled = false;
 
       proBtn.classList.remove("active-vote");
       conBtn.classList.remove("active-vote");
 
+      proBtn.innerText = "👍 찬성이오";
+      conBtn.innerText = "👎 난 반댈세";
+
+      // 🔥 2️⃣ DB 기준으로 정확히 반영
       if (data.type === "pro") {
+        proBtn.disabled = true;
+        conBtn.disabled = true;
         proBtn.classList.add("active-vote");
         proBtn.innerText = "👍 투표 완료";
       }
 
       if (data.type === "con") {
+        proBtn.disabled = true;
+        conBtn.disabled = true;
         conBtn.classList.add("active-vote");
         conBtn.innerText = "👎 투표 완료";
       }
