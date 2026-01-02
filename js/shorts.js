@@ -1,165 +1,207 @@
-/* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
-(function () {
+/* =========================================================
+   GALLA SHORTS — REAL REELS / SHORTS ENGINE (JS)
+   Native Scroll + Scroll Snap (NO TRANSFORM)
+========================================================= */
 
-  let overlay = null;
+console.log("[shorts] loaded");
+
+(function () {
+  const overlay = document.getElementById("shortsOverlay");
+  if (!overlay) return;
+
   let observer = null;
   let currentIndex = -1;
+  let shortsData = [];
 
-  function qs(id) {
-    return document.getElementById(id);
-  }
+  // 🔥 외부(vote.core.js)에서 참조
+  window.__CURRENT_SHORT_ISSUE_ID__ = null;
 
-  function hardPauseAll(exceptIndex = null) {
-    document.querySelectorAll(".short video").forEach((v, i) => {
-      if (i === exceptIndex) return;
-      try {
-        v.pause();
-        v.currentTime = 0;
-        v.muted = true;
-      } catch {}
-    });
-  }
-
-  function playOnly(index) {
-    if (!overlay) return;
-    if (currentIndex === index) return;
-
-    const wrap = overlay.querySelector(`.short[data-index="${index}"]`);
-    if (!wrap) return;
-
-    const video = wrap.querySelector("video");
-    if (!video) return;
-
-    currentIndex = index;
-    window.__GALLA_SHORTS_STATE__.currentIndex = index;
-
-    hardPauseAll(index);
-
-    video.muted = true;
-    video.currentTime = 0;
-    const p = video.play();
-    if (p?.then) p.then(() => (video.muted = false)).catch(() => {});
-  }
-
-  function setupObserver() {
-    if (observer) observer.disconnect();
-
-    observer = new IntersectionObserver(entries => {
-      let best = null;
-      let max = 0;
-
-      entries.forEach(e => {
-        if (e.intersectionRatio > max) {
-          max = e.intersectionRatio;
-          best = e;
-        }
-      });
-
-      if (!best || best.intersectionRatio < 0.6) return;
-
-      const idx = Number(best.target.dataset.index);
-      const issueId = Number(best.target.dataset.issueId);
-
-      window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
-      window.__CURRENT_SHORT_INDEX__ = idx;
-
-      playOnly(idx);
-
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        window.GALLA_CHECK_VOTE(issueId);
-      }
-    }, {
-      threshold: [0.25, 0.5, 0.6, 0.75, 1]
-    });
-
-    overlay.querySelectorAll(".short").forEach(el => observer.observe(el));
-  }
-
-  function openShorts(list, startId) {
-    overlay = qs("shortsOverlay");
-    if (!overlay) return;
+  /* =========================================================
+     SHORTS DATA LOAD (임시)
+     👉 실제로는 index / issue 페이지에서
+        window.openShorts(list, startId) 호출
+  ========================================================= */
+  window.openShorts = function (list, startId = null) {
+    shortsData = list.filter(v => v && v.video_url);
+    if (!shortsData.length) return;
 
     overlay.innerHTML = "";
-    overlay.hidden = false;
-    overlay.style.display = "block";
-    overlay.scrollTop = 0;
     document.body.style.overflow = "hidden";
 
-    const shorts = list.filter(v => v?.video_url);
-    if (!shorts.length) return;
-
-    shorts.forEach((item, i) => {
-      const wrap = document.createElement("section");
-      wrap.className = "short";
-      wrap.dataset.index = i;
-      wrap.dataset.issueId = item.id;
-      wrap.setAttribute("data-issue-id", item.id);
+    shortsData.forEach((item, i) => {
+      const section = document.createElement("section");
+      section.className = "short";
+      section.dataset.index = i;
+      section.dataset.issueId = item.id;
+      section.setAttribute("data-issue-id", item.id);
 
       const video = document.createElement("video");
       video.src = item.video_url;
       video.playsInline = true;
-      video.loop = true;
+      video.preload = "metadata";
       video.muted = true;
+      video.loop = true;
 
-      const voteBar = document.createElement("div");
-      voteBar.className = "shorts-vote";
+      // 🔥 탭 제어 (모바일)
+      let tapTimer = null;
+      let tapCount = 0;
 
-      const btnPro = document.createElement("button");
-      btnPro.className = "vote-btn pro";
-      btnPro.dataset.issueId = item.id;
-      btnPro.textContent = "👍 찬성이오";
+      section.addEventListener("click", () => {
+        tapCount++;
 
-      const btnCon = document.createElement("button");
-      btnCon.className = "vote-btn con";
-      btnCon.dataset.issueId = item.id;
-      btnCon.textContent = "👎 난 반댈세";
+        if (tapCount === 1) {
+          tapTimer = setTimeout(() => {
+            if (video.paused) video.play();
+            else video.pause();
+            tapCount = 0;
+          }, 250);
+        }
 
-      voteBar.appendChild(btnPro);
-      voteBar.appendChild(btnCon);
+        if (tapCount === 2) {
+          clearTimeout(tapTimer);
+          video.playbackRate = video.playbackRate === 1 ? 2 : 1;
+          tapCount = 0;
+        }
+      });
 
-      wrap.appendChild(video);
-      wrap.appendChild(voteBar);
-      overlay.appendChild(wrap);
+      section.appendChild(video);
+      overlay.appendChild(section);
     });
 
-    const startIndex =
-      shorts.findIndex(v => Number(v.id) === Number(startId)) >= 0
-        ? shorts.findIndex(v => Number(v.id) === Number(startId))
-        : 0;
+    // 🔥 투표 바 (단일)
+    injectVoteBar();
 
-    window.__CURRENT_SHORT_ISSUE_ID__ = Number(shorts[startIndex].id);
+    // 시작 위치
+    let startIndex = 0;
+    if (startId) {
+      const found = shortsData.findIndex(v => Number(v.id) === Number(startId));
+      if (found >= 0) startIndex = found;
+    }
 
     requestAnimationFrame(() => {
       overlay.scrollTo({
         top: startIndex * window.innerHeight,
         behavior: "instant"
       });
-
       setupObserver();
-      playOnly(startIndex);
-
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        window.GALLA_CHECK_VOTE(Number(shorts[startIndex].id));
-      }
+      activateShort(startIndex);
     });
+  };
+
+  /* =========================================================
+     INTERSECTION OBSERVER
+  ========================================================= */
+  function setupObserver() {
+    if (observer) observer.disconnect();
+
+    observer = new IntersectionObserver(
+      entries => {
+        let best = null;
+        let maxRatio = 0;
+
+        entries.forEach(e => {
+          if (e.intersectionRatio > maxRatio) {
+            maxRatio = e.intersectionRatio;
+            best = e;
+          }
+        });
+
+        if (!best || best.intersectionRatio < 0.6) return;
+
+        const index = Number(best.target.dataset.index);
+        activateShort(index);
+      },
+      {
+        root: overlay,
+        threshold: [0.25, 0.5, 0.6, 0.75, 0.9]
+      }
+    );
+
+    overlay.querySelectorAll(".short").forEach(el => observer.observe(el));
   }
 
-  document.addEventListener("click", async e => {
-    const btn = e.target.closest(".shorts-vote .vote-btn");
-    if (!btn || btn.disabled) return;
+  /* =========================================================
+     ACTIVATE SHORT (PLAY ONE ONLY)
+  ========================================================= */
+  function activateShort(index) {
+    if (index === currentIndex) return;
 
-    const issueId = Number(btn.dataset.issueId);
-    if (!issueId) return;
+    const shorts = overlay.querySelectorAll(".short");
+    shorts.forEach((el, i) => {
+      const video = el.querySelector("video");
+      if (!video) return;
 
-    if (typeof window.GALLA_GET_MY_VOTE === "function") {
-      const existing = await window.GALLA_GET_MY_VOTE(issueId);
-      if (existing) return;
-    }
+      if (i === index) {
+        video.currentTime = 0;
+        video.muted = true;
+        const p = video.play();
+        if (p?.then) {
+          p.then(() => (video.muted = false)).catch(() => {});
+        }
 
-    const type = btn.classList.contains("pro") ? "pro" : "con";
-    await window.GALLA_VOTE(issueId, type);
+        const issueId = Number(el.dataset.issueId);
+        window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+
+        if (window.GALLA_CHECK_VOTE) {
+          queueMicrotask(() => window.GALLA_CHECK_VOTE(issueId));
+        }
+      } else {
+        video.pause();
+        video.currentTime = 0;
+        video.muted = true;
+      }
+    });
+
+    currentIndex = index;
+  }
+
+  /* =========================================================
+     VOTE BAR (FIXED, SINGLE INSTANCE)
+  ========================================================= */
+  function injectVoteBar() {
+    if (document.querySelector(".shorts-vote")) return;
+
+    const bar = document.createElement("div");
+    bar.className = "shorts-vote";
+
+    const pro = document.createElement("button");
+    pro.className = "vote-btn pro";
+    pro.innerText = "👍 찬성이오";
+
+    const con = document.createElement("button");
+    con.className = "vote-btn con";
+    con.innerText = "👎 난 반댈세";
+
+    pro.addEventListener("click", async () => {
+      const id = window.__CURRENT_SHORT_ISSUE_ID__;
+      if (!id || !window.GALLA_VOTE) return;
+      await window.GALLA_VOTE(id, "pro");
+    });
+
+    con.addEventListener("click", async () => {
+      const id = window.__CURRENT_SHORT_ISSUE_ID__;
+      if (!id || !window.GALLA_VOTE) return;
+      await window.GALLA_VOTE(id, "con");
+    });
+
+    bar.appendChild(pro);
+    bar.appendChild(con);
+    document.body.appendChild(bar);
+  }
+
+  /* =========================================================
+     CLOSE (ESC / BACK)
+  ========================================================= */
+  function closeShorts() {
+    document.body.style.overflow = "";
+    overlay.innerHTML = "";
+    overlay.scrollTop = 0;
+    if (observer) observer.disconnect();
+  }
+
+  window.closeShorts = closeShorts;
+
+  window.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeShorts();
   });
-
-  window.openShorts = openShorts;
 })();
-window.__GALLA_SHORTS_STATE__ = { currentIndex: -1 };
