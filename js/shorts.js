@@ -155,37 +155,36 @@ console.log("[shorts] loaded");
   /* =========================================================
      ACTIVATE SHORT (PLAY ONE ONLY)
   ========================================================= */
-  function activateShort(index) {
-    if (index === currentIndex) return;
+function activateShort(index) {
+  if (index === currentIndex) return;
 
-    const shorts = overlay.querySelectorAll(".short");
-    shorts.forEach((el, i) => {
-      const video = el.querySelector("video");
-      if (!video) return;
+  const shorts = overlay.querySelectorAll(".short");
+  shorts.forEach((el, i) => {
+    const video = el.querySelector("video");
+    if (!video) return;
 
-if (i === index) {
-  video.currentTime = 0;
+    if (i === index) {
+      video.currentTime = 0;
 
-  // 🔒 처음엔 항상 muted
-  video.muted = true;
-  video.play().catch(() => {});
-}
+      // 🔒 처음엔 항상 muted
+      video.muted = true;
+      video.play().catch(() => {});
 
-        const issueId = Number(el.dataset.issueId);
-        window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+      const issueId = Number(el.dataset.issueId);
+      window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
 
-        if (window.GALLA_CHECK_VOTE) {
-          queueMicrotask(() => window.GALLA_CHECK_VOTE(issueId));
-        }
-      } else {
-        video.pause();
-        video.currentTime = 0;
-        video.muted = true;
+      if (window.GALLA_CHECK_VOTE) {
+        queueMicrotask(() => window.GALLA_CHECK_VOTE(issueId));
       }
-    });
+    } else {
+      video.pause();
+      video.currentTime = 0;
+      video.muted = true;
+    }
+  });
 
-    currentIndex = index;
-  }
+  currentIndex = index;
+}
 
   /* =========================================================
      VOTE BAR (FIXED, SINGLE INSTANCE)
