@@ -23,10 +23,14 @@ console.log("[shorts] loaded");
   ========================================================= */
   window.openShorts = function (list, startId = null) {
     if (!overlay) return;
-    shortsData = list.filter(v => v && v.video_url);
+    overlay.innerHTML = "";
+    overlay.style.display = "block";
+    overlay.style.visibility = "visible";
+
+    const normalized = Array.isArray(list) ? list : [list];
+    shortsData = normalized.filter(v => v && v.video_url);
     if (!shortsData.length) return;
 
-    overlay.innerHTML = "";
     // overlay 활성화 (CSS 상태 기반)
     overlay.classList.add("active");
     overlay.style.visibility = "visible";
@@ -204,6 +208,7 @@ console.log("[shorts] loaded");
 
     // overlay 상태 정리
     overlay.classList.remove("active");
+    overlay.style.display = "none";
     overlay.style.visibility = "hidden";
     overlay.innerHTML = "";
     overlay.scrollTop = 0;
