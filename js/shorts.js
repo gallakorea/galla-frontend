@@ -155,7 +155,7 @@ function openShorts(list, startId) {
       ? shorts.findIndex(v => Number(v.id) === Number(startId))
       : 0;
 
-  requestAnimationFrame(() => {
+  requestAnimationFrame(async () => {
     overlay.scrollTo({
       top: startIndex * window.innerHeight,
       behavior: "instant"
@@ -163,6 +163,18 @@ function openShorts(list, startId) {
 
     setupObserver();
     playOnly(startIndex);
+
+    // 🔥 [핵심] 최초 노출 쇼츠 투표 상태 강제 동기화
+    const firstShort = overlay.querySelector(
+      `.short[data-index="${startIndex}"]`
+    );
+
+    if (firstShort) {
+      const issueId = Number(firstShort.dataset.issueId);
+      if (issueId && typeof window.GALLA_CHECK_VOTE === "function") {
+        await window.GALLA_CHECK_VOTE(issueId);
+      }
+    }
   });
 }
 
