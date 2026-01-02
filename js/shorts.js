@@ -9,7 +9,6 @@ console.log("[shorts] loaded");
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
 
-
   let observer = null;
   let currentIndex = -1;
   let shortsData = [];
@@ -25,6 +24,8 @@ console.log("[shorts] loaded");
   window.openShorts = function (list, startId = null) {
     if (!overlay) return;
 
+    overlay.classList.add("active");
+
     overlay.innerHTML = "";
     const isStandalone = document.body?.dataset?.page === "shorts";
 
@@ -34,15 +35,13 @@ console.log("[shorts] loaded");
     } else {
       document.body.classList.remove("shorts-open");
     }
-    overlay.style.display = "block";
-    overlay.style.visibility = "visible";
 
     const normalized = Array.isArray(list) ? list : [list];
     shortsData = normalized.filter(v => v && v.video_url);
     if (!shortsData.length) return;
 
     // overlay 활성화 (CSS 상태 기반)
-    overlay.style.visibility = "visible";
+    // Removed overlay.style.visibility = "visible";
 
     // body 스크롤 상태 백업 후 lock
     if (!isStandalone) {
