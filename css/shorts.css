@@ -23,6 +23,7 @@ body[data-page="shorts"] .header {
    OVERLAY (SCROLL CONTAINER)
 ------------------------- */
 #shortsOverlay {
+  display: none;
   position: fixed;
   inset: 0;
 
@@ -191,4 +192,8 @@ body[data-page="shorts"] .header {
 
 body[data-page="shorts"] .nav {
   height: 58px;
+}
+
+#shortsOverlay.active {
+  display: block;
 }
