@@ -6,6 +6,10 @@
 // shorts.js 상단
 document.addEventListener("DOMContentLoaded", async () => {
 
+  // ❌ index/home에서는 쇼츠 자동 실행 금지
+  if (location.pathname !== "/shorts") return;
+
+  // shorts.html 에서만 overlay 존재 보장
   if (!document.getElementById("shortsOverlay")) return;
 
   // 🔥 Supabase 준비 대기
