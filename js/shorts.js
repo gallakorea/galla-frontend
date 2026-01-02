@@ -238,7 +238,10 @@ async function syncVoteState(issueId) {
 document.addEventListener("click", async e => {
   const btn = e.target.closest(".shorts-vote .vote-btn");
   if (!btn) return;
-  if (!currentIssueId) return;
+
+  // 🔥 버튼 기준으로 issueId를 직접 사용 (observer 의존 제거)
+  const issueId = Number(btn.dataset.issueId);
+  if (!issueId) return;
 
   const type = btn.classList.contains("pro") ? "pro" : "con";
 
@@ -247,8 +250,12 @@ document.addEventListener("click", async e => {
     return;
   }
 
-  await window.GALLA_VOTE(currentIssueId, type);
-  // UI 반영은 vote.core.js에서 처리됨
+  await window.GALLA_VOTE(issueId, type);
+
+  // 🔥 투표 후 UI 즉시 재동기화
+  if (typeof window.GALLA_CHECK_VOTE === "function") {
+    await window.GALLA_CHECK_VOTE(issueId);
+  }
 });
 
 /* =========================
