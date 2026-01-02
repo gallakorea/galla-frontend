@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GALLA - 이슈 상세</title>
+    <link rel="stylesheet" href="css/issue.css" />
+    <link rel="stylesheet" href="css/issue.comments.css" />
+</head>
+
+<body data-page="issue">
+
+<div id="app">
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="header-inner">
+
+            <!-- 뒤로가기 -->
+            <button class="back-btn" id="btn-back">← <span class="back-text">뒤로</span></button>
+
+            <!-- 로고 클릭 → 홈 이동 -->
+            <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
+
+            <!-- ⋯ 메뉴 -->
+            <button class="more-header-btn" id="header-more-btn">⋯</button>
+        </div>
+    </header>
+
+    <!-- ISSUE HERO -->
+    <section class="issue-hero">
+        <div class="issue-category-time">
+            <span id="issue-category">카테고리</span>
+            <span id="issue-time"></span>
+        </div>
+
+        <h1 id="issue-title"></h1>
+        <p id="issue-desc"></p>
+
+        <div class="issue-author">
+            <span id="issue-author">작성자 · 익명</span>
+            <button class="follow-btn" id="follow-btn">+ 팔로우</button>
+        </div>
+    </section>
+
+    <!-- THUMB -->
+    <img src="assets/logo.png" class="issue-thumb" id="issue-thumb" />
+
+    <!-- SPEECH BUTTON -->
+    <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
+
+    <!-- VOTE -->
+    <section class="vote-section">
+        <div class="vote-title white-title">👍 찬반 투표 현황</div>
+
+        <div class="vote-bar">
+            <div class="vote-pro" id="vote-pro-bar"></div>
+            <div class="vote-con" id="vote-con-bar"></div>
+        </div>
+
+        <div class="vote-percent">
+            <span id="vote-pro-text">0%</span>
+            <span id="vote-con-text">0%</span>
+        </div>
+
+        <div class="vote-buttons">
+            <button class="btn-pro" id="btn-vote-pro">👍 찬성이오</button>
+            <button class="btn-con" id="btn-vote-con">👎 난 반댈세</button>
+        </div>
+
+        <!-- ✅ 이 줄 추가 (없어서 UX가 깨졌음) -->
+        <p id="vote-status-text" class="vote-status-text"></p>
+    </section>
+
+    <!-- SUMMARY -->
+    <section class="issue-explain">
+        <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
+
+        <!-- 🔥 여기 하나만 존재해야 함 -->
+    <p id="issue-explain-text" class="ig-clamp">
+    <span class="ig-text"></span>
+    <span class="ig-more">더 보기</span>
+    </p>
+    </section>
+
+    <!-- AI ARGUMENT CARD -->
+    <section class="ai-argument-card" id="ai-argument-card" hidden>
+    <h3 class="white-title">🧠 AI 논점 정리</h3>
+
+    <div class="argument pro" id="ai-argument-pro-line">
+        👍 논점을 불러오는 중입니다…
+    </div>
+
+    <div class="argument con" id="ai-argument-con-line">
+        👎 논점을 불러오는 중입니다…
+    </div>
+    </section>
+
+    <!-- REMIX / BATTLE -->
+    <section class="remix-section remix-card">
+
+    <div class="remix-header white-title">⚔️ 진영 전투 현황</div>
+
+    <div class="remix-stats">
+        <div class="remix-side pro">
+        <p class="remix-title">🔵 찬성 진영</p>
+        <p class="remix-count" id="remix-pro-count">
+            참전 0 · 리믹스 0
+        </p>
+        </div>
+
+        <div class="remix-side con">
+        <p class="remix-title">🔴 반대 진영</p>
+        <p class="remix-count" id="remix-con-count">
+            참전 0 · 리믹스 0
+        </p>
+        </div>
+    </div>
+
+    <div class="remix-actions">
+        <button class="remix-btn pro" id="btn-remix-pro" type="button">
+        🛡️ 찬성 입장으로 참전
+        </button>
+        <button class="remix-btn con" id="btn-remix-con" type="button">
+        ⚔️ 반대 입장으로 맞서기
+        </button>
+    </div>
+
+    <div class="remix-guide">
+        <p class="remix-guide-title">ⓘ 안내</p>
+        <p class="remix-guide-text">
+        참전은 의견 콘텐츠를 생성합니다.<br>
+        단순 투표가 아닌 <b>진영에 합류하는 행위</b>입니다.
+        </p>
+    </div>
+
+    </section>
+
+        <!-- SUPPORT -->
+    <section class="support-section">
+
+        <div class="support-header white-title">⚔️ 진영 밀어주기 현황</div>
+
+        <div class="support-bar">
+        <div id="sup-pro-bar" class="sup-pro" style="width:0%"></div>
+        <div id="sup-con-bar" class="sup-con" style="width:0%"></div>
+        </div>
+
+        <div class="support-stats">
+        <span id="sup-pro-amount">₩0</span>
+        <span id="sup-con-amount">₩0</span>
+        </div>
+
+        <p id="support-status-text" class="support-status-text"></p>
+
+        <div class="support-actions">
+        <button id="support-pro-btn" class="support-btn pro" type="button">
+            👍 찬성 진영 밀어주기
+        </button>
+        <button id="support-con-btn" class="support-btn con" type="button">
+            👎 반대 진영 밀어주기
+        </button>
+        </div>
+
+        <div class="support-guide">
+        <p class="support-guide-title">ⓘ 안내</p>
+        <p class="support-guide-text">
+            진영 밀어주기는 단순 후원이 아닙니다.<br>
+            선택한 진영의 <b>전황 수치와 노출 우선순위</b>에 직접 반영됩니다.
+        </p>
+        </div>
+
+    </section>
+
+       <!-- AI NEWS -->
+    <section class="ai-news" hidden>
+
+    <div class="ai-box ai-news-box">
+        <div class="ai-box-header">
+        <h3 class="white-title">📰 관련 뉴스 근거</h3>
+        <p class="ai-tip">
+            AI 논점을 뒷받침하거나 반박하는 실제 기사들입니다.
+        </p>
+        </div>
+
+        <div class="ai-box-body">
+        <div class="ai-group">
+            <p class="ai-sub">👍 찬성 측 기사</p>
+
+            <div class="ai-skeleton" id="ai-skeleton-pro">
+            <div class="sk-line"></div>
+            <div class="sk-line short"></div>
+            </div>
+
+            <div id="ai-news-pro" class="ai-news-list"></div>
+        </div>
+
+        <div class="ai-group">
+            <p class="ai-sub">👎 반대 측 기사</p>
+
+            <div class="ai-skeleton" id="ai-skeleton-con">
+            <div class="sk-line"></div>
+            <div class="sk-line short"></div>
+            </div>
+
+            <div id="ai-news-con" class="ai-news-list"></div>
+        </div>
+        </div>
+    </div>
+
+    </section>
+
+    <!-- STATISTICS -->
+    <section id="stats-section" class="stats-section">
+        <!-- 🔒 통계 잠금 안내 (100명 미만) -->
+        <div id="stats-locked" class="ai-news-placeholder" hidden>
+        <div class="ai-news-placeholder-title">
+            아직 통계가 공개되지 않았습니다
+        </div>
+        <div class="ai-news-placeholder-desc">
+            참여자가 100명 이상 모이면<br>
+            여론 통계가 자동으로 공개됩니다.
+        </div>
+        </div>
+
+        <div class="stats-header white-title">📊 여론 통계 인포그래픽</div>
+
+        <h2 class="stat-title white-title">👥 성별 참여 비율</h2>
+        <div id="gender-dual"></div>
+
+        <h2 class="stat-title white-title">🎂 나이대 참여 비율</h2>
+        <div id="age-chart"></div>
+
+        <h2 class="stat-title white-title">🗺️ 지역별 참여 히트맵</h2>
+        <div id="region-heatmap" class="region-heatmap"></div>
+
+        <h2 class="stat-title white-title">⚔️ 성별 찬반 비율</h2>
+        <div id="gender-vote"></div>
+
+        <h2 class="stat-title white-title">⚔️ 나이대 찬반 비율</h2>
+        <div id="age-vote"></div>
+
+        <h2 class="stat-title white-title">⚔️ 지역별 찬반 비율</h2>
+        <div id="region-vote"></div>
+
+        <h2 class="stat-title white-title">🎙️ AI 종합 의견</h2>
+        <div id="ai-summary" class="ai-summary"></div>
+    </section>
+
+        <!-- AUTHOR SUPPORT (UI ONLY) -->
+    <section class="author-support">
+        <div class="author-support-header">
+            ✍️ 이 이슈의 발의자
+        </div>
+
+        <div class="author-support-body">
+            <p class="author-support-desc">
+                이 주제를 세상에 던진 사람에게<br>
+                응원과 지지를 보낼 수 있습니다.
+            </p>
+
+            <button id="author-support-btn" class="author-support-btn" disabled>
+                🙌 발의자 응원하기
+            </button>
+
+            <p class="author-support-hint">
+                ※ 기능은 곧 열립니다
+            </p>
+        </div>
+    </section>
+<!-- =========================
+   FACTION COMMENT ZONE
+========================= -->
+
+<!-- ================= COMMENT WAR HEADER ================= -->
+<section class="comment-war-header">
+  <div class="comment-war-title">⚔️ 찬반 댓글 전쟁</div>
+  <div class="comment-war-sub">
+    이 이슈에 대한 찬성과 반대 진영의 실시간 교전 상황입니다.
+  </div>
+</section>
+
+
+<!-- ================= 전황표 ================= -->
+<div class="war-dashboard">
+  <div class="war-title">⚔ 전황표</div>
+
+  <div class="war-grid">
+    <div class="war-box pro">
+      <div class="war-label">찬성 진영</div>
+      <div class="war-stat">총 댓글 <b>284</b></div>
+      <div class="war-sub">동진영 212 · 적진 72</div>
+    </div>
+
+    <div class="war-box neutral">
+      <div class="war-label">전체 전장</div>
+      <div class="war-stat">총 교전 <b>601</b></div>
+      <div class="war-sub">공격 1,842 · 지원 931 · 방어 764</div>
+    </div>
+
+    <div class="war-box con">
+      <div class="war-label">반대 진영</div>
+      <div class="war-stat">총 댓글 <b>317</b></div>
+      <div class="war-sub">동진영 241 · 적진 76</div>
+    </div>
+  </div>
+</div>
+
+<section id="battle-zone">
+
+<style>
+#battle-zone{background:#000;color:#fff;padding:14px;font-family:system-ui}
+
+/* ================= BASIC ================= */
+.army-label{font-weight:700;margin-bottom:6px}
+.pro{color:#5bbcff}
+.con{color:#ff6b6b}
+
+.battle-divider{
+  height:2px;margin:18px 0;
+  background:linear-gradient(90deg,#5bbcff,#ff6b6b);
+  box-shadow:0 0 12px rgba(255,255,255,.25)
+}
+
+/* ================= BILLBOARD ================= */
+.billboard{
+  border-radius:10px;padding:12px;margin-bottom:10px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.85)),
+    repeating-linear-gradient(45deg,#050505,#050505 6px,#0a0a0a 6px,#0a0a0a 12px);
+  box-shadow:0 0 40px rgba(255,255,255,.35)
+}
+.billboard-title{
+  font-size:11px;letter-spacing:3px;
+  margin-bottom:10px;opacity:.9
+}
+
+/* ================= COMMENT ================= */
+.comment{
+  border-radius:8px;border:1px solid rgba(255,255,255,.15);
+  padding:8px;margin-bottom:6px;
+  background:linear-gradient(180deg,#111,#020202)
+}
+.billboard .comment{
+  background:linear-gradient(180deg,#1a1a1a,#020202)
+}
+
+.head{display:flex;justify-content:space-between;font-size:11px}
+.user{display:flex;gap:6px}
+.anon{font-size:10px;padding:1px 5px;border-radius:4px;background:#333;opacity:.7}
+
+.hp-wrap{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.hp-bar{
+  width:50px;
+  height:5px;
+  background:#222;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+.hp-fill{
+  height:100%;
+  background:linear-gradient(90deg,#00ffaa,#00cc66);
+  box-shadow:0 0 6px rgba(0,255,170,.6);
+}
+
+.hp-text{
+  font-size:10px;
+  opacity:.85;
+  min-width:22px;
+  text-align:right;
+}
+
+/* ================= BODY ================= */
+.body{font-size:13px;margin:6px 0}
+.actions{font-size:12px;opacity:.75;display:flex;gap:10px}
+
+/* ================= THREAD ================= */
+.replies{
+  margin-top:6px;
+  border-left:1px solid rgba(255,255,255,.2);
+  padding-left:8px
+}
+.reply{font-size:12px;margin-top:4px;opacity:.85}
+.reply-meta{font-size:10px;opacity:.6;margin-top:4px}
+.more{cursor:pointer;font-size:11px;color:#aaa;margin-top:4px}
+
+/* ================= PAGING ================= */
+.pager-wrap{
+  display:flex;justify-content:center;margin:12px 0
+}
+.pager{
+  display:flex;gap:8px;
+  padding:6px 10px;border-radius:10px;
+  background:rgba(255,255,255,.05);
+  box-shadow:0 0 16px rgba(255,255,255,.2)
+}
+.pager button{
+  min-width:32px;height:30px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.25);
+  background:rgba(255,255,255,.06);
+  color:#fff;font-size:13px;
+  cursor:pointer;transition:.2s
+}
+.pager button:hover{background:rgba(255,255,255,.2)}
+.pager button.active{
+  background:linear-gradient(180deg,#ffffff33,#ffffff10);
+  box-shadow:0 0 10px rgba(255,255,255,.5);
+  font-weight:700
+}
+
+/* ================= 전황표 ================= */
+.war-dashboard{
+  margin-bottom:18px;
+  padding:12px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#0e0e0e,#030303);
+  box-shadow:0 0 40px rgba(255,255,255,.25);
+}
+
+.war-title{
+  font-size:12px;
+  letter-spacing:3px;
+  opacity:.8;
+  margin-bottom:10px;
+}
+
+.war-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px;
+}
+
+.war-box{
+  padding:10px;
+  border-radius:10px;
+  background:linear-gradient(180deg,#1a1a1a,#050505);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 0 16px rgba(255,255,255,.2);
+}
+
+.war-box.pro{box-shadow:0 0 18px rgba(91,188,255,.35)}
+.war-box.con{box-shadow:0 0 18px rgba(255,107,107,.35)}
+
+.war-label{font-size:11px;opacity:.7}
+.war-stat{font-size:14px;margin:6px 0}
+.war-sub{font-size:10px;opacity:.6}
+
+/* ================= COMMENT WAR HEADER ================= */
+.comment-war-header{
+  margin:20px 0 12px;
+  padding:14px 14px 12px;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.9)),
+    repeating-linear-gradient(45deg,#060606,#060606 6px,#0c0c0c 6px,#0c0c0c 12px);
+  box-shadow:0 0 40px rgba(255,255,255,.35);
+}
+
+.comment-war-title{
+  font-size:15px;
+  font-weight:800;
+  letter-spacing:3px;
+  text-shadow:0 0 12px rgba(255,255,255,.5);
+}
+
+.comment-war-sub{
+  margin-top:6px;
+  font-size:11px;
+  opacity:.7;
+}
+
+.reply-actions{
+  margin-top:4px;
+  display:flex;
+  gap:10px;
+  font-size:11px;
+  opacity:.7;
+}
+
+.sub-reply-input{
+  margin-top:6px;
+  display:flex;
+  gap:6px;
+}
+
+.sub-reply-input input{
+  flex:1;
+  background:#111;
+  border:1px solid rgba(255,255,255,.25);
+  color:#fff;
+  padding:4px;
+  border-radius:4px;
+  font-size:11px;
+}
+
+.sub-reply-input button{
+  background:#222;
+  border:1px solid rgba(255,255,255,.3);
+  color:#fff;
+  padding:4px 8px;
+  border-radius:4px;
+  font-size:11px;
+  cursor:pointer;
+}
+
+.actions{
+  display:flex;
+  align-items:center;
+}
+
+.action-more{
+  margin-left:auto;
+  position:relative;
+  cursor:pointer;
+  padding:0 4px;
+  opacity:.6;
+}
+
+.action-more:hover{opacity:1}
+
+.action-menu{
+  position:absolute;
+  right:0;
+  top:16px;
+  background:#111;
+  border:1px solid rgba(255,255,255,.25);
+  border-radius:6px;
+  overflow:hidden;
+  display:none;
+  z-index:30;
+  box-shadow:0 0 12px rgba(255,255,255,.25);
+}
+
+.action-more:hover .action-menu{
+  display:block;
+}
+
+.action-menu div{
+  padding:6px 10px;
+  font-size:11px;
+  white-space:nowrap;
+}
+
+.action-menu div:hover{
+  background:rgba(255,255,255,.1);
+}
+
+/* ================= HP SUPPORT EFFECT ================= */
+.hp-support-glow{
+  position:absolute;
+  inset:0;
+  box-shadow:0 0 10px rgba(0,255,170,.9);
+  animation: supportPulse .9s ease-out;
+  pointer-events:none;
+}
+
+@keyframes supportPulse{
+  from{opacity:1}
+  to{opacity:0}
+}
+
+.hp-bar{
+  position:relative;   /* ← 이 줄 추가 */
+  width:50px;
+  height:5px;
+  background:#222;
+  border-radius:4px;
+  overflow:hidden;
+}
+
+</style>
+
+<div class="army-label pro">🔵 찬성 진영 · 댓글 284</div>
+
+<div class="billboard">
+  <div class="billboard-title">PRO BILLBOARD — 전황 최전선</div>
+  <div id="pro-bb"></div>
+  <div class="pager-wrap"><div class="pager" id="pro-bb-pager"></div></div>
+</div>
+
+<div class="billboard-title" style="margin-top:14px">PRO FRONTLINE — 교전 구역</div>
+<div id="pro-thread"></div>
+<div class="pager-wrap"><div class="pager" id="pro-th-pager"></div></div>
+
+<div class="battle-divider"></div>
+
+<div class="army-label con">🔴 반대 진영 · 댓글 317</div>
+
+<div class="billboard">
+  <div class="billboard-title">BILLBOARD — 전황 최전선</div>
+  <div id="con-bb"></div>
+  <div class="pager-wrap"><div class="pager" id="con-bb-pager"></div></div>
+</div>
+
+<div class="billboard-title" style="margin-top:14px">CON FRONTLINE — 교전 구역</div>
+<div id="con-thread"></div>
+<div class="pager-wrap"><div class="pager" id="con-th-pager"></div></div>
+
+<script>
+const PAGE_SIZE_BB=5, PAGE_SIZE_TH=4;
+
+const state={
+  pro:{bb:1,th:1,data:[]},
+  con:{bb:1,th:1,data:[]}
+}
+
+function user(){
+  const anon = Math.random() > .6;
+  const level = Math.floor(Math.random()*30) + 1;
+  return {
+    name: anon ? "익명" : "User" + Math.floor(Math.random()*1000),
+    anon,
+    level
+  }
+}
+
+function comment(side){
+  return{
+    side,
+    user:user(),
+    hp:Math.floor(Math.random()*40)+50,
+    text:"이 정책은 장기적으로 반드시 필요한 선택입니다.",
+    replies:Math.floor(Math.random()*8)+1,
+    atk:Math.floor(Math.random()*5),
+    sup:Math.floor(Math.random()*5),
+    def:Math.floor(Math.random()*5)
+  }
+}
+
+function makeReply(hp,text,side){
+  return `
+  <div class="reply" data-hp="${hp}">
+    <div class="head">
+      <div class="user">익명</div>
+      <div class="hp-wrap">
+        <div class="hp-bar">
+          <div class="hp-fill" style="width:${hp}%"></div>
+        </div>
+        <span class="hp-text">HP ${hp}</span>
+      </div>
+    </div>
+
+    <div class="body">└ ${text}</div>
+
+    <div class="reply-actions" data-side="${side}">
+      ❤4 👎1 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
+    </div>
+  </div>`;
+}
+
+function make(c){
+  const replyHP1 = Math.floor(Math.random()*40)+50;
+  const replyHP2 = Math.floor(Math.random()*40)+50;
+
+  return `
+  <div class="comment" data-hp="${c.hp}">
+    <div class="head">
+      <div class="user">
+        ${c.user.name}
+        <span class="level-badge">Lv.${c.user.level}</span>
+        ${c.user.anon?'<span class="anon">익명 · HP -20%</span>':''}
+      </div>
+      <div class="hp-wrap">
+        <div class="hp-bar">
+          <div class="hp-fill" style="width:${c.hp}%"></div>
+        </div>
+        <span class="hp-text">HP ${c.hp}</span>
+      </div>
+    </div>
+
+    <div class="body">${c.text}</div>
+
+    <div class="actions" data-side="${c.side}">
+      ❤12 👎3 ⚔공격 🛡방어 <span class="action-support">💣지원</span> 🔗
+    </div>
+
+    <div class="reply-meta">💬 ${c.replies} · ⚔ ${c.atk} · 🛡 ${c.def} · 💣 ${c.sup}</div>
+
+    <div class="replies">
+
+      ${makeReply(replyHP1, "상대 진영 반박: 전혀 동의할 수 없습니다.", c.side)}
+      ${makeReply(replyHP2, "같은 진영 지원: 좋은 의견입니다.", c.side)}
+
+      ${c.replies>2?`<div class="more">+ ${c.replies-2}개 더보기</div>`:""}
+    </div>
+  </div>`;
+}
+
+function render(side){
+  const s=state[side];
+
+  const bb=document.getElementById(side+"-bb");
+  bb.innerHTML=s.data.slice((s.bb-1)*PAGE_SIZE_BB,s.bb*PAGE_SIZE_BB).map(make).join("");
+
+  const th=document.getElementById(side+"-thread");
+  th.innerHTML=s.data.slice(5+(s.th-1)*PAGE_SIZE_TH,5+s.th*PAGE_SIZE_TH).map(make).join("");
+
+  buildPager(side,"bb",PAGE_SIZE_BB);
+  buildPager(side,"th",PAGE_SIZE_TH);
+}
+
+function buildPager(side,type,size){
+  const pager=document.getElementById(`${side}-${type}-pager`);
+  const s=state[side];
+  const total=Math.ceil((s.data.length-5)/size);
+  pager.innerHTML="";
+  for(let i=1;i<=total;i++){
+    const b=document.createElement("button");
+    b.textContent=i;
+    if(s[type]===i) b.classList.add("active");
+    b.onclick=()=>{s[type]=i;render(side);}
+    pager.appendChild(b);
+  }
+}
+
+function init(side){
+  state[side].data = Array.from({length:30}, () => comment(side));
+  render(side);
+}
+
+init("pro");init("con");
+
+document.addEventListener("click", e=>{
+  if(e.target.closest(".reply-actions")){
+    const reply = e.target.closest(".reply");
+    const box = reply.querySelector(".sub-reply-input");
+    box.hidden = !box.hidden;
+  }
+});
+
+document.addEventListener("click", e=>{
+  if(!e.target.classList.contains("action-support")) return;
+
+  const unit = e.target.closest(".comment, .reply");
+  let hp = Number(unit.dataset.hp);
+  hp = Math.min(hp + 12, 100);
+  unit.dataset.hp = hp;
+
+  const fill = unit.querySelector(".hp-fill");
+  fill.style.width = hp + "%";
+
+  const text = unit.querySelector(".hp-text");
+  text.textContent = "HP " + hp;
+
+  const bar = unit.querySelector(".hp-bar");
+  const glow = document.createElement("div");
+  glow.className = "hp-support-glow";
+  bar.appendChild(glow);
+
+  setTimeout(()=>glow.remove(),900);
+});
+</script>
+
+</section>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+    <div class="nav-item" onclick="location.href='index.html'"><img src="assets/icons/nav-home.svg"></div>
+    <div class="nav-item" onclick="location.href='search.html'"><img src="assets/icons/nav-search.svg"></div>
+    <div class="nav-item" onclick="location.href='write.html'"><img src="assets/icons/nav-write.svg"></div>
+    <div class="nav-item" onclick="location.href='random.html'"><img src="assets/icons/nav-random.svg"></div>
+    <div class="nav-item" onclick="location.href='mypage.html'"><img src="assets/icons/nav-user.svg"></div>
+</nav>
+
+<!-- VIDEO MODAL -->
+<div class="speech-backdrop" hidden>
+    <div class="speech-sheet">
+        <div class="speech-header">
+            <span class="speech-title">1분 엘리베이터 스피치</span>
+            <button class="speech-close">✕</button>
+        </div>
+
+        <video id="speech-video" playsinline></video>
+
+        <div class="speech-controls">
+            <div class="play-icon" id="play-icon">▶</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+</div> <!-- #app 끝 -->
+
+<!-- =========================
+   SUPPORT MODAL (CENTER)
+========================= -->
+<div id="support-modal" class="support-modal" hidden>
+  <div class="support-modal-box">
+    <button class="support-close" data-close>✕</button>
+
+    <h2 class="support-title">
+      이 진영에 보탬을 더합니다
+    </h2>
+
+    <p class="support-desc">
+      이 보탬은 승부를 가르는 행위가 아닙니다.<br>
+      이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.
+    </p>
+
+    <!-- 보탬 선택 -->
+    <div class="support-levels">
+      <button class="support-level" data-level="1">
+        <span class="level-title">🤏 작은 보탬</span>
+        <span class="level-desc">댓글·추천에서 기본 표식이 부여됩니다</span>
+      </button>
+
+      <button class="support-level" data-level="2">
+        <span class="level-title">💪 분명한 보탬</span>
+        <span class="level-desc">댓글 상단 노출 + 추천 반영 우선</span>
+      </button>
+
+      <button class="support-level" data-level="3">
+        <span class="level-title">🔥 강한 보탬</span>
+        <span class="level-desc">훈장 표식 + 진영 전황 기여도 강조</span>
+      </button>
+
+      <button class="support-level" data-level="4">
+        <span class="level-title">⚔️ 결정적 보탬</span>
+        <span class="level-desc">
+          고정 댓글 권한 · 진영 전세 수치 반영 강화
+        </span>
+      </button>
+    </div>
+
+    <!-- 직접 입력 -->
+    <div class="support-custom">
+      <label>직접 금액 입력</label>
+      <input type="number" placeholder="₩ 직접 입력" />
+      <p class="support-custom-desc">
+        직접 입력 보탬은 최상위 훈장과<br>
+        모든 댓글·추천 영역에서 최우선 표시됩니다.
+      </p>
+    </div>
+
+    <!-- 푸터 -->
+    <p class="support-footnote">
+      지원해 주신 보탬은 이 이슈를 만든 크리에이터와,<br>
+      사회에 도움이 필요한 곳에 함께 사용될 예정입니다.
+    </p>
+
+    <button class="support-confirm" disabled>
+      이 보탬을 실행합니다
+    </button>
+  </div>
+</div>
+
+<!-- Supabase CDN (non-module, GALLA 표준) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Supabase Client Initializer -->
+<script src="js/supabase.js"></script>
+
+<!-- Issue Page Logic -->
+<script type="module" src="js/issue.js"></script>
+
+<script>
+/* --------------------------
+    뒤로가기 기능
+-------------------------- */
+document.getElementById("btn-back").addEventListener("click", () => {
+    if (document.referrer) history.back();
+    else location.href = "index.html";
+});
+</script>
+
+<script>
+/* ==============================
+   SUPPORT MODAL OPEN / CLOSE
+============================== */
+
+const supportModal = document.getElementById("support-modal");
+
+document.addEventListener("click", (e) => {
+
+  // 닫기 버튼
+  if (e.target.matches("[data-close]")) {
+    supportModal.hidden = true;
+    return;
+  }
+
+  // 모달 바깥 클릭
+  if (e.target === supportModal) {
+    supportModal.hidden = true;
+  }
+
+});
+</script>
+
+<script>
+/* ==============================
+   SUPPORT BUTTON → MODAL OPEN
+============================== */
+
+document.addEventListener("click", (e) => {
+  const supportBtn = e.target.closest(".action-support");
+  if (!supportBtn) return;
+
+  const modal = document.getElementById("support-modal");
+  if (!modal) return;
+
+  modal.hidden = false;
+
+  // 진영 정보 추출
+  const box = supportBtn.closest(".actions, .reply-actions");
+  const side = box?.dataset?.side || "pro";
+
+  modal.dataset.side = side;
+  modal.classList.remove("pro", "con");
+  modal.classList.add(side);
+});
+</script>
+
+</body>
+</html>

@@ -6,6 +6,8 @@
 // shorts.js 상단
 document.addEventListener("DOMContentLoaded", async () => {
 
+  if (!document.getElementById("shortsOverlay")) return;
+
   // 🔥 Supabase 준비 대기
   while (!window.supabaseClient) {
     await new Promise(r => setTimeout(r, 30));
@@ -58,6 +60,9 @@ console.log("[shorts] loaded");
     if (!shortsData.length) return;
 
     overlay.innerHTML = "";
+    overlay.style.display = "block";
+    overlay.style.visibility = "visible";
+    overlay.style.pointerEvents = "auto";
     document.body.style.overflow = "hidden";
 
     shortsData.forEach((item, i) => {
@@ -230,6 +235,9 @@ function activateShort(index) {
     // 쇼츠 내용 제거
     overlay.innerHTML = "";
     overlay.scrollTop = 0;
+    overlay.style.display = "none";
+    overlay.style.visibility = "hidden";
+    overlay.style.pointerEvents = "none";
 
     // observer 해제
     if (observer) {
