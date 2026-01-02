@@ -31,8 +31,6 @@ body[data-page="shorts"] .header {
   margin: 0;
   
   background: #000;
-  visibility: visible;
-  pointer-events: auto;
 
   z-index: 10000;
 
@@ -57,9 +55,6 @@ body[data-page="shorts"] .header {
   scroll-snap-stop: always;
 }
 
-body[data-page="shorts"] #shortsOverlay {
-  display: block;
-}
 
 #shortsOverlay::-webkit-scrollbar {
   display: none;
