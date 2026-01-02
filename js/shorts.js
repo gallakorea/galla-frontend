@@ -278,7 +278,7 @@ document.addEventListener("click", async e => {
   }
 
   await window.GALLA_VOTE(currentIssueId, type);
-  lockVoteUI(currentIssueId, type);
+  lockVoteUI(type);
 });
 
 /* =========================
