@@ -113,7 +113,8 @@ function openShorts(list, startId) {
     const wrap = document.createElement("section");
     wrap.className = "short";
     wrap.dataset.index = i;
-    wrap.dataset.issueId = item.id;
+    wrap.dataset.issueId = item.id;      // JS용
+    wrap.setAttribute("data-issue-id", item.id); // 🔥 DOM selector용
 
     const video = document.createElement("video");
     video.src = item.video_url;
