@@ -221,3 +221,5 @@ console.log("[shorts] loaded");
     if (!overlay.innerHTML.trim()) return; // 쇼츠 열려 있을 때만
     closeShorts();
   });
+
+  })();   // ← 이게 반드시 있어야 함
