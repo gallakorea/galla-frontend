@@ -160,6 +160,21 @@ function openShorts(list, startId) {
     overlay.appendChild(wrap);
   });
 
+  // 🔥 FIX: 쇼츠 DOM 생성 직후 투표 상태 강제 동기화
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      const firstShort = overlay.querySelector('.short[data-issue-id]');
+      if (!firstShort) return;
+
+      const issueId = Number(firstShort.dataset.issueId);
+      if (!issueId) return;
+
+      if (typeof window.GALLA_CHECK_VOTE === 'function') {
+        window.GALLA_CHECK_VOTE(issueId);
+      }
+    }, 0);
+  });
+
   const startIndex =
     shorts.findIndex(v => Number(v.id) === Number(startId)) >= 0
       ? shorts.findIndex(v => Number(v.id) === Number(startId))

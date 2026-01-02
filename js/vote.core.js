@@ -162,38 +162,40 @@ async function checkVoteStatus(issueId) {
 }
 
   
-/* ========= Shorts (ISSUE ID SYNC – ALWAYS APPLY) ========= */
+/* ========= Shorts (FORCE SYNC BY ISSUE ID) ========= */
 document
   .querySelectorAll(`.short[data-issue-id="${issueId}"]`)
   .forEach(shortEl => {
-    const shortProBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
-    const shortConBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
-    if (!shortProBtn || !shortConBtn) return;
+    const proBtn = shortEl.querySelector('.shorts-vote .vote-btn.pro');
+    const conBtn = shortEl.querySelector('.shorts-vote .vote-btn.con');
+    if (!proBtn || !conBtn) return;
 
     // 초기화
-    shortProBtn.disabled = false;
-    shortConBtn.disabled = false;
+    proBtn.disabled = false;
+    conBtn.disabled = false;
 
-    shortProBtn.classList.remove("active-vote");
-    shortConBtn.classList.remove("active-vote");
+    proBtn.classList.remove("active-vote");
+    conBtn.classList.remove("active-vote");
 
-    shortProBtn.innerText = "👍 찬성이오";
-    shortConBtn.innerText = "👎 난 반댈세";
+    proBtn.innerText = "👍 찬성이오";
+    conBtn.innerText = "👎 난 반댈세";
 
-    // DB 기준 반영
+    // DB 결과 강제 반영
     if (data.type === "pro") {
-      shortProBtn.disabled = true;
-      shortConBtn.disabled = true;
-      shortProBtn.classList.add("active-vote");
-      shortProBtn.innerText = "👍 투표 완료";
-    } else if (data.type === "con") {
-      shortProBtn.disabled = true;
-      shortConBtn.disabled = true;
-      shortConBtn.classList.add("active-vote");
-      shortConBtn.innerText = "👎 투표 완료";
+      proBtn.disabled = true;
+      conBtn.disabled = true;
+      proBtn.classList.add("active-vote");
+      proBtn.innerText = "👍 투표 완료";
+    }
+
+    if (data.type === "con") {
+      proBtn.disabled = true;
+      conBtn.disabled = true;
+      conBtn.classList.add("active-vote");
+      conBtn.innerText = "👎 투표 완료";
     }
   });
-
+  
   /* ========= Index Cards ========= */
   document
     .querySelectorAll(`.card[data-id="${issueId}"]`)
