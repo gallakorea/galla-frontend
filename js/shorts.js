@@ -4,6 +4,8 @@
    - ⚠️ 쇼츠는 "shorts 페이지"가 아니라 index 위 오버레이로도 열린다.
 */
 
+window.__SHORTS_READY__ = false;
+
 // openShorts 호출이 "내부 오프너 준비"보다 빨리 와도 안전하게 큐잉 처리
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
 
@@ -125,7 +127,7 @@ async function syncVoteForIssue(issueId) {
   window.__OPEN_SHORTS_INTERNAL__ = function(list, startId) {
     // 실제 구현은 아래에서 재정의된다
     console.warn("[SHORTS] internal opener stub called before init");
-    window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
+    if (!window.__SHORTS_OPEN_QUEUE__) window.__SHORTS_OPEN_QUEUE__ = [];
     window.__SHORTS_OPEN_QUEUE__.push({ list, startId, at: Date.now() });
   };
   // ❌ 파일 전체 return 금지. 대신 "오버레이 활성 상태"로 가드한다.
@@ -243,6 +245,7 @@ async function syncVoteForIssue(issueId) {
     overlay = qs("shortsOverlay");
     if (!overlay) {
       console.error("[SHORTS] overlay missing");
+      window.__SHORTS_READY__ = true; // prevent index timeout loop
       return;
     }
 
@@ -558,15 +561,16 @@ function bindTouchEvents() {
   );
 }
 
-  /* =========================
+  /* ========================= 
      EXPORT + EVENTS
   ========================= */
   // 🔥 FINAL BIND: replace stub with real implementation
   window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
+  window.__SHORTS_READY__ = true;
   window.closeShorts = closeShorts;
 
   // 🔥 flush queued openShorts calls safely
-  if (window.__SHORTS_OPEN_QUEUE__?.length) {
+  if (window.__SHORTS_OPEN_QUEUE__?.length && window.__SHORTS_READY__) {
     const q = window.__SHORTS_OPEN_QUEUE__.splice(0);
     q.forEach((x) => {
       try {
