@@ -291,6 +291,9 @@ async function syncVoteForIssue(issueId) {
       /* 🔥 각 쇼츠는 화면 하나를 정확히 차지 */
       wrap.style.height = "100vh";
       wrap.style.width = "100vw";
+      // Add maxWidth and margin for centering
+      wrap.style.maxWidth = "480px";
+      wrap.style.margin = "0 auto";
       wrap.style.scrollSnapAlign = "start";
       wrap.style.overflow = "hidden";
       wrap.style.position = "relative";
@@ -301,6 +304,14 @@ async function syncVoteForIssue(issueId) {
       video.preload = "auto";
       video.loop = true;
       video.muted = true;
+      // Explicit sizing and fit styles for video
+      video.style.width = "100%";
+      video.style.height = "100%";
+      video.style.maxWidth = "480px";
+      video.style.margin = "0 auto";
+      video.style.objectFit = "cover";
+      video.style.display = "block";
+      video.style.backgroundColor = "#000";
 
       // vote bar
       const voteBar = document.createElement("div");
