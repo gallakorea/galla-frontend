@@ -237,6 +237,17 @@ async function syncVoteForIssue(issueId) {
     overlay.innerHTML = "";
     overlay.hidden = false;
     overlay.style.display = "block";
+
+    /* 🔥 쇼츠 핵심: overlay를 스크롤 컨테이너로 만든다 */
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.width = "100vw";
+    overlay.style.height = "100vh";
+    overlay.style.overflowY = "scroll";
+    overlay.style.overflowX = "hidden";
+    overlay.style.scrollSnapType = "y mandatory";
+    overlay.style.webkitOverflowScrolling = "touch";
+
     overlay.scrollTop = 0;
 
     // 🔒 index 투표 UI 완전 차단 (쇼츠 오버레이 동안)
@@ -268,6 +279,12 @@ async function syncVoteForIssue(issueId) {
       wrap.className = "short";
       wrap.dataset.issueId = item.id;
       wrap.setAttribute("data-issue-id", item.id);
+
+      /* 🔥 각 쇼츠는 화면 하나를 정확히 차지 */
+      wrap.style.height = "100vh";
+      wrap.style.width = "100vw";
+      wrap.style.scrollSnapAlign = "start";
+      wrap.style.position = "relative";
 
       const video = document.createElement("video");
       video.src = item.video_url;
@@ -367,6 +384,11 @@ async function syncVoteForIssue(issueId) {
 
     requestAnimationFrame(() => {
       if (!isShortsActive()) return;
+
+      /* 🔥 키보드 입력을 overlay가 직접 받도록 */
+      overlay.setAttribute("tabindex", "0");
+      overlay.focus();
+
       setupObserver();
       playOnly(firstIssueId);
       syncVoteForIssue(firstIssueId);
@@ -433,7 +455,7 @@ async function syncVoteForIssue(issueId) {
   let wheelAccum = 0;
   let wheelTimer = null;
 
-  window.addEventListener(
+  overlay?.addEventListener(
     "wheel",
     (e) => {
       if (!isShortsActive()) return;
