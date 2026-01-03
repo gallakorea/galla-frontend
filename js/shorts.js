@@ -12,6 +12,10 @@ async function waitForVoteReady(timeout = 3000) {
 }
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
+  // 🔒 Shorts-only guard
+  if (document.body?.dataset?.page !== "shorts") {
+    return;
+  }
 
   const page = document.body?.dataset?.page;
 
@@ -132,20 +136,24 @@ function setupObserver() {
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     playOnly(idx);
 
-    // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
-    queueMicrotask(async () => {
+    // 🔥 ALWAYS re-sync vote state when this short becomes active
+    (async () => {
       const ready = await waitForVoteReady();
       if (!ready) return;
 
       const raw = await window.GALLA_CHECK_VOTE(issueId);
       const result = raw === "pro" || raw === "con" ? raw : null;
-      if (!result) return;
 
       const active = overlay.querySelector(
         `.short[data-issue-id="${issueId}"]`
       );
-      applyShortVoteUI(active, result);
-    });
+
+      // ✅ reset first, then apply
+      applyShortVoteUI(active, null);
+      if (result) {
+        applyShortVoteUI(active, result);
+      }
+    })();
 
     },
     {
@@ -169,6 +177,7 @@ function openShorts(list, startId) {
 
   overlay.innerHTML = "";
   overlay.hidden = false;
+  window.dispatchEvent(new Event("shorts:opened"));
   overlay.style.display = "block";
   overlay.scrollTop = 0;
 
@@ -331,10 +340,11 @@ document.addEventListener("click", async e => {
   const issueId = Number(btn.dataset.issueId);
   if (!issueId) return;
 
-  // 🔒 이미 투표된 상태면 쇼츠에서 재투표 차단
+  // 🔥 Shorts must ignore cached index/issue state
   if (typeof window.GALLA_CHECK_VOTE === "function") {
-    const existing = await window.GALLA_CHECK_VOTE(issueId);
+    const existing = await window.GALLA_CHECK_VOTE(issueId, { force: true });
     if (existing === "pro" || existing === "con") {
+      applyShortVoteUI(btn.closest(".short"), existing);
       return;
     }
   }
@@ -357,6 +367,10 @@ document.addEventListener("click", async e => {
    EXPORT
 ========================= */
 window.openShorts = openShorts;
+// 🔥 Shorts opened → invalidate any previous vote-core UI cache
+window.addEventListener("shorts:opened", () => {
+  window.__GALLA_LAST_VOTE_APPLY__ = null;
+});
 window.closeShorts = closeShorts;
 
 })();
