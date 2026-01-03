@@ -40,6 +40,16 @@ async function waitForVoteReady(timeout = 5000) {
   }
   return false;
 }
+// ✅ vote 결과 정규화 (string / object 모두 대응)
+function normalizeVoteResult(raw) {
+  if (!raw) return null;
+  if (raw === "pro" || raw === "con") return raw;
+  if (typeof raw === "object") {
+    const t = raw.type || raw.vote || raw.result;
+    if (t === "pro" || t === "con") return t;
+  }
+  return null;
+}
 
 /* =========================
    VOTE UI HELPERS
@@ -85,9 +95,13 @@ async function syncVoteForIssue(issueId) {
 
   // force 옵션은 vote.core.js가 지원하는 경우만 의미 있음. (지원 안 해도 무해)
   const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
-  const result = raw === "pro" || raw === "con" ? raw : null;
+  const result = normalizeVoteResult(raw);
 
-  const wrap = document.querySelector(`.short[data-issue-id="${issueId}"]`);
+  // ✅ 오버레이 내부에서만 찾는다 (index 카드 등 외부 DOM 오염 방지)
+  const ov = document.getElementById("shortsOverlay");
+  if (!ov || ov.hidden || ov.style.display === "none") return;
+
+  const wrap = ov.querySelector(`.short[data-issue-id="${issueId}"]`);
   if (!wrap) return;
 
   // UI reset 후 결과 반영
@@ -257,6 +271,54 @@ async function syncVoteForIssue(issueId) {
       btnCon.dataset.type = "con";
       btnCon.textContent = "👎 난 반댈세";
 
+      // ✅ 쇼츠 투표는 버튼이 직접 처리 (전역 vote-core / document 핸들러 충돌 차단)
+      const onShortVoteClick = async (e) => {
+        // 기본/버블/캡처 모두 차단
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const b = e.currentTarget;
+        if (!b || b.disabled) return;
+
+        const issueId = Number(b.dataset.issueId);
+        if (!issueId) return;
+
+        // 이미 투표가 있으면 UI만 확정
+        if (typeof window.GALLA_CHECK_VOTE === "function") {
+          const existingRaw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
+          const existing = normalizeVoteResult(existingRaw);
+          if (existing === "pro" || existing === "con") {
+            await syncVoteForIssue(issueId);
+            return;
+          }
+        }
+
+        const type = b.classList.contains("pro") ? "pro" : "con";
+
+        if (typeof window.GALLA_VOTE !== "function") {
+          console.error("[SHORTS] GALLA_VOTE not found");
+          return;
+        }
+
+        // 낙관적 UI(즉시 반응)
+        const ov = document.getElementById("shortsOverlay");
+        const wrap2 = ov ? ov.querySelector(`.short[data-issue-id="${issueId}"]`) : null;
+        if (wrap2) applyShortVoteUI(wrap2, type);
+
+        try {
+          await window.GALLA_VOTE(issueId, type);
+        } catch (err) {
+          console.error("[SHORTS] vote error", err);
+        }
+
+        await syncVoteForIssue(issueId);
+      };
+
+      // 캡처 단계로 먼저 잡아서 어떤 전역 핸들러보다 우선
+      btnPro.addEventListener("click", onShortVoteClick, true);
+      btnCon.addEventListener("click", onShortVoteClick, true);
+
       voteBar.appendChild(btnPro);
       voteBar.appendChild(btnCon);
 
@@ -274,7 +336,7 @@ async function syncVoteForIssue(issueId) {
     requestAnimationFrame(() => {
       if (!isShortsActive()) return;
 
-      overlay.scrollTo({ top: startIndex * window.innerHeight, behavior: "instant" });
+      overlay.scrollTo({ top: startIndex * window.innerHeight, behavior: "auto" });
       setupObserver();
       playOnly(startIndex);
 
@@ -336,53 +398,6 @@ async function syncVoteForIssue(issueId) {
       }, 120);
     },
     { passive: true }
-  );
-
-  /* =========================
-     VOTE (DB SYNC)
-     - 캡처 단계에서 stopImmediatePropagation으로
-       vote-core 등 전역 핸들러 충돌을 차단한다.
-  ========================= */
-  document.addEventListener(
-    "click",
-    async (e) => {
-      if (!isShortsActive()) return;
-
-      const btn = e.target.closest(".shorts-vote .vote-btn");
-      if (!btn) return;
-
-      // ✅ 쇼츠 투표 클릭은 여기서 '단독' 처리 (전역 충돌 차단)
-      e.stopImmediatePropagation();
-
-      if (btn.disabled) return;
-
-      const issueId = Number(btn.dataset.issueId);
-      if (!issueId) return;
-
-      // 이미 투표 있으면 UI만 반영
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        const existing = await window.GALLA_CHECK_VOTE(issueId, { force: true });
-        if (existing === "pro" || existing === "con") {
-          await syncVoteForIssue(issueId);
-          return;
-        }
-      }
-
-      const type = btn.classList.contains("pro") ? "pro" : "con";
-
-      if (typeof window.GALLA_VOTE !== "function") {
-        console.error("[SHORTS] GALLA_VOTE not found");
-        return;
-      }
-
-      // ✅ 낙관적 UI(즉시 반응)
-      const wrap = document.querySelector(`.short[data-issue-id="${issueId}"]`);
-      if (wrap) applyShortVoteUI(wrap, type);
-
-      await window.GALLA_VOTE(issueId, type);
-      await syncVoteForIssue(issueId);
-    },
-    true // ✅ capture
   );
 
   /* =========================
