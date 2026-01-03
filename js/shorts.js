@@ -37,7 +37,10 @@ window.openShorts = function (list, startId) {
    CORE OPEN
 ========================= */
 function __openShortsInternal(list, startId) {
-  shortsList = (list || []).filter(v => v && v.video_url);
+  // 🔥 HARD FIX: 항상 video_url 있는 항목만, 순서 고정
+  shortsList = (list || [])
+    .filter(v => v && v.video_url)
+    .map(v => ({ id: Number(v.id), video_url: v.video_url }));
   if (!shortsList.length) return;
 
   overlay = document.getElementById("shortsOverlay");
@@ -117,6 +120,10 @@ function __openShortsInternal(list, startId) {
     shortsList.findIndex(v => v.id === startId)
   );
 
+  // 🔒 shorts-open 모드 명시 (vote / index 충돌 방지)
+  document.body.classList.add("shorts-open");
+  window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
+
   bindGestures();
   bindWheel();
   bindTapControls();
@@ -136,7 +143,10 @@ function moveToIndex(idx, instant = false) {
   currentIndex = idx;
 
   track.style.transition = instant ? "none" : "transform 0.35s cubic-bezier(.4,0,.2,1)";
-  track.style.transform = `translateY(-${idx * 100}vh)`;
+  // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
+  const h = window.innerHeight;
+  track.style.transform = `translateY(-${idx * h}px)`;
+  window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
 
   playOnlyCurrent();
   syncVote();
@@ -263,6 +273,8 @@ function syncVote() {
 ========================= */
 function closeShorts() {
   document.body.style.overflow = "";
+  document.body.classList.remove("shorts-open");
+  window.__CURRENT_SHORT_ISSUE_ID__ = null;
   if (overlay) {
     overlay.remove();
     overlay = null;

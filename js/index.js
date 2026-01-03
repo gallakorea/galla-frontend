@@ -266,14 +266,26 @@ async function attachEvents() {
         // 쇼츠 진입 전 context 준비
         prepareShortsVoteContext(id);
 
-        // ✅ FIX (HARD MATCH): 클릭한 이슈 1개만 쇼츠로 연다
-        // 매칭 오류 원인: 다중 리스트 + observer 전환 중 issueId 오염
-        const shortsList = [{
-          id: target.id,
-          video_url: target.video_url,
-        }];
+        // 🔥 영상이 있는 카드만으로 쇼츠 리스트 구성 (릴스/쇼츠 UX 필수)
+        const videoCards = cards.filter(c => c.video_url);
 
-        // startId는 반드시 shortsList[0].id 와 동일
+        // 🔥 클릭한 이슈가 리스트에 없으면 중단
+        const startIndex = videoCards.findIndex(c => c.id === target.id);
+        if (startIndex === -1) {
+          alert("이 이슈에는 쇼츠 영상이 없습니다.");
+          return;
+        }
+
+        // 🔥 영상-콘텐츠 1:1 매칭 유지 + 앞뒤 전환 가능
+        const shortsList = videoCards.map(c => ({
+          id: c.id,
+          video_url: c.video_url
+        }));
+
+        // 🔥 쇼츠 모드 진입 플래그
+        document.body.classList.add("shorts-open");
+
+        // startId는 반드시 클릭한 issue id
         openShortsSafe(shortsList, target.id);
     };
     });
