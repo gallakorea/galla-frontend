@@ -147,9 +147,30 @@ function renderCard(data) {
     </div>`;
 }
 
+
 // =========================================
 // 🔥 EVENTS
 // =========================================
+
+/* =========================================
+ * 🔥 SAFE SHORTS OPENER (index.js)
+ * shorts.js 로딩 타이밍 보호용
+ * ========================================= */
+function openShortsSafe(list, id, retry = 0) {
+    if (typeof window.openShorts === "function") {
+        window.openShorts(list, id);
+        return;
+    }
+
+    if (retry >= 20) {
+        console.error("[INDEX] openShorts timeout");
+        return;
+    }
+
+    setTimeout(() => {
+        openShortsSafe(list, id, retry + 1);
+    }, 50);
+}
 
 async function waitForSessionReady(timeout = 2500) {
   const start = Date.now();
@@ -220,8 +241,8 @@ async function attachEvents() {
         unlock.playsInline = true;
         unlock.play().catch(() => {});
 
-        // 쇼츠 진입
-        openShorts(cards, id);
+        // 쇼츠 진입 (SAFE)
+        openShortsSafe(cards, id);
     };
     });
 
