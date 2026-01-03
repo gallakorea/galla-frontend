@@ -124,7 +124,7 @@ async function syncVoteForIssue(issueId) {
   // ❌ 파일 전체 return 금지. 대신 "오버레이 활성 상태"로 가드한다.
   let overlay = null;
   let observer = null;
-  let currentIndex = -1;
+  let currentIssueId = null;
 
   /* =========================
      UTILS
@@ -138,9 +138,12 @@ async function syncVoteForIssue(issueId) {
     return !!(overlay && !overlay.hidden && overlay.style.display !== "none");
   }
 
-  function hardPauseAll(exceptIndex = null) {
-    document.querySelectorAll(".short video").forEach((v, i) => {
-      if (i === exceptIndex) return;
+  function hardPauseAll(exceptIssueId = null) {
+    document.querySelectorAll(".short").forEach((wrap) => {
+      const issueId = Number(wrap.dataset.issueId);
+      const v = wrap.querySelector("video");
+      if (!v) return;
+      if (issueId === exceptIssueId) return;
       try {
         v.pause();
         v.currentTime = 0;
@@ -149,27 +152,20 @@ async function syncVoteForIssue(issueId) {
     });
   }
 
-  function scrollToShort(index, behavior = "auto") {
-    if (!overlay) return;
-    const el = overlay.querySelector(`.short[data-index="${index}"]`);
-    if (!el) return;
-    el.scrollIntoView({ block: "start", behavior });
-  }
-
-  function playOnly(index) {
+  function playOnly(issueId) {
     if (!isShortsActive()) return;
-    if (currentIndex === index) return;
+    if (currentIssueId === issueId) return;
 
-    const wrap = overlay.querySelector(`.short[data-index="${index}"]`);
+    const wrap = overlay.querySelector(`.short[data-issue-id="${issueId}"]`);
     if (!wrap) return;
 
     const video = wrap.querySelector("video");
     if (!video) return;
 
-    currentIndex = index;
-    window.__GALLA_SHORTS_STATE__.currentIndex = index;
+    currentIssueId = issueId;
+    window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
 
-    hardPauseAll(index);
+    hardPauseAll(issueId);
 
     video.muted = true;
     video.currentTime = 0;
@@ -212,18 +208,12 @@ async function syncVoteForIssue(issueId) {
         if (!best) return;
         if (best.intersectionRatio < 0.6) return;
 
-        const idx = Number(best.target.dataset.index);
         const issueId = Number(best.target.dataset.issueId);
 
-        window.__CURRENT_SHORT_INDEX__ = idx;
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
-        // 🔥 vote-core 기준 issue를 쇼츠 기준으로 즉시 덮어쓰기
         window.__GALLA_ACTIVE_ISSUE_ID__ = issueId;
-        window.__GALLA_SHORTS_STATE__.currentIndex = idx;
 
-        playOnly(idx);
-
-        // ✅ 활성 쇼츠마다 동기화
+        playOnly(issueId);
         syncVoteForIssue(issueId);
       },
       { root: null, threshold: [0.25, 0.5, 0.6, 0.75, 0.9] }
@@ -272,7 +262,6 @@ async function syncVoteForIssue(issueId) {
     shorts.forEach((item, i) => {
       const wrap = document.createElement("section");
       wrap.className = "short";
-      wrap.dataset.index = i;
       wrap.dataset.issueId = item.id;
       wrap.setAttribute("data-issue-id", item.id);
 
@@ -369,19 +358,13 @@ async function syncVoteForIssue(issueId) {
     });
 
     const found = shorts.findIndex((v) => Number(v.id) === Number(startId));
-    const startIndex = found >= 0 ? found : 0;
-
-    const firstIssueId = Number(shorts[startIndex].id);
+    const firstIssueId = Number(shorts[found >= 0 ? found : 0].id);
     window.__CURRENT_SHORT_ISSUE_ID__ = firstIssueId;
 
     requestAnimationFrame(() => {
       if (!isShortsActive()) return;
-
-      scrollToShort(startIndex, "auto");
       setupObserver();
-      playOnly(startIndex);
-
-      // ✅ 최초 진입 동기화 (가장 중요)
+      playOnly(firstIssueId);
       syncVoteForIssue(firstIssueId);
     });
   }
@@ -391,7 +374,7 @@ async function syncVoteForIssue(issueId) {
   ========================= */
   function closeShorts() {
     hardPauseAll();
-    currentIndex = -1;
+    currentIssueId = null;
 
     if (observer) observer.disconnect();
 
@@ -425,11 +408,27 @@ async function syncVoteForIssue(issueId) {
     if (!isShortsActive()) return;
 
     if (e.key === "ArrowDown") {
-      scrollToShort(currentIndex + 1, "smooth");
+      const shorts = [...overlay.querySelectorAll(".short")];
+      const idx = shorts.findIndex(
+        el => Number(el.dataset.issueId) === currentIssueId
+      );
+      const target = shorts[idx + 1];
+      if (target) {
+        const nextIssueId = Number(target.dataset.issueId);
+        playOnly(nextIssueId);
+      }
     }
 
     if (e.key === "ArrowUp") {
-      scrollToShort(currentIndex - 1, "smooth");
+      const shorts = [...overlay.querySelectorAll(".short")];
+      const idx = shorts.findIndex(
+        el => Number(el.dataset.issueId) === currentIssueId
+      );
+      const target = shorts[idx - 1];
+      if (target) {
+        const nextIssueId = Number(target.dataset.issueId);
+        playOnly(nextIssueId);
+      }
     }
 
     if (e.key === "Escape") closeShorts();
@@ -454,7 +453,15 @@ async function syncVoteForIssue(issueId) {
         wheelAccum = 0;
         wheelTimer = null;
 
-        scrollToShort(currentIndex + dir, "smooth");
+        const shorts = [...overlay.querySelectorAll(".short")];
+        const idx = shorts.findIndex(
+          el => Number(el.dataset.issueId) === currentIssueId
+        );
+        const target = shorts[idx + dir];
+        if (target) {
+          const nextIssueId = Number(target.dataset.issueId);
+          playOnly(nextIssueId);
+        }
       }, 120);
     },
     { passive: true }
@@ -503,8 +510,8 @@ async function syncVoteForIssue(issueId) {
   });
 })();
 
-// 🔥 현재 활성 쇼츠 index 외부 노출 (vote.core.js용)
-window.__GALLA_SHORTS_STATE__ = window.__GALLA_SHORTS_STATE__ || { currentIndex: -1 };
+// 🔥 현재 활성 쇼츠 issueId 외부 노출 (vote.core.js용)
+window.__GALLA_SHORTS_STATE__ = window.__GALLA_SHORTS_STATE__ || { currentIssueId: null };
 // =========================
 // (안전장치) 전역 index 투표 차단 가드
 // =========================
