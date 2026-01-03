@@ -243,6 +243,15 @@ async function attachEvents() {
 
         const id = Number(btn.dataset.index);
 
+        // 🔥 반드시 클릭한 이슈가 영상이 있는지 먼저 검증
+        const target = cards.find(c => c.id === id);
+
+        if (!target || !target.video_url) {
+            console.warn("[INDEX] Shorts blocked: no video for issue", id);
+            alert("이 이슈에는 쇼츠 영상이 없습니다.");
+            return;
+        }
+
         /* ===============================
         🔥 AUTOPLAY UNLOCK (중요)
         사용자 제스처 컨텍스트 확보
@@ -255,10 +264,10 @@ async function attachEvents() {
         // 쇼츠 진입 전 context 준비
         prepareShortsVoteContext(id);
 
-        // ✅ FIX: 영상이 있는 카드만 전달 (index 순서 유지)
+        // ✅ 영상이 있는 이슈만 쇼츠 리스트로 구성 (순서 고정)
         const shortsList = cards.filter(c => !!c.video_url);
 
-        // 쇼츠 진입 (SAFE)
+        // 🔥 startId는 shortsList에 포함된 id만 전달됨 (매칭 보장)
         openShortsSafe(shortsList, id);
     };
     });
