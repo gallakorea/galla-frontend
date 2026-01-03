@@ -1,5 +1,5 @@
 // js/vote.core.js
-console.log("[vote.core] loaded — PURE CORE MODE");
+console.log("[vote.core] loaded — PURE CORE MODE (patched)");
 
 let votingInProgress = false;
 
@@ -32,6 +32,7 @@ async function vote(issueId, type) {
   }
 
   const session = await waitForSessionGuaranteed();
+  console.log("[VOTE][ACTION] session user_id:", session?.user?.id, "issueId:", issueId, "type:", type);
   if (!session) {
     votingInProgress = false;
     return "__SESSION_PENDING__";
@@ -67,6 +68,7 @@ async function getMyVote(issueId) {
   if (!supabase) return null;
 
   const session = await waitForSessionGuaranteed();
+  console.log("[VOTE][CHECK] session user_id:", session?.user?.id, "issueId:", issueId);
   if (!session) return "__SESSION_PENDING__";
 
   const { data } = await supabase
@@ -75,8 +77,16 @@ async function getMyVote(issueId) {
     .eq("issue_id", issueId)
     .eq("user_id", session.user.id)
     .maybeSingle();
+  console.log("[VOTE][CHECK] my vote row:", data);
 
-  if (!data) return "__NO_VOTE__";
+  if (!data) {
+    const { data: allVotes } = await supabase
+      .from("votes")
+      .select("user_id, type")
+      .eq("issue_id", issueId);
+    console.log("[VOTE][CHECK] all votes for issue:", allVotes);
+    return "__NO_VOTE__";
+  }
   return data.type;
 }
 
@@ -122,4 +132,6 @@ async function getVoteStats(issueId) {
 ========================= */
 window.GALLA_VOTE = vote;
 window.GALLA_GET_MY_VOTE = getMyVote;
+// 🔥 backward compatibility (issue / shorts expect this name)
+window.GALLA_CHECK_VOTE = getMyVote;
 window.GALLA_GET_VOTE_STATS = getVoteStats;
