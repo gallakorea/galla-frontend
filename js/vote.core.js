@@ -2,13 +2,13 @@
 console.log("[vote.core] loaded — PURE CORE MODE (patched)");
 
 function resolveActiveIssueId(fallbackIssueId) {
-  try {
-    const overlay = document.getElementById("shortsOverlay");
-    const shortsOpen = overlay && overlay.dataset && overlay.dataset.open === "1";
-    if (shortsOpen && typeof window.__CURRENT_SHORT_ISSUE_ID__ === "number") {
-      return window.__CURRENT_SHORT_ISSUE_ID__;
-    }
-  } catch {}
+  // 🔥 DOM 존재 여부 보지 말고 "모드"만 본다
+  if (
+    document.body.classList.contains("shorts-open") &&
+    typeof window.__CURRENT_SHORT_ISSUE_ID__ === "number"
+  ) {
+    return window.__CURRENT_SHORT_ISSUE_ID__;
+  }
   return fallbackIssueId;
 }
 

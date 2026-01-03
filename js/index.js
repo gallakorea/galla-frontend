@@ -255,13 +255,6 @@ async function attachEvents() {
         // 쇼츠 진입 전 context 준비
         prepareShortsVoteContext(id);
 
-        // 🔥🔥🔥 이 줄을 반드시 추가 🔥🔥🔥
-        window.dispatchEvent(new Event("shorts:opened"));
-
-        openShortsSafe(cards, id);
-
-
-
         // 쇼츠 진입 (SAFE)
         openShortsSafe(cards, id);
     };
@@ -270,6 +263,9 @@ async function attachEvents() {
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
+            // 🔥 쇼츠 오버레이 열려 있으면 index 투표 완전 차단
+            if (document.body.classList.contains("shorts-open")) return;
+
             e.stopPropagation();
 
             const type = btn.dataset.type;
