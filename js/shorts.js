@@ -1,3 +1,11 @@
+/* 🔥 GLOBAL SHORTS API (MUST BE FIRST) */
+window.openShorts = function(list, startId) {
+  if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+    window.__OPEN_SHORTS_INTERNAL__(list, startId);
+  } else {
+    console.error("[SHORTS] internal opener not ready");
+  }
+};
 // Wait for session and GALLA_CHECK_VOTE to be ready
 async function waitForVoteReady(timeout = 3000) {
   const start = Date.now();
@@ -170,7 +178,7 @@ function setupObserver() {
 /* =========================
    OPEN SHORTS
 ========================= */
-function openShorts(list, startId) {
+function __openShortsInternal(list, startId) {
   overlay = qs("shortsOverlay");
   if (!overlay) {
     console.error("[SHORTS] overlay missing");
@@ -368,7 +376,7 @@ document.addEventListener("click", async e => {
 /* =========================
    EXPORT
 ========================= */
-window.openShorts = openShorts;
+window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
 // 🔥 Shorts opened → invalidate any previous vote-core UI cache
 window.addEventListener("shorts:opened", () => {
   // vote-core UI 적용 캐시 전면 리셋
