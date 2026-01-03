@@ -250,19 +250,6 @@ async function syncVoteForIssue(issueId) {
     overlay.style.webkitOverflowScrolling = "touch";
     overlay.style.touchAction = "pan-y";
 
-    // 🔒 body 스크롤 완전 차단 (배경 index 이동 방지)
-    overlay.style.overscrollBehavior = "contain";
-
-    if (!window.__SHORTS_BLOCK_SCROLL__) {
-      window.__SHORTS_BLOCK_SCROLL__ = function (e) {
-        if (document.body.classList.contains("shorts-open")) {
-          e.preventDefault();
-        }
-      };
-      document.addEventListener("wheel", window.__SHORTS_BLOCK_SCROLL__, { passive: false });
-      document.addEventListener("touchmove", window.__SHORTS_BLOCK_SCROLL__, { passive: false });
-    }
-
     overlay.scrollTop = 0;
 
     // 🔒 index 투표 UI 완전 차단 (쇼츠 오버레이 동안)
@@ -441,13 +428,6 @@ async function syncVoteForIssue(issueId) {
     }
 
     document.body.style.overflow = "";
-
-    // 🔓 body 스크롤 차단 해제
-    if (window.__SHORTS_BLOCK_SCROLL__) {
-      document.removeEventListener("wheel", window.__SHORTS_BLOCK_SCROLL__);
-      document.removeEventListener("touchmove", window.__SHORTS_BLOCK_SCROLL__);
-      window.__SHORTS_BLOCK_SCROLL__ = null;
-    }
 
     // 🔓 index 투표 UI 복구
     document.body.classList.remove("shorts-open");
