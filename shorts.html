@@ -19,6 +19,12 @@
   ========================= -->
   <div id="shortsOverlay">
 
+    <!-- GLOBAL VOTE OVERLAY (PERSISTENT) -->
+    <div id="shortsVoteOverlay">
+      <button class="shorts-vote-btn pro" data-vote="pro">찬성이오</button>
+      <button class="shorts-vote-btn con" data-vote="con">반댈세</button>
+    </div>
+
     <!-- 🔥 하나의 short = 하나의 화면 (100svh) -->
     <!-- JS에서 이 .short들을 동적으로 생성/주입 -->
 
@@ -57,8 +63,6 @@
     </div>
   </nav>
 
-  <script src="js/vote.core.js"></script>
   <script type="module" src="js/shorts.js"></script>
-
 </body>
 </html>

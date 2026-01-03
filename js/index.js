@@ -211,21 +211,20 @@ async function attachEvents() {
 
         const id = Number(btn.dataset.index);
 
-        // autoplay unlock (유지)
+        /* ===============================
+        🔥 AUTOPLAY UNLOCK (중요)
+        사용자 제스처 컨텍스트 확보
+        =============================== */
         const unlock = document.createElement("video");
         unlock.muted = true;
         unlock.playsInline = true;
         unlock.play().catch(() => {});
 
-        // 🔥 쇼츠 페이지로 이동 + 시작 ID 전달
-        sessionStorage.setItem(
-        "__OPEN_SHORTS__",
-        JSON.stringify({ startId: id })
-        );
-
-        location.href = "shorts.html";
+        // 쇼츠 진입
+        openShorts(cards, id);
     };
     });
+
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
