@@ -255,8 +255,11 @@ async function attachEvents() {
         // 쇼츠 진입 전 context 준비
         prepareShortsVoteContext(id);
 
+        // ✅ FIX: 영상이 있는 카드만 전달 (index 순서 유지)
+        const shortsList = cards.filter(c => !!c.video_url);
+
         // 쇼츠 진입 (SAFE)
-        openShortsSafe(cards, id);
+        openShortsSafe(shortsList, id);
     };
     });
 
