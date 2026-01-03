@@ -238,59 +238,31 @@ async function syncVoteWithRetry(cardEl, id, retry = 0) {
 
 async function attachEvents() {
 
-    // 🎥 1분 엘리베이터 스피치
-    document.querySelectorAll(".speech-btn").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
+    // 🎥 SHORTS OPEN (delegated + capture)
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest(".speech-btn");
+        if (!btn) return;
 
-      const id = Number(btn.dataset.index);
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
 
-      // 🔥 반드시 클릭한 이슈가 영상이 있는지 먼저 검증
-      const target = cards.find(c => c.id === id);
+        const id = Number(btn.dataset.index);
+        const target = cards.find(c => c.id === id);
+        if (!target || !target.video_url) return;
 
-      if (!target || !target.video_url) {
-          console.warn("[INDEX] Shorts blocked: no video for issue", id);
-          alert("이 이슈에는 쇼츠 영상이 없습니다.");
-          return;
-      }
+        // prepare vote context
+        prepareShortsVoteContext(id);
 
-      /* ===============================
-      🔥 AUTOPLAY UNLOCK (중요)
-      사용자 제스처 컨텍스트 확보
-      =============================== */
-      const unlock = document.createElement("video");
-      unlock.muted = true;
-      unlock.playsInline = true;
-      unlock.play().catch(() => {});
+        const videoCards = cards.filter(c => c.video_url);
+        if (!videoCards.length) return;
 
-      // 쇼츠 진입 전 context 준비
-      prepareShortsVoteContext(id);
-
-      // 🔥 영상이 있는 카드만으로 쇼츠 리스트 구성 (릴스/쇼츠 UX 필수)
-      const videoCards = cards.filter(c => c.video_url);
-
-      // 🔥 클릭한 이슈가 리스트에 없으면 중단
-      const startIndex = videoCards.findIndex(c => c.id === target.id);
-      if (startIndex === -1) {
-        alert("이 이슈에는 쇼츠 영상이 없습니다.");
-        return;
-      }
-
-      // 🔥 영상-콘텐츠 1:1 매칭 유지 + 앞뒤 전환 가능
-      const shortsList = videoCards.map(c => ({
-        id: c.id,
-        video_url: c.video_url
-      }));
-
-      // 🔥 쇼츠 모드 진입 플래그
-      document.body.classList.add("shorts-open");
-
-      // startId는 반드시 클릭한 issue id
-      openShortsSafe(shortsList, target.id);
+        document.body.classList.add("shorts-open");
+        window.openShorts(
+            videoCards.map(c => ({ id: c.id, video_url: c.video_url })),
+            id
+        );
     }, true);
-    });
 
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
@@ -518,4 +490,23 @@ function openModal(msg) {
 }
 document.getElementById("modal-close").onclick = () => {
     document.getElementById("modal").style.display = "none";
+};
+// ===============================
+// 🔥 EMERGENCY SHORTS FORCE OPEN
+// ===============================
+window.__FORCE_OPEN_SHORTS__ = function () {
+    if (!window.openShorts) {
+        alert("openShorts not loaded");
+        return;
+    }
+    const videoCards = cards.filter(c => c.video_url);
+    if (!videoCards.length) {
+        alert("no video cards");
+        return;
+    }
+    document.body.classList.add("shorts-open");
+    window.openShorts(
+        videoCards.map(c => ({ id: c.id, video_url: c.video_url })),
+        videoCards[0].id
+    );
 };
