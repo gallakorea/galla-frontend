@@ -1,7 +1,52 @@
 /********************************************
  *  INDEX.JS — GALLA FINAL REAL DATA VERSION
  ********************************************/
+// ===============================
+// 🔥 GUARANTEED SHORTS OPENER (TOP-LEVEL, ONCE)
+// ===============================
+(function () {
+  if (window.__GALLA_SHORTS_OPENER_BOUND__) return;
+  window.__GALLA_SHORTS_OPENER_BOUND__ = true;
+
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.speech-btn');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    const id = Number(btn.dataset.index);
+    if (!Array.isArray(window.cards) || !window.cards.length) return;
+    const target = window.cards.find(c => c.id === id && c.video_url);
+    if (!target) return;
+
+    // force vote context
+    window.__GALLA_LAST_VOTE_APPLY__ = null;
+    window.__GALLA_LAST_VOTE_ISSUE__ = id;
+    window.__GALLA_LAST_VOTE_PAGE__ = 'shorts';
+    window.__CURRENT_SHORT_ISSUE_ID__ = id;
+
+    const list = window.cards.filter(c => c.video_url)
+      .map(c => ({ id: c.id, video_url: c.video_url }));
+    if (!list.length) return;
+
+    document.body.classList.add('shorts-open');
+
+    // wait until shorts engine is ready, then open
+    (function waitOpen(retry=0){
+      if (typeof window.openShorts === 'function') {
+        window.openShorts(list, id);
+        return;
+      }
+      if (retry > 40) return;
+      setTimeout(() => waitOpen(retry+1), 50);
+    })();
+  }, true);
+})();
 let cards = [];
+// expose for shorts opener
+window.cards = cards;
 let bestList;
 let recommendList;
 let bestMore;
@@ -238,32 +283,6 @@ async function syncVoteWithRetry(cardEl, id, retry = 0) {
 
 async function attachEvents() {
 
-    // 🎥 SHORTS OPEN (delegated + capture)
-    document.addEventListener("click", (e) => {
-        const btn = e.target.closest(".speech-btn");
-        if (!btn) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-
-        const id = Number(btn.dataset.index);
-        const target = cards.find(c => c.id === id);
-        if (!target || !target.video_url) return;
-
-        // prepare vote context
-        prepareShortsVoteContext(id);
-
-        const videoCards = cards.filter(c => c.video_url);
-        if (!videoCards.length) return;
-
-        document.body.classList.add("shorts-open");
-        window.openShorts(
-            videoCards.map(c => ({ id: c.id, video_url: c.video_url })),
-            id
-        );
-    }, true);
-
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
@@ -384,6 +403,8 @@ async function loadData() {
         ...c,
         war: warMap[c.id]
     }));
+
+    window.cards = cards;
 
     loadBest();
     loadRecommend();
