@@ -242,14 +242,15 @@ async function syncVoteForIssue(issueId) {
 
     overlay.innerHTML = "";
     overlay.hidden = false;
-    overlay.style.display = "block";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
 
     /* 🔥 쇼츠 핵심: overlay를 스크롤 컨테이너로 만든다 */
     overlay.style.position = "fixed";
     overlay.style.inset = "0";
     overlay.style.width = "100vw";
     overlay.style.height = "100vh";
-    overlay.style.overflowY = "scroll";
+    overlay.style.overflowY = "auto";
     overlay.style.overflowX = "hidden";
     overlay.style.scrollSnapType = "y mandatory";
     overlay.style.scrollSnapStop = "always";
@@ -311,6 +312,7 @@ async function syncVoteForIssue(issueId) {
       wrap.style.scrollSnapAlign = "start";
       wrap.style.overflow = "hidden";
       wrap.style.position = "relative";
+      wrap.style.flexShrink = "0";
 
       const video = document.createElement("video");
       video.src = item.video_url;
