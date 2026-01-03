@@ -390,6 +390,7 @@ async function syncVoteForIssue(issueId) {
       overlay.focus();
 
       setupObserver();
+      bindTouchEvents(); // ✅ 이 줄 추가
       playOnly(firstIssueId);
       syncVoteForIssue(firstIssueId);
     });
@@ -475,6 +476,69 @@ async function syncVoteForIssue(issueId) {
     },
     { passive: true }
   );
+
+  /* =========================
+   TOUCH SWIPE (MOBILE)
+========================= */
+let touchStartY = null;
+let touchEndY = null;
+
+function handleSwipe() {
+  if (!isShortsActive()) return;
+  if (touchStartY === null || touchEndY === null) return;
+
+  const delta = touchStartY - touchEndY;
+  const threshold = 60; // 스와이프 최소 거리(px)
+
+  if (Math.abs(delta) < threshold) return;
+
+  const idx = orderedIssueIds.indexOf(currentIssueId);
+  if (idx === -1) return;
+
+  if (delta > 0) {
+    // 위로 스와이프 → 다음 영상
+    const nextId = orderedIssueIds[idx + 1];
+    if (nextId) playOnly(nextId);
+  } else {
+    // 아래로 스와이프 → 이전 영상
+    const prevId = orderedIssueIds[idx - 1];
+    if (prevId) playOnly(prevId);
+  }
+}
+
+function bindTouchEvents() {
+  if (!overlay) return;
+
+  overlay.addEventListener(
+    "touchstart",
+    (e) => {
+      if (!isShortsActive()) return;
+      touchStartY = e.touches[0].clientY;
+      touchEndY = null;
+    },
+    { passive: true }
+  );
+
+  overlay.addEventListener(
+    "touchmove",
+    (e) => {
+      if (!isShortsActive()) return;
+      touchEndY = e.touches[0].clientY;
+    },
+    { passive: true }
+  );
+
+  overlay.addEventListener(
+    "touchend",
+    () => {
+      if (!isShortsActive()) return;
+      handleSwipe();
+      touchStartY = null;
+      touchEndY = null;
+    },
+    { passive: true }
+  );
+}
 
   /* =========================
      EXPORT + EVENTS
