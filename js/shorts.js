@@ -157,6 +157,12 @@ async function syncVoteForIssue(issueId) {
     if (!isShortsActive()) return;
     if (currentIssueId === issueId) return;
 
+    /* 🔥 force scroll to the correct snap position */
+    const target = overlay.querySelector(`.short[data-issue-id="${issueId}"]`);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
     const wrap = overlay.querySelector(`.short[data-issue-id="${issueId}"]`);
     if (!wrap) return;
 
@@ -207,7 +213,7 @@ async function syncVoteForIssue(issueId) {
         if (window.__SHORTS_VOTING_LOCK__ === true) return;
         const best = getMostVisibleEntry(entries);
         if (!best) return;
-        if (best.intersectionRatio < 0.75) return;
+        if (best.intersectionRatio < 0.6) return;
 
         const issueId = Number(best.target.dataset.issueId);
         if (!orderedIssueIds.includes(issueId)) return;
@@ -218,7 +224,7 @@ async function syncVoteForIssue(issueId) {
         playOnly(issueId);
         syncVoteForIssue(issueId);
       },
-      { root: overlay, threshold: [0.75] }
+      { root: overlay, threshold: [0.6] }
     );
 
     overlay.querySelectorAll(".short").forEach((el) => observer.observe(el));
@@ -246,7 +252,9 @@ async function syncVoteForIssue(issueId) {
     overlay.style.overflowY = "scroll";
     overlay.style.overflowX = "hidden";
     overlay.style.scrollSnapType = "y mandatory";
+    overlay.style.scrollSnapStop = "always";
     overlay.style.webkitOverflowScrolling = "touch";
+    overlay.style.touchAction = "pan-y";
 
     overlay.scrollTop = 0;
 
@@ -284,6 +292,7 @@ async function syncVoteForIssue(issueId) {
       wrap.style.height = "100vh";
       wrap.style.width = "100vw";
       wrap.style.scrollSnapAlign = "start";
+      wrap.style.overflow = "hidden";
       wrap.style.position = "relative";
 
       const video = document.createElement("video");
@@ -456,9 +465,10 @@ async function syncVoteForIssue(issueId) {
   let wheelAccum = 0;
   let wheelTimer = null;
 
-  overlay?.addEventListener(
+  overlay.addEventListener(
     "wheel",
     (e) => {
+      e.preventDefault();
       if (!isShortsActive()) return;
 
       wheelAccum += e.deltaY;
@@ -474,7 +484,7 @@ async function syncVoteForIssue(issueId) {
         if (nextId) playOnly(nextId);
       }, 120);
     },
-    { passive: true }
+    { passive: false }
   );
 
   /* =========================
@@ -496,11 +506,9 @@ function handleSwipe() {
   if (idx === -1) return;
 
   if (delta > 0) {
-    // 위로 스와이프 → 다음 영상
     const nextId = orderedIssueIds[idx + 1];
     if (nextId) playOnly(nextId);
   } else {
-    // 아래로 스와이프 → 이전 영상
     const prevId = orderedIssueIds[idx - 1];
     if (prevId) playOnly(prevId);
   }
