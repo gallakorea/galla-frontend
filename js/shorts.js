@@ -155,9 +155,6 @@ function setupObserver() {
         `.short[data-issue-id="${issueId}"]`
       );
 
-      // ✅ reset first, then apply
-      applyShortVoteUI(active, null);
-      // 디버그 로그 추가
       console.log("[SHORTS][SYNC]", { issueId, result });
       if (result) {
         applyShortVoteUI(active, result);
