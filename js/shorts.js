@@ -251,9 +251,8 @@ async function syncVoteForIssue(issueId) {
     overlay.style.overflowY = "scroll";
     overlay.style.overflowX = "hidden";
     overlay.style.scrollSnapType = "none";
-
-    overlay.style.webkitOverflowScrolling = "touch";
-    overlay.style.touchAction = "pan-y";
+    overlay.style.webkitOverflowScrolling = "auto"; // 🔥 iOS 관성 스크롤 제거
+    overlay.style.touchAction = "none";              // 🔥 브라우저 제스처 전면 차단
 
     overlay.scrollTop = 0;
 
@@ -489,33 +488,9 @@ if (!overlay.__wheelBound) {
   });
 
 
-  /* =========================
+/* =========================
    TOUCH SWIPE (MOBILE)
 ========================= */
-let touchStartY = null;
-let touchEndY = null;
-
-function handleSwipe() {
-  if (!isShortsActive()) return;
-  if (touchStartY === null || touchEndY === null) return;
-
-  const delta = touchStartY - touchEndY;
-  const threshold = 60; // 스와이프 최소 거리(px)
-
-  if (Math.abs(delta) < threshold) return;
-
-  const idx = orderedIssueIds.indexOf(currentIssueId);
-  if (idx === -1) return;
-
-  if (delta > 0) {
-    const nextId = orderedIssueIds[idx + 1];
-    if (nextId) playOnly(nextId);
-  } else {
-    const prevId = orderedIssueIds[idx - 1];
-    if (prevId) playOnly(prevId);
-  }
-}
-
 function bindTouchEvents() {
   if (!overlay) return;
 
@@ -523,33 +498,54 @@ function bindTouchEvents() {
   if (overlay.__touchBound) return;
   overlay.__touchBound = true;
 
+  let startY = null;
+  let lastY = null;
+
+  // touchstart: 시작점만 기록
   overlay.addEventListener(
     "touchstart",
     (e) => {
       if (!isShortsActive()) return;
-      touchStartY = e.touches[0].clientY;
-      touchEndY = null;
+      startY = e.touches[0].clientY;
+      lastY = startY;
     },
     { passive: true }
   );
 
+  // touchmove: 기본 스크롤을 차단하고 이동량만 추적
   overlay.addEventListener(
     "touchmove",
     (e) => {
       if (!isShortsActive()) return;
-      e.preventDefault();
-      touchEndY = e.touches[0].clientY;
+      e.preventDefault(); // 🔥 중요: 브라우저 스크롤 차단
+      lastY = e.touches[0].clientY;
     },
     { passive: false }
   );
 
+  // touchend: 이동량으로 다음/이전 쇼츠 결정
   overlay.addEventListener(
     "touchend",
     () => {
       if (!isShortsActive()) return;
-      handleSwipe();
-      touchStartY = null;
-      touchEndY = null;
+      if (startY === null || lastY === null) return;
+
+      const delta = startY - lastY;
+      const threshold = 60;
+
+      const idx = orderedIssueIds.indexOf(currentIssueId);
+      if (idx !== -1) {
+        if (delta > threshold) {
+          const nextId = orderedIssueIds[idx + 1];
+          if (nextId) playOnly(nextId);
+        } else if (delta < -threshold) {
+          const prevId = orderedIssueIds[idx - 1];
+          if (prevId) playOnly(prevId);
+        }
+      }
+
+      startY = null;
+      lastY = null;
     },
     { passive: true }
   );
