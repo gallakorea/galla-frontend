@@ -4,22 +4,6 @@
 ========================================================= */
 
 /* -------------------------
-   PAGE ISOLATION
-------------------------- */
-body[data-page="shorts"] {
-  margin: 0;
-  padding: 0;
-  background: #000;
-  /* overflow: hidden;  body scroll locked, container scroll only  -- removed as per instructions */
-}
-
-/* legacy header force hide */
-body[data-page="shorts"] header,
-body[data-page="shorts"] .header {
-  display: none !important;
-}
-
-/* -------------------------
    OVERLAY (SCROLL CONTAINER)
 ------------------------- */
 #shortsOverlay {
@@ -28,15 +12,13 @@ body[data-page="shorts"] .header {
   left: 0;
   right: 0;
 
-  /* ⛔️ DO NOT cover bottom nav */
-  bottom: 58px;
+  bottom: 58px; /* reserve nav height */
 
   width: 100vw;
   height: auto;
 
   background: #000;
 
-  /* 🔥 must be LOWER than nav */
   z-index: 8000;
 
   overflow-y: scroll;
@@ -191,54 +173,11 @@ body[data-page="shorts"] .header {
 
 /* 하단 네비 safe-area 보정 (iPhone 홈바 겹침 방지) */
 .nav {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* ================================
-   NAV — SHORTS PAGE BASELINE ONLY
-================================= */
-body[data-page="shorts"] .nav {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 58px;
-  z-index: 9000;
-  background: #000;
-  display: flex !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
 
-/* ================================
-   NAV — ALWAYS VISIBLE (ALL PAGES)
-================================ */
-.nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 58px;
-  background: #000;
-  z-index: 9000;
-}
-
-#shortsOverlay {
-  z-index: 8000;
-}
-
-.nav {
-  z-index: 9000;
-}
-
-/* =========================================================
-   NAV — GUARANTEED VISIBLE (SHORTS + ALL PAGES)
-========================================================= */
-.nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
   height: 58px;
   background: #000;
   z-index: 9000;
@@ -246,9 +185,6 @@ body[data-page="shorts"] .nav {
   display: flex !important;
   visibility: visible !important;
   opacity: 1 !important;
-}
 
-/* iOS safe-area support */
-.nav {
   padding-bottom: env(safe-area-inset-bottom);
 }
