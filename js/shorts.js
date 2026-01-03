@@ -239,16 +239,30 @@ async function syncVoteForIssue(issueId) {
     overlay.style.display = "block";
 
     /* 🔥 쇼츠 핵심: overlay를 스크롤 컨테이너로 만든다 */
+    // 🔥 overlay 스타일: 오버레이 자체를 유일한 스크롤 컨테이너로 고정
     overlay.style.position = "fixed";
-    overlay.style.inset = "0";
+    overlay.style.top = "0";
+    overlay.style.left = "0";
+    overlay.style.right = "0";
+    overlay.style.bottom = "0";
+
     overlay.style.width = "100vw";
-    overlay.style.height = "100vh";
+    overlay.style.height = "100dvh"; // 🔥 모바일 주소창 대응
     overlay.style.overflowY = "scroll";
     overlay.style.overflowX = "hidden";
+
     overlay.style.scrollSnapType = "y mandatory";
-    overlay.style.scrollSnapStop = "always";
     overlay.style.webkitOverflowScrolling = "touch";
+    overlay.style.overscrollBehavior = "contain"; // 🔥 body로 튕김 차단
     overlay.style.touchAction = "pan-y";
+
+    overlay.style.zIndex = "9999";
+
+    // 🔒 body + html 스크롤 완전 차단 (index가 움직이는 문제의 핵심 해결)
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.height = "100%";
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100%";
 
     overlay.scrollTop = 0;
 
@@ -269,7 +283,6 @@ async function syncVoteForIssue(issueId) {
     // 이벤트로 캐시 리셋 신호
     window.dispatchEvent(new Event("shorts:opened"));
 
-    document.body.style.overflow = "hidden";
 
     const shorts = (list || []).filter((v) => v && v.video_url);
     if (!shorts.length) return;
@@ -282,15 +295,14 @@ async function syncVoteForIssue(issueId) {
       wrap.dataset.issueId = item.id;
       wrap.setAttribute("data-issue-id", item.id);
 
-      /* 🔥 각 쇼츠는 화면 하나를 정확히 차지 */
-      wrap.style.height = "100vh";
-      wrap.style.width = "100vw";
-      // Add maxWidth and margin for centering
+      // 🔥 각 쇼츠는 scroll-snap 기준으로 단순화
+      wrap.style.height = "100dvh";
+      wrap.style.width = "100%";
       wrap.style.maxWidth = "480px";
       wrap.style.margin = "0 auto";
       wrap.style.scrollSnapAlign = "start";
-      wrap.style.overflow = "hidden";
       wrap.style.position = "relative";
+      wrap.style.overflow = "hidden";
 
       const video = document.createElement("video");
       video.src = item.video_url;
@@ -427,7 +439,11 @@ async function syncVoteForIssue(issueId) {
       delete overlay.dataset.open;
     }
 
+    // 🔓 body + html 스크롤 차단 해제 (원복)
+    document.documentElement.style.overflow = "";
+    document.documentElement.style.height = "";
     document.body.style.overflow = "";
+    document.body.style.height = "";
 
     // 🔓 index 투표 UI 복구
     document.body.classList.remove("shorts-open");
@@ -472,7 +488,7 @@ let touchStartY = null;
 let touchEndY = null;
 
 function handleSwipe() {
-  // 릴스/쇼츠 방식: 브라우저 scroll + scroll-snap에 전부 위임
+  // 🔥 scroll-snap에 전부 위임 (릴스/쇼츠 방식)
   return;
 }
 
