@@ -257,16 +257,6 @@ async function syncVoteForIssue(issueId) {
     overlay.style.touchAction = "pan-y";
     overlay.style.zIndex = "100"; // 네비보다 낮게
 
-    // 🔒 overlay에서 스크롤 이벤트를 완전히 소유
-    overlay.addEventListener("wheel", (e) => {
-      if (!isShortsActive()) return;
-      e.preventDefault();
-    }, { passive: false });
-
-    overlay.addEventListener("touchmove", (e) => {
-      if (!isShortsActive()) return;
-      e.preventDefault();
-    }, { passive: false });
 
     overlay.scrollTop = 0;
 
