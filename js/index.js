@@ -211,17 +211,21 @@ async function attachEvents() {
 
         const id = Number(btn.dataset.index);
 
-        // ✅ 쇼츠 진입 정보 저장
+        // autoplay unlock (유지)
+        const unlock = document.createElement("video");
+        unlock.muted = true;
+        unlock.playsInline = true;
+        unlock.play().catch(() => {});
+
+        // 🔥 쇼츠 페이지로 이동 + 시작 ID 전달
         sessionStorage.setItem(
         "__OPEN_SHORTS__",
         JSON.stringify({ startId: id })
         );
 
-        // ✅ 쇼츠 페이지로 이동
-        location.href = "/shorts";
+        location.href = "shorts.html";
     };
     });
-
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {

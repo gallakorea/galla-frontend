@@ -5,33 +5,22 @@
 
 // shorts.js 상단
 document.addEventListener("DOMContentLoaded", async () => {
-
-  // 🔥 Supabase 준비 대기
-  while (!window.supabaseClient) {
-    await new Promise(r => setTimeout(r, 30));
-  }
-
-  let startId = null;
-
   const saved = sessionStorage.getItem("__OPEN_SHORTS__");
-  if (saved) {
-    sessionStorage.removeItem("__OPEN_SHORTS__");
-    try {
-      startId = JSON.parse(saved)?.startId ?? null;
-    } catch {}
-  }
+  if (!saved) return;
 
-  // 🔥 쇼츠 데이터 로드 (fallback 포함)
+  sessionStorage.removeItem("__OPEN_SHORTS__");
+  const { startId } = JSON.parse(saved);
+
+  // ⚠️ 여기서 shorts 데이터 로딩
+  // 임시 예시 — 실제론 supabase fetch
   const { data } = await window.supabaseClient
     .from("issues")
     .select("id, video_url")
-    .not("video_url", "is", null)
-    .order("created_at", { ascending: false });
+    .not("video_url", "is", null);
 
   if (!data || !data.length) return;
 
-  // 👉 startId 없으면 첫 번째 쇼츠
-  window.openShorts(data, startId ?? data[0].id);
+  window.openShorts(data, startId);
 });
 
 
@@ -163,13 +152,13 @@ console.log("[shorts] loaded");
       const video = el.querySelector("video");
       if (!video) return;
 
-if (i === index) {
-  video.currentTime = 0;
-
-  // 🔒 처음엔 항상 muted
-  video.muted = true;
-  video.play().catch(() => {});
-}
+      if (i === index) {
+        video.currentTime = 0;
+        video.muted = true;
+        const p = video.play();
+        if (p?.then) {
+          p.then(() => (video.muted = false)).catch(() => {});
+        }
 
         const issueId = Number(el.dataset.issueId);
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
