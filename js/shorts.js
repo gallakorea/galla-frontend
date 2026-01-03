@@ -18,6 +18,37 @@ async function waitForVoteReady(timeout = 3000) {
   }
   return false;
 }
+
+// Forward declaration for applyShortVoteUI to avoid ReferenceError in syncVoteForIssue
+window.applyShortVoteUI = applyShortVoteUI;
+function applyShortVoteUI(wrap, result) {
+  if (!wrap) return;
+  const proBtn = wrap.querySelector(".vote-btn.pro");
+  const conBtn = wrap.querySelector(".vote-btn.con");
+  if (!proBtn || !conBtn) return;
+
+  // reset
+  proBtn.disabled = false;
+  conBtn.disabled = false;
+  proBtn.classList.remove("active-vote");
+  conBtn.classList.remove("active-vote");
+  proBtn.textContent = "👍 찬성이오";
+  conBtn.textContent = "👎 난 반댈세";
+
+  if (result === "pro") {
+    proBtn.disabled = true;
+    conBtn.disabled = true;
+    proBtn.classList.add("active-vote");
+    proBtn.textContent = "👍 투표 완료";
+  }
+  if (result === "con") {
+    proBtn.disabled = true;
+    conBtn.disabled = true;
+    conBtn.classList.add("active-vote");
+    conBtn.textContent = "👎 투표 완료";
+  }
+}
+
 async function syncVoteForIssue(issueId) {
   const ready = await waitForVoteReady();
   if (!ready) return;
@@ -104,33 +135,6 @@ function playOnly(index) {
   }
 }
 
-function applyShortVoteUI(wrap, result) {
-  if (!wrap) return;
-  const proBtn = wrap.querySelector(".vote-btn.pro");
-  const conBtn = wrap.querySelector(".vote-btn.con");
-  if (!proBtn || !conBtn) return;
-
-  // reset
-  proBtn.disabled = false;
-  conBtn.disabled = false;
-  proBtn.classList.remove("active-vote");
-  conBtn.classList.remove("active-vote");
-  proBtn.textContent = "👍 찬성이오";
-  conBtn.textContent = "👎 난 반댈세";
-
-  if (result === "pro") {
-    proBtn.disabled = true;
-    conBtn.disabled = true;
-    proBtn.classList.add("active-vote");
-    proBtn.textContent = "👍 투표 완료";
-  }
-  if (result === "con") {
-    proBtn.disabled = true;
-    conBtn.disabled = true;
-    conBtn.classList.add("active-vote");
-    conBtn.textContent = "👎 투표 완료";
-  }
-}
 
 /* =========================
    OBSERVER (CORE)
