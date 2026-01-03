@@ -9,6 +9,13 @@ console.log("[shorts] loaded");
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
 
+  // 🔒 NAV 보호: shorts는 overlay일 뿐, nav는 절대 숨기지 않는다
+  const nav = document.querySelector(".nav");
+  if (nav) {
+    nav.style.display = "";
+    nav.style.visibility = "";
+  }
+
   let observer = null;
   let currentIndex = -1;
   let shortsData = [];
@@ -225,35 +232,4 @@ console.log("[shorts] loaded");
     closeShorts();
   });
 
-/* =========================================================
-   AUTO BOOTSTRAP FOR /shorts PAGE
-   (standalone entry)
-========================================================= */
-console.log("[shorts] standalone page detected:", document.body?.dataset?.page === "shorts");
-document.addEventListener("DOMContentLoaded", () => {
-  // shorts 단독 페이지인 경우만 자동 실행
-  if (document.body?.dataset?.page !== "shorts") return;
-  if (!window.openShorts) return;
-
-  // 이미 실행된 경우 중복 방지
-  if (document.querySelector("#shortsOverlay .short")) return;
-
-  console.log("[shorts] auto bootstrap");
-
-  // ✅ 임시 더미 (실제 연동 전까지 필수)
-  window.openShorts(
-    [
-      {
-        id: 1,
-        video_url: "https://www.w3schools.com/html/mov_bbb.mp4"
-      },
-      {
-        id: 2,
-        video_url: "https://www.w3schools.com/html/movie.mp4"
-      }
-    ],
-    1
-  );
-});
-
-})();   // ← 이게 반드시 있어야 함
+})(); 
