@@ -430,9 +430,9 @@ async function syncVoteForIssue(issueId) {
       playOnly(firstIssueId);
       syncVoteForIssue(firstIssueId);
       /* 🔥 wheel / touch 이벤트를 shortsOverlay가 반드시 받도록 */
-      overlay.addEventListener("wheel", e => {
-        e.stopPropagation();
-      }, { passive: true });
+      // overlay.addEventListener("wheel", e => {
+      //   e.stopPropagation();
+      // }, { passive: true });
 
       overlay.addEventListener("touchmove", e => {
         e.stopPropagation();
@@ -500,6 +500,52 @@ async function syncVoteForIssue(issueId) {
 
     if (e.key === "Escape") closeShorts();
   });
+
+  /* =========================
+     WHEEL SNAP (DESKTOP – REAL REELS MODE)
+  ========================= */
+  let __WHEEL_LOCK__ = false;
+
+  if (typeof window !== "undefined") {
+    // overlay는 동적으로 할당되므로, observer처럼 바인딩 필요
+    const bindWheelSnap = () => {
+      if (!overlay) return;
+      overlay.addEventListener("wheel", (e) => {
+        if (!isShortsActive()) return;
+
+        // 반드시 overlay가 wheel을 먹도록
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (__WHEEL_LOCK__) return;
+        __WHEEL_LOCK__ = true;
+
+        const delta = e.deltaY;
+        const idx = orderedIssueIds.indexOf(currentIssueId);
+        if (idx === -1) {
+          __WHEEL_LOCK__ = false;
+          return;
+        }
+
+        if (delta > 0) {
+          const nextId = orderedIssueIds[idx + 1];
+          if (nextId) playOnly(nextId);
+        } else {
+          const prevId = orderedIssueIds[idx - 1];
+          if (prevId) playOnly(prevId);
+        }
+
+        // 릴스 특유의 딜레이
+        setTimeout(() => {
+          __WHEEL_LOCK__ = false;
+        }, 450);
+      }, { passive: false });
+    };
+    // overlay가 열릴 때마다 바인딩
+    window.addEventListener("shorts:opened", () => {
+      setTimeout(bindWheelSnap, 0);
+    });
+  }
 
 
   /* =========================
