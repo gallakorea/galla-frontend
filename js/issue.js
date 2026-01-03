@@ -53,7 +53,7 @@ async function forceInitialVoteSync(issueId) {
 }
 
 // ✅ 추가: applyVoteUI helper function
-function applyVoteUI(voteType) {
+function applyVoteUI(stance) {
   const btnPro = qs("btn-vote-pro");
   const btnCon = qs("btn-vote-con");
   if (!btnPro || !btnCon) return;
@@ -63,21 +63,18 @@ function applyVoteUI(voteType) {
   btnCon.classList.remove("active-vote");
   btnPro.disabled = false;
   btnCon.disabled = false;
-  btnPro.innerText = "👍 찬성이오";
-  btnCon.innerText = "👎 난 반댈세";
 
-  if (voteType === "pro") {
+  // lock only if already voted
+  if (stance === "pro") {
     btnPro.classList.add("active-vote");
     btnPro.disabled = true;
     btnCon.disabled = true;
-    btnPro.innerText = "👍 투표 완료";
   }
 
-  if (voteType === "con") {
+  if (stance === "con") {
     btnCon.classList.add("active-vote");
     btnPro.disabled = true;
     btnCon.disabled = true;
-    btnCon.innerText = "👎 투표 완료";
   }
 }
 
@@ -131,34 +128,40 @@ if (!issueId || Number.isNaN(issueId)) {
     return;
   }
 
-  renderIssue(issue);
+renderIssue(issue);
 
-  // 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)
-  await forceInitialVoteSync(issue.id);
+// 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)
+await forceInitialVoteSync(issue.id);
 
-  await initCommentSystem(issue.id);
-  forceBattleScrollWithRetry();
+await initCommentSystem(issue.id);
+forceBattleScrollWithRetry();
 
-  /* ===============================
-    AI ARGUMENT (논점)
-  =============================== */
-  if (typeof loadAiArguments === "function") {
-    loadAiArguments(issue);
-  }
+/* ===============================
+  AI ARGUMENT (논점)
+=============================== */
+if (typeof loadAiArguments === "function") {
+  loadAiArguments(issue);
+}
 
-  /* ===============================
-    AI NEWS (뉴스)
-  =============================== */
-  if (typeof loadAiNews === "function") {
-    loadAiNews(issue);
-  }
-  /* 🔥 통계 */
+/* ===============================
+  AI NEWS (뉴스)
+=============================== */
+if (typeof loadAiNews === "function") {
+  loadAiNews(issue);
+}
+/* 🔥 통계 */
   loadStats(issue.id);
 
   /* ===============================
     REST
-  =============================== */
+  ================================ */
   loadVoteStats(issue.id);
+  if (typeof window.GALLA_CHECK_VOTE === "function") {
+    const voteType = await window.GALLA_CHECK_VOTE(issue.id);
+    if (voteType === "pro" || voteType === "con") {
+      applyVoteUI(voteType);
+    }
+  }
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
   checkAuthorSupport(issue.id);
@@ -289,21 +292,31 @@ async function loadVoteStats(issueId) {
 
 qs("btn-vote-pro")?.addEventListener("click", async () => {
   if (!issueId) return;
+  if (typeof window.GALLA_VOTE !== "function") return;
+  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
   await window.GALLA_VOTE(issueId, "pro");
 
   const voteType = await window.GALLA_CHECK_VOTE(issueId);
-  applyVoteUI(voteType);
+  if (voteType === "pro" || voteType === "con") {
+    applyVoteUI(voteType);
+  }
+
   loadVoteStats(issueId);
 });
 
 qs("btn-vote-con")?.addEventListener("click", async () => {
   if (!issueId) return;
+  if (typeof window.GALLA_VOTE !== "function") return;
+  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
   await window.GALLA_VOTE(issueId, "con");
 
   const voteType = await window.GALLA_CHECK_VOTE(issueId);
-  applyVoteUI(voteType);
+  if (voteType === "pro" || voteType === "con") {
+    applyVoteUI(voteType);
+  }
+
   loadVoteStats(issueId);
 });
 
