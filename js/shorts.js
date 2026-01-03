@@ -2,12 +2,21 @@
    - index.js 에서 window.openShorts(list, startId) 를 호출한다.
    - shorts.js 는 항상 로드되어 있어야 하므로, 파일 전체 return 금지.
 */
+
+/** 내부 오프너 준비될 때까지 자체 재시도 (핵심) */
 window.openShorts = function (list, startId) {
-  if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-    window.__OPEN_SHORTS_INTERNAL__(list, startId);
-  } else {
-    console.error("[SHORTS] internal opener not ready");
-  }
+  const tryOpen = (retry = 0) => {
+    if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+      window.__OPEN_SHORTS_INTERNAL__(list, startId);
+      return;
+    }
+    if (retry >= 60) {
+      console.error("[SHORTS] internal opener not ready (timeout)");
+      return;
+    }
+    setTimeout(() => tryOpen(retry + 1), 50);
+  };
+  tryOpen();
 };
 
 // ✅ vote-core 준비 대기 (세션 + 함수)
@@ -23,6 +32,16 @@ async function waitForVoteReady(timeout = 5000) {
     await new Promise((r) => setTimeout(r, 100));
   }
   return false;
+}
+
+/** vote-core 반환값 표준화: "pro"/"con" 또는 {type:"pro|con"} 모두 지원 */
+function normalizeVoteResult(raw) {
+  if (raw === "pro" || raw === "con") return raw;
+  if (raw && typeof raw === "object") {
+    const t = raw.type || raw.vote || raw.stance;
+    if (t === "pro" || t === "con") return t;
+  }
+  return null;
 }
 
 /* =========================
@@ -59,16 +78,15 @@ async function syncVoteForIssue(issueId) {
   const ready = await waitForVoteReady();
   if (!ready) return;
 
+  // vote-core가 object를 줄 수도 있으니 normalize 필수
   const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
-  const result = raw === "pro" || raw === "con" ? raw : null;
+  const result = normalizeVoteResult(raw);
 
   const wrap = document.querySelector(`.short[data-issue-id="${issueId}"]`);
   if (!wrap) return;
 
   // 1) 일단 버튼을 풀어준다 (초기 disable 해제)
-  wrap.querySelectorAll(".vote-btn").forEach((b) => {
-    b.disabled = false;
-  });
+  wrap.querySelectorAll(".vote-btn").forEach((b) => (b.disabled = false));
 
   // 2) UI reset 후 결과 반영
   applyShortVoteUI(wrap, null);
@@ -78,17 +96,14 @@ async function syncVoteForIssue(issueId) {
 }
 
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO)
-   - observer / wheel / keydown / click 은 shorts 페이지에서만 동작
+   - observer / wheel / keydown / click 은 "오버레이 열림" 상태에서만 동작
 */
 (function () {
-  // NOTE:
-  // Shorts는 별도 페이지가 아니라 index 등 다른 페이지 위에 "오버레이"로 열릴 수 있음.
-  // 따라서 body dataset(page)로 가드하면 이벤트/observer가 죽는다.
-  // 아래 헬퍼로 "오버레이가 열려있는지"를 기준으로만 가드한다.
   let overlay = null;
   let observer = null;
   let currentIndex = -1;
 
+  // 🔥 오버레이 열림 여부 기준 (index 위 오버레이 구조 대응)
   function isOverlayOpen() {
     return !!(overlay && overlay.hidden === false && overlay.style.display !== "none");
   }
@@ -154,19 +169,19 @@ async function syncVoteForIssue(issueId) {
 
   function setupObserver() {
     if (!overlay) return;
-    if (!isOverlayOpen()) return;
 
     if (observer) observer.disconnect();
 
     observer = new IntersectionObserver(
       (entries) => {
         if (!isOverlayOpen()) return;
+
         const best = getMostVisibleEntry(entries);
         if (!best) return;
         if (best.intersectionRatio < 0.6) return;
 
         const idx = Number(best.target.dataset.index);
-        const issueId = Number(best.target.dataset.issueId);
+        const issueId = Number(best.target.dataset.issueId || best.target.getAttribute("data-issue-id"));
 
         window.__CURRENT_SHORT_INDEX__ = idx;
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
@@ -196,11 +211,11 @@ async function syncVoteForIssue(issueId) {
     overlay.innerHTML = "";
     overlay.hidden = false;
     overlay.style.display = "block";
+    overlay.style.overflowY = "scroll";
+    overlay.style.touchAction = "pan-y";
     overlay.scrollTop = 0;
 
-    // 오버레이 오픈 플래그 + 터치/스크롤 제스처 허용
     overlay.dataset.open = "1";
-    overlay.style.touchAction = "pan-y";
 
     // 이벤트로 캐시 리셋 신호
     window.dispatchEvent(new Event("shorts:opened"));
@@ -224,21 +239,22 @@ async function syncVoteForIssue(issueId) {
       video.loop = true;
       video.muted = true;
 
-      // ✅ vote bar 클래스는 반드시 shorts-vote 로 통일
+      // ✅ vote bar
       const voteBar = document.createElement("div");
       voteBar.className = "shorts-vote";
-      // 버튼 위에서 스와이프/스크롤이 죽지 않도록
       voteBar.style.touchAction = "pan-y";
 
       const btnPro = document.createElement("button");
       btnPro.className = "vote-btn pro";
       btnPro.dataset.issueId = item.id;
+      btnPro.dataset.type = "pro"; // ✅ vote-core 호환/오판 방지
       btnPro.textContent = "👍 찬성이오";
       btnPro.style.touchAction = "manipulation";
 
       const btnCon = document.createElement("button");
       btnCon.className = "vote-btn con";
       btnCon.dataset.issueId = item.id;
+      btnCon.dataset.type = "con"; // ✅ vote-core 호환/오판 방지
       btnCon.textContent = "👎 난 반댈세";
       btnCon.style.touchAction = "manipulation";
 
@@ -261,8 +277,8 @@ async function syncVoteForIssue(issueId) {
       setupObserver();
       playOnly(startIndex);
 
-      // ✅ 최초 진입 동기화 (여기가 가장 중요)
-      syncVoteForIssue(firstIssueId);
+      // ✅ 최초 진입 동기화
+      setTimeout(() => syncVoteForIssue(firstIssueId), 0);
     });
   }
 
@@ -289,7 +305,7 @@ async function syncVoteForIssue(issueId) {
      KEYBOARD (DESKTOP)
   ========================= */
   window.addEventListener("keydown", (e) => {
-    if (!overlay || overlay.hidden) return;
+    if (!isOverlayOpen()) return;
 
     if (e.key === "ArrowDown") overlay.scrollBy({ top: window.innerHeight, behavior: "smooth" });
     if (e.key === "ArrowUp") overlay.scrollBy({ top: -window.innerHeight, behavior: "smooth" });
@@ -305,7 +321,7 @@ async function syncVoteForIssue(issueId) {
   window.addEventListener(
     "wheel",
     (e) => {
-      if (!overlay || overlay.hidden) return;
+      if (!isOverlayOpen()) return;
 
       wheelAccum += e.deltaY;
       if (wheelTimer) return;
@@ -323,40 +339,48 @@ async function syncVoteForIssue(issueId) {
 
   /* =========================
      VOTE (DB SYNC)
+     - 캡처 단계에서 stopImmediatePropagation()으로 vote-core 충돌 차단
   ========================= */
-  document.addEventListener("click", async (e) => {
-    if (!isOverlayOpen()) return;
+  document.addEventListener(
+    "click",
+    async (e) => {
+      if (!isOverlayOpen()) return;
 
-    const btn = e.target.closest(".shorts-vote .vote-btn");
-    // 클릭이 다른 핸들러(카드 클릭 등)로 전파되지 않게
-    if (btn) e.stopPropagation();
-    if (!btn) return;
+      const btn = e.target.closest(".shorts-vote .vote-btn");
+      if (!btn) return;
 
-    // ✅ 클릭 즉시 반응이 없었던 이유: selector 불일치 / disabled / 가드
-    if (btn.disabled) return;
+      // ✅ vote-core 등 다른 핸들러가 같은 클릭을 먹지 못하게 차단
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-    const issueId = Number(btn.dataset.issueId);
-    if (!issueId) return;
+      if (btn.disabled) return;
 
-    // 이미 투표 있으면 UI만 반영
-    if (typeof window.GALLA_CHECK_VOTE === "function") {
-      const existing = await window.GALLA_CHECK_VOTE(issueId, { force: true });
-      if (existing === "pro" || existing === "con") {
-        await syncVoteForIssue(issueId);
+      const issueId = Number(btn.dataset.issueId);
+      if (!issueId) return;
+
+      // 이미 투표 있으면 UI만 반영
+      if (typeof window.GALLA_CHECK_VOTE === "function") {
+        const existingRaw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
+        const existing = normalizeVoteResult(existingRaw);
+        if (existing === "pro" || existing === "con") {
+          await syncVoteForIssue(issueId);
+          return;
+        }
+      }
+
+      const type = btn.dataset.type || (btn.classList.contains("pro") ? "pro" : "con");
+
+      if (typeof window.GALLA_VOTE !== "function") {
+        console.error("[SHORTS] GALLA_VOTE not found");
         return;
       }
-    }
 
-    const type = btn.classList.contains("pro") ? "pro" : "con";
-
-    if (typeof window.GALLA_VOTE !== "function") {
-      console.error("[SHORTS] GALLA_VOTE not found");
-      return;
-    }
-
-    await window.GALLA_VOTE(issueId, type);
-    await syncVoteForIssue(issueId);
-  });
+      await window.GALLA_VOTE(issueId, type);
+      await syncVoteForIssue(issueId);
+    },
+    true // ✅ capture!
+  );
 
   /* =========================
      EXPORT + EVENTS
