@@ -472,24 +472,8 @@ let touchStartY = null;
 let touchEndY = null;
 
 function handleSwipe() {
-  if (!isShortsActive()) return;
-  if (touchStartY === null || touchEndY === null) return;
-
-  const delta = touchStartY - touchEndY;
-  const threshold = 60; // 스와이프 최소 거리(px)
-
-  if (Math.abs(delta) < threshold) return;
-
-  const idx = orderedIssueIds.indexOf(currentIssueId);
-  if (idx === -1) return;
-
-  if (delta > 0) {
-    const nextId = orderedIssueIds[idx + 1];
-    if (nextId) playOnly(nextId);
-  } else {
-    const prevId = orderedIssueIds[idx - 1];
-    if (prevId) playOnly(prevId);
-  }
+  // 릴스/쇼츠 방식: 브라우저 scroll + scroll-snap에 전부 위임
+  return;
 }
 
 function bindTouchEvents() {
