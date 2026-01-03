@@ -3,18 +3,43 @@
    Native Scroll + Scroll Snap (NO TRANSFORM)
 ========================================================= */
 
+// shorts.js 상단
+document.addEventListener("DOMContentLoaded", async () => {
+
+  // 🔥 Supabase 준비 대기
+  while (!window.supabaseClient) {
+    await new Promise(r => setTimeout(r, 30));
+  }
+
+  let startId = null;
+
+  const saved = sessionStorage.getItem("__OPEN_SHORTS__");
+  if (saved) {
+    sessionStorage.removeItem("__OPEN_SHORTS__");
+    try {
+      startId = JSON.parse(saved)?.startId ?? null;
+    } catch {}
+  }
+
+  // 🔥 쇼츠 데이터 로드 (fallback 포함)
+  const { data } = await window.supabaseClient
+    .from("issues")
+    .select("id, video_url")
+    .not("video_url", "is", null)
+    .order("created_at", { ascending: false });
+
+  if (!data || !data.length) return;
+
+  // 👉 startId 없으면 첫 번째 쇼츠
+  window.openShorts(data, startId ?? data[0].id);
+});
+
+
 console.log("[shorts] loaded");
 
 (function () {
   const overlay = document.getElementById("shortsOverlay");
   if (!overlay) return;
-
-  // 🔒 NAV 보호: shorts는 overlay일 뿐, nav는 절대 숨기지 않는다
-  const nav = document.querySelector(".nav");
-  if (nav) {
-    nav.style.display = "";
-    nav.style.visibility = "";
-  }
 
   let observer = null;
   let currentIndex = -1;
@@ -29,18 +54,11 @@ console.log("[shorts] loaded");
         window.openShorts(list, startId) 호출
   ========================================================= */
   window.openShorts = function (list, startId = null) {
-    if (!overlay) return;
-
-    overlay.classList.add("active");
-
-    overlay.innerHTML = "";
-
-    const normalized = Array.isArray(list) ? list : [list];
-    shortsData = normalized.filter(v => v && v.video_url);
+    shortsData = list.filter(v => v && v.video_url);
     if (!shortsData.length) return;
 
-    // overlay 활성화 (CSS 상태 기반)
-    // Removed overlay.style.visibility = "visible";
+    overlay.innerHTML = "";
+    document.body.style.overflow = "hidden";
 
     shortsData.forEach((item, i) => {
       const section = document.createElement("section");
@@ -141,15 +159,17 @@ console.log("[shorts] loaded");
     if (index === currentIndex) return;
 
     const shorts = overlay.querySelectorAll(".short");
-
     shorts.forEach((el, i) => {
       const video = el.querySelector("video");
       if (!video) return;
 
-      if (i === index) {
-        video.currentTime = 0;
-        video.muted = true;
-        video.play().catch(() => {});
+if (i === index) {
+  video.currentTime = 0;
+
+  // 🔒 처음엔 항상 muted
+  video.muted = true;
+  video.play().catch(() => {});
+}
 
         const issueId = Number(el.dataset.issueId);
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
@@ -205,18 +225,24 @@ console.log("[shorts] loaded");
      CLOSE (ESC / BACK)
   ========================================================= */
   function closeShorts() {
-    overlay.classList.remove("active");
+    // body 스크롤 복구
+    document.body.style.overflow = "";
+
+    // 쇼츠 내용 제거
     overlay.innerHTML = "";
     overlay.scrollTop = 0;
 
+    // observer 해제
     if (observer) {
-      observer.disconnect();
-      observer = null;
-    }
+  observer.disconnect();
+  observer = null;
+}
 
+    // 🔥🔥🔥 vote bar 제거 (이게 빠져 있었음)
     const bar = document.querySelector(".shorts-vote");
     if (bar) bar.remove();
 
+    // 현재 쇼츠 상태 초기화
     window.__CURRENT_SHORT_ISSUE_ID__ = null;
   }
 
@@ -228,8 +254,4 @@ console.log("[shorts] loaded");
     closeShorts();
   });
 
-  window.addEventListener("popstate", () => {
-    closeShorts();
-  });
-
-})(); 
+  })();   // ← 이게 반드시 있어야 함
