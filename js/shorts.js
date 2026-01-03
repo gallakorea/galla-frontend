@@ -6,6 +6,22 @@ window.openShorts = function(list, startId) {
     console.error("[SHORTS] internal opener not ready");
   }
 };
+/* 🔥 Ensure internal opener is always registered (index-safe) */
+window.__OPEN_SHORTS_INTERNAL__ = function(list, startId) {
+  // Lazy-load behavior: ensure shorts page logic exists
+  if (typeof __openShortsInternal === "function") {
+    __openShortsInternal(list, startId);
+  } else {
+    console.warn("[SHORTS] internal opener not ready yet; retrying...");
+    const retry = setInterval(() => {
+      if (typeof __openShortsInternal === "function") {
+        clearInterval(retry);
+        __openShortsInternal(list, startId);
+      }
+    }, 100);
+    setTimeout(() => clearInterval(retry), 3000);
+  }
+};
 // Wait for session and GALLA_CHECK_VOTE to be ready
 async function waitForVoteReady(timeout = 3000) {
   const start = Date.now();
@@ -20,12 +36,7 @@ async function waitForVoteReady(timeout = 3000) {
 }
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
-  // 🔒 Shorts-only guard
-  if (document.body?.dataset?.page !== "shorts") {
-    return;
-  }
-
-  const page = document.body?.dataset?.page;
+  const isShortsPage = document.body?.dataset?.page === "shorts";
 
   // ❌ 함수 정의는 막지 말고
   // ⛔ observer / 이벤트만 shorts 페이지에서만 동작
@@ -123,6 +134,7 @@ function getMostVisibleEntry(entries) {
 }
 
 function setupObserver() {
+  if (!isShortsPage) return;
   if (observer) observer.disconnect();
 
   observer = new IntersectionObserver(
@@ -279,6 +291,7 @@ function __openShortsInternal(list, startId) {
    CLOSE SHORTS
 ========================= */
 function closeShorts() {
+  if (!isShortsPage) return;
   hardPauseAll();
   currentIndex = -1;
 
@@ -298,6 +311,7 @@ function closeShorts() {
 ========================= */
 
 window.addEventListener("keydown", e => {
+  if (!isShortsPage) return;
   if (!overlay || overlay.hidden) return;
 
   if (e.key === "ArrowDown") {
@@ -318,6 +332,7 @@ let wheelAccum = 0;
 let wheelTimer = null;
 
 window.addEventListener("wheel", e => {
+  if (!isShortsPage) return;
   if (!overlay || overlay.hidden) return;
 
   // 기본 스크롤 허용 (자연스러운 감속)
@@ -343,6 +358,7 @@ window.addEventListener("wheel", e => {
 
 /* 클릭 이벤트 (단일 바) */
 document.addEventListener("click", async e => {
+  if (!isShortsPage) return;
   const btn = e.target.closest(".shorts-vote .vote-btn");
   if (!btn || btn.disabled) return;
 
@@ -376,7 +392,7 @@ document.addEventListener("click", async e => {
 /* =========================
    EXPORT
 ========================= */
-window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
+
 // 🔥 Shorts opened → invalidate any previous vote-core UI cache
 window.addEventListener("shorts:opened", () => {
   // vote-core UI 적용 캐시 전면 리셋
