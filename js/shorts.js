@@ -94,9 +94,14 @@ function setupObserver() {
 
     // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
     queueMicrotask(async () => {
+      if (window.__LAST_SHORT_VOTE_SYNC__ === issueId) return;
+      window.__LAST_SHORT_VOTE_SYNC__ = issueId;
+
       if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
-      const result = await window.GALLA_CHECK_VOTE(issueId);
+      const raw = await window.GALLA_CHECK_VOTE(issueId);
+      const result = raw === "pro" || raw === "con" ? raw : null;
+      if (!result) return;
 
       const active = overlay.querySelector(
         `.short[data-issue-id="${issueId}"]`
@@ -224,7 +229,9 @@ function openShorts(list, startId) {
       if (!issueId) return;
 
       if (typeof window.GALLA_CHECK_VOTE === "function") {
-        const result = await window.GALLA_CHECK_VOTE(issueId);
+        const raw = await window.GALLA_CHECK_VOTE(issueId);
+        const result = raw === "pro" || raw === "con" ? raw : null;
+        if (!result) return;
 
         const active = overlay.querySelector(
           `.short[data-issue-id="${issueId}"]`
@@ -361,3 +368,4 @@ window.closeShorts = closeShorts;
 window.__GALLA_SHORTS_STATE__ = {
   currentIndex: -1
 };
+window.__LAST_SHORT_VOTE_SYNC__ = null;
