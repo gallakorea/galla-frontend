@@ -254,6 +254,14 @@ async function attachEvents() {
 
         // 쇼츠 진입 전 context 준비
         prepareShortsVoteContext(id);
+
+        // 🔥🔥🔥 이 줄을 반드시 추가 🔥🔥🔥
+        window.dispatchEvent(new Event("shorts:opened"));
+
+        openShortsSafe(cards, id);
+
+
+
         // 쇼츠 진입 (SAFE)
         openShortsSafe(cards, id);
     };
