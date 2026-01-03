@@ -64,7 +64,8 @@ function __openShortsInternal(list, startId) {
     zIndex: "50",
     background: "#000",
     overflow: "hidden",
-    touchAction: "none"
+    touchAction: "none",
+    overscrollBehavior: "contain"
   });
 
   /* ===== close btn ===== */
@@ -84,7 +85,7 @@ function __openShortsInternal(list, startId) {
   /* ===== track ===== */
   Object.assign(track.style, {
     width: "100%",
-    height: "100%",
+    height: `${shortsList.length * 100}vh`,
     transition: "transform 0.35s cubic-bezier(.4,0,.2,1)",
     willChange: "transform"
   });
@@ -95,7 +96,7 @@ function __openShortsInternal(list, startId) {
     section.dataset.issueId = item.id;
 
     Object.assign(section.style, {
-      height: `calc(100vh - ${NAV_HEIGHT}px)`,
+      height: "100vh",
       maxWidth: "480px",
       margin: "0 auto",
       position: "relative"
@@ -182,8 +183,12 @@ function bindGestures() {
     const dx = e.touches[0].clientX - startX;
     const dy = e.touches[0].clientY - startY;
 
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > CLOSE_THRESHOLD_X) {
-      track.style.transform = `translateX(${dx}px)`;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      track.style.transform = `
+        translateX(${dx}px)
+        translateY(-${currentIndex * window.innerHeight}px)
+      `;
+      track.style.opacity = `${1 - Math.min(Math.abs(dx) / 300, 0.5)}`;
       return;
     }
 
@@ -193,6 +198,7 @@ function bindGestures() {
   overlay.addEventListener("touchend", e => {
     isDragging = false;
     track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
+    track.style.opacity = "1";
 
     const dy = e.changedTouches[0].clientY - startY;
     const dx = e.changedTouches[0].clientX - startX;
@@ -276,6 +282,7 @@ function closeShorts() {
   document.body.classList.remove("shorts-open");
   window.__CURRENT_SHORT_ISSUE_ID__ = null;
   if (overlay) {
+    track = null;
     overlay.remove();
     overlay = null;
   }
