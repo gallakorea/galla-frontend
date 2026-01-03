@@ -35,7 +35,8 @@ async function vote(issueId, type) {
   console.log("[VOTE][ACTION] session user_id:", session?.user?.id, "issueId:", issueId, "type:", type);
   if (!session) {
     votingInProgress = false;
-    return "__SESSION_PENDING__";
+    console.warn("[VOTE][ACTION] session not ready");
+    return null;
   }
 
   const { error } = await supabase.from("votes").insert({
@@ -49,13 +50,19 @@ async function vote(issueId, type) {
   // 이미 투표한 경우
   if (error) {
     if (error.code === "23505" || error.status === 409) {
-      return await getMyVote(issueId);
+      const existing = await getMyVote(issueId);
+      console.log("[VOTE][ACTION] already voted:", existing);
+      console.log("[VOTE][ACTION] normalized return value:", existing);
+      return existing;
     }
     console.error("[VOTE] insert error", error);
+    console.log("[VOTE][ACTION] normalized return value:", null);
     return null;
   }
 
-  return type;
+  const normalized = type === "pro" || type === "con" ? type : null;
+  console.log("[VOTE][ACTION] normalized return value:", normalized);
+  return normalized;
 }
 
 /* =========================
@@ -69,7 +76,10 @@ async function getMyVote(issueId) {
 
   const session = await waitForSessionGuaranteed();
   console.log("[VOTE][CHECK] session user_id:", session?.user?.id, "issueId:", issueId);
-  if (!session) return "__SESSION_PENDING__";
+  if (!session) {
+    console.warn("[VOTE][CHECK] session not ready");
+    return null;
+  }
 
   const { data } = await supabase
     .from("votes")
@@ -79,15 +89,15 @@ async function getMyVote(issueId) {
     .maybeSingle();
   console.log("[VOTE][CHECK] my vote row:", data);
 
-  if (!data) {
-    const { data: allVotes } = await supabase
-      .from("votes")
-      .select("user_id, type")
-      .eq("issue_id", issueId);
-    console.log("[VOTE][CHECK] all votes for issue:", allVotes);
-    return "__NO_VOTE__";
+  if (!data || !data.type) {
+    console.log("[VOTE][CHECK] no vote for this user");
+    console.log("[VOTE][CHECK] normalized result:", null);
+    return null;
   }
-  return data.type;
+
+  const normalized = data.type === "pro" || data.type === "con" ? data.type : null;
+  console.log("[VOTE][CHECK] normalized result:", normalized);
+  return normalized;
 }
 
 /* =========================
