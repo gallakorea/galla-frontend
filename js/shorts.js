@@ -277,17 +277,19 @@ async function syncVoteForIssue(issueId) {
     // 이벤트로 캐시 리셋 신호
     window.dispatchEvent(new Event("shorts:opened"));
 
-    // document.body.style.overflow = "hidden";
-    // ✅ index 컨텐츠만 고정 (네비게이션은 제외)
-    const app = document.getElementById("app");
-    if (app) {
-      app.style.position = "fixed";
-      app.style.top = "0";
-      app.style.left = "0";
-      app.style.right = "0";
-      app.style.bottom = "0";
-      app.style.overflow = "hidden";
+    // 🔥 Allow shorts scroll while keeping nav visible
+    const nav = document.querySelector("nav");
+    if (nav) {
+      nav.setAttribute("data-shorts-nav", "1");
+      nav.style.pointerEvents = "none";
     }
+    document.querySelectorAll("nav a, nav button").forEach(el => {
+      el.style.pointerEvents = "auto";
+    });
+
+    // 🔥 Block index page scrolling but NOT shorts overlay
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overscrollBehavior = "none";
 
     const shorts = (list || []).filter((v) => v && v.video_url);
     if (!shorts.length) return;
@@ -445,17 +447,14 @@ async function syncVoteForIssue(issueId) {
       delete overlay.dataset.open;
     }
 
-    // document.body.style.overflow = "";
-    // ✅ index 컨테이너 복구
-    const app = document.getElementById("app");
-    if (app) {
-      app.style.position = "";
-      app.style.top = "";
-      app.style.left = "";
-      app.style.right = "";
-      app.style.bottom = "";
-      app.style.overflow = "";
-    }
+    // 🔓 Restore nav interaction
+    document.querySelectorAll('[data-shorts-nav="1"]').forEach(nav => {
+      nav.style.pointerEvents = "";
+      nav.removeAttribute("data-shorts-nav");
+    });
+
+    document.documentElement.style.overscrollBehavior = "";
+    document.body.style.overscrollBehavior = "";
 
     // 🔓 index 투표 UI 복구
     document.body.classList.remove("shorts-open");
