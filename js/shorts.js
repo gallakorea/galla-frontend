@@ -312,10 +312,6 @@ async function syncVoteForIssue(issueId) {
           return;
         }
 
-        // 낙관적 UI(즉시 반응)
-        const ov = document.getElementById("shortsOverlay");
-        const wrap2 = ov ? ov.querySelector(`.short[data-issue-id="${issueId}"]`) : null;
-        if (wrap2) applyShortVoteUI(wrap2, type);
 
         try {
           await window.GALLA_VOTE(issueId, type);
