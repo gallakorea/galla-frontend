@@ -1,6 +1,17 @@
 // js/vote.core.js
 console.log("[vote.core] loaded — PURE CORE MODE (patched)");
 
+function resolveActiveIssueId(fallbackIssueId) {
+  try {
+    const overlay = document.getElementById("shortsOverlay");
+    const shortsOpen = overlay && overlay.dataset && overlay.dataset.open === "1";
+    if (shortsOpen && typeof window.__CURRENT_SHORT_ISSUE_ID__ === "number") {
+      return window.__CURRENT_SHORT_ISSUE_ID__;
+    }
+  } catch {}
+  return fallbackIssueId;
+}
+
 let votingInProgress = false;
 
 /* =========================
@@ -22,6 +33,7 @@ async function waitForSessionGuaranteed(timeout = 5000) {
    VOTE ACTION
 ========================= */
 async function vote(issueId, type) {
+  issueId = resolveActiveIssueId(issueId);
   if (!issueId || votingInProgress) return;
   votingInProgress = true;
 
@@ -69,6 +81,7 @@ async function vote(issueId, type) {
    GET MY VOTE
 ========================= */
 async function getMyVote(issueId) {
+  issueId = resolveActiveIssueId(issueId);
   if (!issueId) return null;
 
   const supabase = window.supabaseClient;
@@ -143,5 +156,9 @@ async function getVoteStats(issueId) {
 window.GALLA_VOTE = vote;
 window.GALLA_GET_MY_VOTE = getMyVote;
 // 🔥 backward compatibility (issue / shorts expect this name)
-window.GALLA_CHECK_VOTE = getMyVote;
+const __GALLA_ORIG_GET_MY_VOTE__ = getMyVote;
+window.GALLA_CHECK_VOTE = async function(issueId, opts) {
+  const resolved = resolveActiveIssueId(issueId);
+  return __GALLA_ORIG_GET_MY_VOTE__(resolved);
+};
 window.GALLA_GET_VOTE_STATS = getVoteStats;
