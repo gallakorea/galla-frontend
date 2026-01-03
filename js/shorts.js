@@ -20,10 +20,7 @@ async function waitForVoteReady(timeout = 3000) {
 }
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
-  // 🔒 Shorts-only guard
-  if (document.body?.dataset?.page !== "shorts") {
-    return;
-  }
+  const isShortsPage = document.body?.dataset?.page === "shorts";
 
   const page = document.body?.dataset?.page;
 
@@ -123,10 +120,12 @@ function getMostVisibleEntry(entries) {
 }
 
 function setupObserver() {
+  if (!isShortsPage) return;
   if (observer) observer.disconnect();
 
   observer = new IntersectionObserver(
     entries => {
+      if (!isShortsPage) return;
       const best = getMostVisibleEntry(entries);
       if (!best) return;
 
@@ -298,6 +297,7 @@ function closeShorts() {
 ========================= */
 
 window.addEventListener("keydown", e => {
+  if (!isShortsPage) return;
   if (!overlay || overlay.hidden) return;
 
   if (e.key === "ArrowDown") {
@@ -318,6 +318,7 @@ let wheelAccum = 0;
 let wheelTimer = null;
 
 window.addEventListener("wheel", e => {
+  if (!isShortsPage) return;
   if (!overlay || overlay.hidden) return;
 
   // 기본 스크롤 허용 (자연스러운 감속)
