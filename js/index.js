@@ -240,54 +240,56 @@ async function attachEvents() {
 
     // 🎥 1분 엘리베이터 스피치
     document.querySelectorAll(".speech-btn").forEach(btn => {
-    btn.onclick = e => {
-        e.stopPropagation();
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-        const id = Number(btn.dataset.index);
+      const id = Number(btn.dataset.index);
 
-        // 🔥 반드시 클릭한 이슈가 영상이 있는지 먼저 검증
-        const target = cards.find(c => c.id === id);
+      // 🔥 반드시 클릭한 이슈가 영상이 있는지 먼저 검증
+      const target = cards.find(c => c.id === id);
 
-        if (!target || !target.video_url) {
-            console.warn("[INDEX] Shorts blocked: no video for issue", id);
-            alert("이 이슈에는 쇼츠 영상이 없습니다.");
-            return;
-        }
-
-        /* ===============================
-        🔥 AUTOPLAY UNLOCK (중요)
-        사용자 제스처 컨텍스트 확보
-        =============================== */
-        const unlock = document.createElement("video");
-        unlock.muted = true;
-        unlock.playsInline = true;
-        unlock.play().catch(() => {});
-
-        // 쇼츠 진입 전 context 준비
-        prepareShortsVoteContext(id);
-
-        // 🔥 영상이 있는 카드만으로 쇼츠 리스트 구성 (릴스/쇼츠 UX 필수)
-        const videoCards = cards.filter(c => c.video_url);
-
-        // 🔥 클릭한 이슈가 리스트에 없으면 중단
-        const startIndex = videoCards.findIndex(c => c.id === target.id);
-        if (startIndex === -1) {
+      if (!target || !target.video_url) {
+          console.warn("[INDEX] Shorts blocked: no video for issue", id);
           alert("이 이슈에는 쇼츠 영상이 없습니다.");
           return;
-        }
+      }
 
-        // 🔥 영상-콘텐츠 1:1 매칭 유지 + 앞뒤 전환 가능
-        const shortsList = videoCards.map(c => ({
-          id: c.id,
-          video_url: c.video_url
-        }));
+      /* ===============================
+      🔥 AUTOPLAY UNLOCK (중요)
+      사용자 제스처 컨텍스트 확보
+      =============================== */
+      const unlock = document.createElement("video");
+      unlock.muted = true;
+      unlock.playsInline = true;
+      unlock.play().catch(() => {});
 
-        // 🔥 쇼츠 모드 진입 플래그
-        document.body.classList.add("shorts-open");
+      // 쇼츠 진입 전 context 준비
+      prepareShortsVoteContext(id);
 
-        // startId는 반드시 클릭한 issue id
-        openShortsSafe(shortsList, target.id);
-    };
+      // 🔥 영상이 있는 카드만으로 쇼츠 리스트 구성 (릴스/쇼츠 UX 필수)
+      const videoCards = cards.filter(c => c.video_url);
+
+      // 🔥 클릭한 이슈가 리스트에 없으면 중단
+      const startIndex = videoCards.findIndex(c => c.id === target.id);
+      if (startIndex === -1) {
+        alert("이 이슈에는 쇼츠 영상이 없습니다.");
+        return;
+      }
+
+      // 🔥 영상-콘텐츠 1:1 매칭 유지 + 앞뒤 전환 가능
+      const shortsList = videoCards.map(c => ({
+        id: c.id,
+        video_url: c.video_url
+      }));
+
+      // 🔥 쇼츠 모드 진입 플래그
+      document.body.classList.add("shorts-open");
+
+      // startId는 반드시 클릭한 issue id
+      openShortsSafe(shortsList, target.id);
+    }, true);
     });
 
     // 👍👎 투표
