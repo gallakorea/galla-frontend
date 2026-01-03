@@ -58,23 +58,29 @@ function applyVoteUI(stance) {
   const btnCon = qs("btn-vote-con");
   if (!btnPro || !btnCon) return;
 
-  // reset
-  btnPro.classList.remove("active-vote");
-  btnCon.classList.remove("active-vote");
-  btnPro.disabled = false;
-  btnCon.disabled = false;
+  // 🔥 미투표 상태
+  if (!stance) {
+    btnPro.classList.remove("active-vote");
+    btnCon.classList.remove("active-vote");
+    btnPro.disabled = false;
+    btnCon.disabled = false;
+    btnPro.innerText = "👍 찬성이오";
+    btnCon.innerText = "👎 난 반댈세";
+    return;
+  }
 
-  // lock only if already voted
+  // 🔥 투표 완료 상태
+  btnPro.disabled = true;
+  btnCon.disabled = true;
+
   if (stance === "pro") {
     btnPro.classList.add("active-vote");
-    btnPro.disabled = true;
-    btnCon.disabled = true;
+    btnPro.innerText = "👍 투표 완료";
   }
 
   if (stance === "con") {
     btnCon.classList.add("active-vote");
-    btnPro.disabled = true;
-    btnCon.disabled = true;
+    btnCon.innerText = "👎 투표 완료";
   }
 }
 
@@ -160,6 +166,8 @@ if (typeof loadAiNews === "function") {
     const voteType = await window.GALLA_CHECK_VOTE(issue.id);
     if (voteType === "pro" || voteType === "con") {
       applyVoteUI(voteType);
+    } else {
+      applyVoteUI(null);
     }
   }
   loadSupportStats(issue.id);
