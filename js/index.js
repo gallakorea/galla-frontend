@@ -264,11 +264,15 @@ async function attachEvents() {
         // 쇼츠 진입 전 context 준비
         prepareShortsVoteContext(id);
 
-        // ✅ 영상이 있는 이슈만 쇼츠 리스트로 구성 (순서 고정)
-        const shortsList = cards.filter(c => !!c.video_url);
+        // ✅ FIX (HARD MATCH): 클릭한 이슈 1개만 쇼츠로 연다
+        // 매칭 오류 원인: 다중 리스트 + observer 전환 중 issueId 오염
+        const shortsList = [{
+          id: target.id,
+          video_url: target.video_url,
+        }];
 
-        // 🔥 startId는 shortsList에 포함된 id만 전달됨 (매칭 보장)
-        openShortsSafe(shortsList, id);
+        // startId는 반드시 shortsList[0].id 와 동일
+        openShortsSafe(shortsList, target.id);
     };
     });
 
