@@ -305,13 +305,16 @@ async function syncVoteForIssue(issueId) {
           }
         }
 
-        const type = b.classList.contains("pro") ? "pro" : "con";
-
+        // 🔥 반드시 dataset 기준으로 판별 (CSS / class 충돌 방지)
+        const type = b.dataset.type === "pro" ? "pro" : "con";
         if (typeof window.GALLA_VOTE !== "function") {
           console.error("[SHORTS] GALLA_VOTE not found");
           return;
         }
 
+        // ❌ 낙관적 UI(즉시 반응)
+        // const wrap = document.querySelector(`.short[data-issue-id="${issueId}"]`);
+        // if (wrap) applyShortVoteUI(wrap, type);
 
         try {
           await window.GALLA_VOTE(issueId, type);
@@ -319,6 +322,7 @@ async function syncVoteForIssue(issueId) {
           console.error("[SHORTS] vote error", err);
         }
 
+        // 🔥 DB 결과를 다시 읽어서 UI 확정 (절대 type 재사용 금지)
         await syncVoteForIssue(issueId);
       };
 
