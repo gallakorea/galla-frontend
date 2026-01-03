@@ -255,6 +255,18 @@ async function syncVoteForIssue(issueId) {
     overlay.style.scrollSnapStop = "always";
     overlay.style.webkitOverflowScrolling = "touch";
     overlay.style.touchAction = "pan-y";
+    overlay.style.zIndex = "100"; // 네비보다 낮게
+
+    // 🔒 overlay에서 스크롤 이벤트를 완전히 소유
+    overlay.addEventListener("wheel", (e) => {
+      if (!isShortsActive()) return;
+      e.preventDefault();
+    }, { passive: false });
+
+    overlay.addEventListener("touchmove", (e) => {
+      if (!isShortsActive()) return;
+      e.preventDefault();
+    }, { passive: false });
 
     overlay.scrollTop = 0;
 
@@ -275,7 +287,17 @@ async function syncVoteForIssue(issueId) {
     // 이벤트로 캐시 리셋 신호
     window.dispatchEvent(new Event("shorts:opened"));
 
-    document.body.style.overflow = "hidden";
+    // document.body.style.overflow = "hidden";
+    // ✅ index 컨텐츠만 고정 (네비게이션은 제외)
+    const app = document.getElementById("app");
+    if (app) {
+      app.style.position = "fixed";
+      app.style.top = "0";
+      app.style.left = "0";
+      app.style.right = "0";
+      app.style.bottom = "0";
+      app.style.overflow = "hidden";
+    }
 
     const shorts = (list || []).filter((v) => v && v.video_url);
     if (!shorts.length) return;
@@ -433,7 +455,17 @@ async function syncVoteForIssue(issueId) {
       delete overlay.dataset.open;
     }
 
-    document.body.style.overflow = "";
+    // document.body.style.overflow = "";
+    // ✅ index 컨테이너 복구
+    const app = document.getElementById("app");
+    if (app) {
+      app.style.position = "";
+      app.style.top = "";
+      app.style.left = "";
+      app.style.right = "";
+      app.style.bottom = "";
+      app.style.overflow = "";
+    }
 
     // 🔓 index 투표 UI 복구
     document.body.classList.remove("shorts-open");
