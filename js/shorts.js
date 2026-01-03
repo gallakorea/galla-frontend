@@ -55,6 +55,34 @@ function playOnly(index) {
   }
 }
 
+function applyShortVoteUI(wrap, result) {
+  if (!wrap) return;
+  const proBtn = wrap.querySelector(".vote-btn.pro");
+  const conBtn = wrap.querySelector(".vote-btn.con");
+  if (!proBtn || !conBtn) return;
+
+  // reset
+  proBtn.disabled = false;
+  conBtn.disabled = false;
+  proBtn.classList.remove("active-vote");
+  conBtn.classList.remove("active-vote");
+  proBtn.textContent = "👍 찬성이오";
+  conBtn.textContent = "👎 난 반댈세";
+
+  if (result === "pro") {
+    proBtn.disabled = true;
+    conBtn.disabled = true;
+    proBtn.classList.add("active-vote");
+    proBtn.textContent = "👍 투표 완료";
+  }
+  if (result === "con") {
+    proBtn.disabled = true;
+    conBtn.disabled = true;
+    conBtn.classList.add("active-vote");
+    conBtn.textContent = "👎 투표 완료";
+  }
+}
+
 /* =========================
    OBSERVER (CORE)
 ========================= */
@@ -94,9 +122,6 @@ function setupObserver() {
 
     // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
     queueMicrotask(async () => {
-      if (window.__LAST_SHORT_VOTE_SYNC__ === issueId) return;
-      window.__LAST_SHORT_VOTE_SYNC__ = issueId;
-
       if (typeof window.GALLA_CHECK_VOTE !== "function") return;
 
       const raw = await window.GALLA_CHECK_VOTE(issueId);
@@ -106,33 +131,7 @@ function setupObserver() {
       const active = overlay.querySelector(
         `.short[data-issue-id="${issueId}"]`
       );
-      if (!active) return;
-
-      const proBtn = active.querySelector(".vote-btn.pro");
-      const conBtn = active.querySelector(".vote-btn.con");
-      if (!proBtn || !conBtn) return;
-
-      // reset
-      proBtn.disabled = false;
-      conBtn.disabled = false;
-      proBtn.classList.remove("active-vote");
-      conBtn.classList.remove("active-vote");
-      proBtn.textContent = "👍 찬성이오";
-      conBtn.textContent = "👎 난 반댈세";
-
-      if (result === "pro") {
-        proBtn.disabled = true;
-        conBtn.disabled = true;
-        proBtn.classList.add("active-vote");
-        proBtn.textContent = "👍 투표 완료";
-      }
-
-      if (result === "con") {
-        proBtn.disabled = true;
-        conBtn.disabled = true;
-        conBtn.classList.add("active-vote");
-        conBtn.textContent = "👎 투표 완료";
-      }
+      applyShortVoteUI(active, result);
     });
 
     },
@@ -236,32 +235,7 @@ function openShorts(list, startId) {
         const active = overlay.querySelector(
           `.short[data-issue-id="${issueId}"]`
         );
-        if (!active) return;
-
-        const proBtn = active.querySelector(".vote-btn.pro");
-        const conBtn = active.querySelector(".vote-btn.con");
-        if (!proBtn || !conBtn) return;
-
-        proBtn.disabled = false;
-        conBtn.disabled = false;
-        proBtn.classList.remove("active-vote");
-        conBtn.classList.remove("active-vote");
-        proBtn.textContent = "👍 찬성이오";
-        conBtn.textContent = "👎 난 반댈세";
-
-        if (result === "pro") {
-          proBtn.disabled = true;
-          conBtn.disabled = true;
-          proBtn.classList.add("active-vote");
-          proBtn.textContent = "👍 투표 완료";
-        }
-
-        if (result === "con") {
-          proBtn.disabled = true;
-          conBtn.disabled = true;
-          conBtn.classList.add("active-vote");
-          conBtn.textContent = "👎 투표 완료";
-        }
+        applyShortVoteUI(active, result);
       }
     })();
   });
@@ -354,6 +328,8 @@ document.addEventListener("click", async e => {
   const type = btn.classList.contains("pro") ? "pro" : "con";
   await window.GALLA_VOTE(issueId, type);
 
+  const wrap = btn.closest(".short");
+  applyShortVoteUI(wrap, type);
   });
 
 /* =========================
@@ -368,4 +344,3 @@ window.closeShorts = closeShorts;
 window.__GALLA_SHORTS_STATE__ = {
   currentIndex: -1
 };
-window.__LAST_SHORT_VOTE_SYNC__ = null;
