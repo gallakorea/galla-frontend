@@ -459,33 +459,6 @@ async function syncVoteForIssue(issueId) {
     if (e.key === "Escape") closeShorts();
   });
 
-  /* =========================
-     WHEEL (DESKTOP)
-  ========================= */
-  let wheelAccum = 0;
-  let wheelTimer = null;
-
-  overlay.addEventListener(
-    "wheel",
-    (e) => {
-      e.preventDefault();
-      if (!isShortsActive()) return;
-
-      wheelAccum += e.deltaY;
-      if (wheelTimer) return;
-
-      wheelTimer = setTimeout(() => {
-        const dir = wheelAccum > 0 ? 1 : -1;
-        wheelAccum = 0;
-        wheelTimer = null;
-
-        const idx = orderedIssueIds.indexOf(currentIssueId);
-        const nextId = orderedIssueIds[idx + dir];
-        if (nextId) playOnly(nextId);
-      }, 120);
-    },
-    { passive: false }
-  );
 
   /* =========================
    TOUCH SWIPE (MOBILE)
@@ -553,6 +526,8 @@ function bindTouchEvents() {
   ========================= */
   window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
   window.closeShorts = closeShorts;
+
+  console.log("[SHORTS] internal opener READY");
 
   // 내부 오프너 준비되면 큐 비우기
   if (window.__SHORTS_OPEN_QUEUE__?.length) {
