@@ -76,9 +76,11 @@ function renderCard(data) {
 
         <img src="${data.thumb || "assets/logo.png"}" class="card-thumb" />
 
-        <div class="speech-btn" data-index="${data.id}">
-          🎥 1분 엘리베이터 스피치
-        </div>
+        ${data.video_url ? `
+          <div class="speech-btn" data-index="${data.id}">
+            🎥 1분 엘리베이터 스피치
+          </div>
+        ` : ``}
 
         <div class="vote-title">👍 찬반 투표 현황</div>
 
