@@ -18,6 +18,34 @@ async function waitForVoteReady(timeout = 3000) {
   }
   return false;
 }
+(async function syncVoteForIssue(issueId) {
+  const ready = await waitForVoteReady();
+  if (!ready) return;
+
+  const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
+  const result = raw === "pro" || raw === "con" ? raw : null;
+
+  const wrap = document.querySelector(
+    `.short[data-issue-id="${issueId}"]`
+  );
+  if (!wrap) return;
+
+  // reset UI
+  applyShortVoteUI(wrap, null);
+
+  // 반드시 버튼 활성화
+  wrap.querySelectorAll(".vote-btn").forEach(b => {
+    b.disabled = false;
+  });
+
+  // 실제 투표 반영
+  if (result) {
+    applyShortVoteUI(wrap, result);
+  }
+
+  console.log("[SHORTS][FORCE_SYNC]", { issueId, result });
+})
+
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
   const isShortsPage = document.body?.dataset?.page === "shorts";
@@ -144,30 +172,7 @@ function setupObserver() {
     playOnly(idx);
 
     // 🔥 ALWAYS re-sync vote state when this short becomes active
-    (async () => {
-      const ready = await waitForVoteReady();
-      if (!ready) return;
-
-      const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
-      const result = raw === "pro" || raw === "con" ? raw : null;
-
-      const active = overlay.querySelector(
-        `.short[data-issue-id="${issueId}"]`
-      );
-
-      console.log("[SHORTS][SYNC]", { issueId, result });
-
-      // 🔥 always reset before apply
-      applyShortVoteUI(active, null);
-
-      // 🔓 ensure buttons are usable after sync
-      active?.querySelectorAll(".vote-btn").forEach(b => b.disabled = false);
-
-      // 🔥 apply actual vote if exists
-      if (result) {
-        applyShortVoteUI(active, result);
-      }
-    })();
+    syncVoteForIssue(issueId);
 
     },
     {
@@ -265,27 +270,7 @@ function __openShortsInternal(list, startId) {
       const issueId = Number(firstShort.dataset.issueId);
       if (!issueId) return;
 
-      const ready = await waitForVoteReady();
-      if (!ready) return;
-
-      const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
-      const result = raw === "pro" || raw === "con" ? raw : null;
-
-      const active = overlay.querySelector(
-        `.short[data-issue-id="${issueId}"]`
-      );
-      if (!active) return;
-
-      // 🔥 always reset first
-      applyShortVoteUI(active, null);
-
-      // 🔓 re-enable buttons after sync
-      active.querySelectorAll(".vote-btn").forEach(b => b.disabled = false);
-
-      // 🔥 then apply real vote if exists
-      if (result) {
-        applyShortVoteUI(active, result);
-      }
+      await syncVoteForIssue(issueId);
     })();
   });
 
@@ -372,24 +357,15 @@ document.addEventListener("click", async e => {
   if (typeof window.GALLA_CHECK_VOTE === "function") {
     const existing = await window.GALLA_CHECK_VOTE(issueId, { force: true });
     if (existing === "pro" || existing === "con") {
-      applyShortVoteUI(btn.closest(".short"), existing);
+      await syncVoteForIssue(issueId);
       return;
     }
   }
 
   const type = btn.classList.contains("pro") ? "pro" : "con";
   await window.GALLA_VOTE(issueId, type);
-
-  const wrap = btn.closest(".short");
-  const ready = await waitForVoteReady();
-  if (!ready) return;
-
-  const raw = await window.GALLA_CHECK_VOTE(issueId);
-  const result = raw === "pro" || raw === "con" ? raw : null;
-  if (!result) return;
-
-  applyShortVoteUI(wrap, result);
-  });
+  await syncVoteForIssue(issueId);
+});
 
 /* =========================
    EXPORT
@@ -402,6 +378,9 @@ window.addEventListener("shorts:opened", () => {
   window.__GALLA_LAST_VOTE_ISSUE__ = null;
   window.__GALLA_LAST_VOTE_PAGE__ = "shorts";
   console.log("[SHORTS] vote-core cache reset (force sync)");
+  if (window.__CURRENT_SHORT_ISSUE_ID__) {
+    syncVoteForIssue(window.__CURRENT_SHORT_ISSUE_ID__);
+  }
 });
 window.closeShorts = closeShorts;
 
