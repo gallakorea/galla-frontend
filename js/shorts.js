@@ -4,7 +4,7 @@
    - ⚠️ 쇼츠는 "shorts 페이지"가 아니라 index 위 오버레이로도 열린다.
 */
 
-window.__SHORTS_READY__ = false;
+window.__SHORTS_READY__ = true;
 
 // openShorts 호출이 "내부 오프너 준비"보다 빨리 와도 안전하게 큐잉 처리
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
@@ -125,6 +125,7 @@ async function syncVoteForIssue(issueId) {
 (function () {
   // 🔥 EARLY BIND: expose internal opener immediately to avoid index openShorts timeout
   window.__OPEN_SHORTS_INTERNAL__ = function(list, startId) {
+    window.__SHORTS_READY__ = true;
     // 실제 구현은 아래에서 재정의된다
     console.warn("[SHORTS] internal opener stub called before init");
     if (!window.__SHORTS_OPEN_QUEUE__) window.__SHORTS_OPEN_QUEUE__ = [];
@@ -245,7 +246,6 @@ async function syncVoteForIssue(issueId) {
     overlay = qs("shortsOverlay");
     if (!overlay) {
       console.error("[SHORTS] overlay missing");
-      window.__SHORTS_READY__ = true; // prevent index timeout loop
       return;
     }
 
