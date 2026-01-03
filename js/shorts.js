@@ -202,6 +202,8 @@ async function syncVoteForIssue(issueId) {
 
         window.__CURRENT_SHORT_INDEX__ = idx;
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+        // 🔥 vote-core 기준 issue를 쇼츠 기준으로 즉시 덮어쓰기
+        window.__GALLA_ACTIVE_ISSUE_ID__ = issueId;
         window.__GALLA_SHORTS_STATE__.currentIndex = idx;
 
         playOnly(idx);
@@ -284,6 +286,11 @@ async function syncVoteForIssue(issueId) {
         const issueId = Number(b.dataset.issueId);
         if (!issueId) return;
 
+        // 🔥 vote-core가 index 기준 issue로 되돌아가는 것 방지
+        window.__GALLA_ACTIVE_ISSUE_ID__ = issueId;
+        window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+        window.__GALLA_VOTE_CONTEXT__ = "shorts";
+
         // 이미 투표가 있으면 UI만 확정
         if (typeof window.GALLA_CHECK_VOTE === "function") {
           const existingRaw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
@@ -362,6 +369,11 @@ async function syncVoteForIssue(issueId) {
     }
 
     document.body.style.overflow = "";
+
+    // vote-core 컨텍스트 복구
+    window.__GALLA_VOTE_CONTEXT__ = "index";
+    window.__GALLA_ACTIVE_ISSUE_ID__ = null;
+    window.__GALLA_GET_ACTIVE_ISSUE_ID__ = null;
   }
 
   /* =========================
@@ -413,6 +425,24 @@ async function syncVoteForIssue(issueId) {
   }
 
   window.addEventListener("shorts:opened", () => {
+    // 🔥 HARD RESET: vote-core를 쇼츠 컨텍스트로 강제 전환
+    window.__GALLA_VOTE_CONTEXT__ = "shorts";
+    window.__GALLA_ACTIVE_ISSUE_ID__ = window.__CURRENT_SHORT_ISSUE_ID__ || null;
+
+    // vote-core가 index 기준으로 잡은 캐시 전부 무효화
+    window.__GALLA_LAST_VOTE_APPLY__ = null;
+    window.__GALLA_LAST_VOTE_ISSUE__ = null;
+    window.__GALLA_LAST_VOTE_PAGE__ = "shorts";
+
+    // vote-core가 참조하는 current issue getter를 강제로 덮어쓴다
+    window.__GALLA_GET_ACTIVE_ISSUE_ID__ = () => {
+      return window.__CURRENT_SHORT_ISSUE_ID__ || window.__GALLA_ACTIVE_ISSUE_ID__;
+    };
+
+    console.warn("[SHORTS][HARD_BIND] vote-core context switched to shorts", {
+      issueId: window.__CURRENT_SHORT_ISSUE_ID__
+    });
+
     // vote-core UI 캐시 리셋 (있어도 되고 없어도 됨)
     window.__GALLA_LAST_VOTE_APPLY__ = null;
     window.__GALLA_LAST_VOTE_ISSUE__ = null;
