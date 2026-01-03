@@ -61,24 +61,29 @@ function applyShortVoteUI(wrap, result) {
   const conBtn = wrap.querySelector(".shorts-vote .vote-btn.con");
   if (!proBtn || !conBtn) return;
 
-  // reset
-  proBtn.disabled = false;
-  conBtn.disabled = false;
+  // 항상 초기화하지 않는다 — 결과 기준 단방향
   proBtn.classList.remove("active-vote");
   conBtn.classList.remove("active-vote");
-  proBtn.textContent = "👍 찬성이오";
-  conBtn.textContent = "👎 난 반댈세";
+
+  proBtn.disabled = false;
+  conBtn.disabled = false;
 
   if (result === "pro") {
     proBtn.disabled = true;
     conBtn.disabled = true;
     proBtn.classList.add("active-vote");
     proBtn.textContent = "👍 투표 완료";
-  } else if (result === "con") {
+    conBtn.textContent = "👎 난 반댈세";
+    return;
+  }
+
+  if (result === "con") {
     proBtn.disabled = true;
     conBtn.disabled = true;
     conBtn.classList.add("active-vote");
     conBtn.textContent = "👎 투표 완료";
+    proBtn.textContent = "👍 찬성이오";
+    return;
   }
 }
 
@@ -104,8 +109,7 @@ async function syncVoteForIssue(issueId) {
   const wrap = ov.querySelector(`.short[data-issue-id="${issueId}"]`);
   if (!wrap) return;
 
-  // UI reset 후 결과 반영
-  applyShortVoteUI(wrap, null);
+  // ❌ reset 제거 — vote-core 역침범 방지
   if (result) applyShortVoteUI(wrap, result);
 
   console.log("[SHORTS][FORCE_SYNC]", { issueId, result });
