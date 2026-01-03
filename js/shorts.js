@@ -3,7 +3,7 @@
    - shorts.js 는 항상 로드되어 있어야 하므로, 파일 전체 return 금지.
 */
 
-/** 내부 오프너 준비될 때까지 자체 재시도 (핵심) */
+/** 내부 오프너 준비될 때까지 자체 재시도 */
 window.openShorts = function (list, startId) {
   const tryOpen = (retry = 0) => {
     if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
@@ -74,23 +74,63 @@ function applyShortVoteUI(wrap, result) {
   }
 }
 
+function uiLooksCorrect(wrap, result) {
+  const proBtn = wrap?.querySelector(".vote-btn.pro");
+  const conBtn = wrap?.querySelector(".vote-btn.con");
+  if (!proBtn || !conBtn) return false;
+
+  const proDone = proBtn.textContent.includes("투표 완료") && proBtn.classList.contains("active-vote");
+  const conDone = conBtn.textContent.includes("투표 완료") && conBtn.classList.contains("active-vote");
+
+  if (!result) {
+    // 아무것도 선택 안 된 상태
+    return !proDone && !conDone && !proBtn.disabled && !conBtn.disabled;
+  }
+
+  if (result === "pro") {
+    return proDone && !conDone && proBtn.disabled && conBtn.disabled;
+  }
+  if (result === "con") {
+    return conDone && !proDone && proBtn.disabled && conBtn.disabled;
+  }
+  return false;
+}
+
+/** 덮어쓰기(=vote-core 등) 방지용: 짧은 간격으로 3번 강제 적용 */
+function enforceShortVoteUI(wrap, result) {
+  if (!wrap) return;
+
+  // 1) 1차 적용
+  applyShortVoteUI(wrap, null);
+  if (result) applyShortVoteUI(wrap, result);
+
+  // 2) 덮어쓰기 방지 재적용 (0ms / 60ms / 180ms)
+  [0, 60, 180].forEach((ms) => {
+    setTimeout(() => {
+      if (!wrap.isConnected) return;
+      if (!uiLooksCorrect(wrap, result)) {
+        applyShortVoteUI(wrap, null);
+        if (result) applyShortVoteUI(wrap, result);
+      }
+    }, ms);
+  });
+}
+
 async function syncVoteForIssue(issueId) {
   const ready = await waitForVoteReady();
   if (!ready) return;
 
-  // vote-core가 object를 줄 수도 있으니 normalize 필수
   const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
   const result = normalizeVoteResult(raw);
 
   const wrap = document.querySelector(`.short[data-issue-id="${issueId}"]`);
   if (!wrap) return;
 
-  // 1) 일단 버튼을 풀어준다 (초기 disable 해제)
+  // 1) 일단 버튼 풀기
   wrap.querySelectorAll(".vote-btn").forEach((b) => (b.disabled = false));
 
-  // 2) UI reset 후 결과 반영
-  applyShortVoteUI(wrap, null);
-  if (result) applyShortVoteUI(wrap, result);
+  // 2) 결과 반영 + 강제 고정
+  enforceShortVoteUI(wrap, result);
 
   console.log("[SHORTS][FORCE_SYNC]", { issueId, result });
 }
@@ -103,16 +143,12 @@ async function syncVoteForIssue(issueId) {
   let observer = null;
   let currentIndex = -1;
 
-  // 🔥 오버레이 열림 여부 기준 (index 위 오버레이 구조 대응)
-  function isOverlayOpen() {
-    return !!(overlay && overlay.hidden === false && overlay.style.display !== "none");
-  }
-
-  /* =========================
-     UTILS
-  ========================= */
   function qs(id) {
     return document.getElementById(id);
+  }
+
+  function isOverlayOpen() {
+    return !!(overlay && overlay.hidden === false && overlay.style.display !== "none");
   }
 
   function hardPauseAll(exceptIndex = null) {
@@ -152,9 +188,6 @@ async function syncVoteForIssue(issueId) {
     }
   }
 
-  /* =========================
-     OBSERVER (CORE)
-  ========================= */
   function getMostVisibleEntry(entries) {
     let best = null;
     let maxRatio = 0;
@@ -169,7 +202,6 @@ async function syncVoteForIssue(issueId) {
 
   function setupObserver() {
     if (!overlay) return;
-
     if (observer) observer.disconnect();
 
     observer = new IntersectionObserver(
@@ -198,9 +230,6 @@ async function syncVoteForIssue(issueId) {
     overlay.querySelectorAll(".short").forEach((el) => observer.observe(el));
   }
 
-  /* =========================
-     OPEN SHORTS
-  ========================= */
   async function __openShortsInternal(list, startId) {
     overlay = qs("shortsOverlay");
     if (!overlay) {
@@ -217,7 +246,7 @@ async function syncVoteForIssue(issueId) {
 
     overlay.dataset.open = "1";
 
-    // 이벤트로 캐시 리셋 신호
+    // vote-core 캐시 리셋 신호
     window.dispatchEvent(new Event("shorts:opened"));
 
     document.body.style.overflow = "hidden";
@@ -239,7 +268,6 @@ async function syncVoteForIssue(issueId) {
       video.loop = true;
       video.muted = true;
 
-      // ✅ vote bar
       const voteBar = document.createElement("div");
       voteBar.className = "shorts-vote";
       voteBar.style.touchAction = "pan-y";
@@ -247,14 +275,14 @@ async function syncVoteForIssue(issueId) {
       const btnPro = document.createElement("button");
       btnPro.className = "vote-btn pro";
       btnPro.dataset.issueId = item.id;
-      btnPro.dataset.type = "pro"; // ✅ vote-core 호환/오판 방지
+      btnPro.dataset.type = "pro"; // ✅ index/vote-core 호환
       btnPro.textContent = "👍 찬성이오";
       btnPro.style.touchAction = "manipulation";
 
       const btnCon = document.createElement("button");
       btnCon.className = "vote-btn con";
       btnCon.dataset.issueId = item.id;
-      btnCon.dataset.type = "con"; // ✅ vote-core 호환/오판 방지
+      btnCon.dataset.type = "con"; // ✅ index/vote-core 호환
       btnCon.textContent = "👎 난 반댈세";
       btnCon.style.touchAction = "manipulation";
 
@@ -277,14 +305,11 @@ async function syncVoteForIssue(issueId) {
       setupObserver();
       playOnly(startIndex);
 
-      // ✅ 최초 진입 동기화
+      // ✅ 최초 진입 동기화(가장 중요)
       setTimeout(() => syncVoteForIssue(firstIssueId), 0);
     });
   }
 
-  /* =========================
-     CLOSE SHORTS
-  ========================= */
   function closeShorts() {
     hardPauseAll();
     currentIndex = -1;
@@ -301,20 +326,13 @@ async function syncVoteForIssue(issueId) {
     document.body.style.overflow = "";
   }
 
-  /* =========================
-     KEYBOARD (DESKTOP)
-  ========================= */
   window.addEventListener("keydown", (e) => {
     if (!isOverlayOpen()) return;
-
     if (e.key === "ArrowDown") overlay.scrollBy({ top: window.innerHeight, behavior: "smooth" });
     if (e.key === "ArrowUp") overlay.scrollBy({ top: -window.innerHeight, behavior: "smooth" });
     if (e.key === "Escape") closeShorts();
   });
 
-  /* =========================
-     WHEEL (DESKTOP)
-  ========================= */
   let wheelAccum = 0;
   let wheelTimer = null;
 
@@ -330,7 +348,6 @@ async function syncVoteForIssue(issueId) {
         const dir = wheelAccum > 0 ? 1 : -1;
         wheelAccum = 0;
         wheelTimer = null;
-
         overlay.scrollBy({ top: dir * window.innerHeight, behavior: "smooth" });
       }, 120);
     },
@@ -339,7 +356,8 @@ async function syncVoteForIssue(issueId) {
 
   /* =========================
      VOTE (DB SYNC)
-     - 캡처 단계에서 stopImmediatePropagation()으로 vote-core 충돌 차단
+     - 캡처 단계에서 stopImmediatePropagation()으로 vote-core 클릭 충돌 차단
+     - (이벤트 충돌 때문에 "누르면 항상 찬성" 같은 현상이 생김)
   ========================= */
   document.addEventListener(
     "click",
@@ -349,8 +367,7 @@ async function syncVoteForIssue(issueId) {
       const btn = e.target.closest(".shorts-vote .vote-btn");
       if (!btn) return;
 
-      // ✅ vote-core 등 다른 핸들러가 같은 클릭을 먹지 못하게 차단
-      e.preventDefault();
+      // ✅ 다른 클릭 핸들러(vote-core 등) 차단
       e.stopPropagation();
       e.stopImmediatePropagation();
 
@@ -359,7 +376,7 @@ async function syncVoteForIssue(issueId) {
       const issueId = Number(btn.dataset.issueId);
       if (!issueId) return;
 
-      // 이미 투표 있으면 UI만 반영
+      // 이미 투표 있으면 UI만 강제 동기화
       if (typeof window.GALLA_CHECK_VOTE === "function") {
         const existingRaw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
         const existing = normalizeVoteResult(existingRaw);
@@ -379,12 +396,9 @@ async function syncVoteForIssue(issueId) {
       await window.GALLA_VOTE(issueId, type);
       await syncVoteForIssue(issueId);
     },
-    true // ✅ capture!
+    true // ✅ capture
   );
 
-  /* =========================
-     EXPORT + EVENTS
-  ========================= */
   window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
   window.closeShorts = closeShorts;
 
