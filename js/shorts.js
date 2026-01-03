@@ -81,12 +81,17 @@ async function syncVoteForIssue(issueId) {
    - observer / wheel / keydown / click 은 shorts 페이지에서만 동작
 */
 (function () {
-  const isShortsPage = document.body?.dataset?.page === "shorts";
-
-  // ❌ 파일 전체 return 금지. 대신 실행부만 가드.
+  // NOTE:
+  // Shorts는 별도 페이지가 아니라 index 등 다른 페이지 위에 "오버레이"로 열릴 수 있음.
+  // 따라서 body dataset(page)로 가드하면 이벤트/observer가 죽는다.
+  // 아래 헬퍼로 "오버레이가 열려있는지"를 기준으로만 가드한다.
   let overlay = null;
   let observer = null;
   let currentIndex = -1;
+
+  function isOverlayOpen() {
+    return !!(overlay && overlay.hidden === false && overlay.style.display !== "none");
+  }
 
   /* =========================
      UTILS
@@ -148,14 +153,14 @@ async function syncVoteForIssue(issueId) {
   }
 
   function setupObserver() {
-    if (!isShortsPage) return;
     if (!overlay) return;
+    if (!isOverlayOpen()) return;
 
     if (observer) observer.disconnect();
 
     observer = new IntersectionObserver(
       (entries) => {
-        if (!isShortsPage) return;
+        if (!isOverlayOpen()) return;
         const best = getMostVisibleEntry(entries);
         if (!best) return;
         if (best.intersectionRatio < 0.6) return;
@@ -193,6 +198,10 @@ async function syncVoteForIssue(issueId) {
     overlay.style.display = "block";
     overlay.scrollTop = 0;
 
+    // 오버레이 오픈 플래그 + 터치/스크롤 제스처 허용
+    overlay.dataset.open = "1";
+    overlay.style.touchAction = "pan-y";
+
     // 이벤트로 캐시 리셋 신호
     window.dispatchEvent(new Event("shorts:opened"));
 
@@ -218,16 +227,20 @@ async function syncVoteForIssue(issueId) {
       // ✅ vote bar 클래스는 반드시 shorts-vote 로 통일
       const voteBar = document.createElement("div");
       voteBar.className = "shorts-vote";
+      // 버튼 위에서 스와이프/스크롤이 죽지 않도록
+      voteBar.style.touchAction = "pan-y";
 
       const btnPro = document.createElement("button");
       btnPro.className = "vote-btn pro";
       btnPro.dataset.issueId = item.id;
       btnPro.textContent = "👍 찬성이오";
+      btnPro.style.touchAction = "manipulation";
 
       const btnCon = document.createElement("button");
       btnCon.className = "vote-btn con";
       btnCon.dataset.issueId = item.id;
       btnCon.textContent = "👎 난 반댈세";
+      btnCon.style.touchAction = "manipulation";
 
       voteBar.appendChild(btnPro);
       voteBar.appendChild(btnCon);
@@ -263,6 +276,7 @@ async function syncVoteForIssue(issueId) {
     if (observer) observer.disconnect();
 
     if (overlay) {
+      overlay.dataset.open = "0";
       overlay.hidden = true;
       overlay.style.display = "none";
       overlay.innerHTML = "";
@@ -275,7 +289,6 @@ async function syncVoteForIssue(issueId) {
      KEYBOARD (DESKTOP)
   ========================= */
   window.addEventListener("keydown", (e) => {
-    if (!isShortsPage) return;
     if (!overlay || overlay.hidden) return;
 
     if (e.key === "ArrowDown") overlay.scrollBy({ top: window.innerHeight, behavior: "smooth" });
@@ -292,7 +305,6 @@ async function syncVoteForIssue(issueId) {
   window.addEventListener(
     "wheel",
     (e) => {
-      if (!isShortsPage) return;
       if (!overlay || overlay.hidden) return;
 
       wheelAccum += e.deltaY;
@@ -313,9 +325,11 @@ async function syncVoteForIssue(issueId) {
      VOTE (DB SYNC)
   ========================= */
   document.addEventListener("click", async (e) => {
-    if (!isShortsPage) return;
+    if (!isOverlayOpen()) return;
 
     const btn = e.target.closest(".shorts-vote .vote-btn");
+    // 클릭이 다른 핸들러(카드 클릭 등)로 전파되지 않게
+    if (btn) e.stopPropagation();
     if (!btn) return;
 
     // ✅ 클릭 즉시 반응이 없었던 이유: selector 불일치 / disabled / 가드
