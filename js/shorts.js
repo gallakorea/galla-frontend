@@ -216,7 +216,7 @@ async function syncVoteForIssue(issueId) {
         playOnly(issueId);
         syncVoteForIssue(issueId);
       },
-      { root: null, threshold: [0.25, 0.5, 0.6, 0.75, 0.9] }
+      { root: overlay, threshold: [0.25, 0.5, 0.6, 0.75, 0.9] }
     );
 
     overlay.querySelectorAll(".short").forEach((el) => observer.observe(el));
