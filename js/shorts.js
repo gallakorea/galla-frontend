@@ -125,6 +125,7 @@ async function syncVoteForIssue(issueId) {
   let overlay = null;
   let observer = null;
   let currentIssueId = null;
+  let orderedIssueIds = [];
 
   /* =========================
      UTILS
@@ -206,9 +207,10 @@ async function syncVoteForIssue(issueId) {
         if (window.__SHORTS_VOTING_LOCK__ === true) return;
         const best = getMostVisibleEntry(entries);
         if (!best) return;
-        if (best.intersectionRatio < 0.6) return;
+        if (best.intersectionRatio < 0.75) return;
 
         const issueId = Number(best.target.dataset.issueId);
+        if (!orderedIssueIds.includes(issueId)) return;
 
         window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
         window.__GALLA_ACTIVE_ISSUE_ID__ = issueId;
@@ -216,7 +218,7 @@ async function syncVoteForIssue(issueId) {
         playOnly(issueId);
         syncVoteForIssue(issueId);
       },
-      { root: overlay, threshold: [0.25, 0.5, 0.6, 0.75, 0.9] }
+      { root: overlay, threshold: [0.75] }
     );
 
     overlay.querySelectorAll(".short").forEach((el) => observer.observe(el));
@@ -258,8 +260,10 @@ async function syncVoteForIssue(issueId) {
 
     const shorts = (list || []).filter((v) => v && v.video_url);
     if (!shorts.length) return;
+    // 🔒 FIX: freeze deterministic order (content ↔ video 1:1)
+    orderedIssueIds = shorts.map(v => Number(v.id));
 
-    shorts.forEach((item, i) => {
+    shorts.forEach((item) => {
       const wrap = document.createElement("section");
       wrap.className = "short";
       wrap.dataset.issueId = item.id;
@@ -357,8 +361,8 @@ async function syncVoteForIssue(issueId) {
       overlay.appendChild(wrap);
     });
 
-    const found = shorts.findIndex((v) => Number(v.id) === Number(startId));
-    const firstIssueId = Number(shorts[found >= 0 ? found : 0].id);
+    const startIdx = orderedIssueIds.indexOf(Number(startId));
+    const firstIssueId = orderedIssueIds[startIdx >= 0 ? startIdx : 0];
     window.__CURRENT_SHORT_ISSUE_ID__ = firstIssueId;
 
     requestAnimationFrame(() => {
@@ -375,6 +379,7 @@ async function syncVoteForIssue(issueId) {
   function closeShorts() {
     hardPauseAll();
     currentIssueId = null;
+    orderedIssueIds = [];
 
     if (observer) observer.disconnect();
 
@@ -408,27 +413,15 @@ async function syncVoteForIssue(issueId) {
     if (!isShortsActive()) return;
 
     if (e.key === "ArrowDown") {
-      const shorts = [...overlay.querySelectorAll(".short")];
-      const idx = shorts.findIndex(
-        el => Number(el.dataset.issueId) === currentIssueId
-      );
-      const target = shorts[idx + 1];
-      if (target) {
-        const nextIssueId = Number(target.dataset.issueId);
-        playOnly(nextIssueId);
-      }
+      const idx = orderedIssueIds.indexOf(currentIssueId);
+      const nextId = orderedIssueIds[idx + 1];
+      if (nextId) playOnly(nextId);
     }
 
     if (e.key === "ArrowUp") {
-      const shorts = [...overlay.querySelectorAll(".short")];
-      const idx = shorts.findIndex(
-        el => Number(el.dataset.issueId) === currentIssueId
-      );
-      const target = shorts[idx - 1];
-      if (target) {
-        const nextIssueId = Number(target.dataset.issueId);
-        playOnly(nextIssueId);
-      }
+      const idx = orderedIssueIds.indexOf(currentIssueId);
+      const prevId = orderedIssueIds[idx - 1];
+      if (prevId) playOnly(prevId);
     }
 
     if (e.key === "Escape") closeShorts();
@@ -453,15 +446,9 @@ async function syncVoteForIssue(issueId) {
         wheelAccum = 0;
         wheelTimer = null;
 
-        const shorts = [...overlay.querySelectorAll(".short")];
-        const idx = shorts.findIndex(
-          el => Number(el.dataset.issueId) === currentIssueId
-        );
-        const target = shorts[idx + dir];
-        if (target) {
-          const nextIssueId = Number(target.dataset.issueId);
-          playOnly(nextIssueId);
-        }
+        const idx = orderedIssueIds.indexOf(currentIssueId);
+        const nextId = orderedIssueIds[idx + dir];
+        if (nextId) playOnly(nextId);
       }, 120);
     },
     { passive: true }
