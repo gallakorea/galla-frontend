@@ -18,7 +18,7 @@ async function waitForVoteReady(timeout = 3000) {
   }
   return false;
 }
-(async function syncVoteForIssue(issueId) {
+async function syncVoteForIssue(issueId) {
   const ready = await waitForVoteReady();
   if (!ready) return;
 
@@ -44,7 +44,7 @@ async function waitForVoteReady(timeout = 3000) {
   }
 
   console.log("[SHORTS][FORCE_SYNC]", { issueId, result });
-})
+}
 
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
