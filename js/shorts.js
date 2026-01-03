@@ -27,14 +27,6 @@ console.log("[shorts] loaded");
     overlay.classList.add("active");
 
     overlay.innerHTML = "";
-    const isStandalone = document.body?.dataset?.page === "shorts";
-
-    // ❗ overlay 방식에서만 shorts-open 사용
-    if (!isStandalone) {
-      document.body.classList.add("shorts-open");
-    } else {
-      document.body.classList.remove("shorts-open");
-    }
 
     const normalized = Array.isArray(list) ? list : [list];
     shortsData = normalized.filter(v => v && v.video_url);
@@ -42,12 +34,6 @@ console.log("[shorts] loaded");
 
     // overlay 활성화 (CSS 상태 기반)
     // Removed overlay.style.visibility = "visible";
-
-    // body 스크롤 상태 백업 후 lock
-    if (!isStandalone) {
-      overlay.__prevBodyOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-    }
 
     shortsData.forEach((item, i) => {
       const section = document.createElement("section");
@@ -212,15 +198,6 @@ console.log("[shorts] loaded");
      CLOSE (ESC / BACK)
   ========================================================= */
   function closeShorts() {
-    const isStandalone = document.body?.dataset?.page === "shorts";
-
-    if (!isStandalone) {
-      document.body.classList.remove("shorts-open");
-      if (overlay.__prevBodyOverflow !== undefined) {
-        document.body.style.overflow = overlay.__prevBodyOverflow;
-      }
-    }
-
     overlay.classList.remove("active");
     overlay.innerHTML = "";
     overlay.scrollTop = 0;
@@ -245,9 +222,7 @@ console.log("[shorts] loaded");
   });
 
   window.addEventListener("popstate", () => {
-    if (document.body.classList.contains("shorts-open")) {
-      closeShorts();
-    }
+    closeShorts();
   });
 
 /* =========================================================
