@@ -249,9 +249,12 @@ async function syncVoteForIssue(issueId) {
     overlay.style.inset = "0";
     overlay.style.width = "100vw";
     overlay.style.height = "100vh";
-    // ❌ 실제 스크롤 완전 차단 (릴스/쇼츠 방식)
-    overlay.style.overflow = "hidden";
-    overlay.style.touchAction = "none";
+    overlay.style.overflowY = "scroll";
+    overlay.style.overflowX = "hidden";
+    overlay.style.scrollSnapType = "y mandatory";
+    overlay.style.scrollSnapStop = "always";
+    overlay.style.webkitOverflowScrolling = "touch";
+    overlay.style.touchAction = "pan-y";
 
     overlay.scrollTop = 0;
 
@@ -471,7 +474,6 @@ async function syncVoteForIssue(issueId) {
   /* =========================
    TOUCH SWIPE (MOBILE)
 ========================= */
-let swipeLocked = false;
 let touchStartY = null;
 let touchEndY = null;
 
@@ -479,20 +481,13 @@ function handleSwipe() {
   if (!isShortsActive()) return;
   if (touchStartY === null || touchEndY === null) return;
 
-  if (swipeLocked) return;
-
   const delta = touchStartY - touchEndY;
-  const threshold = 40; // 릴스/쇼츠 체감 기준
+  const threshold = 60; // 스와이프 최소 거리(px)
 
   if (Math.abs(delta) < threshold) return;
 
-  swipeLocked = true;
-
   const idx = orderedIssueIds.indexOf(currentIssueId);
-  if (idx === -1) {
-    setTimeout(() => { swipeLocked = false; }, 300);
-    return;
-  }
+  if (idx === -1) return;
 
   if (delta > 0) {
     const nextId = orderedIssueIds[idx + 1];
@@ -501,10 +496,6 @@ function handleSwipe() {
     const prevId = orderedIssueIds[idx - 1];
     if (prevId) playOnly(prevId);
   }
-
-  setTimeout(() => {
-    swipeLocked = false;
-  }, 300);
 }
 
 function bindTouchEvents() {
