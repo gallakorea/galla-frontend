@@ -1,3 +1,15 @@
+// Wait for session and GALLA_CHECK_VOTE to be ready
+async function waitForVoteReady(timeout = 3000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    if (window.supabaseClient && typeof window.GALLA_CHECK_VOTE === "function") {
+      const { data } = await window.supabaseClient.auth.getSession();
+      if (data?.session) return true;
+    }
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return false;
+}
 /* shorts.js — TRUE Reels / Shorts (HARD SNAP + SINGLE AUDIO) */
 (function () {
 
@@ -122,7 +134,8 @@ function setupObserver() {
 
     // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
     queueMicrotask(async () => {
-      if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+      const ready = await waitForVoteReady();
+      if (!ready) return;
 
       const raw = await window.GALLA_CHECK_VOTE(issueId);
       const result = raw === "pro" || raw === "con" ? raw : null;
@@ -227,16 +240,17 @@ function openShorts(list, startId) {
       const issueId = Number(firstShort.dataset.issueId);
       if (!issueId) return;
 
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        const raw = await window.GALLA_CHECK_VOTE(issueId);
-        const result = raw === "pro" || raw === "con" ? raw : null;
-        if (!result) return;
+      const ready = await waitForVoteReady();
+      if (!ready) return;
 
-        const active = overlay.querySelector(
-          `.short[data-issue-id="${issueId}"]`
-        );
-        applyShortVoteUI(active, result);
-      }
+      const raw = await window.GALLA_CHECK_VOTE(issueId);
+      const result = raw === "pro" || raw === "con" ? raw : null;
+      if (!result) return;
+
+      const active = overlay.querySelector(
+        `.short[data-issue-id="${issueId}"]`
+      );
+      applyShortVoteUI(active, result);
     })();
   });
 
@@ -329,7 +343,14 @@ document.addEventListener("click", async e => {
   await window.GALLA_VOTE(issueId, type);
 
   const wrap = btn.closest(".short");
-  applyShortVoteUI(wrap, type);
+  const ready = await waitForVoteReady();
+  if (!ready) return;
+
+  const raw = await window.GALLA_CHECK_VOTE(issueId);
+  const result = raw === "pro" || raw === "con" ? raw : null;
+  if (!result) return;
+
+  applyShortVoteUI(wrap, result);
   });
 
 /* =========================
