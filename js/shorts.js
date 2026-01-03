@@ -93,9 +93,40 @@ function setupObserver() {
     playOnly(idx);
 
     // 🔥 DOM + active 쇼츠 확정 후 투표 상태 반영
-    queueMicrotask(() => {
-      if (typeof window.GALLA_CHECK_VOTE === "function") {
-        window.GALLA_CHECK_VOTE(issueId);
+    queueMicrotask(async () => {
+      if (typeof window.GALLA_CHECK_VOTE !== "function") return;
+
+      const result = await window.GALLA_CHECK_VOTE(issueId);
+
+      const active = overlay.querySelector(
+        `.short[data-issue-id="${issueId}"]`
+      );
+      if (!active) return;
+
+      const proBtn = active.querySelector(".vote-btn.pro");
+      const conBtn = active.querySelector(".vote-btn.con");
+      if (!proBtn || !conBtn) return;
+
+      // reset
+      proBtn.disabled = false;
+      conBtn.disabled = false;
+      proBtn.classList.remove("active-vote");
+      conBtn.classList.remove("active-vote");
+      proBtn.textContent = "👍 찬성이오";
+      conBtn.textContent = "👎 난 반댈세";
+
+      if (result === "pro") {
+        proBtn.disabled = true;
+        conBtn.disabled = true;
+        proBtn.classList.add("active-vote");
+        proBtn.textContent = "👍 투표 완료";
+      }
+
+      if (result === "con") {
+        proBtn.disabled = true;
+        conBtn.disabled = true;
+        conBtn.classList.add("active-vote");
+        conBtn.textContent = "👎 투표 완료";
       }
     });
 
@@ -193,9 +224,37 @@ function openShorts(list, startId) {
       if (!issueId) return;
 
       if (typeof window.GALLA_CHECK_VOTE === "function") {
-        // 1️⃣ 현재 보이는 쇼츠
-        await window.GALLA_CHECK_VOTE(issueId);
+        const result = await window.GALLA_CHECK_VOTE(issueId);
 
+        const active = overlay.querySelector(
+          `.short[data-issue-id="${issueId}"]`
+        );
+        if (!active) return;
+
+        const proBtn = active.querySelector(".vote-btn.pro");
+        const conBtn = active.querySelector(".vote-btn.con");
+        if (!proBtn || !conBtn) return;
+
+        proBtn.disabled = false;
+        conBtn.disabled = false;
+        proBtn.classList.remove("active-vote");
+        conBtn.classList.remove("active-vote");
+        proBtn.textContent = "👍 찬성이오";
+        conBtn.textContent = "👎 난 반댈세";
+
+        if (result === "pro") {
+          proBtn.disabled = true;
+          conBtn.disabled = true;
+          proBtn.classList.add("active-vote");
+          proBtn.textContent = "👍 투표 완료";
+        }
+
+        if (result === "con") {
+          proBtn.disabled = true;
+          conBtn.disabled = true;
+          conBtn.classList.add("active-vote");
+          conBtn.textContent = "👎 투표 완료";
+        }
       }
     })();
   });
