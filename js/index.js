@@ -152,6 +152,17 @@ function renderCard(data) {
 // 🔥 EVENTS
 // =========================================
 
+// =========================================
+// 🔥 SHORTS VOTE CONTEXT PREP
+// =========================================
+function prepareShortsVoteContext(issueId) {
+    // 🔥 reset vote-core related globals before entering shorts
+    window.__GALLA_LAST_VOTE_APPLY__ = null;
+    window.__GALLA_LAST_VOTE_ISSUE__ = issueId;
+    window.__GALLA_LAST_VOTE_PAGE__ = "shorts";
+    window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+}
+
 /* =========================================
  * 🔥 SAFE SHORTS OPENER (index.js)
  * shorts.js 로딩 타이밍 보호용
@@ -241,6 +252,8 @@ async function attachEvents() {
         unlock.playsInline = true;
         unlock.play().catch(() => {});
 
+        // 쇼츠 진입 전 context 준비
+        prepareShortsVoteContext(id);
         // 쇼츠 진입 (SAFE)
         openShortsSafe(cards, id);
     };
