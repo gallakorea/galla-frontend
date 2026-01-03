@@ -255,7 +255,7 @@ async function syncVoteForIssue(issueId) {
     overlay.style.scrollSnapStop = "always";
     overlay.style.webkitOverflowScrolling = "touch";
     overlay.style.touchAction = "pan-y";
-    overlay.style.zIndex = "100"; // 네비보다 낮게
+    overlay.style.zIndex = "50"; // nav(보통 100+) 아래, index 위
 
 
     overlay.scrollTop = 0;
@@ -281,15 +281,15 @@ async function syncVoteForIssue(issueId) {
     const nav = document.querySelector("nav");
     if (nav) {
       nav.setAttribute("data-shorts-nav", "1");
-      nav.style.pointerEvents = "none";
+      /* 🔥 nav는 보이되 스크롤 이벤트를 가로채지 않도록 한다 */
+      nav.style.pointerEvents = "auto";
+      nav.style.touchAction = "manipulation";
     }
-    document.querySelectorAll("nav a, nav button").forEach(el => {
-      el.style.pointerEvents = "auto";
-    });
 
     // 🔥 Block index page scrolling but NOT shorts overlay
-    document.documentElement.style.overscrollBehavior = "none";
-    document.body.style.overscrollBehavior = "none";
+    /* 🔥 index 스크롤만 차단, shortsOverlay는 정상 스크롤 */
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
 
     const shorts = (list || []).filter((v) => v && v.video_url);
     if (!shorts.length) return;
@@ -427,6 +427,14 @@ async function syncVoteForIssue(issueId) {
       bindTouchEvents(); // ✅ 이 줄 추가
       playOnly(firstIssueId);
       syncVoteForIssue(firstIssueId);
+      /* 🔥 wheel / touch 이벤트를 shortsOverlay가 반드시 받도록 */
+      overlay.addEventListener("wheel", e => {
+        e.stopPropagation();
+      }, { passive: true });
+
+      overlay.addEventListener("touchmove", e => {
+        e.stopPropagation();
+      }, { passive: true });
     });
   }
 
@@ -453,8 +461,8 @@ async function syncVoteForIssue(issueId) {
       nav.removeAttribute("data-shorts-nav");
     });
 
-    document.documentElement.style.overscrollBehavior = "";
-    document.body.style.overscrollBehavior = "";
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
 
     // 🔓 index 투표 UI 복구
     document.body.classList.remove("shorts-open");
