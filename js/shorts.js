@@ -149,6 +149,13 @@ async function syncVoteForIssue(issueId) {
     });
   }
 
+  function scrollToShort(index, behavior = "auto") {
+    if (!overlay) return;
+    const el = overlay.querySelector(`.short[data-index="${index}"]`);
+    if (!el) return;
+    el.scrollIntoView({ block: "start", behavior });
+  }
+
   function playOnly(index) {
     if (!isShortsActive()) return;
     if (currentIndex === index) return;
@@ -370,7 +377,7 @@ async function syncVoteForIssue(issueId) {
     requestAnimationFrame(() => {
       if (!isShortsActive()) return;
 
-      overlay.scrollTo({ top: startIndex * window.innerHeight, behavior: "auto" });
+      scrollToShort(startIndex, "auto");
       setupObserver();
       playOnly(startIndex);
 
@@ -417,8 +424,14 @@ async function syncVoteForIssue(issueId) {
   window.addEventListener("keydown", (e) => {
     if (!isShortsActive()) return;
 
-    if (e.key === "ArrowDown") overlay.scrollBy({ top: window.innerHeight, behavior: "smooth" });
-    if (e.key === "ArrowUp") overlay.scrollBy({ top: -window.innerHeight, behavior: "smooth" });
+    if (e.key === "ArrowDown") {
+      scrollToShort(currentIndex + 1, "smooth");
+    }
+
+    if (e.key === "ArrowUp") {
+      scrollToShort(currentIndex - 1, "smooth");
+    }
+
     if (e.key === "Escape") closeShorts();
   });
 
@@ -441,7 +454,7 @@ async function syncVoteForIssue(issueId) {
         wheelAccum = 0;
         wheelTimer = null;
 
-        overlay.scrollBy({ top: dir * window.innerHeight, behavior: "smooth" });
+        scrollToShort(currentIndex + dir, "smooth");
       }, 120);
     },
     { passive: true }
