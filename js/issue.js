@@ -47,6 +47,7 @@ async function forceInitialVoteSync(issueId) {
     if (result === "pro" || result === "con") {
       applyVoteUI(result);
     }
+    // ⛔ do NOT reset UI on "__NO_VOTE__" or "__SESSION_PENDING__"
   } catch (e) {
     console.warn("[VOTE] initial sync skipped:", e);
   }
@@ -166,9 +167,9 @@ if (typeof loadAiNews === "function") {
     const voteType = await window.GALLA_CHECK_VOTE(issue.id);
     if (voteType === "pro" || voteType === "con") {
       applyVoteUI(voteType);
-    } else {
-      applyVoteUI(null);
     }
+    // ⛔ DO NOT call applyVoteUI(null)
+    // vote.core.js owns the non-voted UI state
   }
   loadSupportStats(issue.id);
   loadMySupportStatus(issue.id);
