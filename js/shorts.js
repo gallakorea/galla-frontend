@@ -121,6 +121,13 @@ async function syncVoteForIssue(issueId) {
    - observer / wheel / keydown / click 은 "쇼츠 오버레이가 열렸을 때"만 동작
 */
 (function () {
+  // 🔥 EARLY BIND: expose internal opener immediately to avoid index openShorts timeout
+  window.__OPEN_SHORTS_INTERNAL__ = function(list, startId) {
+    // 실제 구현은 아래에서 재정의된다
+    console.warn("[SHORTS] internal opener stub called before init");
+    window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
+    window.__SHORTS_OPEN_QUEUE__.push({ list, startId, at: Date.now() });
+  };
   // ❌ 파일 전체 return 금지. 대신 "오버레이 활성 상태"로 가드한다.
   let overlay = null;
   let observer = null;
@@ -554,13 +561,20 @@ function bindTouchEvents() {
   /* =========================
      EXPORT + EVENTS
   ========================= */
+  // 🔥 FINAL BIND: replace stub with real implementation
   window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
   window.closeShorts = closeShorts;
 
-  // 내부 오프너 준비되면 큐 비우기
+  // 🔥 flush queued openShorts calls safely
   if (window.__SHORTS_OPEN_QUEUE__?.length) {
     const q = window.__SHORTS_OPEN_QUEUE__.splice(0);
-    q.forEach((x) => window.__OPEN_SHORTS_INTERNAL__(x.list, x.startId));
+    q.forEach((x) => {
+      try {
+        __openShortsInternal(x.list, x.startId);
+      } catch (e) {
+        console.error("[SHORTS] failed to open from queue", e);
+      }
+    });
   }
 
   window.addEventListener("shorts:opened", () => {
