@@ -156,6 +156,14 @@ function setupObserver() {
       );
 
       console.log("[SHORTS][SYNC]", { issueId, result });
+
+      // 🔥 always reset before apply
+      applyShortVoteUI(active, null);
+
+      // 🔓 ensure buttons are usable after sync
+      active?.querySelectorAll(".vote-btn").forEach(b => b.disabled = false);
+
+      // 🔥 apply actual vote if exists
       if (result) {
         applyShortVoteUI(active, result);
       }
@@ -214,11 +222,13 @@ function __openShortsInternal(list, startId) {
     btnPro.className = "vote-btn pro";
     btnPro.dataset.issueId = item.id;
     btnPro.textContent = "👍 찬성이오";
+    btnPro.disabled = true; // 🔒 disable until initial vote sync
 
     const btnCon = document.createElement("button");
     btnCon.className = "vote-btn con";
     btnCon.dataset.issueId = item.id;
     btnCon.textContent = "👎 난 반댈세";
+    btnCon.disabled = true; // 🔒 disable until initial vote sync
 
     voteBar.appendChild(btnPro);
     voteBar.appendChild(btnCon);
@@ -260,12 +270,22 @@ function __openShortsInternal(list, startId) {
 
       const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
       const result = raw === "pro" || raw === "con" ? raw : null;
-      if (!result) return;
 
       const active = overlay.querySelector(
         `.short[data-issue-id="${issueId}"]`
       );
-      applyShortVoteUI(active, result);
+      if (!active) return;
+
+      // 🔥 always reset first
+      applyShortVoteUI(active, null);
+
+      // 🔓 re-enable buttons after sync
+      active.querySelectorAll(".vote-btn").forEach(b => b.disabled = false);
+
+      // 🔥 then apply real vote if exists
+      if (result) {
+        applyShortVoteUI(active, result);
+      }
     })();
   });
 
