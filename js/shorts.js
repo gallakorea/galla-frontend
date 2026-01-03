@@ -141,7 +141,7 @@ function setupObserver() {
       const ready = await waitForVoteReady();
       if (!ready) return;
 
-      const raw = await window.GALLA_CHECK_VOTE(issueId);
+      const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
       const result = raw === "pro" || raw === "con" ? raw : null;
 
       const active = overlay.querySelector(
@@ -150,6 +150,8 @@ function setupObserver() {
 
       // ✅ reset first, then apply
       applyShortVoteUI(active, null);
+      // 디버그 로그 추가
+      console.log("[SHORTS][SYNC]", { issueId, result });
       if (result) {
         applyShortVoteUI(active, result);
       }
@@ -252,7 +254,7 @@ function openShorts(list, startId) {
       const ready = await waitForVoteReady();
       if (!ready) return;
 
-      const raw = await window.GALLA_CHECK_VOTE(issueId);
+      const raw = await window.GALLA_CHECK_VOTE(issueId, { force: true });
       const result = raw === "pro" || raw === "con" ? raw : null;
       if (!result) return;
 
@@ -369,7 +371,11 @@ document.addEventListener("click", async e => {
 window.openShorts = openShorts;
 // 🔥 Shorts opened → invalidate any previous vote-core UI cache
 window.addEventListener("shorts:opened", () => {
+  // vote-core UI 적용 캐시 전면 리셋
   window.__GALLA_LAST_VOTE_APPLY__ = null;
+  window.__GALLA_LAST_VOTE_ISSUE__ = null;
+  window.__GALLA_LAST_VOTE_PAGE__ = "shorts";
+  console.log("[SHORTS] vote-core cache reset (force sync)");
 });
 window.closeShorts = closeShorts;
 
