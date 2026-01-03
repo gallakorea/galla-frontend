@@ -236,6 +236,17 @@ async function syncVoteForIssue(issueId) {
     overlay.style.display = "block";
     overlay.scrollTop = 0;
 
+    // 🔒 index 투표 UI 완전 차단 (쇼츠 오버레이 동안)
+    document.body.classList.add("shorts-open");
+    // index 투표 버튼/바 숨김 (있을 경우)
+    document.querySelectorAll(
+      ".vote-bar, .issue-vote, .vote-fixed, .vote-bottom"
+    ).forEach(el => {
+      el.setAttribute("data-shorts-hidden", "1");
+      el.style.pointerEvents = "none";
+      el.style.display = "none";
+    });
+
     // 오버레이 open 플래그
     overlay.dataset.open = "1";
 
@@ -374,6 +385,14 @@ async function syncVoteForIssue(issueId) {
 
     document.body.style.overflow = "";
 
+    // 🔓 index 투표 UI 복구
+    document.body.classList.remove("shorts-open");
+    document.querySelectorAll('[data-shorts-hidden="1"]').forEach(el => {
+      el.style.pointerEvents = "";
+      el.style.display = "";
+      el.removeAttribute("data-shorts-hidden");
+    });
+
     // vote-core 컨텍스트 복구
     window.__GALLA_VOTE_CONTEXT__ = "index";
     window.__GALLA_ACTIVE_ISSUE_ID__ = null;
@@ -461,3 +480,9 @@ async function syncVoteForIssue(issueId) {
 
 // 🔥 현재 활성 쇼츠 index 외부 노출 (vote.core.js용)
 window.__GALLA_SHORTS_STATE__ = window.__GALLA_SHORTS_STATE__ || { currentIndex: -1 };
+// =========================
+// (안전장치) 전역 index 투표 차단 가드
+// =========================
+function isIndexVoteBlocked() {
+  return document.body.classList.contains("shorts-open");
+}
