@@ -7,6 +7,8 @@
 // openShorts 호출이 "내부 오프너 준비"보다 빨리 와도 안전하게 큐잉 처리
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
 
+window.__SHORTS_VOTING_LOCK__ = false;
+
 window.openShorts = function (list, startId) {
   if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
     window.__OPEN_SHORTS_INTERNAL__(list, startId);
@@ -197,6 +199,8 @@ async function syncVoteForIssue(issueId) {
     observer = new IntersectionObserver(
       (entries) => {
         if (!isShortsActive()) return;
+        // 🔒 prevent race condition during voting
+        if (window.__SHORTS_VOTING_LOCK__ === true) return;
         const best = getMostVisibleEntry(entries);
         if (!best) return;
         if (best.intersectionRatio < 0.6) return;
@@ -295,6 +299,9 @@ async function syncVoteForIssue(issueId) {
         e.stopPropagation();
         e.stopImmediatePropagation();
 
+        // 🔒 lock observer during vote
+        window.__SHORTS_VOTING_LOCK__ = true;
+
         const b = e.currentTarget;
         if (!b || b.disabled) return;
 
@@ -332,6 +339,11 @@ async function syncVoteForIssue(issueId) {
         } catch (err) {
           console.error("[SHORTS] vote error", err);
         }
+
+        // 🔓 unlock observer after vote settles
+        setTimeout(() => {
+          window.__SHORTS_VOTING_LOCK__ = false;
+        }, 300);
 
         // 🔥 DB 결과를 다시 읽어서 UI 확정 (절대 type 재사용 금지)
         await syncVoteForIssue(issueId);
