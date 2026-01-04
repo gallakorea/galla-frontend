@@ -1,3 +1,4 @@
+
 /* =========================================================
    GALLA SHORTS / REELS ENGINE (FINAL)
    - index 기반 전환 (scroll 폐기)
@@ -28,11 +29,20 @@ const CLOSE_THRESHOLD_X = 120;
 window.__SHORTS_ENGINE_READY__ = false;
 
 window.openShorts = function (list, startId) {
-  if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-    window.__OPEN_SHORTS_INTERNAL__(list, startId);
-  } else {
-    console.warn("[SHORTS] openShorts called before engine ready");
-    window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+  try {
+    if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+      window.__OPEN_SHORTS_INTERNAL__(list, startId);
+    } else {
+      console.warn("[SHORTS] __OPEN_SHORTS_INTERNAL__ missing, queueing");
+      window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+          window.__OPEN_SHORTS_INTERNAL__(list, startId);
+        }
+      }, { once: true });
+    }
+  } catch (e) {
+    console.error("[SHORTS] openShorts failed", e);
   }
 };
 
@@ -63,15 +73,14 @@ function __openShortsInternal(list, startId) {
   /* ===== overlay style ===== */
   Object.assign(overlay.style, {
     position: "fixed",
-    top: "0",
-    left: "0",
-    right: "0",
-    bottom: `${NAV_HEIGHT}px`,
+    inset: "0",
     zIndex: "9999",
     background: "#000",
     overflow: "hidden",
     touchAction: "none",
-    overscrollBehavior: "contain"
+    overscrollBehavior: "contain",
+    display: "block",
+    pointerEvents: "auto"
   });
 
   /* ===== close btn ===== */
@@ -102,7 +111,7 @@ function __openShortsInternal(list, startId) {
     section.dataset.issueId = item.id;
 
     Object.assign(section.style, {
-      height: `calc(100vh - ${NAV_HEIGHT}px)`,
+      height: "100vh",
       maxWidth: "480px",
       margin: "0 auto",
       position: "relative"
@@ -116,38 +125,9 @@ function __openShortsInternal(list, startId) {
         preload="auto"
         style="width:100%;height:100%;object-fit:cover"
       ></video>
-
-      <div class="shorts-vote-bar" style="
-        position:absolute;
-        left:0;
-        right:0;
-        bottom:${NAV_HEIGHT}px;
-        padding:12px;
-        display:flex;
-        gap:10px;
-        background:linear-gradient(to top, rgba(0,0,0,.7), rgba(0,0,0,0));
-      ">
-        <button class="shorts-vote-pro" data-issue-id="${item.id}" style="
-          flex:1;
-          height:44px;
-          border-radius:10px;
-          border:none;
-          background:#1f3cff;
-          color:#fff;
-          font-weight:600;
-        ">👍 찬성이오</button>
-
-        <button class="shorts-vote-con" data-issue-id="${item.id}" style="
-          flex:1;
-          height:44px;
-          border-radius:10px;
-          border:none;
-          background:#ffd966;
-          color:#000;
-          font-weight:600;
-        ">👎 난 반댈세</button>
-      </div>
+      <div class="shorts-vote"></div>
     `;
+
     track.appendChild(section);
   });
 
@@ -256,14 +236,6 @@ function bindTapControls() {
   let lastTap = 0;
 
   overlay.addEventListener("click", e => {
-    // 🔥 투표 버튼 클릭은 여기서 차단
-    if (
-      e.target.closest(".shorts-vote-pro") ||
-      e.target.closest(".shorts-vote-con")
-    ) {
-      return;
-    }
-
     const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
     const now = Date.now();
 
@@ -345,15 +317,13 @@ if (window.__SHORTS_ENGINE_READY__ && window.__SHORTS_OPEN_QUEUE__.length) {
   window.__SHORTS_OPEN_QUEUE__ = [];
 }
 
-document.addEventListener("click", e => {
-  const proBtn = e.target.closest(".shorts-vote-pro");
-  const conBtn = e.target.closest(".shorts-vote-con");
-
-  if (proBtn && window.GALLA_VOTE) {
-    window.GALLA_VOTE(proBtn.dataset.issueId, "pro");
+window.__FORCE_OPEN_SHORTS__ = function () {
+  const list = (window.cards || []).filter(c => c.video_url)
+    .map(c => ({ id: c.id, video_url: c.video_url }));
+  if (!list.length) {
+    alert("[SHORTS] no video cards");
+    return;
   }
-
-  if (conBtn && window.GALLA_VOTE) {
-    window.GALLA_VOTE(conBtn.dataset.issueId, "con");
-  }
-});
+  window.__OPEN_SHORTS_INTERNAL__(list, list[0].id);
+};
+console.info("[SHORTS] FORCE_OPEN_SHORTS attached");
