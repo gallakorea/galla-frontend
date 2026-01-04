@@ -124,7 +124,9 @@ body[data-page="shorts"] .header {
 .shorts-actions {
   position: absolute;
   right: 12px;
-  bottom: 120px;
+  top: 55%;
+  bottom: auto;
+  transform: translateY(-50%);
 
   display: flex;
   flex-direction: column;
