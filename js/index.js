@@ -1,6 +1,59 @@
 /********************************************
  *  INDEX.JS — GALLA FINAL REAL DATA VERSION
  ********************************************/
+/* ===============================
+ * 🔥 GUARANTEED SHORTS OPENER (DELEGATED, SINGLE)
+ * =============================== */
+(function () {
+  if (window.__GALLA_SHORTS_OPENER_BOUND__) return;
+  window.__GALLA_SHORTS_OPENER_BOUND__ = true;
+
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".speech-btn");
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+
+    const id = Number(btn.dataset.index);
+    const cards = Array.isArray(window.cards) ? window.cards : [];
+    const target = cards.find(c => c.id === id && c.video_url);
+    if (!target) {
+      console.warn("[SHORTS] no video for issue:", id);
+      return;
+    }
+
+    const list = cards
+      .filter(c => c.video_url)
+      .map(c => ({ id: c.id, video_url: c.video_url }));
+
+    if (!list.length) {
+      console.warn("[SHORTS] empty video list");
+      return;
+    }
+
+    // vote / context sync
+    window.__GALLA_LAST_VOTE_APPLY__ = null;
+    window.__GALLA_LAST_VOTE_ISSUE__ = id;
+    window.__GALLA_LAST_VOTE_PAGE__ = "shorts";
+    window.__CURRENT_SHORT_ISSUE_ID__ = id;
+
+    document.body.classList.add("shorts-open");
+
+    (function waitOpen(retry = 0) {
+      if (typeof window.openShorts === "function") {
+        window.openShorts(list, id);
+        return;
+      }
+      if (retry > 40) {
+        console.error("[SHORTS] openShorts not ready");
+        return;
+      }
+      setTimeout(() => waitOpen(retry + 1), 50);
+    })();
+  }, true);
+})();
 let cards = [];
 // expose for shorts opener
 window.cards = cards;
@@ -239,29 +292,6 @@ async function syncVoteWithRetry(cardEl, id, retry = 0) {
 }
 
 async function attachEvents() {
-
-    // 🎥 SHORTS OPEN (단일 진입점)
-    document.querySelectorAll(".speech-btn").forEach(btn => {
-        btn.onclick = e => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const id = Number(btn.dataset.index);
-            const target = cards.find(c => c.id === id && c.video_url);
-            if (!target) {
-                alert("이 이슈에는 쇼츠 영상이 없습니다.");
-                return;
-            }
-
-            const shortsList = cards
-                .filter(c => c.video_url)
-                .map(c => ({ id: c.id, video_url: c.video_url }));
-
-            document.body.classList.add("shorts-open");
-            window.openShorts(shortsList, id);
-        };
-    });
-
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
