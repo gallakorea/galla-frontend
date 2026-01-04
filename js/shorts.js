@@ -21,10 +21,16 @@ let velocityY = 0;
 const SWIPE_THRESHOLD = 70;
 const CLOSE_THRESHOLD_X = 120;
 
-let VIEWPORT_H = window.innerHeight;
+function getViewportHeight() {
+  return window.visualViewport
+    ? window.visualViewport.height
+    : window.innerHeight;
+}
+
+let VIEWPORT_H = getViewportHeight();
 
 function updateViewportHeight() {
-  VIEWPORT_H = window.innerHeight;
+  VIEWPORT_H = getViewportHeight();
 
   if (track) {
     track.style.height = `${shortsList.length * VIEWPORT_H}px`;
@@ -34,6 +40,11 @@ function updateViewportHeight() {
 }
 window.addEventListener("resize", updateViewportHeight);
 window.addEventListener("orientationchange", updateViewportHeight);
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", updateViewportHeight);
+  window.visualViewport.addEventListener("scroll", updateViewportHeight);
+}
 
 /* =========================
    OPEN API
