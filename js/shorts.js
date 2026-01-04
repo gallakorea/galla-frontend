@@ -479,38 +479,56 @@ document.addEventListener("click", e => {
 });
 
 // =========================
-// COMMENT STANCE TAB
+// COMMENT STANCE TAB (STATE)
 // =========================
 document.addEventListener("click", e => {
-  const tab = e.target.closest(".stance-tab");
+  const tab = e.target.closest("#shortsCommentModal .stance-tab");
   if (!tab) return;
 
-  window.currentCommentStance = tab.dataset.stance;
+  e.preventDefault();
+  e.stopPropagation();
 
+  const stance = tab.dataset.stance;
+  if (!stance) return;
+
+  // 상태 저장
+  window.currentCommentStance = stance;
+
+  // UI 갱신
   document
     .querySelectorAll("#shortsCommentModal .stance-tab")
-    .forEach(b => b.classList.remove("active"));
+    .forEach(btn => btn.classList.remove("active"));
 
   tab.classList.add("active");
 
+  // 댓글 다시 로딩
   loadShortsComments();
 });
 
 // =========================
-// COMMENT SORT
+// COMMENT SORT (STATE)
 // =========================
 document.addEventListener("click", e => {
-  const btn = e.target.closest(".sort-btn");
+  const btn = e.target.closest("#shortsCommentModal .sort-btn");
   if (!btn) return;
 
-  window.currentCommentSort = btn.dataset.sort;
+  e.preventDefault();
+  e.stopPropagation();
 
+  const sort = btn.dataset.sort;
+  if (!sort) return;
+
+  // 상태 저장
+  window.currentCommentSort = sort;
+
+  // UI 갱신
   document
     .querySelectorAll("#shortsCommentModal .sort-btn")
     .forEach(b => b.classList.remove("active"));
 
   btn.classList.add("active");
 
+  // 댓글 다시 로딩
   loadShortsComments();
 });
 
