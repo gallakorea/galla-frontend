@@ -405,3 +405,8 @@ body[data-page="shorts"] .nav {
     justify-content: center;
   }
 }
+
+body.comment-open {
+  touch-action: none;
+  overflow: hidden;
+}

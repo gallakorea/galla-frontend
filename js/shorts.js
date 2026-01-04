@@ -486,6 +486,9 @@ document.addEventListener("click", e => {
     requestAnimationFrame(() => {
       modal.classList.add("open");
     });
+
+    bindCommentModalDrag(); // 🔥 여기 추가
+    
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     console.info("[SHORTS][COMMENT] open issue =", issueId);
     if (typeof loadShortsComments === "function") {
@@ -553,9 +556,10 @@ document.addEventListener("click", e => {
 // =========================
 // COMMENT MODAL DRAG
 // =========================
-(function bindCommentModalDrag(){
+function bindCommentModalDrag() {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal) return;
+
   const sheet = modal.querySelector(".comment-sheet");
   if (!sheet) return;
 
@@ -567,6 +571,7 @@ document.addEventListener("click", e => {
     dragging = true;
     startY = e.touches[0].clientY;
     sheet.style.transition = "none";
+    e.stopPropagation();
   }, { passive: true });
 
   sheet.addEventListener("touchmove", e => {
@@ -577,6 +582,7 @@ document.addEventListener("click", e => {
       currentY = dy;
       sheet.style.transform = `translateY(${dy}px)`;
     }
+    e.stopPropagation();
   }, { passive: true });
 
   sheet.addEventListener("touchend", () => {
@@ -585,16 +591,15 @@ document.addEventListener("click", e => {
 
     if (currentY > 120) {
       modal.classList.remove("open");
-      setTimeout(() => {
-        modal.classList.add("hidden");
-      }, 320);
+      document.body.classList.remove("comment-open");
+      setTimeout(() => modal.classList.add("hidden"), 320);
     } else {
       sheet.style.transform = "translateY(0)";
     }
 
     currentY = 0;
   });
-})();
+}
 
 // =========================
 // COMMENT STANCE TAB
