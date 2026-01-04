@@ -19,7 +19,6 @@ let startY = 0;
 let currentTranslateY = 0;
 let velocityY = 0;
 
-const NAV_HEIGHT = 58;
 const SWIPE_THRESHOLD = 70;
 const CLOSE_THRESHOLD_X = 120;
 
