@@ -225,3 +225,39 @@ body[data-page="shorts"] .nav {
 
   z-index: 50;
 }
+
+/* =========================
+   SHORTS RIGHT ACTIONS (INSTAGRAM STYLE)
+========================= */
+.shorts-actions {
+  position: absolute;
+  right: 12px;
+  bottom: 160px; /* 투표 버튼 위 */
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  z-index: 30;
+  pointer-events: auto;
+}
+
+.shorts-action-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.shorts-action-btn .icon {
+  width: 22px;
+  height: 22px;
+  stroke: #fff;
+}
+
+.shorts-action-btn:active {
+  transform: scale(0.92);
+}

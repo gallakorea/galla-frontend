@@ -122,13 +122,28 @@ Object.assign(overlay.style, {
     });
 
     section.innerHTML = `
-      <video 
-        src="${item.video_url}" 
-        playsinline
-        preload="auto"
-        style="width:100%;height:100%;object-fit:cover"
-      ></video>
-    `;
+  <video 
+    src="${item.video_url}" 
+    playsinline
+    preload="auto"
+    style="width:100%;height:100%;object-fit:cover"
+  ></video>
+
+  <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
+  <div class="shorts-actions">
+    <button class="shorts-action-btn comment" aria-label="댓글">
+      <svg class="icon">
+        <use href="/assets/icons/comment.svg#icon"></use>
+      </svg>
+    </button>
+
+    <button class="shorts-action-btn share" aria-label="공유">
+      <svg class="icon">
+        <use href="/assets/icons/share.svg#icon"></use>
+      </svg>
+    </button>
+  </div>
+`;
 
     track.appendChild(section);
   });
@@ -372,3 +387,20 @@ window.__FORCE_OPEN_SHORTS__ = function () {
   window.__OPEN_SHORTS_INTERNAL__(list, list[0].id);
 };
 console.info("[SHORTS] FORCE_OPEN_SHORTS attached");
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".shorts-action-btn");
+  if (!btn) return;
+
+  const short = btn.closest(".short");
+  const issueId = Number(short?.dataset.issueId);
+  if (!issueId) return;
+
+  if (btn.classList.contains("comment")) {
+    console.log("[SHORTS] open comments:", issueId);
+  }
+
+  if (btn.classList.contains("share")) {
+    console.log("[SHORTS] share issue:", issueId);
+  }
+});
