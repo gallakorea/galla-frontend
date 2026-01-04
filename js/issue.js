@@ -414,19 +414,34 @@ async function loadMySupportStatus(issueId) {
 }
 
 /* ==========================================================================
-   7. Video Modal
+   🎬 SHORTS OPEN (ISSUE → SHORTS)
 ========================================================================== */
-const speechBackdrop = document.querySelector(".speech-backdrop");
-const speechSheet = document.querySelector(".speech-sheet");
+qs("open-video-modal")?.addEventListener("click", async () => {
+  if (!currentIssue || !currentIssue.video_url) {
+    alert("영상이 없습니다.");
+    return;
+  }
 
-qs("open-video-modal")?.addEventListener("click", () => {
-  speechBackdrop.hidden = false;
-  setTimeout(() => (speechSheet.style.bottom = "0"), 10);
-});
+  // shorts 엔진 준비 대기
+  let tries = 0;
+  while (typeof window.openShorts !== "function" && tries < 20) {
+    await new Promise(r => setTimeout(r, 100));
+    tries++;
+  }
 
-document.querySelector(".speech-close")?.addEventListener("click", () => {
-  speechSheet.style.bottom = "-100%";
-  setTimeout(() => (speechBackdrop.hidden = true), 300);
+  if (typeof window.openShorts !== "function") {
+    alert("쇼츠 엔진 로딩 중입니다. 잠시 후 다시 시도해주세요.");
+    return;
+  }
+
+  // 🔥 issue → shorts 전달용 리스트
+  const list = [{
+    id: currentIssue.id,
+    video_url: currentIssue.video_url
+  }];
+
+  // 🔥 무조건 body 기준으로 열기
+  window.openShorts(list, currentIssue.id);
 });
 
 /* ==========================================================================
