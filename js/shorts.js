@@ -106,26 +106,28 @@ if (!document.getElementById("shortsCommentModal")) {
   const modal = document.createElement("div");
   modal.id = "shortsCommentModal";
   modal.innerHTML = `
-    <div class="comment-sheet">
-      <div class="comment-header">
-        <div class="stance-tabs">
-          <button class="stance-tab active" data-stance="pro">찬성</button>
-          <button class="stance-tab" data-stance="con">반대</button>
-        </div>
-      </div>
-
-      <div class="comment-sort">
-        <button class="sort-btn active" data-sort="latest">최신순</button>
-        <button class="sort-btn" data-sort="popular">인기순</button>
-      </div>
-
-      <div id="shortsCommentList" class="comment-list"></div>
-
-      <div class="comment-input">
-        <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
-        <button id="shortsCommentSend">등록</button>
-      </div>
+<div class="comment-dim"></div>
+<div class="comment-sheet">
+  <div class="comment-handle"></div>
+  <div class="comment-header">
+    <div class="stance-tabs">
+      <button class="stance-tab active" data-stance="pro">찬성</button>
+      <button class="stance-tab" data-stance="con">반대</button>
     </div>
+  </div>
+
+  <div class="comment-sort">
+    <button class="sort-btn active" data-sort="latest">최신순</button>
+    <button class="sort-btn" data-sort="popular">인기순</button>
+  </div>
+
+  <div id="shortsCommentList" class="comment-list"></div>
+
+  <div class="comment-input">
+    <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
+    <button id="shortsCommentSend">등록</button>
+  </div>
+</div>
   `;
   document.body.appendChild(modal);
 }
@@ -469,12 +471,94 @@ document.addEventListener("click", e => {
     const modal = document.getElementById("shortsCommentModal");
     if (!modal) return;
 
-    modal.classList.add("open");
+    openCommentModal();
     loadShortsComments();
   }
 
   if (btn.classList.contains("share")) {
     console.log("[SHORTS] share issue:", issueId);
+  }
+});
+
+// Helper: open comment modal with animation
+function openCommentModal() {
+  const modal = document.getElementById("shortsCommentModal");
+  if (!modal) return;
+
+  modal.classList.add("visible");
+  requestAnimationFrame(() => {
+    modal.classList.add("open");
+  });
+
+  bindCommentDrag();
+}
+
+// Helper: close comment modal with animation
+function closeCommentModal() {
+  const modal = document.getElementById("shortsCommentModal");
+  if (!modal) return;
+
+  modal.classList.remove("open");
+  setTimeout(() => {
+    modal.classList.remove("visible");
+  }, 300);
+}
+
+// Drag up/down support for comment modal
+function bindCommentDrag() {
+  const modal = document.getElementById("shortsCommentModal");
+  const sheet = modal.querySelector(".comment-sheet");
+  if (!sheet) return;
+
+  let startY = 0;
+  let currentY = 0;
+  let dragging = false;
+
+  sheet.addEventListener("touchstart", e => {
+    dragging = true;
+    startY = e.touches[0].clientY;
+    sheet.style.transition = "none";
+  }, { passive: true });
+
+  sheet.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy > 0) {
+      currentY = dy;
+      sheet.style.transform = `translateY(${dy}px)`;
+    }
+  }, { passive: true });
+
+  sheet.addEventListener("touchend", () => {
+    dragging = false;
+    sheet.style.transition = "transform 0.3s ease";
+
+    if (currentY > 120) {
+      closeCommentModal();
+    } else {
+      sheet.style.transform = "translateY(0)";
+    }
+    currentY = 0;
+  });
+}
+
+// Document-level click to close comment modal
+document.addEventListener("click", e => {
+  const modal = document.getElementById("shortsCommentModal");
+  if (!modal || !modal.classList.contains("visible")) return;
+
+  const sheet = modal.querySelector(".comment-sheet");
+
+  // PC: click outside sheet closes
+  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    if (!sheet.contains(e.target)) {
+      closeCommentModal();
+    }
+  }
+
+  // Mobile: click on dim closes
+  if (e.target.classList.contains("comment-dim")) {
+    closeCommentModal();
   }
 });
 
