@@ -8,6 +8,12 @@
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
 window.__SHORTS_VOTING_LOCK__ = false;
 
+// =========================
+// COMMENT STATE
+// =========================
+window.currentCommentStance = "pro";    // pro | con
+window.currentCommentSort = "latest";   // latest | popular
+
 let shortsList = [];
 let currentIndex = 0;
 let overlay, track;
@@ -488,25 +494,28 @@ function loadShortsComments() {
   const issueId = window.__CURRENT_SHORT_ISSUE_ID__;
   if (!issueId) return;
 
+  const stance = window.currentCommentStance || "pro";
+  const sort = window.currentCommentSort || "latest";
+
   console.info(
     "[SHORTS][COMMENT] load",
     "issue:", issueId,
-    "stance:", window.currentCommentStance || "pro",
-    "sort:", window.currentCommentSort || "latest"
+    "stance:", stance,
+    "sort:", sort
   );
 
   const list = document.getElementById("shortsCommentList");
   if (!list) return;
 
-  // 임시 더미 (DB 연동 전)
+  // Temporary dummy content (ready for DB wiring)
   list.innerHTML = `
     <div style="padding:12px 0;border-bottom:1px solid #222;">
-      <strong>유저A</strong> · 찬성<br/>
-      이 영상은 찬성할 수밖에 없음
+      <strong>유저A</strong> · ${stance === "pro" ? "찬성" : "반대"}<br/>
+      (${sort === "latest" ? "최신" : "인기"}) 기준 댓글
     </div>
     <div style="padding:12px 0;border-bottom:1px solid #222;">
-      <strong>유저B</strong> · 반대<br/>
-      이건 좀 과한 것 같다
+      <strong>유저B</strong><br/>
+      이 이슈에 대한 의견입니다
     </div>
   `;
 }
@@ -516,4 +525,52 @@ document.addEventListener("click", e => {
     const modal = document.getElementById("shortsCommentModal");
     modal?.classList.add("hidden");
   }
+});
+
+// =========================
+// COMMENT STANCE TAB
+// =========================
+document.addEventListener("click", e => {
+  const tab = e.target.closest(".stance-tab");
+  if (!tab) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const stance = tab.dataset.stance;
+  if (!stance) return;
+
+  window.currentCommentStance = stance;
+
+  document.querySelectorAll(".stance-tab").forEach(btn =>
+    btn.classList.remove("active")
+  );
+  tab.classList.add("active");
+
+  console.info("[SHORTS][COMMENT] stance =", stance);
+  loadShortsComments();
+});
+
+// =========================
+// COMMENT SORT
+// =========================
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".sort-btn");
+  if (!btn) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const sort = btn.dataset.sort;
+  if (!sort) return;
+
+  window.currentCommentSort = sort;
+
+  document.querySelectorAll(".sort-btn").forEach(b =>
+    b.classList.remove("active")
+  );
+  btn.classList.add("active");
+
+  console.info("[SHORTS][COMMENT] sort =", sort);
+  loadShortsComments();
 });
