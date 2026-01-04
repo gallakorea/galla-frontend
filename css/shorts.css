@@ -27,8 +27,8 @@ body[data-page="shorts"] .header {
   inset: 0;
 
   width: 100vw;
-  height: 100dvh;
-
+  height: calc(100dvh - 58px); /* 하단 네비만큼 제외 */
+  
   background: #000;
   z-index: 999;
 

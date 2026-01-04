@@ -136,14 +136,14 @@ overlay.innerHTML = `
 /* ===== overlay style ===== */
 Object.assign(overlay.style, {
   position: "fixed",
-  inset: "0",
-  zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
+  top: "0",
+  left: "0",
+  right: "0",
+  bottom: "58px", // 🔥 하단 네비 높이만큼 비움
+  zIndex: "900",
   background: "#000",
   overflow: "hidden",
-  touchAction: "none",
-  overscrollBehavior: "contain",
-  display: "block",
-  pointerEvents: "auto"
+  pointerEvents: "none" // 🔥 핵심
 });
 
   /* ===== close btn ===== */
