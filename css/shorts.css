@@ -256,70 +256,64 @@ body[data-page="shorts"] .nav {
 }
 
 /* =========================
-   SHORTS COMMENT MODAL
+   SHORTS COMMENT MODAL (FINAL SPEC)
 ========================= */
 
 #shortsCommentModal {
   position: fixed;
   inset: 0;
-  z-index: 20000;
+  z-index: 1200;
   display: none;
+  pointer-events: none;
 }
 
-/* 열림 상태 */
 #shortsCommentModal.visible {
   display: block;
-}
-
-/* dim */
-#shortsCommentModal .comment-dim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.45);
   pointer-events: auto;
 }
 
-#shortsCommentModal .comment-sheet {
+#shortsCommentModal .comment-dim {
   position: absolute;
-  left: 50%;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 0;
+}
+
+#shortsCommentModal .comment-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
-  transform: translate(-50%, 100%);
+  z-index: 1;
 
   width: 100%;
   max-width: 480px;
+  margin: 0 auto;
 
-  height: 72vh;
+  height: 70vh;
   max-height: 92vh;
 
-  background: #111;
+  background: #181818;
   border-radius: 18px 18px 0 0;
-
-  transition: transform .35s cubic-bezier(.4,0,.2,1);
-  will-change: transform;
+  box-shadow: 0 -2px 16px rgba(0,0,0,0.22);
 
   display: flex;
   flex-direction: column;
 
-  pointer-events: auto;
-  touch-action: pan-y;
+  transform: translateY(100%);
+  transition: transform .32s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
+  touch-action: none;
 }
 
 #shortsCommentModal.visible .comment-sheet {
-  transform: translate(-50%, 0);
+  transform: translateY(0);
 }
 
-
-/* drag handle */
 .comment-handle {
   width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: #666;
-  margin: 10px auto 6px;
-  flex-shrink: 0;
-}
-
-/* fully expanded state */
-#shortsCommentModal.full .comment-sheet {
-  height: 92vh;
+  height: 5px;
+  border-radius: 3px;
+  background: #444;
+  margin: 12px auto 8px auto;
 }
