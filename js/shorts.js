@@ -63,6 +63,10 @@ function __openShortsInternal(list, startId) {
 
 overlay.innerHTML = `
   <div id="shortsContainer">
+    <div id="shortsVoteBar" class="shorts-vote">
+      <button class="vote-btn pro" data-vote="pro">👍 찬성이오</button>
+      <button class="vote-btn con" data-vote="con">👎 반댈세</button>
+    </div>
     <div class="shorts-top">
       <button id="shortsCloseBtn">←</button>
     </div>
@@ -125,11 +129,6 @@ Object.assign(overlay.style, {
         preload="auto"
         style="width:100%;height:100%;object-fit:cover"
       ></video>
-
-      <div class="shorts-vote" data-issue-id="${item.id}">
-        <button class="vote-btn pro">👍 찬성이오</button>
-        <button class="vote-btn con">👎 반댈세</button>
-      </div>
     `;
 
     track.appendChild(section);
@@ -152,6 +151,17 @@ Object.assign(overlay.style, {
   moveToIndex(currentIndex, true);
 
   document.body.style.overflow = "hidden";
+
+  const voteBar = overlay.querySelector("#shortsVoteBar");
+  voteBar?.addEventListener("click", e => {
+    const btn = e.target.closest(".vote-btn");
+    if (!btn) return;
+    const type = btn.dataset.vote;
+    const issueId = voteBar.dataset.issueId;
+    if (window.GALLA_VOTE && issueId) {
+      window.GALLA_VOTE(issueId, type, { scope: "shorts" });
+    }
+  });
 }
 
 /* =========================
@@ -170,6 +180,7 @@ function moveToIndex(idx, instant = false) {
 
   playOnlyCurrent();
   syncVote();
+  updateShortsVoteBar();
 }
 
 function playOnlyCurrent() {
@@ -241,6 +252,7 @@ function bindTapControls() {
 
   overlay.addEventListener("click", e => {
     const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    if (!video) return;
     const now = Date.now();
 
     if (now - lastTap < 300) {
@@ -251,25 +263,6 @@ function bindTapControls() {
     }
 
     lastTap = now;
-  });
-
-  overlay.addEventListener("click", e => {
-    const btn = e.target.closest(".vote-btn");
-    if (!btn) return;
-
-    const box = btn.closest(".shorts-vote");
-    const issueId = Number(box.dataset.issueId);
-    const type = btn.classList.contains("pro") ? "pro" : "con";
-
-    if (window.__SHORTS_VOTING_LOCK__) return;
-    window.__SHORTS_VOTING_LOCK__ = true;
-
-    if (window.GALLA_VOTE_ACTION) {
-      window.GALLA_VOTE_ACTION(issueId, type)
-        .finally(() => {
-          window.__SHORTS_VOTING_LOCK__ = false;
-        });
-    }
   });
 }
 
@@ -306,18 +299,19 @@ function bindKeyboard() {
    VOTE SYNC (기존 시스템 연동)
 ========================= */
 function syncVote() {
-  const issue = shortsList[currentIndex];
-  if (!issue) return;
-
-  const voteBoxes = document.querySelectorAll(".shorts-vote");
-  const currentBox = voteBoxes[currentIndex];
-  if (!currentBox) return;
-
+  const issueId = shortsList[currentIndex].id;
   if (window.GALLA_CHECK_VOTE) {
-    window.GALLA_CHECK_VOTE(issue.id, {
-      force: true,
-      targetEl: currentBox
-    });
+    window.GALLA_CHECK_VOTE(issueId, { force: true });
+  }
+}
+
+function updateShortsVoteBar() {
+  const bar = document.getElementById("shortsVoteBar");
+  if (!bar) return;
+  const issueId = shortsList[currentIndex]?.id;
+  bar.dataset.issueId = issueId;
+  if (window.GALLA_CHECK_VOTE) {
+    window.GALLA_CHECK_VOTE(issueId, { force: true, scope: "shorts" });
   }
 }
 
