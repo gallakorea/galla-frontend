@@ -69,18 +69,18 @@ function __openShortsInternal(list, startId) {
 
   track = overlay.querySelector("#shortsTrack");
 
-  /* ===== overlay style ===== */
-  Object.assign(overlay.style, {
-    position: "fixed",
-    inset: "0",
-    zIndex: "9999",
-    background: "#000",
-    overflow: "hidden",
-    touchAction: "none",
-    overscrollBehavior: "contain",
-    display: "block",
-    pointerEvents: "auto"
-  });
+/* ===== overlay style ===== */
+Object.assign(overlay.style, {
+  position: "fixed",
+  inset: "0",
+  zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
+  background: "#000",
+  overflow: "hidden",
+  touchAction: "none",
+  overscrollBehavior: "contain",
+  display: "block",
+  pointerEvents: "auto"
+});
 
   /* ===== close btn ===== */
   const closeBtn = overlay.querySelector("#shortsCloseBtn");
