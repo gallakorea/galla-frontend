@@ -750,19 +750,21 @@ body {
 /* ==========================================================
    BOTTOM NAV
 ========================================================== */
-.bottom-nav {
+/* NAVIGATION — 480px 컨테이너 기준 */
+.nav {
     position: fixed;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
+
     width: 100%;
     max-width: 480px;
+    height: 58px;
+
     background: #000;
-    border-top: 1px solid #111;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-    z-index: 200;
+    border-top: 1px solid #222;
+
+    z-index: 2000;
 }
 
 .nav-item img {

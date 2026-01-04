@@ -271,13 +271,15 @@ body {
 }
 
 /* NAVIGATION — viewport 기준 고정 */
+/* NAVIGATION — 480px 컨테이너 기준 */
 .nav {
     position: fixed;
-    left: 0;
-    right: 0;
     bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
 
-    width: 100vw;
+    width: 100%;
+    max-width: 480px;
     height: 58px;
 
     background: #000;
@@ -287,13 +289,9 @@ body {
 }
 
 .nav-inner {
-    max-width: 480px;
-    margin: 0 auto;
-
     display: flex;
     justify-content: space-around;
     align-items: center;
-
     height: 100%;
 }
 
