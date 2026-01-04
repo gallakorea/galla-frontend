@@ -258,7 +258,6 @@ if (explainWrap) {
       videoBtn.dataset.issueId = issue.id;
 
       videoBtn.onclick = async () => {
-        // 🔥 Shorts 엔진 로딩 대기 (index / random 과 동일한 보장 로직)
         let tries = 0;
         while (typeof window.openShorts !== "function" && tries < 20) {
           await new Promise(r => setTimeout(r, 100));
@@ -266,21 +265,21 @@ if (explainWrap) {
         }
 
         if (typeof window.openShorts !== "function") {
-          console.error("[ISSUE] Shorts engine not ready after wait");
           alert("쇼츠 로딩 중입니다. 잠시 후 다시 시도해주세요.");
           return;
         }
 
-        // 🔥 index / random 과 동일한 list 구조
         const list = [{
           id: issue.id,
           video_url: issue.video_url
         }];
 
-        console.log("[ISSUE] openShorts from issue", list);
+        // ✅ 여기 추가
+        window.__SHORTS_MOUNT_TARGET__ = document.body;
 
         window.openShorts(list, issue.id);
       };
+
     } else {
       videoBtn.style.display = "none";
     }

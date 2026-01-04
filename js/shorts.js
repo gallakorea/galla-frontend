@@ -137,7 +137,7 @@ overlay.innerHTML = `
 Object.assign(overlay.style, {
   position: "fixed",
   inset: "0",
-  zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
+  zIndex: "10000", // 🔥 issue 모든 모달 위
   background: "#000",
   overflow: "hidden",
   touchAction: "none",
@@ -488,7 +488,7 @@ document.addEventListener("click", e => {
     });
 
     bindCommentModalDrag(); // 🔥 여기 추가
-    
+
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     console.info("[SHORTS][COMMENT] open issue =", issueId);
     if (typeof loadShortsComments === "function") {
