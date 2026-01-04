@@ -132,7 +132,7 @@ body[data-page="shorts"] .header {
   flex-direction: column;
   gap: 16px;
 
-  z-index: 50;
+  z-index: 12000;          /* 모달 오픈 전에도 클릭 가능 */
   pointer-events: auto;
 }
 
@@ -295,6 +295,16 @@ body[data-page="shorts"] .nav {
   pointer-events: auto;
 }
 
+/* 드래그 업으로 끝까지 올라간 상태 */
+.comment-sheet.full {
+  transform: translateY(0);
+}
+
+/* 반만 열린 기본 상태 */
+.comment-sheet.half {
+  transform: translateY(28%);
+}
+
 /* =========================
    HEADER
 ========================= */
@@ -431,58 +441,7 @@ body.comment-open {
   }
 }
 
-/* =========================
-   SHORTS COMMENT MODAL
-========================= */
-
-.shorts-comment-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  z-index: 3000;
-
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-
-  opacity: 0;
-  pointer-events: none;
-
-  transition: opacity 0.25s ease;
-}
-
-/* 열림 상태 */
-.shorts-comment-modal.open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* -------------------------
-   COMMENT SHEET (MODAL BOTTOM SHEET)
-------------------------- */
-.comment-sheet {
-  width: 100%;
-  max-width: 480px;
-  background: #000;
-  border-radius: 16px 16px 0 0;
-
-  transform: translateY(100%);
-  transition: transform 0.32s cubic-bezier(.4,0,.2,1);
-
-  max-height: 92vh;
-  height: auto;
-
-  display: flex;
-  flex-direction: column;
-
-  touch-action: none;
-}
-
-.comment-sheet.full {
-  transform: translateY(0);
-}
-
-
-.hidden {
-  display: none !important;
+/* 모바일에서 닫기 X 완전 제거 (안전망) */
+@media (hover: none) and (pointer: coarse) {
+  #commentCloseBtn { display: none !important; }
 }
