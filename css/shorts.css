@@ -367,3 +367,45 @@ body[data-page="shorts"] .nav {
   padding: 0 14px;
   font-weight: 700;
 }
+
+#shortsCommentModal {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: none;
+}
+
+#shortsCommentModal.visible {
+  display: block;
+}
+
+.comment-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+}
+
+.comment-sheet {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%) translateY(100%);
+  width: 100%;
+  max-width: 480px;
+  height: 70vh;
+  background: #0b0b0b;
+  border-radius: 16px 16px 0 0;
+  transition: transform 0.3s ease;
+}
+
+#shortsCommentModal.open .comment-sheet {
+  transform: translateX(-50%) translateY(0);
+}
+
+.comment-handle {
+  width: 40px;
+  height: 4px;
+  background: #444;
+  border-radius: 2px;
+  margin: 8px auto;
+}
