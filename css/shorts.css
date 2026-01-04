@@ -412,26 +412,6 @@ body.comment-open {
 }
 
 /* =========================
-   COMMENT MODAL CLOSE (X)
-   - Mobile: hidden
-   - Desktop only
-========================= */
-
-/* 기본: 모바일에서는 숨김 */
-#commentCloseBtn {
-  display: none;
-}
-
-/* 마우스/트랙패드 있는 환경(PC)에서만 표시 */
-@media (hover: hover) and (pointer: fine) {
-  #commentCloseBtn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-/* =========================
    SHORTS COMMENT MODAL
 ========================= */
 
