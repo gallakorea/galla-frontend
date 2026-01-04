@@ -1,49 +1,6 @@
 /********************************************
  *  INDEX.JS — GALLA FINAL REAL DATA VERSION
  ********************************************/
-// ===============================
-// 🔥 GUARANTEED SHORTS OPENER (TOP-LEVEL, ONCE)
-// ===============================
-(function () {
-  if (window.__GALLA_SHORTS_OPENER_BOUND__) return;
-  window.__GALLA_SHORTS_OPENER_BOUND__ = true;
-
-  document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.speech-btn');
-    if (!btn) return;
-
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-
-    const id = Number(btn.dataset.index);
-    if (!Array.isArray(window.cards) || !window.cards.length) return;
-    const target = window.cards.find(c => c.id === id && c.video_url);
-    if (!target) return;
-
-    // force vote context
-    window.__GALLA_LAST_VOTE_APPLY__ = null;
-    window.__GALLA_LAST_VOTE_ISSUE__ = id;
-    window.__GALLA_LAST_VOTE_PAGE__ = 'shorts';
-    window.__CURRENT_SHORT_ISSUE_ID__ = id;
-
-    const list = window.cards.filter(c => c.video_url)
-      .map(c => ({ id: c.id, video_url: c.video_url }));
-    if (!list.length) return;
-
-    document.body.classList.add('shorts-open');
-
-    // wait until shorts engine is ready, then open
-    (function waitOpen(retry=0){
-      if (typeof window.openShorts === 'function') {
-        window.openShorts(list, id);
-        return;
-      }
-      if (retry > 40) return;
-      setTimeout(() => waitOpen(retry+1), 50);
-    })();
-  }, true);
-})();
 let cards = [];
 // expose for shorts opener
 window.cards = cards;
@@ -283,6 +240,28 @@ async function syncVoteWithRetry(cardEl, id, retry = 0) {
 
 async function attachEvents() {
 
+    // 🎥 SHORTS OPEN (단일 진입점)
+    document.querySelectorAll(".speech-btn").forEach(btn => {
+        btn.onclick = e => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = Number(btn.dataset.index);
+            const target = cards.find(c => c.id === id && c.video_url);
+            if (!target) {
+                alert("이 이슈에는 쇼츠 영상이 없습니다.");
+                return;
+            }
+
+            const shortsList = cards
+                .filter(c => c.video_url)
+                .map(c => ({ id: c.id, video_url: c.video_url }));
+
+            document.body.classList.add("shorts-open");
+            window.openShorts(shortsList, id);
+        };
+    });
+
     // 👍👎 투표
     document.querySelectorAll(".vote-btn").forEach(btn => {
         btn.onclick = async e => {
@@ -327,7 +306,8 @@ async function attachEvents() {
 
     // 🧭 카드 전체 클릭 → 이슈 페이지
     document.querySelectorAll(".card").forEach(card => {
-        card.addEventListener("click", () => {
+        card.addEventListener("click", e => {
+            if (e.target.closest(".speech-btn")) return;
             const url = card.dataset.link;
             if (url) location.href = url;
         });
