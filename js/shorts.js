@@ -494,18 +494,26 @@ document.addEventListener("click", e => {
 function openCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal) return;
+
   window.__COMMENT_OPEN__ = true;
-  modal.classList.add("visible");
+
   const sheet = modal.querySelector(".comment-sheet");
-  if (sheet) {
-    // X축 변형 제거, Y축만 사용
-    sheet.style.transform = "translateY(100%)";
-    sheet.style.transition = "none";
-    requestAnimationFrame(() => {
-      sheet.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
-      sheet.style.transform = "translateY(0)";
-    });
-  }
+  if (!sheet) return;
+
+  // 현재 영상 pause
+  const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
+  if (video && !video.paused) video.pause();
+
+  modal.classList.add("visible");
+
+  sheet.style.transition = "none";
+  sheet.style.transform = "translateY(100%)";
+
+  requestAnimationFrame(() => {
+    sheet.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
+    sheet.style.transform = "translateY(0)";
+  });
+
   bindCommentDrag();
 }
 
@@ -513,14 +521,23 @@ function openCommentModal() {
 function closeCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal) return;
+
   const sheet = modal.querySelector(".comment-sheet");
-  if (sheet) {
-    sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
-    sheet.style.transform = "translateY(100%)";
-  }
+  if (!sheet) return;
+
+  sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
+  sheet.style.transform = "translateY(100%)";
+
   setTimeout(() => {
     modal.classList.remove("visible");
     window.__COMMENT_OPEN__ = false;
+
+    // 영상 재생 복구
+    const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    if (video) {
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    }
   }, 300);
 }
 
@@ -534,39 +551,46 @@ function bindCommentDrag() {
   let currentY = 0;
   let dragging = false;
 
-  // 댓글 모달 드래그 중 쇼츠 제스처 완전 차단
-  let dragListener = e => {
+  const onStart = e => {
     dragging = true;
     startY = e.touches[0].clientY;
     sheet.style.transition = "none";
   };
-  let moveListener = e => {
+
+  const onMove = e => {
     if (!dragging) return;
-    // 드래그 중에는 쇼츠 제스처 완전 차단
-    window.__COMMENT_OPEN__ = true;
+
     const dy = e.touches[0].clientY - startY;
-    currentY = Math.max(dy, 0);
-    sheet.style.transform = `translateY(${currentY}px)`;
+
+    // 위로는 제한 없음, 아래로만 이동
+    if (dy > 0) {
+      currentY = dy;
+      sheet.style.transform = `translateY(${currentY}px)`;
+    } else {
+      sheet.style.transform = "translateY(0)";
+    }
   };
-  let endListener = () => {
+
+  const onEnd = () => {
     dragging = false;
     sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
+
     if (currentY > VIEWPORT_H * 0.25) {
       closeCommentModal();
     } else {
       sheet.style.transform = "translateY(0)";
     }
+
     currentY = 0;
   };
 
-  // remove old if already exists
-  sheet.removeEventListener("touchstart", dragListener);
-  sheet.removeEventListener("touchmove", moveListener);
-  sheet.removeEventListener("touchend", endListener);
+  sheet.removeEventListener("touchstart", onStart);
+  sheet.removeEventListener("touchmove", onMove);
+  sheet.removeEventListener("touchend", onEnd);
 
-  sheet.addEventListener("touchstart", dragListener, { passive: true });
-  sheet.addEventListener("touchmove", moveListener, { passive: true });
-  sheet.addEventListener("touchend", endListener);
+  sheet.addEventListener("touchstart", onStart, { passive: true });
+  sheet.addEventListener("touchmove", onMove, { passive: true });
+  sheet.addEventListener("touchend", onEnd);
 }
 
 // Document-level click to close comment modal
