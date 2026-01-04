@@ -262,7 +262,7 @@ body[data-page="shorts"] .nav {
 #shortsCommentModal {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 20000;
   display: none;
 }
 
@@ -276,32 +276,38 @@ body[data-page="shorts"] .nav {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,.45);
+  pointer-events: auto;
 }
 
-/* ✅ 핵심: sheet는 무조건 bottom sheet */
 #shortsCommentModal .comment-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
+  position: absolute;
+  left: 50%;
   bottom: 0;
+  transform: translate(-50%, 100%);
 
-  height: 70vh;
-  max-height: 90vh;
+  width: 100%;
+  max-width: 480px;
+
+  height: 72vh;
+  max-height: 92vh;
 
   background: #111;
-  border-radius: 16px 16px 0 0;
+  border-radius: 18px 18px 0 0;
 
-  transform: translateY(100%);
   transition: transform .35s cubic-bezier(.4,0,.2,1);
+  will-change: transform;
 
   display: flex;
   flex-direction: column;
+
+  pointer-events: auto;
+  touch-action: pan-y;
 }
 
-/* 열렸을 때 */
 #shortsCommentModal.visible .comment-sheet {
-  transform: translateY(0);
+  transform: translate(-50%, 0);
 }
+
 
 /* drag handle */
 .comment-handle {
@@ -309,5 +315,11 @@ body[data-page="shorts"] .nav {
   height: 4px;
   border-radius: 2px;
   background: #666;
-  margin: 10px auto;
+  margin: 10px auto 6px;
+  flex-shrink: 0;
+}
+
+/* fully expanded state */
+#shortsCommentModal.full .comment-sheet {
+  height: 92vh;
 }
