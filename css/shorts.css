@@ -13,26 +13,37 @@ body[data-page="shorts"] {
   /* overflow: hidden;  body scroll locked, container scroll only  -- removed as per instructions */
 }
 
-/* legacy header force hide */
-
 /* -------------------------
    OVERLAY (SCROLL CONTAINER)
 ------------------------- */
-#
-shortsOverlay {
+#shortsOverlay {
   position: fixed;
-  top: 0;
+  inset: 0;
+
   left: 0;
   right: 0;
-  bottom: 0;
-
   width: 100%;
   height: 100dvh;
+  overflow: hidden;
 
   background: #000;
-  z-index: 900;
+  z-index: 999;
 
-  overflow: hidden;
+  overflow-x: hidden;
+
+  scroll-behavior: auto;
+  overscroll-behavior: none;
+
+  overscroll-behavior-y: contain;
+
+  box-sizing: border-box;
+
+  -webkit-overflow-scrolling: auto;
+  touch-action: pan-y;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-gutter: auto;
 }
 
 #shortsOverlay::-webkit-scrollbar {
@@ -46,11 +57,11 @@ shortsOverlay {
   position: relative;
   width: 100%;
   height: 100dvh;
-
   max-width: 480px;
   margin: 0 auto;
 
   scroll-snap-align: start;
+
   background: #000;
 }
 
@@ -179,9 +190,12 @@ shortsOverlay {
   left: 0;
   right: 0;
   bottom: 0;
-
   width: 100%;
   height: 58px;
-
   z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body[data-page="shorts"] .nav {
+  height: 58px;
 }
