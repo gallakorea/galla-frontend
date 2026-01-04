@@ -24,19 +24,40 @@ body[data-page="shorts"] .header {
 ------------------------- */
 #shortsOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 58px; /* keep bottom nav visible */
+  inset: 0;
 
   width: 100%;
-  height: auto;
+  max-width: 480px;
+  height: 100dvh;
+
+  margin: 0 auto;
 
   background: #000;
-  z-index: 500;
+  z-index: 999;
 
-  overflow: hidden;
-  overscroll-behavior: contain;
+  overflow-y: scroll;
+  overflow-x: hidden;
+
+  scroll-snap-type: y mandatory;
+  scroll-snap-points-y: repeat(100%);
+  scroll-behavior: auto;
+  overscroll-behavior: none;
+
+  overscroll-behavior-y: contain;
+
+  box-sizing: border-box;
+
+  -webkit-overflow-scrolling: auto;
+  touch-action: pan-y;
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-gutter: auto;
+  scroll-snap-stop: always;
+}
+
+#shortsOverlay::-webkit-scrollbar {
+  display: none;
 }
 
 /* -------------------------
@@ -46,9 +67,6 @@ body[data-page="shorts"] .header {
   position: relative;
   width: 100%;
   height: 100dvh;
-
-  max-width: 480px;
-  margin: 0 auto;
 
   scroll-snap-align: start;
   scroll-snap-stop: always;
@@ -177,12 +195,7 @@ body[data-page="shorts"] .header {
 
 /* 하단 네비 safe-area 보정 (iPhone 홈바 겹침 방지) */
 .nav {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 58px;
-  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 body[data-page="shorts"] .nav {
