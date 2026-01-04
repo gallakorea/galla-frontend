@@ -247,14 +247,30 @@ if (explainWrap) {
     }
   }
 
-  /* 영상 */
+  /* 🎬 SHORTS ENTRY (1분 영상 버튼) */
   const videoBtn = qs("open-video-modal");
-  const videoEl = qs("speech-video");
 
-  if (videoBtn && videoEl) {
+  if (videoBtn) {
     if (issue.video_url) {
       videoBtn.style.display = "block";
-      videoEl.src = issue.video_url;
+
+      // Shorts 진입용 데이터 세팅
+      videoBtn.dataset.issueId = issue.id;
+
+      videoBtn.onclick = () => {
+        if (typeof window.openShorts !== "function") {
+          console.warn("[ISSUE] Shorts engine not ready");
+          return;
+        }
+
+        // index / random 과 동일한 방식으로 list 구성
+        const list = [{
+          id: issue.id,
+          video_url: issue.video_url
+        }];
+
+        window.openShorts(list, issue.id);
+      };
     } else {
       videoBtn.style.display = "none";
     }
