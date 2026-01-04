@@ -25,6 +25,12 @@ let VIEWPORT_H = window.innerHeight;
 
 function updateViewportHeight() {
   VIEWPORT_H = window.innerHeight;
+
+  if (track) {
+    track.style.height = `${shortsList.length * VIEWPORT_H}px`;
+    track.style.transition = "none";
+    track.style.transform = `translateY(-${currentIndex * VIEWPORT_H}px)`;
+  }
 }
 window.addEventListener("resize", updateViewportHeight);
 window.addEventListener("orientationchange", updateViewportHeight);
@@ -123,10 +129,12 @@ Object.assign(overlay.style, {
     section.dataset.issueId = item.id;
 
     Object.assign(section.style, {
-      height: "100vh",
+      height: `${VIEWPORT_H}px`,
+      width: "100%",
       maxWidth: "480px",
       margin: "0 auto",
-      position: "relative"
+      position: "relative",
+      overflow: "hidden"
     });
 
     section.innerHTML = `
