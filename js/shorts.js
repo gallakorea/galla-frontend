@@ -486,10 +486,15 @@ function openCommentModal() {
   if (!modal) return;
 
   modal.classList.add("visible");
-  requestAnimationFrame(() => {
-    modal.classList.add("open");
-  });
-
+  const sheet = modal.querySelector(".comment-sheet");
+  if (sheet) {
+    sheet.style.transform = "translateY(100%)";
+    sheet.style.transition = "none";
+    requestAnimationFrame(() => {
+      sheet.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
+      sheet.style.transform = "translateY(0)";
+    });
+  }
   bindCommentDrag();
 }
 
@@ -497,8 +502,11 @@ function openCommentModal() {
 function closeCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal) return;
-
-  modal.classList.remove("open");
+  const sheet = modal.querySelector(".comment-sheet");
+  if (sheet) {
+    sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
+    sheet.style.transform = "translateY(100%)";
+  }
   setTimeout(() => {
     modal.classList.remove("visible");
   }, 300);
@@ -523,17 +531,14 @@ function bindCommentDrag() {
   sheet.addEventListener("touchmove", e => {
     if (!dragging) return;
     const dy = e.touches[0].clientY - startY;
-    if (dy > 0) {
-      currentY = dy;
-      sheet.style.transform = `translateY(${dy}px)`;
-    }
+    currentY = Math.max(dy, 0);
+    sheet.style.transform = `translateY(${currentY}px)`;
   }, { passive: true });
 
   sheet.addEventListener("touchend", () => {
     dragging = false;
-    sheet.style.transition = "transform 0.3s ease";
-
-    if (currentY > 120) {
+    sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
+    if (currentY > VIEWPORT_H * 0.25) {
       closeCommentModal();
     } else {
       sheet.style.transform = "translateY(0)";
@@ -546,17 +551,6 @@ function bindCommentDrag() {
 document.addEventListener("click", e => {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal || !modal.classList.contains("visible")) return;
-
-  const sheet = modal.querySelector(".comment-sheet");
-
-  // PC: click outside sheet closes
-  if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
-    if (!sheet.contains(e.target)) {
-      closeCommentModal();
-    }
-  }
-
-  // Mobile: click on dim closes
   if (e.target.classList.contains("comment-dim")) {
     closeCommentModal();
   }
