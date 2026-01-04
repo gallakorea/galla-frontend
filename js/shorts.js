@@ -155,10 +155,15 @@ Object.assign(overlay.style, {
 
   const voteBar = overlay.querySelector("#shortsVoteBar");
   voteBar?.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const btn = e.target.closest(".vote-btn");
     if (!btn) return;
+
     const type = btn.dataset.vote;
     const issueId = voteBar.dataset.issueId;
+
     if (window.GALLA_VOTE && issueId) {
       window.GALLA_VOTE(issueId, type, { scope: "shorts" });
     }
@@ -187,6 +192,7 @@ function moveToIndex(idx, instant = false) {
 function playOnlyCurrent() {
   document.querySelectorAll("#shortsTrack video").forEach((v, i) => {
     if (i === currentIndex) {
+      v.muted = false;
       v.play().catch(()=>{});
       v.playbackRate = 1;
     } else {
@@ -318,9 +324,10 @@ function updateShortsVoteBar() {
     return;
   }
   console.info("[SHORTS][VOTE] sync issueId =", issueId);
-  // Sync issueId onto each vote button
+  // Sync issueId onto each vote button, and reset active-vote class
   bar.querySelectorAll(".vote-btn").forEach(btn => {
     btn.dataset.issueId = issueId;
+    btn.classList.remove("active-vote");
   });
   if (window.GALLA_CHECK_VOTE) {
     window.GALLA_CHECK_VOTE(issueId, { force: true, scope: "shorts" });
