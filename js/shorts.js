@@ -29,11 +29,20 @@ const CLOSE_THRESHOLD_X = 120;
 window.__SHORTS_ENGINE_READY__ = false;
 
 window.openShorts = function (list, startId) {
-  if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-    window.__OPEN_SHORTS_INTERNAL__(list, startId);
-  } else {
-    console.warn("[SHORTS] openShorts called before engine ready");
-    window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+  try {
+    if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+      window.__OPEN_SHORTS_INTERNAL__(list, startId);
+    } else {
+      console.warn("[SHORTS] __OPEN_SHORTS_INTERNAL__ missing, queueing");
+      window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+          window.__OPEN_SHORTS_INTERNAL__(list, startId);
+        }
+      }, { once: true });
+    }
+  } catch (e) {
+    console.error("[SHORTS] openShorts failed", e);
   }
 };
 
@@ -65,11 +74,13 @@ function __openShortsInternal(list, startId) {
   Object.assign(overlay.style, {
     position: "fixed",
     inset: "0",
-    zIndex: "50",
+    zIndex: "9999",
     background: "#000",
     overflow: "hidden",
     touchAction: "none",
-    overscrollBehavior: "contain"
+    overscrollBehavior: "contain",
+    display: "block",
+    pointerEvents: "auto"
   });
 
   /* ===== close btn ===== */
@@ -305,3 +316,14 @@ if (window.__SHORTS_ENGINE_READY__ && window.__SHORTS_OPEN_QUEUE__.length) {
   );
   window.__SHORTS_OPEN_QUEUE__ = [];
 }
+
+window.__FORCE_OPEN_SHORTS__ = function () {
+  const list = (window.cards || []).filter(c => c.video_url)
+    .map(c => ({ id: c.id, video_url: c.video_url }));
+  if (!list.length) {
+    alert("[SHORTS] no video cards");
+    return;
+  }
+  window.__OPEN_SHORTS_INTERNAL__(list, list[0].id);
+};
+console.info("[SHORTS] FORCE_OPEN_SHORTS attached");
