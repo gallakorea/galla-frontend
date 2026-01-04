@@ -89,7 +89,7 @@ Object.assign(overlay.style, {
   /* ===== close btn ===== */
   const closeBtn = overlay.querySelector("#shortsCloseBtn");
   Object.assign(closeBtn.style, {
-    background: "rgba(0,0,0,.5)",
+    background: "rgba(0,0,0,.5)", 
     color: "#fff",
     border: "none",
     fontSize: "18px",
@@ -126,7 +126,11 @@ Object.assign(overlay.style, {
         preload="auto"
         style="width:100%;height:100%;object-fit:cover"
       ></video>
-      <div class="shorts-vote"></div>
+
+      <div class="shorts-vote" data-issue-id="${item.id}">
+        <button class="vote-btn pro" data-vote="pro">👍 찬성이오</button>
+        <button class="vote-btn con" data-vote="con">👎 반댈세</button>
+      </div>
     `;
 
     track.appendChild(section);
@@ -147,6 +151,25 @@ Object.assign(overlay.style, {
   bindKeyboard();
 
   moveToIndex(currentIndex, true);
+
+  overlay.addEventListener("click", e => {
+    const btn = e.target.closest(".vote-btn");
+    if (!btn) return;
+
+    const vote = btn.dataset.vote;
+    const issueId = shortsList[currentIndex]?.id;
+    if (!vote || !issueId) return;
+
+    if (!window.GALLA_VOTE) return;
+
+    window.GALLA_VOTE(issueId, vote)
+      .then(() => {
+        syncVote();
+      })
+      .catch(err => {
+        console.error("[SHORTS VOTE ERROR]", err);
+      });
+  });
 
   document.body.style.overflow = "hidden";
 }
@@ -284,10 +307,36 @@ function bindKeyboard() {
    VOTE SYNC (기존 시스템 연동)
 ========================= */
 function syncVote() {
-  const issueId = shortsList[currentIndex].id;
-  if (window.GALLA_CHECK_VOTE) {
-    window.GALLA_CHECK_VOTE(issueId, { force: true });
-  }
+  const issueId = shortsList[currentIndex]?.id;
+  if (!issueId) return;
+
+  const voteBar = document.querySelector(
+    `.short[data-issue-id="${issueId}"] .shorts-vote`
+  );
+  if (!voteBar) return;
+
+  // 초기화
+  voteBar.querySelectorAll(".vote-btn").forEach(btn => {
+    btn.classList.remove("active-vote", "locked");
+  });
+
+  if (!window.GALLA_CHECK_VOTE) return;
+
+  window.GALLA_CHECK_VOTE(issueId, {
+    force: true,
+    onResult: (result) => {
+      if (!result || !result.my_vote) return;
+
+      const activeBtn = voteBar.querySelector(
+        `.vote-btn[data-vote="${result.my_vote}"]`
+      );
+      if (activeBtn) activeBtn.classList.add("active-vote");
+
+      voteBar.querySelectorAll(".vote-btn").forEach(btn => {
+        btn.classList.add("locked");
+      });
+    }
+  });
 }
 
 /* =========================
