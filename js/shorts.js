@@ -21,6 +21,14 @@ let velocityY = 0;
 const SWIPE_THRESHOLD = 70;
 const CLOSE_THRESHOLD_X = 120;
 
+let VIEWPORT_H = window.innerHeight;
+
+function updateViewportHeight() {
+  VIEWPORT_H = window.innerHeight;
+}
+window.addEventListener("resize", updateViewportHeight);
+window.addEventListener("orientationchange", updateViewportHeight);
+
 /* =========================
    OPEN API
 ========================= */
@@ -104,7 +112,7 @@ Object.assign(overlay.style, {
   /* ===== track ===== */
   Object.assign(track.style, {
     width: "100%",
-    height: `${shortsList.length * 100}vh`,
+    height: `${shortsList.length * VIEWPORT_H}px`,
     transition: "transform 0.35s cubic-bezier(.4,0,.2,1)",
     willChange: "transform"
   });
@@ -200,8 +208,7 @@ function moveToIndex(idx, instant = false) {
 
   track.style.transition = instant ? "none" : "transform 0.35s cubic-bezier(.4,0,.2,1)";
   // 🔥 실제 화면 높이 기준 이동 (모바일 주소창 / iOS 대응)
-  const h = window.innerHeight;
-  track.style.transform = `translateY(-${idx * h}px)`;
+  track.style.transform = `translateY(-${idx * VIEWPORT_H}px)`;
   window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
 
   playOnlyCurrent();
@@ -237,7 +244,7 @@ function bindGestures() {
     isDragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-    currentTranslateY = -currentIndex * window.innerHeight;
+    currentTranslateY = -currentIndex * VIEWPORT_H;
     track.style.transition = "none";
   }, { passive: true });
 
@@ -250,7 +257,7 @@ function bindGestures() {
     if (Math.abs(dx) > Math.abs(dy)) {
       track.style.transform = `
         translateX(${dx}px)
-        translateY(-${currentIndex * window.innerHeight}px)
+        translateY(-${currentIndex * VIEWPORT_H}px)
       `;
       track.style.opacity = `${1 - Math.min(Math.abs(dx) / 300, 0.5)}`;
       return;
