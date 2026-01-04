@@ -482,6 +482,10 @@ document.addEventListener("click", e => {
       return;
     }
     modal.classList.remove("hidden");
+    // 트랜지션 시작을 위해 requestAnimationFrame으로 open 클래스 추가
+    requestAnimationFrame(() => {
+      modal.classList.add("open");
+    });
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     console.info("[SHORTS][COMMENT] open issue =", issueId);
     if (typeof loadShortsComments === "function") {
@@ -530,13 +534,19 @@ document.addEventListener("click", e => {
 
   // 닫기 버튼
   if (e.target.id === "commentCloseBtn") {
-    modal.classList.add("hidden");
+    modal.classList.remove("open");
+    setTimeout(() => {
+      modal.classList.add("hidden");
+    }, 320);
     return;
   }
 
   // 배경 클릭 시 닫기 (sheet 바깥)
   if (e.target === modal) {
-    modal.classList.add("hidden");
+    modal.classList.remove("open");
+    setTimeout(() => {
+      modal.classList.add("hidden");
+    }, 320);
   }
 });
 
@@ -562,16 +572,27 @@ document.addEventListener("click", e => {
   sheet.addEventListener("touchmove", e => {
     if (!dragging) return;
     const dy = e.touches[0].clientY - startY;
-    if (dy < 0) {
-      currentY = Math.max(dy, -window.innerHeight);
-      sheet.style.transform = `translateY(${currentY}px)`;
+
+    if (dy > 0) {
+      currentY = dy;
+      sheet.style.transform = `translateY(${dy}px)`;
     }
   }, { passive: true });
 
   sheet.addEventListener("touchend", () => {
     dragging = false;
-    sheet.style.transition = "transform 0.3s ease";
-    sheet.style.transform = "translateY(0)";
+    sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
+
+    if (currentY > 120) {
+      modal.classList.remove("open");
+      setTimeout(() => {
+        modal.classList.add("hidden");
+      }, 320);
+    } else {
+      sheet.style.transform = "translateY(0)";
+    }
+
+    currentY = 0;
   });
 })();
 
