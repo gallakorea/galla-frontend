@@ -385,3 +385,23 @@ body[data-page="shorts"] .nav {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* =========================
+   SHORTS CLOSE BUTTON
+   - Mobile: hidden
+   - Desktop: visible
+========================= */
+
+/* 기본: 숨김 (모바일 기준) */
+#shortsCloseBtn {
+  display: none;
+}
+
+/* PC 환경에서만 표시 */
+@media (hover: hover) and (pointer: fine) {
+  #shortsCloseBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
