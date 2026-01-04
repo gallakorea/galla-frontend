@@ -137,7 +137,7 @@ overlay.innerHTML = `
 Object.assign(overlay.style, {
   position: "fixed",
   inset: "0",
-  zIndex: "10000", // 🔥 issue 모든 모달 위
+  zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
   background: "#000",
   overflow: "hidden",
   touchAction: "none",
@@ -210,16 +210,6 @@ Object.assign(overlay.style, {
 `;
 
     track.appendChild(section);
-
-    // === Hard-fix visibility and stacking for <video> elements on the issue page
-    const videoEl = section.querySelector("video");
-    if (videoEl) {
-      videoEl.style.display = "block";
-      videoEl.style.visibility = "visible";
-      videoEl.style.opacity = "1";
-      videoEl.style.position = "relative";
-      videoEl.style.zIndex = "1";
-    }
   });
 
   currentIndex = Math.max(
@@ -498,7 +488,7 @@ document.addEventListener("click", e => {
     });
 
     bindCommentModalDrag(); // 🔥 여기 추가
-
+    
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     console.info("[SHORTS][COMMENT] open issue =", issueId);
     if (typeof loadShortsComments === "function") {
