@@ -412,6 +412,26 @@ body.comment-open {
 }
 
 /* =========================
+   COMMENT MODAL CLOSE (X)
+   - Mobile: hidden
+   - Desktop only
+========================= */
+
+/* 기본: 모바일에서는 숨김 */
+#commentCloseBtn {
+  display: none;
+}
+
+/* 마우스/트랙패드 있는 환경(PC)에서만 표시 */
+@media (hover: hover) and (pointer: fine) {
+  #commentCloseBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* =========================
    SHORTS COMMENT MODAL
 ========================= */
 
@@ -437,25 +457,31 @@ body.comment-open {
   pointer-events: auto;
 }
 
+/* -------------------------
+   COMMENT SHEET (MODAL BOTTOM SHEET)
+------------------------- */
 .comment-sheet {
   width: 100%;
   max-width: 480px;
   background: #000;
   border-radius: 16px 16px 0 0;
 
-  /* 🔥 시작 위치: 화면 아래 */
   transform: translateY(100%);
   transition: transform 0.32s cubic-bezier(.4,0,.2,1);
 
-  max-height: 85vh;
+  max-height: 92vh;
+  height: auto;
+
   display: flex;
   flex-direction: column;
+
+  touch-action: none;
 }
 
-/* 모달 열릴 때 시트가 스르륵 올라옴 */
-.shorts-comment-modal.open .comment-sheet {
+.comment-sheet.full {
   transform: translateY(0);
 }
+
 
 .hidden {
   display: none !important;
