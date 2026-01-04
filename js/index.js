@@ -337,7 +337,13 @@ async function attachEvents() {
     // 🧭 카드 전체 클릭 → 이슈 페이지
     document.querySelectorAll(".card").forEach(card => {
         card.addEventListener("click", e => {
-            if (e.target.closest(".speech-btn")) return;
+            // 🔥 HARD BLOCK: clicking Shorts button must NEVER navigate
+            if (e.target.closest(".speech-btn")) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                return;
+            }
             const url = card.dataset.link;
             if (url) location.href = url;
         });
