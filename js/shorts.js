@@ -64,8 +64,8 @@ function __openShortsInternal(list, startId) {
 overlay.innerHTML = `
   <div id="shortsContainer">
     <div id="shortsVoteBar" class="shorts-vote">
-      <button class="vote-btn pro" data-vote="pro">👍 찬성이오</button>
-      <button class="vote-btn con" data-vote="con">👎 반댈세</button>
+      <button class="vote-btn pro" data-vote="pro" data-issue-id="">👍 찬성이오</button>
+      <button class="vote-btn con" data-vote="con" data-issue-id="">👎 반댈세</button>
     </div>
     <div class="shorts-top">
       <button id="shortsCloseBtn">←</button>
@@ -124,8 +124,7 @@ Object.assign(overlay.style, {
     section.innerHTML = `
       <video 
         src="${item.video_url}" 
-        playsinline 
-        muted 
+        playsinline
         preload="auto"
         style="width:100%;height:100%;object-fit:cover"
       ></video>
@@ -149,6 +148,8 @@ Object.assign(overlay.style, {
   bindKeyboard();
 
   moveToIndex(currentIndex, true);
+
+  updateShortsVoteBar();
 
   document.body.style.overflow = "hidden";
 
@@ -179,8 +180,8 @@ function moveToIndex(idx, instant = false) {
   window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
 
   playOnlyCurrent();
-  syncVote();
   updateShortsVoteBar();
+  syncVote();
 }
 
 function playOnlyCurrent() {
@@ -258,6 +259,7 @@ function bindTapControls() {
     if (now - lastTap < 300) {
       video.playbackRate = video.playbackRate === 1 ? 2 : 1;
     } else {
+      if (video.muted) video.muted = false;
       if (video.paused) video.play();
       else video.pause();
     }
@@ -310,6 +312,16 @@ function updateShortsVoteBar() {
   if (!bar) return;
   const issueId = shortsList[currentIndex]?.id;
   bar.dataset.issueId = issueId;
+  // Guard for missing issueId, and log
+  if (!issueId) {
+    console.warn("[SHORTS][VOTE] missing issueId");
+    return;
+  }
+  console.info("[SHORTS][VOTE] sync issueId =", issueId);
+  // Sync issueId onto each vote button
+  bar.querySelectorAll(".vote-btn").forEach(btn => {
+    btn.dataset.issueId = issueId;
+  });
   if (window.GALLA_CHECK_VOTE) {
     window.GALLA_CHECK_VOTE(issueId, { force: true, scope: "shorts" });
   }
