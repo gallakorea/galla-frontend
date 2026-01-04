@@ -12,6 +12,15 @@ function resolveActiveIssueId(fallbackIssueId) {
   return fallbackIssueId;
 }
 
+function resolveVoteContainer(opts) {
+  // 쇼츠 모드일 경우 shortsVoteBar 내부만 조작
+  if (opts?.scope === "shorts") {
+    return document.getElementById("shortsVoteBar");
+  }
+  // 기본은 문서 전체 (index / issue)
+  return document;
+}
+
 let votingInProgress = false;
 
 /* =========================
@@ -157,8 +166,36 @@ window.GALLA_VOTE = vote;
 window.GALLA_GET_MY_VOTE = getMyVote;
 // 🔥 backward compatibility (issue / shorts expect this name)
 const __GALLA_ORIG_GET_MY_VOTE__ = getMyVote;
-window.GALLA_CHECK_VOTE = async function(issueId, opts) {
+window.GALLA_CHECK_VOTE = async function(issueId, opts = {}) {
   const resolved = resolveActiveIssueId(issueId);
-  return __GALLA_ORIG_GET_MY_VOTE__(resolved);
+  const result = await __GALLA_ORIG_GET_MY_VOTE__(resolved);
+
+  const container = resolveVoteContainer(opts);
+  if (!container) {
+    console.warn("[VOTE][UI] vote container not found");
+    return result;
+  }
+
+  const proBtn = container.querySelector(".vote-btn.pro");
+  const conBtn = container.querySelector(".vote-btn.con");
+
+  if (!proBtn || !conBtn) {
+    console.warn("[VOTE][UI] vote buttons missing in container");
+    return result;
+  }
+
+  // 🔥 UI 초기화
+  proBtn.classList.remove("active-vote");
+  conBtn.classList.remove("active-vote");
+
+  // 🔥 DB 결과 기준으로 UI 반영
+  if (result === "pro") {
+    proBtn.classList.add("active-vote");
+  }
+  if (result === "con") {
+    conBtn.classList.add("active-vote");
+  }
+
+  return result;
 };
 window.GALLA_GET_VOTE_STATS = getVoteStats;
