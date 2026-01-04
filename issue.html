@@ -46,14 +46,8 @@
     <!-- THUMB -->
     <img src="assets/logo.png" class="issue-thumb" id="issue-thumb" />
 
-    <!-- SPEECH / SHORTS BUTTON -->
-    <button
-      class="speech-btn open-shorts-btn"
-      id="open-video-modal"
-      data-issue-id=""
-    >
-      🎥 1분 엘리베이터 스피치
-    </button>
+    <!-- SPEECH BUTTON -->
+    <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
 
     <!-- VOTE -->
     <section class="vote-section">
@@ -371,15 +365,24 @@
     <div class="nav-item" onclick="location.href='mypage.html'"><img src="assets/icons/nav-user.svg"></div>
 </nav>
 
-<!-- =========================
-   SHORTS OVERLAY (FULLSCREEN)
-========================= -->
-<div id="shortsOverlay" hidden>
-  <div id="shortsContainer">
-    <!-- shorts.js will inject shorts DOM here -->
-  </div>
-</div>
-<!-- #app 끝 -->
+<!-- VIDEO MODAL -->
+<div class="speech-backdrop" hidden>
+    <div class="speech-sheet">
+        <div class="speech-header">
+            <span class="speech-title">1분 엘리베이터 스피치</span>
+            <button class="speech-close">✕</button>
+        </div>
+
+        <video id="speech-video" playsinline></video>
+
+        <div class="speech-controls">
+            <div class="play-icon" id="play-icon">▶</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+</div> <!-- #app 끝 -->
 
 <!-- =========================
    SUPPORT MODAL (CENTER)
@@ -453,8 +456,6 @@
 
 <!-- Issue Page Logic (단 한 번!) -->
 <script type="module" src="js/issue.js"></script>
-
-<script src="js/shorts.js"></script>
 
 <script>
 /* --------------------------

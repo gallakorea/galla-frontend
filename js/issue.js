@@ -247,39 +247,14 @@ if (explainWrap) {
     }
   }
 
-  /* 🎬 SHORTS ENTRY (1분 영상 버튼) */
+  /* 영상 */
   const videoBtn = qs("open-video-modal");
+  const videoEl = qs("speech-video");
 
-  if (videoBtn) {
+  if (videoBtn && videoEl) {
     if (issue.video_url) {
       videoBtn.style.display = "block";
-
-      // Shorts 진입용 데이터 세팅
-      videoBtn.dataset.issueId = issue.id;
-
-      videoBtn.onclick = async () => {
-        let tries = 0;
-        while (typeof window.openShorts !== "function" && tries < 20) {
-          await new Promise(r => setTimeout(r, 100));
-          tries++;
-        }
-
-        if (typeof window.openShorts !== "function") {
-          alert("쇼츠 로딩 중입니다. 잠시 후 다시 시도해주세요.");
-          return;
-        }
-
-        const list = [{
-          id: issue.id,
-          video_url: issue.video_url
-        }];
-
-        // ✅ 여기 추가
-        window.__SHORTS_MOUNT_TARGET__ = document.body;
-
-        window.openShorts(list, issue.id);
-      };
-
+      videoEl.src = issue.video_url;
     } else {
       videoBtn.style.display = "none";
     }
@@ -438,6 +413,21 @@ async function loadMySupportStatus(issueId) {
     `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
 }
 
+/* ==========================================================================
+   7. Video Modal
+========================================================================== */
+const speechBackdrop = document.querySelector(".speech-backdrop");
+const speechSheet = document.querySelector(".speech-sheet");
+
+qs("open-video-modal")?.addEventListener("click", () => {
+  speechBackdrop.hidden = false;
+  setTimeout(() => (speechSheet.style.bottom = "0"), 10);
+});
+
+document.querySelector(".speech-close")?.addEventListener("click", () => {
+  speechSheet.style.bottom = "-100%";
+  setTimeout(() => (speechBackdrop.hidden = true), 300);
+});
 
 /* ==========================================================================
    8. Remix
