@@ -439,21 +439,6 @@ async function loadMySupportStatus(issueId) {
     `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
 }
 
-/* ==========================================================================
-   7. Video Modal
-========================================================================== */
-const speechBackdrop = document.querySelector(".speech-backdrop");
-const speechSheet = document.querySelector(".speech-sheet");
-
-qs("open-video-modal")?.addEventListener("click", () => {
-  speechBackdrop.hidden = false;
-  setTimeout(() => (speechSheet.style.bottom = "0"), 10);
-});
-
-document.querySelector(".speech-close")?.addEventListener("click", () => {
-  speechSheet.style.bottom = "-100%";
-  setTimeout(() => (speechBackdrop.hidden = true), 300);
-});
 
 /* ==========================================================================
    8. Remix
