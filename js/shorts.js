@@ -1,4 +1,3 @@
-
 /* =========================================================
    GALLA SHORTS / REELS ENGINE (FINAL)
    - index 기반 전환 (scroll 폐기)
@@ -136,6 +135,26 @@ Object.assign(overlay.style, {
     track.appendChild(section);
   });
 
+  overlay.addEventListener("click", e => {
+    const btn = e.target.closest(".vote-btn");
+    if (!btn) return;
+
+    const voteBox = btn.closest(".shorts-vote");
+    const issueId = Number(voteBox.dataset.issueId);
+    const vote = btn.dataset.vote;
+
+    if (window.__SHORTS_VOTING_LOCK__) return;
+    window.__SHORTS_VOTING_LOCK__ = true;
+
+    if (typeof window.GALLA_VOTE === "function") {
+      window.GALLA_VOTE(issueId, vote);
+    }
+
+    setTimeout(() => {
+      window.__SHORTS_VOTING_LOCK__ = false;
+    }, 600);
+  });
+
   currentIndex = Math.max(
     0,
     shortsList.findIndex(v => v.id === startId)
@@ -151,25 +170,6 @@ Object.assign(overlay.style, {
   bindKeyboard();
 
   moveToIndex(currentIndex, true);
-
-  overlay.addEventListener("click", e => {
-    const btn = e.target.closest(".vote-btn");
-    if (!btn) return;
-
-    const vote = btn.dataset.vote;
-    const issueId = shortsList[currentIndex]?.id;
-    if (!vote || !issueId) return;
-
-    if (!window.GALLA_VOTE) return;
-
-    window.GALLA_VOTE(issueId, vote)
-      .then(() => {
-        syncVote();
-      })
-      .catch(err => {
-        console.error("[SHORTS VOTE ERROR]", err);
-      });
-  });
 
   document.body.style.overflow = "hidden";
 }
@@ -307,36 +307,26 @@ function bindKeyboard() {
    VOTE SYNC (기존 시스템 연동)
 ========================= */
 function syncVote() {
-  const issueId = shortsList[currentIndex]?.id;
-  if (!issueId) return;
+  const issueId = shortsList[currentIndex].id;
+  const activeBox = document.querySelectorAll(".shorts-vote")[currentIndex];
+  if (!activeBox) return;
 
-  const voteBar = document.querySelector(
-    `.short[data-issue-id="${issueId}"] .shorts-vote`
-  );
-  if (!voteBar) return;
-
-  // 초기화
-  voteBar.querySelectorAll(".vote-btn").forEach(btn => {
-    btn.classList.remove("active-vote", "locked");
-  });
-
-  if (!window.GALLA_CHECK_VOTE) return;
-
-  window.GALLA_CHECK_VOTE(issueId, {
-    force: true,
-    onResult: (result) => {
-      if (!result || !result.my_vote) return;
-
-      const activeBtn = voteBar.querySelector(
-        `.vote-btn[data-vote="${result.my_vote}"]`
-      );
-      if (activeBtn) activeBtn.classList.add("active-vote");
-
-      voteBar.querySelectorAll(".vote-btn").forEach(btn => {
-        btn.classList.add("locked");
-      });
-    }
-  });
+  if (window.GALLA_CHECK_VOTE) {
+    window.GALLA_CHECK_VOTE(issueId, {
+      force: true,
+      onResult: (res) => {
+        if (!res) return;
+        const { my_vote } = res;
+        activeBox.querySelectorAll(".vote-btn").forEach(b => {
+          b.classList.remove("active-vote", "locked");
+          if (my_vote) b.classList.add("locked");
+          if (b.dataset.vote === my_vote) {
+            b.classList.add("active-vote");
+          }
+        });
+      }
+    });
+  }
 }
 
 /* =========================
