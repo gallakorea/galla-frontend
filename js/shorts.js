@@ -292,6 +292,8 @@ function playOnlyCurrent() {
 ========================= */
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
+    const modal = document.getElementById("shortsCommentModal");
+    if (modal && !modal.classList.contains("hidden")) return;
     isDragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
@@ -300,6 +302,8 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchmove", e => {
+    const modal = document.getElementById("shortsCommentModal");
+    if (modal && !modal.classList.contains("hidden")) return;
     if (!isDragging) return;
 
     const dx = e.touches[0].clientX - startX;
@@ -318,6 +322,8 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchend", e => {
+    const modal = document.getElementById("shortsCommentModal");
+    if (modal && !modal.classList.contains("hidden")) return;
     isDragging = false;
     track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
     track.style.opacity = "1";
@@ -533,6 +539,41 @@ document.addEventListener("click", e => {
     modal.classList.add("hidden");
   }
 });
+
+// =========================
+// COMMENT MODAL DRAG
+// =========================
+(function bindCommentModalDrag(){
+  const modal = document.getElementById("shortsCommentModal");
+  if (!modal) return;
+  const sheet = modal.querySelector(".comment-sheet");
+  if (!sheet) return;
+
+  let startY = 0;
+  let currentY = 0;
+  let dragging = false;
+
+  sheet.addEventListener("touchstart", e => {
+    dragging = true;
+    startY = e.touches[0].clientY;
+    sheet.style.transition = "none";
+  }, { passive: true });
+
+  sheet.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy < 0) {
+      currentY = Math.max(dy, -window.innerHeight);
+      sheet.style.transform = `translateY(${currentY}px)`;
+    }
+  }, { passive: true });
+
+  sheet.addEventListener("touchend", () => {
+    dragging = false;
+    sheet.style.transition = "transform 0.3s ease";
+    sheet.style.transform = "translateY(0)";
+  });
+})();
 
 // =========================
 // COMMENT STANCE TAB
