@@ -88,64 +88,65 @@ function __openShortsInternal(list, startId) {
     document.body.appendChild(overlay);
   }
 
-overlay.innerHTML = `
-  <div id="shortsContainer">
-    <div id="shortsVoteBar" class="shorts-vote">
-      <button class="vote-btn pro" data-vote="pro" data-issue-id="">👍 찬성이오</button>
-      <button class="vote-btn con" data-vote="con" data-issue-id="">👎 반댈세</button>
+  // Clear overlay for fresh rendering
+  overlay.innerHTML = `
+    <div id="shortsContainer">
+      <div id="shortsVoteBar" class="shorts-vote">
+        <button class="vote-btn pro" data-vote="pro" data-issue-id="">👍 찬성이오</button>
+        <button class="vote-btn con" data-vote="con" data-issue-id="">👎 반댈세</button>
+      </div>
+      <div class="shorts-top">
+        <button id="shortsCloseBtn">←</button>
+      </div>
+      <div id="shortsTrack"></div>
     </div>
-    <div class="shorts-top">
-      <button id="shortsCloseBtn">←</button>
-    </div>
-    <div id="shortsTrack"></div>
-  </div>
-`;
-
-// === 댓글 모달 HTML 생성 추가 ===
-if (!document.getElementById("shortsCommentModal")) {
-  const modal = document.createElement("div");
-  modal.id = "shortsCommentModal";
-  modal.innerHTML = `
-<div class="comment-dim"></div>
-<div class="comment-sheet">
-  <div class="comment-handle"></div>
-  <div class="comment-header">
-    <div class="stance-tabs">
-      <button class="stance-tab active" data-stance="pro">찬성</button>
-      <button class="stance-tab" data-stance="con">반대</button>
-    </div>
-  </div>
-
-  <div class="comment-sort">
-    <button class="sort-btn active" data-sort="latest">최신순</button>
-    <button class="sort-btn" data-sort="popular">인기순</button>
-  </div>
-
-  <div id="shortsCommentList" class="comment-list"></div>
-
-  <div class="comment-input">
-    <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
-    <button id="shortsCommentSend">등록</button>
-  </div>
-</div>
   `;
-  document.body.appendChild(modal);
-}
+
+  // === 댓글 모달 HTML 생성 추가 ===
+  if (!document.getElementById("shortsCommentModal")) {
+    const modal = document.createElement("div");
+    modal.id = "shortsCommentModal";
+    modal.innerHTML = `
+  <div class="comment-dim"></div>
+  <div class="comment-sheet">
+    <div class="comment-handle"></div>
+    <div class="comment-header">
+      <div class="stance-tabs">
+        <button class="stance-tab active" data-stance="pro">찬성</button>
+        <button class="stance-tab" data-stance="con">반대</button>
+      </div>
+    </div>
+
+    <div class="comment-sort">
+      <button class="sort-btn active" data-sort="latest">최신순</button>
+      <button class="sort-btn" data-sort="popular">인기순</button>
+    </div>
+
+    <div id="shortsCommentList" class="comment-list"></div>
+
+    <div class="comment-input">
+      <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
+      <button id="shortsCommentSend">등록</button>
+    </div>
+  </div>
+    `;
+    document.body.appendChild(modal);
+  }
 
   track = overlay.querySelector("#shortsTrack");
 
-/* ===== overlay style ===== */
-Object.assign(overlay.style, {
-  position: "fixed",
-  inset: "0",
-  zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
-  background: "#000",
-  overflow: "hidden",
-  touchAction: "none",
-  overscrollBehavior: "contain",
-  display: "block",
-  pointerEvents: "auto"
-});
+  /* ===== overlay style ===== */
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
+    background: "#000",
+    overflow: "hidden",
+    touchAction: "none",
+    overscrollBehavior: "contain",
+    display: "block",
+    pointerEvents: "auto"
+  });
 
   /* ===== close btn ===== */
   const closeBtn = overlay.querySelector("#shortsCloseBtn");
@@ -167,6 +168,9 @@ Object.assign(overlay.style, {
     willChange: "transform"
   });
 
+  // Remove any previous children in track
+  track.innerHTML = "";
+
   shortsList.forEach(item => {
     const section = document.createElement("section");
     section.className = "short";
@@ -182,33 +186,33 @@ Object.assign(overlay.style, {
     });
 
     section.innerHTML = `
-  <video 
-    src="${item.video_url}" 
-    playsinline
-    preload="auto"
-    style="width:100%;height:100%;object-fit:cover"
-  ></video>
+    <video 
+      src="${item.video_url}" 
+      playsinline
+      preload="auto"
+      style="width:100%;height:100%;object-fit:cover"
+    ></video>
 
-  <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
-  <div class="shorts-actions">
-    <button class="shorts-action-btn comment" aria-label="댓글">
-      <svg class="icon" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.8"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-      </svg>
-    </button>
+    <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
+    <div class="shorts-actions">
+      <button class="shorts-action-btn comment" aria-label="댓글">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+        </svg>
+      </button>
 
-    <button class="shorts-action-btn share" aria-label="공유">
-      <svg class="icon" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="1.8"
-           stroke-linecap="round" stroke-linejoin="round">
-        <path d="M22 2L11 13"/>
-        <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
-      </svg>
-    </button>
-  </div>
-`;
+      <button class="shorts-action-btn share" aria-label="공유">
+        <svg class="icon" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.8"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 2L11 13"/>
+          <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
+        </svg>
+      </button>
+    </div>
+    `;
 
     track.appendChild(section);
   });
