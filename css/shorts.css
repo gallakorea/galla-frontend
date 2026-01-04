@@ -200,3 +200,28 @@ body[data-page="shorts"] .header {
 body[data-page="shorts"] .nav {
   height: 58px;
 }
+
+/* =========================
+   SHORTS 480 CONTAINER
+========================= */
+#shortsContainer {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  margin: 0 auto;
+}
+
+/* TOP BAR (480 기준) */
+.shorts-top {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 12px);
+  left: 12px;
+  right: 12px;
+
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+
+  z-index: 50;
+}

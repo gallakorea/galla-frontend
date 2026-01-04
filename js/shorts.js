@@ -62,10 +62,14 @@ function __openShortsInternal(list, startId) {
     document.body.appendChild(overlay);
   }
 
-  overlay.innerHTML = `
+overlay.innerHTML = `
+  <div id="shortsContainer">
+    <div class="shorts-top">
+      <button id="shortsCloseBtn">←</button>
+    </div>
     <div id="shortsTrack"></div>
-    <button id="shortsCloseBtn">←</button>
-  `;
+  </div>
+`;
 
   track = overlay.querySelector("#shortsTrack");
 
@@ -85,14 +89,12 @@ Object.assign(overlay.style, {
   /* ===== close btn ===== */
   const closeBtn = overlay.querySelector("#shortsCloseBtn");
   Object.assign(closeBtn.style, {
-    position: "absolute",
-    top: "12px",
-    left: "12px",
-    zIndex: "60",
     background: "rgba(0,0,0,.5)",
     color: "#fff",
     border: "none",
-    fontSize: "18px"
+    fontSize: "18px",
+    padding: "6px 10px",
+    borderRadius: "10px",
   });
   closeBtn.onclick = closeShorts;
 
