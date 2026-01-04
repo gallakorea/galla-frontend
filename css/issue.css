@@ -1549,3 +1549,13 @@ body {
 .nav {
   z-index: 1000;
 }
+
+body.shorts-open {
+  overflow: hidden !important;
+}
+
+body.shorts-open #app {
+  transform: none !important;
+  filter: none !important;
+  perspective: none !important;
+}
