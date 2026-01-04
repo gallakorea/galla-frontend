@@ -430,15 +430,64 @@ document.addEventListener("click", e => {
   const btn = e.target.closest(".shorts-action-btn");
   if (!btn) return;
 
+  e.preventDefault();
+  e.stopPropagation();
+
   const short = btn.closest(".short");
   const issueId = Number(short?.dataset.issueId);
   if (!issueId) return;
 
   if (btn.classList.contains("comment")) {
-    console.log("[SHORTS] open comments:", issueId);
+    const modal = document.getElementById("shortsCommentModal");
+    if (!modal) {
+      console.warn("[SHORTS][COMMENT] modal not found");
+      return;
+    }
+
+    modal.classList.remove("hidden");
+    window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
+    console.info("[SHORTS][COMMENT] open issue =", issueId);
+
+    if (typeof loadShortsComments === "function") {
+      loadShortsComments();
+    }
   }
 
   if (btn.classList.contains("share")) {
-    console.log("[SHORTS] share issue:", issueId);
+    console.info("[SHORTS][SHARE] issue =", issueId);
+  }
+});
+
+function loadShortsComments() {
+  const issueId = window.__CURRENT_SHORT_ISSUE_ID__;
+  if (!issueId) return;
+
+  console.info(
+    "[SHORTS][COMMENT] load",
+    "issue:", issueId,
+    "stance:", window.currentCommentStance || "pro",
+    "sort:", window.currentCommentSort || "latest"
+  );
+
+  const list = document.getElementById("shortsCommentList");
+  if (!list) return;
+
+  // 임시 더미 (DB 연동 전)
+  list.innerHTML = `
+    <div style="padding:12px 0;border-bottom:1px solid #222;">
+      <strong>유저A</strong> · 찬성<br/>
+      이 영상은 찬성할 수밖에 없음
+    </div>
+    <div style="padding:12px 0;border-bottom:1px solid #222;">
+      <strong>유저B</strong> · 반대<br/>
+      이건 좀 과한 것 같다
+    </div>
+  `;
+}
+
+document.addEventListener("click", e => {
+  if (e.target.id === "commentCloseBtn") {
+    const modal = document.getElementById("shortsCommentModal");
+    modal?.classList.add("hidden");
   }
 });
