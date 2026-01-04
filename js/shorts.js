@@ -143,7 +143,7 @@ Object.assign(overlay.style, {
   zIndex: "900",
   background: "#000",
   overflow: "hidden",
-  pointerEvents: "none" // 🔥 핵심
+  pointerEvents: "auto" // 🔥 핵심
 });
 
   /* ===== close btn ===== */
@@ -253,6 +253,9 @@ Object.assign(overlay.style, {
    MOVE / PLAY
 ========================= */
 function moveToIndex(idx, instant = false) {
+  const modal = document.getElementById("shortsCommentModal");
+  if (modal && !modal.classList.contains("hidden")) return; // 🔒 봉인
+
   if (idx < 0 || idx >= shortsList.length) return;
 
   currentIndex = idx;
@@ -293,8 +296,12 @@ function playOnlyCurrent() {
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
     const modal = document.getElementById("shortsCommentModal");
-    if (modal && !modal.classList.contains("hidden")) return;
+    if (modal && !modal.classList.contains("hidden")) {
+      isDragging = false;   // 🔥 핵심
+      return;
+    }
     isDragging = true;
+
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     currentTranslateY = -currentIndex * VIEWPORT_H;
@@ -482,7 +489,7 @@ document.addEventListener("click", e => {
       return;
     }
     modal.classList.remove("hidden");
-    // 트랜지션 시작을 위해 requestAnimationFrame으로 open 클래스 추가
+    document.body.classList.add("comment-open"); // ✅ 추가
     requestAnimationFrame(() => {
       modal.classList.add("open");
     });
@@ -591,7 +598,6 @@ function bindCommentModalDrag() {
 
     if (currentY > 120) {
       modal.classList.remove("open");
-      document.body.classList.remove("comment-open");
       setTimeout(() => modal.classList.add("hidden"), 320);
     } else {
       sheet.style.transform = "translateY(0)";
