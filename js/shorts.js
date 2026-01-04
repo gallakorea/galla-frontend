@@ -212,8 +212,15 @@ function moveToIndex(idx, instant = false) {
 function playOnlyCurrent() {
   document.querySelectorAll("#shortsTrack video").forEach((v, i) => {
     if (i === currentIndex) {
+      // 🔁 무한 재생 (사용자가 멈출 때까지)
+      v.loop = true;
+      v.setAttribute("loop", "");
       v.muted = false;
-      v.play().catch(()=>{});
+
+      const playPromise = v.play();
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+      }
       v.playbackRate = 1;
     } else {
       v.pause();
