@@ -127,32 +127,12 @@ Object.assign(overlay.style, {
       ></video>
 
       <div class="shorts-vote" data-issue-id="${item.id}">
-        <button class="vote-btn pro" data-vote="pro">👍 찬성이오</button>
-        <button class="vote-btn con" data-vote="con">👎 반댈세</button>
+        <button class="vote-btn pro">👍 찬성이오</button>
+        <button class="vote-btn con">👎 반댈세</button>
       </div>
     `;
 
     track.appendChild(section);
-  });
-
-  overlay.addEventListener("click", e => {
-    const btn = e.target.closest(".vote-btn");
-    if (!btn) return;
-
-    const voteBox = btn.closest(".shorts-vote");
-    const issueId = Number(voteBox.dataset.issueId);
-    const vote = btn.dataset.vote;
-
-    if (window.__SHORTS_VOTING_LOCK__) return;
-    window.__SHORTS_VOTING_LOCK__ = true;
-
-    if (typeof window.GALLA_VOTE === "function") {
-      window.GALLA_VOTE(issueId, vote);
-    }
-
-    setTimeout(() => {
-      window.__SHORTS_VOTING_LOCK__ = false;
-    }, 600);
   });
 
   currentIndex = Math.max(
@@ -272,6 +252,25 @@ function bindTapControls() {
 
     lastTap = now;
   });
+
+  overlay.addEventListener("click", e => {
+    const btn = e.target.closest(".vote-btn");
+    if (!btn) return;
+
+    const box = btn.closest(".shorts-vote");
+    const issueId = Number(box.dataset.issueId);
+    const type = btn.classList.contains("pro") ? "pro" : "con";
+
+    if (window.__SHORTS_VOTING_LOCK__) return;
+    window.__SHORTS_VOTING_LOCK__ = true;
+
+    if (window.GALLA_VOTE_ACTION) {
+      window.GALLA_VOTE_ACTION(issueId, type)
+        .finally(() => {
+          window.__SHORTS_VOTING_LOCK__ = false;
+        });
+    }
+  });
 }
 
 /* =========================
@@ -307,24 +306,17 @@ function bindKeyboard() {
    VOTE SYNC (기존 시스템 연동)
 ========================= */
 function syncVote() {
-  const issueId = shortsList[currentIndex].id;
-  const activeBox = document.querySelectorAll(".shorts-vote")[currentIndex];
-  if (!activeBox) return;
+  const issue = shortsList[currentIndex];
+  if (!issue) return;
+
+  const voteBoxes = document.querySelectorAll(".shorts-vote");
+  const currentBox = voteBoxes[currentIndex];
+  if (!currentBox) return;
 
   if (window.GALLA_CHECK_VOTE) {
-    window.GALLA_CHECK_VOTE(issueId, {
+    window.GALLA_CHECK_VOTE(issue.id, {
       force: true,
-      onResult: (res) => {
-        if (!res) return;
-        const { my_vote } = res;
-        activeBox.querySelectorAll(".vote-btn").forEach(b => {
-          b.classList.remove("active-vote", "locked");
-          if (my_vote) b.classList.add("locked");
-          if (b.dataset.vote === my_vote) {
-            b.classList.add("active-vote");
-          }
-        });
-      }
+      targetEl: currentBox
     });
   }
 }
