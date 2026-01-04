@@ -132,14 +132,19 @@ Object.assign(overlay.style, {
   <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
   <div class="shorts-actions">
     <button class="shorts-action-btn comment" aria-label="댓글">
-      <svg class="icon">
-        <use href="/assets/icons/comment.svg#icon"></use>
+      <svg class="icon" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
       </svg>
     </button>
 
     <button class="shorts-action-btn share" aria-label="공유">
-      <svg class="icon">
-        <use href="/assets/icons/share.svg#icon"></use>
+      <svg class="icon" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 2L11 13"/>
+        <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
       </svg>
     </button>
   </div>
