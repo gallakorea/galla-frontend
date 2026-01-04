@@ -1,9 +1,3 @@
-/* ===== HARD GUARD: prevent double load ===== */
-if (window.__GALLA_SHORTS_ENGINE_LOADED__) {
-  console.warn("[SHORTS] engine already loaded – skip reinit");
-  return;
-}
-window.__GALLA_SHORTS_ENGINE_LOADED__ = true;
 
 /* =========================================================
    GALLA SHORTS / REELS ENGINE (FINAL)
@@ -32,15 +26,16 @@ const CLOSE_THRESHOLD_X = 120;
 /* =========================
    OPEN API
 ========================= */
-if (!window.openShorts) {
-  window.openShorts = function (list, startId) {
-    if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-      window.__OPEN_SHORTS_INTERNAL__(list, startId);
-    } else {
-      window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
-    }
-  };
-}
+window.__SHORTS_ENGINE_READY__ = false;
+
+window.openShorts = function (list, startId) {
+  if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+    window.__OPEN_SHORTS_INTERNAL__(list, startId);
+  } else {
+    console.warn("[SHORTS] openShorts called before engine ready");
+    window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+  }
+};
 
 /* =========================
    CORE OPEN
@@ -301,10 +296,12 @@ function closeShorts() {
    EXPORT
 ========================= */
 window.__OPEN_SHORTS_INTERNAL__ = __openShortsInternal;
+window.__SHORTS_ENGINE_READY__ = true;
+console.info("[SHORTS] engine ready");
 
-if (window.__SHORTS_OPEN_QUEUE__.length) {
+if (window.__SHORTS_ENGINE_READY__ && window.__SHORTS_OPEN_QUEUE__.length) {
   window.__SHORTS_OPEN_QUEUE__.forEach(x =>
-    __openShortsInternal(x.list, x.startId)
+    window.__OPEN_SHORTS_INTERNAL__(x.list, x.startId)
   );
   window.__SHORTS_OPEN_QUEUE__ = [];
 }
