@@ -1,3 +1,10 @@
+/* ===== HARD GUARD: prevent double load ===== */
+if (window.__GALLA_SHORTS_ENGINE_LOADED__) {
+  console.warn("[SHORTS] engine already loaded – skip reinit");
+  return;
+}
+window.__GALLA_SHORTS_ENGINE_LOADED__ = true;
+
 /* =========================================================
    GALLA SHORTS / REELS ENGINE (FINAL)
    - index 기반 전환 (scroll 폐기)
@@ -25,13 +32,15 @@ const CLOSE_THRESHOLD_X = 120;
 /* =========================
    OPEN API
 ========================= */
-window.openShorts = function (list, startId) {
-  if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-    window.__OPEN_SHORTS_INTERNAL__(list, startId);
-  } else {
-    window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
-  }
-};
+if (!window.openShorts) {
+  window.openShorts = function (list, startId) {
+    if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
+      window.__OPEN_SHORTS_INTERNAL__(list, startId);
+    } else {
+      window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+    }
+  };
+}
 
 /* =========================
    CORE OPEN
