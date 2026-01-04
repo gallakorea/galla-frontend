@@ -25,22 +25,6 @@
       <button class="shorts-vote-btn con" data-vote="con">반댈세</button>
     </div>
 
-    <!-- RIGHT ACTION BUTTONS -->
-    <div class="shorts-actions">
-      <button class="shorts-action-btn" id="shortsCommentBtn" aria-label="댓글">
-        <svg class="icon icon-comment" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-        </svg>
-      </button>
-
-      <button class="shorts-action-btn" id="shortsShareBtn" aria-label="공유">
-        <svg class="icon icon-share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 2L11 13"/>
-          <path d="M22 2L15 22l-4-9-9-4z"/>
-        </svg>
-      </button>
-    </div>
-
     <!-- 🔥 하나의 short = 하나의 화면 (100svh) -->
     <!-- JS에서 이 .short들을 동적으로 생성/주입 -->
 
@@ -66,29 +50,6 @@
     </section>
     -->
 
-  </div>
-
-  <!-- =========================
-       SHORTS COMMENT MODAL
-  ========================= -->
-  <div id="shortsCommentModal" class="shorts-comment-modal hidden">
-    <div class="comment-sheet">
-      <div class="comment-header">
-        <button id="commentCloseBtn">닫기</button>
-
-        <div class="comment-tabs">
-          <button class="tab active" data-stance="pro">찬성</button>
-          <button class="tab" data-stance="con">반대</button>
-        </div>
-
-        <div class="comment-sort">
-          <button class="sort active" data-sort="latest">최신순</button>
-          <button class="sort" data-sort="popular">인기순</button>
-        </div>
-      </div>
-
-      <div id="shortsCommentList" class="comment-list"></div>
-    </div>
   </div>
 
   <!-- 하단 네비 (고정) -->

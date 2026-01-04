@@ -8,12 +8,6 @@
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
 window.__SHORTS_VOTING_LOCK__ = false;
 
-// =========================
-// COMMENT STATE
-// =========================
-window.currentCommentStance = "pro";    // pro | con
-window.currentCommentSort = "latest";   // latest | popular
-
 let shortsList = [];
 let currentIndex = 0;
 let overlay, track;
@@ -102,32 +96,6 @@ overlay.innerHTML = `
       <button id="shortsCloseBtn">←</button>
     </div>
     <div id="shortsTrack"></div>
-  </div>
-`;
-  // Append comment modal HTML block (only once per overlay creation)
-  overlay.innerHTML += `
-  <div id="shortsCommentModal" class="shorts-comment-modal hidden">
-    <div class="comment-sheet">
-      <div class="comment-header">
-        <div class="stance-tabs">
-          <button class="stance-tab active" data-stance="pro">찬성</button>
-          <button class="stance-tab" data-stance="con">반대</button>
-        </div>
-        <button id="commentCloseBtn">✕</button>
-      </div>
-
-      <div class="comment-sort">
-        <button class="sort-btn active" data-sort="latest">최신순</button>
-        <button class="sort-btn" data-sort="popular">인기순</button>
-      </div>
-
-      <div id="shortsCommentList" class="comment-list"></div>
-
-      <div class="comment-input">
-        <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
-        <button id="shortsCommentSend">등록</button>
-      </div>
-    </div>
   </div>
 `;
 
@@ -292,8 +260,6 @@ function playOnlyCurrent() {
 ========================= */
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
-    const modal = document.getElementById("shortsCommentModal");
-    if (modal && !modal.classList.contains("hidden")) return;
     isDragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
@@ -302,8 +268,6 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchmove", e => {
-    const modal = document.getElementById("shortsCommentModal");
-    if (modal && !modal.classList.contains("hidden")) return;
     if (!isDragging) return;
 
     const dx = e.touches[0].clientX - startX;
@@ -322,8 +286,6 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchend", e => {
-    const modal = document.getElementById("shortsCommentModal");
-    if (modal && !modal.classList.contains("hidden")) return;
     isDragging = false;
     track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
     track.style.opacity = "1";
@@ -468,178 +430,15 @@ document.addEventListener("click", e => {
   const btn = e.target.closest(".shorts-action-btn");
   if (!btn) return;
 
-  e.preventDefault();
-  e.stopPropagation();
-
   const short = btn.closest(".short");
   const issueId = Number(short?.dataset.issueId);
   if (!issueId) return;
 
   if (btn.classList.contains("comment")) {
-    const modal = document.getElementById("shortsCommentModal");
-    if (!modal) {
-      console.warn("[SHORTS][COMMENT] modal not found");
-      return;
-    }
-    modal.classList.remove("hidden");
-    // 트랜지션 시작을 위해 requestAnimationFrame으로 open 클래스 추가
-    requestAnimationFrame(() => {
-      modal.classList.add("open");
-    });
-    window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
-    console.info("[SHORTS][COMMENT] open issue =", issueId);
-    if (typeof loadShortsComments === "function") {
-      loadShortsComments();
-    }
+    console.log("[SHORTS] open comments:", issueId);
   }
 
   if (btn.classList.contains("share")) {
-    console.info("[SHORTS][SHARE] issue =", issueId);
+    console.log("[SHORTS] share issue:", issueId);
   }
-});
-
-function loadShortsComments() {
-  const issueId = window.__CURRENT_SHORT_ISSUE_ID__;
-  if (!issueId) return;
-
-  const stance = window.currentCommentStance || "pro";
-  const sort = window.currentCommentSort || "latest";
-
-  console.info(
-    "[SHORTS][COMMENT] load",
-    "issue:", issueId,
-    "stance:", stance,
-    "sort:", sort
-  );
-
-  const list = document.getElementById("shortsCommentList");
-  if (!list) return;
-
-  // Temporary dummy content (ready for DB wiring)
-  list.innerHTML = `
-    <div style="padding:12px 0;border-bottom:1px solid #222;">
-      <strong>유저A</strong> · ${stance === "pro" ? "찬성" : "반대"}<br/>
-      (${sort === "latest" ? "최신" : "인기"}) 기준 댓글
-    </div>
-    <div style="padding:12px 0;border-bottom:1px solid #222;">
-      <strong>유저B</strong><br/>
-      이 이슈에 대한 의견입니다
-    </div>
-  `;
-}
-
-document.addEventListener("click", e => {
-  const modal = document.getElementById("shortsCommentModal");
-  if (!modal || modal.classList.contains("hidden")) return;
-
-  // 닫기 버튼
-  if (e.target.id === "commentCloseBtn") {
-    modal.classList.remove("open");
-    setTimeout(() => {
-      modal.classList.add("hidden");
-    }, 320);
-    return;
-  }
-
-  // 배경 클릭 시 닫기 (sheet 바깥)
-  if (e.target === modal) {
-    modal.classList.remove("open");
-    setTimeout(() => {
-      modal.classList.add("hidden");
-    }, 320);
-  }
-});
-
-// =========================
-// COMMENT MODAL DRAG
-// =========================
-(function bindCommentModalDrag(){
-  const modal = document.getElementById("shortsCommentModal");
-  if (!modal) return;
-  const sheet = modal.querySelector(".comment-sheet");
-  if (!sheet) return;
-
-  let startY = 0;
-  let currentY = 0;
-  let dragging = false;
-
-  sheet.addEventListener("touchstart", e => {
-    dragging = true;
-    startY = e.touches[0].clientY;
-    sheet.style.transition = "none";
-  }, { passive: true });
-
-  sheet.addEventListener("touchmove", e => {
-    if (!dragging) return;
-    const dy = e.touches[0].clientY - startY;
-
-    if (dy > 0) {
-      currentY = dy;
-      sheet.style.transform = `translateY(${dy}px)`;
-    }
-  }, { passive: true });
-
-  sheet.addEventListener("touchend", () => {
-    dragging = false;
-    sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
-
-    if (currentY > 120) {
-      modal.classList.remove("open");
-      setTimeout(() => {
-        modal.classList.add("hidden");
-      }, 320);
-    } else {
-      sheet.style.transform = "translateY(0)";
-    }
-
-    currentY = 0;
-  });
-})();
-
-// =========================
-// COMMENT STANCE TAB
-// =========================
-document.addEventListener("click", e => {
-  const tab = e.target.closest(".stance-tab");
-  if (!tab) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  const stance = tab.dataset.stance;
-  if (!stance) return;
-
-  window.currentCommentStance = stance;
-
-  document.querySelectorAll(".stance-tab").forEach(btn =>
-    btn.classList.remove("active")
-  );
-  tab.classList.add("active");
-
-  console.info("[SHORTS][COMMENT] stance =", stance);
-  loadShortsComments();
-});
-
-// =========================
-// COMMENT SORT
-// =========================
-document.addEventListener("click", e => {
-  const btn = e.target.closest(".sort-btn");
-  if (!btn) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  const sort = btn.dataset.sort;
-  if (!sort) return;
-
-  window.currentCommentSort = sort;
-
-  document.querySelectorAll(".sort-btn").forEach(b =>
-    b.classList.remove("active")
-  );
-  btn.classList.add("active");
-
-  console.info("[SHORTS][COMMENT] sort =", sort);
-  loadShortsComments();
 });
