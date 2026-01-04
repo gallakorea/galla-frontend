@@ -107,7 +107,7 @@ overlay.innerHTML = `
   // Append comment modal HTML block (only once per overlay creation)
   overlay.innerHTML += `
   <div id="shortsCommentModal" class="shorts-comment-modal hidden">
-    <div class="comment-sheet" onclick="event.stopPropagation()">
+    <div class="comment-sheet">
       <div class="comment-header">
         <div class="stance-tabs">
           <button class="stance-tab active" data-stance="pro">찬성</button>
@@ -475,11 +475,9 @@ document.addEventListener("click", e => {
       console.warn("[SHORTS][COMMENT] modal not found");
       return;
     }
-
     modal.classList.remove("hidden");
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     console.info("[SHORTS][COMMENT] open issue =", issueId);
-
     if (typeof loadShortsComments === "function") {
       loadShortsComments();
     }
@@ -521,9 +519,18 @@ function loadShortsComments() {
 }
 
 document.addEventListener("click", e => {
+  const modal = document.getElementById("shortsCommentModal");
+  if (!modal || modal.classList.contains("hidden")) return;
+
+  // 닫기 버튼
   if (e.target.id === "commentCloseBtn") {
-    const modal = document.getElementById("shortsCommentModal");
-    modal?.classList.add("hidden");
+    modal.classList.add("hidden");
+    return;
+  }
+
+  // 배경 클릭 시 닫기 (sheet 바깥)
+  if (e.target === modal) {
+    modal.classList.add("hidden");
   }
 });
 
