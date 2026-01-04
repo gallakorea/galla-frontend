@@ -293,6 +293,8 @@ function playOnlyCurrent() {
 ========================= */
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
+    // 쇼츠 제스처 차단 (댓글 모달 열림 시)
+    if (window.__COMMENT_OPEN__) return;
     isDragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
@@ -301,6 +303,8 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchmove", e => {
+    // 쇼츠 제스처 차단 (댓글 모달 열림 시)
+    if (window.__COMMENT_OPEN__) return;
     if (!isDragging) return;
 
     const dx = e.touches[0].clientX - startX;
@@ -319,6 +323,8 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchend", e => {
+    // 쇼츠 제스처 차단 (댓글 모달 열림 시)
+    if (window.__COMMENT_OPEN__) return;
     isDragging = false;
     track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
     track.style.opacity = "1";
@@ -484,10 +490,11 @@ document.addEventListener("click", e => {
 function openCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal) return;
-
+  window.__COMMENT_OPEN__ = true;
   modal.classList.add("visible");
   const sheet = modal.querySelector(".comment-sheet");
   if (sheet) {
+    // X축 변형 제거, Y축만 사용
     sheet.style.transform = "translateY(100%)";
     sheet.style.transition = "none";
     requestAnimationFrame(() => {
@@ -509,6 +516,7 @@ function closeCommentModal() {
   }
   setTimeout(() => {
     modal.classList.remove("visible");
+    window.__COMMENT_OPEN__ = false;
   }, 300);
 }
 
@@ -522,20 +530,21 @@ function bindCommentDrag() {
   let currentY = 0;
   let dragging = false;
 
-  sheet.addEventListener("touchstart", e => {
+  // 댓글 모달 드래그 중 쇼츠 제스처 완전 차단
+  let dragListener = e => {
     dragging = true;
     startY = e.touches[0].clientY;
     sheet.style.transition = "none";
-  }, { passive: true });
-
-  sheet.addEventListener("touchmove", e => {
+  };
+  let moveListener = e => {
     if (!dragging) return;
+    // 드래그 중에는 쇼츠 제스처 완전 차단
+    window.__COMMENT_OPEN__ = true;
     const dy = e.touches[0].clientY - startY;
     currentY = Math.max(dy, 0);
     sheet.style.transform = `translateY(${currentY}px)`;
-  }, { passive: true });
-
-  sheet.addEventListener("touchend", () => {
+  };
+  let endListener = () => {
     dragging = false;
     sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
     if (currentY > VIEWPORT_H * 0.25) {
@@ -544,7 +553,16 @@ function bindCommentDrag() {
       sheet.style.transform = "translateY(0)";
     }
     currentY = 0;
-  });
+  };
+
+  // remove old if already exists
+  sheet.removeEventListener("touchstart", dragListener);
+  sheet.removeEventListener("touchmove", moveListener);
+  sheet.removeEventListener("touchend", endListener);
+
+  sheet.addEventListener("touchstart", dragListener, { passive: true });
+  sheet.addEventListener("touchmove", moveListener, { passive: true });
+  sheet.addEventListener("touchend", endListener);
 }
 
 // Document-level click to close comment modal
