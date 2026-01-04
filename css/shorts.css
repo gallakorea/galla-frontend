@@ -445,3 +445,4 @@ body.comment-open {
 @media (hover: none) and (pointer: coarse) {
   #commentCloseBtn { display: none !important; }
 }
+
