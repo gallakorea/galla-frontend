@@ -7,6 +7,8 @@
 
 window.__SHORTS_OPEN_QUEUE__ = window.__SHORTS_OPEN_QUEUE__ || [];
 window.__SHORTS_VOTING_LOCK__ = false;
+window.currentCommentStance = "pro";   // pro | con
+window.currentCommentSort = "latest"; // latest | popular
 
 let shortsList = [];
 let currentIndex = 0;
@@ -98,6 +100,35 @@ overlay.innerHTML = `
     <div id="shortsTrack"></div>
   </div>
 `;
+
+// === 댓글 모달 HTML 생성 추가 ===
+if (!document.getElementById("shortsCommentModal")) {
+  const modal = document.createElement("div");
+  modal.id = "shortsCommentModal";
+  modal.innerHTML = `
+    <div class="comment-sheet">
+      <div class="comment-header">
+        <div class="stance-tabs">
+          <button class="stance-tab active" data-stance="pro">찬성</button>
+          <button class="stance-tab" data-stance="con">반대</button>
+        </div>
+      </div>
+
+      <div class="comment-sort">
+        <button class="sort-btn active" data-sort="latest">최신순</button>
+        <button class="sort-btn" data-sort="popular">인기순</button>
+      </div>
+
+      <div id="shortsCommentList" class="comment-list"></div>
+
+      <div class="comment-input">
+        <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
+        <button id="shortsCommentSend">등록</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 
   track = overlay.querySelector("#shortsTrack");
 
@@ -435,10 +466,72 @@ document.addEventListener("click", e => {
   if (!issueId) return;
 
   if (btn.classList.contains("comment")) {
-    console.log("[SHORTS] open comments:", issueId);
+    const modal = document.getElementById("shortsCommentModal");
+    if (!modal) return;
+
+    modal.classList.add("open");
+    loadShortsComments();
   }
 
   if (btn.classList.contains("share")) {
     console.log("[SHORTS] share issue:", issueId);
   }
 });
+
+// =========================
+// COMMENT STANCE TAB
+// =========================
+document.addEventListener("click", e => {
+  const tab = e.target.closest(".stance-tab");
+  if (!tab) return;
+
+  window.currentCommentStance = tab.dataset.stance;
+
+  document
+    .querySelectorAll("#shortsCommentModal .stance-tab")
+    .forEach(b => b.classList.remove("active"));
+
+  tab.classList.add("active");
+
+  loadShortsComments();
+});
+
+// =========================
+// COMMENT SORT
+// =========================
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".sort-btn");
+  if (!btn) return;
+
+  window.currentCommentSort = btn.dataset.sort;
+
+  document
+    .querySelectorAll("#shortsCommentModal .sort-btn")
+    .forEach(b => b.classList.remove("active"));
+
+  btn.classList.add("active");
+
+  loadShortsComments();
+});
+
+// =========================
+// COMMENT LOAD (DUMMY)
+// =========================
+function loadShortsComments() {
+  const list = document.getElementById("shortsCommentList");
+  if (!list) return;
+
+  const stance = window.currentCommentStance;
+  const sort = window.currentCommentSort;
+
+  list.innerHTML = `
+    <div style="padding:12px 0;border-bottom:1px solid #222">
+      <strong>유저A</strong> · ${stance === "pro" ? "찬성" : "반대"}<br/>
+      (${sort === "latest" ? "최신" : "인기"}) 기준 더미 댓글
+    </div>
+    <div style="padding:12px 0;border-bottom:1px solid #222">
+      <strong>유저B</strong><br/>
+      다음 단계에서 DB 연결 예정
+    </div>
+  `;
+}
