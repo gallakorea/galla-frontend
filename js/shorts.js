@@ -66,7 +66,7 @@ function __openShortsInternal(list, startId) {
     top: "0",
     left: "0",
     right: "0",
-    bottom: "58px",
+    bottom: `${NAV_HEIGHT}px`,
     zIndex: "9999",
     background: "#000",
     overflow: "hidden",
@@ -102,7 +102,7 @@ function __openShortsInternal(list, startId) {
     section.dataset.issueId = item.id;
 
     Object.assign(section.style, {
-      height: "100vh",
+      height: `calc(100vh - ${NAV_HEIGHT}px)`,
       maxWidth: "480px",
       margin: "0 auto",
       position: "relative"
@@ -121,7 +121,7 @@ function __openShortsInternal(list, startId) {
         position:absolute;
         left:0;
         right:0;
-        bottom:58px;
+        bottom:${NAV_HEIGHT}px;
         padding:12px;
         display:flex;
         gap:10px;
@@ -256,6 +256,14 @@ function bindTapControls() {
   let lastTap = 0;
 
   overlay.addEventListener("click", e => {
+    // 🔥 투표 버튼 클릭은 여기서 차단
+    if (
+      e.target.closest(".shorts-vote-pro") ||
+      e.target.closest(".shorts-vote-con")
+    ) {
+      return;
+    }
+
     const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
     const now = Date.now();
 
