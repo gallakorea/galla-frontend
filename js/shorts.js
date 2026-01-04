@@ -136,14 +136,14 @@ overlay.innerHTML = `
 /* ===== overlay style ===== */
 Object.assign(overlay.style, {
   position: "fixed",
-  top: "0",
-  left: "0",
-  right: "0",
-  bottom: "58px", // 🔥 하단 네비 높이만큼 비움
-  zIndex: "900",
+  inset: "0",
+  zIndex: "900",   // 🔥 nav(2000)보다 낮아야 함
   background: "#000",
   overflow: "hidden",
-  pointerEvents: "auto" // 🔥 핵심
+  touchAction: "none",
+  overscrollBehavior: "contain",
+  display: "block",
+  pointerEvents: "auto"
 });
 
   /* ===== close btn ===== */
@@ -253,9 +253,6 @@ Object.assign(overlay.style, {
    MOVE / PLAY
 ========================= */
 function moveToIndex(idx, instant = false) {
-  const modal = document.getElementById("shortsCommentModal");
-  if (modal && !modal.classList.contains("hidden")) return; // 🔒 봉인
-
   if (idx < 0 || idx >= shortsList.length) return;
 
   currentIndex = idx;
@@ -296,12 +293,8 @@ function playOnlyCurrent() {
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
     const modal = document.getElementById("shortsCommentModal");
-    if (modal && !modal.classList.contains("hidden")) {
-      isDragging = false;   // 🔥 핵심
-      return;
-    }
+    if (modal && !modal.classList.contains("hidden")) return;
     isDragging = true;
-
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     currentTranslateY = -currentIndex * VIEWPORT_H;
@@ -489,13 +482,10 @@ document.addEventListener("click", e => {
       return;
     }
     modal.classList.remove("hidden");
-    document.body.classList.add("comment-open"); // ✅ 추가
+    // 트랜지션 시작을 위해 requestAnimationFrame으로 open 클래스 추가
     requestAnimationFrame(() => {
       modal.classList.add("open");
     });
-
-    bindCommentModalDrag(); // 🔥 여기 추가
-    
     window.__CURRENT_SHORT_ISSUE_ID__ = issueId;
     console.info("[SHORTS][COMMENT] open issue =", issueId);
     if (typeof loadShortsComments === "function") {
@@ -563,10 +553,9 @@ document.addEventListener("click", e => {
 // =========================
 // COMMENT MODAL DRAG
 // =========================
-function bindCommentModalDrag() {
+(function bindCommentModalDrag(){
   const modal = document.getElementById("shortsCommentModal");
   if (!modal) return;
-
   const sheet = modal.querySelector(".comment-sheet");
   if (!sheet) return;
 
@@ -578,7 +567,6 @@ function bindCommentModalDrag() {
     dragging = true;
     startY = e.touches[0].clientY;
     sheet.style.transition = "none";
-    e.stopPropagation();
   }, { passive: true });
 
   sheet.addEventListener("touchmove", e => {
@@ -589,7 +577,6 @@ function bindCommentModalDrag() {
       currentY = dy;
       sheet.style.transform = `translateY(${dy}px)`;
     }
-    e.stopPropagation();
   }, { passive: true });
 
   sheet.addEventListener("touchend", () => {
@@ -598,14 +585,16 @@ function bindCommentModalDrag() {
 
     if (currentY > 120) {
       modal.classList.remove("open");
-      setTimeout(() => modal.classList.add("hidden"), 320);
+      setTimeout(() => {
+        modal.classList.add("hidden");
+      }, 320);
     } else {
       sheet.style.transform = "translateY(0)";
     }
 
     currentY = 0;
   });
-}
+})();
 
 // =========================
 // COMMENT STANCE TAB
