@@ -98,6 +98,32 @@ overlay.innerHTML = `
     <div id="shortsTrack"></div>
   </div>
 `;
+  // Append comment modal HTML block (only once per overlay creation)
+  overlay.innerHTML += `
+  <div id="shortsCommentModal" class="shorts-comment-modal hidden">
+    <div class="comment-sheet" onclick="event.stopPropagation()">
+      <div class="comment-header">
+        <div class="stance-tabs">
+          <button class="stance-tab active" data-stance="pro">찬성</button>
+          <button class="stance-tab" data-stance="con">반대</button>
+        </div>
+        <button id="commentCloseBtn">✕</button>
+      </div>
+
+      <div class="comment-sort">
+        <button class="sort-btn active" data-sort="latest">최신순</button>
+        <button class="sort-btn" data-sort="popular">인기순</button>
+      </div>
+
+      <div id="shortsCommentList" class="comment-list"></div>
+
+      <div class="comment-input">
+        <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
+        <button id="shortsCommentSend">등록</button>
+      </div>
+    </div>
+  </div>
+`;
 
   track = overlay.querySelector("#shortsTrack");
 
