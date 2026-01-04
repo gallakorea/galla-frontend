@@ -210,6 +210,16 @@ Object.assign(overlay.style, {
 `;
 
     track.appendChild(section);
+
+    // === Hard-fix visibility and stacking for <video> elements on the issue page
+    const videoEl = section.querySelector("video");
+    if (videoEl) {
+      videoEl.style.display = "block";
+      videoEl.style.visibility = "visible";
+      videoEl.style.opacity = "1";
+      videoEl.style.position = "relative";
+      videoEl.style.zIndex = "1";
+    }
   });
 
   currentIndex = Math.max(
