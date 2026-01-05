@@ -10,6 +10,9 @@ window.__SHORTS_VOTING_LOCK__ = false;
 window.currentCommentStance = "pro";   // pro | con
 window.currentCommentSort = "latest"; // latest | popular
 
+window.__COMMENT_OPEN__ = false;
+window.__COMMENT_STATE__ = "closed"; // closed | half | full
+
 let shortsList = [];
 let currentIndex = 0;
 let overlay, track;
@@ -297,7 +300,6 @@ function playOnlyCurrent() {
 ========================= */
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
-    // 쇼츠 제스처 차단 (댓글 모달 열림 시)
     if (window.__COMMENT_OPEN__) return;
     isDragging = true;
     startX = e.touches[0].clientX;
@@ -307,7 +309,6 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchmove", e => {
-    // 쇼츠 제스처 차단 (댓글 모달 열림 시)
     if (window.__COMMENT_OPEN__) return;
     if (!isDragging) return;
 
@@ -327,7 +328,6 @@ function bindGestures() {
   }, { passive: true });
 
   overlay.addEventListener("touchend", e => {
-    // 쇼츠 제스처 차단 (댓글 모달 열림 시)
     if (window.__COMMENT_OPEN__) return;
     isDragging = false;
     track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
@@ -490,107 +490,86 @@ document.addEventListener("click", e => {
   }
 });
 
-// Helper: open comment modal with animation
 function openCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
-  if (!modal) return;
+  const sheet = modal?.querySelector(".comment-sheet");
+  if (!modal || !sheet) return;
 
   window.__COMMENT_OPEN__ = true;
+  window.__COMMENT_STATE__ = "half";
 
-  const sheet = modal.querySelector(".comment-sheet");
-  if (!sheet) return;
-
-  // 현재 영상 pause
-  const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
-  if (video && !video.paused) video.pause();
-
-  modal.classList.add("visible");
+  modal.classList.add("open");
 
   sheet.style.transition = "none";
   sheet.style.transform = "translateY(100%)";
 
   requestAnimationFrame(() => {
-    sheet.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
-    sheet.style.transform = "translateY(0)";
+    sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
+    sheet.style.transform = "translateY(60%)";
   });
 
   bindCommentDrag();
 }
 
-// Helper: close comment modal with animation
 function closeCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
-  if (!modal) return;
-
-  const sheet = modal.querySelector(".comment-sheet");
-  if (!sheet) return;
+  const sheet = modal?.querySelector(".comment-sheet");
+  if (!modal || !sheet) return;
 
   sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
   sheet.style.transform = "translateY(100%)";
 
   setTimeout(() => {
-    modal.classList.remove("visible");
+    modal.classList.remove("open");
     window.__COMMENT_OPEN__ = false;
+    window.__COMMENT_STATE__ = "closed";
 
-    // 영상 재생 복구
     const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
-    if (video) {
-      const p = video.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    }
+    if (video) video.play().catch(() => {});
   }, 300);
 }
 
-// Drag up/down support for comment modal
 function bindCommentDrag() {
   const modal = document.getElementById("shortsCommentModal");
-  const sheet = modal.querySelector(".comment-sheet");
+  const sheet = modal?.querySelector(".comment-sheet");
   if (!sheet) return;
 
   let startY = 0;
-  let currentY = 0;
-  let dragging = false;
+  let deltaY = 0;
 
-  const onStart = e => {
-    dragging = true;
+  sheet.addEventListener("touchstart", e => {
     startY = e.touches[0].clientY;
     sheet.style.transition = "none";
-  };
+  }, { passive: true });
 
-  const onMove = e => {
-    if (!dragging) return;
+  sheet.addEventListener("touchmove", e => {
+    deltaY = e.touches[0].clientY - startY;
 
-    const dy = e.touches[0].clientY - startY;
-
-    // 위로는 제한 없음, 아래로만 이동
-    if (dy > 0) {
-      currentY = dy;
-      sheet.style.transform = `translateY(${currentY}px)`;
-    } else {
+    if (deltaY < 0) {
       sheet.style.transform = "translateY(0)";
+      window.__COMMENT_STATE__ = "full";
+      return;
     }
-  };
 
-  const onEnd = () => {
-    dragging = false;
-    sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
+    sheet.style.transform = `translateY(${60 + deltaY / 3}%)`;
+  }, { passive: true });
 
-    if (currentY > VIEWPORT_H * 0.25) {
+  sheet.addEventListener("touchend", () => {
+    sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
+
+    if (deltaY > 140) {
       closeCommentModal();
-    } else {
-      sheet.style.transform = "translateY(0)";
+      return;
     }
 
-    currentY = 0;
-  };
+    if (window.__COMMENT_STATE__ === "full") {
+      sheet.style.transform = "translateY(0)";
+    } else {
+      sheet.style.transform = "translateY(60%)";
+    }
 
-  sheet.removeEventListener("touchstart", onStart);
-  sheet.removeEventListener("touchmove", onMove);
-  sheet.removeEventListener("touchend", onEnd);
-
-  sheet.addEventListener("touchstart", onStart, { passive: true });
-  sheet.addEventListener("touchmove", onMove, { passive: true });
-  sheet.addEventListener("touchend", onEnd);
+    deltaY = 0;
+  });
 }
 
 // Document-level click to close comment modal

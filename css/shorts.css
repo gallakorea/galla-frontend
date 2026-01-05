@@ -259,49 +259,50 @@ body[data-page="shorts"] .nav {
    SHORTS COMMENT MODAL (STABLE)
 ========================= */
 
+/* =========================
+   SHORTS COMMENT MODAL (FIXED)
+========================= */
+
 #shortsCommentModal {
   position: fixed;
   inset: 0;
   z-index: 20000;
   display: none;
-  pointer-events: none;
 }
 
 #shortsCommentModal.visible {
   display: block;
-  pointer-events: auto;
 }
 
-/* dim background */
-#shortsCommentModal .comment-dim {
+#shortsCommentModal::before {
+  content: "";
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0.45);
 }
 
-/* bottom sheet */
+/* 🔥 핵심: X축은 한 번만, Y축만 움직임 */
 #shortsCommentModal .comment-sheet {
   position: absolute;
-  left: 50%;
   bottom: 0;
+  left: 50%;
   transform: translateX(-50%) translateY(100%);
 
   width: 100%;
   max-width: 480px;
-  height: 100dvh;
 
-  background: #181818;
+  height: 90dvh; /* ❗ 100vh 절대 금지 */
+
+  background: #0b0b0b;
   border-radius: 18px 18px 0 0;
 
   display: flex;
   flex-direction: column;
 
-  transition: transform 0.32s cubic-bezier(.4,0,.2,1);
   will-change: transform;
-  touch-action: none;
 }
 
-/* open state */
+/* 열렸을 때 */
 #shortsCommentModal.visible .comment-sheet {
   transform: translateX(-50%) translateY(0);
 }
@@ -353,4 +354,15 @@ body[data-page="shorts"] .nav {
   border-radius: 12px;
   padding: 0 14px;
   font-weight: 700;
+}
+
+.comment-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.comment-input {
+  flex-shrink: 0;
 }
