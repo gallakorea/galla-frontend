@@ -488,11 +488,7 @@ function bindGestures() {
     const dy = e.touches[0].clientY - startY;
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      track.style.transform = `
-        translateX(${dx}px)
-        translateY(-${currentIndex * VIEWPORT_H}px)
-      `;
-      track.style.opacity = `${1 - Math.min(Math.abs(dx) / 300, 0.5)}`;
+      // 🔒 block vertical movement, but DO NOT move track horizontally
       return;
     }
 
@@ -508,8 +504,32 @@ function bindGestures() {
     const dy = e.changedTouches[0].clientY - startY;
     const dx = e.changedTouches[0].clientX - startX;
 
-    if (Math.abs(dx) > CLOSE_THRESHOLD_X) {
+    // 👉 Horizontal swipe navigation
+    if (dx > CLOSE_THRESHOLD_X) {
+      // Swipe RIGHT → go back to previous page / previous scroll position
       closeShorts();
+      setTimeout(() => {
+        history.back();
+      }, 50);
+      return;
+    }
+
+    if (dx < -CLOSE_THRESHOLD_X) {
+      // Swipe LEFT → go to shorts author's mypage
+      const current = shortsList[currentIndex];
+      const section = document.querySelectorAll(".short")[currentIndex];
+      const authorId = section?.dataset?.authorId;
+
+      closeShorts();
+
+      // 🔥 authorId 없으면 기본 마이페이지로 이동
+      const target = authorId
+        ? `/mypage.html?user=${authorId}`
+        : `/mypage.html`;
+
+      setTimeout(() => {
+        location.href = target;
+      }, 50);
       return;
     }
 
