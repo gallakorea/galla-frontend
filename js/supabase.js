@@ -1,8 +1,11 @@
 // js/supabase.js
+// Non-module (global) Supabase client bootstrap
+// 반드시 https://esm.sh/@supabase/supabase-js@2 가 이 파일보다 먼저 로드되어야 함
+
 console.log("[supabase.js] 로드됨");
 
 if (!window.supabase) {
-  console.error("[supabase.js] Supabase SDK가 로드되지 않았습니다.");
+  console.error("[supabase.js] Supabase SDK가 로드되지 않았습니다. <script src=\"https://esm.sh/@supabase/supabase-js@2\"></script> 를 먼저 포함하세요.");
 } else {
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
   const SUPABASE_ANON_KEY =
@@ -20,5 +23,5 @@ if (!window.supabase) {
     }
   );
 
-  console.log("[supabase.js] Supabase 클라이언트 생성 완료");
+  console.log("[supabase.js] Supabase 클라이언트 생성 완료", window.supabaseClient);
 }
