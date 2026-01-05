@@ -32,25 +32,11 @@ body[data-page="shorts"] .header {
   background: #000;
   z-index: 999;
 
-  overflow-y: scroll;
-  overflow-x: hidden;
-
-  scroll-snap-type: y mandatory;
-  scroll-snap-points-y: repeat(100%);
-  scroll-behavior: auto;
-  overscroll-behavior: none;
-
-  overscroll-behavior-y: contain;
+  /* 🔥 JS transform 기반 쇼츠 엔진과 충돌 방지 */
+  overflow: hidden;
+  touch-action: none;
 
   box-sizing: border-box;
-
-  -webkit-overflow-scrolling: auto;
-  touch-action: pan-y;
-
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scrollbar-gutter: auto;
-  scroll-snap-stop: always;
 }
 
 #shortsOverlay::-webkit-scrollbar {
@@ -66,9 +52,6 @@ body[data-page="shorts"] .header {
   max-width: 480px;
   margin: 0 auto;
   height: 100dvh;
-
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
 
   background: #000;
 }
@@ -342,6 +325,8 @@ body[data-page="shorts"] .nav {
   overflow-y: auto;
   padding: 0 14px;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .comment-input {

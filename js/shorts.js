@@ -13,6 +13,10 @@ window.currentCommentSort = "latest"; // latest | popular
 window.__COMMENT_OPEN__ = false;
 window.__COMMENT_STATE__ = "closed"; // closed | half | full
 
+function isScrollableTarget(el) {
+  return el && el.closest && el.closest(".comment-list");
+}
+
 let shortsList = [];
 let currentIndex = 0;
 let overlay, track;
@@ -494,6 +498,7 @@ function openCommentModal() {
   const modal = document.getElementById("shortsCommentModal");
   const sheet = modal?.querySelector(".comment-sheet");
   if (!modal || !sheet) return;
+  if (window.__COMMENT_OPEN__) return;
 
   window.__COMMENT_OPEN__ = true;
   window.__COMMENT_STATE__ = "half";
@@ -501,14 +506,14 @@ function openCommentModal() {
   modal.classList.add("visible");
   document.body.classList.add("comment-open");
 
-  // start from hidden (CSS X kept, Y only changes)
+  const HALF_Y = Math.round(window.innerHeight * 0.45);
+
   sheet.style.transition = "none";
-  sheet.style.transform = "translateX(-50%) translateY(100%)";
+  sheet.style.transform = `translateX(-50%) translateY(${window.innerHeight}px)`;
 
   requestAnimationFrame(() => {
-    sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
-    // half-open position
-    sheet.style.transform = "translateX(-50%) translateY(40vh)";
+    sheet.style.transition = "transform 0.28s cubic-bezier(.4,0,.2,1)";
+    sheet.style.transform = `translateX(-50%) translateY(${HALF_Y}px)`;
   });
 
   bindCommentDrag();
@@ -519,82 +524,74 @@ function closeCommentModal() {
   const sheet = modal?.querySelector(".comment-sheet");
   if (!modal || !sheet) return;
 
-  sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
-  sheet.style.transform = "translateX(-50%) translateY(100%)";
+  sheet.style.transition = "transform 0.25s cubic-bezier(.4,0,.2,1)";
+  sheet.style.transform = `translateX(-50%) translateY(${window.innerHeight}px)`;
 
   setTimeout(() => {
     modal.classList.remove("visible");
     document.body.classList.remove("comment-open");
-
     window.__COMMENT_OPEN__ = false;
     window.__COMMENT_STATE__ = "closed";
 
     const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
     if (video) video.play().catch(() => {});
-  }, 300);
+  }, 260);
 }
 
 function bindCommentDrag() {
   const modal = document.getElementById("shortsCommentModal");
   const sheet = modal?.querySelector(".comment-sheet");
-  if (!sheet) return;
-
-  // Add handle selector and restrict drag start to it
-  const handle = sheet.querySelector(".comment-handle") || sheet.querySelector(".comment-header");
+  const list = sheet?.querySelector(".comment-list");
+  if (!sheet || !list) return;
 
   let startY = 0;
-  let startTranslate = 0;
-  let current = 0;
+  let startPos = 0;
+  let currentPos = 0;
+  let dragging = false;
 
-  // stability tweak: snap thresholds tighter (less floaty)
   const FULL_Y = 0;
   const HALF_Y = Math.round(window.innerHeight * 0.45);
   const CLOSE_Y = Math.round(window.innerHeight * 0.85);
 
-  const getCurrentY = () => {
-    const m = sheet.style.transform.match(/translateY\(([-0-9.]+)px\)/);
-    return m ? Number(m[1]) : HALF_Y;
+  sheet.ontouchstart = e => {
+    if (isScrollableTarget(e.target) && list.scrollTop > 0) return;
+    dragging = true;
+    startY = e.touches[0].clientY;
+    startPos = sheet.getBoundingClientRect().top;
+    sheet.style.transition = "none";
   };
 
-  // Only allow drag starting from handle/header
-  handle.addEventListener("touchstart", e => {
-    startY = e.touches[0].clientY;
-    startTranslate = getCurrentY();
-    sheet.style.transition = "none";
-    sheet.dataset.dragging = "true";
-  }, { passive: true });
-
-  sheet.addEventListener("touchmove", e => {
-    if (sheet.dataset.dragging !== "true") return;
+  sheet.ontouchmove = e => {
+    if (!dragging) return;
     const dy = e.touches[0].clientY - startY;
-    current = Math.max(FULL_Y, Math.min(CLOSE_Y, startTranslate + dy));
-    sheet.style.transform = `translateX(-50%) translateY(${current}px)`;
-  }, { passive: true });
+    currentPos = Math.min(CLOSE_Y, Math.max(FULL_Y, startPos + dy));
+    sheet.style.transform = `translateX(-50%) translateY(${currentPos}px)`;
+  };
 
-  sheet.addEventListener("touchend", () => {
-    if (sheet.dataset.dragging !== "true") return;
-    delete sheet.dataset.dragging;
-    sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
+  sheet.ontouchend = () => {
+    if (!dragging) return;
+    dragging = false;
+    sheet.style.transition = "transform 0.28s cubic-bezier(.4,0,.2,1)";
 
-    if (current > Math.round(window.innerHeight * 0.6)) {
+    if (currentPos > window.innerHeight * 0.6) {
       closeCommentModal();
       return;
     }
 
-    if (current < Math.round(window.innerHeight * 0.2)) {
+    if (currentPos < window.innerHeight * 0.25) {
       window.__COMMENT_STATE__ = "full";
       sheet.style.transform = `translateX(-50%) translateY(${FULL_Y}px)`;
     } else {
       window.__COMMENT_STATE__ = "half";
       sheet.style.transform = `translateX(-50%) translateY(${HALF_Y}px)`;
     }
-  });
+  };
 }
 
-// Document-level click to close comment modal
 document.addEventListener("click", e => {
   const modal = document.getElementById("shortsCommentModal");
   if (!modal || !modal.classList.contains("visible")) return;
+
   if (e.target.classList.contains("comment-dim")) {
     closeCommentModal();
   }
