@@ -370,18 +370,14 @@ function __openShortsInternal(list, startId) {
 
     <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
     <div class="shorts-actions">
-      <button class="shorts-action-btn comment" aria-label="댓글" style="background:transparent;border:none;box-shadow:none;">
-        <svg class="icon" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="1.8"
-             stroke-linecap="round" stroke-linejoin="round">
+      <button class="shorts-action-btn comment" aria-label="댓글">
+        <svg viewBox="0 0 24 24">
           <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
         </svg>
       </button>
 
       <button class="shorts-action-btn share" aria-label="공유">
-        <svg class="icon" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="1.8"
-             stroke-linecap="round" stroke-linejoin="round">
+        <svg viewBox="0 0 24 24">
           <path d="M22 2L11 13"/>
           <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
         </svg>
@@ -902,3 +898,43 @@ function loadShortsComments() {
     </div>
   `;
 }
+  // ===== Inject overlay styles for shorts actions (once) =====
+  if (!document.getElementById("shortsActionsStyle")) {
+    const style = document.createElement("style");
+    style.id = "shortsActionsStyle";
+    style.textContent = `
+.shorts-actions {
+  position:absolute;
+  right:12px;
+  bottom:96px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  z-index:5;
+}
+
+.shorts-action-btn{
+  background:none;
+  border:none;
+  padding:0;
+  width:44px;
+  height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.shorts-action-btn svg{
+  width:26px;
+  height:26px;
+  stroke:#fff;
+  stroke-width:1.8;
+  fill:none;
+}
+
+.shorts-action-btn:active svg{
+  transform:scale(.92);
+}
+`;
+    document.head.appendChild(style);
+  }
