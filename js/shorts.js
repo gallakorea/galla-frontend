@@ -397,6 +397,13 @@ function __openShortsInternal(list, startId) {
     shortsList.findIndex(v => v.id === startId)
   );
 
+  /* 🔥 추가: 쇼츠 복귀용 상태 저장 */
+  sessionStorage.setItem("__SHORTS_RETURN__", JSON.stringify({
+    list: shortsList,
+    index: currentIndex,
+    issueId: shortsList[currentIndex]?.id
+  }));
+
   // 🔒 shorts-open 모드 명시 (vote / index 충돌 방지)
   document.body.classList.add("shorts-open");
   window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
@@ -520,12 +527,19 @@ function bindGestures() {
       const section = document.querySelectorAll(".short")[currentIndex];
       const authorId = section?.dataset?.authorId;
 
+      /* 🔥 복귀 정보 최신화 */
+      sessionStorage.setItem("__SHORTS_RETURN__", JSON.stringify({
+        list: shortsList,
+        index: currentIndex,
+        issueId: current?.id
+      }));
+
       closeShorts();
 
       // 🔥 authorId 없으면 기본 마이페이지로 이동
       const target = authorId
-        ? `/mypage.html?user=${authorId}`
-        : `/mypage.html`;
+        ? `/mypage.html?user=${authorId}&from=shorts`
+        : `/mypage.html?from=shorts`;
 
       setTimeout(() => {
         location.href = target;
@@ -759,6 +773,49 @@ function bindCommentDrag() {
   sheet.ontouchend = () => {
     if (!dragging) return;
     dragging = false;
+    sheet.style.transition = "transform 0.28s cubic-bezier(.4,0,.2,1)";
+
+    if (currentPos > window.innerHeight * 0.6) {
+      closeCommentModal();
+      return;
+    }
+
+    if (currentPos < window.innerHeight * 0.25) {
+      window.__COMMENT_STATE__ = "full";
+      sheet.style.transform = `translateX(-50%) translateY(${FULL_Y}px)`;
+    } else {
+      window.__COMMENT_STATE__ = "half";
+      sheet.style.transform = `translateX(-50%) translateY(${HALF_Y}px)`;
+    }
+  };
+
+  // ===== PC MOUSE DRAG SUPPORT =====
+  let mouseDragging = false;
+
+  sheet.onmousedown = e => {
+    // 댓글 리스트 스크롤 중이면 모달 드래그 막음
+    if (isScrollableTarget(e.target) && list.scrollTop > 0) return;
+
+    mouseDragging = true;
+    startY = e.clientY;
+    startPos = sheet.getBoundingClientRect().top;
+    sheet.style.transition = "none";
+
+    e.preventDefault();
+  };
+
+  window.onmousemove = e => {
+    if (!mouseDragging) return;
+
+    const dy = e.clientY - startY;
+    currentPos = Math.min(CLOSE_Y, Math.max(FULL_Y, startPos + dy));
+    sheet.style.transform = `translateX(-50%) translateY(${currentPos}px)`;
+  };
+
+  window.onmouseup = () => {
+    if (!mouseDragging) return;
+    mouseDragging = false;
+
     sheet.style.transition = "transform 0.28s cubic-bezier(.4,0,.2,1)";
 
     if (currentPos > window.innerHeight * 0.6) {
