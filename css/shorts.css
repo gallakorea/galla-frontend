@@ -269,11 +269,11 @@ body[data-page="shorts"] .nav {
   display: block;
 }
 
-#shortsCommentModal::before {
-  content: "";
+#shortsCommentModal .comment-dim {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,0.45);
+  z-index: 0;
 }
 
 /* 🔥 핵심: X축은 한 번만, Y축만 움직임 */
@@ -295,6 +295,7 @@ body[data-page="shorts"] .nav {
   flex-direction: column;
 
   will-change: transform;
+  z-index: 1;
 }
 
 /* 열렸을 때 */
