@@ -115,12 +115,12 @@ function __openShortsInternal(list, startId) {
     style.textContent = `
 .shorts-meta{
   position:absolute;
-  left:12px;
-  bottom:140px; /* 찬/반 버튼 위 */
-  max-width:320px;
-  z-index:20;   /* 비디오/액션 버튼 위로 */
+  left:14px;
+  bottom:160px;
+  max-width:360px;
+  z-index:30;
   color:#fff;
-  font-family:system-ui;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont;
   pointer-events:auto;
 }
 
@@ -130,11 +130,11 @@ function __openShortsInternal(list, startId) {
 }
 
 .author-avatar{
-  width:36px;
-  height:36px;
+  width:44px;
+  height:44px;
   border-radius:50%;
   object-fit:cover;
-  border:1px solid rgba(255,255,255,.35);
+  border:1px solid rgba(255,255,255,.4);
 }
 
 .author-info{
@@ -146,34 +146,38 @@ function __openShortsInternal(list, startId) {
 .author-line{
   display:flex;
   align-items:center;
-  gap:6px;
-  font-size:13px;
-  font-weight:700;
+  gap:8px;
+  font-size:15px;
+  font-weight:800;
+  line-height:1.2;
 }
 
 .author-level{
-  font-size:11px;
-  padding:1px 6px;
-  border-radius:8px;
-  background:rgba(255,255,255,.12);
+  font-size:12px;
+  padding:2px 8px;
+  border-radius:10px;
+  background:rgba(255,255,255,.18);
+  font-weight:700;
 }
 
 .author-follow{
   margin-left:6px;
-  font-size:11px;
-  padding:2px 8px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,.35);
-  background:rgba(0,0,0,.4);
+  font-size:12px;
+  padding:4px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.45);
+  background:rgba(0,0,0,.45);
   color:#fff;
+  font-weight:700;
   cursor:pointer;
 }
 
 .shorts-title{
-  font-size:13px;
-  font-weight:600;
-  line-height:1.3;
-  opacity:.9;
+  margin-top:6px;
+  font-size:15px;
+  font-weight:700;
+  line-height:1.35;
+  opacity:.95;
 }
 `;
     document.head.appendChild(style);
