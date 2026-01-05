@@ -498,7 +498,8 @@ function openCommentModal() {
   window.__COMMENT_OPEN__ = true;
   window.__COMMENT_STATE__ = "half";
 
-  modal.classList.add("open");
+  modal.classList.add("visible");
+  document.body.classList.add("comment-open");
 
   sheet.style.transition = "none";
   sheet.style.transform = "translateY(100%)";
@@ -520,7 +521,9 @@ function closeCommentModal() {
   sheet.style.transform = "translateY(100%)";
 
   setTimeout(() => {
-    modal.classList.remove("open");
+    modal.classList.remove("visible");
+    document.body.classList.remove("comment-open");
+
     window.__COMMENT_OPEN__ = false;
     window.__COMMENT_STATE__ = "closed";
 
