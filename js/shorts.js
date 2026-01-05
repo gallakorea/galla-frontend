@@ -115,26 +115,50 @@ function __openShortsInternal(list, startId) {
     modal.id = "shortsCommentModal";
     modal.innerHTML = `
   <div class="comment-dim"></div>
+
   <div class="comment-sheet">
-    <div class="comment-handle"></div>
-    <div class="comment-header">
-      <div class="stance-tabs">
-        <button class="stance-tab active" data-stance="pro">찬성</button>
-        <button class="stance-tab" data-stance="con">반대</button>
+
+    <!-- A. 전황 요약 (FIXED) -->
+    <div class="comment-summary">
+      <div class="summary-bar">
+        <span class="pro">찬성 62%</span>
+        <div class="bar">
+          <div class="bar-pro" style="width:62%"></div>
+        </div>
+        <span class="con">반대 38%</span>
       </div>
+      <div class="summary-meta">(총 댓글 184 · 참여자 129)</div>
     </div>
 
-    <div class="comment-sort">
-      <button class="sort-btn active" data-sort="latest">최신순</button>
-      <button class="sort-btn" data-sort="popular">인기순</button>
+    <!-- B. 찬성 / 반대 탭 (STICKY) -->
+    <div class="comment-tabs">
+      <button class="stance-tab active" data-stance="pro">찬성</button>
+      <button class="stance-tab" data-stance="con">반대</button>
     </div>
 
-    <div id="shortsCommentList" class="comment-list"></div>
+    <!-- C. 빌보드 (조건부 노출, 최대 3) -->
+    <div id="commentBillboard" class="comment-billboard" hidden>
+      <div class="billboard-item">🔥 빌보드 댓글 1</div>
+      <div class="billboard-item">🔥 빌보드 댓글 2</div>
+      <div class="billboard-item">🔥 빌보드 댓글 3</div>
+    </div>
 
+    <!-- D. 댓글 리스트 (ONLY SCROLL AREA) -->
+    <div class="comment-list-wrap">
+      <div class="comment-sort">
+        <button class="sort-btn active" data-sort="latest">최신순</button>
+        <button class="sort-btn" data-sort="popular">인기순</button>
+      </div>
+
+      <div id="shortsCommentList" class="comment-list"></div>
+    </div>
+
+    <!-- E. 댓글 입력 -->
     <div class="comment-input">
       <input id="shortsCommentInput" placeholder="댓글을 입력하세요" />
       <button id="shortsCommentSend">등록</button>
     </div>
+
   </div>
     `;
     document.body.appendChild(modal);
