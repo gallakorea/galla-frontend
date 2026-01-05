@@ -114,130 +114,120 @@ function __openShortsInternal(list, startId) {
     const modal = document.createElement("div");
     modal.id = "shortsCommentModal";
     modal.innerHTML = `
-<style>
-/* ===== Shorts Comment Modal UI (Issue Tone) ===== */
-#shortsCommentModal .comment-sheet{
-  background:linear-gradient(180deg,#0e0e0e,#030303);
-  color:#fff;
-  box-shadow:0 -10px 40px rgba(0,0,0,.9);
-}
-.comment-summary{
-  padding:14px;
-  border-bottom:1px solid rgba(255,255,255,.12);
-}
-.comment-summary .summary-bar{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-size:13px;
-  font-weight:700;
-}
-.comment-summary .bar{
-  flex:1;
-  height:6px;
-  background:#222;
-  border-radius:4px;
-  overflow:hidden;
-}
-.comment-summary .bar-pro{
-  height:100%;
-  background:linear-gradient(90deg,#5bbcff,#4da3ff);
-  box-shadow:0 0 8px rgba(91,188,255,.6);
-}
-.comment-summary .summary-meta{
-  margin-top:6px;
-  font-size:11px;
-  opacity:.7;
-}
+    <style>
+    /* ===== Shorts Comment Modal UI (Issue Tone) ===== */
+    #shortsCommentModal .comment-sheet{
+      background:linear-gradient(180deg,#0e0e0e,#030303);
+      color:#fff;
+      box-shadow:0 -10px 40px rgba(0,0,0,.9);
+    }
+    .comment-summary{
+      padding:14px;
+      border-bottom:1px solid rgba(255,255,255,.12);
+    }
+    .comment-summary .summary-bar{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      font-weight:700;
+    }
+    .comment-summary .bar{
+      flex:1;
+      height:6px;
+      background:#222;
+      border-radius:4px;
+      overflow:hidden;
+    }
+    .comment-summary .bar-pro{
+      height:100%;
+      background:linear-gradient(90deg,#5bbcff,#4da3ff);
+      box-shadow:0 0 8px rgba(91,188,255,.6);
+    }
+    .comment-summary .summary-meta{
+      margin-top:6px;
+      font-size:11px;
+      opacity:.7;
+    }
 
-.comment-tabs{
-  display:flex;
-  margin:10px 14px;
-  padding:4px;
-  border-radius:12px;
-  background:rgba(255,255,255,.08);
-  box-shadow:inset 0 0 8px rgba(0,0,0,.6);
-}
-.comment-tabs .stance-tab{
-  flex:1;
-  padding:10px 0;
-  border-radius:10px;
-  border:none;
-  background:transparent;
-  color:#bbb;
-  font-weight:800;
-  letter-spacing:1px;
-  transition:.15s;
-}
-.comment-tabs .stance-tab.active{
-  color:#fff;
-  background:linear-gradient(180deg,#1a1a1a,#050505);
-  box-shadow:0 0 16px rgba(255,255,255,.35);
-}
-.comment-tabs .stance-tab.active.pro{
-  box-shadow:0 0 16px rgba(91,188,255,.6);
-}
-.comment-tabs .stance-tab.active.con{
-  box-shadow:0 0 16px rgba(255,107,107,.6);
-}
+    .comment-tabs.tabs-menu{
+      position: sticky;
+      top: 72px; /* summary height 기준 고정 */
+      z-index: 5;
 
-.comment-list-wrap{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.comment-sort{
-  display:flex;
-  gap:8px;
-  padding:8px 14px;
-  position:sticky;
-  top:48px;
-  background:#0b0b0b;
-  z-index:4;
-}
-.comment-sort .sort-btn{
-  flex:1;
-  padding:6px 0;
-  border-radius:8px;
-  background:#111;
-  border:1px solid rgba(255,255,255,.2);
-  color:#fff;
-}
-.comment-sort .sort-btn.active{
-  background:linear-gradient(180deg,#ffffff33,#ffffff10);
-  box-shadow:0 0 10px rgba(255,255,255,.5);
-}
+      display:flex;
+      margin:0 14px 10px;
+      padding:6px;
+      gap:0;
 
-.comment-list{
-  flex:1;
-  overflow-y:auto;
-  padding:10px 14px;
-}
+      border-radius:18px;
+      background:#0d0d0d;
+      border:2px solid #000;
+      box-shadow:
+        inset 0 0 0 2px rgba(255,255,255,.15),
+        0 6px 18px rgba(0,0,0,.6);
+    }
+    .comment-tabs .stance-tab{
+      flex:1;
+      padding:10px 0;
+      border-radius:10px;
+      border:none;
+      background:transparent;
+      color:#bbb;
+      font-weight:800;
+      letter-spacing:1px;
+      transition:.15s;
+    }
+    .comment-tabs .stance-tab.active{
+      color:#fff;
+      background:linear-gradient(180deg,#1a1a1a,#050505);
+      box-shadow:0 0 16px rgba(255,255,255,.35);
+    }
+    .comment-tabs .stance-tab.active.pro{
+      box-shadow:0 0 16px rgba(91,188,255,.6);
+    }
+    .comment-tabs .stance-tab.active.con{
+      box-shadow:0 0 16px rgba(255,107,107,.6);
+    }
 
-.comment-input{
-  padding:10px 14px;
-  border-top:1px solid rgba(255,255,255,.15);
-  display:flex;
-  gap:8px;
-}
-.comment-input input{
-  flex:1;
-  background:#050505;
-  border:1px solid rgba(255,255,255,.25);
-  border-radius:10px;
-  color:#fff;
-  padding:10px;
-}
-.comment-input button{
-  min-width:64px;
-  border-radius:10px;
-  border:none;
-  background:linear-gradient(180deg,#ff9b2f,#ff6a00);
-  color:#000;
-  font-weight:800;
-}
-</style>
+    .comment-list-wrap{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    .comment-sort{
+      display:none; /* 최신순 고정 */
+    }
+    .comment-list{
+      flex:1;
+      overflow-y:auto;
+      padding:10px 14px;
+    }
+
+    .comment-input{
+      padding:10px 14px;
+      border-top:1px solid rgba(255,255,255,.15);
+      display:flex;
+      gap:8px;
+    }
+    .comment-input input{
+      flex:1;
+      background:#050505;
+      border:1px solid rgba(255,255,255,.25);
+      border-radius:10px;
+      color:#fff;
+      padding:10px;
+    }
+    .comment-input button{
+      min-width:64px;
+      border-radius:10px;
+      border:none;
+      background:linear-gradient(180deg,#ff9b2f,#ff6a00);
+      color:#000;
+      font-weight:800;
+    }
+    </style>
   <div class="comment-dim"></div>
 
   <div class="comment-sheet">
@@ -255,7 +245,7 @@ function __openShortsInternal(list, startId) {
     </div>
 
     <!-- B. 찬성 / 반대 탭 (STICKY) -->
-    <div class="comment-tabs">
+    <div class="comment-tabs tabs-menu">
       <button class="stance-tab pro active" data-stance="pro">찬성</button>
       <button class="stance-tab con" data-stance="con">반대</button>
     </div>
@@ -772,32 +762,6 @@ document.addEventListener("click", e => {
   loadShortsComments();
 });
 
-// =========================
-// COMMENT SORT (STATE)
-// =========================
-document.addEventListener("click", e => {
-  const btn = e.target.closest("#shortsCommentModal .sort-btn");
-  if (!btn) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  const sort = btn.dataset.sort;
-  if (!sort) return;
-
-  // 상태 저장
-  window.currentCommentSort = sort;
-
-  // UI 갱신
-  document
-    .querySelectorAll("#shortsCommentModal .sort-btn")
-    .forEach(b => b.classList.remove("active"));
-
-  btn.classList.add("active");
-
-  // 댓글 다시 로딩
-  loadShortsComments();
-});
 
 // =========================
 // COMMENT LOAD (DUMMY)
@@ -807,12 +771,13 @@ function loadShortsComments() {
   if (!list) return;
 
   const stance = window.currentCommentStance;
-  const sort = window.currentCommentSort;
+  // const sort = window.currentCommentSort;
+  const sort = "latest";
 
   list.innerHTML = `
     <div style="padding:12px 0;border-bottom:1px solid #222">
       <strong>유저A</strong> · ${stance === "pro" ? "찬성" : "반대"}<br/>
-      (${sort === "latest" ? "최신" : "인기"}) 기준 더미 댓글
+      최신 기준 더미 댓글
     </div>
     <div style="padding:12px 0;border-bottom:1px solid #222">
       <strong>유저B</strong><br/>
