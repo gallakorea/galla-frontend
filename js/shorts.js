@@ -108,6 +108,76 @@ function __openShortsInternal(list, startId) {
       <div id="shortsTrack"></div>
     </div>
   `;
+  // ===== Inject overlay styles for shorts meta (once) =====
+  if (!document.getElementById("shortsMetaStyle")) {
+    const style = document.createElement("style");
+    style.id = "shortsMetaStyle";
+    style.textContent = `
+.shorts-meta{
+  position:absolute;
+  left:12px;
+  bottom:140px; /* 찬/반 버튼 위 */
+  max-width:320px;
+  z-index:20;   /* 비디오/액션 버튼 위로 */
+  color:#fff;
+  font-family:system-ui;
+  pointer-events:auto;
+}
+
+.shorts-author{
+  display:flex;
+  gap:10px;
+}
+
+.author-avatar{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.35);
+}
+
+.author-info{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.author-line{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:13px;
+  font-weight:700;
+}
+
+.author-level{
+  font-size:11px;
+  padding:1px 6px;
+  border-radius:8px;
+  background:rgba(255,255,255,.12);
+}
+
+.author-follow{
+  margin-left:6px;
+  font-size:11px;
+  padding:2px 8px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.4);
+  color:#fff;
+  cursor:pointer;
+}
+
+.shorts-title{
+  font-size:13px;
+  font-weight:600;
+  line-height:1.3;
+  opacity:.9;
+}
+`;
+    document.head.appendChild(style);
+  }
 
   // === 댓글 모달 HTML 생성 추가 ===
   if (!document.getElementById("shortsCommentModal")) {
@@ -367,6 +437,21 @@ function __openShortsInternal(list, startId) {
       preload="auto"
       style="width:100%;height:100%;object-fit:cover"
     ></video>
+
+    <!-- LEFT META (AUTHOR) -->
+    <div class="shorts-meta">
+      <div class="shorts-author">
+        <img class="author-avatar" src="assets/default-avatar.png" />
+        <div class="author-info">
+          <div class="author-line">
+            <span class="author-name">작성자</span>
+            <span class="author-level">Lv.12</span>
+            <button class="author-follow">팔로우</button>
+          </div>
+          <div class="shorts-title">이 쇼츠 제목 영역</div>
+        </div>
+      </div>
+    </div>
 
     <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
     <div class="shorts-actions">
