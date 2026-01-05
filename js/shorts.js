@@ -539,33 +539,41 @@ function bindCommentDrag() {
   const sheet = modal?.querySelector(".comment-sheet");
   if (!sheet) return;
 
+  // Add handle selector and restrict drag start to it
+  const handle = sheet.querySelector(".comment-handle") || sheet.querySelector(".comment-header");
+
   let startY = 0;
   let startTranslate = 0;
   let current = 0;
 
-  // measure once
-  const FULL_Y = 0;                 // fully open
-  const HALF_Y = Math.round(window.innerHeight * 0.4);
-  const CLOSE_Y = Math.round(window.innerHeight);
+  // stability tweak: snap thresholds tighter (less floaty)
+  const FULL_Y = 0;
+  const HALF_Y = Math.round(window.innerHeight * 0.45);
+  const CLOSE_Y = Math.round(window.innerHeight * 0.85);
 
   const getCurrentY = () => {
     const m = sheet.style.transform.match(/translateY\(([-0-9.]+)px\)/);
     return m ? Number(m[1]) : HALF_Y;
   };
 
-  sheet.addEventListener("touchstart", e => {
+  // Only allow drag starting from handle/header
+  handle.addEventListener("touchstart", e => {
     startY = e.touches[0].clientY;
     startTranslate = getCurrentY();
     sheet.style.transition = "none";
+    sheet.dataset.dragging = "true";
   }, { passive: true });
 
   sheet.addEventListener("touchmove", e => {
+    if (sheet.dataset.dragging !== "true") return;
     const dy = e.touches[0].clientY - startY;
     current = Math.max(FULL_Y, Math.min(CLOSE_Y, startTranslate + dy));
     sheet.style.transform = `translateX(-50%) translateY(${current}px)`;
   }, { passive: true });
 
   sheet.addEventListener("touchend", () => {
+    if (sheet.dataset.dragging !== "true") return;
+    delete sheet.dataset.dragging;
     sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
 
     if (current > Math.round(window.innerHeight * 0.6)) {
