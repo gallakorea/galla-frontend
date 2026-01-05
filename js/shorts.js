@@ -190,6 +190,36 @@ function __openShortsInternal(list, startId) {
       box-shadow:0 0 16px rgba(255,107,107,.6);
     }
 
+    /* ===============================
+       COMMENT BILLBOARD (STICKY)
+    ================================ */
+    .comment-billboard.sticky{
+      position: sticky;
+      top: 128px; /* summary + tabs 높이 합 */
+      z-index: 4;
+
+      margin: 0 14px 10px;
+      padding: 10px;
+      border-radius: 12px;
+
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.12),rgba(0,0,0,.85)),
+        repeating-linear-gradient(45deg,#050505,#050505 6px,#0a0a0a 6px,#0a0a0a 12px);
+
+      box-shadow: 0 0 28px rgba(255,255,255,.35);
+    }
+
+    .comment-billboard .billboard-item{
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 6px;
+      background: linear-gradient(180deg,#1a1a1a,#020202);
+    }
+    .comment-billboard .billboard-item:last-child{
+      margin-bottom: 0;
+    }
+
     .comment-list-wrap{
       flex:1;
       display:flex;
@@ -250,8 +280,8 @@ function __openShortsInternal(list, startId) {
       <button class="stance-tab con" data-stance="con">반대</button>
     </div>
 
-    <!-- C. 빌보드 (조건부 노출, 최대 3) -->
-    <div id="commentBillboard" class="comment-billboard" hidden>
+    <!-- B-2. 빌보드 (STICKY, 조건부 노출 / 최대 3) -->
+    <div id="commentBillboard" class="comment-billboard sticky" hidden>
       <div class="billboard-item">🔥 빌보드 댓글 1</div>
       <div class="billboard-item">🔥 빌보드 댓글 2</div>
       <div class="billboard-item">🔥 빌보드 댓글 3</div>
@@ -767,6 +797,16 @@ document.addEventListener("click", e => {
 // COMMENT LOAD (DUMMY)
 // =========================
 function loadShortsComments() {
+  // ===== Billboard conditional display (dummy) =====
+  const billboard = document.getElementById("commentBillboard");
+
+  // 더미 조건: 빌보드 댓글 3개 이상일 때만 노출
+  const hasBillboard = true; // 나중에 조건 연결
+
+  if (billboard) {
+    billboard.hidden = !hasBillboard;
+  }
+
   const list = document.getElementById("shortsCommentList");
   if (!list) return;
 
