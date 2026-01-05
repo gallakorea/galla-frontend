@@ -254,11 +254,6 @@ body[data-page="shorts"] .nav {
 
   z-index: 50;
 }
-
-/* =========================
-   SHORTS COMMENT MODAL (STABLE)
-========================= */
-
 /* =========================
    SHORTS COMMENT MODAL (FIXED)
 ========================= */
@@ -324,21 +319,6 @@ body[data-page="shorts"] .nav {
   align-items: center;
 }
 
-/* list */
-.comment-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 14px;
-}
-
-/* input */
-.comment-input {
-  padding: 12px;
-  border-top: 1px solid #222;
-  display: flex;
-  gap: 8px;
-}
-
 .comment-input input {
   flex: 1;
   background: #111;
@@ -365,4 +345,10 @@ body[data-page="shorts"] .nav {
 
 .comment-input {
   flex-shrink: 0;
+}
+
+/* 댓글 열렸을 때 쇼츠 스크롤 차단 */
+body.comment-open #shortsOverlay {
+  overflow: hidden;
+  touch-action: none;
 }
