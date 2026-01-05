@@ -501,12 +501,14 @@ function openCommentModal() {
   modal.classList.add("visible");
   document.body.classList.add("comment-open");
 
+  // start from hidden (CSS X kept, Y only changes)
   sheet.style.transition = "none";
-  sheet.style.transform = "translateY(100%)";
+  sheet.style.transform = "translateX(-50%) translateY(100%)";
 
   requestAnimationFrame(() => {
     sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
-    sheet.style.transform = "translateY(60%)";
+    // half-open position
+    sheet.style.transform = "translateX(-50%) translateY(40vh)";
   });
 
   bindCommentDrag();
@@ -518,7 +520,7 @@ function closeCommentModal() {
   if (!modal || !sheet) return;
 
   sheet.style.transition = "transform 0.3s cubic-bezier(.4,0,.2,1)";
-  sheet.style.transform = "translateY(100%)";
+  sheet.style.transform = "translateX(-50%) translateY(100%)";
 
   setTimeout(() => {
     modal.classList.remove("visible");
@@ -538,40 +540,46 @@ function bindCommentDrag() {
   if (!sheet) return;
 
   let startY = 0;
-  let deltaY = 0;
+  let startTranslate = 0;
+  let current = 0;
+
+  // measure once
+  const FULL_Y = 0;                 // fully open
+  const HALF_Y = Math.round(window.innerHeight * 0.4);
+  const CLOSE_Y = Math.round(window.innerHeight);
+
+  const getCurrentY = () => {
+    const m = sheet.style.transform.match(/translateY\(([-0-9.]+)px\)/);
+    return m ? Number(m[1]) : HALF_Y;
+  };
 
   sheet.addEventListener("touchstart", e => {
     startY = e.touches[0].clientY;
+    startTranslate = getCurrentY();
     sheet.style.transition = "none";
   }, { passive: true });
 
   sheet.addEventListener("touchmove", e => {
-    deltaY = e.touches[0].clientY - startY;
-
-    if (deltaY < 0) {
-      sheet.style.transform = "translateY(0)";
-      window.__COMMENT_STATE__ = "full";
-      return;
-    }
-
-    sheet.style.transform = `translateY(${60 + deltaY / 3}%)`;
+    const dy = e.touches[0].clientY - startY;
+    current = Math.max(FULL_Y, Math.min(CLOSE_Y, startTranslate + dy));
+    sheet.style.transform = `translateX(-50%) translateY(${current}px)`;
   }, { passive: true });
 
   sheet.addEventListener("touchend", () => {
     sheet.style.transition = "transform 0.32s cubic-bezier(.4,0,.2,1)";
 
-    if (deltaY > 140) {
+    if (current > Math.round(window.innerHeight * 0.6)) {
       closeCommentModal();
       return;
     }
 
-    if (window.__COMMENT_STATE__ === "full") {
-      sheet.style.transform = "translateY(0)";
+    if (current < Math.round(window.innerHeight * 0.2)) {
+      window.__COMMENT_STATE__ = "full";
+      sheet.style.transform = `translateX(-50%) translateY(${FULL_Y}px)`;
     } else {
-      sheet.style.transform = "translateY(60%)";
+      window.__COMMENT_STATE__ = "half";
+      sheet.style.transform = `translateX(-50%) translateY(${HALF_Y}px)`;
     }
-
-    deltaY = 0;
   });
 }
 
