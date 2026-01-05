@@ -152,29 +152,33 @@ function __openShortsInternal(list, startId) {
 
 .comment-tabs{
   display:flex;
-  gap:8px;
-  padding:10px 14px;
-  position:sticky;
-  top:0;
-  background:#0b0b0b;
-  z-index:5;
+  margin:10px 14px;
+  padding:4px;
+  border-radius:12px;
+  background:rgba(255,255,255,.08);
+  box-shadow:inset 0 0 8px rgba(0,0,0,.6);
 }
 .comment-tabs .stance-tab{
   flex:1;
-  padding:8px 0;
+  padding:10px 0;
   border-radius:10px;
-  border:1px solid rgba(255,255,255,.2);
-  background:#111;
+  border:none;
+  background:transparent;
+  color:#bbb;
+  font-weight:800;
+  letter-spacing:1px;
+  transition:.15s;
+}
+.comment-tabs .stance-tab.active{
   color:#fff;
-  font-weight:700;
+  background:linear-gradient(180deg,#1a1a1a,#050505);
+  box-shadow:0 0 16px rgba(255,255,255,.35);
 }
 .comment-tabs .stance-tab.active.pro{
-  border-color:#5bbcff;
-  box-shadow:0 0 12px rgba(91,188,255,.6);
+  box-shadow:0 0 16px rgba(91,188,255,.6);
 }
 .comment-tabs .stance-tab.active.con{
-  border-color:#ff6b6b;
-  box-shadow:0 0 12px rgba(255,107,107,.6);
+  box-shadow:0 0 16px rgba(255,107,107,.6);
 }
 
 .comment-list-wrap{
@@ -252,8 +256,8 @@ function __openShortsInternal(list, startId) {
 
     <!-- B. 찬성 / 반대 탭 (STICKY) -->
     <div class="comment-tabs">
-      <button class="stance-tab active" data-stance="pro">찬성</button>
-      <button class="stance-tab" data-stance="con">반대</button>
+      <button class="stance-tab pro active" data-stance="pro">찬성</button>
+      <button class="stance-tab con" data-stance="con">반대</button>
     </div>
 
     <!-- C. 빌보드 (조건부 노출, 최대 3) -->
