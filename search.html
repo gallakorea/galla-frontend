@@ -4,183 +4,85 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GALLA - 검색</title>
-
   <link rel="stylesheet" href="./css/search.css" />
 </head>
 
 <body data-page="search">
 <div id="app">
 
-    <!-- HEADER -->
-    <header class="header">
-        <div class="header-inner">
-            <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'"/>
+<header class="header">
+  <div class="header-inner">
+    <a href="index.html" class="logo-link">
+      <img src="assets/logo.png" class="logo" alt="GALLA" />
+    </a>
 
-            <!-- 로그인/회원가입 (로그아웃 상태) -->
-            <div class="auth-buttons" id="authBefore">
-                <button onclick="location.href='login.html'">로그인</button>
-                <button onclick="location.href='signup.html'">회원가입</button>
-            </div>
+    <div class="auth-buttons" id="authBefore">
+      <button onclick="location.href='login.html'">로그인</button>
+      <button onclick="location.href='signup.html'">회원가입</button>
+    </div>
 
-            <!-- 마이페이지 (로그인 상태) -->
-            <div class="auth-buttons" id="authAfter" style="display:none;">
-                <button onclick="location.href='mypage.html'">마이페이지</button>
-            </div>
-        </div>
-    </header>
+    <div class="auth-buttons" id="authAfter" style="display:none;">
+      <button onclick="location.href='mypage.html'">마이페이지</button>
+    </div>
+  </div>
+</header>
 
-    <main class="page-main search-page">
+<main class="page-main search-page">
 
-      <!-- 🔀 Search Tabs -->
-      <section class="search-tabs">
+<section class="search-tabs">
 
-        <!-- 탭 메뉴 -->
-        <div class="tabs-header">
-            <button type="button" class="tab-item active" data-tab="hot">🔥 핫트렌드</button>
-            <button type="button" class="tab-item" data-tab="search">🔍 검색</button>
-            <button type="button" class="tab-item" data-tab="ai">🔮 유행예감</button>
-            <button type="button" class="tab-item" data-tab="news">📰 실시간 탑 뉴스</button>
-        </div>
+  <!-- TAB MENU -->
+  <div class="tabs-header">
+    <button type="button" class="tab-item active" data-tab="hot">🔥 핫트렌드</button>
+    <button type="button" class="tab-item" data-tab="search">🔍 검색</button>
+    <button type="button" class="tab-item" data-tab="ai">🔮 유행예감</button>
+    <button type="button" class="tab-item" data-tab="news">📰 실시간 탑 뉴스</button>
+  </div>
 
-        <!-- 탭 콘텐츠 -->
-        <div class="tabs-body">
+  <!-- TAB CONTENT -->
+  <div class="tabs-body">
 
-          <!-- 🔥 핫트렌드 -->
-          <div class="tab-panel active" id="tab-hot">
-            <h2 class="section-title">오늘의 핫 트렌드</h2>
-            <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
-            <div id="hot-trend-chips" class="hot-trend-chips"></div>
+    <div class="tab-panel" data-panel="hot">
+      <h2 class="section-title">오늘의 핫 트렌드</h2>
+      <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
+      <div id="hot-trend-chips" class="hot-trend-chips"></div>
+      <div id="hot-results" class="search-results-grid"></div>
+    </div>
 
-            <div class="tab-result">
-              <p class="section-sub" id="hot-result-label"></p>
-              <div id="hot-results" class="search-results-grid"></div>
-            </div>
-          </div>
+    <div class="tab-panel" data-panel="search">
+      <h2 class="section-title">갈라치기 검색</h2>
+      <form id="search-form">
+        <input id="search-input" class="search-input" placeholder="검색어 입력" />
+      </form>
+      <div id="search-results" class="search-results-grid"></div>
+    </div>
 
-          <!-- 🔍 검색 -->
-          <div class="tab-panel" id="tab-search">
-            <h2 class="section-title">갈라치기 검색</h2>
-            <p class="section-sub">제목, 카테고리 기반 검색</p>
+    <div class="tab-panel" data-panel="ai">
+      <h2 class="section-title">AI 유행예감</h2>
+      <div id="ai-trend-list"></div>
+    </div>
 
-            <form id="search-form" class="search-form">
-              <div class="search-input-wrap">
-                <input id="search-input" class="search-input" placeholder="예: 야근 수당, 연애, 19금…" />
-                <button class="search-submit-btn" type="submit">검색</button>
-              </div>
-            </form>
+    <div class="tab-panel" data-panel="news">
+      <h2 class="section-title">실시간 탑 뉴스</h2>
+      <div id="top-news-list"></div>
+    </div>
 
-            <div class="tab-result">
-              <p class="section-sub" id="search-result-label"></p>
-              <div id="search-results" class="search-results-grid"></div>
-            </div>
-          </div>
+  </div>
+</section>
+</main>
 
-          <!-- 🔮 AI 유행예감 -->
-          <div class="tab-panel" id="tab-ai">
-            <h2 class="section-title ai-title">AI 유행예감</h2>
-            <p class="section-sub">AI가 분석한 급상승 예감 이슈</p>
-            <div id="ai-trend-list" class="ai-trend-list"></div>
-          </div>
+<nav class="bottom-nav fixed-nav">
+  <button class="nav-item" data-target="index.html"><img src="./assets/icons/nav-home.svg"></button>
+  <button class="nav-item active" data-target="search.html"><img src="./assets/icons/nav-search.svg"></button>
+  <button class="nav-item" data-target="write.html"><img src="./assets/icons/nav-write.svg"></button>
+  <button class="nav-item" data-target="random.html"><img src="./assets/icons/nav-random.svg"></button>
+  <button class="nav-item" data-target="mypage.html"><img src="./assets/icons/nav-user.svg"></button>
+</nav>
 
-          <!-- 📰 실시간 탑 뉴스 -->
-          <div class="tab-panel" id="tab-news">
-            <h2 class="section-title">실시간 탑 뉴스</h2>
-            <p class="section-sub">지금 가장 주목받는 이슈</p>
-            <div id="top-news-list" class="news-list"></div>
-          </div>
-
-        </div>
-      </section>
-
-    </main>
-
-    <!-- ⭐ 고정 네비게이터 -->
-    <nav class="bottom-nav fixed-nav">
-
-        <button class="nav-item" data-target="index.html">
-            <img src="./assets/icons/nav-home.svg" />
-        </button>
-
-        <button class="nav-item active" data-target="search.html">
-            <img src="./assets/icons/nav-search.svg" />
-        </button>
-
-        <button class="nav-item" data-target="write.html">
-            <img src="./assets/icons/nav-write.svg" />
-        </button>
-
-        <button class="nav-item" data-target="random.html">
-            <img src="./assets/icons/nav-random.svg" />
-        </button>
-
-        <button class="nav-item" data-target="mypage.html">
-            <img src="./assets/icons/nav-user.svg" />
-        </button>
-
-    </nav>
-
-</div>
-
-<!-- ⭐ Supabase (UMD ONLY) -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
-
-
-<!-- ⭐ Supabase 로딩 대기 -->
-<script>
-function waitForSupabaseClient() {
-    return new Promise(resolve => {
-        const timer = setInterval(() => {
-            if (window.supabaseClient) {
-                clearInterval(timer);
-                resolve(window.supabaseClient);
-            }
-        }, 20);
-    });
-}
-</script>
-
-
-<!-- ⭐ 로그인 UI 자동 전환 -->
-<script>
-(async () => {
-    const supabase = await waitForSupabaseClient();
-    const { data } = await supabase.auth.getSession();
-
-    const loggedIn = !!data.session?.user;
-
-    document.getElementById("authBefore").style.display = loggedIn ? "none" : "flex";
-    document.getElementById("authAfter").style.display  = loggedIn ? "flex" : "none";
-})();
-</script>
-
-
-<!-- ⭐ 네비게이션 클릭 시 로그인 여부 체크 -->
-<script>
-document.querySelectorAll(".nav-item").forEach(btn => {
-    btn.addEventListener("click", async () => {
-
-        const target = btn.dataset.target;
-        if (!target) return;
-
-        const supabase = await waitForSupabaseClient();
-        const { data } = await supabase.auth.getSession();
-
-        const needLogin = ["write.html", "random.html", "mypage.html"];
-
-        if (needLogin.includes(target) && !data.session?.user) {
-            alert("로그인이 필요한 기능입니다.");
-            return location.href = "login.html";
-        }
-
-        location.href = target;
-    });
-});
-</script>
-
-
-<!-- 검색 기능 -->
 <script src="./js/search.js"></script>
 
+</div>
 </body>
 </html>
