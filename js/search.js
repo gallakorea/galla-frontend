@@ -38,19 +38,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* =====================================================
      🔮 AI 유행예감 (issue_trend_scores VIEW)
+     ⚠️ VIEW에는 FK가 없으므로 관계형 select 사용 금지
   ===================================================== */
   async function loadAITrends() {
     const { data, error } = await supabase
       .from("issue_trend_scores")
-      .select(`
-        issue_id,
-        trend_score,
-        issues (
-          id,
-          title,
-          category
-        )
-      `)
+      .select("issue_id, title, category, trend_score")
       .order("trend_score", { ascending: false })
       .limit(5);
 
@@ -63,12 +56,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     data.forEach(row => {
       const card = document.createElement("div");
       card.className = "ai-trend-card";
-      card.onclick = () => location.href = `issue.html?id=${row.issue_id}`;
+      card.onclick = () => {
+        location.href = `issue.html?id=${row.issue_id}`;
+      };
+
       card.innerHTML = `
-        <p class="ai-trend-title">${row.issues.title}</p>
-        <p class="ai-trend-meta">${row.issues.category}</p>
+        <p class="ai-trend-title">${row.title}</p>
+        <p class="ai-trend-meta">${row.category}</p>
         <p class="ai-trend-reason">📈 트렌드 점수 ${row.trend_score}</p>
       `;
+
       aiEl.appendChild(card);
     });
   }
