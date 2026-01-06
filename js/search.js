@@ -134,11 +134,18 @@ async function loadTopNews() {
     return;
   }
 
+  if (!data || data.length === 0) {
+    list.innerHTML =
+      `<p style="color:#777;font-size:13px;">표시할 뉴스가 없습니다.</p>`;
+    return;
+  }
+
   list.innerHTML = "";
 
   data.forEach(item => {
     const card = document.createElement("div");
     card.className = "news-card";
+
     card.onclick = () => {
       location.href = `news.html?id=${item.id}`;
     };
@@ -223,4 +230,7 @@ async function loadTopNews() {
   activateTab("hot");
   loadHotTrends();
   loadAITrends();
+  loadTopNews(); // ✅ 무조건 한 번 로드
+  newsLoaded = true;
+
 });
