@@ -4,35 +4,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tabs = document.querySelectorAll(".search-tab");
   const panels = document.querySelectorAll(".tab-panel");
 
-  const hotEl   = document.getElementById("hot-trend-chips");
-  const aiEl    = document.getElementById("ai-trend-list");
-  const form    = document.getElementById("search-form");
-  const input   = document.getElementById("search-input");
-  const grid    = document.getElementById("search-results");
-  const resultSection = document.getElementById("result-section");
-  const label   = document.getElementById("search-result-label");
-
   let aiLoaded = false;
 
-  function showOnlyPanel(name) {
-    panels.forEach(p => {
-      p.style.display = "none";
-    });
-    const panel = document.querySelector(`.tab-panel[data-panel="${name}"]`);
-    if (panel) {
-      panel.style.display = "block";
-    } else {
-      console.warn("[search] panel not found:", name);
-    }
-  }
-
   function activateTab(name) {
+    // reset tabs
     tabs.forEach(t => t.classList.remove("active"));
+
+    // hide all panels if they exist
+    panels.forEach(p => p.style.display = "none");
+
+    // activate tab button
     const tab = document.querySelector(`.search-tab[data-tab="${name}"]`);
     if (tab) tab.classList.add("active");
 
-    showOnlyPanel(name);
+    // try to find panel by data-panel or id
+    let panel =
+      document.querySelector(`.tab-panel[data-panel="${name}"]`) ||
+      document.getElementById(`tab-${name}`);
 
+    // 🔧 fallback: if hot panel is missing, inject one
+    if (!panel && name === "hot") {
+      panel = document.createElement("section");
+      panel.className = "tab-panel";
+      panel.setAttribute("data-panel", "hot");
+      panel.innerHTML = `<div id="hot-trend-chips"></div>`;
+      document.querySelector(".search-page")?.appendChild(panel);
+    }
+
+    if (!panel) {
+      console.warn("[search] panel not found:", name);
+      return;
+    }
+
+    panel.style.display = "block";
+
+    // lazy load AI tab
     if (name === "ai" && !aiLoaded) {
       loadAITrends();
       aiLoaded = true;
@@ -45,15 +51,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  /* ===============================
-     🔥 오늘의 핫 트렌드
-  =============================== */
-  async function loadHotTrends() {
-    if (!hotEl) {
-      console.warn("[search] hot-trend-chips missing");
-      return;
-    }
+  const hotEl   = document.getElementById("hot-trend-chips");
+  const aiEl    = document.getElementById("ai-trend-list");
+  const form    = document.getElementById("search-form");
+  const input   = document.getElementById("search-input");
+  const grid    = document.getElementById("search-results");
+  const resultSection = document.getElementById("result-section");
+  const label   = document.getElementById("search-result-label");
 
+  /* =====================================================
+     🔥 오늘의 핫 트렌드 (hot_search_trends)
+  ===================================================== */
+  async function loadHotTrends() {
     const { data, error } = await supabase
       .from("hot_search_trends")
       .select("keyword")
@@ -79,15 +88,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  /* ===============================
-     🔮 AI 유행예감
-  =============================== */
+  /* =====================================================
+     🔮 AI 유행예감 (issue_trend_scores VIEW)
+     ⚠️ VIEW에는 FK가 없으므로 관계형 select 사용 금지
+  ===================================================== */
   async function loadAITrends() {
-    if (!aiEl) {
-      console.warn("[search] ai-trend-list missing");
-      return;
-    }
-
     const { data, error } = await supabase
       .from("issue_trend_scores")
       .select("issue_id, title, category, trend_score")
@@ -106,18 +111,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.onclick = () => {
         location.href = `issue.html?id=${row.issue_id}`;
       };
+
       card.innerHTML = `
         <p class="ai-trend-title">${row.title}</p>
         <p class="ai-trend-meta">${row.category}</p>
         <p class="ai-trend-reason">📈 트렌드 점수 ${row.trend_score}</p>
       `;
+
       aiEl.appendChild(card);
     });
   }
 
-  /* ===============================
-     🔍 검색
-  =============================== */
+  /* =====================================================
+     🔍 검색 실행
+  ===================================================== */
   async function performSearch(keyword, isHot = false) {
     const q = keyword.trim();
     if (!q) return;
@@ -126,16 +133,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? `‘${q}’ 핫 트렌드 검색 결과`
       : `‘${q}’ 검색 결과`;
 
+    // 🔽 결과 영역 오픈 + 스크롤
     if (resultSection) {
       resultSection.style.display = "block";
       resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    // 🔄 기존 결과 초기화
     grid.innerHTML = "";
 
-    await supabase.from("search_logs").insert({ keyword: q });
+    /* 🔎 검색 로그 기록 */
+    await supabase.from("search_logs").insert({
+      keyword: q
+    });
 
-    const { data, error } = await supabase.rpc("search_issues", { keyword: q });
+    /* 🔎 검색 쿼리 */
+    const { data, error } = await supabase.rpc("search_issues", {
+      keyword: q
+    });
+
     if (error) {
       console.error("search error", error);
       return;
@@ -144,7 +160,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderResults(data);
   }
 
+  /* =====================================================
+     📘 검색 결과 렌더링
+  ===================================================== */
   function renderResults(list) {
+    if (resultSection) {
+      resultSection.style.display = "block";
+    }
+
     if (!list || list.length === 0) {
       grid.innerHTML = `<p style="color:#777;font-size:13px;">검색 결과 없음.</p>`;
       return;
@@ -166,17 +189,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  if (form) {
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      activateTab("search");
-      performSearch(input.value);
-    });
-  }
+  /* =====================================================
+     ⌨️ 이벤트
+  ===================================================== */
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    performSearch(input.value);
+  });
 
-  /* ===============================
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      performSearch(input.value);
+    }
+  });
+
+  /* =====================================================
      INIT
-  =============================== */
-  await loadHotTrends();
+  ===================================================== */
+  loadHotTrends();
   activateTab("hot");
 });
