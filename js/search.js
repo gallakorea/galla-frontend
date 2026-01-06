@@ -17,6 +17,29 @@ const panels = document.querySelectorAll(".tab-panel");
   const searchGrid = document.getElementById("search-results");
   const searchLabel = document.getElementById("search-result-label");
 
+  // 📰 NEWS MODAL DOM
+  const newsModal = document.getElementById("news-modal");
+  const newsModalTitle = document.getElementById("news-modal-title");
+  const newsModalArticles = document.getElementById("news-modal-articles");
+  const newsModalClose = document.getElementById("news-modal-close");
+
+  const viewerModal = document.getElementById("news-viewer-modal");
+  const viewerFrame = document.getElementById("news-viewer-iframe");
+  const viewerClose = document.getElementById("news-viewer-close");
+
+  if (newsModalClose) {
+    newsModalClose.addEventListener("click", () => {
+      newsModal.classList.add("hidden");
+    });
+  }
+
+  if (viewerClose) {
+    viewerClose.addEventListener("click", () => {
+      viewerModal.classList.add("hidden");
+      viewerFrame.src = "";
+    });
+  }
+
   let newsLoaded = false;
 
   /* =========================
@@ -147,7 +170,7 @@ async function loadTopNews() {
     card.className = "news-card";
 
     card.onclick = () => {
-      location.href = `news.html?id=${item.id}`;
+      openNewsModal(item.id);
     };
 
     card.innerHTML = `
@@ -211,6 +234,75 @@ async function loadTopNews() {
       `;
       grid.appendChild(card);
     });
+  }
+
+  /* =========================
+     📰 OPEN NEWS MODAL
+  ========================= */
+  async function openNewsModal(clusterId) {
+    if (!clusterId || !newsModal) return;
+
+    // 모달 오픈
+    newsModal.classList.remove("hidden");
+    newsModalTitle.textContent = "불러오는 중...";
+    newsModalArticles.innerHTML = "";
+
+    const { data, error } = await supabase
+      .from("news_articles")
+      .select(`
+        id,
+        title,
+        source_name,
+        article_url,
+        published_at
+      `)
+      .eq("cluster_id", clusterId)
+      .order("published_at", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.error("[NEWS MODAL] load error:", error);
+      newsModalTitle.textContent = "뉴스를 불러올 수 없습니다";
+      return;
+    }
+
+    newsModalTitle.textContent = `관련 기사 ${data.length}건`;
+
+    data.forEach(article => {
+      const row = document.createElement("div");
+      row.className = "news-modal-article";
+      row.onclick = () => {
+        // 다음 단계에서 인앱뷰어로 교체 예정
+        openNewsViewer(article.article_url);
+      };
+
+      row.innerHTML = `
+        <span class="news-article-source">${article.source_name}</span>
+        <p class="news-article-title">${article.title}</p>
+      `;
+
+      newsModalArticles.appendChild(row);
+    });
+  }
+
+  function openNewsViewer(url) {
+    if (!url || !viewerModal || !viewerFrame) return;
+
+    // 예외 처리: iframe 차단 사이트
+    const blockedDomains = [
+      "naver.com",
+      "daum.net",
+      "chosun.com"
+    ];
+
+    const isBlocked = blockedDomains.some(d => url.includes(d));
+    if (isBlocked) {
+      window.open(url, "_blank");
+      return;
+    }
+
+    viewerFrame.src = url;
+    viewerModal.classList.remove("hidden");
   }
 
   /* =========================
