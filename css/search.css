@@ -592,3 +592,12 @@ body[data-page="search"] .header-inner {
   opacity: 0.6;
   margin-top: 6px;
 }
+
+/* =========================
+   FIX: TOP NEWS LIST LAYOUT
+========================= */
+#top-news-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
