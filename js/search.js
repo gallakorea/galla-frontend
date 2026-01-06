@@ -175,7 +175,7 @@ async function loadTopNews() {
 
     card.innerHTML = `
       <div class="news-thumb">
-        <img src="https://via.placeholder.com/300" />
+        <div class="news-thumb-placeholder"></div>
       </div>
       <div class="news-body">
         <h3 class="news-title">${item.issue_title}</h3>
@@ -270,7 +270,7 @@ async function loadTopNews() {
 
     data.forEach(article => {
       const row = document.createElement("div");
-      row.className = "news-modal-article";
+      row.className = "news-article-item";
       row.onclick = () => {
         // 다음 단계에서 인앱뷰어로 교체 예정
         openNewsViewer(article.article_url);
