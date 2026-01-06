@@ -40,7 +40,7 @@ const panels = document.querySelectorAll(".tab-panel");
     });
   }
 
-  let newsLoaded = false;
+  let newsLoaded = true; // deprecated guard (kept for backward compatibility)
 
   /* =========================
      TAB CONTROL (FIXED)
@@ -63,9 +63,8 @@ const panels = document.querySelectorAll(".tab-panel");
       const tab = btn.dataset.tab;
       activateTab(tab);
 
-      if (tab === "news" && !newsLoaded) {
+      if (tab === "news") {
         loadTopNews();
-        newsLoaded = true;
       }
     });
   });
@@ -322,7 +321,14 @@ async function loadTopNews() {
   activateTab("hot");
   loadHotTrends();
   loadAITrends();
-  loadTopNews(); // ✅ 무조건 한 번 로드
-  newsLoaded = true;
+  loadTopNews(); // 초기 진입 시 뉴스 미리 로드
+
+  // 🕒 60초마다 자동 갱신 (실시간 느낌)
+  setInterval(() => {
+    const activeTab = document.querySelector(".tab-item.active")?.dataset.tab;
+    if (activeTab === "news") {
+      loadTopNews();
+    }
+  }, 60000);
 
 });
