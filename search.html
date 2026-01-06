@@ -42,7 +42,7 @@
   <!-- TAB CONTENT -->
   <div class="tabs-body">
 
-    <div class="tab-panel" data-panel="hot">
+    <div class="tab-panel active" data-panel="hot">
       <h2 class="section-title">오늘의 핫 트렌드</h2>
       <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
       <div id="hot-trend-chips" class="hot-trend-chips"></div>
@@ -59,7 +59,7 @@
 
     <div class="tab-panel" data-panel="ai">
       <h2 class="section-title">AI 유행예감</h2>
-      <div id="ai-trend-list"></div>
+      <div id="ai-trend-list" class="ai-trend-list"></div>
     </div>
 
     <div class="tab-panel" data-panel="news">
@@ -71,30 +71,68 @@
 </section>
 </main>
 
-<!-- 📰 NEWS CLUSTER MODAL -->
+<!-- =================================================
+     📰 NEWS CLUSTER MODAL (BOTTOM SHEET)
+================================================= -->
 <div id="news-modal" class="news-modal hidden">
-  <div class="news-modal-backdrop"></div>
 
+  <!-- dim -->
+  <div class="news-modal-dim" id="news-modal-close"></div>
+
+  <!-- sheet -->
   <div class="news-modal-sheet">
-    <!-- 헤더 -->
+
+    <!-- handle -->
+    <div class="news-modal-handle"></div>
+
+    <!-- header -->
     <div class="news-modal-header">
-      <h2 id="news-modal-title">뉴스 제목</h2>
-      <button id="news-modal-close">✕</button>
+      <h3 id="news-modal-title">관련 기사</h3>
     </div>
 
-    <!-- 기사 리스트 -->
+    <!-- article list -->
     <div id="news-modal-articles" class="news-modal-articles">
-      <!-- JS로 기사 목록 주입 -->
+      <!-- JS에서 기사 리스트 주입 -->
     </div>
+
   </div>
 </div>
 
+<!-- =================================================
+     📰 NEWS VIEWER MODAL (IN-APP IFRAME)
+================================================= -->
+<div id="news-viewer-modal" class="news-viewer-modal hidden">
+
+  <div class="news-viewer-header">
+    <button id="news-viewer-close">닫기</button>
+    <span>기사 보기</span>
+  </div>
+
+  <iframe
+    id="news-viewer-iframe"
+    src=""
+    loading="lazy"
+    referrerpolicy="no-referrer"
+  ></iframe>
+
+</div>
+
 <nav class="bottom-nav fixed-nav">
-  <button class="nav-item" data-target="index.html"><img src="./assets/icons/nav-home.svg"></button>
-  <button class="nav-item active" data-target="search.html"><img src="./assets/icons/nav-search.svg"></button>
-  <button class="nav-item" data-target="write.html"><img src="./assets/icons/nav-write.svg"></button>
-  <button class="nav-item" data-target="random.html"><img src="./assets/icons/nav-random.svg"></button>
-  <button class="nav-item" data-target="mypage.html"><img src="./assets/icons/nav-user.svg"></button>
+  <button class="nav-item" data-target="index.html">
+    <img src="./assets/icons/nav-home.svg">
+  </button>
+  <button class="nav-item active" data-target="search.html">
+    <img src="./assets/icons/nav-search.svg">
+  </button>
+  <button class="nav-item" data-target="write.html">
+    <img src="./assets/icons/nav-write.svg">
+  </button>
+  <button class="nav-item" data-target="random.html">
+    <img src="./assets/icons/nav-random.svg">
+  </button>
+  <button class="nav-item" data-target="mypage.html">
+    <img src="./assets/icons/nav-user.svg">
+  </button>
 </nav>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
