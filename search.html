@@ -31,43 +31,67 @@
 
     <main class="page-main search-page">
 
-        <!-- 🔥 오늘의 핫 트렌드 -->
-        <section class="section-block">
-            <h2 class="section-title">🔥 오늘의 핫 트렌드</h2>
+      <!-- 🔀 Search Tabs -->
+      <section class="search-tabs">
+
+        <!-- 탭 메뉴 -->
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="hot">🔥 핫트렌드</button>
+          <button class="tab-btn" data-tab="search">🔍 검색</button>
+          <button class="tab-btn" data-tab="ai">🔮 유행예감</button>
+          <button class="tab-btn" data-tab="news">📰 실시간 탑 뉴스</button>
+        </div>
+
+        <!-- 탭 콘텐츠 -->
+        <div class="tabs-body">
+
+          <!-- 🔥 핫트렌드 -->
+          <div class="tab-panel active" id="tab-hot">
+            <h2 class="section-title">오늘의 핫 트렌드</h2>
             <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
             <div id="hot-trend-chips" class="hot-trend-chips"></div>
-        </section>
 
-        <!-- 📘 검색 / 트렌드 결과 (공용) -->
-        <section class="section-block" id="result-section" style="display:none;">
-            <h2 class="section-title">📘 결과</h2>
-            <p class="section-sub" id="search-result-label"></p>
-            <div id="search-results" class="search-results-grid"></div>
-        </section>
+            <div class="tab-result">
+              <p class="section-sub" id="hot-result-label"></p>
+              <div id="hot-results" class="search-results-grid"></div>
+            </div>
+          </div>
 
-        <hr class="section-divider" />
-
-        <!-- 🔍 검색 -->
-        <section class="section-block">
-            <h2 class="section-title">🔍 갈라치기 검색</h2>
+          <!-- 🔍 검색 -->
+          <div class="tab-panel" id="tab-search">
+            <h2 class="section-title">갈라치기 검색</h2>
             <p class="section-sub">제목, 카테고리 기반 검색</p>
 
             <form id="search-form" class="search-form">
-                <div class="search-input-wrap">
-                    <input id="search-input" class="search-input" placeholder="예: 야근 수당, 연애, 19금…" />
-                    <button class="search-submit-btn" type="submit">검색</button>
-                </div>
+              <div class="search-input-wrap">
+                <input id="search-input" class="search-input" placeholder="예: 야근 수당, 연애, 19금…" />
+                <button class="search-submit-btn" type="submit">검색</button>
+              </div>
             </form>
-        </section>
 
-        <hr class="section-divider" />
+            <div class="tab-result">
+              <p class="section-sub" id="search-result-label"></p>
+              <div id="search-results" class="search-results-grid"></div>
+            </div>
+          </div>
 
-        <!-- 🔮 AI 유행예감 (탐색용) -->
-        <section class="section-block">
-            <h2 class="section-title ai-title">🔮 AI 유행예감</h2>
+          <!-- 🔮 AI 유행예감 -->
+          <div class="tab-panel" id="tab-ai">
+            <h2 class="section-title ai-title">AI 유행예감</h2>
             <p class="section-sub">AI가 분석한 급상승 예감 이슈</p>
             <div id="ai-trend-list" class="ai-trend-list"></div>
-        </section>
+          </div>
+
+          <!-- 📰 실시간 탑 뉴스 -->
+          <div class="tab-panel" id="tab-news">
+            <h2 class="section-title">실시간 탑 뉴스</h2>
+            <p class="section-sub">지금 가장 주목받는 이슈</p>
+            <div id="top-news-list" class="news-list"></div>
+          </div>
+
+        </div>
+      </section>
+
     </main>
 
     <!-- ⭐ 고정 네비게이터 -->

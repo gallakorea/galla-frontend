@@ -1,6 +1,33 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
 
+  const tabs = document.querySelectorAll(".search-tab");
+  const panels = document.querySelectorAll(".tab-panel");
+
+  let aiLoaded = false;
+
+  function activateTab(name) {
+    tabs.forEach(t => t.classList.remove("active"));
+    panels.forEach(p => p.style.display = "none");
+
+    const tab = document.querySelector(`.search-tab[data-tab="${name}"]`);
+    const panel = document.querySelector(`.tab-panel[data-panel="${name}"]`);
+
+    if (tab) tab.classList.add("active");
+    if (panel) panel.style.display = "block";
+
+    if (name === "ai" && !aiLoaded) {
+      loadAITrends();
+      aiLoaded = true;
+    }
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      activateTab(tab.dataset.tab);
+    });
+  });
+
   const hotEl   = document.getElementById("hot-trend-chips");
   const aiEl    = document.getElementById("ai-trend-list");
   const form    = document.getElementById("search-form");
@@ -31,6 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       chip.textContent = row.keyword;
       chip.onclick = () => {
         input.value = row.keyword;
+        activateTab("search");
         performSearch(row.keyword, true);
       };
       hotEl.appendChild(chip);
@@ -157,5 +185,5 @@ document.addEventListener("DOMContentLoaded", async () => {
      INIT
   ===================================================== */
   loadHotTrends();
-  loadAITrends();
+  activateTab("hot");
 });
