@@ -111,61 +111,55 @@ const panels = document.querySelectorAll(".tab-panel");
   /* =========================
      📰 REALTIME NEWS
   ========================= */
-  async function loadTopNews() {
-    const list = document.getElementById("top-news-list");
-    if (!list) return;
+async function loadTopNews() {
+  const list = document.getElementById("top-news-list");
+  if (!list) return;
 
-    const { data, error } = await supabase
-      .from("news_clusters")
-      .select(`
-        id,
-        canonical_title,
-        summary_3lines,
-        og_image_url,
-        source_name,
-        articles_count
-      `)
-      .order("created_at", { ascending: false })
-      .limit(10);
+  const { data, error } = await supabase
+    .from("news_issues")
+    .select(`
+      id,
+      issue_title,
+      issue_summary,
+      source_name,
+      articles_count
+    `)
+    .order("created_at", { ascending: false })
+    .limit(10);
 
-    if (error) {
-      console.error("[NEWS] loadTopNews error:", error.message, error);
-      if (list) {
-        list.innerHTML = `<p style="color:#777;font-size:13px;">뉴스를 불러오지 못했습니다.</p>`;
-      }
-      return;
-    }
-
-    list.innerHTML = "";
-
-    data.forEach(item => {
-      const card = document.createElement("div");
-      card.className = "news-card";
-      card.onclick = () => {
-        location.href = `news.html?id=${item.id}`;
-      };
-
-      card.innerHTML = `
-        <div class="news-thumb">
-          <img 
-            src="${item.og_image_url || 'assets/placeholder-news.png'}" 
-            loading="lazy"
-            onerror="this.src='assets/placeholder-news.png'"
-          />
-        </div>
-        <div class="news-body">
-          <h3 class="news-title">${item.canonical_title}</h3>
-          <p class="news-summary">${item.summary_3lines}</p>
-          <div class="news-meta">
-            <span>${item.source_name}</span>
-            <span>관련 기사 ${item.articles_count}건</span>
-          </div>
-        </div>
-      `;
-
-      list.appendChild(card);
-    });
+  if (error) {
+    console.error("[NEWS] loadTopNews error:", error);
+    list.innerHTML =
+      `<p style="color:#777;font-size:13px;">뉴스를 불러오지 못했습니다.</p>`;
+    return;
   }
+
+  list.innerHTML = "";
+
+  data.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "news-card";
+    card.onclick = () => {
+      location.href = `news.html?id=${item.id}`;
+    };
+
+    card.innerHTML = `
+      <div class="news-thumb">
+        <img src="https://via.placeholder.com/300" />
+      </div>
+      <div class="news-body">
+        <h3 class="news-title">${item.issue_title}</h3>
+        <p class="news-summary">${item.issue_summary}</p>
+        <div class="news-meta">
+          <span>${item.source_name}</span>
+          <span>관련 기사 ${item.articles_count}건</span>
+        </div>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+}
 
   /* =========================
      🔍 SEARCH CORE
