@@ -35,7 +35,13 @@ const panels = document.querySelectorAll(".tab-panel");
 
   tabs.forEach(btn => {
     btn.addEventListener("click", () => {
-      activateTab(btn.dataset.tab);
+      const tab = btn.dataset.tab;
+      activateTab(tab);
+
+      if (tab === "news" && !newsLoaded) {
+        loadTopNews();
+        newsLoaded = true;
+      }
     });
   });
 
@@ -97,6 +103,60 @@ const panels = document.querySelectorAll(".tab-panel");
         <p class="ai-trend-reason">📈 트렌드 점수 ${row.trend_score}</p>
       `;
       aiEl.appendChild(card);
+    });
+  }
+
+  /* =========================
+     📰 REALTIME NEWS
+  ========================= */
+  let newsLoaded = false;
+
+  async function loadTopNews() {
+    const { data, error } = await supabase
+      .from("news_clusters")
+      .select(`
+        id,
+        canonical_title,
+        summary_3lines,
+        og_image_url,
+        source_name,
+        articles_count
+      `)
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error("news load error", error);
+      return;
+    }
+
+    const list = document.getElementById("top-news-list");
+    if (!list) return;
+
+    list.innerHTML = "";
+
+    data.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "news-card";
+      card.onclick = () => {
+        location.href = `news.html?id=${item.id}`;
+      };
+
+      card.innerHTML = `
+        <div class="news-thumb">
+          <img src="${item.og_image_url}" loading="lazy" />
+        </div>
+        <div class="news-body">
+          <h3 class="news-title">${item.canonical_title}</h3>
+          <p class="news-summary">${item.summary_3lines}</p>
+          <div class="news-meta">
+            <span>${item.source_name}</span>
+            <span>관련 기사 ${item.articles_count}건</span>
+          </div>
+        </div>
+      `;
+
+      list.appendChild(card);
     });
   }
 
