@@ -1,27 +1,21 @@
-/**
+/****
  * js/supabase.js
- * Global Supabase client bootstrap (NON-module)
- * IMPORTANT:
- * - Do NOT use import/export
- * - Do NOT use esm.sh (it serves ESM only)
- * - Must work with plain <script> loading
+ * Supabase UMD bootstrap (NO ESM, NO import/export)
+ * This file MUST be loaded via normal <script> tag
  */
 
-console.log("[supabase.js] bootstrap start");
-
 (function () {
+  if (window.supabaseClient) {
+    return;
+  }
+
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
   const SUPABASE_ANON_KEY =
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
-  function createClient() {
-    if (!window.supabase) {
-      console.error("[supabase.js] Supabase SDK not available on window");
-      return;
-    }
-
-    if (window.supabaseClient) {
-      console.log("[supabase.js] Supabase client already initialized");
+  function initClient() {
+    if (!window.supabase || !window.supabase.createClient) {
+      console.error("[supabase] SDK not available on window");
       return;
     }
 
@@ -30,27 +24,22 @@ console.log("[supabase.js] bootstrap start");
       SUPABASE_ANON_KEY
     );
 
-    console.log("[supabase.js] Supabase client ready");
+    console.log("[supabase] client ready");
   }
 
-  // If SDK already loaded
   if (window.supabase) {
-    createClient();
+    initClient();
     return;
   }
 
-  // Load UMD SDK (NOT esm)
   const script = document.createElement("script");
-  script.src = "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+  script.src =
+    "https://unpkg.com/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js";
   script.async = true;
 
-  script.onload = () => {
-    console.log("[supabase.js] Supabase SDK loaded (UMD)");
-    createClient();
-  };
-
-  script.onerror = () => {
-    console.error("[supabase.js] Failed to load Supabase SDK");
+  script.onload = initClient;
+  script.onerror = function () {
+    console.error("[supabase] failed to load SDK");
   };
 
   document.head.appendChild(script);
