@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const form    = document.getElementById("search-form");
   const input   = document.getElementById("search-input");
   const grid    = document.getElementById("search-results");
+  const resultSection = document.getElementById("result-section");
   const label   = document.getElementById("search-result-label");
 
   /* =====================================================
@@ -81,6 +82,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? `‘${q}’ 핫 트렌드 검색 결과`
       : `‘${q}’ 검색 결과`;
 
+    // 🔽 결과 영역 오픈 + 스크롤
+    if (resultSection) {
+      resultSection.style.display = "block";
+      resultSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // 🔄 기존 결과 초기화
+    grid.innerHTML = "";
+
     /* 🔎 검색 로그 기록 */
     await supabase.from("search_logs").insert({
       keyword: q
@@ -103,7 +113,9 @@ document.addEventListener("DOMContentLoaded", async () => {
      📘 검색 결과 렌더링
   ===================================================== */
   function renderResults(list) {
-    grid.innerHTML = "";
+    if (resultSection) {
+      resultSection.style.display = "block";
+    }
 
     if (!list || list.length === 0) {
       grid.innerHTML = `<p style="color:#777;font-size:13px;">검색 결과 없음.</p>`;

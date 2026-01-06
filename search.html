@@ -38,12 +38,14 @@
             <div id="hot-trend-chips" class="hot-trend-chips"></div>
         </section>
 
-        <!-- 🔮 AI 유행예감 -->
-        <section class="section-block">
-            <h2 class="section-title ai-title">🔮 AI 유행예감</h2>
-            <p class="section-sub">AI가 분석한 급상승 예감 이슈</p>
-            <div id="ai-trend-list" class="ai-trend-list"></div>
+        <!-- 📘 검색 / 트렌드 결과 (공용) -->
+        <section class="section-block" id="result-section" style="display:none;">
+            <h2 class="section-title">📘 결과</h2>
+            <p class="section-sub" id="search-result-label"></p>
+            <div id="search-results" class="search-results-grid"></div>
         </section>
+
+        <hr class="section-divider" />
 
         <!-- 🔍 검색 -->
         <section class="section-block">
@@ -58,13 +60,14 @@
             </form>
         </section>
 
-        <!-- 📘 검색 결과 -->
-        <section class="section-block">
-            <h2 class="section-title">📘 검색 결과</h2>
-            <p class="section-sub" id="search-result-label">아직 검색 전입니다.</p>
-            <div id="search-results" class="search-results-grid"></div>
-        </section>
+        <hr class="section-divider" />
 
+        <!-- 🔮 AI 유행예감 (탐색용) -->
+        <section class="section-block">
+            <h2 class="section-title ai-title">🔮 AI 유행예감</h2>
+            <p class="section-sub">AI가 분석한 급상승 예감 이슈</p>
+            <div id="ai-trend-list" class="ai-trend-list"></div>
+        </section>
     </main>
 
     <!-- ⭐ 고정 네비게이터 -->
