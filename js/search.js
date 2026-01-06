@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =========================
      DOM
   ========================= */
-  const tabs = document.querySelectorAll(".tab-btn");
-  const panels = document.querySelectorAll(".tab-panel");
+const tabs = document.querySelectorAll(".tab-item");
+const panels = document.querySelectorAll(".tab-panel");
 
   const hotEl = document.getElementById("hot-trend-chips");
   const hotGrid = document.getElementById("hot-results");
@@ -26,8 +26,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     panels.forEach(panel => {
-      panel.style.display =
-        panel.id === `tab-${name}` ? "block" : "none";
+      panel.classList.toggle(
+        "active",
+        panel.dataset.panel === name
+      );
     });
   }
 
