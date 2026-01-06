@@ -3,6 +3,19 @@
  * Supabase bootstrap (UMD only, single global client)
  */
 (function () {
+  // Expose a shared waiter so pages don't reimplement it
+  if (!window.waitForSupabaseClient) {
+    window.waitForSupabaseClient = function () {
+      return new Promise(resolve => {
+        const timer = setInterval(() => {
+          if (window.supabaseClient) {
+            clearInterval(timer);
+            resolve(window.supabaseClient);
+          }
+        }, 20);
+      });
+    };
+  }
   if (window.supabaseClient) return;
 
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
