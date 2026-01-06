@@ -17,6 +17,8 @@ const panels = document.querySelectorAll(".tab-panel");
   const searchGrid = document.getElementById("search-results");
   const searchLabel = document.getElementById("search-result-label");
 
+  let newsLoaded = false;
+
   /* =========================
      TAB CONTROL (FIXED)
   ========================= */
@@ -109,9 +111,10 @@ const panels = document.querySelectorAll(".tab-panel");
   /* =========================
      📰 REALTIME NEWS
   ========================= */
-  let newsLoaded = false;
-
   async function loadTopNews() {
+    const list = document.getElementById("top-news-list");
+    if (!list) return;
+
     const { data, error } = await supabase
       .from("news_clusters")
       .select(`
@@ -126,12 +129,12 @@ const panels = document.querySelectorAll(".tab-panel");
       .limit(10);
 
     if (error) {
-      console.error("news load error", error);
+      console.error("[NEWS] loadTopNews error:", error.message, error);
+      if (list) {
+        list.innerHTML = `<p style="color:#777;font-size:13px;">뉴스를 불러오지 못했습니다.</p>`;
+      }
       return;
     }
-
-    const list = document.getElementById("top-news-list");
-    if (!list) return;
 
     list.innerHTML = "";
 
@@ -144,7 +147,11 @@ const panels = document.querySelectorAll(".tab-panel");
 
       card.innerHTML = `
         <div class="news-thumb">
-          <img src="${item.og_image_url}" loading="lazy" />
+          <img 
+            src="${item.og_image_url || 'assets/placeholder-news.png'}" 
+            loading="lazy"
+            onerror="this.src='assets/placeholder-news.png'"
+          />
         </div>
         <div class="news-body">
           <h3 class="news-title">${item.canonical_title}</h3>
