@@ -67,17 +67,28 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
     });
   }
 
-  tabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const tab = btn.dataset.tab;
-      console.log("[TAB CLICK]", tab);
-      activateTab(tab);
+tabs.forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault(); // ✅ 🔥 핵심: 인덱스 이동 차단
 
-      if (tab === "news") {
-        loadTopNews();
-      }
-    });
+    const tab = btn.dataset.tab;
+    console.log("[TAB CLICK]", tab);
+
+    activateTab(tab);
+
+    if (tab === "news") {
+      loadTopNews();
+    }
+
+    if (tab === "hot") {
+      loadHotTrends();
+    }
+
+    if (tab === "ai") {
+      loadAITrends();
+    }
   });
+});
 
 /* =========================
    🔥 HOT TRENDS (REALTIME)
