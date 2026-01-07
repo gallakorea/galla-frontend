@@ -166,20 +166,18 @@ async function loadTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
 
-  const { data, error } = await supabase
-    .from("realtime_top_news") // ✅ 핵심 변경
-    .select(`
-      issue_id,
-      issue_title,
-      issue_summary,
-      thumbnail_url,
-      trend_score,
-      articles_1h,
-      articles_6h,
-      last_article_at
-    `)
-    .order("trend_score", { ascending: false }) // 🔥 실시간 정렬
-    .limit(10);
+const { data, error } = await supabase
+  .from("news_issues")
+  .select(`
+    id,
+    issue_title,
+    issue_summary,
+    thumbnail_url,
+    articles_count,
+    last_article_at
+  `)
+  .order("articles_count", { ascending: false })
+  .limit(10);
 
   if (error) {
     console.error("[REALTIME NEWS ERROR]", error);
@@ -214,7 +212,7 @@ async function loadTopNews() {
       badge = `<span class="trend-badge steady">📌 유지</span>`;
     }
 
-    card.onclick = () => openNewsModal(item.issue_id);
+    card.onclick = () => openNewsModal(item.id);
 
     card.innerHTML = `
       ${thumb}
