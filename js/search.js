@@ -23,18 +23,19 @@ const panels = document.querySelectorAll(".tab-panel");
   const newsModalArticles = document.getElementById("news-modal-articles");
   const newsModalClose = document.getElementById("news-modal-close");
 
-  // ✅ FORCE HIDE NEWS MODAL ON LOAD (prevents page lock)
+  // ✅ HARD RESET: 로드 시 무조건 모달 비활성
   if (newsModal) {
     newsModal.classList.add("hidden");
+    newsModal.style.pointerEvents = "none";
   }
 
-  // Add backdrop click handler to always close modal cleanly
   const newsModalBackdrop = newsModal?.querySelector(".news-modal-backdrop");
   if (newsModalBackdrop) {
-    newsModalBackdrop.addEventListener("click", () => {
-      newsModal.classList.add("hidden");
-      newsModal.style.pointerEvents = "none";
-    });
+    newsModalBackdrop.addEventListener("click", () => closeNewsModal());
+  }
+
+  if (newsModalClose) {
+    newsModalClose.addEventListener("click", () => closeNewsModal());
   }
 
   const viewerModal = document.getElementById("news-viewer-modal");
@@ -53,6 +54,13 @@ const panels = document.querySelectorAll(".tab-panel");
       viewerModal.classList.add("hidden");
       viewerFrame.src = "";
     });
+  }
+
+  // 공통 모달 닫기 함수
+  function closeNewsModal() {
+    if (!newsModal) return;
+    newsModal.classList.add("hidden");
+    newsModal.style.pointerEvents = "none";
   }
 
   let newsLoaded = true; // deprecated guard (kept for backward compatibility)
@@ -279,15 +287,13 @@ function timeAgo(date) {
 async function openNewsModal(clusterId) {
   if (!clusterId || !newsModal) return;
 
-  // 안전하게 모달 오픈
+  // ✅ 모달 활성화 (이때만 클릭 가로채기)
   newsModal.classList.remove("hidden");
   newsModal.style.pointerEvents = "auto";
 
-  // 로딩 UI
   newsModalTitle.textContent = "관련 기사";
-  newsModalArticles.innerHTML = `
-    <p style="color:#777;font-size:13px;">기사를 불러오는 중...</p>
-  `;
+  newsModalArticles.innerHTML =
+    `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
 
   const { data, error } = await supabase
     .from("news_articles")
@@ -296,39 +302,27 @@ async function openNewsModal(clusterId) {
     .order("published_at", { ascending: false })
     .limit(30);
 
-  // ❌ 에러 처리 (여기가 핵심)
+  // ❌ 여기서 에러 나도 페이지 절대 안 멈추게
   if (error || !data) {
-    console.error("[NEWS MODAL] load error:", error);
-
-    newsModalArticles.innerHTML = `
-      <p style="color:#777;font-size:13px;">
-        관련 기사를 불러올 수 없습니다.
-      </p>
-    `;
+    console.error("[NEWS MODAL] load error", error);
+    newsModalArticles.innerHTML =
+      `<p style="color:#777;font-size:13px;">기사를 불러오지 못했습니다.</p>`;
     return;
   }
 
   if (data.length === 0) {
-    newsModalArticles.innerHTML = `
-      <p style="color:#777;font-size:13px;">
-        아직 수집된 기사가 없습니다.
-      </p>
-    `;
+    newsModalArticles.innerHTML =
+      `<p style="color:#777;font-size:13px;">기사가 없습니다.</p>`;
     return;
   }
 
-  // 정상 렌더
   newsModalArticles.innerHTML = "";
 
   data.forEach(article => {
     const row = document.createElement("div");
     row.className = "news-article-item";
     row.onclick = () => openNewsViewer(article.article_url);
-
-    row.innerHTML = `
-      <p class="news-article-title">${article.title}</p>
-    `;
-
+    row.innerHTML = `<p class="news-article-title">${article.title}</p>`;
     newsModalArticles.appendChild(row);
   });
 }
@@ -379,7 +373,7 @@ async function openNewsModal(clusterId) {
     }
   }, 60000);
 
-// 🛟 FINAL SAFETY: never allow modal to block page on init
+// 🛟 ABSOLUTE FAILSAFE
 window.addEventListener("load", () => {
   if (newsModal) {
     newsModal.classList.add("hidden");
