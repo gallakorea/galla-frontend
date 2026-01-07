@@ -181,7 +181,9 @@ async function loadTopNews() {
     const card = document.createElement("div");
     card.className = "news-card";
 
-    card.onclick = () => openNewsModal(item.id);
+    card.onclick = async () => {
+      await loadNewsByIssue(item.id);
+    };
 
     card.innerHTML = `
       <div class="news-body">
