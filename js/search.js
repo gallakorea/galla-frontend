@@ -359,7 +359,8 @@ document.body.style.overflow = "hidden";
     row.innerHTML = `<p class="news-article-title">${article.title}</p>`;
 
     row.onclick = () => {
-      if (article.url) window.open(article.url, "_blank");
+      if (!article.url) return;
+      openNewsViewer(article.url);
     };
 
     newsModalArticles.appendChild(row);
