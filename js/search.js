@@ -182,7 +182,7 @@ async function loadTopNews() {
     card.className = "news-card";
 
     card.onclick = async () => {
-      await loadNewsByIssue(item.id);
+      openNewsModal(item.id);
     };
 
     card.innerHTML = `
