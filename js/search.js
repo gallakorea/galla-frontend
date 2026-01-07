@@ -261,49 +261,61 @@ function timeAgo(date) {
   /* =========================
      📰 OPEN NEWS MODAL
   ========================= */
-  async function openNewsModal(clusterId) {
-    if (!clusterId || !newsModal) return;
+async function openNewsModal(clusterId) {
+  if (!clusterId || !newsModal) return;
 
-    // 모달 오픈
-    newsModal.classList.remove("hidden");
-    newsModalTitle.textContent = "불러오는 중...";
-    newsModalArticles.innerHTML = "";
+  // 모달 오픈
+  newsModal.classList.remove("hidden");
 
-    const { data, error } = await supabase
-      .from("news_articles")
-      .select(`
-        id,
-        title,
-        article_url,
-        published_at
-      `)
-      .eq("cluster_id", clusterId)
-      .order("published_at", { ascending: false })
-      .limit(30);
+  // 로딩 UI
+  newsModalTitle.textContent = "관련 기사";
+  newsModalArticles.innerHTML = `
+    <p style="color:#777;font-size:13px;">기사를 불러오는 중...</p>
+  `;
 
-    if (error) {
-      console.error("[NEWS MODAL] load error:", error);
-      newsModalTitle.textContent = "뉴스를 불러올 수 없습니다";
-      return;
-    }
+  const { data, error } = await supabase
+    .from("news_articles")
+    .select("id, title, article_url, published_at")
+    .eq("cluster_id", clusterId)
+    .order("published_at", { ascending: false })
+    .limit(30);
 
-    newsModalTitle.textContent = `관련 기사 ${data.length}건`;
+  // ❌ 에러 처리 (여기가 핵심)
+  if (error || !data) {
+    console.error("[NEWS MODAL] load error:", error);
 
-    data.forEach(article => {
-      const row = document.createElement("div");
-      row.className = "news-article-item";
-      row.onclick = () => {
-        // 다음 단계에서 인앱뷰어로 교체 예정
-        openNewsViewer(article.article_url);
-      };
-
-      row.innerHTML = `
-        <p class="news-article-title">${article.title}</p>
-      `;
-
-      newsModalArticles.appendChild(row);
-    });
+    newsModalArticles.innerHTML = `
+      <p style="color:#777;font-size:13px;">
+        관련 기사를 불러올 수 없습니다.
+      </p>
+    `;
+    return;
   }
+
+  if (data.length === 0) {
+    newsModalArticles.innerHTML = `
+      <p style="color:#777;font-size:13px;">
+        아직 수집된 기사가 없습니다.
+      </p>
+    `;
+    return;
+  }
+
+  // 정상 렌더
+  newsModalArticles.innerHTML = "";
+
+  data.forEach(article => {
+    const row = document.createElement("div");
+    row.className = "news-article-item";
+    row.onclick = () => openNewsViewer(article.article_url);
+
+    row.innerHTML = `
+      <p class="news-article-title">${article.title}</p>
+    `;
+
+    newsModalArticles.appendChild(row);
+  });
+}
 
   function openNewsViewer(url) {
     if (!url || !viewerModal || !viewerFrame) return;
