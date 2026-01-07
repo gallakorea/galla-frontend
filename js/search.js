@@ -4,23 +4,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const supabase = await waitForSupabaseClient();
 
-  async function fetchRealtimeNews() {
-    try {
-      const { error } = await supabase.functions.invoke(
-        "crawl-naver-news",
-        { body: { limit: 30 } }
-      );
-
-      if (error) {
-        console.error("[NAVER NEWS FETCH ERROR]", error);
-      } else {
-        console.log("[NAVER NEWS] fetched");
-      }
-    } catch (e) {
-      console.error("[NAVER NEWS EXCEPTION]", e);
-    }
-  }
-
   /* =========================
      DOM
   ========================= */
@@ -91,9 +74,7 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
       activateTab(tab);
 
       if (tab === "news") {
-        fetchRealtimeNews().then(() => {
-          loadTopNews();
-        });
+        loadTopNews();
       }
     });
   });
@@ -181,19 +162,19 @@ async function loadTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
 
-  // 🔥 1. 기사 테이블 기준으로 실시간 집계
   const { data, error } = await supabase
-    .from("news_articles")
+    .from("news_issues")
     .select(`
-      issue_id,
-      published_at,
-      news_issues (
-        id,
-        issue_title,
-        issue_summary,
-        thumbnail_url
-      )
-    `);
+      id,
+      issue_title,
+      issue_summary,
+      thumbnail_url,
+      articles_count,
+      last_article_at
+    `)
+    .order("articles_count", { ascending: false })
+    .order("last_article_at", { ascending: false })
+    .limit(10);
 
   if (error) {
     console.error("[NEWS] loadTopNews error:", error);
@@ -208,45 +189,11 @@ async function loadTopNews() {
     return;
   }
 
-  // 🔥 2. issue_id 기준으로 그룹핑
-  const issueMap = new Map();
-
-  data.forEach(row => {
-    if (!row.issue_id || !row.news_issues) return;
-
-    const existing = issueMap.get(row.issue_id);
-
-    if (!existing) {
-      issueMap.set(row.issue_id, {
-        id: row.issue_id,
-        issue_title: row.news_issues.issue_title,
-        issue_summary: row.news_issues.issue_summary,
-        thumbnail_url: row.news_issues.thumbnail_url,
-        articles_count: 1,
-        last_article_at: row.published_at
-      });
-    } else {
-      existing.articles_count += 1;
-      if (new Date(row.published_at) > new Date(existing.last_article_at)) {
-        existing.last_article_at = row.published_at;
-      }
-    }
-  });
-
-  // 🔥 3. 정렬 (기사 수 → 최신순)
-  const issues = Array.from(issueMap.values())
-    .sort((a, b) => {
-      if (b.articles_count !== a.articles_count) {
-        return b.articles_count - a.articles_count;
-      }
-      return new Date(b.last_article_at) - new Date(a.last_article_at);
-    })
-    .slice(0, 10);
-
   list.innerHTML = "";
 
-  issues.forEach((item, index) => {
+  data.forEach((item, index) => {
     const card = document.createElement("div");
+    card.className = "news-card";
 
     const prevRank = previousRanks.get(item.id);
     const currentRank = index + 1;
@@ -270,9 +217,7 @@ async function loadTopNews() {
       ? `<div class="news-thumbnail" style="background-image:url('${item.thumbnail_url}')"></div>`
       : `<div class="news-thumbnail placeholder"></div>`;
 
-    card.onclick = () => {
-      openNewsModal(item.id);
-    };
+    card.onclick = () => openNewsModal(item.id);
 
     card.innerHTML = `
       ${thumb}
@@ -445,9 +390,7 @@ document.body.style.overflow = "hidden";
   setInterval(() => {
     const activeTab = document.querySelector(".tab-item.active")?.dataset.tab;
     if (activeTab === "news") {
-      fetchRealtimeNews().then(() => {
-        loadTopNews();
-      });
+      loadTopNews();
     }
   }, 60000);
 
