@@ -373,7 +373,6 @@ body[data-page="search"] .header-inner {
 
   /* ✅ Y-axis ONLY animation, no centering jump */
   animation: slideUp480 .25s ease-out;
-  transform: translateY(100%);
 
   pointer-events: auto;
   will-change: transform;
