@@ -187,7 +187,7 @@ const { data, error } = await supabase
     articles_count,
     last_article_at
   `)
-  .order("articles_count", { ascending: false })
+  .order("last_article_at", { ascending: false })
   .limit(10);
 
   if (error) {
