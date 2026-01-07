@@ -77,6 +77,10 @@ tabs.forEach(btn => {
     activateTab(tab);
 
     if (tab === "news") {
+      newsPage = 0;
+      hasMoreNews = true;
+      isLoadingNews = false;
+      document.getElementById("top-news-list").innerHTML = "";
       loadTopNews();
     }
 
@@ -173,37 +177,57 @@ async function loadHotTrends() {
    📰 REALTIME TOP NEWS (FIXED)
 ========================= */
 
+let newsPage = 0;
+const NEWS_PAGE_SIZE = 10;
+let isLoadingNews = false;
+let hasMoreNews = true;
+
 async function loadTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
 
-const { data, error } = await supabase
-  .from("news_issues")
-  .select(`
-    id,
-    issue_title,
-    issue_summary,
-    thumbnail_url,
-    articles_count,
-    last_article_at
-  `)
-  .order("last_article_at", { ascending: false })
-  .limit(10);
+  if (isLoadingNews || !hasMoreNews) return;
+  isLoadingNews = true;
+
+  const from = newsPage * NEWS_PAGE_SIZE;
+  const to = from + NEWS_PAGE_SIZE - 1;
+
+  const { data, error } = await supabase
+    .from("news_issues")
+    .select(`
+      id,
+      issue_title,
+      issue_summary,
+      thumbnail_url,
+      articles_count,
+      last_article_at
+    `)
+    .order("last_article_at", { ascending: false })
+    .range(from, to);
 
   if (error) {
     console.error("[REALTIME NEWS ERROR]", error);
-    list.innerHTML =
+    list.innerHTML +=
       `<p style="color:#777;font-size:13px;">뉴스를 불러오지 못했습니다.</p>`;
+    isLoadingNews = false;
     return;
   }
 
   if (!data || data.length === 0) {
-    list.innerHTML =
-      `<p style="color:#777;font-size:13px;">아직 실시간 뉴스가 없습니다.</p>`;
+    if (newsPage === 0) {
+      list.innerHTML +=
+        `<p style="color:#777;font-size:13px;">아직 실시간 뉴스가 없습니다.</p>`;
+    }
+    hasMoreNews = false;
+    isLoadingNews = false;
     return;
   }
 
-  list.innerHTML = "";
+  if (!data || data.length < NEWS_PAGE_SIZE) {
+    hasMoreNews = false;
+  }
+  newsPage += 1;
+  isLoadingNews = false;
 
   data.forEach(item => {
     const card = document.createElement("div");
@@ -467,6 +491,19 @@ document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
 
     location.href = target;
   });
+});
+
+window.addEventListener("scroll", () => {
+  const scrollBottom =
+    window.innerHeight + window.scrollY >=
+    document.body.offsetHeight - 200;
+
+  const activeTab =
+    document.querySelector(".tab-item.active")?.dataset.tab;
+
+  if (scrollBottom && activeTab === "news") {
+    loadTopNews();
+  }
 });
 
 });
