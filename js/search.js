@@ -239,9 +239,11 @@ const { data, error } = await supabase
           ${badge}
         </h3>
 
-        <p class="news-summary">
-          ${item.issue_summary ?? ""}
-        </p>
+      <p class="news-summary clamp-3">
+        ${item.issue_summary
+          ? item.issue_summary
+          : "관련 기사 요약을 준비 중입니다."}
+      </p>
 
         <div class="news-meta">
           <span>📰 ${item.articles_6h}건</span>
