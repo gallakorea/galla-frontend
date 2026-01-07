@@ -329,22 +329,22 @@ body[data-page="search"] .header-inner {
 }
 
 /* =========================
-   FINAL NEWS MODAL (SINGLE SOURCE OF TRUTH)
+   FINAL NEWS MODAL (FIXED)
 ========================= */
 .news-modal {
   position: fixed;
   inset: 0;
   z-index: 1000001;
-  display: none;              /* ✅ 기본 비렌더 */
+
+  display: none;          /* ✅ 기본은 아예 DOM 비활성 */
   justify-content: center;
   align-items: flex-end;
-  opacity: 0;
-  pointer-events: none;
+
+  pointer-events: none;  /* 안전장치 */
 }
 
 .news-modal.active {
-  display: flex;              /* ✅ 활성 시에만 렌더 */
-  opacity: 1;
+  display: flex;         /* ✅ 열릴 때만 DOM 참여 */
   pointer-events: auto;
 }
 
@@ -352,18 +352,22 @@ body[data-page="search"] .header-inner {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,.6);
-  pointer-events: none;       /* ✅ 기본 클릭 차단 해제 */
-}
-.news-modal.active .news-modal-backdrop {
-  pointer-events: auto;       /* ✅ 모달 열렸을 때만 클릭 가로채기 */
+  pointer-events: auto;
 }
 
-/* Y축 전용 애니메이션 */
-@keyframes slideUp480 {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+.news-modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+
+  background: #0b0c14;
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+
+  transform: translateY(100%);
+  transition: transform .25s ease-out;
+}
+
+.news-modal.active .news-modal-sheet {
+  transform: translateY(0);
 }
