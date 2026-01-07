@@ -105,16 +105,13 @@ async function loadHotTrends() {
 
     chip.innerHTML = `<strong>${idx + 1}</strong> ${row.keyword} ${badge}`;
 
-    chip.onclick = async () => {
+    chip.onclick = () => {
       activateTab("news");
-      await loadNewsByIssue(row.issue_id);
+      loadTopNews();
     };
 
     hotEl.appendChild(chip);
   });
-
-  // ✅ 1위 트렌드 자동 로딩
-  await loadNewsByIssue(data[0].issue_id);
 }
 
   /* =========================
@@ -198,6 +195,12 @@ async function loadTopNews() {
 
     list.appendChild(card);
   });
+}
+
+// 🔧 SAFE FALLBACK: hot trend click handler
+function loadNewsByIssue(issueId) {
+  activateTab("news");
+  loadTopNews();
 }
 
 function timeAgo(date) {
