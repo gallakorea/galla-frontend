@@ -420,25 +420,39 @@ document.body.style.overflow = "hidden";
   });
 }
 
-  function openNewsViewer(url) {
-    if (!url || !viewerModal || !viewerFrame) return;
+    function openNewsViewer(url) {
+      if (!url) return;
 
-    // 예외 처리: iframe 차단 사이트
-    const blockedDomains = [
-      "naver.com",
-      "daum.net",
-      "chosun.com"
-    ];
+      // ❌ iframe 차단 확률이 높은 도메인
+      const blockedDomains = [
+        "naver.com",
+        "daum.net",
+        "chosun.com",
+        "joins.com",
+        "hani.co.kr",
+        "mk.co.kr",
+        "sedaily.com",
+        "khan.co.kr",
+        "yonhapnews.co.kr"
+      ];
 
-    const isBlocked = blockedDomains.some(d => url.includes(d));
-    if (isBlocked) {
-      window.open(url, "_blank");
-      return;
+      const isBlocked = blockedDomains.some(d => url.includes(d));
+
+      // 1️⃣ 차단된 도메인 → 무조건 새 탭
+      if (isBlocked) {
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+
+      // 2️⃣ iframe 시도
+      try {
+        viewerFrame.src = url;
+        viewerModal.classList.remove("hidden");
+      } catch (e) {
+        // 3️⃣ iframe 실패 시 안전 탈출
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
     }
-
-    viewerFrame.src = url;
-    viewerModal.classList.remove("hidden");
-  }
 
   /* =========================
      SEARCH EVENTS
