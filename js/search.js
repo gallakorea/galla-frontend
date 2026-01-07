@@ -215,9 +215,16 @@ const { data, error } = await supabase
     : item.thumbnail_url
   : null;
 
-  const thumb = thumbnailUrl
-  ? `<div class="news-thumbnail" style="background-image:url('${thumbnailUrl}')"></div>`
-  : `<div class="news-thumbnail placeholder"></div>`;
+    const thumb = thumbnailUrl
+      ? `
+        <div class="news-thumb">
+          <img src="${thumbnailUrl}" alt="">
+        </div>
+      `
+      : `
+        <div class="news-thumb placeholder"></div>
+      `;
+      
 
     // 🔥 트렌드 배지
     let badge = "";
