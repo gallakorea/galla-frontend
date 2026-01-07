@@ -593,11 +593,3 @@ body[data-page="search"] .header-inner {
   margin-top: 6px;
 }
 
-/* =========================
-   FIX: TOP NEWS LIST LAYOUT
-========================= */
-#top-news-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
