@@ -158,26 +158,31 @@ async function loadHotTrends() {
   /* =========================
      📰 REALTIME NEWS
   ========================= */
+/* =========================
+   📰 REALTIME TOP NEWS (FIXED)
+========================= */
+
 async function loadTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
 
   const { data, error } = await supabase
-    .from("news_issues")
+    .from("realtime_top_news") // ✅ 핵심 변경
     .select(`
-      id,
+      issue_id,
       issue_title,
       issue_summary,
       thumbnail_url,
-      articles_count,
+      trend_score,
+      articles_1h,
+      articles_6h,
       last_article_at
     `)
-    .order("articles_count", { ascending: false })
-    .order("last_article_at", { ascending: false })
+    .order("trend_score", { ascending: false }) // 🔥 실시간 정렬
     .limit(10);
 
   if (error) {
-    console.error("[NEWS] loadTopNews error:", error);
+    console.error("[REALTIME NEWS ERROR]", error);
     list.innerHTML =
       `<p style="color:#777;font-size:13px;">뉴스를 불러오지 못했습니다.</p>`;
     return;
@@ -185,50 +190,46 @@ async function loadTopNews() {
 
   if (!data || data.length === 0) {
     list.innerHTML =
-      `<p style="color:#777;font-size:13px;">아직 수집된 뉴스가 없습니다.</p>`;
+      `<p style="color:#777;font-size:13px;">아직 실시간 뉴스가 없습니다.</p>`;
     return;
   }
 
   list.innerHTML = "";
 
-  data.forEach((item, index) => {
+  data.forEach(item => {
     const card = document.createElement("div");
     card.className = "news-card";
-
-    const prevRank = previousRanks.get(item.id);
-    const currentRank = index + 1;
-
-    let rankDiff = "";
-    let rankClass = "";
-
-    if (prevRank !== undefined) {
-      if (prevRank > currentRank) {
-        rankDiff = `🔺 ${prevRank - currentRank}`;
-        rankClass = "rank-up";
-      } else if (prevRank < currentRank) {
-        rankDiff = `🔻 ${currentRank - prevRank}`;
-        rankClass = "rank-down";
-      }
-    }
-
-    previousRanks.set(item.id, currentRank);
 
     const thumb = item.thumbnail_url
       ? `<div class="news-thumbnail" style="background-image:url('${item.thumbnail_url}')"></div>`
       : `<div class="news-thumbnail placeholder"></div>`;
 
-    card.onclick = () => openNewsModal(item.id);
+    // 🔥 트렌드 배지
+    let badge = "";
+    if (item.articles_1h >= 3) {
+      badge = `<span class="trend-badge hot">🔥 급상승</span>`;
+    } else if (item.articles_6h >= 5 && item.articles_1h >= 1) {
+      badge = `<span class="trend-badge strong">🚀 강세</span>`;
+    } else if (item.articles_6h >= 3) {
+      badge = `<span class="trend-badge steady">📌 유지</span>`;
+    }
+
+    card.onclick = () => openNewsModal(item.issue_id);
 
     card.innerHTML = `
       ${thumb}
       <div class="news-body">
-        <h3 class="news-title">${item.issue_title}</h3>
-        <p class="news-summary">${item.issue_summary ?? ""}</p>
-        <div class="news-rank ${rankClass}">
-          ${rankDiff}
-        </div>
+        <h3 class="news-title">
+          ${item.issue_title}
+          ${badge}
+        </h3>
+
+        <p class="news-summary">
+          ${item.issue_summary ?? ""}
+        </p>
+
         <div class="news-meta">
-          <span>📰 ${item.articles_count}건</span>
+          <span>📰 ${item.articles_6h}건</span>
           <span>⏱ ${timeAgo(item.last_article_at)}</span>
         </div>
       </div>

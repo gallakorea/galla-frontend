@@ -454,3 +454,26 @@ body[data-page="search"] .header-inner {
     transform: translateY(0);
   }
 }
+
+.trend-badge {
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.trend-badge.hot {
+  background: #ff3b30;
+  color: #fff;
+}
+
+.trend-badge.strong {
+  background: #ff9500;
+  color: #000;
+}
+
+.trend-badge.steady {
+  background: #444;
+  color: #fff;
+}
