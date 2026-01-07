@@ -335,16 +335,15 @@ body[data-page="search"] .header-inner {
   position: fixed;
   inset: 0;
   z-index: 1000001;
-
-  display: flex;                 /* 🔥 항상 렌더링 */
+  display: none;              /* ✅ 기본 비렌더 */
   justify-content: center;
   align-items: flex-end;
-
   opacity: 0;
   pointer-events: none;
 }
 
 .news-modal.active {
+  display: flex;              /* ✅ 활성 시에만 렌더 */
   opacity: 1;
   pointer-events: auto;
 }
@@ -353,28 +352,10 @@ body[data-page="search"] .header-inner {
   position: absolute;
   inset: 0;
   background: rgba(0,0,0,.6);
-  pointer-events: auto;
+  pointer-events: none;       /* ✅ 기본 클릭 차단 해제 */
 }
-
-.news-modal-sheet {
-  width: 100%;
-  max-width: 480px;
-  max-height: 80vh;
-
-  background: #0b0c14;
-  border-radius: 20px 20px 0 0;
-  padding: 16px;
-
-  overflow-y: auto;
-
-  transform: translateY(100%);        /* 🔥 시작 위치 */
-  transition: transform .25s ease-out;
-
-  pointer-events: auto;
-}
-
-.news-modal.active .news-modal-sheet {
-  transform: translateY(0);
+.news-modal.active .news-modal-backdrop {
+  pointer-events: auto;       /* ✅ 모달 열렸을 때만 클릭 가로채기 */
 }
 
 /* Y축 전용 애니메이션 */
