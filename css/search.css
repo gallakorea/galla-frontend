@@ -353,11 +353,10 @@ body[data-page="search"] .header-inner {
   position: fixed;
   inset: 0;
   z-index: 1000001;
+}
 
-  /* 핵심 */
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
+.news-modal.hidden {
+  display: none;
 }
 
 /* backdrop도 480 기준으로 */
@@ -372,13 +371,15 @@ body[data-page="search"] .header-inner {
   width: 100%;
   max-width: 480px;
   max-height: 80vh;
-
   background: #0b0c14;
   border-radius: 20px 20px 0 0;
   padding: 16px;
-
   overflow-y: auto;
-  animation: slideUp480 .25s ease-out;
+  transform: translateY(100%);
+}
+
+.news-modal:not(.hidden) .news-modal-sheet {
+  animation: slideUp480 .25s ease-out forwards;
 }
 
 /* 애니메이션 (X축 이동 절대 없음) */
