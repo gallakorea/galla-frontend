@@ -14,7 +14,7 @@ body {
     width: 100%;
     max-width: 480px;
     margin: 0 auto;
-    padding-bottom: 120px;
+    padding-bottom: 94px;
 }
 
 .page-main {
@@ -161,7 +161,7 @@ body {
 
     width: 100% !important;
     max-width: 480px !important;
-    height: 64px !important;
+    height: 58px !important;
 
     background: #000 !important;
     border-top: 1px solid #111 !important;
