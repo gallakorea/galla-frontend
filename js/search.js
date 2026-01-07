@@ -35,11 +35,14 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
     });
   }
 
+  if (newsModal) {
+    newsModal.classList.remove("active");
+  }
+
   // 공통 모달 닫기 함수
   function closeNewsModal() {
     if (!newsModal) return;
     newsModal.classList.remove("active");
-    newsModal.classList.add("hidden");
     document.body.style.overflow = "";
   }
 
@@ -64,6 +67,7 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
   tabs.forEach(btn => {
     btn.addEventListener("click", () => {
       const tab = btn.dataset.tab;
+      console.log("[TAB CLICK]", tab);
       activateTab(tab);
 
       if (tab === "news") {
@@ -268,7 +272,6 @@ async function openNewsModal(issueId) {
   if (!issueId || !newsModal) return;
 
   // ✅ 모달 표시 (CSS만 믿는다)
-newsModal.classList.remove("hidden");
 newsModal.classList.add("active");
 document.body.style.overflow = "hidden";
 
@@ -356,5 +359,9 @@ document.body.style.overflow = "hidden";
       loadTopNews();
     }
   }, 60000);
+
+  tabs.forEach(tab => {
+    tab.style.pointerEvents = "auto";
+  });
 
 });
