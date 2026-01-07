@@ -1,4 +1,12 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔥 ABSOLUTE MODAL RESET (FIX)
+  const __newsModal = document.getElementById("news-modal");
+  if (__newsModal) {
+    __newsModal.classList.add("hidden");
+    __newsModal.style.display = "none";
+    __newsModal.style.pointerEvents = "none";
+  }
+
   const supabase = await waitForSupabaseClient();
 
   /* =========================
@@ -51,7 +59,9 @@ const panels = document.querySelectorAll(".tab-panel");
   // 공통 모달 닫기 함수
   function closeNewsModal() {
     if (!newsModal) return;
+    newsModal.classList.add("hidden");
     newsModal.classList.remove("active");
+    newsModal.style.pointerEvents = "none";
     document.body.style.overflow = "";
   }
 
@@ -279,8 +289,10 @@ function timeAgo(date) {
 async function openNewsModal(clusterId) {
   if (!clusterId || !newsModal) return;
 
-  // ✅ 모달 활성화 (이때만 클릭 가로채기)
+  // 🔴 FORCE OPEN: hidden 제거 + display 복구
+  newsModal.classList.remove("hidden");
   newsModal.classList.add("active");
+  newsModal.style.pointerEvents = "auto";
   document.body.style.overflow = "hidden";
 
   newsModalTitle.textContent = "관련 기사";
@@ -290,7 +302,7 @@ async function openNewsModal(clusterId) {
   const { data, error } = await supabase
     .from("news_articles")
     .select("id, title, published_at, source_url")
-    .eq("cluster_id", clusterId)
+    .eq("issue_id", clusterId)
     .order("published_at", { ascending: false })
     .limit(30);
 
