@@ -379,10 +379,15 @@ document.body.style.overflow = "hidden";
     });
   }
 
-  /* =========================
-     INIT
-  ========================= */
-  activateTab("hot");
+  // =========================
+  // INIT (FORCE NEWS RENDER)
+  // =========================
+  activateTab("news");
+
+  // 🔥 즉시 실시간 탑 뉴스 렌더
+  loadTopNews();
+
+  // 기존 기능 유지
   loadHotTrends();
   loadAITrends();
 
