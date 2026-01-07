@@ -200,58 +200,6 @@ async function loadTopNews() {
   });
 }
 
-async function loadNewsByIssue(issueId) {
-  const list = document.getElementById("top-news-list");
-  if (!list) return;
-
-  list.innerHTML =
-    `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
-
-  const { data, error } = await supabase
-    .from("news_articles")
-    .select(`
-      id,
-      title,
-      article_url,
-      published_at
-    `)
-    .eq("cluster_id", issueId)
-    .order("published_at", { ascending: false })
-    .limit(30);
-
-  if (error) {
-    console.error("[NEWS] loadNewsByIssue error", error);
-    list.innerHTML =
-      `<p style="color:#777;font-size:13px;">뉴스를 불러올 수 없습니다.</p>`;
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    list.innerHTML =
-      `<p style="color:#777;font-size:13px;">관련 뉴스가 없습니다.</p>`;
-    return;
-  }
-
-  list.innerHTML = "";
-
-  data.forEach(article => {
-    const card = document.createElement("div");
-    card.className = "news-card";
-    card.onclick = () => openNewsViewer(article.article_url);
-
-    card.innerHTML = `
-      <div class="news-body">
-        <h3 class="news-title">${article.title}</h3>
-        <div class="news-meta">
-          <span>${new Date(article.published_at).toLocaleString()}</span>
-        </div>
-      </div>
-    `;
-
-    list.appendChild(card);
-  });
-}
-
 function timeAgo(date) {
   if (!date) return "";
   const seconds = Math.floor((new Date() - new Date(date)) / 1000);
