@@ -23,6 +23,20 @@ const panels = document.querySelectorAll(".tab-panel");
   const newsModalArticles = document.getElementById("news-modal-articles");
   const newsModalClose = document.getElementById("news-modal-close");
 
+  // ✅ FORCE HIDE NEWS MODAL ON LOAD (prevents page lock)
+  if (newsModal) {
+    newsModal.classList.add("hidden");
+  }
+
+  // Add backdrop click handler to always close modal cleanly
+  const newsModalBackdrop = newsModal?.querySelector(".news-modal-backdrop");
+  if (newsModalBackdrop) {
+    newsModalBackdrop.addEventListener("click", () => {
+      newsModal.classList.add("hidden");
+      newsModal.style.pointerEvents = "none";
+    });
+  }
+
   const viewerModal = document.getElementById("news-viewer-modal");
   const viewerFrame = document.getElementById("news-viewer-iframe");
   const viewerClose = document.getElementById("news-viewer-close");
@@ -30,6 +44,7 @@ const panels = document.querySelectorAll(".tab-panel");
   if (newsModalClose) {
     newsModalClose.addEventListener("click", () => {
       newsModal.classList.add("hidden");
+      newsModal.style.pointerEvents = "none";
     });
   }
 
@@ -264,8 +279,9 @@ function timeAgo(date) {
 async function openNewsModal(clusterId) {
   if (!clusterId || !newsModal) return;
 
-  // 모달 오픈
+  // 안전하게 모달 오픈
   newsModal.classList.remove("hidden");
+  newsModal.style.pointerEvents = "auto";
 
   // 로딩 UI
   newsModalTitle.textContent = "관련 기사";
@@ -362,5 +378,13 @@ async function openNewsModal(clusterId) {
       loadTopNews();
     }
   }, 60000);
+
+// 🛟 FINAL SAFETY: never allow modal to block page on init
+window.addEventListener("load", () => {
+  if (newsModal) {
+    newsModal.classList.add("hidden");
+    newsModal.style.pointerEvents = "none";
+  }
+});
 
 });
