@@ -25,29 +25,21 @@ const panels = document.querySelectorAll(".tab-panel");
 
   // ✅ HARD RESET: 로드 시 무조건 모달 비활성
   if (newsModal) {
-    newsModal.classList.add("hidden");
     newsModal.style.pointerEvents = "";
   }
 
   const newsModalBackdrop = newsModal?.querySelector(".news-modal-backdrop");
   if (newsModalBackdrop) {
-    newsModalBackdrop.addEventListener("click", () => closeNewsModal());
+    newsModalBackdrop.addEventListener("click", closeNewsModal);
   }
 
   if (newsModalClose) {
-    newsModalClose.addEventListener("click", () => closeNewsModal());
+    newsModalClose.addEventListener("click", closeNewsModal);
   }
 
   const viewerModal = document.getElementById("news-viewer-modal");
   const viewerFrame = document.getElementById("news-viewer-iframe");
   const viewerClose = document.getElementById("news-viewer-close");
-
-  if (newsModalClose) {
-    newsModalClose.addEventListener("click", () => {
-      newsModal.classList.add("hidden");
-      newsModal.style.pointerEvents = "none";
-    });
-  }
 
   if (viewerClose) {
     viewerClose.addEventListener("click", () => {
@@ -59,8 +51,7 @@ const panels = document.querySelectorAll(".tab-panel");
   // 공통 모달 닫기 함수
   function closeNewsModal() {
     if (!newsModal) return;
-    newsModal.classList.add("hidden");
-    newsModal.style.pointerEvents = "none";
+    newsModal.classList.remove("active");
     document.body.style.overflow = "";
   }
 
@@ -286,12 +277,11 @@ function timeAgo(date) {
      📰 OPEN NEWS MODAL
   ========================= */
 async function openNewsModal(clusterId) {
-  document.body.style.overflow = "hidden";
   if (!clusterId || !newsModal) return;
 
   // ✅ 모달 활성화 (이때만 클릭 가로채기)
-  newsModal.classList.remove("hidden");
-  newsModal.style.pointerEvents = "auto";
+  newsModal.classList.add("active");
+  document.body.style.overflow = "hidden";
 
   newsModalTitle.textContent = "관련 기사";
   newsModalArticles.innerHTML =
@@ -378,13 +368,5 @@ async function openNewsModal(clusterId) {
       loadTopNews();
     }
   }, 60000);
-
-// 🛟 ABSOLUTE FAILSAFE
-window.addEventListener("load", () => {
-  if (newsModal) {
-    newsModal.classList.add("hidden");
-    newsModal.style.pointerEvents = "";
-  }
-});
 
 });

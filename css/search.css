@@ -336,20 +336,16 @@ body[data-page="search"] .header-inner {
   inset: 0;
   z-index: 1000001;
 
-  display: none; /* 🔴 default: completely removed from layout */
+  display: flex;                 /* 🔥 항상 렌더링 */
   justify-content: center;
   align-items: flex-end;
 
-  pointer-events: none; /* 🔴 prevent blocking clicks when hidden */
-}
-
-.news-modal.hidden {
-  display: none;
+  opacity: 0;
   pointer-events: none;
 }
 
-.news-modal:not(.hidden) {
-  display: flex;
+.news-modal.active {
+  opacity: 1;
   pointer-events: auto;
 }
 
@@ -371,11 +367,14 @@ body[data-page="search"] .header-inner {
 
   overflow-y: auto;
 
-  /* ✅ Y-axis ONLY animation, no centering jump */
-  animation: slideUp480 .25s ease-out;
+  transform: translateY(100%);        /* 🔥 시작 위치 */
+  transition: transform .25s ease-out;
 
   pointer-events: auto;
-  will-change: transform;
+}
+
+.news-modal.active .news-modal-sheet {
+  transform: translateY(0);
 }
 
 /* Y축 전용 애니메이션 */
