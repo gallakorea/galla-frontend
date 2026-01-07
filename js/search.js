@@ -69,35 +69,53 @@ const panels = document.querySelectorAll(".tab-panel");
     });
   });
 
-  /* =========================
-     🔥 HOT TRENDS
-  ========================= */
-  async function loadHotTrends() {
-    const { data, error } = await supabase
-      .from("hot_search_trends")
-      .select("keyword")
-      .order("search_count", { ascending: false })
-      .limit(10);
+/* =========================
+   🔥 HOT TRENDS (REALTIME)
+========================= */
+async function loadHotTrends() {
+  const { data, error } = await supabase
+    .from("realtime_search_keywords")
+    .select("issue_id, keyword, rank_score")
+    .order("rank_score", { ascending: false }) // 🔥 핵심
+    .limit(10);
 
-    if (error) {
-      console.error("hot trends error", error);
-      return;
-    }
-
-    hotEl.innerHTML = "";
-    hotGrid.innerHTML = "";
-
-    data.forEach(row => {
-      const chip = document.createElement("button");
-      chip.className = "hot-trend-chip";
-      chip.textContent = row.keyword;
-      chip.onclick = () => {
-        activateTab("hot");
-        performSearch(row.keyword, hotGrid);
-      };
-      hotEl.appendChild(chip);
-    });
+  if (error) {
+    console.error("[HOT] load error", error);
+    hotEl.innerHTML =
+      `<p style="color:#777;font-size:13px;">트렌드를 불러오지 못했습니다.</p>`;
+    return;
   }
+
+  hotEl.innerHTML = "";
+  hotGrid.innerHTML = "";
+
+  if (!data || data.length === 0) {
+    hotEl.innerHTML =
+      `<p style="color:#777;font-size:13px;">현재 계산된 트렌드가 없습니다.</p>`;
+    return;
+  }
+
+  data.forEach((row, idx) => {
+    const chip = document.createElement("button");
+    chip.className = "hot-trend-chip";
+
+    let badge = "↑";
+    if (idx === 0) badge = "🔥";
+    else if (idx < 3) badge = "🚀";
+
+    chip.innerHTML = `<strong>${idx + 1}</strong> ${row.keyword} ${badge}`;
+
+    chip.onclick = async () => {
+      activateTab("news");
+      await loadNewsByIssue(row.issue_id);
+    };
+
+    hotEl.appendChild(chip);
+  });
+
+  // ✅ 1위 트렌드 자동 로딩
+  await loadNewsByIssue(data[0].issue_id);
+}
 
   /* =========================
      🔮 AI TRENDS
@@ -144,9 +162,11 @@ async function loadTopNews() {
       issue_title,
       issue_summary,
       source_name,
-      articles_count
+      articles_count,
+      last_article_at
     `)
-    .order("created_at", { ascending: false })
+    .order("articles_count", { ascending: false })
+    .order("last_article_at", { ascending: false })
     .limit(10);
 
   if (error) {
@@ -156,38 +176,37 @@ async function loadTopNews() {
     return;
   }
 
-  if (!data || data.length === 0) {
-    list.innerHTML =
-      `<p style="color:#777;font-size:13px;">표시할 뉴스가 없습니다.</p>`;
-    return;
-  }
-
   list.innerHTML = "";
 
   data.forEach(item => {
     const card = document.createElement("div");
     card.className = "news-card";
 
-    card.onclick = () => {
-      openNewsModal(item.id);
-    };
+    card.onclick = () => openNewsModal(item.id);
 
     card.innerHTML = `
-      <div class="news-thumb">
-        <div class="news-thumb-placeholder"></div>
-      </div>
       <div class="news-body">
         <h3 class="news-title">${item.issue_title}</h3>
-        <p class="news-summary">${item.issue_summary}</p>
+        <p class="news-summary">${item.issue_summary ?? ""}</p>
         <div class="news-meta">
-          <span>${item.source_name}</span>
-          <span>관련 기사 ${item.articles_count}건</span>
+          <span>📰 ${item.articles_count}건</span>
+          <span>⏱ ${timeAgo(item.last_article_at)}</span>
         </div>
       </div>
     `;
 
     list.appendChild(card);
   });
+}
+
+function timeAgo(date) {
+  if (!date) return "";
+  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+
+  if (seconds < 60) return "방금";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}분 전`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}시간 전`;
+  return `${Math.floor(seconds / 86400)}일 전`;
 }
 
   /* =========================
@@ -321,7 +340,6 @@ async function loadTopNews() {
   activateTab("hot");
   loadHotTrends();
   loadAITrends();
-  loadTopNews(); // 초기 진입 시 뉴스 미리 로드
 
   // 🕒 60초마다 자동 갱신 (실시간 느낌)
   setInterval(() => {
