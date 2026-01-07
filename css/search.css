@@ -301,10 +301,19 @@ body[data-page="search"] .header-inner {
 .news-thumb {
   width: 88px;
   height: 88px;
-  object-fit: cover;
   border-radius: 10px;
-  background: #111;
   flex-shrink: 0;
+  object-fit: cover;
+}
+
+/* ✅ 썸네일 없을 때 */
+.news-thumb.placeholder {
+  background: linear-gradient(
+    135deg,
+    #1a1a1a,
+    #111
+  );
+  border: 1px solid #222;
 }
 
 .news-title {
@@ -326,6 +335,8 @@ body[data-page="search"] .header-inner {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+
 
 /* =========================
    NEWS VIEWER (IFRAME)

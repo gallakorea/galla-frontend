@@ -187,7 +187,7 @@ data.forEach(item => {
   const card = document.createElement("div");
   card.className = "news-card";
 
-  const thumb = item.thumbnail_url || FALLBACK_THUMB;
+  const hasThumb = !!item.thumbnail_url;
 
   card.onclick = () => {
     openNewsModal(item.id);
@@ -195,7 +195,11 @@ data.forEach(item => {
 
   card.innerHTML = `
     <div class="news-card-inner">
-      <img class="news-thumb" src="${thumb}" alt="">
+      ${
+        hasThumb
+          ? `<img class="news-thumb" src="${item.thumbnail_url}" alt="">`
+          : `<div class="news-thumb placeholder"></div>`
+      }
       <div class="news-body">
         <h3 class="news-title">${item.issue_title}</h3>
         <p class="news-summary clamp-3">
