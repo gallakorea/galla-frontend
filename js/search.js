@@ -419,4 +419,22 @@ document.body.style.overflow = "hidden";
     tab.style.pointerEvents = "auto";
   });
 
+  /* =========================
+   🔗 BOTTOM NAVIGATION FIX
+========================= */
+document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.preventDefault();
+
+    const target = btn.dataset.target;
+    if (!target) return;
+
+    // 현재 페이지면 무시
+    const current = location.pathname.split("/").pop();
+    if (current === target) return;
+
+    location.href = target;
+  });
+});
+
 });
