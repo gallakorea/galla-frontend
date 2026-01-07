@@ -1,5 +1,25 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  // 🔁 이전 순위 저장 (issue_id → rank)
+  const previousRanks = new Map();
+
   const supabase = await waitForSupabaseClient();
+
+  async function fetchRealtimeNews() {
+    try {
+      const { error } = await supabase.functions.invoke(
+        "crawl-naver-news",
+        { body: { limit: 30 } }
+      );
+
+      if (error) {
+        console.error("[NAVER NEWS FETCH ERROR]", error);
+      } else {
+        console.log("[NAVER NEWS] fetched");
+      }
+    } catch (e) {
+      console.error("[NAVER NEWS EXCEPTION]", e);
+    }
+  }
 
   /* =========================
      DOM
@@ -71,7 +91,9 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
       activateTab(tab);
 
       if (tab === "news") {
-        loadTopNews();
+        fetchRealtimeNews().then(() => {
+          loadTopNews();
+        });
       }
     });
   });
@@ -159,19 +181,19 @@ async function loadTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
 
+  // 🔥 1. 기사 테이블 기준으로 실시간 집계
   const { data, error } = await supabase
-    .from("news_issues")
+    .from("news_articles")
     .select(`
-      id,
-      issue_title,
-      issue_summary,
-      articles_count,
-      last_article_at,
-      thumbnail_url
-    `)
-    .order("articles_count", { ascending: false })
-    .order("last_article_at", { ascending: false })
-    .limit(10);
+      issue_id,
+      published_at,
+      news_issues (
+        id,
+        issue_title,
+        issue_summary,
+        thumbnail_url
+      )
+    `);
 
   if (error) {
     console.error("[NEWS] loadTopNews error:", error);
@@ -180,38 +202,95 @@ async function loadTopNews() {
     return;
   }
 
+  if (!data || data.length === 0) {
+    list.innerHTML =
+      `<p style="color:#777;font-size:13px;">아직 수집된 뉴스가 없습니다.</p>`;
+    return;
+  }
+
+  // 🔥 2. issue_id 기준으로 그룹핑
+  const issueMap = new Map();
+
+  data.forEach(row => {
+    if (!row.issue_id || !row.news_issues) return;
+
+    const existing = issueMap.get(row.issue_id);
+
+    if (!existing) {
+      issueMap.set(row.issue_id, {
+        id: row.issue_id,
+        issue_title: row.news_issues.issue_title,
+        issue_summary: row.news_issues.issue_summary,
+        thumbnail_url: row.news_issues.thumbnail_url,
+        articles_count: 1,
+        last_article_at: row.published_at
+      });
+    } else {
+      existing.articles_count += 1;
+      if (new Date(row.published_at) > new Date(existing.last_article_at)) {
+        existing.last_article_at = row.published_at;
+      }
+    }
+  });
+
+  // 🔥 3. 정렬 (기사 수 → 최신순)
+  const issues = Array.from(issueMap.values())
+    .sort((a, b) => {
+      if (b.articles_count !== a.articles_count) {
+        return b.articles_count - a.articles_count;
+      }
+      return new Date(b.last_article_at) - new Date(a.last_article_at);
+    })
+    .slice(0, 10);
+
   list.innerHTML = "";
 
-const FALLBACK_THUMB = "/assets/images/news-default.jpg";
+  issues.forEach((item, index) => {
+    const card = document.createElement("div");
 
-data.forEach(item => {
-  const card = document.createElement("div");
-  card.className = "news-card";
+    const prevRank = previousRanks.get(item.id);
+    const currentRank = index + 1;
 
-  const hasThumb = !!item.thumbnail_url;
+    let rankDiff = "";
+    let rankClass = "";
 
-  card.onclick = () => {
-    openNewsModal(item.id);
-  };
+    if (prevRank !== undefined) {
+      if (prevRank > currentRank) {
+        rankDiff = `🔺 ${prevRank - currentRank}`;
+        rankClass = "rank-up";
+      } else if (prevRank < currentRank) {
+        rankDiff = `🔻 ${currentRank - prevRank}`;
+        rankClass = "rank-down";
+      }
+    }
 
-  const thumb = item.thumbnail_url
-    ? `<div class="news-thumbnail" style="background-image:url('${item.thumbnail_url}')"></div>`
-    : `<div class="news-thumbnail placeholder"></div>`;
+    previousRanks.set(item.id, currentRank);
 
-  card.innerHTML = `
-    ${thumb}
-    <div class="news-body">
-      <h3 class="news-title">${item.issue_title}</h3>
-      <p class="news-summary">${item.issue_summary ?? ""}</p>
-      <div class="news-meta">
-        <span>📰 ${item.articles_count}건</span>
-        <span>⏱ ${timeAgo(item.last_article_at)}</span>
+    const thumb = item.thumbnail_url
+      ? `<div class="news-thumbnail" style="background-image:url('${item.thumbnail_url}')"></div>`
+      : `<div class="news-thumbnail placeholder"></div>`;
+
+    card.onclick = () => {
+      openNewsModal(item.id);
+    };
+
+    card.innerHTML = `
+      ${thumb}
+      <div class="news-body">
+        <h3 class="news-title">${item.issue_title}</h3>
+        <p class="news-summary">${item.issue_summary ?? ""}</p>
+        <div class="news-rank ${rankClass}">
+          ${rankDiff}
+        </div>
+        <div class="news-meta">
+          <span>📰 ${item.articles_count}건</span>
+          <span>⏱ ${timeAgo(item.last_article_at)}</span>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  list.appendChild(card);
-});
+    list.appendChild(card);
+  });
 }
 
 // 🔧 SAFE FALLBACK: hot trend click handler
@@ -366,7 +445,9 @@ document.body.style.overflow = "hidden";
   setInterval(() => {
     const activeTab = document.querySelector(".tab-item.active")?.dataset.tab;
     if (activeTab === "news") {
-      loadTopNews();
+      fetchRealtimeNews().then(() => {
+        loadTopNews();
+      });
     }
   }, 60000);
 
