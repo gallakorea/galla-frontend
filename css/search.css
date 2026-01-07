@@ -335,14 +335,22 @@ body[data-page="search"] .header-inner {
   position: fixed;
   inset: 0;
   z-index: 1000001;
-  display: flex;
+
+  display: none; /* 🔴 default: completely removed from layout */
   justify-content: center;
   align-items: flex-end;
-  pointer-events: auto;
+
+  pointer-events: none; /* 🔴 prevent blocking clicks when hidden */
 }
 
 .news-modal.hidden {
   display: none;
+  pointer-events: none;
+}
+
+.news-modal:not(.hidden) {
+  display: flex;
+  pointer-events: auto;
 }
 
 .news-modal-backdrop {
@@ -356,13 +364,19 @@ body[data-page="search"] .header-inner {
   width: 100%;
   max-width: 480px;
   max-height: 80vh;
+
   background: #0b0c14;
   border-radius: 20px 20px 0 0;
   padding: 16px;
+
   overflow-y: auto;
+
+  /* ✅ Y-axis ONLY animation, no centering jump */
   animation: slideUp480 .25s ease-out;
-  transform: translateY(0);
+  transform: translateY(100%);
+
   pointer-events: auto;
+  will-change: transform;
 }
 
 /* Y축 전용 애니메이션 */
