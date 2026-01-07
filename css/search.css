@@ -293,6 +293,40 @@ body[data-page="search"] .header-inner {
   margin-top: 6px;
 }
 
+.news-card-inner {
+  display: flex;
+  gap: 12px;
+}
+
+.news-thumb {
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #111;
+  flex-shrink: 0;
+}
+
+.news-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.news-summary {
+  font-size: 13px;
+  color: #aaa;
+  margin-top: 6px;
+}
+
+/* 요약 3줄 제한 */
+.clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* =========================
    NEWS VIEWER (IFRAME)
 ========================= */
