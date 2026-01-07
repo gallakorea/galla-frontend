@@ -419,17 +419,17 @@ document.body.style.overflow = "hidden";
     tab.style.pointerEvents = "auto";
   });
 
-  /* =========================
-   🔗 BOTTOM NAVIGATION FIX
+/* =========================
+   🔗 BOTTOM NAVIGATION FIX (FINAL)
 ========================= */
 document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
   btn.addEventListener("click", e => {
     e.preventDefault();
+    e.stopPropagation(); // 🔥 이게 핵심이다
 
     const target = btn.dataset.target;
     if (!target) return;
 
-    // 현재 페이지면 무시
     const current = location.pathname.split("/").pop();
     if (current === target) return;
 
