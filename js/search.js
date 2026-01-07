@@ -26,7 +26,7 @@ const panels = document.querySelectorAll(".tab-panel");
   // ✅ HARD RESET: 로드 시 무조건 모달 비활성
   if (newsModal) {
     newsModal.classList.add("hidden");
-    newsModal.style.pointerEvents = "none";
+    newsModal.style.pointerEvents = "";
   }
 
   const newsModalBackdrop = newsModal?.querySelector(".news-modal-backdrop");
@@ -61,6 +61,7 @@ const panels = document.querySelectorAll(".tab-panel");
     if (!newsModal) return;
     newsModal.classList.add("hidden");
     newsModal.style.pointerEvents = "none";
+    document.body.style.overflow = "";
   }
 
   let newsLoaded = true; // deprecated guard (kept for backward compatibility)
@@ -285,6 +286,7 @@ function timeAgo(date) {
      📰 OPEN NEWS MODAL
   ========================= */
 async function openNewsModal(clusterId) {
+  document.body.style.overflow = "hidden";
   if (!clusterId || !newsModal) return;
 
   // ✅ 모달 활성화 (이때만 클릭 가로채기)
@@ -297,7 +299,7 @@ async function openNewsModal(clusterId) {
 
   const { data, error } = await supabase
     .from("news_articles")
-    .select("id, title, article_url, published_at")
+    .select("id, title, published_at, source_url")
     .eq("cluster_id", clusterId)
     .order("published_at", { ascending: false })
     .limit(30);
@@ -321,7 +323,11 @@ async function openNewsModal(clusterId) {
   data.forEach(article => {
     const row = document.createElement("div");
     row.className = "news-article-item";
-    row.onclick = () => openNewsViewer(article.article_url);
+    row.onclick = () => {
+      if (article.source_url) {
+        openNewsViewer(article.source_url);
+      }
+    };
     row.innerHTML = `<p class="news-article-title">${article.title}</p>`;
     newsModalArticles.appendChild(row);
   });
@@ -377,7 +383,7 @@ async function openNewsModal(clusterId) {
 window.addEventListener("load", () => {
   if (newsModal) {
     newsModal.classList.add("hidden");
-    newsModal.style.pointerEvents = "none";
+    newsModal.style.pointerEvents = "";
   }
 });
 
