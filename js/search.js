@@ -209,9 +209,15 @@ const { data, error } = await supabase
     const card = document.createElement("div");
     card.className = "news-card";
 
-    const thumb = item.thumbnail_url
-      ? `<div class="news-thumbnail" style="background-image:url('${item.thumbnail_url}')"></div>`
-      : `<div class="news-thumbnail placeholder"></div>`;
+    const thumbnailUrl = item.thumbnail_url
+  ? item.thumbnail_url.startsWith("//")
+    ? "https:" + item.thumbnail_url
+    : item.thumbnail_url
+  : null;
+
+  const thumb = thumbnailUrl
+  ? `<div class="news-thumbnail" style="background-image:url('${thumbnailUrl}')"></div>`
+  : `<div class="news-thumbnail placeholder"></div>`;
 
     // 🔥 트렌드 배지
     let badge = "";
