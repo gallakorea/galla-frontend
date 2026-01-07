@@ -1,12 +1,4 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  // 🔥 ABSOLUTE MODAL RESET (FIX)
-  const __newsModal = document.getElementById("news-modal");
-  if (__newsModal) {
-    __newsModal.classList.add("hidden");
-    __newsModal.style.display = "none";
-    __newsModal.style.pointerEvents = "none";
-  }
-
   const supabase = await waitForSupabaseClient();
 
   /* =========================
@@ -33,7 +25,9 @@ const panels = document.querySelectorAll(".tab-panel");
 
   // ✅ HARD RESET: 로드 시 무조건 모달 비활성
   if (newsModal) {
-    newsModal.style.pointerEvents = "";
+    newsModal.classList.add("hidden");
+    newsModal.style.display = "none";
+    newsModal.style.pointerEvents = "none";
   }
 
   const newsModalBackdrop = newsModal?.querySelector(".news-modal-backdrop");
@@ -60,7 +54,7 @@ const panels = document.querySelectorAll(".tab-panel");
   function closeNewsModal() {
     if (!newsModal) return;
     newsModal.classList.add("hidden");
-    newsModal.classList.remove("active");
+    newsModal.style.display = "none";
     newsModal.style.pointerEvents = "none";
     document.body.style.overflow = "";
   }
@@ -289,9 +283,9 @@ function timeAgo(date) {
 async function openNewsModal(clusterId) {
   if (!clusterId || !newsModal) return;
 
-  // 🔴 FORCE OPEN: hidden 제거 + display 복구
+  // ✅ 모달 활성화 (이때만 클릭 가로채기)
   newsModal.classList.remove("hidden");
-  newsModal.classList.add("active");
+  newsModal.style.display = "flex";
   newsModal.style.pointerEvents = "auto";
   document.body.style.overflow = "hidden";
 
