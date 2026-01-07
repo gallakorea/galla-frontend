@@ -21,9 +21,9 @@ const panels = document.querySelectorAll(".tab-panel");
   const newsModal = document.getElementById("news-modal");
   const newsModalTitle = document.getElementById("news-modal-title");
   const newsModalArticles = document.getElementById("news-modal-articles");
-  const newsModalClose = document.getElementById("news-modal-close");
+const newsModalBackdrop = document.querySelector("#news-modal .news-modal-backdrop");
+newsModalBackdrop?.addEventListener("click", closeNewsModal);
 
-  const newsModalBackdrop = newsModal?.querySelector(".news-modal-backdrop");
   if (newsModalBackdrop) {
     newsModalBackdrop.addEventListener("click", closeNewsModal);
   }
@@ -275,7 +275,8 @@ async function openNewsModal(issueId) {
   if (!issueId || !newsModal) return;
 
   // ✅ 모달 표시 (CSS만 믿는다)
-  newsModal.classList.remove("hidden");
+newsModal.classList.add("active");
+newsModal.classList.add("active");
   document.body.style.overflow = "hidden";
 
   newsModalTitle.textContent = "관련 기사";
