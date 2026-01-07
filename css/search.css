@@ -416,3 +416,17 @@ body[data-page="search"] .header-inner {
 .news-modal.active .news-modal-sheet {
   transform: translateY(0);
 }
+
+.news-thumbnail {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  background-color: #222;
+  flex-shrink: 0;
+}
+
+.news-thumbnail.placeholder {
+  background: linear-gradient(135deg, #222, #111);
+}

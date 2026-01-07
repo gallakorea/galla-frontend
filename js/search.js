@@ -166,7 +166,8 @@ async function loadTopNews() {
       issue_title,
       issue_summary,
       articles_count,
-      last_article_at
+      last_article_at,
+      thumbnail_url
     `)
     .order("articles_count", { ascending: false })
     .order("last_article_at", { ascending: false })
@@ -193,22 +194,18 @@ data.forEach(item => {
     openNewsModal(item.id);
   };
 
+  const thumb = item.thumbnail_url
+    ? `<div class="news-thumbnail" style="background-image:url('${item.thumbnail_url}')"></div>`
+    : `<div class="news-thumbnail placeholder"></div>`;
+
   card.innerHTML = `
-    <div class="news-card-inner">
-      ${
-        hasThumb
-          ? `<img class="news-thumb" src="${item.thumbnail_url}" alt="">`
-          : `<div class="news-thumb placeholder"></div>`
-      }
-      <div class="news-body">
-        <h3 class="news-title">${item.issue_title}</h3>
-        <p class="news-summary clamp-3">
-          ${item.issue_summary ?? ""}
-        </p>
-        <div class="news-meta">
-          <span>📰 ${item.articles_count}건</span>
-          <span>⏱ ${timeAgo(item.last_article_at)}</span>
-        </div>
+    ${thumb}
+    <div class="news-body">
+      <h3 class="news-title">${item.issue_title}</h3>
+      <p class="news-summary">${item.issue_summary ?? ""}</p>
+      <div class="news-meta">
+        <span>📰 ${item.articles_count}건</span>
+        <span>⏱ ${timeAgo(item.last_article_at)}</span>
       </div>
     </div>
   `;
