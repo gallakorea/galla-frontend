@@ -98,10 +98,19 @@ tabs.forEach(btn => {
    🔥 HOT TRENDS (REALTIME)
 ========================= */
 async function loadHotTrends() {
+  const supabase = window.supabaseClient;
+  const hotEl = document.getElementById("hot-trend-chips");
+  const hotGrid = document.getElementById("hot-results");
+
+  if (!supabase || !hotEl || !hotGrid) {
+    console.error("[HOT] missing supabase or DOM");
+    return;
+  }
+
   const { data, error } = await supabase
     .from("realtime_search_keywords")
     .select("issue_id, keyword, rank_score")
-    .order("rank_score", { ascending: false }) // 🔥 핵심
+    .order("rank_score", { ascending: false })
     .limit(10);
 
   if (error) {
