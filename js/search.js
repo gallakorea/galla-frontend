@@ -1,9 +1,12 @@
+const SUPABASE_PROJECT_URL = "https://bidqaputhnkqepvdzrr.supabase.co";
+
 document.addEventListener("DOMContentLoaded", async () => {
-  const SUPABASE_PROJECT_URL = "https://bidqaputhnkqepvdzrr.supabase.co";
-  // 🔁 이전 순위 저장 (issue_id → rank)
-  const previousRanks = new Map();
+  console.log("SEARCH JS LOADED");
 
   const supabase = await waitForSupabaseClient();
+
+  // 🔁 이전 순위 저장
+  const previousRanks = new Map();
 
   /* =========================
      DOM
