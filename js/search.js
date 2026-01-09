@@ -1,9 +1,63 @@
-const SUPABASE_PROJECT_URL = "https://bidqaputhnkqepvdzrr.supabase.co";
-
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("SEARCH JS LOADED");
 
   const supabase = await waitForSupabaseClient();
+
+
+  async function loadHotTrends() {
+  const hotEl = document.getElementById("hot-trend-chips");
+  const hotGrid = document.getElementById("hot-results");
+
+  if (!hotEl || !hotGrid) {
+    console.error("[HOT] missing DOM");
+    return;
+  }
+
+  hotEl.innerHTML = `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
+  hotGrid.innerHTML = "";
+
+  const { data, error } = await supabase.functions.invoke(
+    "get_search_trends"
+  );
+
+  if (error) {
+    console.error("[HOT] invoke error", error);
+    hotEl.innerHTML =
+      `<p style="color:#777;font-size:13px;">트렌드 불러오기 실패</p>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    hotEl.innerHTML =
+      `<p style="color:#777;font-size:13px;">표시할 트렌드 없음</p>`;
+    return;
+  }
+
+  hotEl.innerHTML = "";
+
+  data.slice(0, 10).forEach((row, idx) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "hot-trend-chip";
+
+    chip.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      activateTab("news");
+      loadTopNews();
+    };
+
+    const badge = row.is_hot ? "🔥" : "🚀";
+
+    chip.innerHTML = `
+      <strong>${idx + 1}</strong>
+      ${row.keyword}
+      ${badge}
+    `;
+
+    hotEl.appendChild(chip);
+  });
+}
 
   // 🔁 이전 순위 저장
   const previousRanks = new Map();
@@ -98,88 +152,6 @@ tabs.forEach(btn => {
     }
   });
 });
-
-/* =========================
-   🔥 HOT TRENDS (NAVER DATA LAB)
-   SOURCE: Edge Function /trends
-========================= */
-async function loadHotTrends() {
-  const hotEl = document.getElementById("hot-trend-chips");
-  const hotGrid = document.getElementById("hot-results");
-
-  if (!hotEl || !hotGrid) {
-    console.error("[HOT] missing DOM");
-    return;
-  }
-
-  hotEl.innerHTML = `<p style="color:#777;font-size:13px;">트렌드 불러오는 중...</p>`;
-  hotGrid.innerHTML = "";
-
-  try {
-    const endpoint = `${SUPABASE_PROJECT_URL}/functions/v1/trends`;
-    console.log("[HOT] fetch endpoint =", endpoint);
-
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        keywords: ["금리", "부동산", "주식"]
-      })
-    });
-
-    const json = await res.json();
-    console.log("[HOT TRENDS RAW]", json);
-
-    if (!json?.results || json.results.length === 0) {
-      hotEl.innerHTML =
-        `<p style="color:#777;font-size:13px;">표시할 트렌드가 없습니다.</p>`;
-      return;
-    }
-
-    // 👉 최신 날짜 기준 ratio 추출
-    const ranked = json.results.map(item => {
-      const last = item.data[item.data.length - 1];
-      return {
-        keyword: item.title,
-        ratio: last?.ratio ?? 0
-      };
-    })
-    .sort((a, b) => b.ratio - a.ratio)
-    .slice(0, 10);
-
-    hotEl.innerHTML = "";
-
-    ranked.forEach((row, idx) => {
-      const chip = document.createElement("button");
-      chip.setAttribute("aria-label", "hot trend");
-      chip.type = "button"; // 🔥 폼/링크 기본 동작 차단
-      chip.className = "hot-trend-chip";
-
-      chip.addEventListener("click", (e) => {
-        e.preventDefault();     // 🔥 기본 네비게이션 차단
-        e.stopPropagation();    // 🔥 상위 클릭 전파 차단
-
-        activateTab("news");
-        loadTopNews();
-      });
-
-      let badge = "↑";
-      if (idx === 0) badge = "🔥";
-      else if (idx < 3) badge = "🚀";
-
-      chip.innerHTML = `<strong>${idx + 1}</strong> ${row.keyword} ${badge}`;
-
-      hotEl.appendChild(chip);
-    });
-
-  } catch (err) {
-    console.error("[HOT] fetch error", err);
-    hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">트렌드를 불러오지 못했습니다.</p>`;
-  }
-}
 
   /* =========================
      🔮 AI TRENDS
@@ -536,6 +508,7 @@ document.body.style.overflow = "hidden";
 ========================= */
 document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
   btn.addEventListener("click", e => {
+  if (!e.currentTarget.contains(e.target)) return;
     e.preventDefault();
     e.stopPropagation(); // 🔥 이게 핵심이다
 
