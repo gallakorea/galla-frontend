@@ -153,18 +153,22 @@ async function loadHotTrends() {
 
     ranked.forEach((row, idx) => {
       const chip = document.createElement("button");
+      chip.type = "button"; // 🔥 폼/링크 기본 동작 차단
       chip.className = "hot-trend-chip";
+
+      chip.addEventListener("click", (e) => {
+        e.preventDefault();     // 🔥 기본 네비게이션 차단
+        e.stopPropagation();    // 🔥 상위 클릭 전파 차단
+
+        activateTab("news");
+        loadTopNews();
+      });
 
       let badge = "↑";
       if (idx === 0) badge = "🔥";
       else if (idx < 3) badge = "🚀";
 
       chip.innerHTML = `<strong>${idx + 1}</strong> ${row.keyword} ${badge}`;
-
-      chip.onclick = () => {
-        activateTab("news");
-        loadTopNews();
-      };
 
       hotEl.appendChild(chip);
     });
