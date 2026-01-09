@@ -4,61 +4,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
 
 
-  async function loadHotTrends() {
-  const hotEl = document.getElementById("hot-trend-chips");
-  const hotGrid = document.getElementById("hot-results");
-
-  if (!hotEl || !hotGrid) {
-    console.error("[HOT] missing DOM");
-    return;
-  }
-
-  hotEl.innerHTML = `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
-  hotGrid.innerHTML = "";
-
-  const { data, error } = await supabase.functions.invoke(
-    "get_search_trends"
-  );
-
-  if (error) {
-    console.error("[HOT] invoke error", error);
-    hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">트렌드 불러오기 실패</p>`;
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">표시할 트렌드 없음</p>`;
-    return;
-  }
-
-  hotEl.innerHTML = "";
-
-  data.slice(0, 10).forEach((row, idx) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "hot-trend-chip";
-
-    chip.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      activateTab("news");
-      loadTopNews();
-    };
-
-    const badge = row.is_hot ? "🔥" : "🚀";
-
-    chip.innerHTML = `
-      <strong>${idx + 1}</strong>
-      ${row.keyword}
-      ${badge}
-    `;
-
-    hotEl.appendChild(chip);
-  });
-}
-
   // 🔁 이전 순위 저장
   const previousRanks = new Map();
 
@@ -152,6 +97,55 @@ tabs.forEach(btn => {
     }
   });
 });
+
+async function loadHotTrends() {
+  const hotEl = document.getElementById("hot-trend-chips");
+  const hotGrid = document.getElementById("hot-results");
+
+  if (!hotEl || !hotGrid) {
+    console.error("[HOT] missing DOM");
+    return;
+  }
+
+  hotEl.innerHTML = `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
+  hotGrid.innerHTML = "";
+
+  const { data, error } =
+    await supabase.functions.invoke("get_search_trends");
+
+  if (error) {
+    console.error("[HOT] invoke error", error);
+    hotEl.innerHTML =
+      `<p style="color:#777;font-size:13px;">트렌드 불러오기 실패</p>`;
+    return;
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    hotEl.innerHTML =
+      `<p style="color:#777;font-size:13px;">표시할 트렌드 없음</p>`;
+    return;
+  }
+
+  hotEl.innerHTML = "";
+
+  data.slice(0, 10).forEach((row, idx) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "hot-trend-chip";
+
+    chip.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      activateTab("news");
+      loadTopNews();
+    });
+
+    chip.innerHTML =
+      `<strong>${idx + 1}</strong> ${row.keyword} ${row.is_hot ? "🔥" : "🚀"}`;
+
+    hotEl.appendChild(chip);
+  });
+}
 
   /* =========================
      🔮 AI TRENDS
