@@ -95,57 +95,80 @@ tabs.forEach(btn => {
 });
 
 /* =========================
-   🔥 HOT TRENDS (REALTIME)
+   🔥 HOT TRENDS (NAVER DATA LAB)
+   SOURCE: Edge Function /trends
 ========================= */
 async function loadHotTrends() {
-  const supabase = window.supabaseClient;
   const hotEl = document.getElementById("hot-trend-chips");
   const hotGrid = document.getElementById("hot-results");
 
-  if (!supabase || !hotEl || !hotGrid) {
-    console.error("[HOT] missing supabase or DOM");
+  if (!hotEl || !hotGrid) {
+    console.error("[HOT] missing DOM");
     return;
   }
 
-  const { data, error } = await supabase
-    .from("realtime_search_keywords")
-    .select("issue_id, keyword, rank_score")
-    .order("rank_score", { ascending: false })
-    .limit(10);
-
-  if (error) {
-    console.error("[HOT] load error", error);
-    hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">트렌드를 불러오지 못했습니다.</p>`;
-    return;
-  }
-
-  hotEl.innerHTML = "";
+  hotEl.innerHTML = `<p style="color:#777;font-size:13px;">트렌드 불러오는 중...</p>`;
   hotGrid.innerHTML = "";
 
-  if (!data || data.length === 0) {
+  try {
+    const res = await fetch(
+      "https://<PROJECT_REF>.supabase.co/functions/v1/trends",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          keywords: ["금리", "부동산", "주식"]
+        })
+      }
+    );
+
+    const json = await res.json();
+    console.log("[HOT TRENDS RAW]", json);
+
+    if (!json?.results || json.results.length === 0) {
+      hotEl.innerHTML =
+        `<p style="color:#777;font-size:13px;">표시할 트렌드가 없습니다.</p>`;
+      return;
+    }
+
+    // 👉 최신 날짜 기준 ratio 추출
+    const ranked = json.results.map(item => {
+      const last = item.data[item.data.length - 1];
+      return {
+        keyword: item.title,
+        ratio: last?.ratio ?? 0
+      };
+    })
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, 10);
+
+    hotEl.innerHTML = "";
+
+    ranked.forEach((row, idx) => {
+      const chip = document.createElement("button");
+      chip.className = "hot-trend-chip";
+
+      let badge = "↑";
+      if (idx === 0) badge = "🔥";
+      else if (idx < 3) badge = "🚀";
+
+      chip.innerHTML = `<strong>${idx + 1}</strong> ${row.keyword} ${badge}`;
+
+      chip.onclick = () => {
+        activateTab("news");
+        loadTopNews();
+      };
+
+      hotEl.appendChild(chip);
+    });
+
+  } catch (err) {
+    console.error("[HOT] fetch error", err);
     hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">현재 계산된 트렌드가 없습니다.</p>`;
-    return;
+      `<p style="color:#777;font-size:13px;">트렌드를 불러오지 못했습니다.</p>`;
   }
-
-  data.forEach((row, idx) => {
-    const chip = document.createElement("button");
-    chip.className = "hot-trend-chip";
-
-    let badge = "↑";
-    if (idx === 0) badge = "🔥";
-    else if (idx < 3) badge = "🚀";
-
-    chip.innerHTML = `<strong>${idx + 1}</strong> ${row.keyword} ${badge}`;
-
-    chip.onclick = () => {
-      activateTab("news");
-      loadTopNews();
-    };
-
-    hotEl.appendChild(chip);
-  });
 }
 
   /* =========================
