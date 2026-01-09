@@ -116,18 +116,18 @@ async function loadHotTrends() {
   hotGrid.innerHTML = "";
 
   try {
-    const res = await fetch(
-      `${SUPABASE_PROJECT_URL}/functions/v1/trends`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          keywords: ["금리", "부동산", "주식"]
-        })
-      }
-    );
+    const endpoint = `${SUPABASE_PROJECT_URL}/functions/v1/trends`;
+    console.log("[HOT] fetch endpoint =", endpoint);
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        keywords: ["금리", "부동산", "주식"]
+      })
+    });
 
     const json = await res.json();
     console.log("[HOT TRENDS RAW]", json);
@@ -153,6 +153,7 @@ async function loadHotTrends() {
 
     ranked.forEach((row, idx) => {
       const chip = document.createElement("button");
+      chip.setAttribute("aria-label", "hot trend");
       chip.type = "button"; // 🔥 폼/링크 기본 동작 차단
       chip.className = "hot-trend-chip";
 
