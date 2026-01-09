@@ -70,6 +70,7 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
 tabs.forEach(btn => {
   btn.addEventListener("click", (e) => {
     e.preventDefault(); // ✅ 🔥 핵심: 인덱스 이동 차단
+    e.stopPropagation(); // 🔥🔥🔥 이 줄 추가 (진짜 핵심)
 
     const tab = btn.dataset.tab;
     console.log("[TAB CLICK]", tab);
