@@ -1,4 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
+  const SUPABASE_PROJECT_URL = "https://bidqaputhnkqepvdzrr.supabase.co";
   // 🔁 이전 순위 저장 (issue_id → rank)
   const previousRanks = new Map();
 
@@ -113,7 +114,7 @@ async function loadHotTrends() {
 
   try {
     const res = await fetch(
-      "https://<PROJECT_REF>.supabase.co/functions/v1/trends",
+      `${SUPABASE_PROJECT_URL}/functions/v1/trends`,
       {
         method: "POST",
         headers: {
