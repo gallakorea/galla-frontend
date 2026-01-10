@@ -477,3 +477,26 @@ body[data-page="search"] .header-inner {
   background: #444;
   color: #fff;
 }
+
+.news-category-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0 12px;
+}
+
+.news-category-chips button {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #333;
+}
+
+.news-category-chips button.active {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}

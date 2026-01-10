@@ -85,6 +85,7 @@ tabs.forEach(btn => {
       hasMoreNews = true;
       isLoadingNews = false;
       document.getElementById("top-news-list").innerHTML = "";
+      renderNewsCategoryChips();
       loadTopNews();
     }
 
@@ -190,6 +191,43 @@ const NEWS_PAGE_SIZE = 10;
 let isLoadingNews = false;
 let hasMoreNews = true;
 
+/* =========================
+   🏷 NEWS CATEGORY CHIPS
+========================= */
+const NEWS_CATEGORIES = ["전체", "정치", "경제", "사회", "국제", "연예", "스포츠"];
+let currentNewsCategory = "전체";
+
+function renderNewsCategoryChips() {
+  const wrap = document.getElementById("news-category-chips");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+
+  NEWS_CATEGORIES.forEach(cat => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = cat;
+    if (cat === currentNewsCategory) btn.classList.add("active");
+
+    btn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      currentNewsCategory = cat;
+      renderNewsCategoryChips();
+
+      newsPage = 0;
+      hasMoreNews = true;
+      isLoadingNews = false;
+      const list = document.getElementById("top-news-list");
+      if (list) list.innerHTML = "";
+      loadTopNews();
+    });
+
+    wrap.appendChild(btn);
+  });
+}
+
 async function loadTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
@@ -200,7 +238,7 @@ async function loadTopNews() {
   const from = newsPage * NEWS_PAGE_SIZE;
   const to = from + NEWS_PAGE_SIZE - 1;
 
-  const { data, error } = await supabase
+  let query = supabase
     .from("news_issues")
     .select(`
       id,
@@ -208,10 +246,16 @@ async function loadTopNews() {
       issue_summary,
       thumbnail_url,
       articles_count,
-      last_article_at
+      last_article_at,
+      category
     `)
-    .order("last_article_at", { ascending: false })
-    .range(from, to);
+    .order("last_article_at", { ascending: false });
+
+  if (currentNewsCategory !== "전체") {
+    query = query.eq("category", currentNewsCategory);
+  }
+
+  const { data, error } = await query.range(from, to);
 
   if (error) {
     console.error("[REALTIME NEWS ERROR]", error);
@@ -477,6 +521,8 @@ document.body.style.overflow = "hidden";
   // INIT (FORCE NEWS RENDER)
   // =========================
   activateTab("news");
+  renderNewsCategoryChips();
+  loadTopNews();
 
   // 🔥 즉시 실시간 탑 뉴스 렌더
   loadTopNews();
