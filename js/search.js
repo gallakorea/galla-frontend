@@ -192,9 +192,20 @@ let isLoadingNews = false;
 let hasMoreNews = true;
 
 /* =========================
-   🏷 NEWS CATEGORY CHIPS
+   🏷 NEWS CATEGORY CHIPS (NAVER STANDARD)
 ========================= */
-const NEWS_CATEGORIES = ["전체", "정치", "경제", "사회", "국제", "연예", "스포츠"];
+const NEWS_CATEGORIES = [
+  "전체",
+  "정치",
+  "경제",
+  "사회",
+  "생활문화",
+  "세계",
+  "IT과학",
+  "연예",
+  "스포츠"
+];
+
 let currentNewsCategory = "전체";
 
 function renderNewsCategoryChips() {
