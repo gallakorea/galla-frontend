@@ -179,9 +179,6 @@ async function loadHotTrends() {
     });
   }
 
-  /* =========================
-     📰 REALTIME NEWS
-  ========================= */
 /* =========================
    📰 REALTIME TOP NEWS (FIXED)
 ========================= */
@@ -190,6 +187,20 @@ let newsPage = 0;
 const NEWS_PAGE_SIZE = 10;
 let isLoadingNews = false;
 let hasMoreNews = true;
+
+// 🔄 강제 새로고침 (자동 갱신 전용)
+function refreshTopNews() {
+  const list = document.getElementById("top-news-list");
+  if (!list) return;
+
+  // 🔥 상태 전부 리셋
+  newsPage = 0;
+  hasMoreNews = true;
+  isLoadingNews = false;
+
+  list.innerHTML = "";
+  loadTopNews();
+}
 
 /* =========================
    🏷 NEWS CATEGORY CHIPS (NAVER STANDARD)
@@ -542,11 +553,11 @@ document.body.style.overflow = "hidden";
   loadHotTrends();
   loadAITrends();
 
-  // 🕒 60초마다 자동 갱신 (실시간 느낌)
+  // 🕒 60초마다 자동 갱신 (DB 기준 최신 반영)
   setInterval(() => {
     const activeTab = document.querySelector(".tab-item.active")?.dataset.tab;
     if (activeTab === "news") {
-      loadTopNews();
+      refreshTopNews(); // 🔥 반드시 이걸 써야 함
     }
   }, 60000);
 
