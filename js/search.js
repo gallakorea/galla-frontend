@@ -334,28 +334,12 @@ async function loadTopNews() {
       badge = `<span class="trend-badge steady">📌 유지</span>`;
     }
 
-        card.onclick = async () => {
-      // 기사 여러 개 → 모달
-      if (item.articles_count && item.articles_count > 1) {
-        openNewsModal(item.id);
-        return;
-      }
+    card.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-      // 기사 1개 → 바로 기사 열기
-      const { data, error } = await supabase
-        .from("news_articles")
-        .select("url")
-        .eq("issue_id", item.id)
-        .order("published_at", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (error || !data?.url) {
-        console.error("[SINGLE NEWS OPEN ERROR]", error);
-        return;
-      }
-
-      openNewsViewer(data.url);
+      // 🔥 무조건 모달로 보낸다
+      openNewsModal(item.id);
     };
 
     card.innerHTML = `
