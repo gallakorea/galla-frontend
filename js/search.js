@@ -217,6 +217,17 @@ const NEWS_CATEGORIES = [
   "스포츠"
 ];
 
+const CATEGORY_SID_MAP = {
+  "정치": 100,
+  "경제": 101,
+  "사회": 102,
+  "생활문화": 103,
+  "세계": 104,
+  "IT과학": 105,
+  "연예": 106,
+  "스포츠": 107
+};
+
 let currentNewsCategory = "전체";
 
 function renderNewsCategoryChips() {
@@ -261,20 +272,22 @@ async function loadTopNews() {
   const to = from + NEWS_PAGE_SIZE - 1;
 
   let query = supabase
-    .from("news_issues")
+    .from("related_groups")
     .select(`
       id,
-      issue_title,
-      issue_summary,
-      thumbnail_url,
+      sid,
+      representative_title,
+      representative_summary,
       articles_count,
-      last_article_at,
-      category
+      last_article_at
     `)
     .order("last_article_at", { ascending: false });
 
   if (currentNewsCategory !== "전체") {
-    query = query.eq("category", currentNewsCategory);
+    query = query.eq(
+      "sid",
+      CATEGORY_SID_MAP[currentNewsCategory]
+    );
   }
 
   const { data, error } = await query.range(from, to);
@@ -346,18 +359,16 @@ async function loadTopNews() {
       ${thumb}
       <div class="news-body">
         <h3 class="news-title">
-          ${item.issue_title}
+          ${item.representative_title}
           ${badge}
         </h3>
 
       <p class="news-summary clamp-3">
-        ${item.issue_summary
-          ? item.issue_summary
-          : "관련 기사 요약을 준비 중입니다."}
+        ${item.representative_summary || "관련 기사 요약을 준비 중입니다."}
       </p>
 
         <div class="news-meta">
-          <span>📰 ${item.articles_6h}건</span>
+          <span>📰 ${item.articles_count}건</span>
           <span>⏱ ${timeAgo(item.last_article_at)}</span>
         </div>
       </div>
@@ -431,8 +442,8 @@ function timeAgo(date) {
   /* =========================
      📰 OPEN NEWS MODAL
   ========================= */
-async function openNewsModal(issueId) {
-  if (!issueId || !newsModal) return;
+async function openNewsModal(groupId) {
+  if (!groupId || !newsModal) return;
 
   // ✅ 모달 표시 (CSS만 믿는다)
 newsModal.classList.add("active");
@@ -443,9 +454,9 @@ document.body.style.overflow = "hidden";
     `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
 
   const { data, error } = await supabase
-    .from("news_articles")
+    .from("news_articles_raw")
     .select("id, title, published_at, url") // 🔥 source_url ❌ → url ✅
-    .eq("issue_id", issueId)
+    .eq("related_group_id", groupId)
     .order("published_at", { ascending: false })
     .limit(30);
 
