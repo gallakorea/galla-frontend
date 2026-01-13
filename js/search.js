@@ -273,14 +273,9 @@ async function loadTopNews() {
 
   let query = supabase
     .from("related_groups")
-    .select(`
-      id,
-      sid,
-      representative_title,
-      representative_summary,
-      articles_count,
-      last_article_at
-    `)
+    .select(
+      "id, sid, summary, articles_count, last_article_at"
+    )
     .order("last_article_at", { ascending: false });
 
   if (currentNewsCategory !== "전체") {
@@ -291,6 +286,7 @@ async function loadTopNews() {
   }
 
   const { data, error } = await query.range(from, to);
+  console.log("[REALTIME NEWS DATA]", data);
 
   if (error) {
     console.error("[REALTIME NEWS ERROR]", error);
@@ -329,11 +325,11 @@ async function loadTopNews() {
     card.innerHTML = `
       <div class="news-body">
         <h3 class="news-title">
-          ${item.representative_title}
+          ${item.summary ? item.summary.slice(0, 60) : "관련 뉴스 묶음"}
         </h3>
 
         <p class="news-summary clamp-3">
-          ${item.representative_summary || "관련 기사 요약을 준비 중입니다."}
+          ${item.summary || "관련 기사 요약을 준비 중입니다."}
         </p>
 
         <div class="news-meta">
