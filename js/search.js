@@ -276,8 +276,8 @@ async function loadTopNews() {
     .select(`
       id,
       sid,
-      title,
-      summary,
+      representative_title,
+      representative_summary,
       articles_count,
       last_article_at
     `)
@@ -329,11 +329,11 @@ async function loadTopNews() {
     card.innerHTML = `
       <div class="news-body">
         <h3 class="news-title">
-          ${item.title}
+          ${item.representative_title}
         </h3>
 
         <p class="news-summary clamp-3">
-          ${item.summary || "관련 기사 요약을 준비 중입니다."}
+          ${item.representative_summary || "관련 기사 요약을 준비 중입니다."}
         </p>
 
         <div class="news-meta">
