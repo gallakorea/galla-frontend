@@ -320,52 +320,21 @@ async function loadTopNews() {
     const card = document.createElement("div");
     card.className = "news-card";
 
-    const thumbnailUrl = item.thumbnail_url
-  ? item.thumbnail_url.startsWith("//")
-    ? "https:" + item.thumbnail_url
-    : item.thumbnail_url
-  : null;
-
-    const thumb = thumbnailUrl
-      ? `
-        <div class="news-thumbnail">
-          <img src="${thumbnailUrl}" alt="">
-        </div>
-      `
-      : `
-        <div class="news-thumbnail placeholder"></div>
-      `;
-          
-
-    // 🔥 트렌드 배지
-    let badge = "";
-    if (item.articles_1h >= 3) {
-      badge = `<span class="trend-badge hot">🔥 급상승</span>`;
-    } else if (item.articles_6h >= 5 && item.articles_1h >= 1) {
-      badge = `<span class="trend-badge strong">🚀 강세</span>`;
-    } else if (item.articles_6h >= 3) {
-      badge = `<span class="trend-badge steady">📌 유지</span>`;
-    }
-
     card.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-
-      // 🔥 무조건 모달로 보낸다
       openNewsModal(item.id);
     };
 
     card.innerHTML = `
-      ${thumb}
       <div class="news-body">
         <h3 class="news-title">
           ${item.representative_title}
-          ${badge}
         </h3>
 
-      <p class="news-summary clamp-3">
-        ${item.representative_summary || "관련 기사 요약을 준비 중입니다."}
-      </p>
+        <p class="news-summary clamp-3">
+          ${item.representative_summary || "관련 기사 요약을 준비 중입니다."}
+        </p>
 
         <div class="news-meta">
           <span>📰 ${item.articles_count}건</span>
