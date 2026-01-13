@@ -274,9 +274,10 @@ async function loadTopNews() {
   let query = supabase
     .from("related_groups")
     .select(
-      "id, sid, summary, articles_count, last_article_at"
+      "id, sid, articles_count, last_article_at"
     )
     .order("last_article_at", { ascending: false });
+    
 
   if (currentNewsCategory !== "전체") {
     query = query.eq(
@@ -324,12 +325,10 @@ async function loadTopNews() {
 
     card.innerHTML = `
       <div class="news-body">
-        <h3 class="news-title">
-          ${item.summary ? item.summary.slice(0, 60) : "관련 뉴스 묶음"}
-        </h3>
+        <h3 class="news-title">관련 뉴스 묶음</h3>
 
         <p class="news-summary clamp-3">
-          ${item.summary || "관련 기사 요약을 준비 중입니다."}
+          여러 매체의 최신 기사를 한데 모았습니다.
         </p>
 
         <div class="news-meta">
@@ -338,6 +337,7 @@ async function loadTopNews() {
         </div>
       </div>
     `;
+
 
     list.appendChild(card);
   });
