@@ -347,11 +347,10 @@ grouped.forEach(group => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (isGroup) {
-      openNewsModal(대표기사.related_group_id);
-    } else {
-      openNewsViewer(대표기사.url);
-    }
+    // 🔥 모든 기사 클릭 = 모달
+    openNewsModal(
+      대표기사.related_group_id ?? 대표기사.id
+    );
   };
 
   card.innerHTML = `
@@ -460,8 +459,10 @@ document.body.style.overflow = "hidden";
 
   const { data, error } = await supabase
     .from("news_articles_raw")
-    .select("id, title, published_at, url") // 🔥 source_url ❌ → url ✅
-    .eq("related_group_id", groupId)
+    .select("id, title, published_at, url, related_group_id")
+    .or(
+      `related_group_id.eq.${groupId},id.eq.${groupId}`
+    )
     .order("published_at", { ascending: false })
     .limit(30);
 
