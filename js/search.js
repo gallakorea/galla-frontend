@@ -73,10 +73,15 @@ newsModalBackdrop?.addEventListener("click", closeNewsModal);
     );
 
     panels.forEach(panel => {
-      panel.classList.toggle(
-        "active",
-        panel.dataset.panel === name
-      );
+      const isActive = panel.dataset.panel === name;
+      panel.classList.toggle("active", isActive);
+
+      // 🔥 핫트렌드 탭 활성화 직후 강제 로딩
+      if (isActive && name === "hot") {
+        requestAnimationFrame(() => {
+          loadHotTrends();
+        });
+      }
     });
   }
 
@@ -99,10 +104,6 @@ tabs.forEach(btn => {
       loadTopNews();
     }
 
-    if (tab === "hot") {
-      loadHotTrends();
-    }
-
     if (tab === "ai") {
       loadAITrends();
     }
@@ -112,6 +113,8 @@ tabs.forEach(btn => {
 async function loadHotTrends() {
   const hotEl = document.getElementById("hot-trend-chips");
   if (!hotEl) return;
+  // 🔥 inactive 상태여도 강제로 보이게
+  hotEl.style.display = "block";
 
   hotEl.innerHTML =
     `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
@@ -129,8 +132,11 @@ async function loadHotTrends() {
   }
 
   if (!data || data.length === 0) {
-    hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">현재 핫트렌드 없음</p>`;
+    hotEl.innerHTML = `
+      <p style="color:#777;font-size:13px;">
+        최근 6시간 내 핫트렌드가 없습니다.
+      </p>
+    `;
     return;
   }
 
