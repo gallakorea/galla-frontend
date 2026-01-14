@@ -329,62 +329,37 @@ async function loadTopNews() {
     grouped.get(key).push(article);
   });
 
-  let rendered = 0;
+grouped.forEach(group => {
 
-  grouped.forEach(group => {
-    if (rendered >= 10) return;
-    rendered++;
+  group.sort(
+    (a, b) => new Date(a.published_at) - new Date(b.published_at)
+  );
 
-    // 1️⃣ 대표 기사 선택 규칙
-    // - 기본: 가장 오래된 기사
-    // - 단, 썸네일 없으면 다음 기사 중 thumbnail 있는 기사로 대체
-    group.sort(
-      (a, b) => new Date(a.published_at) - new Date(b.published_at)
-    );
+  const 대표기사 =
+    group.find(a => a.thumbnail_url && a.thumbnail_url.trim() !== "") ||
+    group[0];
 
-    let 대표기사 =
-      group.find(a => a.thumbnail_url && a.thumbnail_url.trim() !== "") ||
-      group[0];
+  const hasThumb =
+    대표기사.thumbnail_url &&
+    대표기사.thumbnail_url.trim() !== "";
 
-    const hasThumb =
-      대표기사.thumbnail_url &&
-      대표기사.thumbnail_url.trim() !== "";
+  const card = document.createElement("div");
+  card.className = "news-card";
 
-    const thumbHtml = hasThumb
-      ? `<img src="${대표기사.thumbnail_url}" alt="" loading="lazy"
-             onerror="this.parentElement.classList.add('placeholder'); this.remove();" />`
-      : "";
-
-    const card = document.createElement("div");
-    card.className = "news-card";
-
-    card.onclick = e => {
-      e.preventDefault();
-      e.stopPropagation();
-      openNewsModal(대표기사.related_group_id ?? 대표기사.id);
-    };
-
-    card.innerHTML = `
-      <div class="news-thumb-wrap ${hasThumb ? "" : "placeholder"}">
-        ${thumbHtml}
+  card.innerHTML = `
+    <div class="news-thumb-wrap ${hasThumb ? "" : "placeholder"}">
+      ${hasThumb ? `<img src="${대표기사.thumbnail_url}" />` : ""}
+    </div>
+    <div class="news-info">
+      <h3>${대표기사.title}</h3>
+      <div class="news-meta">
+        관련기사 ${group.length}건
       </div>
+    </div>
+  `;
 
-      <div class="news-info">
-        <h3 class="news-title clamp-2">
-          ${대표기사.title}
-        </h3>
-
-        <div class="news-meta">
-          <span class="news-count">
-            관련기사 ${group.length}건
-          </span>
-        </div>
-      </div>
-    `;
-
-
-    list.appendChild(card);
-  });
+  list.appendChild(card);
+});
 }
 
 // 🔧 SAFE FALLBACK: hot trend click handler
