@@ -184,7 +184,7 @@ async function loadHotTrends() {
 ========================= */
 
 let newsPage = 0;
-const NEWS_PAGE_SIZE = 10;
+const NEWS_PAGE_SIZE = 30;
 let isLoadingNews = false;
 let hasMoreNews = true;
 
@@ -281,7 +281,8 @@ async function loadTopNews() {
       related_group_id,
       sid
     `)
-    .order("published_at", { ascending: false });
+    .order("related_group_id", { ascending: false, nullsFirst: false })
+    .order("published_at", { ascending: true });
 
   if (currentNewsCategory !== "전체") {
     query = query.eq(
@@ -327,7 +328,12 @@ async function loadTopNews() {
     grouped.get(key).push(article);
   });
 
+  let rendered = 0;
+
   grouped.forEach(group => {
+    if (rendered >= 10) return;
+    rendered++;
+
     // 대표 기사 = 가장 오래된 기사
     group.sort(
       (a, b) => new Date(a.published_at) - new Date(b.published_at)
