@@ -300,7 +300,7 @@ async function loadTopNews() {
       related_group_id,
       sid
     `)
-    .order("created_at", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
     .order("id", { ascending: false });
 
   if (currentNewsCategory !== "전체") {
