@@ -278,12 +278,13 @@ async function loadTopNews() {
       id,
       title,
       published_at,
+      created_at,
       url,
       thumbnail_url,
       related_group_id,
       sid
     `)
-    .order("published_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .order("id", { ascending: false });
 
   if (currentNewsCategory !== "전체") {
