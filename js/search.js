@@ -13,24 +13,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 const tabs = document.querySelectorAll(".tab-item");
 const panels = document.querySelectorAll(".tab-panel");
 
-  /* =========================
-     LOGO CLICK FIX (SEARCH PAGE)
-  ========================= */
-  const searchLogo = document.getElementById("search-logo");
-  if (searchLogo) {
-    searchLogo.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // 기본 진입은 핫트렌드
-      activateTab("hot");
-      loadHotTrends();
-
-      // 스크롤 상단 고정
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  }
-
   const hotEl = document.getElementById("hot-trend-chips");
   const hotGrid = document.getElementById("hot-results");
 
