@@ -318,35 +318,50 @@ async function loadTopNews() {
   newsPage += 1;
   isLoadingNews = false;
 
-  data.forEach(row => {
+  // 🔥 프론트 그룹핑 (related_group_id 기준)
+  const grouped = new Map();
+
+  data.forEach(article => {
+    const key = article.related_group_id ?? article.id;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(article);
+  });
+
+  grouped.forEach(group => {
+    // 대표 기사 = 가장 오래된 기사
+    group.sort(
+      (a, b) => new Date(a.published_at) - new Date(b.published_at)
+    );
+
+    const 대표기사 = group[0];
+    const isGroup = group.length > 1;
+
     const card = document.createElement("div");
     card.className = "news-card";
 
     card.onclick = e => {
       e.preventDefault();
       e.stopPropagation();
-      openNewsModal(row.group_key);
+      openNewsModal(대표기사.related_group_id ?? 대표기사.id);
     };
 
     card.innerHTML = `
       <div class="news-body">
-        <h3 class="news-title">${row.title}</h3>
+        <h3 class="news-title">${대표기사.title}</h3>
+
         <p class="news-summary clamp-2">
           ${
-            row.articles_count > 1
+            isGroup
               ? "여러 매체의 관련 기사를 한데 모았습니다."
               : "단일 기사"
           }
         </p>
+
         <div class="news-meta">
           <span>
-            ${
-              row.articles_count > 1
-                ? `📰 ${row.articles_count}건`
-                : "📰 단일 기사"
-            }
+            ${isGroup ? `📰 ${group.length}건` : "📰 단일 기사"}
           </span>
-          <span>⏱ ${timeAgo(row.first_published_at)}</span>
+          <span>⏱ ${timeAgo(대표기사.published_at)}</span>
         </div>
       </div>
     `;
