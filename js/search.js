@@ -187,7 +187,7 @@ let newsPage = 0;
 const NEWS_PAGE_SIZE = 30;
 let isLoadingNews = false;
 let hasMoreNews = true;
-let lastTopNewsId = null;
+
 
 // 🔄 강제 새로고침 (자동 갱신 전용)
 function refreshTopNews() {
@@ -294,13 +294,14 @@ async function loadTopNews() {
   }
 
   const { data, error } = await query.range(from, to);
+
   if (newsPage === 0 && data && data.length > 0) {
-    const newestId = data[0].id;
-    if (lastTopNewsId && lastTopNewsId === newestId) {
-      isLoadingNews = false;
-      return;
-    }
-    lastTopNewsId = newestId;
+    console.log(
+      "[TOP NEWS DEBUG]",
+      "id:", data[0].id,
+      "published_at:", data[0].published_at,
+      "group:", data[0].related_group_id
+    );
   }
 
   console.log("[REALTIME NEWS DATA]", data);
