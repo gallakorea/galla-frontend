@@ -334,12 +334,17 @@ async function loadTopNews() {
     if (rendered >= 10) return;
     rendered++;
 
-    // 대표 기사 = 가장 오래된 기사
+    // 1️⃣ 대표 기사 선택 규칙
+    // - 기본: 가장 오래된 기사
+    // - 단, 썸네일 없으면 다음 기사 중 thumbnail 있는 기사로 대체
     group.sort(
       (a, b) => new Date(a.published_at) - new Date(b.published_at)
     );
-
-    const 대표기사 = group[0];
+    let 대표기사 = group[0];
+    if (!대표기사.thumbnail_url) {
+      const withThumb = group.find(a => a.thumbnail_url);
+      if (withThumb) 대표기사 = withThumb;
+    }
     const isGroup = group.length > 1;
 
     const card = document.createElement("div");
@@ -351,23 +356,27 @@ async function loadTopNews() {
       openNewsModal(대표기사.related_group_id ?? 대표기사.id);
     };
 
-    card.innerHTML = `
-      <div class="news-body">
-        <h3 class="news-title">${대표기사.title}</h3>
+    const thumb =
+      대표기사.thumbnail_url ||
+      "https://via.placeholder.com/300x180?text=NEWS";
 
-        <p class="news-summary clamp-2">
-          ${
-            isGroup
-              ? "여러 매체의 관련 기사를 한데 모았습니다."
-              : "단일 기사"
-          }
-        </p>
+    card.innerHTML = `
+      <div class="news-thumb">
+        <img src="${thumb}" alt="" loading="lazy" />
+      </div>
+
+      <div class="news-body">
+        <h3 class="news-title clamp-2">
+          ${대표기사.title}
+        </h3>
 
         <div class="news-meta">
-          <span>
-            ${isGroup ? `📰 ${group.length}건` : "📰 단일 기사"}
+          <span class="news-count">
+            📰 관련기사 ${group.length}건
           </span>
-          <span>⏱ ${timeAgo(대표기사.published_at)}</span>
+          <span class="news-time">
+            ⏱ ${timeAgo(대표기사.published_at)}
+          </span>
         </div>
       </div>
     `;
