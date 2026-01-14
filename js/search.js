@@ -183,6 +183,16 @@ async function loadHotTrends() {
    📰 REALTIME TOP NEWS (FIXED)
 ========================= */
 
+function isValidThumbnail(url) {
+  if (!url) return false;
+  if (typeof url !== "string") return false;
+  const u = url.trim();
+  if (!u) return false;
+  if (u === "about:blank") return false;
+  if (!u.startsWith("http")) return false;
+  return true;
+}
+
 let newsPage = 0;
 const NEWS_PAGE_SIZE = 30;
 let isLoadingNews = false;
@@ -348,12 +358,10 @@ async function loadTopNews() {
 
     // 대표기사는 썸네일이 있는 기사 또는 첫번째 기사
     const 대표기사 =
-      group.find(a => a.thumbnail_url && a.thumbnail_url.trim() !== "") ||
+      group.find(a => isValidThumbnail(a.thumbnail_url)) ||
       group[0];
 
-    const hasThumb =
-      대표기사.thumbnail_url &&
-      대표기사.thumbnail_url.trim() !== "";
+    const hasThumb = isValidThumbnail(대표기사.thumbnail_url);
 
     const card = document.createElement("div");
     card.className = "news-card";
@@ -371,21 +379,21 @@ async function loadTopNews() {
     });
 
     card.innerHTML = `
-      <div class="news-thumb-16x9">
-        ${
-          hasThumb
-            ? `
+      ${
+        hasThumb
+          ? `
+            <div class="news-thumb-16x9">
               <img
                 src="${대표기사.thumbnail_url}"
                 alt="thumbnail"
                 loading="lazy"
-                onerror="this.style.display='none'; this.parentElement.classList.add('no-thumb')"
+                referrerpolicy="no-referrer"
+                onerror="this.closest('.news-thumb-16x9')?.remove()"
               />
-            `
-            : ``
-        }
-      </div>
-
+            </div>
+          `
+          : ``
+      }
       <div class="news-text">
         <h3 class="news-title">
           ${대표기사.title}
