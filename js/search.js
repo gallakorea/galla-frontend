@@ -101,48 +101,48 @@ tabs.forEach(btn => {
 
 async function loadHotTrends() {
   const hotEl = document.getElementById("hot-trend-chips");
-  const hotGrid = document.getElementById("hot-results");
+  if (!hotEl) return;
 
-  if (!hotEl || !hotGrid) {
-    console.error("[HOT] missing DOM");
-    return;
-  }
+  hotEl.innerHTML =
+    `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
 
-  hotEl.innerHTML = `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
-  hotGrid.innerHTML = "";
-
-  const { data, error } =
-    await supabase.functions.invoke("get_search_trends");
+  const { data, error } = await supabase
+    .from("hot_trend_groups_6h")
+    .select("group_id, title, article_count")
+    .limit(10);
 
   if (error) {
-    console.error("[HOT] invoke error", error);
+    console.error("[HOT TRENDS ERROR]", error);
     hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">트렌드 불러오기 실패</p>`;
+      `<p style="color:#777;font-size:13px;">핫트렌드 로딩 실패</p>`;
     return;
   }
 
-  if (!Array.isArray(data) || data.length === 0) {
+  if (!data || data.length === 0) {
     hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">표시할 트렌드 없음</p>`;
+      `<p style="color:#777;font-size:13px;">현재 핫트렌드 없음</p>`;
     return;
   }
 
   hotEl.innerHTML = "";
 
-  data.slice(0, 10).forEach((row, idx) => {
+  data.forEach((row, idx) => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "hot-trend-chip";
+
+    chip.innerHTML = `
+      <strong>${idx + 1}</strong>
+      ${row.title}
+      <span style="opacity:.7;">(${row.article_count})</span>
+    `;
 
     chip.addEventListener("click", e => {
       e.preventDefault();
       e.stopPropagation();
       activateTab("news");
-      loadTopNews();
+      openNewsModal(row.group_id);
     });
-
-    chip.innerHTML =
-      `<strong>${idx + 1}</strong> ${row.keyword} ${row.is_hot ? "🔥" : "🚀"}`;
 
     hotEl.appendChild(chip);
   });
