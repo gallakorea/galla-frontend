@@ -1,3 +1,13 @@
+// 썸네일 유효성 검사 유틸 함수
+function isValidThumbnail(url) {
+  if (!url) return false;
+  if (typeof url !== "string") return false;
+  const u = url.trim();
+  if (!u) return false;
+  if (u === "about:blank") return false;
+  if (!u.startsWith("http")) return false;
+  return true;
+}
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("SEARCH JS LOADED");
 
@@ -183,16 +193,6 @@ async function loadHotTrends() {
    📰 REALTIME TOP NEWS (FIXED)
 ========================= */
 
-function isValidThumbnail(url) {
-  if (!url) return false;
-  if (typeof url !== "string") return false;
-  const u = url.trim();
-  if (!u) return false;
-  if (u === "about:blank") return false;
-  if (!u.startsWith("http")) return false;
-  return true;
-}
-
 let newsPage = 0;
 const NEWS_PAGE_SIZE = 30;
 let isLoadingNews = false;
@@ -356,12 +356,14 @@ async function loadTopNews() {
       (a, b) => new Date(a.published_at) - new Date(b.published_at)
     );
 
-    // 대표기사는 썸네일이 있는 기사 또는 첫번째 기사
-    const 대표기사 =
-      group.find(a => isValidThumbnail(a.thumbnail_url)) ||
-      group[0];
+    // 대표기사는 썸네일이 유효한 기사만
+    const 대표기사 = group.find(a => isValidThumbnail(a.thumbnail_url));
 
-    const hasThumb = isValidThumbnail(대표기사.thumbnail_url);
+    if (!대표기사) {
+      return; // 🔥 썸네일 없는 뉴스 그룹은 렌더링 자체를 안 함
+    }
+
+    const hasThumb = true; // 여기까지 왔다는 건 썸네일이 있다는 뜻
 
     const card = document.createElement("div");
     card.className = "news-card";
@@ -379,21 +381,15 @@ async function loadTopNews() {
     });
 
     card.innerHTML = `
-      ${
-        hasThumb
-          ? `
-            <div class="news-thumb-16x9">
-              <img
-                src="${대표기사.thumbnail_url}"
-                alt="thumbnail"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-                onerror="this.closest('.news-thumb-16x9')?.remove()"
-              />
-            </div>
-          `
-          : ``
-      }
+      <div class="news-thumb-16x9">
+        <img
+          src="${대표기사.thumbnail_url}"
+          alt="thumbnail"
+          loading="lazy"
+          onerror="this.closest('.news-card')?.remove()"
+        />
+      </div>
+
       <div class="news-text">
         <h3 class="news-title">
           ${대표기사.title}
@@ -647,8 +643,5 @@ style.innerHTML = `
     display: block;
   }
 
-  .news-thumb-16x9.no-thumb {
-    background: linear-gradient(135deg, #222, #111);
-  }
 `;
 document.head.appendChild(style);
