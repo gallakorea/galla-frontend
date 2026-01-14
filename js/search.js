@@ -274,9 +274,9 @@ async function loadTopNews() {
   let query = supabase
     .from("related_groups")
     .select(
-      "id, sid, articles_count, last_article_at"
+      "id, sid, created_at"
     )
-    .order("last_article_at", { ascending: false });
+    .order("created_at", { ascending: false });
     
 
   if (currentNewsCategory !== "전체") {
@@ -332,8 +332,8 @@ async function loadTopNews() {
         </p>
 
         <div class="news-meta">
-          <span>📰 ${item.articles_count}건</span>
-          <span>⏱ ${timeAgo(item.last_article_at)}</span>
+          <span>📰 관련 기사 묶음</span>
+          <span>⏱ ${timeAgo(item.created_at)}</span>
         </div>
       </div>
     `;
