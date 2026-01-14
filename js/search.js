@@ -288,6 +288,10 @@ async function loadTopNews() {
   const from = newsPage * NEWS_PAGE_SIZE;
   const to = from + NEWS_PAGE_SIZE - 1;
 
+  const since = new Date(
+    Date.now() - 1000 * 60 * 60 * 24
+  ).toISOString();
+
   let query = supabase
     .from("news_articles_raw")
     .select(`
@@ -300,9 +304,11 @@ async function loadTopNews() {
       related_group_id,
       sid
     `)
-    .not("thumbnail_url", "is", null)   // ✅ 썸네일 없는 기사 DB 단계에서 제거
-    .order("published_at", { ascending: false, nullsFirst: false })
+    .not("thumbnail_url", "is", null)
+    .gte("published_at", since)   // 🔥 이 줄이 핵심
+    .order("published_at", { ascending: false })
     .order("id", { ascending: false });
+    
 
   if (currentNewsCategory !== "전체") {
     query = query.eq(
