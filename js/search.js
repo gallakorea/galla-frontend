@@ -313,8 +313,9 @@ async function loadTopNews() {
     isLoadingNews = false;
     return;
   }
-
-  if (!data || data.length < NEWS_PAGE_SIZE) {
+  // ⚠️ related_group_id 기준 프론트 그룹핑 때문에
+  // data.length < PAGE_SIZE 로는 더 가져올지 판단하면 안 됨
+  if (!data || data.length === 0) {
     hasMoreNews = false;
   }
   newsPage += 1;
@@ -525,9 +526,6 @@ document.body.style.overflow = "hidden";
   // =========================
   activateTab("news");
   renderNewsCategoryChips();
-  loadTopNews();
-
-  // 🔥 즉시 실시간 탑 뉴스 렌더
   loadTopNews();
 
   // 기존 기능 유지
