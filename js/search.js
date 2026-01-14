@@ -339,64 +339,66 @@ async function loadTopNews() {
     grouped.get(key).push(article);
   });
 
-grouped.forEach(group => {
+  grouped.forEach(group => {
+    group.sort(
+      (a, b) => new Date(a.published_at) - new Date(b.published_at)
+    );
 
-  group.sort(
-    (a, b) => new Date(a.published_at) - new Date(b.published_at)
-  );
+    // 대표기사는 썸네일이 있는 기사 또는 첫번째 기사
+    const 대표기사 =
+      group.find(a => a.thumbnail_url && a.thumbnail_url.trim() !== "") ||
+      group[0];
 
-  const 대표기사 =
-    group.find(a => a.thumbnail_url && a.thumbnail_url.trim() !== "") ||
-    group[0];
+    const hasThumb =
+      대표기사.thumbnail_url &&
+      대표기사.thumbnail_url.trim() !== "";
 
-  const hasThumb =
-    대표기사.thumbnail_url &&
-    대표기사.thumbnail_url.trim() !== "";
+    const card = document.createElement("div");
+    card.className = "news-card";
+    card.addEventListener("click", () => {
+      openNewsModal(대표기사.related_group_id ?? 대표기사.id);
+    });
 
-  const card = document.createElement("div");
-  card.className = "news-card";
-  card.addEventListener("click", () => {
-    openNewsModal(대표기사.related_group_id ?? 대표기사.id);
-  });
+    const groupId =
+      대표기사.related_group_id ?? 대표기사.id;
 
-  const groupId =
-    대표기사.related_group_id ?? 대표기사.id;
+    card.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openNewsModal(groupId);
+    });
 
-  card.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    openNewsModal(groupId);
-  });
-
-  card.innerHTML = `
-    <div class="news-thumb-16x9">
-      ${
-        hasThumb
-          ? `
-            <img
-              src="${대표기사.thumbnail_url}"
-              alt="thumbnail"
-              loading="lazy"
-              onerror="this.style.display='none'; this.parentElement.classList.add('no-thumb')"
-            />
-          `
-          : ``
-      }
-    </div>
-
-    <div class="news-text">
-      <h3 class="news-title">
-        ${대표기사.title}
-      </h3>
-
-      <div class="news-count">
-        관련 기사 ${group.length}건
+    card.innerHTML = `
+      <div class="news-thumb-16x9">
+        ${
+          hasThumb
+            ? `
+              <img
+                src="${대표기사.thumbnail_url}"
+                alt="thumbnail"
+                loading="lazy"
+                onerror="this.style.display='none'; this.parentElement.classList.add('no-thumb')"
+              />
+            `
+            : ``
+        }
       </div>
-    </div>
-  `;
 
-  list.appendChild(card);
-});
+      <div class="news-text">
+        <h3 class="news-title">
+          ${대표기사.title}
+        </h3>
+
+        <div class="news-count">
+          관련 기사 ${group.length}건
+        </div>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+  // ❌ Frontend must NOT call fetch_article_thumbnail (handled by cron)
+  // Thumbnails are pre-populated by a cron job and are read-only from the DB
 }
 
 // 🔧 SAFE FALLBACK: hot trend click handler
