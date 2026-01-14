@@ -272,11 +272,16 @@ async function loadTopNews() {
   const to = from + NEWS_PAGE_SIZE - 1;
 
   let query = supabase
-    .from("related_groups")
-    .select(
-      "id, sid, created_at"
-    )
-    .order("created_at", { ascending: false });
+    .from("news_articles_raw")
+    .select(`
+      id,
+      title,
+      published_at,
+      url,
+      related_group_id,
+      sid
+    `)
+    .order("published_at", { ascending: false });
     
 
   if (currentNewsCategory !== "전체") {
@@ -313,34 +318,69 @@ async function loadTopNews() {
   newsPage += 1;
   isLoadingNews = false;
 
-  data.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "news-card";
+// 🔥 기사 그룹핑
+const grouped = new Map();
 
-    card.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openNewsModal(item.id);
-    };
+data.forEach(article => {
+  const key = article.related_group_id ?? article.id;
 
-    card.innerHTML = `
-      <div class="news-body">
-        <h3 class="news-title">관련 뉴스 묶음</h3>
+  if (!grouped.has(key)) {
+    grouped.set(key, []);
+  }
+  grouped.get(key).push(article);
+});
 
-        <p class="news-summary clamp-3">
-          여러 매체의 최신 기사를 한데 모았습니다.
-        </p>
+grouped.forEach(group => {
+  // 🟢 대표 기사 = 가장 오래된 기사
+  group.sort(
+    (a, b) =>
+      new Date(a.published_at) - new Date(b.published_at)
+  );
 
-        <div class="news-meta">
-          <span>📰 관련 기사 묶음</span>
-          <span>⏱ ${timeAgo(item.created_at)}</span>
-        </div>
+  const 대표기사 = group[0];
+  const isGroup = group.length > 1;
+
+  const card = document.createElement("div");
+  card.className = "news-card";
+
+  card.onclick = e => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isGroup) {
+      openNewsModal(대표기사.related_group_id);
+    } else {
+      openNewsViewer(대표기사.url);
+    }
+  };
+
+  card.innerHTML = `
+    <div class="news-body">
+      <h3 class="news-title">
+        ${대표기사.title}
+      </h3>
+
+      <p class="news-summary clamp-2">
+        ${
+          isGroup
+            ? "여러 매체의 관련 기사를 한데 모았습니다."
+            : "단일 기사"
+        }
+      </p>
+
+      <div class="news-meta">
+        ${
+          isGroup
+            ? `<span>📰 ${group.length}건</span>`
+            : `<span>📰 단일 기사</span>`
+        }
+        <span>⏱ ${timeAgo(대표기사.published_at)}</span>
       </div>
-    `;
+    </div>
+  `;
 
-
-    list.appendChild(card);
-  });
+  list.appendChild(card);
+});
 }
 
 // 🔧 SAFE FALLBACK: hot trend click handler
