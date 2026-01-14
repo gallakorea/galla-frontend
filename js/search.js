@@ -187,16 +187,17 @@ let newsPage = 0;
 const NEWS_PAGE_SIZE = 30;
 let isLoadingNews = false;
 let hasMoreNews = true;
+let lastTopNewsId = null;
 
 // 🔄 강제 새로고침 (자동 갱신 전용)
 function refreshTopNews() {
   const list = document.getElementById("top-news-list");
   if (!list) return;
 
-  // 🔥 상태 전부 리셋
   newsPage = 0;
   hasMoreNews = true;
   isLoadingNews = false;
+  lastTopNewsId = null;
 
   list.innerHTML = "";
   loadTopNews();
@@ -282,8 +283,8 @@ async function loadTopNews() {
       related_group_id,
       sid
     `)
-    .order("related_group_id", { ascending: false, nullsFirst: false })
-    .order("published_at", { ascending: true });
+    .order("published_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (currentNewsCategory !== "전체") {
     query = query.eq(
@@ -293,6 +294,14 @@ async function loadTopNews() {
   }
 
   const { data, error } = await query.range(from, to);
+  if (newsPage === 0 && data && data.length > 0) {
+    const newestId = data[0].id;
+    if (lastTopNewsId && lastTopNewsId === newestId) {
+      isLoadingNews = false;
+      return;
+    }
+    lastTopNewsId = newestId;
+  }
 
   console.log("[REALTIME NEWS DATA]", data);
 
@@ -346,6 +355,9 @@ grouped.forEach(group => {
 
   const card = document.createElement("div");
   card.className = "news-card";
+  card.addEventListener("click", () => {
+    openNewsModal(대표기사.related_group_id ?? 대표기사.id);
+  });
 
   const groupId =
     대표기사.related_group_id ?? 대표기사.id;
