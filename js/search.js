@@ -348,13 +348,21 @@ grouped.forEach(group => {
   card.className = "news-card";
 
   card.innerHTML = `
-    <div class="news-thumb-wrap ${hasThumb ? "" : "placeholder"}">
-      ${hasThumb ? `<img src="${대표기사.thumbnail_url}" />` : ""}
+    <div class="news-thumb-16x9">
+      ${
+        hasThumb
+          ? `<img src="${대표기사.thumbnail_url}" alt="thumbnail" />`
+          : `<div class="thumb-placeholder"></div>`
+      }
     </div>
-    <div class="news-info">
-      <h3>${대표기사.title}</h3>
-      <div class="news-meta">
-        관련기사 ${group.length}건
+
+    <div class="news-text">
+      <h3 class="news-title">
+        ${대표기사.title}
+      </h3>
+
+      <div class="news-count">
+        관련 기사 ${group.length}건
       </div>
     </div>
   `;
