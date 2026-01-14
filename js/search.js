@@ -278,6 +278,7 @@ async function loadTopNews() {
       title,
       published_at,
       url,
+      thumbnail_url,
       related_group_id,
       sid
     `)
@@ -340,12 +341,19 @@ async function loadTopNews() {
     group.sort(
       (a, b) => new Date(a.published_at) - new Date(b.published_at)
     );
-    let 대표기사 = group[0];
-    if (!대표기사.thumbnail_url) {
-      const withThumb = group.find(a => a.thumbnail_url);
-      if (withThumb) 대표기사 = withThumb;
-    }
-    const isGroup = group.length > 1;
+
+    let 대표기사 =
+      group.find(a => a.thumbnail_url && a.thumbnail_url.trim() !== "") ||
+      group[0];
+
+    const hasThumb =
+      대표기사.thumbnail_url &&
+      대표기사.thumbnail_url.trim() !== "";
+
+    const thumbHtml = hasThumb
+      ? `<img src="${대표기사.thumbnail_url}" alt="" loading="lazy"
+             onerror="this.parentElement.classList.add('placeholder'); this.remove();" />`
+      : "";
 
     const card = document.createElement("div");
     card.className = "news-card";
@@ -356,13 +364,9 @@ async function loadTopNews() {
       openNewsModal(대표기사.related_group_id ?? 대표기사.id);
     };
 
-    const thumb =
-      대표기사.thumbnail_url ||
-      "https://via.placeholder.com/300x180?text=NEWS";
-
     card.innerHTML = `
-      <div class="news-thumb-wrap">
-        <img src="${thumb}" alt="" loading="lazy" />
+      <div class="news-thumb-wrap ${hasThumb ? "" : "placeholder"}">
+        ${thumbHtml}
       </div>
 
       <div class="news-info">
