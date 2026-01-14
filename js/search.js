@@ -372,8 +372,15 @@ grouped.forEach(group => {
     <div class="news-thumb-16x9">
       ${
         hasThumb
-          ? `<img src="${대표기사.thumbnail_url}" alt="thumbnail" />`
-          : `<div class="thumb-placeholder"></div>`
+          ? `
+            <img
+              src="${대표기사.thumbnail_url}"
+              alt="thumbnail"
+              loading="lazy"
+              onerror="this.style.display='none'; this.parentElement.classList.add('no-thumb')"
+            />
+          `
+          : ``
       }
     </div>
 
@@ -606,3 +613,30 @@ window.addEventListener("scroll", () => {
 });
 
 });
+
+// 썸네일 CSS 보정용 JS (파일 하단)
+const style = document.createElement("style");
+style.innerHTML = `
+  .news-thumb-16x9 {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #111;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .news-thumb-16x9 img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .news-thumb-16x9.no-thumb {
+    background: linear-gradient(135deg, #222, #111);
+  }
+`;
+document.head.appendChild(style);
