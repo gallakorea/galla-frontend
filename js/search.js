@@ -347,6 +347,15 @@ grouped.forEach(group => {
   const card = document.createElement("div");
   card.className = "news-card";
 
+  const groupId =
+    대표기사.related_group_id ?? 대표기사.id;
+
+  card.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openNewsModal(groupId);
+  });
+
   card.innerHTML = `
     <div class="news-thumb-16x9">
       ${
