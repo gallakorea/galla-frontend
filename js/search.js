@@ -271,14 +271,26 @@ async function loadTopNews() {
   const from = newsPage * NEWS_PAGE_SIZE;
   const to = from + NEWS_PAGE_SIZE - 1;
 
-  const { data, error } = await supabase.rpc("get_grouped_news_feed", {
-    page_from: from,
-    page_to: to,
-    sid_filter:
-      currentNewsCategory === "전체"
-        ? null
-        : CATEGORY_SID_MAP[currentNewsCategory]
-  });
+  let query = supabase
+    .from("news_articles_raw")
+    .select(`
+      id,
+      title,
+      published_at,
+      url,
+      related_group_id,
+      sid
+    `)
+    .order("published_at", { ascending: false });
+
+  if (currentNewsCategory !== "전체") {
+    query = query.eq(
+      "sid",
+      CATEGORY_SID_MAP[currentNewsCategory]
+    );
+  }
+
+  const { data, error } = await query.range(from, to);
 
   console.log("[REALTIME NEWS DATA]", data);
 
