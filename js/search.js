@@ -300,6 +300,7 @@ async function loadTopNews() {
       related_group_id,
       sid
     `)
+    .not("thumbnail_url", "is", null)   // ✅ 썸네일 없는 기사 DB 단계에서 제거
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("id", { ascending: false });
 
@@ -362,14 +363,9 @@ async function loadTopNews() {
       (a, b) => new Date(a.published_at) - new Date(b.published_at)
     );
 
-    // 대표기사는 썸네일이 유효한 기사만
+    // 대표기사: 썸네일 있는 기사만
     const 대표기사 = group.find(a => isValidThumbnail(a.thumbnail_url));
-
-    if (!대표기사) {
-      return; // 🔥 썸네일 없는 뉴스 그룹은 렌더링 자체를 안 함
-    }
-
-    const hasThumb = true; // 여기까지 왔다는 건 썸네일이 있다는 뜻
+    if (!대표기사) return; // 🔥 썸네일 없는 그룹은 렌더링 금지
 
     const card = document.createElement("div");
     card.className = "news-card";
@@ -392,10 +388,8 @@ async function loadTopNews() {
           src="${대표기사.thumbnail_url}"
           alt="thumbnail"
           loading="lazy"
-          onerror="this.closest('.news-card')?.remove()"
         />
       </div>
-
       <div class="news-text">
         <h3 class="news-title">
           ${대표기사.title}
