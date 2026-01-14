@@ -361,25 +361,23 @@ async function loadTopNews() {
       "https://via.placeholder.com/300x180?text=NEWS";
 
     card.innerHTML = `
-      <div class="news-thumb">
+      <div class="news-thumb-wrap">
         <img src="${thumb}" alt="" loading="lazy" />
       </div>
 
-      <div class="news-body">
+      <div class="news-info">
         <h3 class="news-title clamp-2">
           ${대표기사.title}
         </h3>
 
         <div class="news-meta">
           <span class="news-count">
-            📰 관련기사 ${group.length}건
-          </span>
-          <span class="news-time">
-            ⏱ ${timeAgo(대표기사.published_at)}
+            관련기사 ${group.length}건
           </span>
         </div>
       </div>
     `;
+
 
     list.appendChild(card);
   });
