@@ -20,6 +20,8 @@ const postTitleEl = document.querySelector(".post-title");
 const postMetaEl = document.querySelector(".post-meta");
 const postContentEl = document.querySelector(".post-content");
 
+document.body.style.paddingBottom = "140px";
+
 /*
 comment = {
   id,
@@ -170,16 +172,6 @@ async function submitComment(body) {
 
 const commentInput = document.getElementById("commentInput");
 const commentSubmitBtn = document.getElementById("commentSubmitBtn");
-
-// =========================
-// MOVE COMMENT INPUT ABOVE BOTTOM NAV
-// =========================
-const bottomNav = document.querySelector(".bottom-nav");
-const commentWriteSection = commentInput?.closest(".comment-write");
-
-if (bottomNav && commentWriteSection) {
-  bottomNav.parentNode.insertBefore(commentWriteSection, bottomNav);
-}
 
 commentSubmitBtn.addEventListener("click", async () => {
   const body = commentInput.value.trim();
