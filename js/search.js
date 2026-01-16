@@ -304,7 +304,6 @@ async function loadTopNews() {
       related_group_id,
       sid
     `)
-    .not("thumbnail_url", "is", null)
     .gte("published_at", since)   // 🔥 이 줄이 핵심
     .order("published_at", { ascending: false })
     .order("id", { ascending: false });
