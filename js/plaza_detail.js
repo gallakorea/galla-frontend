@@ -92,54 +92,41 @@ function renderComments(list) {
     const rootLi = document.createElement("li");
     rootLi.className = "comment root";
 
+    const replies = list.filter(r => r.parent_id === root.id);
+
     rootLi.innerHTML = `
       <div class="comment-meta">${root.nickname}</div>
       <div class="comment-body">${root.body}</div>
       <div class="comment-actions">
-        <button class="toggle-replies-btn">답글 보기</button>
+        <button class="toggle-replies-btn">
+          ${replies.length > 0 ? `답글 ${replies.length}개 보기` : "답글 달기"}
+        </button>
       </div>
       <ul class="reply-list hidden"></ul>
     `;
 
-    const bodyEl = rootLi.querySelector(".comment-body");
-
-    bodyEl.addEventListener("click", () => {
-      replyTarget = {
-        parentId: root.id,
-        mentionName: root.nickname
-      };
-      commentInput.value = `@${root.nickname} `;
-      commentInput.focus();
-    });
-
     const replyListEl = rootLi.querySelector(".reply-list");
     const toggleBtn = rootLi.querySelector(".toggle-replies-btn");
 
-    const replies = list.filter(r => r.parent_id === root.id);
-
-    toggleBtn.textContent = replies.length > 0
-      ? `답글 ${replies.length}개 보기`
-      : "답글 달기";
-
     toggleBtn.addEventListener("click", (e) => {
-      e.stopPropagation(); // prevent root click bubbling
+      e.stopPropagation();
 
-      const isHidden = replyListEl.classList.contains("hidden");
-
-      if (isHidden) {
+      if (replyListEl.classList.contains("hidden")) {
         replyListEl.classList.remove("hidden");
         toggleBtn.textContent = "접기";
-
-        if (!replyListEl.dataset.rendered) {
-          renderReplies(replies, replyListEl, root);
-          replyListEl.dataset.rendered = "true";
-        }
+        renderReplies(replies, replyListEl);
       } else {
         replyListEl.classList.add("hidden");
         toggleBtn.textContent = replies.length > 0
           ? `답글 ${replies.length}개 보기`
           : "답글 달기";
+        replyListEl.innerHTML = "";
       }
+    });
+
+    rootLi.querySelector(".comment-body").addEventListener("click", () => {
+      replyTarget = { parentId: root.id };
+      commentInput.focus();
     });
 
     commentList.appendChild(rootLi);
@@ -201,18 +188,16 @@ commentSubmitBtn.addEventListener("click", async () => {
 fetchPostDetail();
 fetchComments();
 
-function renderReplies(replies, container, rootComment) {
+function renderReplies(replies, container) {
   container.innerHTML = "";
 
   replies.forEach(reply => {
     const li = document.createElement("li");
     li.className = "comment reply";
-
     li.innerHTML = `
       <div class="comment-meta">${reply.nickname}</div>
       <div class="comment-body">${reply.body}</div>
     `;
-
     container.appendChild(li);
   });
 }
