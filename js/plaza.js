@@ -141,46 +141,49 @@ function renderPlazaPosts(posts) {
 }
 
 /* =========================
-   SUBMIT → SUPABASE
+   SUBMIT → SUPABASE (FIXED)
 ========================= */
 
-submitBtn.addEventListener("click", async () => {
+submitBtn.addEventListener("click", async (e) => {
+  e.preventDefault();
+
   validatePlazaForm();
   if (submitBtn.disabled) return;
 
   submitBtn.disabled = true;
 
-  const category = categorySelect.value;
+  const category = categorySelect.value.trim();
   const title = titleInput.value.trim();
   const body = bodyInput.value.trim();
-  const nickname = generateAnonNickname();
+  const anonName = generateAnonNickname();
 
   const { error } = await supabase
     .from("plaza_posts")
     .insert({
-      category,
-      title,
-      body,
-      nickname
+      category: category,
+      title: title,
+      body: body,
+      anon_name: anonName
     });
 
   if (error) {
-    alert("등록 중 오류가 발생했습니다.");
-    console.error(error);
+    console.error("plaza insert error:", error);
+    alert("글 등록 중 오류가 발생했습니다.");
     submitBtn.disabled = false;
     return;
   }
 
-  // 성공 시 초기화
+  // 성공 처리
   closePlazaWriteModal();
+
   categorySelect.value = "";
   titleInput.value = "";
   bodyInput.value = "";
   charCount.textContent = "0";
   submitBtn.disabled = true;
 
-  // 임시: 새로고침
-  location.reload();
+  // 리스트 즉시 갱신
+  fetchPlazaPosts();
 });
 
 /* =========================
