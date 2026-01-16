@@ -114,22 +114,27 @@ function renderComments(list) {
       const isHidden = replyListEl.classList.contains("hidden");
 
       if (isHidden) {
-        // 열기
         replyListEl.classList.remove("hidden");
         toggleBtn.textContent = "접기";
 
-        // 최초 1회만 렌더링
         if (!replyListEl.dataset.rendered) {
           renderReplies(replies, replyListEl, root);
           replyListEl.dataset.rendered = "true";
         }
       } else {
-        // 접기
         replyListEl.classList.add("hidden");
         toggleBtn.textContent = replies.length > 0
           ? `답글 ${replies.length}개 보기`
           : "답글 달기";
       }
+
+      // ✅ 항상 하단 입력창에서 답글 작성
+      replyTarget = {
+        parentId: root.id,
+        mentionName: root.nickname
+      };
+      commentInput.value = `@${root.nickname} `;
+      commentInput.focus();
     });
 
     commentList.appendChild(rootLi);
@@ -212,7 +217,6 @@ function renderReplies(replies, container, rootComment) {
         mentionName: reply.nickname
       };
       commentInput.value = `@${reply.nickname} `;
-      scrollToCommentInput();
       commentInput.focus();
     });
 
@@ -232,7 +236,6 @@ function renderReplies(replies, container, rootComment) {
       mentionName: rootComment.nickname
     };
     commentInput.value = `@${rootComment.nickname} `;
-    scrollToCommentInput();
     commentInput.focus();
   });
 
