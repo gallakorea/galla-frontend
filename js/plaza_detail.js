@@ -101,7 +101,9 @@ function renderComments(list) {
       <ul class="reply-list hidden"></ul>
     `;
 
-    rootLi.addEventListener("click", () => {
+    const bodyEl = rootLi.querySelector(".comment-body");
+
+    bodyEl.addEventListener("click", () => {
       replyTarget = {
         parentId: root.id,
         mentionName: root.nickname
@@ -119,7 +121,9 @@ function renderComments(list) {
       ? `답글 ${replies.length}개 보기`
       : "답글 달기";
 
-    toggleBtn.addEventListener("click", () => {
+    toggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // prevent root click bubbling
+
       const isHidden = replyListEl.classList.contains("hidden");
 
       if (isHidden) {
