@@ -85,7 +85,6 @@ function renderComments(list) {
   commentList.innerHTML = "";
 
   const roots = list.filter(c => c.parent_id === null);
-  const replies = list.filter(c => c.parent_id !== null);
 
   roots.forEach(root => {
     const rootLi = document.createElement("li");
@@ -95,48 +94,31 @@ function renderComments(list) {
       <div class="comment-meta">${root.nickname}</div>
       <div class="comment-body">${root.body}</div>
       <div class="comment-actions">
-        <button class="reply-btn">답글</button>
+        <button class="toggle-replies-btn">답글 보기</button>
       </div>
+      <ul class="reply-list hidden"></ul>
     `;
 
-    rootLi.querySelector(".reply-btn").addEventListener("click", () => {
-      replyTarget = {
-        parentId: root.id,
-        mentionName: root.nickname
-      };
-      scrollToCommentInput();
-      commentInput.value = `@${root.nickname} `;
-      commentInput.focus();
+    const replyListEl = rootLi.querySelector(".reply-list");
+    const toggleBtn = rootLi.querySelector(".toggle-replies-btn");
+
+    const replies = list.filter(r => r.parent_id === root.id);
+
+    toggleBtn.textContent = replies.length > 0
+      ? `답글 ${replies.length}개 보기`
+      : "답글 달기";
+
+    toggleBtn.addEventListener("click", () => {
+      replyListEl.classList.toggle("hidden");
+      toggleBtn.textContent = replyListEl.classList.contains("hidden")
+        ? `답글 ${replies.length}개 보기`
+        : "접기";
+      if (!replyListEl.hasChildNodes()) {
+        renderReplies(replies, replyListEl, root);
+      }
     });
 
     commentList.appendChild(rootLi);
-
-    replies
-      .filter(r => r.parent_id === root.id)
-      .forEach(r => {
-        const replyLi = document.createElement("li");
-        replyLi.className = "comment reply";
-
-        replyLi.innerHTML = `
-          <div class="comment-meta">${r.nickname}</div>
-          <div class="comment-body">${r.body}</div>
-          <div class="comment-actions">
-            <button class="reply-btn">답글</button>
-          </div>
-        `;
-
-        replyLi.querySelector(".reply-btn").addEventListener("click", () => {
-          replyTarget = {
-            parentId: root.id,
-            mentionName: r.nickname
-          };
-          scrollToCommentInput();
-          commentInput.value = `@${r.nickname} `;
-          commentInput.focus();
-        });
-
-        commentList.appendChild(replyLi);
-      });
   });
 }
 
@@ -193,3 +175,51 @@ commentSubmitBtn.addEventListener("click", async () => {
 
 fetchPostDetail();
 fetchComments();
+
+function renderReplies(replies, container, rootComment) {
+  container.innerHTML = "";
+
+  replies.forEach(reply => {
+    const li = document.createElement("li");
+    li.className = "comment reply";
+
+    li.innerHTML = `
+      <div class="comment-meta">${reply.nickname}</div>
+      <div class="comment-body">${reply.body}</div>
+      <div class="comment-actions">
+        <button class="reply-btn">답글</button>
+      </div>
+    `;
+
+    li.querySelector(".reply-btn").addEventListener("click", () => {
+      replyTarget = {
+        parentId: rootComment.id,
+        mentionName: reply.nickname
+      };
+      commentInput.value = `@${reply.nickname} `;
+      scrollToCommentInput();
+      commentInput.focus();
+    });
+
+    container.appendChild(li);
+  });
+
+  const writeLi = document.createElement("li");
+  writeLi.className = "reply-write";
+
+  writeLi.innerHTML = `
+    <button class="reply-write-btn">답글 작성</button>
+  `;
+
+  writeLi.querySelector(".reply-write-btn").addEventListener("click", () => {
+    replyTarget = {
+      parentId: rootComment.id,
+      mentionName: rootComment.nickname
+    };
+    commentInput.value = `@${rootComment.nickname} `;
+    scrollToCommentInput();
+    commentInput.focus();
+  });
+
+  container.appendChild(writeLi);
+}
