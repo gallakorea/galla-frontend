@@ -1,3 +1,17 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+  window.SUPABASE_URL,
+  window.SUPABASE_ANON_KEY
+);
+
+const postId = new URLSearchParams(location.search).get("id");
+
+if (!postId) {
+  alert("잘못된 접근입니다.");
+  throw new Error("postId missing");
+}
+
 const commentList = document.getElementById("commentList");
 
 /*
@@ -10,7 +24,30 @@ comment = {
 }
 */
 
-const comments = []; // Supabase에서 가져온다고 가정
+let comments = [];
+
+async function fetchComments() {
+  const { data, error } = await supabase
+    .from("plaza_comments")
+    .select("id, parent_id, body, anon_name, created_at")
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  comments = data.map(c => ({
+    id: c.id,
+    parent_id: c.parent_id,
+    nickname: c.anon_name,
+    body: c.body
+  }));
+
+  commentList.innerHTML = "";
+  renderComments(comments);
+}
 
 function renderComments(list, parentId = null, depth = 0) {
   list
@@ -33,20 +70,28 @@ function renderComments(list, parentId = null, depth = 0) {
     });
 }
 
-function replyTo(parentId) {
+async function replyTo(parentId) {
   const body = prompt("답글을 입력하세요");
   if (!body) return;
 
-  comments.push({
-    id: Date.now(),
-    parent_id: parentId,
-    depth: 0,
-    nickname: generateAnonNickname(),
-    body
-  });
+  const anon_name = generateAnonNickname();
 
-  commentList.innerHTML = "";
-  renderComments(comments);
+  const { error } = await supabase
+    .from("plaza_comments")
+    .insert({
+      post_id: postId,
+      parent_id: parentId,
+      body,
+      anon_name
+    });
+
+  if (error) {
+    alert("댓글 등록 실패");
+    console.error(error);
+    return;
+  }
+
+  fetchComments();
 }
 
 function generateAnonNickname() {
@@ -54,3 +99,28 @@ function generateAnonNickname() {
   const b = ["감자", "고양이", "직장인", "유령"];
   return `${a[Math.floor(Math.random()*a.length)]} ${b[Math.floor(Math.random()*b.length)]}`;
 }
+
+async function submitRootComment(body) {
+  if (!body) return;
+
+  const anon_name = generateAnonNickname();
+
+  const { error } = await supabase
+    .from("plaza_comments")
+    .insert({
+      post_id: postId,
+      parent_id: null,
+      body,
+      anon_name
+    });
+
+  if (error) {
+    alert("댓글 등록 실패");
+    console.error(error);
+    return;
+  }
+
+  fetchComments();
+}
+
+fetchComments();
