@@ -363,52 +363,45 @@ async function loadTopNews() {
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(article);
   });
+    grouped.forEach(group => {
+      group.sort(
+        (a, b) => new Date(a.published_at) - new Date(b.published_at)
+      );
 
-  grouped.forEach(group => {
-    group.sort(
-      (a, b) => new Date(a.published_at) - new Date(b.published_at)
-    );
+      let 대표기사 = group.find(a => isValidThumbnail(a.thumbnail_url));
 
-    // 대표기사: 썸네일 있는 기사만
-    const 대표기사 = group.find(a => isValidThumbnail(a.thumbnail_url));
-    if (!대표기사) return; // 🔥 썸네일 없는 그룹은 렌더링 금지
+      // 🔥 썸네일 없는 그룹은 "스킵"만 해야지 전체를 끊으면 안 됨
+      if (!대표기사) {
+        console.warn("[SKIP GROUP - NO THUMBNAIL]", group);
+        return; // ← 이제 정상 (이건 forEach 1회만 스킵)
+      }
 
-    const card = document.createElement("div");
-    card.className = "news-card";
-    card.addEventListener("click", () => {
-      openNewsModal(대표기사.related_group_id ?? 대표기사.id);
+      const card = document.createElement("div");
+      card.className = "news-card";
+
+      card.addEventListener("click", () => {
+        openNewsModal(대표기사.related_group_id ?? 대표기사.id);
+      });
+
+      card.innerHTML = `
+        <div class="news-thumb-16x9">
+          <img src="${대표기사.thumbnail_url}" />
+        </div>
+        <div class="news-text">
+          <h3 class="news-title">${대표기사.title}</h3>
+          <div class="news-meta">
+            <span class="news-press">${대표기사.press_name}</span>
+            <span class="news-time">${timeAgo(대표기사.published_at)}</span>
+          </div>
+          <div class="news-count">
+            관련 기사 ${group.length}건
+          </div>
+        </div>
+      `;
+
+      list.appendChild(card);
     });
 
-    const groupId =
-      대표기사.related_group_id ?? 대표기사.id;
-
-    card.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      openNewsModal(groupId);
-    });
-
-    card.innerHTML = `
-      <div class="news-thumb-16x9">
-        <img src="${대표기사.thumbnail_url}" />
-      </div>
-      <div class="news-text">
-        <h3 class="news-title">${대표기사.title}</h3>
-
-        <!-- 🔥 여기 추가 -->
-        <div class="news-meta">
-          <span class="news-press">${대표기사.press_name}</span>
-          <span class="news-time">${timeAgo(대표기사.published_at)}</span>
-        </div>
-
-        <div class="news-count">
-          관련 기사 ${group.length}건
-        </div>
-      </div>
-    `;
-
-    list.appendChild(card);
-  });
   // ❌ Frontend must NOT call fetch_article_thumbnail (handled by cron)
   // Thumbnails are pre-populated by a cron job and are read-only from the DB
 }
