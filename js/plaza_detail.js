@@ -186,22 +186,7 @@ commentSubmitBtn.addEventListener("click", async () => {
     return;
   }
 
-  const anon_name = generateAnonNickname();
-
-  const { error } = await supabase
-    .from("plaza_comments")
-    .insert({
-      post_id: postId,
-      parent_id: null,
-      body,
-      anon_name
-    });
-
-  if (error) {
-    console.error(error);
-    alert("댓글 등록 실패");
-    return;
-  }
+  await submitRootComment(body);
 
   // 성공 처리
   commentInput.value = "";
