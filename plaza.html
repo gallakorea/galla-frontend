@@ -35,13 +35,24 @@
   <!-- 카테고리 -->
   <section class="plaza-categories">
     <button class="active">전체</button>
-    <button>정치·사회</button>
-    <button>경제·투자</button>
-    <button>직장·경력</button>
-    <button>연애·결혼</button>
-    <button>생활·일상</button>
-    <button>세계·여행</button>
-    <button>음식·맛집</button>
+    <button>정치</button>
+    <button>사회</button>
+    <button>경제</button>
+    <button>투자</button>
+    <button>직장</button>
+    <button>커리어·이직</button>
+    <button>연애</button>
+    <button>결혼·육아</button>
+    <button>인간관계</button>
+    <button>일상</button>
+    <button>패션·뷰티</button>
+    <button>엔터</button>
+    <button>스포츠</button>
+    <button>여행</button>
+    <button>맛집</button>
+    <button>가치·논쟁</button>
+    <button>불만·푸념</button>
+    <button>19금</button>
     <button>기타</button>
   </section>
 
@@ -80,9 +91,59 @@
 
   </ul>
 
+  <!-- WRITE MODAL -->
+  <div id="plaza-write-modal" class="plaza-modal hidden">
+    <div class="plaza-modal-backdrop" onclick="closePlazaWriteModal()"></div>
+
+    <div class="plaza-modal-box">
+      <h2 class="modal-title">광장에 한 줄 던지기</h2>
+      <div class="modal-category">
+        <select id="plaza-category">
+          <option value="">카테고리 선택</option>
+          <option>정치</option>
+          <option>사회</option>
+          <option>경제</option>
+          <option>투자</option>
+          <option>직장</option>
+          <option>연애</option>
+          <option>결혼</option>
+          <option>일상</option>
+          <option>패션·뷰티</option>
+          <option>엔터</option>
+          <option>스포츠</option>
+          <option>여행</option>
+          <option>맛집</option>
+          <option>19금</option>
+          <option>기타</option>
+        </select>
+      </div>
+
+      <input
+        type="text"
+        id="plaza-title"
+        placeholder="제목 (한 줄)"
+        maxlength="80"
+      />
+
+      <textarea
+        id="plaza-body"
+        placeholder="본문을 입력하세요 (최대 300자)"
+        maxlength="300"
+      ></textarea>
+      <div class="char-counter">
+        <span id="char-count">0</span> / 300
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closePlazaWriteModal()">취소</button>
+        <button class="btn-submit" id="plaza-submit" disabled>등록하기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 네비 위 글쓰기 -->
   <div class="plaza-write-bar">
-    <button onclick="location.href='write.html'">
+    <button onclick="openPlazaWriteModal()">
       ✏️ 광장에 한 줄 던지기 (최대 300자)
     </button>
   </div>
@@ -116,5 +177,6 @@
   </nav>
 
 </div>
+<script src="js/plaza.js"></script>
 </body>
 </html>
