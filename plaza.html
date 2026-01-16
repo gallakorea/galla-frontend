@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>광장 - GALLA</title>
+
+  <!-- plaza 전용 CSS -->
+  <link rel="stylesheet" href="css/plaza.css">
+</head>
+
+<body data-page="plaza">
+<div id="app">
+
+  <!-- HEADER (기존 그대로) -->
+  <header class="header">
+    <div class="header-inner">
+      <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
+
+      <div class="auth-buttons">
+        <button onclick="location.href='login.html'">로그인</button>
+        <button onclick="location.href='signup.html'">회원가입</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 가이드 박스 -->
+  <section class="plaza-guide">
+    <p>
+      광장은 찬반 없는 자유 토론 공간입니다.<br>
+      한 줄 던지고, 댓글로 이어가세요.
+    </p>
+  </section>
+
+  <!-- 카테고리 -->
+  <section class="plaza-categories">
+    <button class="active">전체</button>
+    <button>정치·사회</button>
+    <button>경제·투자</button>
+    <button>직장·경력</button>
+    <button>연애·결혼</button>
+    <button>생활·일상</button>
+    <button>세계·여행</button>
+    <button>음식·맛집</button>
+    <button>기타</button>
+  </section>
+
+  <!-- 글 리스트 -->
+  <ul class="plaza-list">
+
+    <li class="plaza-post">
+      <div class="vote-col">
+        ▲<br>12<br>▼
+      </div>
+
+      <div class="post-body">
+        <div class="post-title">
+          요즘 회사에서 일 잘해도 의미 없다는 생각 드는 사람?
+        </div>
+        <div class="post-meta">
+          직장·경력 · 댓글 23 · 3시간 전
+        </div>
+      </div>
+    </li>
+
+    <li class="plaza-post">
+      <div class="vote-col">
+        ▲<br>8<br>▼
+      </div>
+
+      <div class="post-body">
+        <div class="post-title">
+          연애에서 안정이 더 중요한지 설렘이 더 중요한지
+        </div>
+        <div class="post-meta">
+          연애·결혼 · 댓글 41 · 1시간 전
+        </div>
+      </div>
+    </li>
+
+  </ul>
+
+  <!-- 네비 위 글쓰기 -->
+  <div class="plaza-write-bar">
+    <button onclick="location.href='write.html'">
+      ✏️ 광장에 한 줄 던지기 (최대 300자)
+    </button>
+  </div>
+
+  <!-- BOTTOM NAV (기존 그대로) -->
+  <nav class="bottom-nav">
+    <button class="nav-item" data-target="index.html">
+      <img src="assets/icons/nav-home.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item" data-target="search.html">
+      <img src="assets/icons/nav-search.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item" data-target="write.html">
+      <img src="assets/icons/nav-write.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item active" data-target="plaza.html">
+      <img src="assets/icons/nav-plaza.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item" data-target="mypage.html">
+      <img src="assets/icons/nav-user.svg">
+      <div class="nav-indicator"></div>
+    </button>
+  </nav>
+
+</div>
+</body>
+</html>

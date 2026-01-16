@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>광장 글 - GALLA</title>
+
+  <!-- plaza_detail 전용 CSS만 -->
+  <link rel="stylesheet" href="css/plaza_detail.css">
+</head>
+
+<body data-page="plaza-detail">
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">GALLA</div>
+      <div class="auth-buttons">
+        <button>로그인</button>
+        <button>회원가입</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- GUIDE -->
+  <section class="plaza-guide">
+    <p>
+      광장은 찬반 없는 자유 토론 공간입니다.<br>
+      한 줄 던지고, 댓글로 이어가세요.
+    </p>
+  </section>
+
+  <!-- POST -->
+  <section class="plaza-post">
+    <div class="vote-col">
+      ▲<br>214<br>▼
+    </div>
+
+    <div class="post-body">
+      <h1 class="post-title">
+        요즘 월급으로 서울에서 사는 게 정상인가요?
+      </h1>
+
+      <div class="post-meta">
+        경제·투자 · 3시간 전
+      </div>
+
+      <div class="post-content">
+        집값, 월세, 물가까지 생각하면
+        서울에서 월급으로 사는 게 맞는지 모르겠습니다.
+        다들 어떻게 버티고 계신가요?
+      </div>
+    </div>
+  </section>
+
+  <!-- COMMENT WRITE -->
+  <section class="comment-write">
+    <textarea placeholder="댓글을 입력하세요"></textarea>
+    <button>댓글 등록</button>
+  </section>
+
+  <!-- COMMENT LIST -->
+  <ul class="comment-list">
+    <li class="comment">
+      <div class="comment-meta">익명 · 1시간 전</div>
+      <div class="comment-body">진짜 공감합니다.</div>
+    </li>
+
+    <li class="comment">
+      <div class="comment-meta">익명 · 30분 전</div>
+      <div class="comment-body">그래서 다들 탈서울 하는 듯…</div>
+    </li>
+  </ul>
+
+  <!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+    <button class="nav-item" data-target="index.html">
+      <img src="assets/icons/nav-home.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item" data-target="search.html">
+      <img src="assets/icons/nav-search.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item" data-target="write.html">
+      <img src="assets/icons/nav-write.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item active" data-target="plaza.html">
+      <img src="assets/icons/nav-plaza.svg">
+      <div class="nav-indicator"></div>
+    </button>
+
+    <button class="nav-item" data-target="mypage.html">
+      <img src="assets/icons/nav-user.svg">
+      <div class="nav-indicator"></div>
+    </button>
+  </nav>
+
+</div>
+</body>
+</html>
