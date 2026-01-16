@@ -79,15 +79,18 @@ function renderComments(list, parentId = null, depth = 0) {
     .forEach(c => {
       const li = document.createElement("li");
       li.className = `comment depth-${depth}`;
+
+      const replyBtn = document.createElement("button");
+      replyBtn.textContent = "답글";
+      replyBtn.addEventListener("click", () => replyTo(c.id));
+
       li.innerHTML = `
         <div class="comment-meta">${c.nickname}</div>
         <div class="comment-body">${c.body}</div>
-        <div class="comment-actions">
-          <button>👍</button>
-          <button>👎</button>
-          <button onclick="replyTo(${c.id})">답글</button>
-        </div>
+        <div class="comment-actions"></div>
       `;
+
+      li.querySelector(".comment-actions").appendChild(replyBtn);
       commentList.appendChild(li);
 
       renderComments(list, c.id, depth + 1);
@@ -117,6 +120,7 @@ async function replyTo(parentId) {
 
   fetchComments();
 }
+window.replyTo = replyTo;
 
 function generateAnonNickname() {
   const a = ["웃픈", "화난", "졸린", "과몰입한"];
