@@ -146,11 +146,10 @@ function renderPlazaPosts(posts) {
       <div class="vote-col">▲<br>0<br>▼</div>
       <div class="post-body">
         <div class="post-title">${post.title}</div>
-    -   <div class="post-meta">${post.category} · 방금 전</div>
-    +   <div class="post-meta">
-    +     <span class="post-nickname">${post.nickname}</span>
-    +     · ${post.category} · 방금 전
-    +   </div>
+         <div class="post-meta">
+         <span class="post-nickname">${post.nickname}</span>
+         · ${post.category} · 방금 전
+         </div>
       </div>
     `;
     plazaListEl.appendChild(li);
