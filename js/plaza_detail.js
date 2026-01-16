@@ -73,28 +73,49 @@ async function fetchComments() {
   renderComments(comments);
 }
 
-function renderComments(list, parentId = null, depth = 0) {
-  list
-    .filter(c => c.parent_id === parentId)
-    .forEach(c => {
-      const li = document.createElement("li");
-      li.className = `comment depth-${depth}`;
+function renderComments(list, parentId = null, containerEl = commentList, depth = 0) {
+  const children = list.filter(c => c.parent_id === parentId);
+  if (children.length === 0) return;
 
-      const replyBtn = document.createElement("button");
-      replyBtn.textContent = "답글";
-      replyBtn.addEventListener("click", () => replyTo(c.id));
+  const ul = document.createElement("ul");
+  ul.className = parentId ? "comment-children" : "comment-root";
 
-      li.innerHTML = `
-        <div class="comment-meta">${c.nickname}</div>
-        <div class="comment-body">${c.body}</div>
-        <div class="comment-actions"></div>
-      `;
+  children.forEach(c => {
+    const li = document.createElement("li");
+    li.className = `comment depth-${depth}`;
 
-      li.querySelector(".comment-actions").appendChild(replyBtn);
-      commentList.appendChild(li);
+    const content = document.createElement("div");
+    content.className = "comment-content";
 
-      renderComments(list, c.id, depth + 1);
-    });
+    const meta = document.createElement("div");
+    meta.className = "comment-meta";
+    meta.textContent = c.nickname;
+
+    const body = document.createElement("div");
+    body.className = "comment-body";
+    body.textContent = c.body;
+
+    const actions = document.createElement("div");
+    actions.className = "comment-actions";
+
+    const replyBtn = document.createElement("button");
+    replyBtn.textContent = "답글";
+    replyBtn.addEventListener("click", () => replyTo(c.id));
+
+    actions.appendChild(replyBtn);
+
+    content.appendChild(meta);
+    content.appendChild(body);
+    content.appendChild(actions);
+    li.appendChild(content);
+
+    // 재귀적으로 자식 댓글 렌더링
+    renderComments(list, c.id, li, depth + 1);
+
+    ul.appendChild(li);
+  });
+
+  containerEl.appendChild(ul);
 }
 
 async function replyTo(parentId) {
