@@ -171,14 +171,18 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const body = bodyInput.value.trim();
   const anonName = generateAnonNickname();
 
+  const payload = {
+    category,
+    title,
+    body,
+    anon_name: anonName
+  };
+
+  console.log("plaza insert payload:", payload);
+
   const { error } = await supabase
     .from("plaza_posts")
-    .insert({
-      category: category,
-      title: title,
-      body: body,
-      anon_name: anonName
-    });
+    .insert(payload);
 
   if (error) {
     console.error("plaza insert error:", error);
