@@ -302,7 +302,8 @@ async function loadTopNews() {
       url,
       thumbnail_url,
       related_group_id,
-      sid
+      sid,
+      press_name
     `)
     .gte("published_at", since)   // 🔥 이 줄이 핵심
     .order("published_at", { ascending: false })
@@ -389,16 +390,16 @@ async function loadTopNews() {
 
     card.innerHTML = `
       <div class="news-thumb-16x9">
-        <img
-          src="${대표기사.thumbnail_url}"
-          alt="thumbnail"
-          loading="lazy"
-        />
+        <img src="${대표기사.thumbnail_url}" />
       </div>
       <div class="news-text">
-        <h3 class="news-title">
-          ${대표기사.title}
-        </h3>
+        <h3 class="news-title">${대표기사.title}</h3>
+
+        <!-- 🔥 여기 추가 -->
+        <div class="news-meta">
+          <span class="news-press">${대표기사.press_name}</span>
+          <span class="news-time">${timeAgo(대표기사.published_at)}</span>
+        </div>
 
         <div class="news-count">
           관련 기사 ${group.length}건
