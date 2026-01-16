@@ -153,6 +153,7 @@ function renderPlazaPosts(posts) {
   });
 }
 
+
 /* =========================
    SUBMIT → SUPABASE (FIXED)
 ========================= */
