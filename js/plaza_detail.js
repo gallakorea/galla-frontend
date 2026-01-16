@@ -109,12 +109,24 @@ function renderComments(list) {
       : "답글 달기";
 
     toggleBtn.addEventListener("click", () => {
-      replyListEl.classList.toggle("hidden");
-      toggleBtn.textContent = replyListEl.classList.contains("hidden")
-        ? `답글 ${replies.length}개 보기`
-        : "접기";
-      if (!replyListEl.hasChildNodes()) {
-        renderReplies(replies, replyListEl, root);
+      const isHidden = replyListEl.classList.contains("hidden");
+
+      if (isHidden) {
+        // 열기
+        replyListEl.classList.remove("hidden");
+        toggleBtn.textContent = "접기";
+
+        // 최초 1회만 렌더링
+        if (!replyListEl.dataset.rendered) {
+          renderReplies(replies, replyListEl, root);
+          replyListEl.dataset.rendered = "true";
+        }
+      } else {
+        // 접기
+        replyListEl.classList.add("hidden");
+        toggleBtn.textContent = replies.length > 0
+          ? `답글 ${replies.length}개 보기`
+          : "답글 달기";
       }
     });
 
