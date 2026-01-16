@@ -243,3 +243,32 @@ body {
 .comment-list {
   padding-bottom: 24px;
 }
+
+/* =========================
+   FIXED COMMENT WRITE
+========================= */
+
+.comment-write {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 56px; /* 하단 네비 높이 */
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px;
+  background: #000;
+  border-top: 1px solid #222;
+  z-index: 1000;
+}
+
+.comment-write textarea {
+  width: 100%;
+  height: 60px;
+  resize: none;
+  border-radius: 10px;
+}
+
+.comment-write button {
+  margin-top: 8px;
+  width: 100%;
+}
