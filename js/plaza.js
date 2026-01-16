@@ -175,7 +175,7 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
     category,
     title,
     body,
-    anon_name: anonName
+    nick_name: anonName
   };
 
   console.log("plaza insert payload:", payload);
