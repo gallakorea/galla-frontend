@@ -31,6 +31,7 @@ comment = {
 */
 
 let comments = [];
+let replyTarget = null; // { parentId, mentionName }
 
 async function fetchPostDetail() {
   const { data, error } = await supabase
@@ -69,79 +70,65 @@ async function fetchComments() {
     body: c.body
   }));
 
-  commentList.innerHTML = "";
   renderComments(comments);
 }
 
-function renderComments(list, parentId = null, containerEl = commentList, depth = 0) {
-  const children = list.filter(c => c.parent_id === parentId);
-  if (children.length === 0) return;
+function renderComments(list) {
+  commentList.innerHTML = "";
 
-  const ul = document.createElement("ul");
-  ul.className = parentId ? "comment-children" : "comment-root";
+  const roots = list.filter(c => c.parent_id === null);
+  const replies = list.filter(c => c.parent_id !== null);
 
-  children.forEach(c => {
-    const li = document.createElement("li");
-    li.className = `comment depth-${depth}`;
+  roots.forEach(root => {
+    const rootLi = document.createElement("li");
+    rootLi.className = "comment root";
 
-    const content = document.createElement("div");
-    content.className = "comment-content";
+    rootLi.innerHTML = `
+      <div class="comment-meta">${root.nickname}</div>
+      <div class="comment-body">${root.body}</div>
+      <div class="comment-actions">
+        <button class="reply-btn">답글</button>
+      </div>
+    `;
 
-    const meta = document.createElement("div");
-    meta.className = "comment-meta";
-    meta.textContent = c.nickname;
-
-    const body = document.createElement("div");
-    body.className = "comment-body";
-    body.textContent = c.body;
-
-    const actions = document.createElement("div");
-    actions.className = "comment-actions";
-
-    const replyBtn = document.createElement("button");
-    replyBtn.textContent = "답글";
-    replyBtn.addEventListener("click", () => replyTo(c.id));
-
-    actions.appendChild(replyBtn);
-
-    content.appendChild(meta);
-    content.appendChild(body);
-    content.appendChild(actions);
-    li.appendChild(content);
-
-    // 재귀적으로 자식 댓글 렌더링
-    renderComments(list, c.id, li, depth + 1);
-
-    ul.appendChild(li);
-  });
-
-  containerEl.appendChild(ul);
-}
-
-async function replyTo(parentId) {
-  const body = prompt("답글을 입력하세요");
-  if (!body) return;
-
-  const anon_name = generateAnonNickname();
-
-  const { error } = await supabase
-    .from("plaza_comments")
-    .insert({
-      post_id: postId,
-      parent_id: parentId,
-      body,
-      anon_name
+    rootLi.querySelector(".reply-btn").addEventListener("click", () => {
+      replyTarget = {
+        parentId: root.id,
+        mentionName: root.nickname
+      };
+      commentInput.focus();
+      commentInput.value = `@${root.nickname} `;
     });
 
-  if (error) {
-    alert("댓글 등록 실패");
-    console.error(error);
-    return;
-  }
+    commentList.appendChild(rootLi);
 
-  fetchComments();
+    replies
+      .filter(r => r.parent_id === root.id)
+      .forEach(r => {
+        const replyLi = document.createElement("li");
+        replyLi.className = "comment reply";
+
+        replyLi.innerHTML = `
+          <div class="comment-meta">${r.nickname}</div>
+          <div class="comment-body">${r.body}</div>
+          <div class="comment-actions">
+            <button class="reply-btn">답글</button>
+          </div>
+        `;
+
+        replyLi.querySelector(".reply-btn").addEventListener("click", () => {
+          replyTarget = {
+            parentId: root.id,
+            mentionName: r.nickname
+          };
+          commentInput.focus();
+          commentInput.value = `@${r.nickname} `;
+        });
+
+        commentList.appendChild(replyLi);
+      });
+  });
 }
-window.replyTo = replyTo;
 
 function generateAnonNickname() {
   const a = ["웃픈", "화난", "졸린", "과몰입한"];
@@ -149,19 +136,19 @@ function generateAnonNickname() {
   return `${a[Math.floor(Math.random()*a.length)]} ${b[Math.floor(Math.random()*b.length)]}`;
 }
 
-async function submitRootComment(body) {
-  if (!body) return;
-
+async function submitComment(body) {
   const anon_name = generateAnonNickname();
+
+  const payload = {
+    post_id: postId,
+    body,
+    anon_name,
+    parent_id: replyTarget ? replyTarget.parentId : null
+  };
 
   const { error } = await supabase
     .from("plaza_comments")
-    .insert({
-      post_id: postId,
-      parent_id: null,
-      body,
-      anon_name
-    });
+    .insert(payload);
 
   if (error) {
     alert("댓글 등록 실패");
@@ -169,7 +156,7 @@ async function submitRootComment(body) {
     return;
   }
 
-  fetchComments();
+  replyTarget = null;
 }
 
 /* =========================
@@ -186,9 +173,8 @@ commentSubmitBtn.addEventListener("click", async () => {
     return;
   }
 
-  await submitRootComment(body);
+  await submitComment(body);
 
-  // 성공 처리
   commentInput.value = "";
   fetchComments();
 });
