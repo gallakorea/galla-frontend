@@ -114,7 +114,7 @@ function generateAnonNickname() {
 async function fetchPlazaPosts() {
   let query = supabase
     .from("plaza_posts")
-    .select("id, category, title, created_at")
+    .select("id, category, title, nickname, created_at")
     .order("created_at", { ascending: false });
 
   if (currentCategory !== "전체") {
@@ -146,7 +146,11 @@ function renderPlazaPosts(posts) {
       <div class="vote-col">▲<br>0<br>▼</div>
       <div class="post-body">
         <div class="post-title">${post.title}</div>
-        <div class="post-meta">${post.category} · 방금 전</div>
+    -   <div class="post-meta">${post.category} · 방금 전</div>
+    +   <div class="post-meta">
+    +     <span class="post-nickname">${post.nickname}</span>
+    +     · ${post.category} · 방금 전
+    +   </div>
       </div>
     `;
     plazaListEl.appendChild(li);
@@ -190,6 +194,9 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
     submitBtn.disabled = false;
     return;
   }
+
+  /* ✅⬇️ 바로 여기 */
+  alert("등록이 완료되었습니다.");
 
   // 성공 처리
   closePlazaWriteModal();
