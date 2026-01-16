@@ -32,7 +32,7 @@ let comments = [];
 async function fetchPostDetail() {
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, anon_name, created_at")
+    .select("title, body, category, nickname, created_at")
     .eq("id", postId)
     .single();
 
@@ -44,7 +44,7 @@ async function fetchPostDetail() {
 
   postTitleEl.textContent = data.title;
   postContentEl.textContent = data.body;
-  postMetaEl.textContent = `${data.anon_name} · ${data.category} · 방금 전`;
+  postMetaEl.textContent = `${data.nickname} · ${data.category} · 방금 전`;
 }
 
 async function fetchComments() {
