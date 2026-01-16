@@ -3,7 +3,7 @@
 ========================= */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = "https://bidqauputnhkqepvdzrr";
+const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -24,11 +24,15 @@ function openPlazaWriteModal() {
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
+// expose for inline HTML handlers
+window.openPlazaWriteModal = openPlazaWriteModal;
 
 function closePlazaWriteModal() {
   modal.classList.add("hidden");
   document.body.style.overflow = "";
 }
+// expose for inline HTML handlers
+window.closePlazaWriteModal = closePlazaWriteModal;
 
 /* =========================
    FORM ELEMENTS
@@ -60,13 +64,13 @@ const charCount = document.getElementById("char-count");
    300자 카운터
 ========================= */
 
-bodyInput.addEventListener("input", () => {
+bodyInput && bodyInput.addEventListener("input", () => {
   charCount.textContent = bodyInput.value.length;
   validatePlazaForm();
 });
 
-titleInput.addEventListener("input", validatePlazaForm);
-categorySelect.addEventListener("change", validatePlazaForm);
+titleInput && titleInput.addEventListener("input", validatePlazaForm);
+categorySelect && categorySelect.addEventListener("change", validatePlazaForm);
 
 /* =========================
    VALIDATION
@@ -153,7 +157,7 @@ function renderPlazaPosts(posts) {
    SUBMIT → SUPABASE (FIXED)
 ========================= */
 
-submitBtn.addEventListener("click", async (e) => {
+submitBtn && submitBtn.addEventListener("click", async (e) => {
   e.preventDefault();
 
   validatePlazaForm();
