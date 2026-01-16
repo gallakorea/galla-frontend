@@ -40,62 +40,22 @@
     </div>
 
     <div class="post-body">
-      <h1 class="post-title">
-        요즘 월급으로 서울에서 사는 게 정상인가요?
-      </h1>
+      <h1 class="post-title"></h1>
 
-      <div class="post-meta">
-        피곤한 감자 32 · 경제·투자 · 3시간 전
-      </div>
+      <div class="post-meta"></div>
 
-      <div class="post-content">
-        집값, 월세, 물가까지 생각하면
-        서울에서 월급으로 사는 게 맞는지 모르겠습니다.
-        다들 어떻게 버티고 계신가요?
-      </div>
+      <div class="post-content"></div>
     </div>
   </section>
 
   <!-- COMMENT WRITE -->
   <section class="comment-write">
-    <textarea placeholder="익명으로 댓글을 입력하세요"></textarea>
-    <button>댓글 등록</button>
+    <textarea id="rootCommentBody" placeholder="익명으로 댓글을 입력하세요"></textarea>
+    <button id="rootCommentSubmit">댓글 등록</button>
   </section>
 
   <!-- COMMENT LIST -->
-  <ul class="comment-list">
-    <li class="comment">
-      <div class="comment-header">
-        <span class="comment-author">졸린 고래 104</span>
-        <span class="comment-time">1시간 전</span>
-      </div>
-      <div class="comment-body">진짜 공감합니다.</div>
-
-      <div class="comment-actions">
-        <button>👍 12</button>
-        <button>👎 3</button>
-        <button>답글</button>
-      </div>
-
-      <!-- 대댓글 -->
-      <ul class="comment-children">
-        <li class="comment">
-          <div class="comment-header">
-            <span class="comment-author">화난 택배상자 7</span>
-            <span class="comment-time">45분 전</span>
-          </div>
-          <div class="comment-body">
-            그래서 다들 탈서울 하는 거죠…
-          </div>
-          <div class="comment-actions">
-            <button>👍 5</button>
-            <button>👎 1</button>
-            <button>답글</button>
-          </div>
-        </li>
-      </ul>
-    </li>
-  </ul>
+  <ul class="comment-list" id="commentList"></ul>
 
   <!-- BOTTOM NAV (네가 준 그대로) -->
   <nav class="bottom-nav">
@@ -126,5 +86,6 @@
   </nav>
 
 </div>
+<script src="js/plaza_detail.js"></script>
 </body>
 </html>

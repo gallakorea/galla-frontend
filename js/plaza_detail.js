@@ -13,6 +13,9 @@ if (!postId) {
 }
 
 const commentList = document.getElementById("commentList");
+const postTitleEl = document.querySelector(".post-title");
+const postMetaEl = document.querySelector(".post-meta");
+const postContentEl = document.querySelector(".post-content");
 
 /*
 comment = {
@@ -25,6 +28,24 @@ comment = {
 */
 
 let comments = [];
+
+async function fetchPostDetail() {
+  const { data, error } = await supabase
+    .from("plaza_posts")
+    .select("title, body, category, anon_name, created_at")
+    .eq("id", postId)
+    .single();
+
+  if (error) {
+    console.error(error);
+    alert("글을 불러오지 못했습니다.");
+    return;
+  }
+
+  postTitleEl.textContent = data.title;
+  postContentEl.textContent = data.body;
+  postMetaEl.textContent = `${data.anon_name} · ${data.category} · 방금 전`;
+}
 
 async function fetchComments() {
   const { data, error } = await supabase
@@ -123,4 +144,5 @@ async function submitRootComment(body) {
   fetchComments();
 }
 
+fetchPostDetail();
 fetchComments();
