@@ -167,8 +167,19 @@ async function submitComment(body) {
    COMMENT SUBMIT (ROOT)
 ========================= */
 
+
 const commentInput = document.getElementById("commentInput");
 const commentSubmitBtn = document.getElementById("commentSubmitBtn");
+
+// =========================
+// MOVE COMMENT INPUT ABOVE BOTTOM NAV
+// =========================
+const bottomNav = document.querySelector(".bottom-nav");
+const commentWriteSection = commentInput?.closest(".comment-write");
+
+if (bottomNav && commentWriteSection) {
+  bottomNav.parentNode.insertBefore(commentWriteSection, bottomNav);
+}
 
 commentSubmitBtn.addEventListener("click", async () => {
   const body = commentInput.value.trim();
