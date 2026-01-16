@@ -101,6 +101,15 @@ function renderComments(list) {
       <ul class="reply-list hidden"></ul>
     `;
 
+    rootLi.addEventListener("click", () => {
+      replyTarget = {
+        parentId: root.id,
+        mentionName: root.nickname
+      };
+      commentInput.value = `@${root.nickname} `;
+      commentInput.focus();
+    });
+
     const replyListEl = rootLi.querySelector(".reply-list");
     const toggleBtn = rootLi.querySelector(".toggle-replies-btn");
 
@@ -127,14 +136,6 @@ function renderComments(list) {
           ? `답글 ${replies.length}개 보기`
           : "답글 달기";
       }
-
-      // ✅ 항상 하단 입력창에서 답글 작성
-      replyTarget = {
-        parentId: root.id,
-        mentionName: root.nickname
-      };
-      commentInput.value = `@${root.nickname} `;
-      commentInput.focus();
     });
 
     commentList.appendChild(rootLi);
@@ -206,38 +207,8 @@ function renderReplies(replies, container, rootComment) {
     li.innerHTML = `
       <div class="comment-meta">${reply.nickname}</div>
       <div class="comment-body">${reply.body}</div>
-      <div class="comment-actions">
-        <button class="reply-btn">답글</button>
-      </div>
     `;
-
-    li.querySelector(".reply-btn").addEventListener("click", () => {
-      replyTarget = {
-        parentId: rootComment.id,
-        mentionName: reply.nickname
-      };
-      commentInput.value = `@${reply.nickname} `;
-      commentInput.focus();
-    });
 
     container.appendChild(li);
   });
-
-  const writeLi = document.createElement("li");
-  writeLi.className = "reply-write";
-
-  writeLi.innerHTML = `
-    <button class="reply-write-btn">답글 작성</button>
-  `;
-
-  writeLi.querySelector(".reply-write-btn").addEventListener("click", () => {
-    replyTarget = {
-      parentId: rootComment.id,
-      mentionName: rootComment.nickname
-    };
-    commentInput.value = `@${rootComment.nickname} `;
-    commentInput.focus();
-  });
-
-  container.appendChild(writeLi);
 }
