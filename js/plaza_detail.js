@@ -33,6 +33,14 @@ comment = {
 let comments = [];
 let replyTarget = null; // { parentId, mentionName }
 
+function scrollToCommentInput() {
+  const rect = commentInput.getBoundingClientRect();
+  window.scrollTo({
+    top: window.scrollY + rect.top - 120,
+    behavior: "smooth"
+  });
+}
+
 async function fetchPostDetail() {
   const { data, error } = await supabase
     .from("plaza_posts")
@@ -96,8 +104,9 @@ function renderComments(list) {
         parentId: root.id,
         mentionName: root.nickname
       };
-      commentInput.focus();
+      scrollToCommentInput();
       commentInput.value = `@${root.nickname} `;
+      commentInput.focus();
     });
 
     commentList.appendChild(rootLi);
@@ -121,8 +130,9 @@ function renderComments(list) {
             parentId: root.id,
             mentionName: r.nickname
           };
-          commentInput.focus();
+          scrollToCommentInput();
           commentInput.value = `@${r.nickname} `;
+          commentInput.focus();
         });
 
         commentList.appendChild(replyLi);
@@ -175,6 +185,7 @@ commentSubmitBtn.addEventListener("click", async () => {
 
   await submitComment(body);
 
+  replyTarget = null;
   commentInput.value = "";
   fetchComments();
 });
