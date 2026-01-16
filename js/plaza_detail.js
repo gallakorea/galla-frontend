@@ -147,5 +147,42 @@ async function submitRootComment(body) {
   fetchComments();
 }
 
+/* =========================
+   COMMENT SUBMIT (ROOT)
+========================= */
+
+const commentInput = document.getElementById("commentInput");
+const commentSubmitBtn = document.getElementById("commentSubmitBtn");
+
+commentSubmitBtn.addEventListener("click", async () => {
+  const body = commentInput.value.trim();
+  if (!body) {
+    alert("댓글을 입력하세요.");
+    return;
+  }
+
+  const anon_name = generateAnonNickname();
+
+  const { error } = await supabase
+    .from("plaza_comments")
+    .insert({
+      post_id: postId,
+      parent_id: null,
+      body,
+      anon_name
+    });
+
+  if (error) {
+    console.error(error);
+    alert("댓글 등록 실패");
+    return;
+  }
+
+  // 성공 처리
+  commentInput.value = "";
+  fetchComments();
+});
+
+
 fetchPostDetail();
 fetchComments();
