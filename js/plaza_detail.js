@@ -217,9 +217,18 @@ fetchComments();
 function renderReplies(replies, container) {
   container.innerHTML = "";
 
+  // ✅ 부모에서 내려오는 선 끊기 + 새 시작선
+  container.style.marginLeft = "20";
+  container.style.paddingLeft = "16px";
+  container.style.borderLeft = "1px solid rgba(255,255,255,0.12)";
+
   replies.forEach(reply => {
     const li = document.createElement("li");
     li.className = "comment reply";
+
+    // ✅ 각 대댓글은 독립적으로 아래로 시작
+    li.style.marginTop = "16px";
+
     li.innerHTML = `
       <div class="comment-meta">${reply.nickname}</div>
       <div class="comment-body">${reply.body}</div>
@@ -230,6 +239,8 @@ function renderReplies(replies, container) {
         <button class="reply-btn">답글 달기</button>
       </div>
     `;
+
+    // ✅ 대댓글에서도 다시 답글 가능 (무한 싸움)
     li.querySelector(".reply-btn").addEventListener("click", () => {
       replyTarget = {
         parentId: reply.parent_id ?? reply.id,
