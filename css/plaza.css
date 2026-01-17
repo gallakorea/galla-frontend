@@ -576,3 +576,32 @@ html, body {
   height: 100%;
   object-fit: cover;
 }
+
+/* =========================
+   PLAZA LIST THUMB FIX
+   - keep thumbnails compact on list
+========================= */
+
+.plaza-post {
+  align-items: center;
+}
+
+.plaza-post .post-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.plaza-post .plaza-thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+}
+
+.plaza-post .plaza-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
