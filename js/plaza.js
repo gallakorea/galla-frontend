@@ -167,10 +167,16 @@ function generateAnonNickname() {
    FETCH + RENDER POSTS
 ========================= */
 
+function extractFirstImage(body) {
+  if (!body) return null;
+  const match = body.match(/\[IMAGE\](https?:\/\/[^\s]+)/);
+  return match ? match[1] : null;
+}
+
 async function fetchPlazaPosts() {
   let query = supabase
     .from("plaza_posts")
-    .select("id, category, title, nickname, created_at")
+    .select("id, category, title, nickname, created_at, body, thumbnail")
     .order("created_at", { ascending: false });
 
   if (currentCategory !== "전체") {
@@ -198,7 +204,7 @@ function renderPlazaPosts(posts) {
   posts.forEach(post => {
     const li = document.createElement("li");
     li.className = "plaza-post";
-
+    const thumb = post.thumbnail || extractFirstImage(post.body);
     li.innerHTML = `
       <a href="plaza_detail.html?id=${post.id}" class="plaza-link">
         <div class="post-body">
@@ -207,9 +213,16 @@ function renderPlazaPosts(posts) {
             ${post.nickname} · ${post.category} · 방금 전
           </div>
         </div>
+
+        ${
+          thumb
+            ? `<div class="post-thumb">
+                 <img src="${thumb}" alt="thumbnail" />
+               </div>`
+            : ``
+        }
       </a>
     `;
-
     plazaListEl.appendChild(li);
   });
 }
