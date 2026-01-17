@@ -57,7 +57,7 @@ async function fetchPostDetail() {
   }
 
   postTitleEl.textContent = data.title;
-  postContentEl.textContent = data.body;
+  postContentEl.innerHTML = renderPostBody(data.body);
   postMetaEl.textContent = `${data.nickname} · ${data.category} · 방금 전`;
 }
 
@@ -253,4 +253,25 @@ function renderReplies(replies, container) {
 
     container.appendChild(li);
   });
+}
+
+/* =========================
+   POST BODY RENDERER
+   - 줄바꿈 유지
+   - [IMAGE]URL → 실제 이미지
+========================= */
+function renderPostBody(body) {
+  if (!body) return "";
+
+  return body
+    // 줄바꿈 유지
+    .replace(/\n/g, "<br>")
+
+    // [IMAGE]URL → <img>
+    .replace(
+      /\[IMAGE\](https?:\/\/[^\s]+)/g,
+      `<div class="post-image-wrapper">
+         <img src="$1" class="post-image" />
+       </div>`
+    );
 }
