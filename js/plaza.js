@@ -59,12 +59,12 @@ const titleInput = document.getElementById("plaza-title");
 const submitBtn = document.getElementById("plaza-submit");
 const charCount = document.getElementById("char-count");
 
-/* =========================
-   300자 카운터
-========================= */
+const bodyInput = document.getElementById("plaza-body");
 
-titleInput && titleInput.addEventListener("input", validatePlazaForm);
-categorySelect && categorySelect.addEventListener("change", validatePlazaForm);
+bodyInput?.addEventListener("input", () => {
+  charCount.textContent = bodyInput.value.length;
+  validatePlazaForm();
+});
 
 /* =========================
    VALIDATION
@@ -75,86 +75,72 @@ categorySelect && categorySelect.addEventListener("change", validatePlazaForm);
 function validatePlazaForm() {
   const hasCategory = categorySelect.value.trim() !== "";
   const hasTitle = titleInput.value.trim().length > 0;
-  const hasContent = editorContent.length > 0;
+  const hasBody = bodyInput.value.trim().length > 0;
 
-  submitBtn.disabled = !(hasCategory && hasTitle && hasContent);
+  submitBtn.disabled = !(hasCategory && hasTitle && hasBody);
 }
-// ===== Lightweight Editor State =====
-const editorEl = document.getElementById("editor");
-const addTextBtn = document.getElementById("addText");
+
+/* =========================
+   IMAGE INSERT (TEXTAREA)
+========================= */
+
 const addImageBtn = document.getElementById("addImage");
-const addLinkBtn = document.getElementById("addLink");
-const coverImageInput = document.getElementById("coverImageInput");
 
-let editorContent = [];
-let coverImageUrl = null;
+const imageInput = document.createElement("input");
+imageInput.type = "file";
+imageInput.accept = "image/*";
+imageInput.style.display = "none";
+document.body.appendChild(imageInput);
 
-addTextBtn?.addEventListener("click", () => {
-  const div = document.createElement("div");
-  div.className = "editor-text";
-  div.contentEditable = true;
-  div.dataset.index = editorContent.length;
-  div.addEventListener("input", () => {
-    const idx = Number(div.dataset.index);
-    editorContent[idx].value = div.textContent;
-    validatePlazaForm();
-  });
-  editorEl.appendChild(div);
-  editorContent.push({ type: "text", value: "" });
+addImageBtn?.addEventListener("click", () => {
+  imageInput.click();
 });
 
-addLinkBtn?.addEventListener("click", () => {
-  const url = prompt("링크 URL");
-  if (!url) return;
-  const title = prompt("링크 제목") || url;
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.target = "_blank";
-  a.textContent = title;
-  a.className = "editor-link";
-  editorEl.appendChild(a);
-
-  editorContent.push({ type: "link", url, title });
-  validatePlazaForm();
-});
-
-addImageBtn?.addEventListener("click", async () => {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.onchange = async () => {
-    const file = input.files[0];
-    if (!file) return;
-
-    const path = `plaza/${Date.now()}_${file.name}`;
-    const { error } = await supabase.storage.from("images").upload(path, file);
-    if (error) return alert("이미지 업로드 실패");
-
-    const { data } = supabase.storage.from("images").getPublicUrl(path);
-
-    const img = document.createElement("img");
-    img.src = data.publicUrl;
-    img.className = "editor-image";
-    editorEl.appendChild(img);
-
-    editorContent.push({ type: "image", url: data.publicUrl });
-    validatePlazaForm();
-  };
-  input.click();
-});
-
-coverImageInput?.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
+imageInput.addEventListener("change", async () => {
+  const file = imageInput.files[0];
   if (!file) return;
 
-  const path = `plaza/cover_${Date.now()}_${file.name}`;
-  const { error } = await supabase.storage.from("images").upload(path, file);
-  if (error) return alert("대표 이미지 업로드 실패");
+  const ext = file.name.split(".").pop();
+  const fileName = `plaza_${Date.now()}.${ext}`;
 
-  const { data } = supabase.storage.from("images").getPublicUrl(path);
-  coverImageUrl = data.publicUrl;
+  const { error } = await supabase
+    .storage
+    .from("plaza-images")
+    .upload(fileName, file);
+
+  if (error) {
+    alert("이미지 업로드 실패");
+    console.error(error);
+    return;
+  }
+
+  const { data } = supabase
+    .storage
+    .from("plaza-images")
+    .getPublicUrl(fileName);
+
+  insertImageIntoTextarea(data.publicUrl);
+  imageInput.value = "";
 });
+
+function insertImageIntoTextarea(url) {
+  const start = bodyInput.selectionStart;
+  const end = bodyInput.selectionEnd;
+
+  const tag = `\n[IMAGE]${url}\n`;
+
+  bodyInput.value =
+    bodyInput.value.substring(0, start) +
+    tag +
+    bodyInput.value.substring(end);
+
+  bodyInput.selectionStart =
+    bodyInput.selectionEnd =
+    start + tag.length;
+
+  bodyInput.focus();
+  charCount.textContent = bodyInput.value.length;
+}
 
 /* =========================
    익명 닉네임 생성
@@ -245,11 +231,16 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const title = titleInput.value.trim();
   const anonName = generateAnonNickname();
 
+  const body = bodyInput.value;
+
+  const firstImageMatch = body.match(/\[IMAGE\](.+)/);
+  const thumbnail = firstImageMatch ? firstImageMatch[1] : null;
+
   const payload = {
     category,
     title,
-    content: editorContent,
-    cover_image: coverImageUrl,
+    body,
+    thumbnail,
     nickname: anonName
   };
 
@@ -277,11 +268,7 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   charCount.textContent = "0";
   submitBtn.disabled = true;
 
-  // 에디터 상태 초기화
-  editorContent = [];
-  if (editorEl) editorEl.innerHTML = "";
-  coverImageUrl = null;
-  if (coverImageInput) coverImageInput.value = "";
+  bodyInput.value = "";
 
   // 리스트 즉시 갱신
   fetchPlazaPosts();
