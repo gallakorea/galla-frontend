@@ -105,15 +105,18 @@ function renderComments(list) {
       ${
         replies.length > 0
           ? `
+            <div class="comment-actions">
+              <button class="like-btn">👍</button>
+              <button class="dislike-btn">👎</button>
+              <button class="share-btn">공유</button>
+              <button class="reply-btn">답글 달기</button>
+            </div>
             <div class="reply-toggle-wrapper">
-              <button class="toggle-replies-btn">
-                답글 ${replies.length}개 더보기
-              </button>
+              ${replies.length > 0 ? `<button class="toggle-replies-btn">답글 ${replies.length}개 더보기</button>` : ""}
             </div>
           `
           : ``
       }
-
       <ul class="reply-list hidden"></ul>
     `;
 
@@ -124,8 +127,12 @@ function renderComments(list) {
     /* ===== 답글 달기 ===== */
     replyBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      replyTarget = { parentId: root.id };
+      replyTarget = {
+        parentId: root.id,
+        mentionName: root.nickname
+      };
       commentInput.value = `@${root.nickname} `;
+      scrollToCommentInput();
       commentInput.focus();
     });
 
@@ -216,7 +223,23 @@ function renderReplies(replies, container) {
     li.innerHTML = `
       <div class="comment-meta">${reply.nickname}</div>
       <div class="comment-body">${reply.body}</div>
+      <div class="comment-actions">
+        <button class="like-btn">👍</button>
+        <button class="dislike-btn">👎</button>
+        <button class="share-btn">공유</button>
+        <button class="reply-btn">답글 달기</button>
+      </div>
     `;
+    li.querySelector(".reply-btn").addEventListener("click", () => {
+      replyTarget = {
+        parentId: reply.parent_id ?? reply.id,
+        mentionName: reply.nickname
+      };
+      commentInput.value = `@${reply.nickname} `;
+      scrollToCommentInput();
+      commentInput.focus();
+    });
+
     container.appendChild(li);
   });
 }
