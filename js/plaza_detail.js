@@ -98,9 +98,12 @@ function renderComments(list) {
       <div class="comment-meta">${root.nickname}</div>
       <div class="comment-body">${root.body}</div>
       <div class="comment-actions">
-        <button class="toggle-replies-btn">
-          ${replies.length > 0 ? `답글 ${replies.length}개 보기` : "답글 달기"}
-        </button>
+        <button class="reply-action-btn">답글 달기</button>
+        ${
+          replies.length > 0
+            ? `<button class="toggle-replies-btn">답글 ${replies.length}개 더보기</button>`
+            : ``
+        }
       </div>
       <ul class="reply-list hidden"></ul>
     `;
