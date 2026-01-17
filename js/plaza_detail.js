@@ -97,57 +97,56 @@ function renderComments(list) {
     rootLi.innerHTML = `
       <div class="comment-meta">${root.nickname}</div>
       <div class="comment-body">${root.body}</div>
+
       <div class="comment-actions">
-        <button class="reply-action-btn">답글 달기</button>
-        ${
-          replies.length > 0
-            ? `<button class="toggle-replies-btn">답글 ${replies.length}개 더보기</button>`
-            : ``
-        }
+        <button class="reply-btn">답글 달기</button>
       </div>
+
+      ${
+        replies.length > 0
+          ? `
+            <div class="reply-toggle-wrapper">
+              <button class="toggle-replies-btn">
+                답글 ${replies.length}개 더보기
+              </button>
+            </div>
+          `
+          : ``
+      }
+
       <ul class="reply-list hidden"></ul>
     `;
 
-    const replyListEl = rootLi.querySelector(".reply-list");
+    const replyBtn = rootLi.querySelector(".reply-btn");
     const toggleBtn = rootLi.querySelector(".toggle-replies-btn");
+    const replyListEl = rootLi.querySelector(".reply-list");
 
-    toggleBtn.addEventListener("click", (e) => {
+    /* ===== 답글 달기 ===== */
+    replyBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-
-      // ✅ 답글이 아예 없는 경우 → 토글 금지, 바로 입력만
-    if (replies.length === 0) {
-      replyTarget = {
-        parentId: root.id,
-        mentionName: root.nickname
-      };
-
+      replyTarget = { parentId: root.id };
       commentInput.value = `@${root.nickname} `;
       commentInput.focus();
-      return;
+    });
+
+    /* ===== 답글 더보기 / 접기 ===== */
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        const isOpen = !replyListEl.classList.contains("hidden");
+
+        if (isOpen) {
+          replyListEl.classList.add("hidden");
+          replyListEl.innerHTML = "";
+          toggleBtn.textContent = `답글 ${replies.length}개 더보기`;
+        } else {
+          replyListEl.classList.remove("hidden");
+          toggleBtn.textContent = "접기";
+          renderReplies(replies, replyListEl);
+        }
+      });
     }
-
-      // ✅ 답글이 있는 경우만 접기 / 펼치기
-      const isHidden = replyListEl.classList.contains("hidden");
-
-      if (isHidden) {
-        replyListEl.classList.remove("hidden");
-        toggleBtn.textContent = "접기";
-        renderReplies(replies, replyListEl);
-      } else {
-        replyListEl.classList.add("hidden");
-        toggleBtn.textContent = `답글 ${replies.length}개 보기`;
-        replyListEl.innerHTML = "";
-      }
-    });
-
-    rootLi.querySelector(".comment-body").addEventListener("click", () => {
-      replyTarget = {
-        parentId: root.id,
-        mentionName: root.nickname
-      };
-      commentInput.value = `@${root.nickname} `;
-      commentInput.focus();
-    });
 
     commentList.appendChild(rootLi);
   });
