@@ -216,7 +216,7 @@ function renderPlazaPosts(posts) {
 
         ${
           thumb
-            ? `<div class="post-thumb">
+            ? `<div class="plaza-thumb">
                  <img src="${thumb}" alt="thumbnail" />
                </div>`
             : ``
