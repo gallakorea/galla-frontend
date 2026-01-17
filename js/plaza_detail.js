@@ -111,15 +111,23 @@ function renderComments(list) {
     toggleBtn.addEventListener("click", (e) => {
       e.stopPropagation();
 
-      if (replyListEl.classList.contains("hidden")) {
+      // ✅ 답글이 아예 없는 경우 → 토글 금지, 바로 입력만
+      if (replies.length === 0) {
+        replyTarget = { parentId: root.id };
+        commentInput.focus();
+        return;
+      }
+
+      // ✅ 답글이 있는 경우만 접기 / 펼치기
+      const isHidden = replyListEl.classList.contains("hidden");
+
+      if (isHidden) {
         replyListEl.classList.remove("hidden");
         toggleBtn.textContent = "접기";
         renderReplies(replies, replyListEl);
       } else {
         replyListEl.classList.add("hidden");
-        toggleBtn.textContent = replies.length > 0
-          ? `답글 ${replies.length}개 보기`
-          : "답글 달기";
+        toggleBtn.textContent = `답글 ${replies.length}개 보기`;
         replyListEl.innerHTML = "";
       }
     });
