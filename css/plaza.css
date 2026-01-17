@@ -134,6 +134,8 @@ html, body {
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid #111;
+  width: 100%;
+  overflow: hidden;
 }
 
 .plaza-post a {
@@ -141,6 +143,7 @@ html, body {
   align-items: center;
   width: 100%;
   gap: 12px;
+  justify-content: space-between;
 }
 
 .plaza-post .post-body {
@@ -152,7 +155,7 @@ html, body {
   width: 64px;
   height: 64px;
   flex-shrink: 0;
-  margin-left: auto;
+  margin-left: 12px;
   border-radius: 8px;
   overflow: hidden;
   background: #111;
@@ -162,6 +165,7 @@ html, body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .vote-col {
@@ -616,9 +620,6 @@ html, body {
   border-radius: 12px;
   padding: 4px;
   margin-top: 12px;
-}
-.plaza-list img {
-  display: none !important;
 }
 
 .plaza-list .plaza-thumb img {
