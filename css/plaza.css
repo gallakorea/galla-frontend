@@ -7,16 +7,17 @@
 
 html, body {
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
   background: #000;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 #app {
+  max-width: 480px;
+  margin: 0 auto;
   padding-bottom: 140px;
 }
+
 
 /* HEADER (기존 호환) */
 .header {
@@ -75,11 +76,92 @@ html, body {
   list-style: none;
 }
 
-.plaza-post {
+/* .plaza-post {
   display: flex;
+  align-items: center;
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid #111;
+} */
+
+/* Removed duplicate plaza-item and plaza-thumb styles to prevent conflict */
+/*
+.plaza-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #111;
+  gap: 12px;
+}
+
+.plaza-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.plaza-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.plaza-meta {
+  font-size: 12px;
+  color: #777;
+}
+
+.plaza-thumb {
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+}
+
+.plaza-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+*/
+
+/* Unified plaza-post layout as per instructions */
+.plaza-post {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #111;
+}
+
+.plaza-post a {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 12px;
+}
+
+.plaza-post .post-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.plaza-post .plaza-thumb {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+}
+
+.plaza-post .plaza-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .vote-col {
@@ -92,6 +174,7 @@ html, body {
 
 .post-body {
   flex: 1;
+  min-width: 0;
 }
 
 .post-title {
@@ -534,4 +617,27 @@ html, body {
   padding: 4px;
   margin-top: 12px;
 }
+.plaza-list img {
+  display: none !important;
+}
 
+.plaza-list .plaza-thumb img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.plaza-post .plaza-thumb {
+  width: 64px !important;
+  height: 64px !important;
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+}
+
+.plaza-post a {
+  overflow: hidden;
+}
