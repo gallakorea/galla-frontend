@@ -506,3 +506,31 @@ html, body {
 #plaza-body::placeholder {
   color: #777;
 }
+
+.editor {
+  white-space: pre-wrap;   /* 엔터, 줄바꿈 유지 */
+  word-break: break-word; /* 긴 텍스트 줄바꿈 */
+  outline: none;
+}
+
+.editor-body textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: none;
+
+  background: transparent;
+  color: #fff;
+  border: none;
+  outline: none;
+
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 12px;
+}
+
+.editor-body {
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 4px;
+  margin-top: 12px;
+}
