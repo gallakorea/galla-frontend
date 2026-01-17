@@ -93,11 +93,22 @@
         maxlength="80"
       />
 
-      <textarea
-        id="plaza-body"
-        placeholder="본문을 입력하세요 (최대 300자)"
-        maxlength="300"
-      ></textarea>
+      <!-- EDITOR TOOLBAR -->
+      <div class="editor-toolbar">
+        <button type="button" id="addText">텍스트</button>
+        <button type="button" id="addImage">사진</button>
+        <button type="button" id="addLink">링크</button>
+      </div>
+
+      <!-- EDITOR BODY -->
+      <div id="editor" class="editor" contenteditable="false"></div>
+
+      <!-- COVER IMAGE SELECT -->
+      <div class="cover-select">
+        <label for="coverImageInput">대표 이미지</label>
+        <input type="file" id="coverImageInput" accept="image/*">
+      </div>
+
       <div class="char-counter">
         <span id="char-count">0</span> / 300
       </div>

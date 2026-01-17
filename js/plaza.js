@@ -56,18 +56,12 @@ document.querySelectorAll(".plaza-categories button").forEach(btn => {
 });
 
 const titleInput = document.getElementById("plaza-title");
-const bodyInput = document.getElementById("plaza-body");
 const submitBtn = document.getElementById("plaza-submit");
 const charCount = document.getElementById("char-count");
 
 /* =========================
    300자 카운터
 ========================= */
-
-bodyInput && bodyInput.addEventListener("input", () => {
-  charCount.textContent = bodyInput.value.length;
-  validatePlazaForm();
-});
 
 titleInput && titleInput.addEventListener("input", validatePlazaForm);
 categorySelect && categorySelect.addEventListener("change", validatePlazaForm);
@@ -81,10 +75,86 @@ categorySelect && categorySelect.addEventListener("change", validatePlazaForm);
 function validatePlazaForm() {
   const hasCategory = categorySelect.value.trim() !== "";
   const hasTitle = titleInput.value.trim().length > 0;
-  const hasBody = bodyInput.value.trim().length > 0;
+  const hasContent = editorContent.length > 0;
 
-  submitBtn.disabled = !(hasCategory && hasTitle && hasBody);
+  submitBtn.disabled = !(hasCategory && hasTitle && hasContent);
 }
+// ===== Lightweight Editor State =====
+const editorEl = document.getElementById("editor");
+const addTextBtn = document.getElementById("addText");
+const addImageBtn = document.getElementById("addImage");
+const addLinkBtn = document.getElementById("addLink");
+const coverImageInput = document.getElementById("coverImageInput");
+
+let editorContent = [];
+let coverImageUrl = null;
+
+addTextBtn?.addEventListener("click", () => {
+  const div = document.createElement("div");
+  div.className = "editor-text";
+  div.contentEditable = true;
+  div.dataset.index = editorContent.length;
+  div.addEventListener("input", () => {
+    const idx = Number(div.dataset.index);
+    editorContent[idx].value = div.textContent;
+    validatePlazaForm();
+  });
+  editorEl.appendChild(div);
+  editorContent.push({ type: "text", value: "" });
+});
+
+addLinkBtn?.addEventListener("click", () => {
+  const url = prompt("링크 URL");
+  if (!url) return;
+  const title = prompt("링크 제목") || url;
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.textContent = title;
+  a.className = "editor-link";
+  editorEl.appendChild(a);
+
+  editorContent.push({ type: "link", url, title });
+  validatePlazaForm();
+});
+
+addImageBtn?.addEventListener("click", async () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+
+    const path = `plaza/${Date.now()}_${file.name}`;
+    const { error } = await supabase.storage.from("images").upload(path, file);
+    if (error) return alert("이미지 업로드 실패");
+
+    const { data } = supabase.storage.from("images").getPublicUrl(path);
+
+    const img = document.createElement("img");
+    img.src = data.publicUrl;
+    img.className = "editor-image";
+    editorEl.appendChild(img);
+
+    editorContent.push({ type: "image", url: data.publicUrl });
+    validatePlazaForm();
+  };
+  input.click();
+});
+
+coverImageInput?.addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const path = `plaza/cover_${Date.now()}_${file.name}`;
+  const { error } = await supabase.storage.from("images").upload(path, file);
+  if (error) return alert("대표 이미지 업로드 실패");
+
+  const { data } = supabase.storage.from("images").getPublicUrl(path);
+  coverImageUrl = data.publicUrl;
+});
 
 /* =========================
    익명 닉네임 생성
@@ -173,13 +243,13 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
 
   const category = categorySelect.value.trim();
   const title = titleInput.value.trim();
-  const body = bodyInput.value.trim();
   const anonName = generateAnonNickname();
 
   const payload = {
     category,
     title,
-    body,
+    content: editorContent,
+    cover_image: coverImageUrl,
     nickname: anonName
   };
 
@@ -204,9 +274,14 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
 
   categorySelect.value = "";
   titleInput.value = "";
-  bodyInput.value = "";
   charCount.textContent = "0";
   submitBtn.disabled = true;
+
+  // 에디터 상태 초기화
+  editorContent = [];
+  if (editorEl) editorEl.innerHTML = "";
+  coverImageUrl = null;
+  if (coverImageInput) coverImageInput.value = "";
 
   // 리스트 즉시 갱신
   fetchPlazaPosts();
