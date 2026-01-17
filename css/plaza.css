@@ -337,3 +337,151 @@ html, body {
   color: inherit;
   text-decoration: none;
 }
+
+/* =========================
+   WRITE MODAL LAYOUT
+========================= */
+
+#plaza-write-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#plaza-write-modal.hidden {
+  display: none;
+}
+
+.plaza-write-box {
+  width: 92%;
+  max-width: 420px;
+  background: #0f0f0f;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* =========================
+   FORM ELEMENTS
+========================= */
+
+.plaza-write-box select,
+.plaza-write-box input[type="text"],
+.plaza-write-box textarea {
+  width: 100%;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 12px;
+  color: #fff;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.plaza-write-box textarea {
+  resize: none;
+  min-height: 90px;
+}
+
+/* =========================
+   EDITOR TOOLBAR
+========================= */
+
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.editor-toolbar button {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.editor-toolbar button:hover {
+  background: #2a2a2a;
+}
+
+/* =========================
+   EDITOR BODY
+========================= */
+
+.editor-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.editor-block textarea {
+  width: 100%;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 10px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.editor-block img {
+  width: 100%;
+  border-radius: 10px;
+  display: block;
+}
+
+.editor-block a {
+  color: #4da3ff;
+  text-decoration: underline;
+  font-size: 14px;
+}
+
+/* =========================
+   COVER IMAGE
+========================= */
+
+.cover-image {
+  margin: 10px 0;
+}
+
+.cover-image input {
+  font-size: 13px;
+  color: #ccc;
+}
+
+/* =========================
+   FOOTER BUTTONS
+========================= */
+
+.plaza-write-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.plaza-write-actions button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  border: none;
+}
+
+.plaza-write-actions .cancel {
+  background: #1e1e1e;
+  color: #ccc;
+}
+
+.plaza-write-actions .submit {
+  background: #2f7df6;
+  color: #fff;
+}
