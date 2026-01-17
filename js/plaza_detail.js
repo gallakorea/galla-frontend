@@ -264,14 +264,19 @@ function renderPostBody(body) {
   if (!body) return "";
 
   return body
-    // 줄바꿈 유지
-    .replace(/\n/g, "<br>")
-
-    // [IMAGE]URL → <img>
+    // [IMAGE] 뒤의 URL (줄바꿈 포함) 처리
     .replace(
-      /\[IMAGE\](https?:\/\/[^\s]+)/g,
-      `<div class="post-image-wrapper">
-         <img src="$1" class="post-image" />
-       </div>`
-    );
+      /\[IMAGE\]([\s\S]*?)(?=\n|$)/g,
+      (_, url) => {
+        const cleanUrl = url.replace(/\s+/g, "");
+        return `
+          <div class="post-image-wrapper">
+            <img src="${cleanUrl}" class="post-image" />
+          </div>
+        `;
+      }
+    )
+
+    // 마지막에 줄바꿈 처리
+    .replace(/\n/g, "<br>");
 }
