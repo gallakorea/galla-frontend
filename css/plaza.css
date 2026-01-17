@@ -485,3 +485,24 @@ html, body {
   background: #2f7df6;
   color: #fff;
 }
+
+.editor-body {
+  margin-top: 12px;
+}
+
+#plaza-body {
+  width: 100%;
+  min-height: 140px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 14px;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: none;
+}
+
+#plaza-body::placeholder {
+  color: #777;
+}

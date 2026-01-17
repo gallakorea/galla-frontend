@@ -101,12 +101,12 @@
       </div>
 
       <!-- EDITOR BODY -->
-      <div id="editor" class="editor" contenteditable="false"></div>
-
-      <!-- COVER IMAGE SELECT -->
-      <div class="cover-select">
-        <label for="coverImageInput">대표 이미지</label>
-        <input type="file" id="coverImageInput" accept="image/*">
+      <div class="editor-body" id="editorBody">
+        <textarea
+          id="plaza-body"
+          placeholder="본문을 입력하세요 (최대 300자)"
+          maxlength="300"
+        ></textarea>
       </div>
 
       <div class="char-counter">
