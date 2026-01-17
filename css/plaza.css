@@ -7,16 +7,17 @@
 
 html, body {
   width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
   background: #000;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 }
 
 #app {
+  max-width: 480px;
+  margin: 0 auto;
   padding-bottom: 140px;
 }
+
 
 /* HEADER (기존 호환) */
 .header {
@@ -148,10 +149,10 @@ html, body {
 }
 
 .plaza-post .plaza-thumb {
-  margin-left: auto;
   width: 64px;
   height: 64px;
   flex-shrink: 0;
+  margin-left: auto;
   border-radius: 8px;
   overflow: hidden;
   background: #111;
