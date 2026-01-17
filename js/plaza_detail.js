@@ -112,11 +112,16 @@ function renderComments(list) {
       e.stopPropagation();
 
       // ✅ 답글이 아예 없는 경우 → 토글 금지, 바로 입력만
-      if (replies.length === 0) {
-        replyTarget = { parentId: root.id };
-        commentInput.focus();
-        return;
-      }
+    if (replies.length === 0) {
+      replyTarget = {
+        parentId: root.id,
+        mentionName: root.nickname
+      };
+
+      commentInput.value = `@${root.nickname} `;
+      commentInput.focus();
+      return;
+    }
 
       // ✅ 답글이 있는 경우만 접기 / 펼치기
       const isHidden = replyListEl.classList.contains("hidden");
@@ -133,7 +138,11 @@ function renderComments(list) {
     });
 
     rootLi.querySelector(".comment-body").addEventListener("click", () => {
-      replyTarget = { parentId: root.id };
+      replyTarget = {
+        parentId: root.id,
+        mentionName: root.nickname
+      };
+      commentInput.value = `@${root.nickname} `;
       commentInput.focus();
     });
 
