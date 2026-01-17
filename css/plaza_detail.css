@@ -306,3 +306,30 @@ body {
   height: auto;
   border-radius: 8px;
 }
+
+.post-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-content {
+  width: 100%;
+}
+
+.post-image-wrapper {
+  width: 100%;
+  margin: 12px 0;
+}
+
+.post-image {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.post-content img {
+  max-width: 100%;
+}
