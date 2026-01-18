@@ -302,17 +302,23 @@ document.addEventListener("DOMContentLoaded", () => {
       voteUpBtn.disabled = true;
       voteDownBtn.disabled = true;
 
-      voteUpBtn.style.opacity = "0.4";
-      voteDownBtn.style.opacity = "0.4";
+      voteUpBtn.style.opacity = "0.35";
+      voteDownBtn.style.opacity = "0.35";
 
-      // 🔥 내 투표 방향 시각화
+      // 🔒 이미 투표함 표시
+      voteScoreEl.setAttribute("data-voted", "true");
+
+      // 🔥 선택한 방향만 활성 하이라이트
       if (myVote === 1) {
         voteUpBtn.style.color = "#4da3ff";
         voteUpBtn.style.stroke = "#4da3ff";
+        voteUpBtn.style.opacity = "1";
       }
+
       if (myVote === -1) {
         voteDownBtn.style.color = "#ff5c5c";
         voteDownBtn.style.stroke = "#ff5c5c";
+        voteDownBtn.style.opacity = "1";
       }
     }
   })();
@@ -328,11 +334,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // 아이콘 흰색
+  // 기본/비활성/활성 상태 분리
   [voteUpBtn, voteDownBtn].forEach(btn => {
     if (!btn) return;
-    btn.style.color = "#fff";
-    btn.style.stroke = "#fff";
+    btn.style.color = "#aaa";        // 기본 비활성 톤
+    btn.style.stroke = "#aaa";
     btn.style.fill = "none";
     btn.style.cursor = "pointer";
   });
@@ -362,20 +368,28 @@ document.addEventListener("DOMContentLoaded", () => {
     // ✅ 투표 성공 → 다시 못 누르게 잠금
     myVote = voteValue;
 
+    // 🔒 즉시 잠금
     voteUpBtn.disabled = true;
     voteDownBtn.disabled = true;
-    voteUpBtn.style.opacity = "0.4";
-    voteDownBtn.style.opacity = "0.4";
 
-    // 🔥 방금 누른 방향 색상 표시
+    voteUpBtn.style.opacity = "0.35";
+    voteDownBtn.style.opacity = "0.35";
+
+    // 🔥 방금 누른 방향만 강조
     if (voteValue === 1) {
       voteUpBtn.style.color = "#4da3ff";
       voteUpBtn.style.stroke = "#4da3ff";
+      voteUpBtn.style.opacity = "1";
     }
+
     if (voteValue === -1) {
       voteDownBtn.style.color = "#ff5c5c";
       voteDownBtn.style.stroke = "#ff5c5c";
+      voteDownBtn.style.opacity = "1";
     }
+
+    // 상태 마킹 (CSS/디버그용)
+    voteScoreEl.setAttribute("data-voted", "true");
 
     voting = false;
   }
