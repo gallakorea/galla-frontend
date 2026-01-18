@@ -280,3 +280,39 @@ function renderPostBody(body) {
     // 마지막에 줄바꿈 처리
     .replace(/\n/g, "<br>");
 }
+
+/* =========================
+   PLAZA VOTE (UP / DOWN)
+========================= */
+
+async function vote(voteValue) {
+  const { error } = await supabase.functions.invoke(
+    "vote-plaza-post",
+    {
+      body: {
+        post_id: postId,
+        vote: voteValue, // 1 = up, -1 = down
+      },
+    }
+  );
+
+  if (error) {
+    console.error(error);
+    alert("투표 실패");
+    return;
+  }
+
+  // 투표 후 글 정보 다시 로드
+  fetchPostDetail();
+}
+
+/* 버튼 이벤트 연결 */
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".vote-up")) {
+    vote(1);
+  }
+
+  if (e.target.closest(".vote-down")) {
+    vote(-1);
+  }
+});
