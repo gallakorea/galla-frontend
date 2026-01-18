@@ -306,22 +306,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (voting) return;
     voting = true;
 
-    // 현재 점수
     const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
 
-    // 같은 버튼 다시 누르면 취소 (토글)
-    let nextVote = voteValue;
-    if (myVote === voteValue) {
-      nextVote = 0;
-    }
-
-    // UI 즉시 반영 (delta 계산)
-    const delta = nextVote - myVote;
+    // 항상 누른 방향대로만 반영 (토글 취소 없음)
+    const delta = voteValue;
     voteScoreEl.textContent = String(currentScore + delta);
 
     const { error } = await supabase.functions.invoke(
       "vote-plaza-post",
-      { body: { post_id: postId, vote: nextVote } }
+      { body: { post_id: postId, vote: voteValue } }
     );
 
     if (error) {
@@ -333,9 +326,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 내 투표 상태 갱신
-    myVote = nextVote;
-
+    // 마지막 누른 방향만 기억
+    myVote = voteValue;
     voting = false;
   }
 
