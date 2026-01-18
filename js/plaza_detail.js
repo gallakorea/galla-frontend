@@ -273,7 +273,7 @@ function renderPostBody(body) {
    - up = +1, down = -1
 ========================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   let voting = false; // 중복 클릭 방지
   let voteStateLoaded = false; // 🔒 내 투표 상태 로딩 완료 여부
   const voteScoreEl = document.getElementById("voteScore");
