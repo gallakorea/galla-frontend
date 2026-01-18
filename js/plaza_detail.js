@@ -300,6 +300,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     myVote = data.my_vote ?? 0;
     voteScoreEl.textContent = String(data.score ?? 0);
 
+    // ✅ 투표 상태 로딩 완료
+    voteStateLoaded = true;
+
+    // 아직 투표 안 한 경우 버튼 활성화
+    if (myVote === 0) {
+      voteUpBtn.disabled = false;
+      voteDownBtn.disabled = false;
+      voteUpBtn.style.opacity = "1";
+      voteDownBtn.style.opacity = "1";
+    }
+
     if (myVote !== 0) {
       voteUpBtn.disabled = true;
       voteDownBtn.disabled = true;
