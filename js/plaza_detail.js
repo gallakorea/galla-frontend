@@ -19,6 +19,7 @@ const commentList = document.getElementById("commentList");
 const postTitleEl = document.querySelector(".post-title");
 const postMetaEl = document.querySelector(".post-meta");
 const postContentEl = document.querySelector(".post-content");
+const voteScoreEl = document.getElementById("voteCount");
 
 document.body.style.paddingBottom = "140px";
 
@@ -46,7 +47,7 @@ function scrollToCommentInput() {
 async function fetchPostDetail() {
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, nickname, score, comment_count")
+    .select("title, body, category, nickname, score")
     .eq("id", postId)
     .single();
 
@@ -62,9 +63,6 @@ async function fetchPostDetail() {
   // 🔥 유일한 진실
   voteScoreEl.textContent =
     typeof data.score === "number" ? data.score : 0;
-
-  document.getElementById("commentCount").textContent =
-    data.comment_count ?? 0;
 }
 
 async function fetchComments() {
@@ -293,7 +291,6 @@ function renderPostBody(body) {
    - up = +1, down = -1
 ========================= */
 
-const voteScoreEl = document.getElementById("voteCount");
 
 async function vote(voteValue) {
   const current = parseInt(voteScoreEl.textContent || "0", 10);
