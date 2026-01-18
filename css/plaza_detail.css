@@ -334,8 +334,9 @@ body {
   max-width: 100%;
 }
 
+
 /* =========================
-   POST ACTION BAR (FINAL)
+   POST ACTION BAR — EXACT MATCH
 ========================= */
 
 .post-action-bar {
@@ -344,7 +345,7 @@ body {
   align-items: center;
 
   width: 100%;
-  margin-top: 16px;
+  margin-top: 18px;
   padding: 10px 14px;
 
   background: #0f0f0f;
@@ -352,41 +353,32 @@ body {
   border-radius: 999px;
 }
 
-/* LEFT GROUP */
-.post-action-bar .action-left {
+/* LEFT / RIGHT */
+.action-left,
+.action-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* RIGHT GROUP */
-.post-action-bar .action-right {
-  display: flex;
-  align-items: center;
-}
-
-/* PILL */
+/* PILL COMMON */
 .pill {
   display: flex;
   align-items: center;
   gap: 8px;
 
-  padding: 6px 12px;
+  padding: 6px 14px;
   border-radius: 999px;
 
   background: #fff;
   color: #000;
 }
 
-/* SVG ICON */
-.pill .icon {
-  width: 18px;
+/* VOTE PILL DIVIDER */
+.vote-pill .divider {
+  width: 1px;
   height: 18px;
-  fill: none;
-  stroke: #000;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  background: #ddd;
 }
 
 /* COUNT */
@@ -395,7 +387,30 @@ body {
   font-weight: 600;
 }
 
-/* SHARE */
-.share-pill {
-  padding: 6px 10px;
+/* SVG ICON */
+.icon {
+  width: 18px;
+  height: 18px;
+
+  fill: none;
+  stroke: #000;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+
+  display: block;
+}
+
+/* RIGHT CIRCLE BUTTON */
+.circle-btn {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
