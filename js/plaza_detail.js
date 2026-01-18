@@ -60,7 +60,7 @@ async function fetchPostDetail() {
   postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
   // 🔥 유일한 진실
-  document.getElementById("voteScore").textContent =
+  voteScoreEl.textContent =
     typeof data.score === "number" ? data.score : 0;
 
   document.getElementById("commentCount").textContent =
@@ -293,41 +293,33 @@ function renderPostBody(body) {
    - up = +1, down = -1
 ========================= */
 
-const voteScoreEl = document.getElementById("voteScore");
+const voteScoreEl = document.getElementById("voteCount");
 
 async function vote(voteValue) {
-  // optimistic UI
   const current = parseInt(voteScoreEl.textContent || "0", 10);
+
+  // optimistic UI
   voteScoreEl.textContent = current + voteValue;
 
-  try {
-    const res = await fetch(
-      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/vote-plaza-post",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          post_id: postId,
-          vote: voteValue, // 1 or -1
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      throw new Error(await res.text());
+  const { error } = await supabase.functions.invoke(
+    "vote-plaza-post",
+    {
+      body: {
+        post_id: postId,
+        vote: voteValue, // 1 or -1
+      },
     }
+  );
 
-    // 🔁 re-sync from DB (single source of truth)
-    await fetchPostDetail();
-  } catch (err) {
-    console.error("vote failed:", err);
-    // rollback
-    voteScoreEl.textContent = current;
+  if (error) {
+    console.error("vote error:", error);
+    voteScoreEl.textContent = current; // rollback
     alert("투표 처리 중 오류가 발생했습니다.");
+    return;
   }
+
+  // single source of truth 재동기화
+  await fetchPostDetail();
 }
 
 /* =========================
