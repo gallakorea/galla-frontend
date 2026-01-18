@@ -37,10 +37,11 @@ let replyTarget = null; // { parentId, mentionName }
 let myVote = 0; // 서버 기준으로 초기화됨
 
 async function fetchPostDetail(voteScoreEl, setMyVote = false) {
-  const { data, error } = await supabase.functions.invoke(
-    "get-plaza-post-detail",
-    { body: { post_id: postId } }
-  );
+  const { data, error } = await supabase
+    .from("plaza_posts")
+    .select("title, body, category, nickname, score")
+    .eq("id", postId)
+    .single();
 
   if (error) {
     console.error(error);
@@ -51,14 +52,9 @@ async function fetchPostDetail(voteScoreEl, setMyVote = false) {
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   if (postMetaEl) postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
-  // 🔥 유일한 진실
   if (voteScoreEl) {
-    const score = typeof data.score === "number" ? data.score : 0;
-    voteScoreEl.textContent = String(score);
-  }
-
-  if (setMyVote && typeof data.my_vote === "number") {
-    myVote = data.my_vote;
+    voteScoreEl.textContent =
+      typeof data.score === "number" ? String(data.score) : "0";
   }
 }
 
@@ -307,21 +303,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function vote(voteValue) {
-    // 🔒 중복 요청 방지
     if (voting) return;
-
-    // ❌ 이미 같은 방향으로 투표한 경우 무시
-    if (myVote === voteValue) return;
-
     voting = true;
-
-    const prevVote = myVote;
-    myVote = voteValue;
-
-    const current = parseInt(voteScoreEl.textContent || "0", 10) || 0;
-
-    // ✅ 차이만 반영 (핵심)
-    voteScoreEl.textContent = String(current - prevVote + voteValue);
 
     const { error } = await supabase.functions.invoke(
       "vote-plaza-post",
@@ -330,16 +313,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (error) {
       console.error(error);
-      // rollback
-      myVote = prevVote;
-      voteScoreEl.textContent = String(current);
-      alert("투표 오류");
+      alert("투표 처리 실패");
       voting = false;
       return;
     }
 
-    // 서버 값으로 재동기화
-    await fetchPostDetail(voteScoreEl, false);
+    // ❗ 숫자 계산 절대 하지 말고
+    // ❗ 무조건 서버 값 다시 가져온다
+    await fetchPostDetail(voteScoreEl);
+
     voting = false;
   }
 
@@ -366,6 +348,6 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchComments(commentCountEl);
   });
 
-  fetchPostDetail(voteScoreEl, true);
+  fetchPostDetail(voteScoreEl);
   fetchComments(commentCountEl);
 });
