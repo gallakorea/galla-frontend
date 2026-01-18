@@ -294,23 +294,28 @@ function renderPostBody(body) {
 
 async function vote(voteValue) {
   try {
-    const { data, error } = await supabase.functions.invoke(
-      "vote-plaza-post",
+    const res = await fetch(
+      "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/vote-plaza-post",
       {
-        body: {
-          post_id: postId,
-          vote: voteValue, // 1 or -1
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
         },
+        body: JSON.stringify({
+          post_id: postId,
+          vote: voteValue,
+        }),
       }
     );
 
-    if (error) {
-      console.error("vote error:", error);
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("vote failed:", text);
       alert("투표 처리 중 오류가 발생했습니다.");
       return;
     }
 
-    // 투표 성공 → 상세 다시 로드
     await fetchPostDetail();
   } catch (err) {
     console.error("vote exception:", err);
