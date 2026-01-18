@@ -282,6 +282,30 @@ document.addEventListener("DOMContentLoaded", () => {
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
 
+  // 🔒 페이지 로드 시 서버 기준 내 투표 상태 조회 (IP 기준)
+  (async () => {
+    const { data, error } = await supabase.functions.invoke(
+      "get-plaza-vote-state",
+      { body: { post_id: postId } }
+    );
+
+    if (error) {
+      console.error("vote state load error", error);
+      return;
+    }
+
+    myVote = data.my_vote ?? 0;
+    voteScoreEl.textContent = String(data.score ?? 0);
+
+    // 이미 투표했으면 버튼 잠금
+    if (myVote !== 0) {
+      voteUpBtn.disabled = true;
+      voteDownBtn.disabled = true;
+      voteUpBtn.style.opacity = "0.4";
+      voteDownBtn.style.opacity = "0.4";
+    }
+  })();
+
   const commentPill = document.querySelector(".comment-pill");
   const commentCountEl = document.getElementById("commentCount");
 
@@ -304,22 +328,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function vote(voteValue) {
     if (voting) return;
-
-    // 🔥 핵심 수정: 이전 내 투표 기준으로 변화량 계산
-    // 예)
-    // myVote = 1, 다시 업(1) → delta = 0 (변화 없음)
-    // myVote = -1, 업(1) → delta = +2
-    // myVote = 1, 다운(-1) → delta = -2
-    const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
-    const delta = voteValue - myVote;
-
-    // 변화 없으면 서버 호출도 안 함
-    if (delta === 0) return;
+    if (myVote !== 0) return; // 이미 투표했으면 차단
 
     voting = true;
 
-    // ✅ 화면은 "변화량"만 반영
-    voteScoreEl.textContent = String(currentScore + delta);
+    const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
+    voteScoreEl.textContent = String(currentScore + voteValue);
 
     const { error } = await supabase.functions.invoke(
       "vote-plaza-post",
@@ -327,7 +341,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     if (error) {
-      // 실패 시 롤백
       voteScoreEl.textContent = String(currentScore);
       console.error(error);
       alert("투표 처리 실패");
@@ -335,8 +348,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // ✅ 성공 시 내 투표 상태 갱신
+    // ✅ 투표 성공 → 다시 못 누르게 잠금
     myVote = voteValue;
+    voteUpBtn.disabled = true;
+    voteDownBtn.disabled = true;
+    voteUpBtn.style.opacity = "0.4";
+    voteDownBtn.style.opacity = "0.4";
+
     voting = false;
   }
 
@@ -363,8 +381,6 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchComments(commentCountEl);
   });
 
-  // 초기 로드 시 내 투표 상태는 0으로 시작 (IP 기준 서버 판별)
-  myVote = 0;
   fetchPostDetail(voteScoreEl);
   fetchComments(commentCountEl);
 });
