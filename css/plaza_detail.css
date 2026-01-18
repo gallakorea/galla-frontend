@@ -492,35 +492,76 @@ body {
   gap: 14px;
 }
 
+/* =========================
+   POST ACTION BAR (FINAL ALIGN FIX)
+========================= */
+
 .post-actions {
   display: flex;
-  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 0;
+
+  padding: 12px 14px;
+  margin-top: 16px;
+
+  background: #0f0f0f;
+  border: 1px solid #1f1f1f;
+  border-radius: 16px;
 }
 
+/* LEFT GROUP: up / down / comment */
+.post-actions .action-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+/* RIGHT GROUP: share only */
+.post-actions .action-right {
+  display: flex;
+  align-items: center;
+}
+
+/* EACH ACTION ITEM */
 .action-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 56px;
-  justify-content: center;
 }
 
+/* ICON BUTTON */
 .action-btn {
   width: 36px;
   height: 36px;
   border-radius: 10px;
+
   background: #111;
   border: 1px solid #222;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   font-size: 16px;
+  color: #ccc;
 }
 
+/* COUNTS */
 .count {
   font-size: 14px;
   color: #bbb;
+  line-height: 1;
+}
+
+/* COLOR HINTS */
+.action-btn.up { color: #9aa4ff; }
+.action-btn.down { color: #ff9a9a; }
+.action-btn.comment { color: #ddd; }
+.action-btn.share { color: #7fd1ff; }
+
+/* HOVER */
+.action-btn:hover {
+  background: #1a1a1a;
+  border-color: #333;
+  color: #fff;
 }
