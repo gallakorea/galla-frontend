@@ -21,6 +21,22 @@ const postMetaEl = document.querySelector(".post-meta");
 const postContentEl = document.querySelector(".post-content");
 const voteScoreEl = document.getElementById("voteCount");
 
+const voteUpBtn = document.querySelector(".vote-up");
+const voteDownBtn = document.querySelector(".vote-down");
+const commentPill = document.querySelector(".pill:not(.vote-pill)");
+const commentCountEl = commentPill ? commentPill.querySelector(".count") : null;
+
+// 기본 색상: 흰색 강제
+[voteUpBtn, voteDownBtn].forEach(btn => {
+  if (btn) {
+    btn.style.stroke = "#fff";
+    btn.style.fill = "none";
+    btn.style.color = "#fff";
+    btn.style.pointerEvents = "auto";
+    btn.style.cursor = "pointer";
+  }
+});
+
 document.body.style.paddingBottom = "140px";
 
 /*
@@ -41,6 +57,15 @@ function scrollToCommentInput() {
   window.scrollTo({
     top: window.scrollY + rect.top - 120,
     behavior: "smooth"
+  });
+}
+
+if (commentPill) {
+  commentPill.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    scrollToCommentInput();
+    commentInput.focus();
   });
 }
 
@@ -85,6 +110,10 @@ async function fetchComments() {
   }));
 
   renderComments(comments);
+
+  if (commentCountEl) {
+    commentCountEl.textContent = comments.length;
+  }
 }
 
 function renderComments(list) {
@@ -323,11 +352,7 @@ async function vote(voteValue) {
    VOTE BUTTON BINDING
 ========================= */
 
-const voteUpBtn = document.querySelector(".vote-up");
-const voteDownBtn = document.querySelector(".vote-down");
-
 if (voteUpBtn) {
-  voteUpBtn.style.pointerEvents = "auto";
   voteUpBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -336,7 +361,6 @@ if (voteUpBtn) {
 }
 
 if (voteDownBtn) {
-  voteDownBtn.style.pointerEvents = "auto";
   voteDownBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
