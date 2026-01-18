@@ -46,7 +46,7 @@ function scrollToCommentInput() {
 async function fetchPostDetail() {
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, nickname, created_at")
+    .select("title, body, category, nickname, created_at, score")
     .eq("id", postId)
     .single();
 
@@ -59,6 +59,10 @@ async function fetchPostDetail() {
   postTitleEl.textContent = data.title;
   postContentEl.innerHTML = renderPostBody(data.body);
   postMetaEl.textContent = `${data.nickname} · ${data.category} · 방금 전`;
+  const scoreEl = document.querySelector(".vote-score");
+  if (scoreEl && typeof data.score === "number") {
+    scoreEl.textContent = data.score;
+  }
 }
 
 async function fetchComments() {
@@ -282,37 +286,45 @@ function renderPostBody(body) {
 }
 
 /* =========================
-   PLAZA VOTE (UP / DOWN)
+   PLAZA VOTE (UP / DOWN) — FIXED
 ========================= */
 
 async function vote(voteValue) {
-  const { error } = await supabase.functions.invoke(
-    "vote-plaza-post",
-    {
-      body: {
-        post_id: postId,
-        vote: voteValue, // 1 = up, -1 = down
-      },
+  try {
+    const { data, error } = await supabase.functions.invoke(
+      "vote-plaza-post",
+      {
+        body: {
+          post_id: postId,
+          vote: voteValue, // 1 or -1
+        },
+      }
+    );
+
+    if (error) {
+      console.error("vote error:", error);
+      alert("투표 처리 중 오류가 발생했습니다.");
+      return;
     }
-  );
 
-  if (error) {
-    console.error(error);
-    alert("투표 실패");
-    return;
+    // 투표 성공 → 상세 다시 로드
+    await fetchPostDetail();
+  } catch (err) {
+    console.error("vote exception:", err);
+    alert("투표 요청 실패");
   }
-
-  // 투표 후 글 정보 다시 로드
-  fetchPostDetail();
 }
 
-/* 버튼 이벤트 연결 */
+/* 버튼 이벤트 바인딩 (정확한 타겟) */
 document.addEventListener("click", (e) => {
-  if (e.target.closest(".vote-up")) {
+  const upBtn = e.target.closest(".vote-up");
+  const downBtn = e.target.closest(".vote-down");
+
+  if (upBtn) {
     vote(1);
   }
 
-  if (e.target.closest(".vote-down")) {
+  if (downBtn) {
     vote(-1);
   }
 });
