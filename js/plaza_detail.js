@@ -277,6 +277,8 @@ function renderPostBody(body) {
 ========================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+  let myVote = 0;      // -1 | 0 | 1 : 내가 한 투표 상태
+  let voting = false; // 중복 클릭 방지
   const voteScoreEl = document.getElementById("voteScore");
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
@@ -302,8 +304,21 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function vote(voteValue) {
-    const current = parseInt(voteScoreEl.textContent || "0", 10);
-    voteScoreEl.textContent = String(current + voteValue);
+    // 🔒 중복 요청 방지
+    if (voting) return;
+
+    // ❌ 이미 같은 방향으로 투표한 경우 무시
+    if (myVote === voteValue) return;
+
+    voting = true;
+
+    const prevVote = myVote;
+    myVote = voteValue;
+
+    const current = parseInt(voteScoreEl.textContent || "0", 10) || 0;
+
+    // ✅ 차이만 반영 (핵심)
+    voteScoreEl.textContent = String(current - prevVote + voteValue);
 
     const { error } = await supabase.functions.invoke(
       "vote-plaza-post",
@@ -311,12 +326,18 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     if (error) {
+      console.error(error);
+      // rollback
+      myVote = prevVote;
       voteScoreEl.textContent = String(current);
       alert("투표 오류");
+      voting = false;
       return;
     }
 
+    // 서버 값으로 재동기화
     await fetchPostDetail(voteScoreEl);
+    voting = false;
   }
 
   voteUpBtn?.addEventListener("click", e => {
