@@ -52,10 +52,7 @@ async function fetchPostDetail(voteScoreEl, setMyVote = false) {
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   if (postMetaEl) postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
-  if (voteScoreEl) {
-    voteScoreEl.textContent =
-      typeof data.score === "number" ? String(data.score) : "0";
-  }
+  // voteScoreEl update removed
 }
 
 async function fetchComments(commentCountEl) {
@@ -283,12 +280,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
 
+
   // 🔒 투표 상태 로딩 전까지 무조건 잠금
   if (voteUpBtn) voteUpBtn.disabled = true;
   if (voteDownBtn) voteDownBtn.disabled = true;
 
-  // 🔒 페이지 로드 시 서버 기준 내 투표 상태 조회 (IP 기준)
-  (async () => {
+  // Helper function for vote state loading
+  async function loadVoteState() {
     const { data, error } = await supabase.functions.invoke(
       "get-plaza-vote-state",
       { body: { post_id: postId } }
@@ -302,7 +300,6 @@ document.addEventListener("DOMContentLoaded", () => {
     myVote = data.my_vote ?? 0;
     voteScoreEl.textContent = String(data.score ?? 0);
 
-    // 이미 투표했으면 버튼 잠금
     if (myVote !== 0) {
       voteUpBtn.disabled = true;
       voteDownBtn.disabled = true;
@@ -310,10 +307,6 @@ document.addEventListener("DOMContentLoaded", () => {
       voteUpBtn.style.opacity = "0.35";
       voteDownBtn.style.opacity = "0.35";
 
-      // 🔒 이미 투표함 표시
-      voteScoreEl.setAttribute("data-voted", "true");
-
-      // 🔥 선택한 방향만 활성 하이라이트
       if (myVote === 1) {
         voteUpBtn.style.color = "#4da3ff";
         voteUpBtn.style.stroke = "#4da3ff";
@@ -326,16 +319,7 @@ document.addEventListener("DOMContentLoaded", () => {
         voteDownBtn.style.opacity = "1";
       }
     }
-
-    // ✅ 투표 상태 로딩 완료
-    voteStateLoaded = true;
-
-    // 아직 투표 안 했으면 버튼 열어줌
-    if (myVote === 0) {
-      voteUpBtn.disabled = false;
-      voteDownBtn.disabled = false;
-    }
-  })();
+  }
 
   const commentPill = document.querySelector(".comment-pill");
   const commentCountEl = document.getElementById("commentCount");
@@ -432,6 +416,7 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchComments(commentCountEl);
   });
 
-  fetchPostDetail(voteScoreEl);
+  await loadVoteState();
+  await fetchPostDetail(null);
   fetchComments(commentCountEl);
 });
