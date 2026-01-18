@@ -35,25 +35,30 @@
   <section class="plaza-post">
     <div class="post-inner">
 
-      <div class="post-vote">
-        <button>▲</button>
-        <div class="vote-score">214</div>
-        <button>▼</button>
-      </div>
-
       <div class="post-body">
         <h1 class="post-title"></h1>
         <div class="post-meta"></div>
         <div class="post-content"></div>
-
-        <!-- POST ACTIONS -->
-        <div class="post-actions">
-          <button class="action-btn up">▲</button>
-          <button class="action-btn down">▼</button>
-          <button class="action-btn share">✈️</button>
-        </div>
       </div>
 
+    </div>
+  </section>
+
+  <!-- POST ACTION BAR -->
+  <section class="post-action-bar">
+    <div class="action-group vote-group">
+      <button class="action-btn up">▲</button>
+      <span class="action-count" id="voteCount">2,597</span>
+      <button class="action-btn down">▼</button>
+    </div>
+
+    <div class="action-group comment-group">
+      <span class="comment-icon">💬</span>
+      <span class="action-count" id="commentCount">375</span>
+    </div>
+
+    <div class="action-group share-group">
+      <button class="action-btn share">✈️</button>
     </div>
   </section>
 
