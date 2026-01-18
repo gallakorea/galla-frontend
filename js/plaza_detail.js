@@ -19,27 +19,6 @@ const commentList = document.getElementById("commentList");
 const postTitleEl = document.querySelector(".post-title");
 const postMetaEl = document.querySelector(".post-meta");
 const postContentEl = document.querySelector(".post-content");
-const voteScoreEl = document.getElementById("voteCount");
-
-if (!voteScoreEl) {
-  console.warn("[voteCount] element not found");
-}
-
-const voteUpBtn = document.querySelector(".vote-up");
-const voteDownBtn = document.querySelector(".vote-down");
-const commentPill = document.querySelector(".pill:not(.vote-pill)");
-const commentCountEl = commentPill ? commentPill.querySelector(".count") : null;
-
-// 기본 색상: 흰색 강제
-[voteUpBtn, voteDownBtn].forEach(btn => {
-  if (btn) {
-    btn.style.stroke = "#fff";
-    btn.style.fill = "none";
-    btn.style.color = "#fff";
-    btn.style.pointerEvents = "auto";
-    btn.style.cursor = "pointer";
-  }
-});
 
 document.body.style.paddingBottom = "140px";
 
@@ -56,24 +35,7 @@ comment = {
 let comments = [];
 let replyTarget = null; // { parentId, mentionName }
 
-function scrollToCommentInput() {
-  const rect = commentInput.getBoundingClientRect();
-  window.scrollTo({
-    top: window.scrollY + rect.top - 120,
-    behavior: "smooth"
-  });
-}
-
-if (commentPill) {
-  commentPill.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    scrollToCommentInput();
-    commentInput.focus();
-  });
-}
-
-async function fetchPostDetail() {
+async function fetchPostDetail(voteScoreEl) {
   const { data, error } = await supabase
     .from("plaza_posts")
     .select("title, body, category, nickname, score")
@@ -85,9 +47,9 @@ async function fetchPostDetail() {
     return;
   }
 
-  postTitleEl.textContent = data.title;
-  postContentEl.innerHTML = renderPostBody(data.body);
-  postMetaEl.textContent = `${data.nickname} · ${data.category}`;
+  if (postTitleEl) postTitleEl.textContent = data.title;
+  if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
+  if (postMetaEl) postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
   // 🔥 유일한 진실
   if (voteScoreEl) {
@@ -96,7 +58,7 @@ async function fetchPostDetail() {
   }
 }
 
-async function fetchComments() {
+async function fetchComments(commentCountEl) {
   const { data, error } = await supabase
     .from("plaza_comments")
     .select("id, parent_id, body, anon_name, created_at")
@@ -123,6 +85,7 @@ async function fetchComments() {
 }
 
 function renderComments(list) {
+  if (!commentList) return;
   commentList.innerHTML = "";
 
   const roots = list.filter(c => c.parent_id === null);
@@ -170,9 +133,11 @@ function renderComments(list) {
         parentId: root.id,
         mentionName: root.nickname
       };
-      commentInput.value = `@${root.nickname} `;
-      scrollToCommentInput();
-      commentInput.focus();
+      if (commentInput) {
+        commentInput.value = `@${root.nickname} `;
+        scrollToCommentInput();
+        commentInput.focus();
+      }
     });
 
     /* ===== 답글 더보기 / 접기 ===== */
@@ -227,33 +192,14 @@ async function submitComment(body) {
   replyTarget = null;
 }
 
-/* =========================
-   COMMENT SUBMIT (ROOT)
-========================= */
-
-
-const commentInput = document.getElementById("commentInput");
-const commentSubmitBtn = document.getElementById("commentSubmitBtn");
-
-commentSubmitBtn.addEventListener("click", async () => {
-  const body = commentInput.value.trim();
-  if (!body) {
-    alert("댓글을 입력하세요.");
-    return;
-  }
-
-  await submitComment(body);
-
-  replyTarget = null;
-  commentInput.value = "";
-  fetchComments();
-});
-
-
-document.addEventListener("DOMContentLoaded", () => {
-  fetchPostDetail();
-  fetchComments();
-});
+function scrollToCommentInput() {
+  if (!commentInput) return;
+  const rect = commentInput.getBoundingClientRect();
+  window.scrollTo({
+    top: window.scrollY + rect.top - 120,
+    behavior: "smooth"
+  });
+}
 
 function renderReplies(replies, container) {
   container.innerHTML = "";
@@ -287,9 +233,11 @@ function renderReplies(replies, container) {
         parentId: reply.parent_id ?? reply.id,
         mentionName: reply.nickname
       };
-      commentInput.value = `@${reply.nickname} `;
-      scrollToCommentInput();
-      commentInput.focus();
+      if (commentInput) {
+        commentInput.value = `@${reply.nickname} `;
+        scrollToCommentInput();
+        commentInput.focus();
+      }
     });
 
     container.appendChild(li);
@@ -328,51 +276,92 @@ function renderPostBody(body) {
    - up = +1, down = -1
 ========================= */
 
+document.addEventListener("DOMContentLoaded", () => {
+  const voteScoreEl = document.getElementById("voteCount");
+  const voteUpBtn = document.querySelector(".vote-up");
+  const voteDownBtn = document.querySelector(".vote-down");
+  const commentPill = document.querySelector(".pill:not(.vote-pill)");
+  const commentCountEl = commentPill ? commentPill.querySelector(".count") : null;
+  const commentInput = document.getElementById("commentInput");
+  const commentSubmitBtn = document.getElementById("commentSubmitBtn");
 
-async function vote(voteValue) {
-  if (!voteScoreEl) return;
+  if (!voteScoreEl) console.warn("[voteCount] element not found");
 
-  const current = parseInt(voteScoreEl.textContent || "0", 10);
+  // force white icons
+  [voteUpBtn, voteDownBtn].forEach(btn => {
+    if (!btn) return;
+    btn.style.stroke = "#fff";
+    btn.style.fill = "none";
+    btn.style.color = "#fff";
+    btn.style.cursor = "pointer";
+    btn.style.pointerEvents = "auto";
+  });
 
-  // optimistic UI
-  voteScoreEl.textContent = current + voteValue;
-
-  const { error } = await supabase.functions.invoke(
-    "vote-plaza-post",
-    {
-      body: {
-        post_id: postId,
-        vote: voteValue,
-      },
-    }
-  );
-
-  if (error) {
-    console.error("vote error:", error);
-    voteScoreEl.textContent = current;
-    alert("투표 처리 중 오류가 발생했습니다.");
-    return;
+  function scrollToCommentInput() {
+    if (!commentInput) return;
+    const rect = commentInput.getBoundingClientRect();
+    window.scrollTo({
+      top: window.scrollY + rect.top - 120,
+      behavior: "smooth"
+    });
+    commentInput.focus();
   }
 
-  await fetchPostDetail();
-}
+  if (commentPill) {
+    commentPill.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      scrollToCommentInput();
+    });
+  }
 
-/* =========================
-   VOTE BUTTON BINDING
-========================= */
+  async function vote(voteValue) {
+    if (!voteScoreEl) return;
 
-if (voteUpBtn) {
-  voteUpBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    vote(1);
-  });
-}
+    const current = parseInt(voteScoreEl.textContent || "0", 10);
+    voteScoreEl.textContent = current + voteValue;
 
-if (voteDownBtn) {
-  voteDownBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    vote(-1);
-  });
-}
+    const { error } = await supabase.functions.invoke("vote-plaza-post", {
+      body: { post_id: postId, vote: voteValue }
+    });
+
+    if (error) {
+      console.error(error);
+      voteScoreEl.textContent = current;
+      alert("투표 처리 중 오류");
+      return;
+    }
+
+    await fetchPostDetail(voteScoreEl);
+  }
+
+  if (voteUpBtn) {
+    voteUpBtn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      vote(1);
+    });
+  }
+
+  if (voteDownBtn) {
+    voteDownBtn.addEventListener("click", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      vote(-1);
+    });
+  }
+
+  if (commentSubmitBtn && commentInput) {
+    commentSubmitBtn.addEventListener("click", async () => {
+      const body = commentInput.value.trim();
+      if (!body) return alert("댓글을 입력하세요.");
+
+      await submitComment(body);
+      commentInput.value = "";
+      fetchComments(commentCountEl);
+    });
+  }
+
+  fetchPostDetail(voteScoreEl);
+  fetchComments(commentCountEl);
+});
