@@ -304,12 +304,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function vote(voteValue) {
     if (voting) return;
+
+    // 🔥 핵심 수정: 이전 내 투표 기준으로 변화량 계산
+    // 예)
+    // myVote = 1, 다시 업(1) → delta = 0 (변화 없음)
+    // myVote = -1, 업(1) → delta = +2
+    // myVote = 1, 다운(-1) → delta = -2
+    const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
+    const delta = voteValue - myVote;
+
+    // 변화 없으면 서버 호출도 안 함
+    if (delta === 0) return;
+
     voting = true;
 
-    const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
-
-    // 항상 누른 방향대로만 반영 (토글 취소 없음)
-    const delta = voteValue;
+    // ✅ 화면은 "변화량"만 반영
     voteScoreEl.textContent = String(currentScore + delta);
 
     const { error } = await supabase.functions.invoke(
@@ -326,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // 마지막 누른 방향만 기억
+    // ✅ 성공 시 내 투표 상태 갱신
     myVote = voteValue;
     voting = false;
   }
