@@ -421,3 +421,17 @@ body {
 .post-actions {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
+
+.post-inner {
+  max-width: 100%;
+  padding: 0 16px;
+}
+
+.post-actions {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #0f0f0f;
+  display: flex;
+  justify-content: space-between;
+}
