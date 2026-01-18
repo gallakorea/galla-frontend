@@ -176,7 +176,8 @@ function extractFirstImage(body) {
 async function fetchPlazaPosts() {
   let query = supabase
     .from("plaza_posts")
-    .select("id, category, title, nickname, created_at, body, thumbnail")
+    .select("id, category, title, nickname, created_at, body, thumbnail, score")
+    .order("score", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (currentCategory !== "전체") {
@@ -290,5 +291,26 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
 /* =========================
    INIT
 ========================= */
+
+/* =========================
+   REALTIME: SCORE UPDATE
+   - vote 발생 시 리스트 재정렬
+========================= */
+
+supabase
+  .channel("plaza-posts-realtime")
+  .on(
+    "postgres_changes",
+    {
+      event: "UPDATE",
+      schema: "public",
+      table: "plaza_posts",
+    },
+    (payload) => {
+      console.log("🔄 plaza post updated:", payload);
+      fetchPlazaPosts(); // 점수 변경 시 즉시 재정렬
+    }
+  )
+  .subscribe();
 
 fetchPlazaPosts();
