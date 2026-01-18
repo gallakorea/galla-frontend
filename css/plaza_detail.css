@@ -413,3 +413,14 @@ body {
   border-color: #333;
   color: #fff;
 }
+
+.pill {
+  display: flex;
+  align-items: center;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
