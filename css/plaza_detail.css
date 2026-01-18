@@ -579,3 +579,47 @@ body {
   border-color: #333;
   color: #fff;
 }
+
+/* ACTION ITEM: 수평 기준 통일 */
+.action-item {
+  display: flex;
+  align-items: center;   /* 🔥 이게 핵심 */
+  gap: 6px;
+  height: 36px;
+}
+
+/* 버튼 아이콘 */
+.action-btn {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  line-height: 1;        /* 🔥 baseline 제거 */
+}
+
+/* 댓글 아이콘 (버튼 아님) */
+.action-icon {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 16px;
+  line-height: 1;        /* 🔥 emoji 튐 방지 */
+  color: #ddd;
+}
+
+/* 숫자 */
+.count {
+  display: flex;
+  align-items: center;
+
+  height: 36px;
+  font-size: 14px;
+  line-height: 1;        /* 🔥 이것도 중요 */
+}
