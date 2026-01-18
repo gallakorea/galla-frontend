@@ -8,6 +8,13 @@ const supabase = createClient(
   SUPABASE_ANON_KEY
 );
 
+// 🔑 Anonymous voter ID (persist per device)
+let voterId = localStorage.getItem("galla_voter_id");
+if (!voterId) {
+  voterId = crypto.randomUUID();
+  localStorage.setItem("galla_voter_id", voterId);
+}
+
 const postId = new URLSearchParams(location.search).get("id");
 
 if (!postId) {
@@ -289,7 +296,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadVoteState() {
     const { data, error } = await supabase.functions.invoke(
       "get-plaza-vote-state",
-      { body: { post_id: postId } }
+      { body: { post_id: postId, voter_id: voterId } }
     );
 
     if (error) {
@@ -362,9 +369,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
     voteScoreEl.textContent = String(currentScore + voteValue);
 
-    const { error } = await supabase.functions.invoke(
+    const { data, error } = await supabase.functions.invoke(
       "vote-plaza-post",
-      { body: { post_id: postId, vote: voteValue } }
+      { body: { post_id: postId, vote: voteValue, voter_id: voterId } }
     );
 
     if (error) {
@@ -376,7 +383,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ✅ 투표 성공 → 다시 못 누르게 잠금
-    myVote = voteValue;
+    myVote = data?.my_vote ?? voteValue;
+    if (typeof data?.score === "number") {
+      voteScoreEl.textContent = String(data.score);
+    }
 
     // 🔒 즉시 잠금
     voteUpBtn.disabled = true;
@@ -386,13 +396,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     voteDownBtn.style.opacity = "0.35";
 
     // 🔥 방금 누른 방향만 강조
-    if (voteValue === 1) {
+    if (myVote === 1) {
       voteUpBtn.style.color = "#4da3ff";
       voteUpBtn.style.stroke = "#4da3ff";
       voteUpBtn.style.opacity = "1";
     }
 
-    if (voteValue === -1) {
+    if (myVote === -1) {
       voteDownBtn.style.color = "#ff5c5c";
       voteDownBtn.style.stroke = "#ff5c5c";
       voteDownBtn.style.opacity = "1";
