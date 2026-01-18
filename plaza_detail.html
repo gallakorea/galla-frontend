@@ -47,16 +47,17 @@
     <!-- UP / DOWN -->
     <div class="pill vote-pill">
       <!-- UP -->
-      <svg class="icon vote-up" viewBox="0 0 24 24">
+      <svg class="icon vote-up" viewBox="0 0 24 24" aria-label="upvote">
         <path d="M12 3L5 10h4v8h6v-8h4z"/>
       </svg>
 
-      <span class="count" id="voteCount">2,597</span>
+      <!-- ⚠️ HTML에서는 절대 실제 숫자 넣지 않는다 -->
+      <span class="count" id="voteCount"></span>
 
       <div class="divider"></div>
 
       <!-- DOWN -->
-      <svg class="icon vote-down" viewBox="0 0 24 24">
+      <svg class="icon vote-down" viewBox="0 0 24 24" aria-label="downvote">
         <path d="M12 21l7-7h-4V6h-6v8H5z"/>
       </svg>
     </div>
@@ -66,9 +67,23 @@
       <svg class="icon" viewBox="0 0 24 24">
         <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
       </svg>
-      <span class="count">375</span>
+
+      <!-- 댓글 수도 동일 원칙 -->
+      <span class="count" id="commentCount"></span>
     </div>
   </div>
+
+  <!-- RIGHT -->
+  <div class="action-right">
+    <div class="circle-btn" id="shareBtn">
+      <svg viewBox="0 0 24 24" class="icon">
+        <path d="M14 3l7 7-7 7"></path>
+        <path d="M21 10H10a7 7 0 0 0-7 7"></path>
+      </svg>
+    </div>
+  </div>
+
+</div>
 
   <!-- RIGHT -->
   <div class="action-right">

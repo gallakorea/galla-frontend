@@ -59,9 +59,12 @@ async function fetchPostDetail() {
   postTitleEl.textContent = data.title;
   postContentEl.innerHTML = renderPostBody(data.body);
   postMetaEl.textContent = `${data.nickname} · ${data.category} · 방금 전`;
-  const scoreEl = document.querySelector(".vote-score");
-  if (scoreEl && typeof data.score === "number") {
-    scoreEl.textContent = data.score;
+
+  // ✅ 투표 초기화 (single source of truth)
+  const voteCountEl = document.getElementById("voteCount");
+  if (voteCountEl) {
+    voteCountEl.textContent =
+      typeof data.score === "number" ? data.score : 0;
   }
 }
 
