@@ -53,8 +53,8 @@ async function fetchPostDetail(voteScoreEl) {
 
   // 🔥 유일한 진실
   if (voteScoreEl) {
-    voteScoreEl.textContent =
-      typeof data.score === "number" ? data.score : 0;
+    const score = typeof data.score === "number" ? data.score : 0;
+    voteScoreEl.textContent = String(score);
   }
 }
 
@@ -277,7 +277,14 @@ function renderPostBody(body) {
 ========================= */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const voteScoreEl = document.getElementById("voteCount");
+  // vote count element (robust selector)
+  let voteScoreEl =
+    document.getElementById("voteCount") ||
+    document.querySelector(".vote-pill .count");
+
+  if (!voteScoreEl) {
+    console.warn("[voteCount] element not found (check HTML .vote-pill .count)");
+  }
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
   const commentPill = document.querySelector(".pill:not(.vote-pill)");
@@ -318,8 +325,8 @@ document.addEventListener("DOMContentLoaded", () => {
   async function vote(voteValue) {
     if (!voteScoreEl) return;
 
-    const current = parseInt(voteScoreEl.textContent || "0", 10);
-    voteScoreEl.textContent = current + voteValue;
+    const current = parseInt(voteScoreEl.textContent || "0", 10) || 0;
+    voteScoreEl.textContent = String(current + voteValue);
 
     const { error } = await supabase.functions.invoke("vote-plaza-post", {
       body: { post_id: postId, vote: voteValue }
@@ -327,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (error) {
       console.error(error);
-      voteScoreEl.textContent = current;
+      voteScoreEl.textContent = String(current);
       alert("투표 처리 중 오류");
       return;
     }
