@@ -301,8 +301,19 @@ document.addEventListener("DOMContentLoaded", () => {
     if (myVote !== 0) {
       voteUpBtn.disabled = true;
       voteDownBtn.disabled = true;
+
       voteUpBtn.style.opacity = "0.4";
       voteDownBtn.style.opacity = "0.4";
+
+      // 🔥 내 투표 방향 시각화
+      if (myVote === 1) {
+        voteUpBtn.style.color = "#4da3ff";
+        voteUpBtn.style.stroke = "#4da3ff";
+      }
+      if (myVote === -1) {
+        voteDownBtn.style.color = "#ff5c5c";
+        voteDownBtn.style.stroke = "#ff5c5c";
+      }
     }
   })();
 
@@ -350,10 +361,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ✅ 투표 성공 → 다시 못 누르게 잠금
     myVote = voteValue;
+
     voteUpBtn.disabled = true;
     voteDownBtn.disabled = true;
     voteUpBtn.style.opacity = "0.4";
     voteDownBtn.style.opacity = "0.4";
+
+    // 🔥 방금 누른 방향 색상 표시
+    if (voteValue === 1) {
+      voteUpBtn.style.color = "#4da3ff";
+      voteUpBtn.style.stroke = "#4da3ff";
+    }
+    if (voteValue === -1) {
+      voteDownBtn.style.color = "#ff5c5c";
+      voteDownBtn.style.stroke = "#ff5c5c";
+    }
 
     voting = false;
   }
