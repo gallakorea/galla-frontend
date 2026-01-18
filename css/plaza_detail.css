@@ -430,3 +430,28 @@ body {
   background: #222;
   border-color: #333;
 }
+
+/* 투표바 클릭 보장 */
+.post-action-bar,
+.pill,
+.vote-pill,
+.icon {
+  pointer-events: auto;
+}
+
+.post-action-bar::before,
+.post-action-bar::after {
+  pointer-events: none;
+}
+
+/* SVG 클릭 영역 보장 */
+.vote-up,
+.vote-down {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* 혹시 겹치는 오버레이 제거 */
+.post-action-bar * {
+  z-index: 1;
+}
