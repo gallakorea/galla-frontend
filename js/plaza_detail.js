@@ -34,13 +34,13 @@ comment = {
 
 let comments = [];
 let replyTarget = null; // { parentId, mentionName }
+let myVote = 0; // 서버 기준으로 초기화됨
 
-async function fetchPostDetail(voteScoreEl) {
-  const { data, error } = await supabase
-    .from("plaza_posts")
-    .select("title, body, category, nickname, score")
-    .eq("id", postId)
-    .single();
+async function fetchPostDetail(voteScoreEl, setMyVote = false) {
+  const { data, error } = await supabase.functions.invoke(
+    "get-plaza-post-detail",
+    { body: { post_id: postId } }
+  );
 
   if (error) {
     console.error(error);
@@ -55,6 +55,10 @@ async function fetchPostDetail(voteScoreEl) {
   if (voteScoreEl) {
     const score = typeof data.score === "number" ? data.score : 0;
     voteScoreEl.textContent = String(score);
+  }
+
+  if (setMyVote && typeof data.my_vote === "number") {
+    myVote = data.my_vote;
   }
 }
 
@@ -277,7 +281,6 @@ function renderPostBody(body) {
 ========================= */
 
 document.addEventListener("DOMContentLoaded", () => {
-  let myVote = 0;      // -1 | 0 | 1 : 내가 한 투표 상태
   let voting = false; // 중복 클릭 방지
   const voteScoreEl = document.getElementById("voteScore");
   const voteUpBtn = document.querySelector(".vote-up");
@@ -336,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 서버 값으로 재동기화
-    await fetchPostDetail(voteScoreEl);
+    await fetchPostDetail(voteScoreEl, false);
     voting = false;
   }
 
@@ -363,6 +366,6 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchComments(commentCountEl);
   });
 
-  fetchPostDetail(voteScoreEl);
+  fetchPostDetail(voteScoreEl, true);
   fetchComments(commentCountEl);
 });
