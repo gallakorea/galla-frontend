@@ -288,10 +288,18 @@ function renderPostBody(body) {
 }
 
 /* =========================
-   PLAZA VOTE (UP / DOWN) — FIXED
+   PLAZA VOTE (UP / DOWN)
+   - single score
+   - up = +1, down = -1
 ========================= */
 
+const voteScoreEl = document.getElementById("voteScore");
+
 async function vote(voteValue) {
+  // optimistic UI
+  const current = parseInt(voteScoreEl.textContent || "0", 10);
+  voteScoreEl.textContent = current + voteValue;
+
   try {
     const res = await fetch(
       "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/vote-plaza-post",
@@ -303,40 +311,45 @@ async function vote(voteValue) {
         },
         body: JSON.stringify({
           post_id: postId,
-          vote: voteValue,
+          vote: voteValue, // 1 or -1
         }),
       }
     );
 
     if (!res.ok) {
-      const text = await res.text();
-      console.error("vote failed:", text);
-      alert("투표 처리 중 오류가 발생했습니다.");
-      return;
+      throw new Error(await res.text());
     }
 
+    // 🔁 re-sync from DB (single source of truth)
     await fetchPostDetail();
   } catch (err) {
-    console.error("vote exception:", err);
-    alert("투표 요청 실패");
+    console.error("vote failed:", err);
+    // rollback
+    voteScoreEl.textContent = current;
+    alert("투표 처리 중 오류가 발생했습니다.");
   }
 }
 
 /* =========================
    VOTE BUTTON BINDING
 ========================= */
+
 const voteUpBtn = document.querySelector(".vote-up");
 const voteDownBtn = document.querySelector(".vote-down");
 
 if (voteUpBtn) {
+  voteUpBtn.style.pointerEvents = "auto";
   voteUpBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
     vote(1);
   });
 }
 
 if (voteDownBtn) {
+  voteDownBtn.style.pointerEvents = "auto";
   voteDownBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
     vote(-1);
   });
