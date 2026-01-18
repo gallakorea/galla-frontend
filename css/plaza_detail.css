@@ -334,93 +334,68 @@ body {
   max-width: 100%;
 }
 
-/* =====================================================
-   POST ACTION BAR — CLEAN, SINGLE SOURCE OF TRUTH
-   ===================================================== */
+/* =========================
+   POST ACTION BAR (FINAL)
+========================= */
 
-.post-actions {
+.post-action-bar {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 
+  width: 100%;
   margin-top: 16px;
-  padding: 12px 14px;
+  padding: 10px 14px;
 
   background: #0f0f0f;
   border: 1px solid #1f1f1f;
-  border-radius: 16px;
+  border-radius: 999px;
 }
 
-/* LEFT GROUP: up / down / comment */
-.post-actions .action-left {
+/* LEFT GROUP */
+.post-action-bar .action-left {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
 }
 
-/* RIGHT GROUP: share */
-.post-actions .action-right {
+/* RIGHT GROUP */
+.post-action-bar .action-right {
   display: flex;
   align-items: center;
 }
 
-/* EACH ACTION (ICON + COUNT) */
-.action-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-}
-
-/* ICON BOX (ALL ICONS UNIFIED) */
-.icon-box {
-  width: 36px;
-  height: 36px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: #111;
-  border: 1px solid #222;
-  border-radius: 10px;
-
-  font-size: 16px;
-  line-height: 1; /* critical: kill emoji baseline */
-  cursor: pointer;
-}
-
-/* COUNTS */
-.count {
-  height: 36px;
-  display: flex;
-  align-items: center;
-
-  font-size: 14px;
-  line-height: 1;
-  color: #bbb;
-}
-
-/* COLOR HINTS */
-.icon-box.up { color: #9aa4ff; }
-.icon-box.down { color: #ff9a9a; }
-.icon-box.comment { color: #ddd; }
-.icon-box.share { color: #7fd1ff; }
-
-/* HOVER */
-.icon-box:hover {
-  background: #1a1a1a;
-  border-color: #333;
-  color: #fff;
-}
-
+/* PILL */
 .pill {
   display: flex;
   align-items: center;
+  gap: 8px;
+
+  padding: 6px 12px;
+  border-radius: 999px;
+
+  background: #fff;
+  color: #000;
 }
 
-.icon {
+/* SVG ICON */
+.pill .icon {
   width: 18px;
   height: 18px;
-  stroke-width: 1.8;
+  fill: none;
+  stroke: #000;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* COUNT */
+.pill .count {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* SHARE */
+.share-pill {
+  padding: 6px 10px;
 }
