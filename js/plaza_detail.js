@@ -21,6 +21,10 @@ const postMetaEl = document.querySelector(".post-meta");
 const postContentEl = document.querySelector(".post-content");
 const voteScoreEl = document.getElementById("voteCount");
 
+if (!voteScoreEl) {
+  console.warn("[voteCount] element not found");
+}
+
 const voteUpBtn = document.querySelector(".vote-up");
 const voteDownBtn = document.querySelector(".vote-down");
 const commentPill = document.querySelector(".pill:not(.vote-pill)");
@@ -86,8 +90,10 @@ async function fetchPostDetail() {
   postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
   // 🔥 유일한 진실
-  voteScoreEl.textContent =
-    typeof data.score === "number" ? data.score : 0;
+  if (voteScoreEl) {
+    voteScoreEl.textContent =
+      typeof data.score === "number" ? data.score : 0;
+  }
 }
 
 async function fetchComments() {
@@ -244,14 +250,16 @@ commentSubmitBtn.addEventListener("click", async () => {
 });
 
 
-fetchPostDetail();
-fetchComments();
+document.addEventListener("DOMContentLoaded", () => {
+  fetchPostDetail();
+  fetchComments();
+});
 
 function renderReplies(replies, container) {
   container.innerHTML = "";
 
   // ✅ 부모에서 내려오는 선 끊기 + 새 시작선
-  container.style.marginLeft = "20";
+  container.style.marginLeft = "20px";
   container.style.paddingLeft = "16px";
   container.style.borderLeft = "1px solid rgba(255,255,255,0.12)";
 
@@ -322,6 +330,8 @@ function renderPostBody(body) {
 
 
 async function vote(voteValue) {
+  if (!voteScoreEl) return;
+
   const current = parseInt(voteScoreEl.textContent || "0", 10);
 
   // optimistic UI
@@ -332,19 +342,18 @@ async function vote(voteValue) {
     {
       body: {
         post_id: postId,
-        vote: voteValue, // 1 or -1
+        vote: voteValue,
       },
     }
   );
 
   if (error) {
     console.error("vote error:", error);
-    voteScoreEl.textContent = current; // rollback
+    voteScoreEl.textContent = current;
     alert("투표 처리 중 오류가 발생했습니다.");
     return;
   }
 
-  // single source of truth 재동기화
   await fetchPostDetail();
 }
 
