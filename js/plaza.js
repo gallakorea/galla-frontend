@@ -176,7 +176,16 @@ function extractFirstImage(body) {
 async function fetchPlazaPosts() {
   let query = supabase
     .from("plaza_posts")
-    .select("id, category, title, nickname, created_at, body, thumbnail, score")
+    .select(`
+      id,
+      category,
+      title,
+      nickname,
+      created_at,
+      body,
+      thumbnail,
+      score
+    `)
     .order("score", { ascending: false })
     .order("created_at", { ascending: false });
 
@@ -187,7 +196,7 @@ async function fetchPlazaPosts() {
   const { data, error } = await query;
 
   if (error) {
-    console.error("plaza fetch error:", error);
+    console.error("❌ plaza fetch error:", error);
     return;
   }
 
