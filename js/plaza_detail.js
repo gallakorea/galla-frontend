@@ -306,21 +306,35 @@ document.addEventListener("DOMContentLoaded", () => {
     if (voting) return;
     voting = true;
 
+    // 현재 점수
+    const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
+
+    // 같은 버튼 다시 누르면 취소 (토글)
+    let nextVote = voteValue;
+    if (myVote === voteValue) {
+      nextVote = 0;
+    }
+
+    // UI 즉시 반영 (delta 계산)
+    const delta = nextVote - myVote;
+    voteScoreEl.textContent = String(currentScore + delta);
+
     const { error } = await supabase.functions.invoke(
       "vote-plaza-post",
-      { body: { post_id: postId, vote: voteValue } }
+      { body: { post_id: postId, vote: nextVote } }
     );
 
     if (error) {
+      // 실패 시 롤백
+      voteScoreEl.textContent = String(currentScore);
       console.error(error);
       alert("투표 처리 실패");
       voting = false;
       return;
     }
 
-    // ❗ 숫자 계산 절대 하지 말고
-    // ❗ 무조건 서버 값 다시 가져온다
-    await fetchPostDetail(voteScoreEl);
+    // 내 투표 상태 갱신
+    myVote = nextVote;
 
     voting = false;
   }
@@ -348,6 +362,8 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchComments(commentCountEl);
   });
 
+  // 초기 로드 시 내 투표 상태는 0으로 시작 (IP 기준 서버 판별)
+  myVote = 0;
   fetchPostDetail(voteScoreEl);
   fetchComments(commentCountEl);
 });
