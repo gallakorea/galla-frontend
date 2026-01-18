@@ -335,16 +335,12 @@ body {
 }
 
 
-/* =========================
-   POST ACTION BAR — EXACT MATCH
-========================= */
-
+/* ACTION BAR */
 .post-action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
 
-  width: 100%;
   margin-top: 18px;
   padding: 10px 14px;
 
@@ -361,7 +357,7 @@ body {
   gap: 12px;
 }
 
-/* PILL COMMON */
+/* PILL */
 .pill {
   display: flex;
   align-items: center;
@@ -374,7 +370,7 @@ body {
   color: #000;
 }
 
-/* VOTE PILL DIVIDER */
+/* UP/DOWN DIVIDER */
 .vote-pill .divider {
   width: 1px;
   height: 18px;
@@ -382,12 +378,13 @@ body {
 }
 
 /* COUNT */
-.pill .count {
+.count {
   font-size: 14px;
   font-weight: 600;
+  line-height: 1;
 }
 
-/* SVG ICON */
+/* ICON (SVG 공통) */
 .icon {
   width: 18px;
   height: 18px;
@@ -401,7 +398,7 @@ body {
   display: block;
 }
 
-/* RIGHT CIRCLE BUTTON */
+/* RIGHT CIRCLE */
 .circle-btn {
   width: 36px;
   height: 36px;
