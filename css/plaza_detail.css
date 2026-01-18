@@ -365,6 +365,10 @@ body {
   font-size: 17px;
 }
 
+/* =========================
+   업 다운 배경 조절
+========================= */
+
 .post-actions {
   display: flex;
   align-items: center;
