@@ -278,9 +278,14 @@ function renderPostBody(body) {
 
 document.addEventListener("DOMContentLoaded", () => {
   let voting = false; // 중복 클릭 방지
+  let voteStateLoaded = false; // 🔒 내 투표 상태 로딩 완료 여부
   const voteScoreEl = document.getElementById("voteScore");
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
+
+  // 🔒 투표 상태 로딩 전까지 무조건 잠금
+  if (voteUpBtn) voteUpBtn.disabled = true;
+  if (voteDownBtn) voteDownBtn.disabled = true;
 
   // 🔒 페이지 로드 시 서버 기준 내 투표 상태 조회 (IP 기준)
   (async () => {
@@ -321,6 +326,15 @@ document.addEventListener("DOMContentLoaded", () => {
         voteDownBtn.style.opacity = "1";
       }
     }
+
+    // ✅ 투표 상태 로딩 완료
+    voteStateLoaded = true;
+
+    // 아직 투표 안 했으면 버튼 열어줌
+    if (myVote === 0) {
+      voteUpBtn.disabled = false;
+      voteDownBtn.disabled = false;
+    }
   })();
 
   const commentPill = document.querySelector(".comment-pill");
@@ -344,8 +358,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function vote(voteValue) {
+    if (!voteStateLoaded) return; // 🔒 상태 로딩 전 클릭 차단
     if (voting) return;
-    if (myVote !== 0) return; // 이미 투표했으면 차단
+    if (myVote !== 0) return;     // 🔒 이미 투표함
 
     voting = true;
 
