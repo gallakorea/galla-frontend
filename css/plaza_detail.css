@@ -431,27 +431,38 @@ body {
   border-color: #333;
 }
 
-/* 투표바 클릭 보장 */
-.post-action-bar,
-.pill,
-.vote-pill,
-.icon {
-  pointer-events: auto;
-}
+/* vote buttons */
+.vote-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
 
-.post-action-bar::before,
-.post-action-bar::after {
-  pointer-events: none;
-}
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-/* SVG 클릭 영역 보장 */
-.vote-up,
-.vote-down {
+  color: #fff;
   cursor: pointer;
-  pointer-events: auto;
 }
 
-/* 혹시 겹치는 오버레이 제거 */
-.post-action-bar * {
-  z-index: 1;
+.vote-btn:hover {
+  background: #222;
+  border-color: #333;
+}
+
+.vote-btn.vote-up:hover {
+  color: #9aa4ff;
+}
+
+.vote-btn.vote-down:hover {
+  color: #ff9a9a;
+}
+
+/* count */
+.post-action-bar .count {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 600;
 }
