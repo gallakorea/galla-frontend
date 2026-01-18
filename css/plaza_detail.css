@@ -335,21 +335,25 @@ body {
 }
 
 
-/* ACTION BAR */
+/* =========================
+   POST ACTION BAR — FINAL (DARK + WHITE, PIXEL-ALIGNED)
+========================= */
+
+/* 전체 바 */
 .post-action-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 
   margin-top: 18px;
   padding: 10px 14px;
 
-  background: #0f0f0f;
-  border: 1px solid #1f1f1f;
+  background: #121212;
+  border: 1px solid #222;
   border-radius: 999px;
 }
 
-/* LEFT / RIGHT */
+/* 좌측 / 우측 그룹 */
 .action-left,
 .action-right {
   display: flex;
@@ -357,7 +361,7 @@ body {
   gap: 12px;
 }
 
-/* PILL */
+/* 공통 pill */
 .pill {
   display: flex;
   align-items: center;
@@ -366,31 +370,37 @@ body {
   padding: 6px 14px;
   border-radius: 999px;
 
-  background: #fff;
-  color: #000;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+
+  color: #fff;
 }
 
-/* UP/DOWN DIVIDER */
+/* 업/다운 divider */
 .vote-pill .divider {
   width: 1px;
   height: 18px;
-  background: #ddd;
+  background: rgba(255,255,255,0.25);
 }
 
-/* COUNT */
+/* 숫자 */
 .count {
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
+  color: #fff;
+
+  display: flex;
+  align-items: center;
 }
 
-/* ICON (SVG 공통) */
+/* SVG 아이콘 공통 */
 .icon {
   width: 18px;
   height: 18px;
 
   fill: none;
-  stroke: #000;
+  stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -398,16 +408,25 @@ body {
   display: block;
 }
 
-/* RIGHT CIRCLE */
+/* 우측 원형 버튼 (어워드 / 공유) */
 .circle-btn {
   width: 36px;
   height: 36px;
 
   border-radius: 50%;
-  border: 1px solid #ddd;
-  background: #fff;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+
+  color: #fff;
 
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* hover */
+.pill:hover,
+.circle-btn:hover {
+  background: #222;
+  border-color: #333;
 }
