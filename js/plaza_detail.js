@@ -46,26 +46,25 @@ function scrollToCommentInput() {
 async function fetchPostDetail() {
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, nickname, created_at, score")
+    .select("title, body, category, nickname, score, comment_count")
     .eq("id", postId)
     .single();
 
   if (error) {
     console.error(error);
-    alert("글을 불러오지 못했습니다.");
     return;
   }
 
   postTitleEl.textContent = data.title;
   postContentEl.innerHTML = renderPostBody(data.body);
-  postMetaEl.textContent = `${data.nickname} · ${data.category} · 방금 전`;
+  postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
-  // ✅ 투표 초기화 (single source of truth)
-  const voteCountEl = document.getElementById("voteCount");
-  if (voteCountEl) {
-    voteCountEl.textContent =
-      typeof data.score === "number" ? data.score : 0;
-  }
+  // 🔥 유일한 진실
+  document.getElementById("voteScore").textContent =
+    typeof data.score === "number" ? data.score : 0;
+
+  document.getElementById("commentCount").textContent =
+    data.comment_count ?? 0;
 }
 
 async function fetchComments() {
@@ -323,16 +322,22 @@ async function vote(voteValue) {
   }
 }
 
-/* 버튼 이벤트 바인딩 (정확한 타겟) */
-document.addEventListener("click", (e) => {
-  const upBtn = e.target.closest(".vote-up");
-  const downBtn = e.target.closest(".vote-down");
+/* =========================
+   VOTE BUTTON BINDING
+========================= */
+const voteUpBtn = document.querySelector(".vote-up");
+const voteDownBtn = document.querySelector(".vote-down");
 
-  if (upBtn) {
+if (voteUpBtn) {
+  voteUpBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     vote(1);
-  }
+  });
+}
 
-  if (downBtn) {
+if (voteDownBtn) {
+  voteDownBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
     vote(-1);
-  }
-});
+  });
+}

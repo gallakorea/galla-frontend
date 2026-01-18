@@ -42,7 +42,8 @@
 
 <div class="post-action-bar">
 
-  <div class="action-left">
+  <!-- VOTE PILL -->
+  <div class="vote-pill">
 
     <!-- UP -->
     <button class="vote-btn vote-up" aria-label="upvote">
@@ -51,7 +52,11 @@
       </svg>
     </button>
 
-    <span class="count" id="voteCount">0</span>
+    <!-- SCORE -->
+    <span class="vote-score" id="voteScore">0</span>
+
+    <!-- DIVIDER -->
+    <span class="vote-divider"></span>
 
     <!-- DOWN -->
     <button class="vote-btn vote-down" aria-label="downvote">
@@ -60,25 +65,23 @@
       </svg>
     </button>
 
-    <!-- COMMENT -->
-    <div class="pill">
-      <svg class="icon" viewBox="0 0 24 24">
-        <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-      </svg>
-      <span class="count">375</span>
-    </div>
+  </div>
 
+  <!-- COMMENT -->
+  <div class="pill comment-pill">
+    <svg class="icon" viewBox="0 0 24 24">
+      <path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+    </svg>
+    <span class="count" id="commentCount">375</span>
   </div>
 
   <!-- SHARE -->
-  <div class="action-right">
-    <button class="circle-btn share-btn">
-      <svg viewBox="0 0 24 24" class="icon">
-        <path d="M14 3l7 7-7 7"/>
-        <path d="M21 10H10a7 7 0 0 0-7 7"/>
-      </svg>
-    </button>
-  </div>
+  <button class="circle-btn share-btn">
+    <svg viewBox="0 0 24 24" class="icon">
+      <path d="M14 3l7 7-7 7"/>
+      <path d="M21 10H10a7 7 0 0 0-7 7"/>
+    </svg>
+  </button>
 
 </div>
 
