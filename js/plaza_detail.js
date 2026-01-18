@@ -277,97 +277,70 @@ function renderPostBody(body) {
 ========================= */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // vote count element (robust selector)
-  let voteScoreEl =
-    document.getElementById("voteCount") ||
-    document.querySelector(".vote-pill .count");
-
-  if (!voteScoreEl) {
-    console.warn("[voteCount] element not found (check HTML .vote-pill .count)");
-  }
+  const voteScoreEl = document.getElementById("voteScore");
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
-  const commentPill = document.querySelector(".pill:not(.vote-pill)");
-  const commentCountEl = commentPill ? commentPill.querySelector(".count") : null;
+
+  const commentPill = document.querySelector(".comment-pill");
+  const commentCountEl = document.getElementById("commentCount");
+
   const commentInput = document.getElementById("commentInput");
   const commentSubmitBtn = document.getElementById("commentSubmitBtn");
 
-  if (!voteScoreEl) console.warn("[voteCount] element not found");
+  if (!voteScoreEl) {
+    console.error("❌ voteScore element not found");
+    return;
+  }
 
-  // force white icons
+  // 아이콘 흰색
   [voteUpBtn, voteDownBtn].forEach(btn => {
     if (!btn) return;
+    btn.style.color = "#fff";
     btn.style.stroke = "#fff";
     btn.style.fill = "none";
-    btn.style.color = "#fff";
     btn.style.cursor = "pointer";
-    btn.style.pointerEvents = "auto";
   });
 
-  function scrollToCommentInput() {
-    if (!commentInput) return;
-    const rect = commentInput.getBoundingClientRect();
-    window.scrollTo({
-      top: window.scrollY + rect.top - 120,
-      behavior: "smooth"
-    });
-    commentInput.focus();
-  }
-
-  if (commentPill) {
-    commentPill.addEventListener("click", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      scrollToCommentInput();
-    });
-  }
-
   async function vote(voteValue) {
-    if (!voteScoreEl) return;
-
-    const current = parseInt(voteScoreEl.textContent || "0", 10) || 0;
+    const current = parseInt(voteScoreEl.textContent || "0", 10);
     voteScoreEl.textContent = String(current + voteValue);
 
-    const { error } = await supabase.functions.invoke("vote-plaza-post", {
-      body: { post_id: postId, vote: voteValue }
-    });
+    const { error } = await supabase.functions.invoke(
+      "vote-plaza-post",
+      { body: { post_id: postId, vote: voteValue } }
+    );
 
     if (error) {
-      console.error(error);
       voteScoreEl.textContent = String(current);
-      alert("투표 처리 중 오류");
+      alert("투표 오류");
       return;
     }
 
     await fetchPostDetail(voteScoreEl);
   }
 
-  if (voteUpBtn) {
-    voteUpBtn.addEventListener("click", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      vote(1);
-    });
-  }
+  voteUpBtn?.addEventListener("click", e => {
+    e.preventDefault();
+    vote(1);
+  });
 
-  if (voteDownBtn) {
-    voteDownBtn.addEventListener("click", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      vote(-1);
-    });
-  }
+  voteDownBtn?.addEventListener("click", e => {
+    e.preventDefault();
+    vote(-1);
+  });
 
-  if (commentSubmitBtn && commentInput) {
-    commentSubmitBtn.addEventListener("click", async () => {
-      const body = commentInput.value.trim();
-      if (!body) return alert("댓글을 입력하세요.");
+  commentPill?.addEventListener("click", () => {
+    commentInput?.scrollIntoView({ behavior: "smooth", block: "center" });
+    commentInput?.focus();
+  });
 
-      await submitComment(body);
-      commentInput.value = "";
-      fetchComments(commentCountEl);
-    });
-  }
+  commentSubmitBtn?.addEventListener("click", async () => {
+    const body = commentInput.value.trim();
+    if (!body) return alert("댓글을 입력하세요.");
+    await submitComment(body);
+    commentInput.value = "";
+    fetchComments(commentCountEl);
+  });
 
   fetchPostDetail(voteScoreEl);
   fetchComments(commentCountEl);
