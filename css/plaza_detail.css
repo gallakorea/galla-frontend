@@ -334,9 +334,9 @@ body {
   max-width: 100%;
 }
 
-/* =========================
-   POST ACTIONS — CLEAN ALIGN (FINAL)
-========================= */
+/* =====================================================
+   POST ACTION BAR — CLEAN, SINGLE SOURCE OF TRUTH
+   ===================================================== */
 
 .post-actions {
   display: flex;
@@ -351,28 +351,28 @@ body {
   border-radius: 16px;
 }
 
-/* LEFT: up / down / comment */
+/* LEFT GROUP: up / down / comment */
 .post-actions .action-left {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 20px;
 }
 
-/* RIGHT: share */
+/* RIGHT GROUP: share */
 .post-actions .action-right {
   display: flex;
   align-items: center;
 }
 
-/* EACH ITEM */
+/* EACH ACTION (ICON + COUNT) */
 .action-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   height: 36px;
 }
 
-/* ICON BOX — single vertical baseline */
+/* ICON BOX (ALL ICONS UNIFIED) */
 .icon-box {
   width: 36px;
   height: 36px;
@@ -386,7 +386,8 @@ body {
   border-radius: 10px;
 
   font-size: 16px;
-  line-height: 1; /* kill emoji baseline */
+  line-height: 1; /* critical: kill emoji baseline */
+  cursor: pointer;
 }
 
 /* COUNTS */
@@ -400,8 +401,15 @@ body {
   color: #bbb;
 }
 
-/* COLORS */
+/* COLOR HINTS */
 .icon-box.up { color: #9aa4ff; }
 .icon-box.down { color: #ff9a9a; }
 .icon-box.comment { color: #ddd; }
 .icon-box.share { color: #7fd1ff; }
+
+/* HOVER */
+.icon-box:hover {
+  background: #1a1a1a;
+  border-color: #333;
+  color: #fff;
+}
