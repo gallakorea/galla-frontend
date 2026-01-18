@@ -527,6 +527,8 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 36px;
+  line-height: 1;
 }
 
 /* ICON BUTTON */
@@ -544,6 +546,15 @@ body {
 
   font-size: 16px;
   color: #ccc;
+  line-height: 1;
+}
+
+.action-btn span,
+.action-btn i {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* COUNTS */
@@ -551,6 +562,9 @@ body {
   font-size: 14px;
   color: #bbb;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  height: 36px;
 }
 
 /* COLOR HINTS */
