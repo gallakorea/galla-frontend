@@ -28,14 +28,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginBtn) {
     loginBtn.addEventListener("click", () => {
       console.log("로그인 버튼 클릭");
-      window.location.href = "/login.html";
+      window.location.href = "login.html";
     });
   }
 
   if (signupBtn) {
     signupBtn.addEventListener("click", () => {
       console.log("회원가입 버튼 클릭");
-      window.location.href = "/signup.html";
+      window.location.href = "signup.html";
     });
   }
 });
