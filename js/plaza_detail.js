@@ -18,6 +18,18 @@ const supabase = createClient(
 // 🔥🔥🔥 여기다
 window.supabase = supabase;
 
+let cachedSession = null;
+
+async function getSessionSafe() {
+  if (cachedSession) return cachedSession;
+
+  const { data, error } = await supabase.auth.getSession();
+  if (error) return null;
+
+  cachedSession = data.session;
+  return cachedSession;
+}
+
 /* =========================
    AUTH BUTTONS (LOGIN / SIGNUP / LOGOUT)
    ========================= */
@@ -65,9 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // 1) 최초 로드 시 세션 체크
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = await getSessionSafe();
 
   if (session) {
     showLoggedIn();
@@ -113,7 +123,7 @@ let comments = [];
 let replyTarget = null; // { parentId, mentionName }
 let myVote = 0; // 서버 기준으로 초기화됨
 
-async function fetchPostDetail(voteScoreEl, setMyVote = false) {
+async function fetchPostDetail(voteScoreEl) {
   const { data, error } = await supabase
     .from("plaza_posts")
     .select("title, body, category, nickname, score")
@@ -129,7 +139,9 @@ async function fetchPostDetail(voteScoreEl, setMyVote = false) {
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   if (postMetaEl) postMetaEl.textContent = `${data.nickname} · ${data.category}`;
 
-  // voteScoreEl update removed
+  if (voteScoreEl && typeof data.score === "number") {
+    voteScoreEl.textContent = String(data.score);
+  }
 }
 
 async function fetchComments(commentCountEl) {
@@ -358,9 +370,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const voteDownBtn = document.querySelector(".vote-down");
 
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await getSessionSafe();
+  const user = session?.user ?? null;
 
   if (!user) {
     if (voteUpBtn) {
@@ -378,7 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
     // 로그인 안 한 경우 투표 상태 로딩/투표 로직 진행하지 않음
-    await fetchPostDetail(null);
+    await fetchPostDetail(voteScoreEl);
     fetchComments(commentCountEl);
     return;
   }
@@ -389,9 +400,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Helper function for vote state loading
   async function loadVoteState() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const session = await getSessionSafe();
 
     if (!session) {
       console.error("No active session for vote state");
@@ -482,9 +491,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
     voteScoreEl.textContent = String(currentScore + voteValue);
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    const session = await getSessionSafe();
 
     if (!session) {
       console.error("No active session for voting");
@@ -579,11 +586,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   // ✅ 1. 페이지 로드 시 즉시 세션 확인 후 투표 상태 로딩
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session2 = await getSessionSafe();
 
-  if (session) {
+  await fetchPostDetail(voteScoreEl);
+
+  if (session2) {
     await loadVoteState(); // 🔥 새로고침/페이지 복귀 시 반드시 1회 실행
   }
 
@@ -614,6 +621,5 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  await fetchPostDetail(null);
   fetchComments(commentCountEl);
 });
