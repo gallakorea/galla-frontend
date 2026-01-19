@@ -401,14 +401,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      voteUpBtn.disabled = myVote !== 0;
-      voteDownBtn.disabled = myVote !== 0;
+      // ✅ 항상 클릭 가능 (자유 전환)
+      voteUpBtn.disabled = false;
+      voteDownBtn.disabled = false;
 
-      voteUpBtn.style.opacity = myVote === 1 ? "1" : myVote === 0 ? "1" : "0.35";
-      voteDownBtn.style.opacity = myVote === -1 ? "1" : myVote === 0 ? "1" : "0.35";
+      voteUpBtn.style.opacity = "1";
+      voteDownBtn.style.opacity = "1";
 
-      voteUpBtn.style.color = myVote === 1 ? "#4da3ff" : "#aaa";
-      voteDownBtn.style.color = myVote === -1 ? "#ff5c5c" : "#aaa";
+      voteUpBtn.style.color = "#aaa";
+      voteDownBtn.style.color = "#aaa";
+
+      if (myVote === 1) {
+        voteUpBtn.style.color = "#4da3ff";
+      } else if (myVote === -1) {
+        voteDownBtn.style.color = "#ff5c5c";
+      }
     }
   }
 
@@ -428,7 +435,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function vote(voteValue) {
     if (voting) return;
-    // 같은 방향 클릭 → 취소
+    // 같은 방향 클릭 → 취소 (0으로)
     if (myVote === voteValue) {
       voteValue = 0;
     }
