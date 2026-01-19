@@ -123,10 +123,10 @@ let comments = [];
 let replyTarget = null; // { parentId, mentionName }
 let myVote = 0; // 서버 기준으로 초기화됨
 
-async function fetchPostDetail(voteScoreEl) {
+async function fetchPostDetail() {
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, nickname, score")
+    .select("title, body, category, nickname")
     .eq("id", postId)
     .single();
 
@@ -138,10 +138,6 @@ async function fetchPostDetail(voteScoreEl) {
   if (postTitleEl) postTitleEl.textContent = data.title;
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   if (postMetaEl) postMetaEl.textContent = `${data.nickname} · ${data.category}`;
-
-  if (voteScoreEl && typeof data.score === "number") {
-    voteScoreEl.textContent = String(data.score);
-  }
 }
 
 async function fetchComments(commentCountEl) {
@@ -369,51 +365,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
 
-
-  const session = await getSessionSafe();
-  const user = session?.user ?? null;
-
-  if (!user) {
-    if (voteUpBtn) {
-      voteUpBtn.disabled = true;
-      voteUpBtn.style.opacity = "0.3";
-      voteUpBtn.addEventListener("click", () => {
-        alert("로그인 후 투표할 수 있습니다.");
-      });
-    }
-    if (voteDownBtn) {
-      voteDownBtn.disabled = true;
-      voteDownBtn.style.opacity = "0.3";
-      voteDownBtn.addEventListener("click", () => {
-        alert("로그인 후 투표할 수 있습니다.");
-      });
-    }
-    // 로그인 안 한 경우 투표 상태 로딩/투표 로직 진행하지 않음
-    await fetchPostDetail(voteScoreEl);
-    fetchComments(commentCountEl);
-    return;
-  }
-
-  // 🔒 투표 상태 로딩 전까지 무조건 잠금
-  if (voteUpBtn) voteUpBtn.disabled = true;
-  if (voteDownBtn) voteDownBtn.disabled = true;
+  const commentPill = document.querySelector(".comment-pill");
+  const commentCountEl = document.getElementById("commentCount");
+  const commentInput = document.getElementById("commentInput");
+  const commentSubmitBtn = document.getElementById("commentSubmitBtn");
 
   // Helper function for vote state loading
   async function loadVoteState() {
     const session = await getSessionSafe();
-
-    if (!session) {
-      console.error("No active session for vote state");
-      return;
-    }
-
+    let accessToken = session?.access_token;
+    // 비로그인도 score만큼은 받아야 하므로 Authorization 헤더 없이 호출 허용
+    const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
     const { data, error } = await supabase.functions.invoke(
       "plaza-vote",
       {
         body: { post_id: postId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
       }
     );
 
@@ -430,7 +397,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 버튼 상태 설정
     if (voteUpBtn && voteDownBtn) {
-      if (myVote === 0) {
+      if (!session) {
+        voteUpBtn.disabled = true;
+        voteDownBtn.disabled = true;
+        voteUpBtn.style.opacity = "0.3";
+        voteDownBtn.style.opacity = "0.3";
+        voteUpBtn.style.color = "#aaa";
+        voteUpBtn.style.stroke = "#aaa";
+        voteDownBtn.style.color = "#aaa";
+        voteDownBtn.style.stroke = "#aaa";
+      } else if (myVote === 0) {
         voteUpBtn.disabled = false;
         voteDownBtn.disabled = false;
         voteUpBtn.style.opacity = "1";
@@ -461,12 +437,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
   }
-
-  const commentPill = document.querySelector(".comment-pill");
-  const commentCountEl = document.getElementById("commentCount");
-
-  const commentInput = document.getElementById("commentInput");
-  const commentSubmitBtn = document.getElementById("commentSubmitBtn");
 
   if (!voteScoreEl) {
     console.error("❌ voteScore element not found");
@@ -563,11 +533,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   voteUpBtn?.addEventListener("click", e => {
     e.preventDefault();
+    const session = cachedSession;
+    if (!session) {
+      alert("로그인 후 투표할 수 있습니다.");
+      return;
+    }
     vote(1);
   });
 
   voteDownBtn?.addEventListener("click", e => {
     e.preventDefault();
+    const session = cachedSession;
+    if (!session) {
+      alert("로그인 후 투표할 수 있습니다.");
+      return;
+    }
     vote(-1);
   });
 
@@ -584,34 +564,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComments(commentCountEl);
   });
 
-
   // ✅ 1. 페이지 로드 시 즉시 세션 확인 후 투표 상태 로딩
-  const session2 = await getSessionSafe();
-
-  await fetchPostDetail(voteScoreEl);
-
-  if (session2) {
-    await loadVoteState(); // 🔥 새로고침/페이지 복귀 시 반드시 1회 실행
-  }
+  await fetchPostDetail();
+  await loadVoteState(); // 로그인 여부와 무관하게 1회 실행
 
   // ✅ 2. 이후 로그인/로그아웃 변화 감지 (보조)
   supabase.auth.onAuthStateChange((event, session) => {
-    if (session) {
-      loadVoteState();
-    } else {
-      // 로그아웃 시 투표 UI 초기화
+    // 항상 score는 plaza-vote 기준이므로, 로그인/로그아웃 시에도 loadVoteState 호출
+    loadVoteState();
+    if (!session) {
       myVote = 0;
       voteStateLoaded = false;
-
-      voteScoreEl.textContent = voteScoreEl.textContent || "0";
-
+      if (voteScoreEl) voteScoreEl.textContent = voteScoreEl.textContent || "0";
       if (voteUpBtn) {
         voteUpBtn.disabled = true;
         voteUpBtn.style.opacity = "0.3";
         voteUpBtn.style.color = "#aaa";
         voteUpBtn.style.stroke = "#aaa";
       }
-
       if (voteDownBtn) {
         voteDownBtn.disabled = true;
         voteDownBtn.style.opacity = "0.3";
