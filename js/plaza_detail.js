@@ -477,13 +477,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComments(commentCountEl);
   });
 
-  // 🔐 auth session 확정 이후에만 투표 상태 로딩
-  let authReady = false;
 
+  // ✅ 1. 페이지 로드 시 즉시 세션 확인 후 투표 상태 로딩
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    await loadVoteState(); // 🔥 새로고침/페이지 복귀 시 반드시 1회 실행
+  }
+
+  // ✅ 2. 이후 로그인/로그아웃 변화 감지 (보조)
   supabase.auth.onAuthStateChange((event, session) => {
-    if (session && !authReady) {
-      authReady = true;
-      loadVoteState(); // ✅ 여기서만 호출
+    if (session) {
+      loadVoteState();
+    } else {
+      // 로그아웃 시 투표 UI 초기화
+      myVote = 0;
+      voteStateLoaded = false;
+
+      voteScoreEl.textContent = voteScoreEl.textContent || "0";
+
+      if (voteUpBtn) {
+        voteUpBtn.disabled = true;
+        voteUpBtn.style.opacity = "0.3";
+        voteUpBtn.style.color = "#aaa";
+        voteUpBtn.style.stroke = "#aaa";
+      }
+
+      if (voteDownBtn) {
+        voteDownBtn.disabled = true;
+        voteDownBtn.style.opacity = "0.3";
+        voteDownBtn.style.color = "#aaa";
+        voteDownBtn.style.stroke = "#aaa";
+      }
     }
   });
 
