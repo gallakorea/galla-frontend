@@ -8,13 +8,6 @@ const supabase = createClient(
   SUPABASE_ANON_KEY
 );
 
-// 🔑 Anonymous voter ID (persist per device)
-let voterId = localStorage.getItem("galla_voter_id");
-if (!voterId) {
-  voterId = crypto.randomUUID();
-  localStorage.setItem("galla_voter_id", voterId);
-}
-
 const postId = new URLSearchParams(location.search).get("id");
 
 if (!postId) {
@@ -288,6 +281,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   const voteDownBtn = document.querySelector(".vote-down");
 
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    if (voteUpBtn) {
+      voteUpBtn.disabled = true;
+      voteUpBtn.style.opacity = "0.3";
+      voteUpBtn.addEventListener("click", () => {
+        alert("로그인 후 투표할 수 있습니다.");
+      });
+    }
+    if (voteDownBtn) {
+      voteDownBtn.disabled = true;
+      voteDownBtn.style.opacity = "0.3";
+      voteDownBtn.addEventListener("click", () => {
+        alert("로그인 후 투표할 수 있습니다.");
+      });
+    }
+    // 로그인 안 한 경우 투표 상태 로딩/투표 로직 진행하지 않음
+    await fetchPostDetail(null);
+    fetchComments(commentCountEl);
+    return;
+  }
+
   // 🔒 투표 상태 로딩 전까지 무조건 잠금
   if (voteUpBtn) voteUpBtn.disabled = true;
   if (voteDownBtn) voteDownBtn.disabled = true;
@@ -296,7 +314,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadVoteState() {
     const { data, error } = await supabase.functions.invoke(
       "get-plaza-vote-state",
-      { body: { post_id: postId, voter_id: voterId } }
+      { body: { post_id: postId } }
     );
 
     if (error) {
@@ -362,7 +380,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function vote(voteValue) {
     if (!voteStateLoaded) return; // 🔒 상태 로딩 전 클릭 차단
     if (voting) return;
-    if (myVote !== 0) return;     // 🔒 이미 투표함
+    if (myVote === voteValue) return; // 같은 방향만 막음
 
     voting = true;
 
@@ -371,7 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const { data, error } = await supabase.functions.invoke(
       "vote-plaza-post",
-      { body: { post_id: postId, vote: voteValue, voter_id: voterId } }
+      { body: { post_id: postId, vote: voteValue } }
     );
 
     if (error) {
@@ -387,13 +405,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (typeof data?.score === "number") {
       voteScoreEl.textContent = String(data.score);
     }
-
-    // 🔒 즉시 잠금
-    voteUpBtn.disabled = true;
-    voteDownBtn.disabled = true;
-
-    voteUpBtn.style.opacity = "0.35";
-    voteDownBtn.style.opacity = "0.35";
 
     // 🔥 방금 누른 방향만 강조
     if (myVote === 1) {
