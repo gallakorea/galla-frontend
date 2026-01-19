@@ -477,7 +477,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComments(commentCountEl);
   });
 
-  await loadVoteState();
+  // 🔐 auth session 확정 이후에만 투표 상태 로딩
+  let authReady = false;
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session && !authReady) {
+      authReady = true;
+      loadVoteState(); // ✅ 여기서만 호출
+    }
+  });
+
   await fetchPostDetail(null);
   fetchComments(commentCountEl);
 });
