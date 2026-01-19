@@ -557,14 +557,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComments(commentCountEl);
   });
 
-  // ✅ 1. 페이지 로드 시 즉시 세션 확인 후 투표 상태 로딩
   await fetchPostDetail();
-  await loadVoteState(); // 로그인 여부와 무관하게 1회 실행
 
-  // ✅ 2. 이후 로그인/로그아웃 변화 감지 (보조)
-  supabase.auth.onAuthStateChange(() => {
-    // 항상 score는 plaza-vote 기준이므로, 로그인/로그아웃 시에도 loadVoteState 호출
-    loadVoteState();
+  // ✅ Auth 초기화 완료 후에만 투표 상태 로딩 (새로고침 안정화)
+  let voteLoadedOnce = false;
+
+  async function safeLoadVoteState() {
+    if (voteLoadedOnce) return;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    voteLoadedOnce = true;
+    await loadVoteState();
+  }
+
+  // 1️⃣ 즉시 1차 시도
+  await safeLoadVoteState();
+
+  // 2️⃣ 세션이 늦게 복원되는 경우 대비
+  supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (session) {
+      await safeLoadVoteState();
+    }
   });
 
   fetchComments(commentCountEl);
