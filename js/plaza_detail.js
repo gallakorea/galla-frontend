@@ -312,9 +312,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Helper function for vote state loading
   async function loadVoteState() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.error("No active session for vote state");
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke(
       "get-plaza-vote-state",
-      { body: { post_id: postId } }
+      {
+        body: { post_id: postId },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
     );
 
     if (error) {
@@ -387,9 +401,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
     voteScoreEl.textContent = String(currentScore + voteValue);
 
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      console.error("No active session for voting");
+      voting = false;
+      return;
+    }
+
     const { data, error } = await supabase.functions.invoke(
       "vote-plaza-post",
-      { body: { post_id: postId, vote: voteValue } }
+      {
+        body: { post_id: postId, vote: voteValue },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      }
     );
 
     if (error) {
