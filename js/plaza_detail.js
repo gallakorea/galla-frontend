@@ -19,25 +19,70 @@ const supabase = createClient(
 window.supabase = supabase;
 
 /* =========================
-   AUTH BUTTONS (LOGIN / SIGNUP)
+   AUTH BUTTONS (LOGIN / SIGNUP / LOGOUT)
    ========================= */
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   const loginBtn = document.getElementById("loginBtn");
   const signupBtn = document.getElementById("signupBtn");
 
-  if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-      console.log("로그인 버튼 클릭");
-      window.location.href = "login.html";
-    });
+  // 🔑 현재 페이지 URL 저장
+  const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+
+  // 버튼 초기화 헬퍼
+  function showLoggedOut() {
+    if (loginBtn) {
+      loginBtn.style.display = "inline-block";
+      loginBtn.textContent = "로그인";
+      loginBtn.onclick = () => {
+        console.log("로그인 버튼 클릭");
+        window.location.href = `login.html?returnTo=${returnTo}`;
+      };
+    }
+    if (signupBtn) {
+      signupBtn.style.display = "inline-block";
+      signupBtn.textContent = "회원가입";
+      signupBtn.onclick = () => {
+        console.log("회원가입 버튼 클릭");
+        window.location.href = `signup.html?returnTo=${returnTo}`;
+      };
+    }
   }
 
-  if (signupBtn) {
-    signupBtn.addEventListener("click", () => {
-      console.log("회원가입 버튼 클릭");
-      window.location.href = "signup.html";
-    });
+  function showLoggedIn() {
+    if (loginBtn) {
+      loginBtn.style.display = "inline-block";
+      loginBtn.textContent = "로그아웃";
+      loginBtn.onclick = async () => {
+        console.log("로그아웃 클릭");
+        await supabase.auth.signOut();
+        showLoggedOut();
+        window.location.reload();
+      };
+    }
+    if (signupBtn) {
+      signupBtn.style.display = "none";
+    }
   }
+
+  // 1) 최초 로드 시 세션 체크
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (session) {
+    showLoggedIn();
+  } else {
+    showLoggedOut();
+  }
+
+  // 2) 인증 상태 변화 감지
+  supabase.auth.onAuthStateChange((_event, session) => {
+    if (session) {
+      showLoggedIn();
+    } else {
+      showLoggedOut();
+    }
+  });
 });
 
 const postId = new URLSearchParams(location.search).get("id");
