@@ -18,6 +18,28 @@ const supabase = createClient(
 // 🔥🔥🔥 여기다
 window.supabase = supabase;
 
+/* =========================
+   AUTH BUTTONS (LOGIN / SIGNUP)
+   ========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  const loginBtn = document.getElementById("loginBtn");
+  const signupBtn = document.getElementById("signupBtn");
+
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      console.log("로그인 버튼 클릭");
+      window.location.href = "/login.html";
+    });
+  }
+
+  if (signupBtn) {
+    signupBtn.addEventListener("click", () => {
+      console.log("회원가입 버튼 클릭");
+      window.location.href = "/signup.html";
+    });
+  }
+});
+
 const postId = new URLSearchParams(location.search).get("id");
 
 if (!postId) {
