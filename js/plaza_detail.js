@@ -18,16 +18,9 @@ const supabase = createClient(
 // 🔥🔥🔥 여기다
 window.supabase = supabase;
 
-let cachedSession = null;
-
 async function getSessionSafe() {
-  if (cachedSession) return cachedSession;
-
-  const { data, error } = await supabase.auth.getSession();
-  if (error) return null;
-
-  cachedSession = data.session;
-  return cachedSession;
+  const { data } = await supabase.auth.getSession();
+  return data.session;
 }
 
 /* =========================
@@ -531,9 +524,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     voting = false;
   }
 
-  voteUpBtn?.addEventListener("click", e => {
+  voteUpBtn?.addEventListener("click", async e => {
     e.preventDefault();
-    const session = cachedSession;
+    const session = await getSessionSafe();
     if (!session) {
       alert("로그인 후 투표할 수 있습니다.");
       return;
@@ -541,9 +534,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     vote(1);
   });
 
-  voteDownBtn?.addEventListener("click", e => {
+  voteDownBtn?.addEventListener("click", async e => {
     e.preventDefault();
-    const session = cachedSession;
+    const session = await getSessionSafe();
     if (!session) {
       alert("로그인 후 투표할 수 있습니다.");
       return;
@@ -569,26 +562,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadVoteState(); // 로그인 여부와 무관하게 1회 실행
 
   // ✅ 2. 이후 로그인/로그아웃 변화 감지 (보조)
-  supabase.auth.onAuthStateChange((event, session) => {
+  supabase.auth.onAuthStateChange(() => {
     // 항상 score는 plaza-vote 기준이므로, 로그인/로그아웃 시에도 loadVoteState 호출
     loadVoteState();
-    if (!session) {
-      myVote = 0;
-      voteStateLoaded = false;
-      if (voteScoreEl) voteScoreEl.textContent = voteScoreEl.textContent || "0";
-      if (voteUpBtn) {
-        voteUpBtn.disabled = true;
-        voteUpBtn.style.opacity = "0.3";
-        voteUpBtn.style.color = "#aaa";
-        voteUpBtn.style.stroke = "#aaa";
-      }
-      if (voteDownBtn) {
-        voteDownBtn.disabled = true;
-        voteDownBtn.style.opacity = "0.3";
-        voteDownBtn.style.color = "#aaa";
-        voteDownBtn.style.stroke = "#aaa";
-      }
-    }
   });
 
   fetchComments(commentCountEl);
