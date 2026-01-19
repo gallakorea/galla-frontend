@@ -15,6 +15,9 @@ const supabase = createClient(
   }
 );
 
+// 🔥🔥🔥 여기다
+window.supabase = supabase;
+
 const postId = new URLSearchParams(location.search).get("id");
 
 if (!postId) {
