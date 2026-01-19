@@ -353,6 +353,7 @@ function renderPostBody(body) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   let voting = false; // 중복 클릭 방지
+  let voteStateLoaded = false; // 🔒 내 투표 상태 로딩 완료 여부
   const voteScoreEl = document.getElementById("voteScore");
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
@@ -362,61 +363,71 @@ document.addEventListener("DOMContentLoaded", async () => {
   const commentInput = document.getElementById("commentInput");
   const commentSubmitBtn = document.getElementById("commentSubmitBtn");
 
-  // Helper function for vote state loading (STRICT)
+  // Helper function for vote state loading
   async function loadVoteState() {
     const session = await getSessionSafe();
-
-    // 비로그인: score만 조회
-    if (!session) {
-      const { data, error } = await supabase.functions.invoke(
-        "plaza-vote",
-        {
-          body: { post_id: postId },
-        }
-      );
-
-      if (error) {
-        console.error("vote load error (guest)", error);
-        return;
-      }
-
-      myVote = 0;
-      if (voteScoreEl) voteScoreEl.textContent = String(data.score ?? 0);
-      return;
-    }
-
-    // 로그인 확정 후에만 Authorization 포함
+    let accessToken = session?.access_token;
+    // 비로그인도 score만큼은 받아야 하므로 Authorization 헤더 없이 호출 허용
+    const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
     const { data, error } = await supabase.functions.invoke(
       "plaza-vote",
       {
         body: { post_id: postId },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers,
       }
     );
 
     if (error) {
-      console.error("vote load error (auth)", error);
+      console.error("vote state load error", error);
       return;
     }
 
     myVote = data.my_vote ?? 0;
     if (voteScoreEl) voteScoreEl.textContent = String(data.score ?? 0);
 
-    // 버튼 상태 반영
+    // ✅ 투표 상태 로딩 완료
+    voteStateLoaded = true;
+
+    // 버튼 상태 설정
     if (voteUpBtn && voteDownBtn) {
-      voteUpBtn.disabled = myVote !== 0;
-      voteDownBtn.disabled = myVote !== 0;
+      if (!session) {
+        voteUpBtn.disabled = true;
+        voteDownBtn.disabled = true;
+        voteUpBtn.style.opacity = "0.3";
+        voteDownBtn.style.opacity = "0.3";
+        voteUpBtn.style.color = "#aaa";
+        voteUpBtn.style.stroke = "#aaa";
+        voteDownBtn.style.color = "#aaa";
+        voteDownBtn.style.stroke = "#aaa";
+      } else if (myVote === 0) {
+        voteUpBtn.disabled = false;
+        voteDownBtn.disabled = false;
+        voteUpBtn.style.opacity = "1";
+        voteDownBtn.style.opacity = "1";
+        voteUpBtn.style.color = "#aaa";
+        voteUpBtn.style.stroke = "#aaa";
+        voteDownBtn.style.color = "#aaa";
+        voteDownBtn.style.stroke = "#aaa";
+      } else {
+        voteUpBtn.disabled = true;
+        voteDownBtn.disabled = true;
+        voteUpBtn.style.opacity = "0.35";
+        voteDownBtn.style.opacity = "0.35";
+        voteUpBtn.style.color = "#aaa";
+        voteUpBtn.style.stroke = "#aaa";
+        voteDownBtn.style.color = "#aaa";
+        voteDownBtn.style.stroke = "#aaa";
 
-      voteUpBtn.style.opacity = myVote === 1 ? "1" : myVote === 0 ? "1" : "0.35";
-      voteDownBtn.style.opacity = myVote === -1 ? "1" : myVote === 0 ? "1" : "0.35";
-
-      voteUpBtn.style.color = myVote === 1 ? "#4da3ff" : "#aaa";
-      voteUpBtn.style.stroke = voteUpBtn.style.color;
-
-      voteDownBtn.style.color = myVote === -1 ? "#ff5c5c" : "#aaa";
-      voteDownBtn.style.stroke = voteDownBtn.style.color;
+        if (myVote === 1) {
+          voteUpBtn.style.color = "#4da3ff";
+          voteUpBtn.style.stroke = "#4da3ff";
+          voteUpBtn.style.opacity = "1";
+        } else if (myVote === -1) {
+          voteDownBtn.style.color = "#ff5c5c";
+          voteDownBtn.style.stroke = "#ff5c5c";
+          voteDownBtn.style.opacity = "1";
+        }
+      }
     }
   }
 
@@ -548,8 +559,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await fetchPostDetail();
 
-  // ✅ 투표 상태를 페이지 진입시 단 한 번만 로딩
+  // ✅ 페이지 진입 시 항상 1회 투표 상태 로딩 (로그인/비로그인 공통)
   await loadVoteState();
+
+  // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
+  supabase.auth.onAuthStateChange(async () => {
+    await loadVoteState();
+  });
 
   fetchComments(commentCountEl);
 });
