@@ -428,15 +428,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function vote(voteValue) {
     if (voting) return;
-    if (myVote === voteValue) return; // 같은 방향만 막음
-
+    // 같은 방향 클릭 → 취소
+    if (myVote === voteValue) {
+      voteValue = 0;
+    }
     voting = true;
 
-    const currentScore = parseInt(voteScoreEl.textContent || "0", 10) || 0;
-    voteScoreEl.textContent = String(currentScore + voteValue);
-
     const session = await getSessionSafe();
-
     if (!session) {
       console.error("No active session for voting");
       voting = false;
@@ -454,53 +452,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
 
     if (error) {
-      voteScoreEl.textContent = String(currentScore);
       console.error(error);
       alert("투표 처리 실패");
       voting = false;
       return;
     }
 
-    // ✅ 투표 성공 → 다시 못 누르게 잠금
-    myVote = data?.my_vote ?? voteValue;
+    // 서버가 내려준 값을 단일 진실로 사용
+    myVote = typeof data?.my_vote === "number" ? data.my_vote : 0;
+
     if (typeof data?.score === "number") {
       voteScoreEl.textContent = String(data.score);
     }
 
+    // 버튼 상태 갱신
     if (voteUpBtn && voteDownBtn) {
-      if (myVote === 0) {
-        voteUpBtn.disabled = false;
-        voteDownBtn.disabled = false;
-        voteUpBtn.style.opacity = "1";
-        voteDownBtn.style.opacity = "1";
-        voteUpBtn.style.color = "#aaa";
-        voteUpBtn.style.stroke = "#aaa";
-        voteDownBtn.style.color = "#aaa";
-        voteDownBtn.style.stroke = "#aaa";
-      } else {
-        voteUpBtn.disabled = true;
-        voteDownBtn.disabled = true;
-        voteUpBtn.style.opacity = "0.35";
-        voteDownBtn.style.opacity = "0.35";
-        voteUpBtn.style.color = "#aaa";
-        voteUpBtn.style.stroke = "#aaa";
-        voteDownBtn.style.color = "#aaa";
-        voteDownBtn.style.stroke = "#aaa";
+      voteUpBtn.disabled = false;
+      voteDownBtn.disabled = false;
 
-        if (myVote === 1) {
-          voteUpBtn.style.color = "#4da3ff";
-          voteUpBtn.style.stroke = "#4da3ff";
-          voteUpBtn.style.opacity = "1";
-        } else if (myVote === -1) {
-          voteDownBtn.style.color = "#ff5c5c";
-          voteDownBtn.style.stroke = "#ff5c5c";
-          voteDownBtn.style.opacity = "1";
-        }
+      voteUpBtn.style.opacity = "1";
+      voteDownBtn.style.opacity = "1";
+      voteUpBtn.style.color = "#aaa";
+      voteUpBtn.style.stroke = "#aaa";
+      voteDownBtn.style.color = "#aaa";
+      voteDownBtn.style.stroke = "#aaa";
+
+      if (myVote === 1) {
+        voteUpBtn.style.color = "#4da3ff";
+        voteUpBtn.style.stroke = "#4da3ff";
+      } else if (myVote === -1) {
+        voteDownBtn.style.color = "#ff5c5c";
+        voteDownBtn.style.stroke = "#ff5c5c";
       }
     }
-
-    // 상태 마킹 (CSS/디버그용)
-    voteScoreEl.setAttribute("data-voted", "true");
 
     voting = false;
   }
