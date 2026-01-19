@@ -435,10 +435,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function vote(voteValue) {
     if (voting) return;
-    voting = true;
 
-    // 🔑 이전 내 투표값 저장
-    const prevVote = myVote;
+    voting = true;
 
     const session = await getSessionSafe();
     if (!session) {
@@ -446,15 +444,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       voting = false;
       return;
     }
-
-    // 🔥 즉시 UI 반영 (optimistic update)
-    const delta = voteValue - prevVote;
-    voteScoreEl.textContent = String(
-      Number(voteScoreEl.textContent || 0) + delta
-    );
-
-    // 내 투표 상태 즉시 반영
-    myVote = voteValue;
 
     const { data, error } = await supabase.functions.invoke(
       "plaza-vote",
@@ -469,21 +458,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (error) {
       console.error(error);
       alert("투표 처리 실패");
-
-      // ❌ 실패 시 롤백
-      voteScoreEl.textContent = String(
-        Number(voteScoreEl.textContent || 0) - delta
-      );
-      myVote = prevVote;
-
       voting = false;
       return;
     }
 
-    // ✅ 서버 값을 단일 진실로 재동기화
-    if (typeof data?.my_vote === "number") {
-      myVote = data.my_vote;
-    }
+    // 서버가 내려준 값을 단일 진실로 사용
+    myVote = typeof data?.my_vote === "number" ? data.my_vote : 0;
+
     if (typeof data?.score === "number") {
       voteScoreEl.textContent = String(data.score);
     }
