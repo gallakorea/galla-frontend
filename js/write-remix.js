@@ -196,30 +196,48 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = () => {
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+    document.getElementById('publishPreview').onclick = async () => {
       const isDraftMode = window.__DRAFT_MODE__ === true;
-
-      if (isDraftMode) {
-        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
-        return;
-      }
+      if (isDraftMode) return;
 
       const payload = {
+        status: 'draft',
         category: remixContext.category,
         title: titleEl.value,
-        oneLine: oneLineEl.value,
+        one_line: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
         is_anonymous: anon,
-
-        author_stance: remixStance,        // 🔥 반드시 추가
+        author_stance: remixStance,
         remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId
+        remix_origin_issue_id: remixOriginIssueId,
       };
 
-      sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      location.href = 'confirm.html';
+      const supabase = window.supabaseClient;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const { data: draft, error } = await supabase
+        .from('issues')
+        .insert({
+          ...payload,
+          user_id: user.id,
+        })
+        .select('id')
+        .single();
+
+      if (error || !draft) {
+        console.error('[REMIX DRAFT CREATE ERROR]', error);
+        alert('임시 글 생성에 실패했습니다.');
+        return;
+      }
+
+      location.href = `confirm.html?draft=${draft.id}`;
     };
 
     if (videoEl) {
