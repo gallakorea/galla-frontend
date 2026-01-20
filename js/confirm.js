@@ -65,6 +65,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
+     🔥 REMIX / STANCE 컨텍스트 감지
+  ===================== */
+  const isRemix =
+    window.__IS_REMIX__ === true ||
+    sessionStorage.getItem('__IS_REMIX__') === '1';
+
+  if (isRemix && !draft.author_stance) {
+    const remixContext = JSON.parse(
+      sessionStorage.getItem('remixContext')
+    );
+
+    if (!remixContext || !remixContext.remix_stance) {
+      alert('리믹스 입장 정보를 확인할 수 없습니다.');
+      location.href = 'write-remix.html';
+      return;
+    }
+
+    // 🔥 draft에 REMIX 입장 강제 보강
+    const { error: patchError } = await supabase
+      .from('issues')
+      .update({
+        author_stance: remixContext.remix_stance,
+        remix_stance: remixContext.remix_stance,
+        remix_origin_issue_id: remixContext.origin_issue_id,
+      })
+      .eq('id', draft.id);
+
+    if (patchError) {
+      alert('리믹스 입장 보강 중 오류가 발생했습니다.');
+      return;
+    }
+
+    // 로컬 draft 객체도 동기화
+    draft.author_stance = remixContext.remix_stance;
+    draft.remix_stance = remixContext.remix_stance;
+    draft.remix_origin_issue_id = remixContext.origin_issue_id;
+  }
+
+  /* =====================
      MOCK 검사 결과
   ===================== */
   renderResult('check-title', 'PASS', '문제 없음');
@@ -86,6 +125,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
     publishBtn.textContent = '발행 중…';
+
+    /* =====================
+       ⛔ 발행 전 입장 최종 검증
+    ===================== */
+    if (!draft.author_stance) {
+      alert('이슈에 대한 입장을 선택해주세요.');
+      publishBtn.disabled = false;
+      publishBtn.textContent = '최종 발행';
+      return;
+    }
 
     try {
       const updates = {};
