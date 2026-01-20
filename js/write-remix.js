@@ -2,6 +2,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
+  // 🔒 REMIX 진입 확정 플래그 (write 공용 로직의 입장 선택 alert 차단)
+  window.__IS_REMIX__ = true;
+  sessionStorage.setItem("__IS_REMIX__", "1");
 
     /* ================= REMIX CONTEXT (고정값) ================= */
   const remixContext = JSON.parse(
@@ -14,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !remixContext.remix_stance ||
     !remixContext.category
   ) {
-    alert('잘못된 접근입니다.');
+    console.error('[REMIX] invalid remixContext', remixContext);
     location.href = 'index.html';
     return;
   }
