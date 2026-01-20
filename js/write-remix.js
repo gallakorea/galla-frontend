@@ -204,21 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const payload = {
-        category: remixContext.category,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anon,
-
-        author_stance: remixStance,        // 🔥 반드시 추가
-        remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId
-      };
-
-      sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      location.href = 'confirm.html';
+      // 🔥 REMIX 전용 confirm으로 이동 (DB draft 기준)
+      window.__ALLOW_DRAFT_EXIT__ = true;
+      location.href = `confirm.remix.html?draft=${remixContext.draft_id}`;
     };
 
     document.getElementById('saveDraft').onclick = async () => {
