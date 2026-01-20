@@ -96,7 +96,6 @@
 </nav>
 
 <!-- Supabase -->
-<script src="https://esm.sh/@supabase/supabase-js@2"></script>
 <script src="js/supabase.js"></script>
 
 <!-- My Page 기능 -->
@@ -104,11 +103,13 @@
 
 <script>
 /* ----------------------------------------------------------
-    로그인 상태 체크 및 유저 정보 로딩
+   로그인 상태 체크 및 유저 프로필 로딩 (UMD Supabase 대응)
 ---------------------------------------------------------- */
 document.addEventListener("DOMContentLoaded", async () => {
-    const { data } = await supabase.auth.getSession();
-    const session = data?.session;
+    const supabase = await waitForSupabaseClient();
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData?.session;
 
     if (!session?.user) {
         alert("로그인이 필요합니다.");
@@ -118,23 +119,35 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const userId = session.user.id;
 
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("user_id", userId)
         .single();
 
-    if (profile) {
-        document.getElementById("profileName").textContent = profile.nickname || "익명의 사용자";
-        document.getElementById("profileDesc").textContent = profile.bio || "소개 문구가 없습니다.";
+    if (error) {
+        console.error("[mypage] profile load error", error);
+        return;
+    }
 
-        document.getElementById("badgeText").textContent = profile.badge || "🔥 매운 토론러";
-        document.getElementById("levelText").textContent = "Lv. " + (profile.level || 1);
+    if (profile) {
+        document.getElementById("profileName").textContent =
+            profile.nickname || "익명의 사용자";
+        document.getElementById("profileDesc").textContent =
+            profile.bio || "소개 문구가 없습니다.";
+
+        document.getElementById("badgeText").textContent =
+            profile.badge || "🔥 매운 토론러";
+        document.getElementById("levelText").textContent =
+            "Lv. " + (profile.level || 1);
 
         document.getElementById("statDrop").textContent = profile.gp || 0;
-        document.getElementById("statFollowers").textContent = profile.followers || 0;
-        document.getElementById("statSupports").textContent = profile.supports || 0;
-        document.getElementById("statOppose").textContent = profile.opposes || 0;
+        document.getElementById("statFollowers").textContent =
+            profile.followers || 0;
+        document.getElementById("statSupports").textContent =
+            profile.supports || 0;
+        document.getElementById("statOppose").textContent =
+            profile.opposes || 0;
     }
 });
 </script>
