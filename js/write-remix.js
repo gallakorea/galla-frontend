@@ -1,8 +1,3 @@
-// 🔕 REMIX 페이지에서는 모든 alert 완전 차단
-window.alert = () => {};
-
-// 🔥 REMIX STATE (write-remix 전용, DB draft 기반)
-
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
@@ -236,39 +231,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     document.getElementById('saveDraft').onclick = async () => {
-      try {
-        const supabase = window.supabaseClient;
+      const supabase = window.supabaseClient;
 
-        const params = new URLSearchParams(location.search);
-        const draftId = params.get('draft');
-        if (!draftId) {
-          console.warn('[saveDraft] draft id 없음');
-          return;
-        }
+      const params = new URLSearchParams(location.search);
+      const draftId = params.get('draft');
+      if (!draftId) {
+        console.error('[saveDraft] draft id 없음');
+        return;
+      }
 
-        const updates = {
-          title: titleEl.value,
-          one_line: oneLineEl.value,
-          description: descEl.value,
-          donation_target: donationEl.value,
-          is_anonymous: anon,
-          author_stance: remixStance,
-          remix_stance: remixStance,
-          remix_origin_issue_id: remixOriginIssueId,
-          status: 'draft',
-          updated_at: new Date().toISOString()
-        };
+      const updates = {
+        title: titleEl.value,
+        one_line: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: document.getElementById('isAnonymous').checked,
+        author_stance: remixStance,
+        remix_stance: remixStance,
+        remix_origin_issue_id: remixOriginIssueId,
+        status: 'draft',
+        updated_at: new Date().toISOString()
+      };
 
-        const { error } = await supabase
-          .from('issues')
-          .update(updates)
-          .eq('id', draftId);
+      const { error } = await supabase
+        .from('issues')
+        .update(updates)
+        .eq('id', draftId);
 
-        if (error) {
-          console.error('[saveDraft] supabase error', error);
-        }
-      } catch (e) {
-        console.error('[saveDraft] exception', e);
+      if (error) {
+        console.error('[saveDraft] supabase error', error);
+      } else {
+        console.log('[saveDraft] OK', draftId);
       }
     };
 
