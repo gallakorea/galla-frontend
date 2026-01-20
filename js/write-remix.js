@@ -197,8 +197,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('publishPreview').onclick = () => {
       window.__ALLOW_DRAFT_EXIT__ = true;
-      location.href = `confirm.remix.html?draft=${remixContext.draft_id}`;
+
+      const params = new URLSearchParams(location.search);
+      const draftId = params.get('draft');
+
+      if (!draftId) {
+        alert('draft id가 없습니다');
+        return;
+      }
+
+      location.href = `confirm.remix.html?draft=${draftId}`;
     };
+
 
     document.getElementById('saveDraft').onclick = async () => {
       try {
