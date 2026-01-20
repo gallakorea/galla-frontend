@@ -196,15 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('publishPreview').onclick = () => {
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
-      const isDraftMode = window.__DRAFT_MODE__ === true;
-
-      if (isDraftMode) {
-        console.log('[write-remix.js] DRAFT MODE → confirm 이동 차단');
-        return;
-      }
-
-      // 🔥 REMIX 전용 confirm으로 이동 (DB draft 기준)
       window.__ALLOW_DRAFT_EXIT__ = true;
       location.href = `confirm.remix.html?draft=${remixContext.draft_id}`;
     };
