@@ -354,7 +354,6 @@ function renderPostBody(body) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   let voting = false; // 중복 클릭 방지
-  let voteStateLoaded = false; // 🔒 내 투표 상태 로딩 완료 여부
   const voteScoreEl = document.getElementById("voteScore");
   const voteUpBtn = document.querySelector(".vote-up");
   const voteDownBtn = document.querySelector(".vote-down");
@@ -366,6 +365,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Helper function for vote state loading
   async function loadVoteState() {
+    if (isVotingNow) return; // 🔒 투표 중에는 서버 동기화로 UI 덮어쓰기 금지
+
     const session = await getSessionSafe();
 
     const res = await fetch(
@@ -453,40 +454,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     voting = true;
     isVotingNow = true;
 
-    const session = await getSessionSafe();
-    if (!session) {
-      console.error("No active session for voting");
-      voting = false;
-      return;
-    }
-
-    const prevVote = myVote;
-
-    const { data, error } = await supabase.functions.invoke(
-      "plaza-vote",
-      {
-        body: { post_id: postId, vote: voteValue },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+    try {
+      const session = await getSessionSafe();
+      if (!session) {
+        alert("로그인 후 투표할 수 있습니다.");
+        return;
       }
-    );
 
-    if (error) {
-      console.error(error);
-      alert("투표 처리 실패");
+      const { data, error } = await supabase.functions.invoke(
+        "plaza-vote",
+        {
+          body: { post_id: postId, vote: voteValue },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (error) {
+        console.error(error);
+        alert("투표 처리 실패");
+        return;
+      }
+
+      // ✅ 서버 응답만 단일 진실
+      myVote = data?.my_vote ?? 0;
+      voteScoreEl.textContent = String(data?.score ?? 0);
+      updateVoteUI();
+
+    } finally {
       voting = false;
-      return;
+      isVotingNow = false;
     }
-
-    // ✅ 서버 응답만 단일 진실
-    myVote = data.my_vote ?? 0;
-    voteScoreEl.textContent = String(data.score ?? 0);
-
-    updateVoteUI();
-
-    voting = false;
-    isVotingNow = false;
   }
 
   voteUpBtn?.addEventListener("click", async e => {
@@ -536,14 +535,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ✅ 페이지 진입 시 항상 1회 투표 상태 로딩 (로그인/비로그인 공통)
   await loadVoteState();
-  voteStateLoaded = true;
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
-supabase.auth.onAuthStateChange(async (event) => {
-  if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
-    await loadVoteState();
-  }
-});
+  supabase.auth.onAuthStateChange(async (event) => {
+    if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+      await loadVoteState();
+    }
+  });
 
   fetchComments(commentCountEl);
 });
