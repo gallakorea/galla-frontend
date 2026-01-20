@@ -1,6 +1,18 @@
 // 🔥 REMIX STATE (write-remix 전용, DB draft 기반)
 
 document.addEventListener('DOMContentLoaded', () => {
+  /* ================= ALERT OVERRIDE (REMIX ONLY) =================
+     write / draft restore 공통 로직에서 발생하는
+     "이 이슈에 대한 나의 입장을 선택해주세요" alert를 차단한다
+  ================================================================= */
+  const __originalAlert = window.alert;
+  window.alert = (msg) => {
+    if (typeof msg === 'string' && msg.includes('입장을 선택')) {
+      console.warn('[REMIX] blocked stance alert:', msg);
+      return;
+    }
+    __originalAlert(msg);
+  };
   const body = document.body;
 
   /* ================= REMIX CONTEXT (고정값) ================= */
