@@ -56,7 +56,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 id,
                 title,
                 created_at,
-                score
+                score,
+                thumbnail_url
             `)
             .eq("user_id", userId)
             .order("created_at", { ascending: false });
@@ -82,8 +83,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             const card = document.createElement("div");
             card.className = "thumb-card";
 
+            const thumbSrc = issue.thumbnail_url
+                ? issue.thumbnail_url
+                : "./assets/logo.png";
+
             card.innerHTML = `
-                <img src="./assets/logo.png">
+                <img src="${thumbSrc}">
                 <div class="thumb-title">${issue.title}</div>
                 <div class="thumb-author">by 나</div>
                 <div class="thumb-stats">
