@@ -65,24 +65,54 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
+   🔥 REMIX 입장 승계 보정 (핵심)
+   - remix 글인데 DB에 author_stance가 없으면
+   - write-remix에서 넘어온 입장을 DB에 주입
+===================== */
+const isRemixDraft =
+  Boolean(draft.remix_origin_issue_id) ||
+  sessionStorage.getItem('__REMIX_MODE__') === 'true';
+
+if (isRemixDraft && !draft.author_stance) {
+  const payload = JSON.parse(
+    sessionStorage.getItem('writePayload') || '{}'
+  );
+
+  if (payload.author_stance) {
+    const { error: stanceFixError } = await supabase
+      .from('issues')
+      .update({
+        author_stance: payload.author_stance,
+        remix_stance: payload.remix_stance,
+        remix_origin_issue_id: payload.remix_origin_issue_id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', draft.id);
+
+    if (stanceFixError) {
+      console.error('[CONFIRM] remix stance fix failed', stanceFixError);
+    } else {
+      // 메모리 상 draft도 갱신 (아래 로직 안정화)
+      draft.author_stance = payload.author_stance;
+    }
+  }
+}
+
+  /* =====================
      🔒 WRITE vs REMIX 분기
      - write: 입장 선택 필요
      - write-remix: 입장 선택 절대 금지
   ===================== */
-  const isRemix =
+  const isRemixFinal =
     draft.remix_origin_issue_id !== null &&
     draft.remix_origin_issue_id !== undefined;
 
-  if (isRemix) {
-    // remix 글은 confirm 단계에서 입장을 절대 묻지 않는다
-    console.log('[confirm] REMIX MODE: stance check skipped');
+  if (!isRemixFinal && !draft.author_stance) {
+    alert('이 이슈에 대한 나의 입장을 선택해주세요');
+    location.href = `write.html?draft=${draftId}`;
+    return;
   } else {
-    // 일반 write 글만 입장 필수 검사
-    if (!draft.author_stance) {
-      alert('이 이슈에 대한 나의 입장을 선택해주세요');
-      location.href = `write.html?draft=${draftId}`;
-      return;
-    }
+    console.log('[confirm] REMIX MODE or stance already set');
   }
 
   /* =====================
