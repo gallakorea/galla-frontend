@@ -366,9 +366,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Helper function for vote state loading
   async function loadVoteState() {
-    if (isVotingNow) return; // ❗ 투표 중이면 서버 동기화 차단
-    if (!voteStateLoaded && isVotingNow) return;
-
     const session = await getSessionSafe();
 
     const res = await fetch(
@@ -456,16 +453,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     voting = true;
     isVotingNow = true;
 
-    // Optimistic UI update immediately
-    myVote = voteValue;
-    updateVoteUI();
-
     const session = await getSessionSafe();
     if (!session) {
       console.error("No active session for voting");
       voting = false;
       return;
     }
+
+    const prevVote = myVote;
 
     const { data, error } = await supabase.functions.invoke(
       "plaza-vote",
@@ -502,7 +497,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const nextVote = myVote === 1 ? 0 : 1;
+    let nextVote;
+    if (myVote === 1) nextVote = 0;
+    else nextVote = 1;
+
     await vote(nextVote);
   });
 
@@ -514,7 +512,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    const nextVote = myVote === -1 ? 0 : -1;
+    let nextVote;
+    if (myVote === -1) nextVote = 0;
+    else nextVote = -1;
+
     await vote(nextVote);
   });
 
@@ -539,7 +540,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
 supabase.auth.onAuthStateChange(async (event) => {
-  if (isVotingNow) return;
   if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
     await loadVoteState();
   }
