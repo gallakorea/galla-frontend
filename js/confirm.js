@@ -65,42 +65,43 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     🔥 REMIX / STANCE 컨텍스트 감지
+     🔥 REMIX / STANCE 강제 보정 (최종)
+     - remixContext OR writePayload 중 하나라도 있으면 REMIX
+     - alert / redirect 절대 없음
   ===================== */
+
+  const remixContext =
+    JSON.parse(sessionStorage.getItem('remixContext') || 'null');
+
+  const writePayload =
+    JSON.parse(sessionStorage.getItem('writePayload') || 'null');
+
+  const remixStance =
+    remixContext?.remix_stance || writePayload?.remix_stance || writePayload?.author_stance;
+
+  const remixOriginIssueId =
+    remixContext?.origin_issue_id || writePayload?.remix_origin_issue_id;
+
   const isRemix =
-    window.__IS_REMIX__ === true ||
-    sessionStorage.getItem('__IS_REMIX__') === '1';
+    Boolean(remixStance && remixOriginIssueId);
 
   if (isRemix && !draft.author_stance) {
-    const remixContext = JSON.parse(
-      sessionStorage.getItem('remixContext')
-    );
-
-    if (!remixContext || !remixContext.remix_stance) {
-      alert('리믹스 입장 정보를 확인할 수 없습니다.');
-      location.href = 'write-remix.html';
-      return;
-    }
-
-    // 🔥 draft에 REMIX 입장 강제 보강
+    // 🔥 DB에 무조건 주입 (alert / return 없음)
     const { error: patchError } = await supabase
       .from('issues')
       .update({
-        author_stance: remixContext.remix_stance,
-        remix_stance: remixContext.remix_stance,
-        remix_origin_issue_id: remixContext.origin_issue_id,
+        author_stance: remixStance,
+        remix_stance: remixStance,
+        remix_origin_issue_id: remixOriginIssueId,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', draft.id);
 
-    if (patchError) {
-      alert('리믹스 입장 보강 중 오류가 발생했습니다.');
-      return;
+    if (!patchError) {
+      draft.author_stance = remixStance;
+      draft.remix_stance = remixStance;
+      draft.remix_origin_issue_id = remixOriginIssueId;
     }
-
-    // 로컬 draft 객체도 동기화
-    draft.author_stance = remixContext.remix_stance;
-    draft.remix_stance = remixContext.remix_stance;
-    draft.remix_origin_issue_id = remixContext.origin_issue_id;
   }
 
   /* =====================
