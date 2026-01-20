@@ -65,40 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-   🔥 REMIX 입장 승계 보정 (핵심)
-   - remix 글인데 DB에 author_stance가 없으면
-   - write-remix에서 넘어온 입장을 DB에 주입
-===================== */
-const isRemixDraft =
-  Boolean(draft.remix_origin_issue_id) ||
-  sessionStorage.getItem('__REMIX_MODE__') === 'true';
-
-if (isRemixDraft && !draft.author_stance) {
-  const payload = JSON.parse(
-    sessionStorage.getItem('writePayload') || '{}'
-  );
-
-  if (payload.author_stance) {
-    const { error: stanceFixError } = await supabase
-      .from('issues')
-      .update({
-        author_stance: payload.author_stance,
-        remix_stance: payload.remix_stance,
-        remix_origin_issue_id: payload.remix_origin_issue_id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', draft.id);
-
-    if (stanceFixError) {
-      console.error('[CONFIRM] remix stance fix failed', stanceFixError);
-    } else {
-      // 메모리 상 draft도 갱신 (아래 로직 안정화)
-      draft.author_stance = payload.author_stance;
-    }
-  }
-}
-
-  /* =====================
      🔒 WRITE vs REMIX 분기 (최종 수정)
      - write: 입장 선택 필수
      - write-remix: 입장 질문/검사 완전 제거
@@ -106,16 +72,22 @@ if (isRemixDraft && !draft.author_stance) {
 
   const isRemix = Boolean(draft.remix_origin_issue_id);
 
-  if (!isRemix) {
-    // 일반 write만 입장 검사
+  // ❗ confirm은 draft만 신뢰한다
+  // remix draft는 author_stance가 반드시 있어야 한다 (issue에서 이미 결정됨)
+  if (isRemix) {
+    if (!draft.author_stance) {
+      console.error('[CONFIRM] Remix draft missing author_stance', draft);
+      alert('리믹스 입장 정보가 유실되었습니다. 이슈 페이지에서 다시 시도해주세요.');
+      location.href = `issue.html?id=${draft.remix_origin_issue_id}`;
+      return;
+    }
+  } else {
+    // 일반 write만 입장 선택 필수
     if (!draft.author_stance) {
       alert('이 이슈에 대한 나의 입장을 선택해주세요');
       location.href = `write.html?draft=${draftId}`;
       return;
     }
-  } else {
-    // remix는 confirm 단계에서 절대 입장 관련 alert / redirect 없음
-    console.log('[confirm] REMIX MODE: stance check fully skipped');
   }
 
   /* =====================
