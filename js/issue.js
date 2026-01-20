@@ -506,7 +506,6 @@ async function goRemix(stance) {
       // 🔒 입장은 여기서 확정
       author_stance: stance,
       remix_stance: stance,
-      remix_origin_issue_id: currentIssue.id,
 
       // 본문은 write-remix에서 채움 (DB 제약 통과용 기본값)
       title: "",
