@@ -1,10 +1,5 @@
 // 🔥 REMIX STATE (write-remix 전용)
 
-function getDraftIdFromUrl() {
-  const p = new URLSearchParams(location.search);
-  return p.get('draft');
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
@@ -23,30 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     location.href = 'index.html';
     return;
   }
-
-  const draftId = remixContext.draft_id || getDraftIdFromUrl();
-
-  if (!draftId) {
-    alert('리믹스 초안 정보가 없습니다.');
-    location.href = 'index.html';
-    return;
-  }
-
-  // 🔒 REMIX draft 고정
-  window.__DRAFT_ID__ = draftId;
-
-  // 🔒 REMIX 전역 플래그 (다른 공용 스크립트가 입장 요구 못 하게 차단)
-  window.__IS_REMIX__ = true;
-
-  // ⛔ write / draft 공용 로직에서 잘못 뜨는 입장 요구 alert 차단
-  const __origAlert = window.alert;
-  window.alert = (msg) => {
-    if (typeof msg === 'string' && msg.includes('입장을 선택')) {
-      console.warn('[REMIX] stance alert suppressed:', msg);
-      return;
-    }
-    __origAlert(msg);
-  };
 
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
@@ -232,7 +203,6 @@ if (remixStance === 'con') {
       }
 
       const payload = {
-        draft_id: window.__DRAFT_ID__,      // 🔥 issue에서 생성된 draft
         category: remixContext.category,
         title: titleEl.value,
         oneLine: oneLineEl.value,
@@ -240,14 +210,13 @@ if (remixStance === 'con') {
         donation_target: donationEl.value,
         is_anonymous: anon,
 
-        // 🔒 절대 수정 불가 영역
-        author_stance: remixStance,
+        author_stance: remixStance,        // 🔥 반드시 추가
         remix_stance: remixStance,
         remix_origin_issue_id: remixOriginIssueId
       };
 
       sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      location.href = `confirm.html?draft=${window.__DRAFT_ID__}`;
+      location.href = 'confirm.html';
     };
 
     if (videoEl) {

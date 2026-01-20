@@ -440,7 +440,7 @@ async function checkRemixStatus(issueId) {
   const { data } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("origin_issue_id", issueId)
+    .eq("issue_id", issueId)
     .eq("user_id", session.session.user.id)
     .maybeSingle();
 
@@ -454,7 +454,7 @@ async function loadRemixCounts(issueId) {
   const { data, error } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("origin_issue_id", issueId);
+    .eq("issue_id", issueId);
 
   if (error) {
     console.warn("remix count skipped:", error.message);
@@ -481,66 +481,22 @@ function applyRemixJoinedUI(stance) {
 qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
 qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
 
-async function goRemix(stance) {
+function goRemix(stance) {
   if (!currentIssue) {
     alert("이슈 정보를 불러오지 못했습니다.");
     return;
   }
 
-  const supabase = window.supabaseClient;
-  const { data: session } = await supabase.auth.getSession();
-
-  if (!session?.session) {
-    alert("로그인이 필요합니다.");
-    return;
-  }
-
-  // 🔥 REMIX DRAFT 생성 + 입장 확정 (여기서 모든 판단 종료)
-  const { data: draft, error } = await supabase
-    .from("issues")
-    .insert({
-      status: "draft",
-      category: currentIssue.category,
-      author_stance: stance,
-      user_id: session.session.user.id,
-    })
-    .select("id")
-    .single();
-
-  if (error || !draft) {
-    console.error("[REMIX] draft create failed", error);
-    alert("리믹스를 시작할 수 없습니다.");
-    return;
-  }
-
-  // 🔥 REMIX 관계 테이블에 원본 이슈 연결 (issues 스키마 오염 방지)
-  const { error: remixLinkError } = await supabase
-    .from("remixes")
-    .insert({
-      origin_issue_id: currentIssue.id,
-      remix_issue_id: draft.id,
-      user_id: session.session.user.id,
-      remix_stance: stance
-    });
-
-  if (remixLinkError) {
-    console.error("[REMIX] remix link create failed", remixLinkError);
-    alert("리믹스 연결에 실패했습니다.");
-    return;
-  }
-
-  // 🔒 UI 컨텍스트용 (DB는 이미 확정됨)
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
       origin_issue_id: currentIssue.id,
       remix_stance: stance,
-      category: currentIssue.category,
-      draft_id: draft.id
+      category: currentIssue.category
     })
   );
 
-  location.href = `write-remix.html?draft=${draft.id}`;
+  location.href = "write-remix.html";
 }
 
 /* ==========================================================================

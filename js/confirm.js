@@ -65,32 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     🔒 WRITE vs REMIX 분기 (최종 수정)
-     - write: 입장 선택 필수
-     - write-remix: 입장 질문/검사 완전 제거
-  ===================== */
-
-  const isRemix = Boolean(draft.remix_origin_issue_id);
-
-  // ❗ confirm은 draft만 신뢰한다
-  // remix draft는 author_stance가 반드시 있어야 한다 (issue에서 이미 결정됨)
-  if (isRemix) {
-    if (!draft.author_stance) {
-      console.error('[CONFIRM] Remix draft missing author_stance', draft);
-      alert('리믹스 입장 정보가 유실되었습니다. 이슈 페이지에서 다시 시도해주세요.');
-      location.href = `issue.html?id=${draft.remix_origin_issue_id}`;
-      return;
-    }
-  } else {
-    // 일반 write만 입장 선택 필수
-    if (!draft.author_stance) {
-      alert('이 이슈에 대한 나의 입장을 선택해주세요');
-      location.href = `write.html?draft=${draftId}`;
-      return;
-    }
-  }
-
-  /* =====================
      MOCK 검사 결과
   ===================== */
   renderResult('check-title', 'PASS', '문제 없음');
@@ -103,11 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      뒤로가기
   ===================== */
   backBtn.onclick = () => {
-    if (draft.remix_origin_issue_id) {
-      location.href = `write-remix.html?draft=${draftId}`;
-    } else {
-      location.href = `write.html?draft=${draftId}`;
-    }
+    location.href = `write.html?draft=${draftId}`;
   };
 
   /* =====================
