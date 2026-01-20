@@ -503,7 +503,7 @@ async function goRemix(stance) {
       category: currentIssue.category,
       author_stance: stance,
       remix_stance: stance,
-      issue_id: currentIssue.id,
+      remix_origin_issue_id: currentIssue.id,
       user_id: session.session.user.id,
     })
     .select("id")
@@ -519,7 +519,7 @@ async function goRemix(stance) {
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
-      issue_id: currentIssue.id,
+      origin_issue_id: currentIssue.id,
       remix_stance: stance,
       category: currentIssue.category,
       draft_id: draft.id
