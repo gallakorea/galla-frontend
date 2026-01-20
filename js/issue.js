@@ -503,7 +503,6 @@ async function goRemix(stance) {
       category: currentIssue.category,
       user_id: session.session.user.id,
       author_stance: stance,
-      remix_stance: stance,
       title: "",
       one_line: "",
       description: "",
