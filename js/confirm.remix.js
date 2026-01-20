@@ -64,9 +64,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 🔥 REMIX 필수 검증 (draft 존재만 확인, 입장은 write-remix에서 이미 확정됨)
-  if (!draft || draft.status !== 'draft') {
-    alert('리믹스 임시글이 올바르지 않습니다.');
+  // ✅ REMIX confirm 단계에서는 draft 존재만 확인한다
+  // (remix_stance / remix_origin_issue_id 는 DB 컬럼이 아니며 여기서 검사하면 안 됨)
+  if (!draft) {
+    alert('리믹스 임시글을 불러올 수 없습니다.');
     location.href = 'index.html';
     return;
   }
