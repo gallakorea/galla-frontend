@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
     // ---------------------------
     // 현재 페이지 정보
@@ -20,74 +20,105 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // ---------------------------
-    // 탭 렌더링 요소
+    // 탭 요소
     // ---------------------------
     const tabs = document.querySelectorAll(".tab");
     const tabContent = document.getElementById("tabContent");
 
     // ---------------------------
-    // tab 렌더링 함수들
+    // 로그인 세션 확보
     // ---------------------------
-    const renderMy = () => {
-        tabContent.innerHTML = `
-            <div class="thumb-card">
-                <img src="./assets/logo.png">
-                <div class="thumb-title">연애비용 분담 논쟁 난리났네</div>
-                <div class="thumb-author">by 익명의 사용자</div>
-                <div class="thumb-stats">
-                    <span>🔥 233</span>
-                    <span>💥 102</span>
-                    <span>💬 44</span>
-                </div>
-            </div>
+    const { data: sessionData } = await supabase.auth.getSession();
+    const session = sessionData?.session;
 
-            <div class="thumb-card">
-                <img src="./assets/logo.png">
-                <div class="thumb-title">직장 회식 강요… 이거 불법?</div>
-                <div class="thumb-author">by 익명의 사용자</div>
-                <div class="thumb-stats">
-                    <span>🔥 301</span>
-                    <span>💥 88</span>
-                    <span>💬 29</span>
+    if (!session?.user) {
+        alert("로그인이 필요합니다.");
+        location.href = "login.html";
+        return;
+    }
+
+    const userId = session.user.id;
+
+    // =====================================================
+    // My 갈라 — 내가 만든 이슈
+    // =====================================================
+    const renderMy = async () => {
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        const { data: issues, error } = await supabase
+            .from("issues")
+            .select(`
+                id,
+                title,
+                created_at,
+                score,
+                comment_count
+            `)
+            .eq("author_id", userId)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("[My Galla] error", error);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        if (!issues || issues.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    아직 발의한 이슈가 없습니다.
                 </div>
-            </div>
-        `;
+            `;
+            return;
+        }
+
+        tabContent.innerHTML = "";
+
+        issues.forEach(issue => {
+            const card = document.createElement("div");
+            card.className = "thumb-card";
+
+            card.innerHTML = `
+                <img src="./assets/logo.png">
+                <div class="thumb-title">${issue.title}</div>
+                <div class="thumb-author">by 나</div>
+                <div class="thumb-stats">
+                    <span>🔥 ${issue.score ?? 0}</span>
+                    <span>💬 ${issue.comment_count ?? 0}</span>
+                </div>
+            `;
+
+            card.onclick = () => {
+                location.href = `issue.html?id=${issue.id}`;
+            };
+
+            tabContent.appendChild(card);
+        });
     };
 
+    // =====================================================
+    // Battle / Save / Favorite (아직 더미 유지)
+    // =====================================================
     const renderBattle = () => {
         tabContent.innerHTML = `
-            <div class="thumb-card">
-                <img src="./assets/logo.png">
-                <div class="thumb-title">🔥 도전 콘텐츠 #1</div>
-                <div class="thumb-author">by 익명의 사용자</div>
-                <div class="thumb-stats">
-                    <span>🔥 77</span>
-                    <span>💥 22</span>
-                    <span>💬 11</span>
-                </div>
+            <div style="color:#777;font-size:14px;padding:20px;">
+                Battle 갈라 준비 중
             </div>
         `;
     };
 
     const renderSave = () => {
         tabContent.innerHTML = `
-            <div class="thumb-card">
-                <img src="./assets/logo.png">
-                <div class="thumb-title">저장한 콘텐츠 #1</div>
-                <div class="thumb-author">by 익명의 사용자</div>
-                <div class="thumb-stats">
-                    <span>🔥 122</span>
-                    <span>💥 44</span>
-                    <span>💬 12</span>
-                </div>
+            <div style="color:#777;font-size:14px;padding:20px;">
+                Save 갈라 준비 중
             </div>
         `;
     };
 
     const renderFavorite = () => {
         tabContent.innerHTML = `
-            <div style="color:#888;font-size:14px;padding:20px;">
-                팔로우한 발의자를 준비 중…
+            <div style="color:#777;font-size:14px;padding:20px;">
+                즐겨찾기 준비 중
             </div>
         `;
     };
@@ -111,6 +142,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // 기본 탭 로딩
+    // ---------------------------
+    // 기본 탭
+    // ---------------------------
     renderMy();
 });
