@@ -503,7 +503,6 @@ async function goRemix(stance) {
       category: currentIssue.category,
       author_stance: stance,
       remix_stance: stance,
-      remix_origin_issue_id: currentIssue.id,
       user_id: session.session.user.id,
     })
     .select("id")
@@ -515,11 +514,27 @@ async function goRemix(stance) {
     return;
   }
 
+  // 🔥 REMIX 관계 테이블에 원본 이슈 연결 (issues 스키마 오염 방지)
+  const { error: remixLinkError } = await supabase
+    .from("remixes")
+    .insert({
+      issue_id: currentIssue.id,
+      user_id: session.session.user.id,
+      remix_issue_id: draft.id,
+      remix_stance: stance
+    });
+
+  if (remixLinkError) {
+    console.error("[REMIX] remix link create failed", remixLinkError);
+    alert("리믹스 연결에 실패했습니다.");
+    return;
+  }
+
   // 🔒 UI 컨텍스트용 (DB는 이미 확정됨)
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
-      origin_issue_id: currentIssue.id,
+      issue_id: currentIssue.id,
       remix_stance: stance,
       category: currentIssue.category,
       draft_id: draft.id
