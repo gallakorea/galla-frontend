@@ -96,7 +96,11 @@ document.addEventListener('DOMContentLoaded', async () => {
      뒤로가기
   ===================== */
   backBtn.onclick = () => {
-    location.href = `write.html?draft=${draftId}`;
+    if (draft.remix_origin_issue_id) {
+      location.href = `write-remix.html?draft=${draftId}`;
+    } else {
+      location.href = `write.html?draft=${draftId}`;
+    }
   };
 
   /* =====================
