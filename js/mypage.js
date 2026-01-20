@@ -1,5 +1,4 @@
 document.addEventListener("DOMContentLoaded", async () => {
-
     // ---------------------------
     // Supabase client 확보 (UMD bootstrap 대응)
     // ---------------------------

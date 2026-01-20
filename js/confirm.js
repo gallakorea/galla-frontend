@@ -65,6 +65,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
+     🔒 WRITE vs REMIX 분기
+     - write: 입장 선택 필요
+     - write-remix: 입장 선택 절대 금지
+  ===================== */
+  const isRemix = Boolean(draft.remix_origin_issue_id);
+
+  if (!isRemix) {
+    // 일반 write 글만 입장 필수 검사
+    if (!draft.author_stance) {
+      alert('이슈에 대한 입장을 선택해주세요.');
+      location.href = `write.html?draft=${draftId}`;
+      return;
+    }
+  } else {
+    // remix 글은 confirm 단계에서 입장을 묻지 않는다
+    console.log('[confirm] REMIX MODE: stance check skipped');
+  }
+
+  /* =====================
      MOCK 검사 결과
   ===================== */
   renderResult('check-title', 'PASS', '문제 없음');
