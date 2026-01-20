@@ -1,13 +1,9 @@
-/* ===============================
-   REMIX PAGE GUARD
-   remix 페이지에서는 일반 draft restore 로직을 절대 실행하지 않는다
-================================ */
-if (window.__IS_REMIX__ === true || document.body?.dataset?.page === 'write-remix') {
-  console.log('[DRAFT RESTORE] remix page detected → skipped');
-  return;
-}
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (window.__IS_REMIX__ === true || document.body?.dataset?.page === 'write-remix') {
+    console.log('[DRAFT RESTORE] remix page detected → skipped');
+    return;
+  }
   console.log('[DRAFT RESTORE] Loaded');
 
   const params = new URLSearchParams(location.search);
