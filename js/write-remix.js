@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (
     !remixContext ||
-    !remixContext.origin_issue_id ||
     !remixContext.category
   ) {
     alert('잘못된 접근입니다.');
@@ -68,7 +67,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
