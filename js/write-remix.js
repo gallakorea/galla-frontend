@@ -11,12 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (
     !remixContext ||
     !remixContext.origin_issue_id ||
-    !remixContext.remix_stance ||
     !remixContext.category
   ) {
     alert('잘못된 접근입니다.');
     location.href = 'index.html';
     return;
+  }
+
+  // 🔥 draft 복원 진입 시에는 stance 검사하지 않음
+  if (!remixContext.remix_stance) {
+    console.warn('[write-remix] remix_stance missing but allowed (draft restore)');
   }
 
   // 🔒 이 페이지에서는 "읽기 전용"
