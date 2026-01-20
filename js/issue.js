@@ -517,10 +517,10 @@ async function goRemix(stance) {
   const { error: remixLinkError } = await supabase
     .from("remixes")
     .insert({
-      issue_id: currentIssue.id,
-      user_id: session.session.user.id,
+      origin_issue_id: currentIssue.id,
       remix_issue_id: draft.id,
-      remix_stance: stance
+      user_id: session.session.user.id,
+      stance: stance
     });
 
   if (remixLinkError) {
