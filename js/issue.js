@@ -440,7 +440,7 @@ async function checkRemixStatus(issueId) {
   const { data } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("origin_issue_id", issueId)
+    .eq("issue_id", issueId)
     .eq("user_id", session.session.user.id)
     .maybeSingle();
 
@@ -454,7 +454,7 @@ async function loadRemixCounts(issueId) {
   const { data, error } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("origin_issue_id", issueId);
+    .eq("issue_id", issueId);
 
   if (error) {
     console.warn("remix count skipped:", error.message);
@@ -489,42 +489,51 @@ async function goRemix(stance) {
 
   const supabase = window.supabaseClient;
   const { data: session } = await supabase.auth.getSession();
-  if (!session.session) {
+
+  if (!session?.session) {
     alert("로그인이 필요합니다.");
     return;
   }
 
-  // 🔥 리믹스는 여기서 draft를 반드시 생성
+  // 🔥 핵심: 참전 시점에 remix draft 생성 → 입장 DB 고정
   const { data: draft, error } = await supabase
     .from("issues")
     .insert({
       status: "draft",
       category: currentIssue.category,
-      author_stance: stance,
       user_id: session.session.user.id,
+
+      // 🔒 입장은 여기서 확정
+      author_stance: stance,
+      remix_stance: stance,
+      remix_origin_issue_id: currentIssue.id,
+
+      // 본문은 write-remix에서 채움
+      title: null,
+      one_line: null,
+      description: null,
     })
     .select("id")
     .single();
 
   if (error || !draft) {
     console.error("[REMIX] draft create failed", error);
-    alert("리믹스 초안 생성에 실패했습니다.");
+    alert("참전에 실패했습니다.");
     return;
   }
 
-  // 🔒 REMIX 진입 플래그 (write-remix 입장 선택 alert 차단용)
-  sessionStorage.setItem("__IS_REMIX__", "1");
-
+  // UI 보조 컨텍스트 (신뢰하지 말 것, 참고용)
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
+      draft_id: draft.id,
       origin_issue_id: currentIssue.id,
       remix_stance: stance,
-      category: currentIssue.category,
-      draft_id: draft.id
+      category: currentIssue.category
     })
   );
 
+  // draft id를 들고 write-remix로 이동
   location.href = `write-remix.html?draft=${draft.id}`;
 }
 

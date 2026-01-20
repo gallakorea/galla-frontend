@@ -65,6 +65,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
+     🔒 WRITE vs REMIX 분기 (confirm 단계)
+     - remix: 입장 검사 금지 (이미 draft에 확정됨)
+     - write : 입장 필수
+  ===================== */
+  const isRemix = Boolean(draft.remix_origin_issue_id);
+
+  if (!isRemix && !draft.author_stance) {
+    alert('이 이슈에 대한 나의 입장을 선택해주세요');
+    location.href = `write.html?draft=${draftId}`;
+    return;
+  }
+
+  /* =====================
      MOCK 검사 결과
   ===================== */
   renderResult('check-title', 'PASS', '문제 없음');
@@ -77,7 +90,11 @@ document.addEventListener('DOMContentLoaded', async () => {
      뒤로가기
   ===================== */
   backBtn.onclick = () => {
-    location.href = `write.html?draft=${draftId}`;
+    if (draft.remix_origin_issue_id) {
+      location.href = `write-remix.html?draft=${draftId}`;
+    } else {
+      location.href = `write.html?draft=${draftId}`;
+    }
   };
 
   /* =====================

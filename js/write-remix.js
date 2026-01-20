@@ -1,12 +1,9 @@
-// 🔥 REMIX STATE (write-remix 전용)
+// 🔥 REMIX STATE (write-remix 전용, DB draft 기반)
 
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
-  // 🔒 REMIX 진입 확정 플래그 (write 공용 로직의 입장 선택 alert 차단)
-  window.__IS_REMIX__ = true;
-  sessionStorage.setItem("__IS_REMIX__", "1");
 
-    /* ================= REMIX CONTEXT (고정값) ================= */
+  /* ================= REMIX CONTEXT (고정값) ================= */
   const remixContext = JSON.parse(
     sessionStorage.getItem('remixContext')
   );
@@ -17,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !remixContext.remix_stance ||
     !remixContext.category
   ) {
-    console.error('[REMIX] invalid remixContext', remixContext);
+    alert('잘못된 접근입니다.');
     location.href = 'index.html';
     return;
   }
@@ -27,29 +24,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
-if (remixStance === 'pro') {
-  stanceBox.classList.add('pro');
-  stanceBox.innerHTML = `👍 <strong>찬성 진영</strong>으로 참전했습니다`;
+  if (remixStance === 'pro') {
+    stanceBox.classList.add('pro');
+    stanceBox.innerHTML = `👍 <strong>찬성 진영</strong>으로 참전했습니다`;
 
-  guideText.innerHTML = `
-    이 글은 위 이슈의 <strong>찬성 논점</strong>을 강화하거나
-    새로운 근거를 제시하기 위한 글입니다.
-    <br />
-    <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
-  `;
-}
+    guideText.innerHTML = `
+      이 글은 위 이슈의 <strong>찬성 논점</strong>을 강화하거나
+      새로운 근거를 제시하기 위한 글입니다.
+      <br />
+      <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
+    `;
+  }
 
-if (remixStance === 'con') {
-  stanceBox.classList.add('con');
-  stanceBox.innerHTML = `👎 <strong>반대 진영</strong>으로 참전했습니다`;
+  if (remixStance === 'con') {
+    stanceBox.classList.add('con');
+    stanceBox.innerHTML = `👎 <strong>반대 진영</strong>으로 참전했습니다`;
 
-  guideText.innerHTML = `
-    이 글은 위 이슈의 <strong>반대 논점</strong>을 강화하거나
-    새로운 반론을 제시하기 위한 글입니다.
-    <br />
-    <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
-  `;
-}
+    guideText.innerHTML = `
+      이 글은 위 이슈의 <strong>반대 논점</strong>을 강화하거나
+      새로운 반론을 제시하기 위한 글입니다.
+      <br />
+      <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
+    `;
+  }
+
   const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
@@ -134,7 +132,7 @@ if (remixStance === 'con') {
   });
 
   /* ================= PREVIEW ================= */
-  form.addEventListener('submit', e => {
+  form.addEventListener('submit', async e => {
     e.preventDefault();
 
     if (!titleEl.value) {
@@ -187,6 +185,7 @@ if (remixStance === 'con') {
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
           <button type="button" id="publishPreview">발행 전 적합성 검사</button>
+          <button type="button" id="saveDraft">임시 저장</button>
         </div>
       </section>
     `;
@@ -196,48 +195,69 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = async () => {
+    document.getElementById('publishPreview').onclick = () => {
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
       const isDraftMode = window.__DRAFT_MODE__ === true;
-      if (isDraftMode) return;
+
+      if (isDraftMode) {
+        console.log('[write-remix.js] DRAFT MODE → confirm 이동 차단');
+        return;
+      }
 
       const payload = {
-        status: 'draft',
         category: remixContext.category,
         title: titleEl.value,
-        one_line: oneLineEl.value,
+        oneLine: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
         is_anonymous: anon,
-        author_stance: remixStance,
+
+        author_stance: remixStance,        // 🔥 반드시 추가
         remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId,
+        remix_origin_issue_id: remixOriginIssueId
       };
 
-      const supabase = window.supabaseClient;
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData?.session?.user;
+      sessionStorage.setItem('writePayload', JSON.stringify(payload));
+      location.href = 'confirm.html';
+    };
 
-      if (!user) {
-        alert('로그인이 필요합니다.');
-        return;
+    document.getElementById('saveDraft').onclick = async () => {
+      try {
+        const draftData = new FormData();
+
+        draftData.append('category', remixContext.category);
+        draftData.append('title', titleEl.value);
+        draftData.append('one_line', oneLineEl.value);
+        draftData.append('description', descEl.value);
+        draftData.append('donation_target', donationEl.value);
+        draftData.append('is_anonymous', anon);
+        draftData.append('author_stance', remixStance);
+        draftData.append('remix_stance', remixStance);
+        draftData.append('remix_origin_issue_id', remixOriginIssueId);
+
+        if (thumbInput.files[0]) {
+          draftData.append('thumbnail', thumbInput.files[0]);
+        }
+
+        if (videoInput.files[0]) {
+          draftData.append('video', videoInput.files[0]);
+        }
+
+        // API endpoint for saving draft (replace URL with actual endpoint)
+        const response = await fetch('/api/remix/draft', {
+          method: 'POST',
+          body: draftData,
+        });
+
+        if (!response.ok) {
+          throw new Error('임시 저장에 실패했습니다.');
+        }
+
+        alert('임시 저장이 완료되었습니다.');
+      } catch (error) {
+        console.error(error);
+        alert(error.message || '임시 저장 중 오류가 발생했습니다.');
       }
-
-      const { data: draft, error } = await supabase
-        .from('issues')
-        .insert({
-          ...payload,
-          user_id: user.id,
-        })
-        .select('id')
-        .single();
-
-      if (error || !draft) {
-        console.error('[REMIX DRAFT CREATE ERROR]', error);
-        alert('임시 글 생성에 실패했습니다.');
-        return;
-      }
-
-      location.href = `confirm.html?draft=${draft.id}`;
     };
 
     if (videoEl) {
