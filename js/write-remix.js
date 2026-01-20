@@ -237,40 +237,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('saveDraft').onclick = async () => {
       try {
-        const draftData = new FormData();
+        const supabase = window.supabaseClient;
 
-        draftData.append('category', remixContext.category);
-        draftData.append('title', titleEl.value);
-        draftData.append('one_line', oneLineEl.value);
-        draftData.append('description', descEl.value);
-        draftData.append('donation_target', donationEl.value);
-        draftData.append('is_anonymous', anon);
-        draftData.append('author_stance', remixStance);
-        draftData.append('remix_stance', remixStance);
-        draftData.append('remix_origin_issue_id', remixOriginIssueId);
-
-        if (thumbInput.files[0]) {
-          draftData.append('thumbnail', thumbInput.files[0]);
+        const params = new URLSearchParams(location.search);
+        const draftId = params.get('draft');
+        if (!draftId) {
+          console.warn('[saveDraft] draft id 없음');
+          return;
         }
 
-        if (videoInput.files[0]) {
-          draftData.append('video', videoInput.files[0]);
+        const updates = {
+          title: titleEl.value,
+          one_line: oneLineEl.value,
+          description: descEl.value,
+          donation_target: donationEl.value,
+          is_anonymous: anon,
+          author_stance: remixStance,
+          remix_stance: remixStance,
+          remix_origin_issue_id: remixOriginIssueId,
+          status: 'draft',
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+          .from('issues')
+          .update(updates)
+          .eq('id', draftId);
+
+        if (error) {
+          console.error('[saveDraft] supabase error', error);
         }
-
-        // API endpoint for saving draft (replace URL with actual endpoint)
-        const response = await fetch('/api/remix/draft', {
-          method: 'POST',
-          body: draftData,
-        });
-
-        if (!response.ok) {
-          throw new Error('임시 저장에 실패했습니다.');
-        }
-
-        alert('임시 저장이 완료되었습니다.');
-      } catch (error) {
-        console.error(error);
-        alert(error.message || '임시 저장 중 오류가 발생했습니다.');
+      } catch (e) {
+        console.error('[saveDraft] exception', e);
       }
     };
 
