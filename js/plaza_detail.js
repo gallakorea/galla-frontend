@@ -532,9 +532,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadVoteState();
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
-  supabase.auth.onAuthStateChange(async () => {
+supabase.auth.onAuthStateChange(async (event) => {
+  if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
     await loadVoteState();
-  });
+  }
+});
 
   fetchComments(commentCountEl);
 });
