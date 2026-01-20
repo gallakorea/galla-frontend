@@ -25,6 +25,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
+
+  // 🔥 FIX: remix에서는 author_stance를 강제로 확정시킨다
+  if (remixStance) {
+    window.__FORCE_AUTHOR_STANCE__ = remixStance;
+
+    // write / draft restore 로직이 author_stance를 찾기 때문에 hidden으로 주입
+    const hiddenStance = document.createElement('input');
+    hiddenStance.type = 'hidden';
+    hiddenStance.name = 'author_stance';
+    hiddenStance.value = remixStance;
+    document.getElementById('writeForm')?.appendChild(hiddenStance);
+
+    // remixContext 유실 방지
+    sessionStorage.setItem(
+      'remixContext',
+      JSON.stringify({ ...remixContext, remix_stance: remixStance })
+    );
+  }
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
