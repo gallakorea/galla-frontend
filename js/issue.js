@@ -440,7 +440,7 @@ async function checkRemixStatus(issueId) {
   const { data } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("issue_id", issueId)
+    .eq("origin_issue_id", issueId)
     .eq("user_id", session.session.user.id)
     .maybeSingle();
 
@@ -454,7 +454,7 @@ async function loadRemixCounts(issueId) {
   const { data, error } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("issue_id", issueId);
+    .eq("origin_issue_id", issueId);
 
   if (error) {
     console.warn("remix count skipped:", error.message);
@@ -520,7 +520,7 @@ async function goRemix(stance) {
       origin_issue_id: currentIssue.id,
       remix_issue_id: draft.id,
       user_id: session.session.user.id,
-      stance: stance
+      remix_stance: stance
     });
 
   if (remixLinkError) {
@@ -533,7 +533,7 @@ async function goRemix(stance) {
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
-      issue_id: currentIssue.id,
+      origin_issue_id: currentIssue.id,
       remix_stance: stance,
       category: currentIssue.category,
       draft_id: draft.id
