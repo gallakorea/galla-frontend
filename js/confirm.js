@@ -69,18 +69,20 @@ document.addEventListener('DOMContentLoaded', async () => {
      - write: 입장 선택 필요
      - write-remix: 입장 선택 절대 금지
   ===================== */
-  const isRemix = Boolean(draft.remix_origin_issue_id);
+  const isRemix =
+    draft.remix_origin_issue_id !== null &&
+    draft.remix_origin_issue_id !== undefined;
 
-  if (!isRemix) {
+  if (isRemix) {
+    // remix 글은 confirm 단계에서 입장을 절대 묻지 않는다
+    console.log('[confirm] REMIX MODE: stance check skipped');
+  } else {
     // 일반 write 글만 입장 필수 검사
     if (!draft.author_stance) {
       alert('이 이슈에 대한 나의 입장을 선택해주세요');
       location.href = `write.html?draft=${draftId}`;
       return;
     }
-  } else {
-    // remix 글은 confirm 단계에서 입장을 묻지 않는다
-    console.log('[confirm] REMIX MODE: stance check skipped');
   }
 
   /* =====================
