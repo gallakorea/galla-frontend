@@ -1,6 +1,11 @@
 document.addEventListener("DOMContentLoaded", async () => {
 
     // ---------------------------
+    // Supabase client 확보 (UMD bootstrap 대응)
+    // ---------------------------
+    const supabase = await waitForSupabaseClient();
+
+    // ---------------------------
     // 현재 페이지 정보
     // ---------------------------
     const currentPage = document.body.dataset.page;
