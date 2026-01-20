@@ -502,12 +502,8 @@ async function goRemix(stance) {
       status: "draft",
       category: currentIssue.category,
       user_id: session.session.user.id,
-
-      // 🔒 입장은 여기서 확정
       author_stance: stance,
       remix_stance: stance,
-
-      // 본문은 write-remix에서 채움 (DB 제약 통과용 기본값)
       title: "",
       one_line: "",
       description: "",
