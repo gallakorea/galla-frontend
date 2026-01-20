@@ -1,6 +1,6 @@
-// js/confirm.js
+// js/confirm.remix.js
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[confirm.js] Loaded');
+  console.log('[confirm.remix.js] Loaded');
 
   /* =====================
      Supabase client 대기
@@ -44,12 +44,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (!draftId) {
     alert('임시 저장된 글이 없습니다.');
-    location.href = 'write.html';
+    location.href = 'index.html';
     return;
   }
 
   /* =====================
-     draft 로드
+     draft 로드 (REMIX 전용)
   ===================== */
   const { data: draft, error } = await supabase
     .from('issues')
@@ -60,20 +60,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (error || !draft) {
     alert('임시 글을 불러오지 못했습니다.');
-    location.href = 'write.html';
+    location.href = 'index.html';
     return;
   }
 
-  /* =====================
-     🔒 WRITE vs REMIX 분기 (confirm 단계)
-     - remix: 입장 검사 금지 (이미 draft에 확정됨)
-     - write : 입장 필수
-  ===================== */
-  const isRemix = Boolean(draft.remix_origin_issue_id);
-
-  if (!isRemix && !draft.author_stance) {
-    alert('이 이슈에 대한 나의 입장을 선택해주세요');
-    location.href = `write.html?draft=${draftId}`;
+  // 🔥 REMIX 필수 검증 (입장은 이미 확정됨)
+  if (!draft.remix_origin_issue_id || !draft.remix_stance) {
+    alert('리믹스 정보가 올바르지 않습니다.');
+    location.href = 'index.html';
     return;
   }
 
@@ -87,18 +81,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   publishBtn.disabled = false;
 
   /* =====================
-     뒤로가기
+     뒤로가기 → write-remix
   ===================== */
   backBtn.onclick = () => {
-    if (draft.remix_origin_issue_id) {
-      location.href = `write-remix.html?draft=${draftId}`;
-    } else {
-      location.href = `write.html?draft=${draftId}`;
-    }
+    location.href = `write-remix.html?draft=${draftId}`;
   };
 
   /* =====================
-     🔥 최종 발행 (미디어 이동 포함)
+     🔥 최종 발행
   ===================== */
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
