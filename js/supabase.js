@@ -19,7 +19,7 @@
   if (window.supabaseClient) return;
 
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
-  const SUPABASE_ANON_KEY = "<<< 그대로 유지 >>>";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
   function loadUmd() {
     return new Promise((resolve, reject) => {
