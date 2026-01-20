@@ -440,7 +440,7 @@ async function checkRemixStatus(issueId) {
   const { data } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("issue_id", issueId)
+    .eq("origin_issue_id", issueId)
     .eq("user_id", session.session.user.id)
     .maybeSingle();
 
@@ -454,7 +454,7 @@ async function loadRemixCounts(issueId) {
   const { data, error } = await supabase
     .from("remixes")
     .select("remix_stance")
-    .eq("issue_id", issueId);
+    .eq("origin_issue_id", issueId);
 
   if (error) {
     console.warn("remix count skipped:", error.message);
@@ -481,9 +481,34 @@ function applyRemixJoinedUI(stance) {
 qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
 qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
 
-function goRemix(stance) {
+async function goRemix(stance) {
   if (!currentIssue) {
     alert("이슈 정보를 불러오지 못했습니다.");
+    return;
+  }
+
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+  if (!session.session) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+
+  // 🔥 리믹스는 여기서 draft를 반드시 생성
+  const { data: draft, error } = await supabase
+    .from("issues")
+    .insert({
+      status: "draft",
+      category: currentIssue.category,
+      author_stance: stance,
+      user_id: session.session.user.id,
+    })
+    .select("id")
+    .single();
+
+  if (error || !draft) {
+    console.error("[REMIX] draft create failed", error);
+    alert("리믹스 초안 생성에 실패했습니다.");
     return;
   }
 
@@ -492,11 +517,12 @@ function goRemix(stance) {
     JSON.stringify({
       origin_issue_id: currentIssue.id,
       remix_stance: stance,
-      category: currentIssue.category
+      category: currentIssue.category,
+      draft_id: draft.id
     })
   );
 
-  location.href = "write-remix.html";
+  location.href = `write-remix.html?draft=${draft.id}`;
 }
 
 /* ==========================================================================
