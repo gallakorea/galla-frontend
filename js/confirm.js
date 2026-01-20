@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!isRemix) {
     // 일반 write 글만 입장 필수 검사
     if (!draft.author_stance) {
-      alert('이슈에 대한 입장을 선택해주세요.');
+      alert('이 이슈에 대한 나의 입장을 선택해주세요');
       location.href = `write.html?draft=${draftId}`;
       return;
     }
