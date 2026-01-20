@@ -115,6 +115,7 @@ comment = {
 let comments = [];
 let replyTarget = null; // { parentId, mentionName }
 let myVote = 0; // 서버 기준으로 초기화됨
+let isVotingNow = false; // 🔥 투표 중 loadVoteState 차단
 
 async function fetchPostDetail() {
   const { data, error } = await supabase
@@ -365,6 +366,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Helper function for vote state loading
   async function loadVoteState() {
+    if (isVotingNow) return; // ❗ 투표 중이면 서버 동기화 차단
+
     const session = await getSessionSafe();
 
     const res = await fetch(
@@ -433,10 +436,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     btn.style.cursor = "pointer";
   });
 
+  function updateVoteUI() {
+    if (!voteUpBtn || !voteDownBtn) return;
+
+    voteUpBtn.style.color = "#aaa";
+    voteDownBtn.style.color = "#aaa";
+
+    if (myVote === 1) {
+      voteUpBtn.style.color = "#4da3ff";
+    } else if (myVote === -1) {
+      voteDownBtn.style.color = "#ff5c5c";
+    }
+  }
+
   async function vote(voteValue) {
     if (voting) return;
 
     voting = true;
+    isVotingNow = true;
 
     const session = await getSessionSafe();
     if (!session) {
@@ -462,35 +479,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    // 서버가 내려준 값을 단일 진실로 사용
-    myVote = typeof data?.my_vote === "number" ? data.my_vote : 0;
+    // ✅ 서버 응답만 단일 진실
+    myVote = data.my_vote ?? 0;
+    voteScoreEl.textContent = String(data.score ?? 0);
 
-    if (typeof data?.score === "number") {
-      voteScoreEl.textContent = String(data.score);
-    }
-
-    // 버튼 상태 갱신
-    if (voteUpBtn && voteDownBtn) {
-      voteUpBtn.disabled = false;
-      voteDownBtn.disabled = false;
-
-      voteUpBtn.style.opacity = "1";
-      voteDownBtn.style.opacity = "1";
-      voteUpBtn.style.color = "#aaa";
-      voteUpBtn.style.stroke = "#aaa";
-      voteDownBtn.style.color = "#aaa";
-      voteDownBtn.style.stroke = "#aaa";
-
-      if (myVote === 1) {
-        voteUpBtn.style.color = "#4da3ff";
-        voteUpBtn.style.stroke = "#4da3ff";
-      } else if (myVote === -1) {
-        voteDownBtn.style.color = "#ff5c5c";
-        voteDownBtn.style.stroke = "#ff5c5c";
-      }
-    }
+    updateVoteUI();
 
     voting = false;
+    isVotingNow = false;
   }
 
   voteUpBtn?.addEventListener("click", async e => {
@@ -537,6 +533,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
 supabase.auth.onAuthStateChange(async (event) => {
+  if (isVotingNow) return;
   if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
     await loadVoteState();
   }
