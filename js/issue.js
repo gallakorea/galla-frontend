@@ -508,10 +508,12 @@ async function goRemix(stance) {
       remix_stance: stance,
       remix_origin_issue_id: currentIssue.id,
 
-      // 본문은 write-remix에서 채움
-      title: null,
-      one_line: null,
-      description: null,
+      // 본문은 write-remix에서 채움 (DB 제약 통과용 기본값)
+      title: "",
+      one_line: "",
+      description: "",
+      donation_target: "",
+      moderation_status: "draft"
     })
     .select("id")
     .single();
