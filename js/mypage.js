@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 created_at,
                 score
             `)
-            .eq("author_id", userId)
+            .eq("user_id", userId)
             .order("created_at", { ascending: false });
 
         if (error) {
