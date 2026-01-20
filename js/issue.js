@@ -512,6 +512,9 @@ async function goRemix(stance) {
     return;
   }
 
+  // 🔒 REMIX 진입 플래그 (write-remix 입장 선택 alert 차단용)
+  sessionStorage.setItem("__IS_REMIX__", "1");
+
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
