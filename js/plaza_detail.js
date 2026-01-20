@@ -500,7 +500,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("로그인 후 투표할 수 있습니다.");
       return;
     }
-    vote(1);
+
+    const nextVote = myVote === 1 ? 0 : 1;
+    vote(nextVote);
   });
 
   voteDownBtn?.addEventListener("click", async e => {
@@ -510,7 +512,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("로그인 후 투표할 수 있습니다.");
       return;
     }
-    vote(-1);
+
+    const nextVote = myVote === -1 ? 0 : -1;
+    vote(nextVote);
   });
 
   commentPill?.addEventListener("click", () => {
