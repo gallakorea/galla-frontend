@@ -64,9 +64,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 🔥 REMIX 필수 검증 (입장은 이미 확정됨)
-  if (!draft.remix_origin_issue_id || !draft.remix_stance) {
-    alert('리믹스 정보가 올바르지 않습니다.');
+  // 🔥 REMIX 필수 검증 (draft 존재만 확인, 입장은 write-remix에서 이미 확정됨)
+  if (!draft || draft.status !== 'draft') {
+    alert('리믹스 임시글이 올바르지 않습니다.');
     location.href = 'index.html';
     return;
   }
