@@ -19,6 +19,19 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  // 🔒 REMIX 전역 플래그 (다른 공용 스크립트가 입장 요구 못 하게 차단)
+  window.__IS_REMIX__ = true;
+
+  // ⛔ write / draft 공용 로직에서 잘못 뜨는 입장 요구 alert 차단
+  const __origAlert = window.alert;
+  window.alert = (msg) => {
+    if (typeof msg === 'string' && msg.includes('입장을 선택')) {
+      console.warn('[REMIX] stance alert suppressed:', msg);
+      return;
+    }
+    __origAlert(msg);
+  };
+
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
   const stanceBox = document.getElementById('remixStanceBox');
@@ -202,6 +215,9 @@ if (remixStance === 'con') {
         return;
       }
 
+      // 🔒 confirm 단계에서 REMIX로 인식시키기
+      sessionStorage.setItem('__REMIX_MODE__', 'true');
+
       const payload = {
         category: remixContext.category,
         title: titleEl.value,
@@ -210,7 +226,7 @@ if (remixStance === 'con') {
         donation_target: donationEl.value,
         is_anonymous: anon,
 
-        author_stance: remixStance,        // 🔥 반드시 추가
+        author_stance: remixStance, // REMIX는 issue에서 선택된 입장 강제 승계
         remix_stance: remixStance,
         remix_origin_issue_id: remixOriginIssueId
       };
