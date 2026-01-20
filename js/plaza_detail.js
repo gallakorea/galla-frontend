@@ -496,11 +496,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    let nextVote;
-    if (myVote === 1) nextVote = 0;
-    else nextVote = 1;
-
-    await vote(nextVote);
+    // 🔥 항상 업은 +1로 즉시 전환
+    await vote(1);
   });
 
   voteDownBtn?.addEventListener("click", async e => {
@@ -511,11 +508,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    let nextVote;
-    if (myVote === -1) nextVote = 0;
-    else nextVote = -1;
-
-    await vote(nextVote);
+    // 🔥 항상 다운은 -1로 즉시 전환
+    await vote(-1);
   });
 
   commentPill?.addEventListener("click", () => {
