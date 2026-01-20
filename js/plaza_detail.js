@@ -367,6 +367,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Helper function for vote state loading
   async function loadVoteState() {
     if (isVotingNow) return; // ❗ 투표 중이면 서버 동기화 차단
+    if (!voteStateLoaded && isVotingNow) return;
 
     const session = await getSessionSafe();
 
@@ -455,6 +456,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     voting = true;
     isVotingNow = true;
 
+    // Optimistic UI update immediately
+    myVote = voteValue;
+    updateVoteUI();
+
     const session = await getSessionSafe();
     if (!session) {
       console.error("No active session for voting");
@@ -498,7 +503,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const nextVote = myVote === 1 ? 0 : 1;
-    vote(nextVote);
+    await vote(nextVote);
   });
 
   voteDownBtn?.addEventListener("click", async e => {
@@ -510,7 +515,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const nextVote = myVote === -1 ? 0 : -1;
-    vote(nextVote);
+    await vote(nextVote);
   });
 
   commentPill?.addEventListener("click", () => {
@@ -530,6 +535,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ✅ 페이지 진입 시 항상 1회 투표 상태 로딩 (로그인/비로그인 공통)
   await loadVoteState();
+  voteStateLoaded = true;
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
 supabase.auth.onAuthStateChange(async (event) => {
