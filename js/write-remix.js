@@ -248,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
         is_anonymous: document.getElementById('isAnonymous').checked,
         author_stance: remixStance,
         remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId,
         status: 'draft',
         updated_at: new Date().toISOString()
       };
