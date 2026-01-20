@@ -114,7 +114,8 @@ comment = {
 
 let comments = [];
 let replyTarget = null; // { parentId, mentionName }
-let myVote = 0; // 서버 기준으로 초기화됨
+let myVote = 0;          // 서버 기준
+let lastRenderedVote = 0; // 🔥 UI 기준 마지막 투표 상태
 let isVotingNow = false; // 🔥 투표 중 loadVoteState 차단
 
 async function fetchPostDetail() {
@@ -392,6 +393,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const data = await res.json();
 
     myVote = data.my_vote ?? 0;
+    lastRenderedVote = myVote;
     voteScoreEl.textContent = String(data.score ?? 0);
 
     if (voteUpBtn && voteDownBtn) {
@@ -454,6 +456,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     voting = true;
     isVotingNow = true;
 
+    // 🔥 즉시 UI 반영 (중립 0 제거 핵심 로직)
+    const prev = lastRenderedVote;
+    const next = voteValue;
+
+    // 점수 즉시 계산
+    let delta = 0;
+    if (prev === 1 && next === -1) delta = -2;
+    else if (prev === -1 && next === 1) delta = 2;
+    else if (prev === 0 && next === 1) delta = 1;
+    else if (prev === 0 && next === -1) delta = -1;
+
+    const currentScore = parseInt(voteScoreEl.textContent, 10) || 0;
+    voteScoreEl.textContent = String(currentScore + delta);
+
+    // UI 상태 즉시 변경
+    lastRenderedVote = next;
+    myVote = next;
+    updateVoteUI();
+
     try {
       const session = await getSessionSafe();
       if (!session) {
@@ -477,9 +498,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      // ✅ 서버 응답만 단일 진실
-      myVote = data?.my_vote ?? 0;
-      voteScoreEl.textContent = String(data?.score ?? 0);
+      // 서버 값으로 최종 보정 (차이 있을 때만)
+      if (typeof data?.score === "number") {
+        voteScoreEl.textContent = String(data.score);
+      }
+      myVote = data?.my_vote ?? myVote;
+      lastRenderedVote = myVote;
       updateVoteUI();
 
     } finally {
