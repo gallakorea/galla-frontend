@@ -56,8 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 id,
                 title,
                 created_at,
-                score,
-                comment_count
+                score
             `)
             .eq("author_id", userId)
             .order("created_at", { ascending: false });
@@ -89,7 +88,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="thumb-author">by 나</div>
                 <div class="thumb-stats">
                     <span>🔥 ${issue.score ?? 0}</span>
-                    <span>💬 ${issue.comment_count ?? 0}</span>
                 </div>
             `;
 
