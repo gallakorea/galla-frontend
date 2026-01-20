@@ -99,20 +99,23 @@ if (isRemixDraft && !draft.author_stance) {
 }
 
   /* =====================
-     🔒 WRITE vs REMIX 분기
-     - write: 입장 선택 필요
-     - write-remix: 입장 선택 절대 금지
+     🔒 WRITE vs REMIX 분기 (최종 수정)
+     - write: 입장 선택 필수
+     - write-remix: 입장 질문/검사 완전 제거
   ===================== */
-  const isRemixFinal =
-    draft.remix_origin_issue_id !== null &&
-    draft.remix_origin_issue_id !== undefined;
 
-  if (!isRemixFinal && !draft.author_stance) {
-    alert('이 이슈에 대한 나의 입장을 선택해주세요');
-    location.href = `write.html?draft=${draftId}`;
-    return;
+  const isRemix = Boolean(draft.remix_origin_issue_id);
+
+  if (!isRemix) {
+    // 일반 write만 입장 검사
+    if (!draft.author_stance) {
+      alert('이 이슈에 대한 나의 입장을 선택해주세요');
+      location.href = `write.html?draft=${draftId}`;
+      return;
+    }
   } else {
-    console.log('[confirm] REMIX MODE or stance already set');
+    // remix는 confirm 단계에서 절대 입장 관련 alert / redirect 없음
+    console.log('[confirm] REMIX MODE: stance check fully skipped');
   }
 
   /* =====================
