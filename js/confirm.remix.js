@@ -8,9 +8,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const waitForSupabase = () =>
     new Promise(resolve => {
       const t = setInterval(() => {
-        if (window.supabase) {
+        if (window.supabaseClient) {
           clearInterval(t);
-          resolve(window.supabase);
+          resolve(window.supabaseClient);
         }
       }, 20);
     });
