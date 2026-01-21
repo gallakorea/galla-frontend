@@ -22,6 +22,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
+  /* ==================================================
+     🔥 FIX: write.draft.save.js 호환
+     authorStance 라디오 강제 주입 (필수)
+     ※ write.draft.save.js는 이것만 검사함
+       input[name="authorStance"]:checked
+  ================================================== */
+
+  // 1) 기존 authorStance 라디오가 있으면 체크
+  let authorStanceRadio =
+    document.querySelector('input[name="authorStance"]:checked');
+
+  // 2) 없으면 remixStance 기준으로 하나 생성
+  if (!authorStanceRadio) {
+    const hiddenAuthorStance = document.createElement('input');
+    hiddenAuthorStance.type = 'radio';
+    hiddenAuthorStance.name = 'authorStance'; // 🔥 핵심 키
+    hiddenAuthorStance.value = remixStance;   // 'pro' | 'con'
+    hiddenAuthorStance.checked = true;
+    hiddenAuthorStance.style.display = 'none';
+
+    document.getElementById('writeForm')?.appendChild(hiddenAuthorStance);
+  }
+
   // 🔧 FORCE REAL RADIO FOR VALIDATION (failsafe)
   let stanceInput = document.querySelector('input[name="stance"]:checked');
 
