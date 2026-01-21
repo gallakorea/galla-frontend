@@ -279,30 +279,11 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = () => {
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
-      const isDraftMode = window.__DRAFT_MODE__ === true;
-
-      if (isDraftMode) {
-        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
-        return;
-      }
-
-      const payload = {
-        category: remixContext.category,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anon,
-
-        author_stance: remixStance,        // 🔥 반드시 추가
-        remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId
-      };
-
-      sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      location.href = 'confirm.html';
+    document.getElementById('publishPreview').onclick = (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      console.log('[write-remix] 발행 전 검사 → draft.save.js 에서만 처리');
+      return;
     };
 
     if (videoEl) {
