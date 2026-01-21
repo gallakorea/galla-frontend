@@ -161,28 +161,27 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    if (window.__PREVIEW_BOUND__) return;
-    window.__PREVIEW_BOUND__ = true;
+    document.getElementById('publishPreview').onclick = () => {
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+      const isDraftMode = window.__DRAFT_MODE__ === true;
 
-    document.getElementById('publishPreview').onclick = ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
+      if (isDraftMode) {
+        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
+        return;
+      }
 
-      const anon = document.getElementById('isAnonymous').checked;
-      const authorStance = [...authorStanceEls].find(r => r.checked)?.value;
-
+      // ⬇️ 아래부터는 "정상 발행 흐름"만 실행
       const payload = {
         category: categoryEl.value,
         title: titleEl.value,
-        one_line: oneLineEl.value,
+        oneLine: oneLineEl.value,
         description: descEl.value,
         donation_target: donationEl.value,
         is_anonymous: anon,
-        author_stance: authorStance,
-        remix_origin_issue_id: null
+        author_stance: authorStance   // ✅ 이 줄
       };
 
-      sessionStorage.setItem('writeRemixPayload', JSON.stringify(payload));
+      sessionStorage.setItem('writePayload', JSON.stringify(payload));
       location.href = 'confirm.html';
     };
 

@@ -3,10 +3,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  // 🚫 PREVIEW ONLY MODE — 절대 발행 금지
-  let __PREVIEW_ONLY__ = true;
-  let __PREVIEW_CLICKED__ = false;
-
     /* ================= REMIX CONTEXT (고정값) ================= */
   const remixContext = JSON.parse(
     sessionStorage.getItem('remixContext')
@@ -19,38 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
     !remixContext.category
   ) {
     alert('잘못된 접근입니다.');
+    location.href = 'index.html';
     return;
   }
 
-  // Removed draft id from URLSearchParams per instructions
-
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
-
-  /* ================= 나의 입장 (REMIX: 고정 표시 전용) ================= */
-
-  const fixedStanceBox = document.getElementById('fixedStanceDisplay');
-
-  if (fixedStanceBox) {
-    if (remixStance === 'pro') {
-      fixedStanceBox.className = 'fixed-stance-display pro';
-      fixedStanceBox.textContent = '👍 찬성';
-    } else if (remixStance === 'con') {
-      fixedStanceBox.className = 'fixed-stance-display con';
-      fixedStanceBox.textContent = '👎 반대';
-    }
-  }
-
-  // confirm / payload 전달용 hidden input
-  let hiddenStance = document.querySelector('input[type="hidden"][name="author_stance"]');
-  if (!hiddenStance) {
-    hiddenStance = document.createElement('input');
-    hiddenStance.type = 'hidden';
-    hiddenStance.name = 'author_stance';
-    document.getElementById('writeForm')?.appendChild(hiddenStance);
-  }
-  hiddenStance.value = remixStance;
-
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
@@ -98,19 +68,11 @@ if (remixStance === 'con') {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  // Removed restoring thumbnail preview on back navigation per instructions
-
   thumbBtn.addEventListener('click', () => thumbInput.click());
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
-
-    // Removed revoking previous URL and sessionStorage persistence per instructions
-
-    const url = URL.createObjectURL(f);
-    thumbPreview.innerHTML = `<img src="${url}">`;
-
-    // Removed persisting thumbnail preview for back-navigation per instructions
+    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
   });
 
   const videoInput = document.getElementById('video');
@@ -168,19 +130,9 @@ if (remixStance === 'con') {
     body.style.overflow = '';
   });
 
-  /* ================= HARD SUBMIT GUARD ================= */
-  form.addEventListener('submit', (e) => {
+  /* ================= PREVIEW ================= */
+  form.addEventListener('submit', e => {
     e.preventDefault();
-    e.stopPropagation();
-    return false;
-  });
-
-  /* ================= PREVIEW BUTTON HANDLER ================= */
-  const previewBtn = document.getElementById('previewBtn');
-
-  previewBtn.addEventListener('click', async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
 
     if (!titleEl.value) {
       alert('제목을 입력해주세요');
@@ -203,68 +155,6 @@ if (remixStance === 'con') {
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
-
-    // 🔐 ENSURE DRAFT EXISTS (CREATE OR UPDATE)
-    if (!window.supabaseClient) {
-      alert('Supabase 연결 실패');
-      return;
-    }
-
-    const { data: sessionData } = await window.supabaseClient.auth.getSession();
-    const user = sessionData?.session?.user;
-
-    if (!user) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
-
-    let draftId = sessionStorage.getItem('writeDraftId');
-
-    if (!draftId) {
-      const { data, error } = await window.supabaseClient
-        .from('issues')
-        .insert([{
-          user_id: user.id,
-          category: remixContext.category,
-          title: titleEl.value,
-          one_line: oneLineEl.value,
-          description: descEl.value,
-          donation_target: donationEl.value,
-          is_anonymous: anon,
-          author_stance: remixStance,
-          status: 'draft',
-          moderation_status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select('id')
-        .single();
-
-      if (error || !data?.id) {
-        alert('임시 저장 실패');
-        return;
-      }
-
-      draftId = data.id;
-      sessionStorage.setItem('writeDraftId', draftId);
-    } else {
-      const { error } = await window.supabaseClient
-        .from('issues')
-        .update({
-          title: titleEl.value,
-          one_line: oneLineEl.value,
-          description: descEl.value,
-          donation_target: donationEl.value,
-          is_anonymous: anon,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', draftId);
-
-      if (error) {
-        alert('임시 저장 실패');
-        return;
-      }
-    }
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
@@ -303,19 +193,37 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const publishBtn = document.getElementById('publishPreview');
-    publishBtn.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
+    document.getElementById('publishPreview').onclick = () => {
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+      const isDraftMode = window.__DRAFT_MODE__ === true;
 
-      const draftId = sessionStorage.getItem('writeDraftId');
-      if (!draftId) {
-        alert('임시 저장된 글이 없습니다.');
+      if (isDraftMode) {
+        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
         return;
       }
 
-      location.href = `confirm.html?draft=${draftId}`;
+      const payload = {
+        category: remixContext.category,
+        title: titleEl.value,
+        oneLine: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: anon,
+
+        author_stance: remixStance,        // 🔥 반드시 추가
+        remix_stance: remixStance,
+        remix_origin_issue_id: remixOriginIssueId
+      };
+
+      sessionStorage.setItem('writePayload', JSON.stringify(payload));
+      location.href = 'confirm.html';
     };
+
+    if (videoEl) {
+      document.getElementById('openSpeech').onclick = () => {
+        openSpeech(videoEl.src);
+      };
+    }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   });
@@ -339,9 +247,4 @@ if (remixStance === 'con') {
     speechModal.style.display = 'none';
     body.style.overflow = '';
   });
-
-// 🚫 preview 단계에서는 어떤 자동 발행도 금지
-window.addEventListener('beforeunload', () => {
-  __PREVIEW_ONLY__ = true;
-});
 });

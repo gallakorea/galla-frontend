@@ -2,8 +2,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[confirm.js] Loaded');
 
-  const allowPublish = sessionStorage.getItem('__ALLOW_PUBLISH__') === 'true';
-
   /* =====================
      Supabase client 대기
   ===================== */
@@ -40,10 +38,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   ===================== */
   const params = new URLSearchParams(location.search);
   const draftId = params.get('draft');
-
-  if (!allowPublish) {
-    console.warn('[confirm.js] publish not authorized yet');
-  }
 
   const backBtn = document.getElementById('backBtn');
   const publishBtn = document.getElementById('publishBtn');
@@ -90,11 +84,6 @@ document.addEventListener('DOMContentLoaded', async () => {
      🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
-    if (!allowPublish) {
-      alert('아직 발행 단계가 아닙니다.');
-      return;
-    }
-
     publishBtn.disabled = true;
     publishBtn.textContent = '발행 중…';
 
@@ -166,7 +155,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       /* ---------- 완료 ---------- */
-      sessionStorage.removeItem('__ALLOW_PUBLISH__');
       location.href = `issue.html?id=${draft.id}`;
 
     } catch (err) {

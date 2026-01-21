@@ -1,14 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-  const isRemixPage =
-    window.__IS_REMIX__ === true ||
-    document.body?.dataset?.page === 'write-remix';
-
-  if (isRemixPage) {
-    console.log('[DRAFT RESTORE] remix page detected → skip restore, keep draft');
-    window.__ALLOW_DRAFT_EXIT__ = true; // 🔥 remix 이동은 정상 이동
-    return;
-  }
-
   console.log('[DRAFT RESTORE] Loaded');
 
   const params = new URLSearchParams(location.search);
