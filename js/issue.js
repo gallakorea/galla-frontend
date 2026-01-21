@@ -481,22 +481,56 @@ function applyRemixJoinedUI(stance) {
 qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
 qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
 
-function goRemix(stance) {
+async function goRemix(stance) {
   if (!currentIssue) {
     alert("이슈 정보를 불러오지 못했습니다.");
     return;
   }
 
+  const supabase = window.supabaseClient;
+  const { data: session } = await supabase.auth.getSession();
+
+  if (!session?.session) {
+    alert("로그인이 필요합니다.");
+    return;
+  }
+
+  // 🔥 핵심: 참전 시점에 remix draft 생성 → 입장 DB 고정
+  const { data: draft, error } = await supabase
+    .from("issues")
+    .insert({
+      status: "draft",
+      category: currentIssue.category,
+      user_id: session.session.user.id,
+      author_stance: stance,
+      title: "",
+      one_line: "",
+      description: "",
+      donation_target: "",
+      moderation_status: "draft"
+    })
+    .select("id")
+    .single();
+
+  if (error || !draft) {
+    console.error("[REMIX] draft create failed", error);
+    alert("참전에 실패했습니다.");
+    return;
+  }
+
+  // UI 보조 컨텍스트 (신뢰하지 말 것, 참고용)
   sessionStorage.setItem(
     "remixContext",
     JSON.stringify({
+      draft_id: draft.id,
       origin_issue_id: currentIssue.id,
       remix_stance: stance,
       category: currentIssue.category
     })
   );
 
-  location.href = "write-remix.html";
+  // draft id를 들고 write-remix로 이동
+  location.href = `write-remix.html?draft=${draft.id}`;
 }
 
 /* ==========================================================================
