@@ -203,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
           <button type="button" id="publishPreview">발행 전 적합성 검사</button>
-          <button type="button" id="saveDraft">임시 저장</button>
         </div>
       </section>
     `;
@@ -227,40 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
       location.href = `confirm.remix.html?draft=${draftId}`;
     };
 
-
-    document.getElementById('saveDraft').onclick = async () => {
-      const supabase = window.supabaseClient;
-
-      const params = new URLSearchParams(location.search);
-      const draftId = params.get('draft');
-      if (!draftId) {
-        console.error('[saveDraft] draft id 없음');
-        return;
-      }
-
-      const updates = {
-        title: titleEl.value,
-        one_line: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: document.getElementById('isAnonymous').checked,
-        author_stance: remixStance,
-        remix_stance: remixStance,
-        status: 'draft',
-        updated_at: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('issues')
-        .update(updates)
-        .eq('id', draftId);
-
-      if (error) {
-        console.error('[saveDraft] supabase error', error);
-      } else {
-        console.log('[saveDraft] OK', draftId);
-      }
-    };
 
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
