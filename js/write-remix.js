@@ -269,7 +269,7 @@ if (remixStance === 'con') {
 
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
-          <button type="button" id="publishPreview">발행 전 적합성 검사</button>
+          <button type="button" id="checkOnlyPreview">발행 전 적합성 검사</button>
         </div>
       </section>
     `;
@@ -279,11 +279,11 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = (e) => {
+    document.getElementById('checkOnlyPreview').onclick = (e) => {
       e.preventDefault();
       e.stopImmediatePropagation();
-      console.log('[write-remix] 발행 전 검사 → draft.save.js 에서만 처리');
-      return;
+      console.log('[write-remix] 발행 전 검사 → confirm 이동만');
+      location.href = `confirm.html?draft=${new URLSearchParams(location.search).get('draft')}`;
     };
 
     if (videoEl) {
