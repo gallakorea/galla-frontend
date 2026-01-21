@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body?.dataset?.page === 'write-remix';
 
   if (isRemixPage) {
-    console.log('[DRAFT RESTORE] remix page detected → skipped');
+    console.log('[DRAFT RESTORE] remix page detected → skip restore, keep draft');
+    window.__ALLOW_DRAFT_EXIT__ = true; // 🔥 remix 이동은 정상 이동
     return;
   }
 
