@@ -6,7 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!issuePreview) return;
 
   issuePreview.addEventListener('click', async (e) => {
-    const btn = e.target.closest('#publishPreview');
+    // Draft save is intentionally bound only to the draft button, not publish.
+    const btn = e.target.closest('#saveDraft');
     if (!btn) return;
 
     // 🔥 write.js 기본 이동 완전 차단
