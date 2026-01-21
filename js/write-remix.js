@@ -23,47 +23,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
   /* ================= 나의 입장 (REMIX: 자동 선택 + 선택 불가) ================= */
-  const proRadio = document.querySelector('input[value="pro"]');
-  const conRadio = document.querySelector('input[value="con"]');
+  // HTML 구조가 무엇이든 "author_stance" 기준으로 강제 동기화
+  const stanceRadios = document.querySelectorAll(
+    'input[type="radio"]'
+  );
 
-  if (proRadio && conRadio) {
-    if (remixStance === 'pro') {
-      proRadio.checked = true;
-      conRadio.checked = false;
-    }
-
-    if (remixStance === 'con') {
-      conRadio.checked = true;
-      proRadio.checked = false;
-    }
-
-    // 둘 다 선택 불가 (읽기 전용)
-    proRadio.disabled = true;
-    conRadio.disabled = true;
-  } else {
-    console.warn('[write-remix] author_stance radio inputs not found');
+  if (!stanceRadios.length) {
+    console.warn('[write-remix] stance radio inputs not found');
   }
-
-  /* ================= 나의 입장 (REMIX 고정 선택 + 비활성화) ================= */
-  const stanceRadios = document.querySelectorAll('input[name="author_stance"]');
 
   stanceRadios.forEach(radio => {
-    // remix에서 선택된 입장만 체크
-    if (radio.value === remixStance) {
-      radio.checked = true;
+    const value = radio.value;
+
+    // pro / con 값만 대상
+    if (value === 'pro' || value === 'con') {
+      if (value === remixStance) {
+        radio.checked = true;
+      } else {
+        radio.checked = false;
+      }
+
+      // REMIX에서는 입장 변경 불가
+      radio.disabled = true;
     }
-    // 모든 입장 선택 불가 처리
-    radio.disabled = true;
   });
 
-  /* ================= 나의 입장 (REMIX 고정 표시) ================= */
-  const fixedStanceGroup = document.getElementById('fixedStanceGroup');
-  if (fixedStanceGroup && remixStance) {
-    const radio = fixedStanceGroup.querySelector(
-      `input[value="${remixStance}"]`
-    );
-    if (radio) radio.checked = true;
-  }
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
