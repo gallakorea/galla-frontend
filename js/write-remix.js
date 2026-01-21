@@ -242,6 +242,21 @@ if (remixStance === 'con') {
           return;
         }
 
+        // 🔧 FIX: ensure user exists in users table (FK constraint)
+        const { error: userUpsertError } =
+          await window.supabaseClient
+            .from('users')
+            .upsert({
+              id: user.id,
+              created_at: new Date().toISOString()
+            });
+
+        if (userUpsertError) {
+          console.error('[write-remix] users upsert failed', userUpsertError);
+          alert('사용자 정보 초기화에 실패했습니다.');
+          return;
+        }
+
         const { data: draft, error } =
           await window.supabaseClient
             .from('issues')
