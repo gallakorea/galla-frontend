@@ -8,9 +8,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const waitForSupabase = () =>
     new Promise(resolve => {
       const t = setInterval(() => {
-        if (window.supabaseClient) {
+        if (window.supabase) {
           clearInterval(t);
-          resolve(window.supabaseClient);
+          resolve(window.supabase);
         }
       }, 20);
     });
@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* =====================
      🔐 세션 확인
   ===================== */
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
 
   if (!user) {
     alert('로그인이 필요합니다.');
