@@ -227,23 +227,90 @@ if (remixStance === 'con') {
     };
 
     document.getElementById('publishPreview').onclick = async () => {
-      const thumbImg = document.querySelector('#thumbPreview img');
-      const thumbnailSrc = thumbImg ? thumbImg.src : null;
+      try {
+        if (!window.supabaseClient) {
+          alert('Supabase 연결 실패');
+          return;
+        }
 
-      const payload = {
-        category: remixContext.category,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anon,
-        author_stance: remixStance,
-        thumbnail_src: thumbnailSrc
-      };
+        const { data: sessionData } =
+          await window.supabaseClient.auth.getSession();
+        const user = sessionData?.session?.user;
 
-      sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      window.__ALLOW_DRAFT_EXIT__ = true;
-      location.href = 'confirm.html';
+        if (!user) {
+          alert('로그인이 필요합니다.');
+          return;
+        }
+
+        // 🔥 THUMBNAIL UPLOAD (REMIX)
+        const thumbFile = document.getElementById('thumbnail')?.files?.[0] || null;
+        let thumbnail_url = null;
+
+        if (thumbFile) {
+          const ext = thumbFile.name.split('.').pop();
+          const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
+
+          const { error: uploadError } =
+            await window.supabaseClient
+              .storage
+              .from('issues')
+              .upload(path, thumbFile, { upsert: false });
+
+          if (uploadError) {
+            console.error('[write-remix] thumbnail upload failed', uploadError);
+            throw uploadError;
+          }
+
+          thumbnail_url =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path).data.publicUrl;
+        }
+
+        const { data: draft, error } =
+          await window.supabaseClient
+            .from('issues')
+            .insert([{
+              user_id: user.id,
+
+              // 기본 콘텐츠
+              category: remixContext.category,
+              title: titleEl.value,
+              one_line: oneLineEl.value,
+              description: descEl.value,
+              donation_target: donationEl.value,
+              is_anonymous: anon,
+
+              // 입장 (필수)
+              author_stance: remixStance,
+
+              // 썸네일 (🔥 추가)
+              thumbnail_url: thumbnail_url,
+
+              // 상태
+              status: 'draft',
+              moderation_status: 'pending',
+
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select('id')
+            .single();
+
+        if (error || !draft?.id) {
+          console.error('[write-remix] draft insert failed', error);
+          alert('임시 저장에 실패했습니다.');
+          return;
+        }
+
+        window.__ALLOW_DRAFT_EXIT__ = true;
+        location.href = `confirm.html?draft=${draft.id}`;
+
+      } catch (e) {
+        console.error('[write-remix] publishPreview error', e);
+        alert('임시 저장 중 오류가 발생했습니다.');
+      }
     };
 
     if (videoEl) {
