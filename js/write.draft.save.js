@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = isCheckBtn || isSaveBtn;
     if (!btn) return;
 
+    if (isCheckBtn) {
+      console.log('[draft.save] publishPreview 클릭 → 검사 전용 draft 생성');
+    }
+
     // 🔥 검사 버튼이면 CHECK ONLY 모드 활성화
     window.__CHECK_ONLY__ = !!isCheckBtn;
 
