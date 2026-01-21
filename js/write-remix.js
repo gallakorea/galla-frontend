@@ -178,7 +178,7 @@ if (remixStance === 'con') {
   /* ================= PREVIEW BUTTON HANDLER ================= */
   const previewBtn = document.getElementById('previewBtn');
 
-  previewBtn.addEventListener('click', (e) => {
+  previewBtn.addEventListener('click', async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -203,6 +203,68 @@ if (remixStance === 'con') {
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
+
+    // 🔐 ENSURE DRAFT EXISTS (CREATE OR UPDATE)
+    if (!window.supabaseClient) {
+      alert('Supabase 연결 실패');
+      return;
+    }
+
+    const { data: sessionData } = await window.supabaseClient.auth.getSession();
+    const user = sessionData?.session?.user;
+
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    let draftId = sessionStorage.getItem('writeDraftId');
+
+    if (!draftId) {
+      const { data, error } = await window.supabaseClient
+        .from('issues')
+        .insert([{
+          user_id: user.id,
+          category: remixContext.category,
+          title: titleEl.value,
+          one_line: oneLineEl.value,
+          description: descEl.value,
+          donation_target: donationEl.value,
+          is_anonymous: anon,
+          author_stance: remixStance,
+          status: 'draft',
+          moderation_status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select('id')
+        .single();
+
+      if (error || !data?.id) {
+        alert('임시 저장 실패');
+        return;
+      }
+
+      draftId = data.id;
+      sessionStorage.setItem('writeDraftId', draftId);
+    } else {
+      const { error } = await window.supabaseClient
+        .from('issues')
+        .update({
+          title: titleEl.value,
+          one_line: oneLineEl.value,
+          description: descEl.value,
+          donation_target: donationEl.value,
+          is_anonymous: anon,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', draftId);
+
+      if (error) {
+        alert('임시 저장 실패');
+        return;
+      }
+    }
 
     issuePreview.innerHTML = `
       <section class="issue-preview">
@@ -245,8 +307,14 @@ if (remixStance === 'con') {
     publishBtn.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
-      // ❗ 여기서는 절대 DB 작업 없음
-      location.href = 'confirm.html';
+
+      const draftId = sessionStorage.getItem('writeDraftId');
+      if (!draftId) {
+        alert('임시 저장된 글이 없습니다.');
+        return;
+      }
+
+      location.href = `confirm.html?draft=${draftId}`;
     };
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
