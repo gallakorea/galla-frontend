@@ -80,7 +80,6 @@ if (remixStance === 'con') {
     <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
   `;
 }
-  const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -306,7 +305,7 @@ if (remixStance === 'con') {
             .insert([{
               user_id: user.id,
 
-              // 기본 콘텐츠
+              // 기본 콘텐츠 (write.js와 동일)
               category: remixContext.category,
               title: titleEl.value,
               one_line: oneLineEl.value,
@@ -314,9 +313,10 @@ if (remixStance === 'con') {
               donation_target: donationEl.value,
               is_anonymous: anon,
 
-              // 입장 (필수)
+              // 필수 입장값
               author_stance: remixStance,
 
+              // 미디어 (🔥 반드시 포함)
               thumbnail_url: thumbnailUrl,
               video_url: videoUrl,
 
