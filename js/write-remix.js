@@ -164,6 +164,9 @@ if (remixStance === 'con') {
 
         <h1 class="issue-title">${titleEl.value}</h1>
         <p class="issue-one-line">${oneLineEl.value}</p>
+        <div class="one-line-stance ${remixStance}">
+          ${remixStance === 'pro' ? '👍 찬성' : '👎 반대'}
+        </div>
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
 
         ${thumbImg ? `
