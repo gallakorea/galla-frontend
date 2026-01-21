@@ -6,8 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!issuePreview) return;
 
   issuePreview.addEventListener('click', async (e) => {
-    // Draft save is intentionally bound only to the draft button, not publish.
-    const btn = e.target.closest('#saveDraft');
+    // Draft save is now bound to both the draft button and the 검사 button.
+    const btn =
+      e.target.closest('#saveDraft') ||
+      e.target.closest('#publishPreview');
     if (!btn) return;
 
     // 🔥 write.js 기본 이동 완전 차단
@@ -142,8 +144,16 @@ document.addEventListener('DOMContentLoaded', () => {
          5️⃣ confirm 이동 (🔥 핵심 수술)
          👉 beforeunload draft 삭제 차단
       ========================= */
-      window.__ALLOW_DRAFT_EXIT__ = true;   // ✅ 이 줄이 핵심
-      location.href = `confirm.html?draft=${draft.id}`;
+      // 🔥 검사 전용 플로우: confirm으로만 이동 (발행 절대 금지)
+      if (window.__CHECK_ONLY__ === true) {
+        console.log('[draft.save] 검사 전용 → confirm 이동');
+        window.__ALLOW_DRAFT_EXIT__ = true;
+        location.href = `confirm.html?draft=${draft.id}`;
+        return;
+      }
+
+      // 🔒 일반 임시저장: 페이지 이동 없음
+      console.log('[draft.save] 임시 저장 완료');
 
     } catch (err) {
       console.error('[DRAFT SAVE ERROR]', err);

@@ -282,8 +282,16 @@ if (remixStance === 'con') {
     document.getElementById('checkOnlyPreview').onclick = (e) => {
       e.preventDefault();
       e.stopImmediatePropagation();
-      console.log('[write-remix] 발행 전 검사 → confirm 이동만');
-      location.href = `confirm.html?draft=${new URLSearchParams(location.search).get('draft')}`;
+
+      console.log('[write-remix] 발행 전 검사 → draft.save.js로 위임');
+
+      // 🔥 검사 전용 플래그
+      window.__CHECK_ONLY__ = true;
+
+      // 🔥 기존 draft.save.js 로직 강제 트리거
+      document
+        .getElementById('publishPreview')
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     };
 
     if (videoEl) {
