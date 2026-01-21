@@ -22,6 +22,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
+  // 🔧 FORCE REAL RADIO FOR VALIDATION (failsafe)
+  let stanceInput = document.querySelector('input[name="stance"]:checked');
+
+  if (!stanceInput) {
+    // try to find matching radio
+    const radios = document.querySelectorAll('input[name="stance"]');
+    radios.forEach(r => {
+      if (r.value === remixStance) {
+        r.checked = true;
+        stanceInput = r;
+      }
+    });
+  }
+
+  // still nothing? inject hidden radio so legacy validation passes
+  if (!stanceInput) {
+    const hiddenRadio = document.createElement('input');
+    hiddenRadio.type = 'radio';
+    hiddenRadio.name = 'stance';
+    hiddenRadio.value = remixStance;
+    hiddenRadio.checked = true;
+    hiddenRadio.style.display = 'none';
+    document.getElementById('writeForm')?.appendChild(hiddenRadio);
+  }
+
   /* ===============================
      REMIX STANCE → REAL RADIO BIND
      (UI + validation 완전 일치)
