@@ -18,13 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 🔥 draft id 보존 (preview → confirm 안정화)
-  const urlParams = new URLSearchParams(location.search);
-  const incomingDraftId = urlParams.get('draft');
-
-  if (incomingDraftId) {
-    sessionStorage.setItem('writeDraftId', incomingDraftId);
-  }
+  // Removed draft id from URLSearchParams per instructions
 
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
@@ -192,6 +186,47 @@ if (remixStance === 'con') {
       return;
     }
 
+    // Ensure draft exists or update draft before preview rendering
+    let draftId = sessionStorage.getItem('writeDraftId');
+
+    if (!draftId) {
+      const { data, error } = await supabase
+        .from('issues')
+        .insert([{
+          user_id: supabase.auth.user()?.id,
+          category: categoryEl.value,
+          title: titleEl.value,
+          one_line: oneLineEl.value,
+          description: descEl.value,
+          donation_target: donationEl.value,
+          is_anonymous: document.getElementById('isAnonymous').checked,
+          author_stance: remixStance,
+          status: 'draft',
+          moderation_status: 'pending'
+        }])
+        .select('id')
+        .single();
+      if (error) {
+        alert('임시 저장 중 오류가 발생했습니다.');
+        return;
+      }
+      sessionStorage.setItem('writeDraftId', data.id);
+      draftId = data.id;
+    } else {
+      await supabase
+        .from('issues')
+        .update({
+          category: categoryEl.value,
+          title: titleEl.value,
+          one_line: oneLineEl.value,
+          description: descEl.value,
+          donation_target: donationEl.value,
+          is_anonymous: document.getElementById('isAnonymous').checked,
+          author_stance: remixStance
+        })
+        .eq('id', draftId);
+    }
+
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
@@ -233,27 +268,20 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Simplified publishPreview click handler per instructions
+    // Updated publishPreview click handler per instructions
     const publishBtn = document.getElementById('publishPreview');
     if (publishBtn) {
       publishBtn.addEventListener('click', ev => {
         ev.preventDefault();
         ev.stopPropagation();
 
-        const payload = {
-          category: remixContext.category,
-          title: titleEl.value,
-          oneLine: oneLineEl.value,
-          description: descEl.value,
-          donation_target: donationEl.value,
-          is_anonymous: anon,
-          author_stance: remixStance,
-          remix_origin_issue_id: remixOriginIssueId
-        };
-
-        sessionStorage.setItem('writePayload', JSON.stringify(payload));
-        location.href = 'confirm.html';
-      });
+        const draftId = sessionStorage.getItem('writeDraftId');
+        if (!draftId) {
+          alert('임시 저장된 글이 없습니다.');
+          return;
+        }
+        location.href = `confirm.html?draft=${draftId}`;
+      }, { once: true });
     }
 
     if (videoEl) {
