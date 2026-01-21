@@ -226,45 +226,57 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = () => {
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
-      const isDraftMode = window.__DRAFT_MODE__ === true;
+    document.getElementById('publishPreview').onclick = async () => {
+      try {
+        if (!window.supabaseClient) {
+          alert('Supabase 연결 실패');
+          return;
+        }
 
-      if (isDraftMode) {
-        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
-        return;
+        const { data: sessionData } =
+          await window.supabaseClient.auth.getSession();
+        const user = sessionData?.session?.user;
+
+        if (!user) {
+          alert('로그인이 필요합니다.');
+          return;
+        }
+
+        const { data: draft, error } =
+          await window.supabaseClient
+            .from('issues')
+            .insert([{
+              user_id: user.id,
+              category: remixContext.category,
+              title: titleEl.value,
+              one_line: oneLineEl.value,
+              description: descEl.value,
+              donation_target: donationEl.value,
+              is_anonymous: anon,
+              author_stance: remixStance,
+              remix_stance: remixStance,
+              remix_origin_issue_id: remixOriginIssueId,
+              status: 'draft',
+              moderation_status: 'pending',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }])
+            .select('id')
+            .single();
+
+        if (error || !draft?.id) {
+          console.error('[write-remix] draft insert failed', error);
+          alert('임시 저장에 실패했습니다.');
+          return;
+        }
+
+        window.__ALLOW_DRAFT_EXIT__ = true;
+        location.href = `confirm.html?draft=${draft.id}`;
+
+      } catch (e) {
+        console.error('[write-remix] publishPreview error', e);
+        alert('임시 저장 중 오류가 발생했습니다.');
       }
-
-      const payload = {
-        category: remixContext.category,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anon,
-
-        author_stance: remixStance,        // 🔥 반드시 추가
-        remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId
-      };
-
-      sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      // 🔥 draftId 우선순위: URL → sessionStorage(writeDraftId)
-      const params = new URLSearchParams(location.search);
-      let draftId = params.get('draft');
-
-      if (!draftId) {
-        draftId = sessionStorage.getItem('writeDraftId');
-      }
-
-      if (!draftId) {
-        console.warn('[write-remix] draft id missing, fallback 생성');
-        draftId = `draft_${Date.now()}`;
-        sessionStorage.setItem('writeDraftId', draftId);
-      }
-
-      // confirm 페이지 이동
-      location.href = `confirm.html?draft=${draftId}`;
     };
 
     if (videoEl) {
