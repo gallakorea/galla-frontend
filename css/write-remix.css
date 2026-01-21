@@ -1415,3 +1415,31 @@ select.locked {
   margin-right: 16px;
   font-weight: 600;
 }
+
+/* ===============================
+   REMIX STANCE RADIO FIX
+   =============================== */
+
+/* 기본 라디오 숨김 해제 */
+.radio-group input[type="radio"] {
+  display: inline-block !important;
+  opacity: 1 !important;
+  pointer-events: none; /* REMIX에서는 변경 불가, 표시만 */
+}
+
+/* 체크된 상태 시 시각 강조 */
+.radio-group input[type="radio"]:checked + span,
+.radio-group input[type="radio"]:checked + label {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+/* 선택되지 않은 상태는 흐리게 */
+.radio-group label {
+  opacity: 0.45;
+}
+
+/* 선택된 라벨만 강조 */
+.radio-group input[type="radio"]:checked + label {
+  opacity: 1;
+}
