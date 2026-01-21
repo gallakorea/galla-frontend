@@ -109,9 +109,24 @@
         </div>
 
         <!-- 🔒 선택된 입장 표시 (REMIX 전용, 수정 불가) -->
-        <div class="field-block">
-          <label class="field-label">나의 입장 <span class="required">(고정)</span></label>
-          <div id="selectedStanceDisplay" class="selected-stance-display"></div>
+        <div class="field-block stance-field">
+          <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
+
+          <div class="stance-radio-group">
+            <label class="stance-option">
+              <input type="radio" name="stance" value="pro" />
+              <span>찬성 👍</span>
+            </label>
+
+            <label class="stance-option">
+              <input type="radio" name="stance" value="con" />
+              <span>반대 👎</span>
+            </label>
+          </div>
+
+          <p class="guide-text">
+            이 선택은 공개되지 않으며, AI 논점/뉴스를 정렬하는 기준값으로만 사용됩니다.
+          </p>
         </div>
 
         <!-- 이슈 썸네일 (필수) -->

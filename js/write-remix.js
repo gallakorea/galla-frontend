@@ -1,18 +1,3 @@
-// 🔥 GLOBAL STANCE PRE-INJECT (runs BEFORE DOMContentLoaded)
-(function () {
-  try {
-    const ctxRaw = sessionStorage.getItem('remixContext');
-    if (!ctxRaw) return;
-    const ctx = JSON.parse(ctxRaw);
-    if (ctx && ctx.remix_stance) {
-      // confirm / draft 검증에서 참조하는 전역 플래그
-      window.__SELECTED_STANCE__ = ctx.remix_stance; // 'pro' | 'con'
-    }
-  } catch (e) {
-    console.warn('[write-remix] stance pre-inject failed', e);
-  }
-})();
-
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -38,40 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
   /* ===============================
-     LEGACY STANCE VALIDATION FIX
-     (실제 radio DOM 구조 주입)
+     REMIX STANCE → REAL RADIO BIND
+     (UI + validation 완전 일치)
   ================================ */
-  (function injectLegacyStanceField() {
-    try {
-      // 이미 있으면 중복 생성 금지
-      if (document.querySelector('.stance-field')) return;
 
-      const wrapper = document.createElement('div');
-      wrapper.className = 'stance-field';
-      wrapper.style.display = 'none'; // UI에는 안 보이게
+  const stanceRadios = document.querySelectorAll('input[name="stance"]');
 
-      wrapper.innerHTML = `
-        <label class="stance-option">
-          <input type="radio" name="stance" value="pro" />
-          찬성
-        </label>
-        <label class="stance-option">
-          <input type="radio" name="stance" value="con" />
-          반대
-        </label>
-      `;
-
-      document.body.appendChild(wrapper);
-
-      const target = wrapper.querySelector(
-        `input[value="${remixStance}"]`
-      );
-      if (target) target.checked = true;
-
-    } catch (e) {
-      console.warn('[write-remix] legacy stance inject failed', e);
+  stanceRadios.forEach(radio => {
+    if (radio.value === remixStance) {
+      radio.checked = true;
     }
-  })();
+  });
 
   /* ===============================
      REMIX STANCE → FORM HARD INJECT
@@ -92,8 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 🔒 검증 로직용 전역 주입
-  window.__SELECTED_STANCE__ = remixStance;
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
