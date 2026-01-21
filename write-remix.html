@@ -108,6 +108,37 @@
           />
         </div>
 
+        <!-- 나의 입장 (REMIX 고정) -->
+        <div class="field-block">
+          <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
+
+          <div class="stance-radio-group disabled" id="fixedStanceGroup">
+            <label class="stance-option pro">
+              <input
+                type="radio"
+                name="authorStance"
+                value="pro"
+                disabled
+              />
+              <span>찬성 👍</span>
+            </label>
+
+            <label class="stance-option con">
+              <input
+                type="radio"
+                name="authorStance"
+                value="con"
+                disabled
+              />
+              <span>반대 👎</span>
+            </label>
+          </div>
+
+          <p class="guide-text muted">
+            이 입장은 이슈 참전 시 선택한 입장으로 고정됩니다.
+          </p>
+        </div>
+
         <!-- 이슈 썸네일 (필수) -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일 <span class="required">(필수)</span></label>

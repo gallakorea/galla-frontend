@@ -1,13 +1,17 @@
+// 🔥 REMIX STATE (write-remix 전용)
+
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
-  /* ================= REMIX CONTEXT (고정값) ================= */
+    /* ================= REMIX CONTEXT (고정값) ================= */
   const remixContext = JSON.parse(
     sessionStorage.getItem('remixContext')
   );
 
   if (
     !remixContext ||
+    !remixContext.origin_issue_id ||
+    !remixContext.remix_stance ||
     !remixContext.category
   ) {
     alert('잘못된 접근입니다.');
@@ -15,58 +19,44 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 🔥 draft 복원 진입 시에는 stance 검사하지 않음
-  if (!remixContext.remix_stance) {
-    console.warn('[write-remix] remix_stance missing but allowed (draft restore)');
-  }
-
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
-  // 🔥 FIX: remix에서는 author_stance를 강제로 확정시킨다
-  if (remixStance) {
-    window.__FORCE_AUTHOR_STANCE__ = remixStance;
-
-    // write / draft restore 로직이 author_stance를 찾기 때문에 hidden으로 주입
-    const hiddenStance = document.createElement('input');
-    hiddenStance.type = 'hidden';
-    hiddenStance.name = 'author_stance';
-    hiddenStance.value = remixStance;
-    document.getElementById('writeForm')?.appendChild(hiddenStance);
-
-    // remixContext 유실 방지
-    sessionStorage.setItem(
-      'remixContext',
-      JSON.stringify({ ...remixContext, remix_stance: remixStance })
+  /* ================= 나의 입장 (REMIX 고정 표시) ================= */
+  const fixedStanceGroup = document.getElementById('fixedStanceGroup');
+  if (fixedStanceGroup && remixStance) {
+    const radio = fixedStanceGroup.querySelector(
+      `input[value="${remixStance}"]`
     );
+    if (radio) radio.checked = true;
   }
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
-  if (remixStance === 'pro') {
-    stanceBox.classList.add('pro');
-    stanceBox.innerHTML = `👍 <strong>찬성 진영</strong>으로 참전했습니다`;
+if (remixStance === 'pro') {
+  stanceBox.classList.add('pro');
+  stanceBox.innerHTML = `👍 <strong>찬성 진영</strong>으로 참전했습니다`;
 
-    guideText.innerHTML = `
-      이 글은 위 이슈의 <strong>찬성 논점</strong>을 강화하거나
-      새로운 근거를 제시하기 위한 글입니다.
-      <br />
-      <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
-    `;
-  }
+  guideText.innerHTML = `
+    이 글은 위 이슈의 <strong>찬성 논점</strong>을 강화하거나
+    새로운 근거를 제시하기 위한 글입니다.
+    <br />
+    <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
+  `;
+}
 
-  if (remixStance === 'con') {
-    stanceBox.classList.add('con');
-    stanceBox.innerHTML = `👎 <strong>반대 진영</strong>으로 참전했습니다`;
+if (remixStance === 'con') {
+  stanceBox.classList.add('con');
+  stanceBox.innerHTML = `👎 <strong>반대 진영</strong>으로 참전했습니다`;
 
-    guideText.innerHTML = `
-      이 글은 위 이슈의 <strong>반대 논점</strong>을 강화하거나
-      새로운 반론을 제시하기 위한 글입니다.
-      <br />
-      <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
-    `;
-  }
-
+  guideText.innerHTML = `
+    이 글은 위 이슈의 <strong>반대 논점</strong>을 강화하거나
+    새로운 반론을 제시하기 위한 글입니다.
+    <br />
+    <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
+  `;
+}
+  const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -150,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* ================= PREVIEW ================= */
-  form.addEventListener('submit', async e => {
+  form.addEventListener('submit', e => {
     e.preventDefault();
 
     if (!titleEl.value) {
@@ -213,19 +203,38 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.getElementById('publishPreview').onclick = () => {
-      window.__ALLOW_DRAFT_EXIT__ = true;
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+      const isDraftMode = window.__DRAFT_MODE__ === true;
 
+      if (isDraftMode) {
+        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
+        return;
+      }
+
+      const payload = {
+        category: remixContext.category,
+        title: titleEl.value,
+        oneLine: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: anon,
+
+        author_stance: remixStance,        // 🔥 반드시 추가
+        remix_stance: remixStance,
+        remix_origin_issue_id: remixOriginIssueId
+      };
+
+      sessionStorage.setItem('writePayload', JSON.stringify(payload));
       const params = new URLSearchParams(location.search);
       const draftId = params.get('draft');
 
       if (!draftId) {
-        alert('draft id가 없습니다');
+        alert('draft id가 없습니다.');
         return;
       }
 
       location.href = `confirm.remix.html?draft=${draftId}`;
     };
-
 
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {

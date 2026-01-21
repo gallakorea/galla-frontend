@@ -1402,3 +1402,16 @@ select.locked {
   padding: 16px;
   margin-bottom: 18px;
 }
+
+.stance-radio-group.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.stance-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 16px;
+  font-weight: 600;
+}
