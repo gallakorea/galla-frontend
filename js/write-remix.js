@@ -22,47 +22,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
-  /* ================= 나의 입장 (REMIX: UI + VISUAL 강제 반영) ================= */
+  /* ================= 나의 입장 (REMIX: 고정 표시 전용) ================= */
 
-  const stanceRadios = document.querySelectorAll('input[name="author_stance"]');
-  const stanceLabels = stanceRadios ? Array.from(stanceRadios).map(r => r.closest('label')) : [];
+  const fixedStanceBox = document.getElementById('fixedStanceDisplay');
 
-  let proRadio = null;
-  let conRadio = null;
-
-  stanceRadios.forEach(radio => {
-    if (radio.value === 'pro') proRadio = radio;
-    if (radio.value === 'con') conRadio = radio;
-  });
-
-  if (!proRadio || !conRadio) {
-    console.warn('[write-remix] author_stance radios not found');
-  } else {
+  if (fixedStanceBox) {
     if (remixStance === 'pro') {
-      proRadio.checked = true;
-      conRadio.checked = false;
-    }
-
-    if (remixStance === 'con') {
-      conRadio.checked = true;
-      proRadio.checked = false;
-    }
-
-    // 🔒 REMIX에서는 변경 불가
-    proRadio.disabled = true;
-    conRadio.disabled = true;
-
-    // 🔥 시각적 선택 강제 (CSS 의존 제거)
-    stanceLabels.forEach(label => label.classList.remove('active'));
-    if (remixStance === 'pro' && proRadio.closest('label')) {
-      proRadio.closest('label').classList.add('active');
-    }
-    if (remixStance === 'con' && conRadio.closest('label')) {
-      conRadio.closest('label').classList.add('active');
+      fixedStanceBox.className = 'fixed-stance-display pro';
+      fixedStanceBox.textContent = '👍 찬성';
+    } else if (remixStance === 'con') {
+      fixedStanceBox.className = 'fixed-stance-display con';
+      fixedStanceBox.textContent = '👎 반대';
     }
   }
 
-  // 🔥 confirm 단계용 payload 보존 (radio disabled 대응)
+  // confirm / payload 전달용 hidden input
   let hiddenStance = document.querySelector('input[type="hidden"][name="author_stance"]');
   if (!hiddenStance) {
     hiddenStance = document.createElement('input');
