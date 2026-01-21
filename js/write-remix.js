@@ -47,6 +47,20 @@ if (remixStance === 'con') {
     <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
   `;
 }
+
+  /* ================= SELECTED STANCE (FORM FIXED DISPLAY) ================= */
+  const selectedStanceEl = document.getElementById('selectedStanceDisplay');
+
+  if (selectedStanceEl) {
+    if (remixStance === 'pro') {
+      selectedStanceEl.className = 'one-line-stance pro';
+      selectedStanceEl.textContent = '👍 찬성';
+    } else if (remixStance === 'con') {
+      selectedStanceEl.className = 'one-line-stance con';
+      selectedStanceEl.textContent = '👎 반대';
+    }
+  }
+
   const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
