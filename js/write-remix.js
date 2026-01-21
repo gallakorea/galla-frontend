@@ -19,6 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
+  // 🔥 draft id 보존 (preview → confirm 안정화)
+  const urlParams = new URLSearchParams(location.search);
+  const incomingDraftId = urlParams.get('draft');
+
+  if (incomingDraftId) {
+    sessionStorage.setItem('writeDraftId', incomingDraftId);
+  }
+
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
@@ -241,14 +249,21 @@ if (remixStance === 'con') {
       };
 
       sessionStorage.setItem('writePayload', JSON.stringify(payload));
+      // 🔥 draftId 우선순위: URL → sessionStorage(writeDraftId)
       const params = new URLSearchParams(location.search);
-      const draftId = params.get('draft');
+      let draftId = params.get('draft');
 
       if (!draftId) {
-        alert('draft id가 없습니다.');
-        return;
+        draftId = sessionStorage.getItem('writeDraftId');
       }
 
+      if (!draftId) {
+        console.warn('[write-remix] draft id missing, fallback 생성');
+        draftId = `draft_${Date.now()}`;
+        sessionStorage.setItem('writeDraftId', draftId);
+      }
+
+      // confirm 페이지 이동
       location.href = `confirm.remix.html?draft=${draftId}`;
     };
 
