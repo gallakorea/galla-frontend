@@ -23,30 +23,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
   /* ================= 나의 입장 (REMIX: 자동 선택 + 선택 불가) ================= */
-  // HTML 구조가 무엇이든 "author_stance" 기준으로 강제 동기화
+  // HTML 구조와 무관하게 author_stance 라디오를 강제로 동기화한다
   const stanceRadios = document.querySelectorAll(
-    'input[type="radio"]'
+    'input[type="radio"][name="author_stance"]'
   );
 
-  if (!stanceRadios.length) {
-    console.warn('[write-remix] stance radio inputs not found');
-  }
+  if (!stanceRadios || stanceRadios.length === 0) {
+    console.warn('[write-remix] author_stance radios not found → hidden input fallback');
 
-  stanceRadios.forEach(radio => {
-    const value = radio.value;
-
-    // pro / con 값만 대상
-    if (value === 'pro' || value === 'con') {
-      if (value === remixStance) {
+    // 🔥 라디오가 아예 없을 경우를 대비한 fallback (폼 submit / draft 저장용)
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden';
+    hidden.name = 'author_stance';
+    hidden.value = remixStance;
+    document.getElementById('writeForm')?.appendChild(hidden);
+  } else {
+    stanceRadios.forEach(radio => {
+      if (radio.value === remixStance) {
         radio.checked = true;
       } else {
         radio.checked = false;
       }
-
       // REMIX에서는 입장 변경 불가
       radio.disabled = true;
-    }
-  });
+    });
+  }
 
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
