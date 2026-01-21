@@ -19,13 +19,21 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 🔥 draft id 보존 (preview → confirm 안정화)
+  // 🔥 REMIX는 반드시 draft 기반
   const urlParams = new URLSearchParams(location.search);
   const incomingDraftId = urlParams.get('draft');
 
-  if (incomingDraftId) {
-    sessionStorage.setItem('writeDraftId', incomingDraftId);
+  if (!incomingDraftId) {
+    alert('draft id가 없습니다.');
+    location.href = 'write.html';
+    return;
   }
+
+  // 전역 draft 모드 명시
+  window.__DRAFT_MODE__ = true;
+  window.__ALLOW_DRAFT_EXIT__ = true;
+
+  sessionStorage.setItem('writeDraftId', incomingDraftId);
 
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
@@ -125,7 +133,7 @@ if (remixStance === 'con') {
 
   /* ✅🔥 핵심 수정: 클릭 시 value 초기화 */
   videoBtn.addEventListener('click', () => {
-    videoInput.value = '';   // ← 이 한 줄이 전부
+    videoInput.value = null;   // ← 이 한 줄이 전부
     videoInput.click();
   });
 
@@ -254,21 +262,15 @@ if (remixStance === 'con') {
         donation_target: donationEl.value,
         is_anonymous: anon,
 
-        author_stance: remixStance,        // 🔥 반드시 추가
+        author_stance: remixStance,
         remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId
+        remix_origin_issue_id: remixOriginIssueId,
+        draft_id: incomingDraftId
       };
 
       sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      // 🔥 draftId 우선순위: URL → sessionStorage(writeDraftId)
-      const params = new URLSearchParams(location.search);
-      let draftId = params.get('draft');
 
-      if (!draftId) {
-        draftId = sessionStorage.getItem('writeDraftId');
-      }
-
-      location.href = `confirm.remix.html`;
+      location.href = `confirm.remix.html?draft=${incomingDraftId}`;
     };
 
     if (videoEl) {
