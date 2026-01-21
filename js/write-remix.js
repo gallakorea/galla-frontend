@@ -42,6 +42,17 @@ document.addEventListener('DOMContentLoaded', () => {
       fixedStanceBox.className = 'fixed-stance-display con';
       fixedStanceBox.textContent = '👎 반대';
     }
+  } else {
+    const stanceField = document.querySelector('.field-block label.field-label')?.closest('.field-block');
+    if (stanceField) {
+      stanceField.innerHTML = `
+        <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
+        <div id="fixedStanceDisplay" class="fixed-stance-display"></div>
+        <p class="guide-text">
+          이 입장은 이슈 참전 시 선택한 입장으로 고정됩니다.
+        </p>
+      `;
+    }
   }
 
   // confirm / payload 전달용 hidden input
@@ -50,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     hiddenStance = document.createElement('input');
     hiddenStance.type = 'hidden';
     hiddenStance.name = 'author_stance';
-    document.getElementById('writeForm')?.appendChild(hiddenStance);
+    document.getElementById('writeForm').appendChild(hiddenStance);
   }
   hiddenStance.value = remixStance;
 
@@ -257,14 +268,7 @@ if (remixStance === 'con') {
         draftId = sessionStorage.getItem('writeDraftId');
       }
 
-      if (!draftId) {
-        console.warn('[write-remix] draft id missing, fallback 생성');
-        draftId = `draft_${Date.now()}`;
-        sessionStorage.setItem('writeDraftId', draftId);
-      }
-
-      // confirm 페이지 이동
-      location.href = `confirm.remix.html?draft=${draftId}`;
+      location.href = `confirm.remix.html`;
     };
 
     if (videoEl) {
