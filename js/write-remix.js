@@ -103,7 +103,7 @@ if (remixStance === 'con') {
 
   // ✅ restore thumbnail preview when returning from confirm
   const savedThumb = sessionStorage.getItem('__WRITE_REMIX_THUMB_PREVIEW__');
-  if (savedThumb && thumbPreview) {
+  if (savedThumb && thumbPreview && !thumbPreview.querySelector('img')) {
     thumbPreview.innerHTML = `<img src="${savedThumb}">`;
   }
 
@@ -111,6 +111,9 @@ if (remixStance === 'con') {
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
+
+    const prev = sessionStorage.getItem('__WRITE_REMIX_THUMB_PREVIEW__');
+    if (prev) URL.revokeObjectURL(prev);
 
     const url = URL.createObjectURL(f);
     thumbPreview.innerHTML = `<img src="${url}">`;
