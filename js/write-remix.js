@@ -91,6 +91,8 @@ if (remixStance === 'con') {
   const descEl = document.getElementById('description');
   const donationEl = document.getElementById('donationTarget'); // ✅ 추가
 
+  let __PUBLISH_LOCK__ = false;
+
   /* ================= CATEGORY LOCK (REMIX) ================= */
   categoryEl.value = remixContext.category;   // 원본 이슈 카테고리
   categoryEl.disabled = true;                 // 선택 불가
@@ -241,6 +243,9 @@ if (remixStance === 'con') {
     };
 
     document.getElementById('publishPreview').onclick = async () => {
+      if (__PUBLISH_LOCK__) return;
+      __PUBLISH_LOCK__ = true;
+
       try {
         if (!window.supabaseClient) {
           alert('Supabase 연결 실패');
@@ -257,106 +262,113 @@ if (remixStance === 'con') {
         }
 
         /* =========================
-           THUMBNAIL / VIDEO UPLOAD
+           draftId 확보 (최초 1회)
+        ========================= */
+        let draftId = sessionStorage.getItem('writeDraftId');
+
+        if (!draftId) {
+          const { data: newDraft, error: insertError } =
+            await window.supabaseClient
+              .from('issues')
+              .insert([{
+                user_id: user.id,
+                category: remixContext.category,
+                title: titleEl.value,
+                one_line: oneLineEl.value,
+                description: descEl.value,
+                donation_target: donationEl.value,
+                is_anonymous: anon,
+                author_stance: remixStance,
+                status: 'draft',
+                moderation_status: 'pending',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }])
+              .select('id')
+              .single();
+
+          if (insertError || !newDraft?.id) {
+            console.error('[draft create failed]', insertError);
+            alert('임시 저장 실패');
+            return;
+          }
+
+          draftId = newDraft.id;
+          sessionStorage.setItem('writeDraftId', draftId);
+        }
+
+        /* =========================
+           썸네일 / 비디오 업로드
         ========================= */
         let thumbnailUrl = null;
         let videoUrl = null;
 
-        // 썸네일 업로드
         if (thumbInput.files && thumbInput.files[0]) {
           const file = thumbInput.files[0];
           const ext = file.name.split('.').pop();
-          const path = `issues/${user.id}/thumb_${crypto.randomUUID()}.${ext}`;
+          const path = `issues/${user.id}/thumb_${draftId}.${ext}`;
 
-          const { error: uploadError } =
-            await window.supabaseClient
-              .storage
-              .from('issues')
-              .upload(path, file, { upsert: false });
+          await window.supabaseClient
+            .storage
+            .from('issues')
+            .upload(path, file, { upsert: true });
 
-          if (uploadError) {
-            console.error('[thumbnail upload error]', uploadError);
-            throw uploadError;
-          }
-
-          const { data: publicData } =
+          thumbnailUrl =
             window.supabaseClient
               .storage
               .from('issues')
-              .getPublicUrl(path);
-
-          thumbnailUrl = publicData.publicUrl;
+              .getPublicUrl(path).data.publicUrl;
         }
 
-        // 영상 업로드
         if (videoInput.files && videoInput.files[0]) {
           const file = videoInput.files[0];
           const ext = file.name.split('.').pop();
-          const path = `issues/${user.id}/video_${crypto.randomUUID()}.${ext}`;
+          const path = `issues/${user.id}/video_${draftId}.${ext}`;
 
-          const { error: uploadError } =
-            await window.supabaseClient
-              .storage
-              .from('issues')
-              .upload(path, file, { upsert: false });
+          await window.supabaseClient
+            .storage
+            .from('issues')
+            .upload(path, file, { upsert: true });
 
-          if (uploadError) {
-            console.error('[video upload error]', uploadError);
-            throw uploadError;
-          }
-
-          const { data: publicData } =
+          videoUrl =
             window.supabaseClient
               .storage
               .from('issues')
-              .getPublicUrl(path);
-
-          videoUrl = publicData.publicUrl;
+              .getPublicUrl(path).data.publicUrl;
         }
 
-        const { data: draft, error } =
+        /* =========================
+           draft UPDATE (절대 INSERT X)
+        ========================= */
+        const { error: updateError } =
           await window.supabaseClient
             .from('issues')
-            .insert([{
-              user_id: user.id,
-
-              // 기본 콘텐츠
-              category: remixContext.category,
+            .update({
               title: titleEl.value,
               one_line: oneLineEl.value,
               description: descEl.value,
               donation_target: donationEl.value,
               is_anonymous: anon,
-
-              // 입장 (필수)
-              author_stance: remixStance,
-
               thumbnail_url: thumbnailUrl,
               video_url: videoUrl,
-
-              // 상태
-              status: 'draft',
-              moderation_status: 'pending',
-
-              created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
-            }])
-            .select('id')
-            .single();
+            })
+            .eq('id', draftId);
 
-        if (error || !draft?.id) {
-          console.error('[write-remix] draft insert failed', error);
-          alert('임시 저장에 실패했습니다.');
+        if (updateError) {
+          console.error('[draft update failed]', updateError);
+          alert('임시 저장 실패');
           return;
         }
 
         window.__ALLOW_DRAFT_EXIT__ = true;
-        sessionStorage.removeItem('__WRITE_REMIX_THUMB_PREVIEW__');
-        location.href = `confirm.html?draft=${draft.id}`;
+        location.href = `confirm.html?draft=${draftId}`;
 
       } catch (e) {
-        console.error('[write-remix] publishPreview error', e);
-        alert('임시 저장 중 오류가 발생했습니다.');
+        console.error('[publishPreview fatal]', e);
+        alert('임시 저장 중 오류 발생');
+      } finally {
+        __PUBLISH_LOCK__ = false;
       }
     };
 
