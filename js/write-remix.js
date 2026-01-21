@@ -22,18 +22,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
-  /* ================= 나의 입장 (REMIX: UI 강제 반영) ================= */
+  /* ================= 나의 입장 (REMIX: UI + VISUAL 강제 반영) ================= */
 
-  // ✅ value 기반으로 정확히 선택 (순서 의존 제거)
-  const proRadio = document.querySelector(
-    'input[name="author_stance"][value="pro"]'
-  );
-  const conRadio = document.querySelector(
-    'input[name="author_stance"][value="con"]'
-  );
+  const stanceRadios = document.querySelectorAll('input[name="author_stance"]');
+  const stanceLabels = stanceRadios ? Array.from(stanceRadios).map(r => r.closest('label')) : [];
+
+  let proRadio = null;
+  let conRadio = null;
+
+  stanceRadios.forEach(radio => {
+    if (radio.value === 'pro') proRadio = radio;
+    if (radio.value === 'con') conRadio = radio;
+  });
 
   if (!proRadio || !conRadio) {
-    console.warn('[write-remix] author_stance radio not found');
+    console.warn('[write-remix] author_stance radios not found');
   } else {
     if (remixStance === 'pro') {
       proRadio.checked = true;
@@ -48,19 +51,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🔒 REMIX에서는 변경 불가
     proRadio.disabled = true;
     conRadio.disabled = true;
+
+    // 🔥 시각적 선택 강제 (CSS 의존 제거)
+    stanceLabels.forEach(label => label.classList.remove('active'));
+    if (remixStance === 'pro' && proRadio.closest('label')) {
+      proRadio.closest('label').classList.add('active');
+    }
+    if (remixStance === 'con' && conRadio.closest('label')) {
+      conRadio.closest('label').classList.add('active');
+    }
   }
 
-  // payload 보존용 hidden input (confirm 단계 안전)
-  let hiddenStance = document.querySelector('input[name="author_stance"]');
+  // 🔥 confirm 단계용 payload 보존 (radio disabled 대응)
+  let hiddenStance = document.querySelector('input[type="hidden"][name="author_stance"]');
   if (!hiddenStance) {
     hiddenStance = document.createElement('input');
     hiddenStance.type = 'hidden';
     hiddenStance.name = 'author_stance';
-    hiddenStance.value = remixStance;
     document.getElementById('writeForm')?.appendChild(hiddenStance);
-  } else {
-    hiddenStance.value = remixStance;
   }
+  hiddenStance.value = remixStance;
 
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
