@@ -21,6 +21,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
+
+  /* ===============================
+     REMIX STANCE → FORM HARD INJECT
+     (입장 선택 alert 차단용)
+  ================================ */
+
+  const selectedStanceEl = document.getElementById('selectedStanceDisplay');
+
+  if (selectedStanceEl) {
+    if (remixStance === 'pro') {
+      selectedStanceEl.className = 'one-line-stance pro';
+      selectedStanceEl.innerHTML = '👍 찬성';
+    }
+
+    if (remixStance === 'con') {
+      selectedStanceEl.className = 'one-line-stance con';
+      selectedStanceEl.innerHTML = '👎 반대';
+    }
+  }
+
+  // 🔒 검증 로직용 전역 주입
+  window.__SELECTED_STANCE__ = remixStance;
   const stanceBox = document.getElementById('remixStanceBox');
   const guideText = document.getElementById('remixGuideText');
 
@@ -48,18 +70,6 @@ if (remixStance === 'con') {
   `;
 }
 
-  /* ================= SELECTED STANCE (FORM FIXED DISPLAY) ================= */
-  const selectedStanceEl = document.getElementById('selectedStanceDisplay');
-
-  if (selectedStanceEl) {
-    if (remixStance === 'pro') {
-      selectedStanceEl.className = 'one-line-stance pro';
-      selectedStanceEl.textContent = '👍 찬성';
-    } else if (remixStance === 'con') {
-      selectedStanceEl.className = 'one-line-stance con';
-      selectedStanceEl.textContent = '👎 반대';
-    }
-  }
 
   const remixOriginIssueId = remixContext.origin_issue_id;
 
