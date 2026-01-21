@@ -38,6 +38,29 @@ document.addEventListener('DOMContentLoaded', () => {
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
   /* ===============================
+     LEGACY STANCE VALIDATION BYPASS
+     (radio-based checks compatibility)
+  ================================ */
+  (function injectHiddenStanceRadio() {
+    try {
+      // If any legacy validator checks radio[name="stance"]:checked,
+      // inject a hidden, checked radio to satisfy it.
+      const existing = document.querySelector('input[name="stance"]:checked');
+      if (existing) return;
+
+      const hiddenRadio = document.createElement('input');
+      hiddenRadio.type = 'radio';
+      hiddenRadio.name = 'stance';
+      hiddenRadio.value = remixStance; // 'pro' | 'con'
+      hiddenRadio.checked = true;
+      hiddenRadio.style.display = 'none';
+      document.body.appendChild(hiddenRadio);
+    } catch (e) {
+      console.warn('[write-remix] hidden stance radio inject failed', e);
+    }
+  })();
+
+  /* ===============================
      REMIX STANCE → FORM HARD INJECT
      (입장 선택 alert 차단용)
   ================================ */
