@@ -190,10 +190,19 @@ if (remixStance === 'con') {
     let draftId = sessionStorage.getItem('writeDraftId');
 
     if (!draftId) {
-      const { data, error } = await supabase
+      const { data: sessionData } =
+        await window.supabaseClient.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const { data, error } = await window.supabaseClient
         .from('issues')
         .insert([{
-          user_id: supabase.auth.user()?.id,
+          user_id: user.id,
           category: categoryEl.value,
           title: titleEl.value,
           one_line: oneLineEl.value,
@@ -213,7 +222,7 @@ if (remixStance === 'con') {
       sessionStorage.setItem('writeDraftId', data.id);
       draftId = data.id;
     } else {
-      await supabase
+      await window.supabaseClient
         .from('issues')
         .update({
           category: categoryEl.value,
