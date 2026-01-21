@@ -1,6 +1,7 @@
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
+  window.__IS_PUBLISHING__ = false;
   const body = document.body;
 
     /* ================= REMIX CONTEXT (고정값) ================= */
@@ -261,45 +262,15 @@ if (remixStance === 'con') {
           return;
         }
 
-        /* =========================
-           draftId 확보 (최초 1회)
-        ========================= */
-        let draftId = sessionStorage.getItem('writeDraftId');
+        // ✅ draftId는 반드시 기존 값만 사용 (INSERT 금지)
+        const draftId = sessionStorage.getItem('writeDraftId');
 
         if (!draftId) {
-          const { data: newDraft, error: insertError } =
-            await window.supabaseClient
-              .from('issues')
-              .insert([{
-                user_id: user.id,
-                category: remixContext.category,
-                title: titleEl.value,
-                one_line: oneLineEl.value,
-                description: descEl.value,
-                donation_target: donationEl.value,
-                is_anonymous: anon,
-                author_stance: remixStance,
-                status: 'draft',
-                moderation_status: 'pending',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }])
-              .select('id')
-              .single();
-
-          if (insertError || !newDraft?.id) {
-            console.error('[draft create failed]', insertError);
-            alert('임시 저장 실패');
-            return;
-          }
-
-          draftId = newDraft.id;
-          sessionStorage.setItem('writeDraftId', draftId);
+          alert('임시 저장된 글이 없습니다.');
+          return;
         }
 
-        /* =========================
-           썸네일 / 비디오 업로드
-        ========================= */
+        // ✅ 썸네일 / 비디오 업로드 (draft 기준)
         let thumbnailUrl = null;
         let videoUrl = null;
 
@@ -337,23 +308,17 @@ if (remixStance === 'con') {
               .getPublicUrl(path).data.publicUrl;
         }
 
-        /* =========================
-           draft UPDATE (절대 INSERT X)
-        ========================= */
+        // ✅ draft UPDATE만 수행 (발행 아님)
         const { error: updateError } =
           await window.supabaseClient
             .from('issues')
             .update({
-              title: titleEl.value,
-              one_line: oneLineEl.value,
-              description: descEl.value,
-              donation_target: donationEl.value,
-              is_anonymous: anon,
               thumbnail_url: thumbnailUrl,
               video_url: videoUrl,
               updated_at: new Date().toISOString()
             })
-            .eq('id', draftId);
+            .eq('id', draftId)
+            .eq('status', 'draft');
 
         if (updateError) {
           console.error('[draft update failed]', updateError);
@@ -361,6 +326,7 @@ if (remixStance === 'con') {
           return;
         }
 
+        // ✅ confirm 이동만 수행 (절대 발행 X)
         window.__ALLOW_DRAFT_EXIT__ = true;
         location.href = `confirm.html?draft=${draftId}`;
 
