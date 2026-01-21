@@ -90,9 +90,6 @@ if (remixStance === 'con') {
   const descEl = document.getElementById('description');
   const donationEl = document.getElementById('donationTarget'); // ✅ 추가
 
-  let __PUBLISH_LOCK__ = false;
-  let __PREVIEW_BOUND__ = false;
-
   /* ================= CATEGORY LOCK (REMIX) ================= */
   categoryEl.value = remixContext.category;   // 원본 이슈 카테고리
   categoryEl.disabled = true;                 // 선택 불가
@@ -103,25 +100,19 @@ if (remixStance === 'con') {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  // ✅ restore thumbnail preview when returning from confirm
-  const savedThumb = sessionStorage.getItem('__WRITE_REMIX_THUMB_PREVIEW__');
-  if (savedThumb && thumbPreview && !thumbPreview.querySelector('img')) {
-    thumbPreview.innerHTML = `<img src="${savedThumb}">`;
-  }
+  // Removed restoring thumbnail preview on back navigation per instructions
 
   thumbBtn.addEventListener('click', () => thumbInput.click());
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
 
-    const prev = sessionStorage.getItem('__WRITE_REMIX_THUMB_PREVIEW__');
-    if (prev) URL.revokeObjectURL(prev);
+    // Removed revoking previous URL and sessionStorage persistence per instructions
 
     const url = URL.createObjectURL(f);
     thumbPreview.innerHTML = `<img src="${url}">`;
 
-    // ✅ persist thumbnail preview for back-navigation
-    sessionStorage.setItem('__WRITE_REMIX_THUMB_PREVIEW__', url);
+    // Removed persisting thumbnail preview for back-navigation per instructions
   });
 
   const videoInput = document.getElementById('video');
@@ -242,18 +233,12 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // ⚠️ IMPORTANT:
-    // This button MUST NOT publish.
-    // It only updates the draft and moves to confirm.html.
-    // Bind publishPreview click handler only once, never auto-firing on navigation/back
+    // Simplified publishPreview click handler per instructions
     const publishBtn = document.getElementById('publishPreview');
-    if (!__PREVIEW_BOUND__ && publishBtn) {
-      __PREVIEW_BOUND__ = true;
-      publishBtn.addEventListener('click', (ev) => {
+    if (publishBtn) {
+      publishBtn.addEventListener('click', ev => {
         ev.preventDefault();
         ev.stopPropagation();
-
-        const anon = document.getElementById('isAnonymous').checked;
 
         const payload = {
           category: remixContext.category,
@@ -263,7 +248,7 @@ if (remixStance === 'con') {
           donation_target: donationEl.value,
           is_anonymous: anon,
           author_stance: remixStance,
-          remix_origin_issue_id: remixContext.origin_issue_id
+          remix_origin_issue_id: remixOriginIssueId
         };
 
         sessionStorage.setItem('writePayload', JSON.stringify(payload));
