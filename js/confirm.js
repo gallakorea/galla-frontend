@@ -1,4 +1,7 @@
-// js/confirm.js
+// 🔒 CONFIRM MODE — 절대 자동 발행 금지
+window.__CONFIRM_MODE__ = true;
+let __USER_CONFIRMED_PUBLISH__ = false;
+
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('[confirm.js] Loaded');
 
@@ -73,6 +76,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   publishBtn.disabled = false;
 
+  // 🔒 안전장치: confirm 진입 시 자동 발행 절대 금지
+  if (!publishBtn) {
+    console.warn('[confirm.js] publishBtn 없음 — 발행 불가');
+    return;
+  }
+
   /* =====================
      뒤로가기
   ===================== */
@@ -84,6 +93,14 @@ document.addEventListener('DOMContentLoaded', async () => {
      🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
+    // 🔒 최종 발행은 반드시 사용자 명시적 클릭으로만 허용
+    if (window.__CONFIRM_MODE__ !== true) {
+      console.warn('[confirm.js] CONFIRM_MODE 아님 — 발행 차단');
+      return;
+    }
+
+    __USER_CONFIRMED_PUBLISH__ = true;
+
     publishBtn.disabled = true;
     publishBtn.textContent = '발행 중…';
 
@@ -133,7 +150,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         removePaths.push(oldPath);
       }
 
-      /* ---------- DB 상태 변경 ---------- */
+      /* ---------- DB 상태 변경 (🔥 여기서만 발행) ---------- */
       const { error: updateError } = await supabase
         .from('issues')
         .update({
@@ -142,7 +159,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           moderation_status: 'pending',
           updated_at: new Date().toISOString(),
         })
-        .eq('id', draft.id);
+        .eq('id', draft.id)
+        .eq('status', 'draft'); // 🔒 draft만 발행 가능
 
       if (updateError) throw updateError;
 
@@ -162,8 +180,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       alert('발행 중 오류가 발생했습니다.');
       publishBtn.disabled = false;
       publishBtn.textContent = '최종 발행';
+      __USER_CONFIRMED_PUBLISH__ = false;
     }
   };
+
+  // 🔒 confirm 페이지 이탈은 발행으로 간주하지 않음
+  window.addEventListener('beforeunload', () => {
+    if (!__USER_CONFIRMED_PUBLISH__) {
+      console.log('[confirm.js] 검사 페이지 이탈 — 발행 아님');
+    }
+  });
 });
 
 /* =====================
