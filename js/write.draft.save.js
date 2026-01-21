@@ -1,5 +1,6 @@
 // 🔥 draft 모드 선언 (write.js 차단용)
 window.__DRAFT_MODE__ = true;
+window.__CHECK_ONLY__ = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   const issuePreview = document.getElementById('issuePreview');
@@ -7,10 +8,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   issuePreview.addEventListener('click', async (e) => {
     // Draft save is now bound to both the draft button and the 검사 button.
-    const btn =
-      e.target.closest('#saveDraft') ||
-      e.target.closest('#publishPreview');
+    const isCheckBtn = e.target.closest('#publishPreview');
+    const isSaveBtn = e.target.closest('#saveDraft');
+    const btn = isCheckBtn || isSaveBtn;
     if (!btn) return;
+
+    // 🔥 검사 버튼이면 CHECK ONLY 모드 활성화
+    window.__CHECK_ONLY__ = !!isCheckBtn;
 
     // 🔥 write.js 기본 이동 완전 차단
     e.preventDefault();
@@ -141,10 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       /* =========================
-         5️⃣ confirm 이동 (🔥 핵심 수술)
-         👉 beforeunload draft 삭제 차단
+         5️⃣ confirm 이동 / 임시저장 분기
       ========================= */
-      // 🔥 검사 전용 플로우: confirm으로만 이동 (발행 절대 금지)
       if (window.__CHECK_ONLY__ === true) {
         console.log('[draft.save] 검사 전용 → confirm 이동');
         window.__ALLOW_DRAFT_EXIT__ = true;
@@ -152,7 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 🔒 일반 임시저장: 페이지 이동 없음
       console.log('[draft.save] 임시 저장 완료');
 
     } catch (err) {
