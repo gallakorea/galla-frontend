@@ -292,6 +292,9 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    // ⚠️ IMPORTANT:
+    // This button MUST NOT publish.
+    // It only updates the draft and moves to confirm.html.
     // Bind publishPreview click handler only once, never auto-firing on navigation/back
     const publishBtn = document.getElementById('publishPreview');
     if (!__PREVIEW_BOUND__ && publishBtn) {
@@ -301,6 +304,9 @@ if (remixStance === 'con') {
         ev.stopPropagation();
         if (__PUBLISH_LOCK__) return;
         __PUBLISH_LOCK__ = true;
+
+        if (window.__REMIX_PUBLISH_PREVIEW_FIRED__) return;
+        window.__REMIX_PUBLISH_PREVIEW_FIRED__ = true;
 
         try {
           const draftId = sessionStorage.getItem('writeDraftId');
