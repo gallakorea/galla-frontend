@@ -1427,11 +1427,26 @@ select.locked {
   color: #ff5a5a;
 }
 
-/* ❌ 입장 선택 UI 전부 숨김 (라디오 버튼 영역) */
-.stance-select,
-.stance-radio-group,
-.stance-radio,
-.stance-field,
+/* ✅ REMIX: 입장 라디오 실제 표시 (validation 연동) */
+.stance-field {
+  display: block !important;
+}
+
+.stance-radio-group {
+  display: flex !important;
+  gap: 16px;
+  margin-top: 6px;
+}
+
 .stance-option {
-  display: none !important;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.stance-option input[type="radio"] {
+  display: inline-block;
+  accent-color: #2f80ff;
 }
