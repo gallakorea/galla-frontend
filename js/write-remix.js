@@ -80,6 +80,7 @@ if (remixStance === 'con') {
     <span class="muted">※ 참전 진영은 변경할 수 없습니다.</span>
   `;
 }
+  const remixOriginIssueId = remixContext.origin_issue_id;
 
   const form = document.getElementById('writeForm');
   const issuePreview = document.getElementById('issuePreview');
@@ -100,11 +101,22 @@ if (remixStance === 'con') {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
+  // ✅ restore thumbnail preview when returning from confirm
+  const savedThumb = sessionStorage.getItem('__WRITE_REMIX_THUMB_PREVIEW__');
+  if (savedThumb && thumbPreview) {
+    thumbPreview.innerHTML = `<img src="${savedThumb}">`;
+  }
+
   thumbBtn.addEventListener('click', () => thumbInput.click());
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
-    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+
+    const url = URL.createObjectURL(f);
+    thumbPreview.innerHTML = `<img src="${url}">`;
+
+    // ✅ persist thumbnail preview for back-navigation
+    sessionStorage.setItem('__WRITE_REMIX_THUMB_PREVIEW__', url);
   });
 
   const videoInput = document.getElementById('video');
@@ -305,7 +317,7 @@ if (remixStance === 'con') {
             .insert([{
               user_id: user.id,
 
-              // 기본 콘텐츠 (write.js와 동일)
+              // 기본 콘텐츠
               category: remixContext.category,
               title: titleEl.value,
               one_line: oneLineEl.value,
@@ -313,10 +325,9 @@ if (remixStance === 'con') {
               donation_target: donationEl.value,
               is_anonymous: anon,
 
-              // 필수 입장값
+              // 입장 (필수)
               author_stance: remixStance,
 
-              // 미디어 (🔥 반드시 포함)
               thumbnail_url: thumbnailUrl,
               video_url: videoUrl,
 
@@ -337,6 +348,7 @@ if (remixStance === 'con') {
         }
 
         window.__ALLOW_DRAFT_EXIT__ = true;
+        sessionStorage.removeItem('__WRITE_REMIX_THUMB_PREVIEW__');
         location.href = `confirm.html?draft=${draft.id}`;
 
       } catch (e) {
