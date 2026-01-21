@@ -3,6 +3,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const body = document.body;
 
+  // 🚫 PREVIEW ONLY MODE — 절대 발행 금지
+  let __PREVIEW_ONLY__ = true;
+  let __PREVIEW_CLICKED__ = false;
+
     /* ================= REMIX CONTEXT (고정값) ================= */
   const remixContext = JSON.parse(
     sessionStorage.getItem('remixContext')
@@ -210,8 +214,8 @@ if (remixStance === 'con') {
           donation_target: donationEl.value,
           is_anonymous: document.getElementById('isAnonymous').checked,
           author_stance: remixStance,
-          status: 'draft',
-          moderation_status: 'pending'
+          status: 'draft',              // 🔒 고정
+          moderation_status: 'pending'  // 🔒 고정
         }])
         .select('id')
         .single();
@@ -231,7 +235,8 @@ if (remixStance === 'con') {
           description: descEl.value,
           donation_target: donationEl.value,
           is_anonymous: document.getElementById('isAnonymous').checked,
-          author_stance: remixStance
+          author_stance: remixStance,
+          status: 'draft' // 🔒 어떤 경우에도 변경 불가
         })
         .eq('id', draftId);
     }
@@ -284,13 +289,25 @@ if (remixStance === 'con') {
         ev.preventDefault();
         ev.stopPropagation();
 
+        // 🚫 중복 실행 방지
+        if (__PREVIEW_CLICKED__) return;
+        __PREVIEW_CLICKED__ = true;
+
+        // 🚫 이 단계에서는 절대 발행 금지
+        if (!__PREVIEW_ONLY__) {
+          alert('잘못된 접근입니다.');
+          return;
+        }
+
         const draftId = sessionStorage.getItem('writeDraftId');
         if (!draftId) {
           alert('임시 저장된 글이 없습니다.');
           return;
         }
+
+        // ✅ DB 변경 없이 confirm 로 이동만
         location.href = `confirm.html?draft=${draftId}`;
-      }, { once: true });
+      });
     }
 
     if (videoEl) {
@@ -321,4 +338,9 @@ if (remixStance === 'con') {
     speechModal.style.display = 'none';
     body.style.overflow = '';
   });
+
+// 🚫 preview 단계에서는 어떤 자동 발행도 금지
+window.addEventListener('beforeunload', () => {
+  __PREVIEW_ONLY__ = true;
+});
 });
