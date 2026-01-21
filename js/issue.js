@@ -502,11 +502,16 @@ async function goRemix(stance) {
       status: "draft",
       category: currentIssue.category,
       user_id: session.session.user.id,
+
+      // ✅ 입장은 author_stance 하나만 사용 (실제 존재하는 컬럼)
       author_stance: stance,
-      title: "",
-      one_line: "",
-      description: "",
-      donation_target: "",
+
+      // ✅ draft 생성 시 NULL 허용 컬럼은 아예 넣지 않음
+      title: null,
+      one_line: null,
+      description: null,
+      donation_target: null,
+
       moderation_status: "draft"
     })
     .select("id")
