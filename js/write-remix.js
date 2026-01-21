@@ -22,39 +22,45 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
-  /* ================= 나의 입장 (REMIX: 자동 선택 + 고정) ================= */
-  // HTML value 값이 'pro/con' 또는 '찬성/반대' 인 경우 모두 대응
+  /* ================= 나의 입장 (REMIX: UI 강제 반영) ================= */
+
+  // 실제 DOM 기준: 찬성/반대 라디오는 value가 없고 순서로만 구분됨
+  const stanceWrap = document.querySelector('.field-block');
   const stanceRadios = document.querySelectorAll(
-    'input[type="radio"][name="author_stance"]'
+    'input[type="radio"]'
   );
 
-  if (!stanceRadios || stanceRadios.length === 0) {
-    console.warn('[write-remix] author_stance radios not found → hidden input fallback');
-
-    // 🔥 라디오 UI가 없더라도 payload / submit 용 값은 반드시 유지
-    const hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.name = 'author_stance';
-    hidden.value = remixStance;
-    document.getElementById('writeForm')?.appendChild(hidden);
+  if (!stanceRadios || stanceRadios.length < 2) {
+    console.warn('[write-remix] stance radio inputs not found');
   } else {
-    stanceRadios.forEach(radio => {
-      const v = radio.value?.trim();
+    const proRadio = stanceRadios[0];
+    const conRadio = stanceRadios[1];
 
-      const isPro = v === 'pro' || v === '찬성' || v.includes('찬성');
-      const isCon = v === 'con' || v === '반대' || v.includes('반대');
+    if (remixStance === 'pro') {
+      proRadio.checked = true;
+      conRadio.checked = false;
+    }
 
-      if (remixStance === 'pro' && isPro) {
-        radio.checked = true;
-      }
+    if (remixStance === 'con') {
+      conRadio.checked = true;
+      proRadio.checked = false;
+    }
 
-      if (remixStance === 'con' && isCon) {
-        radio.checked = true;
-      }
+    // REMIX에서는 변경 불가
+    proRadio.disabled = true;
+    conRadio.disabled = true;
+  }
 
-      // REMIX 글에서는 입장 변경 불가
-      radio.disabled = true;
-    });
+  // payload 보존용 hidden input (confirm 단계 안전)
+  let hiddenStance = document.querySelector('input[name="author_stance"]');
+  if (!hiddenStance) {
+    hiddenStance = document.createElement('input');
+    hiddenStance.type = 'hidden';
+    hiddenStance.name = 'author_stance';
+    hiddenStance.value = remixStance;
+    document.getElementById('writeForm')?.appendChild(hiddenStance);
+  } else {
+    hiddenStance.value = remixStance;
   }
 
   const stanceBox = document.getElementById('remixStanceBox');
