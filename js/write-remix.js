@@ -22,6 +22,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
+  /* ================= 나의 입장 (REMIX: 자동 선택 + 선택 불가) ================= */
+  const proRadio = document.querySelector('input[value="pro"]');
+  const conRadio = document.querySelector('input[value="con"]');
+
+  if (proRadio && conRadio) {
+    if (remixStance === 'pro') {
+      proRadio.checked = true;
+      conRadio.checked = false;
+    }
+
+    if (remixStance === 'con') {
+      conRadio.checked = true;
+      proRadio.checked = false;
+    }
+
+    // 둘 다 선택 불가 (읽기 전용)
+    proRadio.disabled = true;
+    conRadio.disabled = true;
+  } else {
+    console.warn('[write-remix] author_stance radio inputs not found');
+  }
+
   /* ================= 나의 입장 (REMIX 고정 선택 + 비활성화) ================= */
   const stanceRadios = document.querySelectorAll('input[name="author_stance"]');
 
