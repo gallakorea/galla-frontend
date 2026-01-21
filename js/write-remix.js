@@ -91,6 +91,7 @@ if (remixStance === 'con') {
   const donationEl = document.getElementById('donationTarget'); // ✅ 추가
 
   let __PUBLISH_LOCK__ = false;
+  let __PREVIEW_BOUND__ = false;
 
   /* ================= CATEGORY LOCK (REMIX) ================= */
   categoryEl.value = remixContext.category;   // 원본 이슈 카테고리
@@ -291,105 +292,106 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = async () => {
-      if (__PUBLISH_LOCK__) return;
-      __PUBLISH_LOCK__ = true;
+    // Bind publishPreview click handler only once, never auto-firing on navigation/back
+    const publishBtn = document.getElementById('publishPreview');
+    if (!__PREVIEW_BOUND__ && publishBtn) {
+      __PREVIEW_BOUND__ = true;
+      publishBtn.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (__PUBLISH_LOCK__) return;
+        __PUBLISH_LOCK__ = true;
 
-      try {
-        const draftId = sessionStorage.getItem('writeDraftId');
-        if (!draftId) {
-          alert('임시 저장된 글이 없습니다.');
-          return;
-        }
+        try {
+          const draftId = sessionStorage.getItem('writeDraftId');
+          if (!draftId) {
+            alert('임시 저장된 글이 없습니다.');
+            return;
+          }
 
-        if (!window.supabaseClient) {
-          alert('Supabase 연결 실패');
-          return;
-        }
+          if (!window.supabaseClient) {
+            alert('Supabase 연결 실패');
+            return;
+          }
 
-        const { data: sessionData } =
-          await window.supabaseClient.auth.getSession();
-        const user = sessionData?.session?.user;
+          const { data: sessionData } =
+            await window.supabaseClient.auth.getSession();
+          const user = sessionData?.session?.user;
 
-        if (!user) {
-          alert('로그인이 필요합니다.');
-          return;
-        }
+          if (!user) {
+            alert('로그인이 필요합니다.');
+            return;
+          }
 
-        /* =========================
-           썸네일 / 비디오 업로드
-        ========================= */
-        let thumbnailUrl = null;
-        let videoUrl = null;
+          let thumbnailUrl = null;
+          let videoUrl = null;
 
-        if (thumbInput.files && thumbInput.files[0]) {
-          const file = thumbInput.files[0];
-          const ext = file.name.split('.').pop();
-          const path = `issues/${user.id}/thumb_${draftId}.${ext}`;
+          if (thumbInput.files && thumbInput.files[0]) {
+            const file = thumbInput.files[0];
+            const ext = file.name.split('.').pop();
+            const path = `issues/${user.id}/thumb_${draftId}.${ext}`;
 
-          await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, file, { upsert: true });
-
-          thumbnailUrl =
-            window.supabaseClient
+            await window.supabaseClient
               .storage
               .from('issues')
-              .getPublicUrl(path).data.publicUrl;
-        }
+              .upload(path, file, { upsert: true });
 
-        if (videoInput.files && videoInput.files[0]) {
-          const file = videoInput.files[0];
-          const ext = file.name.split('.').pop();
-          const path = `issues/${user.id}/video_${draftId}.${ext}`;
+            thumbnailUrl =
+              window.supabaseClient
+                .storage
+                .from('issues')
+                .getPublicUrl(path).data.publicUrl;
+          }
 
-          await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, file, { upsert: true });
+          if (videoInput.files && videoInput.files[0]) {
+            const file = videoInput.files[0];
+            const ext = file.name.split('.').pop();
+            const path = `issues/${user.id}/video_${draftId}.${ext}`;
 
-          videoUrl =
-            window.supabaseClient
+            await window.supabaseClient
               .storage
               .from('issues')
-              .getPublicUrl(path).data.publicUrl;
+              .upload(path, file, { upsert: true });
+
+            videoUrl =
+              window.supabaseClient
+                .storage
+                .from('issues')
+                .getPublicUrl(path).data.publicUrl;
+          }
+
+          const { error: updateError } =
+            await window.supabaseClient
+              .from('issues')
+              .update({
+                title: titleEl.value,
+                one_line: oneLineEl.value,
+                description: descEl.value,
+                donation_target: donationEl.value,
+                is_anonymous: anon,
+                thumbnail_url: thumbnailUrl,
+                video_url: videoUrl,
+                status: 'draft',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', draftId);
+
+          if (updateError) {
+            console.error('[draft update failed]', updateError);
+            alert('임시 저장 실패');
+            return;
+          }
+
+          window.__ALLOW_DRAFT_EXIT__ = true;
+          location.href = `confirm.html?draft=${draftId}`;
+        } catch (err) {
+          console.error('[publishPreview error]', err);
+          alert('임시 저장 중 오류 발생');
+        } finally {
+          __PUBLISH_LOCK__ = false;
         }
-
-        /* =========================
-           draft UPDATE (절대 INSERT X)
-        ========================= */
-        const { error: updateError } =
-          await window.supabaseClient
-            .from('issues')
-            .update({
-              title: titleEl.value,
-              one_line: oneLineEl.value,
-              description: descEl.value,
-              donation_target: donationEl.value,
-              is_anonymous: anon,
-              thumbnail_url: thumbnailUrl,
-              video_url: videoUrl,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', draftId);
-
-        if (updateError) {
-          console.error('[draft update failed]', updateError);
-          alert('임시 저장 실패');
-          return;
-        }
-
-        window.__ALLOW_DRAFT_EXIT__ = true;
-        location.href = `confirm.html?draft=${draftId}`;
-
-      } catch (e) {
-        console.error('[publishPreview fatal]', e);
-        alert('임시 저장 중 오류 발생');
-      } finally {
-        __PUBLISH_LOCK__ = false;
-      }
-    };
+      });
+    }
 
     if (videoEl) {
       document.getElementById('openSpeech').onclick = () => {
