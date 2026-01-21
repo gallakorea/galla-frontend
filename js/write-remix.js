@@ -24,18 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ================= 나의 입장 (REMIX: UI 강제 반영) ================= */
 
-  // 실제 DOM 기준: 찬성/반대 라디오는 value가 없고 순서로만 구분됨
-  const stanceWrap = document.querySelector('.field-block');
-  const stanceRadios = document.querySelectorAll(
-    'input[type="radio"]'
+  // ✅ value 기반으로 정확히 선택 (순서 의존 제거)
+  const proRadio = document.querySelector(
+    'input[name="author_stance"][value="pro"]'
+  );
+  const conRadio = document.querySelector(
+    'input[name="author_stance"][value="con"]'
   );
 
-  if (!stanceRadios || stanceRadios.length < 2) {
-    console.warn('[write-remix] stance radio inputs not found');
+  if (!proRadio || !conRadio) {
+    console.warn('[write-remix] author_stance radio not found');
   } else {
-    const proRadio = stanceRadios[0];
-    const conRadio = stanceRadios[1];
-
     if (remixStance === 'pro') {
       proRadio.checked = true;
       conRadio.checked = false;
@@ -46,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
       proRadio.checked = false;
     }
 
-    // REMIX에서는 변경 불가
+    // 🔒 REMIX에서는 변경 불가
     proRadio.disabled = true;
     conRadio.disabled = true;
   }
