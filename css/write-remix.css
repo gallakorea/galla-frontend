@@ -1402,3 +1402,36 @@ select.locked {
   padding: 16px;
   margin-bottom: 18px;
 }
+
+/* ===============================
+   ONE-LINE BELOW — STANCE DISPLAY
+================================ */
+
+/* 한줄 요약 바로 아래에 표시되는 입장 */
+.one-line-stance {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 찬성 */
+.one-line-stance.pro {
+  color: #4da3ff;
+}
+
+/* 반대 */
+.one-line-stance.con {
+  color: #ff5a5a;
+}
+
+/* ❌ 입장 선택 UI 전부 숨김 (라디오 버튼 영역) */
+.stance-select,
+.stance-radio-group,
+.stance-radio,
+.stance-field,
+.stance-option {
+  display: none !important;
+}
