@@ -1,7 +1,6 @@
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
-  window.__IS_PUBLISHING__ = false;
   const body = document.body;
 
     /* ================= REMIX CONTEXT (고정값) ================= */
@@ -16,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
     !remixContext.category
   ) {
     alert('잘못된 접근입니다.');
-    location.href = 'index.html';
     return;
   }
 
@@ -181,7 +179,7 @@ if (remixStance === 'con') {
   });
 
   /* ================= PREVIEW ================= */
-  form.addEventListener('submit', e => {
+  form.addEventListener('submit', async e => {
     e.preventDefault();
 
     if (!titleEl.value) {
@@ -200,6 +198,56 @@ if (remixStance === 'con') {
       alert('기부처를 선택해주세요');
       donationEl.focus();
       return;
+    }
+
+    // =========================
+    // ENSURE DRAFT EXISTS (ONCE)
+    // =========================
+    let draftId = sessionStorage.getItem('writeDraftId');
+
+    if (!draftId) {
+      if (!window.supabaseClient) {
+        alert('Supabase 연결 실패');
+        return;
+      }
+
+      const { data: sessionData } =
+        await window.supabaseClient.auth.getSession();
+      const user = sessionData?.session?.user;
+
+      if (!user) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const { data: newDraft, error: insertError } =
+        await window.supabaseClient
+          .from('issues')
+          .insert([{
+            user_id: user.id,
+            category: remixContext.category,
+            title: titleEl.value,
+            one_line: oneLineEl.value,
+            description: descEl.value,
+            donation_target: donationEl.value,
+            is_anonymous: document.getElementById('isAnonymous').checked,
+            author_stance: remixStance,
+            status: 'draft',
+            moderation_status: 'pending',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select('id')
+          .single();
+
+      if (insertError || !newDraft?.id) {
+        console.error('[draft create failed]', insertError);
+        alert('임시 저장 실패');
+        return;
+      }
+
+      draftId = newDraft.id;
+      sessionStorage.setItem('writeDraftId', draftId);
     }
 
     const anon = document.getElementById('isAnonymous').checked;
@@ -248,6 +296,12 @@ if (remixStance === 'con') {
       __PUBLISH_LOCK__ = true;
 
       try {
+        const draftId = sessionStorage.getItem('writeDraftId');
+        if (!draftId) {
+          alert('임시 저장된 글이 없습니다.');
+          return;
+        }
+
         if (!window.supabaseClient) {
           alert('Supabase 연결 실패');
           return;
@@ -262,15 +316,9 @@ if (remixStance === 'con') {
           return;
         }
 
-        // ✅ draftId는 반드시 기존 값만 사용 (INSERT 금지)
-        const draftId = sessionStorage.getItem('writeDraftId');
-
-        if (!draftId) {
-          alert('임시 저장된 글이 없습니다.');
-          return;
-        }
-
-        // ✅ 썸네일 / 비디오 업로드 (draft 기준)
+        /* =========================
+           썸네일 / 비디오 업로드
+        ========================= */
         let thumbnailUrl = null;
         let videoUrl = null;
 
@@ -308,17 +356,23 @@ if (remixStance === 'con') {
               .getPublicUrl(path).data.publicUrl;
         }
 
-        // ✅ draft UPDATE만 수행 (발행 아님)
+        /* =========================
+           draft UPDATE (절대 INSERT X)
+        ========================= */
         const { error: updateError } =
           await window.supabaseClient
             .from('issues')
             .update({
+              title: titleEl.value,
+              one_line: oneLineEl.value,
+              description: descEl.value,
+              donation_target: donationEl.value,
+              is_anonymous: anon,
               thumbnail_url: thumbnailUrl,
               video_url: videoUrl,
               updated_at: new Date().toISOString()
             })
-            .eq('id', draftId)
-            .eq('status', 'draft');
+            .eq('id', draftId);
 
         if (updateError) {
           console.error('[draft update failed]', updateError);
@@ -326,7 +380,6 @@ if (remixStance === 'con') {
           return;
         }
 
-        // ✅ confirm 이동만 수행 (절대 발행 X)
         window.__ALLOW_DRAFT_EXIT__ = true;
         location.href = `confirm.html?draft=${draftId}`;
 
