@@ -246,13 +246,13 @@ if (remixStance === 'con') {
     };
 
     document.getElementById('publishPreview').onclick = () => {
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
-      const isDraftMode = window.__DRAFT_MODE__ === true;
-
-      if (isDraftMode) {
-        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
+      if (!incomingDraftId) {
+        alert('draft id가 없습니다.');
         return;
       }
+
+      // 🔥 REMIX는 draft 기반 confirm 이동이 정상 동작
+      window.__ALLOW_DRAFT_EXIT__ = true;
 
       const payload = {
         category: remixContext.category,

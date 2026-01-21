@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const publishBtn = document.getElementById('publishBtn');
 
   if (!draftId) {
-    alert('임시 저장된 글이 없습니다.');
-    location.href = 'write.html';
+    alert('draft id가 없습니다.');
+    location.href = 'index.html';
     return;
   }
 
@@ -59,8 +59,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     .single();
 
   if (error || !draft) {
-    alert('임시 글을 불러오지 못했습니다.');
-    location.href = 'write.html';
+    alert('draft를 불러오지 못했습니다.');
+    location.href = 'index.html';
     return;
   }
 
@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      뒤로가기
   ===================== */
   backBtn.onclick = () => {
-    location.href = `write.html?draft=${draftId}`;
+    location.href = `write-remix.html?draft=${draftId}`;
   };
 
   /* =====================
