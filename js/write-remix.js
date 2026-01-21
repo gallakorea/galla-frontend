@@ -259,10 +259,6 @@ if (remixStance === 'con') {
               // 입장 (필수)
               author_stance: remixStance,
 
-              // 🔥 REMIX 필수 필드 (누락 원인)
-              remix_stance: remixStance,
-              is_remix: true,
-
               // 상태
               status: 'draft',
               moderation_status: 'pending',
