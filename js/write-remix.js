@@ -264,7 +264,7 @@ if (remixStance === 'con') {
       }
 
       // confirm 페이지 이동
-      location.href = `confirm.remix.html?draft=${draftId}`;
+      location.href = `confirm.html?draft=${draftId}`;
     };
 
     if (videoEl) {
