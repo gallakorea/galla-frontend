@@ -38,25 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
   /* ===============================
-     LEGACY STANCE VALIDATION BYPASS
-     (radio-based checks compatibility)
+     LEGACY STANCE VALIDATION FIX
+     (실제 radio DOM 구조 주입)
   ================================ */
-  (function injectHiddenStanceRadio() {
+  (function injectLegacyStanceField() {
     try {
-      // If any legacy validator checks radio[name="stance"]:checked,
-      // inject a hidden, checked radio to satisfy it.
-      const existing = document.querySelector('input[name="stance"]:checked');
-      if (existing) return;
+      // 이미 있으면 중복 생성 금지
+      if (document.querySelector('.stance-field')) return;
 
-      const hiddenRadio = document.createElement('input');
-      hiddenRadio.type = 'radio';
-      hiddenRadio.name = 'stance';
-      hiddenRadio.value = remixStance; // 'pro' | 'con'
-      hiddenRadio.checked = true;
-      hiddenRadio.style.display = 'none';
-      document.body.appendChild(hiddenRadio);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'stance-field';
+      wrapper.style.display = 'none'; // UI에는 안 보이게
+
+      wrapper.innerHTML = `
+        <label class="stance-option">
+          <input type="radio" name="stance" value="pro" />
+          찬성
+        </label>
+        <label class="stance-option">
+          <input type="radio" name="stance" value="con" />
+          반대
+        </label>
+      `;
+
+      document.body.appendChild(wrapper);
+
+      const target = wrapper.querySelector(
+        `input[value="${remixStance}"]`
+      );
+      if (target) target.checked = true;
+
     } catch (e) {
-      console.warn('[write-remix] hidden stance radio inject failed', e);
+      console.warn('[write-remix] legacy stance inject failed', e);
     }
   })();
 
