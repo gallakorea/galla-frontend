@@ -1,3 +1,18 @@
+// 🔥 GLOBAL STANCE PRE-INJECT (runs BEFORE DOMContentLoaded)
+(function () {
+  try {
+    const ctxRaw = sessionStorage.getItem('remixContext');
+    if (!ctxRaw) return;
+    const ctx = JSON.parse(ctxRaw);
+    if (ctx && ctx.remix_stance) {
+      // confirm / draft 검증에서 참조하는 전역 플래그
+      window.__SELECTED_STANCE__ = ctx.remix_stance; // 'pro' | 'con'
+    }
+  } catch (e) {
+    console.warn('[write-remix] stance pre-inject failed', e);
+  }
+})();
+
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
