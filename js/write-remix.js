@@ -242,6 +242,64 @@ if (remixStance === 'con') {
           return;
         }
 
+        /* =========================
+           THUMBNAIL / VIDEO UPLOAD
+        ========================= */
+        let thumbnailUrl = null;
+        let videoUrl = null;
+
+        // 썸네일 업로드
+        if (thumbInput.files && thumbInput.files[0]) {
+          const file = thumbInput.files[0];
+          const ext = file.name.split('.').pop();
+          const path = `issues/${user.id}/thumb_${crypto.randomUUID()}.${ext}`;
+
+          const { error: uploadError } =
+            await window.supabaseClient
+              .storage
+              .from('issues')
+              .upload(path, file, { upsert: false });
+
+          if (uploadError) {
+            console.error('[thumbnail upload error]', uploadError);
+            throw uploadError;
+          }
+
+          const { data: publicData } =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path);
+
+          thumbnailUrl = publicData.publicUrl;
+        }
+
+        // 영상 업로드
+        if (videoInput.files && videoInput.files[0]) {
+          const file = videoInput.files[0];
+          const ext = file.name.split('.').pop();
+          const path = `issues/${user.id}/video_${crypto.randomUUID()}.${ext}`;
+
+          const { error: uploadError } =
+            await window.supabaseClient
+              .storage
+              .from('issues')
+              .upload(path, file, { upsert: false });
+
+          if (uploadError) {
+            console.error('[video upload error]', uploadError);
+            throw uploadError;
+          }
+
+          const { data: publicData } =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path);
+
+          videoUrl = publicData.publicUrl;
+        }
+
         const { data: draft, error } =
           await window.supabaseClient
             .from('issues')
@@ -258,6 +316,9 @@ if (remixStance === 'con') {
 
               // 입장 (필수)
               author_stance: remixStance,
+
+              thumbnail_url: thumbnailUrl,
+              video_url: videoUrl,
 
               // 상태
               status: 'draft',
