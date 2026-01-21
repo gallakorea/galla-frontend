@@ -22,6 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
+  /* ================= 나의 입장 (REMIX 고정 선택 + 비활성화) ================= */
+  const stanceRadios = document.querySelectorAll('input[name="author_stance"]');
+
+  stanceRadios.forEach(radio => {
+    // remix에서 선택된 입장만 체크
+    if (radio.value === remixStance) {
+      radio.checked = true;
+    }
+    // 모든 입장 선택 불가 처리
+    radio.disabled = true;
+  });
+
   /* ================= 나의 입장 (REMIX 고정 표시) ================= */
   const fixedStanceGroup = document.getElementById('fixedStanceGroup');
   if (fixedStanceGroup && remixStance) {
