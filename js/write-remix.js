@@ -168,9 +168,19 @@ if (remixStance === 'con') {
     body.style.overflow = '';
   });
 
-  /* ================= PREVIEW ================= */
-  form.addEventListener('submit', async e => {
+  /* ================= HARD SUBMIT GUARD ================= */
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    return false;
+  });
+
+  /* ================= PREVIEW BUTTON HANDLER ================= */
+  const previewBtn = document.getElementById('previewBtn');
+
+  previewBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
     if (!titleEl.value) {
       alert('제목을 입력해주세요');
@@ -189,8 +199,6 @@ if (remixStance === 'con') {
       donationEl.focus();
       return;
     }
-
-    // Removed DB INSERT / UPDATE calls per instructions
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
@@ -233,28 +241,13 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // Updated publishPreview click handler per instructions
     const publishBtn = document.getElementById('publishPreview');
-    if (publishBtn) {
-      publishBtn.onclick = (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-
-        // 🚫 여기서는 절대 DB 접근 금지
-        const draftId = sessionStorage.getItem('writeDraftId');
-
-        // draftId가 없어도 발행은 절대 안 됨
-        location.href = draftId
-          ? `confirm.html?draft=${draftId}`
-          : `confirm.html`;
-      };
-    }
-
-    if (videoEl) {
-      document.getElementById('openSpeech').onclick = () => {
-        openSpeech(videoEl.src);
-      };
-    }
+    publishBtn.onclick = (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      // ❗ 여기서는 절대 DB 작업 없음
+      location.href = 'confirm.html';
+    };
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
   });
