@@ -247,17 +247,26 @@ if (remixStance === 'con') {
             .from('issues')
             .insert([{
               user_id: user.id,
+
+              // 기본 콘텐츠
               category: remixContext.category,
               title: titleEl.value,
               one_line: oneLineEl.value,
               description: descEl.value,
               donation_target: donationEl.value,
               is_anonymous: anon,
+
+              // 입장 (필수)
               author_stance: remixStance,
+
+              // 🔥 REMIX 필수 필드 (누락 원인)
               remix_stance: remixStance,
-              remix_origin_issue_id: remixOriginIssueId,
+              is_remix: true,
+
+              // 상태
               status: 'draft',
               moderation_status: 'pending',
+
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }])
