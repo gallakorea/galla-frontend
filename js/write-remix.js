@@ -242,32 +242,6 @@ if (remixStance === 'con') {
           return;
         }
 
-        // 🔥 THUMBNAIL UPLOAD (REMIX)
-        const thumbFile = document.getElementById('thumbnail')?.files?.[0] || null;
-        let thumbnail_url = null;
-
-        if (thumbFile) {
-          const ext = thumbFile.name.split('.').pop();
-          const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
-
-          const { error: uploadError } =
-            await window.supabaseClient
-              .storage
-              .from('issues')
-              .upload(path, thumbFile, { upsert: false });
-
-          if (uploadError) {
-            console.error('[write-remix] thumbnail upload failed', uploadError);
-            throw uploadError;
-          }
-
-          thumbnail_url =
-            window.supabaseClient
-              .storage
-              .from('issues')
-              .getPublicUrl(path).data.publicUrl;
-        }
-
         const { data: draft, error } =
           await window.supabaseClient
             .from('issues')
@@ -284,9 +258,6 @@ if (remixStance === 'con') {
 
               // 입장 (필수)
               author_stance: remixStance,
-
-              // 썸네일 (🔥 추가)
-              thumbnail_url: thumbnail_url,
 
               // 상태
               status: 'draft',
