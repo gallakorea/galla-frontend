@@ -190,56 +190,7 @@ if (remixStance === 'con') {
       return;
     }
 
-    // Ensure draft exists or update draft before preview rendering
-    let draftId = sessionStorage.getItem('writeDraftId');
-
-    if (!draftId) {
-      const { data: sessionData } =
-        await window.supabaseClient.auth.getSession();
-      const user = sessionData?.session?.user;
-
-      if (!user) {
-        alert('로그인이 필요합니다.');
-        return;
-      }
-
-      const { data, error } = await window.supabaseClient
-        .from('issues')
-        .insert([{
-          user_id: user.id,
-          category: categoryEl.value,
-          title: titleEl.value,
-          one_line: oneLineEl.value,
-          description: descEl.value,
-          donation_target: donationEl.value,
-          is_anonymous: document.getElementById('isAnonymous').checked,
-          author_stance: remixStance,
-          status: 'draft',              // 🔒 고정
-          moderation_status: 'pending'  // 🔒 고정
-        }])
-        .select('id')
-        .single();
-      if (error) {
-        alert('임시 저장 중 오류가 발생했습니다.');
-        return;
-      }
-      sessionStorage.setItem('writeDraftId', data.id);
-      draftId = data.id;
-    } else {
-      await window.supabaseClient
-        .from('issues')
-        .update({
-          category: categoryEl.value,
-          title: titleEl.value,
-          one_line: oneLineEl.value,
-          description: descEl.value,
-          donation_target: donationEl.value,
-          is_anonymous: document.getElementById('isAnonymous').checked,
-          author_stance: remixStance,
-          status: 'draft' // 🔒 어떤 경우에도 변경 불가
-        })
-        .eq('id', draftId);
-    }
+    // Removed DB INSERT / UPDATE calls per instructions
 
     const anon = document.getElementById('isAnonymous').checked;
     const thumbImg = thumbPreview.querySelector('img');
@@ -285,29 +236,18 @@ if (remixStance === 'con') {
     // Updated publishPreview click handler per instructions
     const publishBtn = document.getElementById('publishPreview');
     if (publishBtn) {
-      publishBtn.addEventListener('click', ev => {
+      publishBtn.onclick = (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
 
-        // 🚫 중복 실행 방지
-        if (__PREVIEW_CLICKED__) return;
-        __PREVIEW_CLICKED__ = true;
-
-        // 🚫 이 단계에서는 절대 발행 금지
-        if (!__PREVIEW_ONLY__) {
-          alert('잘못된 접근입니다.');
-          return;
-        }
-
+        // 🚫 여기서는 절대 DB 접근 금지
         const draftId = sessionStorage.getItem('writeDraftId');
-        if (!draftId) {
-          alert('임시 저장된 글이 없습니다.');
-          return;
-        }
 
-        // ✅ DB 변경 없이 confirm 로 이동만
-        location.href = `confirm.html?draft=${draftId}`;
-      });
+        // draftId가 없어도 발행은 절대 안 됨
+        location.href = draftId
+          ? `confirm.html?draft=${draftId}`
+          : `confirm.html`;
+      };
     }
 
     if (videoEl) {
