@@ -1443,3 +1443,17 @@ select.locked {
 .radio-group input[type="radio"]:checked + label {
   opacity: 1;
 }
+
+/* 🔥 JS에서 강제 주입한 active 상태를 실제로 보이게 */
+label.active,
+.stance-option.active {
+  opacity: 1 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+/* 선택 안 된 쪽은 더 확실히 흐리게 */
+label:not(.active),
+.stance-option:not(.active) {
+  opacity: 0.35;
+}
