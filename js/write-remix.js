@@ -227,61 +227,23 @@ if (remixStance === 'con') {
     };
 
     document.getElementById('publishPreview').onclick = async () => {
-      try {
-        if (!window.supabaseClient) {
-          alert('Supabase 연결 실패');
-          return;
-        }
+      const thumbImg = document.querySelector('#thumbPreview img');
+      const thumbnailSrc = thumbImg ? thumbImg.src : null;
 
-        const { data: sessionData } =
-          await window.supabaseClient.auth.getSession();
-        const user = sessionData?.session?.user;
+      const payload = {
+        category: remixContext.category,
+        title: titleEl.value,
+        oneLine: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: anon,
+        author_stance: remixStance,
+        thumbnail_src: thumbnailSrc
+      };
 
-        if (!user) {
-          alert('로그인이 필요합니다.');
-          return;
-        }
-
-        const { data: draft, error } =
-          await window.supabaseClient
-            .from('issues')
-            .insert([{
-              user_id: user.id,
-
-              // 기본 콘텐츠
-              category: remixContext.category,
-              title: titleEl.value,
-              one_line: oneLineEl.value,
-              description: descEl.value,
-              donation_target: donationEl.value,
-              is_anonymous: anon,
-
-              // 입장 (필수)
-              author_stance: remixStance,
-
-              // 상태
-              status: 'draft',
-              moderation_status: 'pending',
-
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }])
-            .select('id')
-            .single();
-
-        if (error || !draft?.id) {
-          console.error('[write-remix] draft insert failed', error);
-          alert('임시 저장에 실패했습니다.');
-          return;
-        }
-
-        window.__ALLOW_DRAFT_EXIT__ = true;
-        location.href = `confirm.html?draft=${draft.id}`;
-
-      } catch (e) {
-        console.error('[write-remix] publishPreview error', e);
-        alert('임시 저장 중 오류가 발생했습니다.');
-      }
+      sessionStorage.setItem('writePayload', JSON.stringify(payload));
+      window.__ALLOW_DRAFT_EXIT__ = true;
+      location.href = 'confirm.html';
     };
 
     if (videoEl) {
