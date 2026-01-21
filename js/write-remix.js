@@ -19,57 +19,56 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 🔥 REMIX는 반드시 draft 기반
-  const urlParams = new URLSearchParams(location.search);
-  const incomingDraftId = urlParams.get('draft');
-
-  if (!incomingDraftId) {
-    alert('draft id가 없습니다.');
-    location.href = 'write.html';
-    return;
-  }
-
-  // 전역 draft 모드 명시
-  window.__DRAFT_MODE__ = true;
-  window.__ALLOW_DRAFT_EXIT__ = true;
-
-  sessionStorage.setItem('writeDraftId', incomingDraftId);
-
   // 🔒 이 페이지에서는 "읽기 전용"
   const remixStance = remixContext.remix_stance; // 'pro' | 'con'
 
-  /* ================= 나의 입장 (REMIX: 고정 표시 전용) ================= */
+  /* ================= 나의 입장 (REMIX: UI + VISUAL 강제 반영) ================= */
 
-  const fixedStanceBox = document.getElementById('fixedStanceDisplay');
+  const stanceRadios = document.querySelectorAll('input[name="author_stance"]');
+  const stanceLabels = stanceRadios ? Array.from(stanceRadios).map(r => r.closest('label')) : [];
 
-  if (fixedStanceBox) {
-    if (remixStance === 'pro') {
-      fixedStanceBox.className = 'fixed-stance-display pro';
-      fixedStanceBox.textContent = '👍 찬성';
-    } else if (remixStance === 'con') {
-      fixedStanceBox.className = 'fixed-stance-display con';
-      fixedStanceBox.textContent = '👎 반대';
-    }
+  let proRadio = null;
+  let conRadio = null;
+
+  stanceRadios.forEach(radio => {
+    if (radio.value === 'pro') proRadio = radio;
+    if (radio.value === 'con') conRadio = radio;
+  });
+
+  if (!proRadio || !conRadio) {
+    console.warn('[write-remix] author_stance radios not found');
   } else {
-    const stanceField = document.querySelector('.field-block label.field-label')?.closest('.field-block');
-    if (stanceField) {
-      stanceField.innerHTML = `
-        <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
-        <div id="fixedStanceDisplay" class="fixed-stance-display"></div>
-        <p class="guide-text">
-          이 입장은 이슈 참전 시 선택한 입장으로 고정됩니다.
-        </p>
-      `;
+    if (remixStance === 'pro') {
+      proRadio.checked = true;
+      conRadio.checked = false;
+    }
+
+    if (remixStance === 'con') {
+      conRadio.checked = true;
+      proRadio.checked = false;
+    }
+
+    // 🔒 REMIX에서는 변경 불가
+    proRadio.disabled = true;
+    conRadio.disabled = true;
+
+    // 🔥 시각적 선택 강제 (CSS 의존 제거)
+    stanceLabels.forEach(label => label.classList.remove('active'));
+    if (remixStance === 'pro' && proRadio.closest('label')) {
+      proRadio.closest('label').classList.add('active');
+    }
+    if (remixStance === 'con' && conRadio.closest('label')) {
+      conRadio.closest('label').classList.add('active');
     }
   }
 
-  // confirm / payload 전달용 hidden input
+  // 🔥 confirm 단계용 payload 보존 (radio disabled 대응)
   let hiddenStance = document.querySelector('input[type="hidden"][name="author_stance"]');
   if (!hiddenStance) {
     hiddenStance = document.createElement('input');
     hiddenStance.type = 'hidden';
     hiddenStance.name = 'author_stance';
-    document.getElementById('writeForm').appendChild(hiddenStance);
+    document.getElementById('writeForm')?.appendChild(hiddenStance);
   }
   hiddenStance.value = remixStance;
 
@@ -133,7 +132,7 @@ if (remixStance === 'con') {
 
   /* ✅🔥 핵심 수정: 클릭 시 value 초기화 */
   videoBtn.addEventListener('click', () => {
-    videoInput.value = null;   // ← 이 한 줄이 전부
+    videoInput.value = '';   // ← 이 한 줄이 전부
     videoInput.click();
   });
 
@@ -246,13 +245,13 @@ if (remixStance === 'con') {
     };
 
     document.getElementById('publishPreview').onclick = () => {
-      if (!incomingDraftId) {
-        alert('draft id가 없습니다.');
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+      const isDraftMode = window.__DRAFT_MODE__ === true;
+
+      if (isDraftMode) {
+        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
         return;
       }
-
-      // 🔥 REMIX는 draft 기반 confirm 이동이 정상 동작
-      window.__ALLOW_DRAFT_EXIT__ = true;
 
       const payload = {
         category: remixContext.category,
@@ -262,15 +261,21 @@ if (remixStance === 'con') {
         donation_target: donationEl.value,
         is_anonymous: anon,
 
-        author_stance: remixStance,
+        author_stance: remixStance,        // 🔥 반드시 추가
         remix_stance: remixStance,
-        remix_origin_issue_id: remixOriginIssueId,
-        draft_id: incomingDraftId
+        remix_origin_issue_id: remixOriginIssueId
       };
 
       sessionStorage.setItem('writePayload', JSON.stringify(payload));
+      const params = new URLSearchParams(location.search);
+      const draftId = params.get('draft');
 
-      location.href = `confirm.remix.html?draft=${incomingDraftId}`;
+      if (!draftId) {
+        alert('draft id가 없습니다.');
+        return;
+      }
+
+      location.href = `confirm.remix.html?draft=${draftId}`;
     };
 
     if (videoEl) {

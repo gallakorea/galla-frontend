@@ -1,6 +1,6 @@
-// js/confirm.js
+// js/confirm.remix.js
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[confirm.js] Loaded');
+  console.log('[confirm.remix.js] Loaded');
 
   /* =====================
      Supabase client 대기
@@ -8,9 +8,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const waitForSupabase = () =>
     new Promise(resolve => {
       const t = setInterval(() => {
-        if (window.supabaseClient) {
+        if (window.supabase) {
           clearInterval(t);
-          resolve(window.supabaseClient);
+          resolve(window.supabase);
         }
       }, 20);
     });
@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* =====================
      🔐 세션 확인
   ===================== */
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
 
   if (!user) {
     alert('로그인이 필요합니다.');
@@ -43,13 +43,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const publishBtn = document.getElementById('publishBtn');
 
   if (!draftId) {
-    alert('draft id가 없습니다.');
+    alert('임시 저장된 글이 없습니다.');
     location.href = 'index.html';
     return;
   }
 
   /* =====================
-     draft 로드
+     draft 로드 (REMIX 전용)
   ===================== */
   const { data: draft, error } = await supabase
     .from('issues')
@@ -59,7 +59,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     .single();
 
   if (error || !draft) {
-    alert('draft를 불러오지 못했습니다.');
+    alert('임시 글을 불러오지 못했습니다.');
+    location.href = 'index.html';
+    return;
+  }
+
+  // ✅ REMIX confirm 단계에서는 draft 존재만 확인한다
+  // (remix_stance / remix_origin_issue_id 는 DB 컬럼이 아니며 여기서 검사하면 안 됨)
+  if (!draft) {
+    alert('리믹스 임시글을 불러올 수 없습니다.');
     location.href = 'index.html';
     return;
   }
@@ -74,14 +82,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   publishBtn.disabled = false;
 
   /* =====================
-     뒤로가기
+     뒤로가기 → write-remix
   ===================== */
   backBtn.onclick = () => {
     location.href = `write-remix.html?draft=${draftId}`;
   };
 
   /* =====================
-     🔥 최종 발행 (미디어 이동 포함)
+     🔥 최종 발행
   ===================== */
   publishBtn.onclick = async () => {
     publishBtn.disabled = true;
