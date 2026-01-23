@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="./css/write-remix.css" />
 </head>
 
-<body>
+<body data-page="write-remix">
 <div class="app-root">
 
   <header class="header">
@@ -215,6 +215,18 @@
         </div>
 
       </form>
+      <script>
+        // 🔒 HARD BLOCK: prevent legacy write.js publish on remix page
+        (function () {
+          const form = document.getElementById('writeForm');
+          if (!form) return;
+          form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+          }, true); // capture phase
+        })();
+      </script>
 
 
       <!-- ✅ 미리보기 렌더 영역 -->
