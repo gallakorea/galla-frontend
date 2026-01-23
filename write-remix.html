@@ -211,20 +211,47 @@
 
         <!-- 미리보기 -->
         <div class="field-block">
+          <script>
+            // allow exactly one remix preview submit
+            document.getElementById('writeForm')?.addEventListener(
+              'submit',
+              () => {
+                window.__ALLOW_REMIX_PREVIEW__ = true;
+                setTimeout(() => {
+                  window.__ALLOW_REMIX_PREVIEW__ = false;
+                }, 0);
+              },
+              false
+            );
+          </script>
           <button type="submit" class="primary-btn">미리보기</button>
         </div>
 
       </form>
       <script>
-        // 🔒 HARD BLOCK: prevent legacy write.js publish on remix page
+        // 🔒 HARD BLOCK (REMIX SAFE):
+        // - allow remix preview submit handler
+        // - block legacy write.js / auto-publish handlers only
         (function () {
           const form = document.getElementById('writeForm');
           if (!form) return;
-          form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            return false;
-          }, true); // capture phase
+
+          form.addEventListener(
+            'submit',
+            function (e) {
+              // ❗ if this submit was triggered by remix preview logic,
+              // do NOT block it
+              if (window.__ALLOW_REMIX_PREVIEW__ === true) {
+                return;
+              }
+
+              // otherwise hard-block legacy handlers
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return false;
+            },
+            true // capture phase
+          );
         })();
       </script>
 
