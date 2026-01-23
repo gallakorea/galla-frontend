@@ -26,6 +26,9 @@ document.addEventListener(
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 🔥 REMIX DRAFT FILE CACHE (미리보기 후에도 파일 유지)
+  let __REMIX_THUMB_FILE__ = null;
+  let __REMIX_VIDEO_FILE__ = null;
   const body = document.body;
 
     /* ================= REMIX CONTEXT (고정값) ================= */
@@ -180,6 +183,8 @@ if (remixStance === 'con') {
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
+
+    __REMIX_THUMB_FILE__ = f; // 🔥 캐시
     thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
   });
 
@@ -198,14 +203,14 @@ if (remixStance === 'con') {
     const f = e.target.files[0];
     if (!f) return;
 
-    videoPreview.innerHTML = '';
+    __REMIX_VIDEO_FILE__ = f; // 🔥 캐시
 
+    videoPreview.innerHTML = '';
     const video = document.createElement('video');
     video.src = URL.createObjectURL(f);
     video.muted = true;
     video.controls = true;
     video.playsInline = true;
-
     video.load();
     videoPreview.appendChild(video);
   });
@@ -333,7 +338,9 @@ if (remixStance === 'con') {
         let thumbnail_url = null;
         let video_url = null;
 
-        const thumbFile = document.getElementById('thumbnail')?.files?.[0];
+        const thumbFile =
+          document.getElementById('thumbnail')?.files?.[0] ||
+          __REMIX_THUMB_FILE__;
         if (thumbFile) {
           const ext = thumbFile.name.split('.').pop();
           const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
@@ -352,7 +359,9 @@ if (remixStance === 'con') {
               .getPublicUrl(path).data.publicUrl;
         }
 
-        const videoFile = document.getElementById('video')?.files?.[0];
+        const videoFile =
+          document.getElementById('video')?.files?.[0] ||
+          __REMIX_VIDEO_FILE__;
         if (videoFile) {
           const ext = videoFile.name.split('.').pop();
           const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
