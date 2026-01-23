@@ -302,13 +302,25 @@ if (remixStance === 'con') {
     document.getElementById('checkOnlyPreview').onclick = (e) => {
       e.preventDefault();
 
-      // 검사 전용 플래그 세팅
+      // 🔒 검사 전용 플래그
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
-      console.log('[CHECK ONLY] 검사 전용 — 이벤트 버블링으로 draft.save.js 처리');
+      console.log('[CHECK ONLY] 검사 전용 — draft.save.js 트리거');
 
-      // 중요: 아무 버튼도 직접 클릭하지 말고 버블링만 허용
+      // ✅ draft.save.js가 감지하는 publishPreview 버튼이 실제로 없어서 이동이 안 됐음
+      // 해결: issuePreview 내부에 임시 publishPreview 버튼을 만들어 클릭
+      let fake = document.getElementById('publishPreview');
+      if (!fake) {
+        fake = document.createElement('button');
+        fake.id = 'publishPreview';
+        fake.type = 'button';
+        fake.style.display = 'none';
+        issuePreview.appendChild(fake);
+      }
+
+      // 🔥 draft.save.js의 이벤트 위임 로직을 정확히 타게 함
+      fake.click();
     };
 
     if (videoEl) {
