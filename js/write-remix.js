@@ -303,11 +303,14 @@ if (remixStance === 'con') {
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      // 🔒 검사 전용 플래그만 세팅 (이동은 draft.save.js가 담당)
+      // 🔒 검사 전용 플래그만 설정
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
-      console.log('[CHECK ONLY] 검사 전용 — publishPreview 호출 금지, draft.save.js가 직접 처리');
+      console.log('[CHECK ONLY] 검사 전용 — 클릭 이벤트만 전달, draft.save.js가 처리');
+
+      // ⚠️ 여기서 어떤 버튼도 클릭하지 않는다
+      // draft.save.js 는 #checkOnlyPreview 클릭 자체를 이미 감지한다
       return;
     };
 
