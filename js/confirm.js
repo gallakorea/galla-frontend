@@ -42,6 +42,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const params = new URLSearchParams(location.search);
   const draftId = params.get('draft');
 
+  // 🔥 CHECK-ONLY MODE (검사 전용)
+  const isCheckOnly =
+    params.get('mode') === 'check' ||
+    sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true';
+
+  if (isCheckOnly) {
+    console.log('[confirm.js] CHECK-ONLY MODE → 발행 차단');
+  }
+
   const backBtn = document.getElementById('backBtn');
   const publishBtn = document.getElementById('publishBtn');
 
@@ -74,7 +83,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderResult('check-oneline', 'PASS', '문제 없음');
   renderResult('check-description', 'PASS', '문제 없음');
 
-  publishBtn.disabled = false;
+  // 🔒 검사 전용 모드에서는 발행 버튼 비활성화
+  if (isCheckOnly) {
+    publishBtn.disabled = true;
+    publishBtn.textContent = '검사 전용 단계';
+  } else {
+    publishBtn.disabled = false;
+  }
 
   // 🔒 안전장치: confirm 진입 시 자동 발행 절대 금지
   if (!publishBtn) {
@@ -93,6 +108,12 @@ document.addEventListener('DOMContentLoaded', async () => {
      🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
+    // 🔒 검사 전용 모드에서는 절대 발행 불가
+    if (isCheckOnly) {
+      alert('이 단계에서는 발행할 수 없습니다.');
+      return;
+    }
+
     // 🔒 최종 발행은 반드시 사용자 명시적 클릭으로만 허용
     if (window.__CONFIRM_MODE__ !== true) {
       console.warn('[confirm.js] CONFIRM_MODE 아님 — 발행 차단');

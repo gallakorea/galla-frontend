@@ -154,13 +154,17 @@ document.addEventListener('DOMContentLoaded', () => {
          5️⃣ confirm 이동 / 임시저장 분기
       ========================= */
       if (window.__CHECK_ONLY__ === true) {
-        console.log('[draft.save] 검사 전용 → confirm 이동');
+        console.log('[draft.save] 검사 전용 → confirm 이동 (발행 차단)');
         window.__ALLOW_DRAFT_EXIT__ = true;
-        location.href = `confirm.html?draft=${draft.id}`;
+
+        // 🔒 검사 단계에서는 절대 publish 플로우로 넘어가지 않음
+        sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
+
+        location.href = `confirm.html?draft=${draft.id}&mode=check`;
         return;
       }
 
-      console.log('[draft.save] 임시 저장 완료');
+      console.log('[draft.save] 임시 저장 완료 (발행 없음)');
 
     } catch (err) {
       console.error('[DRAFT SAVE ERROR]', err);
