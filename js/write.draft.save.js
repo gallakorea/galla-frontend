@@ -145,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             video_url,
             status: 'draft',
             draft_mode: window.__DRAFT_MODE__,
+            moderation_status: 'pending',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           }])
