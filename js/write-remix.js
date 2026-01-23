@@ -303,12 +303,19 @@ if (remixStance === 'con') {
       e.preventDefault();
       e.stopImmediatePropagation();
 
-      // 🔒 검사 전용 플래그 고정
+      // 🔒 검사 전용 플래그만 세팅 (이동은 draft.save.js가 담당)
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
-      console.log('[CHECK ONLY] 발행 전 검사 진입 — 발행 완전 차단');
-      return false;
+      console.log('[CHECK ONLY] 검사 전용 → draft.save.js로 위임');
+
+      // ✅ draft.save.js가 듣고 있는 가짜 publishPreview 버튼 클릭
+      const fakePublish = document.getElementById('publishPreview');
+      if (fakePublish) {
+        fakePublish.click();
+      } else {
+        console.error('[CHECK ONLY] publishPreview 버튼 없음');
+      }
     };
 
     if (videoEl) {
