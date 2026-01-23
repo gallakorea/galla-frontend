@@ -1,4 +1,4 @@
-// 🚨 GLOBAL HARD BLOCK — 검사 전용 상태에서는 어떤 경우에도 발행 불가
+// 🚨 GLOBAL HARD BLOCK — 검사 전용 상태에서는 발행 루트 자체 진입 금지
 document.addEventListener(
   'click',
   (e) => {
@@ -6,16 +6,22 @@ document.addEventListener(
       sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true' ||
       window.__CHECK_ONLY__ === true;
 
-    // confirm 페이지의 발행 버튼까지 전부 차단
-    if (isCheckOnly && e.target.closest('#publishBtn')) {
+    // ❌ publish / publishPreview / fake 버튼 전부 차단
+    if (
+      isCheckOnly &&
+      (
+        e.target.closest('#publishBtn') ||
+        e.target.closest('#publishPreview')
+      )
+    ) {
       e.preventDefault();
       e.stopImmediatePropagation();
       alert('발행 전 적합성 검사 단계에서는 발행할 수 없습니다.');
-      console.warn('[HARD BLOCK] publishBtn blocked in CHECK ONLY mode');
+      console.warn('[HARD BLOCK] publish blocked in CHECK ONLY mode');
       return false;
     }
   },
-  true // 🔥 capture phase — 어떤 JS보다 먼저 가로챔
+  true
 );
 
 // 🔥 REMIX STATE (write-remix 전용)
@@ -299,28 +305,26 @@ if (remixStance === 'con') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('checkOnlyPreview').onclick = (e) => {
+    document.getElementById('checkOnlyPreview').onclick = async (e) => {
       e.preventDefault();
 
-      // 🔒 검사 전용 플래그
+      console.log('[CHECK ONLY] 검사 전용 draft 생성 후 confirm 이동');
+
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
-      console.log('[CHECK ONLY] 검사 전용 — draft.save.js 트리거');
+      try {
+        // 🔥 draft 생성은 write.draft.save.js의 로직을 직접 호출하지 않음
+        // 대신 confirm 단계에서 사용할 최소 정보만 저장
+        sessionStorage.setItem('__REMIX_CHECK_PAYLOAD__', JSON.stringify({
+          mode: 'check'
+        }));
 
-      // ✅ draft.save.js가 감지하는 publishPreview 버튼이 실제로 없어서 이동이 안 됐음
-      // 해결: issuePreview 내부에 임시 publishPreview 버튼을 만들어 클릭
-      let fake = document.getElementById('publishPreview');
-      if (!fake) {
-        fake = document.createElement('button');
-        fake.id = 'publishPreview';
-        fake.type = 'button';
-        fake.style.display = 'none';
-        issuePreview.appendChild(fake);
+        location.href = 'confirm.html?mode=check';
+      } catch (err) {
+        console.error(err);
+        alert('검사 단계로 이동하지 못했습니다.');
       }
-
-      // 🔥 draft.save.js의 이벤트 위임 로직을 정확히 타게 함
-      fake.click();
     };
 
     if (videoEl) {
