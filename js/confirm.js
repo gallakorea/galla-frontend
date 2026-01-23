@@ -64,10 +64,9 @@ document.addEventListener('DOMContentLoaded', async () => {
      draft 로드
   ===================== */
   const { data: draft, error } = await supabase
-    .from('issues')
+    .from('issues_draft')
     .select('*')
     .eq('id', draftId)
-    .eq('status', 'draft')
     .single();
 
   if (error || !draft) {
@@ -183,19 +182,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         removePaths.push(oldPath);
       }
 
-      /* ---------- DB 상태 변경 (🔥 여기서만 발행) ---------- */
-      const { error: updateError } = await supabase
+      /* ---------- DB 발행: issues INSERT ---------- */
+      const { data: published, error: insertError } = await supabase
         .from('issues')
-        .update({
-          ...updates,
+        .insert([{
+          user_id: draft.user_id,
+          category: draft.category,
+          title: draft.title,
+          one_line: draft.one_line,
+          description: draft.description,
+          donation_target: draft.donation_target,
+          is_anonymous: draft.is_anonymous,
+          author_stance: draft.author_stance,
+          thumbnail_url: updates.thumbnail_url ?? draft.thumbnail_url,
+          video_url: updates.video_url ?? draft.video_url,
           status: 'normal',
           moderation_status: 'pending',
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', draft.id)
-        .eq('status', 'draft'); // 🔒 draft만 발행 가능
+        }])
+        .select('id')
+        .single();
 
-      if (updateError) throw updateError;
+      if (insertError || !published?.id) {
+        throw insertError || new Error('issues 발행 INSERT 실패');
+      }
+
+      /* ---------- issues_draft 삭제 ---------- */
+      const { error: deleteError } = await supabase
+        .from('issues_draft')
+        .delete()
+        .eq('id', draft.id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
 
       /* ---------- draft 파일 제거 ---------- */
       if (removePaths.length > 0) {
@@ -206,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       /* ---------- 완료 ---------- */
-      location.href = `issue.html?id=${draft.id}`;
+      location.href = `issue.html?id=${published.id}`;
 
     } catch (err) {
       console.error('[PUBLISH ERROR]', err);

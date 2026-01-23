@@ -314,15 +314,50 @@ if (remixStance === 'con') {
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
       try {
-        // 🔥 draft 생성은 write.draft.save.js의 로직을 직접 호출하지 않음
-        // 대신 confirm 단계에서 사용할 최소 정보만 저장
-        sessionStorage.setItem('__REMIX_CHECK_PAYLOAD__', JSON.stringify({
-          mode: 'check'
-        }));
+        if (!window.supabaseClient) {
+          throw new Error('Supabase client 없음');
+        }
 
-        location.href = 'confirm.html?mode=check';
+        const { data: sessionData } =
+          await window.supabaseClient.auth.getSession();
+        const user = sessionData?.session?.user;
+        if (!user) {
+          alert('로그인이 필요합니다.');
+          return;
+        }
+
+        // 🔥 핵심: issues_draft 테이블에 실제 draft 생성
+        const { data: draft, error } =
+          await window.supabaseClient
+            .from('issues_draft')
+            .insert([{
+              user_id: user.id,
+              origin_issue_id: remixOriginIssueId,
+              category: categoryEl.value,
+              title: titleEl.value,
+              one_line: oneLineEl.value || null,
+              description: descEl.value,
+              donation_target: donationEl.value,
+              is_anonymous: anon,
+              author_stance: remixStance,
+              status: 'draft',
+              draft_mode: 'check',
+              moderation_status: 'pending',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }])
+            .select('id')
+            .single();
+
+        if (error || !draft?.id) {
+          throw error || new Error('issues_draft 생성 실패');
+        }
+
+        // ✅ draft id를 가지고 confirm 페이지로 이동
+        location.href = `confirm.html?draft=${draft.id}&mode=check`;
+
       } catch (err) {
-        console.error(err);
+        console.error('[CHECK ONLY ERROR]', err);
         alert('검사 단계로 이동하지 못했습니다.');
       }
     };

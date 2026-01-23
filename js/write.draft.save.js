@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!btn) return;
 
     if (isCheckBtn) {
-      console.log('[draft.save] publishPreview 클릭 → 검사 전용 draft 생성');
+      console.log('[draft.save] CHECK ONLY → issues_draft 생성');
     }
 
     // 🔥 검사 버튼이면 CHECK ONLY 모드 활성화
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ========================= */
       const { data: draft, error: insertError } =
         await window.supabaseClient
-          .from('issues')
+          .from('issues_draft')
           .insert([{
             user_id: user.id,
             category,
