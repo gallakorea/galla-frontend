@@ -108,8 +108,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   ===================== */
   backBtn.onclick = () => {
     // 🔒 정상 복귀 — draft 및 미디어 보존
-    window.__ALLOW_DRAFT_EXIT__ = true;
     sessionStorage.setItem('__ALLOW_DRAFT_EXIT__', 'true');
+
     // remix draft면 write-remix로 복귀, 아니면 write로 복귀
     const isRemixDraft = !!draft.origin_issue_id;
 

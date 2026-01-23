@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
+  // 🔒 정상 복귀 플래그 정리 (confirm → write / write-remix)
+  if (sessionStorage.getItem('__ALLOW_DRAFT_EXIT__') === 'true') {
+    sessionStorage.removeItem('__ALLOW_DRAFT_EXIT__');
+  }
+
   console.log('[DRAFT RESTORE] Loaded');
 
   const params = new URLSearchParams(location.search);
@@ -17,7 +22,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentDraft = null;
 
   // 🔥 정상 이동 여부 플래그 (기본: false = 이탈 시 삭제)
-  window.__ALLOW_DRAFT_EXIT__ = false;
 
   try {
     const { data: draft, error } =
@@ -95,8 +99,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('beforeunload', () => {
     if (!currentDraft) return;
 
-    // 🔥 정상 이동이면 삭제 금지
-    if (window.__ALLOW_DRAFT_EXIT__ === true) {
+    // 🔥 정상 이동이면 삭제 금지 (sessionStorage 기준)
+    const allowExit =
+      sessionStorage.getItem('__ALLOW_DRAFT_EXIT__') === 'true';
+
+    if (allowExit) {
       console.log('[DRAFT CLEANUP] 정상 이동 → 삭제 안 함');
       return;
     }
@@ -130,6 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       console.log('[DRAFT CLEANUP] 이탈로 draft 삭제');
 
+      sessionStorage.removeItem('__ALLOW_DRAFT_EXIT__');
     } catch (e) {
       console.warn('[DRAFT CLEANUP FAIL]', e);
     }

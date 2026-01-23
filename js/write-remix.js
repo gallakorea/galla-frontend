@@ -3,8 +3,7 @@ document.addEventListener(
   'click',
   (e) => {
     const isCheckOnly =
-      sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true' ||
-      window.__CHECK_ONLY__ === true;
+      sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true';
 
     // ❌ publish / publishPreview / fake 버튼 전부 차단
     if (
@@ -312,6 +311,7 @@ if (remixStance === 'con') {
 
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
+      sessionStorage.setItem('__ALLOW_DRAFT_EXIT__', 'true');
 
       try {
         if (!window.supabaseClient) {
