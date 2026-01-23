@@ -321,12 +321,59 @@ if (remixStance === 'con') {
         const { data: sessionData } =
           await window.supabaseClient.auth.getSession();
         const user = sessionData?.session?.user;
+
         if (!user) {
           alert('로그인이 필요합니다.');
           return;
         }
 
-        // 🔥 핵심: issues_draft 테이블에 실제 draft 생성
+        /* =========================
+           1️⃣ 썸네일 / 영상 업로드
+        ========================= */
+        let thumbnail_url = null;
+        let video_url = null;
+
+        const thumbFile = document.getElementById('thumbnail')?.files?.[0];
+        if (thumbFile) {
+          const ext = thumbFile.name.split('.').pop();
+          const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
+
+          const { error } = await window.supabaseClient
+            .storage
+            .from('issues')
+            .upload(path, thumbFile);
+
+          if (error) throw error;
+
+          thumbnail_url =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path).data.publicUrl;
+        }
+
+        const videoFile = document.getElementById('video')?.files?.[0];
+        if (videoFile) {
+          const ext = videoFile.name.split('.').pop();
+          const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
+
+          const { error } = await window.supabaseClient
+            .storage
+            .from('issues')
+            .upload(path, videoFile);
+
+          if (error) throw error;
+
+          video_url =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path).data.publicUrl;
+        }
+
+        /* =========================
+           2️⃣ issues_draft INSERT
+        ========================= */
         const { data: draft, error } =
           await window.supabaseClient
             .from('issues_draft')
@@ -338,8 +385,10 @@ if (remixStance === 'con') {
               one_line: oneLineEl.value || null,
               description: descEl.value,
               donation_target: donationEl.value,
-              is_anonymous: anon,
+              is_anonymous: document.getElementById('isAnonymous').checked,
               author_stance: remixStance,
+              thumbnail_url,
+              video_url,
               status: 'draft',
               draft_mode: 'check',
               moderation_status: 'pending',
@@ -353,7 +402,9 @@ if (remixStance === 'con') {
           throw error || new Error('issues_draft 생성 실패');
         }
 
-        // ✅ draft id를 가지고 confirm 페이지로 이동
+        /* =========================
+           3️⃣ confirm 이동
+        ========================= */
         location.href = `confirm.html?draft=${draft.id}&mode=check`;
 
       } catch (err) {
