@@ -1,5 +1,5 @@
-// 🔥 draft 모드 선언 (write.js 차단용)
-window.__DRAFT_MODE__ = true;
+// 🔒 Draft State Machine (edit | check)
+window.__DRAFT_MODE__ = 'edit';
 window.__CHECK_ONLY__ = false;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -20,7 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 🔥 검사 버튼이면 CHECK ONLY 모드 활성화
-    window.__CHECK_ONLY__ = !!isCheckBtn;
+    if (isCheckBtn) {
+      window.__CHECK_ONLY__ = true;
+      window.__DRAFT_MODE__ = 'check';
+    } else {
+      window.__CHECK_ONLY__ = false;
+      window.__DRAFT_MODE__ = 'edit';
+    }
 
     // 🔥 write.js 기본 이동 완전 차단
     e.preventDefault();
@@ -139,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             thumbnail_url,
             video_url,
             status: 'draft',
+            draft_mode: window.__DRAFT_MODE__,
             moderation_status: 'pending',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -153,18 +160,18 @@ document.addEventListener('DOMContentLoaded', () => {
       /* =========================
          5️⃣ confirm 이동 / 임시저장 분기
       ========================= */
-      if (window.__CHECK_ONLY__ === true) {
-        console.log('[draft.save] 검사 전용 → confirm 이동 (발행 차단)');
+      if (window.__DRAFT_MODE__ === 'check') {
+        console.log('[draft.save] CHECK MODE → confirm 이동 (발행 절대 금지)');
         window.__ALLOW_DRAFT_EXIT__ = true;
 
-        // 🔒 검사 단계에서는 절대 publish 플로우로 넘어가지 않음
+        // 검사 전용 상태를 DB 기준으로 전달
         sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
         location.href = `confirm.html?draft=${draft.id}&mode=check`;
         return;
       }
 
-      console.log('[draft.save] 임시 저장 완료 (발행 없음)');
+      console.log('[draft.save] EDIT MODE → draft 저장만 수행');
 
     } catch (err) {
       console.error('[DRAFT SAVE ERROR]', err);

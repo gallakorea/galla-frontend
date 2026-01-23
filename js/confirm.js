@@ -76,6 +76,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // 🔒 DB 기반 검사 전용 차단 (최종 안전장치)
+  if (draft.draft_mode === 'check') {
+    console.log('[confirm.js] DB draft_mode=check → 발행 완전 차단');
+    publishBtn.disabled = true;
+    publishBtn.textContent = '검사 전용 단계';
+  }
+
   /* =====================
      MOCK 검사 결과
   ===================== */
@@ -108,6 +115,11 @@ document.addEventListener('DOMContentLoaded', async () => {
      🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
+    if (draft.draft_mode === 'check') {
+      alert('검사 전용 단계에서는 발행할 수 없습니다.');
+      return;
+    }
+
     // 🔒 검사 전용 모드에서는 절대 발행 불가
     if (isCheckOnly) {
       alert('이 단계에서는 발행할 수 없습니다.');
