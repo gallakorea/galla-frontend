@@ -104,10 +104,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     뒤로가기
+     뒤로가기 (write / write-remix 분기)
   ===================== */
   backBtn.onclick = () => {
-    location.href = `write.html?draft=${draftId}`;
+    // remix draft면 write-remix로 복귀, 아니면 write로 복귀
+    const isRemixDraft = !!draft.origin_issue_id;
+
+    if (isRemixDraft) {
+      location.href = `write-remix.html?draft=${draftId}`;
+    } else {
+      location.href = `write.html?draft=${draftId}`;
+    }
   };
 
   /* =====================

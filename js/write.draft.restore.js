@@ -22,18 +22,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: draft, error } =
       await window.supabaseClient
-        .from('issues')
+        .from('issues_draft')
         .select('*')
         .eq('id', draftId)
-        .eq('status', 'draft')
         .single();
 
     if (error || !draft) {
       console.warn('[DRAFT RESTORE] draft 없음');
+      location.href = 'write.html';
       return;
     }
 
     currentDraft = draft;
+
+    const isRemixDraft = !!draft.origin_issue_id;
 
     const setValue = (id, value) => {
       const el = document.getElementById(id);
@@ -122,10 +124,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       window.supabaseClient
-        .from('issues')
+        .from('issues_draft')
         .delete()
-        .eq('id', currentDraft.id)
-        .eq('status', 'draft');
+        .eq('id', currentDraft.id);
 
       console.log('[DRAFT CLEANUP] 이탈로 draft 삭제');
 
