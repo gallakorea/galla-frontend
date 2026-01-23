@@ -307,15 +307,8 @@ if (remixStance === 'con') {
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
-      console.log('[CHECK ONLY] 검사 전용 → draft.save.js로 위임');
-
-      // ✅ draft.save.js가 듣고 있는 가짜 publishPreview 버튼 클릭
-      const fakePublish = document.getElementById('publishPreview');
-      if (fakePublish) {
-        fakePublish.click();
-      } else {
-        console.error('[CHECK ONLY] publishPreview 버튼 없음');
-      }
+      console.log('[CHECK ONLY] 검사 전용 — publishPreview 호출 금지, draft.save.js가 직접 처리');
+      return;
     };
 
     if (videoEl) {
