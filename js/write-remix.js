@@ -301,17 +301,14 @@ if (remixStance === 'con') {
 
     document.getElementById('checkOnlyPreview').onclick = (e) => {
       e.preventDefault();
-      e.stopImmediatePropagation();
 
-      // 🔒 검사 전용 플래그만 설정
+      // 검사 전용 플래그 세팅
       window.__CHECK_ONLY__ = true;
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
 
-      console.log('[CHECK ONLY] 검사 전용 — 클릭 이벤트만 전달, draft.save.js가 처리');
+      console.log('[CHECK ONLY] 검사 전용 — 이벤트 버블링으로 draft.save.js 처리');
 
-      // ⚠️ 여기서 어떤 버튼도 클릭하지 않는다
-      // draft.save.js 는 #checkOnlyPreview 클릭 자체를 이미 감지한다
-      return;
+      // 중요: 아무 버튼도 직접 클릭하지 말고 버블링만 허용
     };
 
     if (videoEl) {
