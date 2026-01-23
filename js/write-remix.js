@@ -1,3 +1,23 @@
+// 🚨 GLOBAL HARD BLOCK — 검사 전용 상태에서는 어떤 경우에도 발행 불가
+document.addEventListener(
+  'click',
+  (e) => {
+    const isCheckOnly =
+      sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true' ||
+      window.__CHECK_ONLY__ === true;
+
+    // confirm 페이지의 발행 버튼까지 전부 차단
+    if (isCheckOnly && e.target.closest('#publishBtn')) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      alert('발행 전 적합성 검사 단계에서는 발행할 수 없습니다.');
+      console.warn('[HARD BLOCK] publishBtn blocked in CHECK ONLY mode');
+      return false;
+    }
+  },
+  true // 🔥 capture phase — 어떤 JS보다 먼저 가로챔
+);
+
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -281,8 +301,14 @@ if (remixStance === 'con') {
 
     document.getElementById('checkOnlyPreview').onclick = (e) => {
       e.preventDefault();
+      e.stopImmediatePropagation();
+
+      // 🔒 검사 전용 플래그 고정
       window.__CHECK_ONLY__ = true;
-      window.__DRAFT_MODE__ = 'check';
+      sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
+
+      console.log('[CHECK ONLY] 발행 전 검사 진입 — 발행 완전 차단');
+      return false;
     };
 
     if (videoEl) {
