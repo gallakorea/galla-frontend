@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="./css/write-remix.css" />
 </head>
 
-<body data-page="write-remix">
+<body>
 <div class="app-root">
 
   <header class="header">
@@ -211,22 +211,10 @@
 
         <!-- 미리보기 -->
         <div class="field-block">
-          <button type="button" id="previewBtn" class="primary-btn">미리보기</button>
+          <button type="submit" class="primary-btn">미리보기</button>
         </div>
 
       </form>
-      <script>
-        (function() {
-          const form = document.getElementById('writeForm');
-          const previewBtn = document.getElementById('previewBtn');
-          if (!form || !previewBtn) return;
-
-          previewBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            form.dispatchEvent(new CustomEvent('remix:preview', { bubbles: true, cancelable: true }));
-          });
-        })();
-      </script>
 
 
       <!-- ✅ 미리보기 렌더 영역 -->
