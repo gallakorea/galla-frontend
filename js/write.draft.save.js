@@ -8,7 +8,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   issuePreview.addEventListener('click', async (e) => {
     // Draft save is now bound to both the draft button and the 검사 button.
-    const isCheckBtn = e.target.closest('#publishPreview');
+    const isCheckBtn =
+      e.target.closest('#publishPreview') ||
+      e.target.closest('#checkOnlyPreview');
     const isSaveBtn = e.target.closest('#saveDraft');
     const btn = isCheckBtn || isSaveBtn;
     if (!btn) return;

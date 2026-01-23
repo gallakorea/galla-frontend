@@ -281,17 +281,16 @@ if (remixStance === 'con') {
 
     document.getElementById('checkOnlyPreview').onclick = (e) => {
       e.preventDefault();
-      e.stopImmediatePropagation();
 
-      console.log('[write-remix] 발행 전 검사 → draft.save.js로 위임');
-
-      // 🔥 검사 전용 플래그
+      // 검사 전용 모드 플래그만 설정
       window.__CHECK_ONLY__ = true;
 
-      // 🔥 기존 draft.save.js 로직 강제 트리거
-      document
-        .getElementById('publishPreview')
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      // 실제 draft 저장 + confirm 이동은
+      // write.draft.save.js 가 publishPreview 클릭을 통해 처리
+      const realBtn = document.getElementById('publishPreview');
+      if (realBtn) {
+        realBtn.click();
+      }
     };
 
     if (videoEl) {
