@@ -34,6 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(location.search);
   let currentDraftId = params.get('draft');
 
+  if (currentDraftId) {
+    sessionStorage.setItem('__CURRENT_DRAFT_ID__', currentDraftId);
+  } else {
+    const cachedId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+    if (cachedId) currentDraftId = cachedId;
+  }
+
   const body = document.body;
 
     /* ================= REMIX CONTEXT (고정값) ================= */
@@ -323,6 +330,12 @@ if (remixStance === 'con') {
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
       sessionStorage.setItem('__ALLOW_DRAFT_EXIT__', 'true');
 
+        // 🔥 draft id 강제 고정 (중복 생성 방지)
+        if (!currentDraftId) {
+          const cached = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+          if (cached) currentDraftId = cached;
+        }
+
       try {
         if (!window.supabaseClient) {
           throw new Error('Supabase client 없음');
@@ -413,6 +426,8 @@ if (remixStance === 'con') {
             throw updateError;
           }
 
+          sessionStorage.setItem('__CURRENT_DRAFT_ID__', currentDraftId);
+
           draft = { id: currentDraftId };
 
         } else {
@@ -445,12 +460,15 @@ if (remixStance === 'con') {
           }
 
           currentDraftId = inserted.id;
+          sessionStorage.setItem('__CURRENT_DRAFT_ID__', inserted.id);
+
           draft = inserted;
         }
 
         /* =========================
            3️⃣ confirm 이동
         ========================= */
+        sessionStorage.setItem('__CURRENT_DRAFT_ID__', draft.id);
         location.href = `confirm.html?draft=${draft.id}&mode=check`;
 
       } catch (err) {
