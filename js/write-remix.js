@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 🔥 REMIX DRAFT FILE CACHE (미리보기 후에도 파일 유지)
   let __REMIX_THUMB_FILE__ = null;
   let __REMIX_VIDEO_FILE__ = null;
+
+  // 🔥 현재 draft id (있으면 재사용)
+  const params = new URLSearchParams(location.search);
+  let currentDraftId = params.get('draft');
+
   const body = document.body;
 
     /* ================= REMIX CONTEXT (고정값) ================= */
@@ -381,34 +386,66 @@ if (remixStance === 'con') {
         }
 
         /* =========================
-           2️⃣ issues_draft INSERT
+           2️⃣ issues_draft UPSERT (핵심 수정)
         ========================= */
-        const { data: draft, error } =
-          await window.supabaseClient
-            .from('issues_draft')
-            .insert([{
-              user_id: user.id,
-              origin_issue_id: remixOriginIssueId,
-              category: categoryEl.value,
-              title: titleEl.value,
-              one_line: oneLineEl.value || null,
-              description: descEl.value,
-              donation_target: donationEl.value,
-              is_anonymous: document.getElementById('isAnonymous').checked,
-              author_stance: remixStance,
-              thumbnail_url,
-              video_url,
-              status: 'draft',
-              draft_mode: 'check',
-              moderation_status: 'pending',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }])
-            .select('id')
-            .single();
+        let draft;
 
-        if (error || !draft?.id) {
-          throw error || new Error('issues_draft 생성 실패');
+        if (currentDraftId) {
+          const { error: updateError } =
+            await window.supabaseClient
+              .from('issues_draft')
+              .update({
+                category: categoryEl.value,
+                title: titleEl.value,
+                one_line: oneLineEl.value || null,
+                description: descEl.value,
+                donation_target: donationEl.value,
+                is_anonymous: document.getElementById('isAnonymous').checked,
+                author_stance: remixStance,
+                thumbnail_url,
+                video_url,
+                draft_mode: 'check',
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', currentDraftId);
+
+          if (updateError) {
+            throw updateError;
+          }
+
+          draft = { id: currentDraftId };
+
+        } else {
+          const { data: inserted, error: insertError } =
+            await window.supabaseClient
+              .from('issues_draft')
+              .insert([{
+                user_id: user.id,
+                origin_issue_id: remixOriginIssueId,
+                category: categoryEl.value,
+                title: titleEl.value,
+                one_line: oneLineEl.value || null,
+                description: descEl.value,
+                donation_target: donationEl.value,
+                is_anonymous: document.getElementById('isAnonymous').checked,
+                author_stance: remixStance,
+                thumbnail_url,
+                video_url,
+                status: 'draft',
+                draft_mode: 'check',
+                moderation_status: 'pending',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              }])
+              .select('id')
+              .single();
+
+          if (insertError || !inserted?.id) {
+            throw insertError || new Error('issues_draft 생성 실패');
+          }
+
+          currentDraftId = inserted.id;
+          draft = inserted;
         }
 
         /* =========================
