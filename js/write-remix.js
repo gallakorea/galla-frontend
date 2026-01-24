@@ -30,15 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let __REMIX_THUMB_FILE__ = null;
   let __REMIX_VIDEO_FILE__ = null;
 
-  // 🔥 현재 draft id (있으면 재사용)
+  // 🔥 현재 draft id (단일 소스: sessionStorage)
   const params = new URLSearchParams(location.search);
-  let currentDraftId = params.get('draft');
-
-  if (currentDraftId) {
+  // draft id는 오직 sessionStorage 기준
+  let currentDraftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+  // confirm → 뒤로가기로 돌아온 경우만 URL 파라미터 허용
+  if (!currentDraftId && params.get('draft')) {
+    currentDraftId = params.get('draft');
     sessionStorage.setItem('__CURRENT_DRAFT_ID__', currentDraftId);
-  } else {
-    const cachedId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
-    if (cachedId) currentDraftId = cachedId;
   }
 
   const body = document.body;
@@ -330,11 +329,11 @@ if (remixStance === 'con') {
       sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
       sessionStorage.setItem('__ALLOW_DRAFT_EXIT__', 'true');
 
-        // 🔥 draft id 강제 고정 (중복 생성 방지)
-        if (!currentDraftId) {
-          const cached = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
-          if (cached) currentDraftId = cached;
-        }
+      // draft id 강제 고정 (중복 생성 방지)
+      if (!currentDraftId) {
+        const cached = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+        if (cached) currentDraftId = cached;
+      }
 
       try {
         if (!window.supabaseClient) {
@@ -399,39 +398,13 @@ if (remixStance === 'con') {
         }
 
         /* =========================
-           2️⃣ issues_draft UPSERT (핵심 수정)
+           2️⃣ issues_draft SAVE (단일 draft 고정)
         ========================= */
-        let draft;
+        let draftId = currentDraftId;
 
-        if (currentDraftId) {
-          const { error: updateError } =
-            await window.supabaseClient
-              .from('issues_draft')
-              .update({
-                category: categoryEl.value,
-                title: titleEl.value,
-                one_line: oneLineEl.value || null,
-                description: descEl.value,
-                donation_target: donationEl.value,
-                is_anonymous: document.getElementById('isAnonymous').checked,
-                author_stance: remixStance,
-                thumbnail_url,
-                video_url,
-                draft_mode: 'check',
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', currentDraftId);
-
-          if (updateError) {
-            throw updateError;
-          }
-
-          sessionStorage.setItem('__CURRENT_DRAFT_ID__', currentDraftId);
-
-          draft = { id: currentDraftId };
-
-        } else {
-          const { data: inserted, error: insertError } =
+        // 🔥 최초 진입에서만 INSERT
+        if (!draftId) {
+          const { data: inserted, error } =
             await window.supabaseClient
               .from('issues_draft')
               .insert([{
@@ -455,21 +428,36 @@ if (remixStance === 'con') {
               .select('id')
               .single();
 
-          if (insertError || !inserted?.id) {
-            throw insertError || new Error('issues_draft 생성 실패');
-          }
+          if (error || !inserted?.id) throw error;
 
+          draftId = inserted.id;
           currentDraftId = inserted.id;
           sessionStorage.setItem('__CURRENT_DRAFT_ID__', inserted.id);
-
-          draft = inserted;
         }
 
-        /* =========================
-           3️⃣ confirm 이동
-        ========================= */
-        sessionStorage.setItem('__CURRENT_DRAFT_ID__', draft.id);
-        location.href = `confirm.html?draft=${draft.id}&mode=check`;
+        // 🔥 이후는 무조건 UPDATE (중복 row 절대 생성 안 됨)
+        const { error: updateError } =
+          await window.supabaseClient
+            .from('issues_draft')
+            .update({
+              category: categoryEl.value,
+              title: titleEl.value,
+              one_line: oneLineEl.value || null,
+              description: descEl.value,
+              donation_target: donationEl.value,
+              is_anonymous: document.getElementById('isAnonymous').checked,
+              author_stance: remixStance,
+              thumbnail_url,
+              video_url,
+              draft_mode: 'check',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', draftId);
+
+        if (updateError) throw updateError;
+
+        sessionStorage.setItem('__CURRENT_DRAFT_ID__', draftId);
+        location.href = `confirm.html?draft=${draftId}&mode=check`;
 
       } catch (err) {
         console.error('[CHECK ONLY ERROR]', err);
