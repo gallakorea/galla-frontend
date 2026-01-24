@@ -46,6 +46,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     currentDraft = draft;
+    // 🔒 캐시: draft 미디어 URL 고정 (뒤로가기 반복 시 유실 방지)
+    if (draft.thumbnail_url) {
+      sessionStorage.setItem('__DRAFT_THUMBNAIL_URL__', draft.thumbnail_url);
+    }
+    if (draft.video_url) {
+      sessionStorage.setItem('__DRAFT_VIDEO_URL__', draft.video_url);
+    }
     sessionStorage.setItem('__CURRENT_DRAFT_ID__', draft.id);
 
     const isRemixDraft = !!draft.origin_issue_id;
@@ -74,20 +81,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (stanceEl) stanceEl.checked = true;
     }
 
-    if (draft.thumbnail_url) {
+    const cachedThumb =
+      draft.thumbnail_url ||
+      sessionStorage.getItem('__DRAFT_THUMBNAIL_URL__');
+
+    if (cachedThumb) {
       const thumbPreview = document.getElementById('thumbPreview');
       if (thumbPreview) {
-        thumbPreview.innerHTML = `<img src="${draft.thumbnail_url}" />`;
+        thumbPreview.innerHTML = `<img src="${cachedThumb}" />`;
       }
     }
 
-    if (draft.video_url) {
+    const cachedVideo =
+      draft.video_url ||
+      sessionStorage.getItem('__DRAFT_VIDEO_URL__');
+
+    if (cachedVideo) {
       const videoPreview = document.getElementById('videoPreview');
       if (videoPreview) {
         videoPreview.innerHTML = '';
 
         const video = document.createElement('video');
-        video.src = draft.video_url;
+        video.src = cachedVideo;
         video.controls = true;
         video.playsInline = true;
         video.muted = true;
@@ -106,6 +121,13 @@ document.addEventListener('DOMContentLoaded', async () => {
      🚨 진짜 이탈일 때만 삭제
   ================================================= */
   window.addEventListener('beforeunload', () => {
+    // 🔒 미디어 캐시는 페이지 이탈 시에도 유지
+    if (currentDraft?.thumbnail_url) {
+      sessionStorage.setItem('__DRAFT_THUMBNAIL_URL__', currentDraft.thumbnail_url);
+    }
+    if (currentDraft?.video_url) {
+      sessionStorage.setItem('__DRAFT_VIDEO_URL__', currentDraft.video_url);
+    }
     if (!currentDraft) return;
 
     // 🔥 정상 이동이면 삭제 금지 (sessionStorage 기준)
