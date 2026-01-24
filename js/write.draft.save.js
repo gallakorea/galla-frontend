@@ -1,12 +1,32 @@
+// 🚨 HARD BLOCK — remix 페이지에서는 절대 실행 금지
+if (window.__REMIX_CHECK_ONLY__ === true) {
+  console.warn('[draft.save] remix mode detected — disabled');
+  return;
+}
+
 // 🔒 Draft State Machine (edit | check)
 window.__DRAFT_MODE__ = 'edit';
 window.__CHECK_ONLY__ = false;
 
 document.addEventListener('DOMContentLoaded', () => {
+  // 🚨 remix 페이지에서는 draft.save.js 완전 차단
+  if (window.__REMIX_CHECK_ONLY__ === true) {
+    console.warn('[draft.save] blocked inside DOMContentLoaded (remix)');
+    return;
+  }
+
   const issuePreview = document.getElementById('issuePreview');
   if (!issuePreview) return;
 
   issuePreview.addEventListener('click', async (e) => {
+    // 🚨 remix 검사/작성 중이면 draft.save.js 실행 금지
+    if (window.__REMIX_CHECK_ONLY__ === true) {
+      console.warn('[draft.save] click blocked by remix mode');
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
+
     // Draft save is now bound to both the draft button and the 검사 button.
     const isCheckBtn =
       e.target.closest('#checkOnlyPreview');

@@ -7,10 +7,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   console.log('[DRAFT RESTORE] Loaded');
 
   const params = new URLSearchParams(location.search);
-  const draftId = params.get('draft');
+
+  // 🔥 draft id 단일 소스: sessionStorage 우선
+  let draftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+
+  // confirm → 뒤로가기 복귀 시에만 URL 허용
+  if (!draftId && params.get('draft')) {
+    draftId = params.get('draft');
+    sessionStorage.setItem('__CURRENT_DRAFT_ID__', draftId);
+  }
 
   if (!draftId) {
-    console.log('[DRAFT RESTORE] draft 파라미터 없음');
+    console.log('[DRAFT RESTORE] draft 없음');
     return;
   }
 
@@ -38,6 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     currentDraft = draft;
+    sessionStorage.setItem('__CURRENT_DRAFT_ID__', draft.id);
 
     const isRemixDraft = !!draft.origin_issue_id;
 
@@ -103,8 +112,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const allowExit =
       sessionStorage.getItem('__ALLOW_DRAFT_EXIT__') === 'true';
 
-    if (allowExit) {
-      console.log('[DRAFT CLEANUP] 정상 이동 → 삭제 안 함');
+    // 🔥 현재 활성 draft는 절대 삭제 금지
+    const activeDraftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+
+    if (allowExit || activeDraftId === String(currentDraft.id)) {
+      console.log('[DRAFT CLEANUP] 정상 이동 또는 활성 draft → 삭제 안 함');
       return;
     }
 

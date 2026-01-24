@@ -322,6 +322,9 @@ if (remixStance === 'con') {
 
     document.getElementById('checkOnlyPreview').onclick = async (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      window.__REMIX_CHECK_ONLY__ = true;
 
       console.log('[CHECK ONLY] 검사 전용 draft 생성 후 confirm 이동');
 
