@@ -133,27 +133,27 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const myIssueIds = myIssues.map(issue => issue.id);
 
-            // 2) issues_draft 테이블에서 origin_issue_id 가 내 이슈 id 목록에 포함된 row 조회
-            const { data: draftIssues, error: draftIssuesError } = await supabase
-                .from("issues_draft")
+            // 2️⃣ issues 테이블에서 "내 이슈에 참전한 타인의 리믹스" 조회
+            const { data: battleIssues, error: battleError } = await supabase
+                .from("issues")
                 .select(`
-                    origin_issue_id,
                     id,
                     title,
-                    score,
+                    origin_issue_id,
                     thumbnail_url,
+                    score,
                     user_id
                 `)
                 .in("origin_issue_id", myIssueIds)
                 .neq("user_id", userId);
 
-            if (draftIssuesError) {
-                console.error("[Battle Galla] error fetching draft issues", draftIssuesError);
+            if (battleError) {
+                console.error("[Battle Galla] error fetching battle issues", battleError);
                 tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
                 return;
             }
 
-            if (!draftIssues || draftIssues.length === 0) {
+            if (!battleIssues || battleIssues.length === 0) {
                 tabContent.innerHTML = `
                     <div style="color:#777;font-size:14px;padding:20px;">
                         아직 배틀이 발생한 이슈가 없습니다.
@@ -162,29 +162,16 @@ document.addEventListener("DOMContentLoaded", async () => {
                 return;
             }
 
-            // 3) 중복 제거된 origin_issue_id 기준으로 battle 대상 이슈 구성
-            const uniqueOriginIssuesMap = new Map();
-
-            draftIssues.forEach(draft => {
-                if (!uniqueOriginIssuesMap.has(draft.origin_issue_id)) {
-                    uniqueOriginIssuesMap.set(draft.origin_issue_id, draft);
-                }
-            });
-
-            const uniqueOriginIssues = Array.from(uniqueOriginIssuesMap.values());
-
             tabContent.innerHTML = "";
 
-            uniqueOriginIssues.forEach(issue => {
+            battleIssues.forEach(issue => {
                 const origin = myIssues.find(i => i.id === issue.origin_issue_id);
 
                 const card = document.createElement("div");
                 card.className = "thumb-card";
 
-                const thumbSrc = issue.thumbnail_url || "./assets/logo.png";
-
                 card.innerHTML = `
-                    <img src="${origin?.thumbnail_url || "./assets/logo.png"}">
+                    <img src="${issue.thumbnail_url || origin?.thumbnail_url || "./assets/logo.png"}">
                     <div class="thumb-title">
                         ${origin ? origin.title : "Battle Issue"}
                     </div>
