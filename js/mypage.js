@@ -143,8 +143,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 battle_type,
                 score
             `)
+            // battle 판단 기준: origin_issue_id 존재 여부 (legacy 데이터 호환)
             .in("origin_issue_id", myIssueIds)
-            .eq("battle_type", "counter")
             .neq("user_id", userId);
 
         if (battleError) {
