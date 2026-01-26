@@ -422,6 +422,7 @@ if (remixStance === 'con') {
               .insert([{
                 user_id: user.id,
                 origin_issue_id: remixOriginIssueId,
+                battle_type: 'counter',
                 category: categoryEl.value,
                 title: titleEl.value,
                 one_line: oneLineEl.value || null,
@@ -458,6 +459,7 @@ if (remixStance === 'con') {
           author_stance: remixStance,
           draft_mode: 'check',
           updated_at: new Date().toISOString(),
+          battle_type: 'counter',
         };
 
         if (thumbnail_url) {
