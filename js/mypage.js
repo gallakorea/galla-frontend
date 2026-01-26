@@ -109,88 +109,82 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderBattle = async () => {
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
-        try {
-            // 1) 내가 만든 이슈들의 id 목록을 가져온다.
-            const { data: myIssues, error: myIssuesError } = await supabase
-                .from("issues")
-                .select("id, title, thumbnail_url")
-                .eq("user_id", userId);
+        // 1) 내가 만든 원본 이슈 id 목록
+        const { data: myIssues, error: myIssuesError } = await supabase
+            .from("issues")
+            .select("id, title, thumbnail_url")
+            .eq("user_id", userId);
 
-            if (myIssuesError) {
-                console.error("[Battle Galla] error fetching user issues", myIssuesError);
-                tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
-                return;
-            }
-
-            if (!myIssues || myIssues.length === 0) {
-                tabContent.innerHTML = `
-                    <div style="color:#777;font-size:14px;padding:20px;">
-                        아직 배틀이 발생한 이슈가 없습니다.
-                    </div>
-                `;
-                return;
-            }
-
-            const myIssueIds = myIssues.map(issue => issue.id);
-
-            // 2️⃣ issues 테이블에서 "내 이슈에 참전한 타인의 리믹스" 조회
-            const { data: battleIssues, error: battleError } = await supabase
-                .from("issues")
-                .select(`
-                    id,
-                    title,
-                    origin_issue_id,
-                    thumbnail_url,
-                    score,
-                    user_id
-                `)
-                .in("origin_issue_id", myIssueIds)
-                .neq("user_id", userId);
-
-            if (battleError) {
-                console.error("[Battle Galla] error fetching battle issues", battleError);
-                tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
-                return;
-            }
-
-            if (!battleIssues || battleIssues.length === 0) {
-                tabContent.innerHTML = `
-                    <div style="color:#777;font-size:14px;padding:20px;">
-                        아직 배틀이 발생한 이슈가 없습니다.
-                    </div>
-                `;
-                return;
-            }
-
-            tabContent.innerHTML = "";
-
-            battleIssues.forEach(issue => {
-                const origin = myIssues.find(i => i.id === issue.origin_issue_id);
-
-                const card = document.createElement("div");
-                card.className = "thumb-card";
-
-                card.innerHTML = `
-                    <img src="${issue.thumbnail_url || origin?.thumbnail_url || "./assets/logo.png"}">
-                    <div class="thumb-title">
-                        ${origin ? origin.title : "Battle Issue"}
-                    </div>
-                    <div class="thumb-author">⚔️ Battle 진행 중</div>
-                    <div class="thumb-stats">
-                        <span>🔥 ${issue.score ?? 0}</span>
-                    </div>
-                `;
-
-                card.onclick = () => {
-                    location.href = `issue.html?id=${issue.origin_issue_id}`;
-                };
-
-                tabContent.appendChild(card);
-            });
-        } catch (e) {
-            console.error("[Battle Galla] unexpected error", e);
+        if (myIssuesError) {
+            console.error("[Battle Galla] my issues error", myIssuesError);
             tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
         }
+
+        if (!myIssues || myIssues.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    아직 배틀이 발생한 이슈가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        const myIssueIds = myIssues.map(i => i.id);
+
+        // 2) 내 이슈에 참전된 배틀 이슈 조회 (명시적 battle_type 기준)
+        const { data: battleIssues, error: battleError } = await supabase
+            .from("issues")
+            .select(`
+                id,
+                title,
+                thumbnail_url,
+                origin_issue_id,
+                battle_type,
+                score
+            `)
+            .in("origin_issue_id", myIssueIds)
+            .eq("battle_type", "counter")
+            .neq("user_id", userId);
+
+        if (battleError) {
+            console.error("[Battle Galla] battle issues error", battleError);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        if (!battleIssues || battleIssues.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    아직 배틀이 발생한 이슈가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        tabContent.innerHTML = "";
+
+        battleIssues.forEach(battle => {
+            const origin = myIssues.find(i => i.id === battle.origin_issue_id);
+
+            const card = document.createElement("div");
+            card.className = "thumb-card";
+
+            card.innerHTML = `
+                <img src="${origin?.thumbnail_url || "./assets/logo.png"}">
+                <div class="thumb-title">${origin?.title || "Battle Issue"}</div>
+                <div class="thumb-author">⚔️ 참전 발생</div>
+                <div class="thumb-stats">
+                    <span>🔥 ${battle.score ?? 0}</span>
+                </div>
+            `;
+
+            card.onclick = () => {
+                location.href = `issue.html?id=${battle.origin_issue_id}`;
+            };
+
+            tabContent.appendChild(card);
+        });
     };
 
     const renderSave = () => {
