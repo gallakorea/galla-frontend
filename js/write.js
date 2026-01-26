@@ -170,6 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Supabase 클라이언트가 초기화되지 않았습니다.');
         return;
       }
+      // 🔒 FIX: storage undefined 방어 (Cannot read properties of undefined 'from')
+      if (!window.supabaseClient.storage || typeof window.supabaseClient.storage.from !== 'function') {
+        console.error('[write.js] supabaseClient.storage not ready', window.supabaseClient);
+        alert('스토리지 초기화가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
 
       const { data: sessionData } =
         await window.supabaseClient.auth.getSession();
