@@ -164,99 +164,119 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('publishPreview').onclick = async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
 
-      try {
-        if (!window.supabaseClient) {
-          throw new Error('Supabase client 없음');
-        }
+      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
+      const isDraftMode = window.__DRAFT_MODE__ === true;
+      if (isDraftMode) {
+        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
+        return;
+      }
 
-        const { data: sessionData } =
-          await window.supabaseClient.auth.getSession();
-        const user = sessionData?.session?.user;
+      // Supabase client (assume available as window.supabase)
+      if (!window.supabase) {
+        alert('Supabase 클라이언트가 초기화되지 않았습니다.');
+        return;
+      }
+      const { data: { user } } = await window.supabase.auth.getUser();
+      if (!user) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
 
-        if (!user) {
-          alert('로그인이 필요합니다.');
+      let thumbnail_url = null;
+      let video_url = null;
+
+      // Upload thumbnail if file selected
+      const thumbFile = thumbInput.files && thumbInput.files[0];
+      if (thumbFile) {
+        const thumbPath = `drafts/${user.id}/thumbnail_${Date.now()}_${thumbFile.name}`;
+        const { error: thumbErr } = await window.supabase.storage.from('issues').upload(thumbPath, thumbFile, { upsert: true });
+        if (thumbErr) {
+          alert('썸네일 업로드에 실패했습니다.');
           return;
         }
-
-        let thumbnail_url = null;
-        let video_url = null;
-
-        const thumbFile = document.getElementById('thumbnail')?.files?.[0];
-        if (thumbFile) {
-          const ext = thumbFile.name.split('.').pop();
-          const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
-
-          const { error } = await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, thumbFile);
-
-          if (error) throw error;
-
-          thumbnail_url =
-            window.supabaseClient
-              .storage
-              .from('issues')
-              .getPublicUrl(path).data.publicUrl;
-        }
-
-        const videoFile = document.getElementById('video')?.files?.[0];
-        if (videoFile) {
-          const ext = videoFile.name.split('.').pop();
-          const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
-
-          const { error } = await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, videoFile);
-
-          if (error) throw error;
-
-          video_url =
-            window.supabaseClient
-              .storage
-              .from('issues')
-              .getPublicUrl(path).data.publicUrl;
-        }
-
-        const { data: inserted, error } =
-          await window.supabaseClient
-            .from('issues_draft')
-            .insert([{
-              user_id: user.id,
-              category: categoryEl.value,
-              title: titleEl.value,
-              one_line: oneLineEl.value || null,
-              description: descEl.value,
-              donation_target: donationEl.value,
-              is_anonymous: anon,
-              author_stance: authorStance,
-              thumbnail_url,
-              video_url,
-              status: 'draft',
-              draft_mode: 'check',
-              moderation_status: 'pending',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }])
-            .select('id')
-            .single();
-
-        if (error || !inserted?.id) {
-          throw error || new Error('draft 생성 실패');
-        }
-
-        sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
-        sessionStorage.setItem('__CURRENT_DRAFT_ID__', inserted.id);
-
-        location.href = `confirm.html?draft=${inserted.id}&mode=check`;
-
-      } catch (err) {
-        console.error('[WRITE → DRAFT ERROR]', err);
-        alert('발행 전 검사 단계로 이동하지 못했습니다.');
+        const { data: thumbUrlData } = window.supabase.storage.from('issues').getPublicUrl(thumbPath);
+        thumbnail_url = thumbUrlData && thumbUrlData.publicUrl;
       }
+
+      // Upload video if file selected
+      const videoFile = videoInput.files && videoInput.files[0];
+      if (videoFile) {
+        const videoPath = `drafts/${user.id}/video_${Date.now()}_${videoFile.name}`;
+        const { error: videoErr } = await window.supabase.storage.from('issues').upload(videoPath, videoFile, { upsert: true });
+        if (videoErr) {
+          alert('영상 업로드에 실패했습니다.');
+          return;
+        }
+        const { data: videoUrlData } = window.supabase.storage.from('issues').getPublicUrl(videoPath);
+        video_url = videoUrlData && videoUrlData.publicUrl;
+      }
+
+      // Prepare payload for issues_draft
+      const draftPayload = {
+        category: categoryEl.value,
+        title: titleEl.value,
+        one_line: oneLineEl.value,
+        description: descEl.value,
+        donation_target: donationEl.value,
+        is_anonymous: anon,
+        author_stance: authorStance,
+        draft_mode: 'check'
+      };
+      // Only set thumbnail_url/video_url if we just uploaded
+      if (thumbnail_url) draftPayload.thumbnail_url = thumbnail_url;
+      if (video_url) draftPayload.video_url = video_url;
+
+      // Use sessionStorage.__CURRENT_DRAFT_ID__ as single source of truth
+      let draftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
+      let row;
+      if (!draftId) {
+        // INSERT
+        const { data, error } = await window.supabase
+          .from('issues_draft')
+          .insert([draftPayload])
+          .select()
+          .single();
+        if (error || !data) {
+          alert('임시 저장에 실패했습니다.');
+          return;
+        }
+        draftId = data.id;
+        sessionStorage.setItem('__CURRENT_DRAFT_ID__', draftId);
+        row = data;
+      } else {
+        // UPDATE (do not null thumbnail_url/video_url if not reselected)
+        // First, fetch current row
+        const { data: existing, error: fetchErr } = await window.supabase
+          .from('issues_draft')
+          .select('thumbnail_url,video_url')
+          .eq('id', draftId)
+          .single();
+        if (fetchErr || !existing) {
+          alert('임시 저장 로드에 실패했습니다.');
+          return;
+        }
+        if (!thumbnail_url && existing.thumbnail_url) {
+          draftPayload.thumbnail_url = existing.thumbnail_url;
+        }
+        if (!video_url && existing.video_url) {
+          draftPayload.video_url = existing.video_url;
+        }
+        const { error: updateErr, data: updated } = await window.supabase
+          .from('issues_draft')
+          .update(draftPayload)
+          .eq('id', draftId)
+          .select()
+          .single();
+        if (updateErr || !updated) {
+          alert('임시 저장 갱신에 실패했습니다.');
+          return;
+        }
+        row = updated;
+      }
+
+      // Redirect to confirm.html with draft id and mode
+      location.href = `confirm.html?draft=${draftId}&mode=check`;
     };
 
     if (videoEl) {
