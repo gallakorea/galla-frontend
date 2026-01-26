@@ -439,22 +439,32 @@ if (remixStance === 'con') {
         }
 
         // 🔥 이후는 무조건 UPDATE (중복 row 절대 생성 안 됨)
+        const updatePayload = {
+          category: categoryEl.value,
+          title: titleEl.value,
+          one_line: oneLineEl.value || null,
+          description: descEl.value,
+          donation_target: donationEl.value,
+          is_anonymous: document.getElementById('isAnonymous').checked,
+          author_stance: remixStance,
+          draft_mode: 'check',
+          updated_at: new Date().toISOString(),
+        };
+
+        if (thumbnail_url) {
+          updatePayload.thumbnail_url = thumbnail_url;
+          sessionStorage.setItem('__DRAFT_THUMBNAIL_URL__', thumbnail_url);
+        }
+
+        if (video_url) {
+          updatePayload.video_url = video_url;
+          sessionStorage.setItem('__DRAFT_VIDEO_URL__', video_url);
+        }
+
         const { error: updateError } =
           await window.supabaseClient
             .from('issues_draft')
-            .update({
-              category: categoryEl.value,
-              title: titleEl.value,
-              one_line: oneLineEl.value || null,
-              description: descEl.value,
-              donation_target: donationEl.value,
-              is_anonymous: document.getElementById('isAnonymous').checked,
-              author_stance: remixStance,
-              thumbnail_url,
-              video_url,
-              draft_mode: 'check',
-              updated_at: new Date().toISOString(),
-            })
+            .update(updatePayload)
             .eq('id', draftId);
 
         if (updateError) throw updateError;
