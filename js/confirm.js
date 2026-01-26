@@ -41,9 +41,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   const publishBtn = document.getElementById('publishBtn');
 
   if (isCheckOnly) {
-    publishBtn.disabled = true;
-    publishBtn.textContent = '검사 전용 단계';
+    publishBtn.disabled = false;
+    publishBtn.textContent = '발행 단계로 이동';
     publishBtn.style.display = 'inline-flex';
+
+    publishBtn.onclick = () => {
+      // 검사 완료 → 발행 단계로 이동 (mode=check 제거)
+      sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
+      location.href = `confirm.html?draft=${draftId}`;
+    };
+
+    console.log('[confirm.js] CHECK-ONLY MODE → publish stage redirect');
+    return; // 🔴 check-only에서는 최종 발행 로직 바인딩 금지
   } else {
     publishBtn.disabled = false;
     publishBtn.textContent = '최종 발행';
