@@ -106,12 +106,87 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     // Battle / Save / Favorite (아직 더미 유지)
     // =====================================================
-    const renderBattle = () => {
-        tabContent.innerHTML = `
-            <div style="color:#777;font-size:14px;padding:20px;">
-                Battle 갈라 준비 중
-            </div>
-        `;
+    const renderBattle = async () => {
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        // 1️⃣ 내가 만든 이슈 id 목록
+        const { data: myIssues, error: myErr } = await supabase
+            .from("issues")
+            .select("id")
+            .eq("user_id", userId);
+
+        if (myErr) {
+            console.error("[Battle Galla] my issues error", myErr);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        if (!myIssues || myIssues.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    아직 배틀이 발생한 이슈가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        const myIssueIds = myIssues.map(i => i.id);
+
+        // 2️⃣ 내 이슈에 참전한 remix 이슈들
+        const { data: battles, error } = await supabase
+            .from("issues")
+            .select(`
+                id,
+                title,
+                created_at,
+                score,
+                thumbnail_url,
+                origin_issue_id
+            `)
+            .in("origin_issue_id", myIssueIds)
+            .neq("user_id", userId)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("[Battle Galla] error", error);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        if (!battles || battles.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    아직 배틀이 발생한 이슈가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        tabContent.innerHTML = "";
+
+        battles.forEach(issue => {
+            const card = document.createElement("div");
+            card.className = "thumb-card";
+
+            const thumbSrc = issue.thumbnail_url
+                ? issue.thumbnail_url
+                : "./assets/logo.png";
+
+            card.innerHTML = `
+                <img src="${thumbSrc}">
+                <div class="thumb-title">${issue.title}</div>
+                <div class="thumb-author">상대 진영</div>
+                <div class="thumb-stats">
+                    <span>⚔️ ${issue.score ?? 0}</span>
+                </div>
+            `;
+
+            card.onclick = () => {
+                location.href = `issue.html?id=${issue.id}`;
+            };
+
+            tabContent.appendChild(card);
+        });
     };
 
     const renderSave = () => {
