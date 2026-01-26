@@ -188,12 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const thumbFile = thumbInput.files && thumbInput.files[0];
       if (thumbFile) {
         const thumbPath = `drafts/${user.id}/thumbnail_${Date.now()}_${thumbFile.name}`;
-        const { error: thumbErr } = await window.supabase.storage.from('issues').upload(thumbPath, thumbFile, { upsert: true });
+        const { error: thumbErr } = await window.supabaseClient.storage.from('issues').upload(thumbPath, thumbFile, { upsert: true });
         if (thumbErr) {
           alert('썸네일 업로드에 실패했습니다.');
           return;
         }
-        const { data: thumbUrlData } = window.supabase.storage.from('issues').getPublicUrl(thumbPath);
+        const { data: thumbUrlData } = window.supabaseClient.storage.from('issues').getPublicUrl(thumbPath);
         thumbnail_url = thumbUrlData && thumbUrlData.publicUrl;
       }
 
@@ -201,12 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const videoFile = videoInput.files && videoInput.files[0];
       if (videoFile) {
         const videoPath = `drafts/${user.id}/video_${Date.now()}_${videoFile.name}`;
-        const { error: videoErr } = await window.supabase.storage.from('issues').upload(videoPath, videoFile, { upsert: true });
+        const { error: videoErr } = await window.supabaseClient.storage.from('issues').upload(videoPath, videoFile, { upsert: true });
         if (videoErr) {
           alert('영상 업로드에 실패했습니다.');
           return;
         }
-        const { data: videoUrlData } = window.supabase.storage.from('issues').getPublicUrl(videoPath);
+        const { data: videoUrlData } = window.supabaseClient.storage.from('issues').getPublicUrl(videoPath);
         video_url = videoUrlData && videoUrlData.publicUrl;
       }
 
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let row;
       if (!draftId) {
         // INSERT
-        const { data, error } = await window.supabase
+        const { data, error } = await window.supabaseClient
           .from('issues_draft')
           .insert([draftPayload])
           .select()
@@ -245,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // UPDATE (do not null thumbnail_url/video_url if not reselected)
         // First, fetch current row
-        const { data: existing, error: fetchErr } = await window.supabase
+        const { data: existing, error: fetchErr } = await window.supabaseClient
           .from('issues_draft')
           .select('thumbnail_url,video_url')
           .eq('id', draftId)
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!video_url && existing.video_url) {
           draftPayload.video_url = existing.video_url;
         }
-        const { error: updateErr, data: updated } = await window.supabase
+        const { error: updateErr, data: updated } = await window.supabaseClient
           .from('issues_draft')
           .update(draftPayload)
           .eq('id', draftId)
