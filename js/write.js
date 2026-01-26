@@ -165,24 +165,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Supabase client (統一: window.supabaseClient)
-      if (!window.supabaseClient) {
-        alert('Supabase 클라이언트가 초기화되지 않았습니다.');
-        return;
-      }
-      // 🔒 FIX: storage undefined 방어 (Cannot read properties of undefined 'from')
-      if (!window.supabaseClient || !window.supabaseClient.storage) {
-        alert('스토리지 초기화가 완료되지 않았습니다.');
-        return;
-      }
-      if (typeof window.supabaseClient.storage.from !== 'function') {
-        console.error('[write.js] supabaseClient.storage not ready', window.supabaseClient);
-        alert('스토리지 초기화가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
+      const supabase = window.supabaseClient;
+      if (!supabase || !supabase.auth || !supabase.from) {
+        alert('Supabase 초기화 실패');
         return;
       }
 
       const { data: sessionData } =
-        await window.supabaseClient.auth.getSession();
+        await supabase.auth.getSession();
 
       const user = sessionData?.session?.user;
 
@@ -199,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (thumbFile) {
         const safeThumbName = thumbFile.name.replace(/[^a-zA-Z0-9._-]/g, '');
         const thumbPath = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${safeThumbName.split('.').pop()}`;
-        const { error: thumbErr } = await window.supabaseClient
+        const { error: thumbErr } = await supabase
           .storage
           .from('issues')
           .upload(thumbPath, thumbFile, {
@@ -210,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
           alert('썸네일 업로드에 실패했습니다.');
           return;
         }
-        const { data: thumbUrlData } = window.supabaseClient.storage.from('issues').getPublicUrl(thumbPath);
+        const { data: thumbUrlData } = supabase.storage.from('issues').getPublicUrl(thumbPath);
         thumbnail_url = thumbUrlData && thumbUrlData.publicUrl;
       }
 
@@ -219,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (videoFile) {
         const safeVideoName = videoFile.name.replace(/[^a-zA-Z0-9._-]/g, '');
         const videoPath = `drafts/${user.id}/video_${crypto.randomUUID()}.${safeVideoName.split('.').pop()}`;
-        const { error: videoErr } = await window.supabaseClient
+        const { error: videoErr } = await supabase
           .storage
           .from('issues')
           .upload(videoPath, videoFile, {
@@ -230,31 +220,38 @@ document.addEventListener('DOMContentLoaded', () => {
           alert('영상 업로드에 실패했습니다.');
           return;
         }
-        const { data: videoUrlData } = window.supabaseClient.storage.from('issues').getPublicUrl(videoPath);
+        const { data: videoUrlData } = supabase.storage.from('issues').getPublicUrl(videoPath);
         video_url = videoUrlData && videoUrlData.publicUrl;
       }
 
       // Prepare payload for issues_draft
       const draftPayload = {
+        user_id: user.id,              // 🔥 RLS 필수
         category: categoryEl.value,
         title: titleEl.value,
-        one_line: oneLineEl.value,
+        one_line: oneLineEl.value || null,
         description: descEl.value,
         donation_target: donationEl.value,
         is_anonymous: anon,
         author_stance: authorStance,
-        draft_mode: 'check'
+        status: 'draft',
+        draft_mode: 'check',
+        moderation_status: 'pending',
+        updated_at: new Date().toISOString(),
       };
-      // Only set thumbnail_url/video_url if we just uploaded
-      if (thumbnail_url) draftPayload.thumbnail_url = thumbnail_url;
-      if (video_url) draftPayload.video_url = video_url;
 
-      // Use sessionStorage.__CURRENT_DRAFT_ID__ as single source of truth
+      // INSERT 시 created_at 보장
       let draftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
       let row;
       if (!draftId) {
+        draftPayload.created_at = new Date().toISOString();
+
+        // Only set thumbnail_url/video_url if we just uploaded
+        if (thumbnail_url) draftPayload.thumbnail_url = thumbnail_url;
+        if (video_url) draftPayload.video_url = video_url;
+
         // INSERT
-        const { data, error } = await window.supabaseClient
+        const { data, error } = await supabase
           .from('issues_draft')
           .insert([draftPayload])
           .select()
@@ -269,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // UPDATE (do not null thumbnail_url/video_url if not reselected)
         // First, fetch current row
-        const { data: existing, error: fetchErr } = await window.supabaseClient
+        const { data: existing, error: fetchErr } = await supabase
           .from('issues_draft')
           .select('thumbnail_url,video_url')
           .eq('id', draftId)
@@ -284,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!video_url && existing.video_url) {
           draftPayload.video_url = existing.video_url;
         }
-        const { error: updateErr, data: updated } = await window.supabaseClient
+        const { error: updateErr, data: updated } = await supabase
           .from('issues_draft')
           .update(draftPayload)
           .eq('id', draftId)
