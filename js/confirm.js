@@ -27,38 +27,21 @@ document.addEventListener('DOMContentLoaded', async () => {
      draft ID
   ===================== */
   const params = new URLSearchParams(location.search);
-  window.__CONFIRM_MODE__ = params.get('mode') !== 'check';
   const draftId = params.get('draft');
 
-  // 🔥 CHECK-ONLY MODE (단계 분리)
-  // mode=check  → 검사 단계
-  // mode 없음   → 최종 발행 단계
-  const isCheckOnly = params.get('mode') === 'check';
+  // ✅ confirm 페이지는 항상 "최종 발행 단계"
+  window.__CONFIRM_MODE__ = true;
 
-  // 버튼은 항상 존재
+  // 버튼은 항상 최종 발행 버튼
   const backBtn = document.getElementById('backBtn');
   const publishBtn = document.getElementById('publishBtn');
+
   publishBtn.style.display = 'inline-flex';
+  publishBtn.disabled = false;
+  publishBtn.textContent = '최종 발행';
 
-  if (isCheckOnly) {
-    publishBtn.disabled = false;
-    publishBtn.textContent = '발행 단계로 이동';
-
-    publishBtn.onclick = () => {
-      // 검사 → 발행 단계로 전환
-      sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
-      location.href = `confirm.html?draft=${draftId}`;
-    };
-
-    console.log('[confirm.js] CHECK-ONLY MODE → publish stage button enabled');
-  } else {
-    publishBtn.disabled = false;
-    publishBtn.textContent = '최종 발행';
-  }
-
-  if (isCheckOnly) {
-    sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
-  }
+  // 검사 전용 플래그 완전 제거
+  sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
 
   if (!draftId) {
     alert('임시 저장된 글이 없습니다.');
