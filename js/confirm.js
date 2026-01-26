@@ -1,5 +1,4 @@
 // 🔒 CONFIRM MODE — 절대 자동 발행 금지
-window.__CONFIRM_MODE__ = true;
 let __USER_CONFIRMED_PUBLISH__ = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -25,27 +24,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* =====================
-     🔐 세션 확인
-  ===================== */
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData?.session?.user;
-
-  if (!user) {
-    alert('로그인이 필요합니다.');
-    location.href = 'login.html';
-    return;
-  }
-
-  /* =====================
      draft ID
   ===================== */
   const params = new URLSearchParams(location.search);
+  window.__CONFIRM_MODE__ = params.get('mode') !== 'check';
   const draftId = params.get('draft');
 
-  // 🔥 CHECK-ONLY MODE (검사 전용)
+  // 🔥 CHECK-ONLY MODE (URL 기준 단일 판별)
   const isCheckOnly = params.get('mode') === 'check';
-  // 🔥 confirm 진입 시 세션 플래그 정리 (이전 검사 상태 잔존 방지)
-  sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
 
   if (isCheckOnly) {
     console.log('[confirm.js] CHECK-ONLY MODE → 발행 차단');
@@ -57,6 +43,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!draftId) {
     alert('임시 저장된 글이 없습니다.');
     location.href = 'write.html';
+    return;
+  }
+
+  /* =====================
+     🔐 세션 확인
+  ===================== */
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData?.session?.user;
+
+  if (!user) {
+    alert('로그인이 필요합니다.');
+    location.href = 'login.html';
     return;
   }
 
@@ -82,13 +80,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderResult('check-oneline', 'PASS', '문제 없음');
   renderResult('check-description', 'PASS', '문제 없음');
 
-  // 🔒 검사 전용 진입(mode=check)에서만 발행 차단
   if (isCheckOnly) {
     publishBtn.disabled = true;
     publishBtn.textContent = '검사 전용 단계';
   } else {
     publishBtn.disabled = false;
     publishBtn.textContent = '최종 발행';
+    publishBtn.style.display = 'inline-flex';
   }
 
   // 🔒 안전장치: confirm 진입 시 자동 발행 절대 금지
@@ -123,12 +121,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🔒 검사 전용 모드에서는 절대 발행 불가
     if (isCheckOnly) {
       alert('검사 전용 페이지에서는 발행할 수 없습니다.');
-      return;
-    }
-
-    // 🔒 최종 발행은 반드시 사용자 명시적 클릭으로만 허용
-    if (window.__CONFIRM_MODE__ !== true) {
-      console.warn('[confirm.js] CONFIRM_MODE 아님 — 발행 차단');
       return;
     }
 
