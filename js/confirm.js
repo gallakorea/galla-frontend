@@ -75,13 +75,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 🔒 DB 기반 검사 전용 차단 (최종 안전장치)
-  if (draft.draft_mode === 'check') {
-    console.log('[confirm.js] DB draft_mode=check → 발행 완전 차단');
-    publishBtn.disabled = true;
-    publishBtn.textContent = '검사 전용 단계';
-  }
-
   /* =====================
      MOCK 검사 결과
   ===================== */
@@ -89,12 +82,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderResult('check-oneline', 'PASS', '문제 없음');
   renderResult('check-description', 'PASS', '문제 없음');
 
-  // 🔒 검사 전용 모드에서는 발행 버튼 비활성화
+  // 🔒 검사 전용 진입(mode=check)에서만 발행 차단
   if (isCheckOnly) {
     publishBtn.disabled = true;
     publishBtn.textContent = '검사 전용 단계';
   } else {
     publishBtn.disabled = false;
+    publishBtn.textContent = '최종 발행';
   }
 
   // 🔒 안전장치: confirm 진입 시 자동 발행 절대 금지
@@ -124,10 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
      🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
-    if (draft.draft_mode === 'check') {
-      alert('검사 전용 단계에서는 발행할 수 없습니다.');
-      return;
-    }
+    // Removed draft.draft_mode check per instructions
 
     // 🔒 검사 전용 모드에서는 절대 발행 불가
     if (isCheckOnly) {
