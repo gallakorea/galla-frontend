@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // 1) 내가 만든 이슈들의 id 목록을 가져온다.
             const { data: myIssues, error: myIssuesError } = await supabase
                 .from("issues")
-                .select("id")
+                .select("id, title, thumbnail_url")
                 .eq("user_id", userId);
 
             if (myIssuesError) {
@@ -141,9 +141,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                     id,
                     title,
                     score,
-                    thumbnail_url
+                    thumbnail_url,
+                    user_id
                 `)
-                .in("origin_issue_id", myIssueIds);
+                .in("origin_issue_id", myIssueIds)
+                .neq("user_id", userId);
 
             if (draftIssuesError) {
                 console.error("[Battle Galla] error fetching draft issues", draftIssuesError);
@@ -174,14 +176,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             tabContent.innerHTML = "";
 
             uniqueOriginIssues.forEach(issue => {
+                const origin = myIssues.find(i => i.id === issue.origin_issue_id);
+
                 const card = document.createElement("div");
                 card.className = "thumb-card";
 
                 const thumbSrc = issue.thumbnail_url || "./assets/logo.png";
 
                 card.innerHTML = `
-                    <img src="${thumbSrc}">
-                    <div class="thumb-title">${issue.title}</div>
+                    <img src="${origin?.thumbnail_url || "./assets/logo.png"}">
+                    <div class="thumb-title">
+                        ${origin ? origin.title : "Battle Issue"}
+                    </div>
                     <div class="thumb-author">⚔️ Battle 진행 중</div>
                     <div class="thumb-stats">
                         <span>🔥 ${issue.score ?? 0}</span>
