@@ -161,28 +161,102 @@ document.addEventListener('DOMContentLoaded', () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    document.getElementById('publishPreview').onclick = () => {
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
-      const isDraftMode = window.__DRAFT_MODE__ === true;
+    document.getElementById('publishPreview').onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-      if (isDraftMode) {
-        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
-        return;
+      try {
+        if (!window.supabaseClient) {
+          throw new Error('Supabase client 없음');
+        }
+
+        const { data: sessionData } =
+          await window.supabaseClient.auth.getSession();
+        const user = sessionData?.session?.user;
+
+        if (!user) {
+          alert('로그인이 필요합니다.');
+          return;
+        }
+
+        let thumbnail_url = null;
+        let video_url = null;
+
+        const thumbFile = document.getElementById('thumbnail')?.files?.[0];
+        if (thumbFile) {
+          const ext = thumbFile.name.split('.').pop();
+          const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
+
+          const { error } = await window.supabaseClient
+            .storage
+            .from('issues')
+            .upload(path, thumbFile);
+
+          if (error) throw error;
+
+          thumbnail_url =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path).data.publicUrl;
+        }
+
+        const videoFile = document.getElementById('video')?.files?.[0];
+        if (videoFile) {
+          const ext = videoFile.name.split('.').pop();
+          const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
+
+          const { error } = await window.supabaseClient
+            .storage
+            .from('issues')
+            .upload(path, videoFile);
+
+          if (error) throw error;
+
+          video_url =
+            window.supabaseClient
+              .storage
+              .from('issues')
+              .getPublicUrl(path).data.publicUrl;
+        }
+
+        const { data: inserted, error } =
+          await window.supabaseClient
+            .from('issues_draft')
+            .insert([{
+              user_id: user.id,
+              category: categoryEl.value,
+              title: titleEl.value,
+              one_line: oneLineEl.value || null,
+              description: descEl.value,
+              donation_target: donationEl.value,
+              is_anonymous: anon,
+              author_stance: authorStance,
+              thumbnail_url,
+              video_url,
+              status: 'draft',
+              draft_mode: 'check',
+              moderation_status: 'pending',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }])
+            .select('id')
+            .single();
+
+        if (error || !inserted?.id) {
+          throw error || new Error('draft 생성 실패');
+        }
+
+        sessionStorage.setItem('__DRAFT_CHECK_ONLY__', 'true');
+        sessionStorage.setItem('__CURRENT_DRAFT_ID__', inserted.id);
+
+        location.href = `confirm.html?draft=${inserted.id}&mode=check`;
+
+      } catch (err) {
+        console.error('[WRITE → DRAFT ERROR]', err);
+        alert('발행 전 검사 단계로 이동하지 못했습니다.');
       }
-
-      // ⬇️ 아래부터는 "정상 발행 흐름"만 실행
-      const payload = {
-        category: categoryEl.value,
-        title: titleEl.value,
-        oneLine: oneLineEl.value,
-        description: descEl.value,
-        donation_target: donationEl.value,
-        is_anonymous: anon,
-        author_stance: authorStance   // ✅ 이 줄
-      };
-
-      sessionStorage.setItem('writePayload', JSON.stringify(payload));
-      location.href = 'confirm.html';
     };
 
     if (videoEl) {
