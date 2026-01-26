@@ -33,12 +33,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 🔥 CHECK-ONLY MODE (URL 기준 단일 판별)
   const isCheckOnly = params.get('mode') === 'check';
 
-  if (isCheckOnly) {
-    console.log('[confirm.js] CHECK-ONLY MODE → 발행 차단');
+  if (!isCheckOnly) {
+    sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
   }
 
   const backBtn = document.getElementById('backBtn');
   const publishBtn = document.getElementById('publishBtn');
+
+  if (isCheckOnly) {
+    publishBtn.disabled = true;
+    publishBtn.textContent = '검사 전용 단계';
+    publishBtn.style.display = 'inline-flex';
+  } else {
+    publishBtn.disabled = false;
+    publishBtn.textContent = '최종 발행';
+    publishBtn.style.display = 'inline-flex';
+  }
+
+  if (isCheckOnly) {
+    console.log('[confirm.js] CHECK-ONLY MODE → 발행 차단');
+  }
 
   if (!draftId) {
     alert('임시 저장된 글이 없습니다.');
@@ -79,15 +93,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderResult('check-title', 'PASS', '문제 없음');
   renderResult('check-oneline', 'PASS', '문제 없음');
   renderResult('check-description', 'PASS', '문제 없음');
-
-  if (isCheckOnly) {
-    publishBtn.disabled = true;
-    publishBtn.textContent = '검사 전용 단계';
-  } else {
-    publishBtn.disabled = false;
-    publishBtn.textContent = '최종 발행';
-    publishBtn.style.display = 'inline-flex';
-  }
 
   // 🔒 안전장치: confirm 진입 시 자동 발행 절대 금지
   if (!publishBtn) {
