@@ -1,11 +1,13 @@
-// 🚨 GLOBAL HARD BLOCK — 검사 전용 상태에서는 발행 루트 자체 진입 금지
+// 🚨 GLOBAL HARD BLOCK — 검사(confirm) 단계에서만 발행 차단
 document.addEventListener(
   'click',
   (e) => {
     const isCheckOnly =
       sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true';
 
-    // ❌ publish / publishPreview / fake 버튼 전부 차단
+    // write / write-remix 에서는 절대 막지 않음
+    if (!location.pathname.includes('confirm')) return;
+
     if (
       isCheckOnly &&
       (
@@ -26,6 +28,13 @@ document.addEventListener(
 // 🔥 REMIX STATE (write-remix 전용)
 
 document.addEventListener('DOMContentLoaded', () => {
+  // ✅ issue → write‑remix 정상 진입 시 검사 플래그 완전 초기화
+  if (!new URLSearchParams(location.search).has('draft')) {
+    sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
+    sessionStorage.removeItem('__ALLOW_DRAFT_EXIT__');
+    sessionStorage.removeItem('__CURRENT_DRAFT_ID__');
+    console.log('[write-remix] clean entry — check-only flags cleared');
+  }
   // 🔥 REMIX DRAFT FILE CACHE (미리보기 후에도 파일 유지)
   let __REMIX_THUMB_FILE__ = null;
   let __REMIX_VIDEO_FILE__ = null;
