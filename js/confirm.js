@@ -181,6 +181,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           donation_target: draft.donation_target,
           is_anonymous: draft.is_anonymous,
           author_stance: draft.author_stance,
+          origin_issue_id: draft.origin_issue_id,
+          battle_type: draft.battle_type,
           thumbnail_url: updates.thumbnail_url ?? draft.thumbnail_url,
           video_url: updates.video_url ?? draft.video_url,
           status: 'normal',
