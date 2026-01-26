@@ -1,9 +1,3 @@
-// 🚨 HARD BLOCK — remix 페이지에서는 절대 실행 금지
-if (window.__REMIX_CHECK_ONLY__ === true) {
-  console.warn('[draft.save] remix mode detected — disabled');
-  return;
-}
-
 // 🔒 Draft State Machine (edit | check)
 window.__DRAFT_MODE__ = 'edit';
 window.__CHECK_ONLY__ = false;
