@@ -43,6 +43,58 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const userId = session.user.id;
 
+    // ============================
+    // Follow Button (dynamic)
+    // ============================
+    const params = new URLSearchParams(location.search);
+    const viewUserId = params.get("user");
+
+    let followBtn = document.getElementById("followBtn");
+    if (!followBtn) {
+        followBtn = document.createElement("button");
+        followBtn.id = "followBtn";
+        followBtn.className = "follow-btn";
+        followBtn.style.marginTop = "12px";
+        document.querySelector(".profile-section")?.appendChild(followBtn);
+    }
+
+    // 내 마이페이지가 아닌 경우만 노출
+    if (!viewUserId || viewUserId === userId) {
+        followBtn.style.display = "none";
+    } else {
+        followBtn.style.display = "block";
+
+        // 현재 팔로우 상태 확인
+        const { data: followRow } = await supabase
+            .from("follows")
+            .select("id")
+            .eq("follower", userId)
+            .eq("following", viewUserId)
+            .maybeSingle();
+
+        followBtn.textContent = followRow ? "언팔로우" : "팔로우";
+
+        followBtn.onclick = async () => {
+            if (followRow) {
+                // 언팔로우
+                await supabase
+                    .from("follows")
+                    .delete()
+                    .eq("follower", userId)
+                    .eq("following", viewUserId);
+            } else {
+                // 팔로우
+                await supabase
+                    .from("follows")
+                    .insert({
+                        follower: userId,
+                        following: viewUserId
+                    });
+            }
+            location.reload();
+        };
+    }
+
     // =====================================================
     // Load My Stats
     // =====================================================
