@@ -44,6 +44,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     const userId = session.user.id;
 
     // =====================================================
+    // Load My Stats
+    // =====================================================
+    async function loadMyStats() {
+        // 1) My Drop: count of issues where user_id = userId
+        const { count: dropCount, error: dropError } = await supabase
+            .from("issues")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", userId);
+
+        // 2) Followers: count of follows where following = userId
+        const { count: followerCount, error: followerError } = await supabase
+            .from("follows")
+            .select("id", { count: "exact", head: true })
+            .eq("following", userId);
+
+        // 3) Supports (찬성): sum of sup_pro from issues where user_id = userId
+        const { data: supportData, error: supportError } = await supabase
+            .from("issues")
+            .select("sup_pro", { head: false })
+            .eq("user_id", userId);
+        let supportSum = 0;
+        if (supportData && Array.isArray(supportData)) {
+            supportSum = supportData.reduce((acc, row) => acc + (row.sup_pro || 0), 0);
+        }
+
+        // 4) Opposes (반대): sum of sup_con from issues where user_id = userId
+        const { data: opposeData, error: opposeError } = await supabase
+            .from("issues")
+            .select("sup_con", { head: false })
+            .eq("user_id", userId);
+        let opposeSum = 0;
+        if (opposeData && Array.isArray(opposeData)) {
+            opposeSum = opposeData.reduce((acc, row) => acc + (row.sup_con || 0), 0);
+        }
+
+        // Update DOM elements (fallback to 0)
+        const setStat = (selector, value) => {
+            const el = document.querySelector(selector);
+            if (el) el.textContent = value ?? 0;
+        };
+        setStat("#statDrop", dropCount ?? 0);
+        setStat("#statFollowers", followerCount ?? 0);
+        setStat("#statSupports", supportSum ?? 0);
+        setStat("#statOppose", opposeSum ?? 0);
+    }
+
+    // Load stats before initial render
+    loadMyStats();
+
+    // =====================================================
     // My 갈라 — 내가 만든 이슈
     // =====================================================
     const renderMy = async () => {
