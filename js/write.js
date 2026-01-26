@@ -165,19 +165,17 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       e.stopPropagation();
 
-      // 🔒 draft 모드 방어 (정의 안 된 경우도 안전)
-      const isDraftMode = window.__DRAFT_MODE__ === true;
-      if (isDraftMode) {
-        console.log('[write.js] DRAFT MODE → confirm 이동 차단');
-        return;
-      }
-
-      // Supabase client (assume available as window.supabase)
-      if (!window.supabase) {
+      // Supabase client (統一: window.supabaseClient)
+      if (!window.supabaseClient) {
         alert('Supabase 클라이언트가 초기화되지 않았습니다.');
         return;
       }
-      const { data: { user } } = await window.supabase.auth.getUser();
+
+      const { data: sessionData } =
+        await window.supabaseClient.auth.getSession();
+
+      const user = sessionData?.session?.user;
+
       if (!user) {
         alert('로그인이 필요합니다.');
         return;
