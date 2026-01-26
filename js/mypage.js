@@ -109,60 +109,95 @@ document.addEventListener("DOMContentLoaded", async () => {
     const renderBattle = async () => {
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
-        // 🔥 Battle 갈라 임시 기준:
-        // 내가 만든 이슈들을 "배틀 발생 가능 이슈"로 표시
-        // (origin_issue_id 컬럼이 아직 없기 때문에 안전한 우회 처리)
+        try {
+            // 1) 내가 만든 이슈들의 id 목록을 가져온다.
+            const { data: myIssues, error: myIssuesError } = await supabase
+                .from("issues")
+                .select("id")
+                .eq("user_id", userId);
 
-        const { data: myIssues, error } = await supabase
-            .from("issues")
-            .select(`
-                id,
-                title,
-                created_at,
-                score,
-                thumbnail_url
-            `)
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false });
+            if (myIssuesError) {
+                console.error("[Battle Galla] error fetching user issues", myIssuesError);
+                tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+                return;
+            }
 
-        if (error) {
-            console.error("[Battle Galla] error", error);
+            if (!myIssues || myIssues.length === 0) {
+                tabContent.innerHTML = `
+                    <div style="color:#777;font-size:14px;padding:20px;">
+                        아직 배틀이 발생한 이슈가 없습니다.
+                    </div>
+                `;
+                return;
+            }
+
+            const myIssueIds = myIssues.map(issue => issue.id);
+
+            // 2) issues_draft 테이블에서 origin_issue_id 가 내 이슈 id 목록에 포함된 row 조회
+            const { data: draftIssues, error: draftIssuesError } = await supabase
+                .from("issues_draft")
+                .select(`
+                    origin_issue_id,
+                    id,
+                    title,
+                    score,
+                    thumbnail_url
+                `)
+                .in("origin_issue_id", myIssueIds);
+
+            if (draftIssuesError) {
+                console.error("[Battle Galla] error fetching draft issues", draftIssuesError);
+                tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+                return;
+            }
+
+            if (!draftIssues || draftIssues.length === 0) {
+                tabContent.innerHTML = `
+                    <div style="color:#777;font-size:14px;padding:20px;">
+                        아직 배틀이 발생한 이슈가 없습니다.
+                    </div>
+                `;
+                return;
+            }
+
+            // 3) 중복 제거된 origin_issue_id 기준으로 battle 대상 이슈 구성
+            const uniqueOriginIssuesMap = new Map();
+
+            draftIssues.forEach(draft => {
+                if (!uniqueOriginIssuesMap.has(draft.origin_issue_id)) {
+                    uniqueOriginIssuesMap.set(draft.origin_issue_id, draft);
+                }
+            });
+
+            const uniqueOriginIssues = Array.from(uniqueOriginIssuesMap.values());
+
+            tabContent.innerHTML = "";
+
+            uniqueOriginIssues.forEach(issue => {
+                const card = document.createElement("div");
+                card.className = "thumb-card";
+
+                const thumbSrc = issue.thumbnail_url || "./assets/logo.png";
+
+                card.innerHTML = `
+                    <img src="${thumbSrc}">
+                    <div class="thumb-title">${issue.title}</div>
+                    <div class="thumb-author">⚔️ Battle 진행 중</div>
+                    <div class="thumb-stats">
+                        <span>🔥 ${issue.score ?? 0}</span>
+                    </div>
+                `;
+
+                card.onclick = () => {
+                    location.href = `issue.html?id=${issue.origin_issue_id}`;
+                };
+
+                tabContent.appendChild(card);
+            });
+        } catch (e) {
+            console.error("[Battle Galla] unexpected error", e);
             tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
-            return;
         }
-
-        if (!myIssues || myIssues.length === 0) {
-            tabContent.innerHTML = `
-                <div style="color:#777;font-size:14px;padding:20px;">
-                    아직 배틀이 발생한 이슈가 없습니다.
-                </div>
-            `;
-            return;
-        }
-
-        tabContent.innerHTML = "";
-
-        myIssues.forEach(issue => {
-            const card = document.createElement("div");
-            card.className = "thumb-card";
-
-            const thumbSrc = issue.thumbnail_url || "./assets/logo.png";
-
-            card.innerHTML = `
-                <img src="${thumbSrc}">
-                <div class="thumb-title">${issue.title}</div>
-                <div class="thumb-author">⚔️ Battle 진행 중</div>
-                <div class="thumb-stats">
-                    <span>🔥 ${issue.score ?? 0}</span>
-                </div>
-            `;
-
-            card.onclick = () => {
-                location.href = `issue.html?id=${issue.id}`;
-            };
-
-            tabContent.appendChild(card);
-        });
     };
 
     const renderSave = () => {
