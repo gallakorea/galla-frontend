@@ -59,24 +59,34 @@ document.addEventListener("DOMContentLoaded", async () => {
             .select("id", { count: "exact", head: true })
             .eq("following", userId);
 
-        // 3) Supports (찬성): sum of sup_pro from issues where user_id = userId
-        const { data: supportData, error: supportError } = await supabase
+        // 3) 내가 만든 이슈 id 목록
+        const { data: myIssues, error: myIssuesError } = await supabase
             .from("issues")
-            .select("sup_pro", { head: false })
+            .select("id")
             .eq("user_id", userId);
+
+        const myIssueIds = (myIssues || []).map(i => i.id);
+
+        // 4) Supports (찬성): votes.type = 'pro'
         let supportSum = 0;
-        if (supportData && Array.isArray(supportData)) {
-            supportSum = supportData.reduce((acc, row) => acc + (row.sup_pro || 0), 0);
+        if (myIssueIds.length > 0) {
+            const { count } = await supabase
+                .from("votes")
+                .select("id", { count: "exact", head: true })
+                .in("issue_id", myIssueIds)
+                .eq("type", "pro");
+            supportSum = count || 0;
         }
 
-        // 4) Opposes (반대): sum of sup_con from issues where user_id = userId
-        const { data: opposeData, error: opposeError } = await supabase
-            .from("issues")
-            .select("sup_con", { head: false })
-            .eq("user_id", userId);
+        // 5) Opposes (반발): votes.type = 'con'
         let opposeSum = 0;
-        if (opposeData && Array.isArray(opposeData)) {
-            opposeSum = opposeData.reduce((acc, row) => acc + (row.sup_con || 0), 0);
+        if (myIssueIds.length > 0) {
+            const { count } = await supabase
+                .from("votes")
+                .select("id", { count: "exact", head: true })
+                .in("issue_id", myIssueIds)
+                .eq("type", "con");
+            opposeSum = count || 0;
         }
 
         // Update DOM elements (fallback to 0)
