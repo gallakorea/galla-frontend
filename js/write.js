@@ -171,7 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       // 🔒 FIX: storage undefined 방어 (Cannot read properties of undefined 'from')
-      if (!window.supabaseClient.storage || typeof window.supabaseClient.storage.from !== 'function') {
+      if (!window.supabaseClient || !window.supabaseClient.storage) {
+        alert('스토리지 초기화가 완료되지 않았습니다.');
+        return;
+      }
+      if (typeof window.supabaseClient.storage.from !== 'function') {
         console.error('[write.js] supabaseClient.storage not ready', window.supabaseClient);
         alert('스토리지 초기화가 완료되지 않았습니다. 잠시 후 다시 시도해주세요.');
         return;
@@ -193,8 +197,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // Upload thumbnail if file selected
       const thumbFile = thumbInput.files && thumbInput.files[0];
       if (thumbFile) {
-        const thumbPath = `drafts/${user.id}/thumbnail_${Date.now()}_${thumbFile.name}`;
-        const { error: thumbErr } = await window.supabaseClient.storage.from('issues').upload(thumbPath, thumbFile, { upsert: true });
+        const safeThumbName = thumbFile.name.replace(/[^a-zA-Z0-9._-]/g, '');
+        const thumbPath = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${safeThumbName.split('.').pop()}`;
+        const { error: thumbErr } = await window.supabaseClient
+          .storage
+          .from('issues')
+          .upload(thumbPath, thumbFile, {
+            upsert: false,
+            contentType: thumbFile.type
+          });
         if (thumbErr) {
           alert('썸네일 업로드에 실패했습니다.');
           return;
@@ -206,8 +217,15 @@ document.addEventListener('DOMContentLoaded', () => {
       // Upload video if file selected
       const videoFile = videoInput.files && videoInput.files[0];
       if (videoFile) {
-        const videoPath = `drafts/${user.id}/video_${Date.now()}_${videoFile.name}`;
-        const { error: videoErr } = await window.supabaseClient.storage.from('issues').upload(videoPath, videoFile, { upsert: true });
+        const safeVideoName = videoFile.name.replace(/[^a-zA-Z0-9._-]/g, '');
+        const videoPath = `drafts/${user.id}/video_${crypto.randomUUID()}.${safeVideoName.split('.').pop()}`;
+        const { error: videoErr } = await window.supabaseClient
+          .storage
+          .from('issues')
+          .upload(videoPath, videoFile, {
+            upsert: false,
+            contentType: videoFile.type
+          });
         if (videoErr) {
           alert('영상 업로드에 실패했습니다.');
           return;
