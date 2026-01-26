@@ -43,9 +43,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const draftId = params.get('draft');
 
   // 🔥 CHECK-ONLY MODE (검사 전용)
-  const isCheckOnly =
-    params.get('mode') === 'check' ||
-    sessionStorage.getItem('__DRAFT_CHECK_ONLY__') === 'true';
+  const isCheckOnly = params.get('mode') === 'check';
+  // 🔥 confirm 진입 시 세션 플래그 정리 (이전 검사 상태 잔존 방지)
+  sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
 
   if (isCheckOnly) {
     console.log('[confirm.js] CHECK-ONLY MODE → 발행 차단');
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🔒 검사 전용 모드에서는 절대 발행 불가
     if (isCheckOnly) {
-      alert('이 단계에서는 발행할 수 없습니다.');
+      alert('검사 전용 페이지에서는 발행할 수 없습니다.');
       return;
     }
 
