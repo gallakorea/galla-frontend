@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // 🚨 WRITE PAGE ENTRY RESET — draft / check state hard clear
+  sessionStorage.removeItem('__CURRENT_DRAFT_ID__');
+  sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
+  sessionStorage.removeItem('__ALLOW_DRAFT_EXIT__');
+  sessionStorage.removeItem('__DRAFT_THUMBNAIL_URL__');
+  sessionStorage.removeItem('__DRAFT_VIDEO_URL__');
   const body = document.body;
 
   const form = document.getElementById('writeForm');
