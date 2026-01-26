@@ -1,4 +1,4 @@
-// 🔒 CONFIRM MODE — 절대 자동 발행 금지
+window.__CONFIRM_MODE__ = true;
 let __USER_CONFIRMED_PUBLISH__ = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -30,37 +30,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.__CONFIRM_MODE__ = params.get('mode') !== 'check';
   const draftId = params.get('draft');
 
-  // 🔥 CHECK-ONLY MODE (URL 기준 단일 판별)
+  // 🔥 CHECK-ONLY MODE (단계 분리)
+  // mode=check  → 검사 단계
+  // mode 없음   → 최종 발행 단계
   const isCheckOnly = params.get('mode') === 'check';
 
-  if (!isCheckOnly) {
-    sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
-  }
-
+  // 버튼은 항상 존재
   const backBtn = document.getElementById('backBtn');
   const publishBtn = document.getElementById('publishBtn');
+  publishBtn.style.display = 'inline-flex';
 
   if (isCheckOnly) {
     publishBtn.disabled = false;
     publishBtn.textContent = '발행 단계로 이동';
-    publishBtn.style.display = 'inline-flex';
 
     publishBtn.onclick = () => {
-      // 검사 완료 → 발행 단계로 이동 (mode=check 제거)
+      // 검사 → 발행 단계로 전환
       sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
       location.href = `confirm.html?draft=${draftId}`;
     };
 
-    console.log('[confirm.js] CHECK-ONLY MODE → publish stage redirect');
-    return; // 🔴 check-only에서는 최종 발행 로직 바인딩 금지
+    console.log('[confirm.js] CHECK-ONLY MODE → publish stage button enabled');
   } else {
     publishBtn.disabled = false;
     publishBtn.textContent = '최종 발행';
-    publishBtn.style.display = 'inline-flex';
   }
 
   if (isCheckOnly) {
-    console.log('[confirm.js] CHECK-ONLY MODE → 발행 차단');
+    sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
   }
 
   if (!draftId) {
@@ -99,6 +96,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* =====================
      MOCK 검사 결과
   ===================== */
+  // 🔥 검사 기능 비활성 상태: 로딩 제거 즉시 PASS 처리
+  ['check-title','check-oneline','check-description'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('loading');
+  });
+
   renderResult('check-title', 'PASS', '문제 없음');
   renderResult('check-oneline', 'PASS', '문제 없음');
   renderResult('check-description', 'PASS', '문제 없음');
@@ -131,12 +134,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   ===================== */
   publishBtn.onclick = async () => {
     // Removed draft.draft_mode check per instructions
-
-    // 🔒 검사 전용 모드에서는 절대 발행 불가
-    if (isCheckOnly) {
-      alert('검사 전용 페이지에서는 발행할 수 없습니다.');
-      return;
-    }
 
     __USER_CONFIRMED_PUBLISH__ = true;
 
