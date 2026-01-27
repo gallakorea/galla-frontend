@@ -81,16 +81,15 @@ body {
 .profile-actions {
     margin-top: 14px;
     display: flex;
-    justify-content: center;
-    gap: 10px;
     width: 100%;
     padding: 0 16px;
+    gap: 8px;
     box-sizing: border-box;
 }
 
 .profile-actions button {
     flex: 1;
-    padding: 12px 16px;
+    height: 42px;
     font-size: 14px;
     font-weight: 700;
     border-radius: 10px;
@@ -98,7 +97,7 @@ body {
     cursor: pointer;
 }
 
-/* Follow */
+/* Follow / Unfollow */
 .profile-actions .follow {
     background: #3B82F6;
     color: #fff;
@@ -107,6 +106,7 @@ body {
 .profile-actions .following {
     background: #1b1b1b;
     color: #bbb;
+    border: 1px solid #2a2a2a;
 }
 
 /* Message */
@@ -114,6 +114,18 @@ body {
     background: #1b1b1b;
     color: #fff;
     border: 1px solid #2a2a2a;
+}
+
+/* My page buttons */
+.profile-actions .edit-btn {
+    background: #1b1b1b;
+    color: #fff;
+    border: 1px solid #2a2a2a;
+}
+
+.profile-actions .mission-btn {
+    background: #3B82F6;
+    color: #fff;
 }
 
 /* STATS */

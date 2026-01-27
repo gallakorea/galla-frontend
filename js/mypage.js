@@ -51,56 +51,69 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isMyPage = viewUserId === userId;
 
     // ============================
-    // Profile Actions (Follow / Message)
+    // Profile Actions (self vs other)
     // ============================
-    const followBtn = document.getElementById("followBtn");
-    const messageBtn = document.getElementById("messageBtn");
+    const actionsEl = document.getElementById("profileActions");
+    if (actionsEl) {
+        actionsEl.innerHTML = "";
 
-    if (isMyPage) {
-        // 내 페이지에서는 액션 버튼 숨김
-        if (followBtn) followBtn.style.display = "none";
-        if (messageBtn) messageBtn.style.display = "none";
-    } else {
-        // 상대 프로필
-        if (followBtn) followBtn.style.display = "inline-block";
-        if (messageBtn) messageBtn.style.display = "inline-block";
+        if (isMyPage) {
+            // 내 프로필
+            actionsEl.innerHTML = `
+                <button class="action-btn primary" id="editProfileBtn">프로필 편집</button>
+                <button class="action-btn ghost" id="todayMissionBtn">오늘의 미션</button>
+            `;
 
-        const { data: followRow } = await supabase
-            .from("follows")
-            .select("id")
-            .eq("follower", userId)
-            .eq("following", viewUserId)
-            .maybeSingle();
+            document.getElementById("editProfileBtn").onclick = () => {
+                location.href = "settings.html";
+            };
 
-        const isFollowing = !!followRow;
+            document.getElementById("todayMissionBtn").onclick = () => {
+                location.href = "quest.html";
+            };
+        } else {
+            // 상대 프로필
+            actionsEl.innerHTML = `
+                <button class="action-btn primary" id="followActionBtn">팔로우</button>
+                <button class="action-btn ghost" id="messageActionBtn">메시지 보내기</button>
+            `;
 
-        // 버튼 상태
-        followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
-        followBtn.classList.toggle("following", isFollowing);
-        followBtn.classList.toggle("follow", !isFollowing);
+            const followActionBtn = document.getElementById("followActionBtn");
 
-        followBtn.onclick = async () => {
-            if (isFollowing) {
-                await supabase
-                    .from("follows")
-                    .delete()
-                    .eq("follower", userId)
-                    .eq("following", viewUserId);
-            } else {
-                await supabase
-                    .from("follows")
-                    .insert({
-                        follower: userId,
-                        following: viewUserId
-                    });
-            }
-            location.reload();
-        };
+            const { data: followRow } = await supabase
+                .from("follows")
+                .select("id")
+                .eq("follower", userId)
+                .eq("following", viewUserId)
+                .maybeSingle();
 
-        // 메시지 버튼 (아직 기능 없음)
-        messageBtn.onclick = () => {
-            alert("메시지 기능은 준비 중입니다.");
-        };
+            const isFollowing = !!followRow;
+
+            followActionBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
+            followActionBtn.classList.toggle("following", isFollowing);
+
+            followActionBtn.onclick = async () => {
+                if (isFollowing) {
+                    await supabase
+                        .from("follows")
+                        .delete()
+                        .eq("follower", userId)
+                        .eq("following", viewUserId);
+                } else {
+                    await supabase
+                        .from("follows")
+                        .insert({
+                            follower: userId,
+                            following: viewUserId
+                        });
+                }
+                location.reload();
+            };
+
+            document.getElementById("messageActionBtn").onclick = () => {
+                alert("메시지 기능은 준비 중입니다.");
+            };
+        }
     }
 
     // =====================================================
