@@ -79,9 +79,16 @@ body {
 }
 
 /* PROFILE ACTION BUTTONS */
+.profile-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px 0;
+}
+
 .profile-actions button {
-    flex: 1;
-    height: 44px;
+    flex: 1 1 0%;
+    width: 100%;
+    height: 40px;
     font-size: 14px;
     font-weight: 600;
     border-radius: 10px;
@@ -89,7 +96,6 @@ body {
     cursor: pointer;
     background: #262626;
     color: #ffffff;
-    transition: background .15s ease, color .15s ease;
 }
 
 /* Follow (Instagram blue) */
@@ -101,10 +107,10 @@ body {
 /* Following / Unfollow */
 .profile-actions .following {
     background: #262626;
-    color: #e5e5e5;
+    color: #ffffff;
 }
 
-/* Message / Edit / Mission (Instagram gray) */
+/* Message / Edit / Mission */
 .profile-actions .message-btn,
 .profile-actions .edit-btn,
 .profile-actions .mission-btn {
@@ -113,14 +119,8 @@ body {
 }
 
 /* Hover / Active */
-.profile-actions .follow:hover {
-    background: #1877f2;
-}
-
-.profile-actions .message-btn:hover,
-.profile-actions .edit-btn:hover,
-.profile-actions .mission-btn:hover {
-    background: #333333;
+.profile-actions button:hover {
+    background: #303030;
 }
 
 .profile-actions button:active {
