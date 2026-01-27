@@ -79,56 +79,52 @@ body {
 }
 
 /* PROFILE ACTION BUTTONS */
-.profile-actions {
-    margin-top: 14px;
-    display: flex;
-    width: 100%;
-    padding: 0 16px;
-    gap: 8px;
-    box-sizing: border-box;
-}
-
 .profile-actions button {
     flex: 1;
     height: 44px;
     font-size: 14px;
     font-weight: 600;
-    border-radius: 12px;
+    border-radius: 10px;
     border: none;
     cursor: pointer;
-    transition: background .2s ease, color .2s ease, border .2s ease;
+    background: #262626;
+    color: #ffffff;
+    transition: background .15s ease, color .15s ease;
 }
 
-/* Follow / Unfollow */
+/* Follow (Instagram blue) */
 .profile-actions .follow {
     background: #0095f6;
-    color: #fff;
+    color: #ffffff;
 }
 
+/* Following / Unfollow */
 .profile-actions .following {
     background: #262626;
     color: #e5e5e5;
-    border: 1px solid #262626;
 }
 
-/* Message */
-.profile-actions .message-btn {
-    background: #262626;
-    color: #ffffff;
-    border: 1px solid #262626;
-}
-
-/* My page buttons */
-.profile-actions .edit-btn {
-    background: #262626;
-    color: #ffffff;
-    border: 1px solid #262626;
-}
-
+/* Message / Edit / Mission (Instagram gray) */
+.profile-actions .message-btn,
+.profile-actions .edit-btn,
 .profile-actions .mission-btn {
     background: #262626;
     color: #ffffff;
-    border: 1px solid #262626;
+}
+
+/* Hover / Active */
+.profile-actions .follow:hover {
+    background: #1877f2;
+}
+
+.profile-actions .message-btn:hover,
+.profile-actions .edit-btn:hover,
+.profile-actions .mission-btn:hover {
+    background: #333333;
+}
+
+.profile-actions button:active {
+    transform: scale(0.97);
 }
 
 /* STATS */
@@ -262,18 +258,3 @@ body {
 
 /* 텍스트 제거 */
 .nav-label { display:none !important; }
-
-/* Profile action button hover/active polish */
-.profile-actions button:active {
-    transform: scale(0.98);
-}
-
-.profile-actions .follow:hover {
-    background: #1877f2;
-}
-
-.profile-actions .message-btn:hover,
-.profile-actions .edit-btn:hover,
-.profile-actions .mission-btn:hover {
-    background: #363636;
-}
