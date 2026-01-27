@@ -110,9 +110,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load viewed user's profile data (nickname, bio, level)
     // ============================
     const { data: viewProfile, error: viewProfileError } = await supabase
-        .from("user_profiles")
+        .from("users")
         .select("nickname, bio, level")
-        .eq("user_id", viewUserId)
+        .eq("id", viewUserId)
         .single();
 
     if (!viewProfileError && viewProfile) {
