@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       let avatarUrl = null;
 
-      // 1. Upload image if selected
+      // 1. Upload image if selected (FIXED)
       if (selectedFile) {
         if (!selectedFile.type.startsWith("image/")) {
           alert("이미지 파일만 업로드 가능합니다.");
@@ -55,34 +55,43 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const filePath = `${userId}/avatar.jpg`;
 
-        let uploadError = null;
+        // Convert to JPEG Blob to avoid mime / policy issues
+        const jpegBlob = await (async () => {
+          const img = new Image();
+          const url = URL.createObjectURL(selectedFile);
+          img.src = url;
 
-        // 1차: upload 시도
-        const uploadResult = await supabase.storage
-          .from("profiles")
-          .upload(filePath, selectedFile, {
-            cacheControl: "3600",
-            upsert: false
+          await new Promise((res, rej) => {
+            img.onload = res;
+            img.onerror = rej;
           });
 
-        uploadError = uploadResult.error;
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
 
-        // 2차: 이미 존재하면 update
-        if (uploadError && uploadError.statusCode === 409) {
-          console.warn("file exists, retrying with update");
+          URL.revokeObjectURL(url);
 
-          const updateResult = await supabase.storage
-            .from("profiles")
-            .update(filePath, selectedFile, {
-              cacheControl: "3600"
-            });
+          return await new Promise((res, rej) => {
+            canvas.toBlob(
+              blob => (blob ? res(blob) : rej(new Error("toBlob failed"))),
+              "image/jpeg",
+              0.9
+            );
+          });
+        })();
 
-          uploadError = updateResult.error;
-        }
+        const { error: uploadError } = await supabase.storage
+          .from("profiles")
+          .upload(filePath, jpegBlob, {
+            upsert: true
+          });
 
         if (uploadError) {
-          console.error("storage upload failed:", uploadError.message, uploadError.statusCode);
-          alert("사진 업로드 실패");
+          console.error("storage upload error:", uploadError);
+          alert("사진 업로드 실패 (스토리지)");
           return;
         }
 
