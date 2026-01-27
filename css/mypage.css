@@ -83,11 +83,14 @@ body {
     display: flex;
     justify-content: center;
     gap: 10px;
+    width: 100%;
+    padding: 0 16px;
+    box-sizing: border-box;
 }
 
 .profile-actions button {
-    min-width: 120px;
-    padding: 10px 16px;
+    flex: 1;
+    padding: 12px 16px;
     font-size: 14px;
     font-weight: 700;
     border-radius: 10px;
