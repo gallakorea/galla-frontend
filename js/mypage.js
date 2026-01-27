@@ -51,69 +51,78 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isMyPage = viewUserId === userId;
 
     // ============================
-    // Profile Actions (self vs other)
+    // Profile Actions (Follow / Message) - Render dynamically
     // ============================
-    const actionsEl = document.getElementById("profileActions");
-    if (actionsEl) {
-        actionsEl.innerHTML = "";
+    const profileActions = document.getElementById("profileActions");
+    profileActions.innerHTML = "";
 
-        if (isMyPage) {
-            // 내 프로필
-            actionsEl.innerHTML = `
-                <button class="action-btn primary" id="editProfileBtn">프로필 편집</button>
-                <button class="action-btn ghost" id="todayMissionBtn">오늘의 미션</button>
-            `;
+    if (isMyPage) {
+        const editBtn = document.createElement("button");
+        editBtn.className = "action-btn primary";
+        editBtn.textContent = "프로필 편집";
+        editBtn.onclick = () => location.href = "account-edit.html";
 
-            document.getElementById("editProfileBtn").onclick = () => {
-                location.href = "settings.html";
-            };
+        const missionBtn = document.createElement("button");
+        missionBtn.className = "action-btn secondary";
+        missionBtn.textContent = "오늘의 미션";
+        missionBtn.onclick = () => location.href = "quest.html";
 
-            document.getElementById("todayMissionBtn").onclick = () => {
-                location.href = "quest.html";
-            };
-        } else {
-            // 상대 프로필
-            actionsEl.innerHTML = `
-                <button class="action-btn primary" id="followActionBtn">팔로우</button>
-                <button class="action-btn ghost" id="messageActionBtn">메시지 보내기</button>
-            `;
+        profileActions.appendChild(editBtn);
+        profileActions.appendChild(missionBtn);
+    } else {
+        const followBtn = document.createElement("button");
+        followBtn.className = "action-btn primary";
 
-            const followActionBtn = document.getElementById("followActionBtn");
+        const messageBtn = document.createElement("button");
+        messageBtn.className = "action-btn secondary";
+        messageBtn.textContent = "메시지 보내기";
 
-            const { data: followRow } = await supabase
-                .from("follows")
-                .select("id")
-                .eq("follower", userId)
-                .eq("following", viewUserId)
-                .maybeSingle();
+        const { data: followRow } = await supabase
+            .from("follows")
+            .select("id")
+            .eq("follower", userId)
+            .eq("following", viewUserId)
+            .maybeSingle();
 
-            const isFollowing = !!followRow;
+        let isFollowing = !!followRow;
+        followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
 
-            followActionBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
-            followActionBtn.classList.toggle("following", isFollowing);
+        followBtn.onclick = async () => {
+            if (isFollowing) {
+                await supabase.from("follows")
+                    .delete()
+                    .eq("follower", userId)
+                    .eq("following", viewUserId);
+            } else {
+                await supabase.from("follows")
+                    .insert({ follower: userId, following: viewUserId });
+            }
+            location.reload();
+        };
 
-            followActionBtn.onclick = async () => {
-                if (isFollowing) {
-                    await supabase
-                        .from("follows")
-                        .delete()
-                        .eq("follower", userId)
-                        .eq("following", viewUserId);
-                } else {
-                    await supabase
-                        .from("follows")
-                        .insert({
-                            follower: userId,
-                            following: viewUserId
-                        });
-                }
-                location.reload();
-            };
+        messageBtn.onclick = () => alert("메시지 기능은 준비 중입니다.");
 
-            document.getElementById("messageActionBtn").onclick = () => {
-                alert("메시지 기능은 준비 중입니다.");
-            };
-        }
+        profileActions.appendChild(followBtn);
+        profileActions.appendChild(messageBtn);
+    }
+
+    // ============================
+    // Load viewed user's profile data (nickname, bio, level)
+    // ============================
+    const { data: viewProfile, error: viewProfileError } = await supabase
+        .from("user_profiles")
+        .select("nickname, bio, level")
+        .eq("user_id", viewUserId)
+        .single();
+
+    if (!viewProfileError && viewProfile) {
+        const nameEl = document.getElementById("profileName");
+        const descEl = document.getElementById("profileDesc");
+        const levelEl = document.getElementById("levelText");
+
+        if (nameEl) nameEl.textContent = viewProfile.nickname || "익명의 사용자";
+        if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
+        if (levelEl) levelEl.textContent = "Lv. " + (viewProfile.level || 1);
     }
 
     // =====================================================
