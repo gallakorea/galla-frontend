@@ -101,33 +101,34 @@ body {
 
 /* Follow / Unfollow */
 .profile-actions .follow {
-    background: #3B82F6;
+    background: #0095f6;
     color: #fff;
 }
 
 .profile-actions .following {
-    background: #111;
-    color: #ccc;
-    border: 1px solid #333;
+    background: #262626;
+    color: #e5e5e5;
+    border: 1px solid #262626;
 }
 
 /* Message */
 .profile-actions .message-btn {
-    background: #fff;
-    color: #000;
-    border: none;
+    background: #262626;
+    color: #fff;
+    border: 1px solid #262626;
 }
 
 /* My page buttons */
 .profile-actions .edit-btn {
-    background: #fff;
-    color: #000;
+    background: #262626;
+    color: #fff;
+    border: 1px solid #262626;
 }
 
 .profile-actions .mission-btn {
-    background: #111;
+    background: #262626;
     color: #fff;
-    border: 1px solid #333;
+    border: 1px solid #262626;
 }
 
 /* STATS */
@@ -268,14 +269,11 @@ body {
 }
 
 .profile-actions .follow:hover {
-    background: #2563EB;
+    background: #1877f2;
 }
 
 .profile-actions .message-btn:hover,
-.profile-actions .edit-btn:hover {
-    background: #f2f2f2;
-}
-
+.profile-actions .edit-btn:hover,
 .profile-actions .mission-btn:hover {
-    background: #000;
+    background: #363636;
 }
