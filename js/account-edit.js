@@ -72,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // 1. Upload image if selected
       if (selectedFile) {
-        const filePath = `avatars/${userId}.jpg`;
+        const filePath = `${userId}.jpg`;
 
         // Convert to JPEG Blob
         const jpegBlob = await convertToJpegBlob(selectedFile);
@@ -81,8 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           .from("avatars")
           .upload(filePath, jpegBlob, {
             upsert: true,
-            contentType: "image/jpeg",
-            cacheControl: "3600"
+            contentType: "image/jpeg"
           });
 
         if (uploadError) {
@@ -91,19 +90,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        // Use signed URL to avoid public access / cache issues
-        const { data: signed, error: signedError } =
-          await supabase.storage
-            .from("avatars")
-            .createSignedUrl(filePath, 60 * 60);
+        const { data: publicUrlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(filePath);
 
-        if (signedError || !signed?.signedUrl) {
-          console.error("signed url error", signedError);
-          alert("사진 URL 생성 실패");
-          return;
-        }
-
-        avatarUrl = signed.signedUrl;
+        avatarUrl = publicUrlData.publicUrl;
         preview.src = avatarUrl;
       }
 
