@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Remove existing file first to avoid 400 error
         const { error: removeError } = await supabase.storage
-          .from("profiles")
+          .from("avatars")
           .remove([filePath]);
         if (removeError && removeError.status !== 404) {
           console.error("remove error", removeError);
@@ -88,7 +88,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const jpegBlob = await convertToJpegBlob(selectedFile);
 
         const { error: uploadError } = await supabase.storage
-          .from("profiles")
+          .from("avatars")
           .upload(filePath, jpegBlob, {
             upsert: true,
             contentType: "image/jpeg"
@@ -101,21 +101,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const { data: publicData } = supabase.storage
-          .from("profiles")
+          .from("avatars")
           .getPublicUrl(filePath);
 
         // Append cache buster query string to force refresh
         avatarUrl = publicData.publicUrl + "?t=" + Date.now();
       }
 
-      // 2. Update profile table
+      // 2. Update users table (account profile)
       const nickname = document.getElementById("nicknameInput")?.value || null;
       const bio = document.getElementById("bioInput")?.value || null;
       const phone = document.getElementById("phoneInput")?.value || null;
 
-      const updatePayload = {
-        updated_at: new Date().toISOString()
-      };
+      const updatePayload = {};
 
       if (nickname !== null) updatePayload.nickname = nickname;
       if (bio !== null) updatePayload.bio = bio;
@@ -125,9 +123,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.log("updatePayload:", updatePayload);
 
       const { error: updateError } = await supabase
-        .from("user_profiles")
+        .from("users")
         .update(updatePayload)
-        .eq("user_id", userId);
+        .eq("id", userId);
 
       if (updateError) {
         console.error("profile update error", updateError);

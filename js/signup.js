@@ -70,21 +70,42 @@ async function waitForClient() {
 
             console.log("[signup.js] Auth 성공 — userId:", userId);
 
+            const { error: userError } = await supabase
+                .from("users")
+                .insert({
+                    id: userId,
+                    nickname,
+                    bio: null,
+                    phone: phone || null,
+                    region: selectedRegion,
+                    email,
+                    avatar_url: null,
+                    level: 1,
+                    exp: 0,
+                    created_at: new Date()
+                });
+
+            if (userError) {
+                alert("회원 기본 정보 저장 오류: " + userError.message);
+                return;
+            }
+
             const { error: profileError } = await supabase
                 .from("user_profiles")
                 .insert({
                     user_id: userId,
-                    nickname,
-                    phone: phone || null,
-                    region: selectedRegion,
                     anonymous,
                     level: 1,
                     gp: 0,
+                    warning_count: 0,
+                    role: "user",
+                    warning_level: "normal",
+                    admin_flag: false,
                     created_at: new Date()
                 });
 
             if (profileError) {
-                alert("프로필 저장 오류: " + profileError.message);
+                alert("유저 상태 초기화 오류: " + profileError.message);
                 return;
             }
 
