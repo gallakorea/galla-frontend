@@ -51,21 +51,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isMyPage = viewUserId === userId;
 
     // ============================
-    // Follow Button
+    // Profile Actions (Follow / Message)
     // ============================
-    let followBtn = document.getElementById("followBtn");
-    if (!followBtn) {
-        followBtn = document.createElement("button");
-        followBtn.id = "followBtn";
-        followBtn.className = "follow-btn";
-        followBtn.style.marginTop = "12px";
-        document.querySelector(".profile-section")?.appendChild(followBtn);
-    }
+    const followBtn = document.getElementById("followBtn");
+    const messageBtn = document.getElementById("messageBtn");
 
     if (isMyPage) {
-        followBtn.style.display = "none";
+        // 내 페이지에서는 액션 버튼 숨김
+        if (followBtn) followBtn.style.display = "none";
+        if (messageBtn) messageBtn.style.display = "none";
     } else {
-        followBtn.style.display = "block";
+        // 상대 프로필
+        if (followBtn) followBtn.style.display = "inline-block";
+        if (messageBtn) messageBtn.style.display = "inline-block";
 
         const { data: followRow } = await supabase
             .from("follows")
@@ -74,10 +72,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             .eq("following", viewUserId)
             .maybeSingle();
 
-        followBtn.textContent = followRow ? "언팔로우" : "팔로우";
+        const isFollowing = !!followRow;
+
+        // 버튼 상태
+        followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
+        followBtn.classList.toggle("following", isFollowing);
+        followBtn.classList.toggle("follow", !isFollowing);
 
         followBtn.onclick = async () => {
-            if (followRow) {
+            if (isFollowing) {
                 await supabase
                     .from("follows")
                     .delete()
@@ -92,6 +95,11 @@ document.addEventListener("DOMContentLoaded", async () => {
                     });
             }
             location.reload();
+        };
+
+        // 메시지 버튼 (아직 기능 없음)
+        messageBtn.onclick = () => {
+            alert("메시지 기능은 준비 중입니다.");
         };
     }
 
