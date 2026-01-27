@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       let avatarUrl = null;
 
-      // 1. Upload image if selected (FIXED – single request, correct method)
+      // 1. Upload image if selected (FINAL FIX – single upload only)
       if (selectedFile) {
         if (!selectedFile.type.startsWith("image/")) {
           alert("이미지 파일만 업로드 가능합니다.");
@@ -82,25 +82,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
         })();
 
-        // Check if file already exists
-        const { data: existing } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("profiles")
-          .list(userId, { limit: 1 });
-
-        const uploadFn = existing && existing.length > 0
-          ? supabase.storage.from("profiles").update
-          : supabase.storage.from("profiles").upload;
-
-        const { error: uploadError } = await uploadFn.call(
-          supabase.storage.from("profiles"),
-          filePath,
-          jpegBlob,
-          {
+          .upload(filePath, jpegBlob, {
+            upsert: true,
             contentType: "image/jpeg",
-            cacheControl: "3600",
-            upsert: true
-          }
-        );
+            cacheControl: "3600"
+          });
 
         if (uploadError) {
           console.error("storage upload error:", uploadError);
