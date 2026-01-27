@@ -74,16 +74,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (selectedFile) {
         const filePath = `avatars/${userId}.jpg`;
 
-        // Remove existing file first to avoid 400 error
-        const { error: removeError } = await supabase.storage
-          .from("avatars")
-          .remove([filePath]);
-        if (removeError && removeError.status !== 404) {
-          console.error("remove error", removeError);
-          alert("사진 업로드 실패");
-          return;
-        }
-
         // Convert to JPEG Blob
         const jpegBlob = await convertToJpegBlob(selectedFile);
 
@@ -91,7 +81,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           .from("avatars")
           .upload(filePath, jpegBlob, {
             upsert: true,
-            contentType: "image/jpeg"
+            contentType: "image/jpeg",
+            cacheControl: "3600"
           });
 
         if (uploadError) {
@@ -100,12 +91,20 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        const { data: publicData } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(filePath);
+        // Use signed URL to avoid public access / cache issues
+        const { data: signed, error: signedError } =
+          await supabase.storage
+            .from("avatars")
+            .createSignedUrl(filePath, 60 * 60);
 
-        // Append cache buster query string to force refresh
-        avatarUrl = publicData.publicUrl + "?t=" + Date.now();
+        if (signedError || !signed?.signedUrl) {
+          console.error("signed url error", signedError);
+          alert("사진 URL 생성 실패");
+          return;
+        }
+
+        avatarUrl = signed.signedUrl;
+        preview.src = avatarUrl;
       }
 
       // 2. Update users table (account profile)
