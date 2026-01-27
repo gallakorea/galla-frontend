@@ -55,16 +55,33 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const filePath = `${userId}/avatar.jpg`;
 
-        const { error: uploadError } = await supabase.storage
+        let uploadError = null;
+
+        // 1차: upload 시도
+        const uploadResult = await supabase.storage
           .from("profiles")
           .upload(filePath, selectedFile, {
-            upsert: true,
-            contentType: selectedFile.type,
-            cacheControl: "3600"
+            cacheControl: "3600",
+            upsert: false
           });
 
+        uploadError = uploadResult.error;
+
+        // 2차: 이미 존재하면 update
+        if (uploadError && uploadError.statusCode === 409) {
+          console.warn("file exists, retrying with update");
+
+          const updateResult = await supabase.storage
+            .from("profiles")
+            .update(filePath, selectedFile, {
+              cacheControl: "3600"
+            });
+
+          uploadError = updateResult.error;
+        }
+
         if (uploadError) {
-          console.error("upload error", uploadError);
+          console.error("storage upload failed:", uploadError.message, uploadError.statusCode);
           alert("사진 업로드 실패");
           return;
         }
