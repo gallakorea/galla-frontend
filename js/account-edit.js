@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       let avatarUrl = null;
 
-      // 1. Upload image if selected (FIXED)
+      // 1. Upload image if selected (FIXED – single request, correct method)
       if (selectedFile) {
         if (!selectedFile.type.startsWith("image/")) {
           alert("이미지 파일만 업로드 가능합니다.");
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const filePath = `${userId}/avatar.jpg`;
 
-        // Convert to JPEG Blob to avoid mime / policy issues
+        // Convert to JPEG Blob
         const jpegBlob = await (async () => {
           const img = new Image();
           const url = URL.createObjectURL(selectedFile);
@@ -71,7 +71,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           canvas.height = img.height;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0);
-
           URL.revokeObjectURL(url);
 
           return await new Promise((res, rej) => {
@@ -83,15 +82,29 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
         })();
 
-        const { error: uploadError } = await supabase.storage
+        // Check if file already exists
+        const { data: existing } = await supabase.storage
           .from("profiles")
-          .upload(filePath, jpegBlob, {
+          .list(userId, { limit: 1 });
+
+        const uploadFn = existing && existing.length > 0
+          ? supabase.storage.from("profiles").update
+          : supabase.storage.from("profiles").upload;
+
+        const { error: uploadError } = await uploadFn.call(
+          supabase.storage.from("profiles"),
+          filePath,
+          jpegBlob,
+          {
+            contentType: "image/jpeg",
+            cacheControl: "3600",
             upsert: true
-          });
+          }
+        );
 
         if (uploadError) {
           console.error("storage upload error:", uploadError);
-          alert("사진 업로드 실패 (스토리지)");
+          alert("이미지 업로드 실패");
           return;
         }
 
