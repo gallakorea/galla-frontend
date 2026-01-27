@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const jpegBlob = await convertToJpegBlob(selectedFile);
 
         const { error: uploadError } = await supabase.storage
-          .from("avatars")
+          .from("profiles")
           .upload(filePath, jpegBlob, {
             upsert: true,
             contentType: "image/jpeg"
@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const { data: publicUrlData } = supabase.storage
-          .from("avatars")
+          .from("profiles")
           .getPublicUrl(filePath);
 
         avatarUrl = publicUrlData.publicUrl;
