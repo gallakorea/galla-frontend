@@ -72,7 +72,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       // 1. Upload image if selected
       if (selectedFile) {
-        const filePath = `${userId}.jpg`;
+        if (!selectedFile.type.startsWith("image/")) {
+          alert("이미지 파일만 업로드 가능합니다.");
+          return;
+        }
+
+        const filePath = `${userId}/avatar.jpg`;
 
         // Convert to JPEG Blob
         const jpegBlob = await convertToJpegBlob(selectedFile);
@@ -81,7 +86,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           .from("profiles")
           .upload(filePath, jpegBlob, {
             upsert: true,
-            contentType: "image/jpeg"
+            contentType: "image/jpeg",
+            cacheControl: "3600"
           });
 
         if (uploadError) {
