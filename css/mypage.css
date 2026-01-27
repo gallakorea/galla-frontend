@@ -34,6 +34,7 @@ body {
 .profile-section {
     text-align:center;
     padding:20px 0 10px;
+    position: relative;
 }
 
 .profile-img {
@@ -78,19 +79,21 @@ body {
 
 /* FOLLOW BUTTON */
 .follow-btn {
-    display: inline-block;
-    margin-top: 10px;
+    position: absolute;
+    left: 16px;
+    top: 110px;
     padding: 6px 14px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     color: #fff;
     background: #3B82F6;
-    border-radius: 16px;
+    border-radius: 18px;
     cursor: pointer;
+    z-index: 5;
 }
 
 .follow-btn.following {
-    background: #333;
+    background: #1b1b1b;
     color: #bbb;
 }
 
@@ -225,4 +228,3 @@ body {
 
 /* 텍스트 제거 */
 .nav-label { display:none !important; }
-
