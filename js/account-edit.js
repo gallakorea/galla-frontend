@@ -82,16 +82,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
         })();
 
-        await supabase.storage
-          .from("profiles")
-          .remove([filePath]);
-
         const { error: uploadError } = await supabase.storage
           .from("profiles")
           .upload(filePath, jpegBlob, {
-            upsert: false,
-            contentType: "image/jpeg",
-            cacheControl: "3600"
+            upsert: true,
+            contentType: "image/jpeg"
           });
 
         if (uploadError) {
@@ -99,12 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           throw uploadError;
         }
 
-        const { data: publicUrlData } = supabase.storage
-          .from("profiles")
-          .getPublicUrl(filePath);
-
-        avatarUrl = publicUrlData.publicUrl;
-        preview.src = avatarUrl;
+        avatarUrl = filePath; // store path only, not public URL
       }
 
       // 2. Update users table (account profile)
