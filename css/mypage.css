@@ -76,6 +76,24 @@ body {
     margin-top:6px;
 }
 
+/* FOLLOW BUTTON */
+.follow-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: #3B82F6;
+    border-radius: 16px;
+    cursor: pointer;
+}
+
+.follow-btn.following {
+    background: #333;
+    color: #bbb;
+}
+
 /* STATS */
 .stats-row {
     display:flex;
