@@ -41,30 +41,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     preview.src = URL.createObjectURL(file);
   });
 
-  // Helper to convert image file to JPEG Blob via canvas
-  async function convertToJpegBlob(file) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        canvas.toBlob(
-          blob => {
-            if (blob) resolve(blob);
-            else reject(new Error("Canvas toBlob failed"));
-          },
-          "image/jpeg",
-          0.9
-        );
-      };
-      img.onerror = () => reject(new Error("Image load error"));
-      img.src = URL.createObjectURL(file);
-    });
-  }
-
   // Save handler
   saveBtn.addEventListener("click", async () => {
     try {
@@ -79,14 +55,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const filePath = `${userId}/avatar.jpg`;
 
-        // Convert to JPEG Blob
-        const jpegBlob = await convertToJpegBlob(selectedFile);
-
         const { error: uploadError } = await supabase.storage
           .from("profiles")
-          .upload(filePath, jpegBlob, {
+          .upload(filePath, selectedFile, {
             upsert: true,
-            contentType: "image/jpeg",
+            contentType: selectedFile.type,
             cacheControl: "3600"
           });
 
