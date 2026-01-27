@@ -89,12 +89,13 @@ body {
 
 .profile-actions button {
     flex: 1;
-    height: 42px;
+    height: 44px;
     font-size: 14px;
-    font-weight: 700;
-    border-radius: 10px;
+    font-weight: 600;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
+    transition: background .2s ease, color .2s ease, border .2s ease;
 }
 
 /* Follow / Unfollow */
@@ -104,28 +105,28 @@ body {
 }
 
 .profile-actions .following {
-    background: #1b1b1b;
-    color: #bbb;
-    border: 1px solid #2a2a2a;
+    background: #111;
+    color: #ccc;
+    border: 1px solid #333;
 }
 
 /* Message */
 .profile-actions .message-btn {
-    background: #1b1b1b;
-    color: #fff;
-    border: 1px solid #2a2a2a;
+    background: #fff;
+    color: #000;
+    border: none;
 }
 
 /* My page buttons */
 .profile-actions .edit-btn {
-    background: #1b1b1b;
-    color: #fff;
-    border: 1px solid #2a2a2a;
+    background: #fff;
+    color: #000;
 }
 
 .profile-actions .mission-btn {
-    background: #3B82F6;
+    background: #111;
     color: #fff;
+    border: 1px solid #333;
 }
 
 /* STATS */
@@ -259,3 +260,21 @@ body {
 
 /* 텍스트 제거 */
 .nav-label { display:none !important; }
+
+/* Profile action button hover/active polish */
+.profile-actions button:active {
+    transform: scale(0.98);
+}
+
+.profile-actions .follow:hover {
+    background: #2563EB;
+}
+
+.profile-actions .message-btn:hover,
+.profile-actions .edit-btn:hover {
+    background: #f2f2f2;
+}
+
+.profile-actions .mission-btn:hover {
+    background: #000;
+}
