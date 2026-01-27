@@ -113,22 +113,22 @@ body {
 
 /* Message */
 .profile-actions .message-btn {
-    background: #262626;
+    background: #2a2d31;
     color: #fff;
-    border: 1px solid #262626;
+    border: none;
 }
 
 /* My page buttons */
 .profile-actions .edit-btn {
-    background: #262626;
+    background: #2a2d31;
     color: #fff;
-    border: 1px solid #262626;
+    border: none;
 }
 
 .profile-actions .mission-btn {
-    background: #262626;
+    background: #2a2d31;
     color: #fff;
-    border: 1px solid #262626;
+    border: none;
 }
 
 /* STATS */
@@ -275,5 +275,5 @@ body {
 .profile-actions .message-btn:hover,
 .profile-actions .edit-btn:hover,
 .profile-actions .mission-btn:hover {
-    background: #363636;
+    background: #3a3d41;
 }
