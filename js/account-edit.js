@@ -82,18 +82,21 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
         })();
 
+        await supabase.storage
+          .from("profiles")
+          .remove([filePath]);
+
         const { error: uploadError } = await supabase.storage
           .from("profiles")
           .upload(filePath, jpegBlob, {
-            upsert: true,
+            upsert: false,
             contentType: "image/jpeg",
             cacheControl: "3600"
           });
 
         if (uploadError) {
           console.error("storage upload error:", uploadError);
-          alert("이미지 업로드 실패");
-          return;
+          throw uploadError;
         }
 
         const { data: publicUrlData } = supabase.storage
