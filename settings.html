@@ -227,40 +227,6 @@ function waitForSupabaseClient() {
 }
 </script>
 
-<!-- 로그인 체크 & 프로필 불러오기 & 로그아웃 -->
-<script>
-(async () => {
-    const supabase = await waitForSupabaseClient();
-    const { data } = await supabase.auth.getSession();
-
-    if (!data.session?.user) {
-        alert("로그인이 필요한 페이지입니다.");
-        return location.href = "login.html";
-    }
-
-    const user = data.session.user;
-
-    // 프로필 불러오기
-    const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-    if (profile) {
-        document.getElementById("profileName").textContent = profile.nickname || "익명의 사용자";
-        document.getElementById("profileBio").textContent = profile.bio || "소개 문구가 없습니다.";
-        document.getElementById("emailValue").textContent = user.email;
-        document.getElementById("phoneValue").textContent = profile.phone || "-";
-    }
-
-    // 로그아웃
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-        window.gallaLogout();
-    });
-})();
-</script>
-
 <!-- Supabase SDK (단 1회) -->
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
