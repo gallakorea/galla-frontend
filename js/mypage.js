@@ -44,11 +44,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     const userId = session.user.id;
 
     // ============================
-    // Follow Button (dynamic)
+    // View User (self vs other)
     // ============================
     const params = new URLSearchParams(location.search);
-    const viewUserId = params.get("user");
+    const viewUserId = params.get("user") || userId;
+    const isMyPage = viewUserId === userId;
 
+    // ============================
+    // Follow Button
+    // ============================
     let followBtn = document.getElementById("followBtn");
     if (!followBtn) {
         followBtn = document.createElement("button");
@@ -58,13 +62,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelector(".profile-section")?.appendChild(followBtn);
     }
 
-    // 내 마이페이지가 아닌 경우만 노출
-    if (!viewUserId || viewUserId === userId) {
+    if (isMyPage) {
         followBtn.style.display = "none";
     } else {
         followBtn.style.display = "block";
 
-        // 현재 팔로우 상태 확인
         const { data: followRow } = await supabase
             .from("follows")
             .select("id")
@@ -76,14 +78,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         followBtn.onclick = async () => {
             if (followRow) {
-                // 언팔로우
                 await supabase
                     .from("follows")
                     .delete()
                     .eq("follower", userId)
                     .eq("following", viewUserId);
             } else {
-                // 팔로우
                 await supabase
                     .from("follows")
                     .insert({
@@ -99,23 +99,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load My Stats
     // =====================================================
     async function loadMyStats() {
-        // 1) My Drop: count of issues where user_id = userId
+        // 1) My Drop: count of issues where user_id = viewUserId
         const { count: dropCount, error: dropError } = await supabase
             .from("issues")
             .select("id", { count: "exact", head: true })
-            .eq("user_id", userId);
+            .eq("user_id", viewUserId);
 
-        // 2) Followers: count of follows where following = userId
+        // 2) Followers: count of follows where following = viewUserId
         const { count: followerCount, error: followerError } = await supabase
             .from("follows")
             .select("id", { count: "exact", head: true })
-            .eq("following", userId);
+            .eq("following", viewUserId);
 
         // 3) 내가 만든 이슈 id 목록
         const { data: myIssues, error: myIssuesError } = await supabase
             .from("issues")
             .select("id")
-            .eq("user_id", userId);
+            .eq("user_id", viewUserId);
 
         const myIssueIds = (myIssues || []).map(i => i.id);
 
@@ -170,7 +170,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 score,
                 thumbnail_url
             `)
-            .eq("user_id", userId)
+            .eq("user_id", viewUserId)
             .order("created_at", { ascending: false });
 
         if (error) {
@@ -201,7 +201,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             card.innerHTML = `
                 <img src="${thumbSrc}">
                 <div class="thumb-title">${issue.title}</div>
-                <div class="thumb-author">by 나</div>
+                <div class="thumb-author">${isMyPage ? "by 나" : "by 사용자"}</div>
                 <div class="thumb-stats">
                     <span>🔥 ${issue.score ?? 0}</span>
                 </div>
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const { data: myIssues, error: myIssuesError } = await supabase
             .from("issues")
             .select("id, title, thumbnail_url")
-            .eq("user_id", userId);
+            .eq("user_id", viewUserId);
 
         if (myIssuesError) {
             console.error("[Battle Galla] my issues error", myIssuesError);
