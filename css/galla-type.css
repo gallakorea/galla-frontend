@@ -140,27 +140,4 @@ body {
     cursor: pointer;
 }
 
-/* NAV */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #000;
-    border-top: 1px solid #222;
-    padding: 12px 0;
-    display: flex;
-    justify-content: space-around;
-    z-index: 2000;
-}
-.bottom-nav img {
-    width: 26px !important;
-    height: 26px !important;
-    filter: none !important;
-    opacity: 1 !important;
-    mix-blend-mode: normal !important;
-}
-.nav-item.active img { opacity: 1 !important; }
 

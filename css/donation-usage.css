@@ -76,32 +76,3 @@ body {
 .usage-amount { color: #ffe27a; }
 .usage-desc { color: #bbb; font-size: 13px; margin-bottom: 6px; }
 .usage-date { font-size: 12px; color: #777; }
-
-/* ⭐ 네비게이션 : donation-usage 전용 */
-.bottom-nav-usage {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    padding: 12px 0;
-    background: #000;
-    border-top: 1px solid #222;
-    display: flex;
-    justify-content: space-around;
-    z-index: 2000;
-}
-
-/* 네비게이션 아이콘 충돌 완전 차단 */
-.nav-icon-usage {
-    width: 26px !important;
-    height: 26px !important;
-    filter: none !important;
-    -webkit-filter: none !important;
-    mix-blend-mode: normal !important;
-    opacity: 1 !important;
-}
-.nav-icon-usage.active {
-    opacity: 1 !important;
-}

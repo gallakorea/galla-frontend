@@ -104,24 +104,6 @@ body{
 .done{color:#4af06d;font-weight:700;}
 .locked{color:#777;font-weight:700;}
 
-/* NAV */
-.nav{
-    position:fixed;
-    bottom:0;left:50%;
-    transform:translateX(-50%);
-    width:100%;
-    max-width:480px;
-    background:#000;
-    border-top:1px solid #222;
-    padding:12px 0;
-}
-.nav-inner{display:flex;justify-content:space-around;}
-.nav-item{
-    width:26px;
-    filter:brightness(0) invert(1);
-    cursor:pointer;
-}
-
 .back-btn {
     width: 24px;
     cursor: pointer;

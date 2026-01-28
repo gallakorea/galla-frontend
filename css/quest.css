@@ -293,35 +293,6 @@ body {
     font-weight: 800;
 }
 
-.nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #000;
-    border-top: 1px solid #222;
-    padding: 12px 0;
-    z-index: 999;
-}
-
-.nav-inner {
-    display: flex;
-    justify-content: space-around;
-}
-
-.nav-icon {
-    width: 26px;
-    filter: brightness(0) invert(1) !important;
-    opacity: 1 !important;
-}
-
-.nav-item.active {
-    opacity: 1;
-    filter: brightness(1.2);
-}
-
 .back-btn {
     width: 24px;
     cursor: pointer;
@@ -331,4 +302,3 @@ body {
 .back-btn:hover {
     opacity: 0.7;
 }
-

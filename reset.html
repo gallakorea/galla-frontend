@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>비밀번호 재설정 - GALLA</title>
     <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="./css/nav.css">
 </head>
 
 <body data-page="reset">
@@ -40,33 +41,43 @@
         </div>
     </section>
 
-    <!-- BOTTOM NAV -->
-    <nav class="bottom-nav">
-        <button class="nav-item" data-target="index.html">
-            <img src="assets/icons/nav-home.svg">
-            <div class="nav-indicator"></div>
+    <nav class="nav">
+      <div class="nav-inner">
+
+        <button class="nav-item" data-page="index" data-target="index.html">
+          <img src="./assets/icons/nav-home.svg"
+               data-base="./assets/icons/nav-home.svg"
+               data-active="./assets/icons/nav-home-active.svg">
         </button>
 
-        <button class="nav-item" data-target="search.html">
-            <img src="assets/icons/nav-search.svg">
-            <div class="nav-indicator"></div>
+        <button class="nav-item" data-page="search" data-target="search.html">
+          <img src="./assets/icons/nav-search.svg"
+               data-base="./assets/icons/nav-search.svg"
+               data-active="./assets/icons/nav-search-active.svg">
         </button>
 
-        <button class="nav-item" data-target="write.html">
-            <img src="assets/icons/nav-write.svg">
-            <div class="nav-indicator"></div>
+        <button class="nav-item" data-page="write" data-target="write.html">
+          <img src="./assets/icons/nav-write.svg"
+               data-base="./assets/icons/nav-write.svg"
+               data-active="./assets/icons/nav-write-active.svg">
         </button>
 
-        <button class="nav-item" data-target="plaza.html">
-            <img src="assets/icons/nav-plaza.svg">
-            <div class="nav-indicator"></div>
+        <button class="nav-item" data-page="plaza" data-target="plaza.html">
+          <img src="./assets/icons/nav-plaza.svg"
+               data-base="./assets/icons/nav-plaza.svg"
+               data-active="./assets/icons/nav-plaza-active.svg">
         </button>
 
-        <button class="nav-item active" data-target="mypage.html">
-            <img src="assets/icons/nav-user.svg">
-            <div class="nav-indicator"></div>
+        <button class="nav-item" data-page="mypage" data-target="mypage.html">
+          <img src="./assets/icons/nav-user.svg"
+               data-base="./assets/icons/nav-user.svg"
+               data-active="./assets/icons/nav-user-active.svg">
         </button>
+
+      </div>
     </nav>
+
+    <script src="./js/nav.js"></script>
 
 </div>
 
@@ -88,28 +99,6 @@ function waitForSupabaseClient() {
 }
 </script>
 
-<!-- ⭐ 네비게이션 + 로그인 체크 -->
-<script>
-document.querySelectorAll(".nav-item").forEach(item => {
-    item.addEventListener("click", async () => {
-        const target = item.dataset.target;
-        if (!target) return;
-
-        const supabase = await waitForSupabaseClient();
-        const { data } = await supabase.auth.getSession();
-
-        const needLogin = ["write.html", "random.html", "mypage.html"];
-
-        if (needLogin.includes(target) && !data.session?.user) {
-            alert("로그인이 필요한 페이지입니다.");
-            location.href = "login.html";
-            return;
-        }
-
-        location.href = target;
-    });
-});
-</script>
 
 <!-- ⭐ 비밀번호 재설정 -->
 <script>

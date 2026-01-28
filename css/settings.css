@@ -293,46 +293,6 @@ input:checked + .slider:before {
     border-radius: 6px;
 }
 
-/* NAVIGATION BAR */
-.nav-bar {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    height: 62px;
-    background: #0d0d0d;
-    border-top: 1px solid #1c1c1c;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 999;
-}
-
-.nav-item {
-    text-align: center;
-    flex: 1;
-    color: #777;
-    font-size: 11px;
-    text-decoration: none;
-}
-
-.nav-item.active {
-    color: #fff;
-}
-
-.nav-icon {
-    width: 24px;
-    height: 24px;
-    margin-bottom: 4px;
-    opacity: 0.75;
-}
-
-.nav-item.active .nav-icon {
-    opacity: 1;
-}
-
 .write-btn-wrap {
     position: relative;
     top: -20px;
@@ -354,40 +314,6 @@ input:checked + .slider:before {
     width: 28px;
     height: 28px;
     filter: brightness(0) invert(1);
-}
-
-/* NAV (index와 동일) */
-.nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #000;
-    border-top: 1px solid #222;
-    padding: 12px 0;
-    z-index: 9999;
-}
-
-.nav-inner {
-    display: flex;
-    justify-content: space-around;
-}
-
-.nav-item {
-    cursor: pointer;
-}
-
-.nav-icon {
-    width: 26px;
-    filter: brightness(0) invert(1) !important;
-    opacity: 0.6;
-    transition: 0.2s;
-}
-
-.nav-item.active {
-    opacity: 1 !important;
 }
 
 /* ===== 갈라치기 성향 업그레이드 ===== */

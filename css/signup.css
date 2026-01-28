@@ -184,29 +184,6 @@ input:checked + .slider::before {
     font-size: 15px;
 }
 
-/* NAV */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    max-width: 480px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #000;
-    border-top: 1px solid #222;
-    padding: 10px 0;
-}
-
-.bottom-nav-inner {
-    display: flex;
-    justify-content: space-around;
-}
-
-.nav-icon {
-    width: 26px;
-    filter: brightness(0) invert(1) !important;
-}
-
 .submit-btn {
     position: relative;
     z-index: 10000;

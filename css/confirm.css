@@ -91,39 +91,3 @@ body[data-page="confirm"] {
   border: none;
   color: #fff;
 }
-
-/* =========================
-   🔥 BOTTOM NAV (핵심)
-========================= */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  background: #000;
-  border-top: 1px solid #111;
-  display: flex;
-  justify-content: space-around;
-  padding: 10px 0;
-  z-index: 9999;
-}
-
-.nav-item {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 🔥 SVG 폭주 차단 */
-.nav-item img {
-  width: 26px;
-  height: 26px;
-  max-width: 26px;
-  max-height: 26px;
-  object-fit: contain;
-  display: block;
-}

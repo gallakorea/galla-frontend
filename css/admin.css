@@ -8,7 +8,8 @@
 --------------------------------------------------- */
 
 .admin-page {
-    padding: 90px 18px 120px;
+    /* NOTE: Navigation spacing is handled globally in css/nav.css */
+    padding: 90px 18px 24px;
 }
 
 /* -------------------------------------------------

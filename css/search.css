@@ -150,57 +150,6 @@ body {
     border: 1px solid #1f2438;
 }
 
-/***************************************************
- * ★★★ 고정 네비게이터 — 절대 안깨지는 최종본 ★★★
- ***************************************************/
-.fixed-nav {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-
-    width: 100% !important;
-    max-width: 480px !important;
-    height: 58px !important;
-
-    background: #000 !important;
-    border-top: 1px solid #111 !important;
-
-    display: flex !important;
-    justify-content: space-around !important;
-    align-items: center !important;
-
-    padding: 0 !important;
-    margin: 0 !important;
-
-    z-index: 999999 !important;
-}
-
-.fixed-nav .nav-item {
-    width: 20%;
-    height: 100%;
-    background: none;
-    border: none;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.fixed-nav .nav-item img {
-    width: 30px !important;
-    height: 30px !important;
-    object-fit: contain !important;
-
-    filter: none !important;
-    -webkit-filter: none !important;
-    mix-blend-mode: normal !important;
-
-    opacity: 1 !important;
-    background: transparent !important;
-
-    display: block !important;
-}
-
 /* 검색 페이지 헤더 강제 리셋 */
 body[data-page="search"] .header {
     position: sticky !important;

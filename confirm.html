@@ -5,6 +5,7 @@
   <title>발행 전 적합성 검사 · GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="./css/confirm.css" />
+  <link rel="stylesheet" href="./css/nav.css" />
 </head>
 
 <body data-page="confirm">
@@ -43,14 +44,27 @@
 
 </div><!-- ✅ app-root 닫힘 -->
 
-<!-- BOTTOM NAV -->
-<nav class="bottom-nav">
-  <a href="index.html" class="nav-item"><img src="./assets/icons/nav-home.svg"></a>
-  <a href="search.html" class="nav-item"><img src="./assets/icons/nav-search.svg"></a>
-  <a href="write.html" class="nav-item active"><img src="./assets/icons/nav-write.svg"></a>
-  <a href="plaza.html" class="nav-item"><img src="./assets/icons/nav-plaza.svg"></a>
-  <a href="mypage.html" class="nav-item"><img src="./assets/icons/nav-user.svg"></a>
+<!-- COMMON NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-item" data-page="index" data-target="index.html">
+      <img src="./assets/icons/nav-home.svg">
+    </button>
+    <button class="nav-item" data-page="search" data-target="search.html">
+      <img src="./assets/icons/nav-search.svg">
+    </button>
+    <button class="nav-item nav-write" data-page="write" data-target="write.html">
+      <img src="./assets/icons/nav-write.svg">
+    </button>
+    <button class="nav-item" data-page="plaza" data-target="plaza.html">
+      <img src="./assets/icons/nav-plaza.svg">
+    </button>
+    <button class="nav-item" data-page="mypage" data-target="mypage.html">
+      <img src="./assets/icons/nav-user.svg">
+    </button>
+  </div>
 </nav>
+<script src="./js/nav.js"></script>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="./js/supabase.js"></script>

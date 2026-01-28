@@ -81,29 +81,3 @@ body {
     margin: 0 auto;
 }
 
-/* ============================= */
-/* ⭐ index.html과 동일한 네비게이터 */
-/* ============================= */
-.nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #000;
-    border-top: 1px solid #222;
-    padding: 12px 0;
-    z-index: 2000;
-}
-.nav-inner {
-    display: flex;
-    justify-content: space-around;
-}
-.nav-icon {
-    width: 26px;
-    /* index에서 정상 적용되던 방식 그대로 */
-    filter: brightness(0) invert(1) !important;
-    opacity: 1 !important;
-}
-

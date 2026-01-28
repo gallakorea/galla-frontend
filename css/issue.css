@@ -17,7 +17,6 @@ body {
     width: 100%;
     max-width: 420px;
     margin: 0 auto;
-    padding-bottom: 140px;
 }
 
 /* ==========================================================
@@ -747,28 +746,6 @@ body {
 }
 
 
-/* ==========================================================
-   BOTTOM NAV
-========================================================== */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 480px;
-    background: #000;
-    border-top: 1px solid #111;
-    display: flex;
-    justify-content: space-around;
-    padding: 10px 0;
-    z-index: 200;
-}
-
-.nav-item img {
-    width: 26px;
-    filter: brightness(0) invert(1);
-}
 
 /* ==========================================================
    REMIX / BATTLE
@@ -1636,8 +1613,4 @@ body {
   color: #fff;
   font-weight: 600;
   cursor: pointer;
-}
-
-.nav {
-  z-index: 1000;
 }

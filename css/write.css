@@ -14,7 +14,6 @@ body {
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
-  padding-bottom: 110px; /* bottom nav space */
 }
 
 .page-main, .page-inner {
@@ -319,54 +318,6 @@ body {
   border: none;
 }
 
-/***************************************************
- * BOTTOM NAVIGATION
- ***************************************************/
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  background: #000;
-  border-top: 1px solid #111;
-  padding: 12px 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 9999;
-}
-
-.nav-item {
-  background: none;
-  border: none;
-  position: relative;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.nav-item img {
-  width: 28px;
-  height: 28px;
-  filter: brightness(0) invert(1);
-  opacity: 1;
-}
-
-.nav-indicator {
-  width: 100%;
-  height: 3px;
-  background: transparent;
-  border-radius: 999px;
-  position: absolute;
-  top: -8px;
-}
-
-.nav-item.active .nav-indicator {
-  background: var(--indicator-color, #4A6CFF);
-}
 
 /***************************************************
  * VIDEO MODAL
@@ -766,11 +717,6 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   background:#111; padding:16px; border-radius:16px;
 }
 
-.bottom-nav {
-  position:fixed; bottom:0; left:0; right:0;
-  height:64px; background:#000; display:flex;
-}
-
 /* =========================
    AI MODAL FINAL OVERRIDE
    (중복 정의 덮어쓰기)
@@ -972,45 +918,6 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 /* =========================
    BOTTOM NAV (INDEX MATCH)
 ========================= */
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-
-  width: 100%;
-  max-width: 480px;
-
-  background: #000;
-  border-top: 1px solid #222;
-
-  padding: 12px 0;
-  z-index: 9999;
-}
-
-.bottom-nav .nav-item {
-  background: none;
-  border: none;
-  padding: 0;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bottom-nav .nav-item img {
-  width: 26px;        /* 🔥 index와 동일 */
-  height: 26px;
-  filter: brightness(0) invert(1);
-  opacity: 1;
-}
-
-.app-root {
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  padding-bottom: 110px; /* index와 동일 */
-}
 
 .required { color: #ffe27a; font-weight: 700; margin-left: 4px; }
 .optional { color: #888; font-weight: 500; margin-left: 4px; }
@@ -1257,30 +1164,6 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   }
 }
 
-/* ================================
-   🔥 하단 네비게이션 높이 최소화
-   (아이콘 크기 유지)
-   ================================ */
-
-.bottom-nav {
-  height: 45px;          /* 🔥 더 줄임 (기존 56px → 48px) */
-  padding: 4px 0;        /* 🔥 상하 여백 최소화 */
-}
-
-/* 아이콘 터치 영역만 최소 유지 */
-.bottom-nav .nav-item {
-  padding: 4px 0;
-}
-
-/* ✅ 아이콘 크기는 절대 건드리지 않음 */
-/* .bottom-nav .nav-item img  ← 수정 없음 */
-
-/* iOS safe-area 대응 */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .bottom-nav {
-    padding-bottom: calc(4px + env(safe-area-inset-bottom));
-  }
-}
 
 /* =========================
    SPEECH MODAL FIX (FINAL)

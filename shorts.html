@@ -10,6 +10,7 @@
 
   <!-- Shorts 전용 CSS -->
   <link rel="stylesheet" href="css/shorts.css" />
+  <link rel="stylesheet" href="./css/nav.css">
 </head>
 
 <body data-page="shorts">
@@ -54,14 +55,42 @@
 
   <!-- 하단 네비 (고정) -->
   <nav class="nav">
-    <div class="nav-inner">
-      <img src="assets/icons/nav-home.svg" class="nav-icon" data-target="index.html">
-      <img src="assets/icons/nav-search.svg" class="nav-icon" data-target="search.html">
-      <img src="assets/icons/nav-write.svg" class="nav-icon" data-target="write.html">
-      <img src="assets/icons/nav-plaza.svg" class="nav-icon" data-target="plaza.html">
-      <img src="assets/icons/nav-user.svg" class="nav-icon" data-target="mypage.html">
-    </div>
-  </nav>
+  <div class="nav-inner">
+
+    <button class="nav-item" data-page="index" data-target="index.html">
+      <img src="./assets/icons/nav-home.svg"
+           data-base="./assets/icons/nav-home.svg"
+           data-active="./assets/icons/nav-home-active.svg">
+    </button>
+
+    <button class="nav-item" data-page="search" data-target="search.html">
+      <img src="./assets/icons/nav-search.svg"
+           data-base="./assets/icons/nav-search.svg"
+           data-active="./assets/icons/nav-search-active.svg">
+    </button>
+
+    <button class="nav-item active" data-page="write" data-target="write.html">
+      <img src="./assets/icons/nav-write.svg"
+           data-base="./assets/icons/nav-write.svg"
+           data-active="./assets/icons/nav-write-active.svg">
+    </button>
+
+    <button class="nav-item" data-page="plaza" data-target="plaza.html">
+      <img src="./assets/icons/nav-plaza.svg"
+           data-base="./assets/icons/nav-plaza.svg"
+           data-active="./assets/icons/nav-plaza-active.svg">
+    </button>
+
+    <button class="nav-item" data-page="mypage" data-target="mypage.html">
+      <img src="./assets/icons/nav-user.svg"
+           data-base="./assets/icons/nav-user.svg"
+           data-active="./assets/icons/nav-user-active.svg">
+    </button>
+
+  </div>
+</nav>
+
+<script src="./js/nav.js"></script>
 
   <script type="module" src="js/shorts.js"></script>
 </body>

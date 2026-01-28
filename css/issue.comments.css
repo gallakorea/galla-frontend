@@ -254,7 +254,6 @@
   position:fixed;
   left:50%;
   transform:translateX(-50%);
-  bottom:56px;
   width:100%;
   max-width:480px;
   padding:12px;
@@ -328,30 +327,7 @@
 }
 
 /* 네비게이션 밀착 */
-body{
-  padding-bottom:120px;
-}
 
-.bottom-nav{
-  position:fixed;
-  bottom:0;
-  left:50%;
-  transform:translateX(-50%);
-  width:100%;
-  max-width:480px;
-  height:56px;
-  z-index:998;
-}
-
-/* 입력바가 네비 바로 위에 밀착 */
-.battle-input-wrapper{
-  bottom:56px;
-}
-
-/* 페이지 스크롤 여백 정리 */
-body{
-  padding-bottom:112px; /* 56(nav) + 56(input) */
-}
 
 .battle-btn-group,
 .battle-input-actions{
@@ -384,7 +360,6 @@ body{
 
 .battle-input-bar{
   position:fixed;
-  bottom:56px; /* 네비게이션 바로 위 */
   left:0;
   right:0;
   padding:8px 10px 10px;
@@ -465,7 +440,6 @@ body{
 
 .battle-input-bar {
   position: fixed;
-  bottom: 56px; /* bottom-nav 높이 */
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
@@ -479,14 +453,6 @@ body{
   z-index: 90;
 }
 
-.bottom-nav {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  max-width: 480px;
-  left: 50%;
-  transform: translateX(-50%);
-}
 
 #battle-comment-input {
   width: 100%;
@@ -526,9 +492,6 @@ body{
   color: #000;
 }
 
-#battle-zone {
-  padding-bottom: 140px; /* 입력창 + 네비 공간 확보 */
-}
 
 .gif-panel {
   position: fixed;
