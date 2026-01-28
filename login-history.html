@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 기록 - GALLA</title>
+
+  <link rel="stylesheet" href="./css/index.css">
+  <style>
+    body {
+      background:#000;
+      color:#fff;
+      max-width:480px;
+      margin:0 auto;
+      font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    }
+    .section { padding:24px 16px; }
+    .log-card {
+      background:#0d0d0d;
+      border:1px solid #1c1c1c;
+      border-radius:12px;
+      padding:14px;
+      margin-bottom:12px;
+    }
+    .log-date { font-size:13px; color:#aaa; margin-bottom:4px; }
+    .log-agent { font-size:14px; word-break:break-all; }
+  </style>
+</head>
+
+<body data-page="login-history">
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="back-btn" onclick="history.back()">←</div>
+      <div class="header-title">로그인 기록</div>
+      <div class="header-spacer"></div>
+    </div>
+  </header>
+
+  <section class="section" id="logList">
+    <div style="color:#777">불러오는 중...</div>
+  </section>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
+    <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
+    <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
+    <img src="assets/icons/nav-plaza.svg" class="nav-icon nav-item" data-target="plaza.html">
+    <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
+  </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabase.js"></script>
+<script src="./js/login-history.js"></script>
+
+</body>
+</html>
