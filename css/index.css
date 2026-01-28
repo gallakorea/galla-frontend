@@ -3,11 +3,11 @@
 
 html, body {
     width: 100%;
-    height: 100%;
     background: #000;
     color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-    overflow: hidden; /* body 스크롤 완전 차단 */
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 body {
@@ -19,12 +19,8 @@ body {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-
-    height: 100dvh;              /* viewport 기준 고정 */
-    overflow-y: auto;            /* 실제 스크롤은 여기서만 */
-    -webkit-overflow-scrolling: touch;
-
-    padding-bottom: 58px;        /* 하단 네비 높이 확보 */
+    min-height: 100vh;
+    padding-bottom: 58px;
 }
 
 /* HEADER */
