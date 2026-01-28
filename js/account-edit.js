@@ -1,8 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("[account-edit.js] loaded");
-  console.log("[account-edit] DOM emailField:", document.getElementById("emailField"));
-  console.log("[account-edit] DOM phoneField:", document.getElementById("phoneField"));
-  console.log("[account-edit] DOM profilePreview:", document.getElementById("profilePreview"));
 
   // =========================
   // Supabase client wait
@@ -49,7 +46,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedFile = null;
 
   // =========================
-  // Load existing profile (initial render)
+  // Load existing profile
   // =========================
   const { data: profile, error: profileError } = await supabase
     .from("users")
@@ -60,22 +57,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (profileError) {
     console.error("[account-edit] load profile error", profileError);
   } else if (profile) {
-    if (profile.nickname) nicknameInput.value = profile.nickname;
+    nicknameInput.value = profile.nickname || "";
     bioInput.value = profile.bio || "";
 
-    // 이메일 (auth 기준)
     if (emailField) {
       emailField.textContent = session.user.email || "-";
-      console.log("[account-edit] email set:", session.user.email);
     }
 
-    // 전화번호 (users 테이블 기준)
     if (phoneField) {
       phoneField.textContent = profile.phone || "-";
-      console.log("[account-edit] phone set:", profile.phone);
     }
 
-    // 프로필 이미지
     if (profile.avatar_url) {
       const SUPABASE_URL = supabase.supabaseUrl;
       previewImg.src =
@@ -86,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================
-  // Image preview only (NO upload here)
+  // Image preview only
   // =========================
   fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
@@ -103,15 +95,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // =========================
-  // Save handler (single source of truth)
+  // Save handler
   // =========================
   saveBtn.addEventListener("click", async () => {
     try {
       const updatePayload = {};
 
-      // ---------
-      // 1. Image upload (ONLY here)
-      // ---------
+      // 1) Image upload
       if (selectedFile) {
         const filePath = `${userId}/avatar.jpg`;
 
@@ -154,9 +144,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         updatePayload.avatar_url = filePath;
       }
 
-      // ---------
-      // 2. Text fields
-      // ---------
+      // 2) Text fields
       const nickname = nicknameInput.value.trim();
       const bio = bioInput.value.trim();
 
@@ -168,9 +156,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      // ---------
-      // 3. Update users table (ONLY)
-      // ---------
+      // 3) Update users table
       const { error: updateError } = await supabase
         .from("users")
         .update(updatePayload)

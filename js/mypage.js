@@ -127,12 +127,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (profileImg) {
             if (viewProfile.avatar_url) {
-                const { data } = supabase
+                const { data, error } = supabase
                     .storage
                     .from("profiles")
                     .getPublicUrl(viewProfile.avatar_url);
 
-                profileImg.src = data.publicUrl + `?t=${Date.now()}`;
+                if (!error && data?.publicUrl) {
+                    // 🔥 캐시 무효화 파라미터 필수
+                    profileImg.src = `${data.publicUrl}?t=${Date.now()}`;
+                } else {
+                    profileImg.src = "assets/logo.png";
+                }
             } else {
                 profileImg.src = "assets/logo.png";
             }

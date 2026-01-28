@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (profile.avatar_url) {
         const SUPABASE_URL = supabase.supabaseUrl;
         profileImgEl.src =
-          `${SUPABASE_URL}/storage/v1/object/public/profiles/${profile.avatar_url}`;
+          `${SUPABASE_URL}/storage/v1/object/public/profiles/${profile.avatar_url}?t=${Date.now()}`;
       } else {
         profileImgEl.src = "./assets/logo.png";
       }
