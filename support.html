@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>문의하기 - GALLA</title>
+
+  <link rel="stylesheet" href="./css/index.css">
+  <style>
+    body {
+      background:#000;
+      color:#fff;
+      max-width:480px;
+      margin:0 auto;
+      font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    }
+
+    .section { padding:24px 16px; }
+
+    .input-group { margin-bottom:20px; }
+    .input-label {
+      font-size:14px;
+      color:#aaa;
+      margin-bottom:6px;
+    }
+
+    .input-field {
+      width:100%;
+      padding:12px;
+      background:#0d0d0d;
+      border:1px solid #1c1c1c;
+      border-radius:12px;
+      color:#fff;
+      font-size:15px;
+    }
+
+    .textarea {
+      height:120px;
+      resize:none;
+    }
+
+    .info-box {
+      background:#0d0d0d;
+      border:1px solid #1c1c1c;
+      border-radius:12px;
+      padding:14px;
+      font-size:14px;
+      color:#bbb;
+      line-height:1.5;
+    }
+
+    .save-btn {
+      width:100%;
+      padding:14px;
+      background:#3b82f6;
+      color:#fff;
+      font-size:16px;
+      font-weight:700;
+      border:none;
+      border-radius:12px;
+      cursor:pointer;
+      margin-top:16px;
+    }
+  </style>
+</head>
+
+<body data-page="support">
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="back-btn" onclick="history.back()">←</div>
+      <div class="header-title">문의하기</div>
+      <div class="header-spacer"></div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <section class="section">
+
+    <div class="input-group">
+      <div class="input-label">이메일</div>
+      <input type="text" id="emailField" class="input-field" readonly>
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">문의 제목</div>
+      <input type="text" id="subjectInput" class="input-field" placeholder="문의 제목을 입력하세요">
+    </div>
+
+    <div class="input-group">
+      <div class="input-label">문의 내용</div>
+      <textarea id="messageInput" class="input-field textarea"
+        placeholder="불편 사항, 오류, 제안 내용을 자세히 적어주세요"></textarea>
+    </div>
+
+    <div class="info-box">
+      현재 문의는 이메일로 처리됩니다.<br>
+      작성 후 아래 메일로 보내주세요.<br><br>
+      📧 <strong>gallakorea@gmail.com</strong>
+    </div>
+
+    <button class="save-btn" id="sendBtn">메일 보내기</button>
+
+  </section>
+
+</div>
+
+<!-- BOTTOM NAVIGATION -->
+<nav class="nav">
+  <div class="nav-inner">
+    <img src="assets/icons/nav-home.svg" class="nav-icon nav-item" data-target="index.html">
+    <img src="assets/icons/nav-search.svg" class="nav-icon nav-item" data-target="search.html">
+    <img src="assets/icons/nav-write.svg" class="nav-icon nav-item" data-target="write.html">
+    <img src="assets/icons/nav-plaza.svg" class="nav-icon nav-item" data-target="plaza.html">
+    <img src="assets/icons/nav-user.svg" class="nav-icon nav-item active" data-target="mypage.html">
+  </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabase.js"></script>
+<script src="./js/support.js"></script>
+
+</body>
+</html>
