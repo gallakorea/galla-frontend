@@ -1,7 +1,3 @@
-/* =========================
-   GLOBAL BOTTOM NAV (FIXED)
-========================= */
-
 .nav {
   position: fixed;
   bottom: 0;
@@ -16,17 +12,6 @@
   background: #000;
   border-top: 1px solid #222;
   z-index: 9999;
-
-  /* ❗ iOS 버그 방지 */
-  transform: none !important;
-}
-
-/* iOS Safari 강제 고정 */
-@supports (-webkit-touch-callout: none) {
-  .nav {
-    transform: translateZ(0) !important;
-    will-change: transform;
-  }
 }
 
 .nav-inner {
@@ -46,7 +31,6 @@
   cursor: pointer;
 }
 
-/* 아이콘 크기만 관리 */
 .nav-item img {
   width: 30px;
   height: 30px;
