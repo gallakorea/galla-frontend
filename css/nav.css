@@ -1,16 +1,32 @@
+/* =========================
+   GLOBAL BOTTOM NAV (FIXED)
+========================= */
+
 .nav {
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+
+  margin: 0 auto;
   width: 100%;
   max-width: 480px;
   height: 58px;
+
   background: #000;
   border-top: 1px solid #222;
-  z-index: 999;
+  z-index: 9999;
 
-  transform: translateZ(0); /* iOS fixed 안정화 */
+  /* ❗ iOS 버그 방지 */
+  transform: none !important;
+}
+
+/* iOS Safari 강제 고정 */
+@supports (-webkit-touch-callout: none) {
+  .nav {
+    transform: translateZ(0) !important;
+    will-change: transform;
+  }
 }
 
 .nav-inner {
