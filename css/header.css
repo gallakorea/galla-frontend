@@ -10,12 +10,14 @@
   width: 100%;
   background: #000;
   border-bottom: 1px solid #111;
+
   transition: transform 0.25s ease;
   will-change: transform;
 }
 
+/* 내부 컨테이너 */
 .header-inner {
-  height: 60px;
+  height: 64px;              /* 숨 막힌다고 해서 여유 줌 */
   max-width: 480px;
   margin: 0 auto;
   padding: 0 18px;
@@ -25,36 +27,37 @@
   justify-content: space-between;
 }
 
-/* LEFT */
-.header-logo {
-  width: 105px;
+/* 로고 */
+.logo {
+  width: 105px;              /* 기존과 동일 */
   height: auto;
   cursor: pointer;
 }
 
-/* RIGHT */
-.header-right {
+/* 우측 종이비행기 버튼 */
+.header-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+
   display: flex;
-  gap: 0;
-}
+  align-items: center;
+  justify-content: center;
 
-.header-icon.search {
-  display: none !important;
-}
-
-.header-icon {
-  background: none;
+  background: rgba(255,255,255,0.08);
   border: none;
   padding: 0;
   cursor: pointer;
 }
 
-.header-icon img {
-  width: 24px;
-  height: 24px;
+/* 종이비행기 아이콘 */
+.header-action img {
+  width: 20px;
+  height: 20px;
   display: block;
 }
 
+/* 스크롤 시 헤더 숨김 */
 .header.hide {
   transform: translateY(-100%);
 }

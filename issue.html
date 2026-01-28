@@ -6,6 +6,7 @@
     <title>GALLA - 이슈 상세</title>
     <link rel="stylesheet" href="css/issue.css" />
     <link rel="stylesheet" href="css/issue.comments.css" />
+    <link rel="stylesheet" href="./css/header.css">
     <link rel="stylesheet" href="./css/nav.css">
 </head>
 
@@ -13,19 +14,27 @@
 
 <div id="app">
 
-    <!-- HEADER -->
+    <!-- HEADER : COMMON TYPE B -->
     <header class="header">
-        <div class="header-inner">
+      <div class="header-inner">
 
-            <!-- 뒤로가기 -->
-            <button class="back-btn" id="btn-back">← <span class="back-text">뒤로</span></button>
+        <!-- 뒤로가기 -->
+        <button class="back-btn" id="btn-back" onclick="history.back()">
+          ← <span class="back-text">뒤로</span>
+        </button>
 
-            <!-- 로고 클릭 → 홈 이동 -->
-            <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
+        <!-- 로고 -->
+        <img
+          src="assets/logo.png"
+          alt="GALLA"
+          class="logo"
+          onclick="location.href='index.html'"
+        />
 
-            <!-- ⋯ 메뉴 -->
-            <button class="more-header-btn" id="header-more-btn">⋯</button>
-        </div>
+        <!-- 더보기 메뉴 -->
+        <button class="more-header-btn" id="header-more-btn">⋯</button>
+
+      </div>
     </header>
 
     <!-- ISSUE HERO -->
