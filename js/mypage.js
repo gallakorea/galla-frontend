@@ -125,12 +125,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
         if (levelEl) levelEl.textContent = "Lv. " + (viewProfile.level || 1);
 
-        const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
-
         if (profileImg) {
-            profileImg.src = viewProfile.avatar_url
-                ? `${SUPABASE_URL}/storage/v1/object/public/profiles/${viewProfile.avatar_url}`
-                : "assets/logo.png";
+            if (viewProfile.avatar_url) {
+                const { data } = supabase
+                    .storage
+                    .from("profiles")
+                    .getPublicUrl(viewProfile.avatar_url);
+
+                profileImg.src = data.publicUrl + `?t=${Date.now()}`;
+            } else {
+                profileImg.src = "assets/logo.png";
+            }
         }
     }
 
