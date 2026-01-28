@@ -1,7 +1,9 @@
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("[account-edit.js] loaded");
 
+  // =========================
   // Supabase client wait
+  // =========================
   const waitForSupabase = () =>
     new Promise(resolve => {
       const t = setInterval(() => {
@@ -14,7 +16,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const supabase = await waitForSupabase();
 
+  // =========================
   // Session check
+  // =========================
   const { data: sessionData } = await supabase.auth.getSession();
   const session = sessionData?.session;
 
@@ -26,61 +30,70 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const userId = session.user.id;
 
-  const input = document.getElementById("profileInput");
-  const preview = document.getElementById("profilePreview");
-  const saveBtn = document.querySelector(".save-btn");
+  // =========================
+  // DOM refs
+  // =========================
+  const fileInput = document.getElementById("profileInput");
+  const previewImg = document.getElementById("profilePreview");
+  const saveBtn = document.getElementById("saveBtn");
+
+  const nicknameInput = document.getElementById("nickname");
+  const bioInput = document.getElementById("bio");
 
   let selectedFile = null;
 
-  // Preview image
-  input.addEventListener("change", () => {
-    const file = input.files[0];
+  // =========================
+  // Image preview only (NO upload here)
+  // =========================
+  fileInput.addEventListener("change", () => {
+    const file = fileInput.files[0];
     if (!file) return;
 
+    if (!file.type.startsWith("image/")) {
+      alert("이미지 파일만 선택할 수 있습니다.");
+      fileInput.value = "";
+      return;
+    }
+
     selectedFile = file;
-    preview.src = URL.createObjectURL(file);
+    previewImg.src = URL.createObjectURL(file);
   });
 
-  // Save handler
+  // =========================
+  // Save handler (single source of truth)
+  // =========================
   saveBtn.addEventListener("click", async () => {
     try {
-      let avatarUrl = null;
+      const updatePayload = {};
 
-      // 1. Upload image if selected (FINAL FIX – single upload only)
+      // ---------
+      // 1. Image upload (ONLY here)
+      // ---------
       if (selectedFile) {
-        if (!selectedFile.type.startsWith("image/")) {
-          alert("이미지 파일만 업로드 가능합니다.");
-          return;
-        }
-
         const filePath = `${userId}/avatar.jpg`;
 
-        // Convert to JPEG Blob
-        const jpegBlob = await (async () => {
+        const jpegBlob = await new Promise((resolve, reject) => {
           const img = new Image();
           const url = URL.createObjectURL(selectedFile);
           img.src = url;
 
-          await new Promise((res, rej) => {
-            img.onload = res;
-            img.onerror = rej;
-          });
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            URL.revokeObjectURL(url);
 
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          URL.revokeObjectURL(url);
-
-          return await new Promise((res, rej) => {
             canvas.toBlob(
-              blob => (blob ? res(blob) : rej(new Error("toBlob failed"))),
+              blob => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
               "image/jpeg",
               0.9
             );
-          });
-        })();
+          };
+
+          img.onerror = reject;
+        });
 
         const { error: uploadError } = await supabase.storage
           .from("profiles")
@@ -90,54 +103,47 @@ document.addEventListener("DOMContentLoaded", async () => {
           });
 
         if (uploadError) {
-          console.error("storage upload error:", uploadError);
-          throw uploadError;
+          console.error("[account-edit] storage upload error", uploadError);
+          alert("이미지 업로드 실패");
+          return;
         }
 
-        avatarUrl = filePath; // store path only, not public URL
-
-        // 🔥 즉시 미리보기 반영 (public URL)
-        const { data: publicUrlData } = supabase
-          .storage
-          .from("profiles")
-          .getPublicUrl(filePath);
-
-        if (publicUrlData?.publicUrl) {
-          preview.src = publicUrlData.publicUrl + `?t=${Date.now()}`;
-        }
+        updatePayload.avatar_url = filePath;
       }
 
-      // 2. Update users table (account profile)
-      const nickname = document.getElementById("nicknameInput")?.value || null;
-      const bio = document.getElementById("bioInput")?.value || null;
-      const phone = document.getElementById("phoneInput")?.value || null;
+      // ---------
+      // 2. Text fields
+      // ---------
+      const nickname = nicknameInput.value.trim();
+      const bio = bioInput.value.trim();
 
-      const updatePayload = {};
+      if (nickname) updatePayload.nickname = nickname;
+      updatePayload.bio = bio;
 
-      if (nickname !== null) updatePayload.nickname = nickname;
-      if (bio !== null) updatePayload.bio = bio;
-      if (phone !== null) updatePayload.phone = phone;
-      if (avatarUrl) updatePayload.avatar_url = avatarUrl;
+      if (Object.keys(updatePayload).length === 0) {
+        alert("변경된 내용이 없습니다.");
+        return;
+      }
 
-      console.log("updatePayload:", updatePayload);
-
+      // ---------
+      // 3. Update users table (ONLY)
+      // ---------
       const { error: updateError } = await supabase
         .from("users")
         .update(updatePayload)
         .eq("id", userId);
 
       if (updateError) {
-        console.error("profile update error", updateError);
+        console.error("[account-edit] users update error", updateError);
         alert("프로필 저장 실패");
         return;
       }
 
-      console.log("[account-edit] saved avatar_url:", avatarUrl);
       alert("계정 정보가 저장되었습니다.");
-      history.back();
+      location.href = "mypage.html";
 
-    } catch (e) {
-      console.error("unexpected error", e);
+    } catch (err) {
+      console.error("[account-edit] unexpected error", err);
       alert("오류가 발생했습니다.");
     }
   });
