@@ -3,14 +3,11 @@
 
 html, body {
     width: 100%;
-    min-height: 100%;
+    height: 100%;
     background: #000;
     color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-
-    overflow-x: hidden;
-    overflow-y: auto;   /* ✅ 스크롤 살아남 */
-    position: relative;
+    overflow: hidden; /* body 스크롤 완전 차단 */
 }
 
 body {
@@ -22,8 +19,12 @@ body {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-    min-height: 100vh;
-    padding-bottom: 58px;
+
+    height: 100dvh;              /* viewport 기준 고정 */
+    overflow-y: auto;            /* 실제 스크롤은 여기서만 */
+    -webkit-overflow-scrolling: touch;
+
+    padding-bottom: 58px;        /* 하단 네비 높이 확보 */
 }
 
 /* HEADER */
@@ -422,11 +423,6 @@ body {
 /* 쇼츠 열릴 때 index 레이아웃 제거 */
 body.shorts-open #app {
   padding-bottom: 0 !important;
-}
-
-/* 쇼츠 열릴 때 스크롤 완전 차단 */
-body.shorts-open {
-  overflow: hidden !important;
 }
 
 /* =========================
