@@ -75,3 +75,9 @@
 .more-header-btn {
   gap: 0;
 }
+
+.more-header-btn svg {
+  width: 22px;
+  height: 22px;
+  color: #fff; /* stroke = currentColor */
+}
