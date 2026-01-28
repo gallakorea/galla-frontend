@@ -40,6 +40,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const nicknameInput = document.getElementById("nickname");
   const bioInput = document.getElementById("bio");
 
+  const emailField = document.getElementById("emailField");
+  const phoneField = document.getElementById("phoneField");
+
   let selectedFile = null;
 
   // =========================
@@ -47,7 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================
   const { data: profile, error: profileError } = await supabase
     .from("users")
-    .select("nickname, bio, avatar_url")
+    .select("nickname, bio, avatar_url, phone")
     .eq("id", userId)
     .single();
 
@@ -57,6 +60,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (profile.nickname) nicknameInput.value = profile.nickname;
     bioInput.value = profile.bio || "";
 
+    // 이메일 (auth 기준)
+    if (emailField) {
+      emailField.textContent = session.user.email || "-";
+    }
+
+    // 전화번호 (users 테이블 기준)
+    if (phoneField) {
+      phoneField.textContent = profile.phone || "-";
+    }
+
+    // 프로필 이미지
     if (profile.avatar_url) {
       const SUPABASE_URL = supabase.supabaseUrl;
       previewImg.src =
