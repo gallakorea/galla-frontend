@@ -9,7 +9,6 @@
   background: #000;
   border-top: 1px solid #222;
   z-index: 999;
-  box-shadow: none;
 }
 
 .nav-inner {
@@ -20,51 +19,19 @@
 }
 
 .nav-item {
-  width: auto;
-  height: auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  transform: translateY(-6px);
-  cursor: pointer;
-  background: transparent;
+  transform: translateY(-4px);
+  background: none;
   border: none;
-  border-radius: 0;
-  box-shadow: none;
   padding: 0;
+  cursor: pointer;
 }
 
-.nav-item img,
-.nav-item svg {
+/* 아이콘 크기만 관리 */
+.nav-item img {
   width: 26px;
   height: 26px;
   display: block;
-  fill: none;
-  stroke: #fff;
-  filter: none;
-  box-shadow: none;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  opacity: 1;
-}
-
-/* active 상태도 동일하게 유지 */
-.nav-item.active {
-  background: transparent;
-}
-
-.nav-item.active img,
-.nav-item.active svg {
-  filter: none;
-}
-
-.nav-item::before,
-.nav-item::after,
-.nav::before,
-.nav::after {
-  content: none !important;
-  display: none !important;
-  box-shadow: none !important;
-  border: none !important;
 }
