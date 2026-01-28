@@ -200,8 +200,9 @@ body[data-page="shorts"] .header {
   pointer-events: none;
 }
 
-/* 하단 네비 safe-area 보정 (iPhone 홈바 겹침 방지) */
-.nav {
+
+/* 하단 네비 safe-area 보정 (SHORTS 전용) */
+body[data-page="shorts"] .nav {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
