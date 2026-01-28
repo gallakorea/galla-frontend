@@ -95,6 +95,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         avatarUrl = filePath; // store path only, not public URL
+
+        // 🔥 즉시 미리보기 반영 (public URL)
+        const { data: publicUrlData } = supabase
+          .storage
+          .from("profiles")
+          .getPublicUrl(filePath);
+
+        if (publicUrlData?.publicUrl) {
+          preview.src = publicUrlData.publicUrl + `?t=${Date.now()}`;
+        }
       }
 
       // 2. Update users table (account profile)
@@ -122,6 +132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
+      console.log("[account-edit] saved avatar_url:", avatarUrl);
       alert("계정 정보가 저장되었습니다.");
       history.back();
 

@@ -107,11 +107,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ============================
-    // Load viewed user's profile data (nickname, bio, level)
+    // Load viewed user's profile data (nickname, bio, level, avatar_url)
     // ============================
     const { data: viewProfile, error: viewProfileError } = await supabase
         .from("users")
-        .select("nickname, bio, level")
+        .select("nickname, bio, level, avatar_url")
         .eq("id", viewUserId)
         .single();
 
@@ -119,10 +119,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         const nameEl = document.getElementById("profileName");
         const descEl = document.getElementById("profileDesc");
         const levelEl = document.getElementById("levelText");
+        const profileImg = document.getElementById("profileImg");
 
         if (nameEl) nameEl.textContent = viewProfile.nickname || "익명의 사용자";
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
         if (levelEl) levelEl.textContent = "Lv. " + (viewProfile.level || 1);
+
+        const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
+
+        if (profileImg) {
+            profileImg.src = viewProfile.avatar_url
+                ? `${SUPABASE_URL}/storage/v1/object/public/profiles/${viewProfile.avatar_url}`
+                : "assets/logo.png";
+        }
     }
 
     // =====================================================
