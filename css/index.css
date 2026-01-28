@@ -3,14 +3,14 @@
 
 html, body {
     width: 100%;
-    min-height: 100%;
+    height: 100%;
+    margin: 0;
     background: #000;
     color: #fff;
     font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 
     overflow-x: hidden;
-    overflow-y: auto;   /* ✅ 스크롤 살아남 */
-    position: relative;
+    overscroll-behavior-y: none; /* ✅ iOS rubber-band 차단 */
 }
 
 body {
@@ -22,8 +22,12 @@ body {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-    min-height: 100dvh;
+
+    min-height: 100%;
     padding-bottom: 58px;
+
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /* HEADER */

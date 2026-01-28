@@ -9,6 +9,8 @@
   background: #000;
   border-top: 1px solid #222;
   z-index: 999;
+
+  transform: translateZ(0); /* iOS fixed 안정화 */
 }
 
 .nav-inner {
