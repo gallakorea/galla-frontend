@@ -52,7 +52,6 @@ window.addEventListener("orientationchange", updateViewportHeight);
 
 if (window.visualViewport) {
   window.visualViewport.addEventListener("resize", updateViewportHeight);
-  window.visualViewport.addEventListener("scroll", updateViewportHeight);
 }
 
 /* =========================
@@ -727,11 +726,16 @@ function updateShortsVoteBar() {
 function closeShorts() {
   document.body.style.overflow = "";
   document.body.classList.remove("shorts-open");
+
+  // ✅ viewport 기준 완전 복구
+  VIEWPORT_H = window.innerHeight;
+
   window.__CURRENT_SHORT_ISSUE_ID__ = null;
+
   if (overlay) {
-    track = null;
     overlay.remove();
     overlay = null;
+    track = null;
   }
 }
 

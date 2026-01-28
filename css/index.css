@@ -22,20 +22,8 @@ body {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-
-    /* 콘텐츠는 네비 높이를 포함한 실제 화면 높이만 사용 */
     min-height: 100dvh;
-
-    /* fixed bottom-nav 공간 확보 */
     padding-bottom: 58px;
-}
-
-/* iOS 스크롤 시 viewport 변동 방지 */
-html {
-    height: 100%;
-}
-body {
-    min-height: 100%;
 }
 
 /* HEADER */
