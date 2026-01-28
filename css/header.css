@@ -34,26 +34,35 @@
   cursor: pointer;
 }
 
-/* 우측 종이비행기 버튼 */
-.header-action {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+/* =========================
+   HEADER ICON — IMAGE ONLY
+========================= */
+
+/* 모든 헤더 액션 버튼 공통 */
+.header-action,
+.back-btn,
+.more-header-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+
+  width: auto;
+  height: auto;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  background: rgba(255,255,255,0.08);
-  border: none;
-  padding: 0;
   cursor: pointer;
 }
 
 /* 종이비행기 아이콘 */
-.header-action img {
-  width: 20px;
-  height: 20px;
+.header-action img,
+.back-btn img,
+.more-header-btn img {
+  width: 22px;
+  height: 22px;
   display: block;
 }
 
