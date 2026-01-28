@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>정산 내역 - GALLA</title>
+
+  <link rel="stylesheet" href="./css/index.css">
+
+  <style>
+    body {
+      background:#000;
+      color:#fff;
+      max-width:480px;
+      margin:0 auto;
+      font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    }
+
+    /* HEADER */
+    .header {
+      position: sticky;
+      top: 0;
+      background: #000;
+      border-bottom: 1px solid #111;
+      z-index: 10;
+    }
+    .header-inner {
+      height: 50px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .back-btn { font-size: 20px; cursor: pointer; }
+    .header-title { font-size: 16px; font-weight: 700; }
+    .header-spacer { width: 24px; }
+
+    /* SECTION */
+    .section {
+      padding: 22px 16px;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    /* SUMMARY */
+    .summary-card {
+      background: #0d0d0d;
+      border: 1px solid #1c1c1c;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .summary-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .summary-row .label {
+      color: #aaa;
+    }
+
+    .summary-row .value {
+      font-weight: 700;
+    }
+
+    /* LIST */
+    .list-card {
+      background: #0d0d0d;
+      border: 1px solid #1c1c1c;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid #1c1c1c;
+      font-size: 14px;
+    }
+
+    .list-item:last-child {
+      border-bottom: none;
+    }
+
+    .list-left {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .list-date {
+      font-size: 13px;
+      color: #777;
+    }
+
+    .list-status {
+      font-size: 12px;
+      color: #4aa3ff;
+    }
+
+    .list-status.done {
+      color: #6bdc76;
+    }
+
+    .list-status.wait {
+      color: #ffcc66;
+    }
+
+    .list-amount {
+      font-weight: 700;
+    }
+
+    .empty {
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      padding: 30px 0;
+    }
+  </style>
+</head>
+
+<body data-page="settlement">
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="back-btn" onclick="history.back()">←</div>
+      <div class="header-title">정산 내역</div>
+      <div class="header-spacer"></div>
+    </div>
+  </header>
+
+  <!-- SUMMARY -->
+  <section class="section">
+    <div class="summary-card">
+      <div class="summary-row">
+        <span class="label">총 정산 금액</span>
+        <span class="value">₩ 0</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">출금 완료</span>
+        <span class="value">₩ 0</span>
+      </div>
+      <div class="summary-row">
+        <span class="label">출금 대기</span>
+        <span class="value">₩ 0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIST -->
+  <section class="section">
+    <div class="section-title">정산 기록</div>
+
+    <div class="list-card">
+
+      <!-- 비어있을 때 -->
+      <div class="empty">
+        아직 정산 내역이 없습니다.
+      </div>
+
+      <!--
+      실제 데이터 연결 시 예시
+
+      <div class="list-item">
+        <div class="list-left">
+          <div>출금 요청</div>
+          <div class="list-date">2026.01.28</div>
+          <div class="list-status wait">출금 대기</div>
+        </div>
+        <div class="list-amount">₩ 25,000</div>
+      </div>
+
+      <div class="list-item">
+        <div class="list-left">
+          <div>출금 완료</div>
+          <div class="list-date">2026.01.15</div>
+          <div class="list-status done">출금 완료</div>
+        </div>
+        <div class="list-amount">₩ 50,000</div>
+      </div>
+      -->
+
+    </div>
+  </section>
+
+</div>
+
+<!-- ============================= -->
+<!-- ⭐ BOTTOM NAVIGATION -->
+<!-- ============================= -->
+<nav class="nav">
+  <div class="nav-inner">
+
+    <img src="./assets/icons/nav-home.svg"
+         class="nav-icon nav-item"
+         data-target="index.html"/>
+
+    <img src="./assets/icons/nav-search.svg"
+         class="nav-icon nav-item"
+         data-target="search.html"/>
+
+    <img src="./assets/icons/nav-write.svg"
+         class="nav-icon nav-item"
+         data-target="write.html"/>
+
+    <img src="./assets/icons/nav-plaza.svg"
+         class="nav-icon nav-item"
+         data-target="plaza.html"/>
+
+    <img src="./assets/icons/nav-user.svg"
+         class="nav-icon nav-item active"
+         data-target="mypage.html"/>
+
+  </div>
+</nav>
+
+<script>
+document.querySelectorAll(".nav-item").forEach(icon => {
+  icon.addEventListener("click", () => {
+    const t = icon.dataset.target;
+    if (t) location.href = t;
+  });
+});
+</script>
+
+</body>
+</html>
