@@ -23,47 +23,6 @@ body {
 }
 
 /***************************************************
- * HEADER
- ***************************************************/
-.header {
-    background: #000;
-    border-bottom: 1px solid #111;
-    display: flex;
-    justify-content: center;
-    position: sticky;
-    top: 0;
-    z-index: 999;
-}
-
-.header-inner {
-    width: 100%;
-    max-width: 480px;
-    height: 54px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-}
-
-.logo {
-    width: 105px;
-}
-
-.auth-buttons {
-    display: flex;
-    gap: 8px;
-}
-
-.auth-buttons button {
-    padding: 5px 10px;
-    background: #111;
-    color: #fff;
-    border-radius: 14px;
-    border: 1px solid #333;
-    font-size: 12px;
-}
-
-/***************************************************
  * HOT TRENDS
  ***************************************************/
 .section-block {

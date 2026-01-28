@@ -12,31 +12,6 @@ body {
   padding-bottom:96px;
 }
 
-/* HEADER */
-.header {
-  position:sticky;
-  top:0;
-  background:#000;
-  border-bottom:1px solid #111;
-  z-index:1000;
-}
-.header-inner {
-  height:54px;
-  padding:0 16px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.logo { width:105px; }
-.auth-buttons button {
-  background:#111;
-  border:1px solid #333;
-  color:#fff;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:12px;
-}
-
 /* GUIDE */
 .plaza-guide {
   padding:14px 16px;

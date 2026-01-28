@@ -61,3 +61,48 @@
 .header.hide {
   transform: translateY(-100%);
 }
+
+/* =========================
+   COMMON HEADER – LEFT / RIGHT BUTTON VARIANTS
+========================= */
+
+/* 뒤로가기 버튼 (좌측) */
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 10px;
+
+  background: rgba(255,255,255,0.08);
+  border: none;
+
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.back-text {
+  font-size: 13px;
+}
+
+/* 우측 ⋯ 버튼 */
+.more-header-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255,255,255,0.08);
+  border: none;
+
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}

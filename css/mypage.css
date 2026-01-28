@@ -8,28 +8,6 @@ body {
     margin:0 auto;
 }
 
-/* HEADER */
-.header {
-    position:sticky;
-    top:0;
-    background:#000;
-    z-index:999;
-    border-bottom:1px solid #111;
-}
-.header-inner {
-    height:52px;
-    padding:0 16px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-.logo { width:105px; }
-.setting-text {
-    font-size:15px;
-    color:#fff;
-    cursor:pointer;
-}
-
 /* PROFILE */
 .profile-section {
     text-align:center;

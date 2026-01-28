@@ -19,25 +19,6 @@ html, body {
 }
 
 
-/* HEADER (기존 호환) */
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 9999;
-  background: #000;
-  border-bottom: 1px solid #111;
-}
-.header-inner {
-  height: 54px;
-  padding: 0 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.logo {
-  width: 105px;
-}
-
 /* GUIDE */
 .plaza-guide {
   padding: 14px 16px;
