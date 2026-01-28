@@ -22,8 +22,12 @@ body {
     margin: 0 auto;
     width: 100%;
     max-width: 480px;
-    min-height: 100vh;
-    padding-bottom: 58px;
+
+    /* 네비 높이 제외 */
+    min-height: calc(100vh - 58px);
+
+    /* 네비 + 여유 */
+    padding-bottom: 82px;
 }
 
 /* HEADER */
