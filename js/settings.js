@@ -39,9 +39,9 @@ document.addEventListener("DOMContentLoaded", async () => {
      프로필 정보 로딩
   ===================== */
   const { data: profile, error: profileErr } = await supabase
-    .from("user_profiles")
-    .select("*")
-    .eq("user_id", userId)
+    .from("users")
+    .select("nickname, bio, phone, avatar_url")
+    .eq("id", userId)
     .single();
 
   if (profileErr) {
@@ -55,6 +55,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("profileBio") && ($("profileBio").textContent = profile.bio || "소개 문구가 없습니다.");
     $("emailValue") && ($("emailValue").textContent = user.email || "-");
     $("phoneValue") && ($("phoneValue").textContent = profile.phone || "-");
+
+    const profileImgEl = document.querySelector(".profile-card .profile-img");
+    if (profileImgEl) {
+      if (profile.avatar_url) {
+        const SUPABASE_URL = supabase.supabaseUrl;
+        profileImgEl.src =
+          `${SUPABASE_URL}/storage/v1/object/public/profiles/${profile.avatar_url}`;
+      } else {
+        profileImgEl.src = "./assets/logo.png";
+      }
+    }
   }
 
   /* =====================
