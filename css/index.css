@@ -23,11 +23,8 @@ body {
     width: 100%;
     max-width: 480px;
 
-    /* 네비 높이 제외 */
-    min-height: calc(100vh - 58px);
-
-    /* 네비 + 여유 */
-    padding-bottom: 82px;
+    min-height: 100vh;      /* ← 다시 100vh로 */
+    padding-bottom: 58px;  /* ← 네비 높이만큼만 */
 }
 
 /* HEADER */
