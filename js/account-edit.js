@@ -43,6 +43,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   let selectedFile = null;
 
   // =========================
+  // Load existing profile (initial render)
+  // =========================
+  const { data: profile, error: profileError } = await supabase
+    .from("users")
+    .select("nickname, bio, avatar_url")
+    .eq("id", userId)
+    .single();
+
+  if (profileError) {
+    console.error("[account-edit] load profile error", profileError);
+  } else if (profile) {
+    if (profile.nickname) nicknameInput.value = profile.nickname;
+    bioInput.value = profile.bio || "";
+
+    if (profile.avatar_url) {
+      const SUPABASE_URL = supabase.supabaseUrl;
+      previewImg.src =
+        `${SUPABASE_URL}/storage/v1/object/public/profiles/${profile.avatar_url}`;
+    }
+  }
+
+  // =========================
   // Image preview only (NO upload here)
   // =========================
   fileInput.addEventListener("change", () => {
