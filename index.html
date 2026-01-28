@@ -8,6 +8,7 @@
 
     <link rel="stylesheet" href="css/index.css" />
     <link rel="stylesheet" href="css/shorts.css" />
+    <link rel="stylesheet" href="./css/header.css">
     <link rel="stylesheet" href="./css/nav.css">
 
 </head>
@@ -16,21 +17,16 @@
 <div id="app">
 
     <!-- HEADER -->
-    <header class="header">
-        <div class="header-inner">
-            <img src="assets/logo.png" alt="GALLA" class="logo"
-                 onclick="location.href='index.html'" />
+    <header class="header header-common">
+      <div class="header-inner">
+        <img src="assets/logo.png" alt="GALLA" class="logo"
+             onclick="location.href='index.html'" />
 
-            <!-- 로그인/로그아웃 전환 UI -->
-            <div class="auth-buttons">
-                <!-- 로그인 전 -->
-                <button id="headerLoginBtn" onclick="location.href='login.html'">로그인</button>
-                <button id="headerSignupBtn" onclick="location.href='signup.html'">회원가입</button>
-
-                <!-- 로그인 후 -->
-                <button id="headerMypageBtn" onclick="location.href='mypage.html'" style="display:none;">마이페이지</button>
-            </div>
-        </div>
+        <button class="header-action"
+                onclick="location.href='write.html'">
+          <img src="assets/icons/icon-share.svg" alt="share">
+        </button>
+      </div>
     </header>
 
     <!-- HERO -->
@@ -127,48 +123,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase.js"></script>
 
-<script>
-/* ============================================================
-   로그인 상태에 따라 UI 자동 변경 (모든 페이지 공통 사용)
-============================================================ */
-document.addEventListener("DOMContentLoaded", async () => {
 
-    // supabaseClient 로드 대기
-    function waitForSupabase() {
-        return new Promise(resolve => {
-            const timer = setInterval(() => {
-                if (window.supabaseClient) {
-                    clearInterval(timer);
-                    resolve();
-                }
-            }, 20);
-        });
-    }
-
-    await waitForSupabase();
-    const supabase = window.supabaseClient;
-
-    const { data } = await supabase.auth.getSession();
-    const session = data.session;
-
-    const btnLogin = document.getElementById("headerLoginBtn");
-    const btnSignup = document.getElementById("headerSignupBtn");
-    const btnMypage = document.getElementById("headerMypageBtn");
-
-    if (session?.user) {
-        // 로그인 상태
-        btnLogin.style.display = "none";
-        btnSignup.style.display = "none";
-        btnMypage.style.display = "inline-block";
-    } else {
-        // 로그아웃 상태
-        btnLogin.style.display = "inline-block";
-        btnSignup.style.display = "inline-block";
-        btnMypage.style.display = "none";
-    }
-
-});
-</script>
 
 <!-- 🔥🔥🔥 여기 추가 (중요) 🔥🔥🔥 -->
 

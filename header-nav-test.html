@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>GALLA – Header/Nav Test</title>
+
+  <!-- 공통 헤더 -->
+  <link rel="stylesheet" href="css/header.css" />
+  <!-- 공통 네비 -->
+  <link rel="stylesheet" href="css/nav.css" />
+
+  <style>
+    /* ===== 테스트용 콘텐츠 ===== */
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+    }
+
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: 58px; /* 네비 높이 */
+    }
+
+    .test-section {
+      padding: 20px 16px;
+      border-bottom: 1px solid #111;
+    }
+
+    .test-section h2 {
+      font-size: 18px;
+      margin-bottom: 12px;
+    }
+
+    .test-box {
+      height: 120px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #111, #050505);
+      border: 1px solid #222;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+
+<body data-page="test">
+
+  <div id="app">
+
+    <!-- ===== 공통 헤더 ===== -->
+    <header class="header">
+      <div class="header-inner">
+
+        <div class="header-left">
+          <img
+            src="assets/logo.png"
+            alt="GALLA"
+            class="header-logo"
+            onclick="location.href='index.html'"
+          />
+        </div>
+
+        <div class="header-right">
+          <button class="header-icon" onclick="alert('DM')">
+            <img src="assets/icons/icon-share.svg" alt="Share" />
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ===== 테스트 콘텐츠 ===== -->
+    <section class="test-section">
+      <h2>Header + Nav Scroll Test</h2>
+      <div class="test-box"></div>
+      <div class="test-box"></div>
+      <div class="test-box"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>More Content</h2>
+      <div class="test-box"></div>
+      <div class="test-box"></div>
+      <div class="test-box"></div>
+    </section>
+
+    <section class="test-section">
+      <h2>Bottom Area</h2>
+      <div class="test-box"></div>
+      <div class="test-box"></div>
+    </section>
+
+  </div>
+
+  <!-- ===== 공통 네비게이션 ===== -->
+  <nav class="nav">
+    <div class="nav-inner">
+
+      <button class="nav-item">
+        <img src="assets/icons/nav-home.svg" />
+      </button>
+
+      <button class="nav-item">
+        <img src="assets/icons/nav-search.svg" />
+      </button>
+
+      <button class="nav-item">
+        <img src="assets/icons/nav-write.svg" />
+      </button>
+
+      <button class="nav-item">
+        <img src="assets/icons/nav-plaza.svg" />
+      </button>
+
+      <button class="nav-item">
+        <img src="assets/icons/nav-user.svg" />
+      </button>
+
+    </div>
+  </nav>
+
+</body>
+</html>

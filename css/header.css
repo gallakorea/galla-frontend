@@ -1,0 +1,60 @@
+/* =========================
+   COMMON HEADER (INSTAGRAM STYLE)
+========================= */
+
+.header {
+  position: relative;
+  top: 0;
+  z-index: 1000;
+
+  width: 100%;
+  background: #000;
+  border-bottom: 1px solid #111;
+  transition: transform 0.25s ease;
+  will-change: transform;
+}
+
+.header-inner {
+  height: 60px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* LEFT */
+.header-logo {
+  width: 105px;
+  height: auto;
+  cursor: pointer;
+}
+
+/* RIGHT */
+.header-right {
+  display: flex;
+  gap: 0;
+}
+
+.header-icon.search {
+  display: none !important;
+}
+
+.header-icon {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.header-icon img {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+
+.header.hide {
+  transform: translateY(-100%);
+}

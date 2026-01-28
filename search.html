@@ -5,26 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GALLA - 검색</title>
   <link rel="stylesheet" href="./css/search.css" />
+  <link rel="stylesheet" href="./css/header.css">
   <link rel="stylesheet" href="./css/nav.css">
 </head>
 
 <body data-page="search">
 <div id="app">
 
-<header class="header">
+<header class="header header-common">
   <div class="header-inner">
-    <a href="search.html" class="logo-link">
+    <a href="index.html" class="logo-link">
       <img src="assets/logo.png" class="logo" alt="GALLA" />
     </a>
 
-    <div class="auth-buttons" id="authBefore">
-      <button onclick="location.href='login.html'">로그인</button>
-      <button onclick="location.href='signup.html'">회원가입</button>
-    </div>
-
-    <div class="auth-buttons" id="authAfter" style="display:none;">
-      <button onclick="location.href='mypage.html'">마이페이지</button>
-    </div>
+    <button class="header-action" aria-label="share">
+      <img src="assets/icons/icon-share.svg" alt="share" />
+    </button>
   </div>
 </header>
 

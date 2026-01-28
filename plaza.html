@@ -7,21 +7,20 @@
 
   <!-- plaza 전용 CSS -->
   <link rel="stylesheet" href="css/plaza.css">
+  <link rel="stylesheet" href="./css/header.css">
   <link rel="stylesheet" href="./css/nav.css">
 </head>
 
 <body data-page="plaza">
 <div id="app">
 
-  <!-- HEADER (기존 그대로) -->
+  <!-- HEADER (COMMON) -->
   <header class="header">
     <div class="header-inner">
-      <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
-
-      <div class="auth-buttons">
-        <button onclick="location.href='login.html'">로그인</button>
-        <button onclick="location.href='signup.html'">회원가입</button>
-      </div>
+      <img src="assets/logo.png" class="logo" onclick="location.href='index.html'" />
+      <button class="header-action">
+        <img src="assets/icons/icon-share.svg" alt="share" />
+      </button>
     </div>
   </header>
 
