@@ -1,0 +1,11 @@
+<svg viewBox="0 0 24 24"
+     xmlns="http://www.w3.org/2000/svg"
+     fill="#000000">
+  <!-- 돋보기 원 -->
+  <circle cx="11" cy="11" r="6.5"/>
+
+  <!-- 손잡이 -->
+  <rect x="14.8" y="14.8" width="7" height="2.2"
+        rx="1.1"
+        transform="rotate(45 14.8 14.8)"/>
+</svg>

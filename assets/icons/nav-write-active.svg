@@ -1,0 +1,14 @@
+<svg viewBox="0 0 24 24"
+     xmlns="http://www.w3.org/2000/svg"
+     fill="#000000">
+
+  <!-- 바깥 원 -->
+  <circle cx="12" cy="12" r="7.5"/>
+
+  <!-- 세로 막대 -->
+  <rect x="11" y="7.2" width="2" height="9.6" rx="1"/>
+
+  <!-- 가로 막대 -->
+  <rect x="7.2" y="11" width="9.6" height="2" rx="1"/>
+
+</svg>

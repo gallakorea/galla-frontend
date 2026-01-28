@@ -1,0 +1,70 @@
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: 58px;
+  background: #000;
+  border-top: 1px solid #222;
+  z-index: 999;
+  box-shadow: none;
+}
+
+.nav-inner {
+  height: 100%;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.nav-item {
+  width: auto;
+  height: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: translateY(-6px);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.nav-item img,
+.nav-item svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+  fill: none;
+  stroke: #fff;
+  filter: none;
+  box-shadow: none;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  opacity: 1;
+}
+
+/* active 상태도 동일하게 유지 */
+.nav-item.active {
+  background: transparent;
+}
+
+.nav-item.active img,
+.nav-item.active svg {
+  filter: none;
+}
+
+.nav-item::before,
+.nav-item::after,
+.nav::before,
+.nav::after {
+  content: none !important;
+  display: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
