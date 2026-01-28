@@ -11,7 +11,7 @@
 
     <style>
         #app {
-            padding-bottom: 120px;
+            padding-bottom: 80px;
         }
     </style>
 </head>
@@ -23,7 +23,7 @@
     <!-- HEADER (프로젝트 표준 구조 적용) -->
     <header class="header">
         <div class="header-inner">
-            <img src="./assets/icons/back.svg" class="back-icon" onclick="history.back()">
+            <img src="./assets/icons/back.svg" class="back-btn" onclick="history.back()">
             <div class="header-title">갈라리안 등급</div>
             <div class="header-spacer"></div>
         </div>
@@ -190,28 +190,6 @@
     </nav>
 
 </div>
-
-
-<script>
-/* NAVIGATION */
-document.querySelectorAll(".nav-item").forEach(item => {
-    item.addEventListener("click", () => {
-        const t = item.dataset.target;
-        if (t) location.href = t;
-    });
-});
-
-/* 로그인 체크 */
-(async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-
-    if (!sessionData.session) {
-        alert("로그인이 필요합니다");
-        location.href = "login.html";
-        return;
-    }
-})();
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase.js"></script>
