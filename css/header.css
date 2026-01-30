@@ -29,7 +29,7 @@
 
 /* 로고 */
 .logo {
-  width: 105px;              /* 기존과 동일 */
+  width: 120px;              /* 기존과 동일 */
   height: auto;
   cursor: pointer;
 }
@@ -76,7 +76,7 @@
   gap: 0;
 }
 
-.more-header-btn svg {
+.setting-btn svg {
   width: 22px;
   height: 22px;
   color: #fff; /* stroke = currentColor */
