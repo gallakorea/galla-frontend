@@ -114,36 +114,202 @@ body {
 }
 
 /* ==========================================================
-   THUMBNAIL
+   MEDIA (4:5 세로형)
 ========================================================== */
-.issue-thumb {
+.issue-media {
     width: 100%;
-    height: 240px;
-    object-fit: contain;
+    aspect-ratio: 4 / 5;
+    position: relative;
+    overflow: hidden;
     background: #111;
-    border-radius: 14px;
-    padding: 12px;
-    border: 1px solid #222;
     margin-top: 12px;
+    flex-shrink: 0;
 }
 
-/* ==========================================================
-   스피치 버튼
-========================================================== */
-.speech-btn {
-    width: calc(100% - 32px);
-    margin: 18px auto 0;
-    background: #171717;
-    padding: 14px;
-    border-radius: 12px;
-    border: 1px solid #292929;
-    text-align: center;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
+.issue-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     display: block;
-    color: #fff !important;
 }
+
+.issue-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 플레이 오버레이 */
+.issue-play-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.2);
+}
+.issue-play-overlay.hidden { display: none; }
+.issue-play-circle {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.issue-play-tri {
+    width: 0;
+    height: 0;
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    border-left: 20px solid #fff;
+    margin-left: 4px;
+}
+.issue-vid-dur {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 5px;
+}
+.issue-vid-mute {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.55);
+    border: none;
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 2;
+}
+
+/* 캐러셀 */
+.issue-carousel {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+.issue-slides {
+    display: flex;
+    height: 100%;
+    transition: transform .28s ease;
+}
+.issue-slide {
+    min-width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+}
+.issue-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.issue-arr {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.4);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+.issue-arr.l { left: 8px; }
+.issue-arr.r { right: 8px; }
+.issue-c-dots {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+}
+.issue-c-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.3);
+    transition: all .2s;
+}
+.issue-c-dot.on { background: #fff; width: 14px; }
+.issue-c-cnt {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-weight: 700;
+    z-index: 2;
+}
+
+/* 구 .issue-thumb 하위 호환 */
+.issue-thumb { display: none; }
+
+/* ==========================================================
+   진영 버튼 (커스텀 라벨)
+========================================================== */
+.faction-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+.faction-btn {
+    flex: 1;
+    padding: 13px 8px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    border: none;
+    line-height: 1.35;
+    word-break: keep-all;
+    transition: transform .1s, background .15s;
+}
+.faction-btn:active { transform: scale(.97); }
+.faction-btn-a {
+    background: #0a1233;
+    color: #aac4ff;
+    border: 1px solid #1a3a8a;
+}
+.faction-btn-b {
+    background: #1a0808;
+    color: #ffaaaa;
+    border: 1px solid #8a1a1a;
+}
+.faction-btn-a.voted {
+    background: #3356ff;
+    color: #fff;
+    border-color: #3356ff;
+}
+.faction-btn-b.voted {
+    background: #ff4f6e;
+    color: #fff;
+    border-color: #ff4f6e;
+}
+.faction-btn.disabled { opacity: .6; pointer-events: none; }
 
 /* ==========================================================
    SUMMARY

@@ -53,11 +53,8 @@
         </div>
     </section>
 
-    <!-- THUMB -->
-    <img src="assets/logo.png" class="issue-thumb" id="issue-thumb" />
-
-    <!-- SPEECH BUTTON -->
-    <button class="speech-btn" id="open-video-modal">🎥 1분 엘리베이터 스피치</button>
+    <!-- MEDIA (4:5 세로형 — 영상/캐러셀/이미지) -->
+    <div id="issue-media-wrap"></div>
 
     <!-- VOTE -->
     <section class="vote-section">
@@ -73,9 +70,9 @@
             <span id="vote-con-text">0%</span>
         </div>
 
-        <div class="vote-buttons">
-            <button class="btn-pro" id="btn-vote-pro">👍 찬성이오</button>
-            <button class="btn-con" id="btn-vote-con">👎 난 반댈세</button>
+        <div class="faction-btns">
+            <button class="faction-btn faction-btn-a" id="btn-vote-pro">👍 찬성이오</button>
+            <button class="faction-btn faction-btn-b" id="btn-vote-con">👎 난 반댈세</button>
         </div>
 
         <!-- ✅ 이 줄 추가 (없어서 UX가 깨졌음) -->
@@ -298,7 +295,7 @@
 
         <div class="war-grid">
           <div class="war-box pro">
-            <div class="war-label">찬성 진영</div>
+            <div class="war-label">👍 진영</div>
             <div class="war-stat">총 댓글 <b id="stat-pro-total">0</b></div>
             <div class="war-sub">동진영 <span id="stat-pro-same">0</span> · 적진 <span id="stat-pro-oppo">0</span></div>
           </div>
@@ -310,7 +307,7 @@
           </div>
 
           <div class="war-box con">
-            <div class="war-label">반대 진영</div>
+            <div class="war-label">👎 진영</div>
             <div class="war-stat">총 댓글 <b id="stat-con-total">0</b></div>
             <div class="war-sub">동진영 <span id="stat-con-same">0</span> · 적진 <span id="stat-con-oppo">0</span></div>
           </div>
@@ -405,24 +402,6 @@
   </div>
 </nav>
 
-<!-- VIDEO MODAL -->
-<div class="speech-backdrop" hidden>
-    <div class="speech-sheet">
-        <div class="speech-header">
-            <span class="speech-title">1분 엘리베이터 스피치</span>
-            <button class="speech-close">✕</button>
-        </div>
-
-        <video id="speech-video" playsinline></video>
-
-        <div class="speech-controls">
-            <div class="play-icon" id="play-icon">▶</div>
-            <div class="progress-container">
-                <div class="progress-bar" id="progress-bar"></div>
-            </div>
-        </div>
-    </div>
-</div> <!-- #app 끝 -->
 
 <!-- =========================
    SUPPORT MODAL (CENTER)

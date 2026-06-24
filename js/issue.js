@@ -53,36 +53,26 @@ async function forceInitialVoteSync(issueId) {
   }
 }
 
-// ✅ 추가: applyVoteUI helper function
 function applyVoteUI(stance) {
   const btnPro = qs("btn-vote-pro");
   const btnCon = qs("btn-vote-con");
   if (!btnPro || !btnCon) return;
 
-  // 🔥 미투표 상태
   if (!stance) {
-    btnPro.classList.remove("active-vote");
-    btnCon.classList.remove("active-vote");
+    btnPro.classList.remove("voted");
+    btnCon.classList.remove("voted");
     btnPro.disabled = false;
     btnCon.disabled = false;
-    btnPro.innerText = "👍 찬성이오";
-    btnCon.innerText = "👎 난 반댈세";
     return;
   }
 
-  // 🔥 투표 완료 상태
   btnPro.disabled = true;
   btnCon.disabled = true;
+  btnPro.classList.add("disabled");
+  btnCon.classList.add("disabled");
 
-  if (stance === "pro") {
-    btnPro.classList.add("active-vote");
-    btnPro.innerText = "👍 투표 완료";
-  }
-
-  if (stance === "con") {
-    btnCon.classList.add("active-vote");
-    btnCon.innerText = "👎 투표 완료";
-  }
+  if (stance === "pro") btnPro.classList.add("voted");
+  if (stance === "con") btnCon.classList.add("voted");
 }
 
 
@@ -182,9 +172,123 @@ if (typeof loadAiNews === "function") {
 /* ==========================================================================
    3. Render Issue
 ========================================================================== */
+
+/* 캐러셀 상태 */
+let issueCarouselIdx = 0;
+let issueCarouselTotal = 0;
+
+function renderIssueMedia(issue) {
+    const wrap = document.getElementById('issue-media-wrap');
+    if (!wrap) return;
+
+    // 영상
+    if (issue.video_url) {
+        wrap.innerHTML = `
+        <div class="issue-media" onclick="issueTogglePlay()">
+            <video id="issue-vid" loop playsinline muted preload="metadata">
+                <source src="${issue.video_url}" type="video/mp4">
+            </video>
+            <div class="issue-play-overlay" id="issue-play-ov">
+                <div class="issue-play-circle"><div class="issue-play-tri"></div></div>
+            </div>
+            <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
+            <button class="issue-vid-mute" id="issue-vid-mute"
+                onclick="event.stopPropagation();issueToggleMute()">🔇</button>
+        </div>`;
+
+        const vid = document.getElementById('issue-vid');
+        if (vid) {
+            vid.addEventListener('loadedmetadata', () => {
+                const t = Math.floor(vid.duration);
+                const dur = document.getElementById('issue-vid-dur');
+                if (dur) dur.textContent = `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;
+            });
+
+            // 스크롤 자동재생
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting && e.intersectionRatio > 0.5) {
+                        vid.play().catch(() => {});
+                        document.getElementById('issue-play-ov')?.classList.add('hidden');
+                    } else {
+                        vid.pause();
+                        document.getElementById('issue-play-ov')?.classList.remove('hidden');
+                    }
+                });
+            }, { threshold: 0.5 });
+            observer.observe(vid);
+        }
+        return;
+    }
+
+    // 사진 (thumbnail_url 단일 or 배열)
+    const images = issue.images || (issue.thumbnail_url ? [issue.thumbnail_url] : []);
+    if (images.length > 0) {
+        issueCarouselTotal = images.length;
+        issueCarouselIdx = 0;
+        const dots = images.map((_, i) => `<div class="issue-c-dot ${i===0?'on':''}"></div>`).join('');
+        const slides = images.map(url => `<div class="issue-slide"><img src="${url}" loading="lazy"></div>`).join('');
+        wrap.innerHTML = `
+        <div class="issue-media">
+            <div class="issue-carousel">
+                <div class="issue-slides" id="issue-slides">${slides}</div>
+                ${images.length > 1 ? `
+                <button class="issue-arr l" onclick="issueCarouselGo(-1)">‹</button>
+                <button class="issue-arr r" onclick="issueCarouselGo(1)">›</button>
+                <div class="issue-c-cnt" id="issue-c-cnt">1 / ${images.length}</div>
+                <div class="issue-c-dots" id="issue-c-dots">${dots}</div>
+                ` : ''}
+            </div>
+        </div>`;
+        return;
+    }
+
+    // 없음
+    wrap.innerHTML = '';
+}
+
+window.issueTogglePlay = function() {
+    const v = document.getElementById('issue-vid');
+    const o = document.getElementById('issue-play-ov');
+    if (!v) return;
+    if (v.paused) { v.play().catch(()=>{}); o?.classList.add('hidden'); }
+    else { v.pause(); o?.classList.remove('hidden'); }
+};
+
+window.issueToggleMute = function() {
+    const v = document.getElementById('issue-vid');
+    const btn = document.getElementById('issue-vid-mute');
+    if (!v) return;
+    v.muted = !v.muted;
+    if (btn) btn.textContent = v.muted ? '🔇' : '🔊';
+};
+
+window.issueCarouselGo = function(dir) {
+    issueCarouselIdx = (issueCarouselIdx + dir + issueCarouselTotal) % issueCarouselTotal;
+    const i = issueCarouselIdx;
+    const slides = document.getElementById('issue-slides');
+    const cnt = document.getElementById('issue-c-cnt');
+    const dots = document.getElementById('issue-c-dots');
+    if (slides) slides.style.transform = `translateX(-${i*100}%)`;
+    if (cnt) cnt.textContent = `${i+1} / ${issueCarouselTotal}`;
+    if (dots) dots.querySelectorAll('.issue-c-dot').forEach((d, idx) => {
+        d.classList.toggle('on', idx === i);
+        d.style.width = idx === i ? '14px' : '5px';
+    });
+};
+
 function renderIssue(issue) {
-  currentIssue = issue;   // ✅ 이 줄 추가
+  currentIssue = issue;
   issueAuthorId = issue.user_id;
+
+  // 미디어 렌더링
+  renderIssueMedia(issue);
+
+  // 진영 버튼 라벨 적용
+  const btnPro = qs("btn-vote-pro");
+  const btnCon = qs("btn-vote-con");
+  if (btnPro && issue.faction_a) btnPro.textContent = `👍 ${issue.faction_a}`;
+  if (btnCon && issue.faction_b) btnCon.textContent = `👎 ${issue.faction_b}`;
 
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
@@ -230,35 +334,10 @@ if (explainWrap) {
 }
 
   if (issue.created_at) {
-    qs("issue-time").innerText =
-      new Date(issue.created_at).toLocaleDateString();
+    qs("issue-time").innerText = new Date(issue.created_at).toLocaleDateString();
   }
 
   qs("issue-author").innerText = "작성자 · 익명";
-
-  /* 썸네일 */
-  const thumb = qs("issue-thumb");
-  if (thumb) {
-    if (issue.thumbnail_url) {
-      thumb.src = issue.thumbnail_url;
-      thumb.style.display = "block";
-    } else {
-      thumb.style.display = "none";
-    }
-  }
-
-  /* 영상 */
-  const videoBtn = qs("open-video-modal");
-  const videoEl = qs("speech-video");
-
-  if (videoBtn && videoEl) {
-    if (issue.video_url) {
-      videoBtn.style.display = "block";
-      videoEl.src = issue.video_url;
-    } else {
-      videoBtn.style.display = "none";
-    }
-  }
 }
 
 /* ==========================================================================
@@ -414,20 +493,8 @@ async function loadMySupportStatus(issueId) {
 }
 
 /* ==========================================================================
-   7. Video Modal
+   7. Video Modal — 제거됨 (인라인 재생으로 대체)
 ========================================================================== */
-const speechBackdrop = document.querySelector(".speech-backdrop");
-const speechSheet = document.querySelector(".speech-sheet");
-
-qs("open-video-modal")?.addEventListener("click", () => {
-  speechBackdrop.hidden = false;
-  setTimeout(() => (speechSheet.style.bottom = "0"), 10);
-});
-
-document.querySelector(".speech-close")?.addEventListener("click", () => {
-  speechSheet.style.bottom = "-100%";
-  setTimeout(() => (speechBackdrop.hidden = true), 300);
-});
 
 /* ==========================================================================
    8. Remix
