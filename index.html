@@ -2,40 +2,30 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>GALLA</title>
-
     <link rel="stylesheet" href="css/index.css" />
-    <link rel="stylesheet" href="css/shorts.css" />
     <link rel="stylesheet" href="./css/header.css">
     <link rel="stylesheet" href="./css/nav.css">
-
 </head>
-
 <body data-page="index">
 <div id="app">
 
-    <!-- HEADER -->
     <header class="header header-common">
       <div class="header-inner">
         <img src="assets/logo.png" alt="GALLA" class="logo"
              onclick="location.href='index.html'" />
-
-        <button class="header-action"
-                onclick="location.href='write.html'">
+        <button class="header-action" onclick="location.href='write.html'">
           <img src="assets/icons/icon-share.svg" alt="share">
         </button>
       </div>
     </header>
 
-    <!-- HERO -->
     <section class="hero">
         <h1 class="hero-title">지금, 대한민국의 진짜 여론</h1>
         <p class="hero-desc">진영을 선택하고 의견을 던지고, 싸우고, 후원하라.</p>
     </section>
 
-    <!-- CATEGORY -->
     <section class="category-section">
         <div class="chip-scroll">
             <div class="chip active" onclick="location.href='search.html?category=전체'">전체</div>
@@ -53,88 +43,61 @@
         </div>
     </section>
 
-    <!-- BEST -->
     <section class="section">
         <div class="section-title">🔥 베스트 갈라</div>
         <div id="best-list"></div>
         <button id="best-more" class="more-list-btn" onclick="location.href='search.html?type=best'">더보기</button>
     </section>
 
-    <!-- RECOMMENDED -->
     <section class="section">
         <div class="section-title">⭐ 오늘의 추천 갈라</div>
         <div id="recommend-list"></div>
     </section>
 
+</div>
 
-</div> <!-- #app 닫힘 -->
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-item" data-page="index" data-target="index.html">
+      <img src="./assets/icons/nav-home.svg"
+           data-base="./assets/icons/nav-home.svg"
+           data-active="./assets/icons/nav-home-active.svg">
+    </button>
+    <button class="nav-item" data-page="search" data-target="search.html">
+      <img src="./assets/icons/nav-search.svg"
+           data-base="./assets/icons/nav-search.svg"
+           data-active="./assets/icons/nav-search-active.svg">
+    </button>
+    <button class="nav-item" data-page="write" data-target="write.html">
+      <img src="./assets/icons/nav-write.svg"
+           data-base="./assets/icons/nav-write.svg"
+           data-active="./assets/icons/nav-write-active.svg">
+    </button>
+    <button class="nav-item" data-page="plaza" data-target="plaza.html">
+      <img src="./assets/icons/nav-plaza.svg"
+           data-base="./assets/icons/nav-plaza.svg"
+           data-active="./assets/icons/nav-plaza-active.svg">
+    </button>
+    <button class="nav-item" data-page="mypage" data-target="mypage.html">
+      <img src="./assets/icons/nav-user.svg"
+           data-base="./assets/icons/nav-user.svg"
+           data-active="./assets/icons/nav-user-active.svg">
+    </button>
+  </div>
+</nav>
 
-    <!-- NAVIGATION -->
-    <nav class="nav">
-      <div class="nav-inner">
-
-        <button class="nav-item" data-page="index" data-target="index.html">
-          <img src="./assets/icons/nav-home.svg"
-               data-base="./assets/icons/nav-home.svg"
-               data-active="./assets/icons/nav-home-active.svg">
-        </button>
-
-        <button class="nav-item" data-page="search" data-target="search.html">
-          <img src="./assets/icons/nav-search.svg"
-               data-base="./assets/icons/nav-search.svg"
-               data-active="./assets/icons/nav-search-active.svg">
-        </button>
-
-        <button class="nav-item" data-page="write" data-target="write.html">
-          <img src="./assets/icons/nav-write.svg"
-               data-base="./assets/icons/nav-write.svg"
-               data-active="./assets/icons/nav-write-active.svg">
-        </button>
-
-        <button class="nav-item" data-page="plaza" data-target="plaza.html">
-          <img src="./assets/icons/nav-plaza.svg"
-               data-base="./assets/icons/nav-plaza.svg"
-               data-active="./assets/icons/nav-plaza-active.svg">
-        </button>
-
-        <button class="nav-item" data-page="mypage" data-target="mypage.html">
-          <img src="./assets/icons/nav-user.svg"
-               data-base="./assets/icons/nav-user.svg"
-               data-active="./assets/icons/nav-user-active.svg">
-        </button>
-
-      </div>
-    </nav>
-
-    <!-- SHORTS OVERLAY (REAL REELS ENGINE) -->
-    <div id="shortsOverlay" hidden></div>
-
-
-<!-- 🔴 여기부터 추가 -->
 <div id="modal" class="modal">
     <div class="modal-content">
         <p id="modal-text"></p>
         <button id="modal-close">확인</button>
     </div>
 </div>
-<!-- 🔴 여기까지 추가 -->
 
-<!-- Supabase Loader -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/supabase.js"></script>
-
-
-
-<!-- 🔥🔥🔥 여기 추가 (중요) 🔥🔥🔥 -->
-
 <script type="module" src="js/vote.core.js"></script>
-<script src="js/shorts.js"></script>
-
 <script src="js/index.js"></script>
-
-</body>
 <script src="./js/nav.js"></script>
 
-
-
+</body>
 </html>
