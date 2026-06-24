@@ -1874,3 +1874,10 @@ body {
 /* speech-btn 완전 제거 */
 .speech-btn { display:none !important; }
 .speech-backdrop { display:none !important; }
+
+/* vote.core.js active-vote 호환 */
+.faction-btn.active-vote {
+    background: #ffe27a !important;
+    color: #111 !important;
+    border-color: #ffe27a !important;
+}
