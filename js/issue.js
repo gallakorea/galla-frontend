@@ -439,8 +439,8 @@ async function support(stance, amount) {
 
   alert(
     stance === "pro"
-      ? "👍 찬성 진영을 지원했습니다."
-      : "👎 반대 진영을 지원했습니다."
+      ? `👍 ${currentIssue?.faction_a || "찬성"} 진영을 지원했습니다.`
+      : `👎 ${currentIssue?.faction_b || "반대"} 진영을 지원했습니다.`
   );
 }
 
@@ -489,7 +489,7 @@ async function loadMySupportStatus(issueId) {
   const stance = data[0].stance;
 
   qs("support-status-text").innerText =
-    `${stance === "pro" ? "찬성" : "반대"} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
+    `${stance === "pro" ? (currentIssue?.faction_a || "찬성") : (currentIssue?.faction_b || "반대")} 진영에 ₩${total.toLocaleString()} 도움을 주셨습니다.`;
 }
 
 /* ==========================================================================
