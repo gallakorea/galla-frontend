@@ -688,3 +688,18 @@
 .enemy-user { color: #ff6b6b; }
 .enemy-level { color: #ff6b6b; border-color: #ff6b6b; }
 .enemy-icon { color: #ff6b6b; }
+/* 실데이터 전환 보강 */
+.empty-zone {
+  padding: 24px 16px;
+  text-align: center;
+  color: #777;
+  font-size: 13px;
+  background: #0d0d0d;
+  border: 1px dashed #2a2a2a;
+  border-radius: 10px;
+}
+.actions .done,
+.reply-actions .done {
+  opacity: 0.35;
+  pointer-events: auto; /* 클릭 시 '이미 참여' 안내를 위해 유지 */
+}

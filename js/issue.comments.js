@@ -1,19 +1,49 @@
+/* =========================================================
+   GALLA — Issue Comment Battle System (실데이터 버전)
+   - comments / comment_likes / comment_actions 테이블 연동
+   - HP·전투 카운터는 battle_action RPC가 서버에서 갱신
+========================================================= */
+
 window.CURRENT_ISSUE_ID = null;
 
 let BATTLE_MODE = null;
-// BATTLE_MODE = { type: "attack"|"defend", targetEl: HTMLElement, targetUser: string, targetSide: "pro"|"con" }
+// BATTLE_MODE = { type: "attack"|"defend", targetId, targetUser, targetSide }
+
+const PAGE_SIZE_BB = 5, PAGE_SIZE_TH = 4;
+
+const state = {
+  pro: { bb: 1, th: 1, data: [] },
+  con: { bb: 1, th: 1, data: [] }
+};
+
+/* 로그인 사용자 상태 */
+const ME = {
+  userId: null,
+  likes: new Map(),   // comment_id -> 1 | -1
+  actions: new Set()  // `${comment_id}:${action_type}`
+};
+
+let allRows = [];     // 이 이슈의 모든 댓글 행
+let replyMap = {};    // parent_id -> [reply rows]
+let likeAgg = {};     // comment_id -> { up, down }
+let profileMap = {};  // user_id -> { nickname, level }
+
+let eventsBound = false;
 
 // ============================
 // 🧩 Comment Text Renderer
 // ============================
 function renderCommentText(text) {
   if (!text) return "";
-  return text.replace(
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return escaped.replace(
     /\[gif:(.*?)\]/g,
-    (_, url) => `<img src="${url}" class="comment-gif">`
+    (_, url) => `<img src="${url.replace(/"/g, "")}" class="comment-gif">`
   );
 }
-
 
 export async function initCommentSystem(issueId) {
   window.CURRENT_ISSUE_ID = issueId;
@@ -27,114 +57,168 @@ export async function initCommentSystem(issueId) {
     return;
   }
 
-  await loadComments(window.CURRENT_ISSUE_ID);
-  await loadWarStats();
+  // 진영 기본값: 내가 투표한 진영
+  if (window.MY_VOTE_TYPE === "pro" || window.MY_VOTE_TYPE === "con") {
+    const sel = document.getElementById("battle-side-select");
+    if (sel) sel.value = window.MY_VOTE_TYPE;
+    document.querySelectorAll(".side-btn").forEach(b =>
+      b.classList.toggle("active", b.dataset.side === window.MY_VOTE_TYPE));
+  }
+
+  await loadComments(issueId);
   renderSide("pro");
   renderSide("con");
   renderWarDashboard();
   bindEvents();
 }
 
-/* =========================================================
-   GALLA — Issue Comment Battle System
-   UI + Logic FULL VERSION
-========================================================= */
-let warStats = {
-  pro: { total: 0, own: 0, enemy: 0 },
-  con: { total: 0, own: 0, enemy: 0 },
-  global: { attack: 0, support: 0, defend: 0 }
-};
-
-const PAGE_SIZE_BB = 5, PAGE_SIZE_TH = 4;
-
-const state = {
-  pro: { bb: 1, th: 1, data: [] },
-  con: { bb: 1, th: 1, data: [] }
-};
-
 /* ======================
-   Mock Data Generator
+   Data Loading
 ====================== */
 
-function createUser() {
-  const anon = Math.random() > .6;
-  const level = Math.floor(Math.random() * 30) + 1;
-  return {
-    name: anon ? "익명" : "User" + Math.floor(Math.random() * 1000),
-    anon,
-    level
-  };
-}
+async function loadComments(issueId) {
+  const supabase = window.supabaseClient;
 
-function createComment(side) {
-  return {
-    side,
-    user: createUser(),
-    hp: Math.floor(Math.random() * 40) + 50,
-    text: "이 정책은 장기적으로 반드시 필요한 선택입니다.",
-    replies: Math.floor(Math.random() * 8) + 1,
-    atk: Math.floor(Math.random() * 5),
-    sup: Math.floor(Math.random() * 5),
-    def: Math.floor(Math.random() * 5)
-  };
+  const { data: sess } = await supabase.auth.getSession();
+  ME.userId = sess?.session?.user?.id || null;
+
+  const { data: rows, error } = await supabase
+    .from("comments")
+    .select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action")
+    .eq("issue_id", issueId)
+    .neq("status", "deleted")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[comments] load failed", error);
+    return;
+  }
+  allRows = rows || [];
+
+  // 작성자 프로필
+  profileMap = {};
+  const userIds = [...new Set(allRows.map(r => r.user_id).filter(Boolean))];
+  if (userIds.length) {
+    const { data: profiles } = await supabase
+      .from("user_profiles")
+      .select("user_id,nickname,level")
+      .in("user_id", userIds);
+    profiles?.forEach(p => profileMap[p.user_id] = p);
+  }
+
+  // 좋아요 집계 + 내 좋아요
+  likeAgg = {};
+  ME.likes = new Map();
+  const ids = allRows.map(r => r.id);
+  if (ids.length) {
+    const { data: likes } = await supabase
+      .from("comment_likes")
+      .select("comment_id,user_id,value")
+      .in("comment_id", ids);
+    likes?.forEach(l => {
+      const a = likeAgg[l.comment_id] ||= { up: 0, down: 0 };
+      if (l.value === 1) a.up++; else a.down++;
+      if (ME.userId && l.user_id === ME.userId) ME.likes.set(l.comment_id, l.value);
+    });
+  }
+
+  // 내가 이미 수행한 전투 액션 (중복 방지 표시)
+  ME.actions = new Set();
+  if (ME.userId && ids.length) {
+    const { data: acts } = await supabase
+      .from("comment_actions")
+      .select("comment_id,action_type")
+      .eq("user_id", ME.userId)
+      .in("comment_id", ids);
+    acts?.forEach(a => ME.actions.add(`${a.comment_id}:${a.action_type}`));
+  }
+
+  // 댓글/대댓글 분류
+  replyMap = {};
+  const top = { pro: [], con: [] };
+  allRows.forEach(r => {
+    if (r.parent_id) {
+      (replyMap[r.parent_id] ||= []).push(r);
+    } else if (r.faction === "pro" || r.faction === "con") {
+      top[r.faction].push(r);
+    }
+  });
+  // 대댓글은 오래된 순으로 표시
+  Object.values(replyMap).forEach(list => list.reverse());
+
+  // 교전 점수순 정렬 → 빌보드 상위 노출
+  const score = c =>
+    (c.attack_count || 0) + (c.defense_count || 0) + (c.support_count || 0) +
+    ((likeAgg[c.id]?.up) || 0) + ((replyMap[c.id]?.length) || 0);
+  top.pro.sort((a, b) => score(b) - score(a));
+  top.con.sort((a, b) => score(b) - score(a));
+
+  state.pro.data = top.pro;
+  state.con.data = top.con;
 }
 
 /* ======================
    Rendering
 ====================== */
 
-function makeReply(hp, text, side) {
+function displayName(c) {
+  if (c.is_anonymous) return "익명";
+  return profileMap[c.user_id]?.nickname || "익명";
+}
+function displayLevel(c) {
+  return profileMap[c.user_id]?.level || 1;
+}
+function likeUI(c) {
+  const agg = likeAgg[c.id] || { up: 0, down: 0 };
+  const mine = ME.likes.get(c.id);
   return `
-  <div class="reply" data-hp="${hp}">
+    <span class="like ${mine === 1 ? "active-like" : ""}" data-id="${c.id}">👍${agg.up}</span>
+    <span class="dislike ${mine === -1 ? "active-dislike" : ""}" data-id="${c.id}">👎${agg.down}</span>`;
+}
+
+function makeReply(r) {
+  const prefix = r.battle_action
+    ? `<b>${r.battle_action === "attack" ? "⚔ 공격" : "🛡 방어"}</b> `
+    : "";
+  return `
+  <div class="reply" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
     <div class="head">
-      <div class="user">익명</div>
+      <div class="user">
+        <span class="user-name">${displayName(r)}</span>
+        <span class="level-badge">Lv.${displayLevel(r)}</span>
+      </div>
       <div class="hp-wrap">
-        <div class="hp-bar"><div class="hp-fill" style="width:${hp}%"></div></div>
-        <span class="hp-text">HP ${hp}</span>
+        <div class="hp-bar"><div class="hp-fill" style="width:${r.hp}%"></div></div>
+        <span class="hp-text">HP ${r.hp}</span>
       </div>
     </div>
-    <div class="body">└ ${renderCommentText(text)}</div>
-      <div class="reply-actions" data-side="${side}">
-        <span class="like">👍4</span>
-        <span class="dislike">👎1</span>
-        <span class="action-attack">⚔공격</span>
-        <span class="action-defend">🛡방어</span>
-        <span class="action-support">💣지원</span>
-      </div>
+    <div class="body">└ ${prefix}${renderCommentText(r.content)}</div>
+    <div class="reply-actions" data-side="${r.faction}">
+      ${likeUI(r)}
+      <span class="action-attack" data-id="${r.id}">⚔공격</span>
+      <span class="action-defend" data-id="${r.id}">🛡방어</span>
+      <span class="action-support ${ME.actions.has(r.id + ":support") ? "done" : ""}" data-id="${r.id}">💣지원</span>
+    </div>
   </div>`;
 }
 
 function makeComment(c) {
-  const r1 = Math.floor(Math.random() * 40) + 50;
-  const r2 = Math.floor(Math.random() * 40) + 50;
-
-  const myVote = window.MY_VOTE_TYPE;
-
+  const replies = replyMap[c.id] || [];
   const selectedSide = document.getElementById("battle-side-select")?.value;
-  const isMySide = c.side === selectedSide;
+  const isMySide = c.faction === selectedSide;
 
-let battleButtons = isMySide
-  ? `<span class="action-defend">🛡방어</span>`
-  : `<span class="action-attack">⚔공격</span>`;
-
-  const actionUI = `
-    <div class="actions">
-      <span class="like">👍12</span>
-      <span class="dislike">👎3</span>
-      ${battleButtons}
-      <span class="action-support">💣지원</span>
-      <span class="action-more">⋯</span>
-    </div>
-  `;
+  const battleButtons = isMySide
+    ? `<span class="action-defend ${ME.actions.has(c.id + ":defend") ? "done" : ""}" data-id="${c.id}">🛡방어</span>`
+    : `<span class="action-attack ${ME.actions.has(c.id + ":attack") ? "done" : ""}" data-id="${c.id}">⚔공격</span>`;
 
   return `
-    <div class="comment" data-hp="${c.hp}" data-side="${c.side}">
+    <div class="comment" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
     <div class="head">
       <div class="user">
         <span class="side-icon"></span>
-        <span class="user-name">${c.user.name}</span>
-        <span class="level-badge">Lv.${c.user.level}</span>
-        ${c.user.anon ? `<span class="anon">익명 · HP -20%</span>` : ``}
+        <span class="user-name">${displayName(c)}</span>
+        <span class="level-badge">Lv.${displayLevel(c)}</span>
+        ${c.is_anonymous ? `<span class="anon">익명</span>` : ``}
       </div>
       <div class="hp-wrap">
         <div class="hp-bar"><div class="hp-fill" style="width:${c.hp}%"></div></div>
@@ -142,54 +226,23 @@ let battleButtons = isMySide
       </div>
     </div>
 
-    <div class="body">${renderCommentText(c.text)}</div>
+    <div class="body">${renderCommentText(c.content)}</div>
 
-    ${actionUI}
+    <div class="actions">
+      ${likeUI(c)}
+      ${battleButtons}
+      <span class="action-support ${ME.actions.has(c.id + ":support") ? "done" : ""}" data-id="${c.id}">💣지원</span>
+      <span class="action-more">⋯</span>
+    </div>
 
-    <div class="reply-meta">💬 ${c.replies} · ⚔ ${c.atk} · 🛡 ${c.def} · 💣 ${c.sup}</div>
+    <div class="reply-meta">💬 ${replies.length} · ⚔ ${c.attack_count || 0} · 🛡 ${c.defense_count || 0} · 💣 ${c.support_count || 0}</div>
 
-    <button class="reply-toggle">답글 보기</button>
+    <button class="reply-toggle" ${replies.length === 0 ? "hidden" : ""}>답글 보기</button>
 
     <div class="replies" hidden>
-      ${makeReply(r1, "상대 진영 반박: 전혀 동의할 수 없습니다.", c.side)}
-      ${makeReply(r2, "같은 진영 지원: 좋은 의견입니다.", c.side)}
-      ${c.replies > 2 ? `<div class="more">+ ${c.replies - 2}개 더보기</div>` : ""}
+      ${replies.map(makeReply).join("")}
     </div>
   </div>`;
-}
-
-async function loadComments(issueId) {
-  state.pro.data = Array.from({ length: 30 }, () => createComment("pro"));
-  state.con.data = Array.from({ length: 30 }, () => createComment("con"));
-}
-
-
-async function loadWarStats(issueId) {
-  const supabase = window.supabaseClient;
-
-  const { data, error } = await supabase
-    .from("comment_actions")
-    .select("side, action_type");
-
-  if (error) {
-    console.error("war stats load failed", error);
-    return;
-  }
-
-  warStats = {
-    pro: { total: 0, own: 0, enemy: 0 },
-    con: { total: 0, own: 0, enemy: 0 },
-    global: { attack: 0, support: 0, defend: 0 }
-  };
-
-  data.forEach(row => {
-    if (row.side === "pro") warStats.pro.total++;
-    if (row.side === "con") warStats.con.total++;
-
-    if (row.action_type === "attack") warStats.global.attack++;
-    if (row.action_type === "support") warStats.global.support++;
-    if (row.action_type === "defend") warStats.global.defend++;
-  });
 }
 
 /* ======================
@@ -206,27 +259,36 @@ function renderSide(side) {
     return;
   }
 
+  if (s.data.length === 0) {
+    bb.innerHTML = `<div class="empty-zone">아직 이 진영의 댓글이 없습니다. 첫 포문을 여세요!</div>`;
+    th.innerHTML = "";
+    buildPager(side, "bb", PAGE_SIZE_BB, 0);
+    buildPager(side, "th", PAGE_SIZE_TH, 0);
+    return;
+  }
+
   bb.innerHTML = s.data
     .slice((s.bb - 1) * PAGE_SIZE_BB, s.bb * PAGE_SIZE_BB)
     .map(makeComment)
     .join("");
 
   th.innerHTML = s.data
-    .slice(5 + (s.th - 1) * PAGE_SIZE_TH, 5 + s.th * PAGE_SIZE_TH)
+    .slice(PAGE_SIZE_BB + (s.th - 1) * PAGE_SIZE_TH, PAGE_SIZE_BB + s.th * PAGE_SIZE_TH)
     .map(makeComment)
     .join("");
 
-  buildPager(side, "bb", PAGE_SIZE_BB);
-  buildPager(side, "th", PAGE_SIZE_TH);
+  buildPager(side, "bb", PAGE_SIZE_BB, Math.ceil(s.data.length / PAGE_SIZE_BB));
+  buildPager(side, "th", PAGE_SIZE_TH, Math.ceil(Math.max(0, s.data.length - PAGE_SIZE_BB) / PAGE_SIZE_TH));
 
   applySideColoring();
 }
 
-function buildPager(side, type, size) {
+function buildPager(side, type, size, total) {
   const pager = document.getElementById(`${side}-${type}-pager`);
+  if (!pager) return;
   const s = state[side];
-  const total = Math.ceil((s.data.length - 5) / size);
   pager.innerHTML = "";
+  if (total <= 1) return;
 
   for (let i = 1; i <= total; i++) {
     const b = document.createElement("button");
@@ -238,26 +300,52 @@ function buildPager(side, type, size) {
 }
 
 function renderWarDashboard() {
-  const pro = document.querySelector(".war-box.pro .war-stat b");
-  const con = document.querySelector(".war-box.con .war-stat b");
-  const neutral = document.querySelector(".war-box.neutral .war-stat b");
-  const sub = document.querySelector(".war-box.neutral .war-sub");
+  // index.js의 loadWarData와 동일한 집계 방식 (피드 전황표와 수치 일치)
+  const w = {
+    pro: { total: 0, same: 0, oppo: 0 },
+    con: { total: 0, same: 0, oppo: 0 },
+    atk: 0, def: 0, sup: 0
+  };
 
-  if (!pro || !con || !neutral || !sub) {
-    console.warn("⚠️ war dashboard UI not ready");
-    return;
-  }
+  allRows.forEach(row => {
+    const f = row.faction;
+    if (!w[f]) return;
+    w[f].total++;
+    w.atk += row.attack_count || 0;
+    w.def += row.defense_count || 0;
+    w.sup += row.support_count || 0;
+    w[f].same += (row.defense_count || 0) + (row.support_count || 0);
+    const enemy = f === "pro" ? "con" : "pro";
+    w[enemy].oppo += row.attack_count || 0;
+  });
 
-  pro.innerText = warStats.pro.total;
-  con.innerText = warStats.con.total;
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = v;
+  };
+  set("stat-pro-total", w.pro.total);
+  set("stat-pro-same", w.pro.same);
+  set("stat-pro-oppo", w.pro.oppo);
+  set("stat-con-total", w.con.total);
+  set("stat-con-same", w.con.same);
+  set("stat-con-oppo", w.con.oppo);
+  set("stat-total", w.atk + w.def + w.sup);
+  set("stat-atk", w.atk);
+  set("stat-sup", w.sup);
+  set("stat-def", w.def);
+}
 
-  neutral.innerText =
-    warStats.global.attack +
-    warStats.global.support +
-    warStats.global.defend;
+async function reloadAndRender() {
+  await loadComments(window.CURRENT_ISSUE_ID);
+  renderSide("pro");
+  renderSide("con");
+  renderWarDashboard();
+}
 
-  sub.innerText =
-    `공격 ${warStats.global.attack} · 지원 ${warStats.global.support} · 방어 ${warStats.global.defend}`;
+function requireLogin() {
+  if (ME.userId) return true;
+  alert("로그인이 필요합니다.");
+  return false;
 }
 
 /* ======================
@@ -265,90 +353,122 @@ function renderWarDashboard() {
 ====================== */
 
 function bindEvents() {
-  document.addEventListener("click", e => {
+  if (eventsBound) return;
+  eventsBound = true;
 
-  // ⚔🛡 전투 버튼 클릭 → 하단 입력창으로 통일
-  if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
-    const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
+  document.addEventListener("click", async e => {
 
-    // comment 또는 reply 어디서 눌러도 잡히게
-    const targetEl = e.target.closest(".comment") || e.target.closest(".reply");
-    if (!targetEl) return;
+    // ⚔🛡 전투 버튼 클릭 → 하단 입력창으로 통일
+    if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
+      if (!requireLogin()) return;
+      const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
 
-    // 표시용 유저명 (comment면 .head .user / reply면 .head .user)
-    const userEl = targetEl.querySelector(".head .user");
-    const targetUser = userEl ? userEl.textContent.trim() : "익명";
+      if (ME.actions.has(e.target.dataset.id + ":" + type)) {
+        alert(type === "attack" ? "이미 공격한 댓글입니다." : "이미 방어한 댓글입니다.");
+        return;
+      }
 
-    // comment의 side는 c.side로 이미 내려오고(렌더링 데이터), DOM엔 없으니 reply-actions의 data-side 우선 사용
-    const sideFromAttr =
-      targetEl.getAttribute("data-side") ||
-      targetEl.querySelector("[data-side]")?.getAttribute("data-side") ||
-      targetEl.closest(".comment")?.querySelector(".reply-actions")?.getAttribute("data-side");
+      const targetEl = e.target.closest(".comment") || e.target.closest(".reply");
+      if (!targetEl) return;
 
-    // comment쪽은 makeComment에서 data-side를 심어주는게 가장 안정적이지만, 지금은 최소 동작만
-    const targetSide = sideFromAttr || document.getElementById("battle-side-select")?.value || "pro";
+      const targetId = Number(e.target.dataset.id || targetEl.dataset.id);
+      const nameEl = targetEl.querySelector(".head .user-name");
+      const targetUser = nameEl ? nameEl.textContent.trim() : "익명";
+      const targetSide = targetEl.dataset.side || "pro";
 
-    BATTLE_MODE = { type, targetEl, targetUser, targetSide };
+      BATTLE_MODE = { type, targetId, targetUser, targetSide };
 
-    // 하단 입력창 세팅
-    const input = document.getElementById("battle-comment-input");
-    if (!input) return;
+      const input = document.getElementById("battle-comment-input");
+      if (!input) return;
 
-    input.value = `@${targetUser} ${type === "attack" ? "⚔ 공격" : "🛡 방어"} → `;
-    input.focus();
+      input.value = `@${targetUser} ${type === "attack" ? "⚔ 공격" : "🛡 방어"} → `;
+      input.focus();
 
-    // 전투 중엔 진영 선택 비활성(숨김)
-    document.querySelectorAll(".side-btn").forEach(b => (b.style.display = "none"));
+      // 전투 중엔 진영 선택 비활성(숨김)
+      document.querySelectorAll(".side-btn").forEach(b => (b.style.display = "none"));
+      return;
+    }
 
-    // hidden select도 변경 금지(댓글/대댓글은 진영 따라가야 함)
-    // document.getElementById("battle-side-select").value = targetSide;  // 필요 시 사용
-    return;
-  }
-
-    // 💣 지원
+    // 💣 지원 → RPC로 HP/카운터 갱신
     if (e.target.classList.contains("action-support")) {
+      if (!requireLogin()) return;
+      const id = Number(e.target.dataset.id);
+      if (!id) return;
+
+      if (ME.actions.has(id + ":support")) {
+        alert("이미 지원한 댓글입니다.");
+        return;
+      }
+
+      const { data, error } = await window.supabaseClient.rpc("battle_action", {
+        p_comment_id: id, p_action: "support"
+      });
+      if (error || !data?.ok) {
+        if (data?.reason === "already") alert("이미 지원한 댓글입니다.");
+        else console.error("[support] failed", error || data);
+        return;
+      }
+
+      ME.actions.add(id + ":support");
+      e.target.classList.add("done");
+
+      // 해당 유닛 HP 즉시 반영 + 글로우
       const unit = e.target.closest(".reply") || e.target.closest(".comment");
-      let hp = Number(unit.dataset.hp);
-      hp = Math.min(hp + 12, 100);
-      unit.dataset.hp = hp;
+      if (unit) {
+        unit.dataset.hp = data.hp;
+        const fill = unit.querySelector(".hp-fill");
+        const text = unit.querySelector(".hp-text");
+        if (fill) fill.style.width = data.hp + "%";
+        if (text) text.textContent = "HP " + data.hp;
 
-      const fill = unit.querySelector(".hp-fill");
-      const text = unit.querySelector(".hp-text");
-
-      fill.style.width = hp + "%";
-      text.textContent = "HP " + hp;
-
-      const bar = unit.querySelector(".hp-bar");
-      const glow = document.createElement("div");
-      glow.className = "hp-support-glow";
-      bar.appendChild(glow);
-      setTimeout(() => glow.remove(), 900);
+        const bar = unit.querySelector(".hp-bar");
+        if (bar) {
+          const glow = document.createElement("div");
+          glow.className = "hp-support-glow";
+          bar.appendChild(glow);
+          setTimeout(() => glow.remove(), 900);
+        }
+      }
       return;
     }
 
-    // 👍 좋아요
-    if (e.target.classList.contains("like")) {
-      const el = e.target;
-      const isActive = el.classList.toggle("active-like");
+    // 👍👎 좋아요/싫어요 → comment_likes 테이블
+    if (e.target.classList.contains("like") || e.target.classList.contains("dislike")) {
+      if (!requireLogin()) return;
+      const id = Number(e.target.dataset.id);
+      if (!id) return;
 
-      const other = el.parentElement.querySelector(".dislike");
-      other.classList.remove("active-dislike");
+      const supabase = window.supabaseClient;
+      const desired = e.target.classList.contains("like") ? 1 : -1;
+      const current = ME.likes.get(id);
+      const agg = likeAgg[id] ||= { up: 0, down: 0 };
 
-      let n = Number(el.textContent.replace("👍", ""));
-      el.textContent = "👍" + (isActive ? n + 1 : n - 1);
-      return;
-    }
+      if (current === desired) {
+        // 취소
+        const { error } = await supabase.from("comment_likes")
+          .delete().eq("comment_id", id).eq("user_id", ME.userId);
+        if (error) return console.error("[like] delete failed", error);
+        ME.likes.delete(id);
+        desired === 1 ? agg.up-- : agg.down--;
+      } else {
+        const { error } = await supabase.from("comment_likes")
+          .upsert({ comment_id: id, user_id: ME.userId, value: desired });
+        if (error) return console.error("[like] upsert failed", error);
+        if (current === 1) agg.up--;
+        if (current === -1) agg.down--;
+        desired === 1 ? agg.up++ : agg.down++;
+        ME.likes.set(id, desired);
+      }
 
-    // 👎 싫어요
-    if (e.target.classList.contains("dislike")) {
-      const el = e.target;
-      const isActive = el.classList.toggle("active-dislike");
-
-      const other = el.parentElement.querySelector(".like");
-      other.classList.remove("active-like");
-
-      let n = Number(el.textContent.replace("👎", ""));
-      el.textContent = "👎" + (isActive ? n + 1 : n - 1);
+      // 같은 댓글의 표시들 갱신 (빌보드/스레드에 중복 표시될 수 있음)
+      document.querySelectorAll(`.like[data-id="${id}"]`).forEach(el => {
+        el.textContent = "👍" + agg.up;
+        el.classList.toggle("active-like", ME.likes.get(id) === 1);
+      });
+      document.querySelectorAll(`.dislike[data-id="${id}"]`).forEach(el => {
+        el.textContent = "👎" + agg.down;
+        el.classList.toggle("active-dislike", ME.likes.get(id) === -1);
+      });
       return;
     }
 
@@ -358,13 +478,13 @@ function bindEvents() {
       return;
     }
 
+    // 답글 보기 토글
     const btn = e.target.closest(".reply-toggle");
     if (!btn) return;
 
     const currentComment = btn.closest(".comment");
     const currentReplies = currentComment.querySelector(".replies");
 
-    // 🔒 이미 열려있는 다른 대댓글 전부 닫기
     document.querySelectorAll(".comment .replies").forEach(r => {
       if (r !== currentReplies) {
         r.hidden = true;
@@ -373,118 +493,93 @@ function bindEvents() {
       }
     });
 
-    // 🔁 현재 것 토글
     const isOpen = !currentReplies.hidden;
     currentReplies.hidden = isOpen;
     btn.innerText = isOpen ? "답글 보기" : "답글 숨기기";
   });
 
-
-    // 🔵🔴 진영 선택 버튼 동작
+  // 🔵🔴 진영 선택 버튼
   document.querySelectorAll(".side-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       document.getElementById("battle-side-select").value = btn.dataset.side;
-      applySideColoring();
+      // 진영이 바뀌면 공격/방어 버튼 구성이 달라지므로 다시 렌더
+      renderSide("pro");
+      renderSide("con");
     });
   });
 
-    document.getElementById("battle-comment-submit")
+  // 전송
+  document.getElementById("battle-comment-submit")
     ?.addEventListener("click", async () => {
+      if (!requireLogin()) return;
 
-  const input = document.getElementById("battle-comment-input");
-  if (!input) return;
+      const input = document.getElementById("battle-comment-input");
+      if (!input) return;
 
-  // ✅ 전투 모드면: 댓글/대댓글 내부로 reply HTML 삽입하고 종료
-  if (BATTLE_MODE) {
-    const { type, targetEl, targetUser, targetSide } = BATTLE_MODE;
+      const supabase = window.supabaseClient;
+      const side = document.getElementById("battle-side-select").value;
 
-    // "@유저 ⚔ 공격 → " 프리픽스 제거
-    const raw = input.value.trim();
-    const text = raw.replace(/^@.*?→\s*/, "").trim();
+      // ✅ 전투 모드: 대상 댓글에 대한 답글 + 전투 액션
+      if (BATTLE_MODE) {
+        const { type, targetId } = BATTLE_MODE;
 
-    if (!text) {
-      alert("의견을 입력하세요.");
-      return;
-    }
+        const raw = input.value.trim();
+        const text = raw.replace(/^@.*?→\s*/, "").trim();
 
-    // targetEl이 reply면, 해당 reply가 들어있는 comment의 replies에 삽입해야 UX가 맞음
-    const parentComment = targetEl.classList.contains("comment") ? targetEl : targetEl.closest(".comment");
-    const repliesBox = parentComment?.querySelector(".replies");
-    if (!repliesBox) return;
+        if (!text) {
+          alert("의견을 입력하세요.");
+          return;
+        }
 
-    // replies 펼치기
-    repliesBox.hidden = false;
-    const toggleBtn = parentComment.querySelector(".reply-toggle");
-    if (toggleBtn) toggleBtn.innerText = "답글 숨기기";
+        const { error: insertErr } = await supabase.from("comments").insert({
+          issue_id: window.CURRENT_ISSUE_ID,
+          user_id: ME.userId,
+          parent_id: targetId,
+          faction: side,
+          content: text,
+          battle_action: type
+        });
+        if (insertErr) {
+          console.error("[battle reply] insert failed", insertErr);
+          alert("답글 등록에 실패했습니다.");
+          return;
+        }
 
-    // ✅ reply 추가 (makeReply 스타일과 맞춰 최소 구조)
-    const hp = Math.floor(Math.random() * 40) + 50;
-    const replyHtml = `
-      <div class="reply" data-hp="${hp}">
-        <div class="head">
-          <div class="user">익명</div>
-          <div class="hp-wrap">
-            <div class="hp-bar"><div class="hp-fill" style="width:${hp}%"></div></div>
-            <span class="hp-text">HP ${hp}</span>
-          </div>
-        </div>
-        <div class="body">└ <b>${type === "attack" ? "⚔ 공격" : "🛡 방어"}</b> @${targetUser}: ${renderCommentText(text)}</div>
-        <div class="reply-actions" data-side="${targetSide}">
-          <span class="like">👍0</span>
-          <span class="dislike">👎0</span>
-          <span class="action-attack">⚔공격</span>
-          <span class="action-defend">🛡방어</span>
-          <span class="action-support">💣지원</span>
-        </div>
-      </div>
-    `;
+        // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
+        await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
 
-  repliesBox.insertAdjacentHTML("afterbegin", replyHtml);
+        BATTLE_MODE = null;
+        input.value = "";
+        document.querySelectorAll(".side-btn").forEach(b => (b.style.display = ""));
 
-  // 상태 초기화 + UI 복귀
-  BATTLE_MODE = null;
-  input.value = "";
-  document.querySelectorAll(".side-btn").forEach(b => (b.style.display = ""));
-  return; // ✅ 여기서 종료 (DB insert 안 함)
-}
-    
+        await reloadAndRender();
+        return;
+      }
 
-    const text = document.getElementById("battle-comment-input").value.trim();
-    const side = document.getElementById("battle-side-select").value;
+      // ✅ 일반 댓글
+      const text = input.value.trim();
+      if (!text) {
+        alert("의견을 입력하세요.");
+        return;
+      }
 
-    if (!text) {
-      alert("의견을 입력하세요.");
-      return;
-    }
+      const { error } = await supabase.from("comments").insert({
+        issue_id: window.CURRENT_ISSUE_ID,
+        user_id: ME.userId,
+        faction: side,
+        content: text
+      });
+      if (error) {
+        console.error("[comment] insert failed", error);
+        alert("댓글 등록에 실패했습니다.");
+        return;
+      }
 
-    const supabase = window.supabaseClient;
-    const { data: session } = await supabase.auth.getSession();
-
-    if (!session.session) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
-
-    await supabase.from("comments").insert({
-      issue_id: window.CURRENT_ISSUE_ID,
-      user_id: session.session.user.id,
-      side,
-      text,
-      hp: 80
+      input.value = "";
+      await reloadAndRender();
     });
-
-    document.getElementById("battle-comment-input").value = "";
-
-    await loadComments(window.CURRENT_ISSUE_ID);
-    renderSide("pro");
-    renderSide("con");
-
-    await loadWarStats();
-    renderWarDashboard();
-  });
-
 }
 
 function applySideColoring() {
@@ -505,7 +600,6 @@ function applySideColoring() {
 
     if (!user) return;
 
-    // 아이콘이 reply에는 없을 수 있으므로 없으면 생성
     let realIcon = icon;
     if (!realIcon) {
       realIcon = document.createElement("span");
