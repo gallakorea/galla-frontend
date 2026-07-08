@@ -105,8 +105,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (imageFiles.length > 0) {
         images = [];
         for (let i = 0; i < imageFiles.length; i++) {
-          btn.textContent = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
-          images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image'));
+          const label = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
+          btn.textContent = label;
+          images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image',
+            p => { btn.textContent = p == null ? label : `${label} ${p}%`; }));
         }
         thumbnail_url = images[0];
       }
@@ -114,7 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // 영상 (Cloudflare R2)
       if (videoFile) {
         btn.textContent = '영상 업로드 중…';
-        video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video');
+        video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video',
+          p => { btn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; });
       }
 
       /* =========================

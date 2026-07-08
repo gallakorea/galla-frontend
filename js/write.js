@@ -218,24 +218,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const videoFile = videoInput.files && videoInput.files[0];
 
       try {
+        publishBtn.disabled = true;
         if (imageFiles.length > 0) {
           images = [];
           for (let i = 0; i < imageFiles.length; i++) {
-            publishBtn.textContent = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
-            publishBtn.disabled = true;
-            images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image'));
+            const label = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
+            publishBtn.textContent = label;
+            images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image',
+              p => { publishBtn.textContent = p == null ? label : `${label} ${p}%`; }));
           }
           thumbnail_url = images[0];
         }
 
         if (videoFile) {
           publishBtn.textContent = '영상 업로드 중…';
-          publishBtn.disabled = true;
-          video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video');
+          video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video',
+            p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; });
         }
       } catch (err) {
         console.error('[UPLOAD ERROR]', err);
-        alert('미디어 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        alert(err.message === 'stall'
+          ? '업로드가 지연되고 있습니다. 네트워크 상태를 확인하고 다시 시도해주세요.'
+          : '미디어 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
         publishBtn.textContent = '발행 전 적합성 검사';
         publishBtn.disabled = false;
         return;
