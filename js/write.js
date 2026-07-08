@@ -24,11 +24,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  thumbBtn.addEventListener('click', () => thumbInput.click());
+  const MAX_IMAGES = 10;
+
+  thumbBtn.addEventListener('click', () => {
+    thumbInput.value = '';
+    thumbInput.click();
+  });
   thumbInput.addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    thumbPreview.innerHTML = `<img src="${URL.createObjectURL(f)}">`;
+    const files = [...(e.target.files || [])];
+    if (files.length === 0) return;
+    if (files.length > MAX_IMAGES) {
+      alert(`이미지는 최대 ${MAX_IMAGES}장까지 선택할 수 있습니다.`);
+      thumbInput.value = '';
+      thumbPreview.innerHTML = '';
+      return;
+    }
+    thumbPreview.innerHTML = `
+      <div class="multi-img-strip">
+        ${files.map((f, i) => `
+          <div class="multi-img-item">
+            <img src="${URL.createObjectURL(f)}">
+            ${i === 0 ? '<span class="multi-img-badge">대표</span>' : ''}
+          </div>
+        `).join('')}
+      </div>
+      ${files.length > 1 ? `<div class="guide-text">${files.length}장 선택됨 · 캐러셀로 노출됩니다</div>` : ''}
+    `;
   });
 
   const videoInput = document.getElementById('video');
@@ -189,46 +210,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let thumbnail_url = null;
       let video_url = null;
+      let images = null;
 
-      // Upload thumbnail if file selected
-      const thumbFile = thumbInput.files && thumbInput.files[0];
-      if (thumbFile) {
-        const safeThumbName = thumbFile.name.replace(/[^a-zA-Z0-9._-]/g, '');
-        const thumbPath = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${safeThumbName.split('.').pop()}`;
-        const { error: thumbErr } = await supabase
-          .storage
-          .from('issues')
-          .upload(thumbPath, thumbFile, {
-            upsert: false,
-            contentType: thumbFile.type
-          });
-        if (thumbErr) {
-          alert('썸네일 업로드에 실패했습니다.');
-          return;
-        }
-        const { data: thumbUrlData } = supabase.storage.from('issues').getPublicUrl(thumbPath);
-        thumbnail_url = thumbUrlData && thumbUrlData.publicUrl;
-      }
-
-      // Upload video if file selected
+      // Cloudflare R2 업로드 (이미지 여러 장 + 영상)
+      const publishBtn = document.getElementById('publishPreview');
+      const imageFiles = [...(thumbInput.files || [])];
       const videoFile = videoInput.files && videoInput.files[0];
-      if (videoFile) {
-        const safeVideoName = videoFile.name.replace(/[^a-zA-Z0-9._-]/g, '');
-        const videoPath = `drafts/${user.id}/video_${crypto.randomUUID()}.${safeVideoName.split('.').pop()}`;
-        const { error: videoErr } = await supabase
-          .storage
-          .from('issues')
-          .upload(videoPath, videoFile, {
-            upsert: false,
-            contentType: videoFile.type
-          });
-        if (videoErr) {
-          alert('영상 업로드에 실패했습니다.');
-          return;
+
+      try {
+        if (imageFiles.length > 0) {
+          images = [];
+          for (let i = 0; i < imageFiles.length; i++) {
+            publishBtn.textContent = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
+            publishBtn.disabled = true;
+            images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image'));
+          }
+          thumbnail_url = images[0];
         }
-        const { data: videoUrlData } = supabase.storage.from('issues').getPublicUrl(videoPath);
-        video_url = videoUrlData && videoUrlData.publicUrl;
+
+        if (videoFile) {
+          publishBtn.textContent = '영상 업로드 중…';
+          publishBtn.disabled = true;
+          video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video');
+        }
+      } catch (err) {
+        console.error('[UPLOAD ERROR]', err);
+        alert('미디어 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        publishBtn.textContent = '발행 전 적합성 검사';
+        publishBtn.disabled = false;
+        return;
       }
+      publishBtn.textContent = '발행 전 적합성 검사';
+      publishBtn.disabled = false;
 
       // Prepare payload for issues_draft
       const draftPayload = {
@@ -255,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Only set thumbnail_url/video_url if we just uploaded
         if (thumbnail_url) draftPayload.thumbnail_url = thumbnail_url;
         if (video_url) draftPayload.video_url = video_url;
+        if (images) draftPayload.images = images;
 
         // INSERT
         const { data, error } = await supabase
@@ -274,19 +288,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // First, fetch current row
         const { data: existing, error: fetchErr } = await supabase
           .from('issues_draft')
-          .select('thumbnail_url,video_url')
+          .select('thumbnail_url,video_url,images')
           .eq('id', draftId)
           .single();
         if (fetchErr || !existing) {
           alert('임시 저장 로드에 실패했습니다.');
           return;
         }
-        if (!thumbnail_url && existing.thumbnail_url) {
-          draftPayload.thumbnail_url = existing.thumbnail_url;
-        }
-        if (!video_url && existing.video_url) {
-          draftPayload.video_url = existing.video_url;
-        }
+        if (thumbnail_url) draftPayload.thumbnail_url = thumbnail_url;
+        else if (existing.thumbnail_url) draftPayload.thumbnail_url = existing.thumbnail_url;
+        if (video_url) draftPayload.video_url = video_url;
+        else if (existing.video_url) draftPayload.video_url = existing.video_url;
+        if (images) draftPayload.images = images;
+        else if (existing.images) draftPayload.images = existing.images;
         const { error: updateErr, data: updated } = await supabase
           .from('issues_draft')
           .update(draftPayload)

@@ -92,52 +92,29 @@ document.addEventListener('DOMContentLoaded', () => {
       /* =========================
          3️⃣ 파일 업로드
       ========================= */
-      const thumbFile =
-        document.getElementById('thumbnail')?.files?.[0] || null;
+      const imageFiles =
+        [...(document.getElementById('thumbnail')?.files || [])];
       const videoFile =
         document.getElementById('video')?.files?.[0] || null;
 
       let thumbnail_url = null;
       let video_url = null;
+      let images = null;
 
-      // 썸네일
-      if (thumbFile) {
-        const ext = thumbFile.name.split('.').pop();
-        const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
-
-        const { error: uploadError } =
-          await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, thumbFile, { upsert: false });
-
-        if (uploadError) throw uploadError;
-
-        thumbnail_url =
-          window.supabaseClient
-            .storage
-            .from('issues')
-            .getPublicUrl(path).data.publicUrl;
+      // 이미지 (Cloudflare R2, 여러 장)
+      if (imageFiles.length > 0) {
+        images = [];
+        for (let i = 0; i < imageFiles.length; i++) {
+          btn.textContent = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
+          images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image'));
+        }
+        thumbnail_url = images[0];
       }
 
-      // 영상
+      // 영상 (Cloudflare R2)
       if (videoFile) {
-        const ext = videoFile.name.split('.').pop();
-        const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
-
-        const { error: uploadError } =
-          await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, videoFile, { upsert: false });
-
-        if (uploadError) throw uploadError;
-
-        video_url =
-          window.supabaseClient
-            .storage
-            .from('issues')
-            .getPublicUrl(path).data.publicUrl;
+        btn.textContent = '영상 업로드 중…';
+        video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video');
       }
 
       /* =========================
@@ -157,6 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
             author_stance: authorStance, // 🔥 반드시 필요
             thumbnail_url,
             video_url,
+            images,
             status: 'draft',
             draft_mode: window.__DRAFT_MODE__,
             moderation_status: 'pending',

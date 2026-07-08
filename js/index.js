@@ -145,7 +145,7 @@ function renderCard(data) {
                     <span class="author-name">${data.author}</span>
                     <span class="level-badge">Lv.${data.level}</span>
                 </div>
-                <button class="follow-btn open-modal" data-msg="팔로우 기능 준비 중">+ 팔로우</button>
+                ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
             </div>
 
             <div class="card-title">${data.title}</div>
@@ -189,8 +189,8 @@ function renderCard(data) {
             <div class="card-footer">
                 <div class="footer-icons">
                     <img src="assets/icons/icon-comment.svg" class="goto-comments">
-                    <img src="assets/icons/icon-bookmark.svg" class="open-modal" data-msg="북마크 준비 중">
-                    <img src="assets/icons/icon-share.svg" class="open-modal" data-msg="공유 준비 중">
+                    <img src="assets/icons/icon-bookmark.svg" class="bookmark-btn" data-id="${data.id}">
+                    <img src="assets/icons/icon-share.svg" class="share-btn" data-id="${data.id}">
                 </div>
                 <button class="more-btn open-modal" data-msg="더보기 메뉴 준비 중">${moreIcon}</button>
             </div>
@@ -260,6 +260,114 @@ async function syncVoteWithRetry(cardEl, id, retry = 0) {
 }
 
 /* ===========================
+ * 소셜 상태 (팔로우 / 북마크)
+ * =========================== */
+const social = {
+    userId: null,
+    follows: new Set(),     // 내가 팔로우한 user_id
+    bookmarks: new Set(),   // 내가 북마크한 issue_id (문자열)
+    loaded: false
+};
+
+async function initSocial() {
+    const supabase = window.supabaseClient;
+    const { data } = await supabase.auth.getSession();
+    const user = data?.session?.user;
+    if (user) {
+        social.userId = user.id;
+        const [f, b] = await Promise.all([
+            supabase.from('follows').select('following').eq('follower', user.id),
+            supabase.from('bookmarks').select('issue_id').eq('user_id', user.id)
+        ]);
+        f.data?.forEach(r => social.follows.add(r.following));
+        b.data?.forEach(r => social.bookmarks.add(String(r.issue_id)));
+    }
+    social.loaded = true;
+    applySocialState();
+}
+
+function setFollowUI(btn, on) {
+    btn.classList.toggle('following', on);
+    btn.textContent = on ? '팔로잉' : '+ 팔로우';
+}
+
+function applySocialState() {
+    if (!social.loaded) return;
+    document.querySelectorAll('.follow-btn[data-uid]').forEach(btn => {
+        if (social.userId && btn.dataset.uid === social.userId) {
+            btn.style.display = 'none';
+            return;
+        }
+        setFollowUI(btn, social.follows.has(btn.dataset.uid));
+    });
+    document.querySelectorAll('.bookmark-btn').forEach(img => {
+        img.classList.toggle('active', social.bookmarks.has(img.dataset.id));
+    });
+}
+
+async function toggleFollow(btn) {
+    if (!social.userId) return openModal('로그인이 필요합니다.');
+    const supabase = window.supabaseClient;
+    const uid = btn.dataset.uid;
+    const on = social.follows.has(uid);
+
+    // 낙관적 갱신 (같은 작성자의 모든 카드에 반영)
+    if (on) social.follows.delete(uid); else social.follows.add(uid);
+    applySocialState();
+
+    const { error } = on
+        ? await supabase.from('follows').delete()
+            .eq('follower', social.userId).eq('following', uid)
+        : await supabase.from('follows').insert({ follower: social.userId, following: uid });
+
+    if (error && error.code !== '23505') {
+        if (on) social.follows.add(uid); else social.follows.delete(uid);
+        applySocialState();
+        openModal('처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+}
+
+async function toggleBookmark(img) {
+    if (!social.userId) return openModal('로그인이 필요합니다.');
+    const supabase = window.supabaseClient;
+    const id = img.dataset.id;
+    const on = social.bookmarks.has(id);
+
+    if (on) social.bookmarks.delete(id); else social.bookmarks.add(id);
+    applySocialState();
+
+    const { error } = on
+        ? await supabase.from('bookmarks').delete()
+            .eq('user_id', social.userId).eq('issue_id', Number(id))
+        : await supabase.from('bookmarks').insert({ user_id: social.userId, issue_id: Number(id) });
+
+    if (error && error.code !== '23505') {
+        if (on) social.bookmarks.add(id); else social.bookmarks.delete(id);
+        applySocialState();
+        openModal('처리에 실패했습니다. 잠시 후 다시 시도해주세요.');
+    }
+}
+
+async function shareIssue(id) {
+    const card = window.cards.find(c => String(c.id) === String(id));
+    const url = new URL(`issue.html?id=${id}`, location.href).href;
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: card?.title || 'GALLA', url });
+            return;
+        } catch (err) {
+            if (err.name === 'AbortError') return; // 사용자가 공유 취소
+        }
+    }
+    try {
+        await navigator.clipboard.writeText(url);
+        openModal('링크가 복사되었습니다.');
+    } catch {
+        openModal('링크 복사에 실패했습니다.');
+    }
+}
+
+/* ===========================
  * 이벤트 바인딩
  * =========================== */
 function attachEvents() {
@@ -284,6 +392,30 @@ function attachEvents() {
         };
     });
 
+    // 팔로우
+    document.querySelectorAll('.follow-btn[data-uid]').forEach(btn => {
+        btn.onclick = e => {
+            e.stopPropagation();
+            toggleFollow(btn);
+        };
+    });
+
+    // 북마크
+    document.querySelectorAll('.bookmark-btn').forEach(img => {
+        img.onclick = e => {
+            e.stopPropagation();
+            toggleBookmark(img);
+        };
+    });
+
+    // 공유
+    document.querySelectorAll('.share-btn').forEach(img => {
+        img.onclick = e => {
+            e.stopPropagation();
+            shareIssue(img.dataset.id);
+        };
+    });
+
     // 전황표 → 이슈 댓글
     document.querySelectorAll('.goto-comments').forEach(el => {
         el.onclick = e => {
@@ -299,6 +431,25 @@ function attachEvents() {
             const url = card.dataset.link;
             if (url) location.href = url;
         });
+    });
+
+    // 캐러셀 터치 스와이프 (인스타 스타일)
+    document.querySelectorAll('.carousel-wrap').forEach(wrap => {
+        if (wrap.dataset.swipeBound) return;
+        wrap.dataset.swipeBound = '1';
+        let startX = 0, startY = 0;
+        wrap.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+        wrap.addEventListener('touchend', e => {
+            const dx = e.changedTouches[0].clientX - startX;
+            const dy = e.changedTouches[0].clientY - startY;
+            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                const card = wrap.closest('.card');
+                if (card) carouselGo(Number(card.dataset.id), dx < 0 ? 1 : -1);
+            }
+        }, { passive: true });
     });
 
     // 비디오 자동재생 옵저버 등록
@@ -317,6 +468,9 @@ function attachEvents() {
             syncVoteWithRetry(cardEl, Number(cardEl.dataset.id));
         });
     }
+
+    // 팔로우/북마크 상태 복원 (무한 스크롤로 추가된 카드 포함)
+    applySocialState();
 }
 
 /* ===========================
@@ -330,6 +484,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     while (!window.supabaseClient) {
         await new Promise(r => setTimeout(r, 30));
     }
+    initSocial();
     await loadData();
 });
 
@@ -349,7 +504,7 @@ async function loadData() {
         .select(`
             id, title, one_line, category, created_at,
             pro_count, con_count, sup_pro, sup_con,
-            user_id, thumbnail_url, video_url,
+            user_id, thumbnail_url, video_url, images,
             faction_a, faction_b
         `)
         .order('created_at', { ascending: false });
@@ -367,6 +522,7 @@ async function loadData() {
 
     cards = issues.map(row => ({
         id: row.id,
+        user_id: row.user_id,
         category: row.category,
         author: profileMap[row.user_id]?.nickname || '익명',
         level: profileMap[row.user_id]?.level || 1,
@@ -379,7 +535,9 @@ async function loadData() {
         video_url: row.video_url,
         faction_a: row.faction_a,
         faction_b: row.faction_b,
-        images: row.thumbnail_url ? [row.thumbnail_url] : []
+        images: Array.isArray(row.images) && row.images.length > 0
+            ? row.images
+            : (row.thumbnail_url ? [row.thumbnail_url] : [])
     }));
 
     const issueIds = cards.map(c => c.id);

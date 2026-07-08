@@ -240,6 +240,23 @@ function renderIssueMedia(issue) {
                 ` : ''}
             </div>
         </div>`;
+
+        // 터치 스와이프 (인스타 스타일)
+        if (images.length > 1) {
+            const carousel = wrap.querySelector('.issue-carousel');
+            let startX = 0, startY = 0;
+            carousel.addEventListener('touchstart', e => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            }, { passive: true });
+            carousel.addEventListener('touchend', e => {
+                const dx = e.changedTouches[0].clientX - startX;
+                const dy = e.changedTouches[0].clientY - startY;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                    issueCarouselGo(dx < 0 ? 1 : -1);
+                }
+            }, { passive: true });
+        }
         return;
     }
 

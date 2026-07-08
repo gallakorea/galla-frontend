@@ -127,10 +127,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const updates = {};
       const removePaths = [];
 
-      /* ---------- 썸네일 이동 ---------- */
-      if (draft.thumbnail_url) {
-        const oldPath =
-          draft.thumbnail_url.split('/storage/v1/object/public/issues/')[1];
+      /* ---------- 미디어 정리 ----------
+         R2(Cloudflare) URL은 발행 시 이동이 필요 없음.
+         레거시 Supabase Storage draft 파일만 public 경로로 복사. */
+      const STORAGE_PREFIX = '/storage/v1/object/public/issues/';
+
+      /* ---------- 썸네일 이동 (레거시 storage만) ---------- */
+      if (draft.thumbnail_url && draft.thumbnail_url.includes(STORAGE_PREFIX)) {
+        const oldPath = draft.thumbnail_url.split(STORAGE_PREFIX)[1];
 
         const ext = oldPath.split('.').pop();
         const newPath = `public/${draft.id}/thumbnail.${ext}`;
@@ -148,10 +152,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         removePaths.push(oldPath);
       }
 
-      /* ---------- 영상 이동 ---------- */
-      if (draft.video_url) {
-        const oldPath =
-          draft.video_url.split('/storage/v1/object/public/issues/')[1];
+      /* ---------- 영상 이동 (레거시 storage만) ---------- */
+      if (draft.video_url && draft.video_url.includes(STORAGE_PREFIX)) {
+        const oldPath = draft.video_url.split(STORAGE_PREFIX)[1];
 
         const ext = oldPath.split('.').pop();
         const newPath = `public/${draft.id}/video.${ext}`;
@@ -185,6 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           battle_type: draft.battle_type,
           thumbnail_url: updates.thumbnail_url ?? draft.thumbnail_url,
           video_url: updates.video_url ?? draft.video_url,
+          images: draft.images ?? null,
           status: 'normal',
           moderation_status: 'pending',
           created_at: new Date().toISOString(),

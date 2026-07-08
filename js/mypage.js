@@ -348,20 +348,146 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     };
 
-    const renderSave = () => {
-        tabContent.innerHTML = `
-            <div style="color:#777;font-size:14px;padding:20px;">
-                Save 갈라 준비 중
-            </div>
-        `;
+    // =====================================================
+    // Save 갈라 — 내가 북마크한 이슈
+    // =====================================================
+    const renderSave = async () => {
+        if (!isMyPage) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    저장한 갈라는 본인만 볼 수 있습니다.
+                </div>
+            `;
+            return;
+        }
+
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        const { data: bookmarks, error: bmError } = await supabase
+            .from("bookmarks")
+            .select("issue_id, created_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false });
+
+        if (bmError) {
+            console.error("[Save Galla] bookmarks error", bmError);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        if (!bookmarks || bookmarks.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    저장한 갈라가 없습니다. 피드에서 북마크 아이콘을 눌러 저장해보세요.
+                </div>
+            `;
+            return;
+        }
+
+        const issueIds = bookmarks.map(b => b.issue_id);
+        const { data: issues, error: issueError } = await supabase
+            .from("issues")
+            .select("id, title, score, thumbnail_url")
+            .in("id", issueIds);
+
+        if (issueError) {
+            console.error("[Save Galla] issues error", issueError);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        const issueMap = {};
+        (issues || []).forEach(i => issueMap[i.id] = i);
+
+        tabContent.innerHTML = "";
+
+        issueIds.forEach(id => {
+            const issue = issueMap[id];
+            if (!issue) return; // 삭제된 이슈
+
+            const card = document.createElement("div");
+            card.className = "thumb-card";
+            card.innerHTML = `
+                <img src="${issue.thumbnail_url || "./assets/logo.png"}">
+                <div class="thumb-title">${issue.title}</div>
+                <div class="thumb-author">🔖 저장한 갈라</div>
+                <div class="thumb-stats">
+                    <span>🔥 ${issue.score ?? 0}</span>
+                </div>
+            `;
+            card.onclick = () => location.href = `issue.html?id=${issue.id}`;
+            tabContent.appendChild(card);
+        });
     };
 
-    const renderFavorite = () => {
-        tabContent.innerHTML = `
-            <div style="color:#777;font-size:14px;padding:20px;">
-                즐겨찾기 준비 중
-            </div>
-        `;
+    // =====================================================
+    // 즐겨찾기 — 팔로우한 사용자
+    // =====================================================
+    const renderFavorite = async () => {
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        const { data: follows, error: followError } = await supabase
+            .from("follows")
+            .select("following")
+            .eq("follower", viewUserId)
+            .order("created_at", { ascending: false });
+
+        if (followError) {
+            console.error("[Favorite] follows error", followError);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        if (!follows || follows.length === 0) {
+            tabContent.innerHTML = `
+                <div style="color:#777;font-size:14px;padding:20px;">
+                    팔로우한 사용자가 없습니다.
+                </div>
+            `;
+            return;
+        }
+
+        const followingIds = follows.map(f => f.following);
+        const { data: followUsers, error: usersError } = await supabase
+            .from("users")
+            .select("id, nickname, level, avatar_url")
+            .in("id", followingIds);
+
+        if (usersError) {
+            console.error("[Favorite] users error", usersError);
+            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            return;
+        }
+
+        const userMap = {};
+        (followUsers || []).forEach(u => userMap[u.id] = u);
+
+        tabContent.innerHTML = "";
+
+        followingIds.forEach(fid => {
+            const u = userMap[fid];
+            if (!u) return;
+
+            let avatarSrc = "assets/logo.png";
+            if (u.avatar_url) {
+                const { data: pub } = supabase.storage
+                    .from("profiles")
+                    .getPublicUrl(u.avatar_url);
+                if (pub?.publicUrl) avatarSrc = `${pub.publicUrl}?t=${Date.now()}`;
+            }
+
+            const row = document.createElement("div");
+            row.className = "user-row";
+            row.innerHTML = `
+                <img class="user-row-avatar" src="${avatarSrc}">
+                <div class="user-row-info">
+                    <div class="user-row-name">${u.nickname || "익명의 사용자"}</div>
+                    <div class="user-row-level">Lv. ${u.level || 1}</div>
+                </div>
+            `;
+            row.onclick = () => location.href = `mypage.html?user=${u.id}`;
+            tabContent.appendChild(row);
+        });
     };
 
     // ---------------------------

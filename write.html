@@ -111,15 +111,15 @@
           </div>
         </div>
 
-        <!-- 이슈 썸네일 (필수) -->
+        <!-- 이슈 이미지 (필수, 최대 10장) -->
         <div class="field-block">
-          <label class="field-label">이슈 썸네일 <span class="required">(필수)</span></label>
-          <input type="file" id="thumbnail" hidden accept="image/*" />
+          <label class="field-label">이슈 이미지 <span class="required">(필수 · 최대 10장)</span></label>
+          <input type="file" id="thumbnail" hidden accept="image/*" multiple />
           <button type="button" id="thumbnailBtn" class="file-btn">
-            썸네일 업로드
+            이미지 업로드
           </button>
           <div class="guide-text">
-            피드와 공유 화면에 노출될 대표 이미지입니다 (권장 비율 16:9)
+            여러 장 선택 시 인스타그램처럼 캐러셀로 노출됩니다. 첫 번째 이미지가 대표 썸네일이 됩니다 (세로형 4:5 권장)
           </div>
           <div id="thumbPreview" class="preview-box"></div>
         </div>
@@ -354,6 +354,7 @@
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="./js/supabase.js"></script>
+<script src="./js/media-upload.js"></script>
 
 <script src="./js/write.js"></script>
 <script src="./js/write.ai.js"></script>

@@ -85,10 +85,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       draft.thumbnail_url ||
       sessionStorage.getItem('__DRAFT_THUMBNAIL_URL__');
 
-    if (cachedThumb) {
+    const draftImages =
+      Array.isArray(draft.images) && draft.images.length > 0
+        ? draft.images
+        : (cachedThumb ? [cachedThumb] : []);
+
+    if (draftImages.length > 0) {
       const thumbPreview = document.getElementById('thumbPreview');
       if (thumbPreview) {
-        thumbPreview.innerHTML = `<img src="${cachedThumb}" />`;
+        thumbPreview.innerHTML = `
+          <div class="multi-img-strip">
+            ${draftImages.map((url, i) => `
+              <div class="multi-img-item">
+                <img src="${url}">
+                ${i === 0 ? '<span class="multi-img-badge">대표</span>' : ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
       }
     }
 
@@ -143,18 +157,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
+      // 레거시 Supabase Storage 파일만 정리 대상 (R2 URL은 경로 없음)
+      const STORAGE_PREFIX = '/storage/v1/object/public/issues/';
       const paths = [];
 
-      if (currentDraft.thumbnail_url) {
-        paths.push(
-          currentDraft.thumbnail_url.split('/storage/v1/object/public/issues/')[1]
-        );
+      if (currentDraft.thumbnail_url?.includes(STORAGE_PREFIX)) {
+        paths.push(currentDraft.thumbnail_url.split(STORAGE_PREFIX)[1]);
       }
 
-      if (currentDraft.video_url) {
-        paths.push(
-          currentDraft.video_url.split('/storage/v1/object/public/issues/')[1]
-        );
+      if (currentDraft.video_url?.includes(STORAGE_PREFIX)) {
+        paths.push(currentDraft.video_url.split(STORAGE_PREFIX)[1]);
       }
 
       if (paths.length > 0) {

@@ -371,42 +371,14 @@ if (remixStance === 'con') {
           document.getElementById('thumbnail')?.files?.[0] ||
           __REMIX_THUMB_FILE__;
         if (thumbFile) {
-          const ext = thumbFile.name.split('.').pop();
-          const path = `drafts/${user.id}/thumbnail_${crypto.randomUUID()}.${ext}`;
-
-          const { error } = await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, thumbFile);
-
-          if (error) throw error;
-
-          thumbnail_url =
-            window.supabaseClient
-              .storage
-              .from('issues')
-              .getPublicUrl(path).data.publicUrl;
+          thumbnail_url = await window.GALLA_UPLOAD_MEDIA(thumbFile, 'image');
         }
 
         const videoFile =
           document.getElementById('video')?.files?.[0] ||
           __REMIX_VIDEO_FILE__;
         if (videoFile) {
-          const ext = videoFile.name.split('.').pop();
-          const path = `drafts/${user.id}/video_${crypto.randomUUID()}.${ext}`;
-
-          const { error } = await window.supabaseClient
-            .storage
-            .from('issues')
-            .upload(path, videoFile);
-
-          if (error) throw error;
-
-          video_url =
-            window.supabaseClient
-              .storage
-              .from('issues')
-              .getPublicUrl(path).data.publicUrl;
+          video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video');
         }
 
         /* =========================
