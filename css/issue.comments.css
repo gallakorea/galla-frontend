@@ -445,12 +445,21 @@
   width: 100%;
   max-width: 480px;
 
+  /* 하단 네비(높이 58px) 바로 위에 고정 */
+  bottom: 58px;
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+
   background: linear-gradient(180deg, rgba(10,10,10,.95), rgba(0,0,0,.95));
   backdrop-filter: blur(6px);
   border-top: 1px solid rgba(255,255,255,.15);
   padding: 8px 10px 10px;
   box-shadow: 0 -8px 20px rgba(0,0,0,.6);
-  z-index: 90;
+  z-index: 91; /* 하단 네비(9999)보다 콘텐츠 위, 네비와 겹치지 않게 위에 배치 */
+}
+
+/* 고정 입력 바에 마지막 댓글이 가리지 않도록 여백 확보 */
+#battle-zone {
+  padding-bottom: 180px;
 }
 
 
