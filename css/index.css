@@ -82,6 +82,11 @@ body { display: block; }
     flex-shrink: 0;
 }
 
+/* 영상 카드는 인스타 릴스처럼 9:16 세로 (세로 영상이 잘리지 않도록) */
+.card-media--video {
+    aspect-ratio: 9 / 16;
+}
+
 .card-media video {
     width: 100%;
     height: 100%;

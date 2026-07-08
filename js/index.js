@@ -55,7 +55,7 @@ function renderMedia(data) {
     if (data.video_url) {
         const ovId = `ov-${data.id}`;
         return `
-        <div class="card-media" onclick="event.stopPropagation()">
+        <div class="card-media card-media--video" onclick="event.stopPropagation()">
             <video
                 id="vid-${data.id}"
                 data-overlay-id="${ovId}"

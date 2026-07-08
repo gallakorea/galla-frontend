@@ -184,7 +184,7 @@ function renderIssueMedia(issue) {
     // 영상
     if (issue.video_url) {
         wrap.innerHTML = `
-        <div class="issue-media" onclick="issueTogglePlay()">
+        <div class="issue-media issue-media--video" onclick="issueTogglePlay()">
             <video id="issue-vid" loop playsinline muted preload="metadata">
                 <source src="${issue.video_url}" type="video/mp4">
             </video>
