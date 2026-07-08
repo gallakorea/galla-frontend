@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Supabase CLI 로컬 임시 파일
+supabase/.temp/
+
+# 로그·임시
+*.log
