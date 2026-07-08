@@ -26,7 +26,7 @@ let votingInProgress = false;
 /* =========================
    SESSION
 ========================= */
-async function waitForSessionGuaranteed(timeout = 5000) {
+async function waitForSessionGuaranteed(timeout = 2000) {
   const supabase = window.supabaseClient;
   const start = Date.now();
 
@@ -36,6 +36,16 @@ async function waitForSessionGuaranteed(timeout = 5000) {
     await new Promise(r => setTimeout(r, 100));
   }
   return null;
+}
+
+// 로그인 필요 안내 (중복 alert 방지)
+let __voteLoginPrompted = false;
+function promptLogin() {
+  if (__voteLoginPrompted) return;
+  __voteLoginPrompted = true;
+  const go = confirm("로그인이 필요합니다. 로그인 페이지로 이동할까요?");
+  if (go) location.href = "login.html";
+  setTimeout(() => { __voteLoginPrompted = false; }, 500);
 }
 
 /* =========================
@@ -57,6 +67,7 @@ async function vote(issueId, type) {
   if (!session) {
     votingInProgress = false;
     console.warn("[VOTE][ACTION] session not ready");
+    promptLogin();
     return null;
   }
 
