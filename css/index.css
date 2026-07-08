@@ -94,6 +94,11 @@ body { display: block; }
     display: block;
 }
 
+/* 세로 영상이 아래쪽부터 잘리지 않도록 크롭 기준을 아래로 살짝 이동 */
+.card-media--video video {
+    object-position: center 68%;
+}
+
 .card-media img {
     width: 100%;
     height: 100%;
