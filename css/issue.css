@@ -126,10 +126,10 @@ body {
     flex-shrink: 0;
 }
 
-/* 영상은 인스타 릴스처럼 9:16 세로 (세로 영상 잘림 방지)
+/* 영상은 인스타 피드처럼 3:4 세로 (릴스 9:16은 너무 길어 여백이 커 보임)
    .issue-media 정의가 파일 뒤쪽에 하나 더 있어 우선순위 확보용 복합 선택자 사용 */
 .issue-media.issue-media--video {
-    aspect-ratio: 9 / 16;
+    aspect-ratio: 3 / 4;
 }
 
 .issue-media video {
