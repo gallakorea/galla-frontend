@@ -523,3 +523,6 @@ body {
 .comment-actions .reply-btn {
   background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 4px 6px;
 }
+
+/* 저장(북마크) 버튼 활성 */
+.bookmark-btn.on .icon { fill: #f5c518; stroke: #f5c518; }

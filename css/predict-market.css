@@ -209,3 +209,13 @@
 .pmd-reply-toggle {
   margin-top: 6px; background: none; border: none; color: #6d8bff; font-size: 12px; font-weight: 800; cursor: pointer; padding: 4px 0;
 }
+
+/* 마켓 저장 버튼 */
+.pmd-save {
+  margin-left: auto;
+  padding: 5px 12px; border-radius: 999px;
+  background: #14161d; color: #aeb7c9;
+  border: 1px solid #2a2e3a;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.pmd-save.on { border-color: #f5c518; color: #f5c518; background: rgba(245,197,24,.1); }

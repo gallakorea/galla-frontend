@@ -380,6 +380,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (it.type === "issue") quickViewIssue(it.id);
         else if (it.type === "news") quickViewNews(it.id);
         else if (it.type === "plaza") quickViewPlaza(it.id);
+        else if (it.type === "market") quickViewMarket(it.id);
     }
 
     function openQvList(items, index) {
@@ -580,20 +581,92 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function quickViewPlaza(postId) {
-        const { data: p } = await supabase.from("plaza_posts")
-            .select("id,title,body,category,cover_image,thumbnail,up_count,down_count,view_count")
-            .eq("id", postId).maybeSingle();
+        const [{ data: p }, { data: bm }] = await Promise.all([
+            supabase.from("plaza_posts")
+                .select("id,title,body,category,cover_image,thumbnail,up_count,down_count,view_count")
+                .eq("id", postId).maybeSingle(),
+            supabase.from("plaza_bookmarks")
+                .select("post_id").eq("user_id", userId).eq("post_id", postId).maybeSingle()
+        ]);
         if (!p) { location.href = `plaza_detail.html?id=${postId}`; return; }
         // 본문 미리보기: 마커 제거 후 앞 120자
         const plain = (p.body || "").replace(/\[(IMAGE|VIDEO|EMBED)\]\S+/g, "").replace(/\s+/g, " ").trim();
+
+        let saved = !!bm;
         openQuickView({
             mediaHtml: qvImg(p.cover_image || p.thumbnail),
             cat: `${p.category || ""} · 갈라 광장`,
             title: p.title,
             desc: plain.slice(0, 120) + (plain.length > 120 ? "…" : ""),
             stats: `<span>추천 ${p.up_count || 0}</span> · <span>비추 ${p.down_count || 0}</span> · <span>조회 ${p.view_count || 0}</span>`,
+            actions: [{
+                label: saved ? "🔖 저장됨" : "🔖 저장",
+                active: saved,
+                onClick: async (btn) => {
+                    if (saved) {
+                        await supabase.from("plaza_bookmarks").delete()
+                            .eq("user_id", userId).eq("post_id", postId);
+                    } else {
+                        await supabase.from("plaza_bookmarks").insert({ post_id: postId, user_id: userId });
+                    }
+                    saved = !saved;
+                    btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                    btn.classList.toggle("on", saved);
+                    qvDirty = true;
+                }
+            }],
             goLabel: "광장에서 보기",
             goHref: `plaza_detail.html?id=${p.id}`
+        });
+    }
+
+    async function quickViewMarket(marketId) {
+        const [{ data: m }, { data: bm }] = await Promise.all([
+            supabase.from("markets")
+                .select("id,question,category,image_url,volume,market_type,resolved,close_at")
+                .eq("id", marketId).maybeSingle(),
+            supabase.from("market_bookmarks")
+                .select("market_id").eq("user_id", userId).eq("market_id", marketId).maybeSingle()
+        ]);
+        if (!m) { location.href = `predict-market.html?id=${marketId}`; return; }
+
+        // 대표 선택지 확률
+        let topLine = "";
+        const { data: outs } = await supabase.from("market_outcomes")
+            .select("label,pool_yes,pool_no,sort_order").eq("market_id", marketId);
+        if (outs && outs.length) {
+            const top = outs.map(o => ({
+                label: o.label,
+                p: Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100)
+            })).sort((a, b) => b.p - a.p)[0];
+            if (top) topLine = `<span><b>${top.p}%</b> ${top.label}</span> · `;
+        }
+
+        let saved = !!bm;
+        openQuickView({
+            mediaHtml: m.image_url ? qvImg(m.image_url) : "",
+            cat: `${m.category || ""} · 갈라예측${m.market_type === "multi" ? " · 여러 선택지" : ""}`,
+            title: m.question,
+            desc: "",
+            stats: `${topLine}<span>거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</span>${m.resolved ? " · <span>정산 완료</span>" : ""}`,
+            actions: [{
+                label: saved ? "🔖 저장됨" : "🔖 저장",
+                active: saved,
+                onClick: async (btn) => {
+                    if (saved) {
+                        await supabase.from("market_bookmarks").delete()
+                            .eq("user_id", userId).eq("market_id", marketId);
+                    } else {
+                        await supabase.from("market_bookmarks").insert({ market_id: marketId, user_id: userId });
+                    }
+                    saved = !saved;
+                    btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                    btn.classList.toggle("on", saved);
+                    qvDirty = true;
+                }
+            }],
+            goLabel: "예측하러 가기",
+            goHref: `predict-market.html?id=${m.id}`
         });
     }
 
@@ -628,56 +701,87 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
-        const { data: bookmarks, error: bmError } = await supabase
-            .from("bookmarks")
-            .select("issue_id, created_at")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false });
+        // 이슈 + 예측 + 광장 저장을 저장 시각순으로 통합
+        const [{ data: ibm }, { data: mbm }, { data: pbm }] = await Promise.all([
+            supabase.from("bookmarks").select("issue_id, created_at").eq("user_id", userId),
+            supabase.from("market_bookmarks").select("market_id, created_at").eq("user_id", userId),
+            supabase.from("plaza_bookmarks").select("post_id, created_at").eq("user_id", userId)
+        ]);
 
-        if (bmError) {
-            console.error("[Save Galla] bookmarks error", bmError);
-            tabContent.innerHTML = emptyMsg("불러오기 실패");
+        const merged = [
+            ...(ibm || []).map(b => ({ type: "issue", id: b.issue_id, at: b.created_at })),
+            ...(mbm || []).map(b => ({ type: "market", id: b.market_id, at: b.created_at })),
+            ...(pbm || []).map(b => ({ type: "plazaSaved", id: b.post_id, at: b.created_at }))
+        ].sort((a, b) => new Date(b.at) - new Date(a.at));
+
+        if (!merged.length) {
+            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드·예측·광장에서 저장을 눌러보세요.");
             return;
         }
 
-        if (!bookmarks || bookmarks.length === 0) {
-            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드에서 북마크 아이콘을 눌러 저장해보세요.");
-            return;
-        }
+        // 상세 데이터 일괄 조회
+        const issueIds = merged.filter(m => m.type === "issue").map(m => m.id);
+        const marketIds = merged.filter(m => m.type === "market").map(m => m.id);
+        const plazaIds = merged.filter(m => m.type === "plazaSaved").map(m => m.id);
 
-        const issueIds = bookmarks.map(b => b.issue_id);
-        const { data: issues, error: issueError } = await supabase
-            .from("issues")
-            .select("id, title, thumbnail_url, video_url, images")
-            .in("id", issueIds);
+        const [{ data: issues }, { data: markets }, { data: plazas }] = await Promise.all([
+            issueIds.length
+                ? supabase.from("issues").select("id, title, thumbnail_url, video_url, images").in("id", issueIds)
+                : Promise.resolve({ data: [] }),
+            marketIds.length
+                ? supabase.from("markets").select("id, question, image_url").in("id", marketIds)
+                : Promise.resolve({ data: [] }),
+            plazaIds.length
+                ? supabase.from("plaza_posts").select("id, title, cover_image, thumbnail").in("id", plazaIds)
+                : Promise.resolve({ data: [] })
+        ]);
 
-        if (issueError) {
-            console.error("[Save Galla] issues error", issueError);
-            tabContent.innerHTML = emptyMsg("불러오기 실패");
-            return;
-        }
-
-        const issueMap = {};
-        (issues || []).forEach(i => issueMap[i.id] = i);
+        const iMap = {}, mMap = {}, pMap = {};
+        (issues || []).forEach(i => iMap[i.id] = i);
+        (markets || []).forEach(m => mMap[m.id] = m);
+        (plazas || []).forEach(p => pMap[p.id] = p);
 
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
-        const qvItems = issueIds.filter(id => issueMap[id]).map(id => ({ type: "issue", id }));
-        let idx = 0;
-        issueIds.forEach(id => {
-            const issue = issueMap[id];
-            if (!issue) return; // 삭제된 이슈
-            const myIdx = idx++;
-            const thumb = issue.thumbnail_url
-                || (Array.isArray(issue.images) && issue.images[0])
-                || null;
-            tabContent.appendChild(igCard({
-                thumb,
-                title: issue.title,
-                badge: issue.video_url ? "▶" : "",
-                onClick: () => openQvList(qvItems, myIdx)
-            }));
+        const live = merged.filter(m =>
+            (m.type === "issue" && iMap[m.id]) ||
+            (m.type === "market" && mMap[m.id]) ||
+            (m.type === "plazaSaved" && pMap[m.id]));
+
+        const qvItems = live.map(m => ({
+            type: m.type === "issue" ? "issue" : m.type === "market" ? "market" : "plaza",
+            id: m.id
+        }));
+
+        live.forEach((m, myIdx) => {
+            let card;
+            if (m.type === "issue") {
+                const i = iMap[m.id];
+                card = igCard({
+                    thumb: i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null,
+                    title: i.title,
+                    badge: i.video_url ? "▶" : "",
+                    onClick: () => openQvList(qvItems, myIdx)
+                });
+            } else if (m.type === "market") {
+                const mk = mMap[m.id];
+                card = igCard({
+                    thumb: mk.image_url,
+                    title: mk.question,
+                    badge: "예측",
+                    onClick: () => openQvList(qvItems, myIdx)
+                });
+            } else {
+                const p = pMap[m.id];
+                card = igCard({
+                    thumb: p.cover_image || p.thumbnail,
+                    title: p.title,
+                    badge: "광장",
+                    onClick: () => openQvList(qvItems, myIdx)
+                });
+            }
+            tabContent.appendChild(card);
         });
     };
 
@@ -854,11 +958,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         };
         if (isMyPage) {
-            const [{ count: bm }, { count: nbm }] = await Promise.all([
+            const [{ count: bm }, { count: nbm }, { count: mbm }, { count: pbm }] = await Promise.all([
                 supabase.from("bookmarks").select("issue_id", { count: "exact", head: true }).eq("user_id", userId),
-                supabase.from("galla_news_bookmarks").select("news_id", { count: "exact", head: true }).eq("user_id", userId)
+                supabase.from("galla_news_bookmarks").select("news_id", { count: "exact", head: true }).eq("user_id", userId),
+                supabase.from("market_bookmarks").select("market_id", { count: "exact", head: true }).eq("user_id", userId),
+                supabase.from("plaza_bookmarks").select("post_id", { count: "exact", head: true }).eq("user_id", userId)
             ]);
-            setCount("save", bm ?? 0);
+            setCount("save", (bm ?? 0) + (mbm ?? 0) + (pbm ?? 0));
             setCount("news", nbm ?? 0);
         }
         const { count: pz } = await supabase

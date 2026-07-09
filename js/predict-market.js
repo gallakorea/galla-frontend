@@ -2,6 +2,7 @@
    predict-market.js — 예측 마켓 상세/거래 (폴리마켓식)
 ========================================================= */
 let supa = null, ME = null, MARKET = null, OUTCOMES = [], ACTIVE = null, POS = null, SIDE = 'yes', CREATOR = null;
+let MY_SAVED = false; // 마켓 저장(북마크) 상태
 const $ = id => document.getElementById(id);
 const marketId = Number(new URLSearchParams(location.search).get('id'));
 
@@ -31,6 +32,28 @@ function needLogin(){
 }
 
 let MY_BAL = 0;
+
+/* 마켓 저장 토글 (렌더가 갈아끼워지므로 위임) */
+document.addEventListener('click', async e => {
+  const btn = e.target.closest('#pmdSaveBtn');
+  if(!btn) return;
+  if(needLogin()) return;
+  btn.disabled = true;
+  try{
+    if(MY_SAVED){
+      await supa.from('market_bookmarks').delete()
+        .eq('market_id', marketId).eq('user_id', ME.id);
+    }else{
+      await supa.from('market_bookmarks').insert({ market_id: marketId, user_id: ME.id });
+    }
+    MY_SAVED = !MY_SAVED;
+    btn.textContent = MY_SAVED ? '🔖 저장됨' : '🔖 저장';
+    btn.classList.toggle('on', MY_SAVED);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
   supa = await waitForSupabaseClient();
   const { data } = await supa.auth.getSession();
@@ -50,6 +73,14 @@ async function loadMarket(){
   const { data: m, error } = await supa.from('markets').select('*').eq('id', marketId).single();
   if(error||!m){ $('pmdMain').innerHTML='<div class="empty-zone">마켓을 찾을 수 없습니다.</div>'; return; }
   MARKET = m;
+
+  // 저장(북마크) 상태
+  MY_SAVED = false;
+  if(ME){
+    const { data: bm } = await supa.from('market_bookmarks')
+      .select('market_id').eq('market_id', marketId).eq('user_id', ME.id).maybeSingle();
+    MY_SAVED = !!bm;
+  }
 
   // 크리에이터(작성자) 프로필
   CREATOR = null;
@@ -125,6 +156,7 @@ function render(){
         ${m.resolved ? `<span class="pmd-resolved yes">✔ 정산 완료 · ${esc(multi?(winName||''):(m.outcome==='yes'?'YES':'NO'))} 승리</span>`
           : `<span class="pmd-time">⏰ ${timeLeft(m.close_at)}</span>`}
         <span class="pmd-vol">💰 거래량 ${fmt(m.volume)}P</span>
+        <button class="pmd-save ${MY_SAVED ? 'on' : ''}" id="pmdSaveBtn">${MY_SAVED ? '🔖 저장됨' : '🔖 저장'}</button>
       </div>
     </section>
 

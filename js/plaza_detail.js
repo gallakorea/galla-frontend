@@ -643,3 +643,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   fetchComments(commentCountEl);
 });
+/* =========================
+   글 저장(북마크) — 로그인 필수
+========================= */
+(async function initPlazaBookmark() {
+  const btn = document.getElementById("plazaBookmarkBtn");
+  if (!btn || !postId) return;
+
+  let saved = false;
+
+  const paint = () => btn.classList.toggle("on", saved);
+
+  const session = await getSessionSafe();
+  if (session?.user) {
+    const { data } = await supabase
+      .from("plaza_bookmarks")
+      .select("post_id")
+      .eq("post_id", postId)
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    saved = !!data;
+    paint();
+  }
+
+  btn.addEventListener("click", async () => {
+    const s = await getSessionSafe();
+    if (!s?.user) {
+      if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+      return;
+    }
+    btn.disabled = true;
+    try {
+      if (saved) {
+        await supabase.from("plaza_bookmarks").delete()
+          .eq("post_id", postId).eq("user_id", s.user.id);
+      } else {
+        await supabase.from("plaza_bookmarks").insert({ post_id: postId, user_id: s.user.id });
+      }
+      saved = !saved;
+      paint();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
