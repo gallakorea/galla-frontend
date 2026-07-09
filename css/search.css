@@ -842,3 +842,11 @@ body[data-page="search"] .header-inner {
 /* 지금 뜨는 — 갈라 그룹(예측/이슈) */
 .tr-group { margin-bottom: 20px; }
 .tr-group-head { font-size: 13.5px; font-weight: 800; color: #cfd6e6; margin: 0 2px 10px; }
+
+/* 핫트렌드 섹션 더보기 */
+.tr-more {
+  width: 100%; margin: 4px 0 2px; padding: 10px;
+  border: 1px solid #262a38; border-radius: 10px;
+  background: #12141c; color: #aeb7c9; font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.tr-more:active { border-color: #4a7bff; }
