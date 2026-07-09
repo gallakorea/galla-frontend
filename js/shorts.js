@@ -126,12 +126,14 @@ function __openShortsInternal(list, startId) {
 .shorts-meta{
   position:absolute;
   left:14px;
-  bottom:160px;
-  max-width:360px;
+  top:58px;               /* 좌측 상단 (뒤로가기 버튼 아래) */
+  right:70px;             /* 우측 액션 버튼과 겹치지 않게 */
+  max-width:none;
   z-index:30;
   color:#fff;
   font-family:system-ui,-apple-system,BlinkMacSystemFont;
   pointer-events:auto;
+  text-shadow:0 1px 6px rgba(0,0,0,.6);
 }
 
 .shorts-author{
