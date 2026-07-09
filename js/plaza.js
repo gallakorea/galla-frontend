@@ -20,7 +20,20 @@ let currentCategory = "전체";
 
 const modal = document.getElementById("plaza-write-modal");
 
-function openPlazaWriteModal() {
+/* 정통망법 대비: 글 작성은 무조건 로그인(작성자 기록). 익명은 '표시'만 가능 */
+async function requirePlazaLogin() {
+  const { data } = await supabase.auth.getSession();
+  const user = data?.session?.user || null;
+  if (user) return user;
+  if (confirm("글을 쓰려면 로그인이 필요합니다. 로그인하시겠어요?")) {
+    location.href = "login.html";
+  }
+  return null;
+}
+
+async function openPlazaWriteModal() {
+  const user = await requirePlazaLogin();
+  if (!user) return;
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
 }
@@ -455,11 +468,26 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   validatePlazaForm();
   if (submitBtn.disabled) return;
 
+  // 정통망법 대비: 작성자 기록 필수 (익명은 표시만)
+  const user = await requirePlazaLogin();
+  if (!user) return;
+
   submitBtn.disabled = true;
 
   const category = categorySelect.value.trim();
   const title = titleInput.value.trim();
-  const anonName = generateAnonNickname();
+
+  // 표시 이름: 익명 체크 시 랜덤 익명, 해제 시 내 닉네임
+  const anonChecked = document.getElementById("plaza-anon")?.checked !== false;
+  let displayName = generateAnonNickname();
+  if (!anonChecked) {
+    const { data: prof } = await supabase
+      .from("user_profiles")
+      .select("nickname")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    displayName = prof?.nickname || displayName;
+  }
 
   const body = bodyInput.value;
 
@@ -471,10 +499,9 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
     title,
     body,
     thumbnail,
-    nickname: anonName
+    nickname: displayName,
+    user_id: user.id
   };
-
-  console.log("plaza insert payload:", payload);
 
   const { error } = await supabase
     .from("plaza_posts")

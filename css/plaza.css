@@ -727,3 +727,11 @@ html, body {
 .plaza-drophint[hidden],
 .plaza-attach[hidden],
 .plaza-preview[hidden] { display: none !important; }
+
+/* 익명 표시 선택 */
+.plaza-anon-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 0 2px; font-size: 13px; color: #ccc; cursor: pointer;
+}
+.plaza-anon-row input { accent-color: #2f7df6; width: 16px; height: 16px; }
+.plaza-anon-row .anon-note { color: #777; font-size: 11.5px; }

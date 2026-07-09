@@ -247,12 +247,23 @@ function generateAnonNickname() {
 }
 
 async function submitComment(body) {
+  // 정통망법 대비: 댓글도 무조건 로그인(작성자 기록). 익명은 표시만.
+  const session = await getSessionSafe();
+  const user = session?.user || null;
+  if (!user) {
+    if (confirm("댓글을 쓰려면 로그인이 필요합니다. 로그인하시겠어요?")) {
+      location.href = "login.html";
+    }
+    return;
+  }
+
   const anon_name = generateAnonNickname();
 
   const payload = {
     post_id: postId,
     body,
     anon_name,
+    user_id: user.id,
     parent_id: replyTarget ? replyTarget.parentId : null
   };
 
