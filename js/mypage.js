@@ -483,7 +483,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // =====================================================
-    // 팔로워 — 나를 팔로우하는 사용자
+    // My 광장 — 내가 쓴 갈라 광장 글 (인스타 그리드)
+    // =====================================================
+    const renderPlaza = async () => {
+        tabContent.className = "content-area";
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        const { data: posts, error } = await supabase
+            .from("plaza_posts")
+            .select("id, title, thumbnail, cover_image, up_count, view_count, created_at")
+            .eq("user_id", viewUserId)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("[My Plaza] error", error);
+            tabContent.innerHTML = emptyMsg("불러오기 실패");
+            return;
+        }
+
+        if (!posts || posts.length === 0) {
+            tabContent.innerHTML = emptyMsg("아직 갈라 광장에 쓴 글이 없습니다.");
+            return;
+        }
+
+        tabContent.className = "content-area grid";
+        tabContent.innerHTML = "";
+
+        posts.forEach(p => {
+            tabContent.appendChild(igCard({
+                thumb: p.cover_image || p.thumbnail,
+                title: p.title,
+                badge: "",
+                onClick: () => location.href = `plaza_detail.html?id=${p.id}`
+            }));
+        });
+    };
+
+    // =====================================================
+    // 즐겨찾기 — 나를 팔로우하는 사용자
     // =====================================================
     const renderFollower = async () => {
         tabContent.className = "content-area";
@@ -568,6 +605,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             setCount("save", bm ?? 0);
             setCount("news", nbm ?? 0);
         }
+        const { count: pz } = await supabase
+            .from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", viewUserId);
+        setCount("plaza", pz ?? 0);
         const { count: fl } = await supabase
             .from("follows").select("id", { count: "exact", head: true }).eq("following", viewUserId);
         setCount("follower", fl ?? 0);
@@ -589,6 +629,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 case "battle": renderBattle(); break;  // 2단계 복원용
                 case "save": renderSave(); break;
                 case "news": renderNews(); break;
+                case "plaza": renderPlaza(); break;
                 case "follower": renderFollower(); break;
             }
         });
