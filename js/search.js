@@ -351,8 +351,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (b) { activateTab("search"); runSearch(b.dataset.kw, true); }
     };
 
-    // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 예측
-    const [gnRes, giRes, mkRes] = await Promise.all([
+    // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 플라자 + 뜨는 예측
+    const [gnRes, giRes, pzRes, mkRes] = await Promise.all([
       supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at")
         .eq("status", "published").not("hero_image", "is", null).neq("hero_image", "")
         .order("published_at", { ascending: false }).limit(24),
@@ -360,6 +360,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
         .order("hot_score", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false }).limit(8),
+      supabase.from("plaza_posts")
+        .select("id,title,category,cover_image,thumbnail,up_count,down_count,score,created_at")
+        .order("score", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }).limit(6),
       (async () => {
         const { data } = await supabase.from("markets")
           .select("id,question,category,volume,market_type")
@@ -395,7 +399,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       gnews.sort((a, b) => (b._l + b._c * 2) - (a._l + a._c * 2) || new Date(b.published_at) - new Date(a.published_at));
       gnews = gnews.slice(0, 6);
     }
-    const gi = giRes.data || [], markets = mkRes;
+    const gi = giRes.data || [], plaza = pzRes.data || [], markets = mkRes;
 
     let html = "";
     if (gnews.length) {
@@ -423,6 +427,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="sr-title">${esc(i.title)}</div>
             <div class="sr-bar"><div class="sr-bar-pro" style="width:${pro}%"></div></div>
             <div class="sr-meta">👍 ${i.pro_count || 0} · 👎 ${i.con_count || 0}</div>
+          </div>
+        </a>`;
+      }).join("") + `</div>`;
+    }
+    if (plaza.length) {
+      html += `<div class="tr-group"><div class="tr-group-head">🗣 뜨는 플라자</div>` + plaza.map(p => {
+        const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+        return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">플라자</span>`}</div>
+          <div class="sr-body">
+            <div class="sr-cat">${esc(p.category || "")} · 플라자</div>
+            <div class="sr-title">${esc(p.title || "")}</div>
+            <div class="sr-meta">👍 ${p.up_count || 0} · 👎 ${p.down_count || 0}</div>
           </div>
         </a>`;
       }).join("") + `</div>`;
