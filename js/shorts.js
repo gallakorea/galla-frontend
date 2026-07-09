@@ -113,7 +113,7 @@ function __openShortsInternal(list, startId) {
     <div id="shortsContainer">
       <div id="shortsVoteBar" class="shorts-vote">
         <button class="vote-btn pro" data-vote="pro" data-issue-id="">👍 찬성이오</button>
-        <button class="vote-btn con" data-vote="con" data-issue-id="">👎 반댈세</button>
+        <button class="vote-btn con" data-vote="con" data-issue-id="">👎 난 반댈세</button>
       </div>
       <div class="shorts-top">
         <button id="shortsCloseBtn">←</button>
@@ -835,7 +835,7 @@ function updateShortsVoteBar() {
   const proBtn = bar.querySelector('.vote-btn.pro');
   const conBtn = bar.querySelector('.vote-btn.con');
   if (proBtn) proBtn.textContent = `👍 ${cur.faction_a || "찬성이오"}`;
-  if (conBtn) conBtn.textContent = `👎 ${cur.faction_b || "반댈세"}`;
+  if (conBtn) conBtn.textContent = `👎 ${cur.faction_b || "난 반댈세"}`;
 
   bar.querySelectorAll(".vote-btn").forEach(btn => {
     btn.dataset.issueId = issueId;
@@ -1152,8 +1152,8 @@ async function loadShortsComments() {
   const modal = document.getElementById("shortsCommentModal");
   const bar = modal.querySelector(".summary-bar");
   if (bar) {
-    bar.querySelector(".pro").textContent = `${issue?.faction_a || "찬성"} ${proPct}%`;
-    bar.querySelector(".con").textContent = `${issue?.faction_b || "반대"} ${100 - proPct}%`;
+    bar.querySelector(".pro").textContent = `${issue?.faction_a || "찬성이오"} ${proPct}%`;
+    bar.querySelector(".con").textContent = `${issue?.faction_b || "난 반댈세"} ${100 - proPct}%`;
     bar.querySelector(".bar-pro").style.width = proPct + "%";
   }
   const participants = new Set(SC.rows.map(r => r.user_id).filter(Boolean)).size;
@@ -1163,8 +1163,8 @@ async function loadShortsComments() {
   // 탭 라벨도 진영 이름으로
   const tabPro = modal.querySelector('.stance-tab[data-stance="pro"]');
   const tabCon = modal.querySelector('.stance-tab[data-stance="con"]');
-  if (tabPro) tabPro.textContent = issue?.faction_a || "찬성";
-  if (tabCon) tabCon.textContent = issue?.faction_b || "반대";
+  if (tabPro) tabPro.textContent = issue?.faction_a || "찬성이오";
+  if (tabCon) tabCon.textContent = issue?.faction_b || "난 반댈세";
 
   // 프로필 + 좋아요
   SC.profiles = {}; SC.likeAgg = {}; SC.myLikes = new Map();
