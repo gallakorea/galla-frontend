@@ -1300,6 +1300,7 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
 
 /* 업로드 드롭 버튼 */
 .media-drop {
+  box-sizing: border-box;
   width: 100%;
   min-height: 160px;
   display: flex;
