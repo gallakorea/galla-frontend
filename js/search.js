@@ -217,13 +217,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data || [];
   }
 
+  async function searchPlaza(q) {
+    const { data } = await supabase
+      .from("plaza_posts")
+      .select("id,title,category,nickname,cover_image,thumbnail,up_count,down_count,created_at")
+      .or(`title.ilike.%${q}%,body.ilike.%${q}%`)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    return data || [];
+  }
+
   const doSearch = debounce(async q => {
     const my = ++seq;
-    const [issues, markets, news] = await Promise.all([
-      searchIssues(q), searchMarkets(q), searchNews(q)
+    const [issues, markets, news, plaza] = await Promise.all([
+      searchIssues(q), searchMarkets(q), searchNews(q), searchPlaza(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, issues, markets, news);
+    renderResults(q, issues, markets, news, plaza);
   }, 240);
 
   function runSearch(kw, addHistory) {
@@ -258,14 +268,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     return null;
   }
 
-  function renderResults(q, issues, markets, news) {
-    const total = issues.length + markets.length + news.length;
+  function renderResults(q, issues, markets, news, plaza) {
+    plaza = plaza || [];
+    const total = issues.length + markets.length + news.length + plaza.length;
     if (!total) {
       resultsEl.innerHTML =
         `<div class="sr-none">‘${esc(q)}’ 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
       return;
     }
     let html = "";
+
+    if (news.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
+      html += news.map(n =>
+        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
+          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
+          <div class="sr-body">
+            <div class="sr-title">${esc(n.title)}</div>
+            <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
+          </div>
+        </div>`
+      ).join("");
+      html += `</div>`;
+    }
 
     if (issues.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head">🗳 갈라 이슈 <b>${issues.length}</b></div>`;
@@ -303,17 +328,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       html += `</div>`;
     }
 
-    if (news.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
-      html += news.map(n =>
-        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
-          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
+    if (plaza.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">🗣 플라자 <b>${plaza.length}</b></div>`;
+      html += plaza.map(p => {
+        const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+        return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">플라자</span>`}</div>
           <div class="sr-body">
-            <div class="sr-title">${esc(n.title)}</div>
-            <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
+            <div class="sr-cat">${esc(p.category || "")}${p.nickname ? " · " + esc(p.nickname) : ""}</div>
+            <div class="sr-title">${esc(p.title || "")}</div>
+            <div class="sr-meta">👍 ${p.up_count || 0} · 👎 ${p.down_count || 0}</div>
           </div>
-        </div>`
-      ).join("");
+        </a>`;
+      }).join("");
       html += `</div>`;
     }
 
