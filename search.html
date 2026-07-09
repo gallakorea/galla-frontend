@@ -30,37 +30,54 @@
 
   <!-- TAB MENU -->
   <div class="tabs-header">
-    <button type="button" class="tab-item active" data-tab="hot">🔥 핫트렌드</button>
-    <button type="button" class="tab-item" data-tab="search">🔍 검색</button>
-    <button type="button" class="tab-item" data-tab="ai">🔮 유행예감</button>
-    <button type="button" class="tab-item" data-tab="news">📰 실시간 뉴스</button>
+    <button type="button" class="tab-item active" data-tab="search">🔍 검색</button>
+    <button type="button" class="tab-item" data-tab="trending">🔥 지금 뜨는</button>
+    <button type="button" class="tab-item" data-tab="news">📰 뉴스</button>
   </div>
 
   <!-- TAB CONTENT -->
   <div class="tabs-body">
 
-    <div class="tab-panel active" data-panel="hot">
-      <h2 class="section-title">오늘의 핫 트렌드</h2>
-      <p class="section-sub">지금 가장 많이 검색되는 키워드 TOP10</p>
-      <div id="hot-trend-chips" class="hot-trend-chips"></div>
-      <div id="hot-results" class="search-results-grid"></div>
-    </div>
-
-    <div class="tab-panel" data-panel="search">
-      <h2 class="section-title">갈라치기 검색</h2>
-      <form id="search-form">
-        <input id="search-input" class="search-input" placeholder="검색어 입력" />
+    <!-- ===== 통합 검색 ===== -->
+    <div class="tab-panel active" data-panel="search">
+      <form id="search-form" class="search-bar">
+        <span class="search-bar-ic">🔍</span>
+        <input id="search-input" class="search-input" placeholder="갈라 이슈 · 예측 · 뉴스 검색"
+               autocomplete="off" />
+        <button type="button" id="search-clear" class="search-clear" hidden>✕</button>
       </form>
-      <div id="search-results" class="search-results-grid"></div>
+
+      <!-- 입력 전: 최근/인기 검색어 -->
+      <div id="search-empty" class="search-empty">
+        <div class="se-block" id="se-recent-block" hidden>
+          <div class="se-head">
+            <span>최근 검색어</span>
+            <button type="button" id="se-recent-clear" class="se-clear">전체삭제</button>
+          </div>
+          <div id="se-recent" class="se-chips"></div>
+        </div>
+        <div class="se-block">
+          <div class="se-head"><span>인기 검색어</span></div>
+          <div id="se-popular" class="se-poplist"></div>
+        </div>
+      </div>
+
+      <!-- 검색 결과(섹션형) -->
+      <div id="search-results" class="search-results"></div>
     </div>
 
-    <div class="tab-panel" data-panel="ai">
-      <h2 class="section-title">AI 유행예감</h2>
-      <div id="ai-trend-list" class="ai-trend-list"></div>
+    <!-- ===== 지금 뜨는 ===== -->
+    <div class="tab-panel" data-panel="trending">
+      <h2 class="section-title">🔥 지금 뜨는 키워드</h2>
+      <p class="section-sub">최근 6시간 뉴스에서 가장 많이 언급된 키워드</p>
+      <div id="trending-hot" class="trending-hot"></div>
+
+      <h2 class="section-title" style="margin-top:22px;">📈 갈라에서 뜨는 이슈</h2>
+      <div id="trending-galla" class="search-results"></div>
     </div>
 
+    <!-- ===== 뉴스 ===== -->
     <div class="tab-panel" data-panel="news">
-      <h2 class="section-title">실시간 뉴스</h2>
       <div id="news-category-chips" class="news-category-chips"></div>
       <div id="top-news-list"></div>
     </div>

@@ -1,650 +1,504 @@
-// 썸네일 유효성 검사 유틸 함수
-function isValidThumbnail(url) {
-  if (!url) return false;
-  if (typeof url !== "string") return false;
-  const u = url.trim();
-  if (!u) return false;
-  if (u === "about:blank") return false;
-  if (!u.startsWith("http")) return false;
-  return true;
-}
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("SEARCH JS LOADED");
+/* =========================================================
+   GALLA 서치 — 통합 검색 허브
+   탭: 검색(통합 인스턴트) / 지금 뜨는 / 뉴스
+========================================================= */
 
+function isValidThumbnail(url) {
+  if (!url || typeof url !== "string") return false;
+  const u = url.trim();
+  if (!u || u === "about:blank") return false;
+  return u.startsWith("http");
+}
+function esc(s) {
+  return (s == null ? "" : String(s))
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function timeAgo(ts) {
+  if (!ts) return "";
+  const d = (Date.now() - new Date(ts)) / 1000;
+  if (d < 60) return "방금";
+  if (d < 3600) return `${Math.floor(d / 60)}분 전`;
+  if (d < 86400) return `${Math.floor(d / 3600)}시간 전`;
+  return `${Math.floor(d / 86400)}일 전`;
+}
+function debounce(fn, ms) {
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
 
-
-  // 🔁 이전 순위 저장
-  const previousRanks = new Map();
-
-  /* =========================
-     DOM
-  ========================= */
-const tabs = document.querySelectorAll(".tab-item");
-const panels = document.querySelectorAll(".tab-panel");
-
-  const hotEl = document.getElementById("hot-trend-chips");
-  const hotGrid = document.getElementById("hot-results");
-
-  const aiEl = document.getElementById("ai-trend-list");
+  /* ================= DOM ================= */
+  const tabs = document.querySelectorAll(".tab-item");
+  const panels = document.querySelectorAll(".tab-panel");
 
   const form = document.getElementById("search-form");
   const input = document.getElementById("search-input");
-  const searchGrid = document.getElementById("search-results");
-  const searchLabel = document.getElementById("search-result-label");
+  const clearBtn = document.getElementById("search-clear");
+  const emptyEl = document.getElementById("search-empty");
+  const resultsEl = document.getElementById("search-results");
+  const recentBlock = document.getElementById("se-recent-block");
+  const recentEl = document.getElementById("se-recent");
+  const popularEl = document.getElementById("se-popular");
 
-  // 📰 NEWS MODAL DOM
   const newsModal = document.getElementById("news-modal");
   const newsModalTitle = document.getElementById("news-modal-title");
   const newsModalArticles = document.getElementById("news-modal-articles");
-const newsModalBackdrop = document.querySelector("#news-modal .news-modal-backdrop");
-newsModalBackdrop?.addEventListener("click", closeNewsModal);
-
+  const newsModalBackdrop = document.querySelector("#news-modal .news-modal-backdrop");
   const viewerModal = document.getElementById("news-viewer-modal");
   const viewerFrame = document.getElementById("news-viewer-iframe");
   const viewerClose = document.getElementById("news-viewer-close");
 
-  if (viewerClose) {
-    viewerClose.addEventListener("click", () => {
-      viewerModal.classList.add("hidden");
-      viewerFrame.src = "";
-    });
-  }
+  newsModalBackdrop?.addEventListener("click", closeNewsModal);
+  viewerClose?.addEventListener("click", () => {
+    viewerModal.classList.add("hidden");
+    viewerFrame.src = "";
+  });
+  newsModal?.classList.remove("active");
 
-  if (newsModal) {
-    newsModal.classList.remove("active");
-  }
-
-  // 공통 모달 닫기 함수
   function closeNewsModal() {
     if (!newsModal) return;
     newsModal.classList.remove("active");
     document.body.style.overflow = "";
   }
 
-  let newsLoaded = true; // deprecated guard (kept for backward compatibility)
-
-  /* =========================
-     TAB CONTROL (FIXED)
-  ========================= */
+  /* ================= 탭 ================= */
+  let trendingLoaded = false, newsInit = false;
   function activateTab(name) {
-    tabs.forEach(btn =>
-      btn.classList.toggle("active", btn.dataset.tab === name)
-    );
-
-    panels.forEach(panel => {
-      const isActive = panel.dataset.panel === name;
-      panel.classList.toggle("active", isActive);
-
-      // 🔥 핫트렌드 탭 활성화 직후 강제 로딩
-      if (isActive && name === "hot") {
-        requestAnimationFrame(() => {
-          loadHotTrends();
-        });
-      }
-    });
-  }
-
-tabs.forEach(btn => {
-  btn.addEventListener("click", (e) => {
-    e.preventDefault(); // ✅ 🔥 핵심: 인덱스 이동 차단
-    e.stopPropagation(); // 🔥🔥🔥 이 줄 추가 (진짜 핵심)
-
-    const tab = btn.dataset.tab;
-    console.log("[TAB CLICK]", tab);
-
-    activateTab(tab);
-
-    if (tab === "news") {
-      newsPage = 0;
-      hasMoreNews = true;
-      isLoadingNews = false;
-      document.getElementById("top-news-list").innerHTML = "";
+    tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+    panels.forEach(p => p.classList.toggle("active", p.dataset.panel === name));
+    if (name === "trending" && !trendingLoaded) { trendingLoaded = true; loadTrending(); }
+    if (name === "news" && !newsInit) {
+      newsInit = true;
       renderNewsCategoryChips();
-      loadTopNews();
+      resetNews();
     }
-
-    if (tab === "ai") {
-      loadAITrends();
-    }
-  });
-});
-
-async function loadHotTrends() {
-  const hotEl = document.getElementById("hot-trend-chips");
-  if (!hotEl) return;
-  // 🔥 inactive 상태여도 강제로 보이게
-  hotEl.style.display = "block";
-
-  hotEl.innerHTML =
-    `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
-
-  const { data, error } = await supabase
-    .from("hot_trend_groups_6h")
-    .select("group_id, title, article_count")
-    .limit(10);
-
-  if (error) {
-    console.error("[HOT TRENDS ERROR]", error);
-    hotEl.innerHTML =
-      `<p style="color:#777;font-size:13px;">핫트렌드 로딩 실패</p>`;
-    return;
+    if (name === "search") input.focus();
   }
-
-  if (!data || data.length === 0) {
-    hotEl.innerHTML = `
-      <p style="color:#777;font-size:13px;">
-        최근 6시간 내 핫트렌드가 없습니다.
-      </p>
-    `;
-    return;
-  }
-
-  hotEl.innerHTML = "";
-
-  data.forEach((row, idx) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "hot-trend-chip";
-
-    chip.innerHTML = `
-      <strong>${idx + 1}</strong>
-      ${row.title}
-      <span style="opacity:.7;">(${row.article_count})</span>
-    `;
-
-    chip.addEventListener("click", e => {
-      e.preventDefault();
-      e.stopPropagation();
-      activateTab("news");
-      openNewsModal(row.group_id);
-    });
-
-    hotEl.appendChild(chip);
-  });
-}
-
-  /* =========================
-     🔮 AI TRENDS
-  ========================= */
-  async function loadAITrends() {
-    const { data, error } = await supabase
-      .from("issue_trend_scores")
-      .select("issue_id, title, category, trend_score")
-      .order("trend_score", { ascending: false })
-      .limit(10);
-
-    if (error) {
-      console.error("ai trends error", error);
-      return;
-    }
-
-    aiEl.innerHTML = "";
-    data.forEach(row => {
-      const card = document.createElement("div");
-      card.className = "ai-trend-card";
-      card.onclick = () =>
-        (location.href = `issue.html?id=${row.issue_id}`);
-
-      card.innerHTML = `
-        <p class="ai-trend-title">${row.title}</p>
-        <p class="ai-trend-meta">${row.category}</p>
-        <p class="ai-trend-reason">📈 트렌드 점수 ${row.trend_score}</p>
-      `;
-      aiEl.appendChild(card);
-    });
-  }
-
-/* =========================
-   📰 REALTIME TOP NEWS (FIXED)
-========================= */
-
-let newsPage = 0;
-const NEWS_PAGE_SIZE = 30;
-let isLoadingNews = false;
-let hasMoreNews = true;
-
-
-// 🔄 강제 새로고침 (자동 갱신 전용)
-function refreshTopNews() {
-  const list = document.getElementById("top-news-list");
-  if (!list) return;
-
-  newsPage = 0;
-  hasMoreNews = true;
-  isLoadingNews = false;
-  lastTopNewsId = null;
-
-  list.innerHTML = "";
-  loadTopNews();
-}
-
-/* =========================
-   🏷 NEWS CATEGORY CHIPS (NAVER STANDARD)
-========================= */
-const NEWS_CATEGORIES = [
-  "전체",
-  "정치",
-  "경제",
-  "사회",
-  "생활문화",
-  "세계",
-  "IT과학",
-  "연예",
-  "스포츠"
-];
-
-const CATEGORY_SID_MAP = {
-  "정치": 100,
-  "경제": 101,
-  "사회": 102,
-  "생활문화": 103,
-  "세계": 104,
-  "IT과학": 105,
-  "연예": 106,
-  "스포츠": 107
-};
-
-let currentNewsCategory = "전체";
-
-function renderNewsCategoryChips() {
-  const wrap = document.getElementById("news-category-chips");
-  if (!wrap) return;
-
-  wrap.innerHTML = "";
-
-  NEWS_CATEGORIES.forEach(cat => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = cat;
-    if (cat === currentNewsCategory) btn.classList.add("active");
-
+  tabs.forEach(btn => {
     btn.addEventListener("click", e => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      currentNewsCategory = cat;
-      renderNewsCategoryChips();
-
-      newsPage = 0;
-      hasMoreNews = true;
-      isLoadingNews = false;
-      const list = document.getElementById("top-news-list");
-      if (list) list.innerHTML = "";
-      loadTopNews();
+      e.preventDefault(); e.stopPropagation();
+      activateTab(btn.dataset.tab);
     });
-
-    wrap.appendChild(btn);
   });
-}
 
-async function loadTopNews() {
-  const list = document.getElementById("top-news-list");
-  if (!list) return;
-
-  if (isLoadingNews || !hasMoreNews) return;
-  isLoadingNews = true;
-
-  const from = newsPage * NEWS_PAGE_SIZE;
-  const to = from + NEWS_PAGE_SIZE - 1;
-
-  const since = new Date(
-    Date.now() - 1000 * 60 * 60 * 24
-  ).toISOString();
-
-  let query = supabase
-    .from("news_articles_raw")
-    .select(`
-      id,
-      title,
-      published_at,
-      created_at,
-      url,
-      thumbnail_url,
-      related_group_id,
-      sid,
-      press_name
-    `)
-    .gte("published_at", since)   // 🔥 이 줄이 핵심
-    // 렌더는 썸네일 있는 기사만 표시하므로, 최신 기사에 아직 썸네일이 안 붙은 경우
-    // 첫 페이지가 통째로 스킵돼 빈 화면이 되는 걸 방지 (썸네일 있는 기사만 조회)
-    .not("thumbnail_url", "is", null)
-    .neq("thumbnail_url", "")
-    .order("published_at", { ascending: false })
-    .order("id", { ascending: false });
-    
-
-  if (currentNewsCategory !== "전체") {
-    query = query.eq(
-      "sid",
-      CATEGORY_SID_MAP[currentNewsCategory]
-    );
+  /* ================= 최근 검색어 (localStorage) ================= */
+  const RECENT_KEY = "galla_recent_searches";
+  const getRecent = () => {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; }
+    catch { return []; }
+  };
+  const saveRecent = list => localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 10)));
+  function addRecent(kw) {
+    kw = kw.trim(); if (!kw) return;
+    const list = getRecent().filter(x => x !== kw);
+    list.unshift(kw); saveRecent(list); renderRecent();
   }
-
-  const { data, error } = await query.range(from, to);
-
-  if (newsPage === 0 && data && data.length > 0) {
-    console.log(
-      "[TOP NEWS DEBUG]",
-      "id:", data[0].id,
-      "published_at:", data[0].published_at,
-      "group:", data[0].related_group_id
-    );
+  function removeRecent(kw) {
+    saveRecent(getRecent().filter(x => x !== kw)); renderRecent();
   }
-
-  console.log("[REALTIME NEWS DATA]", data);
-
-  if (error) {
-    console.error("[REALTIME NEWS ERROR]", error);
-    list.innerHTML +=
-      `<p style="color:#777;font-size:13px;">뉴스를 불러오지 못했습니다.</p>`;
-    isLoadingNews = false;
-    return;
+  function renderRecent() {
+    const list = getRecent();
+    recentBlock.hidden = list.length === 0;
+    recentEl.innerHTML = list.map(kw =>
+      `<span class="se-chip" data-kw="${esc(kw)}">${esc(kw)}<button class="se-chip-x" data-del="${esc(kw)}">✕</button></span>`
+    ).join("");
   }
-
-  if (!data || data.length === 0) {
-    if (newsPage === 0) {
-      list.innerHTML +=
-        `<p style="color:#777;font-size:13px;">아직 실시간 뉴스가 없습니다.</p>`;
-    }
-    hasMoreNews = false;
-    isLoadingNews = false;
-    return;
-  }
-  // ⚠️ related_group_id 기준 프론트 그룹핑 때문에
-  // data.length < PAGE_SIZE 로는 더 가져올지 판단하면 안 됨
-  if (!data || data.length === 0) {
-    hasMoreNews = false;
-  }
-  newsPage += 1;
-  isLoadingNews = false;
-
-  // 🔥 프론트 그룹핑 (related_group_id 기준)
-  const grouped = new Map();
-
-  data.forEach(article => {
-    const key = article.related_group_id ?? article.id;
-    if (!grouped.has(key)) grouped.set(key, []);
-    grouped.get(key).push(article);
+  document.getElementById("se-recent-clear")?.addEventListener("click", () => {
+    saveRecent([]); renderRecent();
   });
-    grouped.forEach(group => {
-      group.sort(
-        (a, b) => new Date(a.published_at) - new Date(b.published_at)
-      );
+  recentEl.addEventListener("click", e => {
+    const del = e.target.closest("[data-del]");
+    if (del) { removeRecent(del.dataset.del); return; }
+    const chip = e.target.closest("[data-kw]");
+    if (chip) runSearch(chip.dataset.kw, true);
+  });
 
-      let 대표기사 = group.find(a => isValidThumbnail(a.thumbnail_url));
+  /* ================= 인기 검색어 (뉴스 핫키워드) ================= */
+  async function loadPopular() {
+    const { data } = await supabase
+      .from("hot_trend_groups_6h")
+      .select("title, article_count")
+      .order("article_count", { ascending: false })
+      .limit(10);
+    if (!data || !data.length) { popularEl.innerHTML =
+      `<p class="se-muted">아직 집계된 인기 검색어가 없어요.</p>`; return; }
+    popularEl.innerHTML = data.map((r, i) =>
+      `<button class="se-pop" data-kw="${esc(r.title)}">
+        <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
+        <span class="se-pop-title">${esc(r.title)}</span>
+       </button>`
+    ).join("");
+  }
+  popularEl.addEventListener("click", e => {
+    const b = e.target.closest("[data-kw]");
+    if (b) runSearch(b.dataset.kw, true);
+  });
 
-      // 🔥 썸네일 없는 그룹은 "스킵"만 해야지 전체를 끊으면 안 됨
-      if (!대표기사) {
-        console.warn("[SKIP GROUP - NO THUMBNAIL]", group);
-        return; // ← 이제 정상 (이건 forEach 1회만 스킵)
-      }
+  /* ================= 통합 검색 ================= */
+  let seq = 0;
 
-      const card = document.createElement("div");
-      card.className = "news-card";
+  function showEmpty(show) {
+    emptyEl.style.display = show ? "block" : "none";
+    resultsEl.style.display = show ? "none" : "block";
+  }
 
-      card.addEventListener("click", () => {
-        openNewsModal(대표기사.related_group_id ?? 대표기사.id);
+  async function searchIssues(q) {
+    const { data } = await supabase
+      .from("issues")
+      .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,created_at")
+      .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
+      .order("created_at", { ascending: false })
+      .limit(12);
+    return data || [];
+  }
+  async function searchMarkets(q) {
+    const { data } = await supabase
+      .from("markets")
+      .select("id,question,category,volume,market_type,image_url")
+      .eq("resolved", false)
+      .ilike("question", `%${q}%`)
+      .order("volume", { ascending: false })
+      .limit(10);
+    const markets = data || [];
+    if (markets.length) {
+      const ids = markets.map(m => m.id);
+      const { data: outs } = await supabase
+        .from("market_outcomes")
+        .select("market_id,label,pool_yes,pool_no,sort_order")
+        .in("market_id", ids);
+      const byM = {};
+      (outs || []).forEach(o => (byM[o.market_id] ||= []).push(o));
+      markets.forEach(m => {
+        const list = (byM[m.id] || []).sort((a, b) => a.sort_order - b.sort_order);
+        const top = list.map(o => ({
+          label: o.label, p: Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100)
+        })).sort((a, b) => b.p - a.p)[0];
+        m._top = top;
+        m._multi = m.market_type === "multi";
       });
+    }
+    return markets;
+  }
+  async function searchNews(q) {
+    const { data } = await supabase
+      .from("news_articles_raw")
+      .select("id,title,press_name,published_at,thumbnail_url,url,related_group_id")
+      .ilike("title", `%${q}%`)
+      .not("thumbnail_url", "is", null)
+      .neq("thumbnail_url", "")
+      .order("published_at", { ascending: false })
+      .limit(10);
+    return data || [];
+  }
 
-      card.innerHTML = `
-        <div class="news-thumb-16x9">
-          <img src="${대표기사.thumbnail_url}" />
-        </div>
-        <div class="news-text">
-          <h3 class="news-title">${대표기사.title}</h3>
-          <div class="news-meta">
-            <span class="news-press">${대표기사.press_name}</span>
-            <span class="news-time">${timeAgo(대표기사.published_at)}</span>
-          </div>
-          <div class="news-count">
-            관련 기사 ${group.length}건
-          </div>
-        </div>
-      `;
+  const doSearch = debounce(async q => {
+    const my = ++seq;
+    const [issues, markets, news] = await Promise.all([
+      searchIssues(q), searchMarkets(q), searchNews(q)
+    ]);
+    if (my !== seq) return; // 최신 입력만 반영
+    renderResults(q, issues, markets, news);
+  }, 240);
 
-      list.appendChild(card);
-    });
+  function runSearch(kw, addHistory) {
+    input.value = kw;
+    clearBtn.hidden = !kw;
+    if (addHistory) addRecent(kw);
+    showEmpty(false);
+    resultsEl.innerHTML = `<div class="sr-loading">검색 중…</div>`;
+    doSearch(kw.trim());
+  }
 
-  // ❌ Frontend must NOT call fetch_article_thumbnail (handled by cron)
-  // Thumbnails are pre-populated by a cron job and are read-only from the DB
-}
+  input.addEventListener("input", () => {
+    const q = input.value.trim();
+    clearBtn.hidden = !input.value;
+    if (!q) { showEmpty(true); return; }
+    showEmpty(false);
+    resultsEl.innerHTML = `<div class="sr-loading">검색 중…</div>`;
+    doSearch(q);
+  });
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (q) { addRecent(q); doSearch(q); }
+  });
+  clearBtn.addEventListener("click", () => {
+    input.value = ""; clearBtn.hidden = true; showEmpty(true); input.focus();
+  });
 
-// 🔧 SAFE FALLBACK: hot trend click handler
-function loadNewsByIssue(issueId) {
-  activateTab("news");
-  loadTopNews();
-}
+  function issueThumb(i) {
+    if (isValidThumbnail(i.thumbnail_url)) return i.thumbnail_url;
+    if (Array.isArray(i.images) && i.images[0]) return i.images[0];
+    return null;
+  }
 
-function timeAgo(date) {
-  if (!date) return "";
-  const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-
-  if (seconds < 60) return "방금";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}분 전`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}시간 전`;
-  return `${Math.floor(seconds / 86400)}일 전`;
-}
-
-  /* =========================
-     🔍 SEARCH CORE
-  ========================= */
-  async function performSearch(keyword, targetGrid) {
-    const q = keyword.trim();
-    if (!q) return;
-
-    const { data, error } = await supabase.rpc("search_issues", {
-      keyword: q
-    });
-
-    if (error) {
-      console.error("search error", error);
+  function renderResults(q, issues, markets, news) {
+    const total = issues.length + markets.length + news.length;
+    if (!total) {
+      resultsEl.innerHTML =
+        `<div class="sr-none">‘${esc(q)}’ 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
       return;
     }
+    let html = "";
 
-    renderResults(data, targetGrid);
-  }
-
-  function renderResults(list, grid) {
-    grid.innerHTML = "";
-
-    if (!list || list.length === 0) {
-      grid.innerHTML =
-        `<p style="color:#777;font-size:13px;">검색 결과 없음</p>`;
-      return;
+    if (issues.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">🗳 갈라 이슈 <b>${issues.length}</b></div>`;
+      html += issues.map(i => {
+        const th = issueThumb(i);
+        const total2 = (i.pro_count || 0) + (i.con_count || 0);
+        const pro = total2 ? Math.round((i.pro_count || 0) / total2 * 100) : 50;
+        return `<a class="sr-card" href="issue.html?id=${i.id}">
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
+          <div class="sr-body">
+            <div class="sr-cat">${esc(i.category || "")}</div>
+            <div class="sr-title">${esc(i.title)}</div>
+            <div class="sr-bar"><div class="sr-bar-pro" style="width:${pro}%"></div></div>
+            <div class="sr-meta">👍 ${i.pro_count || 0} · 👎 ${i.con_count || 0}</div>
+          </div>
+        </a>`;
+      }).join("");
+      html += `</div>`;
     }
 
-    list.forEach(i => {
-      const card = document.createElement("div");
-      card.className = "search-card";
-      card.onclick = () =>
-        (location.href = `issue.html?id=${i.id}`);
+    if (markets.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">🔮 갈라예측 <b>${markets.length}</b></div>`;
+      html += markets.map(m => {
+        const top = m._top;
+        return `<a class="sr-card predict" href="predict-market.html?id=${m.id}">
+          <div class="sr-body">
+            <div class="sr-cat">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""}</div>
+            <div class="sr-title">${esc(m.question)}</div>
+            ${top ? `<div class="sr-pred"><b>${top.p}%</b> <span>${esc(top.label)}</span></div>` : ""}
+            <div class="sr-meta">💰 거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</div>
+          </div>
+          <div class="sr-go">›</div>
+        </a>`;
+      }).join("");
+      html += `</div>`;
+    }
 
-      card.innerHTML = `
-        <span class="search-card-category">${i.category}</span>
-        <p class="search-card-title">${i.title}</p>
-        <div class="search-card-meta">
-          👍 ${i.pro_count} · 👎 ${i.con_count}
-        </div>
-      `;
-      grid.appendChild(card);
-    });
+    if (news.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
+      html += news.map(n =>
+        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-gid="${esc(n.related_group_id || n.id)}">
+          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy">` : `<span class="sr-noimg">NEWS</span>`}</div>
+          <div class="sr-body">
+            <div class="sr-title">${esc(n.title)}</div>
+            <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
+          </div>
+        </div>`
+      ).join("");
+      html += `</div>`;
+    }
+
+    resultsEl.innerHTML = html;
   }
 
-  /* =========================
-     📰 OPEN NEWS MODAL
-  ========================= */
-async function openNewsModal(groupId) {
-  if (!groupId || !newsModal) return;
+  // 뉴스 결과 카드 클릭 → 기사 뷰어
+  resultsEl.addEventListener("click", e => {
+    const news = e.target.closest(".sr-card.news");
+    if (news) {
+      const url = news.dataset.url;
+      if (url) openNewsViewer(url);
+    }
+  });
 
-  // ✅ 모달 표시 (CSS만 믿는다)
-newsModal.classList.add("active");
-document.body.style.overflow = "hidden";
+  /* ================= 지금 뜨는 ================= */
+  async function loadTrending() {
+    const hotWrap = document.getElementById("trending-hot");
+    const gallaWrap = document.getElementById("trending-galla");
+    hotWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
 
-  newsModalTitle.textContent = "관련 기사";
-  newsModalArticles.innerHTML =
-    `<p style="color:#777;font-size:13px;">불러오는 중...</p>`;
-
-  const { data, error } = await supabase
-    .from("news_articles_raw")
-    .select("id, title, published_at, url, related_group_id")
-    .or(
-      `related_group_id.eq.${groupId},id.eq.${groupId}`
-    )
-    .order("published_at", { ascending: false })
-    .limit(30);
-
-  if (error) {
-    console.error("[NEWS MODAL]", error);
-    newsModalArticles.innerHTML =
-      `<p style="color:#777;font-size:13px;">기사를 불러오지 못했습니다.</p>`;
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    newsModalArticles.innerHTML =
-      `<p style="color:#777;font-size:13px;">기사가 없습니다.</p>`;
-    return;
-  }
-
-  newsModalArticles.innerHTML = "";
-
-  data.forEach(article => {
-    const row = document.createElement("div");
-    row.className = "news-article-item";
-    row.innerHTML = `<p class="news-article-title">${article.title}</p>`;
-
-    row.onclick = () => {
-      if (!article.url) return;
-      openNewsViewer(article.url);
+    const { data: hot } = await supabase
+      .from("hot_trend_groups_6h")
+      .select("group_id,title,article_count")
+      .order("article_count", { ascending: false })
+      .limit(10);
+    if (hot && hot.length) {
+      hotWrap.innerHTML = hot.map((r, i) =>
+        `<button class="th-chip" data-kw="${esc(r.title)}">
+          <span class="th-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
+          <span class="th-title">${esc(r.title)}</span>
+          <span class="th-cnt">${r.article_count}</span>
+        </button>`
+      ).join("");
+    } else {
+      hotWrap.innerHTML = `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
+    }
+    hotWrap.onclick = e => {
+      const b = e.target.closest("[data-kw]");
+      if (b) { activateTab("search"); runSearch(b.dataset.kw, true); }
     };
 
-    newsModalArticles.appendChild(row);
-  });
-}
-
-    function openNewsViewer(url) {
-      if (!url) return;
-
-      // ❌ iframe 차단 확률이 높은 도메인
-      const blockedDomains = [
-        "naver.com",
-        "daum.net",
-        "chosun.com",
-        "joins.com",
-        "hani.co.kr",
-        "mk.co.kr",
-        "sedaily.com",
-        "khan.co.kr",
-        "yonhapnews.co.kr"
-      ];
-
-      const isBlocked = blockedDomains.some(d => url.includes(d));
-
-      // 1️⃣ 차단된 도메인 → 무조건 새 탭
-      if (isBlocked) {
-        window.open(url, "_blank", "noopener,noreferrer");
-        return;
-      }
-
-      // 2️⃣ iframe 시도
-      try {
-        viewerFrame.src = url;
-        viewerModal.classList.remove("hidden");
-      } catch (e) {
-        // 3️⃣ iframe 실패 시 안전 탈출
-        window.open(url, "_blank", "noopener,noreferrer");
-      }
+    // 갈라에서 뜨는 이슈 (hot_score 우선, 없으면 최신)
+    const { data: gi } = await supabase
+      .from("issues")
+      .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
+      .order("hot_score", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (gi && gi.length) {
+      gallaWrap.innerHTML = `<div class="sr-sec">` + gi.map(i => {
+        const th = issueThumb(i);
+        const t2 = (i.pro_count || 0) + (i.con_count || 0);
+        const pro = t2 ? Math.round((i.pro_count || 0) / t2 * 100) : 50;
+        return `<a class="sr-card" href="issue.html?id=${i.id}">
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
+          <div class="sr-body">
+            <div class="sr-cat">${esc(i.category || "")}</div>
+            <div class="sr-title">${esc(i.title)}</div>
+            <div class="sr-bar"><div class="sr-bar-pro" style="width:${pro}%"></div></div>
+            <div class="sr-meta">👍 ${i.pro_count || 0} · 👎 ${i.con_count || 0}</div>
+          </div>
+        </a>`;
+      }).join("") + `</div>`;
+    } else {
+      gallaWrap.innerHTML = `<p class="se-muted">아직 이슈가 없어요.</p>`;
     }
+  }
 
-  /* =========================
-     SEARCH EVENTS
-  ========================= */
-  if (form) {
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      activateTab("search");
-      performSearch(input.value, searchGrid);
+  /* ================= 뉴스 (실시간) ================= */
+  const NEWS_CATEGORIES = ["전체", "정치", "경제", "사회", "생활문화", "세계", "IT과학", "연예", "스포츠"];
+  const CATEGORY_SID_MAP = { "정치": 100, "경제": 101, "사회": 102, "생활문화": 103, "세계": 104, "IT과학": 105, "연예": 106, "스포츠": 107 };
+  let currentNewsCategory = "전체";
+  let newsPage = 0, isLoadingNews = false, hasMoreNews = true;
+  const NEWS_PAGE_SIZE = 30;
+
+  function renderNewsCategoryChips() {
+    const wrap = document.getElementById("news-category-chips");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    NEWS_CATEGORIES.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = cat;
+      if (cat === currentNewsCategory) btn.classList.add("active");
+      btn.addEventListener("click", e => {
+        e.preventDefault(); e.stopPropagation();
+        currentNewsCategory = cat;
+        renderNewsCategoryChips();
+        resetNews();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+  function resetNews() {
+    newsPage = 0; hasMoreNews = true; isLoadingNews = false;
+    const list = document.getElementById("top-news-list");
+    if (list) list.innerHTML = "";
+    loadTopNews();
+  }
+
+  async function loadTopNews() {
+    const list = document.getElementById("top-news-list");
+    if (!list || isLoadingNews || !hasMoreNews) return;
+    isLoadingNews = true;
+
+    const from = newsPage * NEWS_PAGE_SIZE;
+    const to = from + NEWS_PAGE_SIZE - 1;
+    const since = new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString();
+
+    let query = supabase
+      .from("news_articles_raw")
+      .select("id,title,published_at,url,thumbnail_url,related_group_id,sid,press_name")
+      .gte("published_at", since)
+      .not("thumbnail_url", "is", null)
+      .neq("thumbnail_url", "")
+      .order("published_at", { ascending: false })
+      .order("id", { ascending: false });
+    if (currentNewsCategory !== "전체") query = query.eq("sid", CATEGORY_SID_MAP[currentNewsCategory]);
+
+    const { data, error } = await query.range(from, to);
+    if (error) {
+      console.error("[NEWS ERROR]", error);
+      if (newsPage === 0) list.innerHTML = `<p class="se-muted">뉴스를 불러오지 못했습니다.</p>`;
+      isLoadingNews = false; return;
+    }
+    if (!data || !data.length) {
+      if (newsPage === 0) list.innerHTML = `<p class="se-muted">아직 실시간 뉴스가 없습니다.</p>`;
+      hasMoreNews = false; isLoadingNews = false; return;
+    }
+    newsPage += 1;
+    isLoadingNews = false;
+
+    const grouped = new Map();
+    data.forEach(a => {
+      const key = a.related_group_id ?? a.id;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(a);
+    });
+    grouped.forEach(group => {
+      group.sort((a, b) => new Date(a.published_at) - new Date(b.published_at));
+      const rep = group.find(a => isValidThumbnail(a.thumbnail_url));
+      if (!rep) return;
+      const card = document.createElement("div");
+      card.className = "news-card";
+      card.addEventListener("click", () => openNewsModal(rep.related_group_id ?? rep.id));
+      card.innerHTML = `
+        <div class="news-thumb-16x9"><img src="${esc(rep.thumbnail_url)}" loading="lazy"></div>
+        <div class="news-text">
+          <h3 class="news-title">${esc(rep.title)}</h3>
+          <div class="news-meta">
+            <span class="news-press">${esc(rep.press_name || "")}</span>
+            <span class="news-time">${timeAgo(rep.published_at)}</span>
+          </div>
+          <div class="news-count">관련 기사 ${group.length}건</div>
+        </div>`;
+      list.appendChild(card);
     });
   }
 
-  // =========================
-  // INIT (FORCE NEWS RENDER)
-  // =========================
-  activateTab("news");
-  renderNewsCategoryChips();
-  loadTopNews();
+  async function openNewsModal(groupId) {
+    if (!groupId || !newsModal) return;
+    newsModal.classList.add("active");
+    document.body.style.overflow = "hidden";
+    newsModalTitle.textContent = "관련 기사";
+    newsModalArticles.innerHTML = `<p class="se-muted">불러오는 중...</p>`;
 
-  // 기존 기능 유지
-  loadHotTrends();
-  loadAITrends();
-
-  // 🕒 60초마다 자동 갱신 (DB 기준 최신 반영)
-  setInterval(() => {
-    const activeTab = document.querySelector(".tab-item.active")?.dataset.tab;
-    if (activeTab === "news") {
-      refreshTopNews(); // 🔥 반드시 이걸 써야 함
+    const { data, error } = await supabase
+      .from("news_articles_raw")
+      .select("id,title,published_at,url,related_group_id")
+      .or(`related_group_id.eq.${groupId},id.eq.${groupId}`)
+      .order("published_at", { ascending: false })
+      .limit(30);
+    if (error || !data || !data.length) {
+      newsModalArticles.innerHTML = `<p class="se-muted">기사가 없습니다.</p>`;
+      return;
     }
-  }, 60000);
+    newsModalArticles.innerHTML = "";
+    data.forEach(a => {
+      const row = document.createElement("div");
+      row.className = "news-article-item";
+      row.innerHTML = `<p class="news-article-title">${esc(a.title)}</p>`;
+      row.onclick = () => a.url && openNewsViewer(a.url);
+      newsModalArticles.appendChild(row);
+    });
+  }
 
-  tabs.forEach(tab => {
-    tab.style.pointerEvents = "auto";
+  function openNewsViewer(url) {
+    if (!url) return;
+    const blocked = ["naver.com", "daum.net", "chosun.com", "joins.com", "hani.co.kr",
+      "mk.co.kr", "sedaily.com", "khan.co.kr", "yonhapnews.co.kr"];
+    if (blocked.some(d => url.includes(d))) {
+      window.open(url, "_blank", "noopener,noreferrer"); return;
+    }
+    try { viewerFrame.src = url; viewerModal.classList.remove("hidden"); }
+    catch { window.open(url, "_blank", "noopener,noreferrer"); }
+  }
+
+  // 뉴스 무한 스크롤
+  window.addEventListener("scroll", () => {
+    const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 250;
+    const active = document.querySelector(".tab-item.active")?.dataset.tab;
+    if (nearBottom && active === "news") loadTopNews();
   });
 
-/* =========================
-   🔗 BOTTOM NAVIGATION FIX (FINAL)
-========================= */
-document.querySelectorAll(".bottom-nav .nav-item").forEach(btn => {
-  btn.addEventListener("click", e => {
-  if (!e.currentTarget.contains(e.target)) return;
-    e.preventDefault();
-    e.stopPropagation(); // 🔥 이게 핵심이다
-
-    const target = btn.dataset.target;
-    if (!target) return;
-
-    const current = location.pathname.split("/").pop();
-    if (current === target) return;
-
-    location.href = target;
-  });
+  /* ================= INIT ================= */
+  renderRecent();
+  loadPopular();
+  showEmpty(true);
+  activateTab("search");
+  input.focus();
 });
-
-window.addEventListener("scroll", () => {
-  const scrollBottom =
-    window.innerHeight + window.scrollY >=
-    document.body.offsetHeight - 200;
-
-  const activeTab =
-    document.querySelector(".tab-item.active")?.dataset.tab;
-
-  if (scrollBottom && activeTab === "news") {
-    loadTopNews();
-  }
-});
-
-});
-
-// 썸네일 CSS 보정용 JS (파일 하단)
-const style = document.createElement("style");
-style.innerHTML = `
-  .news-thumb-16x9 {
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #111;
-    border-radius: 12px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .news-thumb-16x9 img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-`;
-document.head.appendChild(style);
