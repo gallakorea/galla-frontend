@@ -18,30 +18,32 @@ function estShares(o, side, s){
   if(s<=0) return 0;
   return side==='yes' ? (y+s-(k/(n+s))) : (n+s-(k/(y+s)));
 }
-// YES 라벨: 다중은 후보명, 이진은 YES
+// YES/NO 라벨: 다중은 후보명/아님, 이진은 YES/NO (👍/👎 정체성)
 function yesLabel(){return isMulti()&&ACTIVE?ACTIVE.label:'YES';}
+function noLabel(){return isMulti()?'아님':'NO';}
 function ocLabel(id){const o=OUTCOMES.find(x=>x.id===id);return o?o.label:'';}
 
+// 로그인 필요 → 알럿(확인 시 로그인 페이지)
+function needLogin(){
+  if(ME) return false;
+  if(confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) location.href='login.html';
+  return true;
+}
+
+let MY_BAL = 0;
 document.addEventListener('DOMContentLoaded', async () => {
   supa = await waitForSupabaseClient();
   const { data } = await supa.auth.getSession();
   ME = data?.session?.user || null;
   await refreshBalance();
-  $('pointPill').addEventListener('click', async () => {
-    if(!ME){location.href='login.html';return;}
-    const {data,error}=await supa.rpc('claim_daily');
-    if(error)return toast('오류');
-    if(data.ok){toast(`출석 완료! +${fmt(data.claimed)}P`);$('pointBalance').textContent=fmt(data.balance)+'P';}
-    else toast('오늘 출석은 이미 받았어요.');
-  });
   if(!marketId){ $('pmdMain').innerHTML='<div class="empty-zone">잘못된 접근입니다.</div>'; return; }
   await loadMarket();
 });
 
 async function refreshBalance(){
-  if(!ME){$('pointBalance').textContent='로그인';return;}
+  if(!ME) return;
   const {data}=await supa.rpc('ensure_balance');
-  if(data!=null)$('pointBalance').textContent=fmt(data)+'P';
+  if(data!=null){ MY_BAL=data; const el=$('tradeBalance'); if(el) el.textContent='보유 '+fmt(data)+'P'; }
 }
 
 async function loadMarket(){
@@ -102,9 +104,9 @@ function render(){
     ${multi ? renderOutcomeSelector() : ''}
 
     <section class="pmd-prob-big">
-      <div class="pmd-prob-num"><span class="pmd-prob-yes">${p}%</span> <span class="pmd-prob-label">${esc(multi?ACTIVE.label:'YES')} 확률</span></div>
+      <div class="pmd-prob-num"><span class="pmd-prob-yes">${p}%</span> <span class="pmd-prob-label">👍 ${esc(multi?ACTIVE.label:'YES')} 확률</span></div>
       <div class="pmd-bar"><div class="pmd-bar-yes" style="width:${p}%"></div></div>
-      <div class="pmd-bar-legend"><span class="c-yes">${esc(yesLabel())} ${p}%</span><span class="c-no">아님 ${100-p}%</span></div>
+      <div class="pmd-bar-legend"><span class="c-yes">👍 ${esc(yesLabel())} ${p}%</span><span class="c-no">👎 ${esc(noLabel())} ${100-p}%</span></div>
     </section>
 
     <section class="pmd-chart">${renderChart(ACTIVE_TRADES, p)}</section>
@@ -217,9 +219,11 @@ async function loadPositions(body){
 
 function emptyTab(msg){ return `<div class="pmd-tab-empty">${msg}</div>`; }
 
-/* ----- 댓글: 배틀식 (YES/NO 진영 + 좋아요 + 대댓글) ----- */
+/* ----- 댓글: 배틀식 (👍/👎 진영 + 좋아요 + 대댓글 @멘션) ----- */
 let CMT_SIDE = 'yes';
-function cmtSideLabel(side){ return isMulti() ? (side==='yes'?'긍정':'부정') : (side==='yes'?'YES 진영':'NO 진영'); }
+function cmtSideLabel(side){ return isMulti() ? (side==='yes'?'👍 긍정':'👎 부정') : (side==='yes'?'👍 YES':'👎 NO'); }
+// @멘션 하이라이트
+function cmtBody(content){ return esc(content).replace(/@(\S+)/g,'<span class="pmd-mention">@$1</span>'); }
 
 async function loadComments(body){
   if(POS){ CMT_SIDE = (POS.no_shares > POS.yes_shares) ? 'no' : 'yes'; }
@@ -228,6 +232,7 @@ async function loadComments(body){
     .order('created_at',{ascending:true}).limit(300);
 
   const profs = await fetchProfiles((rows||[]).map(c=>c.user_id));
+  const nick = uid => profs[uid]?.nickname || '익명';
   const ids=(rows||[]).map(c=>c.id);
   const likeAgg={}; const myLikes=new Set();
   if(ids.length){
@@ -235,25 +240,32 @@ async function loadComments(body){
     likes?.forEach(l=>{ likeAgg[l.comment_id]=(likeAgg[l.comment_id]||0)+1; if(ME&&l.user_id===ME.id) myLikes.add(l.comment_id); });
   }
 
-  // 부모/자식 분류
+  // parent_id는 항상 최상위 댓글 id → 답글은 그 아래로 flat하게 쌓임
+  const byId={}; (rows||[]).forEach(c=>byId[c.id]=c);
   const tops=(rows||[]).filter(c=>!c.parent_id).reverse(); // 최신 부모 위로
   const childrenOf={}; (rows||[]).forEach(c=>{ if(c.parent_id) (childrenOf[c.parent_id]||=[]).push(c); });
+  Object.values(childrenOf).forEach(a=>a.sort((x,y)=>new Date(x.created_at)-new Date(y.created_at)));
 
-  const renderOne=(c,isReply)=>{
+  const cmtHtml=(c,isReply,topId)=>{
     const liked=myLikes.has(c.id);
-    const kids=childrenOf[c.id]||[];
-    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}">
+    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
       <div class="pmd-cmt-head">
-        <span class="pmd-cmt-flag ${c.side}">${c.side.toUpperCase()}</span>
-        <span class="pmd-cmt-name">${esc(profs[c.user_id]?.nickname||'익명')}</span>
+        <span class="pmd-cmt-flag ${c.side}">${c.side==='yes'?'👍':'👎'}</span>
+        <span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
       </div>
-      <div class="pmd-cmt-body">${esc(c.content)}</div>
+      <div class="pmd-cmt-body">${cmtBody(c.content)}</div>
       <div class="pmd-cmt-actions">
         <button class="pmd-cmt-like ${liked?'on':''}" data-id="${c.id}">♥ <span>${likeAgg[c.id]||0}</span></button>
-        ${!isReply?`<button class="pmd-cmt-reply" data-id="${c.id}">답글</button>`:''}
+        <button class="pmd-cmt-reply" data-id="${c.id}">답글</button>
       </div>
-      ${kids.length?`<div class="pmd-cmt-replies">${kids.map(k=>renderOne(k,true)).join('')}</div>`:''}
+    </div>`;
+  };
+  const renderThread=(c)=>{
+    const kids=childrenOf[c.id]||[];
+    return `<div class="pmd-cmt-thread">
+      ${cmtHtml(c,false,c.id)}
+      ${kids.length?`<div class="pmd-cmt-replies">${kids.map(k=>cmtHtml(k,true,c.id)).join('')}</div>`:''}
       <div class="pmd-cmt-replybox" id="replybox-${c.id}" hidden></div>
     </div>`;
   };
@@ -270,7 +282,7 @@ async function loadComments(body){
       </div>
     </div>
     <div class="pmd-cmt-list">
-      ${tops.length ? tops.map(c=>renderOne(c,false)).join('') : emptyTab('첫 의견을 남겨보세요!')}
+      ${tops.length ? tops.map(renderThread).join('') : emptyTab('첫 의견을 남겨보세요!')}
     </div>`;
 
   // 진영 선택
@@ -283,32 +295,34 @@ async function loadComments(body){
   $('cmtSend').addEventListener('click', ()=>postComment($('cmtInput').value, CMT_SIDE, null, body));
   // 좋아요
   body.querySelectorAll('.pmd-cmt-like').forEach(b=>b.addEventListener('click', async ()=>{
-    if(!ME){location.href='login.html';return;}
+    if(needLogin())return;
     const id=Number(b.dataset.id); const on=b.classList.contains('on');
     const span=b.querySelector('span'); let n=Number(span.textContent);
     if(on){ await supa.from('market_comment_likes').delete().eq('comment_id',id).eq('user_id',ME.id); b.classList.remove('on'); span.textContent=Math.max(0,n-1); }
     else { const {error}=await supa.from('market_comment_likes').insert({comment_id:id,user_id:ME.id}); if(!error){ b.classList.add('on'); span.textContent=n+1; } }
   }));
-  // 답글 토글 → 대댓글 입력창
+  // 답글 → 해당 스레드 최하단 입력창(@멘션 자동)
   body.querySelectorAll('.pmd-cmt-reply').forEach(b=>b.addEventListener('click', ()=>{
-    if(!ME){location.href='login.html';return;}
-    const id=Number(b.dataset.id);
-    const box=$('replybox-'+id);
-    if(!box.hidden){ box.hidden=true; box.innerHTML=''; return; }
+    if(needLogin())return;
+    const cmtEl=b.closest('.pmd-cmt');
+    const topId=Number(cmtEl.dataset.top);
+    const author=cmtEl.dataset.author;
+    const box=$('replybox-'+topId);
     box.hidden=false;
     box.innerHTML=`<div class="pmd-cmt-inputrow reply">
-      <input class="pmd-cmt-input reply-input" maxlength="300" placeholder="답글 달기…">
+      <input class="pmd-cmt-input reply-input" maxlength="300" value="@${author} " placeholder="답글 달기…">
       <button class="pmd-cmt-send reply-send">게시</button>
     </div>`;
-    const inp=box.querySelector('.reply-input'); inp.focus();
-    box.querySelector('.reply-send').addEventListener('click', ()=>postComment(inp.value, CMT_SIDE, id, body));
+    const inp=box.querySelector('.reply-input'); inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
+    box.querySelector('.reply-send').addEventListener('click', ()=>postComment(inp.value, CMT_SIDE, topId, body));
+    box.scrollIntoView({block:'nearest',behavior:'smooth'});
   }));
 }
 
 async function postComment(text, side, parentId, body){
-  if(!ME){location.href='login.html';return;}
+  if(needLogin())return;
   const txt=(text||'').trim();
-  if(!txt)return toast('의견을 입력하세요.');
+  if(!txt || txt.startsWith('@')&&txt.replace(/^@\S+\s*/,'').length===0)return toast('의견을 입력하세요.');
   const payload={market_id:marketId,user_id:ME.id,side,content:txt};
   if(parentId) payload.parent_id=parentId;
   const { error } = await supa.from('market_comments').insert(payload);
@@ -328,7 +342,7 @@ function renderChart(trades, curP){
   return `<svg viewBox="0 0 ${W} ${H}" class="pmd-chart-svg" preserveAspectRatio="none">
     <path d="${area}" fill="rgba(51,86,255,.14)"/>
     <path d="${line}" fill="none" stroke="#3356ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-  </svg><div class="pmd-chart-cap">${esc(yesLabel())} 확률 추이</div>`;
+  </svg><div class="pmd-chart-cap">👍 ${esc(yesLabel())} 확률 추이</div>`;
 }
 
 // 다중 후보 선택기
@@ -354,11 +368,11 @@ function renderPosition(){
   return `
   <section class="pmd-pos">
     <div class="pmd-pos-title">내 포지션 · ${esc(multi?ACTIVE.label:'예/아니오')}</div>
-    <div class="pmd-pos-row"><span>${yl} 셰어</span><b class="c-yes">${fmt(y)}</b></div>
-    <div class="pmd-pos-row"><span>${nl} 셰어</span><b class="c-no">${fmt(n)}</b></div>
+    <div class="pmd-pos-row"><span>👍 ${yl} 셰어</span><b class="c-yes">${fmt(y)}</b></div>
+    <div class="pmd-pos-row"><span>👎 ${nl} 셰어</span><b class="c-no">${fmt(n)}</b></div>
     <div class="pmd-pos-row"><span>투입 포인트</span><b>${fmt(POS.spent)}P</b></div>
     ${m.resolved ? `<div class="pmd-pos-row payout"><span>정산 수령</span><b>+${fmt(won?y:n)}P</b></div>`
-      : `<div class="pmd-pos-hint">적중 시 셰어 1개당 1P 지급 (${yl} → ${fmt(y)}P / ${nl} → ${fmt(n)}P)</div>`}
+      : `<div class="pmd-pos-hint">적중 시 셰어 1개당 1P 지급 (👍 ${yl} → ${fmt(y)}P / 👎 ${nl} → ${fmt(n)}P)</div>`}
   </section>`;
 }
 
@@ -367,9 +381,10 @@ function renderTrade(){
   return `
   <section class="pmd-trade">
     ${isMulti()?`<div class="pmd-trade-oc">선택: <b>${esc(ACTIVE.label)}</b></div>`:''}
+    ${ME?`<div class="pmd-trade-bal" id="tradeBalance">보유 ${fmt(MY_BAL)}P</div>`:''}
     <div class="pmd-side-toggle">
-      <button class="pmd-side yes active" data-side="yes">${yl} 매수</button>
-      <button class="pmd-side no" data-side="no">${nl} 매수</button>
+      <button class="pmd-side yes active" data-side="yes">👍 ${yl} 매수</button>
+      <button class="pmd-side no" data-side="no">👎 ${nl} 매수</button>
     </div>
     <div class="pmd-amount-row">
       <input id="tradeAmt" class="pmd-amount" type="number" min="1" placeholder="투입 포인트" inputmode="numeric">
@@ -381,7 +396,7 @@ function renderTrade(){
       </div>
     </div>
     <div id="tradeEst" class="pmd-est">포인트를 입력하세요</div>
-    <button id="tradeBtn" class="pmd-buy">YES 매수</button>
+    <button id="tradeBtn" class="pmd-buy yes">👍 ${yl} 매수</button>
   </section>`;
 }
 
@@ -412,7 +427,7 @@ function bindTrade(){
     SIDE=b.dataset.side;
     document.querySelectorAll('.pmd-side').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
-    $('tradeBtn').textContent = (SIDE==='yes'?yl:nl)+' 매수';
+    $('tradeBtn').textContent = (SIDE==='yes'?'👍 '+yl:'👎 '+nl)+' 매수';
     $('tradeBtn').className = 'pmd-buy '+SIDE;
     updateEst();
   }));
@@ -436,12 +451,12 @@ function updateEst(){
   if(s<=0){est.textContent='포인트를 입력하세요';return;}
   const shares=estShares(ACTIVE,SIDE,s);
   const avg=s/shares;
-  const sideL=SIDE==='yes'?(isMulti()?ACTIVE.label:'YES'):(isMulti()?'아님':'NO');
+  const sideL=(SIDE==='yes'?'👍 '+(isMulti()?ACTIVE.label:'YES'):'👎 '+(isMulti()?'아님':'NO'));
   est.innerHTML=`예상 <b>${fmt(shares)}</b> ${esc(sideL)} 셰어 · 평균가 ${(avg*100).toFixed(1)}% · 적중 시 <b class="c-yes">+${fmt(shares)}P</b>`;
 }
 
 async function doTrade(){
-  if(!ME){location.href='login.html';return;}
+  if(needLogin())return;
   const s=Number($('tradeAmt').value)||0;
   if(s<=0)return toast('투입 포인트를 입력하세요.');
   const btn=$('tradeBtn'); btn.disabled=true; const orig=btn.textContent; btn.textContent='처리 중…';
@@ -451,7 +466,7 @@ async function doTrade(){
     btn.disabled=false;btn.textContent=orig;
     return toast(data.reason==='insufficient'?'포인트가 부족합니다.':data.reason==='closed'?'마감된 마켓입니다.':'거래할 수 없습니다.');
   }
-  $('pointBalance').textContent=fmt(data.balance)+'P';
+  MY_BAL=data.balance;
   toast(`매수 완료! ${fmt(data.shares)}셰어`);
   await loadMarket(); // 가격·포지션·차트 갱신
 }

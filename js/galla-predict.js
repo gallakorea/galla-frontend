@@ -219,7 +219,7 @@ function renderMarkets() {
       const p = outs[0] ? outcomePct(outs[0]) : 50;
       probBlock = `<div class="mc-prob">
         <div class="mc-prob-bar"><div class="mc-prob-yes" style="width:${p}%"></div></div>
-        <div class="mc-prob-legend"><span class="mc-yes">YES ${p}%</span><span class="mc-no">NO ${100 - p}%</span></div>
+        <div class="mc-prob-legend"><span class="mc-yes">👍 YES ${p}%</span><span class="mc-no">👎 NO ${100 - p}%</span></div>
       </div>`;
     }
 
