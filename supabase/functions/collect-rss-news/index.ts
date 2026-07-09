@@ -17,9 +17,22 @@ const FEEDS: [string, string][] = [
   ["뉴시스", "https://www.newsis.com/RSS/economy.xml"],
   ["뉴시스", "https://www.newsis.com/RSS/society.xml"],
   ["연합뉴스TV", "https://www.yonhapnewstv.co.kr/browse/feed/"],
-  // 조중동
+  // 조선일보 (전체 + 카테고리)
   ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml"],
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/politics/?outputType=xml"],
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/economy/?outputType=xml"],
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/national/?outputType=xml"],
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/international/?outputType=xml"],
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/culture-life/?outputType=xml"],
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/sports/?outputType=xml"],
+  // 동아일보 (전체 + 카테고리)
   ["동아일보", "https://rss.donga.com/total.xml"],
+  ["동아일보", "https://rss.donga.com/politics.xml"],
+  ["동아일보", "https://rss.donga.com/national.xml"],
+  ["동아일보", "https://rss.donga.com/economy.xml"],
+  ["동아일보", "https://rss.donga.com/international.xml"],
+  ["동아일보", "https://rss.donga.com/culture.xml"],
+  ["동아일보", "https://rss.donga.com/sports.xml"],
   // 종합일간
   ["경향신문", "https://www.khan.co.kr/rss/rssdata/total_news.xml"],
   ["경향신문", "https://www.khan.co.kr/rss/rssdata/politic_news.xml"],
