@@ -627,41 +627,16 @@ function applySideColoring() {
 
 /* =========================================================
    모바일 키보드 대응
-   - 입력창 포커스 시 컴포저를 키보드 바로 위에 고정
-   - 하단 네비는 숨겨서 화면이 겹쳐 넘어가는 문제 방지
+   - 입력창 포커스 시: 하단 네비를 숨기고 컴포저를 bottom:0으로 내림
+   - iOS/안드로이드가 fixed 요소를 키보드 위로 배치하므로,
+     bottom:0 하나만 남기면 키보드 바로 위에 깔끔히 붙는다.
+     (gap 수동 계산은 iOS 자동추적과 겹쳐 이중으로 밀리므로 사용하지 않음)
 ========================================================= */
 (function () {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const getBar = () => document.querySelector(".battle-input-bar");
+  const isInput = (el) => el && el.id === "battle-comment-input";
+  const open = () => document.body.classList.add("kb-open");
+  const close = () => document.body.classList.remove("kb-open");
 
-  function apply() {
-    const bar = getBar();
-    if (!bar) return;
-    // 키보드가 가린 높이(레이아웃 좌표 기준)
-    const gap = Math.max(0, window.innerHeight - (vv.height + vv.offsetTop));
-    if (gap > 120) {
-      document.body.classList.add("kb-open");
-      bar.style.bottom = gap + "px";
-    } else {
-      document.body.classList.remove("kb-open");
-      bar.style.bottom = "";
-    }
-  }
-
-  vv.addEventListener("resize", apply);
-  vv.addEventListener("scroll", apply);
-
-  document.addEventListener("focusin", (e) => {
-    if (e.target && e.target.id === "battle-comment-input") setTimeout(apply, 60);
-  });
-  document.addEventListener("focusout", (e) => {
-    if (e.target && e.target.id === "battle-comment-input") {
-      setTimeout(() => {
-        document.body.classList.remove("kb-open");
-        const bar = getBar();
-        if (bar) bar.style.bottom = "";
-      }, 60);
-    }
-  });
+  document.addEventListener("focusin", (e) => { if (isInput(e.target)) open(); });
+  document.addEventListener("focusout", (e) => { if (isInput(e.target)) setTimeout(close, 100); });
 })();

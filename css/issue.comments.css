@@ -462,12 +462,15 @@
   padding-bottom: 180px;
 }
 
-/* 모바일 키보드가 열렸을 때: 하단 네비 숨기고 컴포저는 JS가 키보드 위로 고정 */
+/* 모바일 키보드가 열렸을 때:
+   - 하단 네비 숨김(키보드 위에 함께 떠서 겹치는 문제 제거)
+   - 컴포저를 bottom:0으로 내려 키보드 바로 위에 붙임 */
 body.kb-open .nav {
   display: none;
 }
 body.kb-open .battle-input-bar {
-  z-index: 10000; /* 키보드 위, 네비 위 */
+  bottom: 0;
+  z-index: 10000; /* 키보드 위 */
 }
 
 
