@@ -59,12 +59,14 @@
         </div>
     </section>
 
-    <!-- TABS -->
+    <!-- TABS
+         ⚠️ 1단계: My 갈라 / Battle 갈라 숨김. 2단계 오픈 시 hidden 속성만 제거하면 복원. -->
     <section class="tabs">
-        <div class="tab active" data-tab="my">My 갈라</div>
-        <div class="tab" data-tab="battle">Battle 갈라</div>
-        <div class="tab" data-tab="save">Save 갈라</div>
-        <div class="tab" data-tab="favorite">즐겨찾기</div>
+        <div class="tab" data-tab="my" hidden>My 갈라</div>
+        <div class="tab" data-tab="battle" hidden>Battle 갈라</div>
+        <div class="tab active" data-tab="save">🔖 Save 갈라</div>
+        <div class="tab" data-tab="news">📰 저장한 뉴스</div>
+        <div class="tab" data-tab="follower">👥 팔로워</div>
     </section>
 
     <!-- CONTENT -->

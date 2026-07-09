@@ -349,15 +349,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // =====================================================
-    // Save 갈라 — 내가 북마크한 이슈
+    // 인스타 그리드 카드 (정사각 썸네일 + 하단 타이틀 오버레이)
+    // =====================================================
+    const igCard = ({ thumb, title, badge, onClick }) => {
+        const card = document.createElement("div");
+        card.className = "ig-card";
+        card.innerHTML = `
+            <img src="${thumb || "./assets/logo.png"}" loading="lazy"
+                 onerror="this.src='./assets/logo.png'">
+            ${badge ? `<span class="ig-badge">${badge}</span>` : ""}
+            <div class="ig-title">${title || ""}</div>
+        `;
+        card.onclick = onClick;
+        return card;
+    };
+
+    const emptyMsg = (msg) => `
+        <div class="tab-empty" style="color:#777;font-size:14px;padding:24px 16px;">${msg}</div>`;
+
+    // =====================================================
+    // Save 갈라 — 내가 북마크한 이슈 (인스타 그리드)
     // =====================================================
     const renderSave = async () => {
+        tabContent.className = "content-area";
         if (!isMyPage) {
-            tabContent.innerHTML = `
-                <div style="color:#777;font-size:14px;padding:20px;">
-                    저장한 갈라는 본인만 볼 수 있습니다.
-                </div>
-            `;
+            tabContent.innerHTML = emptyMsg("저장한 갈라는 본인만 볼 수 있습니다.");
             return;
         }
 
@@ -371,91 +387,134 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (bmError) {
             console.error("[Save Galla] bookmarks error", bmError);
-            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            tabContent.innerHTML = emptyMsg("불러오기 실패");
             return;
         }
 
         if (!bookmarks || bookmarks.length === 0) {
-            tabContent.innerHTML = `
-                <div style="color:#777;font-size:14px;padding:20px;">
-                    저장한 갈라가 없습니다. 피드에서 북마크 아이콘을 눌러 저장해보세요.
-                </div>
-            `;
+            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드에서 북마크 아이콘을 눌러 저장해보세요.");
             return;
         }
 
         const issueIds = bookmarks.map(b => b.issue_id);
         const { data: issues, error: issueError } = await supabase
             .from("issues")
-            .select("id, title, score, thumbnail_url")
+            .select("id, title, thumbnail_url, video_url, images")
             .in("id", issueIds);
 
         if (issueError) {
             console.error("[Save Galla] issues error", issueError);
-            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            tabContent.innerHTML = emptyMsg("불러오기 실패");
             return;
         }
 
         const issueMap = {};
         (issues || []).forEach(i => issueMap[i.id] = i);
 
+        tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
         issueIds.forEach(id => {
             const issue = issueMap[id];
             if (!issue) return; // 삭제된 이슈
-
-            const card = document.createElement("div");
-            card.className = "thumb-card";
-            card.innerHTML = `
-                <img src="${issue.thumbnail_url || "./assets/logo.png"}">
-                <div class="thumb-title">${issue.title}</div>
-                <div class="thumb-author">🔖 저장한 갈라</div>
-                <div class="thumb-stats">
-                    <span>🔥 ${issue.score ?? 0}</span>
-                </div>
-            `;
-            card.onclick = () => location.href = `issue.html?id=${issue.id}`;
-            tabContent.appendChild(card);
+            const thumb = issue.thumbnail_url
+                || (Array.isArray(issue.images) && issue.images[0])
+                || null;
+            tabContent.appendChild(igCard({
+                thumb,
+                title: issue.title,
+                badge: issue.video_url ? "▶" : "",
+                onClick: () => location.href = `issue.html?id=${issue.id}`
+            }));
         });
     };
 
     // =====================================================
-    // 즐겨찾기 — 팔로우한 사용자
+    // 저장한 뉴스 — 갈라뉴스 북마크 (인스타 그리드)
     // =====================================================
-    const renderFavorite = async () => {
+    const renderNews = async () => {
+        tabContent.className = "content-area";
+        if (!isMyPage) {
+            tabContent.innerHTML = emptyMsg("저장한 뉴스는 본인만 볼 수 있습니다.");
+            return;
+        }
+
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        const { data: bms, error: bmErr } = await supabase
+            .from("galla_news_bookmarks")
+            .select("news_id, created_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false });
+
+        if (bmErr) {
+            console.error("[Saved News] error", bmErr);
+            tabContent.innerHTML = emptyMsg("불러오기 실패");
+            return;
+        }
+
+        if (!bms || bms.length === 0) {
+            tabContent.innerHTML = emptyMsg("저장한 뉴스가 없습니다.<br>갈라뉴스에서 🔖 저장을 눌러보세요.");
+            return;
+        }
+
+        const newsIds = bms.map(b => b.news_id);
+        const { data: newsRows } = await supabase
+            .from("galla_news")
+            .select("id, title, hero_image, category")
+            .in("id", newsIds);
+
+        const newsMap = {};
+        (newsRows || []).forEach(n => newsMap[n.id] = n);
+
+        tabContent.className = "content-area grid";
+        tabContent.innerHTML = "";
+
+        newsIds.forEach(id => {
+            const n = newsMap[id];
+            if (!n) return;
+            tabContent.appendChild(igCard({
+                thumb: n.hero_image,
+                title: n.title,
+                badge: "📰",
+                onClick: () => location.href = `search.html?gn=${n.id}`
+            }));
+        });
+    };
+
+    // =====================================================
+    // 팔로워 — 나를 팔로우하는 사용자
+    // =====================================================
+    const renderFollower = async () => {
+        tabContent.className = "content-area";
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
         const { data: follows, error: followError } = await supabase
             .from("follows")
-            .select("following")
-            .eq("follower", viewUserId)
+            .select("follower")
+            .eq("following", viewUserId)
             .order("created_at", { ascending: false });
 
         if (followError) {
-            console.error("[Favorite] follows error", followError);
-            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            console.error("[Follower] follows error", followError);
+            tabContent.innerHTML = emptyMsg("불러오기 실패");
             return;
         }
 
         if (!follows || follows.length === 0) {
-            tabContent.innerHTML = `
-                <div style="color:#777;font-size:14px;padding:20px;">
-                    팔로우한 사용자가 없습니다.
-                </div>
-            `;
+            tabContent.innerHTML = emptyMsg("아직 팔로워가 없습니다.");
             return;
         }
 
-        const followingIds = follows.map(f => f.following);
+        const followerIds = follows.map(f => f.follower);
         const { data: followUsers, error: usersError } = await supabase
             .from("users")
             .select("id, nickname, level, avatar_url")
-            .in("id", followingIds);
+            .in("id", followerIds);
 
         if (usersError) {
-            console.error("[Favorite] users error", usersError);
-            tabContent.innerHTML = `<div style="color:#777">불러오기 실패</div>`;
+            console.error("[Follower] users error", usersError);
+            tabContent.innerHTML = emptyMsg("불러오기 실패");
             return;
         }
 
@@ -464,7 +523,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         tabContent.innerHTML = "";
 
-        followingIds.forEach(fid => {
+        followerIds.forEach(fid => {
             const u = userMap[fid];
             if (!u) return;
 
@@ -490,6 +549,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     };
 
+    // =====================================================
+    // 탭 카운트 뱃지 (Save/뉴스/팔로워)
+    // =====================================================
+    async function loadTabCounts() {
+        const setCount = (tabName, n) => {
+            const el = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            if (el && typeof n === "number") {
+                el.innerHTML = el.innerHTML.replace(/ <span class="tab-count">.*<\/span>/, "")
+                    + ` <span class="tab-count">${n}</span>`;
+            }
+        };
+        if (isMyPage) {
+            const [{ count: bm }, { count: nbm }] = await Promise.all([
+                supabase.from("bookmarks").select("issue_id", { count: "exact", head: true }).eq("user_id", userId),
+                supabase.from("galla_news_bookmarks").select("news_id", { count: "exact", head: true }).eq("user_id", userId)
+            ]);
+            setCount("save", bm ?? 0);
+            setCount("news", nbm ?? 0);
+        }
+        const { count: fl } = await supabase
+            .from("follows").select("id", { count: "exact", head: true }).eq("following", viewUserId);
+        setCount("follower", fl ?? 0);
+    }
+    loadTabCounts();
+
     // ---------------------------
     // 탭 클릭 이벤트
     // ---------------------------
@@ -501,16 +585,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             const menu = tab.dataset.tab;
 
             switch (menu) {
-                case "my": renderMy(); break;
-                case "battle": renderBattle(); break;
+                case "my": renderMy(); break;          // 2단계 복원용
+                case "battle": renderBattle(); break;  // 2단계 복원용
                 case "save": renderSave(); break;
-                case "favorite": renderFavorite(); break;
+                case "news": renderNews(); break;
+                case "follower": renderFollower(); break;
             }
         });
     });
 
     // ---------------------------
-    // 기본 탭
+    // 기본 탭 (1단계: Save 갈라)
     // ---------------------------
-    renderMy();
+    renderSave();
 });

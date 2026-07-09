@@ -605,8 +605,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function openGallaNews(id) {
-    const n = GALLA_CACHE[id];
-    if (!n) return;
+    let n = GALLA_CACHE[id];
+    if (!n) {
+      // 딥링크(?gn=) 등 캐시 미스 → 직접 조회
+      const { data } = await supabase.from("galla_news")
+        .select("id,title,summary,category,hero_image,source_count,published_at")
+        .eq("id", id).maybeSingle();
+      if (!data) return;
+      GALLA_CACHE[id] = data;
+      n = data;
+    }
     viewerTitle.textContent = n.title || "갈라뉴스";
     viewerExt.style.display = "none";
     viewerFallback.hidden = true;
@@ -947,6 +955,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderRecent();
   loadPopular();
   showEmpty(true);
-  activateTab("search");
-  input.focus();
+
+  // 딥링크: ?gn=<id> → 갈라뉴스 리더 바로 열기 (마이페이지 '저장한 뉴스' 등)
+  const gnParam = new URLSearchParams(location.search).get("gn");
+  if (gnParam) {
+    activateTab("news");
+    openGallaNews(gnParam);
+  } else {
+    activateTab("search");
+    input.focus();
+  }
 });
