@@ -80,8 +80,9 @@ function renderMedia(data) {
         carouselState[data.id] = { idx: 0, total };
         const dotsHtml = imgs.map((_, i) =>
             `<div class="carousel-dot ${i === 0 ? 'on' : ''}"></div>`).join('');
+        // 캐러셀은 lazy 금지 — 가로 오프스크린이라 안 불러와져 넘기면 빈 슬라이드가 됨
         const slidesHtml = imgs.map(url =>
-            `<div class="carousel-slide"><img src="${url}" loading="lazy"></div>`).join('');
+            `<div class="carousel-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
         return `
         <div class="card-media" onclick="event.stopPropagation()">
             <div class="carousel-wrap">

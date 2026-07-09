@@ -227,7 +227,7 @@ function renderIssueMedia(issue) {
         issueCarouselTotal = images.length;
         issueCarouselIdx = 0;
         const dots = images.map((_, i) => `<div class="issue-c-dot ${i===0?'on':''}"></div>`).join('');
-        const slides = images.map(url => `<div class="issue-slide"><img src="${url}" loading="lazy"></div>`).join('');
+        const slides = images.map(url => `<div class="issue-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
         wrap.innerHTML = `
         <div class="issue-media">
             <div class="issue-carousel">
