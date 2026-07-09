@@ -351,8 +351,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (b) { activateTab("search"); runSearch(b.dataset.kw, true); }
     };
 
-    // 2) 갈라에서 뜨는 — 예측(마켓) + 이슈
-    const [mkRes, giRes] = await Promise.all([
+    // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 예측
+    const [gnRes, giRes, mkRes] = await Promise.all([
+      supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at")
+        .eq("status", "published").order("published_at", { ascending: false }).limit(24),
+      supabase.from("issues")
+        .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
+        .order("hot_score", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }).limit(8),
       (async () => {
         const { data } = await supabase.from("markets")
           .select("id,question,category,volume,market_type")
@@ -371,25 +377,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
         return markets;
       })(),
-      supabase.from("issues")
-        .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
-        .order("hot_score", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false }).limit(8),
     ]);
 
-    const markets = mkRes, gi = giRes.data || [];
+    // 인기 뉴스: 참여도(좋아요+댓글) 상위, 없으면 최신
+    let gnews = gnRes.data || [];
+    if (gnews.length) {
+      const ids = gnews.map(n => n.id);
+      const [cRes, rRes] = await Promise.all([
+        supabase.from("galla_news_comments").select("news_id").in("news_id", ids),
+        supabase.from("galla_news_reactions").select("news_id,value").in("news_id", ids),
+      ]);
+      const cC = {}, lk = {};
+      (cRes.data || []).forEach(r => cC[r.news_id] = (cC[r.news_id] || 0) + 1);
+      (rRes.data || []).forEach(r => { if (r.value === 1) lk[r.news_id] = (lk[r.news_id] || 0) + 1; });
+      gnews.forEach(n => { n._c = cC[n.id] || 0; n._l = lk[n.id] || 0; GALLA_CACHE[n.id] = Object.assign(n, { cCount: n._c, likes: n._l, dislikes: 0, myReact: 0, saved: false }); });
+      gnews.sort((a, b) => (b._l + b._c * 2) - (a._l + a._c * 2) || new Date(b.published_at) - new Date(a.published_at));
+      gnews = gnews.slice(0, 6);
+    }
+    const gi = giRes.data || [], markets = mkRes;
+
     let html = "";
-    if (markets.length) {
-      html += `<div class="tr-group"><div class="tr-group-head">🔮 뜨는 예측</div>` + markets.map(m =>
-        `<a class="sr-card predict" href="predict-market.html?id=${m.id}">
+    if (gnews.length) {
+      html += `<div class="tr-group"><div class="tr-group-head">📰 인기 뉴스</div>` + gnews.map(n => {
+        const th = isValidThumbnail(n.hero_image);
+        return `<div class="sr-card gn-trend" data-gid="${n.id}">
+          <div class="sr-thumb">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">GALLA</span>`}</div>
           <div class="sr-body">
-            <div class="sr-cat">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""}</div>
-            <div class="sr-title">${esc(m.question)}</div>
-            ${m._top ? `<div class="sr-pred"><b>${m._top.p}%</b> <span>${esc(m._top.label)}</span></div>` : ""}
-            <div class="sr-meta">💰 거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</div>
+            <div class="sr-cat">${esc(n.category || "")} · 갈라뉴스</div>
+            <div class="sr-title">${esc(n.title)}</div>
+            <div class="sr-meta">👍 ${n._l} · 💬 ${n._c} · ${timeAgo(n.published_at)}</div>
           </div>
-          <div class="sr-go">›</div>
-        </a>`).join("") + `</div>`;
+        </div>`;
+      }).join("") + `</div>`;
     }
     if (gi.length) {
       html += `<div class="tr-group"><div class="tr-group-head">🗳 뜨는 이슈</div>` + gi.map(i => {
@@ -407,7 +426,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         </a>`;
       }).join("") + `</div>`;
     }
+    if (markets.length) {
+      html += `<div class="tr-group"><div class="tr-group-head">🔮 뜨는 예측</div>` + markets.map(m =>
+        `<a class="sr-card predict" href="predict-market.html?id=${m.id}">
+          <div class="sr-body">
+            <div class="sr-cat">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""}</div>
+            <div class="sr-title">${esc(m.question)}</div>
+            ${m._top ? `<div class="sr-pred"><b>${m._top.p}%</b> <span>${esc(m._top.label)}</span></div>` : ""}
+            <div class="sr-meta">💰 거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</div>
+          </div>
+          <div class="sr-go">›</div>
+        </a>`).join("") + `</div>`;
+    }
     gallaWrap.innerHTML = html || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
+    gallaWrap.onclick = e => {
+      const g = e.target.closest(".gn-trend");
+      if (g && g.dataset.gid) openGallaNews(g.dataset.gid);
+    };
   }
 
   /* ================= 뉴스 (실시간) ================= */
