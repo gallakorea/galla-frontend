@@ -698,3 +698,19 @@ body[data-page="search"] .header-inner {
   background: linear-gradient(90deg, #3356ff, #6d4bff); color: #fff;
   font-size: 14px; font-weight: 800; text-decoration: none;
 }
+
+/* 기사 리더 (엣지 함수로 긁어온 본문을 우리 포맷으로) */
+.news-viewer-reader {
+  position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: #0b0c14; padding: 20px 18px 64px;
+}
+.reader-loading { color: #8a93a6; text-align: center; padding: 64px 0; font-size: 14px; }
+.reader { max-width: 680px; margin: 0 auto; }
+.reader-title { font-size: 22px; font-weight: 900; line-height: 1.35; color: #fff; margin: 0 0 8px; word-break: keep-all; }
+.reader-sub { font-size: 12.5px; color: #8a93a6; margin-bottom: 16px; }
+.reader-hero { width: 100%; border-radius: 12px; margin-bottom: 18px; display: block; }
+.reader p { font-size: 16px; line-height: 1.75; color: #dfe4ee; margin: 0 0 16px; word-break: keep-all; }
+.reader-origin { display: inline-block; margin-top: 10px; color: #6d8bff; font-weight: 700; font-size: 14px; text-decoration: none; }
+
+/* hidden 속성이 display:flex/absolute 규칙에 먹히던 문제 — 명시적으로 숨김 */
+.news-viewer-fallback[hidden], .news-viewer-reader[hidden] { display: none !important; }

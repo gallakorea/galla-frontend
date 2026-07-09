@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const popularEl = document.getElementById("se-popular");
 
   const viewerModal = document.getElementById("news-viewer-modal");
-  const viewerFrame = document.getElementById("news-viewer-iframe");
+  const viewerReader = document.getElementById("news-viewer-reader");
   const viewerClose = document.getElementById("news-viewer-close");
   const viewerTitle = document.getElementById("news-viewer-title");
   const viewerExt = document.getElementById("news-viewer-ext");
@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function closeNewsViewer() {
     viewerModal.classList.add("hidden");
-    viewerFrame.src = "";
+    viewerReader.innerHTML = "";
     document.body.style.overflow = "";
   }
   viewerClose?.addEventListener("click", closeNewsViewer);
@@ -449,37 +449,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // iframe 삽입이 막히는(X-Frame-Options) 대표 도메인 → 처음부터 폴백 화면
-  const IFRAME_BLOCKED = ["naver.com", "daum.net", "chosun.com", "joins.com", "joongang.co.kr",
-    "hani.co.kr", "mk.co.kr", "sedaily.com", "khan.co.kr", "yna.co.kr", "yonhapnews",
-    "donga.com", "hankyung.com", "sbs.co.kr", "kbs.co.kr", "imbc.com", "jtbc.co.kr"];
+  const fmtDate = ts => {
+    const d = ts ? new Date(ts) : null;
+    return d && !isNaN(d) ? d.toLocaleDateString("ko-KR") : "";
+  };
+  let viewerSeq = 0;
 
-  function openNewsViewer(url, title, press) {
+  async function openNewsViewer(url, title, press) {
     if (!url) return;
-    viewerTitle.textContent = title || press || "기사 보기";
+    const my = ++viewerSeq;
+    viewerTitle.textContent = title || press || "기사";
     viewerExt.href = url;
     viewerFallbackBtn.href = url;
     document.querySelector("#news-viewer-fallback .nvf-title").textContent = title || "";
+    viewerFallback.hidden = true;
+    viewerReader.hidden = false;
+    viewerReader.scrollTop = 0;
+    viewerReader.innerHTML = `<div class="reader-loading">기사를 불러오는 중…</div>`;
     viewerModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
-    const blocked = IFRAME_BLOCKED.some(d => url.includes(d));
-    if (blocked) {
-      // 앱 안 삽입 불가 → 폴백(원문 열기 버튼)만 표시
-      viewerFrame.style.display = "none";
-      viewerFrame.src = "";
-      viewerFallback.hidden = false;
+    // 서버(엣지 함수)에서 원문 긁어와 우리 포맷으로 렌더
+    let d = null;
+    try {
+      const res = await supabase.functions.invoke("article-reader", { body: { url } });
+      d = res.data;
+    } catch (_e) { /* fall through */ }
+    if (my !== viewerSeq) return; // 그 사이 다른 기사 열림
+
+    if (d && d.ok && Array.isArray(d.paragraphs) && d.paragraphs.length) {
+      viewerReader.innerHTML = `
+        <article class="reader">
+          <h1 class="reader-title">${esc(d.title || title || "")}</h1>
+          <div class="reader-sub">${esc(d.siteName || press || "")}${d.published && fmtDate(d.published) ? " · " + fmtDate(d.published) : ""}</div>
+          ${isValidThumbnail(d.image) ? `<img class="reader-hero" src="${esc(d.image)}" onerror="this.style.display='none'">` : ""}
+          ${d.paragraphs.map(p => `<p>${esc(p)}</p>`).join("")}
+          <a class="reader-origin" href="${esc(url)}" target="_blank" rel="noopener noreferrer">원문 기사에서 보기 ↗</a>
+        </article>`;
     } else {
-      viewerFallback.hidden = true;
-      viewerFrame.style.display = "block";
-      viewerFrame.src = url;
-      // 일부 사이트는 헤더 차단으로 빈 화면 → 3.5초 안에 로드 못하면 폴백 노출
-      clearTimeout(viewerFrame.__t);
-      let loaded = false;
-      viewerFrame.onload = () => { loaded = true; };
-      viewerFrame.__t = setTimeout(() => {
-        if (!loaded) { viewerFrame.style.display = "none"; viewerFallback.hidden = false; }
-      }, 2500);
+      // 추출 실패 → 원문 열기 폴백
+      viewerReader.hidden = true;
+      viewerFallback.hidden = false;
     }
   }
 
