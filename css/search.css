@@ -389,26 +389,27 @@ body[data-page="search"] .header-inner {
 
 .news-category-chips {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   overflow-x: auto;
   padding: 8px 0 12px;
 }
 
 .news-category-chips button {
   flex-shrink: 0;
-  padding: 6px 12px;
-  border-radius: 999px;
+  padding: 7px 13px;
+  border-radius: 18px;
   font-size: 13px;
-  border: 1px solid #2a2e3a;
-  background: #14161d;
-  color: #aeb7c9;
+  border: 1px solid #333;
+  background: #171717;
+  color: #ccc;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .news-category-chips button.active {
   background: #fff;
   color: #000;
   border-color: #fff;
-  font-weight: 700;
 }
 
 /* 뉴스 카드 */
