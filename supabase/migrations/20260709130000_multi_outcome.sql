@@ -213,3 +213,18 @@ grant execute on function public.market_resolve(bigint,bigint,text) to authentic
 -- 옛 시그니처 정리 (market_trade는 동일 시그니처라 in-place 교체됨 → drop 금지)
 drop function if exists public.create_market(text,text,text,text,timestamptz,double precision);
 drop function if exists public.market_resolve(bigint,text);
+
+-- 위 drop table ... cascade 로 predict_god_leaderboard 뷰가 함께 삭제되므로 재생성
+create or replace view public.predict_god_leaderboard as
+select
+  m.created_by as user_id, up.nickname, up.level,
+  count(distinct m.id) as markets_created,
+  round(coalesce(sum(m.volume),0)::numeric,0) as total_volume,
+  coalesce((select count(distinct mp.user_id) from public.market_positions mp
+            join public.markets m2 on m2.id = mp.market_id
+            where m2.created_by = m.created_by),0) as participants
+from public.markets m
+left join public.user_profiles up on up.user_id = m.created_by
+where m.created_by is not null
+group by m.created_by, up.nickname, up.level;
+grant select on public.predict_god_leaderboard to anon, authenticated;
