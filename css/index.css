@@ -82,9 +82,9 @@ body { display: block; }
     flex-shrink: 0;
 }
 
-/* 영상 카드는 3:4 세로 */
+/* 영상 카드는 인스타 피드 추천 세로형 4:5 (1080x1350) */
 .card-media--video {
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 4 / 5;
 }
 
 .card-media video {
