@@ -306,6 +306,10 @@ async function loadTopNews() {
       press_name
     `)
     .gte("published_at", since)   // 🔥 이 줄이 핵심
+    // 렌더는 썸네일 있는 기사만 표시하므로, 최신 기사에 아직 썸네일이 안 붙은 경우
+    // 첫 페이지가 통째로 스킵돼 빈 화면이 되는 걸 방지 (썸네일 있는 기사만 조회)
+    .not("thumbnail_url", "is", null)
+    .neq("thumbnail_url", "")
     .order("published_at", { ascending: false })
     .order("id", { ascending: false });
     
