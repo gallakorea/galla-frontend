@@ -8,17 +8,37 @@ const supa = createClient(
 );
 
 const FEEDS: [string, string][] = [
+  // 통신/종합
   ["연합뉴스", "https://www.yna.co.kr/rss/news.xml"],
   ["연합뉴스", "https://www.yna.co.kr/rss/politics.xml"],
   ["연합뉴스", "https://www.yna.co.kr/rss/economy.xml"],
   ["연합뉴스", "https://www.yna.co.kr/rss/international.xml"],
+  ["뉴시스", "https://www.newsis.com/RSS/politics.xml"],
+  ["뉴시스", "https://www.newsis.com/RSS/economy.xml"],
+  ["뉴시스", "https://www.newsis.com/RSS/society.xml"],
+  ["연합뉴스TV", "https://www.yonhapnewstv.co.kr/browse/feed/"],
+  // 조중동
+  ["조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml"],
+  ["동아일보", "https://rss.donga.com/total.xml"],
+  // 종합일간
   ["경향신문", "https://www.khan.co.kr/rss/rssdata/total_news.xml"],
+  ["경향신문", "https://www.khan.co.kr/rss/rssdata/politic_news.xml"],
   ["한겨레", "https://www.hani.co.kr/rss/"],
-  ["머니투데이", "https://rss.mt.co.kr/mt_news.xml"],
-  ["전자신문", "https://rss.etnews.com/Section901.xml"],
-  ["오마이뉴스", "http://rss.ohmynews.com/rss/ohmynews.xml"],
-  ["SBS", "https://news.sbs.co.kr/news/headlineRssFeed.do?plink=RSSREADER"],
+  ["한겨레", "https://www.hani.co.kr/rss/politics/"],
   ["국민일보", "https://www.kmib.co.kr/rss/data/kmibRssAll.xml"],
+  ["서울신문", "https://www.seoul.co.kr/xml/rss/rss_politics.xml"],
+  ["세계일보", "https://www.segye.com/Articles/RSSList/segye_recent.xml"],
+  ["오마이뉴스", "http://rss.ohmynews.com/rss/ohmynews.xml"],
+  // 경제
+  ["매일경제", "https://www.mk.co.kr/rss/30000001/"],
+  ["한국경제", "https://www.hankyung.com/feed/all-news"],
+  ["머니투데이", "https://rss.mt.co.kr/mt_news.xml"],
+  // 방송
+  ["SBS", "https://news.sbs.co.kr/news/headlineRssFeed.do?plink=RSSREADER"],
+  // IT
+  ["전자신문", "https://rss.etnews.com/Section901.xml"],
+  ["ZDNet", "https://feeds.feedburner.com/zdkorea"],
+  ["아이뉴스24", "https://www.inews24.com/rss/news_all.xml"],
 ];
 
 const UA = "Mozilla/5.0 (compatible; GallaBot/1.0; +https://galla-frontend.pages.dev)";
@@ -36,6 +56,17 @@ const pick = (block: string, tag: string): string => {
   const m = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
   return m ? m[1] : "";
 };
+// RSS <link>URL</link> (+CDATA), Atom <link href="URL"/>, guid URL 모두 대응
+const decEnt = (s: string) => s.replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").trim();
+function pickLink(block: string): string {
+  let m = block.match(/<link>([\s\S]*?)<\/link>/i);
+  if (m) { const u = decEnt(m[1]); if (/^https?:/.test(u)) return u; }
+  const atom = [...block.matchAll(/<link\b[^>]*\bhref="([^"]+)"[^>]*\/?>/gi)];
+  for (const l of atom) { if (/^https?:/.test(l[1])) return l[1]; }
+  m = block.match(/<guid[^>]*>([\s\S]*?)<\/guid>/i);
+  if (m) { const u = decEnt(m[1]); if (/^https?:/.test(u)) return u; }
+  return "";
+}
 function pickImg(block: string): string | null {
   let m = block.match(/<(?:media:thumbnail|media:content|enclosure)[^>]*\burl="([^"]+)"/i);
   if (m) return m[1];
@@ -43,22 +74,33 @@ function pickImg(block: string): string | null {
   return m ? m[1] : null;
 }
 
+const diag: Record<string, string> = {};
 async function parseFeed(name: string, url: string) {
   const out: any[] = [];
+  const key = `${name}:${url.slice(-24)}`;
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 12000);
     const res = await fetch(url, { redirect: "follow", signal: ctl.signal, headers: { "User-Agent": UA, "Accept": "application/rss+xml,application/xml,text/xml,*/*" } });
     clearTimeout(t);
-    if (!res.ok) return out;
-    const xml = await res.text();
-    const items = xml.split(/<item[\s>]/i).slice(1, MAX_PER_FEED + 1);
+    if (!res.ok) { diag[key] = `http ${res.status}`; return out; }
+    const buf = await res.arrayBuffer();
+    // 한국 언론 RSS는 EUC-KR 인 경우가 있어 charset 감지 후 디코드
+    let xml = new TextDecoder("utf-8").decode(buf);
+    const cs = xml.match(/encoding="([^"]+)"/i)?.[1]?.toLowerCase();
+    if (cs && (cs.includes("euc-kr") || cs.includes("ks_c") || cs.includes("cp949"))) {
+      try { xml = new TextDecoder("euc-kr").decode(buf); } catch { /* keep utf8 */ }
+    }
+    const atomFeed = /<entry[\s>]/i.test(xml) && !/<item[\s>]/i.test(xml);
+    const items = xml.split(atomFeed ? /<entry[\s>]/i : /<item[\s>]/i).slice(1, MAX_PER_FEED + 1);
+    const closeTag = atomFeed ? /<\/entry>/i : /<\/item>/i;
     for (const raw of items) {
-      const block = raw.slice(0, raw.search(/<\/item>/i) >= 0 ? raw.search(/<\/item>/i) : raw.length);
-      const link = unwrap(pick(block, "link")) || unwrap(pick(block, "guid"));
+      const end = raw.search(closeTag);
+      const block = raw.slice(0, end >= 0 ? end : raw.length);
+      const link = pickLink(block);
       const title = unwrap(pick(block, "title"));
       if (!/^https?:\/\//.test(link) || !title) continue;
-      const pub = unwrap(pick(block, "pubDate"));
+      const pub = unwrap(pick(block, "pubDate")) || unwrap(pick(block, "published")) || unwrap(pick(block, "updated"));
       const d = pub ? new Date(pub) : null;
       out.push({
         source: "rss",
@@ -71,7 +113,8 @@ async function parseFeed(name: string, url: string) {
         processed: false,
       });
     }
-  } catch (_e) { /* 피드 하나 실패해도 나머지는 계속 */ }
+    diag[key] = `${out.length} items`;
+  } catch (e) { diag[key] = `err ${String(e).slice(0, 40)}`; }
   return out;
 }
 
@@ -94,6 +137,6 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    ok: true, feeds: FEEDS.length, fetched: rows.length, inserted, ms: Date.now() - started,
+    ok: true, feeds: FEEDS.length, fetched: rows.length, inserted, ms: Date.now() - started, diag,
   }), { headers: { "Content-Type": "application/json" } });
 });
