@@ -329,11 +329,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (plaza.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">🗣 플라자 <b>${plaza.length}</b></div>`;
+      html += `<div class="sr-sec"><div class="sr-sec-head">🗣 갈라 광장 <b>${plaza.length}</b></div>`;
       html += plaza.map(p => {
         const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
         return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
-          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">플라자</span>`}</div>
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">광장</span>`}</div>
           <div class="sr-body">
             <div class="sr-cat">${esc(p.category || "")}${p.nickname ? " · " + esc(p.nickname) : ""}</div>
             <div class="sr-title">${esc(p.title || "")}</div>
@@ -398,7 +398,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (b) { activateTab("search"); runSearch(b.dataset.kw, true); }
     };
 
-    // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 플라자 + 뜨는 예측
+    // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 갈라 광장 + 뜨는 예측
     const [gnRes, giRes, pzRes, mkRes] = await Promise.all([
       supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at")
         .eq("status", "published").not("hero_image", "is", null).neq("hero_image", "")
@@ -476,9 +476,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const plazaItems = plaza.map(p => {
       const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
       return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
-        <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">플라자</span>`}</div>
+        <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">광장</span>`}</div>
         <div class="sr-body">
-          <div class="sr-cat">${esc(p.category || "")} · 플라자</div>
+          <div class="sr-cat">${esc(p.category || "")} · 갈라 광장</div>
           <div class="sr-title">${esc(p.title || "")}</div>
           <div class="sr-meta">👍 ${p.up_count || 0} · 👎 ${p.down_count || 0}</div>
         </div>
@@ -496,7 +496,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       </a>`);
 
     const html = trGroup("📰 인기 뉴스", gnewsItems) + trGroup("🗳 뜨는 이슈", issueItems)
-      + trGroup("🔮 뜨는 예측", marketItems) + trGroup("🗣 뜨는 플라자", plazaItems);
+      + trGroup("🔮 뜨는 예측", marketItems) + trGroup("🗣 뜨는 갈라 광장", plazaItems);
     gallaWrap.innerHTML = html || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
     gallaWrap.onclick = e => {
       trMoreClick(e);
