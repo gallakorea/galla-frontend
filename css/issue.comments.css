@@ -462,6 +462,14 @@
   padding-bottom: 180px;
 }
 
+/* 모바일 키보드가 열렸을 때: 하단 네비 숨기고 컴포저는 JS가 키보드 위로 고정 */
+body.kb-open .nav {
+  display: none;
+}
+body.kb-open .battle-input-bar {
+  z-index: 10000; /* 키보드 위, 네비 위 */
+}
+
 
 #battle-comment-input {
   width: 100%;
