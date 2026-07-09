@@ -492,3 +492,34 @@ body {
   margin: 8px 0; font-size: 13px; color: #ccc; cursor: pointer;
 }
 .plaza-anon-row input { accent-color: #2f7df6; width: 16px; height: 16px; }
+
+/* ===========================================================
+   댓글: 작성자 헤더 + 좋아요/싫어요
+=========================================================== */
+.comment-meta {
+  display: flex; align-items: baseline; gap: 8px;
+  margin-bottom: 4px;
+}
+.comment-meta .cm-nick {
+  font-size: 13px; font-weight: 700; color: #8fb6ff;
+}
+.comment-meta .cm-time {
+  font-size: 11.5px; color: #777;
+}
+.comment-body { font-size: 15px; line-height: 1.55; }
+
+.comment-actions {
+  display: flex; align-items: center; gap: 8px; margin-top: 8px;
+}
+.cv-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #161616; border: 1px solid #2e2e2e; color: #bbb;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 12px; cursor: pointer;
+}
+.cv-btn span { font-weight: 700; }
+.cv-btn.cv-like.on { border-color: #4a7bff; color: #8fb6ff; background: rgba(74,123,255,.12); }
+.cv-btn.cv-dislike.on { border-color: #ff6b6b; color: #ff9b9b; background: rgba(255,107,107,.12); }
+.comment-actions .reply-btn {
+  background: none; border: none; color: #888; font-size: 12px; cursor: pointer; padding: 4px 6px;
+}

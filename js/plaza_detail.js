@@ -102,6 +102,9 @@ const postContentEl = document.querySelector(".post-content");
 
 document.body.style.paddingBottom = "140px";
 
+/* 댓글 좋아요/싫어요 (이벤트 위임) */
+commentList?.addEventListener("click", handleCommentVote);
+
 /*
 comment = {
   id,
@@ -119,9 +122,12 @@ let lastRenderedVote = 0; // 🔥 UI 기준 마지막 투표 상태
 let isVotingNow = false; // 🔥 투표 중 loadVoteState 차단
 
 async function fetchPostDetail() {
+  // 조회수 +1 (비동기, 실패 무시)
+  supabase.rpc("increment_plaza_view", { p_post_id: postId }).then(() => {});
+
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, nickname")
+    .select("title, body, category, nickname, view_count, created_at")
     .eq("id", postId)
     .single();
 
@@ -132,13 +138,19 @@ async function fetchPostDetail() {
 
   if (postTitleEl) postTitleEl.textContent = data.title;
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
-  if (postMetaEl) postMetaEl.textContent = `${data.nickname} · ${data.category}`;
+  if (postMetaEl) {
+    postMetaEl.textContent =
+      `${data.nickname} · ${data.category} · 조회 ${(data.view_count || 0) + 1}`;
+  }
 }
+
+/* 내 댓글 투표 상태 (comment_id → 1|-1) */
+let myCommentVotes = {};
 
 async function fetchComments(commentCountEl) {
   const { data, error } = await supabase
     .from("plaza_comments")
-    .select("id, parent_id, body, anon_name, created_at")
+    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
@@ -151,14 +163,82 @@ async function fetchComments(commentCountEl) {
     id: c.id,
     parent_id: c.parent_id,
     nickname: c.anon_name,
-    body: c.body
+    body: c.body,
+    created_at: c.created_at,
+    like_count: c.like_count || 0,
+    dislike_count: c.dislike_count || 0
   }));
+
+  // 로그인 상태면 내 투표 불러와 하이라이트
+  myCommentVotes = {};
+  const session = await getSessionSafe();
+  if (session?.user && comments.length) {
+    const { data: votes } = await supabase
+      .from("plaza_comment_votes")
+      .select("comment_id, value")
+      .in("comment_id", comments.map(c => c.id));
+    (votes || []).forEach(v => { myCommentVotes[v.comment_id] = v.value; });
+  }
 
   renderComments(comments);
 
   if (commentCountEl) {
     commentCountEl.textContent = comments.length;
   }
+}
+
+/* 상대 시간 */
+function timeAgoK(iso) {
+  if (!iso) return "";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return "방금 전";
+  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
+  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  return `${Math.floor(s / 86400)}일 전`;
+}
+
+/* 댓글 헤더 + 투표 버튼 HTML */
+function commentVoteHtml(c) {
+  const my = myCommentVotes[c.id];
+  return `
+    <button class="cv-btn cv-like ${my === 1 ? "on" : ""}" data-cid="${c.id}" data-v="1">👍 <span>${c.like_count}</span></button>
+    <button class="cv-btn cv-dislike ${my === -1 ? "on" : ""}" data-cid="${c.id}" data-v="-1">👎 <span>${c.dislike_count}</span></button>`;
+}
+function commentHeaderHtml(c) {
+  return `<div class="comment-meta"><span class="cm-nick">${c.nickname || "익명"}</span><span class="cm-time">${timeAgoK(c.created_at)}</span></div>`;
+}
+
+/* 투표 처리 (이벤트 위임) */
+async function handleCommentVote(e) {
+  const btn = e.target.closest(".cv-btn");
+  if (!btn) return false;
+  e.stopPropagation();
+
+  const session = await getSessionSafe();
+  if (!session?.user) {
+    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    return true;
+  }
+
+  const cid = btn.dataset.cid;
+  const val = Number(btn.dataset.v);
+  const { data, error } = await supabase.rpc("vote_plaza_comment", {
+    p_comment_id: cid, p_value: val
+  });
+  if (error) { console.error(error); alert("투표 실패"); return true; }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (row) {
+    if (row.my_vote === null || row.my_vote === undefined) delete myCommentVotes[cid];
+    else myCommentVotes[cid] = row.my_vote;
+    // 해당 댓글의 두 버튼 갱신
+    document.querySelectorAll(`.cv-btn[data-cid="${cid}"]`).forEach(b => {
+      const v = Number(b.dataset.v);
+      b.querySelector("span").textContent = v === 1 ? row.like_count : row.dislike_count;
+      b.classList.toggle("on", myCommentVotes[cid] === v);
+    });
+  }
+  return true;
 }
 
 function renderComments(list) {
@@ -174,26 +254,19 @@ function renderComments(list) {
     const replies = list.filter(r => r.parent_id === root.id);
 
     rootLi.innerHTML = `
-      <div class="comment-meta">${root.nickname}</div>
+      ${commentHeaderHtml(root)}
       <div class="comment-body">${root.body}</div>
 
       <div class="comment-actions">
+        ${commentVoteHtml(root)}
         <button class="reply-btn">답글 달기</button>
       </div>
 
       ${
         replies.length > 0
-          ? `
-            <div class="comment-actions">
-              <button class="like-btn">👍</button>
-              <button class="dislike-btn">👎</button>
-              <button class="share-btn">공유</button>
-              <button class="reply-btn">답글 달기</button>
-            </div>
-            <div class="reply-toggle-wrapper">
-              ${replies.length > 0 ? `<button class="toggle-replies-btn">답글 ${replies.length}개 더보기</button>` : ""}
-            </div>
-          `
+          ? `<div class="reply-toggle-wrapper">
+              <button class="toggle-replies-btn">답글 ${replies.length}개 더보기</button>
+            </div>`
           : ``
       }
       <ul class="reply-list hidden"></ul>
@@ -315,12 +388,10 @@ function renderReplies(replies, container) {
     li.style.marginTop = "16px";
 
     li.innerHTML = `
-      <div class="comment-meta">${reply.nickname}</div>
+      ${commentHeaderHtml(reply)}
       <div class="comment-body">${reply.body}</div>
       <div class="comment-actions">
-        <button class="like-btn">👍</button>
-        <button class="dislike-btn">👎</button>
-        <button class="share-btn">공유</button>
+        ${commentVoteHtml(reply)}
         <button class="reply-btn">답글 달기</button>
       </div>
     `;
