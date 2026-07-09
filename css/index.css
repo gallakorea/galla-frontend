@@ -82,9 +82,9 @@ body { display: block; }
     flex-shrink: 0;
 }
 
-/* 영상 카드는 인스타 피드처럼 3:4 세로 (릴스 9:16은 너무 길어 여백이 커 보임) */
+/* 영상 카드는 인스타 피드와 동일하게 4:5 세로 */
 .card-media--video {
-    aspect-ratio: 3 / 4;
+    aspect-ratio: 4 / 5;
 }
 
 .card-media video {
@@ -92,11 +92,6 @@ body { display: block; }
     height: 100%;
     object-fit: cover;
     display: block;
-}
-
-/* 세로 영상이 아래쪽부터 잘리지 않도록 크롭 기준을 아래로 살짝 이동 */
-.card-media--video video {
-    object-position: center 68%;
 }
 
 .card-media img {
