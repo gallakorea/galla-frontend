@@ -87,49 +87,29 @@
 </main>
 
 <!-- =================================================
-     📰 NEWS CLUSTER MODAL (BOTTOM SHEET)
-================================================= -->
-<div id="news-modal" class="news-modal">
-
-  <!-- dim -->
-  <div class="news-modal-backdrop" id="news-modal-close"></div>
-
-  <!-- sheet -->
-  <div class="news-modal-sheet">
-
-    <!-- handle -->
-    <div class="news-modal-handle"></div>
-
-    <!-- header -->
-    <div class="news-modal-header">
-      <h3 id="news-modal-title">관련 기사</h3>
-      <button type="button" id="news-modal-x" class="news-modal-x" aria-label="닫기">✕</button>
-    </div>
-
-    <!-- article list -->
-    <div id="news-modal-articles" class="news-modal-articles">
-      <!-- JS에서 기사 리스트 주입 -->
-    </div>
-
-  </div>
-</div>
-
-<!-- =================================================
      📰 NEWS VIEWER MODAL (IN-APP IFRAME)
 ================================================= -->
 <div id="news-viewer-modal" class="news-viewer-modal hidden">
 
   <div class="news-viewer-header">
-    <button id="news-viewer-close">닫기</button>
-    <span>기사 보기</span>
+    <button id="news-viewer-close" aria-label="닫기">✕</button>
+    <span id="news-viewer-title">기사 보기</span>
+    <a id="news-viewer-ext" href="#" target="_blank" rel="noopener noreferrer">원문 ↗</a>
   </div>
 
-  <iframe
-    id="news-viewer-iframe"
-    src=""
-    loading="lazy"
-    referrerpolicy="no-referrer"
-  ></iframe>
+  <div class="news-viewer-stage">
+    <iframe
+      id="news-viewer-iframe"
+      src=""
+      loading="lazy"
+      referrerpolicy="no-referrer"
+    ></iframe>
+    <div id="news-viewer-fallback" class="news-viewer-fallback" hidden>
+      <p class="nvf-title"></p>
+      <p class="nvf-desc">이 언론사는 앱 안에서 바로 보기가 제한돼 있어요.</p>
+      <a class="nvf-btn" id="news-viewer-fallback-btn" href="#" target="_blank" rel="noopener noreferrer">원문 기사 열기 ↗</a>
+    </div>
+  </div>
 
 </div>
 

@@ -48,31 +48,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
-  const newsModal = document.getElementById("news-modal");
-  const newsModalTitle = document.getElementById("news-modal-title");
-  const newsModalArticles = document.getElementById("news-modal-articles");
-  const newsModalBackdrop = document.querySelector("#news-modal .news-modal-backdrop");
   const viewerModal = document.getElementById("news-viewer-modal");
   const viewerFrame = document.getElementById("news-viewer-iframe");
   const viewerClose = document.getElementById("news-viewer-close");
+  const viewerTitle = document.getElementById("news-viewer-title");
+  const viewerExt = document.getElementById("news-viewer-ext");
+  const viewerFallback = document.getElementById("news-viewer-fallback");
+  const viewerFallbackBtn = document.getElementById("news-viewer-fallback-btn");
 
-  newsModalBackdrop?.addEventListener("click", closeNewsModal);
-  document.getElementById("news-modal-x")?.addEventListener("click", closeNewsModal);
-  newsModalArticles?.addEventListener("click", e => {
-    const it = e.target.closest("[data-url]");
-    if (it && it.dataset.url) openNewsViewer(it.dataset.url);
-  });
-  viewerClose?.addEventListener("click", () => {
+  function closeNewsViewer() {
     viewerModal.classList.add("hidden");
     viewerFrame.src = "";
-  });
-  newsModal?.classList.remove("active");
-
-  function closeNewsModal() {
-    if (!newsModal) return;
-    newsModal.classList.remove("active");
     document.body.style.overflow = "";
   }
+  viewerClose?.addEventListener("click", closeNewsViewer);
 
   /* ================= 탭 ================= */
   let trendingLoaded = false, newsInit = false;
@@ -293,7 +282,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (news.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
       html += news.map(n =>
-        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-gid="${esc(n.related_group_id || n.id)}">
+        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
           <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
           <div class="sr-body">
             <div class="sr-title">${esc(n.title)}</div>
@@ -312,7 +301,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const news = e.target.closest(".sr-card.news");
     if (news) {
       const url = news.dataset.url;
-      if (url) openNewsViewer(url);
+      if (url) openNewsViewer(url, news.dataset.title, news.dataset.press);
     }
   });
 
@@ -446,7 +435,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!rep) return;
       const card = document.createElement("div");
       card.className = "news-card";
-      card.addEventListener("click", () => openNewsModal(rep.related_group_id ?? rep.id));
+      card.addEventListener("click", () => openNewsViewer(rep.url, rep.title, rep.press_name));
       card.innerHTML = `
         <div class="news-thumb-16x9"><img src="${esc(rep.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)"></div>
         <div class="news-text">
@@ -455,52 +444,43 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span class="news-press">${esc(rep.press_name || "")}</span>
             <span class="news-time">${timeAgo(rep.published_at)}</span>
           </div>
-          <div class="news-count">관련 기사 ${group.length}건</div>
         </div>`;
       list.appendChild(card);
     });
   }
 
-  async function openNewsModal(groupId) {
-    if (!groupId || !newsModal) return;
-    newsModal.classList.add("active");
-    document.body.style.overflow = "hidden";
-    newsModalTitle.textContent = "관련 기사";
-    newsModalArticles.innerHTML = `<p class="se-muted">불러오는 중...</p>`;
+  // iframe 삽입이 막히는(X-Frame-Options) 대표 도메인 → 처음부터 폴백 화면
+  const IFRAME_BLOCKED = ["naver.com", "daum.net", "chosun.com", "joins.com", "joongang.co.kr",
+    "hani.co.kr", "mk.co.kr", "sedaily.com", "khan.co.kr", "yna.co.kr", "yonhapnews",
+    "donga.com", "hankyung.com", "sbs.co.kr", "kbs.co.kr", "imbc.com", "jtbc.co.kr"];
 
-    const { data, error } = await supabase
-      .from("news_articles_raw")
-      .select("id,title,published_at,url,related_group_id,press_name,thumbnail_url")
-      .or(`related_group_id.eq.${groupId},id.eq.${groupId}`)
-      .order("published_at", { ascending: false })
-      .limit(30);
-    if (error || !data || !data.length) {
-      newsModalArticles.innerHTML = `<p class="se-muted">기사가 없습니다.</p>`;
-      return;
-    }
-    newsModalTitle.textContent = `관련 기사 ${data.length}건`;
-    newsModalArticles.innerHTML = data.map(a =>
-      `<div class="news-article-item" data-url="${esc(a.url || "")}">
-        <div class="news-mini-thumb">${isValidThumbnail(a.thumbnail_url)
-          ? `<img src="${esc(a.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
-        <div class="nai-body">
-          <p class="news-article-title">${esc(a.title)}</p>
-          <div class="nai-meta">${esc(a.press_name || "")}${a.press_name ? " · " : ""}${timeAgo(a.published_at)}</div>
-        </div>
-        <span class="nai-go">›</span>
-      </div>`
-    ).join("");
-  }
-
-  function openNewsViewer(url) {
+  function openNewsViewer(url, title, press) {
     if (!url) return;
-    const blocked = ["naver.com", "daum.net", "chosun.com", "joins.com", "hani.co.kr",
-      "mk.co.kr", "sedaily.com", "khan.co.kr", "yonhapnews.co.kr"];
-    if (blocked.some(d => url.includes(d))) {
-      window.open(url, "_blank", "noopener,noreferrer"); return;
+    viewerTitle.textContent = title || press || "기사 보기";
+    viewerExt.href = url;
+    viewerFallbackBtn.href = url;
+    document.querySelector("#news-viewer-fallback .nvf-title").textContent = title || "";
+    viewerModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+
+    const blocked = IFRAME_BLOCKED.some(d => url.includes(d));
+    if (blocked) {
+      // 앱 안 삽입 불가 → 폴백(원문 열기 버튼)만 표시
+      viewerFrame.style.display = "none";
+      viewerFrame.src = "";
+      viewerFallback.hidden = false;
+    } else {
+      viewerFallback.hidden = true;
+      viewerFrame.style.display = "block";
+      viewerFrame.src = url;
+      // 일부 사이트는 헤더 차단으로 빈 화면 → 3.5초 안에 로드 못하면 폴백 노출
+      clearTimeout(viewerFrame.__t);
+      let loaded = false;
+      viewerFrame.onload = () => { loaded = true; };
+      viewerFrame.__t = setTimeout(() => {
+        if (!loaded) { viewerFrame.style.display = "none"; viewerFallback.hidden = false; }
+      }, 2500);
     }
-    try { viewerFrame.src = url; viewerModal.classList.remove("hidden"); }
-    catch { window.open(url, "_blank", "noopener,noreferrer"); }
   }
 
   // 뉴스 무한 스크롤
