@@ -184,16 +184,12 @@ function renderIssueMedia(issue) {
     // 영상
     if (issue.video_url) {
         wrap.innerHTML = `
-        <div class="issue-media issue-media--video" onclick="issueTogglePlay()">
+        <div class="issue-media issue-media--video" onclick="issueOpenReels()">
             <video id="issue-vid" loop playsinline muted preload="metadata">
                 <source src="${issue.video_url}" type="video/mp4">
             </video>
-            <div class="issue-play-overlay" id="issue-play-ov">
-                <div class="issue-play-circle"><div class="issue-play-tri"></div></div>
-            </div>
             <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
-            <button class="issue-vid-mute" id="issue-vid-mute"
-                onclick="event.stopPropagation();issueToggleMute()">🔇</button>
+            <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
 
         const vid = document.getElementById('issue-vid');
@@ -227,7 +223,7 @@ function renderIssueMedia(issue) {
         issueCarouselTotal = images.length;
         issueCarouselIdx = 0;
         const dots = images.map((_, i) => `<div class="issue-c-dot ${i===0?'on':''}"></div>`).join('');
-        const slides = images.map(url => `<div class="issue-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
+        const slides = images.map(url => `<div class="issue-slide"><img class="cs-fill" src="${url}" aria-hidden="true" loading="eager"><img class="cs-img" src="${url}" loading="eager" decoding="async"></div>`).join('');
         wrap.innerHTML = `
         <div class="issue-media">
             <div class="issue-carousel">
@@ -278,6 +274,23 @@ window.issueToggleMute = function() {
     if (!v) return;
     v.muted = !v.muted;
     if (btn) btn.textContent = v.muted ? '🔇' : '🔊';
+};
+
+/* 이슈 인라인 영상 탭 → 전체화면 릴스 모드 */
+window.issueOpenReels = function() {
+    const i = currentIssue;
+    if (!i || !i.video_url) return;
+    const item = {
+        id: i.id, video_url: i.video_url, title: i.title || "",
+        author: i.author || "익명", level: i.level != null ? i.level : "",
+        category: i.category || "", user_id: i.user_id || "",
+        faction_a: i.faction_a || "", faction_b: i.faction_b || ""
+    };
+    const v = document.getElementById('issue-vid');
+    if (v) v.pause();
+    if (typeof window.openShorts === 'function') {
+        window.openShorts([item], i.id);
+    }
 };
 
 window.issueCarouselGo = function(dir) {

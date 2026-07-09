@@ -54,22 +54,16 @@ function carouselGo(issueId, dir) {
 function renderMedia(data) {
     // 영상
     if (data.video_url) {
-        const ovId = `ov-${data.id}`;
         return `
-        <div class="card-media card-media--video" onclick="event.stopPropagation()">
+        <div class="card-media card-media--video"
+             onclick="event.stopPropagation();openReels(${data.id})">
             <video
                 id="vid-${data.id}"
-                data-overlay-id="${ovId}"
-                loop playsinline muted preload="metadata"
-                onclick="toggleVidPlay('vid-${data.id}','${ovId}')">
+                loop playsinline muted preload="metadata">
                 <source src="${data.video_url}" type="video/mp4">
             </video>
-            <div class="play-overlay" id="${ovId}">
-                <div class="play-circle"><div class="play-tri"></div></div>
-            </div>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
-            <button class="vid-mute" id="mute-${data.id}"
-                onclick="event.stopPropagation();toggleMute('vid-${data.id}','mute-${data.id}')">🔇</button>
+            <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
     }
 
@@ -81,8 +75,12 @@ function renderMedia(data) {
         const dotsHtml = imgs.map((_, i) =>
             `<div class="carousel-dot ${i === 0 ? 'on' : ''}"></div>`).join('');
         // 캐러셀은 lazy 금지 — 가로 오프스크린이라 안 불러와져 넘기면 빈 슬라이드가 됨
+        // 가로/세로 혼합 대비: 원본은 contain으로 전체 표시, 뒤에 블러 배경 필로 여백 채움
         const slidesHtml = imgs.map(url =>
-            `<div class="carousel-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
+            `<div class="carousel-slide">
+                <img class="cs-fill" src="${url}" aria-hidden="true" loading="eager">
+                <img class="cs-img" src="${url}" loading="eager" decoding="async">
+            </div>`).join('');
         return `
         <div class="card-media" onclick="event.stopPropagation()">
             <div class="carousel-wrap">
@@ -101,7 +99,8 @@ function renderMedia(data) {
     if (data.thumb) {
         return `
         <div class="card-media">
-            <img src="${data.thumb}" loading="lazy" alt="">
+            <img class="cs-fill" src="${data.thumb}" aria-hidden="true" loading="lazy">
+            <img class="cs-img" src="${data.thumb}" loading="lazy" alt="">
         </div>`;
     }
 
@@ -222,6 +221,25 @@ function toggleMute(vidId, btnId) {
     const btn = document.getElementById(btnId);
     if (btn) btn.textContent = v.muted ? '🔇' : '🔊';
 }
+
+/* 인라인 영상 탭 → 전체화면 릴스 모드 */
+window.openReels = function (startId) {
+    const vids = (window.cards || [])
+        .filter(c => c.video_url)
+        .map(c => ({
+            id: c.id, video_url: c.video_url, title: c.title,
+            author: c.author, level: c.level, category: c.category,
+            user_id: c.user_id, faction_a: c.faction_a, faction_b: c.faction_b
+        }));
+    if (!vids.length) return;
+    // 인라인 미리보기 정지 (소리 중복 방지)
+    document.querySelectorAll('.card-media video').forEach(v => v.pause());
+    if (typeof window.openShorts === 'function') {
+        window.openShorts(vids, Number(startId));
+    } else {
+        location.href = `issue.html?id=${startId}`;
+    }
+};
 
 /* ===========================
  * 투표 UI

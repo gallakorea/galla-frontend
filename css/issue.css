@@ -146,6 +146,41 @@ body {
     display: block;
 }
 
+/* 가로/세로 혼합 사진 — 잘림 방지: 원본 전체(contain) + 블러 배경 필 */
+.issue-slide { position: relative; }
+.issue-media .cs-fill {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(26px) brightness(.5);
+    transform: scale(1.15);
+    z-index: 0;
+}
+.issue-media .cs-img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* 인라인 영상 릴스 배지 */
+.vid-reels-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,.6);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: 999px;
+    z-index: 3;
+    pointer-events: none;
+}
+
 /* 플레이 오버레이 */
 .issue-play-overlay {
     position: absolute;

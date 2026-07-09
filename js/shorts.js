@@ -85,7 +85,17 @@ function __openShortsInternal(list, startId) {
   // 🔥 HARD FIX: 항상 video_url 있는 항목만, 순서 고정
   shortsList = (list || [])
     .filter(v => v && v.video_url)
-    .map(v => ({ id: Number(v.id), video_url: v.video_url }));
+    .map(v => ({
+      id: Number(v.id),
+      video_url: v.video_url,
+      title: v.title || "",
+      author: v.author || "익명",
+      level: v.level != null ? v.level : "",
+      category: v.category || "",
+      user_id: v.user_id || "",
+      faction_a: v.faction_a || "",
+      faction_b: v.faction_b || ""
+    }));
   if (!shortsList.length) return;
 
   overlay = document.getElementById("shortsOverlay");
@@ -135,6 +145,20 @@ function __openShortsInternal(list, startId) {
   border-radius:50%;
   object-fit:cover;
   border:1px solid rgba(255,255,255,.4);
+}
+.author-avatar-init{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  font-size:18px;
+  color:#fff;
+  background:linear-gradient(135deg,#ff9b2f,#ff6a00);
+}
+.shorts-cat{
+  font-size:12px;
+  opacity:.75;
+  margin-top:2px;
 }
 
 .author-info{
@@ -424,6 +448,7 @@ function __openShortsInternal(list, startId) {
     const section = document.createElement("section");
     section.className = "short";
     section.dataset.issueId = item.id;
+    if (item.user_id) section.dataset.authorId = item.user_id;
 
     Object.assign(section.style, {
       height: `${VIEWPORT_H}px`,
@@ -445,14 +470,14 @@ function __openShortsInternal(list, startId) {
     <!-- LEFT META (AUTHOR) -->
     <div class="shorts-meta">
       <div class="shorts-author">
-        <img class="author-avatar" src="assets/default-avatar.png" />
+        <div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>
         <div class="author-info">
           <div class="author-line">
-            <span class="author-name">작성자</span>
-            <span class="author-level">Lv.12</span>
-            <button class="author-follow">팔로우</button>
+            <span class="author-name">${item.author || "익명"}</span>
+            ${item.level !== "" ? `<span class="author-level">Lv.${item.level}</span>` : ""}
           </div>
-          <div class="shorts-title">이 쇼츠 제목 영역</div>
+          ${item.category ? `<div class="shorts-cat">${item.category}</div>` : ""}
+          <div class="shorts-title">${item.title || ""}</div>
         </div>
       </div>
     </div>
@@ -545,11 +570,16 @@ function playOnlyCurrent() {
       // 🔁 무한 재생 (사용자가 멈출 때까지)
       v.loop = true;
       v.setAttribute("loop", "");
-      v.muted = false;
+      // 소리는 기본 ON, 사용자가 음소거하면 다음 영상까지 그 상태 유지(스티키)
+      v.muted = !!window.__REELS_MUTED__;
 
       const playPromise = v.play();
       if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {});
+        // 브라우저가 소리 자동재생을 막으면 음소거로 폴백해 재생은 유지
+        playPromise.catch(() => {
+          v.muted = true;
+          v.play().catch(() => {});
+        });
       }
       v.playbackRate = 1;
     } else {
@@ -641,24 +671,95 @@ function bindGestures() {
 /* =========================
    TAP / DOUBLE TAP
 ========================= */
+/* 릴스 조작:
+   - 한 번 탭  → 음소거 토글 (음소거하면 다음 영상까지 유지)
+   - 더블 탭 후 누르고 있기 → 누르는 동안 2배속, 떼면 1배속
+*/
+function reelBadge(section, text, isSpeed) {
+  if (!section) return null;
+  let b = section.querySelector(`.reel-badge.${isSpeed ? "speed" : "mute"}`);
+  if (!b) {
+    b = document.createElement("div");
+    b.className = `reel-badge ${isSpeed ? "speed" : "mute"}`;
+    section.appendChild(b);
+  }
+  b.textContent = text;
+  return b;
+}
+function flashBadge(section, text) {
+  const b = reelBadge(section, text, false);
+  if (!b) return;
+  b.classList.add("show");
+  clearTimeout(b.__t);
+  b.__t = setTimeout(() => b.classList.remove("show"), 650);
+}
+function showSpeedBadge(section, on) {
+  const b = reelBadge(section, "2배속 ⏩", true);
+  if (!b) return;
+  b.classList.toggle("show", on);
+}
+
+function curVideoAndSection() {
+  const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
+  const section = document.querySelectorAll(".short")[currentIndex];
+  return { video, section };
+}
+
 function bindTapControls() {
-  let lastTap = 0;
+  let tapTimer = null;
+  let waitingSecond = false;
+  let holding2x = false;
+  let downX = 0, downY = 0, moved = false;
 
-  overlay.addEventListener("click", e => {
-    const video = document.querySelectorAll("#shortsTrack video")[currentIndex];
-    if (!video) return;
-    const now = Date.now();
+  const isControl = t =>
+    t.closest &&
+    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,#shortsCommentModal");
 
-    if (now - lastTap < 300) {
-      video.playbackRate = video.playbackRate === 1 ? 2 : 1;
-    } else {
-      if (video.muted) video.muted = false;
-      if (video.paused) video.play();
-      else video.pause();
+  overlay.addEventListener("pointerdown", e => {
+    if (isControl(e.target)) return;
+    downX = e.clientX; downY = e.clientY; moved = false;
+    if (waitingSecond) {
+      // 더블탭의 두 번째 탭 → 누르는 동안 2배속
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+      waitingSecond = false;
+      const { video, section } = curVideoAndSection();
+      if (video) { video.playbackRate = 2; holding2x = true; showSpeedBadge(section, true); }
     }
-
-    lastTap = now;
   });
+
+  overlay.addEventListener("pointermove", e => {
+    if (Math.abs(e.clientX - downX) > 12 || Math.abs(e.clientY - downY) > 12) moved = true;
+  });
+
+  const endHold = () => {
+    if (!holding2x) return;
+    holding2x = false;
+    const { video, section } = curVideoAndSection();
+    if (video) video.playbackRate = 1;
+    showSpeedBadge(section, false);
+  };
+
+  overlay.addEventListener("pointerup", e => {
+    if (isControl(e.target)) { endHold(); return; }
+    if (holding2x) { endHold(); return; }
+    if (moved) { // 스와이프였음 → 탭 아님
+      if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+      waitingSecond = false;
+      return;
+    }
+    // 깔끔한 탭 → 더블탭 여부 확인 후 단일 탭이면 음소거 토글
+    waitingSecond = true;
+    tapTimer = setTimeout(() => {
+      waitingSecond = false; tapTimer = null;
+      const { video, section } = curVideoAndSection();
+      if (!video) return;
+      window.__REELS_MUTED__ = !window.__REELS_MUTED__;
+      video.muted = window.__REELS_MUTED__;
+      flashBadge(section, window.__REELS_MUTED__ ? "🔇 음소거" : "🔊 소리 켜짐");
+    }, 260);
+  });
+
+  overlay.addEventListener("pointercancel", endHold);
 }
 
 /* =========================
@@ -712,6 +813,13 @@ function updateShortsVoteBar() {
   }
   console.info("[SHORTS][VOTE] sync issueId =", issueId);
   // Sync issueId onto each vote button, and reset active-vote class
+  // 진영명(있으면) 반영 — 없으면 기본 찬성/반대
+  const cur = shortsList[currentIndex] || {};
+  const proBtn = bar.querySelector('.vote-btn.pro');
+  const conBtn = bar.querySelector('.vote-btn.con');
+  if (proBtn) proBtn.textContent = `👍 ${cur.faction_a || "찬성이오"}`;
+  if (conBtn) conBtn.textContent = `👎 ${cur.faction_b || "반댈세"}`;
+
   bar.querySelectorAll(".vote-btn").forEach(btn => {
     btn.dataset.issueId = issueId;
     btn.classList.remove("active-vote");

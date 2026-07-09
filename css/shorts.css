@@ -19,6 +19,37 @@ body[data-page="shorts"] .header {
   display: none !important;
 }
 
+/* 릴스 오버레이가 index/issue 위에 떠 있을 때 하단 네비/헤더 숨김 */
+body.shorts-open .nav,
+body.shorts-open .header,
+body.shorts-open header { display: none !important; }
+body.shorts-open { overflow: hidden !important; }
+
+/* 릴스 탭 피드백 배지 (음소거 / 2배속) */
+.reel-badge {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(.9);
+  background: rgba(0,0,0,.62);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s, transform .15s;
+  white-space: nowrap;
+}
+.reel-badge.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.reel-badge.speed {
+  top: 84px; left: 50%;
+  background: rgba(255,106,0,.9);
+  color: #000;
+}
+
 /* -------------------------
    OVERLAY (SCROLL CONTAINER)
 ------------------------- */
