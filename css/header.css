@@ -55,6 +55,10 @@
   justify-content: center;
 
   cursor: pointer;
+
+  /* 다크 헤더 위 텍스트 버튼(←, ⋯)이 기본 검정색으로 묻히지 않게 */
+  color: #fff;
+  font-size: 16px;
 }
 
 /* 종이비행기 아이콘 */
