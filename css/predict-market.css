@@ -176,3 +176,12 @@
 .pmd-related-q { font-size: 14px; font-weight: 700; line-height: 1.4; }
 .pmd-related-meta { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #999; }
 .pmd-related-pct { color: #6d8bff; font-weight: 800; }
+
+/* ===== 댓글 더보기 / 답글 접기 ===== */
+.pmd-cmt-more {
+  width: 100%; margin-top: 12px; padding: 12px; border-radius: 10px;
+  background: #111; border: 1px solid #2a2a2a; color: #aac4ff; font-weight: 800; font-size: 13px; cursor: pointer;
+}
+.pmd-reply-toggle {
+  margin-top: 6px; background: none; border: none; color: #6d8bff; font-size: 12px; font-weight: 800; cursor: pointer; padding: 4px 0;
+}
