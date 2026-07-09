@@ -34,8 +34,9 @@ alter table public.galla_news_sources enable row level security;
 create policy galla_news_read on public.galla_news for select using (true);
 create policy galla_news_sources_read on public.galla_news_sources for select using (true);
 
--- 생성: generate-galla-news 엣지 함수(gpt-4o-mini)를 3시간마다 호출
--- select cron.schedule('generate_galla_news_job','20 */3 * * *',
+-- 생성: generate-galla-news 엣지 함수(gpt-4o-mini)를 2시간마다 호출.
+-- 다중소스 종합 + 중요 단독기사도 AI 요약·재구성해 발행량 확보. 병렬 처리 + topic_key 중복방지.
+-- select cron.schedule('generate_galla_news_job','15 */2 * * *',
 --   $$ select net.http_post(url:='.../functions/v1/generate-galla-news',
 --        headers:=jsonb_build_object('Content-Type','application/json'),
---        body:='{"max_topics":5,"hours":12}'::jsonb); $$);
+--        body:='{"max_topics":12,"hours":8}'::jsonb); $$);
