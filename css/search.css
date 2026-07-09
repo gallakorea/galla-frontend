@@ -85,6 +85,7 @@ body {
 
 .search-input {
     width: 100%;
+    box-sizing: border-box;   /* padding 포함 — 100% 초과 오버플로우 방지 */
     padding: 12px 14px;
     border-radius: 12px;
     background: #0b0c14;
