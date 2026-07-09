@@ -35,6 +35,9 @@ function debounce(fn, ms) {
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
 
+  let ME = null;
+  supabase.auth.getUser().then(({ data }) => { ME = data?.user || null; });
+
   /* ================= DOM ================= */
   const tabs = document.querySelectorAll(".tab-item");
   const panels = document.querySelectorAll(".tab-panel");
@@ -471,7 +474,129 @@ document.addEventListener("DOMContentLoaded", async () => {
         ${bodyParas.map(p => `<p>${esc(p)}</p>`).join("")}
         ${srcHtml ? `<div class="reader-sources"><div class="reader-sources-head">🔗 관련 기사 (출처 · 팩트체크)</div>${srcHtml}</div>` : ""}
         <p class="reader-disclaimer">본 기사는 위 보도들을 AI가 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
+        <div id="gn-comments" class="gn-comments"></div>
       </article>`;
+    loadGnComments(id);
+  }
+
+  /* ===== 갈라뉴스 배틀 댓글 (대댓글 + @멘션 + 좋아요) ===== */
+  async function fetchProfiles(ids) {
+    const uniq = [...new Set(ids.filter(Boolean))];
+    if (!uniq.length) return {};
+    const { data } = await supabase.from("user_profiles").select("user_id,nickname").in("user_id", uniq);
+    const m = {}; (data || []).forEach(p => m[p.user_id] = p); return m;
+  }
+  function needLogin() {
+    if (ME) return false;
+    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    return true;
+  }
+  const cmtBody = c => esc(c).replace(/@(\S+)/g, '<span class="gnc-mention">@$1</span>');
+
+  let GNC = null, GNC_NEWS = null, GNC_TOP_LIMIT = 8;
+  const GNC_EXPANDED = new Set();
+
+  async function loadGnComments(newsId) {
+    GNC_NEWS = newsId; GNC_TOP_LIMIT = 8; GNC_EXPANDED.clear();
+    const { data: rows } = await supabase.from("galla_news_comments")
+      .select("id,user_id,content,created_at,parent_id").eq("news_id", newsId)
+      .order("created_at", { ascending: true }).limit(500);
+    const profs = await fetchProfiles((rows || []).map(c => c.user_id));
+    const ids = (rows || []).map(c => c.id);
+    const likeAgg = {}; const myLikes = new Set();
+    if (ids.length) {
+      const { data: likes } = await supabase.from("galla_news_comment_likes").select("comment_id,user_id").in("comment_id", ids);
+      likes?.forEach(l => { likeAgg[l.comment_id] = (likeAgg[l.comment_id] || 0) + 1; if (ME && l.user_id === ME.id) myLikes.add(l.comment_id); });
+    }
+    const tops = (rows || []).filter(c => !c.parent_id).reverse();
+    const childrenOf = {}; (rows || []).forEach(c => { if (c.parent_id) (childrenOf[c.parent_id] ||= []).push(c); });
+    Object.values(childrenOf).forEach(a => a.sort((x, y) => new Date(x.created_at) - new Date(y.created_at)));
+    GNC = { tops, childrenOf, profs, likeAgg, myLikes };
+    renderGnComments();
+  }
+
+  function renderGnComments() {
+    const box = document.getElementById("gn-comments");
+    if (!box || !GNC) return;
+    const { tops, childrenOf, profs, likeAgg, myLikes } = GNC;
+    const nick = uid => profs[uid]?.nickname || "익명";
+    const total = tops.length + Object.values(childrenOf).reduce((a, b) => a + b.length, 0);
+
+    const cmt = (c, isReply, topId) => {
+      const liked = myLikes.has(c.id);
+      return `<div class="gnc ${isReply ? "reply" : ""}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
+        <div class="gnc-av">${esc((nick(c.user_id).trim().charAt(0) || "익"))}</div>
+        <div class="gnc-main">
+          <div class="gnc-head"><span class="gnc-name">${esc(nick(c.user_id))}</span><span class="gnc-time">${timeAgo(c.created_at)}</span></div>
+          <div class="gnc-text">${cmtBody(c.content)}</div>
+          <div class="gnc-actions">
+            <button class="gnc-like ${liked ? "on" : ""}" data-id="${c.id}">♥ <span>${likeAgg[c.id] || 0}</span></button>
+            <button class="gnc-reply" data-id="${c.id}">답글</button>
+          </div>
+        </div>
+      </div>`;
+    };
+    const thread = c => {
+      const kids = childrenOf[c.id] || [];
+      const exp = GNC_EXPANDED.has(c.id);
+      let rep = "";
+      if (kids.length) {
+        rep = exp
+          ? `<div class="gnc-replies">${kids.map(k => cmt(k, true, c.id)).join("")}</div><button class="gnc-toggle" data-top="${c.id}" data-act="collapse">답글 숨기기 ▴</button>`
+          : `<button class="gnc-toggle" data-top="${c.id}" data-act="expand">${kids.length}개 답글 보기 ▾</button>`;
+      }
+      return `<div class="gnc-thread">${cmt(c, false, c.id)}${rep}<div class="gnc-rb" id="gnc-rb-${c.id}" hidden></div></div>`;
+    };
+    const shown = tops.slice(0, GNC_TOP_LIMIT);
+    const remaining = tops.length - shown.length;
+
+    box.innerHTML = `
+      <div class="gnc-title">💬 댓글 ${total}</div>
+      <div class="gnc-compose">
+        <input id="gncInput" class="gnc-input" maxlength="300" placeholder="의견을 남기고 붙어보세요…">
+        <button id="gncSend" class="gnc-send">게시</button>
+      </div>
+      <div class="gnc-list">${tops.length ? shown.map(thread).join("") : '<div class="gnc-empty">첫 댓글을 남겨보세요!</div>'}</div>
+      ${remaining > 0 ? `<button id="gncMore" class="gnc-more">댓글 더 보기 (${remaining})</button>` : ""}`;
+
+    const inp = document.getElementById("gncInput");
+    document.getElementById("gncSend").addEventListener("click", () => postGnComment(inp.value, null));
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") postGnComment(inp.value, null); });
+    document.getElementById("gncMore")?.addEventListener("click", () => { GNC_TOP_LIMIT += 10; renderGnComments(); });
+    box.querySelectorAll(".gnc-toggle").forEach(b => b.addEventListener("click", () => {
+      const id = Number(b.dataset.top);
+      if (b.dataset.act === "expand") GNC_EXPANDED.add(id); else GNC_EXPANDED.delete(id);
+      renderGnComments();
+    }));
+    box.querySelectorAll(".gnc-like").forEach(b => b.addEventListener("click", async () => {
+      if (needLogin()) return;
+      const id = Number(b.dataset.id), on = b.classList.contains("on"), span = b.querySelector("span"), n = Number(span.textContent);
+      if (on) { await supabase.from("galla_news_comment_likes").delete().eq("comment_id", id).eq("user_id", ME.id); b.classList.remove("on"); span.textContent = Math.max(0, n - 1); GNC.myLikes.delete(id); GNC.likeAgg[id] = (GNC.likeAgg[id] || 1) - 1; }
+      else { const { error } = await supabase.from("galla_news_comment_likes").insert({ comment_id: id, user_id: ME.id }); if (!error) { b.classList.add("on"); span.textContent = n + 1; GNC.myLikes.add(id); GNC.likeAgg[id] = (GNC.likeAgg[id] || 0) + 1; } }
+    }));
+    box.querySelectorAll(".gnc-reply").forEach(b => b.addEventListener("click", () => {
+      if (needLogin()) return;
+      const el = b.closest(".gnc"), topId = Number(el.dataset.top), author = el.dataset.author;
+      GNC_EXPANDED.add(topId);
+      if (!document.getElementById("gnc-rb-" + topId)) { renderGnComments(); }
+      const rb = document.getElementById("gnc-rb-" + topId);
+      rb.hidden = false;
+      rb.innerHTML = `<div class="gnc-compose reply"><input class="gnc-input gnc-reply-input" maxlength="300" value="@${esc(author)} "><button class="gnc-send gnc-reply-send">게시</button></div>`;
+      const ri = rb.querySelector(".gnc-reply-input");
+      ri.focus(); ri.setSelectionRange(ri.value.length, ri.value.length);
+      rb.querySelector(".gnc-reply-send").addEventListener("click", () => postGnComment(ri.value, topId));
+      ri.addEventListener("keydown", e => { if (e.key === "Enter") postGnComment(ri.value, topId); });
+    }));
+  }
+
+  async function postGnComment(content, parentId) {
+    if (needLogin()) return;
+    content = (content || "").trim(); if (!content) return;
+    const { error } = await supabase.from("galla_news_comments")
+      .insert({ news_id: GNC_NEWS, user_id: ME.id, content, parent_id: parentId || null });
+    if (error) { alert("댓글 등록 실패"); return; }
+    if (parentId) GNC_EXPANDED.add(parentId);
+    await loadGnComments(GNC_NEWS);
   }
 
   async function loadTopNews() {
