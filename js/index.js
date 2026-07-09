@@ -33,12 +33,18 @@ const carouselState = {};
 function carouselGo(issueId, dir) {
     const state = carouselState[issueId];
     if (!state) return;
-    state.idx = (state.idx + dir + state.total) % state.total;
+    // clamp(끝에서 루프 안 함) — 인스타 동일
+    state.idx = Math.max(0, Math.min(state.total - 1, state.idx + dir));
     const i = state.idx;
     const slides = document.getElementById(`slides-${issueId}`);
     const dots = document.getElementById(`dots-${issueId}`);
     const cnt = document.getElementById(`cnt-${issueId}`);
-    if (slides) slides.style.transform = `translateX(-${i * 100}%)`;
+    if (slides) {
+        // px 기반 스냅(%의 폭 계산 오차로 두 장 걸쳐 보이던 문제 방지)
+        const W = slides.parentElement.offsetWidth;
+        slides.style.transition = 'transform .28s ease';
+        slides.style.transform = `translateX(${-i * W}px)`;
+    }
     if (cnt) cnt.textContent = `${i + 1} / ${state.total}`;
     if (dots) {
         dots.querySelectorAll('.carousel-dot').forEach((d, idx) => {
@@ -461,22 +467,51 @@ function attachEvents() {
         });
     });
 
-    // 캐러셀 터치 스와이프 (인스타 스타일)
+    // 캐러셀 터치 스와이프 — 손가락 추적 라이브 드래그(인스타 스타일)
     document.querySelectorAll('.carousel-wrap').forEach(wrap => {
         if (wrap.dataset.swipeBound) return;
         wrap.dataset.swipeBound = '1';
-        let startX = 0, startY = 0;
+        const slides = wrap.querySelector('.carousel-slides');
+        const card = wrap.closest('.card');
+        const id = Number(card?.dataset.id);
+        const st = carouselState[id];
+        if (!slides || !st) return;
+
+        let startX = 0, startY = 0, W = 0, dragging = false, decided = false, horiz = false;
+
         wrap.addEventListener('touchstart', e => {
             startX = e.touches[0].clientX;
             startY = e.touches[0].clientY;
+            W = wrap.offsetWidth;
+            dragging = true; decided = false; horiz = false;
+            slides.style.transition = 'none';
         }, { passive: true });
-        wrap.addEventListener('touchend', e => {
-            const dx = e.changedTouches[0].clientX - startX;
-            const dy = e.changedTouches[0].clientY - startY;
-            if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-                const card = wrap.closest('.card');
-                if (card) carouselGo(Number(card.dataset.id), dx < 0 ? 1 : -1);
+
+        wrap.addEventListener('touchmove', e => {
+            if (!dragging) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            if (!decided) {
+                if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+                decided = true;
+                horiz = Math.abs(dx) > Math.abs(dy);
             }
+            if (!horiz) return;               // 세로 스크롤은 페이지에 양보
+            let d = dx;
+            // 양 끝에서는 저항
+            if ((st.idx === 0 && dx > 0) || (st.idx === st.total - 1 && dx < 0)) d = dx * 0.35;
+            slides.style.transform = `translateX(${-st.idx * W + d}px)`;
+        }, { passive: true });
+
+        wrap.addEventListener('touchend', e => {
+            if (!dragging) return;
+            dragging = false;
+            if (!horiz) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            const THRESH = Math.min(60, W * 0.2);
+            if (dx <= -THRESH) carouselGo(id, 1);
+            else if (dx >= THRESH) carouselGo(id, -1);
+            else carouselGo(id, 0);           // 문턱 미달 → 제자리 스냅
         }, { passive: true });
     });
 

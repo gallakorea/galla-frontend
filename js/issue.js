@@ -237,20 +237,45 @@ function renderIssueMedia(issue) {
             </div>
         </div>`;
 
-        // 터치 스와이프 (인스타 스타일)
+        // 터치 스와이프 — 손가락 추적 라이브 드래그(인스타 스타일)
         if (images.length > 1) {
             const carousel = wrap.querySelector('.issue-carousel');
-            let startX = 0, startY = 0;
+            const slidesEl = carousel.querySelector('.issue-slides');
+            let startX = 0, startY = 0, W = 0, dragging = false, decided = false, horiz = false;
+
             carousel.addEventListener('touchstart', e => {
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
+                W = carousel.offsetWidth;
+                dragging = true; decided = false; horiz = false;
+                slidesEl.style.transition = 'none';
             }, { passive: true });
-            carousel.addEventListener('touchend', e => {
-                const dx = e.changedTouches[0].clientX - startX;
-                const dy = e.changedTouches[0].clientY - startY;
-                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-                    issueCarouselGo(dx < 0 ? 1 : -1);
+
+            carousel.addEventListener('touchmove', e => {
+                if (!dragging) return;
+                const dx = e.touches[0].clientX - startX;
+                const dy = e.touches[0].clientY - startY;
+                if (!decided) {
+                    if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+                    decided = true;
+                    horiz = Math.abs(dx) > Math.abs(dy);
                 }
+                if (!horiz) return;
+                let d = dx;
+                if ((issueCarouselIdx === 0 && dx > 0) ||
+                    (issueCarouselIdx === issueCarouselTotal - 1 && dx < 0)) d = dx * 0.35;
+                slidesEl.style.transform = `translateX(${-issueCarouselIdx * W + d}px)`;
+            }, { passive: true });
+
+            carousel.addEventListener('touchend', e => {
+                if (!dragging) return;
+                dragging = false;
+                if (!horiz) return;
+                const dx = e.changedTouches[0].clientX - startX;
+                const THRESH = Math.min(60, W * 0.2);
+                if (dx <= -THRESH) issueCarouselGo(1);
+                else if (dx >= THRESH) issueCarouselGo(-1);
+                else issueCarouselGo(0);
             }, { passive: true });
         }
         return;
@@ -294,12 +319,17 @@ window.issueOpenReels = function() {
 };
 
 window.issueCarouselGo = function(dir) {
-    issueCarouselIdx = (issueCarouselIdx + dir + issueCarouselTotal) % issueCarouselTotal;
+    // clamp(끝에서 루프 안 함)
+    issueCarouselIdx = Math.max(0, Math.min(issueCarouselTotal - 1, issueCarouselIdx + dir));
     const i = issueCarouselIdx;
     const slides = document.getElementById('issue-slides');
     const cnt = document.getElementById('issue-c-cnt');
     const dots = document.getElementById('issue-c-dots');
-    if (slides) slides.style.transform = `translateX(-${i*100}%)`;
+    if (slides) {
+        const W = slides.parentElement.offsetWidth;  // px 기반 정확 스냅
+        slides.style.transition = 'transform .28s ease';
+        slides.style.transform = `translateX(${-i * W}px)`;
+    }
     if (cnt) cnt.textContent = `${i+1} / ${issueCarouselTotal}`;
     if (dots) dots.querySelectorAll('.issue-c-dot').forEach((d, idx) => {
         d.classList.toggle('on', idx === i);
