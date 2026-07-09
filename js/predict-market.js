@@ -126,12 +126,56 @@ function render(){
       </div>
       <div id="pmdTabBody" class="pmd-tab-body"></div>
     </section>
+
+    <section class="pmd-related">
+      <div class="pmd-related-title">관련 마켓</div>
+      <div id="pmdRelated" class="pmd-related-list"><div class="pmd-tab-loading">불러오는 중…</div></div>
+    </section>
   `;
 
   if(!m.resolved && !closed) bindTrade();
   if(isCreator && !m.resolved) bindResolve();
   bindTabs();
   loadTab('comments');
+  loadRelated();
+}
+
+/* ===== 관련 마켓 (같은 카테고리 우선, 거래량순) ===== */
+async function loadRelated(){
+  const wrap=$('pmdRelated'); if(!wrap) return;
+  // 같은 카테고리 미마감 마켓
+  let { data } = await supa.from('markets')
+    .select('id,question,category,market_type,volume,close_at,resolved')
+    .neq('id', marketId).eq('category', MARKET.category)
+    .order('volume',{ascending:false}).limit(6);
+  // 부족하면 전체에서 채움
+  if(!data || data.length<3){
+    const { data: more } = await supa.from('markets')
+      .select('id,question,category,market_type,volume,close_at,resolved')
+      .neq('id', marketId).order('volume',{ascending:false}).limit(6);
+    const seen=new Set((data||[]).map(m=>m.id));
+    (more||[]).forEach(m=>{ if(!seen.has(m.id)&&(data=data||[]).length<6) data.push(m); });
+  }
+  if(!data || !data.length){ wrap.innerHTML=`<div class="pmd-tab-empty">관련 마켓이 없습니다.</div>`; return; }
+
+  // 각 마켓 대표 확률(첫 후보) 로드
+  const ids=data.map(m=>m.id);
+  const { data: outs } = await supa.from('market_outcomes')
+    .select('market_id,label,pool_yes,pool_no,sort_order').in('market_id',ids);
+  const byM={}; (outs||[]).forEach(o=>(byM[o.market_id]||=[]).push(o));
+  Object.values(byM).forEach(a=>a.sort((x,y)=>x.sort_order-y.sort_order));
+
+  wrap.innerHTML=data.map(m=>{
+    const list=byM[m.id]||[];
+    const top=list.map(o=>({l:o.label,p:Math.round(o.pool_no/(o.pool_yes+o.pool_no)*100)})).sort((a,b)=>b.p-a.p)[0];
+    const pctTxt = m.market_type==='multi'
+      ? (top?`${esc(top.l)} ${top.p}%`:'—')
+      : (top?`👍 ${top.p}%`:'—');
+    return `<a class="pmd-related-item" href="predict-market.html?id=${m.id}">
+      <div class="pmd-related-q">${esc(m.question)}</div>
+      <div class="pmd-related-meta"><span class="pmd-related-pct">${pctTxt}</span><span>💰 ${fmt(m.volume)}P</span></div>
+    </a>`;
+  }).join('');
 }
 
 /* ===== 탭 (댓글 / 상위 보유자 / 포지션 / 활동) ===== */

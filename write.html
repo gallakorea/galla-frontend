@@ -53,23 +53,23 @@
 
           <!-- 사진 모드 -->
           <div class="media-pane" id="pane-photo">
-            <input type="file" id="thumbnail" hidden accept="image/*" multiple />
-            <button type="button" id="thumbnailBtn" class="media-drop">
+            <input type="file" id="thumbnail" class="visually-hidden-file" accept="image/*" multiple />
+            <label for="thumbnail" id="thumbnailBtn" class="media-drop">
               <span class="media-drop-icon">＋</span>
               <span class="media-drop-title">사진 업로드</span>
               <span class="media-drop-sub">최대 10장 · 여러 장은 인스타처럼 캐러셀 (첫 장이 대표)</span>
-            </button>
+            </label>
             <div id="thumbPreview" class="preview-box"></div>
           </div>
 
           <!-- 동영상 모드 -->
           <div class="media-pane" id="pane-video" hidden>
-            <input type="file" id="video" hidden accept="video/*" />
-            <button type="button" id="videoBtn" class="media-drop">
+            <input type="file" id="video" class="visually-hidden-file" accept="video/*" />
+            <label for="video" id="videoBtn" class="media-drop">
               <span class="media-drop-icon">＋</span>
               <span class="media-drop-title">동영상 업로드</span>
               <span class="media-drop-sub">세로 4:5 권장 · 핵심 요소는 중앙에 배치</span>
-            </button>
+            </label>
             <div id="videoPreview" class="preview-box"></div>
           </div>
 

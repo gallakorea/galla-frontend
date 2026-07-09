@@ -153,8 +153,7 @@ function bindUI() {
     addOutcomeRow();
   });
 
-  // 이미지 선택
-  $('mImageBtn').addEventListener('click', () => $('mImage').click());
+  // 이미지 선택 (label[for]이 파일창을 염 — 모바일 안전)
   $('mImage').addEventListener('change', e => {
     const f = e.target.files[0];
     $('mImagePreview').innerHTML = f ? `<img src="${URL.createObjectURL(f)}">` : '';

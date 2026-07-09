@@ -199,7 +199,7 @@ if (remixStance === 'con') {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
-  thumbBtn.addEventListener('click', () => thumbInput.click());
+  thumbInput.addEventListener('click', () => { thumbInput.value = ''; });
   thumbInput.addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
@@ -212,11 +212,8 @@ if (remixStance === 'con') {
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  /* ✅🔥 핵심 수정: 클릭 시 value 초기화 */
-  videoBtn.addEventListener('click', () => {
-    videoInput.value = '';   // ← 이 한 줄이 전부
-    videoInput.click();
-  });
+  /* label[for=video]이 파일창을 염. 재선택 위해 열릴 때 value 초기화 */
+  videoInput.addEventListener('click', () => { videoInput.value = ''; });
 
   /* 🔥 영상 미리보기 안정화 */
   videoInput.addEventListener('change', e => {

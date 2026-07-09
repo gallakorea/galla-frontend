@@ -136,10 +136,10 @@
         <!-- 이슈 썸네일 (필수) -->
         <div class="field-block">
           <label class="field-label">이슈 썸네일 <span class="required">(필수)</span></label>
-          <input type="file" id="thumbnail" hidden accept="image/*" />
-          <button type="button" id="thumbnailBtn" class="file-btn">
+          <input type="file" id="thumbnail" class="visually-hidden-file" accept="image/*" />
+          <label for="thumbnail" id="thumbnailBtn" class="file-btn">
             썸네일 업로드
-          </button>
+          </label>
           <div class="guide-text">
             피드와 공유 화면에 노출될 대표 이미지입니다 (권장 비율 16:9)
           </div>
@@ -151,10 +151,10 @@
           <label class="field-label">
             1분 엘리베이터 스피치 <span class="optional">(선택)</span>
           </label>
-          <input type="file" id="video" hidden accept="video/*" />
-          <button type="button" id="videoBtn" class="file-btn">
+          <input type="file" id="video" class="visually-hidden-file" accept="video/*" />
+          <label for="video" id="videoBtn" class="file-btn">
             영상 업로드
-          </button>
+          </label>
           <div class="guide-text">
             이슈를 직접 설명하는 1분 이내 세로 영상 (9:16 권장)
           </div>

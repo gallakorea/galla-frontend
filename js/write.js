@@ -26,10 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MAX_IMAGES = 10;
 
-  thumbBtn.addEventListener('click', () => {
-    thumbInput.value = '';
-    thumbInput.click();
-  });
+  // label[for] 이 네이티브로 파일창을 염 (모바일 안전).
+  // 같은 파일 재선택 시에도 change가 뜨도록 열릴 때 value 초기화.
+  thumbInput.addEventListener('click', () => { thumbInput.value = ''; });
   thumbInput.addEventListener('change', e => {
     const files = [...(e.target.files || [])];
     if (files.length === 0) return;
@@ -56,11 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const videoBtn = document.getElementById('videoBtn');
   const videoPreview = document.getElementById('videoPreview');
 
-  /* ✅🔥 핵심 수정: 클릭 시 value 초기화 */
-  videoBtn.addEventListener('click', () => {
-    videoInput.value = '';   // ← 이 한 줄이 전부
-    videoInput.click();
-  });
+  /* label[for=video] 이 파일창을 염. 재선택 위해 열릴 때 value 초기화 */
+  videoInput.addEventListener('click', () => { videoInput.value = ''; });
 
   /* 🔥 영상 미리보기 안정화 */
   videoInput.addEventListener('change', e => {
