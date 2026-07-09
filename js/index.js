@@ -581,13 +581,22 @@ function interleave(issues, predicts) {
 
 async function loadPredictionCards() {
     const supabase = window.supabaseClient;
-    const { data: markets } = await supabase
+    let { data: markets } = await supabase
         .from('markets')
-        .select('id, question, category, market_type, volume, close_at, resolved')
+        .select('id, question, category, market_type, volume, close_at, resolved, created_at')
         .eq('resolved', false)
-        .order('volume', { ascending: false })
-        .limit(12);
+        .limit(60);
     if (!markets || !markets.length) return [];
+
+    // 알고리즘: 반응(거래량) 많은 것 위주 + 신규 가점 + 랜덤(매번 다르게)
+    const now = Date.now();
+    markets = markets.map(m => {
+        const ageH = (now - new Date(m.created_at)) / 3600000;
+        const freshBonus = ageH < 24 ? 6000 : ageH < 168 ? 2500 : 0; // 신규(24h)·이번주 가점
+        const engagement = (m.volume || 0) + freshBonus;
+        const jitter = 0.6 + Math.random() * 0.9;                     // 랜덤 요소
+        return { ...m, _score: engagement * jitter + Math.random() * 1500 };
+    }).sort((a, b) => b._score - a._score).slice(0, 12);
 
     const ids = markets.map(m => m.id);
     const { data: outs } = await supabase
