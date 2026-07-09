@@ -183,9 +183,11 @@ body { display: block; }
     transition: transform .28s ease;
 }
 .carousel-slide {
-    min-width: 100%;
+    flex: 0 0 100%;      /* 모든 슬라이드 폭을 컨테이너 폭으로 강제 고정 */
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;        /* 이미지 원본 폭으로 늘어나 슬라이드 정렬이 틀어지는 것 방지 */
     height: 100%;
-    flex-shrink: 0;
     overflow: hidden;
     position: relative;
 }

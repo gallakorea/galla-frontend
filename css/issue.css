@@ -226,9 +226,12 @@ body {
     transition: transform .28s ease;
 }
 .issue-slide {
-    min-width: 100%;
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     height: 100%;
-    flex-shrink: 0;
+    position: relative;
 }
 .issue-slide img {
     width: 100%;
@@ -1849,7 +1852,7 @@ body {
 }
 .issue-carousel { width:100%; height:100%; position:relative; overflow:hidden; }
 .issue-slides { display:flex; height:100%; transition:transform .28s ease; }
-.issue-slide { min-width:100%; height:100%; flex-shrink:0; }
+.issue-slide { flex:0 0 100%; width:100%; max-width:100%; min-width:0; height:100%; }
 .issue-slide img { width:100%; height:100%; object-fit:cover; display:block; }
 .issue-arr {
     position:absolute; top:50%; transform:translateY(-50%);

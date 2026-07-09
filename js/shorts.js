@@ -581,10 +581,18 @@ function playOnlyCurrent() {
 
       const playPromise = v.play();
       if (playPromise && typeof playPromise.catch === "function") {
-        // 브라우저가 소리 자동재생을 막으면 음소거로 폴백해 재생은 유지
-        playPromise.catch(() => {
-          v.muted = true;
-          v.play().catch(() => {});
+        playPromise.catch(err => {
+          if (err && err.name === "NotAllowedError") {
+            // 진짜 자동재생 정책 차단(제스처 없음)일 때만 음소거로 폴백
+            v.muted = true;
+            v.play().catch(() => {});
+          } else {
+            // 데이터 부족 등 → 소리 유지한 채 준비되면 재시도(느린 R2 대응)
+            v.addEventListener("canplay", () => {
+              v.muted = !!window.__REELS_MUTED__;
+              v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+            }, { once: true });
+          }
         });
       }
       v.playbackRate = 1;
