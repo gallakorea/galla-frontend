@@ -4,6 +4,7 @@
 
 let cards = [];
 window.cards = cards;
+let feed = [];
 let bestList, recommendList, bestMore;
 
 /* ===========================
@@ -425,6 +426,15 @@ function attachEvents() {
         };
     });
 
+    // 예측 카드 클릭 → 예측 상세
+    document.querySelectorAll('.predict-feed-card').forEach(el => {
+        if (el.dataset.bound) return;
+        el.dataset.bound = '1';
+        el.addEventListener('click', () => {
+            location.href = `predict-market.html?id=${el.dataset.mid}`;
+        });
+    });
+
     // 카드 전체 클릭
     document.querySelectorAll('.card').forEach(card => {
         card.addEventListener('click', e => {
@@ -545,9 +555,84 @@ async function loadData() {
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
     window.cards = cards;
 
+    // 예측 마켓 로드 후 이슈와 교차 배열
+    const predictionCards = await loadPredictionCards();
+    feed = interleave(cards, predictionCards);
+    window.feed = feed;
+
     loadBest();
     loadRecommend();
 }
+
+// 갈라 콘텐츠 2개마다 예측 콘텐츠 1개를 끼워 배치
+function interleave(issues, predicts) {
+    const out = [];
+    let pi = 0;
+    issues.forEach((c, i) => {
+        out.push({ type: 'issue', data: c });
+        if ((i + 1) % 2 === 0 && predicts[pi]) out.push({ type: 'predict', data: predicts[pi++] });
+    });
+    while (pi < predicts.length) out.push({ type: 'predict', data: predicts[pi++] });
+    return out;
+}
+
+async function loadPredictionCards() {
+    const supabase = window.supabaseClient;
+    const { data: markets } = await supabase
+        .from('markets')
+        .select('id, question, category, market_type, volume, close_at, resolved')
+        .eq('resolved', false)
+        .order('volume', { ascending: false })
+        .limit(12);
+    if (!markets || !markets.length) return [];
+
+    const ids = markets.map(m => m.id);
+    const { data: outs } = await supabase
+        .from('market_outcomes')
+        .select('market_id, label, pool_yes, pool_no, sort_order')
+        .in('market_id', ids);
+    const byM = {};
+    outs?.forEach(o => (byM[o.market_id] ||= []).push(o));
+    Object.values(byM).forEach(a => a.sort((x, y) => x.sort_order - y.sort_order));
+
+    const pct = o => Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100);
+    return markets.map(m => {
+        const list = (byM[m.id] || []).map(o => ({ label: o.label, p: pct(o) }));
+        return { ...m, outcomes: list };
+    });
+}
+
+/* 홈 피드용 예측 카드 (톤 유지, 명확히 '예측') */
+function renderPredictCard(m) {
+    const multi = m.market_type === 'multi';
+    let body;
+    if (multi) {
+        const top = m.outcomes.slice().sort((a, b) => b.p - a.p).slice(0, 3);
+        body = `<div class="pf-multi">
+            ${top.map(o => `<div class="pf-multi-row"><span>${escHtml(o.label)}</span><b>${o.p}%</b></div>`).join('')}
+            ${m.outcomes.length > 3 ? `<div class="pf-more">+${m.outcomes.length - 3}개 선택지</div>` : ''}
+        </div>`;
+    } else {
+        const p = m.outcomes[0] ? m.outcomes[0].p : 50;
+        body = `<div class="pf-bar"><div class="pf-bar-yes" style="width:${p}%"></div></div>
+            <div class="pf-legend"><span class="pf-yes">👍 YES ${p}%</span><span class="pf-no">👎 NO ${100 - p}%</span></div>`;
+    }
+    return `
+    <div class="predict-feed-card" data-mid="${m.id}">
+        <div class="pf-head">
+            <span class="pf-badge">🔮 갈라예측</span>
+            <span class="pf-cat">${escHtml(m.category || '')}${multi ? ' · 여러 선택지' : ''}</span>
+        </div>
+        <div class="pf-q">${escHtml(m.question)}</div>
+        ${body}
+        <div class="pf-foot">
+            <span>💰 ${(Math.round(m.volume)).toLocaleString('ko-KR')}P</span>
+            <span class="pf-go">예측하러 가기 ›</span>
+        </div>
+    </div>`;
+}
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function renderFeedItem(item){ return item.type === 'predict' ? renderPredictCard(item.data) : renderCard(item.data); }
 
 async function loadWarData(issueIds) {
     const supabase = window.supabaseClient;
@@ -582,15 +667,15 @@ async function loadWarData(issueIds) {
 
 function loadBest() {
     bestList.innerHTML = '';
-    cards.slice(0, 3).forEach(c => bestList.innerHTML += renderCard(c));
+    feed.slice(0, 3).forEach(item => bestList.innerHTML += renderFeedItem(item));
     attachEvents();
 }
 
 let rec = 3;
 function loadRecommend() {
     for (let i = 0; i < 3; i++) {
-        if (!cards[rec]) return;
-        recommendList.innerHTML += renderCard(cards[rec]);
+        if (!feed[rec]) return;
+        recommendList.innerHTML += renderFeedItem(feed[rec]);
         rec++;
     }
     attachEvents();

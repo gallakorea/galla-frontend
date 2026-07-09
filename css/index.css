@@ -84,7 +84,7 @@ body { display: block; }
 
 /* 영상 카드는 인스타 피드 추천 세로형 4:5 (1080x1350) */
 .card-media--video {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 9 / 16;   /* 인스타처럼 세로 영상 전체 표시(잘림 없음) */
 }
 
 .card-media video {
@@ -453,3 +453,38 @@ body { display: block; }
 body.shorts-open #app { padding-bottom: 0 !important; }
 body.shorts-open header,
 body.shorts-open .header { display: none !important; }
+
+/* ===== 홈 피드 예측 카드 (갈라 콘텐츠와 교차) ===== */
+.predict-feed-card {
+    background: linear-gradient(160deg, #0c1524, #0a0e17);
+    border: 1px solid #1c2b45;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    cursor: pointer;
+    transition: border-color .15s;
+}
+.predict-feed-card:active { border-color: #3356ff; }
+.pf-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.pf-badge {
+    font-size: 11px; font-weight: 900; color: #fff;
+    background: linear-gradient(90deg, #3356ff, #6d4bff);
+    padding: 3px 9px; border-radius: 999px;
+}
+.pf-cat { font-size: 12px; color: #8fa3c8; font-weight: 700; }
+.pf-q { font-size: 16px; font-weight: 800; line-height: 1.4; margin-bottom: 12px; }
+
+.pf-bar { height: 9px; border-radius: 999px; background: #ff4f6e; overflow: hidden; }
+.pf-bar-yes { height: 100%; background: #3356ff; border-radius: 999px 0 0 999px; }
+.pf-legend { display: flex; justify-content: space-between; margin-top: 7px; font-size: 13px; font-weight: 800; }
+.pf-yes { color: #6d8bff; }
+.pf-no { color: #ff6f86; }
+
+.pf-multi { display: flex; flex-direction: column; gap: 7px; }
+.pf-multi-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #142138; }
+.pf-multi-row span { color: #dbe4f5; }
+.pf-multi-row b { color: #6d8bff; font-weight: 900; }
+.pf-more { font-size: 12px; color: #7c8db0; padding-top: 2px; }
+
+.pf-foot { display: flex; justify-content: space-between; margin-top: 13px; font-size: 12px; color: #8fa3c8; }
+.pf-go { color: #6d8bff; font-weight: 800; }

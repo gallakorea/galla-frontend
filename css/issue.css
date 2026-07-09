@@ -129,7 +129,7 @@ body {
 /* 영상은 인스타 피드 추천 세로형 4:5 (1080x1350)
    .issue-media 정의가 파일 뒤쪽에 하나 더 있어 우선순위 확보용 복합 선택자 사용 */
 .issue-media.issue-media--video {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 9 / 16;   /* 인스타처럼 세로 영상 전체 표시(잘림 없음) */
 }
 
 .issue-media video {
