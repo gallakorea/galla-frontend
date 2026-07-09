@@ -277,8 +277,8 @@ body {
 #mpQuickView .qv-card {
     position: absolute; left: 50%; top: 50%;
     transform: translate(-50%, -50%);
-    width: calc(100% - 36px); max-width: 420px;
-    max-height: 82vh; overflow-y: auto;
+    width: calc(100% - 28px); max-width: 440px;
+    max-height: 90vh; overflow-y: auto;
     background: #101014;
     border: 1px solid #26262e;
     border-radius: 16px;
@@ -290,9 +290,14 @@ body {
     background: rgba(0,0,0,.6); color: #fff;
     border: none; cursor: pointer; font-size: 14px;
 }
-#mpQuickView .qv-media img,
-#mpQuickView .qv-media video {
+#mpQuickView .qv-media img {
     width: 100%; max-height: 46vh; object-fit: cover; display: block;
+    background: #000;
+}
+/* 영상은 잘리면 안 됨 — 원본 비율 유지(레터박스), 세로 릴스 대응 */
+#mpQuickView .qv-media video {
+    width: 100%; height: auto; max-height: 58vh;
+    object-fit: contain; display: block;
     background: #000;
 }
 #mpQuickView .qv-body { padding: 14px 16px 16px; }
