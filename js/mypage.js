@@ -351,6 +351,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     // 퀵뷰 모달 — 그리드 클릭 시 페이지 이탈 없이 미리보기
     // =====================================================
+    // 퀵뷰 탐색 상태: 현재 탭의 아이템 목록 + 위치
+    let QV_ITEMS = [];   // [{type:'issue'|'news'|'plaza', id}]
+    let QV_INDEX = 0;
+    let qvDirty = false; // 퀵뷰에서 저장 해제 등 변경 발생 → 닫을 때 탭 새로고침
+
+    function closeQuickView() {
+        const qv = document.getElementById("mpQuickView");
+        if (!qv) return;
+        qv.classList.remove("open");
+        document.body.style.overflow = "";
+        if (qvDirty) {
+            qvDirty = false;
+            document.querySelector(".tab.active")?.click(); // 현재 탭 재렌더
+        }
+    }
+
+    function qvStep(dir) {
+        const next = QV_INDEX + dir;
+        if (next < 0 || next >= QV_ITEMS.length) return;
+        QV_INDEX = next;
+        showQvCurrent();
+    }
+
+    function showQvCurrent() {
+        const it = QV_ITEMS[QV_INDEX];
+        if (!it) return;
+        if (it.type === "issue") quickViewIssue(it.id);
+        else if (it.type === "news") quickViewNews(it.id);
+        else if (it.type === "plaza") quickViewPlaza(it.id);
+    }
+
+    function openQvList(items, index) {
+        QV_ITEMS = items;
+        QV_INDEX = index;
+        showQvCurrent();
+    }
+
     function ensureQuickView() {
         let qv = document.getElementById("mpQuickView");
         if (qv) return qv;
@@ -360,32 +397,78 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="qv-dim"></div>
             <div class="qv-card">
                 <button class="qv-close" aria-label="닫기">✕</button>
+                <button class="qv-nav qv-prev" aria-label="이전">‹</button>
+                <button class="qv-nav qv-next" aria-label="다음">›</button>
                 <div class="qv-media"></div>
                 <div class="qv-body">
                     <div class="qv-cat"></div>
                     <div class="qv-title"></div>
                     <div class="qv-desc"></div>
                     <div class="qv-stats"></div>
+                    <div class="qv-actions"></div>
                     <button class="qv-go"></button>
                 </div>
             </div>`;
         document.body.appendChild(qv);
-        const close = () => { qv.classList.remove("open"); document.body.style.overflow = ""; };
-        qv.querySelector(".qv-dim").onclick = close;
-        qv.querySelector(".qv-close").onclick = close;
+        qv.querySelector(".qv-dim").onclick = closeQuickView;
+        qv.querySelector(".qv-close").onclick = closeQuickView;
+        qv.querySelector(".qv-prev").onclick = () => qvStep(-1);
+        qv.querySelector(".qv-next").onclick = () => qvStep(1);
+
+        // 좌우 스와이프로 이전/다음 (세로 스크롤과 구분)
+        const card = qv.querySelector(".qv-card");
+        let tx = 0, ty = 0;
+        card.addEventListener("touchstart", e => {
+            tx = e.touches[0].clientX; ty = e.touches[0].clientY;
+        }, { passive: true });
+        card.addEventListener("touchend", e => {
+            const dx = e.changedTouches[0].clientX - tx;
+            const dy = e.changedTouches[0].clientY - ty;
+            if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                qvStep(dx < 0 ? 1 : -1);
+            }
+        }, { passive: true });
+
+        // 키보드 ← → / ESC
+        document.addEventListener("keydown", e => {
+            if (!qv.classList.contains("open")) return;
+            if (e.key === "ArrowLeft") qvStep(-1);
+            if (e.key === "ArrowRight") qvStep(1);
+            if (e.key === "Escape") closeQuickView();
+        });
         return qv;
     }
 
-    function openQuickView({ mediaHtml, cat, title, desc, stats, goLabel, goHref }) {
+    function openQuickView({ mediaHtml, cat, title, desc, stats, goLabel, goHref, actions }) {
         const qv = ensureQuickView();
         qv.querySelector(".qv-media").innerHTML = mediaHtml || "";
         qv.querySelector(".qv-cat").textContent = cat || "";
         qv.querySelector(".qv-title").textContent = title || "";
         qv.querySelector(".qv-desc").textContent = desc || "";
         qv.querySelector(".qv-stats").innerHTML = stats || "";
+
+        // 액션 버튼 (좋아요/저장 등)
+        const actWrap = qv.querySelector(".qv-actions");
+        actWrap.innerHTML = "";
+        (actions || []).forEach(a => {
+            const b = document.createElement("button");
+            b.className = "qv-act" + (a.active ? " on" : "");
+            b.textContent = a.label;
+            b.onclick = async () => {
+                b.disabled = true;
+                try { await a.onClick(b); } finally { b.disabled = false; }
+            };
+            actWrap.appendChild(b);
+        });
+
         const go = qv.querySelector(".qv-go");
         go.textContent = goLabel || "원본으로 이동";
         go.onclick = () => location.href = goHref;
+
+        // 이전/다음 버튼 표시 여부
+        qv.querySelector(".qv-prev").style.visibility = QV_INDEX > 0 ? "visible" : "hidden";
+        qv.querySelector(".qv-next").style.visibility = QV_INDEX < QV_ITEMS.length - 1 ? "visible" : "hidden";
+
         qv.classList.add("open");
         document.body.style.overflow = "hidden";
     }
@@ -396,36 +479,101 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 타입별 퀵뷰 (필요 데이터 lazy 조회)
     async function quickViewIssue(issueId) {
-        const { data: i } = await supabase.from("issues")
-            .select("id,title,category,thumbnail_url,images,video_url,pro_count,con_count,faction_a,faction_b")
-            .eq("id", issueId).maybeSingle();
+        const [{ data: i }, { data: bm }] = await Promise.all([
+            supabase.from("issues")
+                .select("id,title,category,thumbnail_url,images,video_url,pro_count,con_count,faction_a,faction_b")
+                .eq("id", issueId).maybeSingle(),
+            supabase.from("bookmarks")
+                .select("issue_id").eq("user_id", userId).eq("issue_id", issueId).maybeSingle()
+        ]);
         if (!i) { location.href = `issue.html?id=${issueId}`; return; }
         const thumb = i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null;
         const media = i.video_url
             ? `<video src="${i.video_url}" controls playsinline preload="metadata"></video>`
             : qvImg(thumb);
+
+        let saved = !!bm;
         openQuickView({
             mediaHtml: media,
             cat: i.category || "",
             title: i.title,
             desc: "",
             stats: `<span>${i.faction_a || "찬성"} ${i.pro_count || 0}</span> · <span>${i.faction_b || "반대"} ${i.con_count || 0}</span>`,
+            actions: [{
+                label: saved ? "🔖 저장됨" : "🔖 저장",
+                active: saved,
+                onClick: async (btn) => {
+                    if (saved) {
+                        await supabase.from("bookmarks").delete()
+                            .eq("user_id", userId).eq("issue_id", issueId);
+                    } else {
+                        await supabase.from("bookmarks").insert({ user_id: userId, issue_id: issueId });
+                    }
+                    saved = !saved;
+                    btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                    btn.classList.toggle("on", saved);
+                    qvDirty = true;
+                }
+            }],
             goLabel: "이슈에서 참전하기",
             goHref: `issue.html?id=${i.id}`
         });
     }
 
     async function quickViewNews(newsId) {
-        const { data: n } = await supabase.from("galla_news")
-            .select("id,title,summary,category,hero_image,source_count")
-            .eq("id", newsId).maybeSingle();
+        const [{ data: n }, { data: bm }, { data: rx }] = await Promise.all([
+            supabase.from("galla_news")
+                .select("id,title,summary,category,hero_image,source_count")
+                .eq("id", newsId).maybeSingle(),
+            supabase.from("galla_news_bookmarks")
+                .select("news_id").eq("user_id", userId).eq("news_id", newsId).maybeSingle(),
+            supabase.from("galla_news_reactions")
+                .select("value").eq("user_id", userId).eq("news_id", newsId).maybeSingle()
+        ]);
         if (!n) { location.href = `search.html?gn=${newsId}`; return; }
+
+        let liked = rx?.value === 1;
+        let saved = !!bm;
         openQuickView({
             mediaHtml: qvImg(n.hero_image),
             cat: `${n.category || ""} · 갈라뉴스`,
             title: n.title,
             desc: n.summary || "",
             stats: n.source_count ? `<span>출처 ${n.source_count}곳 종합</span>` : "",
+            actions: [
+                {
+                    label: liked ? "👍 좋아요 취소" : "👍 좋아요",
+                    active: liked,
+                    onClick: async (btn) => {
+                        if (liked) {
+                            await supabase.from("galla_news_reactions").delete()
+                                .eq("user_id", userId).eq("news_id", newsId);
+                        } else {
+                            await supabase.from("galla_news_reactions")
+                                .upsert({ news_id: newsId, user_id: userId, value: 1 }, { onConflict: "news_id,user_id" });
+                        }
+                        liked = !liked;
+                        btn.textContent = liked ? "👍 좋아요 취소" : "👍 좋아요";
+                        btn.classList.toggle("on", liked);
+                    }
+                },
+                {
+                    label: saved ? "🔖 저장됨" : "🔖 저장",
+                    active: saved,
+                    onClick: async (btn) => {
+                        if (saved) {
+                            await supabase.from("galla_news_bookmarks").delete()
+                                .eq("user_id", userId).eq("news_id", newsId);
+                        } else {
+                            await supabase.from("galla_news_bookmarks").insert({ news_id: newsId, user_id: userId });
+                        }
+                        saved = !saved;
+                        btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                        btn.classList.toggle("on", saved);
+                        qvDirty = true;
+                    }
+                }
+            ],
             goLabel: "기사 전체 읽기",
             goHref: `search.html?gn=${n.id}`
         });
@@ -515,9 +663,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
+        const qvItems = issueIds.filter(id => issueMap[id]).map(id => ({ type: "issue", id }));
+        let idx = 0;
         issueIds.forEach(id => {
             const issue = issueMap[id];
             if (!issue) return; // 삭제된 이슈
+            const myIdx = idx++;
             const thumb = issue.thumbnail_url
                 || (Array.isArray(issue.images) && issue.images[0])
                 || null;
@@ -525,7 +676,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 thumb,
                 title: issue.title,
                 badge: issue.video_url ? "▶" : "",
-                onClick: () => quickViewIssue(issue.id)
+                onClick: () => openQvList(qvItems, myIdx)
             }));
         });
     };
@@ -571,14 +722,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
+        const qvItems = newsIds.filter(id => newsMap[id]).map(id => ({ type: "news", id }));
+        let idx = 0;
         newsIds.forEach(id => {
             const n = newsMap[id];
             if (!n) return;
+            const myIdx = idx++;
             tabContent.appendChild(igCard({
                 thumb: n.hero_image,
                 title: n.title,
                 badge: "📰",
-                onClick: () => quickViewNews(n.id)
+                onClick: () => openQvList(qvItems, myIdx)
             }));
         });
     };
@@ -610,12 +764,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
-        posts.forEach(p => {
+        const qvItems = posts.map(p => ({ type: "plaza", id: p.id }));
+        posts.forEach((p, myIdx) => {
             tabContent.appendChild(igCard({
                 thumb: p.cover_image || p.thumbnail,
                 title: p.title,
                 badge: "",
-                onClick: () => quickViewPlaza(p.id)
+                onClick: () => openQvList(qvItems, myIdx)
             }));
         });
     };

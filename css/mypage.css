@@ -314,3 +314,32 @@ body {
     background: #2f7df6; color: #fff; font-size: 14px; font-weight: 800;
     cursor: pointer;
 }
+
+/* 퀵뷰 이전/다음 + 액션 버튼 */
+#mpQuickView .qv-nav {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(0,0,0,.6); color: #fff;
+    border: 1px solid rgba(255,255,255,.25);
+    font-size: 20px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding-bottom: 3px;
+}
+#mpQuickView .qv-prev { left: 8px; }
+#mpQuickView .qv-next { right: 8px; }
+
+#mpQuickView .qv-actions {
+    display: flex; gap: 8px; margin-top: 12px;
+}
+#mpQuickView .qv-actions:empty { display: none; }
+#mpQuickView .qv-act {
+    flex: 1;
+    padding: 9px 10px; border-radius: 10px;
+    background: #1a1c24; color: #cfd4de;
+    border: 1px solid #2c2f3a;
+    font-size: 13px; font-weight: 700; cursor: pointer;
+}
+#mpQuickView .qv-act.on {
+    border-color: #2f7df6; color: #8fb6ff; background: rgba(47,125,246,.12);
+}
+#mpQuickView .qv-act:disabled { opacity: .5; }
