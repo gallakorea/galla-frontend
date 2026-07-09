@@ -1887,3 +1887,26 @@ body {
     color: #111 !important;
     border-color: #ffe27a !important;
 }
+
+/* ===== 인스타식 작성자 헤더 (미디어 위) — 이슈 페이지 ===== */
+.media-author-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 12px 16px;
+}
+.media-author-head .mah-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.media-author-head .mah-avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 800; color: #fff;
+    background: linear-gradient(135deg, #3356ff, #ff4f6e);
+}
+.media-author-head .mah-avatar.generic { background: linear-gradient(135deg, #2a3550, #4a2e3a); }
+.media-author-head .mah-info { min-width: 0; }
+.media-author-head .mah-line1 { display: flex; align-items: center; gap: 6px; }
+.media-author-head .mah-line1 .author-name { font-size: 14px; font-weight: 700; }
+.media-author-head .mah-line2 { font-size: 12px; color: #888; margin-top: 2px; }
+
+/* 제목·설명 캡션 (미디어 아래) */
+.issue-caption { padding: 14px 16px 4px; }
+.issue-caption h1 { font-size: 20px; font-weight: 900; line-height: 1.35; margin: 0; }
+.issue-caption p { font-size: 14px; color: #bbb; line-height: 1.5; margin: 6px 0 0; }

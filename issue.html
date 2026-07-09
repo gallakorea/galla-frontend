@@ -37,24 +37,26 @@
       </div>
     </header>
 
-    <!-- ISSUE HERO -->
-    <section class="issue-hero">
-        <div class="issue-category-time">
-            <span id="issue-category">카테고리</span>
-            <span id="issue-time"></span>
+    <!-- INSTAGRAM식 작성자 헤더 (미디어 위) -->
+    <div class="media-author-head">
+        <div class="mah-left">
+            <div class="mah-avatar generic"></div>
+            <div class="mah-info">
+                <div class="mah-line1"><span id="issue-author" class="author-name">작성자 · 익명</span></div>
+                <div class="mah-line2"><span id="issue-category">카테고리</span> · <span id="issue-time"></span></div>
+            </div>
         </div>
+        <button class="follow-btn" id="follow-btn">+ 팔로우</button>
+    </div>
 
+    <!-- MEDIA (영상/캐러셀/이미지) -->
+    <div id="issue-media-wrap"></div>
+
+    <!-- 제목·설명 (미디어 아래 캡션) -->
+    <section class="issue-caption">
         <h1 id="issue-title"></h1>
         <p id="issue-desc"></p>
-
-        <div class="issue-author">
-            <span id="issue-author">작성자 · 익명</span>
-            <button class="follow-btn" id="follow-btn">+ 팔로우</button>
-        </div>
     </section>
-
-    <!-- MEDIA (4:5 세로형 — 영상/캐러셀/이미지) -->
-    <div id="issue-media-wrap"></div>
 
     <!-- VOTE -->
     <section class="vote-section">

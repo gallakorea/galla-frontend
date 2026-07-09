@@ -130,25 +130,28 @@ function renderCard(data) {
         atk: 0, def: 0, sup: 0
     };
 
+    const initial = (data.author || '익').trim().charAt(0) || '익';
+
     return `
     <div class="card" data-id="${data.id}" data-link="issue.html?id=${data.id}">
+
+        <div class="media-author-head">
+            <div class="mah-left">
+                <div class="mah-avatar">${initial}</div>
+                <div class="mah-info">
+                    <div class="mah-line1">
+                        <span class="author-name">${data.author}</span>
+                        <span class="level-badge">Lv.${data.level}</span>
+                    </div>
+                    <div class="mah-line2">${data.category} · ${data.time}</div>
+                </div>
+            </div>
+            ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
+        </div>
 
         ${renderMedia(data)}
 
         <div class="card-body">
-            <div class="card-top">
-                <span>${data.category}</span>
-                <span>${data.time}</span>
-            </div>
-
-            <div class="card-author">
-                <div class="author-wrap">
-                    <span class="author-name">${data.author}</span>
-                    <span class="level-badge">Lv.${data.level}</span>
-                </div>
-                ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
-            </div>
-
             <div class="card-title">${data.title}</div>
             ${data.oneLine ? `<div class="card-desc">${data.oneLine}</div>` : ''}
 
