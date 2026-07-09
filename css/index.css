@@ -82,9 +82,9 @@ body { display: block; }
     flex-shrink: 0;
 }
 
-/* 영상 카드는 인스타 피드와 동일하게 4:5 세로 */
+/* 영상 카드는 3:4 세로 */
 .card-media--video {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 3 / 4;
 }
 
 .card-media video {
@@ -92,11 +92,6 @@ body { display: block; }
     height: 100%;
     object-fit: cover;
     display: block;
-}
-
-/* 세로 영상 하단(로고 등)이 잘리지 않도록 크롭 기준을 아래로 이동 */
-.card-media--video video {
-    object-position: center 62%;
 }
 
 .card-media img {

@@ -126,10 +126,10 @@ body {
     flex-shrink: 0;
 }
 
-/* 영상은 인스타 피드와 동일하게 4:5 세로
+/* 영상은 3:4 세로
    .issue-media 정의가 파일 뒤쪽에 하나 더 있어 우선순위 확보용 복합 선택자 사용 */
 .issue-media.issue-media--video {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 3 / 4;
 }
 
 .issue-media video {
@@ -137,11 +137,6 @@ body {
     height: 100%;
     object-fit: cover;
     display: block;
-}
-
-/* 세로 영상 하단(로고 등)이 잘리지 않도록 크롭 기준을 아래로 이동 */
-.issue-media--video video {
-    object-position: center 62%;
 }
 
 .issue-media img {
