@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GALLA - 예측 마켓</title>
+  <link rel="stylesheet" href="./css/galla-predict.css" />
+  <link rel="stylesheet" href="./css/predict-market.css" />
+  <link rel="stylesheet" href="./css/header.css">
+  <link rel="stylesheet" href="./css/nav.css">
+</head>
+
+<body data-page="predict">
+<div id="app">
+
+<header class="header header-common">
+  <div class="header-inner">
+    <button class="back-btn" onclick="history.length>1?history.back():location.href='galla-predict.html'">←</button>
+    <span class="header-title">예측 마켓</span>
+    <button id="pointPill" class="point-pill"><span class="point-coin">🪙</span><span id="pointBalance">–</span></button>
+  </div>
+</header>
+
+<main class="pmd-main" id="pmdMain">
+  <div class="pmd-loading" id="pmdLoading">불러오는 중…</div>
+</main>
+
+<div id="pmToast" class="pm-toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./js/supabase.js"></script>
+<script src="./js/predict-market.js"></script>
+
+</body>
+</html>

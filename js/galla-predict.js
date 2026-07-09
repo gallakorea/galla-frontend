@@ -1,0 +1,246 @@
+/* =========================================================
+   galla-predict.js — 갈라예측 (폴리마켓식 예측시장, 가상 포인트)
+========================================================= */
+
+let supa = null;
+let ME = null;
+let allMarkets = [];
+let curCat = '';
+let curSort = 'volume';
+
+const $ = id => document.getElementById(id);
+
+function toast(msg) {
+  const t = $('pmToast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.hidden = true; }, 2200);
+}
+
+function pct(m) {
+  const y = m.pool_yes, n = m.pool_no;
+  return Math.round((n / (y + n)) * 100); // YES 확률
+}
+function fmt(n) {
+  return Math.round(n).toLocaleString('ko-KR');
+}
+function timeLeft(closeAt) {
+  const ms = new Date(closeAt) - Date.now();
+  if (ms <= 0) return '마감';
+  const d = Math.floor(ms / 86400000);
+  if (d >= 1) return `D-${d}`;
+  const h = Math.floor(ms / 3600000);
+  if (h >= 1) return `${h}시간 남음`;
+  return `${Math.max(1, Math.floor(ms / 60000))}분 남음`;
+}
+
+/* ============ 초기화 ============ */
+document.addEventListener('DOMContentLoaded', async () => {
+  supa = await waitForSupabaseClient();
+
+  const { data } = await supa.auth.getSession();
+  ME = data?.session?.user || null;
+
+  await refreshBalance();
+  bindUI();
+  await loadMarkets();
+});
+
+async function refreshBalance() {
+  if (!ME) { $('pointBalance').textContent = '로그인'; return; }
+  const { data, error } = await supa.rpc('ensure_balance');
+  if (!error && data != null) $('pointBalance').textContent = fmt(data) + 'P';
+}
+
+/* ============ UI 바인딩 ============ */
+function bindUI() {
+  // 포인트 pill → 출석 지급
+  $('pointPill').addEventListener('click', async () => {
+    if (!ME) { location.href = 'login.html'; return; }
+    const { data, error } = await supa.rpc('claim_daily');
+    if (error) return toast('오류가 발생했습니다.');
+    if (data.ok) { toast(`출석 완료! +${fmt(data.claimed)}P`); $('pointBalance').textContent = fmt(data.balance) + 'P'; }
+    else if (data.reason === 'already') toast('오늘 출석 포인트는 이미 받았어요.');
+  });
+
+  // 세그먼트 탭
+  document.querySelectorAll('.seg-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.seg-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const v = t.dataset.view;
+      $('view-markets').hidden = v !== 'markets';
+      $('view-king').hidden = v !== 'king';
+      $('view-god').hidden = v !== 'god';
+      $('createFab').style.display = v === 'markets' ? '' : 'none';
+      if (v === 'king') loadLeaderboard('king');
+      if (v === 'god') loadLeaderboard('god');
+    });
+  });
+
+  // 카테고리 칩
+  $('catChips').addEventListener('click', e => {
+    const chip = e.target.closest('.cat-chip');
+    if (!chip) return;
+    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    curCat = chip.dataset.cat;
+    renderMarkets();
+  });
+
+  // 정렬
+  $('sortSelect').addEventListener('change', e => { curSort = e.target.value; renderMarkets(); });
+
+  // 생성 모달
+  $('createFab').addEventListener('click', () => {
+    if (!ME) { location.href = 'login.html'; return; }
+    // 기본 마감: 7일 뒤
+    const d = new Date(Date.now() + 7 * 86400000);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    $('mCloseAt').value = d.toISOString().slice(0, 16);
+    $('createModal').hidden = false;
+  });
+  $('createClose').addEventListener('click', () => { $('createModal').hidden = true; });
+  $('createModal').addEventListener('click', e => { if (e.target.id === 'createModal') $('createModal').hidden = true; });
+
+  // 이미지 선택
+  $('mImageBtn').addEventListener('click', () => $('mImage').click());
+  $('mImage').addEventListener('change', e => {
+    const f = e.target.files[0];
+    $('mImagePreview').innerHTML = f ? `<img src="${URL.createObjectURL(f)}">` : '';
+  });
+
+  $('createSubmit').addEventListener('click', submitMarket);
+}
+
+/* ============ 마켓 로드/렌더 ============ */
+async function loadMarkets() {
+  const { data, error } = await supa
+    .from('markets')
+    .select('id,question,category,image_url,close_at,resolved,outcome,pool_yes,pool_no,volume,created_at')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  allMarkets = data || [];
+  renderMarkets();
+}
+
+function renderMarkets() {
+  let list = allMarkets.slice();
+  if (curCat) list = list.filter(m => m.category === curCat);
+
+  if (curSort === 'volume') list.sort((a, b) => b.volume - a.volume);
+  else if (curSort === 'new') list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  else if (curSort === 'closing') list.sort((a, b) => new Date(a.close_at) - new Date(b.close_at));
+
+  const wrap = $('marketList');
+  $('marketsEmpty').hidden = list.length > 0;
+  wrap.innerHTML = list.map(m => {
+    const p = pct(m);
+    const closed = m.resolved || new Date(m.close_at) <= Date.now();
+    const statusBadge = m.resolved
+      ? `<span class="mc-resolved ${m.outcome}">정산: ${m.outcome === 'yes' ? 'YES' : 'NO'}</span>`
+      : `<span class="mc-time">${timeLeft(m.close_at)}</span>`;
+    return `
+    <div class="market-card" data-id="${m.id}">
+      <div class="mc-top">
+        ${m.image_url ? `<img class="mc-thumb" src="${m.image_url}" loading="lazy">` : `<div class="mc-thumb mc-thumb-ph">🔮</div>`}
+        <div class="mc-head">
+          <div class="mc-q">${escapeHtml(m.question)}</div>
+          <div class="mc-meta">${m.category || ''} · ${statusBadge}</div>
+        </div>
+      </div>
+      <div class="mc-prob">
+        <div class="mc-prob-bar"><div class="mc-prob-yes" style="width:${p}%"></div></div>
+        <div class="mc-prob-legend">
+          <span class="mc-yes">YES ${p}%</span>
+          <span class="mc-no">NO ${100 - p}%</span>
+        </div>
+      </div>
+      <div class="mc-foot">
+        <span>💰 ${fmt(m.volume)}P</span>
+        <span class="mc-go">${closed ? '결과 보기' : '예측하기'} ›</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.market-card').forEach(c => {
+    c.onclick = () => location.href = `predict-market.html?id=${c.dataset.id}`;
+  });
+}
+
+/* ============ 마켓 생성 ============ */
+async function submitMarket() {
+  const q = $('mQuestion').value.trim();
+  const closeAt = $('mCloseAt').value;
+  if (!q) return toast('질문을 입력하세요.');
+  if (!closeAt) return toast('마감 일시를 선택하세요.');
+  if (new Date(closeAt) <= new Date()) return toast('마감은 미래 시각이어야 합니다.');
+
+  const btn = $('createSubmit');
+  btn.disabled = true; btn.textContent = '만드는 중…';
+  try {
+    let imageUrl = null;
+    const f = $('mImage').files[0];
+    if (f) {
+      btn.textContent = '이미지 업로드 중…';
+      imageUrl = await window.GALLA_UPLOAD_MEDIA(f, 'image');
+    }
+    const { data, error } = await supa.rpc('create_market', {
+      p_question: q,
+      p_description: $('mDesc').value.trim() || null,
+      p_category: $('mCategory').value,
+      p_image_url: imageUrl,
+      p_close_at: new Date(closeAt).toISOString(),
+      p_liquidity: 1000
+    });
+    if (error) throw error;
+    $('createModal').hidden = true;
+    $('mQuestion').value = ''; $('mDesc').value = ''; $('mImage').value = ''; $('mImagePreview').innerHTML = '';
+    toast('예측 마켓이 생성되었습니다!');
+    location.href = `predict-market.html?id=${data}`;
+  } catch (e) {
+    console.error(e);
+    toast('마켓 생성에 실패했습니다.');
+  } finally {
+    btn.disabled = false; btn.textContent = '마켓 만들기';
+  }
+}
+
+/* ============ 리더보드 ============ */
+async function loadLeaderboard(kind) {
+  const el = kind === 'king' ? $('kingList') : $('godList');
+  if (el.dataset.loaded) return;
+  el.innerHTML = `<div class="lb-loading">불러오는 중…</div>`;
+
+  if (kind === 'king') {
+    const { data } = await supa.from('predict_king_leaderboard')
+      .select('*').order('profit', { ascending: false }).limit(50);
+    el.innerHTML = (data || []).map((r, i) => `
+      <div class="lb-row">
+        <span class="lb-rank ${i < 3 ? 'top' : ''}">${medal(i)}</span>
+        <span class="lb-name">${escapeHtml(r.nickname || '익명')} ${title(i, 'king')}</span>
+        <span class="lb-stat">${r.profit >= 0 ? '+' : ''}${fmt(r.profit)}P</span>
+      </div>`).join('') || emptyLB();
+  } else {
+    const { data } = await supa.from('predict_god_leaderboard')
+      .select('*').order('total_volume', { ascending: false }).limit(50);
+    el.innerHTML = (data || []).map((r, i) => `
+      <div class="lb-row">
+        <span class="lb-rank ${i < 3 ? 'top' : ''}">${medal(i)}</span>
+        <span class="lb-name">${escapeHtml(r.nickname || '익명')} ${title(i, 'god')}</span>
+        <span class="lb-stat">💰 ${fmt(r.total_volume)}P · 👥 ${r.participants}</span>
+      </div>`).join('') || emptyLB();
+  }
+  el.dataset.loaded = '1';
+}
+function medal(i) { return i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1); }
+function title(i, kind) {
+  if (i !== 0) return '';
+  return kind === 'king' ? '<span class="lb-title king">👑 예측왕</span>' : '<span class="lb-title god">🔮 예측의 신</span>';
+}
+function emptyLB() { return `<div class="empty-zone">아직 랭킹이 없습니다.</div>`; }
+
+function escapeHtml(s) {
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}

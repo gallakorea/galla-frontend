@@ -1,0 +1,150 @@
+/* ===== 갈라예측 (폴리마켓식) ===== */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #000; color: #fff; }
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
+
+.predict-main { padding-bottom: 120px; }
+
+/* 포인트 pill */
+.point-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: linear-gradient(90deg, #1c2b4a, #17325e);
+  border: 1px solid #2f80ff; color: #fff; font-weight: 800; font-size: 13px;
+  cursor: pointer;
+}
+.point-coin { font-size: 14px; }
+
+/* hero */
+.predict-hero { padding: 16px 16px 8px; }
+.predict-title { font-size: 22px; font-weight: 900; margin: 0; }
+.predict-sub { font-size: 13px; color: #9aa; margin: 6px 0 0; }
+
+/* 세그먼트 탭 */
+.seg-tabs { display: flex; gap: 6px; padding: 12px 16px 6px; }
+.seg-tab {
+  flex: 1; padding: 10px; border-radius: 10px;
+  background: #101010; border: 1px solid #222; color: #999;
+  font-weight: 800; font-size: 13px; cursor: pointer;
+}
+.seg-tab.active { background: #17325e; border-color: #2f80ff; color: #fff; }
+
+.predict-view { padding: 6px 16px 0; }
+.predict-view[hidden] { display: none; }
+
+/* 카테고리 칩 */
+.cat-chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; -webkit-overflow-scrolling: touch; }
+.cat-chips::-webkit-scrollbar { display: none; }
+.cat-chip {
+  flex: 0 0 auto; padding: 7px 14px; border-radius: 999px;
+  background: #111; border: 1px solid #2a2a2a; color: #bbb;
+  font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.cat-chip.active { background: #fff; color: #000; border-color: #fff; }
+
+.sort-row { padding: 4px 0 10px; }
+.sort-select {
+  background: #111; color: #ddd; border: 1px solid #2a2a2a;
+  border-radius: 10px; padding: 8px 10px; font-size: 13px; font-weight: 700;
+}
+
+/* 마켓 카드 */
+.market-list { display: flex; flex-direction: column; gap: 12px; }
+.market-card {
+  background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 16px;
+  padding: 14px; cursor: pointer; transition: border-color .15s;
+}
+.market-card:active { border-color: #2f80ff; }
+.mc-top { display: flex; gap: 12px; align-items: flex-start; }
+.mc-thumb { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex: 0 0 auto; background: #1a1a1a; }
+.mc-thumb-ph { display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.mc-head { flex: 1; min-width: 0; }
+.mc-q { font-size: 15px; font-weight: 800; line-height: 1.35; }
+.mc-meta { font-size: 12px; color: #888; margin-top: 4px; }
+.mc-time { color: #ffb020; font-weight: 700; }
+.mc-resolved { font-weight: 800; }
+.mc-resolved.yes { color: #22c55e; }
+.mc-resolved.no { color: #ef4444; }
+
+.mc-prob { margin-top: 12px; }
+.mc-prob-bar { height: 8px; border-radius: 999px; background: #ef4444; overflow: hidden; }
+.mc-prob-yes { height: 100%; background: #22c55e; border-radius: 999px 0 0 999px; }
+.mc-prob-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px; font-weight: 800; }
+.mc-yes { color: #22c55e; }
+.mc-no { color: #ef4444; }
+
+.mc-foot { display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; color: #999; }
+.mc-go { color: #2f80ff; font-weight: 800; }
+
+.empty-zone {
+  padding: 40px 16px; text-align: center; color: #777; font-size: 14px;
+}
+
+/* FAB */
+.create-fab {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 78px; z-index: 80;
+  padding: 14px 22px; border-radius: 999px;
+  background: #2f80ff; color: #fff; font-weight: 900; font-size: 15px;
+  border: none; box-shadow: 0 6px 20px rgba(47,128,255,.5); cursor: pointer;
+}
+
+/* 리더보드 */
+.lb-caption { font-size: 13px; color: #9aa; padding: 8px 0 12px; }
+.leaderboard { display: flex; flex-direction: column; gap: 8px; }
+.lb-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: #0d0d0d; border: 1px solid #1c1c1c; border-radius: 12px;
+}
+.lb-rank { width: 28px; text-align: center; font-weight: 900; font-size: 15px; color: #aaa; }
+.lb-rank.top { font-size: 18px; }
+.lb-name { flex: 1; font-weight: 700; font-size: 14px; }
+.lb-stat { font-weight: 800; font-size: 13px; color: #22c55e; }
+.lb-title { font-size: 11px; padding: 2px 6px; border-radius: 6px; margin-left: 4px; }
+.lb-title.king { background: #3a2d00; color: #ffd54a; }
+.lb-title.god { background: #2a1440; color: #c98bff; }
+.lb-loading { padding: 24px; text-align: center; color: #777; }
+
+/* 생성 모달 */
+.pm-modal {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,.72); display: flex; align-items: flex-end; justify-content: center;
+}
+.pm-modal[hidden] { display: none; }
+.pm-modal-inner {
+  width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto;
+  background: #0e0e0e; border-radius: 20px 20px 0 0; border-top: 1px solid #222;
+}
+.pm-modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px; border-bottom: 1px solid #1c1c1c; position: sticky; top: 0; background: #0e0e0e;
+}
+.pm-modal-header h2 { font-size: 17px; margin: 0; }
+.pm-close { background: none; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
+.pm-modal-body { padding: 16px; display: flex; flex-direction: column; }
+.pm-label { font-size: 13px; font-weight: 800; color: #ccc; margin: 12px 0 6px; }
+.pm-input {
+  width: 100%; padding: 12px; border-radius: 10px;
+  background: #050505; border: 1px solid #2a2a2a; color: #fff; font-size: 14px;
+}
+.pm-textarea { min-height: 72px; resize: vertical; }
+.pm-image-btn {
+  padding: 12px; border-radius: 10px; background: #111; border: 1px dashed #333;
+  color: #bbb; font-weight: 700; cursor: pointer;
+}
+.pm-image-preview:not(:empty) { margin-top: 10px; }
+.pm-image-preview img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 12px; }
+.pm-submit {
+  margin-top: 20px; padding: 15px; border-radius: 999px;
+  background: #2f80ff; color: #fff; font-weight: 900; font-size: 16px; border: none; cursor: pointer;
+}
+.pm-submit:disabled { opacity: .6; }
+
+/* 토스트 */
+.pm-toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 150px; z-index: 300;
+  background: #fff; color: #000; padding: 12px 18px; border-radius: 999px;
+  font-weight: 800; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+}
+.pm-toast[hidden] { display: none; }

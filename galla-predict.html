@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GALLA - 갈라예측</title>
+  <link rel="stylesheet" href="./css/galla-predict.css" />
+  <link rel="stylesheet" href="./css/header.css">
+  <link rel="stylesheet" href="./css/nav.css">
+</head>
+
+<body data-page="predict">
+<div id="app">
+
+<header class="header header-common">
+  <div class="header-inner">
+    <a href="index.html" class="logo-link">
+      <img src="assets/logo.png" class="logo" alt="GALLA" />
+    </a>
+    <button id="pointPill" class="point-pill" title="탭하여 출석 포인트 받기">
+      <span class="point-coin">🪙</span>
+      <span id="pointBalance">–</span>
+    </button>
+  </div>
+</header>
+
+<main class="predict-main">
+
+  <!-- 상단 소개 -->
+  <section class="predict-hero">
+    <h1 class="predict-title">🔮 갈라예측</h1>
+    <p class="predict-sub">여론을 예측하고 포인트로 겨루세요. 현금 없는 예측 게임.</p>
+  </section>
+
+  <!-- 탭: 마켓 / 예측왕 / 예측의 신 -->
+  <div class="seg-tabs">
+    <button class="seg-tab active" data-view="markets">마켓</button>
+    <button class="seg-tab" data-view="king">👑 예측왕</button>
+    <button class="seg-tab" data-view="god">🔮 예측의 신</button>
+  </div>
+
+  <!-- ===== 마켓 뷰 ===== -->
+  <section id="view-markets" class="predict-view">
+    <div class="cat-chips" id="catChips">
+      <button class="cat-chip active" data-cat="">전체</button>
+      <button class="cat-chip" data-cat="정치·사회">정치·사회</button>
+      <button class="cat-chip" data-cat="경제·투자">경제·투자</button>
+      <button class="cat-chip" data-cat="엔터·스포츠">엔터·스포츠</button>
+      <button class="cat-chip" data-cat="연애·결혼">연애·결혼</button>
+      <button class="cat-chip" data-cat="생활·일상">생활·일상</button>
+      <button class="cat-chip" data-cat="기타">기타</button>
+    </div>
+
+    <div class="sort-row">
+      <select id="sortSelect" class="sort-select">
+        <option value="volume">🔥 거래량순</option>
+        <option value="new">🆕 최신순</option>
+        <option value="closing">⏰ 마감임박순</option>
+      </select>
+    </div>
+
+    <div id="marketList" class="market-list"></div>
+    <div id="marketsEmpty" class="empty-zone" hidden>아직 예측 마켓이 없습니다. 첫 마켓을 만들어보세요!</div>
+  </section>
+
+  <!-- ===== 예측왕 ===== -->
+  <section id="view-king" class="predict-view" hidden>
+    <div class="lb-caption">예측으로 포인트를 가장 많이 딴 유저</div>
+    <div id="kingList" class="leaderboard"></div>
+  </section>
+
+  <!-- ===== 예측의 신 ===== -->
+  <section id="view-god" class="predict-view" hidden>
+    <div class="lb-caption">만든 마켓에 베팅이 가장 많이 몰린 창시자</div>
+    <div id="godList" class="leaderboard"></div>
+  </section>
+
+</main>
+
+<!-- FAB: 예측 만들기 -->
+<button id="createFab" class="create-fab">＋ 예측 만들기</button>
+
+<!-- 마켓 생성 모달 -->
+<div id="createModal" class="pm-modal" hidden>
+  <div class="pm-modal-inner">
+    <div class="pm-modal-header">
+      <h2>새 예측 마켓</h2>
+      <button id="createClose" class="pm-close">✕</button>
+    </div>
+    <div class="pm-modal-body">
+      <label class="pm-label">질문 (YES/NO로 답할 수 있게)</label>
+      <input id="mQuestion" class="pm-input" maxlength="120" placeholder="예: 비트코인이 연말까지 10만 달러를 돌파한다?" />
+
+      <label class="pm-label">설명 (선택)</label>
+      <textarea id="mDesc" class="pm-input pm-textarea" maxlength="500" placeholder="정산 기준을 명확히 적어주세요. 예: 2026-12-31 종가 기준"></textarea>
+
+      <label class="pm-label">카테고리</label>
+      <select id="mCategory" class="pm-input">
+        <option>정치·사회</option>
+        <option>경제·투자</option>
+        <option>엔터·스포츠</option>
+        <option>연애·결혼</option>
+        <option>생활·일상</option>
+        <option>기타</option>
+      </select>
+
+      <label class="pm-label">대표 이미지 (선택)</label>
+      <input type="file" id="mImage" accept="image/*" hidden />
+      <button type="button" id="mImageBtn" class="pm-image-btn">이미지 선택</button>
+      <div id="mImagePreview" class="pm-image-preview"></div>
+
+      <label class="pm-label">마감 일시</label>
+      <input id="mCloseAt" class="pm-input" type="datetime-local" />
+
+      <button id="createSubmit" class="pm-submit">마켓 만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 안내 토스트 -->
+<div id="pmToast" class="pm-toast" hidden></div>
+
+<nav class="nav">
+  <div class="nav-inner">
+      <button class="nav-item" data-page="index" data-target="index.html">
+        <img src="./assets/icons/nav-home.svg" data-base="./assets/icons/nav-home.svg" data-active="./assets/icons/nav-home-active.svg">
+      </button>
+      <button class="nav-item" data-page="predict" data-target="galla-predict.html">
+        <img src="./assets/icons/nav-predict.svg" data-base="./assets/icons/nav-predict.svg" data-active="./assets/icons/nav-predict-active.svg">
+      </button>
+      <button class="nav-item" data-page="search" data-target="search.html">
+        <img src="./assets/icons/nav-search.svg" data-base="./assets/icons/nav-search.svg" data-active="./assets/icons/nav-search-active.svg">
+      </button>
+      <button class="nav-item" data-page="plaza" data-target="plaza.html">
+        <img src="./assets/icons/nav-plaza.svg" data-base="./assets/icons/nav-plaza.svg" data-active="./assets/icons/nav-plaza-active.svg">
+      </button>
+      <button class="nav-item" data-page="mypage" data-target="mypage.html">
+        <img src="./assets/icons/nav-user.svg" data-base="./assets/icons/nav-user.svg" data-active="./assets/icons/nav-user-active.svg">
+      </button>
+  </div>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="./js/supabase.js"></script>
+<script src="./js/media-upload.js"></script>
+<script src="./js/nav.js"></script>
+<script src="./js/galla-predict.js"></script>
+
+</body>
+</html>
