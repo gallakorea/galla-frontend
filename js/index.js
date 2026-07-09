@@ -450,14 +450,16 @@ function attachEvents() {
         };
     });
 
-    // 예측 카드 클릭 → 예측 상세
-    document.querySelectorAll('.predict-feed-card').forEach(el => {
-        if (el.dataset.bound) return;
-        el.dataset.bound = '1';
-        el.addEventListener('click', () => {
-            location.href = `predict-market.html?id=${el.dataset.mid}`;
+    // 예측 카드 클릭 → 예측 상세 (위임: innerHTML+= 재렌더로 리스너 유실되는 문제 방지)
+    if (!window.__predictClickDelegated) {
+        window.__predictClickDelegated = true;
+        document.addEventListener('click', e => {
+            const c = e.target.closest('.predict-feed-card');
+            if (c && c.dataset.mid) {
+                location.href = `predict-market.html?id=${c.dataset.mid}`;
+            }
         });
-    });
+    }
 
     // 카드 전체 클릭
     document.querySelectorAll('.card').forEach(card => {
@@ -633,7 +635,7 @@ async function loadPredictionCards() {
     const supabase = window.supabaseClient;
     let { data: markets } = await supabase
         .from('markets')
-        .select('id, question, category, market_type, volume, close_at, resolved, created_at')
+        .select('id, question, category, market_type, volume, close_at, resolved, created_at, created_by')
         .eq('resolved', false)
         .limit(60);
     if (!markets || !markets.length) return [];
@@ -657,10 +659,27 @@ async function loadPredictionCards() {
     outs?.forEach(o => (byM[o.market_id] ||= []).push(o));
     Object.values(byM).forEach(a => a.sort((x, y) => x.sort_order - y.sort_order));
 
+    // 크리에이터(작성자) 프로필 로드
+    const creatorIds = [...new Set(markets.map(m => m.created_by).filter(Boolean))];
+    const profMap = {};
+    if (creatorIds.length) {
+        const { data: profs } = await supabase
+            .from('user_profiles')
+            .select('user_id, nickname, level')
+            .in('user_id', creatorIds);
+        profs?.forEach(p => (profMap[p.user_id] = p));
+    }
+
     const pct = o => Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100);
     return markets.map(m => {
         const list = (byM[m.id] || []).map(o => ({ label: o.label, p: pct(o) }));
-        return { ...m, outcomes: list };
+        const prof = profMap[m.created_by];
+        return {
+            ...m,
+            outcomes: list,
+            creatorName: prof?.nickname || '갈라 크리에이터',
+            creatorLevel: prof?.level ?? 1
+        };
     });
 }
 
@@ -679,16 +698,30 @@ function renderPredictCard(m) {
         body = `<div class="pf-bar"><div class="pf-bar-yes" style="width:${p}%"></div></div>
             <div class="pf-legend"><span class="pf-yes">👍 YES ${p}%</span><span class="pf-no">👎 NO ${100 - p}%</span></div>`;
     }
+    const cName = escHtml(m.creatorName || '갈라 크리에이터');
+    const cInit = (m.creatorName || '갈').trim().charAt(0) || '갈';
+    const cLv = m.creatorLevel ?? 1;
     return `
     <div class="predict-feed-card" data-mid="${m.id}">
-        <div class="pf-head">
+        <div class="pf-top">
             <span class="pf-badge">🔮 갈라예측</span>
             <span class="pf-cat">${escHtml(m.category || '')}${multi ? ' · 여러 선택지' : ''}</span>
+        </div>
+        <div class="pf-creator">
+            <div class="pf-avatar">${cInit}</div>
+            <div class="pf-cinfo">
+                <div class="pf-cline">
+                    <span class="pf-cname">${cName}</span>
+                    <span class="pf-clv">Lv.${cLv}</span>
+                    <span class="pf-ctag">크리에이터</span>
+                </div>
+                <div class="pf-csub">이 예측을 만든 크리에이터</div>
+            </div>
         </div>
         <div class="pf-q">${escHtml(m.question)}</div>
         ${body}
         <div class="pf-foot">
-            <span>💰 ${(Math.round(m.volume)).toLocaleString('ko-KR')}P</span>
+            <span class="pf-vol">💰 거래량 ${(Math.round(m.volume)).toLocaleString('ko-KR')}P</span>
             <span class="pf-go">예측하러 가기 ›</span>
         </div>
     </div>`;

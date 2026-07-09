@@ -1,7 +1,7 @@
 /* =========================================================
    predict-market.js — 예측 마켓 상세/거래 (폴리마켓식)
 ========================================================= */
-let supa = null, ME = null, MARKET = null, OUTCOMES = [], ACTIVE = null, POS = null, SIDE = 'yes';
+let supa = null, ME = null, MARKET = null, OUTCOMES = [], ACTIVE = null, POS = null, SIDE = 'yes', CREATOR = null;
 const $ = id => document.getElementById(id);
 const marketId = Number(new URLSearchParams(location.search).get('id'));
 
@@ -51,6 +51,14 @@ async function loadMarket(){
   if(error||!m){ $('pmdMain').innerHTML='<div class="empty-zone">마켓을 찾을 수 없습니다.</div>'; return; }
   MARKET = m;
 
+  // 크리에이터(작성자) 프로필
+  CREATOR = null;
+  if(m.created_by){
+    const { data: cp } = await supa.from('user_profiles')
+      .select('user_id,nickname,level').eq('user_id', m.created_by).maybeSingle();
+    CREATOR = cp || null;
+  }
+
   const { data: outs } = await supa.from('market_outcomes').select('*').eq('market_id',marketId).order('sort_order',{ascending:true});
   OUTCOMES = outs || [];
   // 활성 후보 유지/기본값
@@ -80,6 +88,24 @@ async function selectOutcome(id){
 }
 window.selectOutcome = selectOutcome;
 
+function renderCreator(){
+  const name = esc(CREATOR?.nickname || '갈라 크리에이터');
+  const init = (CREATOR?.nickname || '갈').trim().charAt(0) || '갈';
+  const lv = CREATOR?.level ?? 1;
+  return `
+    <div class="pmd-creator">
+      <div class="pmd-creator-av">${init}</div>
+      <div class="pmd-creator-info">
+        <div class="pmd-creator-line">
+          <span class="pmd-creator-name">${name}</span>
+          <span class="pmd-creator-lv">Lv.${lv}</span>
+          <span class="pmd-creator-tag">🔮 크리에이터</span>
+        </div>
+        <div class="pmd-creator-sub">이 예측을 만든 크리에이터</div>
+      </div>
+    </div>`;
+}
+
 function render(){
   const m = MARKET;
   const p = ocPct(ACTIVE);
@@ -92,6 +118,7 @@ function render(){
     <section class="pmd-hero">
       ${m.image_url ? `<img class="pmd-img" src="${m.image_url}">` : ''}
       <div class="pmd-cat">${m.category||''}${multi?' · 여러 선택지':''}</div>
+      ${renderCreator()}
       <h1 class="pmd-q">${esc(m.question)}</h1>
       ${m.description ? `<p class="pmd-desc">${esc(m.description)}</p>` : ''}
       <div class="pmd-status">
