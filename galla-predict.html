@@ -32,11 +32,10 @@
     <p class="predict-sub">여론을 예측하고 포인트로 겨루세요. 현금 없는 예측 게임.</p>
   </section>
 
-  <!-- 탭: 마켓 / 예측왕 / 예측의 신 -->
+  <!-- 탭: 마켓 / 랭킹 -->
   <div class="seg-tabs">
-    <button class="seg-tab active" data-view="markets">마켓</button>
-    <button class="seg-tab" data-view="king">👑 예측왕</button>
-    <button class="seg-tab" data-view="god">🔮 예측의 신</button>
+    <button class="seg-tab active" data-view="markets">🔮 마켓</button>
+    <button class="seg-tab" data-view="rank">🏆 랭킹</button>
   </div>
 
   <!-- ===== 마켓 뷰 ===== -->
@@ -63,16 +62,30 @@
     <div id="marketsEmpty" class="empty-zone" hidden>아직 예측 마켓이 없습니다. 첫 마켓을 만들어보세요!</div>
   </section>
 
-  <!-- ===== 예측왕 ===== -->
-  <section id="view-king" class="predict-view" hidden>
-    <div class="lb-caption">예측으로 포인트를 가장 많이 딴 유저</div>
-    <div id="kingList" class="leaderboard"></div>
-  </section>
+  <!-- ===== 랭킹 ===== -->
+  <section id="view-rank" class="predict-view" hidden>
+    <!-- 내 등급 카드 -->
+    <div id="myTierCard" class="tier-card"></div>
 
-  <!-- ===== 예측의 신 ===== -->
-  <section id="view-god" class="predict-view" hidden>
-    <div class="lb-caption">만든 마켓에 베팅이 가장 많이 몰린 창시자</div>
-    <div id="godList" class="leaderboard"></div>
+    <!-- 랭킹 서브탭 -->
+    <div class="rank-subtabs">
+      <button class="rank-subtab active" data-rank="galla">종합</button>
+      <button class="rank-subtab" data-rank="king">👑 예측왕</button>
+      <button class="rank-subtab" data-rank="god">🔮 예측의 신</button>
+    </div>
+
+    <div id="rankGalla" class="rank-pane">
+      <div class="lb-caption">보유 포인트 = 갈라 통합 랭킹</div>
+      <div id="gallaList" class="leaderboard"></div>
+    </div>
+    <div id="rankKing" class="rank-pane" hidden>
+      <div class="lb-caption">예측으로 포인트를 가장 많이 딴 예언가</div>
+      <div id="kingList" class="leaderboard"></div>
+    </div>
+    <div id="rankGod" class="rank-pane" hidden>
+      <div class="lb-caption">만든 마켓에 베팅이 가장 많이 몰린 창시자</div>
+      <div id="godList" class="leaderboard"></div>
+    </div>
   </section>
 
 </main>
@@ -143,6 +156,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./js/supabase.js"></script>
 <script src="./js/media-upload.js"></script>
+<script src="./js/tiers.js"></script>
 <script src="./js/nav.js"></script>
 <script src="./js/galla-predict.js"></script>
 

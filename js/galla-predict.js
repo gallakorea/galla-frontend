@@ -47,10 +47,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadMarkets();
 });
 
+let MY_POINTS = 0;
 async function refreshBalance() {
   if (!ME) { $('pointBalance').textContent = '로그인'; return; }
   const { data, error } = await supa.rpc('ensure_balance');
-  if (!error && data != null) $('pointBalance').textContent = fmt(data) + 'P';
+  if (!error && data != null) { MY_POINTS = data; $('pointBalance').textContent = fmt(data) + 'P'; }
+}
+
+function renderMyTier() {
+  const card = $('myTierCard');
+  if (!card) return;
+  if (!ME) { card.innerHTML = `<div class="tier-card-guest">로그인하고 예언가 등급에 도전하세요</div>`; return; }
+  const t = window.GALLA_tierOf(MY_POINTS);
+  const nextTxt = t.next
+    ? `${t.next.icon} ${t.next.name}까지 ${fmt(t.next.min - MY_POINTS)}P`
+    : '최고 등급 달성! 🎉';
+  card.innerHTML = `
+    <div class="tier-card-top">
+      <span class="tier-emoji" style="background:${t.color}22;border-color:${t.color}">${t.icon}</span>
+      <div class="tier-card-info">
+        <div class="tier-card-name" style="color:${t.color}">${t.name}</div>
+        <div class="tier-card-pts">${fmt(MY_POINTS)}P 보유</div>
+      </div>
+    </div>
+    <div class="tier-progress"><div class="tier-progress-fill" style="width:${t.progress}%;background:${t.color}"></div></div>
+    <div class="tier-next">${nextTxt}</div>`;
 }
 
 /* ============ UI 바인딩 ============ */
@@ -64,18 +85,29 @@ function bindUI() {
     else if (data.reason === 'already') toast('오늘 출석 포인트는 이미 받았어요.');
   });
 
-  // 세그먼트 탭
+  // 세그먼트 탭 (마켓 / 랭킹)
   document.querySelectorAll('.seg-tab').forEach(t => {
     t.addEventListener('click', () => {
       document.querySelectorAll('.seg-tab').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       const v = t.dataset.view;
       $('view-markets').hidden = v !== 'markets';
-      $('view-king').hidden = v !== 'king';
-      $('view-god').hidden = v !== 'god';
+      $('view-rank').hidden = v !== 'rank';
       $('createFab').style.display = v === 'markets' ? '' : 'none';
-      if (v === 'king') loadLeaderboard('king');
-      if (v === 'god') loadLeaderboard('god');
+      if (v === 'rank') { renderMyTier(); loadLeaderboard('galla'); }
+    });
+  });
+
+  // 랭킹 서브탭 (종합 / 예측왕 / 예측의 신)
+  document.querySelectorAll('.rank-subtab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.rank-subtab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const r = t.dataset.rank;
+      $('rankGalla').hidden = r !== 'galla';
+      $('rankKing').hidden = r !== 'king';
+      $('rankGod').hidden = r !== 'god';
+      loadLeaderboard(r);
     });
   });
 
@@ -209,17 +241,28 @@ async function submitMarket() {
 
 /* ============ 리더보드 ============ */
 async function loadLeaderboard(kind) {
-  const el = kind === 'king' ? $('kingList') : $('godList');
-  if (el.dataset.loaded) return;
+  const map = { galla: 'gallaList', king: 'kingList', god: 'godList' };
+  const el = $(map[kind]);
+  if (!el || el.dataset.loaded) return;
   el.innerHTML = `<div class="lb-loading">불러오는 중…</div>`;
+  const badge = window.GALLA_tierBadge;
 
-  if (kind === 'king') {
+  if (kind === 'galla') {
+    const { data } = await supa.from('galla_rank')
+      .select('*').order('rank', { ascending: true }).limit(50);
+    el.innerHTML = (data || []).map((r, i) => `
+      <div class="lb-row">
+        <span class="lb-rank ${i < 3 ? 'top' : ''}">${medal(i)}</span>
+        <span class="lb-name">${escapeHtml(r.nickname || '익명')}<br>${badge(r.points)}</span>
+        <span class="lb-stat">${fmt(r.points)}P</span>
+      </div>`).join('') || emptyLB();
+  } else if (kind === 'king') {
     const { data } = await supa.from('predict_king_leaderboard')
       .select('*').order('profit', { ascending: false }).limit(50);
     el.innerHTML = (data || []).map((r, i) => `
       <div class="lb-row">
         <span class="lb-rank ${i < 3 ? 'top' : ''}">${medal(i)}</span>
-        <span class="lb-name">${escapeHtml(r.nickname || '익명')} ${title(i, 'king')}</span>
+        <span class="lb-name">${escapeHtml(r.nickname || '익명')} ${title(i, 'king')}<br><span class="lb-sub">적중 ${r.wins}회</span></span>
         <span class="lb-stat">${r.profit >= 0 ? '+' : ''}${fmt(r.profit)}P</span>
       </div>`).join('') || emptyLB();
   } else {
@@ -228,7 +271,7 @@ async function loadLeaderboard(kind) {
     el.innerHTML = (data || []).map((r, i) => `
       <div class="lb-row">
         <span class="lb-rank ${i < 3 ? 'top' : ''}">${medal(i)}</span>
-        <span class="lb-name">${escapeHtml(r.nickname || '익명')} ${title(i, 'god')}</span>
+        <span class="lb-name">${escapeHtml(r.nickname || '익명')} ${title(i, 'god')}<br><span class="lb-sub">마켓 ${r.markets_created}개</span></span>
         <span class="lb-stat">💰 ${fmt(r.total_volume)}P · 👥 ${r.participants}</span>
       </div>`).join('') || emptyLB();
   }
