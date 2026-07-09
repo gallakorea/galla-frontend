@@ -10,7 +10,7 @@ html, body { margin: 0; background: #000; color: #fff; }
   display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 12px; border-radius: 999px;
   background: linear-gradient(90deg, #1c2b4a, #17325e);
-  border: 1px solid #2f80ff; color: #fff; font-weight: 800; font-size: 13px;
+  border: 1px solid #3356ff; color: #fff; font-weight: 800; font-size: 13px;
   cursor: pointer;
 }
 .point-coin { font-size: 14px; }
@@ -27,7 +27,7 @@ html, body { margin: 0; background: #000; color: #fff; }
   background: #101010; border: 1px solid #222; color: #999;
   font-weight: 800; font-size: 13px; cursor: pointer;
 }
-.seg-tab.active { background: #17325e; border-color: #2f80ff; color: #fff; }
+.seg-tab.active { background: #17325e; border-color: #3356ff; color: #fff; }
 
 .predict-view { padding: 6px 16px 0; }
 .predict-view[hidden] { display: none; }
@@ -54,7 +54,7 @@ html, body { margin: 0; background: #000; color: #fff; }
   background: #0d0d0d; border: 1px solid #1e1e1e; border-radius: 16px;
   padding: 14px; cursor: pointer; transition: border-color .15s;
 }
-.market-card:active { border-color: #2f80ff; }
+.market-card:active { border-color: #3356ff; }
 .mc-top { display: flex; gap: 12px; align-items: flex-start; }
 .mc-thumb { width: 52px; height: 52px; border-radius: 12px; object-fit: cover; flex: 0 0 auto; background: #1a1a1a; }
 .mc-thumb-ph { display: flex; align-items: center; justify-content: center; font-size: 24px; }
@@ -63,18 +63,18 @@ html, body { margin: 0; background: #000; color: #fff; }
 .mc-meta { font-size: 12px; color: #888; margin-top: 4px; }
 .mc-time { color: #ffb020; font-weight: 700; }
 .mc-resolved { font-weight: 800; }
-.mc-resolved.yes { color: #22c55e; }
-.mc-resolved.no { color: #ef4444; }
+.mc-resolved.yes { color: #3356ff; }
+.mc-resolved.no { color: #ff4f6e; }
 
 .mc-prob { margin-top: 12px; }
-.mc-prob-bar { height: 8px; border-radius: 999px; background: #ef4444; overflow: hidden; }
-.mc-prob-yes { height: 100%; background: #22c55e; border-radius: 999px 0 0 999px; }
+.mc-prob-bar { height: 8px; border-radius: 999px; background: #ff4f6e; overflow: hidden; }
+.mc-prob-yes { height: 100%; background: #3356ff; border-radius: 999px 0 0 999px; }
 .mc-prob-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px; font-weight: 800; }
-.mc-yes { color: #22c55e; }
-.mc-no { color: #ef4444; }
+.mc-yes { color: #6d8bff; }
+.mc-no { color: #ff4f6e; }
 
 .mc-foot { display: flex; justify-content: space-between; margin-top: 12px; font-size: 12px; color: #999; }
-.mc-go { color: #2f80ff; font-weight: 800; }
+.mc-go { color: #3356ff; font-weight: 800; }
 
 .empty-zone {
   padding: 40px 16px; text-align: center; color: #777; font-size: 14px;
@@ -85,8 +85,8 @@ html, body { margin: 0; background: #000; color: #fff; }
   position: fixed; left: 50%; transform: translateX(-50%);
   bottom: 78px; z-index: 80;
   padding: 14px 22px; border-radius: 999px;
-  background: #2f80ff; color: #fff; font-weight: 900; font-size: 15px;
-  border: none; box-shadow: 0 6px 20px rgba(47,128,255,.5); cursor: pointer;
+  background: #3356ff; color: #fff; font-weight: 900; font-size: 15px;
+  border: none; box-shadow: 0 6px 20px rgba(51,86,255,.5); cursor: pointer;
 }
 
 /* 리더보드 */
@@ -99,7 +99,7 @@ html, body { margin: 0; background: #000; color: #fff; }
 .lb-rank { width: 28px; text-align: center; font-weight: 900; font-size: 15px; color: #aaa; }
 .lb-rank.top { font-size: 18px; }
 .lb-name { flex: 1; font-weight: 700; font-size: 14px; }
-.lb-stat { font-weight: 800; font-size: 13px; color: #22c55e; }
+.lb-stat { font-weight: 800; font-size: 13px; color: #3356ff; }
 .lb-title { font-size: 11px; padding: 2px 6px; border-radius: 6px; margin-left: 4px; }
 .lb-title.king { background: #3a2d00; color: #ffd54a; }
 .lb-title.god { background: #2a1440; color: #c98bff; }
@@ -136,7 +136,7 @@ html, body { margin: 0; background: #000; color: #fff; }
 .pm-image-preview img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 12px; }
 .pm-submit {
   margin-top: 20px; padding: 15px; border-radius: 999px;
-  background: #2f80ff; color: #fff; font-weight: 900; font-size: 16px; border: none; cursor: pointer;
+  background: #3356ff; color: #fff; font-weight: 900; font-size: 16px; border: none; cursor: pointer;
 }
 .pm-submit:disabled { opacity: .6; }
 
@@ -176,7 +176,7 @@ html, body { margin: 0; background: #000; color: #fff; }
   flex: 1; padding: 8px; border-radius: 8px; background: #101010;
   border: 1px solid #222; color: #999; font-weight: 800; font-size: 12px; cursor: pointer;
 }
-.rank-subtab.active { background: #17325e; border-color: #2f80ff; color: #fff; }
+.rank-subtab.active { background: #17325e; border-color: #3356ff; color: #fff; }
 .rank-pane[hidden] { display: none; }
 .lb-sub { font-size: 11px; color: #888; font-weight: 600; }
 .lb-name { line-height: 1.35; }

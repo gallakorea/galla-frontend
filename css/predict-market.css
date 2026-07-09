@@ -6,24 +6,24 @@
 
 .pmd-hero { padding:16px 0 8px; }
 .pmd-img { width:100%; max-height:220px; object-fit:cover; border-radius:16px; margin-bottom:12px; }
-.pmd-cat { font-size:12px; color:#2f80ff; font-weight:800; }
+.pmd-cat { font-size:12px; color:#3356ff; font-weight:800; }
 .pmd-q { font-size:20px; font-weight:900; line-height:1.35; margin:6px 0; }
 .pmd-desc { font-size:13px; color:#aaa; line-height:1.5; }
 .pmd-status { display:flex; flex-wrap:wrap; gap:12px; margin-top:10px; font-size:13px; }
 .pmd-time { color:#ffb020; font-weight:800; }
 .pmd-vol { color:#999; }
 .pmd-resolved { font-weight:900; }
-.pmd-resolved.yes { color:#22c55e; }
-.pmd-resolved.no { color:#ef4444; }
+.pmd-resolved.yes { color:#3356ff; }
+.pmd-resolved.no { color:#ff4f6e; }
 
 .pmd-prob-big { margin:16px 0; padding:16px; background:#0d0d0d; border:1px solid #1c1c1c; border-radius:16px; }
 .pmd-prob-num { display:flex; align-items:baseline; gap:8px; }
-.pmd-prob-yes { font-size:34px; font-weight:900; color:#22c55e; }
+.pmd-prob-yes { font-size:34px; font-weight:900; color:#6d8bff; }
 .pmd-prob-label { font-size:13px; color:#999; font-weight:700; }
-.pmd-bar { height:10px; border-radius:999px; background:#ef4444; overflow:hidden; margin-top:12px; }
-.pmd-bar-yes { height:100%; background:#22c55e; border-radius:999px 0 0 999px; }
+.pmd-bar { height:10px; border-radius:999px; background:#ff4f6e; overflow:hidden; margin-top:12px; }
+.pmd-bar-yes { height:100%; background:#3356ff; border-radius:999px 0 0 999px; }
 .pmd-bar-legend { display:flex; justify-content:space-between; margin-top:8px; font-size:13px; font-weight:800; }
-.c-yes { color:#22c55e; } .c-no { color:#ef4444; }
+.c-yes { color:#6d8bff; } .c-no { color:#ff4f6e; }
 
 .pmd-chart { margin:8px 0 16px; }
 .pmd-chart-svg { width:100%; height:120px; display:block; }
@@ -33,21 +33,21 @@
 .pmd-pos { margin:16px 0; padding:14px 16px; background:#0d0d0d; border:1px solid #1c1c1c; border-radius:16px; }
 .pmd-pos-title { font-weight:800; margin-bottom:8px; }
 .pmd-pos-row { display:flex; justify-content:space-between; padding:4px 0; font-size:14px; }
-.pmd-pos-row.payout b { color:#22c55e; }
+.pmd-pos-row.payout b { color:#3356ff; }
 .pmd-pos-hint { font-size:12px; color:#888; margin-top:6px; }
 
 .pmd-trade { margin:16px 0; padding:16px; background:#0d0d0d; border:1px solid #1c1c1c; border-radius:16px; }
 .pmd-side-toggle { display:flex; gap:8px; margin-bottom:12px; }
 .pmd-side { flex:1; padding:12px; border-radius:10px; background:#111; border:1px solid #2a2a2a; color:#aaa; font-weight:800; cursor:pointer; }
-.pmd-side.yes.active { background:rgba(34,197,94,.18); border-color:#22c55e; color:#22c55e; }
-.pmd-side.no.active { background:rgba(239,68,68,.18); border-color:#ef4444; color:#ef4444; }
+.pmd-side.yes.active { background:rgba(51,86,255,.18); border-color:#3356ff; color:#3356ff; }
+.pmd-side.no.active { background:rgba(255,79,110,.18); border-color:#ff4f6e; color:#ff4f6e; }
 .pmd-amount-row { display:flex; flex-direction:column; gap:8px; }
 .pmd-amount { width:100%; padding:14px; border-radius:10px; background:#050505; border:1px solid #2a2a2a; color:#fff; font-size:16px; font-weight:700; }
 .pmd-quick { display:flex; gap:6px; }
 .pmd-quick button { flex:1; padding:8px; border-radius:8px; background:#161616; border:1px solid #2a2a2a; color:#ccc; font-weight:700; font-size:12px; cursor:pointer; }
 .pmd-est { font-size:13px; color:#bbb; margin:12px 0; text-align:center; }
-.pmd-buy { width:100%; padding:15px; border-radius:999px; border:none; font-weight:900; font-size:16px; color:#fff; cursor:pointer; background:#22c55e; }
-.pmd-buy.no { background:#ef4444; }
+.pmd-buy { width:100%; padding:15px; border-radius:999px; border:none; font-weight:900; font-size:16px; color:#fff; cursor:pointer; background:#3356ff; }
+.pmd-buy.no { background:#ff4f6e; }
 .pmd-buy:disabled { opacity:.6; }
 
 .pmd-closed { margin:16px 0; padding:16px; text-align:center; background:#0d0d0d; border:1px solid #1c1c1c; border-radius:16px; color:#ffb020; font-weight:700; font-size:14px; }
@@ -57,4 +57,68 @@
 .pmd-resolve-hint { font-size:12px; color:#999; margin:6px 0 12px; }
 .pmd-resolve-btns { display:flex; gap:8px; }
 .pmd-rz { flex:1; padding:12px; border-radius:10px; border:none; font-weight:800; cursor:pointer; color:#fff; }
-.pmd-rz.yes { background:#15803d; } .pmd-rz.no { background:#b91c1c; }
+.pmd-rz.yes { background:#3356ff; } .pmd-rz.no { background:#ff4f6e; }
+
+/* ===== 상세 탭 (댓글/보유자/포지션/활동) ===== */
+.pmd-tabs { margin: 20px 0 8px; }
+.pmd-tabbar { display: flex; gap: 4px; border-bottom: 1px solid #222; }
+.pmd-tab {
+  flex: 1; padding: 12px 4px; background: none; border: none;
+  color: #888; font-weight: 800; font-size: 13px; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.pmd-tab.active { color: #fff; border-bottom-color: #ffe27a; }
+.pmd-tab-body { padding: 14px 0; }
+.pmd-tab-loading, .pmd-tab-empty { padding: 30px; text-align: center; color: #777; font-size: 13px; }
+
+/* 활동 피드 */
+.pmd-feed { display: flex; flex-direction: column; gap: 2px; }
+.pmd-feed-row { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid #141414; font-size: 13px; }
+.pmd-feed-side { font-weight: 900; font-size: 11px; padding: 2px 7px; border-radius: 6px; flex: 0 0 auto; }
+.pmd-feed-side.yes { background: #0a1233; color: #aac4ff; }
+.pmd-feed-side.no { background: #1a0808; color: #ffaaaa; }
+.pmd-feed-txt { flex: 1; color: #ccc; min-width: 0; }
+.pmd-feed-time { color: #666; font-size: 11px; flex: 0 0 auto; }
+
+/* 상위 보유자 */
+.pmd-holders { display: flex; flex-direction: column; gap: 6px; }
+.pmd-holder-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 10px; }
+.pmd-holder-rank { width: 22px; text-align: center; color: #ffe27a; font-weight: 900; }
+.pmd-holder-name { flex: 1; font-weight: 700; font-size: 14px; }
+.pmd-holder-side { font-weight: 800; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
+.pmd-holder-side.yes { background: #0a1233; color: #aac4ff; }
+.pmd-holder-side.no { background: #1a0808; color: #ffaaaa; }
+
+/* 포지션 2열 */
+.pmd-pos-cols { display: flex; gap: 10px; }
+.pmd-pos-col { flex: 1; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; padding: 10px; }
+.pmd-pos-col-head { font-weight: 800; font-size: 12px; padding: 4px 6px 8px; }
+.pmd-pos-col-head.yes { color: #6d8bff; }
+.pmd-pos-col-head.no { color: #ff6f86; }
+.pmd-pos-item { display: flex; justify-content: space-between; padding: 6px; font-size: 13px; border-top: 1px solid #161616; }
+.pmd-pos-item b { color: #eee; }
+.pmd-pos-none { color: #666; font-size: 12px; padding: 6px; }
+
+/* 배틀식 댓글 */
+.pmd-cmt-compose { margin-bottom: 14px; }
+.pmd-cmt-sidesel { display: flex; gap: 8px; margin-bottom: 8px; }
+.pmd-cmt-side { flex: 1; padding: 9px; border-radius: 8px; background: #111; border: 1px solid #2a2a2a; color: #999; font-weight: 800; font-size: 13px; cursor: pointer; }
+.pmd-cmt-side.yes.active { background: #0a1233; border-color: #3356ff; color: #aac4ff; }
+.pmd-cmt-side.no.active { background: #1a0808; border-color: #ff4f6e; color: #ffaaaa; }
+.pmd-cmt-inputrow { display: flex; gap: 8px; }
+.pmd-cmt-input { flex: 1; padding: 12px; border-radius: 10px; background: #050505; border: 1px solid #2a2a2a; color: #fff; font-size: 14px; }
+.pmd-cmt-send { padding: 0 18px; border-radius: 10px; border: none; background: #ffe27a; color: #111; font-weight: 900; cursor: pointer; }
+
+.pmd-cmt-list { display: flex; flex-direction: column; gap: 10px; }
+.pmd-cmt { padding: 12px 14px; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; border-left: 3px solid #2a2a2a; }
+.pmd-cmt.yes { border-left-color: #3356ff; }
+.pmd-cmt.no { border-left-color: #ff4f6e; }
+.pmd-cmt-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pmd-cmt-flag { font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 5px; }
+.pmd-cmt-flag.yes { background: #0a1233; color: #aac4ff; }
+.pmd-cmt-flag.no { background: #1a0808; color: #ffaaaa; }
+.pmd-cmt-name { font-weight: 700; font-size: 13px; }
+.pmd-cmt-time { color: #666; font-size: 11px; margin-left: auto; }
+.pmd-cmt-body { font-size: 14px; line-height: 1.45; color: #eaeaea; }
+.pmd-cmt-like { margin-top: 8px; background: none; border: none; color: #777; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
+.pmd-cmt-like.on { color: #ff4f6e; }
