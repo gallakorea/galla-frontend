@@ -838,3 +838,7 @@ body[data-page="search"] .header-inner {
 .gn-act.on.like { border-color: #3356ff; color: #6d8bff; background: rgba(51,86,255,.12); }
 .gn-act.on.dislike { border-color: #ff4f6e; color: #ff6f86; background: rgba(255,79,110,.12); }
 .gn-act.on.save { border-color: #6d4bff; color: #b7a6f0; background: rgba(120,90,240,.12); }
+
+/* 지금 뜨는 — 갈라 그룹(예측/이슈) */
+.tr-group { margin-bottom: 20px; }
+.tr-group-head { font-size: 13.5px; font-weight: 800; color: #cfd6e6; margin: 0 2px 10px; }

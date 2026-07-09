@@ -118,19 +118,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (chip) runSearch(chip.dataset.kw, true);
   });
 
-  /* ================= 인기 검색어 (뉴스 핫키워드) ================= */
+  /* ================= 뜨는 키워드 (실제 뉴스 제목 빈출어 추출) ================= */
+  const KW_STOP = new Set(("그 이 저 것 수 등 및 더 또 왜 위 중 후 전 첫 관련 오늘 지난 이번 대한 통해 위해 대해 있다 없다 한다 된다 " +
+    "종합 속보 단독 영상 사진 인터뷰 기자 뉴스 오전 오후 이상 이하 최고 최대 그룹 대표 회장 사장 의원 대통령 " +
+    "밝혀 밝혔 예정 계획 추진 발표 확인 논란 무슨 어떤 이런 저런 그런 하며 하고 하는 했다 되는 통한 " +
+    "포토 화보 사설 칼럼 만평 종합뉴스 게시 제공 공개 참석 방문 개최 진행 관계자").split(" "));
+  let _hotKwCache = null;
+  async function computeHotKeywords(limit = 12) {
+    if (_hotKwCache) return _hotKwCache.slice(0, limit);
+    const since = new Date(Date.now() - 6 * 3600e3).toISOString();
+    const { data } = await supabase.from("news_articles_raw")
+      .select("title").gte("published_at", since).limit(700);
+    const freq = {};
+    (data || []).forEach(r => {
+      const seen = new Set();
+      (r.title || "").replace(/[^가-힣A-Za-z0-9 ]/g, " ").split(/\s+/).forEach(t => {
+        t = t.trim();
+        if (t.length < 2 || t.length > 12 || /^\d+$/.test(t) || KW_STOP.has(t)) return;
+        if (seen.has(t)) return; seen.add(t);      // 문서빈도(기사당 1회) → 여러 기사에 걸친 단어가 상위
+        freq[t] = (freq[t] || 0) + 1;
+      });
+    });
+    _hotKwCache = Object.entries(freq).filter(([, c]) => c >= 2)
+      .sort((a, b) => b[1] - a[1]).map(([kw, count]) => ({ kw, count }));
+    return _hotKwCache.slice(0, limit);
+  }
+
   async function loadPopular() {
-    const { data } = await supabase
-      .from("hot_trend_groups_6h")
-      .select("title, article_count")
-      .order("article_count", { ascending: false })
-      .limit(10);
-    if (!data || !data.length) { popularEl.innerHTML =
+    const kws = await computeHotKeywords(10);
+    if (!kws.length) { popularEl.innerHTML =
       `<p class="se-muted">아직 집계된 인기 검색어가 없어요.</p>`; return; }
-    popularEl.innerHTML = data.map((r, i) =>
-      `<button class="se-pop" data-kw="${esc(r.title)}">
+    popularEl.innerHTML = kws.map((r, i) =>
+      `<button class="se-pop" data-kw="${esc(r.kw)}">
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
-        <span class="se-pop-title">${esc(r.title)}</span>
+        <span class="se-pop-title">${esc(r.kw)}</span>
        </button>`
     ).join("");
   }
@@ -313,37 +334,65 @@ document.addEventListener("DOMContentLoaded", async () => {
     const hotWrap = document.getElementById("trending-hot");
     const gallaWrap = document.getElementById("trending-galla");
     hotWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
+    gallaWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
 
-    const { data: hot } = await supabase
-      .from("hot_trend_groups_6h")
-      .select("group_id,title,article_count")
-      .order("article_count", { ascending: false })
-      .limit(10);
-    if (hot && hot.length) {
-      hotWrap.innerHTML = hot.map((r, i) =>
-        `<button class="th-chip" data-kw="${esc(r.title)}">
+    // 1) 뜨는 키워드 — 실제 뉴스 제목 빈출어
+    const kws = await computeHotKeywords(12);
+    hotWrap.innerHTML = kws.length
+      ? kws.map((r, i) =>
+        `<button class="th-chip" data-kw="${esc(r.kw)}">
           <span class="th-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
-          <span class="th-title">${esc(r.title)}</span>
-          <span class="th-cnt">${r.article_count}</span>
-        </button>`
-      ).join("");
-    } else {
-      hotWrap.innerHTML = `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
-    }
+          <span class="th-title">${esc(r.kw)}</span>
+          <span class="th-cnt">${r.count}건</span>
+        </button>`).join("")
+      : `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
     hotWrap.onclick = e => {
       const b = e.target.closest("[data-kw]");
       if (b) { activateTab("search"); runSearch(b.dataset.kw, true); }
     };
 
-    // 갈라에서 뜨는 이슈 (hot_score 우선, 없으면 최신)
-    const { data: gi } = await supabase
-      .from("issues")
-      .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
-      .order("hot_score", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(10);
-    if (gi && gi.length) {
-      gallaWrap.innerHTML = `<div class="sr-sec">` + gi.map(i => {
+    // 2) 갈라에서 뜨는 — 예측(마켓) + 이슈
+    const [mkRes, giRes] = await Promise.all([
+      (async () => {
+        const { data } = await supabase.from("markets")
+          .select("id,question,category,volume,market_type")
+          .eq("resolved", false).order("volume", { ascending: false }).limit(6);
+        const markets = data || [];
+        if (markets.length) {
+          const ids = markets.map(m => m.id);
+          const { data: outs } = await supabase.from("market_outcomes")
+            .select("market_id,label,pool_yes,pool_no,sort_order").in("market_id", ids);
+          const byM = {}; (outs || []).forEach(o => (byM[o.market_id] ||= []).push(o));
+          markets.forEach(m => {
+            const list = (byM[m.id] || []).sort((a, b) => a.sort_order - b.sort_order);
+            m._top = list.map(o => ({ label: o.label, p: Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100) })).sort((a, b) => b.p - a.p)[0];
+            m._multi = m.market_type === "multi";
+          });
+        }
+        return markets;
+      })(),
+      supabase.from("issues")
+        .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
+        .order("hot_score", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }).limit(8),
+    ]);
+
+    const markets = mkRes, gi = giRes.data || [];
+    let html = "";
+    if (markets.length) {
+      html += `<div class="tr-group"><div class="tr-group-head">🔮 뜨는 예측</div>` + markets.map(m =>
+        `<a class="sr-card predict" href="predict-market.html?id=${m.id}">
+          <div class="sr-body">
+            <div class="sr-cat">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""}</div>
+            <div class="sr-title">${esc(m.question)}</div>
+            ${m._top ? `<div class="sr-pred"><b>${m._top.p}%</b> <span>${esc(m._top.label)}</span></div>` : ""}
+            <div class="sr-meta">💰 거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</div>
+          </div>
+          <div class="sr-go">›</div>
+        </a>`).join("") + `</div>`;
+    }
+    if (gi.length) {
+      html += `<div class="tr-group"><div class="tr-group-head">🗳 뜨는 이슈</div>` + gi.map(i => {
         const th = issueThumb(i);
         const t2 = (i.pro_count || 0) + (i.con_count || 0);
         const pro = t2 ? Math.round((i.pro_count || 0) / t2 * 100) : 50;
@@ -357,9 +406,8 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </a>`;
       }).join("") + `</div>`;
-    } else {
-      gallaWrap.innerHTML = `<p class="se-muted">아직 이슈가 없어요.</p>`;
     }
+    gallaWrap.innerHTML = html || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
   }
 
   /* ================= 뉴스 (실시간) ================= */
