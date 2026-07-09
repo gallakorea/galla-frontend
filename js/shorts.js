@@ -360,6 +360,27 @@ function __openShortsInternal(list, startId) {
       color:#000;
       font-weight:800;
     }
+
+    /* ===== 실데이터 댓글 아이템 ===== */
+    .sc-empty{ padding:24px 0; text-align:center; color:#777; font-size:13px; }
+    .sc-item{ padding:12px 0; border-bottom:1px solid #1e1e1e; }
+    .sc-item.sc-reply{ border-bottom:none; padding:10px 0 0; }
+    .sc-head{ display:flex; align-items:baseline; gap:6px; margin-bottom:4px; }
+    .sc-nick{ font-size:13px; }
+    .sc-nick.pro{ color:#5bbcff; }
+    .sc-nick.con{ color:#ff6b6b; }
+    .sc-lv{ font-size:11px; color:#f5c518; }
+    .sc-time{ font-size:11px; color:#666; }
+    .sc-body{ font-size:14px; line-height:1.5; color:#eee; word-break:break-word; }
+    .sc-acts{ display:flex; align-items:center; gap:10px; margin-top:6px; }
+    .sc-like{
+      background:#141414; border:1px solid #2c2c2c; color:#aaa;
+      padding:3px 10px; border-radius:999px; font-size:12px; cursor:pointer;
+    }
+    .sc-like.on{ border-color:#4a7bff; color:#8fb6ff; background:rgba(74,123,255,.12); }
+    .sc-toggle{ background:none; border:none; color:#888; font-size:12px; cursor:pointer; }
+    .sc-replies{ margin-left:14px; padding-left:12px; border-left:1px solid rgba(255,255,255,.12); }
+    .billboard-item .bb-like{ color:#f5c518; font-size:11px; margin-left:4px; }
     </style>
   <div class="comment-dim"></div>
 
@@ -1060,37 +1081,244 @@ document.addEventListener("click", e => {
 
 
 // =========================
-// COMMENT LOAD (DUMMY)
+// COMMENT LOAD (REAL DATA — issue comments 연동)
 // =========================
-function loadShortsComments() {
-  // ===== Billboard conditional display (dummy) =====
-  const billboard = document.getElementById("commentBillboard");
+const SC = {
+  issueId: null,
+  rows: [],           // 전체 댓글 rows
+  profiles: {},       // user_id → {nickname, level}
+  likeAgg: {},        // comment_id → {up, down}
+  myLikes: new Map(), // comment_id → 1|-1
+  myId: null,
+  expanded: new Set() // 답글 펼침 상태
+};
+window.currentCommentStance = window.currentCommentStance || "pro";
+window.currentCommentSort = window.currentCommentSort || "latest";
 
-  // 더미 조건: 빌보드 댓글 3개 이상일 때만 노출
-  const hasBillboard = true; // 나중에 조건 연결
+function scEsc(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function scTimeAgo(iso) {
+  if (!iso) return "";
+  const t = new Date(iso.endsWith?.("Z") || iso.includes?.("+") ? iso : iso + "Z").getTime();
+  const s = (Date.now() - t) / 1000;
+  if (s < 60) return "방금 전";
+  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
+  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  return `${Math.floor(s / 86400)}일 전`;
+}
+function scNick(r) {
+  if (r.is_anonymous) return "익명";
+  return SC.profiles[r.user_id]?.nickname || "익명";
+}
+function scLevel(r) {
+  if (r.is_anonymous) return "";
+  const lv = SC.profiles[r.user_id]?.level;
+  return lv ? `<span class="sc-lv">Lv.${lv}</span>` : "";
+}
 
-  if (billboard) {
-    billboard.hidden = !hasBillboard;
+async function loadShortsComments() {
+  const supabase = window.supabaseClient;
+  const list = document.getElementById("shortsCommentList");
+  if (!supabase || !list) return;
+
+  const issueId = window.__CURRENT_SHORT_ISSUE_ID__;
+  if (!issueId) { list.innerHTML = ""; return; }
+  SC.issueId = issueId;
+
+  list.innerHTML = `<div class="sc-empty">불러오는 중…</div>`;
+
+  const { data: sess } = await supabase.auth.getSession();
+  SC.myId = sess?.session?.user?.id || null;
+
+  // 이슈 전황(찬반) + 진영 이름 + 댓글
+  const [{ data: issue }, { data: rows }] = await Promise.all([
+    supabase.from("issues")
+      .select("pro_count,con_count,faction_a,faction_b").eq("id", issueId).single(),
+    supabase.from("comments")
+      .select("id,user_id,content,created_at,faction,parent_id,is_anonymous")
+      .eq("issue_id", issueId).neq("status", "deleted")
+      .order("created_at", { ascending: false }).limit(300)
+  ]);
+  // 로딩 중 스크롤로 이슈가 바뀌었으면 무시
+  if (SC.issueId !== window.__CURRENT_SHORT_ISSUE_ID__) return;
+  SC.rows = rows || [];
+
+  // 전황 요약 갱신
+  const pro = issue?.pro_count || 0, con = issue?.con_count || 0;
+  const total = pro + con;
+  const proPct = total ? Math.round(pro / total * 100) : 50;
+  const modal = document.getElementById("shortsCommentModal");
+  const bar = modal.querySelector(".summary-bar");
+  if (bar) {
+    bar.querySelector(".pro").textContent = `${issue?.faction_a || "찬성"} ${proPct}%`;
+    bar.querySelector(".con").textContent = `${issue?.faction_b || "반대"} ${100 - proPct}%`;
+    bar.querySelector(".bar-pro").style.width = proPct + "%";
   }
+  const participants = new Set(SC.rows.map(r => r.user_id).filter(Boolean)).size;
+  const metaEl = modal.querySelector(".summary-meta");
+  if (metaEl) metaEl.textContent = `(총 댓글 ${SC.rows.length} · 참여자 ${participants})`;
 
+  // 탭 라벨도 진영 이름으로
+  const tabPro = modal.querySelector('.stance-tab[data-stance="pro"]');
+  const tabCon = modal.querySelector('.stance-tab[data-stance="con"]');
+  if (tabPro) tabPro.textContent = issue?.faction_a || "찬성";
+  if (tabCon) tabCon.textContent = issue?.faction_b || "반대";
+
+  // 프로필 + 좋아요
+  SC.profiles = {}; SC.likeAgg = {}; SC.myLikes = new Map();
+  const userIds = [...new Set(SC.rows.map(r => r.user_id).filter(Boolean))];
+  const ids = SC.rows.map(r => r.id);
+  const [profRes, likeRes] = await Promise.all([
+    userIds.length
+      ? supabase.from("user_profiles").select("user_id,nickname,level").in("user_id", userIds)
+      : Promise.resolve({ data: [] }),
+    ids.length
+      ? supabase.from("comment_likes").select("comment_id,user_id,value").in("comment_id", ids)
+      : Promise.resolve({ data: [] })
+  ]);
+  (profRes.data || []).forEach(p => SC.profiles[p.user_id] = p);
+  (likeRes.data || []).forEach(l => {
+    const a = SC.likeAgg[l.comment_id] ||= { up: 0, down: 0 };
+    if (l.value === 1) a.up++; else a.down++;
+    if (SC.myId && l.user_id === SC.myId) SC.myLikes.set(l.comment_id, l.value);
+  });
+
+  renderShortsComments();
+}
+
+function renderShortsComments() {
   const list = document.getElementById("shortsCommentList");
   if (!list) return;
 
   const stance = window.currentCommentStance;
-  // const sort = window.currentCommentSort;
-  const sort = "latest";
+  const sort = window.currentCommentSort;
 
-  list.innerHTML = `
-    <div style="padding:12px 0;border-bottom:1px solid #222">
-      <strong>유저A</strong> · ${stance === "pro" ? "찬성" : "반대"}<br/>
-      최신 기준 더미 댓글
-    </div>
-    <div style="padding:12px 0;border-bottom:1px solid #222">
-      <strong>유저B</strong><br/>
-      다음 단계에서 DB 연결 예정
-    </div>
-  `;
+  const tops = SC.rows.filter(r => !r.parent_id && r.faction === stance);
+  const byParent = {};
+  SC.rows.forEach(r => { if (r.parent_id) (byParent[r.parent_id] ||= []).push(r); });
+
+  const up = id => (SC.likeAgg[id]?.up || 0);
+  if (sort === "popular") tops.sort((a, b) => up(b.id) - up(a.id));
+  // latest는 이미 created_at desc 정렬 상태
+
+  // 빌보드: 현재 진영 좋아요 상위 3 (1개 이상일 때만 노출)
+  const billboard = document.getElementById("commentBillboard");
+  const hot = [...tops].filter(c => up(c.id) > 0).sort((a, b) => up(b.id) - up(a.id)).slice(0, 3);
+  if (billboard) {
+    billboard.hidden = hot.length === 0;
+    billboard.innerHTML = hot.map(c =>
+      `<div class="billboard-item">🔥 <b>${scEsc(scNick(c))}</b> ${scEsc(c.content).slice(0, 40)} <span class="bb-like">👍${up(c.id)}</span></div>`
+    ).join("");
+  }
+
+  if (!tops.length) {
+    list.innerHTML = `<div class="sc-empty">아직 이 진영의 댓글이 없어요. 첫 포문을 여세요!</div>`;
+    return;
+  }
+
+  const itemHtml = (c, isReply) => {
+    const my = SC.myLikes.get(c.id);
+    const replies = byParent[c.id] || [];
+    return `
+      <div class="sc-item ${isReply ? "sc-reply" : ""}" data-cid="${c.id}">
+        <div class="sc-head">
+          <b class="sc-nick ${c.faction === "pro" ? "pro" : "con"}">${scEsc(scNick(c))}</b>
+          ${scLevel(c)}
+          <span class="sc-time">${scTimeAgo(c.created_at)}</span>
+        </div>
+        <div class="sc-body">${scEsc(c.content)}</div>
+        <div class="sc-acts">
+          <button class="sc-like ${my === 1 ? "on" : ""}" data-cid="${c.id}">👍 ${up(c.id)}</button>
+          ${!isReply && replies.length
+            ? `<button class="sc-toggle" data-cid="${c.id}">답글 ${replies.length}개 ${SC.expanded.has(c.id) ? "접기" : "보기"}</button>`
+            : ""}
+        </div>
+        ${!isReply && SC.expanded.has(c.id)
+          ? `<div class="sc-replies">${replies.slice().reverse().map(r => itemHtml(r, true)).join("")}</div>`
+          : ""}
+      </div>`;
+  };
+
+  list.innerHTML = tops.map(c => itemHtml(c, false)).join("");
 }
+
+// ===== 댓글 상호작용: 정렬 / 답글 펼침 / 좋아요 =====
+document.addEventListener("click", async e => {
+  const modal = document.getElementById("shortsCommentModal");
+  if (!modal || !modal.classList.contains("visible")) return;
+  const supabase = window.supabaseClient;
+
+  const sortBtn = e.target.closest("#shortsCommentModal .sort-btn");
+  if (sortBtn) {
+    window.currentCommentSort = sortBtn.dataset.sort;
+    modal.querySelectorAll(".sort-btn").forEach(b => b.classList.toggle("active", b === sortBtn));
+    renderShortsComments();
+    return;
+  }
+
+  const tg = e.target.closest("#shortsCommentModal .sc-toggle");
+  if (tg) {
+    const cid = Number(tg.dataset.cid);
+    if (SC.expanded.has(cid)) SC.expanded.delete(cid); else SC.expanded.add(cid);
+    renderShortsComments();
+    return;
+  }
+
+  const likeBtn = e.target.closest("#shortsCommentModal .sc-like");
+  if (likeBtn && supabase) {
+    if (!SC.myId) {
+      if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+      return;
+    }
+    const cid = Number(likeBtn.dataset.cid);
+    const mine = SC.myLikes.get(cid);
+    if (mine === 1) {
+      await supabase.from("comment_likes").delete().eq("comment_id", cid).eq("user_id", SC.myId);
+      SC.myLikes.delete(cid);
+      if (SC.likeAgg[cid]) SC.likeAgg[cid].up = Math.max(0, SC.likeAgg[cid].up - 1);
+    } else {
+      const { error } = await supabase.from("comment_likes")
+        .upsert({ comment_id: cid, user_id: SC.myId, value: 1 }, { onConflict: "comment_id,user_id" });
+      if (!error) {
+        (SC.likeAgg[cid] ||= { up: 0, down: 0 }).up++;
+        SC.myLikes.set(cid, 1);
+      }
+    }
+    renderShortsComments();
+    return;
+  }
+});
+
+// ===== 댓글 등록 (로그인 필수, 현재 진영 탭으로 등록) =====
+document.addEventListener("click", async e => {
+  if (!e.target.closest("#shortsCommentSend")) return;
+  const supabase = window.supabaseClient;
+  const input = document.getElementById("shortsCommentInput");
+  if (!supabase || !input) return;
+
+  const content = input.value.trim();
+  if (!content) return;
+
+  const { data: sess } = await supabase.auth.getSession();
+  const uid = sess?.session?.user?.id;
+  if (!uid) {
+    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    return;
+  }
+
+  const { error } = await supabase.from("comments").insert({
+    issue_id: SC.issueId,
+    user_id: uid,
+    faction: window.currentCommentStance,
+    content
+  });
+  if (error) { console.error("[SHORTS] comment insert", error); alert("댓글 등록 실패"); return; }
+
+  input.value = "";
+  loadShortsComments();
+});
   // ===== Inject overlay styles for shorts actions (once) =====
   if (!document.getElementById("shortsActionsStyle")) {
     const style = document.createElement("style");
