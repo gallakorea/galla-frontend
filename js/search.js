@@ -365,6 +365,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   let currentNewsCategory = "전체";
   let newsPage = 0, isLoadingNews = false, hasMoreNews = true;
   const NEWS_PAGE_SIZE = 30;
+  let newsMode = "galla";          // galla | raw(폴백)
+  const GALLA_CACHE = {};
 
   function renderNewsCategoryChips() {
     const wrap = document.getElementById("news-category-chips");
@@ -388,7 +390,88 @@ document.addEventListener("DOMContentLoaded", async () => {
     newsPage = 0; hasMoreNews = true; isLoadingNews = false;
     const list = document.getElementById("top-news-list");
     if (list) list.innerHTML = "";
-    loadTopNews();
+    loadGallaNews();
+  }
+
+  /* ===== 갈라뉴스 (AI 종합 기사) ===== */
+  async function loadGallaNews() {
+    const list = document.getElementById("top-news-list");
+    if (!list) return;
+    newsMode = "galla";
+    list.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
+    let q = supabase.from("galla_news")
+      .select("id,title,summary,category,hero_image,source_count,published_at")
+      .eq("status", "published")
+      .order("published_at", { ascending: false }).limit(40);
+    if (currentNewsCategory !== "전체") q = q.eq("category", currentNewsCategory);
+    const { data: news } = await q;
+
+    if (!news || !news.length) {         // 아직 갈라뉴스 없으면 원본 뉴스 폴백
+      newsMode = "raw";
+      list.innerHTML = "";
+      loadTopNews();
+      return;
+    }
+    list.innerHTML = news.map(n => {
+      GALLA_CACHE[n.id] = n;
+      const th = isValidThumbnail(n.hero_image);
+      return `<div class="news-card galla" data-gid="${n.id}">
+        <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
+        <div class="news-text">
+          <span class="galla-badge">🟣 갈라뉴스</span>
+          <h3 class="news-title">${esc(n.title)}</h3>
+          <div class="news-meta">
+            <span>${esc(n.category || "")}</span>
+            <span class="news-time">${timeAgo(n.published_at)}</span>
+            <span>· 관련 ${n.source_count || 0}건</span>
+          </div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  async function openGallaNews(id) {
+    const n = GALLA_CACHE[id];
+    if (!n) return;
+    viewerTitle.textContent = n.title || "갈라뉴스";
+    viewerExt.style.display = "none";
+    viewerFallback.hidden = true;
+    viewerReader.hidden = false;
+    viewerReader.scrollTop = 0;
+    viewerReader.innerHTML = `<div class="reader-loading">불러오는 중…</div>`;
+    viewerModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+
+    const { data: srcs } = await supabase.from("galla_news_sources")
+      .select("url,press_name,title,thumbnail_url").eq("news_id", id);
+
+    const paras = (n.body || "").split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+    // body가 리스트 조회엔 없어 상세에서 다시 가져오기
+    let bodyParas = paras;
+    if (!bodyParas.length) {
+      const { data: full } = await supabase.from("galla_news").select("body").eq("id", id).single();
+      bodyParas = (full?.body || "").split(/\n{2,}/).map(s => s.trim()).filter(Boolean);
+    }
+
+    const srcHtml = (srcs || []).map(s =>
+      `<a class="reader-src" href="${esc(s.url || "#")}" target="_blank" rel="noopener noreferrer">
+        <div class="reader-src-thumb">${isValidThumbnail(s.thumbnail_url) ? `<img src="${esc(s.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
+        <div class="reader-src-body">
+          <div class="reader-src-title">${esc(s.title || "")}</div>
+          <div class="reader-src-press">${esc(s.press_name || "")} ↗</div>
+        </div>
+      </a>`).join("");
+
+    viewerReader.innerHTML = `
+      <article class="reader">
+        <span class="reader-badge">🟣 갈라뉴스 · AI가 여러 보도를 종합</span>
+        <h1 class="reader-title">${esc(n.title)}</h1>
+        <div class="reader-sub">${esc(n.category || "")} · ${timeAgo(n.published_at)}</div>
+        ${isValidThumbnail(n.hero_image) ? `<img class="reader-hero" src="${esc(n.hero_image)}" onerror="this.style.display='none'">` : ""}
+        ${bodyParas.map(p => `<p>${esc(p)}</p>`).join("")}
+        ${srcHtml ? `<div class="reader-sources"><div class="reader-sources-head">🔗 관련 기사 (출처 · 팩트체크)</div>${srcHtml}</div>` : ""}
+        <p class="reader-disclaimer">본 기사는 위 보도들을 AI가 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
+      </article>`;
   }
 
   async function loadTopNews() {
@@ -500,11 +583,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // 뉴스 무한 스크롤
+  // 갈라뉴스 카드 클릭 → 갈라뉴스 리더 (원본 뉴스 카드는 자체 핸들러)
+  document.getElementById("top-news-list")?.addEventListener("click", e => {
+    const g = e.target.closest(".news-card.galla");
+    if (g && g.dataset.gid) openGallaNews(g.dataset.gid);
+  });
+
+  // 뉴스 무한 스크롤 (원본 폴백 모드에서만 페이지네이션)
   window.addEventListener("scroll", () => {
     const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 250;
     const active = document.querySelector(".tab-item.active")?.dataset.tab;
-    if (nearBottom && active === "news") loadTopNews();
+    if (nearBottom && active === "news" && newsMode === "raw") loadTopNews();
   });
 
   /* ================= INIT ================= */
