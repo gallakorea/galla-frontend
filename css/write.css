@@ -1210,3 +1210,129 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   border-radius: 12px;
   object-fit: contain;
 }
+/***************************************************
+ * 인스타식 2단계 마법사 (미디어 → 세부정보)
+ ***************************************************/
+.wizard-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px 14px;
+}
+.wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #777;
+  cursor: pointer;
+  user-select: none;
+}
+.wizard-step .wizard-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #222;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #333;
+}
+.wizard-step.active { color: #fff; }
+.wizard-step.active .wizard-dot {
+  background: #2f80ff;
+  color: #fff;
+  border-color: #2f80ff;
+}
+.wizard-line {
+  flex: 1;
+  height: 1px;
+  background: #2a2a2a;
+}
+
+.wizard-panel { display: block; }
+.wizard-panel[hidden] { display: none; }
+
+.wizard-nav {
+  display: flex;
+  gap: 10px;
+  padding: 8px 16px 24px;
+}
+.wizard-nav .primary-btn { flex: 1; }
+.ghost-btn {
+  padding: 16px 22px;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 999px;
+  color: #ccc;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* 미디어 타입 탭 */
+.media-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 14px;
+}
+.media-tab {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  background: #111;
+  border: 1px solid #2a2a2a;
+  color: #aaa;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.media-tab.active {
+  background: #17325e;
+  border-color: #2f80ff;
+  color: #fff;
+}
+
+.media-pane { padding: 0 16px; }
+.media-pane[hidden] { display: none; }
+
+/* 업로드 드롭 버튼 */
+.media-drop {
+  width: 100%;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  background: #0d0d0d;
+  border: 1.5px dashed #333;
+  border-radius: 16px;
+  color: #bbb;
+  cursor: pointer;
+}
+.media-drop:active { background: #131313; }
+.media-drop-icon {
+  font-size: 34px;
+  line-height: 1;
+  color: #2f80ff;
+}
+.media-drop-title { font-size: 15px; font-weight: 800; color: #eee; }
+.media-drop-sub { font-size: 12px; color: #888; text-align: center; }
+
+/* 양 진영 이름 입력 */
+.faction-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.faction-input { flex: 1; }
+.faction-vs {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ff5b5b;
+  letter-spacing: 1px;
+}

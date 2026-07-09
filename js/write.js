@@ -79,6 +79,85 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPreview.appendChild(video);
   });
 
+  /* ================= 진영 이름 → 입장 라벨 연동 ================= */
+  const factionAEl = document.getElementById('factionA');
+  const factionBEl = document.getElementById('factionB');
+  const stanceProLabel = document.getElementById('stanceProLabel');
+  const stanceConLabel = document.getElementById('stanceConLabel');
+
+  function syncStanceLabels() {
+    const a = factionAEl.value.trim() || '찬성이오';
+    const b = factionBEl.value.trim() || '난 반댈세';
+    if (stanceProLabel) stanceProLabel.textContent = `👍 ${a}`;
+    if (stanceConLabel) stanceConLabel.textContent = `👎 ${b}`;
+  }
+  factionAEl.addEventListener('input', syncStanceLabels);
+  factionBEl.addEventListener('input', syncStanceLabels);
+
+  /* ================= 미디어 타입 탭 (사진 / 동영상 배타) ================= */
+  // window.__MEDIA_MODE__: 'photo' | 'video'
+  window.__MEDIA_MODE__ = 'photo';
+  const mediaTabs = document.querySelectorAll('.media-tab');
+  const panePhoto = document.getElementById('pane-photo');
+  const paneVideo = document.getElementById('pane-video');
+
+  function setMediaMode(mode) {
+    window.__MEDIA_MODE__ = mode;
+    mediaTabs.forEach(t => t.classList.toggle('active', t.dataset.media === mode));
+    if (panePhoto) panePhoto.hidden = mode !== 'photo';
+    if (paneVideo) paneVideo.hidden = mode !== 'video';
+
+    // 배타: 선택하지 않은 쪽 미디어는 비워 발행에 섞이지 않도록
+    if (mode === 'photo') {
+      videoInput.value = '';
+      videoPreview.innerHTML = '';
+    } else {
+      thumbInput.value = '';
+      thumbPreview.innerHTML = '';
+    }
+  }
+  mediaTabs.forEach(tab => {
+    tab.addEventListener('click', () => setMediaMode(tab.dataset.media));
+  });
+
+  /* ================= 단계 네비게이션 ================= */
+  const panel1 = document.getElementById('panel-1');
+  const panel2 = document.getElementById('panel-2');
+  const wizardSteps = document.querySelectorAll('.wizard-step');
+
+  function goStep(n) {
+    if (panel1) panel1.hidden = n !== 1;
+    if (panel2) panel2.hidden = n !== 2;
+    wizardSteps.forEach(s => s.classList.toggle('active', Number(s.dataset.step) <= n));
+    // 미리보기 열려있으면 접기
+    if (issuePreview) issuePreview.innerHTML = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function hasMedia() {
+    return window.__MEDIA_MODE__ === 'photo'
+      ? (thumbInput.files && thumbInput.files.length > 0)
+      : (videoInput.files && videoInput.files.length > 0);
+  }
+
+  document.getElementById('toStep2')?.addEventListener('click', () => {
+    if (!hasMedia()) {
+      alert(window.__MEDIA_MODE__ === 'photo'
+        ? '사진을 1장 이상 올려주세요.'
+        : '동영상을 올려주세요.');
+      return;
+    }
+    goStep(2);
+  });
+  document.getElementById('backStep1')?.addEventListener('click', () => goStep(1));
+  wizardSteps.forEach(s => {
+    s.addEventListener('click', () => {
+      const target = Number(s.dataset.step);
+      if (target === 1) goStep(1);
+      else if (target === 2 && hasMedia()) goStep(2);
+    });
+  });
+
   /* ================= AI MODAL ================= */
   const openAiBtn = document.getElementById('openAiModal');
   const aiModal = document.getElementById('aiModal');
@@ -158,7 +237,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
        
         <div class="issue-author-stance">
-          발의자 입장 · ${authorStance === 'pro' ? '찬성' : '반대'}
+          발의자 입장 · ${authorStance === 'pro'
+            ? (factionAEl.value.trim() || '찬성이오')
+            : (factionBEl.value.trim() || '난 반댈세')}
         </div>
 
         ${thumbImg ? `
@@ -257,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
         donation_target: donationEl.value,
         is_anonymous: anon,
         author_stance: authorStance,
+        faction_a: factionAEl.value.trim() || null,
+        faction_b: factionBEl.value.trim() || null,
         status: 'draft',
         draft_mode: 'check',
         moderation_status: 'pending',

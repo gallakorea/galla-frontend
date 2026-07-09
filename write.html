@@ -29,175 +29,181 @@
         <p class="write-main-desc">사람들의 찬반과 후원을 모아보세요.</p>
       </section>
 
-      <section class="section-block write-guide-block">
-        <ul class="write-guide-list">
-          <li>제목은 최대 80자 이내</li>
-          <li>논쟁 포인트가 명확할수록 참여율 상승</li>
-          <li>AI로 글 다듬기 가능</li>
-        </ul>
-      </section>
-
-      <section class="section-block">
-        <div class="anon-toggle">
-          <span>익명으로 발의하기</span>
-          <label class="switch">
-            <input type="checkbox" id="isAnonymous" />
-            <span class="slider"></span>
-          </label>
-        </div>
-      </section>
+      <!-- STEP INDICATOR -->
+      <div class="wizard-steps">
+        <div class="wizard-step active" data-step="1"><span class="wizard-dot">1</span> 미디어</div>
+        <div class="wizard-line"></div>
+        <div class="wizard-step" data-step="2"><span class="wizard-dot">2</span> 세부정보</div>
+      </div>
 
       <form id="writeForm">
 
-        <!-- 카테고리 (필수) -->
-        <div class="field-block">
-          <label class="field-label">카테고리 <span class="required">(필수)</span></label>
-          <select id="category" class="input-field" required>
-            <option value="">논쟁 주제에 맞는 카테고리를 선택하세요</option>
-            <option>정치·사회</option>
-            <option>경제·투자</option>
-            <option>직장·경력</option>
-            <option>연애·결혼</option>
-            <option>생활·일상</option>
-            <option>패션·뷰티</option>
-            <option>엔터·스포츠</option>
-            <option>세계·여행</option>
-            <option>음식·맛집</option>
-            <option>19금</option>
-            <option>기타</option>
-          </select>
-        </div>
+        <!-- ================= STEP 1 : 미디어 ================= -->
+        <section class="wizard-panel" id="panel-1">
 
-        <!-- 제목 (필수) -->
-        <div class="field-block">
-          <label class="field-label">제목 <span class="required">(필수)</span></label>
-          <input
-            id="title"
-            class="input-field"
-            maxlength="80"
-            placeholder="사람들이 찬반을 고민하게 만들 한 문장 제목 (최대 80자)"
-          />
-        </div>
-
-        <!-- 한줄 요약 (필수) -->
-        <div class="field-block">
-          <label class="field-label">한줄 요약 <span class="required">(필수)</span></label>
-          <input
-            id="oneLine"
-            class="input-field"
-            placeholder="이 이슈를 한 문장으로 요약해 주세요"
-          />
-        </div>
-
-        <!-- ✅ 나의 입장 (필수) : 한줄요약 바로 아래 추가 -->
-        <div class="field-block" id="authorStanceBlock">
-          <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
-
-          <div class="ai-tone-radio-group" style="margin-top: 10px;">
-            <label class="ai-tone-option">
-              <input type="radio" name="authorStance" value="pro" required />
-              <span>찬성 👍</span>
-            </label>
-
-            <label class="ai-tone-option">
-              <input type="radio" name="authorStance" value="con" required />
-              <span>반대 👎</span>
-            </label>
-          </div>
-
-          <!-- 프론트 노출 최소화용 가이드 (원하면 삭제 가능) -->
-          <div class="guide-text" style="margin-top: 8px;">
-            이 선택은 공개되지 않으며, AI 논점/뉴스를 정렬하는 기준값으로만 사용됩니다.
-          </div>
-        </div>
-
-        <!-- 이슈 이미지 (필수, 최대 10장) -->
-        <div class="field-block">
-          <label class="field-label">이슈 이미지 <span class="required">(필수 · 최대 10장)</span></label>
-          <input type="file" id="thumbnail" hidden accept="image/*" multiple />
-          <button type="button" id="thumbnailBtn" class="file-btn">
-            이미지 업로드
-          </button>
-          <div class="guide-text">
-            여러 장 선택 시 인스타그램처럼 캐러셀로 노출됩니다. 첫 번째 이미지가 대표 썸네일이 됩니다 (세로형 4:5 권장)
-          </div>
-          <div id="thumbPreview" class="preview-box"></div>
-        </div>
-
-        <!-- 1분 엘리베이터 스피치 (선택) -->
-        <div class="field-block">
-          <label class="field-label">
-            1분 엘리베이터 스피치 <span class="optional">(선택)</span>
-          </label>
-          <input type="file" id="video" hidden accept="video/*" />
-          <button type="button" id="videoBtn" class="file-btn">
-            영상 업로드
-          </button>
-          <div class="guide-text">
-            이슈를 직접 설명하는 1분 이내 세로 영상 (9:16 권장)
-          </div>
-          <div id="videoPreview" class="preview-box"></div>
-        </div>
-
-        <!-- 이슈 설명 (필수) -->
-        <div class="field-block">
-          <label class="field-label">
-            이슈 설명 <span class="required">(필수)</span>
-            <span class="char-limit">· 최대 500자</span>
-          </label>
-          <textarea
-            id="description"
-            class="input-field textarea"
-            maxlength="500"
-            placeholder="왜 이 문제가 논쟁거리인지, 찬반이 갈리는 이유를 구체적으로 설명해 주세요 (최대 500자)"
-          ></textarea>
-          <button type="button" id="openAiModal" class="ai-main-btn">
-            ✨ AI에게 글 다듬기
-          </button>
-        </div>
-
-         <!-- References -->
-        <div class="field-block">
-          <label class="field-label">관련 기사·자료 링크 (선택)</label>
-          <input type="url" id="ref1" class="input-field" />
-          <input type="url" id="ref2" class="input-field" />
-          <input type="url" id="ref3" class="input-field" />
-        </div>
-
-        <!-- 기부처 선택 (필수) -->
-        <div class="field-block">
-          <label class="field-label">기부처 선택 <span class="required">(필수)</span></label>
-          <select id="donationTarget" class="input-field" required>
-            <option value="">기부처를 선택하세요</option>
-            <option>사회복지</option>
-            <option>아동·청소년 지원</option>
-            <option>장애인 지원</option>
-            <option>환경 보호</option>
-            <option>재난·긴급구호</option>
-            <option>교육 및 문화</option>
-            <option>동물 보호</option>
-            <option>헌혈·재능기부</option>
-          </select>
-          <div class="guide-text">
-            선택한 기부처는 미리보기 및 발행 후 공개됩니다
-          </div>
-        </div>
-
-                <!-- 기부 가이드 -->
-        <div class="field-block donation-guide">
-          <p class="donation-guide-text">
-            본 이슈를 통해 발생한 수익금의 일부는 선택하신 기부처에 전달됩니다.<br />
-            기부 내역은 투명하게 공개되며, 갈라 참여는 더 나은 사회로 이어집니다.
+          <p class="write-main-desc" style="margin-bottom:14px;">
+            사진(캐러셀) 또는 동영상 중 <b>하나</b>를 선택해 올려주세요.
           </p>
-        </div>
 
-        <!-- 미리보기 -->
-        <div class="field-block">
-          <button type="submit" class="primary-btn">미리보기</button>
-        </div>
+          <!-- 미디어 타입 탭 -->
+          <div class="media-tabs">
+            <button type="button" class="media-tab active" data-media="photo">🖼️ 사진</button>
+            <button type="button" class="media-tab" data-media="video">🎬 동영상</button>
+          </div>
+
+          <!-- 사진 모드 -->
+          <div class="media-pane" id="pane-photo">
+            <input type="file" id="thumbnail" hidden accept="image/*" multiple />
+            <button type="button" id="thumbnailBtn" class="media-drop">
+              <span class="media-drop-icon">＋</span>
+              <span class="media-drop-title">사진 업로드</span>
+              <span class="media-drop-sub">최대 10장 · 여러 장은 인스타처럼 캐러셀 (첫 장이 대표)</span>
+            </button>
+            <div id="thumbPreview" class="preview-box"></div>
+          </div>
+
+          <!-- 동영상 모드 -->
+          <div class="media-pane" id="pane-video" hidden>
+            <input type="file" id="video" hidden accept="video/*" />
+            <button type="button" id="videoBtn" class="media-drop">
+              <span class="media-drop-icon">＋</span>
+              <span class="media-drop-title">동영상 업로드</span>
+              <span class="media-drop-sub">세로 4:5 권장 · 핵심 요소는 중앙에 배치</span>
+            </button>
+            <div id="videoPreview" class="preview-box"></div>
+          </div>
+
+          <div class="wizard-nav">
+            <button type="button" class="primary-btn" id="toStep2">다음</button>
+          </div>
+        </section>
+
+        <!-- ================= STEP 2 : 세부정보 ================= -->
+        <section class="wizard-panel" id="panel-2" hidden>
+
+          <!-- 익명 -->
+          <div class="anon-toggle">
+            <span>익명으로 발의하기</span>
+            <label class="switch">
+              <input type="checkbox" id="isAnonymous" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- 카테고리 -->
+          <div class="field-block">
+            <label class="field-label">카테고리 <span class="required">(필수)</span></label>
+            <select id="category" class="input-field" required>
+              <option value="">논쟁 주제에 맞는 카테고리를 선택하세요</option>
+              <option>정치·사회</option>
+              <option>경제·투자</option>
+              <option>직장·경력</option>
+              <option>연애·결혼</option>
+              <option>생활·일상</option>
+              <option>패션·뷰티</option>
+              <option>엔터·스포츠</option>
+              <option>세계·여행</option>
+              <option>음식·맛집</option>
+              <option>19금</option>
+              <option>기타</option>
+            </select>
+          </div>
+
+          <!-- 제목 -->
+          <div class="field-block">
+            <label class="field-label">제목 <span class="required">(필수)</span></label>
+            <input id="title" class="input-field" maxlength="80"
+              placeholder="사람들이 찬반을 고민하게 만들 한 문장 제목 (최대 80자)" />
+          </div>
+
+          <!-- 한줄 요약 -->
+          <div class="field-block">
+            <label class="field-label">한줄 요약 <span class="required">(필수)</span></label>
+            <input id="oneLine" class="input-field"
+              placeholder="이 이슈를 한 문장으로 요약해 주세요" />
+          </div>
+
+          <!-- 양 진영 이름 -->
+          <div class="field-block">
+            <label class="field-label">양 진영 이름 <span class="optional">(선택 · 비우면 기본값)</span></label>
+            <div class="faction-name-row">
+              <input id="factionA" class="input-field faction-input" maxlength="20" placeholder="찬성이오" />
+              <span class="faction-vs">VS</span>
+              <input id="factionB" class="input-field faction-input" maxlength="20" placeholder="난 반댈세" />
+            </div>
+            <div class="guide-text">피드·이슈 화면의 👍 / 👎 찬반 버튼에 그대로 표시됩니다.</div>
+          </div>
+
+          <!-- 나의 입장 -->
+          <div class="field-block" id="authorStanceBlock">
+            <label class="field-label">나의 입장 <span class="required">(필수)</span></label>
+            <div class="ai-tone-radio-group" style="margin-top: 10px;">
+              <label class="ai-tone-option">
+                <input type="radio" name="authorStance" value="pro" required />
+                <span id="stanceProLabel">👍 찬성이오</span>
+              </label>
+              <label class="ai-tone-option">
+                <input type="radio" name="authorStance" value="con" required />
+                <span id="stanceConLabel">👎 난 반댈세</span>
+              </label>
+            </div>
+            <div class="guide-text" style="margin-top: 8px;">
+              이 선택은 공개되지 않으며, AI 논점/뉴스를 정렬하는 기준값으로만 사용됩니다.
+            </div>
+          </div>
+
+          <!-- 이슈 설명 -->
+          <div class="field-block">
+            <label class="field-label">
+              이슈 설명 <span class="required">(필수)</span>
+              <span class="char-limit">· 최대 500자</span>
+            </label>
+            <textarea id="description" class="input-field textarea" maxlength="500"
+              placeholder="왜 이 문제가 논쟁거리인지, 찬반이 갈리는 이유를 구체적으로 설명해 주세요 (최대 500자)"></textarea>
+            <button type="button" id="openAiModal" class="ai-main-btn">
+              ✨ AI에게 글 다듬기
+            </button>
+          </div>
+
+          <!-- References -->
+          <div class="field-block">
+            <label class="field-label">관련 기사·자료 링크 (선택)</label>
+            <input type="url" id="ref1" class="input-field" />
+            <input type="url" id="ref2" class="input-field" />
+            <input type="url" id="ref3" class="input-field" />
+          </div>
+
+          <!-- 기부처 -->
+          <div class="field-block">
+            <label class="field-label">기부처 선택 <span class="required">(필수)</span></label>
+            <select id="donationTarget" class="input-field" required>
+              <option value="">기부처를 선택하세요</option>
+              <option>사회복지</option>
+              <option>아동·청소년 지원</option>
+              <option>장애인 지원</option>
+              <option>환경 보호</option>
+              <option>재난·긴급구호</option>
+              <option>교육 및 문화</option>
+              <option>동물 보호</option>
+              <option>헌혈·재능기부</option>
+            </select>
+            <div class="guide-text">선택한 기부처는 미리보기 및 발행 후 공개됩니다</div>
+          </div>
+
+          <div class="field-block donation-guide">
+            <p class="donation-guide-text">
+              본 이슈를 통해 발생한 수익금의 일부는 선택하신 기부처에 전달됩니다.<br />
+              기부 내역은 투명하게 공개되며, 갈라 참여는 더 나은 사회로 이어집니다.
+            </p>
+          </div>
+
+          <div class="wizard-nav">
+            <button type="button" class="ghost-btn" id="backStep1">이전</button>
+            <button type="submit" class="primary-btn">미리보기</button>
+          </div>
+        </section>
 
       </form>
-
 
       <!-- ✅ 미리보기 렌더 영역 -->
       <div id="issuePreview"></div>

@@ -83,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const donationTarget = document.getElementById('donationTarget')?.value;
       const isAnonymous =
         document.getElementById('isAnonymous')?.checked ?? false;
+      const factionA = document.getElementById('factionA')?.value.trim() || null;
+      const factionB = document.getElementById('factionB')?.value.trim() || null;
 
       if (!category || !title || !description || !donationTarget) {
         alert('필수 항목이 누락되었습니다.');
@@ -135,6 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
             donation_target: donationTarget,
             is_anonymous: isAnonymous,
             author_stance: authorStance, // 🔥 반드시 필요
+            faction_a: factionA,
+            faction_b: factionB,
             thumbnail_url,
             video_url,
             images,

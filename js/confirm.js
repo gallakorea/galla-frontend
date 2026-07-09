@@ -189,6 +189,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           thumbnail_url: updates.thumbnail_url ?? draft.thumbnail_url,
           video_url: updates.video_url ?? draft.video_url,
           images: draft.images ?? null,
+          faction_a: draft.faction_a ?? null,
+          faction_b: draft.faction_b ?? null,
           status: 'normal',
           moderation_status: 'pending',
           created_at: new Date().toISOString(),

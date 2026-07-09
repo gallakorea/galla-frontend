@@ -69,6 +69,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     setValue('oneLine', draft.one_line);
     setValue('description', draft.description);
     setValue('donationTarget', draft.donation_target);
+    setValue('factionA', draft.faction_a);
+    setValue('factionB', draft.faction_b);
+
+    // 진영 이름 → 입장 라벨 동기화
+    const proLbl = document.getElementById('stanceProLabel');
+    const conLbl = document.getElementById('stanceConLabel');
+    if (proLbl) proLbl.textContent = `👍 ${draft.faction_a || '찬성이오'}`;
+    if (conLbl) conLbl.textContent = `👎 ${draft.faction_b || '난 반댈세'}`;
+
+    // 미디어 모드 복원 (영상 있으면 동영상 탭, 아니면 사진 탭)
+    if (draft.video_url && typeof window.__MEDIA_MODE__ !== 'undefined') {
+      document.querySelector('.media-tab[data-media="video"]')?.click();
+    }
 
     const anonEl = document.getElementById('isAnonymous');
     if (anonEl) anonEl.checked = !!draft.is_anonymous;
