@@ -138,3 +138,13 @@
 .pmd-resolve-multi { display: flex; flex-direction: column; gap: 6px; }
 .pmd-rz-oc { padding: 11px; border-radius: 10px; border: 1px solid #3a1414; background: #160f0f; color: #ffd; font-weight: 800; cursor: pointer; }
 .pmd-rz-oc:hover { border-color: #3356ff; }
+
+/* ===== 대댓글 ===== */
+.pmd-cmt-actions { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+.pmd-cmt-reply { background: none; border: none; color: #888; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
+.pmd-cmt-reply:hover { color: #aac4ff; }
+.pmd-cmt-replies { margin-top: 10px; padding-left: 12px; border-left: 2px solid #1e1e1e; display: flex; flex-direction: column; gap: 8px; }
+.pmd-cmt.reply { padding: 10px 12px; background: #0a0a0a; border-radius: 10px; border-left-width: 3px; }
+.pmd-cmt-replybox { margin-top: 8px; }
+.pmd-cmt-inputrow.reply .pmd-cmt-input { padding: 10px; font-size: 13px; }
+.pmd-cmt-inputrow.reply .pmd-cmt-send { padding: 0 14px; }

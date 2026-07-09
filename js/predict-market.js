@@ -217,17 +217,17 @@ async function loadPositions(body){
 
 function emptyTab(msg){ return `<div class="pmd-tab-empty">${msg}</div>`; }
 
-/* ----- 댓글: 배틀식 (YES/NO 진영 + 좋아요) ----- */
+/* ----- 댓글: 배틀식 (YES/NO 진영 + 좋아요 + 대댓글) ----- */
 let CMT_SIDE = 'yes';
+function cmtSideLabel(side){ return isMulti() ? (side==='yes'?'긍정':'부정') : (side==='yes'?'YES 진영':'NO 진영'); }
+
 async function loadComments(body){
-  // 내 포지션 우세 진영으로 기본 선택
   if(POS){ CMT_SIDE = (POS.no_shares > POS.yes_shares) ? 'no' : 'yes'; }
   const { data: rows } = await supa.from('market_comments')
-    .select('id,user_id,side,content,created_at').eq('market_id',marketId)
-    .order('created_at',{ascending:false}).limit(100);
-  const profs = await fetchProfiles((rows||[]).map(c=>c.user_id));
+    .select('id,user_id,side,content,created_at,parent_id').eq('market_id',marketId)
+    .order('created_at',{ascending:true}).limit(300);
 
-  // 좋아요 집계 + 내 좋아요
+  const profs = await fetchProfiles((rows||[]).map(c=>c.user_id));
   const ids=(rows||[]).map(c=>c.id);
   const likeAgg={}; const myLikes=new Set();
   if(ids.length){
@@ -235,11 +235,34 @@ async function loadComments(body){
     likes?.forEach(l=>{ likeAgg[l.comment_id]=(likeAgg[l.comment_id]||0)+1; if(ME&&l.user_id===ME.id) myLikes.add(l.comment_id); });
   }
 
+  // 부모/자식 분류
+  const tops=(rows||[]).filter(c=>!c.parent_id).reverse(); // 최신 부모 위로
+  const childrenOf={}; (rows||[]).forEach(c=>{ if(c.parent_id) (childrenOf[c.parent_id]||=[]).push(c); });
+
+  const renderOne=(c,isReply)=>{
+    const liked=myLikes.has(c.id);
+    const kids=childrenOf[c.id]||[];
+    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}">
+      <div class="pmd-cmt-head">
+        <span class="pmd-cmt-flag ${c.side}">${c.side.toUpperCase()}</span>
+        <span class="pmd-cmt-name">${esc(profs[c.user_id]?.nickname||'익명')}</span>
+        <span class="pmd-cmt-time">${ago(c.created_at)}</span>
+      </div>
+      <div class="pmd-cmt-body">${esc(c.content)}</div>
+      <div class="pmd-cmt-actions">
+        <button class="pmd-cmt-like ${liked?'on':''}" data-id="${c.id}">♥ <span>${likeAgg[c.id]||0}</span></button>
+        ${!isReply?`<button class="pmd-cmt-reply" data-id="${c.id}">답글</button>`:''}
+      </div>
+      ${kids.length?`<div class="pmd-cmt-replies">${kids.map(k=>renderOne(k,true)).join('')}</div>`:''}
+      <div class="pmd-cmt-replybox" id="replybox-${c.id}" hidden></div>
+    </div>`;
+  };
+
   body.innerHTML = `
     <div class="pmd-cmt-compose">
       <div class="pmd-cmt-sidesel">
-        <button class="pmd-cmt-side yes ${CMT_SIDE==='yes'?'active':''}" data-side="yes">YES 진영</button>
-        <button class="pmd-cmt-side no ${CMT_SIDE==='no'?'active':''}" data-side="no">NO 진영</button>
+        <button class="pmd-cmt-side yes ${CMT_SIDE==='yes'?'active':''}" data-side="yes">${cmtSideLabel('yes')}</button>
+        <button class="pmd-cmt-side no ${CMT_SIDE==='no'?'active':''}" data-side="no">${cmtSideLabel('no')}</button>
       </div>
       <div class="pmd-cmt-inputrow">
         <input id="cmtInput" class="pmd-cmt-input" maxlength="300" placeholder="이 예측에 대한 의견을 남기세요…">
@@ -247,37 +270,17 @@ async function loadComments(body){
       </div>
     </div>
     <div class="pmd-cmt-list">
-      ${(rows||[]).length ? rows.map(c=>{
-        const liked=myLikes.has(c.id);
-        return `<div class="pmd-cmt ${c.side}">
-          <div class="pmd-cmt-head">
-            <span class="pmd-cmt-flag ${c.side}">${c.side.toUpperCase()}</span>
-            <span class="pmd-cmt-name">${esc(profs[c.user_id]?.nickname||'익명')}</span>
-            <span class="pmd-cmt-time">${ago(c.created_at)}</span>
-          </div>
-          <div class="pmd-cmt-body">${esc(c.content)}</div>
-          <button class="pmd-cmt-like ${liked?'on':''}" data-id="${c.id}">♥ <span>${likeAgg[c.id]||0}</span></button>
-        </div>`;
-      }).join('') : emptyTab('첫 의견을 남겨보세요!')}
+      ${tops.length ? tops.map(c=>renderOne(c,false)).join('') : emptyTab('첫 의견을 남겨보세요!')}
     </div>`;
 
   // 진영 선택
-  body.querySelectorAll('.pmd-cmt-side').forEach(b=>b.addEventListener('click',()=>{
+  body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-side').forEach(b=>b.addEventListener('click',()=>{
     CMT_SIDE=b.dataset.side;
-    body.querySelectorAll('.pmd-cmt-side').forEach(x=>x.classList.remove('active'));
+    body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-side').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
   }));
-  // 게시
-  $('cmtSend').addEventListener('click', async ()=>{
-    if(!ME){location.href='login.html';return;}
-    const txt=$('cmtInput').value.trim();
-    if(!txt)return toast('의견을 입력하세요.');
-    const { error } = await supa.from('market_comments').insert({market_id:marketId,user_id:ME.id,side:CMT_SIDE,content:txt});
-    if(error)return toast('등록 실패');
-    $('cmtInput').value='';
-    await refreshBalance();
-    loadComments(body);
-  });
+  // 최상위 게시
+  $('cmtSend').addEventListener('click', ()=>postComment($('cmtInput').value, CMT_SIDE, null, body));
   // 좋아요
   body.querySelectorAll('.pmd-cmt-like').forEach(b=>b.addEventListener('click', async ()=>{
     if(!ME){location.href='login.html';return;}
@@ -286,6 +289,32 @@ async function loadComments(body){
     if(on){ await supa.from('market_comment_likes').delete().eq('comment_id',id).eq('user_id',ME.id); b.classList.remove('on'); span.textContent=Math.max(0,n-1); }
     else { const {error}=await supa.from('market_comment_likes').insert({comment_id:id,user_id:ME.id}); if(!error){ b.classList.add('on'); span.textContent=n+1; } }
   }));
+  // 답글 토글 → 대댓글 입력창
+  body.querySelectorAll('.pmd-cmt-reply').forEach(b=>b.addEventListener('click', ()=>{
+    if(!ME){location.href='login.html';return;}
+    const id=Number(b.dataset.id);
+    const box=$('replybox-'+id);
+    if(!box.hidden){ box.hidden=true; box.innerHTML=''; return; }
+    box.hidden=false;
+    box.innerHTML=`<div class="pmd-cmt-inputrow reply">
+      <input class="pmd-cmt-input reply-input" maxlength="300" placeholder="답글 달기…">
+      <button class="pmd-cmt-send reply-send">게시</button>
+    </div>`;
+    const inp=box.querySelector('.reply-input'); inp.focus();
+    box.querySelector('.reply-send').addEventListener('click', ()=>postComment(inp.value, CMT_SIDE, id, body));
+  }));
+}
+
+async function postComment(text, side, parentId, body){
+  if(!ME){location.href='login.html';return;}
+  const txt=(text||'').trim();
+  if(!txt)return toast('의견을 입력하세요.');
+  const payload={market_id:marketId,user_id:ME.id,side,content:txt};
+  if(parentId) payload.parent_id=parentId;
+  const { error } = await supa.from('market_comments').insert(payload);
+  if(error)return toast('등록 실패');
+  await refreshBalance();
+  loadComments(body);
 }
 
 function renderChart(trades, curP){

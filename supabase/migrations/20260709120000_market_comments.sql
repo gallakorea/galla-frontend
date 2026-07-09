@@ -42,3 +42,7 @@ begin perform public._award(NEW.user_id, 20, 'act_comment', 15); return NEW; end
 drop trigger if exists trg_pts_mkcomment on public.market_comments;
 create trigger trg_pts_mkcomment after insert on public.market_comments
   for each row execute function public._pts_mkcomment();
+
+-- 대댓글 지원 (2026-07-09 추가)
+alter table public.market_comments add column if not exists parent_id bigint references public.market_comments(id) on delete cascade;
+create index if not exists mkc_parent_idx on public.market_comments(parent_id);
