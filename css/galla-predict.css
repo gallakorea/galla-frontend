@@ -1,6 +1,9 @@
 /* ===== 갈라예측 (폴리마켓식) ===== */
 * { box-sizing: border-box; }
-html, body { margin: 0; background: #000; color: #fff; }
+html, body {
+  margin: 0; background: #000; color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+}
 #app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
 
 .predict-main { padding-bottom: 120px; }
