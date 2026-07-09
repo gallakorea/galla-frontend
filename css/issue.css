@@ -1087,6 +1087,7 @@ body {
   -webkit-line-clamp: 3;
   overflow: hidden;
   word-break: break-word;
+  white-space: pre-wrap;   /* 작성자의 줄바꿈·띄어쓰기 그대로 살림 */
 }
 
 .ig-more {
