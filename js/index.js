@@ -75,12 +75,9 @@ function renderMedia(data) {
         const dotsHtml = imgs.map((_, i) =>
             `<div class="carousel-dot ${i === 0 ? 'on' : ''}"></div>`).join('');
         // 캐러셀은 lazy 금지 — 가로 오프스크린이라 안 불러와져 넘기면 빈 슬라이드가 됨
-        // 가로/세로 혼합 대비: 원본은 contain으로 전체 표시, 뒤에 블러 배경 필로 여백 채움
+        // 4:5 세로 프레임에 꽉 채움(cover). 가로 사진은 업로드 때 크롭 영역을 선택하므로 이미 세로임.
         const slidesHtml = imgs.map(url =>
-            `<div class="carousel-slide">
-                <img class="cs-fill" src="${url}" aria-hidden="true" loading="eager">
-                <img class="cs-img" src="${url}" loading="eager" decoding="async">
-            </div>`).join('');
+            `<div class="carousel-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
         return `
         <div class="card-media" onclick="event.stopPropagation()">
             <div class="carousel-wrap">
@@ -99,8 +96,7 @@ function renderMedia(data) {
     if (data.thumb) {
         return `
         <div class="card-media">
-            <img class="cs-fill" src="${data.thumb}" aria-hidden="true" loading="lazy">
-            <img class="cs-img" src="${data.thumb}" loading="lazy" alt="">
+            <img src="${data.thumb}" loading="lazy" alt="">
         </div>`;
     }
 

@@ -101,25 +101,6 @@ body { display: block; }
     display: block;
 }
 
-/* 가로/세로 혼합 사진 — 잘림 방지: 원본 전체(contain) + 블러 배경 필 */
-.card-media .cs-fill {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: blur(26px) brightness(.5);
-    transform: scale(1.15);
-    z-index: 0;
-}
-.card-media .cs-img {
-    position: relative;
-    z-index: 1;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
 /* 인라인 영상 릴스 배지 */
 .vid-reels-badge {
     position: absolute;
