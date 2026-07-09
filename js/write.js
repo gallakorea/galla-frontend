@@ -26,28 +26,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const MAX_IMAGES = 10;
 
+  // 업로드에 쓸 최종 이미지(4:5로 크롭 완료된 File 배열). 원본 대신 이걸 올린다.
+  let croppedImages = [];
+
   // label[for] 이 네이티브로 파일창을 염 (모바일 안전).
   // 같은 파일 재선택 시에도 change가 뜨도록 열릴 때 value 초기화.
   thumbInput.addEventListener('click', () => { thumbInput.value = ''; });
-  thumbInput.addEventListener('change', e => {
+  thumbInput.addEventListener('change', async e => {
     const files = [...(e.target.files || [])];
     if (files.length === 0) return;
     if (files.length > MAX_IMAGES) {
       alert(`이미지는 최대 ${MAX_IMAGES}장까지 선택할 수 있습니다.`);
       thumbInput.value = '';
       thumbPreview.innerHTML = '';
+      croppedImages = [];
       return;
     }
+
+    // 4:5 세로 프레임으로 확정 — 가로 사진은 보여질 부분을 직접 선택하게 함
+    thumbPreview.innerHTML = `<div class="guide-text">사진 처리 중…</div>`;
+    try {
+      croppedImages = typeof window.GALLA_PROCESS_IMAGES === 'function'
+        ? await window.GALLA_PROCESS_IMAGES(files)
+        : files;
+    } catch (err) {
+      console.error('[CROP ERROR]', err);
+      croppedImages = files;
+    }
+
     thumbPreview.innerHTML = `
       <div class="multi-img-strip">
-        ${files.map((f, i) => `
+        ${croppedImages.map((f, i) => `
           <div class="multi-img-item">
             <img src="${URL.createObjectURL(f)}">
             ${i === 0 ? '<span class="multi-img-badge">대표</span>' : ''}
           </div>
         `).join('')}
       </div>
-      ${files.length > 1 ? `<div class="guide-text">${files.length}장 선택됨 · 캐러셀로 노출됩니다</div>` : ''}
+      ${croppedImages.length > 1 ? `<div class="guide-text">${croppedImages.length}장 선택됨 · 캐러셀로 노출됩니다</div>` : ''}
     `;
   });
 
@@ -132,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function hasMedia() {
     return window.__MEDIA_MODE__ === 'photo'
-      ? (thumbInput.files && thumbInput.files.length > 0)
+      ? (croppedImages.length > 0)
       : (videoInput.files && videoInput.files.length > 0);
   }
 
@@ -291,7 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Cloudflare R2 업로드 (이미지 여러 장 + 영상)
       const publishBtn = document.getElementById('publishPreview');
-      const imageFiles = [...(thumbInput.files || [])];
+      const imageFiles = croppedImages.length ? croppedImages : [...(thumbInput.files || [])];
       const videoFile = videoInput.files && videoInput.files[0];
 
       try {
