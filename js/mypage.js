@@ -349,6 +349,107 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // =====================================================
+    // 퀵뷰 모달 — 그리드 클릭 시 페이지 이탈 없이 미리보기
+    // =====================================================
+    function ensureQuickView() {
+        let qv = document.getElementById("mpQuickView");
+        if (qv) return qv;
+        qv = document.createElement("div");
+        qv.id = "mpQuickView";
+        qv.innerHTML = `
+            <div class="qv-dim"></div>
+            <div class="qv-card">
+                <button class="qv-close" aria-label="닫기">✕</button>
+                <div class="qv-media"></div>
+                <div class="qv-body">
+                    <div class="qv-cat"></div>
+                    <div class="qv-title"></div>
+                    <div class="qv-desc"></div>
+                    <div class="qv-stats"></div>
+                    <button class="qv-go"></button>
+                </div>
+            </div>`;
+        document.body.appendChild(qv);
+        const close = () => { qv.classList.remove("open"); document.body.style.overflow = ""; };
+        qv.querySelector(".qv-dim").onclick = close;
+        qv.querySelector(".qv-close").onclick = close;
+        return qv;
+    }
+
+    function openQuickView({ mediaHtml, cat, title, desc, stats, goLabel, goHref }) {
+        const qv = ensureQuickView();
+        qv.querySelector(".qv-media").innerHTML = mediaHtml || "";
+        qv.querySelector(".qv-cat").textContent = cat || "";
+        qv.querySelector(".qv-title").textContent = title || "";
+        qv.querySelector(".qv-desc").textContent = desc || "";
+        qv.querySelector(".qv-stats").innerHTML = stats || "";
+        const go = qv.querySelector(".qv-go");
+        go.textContent = goLabel || "원본으로 이동";
+        go.onclick = () => location.href = goHref;
+        qv.classList.add("open");
+        document.body.style.overflow = "hidden";
+    }
+
+    const qvImg = (src) => src
+        ? `<img src="${src}" onerror="this.src='./assets/logo.png'">`
+        : `<img src="./assets/logo.png">`;
+
+    // 타입별 퀵뷰 (필요 데이터 lazy 조회)
+    async function quickViewIssue(issueId) {
+        const { data: i } = await supabase.from("issues")
+            .select("id,title,category,thumbnail_url,images,video_url,pro_count,con_count,faction_a,faction_b")
+            .eq("id", issueId).maybeSingle();
+        if (!i) { location.href = `issue.html?id=${issueId}`; return; }
+        const thumb = i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null;
+        const media = i.video_url
+            ? `<video src="${i.video_url}" controls playsinline preload="metadata"></video>`
+            : qvImg(thumb);
+        openQuickView({
+            mediaHtml: media,
+            cat: i.category || "",
+            title: i.title,
+            desc: "",
+            stats: `<span>${i.faction_a || "찬성"} ${i.pro_count || 0}</span> · <span>${i.faction_b || "반대"} ${i.con_count || 0}</span>`,
+            goLabel: "이슈에서 참전하기",
+            goHref: `issue.html?id=${i.id}`
+        });
+    }
+
+    async function quickViewNews(newsId) {
+        const { data: n } = await supabase.from("galla_news")
+            .select("id,title,summary,category,hero_image,source_count")
+            .eq("id", newsId).maybeSingle();
+        if (!n) { location.href = `search.html?gn=${newsId}`; return; }
+        openQuickView({
+            mediaHtml: qvImg(n.hero_image),
+            cat: `${n.category || ""} · 갈라뉴스`,
+            title: n.title,
+            desc: n.summary || "",
+            stats: n.source_count ? `<span>출처 ${n.source_count}곳 종합</span>` : "",
+            goLabel: "기사 전체 읽기",
+            goHref: `search.html?gn=${n.id}`
+        });
+    }
+
+    async function quickViewPlaza(postId) {
+        const { data: p } = await supabase.from("plaza_posts")
+            .select("id,title,body,category,cover_image,thumbnail,up_count,down_count,view_count")
+            .eq("id", postId).maybeSingle();
+        if (!p) { location.href = `plaza_detail.html?id=${postId}`; return; }
+        // 본문 미리보기: 마커 제거 후 앞 120자
+        const plain = (p.body || "").replace(/\[(IMAGE|VIDEO|EMBED)\]\S+/g, "").replace(/\s+/g, " ").trim();
+        openQuickView({
+            mediaHtml: qvImg(p.cover_image || p.thumbnail),
+            cat: `${p.category || ""} · 갈라 광장`,
+            title: p.title,
+            desc: plain.slice(0, 120) + (plain.length > 120 ? "…" : ""),
+            stats: `<span>추천 ${p.up_count || 0}</span> · <span>비추 ${p.down_count || 0}</span> · <span>조회 ${p.view_count || 0}</span>`,
+            goLabel: "광장에서 보기",
+            goHref: `plaza_detail.html?id=${p.id}`
+        });
+    }
+
+    // =====================================================
     // 인스타 그리드 카드 (정사각 썸네일 + 하단 타이틀 오버레이)
     // =====================================================
     const igCard = ({ thumb, title, badge, onClick }) => {
@@ -424,7 +525,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 thumb,
                 title: issue.title,
                 badge: issue.video_url ? "▶" : "",
-                onClick: () => location.href = `issue.html?id=${issue.id}`
+                onClick: () => quickViewIssue(issue.id)
             }));
         });
     };
@@ -477,7 +578,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 thumb: n.hero_image,
                 title: n.title,
                 badge: "📰",
-                onClick: () => location.href = `search.html?gn=${n.id}`
+                onClick: () => quickViewNews(n.id)
             }));
         });
     };
@@ -514,7 +615,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 thumb: p.cover_image || p.thumbnail,
                 title: p.title,
                 badge: "",
-                onClick: () => location.href = `plaza_detail.html?id=${p.id}`
+                onClick: () => quickViewPlaza(p.id)
             }));
         });
     };
