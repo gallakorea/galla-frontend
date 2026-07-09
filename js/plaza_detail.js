@@ -257,12 +257,22 @@ async function submitComment(body) {
     return;
   }
 
-  const anon_name = generateAnonNickname();
+  // 표시 이름: 익명 체크 시 랜덤 익명, 기본은 내 닉네임
+  const anonChecked = document.getElementById("comment-anon")?.checked === true;
+  let displayName = generateAnonNickname();
+  if (!anonChecked) {
+    const { data: prof } = await supabase
+      .from("user_profiles")
+      .select("nickname")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    displayName = prof?.nickname || displayName;
+  }
 
   const payload = {
     post_id: postId,
     body,
-    anon_name,
+    anon_name: displayName,
     user_id: user.id,
     parent_id: replyTarget ? replyTarget.parentId : null
   };

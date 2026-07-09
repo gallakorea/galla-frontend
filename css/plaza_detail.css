@@ -485,3 +485,10 @@ body {
 .post-content a { color: #7fb2ff; }
 .post-content strong { font-weight: 700; }
 .post-content del { opacity: .7; }
+
+/* 익명 표시 선택 (댓글) */
+.plaza-anon-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0; font-size: 13px; color: #ccc; cursor: pointer;
+}
+.plaza-anon-row input { accent-color: #2f7df6; width: 16px; height: 16px; }

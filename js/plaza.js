@@ -477,8 +477,8 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const category = categorySelect.value.trim();
   const title = titleInput.value.trim();
 
-  // 표시 이름: 익명 체크 시 랜덤 익명, 해제 시 내 닉네임
-  const anonChecked = document.getElementById("plaza-anon")?.checked !== false;
+  // 표시 이름: 익명 체크 시 랜덤 익명, 기본은 내 닉네임
+  const anonChecked = document.getElementById("plaza-anon")?.checked === true;
   let displayName = generateAnonNickname();
   if (!anonChecked) {
     const { data: prof } = await supabase
