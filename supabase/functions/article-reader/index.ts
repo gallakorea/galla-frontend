@@ -91,39 +91,46 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 문단 추출
-    const paragraphs: string[] = [];
-    const pushText = (t: string) => {
-      const s = t.replace(/\s+/g, " ").trim();
-      if (s.length >= 2) paragraphs.push(s);
-    };
-    if (best) {
-      const ps = best.querySelectorAll("p");
-      if (ps.length) ps.forEach((p) => pushText(p.textContent || ""));
-      else (best.textContent || "").split(/\n{1,}/).forEach(pushText);
-    } else {
-      // 폴백: 문서 전체에서 긴 <p>만
-      doc.querySelectorAll("p").forEach((p) => {
-        const s = (p.textContent || "").trim();
-        if (s.length >= 40) pushText(s);
+    // 본문을 순서 보존 블록(문단/이미지)으로 추출
+    const blocks: Array<{ t: "p" | "img"; text?: string; src?: string }> = [];
+    const seenImg = new Set<string>();
+    let textLenTotal = 0;
+    const isBadImg = (src: string) =>
+      /(logo|icon|blank|1x1|spacer|ad[_./-]|banner|profile|emoji|button|btn_)/i.test(src);
+
+    const container = best || doc.querySelector("body");
+    const nodes = container ? [...container.querySelectorAll("p, img")] : [];
+    if (nodes.length) {
+      for (const el of nodes as Element[]) {
+        const tag = (el.tagName || "").toLowerCase();
+        if (tag === "p") {
+          const s = (el.textContent || "").replace(/\s+/g, " ").trim();
+          if (s.length >= 2) { blocks.push({ t: "p", text: s }); textLenTotal += s.length; }
+        } else if (tag === "img") {
+          const src = abs(el.getAttribute("src") || el.getAttribute("data-src") || el.getAttribute("data-original"), finalUrl);
+          if (!src || seenImg.has(src) || isBadImg(src)) continue;
+          const w = parseInt(el.getAttribute("width") || "0");
+          if (w && w < 120) continue;
+          if (blocks.filter((b) => b.t === "img").length >= 8) continue;
+          seenImg.add(src);
+          blocks.push({ t: "img", src });
+        }
+      }
+    }
+    // <p>가 없으면 텍스트 통짜 분할
+    if (!blocks.some((b) => b.t === "p") && best) {
+      (best.textContent || "").split(/\n{1,}/).forEach((t) => {
+        const s = t.replace(/\s+/g, " ").trim();
+        if (s.length >= 2) { blocks.push({ t: "p", text: s }); textLenTotal += s.length; }
       });
     }
 
-    // 본문 이미지(최대 4장)
-    const images: string[] = [];
-    (best || doc).querySelectorAll("img").forEach((im) => {
-      const src = abs(im.getAttribute("src") || im.getAttribute("data-src"), finalUrl);
-      if (src && images.length < 4 && !images.includes(src)) images.push(src);
-    });
-
-    const totalLen = paragraphs.join("").length;
-    if (totalLen < 200) {
+    if (textLenTotal < 200) {
       return json({ ok: false, error: "too short", title, image, siteName, finalUrl }, 200);
     }
 
     return json({
-      ok: true, title, siteName, published, finalUrl,
-      image, images, paragraphs,
+      ok: true, title, siteName, published, finalUrl, image, blocks,
     });
   } catch (e) {
     return json({ ok: false, error: String(e) }, 200);

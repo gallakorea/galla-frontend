@@ -477,13 +477,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (_e) { /* fall through */ }
     if (my !== viewerSeq) return; // 그 사이 다른 기사 열림
 
-    if (d && d.ok && Array.isArray(d.paragraphs) && d.paragraphs.length) {
+    if (d && d.ok && Array.isArray(d.blocks) && d.blocks.length) {
+      const imgCount = d.blocks.filter(b => b.t === "img").length;
+      // 본문에 사진이 없을 때만 대표(og) 이미지를 상단에 (중복 방지)
+      const hero = (isValidThumbnail(d.image) && imgCount === 0)
+        ? `<img class="reader-hero" src="${esc(d.image)}" onerror="this.style.display='none'">` : "";
+      const body = d.blocks.map(b => b.t === "img"
+        ? `<img class="reader-img" src="${esc(b.src)}" loading="lazy" onerror="this.remove()">`
+        : `<p>${esc(b.text)}</p>`).join("");
       viewerReader.innerHTML = `
         <article class="reader">
           <h1 class="reader-title">${esc(d.title || title || "")}</h1>
           <div class="reader-sub">${esc(d.siteName || press || "")}${d.published && fmtDate(d.published) ? " · " + fmtDate(d.published) : ""}</div>
-          ${isValidThumbnail(d.image) ? `<img class="reader-hero" src="${esc(d.image)}" onerror="this.style.display='none'">` : ""}
-          ${d.paragraphs.map(p => `<p>${esc(p)}</p>`).join("")}
+          ${hero}
+          ${body}
           <a class="reader-origin" href="${esc(url)}" target="_blank" rel="noopener noreferrer">원문 기사에서 보기 ↗</a>
         </article>`;
     } else {

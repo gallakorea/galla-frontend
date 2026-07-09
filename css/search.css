@@ -714,3 +714,6 @@ body[data-page="search"] .header-inner {
 
 /* hidden 속성이 display:flex/absolute 규칙에 먹히던 문제 — 명시적으로 숨김 */
 .news-viewer-fallback[hidden], .news-viewer-reader[hidden] { display: none !important; }
+
+/* 리더 본문 속 사진(문단 사이) */
+.reader-img { width: 100%; border-radius: 10px; margin: 6px 0 18px; display: block; }
