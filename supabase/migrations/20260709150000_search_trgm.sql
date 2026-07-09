@@ -6,3 +6,8 @@ create extension if not exists pg_trgm;
 
 create index concurrently if not exists idx_news_title_trgm
   on public.news_articles_raw using gin (title gin_trgm_ops);
+
+-- 관련기사 묶음 모달: where related_group_id = X 조회가 인덱스 없어 타임아웃나던 문제.
+-- 대부분 null 이므로 부분 인덱스.
+create index concurrently if not exists idx_news_related_group
+  on public.news_articles_raw (related_group_id) where related_group_id is not null;

@@ -9,6 +9,12 @@ function isValidThumbnail(url) {
   if (!u || u === "about:blank") return false;
   return u.startsWith("http");
 }
+// 크롤링 썸네일이 깨졌을 때(로드 실패) → 이미지 숨기고 컨테이너에 플레이스홀더 표시
+window.galla_imgFail = function (el) {
+  el.style.display = "none";
+  const box = el.closest(".news-thumb-16x9, .sr-thumb, .news-mini-thumb");
+  if (box) box.classList.add("thumb-fail");
+};
 function esc(s) {
   return (s == null ? "" : String(s))
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -51,6 +57,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const viewerClose = document.getElementById("news-viewer-close");
 
   newsModalBackdrop?.addEventListener("click", closeNewsModal);
+  document.getElementById("news-modal-x")?.addEventListener("click", closeNewsModal);
+  newsModalArticles?.addEventListener("click", e => {
+    const it = e.target.closest("[data-url]");
+    if (it && it.dataset.url) openNewsViewer(it.dataset.url);
+  });
   viewerClose?.addEventListener("click", () => {
     viewerModal.classList.add("hidden");
     viewerFrame.src = "";
@@ -250,7 +261,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const total2 = (i.pro_count || 0) + (i.con_count || 0);
         const pro = total2 ? Math.round((i.pro_count || 0) / total2 * 100) : 50;
         return `<a class="sr-card" href="issue.html?id=${i.id}">
-          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
           <div class="sr-body">
             <div class="sr-cat">${esc(i.category || "")}</div>
             <div class="sr-title">${esc(i.title)}</div>
@@ -283,7 +294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
       html += news.map(n =>
         `<div class="sr-card news" data-url="${esc(n.url || "")}" data-gid="${esc(n.related_group_id || n.id)}">
-          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy">` : `<span class="sr-noimg">NEWS</span>`}</div>
+          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
           <div class="sr-body">
             <div class="sr-title">${esc(n.title)}</div>
             <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
@@ -345,7 +356,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const t2 = (i.pro_count || 0) + (i.con_count || 0);
         const pro = t2 ? Math.round((i.pro_count || 0) / t2 * 100) : 50;
         return `<a class="sr-card" href="issue.html?id=${i.id}">
-          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
+          <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
           <div class="sr-body">
             <div class="sr-cat">${esc(i.category || "")}</div>
             <div class="sr-title">${esc(i.title)}</div>
@@ -437,7 +448,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.className = "news-card";
       card.addEventListener("click", () => openNewsModal(rep.related_group_id ?? rep.id));
       card.innerHTML = `
-        <div class="news-thumb-16x9"><img src="${esc(rep.thumbnail_url)}" loading="lazy"></div>
+        <div class="news-thumb-16x9"><img src="${esc(rep.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)"></div>
         <div class="news-text">
           <h3 class="news-title">${esc(rep.title)}</h3>
           <div class="news-meta">
@@ -459,7 +470,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const { data, error } = await supabase
       .from("news_articles_raw")
-      .select("id,title,published_at,url,related_group_id")
+      .select("id,title,published_at,url,related_group_id,press_name,thumbnail_url")
       .or(`related_group_id.eq.${groupId},id.eq.${groupId}`)
       .order("published_at", { ascending: false })
       .limit(30);
@@ -467,14 +478,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       newsModalArticles.innerHTML = `<p class="se-muted">기사가 없습니다.</p>`;
       return;
     }
-    newsModalArticles.innerHTML = "";
-    data.forEach(a => {
-      const row = document.createElement("div");
-      row.className = "news-article-item";
-      row.innerHTML = `<p class="news-article-title">${esc(a.title)}</p>`;
-      row.onclick = () => a.url && openNewsViewer(a.url);
-      newsModalArticles.appendChild(row);
-    });
+    newsModalTitle.textContent = `관련 기사 ${data.length}건`;
+    newsModalArticles.innerHTML = data.map(a =>
+      `<div class="news-article-item" data-url="${esc(a.url || "")}">
+        <div class="news-mini-thumb">${isValidThumbnail(a.thumbnail_url)
+          ? `<img src="${esc(a.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
+        <div class="nai-body">
+          <p class="news-article-title">${esc(a.title)}</p>
+          <div class="nai-meta">${esc(a.press_name || "")}${a.press_name ? " · " : ""}${timeAgo(a.published_at)}</div>
+        </div>
+        <span class="nai-go">›</span>
+      </div>`
+    ).join("");
   }
 
   function openNewsViewer(url) {
