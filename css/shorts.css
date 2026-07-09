@@ -181,8 +181,8 @@ body.shorts-open { overflow: hidden !important; }
   left: 50%;
   transform: translateX(-50%);
 
-  /* 릴스 오버레이는 하단 네비를 숨기므로 화면 맨 아래에 붙임(로고 안 가리게) */
-  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  /* 로고 아래에 여유 있게 — 맨 아래보단 살짝 위 */
+  bottom: calc(env(safe-area-inset-bottom) + 34px);
 
   width: calc(100% - 24px);
   max-width: 480px;
