@@ -393,6 +393,15 @@ function extractFirstImage(body) {
   return match ? match[1] : null;
 }
 
+function timeAgoK(iso) {
+  if (!iso) return "";
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return "방금 전";
+  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
+  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  return `${Math.floor(s / 86400)}일 전`;
+}
+
 async function fetchPlazaPosts() {
   let query = supabase
     .from("plaza_posts")
@@ -404,7 +413,10 @@ async function fetchPlazaPosts() {
       created_at,
       body,
       thumbnail,
-      score
+      score,
+      up_count,
+      view_count,
+      plaza_comments(count)
     `)
     .order("score", { ascending: false })
     .order("created_at", { ascending: false });
@@ -435,12 +447,18 @@ function renderPlazaPosts(posts) {
     const li = document.createElement("li");
     li.className = "plaza-post";
     const thumb = post.thumbnail || extractFirstImage(post.body);
+    const cmtCount = post.plaza_comments?.[0]?.count ?? 0;
     li.innerHTML = `
       <a href="plaza_detail.html?id=${post.id}" class="plaza-link">
         <div class="post-body">
           <div class="post-title">${post.title}</div>
           <div class="post-meta">
-            ${post.nickname} · ${post.category} · 방금 전
+            ${post.nickname} · ${post.category} · ${timeAgoK(post.created_at)}
+          </div>
+          <div class="post-stats">
+            <span>👍 ${post.up_count || 0}</span>
+            <span>💬 ${cmtCount}</span>
+            <span>조회 ${post.view_count || 0}</span>
           </div>
         </div>
 
