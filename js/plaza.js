@@ -30,6 +30,16 @@ window.openPlazaWriteModal = openPlazaWriteModal;
 function closePlazaWriteModal() {
   modal.classList.add("hidden");
   document.body.style.overflow = "";
+  // 미리보기 화면이 열려 있으면 편집 화면으로 복귀
+  if (typeof previewOn !== "undefined" && previewOn) {
+    previewOn = false;
+    const pv = document.getElementById("plaza-preview");
+    const btn = document.getElementById("tb-preview");
+    const body = document.getElementById("plaza-body");
+    if (pv) pv.hidden = true;
+    if (body) body.style.display = "";
+    if (btn) btn.classList.remove("on");
+  }
 }
 // expose for inline HTML handlers
 window.closePlazaWriteModal = closePlazaWriteModal;
@@ -58,89 +68,286 @@ document.querySelectorAll(".plaza-categories button").forEach(btn => {
 const titleInput = document.getElementById("plaza-title");
 const submitBtn = document.getElementById("plaza-submit");
 const charCount = document.getElementById("char-count");
-
 const bodyInput = document.getElementById("plaza-body");
 
-bodyInput?.addEventListener("input", () => {
-  charCount.textContent = bodyInput.value.length;
+const attachStrip = document.getElementById("plaza-attach");
+const previewEl = document.getElementById("plaza-preview");
+const dropHint = document.getElementById("plaza-drophint");
+const editorBody = document.getElementById("editorBody");
+
+const IMG_MAX = 20 * 1024 * 1024; // 20MB
+const VID_MAX = 50 * 1024 * 1024; // 50MB
+
+let uploading = 0;
+let previewOn = false;
+
+/* =========================
+   공통: 본문 변경 반영
+========================= */
+function onBodyChanged() {
+  if (charCount) charCount.textContent = bodyInput.value.length;
+  refreshAttach();
   validatePlazaForm();
-});
+  if (previewOn) renderPreview();
+}
+
+bodyInput?.addEventListener("input", onBodyChanged);
+titleInput?.addEventListener("input", validatePlazaForm);
+categorySelect?.addEventListener("change", validatePlazaForm);
 
 /* =========================
    VALIDATION
-   - 카테고리 필수
-   - 제목/본문 필수
+   - 카테고리/제목 필수, 본문(글 또는 미디어) 필수, 업로드 중이면 비활성
 ========================= */
-
 function validatePlazaForm() {
   const hasCategory = categorySelect.value.trim() !== "";
   const hasTitle = titleInput.value.trim().length > 0;
   const hasBody = bodyInput.value.trim().length > 0;
-
-  submitBtn.disabled = !(hasCategory && hasTitle && hasBody);
+  submitBtn.disabled = uploading > 0 || !(hasCategory && hasTitle && hasBody);
 }
 
 /* =========================
-   IMAGE INSERT (TEXTAREA)
+   에디터: 텍스트 조작 유틸
 ========================= */
+function wrapSel(before, after) {
+  const s = bodyInput.selectionStart, e = bodyInput.selectionEnd;
+  const v = bodyInput.value;
+  const sel = v.slice(s, e) || "텍스트";
+  bodyInput.value = v.slice(0, s) + before + sel + after + v.slice(e);
+  bodyInput.selectionStart = s + before.length;
+  bodyInput.selectionEnd = s + before.length + sel.length;
+  bodyInput.focus();
+  onBodyChanged();
+}
 
-const addImageBtn = document.getElementById("addImage");
+function linePrefix(pfx) {
+  const s = bodyInput.selectionStart;
+  const v = bodyInput.value;
+  const lineStart = v.lastIndexOf("\n", s - 1) + 1;
+  bodyInput.value = v.slice(0, lineStart) + pfx + v.slice(lineStart);
+  bodyInput.selectionStart = bodyInput.selectionEnd = s + pfx.length;
+  bodyInput.focus();
+  onBodyChanged();
+}
 
+function insertLink() {
+  const url = prompt("링크 URL을 입력하세요 (https://...)");
+  if (!url) return;
+  const u = url.trim();
+  if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL만 가능해요.");
+  const s = bodyInput.selectionStart, e = bodyInput.selectionEnd;
+  const v = bodyInput.value;
+  const text = v.slice(s, e) || u;
+  const md = `[${text}](${u})`;
+  bodyInput.value = v.slice(0, s) + md + v.slice(e);
+  bodyInput.selectionStart = bodyInput.selectionEnd = s + md.length;
+  bodyInput.focus();
+  onBodyChanged();
+}
+
+// 블록 마커([IMAGE]/[VIDEO]/[EMBED])를 한 줄 단독으로 삽입
+function insertBlock(marker) {
+  const v = bodyInput.value;
+  const start = bodyInput.selectionStart;
+  const prefix = v.slice(0, start);
+  const suffix = v.slice(start);
+  const pre = prefix.length && !prefix.endsWith("\n") ? "\n" : "";
+  const post = suffix.startsWith("\n") ? "" : "\n";
+  const chunk = pre + marker + post;
+  bodyInput.value = prefix + chunk + suffix;
+  const pos = (prefix + chunk).length;
+  bodyInput.selectionStart = bodyInput.selectionEnd = pos;
+  bodyInput.focus();
+  onBodyChanged();
+}
+
+/* =========================
+   툴바 버튼
+========================= */
+document.getElementById("plaza-toolbar")?.addEventListener("click", (e) => {
+  const b = e.target.closest(".tb-btn[data-fmt]");
+  if (!b) return;
+  const fmt = b.dataset.fmt;
+  if (fmt === "bold") wrapSel("**", "**");
+  else if (fmt === "italic") wrapSel("*", "*");
+  else if (fmt === "strike") wrapSel("~~", "~~");
+  else if (fmt === "quote") linePrefix("> ");
+  else if (fmt === "list") linePrefix("- ");
+  else if (fmt === "link") insertLink();
+});
+
+document.getElementById("tb-extimg")?.addEventListener("click", () => {
+  const url = prompt("이미지 주소(URL)를 붙여넣으세요");
+  if (!url) return;
+  const u = url.trim();
+  if (!/^https?:\/\//i.test(u)) return alert("http(s):// 이미지 URL만 가능해요.");
+  insertBlock(`[IMAGE]${u}`);
+});
+
+document.getElementById("tb-embed")?.addEventListener("click", () => {
+  const url = prompt("유튜브/비메오 또는 링크 URL을 붙여넣으세요");
+  if (!url) return;
+  const u = url.trim();
+  if (!/^https?:\/\//i.test(u)) return alert("http(s):// URL만 가능해요.");
+  insertBlock(`[EMBED]${u}`);
+});
+
+/* =========================
+   미리보기 토글
+========================= */
+function renderPreview() {
+  const html = window.GALLA_renderPlazaBody
+    ? window.GALLA_renderPlazaBody(bodyInput.value)
+    : "";
+  previewEl.innerHTML = html || `<p class="pb-empty">미리볼 내용이 없어요.</p>`;
+}
+document.getElementById("tb-preview")?.addEventListener("click", (e) => {
+  previewOn = !previewOn;
+  const btn = e.currentTarget;
+  if (previewOn) {
+    renderPreview();
+    previewEl.hidden = false;
+    bodyInput.style.display = "none";
+    btn.classList.add("on");
+  } else {
+    previewEl.hidden = true;
+    bodyInput.style.display = "";
+    btn.classList.remove("on");
+    bodyInput.focus();
+  }
+});
+
+/* =========================
+   파일 업로드 (사진/동영상 → plaza-images 버킷, 익명 anon)
+========================= */
 const imageInput = document.createElement("input");
 imageInput.type = "file";
 imageInput.accept = "image/*";
+imageInput.multiple = true;
 imageInput.style.display = "none";
 document.body.appendChild(imageInput);
 
-addImageBtn?.addEventListener("click", () => {
-  imageInput.click();
-});
+const videoInput = document.createElement("input");
+videoInput.type = "file";
+videoInput.accept = "video/*";
+videoInput.style.display = "none";
+document.body.appendChild(videoInput);
 
-imageInput.addEventListener("change", async () => {
-  const file = imageInput.files[0];
-  if (!file) return;
+document.getElementById("tb-photo")?.addEventListener("click", () => imageInput.click());
+document.getElementById("tb-video")?.addEventListener("click", () => videoInput.click());
 
-  const ext = file.name.split(".").pop();
-  const fileName = `plaza_${Date.now()}.${ext}`;
-
-  const { error } = await supabase
-    .storage
-    .from("plaza-images")
-    .upload(fileName, file);
-
-  if (error) {
-    alert("이미지 업로드 실패");
-    console.error(error);
-    return;
-  }
-
-  const { data } = supabase
-    .storage
-    .from("plaza-images")
-    .getPublicUrl(fileName);
-
-  insertImageIntoTextarea(data.publicUrl);
+imageInput.addEventListener("change", () => {
+  if (imageInput.files.length) handleFiles([...imageInput.files]);
   imageInput.value = "";
 });
+videoInput.addEventListener("change", () => {
+  if (videoInput.files.length) handleFiles([...videoInput.files]);
+  videoInput.value = "";
+});
 
-function insertImageIntoTextarea(url) {
-  const start = bodyInput.selectionStart;
-  const end = bodyInput.selectionEnd;
-
-  const tag = `\n[IMAGE]${url}\n`;
-
-  bodyInput.value =
-    bodyInput.value.substring(0, start) +
-    tag +
-    bodyInput.value.substring(end);
-
-  bodyInput.selectionStart =
-    bodyInput.selectionEnd =
-    start + tag.length;
-
-  bodyInput.focus();
-  charCount.textContent = bodyInput.value.length;
+async function uploadToBucket(file) {
+  const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const name = `plaza_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  const { error } = await supabase.storage
+    .from("plaza-images")
+    .upload(name, file, { contentType: file.type || undefined, upsert: false });
+  if (error) throw error;
+  return supabase.storage.from("plaza-images").getPublicUrl(name).data.publicUrl;
 }
+
+async function handleFiles(files) {
+  for (const f of files) {
+    const isVid = /^video\//.test(f.type);
+    const isImg = /^image\//.test(f.type);
+    if (!isVid && !isImg) { alert("이미지 또는 동영상만 올릴 수 있어요."); continue; }
+    if (isImg && f.size > IMG_MAX) { alert("이미지는 20MB 이하만 가능해요."); continue; }
+    if (isVid && f.size > VID_MAX) { alert("동영상은 50MB 이하만 가능해요."); continue; }
+
+    uploading++;
+    refreshAttach();
+    validatePlazaForm();
+    try {
+      const url = await uploadToBucket(f);
+      insertBlock(`[${isVid ? "VIDEO" : "IMAGE"}]${url}`);
+    } catch (err) {
+      console.error("plaza upload error:", err);
+      alert("업로드 실패: " + (err?.message || err));
+    } finally {
+      uploading--;
+      refreshAttach();
+      validatePlazaForm();
+    }
+  }
+}
+
+/* =========================
+   드래그&드롭 / 붙여넣기 업로드
+========================= */
+["dragenter", "dragover"].forEach((ev) =>
+  editorBody?.addEventListener(ev, (e) => {
+    if (e.dataTransfer && [...e.dataTransfer.types].includes("Files")) {
+      e.preventDefault();
+      if (dropHint) dropHint.hidden = false;
+    }
+  })
+);
+["dragleave", "drop"].forEach((ev) =>
+  editorBody?.addEventListener(ev, (e) => {
+    if (ev === "drop") {
+      e.preventDefault();
+      const files = [...(e.dataTransfer?.files || [])];
+      if (files.length) handleFiles(files);
+    }
+    if (dropHint) dropHint.hidden = true;
+  })
+);
+bodyInput?.addEventListener("paste", (e) => {
+  const files = [...(e.clipboardData?.files || [])];
+  if (files.length) { e.preventDefault(); handleFiles(files); }
+});
+
+/* =========================
+   첨부 미리보기 스트립 (본문 마커에서 파생)
+========================= */
+function refreshAttach() {
+  if (!attachStrip) return;
+  const items = [];
+  const re = /\[(IMAGE|VIDEO)\](https?:\/\/[^\s]+)/g;
+  let m;
+  while ((m = re.exec(bodyInput.value))) items.push({ kind: m[1], url: m[2], marker: m[0] });
+
+  if (!items.length && uploading === 0) {
+    attachStrip.hidden = true;
+    attachStrip.innerHTML = "";
+    return;
+  }
+  attachStrip.hidden = false;
+  attachStrip.innerHTML =
+    items.map((it) =>
+      `<div class="pa-item">
+        ${it.kind === "IMAGE"
+          ? `<img src="${it.url}">`
+          : `<video src="${it.url}" muted preload="metadata"></video><span class="pa-badge">▶</span>`}
+        <button type="button" class="pa-del" data-marker="${encodeURIComponent(it.marker)}">✕</button>
+      </div>`
+    ).join("") +
+    (uploading > 0 ? `<div class="pa-item pa-uploading"><div class="pa-spin"></div></div>` : "");
+}
+
+attachStrip?.addEventListener("click", (e) => {
+  const del = e.target.closest(".pa-del");
+  if (!del) return;
+  const marker = decodeURIComponent(del.dataset.marker);
+  // 마커 라인 제거 (앞뒤 줄바꿈 정리)
+  const v = bodyInput.value;
+  const idx = v.indexOf(marker);
+  if (idx === -1) return;
+  let start = idx, end = idx + marker.length;
+  if (v[end] === "\n") end++;
+  else if (v[start - 1] === "\n") start--;
+  bodyInput.value = v.slice(0, start) + v.slice(end);
+  onBodyChanged();
+});
 
 /* =========================
    익명 닉네임 생성
@@ -292,6 +499,7 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   submitBtn.disabled = true;
 
   bodyInput.value = "";
+  if (attachStrip) { attachStrip.hidden = true; attachStrip.innerHTML = ""; }
 
   // 리스트 즉시 갱신
   fetchPlazaPosts();

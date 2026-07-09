@@ -452,3 +452,36 @@ body {
   justify-content: center;
   cursor: pointer;
 }
+/* ===========================================================
+   갈라 광장 본문 렌더 (공용 렌더러 결과: 이미지/동영상/임베드/마크다운)
+=========================================================== */
+.post-content .pb-p { margin: 0 0 10px; line-height: 1.65; }
+.post-content .pb-gap { height: 10px; }
+.post-content .pb-media { margin: 12px 0; }
+.post-content .pb-media img,
+.post-content .pb-media video {
+  width: 100%; height: auto; display: block;
+  border-radius: 10px; background: #000;
+}
+.post-content .pb-embed {
+  position: relative; width: 100%; aspect-ratio: 16/9;
+  margin: 12px 0; border-radius: 10px; overflow: hidden; background: #000;
+}
+.post-content .pb-embed iframe {
+  position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+}
+.post-content .pb-quote {
+  margin: 10px 0; padding: 8px 14px;
+  border-left: 3px solid #2f7df6; color: #bcd3ff;
+  background: rgba(47,125,246,.08); border-radius: 0 8px 8px 0;
+}
+.post-content .pb-list { margin: 10px 0; padding-left: 22px; }
+.post-content .pb-list li { margin: 4px 0; }
+.post-content .pb-linkcard {
+  display: block; margin: 10px 0; padding: 12px 14px;
+  border: 1px solid #333; border-radius: 10px; color: #7fb2ff;
+  word-break: break-all; text-decoration: none;
+}
+.post-content a { color: #7fb2ff; }
+.post-content strong { font-weight: 700; }
+.post-content del { opacity: .7; }

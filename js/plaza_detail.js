@@ -323,27 +323,15 @@ function renderReplies(replies, container) {
 
 /* =========================
    POST BODY RENDERER
-   - 줄바꿈 유지
-   - [IMAGE]URL → 실제 이미지
+   - 공용 렌더러(plaza-render.js) 사용: 이미지/동영상/임베드 + 라이트 마크다운(XSS-safe)
+   - 구버전 폴백: 렌더러 미로드 시 [IMAGE]만 처리
 ========================= */
 function renderPostBody(body) {
   if (!body) return "";
-
+  if (window.GALLA_renderPlazaBody) return window.GALLA_renderPlazaBody(body);
   return body
-    // [IMAGE] 뒤의 URL (줄바꿈 포함) 처리
-    .replace(
-      /\[IMAGE\]([\s\S]*?)(?=\n|$)/g,
-      (_, url) => {
-        const cleanUrl = url.replace(/\s+/g, "");
-        return `
-          <div class="post-image-wrapper">
-            <img src="${cleanUrl}" class="post-image" />
-          </div>
-        `;
-      }
-    )
-
-    // 마지막에 줄바꿈 처리
+    .replace(/\[IMAGE\]([\s\S]*?)(?=\n|$)/g, (_, url) =>
+      `<div class="post-image-wrapper"><img src="${url.replace(/\s+/g, "")}" class="post-image" /></div>`)
     .replace(/\n/g, "<br>");
 }
 
