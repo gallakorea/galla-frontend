@@ -53,8 +53,6 @@ const FEEDS: [string, string][] = [
   ["전자신문", "https://rss.etnews.com/Section901.xml"],
   ["ZDNet", "https://feeds.feedburner.com/zdkorea"],
   ["아이뉴스24", "https://www.inews24.com/rss/news_all.xml"],
-  ["데이터넷", "http://www.datanet.co.kr/rss/allArticle.xml"],
-  ["컨슈머타임스", "http://www.cstimes.com/rss/allArticle.xml"],
 ];
 
 const UA = "Mozilla/5.0 (compatible; GallaBot/1.0; +https://galla-frontend.pages.dev)";
