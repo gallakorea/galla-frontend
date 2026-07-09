@@ -816,3 +816,25 @@ body[data-page="search"] .header-inner {
   width: 100%; margin-top: 12px; padding: 11px; border: 1px solid #262a38; border-radius: 10px;
   background: #12141c; color: #aeb7c9; font-size: 13px; font-weight: 700; cursor: pointer;
 }
+
+/* 갈라뉴스 카드 지표 */
+.gn-cardstats {
+  display: flex; align-items: center; gap: 12px; margin-top: 7px;
+  font-size: 12px; color: #8a93a6;
+}
+.gn-cardstats .gn-saved { color: #6d8bff; font-weight: 700; }
+
+/* 갈라뉴스 리더 액션바 */
+.gn-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin: 22px 0 4px; padding: 14px 0; border-top: 1px solid #1b1e28;
+}
+.gn-act {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid #262a38; background: #12141c; color: #cfd6e6;
+  border-radius: 999px; padding: 9px 15px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.gn-act span { font-variant-numeric: tabular-nums; }
+.gn-act.on.like { border-color: #3356ff; color: #6d8bff; background: rgba(51,86,255,.12); }
+.gn-act.on.dislike { border-color: #ff4f6e; color: #ff6f86; background: rgba(255,79,110,.12); }
+.gn-act.on.save { border-color: #6d4bff; color: #b7a6f0; background: rgba(120,90,240,.12); }

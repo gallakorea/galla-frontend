@@ -415,8 +415,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadTopNews();
       return;
     }
+
+    // 반응·댓글·저장 집계(리스트 일괄)
+    const ids = news.map(n => n.id);
+    const [cRes, rRes, bRes] = await Promise.all([
+      supabase.from("galla_news_comments").select("news_id").in("news_id", ids),
+      supabase.from("galla_news_reactions").select("news_id,value,user_id").in("news_id", ids),
+      ME ? supabase.from("galla_news_bookmarks").select("news_id").in("news_id", ids).eq("user_id", ME.id) : Promise.resolve({ data: [] }),
+    ]);
+    const cCount = {}, likes = {}, dislikes = {}, myReact = {}, saved = new Set();
+    (cRes.data || []).forEach(r => cCount[r.news_id] = (cCount[r.news_id] || 0) + 1);
+    (rRes.data || []).forEach(r => {
+      if (r.value === 1) likes[r.news_id] = (likes[r.news_id] || 0) + 1;
+      else dislikes[r.news_id] = (dislikes[r.news_id] || 0) + 1;
+      if (ME && r.user_id === ME.id) myReact[r.news_id] = r.value;
+    });
+    (bRes.data || []).forEach(r => saved.add(r.news_id));
+
     list.innerHTML = news.map(n => {
-      GALLA_CACHE[n.id] = n;
+      GALLA_CACHE[n.id] = Object.assign(n, {
+        cCount: cCount[n.id] || 0, likes: likes[n.id] || 0, dislikes: dislikes[n.id] || 0,
+        myReact: myReact[n.id] || 0, saved: saved.has(n.id),
+      });
       const th = isValidThumbnail(n.hero_image);
       return `<div class="news-card galla" data-gid="${n.id}">
         <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
@@ -427,6 +447,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span>${esc(n.category || "")}</span>
             <span class="news-time">${timeAgo(n.published_at)}</span>
             <span>· 관련 ${n.source_count || 0}건</span>
+          </div>
+          <div class="gn-cardstats">
+            <span>👍 ${n.likes}</span>
+            <span>👎 ${n.dislikes}</span>
+            <span>💬 ${n.cCount}</span>
+            ${n.saved ? `<span class="gn-saved">🔖 저장됨</span>` : ""}
           </div>
         </div>
       </div>`;
@@ -472,11 +498,62 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="reader-sub">${esc(n.category || "")} · ${timeAgo(n.published_at)}</div>
         ${isValidThumbnail(n.hero_image) ? `<img class="reader-hero" src="${esc(n.hero_image)}" onerror="this.style.display='none'">` : ""}
         ${bodyParas.map(p => `<p>${esc(p)}</p>`).join("")}
+        <div class="gn-actions" id="gn-actions"></div>
         ${srcHtml ? `<div class="reader-sources"><div class="reader-sources-head">🔗 관련 기사 (출처 · 팩트체크)</div>${srcHtml}</div>` : ""}
         <p class="reader-disclaimer">본 기사는 위 보도들을 AI가 종합·재작성한 것입니다. 사진·사실의 출처는 각 언론사에 있습니다.</p>
         <div id="gn-comments" class="gn-comments"></div>
       </article>`;
+    GN_OPEN = id;
+    renderGnActions();
     loadGnComments(id);
+  }
+
+  /* ===== 갈라뉴스 액션바 (좋아요/싫어요/댓글/저장) ===== */
+  let GN_OPEN = null;
+  function renderGnActions() {
+    const bar = document.getElementById("gn-actions");
+    const n = GALLA_CACHE[GN_OPEN];
+    if (!bar || !n) return;
+    bar.innerHTML = `
+      <button class="gn-act ${n.myReact === 1 ? "on like" : ""}" data-act="like">👍 <span>${n.likes}</span></button>
+      <button class="gn-act ${n.myReact === -1 ? "on dislike" : ""}" data-act="dislike">👎 <span>${n.dislikes}</span></button>
+      <button class="gn-act" data-act="comment">💬 <span>${n.cCount}</span></button>
+      <button class="gn-act ${n.saved ? "on save" : ""}" data-act="save">${n.saved ? "🔖 저장됨" : "🔖 저장"}</button>`;
+    bar.querySelectorAll(".gn-act").forEach(b => b.addEventListener("click", () => {
+      const act = b.dataset.act;
+      if (act === "like") reactGn(1);
+      else if (act === "dislike") reactGn(-1);
+      else if (act === "save") saveGn();
+      else if (act === "comment") document.getElementById("gn-comments")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
+  }
+  async function reactGn(val) {
+    if (needLogin()) return;
+    const n = GALLA_CACHE[GN_OPEN]; if (!n) return;
+    const cur = n.myReact || 0;
+    if (cur === val) {
+      await supabase.from("galla_news_reactions").delete().eq("news_id", GN_OPEN).eq("user_id", ME.id);
+      if (val === 1) n.likes--; else n.dislikes--;
+      n.myReact = 0;
+    } else {
+      await supabase.from("galla_news_reactions").upsert({ news_id: GN_OPEN, user_id: ME.id, value: val }, { onConflict: "news_id,user_id" });
+      if (cur === 1) n.likes--; else if (cur === -1) n.dislikes--;
+      if (val === 1) n.likes++; else n.dislikes++;
+      n.myReact = val;
+    }
+    renderGnActions();
+  }
+  async function saveGn() {
+    if (needLogin()) return;
+    const n = GALLA_CACHE[GN_OPEN]; if (!n) return;
+    if (n.saved) {
+      await supabase.from("galla_news_bookmarks").delete().eq("news_id", GN_OPEN).eq("user_id", ME.id);
+      n.saved = false;
+    } else {
+      await supabase.from("galla_news_bookmarks").insert({ news_id: GN_OPEN, user_id: ME.id });
+      n.saved = true;
+    }
+    renderGnActions();
   }
 
   /* ===== 갈라뉴스 배틀 댓글 (대댓글 + @멘션 + 좋아요) ===== */
