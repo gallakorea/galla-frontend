@@ -180,3 +180,21 @@ html, body { margin: 0; background: #000; color: #fff; }
 .rank-pane[hidden] { display: none; }
 .lb-sub { font-size: 11px; color: #888; font-weight: 600; }
 .lb-name { line-height: 1.35; }
+
+/* ===== 다중 선택지 (목록 카드) ===== */
+.mc-multi { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.mc-multi-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 5px 0; border-bottom: 1px solid #141414; }
+.mc-multi-row.win .mc-multi-label { color: #ffe27a; font-weight: 800; }
+.mc-multi-label { color: #ddd; }
+.mc-multi-pct { font-weight: 800; color: #6d8bff; }
+.mc-multi-more { font-size: 12px; color: #777; padding-top: 2px; }
+
+/* ===== 생성 모달: 유형/후보 ===== */
+.pm-type-tabs { display: flex; gap: 8px; }
+.pm-type-tab { flex: 1; padding: 11px; border-radius: 10px; background: #111; border: 1px solid #2a2a2a; color: #999; font-weight: 800; font-size: 14px; cursor: pointer; }
+.pm-type-tab.active { background: #17325e; border-color: #3356ff; color: #fff; }
+.pm-hint { font-size: 11px; color: #777; font-weight: 600; }
+.pm-outcome-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.pm-outcome-input { flex: 1; }
+.pm-outcome-del { width: 42px; border-radius: 10px; background: #1a0808; border: 1px solid #3a1414; color: #ffaaaa; font-weight: 800; cursor: pointer; }
+.pm-add-outcome { width: 100%; padding: 10px; border-radius: 10px; background: #111; border: 1px dashed #333; color: #aac4ff; font-weight: 700; cursor: pointer; }

@@ -101,8 +101,21 @@
       <button id="createClose" class="pm-close">✕</button>
     </div>
     <div class="pm-modal-body">
-      <label class="pm-label">질문 (YES/NO로 답할 수 있게)</label>
+      <label class="pm-label">마켓 유형</label>
+      <div class="pm-type-tabs">
+        <button type="button" class="pm-type-tab active" data-type="binary">예 / 아니오</button>
+        <button type="button" class="pm-type-tab" data-type="multi">여러 선택지</button>
+      </div>
+
+      <label class="pm-label">질문</label>
       <input id="mQuestion" class="pm-input" maxlength="120" placeholder="예: 비트코인이 연말까지 10만 달러를 돌파한다?" />
+
+      <!-- 여러 선택지 후보 입력 -->
+      <div id="mOutcomesWrap" hidden>
+        <label class="pm-label">선택지 (후보) <span class="pm-hint">2~8개</span></label>
+        <div id="mOutcomes"></div>
+        <button type="button" id="mAddOutcome" class="pm-add-outcome">＋ 선택지 추가</button>
+      </div>
 
       <label class="pm-label">설명 (선택)</label>
       <textarea id="mDesc" class="pm-input pm-textarea" maxlength="500" placeholder="정산 기준을 명확히 적어주세요. 예: 2026-12-31 종가 기준"></textarea>

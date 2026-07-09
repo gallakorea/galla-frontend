@@ -122,3 +122,19 @@
 .pmd-cmt-body { font-size: 14px; line-height: 1.45; color: #eaeaea; }
 .pmd-cmt-like { margin-top: 8px; background: none; border: none; color: #777; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
 .pmd-cmt-like.on { color: #ff4f6e; }
+
+/* ===== 다중 후보 선택기 (상세) ===== */
+.pmd-oc-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.pmd-oc { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 12px 14px; border-radius: 12px; background: #0d0d0d; border: 1px solid #1e1e1e; color: #fff; cursor: pointer; }
+.pmd-oc.on { border-color: #3356ff; background: #0a1020; }
+.pmd-oc.win { border-color: #ffe27a; }
+.pmd-oc-label { flex: 0 0 40%; font-weight: 700; font-size: 14px; }
+.pmd-oc-bar { flex: 1; height: 8px; border-radius: 999px; background: #1a1a1a; overflow: hidden; }
+.pmd-oc-bar span { display: block; height: 100%; background: #3356ff; border-radius: 999px; }
+.pmd-oc-pct { flex: 0 0 auto; font-weight: 900; color: #6d8bff; font-size: 14px; }
+
+.pmd-trade-oc { font-size: 13px; color: #aac4ff; margin-bottom: 10px; }
+.pmd-resolve-multi { display: flex; flex-direction: column; gap: 6px; }
+.pmd-rz-oc { padding: 11px; border-radius: 10px; border: 1px solid #3a1414; background: #160f0f; color: #ffd; font-weight: 800; cursor: pointer; }
+.pmd-rz-oc:hover { border-color: #3356ff; }

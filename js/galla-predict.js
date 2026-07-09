@@ -136,6 +136,23 @@ function bindUI() {
   $('createClose').addEventListener('click', () => { $('createModal').hidden = true; });
   $('createModal').addEventListener('click', e => { if (e.target.id === 'createModal') $('createModal').hidden = true; });
 
+  // 마켓 유형 토글
+  document.querySelectorAll('.pm-type-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.pm-type-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      window.__NEW_TYPE__ = t.dataset.type;
+      $('mOutcomesWrap').hidden = t.dataset.type !== 'multi';
+      if (t.dataset.type === 'multi' && $('mOutcomes').children.length === 0) {
+        addOutcomeRow(); addOutcomeRow();
+      }
+    });
+  });
+  $('mAddOutcome').addEventListener('click', () => {
+    if ($('mOutcomes').children.length >= 8) return toast('최대 8개까지 가능합니다.');
+    addOutcomeRow();
+  });
+
   // 이미지 선택
   $('mImageBtn').addEventListener('click', () => $('mImage').click());
   $('mImage').addEventListener('change', e => {
@@ -147,15 +164,27 @@ function bindUI() {
 }
 
 /* ============ 마켓 로드/렌더 ============ */
+let OUTCOMES_BY_MARKET = {};
 async function loadMarkets() {
   const { data, error } = await supa
     .from('markets')
-    .select('id,question,category,image_url,close_at,resolved,outcome,pool_yes,pool_no,volume,created_at')
+    .select('id,question,category,image_url,close_at,resolved,outcome,resolved_outcome_id,market_type,volume,created_at')
     .order('created_at', { ascending: false });
   if (error) { console.error(error); return; }
   allMarkets = data || [];
+
+  // 후보 일괄 로드
+  OUTCOMES_BY_MARKET = {};
+  const ids = allMarkets.map(m => m.id);
+  if (ids.length) {
+    const { data: outs } = await supa.from('market_outcomes')
+      .select('id,market_id,label,pool_yes,pool_no,sort_order,is_winner').in('market_id', ids);
+    outs?.forEach(o => (OUTCOMES_BY_MARKET[o.market_id] ||= []).push(o));
+    Object.values(OUTCOMES_BY_MARKET).forEach(a => a.sort((x, y) => x.sort_order - y.sort_order));
+  }
   renderMarkets();
 }
+function outcomePct(o) { return Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100); }
 
 function renderMarkets() {
   let list = allMarkets.slice();
@@ -168,27 +197,42 @@ function renderMarkets() {
   const wrap = $('marketList');
   $('marketsEmpty').hidden = list.length > 0;
   wrap.innerHTML = list.map(m => {
-    const p = pct(m);
     const closed = m.resolved || new Date(m.close_at) <= Date.now();
     const statusBadge = m.resolved
-      ? `<span class="mc-resolved ${m.outcome}">정산: ${m.outcome === 'yes' ? 'YES' : 'NO'}</span>`
+      ? `<span class="mc-resolved yes">✔ 정산 완료</span>`
       : `<span class="mc-time">${timeLeft(m.close_at)}</span>`;
+    const outs = OUTCOMES_BY_MARKET[m.id] || [];
+
+    let probBlock;
+    if (m.market_type === 'multi' && outs.length) {
+      // 확률 높은 순 top 3
+      const top = outs.map(o => ({ label: o.label, p: outcomePct(o), win: o.is_winner }))
+        .sort((a, b) => b.p - a.p).slice(0, 3);
+      probBlock = `<div class="mc-multi">
+        ${top.map(o => `<div class="mc-multi-row ${o.win ? 'win' : ''}">
+          <span class="mc-multi-label">${escapeHtml(o.label)}${o.win ? ' 👑' : ''}</span>
+          <span class="mc-multi-pct">${o.p}%</span>
+        </div>`).join('')}
+        ${outs.length > 3 ? `<div class="mc-multi-more">+${outs.length - 3}개 선택지</div>` : ''}
+      </div>`;
+    } else {
+      const p = outs[0] ? outcomePct(outs[0]) : 50;
+      probBlock = `<div class="mc-prob">
+        <div class="mc-prob-bar"><div class="mc-prob-yes" style="width:${p}%"></div></div>
+        <div class="mc-prob-legend"><span class="mc-yes">YES ${p}%</span><span class="mc-no">NO ${100 - p}%</span></div>
+      </div>`;
+    }
+
     return `
     <div class="market-card" data-id="${m.id}">
       <div class="mc-top">
         ${m.image_url ? `<img class="mc-thumb" src="${m.image_url}" loading="lazy">` : `<div class="mc-thumb mc-thumb-ph">🔮</div>`}
         <div class="mc-head">
           <div class="mc-q">${escapeHtml(m.question)}</div>
-          <div class="mc-meta">${m.category || ''} · ${statusBadge}</div>
+          <div class="mc-meta">${m.category || ''} · ${statusBadge}${m.market_type === 'multi' ? ' · 여러 선택지' : ''}</div>
         </div>
       </div>
-      <div class="mc-prob">
-        <div class="mc-prob-bar"><div class="mc-prob-yes" style="width:${p}%"></div></div>
-        <div class="mc-prob-legend">
-          <span class="mc-yes">YES ${p}%</span>
-          <span class="mc-no">NO ${100 - p}%</span>
-        </div>
-      </div>
+      ${probBlock}
       <div class="mc-foot">
         <span>💰 ${fmt(m.volume)}P</span>
         <span class="mc-go">${closed ? '결과 보기' : '예측하기'} ›</span>
@@ -201,13 +245,33 @@ function renderMarkets() {
   });
 }
 
+function addOutcomeRow(val = '') {
+  const row = document.createElement('div');
+  row.className = 'pm-outcome-row';
+  row.innerHTML = `<input class="pm-input pm-outcome-input" maxlength="30" placeholder="선택지 이름" value="${val}">
+    <button type="button" class="pm-outcome-del">✕</button>`;
+  row.querySelector('.pm-outcome-del').addEventListener('click', () => {
+    if ($('mOutcomes').children.length <= 2) return toast('최소 2개는 필요합니다.');
+    row.remove();
+  });
+  $('mOutcomes').appendChild(row);
+}
+
 /* ============ 마켓 생성 ============ */
 async function submitMarket() {
   const q = $('mQuestion').value.trim();
   const closeAt = $('mCloseAt').value;
+  const type = window.__NEW_TYPE__ || 'binary';
   if (!q) return toast('질문을 입력하세요.');
   if (!closeAt) return toast('마감 일시를 선택하세요.');
   if (new Date(closeAt) <= new Date()) return toast('마감은 미래 시각이어야 합니다.');
+
+  let outcomes = null;
+  if (type === 'multi') {
+    const labels = [...document.querySelectorAll('.pm-outcome-input')].map(i => i.value.trim()).filter(Boolean);
+    if (labels.length < 2) return toast('선택지를 2개 이상 입력하세요.');
+    outcomes = labels.map(l => ({ label: l }));
+  }
 
   const btn = $('createSubmit');
   btn.disabled = true; btn.textContent = '만드는 중…';
@@ -224,6 +288,7 @@ async function submitMarket() {
       p_category: $('mCategory').value,
       p_image_url: imageUrl,
       p_close_at: new Date(closeAt).toISOString(),
+      p_outcomes: outcomes,
       p_liquidity: 1000
     });
     if (error) throw error;
