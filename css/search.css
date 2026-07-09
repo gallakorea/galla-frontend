@@ -722,14 +722,25 @@ body[data-page="search"] .header-inner {
    갈라뉴스 (AI 종합)
 ========================================================= */
 .galla-badge {
-  display: inline-block; font-size: 10.5px; font-weight: 800;
-  color: #cdb4ff; background: rgba(124,77,255,.16); border: 1px solid rgba(124,77,255,.4);
-  padding: 2px 8px; border-radius: 8px; margin-bottom: 6px;
+  align-self: flex-start;      /* flex 아이템 stretch 방지(카드 전체 폭으로 늘어나던 문제) */
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .2px;
+  color: #b7a6f0; background: rgba(120,90,240,.10);
+  padding: 3px 9px; border-radius: 7px; margin-bottom: 7px;
+}
+.galla-badge::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%;
+  background: linear-gradient(135deg, #8b6dff, #5b8cff); flex: 0 0 auto;
 }
 .reader-badge {
-  display: inline-block; font-size: 11px; font-weight: 800;
-  color: #cdb4ff; background: rgba(124,77,255,.16); border: 1px solid rgba(124,77,255,.4);
-  padding: 3px 10px; border-radius: 999px; margin-bottom: 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: .2px;
+  color: #b7a6f0; background: rgba(120,90,240,.10);
+  padding: 4px 11px; border-radius: 999px; margin-bottom: 12px;
+}
+.reader-badge::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: linear-gradient(135deg, #8b6dff, #5b8cff); flex: 0 0 auto;
 }
 .reader-disclaimer {
   margin-top: 24px; padding-top: 14px; border-top: 1px solid #1b1e28;

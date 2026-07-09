@@ -421,7 +421,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return `<div class="news-card galla" data-gid="${n.id}">
         <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
         <div class="news-text">
-          <span class="galla-badge">🟣 갈라뉴스</span>
+          <span class="galla-badge">갈라뉴스</span>
           <h3 class="news-title">${esc(n.title)}</h3>
           <div class="news-meta">
             <span>${esc(n.category || "")}</span>
@@ -467,7 +467,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     viewerReader.innerHTML = `
       <article class="reader">
-        <span class="reader-badge">🟣 갈라뉴스 · AI가 여러 보도를 종합</span>
+        <span class="reader-badge">갈라뉴스 · AI 종합</span>
         <h1 class="reader-title">${esc(n.title)}</h1>
         <div class="reader-sub">${esc(n.category || "")} · ${timeAgo(n.published_at)}</div>
         ${isValidThumbnail(n.hero_image) ? `<img class="reader-hero" src="${esc(n.hero_image)}" onerror="this.style.display='none'">` : ""}
