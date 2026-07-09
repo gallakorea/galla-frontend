@@ -98,6 +98,9 @@ function __openShortsInternal(list, startId) {
     }));
   if (!shortsList.length) return;
 
+  // 릴스 진입 시 소리는 항상 기본 ON (사용자가 세션 중 음소거하면 그때부터 유지)
+  window.__REELS_MUTED__ = false;
+
   overlay = document.getElementById("shortsOverlay");
   if (!overlay) {
     overlay = document.createElement("div");
@@ -552,7 +555,8 @@ function __openShortsInternal(list, startId) {
    MOVE / PLAY
 ========================= */
 function moveToIndex(idx, instant = false) {
-  if (idx < 0 || idx >= shortsList.length) return;
+  // 범위를 벗어나면 끝으로 스냅(항상 transform 재설정 → 드래그 잔상/튐 방지)
+  idx = Math.max(0, Math.min(shortsList.length - 1, idx));
 
   currentIndex = idx;
 
@@ -627,43 +631,21 @@ function bindGestures() {
 
     const dy = e.changedTouches[0].clientY - startY;
     const dx = e.changedTouches[0].clientX - startX;
+    const horizontal = Math.abs(dx) > Math.abs(dy);
 
-    // 👉 Horizontal swipe navigation
-    if (dx > CLOSE_THRESHOLD_X) {
-      // Swipe RIGHT → go back to previous page / previous scroll position
+    // 👉 오른쪽으로 확실히 밀면 → 릴스만 닫고 원래 피드로 복귀 (딴 페이지로 안 감)
+    if (horizontal && dx > CLOSE_THRESHOLD_X) {
       closeShorts();
-      setTimeout(() => {
-        history.back();
-      }, 50);
       return;
     }
 
-    if (dx < -CLOSE_THRESHOLD_X) {
-      // Swipe LEFT → go to shorts author's mypage
-      const current = shortsList[currentIndex];
-      const section = document.querySelectorAll(".short")[currentIndex];
-      const authorId = section?.dataset?.authorId;
-
-      /* 🔥 복귀 정보 최신화 */
-      sessionStorage.setItem("__SHORTS_RETURN__", JSON.stringify({
-        list: shortsList,
-        index: currentIndex,
-        issueId: current?.id
-      }));
-
-      closeShorts();
-
-      // 🔥 authorId 없으면 기본 마이페이지로 이동
-      const target = authorId
-        ? `/mypage.html?user=${authorId}&from=shorts`
-        : `/mypage.html?from=shorts`;
-
-      setTimeout(() => {
-        location.href = target;
-      }, 50);
+    // 가로 스와이프(왼쪽/애매한 대각선)는 아무 이동 없이 제자리 스냅
+    if (horizontal) {
+      moveToIndex(currentIndex);
       return;
     }
 
+    // 세로 스와이프 → 릴스 한 칸씩 (범위 밖이면 clamp되어 제자리 스냅)
     if (dy < -SWIPE_THRESHOLD) moveToIndex(currentIndex + 1);
     else if (dy > SWIPE_THRESHOLD) moveToIndex(currentIndex - 1);
     else moveToIndex(currentIndex);
@@ -769,15 +751,19 @@ function bindTapControls() {
 ========================= */
 function bindWheel() {
   let lock = false;
+  let unlockTimer = null;
   overlay.addEventListener("wheel", e => {
     e.preventDefault();
+    // 관성/연속 휠이 들어오는 동안 계속 잠금 유지 → 스크롤 1번 = 릴스 1칸
+    clearTimeout(unlockTimer);
+    unlockTimer = setTimeout(() => { lock = false; }, 260);
+
     if (lock) return;
+    if (Math.abs(e.deltaY) < 8) return;   // 미세 스크롤 무시
     lock = true;
 
     if (e.deltaY > 0) moveToIndex(currentIndex + 1);
     else moveToIndex(currentIndex - 1);
-
-    setTimeout(() => lock = false, 400);
   }, { passive: false });
 }
 
