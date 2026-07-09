@@ -469,7 +469,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       </a>`);
 
     const html = trGroup("📰 인기 뉴스", gnewsItems) + trGroup("🗳 뜨는 이슈", issueItems)
-      + trGroup("🗣 뜨는 플라자", plazaItems) + trGroup("🔮 뜨는 예측", marketItems);
+      + trGroup("🔮 뜨는 예측", marketItems) + trGroup("🗣 뜨는 플라자", plazaItems);
     gallaWrap.innerHTML = html || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
     gallaWrap.onclick = e => {
       trMoreClick(e);
