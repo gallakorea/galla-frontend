@@ -94,6 +94,11 @@ body { display: block; }
     display: block;
 }
 
+/* 세로 영상 하단(로고 등)이 잘리지 않도록 크롭 기준을 아래로 이동 */
+.card-media--video video {
+    object-position: center 62%;
+}
+
 .card-media img {
     width: 100%;
     height: 100%;
