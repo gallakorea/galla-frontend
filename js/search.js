@@ -354,7 +354,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 예측
     const [gnRes, giRes, mkRes] = await Promise.all([
       supabase.from("galla_news").select("id,title,summary,category,hero_image,source_count,published_at")
-        .eq("status", "published").order("published_at", { ascending: false }).limit(24),
+        .eq("status", "published").not("hero_image", "is", null).neq("hero_image", "")
+        .order("published_at", { ascending: false }).limit(24),
       supabase.from("issues")
         .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
         .order("hot_score", { ascending: false, nullsFirst: false })
@@ -379,8 +380,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       })(),
     ]);
 
-    // 인기 뉴스: 참여도(좋아요+댓글) 상위, 없으면 최신
-    let gnews = gnRes.data || [];
+    // 인기 뉴스: 참여도(좋아요+댓글) 상위, 없으면 최신 (썸네일 있는 것만)
+    let gnews = (gnRes.data || []).filter(n => isValidThumbnail(n.hero_image));
     if (gnews.length) {
       const ids = gnews.map(n => n.id);
       const [cRes, rRes] = await Promise.all([
@@ -488,9 +489,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     let q = supabase.from("galla_news")
       .select("id,title,summary,category,hero_image,source_count,published_at")
       .eq("status", "published")
+      .not("hero_image", "is", null).neq("hero_image", "")   // 썸네일 없는 뉴스 제외
       .order("published_at", { ascending: false }).limit(40);
     if (currentNewsCategory !== "전체") q = q.eq("category", currentNewsCategory);
-    const { data: news } = await q;
+    let { data: news } = await q;
+    news = (news || []).filter(n => isValidThumbnail(n.hero_image));
 
     if (!news || !news.length) {         // 아직 갈라뉴스 없으면 원본 뉴스 폴백
       newsMode = "raw";
