@@ -54,6 +54,29 @@ function carouselGo(issueId, dir) {
     }
 }
 
+/* 슬라이드 폭을 측정한 px로 못박음 — 모바일 사파리/크롬에서 flex-basis:100% 순환 참조로
+   슬라이드가 이미지 원본/3배 폭이 돼 한 장이 여러 칸에 걸쳐 보이던 문제 원천 차단 */
+function sizeAllCarousels() {
+    document.querySelectorAll('.carousel-wrap').forEach(wrap => {
+        const slides = wrap.querySelector('.carousel-slides');
+        if (!slides) return;
+        const w = wrap.clientWidth;
+        if (!w) return;
+        slides.querySelectorAll('.carousel-slide').forEach(s => {
+            s.style.flex = `0 0 ${w}px`;
+            s.style.width = `${w}px`;
+            s.style.maxWidth = `${w}px`;
+        });
+        const card = wrap.closest('.card');
+        const st = carouselState[Number(card?.dataset.id)];
+        if (st) {
+            slides.style.transition = 'none';
+            slides.style.transform = `translateX(${-st.idx * w}px)`;
+        }
+    });
+}
+let __carouselResizeBound = false;
+
 /* ===========================
  * 미디어 렌더러
  * =========================== */
@@ -516,6 +539,14 @@ function attachEvents() {
             else carouselGo(id, 0);           // 문턱 미달 → 제자리 스냅
         }, { passive: true });
     });
+
+    // 슬라이드 폭 px 고정 (모바일 flex-basis 순환 참조 방지)
+    sizeAllCarousels();
+    requestAnimationFrame(sizeAllCarousels);
+    if (!__carouselResizeBound) {
+        __carouselResizeBound = true;
+        window.addEventListener('resize', sizeAllCarousels);
+    }
 
     // 비디오 자동재생 옵저버 등록
     document.querySelectorAll('.card-media video').forEach(v => {

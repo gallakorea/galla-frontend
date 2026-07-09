@@ -278,6 +278,14 @@ function renderIssueMedia(issue) {
                 else issueCarouselGo(0);
             }, { passive: true });
         }
+
+        // 슬라이드 폭 px 고정 (모바일 flex-basis:100% 순환 참조 방지)
+        sizeIssueCarousel();
+        requestAnimationFrame(sizeIssueCarousel);
+        if (!window.__issueCarouselResizeBound) {
+            window.__issueCarouselResizeBound = true;
+            window.addEventListener('resize', sizeIssueCarousel);
+        }
         return;
     }
 
@@ -317,6 +325,21 @@ window.issueOpenReels = function() {
         window.openShorts([item], i.id);
     }
 };
+
+function sizeIssueCarousel() {
+    const carousel = document.querySelector('.issue-carousel');
+    const slides = document.getElementById('issue-slides');
+    if (!carousel || !slides) return;
+    const w = carousel.clientWidth;
+    if (!w) return;
+    slides.querySelectorAll('.issue-slide').forEach(s => {
+        s.style.flex = `0 0 ${w}px`;
+        s.style.width = `${w}px`;
+        s.style.maxWidth = `${w}px`;
+    });
+    slides.style.transition = 'none';
+    slides.style.transform = `translateX(${-issueCarouselIdx * w}px)`;
+}
 
 window.issueCarouselGo = function(dir) {
     // clamp(끝에서 루프 안 함)
