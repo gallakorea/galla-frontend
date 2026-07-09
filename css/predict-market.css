@@ -174,8 +174,8 @@
 .pmd-cmt-inputrow.reply .pmd-cmt-send { padding: 0 14px; }
 
 /* ===== 상세 헤더: 로고 중앙, 로그인 없음 ===== */
-.header-inner .hb-side { flex: 1; display: flex; align-items: center; }
-.header-inner .back-btn.hb-side { justify-content: flex-start; color: #fff; font-size: 15px; font-weight: 700; }
+.header-inner .hb-side { flex: 0 0 56px; width: 56px; display: flex; align-items: center; }
+.header-inner .back-btn.hb-side { justify-content: flex-start; color: #c9c9c9; font-size: 13px; font-weight: 400; }
 .header-inner .logo { flex: 0 0 auto; }
 
 /* 거래 패널 보유 포인트 */

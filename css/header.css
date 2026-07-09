@@ -80,6 +80,23 @@
   gap: 0;
 }
 
+/* 타입B 헤더(뒤로/로고/더보기): 양쪽 버튼 폭을 같게 해 로고를 정중앙에 */
+.header-inner .back-btn,
+.header-inner .more-header-btn {
+  width: 56px;
+  flex: 0 0 56px;
+}
+.header-inner .back-btn { justify-content: flex-start; }
+.header-inner .more-header-btn { justify-content: flex-end; }
+
+/* '뒤로' 텍스트 톤 다운 */
+.header-inner .back-btn {
+  font-size: 13px;
+  color: #c9c9c9;
+  gap: 3px;
+}
+.header-inner .back-btn .back-text { font-size: 12px; }
+
 .setting-btn svg {
   width: 22px;
   height: 22px;
