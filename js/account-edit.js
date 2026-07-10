@@ -55,6 +55,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   nicknameInput.addEventListener("input", syncCounts);
   bioInput.addEventListener("input", syncCounts);
 
+  // 전화번호 자동 하이픈 포맷 (010-0000-0000)
+  const formatPhone = (v) => {
+    const d = v.replace(/\D/g, "").slice(0, 11);
+    if (d.length < 4) return d;
+    if (d.length < 8) return d.slice(0, 3) + "-" + d.slice(3);
+    return d.slice(0, 3) + "-" + d.slice(3, 7) + "-" + d.slice(7);
+  };
+  phoneField.addEventListener("input", () => {
+    phoneField.value = formatPhone(phoneField.value);
+  });
+
   // =========================
   // Load existing profile
   // =========================
@@ -76,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (phoneField) {
-      phoneField.textContent = profile.phone || "-";
+      phoneField.value = profile.phone ? formatPhone(profile.phone) : "";
     }
 
     if (profile.avatar_url) {
@@ -161,6 +172,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (nickname) updatePayload.nickname = nickname;
       updatePayload.bio = bio;
+
+      // 전화번호: 숫자만 저장. 입력이 있으면 10~11자리 검증
+      const phoneDigits = phoneField.value.replace(/\D/g, "");
+      if (phoneDigits && !/^01[0-9]{8,9}$/.test(phoneDigits)) {
+        alert("전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)");
+        return;
+      }
+      updatePayload.phone = phoneDigits || null;
 
       if (Object.keys(updatePayload).length === 0) {
         alert("변경된 내용이 없습니다.");
