@@ -73,6 +73,8 @@ export async function initCommentSystem(issueId) {
   renderWarDashboard();
   renderMorale();
   bindEvents();
+  initBattleFeed(issueId);
+  renderHonors();
 }
 
 /* ======================
@@ -182,6 +184,203 @@ function renderMorale() {
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
     <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>`;
+}
+
+/* ======================
+   실시간 전장 (킬 피드 / HP 동기화 / 격파 배너 / 전공 / 콤보)
+====================== */
+let FEED_CHANNEL = null;
+let feedNickCache = {};          // user_id → nickname
+let COMBO = { n: 0, t: 0 };      // 연속 참전 콤보 (10초 창)
+
+function escT(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function actorName(uid) {
+  if (!uid) return "익명";
+  return feedNickCache[uid] || profileMap[uid]?.nickname || "익명 전사";
+}
+async function fetchFeedNicks(ids) {
+  const need = [...new Set(ids.filter(u => u && !feedNickCache[u] && !profileMap[u]))];
+  if (!need.length) return;
+  const { data } = await window.supabaseClient
+    .from("user_profiles").select("user_id,nickname").in("user_id", need);
+  (data || []).forEach(p => { feedNickCache[p.user_id] = p.nickname; });
+}
+
+const ACTION_META = {
+  attack:  { icon: "⚔", verb: "공격", delta: "-12", cls: "atk" },
+  defend:  { icon: "🛡", verb: "방어", delta: "+8",  cls: "def" },
+  support: { icon: "💣", verb: "지원", delta: "+12", cls: "sup" }
+};
+
+function feedLineHTML(a, isNew) {
+  const meta = ACTION_META[a.action_type] || ACTION_META.attack;
+  const target = allRows.find(r => r.id === a.comment_id);
+  const targetName = target ? (target.is_anonymous ? "익명" : (profileMap[target.user_id]?.nickname || "익명")) : "???";
+  const targetSide = target?.faction === "pro" ? "👍" : "👎";
+  const t = a.created_at ? new Date(a.created_at) : new Date();
+  const hh = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+  return `<div class="bf-line ${meta.cls} ${isNew ? "new" : ""}">
+    <span class="bf-time">${hh}</span>
+    <b class="bf-actor ${a.side === "pro" ? "pro" : "con"}">${escT(actorName(a.user_id))}</b>
+    <span class="bf-verb">${meta.icon} ${meta.verb}</span>
+    <span class="bf-arrow">→</span>
+    <span class="bf-target">${targetSide} ${escT(targetName)}</span>
+    <b class="bf-delta">${meta.delta}</b>
+  </div>`;
+}
+
+function ensureFeedBox() {
+  let box = document.getElementById("battle-feed");
+  if (box) return box;
+  const dash = document.querySelector(".war-dashboard");
+  if (!dash) return null;
+  box = document.createElement("div");
+  box.id = "battle-feed";
+  box.className = "battle-feed";
+  box.innerHTML = `<div class="bf-title">📡 전장 속보 <span class="bf-live">LIVE</span></div><div class="bf-list" id="bf-list"><div class="bf-empty">아직 교전 기록이 없습니다.</div></div>`;
+  dash.after(box);
+  return box;
+}
+
+async function initBattleFeed(issueId) {
+  const supabase = window.supabaseClient;
+  const box = ensureFeedBox();
+  if (!box) return;
+
+  // 초기 로그: 이 이슈 댓글들에 대한 최근 액션 8건
+  const ids = allRows.map(r => r.id);
+  if (ids.length) {
+    const { data: logs } = await supabase
+      .from("comment_actions")
+      .select("comment_id,user_id,side,action_type,created_at")
+      .in("comment_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(8);
+    if (logs?.length) {
+      await fetchFeedNicks(logs.map(l => l.user_id));
+      document.getElementById("bf-list").innerHTML = logs.map(l => feedLineHTML(l, false)).join("");
+    }
+  }
+
+  // 실시간 구독: 새 전투 로그 + 댓글 HP 변동
+  if (FEED_CHANNEL) { supabase.removeChannel(FEED_CHANNEL); FEED_CHANNEL = null; }
+  FEED_CHANNEL = supabase
+    .channel("battle-" + issueId)
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "comment_actions" }, async payload => {
+      const a = payload.new;
+      if (!allRows.some(r => r.id === a.comment_id)) return; // 다른 이슈
+      await fetchFeedNicks([a.user_id]);
+      pushFeedLine(a);
+    })
+    .on("postgres_changes", { event: "UPDATE", schema: "public", table: "comments" }, payload => {
+      const c = payload.new;
+      const row = allRows.find(r => r.id === c.id);
+      if (!row) return; // 다른 이슈
+      const oldHp = row.hp;
+      if (typeof c.hp === "number" && c.hp !== oldHp) {
+        row.hp = c.hp;
+        row.attack_count = c.attack_count; row.defense_count = c.defense_count; row.support_count = c.support_count;
+        syncUnitHp(c.id, oldHp, c.hp);
+        renderMorale();
+      }
+    })
+    .subscribe();
+}
+
+function pushFeedLine(a) {
+  const list = document.getElementById("bf-list");
+  if (!list) return;
+  list.querySelector(".bf-empty")?.remove();
+  list.insertAdjacentHTML("afterbegin", feedLineHTML(a, true));
+  while (list.children.length > 8) list.lastElementChild.remove();
+}
+
+/* 남이 때린/살린 HP 변동을 내 화면에도 반영 (본인 조작분은 로컬 연출과 중복돼도 무해) */
+function syncUnitHp(commentId, oldHp, newHp) {
+  const unit = document.querySelector(`.comment[data-id="${commentId}"], .reply[data-id="${commentId}"]`);
+  if (!unit) return;
+  const shown = Number(unit.dataset.hp);
+  if (shown === newHp) return; // 이미 로컬 연출로 반영됨
+  applyHpToUnit(unit, newHp);
+  if (newHp < oldHp) {
+    hitFx(unit, "hit");
+    spawnCombatText(unit, String(newHp - oldHp), newHp <= 0 ? "crit" : "dmg");
+    if (newHp <= 0) showKoBanner(commentId);
+  } else {
+    hitFx(unit, "heal");
+    spawnCombatText(unit, "+" + (newHp - oldHp), "heal");
+    if (oldHp <= 0 && newHp > 0) spawnCombatText(unit, "✨ 부활!", "heal");
+  }
+}
+
+/* 💀 격파 배너 (전장 전체 연출) */
+function showKoBanner(commentId) {
+  const row = allRows.find(r => r.id === commentId);
+  const name = row ? (row.is_anonymous ? "익명" : (profileMap[row.user_id]?.nickname || "익명")) : "???";
+  const side = row?.faction === "pro" ? "👍" : "👎";
+  const el = document.createElement("div");
+  el.className = "ko-banner";
+  el.innerHTML = `<div class="ko-inner"><span class="ko-skull">💀</span><b>${side} ${escT(name)}</b>의 댓글 <span class="ko-word">격파!</span></div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+/* 🔥 콤보 (10초 내 연속 참전) */
+function bumpCombo() {
+  const now = Date.now();
+  COMBO.n = (now - COMBO.t < 10000) ? COMBO.n + 1 : 1;
+  COMBO.t = now;
+  if (COMBO.n >= 2) {
+    const el = document.createElement("div");
+    el.className = "combo-pop";
+    el.textContent = `🔥 ${COMBO.n} COMBO!`;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
+  }
+}
+
+/* 🎖 전공 훈장 — 이 전장 최다 공격/방어/지원 */
+async function renderHonors() {
+  const ids = allRows.map(r => r.id);
+  if (!ids.length) return;
+  const { data: logs } = await window.supabaseClient
+    .from("comment_actions")
+    .select("user_id,action_type")
+    .in("comment_id", ids)
+    .limit(2000);
+  if (!logs?.length) return;
+
+  const agg = {}; // uid → {attack,defend,support}
+  logs.forEach(l => {
+    const a = agg[l.user_id] ||= { attack: 0, defend: 0, support: 0 };
+    if (a[l.action_type] !== undefined) a[l.action_type]++;
+  });
+  const top = (k) => Object.entries(agg).sort((x, y) => y[1][k] - x[1][k])[0];
+  const picks = [
+    { k: "attack", icon: "⚔", label: "최다 공격" },
+    { k: "defend", icon: "🛡", label: "최다 방어" },
+    { k: "support", icon: "💣", label: "최다 지원" }
+  ].map(p => ({ ...p, e: top(p.k) })).filter(p => p.e && p.e[1][p.k] > 0);
+  if (!picks.length) return;
+
+  await fetchFeedNicks(picks.map(p => p.e[0]));
+
+  let box = document.getElementById("battle-honors");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "battle-honors";
+    box.className = "battle-honors";
+    (document.getElementById("battle-feed") || document.querySelector(".war-dashboard"))?.after(box);
+  }
+  box.innerHTML = `<div class="bh-title">🎖 전공 훈장</div><div class="bh-row">` +
+    picks.map(p => `
+      <div class="bh-card ${p.k}">
+        <span class="bh-ic">${p.icon}</span>
+        <b class="bh-name">${escT(actorName(p.e[0]))}</b>
+        <span class="bh-label">${p.label} ${p.e[1][p.k]}회</span>
+      </div>`).join("") + `</div>`;
 }
 
 /* ======================
@@ -585,7 +784,9 @@ function bindEvents() {
         applyHpToUnit(unit, data.hp);
         hitFx(unit, "heal");
         spawnCombatText(unit, "+12 지원!", "heal");
+        bumpCombo();
         renderMorale();
+        renderHonors();
       }
       return;
     }
@@ -719,11 +920,14 @@ function bindEvents() {
             hitFx(targetUnit, "hit");
             const crit = bd.hp <= 0;
             spawnCombatText(targetUnit, crit ? "-12 격파!" : "-12", crit ? "crit" : "dmg");
+            if (crit) showKoBanner(targetId);
           } else {
             hitFx(targetUnit, "heal");
             spawnCombatText(targetUnit, "+8 방어", "heal");
           }
+          bumpCombo();
           renderMorale();
+          renderHonors();
           setTimeout(() => reloadAndRender(), 900);
         } else {
           if (bd && !bd.ok && bd.reason !== "already") {

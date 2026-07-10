@@ -823,3 +823,104 @@ body.kb-open .battle-input-bar {
   border: 1px dashed #3a3d47; border-radius: 8px; padding: 2px 9px;
 }
 .action-locked:active { color: #cfd4e0; }
+
+/* ============================================================
+   실시간 전장: 킬 피드 / 격파 배너 / 콤보 / 전공 훈장
+============================================================ */
+
+/* 📡 전장 속보 */
+.battle-feed {
+  margin: 14px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #0c0d10, #050506);
+  border: 1px solid #1c1e26;
+}
+.bf-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; letter-spacing: 2px; opacity: .85; margin-bottom: 9px; font-weight: 800;
+}
+.bf-live {
+  font-size: 9px; letter-spacing: 1px; color: #ff5c5c;
+  border: 1px solid #ff5c5c; border-radius: 5px; padding: 1px 5px;
+  animation: liveBlink 1.4s ease-in-out infinite;
+}
+@keyframes liveBlink { 0%,100%{opacity:1;} 50%{opacity:.35;} }
+.bf-list { display: flex; flex-direction: column; gap: 5px; }
+.bf-empty { font-size: 12px; color: #666; padding: 6px 0; }
+.bf-line {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: 11.5px; color: #b9bec9;
+  padding: 5px 8px; border-radius: 8px; background: rgba(255,255,255,.03);
+  border-left: 3px solid #333;
+}
+.bf-line.atk { border-left-color: #ff5c5c; }
+.bf-line.def { border-left-color: #4da3ff; }
+.bf-line.sup { border-left-color: #35e0a0; }
+.bf-line.new { animation: bfSlide .45s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes bfSlide { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+.bf-time { font-size: 10px; color: #5c6070; font-variant-numeric: tabular-nums; }
+.bf-actor.pro { color: #6db4ff; } .bf-actor.con { color: #ff8a8a; }
+.bf-verb { font-weight: 700; }
+.bf-arrow { color: #555; }
+.bf-delta { margin-left: auto; font-weight: 900; }
+.bf-line.atk .bf-delta { color: #ff6a6a; }
+.bf-line.def .bf-delta, .bf-line.sup .bf-delta { color: #35e0a0; }
+
+/* 💀 격파 배너 */
+.ko-banner {
+  position: fixed; left: 50%; top: 38%; transform: translateX(-50%);
+  z-index: 4000; pointer-events: none;
+  animation: koBanner 2.2s cubic-bezier(.2,.9,.3,1) forwards;
+}
+.ko-inner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 26px; border-radius: 14px;
+  background: rgba(10,0,0,.88);
+  border: 2px solid #ff3b3b;
+  box-shadow: 0 0 40px rgba(255,59,59,.55), inset 0 0 24px rgba(255,59,59,.15);
+  color: #fff; font-size: 16px; font-weight: 800; white-space: nowrap;
+}
+.ko-skull { font-size: 26px; animation: koSkull .6s cubic-bezier(.2,1.6,.4,1); }
+.ko-word { color: #ff5c5c; font-size: 20px; font-weight: 900; letter-spacing: 2px; }
+@keyframes koBanner {
+  0% { opacity: 0; transform: translateX(-50%) scale(.6); }
+  12% { opacity: 1; transform: translateX(-50%) scale(1.08); }
+  20% { transform: translateX(-50%) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-16px) scale(.96); }
+}
+@keyframes koSkull { 0%{transform:scale(0) rotate(-30deg);} 100%{transform:scale(1) rotate(0);} }
+
+/* 🔥 콤보 팝 */
+.combo-pop {
+  position: fixed; left: 50%; top: 30%; transform: translateX(-50%);
+  z-index: 4000; pointer-events: none;
+  font-size: 30px; font-weight: 900; color: #ffd23b;
+  text-shadow: 0 0 18px rgba(255,180,40,.8), 0 3px 8px rgba(0,0,0,.7);
+  animation: comboPop 1.3s cubic-bezier(.2,.9,.3,1) forwards;
+}
+@keyframes comboPop {
+  0% { opacity: 0; transform: translateX(-50%) scale(.4) rotate(-6deg); }
+  18% { opacity: 1; transform: translateX(-50%) scale(1.25) rotate(2deg); }
+  30% { transform: translateX(-50%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-26px); }
+}
+
+/* 🎖 전공 훈장 */
+.battle-honors { margin: 14px 0; }
+.bh-title { font-size: 12px; letter-spacing: 2px; opacity: .85; font-weight: 800; margin-bottom: 9px; }
+.bh-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bh-card {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 11px 6px; border-radius: 12px; text-align: center;
+  background: linear-gradient(180deg, #101116, #08090c);
+  border: 1px solid #22242e;
+}
+.bh-card.attack  { border-color: rgba(255,92,92,.4);  box-shadow: 0 0 14px rgba(255,92,92,.12); }
+.bh-card.defend  { border-color: rgba(77,163,255,.4); box-shadow: 0 0 14px rgba(77,163,255,.12); }
+.bh-card.support { border-color: rgba(53,224,160,.4); box-shadow: 0 0 14px rgba(53,224,160,.12); }
+.bh-ic { font-size: 18px; }
+.bh-name { font-size: 12.5px; color: #fff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bh-label { font-size: 10.5px; color: #8b90a0; font-weight: 700; }
