@@ -70,18 +70,7 @@ export async function initCommentSystem(issueId) {
   }
 
   await loadComments(issueId);
-
-  // 글쓰기 진영 = 내 투표 진영으로 고정 (혼란 방지). 미투표면 자유 선택.
-  if (ME.faction) {
-    const sel = document.getElementById("battle-side-select");
-    if (sel) sel.value = ME.faction;
-    document.querySelectorAll(".side-btn").forEach(b => {
-      const mine = b.dataset.side === ME.faction;
-      b.classList.toggle("active", mine);
-      b.classList.toggle("side-locked", !mine);
-      if (mine) b.innerHTML = (ME.faction === "pro" ? "👍 선택" : "👎 선택") + ' <span class="side-mine">내 진영</span>';
-    });
-  }
+  await initComposerUI();
   computeAce();
   renderSide("pro");
   renderSide("con");
@@ -90,6 +79,83 @@ export async function initCommentSystem(issueId) {
   bindEvents();
   initBattleFeed(issueId);
   renderHonors();
+}
+
+/* ======================
+   컴포저 UI — 내 진영 상태 / 적진 침투 모드
+====================== */
+let INFILTRATE = false;      // 침투 모드 (상대 진영으로 글쓰기)
+let INFIL_LEFT = null;       // 오늘 남은 침투 횟수
+
+async function initComposerUI() {
+  const bottom = document.querySelector(".battle-input-bottom");
+  const sel = document.getElementById("battle-side-select");
+  if (!bottom || !sel) return;
+
+  // 미투표: "어느 진영으로 쓸까요" 안내만 추가하고 기존 선택 버튼 유지
+  if (!ME.faction) {
+    if (!bottom.querySelector(".side-caption")) {
+      const cap = document.createElement("div");
+      cap.className = "side-caption";
+      cap.textContent = "✍️ 어느 진영으로 참전할까요? (투표하면 진영이 고정돼요)";
+      bottom.prepend(cap);
+    }
+    return;
+  }
+
+  // 투표자: 선택 버튼 제거 → 내 진영 상태바 + 침투 버튼
+  sel.value = ME.faction;
+  const my = ME.faction;
+  const enemy = my === "pro" ? "con" : "pro";
+  const myLabel = my === "pro" ? "👍 찬성" : "👎 반대";
+  const enemyLabel = enemy === "pro" ? "👍 찬성" : "👎 반대";
+
+  const { data: st } = await window.supabaseClient.rpc("infiltration_status");
+  INFIL_LEFT = st?.left ?? 3;
+
+  bottom.innerHTML = `
+    <div class="composer-side ${my}" id="composer-side">
+      <span class="cs-flag">🎖 ${myLabel} 진영으로 참전 중</span>
+      <button type="button" class="infiltrate-btn" id="infiltrate-btn">
+        🕵️ 적진 침투 <b id="infil-left">${INFIL_LEFT}</b>/3
+      </button>
+    </div>`;
+
+  document.getElementById("infiltrate-btn").addEventListener("click", () => {
+    if (!INFILTRATE && INFIL_LEFT <= 0) {
+      alert("오늘의 침투 횟수를 모두 썼어요. 내일 다시 침투할 수 있어요. (하루 3회)");
+      return;
+    }
+    INFILTRATE = !INFILTRATE;
+    sel.value = INFILTRATE ? enemy : my;
+    const box = document.getElementById("composer-side");
+    const input = document.getElementById("battle-comment-input");
+    box.classList.toggle("infiltrating", INFILTRATE);
+    box.querySelector(".cs-flag").innerHTML = INFILTRATE
+      ? `🕵️ <b>${enemyLabel} 진영 침투 모드</b> — 적진에 글이 올라갑니다`
+      : `🎖 ${myLabel} 진영으로 참전 중`;
+    if (input) input.placeholder = INFILTRATE
+      ? "적진에 남길 말을 입력하세요… (침투 1회 소모)"
+      : "이 전투에 대한 의견을 입력하세요...";
+    window.BattleFX?.haptic("tap");
+  });
+}
+
+function consumeInfiltration() {
+  INFIL_LEFT = Math.max(0, (INFIL_LEFT ?? 3) - 1);
+  const el = document.getElementById("infil-left");
+  if (el) el.textContent = INFIL_LEFT;
+  // 모드 해제 (1회 소모 후 복귀)
+  INFILTRATE = false;
+  const sel = document.getElementById("battle-side-select");
+  if (sel && ME.faction) sel.value = ME.faction;
+  const box = document.getElementById("composer-side");
+  if (box) {
+    box.classList.remove("infiltrating");
+    box.querySelector(".cs-flag").innerHTML = `🎖 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영으로 참전 중`;
+  }
+  const input = document.getElementById("battle-comment-input");
+  if (input) input.placeholder = "이 전투에 대한 의견을 입력하세요...";
 }
 
 /* ======================
@@ -1052,6 +1118,7 @@ function bindEvents() {
         return;
       }
 
+      const wasInfiltration = INFILTRATE;
       const { error } = await supabase.from("comments").insert({
         issue_id: window.CURRENT_ISSUE_ID,
         user_id: ME.userId,
@@ -1059,20 +1126,34 @@ function bindEvents() {
         content: text
       });
       if (error) {
+        if (String(error.message || "").includes("infiltration_limit")) {
+          alert("오늘의 침투 횟수(3회)를 모두 썼어요. 내일 다시 침투할 수 있어요.");
+          consumeInfiltration(); // 카운터 0 동기화 + 모드 해제
+          return;
+        }
         console.error("[comment] insert failed", error);
         alert("댓글 등록에 실패했습니다.");
         return;
       }
 
-      // ✨ 참전 연출: 입력창에서 진영색 빛 폭발
+      // ✨ 참전/침투 연출
       const FX = window.BattleFX;
       if (FX) {
-        FX.burstAt(input, side === "pro" ? "pro" : "con");
-        FX.shockwave(input, side === "pro" ? "rgba(77,163,255,.85)" : "rgba(255,92,92,.85)");
-        FX.flash(side === "pro" ? "rgba(77,163,255,.12)" : "rgba(255,92,92,.12)");
-        FX.banner(side === "pro" ? "👍 찬성 진영 참전!" : "👎 반대 진영 참전!", "info");
-        FX.haptic("tap");
+        if (wasInfiltration) {
+          FX.burstAt(input, "ko");
+          FX.shockwave(input, "rgba(245,207,107,.9)");
+          FX.flash("rgba(245,207,107,.14)", 220);
+          FX.banner("🕵️ 적진 침투 성공!", "warn");
+          FX.haptic("attack");
+        } else {
+          FX.burstAt(input, side === "pro" ? "pro" : "con");
+          FX.shockwave(input, side === "pro" ? "rgba(77,163,255,.85)" : "rgba(255,92,92,.85)");
+          FX.flash(side === "pro" ? "rgba(77,163,255,.12)" : "rgba(255,92,92,.12)");
+          FX.banner(side === "pro" ? "👍 찬성 진영 참전!" : "👎 반대 진영 참전!", "info");
+          FX.haptic("tap");
+        }
       }
+      if (wasInfiltration) consumeInfiltration();
 
       input.value = "";
       await reloadAndRender();
