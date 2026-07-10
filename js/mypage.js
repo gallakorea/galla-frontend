@@ -702,68 +702,131 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
-        // 이슈 + 예측 저장을 저장 시각순으로 통합 (광장 저장은 My 광장 탭에서)
-        const [{ data: ibm }, { data: mbm }] = await Promise.all([
-            supabase.from("bookmarks").select("issue_id, created_at").eq("user_id", userId),
-            supabase.from("market_bookmarks").select("market_id, created_at").eq("user_id", userId)
-        ]);
+        // Save 갈라 = 저장한 이슈 (예측은 My 예측, 광장은 My 광장에서)
+        const { data: ibm } = await supabase
+            .from("bookmarks")
+            .select("issue_id, created_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false });
 
-        const merged = [
-            ...(ibm || []).map(b => ({ type: "issue", id: b.issue_id, at: b.created_at })),
-            ...(mbm || []).map(b => ({ type: "market", id: b.market_id, at: b.created_at }))
-        ].sort((a, b) => new Date(b.at) - new Date(a.at));
-
-        if (!merged.length) {
-            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드·예측에서 저장을 눌러보세요.");
+        if (!ibm || !ibm.length) {
+            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드에서 북마크를 눌러 저장해보세요.");
             return;
         }
 
-        // 상세 데이터 일괄 조회
-        const issueIds = merged.filter(m => m.type === "issue").map(m => m.id);
-        const marketIds = merged.filter(m => m.type === "market").map(m => m.id);
+        const issueIds = ibm.map(b => b.issue_id);
+        const { data: issues } = await supabase
+            .from("issues")
+            .select("id, title, thumbnail_url, video_url, images")
+            .in("id", issueIds);
 
-        const [{ data: issues }, { data: markets }] = await Promise.all([
-            issueIds.length
-                ? supabase.from("issues").select("id, title, thumbnail_url, video_url, images").in("id", issueIds)
-                : Promise.resolve({ data: [] }),
-            marketIds.length
-                ? supabase.from("markets").select("id, question, image_url").in("id", marketIds)
-                : Promise.resolve({ data: [] })
-        ]);
-
-        const iMap = {}, mMap = {};
+        const iMap = {};
         (issues || []).forEach(i => iMap[i.id] = i);
-        (markets || []).forEach(m => mMap[m.id] = m);
 
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
-        const live = merged.filter(m =>
-            (m.type === "issue" && iMap[m.id]) ||
-            (m.type === "market" && mMap[m.id]));
+        const liveIds = issueIds.filter(id => iMap[id]);
+        const qvItems = liveIds.map(id => ({ type: "issue", id }));
 
-        const qvItems = live.map(m => ({ type: m.type, id: m.id }));
+        liveIds.forEach((id, myIdx) => {
+            const i = iMap[id];
+            tabContent.appendChild(igCard({
+                thumb: i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null,
+                title: i.title,
+                badge: i.video_url ? "▶" : "",
+                onClick: () => openQvList(qvItems, myIdx)
+            }));
+        });
+    };
 
-        live.forEach((m, myIdx) => {
-            let card;
-            if (m.type === "issue") {
-                const i = iMap[m.id];
-                card = igCard({
-                    thumb: i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null,
-                    title: i.title,
-                    badge: i.video_url ? "▶" : "",
-                    onClick: () => openQvList(qvItems, myIdx)
-                });
-            } else {
-                const mk = mMap[m.id];
-                card = igCard({
-                    thumb: mk.image_url,
-                    title: mk.question,
-                    badge: "예측",
-                    onClick: () => openQvList(qvItems, myIdx)
-                });
+    // =====================================================
+    // My 예측 — 내가 만든 예측 / 저장한 예측 (서브탭 + 그리드)
+    // =====================================================
+    let predictSubTab = "mine"; // mine | saved
+
+    const renderPredict = async () => {
+        tabContent.className = "content-area";
+        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+
+        const showSaved = isMyPage;
+        if (!showSaved) predictSubTab = "mine";
+
+        let markets = [];
+        if (predictSubTab === "mine") {
+            const { data, error } = await supabase
+                .from("markets")
+                .select("id, question, image_url, created_at")
+                .eq("created_by", viewUserId)
+                .order("created_at", { ascending: false });
+            if (error) {
+                console.error("[My Predict] error", error);
+                tabContent.innerHTML = emptyMsg("불러오기 실패");
+                return;
             }
-            tabContent.appendChild(card);
+            markets = data || [];
+        } else {
+            const { data: bms, error } = await supabase
+                .from("market_bookmarks")
+                .select("market_id, created_at")
+                .eq("user_id", userId)
+                .order("created_at", { ascending: false });
+            if (error) {
+                console.error("[Saved Predict] error", error);
+                tabContent.innerHTML = emptyMsg("불러오기 실패");
+                return;
+            }
+            const ids = (bms || []).map(b => b.market_id);
+            if (ids.length) {
+                const { data: rows } = await supabase
+                    .from("markets")
+                    .select("id, question, image_url, created_at")
+                    .in("id", ids);
+                const map = {};
+                (rows || []).forEach(m => map[m.id] = m);
+                markets = ids.map(id => map[id]).filter(Boolean); // 저장순 유지
+            }
+        }
+
+        tabContent.className = "content-area";
+        tabContent.innerHTML = "";
+
+        if (showSaved) {
+            const bar = document.createElement("div");
+            bar.className = "mp-subtabs";
+            bar.innerHTML = `
+                <button class="mp-subtab ${predictSubTab === "mine" ? "active" : ""}" data-sub="mine">내가 만든 예측</button>
+                <button class="mp-subtab ${predictSubTab === "saved" ? "active" : ""}" data-sub="saved">저장한 예측</button>`;
+            bar.onclick = e => {
+                const b = e.target.closest(".mp-subtab");
+                if (!b || b.dataset.sub === predictSubTab) return;
+                predictSubTab = b.dataset.sub;
+                renderPredict();
+            };
+            tabContent.appendChild(bar);
+        }
+
+        if (!markets.length) {
+            const empty = document.createElement("div");
+            empty.innerHTML = emptyMsg(predictSubTab === "mine"
+                ? "아직 만든 예측이 없습니다."
+                : "저장한 예측이 없습니다.<br>예측 상세에서 저장을 눌러보세요.");
+            tabContent.appendChild(empty);
+            return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "content-grid";
+        tabContent.appendChild(grid);
+
+        const qvItems = markets.map(m => ({ type: "market", id: m.id }));
+        markets.forEach((m, myIdx) => {
+            grid.appendChild(igCard({
+                thumb: m.image_url,
+                title: m.question,
+                badge: "",
+                onClick: () => openQvList(qvItems, myIdx)
+            }));
         });
     };
 
@@ -993,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     + ` <span class="tab-count">${n}</span>`;
             }
         };
-        let savedPlaza = 0;
+        let savedPlaza = 0, savedMarkets = 0;
         if (isMyPage) {
             const [{ count: bm }, { count: nbm }, { count: mbm }, { count: pbm }] = await Promise.all([
                 supabase.from("bookmarks").select("issue_id", { count: "exact", head: true }).eq("user_id", userId),
@@ -1001,13 +1064,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                 supabase.from("market_bookmarks").select("market_id", { count: "exact", head: true }).eq("user_id", userId),
                 supabase.from("plaza_bookmarks").select("post_id", { count: "exact", head: true }).eq("user_id", userId)
             ]);
-            setCount("save", (bm ?? 0) + (mbm ?? 0)); // 광장 저장은 My 광장 탭으로
+            setCount("save", bm ?? 0); // 이슈만 (예측/광장은 각자 탭)
             setCount("news", nbm ?? 0);
+            savedMarkets = mbm ?? 0;
             savedPlaza = pbm ?? 0;
         }
-        const { count: pz } = await supabase
-            .from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", viewUserId);
+        const [{ count: pz }, { count: mk }] = await Promise.all([
+            supabase.from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", viewUserId),
+            supabase.from("markets").select("id", { count: "exact", head: true }).eq("created_by", viewUserId)
+        ]);
         setCount("plaza", (pz ?? 0) + savedPlaza);
+        setCount("predict", (mk ?? 0) + savedMarkets);
         const { count: fl } = await supabase
             .from("follows").select("id", { count: "exact", head: true }).eq("following", viewUserId);
         setCount("follower", fl ?? 0);
@@ -1029,6 +1096,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 case "battle": renderBattle(); break;  // 2단계 복원용
                 case "save": renderSave(); break;
                 case "news": renderNews(); break;
+                case "predict": renderPredict(); break;
                 case "plaza": renderPlaza(); break;
                 case "follower": renderFollower(); break;
             }
