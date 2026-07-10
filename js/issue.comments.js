@@ -19,6 +19,7 @@ const state = {
 /* 로그인 사용자 상태 */
 const ME = {
   userId: null,
+  faction: null,      // 'pro' | 'con' — 이 이슈에 대한 내 투표(= 내 진영). 없으면 참전 불가
   likes: new Map(),   // comment_id -> 1 | -1
   actions: new Set()  // `${comment_id}:${action_type}`
 };
@@ -193,6 +194,20 @@ async function loadComments(issueId) {
   const { data: sess } = await supabase.auth.getSession();
   ME.userId = sess?.session?.user?.id || null;
 
+  // 내 진영 = 이 이슈에 대한 내 투표 (서버 RPC도 동일 기준으로 강제)
+  ME.faction = null;
+  if (ME.userId) {
+    const { data: myVote } = await supabase
+      .from("votes")
+      .select("type")
+      .eq("issue_id", issueId)
+      .eq("user_id", ME.userId)
+      .limit(1);
+    const t = myVote?.[0]?.type;
+    if (t === "pro" || t === "con") ME.faction = t;
+  }
+  window.MY_VOTE_TYPE = ME.faction;
+
   const { data: rows, error } = await supabase
     .from("comments")
     .select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action")
@@ -287,6 +302,25 @@ function likeUI(c) {
     <span class="dislike ${mine === -1 ? "active-dislike" : ""}" data-id="${c.id}">👎${agg.down}</span>`;
 }
 
+/* 진영 규칙 (서버 battle_action RPC와 동일)
+   - 내 진영 없음(미투표) → 참전 불가
+   - 반대 진영 댓글 → ⚔공격만
+   - 같은 진영 댓글  → 🛡방어 · 💣지원만 */
+function battleButtonsFor(c) {
+  const my = ME.faction;
+  const done = (a) => (ME.actions.has(c.id + ":" + a) ? "done" : "");
+
+  if (!my) {
+    return `<span class="action-locked" data-id="${c.id}">🔒 진영 선택 후 참전</span>`;
+  }
+  if (my !== c.faction) {
+    return `<span class="action-attack ${done("attack")}" data-id="${c.id}">⚔공격</span>`;
+  }
+  return `
+    <span class="action-defend ${done("defend")}" data-id="${c.id}">🛡방어</span>
+    <span class="action-support ${done("support")}" data-id="${c.id}">💣지원</span>`;
+}
+
 function makeReply(r) {
   const prefix = r.battle_action
     ? `<b>${r.battle_action === "attack" ? "⚔ 공격" : "🛡 방어"}</b> `
@@ -304,20 +338,14 @@ function makeReply(r) {
     <div class="body">└ ${prefix}${renderCommentText(r.content)}</div>
     <div class="reply-actions" data-side="${r.faction}">
       ${likeUI(r)}
-      <span class="action-attack ${ME.actions.has(r.id + ":attack") ? "done" : ""}" data-id="${r.id}">⚔공격</span>
-      <span class="action-defend ${ME.actions.has(r.id + ":defend") ? "done" : ""}" data-id="${r.id}">🛡방어</span>
-      <span class="action-support ${ME.actions.has(r.id + ":support") ? "done" : ""}" data-id="${r.id}">💣지원</span>
+      ${battleButtonsFor(r)}
     </div>
   </div>`;
 }
 
 function makeComment(c) {
   const replies = replyMap[c.id] || [];
-
-  // 중립 플랫폼: 모든 댓글에 공격·방어 둘 다 노출 (진영 무관)
-  const battleButtons = `
-    <span class="action-attack ${ME.actions.has(c.id + ":attack") ? "done" : ""}" data-id="${c.id}">⚔공격</span>
-    <span class="action-defend ${ME.actions.has(c.id + ":defend") ? "done" : ""}" data-id="${c.id}">🛡방어</span>`;
+  const battleButtons = battleButtonsFor(c);
 
   const ko = c.hp <= 0 ? " ko" : "";
   const isAce = ACE[c.faction] === c.id;
@@ -340,7 +368,6 @@ function makeComment(c) {
     <div class="actions">
       ${likeUI(c)}
       ${battleButtons}
-      <span class="action-support ${ME.actions.has(c.id + ":support") ? "done" : ""}" data-id="${c.id}">💣지원</span>
       <span class="cp-chip" title="전투력">⚡${power}</span>
       <span class="action-more">⋯</span>
     </div>
@@ -460,6 +487,18 @@ function requireLogin() {
   return false;
 }
 
+/* 서버 battle_action 거부 사유 → 사용자 메시지 */
+function battleReasonMsg(reason) {
+  switch (reason) {
+    case "no_faction": return "먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요.";
+    case "same_faction": return "같은 진영은 공격할 수 없어요.";
+    case "cross_faction": return "같은 진영 댓글만 방어·지원할 수 있어요.";
+    case "already": return "이미 이 댓글에 같은 행동을 했어요.";
+    case "unauthorized": return "로그인이 필요합니다.";
+    default: return null;
+  }
+}
+
 /* ======================
    Interaction
 ====================== */
@@ -470,23 +509,34 @@ function bindEvents() {
 
   document.addEventListener("click", async e => {
 
+    // 🔒 진영 미선택(미투표) → 참전 안내
+    if (e.target.classList.contains("action-locked")) {
+      alert("먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요.");
+      return;
+    }
+
     // ⚔🛡 전투 버튼 클릭 → 하단 입력창으로 통일
     if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
       if (!requireLogin()) return;
       const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
+
+      const targetEl = e.target.closest(".comment") || e.target.closest(".reply");
+      if (!targetEl) return;
+      const targetSide = targetEl.dataset.side || "pro";
+
+      // 진영 규칙 프론트 사전 검사 (서버 RPC가 최종 강제)
+      if (!ME.faction) { alert("먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요."); return; }
+      if (type === "attack" && ME.faction === targetSide) { alert("같은 진영은 공격할 수 없어요. 상대 진영을 공격하세요."); return; }
+      if (type === "defend" && ME.faction !== targetSide) { alert("같은 진영 댓글만 방어할 수 있어요."); return; }
 
       if (ME.actions.has(e.target.dataset.id + ":" + type)) {
         alert(type === "attack" ? "이미 공격한 댓글입니다." : "이미 방어한 댓글입니다.");
         return;
       }
 
-      const targetEl = e.target.closest(".comment") || e.target.closest(".reply");
-      if (!targetEl) return;
-
       const targetId = Number(e.target.dataset.id || targetEl.dataset.id);
       const nameEl = targetEl.querySelector(".head .user-name");
       const targetUser = nameEl ? nameEl.textContent.trim() : "익명";
-      const targetSide = targetEl.dataset.side || "pro";
 
       BATTLE_MODE = { type, targetId, targetUser, targetSide };
 
@@ -501,11 +551,16 @@ function bindEvents() {
       return;
     }
 
-    // 💣 지원 → RPC로 HP/카운터 갱신
+    // 💣 지원 → RPC로 HP/카운터 갱신 (같은 진영만)
     if (e.target.classList.contains("action-support")) {
       if (!requireLogin()) return;
       const id = Number(e.target.dataset.id);
       if (!id) return;
+
+      const supUnit = e.target.closest(".reply") || e.target.closest(".comment");
+      const supSide = supUnit?.dataset.side;
+      if (!ME.faction) { alert("먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요."); return; }
+      if (ME.faction !== supSide) { alert("같은 진영 댓글만 지원할 수 있어요."); return; }
 
       if (ME.actions.has(id + ":support")) {
         alert("이미 지원한 댓글입니다.");
@@ -516,8 +571,8 @@ function bindEvents() {
         p_comment_id: id, p_action: "support"
       });
       if (error || !data?.ok) {
-        if (data?.reason === "already") alert("이미 지원한 댓글입니다.");
-        else console.error("[support] failed", error || data);
+        alert(battleReasonMsg(data?.reason) || "지원에 실패했습니다.");
+        if (!data?.reason) console.error("[support] failed", error || data);
         return;
       }
 
@@ -639,7 +694,7 @@ function bindEvents() {
           issue_id: window.CURRENT_ISSUE_ID,
           user_id: ME.userId,
           parent_id: targetId,
-          faction: side,
+          faction: ME.faction || side,   // 답글은 항상 내 진영으로 기록
           content: text,
           battle_action: type
         });
@@ -671,6 +726,10 @@ function bindEvents() {
           renderMorale();
           setTimeout(() => reloadAndRender(), 900);
         } else {
+          if (bd && !bd.ok && bd.reason !== "already") {
+            const m = battleReasonMsg(bd.reason);
+            if (m) alert(m);
+          }
           await reloadAndRender();
         }
         return;

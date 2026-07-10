@@ -816,3 +816,10 @@ body.kb-open .battle-input-bar {
   box-shadow: 0 0 8px rgba(255,255,255,.8); transition: left .7s cubic-bezier(.22,1,.36,1);
 }
 .bm-status { margin-top: 7px; text-align: center; font-size: 12px; font-weight: 800; color: #cfd4e0; }
+
+/* 진영 미선택 시 전투 잠금 안내 */
+.action-locked {
+  font-size: 12px; color: #8b90a0; cursor: pointer;
+  border: 1px dashed #3a3d47; border-radius: 8px; padding: 2px 9px;
+}
+.action-locked:active { color: #cfd4e0; }
