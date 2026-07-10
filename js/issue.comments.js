@@ -304,8 +304,8 @@ function makeReply(r) {
     <div class="body">└ ${prefix}${renderCommentText(r.content)}</div>
     <div class="reply-actions" data-side="${r.faction}">
       ${likeUI(r)}
-      <span class="action-attack" data-id="${r.id}">⚔공격</span>
-      <span class="action-defend" data-id="${r.id}">🛡방어</span>
+      <span class="action-attack ${ME.actions.has(r.id + ":attack") ? "done" : ""}" data-id="${r.id}">⚔공격</span>
+      <span class="action-defend ${ME.actions.has(r.id + ":defend") ? "done" : ""}" data-id="${r.id}">🛡방어</span>
       <span class="action-support ${ME.actions.has(r.id + ":support") ? "done" : ""}" data-id="${r.id}">💣지원</span>
     </div>
   </div>`;
@@ -313,12 +313,11 @@ function makeReply(r) {
 
 function makeComment(c) {
   const replies = replyMap[c.id] || [];
-  const selectedSide = document.getElementById("battle-side-select")?.value;
-  const isMySide = c.faction === selectedSide;
 
-  const battleButtons = isMySide
-    ? `<span class="action-defend ${ME.actions.has(c.id + ":defend") ? "done" : ""}" data-id="${c.id}">🛡방어</span>`
-    : `<span class="action-attack ${ME.actions.has(c.id + ":attack") ? "done" : ""}" data-id="${c.id}">⚔공격</span>`;
+  // 중립 플랫폼: 모든 댓글에 공격·방어 둘 다 노출 (진영 무관)
+  const battleButtons = `
+    <span class="action-attack ${ME.actions.has(c.id + ":attack") ? "done" : ""}" data-id="${c.id}">⚔공격</span>
+    <span class="action-defend ${ME.actions.has(c.id + ":defend") ? "done" : ""}" data-id="${c.id}">🛡방어</span>`;
 
   const ko = c.hp <= 0 ? " ko" : "";
   const isAce = ACE[c.faction] === c.id;
@@ -607,10 +606,9 @@ function bindEvents() {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
+      // 진영 선택은 "내가 어느 편으로 글을 쓸지"만 결정한다.
+      // 공격/방어는 중립적으로 모든 댓글에 열려 있으므로 재렌더 불필요.
       document.getElementById("battle-side-select").value = btn.dataset.side;
-      // 진영이 바뀌면 공격/방어 버튼 구성이 달라지므로 다시 렌더
-      renderSide("pro");
-      renderSide("con");
     });
   });
 
@@ -702,10 +700,9 @@ function bindEvents() {
     });
 }
 
+/* 중립 플랫폼: 내 진영 기준(아군/적군)이 아니라 진영 자체로 색을 칠한다.
+   찬성(pro) = 파랑 👍 / 반대(con) = 빨강 👎 */
 function applySideColoring() {
-  const mySide = document.getElementById("battle-side-select")?.value;
-  if (!mySide) return;
-
   document.querySelectorAll(".comment, .reply").forEach(unit => {
     const side =
       unit.dataset.side ||
@@ -731,16 +728,16 @@ function applySideColoring() {
     level?.classList.remove("ally-level", "enemy-level");
     realIcon.classList.remove("ally-icon", "enemy-icon");
 
-    if (side === mySide) {
-      name.classList.add("ally-user");
+    if (side === "pro") {
+      name.classList.add("ally-user");     // 파랑 = 찬성
       level?.classList.add("ally-level");
       realIcon.classList.add("ally-icon");
-      realIcon.textContent = "🛡";
+      realIcon.textContent = "👍";
     } else {
-      name.classList.add("enemy-user");
+      name.classList.add("enemy-user");    // 빨강 = 반대
       level?.classList.add("enemy-level");
       realIcon.classList.add("enemy-icon");
-      realIcon.textContent = "⚔";
+      realIcon.textContent = "👎";
     }
   });
 }
