@@ -348,3 +348,28 @@ body {
     border-color: #2f7df6; color: #8fb6ff; background: rgba(47,125,246,.12);
 }
 #mpQuickView .qv-act:disabled { opacity: .5; }
+
+/* My 광장 서브탭 (내가 쓴 글 / 저장한 글) */
+.mp-subtabs {
+    display: flex; gap: 8px;
+    padding: 12px 14px 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+.mp-subtab {
+    padding: 7px 14px; border-radius: 18px;
+    background: #171717; color: #ccc;
+    border: 1px solid #333;
+    font-size: 13px; cursor: pointer;
+}
+.mp-subtab.active { background: #fff; color: #000; border-color: #fff; }
+
+/* 탭 내부용 3열 그리드 (서브탭과 함께 쓸 때) */
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    width: 100%;
+    padding: 0 2px;
+    box-sizing: border-box;
+}

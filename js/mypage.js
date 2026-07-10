@@ -364,6 +364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (qvDirty) {
             qvDirty = false;
             document.querySelector(".tab.active")?.click(); // 현재 탭 재렌더
+            loadTabCounts(); // 탭 카운트 갱신
         }
     }
 
@@ -701,58 +702,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
-        // 이슈 + 예측 + 광장 저장을 저장 시각순으로 통합
-        const [{ data: ibm }, { data: mbm }, { data: pbm }] = await Promise.all([
+        // 이슈 + 예측 저장을 저장 시각순으로 통합 (광장 저장은 My 광장 탭에서)
+        const [{ data: ibm }, { data: mbm }] = await Promise.all([
             supabase.from("bookmarks").select("issue_id, created_at").eq("user_id", userId),
-            supabase.from("market_bookmarks").select("market_id, created_at").eq("user_id", userId),
-            supabase.from("plaza_bookmarks").select("post_id, created_at").eq("user_id", userId)
+            supabase.from("market_bookmarks").select("market_id, created_at").eq("user_id", userId)
         ]);
 
         const merged = [
             ...(ibm || []).map(b => ({ type: "issue", id: b.issue_id, at: b.created_at })),
-            ...(mbm || []).map(b => ({ type: "market", id: b.market_id, at: b.created_at })),
-            ...(pbm || []).map(b => ({ type: "plazaSaved", id: b.post_id, at: b.created_at }))
+            ...(mbm || []).map(b => ({ type: "market", id: b.market_id, at: b.created_at }))
         ].sort((a, b) => new Date(b.at) - new Date(a.at));
 
         if (!merged.length) {
-            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드·예측·광장에서 저장을 눌러보세요.");
+            tabContent.innerHTML = emptyMsg("저장한 갈라가 없습니다.<br>피드·예측에서 저장을 눌러보세요.");
             return;
         }
 
         // 상세 데이터 일괄 조회
         const issueIds = merged.filter(m => m.type === "issue").map(m => m.id);
         const marketIds = merged.filter(m => m.type === "market").map(m => m.id);
-        const plazaIds = merged.filter(m => m.type === "plazaSaved").map(m => m.id);
 
-        const [{ data: issues }, { data: markets }, { data: plazas }] = await Promise.all([
+        const [{ data: issues }, { data: markets }] = await Promise.all([
             issueIds.length
                 ? supabase.from("issues").select("id, title, thumbnail_url, video_url, images").in("id", issueIds)
                 : Promise.resolve({ data: [] }),
             marketIds.length
                 ? supabase.from("markets").select("id, question, image_url").in("id", marketIds)
-                : Promise.resolve({ data: [] }),
-            plazaIds.length
-                ? supabase.from("plaza_posts").select("id, title, cover_image, thumbnail").in("id", plazaIds)
                 : Promise.resolve({ data: [] })
         ]);
 
-        const iMap = {}, mMap = {}, pMap = {};
+        const iMap = {}, mMap = {};
         (issues || []).forEach(i => iMap[i.id] = i);
         (markets || []).forEach(m => mMap[m.id] = m);
-        (plazas || []).forEach(p => pMap[p.id] = p);
 
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
         const live = merged.filter(m =>
             (m.type === "issue" && iMap[m.id]) ||
-            (m.type === "market" && mMap[m.id]) ||
-            (m.type === "plazaSaved" && pMap[m.id]));
+            (m.type === "market" && mMap[m.id]));
 
-        const qvItems = live.map(m => ({
-            type: m.type === "issue" ? "issue" : m.type === "market" ? "market" : "plaza",
-            id: m.id
-        }));
+        const qvItems = live.map(m => ({ type: m.type, id: m.id }));
 
         live.forEach((m, myIdx) => {
             let card;
@@ -764,20 +754,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                     badge: i.video_url ? "▶" : "",
                     onClick: () => openQvList(qvItems, myIdx)
                 });
-            } else if (m.type === "market") {
+            } else {
                 const mk = mMap[m.id];
                 card = igCard({
                     thumb: mk.image_url,
                     title: mk.question,
                     badge: "예측",
-                    onClick: () => openQvList(qvItems, myIdx)
-                });
-            } else {
-                const p = pMap[m.id];
-                card = igCard({
-                    thumb: p.cover_image || p.thumbnail,
-                    title: p.title,
-                    badge: "광장",
                     onClick: () => openQvList(qvItems, myIdx)
                 });
             }
@@ -842,35 +824,89 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // =====================================================
-    // My 광장 — 내가 쓴 갈라 광장 글 (인스타 그리드)
+    // My 광장 — 내가 쓴 글 / 저장한 글 (서브탭 + 인스타 그리드)
     // =====================================================
+    let plazaSubTab = "mine"; // mine | saved
+
     const renderPlaza = async () => {
         tabContent.className = "content-area";
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
-        const { data: posts, error } = await supabase
-            .from("plaza_posts")
-            .select("id, title, thumbnail, cover_image, up_count, view_count, created_at")
-            .eq("user_id", viewUserId)
-            .order("created_at", { ascending: false });
+        // 저장한 글은 본인 페이지에서만 (RLS도 본인만 조회 가능)
+        const showSaved = isMyPage;
+        if (!showSaved) plazaSubTab = "mine";
 
-        if (error) {
-            console.error("[My Plaza] error", error);
-            tabContent.innerHTML = emptyMsg("불러오기 실패");
-            return;
+        let posts = [];
+        if (plazaSubTab === "mine") {
+            const { data, error } = await supabase
+                .from("plaza_posts")
+                .select("id, title, thumbnail, cover_image, created_at")
+                .eq("user_id", viewUserId)
+                .order("created_at", { ascending: false });
+            if (error) {
+                console.error("[My Plaza] error", error);
+                tabContent.innerHTML = emptyMsg("불러오기 실패");
+                return;
+            }
+            posts = data || [];
+        } else {
+            const { data: bms, error } = await supabase
+                .from("plaza_bookmarks")
+                .select("post_id, created_at")
+                .eq("user_id", userId)
+                .order("created_at", { ascending: false });
+            if (error) {
+                console.error("[Saved Plaza] error", error);
+                tabContent.innerHTML = emptyMsg("불러오기 실패");
+                return;
+            }
+            const ids = (bms || []).map(b => b.post_id);
+            if (ids.length) {
+                const { data: rows } = await supabase
+                    .from("plaza_posts")
+                    .select("id, title, thumbnail, cover_image, created_at")
+                    .in("id", ids);
+                const map = {};
+                (rows || []).forEach(p => map[p.id] = p);
+                posts = ids.map(id => map[id]).filter(Boolean); // 저장순 유지
+            }
         }
 
-        if (!posts || posts.length === 0) {
-            tabContent.innerHTML = emptyMsg("아직 갈라 광장에 쓴 글이 없습니다.");
-            return;
-        }
-
-        tabContent.className = "content-area grid";
+        // 서브탭 바 + 그리드 컨테이너
+        tabContent.className = "content-area";
         tabContent.innerHTML = "";
+
+        if (showSaved) {
+            const bar = document.createElement("div");
+            bar.className = "mp-subtabs";
+            bar.innerHTML = `
+                <button class="mp-subtab ${plazaSubTab === "mine" ? "active" : ""}" data-sub="mine">내가 쓴 글</button>
+                <button class="mp-subtab ${plazaSubTab === "saved" ? "active" : ""}" data-sub="saved">저장한 글</button>`;
+            bar.onclick = e => {
+                const b = e.target.closest(".mp-subtab");
+                if (!b || b.dataset.sub === plazaSubTab) return;
+                plazaSubTab = b.dataset.sub;
+                renderPlaza();
+            };
+            tabContent.appendChild(bar);
+        }
+
+        if (!posts.length) {
+            const empty = document.createElement("div");
+            empty.innerHTML = emptyMsg(plazaSubTab === "mine"
+                ? "아직 갈라 광장에 쓴 글이 없습니다."
+                : "저장한 광장 글이 없습니다.<br>광장에서 북마크를 눌러 저장해보세요.");
+            tabContent.appendChild(empty);
+            return;
+        }
+
+        const grid = document.createElement("div");
+        grid.className = "content-grid";
+        tabContent.appendChild(grid);
 
         const qvItems = posts.map(p => ({ type: "plaza", id: p.id }));
         posts.forEach((p, myIdx) => {
-            tabContent.appendChild(igCard({
+            grid.appendChild(igCard({
                 thumb: p.cover_image || p.thumbnail,
                 title: p.title,
                 badge: "",
@@ -957,6 +993,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     + ` <span class="tab-count">${n}</span>`;
             }
         };
+        let savedPlaza = 0;
         if (isMyPage) {
             const [{ count: bm }, { count: nbm }, { count: mbm }, { count: pbm }] = await Promise.all([
                 supabase.from("bookmarks").select("issue_id", { count: "exact", head: true }).eq("user_id", userId),
@@ -964,12 +1001,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                 supabase.from("market_bookmarks").select("market_id", { count: "exact", head: true }).eq("user_id", userId),
                 supabase.from("plaza_bookmarks").select("post_id", { count: "exact", head: true }).eq("user_id", userId)
             ]);
-            setCount("save", (bm ?? 0) + (mbm ?? 0) + (pbm ?? 0));
+            setCount("save", (bm ?? 0) + (mbm ?? 0)); // 광장 저장은 My 광장 탭으로
             setCount("news", nbm ?? 0);
+            savedPlaza = pbm ?? 0;
         }
         const { count: pz } = await supabase
             .from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", viewUserId);
-        setCount("plaza", pz ?? 0);
+        setCount("plaza", (pz ?? 0) + savedPlaza);
         const { count: fl } = await supabase
             .from("follows").select("id", { count: "exact", head: true }).eq("following", viewUserId);
         setCount("follower", fl ?? 0);
