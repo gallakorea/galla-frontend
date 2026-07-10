@@ -478,10 +478,7 @@ function renderPlazaPosts(posts) {
             <span>👍 ${post.up_count || 0}</span>
             <span>💬 ${cmtCount}</span>
             <span>조회 ${post.view_count || 0}</span>
-            <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">
-              <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
-              <span class="save-txt">${saved ? "저장됨" : "저장"}</span>
-            </button>
+            <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">🔖</button>
           </div>
         </div>
 

@@ -254,13 +254,13 @@ function renderMarkets() {
       </div>
       ${probBlock}
       <div class="mc-foot">
-        <span>💰 ${fmt(m.volume)}P</span>
+        <span class="mc-stats">
+          <span>💰 ${fmt(m.volume)}P</span>
+          <button class="mc-act mc-like ${MY_RX[m.id] === 1 ? 'on' : ''}" data-act="like" data-id="${m.id}">👍 <span>${RX_AGG[m.id]?.up || 0}</span></button>
+          <button class="mc-act mc-dislike ${MY_RX[m.id] === -1 ? 'on' : ''}" data-act="dislike" data-id="${m.id}">👎 <span>${RX_AGG[m.id]?.down || 0}</span></button>
+          <button class="mc-act mc-save ${MY_SAVED[m.id] ? 'on' : ''}" data-act="save" data-id="${m.id}" aria-label="저장">🔖</button>
+        </span>
         <span class="mc-go">${closed ? '결과 보기' : '예측하기'} ›</span>
-      </div>
-      <div class="mc-actions">
-        <button class="mc-act mc-like ${MY_RX[m.id] === 1 ? 'on' : ''}" data-act="like" data-id="${m.id}">👍 <span>${RX_AGG[m.id]?.up || 0}</span></button>
-        <button class="mc-act mc-dislike ${MY_RX[m.id] === -1 ? 'on' : ''}" data-act="dislike" data-id="${m.id}">👎 <span>${RX_AGG[m.id]?.down || 0}</span></button>
-        <button class="mc-act mc-save ${MY_SAVED[m.id] ? 'on' : ''}" data-act="save" data-id="${m.id}">🔖 <span>${MY_SAVED[m.id] ? '저장됨' : '저장'}</span></button>
       </div>
     </div>`;
   }).join('');
@@ -292,8 +292,6 @@ function bindMarketActions(wrap) {
             await supa.from('market_bookmarks').insert({ market_id: id, user_id: ME.id });
             MY_SAVED[id] = true;
           }
-          const s = btn.querySelector('span');
-          s.textContent = MY_SAVED[id] ? '저장됨' : '저장';
           btn.classList.toggle('on', !!MY_SAVED[id]);
         } else {
           const val = act === 'like' ? 1 : -1;

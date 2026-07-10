@@ -744,16 +744,13 @@ html, body {
 .plaza-post .post-stats span { display: inline-flex; align-items: center; gap: 3px; }
 
 
-/* 목록 카드 저장 버튼 (통계 줄 인라인, 우측) */
+
+/* 목록 카드 저장: 통계 줄 인라인 이모지 (우측) */
 .plaza-post .post-stats { align-items: center; }
 .plaza-save-btn {
-  margin-left: auto;
-  display: inline-flex; align-items: center; gap: 4px;
-  background: #171717; border: 1px solid #333; color: #aeb7c9;
-  padding: 4px 10px; border-radius: 999px;
-  font-size: 12px; font-weight: 700; cursor: pointer;
+  background: none; border: none; padding: 0 2px; cursor: pointer;
+  font-size: 15px; line-height: 1;
+  filter: grayscale(1) opacity(.55);
 }
-.plaza-save-btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; }
-.plaza-save-btn.on { border-color: #f5c518; color: #f5c518; }
-.plaza-save-btn.on svg { fill: #f5c518; }
+.plaza-save-btn.on { filter: none; }
 .plaza-save-btn:disabled { opacity: .5; }
