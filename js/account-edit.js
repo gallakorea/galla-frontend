@@ -39,11 +39,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const nicknameInput = document.getElementById("nickname");
   const bioInput = document.getElementById("bio");
+  const nickCount = document.getElementById("nickCount");
+  const bioCount = document.getElementById("bioCount");
 
   const emailField = document.getElementById("emailField");
   const phoneField = document.getElementById("phoneField");
 
   let selectedFile = null;
+
+  // 글자수 카운터
+  const syncCounts = () => {
+    if (nickCount) nickCount.textContent = nicknameInput.value.length;
+    if (bioCount) bioCount.textContent = bioInput.value.length;
+  };
+  nicknameInput.addEventListener("input", syncCounts);
+  bioInput.addEventListener("input", syncCounts);
 
   // =========================
   // Load existing profile
@@ -59,6 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else if (profile) {
     nicknameInput.value = profile.nickname || "";
     bioInput.value = profile.bio || "";
+    syncCounts();
 
     if (emailField) {
       emailField.textContent = session.user.email || "-";
