@@ -208,6 +208,16 @@ function __openShortsInternal(list, startId) {
   line-height:1.35;
   opacity:.95;
 }
+.shorts-goto{ cursor:pointer; }
+.shorts-goto:active{ opacity:.7; }
+.shorts-goto-chip{
+  display:inline-flex; align-items:center;
+  margin-left:8px; padding:2px 9px;
+  font-size:11px; font-weight:800; white-space:nowrap;
+  color:#fff; background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.35); border-radius:999px;
+  vertical-align:2px;
+}
 `;
     document.head.appendChild(style);
   }
@@ -503,7 +513,9 @@ function __openShortsInternal(list, startId) {
             ${item.level !== "" ? `<span class="author-level">Lv.${item.level}</span>` : ""}
           </div>
           ${item.category ? `<div class="shorts-cat">${item.category}</div>` : ""}
-          <div class="shorts-title">${item.title || ""}</div>
+          <div class="shorts-title shorts-goto" data-goto="${item.id}" role="link">${item.title || ""}
+            <span class="shorts-goto-chip">게시물 보기 ›</span>
+          </div>
         </div>
       </div>
     </div>
@@ -726,7 +738,7 @@ function bindTapControls() {
 
   const isControl = t =>
     t.closest &&
-    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,#shortsCommentModal");
+    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,.shorts-goto,#shortsCommentModal");
 
   overlay.addEventListener("pointerdown", e => {
     if (isControl(e.target)) return;
@@ -884,6 +896,15 @@ window.__FORCE_OPEN_SHORTS__ = function () {
   window.__OPEN_SHORTS_INTERNAL__(list, list[0].id);
 };
 console.info("[SHORTS] FORCE_OPEN_SHORTS attached");
+
+/* 릴스 → 게시물 본문 이동 (제목 탭) */
+document.addEventListener("click", e => {
+  const go = e.target.closest(".shorts-goto");
+  if (!go || !go.dataset.goto) return;
+  e.preventDefault();
+  e.stopPropagation();
+  location.href = `issue.html?id=${go.dataset.goto}`;
+});
 
 document.addEventListener("click", e => {
   const btn = e.target.closest(".shorts-action-btn");

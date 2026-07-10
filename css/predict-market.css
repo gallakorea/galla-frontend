@@ -230,3 +230,41 @@
   font-size: 12px; font-weight: 700; cursor: pointer;
 }
 .pmd-share .ic-share { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+
+/* ============================================================
+   댓글 UX 개선: 진영 칩 / 홀더 뱃지 / 포지션 잠금 / 선택 강제
+============================================================ */
+.pmd-side-chip {
+  font-size: 10px; font-weight: 900; letter-spacing: .5px;
+  padding: 2px 8px; border-radius: 7px;
+}
+.pmd-side-chip.yes { color: #aac4ff; background: rgba(51,86,255,.2); border: 1px solid rgba(109,139,255,.5); }
+.pmd-side-chip.no  { color: #ffaaba; background: rgba(255,79,110,.16); border: 1px solid rgba(255,111,134,.5); }
+
+.pmd-cmt-holder {
+  font-size: 9.5px; font-weight: 800;
+  padding: 1px 7px; border-radius: 6px;
+}
+.pmd-cmt-holder.yes { color: #ffd977; background: rgba(255,196,0,.12); border: 1px solid rgba(255,196,0,.4); }
+.pmd-cmt-holder.no  { color: #ffd977; background: rgba(255,196,0,.12); border: 1px solid rgba(255,196,0,.4); }
+.pmd-cmt-holder.watch { color: #777; background: rgba(255,255,255,.05); border: 1px solid #2a2a2a; }
+
+/* 컴포저 상태 */
+.pmd-cmt-locked {
+  padding: 10px 12px; border-radius: 10px; margin-bottom: 10px;
+  font-size: 12.5px; font-weight: 700;
+}
+.pmd-cmt-locked.yes { color: #aac4ff; background: rgba(51,86,255,.12); border: 1px solid rgba(109,139,255,.45); }
+.pmd-cmt-locked.no  { color: #ffaaba; background: rgba(255,79,110,.1); border: 1px solid rgba(255,111,134,.45); }
+.pmd-cmt-ask { font-size: 12.5px; font-weight: 800; color: #dfe3ec; margin-bottom: 8px; }
+.pmd-cmt-ask-sub { font-size: 11px; color: #777; font-weight: 600; }
+
+/* 선택 상태가 입력창까지 이어지게 */
+.pmd-cmt-compose.side-yes .pmd-cmt-input { border-color: #3356ff; box-shadow: 0 0 10px rgba(51,86,255,.25); }
+.pmd-cmt-compose.side-no  .pmd-cmt-input { border-color: #ff4f6e; box-shadow: 0 0 10px rgba(255,79,110,.22); }
+.pmd-cmt-send.yes { background: #3356ff; }
+.pmd-cmt-send.no  { background: #ff4f6e; }
+
+/* 미선택 게시 시 흔들기 */
+.pmd-cmt-sidesel.shake { animation: selShake .45s; }
+@keyframes selShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 50%{transform:translateX(6px);} 75%{transform:translateX(-3px);} }

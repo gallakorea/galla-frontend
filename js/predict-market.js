@@ -336,9 +336,15 @@ async function loadPositions(body){
 
 function emptyTab(msg){ return `<div class="pmd-tab-empty">${msg}</div>`; }
 
-/* ----- 댓글: 배틀식 (👍/👎 진영 + 좋아요 + 대댓글 @멘션) ----- */
-let CMT_SIDE = 'yes';
+/* ----- 댓글: 배틀식 (👍/👎 진영 + 좋아요 + 대댓글 @멘션) -----
+   UX 규칙:
+   - 베팅한 유저: 댓글 진영 = 보유 포지션으로 자동 잠금 (모순 발언/오선택 방지)
+   - 미베팅 유저: 기본 미선택 → 명시적으로 골라야 게시 가능
+   - 모든 댓글에 진영 칩 + 실제 베팅 여부(💰 홀더 / 관전) 뱃지 표시 */
+let CMT_SIDE = null;           // 'yes' | 'no' | null(미선택)
+let MY_POS_SIDE = null;        // 내 포지션 기준 잠금 진영
 function cmtSideLabel(side){ return isMulti() ? (side==='yes'?'👍 긍정':'👎 부정') : (side==='yes'?'👍 YES':'👎 NO'); }
+function cmtSideName(side){ return isMulti() ? (side==='yes'?'긍정':'부정') : side.toUpperCase(); }
 // @멘션 하이라이트
 function cmtBody(content){ return esc(content).replace(/@(\S+)/g,'<span class="pmd-mention">@$1</span>'); }
 
@@ -347,7 +353,15 @@ let CMT_TOP_LIMIT=8;             // 최상위 댓글 노출 수
 const CMT_EXPANDED=new Set();    // 답글 펼친 스레드 id
 
 async function loadComments(body){
-  if(POS){ CMT_SIDE = (POS.no_shares > POS.yes_shares) ? 'no' : 'yes'; }
+  // 내 포지션 → 댓글 진영 잠금 (베팅과 발언 일치)
+  MY_POS_SIDE = null;
+  if(POS && ((POS.yes_shares||0) > 0 || (POS.no_shares||0) > 0)){
+    MY_POS_SIDE = (POS.no_shares||0) > (POS.yes_shares||0) ? 'no' : 'yes';
+    CMT_SIDE = MY_POS_SIDE;
+  } else {
+    CMT_SIDE = null; // 미베팅: 반드시 직접 선택
+  }
+
   const { data: rows } = await supa.from('market_comments')
     .select('id,user_id,side,content,created_at,parent_id').eq('market_id',marketId)
     .order('created_at',{ascending:true}).limit(500);
@@ -359,24 +373,42 @@ async function loadComments(body){
     const { data: likes } = await supa.from('market_comment_likes').select('comment_id,user_id').in('comment_id',ids);
     likes?.forEach(l=>{ likeAgg[l.comment_id]=(likeAgg[l.comment_id]||0)+1; if(ME&&l.user_id===ME.id) myLikes.add(l.comment_id); });
   }
+
+  // 작성자들의 실제 베팅 여부 (💰 홀더 뱃지용)
+  const posMap={};
+  const authorIds=[...new Set((rows||[]).map(c=>c.user_id).filter(Boolean))];
+  if(authorIds.length){
+    const { data: poss } = await supa.from('market_positions')
+      .select('user_id,yes_shares,no_shares').eq('market_id',marketId).in('user_id',authorIds);
+    poss?.forEach(p=>{
+      if((p.yes_shares||0)>0 || (p.no_shares||0)>0)
+        posMap[p.user_id] = (p.no_shares||0) > (p.yes_shares||0) ? 'no' : 'yes';
+    });
+  }
+
   const tops=(rows||[]).filter(c=>!c.parent_id).reverse(); // 최신 부모 위로
   const childrenOf={}; (rows||[]).forEach(c=>{ if(c.parent_id) (childrenOf[c.parent_id]||=[]).push(c); });
   Object.values(childrenOf).forEach(a=>a.sort((x,y)=>new Date(x.created_at)-new Date(y.created_at)));
 
-  CMT_DATA={ tops, childrenOf, profs, likeAgg, myLikes };
+  CMT_DATA={ tops, childrenOf, profs, likeAgg, myLikes, posMap };
   renderComments(body);
 }
 
 function renderComments(body){
-  const { tops, childrenOf, profs, likeAgg, myLikes } = CMT_DATA;
+  const { tops, childrenOf, profs, likeAgg, myLikes, posMap } = CMT_DATA;
   const nick = uid => profs[uid]?.nickname || '익명';
 
   const cmtHtml=(c,isReply,topId)=>{
     const liked=myLikes.has(c.id);
+    const holdSide = posMap?.[c.user_id]; // 실제 베팅 진영 (없으면 관전자)
+    const holderBadge = holdSide
+      ? `<span class="pmd-cmt-holder ${holdSide}">💰 ${cmtSideName(holdSide)} 홀더</span>`
+      : `<span class="pmd-cmt-holder watch">관전</span>`;
     return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
       <div class="pmd-cmt-head">
-        <span class="pmd-cmt-flag ${c.side}">${c.side==='yes'?'👍':'👎'}</span>
+        <span class="pmd-side-chip ${c.side}">${cmtSideName(c.side)}</span>
         <span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>
+        ${holderBadge}
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
       </div>
       <div class="pmd-cmt-body">${cmtBody(c.content)}</div>
@@ -406,15 +438,31 @@ function renderComments(body){
   const shown=tops.slice(0,CMT_TOP_LIMIT);
   const remaining=tops.length-shown.length;
 
-  body.innerHTML = `
-    <div class="pmd-cmt-compose">
+  // 컴포저: 베팅자=포지션 잠금 / 미베팅자=명시적 선택
+  let composeTop;
+  if (MY_POS_SIDE) {
+    const shares = MY_POS_SIDE === 'yes' ? (POS?.yes_shares||0) : (POS?.no_shares||0);
+    composeTop = `
+      <div class="pmd-cmt-locked ${MY_POS_SIDE}">
+        💰 내 포지션: <b>${cmtSideName(MY_POS_SIDE)} ${fmt(shares)}주</b> 보유 —
+        <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다
+      </div>`;
+  } else {
+    composeTop = `
+      <div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(베팅하면 자동으로 고정돼요)</span></div>
       <div class="pmd-cmt-sidesel">
         <button class="pmd-cmt-side yes ${CMT_SIDE==='yes'?'active':''}" data-side="yes">${cmtSideLabel('yes')}</button>
         <button class="pmd-cmt-side no ${CMT_SIDE==='no'?'active':''}" data-side="no">${cmtSideLabel('no')}</button>
-      </div>
+      </div>`;
+  }
+
+  body.innerHTML = `
+    <div class="pmd-cmt-compose ${CMT_SIDE ? 'side-'+CMT_SIDE : 'side-none'}">
+      ${composeTop}
       <div class="pmd-cmt-inputrow">
-        <input id="cmtInput" class="pmd-cmt-input" maxlength="300" placeholder="이 예측에 대한 의견을 남기세요…">
-        <button id="cmtSend" class="pmd-cmt-send">게시</button>
+        <input id="cmtInput" class="pmd-cmt-input" maxlength="300"
+          placeholder="${CMT_SIDE ? `[${cmtSideName(CMT_SIDE)} 입장] 의견을 남기세요…` : '먼저 입장을 선택하세요'}">
+        <button id="cmtSend" class="pmd-cmt-send ${CMT_SIDE||''}">게시</button>
       </div>
     </div>
     <div class="pmd-cmt-list">
@@ -422,13 +470,29 @@ function renderComments(body){
     </div>
     ${remaining>0?`<button id="cmtMore" class="pmd-cmt-more">댓글 더 보기 (${remaining})</button>`:''}`;
 
-  // 진영 선택
+  // 진영 선택 (미베팅자만 렌더됨)
   body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-side').forEach(b=>b.addEventListener('click',()=>{
     CMT_SIDE=b.dataset.side;
+    const compose=body.querySelector('.pmd-cmt-compose');
+    compose.classList.remove('side-none','side-yes','side-no');
+    compose.classList.add('side-'+CMT_SIDE);
     body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-side').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
+    const inp=$('cmtInput');
+    inp.placeholder=`[${cmtSideName(CMT_SIDE)} 입장] 의견을 남기세요…`;
+    $('cmtSend').className='pmd-cmt-send '+CMT_SIDE;
+    inp.focus();
   }));
-  $('cmtSend').addEventListener('click', ()=>postComment($('cmtInput').value, CMT_SIDE, null, body));
+  $('cmtSend').addEventListener('click', ()=>{
+    if(!CMT_SIDE){
+      const sel=body.querySelector('.pmd-cmt-sidesel');
+      sel?.classList.add('shake');
+      setTimeout(()=>sel?.classList.remove('shake'), 500);
+      toast('먼저 YES/NO 입장을 선택해주세요.');
+      return;
+    }
+    postComment($('cmtInput').value, CMT_SIDE, null, body);
+  });
   // 댓글 더 보기
   $('cmtMore')?.addEventListener('click', ()=>{ CMT_TOP_LIMIT+=10; renderComments(body); });
   // 답글 접기/펼치기
@@ -460,7 +524,10 @@ function renderComments(body){
       <button class="pmd-cmt-send reply-send">게시</button>
     </div>`;
     const inp=box.querySelector('.reply-input'); inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
-    box.querySelector('.reply-send').addEventListener('click', ()=>postComment(inp.value, CMT_SIDE, topId, body));
+    box.querySelector('.reply-send').addEventListener('click', ()=>{
+      if(!CMT_SIDE){ toast('먼저 상단에서 YES/NO 입장을 선택해주세요.'); return; }
+      postComment(inp.value, CMT_SIDE, topId, body);
+    });
     box.scrollIntoView({block:'nearest',behavior:'smooth'});
   }));
 }

@@ -39,6 +39,7 @@ let allRows = [];     // 이 이슈의 모든 댓글 행
 let replyMap = {};    // parent_id -> [reply rows]
 let likeAgg = {};     // comment_id -> { up, down }
 let profileMap = {};  // user_id -> { nickname, level }
+let voteMap = {};     // user_id -> 'pro'|'con' (이 이슈 투표 = 실제 소속)
 
 let eventsBound = false;
 
@@ -159,6 +160,146 @@ function consumeInfiltration() {
 }
 
 /* ======================
+   💬 진영 작전회의 — 실시간 진영 전용 채팅 (상대 진영 입장 불가, RLS 강제)
+====================== */
+let CHAT_CHANNEL = null;
+let CHAT_OPEN = false;
+
+function chatRoomLabel() {
+  return ME.faction === "pro" ? "👍 찬성 진영 작전회의" : "👎 반대 진영 작전회의";
+}
+
+function ensureChatUI() {
+  let sheet = document.getElementById("faction-chat");
+  if (sheet) return sheet;
+  sheet = document.createElement("div");
+  sheet.id = "faction-chat";
+  sheet.className = "faction-chat " + (ME.faction || "");
+  sheet.innerHTML = `
+    <div class="fc-dim"></div>
+    <div class="fc-sheet">
+      <div class="fc-head">
+        <span class="fc-title">${chatRoomLabel()}</span>
+        <span class="fc-live">LIVE</span>
+        <button class="fc-close" aria-label="닫기">✕</button>
+      </div>
+      <div class="fc-notice">🔒 우리 진영만 볼 수 있는 방입니다. 작전을 논의하세요!</div>
+      <div class="fc-list" id="fc-list"></div>
+      <div class="fc-inputrow">
+        <input id="fc-input" maxlength="500" placeholder="아군에게 메시지 보내기…">
+        <button id="fc-send">전송</button>
+      </div>
+    </div>`;
+  document.body.appendChild(sheet);
+
+  sheet.querySelector(".fc-dim").onclick = closeFactionChat;
+  sheet.querySelector(".fc-close").onclick = closeFactionChat;
+  const input = sheet.querySelector("#fc-input");
+  const send = () => sendFactionChat(input);
+  sheet.querySelector("#fc-send").onclick = send;
+  input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+  return sheet;
+}
+
+function chatMsgHTML(m, prepend = false) {
+  const mine = m.user_id === ME.userId;
+  const nick = mine ? "" : `<div class="fc-nick">${escT(actorName(m.user_id))}</div>`;
+  const t = new Date(m.created_at || Date.now());
+  const hh = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
+  return `<div class="fc-msg ${mine ? "mine" : ""}">
+    ${nick}
+    <div class="fc-row">
+      ${mine ? `<span class="fc-time">${hh}</span>` : ""}
+      <div class="fc-bubble">${escT(m.content)}</div>
+      ${mine ? "" : `<span class="fc-time">${hh}</span>`}
+    </div>
+  </div>`;
+}
+
+async function openFactionChat() {
+  const supabase = window.supabaseClient;
+  if (!ME.faction) {
+    alert("진영 작전회의는 투표한 사람만 입장할 수 있어요. 먼저 투표해 주세요!");
+    return;
+  }
+  const sheet = ensureChatUI();
+  sheet.classList.add("open");
+  CHAT_OPEN = true;
+  window.BattleFX?.haptic("tap");
+
+  // 최근 50개 로드 (RLS가 내 진영만 반환)
+  const list = document.getElementById("fc-list");
+  list.innerHTML = `<div class="fc-loading">불러오는 중…</div>`;
+  const { data: msgs, error } = await supabase
+    .from("faction_chats")
+    .select("id,user_id,content,created_at")
+    .eq("issue_id", window.CURRENT_ISSUE_ID)
+    .eq("faction", ME.faction)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) { list.innerHTML = `<div class="fc-loading">채팅을 불러오지 못했어요.</div>`; return; }
+
+  const rows = (msgs || []).reverse();
+  await fetchFeedNicks(rows.map(m => m.user_id));
+  list.innerHTML = rows.length
+    ? rows.map(m => chatMsgHTML(m)).join("")
+    : `<div class="fc-loading">아직 메시지가 없어요. 첫 작전을 지시하세요!</div>`;
+  list.scrollTop = list.scrollHeight;
+
+  // 실시간 구독 (RLS 덕에 상대 진영 메시지는 아예 수신 안 됨)
+  if (CHAT_CHANNEL) { supabase.removeChannel(CHAT_CHANNEL); CHAT_CHANNEL = null; }
+  CHAT_CHANNEL = supabase
+    .channel("fchat-" + window.CURRENT_ISSUE_ID + "-" + ME.faction)
+    .on("postgres_changes", {
+      event: "INSERT", schema: "public", table: "faction_chats",
+      filter: "issue_id=eq." + window.CURRENT_ISSUE_ID
+    }, async payload => {
+      const m = payload.new;
+      if (m.faction !== ME.faction) return;            // 안전망 (RLS가 1차 차단)
+      if (m.user_id === ME.userId) return;             // 내 메시지는 전송 시 이미 그림
+      await fetchFeedNicks([m.user_id]);
+      const l = document.getElementById("fc-list");
+      if (!l) return;
+      l.querySelector(".fc-loading")?.remove();
+      l.insertAdjacentHTML("beforeend", chatMsgHTML(m));
+      l.scrollTop = l.scrollHeight;
+      window.BattleFX?.haptic("tap");
+    })
+    .subscribe();
+}
+
+function closeFactionChat() {
+  const sheet = document.getElementById("faction-chat");
+  sheet?.classList.remove("open");
+  CHAT_OPEN = false;
+  if (CHAT_CHANNEL) { window.supabaseClient.removeChannel(CHAT_CHANNEL); CHAT_CHANNEL = null; }
+}
+
+async function sendFactionChat(input) {
+  const content = (input.value || "").trim();
+  if (!content) return;
+  const supabase = window.supabaseClient;
+  input.value = "";
+
+  const { data, error } = await supabase.from("faction_chats").insert({
+    issue_id: window.CURRENT_ISSUE_ID,
+    user_id: ME.userId,
+    faction: ME.faction,
+    content
+  }).select("id,user_id,content,created_at").single();
+
+  if (error) {
+    console.error("[fchat] send failed", error);
+    alert("전송에 실패했어요. 진영 투표 상태를 확인해 주세요.");
+    return;
+  }
+  const l = document.getElementById("fc-list");
+  l.querySelector(".fc-loading")?.remove();
+  l.insertAdjacentHTML("beforeend", chatMsgHTML(data));
+  l.scrollTop = l.scrollHeight;
+}
+
+/* ======================
    게임 유틸 (HP 티어 / 전투력 / 에이스 / FX)
 ====================== */
 let ACE = { pro: null, con: null };
@@ -266,8 +407,13 @@ function renderMorale() {
     </div>
     <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>
     ${ME.faction
-      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>`
+      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!
+           <button type="button" class="fc-open-btn" id="fc-open">💬 작전회의</button>
+         </div>`
       : `<div class="bm-mine none">🔒 위에서 투표하면 진영이 정해지고 참전할 수 있어요</div>`}`;
+
+  const openBtn = bar.querySelector("#fc-open");
+  if (openBtn) openBtn.onclick = openFactionChat;
 }
 
 /* ======================
@@ -540,6 +686,17 @@ async function loadComments(issueId) {
     profiles?.forEach(p => profileMap[p.user_id] = p);
   }
 
+  // 작성자들의 실제 투표 진영 → 댓글 진영과 다르면 🕵️ 침투자
+  voteMap = {};
+  if (userIds.length) {
+    const { data: authorVotes } = await supabase
+      .from("votes")
+      .select("user_id,type")
+      .eq("issue_id", issueId)
+      .in("user_id", userIds);
+    authorVotes?.forEach(v => voteMap[v.user_id] = v.type);
+  }
+
   // 좋아요 집계 + 내 좋아요
   likeAgg = {};
   ME.likes = new Map();
@@ -620,12 +777,25 @@ function likeUI(c) {
    - 같은 진영 댓글  → 🛡방어 · 💣지원만 (동일 쿨다운) */
 const ACTION_LABEL = { attack: "⚔공격", defend: "🛡방어", support: "💣지원" };
 
-/* 내 기준 아군/적군 태그 (진영색과 별개로 '나와의 관계'를 명시) */
-function relTag(faction) {
-  if (!ME.faction) return "";
-  return ME.faction === faction
-    ? `<span class="rel-tag ally">아군</span>`
-    : `<span class="rel-tag enemy">적군</span>`;
+/* 침투자: 작성자의 실제 투표 진영 ≠ 댓글 진영 */
+function isInfiltrator(c) {
+  const v = voteMap[c.user_id];
+  return (v === "pro" || v === "con") && v !== c.faction;
+}
+
+/* 내 기준 아군/적군 태그 + 침투자 뱃지
+   침투자의 소속은 '실제 투표 진영' 기준으로 판정 (적진에 써도 적군이면 적군) */
+function relTag(c) {
+  const infil = isInfiltrator(c);
+  const realSide = infil ? voteMap[c.user_id] : c.faction;
+  let html = "";
+  if (ME.faction) {
+    html += ME.faction === realSide
+      ? `<span class="rel-tag ally">아군</span>`
+      : `<span class="rel-tag enemy">적군</span>`;
+  }
+  if (infil) html += `<span class="rel-tag infil">🕵️ 침투</span>`;
+  return html;
 }
 function battleBtn(c, action) {
   const left = cooldownLeft(c.id, action);
@@ -672,7 +842,7 @@ function makeReply(r) {
       <div class="user">
         <span class="user-name">${displayName(r)}</span>
         <span class="level-badge">Lv.${displayLevel(r)}</span>
-        ${relTag(r.faction)}
+        ${relTag(r)}
       </div>
       ${hpBarHTML(r)}
     </div>
@@ -698,7 +868,7 @@ function makeComment(c) {
         <span class="side-icon"></span>
         <span class="user-name">${displayName(c)}</span>
         <span class="level-badge">Lv.${displayLevel(c)}</span>
-        ${relTag(c.faction)}
+        ${relTag(c)}
         ${isAce ? `<span class="ace-badge">👑 에이스</span>` : ``}
         ${c.is_anonymous ? `<span class="anon">익명</span>` : ``}
       </div>

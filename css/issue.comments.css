@@ -1057,3 +1057,86 @@ body.kb-open .battle-input-bar {
 .composer-side.infiltrating .infiltrate-btn {
   background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.3); color: #ddd;
 }
+
+/* 🕵️ 침투자 뱃지 */
+.rel-tag.infil { color: #f5cf6b; border: 1px solid rgba(245,207,107,.6); background: rgba(245,207,107,.1); }
+
+/* ============================================================
+   💬 진영 작전회의 (진영 전용 실시간 채팅)
+============================================================ */
+.fc-open-btn {
+  margin-left: 8px; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 900; cursor: pointer;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.3); color: #fff;
+}
+.faction-chat { position: fixed; inset: 0; z-index: 5000; display: none; }
+.faction-chat.open { display: block; }
+.faction-chat .fc-dim { position: absolute; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(2px); }
+.faction-chat .fc-sheet {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 0; width: 100%; max-width: 480px; height: 72vh;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #101116, #08090c);
+  border: 1px solid #22242e; border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  animation: fcUp .28s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes fcUp { from { transform: translate(-50%, 40px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.faction-chat.pro .fc-sheet { box-shadow: 0 -10px 50px rgba(61,107,255,.25); }
+.faction-chat.con .fc-sheet { box-shadow: 0 -10px 50px rgba(255,77,103,.22); }
+
+.fc-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #1b1d25;
+}
+.fc-title { font-size: 14.5px; font-weight: 900; }
+.faction-chat.pro .fc-title { color: #a9c2ff; }
+.faction-chat.con .fc-title { color: #ffb0bd; }
+.fc-live {
+  font-size: 9px; letter-spacing: 1px; color: #ff5c5c;
+  border: 1px solid #ff5c5c; border-radius: 5px; padding: 1px 5px;
+  animation: liveBlink 1.4s ease-in-out infinite;
+}
+.fc-close {
+  margin-left: auto; width: 30px; height: 30px; border-radius: 50%;
+  background: rgba(255,255,255,.07); border: none; color: #ccc; cursor: pointer;
+}
+.fc-notice {
+  padding: 8px 16px; font-size: 11px; color: #8b90a0; font-weight: 700;
+  background: rgba(255,255,255,.03); border-bottom: 1px solid #16181f;
+}
+.fc-list {
+  flex: 1; overflow-y: auto; padding: 14px 14px 8px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.fc-loading { text-align: center; color: #666; font-size: 12px; padding: 20px 0; }
+.fc-msg { display: flex; flex-direction: column; align-items: flex-start; }
+.fc-msg.mine { align-items: flex-end; }
+.fc-nick { font-size: 11px; color: #8b90a0; font-weight: 800; margin: 0 4px 3px; }
+.fc-row { display: flex; align-items: flex-end; gap: 5px; max-width: 82%; }
+.fc-bubble {
+  padding: 9px 13px; border-radius: 16px;
+  font-size: 13.5px; line-height: 1.5; color: #eee;
+  background: #1b1d26; border: 1px solid #262936;
+  word-break: break-word; white-space: pre-wrap;
+  border-top-left-radius: 5px;
+}
+.fc-msg.mine .fc-bubble { border-radius: 16px; border-top-right-radius: 5px; color: #fff; }
+.faction-chat.pro .fc-msg.mine .fc-bubble { background: linear-gradient(135deg, #2b4fd0, #3d6bff); border-color: #3d6bff; }
+.faction-chat.con .fc-msg.mine .fc-bubble { background: linear-gradient(135deg, #d0324c, #ff4d67); border-color: #ff4d67; }
+.fc-time { font-size: 10px; color: #5c6070; flex-shrink: 0; }
+.fc-inputrow {
+  display: flex; gap: 8px; padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #1b1d25; background: rgba(10,10,14,.9);
+}
+.fc-inputrow input {
+  flex: 1; height: 42px; padding: 0 16px; border-radius: 999px;
+  background: #14161d; border: 1px solid #2a2d3a; color: #fff; font-size: 14px; outline: none;
+}
+.fc-inputrow button {
+  height: 42px; padding: 0 18px; border-radius: 999px; border: none;
+  font-size: 13px; font-weight: 900; color: #fff; cursor: pointer;
+}
+.faction-chat.pro .fc-inputrow button { background: linear-gradient(135deg, #2b4fd0, #3d6bff); }
+.faction-chat.con .fc-inputrow button { background: linear-gradient(135deg, #d0324c, #ff4d67); }
