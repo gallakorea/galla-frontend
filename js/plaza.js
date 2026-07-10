@@ -481,6 +481,9 @@ function renderPlazaPosts(posts) {
             <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">
               <svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg>
             </button>
+            <button class="plaza-share-btn" data-id="${post.id}" data-title="${(post.title || "").replace(/"/g, "&quot;")}" aria-label="공유">
+              <svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg>
+            </button>
           </div>
         </div>
 
@@ -496,6 +499,26 @@ function renderPlazaPosts(posts) {
     plazaListEl.appendChild(li);
   });
 }
+
+/* 공용 공유 (Web Share API + 클립보드 폴백) */
+async function gallaShare(title, path) {
+  const url = new URL(path, location.href).href;
+  if (navigator.share) {
+    try { await navigator.share({ title: title || "GALLA", url }); return; }
+    catch (err) { if (err.name === "AbortError") return; }
+  }
+  try { await navigator.clipboard.writeText(url); alert("링크가 복사되었습니다."); }
+  catch { alert("링크 복사에 실패했습니다."); }
+}
+
+/* 목록 카드 공유 (이벤트 위임) */
+plazaListEl?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".plaza-share-btn");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  gallaShare(btn.dataset.title, `plaza_detail.html?id=${btn.dataset.id}`);
+});
 
 /* 목록 카드 저장 토글 (이벤트 위임) */
 plazaListEl?.addEventListener("click", async (e) => {

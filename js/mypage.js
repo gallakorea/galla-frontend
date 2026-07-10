@@ -390,8 +390,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         showQvCurrent();
     }
 
-    // 공용 북마크 SVG (icon-bookmark 모양) — 전 페이지 통일
+    // 공용 아이콘 SVG — 전 페이지 통일
     const BM_ICON = '<svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg>';
+    const SHARE_ICON = '<svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg>';
 
     function ensureQuickView() {
         let qv = document.getElementById("mpQuickView");
@@ -465,6 +466,20 @@ document.addEventListener("DOMContentLoaded", async () => {
             };
             actWrap.appendChild(b);
         });
+        // 공유 버튼 (항상, 저장 옆)
+        const shareBtn = document.createElement("button");
+        shareBtn.className = "qv-act qv-share";
+        shareBtn.innerHTML = SHARE_ICON + '<span class="qv-act-txt">공유</span>';
+        shareBtn.onclick = async () => {
+            const url = new URL(goHref, location.href).href;
+            if (navigator.share) {
+                try { await navigator.share({ title: title || "GALLA", url }); return; }
+                catch (err) { if (err.name === "AbortError") return; }
+            }
+            try { await navigator.clipboard.writeText(url); alert("링크가 복사되었습니다."); }
+            catch { alert("링크 복사에 실패했습니다."); }
+        };
+        actWrap.appendChild(shareBtn);
 
         const go = qv.querySelector(".qv-go");
         go.textContent = goLabel || "원본으로 이동";

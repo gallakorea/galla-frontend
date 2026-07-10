@@ -351,7 +351,8 @@ body {
 #mpQuickView .qv-act {
     display: inline-flex; align-items: center; justify-content: center; gap: 5px;
 }
-#mpQuickView .qv-act .ic-bookmark { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+#mpQuickView .qv-act .ic-bookmark,
+#mpQuickView .qv-act .ic-share { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 #mpQuickView .qv-act.on .ic-bookmark { fill: #f5c518; }
 
 /* My 광장 서브탭 (내가 쓴 글 / 저장한 글) */

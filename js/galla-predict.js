@@ -259,6 +259,7 @@ function renderMarkets() {
           <button class="mc-act mc-like ${MY_RX[m.id] === 1 ? 'on' : ''}" data-act="like" data-id="${m.id}">👍 <span>${RX_AGG[m.id]?.up || 0}</span></button>
           <button class="mc-act mc-dislike ${MY_RX[m.id] === -1 ? 'on' : ''}" data-act="dislike" data-id="${m.id}">👎 <span>${RX_AGG[m.id]?.down || 0}</span></button>
           <button class="mc-act mc-save ${MY_SAVED[m.id] ? 'on' : ''}" data-act="save" data-id="${m.id}" aria-label="저장"><svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg></button>
+          <button class="mc-act mc-share" data-act="share" data-id="${m.id}" data-title="${escapeHtml(m.question)}" aria-label="공유"><svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg></button>
         </span>
         <span class="mc-go">${closed ? '결과 보기' : '예측하기'} ›</span>
       </div>
@@ -279,9 +280,21 @@ function bindMarketActions(wrap) {
   wrap.querySelectorAll('.mc-act').forEach(btn => {
     btn.onclick = async (e) => {
       e.stopPropagation();
-      if (!ME) { if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html'; return; }
       const id = Number(btn.dataset.id);
       const act = btn.dataset.act;
+
+      if (act === 'share') {
+        const url = new URL(`predict-market.html?id=${id}`, location.href).href;
+        if (navigator.share) {
+          try { await navigator.share({ title: btn.dataset.title || 'GALLA', url }); return; }
+          catch (err) { if (err.name === 'AbortError') return; }
+        }
+        try { await navigator.clipboard.writeText(url); toast('링크가 복사되었습니다.'); }
+        catch { toast('링크 복사에 실패했습니다.'); }
+        return;
+      }
+
+      if (!ME) { if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html'; return; }
       btn.disabled = true;
       try {
         if (act === 'save') {

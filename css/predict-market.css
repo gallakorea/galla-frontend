@@ -222,3 +222,11 @@
 .pmd-save .ic-bookmark { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .pmd-save.on { border-color: #f5c518; color: #f5c518; background: rgba(245,197,24,.1); }
 .pmd-save.on .ic-bookmark { fill: #f5c518; }
+.pmd-share {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 999px;
+  background: #14161d; color: #aeb7c9;
+  border: 1px solid #2a2e3a;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.pmd-share .ic-share { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; }

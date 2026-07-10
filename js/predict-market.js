@@ -55,6 +55,18 @@ document.addEventListener('click', async e => {
   }
 });
 
+/* 마켓 공유 (위임) */
+document.addEventListener('click', async e => {
+  if (!e.target.closest('#pmdShareBtn')) return;
+  const url = new URL(`predict-market.html?id=${marketId}`, location.href).href;
+  if (navigator.share) {
+    try { await navigator.share({ title: MARKET?.question || 'GALLA', url }); return; }
+    catch (err) { if (err.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast('링크가 복사되었습니다.'); }
+  catch { toast('링크 복사에 실패했습니다.'); }
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
   supa = await waitForSupabaseClient();
   const { data } = await supa.auth.getSession();
@@ -158,6 +170,7 @@ function render(){
           : `<span class="pmd-time">⏰ ${timeLeft(m.close_at)}</span>`}
         <span class="pmd-vol">💰 거래량 ${fmt(m.volume)}P</span>
         <button class="pmd-save ${MY_SAVED ? 'on' : ''}" id="pmdSaveBtn"><svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg> <span class="pmd-save-txt">${MY_SAVED ? '저장됨' : '저장'}</span></button>
+        <button class="pmd-share" id="pmdShareBtn"><svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg> 공유</button>
       </div>
     </section>
 
