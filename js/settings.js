@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("emailValue") && ($("emailValue").textContent = user.email || "-");
     $("phoneValue") && ($("phoneValue").textContent = profile.phone || "-");
 
-    const profileImgEl = document.querySelector(".profile-card .profile-img");
+    const profileImgEl = document.getElementById("plAvatar") || document.querySelector(".profile-card .profile-img");
     if (profileImgEl) {
       if (profile.avatar_url) {
         const SUPABASE_URL = supabase.supabaseUrl;
@@ -131,6 +131,60 @@ document.addEventListener("DOMContentLoaded", async () => {
     .eq("user_id", userId);
 
   setText("statComments", commentCount ?? 0);
+
+  /* =====================
+     ⚔️ 전투 전적 (공격/방어/지원) + 오늘 침투
+  ===================== */
+  const { data: myActs } = await supabase
+    .from("comment_actions")
+    .select("action_type")
+    .eq("user_id", userId)
+    .limit(5000);
+  const acts = { attack: 0, defend: 0, support: 0 };
+  (myActs || []).forEach(a => { if (acts[a.action_type] !== undefined) acts[a.action_type]++; });
+  setText("statAtk", acts.attack);
+  setText("statDef", acts.defend);
+  setText("statSup", acts.support);
+
+  const { data: infSt } = await supabase.rpc("infiltration_status");
+  setText("statInfil", infSt?.used ?? 0);
+
+  /* =====================
+     🎮 레벨 · 전투력 · XP 게이지
+     전투력 = 갈라×50 + 댓글×10 + 전투액션×5 + 받은찬반×2
+  ===================== */
+  const levelEl = document.getElementById("plLevel");
+  const { data: lvRow } = await supabase.from("users").select("level").eq("id", userId).single();
+  const level = lvRow?.level || 1;
+  if (levelEl) levelEl.textContent = "Lv." + level;
+
+  const totalActs = acts.attack + acts.defend + acts.support;
+  const proN = Number(document.getElementById("statPro")?.textContent) || 0;
+  const conN = Number(document.getElementById("statCon")?.textContent) || 0;
+  const power = (myIssueCount ?? 0) * 50 + (commentCount ?? 0) * 10 + totalActs * 5 + (proN + conN) * 2;
+  const xpPct = Math.min(99, power % 100); // 다음 레벨 진행도(연출용)
+
+  const powerEl = document.getElementById("plPower");
+  const xpFill = document.getElementById("plXpFill");
+  const xpLabel = document.getElementById("plXpLabel");
+  if (xpLabel) xpLabel.textContent = `다음 레벨까지 ${100 - xpPct}%`;
+  requestAnimationFrame(() => { if (xpFill) xpFill.style.width = xpPct + "%"; });
+
+  /* 숫자 카운트업 연출 (전적 + 전투력) */
+  const countUp = (el, target) => {
+    if (!el) return;
+    const t0 = performance.now(), dur = 900;
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3))).toLocaleString("ko-KR");
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  };
+  countUp(powerEl, power);
+  document.querySelectorAll(".rec-num").forEach(el => {
+    const v = Number(el.textContent) || 0;
+    if (v > 0) countUp(el, v);
+  });
 
   /* =====================
      로그아웃

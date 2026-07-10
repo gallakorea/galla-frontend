@@ -12,181 +12,124 @@
 
 <div id="app">
 
+    
     <!-- HEADER -->
-    <header class="header">
-        <div class="header-inner">
-            <img src="./assets/logo.png" class="logo" onclick="location.href='index.html'">
-            <div class="header-title">설정</div>
-            <div class="header-spacer"></div>
-        </div>
+    <header class="st-header">
+        <button class="st-back" onclick="history.back()" aria-label="뒤로">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="st-title">설정</div>
+        <div class="st-back" style="visibility:hidden"></div>
     </header>
 
+    <main class="st-main">
 
-    <!-- SECTION: 계정 정보 -->
-    <section class="section">
-        <div class="section-title">계정 정보</div>
-
-        <div class="card profile-card" onclick="location.href='account-edit.html'">
-            <img src="./assets/logo.png" class="profile-img">
-            <div class="profile-info">
-                <div class="profile-name" id="profileName">익명의 사용자</div>
-                <div class="profile-desc" id="profileBio">소개 문구가 여기에 표시됩니다.</div>
+    <!-- 🎮 플레이어 카드 -->
+    <section class="pl-card" onclick="location.href='account-edit.html'">
+        <div class="pl-glow"></div>
+        <div class="pl-top">
+            <div class="pl-avatar-ring">
+                <img src="./assets/logo.png" class="pl-avatar profile-img" id="plAvatar">
             </div>
-            <div class="arrow">&gt;</div>
+            <div class="pl-info">
+                <div class="pl-name-row">
+                    <span class="pl-name" id="profileName">익명의 사용자</span>
+                    <span class="pl-lv" id="plLevel">Lv.1</span>
+                </div>
+                <div class="pl-bio" id="profileBio">소개 문구가 없습니다.</div>
+                <div class="pl-edit">프로필 편집 ›</div>
+            </div>
         </div>
-
-        <div class="card list-card">
-            <div class="list-item">
-                <span>이메일</span>
-                <span class="value" id="emailValue">-</span>
+        <div class="pl-xp">
+            <div class="pl-xp-head">
+                <span>⚡ 전투력 <b id="plPower">0</b></span>
+                <span class="pl-xp-next" id="plXpLabel">다음 레벨까지 0%</span>
             </div>
-            <div class="list-item">
-                <span>전화번호</span>
-                <span class="value" id="phoneValue">-</span>
-            </div>
+            <div class="pl-xp-track"><div class="pl-xp-fill" id="plXpFill"></div></div>
         </div>
     </section>
 
+    <!-- ⚔️ 전적 대시보드 -->
+    <div class="st-label">⚔️ 나의 전적</div>
+    <section class="rec-grid">
+        <div class="rec-box"><div class="rec-num" id="statMy">0</div><div class="rec-label">🔥 만든 갈라</div></div>
+        <div class="rec-box"><div class="rec-num pro" id="statPro">0</div><div class="rec-label">👍 받은 찬성</div></div>
+        <div class="rec-box"><div class="rec-num con" id="statCon">0</div><div class="rec-label">👎 받은 반대</div></div>
+        <div class="rec-box"><div class="rec-num" id="statComments">0</div><div class="rec-label">💬 참전 댓글</div></div>
+        <div class="rec-box"><div class="rec-num atk" id="statAtk">0</div><div class="rec-label">⚔ 공격</div></div>
+        <div class="rec-box"><div class="rec-num def" id="statDef">0</div><div class="rec-label">🛡 방어</div></div>
+        <div class="rec-box"><div class="rec-num sup" id="statSup">0</div><div class="rec-label">💣 지원</div></div>
+        <div class="rec-box"><div class="rec-num gold" id="statInfil">0</div><div class="rec-label">🕵️ 오늘 침투</div></div>
+    </section>
 
-    <!-- SECTION: 지갑 / 정산 -->
-    <section class="section">
+    <!-- 성향 카드 -->
+    <section class="card report-card enhanced-galla-type" data-target="galla-type.html">
+        <div class="report-title">나의 갈라치기 성향</div>
+        <div class="galla-type-badge">🔥 논리적 개척자형</div>
+        <div class="ratio-box">
+            <div class="ratio-item"><div class="ratio-label">찬성</div><div class="ratio-value pro">62%</div></div>
+            <div class="ratio-item"><div class="ratio-label">반대</div><div class="ratio-value con">38%</div></div>
+        </div>
+        <div class="categories">선호 주제: 연애·결혼 / 직장·경력 / 생활·일상</div>
+        <div class="type-desc">새로운 이슈에 도전하며, 감정보다 논리를 우선하는 스타일입니다.</div>
+        <div class="galla-tags"><span>#논리적</span><span>#새로운이슈성향</span><span>#고집은약간</span><span>#직설화법</span></div>
+        <div class="arrow more">&gt;</div>
+    </section>
+
+    <!-- 🎮 게임 메뉴 타일 -->
+    <div class="st-label">🎮 성장 · 도전</div>
+    <section class="tile-grid">
+        <div class="menu-tile grade" data-target="grade.html">
+            <span class="tile-ic">🏆</span>
+            <span class="tile-name">내 등급</span>
+            <span class="tile-sub">예언가의 길</span>
+        </div>
+        <div class="menu-tile quest" data-target="quest.html">
+            <span class="tile-ic">🎯</span>
+            <span class="tile-name">데일리 미션</span>
+            <span class="tile-sub">오늘의 보상 받기</span>
+        </div>
+    </section>
+
+    <!-- 💰 지갑/정산/기부: 2단계 오픈 시 hidden 제거로 복원 -->
+    <section class="section" hidden>
         <div class="section-title">지갑 / 정산</div>
-
         <div class="card wallet-card">
-            <div class="wallet-row">
-                <span>총 후원 수익</span>
-                <span class="num" id="revenueTotal">₩ 0</span>
-            </div>
-            <div class="wallet-row">
-                <span>출금 가능 금액</span>
-                <span class="num" id="revenueAvailable">₩ 0</span>
-            </div>
-
+            <div class="wallet-row"><span>총 후원 수익</span><span class="num" id="revenueTotal">₩ 0</span></div>
+            <div class="wallet-row"><span>출금 가능 금액</span><span class="num" id="revenueAvailable">₩ 0</span></div>
             <button class="primary-btn" onclick="location.href='withdraw.html'">출금 요청</button>
         </div>
-
-        <div class="card single-link" data-target="settlement.html">
-            정산 내역 <span class="arrow">&gt;</span>
-        </div>
+        <div class="card single-link" data-target="settlement.html">정산 내역 <span class="arrow">&gt;</span></div>
     </section>
-
-
-    <!-- SECTION: 기부 현황 -->
-    <section class="section">
+    <section class="section" hidden>
         <div class="section-title">기부 현황</div>
-
         <div class="card wallet-card">
-            <div class="wallet-row">
-                <span>내가 후원한 금액</span>
-                <span class="num" id="donationTotal">₩ 0</span>
-            </div>
-
+            <div class="wallet-row"><span>내가 후원한 금액</span><span class="num" id="donationTotal">₩ 0</span></div>
             <button class="primary-btn" onclick="location.href='donation.html'">기부 사용처 보기</button>
         </div>
     </section>
 
-
-    <!-- SECTION: 활동 통계 -->
-    <section class="section">
-        <div class="section-title">나의 활동 통계</div>
-
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div class="stat-num" id="statMy">0</div>
-                <div class="stat-label">🔥 만든 갈라</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-num" id="statPro">0</div>
-                <div class="stat-label">👍 찬성 수</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-num" id="statCon">0</div>
-                <div class="stat-label">👎 반대 수</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-num" id="statComments">0</div>
-                <div class="stat-label">💬 댓글 수</div>
-            </div>
-        </div>
-
-        <div class="card report-card enhanced-galla-type" data-target="galla-type.html">
-            <div class="report-title">나의 갈라치기 성향</div>
-            <div class="galla-type-badge">🔥 논리적 개척자형</div>
-
-            <div class="ratio-box">
-                <div class="ratio-item">
-                    <div class="ratio-label">찬성</div>
-                    <div class="ratio-value pro">62%</div>
-                </div>
-                <div class="ratio-item">
-                    <div class="ratio-label">반대</div>
-                    <div class="ratio-value con">38%</div>
-                </div>
-            </div>
-
-            <div class="categories">
-                선호 주제: 연애·결혼 / 직장·경력 / 생활·일상
-            </div>
-
-            <div class="type-desc">
-                새로운 이슈에 도전하며, 감정보다 논리를 우선하는 스타일입니다.
-            </div>
-
-            <div class="galla-tags">
-                <span>#논리적</span>
-                <span>#새로운이슈성향</span>
-                <span>#고집은약간</span>
-                <span>#직설화법</span>
-            </div>
-
-            <div class="arrow more">&gt;</div>
-        </div>
-
+    <!-- 계정 -->
+    <div class="st-label">👤 계정</div>
+    <section class="st-list">
+        <div class="st-item"><span class="st-ic">✉️</span> 이메일 <span class="st-val" id="emailValue">-</span></div>
+        <div class="st-item"><span class="st-ic">📱</span> 전화번호 <span class="st-val" id="phoneValue">-</span></div>
+        <div class="st-item" data-target="change-password.html"><span class="st-ic">🔑</span> 비밀번호 변경 <span class="st-arrow">›</span></div>
+        <div class="st-item" data-target="login-history.html"><span class="st-ic">🕐</span> 로그인 기록 <span class="st-arrow">›</span></div>
     </section>
 
-
-    <!-- SECTION: 등급 -->
-    <section class="section">
-        <div class="section-title">등급 · 성장</div>
-
-        <div class="card single-link" data-target="grade.html">
-            내 등급 보기 <span class="arrow">&gt;</span>
-        </div>
+    <!-- 앱 정보 -->
+    <div class="st-label">ℹ️ 앱 정보 · 고객센터</div>
+    <section class="st-list">
+        <div class="st-item" data-target="support.html"><span class="st-ic">💬</span> 문의하기 <span class="st-arrow">›</span></div>
+        <div class="st-item"><span class="st-ic">📦</span> 버전 정보 <span class="st-val">v1.0.0</span></div>
+        <div class="st-item" data-target="terms.html"><span class="st-ic">📄</span> 서비스 이용약관 <span class="st-arrow">›</span></div>
+        <div class="st-item" data-target="privacy.html"><span class="st-ic">🔒</span> 개인정보 처리방침 <span class="st-arrow">›</span></div>
     </section>
 
-    <!-- SECTION: 데일리 미션 -->
-    <section class="section">
-        <div class="section-title">데일리 미션</div>
+    <button class="st-logout" id="logoutBtn">로그아웃</button>
 
-        <div class="card single-link" data-target="quest.html">
-            오늘의 미션 보기 <span class="arrow">&gt;</span>
-        </div>
-    </section>
-
-
-    <!-- SECTION: 보안 -->
-    <section class="section">
-        <div class="section-title">보안</div>
-
-        <div class="card list-card">
-            <div class="list-item" data-target="change-password.html">비밀번호 변경 <span class="arrow">&gt;</span></div>
-            <div class="list-item" data-target="login-history.html">로그인 기록 <span class="arrow">&gt;</span></div>
-            <div class="list-item logout" id="logoutBtn">로그아웃</div>
-        </div>
-    </section>
-
-
-    <!-- SECTION: 고객센터 -->
-    <section class="section">
-        <div class="section-title">앱 정보 / 고객센터</div>
-
-        <div class="card list-card">
-            <div class="list-item" data-target="support.html">문의하기 <span class="arrow">&gt;</span></div>
-            <div class="list-item">버전 정보 <span class="value">v1.0.0</span></div>
-            <div class="list-item" data-target="terms.html">서비스 이용약관 <span class="arrow">&gt;</span></div>
-            <div class="list-item" data-target="privacy.html">개인정보 처리방침 <span class="arrow">&gt;</span></div>
-        </div>
-    </section>
+    </main>
 
 
     <!-- BOTTOM NAVIGATION -->
