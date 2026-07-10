@@ -985,3 +985,44 @@ body.kb-open .battle-input-bar {
   100% { opacity: 0; transform: translateX(-50%) translateY(-18px); }
 }
 @keyframes fxWarnShake { 0%,100%{margin-left:0;} 25%{margin-left:-6px;} 50%{margin-left:6px;} 75%{margin-left:-3px;} }
+
+/* ============================================================
+   UX 명확화: 아군/적군 태그 · 내 진영 배지 · 쿨다운 · 진영 보더
+============================================================ */
+
+/* 아군/적군 관계 태그 */
+.rel-tag {
+  font-size: 9.5px; font-weight: 900; letter-spacing: .5px;
+  padding: 1px 6px; border-radius: 6px;
+}
+.rel-tag.ally  { color: #7cf5c8; border: 1px solid rgba(53,224,160,.6); background: rgba(53,224,160,.1); }
+.rel-tag.enemy { color: #ff9b9b; border: 1px solid rgba(255,92,92,.6); background: rgba(255,92,92,.1); }
+
+/* 유닛 좌측 진영 보더 (한눈에 진영 구분) */
+.comment[data-side="pro"], .reply[data-side="pro"] { border-left: 3px solid rgba(77,163,255,.55); }
+.comment[data-side="con"], .reply[data-side="con"] { border-left: 3px solid rgba(255,92,92,.55); }
+
+/* 내 진영 안내줄 (사기 게이지 아래) */
+.bm-mine {
+  margin-top: 9px; text-align: center;
+  font-size: 12px; font-weight: 800;
+  padding: 7px 10px; border-radius: 9px;
+}
+.bm-mine.pro { color: #a8d2ff; background: rgba(51,86,255,.14); border: 1px solid rgba(77,163,255,.4); }
+.bm-mine.con { color: #ffc2c2; background: rgba(255,79,110,.12); border: 1px solid rgba(255,92,92,.4); }
+.bm-mine.none { color: #8b90a0; background: rgba(255,255,255,.05); border: 1px dashed #3a3d47; }
+.bm-mine b { color: #fff; }
+
+/* 쿨다운 중 전투 버튼 */
+.action-attack.cooldown, .action-defend.cooldown, .action-support.cooldown {
+  opacity: .45; cursor: default;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 잠긴 진영 버튼 */
+.side-btn.side-locked { opacity: .35; }
+.side-btn .side-mine {
+  font-size: 9px; font-weight: 900; letter-spacing: .5px;
+  padding: 1px 5px; border-radius: 5px; margin-left: 4px;
+  background: rgba(255,210,90,.2); border: 1px solid rgba(255,210,90,.5); color: #ffdf7a;
+}

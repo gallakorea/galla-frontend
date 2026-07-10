@@ -21,8 +21,19 @@ const ME = {
   userId: null,
   faction: null,      // 'pro' | 'con' — 이 이슈에 대한 내 투표(= 내 진영). 없으면 참전 불가
   likes: new Map(),   // comment_id -> 1 | -1
-  actions: new Set()  // `${comment_id}:${action_type}`
+  actions: new Map()  // `${comment_id}:${action_type}` -> 마지막 액션 epoch ms (쿨다운)
 };
+
+/* 전투 쿨다운 (서버 battle_action의 c_cooldown과 동일하게 유지) */
+const BATTLE_COOLDOWN_MS = 60 * 1000;
+function cooldownLeft(commentId, action) {
+  const t = ME.actions.get(`${commentId}:${action}`);
+  if (!t) return 0;
+  return Math.max(0, Math.ceil((t + BATTLE_COOLDOWN_MS - Date.now()) / 1000));
+}
+function markAction(commentId, action) {
+  ME.actions.set(`${commentId}:${action}`, Date.now());
+}
 
 let allRows = [];     // 이 이슈의 모든 댓글 행
 let replyMap = {};    // parent_id -> [reply rows]
@@ -58,15 +69,19 @@ export async function initCommentSystem(issueId) {
     return;
   }
 
-  // 진영 기본값: 내가 투표한 진영
-  if (window.MY_VOTE_TYPE === "pro" || window.MY_VOTE_TYPE === "con") {
-    const sel = document.getElementById("battle-side-select");
-    if (sel) sel.value = window.MY_VOTE_TYPE;
-    document.querySelectorAll(".side-btn").forEach(b =>
-      b.classList.toggle("active", b.dataset.side === window.MY_VOTE_TYPE));
-  }
-
   await loadComments(issueId);
+
+  // 글쓰기 진영 = 내 투표 진영으로 고정 (혼란 방지). 미투표면 자유 선택.
+  if (ME.faction) {
+    const sel = document.getElementById("battle-side-select");
+    if (sel) sel.value = ME.faction;
+    document.querySelectorAll(".side-btn").forEach(b => {
+      const mine = b.dataset.side === ME.faction;
+      b.classList.toggle("active", mine);
+      b.classList.toggle("side-locked", !mine);
+      if (mine) b.innerHTML = (ME.faction === "pro" ? "👍 선택" : "👎 선택") + ' <span class="side-mine">내 진영</span>';
+    });
+  }
   computeAce();
   renderSide("pro");
   renderSide("con");
@@ -183,7 +198,10 @@ function renderMorale() {
       <div class="bm-con" style="width:${100 - proPct}%"></div>
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
-    <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>`;
+    <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>
+    ${ME.faction
+      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>`
+      : `<div class="bm-mine none">🔒 위에서 투표하면 진영이 정해지고 참전할 수 있어요</div>`}`;
 }
 
 /* ======================
@@ -472,15 +490,19 @@ async function loadComments(issueId) {
     });
   }
 
-  // 내가 이미 수행한 전투 액션 (중복 방지 표시)
-  ME.actions = new Set();
+  // 내 전투 액션 최근 시각 (쿨다운 계산용) — key `${comment_id}:${action_type}` → epoch ms
+  ME.actions = new Map();
   if (ME.userId && ids.length) {
     const { data: acts } = await supabase
       .from("comment_actions")
-      .select("comment_id,action_type")
+      .select("comment_id,action_type,created_at")
       .eq("user_id", ME.userId)
-      .in("comment_id", ids);
-    acts?.forEach(a => ME.actions.add(`${a.comment_id}:${a.action_type}`));
+      .in("comment_id", ids)
+      .order("created_at", { ascending: false });
+    acts?.forEach(a => {
+      const k = `${a.comment_id}:${a.action_type}`;
+      if (!ME.actions.has(k)) ME.actions.set(k, new Date(a.created_at).getTime());
+    });
   }
 
   // 댓글/대댓글 분류
@@ -528,22 +550,50 @@ function likeUI(c) {
 
 /* 진영 규칙 (서버 battle_action RPC와 동일)
    - 내 진영 없음(미투표) → 참전 불가
-   - 반대 진영 댓글 → ⚔공격만
-   - 같은 진영 댓글  → 🛡방어 · 💣지원만 */
+   - 반대 진영 댓글 → ⚔공격만 (60초 쿨다운 후 재공격 가능)
+   - 같은 진영 댓글  → 🛡방어 · 💣지원만 (동일 쿨다운) */
+const ACTION_LABEL = { attack: "⚔공격", defend: "🛡방어", support: "💣지원" };
+
+/* 내 기준 아군/적군 태그 (진영색과 별개로 '나와의 관계'를 명시) */
+function relTag(faction) {
+  if (!ME.faction) return "";
+  return ME.faction === faction
+    ? `<span class="rel-tag ally">아군</span>`
+    : `<span class="rel-tag enemy">적군</span>`;
+}
+function battleBtn(c, action) {
+  const left = cooldownLeft(c.id, action);
+  const cd = left > 0 ? ` cooldown" data-cd="${action}" data-until="${ME.actions.get(c.id + ":" + action) + BATTLE_COOLDOWN_MS}` : "";
+  const label = left > 0 ? `${ACTION_LABEL[action]} ${left}s` : ACTION_LABEL[action];
+  return `<span class="action-${action}${cd}" data-id="${c.id}">${label}</span>`;
+}
 function battleButtonsFor(c) {
   const my = ME.faction;
-  const done = (a) => (ME.actions.has(c.id + ":" + a) ? "done" : "");
-
   if (!my) {
     return `<span class="action-locked" data-id="${c.id}">🔒 진영 선택 후 참전</span>`;
   }
   if (my !== c.faction) {
-    return `<span class="action-attack ${done("attack")}" data-id="${c.id}">⚔공격</span>`;
+    return battleBtn(c, "attack");
   }
-  return `
-    <span class="action-defend ${done("defend")}" data-id="${c.id}">🛡방어</span>
-    <span class="action-support ${done("support")}" data-id="${c.id}">💣지원</span>`;
+  return battleBtn(c, "defend") + battleBtn(c, "support");
 }
+
+/* 쿨다운 카운트다운 티커 (1초마다 버튼 라벨 갱신, 끝나면 활성화) */
+setInterval(() => {
+  document.querySelectorAll("[data-cd]").forEach(el => {
+    const until = Number(el.dataset.until);
+    const left = Math.ceil((until - Date.now()) / 1000);
+    const action = el.dataset.cd;
+    if (left > 0) {
+      el.textContent = `${ACTION_LABEL[action]} ${left}s`;
+    } else {
+      el.textContent = ACTION_LABEL[action];
+      el.classList.remove("cooldown");
+      delete el.dataset.cd;
+      delete el.dataset.until;
+    }
+  });
+}, 1000);
 
 function makeReply(r) {
   const prefix = r.battle_action
@@ -556,6 +606,7 @@ function makeReply(r) {
       <div class="user">
         <span class="user-name">${displayName(r)}</span>
         <span class="level-badge">Lv.${displayLevel(r)}</span>
+        ${relTag(r.faction)}
       </div>
       ${hpBarHTML(r)}
     </div>
@@ -581,6 +632,7 @@ function makeComment(c) {
         <span class="side-icon"></span>
         <span class="user-name">${displayName(c)}</span>
         <span class="level-badge">Lv.${displayLevel(c)}</span>
+        ${relTag(c.faction)}
         ${isAce ? `<span class="ace-badge">👑 에이스</span>` : ``}
         ${c.is_anonymous ? `<span class="anon">익명</span>` : ``}
       </div>
@@ -712,11 +764,12 @@ function requireLogin() {
 }
 
 /* 서버 battle_action 거부 사유 → 사용자 메시지 */
-function battleReasonMsg(reason) {
+function battleReasonMsg(reason, data) {
   switch (reason) {
     case "no_faction": return "먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요.";
     case "same_faction": return "같은 진영은 공격할 수 없어요.";
     case "cross_faction": return "같은 진영 댓글만 방어·지원할 수 있어요.";
+    case "cooldown": return `쿨다운 중이에요. ${data?.wait ?? 60}초 후 다시 시도하세요.`;
     case "already": return "이미 이 댓글에 같은 행동을 했어요.";
     case "unauthorized": return "로그인이 필요합니다.";
     default: return null;
@@ -753,8 +806,9 @@ function bindEvents() {
       if (type === "attack" && ME.faction === targetSide) { alert("같은 진영은 공격할 수 없어요. 상대 진영을 공격하세요."); return; }
       if (type === "defend" && ME.faction !== targetSide) { alert("같은 진영 댓글만 방어할 수 있어요."); return; }
 
-      if (ME.actions.has(e.target.dataset.id + ":" + type)) {
-        alert(type === "attack" ? "이미 공격한 댓글입니다." : "이미 방어한 댓글입니다.");
+      const cdLeft = cooldownLeft(Number(e.target.dataset.id), type);
+      if (cdLeft > 0) {
+        alert((type === "attack" ? "재공격" : "재방어") + `까지 ${cdLeft}초 남았어요.`);
         return;
       }
 
@@ -786,8 +840,9 @@ function bindEvents() {
       if (!ME.faction) { alert("먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요."); return; }
       if (ME.faction !== supSide) { alert("같은 진영 댓글만 지원할 수 있어요."); return; }
 
-      if (ME.actions.has(id + ":support")) {
-        alert("이미 지원한 댓글입니다.");
+      const supLeft = cooldownLeft(id, "support");
+      if (supLeft > 0) {
+        alert(`재지원까지 ${supLeft}초 남았어요.`);
         return;
       }
 
@@ -795,13 +850,16 @@ function bindEvents() {
         p_comment_id: id, p_action: "support"
       });
       if (error || !data?.ok) {
-        alert(battleReasonMsg(data?.reason) || "지원에 실패했습니다.");
+        alert(battleReasonMsg(data?.reason, data) || "지원에 실패했습니다.");
         if (!data?.reason) console.error("[support] failed", error || data);
         return;
       }
 
-      ME.actions.add(id + ":support");
-      e.target.classList.add("done");
+      markAction(id, "support");
+      e.target.classList.add("cooldown");
+      e.target.dataset.cd = "support";
+      e.target.dataset.until = String(Date.now() + BATTLE_COOLDOWN_MS);
+      e.target.textContent = `${ACTION_LABEL.support} 60s`;
 
       // 해당 유닛 HP 즉시 반영 + 힐 FX + 플로팅 텍스트
       const unit = e.target.closest(".reply") || e.target.closest(".comment");
@@ -889,13 +947,15 @@ function bindEvents() {
     btn.innerText = isOpen ? "답글 보기" : "답글 숨기기";
   });
 
-  // 🔵🔴 진영 선택 버튼
+  // 🔵🔴 진영 선택 버튼 — 투표했다면 내 진영으로 잠금
   document.querySelectorAll(".side-btn").forEach(btn => {
     btn.addEventListener("click", () => {
+      if (ME.faction && btn.dataset.side !== ME.faction) {
+        alert(`이 이슈에서 당신은 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영입니다. 진영은 투표로 정해져요.`);
+        return;
+      }
       document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-      // 진영 선택은 "내가 어느 편으로 글을 쓸지"만 결정한다.
-      // 공격/방어는 중립적으로 모든 댓글에 열려 있으므로 재렌더 불필요.
       document.getElementById("battle-side-select").value = btn.dataset.side;
     });
   });
@@ -977,7 +1037,7 @@ function bindEvents() {
           setTimeout(() => reloadAndRender(), 900);
         } else {
           if (bd && !bd.ok && bd.reason !== "already") {
-            const m = battleReasonMsg(bd.reason);
+            const m = battleReasonMsg(bd.reason, bd);
             if (m) alert(m);
           }
           await reloadAndRender();
