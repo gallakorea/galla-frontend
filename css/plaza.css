@@ -760,3 +760,14 @@ html, body {
   display: inline-flex; align-items: center; color: #8a8f99;
 }
 .plaza-share-btn .ic-share { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+
+/* 목록 카드 업/다운 투표 (레딧식) */
+.pv-vote { display: inline-flex; align-items: center; gap: 4px; }
+.pv-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; color: #8a8f99;
+}
+.pv-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+.pv-btn.pv-up.on { color: #4da3ff; }
+.pv-btn.pv-down.on { color: #ff5c5c; }
+.pv-score { min-width: 14px; text-align: center; font-weight: 700; color: #cfd4de; }

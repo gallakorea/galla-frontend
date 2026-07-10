@@ -434,17 +434,19 @@ async function fetchPlazaPosts() {
 
   const posts = data || [];
 
-  // 내 저장 상태 로드 (로그인 시)
+  // 내 저장/투표 상태 로드 (로그인 시)
   MY_PLAZA_SAVED = {};
+  MY_PLAZA_VOTES = {};
   const { data: sess } = await supabase.auth.getSession();
   PLAZA_ME = sess?.session?.user || null;
   if (PLAZA_ME && posts.length) {
-    const { data: bms } = await supabase
-      .from("plaza_bookmarks")
-      .select("post_id")
-      .eq("user_id", PLAZA_ME.id)
-      .in("post_id", posts.map(p => p.id));
+    const ids = posts.map(p => p.id);
+    const [{ data: bms }, { data: votes }] = await Promise.all([
+      supabase.from("plaza_bookmarks").select("post_id").eq("user_id", PLAZA_ME.id).in("post_id", ids),
+      supabase.from("plaza_votes").select("post_id, vote").eq("user_id", PLAZA_ME.id).in("post_id", ids)
+    ]);
     (bms || []).forEach(b => { MY_PLAZA_SAVED[b.post_id] = true; });
+    (votes || []).forEach(v => { MY_PLAZA_VOTES[v.post_id] = v.vote; });
   }
 
   renderPlazaPosts(posts);
@@ -452,6 +454,7 @@ async function fetchPlazaPosts() {
 
 let PLAZA_ME = null;
 let MY_PLAZA_SAVED = {};
+let MY_PLAZA_VOTES = {};
 
 function renderPlazaPosts(posts) {
   plazaListEl.innerHTML = "";
@@ -475,7 +478,15 @@ function renderPlazaPosts(posts) {
             ${post.nickname} · ${post.category} · ${timeAgoK(post.created_at)}
           </div>
           <div class="post-stats">
-            <span>👍 ${post.up_count || 0}</span>
+            <span class="pv-vote">
+              <button class="pv-btn pv-up ${MY_PLAZA_VOTES[post.id] === 1 ? "on" : ""}" data-id="${post.id}" data-v="1" aria-label="추천">
+                <svg viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg>
+              </button>
+              <span class="pv-score" data-id="${post.id}">${post.score || 0}</span>
+              <button class="pv-btn pv-down ${MY_PLAZA_VOTES[post.id] === -1 ? "on" : ""}" data-id="${post.id}" data-v="-1" aria-label="비추천">
+                <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+            </span>
             <span>💬 ${cmtCount}</span>
             <span>조회 ${post.view_count || 0}</span>
             <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">
@@ -518,6 +529,43 @@ plazaListEl?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
   gallaShare(btn.dataset.title, `plaza_detail.html?id=${btn.dataset.id}`);
+});
+
+/* 목록 카드 업/다운 투표 (레딧식, 이벤트 위임) */
+let plazaVoting = false;
+plazaListEl?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".pv-btn");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (plazaVoting) return;
+
+  const { data: sess } = await supabase.auth.getSession();
+  const session = sess?.session;
+  if (!session?.user) {
+    if (confirm("투표하려면 로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    return;
+  }
+
+  const id = btn.dataset.id;
+  const val = Number(btn.dataset.v);
+  const scoreEl = plazaListEl.querySelector(`.pv-score[data-id="${id}"]`);
+  const wrap = btn.closest(".pv-vote");
+  const upB = wrap.querySelector(".pv-up"), downB = wrap.querySelector(".pv-down");
+
+  plazaVoting = true;
+  try {
+    const { data, error } = await supabase.rpc("vote_plaza_post", { p_post_id: id, p_value: val });
+    if (error) { console.error(error); alert("투표 처리 실패"); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row && typeof row.score === "number" && scoreEl) scoreEl.textContent = String(row.score);
+    const mv = row?.my_vote ?? 0;
+    MY_PLAZA_VOTES[id] = mv;
+    upB.classList.toggle("on", mv === 1);
+    downB.classList.toggle("on", mv === -1);
+  } finally {
+    plazaVoting = false;
+  }
 });
 
 /* 목록 카드 저장 토글 (이벤트 위임) */

@@ -839,7 +839,10 @@ body[data-page="search"] .header-inner {
 .gn-act span { font-variant-numeric: tabular-nums; }
 .gn-act.on.like { border-color: #3356ff; color: #6d8bff; background: rgba(51,86,255,.12); }
 .gn-act.on.dislike { border-color: #ff4f6e; color: #ff6f86; background: rgba(255,79,110,.12); }
-.gn-act.on.save { border-color: #6d4bff; color: #b7a6f0; background: rgba(120,90,240,.12); }
+.gn-act.on.save { border-color: #f5c518; color: #f5c518; background: rgba(245,197,24,.1); }
+.gn-act.gn-icon { padding: 9px 13px; }
+.gn-act .ic-bookmark, .gn-act .ic-share { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.gn-act.on.save .ic-bookmark { fill: #f5c518; }
 
 /* 지금 뜨는 — 갈라 그룹(예측/이슈) */
 .tr-group { margin-bottom: 20px; }

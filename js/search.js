@@ -607,11 +607,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function openGallaNews(id) {
     let n = GALLA_CACHE[id];
     if (!n) {
-      // 딥링크(?gn=) 등 캐시 미스 → 직접 조회
+      // 딥링크(?gn=) 등 캐시 미스 → 기사 + 참여수(좋아요/싫어요/댓글/저장) 조회
       const { data } = await supabase.from("galla_news")
         .select("id,title,summary,category,hero_image,source_count,published_at")
         .eq("id", id).maybeSingle();
       if (!data) return;
+
+      const [{ count: cCount }, { data: rx }] = await Promise.all([
+        supabase.from("galla_news_comments").select("id", { count: "exact", head: true }).eq("news_id", id),
+        supabase.from("galla_news_reactions").select("value").eq("news_id", id)
+      ]);
+      const likes = (rx || []).filter(r => r.value === 1).length;
+      const dislikes = (rx || []).filter(r => r.value === -1).length;
+      let myReact = 0, saved = false;
+      if (ME) {
+        const [{ data: mine }, { data: bm }] = await Promise.all([
+          supabase.from("galla_news_reactions").select("value").eq("news_id", id).eq("user_id", ME.id).maybeSingle(),
+          supabase.from("galla_news_bookmarks").select("news_id").eq("news_id", id).eq("user_id", ME.id).maybeSingle()
+        ]);
+        myReact = mine?.value || 0; saved = !!bm;
+      }
+      Object.assign(data, { cCount: cCount || 0, likes, dislikes, myReact, saved });
       GALLA_CACHE[id] = data;
       n = data;
     }
@@ -671,14 +687,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       <button class="gn-act ${n.myReact === 1 ? "on like" : ""}" data-act="like">👍 <span>${n.likes}</span></button>
       <button class="gn-act ${n.myReact === -1 ? "on dislike" : ""}" data-act="dislike">👎 <span>${n.dislikes}</span></button>
       <button class="gn-act" data-act="comment">💬 <span>${n.cCount}</span></button>
-      <button class="gn-act ${n.saved ? "on save" : ""}" data-act="save">${n.saved ? "🔖 저장됨" : "🔖 저장"}</button>`;
+      <button class="gn-act gn-icon ${n.saved ? "on save" : ""}" data-act="save" aria-label="저장">${GN_BM_ICON}</button>
+      <button class="gn-act gn-icon" data-act="share" aria-label="공유">${GN_SHARE_ICON}</button>`;
     bar.querySelectorAll(".gn-act").forEach(b => b.addEventListener("click", () => {
       const act = b.dataset.act;
       if (act === "like") reactGn(1);
       else if (act === "dislike") reactGn(-1);
       else if (act === "save") saveGn();
+      else if (act === "share") shareGn();
       else if (act === "comment") document.getElementById("gn-comments")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }));
+  }
+  const GN_BM_ICON = '<svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg>';
+  const GN_SHARE_ICON = '<svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg>';
+  async function shareGn() {
+    const n = GALLA_CACHE[GN_OPEN]; if (!n) return;
+    const url = new URL(`search.html?gn=${GN_OPEN}`, location.href).href;
+    if (navigator.share) {
+      try { await navigator.share({ title: n.title || "GALLA 뉴스", url }); return; }
+      catch (err) { if (err.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(url); alert("링크가 복사되었습니다."); }
+    catch { alert("링크 복사에 실패했습니다."); }
   }
   async function reactGn(val) {
     if (needLogin()) return;

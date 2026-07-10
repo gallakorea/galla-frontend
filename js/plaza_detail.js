@@ -444,33 +444,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   const commentInput = document.getElementById("commentInput");
   const commentSubmitBtn = document.getElementById("commentSubmitBtn");
 
-  // Helper function for vote state loading
+  // Helper function for vote state loading (PostgREST 직접 조회, 엣지함수 JWT 이슈 회피)
   async function loadVoteState() {
     if (isVotingNow) return; // 🔒 투표 중에는 서버 동기화로 UI 덮어쓰기 금지
 
     const session = await getSessionSafe();
 
-    const res = await fetch(
-      `${SUPABASE_URL}/functions/v1/plaza-vote`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(session?.access_token
-            ? { Authorization: `Bearer ${session.access_token}` }
-            : {}),
-        },
-        body: JSON.stringify({ post_id: postId }),
-        cache: "no-store",
-      }
-    );
-
-    if (!res.ok) {
-      console.error("vote state load failed", await res.text());
-      return;
+    const { data: post } = await supabase
+      .from("plaza_posts").select("score").eq("id", postId).maybeSingle();
+    let mv = 0;
+    if (session?.user) {
+      const { data: v } = await supabase
+        .from("plaza_votes").select("vote")
+        .eq("post_id", postId).eq("user_id", session.user.id).maybeSingle();
+      mv = v?.vote ?? 0;
     }
 
-    const data = await res.json();
+    const data = { score: post?.score ?? 0, my_vote: mv };
 
     myVote = data.my_vote ?? 0;
     lastRenderedVote = myVote;
@@ -562,15 +552,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      const { data, error } = await supabase.functions.invoke(
-        "plaza-vote",
-        {
-          body: { post_id: postId, vote: voteValue },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      const { data: rows, error } = await supabase.rpc("vote_plaza_post", {
+        p_post_id: postId, p_value: voteValue
+      });
 
       if (error) {
         console.error(error);
@@ -578,7 +562,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      // 서버 값으로 최종 보정 (차이 있을 때만)
+      const data = Array.isArray(rows) ? rows[0] : rows;
+      // 서버 값으로 최종 보정
       if (typeof data?.score === "number") {
         voteScoreEl.textContent = String(data.score);
       }
