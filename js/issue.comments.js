@@ -66,10 +66,121 @@ export async function initCommentSystem(issueId) {
   }
 
   await loadComments(issueId);
+  computeAce();
   renderSide("pro");
   renderSide("con");
   renderWarDashboard();
+  renderMorale();
   bindEvents();
+}
+
+/* ======================
+   게임 유틸 (HP 티어 / 전투력 / 에이스 / FX)
+====================== */
+let ACE = { pro: null, con: null };
+
+function hpTier(hp) {
+  if (hp <= 0) return "ko";
+  if (hp <= 30) return "lo";
+  if (hp <= 60) return "mid";
+  return "hi";
+}
+function combatPower(c) {
+  const agg = likeAgg[c.id] || { up: 0 };
+  return (c.attack_count || 0) + (c.defense_count || 0) + (c.support_count || 0) + (agg.up || 0);
+}
+function computeAce() {
+  ACE = { pro: null, con: null };
+  ["pro", "con"].forEach(side => {
+    let best = null;
+    allRows.forEach(r => {
+      if (r.faction !== side || r.hp <= 0) return;
+      if (!best || r.hp > best.hp || (r.hp === best.hp && combatPower(r) > combatPower(best))) best = r;
+    });
+    if (best) ACE[side] = best.id;
+  });
+}
+
+/* HP 바 마크업 (티어 색 + 격파 상태) */
+function hpBarHTML(c) {
+  const hp = Math.max(0, c.hp | 0);
+  const tier = hpTier(c.hp);
+  return `
+    <div class="hp-wrap ${tier === "ko" ? "ko" : ""}">
+      <div class="hp-bar hp-${tier}">
+        <div class="hp-ghost" style="width:${hp}%"></div>
+        <div class="hp-fill" style="width:${hp}%"></div>
+      </div>
+      <span class="hp-text">${hp <= 0 ? "💀 격파" : "HP " + hp}</span>
+    </div>`;
+}
+
+/* 플로팅 전투 텍스트 (-12 / +8 / +12 CRIT 등) */
+function spawnCombatText(unit, text, kind) {
+  if (!unit) return;
+  const el = document.createElement("div");
+  el.className = "combat-float " + kind;
+  el.textContent = text;
+  unit.appendChild(el);
+  setTimeout(() => el.remove(), 1100);
+}
+/* 피격/힐 임팩트 */
+function hitFx(unit, kind) {
+  if (!unit) return;
+  unit.classList.remove("fx-hit", "fx-heal");
+  void unit.offsetWidth; // reflow로 애니메이션 리셋
+  unit.classList.add(kind === "heal" ? "fx-heal" : "fx-hit");
+  setTimeout(() => unit.classList.remove("fx-hit", "fx-heal"), 600);
+}
+/* HP 바 즉시 갱신(격파 반영) */
+function applyHpToUnit(unit, hp) {
+  if (!unit) return;
+  const clamped = Math.max(0, hp | 0);
+  unit.dataset.hp = clamped;
+  const bar = unit.querySelector(".hp-bar");
+  const fill = unit.querySelector(".hp-fill");
+  const ghost = unit.querySelector(".hp-ghost");
+  const text = unit.querySelector(".hp-text");
+  if (fill) fill.style.width = clamped + "%";
+  if (ghost) setTimeout(() => { ghost.style.width = clamped + "%"; }, 260);
+  if (text) text.textContent = clamped <= 0 ? "💀 격파" : "HP " + clamped;
+  if (bar) { bar.className = "hp-bar hp-" + hpTier(hp); }
+  const wrap = unit.querySelector(".hp-wrap");
+  if (wrap) wrap.classList.toggle("ko", clamped <= 0);
+  if (clamped <= 0) unit.classList.add("ko");
+}
+
+/* 진영 사기 게이지 (전투력 tug-of-war) */
+function renderMorale() {
+  const host = document.querySelector(".comment-war-header");
+  if (!host) return;
+  let bar = document.getElementById("battle-morale");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "battle-morale";
+    bar.className = "battle-morale";
+    host.appendChild(bar);
+  }
+  let pro = 0, con = 0;
+  allRows.forEach(r => {
+    const p = Math.max(0, r.hp) + combatPower(r) * 4;
+    if (r.faction === "pro") pro += p; else if (r.faction === "con") con += p;
+  });
+  const tot = pro + con || 1;
+  const proPct = Math.round(pro / tot * 100);
+  const lead = proPct > 50 ? "pro" : proPct < 50 ? "con" : "even";
+  bar.innerHTML = `
+    <div class="bm-top">
+      <span class="bm-side pro ${lead === "pro" ? "lead" : ""}">👍 찬성 전투력 ${Math.round(pro)}</span>
+      <span class="bm-vs">VS</span>
+      <span class="bm-side con ${lead === "con" ? "lead" : ""}">${Math.round(con)} 반대 전투력 👎</span>
+    </div>
+    <div class="bm-track">
+      <div class="bm-pro" style="width:${proPct}%"></div>
+      <div class="bm-con" style="width:${100 - proPct}%"></div>
+      <div class="bm-needle" style="left:${proPct}%"></div>
+    </div>
+    <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>`;
 }
 
 /* ======================
@@ -180,17 +291,15 @@ function makeReply(r) {
   const prefix = r.battle_action
     ? `<b>${r.battle_action === "attack" ? "⚔ 공격" : "🛡 방어"}</b> `
     : "";
+  const ko = r.hp <= 0 ? " ko" : "";
   return `
-  <div class="reply" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
+  <div class="reply${ko}" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
     <div class="head">
       <div class="user">
         <span class="user-name">${displayName(r)}</span>
         <span class="level-badge">Lv.${displayLevel(r)}</span>
       </div>
-      <div class="hp-wrap">
-        <div class="hp-bar"><div class="hp-fill" style="width:${r.hp}%"></div></div>
-        <span class="hp-text">HP ${r.hp}</span>
-      </div>
+      ${hpBarHTML(r)}
     </div>
     <div class="body">└ ${prefix}${renderCommentText(r.content)}</div>
     <div class="reply-actions" data-side="${r.faction}">
@@ -211,19 +320,20 @@ function makeComment(c) {
     ? `<span class="action-defend ${ME.actions.has(c.id + ":defend") ? "done" : ""}" data-id="${c.id}">🛡방어</span>`
     : `<span class="action-attack ${ME.actions.has(c.id + ":attack") ? "done" : ""}" data-id="${c.id}">⚔공격</span>`;
 
+  const ko = c.hp <= 0 ? " ko" : "";
+  const isAce = ACE[c.faction] === c.id;
+  const power = combatPower(c);
   return `
-    <div class="comment" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
+    <div class="comment${ko}${isAce ? " ace" : ""}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
     <div class="head">
       <div class="user">
         <span class="side-icon"></span>
         <span class="user-name">${displayName(c)}</span>
         <span class="level-badge">Lv.${displayLevel(c)}</span>
+        ${isAce ? `<span class="ace-badge">👑 에이스</span>` : ``}
         ${c.is_anonymous ? `<span class="anon">익명</span>` : ``}
       </div>
-      <div class="hp-wrap">
-        <div class="hp-bar"><div class="hp-fill" style="width:${c.hp}%"></div></div>
-        <span class="hp-text">HP ${c.hp}</span>
-      </div>
+      ${hpBarHTML(c)}
     </div>
 
     <div class="body">${renderCommentText(c.content)}</div>
@@ -232,6 +342,7 @@ function makeComment(c) {
       ${likeUI(c)}
       ${battleButtons}
       <span class="action-support ${ME.actions.has(c.id + ":support") ? "done" : ""}" data-id="${c.id}">💣지원</span>
+      <span class="cp-chip" title="전투력">⚡${power}</span>
       <span class="action-more">⋯</span>
     </div>
 
@@ -337,9 +448,11 @@ function renderWarDashboard() {
 
 async function reloadAndRender() {
   await loadComments(window.CURRENT_ISSUE_ID);
+  computeAce();
   renderSide("pro");
   renderSide("con");
   renderWarDashboard();
+  renderMorale();
 }
 
 function requireLogin() {
@@ -412,22 +525,13 @@ function bindEvents() {
       ME.actions.add(id + ":support");
       e.target.classList.add("done");
 
-      // 해당 유닛 HP 즉시 반영 + 글로우
+      // 해당 유닛 HP 즉시 반영 + 힐 FX + 플로팅 텍스트
       const unit = e.target.closest(".reply") || e.target.closest(".comment");
       if (unit) {
-        unit.dataset.hp = data.hp;
-        const fill = unit.querySelector(".hp-fill");
-        const text = unit.querySelector(".hp-text");
-        if (fill) fill.style.width = data.hp + "%";
-        if (text) text.textContent = "HP " + data.hp;
-
-        const bar = unit.querySelector(".hp-bar");
-        if (bar) {
-          const glow = document.createElement("div");
-          glow.className = "hp-support-glow";
-          bar.appendChild(glow);
-          setTimeout(() => glow.remove(), 900);
-        }
+        applyHpToUnit(unit, data.hp);
+        hitFx(unit, "heal");
+        spawnCombatText(unit, "+12 지원!", "heal");
+        renderMorale();
       }
       return;
     }
@@ -548,13 +652,29 @@ function bindEvents() {
         }
 
         // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
-        await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
+        const { data: bd } = await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
 
         BATTLE_MODE = null;
         input.value = "";
         document.querySelectorAll(".side-btn").forEach(b => (b.style.display = ""));
 
-        await reloadAndRender();
+        // 게임 FX: 대상 유닛에 데미지/힐 연출 후 리로드
+        const targetUnit = document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`);
+        if (bd?.ok && targetUnit) {
+          applyHpToUnit(targetUnit, bd.hp);
+          if (type === "attack") {
+            hitFx(targetUnit, "hit");
+            const crit = bd.hp <= 0;
+            spawnCombatText(targetUnit, crit ? "-12 격파!" : "-12", crit ? "crit" : "dmg");
+          } else {
+            hitFx(targetUnit, "heal");
+            spawnCombatText(targetUnit, "+8 방어", "heal");
+          }
+          renderMorale();
+          setTimeout(() => reloadAndRender(), 900);
+        } else {
+          await reloadAndRender();
+        }
         return;
       }
 

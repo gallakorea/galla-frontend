@@ -26,10 +26,12 @@
 
 /* ================= COMMENT ================= */
 .comment{
+  position:relative;
   border-radius:8px;border:1px solid rgba(255,255,255,.15);
   padding:8px;margin-bottom:6px;
   background:linear-gradient(180deg,#111,#020202)
 }
+.reply{position:relative;}
 .billboard .comment{
   background:linear-gradient(180deg,#1a1a1a,#020202)
 }
@@ -724,3 +726,93 @@ body.kb-open .battle-input-bar {
   opacity: 0.35;
   pointer-events: auto; /* 클릭 시 '이미 참여' 안내를 위해 유지 */
 }
+
+/* ============================================================
+   댓글 대전 게임 모드 강화 (HP 티어 / 격파 / FX / 사기게이지)
+============================================================ */
+
+/* HP 바 확대 + 티어 색 + 데미지 잔상(ghost) */
+.hp-wrap { position: relative; }
+.hp-bar {
+  width: 74px; height: 9px; background: #1a1c22;
+  border: 1px solid #2a2d36; border-radius: 6px; overflow: hidden;
+}
+.hp-ghost {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: rgba(255,255,255,.35);
+  transition: width .5s ease .25s;
+}
+.hp-fill {
+  position: relative; height: 100%; border-radius: 5px;
+  transition: width .35s cubic-bezier(.22,1,.36,1);
+  box-shadow: none;
+}
+.hp-bar.hp-hi  .hp-fill { background: linear-gradient(90deg,#22e39a,#12c46f); }
+.hp-bar.hp-mid .hp-fill { background: linear-gradient(90deg,#ffd15c,#ff9f45); }
+.hp-bar.hp-lo  .hp-fill { background: linear-gradient(90deg,#ff7a5c,#ff3b3b); }
+.hp-bar.hp-lo  { animation: hpLowPulse 1s ease-in-out infinite; }
+@keyframes hpLowPulse { 0%,100%{ box-shadow:0 0 0 rgba(255,59,59,0);} 50%{ box-shadow:0 0 10px rgba(255,59,59,.7);} }
+.hp-wrap.ko .hp-text { color: #ff5c5c; font-weight: 800; }
+
+/* 격파(KO) 유닛 */
+.comment.ko, .reply.ko {
+  filter: grayscale(.7) brightness(.72);
+  position: relative;
+}
+.comment.ko::after {
+  content: "💀 격파됨"; position: absolute; top: 10px; right: 12px;
+  font-size: 12px; font-weight: 900; color: #ff5c5c;
+  border: 1.5px solid #ff5c5c; border-radius: 6px; padding: 2px 8px;
+  transform: rotate(-8deg); background: rgba(0,0,0,.4); letter-spacing: .5px;
+}
+
+/* 피격 / 힐 임팩트 */
+@keyframes fxShake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-5px);} 40%{transform:translateX(5px);} 60%{transform:translateX(-3px);} 80%{transform:translateX(3px);} }
+.fx-hit { animation: fxShake .45s; box-shadow: inset 0 0 0 2px rgba(255,60,60,.55); border-radius: 12px; }
+.fx-heal { box-shadow: inset 0 0 0 2px rgba(40,220,150,.55); border-radius: 12px; }
+
+/* 플로팅 전투 텍스트 */
+.combat-float {
+  position: absolute; top: 8px; right: 14px; z-index: 20;
+  font-size: 18px; font-weight: 900; pointer-events: none;
+  text-shadow: 0 2px 6px rgba(0,0,0,.7);
+  animation: floatUp 1.1s cubic-bezier(.2,.8,.3,1) forwards;
+}
+.combat-float.dmg  { color: #ff6a6a; }
+.combat-float.crit { color: #ffd23b; font-size: 22px; }
+.combat-float.heal { color: #35e0a0; }
+@keyframes floatUp { 0%{opacity:0; transform:translateY(6px) scale(.7);} 15%{opacity:1; transform:translateY(-2px) scale(1.15);} 100%{opacity:0; transform:translateY(-34px) scale(1);} }
+
+/* 전투력 칩 */
+.cp-chip {
+  font-size: 11px; font-weight: 800; color: #ffd977;
+  background: rgba(255,196,0,.12); border: 1px solid rgba(255,196,0,.3);
+  padding: 1px 7px; border-radius: 8px; margin-left: 2px;
+}
+
+/* 에이스 */
+.comment.ace { border: 1px solid rgba(255,210,90,.5); box-shadow: 0 0 20px rgba(255,200,60,.15); }
+.ace-badge {
+  font-size: 10.5px; font-weight: 900; color: #ffdf7a;
+  background: linear-gradient(135deg, rgba(255,200,60,.25), rgba(255,160,40,.15));
+  border: 1px solid rgba(255,200,60,.55); padding: 1px 7px; border-radius: 8px;
+}
+
+/* 진영 사기 게이지 (tug of war) */
+.battle-morale { margin-top: 14px; }
+.bm-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; font-weight: 800; margin-bottom: 7px; }
+.bm-side.pro { color: #6db4ff; } .bm-side.con { color: #ff8a8a; }
+.bm-side.lead { text-shadow: 0 0 10px currentColor; }
+.bm-vs { color: #777; font-size: 10px; }
+.bm-track {
+  position: relative; height: 16px; border-radius: 9px; overflow: hidden;
+  display: flex; background: #14161d; border: 1px solid #24262f;
+}
+.bm-pro { height: 100%; background: linear-gradient(90deg,#2f6bd6,#4da3ff); transition: width .7s cubic-bezier(.22,1,.36,1); }
+.bm-con { height: 100%; background: linear-gradient(90deg,#ff6767,#c93a3a); transition: width .7s cubic-bezier(.22,1,.36,1); }
+.bm-needle {
+  position: absolute; top: -3px; bottom: -3px; width: 3px; background: #fff;
+  transform: translateX(-50%); border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255,255,255,.8); transition: left .7s cubic-bezier(.22,1,.36,1);
+}
+.bm-status { margin-top: 7px; text-align: center; font-size: 12px; font-weight: 800; color: #cfd4e0; }
