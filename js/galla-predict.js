@@ -181,7 +181,28 @@ async function loadMarkets() {
     outs?.forEach(o => (OUTCOMES_BY_MARKET[o.market_id] ||= []).push(o));
     Object.values(OUTCOMES_BY_MARKET).forEach(a => a.sort((x, y) => x.sort_order - y.sort_order));
   }
+  await loadReactionsAndSaves(ids);
   renderMarkets();
+}
+
+/* 좋아요/싫어요 집계 + 내 반응 + 저장 상태 */
+let RX_AGG = {};       // market_id → {up, down}
+let MY_RX = {};        // market_id → 1|-1
+let MY_SAVED = {};     // market_id → true
+async function loadReactionsAndSaves(ids) {
+  RX_AGG = {}; MY_RX = {}; MY_SAVED = {};
+  if (!ids.length) return;
+  const [rxRes, myRxRes, savedRes] = await Promise.all([
+    supa.from('market_reactions').select('market_id,value').in('market_id', ids),
+    ME ? supa.from('market_reactions').select('market_id,value').eq('user_id', ME.id).in('market_id', ids) : Promise.resolve({ data: [] }),
+    ME ? supa.from('market_bookmarks').select('market_id').eq('user_id', ME.id).in('market_id', ids) : Promise.resolve({ data: [] })
+  ]);
+  (rxRes.data || []).forEach(r => {
+    const a = RX_AGG[r.market_id] ||= { up: 0, down: 0 };
+    if (r.value === 1) a.up++; else a.down++;
+  });
+  (myRxRes.data || []).forEach(r => { MY_RX[r.market_id] = r.value; });
+  (savedRes.data || []).forEach(b => { MY_SAVED[b.market_id] = true; });
 }
 function outcomePct(o) { return Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100); }
 
@@ -236,11 +257,72 @@ function renderMarkets() {
         <span>💰 ${fmt(m.volume)}P</span>
         <span class="mc-go">${closed ? '결과 보기' : '예측하기'} ›</span>
       </div>
+      <div class="mc-actions">
+        <button class="mc-act mc-like ${MY_RX[m.id] === 1 ? 'on' : ''}" data-act="like" data-id="${m.id}">👍 <span>${RX_AGG[m.id]?.up || 0}</span></button>
+        <button class="mc-act mc-dislike ${MY_RX[m.id] === -1 ? 'on' : ''}" data-act="dislike" data-id="${m.id}">👎 <span>${RX_AGG[m.id]?.down || 0}</span></button>
+        <button class="mc-act mc-save ${MY_SAVED[m.id] ? 'on' : ''}" data-act="save" data-id="${m.id}">🔖 <span>${MY_SAVED[m.id] ? '저장됨' : '저장'}</span></button>
+      </div>
     </div>`;
   }).join('');
 
   wrap.querySelectorAll('.market-card').forEach(c => {
-    c.onclick = () => location.href = `predict-market.html?id=${c.dataset.id}`;
+    c.onclick = (e) => {
+      if (e.target.closest('.mc-actions')) return; // 액션 버튼은 이동 막음
+      location.href = `predict-market.html?id=${c.dataset.id}`;
+    };
+  });
+  bindMarketActions(wrap);
+}
+
+/* 카드 액션: 좋아요/싫어요/저장 (이벤트 위임) */
+function bindMarketActions(wrap) {
+  wrap.querySelectorAll('.mc-act').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      if (!ME) { if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html'; return; }
+      const id = Number(btn.dataset.id);
+      const act = btn.dataset.act;
+      btn.disabled = true;
+      try {
+        if (act === 'save') {
+          if (MY_SAVED[id]) {
+            await supa.from('market_bookmarks').delete().eq('market_id', id).eq('user_id', ME.id);
+            delete MY_SAVED[id];
+          } else {
+            await supa.from('market_bookmarks').insert({ market_id: id, user_id: ME.id });
+            MY_SAVED[id] = true;
+          }
+          const s = btn.querySelector('span');
+          s.textContent = MY_SAVED[id] ? '저장됨' : '저장';
+          btn.classList.toggle('on', !!MY_SAVED[id]);
+        } else {
+          const val = act === 'like' ? 1 : -1;
+          const mine = MY_RX[id];
+          const agg = RX_AGG[id] ||= { up: 0, down: 0 };
+          if (mine === val) {
+            await supa.from('market_reactions').delete().eq('market_id', id).eq('user_id', ME.id);
+            delete MY_RX[id];
+            if (val === 1) agg.up--; else agg.down--;
+          } else {
+            await supa.from('market_reactions').upsert({ market_id: id, user_id: ME.id, value: val }, { onConflict: 'market_id,user_id' });
+            if (mine === 1) agg.up--; else if (mine === -1) agg.down--;
+            if (val === 1) agg.up++; else agg.down++;
+            MY_RX[id] = val;
+          }
+          // 두 버튼 갱신
+          const card = btn.closest('.market-card');
+          const likeB = card.querySelector('.mc-like'), disB = card.querySelector('.mc-dislike');
+          likeB.querySelector('span').textContent = agg.up;
+          disB.querySelector('span').textContent = agg.down;
+          likeB.classList.toggle('on', MY_RX[id] === 1);
+          disB.classList.toggle('on', MY_RX[id] === -1);
+        }
+      } catch (err) {
+        console.error('[predict action]', err);
+      } finally {
+        btn.disabled = false;
+      }
+    };
   });
 }
 

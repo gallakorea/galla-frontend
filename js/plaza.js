@@ -432,8 +432,26 @@ async function fetchPlazaPosts() {
     return;
   }
 
-  renderPlazaPosts(data || []);
+  const posts = data || [];
+
+  // 내 저장 상태 로드 (로그인 시)
+  MY_PLAZA_SAVED = {};
+  const { data: sess } = await supabase.auth.getSession();
+  PLAZA_ME = sess?.session?.user || null;
+  if (PLAZA_ME && posts.length) {
+    const { data: bms } = await supabase
+      .from("plaza_bookmarks")
+      .select("post_id")
+      .eq("user_id", PLAZA_ME.id)
+      .in("post_id", posts.map(p => p.id));
+    (bms || []).forEach(b => { MY_PLAZA_SAVED[b.post_id] = true; });
+  }
+
+  renderPlazaPosts(posts);
 }
+
+let PLAZA_ME = null;
+let MY_PLAZA_SAVED = {};
 
 function renderPlazaPosts(posts) {
   plazaListEl.innerHTML = "";
@@ -448,6 +466,7 @@ function renderPlazaPosts(posts) {
     li.className = "plaza-post";
     const thumb = post.thumbnail || extractFirstImage(post.body);
     const cmtCount = post.plaza_comments?.[0]?.count ?? 0;
+    const saved = !!MY_PLAZA_SAVED[post.id];
     li.innerHTML = `
       <a href="plaza_detail.html?id=${post.id}" class="plaza-link">
         <div class="post-body">
@@ -459,6 +478,10 @@ function renderPlazaPosts(posts) {
             <span>👍 ${post.up_count || 0}</span>
             <span>💬 ${cmtCount}</span>
             <span>조회 ${post.view_count || 0}</span>
+            <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">
+              <svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
+              <span class="save-txt">${saved ? "저장됨" : "저장"}</span>
+            </button>
           </div>
         </div>
 
@@ -474,6 +497,39 @@ function renderPlazaPosts(posts) {
     plazaListEl.appendChild(li);
   });
 }
+
+/* 목록 카드 저장 토글 (이벤트 위임) */
+plazaListEl?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".plaza-save-btn");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  const { data: sess } = await supabase.auth.getSession();
+  const user = sess?.session?.user;
+  if (!user) {
+    if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    return;
+  }
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  try {
+    if (MY_PLAZA_SAVED[id]) {
+      await supabase.from("plaza_bookmarks").delete().eq("post_id", id).eq("user_id", user.id);
+      delete MY_PLAZA_SAVED[id];
+    } else {
+      await supabase.from("plaza_bookmarks").insert({ post_id: id, user_id: user.id });
+      MY_PLAZA_SAVED[id] = true;
+    }
+    btn.classList.toggle("on", !!MY_PLAZA_SAVED[id]);
+    const txt = btn.querySelector(".save-txt");
+    if (txt) txt.textContent = MY_PLAZA_SAVED[id] ? "저장됨" : "저장";
+  } catch (err) {
+    console.error("[plaza save]", err);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 
 /* =========================
