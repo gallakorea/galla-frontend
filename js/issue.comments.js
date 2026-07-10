@@ -39,7 +39,6 @@ let allRows = [];     // 이 이슈의 모든 댓글 행
 let replyMap = {};    // parent_id -> [reply rows]
 let likeAgg = {};     // comment_id -> { up, down }
 let profileMap = {};  // user_id -> { nickname, level }
-let voteMap = {};     // user_id -> 'pro'|'con' (이 이슈 투표 = 실제 소속)
 
 let eventsBound = false;
 
@@ -686,17 +685,6 @@ async function loadComments(issueId) {
     profiles?.forEach(p => profileMap[p.user_id] = p);
   }
 
-  // 작성자들의 실제 투표 진영 → 댓글 진영과 다르면 🕵️ 침투자
-  voteMap = {};
-  if (userIds.length) {
-    const { data: authorVotes } = await supabase
-      .from("votes")
-      .select("user_id,type")
-      .eq("issue_id", issueId)
-      .in("user_id", userIds);
-    authorVotes?.forEach(v => voteMap[v.user_id] = v.type);
-  }
-
   // 좋아요 집계 + 내 좋아요
   likeAgg = {};
   ME.likes = new Map();
@@ -777,25 +765,18 @@ function likeUI(c) {
    - 같은 진영 댓글  → 🛡방어 · 💣지원만 (동일 쿨다운) */
 const ACTION_LABEL = { attack: "⚔공격", defend: "🛡방어", support: "💣지원" };
 
-/* 침투자: 작성자의 실제 투표 진영 ≠ 댓글 진영 */
-function isInfiltrator(c) {
-  const v = voteMap[c.user_id];
-  return (v === "pro" || v === "con") && v !== c.faction;
-}
-
-/* 내 기준 아군/적군 태그 + 침투자 뱃지
-   침투자의 소속은 '실제 투표 진영' 기준으로 판정 (적진에 써도 적군이면 적군) */
+/* 내 기준 아군/적군 태그 — 댓글이 달린 진영 기준.
+   ⚠️ 침투 글은 그 진영의 평범한 글로 보여야 한다(위장 유지) — 남에게 정체 노출 금지.
+   단, 본인 눈에만 '내 침투 글' 표시(자기 글 추적용). */
 function relTag(c) {
-  const infil = isInfiltrator(c);
-  const realSide = infil ? voteMap[c.user_id] : c.faction;
-  let html = "";
-  if (ME.faction) {
-    html += ME.faction === realSide
-      ? `<span class="rel-tag ally">아군</span>`
-      : `<span class="rel-tag enemy">적군</span>`;
+  // 내 침투 글: 아군/적군 대신 침투 표시만 (본인에게만 보임)
+  if (ME.userId && c.user_id === ME.userId && ME.faction && c.faction !== ME.faction) {
+    return `<span class="rel-tag infil">🕵️ 내 침투 글</span>`;
   }
-  if (infil) html += `<span class="rel-tag infil">🕵️ 침투</span>`;
-  return html;
+  if (!ME.faction) return "";
+  return ME.faction === c.faction
+    ? `<span class="rel-tag ally">아군</span>`
+    : `<span class="rel-tag enemy">적군</span>`;
 }
 function battleBtn(c, action) {
   const left = cooldownLeft(c.id, action);
