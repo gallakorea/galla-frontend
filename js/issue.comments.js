@@ -304,14 +304,39 @@ function syncUnitHp(commentId, oldHp, newHp) {
   const shown = Number(unit.dataset.hp);
   if (shown === newHp) return; // 이미 로컬 연출로 반영됨
   applyHpToUnit(unit, newHp);
+
+  const FX = window.BattleFX;
+  const row = allRows.find(r => r.id === commentId);
+  const isMine = !!(ME.userId && row && row.user_id === ME.userId);
+  const isMySide = !!(ME.faction && row && row.faction === ME.faction);
+
   if (newHp < oldHp) {
     hitFx(unit, "hit");
     spawnCombatText(unit, String(newHp - oldHp), newHp <= 0 ? "crit" : "dmg");
+    if (FX) FX.burstAt(unit, newHp <= 0 ? "ko" : "attack");
+    // ⚠ 내 댓글 피격 경고 (실시간)
+    if (isMine && FX) {
+      FX.vignette("danger");
+      FX.banner(newHp <= 0 ? "💀 내 댓글이 격파당했다!" : "⚠ 내 댓글이 공격받고 있다!", "warn");
+      FX.haptic(newHp <= 0 ? "ko" : "warn");
+    } else if (isMySide && newHp <= 0 && FX) {
+      FX.vignette("danger");
+      FX.haptic("warn");
+    }
     if (newHp <= 0) showKoBanner(commentId);
   } else {
     hitFx(unit, "heal");
     spawnCombatText(unit, "+" + (newHp - oldHp), "heal");
-    if (oldHp <= 0 && newHp > 0) spawnCombatText(unit, "✨ 부활!", "heal");
+    if (FX) FX.burstAt(unit, "support");
+    const revived = oldHp <= 0 && newHp > 0;
+    if (revived) spawnCombatText(unit, "✨ 부활!", "heal");
+    // 🎉 내 댓글을 아군이 지켜줌 (실시간 환호)
+    if (isMine && FX) {
+      FX.vignette("heal");
+      FX.banner(revived ? "✨ 아군이 내 댓글을 부활시켰다!" : "🛡 아군이 내 댓글을 지켜줬다!", "cheer");
+      FX.confetti(40);
+      FX.haptic("cheer");
+    }
   }
 }
 
@@ -784,6 +809,13 @@ function bindEvents() {
         applyHpToUnit(unit, data.hp);
         hitFx(unit, "heal");
         spawnCombatText(unit, "+12 지원!", "heal");
+        const FX = window.BattleFX;
+        if (FX) {
+          FX.burstAt(unit, "support");
+          FX.shockwave(unit, "rgba(53,224,160,.9)");
+          FX.haptic("heal");
+          if (Number(unit.dataset.hp) >= 100) { FX.banner("💪 풀피 지원!", "cheer"); }
+        }
         bumpCombo();
         renderMorale();
         renderHonors();
@@ -916,14 +948,28 @@ function bindEvents() {
         const targetUnit = document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`);
         if (bd?.ok && targetUnit) {
           applyHpToUnit(targetUnit, bd.hp);
+          const FX = window.BattleFX;
           if (type === "attack") {
             hitFx(targetUnit, "hit");
             const crit = bd.hp <= 0;
             spawnCombatText(targetUnit, crit ? "-12 격파!" : "-12", crit ? "crit" : "dmg");
+            if (FX) {
+              FX.shockwave(targetUnit, "rgba(255,80,50,.9)");
+              FX.burstAt(targetUnit, crit ? "ko" : "attack");
+              FX.haptic(crit ? "ko" : "attack");
+              if (crit) FX.flash("rgba(255,40,40,.18)", 240);
+            }
             if (crit) showKoBanner(targetId);
           } else {
             hitFx(targetUnit, "heal");
             spawnCombatText(targetUnit, "+8 방어", "heal");
+            if (FX) {
+              FX.burstAt(targetUnit, "defend");
+              FX.shockwave(targetUnit, "rgba(120,190,255,.9)");
+              FX.banner("🛡 방어 성공!", "cheer");
+              FX.confetti(46);
+              FX.haptic("cheer");
+            }
           }
           bumpCombo();
           renderMorale();
@@ -956,6 +1002,16 @@ function bindEvents() {
         console.error("[comment] insert failed", error);
         alert("댓글 등록에 실패했습니다.");
         return;
+      }
+
+      // ✨ 참전 연출: 입력창에서 진영색 빛 폭발
+      const FX = window.BattleFX;
+      if (FX) {
+        FX.burstAt(input, side === "pro" ? "pro" : "con");
+        FX.shockwave(input, side === "pro" ? "rgba(77,163,255,.85)" : "rgba(255,92,92,.85)");
+        FX.flash(side === "pro" ? "rgba(77,163,255,.12)" : "rgba(255,92,92,.12)");
+        FX.banner(side === "pro" ? "👍 찬성 진영 참전!" : "👎 반대 진영 참전!", "info");
+        FX.haptic("tap");
       }
 
       input.value = "";
