@@ -191,55 +191,105 @@ function renderAllStats(data) {
   renderAiSummary(data.ai_summary);
 }
 
+/* ============================================================
+   인터랙티브 인포그래픽 유틸
+   - giReveal: 스크롤 진입 시 .gi-in 부여 → CSS 전환/카운트업 트리거
+   - giCountUp: 숫자 카운트업 애니메이션
+============================================================ */
+let GI_OBSERVER = null;
+function giObserver() {
+  if (GI_OBSERVER) return GI_OBSERVER;
+  GI_OBSERVER = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const el = e.target;
+      el.classList.add("gi-in");
+      el.querySelectorAll("[data-count]").forEach(giCountUp);
+      GI_OBSERVER.unobserve(el);
+    });
+  }, { threshold: 0.25 });
+  return GI_OBSERVER;
+}
+function giReveal(el) {
+  if (!el) return;
+  // 이미 화면 안이면 즉시, 아니면 관찰
+  const r = el.getBoundingClientRect();
+  if (r.top < window.innerHeight && r.bottom > 0) {
+    el.classList.add("gi-in");
+    el.querySelectorAll("[data-count]").forEach(giCountUp);
+  } else {
+    giObserver().observe(el);
+  }
+}
+function giCountUp(node) {
+  const target = parseFloat(node.dataset.count) || 0;
+  const dur = 900, t0 = performance.now();
+  const suffix = node.dataset.suffix || "";
+  (function step(now) {
+    const p = Math.min(1, (now - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    node.textContent = Math.round(target * eased) + suffix;
+    if (p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
 function renderGender(gender) {
   const root = qs("#gender-dual");
   if (!root || !gender) return;
+  const male = gender.male, female = gender.female;
+  const lead = male >= female ? "남성" : "여성";
+  const leadPct = Math.max(male, female);
 
   root.innerHTML = `
-    <div class="dual-bar-labels">
-      <span>남성 ${gender.male}%</span>
-      <span>여성 ${gender.female}%</span>
-    </div>
-    <div class="dual-bar">
-      <div class="dual-left" style="width:${gender.male}%"></div>
-      <div class="dual-right" style="width:${gender.female}%"></div>
-    </div>
-  `;
+    <div class="gi-gender gi-card">
+      <div class="gi-donut" style="--giT:${male}">
+        <div class="gi-donut-center">
+          <b data-count="${leadPct}" data-suffix="%">0%</b>
+          <span>${lead} 우세</span>
+        </div>
+      </div>
+      <div class="gi-legend">
+        <div class="gi-leg male"><span class="gi-dot"></span>남성 <b data-count="${male}" data-suffix="%">0%</b></div>
+        <div class="gi-leg female"><span class="gi-dot"></span>여성 <b data-count="${female}" data-suffix="%">0%</b></div>
+      </div>
+    </div>`;
+  giReveal(root.querySelector(".gi-gender"));
 }
 
 function renderAge(age) {
   const root = qs("#age-chart");
   if (!root || !age) return;
-
-  root.innerHTML = "";
-  age.forEach(row => {
-    const el = document.createElement("div");
-    el.className = "age-row";
-    el.innerHTML = `
-      <div class="age-header">
-        <span>${row.label}</span>
-        <span>${row.percent}%</span>
-      </div>
-      <div class="age-bar">
-        <div class="age-fill" style="width:${row.percent}%"></div>
-      </div>
-    `;
-    root.appendChild(el);
-  });
+  const max = Math.max(...age.map(a => a.percent), 1);
+  root.innerHTML = `<div class="gi-card gi-bars">${age.map((row, i) => `
+    <div class="gi-bar-row" style="--giD:${i * 90}ms">
+      <div class="gi-bar-head"><span>${escapeText(row.label)}</span><b data-count="${row.percent}" data-suffix="%">0%</b></div>
+      <div class="gi-track"><div class="gi-fill age" style="--giW:${Math.round(row.percent / max * 100)}%"></div></div>
+    </div>`).join("")}</div>`;
+  giReveal(root.querySelector(".gi-bars"));
 }
 
 function renderRegion(region) {
   const root = qs("#region-heatmap");
   if (!root || !region) return;
-
-  root.innerHTML = "";
-  region.forEach(r => {
-    const el = document.createElement("div");
-    el.className = "region-cell";
-    el.style.background = heatColor(r.percent);
-    el.innerHTML = `${r.name}<br/>${r.percent}%`;
-    root.appendChild(el);
+  const sorted = [...region].sort((a, b) => b.percent - a.percent);
+  const max = Math.max(...region.map(r => r.percent), 1);
+  root.className = "region-heatmap gi-card gi-heat";
+  root.innerHTML = sorted.map((r, i) => {
+    const intensity = r.percent / max;
+    return `<button class="gi-heat-cell" style="--giA:${intensity.toFixed(2)}; --giD:${i * 70}ms" data-name="${escapeText(r.name)}" data-pct="${r.percent}">
+      ${i === 0 ? '<span class="gi-heat-crown">👑</span>' : ""}
+      <span class="gi-heat-name">${escapeText(r.name)}</span>
+      <b class="gi-heat-pct" data-count="${r.percent}" data-suffix="%">0%</b>
+    </button>`;
+  }).join("");
+  // 탭하면 강조
+  root.querySelectorAll(".gi-heat-cell").forEach(c => {
+    c.addEventListener("click", () => {
+      root.querySelectorAll(".gi-heat-cell").forEach(x => x.classList.remove("on"));
+      c.classList.add("on");
+    });
   });
+  giReveal(root);
 }
 
 function heatColor(p) {
@@ -247,36 +297,31 @@ function heatColor(p) {
   return `rgba(255, 200, 80, ${alpha})`;
 }
 
-function renderGenderVote(data) {
-  renderVoteBar("#gender-vote", data);
-}
-function renderAgeVote(data) {
-  renderVoteBar("#age-vote", data);
-}
-function renderRegionVote(data) {
-  renderVoteBar("#region-vote", data);
+function escapeText(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function renderGenderVote(data) { renderVoteBar("#gender-vote", data); }
+function renderAgeVote(data) { renderVoteBar("#age-vote", data); }
+function renderRegionVote(data) { renderVoteBar("#region-vote", data); }
+
+/* 찬반: 중앙 기준 양방향(diverging) 바 — 찬성 파랑(왼쪽) / 반대 빨강(오른쪽) */
 function renderVoteBar(selector, rows) {
   const root = qs(selector);
   if (!root || !rows) return;
-
-  root.innerHTML = "";
-  rows.forEach(r => {
-    const el = document.createElement("div");
-    el.className = "vote-item";
-    el.innerHTML = `
-      <div class="vote-labels">
-        <span>${r.label}</span>
-        <span>👍 ${r.pro}% / 👎 ${r.con}%</span>
+  root.innerHTML = `<div class="gi-card gi-diverge">${rows.map((r, i) => `
+    <div class="gi-dv-row" style="--giD:${i * 90}ms">
+      <div class="gi-dv-head">
+        <span class="gi-dv-label">${escapeText(r.label)}</span>
+        <span class="gi-dv-nums"><b class="pro" data-count="${r.pro}" data-suffix="%">0%</b> · <b class="con" data-count="${r.con}" data-suffix="%">0%</b></span>
       </div>
-      <div class="vote-bar">
-        <div class="vote-pro" style="width:${r.pro}%"></div>
-        <div class="vote-con" style="width:${r.con}%"></div>
+      <div class="gi-dv-track">
+        <div class="gi-dv-pro" style="--giW:${r.pro}%"></div>
+        <div class="gi-dv-con" style="--giW:${r.con}%"></div>
+        <div class="gi-dv-mid"></div>
       </div>
-    `;
-    root.appendChild(el);
-  });
+    </div>`).join("")}</div>`;
+  giReveal(root.querySelector(".gi-diverge"));
 }
 
 function renderAiSummary(text) {
