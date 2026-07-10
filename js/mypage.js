@@ -390,6 +390,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         showQvCurrent();
     }
 
+    // 공용 북마크 SVG (icon-bookmark 모양) — 전 페이지 통일
+    const BM_ICON = '<svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg>';
+
     function ensureQuickView() {
         let qv = document.getElementById("mpQuickView");
         if (qv) return qv;
@@ -455,7 +458,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         (actions || []).forEach(a => {
             const b = document.createElement("button");
             b.className = "qv-act" + (a.active ? " on" : "");
-            b.textContent = a.label;
+            b.innerHTML = a.label;
             b.onclick = async () => {
                 b.disabled = true;
                 try { await a.onClick(b); } finally { b.disabled = false; }
@@ -502,7 +505,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             desc: "",
             stats: `<span>${i.faction_a || "찬성"} ${i.pro_count || 0}</span> · <span>${i.faction_b || "반대"} ${i.con_count || 0}</span>`,
             actions: [{
-                label: saved ? "🔖 저장됨" : "🔖 저장",
+                label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                 active: saved,
                 onClick: async (btn) => {
                     if (saved) {
@@ -512,7 +515,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await supabase.from("bookmarks").insert({ user_id: userId, issue_id: issueId });
                     }
                     saved = !saved;
-                    btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                    btn.querySelector(".qv-act-txt").textContent = saved ? "저장됨" : "저장";
                     btn.classList.toggle("on", saved);
                     qvDirty = true;
                 }
@@ -560,7 +563,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     }
                 },
                 {
-                    label: saved ? "🔖 저장됨" : "🔖 저장",
+                    label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                     active: saved,
                     onClick: async (btn) => {
                         if (saved) {
@@ -570,7 +573,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             await supabase.from("galla_news_bookmarks").insert({ news_id: newsId, user_id: userId });
                         }
                         saved = !saved;
-                        btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                        btn.querySelector(".qv-act-txt").textContent = saved ? "저장됨" : "저장";
                         btn.classList.toggle("on", saved);
                         qvDirty = true;
                     }
@@ -601,7 +604,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             desc: plain.slice(0, 120) + (plain.length > 120 ? "…" : ""),
             stats: `<span>추천 ${p.up_count || 0}</span> · <span>비추 ${p.down_count || 0}</span> · <span>조회 ${p.view_count || 0}</span>`,
             actions: [{
-                label: saved ? "🔖 저장됨" : "🔖 저장",
+                label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                 active: saved,
                 onClick: async (btn) => {
                     if (saved) {
@@ -611,7 +614,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await supabase.from("plaza_bookmarks").insert({ post_id: postId, user_id: userId });
                     }
                     saved = !saved;
-                    btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                    btn.querySelector(".qv-act-txt").textContent = saved ? "저장됨" : "저장";
                     btn.classList.toggle("on", saved);
                     qvDirty = true;
                 }
@@ -651,7 +654,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             desc: "",
             stats: `${topLine}<span>거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</span>${m.resolved ? " · <span>정산 완료</span>" : ""}`,
             actions: [{
-                label: saved ? "🔖 저장됨" : "🔖 저장",
+                label: BM_ICON + '<span class="qv-act-txt">' + (saved ? "저장됨" : "저장") + '</span>',
                 active: saved,
                 onClick: async (btn) => {
                     if (saved) {
@@ -661,7 +664,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await supabase.from("market_bookmarks").insert({ market_id: marketId, user_id: userId });
                     }
                     saved = !saved;
-                    btn.textContent = saved ? "🔖 저장됨" : "🔖 저장";
+                    btn.querySelector(".qv-act-txt").textContent = saved ? "저장됨" : "저장";
                     btn.classList.toggle("on", saved);
                     qvDirty = true;
                 }
@@ -855,7 +858,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         if (!bms || bms.length === 0) {
-            tabContent.innerHTML = emptyMsg("저장한 뉴스가 없습니다.<br>갈라뉴스에서 🔖 저장을 눌러보세요.");
+            tabContent.innerHTML = emptyMsg("저장한 뉴스가 없습니다.<br>갈라뉴스에서 저장을 눌러보세요.");
             return;
         }
 

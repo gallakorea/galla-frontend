@@ -478,7 +478,9 @@ function renderPlazaPosts(posts) {
             <span>👍 ${post.up_count || 0}</span>
             <span>💬 ${cmtCount}</span>
             <span>조회 ${post.view_count || 0}</span>
-            <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">🔖</button>
+            <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">
+              <svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg>
+            </button>
           </div>
         </div>
 

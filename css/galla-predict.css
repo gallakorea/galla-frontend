@@ -221,6 +221,8 @@ html, body {
 }
 .mc-act.mc-like.on { color: #6d8bff; }
 .mc-act.mc-dislike.on { color: #ff6f86; }
-.mc-act.mc-save { font-size: 14px; filter: grayscale(1) opacity(.6); }
-.mc-act.mc-save.on { filter: none; }
+.mc-act.mc-save { color: #8a8f99; }
+.mc-act.mc-save .ic-bookmark { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; display: block; }
+.mc-act.mc-save.on { color: #f5c518; }
+.mc-act.mc-save.on .ic-bookmark { fill: #f5c518; }
 .mc-act:disabled { opacity: .5; }

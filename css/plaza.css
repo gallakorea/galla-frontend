@@ -745,12 +745,13 @@ html, body {
 
 
 
-/* 목록 카드 저장: 통계 줄 인라인 이모지 (우측) */
+/* 목록 카드 저장: 통계 줄 인라인 SVG 북마크 (조회 바로 옆) */
 .plaza-post .post-stats { align-items: center; }
 .plaza-save-btn {
-  background: none; border: none; padding: 0 2px; cursor: pointer;
-  font-size: 15px; line-height: 1;
-  filter: grayscale(1) opacity(.55);
+  background: none; border: none; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; color: #8a8f99;
 }
-.plaza-save-btn.on { filter: none; }
+.plaza-save-btn .ic-bookmark { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.plaza-save-btn.on { color: #f5c518; }
+.plaza-save-btn.on .ic-bookmark { fill: #f5c518; }
 .plaza-save-btn:disabled { opacity: .5; }

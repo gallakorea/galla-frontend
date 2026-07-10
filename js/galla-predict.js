@@ -258,7 +258,7 @@ function renderMarkets() {
           <span>💰 ${fmt(m.volume)}P</span>
           <button class="mc-act mc-like ${MY_RX[m.id] === 1 ? 'on' : ''}" data-act="like" data-id="${m.id}">👍 <span>${RX_AGG[m.id]?.up || 0}</span></button>
           <button class="mc-act mc-dislike ${MY_RX[m.id] === -1 ? 'on' : ''}" data-act="dislike" data-id="${m.id}">👎 <span>${RX_AGG[m.id]?.down || 0}</span></button>
-          <button class="mc-act mc-save ${MY_SAVED[m.id] ? 'on' : ''}" data-act="save" data-id="${m.id}" aria-label="저장">🔖</button>
+          <button class="mc-act mc-save ${MY_SAVED[m.id] ? 'on' : ''}" data-act="save" data-id="${m.id}" aria-label="저장"><svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg></button>
         </span>
         <span class="mc-go">${closed ? '결과 보기' : '예측하기'} ›</span>
       </div>

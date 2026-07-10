@@ -47,7 +47,8 @@ document.addEventListener('click', async e => {
       await supa.from('market_bookmarks').insert({ market_id: marketId, user_id: ME.id });
     }
     MY_SAVED = !MY_SAVED;
-    btn.textContent = MY_SAVED ? '🔖 저장됨' : '🔖 저장';
+    const lbl = btn.querySelector('.pmd-save-txt');
+    if (lbl) lbl.textContent = MY_SAVED ? '저장됨' : '저장';
     btn.classList.toggle('on', MY_SAVED);
   }finally{
     btn.disabled = false;
@@ -156,7 +157,7 @@ function render(){
         ${m.resolved ? `<span class="pmd-resolved yes">✔ 정산 완료 · ${esc(multi?(winName||''):(m.outcome==='yes'?'YES':'NO'))} 승리</span>`
           : `<span class="pmd-time">⏰ ${timeLeft(m.close_at)}</span>`}
         <span class="pmd-vol">💰 거래량 ${fmt(m.volume)}P</span>
-        <button class="pmd-save ${MY_SAVED ? 'on' : ''}" id="pmdSaveBtn">${MY_SAVED ? '🔖 저장됨' : '🔖 저장'}</button>
+        <button class="pmd-save ${MY_SAVED ? 'on' : ''}" id="pmdSaveBtn"><svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg> <span class="pmd-save-txt">${MY_SAVED ? '저장됨' : '저장'}</span></button>
       </div>
     </section>
 

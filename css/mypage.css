@@ -348,6 +348,11 @@ body {
     border-color: #2f7df6; color: #8fb6ff; background: rgba(47,125,246,.12);
 }
 #mpQuickView .qv-act:disabled { opacity: .5; }
+#mpQuickView .qv-act {
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+}
+#mpQuickView .qv-act .ic-bookmark { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+#mpQuickView .qv-act.on .ic-bookmark { fill: #f5c518; }
 
 /* My 광장 서브탭 (내가 쓴 글 / 저장한 글) */
 .mp-subtabs {
