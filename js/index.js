@@ -580,9 +580,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     while (!window.supabaseClient) {
         await new Promise(r => setTimeout(r, 30));
     }
+    initHeader();
     initSocial();
+    if (window.initNotifications) window.initNotifications();
     await loadData();
 });
+
+/* 헤더: + 글쓰기(권한 게이팅) / ♥ 알림 */
+function initHeader() {
+    document.getElementById('hdrWrite')?.addEventListener('click', handleWriteClick);
+    // ♥ 알림 클릭은 notifications.js가 바인딩
+}
+
+async function handleWriteClick() {
+    const supabase = window.supabaseClient;
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess?.session) {
+        if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html';
+        return;
+    }
+    const { data: prof } = await supabase
+        .from('user_profiles').select('admin_flag').eq('user_id', sess.session.user.id).maybeSingle();
+    if (prof?.admin_flag) {
+        location.href = 'write.html';
+    } else {
+        showWriteComingSoon();
+    }
+}
+
+function showWriteComingSoon() {
+    let m = document.getElementById('write-soon');
+    if (!m) {
+        m = document.createElement('div');
+        m.id = 'write-soon';
+        m.className = 'soon-modal';
+        m.innerHTML = `
+          <div class="soon-dim"></div>
+          <div class="soon-card">
+            <div class="soon-emoji">✍️</div>
+            <div class="soon-title">글쓰기는 곧 열립니다</div>
+            <div class="soon-desc">지금은 갈라 팀이 이슈를 발제하고 있어요.<br>머지않아 모두가 직접 갈라를 던질 수 있게 준비 중이에요!</div>
+            <button class="soon-close">알겠어요</button>
+          </div>`;
+        document.body.appendChild(m);
+        const close = () => m.classList.remove('open');
+        m.querySelector('.soon-dim').onclick = close;
+        m.querySelector('.soon-close').onclick = close;
+    }
+    requestAnimationFrame(() => m.classList.add('open'));
+}
 
 // 스크롤 복원/저장
 if (localStorage.getItem('scrollPos')) {
@@ -646,25 +692,84 @@ async function loadData() {
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
     window.cards = cards;
 
-    // 예측 마켓 로드 후 이슈와 교차 배열
-    const predictionCards = await loadPredictionCards();
-    feed = interleave(cards, predictionCards);
+    // 예측 마켓 + 광장 글을 이슈와 교차 배열 (이슈2 · 예측1 · 광장1 리듬)
+    const [predictionCards, plazaCards] = await Promise.all([
+        loadPredictionCards(),
+        loadPlazaCards()
+    ]);
+    feed = interleave(cards, predictionCards, plazaCards);
     window.feed = feed;
 
     loadBest();
     loadRecommend();
 }
 
-// 갈라 콘텐츠 2개마다 예측 콘텐츠 1개를 끼워 배치
-function interleave(issues, predicts) {
+// 이슈 2개마다 예측 1개, 3개마다 광장 1개를 끼워 배치
+function interleave(issues, predicts, plazas = []) {
     const out = [];
-    let pi = 0;
+    let pi = 0, zi = 0;
     issues.forEach((c, i) => {
         out.push({ type: 'issue', data: c });
         if ((i + 1) % 2 === 0 && predicts[pi]) out.push({ type: 'predict', data: predicts[pi++] });
+        if ((i + 1) % 3 === 0 && plazas[zi]) out.push({ type: 'plaza', data: plazas[zi++] });
     });
     while (pi < predicts.length) out.push({ type: 'predict', data: predicts[pi++] });
+    while (zi < plazas.length) out.push({ type: 'plaza', data: plazas[zi++] });
     return out;
+}
+
+// 광장 글을 피드용으로 로드 (최신순 + 점수/신규 가점 가벼운 정렬)
+async function loadPlazaCards() {
+    const supabase = window.supabaseClient;
+    const { data: posts } = await supabase
+        .from('plaza_posts')
+        .select('id, category, title, body, nickname, cover_image, thumbnail, up_count, view_count, user_id, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+    if (!posts || !posts.length) return [];
+    const now = Date.now();
+    return posts.map(p => {
+        const ageH = (now - new Date(p.created_at)) / 3600000;
+        const fresh = ageH < 24 ? 40 : ageH < 168 ? 15 : 0;
+        return { ...p, _score: (p.up_count || 0) * 3 + (p.view_count || 0) * 0.2 + fresh + Math.random() * 8 };
+    }).sort((a, b) => b._score - a._score).slice(0, 8);
+}
+
+// 광장 본문에서 텍스트만 뽑아 1~2줄 요약
+function plazaExcerpt(body) {
+    if (!body) return '';
+    return String(body)
+        .replace(/^\[(IMAGE|VIDEO|EMBED)\].*$/gim, ' ')   // 미디어 마커 제거
+        .replace(/[#>*_~`\-]/g, ' ')                        // 마크다운 기호 제거
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')            // 링크 → 텍스트
+        .replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
+/* 홈 피드용 광장 카드 (톤 유지, '광장'으로 명확히 구분) */
+function renderPlazaCard(p) {
+    const cover = p.cover_image || p.thumbnail || '';
+    const excerpt = plazaExcerpt(p.body);
+    const cat = p.category ? escHtml(p.category) : '광장';
+    return `
+    <div class="card plaza-card" onclick="location.href='plaza_detail.html?id=${p.id}'">
+      <div class="pz-head">
+        <span class="pz-badge">🏛 광장</span>
+        <span class="pz-cat">${cat}</span>
+        <span class="pz-author">${escHtml(p.nickname || '익명')}</span>
+      </div>
+      <div class="pz-body">
+        <div class="pz-text">
+          <div class="pz-title">${escHtml(p.title || '(제목 없음)')}</div>
+          ${excerpt ? `<div class="pz-excerpt">${escHtml(excerpt)}</div>` : ''}
+        </div>
+        ${cover ? `<div class="pz-thumb"><img src="${escHtml(cover)}" loading="lazy" alt=""></div>` : ''}
+      </div>
+      <div class="pz-foot">
+        <span>👍 ${p.up_count || 0}</span>
+        <span>👁 ${p.view_count || 0}</span>
+        <span class="pz-go">글 보기 ›</span>
+      </div>
+    </div>`;
 }
 
 async function loadPredictionCards() {
@@ -763,7 +868,11 @@ function renderPredictCard(m) {
     </div>`;
 }
 function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function renderFeedItem(item){ return item.type === 'predict' ? renderPredictCard(item.data) : renderCard(item.data); }
+function renderFeedItem(item){
+    if (item.type === 'predict') return renderPredictCard(item.data);
+    if (item.type === 'plaza') return renderPlazaCard(item.data);
+    return renderCard(item.data);
+}
 
 async function loadWarData(issueIds) {
     const supabase = window.supabaseClient;

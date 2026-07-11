@@ -35,6 +35,34 @@
 }
 
 /* =========================
+   인스타식 3분할 헤더 (+좌 / 로고중앙 / ♥우)
+========================= */
+.header-inner.header-3 {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  justify-content: unset;
+}
+.header-inner.header-3 .logo { justify-self: center; }
+.hdr-btn {
+  width: 40px; height: 40px; padding: 0;
+  background: none; border: none; cursor: pointer; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.hdr-btn svg { width: 24px; height: 24px; display: block; }
+.hdr-btn:active { transform: scale(.9); }
+.hdr-write { justify-self: start; }
+.hdr-noti { justify-self: end; }
+.noti-badge {
+  position: absolute; top: 4px; right: 4px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: #ff4d67; border: 2px solid #000;
+  color: #fff; font-size: 9.5px; font-weight: 900; line-height: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* =========================
    HEADER ICON — IMAGE ONLY
 ========================= */
 
