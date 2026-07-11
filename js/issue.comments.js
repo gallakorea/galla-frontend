@@ -1352,14 +1352,18 @@ function openInlineComposer(type, targetId, targetUser, unit) {
   const box = ensureInlineComposer();
   BATTLE_MODE = { type, targetId, targetUser };
 
+  // 일반 대상 = 공격/방어(심플), 침투자 대상 = 격퇴 (게임 서사)
+  const isInfil = unit.classList.contains("infil-unit");
+  const atkVerb = isInfil ? "격퇴" : "공격";
+
   box.classList.remove("atk", "def");
   box.classList.add(type === "attack" ? "atk" : "def");
   box.querySelector("#ic-title").innerHTML = type === "attack"
-    ? `⚔ <b>${escT(targetUser)}</b> 공격 — 이유를 남겨야 데미지가 들어갑니다`
+    ? `⚔ <b>${escT(targetUser)}</b> ${atkVerb} — 이유를 남겨야 데미지가 들어갑니다`
     : `🛡 <b>${escT(targetUser)}</b> 방어 — 지원 근거가 방어막이 됩니다`;
   const input = box.querySelector("#ic-input");
   input.placeholder = type === "attack" ? "반박 근거를 입력…" : "지지 근거를 입력…";
-  box.querySelector("#ic-send").textContent = type === "attack" ? "⚔ −12" : "🛡 +8";
+  box.querySelector("#ic-send").textContent = type === "attack" ? `⚔ −12` : `🛡 +8`;
 
   // 대상 유닛 바로 아래에 부착 (최상위 댓글이면 스레드 끝, 답글이면 그 답글 뒤)
   if (unit.classList.contains("reply")) {
