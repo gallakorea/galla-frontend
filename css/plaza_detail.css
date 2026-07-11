@@ -526,3 +526,73 @@ body {
 
 /* 저장(북마크) 버튼 활성 */
 .bookmark-btn.on .icon { fill: #f5c518; stroke: #f5c518; }
+
+/* =========================================================
+   🏛 광장 상세 톤앤매너 고도화 (GALLA 게임 팔레트)
+========================================================= */
+html, body {
+  background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) #0a0a0b !important;
+  color: #f5f5f2 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.plaza-guide {
+  background: linear-gradient(180deg, rgba(245,207,107,.06), transparent) !important;
+  border-bottom: 1px solid rgba(255,255,255,.05) !important;
+  color: #9a9aa0 !important; font-size: 12.5px !important; line-height: 1.6 !important;
+}
+
+/* 제목·메타 */
+.post-title { font-size: 20px !important; font-weight: 900 !important; color: #f5f5f2 !important; line-height: 1.35 !important; }
+.post-meta { color: #8b8b93 !important; font-size: 12.5px !important; }
+
+/* 본문 카드 */
+.post-content {
+  background: linear-gradient(180deg, #131418, #0c0c0f) !important;
+  border: 1px solid rgba(255,255,255,.08) !important; border-radius: 16px !important;
+  padding: 16px !important; margin: 14px 0 !important;
+  font-size: 14.5px !important; line-height: 1.7 !important; color: #e7e7ea !important;
+}
+.post-content img, .post-content video { border-radius: 12px !important; }
+.post-content a { color: #7f9dff !important; }
+.post-content .pb-quote { border-left: 3px solid rgba(245,207,107,.5) !important; color: #c9c9cf !important; }
+
+/* 액션 바 (추천 pill / 댓글 / 저장 / 공유) */
+.post-action-bar {
+  background: linear-gradient(180deg, #131418, #0c0c0f) !important;
+  border: 1px solid rgba(255,255,255,.08) !important; border-radius: 999px !important;
+}
+.vote-pill { background: rgba(255,255,255,.04) !important; }
+.vote-btn:hover { color: #f5cf6b !important; }
+.vote-btn.on.vote-up, .vote-up.on { color: #f5cf6b !important; }
+.vote-btn.on.vote-down, .vote-down.on { color: #ff5c5c !important; }
+.vote-score { color: #f5f5f2 !important; font-weight: 900 !important; }
+.circle-btn { border: 1px solid rgba(255,255,255,.1) !important; color: #c9c9cf !important; }
+.circle-btn.on, .bookmark-btn.on { color: #f5cf6b !important; }
+
+/* 댓글 입력 */
+.comment-write textarea {
+  background: #101116 !important; border: 1px solid #23252f !important;
+  border-radius: 12px !important; color: #fff !important; font-size: 14px !important;
+}
+.comment-write textarea:focus { border-color: #3d6bff !important; outline: none; }
+.comment-write button {
+  background: linear-gradient(135deg, #f5cf6b, #e0972a) !important;
+  color: #1a1408 !important; border: none !important; border-radius: 12px !important;
+  font-weight: 900 !important;
+}
+
+/* 댓글 리스트 카드 */
+.comment-list > li {
+  background: linear-gradient(180deg, #131418, #0c0c0f) !important;
+  border: 1px solid rgba(255,255,255,.07) !important; border-radius: 14px !important;
+  padding: 12px 14px !important; margin-bottom: 10px !important;
+}
+.cm-nick { color: #f5f5f2 !important; font-weight: 800 !important; font-size: 13px !important; }
+.cm-time { color: #6c6c72 !important; font-size: 11px !important; }
+.comment-body { color: #e7e7ea !important; font-size: 13.5px !important; line-height: 1.5 !important; margin: 6px 0 !important; }
+.reply-btn, .toggle-replies-btn { color: #7f9dff !important; background: none !important; border: none !important; font-weight: 800 !important; font-size: 12px !important; cursor: pointer; }
+.reply-list > li {
+  background: rgba(255,255,255,.03) !important; border: 1px solid rgba(255,255,255,.06) !important;
+  border-radius: 12px !important; padding: 10px 12px !important; margin-top: 8px !important;
+}

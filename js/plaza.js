@@ -394,6 +394,17 @@ function extractFirstImage(body) {
   return match ? match[1] : null;
 }
 
+// 본문에서 텍스트만 뽑아 카드 미리보기용 요약
+function plazaExcerpt(body) {
+  if (!body) return "";
+  return String(body)
+    .replace(/^\[(IMAGE|VIDEO|EMBED)\].*$/gim, " ")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[#>*_~`]/g, " ")
+    .replace(/\s+/g, " ").trim().slice(0, 72);
+}
+function escP(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
 function timeAgoK(iso) {
   if (!iso) return "";
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -471,13 +482,17 @@ function renderPlazaPosts(posts) {
     const thumb = post.thumbnail || extractFirstImage(post.body);
     const cmtCount = post.plaza_comments?.[0]?.count ?? 0;
     const saved = !!MY_PLAZA_SAVED[post.id];
+    const excerpt = plazaExcerpt(post.body);
     li.innerHTML = `
       <a href="plaza_detail.html?id=${post.id}" class="plaza-link">
         <div class="post-body">
-          <div class="post-title">${post.title}</div>
-          <div class="post-meta">
-            ${post.nickname} · ${post.category} · ${timeAgoK(post.created_at)}
+          <div class="post-head">
+            <span class="post-cat">${escP(post.category || "광장")}</span>
+            <span class="post-author">${escP(post.nickname || "익명")}</span>
+            <span class="post-time">${timeAgoK(post.created_at)}</span>
           </div>
+          <div class="post-title">${escP(post.title)}</div>
+          ${excerpt ? `<div class="post-excerpt">${escP(excerpt)}</div>` : ""}
           <div class="post-stats">
             <span class="pv-vote">
               <button class="pv-btn pv-up ${MY_PLAZA_VOTES[post.id] === 1 ? "on" : ""}" data-id="${post.id}" data-v="1" aria-label="추천">

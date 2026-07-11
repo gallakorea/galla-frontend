@@ -771,3 +771,96 @@ html, body {
 .pv-btn.pv-up.on { color: #4da3ff; }
 .pv-btn.pv-down.on { color: #ff5c5c; }
 .pv-score { min-width: 14px; text-align: center; font-weight: 700; color: #cfd4de; }
+
+/* =========================================================
+   🏛 광장 톤앤매너 고도화 (GALLA 게임 팔레트)
+   파랑 #3d6bff / 골드 #f5cf6b / 빨강 #ff4d67 / 카드 그라데이션
+========================================================= */
+html, body {
+  background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) #0a0a0b !important;
+  color: #f5f5f2 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 안내 */
+.plaza-guide {
+  background: linear-gradient(180deg, rgba(245,207,107,.06), transparent) !important;
+  border-bottom: 1px solid rgba(255,255,255,.05) !important;
+  color: #9a9aa0 !important; font-size: 12.5px !important; line-height: 1.6 !important;
+}
+
+/* 카테고리 칩 */
+.plaza-categories { padding: 12px !important; border-bottom: none !important; scrollbar-width: none; }
+.plaza-categories::-webkit-scrollbar { display: none; }
+.plaza-categories button {
+  background: rgba(255,255,255,.05) !important; border: 1px solid rgba(255,255,255,.1) !important;
+  color: #9a9aa0 !important; padding: 7px 14px !important; font-size: 12.5px !important;
+  font-weight: 700 !important; cursor: pointer;
+}
+.plaza-categories button.active {
+  background: rgba(245,207,107,.14) !important; border-color: rgba(245,207,107,.5) !important;
+  color: #f5cf6b !important;
+}
+
+/* 리스트 → 카드 */
+.plaza-list { padding: 6px 12px !important; display: flex; flex-direction: column; gap: 10px; }
+.plaza-post {
+  display: block !important; padding: 0 !important; overflow: visible !important;
+  background: linear-gradient(180deg, #131418, #0c0c0f) !important;
+  border: 1px solid rgba(255,255,255,.08) !important; border-bottom: 1px solid rgba(255,255,255,.08) !important;
+  border-radius: 16px !important;
+  transition: transform .1s ease;
+}
+.plaza-post:active { transform: scale(.995); }
+.plaza-post a, .plaza-post .plaza-link {
+  display: flex !important; align-items: stretch !important; gap: 12px !important;
+  padding: 14px !important; justify-content: space-between !important;
+  text-decoration: none; color: inherit;
+}
+.plaza-post .post-body { flex: 1; min-width: 0; }
+
+.post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11.5px; }
+.post-cat {
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(61,107,255,.14); border: 1px solid rgba(61,107,255,.35);
+  color: #7f9dff; font-weight: 800;
+}
+.post-author { color: #c9c9cf; font-weight: 700; }
+.post-time { color: #6c6c72; margin-left: auto; }
+
+.post-title { font-size: 15.5px !important; font-weight: 800 !important; color: #f5f5f2 !important; line-height: 1.35 !important; margin-bottom: 4px !important; }
+.post-excerpt {
+  font-size: 12.5px; color: #9a9aa0; line-height: 1.5; margin-bottom: 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* 썸네일 */
+.plaza-post .plaza-thumb {
+  width: 78px !important; height: 78px !important; flex: 0 0 78px !important;
+  margin: 0 !important; border-radius: 12px !important; overflow: hidden;
+  background: #1c1c22 !important; align-self: center;
+}
+
+/* 통계 + 추천 */
+.plaza-post .post-stats { display: flex !important; align-items: center; gap: 14px !important; font-size: 12px; color: #8b8b93; font-weight: 700; margin-top: 2px; }
+.pv-vote { display: inline-flex; align-items: center; gap: 2px; background: rgba(255,255,255,.04); border-radius: 999px; padding: 2px 5px; }
+.pv-btn { background: none; border: none; color: #8b8b93; cursor: pointer; display: flex; padding: 2px; }
+.pv-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; }
+.pv-btn.pv-up.on { color: #f5cf6b !important; }
+.pv-btn.pv-down.on { color: #ff5c5c !important; }
+.pv-score { min-width: 14px; text-align: center; font-weight: 800; color: #cfd4de; font-size: 12px; }
+.plaza-save-btn.on { color: #f5cf6b !important; }
+.plaza-save-btn.on .ic-bookmark { fill: #f5cf6b !important; }
+
+/* 글쓰기 바 → 골드 */
+.plaza-write-bar {
+  background: linear-gradient(180deg, transparent, #0a0a0b 45%) !important;
+  border-top: none !important;
+}
+.plaza-write-bar button {
+  border: none !important; border-radius: 14px !important;
+  background: linear-gradient(135deg, #f5cf6b, #e0972a) !important;
+  color: #1a1408 !important; font-size: 14.5px !important; font-weight: 900 !important;
+  box-shadow: 0 10px 26px -10px rgba(224,151,42,.6);
+}
