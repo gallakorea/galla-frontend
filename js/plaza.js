@@ -8,6 +8,8 @@ const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// write-hub / dm 공용 클라이언트로 노출
+window.supabaseClient = window.supabaseClient || supabase;
 /* =========================
    LIST STATE
 ========================= */
@@ -40,6 +42,13 @@ async function openPlazaWriteModal() {
 }
 // expose for inline HTML handlers
 window.openPlazaWriteModal = openPlazaWriteModal;
+// 통합 글쓰기 허브('광장' 선택) / ?compose=1 진입 시 모달 오픈
+window.__openComposeModal = openPlazaWriteModal;
+if (new URLSearchParams(location.search).get("compose") === "1") {
+  setTimeout(openPlazaWriteModal, 60);
+}
+// 헤더 DM 버튼 초기화
+if (window.initDM) window.initDM("#plazaDmBtn");
 
 function closePlazaWriteModal() {
   modal.classList.add("hidden");

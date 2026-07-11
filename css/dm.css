@@ -1,0 +1,80 @@
+/* DM 다이렉트 메시지 */
+.dm-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;
+  border-radius:999px;background:#ff4d67;border:2px solid #000;color:#fff;
+  font-size:9.5px;font-weight:900;line-height:12px;display:flex;align-items:center;justify-content:center;}
+
+.dm-root{position:fixed;inset:0;z-index:11500;pointer-events:none;}
+.dm-root.open{pointer-events:auto;}
+.dm-dim{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;transition:opacity .2s;}
+.dm-root.open .dm-dim{opacity:1;}
+.dm-panel{position:absolute;top:0;right:0;bottom:0;width:100%;max-width:460px;
+  background:radial-gradient(120% 80% at 50% 0%,#141419 0%,#0a0a0b 60%);
+  border-left:1px solid rgba(255,255,255,.08);
+  transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);
+  display:flex;flex-direction:column;overflow:hidden;}
+.dm-root.open .dm-panel{transform:translateX(0);}
+.dm-view{position:absolute;inset:0;display:flex;flex-direction:column;}
+.dm-view[hidden]{display:none;}
+
+.dm-head{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;
+  height:56px;padding:0 8px;border-bottom:1px solid rgba(255,255,255,.07);flex:none;
+  padding-top:env(safe-area-inset-top);box-sizing:content-box;}
+.dm-title{text-align:center;font-size:16px;font-weight:800;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dm-x,.dm-compose,.dm-back{width:40px;height:40px;background:none;border:none;color:#fff;
+  font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.dm-back{font-size:30px;}
+.dm-compose{font-size:19px;}
+.dm-head-sp{width:40px;}
+
+.dm-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.dm-empty{text-align:center;color:#8b909b;font-size:14px;padding:64px 24px;line-height:1.7;}
+.dm-empty span{font-size:12.5px;color:#6b7280;}
+
+.dm-thread{display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:12px 16px;background:none;border:none;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.05);}
+.dm-thread:active{background:rgba(255,255,255,.04);}
+.dm-ava{width:46px;height:46px;flex:none;border-radius:50%;color:#fff;
+  font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  text-transform:uppercase;}
+.dm-thread-mid{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1;}
+.dm-thread-name{font-size:15px;font-weight:700;color:#fff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dm-thread-prev{font-size:13px;color:#9aa0ad;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dm-unread .dm-thread-prev{color:#e6e8ec;font-weight:600;}
+.dm-thread-side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;}
+.dm-thread-time{font-size:11.5px;color:#6b7280;}
+.dm-dot{min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#ff4d67;
+  color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+
+/* 대화 */
+.dm-msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 12px;display:flex;flex-direction:column;gap:7px;}
+.dm-loading{color:#6b7280;text-align:center;padding:24px;font-size:13px;}
+.dm-bubble{max-width:76%;padding:9px 13px;border-radius:16px;position:relative;
+  font-size:14.5px;line-height:1.4;color:#fff;word-break:break-word;
+  display:flex;flex-direction:column;gap:3px;}
+.dm-bubble.you{align-self:flex-start;background:#23252c;border-bottom-left-radius:5px;}
+.dm-bubble.me{align-self:flex-end;
+  background:linear-gradient(135deg,#3d6bff,#5b7dff);border-bottom-right-radius:5px;}
+.dm-bub-time{font-size:10px;opacity:.6;align-self:flex-end;}
+
+.dm-inputbar{display:flex;align-items:flex-end;gap:8px;padding:10px 12px;
+  padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  border-top:1px solid rgba(255,255,255,.08);flex:none;background:#0c0c0f;}
+.dm-inputbar textarea{flex:1;resize:none;max-height:120px;background:#1a1b20;
+  border:1px solid rgba(255,255,255,.1);border-radius:20px;color:#fff;
+  padding:10px 14px;font-size:14.5px;line-height:1.35;font-family:inherit;outline:none;}
+.dm-inputbar textarea:focus{border-color:#3d6bff;}
+.dm-send{width:40px;height:40px;flex:none;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#3d6bff,#5b7dff);color:#fff;font-size:16px;
+  display:flex;align-items:center;justify-content:center;}
+.dm-send:active{transform:scale(.92);}
+
+/* 검색 */
+.dm-search-wrap{padding:12px 16px;flex:none;}
+.dm-search-wrap input{width:100%;box-sizing:border-box;background:#1a1b20;
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;
+  padding:11px 14px;font-size:14.5px;outline:none;}
+.dm-search-wrap input:focus{border-color:#f5cf6b;}
