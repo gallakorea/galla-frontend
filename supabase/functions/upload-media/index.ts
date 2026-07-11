@@ -10,7 +10,7 @@ const R2_PUBLIC_URL = Deno.env.get("R2_PUBLIC_URL")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info, x-upload-mode, x-upload-kind, x-upload-filename",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
