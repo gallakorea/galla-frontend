@@ -103,6 +103,19 @@ document.addEventListener("DOMContentLoaded", () => {
       locked = false; armed = false; dir = 0; targetKey = null;
     };
 
+    // BFCache 복원 대응: 밀어낸 상태(.dragging + translateX)로 떠났다가
+    // 뒤로가기/스와이프로 돌아오면 그 상태가 그대로 살아나 페이지가
+    // 축소된 카드처럼 보임 → 표시 즉시 무전환으로 원상복구
+    window.addEventListener("pageshow", () => {
+      stage.style.transition = "none";
+      peek.style.transition = "none";
+      stage.style.transform = "";
+      peek.style.transform = "";
+      setDrag(false);
+      locked = false; armed = false; dir = 0; targetKey = null;
+      requestAnimationFrame(() => { stage.style.transition = ""; peek.style.transition = ""; });
+    });
+
     document.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) { armed = false; return; }
       armed = !inHScroll(e.target) && !overlayOpen();
