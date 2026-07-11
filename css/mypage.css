@@ -640,3 +640,73 @@ body{
 
 /* ---- 방문자 헤더 타이틀 ---- */
 .mp-hdr-title{ font-size:16px; font-weight:800; letter-spacing:-.3px; }
+
+/* =========================================================
+   마이페이지 v4 — 인스타의 결 + GALLA 시그니처 차별화
+   ① 앰비언트 골드 글로우 ② 라운드 미디어 그리드 ③ 필 버튼
+   ④ 스태거 등장 모션 ⑤ 헤어라인 리듬
+========================================================= */
+
+/* ① 시그니처: 프로필 뒤 은은한 골드 앰비언트 (인스타의 플랫 블랙과 차별) */
+.profile-section{ position:relative; overflow:visible; }
+.profile-section::before{
+  content:""; position:absolute; top:-70px; left:50%; transform:translateX(-50%);
+  width:340px; height:230px; pointer-events:none;
+  background:radial-gradient(50% 50% at 50% 40%, rgba(245,207,107,.075), transparent 70%);
+}
+.mp-top, .mp-idline, .level-row, .profile-desc, .profile-actions{ position:relative; }
+
+/* 프로필 하단 마감 헤어라인 (그라데이션 — 시그니처 라인) */
+.profile-section::after{
+  content:""; position:absolute; left:18px; right:18px; bottom:-1px; height:1px;
+  background:linear-gradient(90deg, transparent, rgba(245,207,107,.28), rgba(255,255,255,.1), transparent);
+}
+
+/* ② 타이포 리듬 — 이름 크게, 보조는 더 조용히 */
+.profile-name{ font-size:19px; font-weight:850; letter-spacing:-.5px; }
+.mp-idline{ margin-top:16px; gap:8px; align-items:baseline; }
+.mp-idline .level{ font-size:11.5px; padding:3px 9px; }
+.mp-power{ font-size:11.5px; padding:3px 9px; }
+.profile-desc{ color:#a8adb8; font-size:13px; }
+.badge{ font-size:12px; color:#8e8e93; }
+
+/* 스탯: 미세 구분 리듬 */
+.stats-row .stat-unit{ position:relative; }
+.stats-row .stat-unit + .stat-unit::before{
+  content:""; position:absolute; left:-1px; top:50%; transform:translateY(-50%);
+  width:1px; height:22px; background:rgba(255,255,255,.06);
+}
+.stat-num{ font-size:20px; }
+
+/* ③ 버튼: 필 셰이프 (인스타 라운드렉트와 차별) */
+.profile-actions{ gap:8px; padding:16px 0 6px; }
+.profile-actions button{
+  height:38px; border-radius:99px; font-size:13.5px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+}
+.profile-actions .action-btn.primary{
+  background:linear-gradient(135deg,#1463f0,#4d7cff 60%,#6a8dff);
+  box-shadow:0 6px 20px rgba(30,95,230,.32), inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+/* 탭: 활성 텍스트에 미세 발광 */
+.tabs{ border-bottom:1px solid rgba(255,255,255,.05); }
+.tab.active{ text-shadow:0 0 14px rgba(255,255,255,.35); }
+.tab.active::after{ height:2px; box-shadow:0 0 8px rgba(255,255,255,.35); }
+
+/* ④ 라운드 미디어 그리드 — 인스타 하드 그리드와 차별 (Threads/애플 감성) */
+.content-area.grid, .content-grid{ gap:5px; padding:8px 8px 120px; }
+.ig-card{ border-radius:10px; overflow:hidden; background:#101116;
+  transition:transform .18s cubic-bezier(.2,.8,.3,1), filter .18s; }
+.ig-card::after{ border-radius:10px; box-shadow:inset 0 0 0 .5px rgba(255,255,255,.06); }
+.ig-card:active{ transform:scale(.965); }
+.ig-card:hover{ filter:brightness(1.08); }
+
+/* ⑤ 스태거 등장 모션 */
+@keyframes mpRise{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+.profile-section{ animation:mpRise .4s cubic-bezier(.2,.8,.3,1) both; }
+.tabs{ animation:mpRise .4s .06s cubic-bezier(.2,.8,.3,1) both; }
+.content-area{ animation:mpRise .45s .12s cubic-bezier(.2,.8,.3,1) both; }
+
+/* 빈 상태 정제 */
+.tab-empty{ color:#6f7480 !important; font-size:13.5px !important; }
