@@ -28,6 +28,7 @@
       }
 
       const urls = [
+        "./js/vendor/supabase.js",   // 로컬 우선 (Cloudflare Pages CDN + 브라우저 캐시 공유, 외부 CDN 왕복 제거)
         "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js",
         "https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"
       ];
