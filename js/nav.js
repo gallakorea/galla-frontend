@@ -55,27 +55,124 @@ document.addEventListener("DOMContentLoaded", () => {
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
     );
 
-    let sx = 0, sy = 0, st = 0, armed = false;
+    /* ── 인스타식 인터랙티브 드래그 전환 ──
+       손가락에 1:1로 페이지가 붙어 끌리고, 옆 페이지 카드가 갭을 두고 따라온다.
+       놓는 순간 거리/속도로 커밋 판정 → 끝까지 밀려나간 뒤 이동, 아니면 스냅백 */
+    const PAGE_META = {
+      index:   { name: "홈",   icon: "assets/icons/nav-home-active.svg" },
+      predict: { name: "예측", icon: "assets/icons/nav-predict-active.svg" },
+      search:  { name: "검색", icon: "assets/icons/nav-search-active.svg" },
+      plaza:   { name: "광장", icon: "assets/icons/nav-plaza-active.svg" },
+      mypage:  { name: "마이", icon: "assets/icons/nav-user-active.svg" },
+    };
+    const GAP = 14; // 페이지 사이 검은 틈 (인스타 감성)
+
+    // 페이지 콘텐츠를 스테이지로 감싼다 (nav·이후 생성되는 모달들은 바깥에 남음)
+    const stage = document.createElement("div");
+    stage.id = "page-stage";
+    Array.from(document.body.children).forEach((el) => {
+      if (el.matches(".nav") || el.tagName === "SCRIPT") return;
+      stage.appendChild(el);
+    });
+    document.body.prepend(stage);
+
+    // 옆에서 따라 들어오는 목적지 카드
+    const peek = document.createElement("div");
+    peek.className = "swipe-peek";
+    document.body.appendChild(peek);
+
+    let sx = 0, sy = 0, dxCur = 0, lastX = 0, lastT = 0, vel = 0;
+    let armed = false, locked = false, dir = 0, targetKey = null;
+
+    const W = () => window.innerWidth;
+    const setDrag = (on) => {
+      stage.classList.toggle("dragging", on);
+      peek.classList.toggle("show", on);
+    };
+    const place = (dx) => {
+      stage.style.transform = `translateX(${dx}px)`;
+      const off = dx < 0 ? (W() + GAP + dx) : (dx - W() - GAP);
+      peek.style.transform = `translateX(${off}px)`;
+    };
+    const reset = () => {
+      stage.style.transition = "";
+      stage.style.transform = "";
+      peek.style.transition = "";
+      peek.style.transform = "";
+      setDrag(false);
+      locked = false; armed = false; dir = 0; targetKey = null;
+    };
+
     document.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) { armed = false; return; }
       armed = !inHScroll(e.target) && !overlayOpen();
-      sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+      locked = false; dir = 0; dxCur = 0; vel = 0;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+      lastX = sx; lastT = performance.now();
     }, { passive: true });
 
-    document.addEventListener("touchend", (e) => {
-      if (!armed) return;
-      const dx = e.changedTouches[0].clientX - sx;
-      const dy = e.changedTouches[0].clientY - sy;
-      if (Date.now() - st > 600) return;                          // 빠른 플릭만
-      if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 2) return; // 수평 위주만
-      const next = PAGE_ORDER[curIdx + (dx < 0 ? 1 : -1)];        // 왼쪽으로 밀면 다음
-      if (!next) return;
-      // 살짝 밀리며 전환되는 느낌
-      document.body.style.transition = "transform .16s ease, opacity .16s ease";
-      document.body.style.transform = `translateX(${dx < 0 ? -26 : 26}px)`;
-      document.body.style.opacity = ".55";
-      setTimeout(() => { location.href = PAGE_URL[next]; }, 110);
+    document.addEventListener("touchmove", (e) => {
+      if (!armed || e.touches.length !== 1) return;
+      const x = e.touches[0].clientX, y = e.touches[0].clientY;
+      const dx = x - sx, dy = y - sy;
+
+      if (!locked) {
+        if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { armed = false; return; } // 세로 스크롤 양보
+        if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.4) return;              // 수평 의도 확정 전
+        // 수평 드래그 시작
+        dir = dx < 0 ? 1 : -1;
+        targetKey = PAGE_ORDER[curIdx + dir] || null;
+        if (targetKey) {
+          const m = PAGE_META[targetKey];
+          peek.innerHTML = `<img src="${m.icon}" alt=""><span>${m.name}</span>`;
+        }
+        locked = true;
+        setDrag(true);
+        stage.style.transition = "none";
+        peek.style.transition = "none";
+      }
+
+      e.preventDefault(); // 수평 드래그 중 세로 스크롤 잠금
+      // 방향이 뒤집히면 목적지 재계산
+      const d2 = dx < 0 ? 1 : -1;
+      if (d2 !== dir) {
+        dir = d2;
+        targetKey = PAGE_ORDER[curIdx + dir] || null;
+        if (targetKey) {
+          const m = PAGE_META[targetKey];
+          peek.innerHTML = `<img src="${m.icon}" alt=""><span>${m.name}</span>`;
+        } else peek.innerHTML = "";
+      }
+      // 목적지 없으면 고무줄 저항
+      dxCur = targetKey ? dx : dx * 0.28;
+      place(dxCur);
+
+      const now = performance.now();
+      if (now - lastT > 0) vel = (x - lastX) / (now - lastT); // px/ms
+      lastX = x; lastT = now;
+    }, { passive: false });
+
+    document.addEventListener("touchend", () => {
+      if (!locked) { armed = false; return; }
+      const w = W();
+      const commit = targetKey && (
+        Math.abs(dxCur) > w * 0.32 ||                       // 충분히 끌었거나
+        (Math.abs(vel) > 0.45 && Math.sign(vel) === -dir)   // 빠르게 던졌거나
+      );
+      const ease = "transform .26s cubic-bezier(.22,.9,.3,1)";
+      stage.style.transition = ease;
+      peek.style.transition = ease;
+      if (commit) {
+        place(dir > 0 ? -(w + GAP) : (w + GAP));            // 끝까지 밀어내기
+        const url = PAGE_URL[targetKey];
+        setTimeout(() => { location.href = url; }, 210);
+      } else {
+        place(0);                                            // 쫀득한 스냅백
+        setTimeout(reset, 280);
+      }
     }, { passive: true });
+
+    document.addEventListener("touchcancel", () => { if (locked) { stage.style.transition = "transform .2s"; place(0); setTimeout(reset, 220); } }, { passive: true });
   }
 
   // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다
