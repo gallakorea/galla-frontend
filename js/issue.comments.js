@@ -1331,11 +1331,19 @@ function finishComposing(input) {
    찬성(pro) = 파랑 👍 / 반대(con) = 빨강 👎 */
 function applySideColoring() {
   document.querySelectorAll(".comment, .reply").forEach(unit => {
-    const side =
+    let side =
       unit.dataset.side ||
       unit.querySelector(".reply-actions")?.dataset.side;
 
     if (!side) return;
+
+    // 🕵️ 내 침투 글: 남에겐 위장 진영(dataset.side)으로 보이지만,
+    // 본인 화면에선 '내 실제 진영'으로 아이콘·색을 칠해 피아식별을 돕는다.
+    // (타인은 row.user_id !== ME.userId 라 이 분기를 안 타므로 위장 유지)
+    const row = allRows.find(r => r.id === Number(unit.dataset.id));
+    if (row && ME.userId && row.user_id === ME.userId && ME.faction && row.faction !== ME.faction) {
+      side = ME.faction;
+    }
 
     const user = unit.querySelector(".user");
     const name = unit.querySelector(".user-name") || user;
