@@ -496,10 +496,15 @@ function renderComments(body){
         </div>`;
     } else {
       if (CMT_SIDE == null) CMT_SIDE = ACTIVE?.id ? String(ACTIVE.id) : (OUTCOMES[0] ? String(OUTCOMES[0].id) : null);
-      const opts = OUTCOMES.map(o=>`<option value="${o.id}" ${String(CMT_SIDE)===String(o.id)?'selected':''}>${esc(o.label)} 지지</option>`).join('');
+      const chips = OUTCOMES.map(o=>{
+        const on = String(CMT_SIDE)===String(o.id);
+        const c = ocColor(o.id);
+        const st = on ? `background:${c}22;border-color:${c};color:${c}` : '';
+        return `<button class="pmd-cmt-pick ${on?'active':''}" data-pick="${o.id}" style="${st}">🎯 ${esc(o.label)}</button>`;
+      }).join('');
       composeTop = `
         <div class="pmd-cmt-ask">✍️ 어느 후보에 대한 의견인가요?</div>
-        <select id="cmtOcSel" class="pmd-cmt-ocsel">${opts}</select>`;
+        <div class="pmd-cmt-picksel">${chips}</div>`;
     }
   } else {
     composeTop = `
@@ -535,12 +540,6 @@ function renderComments(body){
     inp.placeholder=`[${pickName(CMT_SIDE)}] 의견을 남기세요…`;
     inp.focus();
   }));
-  // 다중 마켓: 댓글 후보 드롭다운
-  $('cmtOcSel')?.addEventListener('change', e=>{
-    CMT_SIDE = e.target.value;
-    const inp=$('cmtInput');
-    if(inp) inp.placeholder=`[${pickName(CMT_SIDE)}] 의견을 남기세요…`;
-  });
   $('cmtSend').addEventListener('click', ()=>{
     if(CMT_SIDE==null){
       const sel=body.querySelector('.pmd-cmt-picksel')||body.querySelector('.pmd-cmt-ocsel');
