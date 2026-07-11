@@ -175,6 +175,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const tierIcon = lv >= 20 ? "👑" : lv >= 10 ? "⚔️" : lv >= 5 ? "🔰" : "🌱";
             tierChip.textContent = `${tierIcon} ${lv}`;
         }
+        // 전투력 = 이 유저가 벌인 전투 액션(공격/방어/지원) 총량
+        (async () => {
+            const powerEl = document.getElementById("powerText");
+            if (!powerEl) return;
+            const { count } = await supabase
+                .from("comment_actions")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", viewUserId);
+            powerEl.textContent = `⚡ 전투력 ${(count ?? 0).toLocaleString()}`;
+        })();
         const badgeEl = document.getElementById("badgeText");
         if (badgeEl) {
             if (isMyPage) badgeEl.textContent = "🎯 오늘의 미션";

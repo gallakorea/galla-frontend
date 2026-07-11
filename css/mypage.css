@@ -536,3 +536,11 @@ body{
 .mp-hdr-other{ grid-template-columns:44px 1fr 44px; }
 .mp-hdr-title{ text-align:center; font-size:16px; font-weight:800; color:#fff;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* 탭 숫자(카운트) 숨김 */
+.tab-count{ display:none !important; }
+
+/* 전투력 칩 (레벨 옆) */
+.mp-power{ font-size:12px; font-weight:800; color:var(--g-gold);
+  background:rgba(245,207,107,.12); border:1px solid rgba(245,207,107,.3);
+  padding:2px 8px; border-radius:99px; white-space:nowrap; }
