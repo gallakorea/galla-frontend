@@ -973,7 +973,7 @@ function makeComment(c) {
     <div class="actions">
       ${likeUI(c)}
       ${battleButtons}
-      <span class="cp-chip" title="전투력">⚡${power}</span>
+      <span class="cp-chip" title="이 댓글이 받은 공격+방어+지원+추천을 합친 전투력">⚡ 전투력 ${power}</span>
       <span class="action-more">⋯</span>
     </div>
 
