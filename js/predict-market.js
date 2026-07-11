@@ -341,18 +341,30 @@ function emptyTab(msg){ return `<div class="pmd-tab-empty">${msg}</div>`; }
    - 베팅한 유저: 댓글 진영 = 보유 포지션으로 자동 잠금 (모순 발언/오선택 방지)
    - 미베팅 유저: 기본 미선택 → 명시적으로 골라야 게시 가능
    - 모든 댓글에 진영 칩 + 실제 베팅 여부(💰 홀더 / 관전) 뱃지 표시 */
-let CMT_SIDE = null;           // 'yes' | 'no' | null(미선택)
-let MY_POS_SIDE = null;        // 내 포지션 기준 잠금 진영
-// 다중 마켓이면 "{후보명} 긍정/부정"으로 — 누굴 예측하는지 명확히. ocId 없으면(기존 댓글) 후보명 생략.
+let CMT_SIDE = null;           // 단일: 'yes'|'no' / 다중: 후보 outcome_id(문자열 'oc:ID') 또는 'etc'
+let MY_POS_SIDE = null;        // 내 포지션 기준 잠금 진영(단일만)
+
+// 후보별 팀 색 팔레트 (다중 마켓) — 후보 = 팀
+const OC_COLORS = ['#3d6bff','#ff4d67','#35e0a0','#9b5bff','#ff9f40','#f5cf6b','#4dd0e1','#ff7ab6'];
+function ocColor(ocId){
+  const i = OUTCOMES.findIndex(o=>o.id===Number(ocId));
+  return i>=0 ? OC_COLORS[i%OC_COLORS.length] : '#8b8b93'; // 기타/미지정=회색
+}
+// 팀 이름 — 다중: 후보명(없으면 기타) / 단일: YES/NO. 긍정·부정 없음.
 function cmtSideName(side, ocId){
-  const pn = side==='yes' ? '긍정' : '부정';
-  if (!isMulti()) return side.toUpperCase();          // 단일: YES/NO
-  const oc = ocId ? ocLabel(ocId) : '';
-  return oc ? `${oc} ${pn}` : pn;
+  if (!isMulti()) return side==='yes'?'YES':'NO';
+  return ocId ? ocLabel(ocId) : '기타';              // etc·레거시 모두 기타
 }
 function cmtSideLabel(side, ocId){
-  const emoji = side==='yes' ? '👍' : '👎';
-  return `${emoji} ${cmtSideName(side, ocId)}`;
+  if (!isMulti()) return (side==='yes'?'👍 ':'👎 ') + cmtSideName(side, ocId);
+  return ocId ? '🎯 ' + ocLabel(ocId) : '🤔 기타';
+}
+// 댓글 카드/칩에 후보 색 입히는 inline style (후보 없으면 회색=기타)
+function ocChipStyle(side, ocId){
+  if (!isMulti()) return '';
+  if (!ocId) return 'color:#b8b8bf;background:rgba(255,255,255,.06);border-color:#3a3a3a';
+  const c = ocColor(ocId);
+  return `color:${c};background:${c}22;border-color:${c}99`;
 }
 // @멘션 하이라이트
 function cmtBody(content){ return esc(content).replace(/@(\S+)/g,'<span class="pmd-mention">@$1</span>'); }
@@ -362,13 +374,13 @@ let CMT_TOP_LIMIT=8;             // 최상위 댓글 노출 수
 const CMT_EXPANDED=new Set();    // 답글 펼친 스레드 id
 
 async function loadComments(body){
-  // 내 포지션 → 댓글 진영 잠금 (베팅과 발언 일치)
+  // 단일 마켓: 내 포지션으로 YES/NO 잠금. 다중 마켓: 여러 후보 가능 → 자유 선택(잠금 없음)
   MY_POS_SIDE = null;
-  if(POS && ((POS.yes_shares||0) > 0 || (POS.no_shares||0) > 0)){
+  if(!isMulti() && POS && ((POS.yes_shares||0) > 0 || (POS.no_shares||0) > 0)){
     MY_POS_SIDE = (POS.no_shares||0) > (POS.yes_shares||0) ? 'no' : 'yes';
     CMT_SIDE = MY_POS_SIDE;
   } else {
-    CMT_SIDE = null; // 미베팅: 반드시 직접 선택
+    CMT_SIDE = null; // 다중 or 미베팅: 직접 선택
   }
 
   const { data: rows } = await supa.from('market_comments')
@@ -412,14 +424,16 @@ function renderComments(body){
     const liked=myLikes.has(c.id);
     // 이 댓글의 후보(outcome)에 실제 베팅했는지로 홀더 판정
     const isHolder = !!posMap?.[`${c.user_id}:${c.outcome_id||'x'}`];
-    const teamName = cmtSideName(c.side, c.outcome_id);   // 예: "손흥민 긍정"
-    // 역할 뱃지도 진영 색으로 통일 — 홀더는 💰(돈 걸린 편), 관전은 👁(응원만)
+    const teamName = cmtSideName(c.side, c.outcome_id);   // 다중: "손흥민" / 단일: YES
+    const multi = isMulti();
+    const chipStyle = multi ? ` style="${ocChipStyle(c.side, c.outcome_id)}"` : '';
+    const borderStyle = multi ? ` style="border-left-color:${c.side==='etc'?'#8b8b93':ocColor(c.outcome_id)}"` : '';
     const roleBadge = isHolder
-      ? `<span class="pmd-cmt-role holder ${c.side}">💰 ${teamName} 홀더</span>`
-      : `<span class="pmd-cmt-role watch ${c.side}">👁 ${teamName} 응원</span>`;
-    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
+      ? `<span class="pmd-cmt-role holder ${c.side}"${chipStyle}>💰 ${teamName} 홀더</span>`
+      : `<span class="pmd-cmt-role watch ${c.side}"${chipStyle}>👁 ${teamName} 응원</span>`;
+    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}"${borderStyle}>
       <div class="pmd-cmt-head">
-        <span class="pmd-side-chip ${c.side}">${cmtSideLabel(c.side, c.outcome_id)}</span>
+        <span class="pmd-side-chip ${c.side}"${chipStyle}>${cmtSideLabel(c.side, c.outcome_id)}</span>
         <span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>
         ${roleBadge}
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
@@ -451,31 +465,54 @@ function renderComments(body){
   const shown=tops.slice(0,CMT_TOP_LIMIT);
   const remaining=tops.length-shown.length;
 
-  // 컴포저: 베팅자=포지션 잠금 / 미베팅자=명시적 선택
+  const multi = isMulti();
+  // 현재 선택(pick)의 표시 이름 — 다중: 후보명/기타, 단일: YES/NO
+  const pickName = (p) => {
+    if (p==null) return '';
+    if (!multi) return cmtSideName(p, ACTIVE?.id);
+    if (p==='etc') return '기타';
+    return ocLabel(Number(p));
+  };
+
+  // 컴포저: (단일)베팅자 포지션 잠금 / 그 외 명시적 선택
   let composeTop;
-  if (MY_POS_SIDE) {
+  if (MY_POS_SIDE && !multi) {
     const shares = MY_POS_SIDE === 'yes' ? (POS?.yes_shares||0) : (POS?.no_shares||0);
     composeTop = `
       <div class="pmd-cmt-locked ${MY_POS_SIDE}">
-        💰 내 포지션: <b>${cmtSideName(MY_POS_SIDE, ACTIVE?.id)} ${fmt(shares)}주</b> 보유 —
-        <b>${cmtSideName(MY_POS_SIDE, ACTIVE?.id)} 입장</b>으로 작성됩니다
+        💰 내 포지션: <b>${cmtSideName(MY_POS_SIDE)} ${fmt(shares)}주</b> 보유 —
+        <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다
+      </div>`;
+  } else if (multi) {
+    // 다중: 후보 선택 + 기타 (긍정/부정 없음 — 후보가 곧 팀)
+    const picks = OUTCOMES.map(o=>{
+      const on = String(CMT_SIDE)===String(o.id);
+      const c = ocColor(o.id);
+      const st = on ? `background:${c}22;border-color:${c};color:${c}` : '';
+      return `<button class="pmd-cmt-pick ${on?'active':''}" data-pick="${o.id}" style="${st}">🎯 ${esc(o.label)}</button>`;
+    }).join('');
+    composeTop = `
+      <div class="pmd-cmt-ask">✍️ 어느 후보를 지지하나요?</div>
+      <div class="pmd-cmt-picksel">
+        ${picks}
+        <button class="pmd-cmt-pick etc ${CMT_SIDE==='etc'?'active':''}" data-pick="etc">🤔 기타</button>
       </div>`;
   } else {
     composeTop = `
       <div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(베팅하면 자동으로 고정돼요)</span></div>
-      <div class="pmd-cmt-sidesel">
-        <button class="pmd-cmt-side yes ${CMT_SIDE==='yes'?'active':''}" data-side="yes">${cmtSideLabel('yes', ACTIVE?.id)}</button>
-        <button class="pmd-cmt-side no ${CMT_SIDE==='no'?'active':''}" data-side="no">${cmtSideLabel('no', ACTIVE?.id)}</button>
+      <div class="pmd-cmt-picksel">
+        <button class="pmd-cmt-pick yes ${CMT_SIDE==='yes'?'active':''}" data-pick="yes">👍 YES</button>
+        <button class="pmd-cmt-pick no ${CMT_SIDE==='no'?'active':''}" data-pick="no">👎 NO</button>
       </div>`;
   }
 
   body.innerHTML = `
-    <div class="pmd-cmt-compose ${CMT_SIDE ? 'side-'+CMT_SIDE : 'side-none'}">
+    <div class="pmd-cmt-compose ${CMT_SIDE!=null ? 'has-pick' : 'side-none'}">
       ${composeTop}
       <div class="pmd-cmt-inputrow">
         <input id="cmtInput" class="pmd-cmt-input" maxlength="300"
-          placeholder="${CMT_SIDE ? `[${cmtSideName(CMT_SIDE, ACTIVE?.id)} 입장] 의견을 남기세요…` : '먼저 입장을 선택하세요'}">
-        <button id="cmtSend" class="pmd-cmt-send ${CMT_SIDE||''}">게시</button>
+          placeholder="${CMT_SIDE!=null ? `[${esc(pickName(CMT_SIDE))}] 의견을 남기세요…` : (multi?'먼저 후보를 선택하세요':'먼저 입장을 선택하세요')}">
+        <button id="cmtSend" class="pmd-cmt-send">게시</button>
       </div>
     </div>
     <div class="pmd-cmt-list">
@@ -483,25 +520,23 @@ function renderComments(body){
     </div>
     ${remaining>0?`<button id="cmtMore" class="pmd-cmt-more">댓글 더 보기 (${remaining})</button>`:''}`;
 
-  // 진영 선택 (미베팅자만 렌더됨)
-  body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-side').forEach(b=>b.addEventListener('click',()=>{
-    CMT_SIDE=b.dataset.side;
-    const compose=body.querySelector('.pmd-cmt-compose');
-    compose.classList.remove('side-none','side-yes','side-no');
-    compose.classList.add('side-'+CMT_SIDE);
-    body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-side').forEach(x=>x.classList.remove('active'));
+  // 선택 버튼 (잠금 아닐 때만 렌더됨)
+  body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(b=>b.addEventListener('click',()=>{
+    CMT_SIDE=b.dataset.pick;
+    body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(x=>{ x.classList.remove('active'); if(multi&&x.dataset.pick!=='etc') x.style.cssText=''; });
     b.classList.add('active');
+    if(multi && b.dataset.pick!=='etc'){ const c=ocColor(b.dataset.pick); b.style.cssText=`background:${c}22;border-color:${c};color:${c}`; }
+    body.querySelector('.pmd-cmt-compose')?.classList.add('has-pick');
     const inp=$('cmtInput');
-    inp.placeholder=`[${cmtSideName(CMT_SIDE, ACTIVE?.id)} 입장] 의견을 남기세요…`;
-    $('cmtSend').className='pmd-cmt-send '+CMT_SIDE;
+    inp.placeholder=`[${pickName(CMT_SIDE)}] 의견을 남기세요…`;
     inp.focus();
   }));
   $('cmtSend').addEventListener('click', ()=>{
-    if(!CMT_SIDE){
-      const sel=body.querySelector('.pmd-cmt-sidesel');
+    if(CMT_SIDE==null){
+      const sel=body.querySelector('.pmd-cmt-picksel');
       sel?.classList.add('shake');
       setTimeout(()=>sel?.classList.remove('shake'), 500);
-      toast('먼저 YES/NO 입장을 선택해주세요.');
+      toast(multi?'먼저 지지 후보(또는 기타)를 선택해주세요.':'먼저 YES/NO 입장을 선택해주세요.');
       return;
     }
     postComment($('cmtInput').value, CMT_SIDE, null, body);
@@ -538,22 +573,31 @@ function renderComments(body){
     </div>`;
     const inp=box.querySelector('.reply-input'); inp.focus(); inp.setSelectionRange(inp.value.length,inp.value.length);
     box.querySelector('.reply-send').addEventListener('click', ()=>{
-      if(!CMT_SIDE){ toast('먼저 상단에서 YES/NO 입장을 선택해주세요.'); return; }
+      if(CMT_SIDE==null){ toast(isMulti()?'먼저 상단에서 지지 후보를 선택해주세요.':'먼저 상단에서 YES/NO 입장을 선택해주세요.'); return; }
       postComment(inp.value, CMT_SIDE, topId, body);
     });
     box.scrollIntoView({block:'nearest',behavior:'smooth'});
   }));
 }
 
-async function postComment(text, side, parentId, body){
+async function postComment(text, pick, parentId, body){
   if(needLogin())return;
   const txt=(text||'').trim();
   if(!txt || txt.startsWith('@')&&txt.replace(/^@\S+\s*/,'').length===0)return toast('의견을 입력하세요.');
-  const payload={market_id:marketId,user_id:ME.id,side,content:txt};
+
+  // pick 해석 — 단일: 'yes'/'no' / 다중: 후보 outcome_id 또는 'etc'
+  const payload={market_id:marketId,user_id:ME.id,content:txt};
   if(parentId) payload.parent_id=parentId;
-  if(ACTIVE?.id) payload.outcome_id=ACTIVE.id;   // 지금 보고 있는 후보에 대한 의견으로 기록
+  if(!isMulti()){
+    payload.side = pick;                       // yes | no
+    if(ACTIVE?.id) payload.outcome_id=ACTIVE.id;
+  } else if(pick==='etc'){
+    payload.side='etc'; payload.outcome_id=null; // 기타
+  } else {
+    payload.side='yes'; payload.outcome_id=Number(pick); // 후보 지지
+  }
   const { error } = await supa.from('market_comments').insert(payload);
-  if(error)return toast('등록 실패');
+  if(error){ console.error('[cmt] insert', error); return toast('등록 실패'); }
   await refreshBalance();
   loadComments(body);
 }

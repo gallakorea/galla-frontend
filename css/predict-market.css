@@ -129,6 +129,19 @@
 .pmd-cmt-side { flex: 1; padding: 9px; border-radius: 8px; background: #111; border: 1px solid #2a2a2a; color: #999; font-weight: 800; font-size: 13px; cursor: pointer; }
 .pmd-cmt-side.yes.active { background: #0a1233; border-color: #3356ff; color: #aac4ff; }
 .pmd-cmt-side.no.active { background: #1a0808; border-color: #ff4f6e; color: #ffaaaa; }
+
+/* 후보 선택(다중) + YES/NO(단일) 통합 버튼 — 후보=팀 */
+.pmd-cmt-picksel { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 8px; }
+.pmd-cmt-picksel.shake { animation: selShake .45s; }
+.pmd-cmt-pick {
+  padding: 8px 12px; border-radius: 999px;
+  background: #111; border: 1px solid #2a2a2a; color: #aab; font-weight: 800; font-size: 12.5px; cursor: pointer;
+  transition: transform .1s ease;
+}
+.pmd-cmt-pick:active { transform: scale(.96); }
+.pmd-cmt-pick.yes.active { background: #0a1233; border-color: #3356ff; color: #aac4ff; }
+.pmd-cmt-pick.no.active  { background: #1a0808; border-color: #ff4f6e; color: #ffaaaa; }
+.pmd-cmt-pick.etc.active { background: rgba(255,255,255,.08); border-color: #666; color: #ddd; }
 .pmd-cmt-inputrow { display: flex; gap: 8px; }
 .pmd-cmt-input { flex: 1; padding: 12px; border-radius: 10px; background: #050505; border: 1px solid #2a2a2a; color: #fff; font-size: 14px; }
 .pmd-cmt-send { padding: 0 18px; border-radius: 10px; border: none; background: #ffe27a; color: #111; font-weight: 900; cursor: pointer; }
