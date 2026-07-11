@@ -63,10 +63,8 @@ async function vote(issueId, type) {
   }
 
   const session = await waitForSessionGuaranteed();
-  console.log("[VOTE][ACTION] session user_id:", session?.user?.id, "issueId:", issueId, "type:", type);
   if (!session) {
     votingInProgress = false;
-    console.warn("[VOTE][ACTION] session not ready");
     promptLogin();
     return null;
   }
@@ -82,37 +80,64 @@ async function vote(issueId, type) {
   // 이미 투표한 경우
   if (error) {
     if (error.code === "23505" || error.status === 409) {
-      const existing = await getMyVote(issueId);
-      console.log("[VOTE][ACTION] already voted:", existing);
-      console.log("[VOTE][ACTION] normalized return value:", existing);
-      return existing;
+      return await getMyVote(issueId);
     }
     console.error("[VOTE] insert error", error);
-    console.log("[VOTE][ACTION] normalized return value:", null);
     return null;
   }
 
   const normalized = type === "pro" || type === "con" ? type : null;
-  console.log("[VOTE][ACTION] normalized return value:", normalized);
+  // 캐시 갱신 (재조회 없이 즉시 반영)
+  const idN = Number(resolveActiveIssueId(issueId));
+  if (idN) { __votePrefetched.add(idN); if (normalized) __voteCache.set(idN, normalized); }
   return normalized;
 }
 
 /* =========================
-   GET MY VOTE
+   내 투표 캐시 (N+1 방지)
+   - 피드/목록은 GALLA_PREFETCH_VOTES([ids])로 한 번에 조회 → 카드별 개별 쿼리 제거
+   - prefetch된 id는 캐시에서 즉시 반환(무투표=null), 미prefetch id만 개별 조회 fallback
+========================= */
+const __voteCache = new Map();       // issueId(Number) → 'pro' | 'con'
+const __votePrefetched = new Set();  // 배치로 이미 조회한 issueId
+
+window.GALLA_PREFETCH_VOTES = async function (issueIds) {
+  const supabase = window.supabaseClient;
+  if (!supabase) return;
+  const ids = [...new Set((issueIds || []).map(Number).filter(Boolean))];
+  if (!ids.length) return;
+
+  const session = await waitForSessionGuaranteed();
+  ids.forEach(id => __votePrefetched.add(id));   // 세션 없어도 '무투표'로 확정
+  if (!session) return;
+
+  const { data, error } = await supabase
+    .from("votes")
+    .select("issue_id,type")
+    .eq("user_id", session.user.id)
+    .in("issue_id", ids);
+  if (error) { console.error("[VOTE] prefetch error", error); return; }
+  (data || []).forEach(v => {
+    if (v.type === "pro" || v.type === "con") __voteCache.set(Number(v.issue_id), v.type);
+  });
+};
+
+/* =========================
+   GET MY VOTE (캐시 우선)
 ========================= */
 async function getMyVote(issueId) {
   issueId = resolveActiveIssueId(issueId);
   if (!issueId) return null;
 
+  // 배치 프리페치된 id는 추가 쿼리 없이 즉시 반환
+  const idN = Number(issueId);
+  if (__votePrefetched.has(idN)) return __voteCache.get(idN) || null;
+
   const supabase = window.supabaseClient;
   if (!supabase) return null;
 
   const session = await waitForSessionGuaranteed();
-  console.log("[VOTE][CHECK] session user_id:", session?.user?.id, "issueId:", issueId);
-  if (!session) {
-    console.warn("[VOTE][CHECK] session not ready");
-    return null;
-  }
+  if (!session) return null;
 
   const { data } = await supabase
     .from("votes")
@@ -120,16 +145,11 @@ async function getMyVote(issueId) {
     .eq("issue_id", issueId)
     .eq("user_id", session.user.id)
     .maybeSingle();
-  console.log("[VOTE][CHECK] my vote row:", data);
 
-  if (!data || !data.type) {
-    console.log("[VOTE][CHECK] no vote for this user");
-    console.log("[VOTE][CHECK] normalized result:", null);
-    return null;
-  }
-
-  const normalized = data.type === "pro" || data.type === "con" ? data.type : null;
-  console.log("[VOTE][CHECK] normalized result:", normalized);
+  const normalized = data && (data.type === "pro" || data.type === "con") ? data.type : null;
+  // 단건 조회 결과도 캐시에 반영
+  __votePrefetched.add(idN);
+  if (normalized) __voteCache.set(idN, normalized);
   return normalized;
 }
 

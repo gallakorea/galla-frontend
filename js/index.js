@@ -637,7 +637,12 @@ async function loadData() {
     }));
 
     const issueIds = cards.map(c => c.id);
-    const warMap = await loadWarData(issueIds);
+
+    // 내 투표 상태를 한 번에 프리페치(카드별 N+1 쿼리 제거) + 전황 집계를 병렬로
+    const [warMap] = await Promise.all([
+        loadWarData(issueIds),
+        window.GALLA_PREFETCH_VOTES ? window.GALLA_PREFETCH_VOTES(issueIds) : Promise.resolve()
+    ]);
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
     window.cards = cards;
 
