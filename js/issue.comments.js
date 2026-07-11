@@ -427,7 +427,7 @@ function renderMorale() {
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
     <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : `${fLabel(lead)} 진영 우세`} · ${proPct}%</div>
-    <div class="bm-stats">⚡ 총 교전 <b id="stat-total">0</b> · ⚔ <span id="stat-atk">0</span> · 🛡 <span id="stat-def">0</span> · 💣 <span id="stat-sup">0</span></div>
+    <div class="bm-stats">⚡ 총 교전 <b id="stat-total">0</b> · 💥 <span id="stat-atk">0</span> · 🛡 <span id="stat-def">0</span> · 💣 <span id="stat-sup">0</span></div>
     ${ME.faction
       ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${fLabel(ME.faction)} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>
          <button type="button" class="fc-enter ${ME.faction}" id="fc-open">
@@ -470,7 +470,7 @@ async function fetchFeedNicks(ids) {
 }
 
 const ACTION_META = {
-  attack:  { icon: "⚔", verb: "공격", delta: "-12", cls: "atk" },
+  attack:  { icon: "💥", verb: "공격", delta: "-12", cls: "atk" },
   defend:  { icon: "🛡", verb: "방어", delta: "+8",  cls: "def" },
   support: { icon: "💣", verb: "지원", delta: "+12", cls: "sup" }
 };
@@ -689,7 +689,7 @@ async function renderHonors() {
   });
   const top = (k) => Object.entries(agg).sort((x, y) => y[1][k] - x[1][k])[0];
   const picks = [
-    { k: "attack", icon: "⚔", label: "최다 공격" },
+    { k: "attack", icon: "💥", label: "최다 공격" },
     { k: "defend", icon: "🛡", label: "최다 방어" },
     { k: "support", icon: "💣", label: "최다 지원" }
   ].map(p => ({ ...p, e: top(p.k) })).filter(p => p.e && p.e[1][p.k] > 0);
@@ -850,9 +850,9 @@ function likeUI(c) {
 
 /* 진영 규칙 (서버 battle_action RPC와 동일)
    - 내 진영 없음(미투표) → 참전 불가
-   - 반대 진영 댓글 → ⚔공격만 (60초 쿨다운 후 재공격 가능)
+   - 반대 진영 댓글 → 💥공격만 (60초 쿨다운 후 재공격 가능)
    - 같은 진영 댓글  → 🛡방어 · 💣지원만 (동일 쿨다운) */
-const ACTION_LABEL = { attack: "⚔공격", defend: "🛡방어", support: "💣지원" };
+const ACTION_LABEL = { attack: "💥공격", defend: "🛡방어", support: "💣지원" };
 
 /* 침투자 판별 — 작성자의 실제 투표 진영 ≠ 글이 놓인 진영.
    위장 없음: 침투자의 실제 입장(진영)을 모두에게 노출한다(싸움 유도). */
@@ -892,7 +892,7 @@ function battleButtonsFor(c) {
   }
   if (my !== c.faction) {
     // 적진의 침투자는 '격퇴' — 침입자를 몰아낸다는 게임 서사 (동작은 attack 그대로)
-    return battleBtn(c, "attack", isInfiltrator(c) ? "⚔격퇴" : null);
+    return battleBtn(c, "attack", isInfiltrator(c) ? "💥격퇴" : null);
   }
   return battleBtn(c, "defend") + battleBtn(c, "support");
 }
@@ -917,7 +917,7 @@ setInterval(() => {
 
 function makeReply(r) {
   const chip = r.battle_action === "attack"
-    ? `<span class="reply-chip atk">⚔ 공격 −12</span>`
+    ? `<span class="reply-chip atk">💥 공격 −12</span>`
     : r.battle_action === "defend"
       ? `<span class="reply-chip def">🛡 방어 +8</span>`
       : "";
@@ -977,7 +977,7 @@ function makeComment(c) {
       <span class="action-more">⋯</span>
     </div>
 
-    <div class="reply-meta">💬 ${replies.length} · ⚔ ${c.attack_count || 0} · 🛡 ${c.defense_count || 0} · 💣 ${c.support_count || 0}</div>
+    <div class="reply-meta">💬 ${replies.length} · 💥 ${c.attack_count || 0} · 🛡 ${c.defense_count || 0} · 💣 ${c.support_count || 0}</div>
 
     <div class="replies" data-id="${c.id}">
       ${hiddenCount > 0 ? `<button type="button" class="reply-older" data-id="${c.id}">이전 답글 ${hiddenCount}개 보기</button>` : ``}
@@ -1101,7 +1101,7 @@ function bindEvents() {
       return;
     }
 
-    // ⚔🛡 전투 버튼 클릭 → 해당 유닛 아래 인라인 컴포저 (누구를 왜 치는지 그 자리에서 보이게)
+    // 💥🛡 전투 버튼 클릭 → 해당 유닛 아래 인라인 컴포저 (누구를 왜 치는지 그 자리에서 보이게)
     if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
       if (!requireLogin()) return;
       const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
@@ -1359,11 +1359,11 @@ function openInlineComposer(type, targetId, targetUser, unit) {
   box.classList.remove("atk", "def");
   box.classList.add(type === "attack" ? "atk" : "def");
   box.querySelector("#ic-title").innerHTML = type === "attack"
-    ? `⚔ <b>${escT(targetUser)}</b> ${atkVerb} — 이유를 남겨야 데미지가 들어갑니다`
+    ? `💥 <b>${escT(targetUser)}</b> ${atkVerb} — 이유를 남겨야 데미지가 들어갑니다`
     : `🛡 <b>${escT(targetUser)}</b> 방어 — 지원 근거가 방어막이 됩니다`;
   const input = box.querySelector("#ic-input");
   input.placeholder = type === "attack" ? "반박 근거를 입력…" : "지지 근거를 입력…";
-  box.querySelector("#ic-send").textContent = type === "attack" ? `⚔ −12` : `🛡 +8`;
+  box.querySelector("#ic-send").textContent = type === "attack" ? `💥 −12` : `🛡 +8`;
 
   // 대상 유닛 바로 아래에 부착 (최상위 댓글이면 스레드 끝, 답글이면 그 답글 뒤)
   if (unit.classList.contains("reply")) {
@@ -1483,7 +1483,7 @@ function updateReplyMeta(rootUnit, rootId) {
   const row = allRows.find(r => r.id === rootId);
   if (!meta || !row) return;
   const n = (replyMap[rootId] || []).length;
-  meta.textContent = `💬 ${n} · ⚔ ${row.attack_count || 0} · 🛡 ${row.defense_count || 0} · 💣 ${row.support_count || 0}`;
+  meta.textContent = `💬 ${n} · 💥 ${row.attack_count || 0} · 🛡 ${row.defense_count || 0} · 💣 ${row.support_count || 0}`;
 }
 
 /* 전송 완료 후 컴포저 정리 — 모바일 키보드 모드(kb-open)를 확실히 해제.
