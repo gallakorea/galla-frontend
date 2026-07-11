@@ -7,13 +7,13 @@
 window.CURRENT_ISSUE_ID = null;
 
 let BATTLE_MODE = null;
-// BATTLE_MODE = { type: "attack"|"defend", targetId, targetUser, targetSide }
+// BATTLE_MODE = { type: "attack"|"defend", targetId, targetUser } — 인라인 컴포저가 소유
 
-const PAGE_SIZE_BB = 5, PAGE_SIZE_TH = 4;
+const PAGE_SIZE = 8;
 
 const state = {
-  pro: { bb: 1, th: 1, data: [] },
-  con: { bb: 1, th: 1, data: [] }
+  pro: { page: 1, data: [] },
+  con: { page: 1, data: [] }
 };
 
 /* 로그인 사용자 상태 */
@@ -33,6 +33,18 @@ function cooldownLeft(commentId, action) {
 }
 function markAction(commentId, action) {
   ME.actions.set(`${commentId}:${action}`, Date.now());
+}
+
+/* 답글 체인의 최상위(루트) 댓글 id — 스레드는 1depth라 답글의 답글도 루트에 귀속 */
+function rootIdOf(id) {
+  let cur = allRows.find(r => r.id === id);
+  let hop = 0;
+  while (cur && cur.parent_id && hop < 20) {
+    const p = allRows.find(r => r.id === cur.parent_id);
+    if (!p) break;
+    cur = p; hop++;
+  }
+  return cur ? cur.id : id;
 }
 
 let allRows = [];     // 이 이슈의 모든 댓글 행
@@ -90,26 +102,23 @@ let INFIL_LEFT = null;       // 오늘 남은 침투 횟수
 
 async function initComposerUI() {
   const bottom = document.querySelector(".battle-input-bottom");
-  const sel = document.getElementById("battle-side-select");
-  if (!bottom || !sel) return;
+  const input = document.getElementById("battle-comment-input");
+  if (!bottom) return;
 
-  // 미투표: "어느 진영으로 쓸까요" 안내만 추가하고 기존 선택 버튼 유지
+  // 미투표: 잠금 안내 — 진영은 투표로만 정해진다
   if (!ME.faction) {
-    if (!bottom.querySelector(".side-caption")) {
-      const cap = document.createElement("div");
-      cap.className = "side-caption";
-      cap.textContent = "✍️ 어느 진영으로 참전할까요? (투표하면 진영이 고정돼요)";
-      bottom.prepend(cap);
-    }
+    bottom.innerHTML = `
+      <div class="composer-side locked" id="composer-side">
+        <span class="cs-flag">🔒 위에서 투표해 진영을 정하면 참전할 수 있어요</span>
+      </div>`;
+    if (input) input.placeholder = "투표하고 참전하세요…";
     return;
   }
 
-  // 투표자: 선택 버튼 제거 → 내 진영 상태바 + 침투 버튼
-  sel.value = ME.faction;
+  // 투표자: 내 진영 상태바 + 침투 버튼
   const my = ME.faction;
-  const enemy = my === "pro" ? "con" : "pro";
   const myLabel = my === "pro" ? "👍 찬성" : "👎 반대";
-  const enemyLabel = enemy === "pro" ? "👍 찬성" : "👎 반대";
+  const enemyLabel = my === "pro" ? "👎 반대" : "👍 찬성";
 
   const { data: st } = await window.supabaseClient.rpc("infiltration_status");
   INFIL_LEFT = st?.left ?? 3;
@@ -121,6 +130,7 @@ async function initComposerUI() {
         🕵️ 적진 침투 <b id="infil-left">${INFIL_LEFT}</b>/3
       </button>
     </div>`;
+  if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
 
   document.getElementById("infiltrate-btn").addEventListener("click", () => {
     if (!INFILTRATE && INFIL_LEFT <= 0) {
@@ -128,16 +138,14 @@ async function initComposerUI() {
       return;
     }
     INFILTRATE = !INFILTRATE;
-    sel.value = INFILTRATE ? enemy : my;
     const box = document.getElementById("composer-side");
-    const input = document.getElementById("battle-comment-input");
     box.classList.toggle("infiltrating", INFILTRATE);
     box.querySelector(".cs-flag").innerHTML = INFILTRATE
       ? `🕵️ <b>${enemyLabel} 진영 침투 모드</b> — 적진에 글이 올라갑니다`
       : `🎖 ${myLabel} 진영으로 참전 중`;
     if (input) input.placeholder = INFILTRATE
-      ? "적진에 남길 말을 입력하세요… (침투 1회 소모)"
-      : "이 전투에 대한 의견을 입력하세요...";
+      ? `적진에 침투 글 쓰기… (오늘 ${INFIL_LEFT}회 남음)`
+      : "아군 전선에 새 의견 쓰기…";
     window.BattleFX?.haptic("tap");
   });
 }
@@ -148,15 +156,13 @@ function consumeInfiltration() {
   if (el) el.textContent = INFIL_LEFT;
   // 모드 해제 (1회 소모 후 복귀)
   INFILTRATE = false;
-  const sel = document.getElementById("battle-side-select");
-  if (sel && ME.faction) sel.value = ME.faction;
   const box = document.getElementById("composer-side");
   if (box) {
     box.classList.remove("infiltrating");
     box.querySelector(".cs-flag").innerHTML = `🎖 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영으로 참전 중`;
   }
   const input = document.getElementById("battle-comment-input");
-  if (input) input.placeholder = "이 전투에 대한 의견을 입력하세요...";
+  if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
 }
 
 /* ======================
@@ -406,6 +412,7 @@ function renderMorale() {
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
     <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>
+    <div class="bm-stats">⚡ 총 교전 <b id="stat-total">0</b> · ⚔ <span id="stat-atk">0</span> · 🛡 <span id="stat-def">0</span> · 💣 <span id="stat-sup">0</span></div>
     ${ME.faction
       ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>
          <button type="button" class="fc-enter ${ME.faction}" id="fc-open">
@@ -420,6 +427,9 @@ function renderMorale() {
 
   const openBtn = bar.querySelector("#fc-open");
   if (openBtn) openBtn.onclick = openFactionChat;
+
+  // 슬림 전황 수치 채우기 (전황표 3박스를 이 한 줄로 통합)
+  renderWarDashboard();
 }
 
 /* ======================
@@ -470,13 +480,13 @@ function feedLineHTML(a, isNew) {
 function ensureFeedBox() {
   let box = document.getElementById("battle-feed");
   if (box) return box;
-  const dash = document.querySelector(".war-dashboard");
-  if (!dash) return null;
+  const anchor = document.getElementById("battle-morale") || document.querySelector(".comment-war-header");
+  if (!anchor) return null;
   box = document.createElement("div");
   box.id = "battle-feed";
   box.className = "battle-feed";
   box.innerHTML = `<div class="bf-title">📡 전장 속보 <span class="bf-live">LIVE</span></div><div class="bf-list" id="bf-list"><div class="bf-empty">아직 교전 기록이 없습니다.</div></div>`;
-  dash.after(box);
+  anchor.after(box);
   return box;
 }
 
@@ -521,6 +531,50 @@ async function initBattleFeed(issueId) {
         syncUnitHp(c.id, oldHp, c.hp);
         renderMorale();
       }
+    })
+    // 새 댓글/답글 실시간 부분 삽입 — 남의 참전·전투 답글이 그 자리에 바로 나타난다
+    .on("postgres_changes", { event: "INSERT", schema: "public", table: "comments", filter: "issue_id=eq." + issueId }, async payload => {
+      const c = payload.new;
+      if (!c || c.user_id === ME.userId) return;          // 내 것은 로컬에서 이미 처리
+      if (allRows.some(r => r.id === c.id)) return;
+      if (c.status === "deleted") return;
+
+      await fetchFeedNicks([c.user_id]);
+      if (!profileMap[c.user_id] && feedNickCache[c.user_id]) {
+        profileMap[c.user_id] = { nickname: feedNickCache[c.user_id], level: 1 };
+      }
+      // 침투 노출 판정용 작성자 투표 진영 (미보유 시 단건 조회)
+      if (!authorVoteMap[c.user_id]) {
+        const { data: v } = await window.supabaseClient
+          .from("votes").select("type")
+          .eq("issue_id", issueId).eq("user_id", c.user_id).limit(1);
+        const t = v?.[0]?.type;
+        if (t === "pro" || t === "con") authorVoteMap[c.user_id] = t;
+      }
+
+      allRows.unshift(c);
+
+      if (c.parent_id) {
+        const rootId = rootIdOf(c.id);
+        (replyMap[rootId] ||= []).push(c);
+        const rootUnit = document.querySelector(`.comment[data-id="${rootId}"]`);
+        const repliesBox = rootUnit?.querySelector(":scope > .replies");
+        if (repliesBox) {
+          repliesBox.insertAdjacentHTML("beforeend", makeReply(c));
+          applySideColoring();
+          updateReplyMeta(rootUnit, rootId);
+        }
+      } else if (c.faction === "pro" || c.faction === "con") {
+        state[c.faction].data.unshift(c);
+        const list = document.getElementById(c.faction + "-list");
+        if (list && state[c.faction].page === 1) {
+          list.querySelector(".empty-zone")?.remove();
+          list.insertAdjacentHTML("afterbegin", makeComment(c));
+          applySideColoring();
+        }
+      }
+      renderWarDashboard();
+      renderMorale();
     })
     .subscribe();
 }
@@ -633,7 +687,7 @@ async function renderHonors() {
     box = document.createElement("div");
     box.id = "battle-honors";
     box.className = "battle-honors";
-    (document.getElementById("battle-feed") || document.querySelector(".war-dashboard"))?.after(box);
+    (document.getElementById("battle-feed") || document.getElementById("battle-morale") || document.querySelector(".comment-war-header"))?.after(box);
   }
   box.innerHTML = `<div class="bh-title">🎖 전공 훈장</div><div class="bh-row">` +
     picks.map(p => `
@@ -735,12 +789,13 @@ async function loadComments(issueId) {
     });
   }
 
-  // 댓글/대댓글 분류
+  // 댓글/대댓글 분류 — 답글의 답글(parent가 답글)은 최상위 댓글 스레드로 승격(1depth 유지).
+  // 승격 없이는 replyMap[답글id]가 렌더되지 않아 화면에서 영영 안 보이는 버그가 있었다.
   replyMap = {};
   const top = { pro: [], con: [] };
   allRows.forEach(r => {
     if (r.parent_id) {
-      (replyMap[r.parent_id] ||= []).push(r);
+      (replyMap[rootIdOf(r.id)] ||= []).push(r);
     } else if (r.faction === "pro" || r.faction === "con") {
       top[r.faction].push(r);
     }
@@ -808,19 +863,22 @@ function relTag(c) {
     ? `<span class="rel-tag ally">아군</span>`
     : `<span class="rel-tag enemy">적군</span>`;
 }
-function battleBtn(c, action) {
+function battleBtn(c, action, customLabel) {
+  const base = customLabel || ACTION_LABEL[action];
   const left = cooldownLeft(c.id, action);
   const cd = left > 0 ? ` cooldown" data-cd="${action}" data-until="${ME.actions.get(c.id + ":" + action) + BATTLE_COOLDOWN_MS}` : "";
-  const label = left > 0 ? `${ACTION_LABEL[action]} ${left}s` : ACTION_LABEL[action];
-  return `<span class="action-${action}${cd}" data-id="${c.id}">${label}</span>`;
+  const label = left > 0 ? `${base} ${left}s` : base;
+  const lbl = customLabel ? ` data-lbl="${customLabel}"` : "";
+  return `<span class="action-${action}${cd}" data-id="${c.id}"${lbl}>${label}</span>`;
 }
 function battleButtonsFor(c) {
   const my = ME.faction;
   if (!my) {
-    return `<span class="action-locked" data-id="${c.id}">🔒 진영 선택 후 참전</span>`;
+    return `<span class="action-locked" data-id="${c.id}">🔒 투표 후 참전</span>`;
   }
   if (my !== c.faction) {
-    return battleBtn(c, "attack");
+    // 적진의 침투자는 '요격' — 침입자를 쳐낸다는 게임 서사 (동작은 attack 그대로)
+    return battleBtn(c, "attack", isInfiltrator(c) ? "⚔요격" : null);
   }
   return battleBtn(c, "defend") + battleBtn(c, "support");
 }
@@ -831,10 +889,11 @@ setInterval(() => {
     const until = Number(el.dataset.until);
     const left = Math.ceil((until - Date.now()) / 1000);
     const action = el.dataset.cd;
+    const base = el.dataset.lbl || ACTION_LABEL[action];
     if (left > 0) {
-      el.textContent = `${ACTION_LABEL[action]} ${left}s`;
+      el.textContent = `${base} ${left}s`;
     } else {
-      el.textContent = ACTION_LABEL[action];
+      el.textContent = base;
       el.classList.remove("cooldown");
       delete el.dataset.cd;
       delete el.dataset.until;
@@ -843,12 +902,15 @@ setInterval(() => {
 }, 1000);
 
 function makeReply(r) {
-  const prefix = r.battle_action
-    ? `<b>${r.battle_action === "attack" ? "⚔ 공격" : "🛡 방어"}</b> `
-    : "";
+  const chip = r.battle_action === "attack"
+    ? `<span class="reply-chip atk">⚔ 공격 −12</span>`
+    : r.battle_action === "defend"
+      ? `<span class="reply-chip def">🛡 방어 +8</span>`
+      : "";
   const ko = r.hp <= 0 ? " ko" : "";
+  const infil = isInfiltrator(r) ? " infil-unit" : "";
   return `
-  <div class="reply${ko}" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
+  <div class="reply${ko}${infil}" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
     <div class="head">
       <div class="user">
         <span class="user-name">${displayName(r)}</span>
@@ -857,7 +919,7 @@ function makeReply(r) {
       </div>
       ${hpBarHTML(r)}
     </div>
-    <div class="body">└ ${prefix}${renderCommentText(r.content)}</div>
+    <div class="body">${chip}${renderCommentText(r.content)}</div>
     <div class="reply-actions" data-side="${r.faction}">
       ${likeUI(r)}
       ${battleButtonsFor(r)}
@@ -871,9 +933,15 @@ function makeComment(c) {
 
   const ko = c.hp <= 0 ? " ko" : "";
   const isAce = ACE[c.faction] === c.id;
+  const infil = isInfiltrator(c) ? " infil-unit" : "";
   const power = combatPower(c);
+
+  // 답글 상시 노출 — 4개 초과면 최근 3개만 펼치고 위에 로컬 '이전 답글 보기' 버튼
+  const shown = replies.length > 4 ? replies.slice(-3) : replies;
+  const hiddenCount = replies.length - shown.length;
+
   return `
-    <div class="comment${ko}${isAce ? " ace" : ""}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
+    <div class="comment${ko}${isAce ? " ace" : ""}${infil}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
     <div class="head">
       <div class="user">
         <span class="side-icon"></span>
@@ -897,10 +965,9 @@ function makeComment(c) {
 
     <div class="reply-meta">💬 ${replies.length} · ⚔ ${c.attack_count || 0} · 🛡 ${c.defense_count || 0} · 💣 ${c.support_count || 0}</div>
 
-    <button class="reply-toggle" ${replies.length === 0 ? "hidden" : ""}>답글 보기</button>
-
-    <div class="replies" hidden>
-      ${replies.map(makeReply).join("")}
+    <div class="replies" data-id="${c.id}">
+      ${hiddenCount > 0 ? `<button type="button" class="reply-older" data-id="${c.id}">이전 답글 ${hiddenCount}개 보기</button>` : ``}
+      ${shown.map(makeReply).join("")}
     </div>
   </div>`;
 }
@@ -911,40 +978,30 @@ function makeComment(c) {
 
 function renderSide(side) {
   const s = state[side];
-  const bb = document.getElementById(side + "-bb");
-  const th = document.getElementById(side + "-thread");
-
-  if (!bb || !th) {
+  const list = document.getElementById(side + "-list");
+  if (!list) {
     console.warn("renderSide target missing:", side);
     return;
   }
 
   if (s.data.length === 0) {
-    bb.innerHTML = `<div class="empty-zone">아직 이 진영의 댓글이 없습니다. 첫 포문을 여세요!</div>`;
-    th.innerHTML = "";
-    buildPager(side, "bb", PAGE_SIZE_BB, 0);
-    buildPager(side, "th", PAGE_SIZE_TH, 0);
+    list.innerHTML = `<div class="empty-zone">아직 이 진영의 댓글이 없습니다. 첫 포문을 여세요!</div>`;
+    buildPager(side, 0);
     return;
   }
 
-  bb.innerHTML = s.data
-    .slice((s.bb - 1) * PAGE_SIZE_BB, s.bb * PAGE_SIZE_BB)
+  // 교전 점수순 정렬(로드 시) 유지 — 상위가 곧 전선의 최전방
+  list.innerHTML = s.data
+    .slice((s.page - 1) * PAGE_SIZE, s.page * PAGE_SIZE)
     .map(makeComment)
     .join("");
 
-  th.innerHTML = s.data
-    .slice(PAGE_SIZE_BB + (s.th - 1) * PAGE_SIZE_TH, PAGE_SIZE_BB + s.th * PAGE_SIZE_TH)
-    .map(makeComment)
-    .join("");
-
-  buildPager(side, "bb", PAGE_SIZE_BB, Math.ceil(s.data.length / PAGE_SIZE_BB));
-  buildPager(side, "th", PAGE_SIZE_TH, Math.ceil(Math.max(0, s.data.length - PAGE_SIZE_BB) / PAGE_SIZE_TH));
-
+  buildPager(side, Math.ceil(s.data.length / PAGE_SIZE));
   applySideColoring();
 }
 
-function buildPager(side, type, size, total) {
-  const pager = document.getElementById(`${side}-${type}-pager`);
+function buildPager(side, total) {
+  const pager = document.getElementById(`${side}-pager`);
   if (!pager) return;
   const s = state[side];
   pager.innerHTML = "";
@@ -953,8 +1010,8 @@ function buildPager(side, type, size, total) {
   for (let i = 1; i <= total; i++) {
     const b = document.createElement("button");
     b.textContent = i;
-    if (s[type] === i) b.classList.add("active");
-    b.onclick = () => { s[type] = i; renderSide(side); };
+    if (s.page === i) b.classList.add("active");
+    b.onclick = () => { s.page = i; renderSide(side); };
     pager.appendChild(b);
   }
 }
@@ -995,15 +1052,6 @@ function renderWarDashboard() {
   set("stat-def", w.def);
 }
 
-async function reloadAndRender() {
-  await loadComments(window.CURRENT_ISSUE_ID);
-  computeAce();
-  renderSide("pro");
-  renderSide("con");
-  renderWarDashboard();
-  renderMorale();
-}
-
 function requireLogin() {
   if (ME.userId) return true;
   alert("로그인이 필요합니다.");
@@ -1039,12 +1087,13 @@ function bindEvents() {
       return;
     }
 
-    // ⚔🛡 전투 버튼 클릭 → 하단 입력창으로 통일
+    // ⚔🛡 전투 버튼 클릭 → 해당 유닛 아래 인라인 컴포저 (누구를 왜 치는지 그 자리에서 보이게)
     if (e.target.classList.contains("action-attack") || e.target.classList.contains("action-defend")) {
       if (!requireLogin()) return;
       const type = e.target.classList.contains("action-attack") ? "attack" : "defend";
 
-      const targetEl = e.target.closest(".comment") || e.target.closest(".reply");
+      // 가장 가까운 유닛(답글이면 답글, 아니면 댓글) — .comment를 먼저 찾으면 답글의 진영을 잘못 판정한다
+      const targetEl = e.target.closest(".reply, .comment");
       if (!targetEl) return;
       const targetSide = targetEl.dataset.side || "pro";
 
@@ -1063,16 +1112,7 @@ function bindEvents() {
       const nameEl = targetEl.querySelector(".head .user-name");
       const targetUser = nameEl ? nameEl.textContent.trim() : "익명";
 
-      BATTLE_MODE = { type, targetId, targetUser, targetSide };
-
-      const input = document.getElementById("battle-comment-input");
-      if (!input) return;
-
-      input.value = `@${targetUser} ${type === "attack" ? "⚔ 공격" : "🛡 방어"} → `;
-      input.focus();
-
-      // 전투 중엔 진영 선택 비활성(숨김)
-      document.querySelectorAll(".side-btn").forEach(b => (b.style.display = "none"));
+      openInlineComposer(type, targetId, targetUser, targetEl);
       return;
     }
 
@@ -1174,40 +1214,20 @@ function bindEvents() {
       return;
     }
 
-    // 답글 보기 토글
-    const btn = e.target.closest(".reply-toggle");
-    if (!btn) return;
-
-    const currentComment = btn.closest(".comment");
-    const currentReplies = currentComment.querySelector(".replies");
-
-    document.querySelectorAll(".comment .replies").forEach(r => {
-      if (r !== currentReplies) {
-        r.hidden = true;
-        const b = r.closest(".comment").querySelector(".reply-toggle");
-        if (b) b.innerText = "답글 보기";
+    // 이전 답글 로컬 펼침 (리로드 없음 — 답글은 항상 노출, 4개 초과분만 접혀 있음)
+    const older = e.target.closest(".reply-older");
+    if (older) {
+      const id = Number(older.dataset.id);
+      const wrap = older.closest(".replies");
+      if (wrap) {
+        wrap.innerHTML = (replyMap[id] || []).map(makeReply).join("");
+        applySideColoring();
       }
-    });
-
-    const isOpen = !currentReplies.hidden;
-    currentReplies.hidden = isOpen;
-    btn.innerText = isOpen ? "답글 보기" : "답글 숨기기";
+      return;
+    }
   });
 
-  // 🔵🔴 진영 선택 버튼 — 투표했다면 내 진영으로 잠금
-  document.querySelectorAll(".side-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      if (ME.faction && btn.dataset.side !== ME.faction) {
-        alert(`이 이슈에서 당신은 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영입니다. 진영은 투표로 정해져요.`);
-        return;
-      }
-      document.querySelectorAll(".side-btn").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      document.getElementById("battle-side-select").value = btn.dataset.side;
-    });
-  });
-
-  // 전송
+  // 전송 — 하단 바는 '새 최상위 의견(참전/침투)' 전용. 전투 답글은 인라인 컴포저가 처리.
   document.getElementById("battle-comment-submit")
     ?.addEventListener("click", async () => {
       if (!requireLogin()) return;
@@ -1216,84 +1236,14 @@ function bindEvents() {
       if (!input) return;
 
       const supabase = window.supabaseClient;
-      const side = document.getElementById("battle-side-select").value;
 
-      // ✅ 전투 모드: 대상 댓글에 대한 답글 + 전투 액션
-      if (BATTLE_MODE) {
-        const { type, targetId } = BATTLE_MODE;
-
-        const raw = input.value.trim();
-        const text = raw.replace(/^@.*?→\s*/, "").trim();
-
-        if (!text) {
-          alert("의견을 입력하세요.");
-          return;
-        }
-
-        const { error: insertErr } = await supabase.from("comments").insert({
-          issue_id: window.CURRENT_ISSUE_ID,
-          user_id: ME.userId,
-          parent_id: targetId,
-          faction: ME.faction || side,   // 답글은 항상 내 진영으로 기록
-          content: text,
-          battle_action: type
-        });
-        if (insertErr) {
-          console.error("[battle reply] insert failed", insertErr);
-          alert("답글 등록에 실패했습니다.");
-          return;
-        }
-
-        // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
-        const { data: bd } = await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
-
-        BATTLE_MODE = null;
-        input.value = "";
-        finishComposing(input);
-        document.querySelectorAll(".side-btn").forEach(b => (b.style.display = ""));
-
-        // 게임 FX: 대상 유닛에 데미지/힐 연출 후 리로드
-        const targetUnit = document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`);
-        if (bd?.ok && targetUnit) {
-          applyHpToUnit(targetUnit, bd.hp);
-          const FX = window.BattleFX;
-          if (type === "attack") {
-            hitFx(targetUnit, "hit");
-            const crit = bd.hp <= 0;
-            spawnCombatText(targetUnit, crit ? "-12 격파!" : "-12", crit ? "crit" : "dmg");
-            if (FX) {
-              FX.shockwave(targetUnit, "rgba(255,80,50,.9)");
-              FX.burstAt(targetUnit, crit ? "ko" : "attack");
-              FX.haptic(crit ? "ko" : "attack");
-              if (crit) FX.flash("rgba(255,40,40,.18)", 240);
-            }
-            if (crit) showKoBanner(targetId);
-          } else {
-            hitFx(targetUnit, "heal");
-            spawnCombatText(targetUnit, "+8 방어", "heal");
-            if (FX) {
-              FX.burstAt(targetUnit, "defend");
-              FX.shockwave(targetUnit, "rgba(120,190,255,.9)");
-              FX.banner("🛡 방어 성공!", "cheer");
-              FX.confetti(46);
-              FX.haptic("cheer");
-            }
-          }
-          bumpCombo();
-          renderMorale();
-          renderHonors();
-          setTimeout(() => reloadAndRender(), 900);
-        } else {
-          if (bd && !bd.ok && bd.reason !== "already") {
-            const m = battleReasonMsg(bd.reason, bd);
-            if (m) alert(m);
-          }
-          await reloadAndRender();
-        }
+      // 진영은 투표로 고정 — 미투표자는 참전 불가
+      if (!ME.faction) {
+        alert("먼저 위에서 투표해 진영을 정하면 참전할 수 있어요.");
         return;
       }
+      const side = INFILTRATE ? (ME.faction === "pro" ? "con" : "pro") : ME.faction;
 
-      // ✅ 일반 댓글
       const text = input.value.trim();
       if (!text) {
         alert("의견을 입력하세요.");
@@ -1301,12 +1251,12 @@ function bindEvents() {
       }
 
       const wasInfiltration = INFILTRATE;
-      const { error } = await supabase.from("comments").insert({
+      const { data: newRow, error } = await supabase.from("comments").insert({
         issue_id: window.CURRENT_ISSUE_ID,
         user_id: ME.userId,
         faction: side,
         content: text
-      });
+      }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action").single();
       if (error) {
         if (String(error.message || "").includes("infiltration_limit")) {
           alert("오늘의 침투 횟수(3회)를 모두 썼어요. 내일 다시 침투할 수 있어요.");
@@ -1339,8 +1289,183 @@ function bindEvents() {
 
       input.value = "";
       finishComposing(input);
-      await reloadAndRender();
+
+      // 부분 삽입 — 전체 리로드 없이 내가 쓴 존 맨 위에 바로 표시 (스크롤·상태 유지)
+      authorVoteMap[ME.userId] = ME.faction; // 침투 노출 판정에 내 실제 진영 반영
+      allRows.unshift(newRow);
+      state[side]?.data.unshift(newRow);
+      const list = document.getElementById(side + "-list");
+      if (list) {
+        list.querySelector(".empty-zone")?.remove();
+        list.insertAdjacentHTML("afterbegin", makeComment(newRow));
+        applySideColoring();
+        const el = list.firstElementChild;
+        if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+      renderWarDashboard();
+      renderMorale();
     });
+}
+
+/* ======================
+   인라인 전투 컴포저 — 공격/방어를 '그 자리에서' 쓰고 결과도 그 자리에 남긴다
+====================== */
+function ensureInlineComposer() {
+  let box = document.getElementById("inline-composer");
+  if (box) return box;
+  box = document.createElement("div");
+  box.id = "inline-composer";
+  box.className = "inline-composer";
+  box.innerHTML = `
+    <div class="ic-head">
+      <span class="ic-title" id="ic-title"></span>
+      <button type="button" class="ic-close" aria-label="닫기">✕</button>
+    </div>
+    <div class="ic-row">
+      <input id="ic-input" maxlength="500" autocomplete="off">
+      <button type="button" id="ic-send" class="ic-send"></button>
+    </div>`;
+  box.querySelector(".ic-close").addEventListener("click", closeInlineComposer);
+  box.querySelector("#ic-send").addEventListener("click", submitInline);
+  box.querySelector("#ic-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") submitInline();
+    if (e.key === "Escape") closeInlineComposer();
+  });
+  return box;
+}
+
+function openInlineComposer(type, targetId, targetUser, unit) {
+  const box = ensureInlineComposer();
+  BATTLE_MODE = { type, targetId, targetUser };
+
+  box.classList.remove("atk", "def");
+  box.classList.add(type === "attack" ? "atk" : "def");
+  box.querySelector("#ic-title").innerHTML = type === "attack"
+    ? `⚔ <b>${escT(targetUser)}</b> 공격 — 이유를 남겨야 데미지가 들어갑니다`
+    : `🛡 <b>${escT(targetUser)}</b> 방어 — 지원 근거가 방어막이 됩니다`;
+  const input = box.querySelector("#ic-input");
+  input.placeholder = type === "attack" ? "반박 근거를 입력…" : "지지 근거를 입력…";
+  box.querySelector("#ic-send").textContent = type === "attack" ? "⚔ −12" : "🛡 +8";
+
+  // 대상 유닛 바로 아래에 부착 (최상위 댓글이면 스레드 끝, 답글이면 그 답글 뒤)
+  if (unit.classList.contains("reply")) {
+    unit.insertAdjacentElement("afterend", box);
+  } else {
+    const replies = unit.querySelector(":scope > .replies") || unit;
+    replies.insertAdjacentElement("afterend", box);
+  }
+  input.value = "";
+  input.focus();
+  window.BattleFX?.haptic("tap");
+}
+
+function closeInlineComposer() {
+  document.getElementById("inline-composer")?.remove();
+  BATTLE_MODE = null;
+  document.body.classList.remove("kb-open");
+}
+
+async function submitInline() {
+  if (!BATTLE_MODE) return;
+  const input = document.getElementById("ic-input");
+  const text = (input?.value || "").trim();
+  if (!text) { alert("의견을 입력하세요."); return; }
+  const { type, targetId, targetUser } = BATTLE_MODE;
+  await submitBattleReply(type, targetId, targetUser, text);
+}
+
+/* 전투 답글 제출 — insert + battle_action RPC + 부분 삽입(리로드 없음) */
+async function submitBattleReply(type, targetId, targetUser, text) {
+  const supabase = window.supabaseClient;
+
+  // 답글의 답글도 최상위 스레드에 붙인다(1depth) — 대상은 @멘션으로 보존
+  const rootId = rootIdOf(targetId);
+  const content = rootId !== targetId ? `@${targetUser} ${text}` : text;
+
+  const { data: newRow, error: insertErr } = await supabase.from("comments").insert({
+    issue_id: window.CURRENT_ISSUE_ID,
+    user_id: ME.userId,
+    parent_id: rootId,
+    faction: ME.faction,
+    content,
+    battle_action: type
+  }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action").single();
+  if (insertErr) {
+    console.error("[battle reply] insert failed", insertErr);
+    alert("답글 등록에 실패했습니다.");
+    return;
+  }
+
+  // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
+  const { data: bd } = await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
+
+  closeInlineComposer();
+
+  // 로컬 상태 + DOM 부분 삽입 — 방금 단 답글이 그 자리에 바로 보인다
+  authorVoteMap[ME.userId] = ME.faction;
+  allRows.unshift(newRow);
+  (replyMap[rootId] ||= []).push(newRow);
+
+  const rootUnit = document.querySelector(`.comment[data-id="${rootId}"]`);
+  const repliesBox = rootUnit?.querySelector(":scope > .replies");
+  if (repliesBox) {
+    repliesBox.insertAdjacentHTML("beforeend", makeReply(newRow));
+    applySideColoring();
+    updateReplyMeta(rootUnit, rootId);
+  }
+
+  // FX + 대상 HP 반영
+  const targetUnit = document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`);
+  if (bd?.ok && targetUnit) {
+    // 쿨다운 로컬 시작 (서버 comment_actions와 동기)
+    markAction(targetId, type);
+    document.querySelectorAll(`.action-${type}[data-id="${targetId}"]`).forEach(el => {
+      el.classList.add("cooldown");
+      el.dataset.cd = type;
+      el.dataset.until = String(Date.now() + BATTLE_COOLDOWN_MS);
+    });
+
+    applyHpToUnit(targetUnit, bd.hp);
+    const FX = window.BattleFX;
+    if (type === "attack") {
+      hitFx(targetUnit, "hit");
+      const crit = bd.hp <= 0;
+      spawnCombatText(targetUnit, crit ? "-12 격파!" : "-12", crit ? "crit" : "dmg");
+      if (FX) {
+        FX.shockwave(targetUnit, "rgba(255,80,50,.9)");
+        FX.burstAt(targetUnit, crit ? "ko" : "attack");
+        FX.haptic(crit ? "ko" : "attack");
+        if (crit) FX.flash("rgba(255,40,40,.18)", 240);
+      }
+      if (crit) showKoBanner(targetId);
+    } else {
+      hitFx(targetUnit, "heal");
+      spawnCombatText(targetUnit, "+8 방어", "heal");
+      if (FX) {
+        FX.burstAt(targetUnit, "defend");
+        FX.shockwave(targetUnit, "rgba(120,190,255,.9)");
+        FX.banner("🛡 방어 성공!", "cheer");
+        FX.confetti(46);
+        FX.haptic("cheer");
+      }
+    }
+    bumpCombo();
+    renderMorale();
+    renderWarDashboard();
+    renderHonors();
+  } else if (bd && !bd.ok && bd.reason !== "already") {
+    const m = battleReasonMsg(bd.reason, bd);
+    if (m) alert(m);
+  }
+}
+
+/* 루트 댓글의 답글/교전 카운터 표시 갱신 */
+function updateReplyMeta(rootUnit, rootId) {
+  const meta = rootUnit.querySelector(":scope > .reply-meta");
+  const row = allRows.find(r => r.id === rootId);
+  if (!meta || !row) return;
+  const n = (replyMap[rootId] || []).length;
+  meta.textContent = `💬 ${n} · ⚔ ${row.attack_count || 0} · 🛡 ${row.defense_count || 0} · 💣 ${row.support_count || 0}`;
 }
 
 /* 전송 완료 후 컴포저 정리 — 모바일 키보드 모드(kb-open)를 확실히 해제.
@@ -1406,7 +1531,7 @@ function applySideColoring() {
      (gap 수동 계산은 iOS 자동추적과 겹쳐 이중으로 밀리므로 사용하지 않음)
 ========================================================= */
 (function () {
-  const isInput = (el) => el && el.id === "battle-comment-input";
+  const isInput = (el) => el && (el.id === "battle-comment-input" || el.id === "ic-input");
   const open = () => document.body.classList.add("kb-open");
   const close = () => document.body.classList.remove("kb-open");
 

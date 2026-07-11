@@ -294,77 +294,33 @@
         </div>
       </section>
 
-      <!-- WAR DASHBOARD -->
-      <div class="war-dashboard">
-        <div class="war-title">⚔ 전황표</div>
-
-        <div class="war-grid">
-          <div class="war-box pro">
-            <div class="war-label">👍 진영</div>
-            <div class="war-stat">총 댓글 <b id="stat-pro-total">0</b></div>
-            <div class="war-sub">동진영 <span id="stat-pro-same">0</span> · 적진 <span id="stat-pro-oppo">0</span></div>
-          </div>
-
-          <div class="war-box neutral">
-            <div class="war-label">전체 전장</div>
-            <div class="war-stat">총 교전 <b id="stat-total">0</b></div>
-            <div class="war-sub">공격 <span id="stat-atk">0</span> · 지원 <span id="stat-sup">0</span> · 방어 <span id="stat-def">0</span></div>
-          </div>
-
-          <div class="war-box con">
-            <div class="war-label">👎 진영</div>
-            <div class="war-stat">총 댓글 <b id="stat-con-total">0</b></div>
-            <div class="war-sub">동진영 <span id="stat-con-same">0</span> · 적진 <span id="stat-con-oppo">0</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- PRO -->
-      <div class="army-label pro">👍 진영</div>
-      <div class="billboard">
-        <div class="billboard-title">PRO BILLBOARD — 전황 최전선</div>
-        <div id="pro-bb"></div>
-        <div class="pager-wrap"><div class="pager" id="pro-bb-pager"></div></div>
-      </div>
-
-      <div class="billboard-title" style="margin-top:14px">PRO FRONTLINE — 교전 구역</div>
-      <div id="pro-thread"></div>
-      <div class="pager-wrap"><div class="pager" id="pro-th-pager"></div></div>
+      <!-- 👍 찬성 전선 (진영 구역 분리 — 침투로만 넘나든다) -->
+      <div class="army-label pro">👍 찬성 전선 <span class="al-count"><b id="stat-pro-total">0</b>개 의견</span></div>
+      <div id="pro-list" class="zone-list pro"></div>
+      <div class="pager-wrap"><div class="pager" id="pro-pager"></div></div>
 
       <div class="battle-divider"></div>
 
-      <!-- CON -->
-      <div class="army-label con">👎 진영</div>
-      <div class="billboard">
-        <div class="billboard-title">CON BILLBOARD — 전황 최전선</div>
-        <div id="con-bb"></div>
-        <div class="pager-wrap"><div class="pager" id="con-bb-pager"></div></div>
-      </div>
-
-      <div class="billboard-title" style="margin-top:14px">CON FRONTLINE — 교전 구역</div>
-      <div id="con-thread"></div>
-      <div class="pager-wrap"><div class="pager" id="con-th-pager"></div></div>
+      <!-- 👎 반대 전선 -->
+      <div class="army-label con">👎 반대 전선 <span class="al-count"><b id="stat-con-total">0</b>개 의견</span></div>
+      <div id="con-list" class="zone-list con"></div>
+      <div class="pager-wrap"><div class="pager" id="con-pager"></div></div>
 
     </section>
 
-<!-- BATTLE COMMENT INPUT -->
+<!-- BATTLE COMMENT INPUT — 새 최상위 의견(참전/침투) 전용. 전투 답글은 각 댓글의 인라인 컴포저에서. -->
 <div class="battle-input-bar">
 
   <div class="battle-input-top">
-    <input id="battle-comment-input" placeholder="이 전투에 대한 의견을 입력하세요..." />
+    <input id="battle-comment-input" placeholder="아군 전선에 새 의견 쓰기…" />
 
     <button class="gif-btn">GIF</button>
-    <button id="battle-comment-submit" class="submit-btn">⚔️</button>
+    <button id="battle-comment-submit" class="submit-btn">참전</button>
   </div>
 
   <div id="gif-panel" hidden class="gif-panel"></div>
 
-  <div class="battle-input-bottom">
-    <button class="side-btn pro active" data-side="pro">👍 선택</button>
-    <button class="side-btn con" data-side="con">👎 선택</button>
-  </div>
-
-  <input type="hidden" id="battle-side-select" value="pro" />
+  <div class="battle-input-bottom"></div>
 
 </div>
 
