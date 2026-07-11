@@ -890,11 +890,13 @@ function battleButtonsFor(c) {
   if (!my) {
     return `<span class="action-locked" data-id="${c.id}">🔒 투표 후 참전</span>`;
   }
+  // 💬 반박 = 무한·무쿨다운 (대화는 언제나 열려 있다). 전투 버튼은 자원(쿨다운).
+  const reply = `<span class="action-reply" data-id="${c.id}">💬 반박</span>`;
   if (my !== c.faction) {
     // 적진의 침투자는 '격퇴' — 침입자를 몰아낸다는 게임 서사 (동작은 attack 그대로)
-    return battleBtn(c, "attack", isInfiltrator(c) ? "💥격퇴" : null);
+    return reply + battleBtn(c, "attack", isInfiltrator(c) ? "💥격퇴" : null);
   }
-  return battleBtn(c, "defend") + battleBtn(c, "support");
+  return reply + battleBtn(c, "defend") + battleBtn(c, "support");
 }
 
 /* 쿨다운 카운트다운 티커 (1초마다 버튼 라벨 갱신, 끝나면 활성화) */
@@ -1098,6 +1100,18 @@ function bindEvents() {
     // 🔒 진영 미선택(미투표) → 참전 안내
     if (e.target.classList.contains("action-locked")) {
       alert("먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요.");
+      return;
+    }
+
+    // 💬 반박 = 무한·무쿨다운 대화. 전투 없이 답글만 단다.
+    if (e.target.classList.contains("action-reply")) {
+      if (!requireLogin()) return;
+      if (!ME.faction) { alert("먼저 이 이슈에 투표해 진영을 정해야 참전할 수 있어요."); return; }
+      const rEl = e.target.closest(".reply, .comment");
+      if (!rEl) return;
+      const rId = Number(e.target.dataset.id || rEl.dataset.id);
+      const rName = rEl.querySelector(".head .user-name");
+      openInlineComposer("reply", rId, rName ? rName.textContent.trim() : "익명", rEl);
       return;
     }
 
@@ -1356,14 +1370,23 @@ function openInlineComposer(type, targetId, targetUser, unit) {
   const isInfil = unit.classList.contains("infil-unit");
   const atkVerb = isInfil ? "격퇴" : "공격";
 
-  box.classList.remove("atk", "def");
-  box.classList.add(type === "attack" ? "atk" : "def");
-  box.querySelector("#ic-title").innerHTML = type === "attack"
-    ? `💥 <b>${escT(targetUser)}</b> ${atkVerb} — 이유를 남겨야 데미지가 들어갑니다`
-    : `🛡 <b>${escT(targetUser)}</b> 방어 — 지원 근거가 방어막이 됩니다`;
+  box.classList.remove("atk", "def", "reply");
+  box.classList.add(type === "attack" ? "atk" : type === "defend" ? "def" : "reply");
+
   const input = box.querySelector("#ic-input");
-  input.placeholder = type === "attack" ? "반박 근거를 입력…" : "지지 근거를 입력…";
-  box.querySelector("#ic-send").textContent = type === "attack" ? `💥 −12` : `🛡 +8`;
+  if (type === "reply") {
+    box.querySelector("#ic-title").innerHTML = `💬 <b>${escT(targetUser)}</b>에게 반박 — 대화는 제한 없어요`;
+    input.placeholder = "반박할 말을 입력…";
+    box.querySelector("#ic-send").textContent = "💬 답글";
+  } else if (type === "attack") {
+    box.querySelector("#ic-title").innerHTML = `💥 <b>${escT(targetUser)}</b> ${atkVerb} — 이유를 남겨야 데미지가 들어갑니다`;
+    input.placeholder = "반박 근거를 입력…";
+    box.querySelector("#ic-send").textContent = `💥 −12`;
+  } else {
+    box.querySelector("#ic-title").innerHTML = `🛡 <b>${escT(targetUser)}</b> 방어 — 지원 근거가 방어막이 됩니다`;
+    input.placeholder = "지지 근거를 입력…";
+    box.querySelector("#ic-send").textContent = `🛡 +8`;
+  }
 
   // 대상 유닛 바로 아래에 부착 (최상위 댓글이면 스레드 끝, 답글이면 그 답글 뒤)
   if (unit.classList.contains("reply")) {
@@ -1392,13 +1415,15 @@ async function submitInline() {
   await submitBattleReply(type, targetId, targetUser, text);
 }
 
-/* 전투 답글 제출 — insert + battle_action RPC + 부분 삽입(리로드 없음) */
+/* 답글 제출 — 반박(reply)은 대화만, 공격/방어는 battle_action까지. 부분 삽입(리로드 없음) */
 async function submitBattleReply(type, targetId, targetUser, text) {
   const supabase = window.supabaseClient;
+  const isBattle = type === "attack" || type === "defend";
 
-  // 답글의 답글도 최상위 스레드에 붙인다(1depth) — 대상은 @멘션으로 보존
+  // 답글의 답글도 최상위 스레드에 붙인다(1depth) — 대상은 @멘션으로 보존.
+  // 반박(대화)은 항상 @멘션을 붙여 누구에게 답하는지 남긴다.
   const rootId = rootIdOf(targetId);
-  const content = rootId !== targetId ? `@${targetUser} ${text}` : text;
+  const content = (!isBattle || rootId !== targetId) ? `@${targetUser} ${text}` : text;
 
   const { data: newRow, error: insertErr } = await supabase.from("comments").insert({
     issue_id: window.CURRENT_ISSUE_ID,
@@ -1406,16 +1431,18 @@ async function submitBattleReply(type, targetId, targetUser, text) {
     parent_id: rootId,
     faction: ME.faction,
     content,
-    battle_action: type
+    battle_action: isBattle ? type : null
   }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action").single();
   if (insertErr) {
-    console.error("[battle reply] insert failed", insertErr);
+    console.error("[reply] insert failed", insertErr);
     alert("답글 등록에 실패했습니다.");
     return;
   }
 
-  // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
-  const { data: bd } = await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
+  // 전투일 때만 액션 기록 + 대상 HP 갱신. 반박은 대화만(쿨다운·데미지 없음).
+  const { data: bd } = isBattle
+    ? await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type })
+    : { data: null };
 
   closeInlineComposer();
 
@@ -1471,6 +1498,11 @@ async function submitBattleReply(type, targetId, targetUser, text) {
     renderMorale();
     renderWarDashboard();
     renderHonors();
+  } else if (!isBattle) {
+    // 반박(대화) — 데미지 없이 답글만 튀어나오는 가벼운 연출
+    const newUnit = document.querySelector(`.reply[data-id="${newRow.id}"]`);
+    const FX = window.BattleFX;
+    if (newUnit && FX) { FX.burstAt(newUnit, ME.faction === "pro" ? "pro" : "con"); FX.haptic("tap"); }
   } else if (bd && !bd.ok && bd.reason !== "already") {
     const m = battleReasonMsg(bd.reason, bd);
     if (m) alert(m);
