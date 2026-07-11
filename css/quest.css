@@ -154,3 +154,14 @@ body {
   transition: transform .1s ease;
 }
 .reward-btn:active { transform: scale(.97); }
+
+/* 미션 보상 받기 버튼 */
+.q-claim{ width:100%; margin-top:12px; padding:11px; border-radius:11px; border:none;
+  font-size:13.5px; font-weight:800; cursor:pointer;
+  background:#26262a; color:#7c8088; }
+.q-claim.ready{ background:linear-gradient(135deg,#f5cf6b,#ffe6a3); color:#0a0a0b;
+  box-shadow:0 4px 16px rgba(245,207,107,.28); animation:qpulse 1.6s ease-in-out infinite; }
+.q-claim.done{ background:rgba(61,107,255,.14); color:#8fb6ff; border:1px solid rgba(61,107,255,.4); }
+.q-claim:disabled{ cursor:default; }
+@keyframes qpulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.015); } }
+.quest-card.completed{ opacity:.9; }
