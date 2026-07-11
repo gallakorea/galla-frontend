@@ -1233,18 +1233,3 @@ body.kb-open .battle-input-bar {
 .composer-side.locked{
   background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); color:#8b8b93;
 }
-
-/* =========================================================
-   💬 반박 — 무한·무쿨다운 대화 버튼 + 중립 컴포저
-========================================================= */
-.action-reply{
-  background:none; border:none; cursor:pointer;
-  color:#c9c9cf; font-weight:800; font-size:12px;
-}
-.action-reply:active{ color:#fff; }
-
-/* 인라인 컴포저 중립(반박) 변형 — 전투색 아닌 차분한 톤 */
-.inline-composer.reply{ border-color:rgba(255,255,255,.22); box-shadow:0 0 16px rgba(255,255,255,.06); }
-.inline-composer.reply .ic-title{ color:#d5d5da; }
-.inline-composer.reply .ic-row input:focus{ border-color:#8b8b93; }
-.inline-composer.reply .ic-send{ background:linear-gradient(135deg,#3a3d47,#54586620); background:#2a2d3a; color:#fff; box-shadow:0 6px 18px -6px rgba(0,0,0,.6); }
