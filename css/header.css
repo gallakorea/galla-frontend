@@ -3,6 +3,9 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* iOS 상태바·오버스크롤 영역에 흰색이 비치던 문제 —
+     body에만 다크 배경이 있고 html은 기본(흰색)이었음 */
+  background: #000;
 }
 
 /* =========================
