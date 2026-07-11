@@ -547,3 +547,96 @@ body{
 
 /* 헤더 단차 제거 — 라디얼 본문 배경이 헤더 뒤로 이어지게 */
 .header{ background:transparent !important; border-bottom:none !important; }
+
+/* =========================================================
+   마이페이지 v3 — 프리미엄 다크 폴리시
+   (v2 클린 구조 유지, 질감·타이포·디테일 업그레이드)
+========================================================= */
+body{
+  font-family:"Pretendard",-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+  letter-spacing:-.01em;
+}
+
+/* ---- 아바타: 은은한 골드 헤어라인 링 ---- */
+.mp-ava-ring{
+  padding:2.5px; border-radius:50%;
+  background:linear-gradient(145deg, rgba(245,207,107,.55), rgba(245,207,107,.08) 45%, rgba(255,255,255,.06));
+}
+.profile-img{ border:2.5px solid #0a0a0b; width:82px; height:82px; }
+.mp-tier-chip{
+  background:linear-gradient(180deg,#1d1e24,#121318);
+  border:1px solid rgba(245,207,107,.4); color:#f5cf6b;
+  box-shadow:0 3px 12px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* ---- 스탯: 정돈된 숫자 타이포 ---- */
+.stat-num{ font-size:19px; font-weight:800; letter-spacing:-.4px;
+  font-variant-numeric:tabular-nums; }
+.stat-label{ font-size:11.5px; color:#8e8e93; margin-top:2px; letter-spacing:0; }
+
+/* ---- 이름줄 ---- */
+.profile-name{ font-size:16.5px; font-weight:800; letter-spacing:-.3px; }
+.mp-idline .level{ color:#8e8e93; font-size:12px; font-weight:700;
+  background:rgba(255,255,255,.06); padding:2px 8px; border-radius:99px; }
+.mp-power{ color:#f5cf6b; background:rgba(245,207,107,.09);
+  border:1px solid rgba(245,207,107,.28); }
+.badge{ color:#c7c7cc; font-size:12.5px; }
+.profile-desc{ color:#b9bdc6; font-size:13px; line-height:1.55; }
+
+/* ---- 액션 버튼: 프리미엄 ---- */
+.profile-actions{ gap:8px; }
+.profile-actions button{
+  height:36px; border-radius:10px; font-size:13.5px; font-weight:800;
+  background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.09);
+  transition:background .15s ease, transform .1s ease;
+}
+.profile-actions button:active{ transform:scale(.98); }
+.profile-actions .action-btn.primary{
+  background:linear-gradient(135deg,#0a68f5,#3d6bff);
+  box-shadow:0 4px 14px rgba(20,90,220,.28);
+  border:none;
+}
+
+/* ---- 탭: 블러 스티키 + 부드러운 언더라인 ---- */
+.tabs{
+  background:rgba(10,10,11,.78);
+  backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  border-top:none; border-bottom:1px solid rgba(255,255,255,.06);
+}
+.tab{ font-size:13.5px; letter-spacing:-.2px; transition:color .15s ease; }
+.tab.active::after{
+  left:14px; right:14px; height:2px;
+  background:linear-gradient(90deg,#fff,rgba(255,255,255,.55));
+  border-radius:2px;
+}
+
+/* ---- 그리드: 미묘한 깊이 + 영상 뱃지 ---- */
+.content-area.grid, .content-grid{ gap:2.5px; padding-top:2.5px; }
+.ig-card{ background:#0e0f13; }
+.ig-card::after{
+  content:""; position:absolute; inset:0;
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.045); pointer-events:none;
+}
+.ig-card .ig-badge{
+  top:7px; right:7px; width:24px; height:24px; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.5); border-radius:50%;
+  backdrop-filter:blur(4px); font-size:11px;
+  filter:none; border:.5px solid rgba(255,255,255,.22);
+}
+
+/* ---- 빈 상태 ---- */
+.tab-empty{ padding:56px 24px !important; line-height:1.7; }
+
+/* ---- 즐겨찾기 유저 행 ---- */
+.user-row{
+  background:linear-gradient(180deg,#14151a,#0e0f13);
+  border:1px solid rgba(255,255,255,.06); border-radius:14px;
+}
+
+/* ---- 서브탭 ---- */
+.mp-subtab{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#9a9aa0; }
+.mp-subtab.active{ background:#fff; color:#0a0a0b; border-color:#fff; font-weight:800; }
+
+/* ---- 방문자 헤더 타이틀 ---- */
+.mp-hdr-title{ font-size:16px; font-weight:800; letter-spacing:-.3px; }
