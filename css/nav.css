@@ -1,21 +1,40 @@
+/* =========================================================
+   하단 네비 — 인스타식 플로팅 필
+   바닥에서 떠 있는 유리질 알약. 스크롤 내리면(피드 탐색) 작아지고
+   올리면 다시 커진다 (nav.js가 .nav--mini 토글, 부드러운 스케일 전환)
+========================================================= */
 .nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%) scale(1);
+  transform-origin: 50% 100%;
 
-  margin: 0 auto;
-  width: 100%;
-  max-width: 480px;
-  height: 58px;
+  width: calc(100% - 44px);
+  max-width: 396px;
+  height: 62px;
 
-  background: #000;
-  border-top: 1px solid #222;
+  background: rgba(16, 16, 20, .86);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .05);
+
   z-index: 9999;
+  transition: transform .34s cubic-bezier(.25, .85, .3, 1.02), opacity .3s ease;
+  will-change: transform;
+}
+
+/* 스크롤 다운 → 자연스럽게 축소 */
+.nav.nav--mini {
+  transform: translateX(-50%) scale(.78);
+  opacity: .92;
 }
 
 .nav-inner {
   height: 100%;
+  padding: 0 10px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -25,14 +44,24 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 52px;
+  height: 46px;
+  border-radius: 999px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
+  transition: background .22s ease, transform .12s ease;
+}
+.nav-item:active { transform: scale(.9); }
+
+/* 활성 탭: 인스타처럼 자기만의 버블 */
+.nav-item.active {
+  background: rgba(255, 255, 255, .1);
 }
 
 .nav-item img {
-  width: 30px;
-  height: 30px;
+  width: 27px;
+  height: 27px;
   display: block;
 }

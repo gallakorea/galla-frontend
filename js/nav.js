@@ -29,4 +29,27 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다
+  const nav = document.querySelector(".nav");
+  if (nav) {
+    let lastY = window.scrollY;
+    let ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const dy = y - lastY;
+        if (Math.abs(dy) > 4) {           // 미세 스크롤 무시 (떨림 방지)
+          if (dy > 0 && y > 60) nav.classList.add("nav--mini");
+          else if (dy < 0)      nav.classList.remove("nav--mini");
+          lastY = y;
+        }
+        // 최상단에서는 항상 원래 크기
+        if (y <= 10) nav.classList.remove("nav--mini");
+        ticking = false;
+      });
+    }, { passive: true });
+  }
 });
