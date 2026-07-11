@@ -39,6 +39,7 @@ let allRows = [];     // 이 이슈의 모든 댓글 행
 let replyMap = {};    // parent_id -> [reply rows]
 let likeAgg = {};     // comment_id -> { up, down }
 let profileMap = {};  // user_id -> { nickname, level }
+let authorVoteMap = {}; // user_id -> 'pro'|'con' (이 이슈의 작성자 실제 투표 진영, 침투 노출용)
 
 let eventsBound = false;
 
@@ -691,6 +692,18 @@ async function loadComments(issueId) {
     profiles?.forEach(p => profileMap[p.user_id] = p);
   }
 
+  // 작성자별 이 이슈 투표 진영 (침투 노출용 — votes SELECT 공개 정책)
+  // 침투 = 작성자 실제 투표 진영 ≠ 글이 놓인 진영. 정체를 숨기지 않고 모두에게 노출한다.
+  authorVoteMap = {};
+  if (userIds.length) {
+    const { data: avotes } = await supabase
+      .from("votes")
+      .select("user_id,type")
+      .eq("issue_id", issueId)
+      .in("user_id", userIds);
+    avotes?.forEach(v => { if (v.type === "pro" || v.type === "con") authorVoteMap[v.user_id] = v.type; });
+  }
+
   // 좋아요 집계 + 내 좋아요
   likeAgg = {};
   ME.likes = new Map();
@@ -771,16 +784,27 @@ function likeUI(c) {
    - 같은 진영 댓글  → 🛡방어 · 💣지원만 (동일 쿨다운) */
 const ACTION_LABEL = { attack: "⚔공격", defend: "🛡방어", support: "💣지원" };
 
-/* 내 기준 아군/적군 태그 — 댓글이 달린 진영 기준.
-   ⚠️ 침투 글은 그 진영의 평범한 글로 보여야 한다(위장 유지) — 남에게 정체 노출 금지.
-   단, 본인 눈에만 '내 침투 글' 표시(자기 글 추적용). */
+/* 침투자 판별 — 작성자의 실제 투표 진영 ≠ 글이 놓인 진영.
+   위장 없음: 침투자의 실제 입장(진영)을 모두에게 노출한다(싸움 유도). */
+function isInfiltrator(c) {
+  const v = authorVoteMap[c.user_id];
+  return !!(v && (c.faction === "pro" || c.faction === "con") && v !== c.faction);
+}
+/* 화면 표시용 진영 — 침투자는 '실제 진영'을 노출, 그 외는 글이 놓인 진영 */
+function shownFaction(c) {
+  return isInfiltrator(c) ? authorVoteMap[c.user_id] : c.faction;
+}
+
+/* 관계 태그 — 침투자는 모두에게 노출('적진 침투'), 그 외는 내 기준 아군/적군.
+   아군/적군 판정도 표시 진영(shownFaction) 기준. */
 function relTag(c) {
-  // 내 침투 글: 아군/적군 대신 침투 표시만 (본인에게만 보임)
-  if (ME.userId && c.user_id === ME.userId && ME.faction && c.faction !== ME.faction) {
-    return `<span class="rel-tag infil">🕵️ 내 침투 글</span>`;
+  if (isInfiltrator(c)) {
+    const mine = ME.userId && c.user_id === ME.userId;
+    const realKo = authorVoteMap[c.user_id] === "pro" ? "👍 찬성" : "👎 반대";
+    return `<span class="rel-tag infil">🕵️ ${mine ? "내 침투" : "침투자"} · 원래 ${realKo}</span>`;
   }
   if (!ME.faction) return "";
-  return ME.faction === c.faction
+  return ME.faction === shownFaction(c)
     ? `<span class="rel-tag ally">아군</span>`
     : `<span class="rel-tag enemy">적군</span>`;
 }
@@ -1337,13 +1361,10 @@ function applySideColoring() {
 
     if (!side) return;
 
-    // 🕵️ 내 침투 글: 남에겐 위장 진영(dataset.side)으로 보이지만,
-    // 본인 화면에선 '내 실제 진영'으로 아이콘·색을 칠해 피아식별을 돕는다.
-    // (타인은 row.user_id !== ME.userId 라 이 분기를 안 타므로 위장 유지)
+    // 🕵️ 침투자는 실제 진영으로 색을 칠한다(위장 없음, 모두에게 노출).
+    // 반대 진영 영역에 실제 진영 색으로 껴 있어 '적진 침투'가 한눈에 드러난다.
     const row = allRows.find(r => r.id === Number(unit.dataset.id));
-    if (row && ME.userId && row.user_id === ME.userId && ME.faction && row.faction !== ME.faction) {
-      side = ME.faction;
-    }
+    if (row) side = shownFaction(row);
 
     const user = unit.querySelector(".user");
     const name = unit.querySelector(".user-name") || user;
