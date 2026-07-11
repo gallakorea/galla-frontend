@@ -49,9 +49,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 let MY_POINTS = 0;
 async function refreshBalance() {
-  if (!ME) { $('pointBalance').textContent = '로그인'; return; }
+  // 비로그인: 로그인 버튼을 노출하지 않고 포인트 pill 자체를 숨김
+  if (!ME) { const p = $('pointPill'); if (p) p.hidden = true; return; }
+  const p = $('pointPill'); if (p) p.hidden = false;
   const { data, error } = await supa.rpc('ensure_balance');
   if (!error && data != null) { MY_POINTS = data; $('pointBalance').textContent = fmt(data) + 'P'; }
+}
+
+// 예측 마켓 생성 모달 열기 (헤더 + / FAB / ?compose=1 공용)
+function openCreateModal() {
+  if (!ME) { if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html'; return; }
+  const d = new Date(Date.now() + 7 * 86400000);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  $('mCloseAt').value = d.toISOString().slice(0, 16);
+  $('createModal').hidden = false;
 }
 
 function renderMyTier() {
@@ -125,14 +136,12 @@ function bindUI() {
   $('sortSelect').addEventListener('change', e => { curSort = e.target.value; renderMarkets(); });
 
   // 생성 모달
-  $('createFab').addEventListener('click', () => {
-    if (!ME) { location.href = 'login.html'; return; }
-    // 기본 마감: 7일 뒤
-    const d = new Date(Date.now() + 7 * 86400000);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    $('mCloseAt').value = d.toISOString().slice(0, 16);
-    $('createModal').hidden = false;
-  });
+  $('createFab').addEventListener('click', openCreateModal);
+  // 통합 글쓰기 허브(+ 헤더)에서 '예측' 선택 시 / ?compose=1 진입 시
+  window.__openComposeModal = openCreateModal;
+  if (new URLSearchParams(location.search).get('compose') === '1') {
+    setTimeout(openCreateModal, 60);
+  }
   $('createClose').addEventListener('click', () => { $('createModal').hidden = true; });
   $('createModal').addEventListener('click', e => { if (e.target.id === 'createModal') $('createModal').hidden = true; });
 

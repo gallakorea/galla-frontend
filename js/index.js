@@ -588,46 +588,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 /* 헤더: + 글쓰기(권한 게이팅) / ♥ 알림 */
 function initHeader() {
-    document.getElementById('hdrWrite')?.addEventListener('click', handleWriteClick);
+    // + 글쓰기: 통합 허브(갈라/예측/광장 선택). 홈이므로 갈라 우선
+    document.getElementById('hdrWrite')?.addEventListener('click',
+        () => window.openWriteHub && window.openWriteHub('galla'));
     // ♥ 알림 클릭은 notifications.js가 바인딩
-}
-
-async function handleWriteClick() {
-    const supabase = window.supabaseClient;
-    const { data: sess } = await supabase.auth.getSession();
-    if (!sess?.session) {
-        if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html';
-        return;
-    }
-    const { data: prof } = await supabase
-        .from('user_profiles').select('admin_flag').eq('user_id', sess.session.user.id).maybeSingle();
-    if (prof?.admin_flag) {
-        location.href = 'write.html';
-    } else {
-        showWriteComingSoon();
-    }
-}
-
-function showWriteComingSoon() {
-    let m = document.getElementById('write-soon');
-    if (!m) {
-        m = document.createElement('div');
-        m.id = 'write-soon';
-        m.className = 'soon-modal';
-        m.innerHTML = `
-          <div class="soon-dim"></div>
-          <div class="soon-card">
-            <div class="soon-emoji">✍️</div>
-            <div class="soon-title">글쓰기는 곧 열립니다</div>
-            <div class="soon-desc">지금은 갈라 팀이 이슈를 발제하고 있어요.<br>머지않아 모두가 직접 갈라를 던질 수 있게 준비 중이에요!</div>
-            <button class="soon-close">알겠어요</button>
-          </div>`;
-        document.body.appendChild(m);
-        const close = () => m.classList.remove('open');
-        m.querySelector('.soon-dim').onclick = close;
-        m.querySelector('.soon-close').onclick = close;
-    }
-    requestAnimationFrame(() => m.classList.add('open'));
 }
 
 // 스크롤 복원/저장

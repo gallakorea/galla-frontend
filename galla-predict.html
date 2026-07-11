@@ -6,6 +6,7 @@
   <title>GALLA - 갈라예측</title>
   <link rel="stylesheet" href="./css/galla-predict.css" />
   <link rel="stylesheet" href="./css/header.css">
+  <link rel="stylesheet" href="./css/write-hub.css">
   <link rel="stylesheet" href="./css/nav.css">
 </head>
 
@@ -13,10 +14,11 @@
 <div id="app">
 
 <header class="header header-common">
-  <div class="header-inner">
-    <a href="index.html" class="logo-link">
-      <img src="assets/logo.png" class="logo" alt="GALLA" />
-    </a>
+  <div class="header-inner header-3">
+    <button class="hdr-btn hdr-write" data-write-hub="predict" aria-label="글쓰기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <img src="assets/logo.png" class="logo" alt="GALLA" onclick="location.href='index.html'" />
     <button id="pointPill" class="point-pill" title="탭하여 출석 포인트 받기">
       <span class="point-coin">🪙</span>
       <span id="pointBalance">–</span>
@@ -171,6 +173,7 @@
 <script src="./js/media-upload.js"></script>
 <script src="./js/tiers.js"></script>
 <script src="./js/nav.js"></script>
+<script src="./js/write-hub.js"></script>
 <script src="./js/galla-predict.js"></script>
 
 </body>
