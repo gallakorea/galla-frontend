@@ -104,7 +104,6 @@ function bindUI() {
       const v = t.dataset.view;
       $('view-markets').hidden = v !== 'markets';
       $('view-rank').hidden = v !== 'rank';
-      $('createFab').style.display = v === 'markets' ? '' : 'none';
       if (v === 'rank') { renderMyTier(); loadLeaderboard('galla'); }
     });
   });
@@ -135,9 +134,7 @@ function bindUI() {
   // 정렬
   $('sortSelect').addEventListener('change', e => { curSort = e.target.value; renderMarkets(); });
 
-  // 생성 모달
-  $('createFab').addEventListener('click', openCreateModal);
-  // 통합 글쓰기 허브(+ 헤더)에서 '예측' 선택 시 / ?compose=1 진입 시
+  // 생성 모달: 헤더 + 글쓰기 허브('예측') 또는 ?compose=1로 오픈
   window.__openComposeModal = openCreateModal;
   if (new URLSearchParams(location.search).get('compose') === '1') {
     setTimeout(openCreateModal, 60);
