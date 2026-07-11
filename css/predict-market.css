@@ -254,15 +254,13 @@
 .pmd-side-chip.yes { color: #aac4ff; background: rgba(51,86,255,.2); border: 1px solid rgba(109,139,255,.5); }
 .pmd-side-chip.no  { color: #ffaaba; background: rgba(255,79,110,.16); border: 1px solid rgba(255,111,134,.5); }
 
-/* 역할 뱃지 — 진영 색으로 통일(팀 구분). 홀더=💰(진하게), 관전=👁(연하게) */
+/* 역할 뱃지 — 팀색(칩)과 분리. 홀더=골드(돈 걸림) / 관전=회색(베팅 안 함) */
 .pmd-cmt-role {
   font-size: 9.5px; font-weight: 800;
   padding: 1px 7px; border-radius: 6px; white-space: nowrap;
 }
-.pmd-cmt-role.holder.yes { color: #cfe0ff; background: rgba(51,86,255,.28); border: 1px solid rgba(109,139,255,.7); }
-.pmd-cmt-role.holder.no  { color: #ffd0da; background: rgba(255,79,110,.24); border: 1px solid rgba(255,111,134,.7); }
-.pmd-cmt-role.watch.yes  { color: #8fa8e0; background: rgba(51,86,255,.09); border: 1px dashed rgba(109,139,255,.45); }
-.pmd-cmt-role.watch.no   { color: #e08f9f; background: rgba(255,79,110,.08); border: 1px dashed rgba(255,111,134,.45); }
+.pmd-cmt-role.holder { color: #ffd977; background: rgba(255,196,0,.14); border: 1px solid rgba(255,196,0,.55); }
+.pmd-cmt-role.watch  { color: #9a9aa0; background: rgba(255,255,255,.05); border: 1px dashed #3a3a3a; }
 
 /* 컴포저 상태 */
 .pmd-cmt-locked {
@@ -283,3 +281,12 @@
 /* 미선택 게시 시 흔들기 */
 .pmd-cmt-sidesel.shake { animation: selShake .45s; }
 @keyframes selShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 50%{transform:translateX(6px);} 75%{transform:translateX(-3px);} }
+
+/* 다중 마켓 댓글: 현재 후보(ACTIVE) 지지로 자동 작성 안내 */
+.pmd-cmt-active {
+  padding: 9px 12px; border-radius: 10px; margin-bottom: 8px;
+  background: #0d0d0d; border: 1px solid #2a2a2a;
+  font-size: 12.5px; font-weight: 700; color: #cfcfd6;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.pmd-cmt-active-hint { margin-left: auto; font-size: 10.5px; font-weight: 600; color: #7a7a82; }

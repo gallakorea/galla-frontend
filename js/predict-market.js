@@ -424,13 +424,13 @@ function renderComments(body){
     const liked=myLikes.has(c.id);
     // 이 댓글의 후보(outcome)에 실제 베팅했는지로 홀더 판정
     const isHolder = !!posMap?.[`${c.user_id}:${c.outcome_id||'x'}`];
-    const teamName = cmtSideName(c.side, c.outcome_id);   // 다중: "손흥민" / 단일: YES
     const multi = isMulti();
+    // 팀 색은 칩·보더에만(후보별). 역할 뱃지는 홀더=골드/관전=회색으로 베팅여부 구분
     const chipStyle = multi ? ` style="${ocChipStyle(c.side, c.outcome_id)}"` : '';
-    const borderStyle = multi ? ` style="border-left-color:${c.side==='etc'?'#8b8b93':ocColor(c.outcome_id)}"` : '';
+    const borderStyle = multi ? ` style="border-left-color:${c.outcome_id?ocColor(c.outcome_id):'#8b8b93'}"` : '';
     const roleBadge = isHolder
-      ? `<span class="pmd-cmt-role holder ${c.side}"${chipStyle}>💰 ${teamName} 홀더</span>`
-      : `<span class="pmd-cmt-role watch ${c.side}"${chipStyle}>👁 ${teamName} 응원</span>`;
+      ? `<span class="pmd-cmt-role holder">💰 홀더</span>`
+      : `<span class="pmd-cmt-role watch">👁 관전</span>`;
     return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}"${borderStyle}>
       <div class="pmd-cmt-head">
         <span class="pmd-side-chip ${c.side}"${chipStyle}>${cmtSideLabel(c.side, c.outcome_id)}</span>
@@ -484,19 +484,15 @@ function renderComments(body){
         <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다
       </div>`;
   } else if (multi) {
-    // 다중: 후보 선택 + 기타 (긍정/부정 없음 — 후보가 곧 팀)
-    const picks = OUTCOMES.map(o=>{
-      const on = String(CMT_SIDE)===String(o.id);
-      const c = ocColor(o.id);
-      const st = on ? `background:${c}22;border-color:${c};color:${c}` : '';
-      return `<button class="pmd-cmt-pick ${on?'active':''}" data-pick="${o.id}" style="${st}">🎯 ${esc(o.label)}</button>`;
-    }).join('');
-    composeTop = `
-      <div class="pmd-cmt-ask">✍️ 어느 후보를 지지하나요?</div>
-      <div class="pmd-cmt-picksel">
-        ${picks}
-        <button class="pmd-cmt-pick etc ${CMT_SIDE==='etc'?'active':''}" data-pick="etc">🤔 기타</button>
-      </div>`;
+    // 다중: 후보 선택 버튼을 나열하지 않고, '지금 보고 있는 후보(ACTIVE)' 지지로 자동 작성.
+    // (후보가 10개여도 위 후보 탭에서 고르면 되므로 톤앤매너 유지)
+    CMT_SIDE = ACTIVE?.id ? String(ACTIVE.id) : null;
+    const c = ocColor(ACTIVE?.id);
+    composeTop = ACTIVE ? `
+      <div class="pmd-cmt-active" style="border-color:${c}66">
+        🎯 <b style="color:${c}">${esc(ACTIVE.label)}</b> 지지 입장으로 작성돼요
+        <span class="pmd-cmt-active-hint">다른 후보는 위에서 선택</span>
+      </div>` : `<div class="pmd-cmt-ask">위에서 후보를 먼저 선택하세요</div>`;
   } else {
     composeTop = `
       <div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(베팅하면 자동으로 고정돼요)</span></div>
@@ -591,10 +587,8 @@ async function postComment(text, pick, parentId, body){
   if(!isMulti()){
     payload.side = pick;                       // yes | no
     if(ACTIVE?.id) payload.outcome_id=ACTIVE.id;
-  } else if(pick==='etc'){
-    payload.side='etc'; payload.outcome_id=null; // 기타
   } else {
-    payload.side='yes'; payload.outcome_id=Number(pick); // 후보 지지
+    payload.side='yes'; payload.outcome_id=Number(pick)||ACTIVE?.id; // 현재 후보 지지
   }
   const { error } = await supa.from('market_comments').insert(payload);
   if(error){ console.error('[cmt] insert', error); return toast('등록 실패'); }
