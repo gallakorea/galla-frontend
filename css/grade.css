@@ -1,117 +1,125 @@
-/* RESET */
-*{margin:0;padding:0;box-sizing:border-box;}
-body{
-    background:#000;
-    color:#fff;
-    font-family:-apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-    max-width:480px;
-    margin:0 auto;
+/* ============================================================
+   갈라리안 등급 — 게임 티어 시스템 (galla-ui 팔레트)
+   티어 색: SPARK 회색 / BREAKER 청록 / VANGUARD 파랑
+           AUTHORITY 보라 / DOMINION 빨강 / APEX 골드
+============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  color: #f5f5f2;
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', Helvetica, Arial, sans-serif;
+  max-width: 480px; margin: 0 auto;
+}
+.section { padding: 0 16px; margin-top: 26px; }
+.section:last-of-type { padding-bottom: 130px; }
+
+/* ===== 현재 등급 히어로 ===== */
+.grade-main {
+  position: relative; overflow: hidden;
+  padding: 30px 20px 24px; text-align: center;
+  border-radius: 20px !important;
+  background: radial-gradient(130% 120% at 50% 0%, rgba(61,107,255,.22), rgba(13,13,17,.9) 60%), #0d0d11 !important;
+  border: 1px solid rgba(61,107,255,.35) !important;
+  box-shadow: 0 20px 50px -20px rgba(0,0,0,.8);
+}
+.tier-name {
+  font-size: 34px; font-weight: 900; letter-spacing: 4px;
+  color: #f5cf6b !important;
+  text-shadow: 0 0 26px rgba(245,207,107,.55);
+}
+.tier-desc { margin-top: 10px; font-size: 12.5px; color: #9a9aa0; line-height: 1.6; }
+.xp-bar {
+  margin-top: 18px; height: 12px; border-radius: 999px;
+  background: #1c1c22; border: 1px solid #26262e; overflow: hidden;
+}
+.xp-progress {
+  position: relative; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #f5cf6b, #e0972a) !important;
+  overflow: hidden;
+}
+.xp-progress::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  background-size: 220% 100%; animation: gShimmer 2.4s linear infinite;
+}
+@keyframes gShimmer { 0%{background-position:-120% 0;} 100%{background-position:220% 0;} }
+.xp-text { margin-top: 9px; font-size: 12px; font-weight: 800; color: #f5cf6b; }
+.tier-aura { display: none; }
+
+/* ===== 다음 등급 진척도 ===== */
+.next-tier-card { padding: 18px 16px; }
+.next-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.next-row .label { font-size: 12px; font-weight: 800; color: #8b8b93; }
+.next-row .value { font-size: 16px; font-weight: 900; color: #b98bff; text-shadow: 0 0 14px rgba(155,91,255,.4); }
+.progress-item { margin-top: 12px; }
+.pi-label { font-size: 11.5px; font-weight: 700; color: #9a9aa0; margin-bottom: 6px; }
+.pi-bar { height: 8px; border-radius: 999px; background: #1c1c22; overflow: hidden; }
+.pi-bar .fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3d6bff, #6d8bff) !important; box-shadow: 0 0 10px rgba(61,107,255,.4); }
+.pi-text { margin-top: 5px; font-size: 10.5px; color: #6c6c72; font-weight: 700; text-align: right; }
+
+/* ===== 세계관 ===== */
+.lore-card {
+  padding: 16px; font-size: 12.5px; color: #9a9aa0; line-height: 1.7;
+  border-left: 3px solid rgba(245,207,107,.5) !important;
 }
 
-/* HEADER */
-.header{position:sticky;top:0;background:#000;border-bottom:1px solid #111;z-index:999;}
-.header-inner{height:50px;padding:0 16px;display:flex;justify-content:space-between;align-items:center;}
-.logo{width:90px;}
-.header-title{font-size:17px;font-weight:700;}
-.header-spacer{width:24px;}
-
-/* SECTION */
-.section{padding:24px 16px;}
-.section-title{font-size:15px;color:#aaa;margin-bottom:10px;}
-
-/* CARD */
-.card{
-    background:#0d0d0d;
-    border:1px solid #1c1c1c;
-    border-radius:14px;
-    padding:18px;
-    margin-bottom:18px;
+/* ===== 티어 계층 — 티어별 아이덴티티 ===== */
+.tiers-list { display: flex; flex-direction: column; gap: 10px; }
+.tier-box {
+  position: relative; padding: 15px 16px;
+  border-radius: 4px 16px 16px 4px !important;
+  border-left-width: 3px !important; border-left-style: solid !important;
+  transition: transform .12s ease;
 }
+.tier-box:active { transform: scale(.98); }
+.tier-title { font-size: 15px; font-weight: 900; letter-spacing: 2px; }
+.tier-sub { margin-top: 3px; font-size: 11px; color: #8b8b93; font-weight: 700; }
+.perk-list { margin: 9px 0 0 16px; font-size: 11.5px; color: #9a9aa0; line-height: 1.8; }
 
-/* MAIN GRADE */
-.grade-main{position:relative;overflow:hidden;}
-.tier-name{text-align:center;font-size:26px;font-weight:900;margin-bottom:4px;}
-.tier-desc{text-align:center;font-size:13px;color:#bbb;margin-bottom:16px;}
-
-/* Aura */
-.tier-aura{
-    position:absolute;
-    top:-20px;left:0;right:0;
-    height:120px;
-    filter:blur(28px);
-    opacity:0.45;
+.tier-box.spark    { border-left-color: #5c5c62 !important; background: linear-gradient(90deg, rgba(120,120,130,.08), rgba(255,255,255,.01)) !important; }
+.tier-box.spark .tier-title { color: #9a9aa0; }
+.tier-box.breaker  { border-left-color: #35e0c0 !important; background: linear-gradient(90deg, rgba(53,224,192,.09), rgba(255,255,255,.01)) !important; }
+.tier-box.breaker .tier-title { color: #7cf5dd; }
+.tier-box.vanguard { border-left-color: #3d6bff !important; background: linear-gradient(90deg, rgba(61,107,255,.11), rgba(255,255,255,.01)) !important; }
+.tier-box.vanguard .tier-title { color: #7f9dff; }
+.tier-box.authority{ border-left-color: #9b5bff !important; background: linear-gradient(90deg, rgba(155,91,255,.1), rgba(255,255,255,.01)) !important; }
+.tier-box.authority .tier-title { color: #b98bff; }
+.tier-box.dominion { border-left-color: #ff4d67 !important; background: linear-gradient(90deg, rgba(255,77,103,.1), rgba(255,255,255,.01)) !important; }
+.tier-box.dominion .tier-title { color: #ff8595; }
+.tier-box.apex {
+  border-left-color: #f5cf6b !important;
+  background: linear-gradient(90deg, rgba(245,207,107,.14), rgba(224,151,42,.03)) !important;
+  box-shadow: 0 0 22px rgba(245,207,107,.12);
 }
-.vanguard-aura{background:linear-gradient(90deg,#438DFF,#3CCBFF);}
-
-/* XP Bar */
-.xp-bar{width:100%;height:12px;background:#222;border-radius:40px;overflow:hidden;}
-.xp-progress{background:#3CB8FF;height:100%;}
-.xp-text{text-align:center;font-size:12px;color:#aaa;margin-top:6px;}
-
-/* NEXT TIER PROGRESS */
-.next-row{display:flex;justify-content:space-between;margin-bottom:8px;}
-.value{font-weight:800;font-size:14px;}
-
-.progress-item{margin-top:14px;}
-.pi-label{font-size:12px;color:#bbb;margin-bottom:4px;}
-.pi-bar{height:10px;background:#222;border-radius:40px;overflow:hidden;}
-.fill{background:#61c0ff;height:100%;}
-.pi-text{font-size:12px;color:#777;margin-top:4px;}
-
-/* TIER STRUCTURE */
-.tiers-list{display:flex;flex-direction:column;gap:12px;}
-
-.tier-box{
-    background:#111;
-    border:1px solid #222;
-    padding:16px;
-    border-radius:12px;
+.tier-box.apex .tier-title {
+  color: #f5cf6b;
+  text-shadow: 0 0 14px rgba(245,207,107,.5);
 }
-.tier-title{font-size:18px;font-weight:800;}
-.tier-sub{font-size:12px;color:#aaa;margin-top:3px;}
-
-.perk-list{
-    margin-top:10px;
-    margin-left:14px;
-    color:#ccc;
-    font-size:12px;
-    line-height:17px;
+.tier-box.apex::after {
+  content: '👑'; position: absolute; top: 12px; right: 14px; font-size: 16px;
 }
-.perk-list li{list-style:disc;}
+/* 현재 내 티어 하이라이트 (grade.js가 .current 부여 시) */
+.tier-box.current { outline: 2px solid rgba(245,207,107,.6); box-shadow: 0 0 24px rgba(245,207,107,.25); }
 
-/* BENEFITS (STATS) */
-.benefit-item{
-    display:flex;
-    justify-content:space-between;
-    padding:10px 0;
-    border-bottom:1px solid #111;
+/* ===== 능력치 ===== */
+.benefit-card { padding: 6px 16px; }
+.benefit-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.05);
 }
-.benefit-item:last-child{border-bottom:none;}
+.benefit-item:last-child { border-bottom: none; }
+.bt { font-size: 12px; font-weight: 900; letter-spacing: 1.5px; color: #9a9aa0; }
+.bd { font-size: 12px; color: #c9c9cf; font-weight: 600; }
+.apex-benefit .bt { color: #f5cf6b; text-shadow: 0 0 10px rgba(245,207,107,.4); }
+.apex-benefit .bd { color: #f5cf6b; font-weight: 800; }
 
-.bt{font-weight:800;font-size:14px;}
-.bd{font-size:13px;color:#ccc;}
-.apex-benefit .bt{color:#ff6b6b;}
-
-/* ACHIEVEMENTS */
-.ach-item{
-    display:flex;
-    justify-content:space-between;
-    padding:12px 0;
-    border-bottom:1px solid #111;
+/* ===== 업적 도감 ===== */
+.ach-card { padding: 6px 16px; }
+.ach-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 13px 0; font-size: 13px; font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,.05);
 }
-.ach-item:last-child{border-bottom:none;}
-
-.done{color:#4af06d;font-weight:700;}
-.locked{color:#777;font-weight:700;}
-
-.back-btn {
-    width: 24px;
-    cursor: pointer;
-    filter: brightness(0) invert(1);
-}
-
-.back-btn:hover {
-    opacity: 0.7;
-}
-
-
+.ach-item:last-child { border-bottom: none; }
+.ach-status { font-size: 10.5px; font-weight: 900; padding: 3px 10px; border-radius: 999px; }
+.ach-status.done { color: #55e6ae; background: rgba(53,224,160,.1); border: 1px solid rgba(53,224,160,.4); }
+.ach-status.locked { color: #5c5c62; background: rgba(255,255,255,.04); border: 1px solid #26262e; }

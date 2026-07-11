@@ -14,16 +14,12 @@
 <div id="app">
 
     <!-- HEADER -->
-    <header class="header">
-        <div class="header-inner">
-
-            <!-- 뒤로가기 -->
-            <img src="assets/icons/back.svg" class="back-btn" onclick="history.back()">
-
-            <div class="header-title">데일리 퀘스트</div>
-
-            <div class="header-spacer"></div>
-        </div>
+    <header class="st-header">
+        <button class="st-back" onclick="history.back()" aria-label="뒤로">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="st-title">데일리 퀘스트</div>
+        <div class="st-back" style="visibility:hidden"></div>
     </header>
 
     <section class="main">

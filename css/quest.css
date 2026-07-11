@@ -1,304 +1,156 @@
-/* RESET */
+/* ============================================================
+   데일리 퀘스트 — 게임 미션 보드 (galla-ui 팔레트)
+   파랑 #3d6bff / 골드 #f5cf6b / 배경 #0a0a0b
+============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
-
 body {
-    background: #000;
-    color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
-    max-width: 480px;
-    margin: 0 auto;
+  color: #f5f5f2;
+  font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', Helvetica, Arial, sans-serif;
+  max-width: 480px; margin: 0 auto;
 }
+.main { padding: 10px 16px 130px; }
+.section-title, .section-title-special {
+  font-size: 12px; font-weight: 900; letter-spacing: .5px; color: #8b8b93;
+  margin: 28px 4px 12px;
+}
+.section-title-special { color: #ff8595; }
 
-/* HEADER */
-.header {
-    position: sticky;
-    top: 0;
-    background: #000;
-    border-bottom: 1px solid #111;
-    z-index: 999;
-}
-.header-inner {
-    height: 50px;
-    padding: 0 16px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.header-title {
-    font-size: 17px;
-    font-weight: 800;
-}
-.back-btn {
-    font-size: 20px;
-    cursor: pointer;
-}
-
-/* MAIN */
-.main {
-    padding: 22px 16px 140px;
-}
-
-.section-title {
-    margin-top: 20px;
-    font-size: 17px;
-    font-weight: 700;
-    margin-bottom: 12px;
-}
-.section-title-special {
-    margin-top: 34px;
-    font-size: 19px;
-    font-weight: 800;
-    color: #ff4f6e;
-    margin-bottom: 12px;
-}
-
-/* PROGRESS RING */
-.progress-wrapper {
-    width: 160px;
-    height: 160px;
-    margin: 0 auto 32px;
-    position: relative;
-}
-
-.ring-bg {
-    fill: none;
-    stroke: #222;
-    stroke-width: 12;
-}
-
+/* ===== 달성률 링 ===== */
+.progress-wrapper { position: relative; width: 160px; margin: 18px auto 6px; }
+.ring { transform: rotate(-90deg); display: block; }
+.ring-bg { fill: none; stroke: #1c1c22; stroke-width: 11; }
 .ring-progress {
-    fill: none;
-    stroke: #3b82f6;
-    stroke-width: 12;
-    stroke-linecap: round;
-    transform: rotate(-90deg);
-    transform-origin: 50% 50%;
-    stroke-dasharray: 440;
-    stroke-dashoffset: 440;
-    transition: .6s ease;
+  fill: none; stroke: #f5cf6b; stroke-width: 11; stroke-linecap: round;
+  stroke-dasharray: 439.8; stroke-dashoffset: 439.8;
+  transition: stroke-dashoffset 1s cubic-bezier(.22,1,.36,1);
+  filter: drop-shadow(0 0 8px rgba(245,207,107,.55));
 }
-
 .ring-center {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-#progress-percent {
-    font-size: 28px;
-    font-weight: 800;
-}
-.progress-label {
-    font-size: 12px;
-    margin-top: 4px;
-    color: #999;
-}
+#progress-percent { font-size: 30px; font-weight: 900; color: #f5cf6b; text-shadow: 0 0 18px rgba(245,207,107,.45); }
+.progress-label { margin-top: 4px; font-size: 11px; font-weight: 700; color: #8b8b93; }
 
-/* DAILY QUEST */
+/* ===== 데일리 퀘스트 카드 ===== */
+.daily-list { display: flex; flex-direction: column; gap: 10px; }
 .quest-card {
-    background: #0d0d0d;
-    border: 1px solid #1f1f1f;
-    border-radius: 14px;
-    padding: 18px;
-    margin-bottom: 14px;
-    box-shadow: 0 0 10px #000;
+  padding: 15px 16px; border-radius: 16px;
+  background: linear-gradient(180deg, #131418, #0c0c0f);
+  border: 1px solid rgba(255,255,255,.08);
+  border-left: 3px solid #3d6bff;
+  transition: transform .12s ease;
 }
-.quest-card.completed {
-    border-color: #ffe27a;
-    background: #251f00;
-    box-shadow: 0 0 20px rgba(255,226,122,0.35);
-}
-
-.quest-top {
-    display: flex;
-    align-items: center;
-}
+.quest-card:active { transform: scale(.98); }
+.quest-top { display: flex; align-items: center; gap: 12px; }
 .quest-icon {
-    font-size: 26px;
-    margin-right: 12px;
+  width: 42px; height: 42px; flex: 0 0 42px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; border-radius: 12px;
+  background: rgba(61,107,255,.12); border: 1px solid rgba(61,107,255,.3);
 }
-.quest-title {
-    font-size: 16px;
-    font-weight: 700;
-}
-.quest-sub {
-    font-size: 12px;
-    color: #999;
-    margin-top: 3px;
-}
-
-.bar {
-    width: 100%;
-    height: 8px;
-    background: #222;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-top: 6px;
-}
+.quest-title { font-size: 14px; font-weight: 800; }
+.quest-sub { margin-top: 2px; font-size: 11.5px; color: #8b8b93; font-weight: 600; }
+.quest-progress { margin-top: 11px; display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 800; color: #9a9aa0; }
+.bar { flex: 1; height: 8px; border-radius: 999px; background: #1c1c22; overflow: hidden; }
 .bar-fill {
-    height: 100%;
-    width: 0%;
-    background: #3b82f6;
-    transition: width .3s ease;
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #3d6bff, #6d8bff);
+  box-shadow: 0 0 10px rgba(61,107,255,.45);
+  transition: width .6s cubic-bezier(.22,1,.36,1);
 }
+.quest-card.completed { border-left-color: #35e0a0; background: linear-gradient(90deg, rgba(53,224,160,.08), #0c0c0f 55%); }
+.quest-card.completed .bar-fill { background: linear-gradient(90deg, #35e0a0, #55e6ae); box-shadow: 0 0 10px rgba(53,224,160,.45); }
+.quest-card.completed .quest-icon { background: rgba(53,224,160,.12); border-color: rgba(53,224,160,.4); }
+.quest-card.completed .quest-title::after { content: ' ✓'; color: #55e6ae; }
 
-/* TODAY REWARD */
+/* ===== 오늘의 보상 ===== */
 .today-reward {
-    margin: 26px 0;
-    padding: 18px;
-    background: #0d0d0d;
-    border: 1px solid #2c2c2c;
-    border-radius: 16px;
-    box-shadow: 0 0 14px rgba(255,226,122,0.15);
+  margin-top: 28px; padding: 20px 18px; border-radius: 20px;
+  position: relative; overflow: hidden;
+  background: radial-gradient(120% 130% at 50% -10%, rgba(245,207,107,.16), #0c0c0f 60%);
+  border: 1px solid rgba(245,207,107,.35);
+  box-shadow: 0 16px 40px -18px rgba(0,0,0,.8);
 }
-
-.tr-header {
-    font-size: 17px;
-    font-weight: 800;
-    margin-bottom: 12px;
-}
-
-.tr-gp-total {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.tr-label {
-    font-size: 13px;
-    color: #aaa;
-}
-.tr-total-gp {
-    font-size: 20px;
-    font-weight: 800;
-    color: #ffe27a;
-}
-
-.tr-bar-wrap {
-    width: 100%;
-    height: 12px;
-    background: #222;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-top: 12px;
-}
+.tr-header { font-size: 14px; font-weight: 900; }
+.tr-gp-total { margin-top: 14px; display: flex; justify-content: space-between; align-items: baseline; }
+.tr-label { font-size: 11.5px; font-weight: 700; color: #8b8b93; }
+.tr-total-gp { font-size: 24px; font-weight: 900; color: #f5cf6b; text-shadow: 0 0 16px rgba(245,207,107,.5); }
+.tr-bar-wrap { position: relative; margin-top: 12px; height: 10px; }
+.tr-bar-bg { position: absolute; inset: 0; border-radius: 999px; background: #1c1c22; }
 .tr-bar-fill {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, #ffe27a, #ffd24a);
-    transition: 0.4s ease;
+  position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #f5cf6b, #e0972a);
+  box-shadow: 0 0 12px rgba(245,207,107,.5);
+  transition: width .8s cubic-bezier(.22,1,.36,1);
 }
-
-.tr-progress-text {
-    margin-top: 6px;
-    text-align: right;
-    font-size: 12px;
-    color: #ccc;
-}
-
+.tr-progress-text { margin-top: 8px; font-size: 11px; font-weight: 800; color: #9a9aa0; text-align: right; }
 .tr-btn {
-    margin-top: 14px;
-    padding: 12px;
-    width: 100%;
-    background: #ffe27a;
-    border: none;
-    border-radius: 12px;
-    color: #000;
-    font-weight: 800;
-    cursor: pointer;
+  margin-top: 15px; width: 100%; padding: 14px; border: none; border-radius: 13px;
+  font-size: 15px; font-weight: 900; cursor: pointer;
+  background: linear-gradient(135deg, #f5cf6b, #e0972a); color: #1a1408;
+  box-shadow: 0 10px 26px -10px rgba(224,151,42,.7);
+  transition: transform .1s ease;
 }
-.tr-btn.disabled {
-    background: #999;
-    color: #444;
-    pointer-events: none;
-}
+.tr-btn:active { transform: scale(.985); }
+.tr-btn.disabled { background: #1c1c22; color: #5c5c62; box-shadow: none; cursor: default; }
 
-/* WEEKLY */
-.weekly-scroll {
-    overflow-x: scroll;
-    padding-bottom: 6px;
-}
+/* ===== 주간 퀘스트 (가로 스크롤) ===== */
+.weekly-scroll { overflow-x: auto; margin: 0 -16px; padding: 0 16px; scrollbar-width: none; }
 .weekly-scroll::-webkit-scrollbar { display: none; }
-
-.weekly-list {
-    display: flex;
-    gap: 14px;
-}
+.weekly-list { display: flex; gap: 10px; width: max-content; padding-bottom: 4px; }
 .weekly-card {
-    min-width: 200px;
-    background: #0a0a0a;
-    border: 1px solid #222;
-    border-radius: 16px;
-    padding: 18px;
+  width: 168px; flex: 0 0 168px; padding: 15px 14px; border-radius: 16px;
+  background: linear-gradient(180deg, #131418, #0c0c0f);
+  border: 1px solid rgba(155,91,255,.3);
+  border-top: 3px solid #9b5bff;
 }
-.weekly-card.completed {
-    border-color: #3b82f6;
-    box-shadow: 0 0 16px rgba(59,130,246,0.35);
-}
+.weekly-title { font-size: 13px; font-weight: 800; line-height: 1.4; }
+.weekly-sub { margin-top: 4px; font-size: 11px; color: #8b8b93; font-weight: 600; }
+.weekly-card .bar-fill { background: linear-gradient(90deg, #9b5bff, #b98bff); box-shadow: 0 0 10px rgba(155,91,255,.45); }
+.weekly-card.completed { border-color: rgba(53,224,160,.4); border-top-color: #35e0a0; }
+.weekly-card.completed .bar-fill { background: linear-gradient(90deg, #35e0a0, #55e6ae); }
 
-/* SPECIAL */
+/* ===== 스페셜 이벤트 ===== */
 .special-card {
-    position: relative;
-    background: #150000;
-    border: 1px solid #ff4f6e;
-    border-radius: 16px;
-    padding: 20px;
-    overflow: hidden;
+  position: relative; overflow: hidden; border-radius: 20px;
+  border: 1px solid rgba(255,77,103,.4);
+  box-shadow: 0 0 28px rgba(255,77,103,.14);
 }
 .special-bg {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(45deg, transparent, rgba(255,50,80,0.3), transparent);
-    animation: shine 3s infinite;
+  position: absolute; inset: 0;
+  background: radial-gradient(130% 140% at 15% 0%, rgba(255,77,103,.28), #0c0c0f 65%);
 }
-@keyframes shine {
-    0% { transform: translateX(-100%); }
-    50% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
+.special-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.06) 50%, transparent 70%);
+  background-size: 250% 100%; animation: qShine 3.2s linear infinite;
 }
-.special-title {
-    font-size: 17px;
-    font-weight: 800;
-}
-.special-desc {
-    font-size: 13px;
-    margin-top: 6px;
-    color: #ccc;
-}
+@keyframes qShine { 0%{background-position:200% 0;} 100%{background-position:-100% 0;} }
+.special-content { position: relative; padding: 20px 18px; }
+.special-title { font-size: 16px; font-weight: 900; }
+.special-desc { margin-top: 6px; font-size: 12.5px; color: #c9c9cf; font-weight: 600; }
 .special-btn {
-    margin-top: 14px;
-    padding: 12px;
-    background: #ff4f6e;
-    color: #fff;
-    font-weight: 800;
-    border-radius: 12px;
-    border: none;
+  margin-top: 15px; padding: 12px 18px; border: none; border-radius: 12px;
+  font-size: 13.5px; font-weight: 900; cursor: pointer;
+  background: linear-gradient(135deg, #ff4d67, #d63a52); color: #fff;
+  box-shadow: 0 10px 24px -10px rgba(255,77,103,.7);
+  transition: transform .1s ease;
 }
+.special-btn:active { transform: scale(.97); }
 
-/* DAILY CHEST */
+/* ===== 데일리 상자 ===== */
 .reward-area {
-    margin-top: 38px;
-    text-align: center;
+  margin-top: 28px; padding: 22px 18px; border-radius: 20px; text-align: center;
+  background: linear-gradient(180deg, #131418, #0c0c0f);
+  border: 1px dashed rgba(245,207,107,.4);
 }
-.reward-icon {
-    font-size: 44px;
-    margin-bottom: 6px;
-}
+.reward-icon { font-size: 40px; animation: qBounce 2.2s ease-in-out infinite; }
+@keyframes qBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
 .reward-btn {
-    background: #ffe27a;
-    padding: 14px 18px;
-    border-radius: 12px;
-    color: #000;
-    font-weight: 800;
+  margin-top: 12px; padding: 12px 22px; border-radius: 999px; cursor: pointer;
+  background: rgba(245,207,107,.12); border: 1px solid rgba(245,207,107,.5);
+  color: #f5cf6b; font-size: 14px; font-weight: 900;
+  transition: transform .1s ease;
 }
-
-.back-btn {
-    width: 24px;
-    cursor: pointer;
-    filter: brightness(0) invert(1);
-}
-
-.back-btn:hover {
-    opacity: 0.7;
-}
+.reward-btn:active { transform: scale(.97); }

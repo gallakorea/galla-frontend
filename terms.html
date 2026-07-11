@@ -85,13 +85,13 @@
 <div id="app">
 
   <!-- HEADER -->
-  <header class="header">
-    <div class="header-inner">
-      <div class="back-btn" onclick="history.back()">←</div>
-      <div class="header-title">서비스 이용약관</div>
-      <div class="header-spacer"></div>
-    </div>
-  </header>
+  <header class="st-header">
+        <button class="st-back" onclick="history.back()" aria-label="뒤로">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="st-title">서비스 이용약관</div>
+        <div class="st-back" style="visibility:hidden"></div>
+    </header>
 
   <!-- CONTENT -->
   <section class="section">

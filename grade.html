@@ -23,12 +23,12 @@
 <div id="app">
 
     <!-- HEADER (프로젝트 표준 구조 적용) -->
-    <header class="header">
-        <div class="header-inner">
-            <img src="./assets/icons/back.svg" class="back-btn" onclick="history.back()">
-            <div class="header-title">갈라리안 등급</div>
-            <div class="header-spacer"></div>
-        </div>
+    <header class="st-header">
+        <button class="st-back" onclick="history.back()" aria-label="뒤로">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="st-title">갈라리안 등급</div>
+        <div class="st-back" style="visibility:hidden"></div>
     </header>
 
     <!-- CURRENT TIER -->
