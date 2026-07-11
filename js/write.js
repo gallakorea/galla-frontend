@@ -24,6 +24,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbBtn = document.getElementById('thumbnailBtn');
   const thumbPreview = document.getElementById('thumbPreview');
 
+  // 대표 썸네일(3:4, 마이페이지 카드용 · 선택)
+  const cardThumbInput = document.getElementById('cardThumb');
+  const cardThumbLabel = document.getElementById('cardThumbLabel');
+  const cardThumbPreview = document.getElementById('cardThumbPreview');
+  const cardThumbImg = document.getElementById('cardThumbImg');
+  const cardThumbClear = document.getElementById('cardThumbClear');
+  if (cardThumbInput) {
+    cardThumbInput.addEventListener('change', () => {
+      const f = cardThumbInput.files && cardThumbInput.files[0];
+      if (!f) return;
+      cardThumbImg.src = URL.createObjectURL(f);
+      cardThumbPreview.hidden = false;
+      cardThumbLabel.hidden = true;
+    });
+    cardThumbClear.addEventListener('click', () => {
+      cardThumbInput.value = '';
+      cardThumbPreview.hidden = true;
+      cardThumbLabel.hidden = false;
+    });
+  }
+
   const MAX_IMAGES = 10;
 
   // 업로드에 쓸 최종 이미지(4:5로 크롭 완료된 File 배열). 원본 대신 이걸 올린다.
@@ -304,6 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let thumbnail_url = null;
       let video_url = null;
       let images = null;
+      let card_thumb_url = null;
 
       // Cloudflare R2 업로드 (이미지 여러 장 + 영상)
       const publishBtn = document.getElementById('publishPreview');
@@ -327,6 +349,13 @@ document.addEventListener('DOMContentLoaded', () => {
           publishBtn.textContent = '영상 업로드 중…';
           video_url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video',
             p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; });
+        }
+
+        const cardThumbFile = cardThumbInput && cardThumbInput.files && cardThumbInput.files[0];
+        if (cardThumbFile) {
+          publishBtn.textContent = '썸네일 업로드 중…';
+          card_thumb_url = await window.GALLA_UPLOAD_MEDIA(cardThumbFile, 'image',
+            p => { publishBtn.textContent = p == null ? '썸네일 업로드 중…' : `썸네일 업로드 중… ${p}%`; });
         }
       } catch (err) {
         console.error('[UPLOAD ERROR]', err);
@@ -368,6 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (thumbnail_url) draftPayload.thumbnail_url = thumbnail_url;
         if (video_url) draftPayload.video_url = video_url;
         if (images) draftPayload.images = images;
+        if (card_thumb_url) draftPayload.card_thumb_url = card_thumb_url;
 
         // INSERT
         const { data, error } = await supabase
@@ -387,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // First, fetch current row
         const { data: existing, error: fetchErr } = await supabase
           .from('issues_draft')
-          .select('thumbnail_url,video_url,images')
+          .select('thumbnail_url,video_url,images,card_thumb_url')
           .eq('id', draftId)
           .single();
         if (fetchErr || !existing) {
@@ -400,6 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (existing.video_url) draftPayload.video_url = existing.video_url;
         if (images) draftPayload.images = images;
         else if (existing.images) draftPayload.images = existing.images;
+        if (card_thumb_url) draftPayload.card_thumb_url = card_thumb_url;
+        else if (existing.card_thumb_url) draftPayload.card_thumb_url = existing.card_thumb_url;
         const { error: updateErr, data: updated } = await supabase
           .from('issues_draft')
           .update(draftPayload)

@@ -217,7 +217,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 title,
                 created_at,
                 score,
-                thumbnail_url
+                thumbnail_url,
+                card_thumb_url,
+                images,
+                video_url
             `)
             .eq("user_id", viewUserId)
             .order("created_at", { ascending: false });
@@ -243,12 +246,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const card = document.createElement("div");
             card.className = "thumb-card";
 
-            const thumbSrc = issue.thumbnail_url
-                ? issue.thumbnail_url
-                : "./assets/logo.png";
+            // 3:4 대표 썸네일 우선 → 없으면 사진/영상 → 최후 로고
+            const firstImg = Array.isArray(issue.images) && issue.images.length ? issue.images[0] : null;
+            const thumbSrc = issue.card_thumb_url
+                || issue.thumbnail_url
+                || firstImg
+                || "./assets/logo.png";
+            if (issue.card_thumb_url) card.classList.add("thumb-card--34");
 
             card.innerHTML = `
-                <img src="${thumbSrc}">
+                <img src="${thumbSrc}"${issue.video_url && thumbSrc === "./assets/logo.png" ? ' data-video="1"' : ''}>
                 <div class="thumb-title">${issue.title}</div>
                 <div class="thumb-author">${isMyPage ? "by 나" : "by 사용자"}</div>
                 <div class="thumb-stats">

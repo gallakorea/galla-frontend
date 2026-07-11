@@ -188,6 +188,12 @@ body {
     object-fit:cover;
 }
 
+/* 3:4 대표 썸네일이 있는 카드는 세로형으로 */
+.thumb-card--34 img {
+    height:auto;
+    aspect-ratio:3/4;
+}
+
 .thumb-title {
     font-size:13px;
     padding:10px 10px 4px;

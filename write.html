@@ -73,6 +73,23 @@
             <div id="videoPreview" class="preview-box"></div>
           </div>
 
+          <!-- 대표 썸네일 (3:4, 마이페이지 카드용 · 선택) -->
+          <div class="card-thumb-block">
+            <div class="card-thumb-head">
+              <span class="card-thumb-title">대표 썸네일 <span class="ct-badge">3:4</span></span>
+              <span class="card-thumb-sub">마이페이지 카드에 노출돼요 · 없으면 사진·영상으로 대체</span>
+            </div>
+            <input type="file" id="cardThumb" class="visually-hidden-file" accept="image/*" />
+            <label for="cardThumb" id="cardThumbLabel" class="card-thumb-drop">
+              <span class="card-thumb-plus">＋</span>
+              <span>세로형 썸네일 올리기</span>
+            </label>
+            <div id="cardThumbPreview" class="card-thumb-preview" hidden>
+              <img id="cardThumbImg" alt="썸네일 미리보기" />
+              <button type="button" id="cardThumbClear" class="card-thumb-clear" aria-label="삭제">✕</button>
+            </div>
+          </div>
+
           <div class="wizard-nav">
             <button type="button" class="primary-btn" id="toStep2">다음</button>
           </div>
