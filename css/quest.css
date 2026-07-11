@@ -165,3 +165,11 @@ body {
 .q-claim:disabled{ cursor:default; }
 @keyframes qpulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.015); } }
 .quest-card.completed{ opacity:.9; }
+
+/* GP 상점 진입 버튼 */
+.shop-entry{ width:100%; display:flex; flex-direction:column; gap:4px; align-items:flex-start;
+  padding:16px; border-radius:14px; cursor:pointer; text-align:left;
+  background:linear-gradient(135deg,rgba(245,207,107,.16),rgba(245,207,107,.05));
+  border:1px solid rgba(245,207,107,.4); color:#f5cf6b; font-size:14.5px; font-weight:800; }
+.shop-entry-sub{ font-size:12px; font-weight:600; color:#b9a05a; }
+.shop-entry:active{ transform:scale(.985); }

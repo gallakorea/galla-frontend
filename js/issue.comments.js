@@ -35,6 +35,27 @@ function markAction(commentId, action) {
   ME.actions.set(`${commentId}:${action}`, Date.now());
 }
 
+/* ⚡ 쿨다운 리셋권 — 쿨다운에 걸렸을 때 보유 시 사용 제안.
+   승인되면 RESET_ARMED에 표시 → battle_action 호출에 p_use_reset 전달(서버가 소비) */
+const RESET_ARMED = new Set();
+async function offerCooldownReset(commentId, action, waitSec) {
+  try {
+    const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+    const qty = inv.cooldown_reset || 0;
+    if (qty <= 0) {
+      alert(`재시도까지 ${waitSec}초 남았어요.\n(⚡ 쿨다운 리셋권이 있으면 바로 가능 — GP 상점)`);
+      return false;
+    }
+    if (!confirm(`쿨다운 ${waitSec}초 남음.\n⚡ 쿨다운 리셋권을 사용해 바로 실행할까요? (보유 ${qty}개)`)) return false;
+    RESET_ARMED.add(`${commentId}:${action}`);
+    ME.actions.delete(`${commentId}:${action}`); // 로컬 쿨다운 해제
+    return true;
+  } catch (_) {
+    alert(`재시도까지 ${waitSec}초 남았어요.`);
+    return false;
+  }
+}
+
 /* 진영 이름 — 글쓴이가 정한 이름(issues.faction_a/b, issue.js가 window.ISSUE_FACTIONS로 노출).
    👍/👎 아이콘으로 두 편을 가른다. 고정된 '찬성/반대'가 아니다. */
 function fName(side) {
@@ -147,10 +168,22 @@ async function initComposerUI() {
     </div>`;
   if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
 
-  document.getElementById("infiltrate-btn").addEventListener("click", () => {
+  document.getElementById("infiltrate-btn").addEventListener("click", async () => {
     if (!INFILTRATE && INFIL_LEFT <= 0) {
-      alert("오늘의 침투 횟수를 모두 썼어요. 내일 다시 침투할 수 있어요. (하루 3회)");
-      return;
+      // 🕵️ 침투권 보유 시 한도 +1 제안
+      const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+      const passes = inv.infiltrate_pass || 0;
+      if (passes <= 0) {
+        alert("오늘의 침투 횟수를 모두 썼어요. 내일 다시 침투할 수 있어요.\n(🕵️ 침투권이 있으면 한도 +1 — GP 상점)");
+        return;
+      }
+      if (!confirm(`오늘 침투 한도를 모두 썼어요.\n🕵️ 침투권을 사용해 한도를 +1 할까요? (보유 ${passes}개)`)) return;
+      const { data: ur } = await window.supabaseClient.rpc("use_infiltrate_pass");
+      if (!ur?.ok) { alert("침투권 사용에 실패했어요."); return; }
+      INFIL_LEFT += 1;
+      const cntEl = document.getElementById("infil-left");
+      if (cntEl) cntEl.textContent = INFIL_LEFT;
+      window.BattleFX?.banner?.("🕵️ 침투권 사용! 한도 +1", "cheer");
     }
     INFILTRATE = !INFILTRATE;
     const box = document.getElementById("composer-side");
@@ -358,6 +391,8 @@ function hpBarHTML(c) {
         <div class="hp-fill" style="width:${hp}%"></div>
       </div>
       <span class="hp-text">${hp <= 0 ? "💀 격파" : "HP " + hp}</span>
+      ${hp <= 0 && ME.userId && c.user_id === ME.userId
+        ? `<button class="revive-btn" data-id="${c.id}">✨ 부활</button>` : ""}
     </div>`;
 }
 
@@ -1094,6 +1129,28 @@ function bindEvents() {
   eventsBound = true;
 
   document.addEventListener("click", async e => {
+    // ✨ 부활권: 격파당한 내 댓글 부활
+    if (e.target.classList.contains("revive-btn")) {
+      e.stopPropagation();
+      const rid = Number(e.target.dataset.id);
+      const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+      const owned = inv.revive || 0;
+      if (owned <= 0) { alert("✨ 부활권이 없어요. GP 상점에서 구매할 수 있어요. (800 GP)"); return; }
+      if (!confirm(`✨ 부활권을 사용해 이 댓글을 HP 50으로 부활시킬까요? (보유 ${owned}개)`)) return;
+      const { data: rv } = await window.supabaseClient.rpc("use_revive", { p_comment_id: rid });
+      if (!rv?.ok) { alert("부활에 실패했어요: " + (rv?.reason || "오류")); return; }
+      const unit = e.target.closest(".reply, .comment");
+      if (unit) {
+        applyHpToUnit(unit, rv.hp);
+        e.target.remove();
+        const FX = window.BattleFX;
+        if (FX) { FX.burstAt(unit, "support"); FX.banner("✨ 댓글 부활!", "cheer"); FX.haptic("heal"); }
+      }
+      const row = allRows.find(r => r.id === rid);
+      if (row) row.hp = rv.hp;
+      return;
+    }
+
 
     // 🔒 진영 미선택(미투표) → 참전 안내
     if (e.target.classList.contains("action-locked")) {
@@ -1118,8 +1175,8 @@ function bindEvents() {
 
       const cdLeft = cooldownLeft(Number(e.target.dataset.id), type);
       if (cdLeft > 0) {
-        alert((type === "attack" ? "재공격" : "재방어") + `까지 ${cdLeft}초 남았어요.`);
-        return;
+        // ⚡ 쿨다운 리셋권 보유 시 즉시 사용 제안
+        if (!(await offerCooldownReset(Number(e.target.dataset.id), type, cdLeft))) return;
       }
 
       const targetId = Number(e.target.dataset.id || targetEl.dataset.id);
@@ -1143,13 +1200,14 @@ function bindEvents() {
 
       const supLeft = cooldownLeft(id, "support");
       if (supLeft > 0) {
-        alert(`재지원까지 ${supLeft}초 남았어요.`);
-        return;
+        if (!(await offerCooldownReset(id, "support", supLeft))) return;
       }
 
       const { data, error } = await window.supabaseClient.rpc("battle_action", {
-        p_comment_id: id, p_action: "support"
+        p_comment_id: id, p_action: "support",
+        p_use_reset: RESET_ARMED.has(id + ":support")
       });
+      RESET_ARMED.delete(id + ":support");
       if (error || !data?.ok) {
         alert(battleReasonMsg(data?.reason, data) || "지원에 실패했습니다.");
         if (!data?.reason) console.error("[support] failed", error || data);
@@ -1415,7 +1473,11 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   }
 
   // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
-  const { data: bd } = await supabase.rpc("battle_action", { p_comment_id: targetId, p_action: type });
+  const { data: bd } = await supabase.rpc("battle_action", {
+    p_comment_id: targetId, p_action: type,
+    p_use_reset: RESET_ARMED.has(`${targetId}:${type}`)
+  });
+  RESET_ARMED.delete(`${targetId}:${type}`);
 
   closeInlineComposer();
 

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GALLA 퀘스트</title>
     <link rel="stylesheet" href="css/quest.css">
+    <link rel="stylesheet" href="./css/items.css">
     <link rel="stylesheet" href="./css/nav.css">
   <link rel="stylesheet" href="./css/galla-ui.css">
 </head>
@@ -58,6 +59,13 @@
 
             <button id="tr-claim-btn" class="tr-btn disabled">보상 받기</button>
         </div>
+
+        <!-- GP 상점 -->
+        <h2 class="section-title">GP 상점</h2>
+        <button class="shop-entry" onclick="window.openShop && window.openShop()">
+            🛒 모은 GP로 전투 아이템 구매하기
+            <span class="shop-entry-sub">⚡ 쿨다운 리셋 · 🕵️ 침투권 · ✨ 부활권</span>
+        </button>
 
         <!-- WEEKLY QUESTS -->
         <h2 class="section-title">주간 퀘스트</h2>
@@ -126,6 +134,7 @@
 <script src="js/supabase.js"></script>
 
 <!-- Quest JS -->
+<script src="js/items.js"></script>
 <script src="js/quest.js"></script>
 
 <!-- ⭐ Login Check + Load Profile -->
