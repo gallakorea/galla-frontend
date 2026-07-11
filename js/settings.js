@@ -36,6 +36,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userId = user.id;
 
   /* =====================
+     갈라치기 성향 (실제 행동 기반, 매번 재계산)
+  ===================== */
+  (async () => {
+    try {
+      if (!window.GALLA_computeType) return;
+      const d = await window.GALLA_computeType(supabase, userId);
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set("gtBadge", `${d.emoji} ${d.name}${d.rookie ? "" : "형"}`);
+      set("gtPro", d.proPct + "%");
+      set("gtCon", d.conPct + "%");
+      set("gtDesc", d.desc);
+      const tagsEl = document.getElementById("gtTags");
+      if (tagsEl) tagsEl.innerHTML = (d.tags || []).map(t => `<span>${t}</span>`).join("");
+    } catch (e) { console.error("[galla-type card]", e); }
+  })();
+
+  /* =====================
      프로필 정보 로딩
   ===================== */
   const { data: profile, error: profileErr } = await supabase

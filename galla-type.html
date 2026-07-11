@@ -153,14 +153,17 @@ function waitSupabase() {
 
     const user = sessionData.session.user;
 
-    // TODO: 여기에서 실제 성향 분석 데이터 fetch 할 수 있음.
-    // 아래는 동적 데이터가 들어갈 자리.
-
+    // 실제 행동 기반 성향 계산 → 화면 채우기 (행동 바뀌면 매번 재계산됨)
+    try {
+        const data = await window.GALLA_computeType(supabase, user.id);
+        window.GALLA_renderTypePage(data);
+    } catch (e) { console.error("[galla-type]", e); }
 })();
 </script>
 
 <script src="./js/vendor/supabase.js"></script>
 <script src="js/supabase.js"></script>
+<script src="js/galla-type.js"></script>
 
 <!-- ============================= -->
 <!-- ⭐ BOTTOM NAVIGATION (COMMON) -->

@@ -65,14 +65,13 @@
     <!-- 성향 카드 -->
     <section class="card report-card enhanced-galla-type" data-target="galla-type.html">
         <div class="report-title">나의 갈라치기 성향</div>
-        <div class="galla-type-badge">🔥 논리적 개척자형</div>
+        <div class="galla-type-badge" id="gtBadge">분석 중…</div>
         <div class="ratio-box">
-            <div class="ratio-item"><div class="ratio-label">찬성</div><div class="ratio-value pro">62%</div></div>
-            <div class="ratio-item"><div class="ratio-label">반대</div><div class="ratio-value con">38%</div></div>
+            <div class="ratio-item"><div class="ratio-label">찬성</div><div class="ratio-value pro" id="gtPro">–</div></div>
+            <div class="ratio-item"><div class="ratio-label">반대</div><div class="ratio-value con" id="gtCon">–</div></div>
         </div>
-        <div class="categories">선호 주제: 연애·결혼 / 직장·경력 / 생활·일상</div>
-        <div class="type-desc">새로운 이슈에 도전하며, 감정보다 논리를 우선하는 스타일입니다.</div>
-        <div class="galla-tags"><span>#논리적</span><span>#새로운이슈성향</span><span>#고집은약간</span><span>#직설화법</span></div>
+        <div class="type-desc" id="gtDesc">행동을 분석해 성향을 계산하고 있어요.</div>
+        <div class="galla-tags" id="gtTags"></div>
         <div class="arrow more">&gt;</div>
     </section>
 
@@ -202,6 +201,9 @@ function waitForSupabaseClient() {
 
 <!-- Supabase Client 생성 -->
 <script src="js/supabase.js"></script>
+
+<!-- 갈라치기 성향 로직 -->
+<script src="js/galla-type.js"></script>
 
 <!-- Settings 페이지 로직 -->
 <script src="js/settings.js"></script>
