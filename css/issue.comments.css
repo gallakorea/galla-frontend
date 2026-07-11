@@ -1069,7 +1069,7 @@ body.kb-open .battle-input-bar {
   font-size: 11px; font-weight: 900; cursor: pointer;
   background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.3); color: #fff;
 }
-.faction-chat { position: fixed; inset: 0; z-index: 5000; display: none; }
+.faction-chat { position: fixed; inset: 0; z-index: 10050; display: none; } /* 하단 nav(9999)보다 위 — 입력란이 가려지지 않게 */
 .faction-chat.open { display: block; }
 .faction-chat .fc-dim { position: absolute; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(2px); }
 .faction-chat .fc-sheet {
