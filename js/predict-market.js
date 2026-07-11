@@ -400,15 +400,16 @@ function renderComments(body){
 
   const cmtHtml=(c,isReply,topId)=>{
     const liked=myLikes.has(c.id);
-    const holdSide = posMap?.[c.user_id]; // 실제 베팅 진영 (없으면 관전자)
-    const holderBadge = holdSide
-      ? `<span class="pmd-cmt-holder ${holdSide}">💰 ${cmtSideName(holdSide)} 홀더</span>`
-      : `<span class="pmd-cmt-holder watch">관전</span>`;
+    const isHolder = !!posMap?.[c.user_id]; // 실제 베팅자 여부 (없으면 관전자)
+    // 역할 뱃지도 진영 색으로 통일 — 홀더는 💰(돈 걸린 편), 관전은 👁(응원만)
+    const roleBadge = isHolder
+      ? `<span class="pmd-cmt-role holder ${c.side}">💰 ${cmtSideName(c.side)} 홀더</span>`
+      : `<span class="pmd-cmt-role watch ${c.side}">👁 ${cmtSideName(c.side)} 응원</span>`;
     return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
       <div class="pmd-cmt-head">
-        <span class="pmd-side-chip ${c.side}">${cmtSideName(c.side)}</span>
+        <span class="pmd-side-chip ${c.side}">${cmtSideLabel(c.side)}</span>
         <span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>
-        ${holderBadge}
+        ${roleBadge}
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
       </div>
       <div class="pmd-cmt-body">${cmtBody(c.content)}</div>

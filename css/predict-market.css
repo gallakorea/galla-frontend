@@ -241,13 +241,15 @@
 .pmd-side-chip.yes { color: #aac4ff; background: rgba(51,86,255,.2); border: 1px solid rgba(109,139,255,.5); }
 .pmd-side-chip.no  { color: #ffaaba; background: rgba(255,79,110,.16); border: 1px solid rgba(255,111,134,.5); }
 
-.pmd-cmt-holder {
+/* 역할 뱃지 — 진영 색으로 통일(팀 구분). 홀더=💰(진하게), 관전=👁(연하게) */
+.pmd-cmt-role {
   font-size: 9.5px; font-weight: 800;
-  padding: 1px 7px; border-radius: 6px;
+  padding: 1px 7px; border-radius: 6px; white-space: nowrap;
 }
-.pmd-cmt-holder.yes { color: #ffd977; background: rgba(255,196,0,.12); border: 1px solid rgba(255,196,0,.4); }
-.pmd-cmt-holder.no  { color: #ffd977; background: rgba(255,196,0,.12); border: 1px solid rgba(255,196,0,.4); }
-.pmd-cmt-holder.watch { color: #777; background: rgba(255,255,255,.05); border: 1px solid #2a2a2a; }
+.pmd-cmt-role.holder.yes { color: #cfe0ff; background: rgba(51,86,255,.28); border: 1px solid rgba(109,139,255,.7); }
+.pmd-cmt-role.holder.no  { color: #ffd0da; background: rgba(255,79,110,.24); border: 1px solid rgba(255,111,134,.7); }
+.pmd-cmt-role.watch.yes  { color: #8fa8e0; background: rgba(51,86,255,.09); border: 1px dashed rgba(109,139,255,.45); }
+.pmd-cmt-role.watch.no   { color: #e08f9f; background: rgba(255,79,110,.08); border: 1px dashed rgba(255,111,134,.45); }
 
 /* 컴포저 상태 */
 .pmd-cmt-locked {
