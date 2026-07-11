@@ -484,15 +484,23 @@ function renderComments(body){
         <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다
       </div>`;
   } else if (multi) {
-    // 다중: 후보 선택 버튼을 나열하지 않고, '지금 보고 있는 후보(ACTIVE)' 지지로 자동 작성.
-    // (후보가 10개여도 위 후보 탭에서 고르면 되므로 톤앤매너 유지)
-    CMT_SIDE = ACTIVE?.id ? String(ACTIVE.id) : null;
-    const c = ocColor(ACTIVE?.id);
-    composeTop = ACTIVE ? `
-      <div class="pmd-cmt-active" style="border-color:${c}66">
-        🎯 <b style="color:${c}">${esc(ACTIVE.label)}</b> 지지 입장으로 작성돼요
-        <span class="pmd-cmt-active-hint">다른 후보는 위에서 선택</span>
-      </div>` : `<div class="pmd-cmt-ask">위에서 후보를 먼저 선택하세요</div>`;
+    // 위(후보 탭)=베팅 / 아래(입력창 위)=댓글 후보 선택.
+    // 내가 지금 후보(ACTIVE)에 베팅했으면 → 그 후보로 자동 잠금. 아니면 드롭다운 선택.
+    const betOnActive = !!(POS && (POS.yes_shares||0) > 0);
+    if (betOnActive && ACTIVE) {
+      CMT_SIDE = String(ACTIVE.id);
+      const c = ocColor(ACTIVE.id);
+      composeTop = `
+        <div class="pmd-cmt-locked" style="color:${c};background:${c}14;border:1px solid ${c}66">
+          💰 <b>${esc(ACTIVE.label)}</b> 홀더 — 이 후보 지지 입장으로 작성됩니다
+        </div>`;
+    } else {
+      if (CMT_SIDE == null) CMT_SIDE = ACTIVE?.id ? String(ACTIVE.id) : (OUTCOMES[0] ? String(OUTCOMES[0].id) : null);
+      const opts = OUTCOMES.map(o=>`<option value="${o.id}" ${String(CMT_SIDE)===String(o.id)?'selected':''}>${esc(o.label)} 지지</option>`).join('');
+      composeTop = `
+        <div class="pmd-cmt-ask">✍️ 어느 후보에 대한 의견인가요?</div>
+        <select id="cmtOcSel" class="pmd-cmt-ocsel">${opts}</select>`;
+    }
   } else {
     composeTop = `
       <div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(베팅하면 자동으로 고정돼요)</span></div>
@@ -527,12 +535,18 @@ function renderComments(body){
     inp.placeholder=`[${pickName(CMT_SIDE)}] 의견을 남기세요…`;
     inp.focus();
   }));
+  // 다중 마켓: 댓글 후보 드롭다운
+  $('cmtOcSel')?.addEventListener('change', e=>{
+    CMT_SIDE = e.target.value;
+    const inp=$('cmtInput');
+    if(inp) inp.placeholder=`[${pickName(CMT_SIDE)}] 의견을 남기세요…`;
+  });
   $('cmtSend').addEventListener('click', ()=>{
     if(CMT_SIDE==null){
-      const sel=body.querySelector('.pmd-cmt-picksel');
+      const sel=body.querySelector('.pmd-cmt-picksel')||body.querySelector('.pmd-cmt-ocsel');
       sel?.classList.add('shake');
       setTimeout(()=>sel?.classList.remove('shake'), 500);
-      toast(multi?'먼저 지지 후보(또는 기타)를 선택해주세요.':'먼저 YES/NO 입장을 선택해주세요.');
+      toast(multi?'먼저 지지 후보를 선택해주세요.':'먼저 YES/NO 입장을 선택해주세요.');
       return;
     }
     postComment($('cmtInput').value, CMT_SIDE, null, body);
