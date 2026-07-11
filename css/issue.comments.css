@@ -1064,11 +1064,31 @@ body.kb-open .battle-input-bar {
 /* ============================================================
    💬 진영 작전회의 (진영 전용 실시간 채팅)
 ============================================================ */
-.fc-open-btn {
-  margin-left: 8px; padding: 3px 10px; border-radius: 999px;
-  font-size: 11px; font-weight: 900; cursor: pointer;
-  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.3); color: #fff;
+/* 채팅방 입장 배너 (카톡 오픈채팅 입장 느낌 — 채팅방임을 명확히) */
+.fc-enter {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  margin-top: 10px; padding: 11px 13px; border-radius: 14px; cursor: pointer;
+  text-align: left; color: #fff;
+  border: 1px solid rgba(255,255,255,.14);
+  transition: transform .1s ease, filter .15s ease;
 }
+.fc-enter:active { transform: scale(.985); filter: brightness(1.08); }
+.fc-enter.pro { background: linear-gradient(135deg, rgba(61,107,255,.22), rgba(61,107,255,.08)); border-color: rgba(61,107,255,.4); }
+.fc-enter.con { background: linear-gradient(135deg, rgba(255,77,103,.22), rgba(255,77,103,.08)); border-color: rgba(255,77,103,.4); }
+.fc-enter-ico {
+  width: 38px; height: 38px; flex: 0 0 38px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center; font-size: 19px;
+  background: rgba(255,255,255,.1);
+}
+.fc-enter-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fc-enter-tx b { font-size: 13.5px; font-weight: 900; display: flex; align-items: center; gap: 6px; }
+.fc-enter-tx small { font-size: 11px; color: #b9bdcc; font-weight: 600; }
+.fc-enter-live {
+  font-size: 8.5px; letter-spacing: 1px; color: #ff5c5c; font-weight: 900;
+  border: 1px solid #ff5c5c; border-radius: 4px; padding: 1px 4px;
+  animation: liveBlink 1.4s ease-in-out infinite;
+}
+.fc-enter-arrow { font-size: 22px; font-weight: 400; color: rgba(255,255,255,.5); flex: 0 0 auto; }
 .faction-chat { position: fixed; inset: 0; z-index: 10050; display: none; } /* 하단 nav(9999)보다 위 — 입력란이 가려지지 않게 */
 .faction-chat.open { display: block; }
 .faction-chat .fc-dim { position: absolute; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(2px); }

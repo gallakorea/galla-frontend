@@ -165,7 +165,7 @@ let CHAT_CHANNEL = null;
 let CHAT_OPEN = false;
 
 function chatRoomLabel() {
-  return ME.faction === "pro" ? "👍 찬성 진영 작전회의" : "👎 반대 진영 작전회의";
+  return ME.faction === "pro" ? "👍 찬성 진영 채팅방" : "👎 반대 진영 채팅방";
 }
 
 function ensureChatUI() {
@@ -406,9 +406,15 @@ function renderMorale() {
     </div>
     <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>
     ${ME.faction
-      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!
-           <button type="button" class="fc-open-btn" id="fc-open">💬 작전회의</button>
-         </div>`
+      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>
+         <button type="button" class="fc-enter ${ME.faction}" id="fc-open">
+           <span class="fc-enter-ico">💬</span>
+           <span class="fc-enter-tx">
+             <b>실시간 진영 채팅방 <span class="fc-enter-live">LIVE</span></b>
+             <small>우리 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영끼리만 · 지금 입장해 대화하기</small>
+           </span>
+           <span class="fc-enter-arrow">›</span>
+         </button>`
       : `<div class="bm-mine none">🔒 위에서 투표하면 진영이 정해지고 참전할 수 있어요</div>`}`;
 
   const openBtn = bar.querySelector("#fc-open");
