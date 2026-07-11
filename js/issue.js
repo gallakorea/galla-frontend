@@ -125,6 +125,12 @@ if (!issueId || Number.isNaN(issueId)) {
     return;
   }
 
+// 진영 이름은 글쓴이가 정한다(faction_a/b) — 댓글 배틀·채팅 등 전역에서 사용
+window.ISSUE_FACTIONS = {
+  pro: issue.faction_a || "찬성",
+  con: issue.faction_b || "반대"
+};
+
 renderIssue(issue);
 
 // 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)

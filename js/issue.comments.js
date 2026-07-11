@@ -35,6 +35,15 @@ function markAction(commentId, action) {
   ME.actions.set(`${commentId}:${action}`, Date.now());
 }
 
+/* 진영 이름 — 글쓴이가 정한 이름(issues.faction_a/b, issue.js가 window.ISSUE_FACTIONS로 노출).
+   👍/👎 아이콘으로 두 편을 가른다. 고정된 '찬성/반대'가 아니다. */
+function fName(side) {
+  return window.ISSUE_FACTIONS?.[side] || (side === "pro" ? "찬성" : "반대");
+}
+function fLabel(side) {
+  return (side === "pro" ? "👍 " : "👎 ") + fName(side);
+}
+
 /* 답글 체인의 최상위(루트) 댓글 id — 스레드는 1depth라 답글의 답글도 루트에 귀속 */
 function rootIdOf(id) {
   let cur = allRows.find(r => r.id === id);
@@ -82,6 +91,12 @@ export async function initCommentSystem(issueId) {
     return;
   }
 
+  // 전선 라벨 = 글쓴이가 정한 진영 이름
+  const alPro = document.getElementById("al-pro");
+  const alCon = document.getElementById("al-con");
+  if (alPro) alPro.textContent = fLabel("pro");
+  if (alCon) alCon.textContent = fLabel("con");
+
   await loadComments(issueId);
   await initComposerUI();
   computeAce();
@@ -117,8 +132,8 @@ async function initComposerUI() {
 
   // 투표자: 내 진영 상태바 + 침투 버튼
   const my = ME.faction;
-  const myLabel = my === "pro" ? "👍 찬성" : "👎 반대";
-  const enemyLabel = my === "pro" ? "👎 반대" : "👍 찬성";
+  const myLabel = fLabel(my);
+  const enemyLabel = fLabel(my === "pro" ? "con" : "pro");
 
   const { data: st } = await window.supabaseClient.rpc("infiltration_status");
   INFIL_LEFT = st?.left ?? 3;
@@ -159,7 +174,7 @@ function consumeInfiltration() {
   const box = document.getElementById("composer-side");
   if (box) {
     box.classList.remove("infiltrating");
-    box.querySelector(".cs-flag").innerHTML = `🎖 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영으로 참전 중`;
+    box.querySelector(".cs-flag").innerHTML = `🎖 ${fLabel(ME.faction)} 진영으로 참전 중`;
   }
   const input = document.getElementById("battle-comment-input");
   if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
@@ -172,7 +187,7 @@ let CHAT_CHANNEL = null;
 let CHAT_OPEN = false;
 
 function chatRoomLabel() {
-  return ME.faction === "pro" ? "👍 찬성 진영 채팅방" : "👎 반대 진영 채팅방";
+  return `${fLabel(ME.faction)} 진영 채팅방`;
 }
 
 function ensureChatUI() {
@@ -402,24 +417,24 @@ function renderMorale() {
   const lead = proPct > 50 ? "pro" : proPct < 50 ? "con" : "even";
   bar.innerHTML = `
     <div class="bm-top">
-      <span class="bm-side pro ${lead === "pro" ? "lead" : ""}">👍 찬성 전투력 ${Math.round(pro)}</span>
+      <span class="bm-side pro ${lead === "pro" ? "lead" : ""}">${fLabel("pro")} 전투력 ${Math.round(pro)}</span>
       <span class="bm-vs">VS</span>
-      <span class="bm-side con ${lead === "con" ? "lead" : ""}">${Math.round(con)} 반대 전투력 👎</span>
+      <span class="bm-side con ${lead === "con" ? "lead" : ""}">${Math.round(con)} 전투력 ${fName("con")} 👎</span>
     </div>
     <div class="bm-track">
       <div class="bm-pro" style="width:${proPct}%"></div>
       <div class="bm-con" style="width:${100 - proPct}%"></div>
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
-    <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : lead === "pro" ? "👍 찬성 진영 우세" : "👎 반대 진영 우세"} · ${proPct}%</div>
+    <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : `${fLabel(lead)} 진영 우세`} · ${proPct}%</div>
     <div class="bm-stats">⚡ 총 교전 <b id="stat-total">0</b> · ⚔ <span id="stat-atk">0</span> · 🛡 <span id="stat-def">0</span> · 💣 <span id="stat-sup">0</span></div>
     ${ME.faction
-      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>
+      ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${fLabel(ME.faction)} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>
          <button type="button" class="fc-enter ${ME.faction}" id="fc-open">
            <span class="fc-enter-ico">💬</span>
            <span class="fc-enter-tx">
              <b>실시간 진영 채팅방 <span class="fc-enter-live">LIVE</span></b>
-             <small>우리 ${ME.faction === "pro" ? "👍 찬성" : "👎 반대"} 진영끼리만 · 지금 입장해 대화하기</small>
+             <small>우리 ${fLabel(ME.faction)} 진영끼리만 · 지금 입장해 대화하기</small>
            </span>
            <span class="fc-enter-arrow">›</span>
          </button>`
@@ -855,8 +870,7 @@ function shownFaction(c) {
 function relTag(c) {
   if (isInfiltrator(c)) {
     const mine = ME.userId && c.user_id === ME.userId;
-    const realKo = authorVoteMap[c.user_id] === "pro" ? "👍 찬성" : "👎 반대";
-    return `<span class="rel-tag infil">🕵️ ${mine ? "내 침투" : "침투자"} · 원래 ${realKo}</span>`;
+    return `<span class="rel-tag infil">🕵️ ${mine ? "내 침투" : "침투자"} · 원래 ${fLabel(authorVoteMap[c.user_id])}</span>`;
   }
   if (!ME.faction) return "";
   return ME.faction === shownFaction(c)
@@ -877,8 +891,8 @@ function battleButtonsFor(c) {
     return `<span class="action-locked" data-id="${c.id}">🔒 투표 후 참전</span>`;
   }
   if (my !== c.faction) {
-    // 적진의 침투자는 '요격' — 침입자를 쳐낸다는 게임 서사 (동작은 attack 그대로)
-    return battleBtn(c, "attack", isInfiltrator(c) ? "⚔요격" : null);
+    // 적진의 침투자는 '격퇴' — 침입자를 몰아낸다는 게임 서사 (동작은 attack 그대로)
+    return battleBtn(c, "attack", isInfiltrator(c) ? "⚔격퇴" : null);
   }
   return battleBtn(c, "defend") + battleBtn(c, "support");
 }
@@ -1281,7 +1295,7 @@ function bindEvents() {
           FX.burstAt(input, side === "pro" ? "pro" : "con");
           FX.shockwave(input, side === "pro" ? "rgba(77,163,255,.85)" : "rgba(255,92,92,.85)");
           FX.flash(side === "pro" ? "rgba(77,163,255,.12)" : "rgba(255,92,92,.12)");
-          FX.banner(side === "pro" ? "👍 찬성 진영 참전!" : "👎 반대 진영 참전!", "info");
+          FX.banner(`${fLabel(side)} 진영 참전!`, "info");
           FX.haptic("tap");
         }
       }
