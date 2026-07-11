@@ -478,3 +478,61 @@ body{
 
 /* ---- 빈 상태 ---- */
 .tab-empty, .content-area > div[style]{ color:#7a7f8a !important; }
+
+/* =========================================================
+   마이페이지 v2 — 인스타 클린 리스킨 (촌스러움 제거)
+   앞선 배틀 블록의 과한 장식을 톤다운 (배틀 감성은 최소·절제)
+========================================================= */
+/* 아바타: 로우드 conic 링 제거 → 인스타식 심플 */
+.mp-ava-ring{ background:none; padding:0; }
+.profile-img{ width:84px; height:84px; border:1.5px solid #2a2a2a; }
+.mp-top{ gap:26px; padding:0 4px; }
+.mp-tier-chip{ bottom:-6px; background:#1c1c1e; border:1px solid #3a3a3c;
+  color:#e9e9ec; font-size:10.5px; font-weight:800; padding:2px 8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.45); }
+
+/* 스탯: 인스타식 모노톤 (숫자 흰색, 라벨 회색) */
+.stats-row{ gap:2px; }
+.stat-num{ font-size:18px; font-weight:800; color:#fff; }
+.stat-label{ font-size:12.5px; color:#c7c7cc; margin-top:1px; }
+.stat-pro .stat-num, .stat-con .stat-num{ color:#fff; }
+
+/* 이름/소개: 심플 */
+.mp-idline{ margin-top:14px; gap:7px; }
+.profile-name{ font-size:15px; font-weight:700; }
+.mp-idline .level{ color:#9a9a9f; font-size:12.5px; font-weight:600; }
+.level-row{ margin-top:6px; }
+.badge{ background:none; border:none; padding:0; color:#e9e9ec;
+  font-size:13px; font-weight:600; }
+.profile-desc{ margin-top:5px; font-size:13px; color:#d0d0d4; }
+
+/* 액션 버튼: 인스타 (편집=회색, 팔로우=파랑만 포인트) */
+.profile-actions{ gap:6px; padding:14px 0 2px; }
+.profile-actions button{ height:34px; border-radius:9px; font-size:13.5px; font-weight:700;
+  background:#262628; border:1px solid #333; color:#fff; }
+.profile-actions .action-btn.primary{ background:#0a68f5; border:none; }
+.profile-actions button:hover{ background:#303032; }
+
+/* 탭: 인스타식 아이콘 라인 느낌 — 흰색 언더라인, 균등 배치 */
+.tabs{ justify-content:space-around; padding:0; }
+.tab{ padding:12px 8px; font-size:13px; color:#8e8e93; font-weight:600; }
+.tab.active{ color:#fff; }
+.tab.active::after{ left:8px; right:8px; height:1.5px;
+  background:#fff; border-radius:0; }
+.tab-count{ color:#8e8e93; font-weight:600; }
+
+/* 그리드: 인스타식 — 타이틀 오버레이 제거, 라운드 제거, 타이트 */
+.content-area.grid, .content-grid{ gap:2px; }
+.ig-card{ border-radius:0; }
+.ig-card::after{ border-radius:0; box-shadow:none; }
+.ig-card:hover{ transform:none; }
+.ig-card:hover::after{ box-shadow:none; }
+.ig-card:hover img{ transform:none; }
+.ig-card .ig-title{ display:none; }
+.ig-card .ig-badge{ background:none; border:none; padding:0; top:8px; right:8px;
+  font-size:15px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.8)); }
+
+/* 방문자(다른 유저) 뷰 헤더 */
+.mp-hdr-other{ grid-template-columns:44px 1fr 44px; }
+.mp-hdr-title{ text-align:center; font-size:16px; font-weight:800; color:#fff;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

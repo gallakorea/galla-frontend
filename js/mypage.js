@@ -43,16 +43,51 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const userId = session.user.id;
 
-    // 헤더: 알림(♥) + 메시지(DM) 초기화
-    if (window.initNotifications) window.initNotifications();
-    if (window.initDM) window.initDM("#mpDmBtn");
-
     // ============================
     // View User (self vs other)
     // ============================
     const params = new URLSearchParams(location.search);
     const viewUserId = params.get("user") || userId;
     const isMyPage = viewUserId === userId;
+
+    // ============================
+    // 헤더 & 탭: 내 프로필 vs 방문자 뷰 분기
+    // ============================
+    if (isMyPage) {
+        document.body.classList.add("mp-self");
+        // 내 프로필: 알림(♥) + 메시지(DM) 활성화
+        if (window.initNotifications) window.initNotifications();
+        if (window.initDM) window.initDM("#mpDmBtn");
+    } else {
+        document.body.classList.add("mp-other");
+        // 방문자 뷰 헤더: 뒤로 / 유저명 / 더보기 (개인용 알림·DM·설정 숨김)
+        const hi = document.querySelector(".header-inner");
+        if (hi) {
+            hi.classList.remove("header-3");
+            hi.classList.add("mp-hdr-other");
+            hi.innerHTML = `
+                <button class="hdr-btn" aria-label="뒤로" onclick="history.length>1?history.back():location.href='index.html'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <span class="mp-hdr-title" id="mpHdrTitle"></span>
+                <button class="hdr-btn" aria-label="더보기" id="mpMoreBtn">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                </button>`;
+            document.getElementById("mpMoreBtn").onclick = () => {
+                const name = document.getElementById("profileName")?.textContent || "이 사용자";
+                if (navigator.share) {
+                    navigator.share({ title: name, url: location.href }).catch(() => {});
+                } else {
+                    navigator.clipboard?.writeText(location.href);
+                    alert("프로필 링크를 복사했습니다.");
+                }
+            };
+        }
+        // 방문자에게 비공개 탭 숨김 (Save/뉴스/즐겨찾기는 본인만)
+        ["save", "news", "follower"].forEach(t => {
+            document.querySelector(`.tab[data-tab="${t}"]`)?.setAttribute("hidden", "");
+        });
+    }
 
     // ============================
     // Profile Actions (Follow / Message) - Render dynamically
@@ -104,7 +139,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             location.reload();
         };
 
-        messageBtn.onclick = () => alert("메시지 기능은 준비 중입니다.");
+        messageBtn.onclick = () => {
+            const name = document.getElementById("profileName")?.textContent || "";
+            if (window.startDM) window.startDM(viewUserId, name);
+        };
 
         profileActions.appendChild(followBtn);
         profileActions.appendChild(messageBtn);
@@ -126,6 +164,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const profileImg = document.getElementById("profileImg");
 
         if (nameEl) nameEl.textContent = viewProfile.nickname || "익명의 사용자";
+        const hdrTitle = document.getElementById("mpHdrTitle");
+        if (hdrTitle) hdrTitle.textContent = viewProfile.nickname || "프로필";
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
         const lv = viewProfile.level || 1;
         if (levelEl) levelEl.textContent = "Lv. " + lv;
@@ -136,7 +176,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             tierChip.textContent = `${tierIcon} ${lv}`;
         }
         const badgeEl = document.getElementById("badgeText");
-        if (badgeEl) badgeEl.textContent = "🎯 오늘의 미션";
+        if (badgeEl) {
+            if (isMyPage) badgeEl.textContent = "🎯 오늘의 미션";
+            else badgeEl.hidden = true; // 미션 배지는 본인 전용
+        }
 
         if (profileImg) {
             if (viewProfile.avatar_url) {
@@ -1142,7 +1185,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // ---------------------------
-    // 기본 탭 (1단계: Save 갈라)
+    // 기본 탭: 내 프로필=Save 갈라 / 방문자=My 광장(공개)
     // ---------------------------
-    renderSave();
+    if (isMyPage) {
+        renderSave();
+    } else {
+        tabs.forEach(t => t.classList.remove("active"));
+        const plazaTab = document.querySelector('.tab[data-tab="plaza"]');
+        plazaTab?.classList.add("active");
+        renderPlaza();
+    }
 });
