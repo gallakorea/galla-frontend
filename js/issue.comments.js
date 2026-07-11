@@ -1225,6 +1225,7 @@ function bindEvents() {
 
         BATTLE_MODE = null;
         input.value = "";
+        finishComposing(input);
         document.querySelectorAll(".side-btn").forEach(b => (b.style.display = ""));
 
         // 게임 FX: 대상 유닛에 데미지/힐 연출 후 리로드
@@ -1313,8 +1314,17 @@ function bindEvents() {
       if (wasInfiltration) consumeInfiltration();
 
       input.value = "";
+      finishComposing(input);
       await reloadAndRender();
     });
+}
+
+/* 전송 완료 후 컴포저 정리 — 모바일 키보드 모드(kb-open)를 확실히 해제.
+   전송 버튼 탭 시 input이 blur되지 않아 focusout이 안 나면
+   kb-open이 남아 하단 네비가 사라진 채 화면이 먹통처럼 고정된다. */
+function finishComposing(input) {
+  try { input?.blur(); } catch (_) {}
+  document.body.classList.remove("kb-open");
 }
 
 /* 중립 플랫폼: 내 진영 기준(아군/적군)이 아니라 진영 자체로 색을 칠한다.
