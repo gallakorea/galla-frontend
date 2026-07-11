@@ -1,4 +1,5 @@
 /* DM 다이렉트 메시지 */
+.dm-badge[hidden]{display:none;}
 .dm-badge{position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;
   border-radius:999px;background:#ff4d67;border:2px solid #000;color:#fff;
   font-size:9.5px;font-weight:900;line-height:12px;display:flex;align-items:center;justify-content:center;}

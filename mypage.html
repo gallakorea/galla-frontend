@@ -6,6 +6,8 @@
     <title>마이페이지 - GALLA</title>
     <link rel="stylesheet" href="css/mypage.css">
     <link rel="stylesheet" href="./css/header.css">
+    <link rel="stylesheet" href="./css/notifications.css">
+    <link rel="stylesheet" href="./css/dm.css">
     <link rel="stylesheet" href="./css/nav.css">
 </head>
 
@@ -18,46 +20,61 @@
         <div class="header-inner header-3">
             <span class="hdr-spacer" aria-hidden="true"></span>
             <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
-            <button class="more-header-btn" onclick="location.href='settings.html'">
-            <img src="assets/icons/icon-settings.svg" alt="settings">
-            </button>
+            <div class="mp-hdr-actions" id="mpHdrActions">
+                <button class="hdr-btn" id="hdrNoti" aria-label="알림">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span class="noti-badge" id="notiBadge" hidden></span>
+                </button>
+                <button class="hdr-btn" id="mpDmBtn" aria-label="메시지">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
+                    <span class="dm-badge" hidden></span>
+                </button>
+                <button class="hdr-btn" aria-label="설정" onclick="location.href='settings.html'">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                </button>
+            </div>
         </div>
     </header>
 
     <!-- PROFILE -->
     <section class="profile-section">
+        <div class="mp-top">
+            <div class="mp-ava-ring">
+                <img src="assets/logo.png" class="profile-img" id="profileImg">
+                <span class="mp-tier-chip" id="tierChip" onclick="location.href='grade.html'"></span>
+            </div>
+            <div class="stats-row">
+                <div class="stat-unit">
+                    <div class="stat-num" id="statDrop">0</div>
+                    <div class="stat-label">My Drop</div>
+                </div>
+                <div class="stat-unit">
+                    <div class="stat-num" id="statFollowers">0</div>
+                    <div class="stat-label">팔로워</div>
+                </div>
+                <div class="stat-unit stat-pro">
+                    <div class="stat-num" id="statSupports">0</div>
+                    <div class="stat-label">지지</div>
+                </div>
+                <div class="stat-unit stat-con">
+                    <div class="stat-num" id="statOppose">0</div>
+                    <div class="stat-label">반발</div>
+                </div>
+            </div>
+        </div>
 
-        <img src="assets/logo.png" class="profile-img" id="profileImg">
-
-        <div class="profile-name" id="profileName"></div>
+        <div class="mp-idline">
+            <span class="profile-name" id="profileName"></span>
+            <span class="level" onclick="location.href='grade.html'" id="levelText"></span>
+        </div>
 
         <div class="level-row">
             <span class="badge" onclick="location.href='quest.html'" id="badgeText"></span>
-            <span class="level" onclick="location.href='grade.html'" id="levelText"></span>
         </div>
 
         <div class="profile-desc" id="profileDesc"></div>
 
         <div class="profile-actions" id="profileActions"></div>
-
-        <div class="stats-row">
-            <div class="stat-unit">
-                <div class="stat-num" id="statDrop">0</div>
-                <div class="stat-label">My Drop</div>
-            </div>
-            <div class="stat-unit">
-                <div class="stat-num" id="statFollowers">0</div>
-                <div class="stat-label">팔로워</div>
-            </div>
-            <div class="stat-unit">
-                <div class="stat-num" id="statSupports">0</div>
-                <div class="stat-label">지지</div>
-            </div>
-            <div class="stat-unit">
-                <div class="stat-num" id="statOppose">0</div>
-                <div class="stat-label">반발</div>
-            </div>
-        </div>
     </section>
 
     <!-- TABS
@@ -116,6 +133,10 @@
 
 <!-- Supabase -->
 <script src="js/supabase.js"></script>
+
+<!-- 알림 + DM -->
+<script src="js/notifications.js"></script>
+<script src="js/dm.js"></script>
 
 <!-- My Page 기능 -->
 <script src="js/mypage.js"></script>

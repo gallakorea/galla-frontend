@@ -43,6 +43,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const userId = session.user.id;
 
+    // 헤더: 알림(♥) + 메시지(DM) 초기화
+    if (window.initNotifications) window.initNotifications();
+    if (window.initDM) window.initDM("#mpDmBtn");
+
     // ============================
     // View User (self vs other)
     // ============================
@@ -123,7 +127,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         if (nameEl) nameEl.textContent = viewProfile.nickname || "익명의 사용자";
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
-        if (levelEl) levelEl.textContent = "Lv. " + (viewProfile.level || 1);
+        const lv = viewProfile.level || 1;
+        if (levelEl) levelEl.textContent = "Lv. " + lv;
+        // 아바타 위 전투 티어 칩 + 상단 배지
+        const tierChip = document.getElementById("tierChip");
+        if (tierChip) {
+            const tierIcon = lv >= 20 ? "👑" : lv >= 10 ? "⚔️" : lv >= 5 ? "🔰" : "🌱";
+            tierChip.textContent = `${tierIcon} ${lv}`;
+        }
+        const badgeEl = document.getElementById("badgeText");
+        if (badgeEl) badgeEl.textContent = "🎯 오늘의 미션";
 
         if (profileImg) {
             if (viewProfile.avatar_url) {
