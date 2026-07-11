@@ -1,3 +1,10 @@
+/* iOS Safari 폰트 부스팅 방지 — 요소별로 글자가 제멋대로 확대되어
+   같은 UI(서치 탭 등)가 서로 다른 크기로 보이던 문제의 근본 원인 */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 /* =========================
    COMMON HEADER (INSTAGRAM STYLE)
 ========================= */

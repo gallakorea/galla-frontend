@@ -855,33 +855,3 @@ body[data-page="search"] .header-inner {
   background: #12141c; color: #aeb7c9; font-size: 12.5px; font-weight: 700; cursor: pointer;
 }
 .tr-more:active { border-color: #4a7bff; }
-
-/* =========================================================
-   상단 탭 정리 — 폴더 탭(크기 들쭉날쭉) → 균등 세그먼트 칩
-   (광장 카테고리 칩과 같은 골드 활성 문법)
-========================================================= */
-.tabs-header {
-  gap: 8px;
-  padding: 12px 16px 12px;
-}
-.tab-item {
-  flex: 1;
-  text-align: center;
-  background: rgba(255,255,255,.05);
-  color: #9a9aa0;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 999px;
-  padding: 10px 0;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: -.2px;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-}
-.tab-item.active {
-  background: rgba(245,207,107,.12);
-  color: #f5cf6b;
-  border-color: rgba(245,207,107,.55);
-}
-.tabs-body {
-  border-top: 1px solid rgba(255,255,255,.06);
-}
