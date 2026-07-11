@@ -107,3 +107,17 @@
 .swipe-peek span {
   font-size: 14px; font-weight: 800; color: #9aa0ad; letter-spacing: -.2px;
 }
+
+/* =========================================================
+   전 페이지 색 통일 — 단일 배경 + 헤더 투명 (색단차 제거)
+   nav.css는 모든 페이지가 마지막에 로드 → 전역 기준색 역할
+========================================================= */
+html { background: #0a0a0b; }
+body {
+  background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) fixed #0a0a0b !important;
+}
+/* 상단 헤더는 투명 — 배경이 위까지 끊김 없이 이어짐 */
+.header {
+  background: transparent !important;
+  border-bottom: none !important;
+}
