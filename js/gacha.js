@@ -5,7 +5,7 @@
 (function () {
   const sb = () => window.supabaseClient || window.supabase;
   const SPIN = ["🏷️","🎨","🔥","💢","💠","👑","🎯","🧠","💎","✨","🕵️","🌪️"];
-  const GRADE = { common: "#9aa0ad", rare: "#4fc3f7", epic: "#a17bff", legendary: "#f5cf6b" };
+  const GRADE = { bust: "#6c7280", common: "#9aa0ad", rare: "#4fc3f7", epic: "#a17bff", legendary: "#f5cf6b" };
 
   function css() {
     if (document.getElementById("gacha-css")) return;
@@ -64,9 +64,9 @@
     }
     if (data.limit) btn.textContent = `🎰 뽑기 (700 GP) · 오늘 ${data.used}/${data.limit}`;
     const color = GRADE[data.grade] || GRADE.common;
-    machine.textContent = data.type === "gp" ? "💰" : "🎁";
+    machine.textContent = data.type === "bust" ? "💨" : (data.type === "gp" ? "💰" : "🎁");
     rewardBox.innerHTML = `<div class="ga-reward" style="border-color:${color};background:${color}22">
-      <div class="rg" style="color:${color}">${({common:"COMMON",rare:"RARE",epic:"EPIC",legendary:"LEGENDARY"})[data.grade] || ""}</div>
+      <div class="rg" style="color:${color}">${({bust:"꽝",common:"COMMON",rare:"RARE",epic:"EPIC",legendary:"LEGENDARY"})[data.grade] || ""}</div>
       <div class="rl">${data.label}</div></div>`;
     if (data.grade === "legendary" || data.grade === "epic") window.BattleFX?.banner?.(data.label, "cheer");
     document.dispatchEvent(new CustomEvent("galla:items-changed"));
