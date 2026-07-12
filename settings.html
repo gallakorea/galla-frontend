@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/settings.css?v=0712v">
-    <link rel="stylesheet" href="./css/items.css?v=0712v">
-    <link rel="stylesheet" href="./css/nav.css?v=0712v">
+    <link rel="stylesheet" href="./css/settings.css?v=0712w">
+    <link rel="stylesheet" href="./css/items.css?v=0712w">
+    <link rel="stylesheet" href="./css/nav.css?v=0712w">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -108,6 +108,11 @@
             <span class="tile-name">일기토</span>
             <span class="tile-sub">1:1 논쟁 대결·투표</span>
         </div>
+        <div class="menu-tile titles" id="titlesTile">
+            <span class="tile-ic">🏷️</span>
+            <span class="tile-name">칭호</span>
+            <span class="tile-sub">닉네임 옆 상태 표현</span>
+        </div>
     </section>
 
     <!-- 💰 지갑/정산/기부: 2단계 오픈 시 hidden 제거로 복원 -->
@@ -186,7 +191,7 @@
     </div>
     </nav>
 
-    <script src="./js/nav.js?v=0712v"></script>
+    <script src="./js/nav.js?v=0712w"></script>
 
 </div>
 
@@ -217,21 +222,23 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- Supabase SDK (단 1회) -->
-<script src="./js/vendor/supabase.js?v=0712v"></script>
+<script src="./js/vendor/supabase.js?v=0712w"></script>
 
 <!-- Supabase Client 생성 -->
-<script src="js/supabase.js?v=0712v"></script>
+<script src="js/supabase.js?v=0712w"></script>
 
 <!-- 갈라치기 성향 로직 -->
-<script src="js/galla-type.js?v=0712v"></script>
+<script src="js/galla-type.js?v=0712w"></script>
 
 <!-- GP 상점 -->
-<script src="js/items.js?v=0712v"></script>
+<script src="js/items.js?v=0712w"></script>
+<script src="js/titles.js?v=0712w"></script>
 
 <!-- Settings 페이지 로직 -->
-<script src="js/settings.js?v=0712v"></script>
+<script src="js/settings.js?v=0712w"></script>
 
 <script>
+  document.getElementById('titlesTile')?.addEventListener('click', function(){ window.GALLA_openTitles && window.GALLA_openTitles(); });
   document.getElementById('shopTile')?.addEventListener('click', function(e){
     e.stopPropagation();
     window.openShop && window.openShop();

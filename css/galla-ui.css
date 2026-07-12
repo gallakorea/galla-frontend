@@ -120,3 +120,10 @@ body {
 .nick-gold::after { content: " 👑"; -webkit-text-fill-color: initial; color: #f5cf6b; font-size: .82em; text-shadow: none; }
 @keyframes nickGoldShine { 0% { background-position: 0% 0; } 100% { background-position: 220% 0; } }
 @media (prefers-reduced-motion: reduce) { .nick-gold { animation: none; } }
+
+/* 🏷️ 장착 칭호 배지 (닉네임 앞) — supabase.js가 자동 삽입 */
+.nick-title {
+  display: inline-block; font-size: .72em; font-weight: 900; vertical-align: middle;
+  color: #f5cf6b; background: rgba(245,207,107,.14); border: 1px solid rgba(245,207,107,.35);
+  border-radius: 99px; padding: 1px 7px; margin-right: 5px; line-height: 1.5; white-space: nowrap;
+}

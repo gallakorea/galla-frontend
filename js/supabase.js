@@ -53,8 +53,8 @@
     need.forEach(u => { cache[u] = cache[u] || null; }); // 로딩 마킹(중복요청 방지)
     try {
       const { data } = await window.supabaseClient
-        .from("user_cosmetics").select("user_id,nick_gold,emoticon").in("user_id", need);
-      (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon }; });
+        .from("user_cosmetics").select("user_id,nick_gold,emoticon,title").in("user_id", need);
+      (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title }; });
     } catch (e) { /* 무해 */ }
     need.forEach(u => { if (!cache[u]) cache[u] = {}; });
   };
@@ -76,8 +76,21 @@
     });
     if (!map.size) return;
     await window.GALLA_loadDecos([...map.keys()]);
-    map.forEach((list, uid) => { if (window.GALLA_isGoldNick(uid)) list.forEach(el => el.classList.add("nick-gold")); });
+    map.forEach((list, uid) => {
+      const d = window.GALLA_decoCache[uid] || {};
+      list.forEach(el => {
+        if (d.nick_gold) el.classList.add("nick-gold");
+        // 장착 칭호 배지 — 닉네임 앞에 1회 삽입
+        if (d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
+          const b = document.createElement("span");
+          b.className = "nick-title";
+          b.textContent = d.title;
+          el.parentNode.insertBefore(b, el);
+        }
+      });
+    });
   }
+  window.GALLA_titleOf = (uid) => (window.GALLA_decoCache[uid] || {}).title || null;
   window.GALLA_refreshNickGold = function () {
     if (_ngPending) return;
     _ngPending = true;
