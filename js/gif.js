@@ -31,8 +31,10 @@
     if (document.getElementById("gif-css")) return;
     const s = document.createElement("style"); s.id = "gif-css";
     s.textContent = `
-      .gifp-btn{flex:0 0 auto;border:none;background:transparent;font-size:18px;line-height:1;padding:6px;cursor:pointer;border-radius:10px;opacity:.9}
-      .gifp-btn:hover{background:rgba(255,255,255,.08)}
+      .gifp-btn{flex:0 0 auto;border:none;background:rgba(255,255,255,.06);line-height:0;padding:6px 8px;cursor:pointer;border-radius:9px;opacity:.92;display:flex;align-items:center}
+      .gifp-btn:hover{background:rgba(255,255,255,.12);opacity:1}
+      .gifp-btn img{height:12px;display:block;pointer-events:none}
+      .gif-powered img.gif-brand{height:12px;vertical-align:middle;margin-left:3px;opacity:.85}
       .gif-panel{position:fixed;z-index:9999;width:min(380px,94vw);background:#16171c;border:1px solid rgba(255,255,255,.12);
         border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.55);padding:10px;transform:translateY(6px);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s}
       .gif-panel.open{opacity:1;pointer-events:auto;transform:translateY(0)}
@@ -43,7 +45,7 @@
       .gif-cell{width:100%;display:block;border-radius:9px;margin-bottom:8px;cursor:pointer;background:#0c0d11}
       .gif-cell:active{transform:scale(.97)}
       .gif-powered{text-align:right;font-size:10px;color:#6c7280;margin-top:6px;font-weight:700}
-      .gif-msg{padding:22px 12px;text-align:center;color:#9aa0ad;font-size:13px}
+      .gif-msg{padding:22px 12px;text-align:center;color:#9aa0ad;font-size:13px;column-span:all;line-height:1.5}
       .gif-lock{padding:18px 12px;text-align:center;color:#c9d1e0}
       .gif-lock b{color:#f5cf6b}
       .gif-lock button{margin-top:12px;width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,#f5cf6b,#e0a93a);color:#0a0a0b;font-weight:900;cursor:pointer}
@@ -99,7 +101,7 @@
     panel.innerHTML = `
       <div class="gif-search"><input type="text" id="gif-q" placeholder="GIF 검색 (예: 반박, ㅋㅋ, 팩트)" autocomplete="off"></div>
       <div class="gif-grid"></div>
-      <div class="gif-powered">powered by GIPHY</div>`;
+      <div class="gif-powered">Powered by <img class="gif-brand" src="/assets/giphy-logo.svg" alt="GIPHY"></div>`;
     const q = panel.querySelector("#gif-q");
     q.addEventListener("input", () => { clearTimeout(tmr); tmr = setTimeout(() => runSearch(q.value.trim()), 350); });
     q.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); clearTimeout(tmr); runSearch(q.value.trim()); } });
@@ -138,7 +140,8 @@
     if (!row || !input || row.querySelector(":scope > .gifp-btn")) return;
     css();
     const btn = document.createElement("button");
-    btn.type = "button"; btn.className = "gifp-btn"; btn.textContent = "🎬";
+    btn.type = "button"; btn.className = "gifp-btn";
+    btn.innerHTML = `<img src="/assets/giphy-logo.svg" alt="GIF">`;
     btn.setAttribute("aria-label", "GIF");
     btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); togglePanel(btn, row.querySelector("input") || input); });
     const submit = row.querySelector(".submit-btn, .ic-send");
