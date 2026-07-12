@@ -195,6 +195,8 @@ function renderIssueMedia(issue) {
                 <source src="${issue.video_url}" type="video/mp4">
             </video>
             <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
+            <button class="vid-mute" id="issue-vid-mute"
+                    onclick="event.stopPropagation();window.GALLA_setSound(!window.GALLA_soundOn())">🔇</button>
             <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
 
@@ -210,7 +212,11 @@ function renderIssueMedia(issue) {
             const observer = new IntersectionObserver(entries => {
                 entries.forEach(e => {
                     if (e.isIntersecting && e.intersectionRatio > 0.5) {
-                        vid.play().catch(() => {});
+                        // 전역 사운드 선호 + 제스처 시 소리 재생 (인덱스·릴스와 통일)
+                        const wantSound = window.GALLA_soundOn && window.GALLA_soundOn() && window.GALLA_gestured;
+                        vid.muted = !wantSound;
+                        vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+                        window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns();
                         document.getElementById('issue-play-ov')?.classList.add('hidden');
                     } else {
                         vid.pause();
@@ -219,6 +225,7 @@ function renderIssueMedia(issue) {
                 });
             }, { threshold: 0.5 });
             observer.observe(vid);
+            document.addEventListener('galla:sound', () => window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns());
         }
         return;
     }

@@ -778,7 +778,9 @@ function bindTapControls() {
       waitingSecond = false; tapTimer = null;
       const { video, section } = curVideoAndSection();
       if (!video) return;
-      window.__REELS_MUTED__ = !window.__REELS_MUTED__;
+      // 전역 선호를 뒤집어 인덱스·이슈와 통일 (현재 뮤트면 → 켜기)
+      if (window.GALLA_setSound) window.GALLA_setSound(window.__REELS_MUTED__);
+      else window.__REELS_MUTED__ = !window.__REELS_MUTED__;
       video.muted = window.__REELS_MUTED__;
       flashBadge(section, window.__REELS_MUTED__ ? "🔇 음소거" : "🔊 소리 켜짐");
     }, 260);
