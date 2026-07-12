@@ -19,7 +19,11 @@
     { key: "emoticon_pack",   emoji: "😎", name: "이모티콘 사용권", price: 1000, group: "deco", kind: "unlock",
       desc: "댓글·전투에 갈라 이모티콘을 붙일 수 있어요 (영구)" },
     { key: "nick_deco",       emoji: "🎨", name: "닉네임 꾸미기", price: 1500, group: "deco", kind: "unlock",
-      desc: "닉네임에 골드 반짝임 효과를 입혀요 (영구)" },
+      desc: "닉네임에 골드 반짝임 효과를 입혀요 (영구) · 스타일 팩은 설정>꾸미기" },
+    { key: "sticker_pack_2",  emoji: "🔥", name: "감정폭발 스티커팩", price: 1000, group: "deco", kind: "unlock",
+      desc: "킹받네·현타·극혐 등 감정 스티커 9종 (영구)" },
+    { key: "sticker_pack_3",  emoji: "💢", name: "정시밈 스티커팩", price: 1000, group: "deco", kind: "unlock",
+      desc: "내로남불·유체이탈·국뽕 등 시사 밈 9종 (영구)" },
     // ── 도전 ──
     { key: "duel_ticket",     emoji: "⚔️", name: "일기토 신청서", price: 700, group: "duel", kind: "consumable",
       desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청" },

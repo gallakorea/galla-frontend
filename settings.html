@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/settings.css?v=0712w">
-    <link rel="stylesheet" href="./css/items.css?v=0712w">
-    <link rel="stylesheet" href="./css/nav.css?v=0712w">
+    <link rel="stylesheet" href="./css/settings.css?v=0712x">
+    <link rel="stylesheet" href="./css/items.css?v=0712x">
+    <link rel="stylesheet" href="./css/nav.css?v=0712x">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -110,8 +110,13 @@
         </div>
         <div class="menu-tile titles" id="titlesTile">
             <span class="tile-ic">🏷️</span>
-            <span class="tile-name">칭호</span>
-            <span class="tile-sub">닉네임 옆 상태 표현</span>
+            <span class="tile-name">꾸미기</span>
+            <span class="tile-sub">칭호·닉네임 스타일</span>
+        </div>
+        <div class="menu-tile gacha" id="gachaTile">
+            <span class="tile-ic">🎰</span>
+            <span class="tile-name">갈라 뽑기</span>
+            <span class="tile-sub">랜덤 보상·잭팟</span>
         </div>
     </section>
 
@@ -191,7 +196,7 @@
     </div>
     </nav>
 
-    <script src="./js/nav.js?v=0712w"></script>
+    <script src="./js/nav.js?v=0712x"></script>
 
 </div>
 
@@ -222,23 +227,25 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- Supabase SDK (단 1회) -->
-<script src="./js/vendor/supabase.js?v=0712w"></script>
+<script src="./js/vendor/supabase.js?v=0712x"></script>
 
 <!-- Supabase Client 생성 -->
-<script src="js/supabase.js?v=0712w"></script>
+<script src="js/supabase.js?v=0712x"></script>
 
 <!-- 갈라치기 성향 로직 -->
-<script src="js/galla-type.js?v=0712w"></script>
+<script src="js/galla-type.js?v=0712x"></script>
 
 <!-- GP 상점 -->
-<script src="js/items.js?v=0712w"></script>
-<script src="js/titles.js?v=0712w"></script>
+<script src="js/items.js?v=0712x"></script>
+<script src="js/titles.js?v=0712x"></script>
+<script src="js/gacha.js?v=0712x"></script>
 
 <!-- Settings 페이지 로직 -->
-<script src="js/settings.js?v=0712w"></script>
+<script src="js/settings.js?v=0712x"></script>
 
 <script>
   document.getElementById('titlesTile')?.addEventListener('click', function(){ window.GALLA_openTitles && window.GALLA_openTitles(); });
+  document.getElementById('gachaTile')?.addEventListener('click', function(){ window.GALLA_openGacha && window.GALLA_openGacha(); });
   document.getElementById('shopTile')?.addEventListener('click', function(e){
     e.stopPropagation();
     window.openShop && window.openShop();

@@ -53,8 +53,8 @@
     need.forEach(u => { cache[u] = cache[u] || null; }); // 로딩 마킹(중복요청 방지)
     try {
       const { data } = await window.supabaseClient
-        .from("user_cosmetics").select("user_id,nick_gold,emoticon,title").in("user_id", need);
-      (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title }; });
+        .from("user_cosmetics").select("user_id,nick_gold,emoticon,title,nick_style").in("user_id", need);
+      (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title, nick_style: r.nick_style }; });
     } catch (e) { /* 무해 */ }
     need.forEach(u => { if (!cache[u]) cache[u] = {}; });
   };
@@ -79,7 +79,10 @@
     map.forEach((list, uid) => {
       const d = window.GALLA_decoCache[uid] || {};
       list.forEach(el => {
-        if (d.nick_gold) el.classList.add("nick-gold");
+        // 장착 닉네임 스타일(없으면 골드 폴백)
+        const style = d.nick_style || (d.nick_gold ? "gold" : null);
+        if (style) el.classList.add("ns-" + style);
+        if (style === "gold") el.classList.add("nick-gold");
         // 장착 칭호 배지 — 닉네임 앞에 1회 삽입
         if (d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
           const b = document.createElement("span");

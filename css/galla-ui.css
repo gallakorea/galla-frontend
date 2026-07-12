@@ -127,3 +127,18 @@ body {
   color: #f5cf6b; background: rgba(245,207,107,.14); border: 1px solid rgba(245,207,107,.35);
   border-radius: 99px; padding: 1px 7px; margin-right: 5px; line-height: 1.5; white-space: nowrap;
 }
+
+/* 🎨 닉네임 스타일 팩 (ns-*) — supabase.js가 장착 스타일 클래스 자동 부여 */
+.ns-neon, .ns-ice, .ns-fire, .ns-toxic, .ns-royal, .ns-rainbow {
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  font-weight: 900 !important; background-size: 200% 100%;
+}
+.ns-neon  { background-image: linear-gradient(92deg,#00e5ff,#3d6bff,#00e5ff); text-shadow: 0 0 10px rgba(0,229,255,.5); animation: nsShine 3s linear infinite; }
+.ns-ice   { background-image: linear-gradient(92deg,#bfefff,#7fd4ff,#e8f8ff,#9fd8ff); text-shadow: 0 0 8px rgba(150,220,255,.45); animation: nsShine 4s linear infinite; }
+.ns-fire  { background-image: linear-gradient(92deg,#ffd24a,#ff6a00,#ff2d2d,#ff9a3d); text-shadow: 0 0 10px rgba(255,90,0,.5); animation: nsShine 2.2s linear infinite; }
+.ns-toxic { background-image: linear-gradient(92deg,#b6ff2e,#39d17a,#c9ff4a); text-shadow: 0 0 9px rgba(120,230,80,.5); animation: nsShine 3s linear infinite; }
+.ns-royal { background-image: linear-gradient(92deg,#c9a3ff,#7b5cff,#a17bff,#e0c9ff); text-shadow: 0 0 10px rgba(150,110,255,.5); animation: nsShine 3.4s linear infinite; }
+.ns-rainbow { background-image: linear-gradient(92deg,#ff4f6e,#ffcf6b,#4fd17a,#4fc3f7,#a17bff,#ff4f6e); background-size:300% 100%; animation: nsShine 2.4s linear infinite; }
+@keyframes nsShine { 0%{background-position:0% 0} 100%{background-position:200% 0} }
+@media (prefers-reduced-motion: reduce){ .ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{ animation:none; } }
