@@ -475,6 +475,15 @@ function renderIssue(issue) {
             { key: "description", label: "설명", type: "textarea", value: issue.description || "" },
             { key: "category", label: "카테고리", type: "select", options: window.GALLA_CATEGORIES, value: issue.category || "" },
           ],
+          extra: [{
+            icon: "🚀", label: "상단 고정 부스트 (2,000GP · 24h)",
+            onClick: async () => {
+              if (!confirm("이 갈라를 24시간 피드 상단에 고정할까요? (2,000 GP)")) return;
+              const { data } = await supabase.rpc("buy_boost", { p_type: "issue", p_id: Number(issue.id), p_kind: "pin" });
+              if (!data?.ok) { alert(data?.reason === "insufficient" ? "GP가 부족해요. (2,000GP 필요)" : "부스트 실패"); return; }
+              alert("🚀 상단 고정 완료! 24시간 동안 피드 상단에 노출됩니다.");
+            },
+          }],
           onSaved: (patch) => {
             if (patch.title != null) { const t = qs("issue-title"); if (t) t.innerText = patch.title; }
             if (patch.category != null) { const c = qs("issue-category"); if (c) c.innerText = patch.category; }

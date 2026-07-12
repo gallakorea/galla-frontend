@@ -79,6 +79,13 @@
     edit.onclick = () => { closeSheet(); openEdit(cfg); };
     if (cfg.editFields && cfg.editFields.length) sheet.appendChild(edit);
 
+    // 추가 액션(부스트 등): cfg.extra = [{ icon, label, onClick }]
+    (cfg.extra || []).forEach(x => {
+      const b = el('button', 'oa-item', `<span class="oa-ic">${x.icon || '•'}</span> ${x.label}`);
+      b.onclick = () => { closeSheet(); x.onClick && x.onClick(); };
+      sheet.appendChild(b);
+    });
+
     const del = el('button', 'oa-item oa-danger', '<span class="oa-ic">🗑</span> 삭제하기');
     del.onclick = () => { closeSheet(); confirmDelete(cfg); };
     sheet.appendChild(del);

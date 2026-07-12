@@ -179,8 +179,8 @@ function renderCard(data) {
       : `<div class="mah-avatar">${(data.author || '익').trim().charAt(0) || '익'}</div>`;
 
     return `
-    <div class="card" data-id="${data.id}" data-link="issue.html?id=${data.id}">
-
+    <div class="card${data.pinned ? ' pinned' : ''}" data-id="${data.id}" data-link="issue.html?id=${data.id}">
+        ${data.pinned ? `<div class="pin-badge">📌 부스트</div>` : ''}
         <div class="media-author-head">
             <div class="mah-left">
                 <div class="mah-avatar"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${avatarImg}</div>
@@ -696,6 +696,17 @@ async function loadData() {
     }));
 
     const issueIds = cards.map(c => c.id);
+
+    // 🚀 부스트: 24h 상단 고정된 이슈를 맨 앞으로 + 배지
+    try {
+        const { data: pins } = await supabase.from('content_boosts')
+            .select('target_id').eq('kind', 'pin').gt('until', new Date().toISOString());
+        const pinSet = new Set((pins || []).map(p => Number(p.target_id)));
+        if (pinSet.size) {
+            cards.forEach(c => { if (pinSet.has(Number(c.id))) c.pinned = true; });
+            cards.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+        }
+    } catch (_) {}
 
     // 내 투표 상태를 한 번에 프리페치(카드별 N+1 쿼리 제거) + 전황 집계를 병렬로
     const [warMap] = await Promise.all([

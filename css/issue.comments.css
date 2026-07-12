@@ -1245,3 +1245,8 @@ body.kb-open .battle-input-bar {
 .c-duel:active { transform: scale(.94); }
 @keyframes cDuelPulse { 50% { box-shadow: 0 0 22px rgba(245,207,107,.65); transform: translateY(-1px); } }
 @media (prefers-reduced-motion: reduce) { .c-duel { animation: none; } }
+
+/* ✨ 부스트: 하이라이트 댓글 */
+.comment.hl, .reply.hl { border: 1px solid rgba(245,207,107,.5) !important; box-shadow: 0 0 16px rgba(245,207,107,.18); position: relative; }
+.comment.hl::before, .reply.hl::before { content: "✨ 하이라이트"; position: absolute; top: -8px; left: 12px;
+  font-size: 10px; font-weight: 900; color: #0a0a0b; background: linear-gradient(135deg,#f5cf6b,#e0a93a); padding: 1px 8px; border-radius: 99px; }

@@ -2051,3 +2051,8 @@ body {
 @keyframes dlbGlow { 50% { box-shadow: 0 0 26px rgba(255,45,45,.28); } }
 @keyframes dpulseB { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce){ .duel-live-banner,.dlb-live{ animation:none; } }
+
+/* 🚀 부스트: 상단 고정 카드 배지 */
+.card.pinned { border: 1px solid rgba(245,207,107,.4); box-shadow: 0 0 20px rgba(245,207,107,.12); position: relative; }
+.pin-badge { position: absolute; top: 10px; right: 10px; z-index: 3; font-size: 11px; font-weight: 900;
+  color: #0a0a0b; background: linear-gradient(135deg,#f5cf6b,#e0a93a); padding: 3px 9px; border-radius: 99px; }

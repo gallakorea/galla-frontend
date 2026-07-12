@@ -78,6 +78,7 @@ function rootIdOf(id) {
 }
 
 let allRows = [];     // 이 이슈의 모든 댓글 행
+let hlSet = new Set(); // 🚀 하이라이트 부스트된 댓글 id
 let replyMap = {};    // parent_id -> [reply rows]
 let likeAgg = {};     // comment_id -> { up, down }
 let profileMap = {};  // user_id -> { nickname, level }
@@ -829,6 +830,17 @@ async function loadComments(issueId) {
   }
   allRows = rows || [];
 
+  // 🚀 하이라이트 부스트(24h) 적용 대상
+  hlSet = new Set();
+  try {
+    const ids = allRows.map(r => r.id);
+    if (ids.length) {
+      const { data: hb } = await supabase.from("content_boosts")
+        .select("target_id").eq("kind", "highlight").gt("until", new Date().toISOString()).in("target_id", ids);
+      (hb || []).forEach(b => hlSet.add(Number(b.target_id)));
+    }
+  } catch (_) {}
+
   // 작성자 프로필
   profileMap = {};
   const userIds = [...new Set(allRows.map(r => r.user_id).filter(Boolean))];
@@ -938,6 +950,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
       ${isOther ? opt("⚔️", `<b style="color:#f5cf6b">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
       ${isOther ? opt("🚨", "신고", "report") : ""}
       ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("✏️", "댓글 수정", "edit")}
+      ${isOther ? "" : opt("✨", "하이라이트 (800GP · 24h)", "hl")}
       ${isOther ? "" : opt("🗑️", "댓글 삭제", "del")}
       <button class="cmm-opt cancel" style="width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer">닫기</button>
     </div>`;
@@ -981,6 +994,15 @@ function openCommentMoreMenu({ uid, nick, cid }) {
       table: "comments", id: cid, soft: true,
       onDone: () => { document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.remove(); },
     });
+  });
+  sheet.querySelector(".hl")?.addEventListener("click", async () => {
+    close();
+    if (!confirm("이 댓글을 24시간 하이라이트할까요? (800 GP)")) return;
+    const { data } = await window.supabaseClient.rpc("buy_boost", { p_type: "comment", p_id: Number(cid), p_kind: "highlight" });
+    if (!data?.ok) { alert(data?.reason === "insufficient" ? "GP가 부족해요. (800GP 필요)" : "부스트 실패"); return; }
+    hlSet.add(Number(cid));
+    document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.classList.add("hl");
+    window.BattleFX?.banner?.("✨ 하이라이트 적용! (24h)", "cheer");
   });
 }
 function displayLevel(c) {
@@ -1116,7 +1138,7 @@ function makeComment(c) {
   const hiddenCount = replies.length - shown.length;
 
   return `
-    <div class="comment${ko}${isAce ? " ace" : ""}${infil}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
+    <div class="comment${ko}${isAce ? " ace" : ""}${infil}${hlSet.has(c.id) ? " hl" : ""}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
     <div class="head">
       <div class="user">
         <span class="side-icon"></span>
