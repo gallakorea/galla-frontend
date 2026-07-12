@@ -90,6 +90,7 @@ function __openShortsInternal(list, startId) {
       video_url: v.video_url,
       title: v.title || "",
       author: v.author || "익명",
+      avatar_url: v.avatar_url || null,
       level: v.level != null ? v.level : "",
       category: v.category || "",
       user_id: v.user_id || "",
@@ -506,7 +507,7 @@ function __openShortsInternal(list, startId) {
     <!-- LEFT META (AUTHOR) -->
     <div class="shorts-meta">
       <div class="shorts-author">
-        <div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>
+        ${window.GALLA_avatarImg ? window.GALLA_avatarImg(item.avatar_url, "author-avatar") : `<div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>`}
         <div class="author-info">
           <div class="author-line">
             <span class="author-name">${item.author || "익명"}</span>

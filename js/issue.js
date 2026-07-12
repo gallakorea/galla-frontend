@@ -125,14 +125,17 @@ if (!issueId || Number.isNaN(issueId)) {
     return;
   }
 
-  // 작성자명 해석: 비익명이면 실제 닉네임(users.nickname 정본), 익명이면 "익명"
+  // 작성자명·아바타 해석: 비익명이면 실제 닉네임(users.nickname 정본)/프로필사진, 익명이면 "익명"
   let __authorName = "익명";
+  let __authorAvatar = null;
   if (!issue.is_anonymous && issue.user_id) {
     const { data: prof } = await supabase
-      .from("users").select("nickname").eq("id", issue.user_id).maybeSingle();
+      .from("users").select("nickname, avatar_url").eq("id", issue.user_id).maybeSingle();
     __authorName = prof?.nickname || "익명";
+    __authorAvatar = prof?.avatar_url || null;
   }
   issue.author = __authorName;
+  issue.author_avatar = __authorAvatar;
 
 // 진영 이름은 글쓴이가 정한다(faction_a/b) — 댓글 배틀·채팅 등 전역에서 사용
 window.ISSUE_FACTIONS = {
@@ -338,6 +341,7 @@ window.issueOpenReels = function() {
     const item = {
         id: i.id, video_url: i.video_url, title: i.title || "",
         author: i.author || "익명", level: i.level != null ? i.level : "",
+        avatar_url: i.author_avatar || null,
         category: i.category || "", user_id: i.user_id || "",
         faction_a: i.faction_a || "", faction_b: i.faction_b || ""
     };
@@ -469,6 +473,13 @@ if (explainWrap) {
   }
 
   qs("issue-author").innerText = "작성자 · " + (issue.author || "익명");
+
+  // 작성자 프로필 사진 (없으면 기본 갈라 아이콘)
+  const avEl = document.querySelector(".media-author-head .mah-avatar");
+  if (avEl && window.GALLA_avatarImg) {
+    avEl.classList.remove("generic");
+    avEl.innerHTML = window.GALLA_avatarImg(issue.author_avatar);
+  }
 }
 
 /* ==========================================================================

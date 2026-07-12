@@ -173,14 +173,16 @@ function renderCard(data) {
         atk: 0, def: 0, sup: 0
     };
 
-    const initial = (data.author || '익').trim().charAt(0) || '익';
+    const avatarImg = window.GALLA_avatarImg
+      ? window.GALLA_avatarImg(data.avatar_url, 'mah-avatar-img')
+      : `<div class="mah-avatar">${(data.author || '익').trim().charAt(0) || '익'}</div>`;
 
     return `
     <div class="card" data-id="${data.id}" data-link="issue.html?id=${data.id}">
 
         <div class="media-author-head">
             <div class="mah-left">
-                <div class="mah-avatar">${initial}</div>
+                <div class="mah-avatar">${avatarImg}</div>
                 <div class="mah-info">
                     <div class="mah-line1">
                         <span class="author-name">${data.author}</span>
@@ -272,6 +274,7 @@ window.openReels = function (startId) {
         .map(c => ({
             id: c.id, video_url: c.video_url, title: c.title,
             author: c.author, level: c.level, category: c.category,
+            avatar_url: c.avatar_url,
             user_id: c.user_id, faction_a: c.faction_a, faction_b: c.faction_b
         }));
     if (!vids.length) return;
@@ -636,13 +639,14 @@ async function loadData() {
     if (error) { console.error(error); return; }
 
     const userIds = [...new Set(issues.map(i => i.user_id).filter(Boolean))];
+    // users 테이블 = 닉네임(정본)·레벨·아바타 한 번에
     const { data: profiles } = await supabase
-        .from('user_profiles')
-        .select('user_id, nickname, level')
-        .in('user_id', userIds);
+        .from('users')
+        .select('id, nickname, level, avatar_url')
+        .in('id', userIds);
 
     const profileMap = {};
-    profiles?.forEach(p => profileMap[p.user_id] = p);
+    profiles?.forEach(p => profileMap[p.id] = p);
 
     cards = issues.map(row => ({
         id: row.id,
@@ -650,6 +654,7 @@ async function loadData() {
         category: row.category,
         author: profileMap[row.user_id]?.nickname || '익명',
         level: profileMap[row.user_id]?.level || 1,
+        avatar_url: profileMap[row.user_id]?.avatar_url || null,
         time: new Date(row.created_at).toLocaleDateString(),
         title: row.title,
         oneLine: row.one_line,

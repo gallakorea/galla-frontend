@@ -19,6 +19,21 @@
   if (window.supabaseClient) return;
 
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
+
+  // 아바타(프로필 사진) URL 해석: avatar_url은 'userid/avatar.jpg' 상대경로.
+  // 없으면 기본 갈라 원형 아이콘. 전역 공용.
+  window.GALLA_DEFAULT_AVATAR = "/assets/app-icons/profile-circle-128.png";
+  window.GALLA_avatarSrc = function (avatarUrl) {
+    if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR;
+    if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
+    return `${SUPABASE_URL}/storage/v1/object/public/profiles/${avatarUrl}`;
+  };
+  // onerror 시 기본 아이콘으로 폴백하는 <img> 속성 문자열
+  window.GALLA_avatarImg = function (avatarUrl, cls) {
+    const src = window.GALLA_avatarSrc(avatarUrl);
+    return `<img class="${cls || ''}" src="${src}" alt="프로필" loading="lazy" ` +
+           `onerror="this.onerror=null;this.src='${window.GALLA_DEFAULT_AVATAR}'">`;
+  };
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
   function loadUmd() {
