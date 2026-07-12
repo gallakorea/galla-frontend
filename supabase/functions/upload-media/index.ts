@@ -65,12 +65,14 @@ serve(async (req) => {
 
     const key = `${kind}s/${user.id}/${crypto.randomUUID()}.${ext}`;
     const url = `https://${CF_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`;
+    // 랜덤 UUID 키라 내용이 절대 안 바뀜 → 1년 immutable 캐시. cdn.galla.im 엣지가 캐싱하도록 저장
+    const CACHE = "public, max-age=31536000, immutable";
 
     if (isProxy) {
       const body = new Uint8Array(await req.arrayBuffer());
       const putRes = await r2.fetch(url, {
         method: "PUT",
-        headers: { "content-type": contentType },
+        headers: { "content-type": contentType, "cache-control": CACHE },
         body,
       });
       if (!putRes.ok) {
@@ -80,14 +82,14 @@ serve(async (req) => {
     }
 
     const signed = await r2.sign(
-      new Request(url, { method: "PUT", headers: { "content-type": contentType } }),
+      new Request(url, { method: "PUT", headers: { "content-type": contentType, "cache-control": CACHE } }),
       { aws: { signQuery: true }, expiresIn: 3600 }
     );
     return json({
       kind,
       uploadUrl: signed.url,
       method: "PUT",
-      headers: { "content-type": contentType },
+      headers: { "content-type": contentType, "cache-control": CACHE },
       publicUrl: `${R2_PUBLIC_URL}/${key}`,
     });
   } catch (e) {
