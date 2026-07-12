@@ -17,15 +17,15 @@
   <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
   <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
 
-    <link rel="stylesheet" href="css/issue.css?v=0713r" />
-    <link rel="stylesheet" href="css/issue.comments.css?v=0713r" />
-    <link rel="stylesheet" href="./css/items.css?v=0713r">
-    <link rel="stylesheet" href="./css/dm.css?v=0713r">
-    <link rel="stylesheet" href="./css/user-sheet.css?v=0713r">
-    <link rel="stylesheet" href="./css/owner-actions.css?v=0713r">
-    <link rel="stylesheet" href="./css/header.css?v=0713r">
-    <link rel="stylesheet" href="./css/nav.css?v=0713r">
-    <link rel="stylesheet" href="./css/shorts.css?v=0713r">
+    <link rel="stylesheet" href="css/issue.css?v=0713s" />
+    <link rel="stylesheet" href="css/issue.comments.css?v=0713s" />
+    <link rel="stylesheet" href="./css/items.css?v=0713s">
+    <link rel="stylesheet" href="./css/dm.css?v=0713s">
+    <link rel="stylesheet" href="./css/user-sheet.css?v=0713s">
+    <link rel="stylesheet" href="./css/owner-actions.css?v=0713s">
+    <link rel="stylesheet" href="./css/header.css?v=0713s">
+    <link rel="stylesheet" href="./css/nav.css?v=0713s">
+    <link rel="stylesheet" href="./css/shorts.css?v=0713s">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -124,6 +124,9 @@
         <p id="vote-status-text" class="vote-status-text"></p>
     </section>
 
+    <!-- 진영 밀어주기 (투표 직후 · GP 소비 액션) -->
+    <section id="faction-section" class="faction-section"></section>
+
     <!-- SUMMARY -->
     <section class="issue-explain">
         <h3 class="white-title">📝 이 주제에 대한 핵심 요약</h3>
@@ -190,41 +193,6 @@
 
     </section>
 
-        <!-- SUPPORT -->
-    <section class="support-section">
-
-        <div class="support-header white-title">⚔️ 진영 밀어주기 현황</div>
-
-        <div class="support-bar">
-        <div id="sup-pro-bar" class="sup-pro" style="width:0%"></div>
-        <div id="sup-con-bar" class="sup-con" style="width:0%"></div>
-        </div>
-
-        <div class="support-stats">
-        <span id="sup-pro-amount">₩0</span>
-        <span id="sup-con-amount">₩0</span>
-        </div>
-
-        <p id="support-status-text" class="support-status-text"></p>
-
-        <div class="support-actions">
-        <button id="support-pro-btn" class="support-btn pro" type="button">
-            👍 진영 밀어주기
-        </button>
-        <button id="support-con-btn" class="support-btn con" type="button">
-            👎 진영 밀어주기
-        </button>
-        </div>
-
-        <div class="support-guide">
-        <p class="support-guide-title">ⓘ 안내</p>
-        <p class="support-guide-text">
-            진영 밀어주기는 단순 후원이 아닙니다.<br>
-            선택한 진영의 <b>전황 수치와 노출 우선순위</b>에 직접 반영됩니다.
-        </p>
-        </div>
-
-    </section>
 
     <!-- 관련 링크·근거 (커뮤니티·유튜브·자료 등 외부 링크 → 클릭 시 외부 이동) -->
     <section id="related-links-sec" class="related-links" hidden>
@@ -397,98 +365,37 @@
 </nav>
 
 
-<!-- =========================
-   SUPPORT MODAL (CENTER)
-========================= -->
-<div id="support-modal" class="support-modal" hidden>
-  <div class="support-modal-box">
-    <button class="support-close" data-close>✕</button>
-
-    <h2 class="support-title">
-      이 진영에 보탬을 더합니다
-    </h2>
-
-    <p class="support-desc">
-      이 보탬은 승부를 가르는 행위가 아닙니다.<br>
-      이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.
-    </p>
-
-    <!-- 보탬 선택 -->
-    <div class="support-levels">
-      <button class="support-level" data-level="1">
-        <span class="level-title">🤏 작은 보탬</span>
-        <span class="level-desc">댓글·추천에서 기본 표식이 부여됩니다</span>
-      </button>
-
-      <button class="support-level" data-level="2">
-        <span class="level-title">💪 분명한 보탬</span>
-        <span class="level-desc">댓글 상단 노출 + 추천 반영 우선</span>
-      </button>
-
-      <button class="support-level" data-level="3">
-        <span class="level-title">🔥 강한 보탬</span>
-        <span class="level-desc">훈장 표식 + 진영 전황 기여도 강조</span>
-      </button>
-
-      <button class="support-level" data-level="4">
-        <span class="level-title">⚔️ 결정적 보탬</span>
-        <span class="level-desc">
-          고정 댓글 권한 · 진영 전세 수치 반영 강화
-        </span>
-      </button>
-    </div>
-
-    <!-- 직접 입력 -->
-    <div class="support-custom">
-      <label>직접 금액 입력</label>
-      <input type="number" placeholder="₩ 직접 입력" />
-      <p class="support-custom-desc">
-        직접 입력 보탬은 최상위 훈장과<br>
-        모든 댓글·추천 영역에서 최우선 표시됩니다.
-      </p>
-    </div>
-
-    <!-- 푸터 -->
-    <p class="support-footnote">
-      지원해 주신 보탬은 이 이슈를 만든 크리에이터와,<br>
-      사회에 도움이 필요한 곳에 함께 사용될 예정입니다.
-    </p>
-
-    <button class="support-confirm" disabled>
-      이 보탬을 실행합니다
-    </button>
-  </div>
-</div>
 
 <!-- Supabase -->
-<script src="./js/vendor/supabase.js?v=0713r"></script>
-<script src="js/supabase.js?v=0713r"></script>
+<script src="./js/vendor/supabase.js?v=0713s"></script>
+<script src="js/supabase.js?v=0713s"></script>
 
 <!-- 전역 Core (window.* 정의) -->
-<script src="js/vote.core.js?v=0713r"></script>
+<script src="js/vote.core.js?v=0713s"></script>
 
 <!-- 전장 FX 엔진 (파티클/충격파/햅틱) -->
-<script src="js/battle-fx.js?v=0713r"></script>
-<script src="js/items.js?v=0713r"></script>
-<script src="js/emoticon.js?v=0713r"></script>
-<script src="js/gif.js?v=0713r"></script>
-<script src="js/donate.js?v=0713r"></script>
-<script src="js/charge.js?v=0713r"></script>
-<script src="js/dm.js?v=0713r"></script>
-<script src="js/user-sheet.js?v=0713r"></script>
-<script src="js/owner-actions.js?v=0713r"></script>
-<script src="js/share-sheet.js?v=0713r"></script>
-<script src="js/report-block.js?v=0713r"></script>
-<script src="js/comment-actions.js?v=0713r"></script>
+<script src="js/battle-fx.js?v=0713s"></script>
+<script src="js/items.js?v=0713s"></script>
+<script src="js/emoticon.js?v=0713s"></script>
+<script src="js/gif.js?v=0713s"></script>
+<script src="js/donate.js?v=0713s"></script>
+<script src="js/charge.js?v=0713s"></script>
+<script src="js/faction.js?v=0713s"></script>
+<script src="js/dm.js?v=0713s"></script>
+<script src="js/user-sheet.js?v=0713s"></script>
+<script src="js/owner-actions.js?v=0713s"></script>
+<script src="js/share-sheet.js?v=0713s"></script>
+<script src="js/report-block.js?v=0713s"></script>
+<script src="js/comment-actions.js?v=0713s"></script>
 
 <!-- Issue Page Logic (단 한 번!) -->
-<script src="js/media-sound.js?v=0713r"></script>
-<script type="module" src="js/issue.js?v=0713r"></script>
+<script src="js/media-sound.js?v=0713s"></script>
+<script type="module" src="js/issue.js?v=0713s"></script>
 
 <!-- 릴스(쇼츠) 엔진 -->
-<script type="module" src="js/shorts.js?v=0713r"></script>
+<script type="module" src="js/shorts.js?v=0713s"></script>
 
-<script src="./js/nav.js?v=0713r"></script>
+<script src="./js/nav.js?v=0713s"></script>
 
 <script>
 /* --------------------------
@@ -500,86 +407,6 @@ document.getElementById("btn-back").addEventListener("click", () => {
 });
 </script>
 
-<script>
-/* ==============================
-   SUPPORT MODAL OPEN / CLOSE
-============================== */
-
-const supportModal = document.getElementById("support-modal");
-
-document.addEventListener("click", (e) => {
-
-  // 닫기 버튼
-  if (e.target.matches("[data-close]")) {
-    supportModal.hidden = true;
-    return;
-  }
-
-  // 모달 바깥 클릭
-  if (e.target === supportModal) {
-    supportModal.hidden = true;
-  }
-
-});
-</script>
-
-<script>
-
-/* ==============================
-   SUPPORT BUTTON → MODAL OPEN
-============================== */
-
-document.addEventListener("click", (e) => {
-  const supportBtn = e.target.closest(".action-support");
-  if (!supportBtn) return;
-
-  const modal = document.getElementById("support-modal");
-  if (!modal) return;
-
-  // 진영 정보 먼저 추출
-  const box = supportBtn.closest(".actions, .reply-actions");
-  const side = box?.dataset?.side || "pro";
-
-  modal.hidden = false;
-
-  // ====== 진영 후원 모드 ======
-  modal.dataset.mode = "side";
-  modal.dataset.side = side;
-
-  modal.classList.remove("author", "pro", "con");
-  modal.classList.add(side);
-
-  modal.querySelector(".support-title").innerText =
-    "이 진영에 보탬을 더합니다";
-
-  modal.querySelector(".support-desc").innerHTML =
-    "이 보탬은 승부를 가르는 행위가 아닙니다.<br>이미 끝난 싸움 이후, 당신의 선택을 남기는 방식입니다.";
-});
-</script>
-
-<script>
-/* ==============================
-   AUTHOR SUPPORT BUTTON
-============================== */
-
-document.getElementById("author-support-btn")?.addEventListener("click", () => {
-  const modal = document.getElementById("support-modal");
-  if (!modal) return;
-
-  modal.hidden = false;
-
-  // 발의자 응원 모드 표시
-  modal.dataset.mode = "author";
-
-  modal.classList.remove("pro", "con");
-  modal.classList.add("author");
-
-  // 제목/문구 교체
-  modal.querySelector(".support-title").innerText = "이 이슈를 만든 사람을 응원합니다";
-  modal.querySelector(".support-desc").innerHTML =
-    "이 보탬은 특정 진영이 아닌,<br><b>이 주제를 세상에 던진 사람에게 전달됩니다.</b>";
-});
-</script>
 
 </body>
 </html>

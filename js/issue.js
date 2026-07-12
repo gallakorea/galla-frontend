@@ -207,9 +207,8 @@ if (typeof loadAiNews === "function") {
     // ⛔ DO NOT call applyVoteUI(null)
     // vote.core.js owns the non-voted UI state
   }
-  loadSupportStats(issue.id);
-  loadMySupportStatus(issue.id);
-  checkAuthorSupport(issue.id);
+  // 진영 밀어주기 (faction.js) — GP 소비 액션, 투표 아래
+  if (window.GALLA_initFaction) window.GALLA_initFaction(issue);
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
 
