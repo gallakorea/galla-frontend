@@ -276,6 +276,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Load stats before initial render
     loadMyStats();
 
+    // 발의자 후원 수익 카드 (내 프로필 & 받은 후원이 있을 때만)
+    if (isMyPage && window.GALLA_renderEarnings) window.GALLA_renderEarnings();
+
     // =====================================================
     // My 갈라 — 내가 만든 이슈
     // =====================================================

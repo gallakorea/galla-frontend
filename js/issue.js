@@ -182,6 +182,11 @@ if (typeof loadAiArguments === "function") {
 renderRelatedLinks(issue.related_links);
 
 /* ===============================
+  발의자 후원 (슈퍼챗형)
+=============================== */
+if (window.GALLA_initDonations) window.GALLA_initDonations(issue);
+
+/* ===============================
   AI NEWS (뉴스)
 =============================== */
 if (typeof loadAiNews === "function") {
@@ -873,6 +878,7 @@ async function checkAuthorSupport(issueId) {
 
   if (data) {
     const btn = qs("author-support-btn");
+    if (!btn) return; // 후원(donate) 섹션으로 교체됨 — 구 버튼 없으면 무시
     btn.disabled = true;
     btn.innerText = "🔥 이미 응원했습니다";
   }

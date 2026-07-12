@@ -17,15 +17,15 @@
   <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
   <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
 
-    <link rel="stylesheet" href="css/issue.css?v=0713o" />
-    <link rel="stylesheet" href="css/issue.comments.css?v=0713o" />
-    <link rel="stylesheet" href="./css/items.css?v=0713o">
-    <link rel="stylesheet" href="./css/dm.css?v=0713o">
-    <link rel="stylesheet" href="./css/user-sheet.css?v=0713o">
-    <link rel="stylesheet" href="./css/owner-actions.css?v=0713o">
-    <link rel="stylesheet" href="./css/header.css?v=0713o">
-    <link rel="stylesheet" href="./css/nav.css?v=0713o">
-    <link rel="stylesheet" href="./css/shorts.css?v=0713o">
+    <link rel="stylesheet" href="css/issue.css?v=0713p" />
+    <link rel="stylesheet" href="css/issue.comments.css?v=0713p" />
+    <link rel="stylesheet" href="./css/items.css?v=0713p">
+    <link rel="stylesheet" href="./css/dm.css?v=0713p">
+    <link rel="stylesheet" href="./css/user-sheet.css?v=0713p">
+    <link rel="stylesheet" href="./css/owner-actions.css?v=0713p">
+    <link rel="stylesheet" href="./css/header.css?v=0713p">
+    <link rel="stylesheet" href="./css/nav.css?v=0713p">
+    <link rel="stylesheet" href="./css/shorts.css?v=0713p">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -308,26 +308,15 @@
         <div id="ai-summary" class="ai-summary"></div>
     </section>
     
-        <!-- AUTHOR SUPPORT (UI ONLY) -->
-    <section class="author-support">
-        <div class="author-support-header">
-            ✍️ 이 이슈의 발의자
+        <!-- 발의자 후원 (슈퍼챗형) -->
+    <section class="donate-section" id="donate-section">
+        <div class="donate-head">
+            <span class="donate-title">💝 이 이슈의 발의자 후원</span>
+            <span class="donate-total" id="donate-total"></span>
         </div>
-
-        <div class="author-support-body">
-            <p class="author-support-desc">
-                이 주제를 세상에 던진 사람에게<br>
-                응원과 지지를 보낼 수 있습니다.
-            </p>
-
-          <button id="author-support-btn" class="author-support-btn">
-              🙌 발의자 응원하기
-          </button>
-
-            <p class="author-support-hint">
-                ※ 기능은 곧 열립니다
-            </p>
-        </div>
+        <p class="donate-desc">이 주제를 세상에 던진 발의자에게 후원할 수 있어요. 유튜브 슈퍼챗처럼 응원 메시지도 함께 전달됩니다.</p>
+        <button id="donate-btn" class="donate-cta">💝 후원하기</button>
+        <div class="donate-list" id="donate-list"></div>
     </section>
 
 <!-- =========================
@@ -472,32 +461,33 @@
 </div>
 
 <!-- Supabase -->
-<script src="./js/vendor/supabase.js?v=0713o"></script>
-<script src="js/supabase.js?v=0713o"></script>
+<script src="./js/vendor/supabase.js?v=0713p"></script>
+<script src="js/supabase.js?v=0713p"></script>
 
 <!-- 전역 Core (window.* 정의) -->
-<script src="js/vote.core.js?v=0713o"></script>
+<script src="js/vote.core.js?v=0713p"></script>
 
 <!-- 전장 FX 엔진 (파티클/충격파/햅틱) -->
-<script src="js/battle-fx.js?v=0713o"></script>
-<script src="js/items.js?v=0713o"></script>
-<script src="js/emoticon.js?v=0713o"></script>
-<script src="js/gif.js?v=0713o"></script>
-<script src="js/dm.js?v=0713o"></script>
-<script src="js/user-sheet.js?v=0713o"></script>
-<script src="js/owner-actions.js?v=0713o"></script>
-<script src="js/share-sheet.js?v=0713o"></script>
-<script src="js/report-block.js?v=0713o"></script>
-<script src="js/comment-actions.js?v=0713o"></script>
+<script src="js/battle-fx.js?v=0713p"></script>
+<script src="js/items.js?v=0713p"></script>
+<script src="js/emoticon.js?v=0713p"></script>
+<script src="js/gif.js?v=0713p"></script>
+<script src="js/donate.js?v=0713p"></script>
+<script src="js/dm.js?v=0713p"></script>
+<script src="js/user-sheet.js?v=0713p"></script>
+<script src="js/owner-actions.js?v=0713p"></script>
+<script src="js/share-sheet.js?v=0713p"></script>
+<script src="js/report-block.js?v=0713p"></script>
+<script src="js/comment-actions.js?v=0713p"></script>
 
 <!-- Issue Page Logic (단 한 번!) -->
-<script src="js/media-sound.js?v=0713o"></script>
-<script type="module" src="js/issue.js?v=0713o"></script>
+<script src="js/media-sound.js?v=0713p"></script>
+<script type="module" src="js/issue.js?v=0713p"></script>
 
 <!-- 릴스(쇼츠) 엔진 -->
-<script type="module" src="js/shorts.js?v=0713o"></script>
+<script type="module" src="js/shorts.js?v=0713p"></script>
 
-<script src="./js/nav.js?v=0713o"></script>
+<script src="./js/nav.js?v=0713p"></script>
 
 <script>
 /* --------------------------
