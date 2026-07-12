@@ -225,11 +225,11 @@
       TA("i-desc", "설명", "이슈 상세 설명") + IN("i-cat", "카테고리", "", "사회") +
       `<div class="ad-2col">${IN("i-fa", "진영 A", "👍 찬성이오")}${IN("i-fb", "진영 B", "👎 난 반댈세")}</div>` +
       IN("i-thumb", "썸네일 이미지 URL", "https://…") +
-      `<label>관련 뉴스 링크</label>
-       <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="뉴스 기사 URL 붙여넣기 → 추가" style="margin:0">
+      `<label>관련 링크 · 근거</label>
+       <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="뉴스·커뮤니티·유튜브·자료 등 URL 붙여넣기 → 추가" style="margin:0">
        <button class="ad-btn ghost" id="i-link-go" type="button">추가</button></div>
        <div id="i-links" class="ad-links"></div>` +
-      `<button class="ad-btn primary" id="i-go">🚀 이슈 발행</button><div class="ad-note">진영명 비우면 기본(찬성이오/난 반댈세). 관련 뉴스 링크는 이슈 하단에 카드로 뜨고 클릭 시 외부로 이동합니다.</div>`;
+      `<button class="ad-btn primary" id="i-go">🚀 이슈 발행</button><div class="ad-note">진영명 비우면 기본(찬성이오/난 반댈세). 관련 링크는 이슈 하단에 근거 카드로 뜨고 클릭 시 외부로 이동합니다.</div>`;
     renderIssueLinks();
     const addLink = async () => {
       const u = $("#i-link-url").value.trim(); if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL을 입력하세요.");

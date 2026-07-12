@@ -6,7 +6,19 @@ import { initCommentSystem } from "./issue.comments.js";
 
 console.log("[issue.js] loaded");
 
-/* 직접 등록한 관련 뉴스 링크 → 카드로 렌더, 클릭 시 외부 이동 */
+/* 직접 등록한 관련 링크·근거 → 카드로 렌더, 클릭 시 외부 이동
+   커뮤니티·유튜브·뉴스·자료 등 유형별 아이콘/라벨 */
+function relLinkType(url) {
+  const h = (() => { try { return new URL(url).hostname.replace(/^www\./, "").toLowerCase(); } catch { return ""; } })();
+  if (/youtube\.com|youtu\.be/.test(h)) return { icon: "▶", label: "유튜브" };
+  if (/(dcinside|fmkorea|theqoo|ruliweb|clien|mlbpark|instiz|ppomppu|bobaedream|todayhumor|82cook|pann\.nate|arca\.live|humoruniv|slrclub|inven|gasengi|cook82)/.test(h))
+    return { icon: "💬", label: "커뮤니티" };
+  if (/(yna\.co|chosun|donga|hani|khan|joongang|hankookilbo|mk\.co|mt\.co|sedaily|newsis|ytn|sbs|kbs|mbc|jtbc|news|press|ilbo|times|herald|edaily|nocutnews|ohmynews|pressian|dt\.co)/.test(h))
+    return { icon: "📰", label: "뉴스" };
+  if (/(namu\.wiki|wikipedia|blog\.naver|tistory|brunch|medium|gov\.kr|go\.kr|or\.kr|assembly)/.test(h))
+    return { icon: "📄", label: "자료" };
+  return { icon: "🔗", label: "링크" };
+}
 function renderRelatedLinks(links) {
   const sec = document.getElementById("related-links-sec");
   const root = document.getElementById("related-links-list");
@@ -17,9 +29,10 @@ function renderRelatedLinks(links) {
   const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
   root.innerHTML = list.map(l => {
     const url = l && l.url; if (!url || !/^https?:\/\//i.test(url)) return "";
+    const t = relLinkType(url);
     return `<a class="rel-news-card" href="${A(url)}" target="_blank" rel="noopener noreferrer">
-      ${l.image ? `<span class="rel-news-thumb" style="background-image:url('${A(l.image)}')"></span>` : `<span class="rel-news-thumb none">🔗</span>`}
-      <span class="rel-news-mid"><span class="rel-news-src">${A(l.source || host(url))}</span><span class="rel-news-title">${A(l.title || url)}</span></span>
+      ${l.image ? `<span class="rel-news-thumb" style="background-image:url('${A(l.image)}')"></span>` : `<span class="rel-news-thumb none">${t.icon}</span>`}
+      <span class="rel-news-mid"><span class="rel-news-src"><span class="rel-news-type">${t.icon} ${t.label}</span> · ${A(l.source || host(url))}</span><span class="rel-news-title">${A(l.title || url)}</span></span>
       <span class="rel-news-go">↗</span>
     </a>`;
   }).join("");
