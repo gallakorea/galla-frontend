@@ -1277,6 +1277,12 @@ function renderWarDashboard() {
   set("stat-atk", w.atk);
   set("stat-sup", w.sup);
   set("stat-def", w.def);
+
+  // 승세 진영 강조 (왕관 + 글로우 펄스)
+  const proBox = document.querySelector(".bmw-box.pro");
+  const conBox = document.querySelector(".bmw-box.con");
+  proBox?.classList.toggle("win", w.pro.total > w.con.total);
+  conBox?.classList.toggle("win", w.con.total > w.pro.total);
 }
 
 function requireLogin() {
