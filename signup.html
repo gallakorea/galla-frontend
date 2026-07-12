@@ -60,6 +60,12 @@
       </div>
 
       <div class="field">
+        <label class="field-label" for="birthdate">생년월일 <span class="req">*</span> <span class="field-optional">만 14세 이상 가입 가능</span></label>
+        <input type="date" id="birthdate" class="field-input" placeholder="YYYY-MM-DD">
+        <div class="pw-hint" id="ageHint"></div>
+      </div>
+
+      <div class="field">
         <label class="field-label">사는 지역 <span class="field-optional">선택</span></label>
         <div class="region-grid">
           <div class="region-chip">서울</div><div class="region-chip">부산</div>
@@ -81,6 +87,37 @@
           <input type="checkbox" id="anonymous">
           <span class="slider"></span>
         </label>
+      </div>
+
+      <!-- 약관·개인정보 동의 (개인정보보호법 제22조 / 정통망법 제50조) -->
+      <div class="agree-box">
+        <label class="agree-item agree-all">
+          <input type="checkbox" id="agreeAll">
+          <span class="ag-mark"></span>
+          <b>전체 동의</b>
+        </label>
+        <div class="agree-list">
+          <label class="agree-item">
+            <input type="checkbox" id="agreeAge" class="agree-req">
+            <span class="ag-mark"></span>
+            <span class="ag-txt"><em>[필수]</em> 만 14세 이상입니다</span>
+          </label>
+          <label class="agree-item">
+            <input type="checkbox" id="agreeTerms" class="agree-req">
+            <span class="ag-mark"></span>
+            <span class="ag-txt"><em>[필수]</em> <a href="terms.html" target="_blank" rel="noopener">이용약관</a> 동의</span>
+          </label>
+          <label class="agree-item">
+            <input type="checkbox" id="agreePrivacy" class="agree-req">
+            <span class="ag-mark"></span>
+            <span class="ag-txt"><em>[필수]</em> <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a> 동의</span>
+          </label>
+          <label class="agree-item">
+            <input type="checkbox" id="agreeMarketing">
+            <span class="ag-mark"></span>
+            <span class="ag-txt"><em class="opt">[선택]</em> 마케팅·이벤트 정보 수신 동의 (이메일·앱 푸시)</span>
+          </label>
+        </div>
       </div>
 
       <div class="reward-box">
@@ -137,6 +174,49 @@ function waitForSupabaseClient() {
     else { hint.textContent='✕ 비밀번호가 일치하지 않습니다'; hint.className='pw-hint no'; }
   }
   p1.addEventListener('input', chk); p2.addEventListener('input', chk);
+
+  // 생년월일 → 만 나이 계산 · 만14세 미만 차단 안내
+  var bd = document.getElementById('birthdate'), ageHint = document.getElementById('ageHint');
+  var ageAgree = document.getElementById('agreeAge');
+  window.GALLA_ageFromBirth = function(v){
+    if(!v) return null;
+    var d = new Date(v); if(isNaN(d)) return null;
+    var t = new Date(), a = t.getFullYear() - d.getFullYear();
+    var m = t.getMonth() - d.getMonth();
+    if(m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+    return a;
+  };
+  if(bd){
+    bd.max = new Date().toISOString().slice(0,10);
+    bd.addEventListener('input', function(){
+      var a = window.GALLA_ageFromBirth(bd.value);
+      if(a === null){ ageHint.textContent=''; ageHint.className='pw-hint'; }
+      else if(a < 14){ ageHint.textContent='✕ 만 14세 미만은 가입할 수 없습니다'; ageHint.className='pw-hint no'; ageAgree.checked=false; }
+      else { ageHint.textContent='✓ 가입 가능 연령입니다 (만 '+a+'세)'; ageHint.className='pw-hint ok'; ageAgree.checked=true; }
+      syncAgreeAll(); refreshSignupBtn();
+    });
+  }
+
+  // 약관 동의 체크박스 연동
+  var agreeAll = document.getElementById('agreeAll');
+  var reqBoxes = [document.getElementById('agreeAge'), document.getElementById('agreeTerms'), document.getElementById('agreePrivacy')];
+  var mkt = document.getElementById('agreeMarketing');
+  var allBoxes = reqBoxes.concat([mkt]);
+  var signupBtn2 = document.getElementById('signupBtn');
+  function syncAgreeAll(){ agreeAll.checked = allBoxes.every(function(b){ return b.checked; }); }
+  function refreshSignupBtn(){
+    var age = window.GALLA_ageFromBirth(bd && bd.value);
+    var ok = reqBoxes.every(function(b){ return b.checked; }) && age !== null && age >= 14;
+    signupBtn2.disabled = !ok;
+  }
+  agreeAll.addEventListener('change', function(){
+    // 연령은 생년월일이 통과해야만 강제로 켤 수 있음
+    var canAge = (window.GALLA_ageFromBirth(bd && bd.value) || 0) >= 14;
+    allBoxes.forEach(function(b){ if(b === ageAgree) b.checked = agreeAll.checked && canAge; else b.checked = agreeAll.checked; });
+    refreshSignupBtn();
+  });
+  allBoxes.forEach(function(b){ b.addEventListener('change', function(){ syncAgreeAll(); refreshSignupBtn(); }); });
+  refreshSignupBtn();
 </script>
 
 <!-- signup 기능 -->

@@ -38,6 +38,8 @@ async function waitForClient() {
         const nickname = nicknameInput.value.trim();
         const phone = phoneInput.value.trim();
         const anonymous = document.getElementById("anonymous").checked;
+        const birthDate = (document.getElementById("birthdate") || {}).value || "";
+        const marketingOptIn = document.getElementById("agreeMarketing").checked;
 
         if (!email || !password || !password2 || !nickname) {
             alert("필수 항목을 입력해주세요.");
@@ -49,12 +51,48 @@ async function waitForClient() {
             return;
         }
 
+        // 만 14세 이상 확인 (개인정보보호법 제22조의2)
+        const age = window.GALLA_ageFromBirth ? window.GALLA_ageFromBirth(birthDate) : null;
+        if (age === null) {
+            alert("생년월일을 입력해주세요.");
+            return;
+        }
+        if (age < 14) {
+            alert("만 14세 미만은 가입할 수 없습니다.");
+            return;
+        }
+
+        // 필수 약관 동의 확인
+        const agreeAge = document.getElementById("agreeAge").checked;
+        const agreeTerms = document.getElementById("agreeTerms").checked;
+        const agreePrivacy = document.getElementById("agreePrivacy").checked;
+        if (!agreeAge || !agreeTerms || !agreePrivacy) {
+            alert("필수 약관(만 14세 이상·이용약관·개인정보 수집·이용)에 동의해주세요.");
+            return;
+        }
+
         try {
             console.log("[signup.js] Auth.signUp 요청 시작");
 
+            // 폼 값은 user_metadata로 전달 → 서버측 트리거(handle_new_user,
+            // SECURITY DEFINER)가 users/user_profiles를 생성한다.
+            // (이메일 인증이 켜져 있어 signUp 직후엔 세션이 없으므로, 클라이언트에서
+            //  직접 INSERT하면 RLS(auth.uid()=id)에 막힌다 → 트리거로 처리)
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email,
-                password
+                password,
+                options: {
+                    data: {
+                        nickname,
+                        phone: phone || null,
+                        region: selectedRegion || null,
+                        anonymous,
+                        birth_date: birthDate,
+                        age_verified: true,
+                        terms_agreed: true,
+                        marketing_opt_in: marketingOptIn
+                    }
+                }
             });
 
             if (signUpError) {
@@ -69,45 +107,6 @@ async function waitForClient() {
             }
 
             console.log("[signup.js] Auth 성공 — userId:", userId);
-
-            const { error: userError } = await supabase
-                .from("users")
-                .insert({
-                    id: userId,
-                    nickname,
-                    bio: null,
-                    phone: phone || null,
-                    region: selectedRegion,
-                    email,
-                    avatar_url: null,
-                    level: 1,
-                    exp: 0,
-                    created_at: new Date()
-                });
-
-            if (userError) {
-                alert("회원 기본 정보 저장 오류: " + userError.message);
-                return;
-            }
-
-            const { error: profileError } = await supabase
-                .from("user_profiles")
-                .insert({
-                    user_id: userId,
-                    anonymous,
-                    level: 1,
-                    gp: 0,
-                    warning_count: 0,
-                    role: "user",
-                    warning_level: "normal",
-                    admin_flag: false,
-                    created_at: new Date()
-                });
-
-            if (profileError) {
-                alert("유저 상태 초기화 오류: " + profileError.message);
-                return;
-            }
 
             alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
             location.href = "index.html";
