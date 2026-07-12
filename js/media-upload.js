@@ -82,6 +82,22 @@
     if (!supabase) throw new Error('Supabase 초기화 실패');
     const token = await getAccessToken();
 
+    // 영상은 업로드 전에 브라우저에서 720p/~2.5Mbps로 재인코딩해 용량 축소
+    // (미지원 브라우저·실패 시 원본 그대로 반환하므로 업로드는 절대 안 깨짐)
+    if (kind === 'video' && window.GALLA_COMPRESS_VIDEO) {
+      try {
+        if (onProgress) onProgress(0);
+        const before = file.size;
+        file = await window.GALLA_COMPRESS_VIDEO(file, p => {
+          // 압축 구간을 진행률 0~50%로 매핑, 업로드가 나머지 50~100%
+          if (onProgress) onProgress(Math.round(p * 0.5));
+        });
+        if (file.size < before) {
+          console.info(`[media-upload] 영상 압축: ${(before/1048576).toFixed(1)}MB → ${(file.size/1048576).toFixed(1)}MB`);
+        }
+      } catch (_) { /* 압축 실패 무시, 원본 업로드 */ }
+    }
+
     const { data, error } = await supabase.functions.invoke('upload-media', {
       body: {
         kind,
