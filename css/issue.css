@@ -335,6 +335,21 @@ body {
 }
 .faction-btn.disabled { opacity: .6; pointer-events: none; }
 
+/* 이슈 액션바 (좋아요/저장/공유) */
+.issue-actions { display: flex; gap: 8px; padding: 2px 16px 14px; }
+.ia-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 12px;
+  color: #cfd3db; font-size: 13px; font-weight: 700; font-family: inherit; padding: 11px 0; cursor: pointer;
+  transition: transform .1s ease, background .15s ease, color .15s ease, border-color .15s ease;
+}
+.ia-btn svg { width: 20px; height: 20px; }
+.ia-btn:active { transform: scale(.97); }
+#issue-like-btn.on { color: #ff4d67; border-color: rgba(255,77,103,.5); background: rgba(255,77,103,.1); }
+#issue-like-btn.on svg { fill: #ff4d67; stroke: #ff4d67; }
+#issue-save-btn.on { color: #fff; border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.08); }
+#issue-save-btn.on svg { fill: #fff; }
+
 /* ==========================================================
    SUMMARY
 ========================================================== */

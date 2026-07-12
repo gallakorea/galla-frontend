@@ -241,7 +241,7 @@ function renderCard(data) {
                     <img src="assets/icons/icon-bookmark.svg" class="bookmark-btn" data-id="${data.id}">
                     <img src="assets/icons/icon-share.svg" class="share-btn" data-id="${data.id}">
                 </div>
-                <button class="more-btn open-modal" data-msg="더보기 메뉴 준비 중">${moreIcon}</button>
+                <button class="more-btn card-more" data-id="${data.id}" data-uid="${data.user_id || ''}" aria-label="더보기">${moreIcon}</button>
             </div>
         </div>
 
@@ -420,23 +420,13 @@ async function toggleBookmark(img) {
     }
 }
 
-async function shareIssue(id) {
+function shareIssue(id) {
     const card = window.cards.find(c => String(c.id) === String(id));
     const url = window.GALLA_shareUrl ? window.GALLA_shareUrl('issue', id) : new URL(`issue.html?id=${id}`, location.href).href;
-    if (navigator.share) {
-        try {
-            await navigator.share({ title: card?.title ? `⚔️ ${card.title}` : 'GALLA', text: '찬성이냐 반대냐, 당신의 진영은?', url });
-            return;
-        } catch (err) {
-            if (err.name === 'AbortError') return; // 사용자가 공유 취소
-        }
-    }
-    try {
-        await navigator.clipboard.writeText(url);
-        openModal('링크가 복사되었습니다.');
-    } catch {
-        openModal('링크 복사에 실패했습니다.');
-    }
+    const title = card?.title ? `⚔️ ${card.title}` : 'GALLA';
+    if (window.GALLA_share) return window.GALLA_share({ url, title, text: '찬성이냐 반대냐, 당신의 진영은?' });
+    if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
+    navigator.clipboard?.writeText(url).then(() => openModal('링크가 복사되었습니다.'));
 }
 
 /* ===========================
@@ -485,6 +475,31 @@ function attachEvents() {
         img.onclick = e => {
             e.stopPropagation();
             shareIssue(img.dataset.id);
+        };
+    });
+
+    // ⋯ 더보기: 소유자·관리자 → 수정/삭제, 아니면 → 신고/차단
+    document.querySelectorAll('.card-more').forEach(btn => {
+        btn.onclick = async e => {
+            e.stopPropagation();
+            const id = btn.dataset.id, uid = btn.dataset.uid || null;
+            const card = window.cards?.find(c => String(c.id) === String(id));
+            const canManage = window.GALLA_canManage ? await window.GALLA_canManage(uid) : false;
+            if (canManage && window.GALLA_openOwnerMenu) {
+                window.GALLA_openOwnerMenu({
+                    table: 'issues', id: Number(id), ownerId: uid, label: '갈라',
+                    editFields: [
+                        { key: 'title', label: '제목', type: 'text', value: card?.title || '' },
+                        { key: 'category', label: '카테고리', type: 'select', options: window.GALLA_CATEGORIES, value: card?.category || '' },
+                    ],
+                    onDeleted: () => { btn.closest('.card')?.remove(); },
+                });
+            } else if (window.GALLA_openReportMenu) {
+                window.GALLA_openReportMenu({
+                    contentType: 'issue', contentId: id, authorId: uid, authorName: card?.author,
+                    onBlocked: () => { document.querySelectorAll('.card').forEach(c => { if (window.cards?.find(x => String(x.id) === c.dataset.id)?.user_id === uid) c.remove(); }); },
+                });
+            }
         };
     });
 
@@ -629,7 +644,7 @@ window.addEventListener('scroll', () => {
 async function loadData() {
     const supabase = window.supabaseClient;
 
-    const { data: issues, error } = await supabase
+    let { data: issues, error } = await supabase
         .from('issues')
         .select(`
             id, title, one_line, category, created_at,
@@ -640,6 +655,13 @@ async function loadData() {
         .order('created_at', { ascending: false });
 
     if (error) { console.error(error); return; }
+
+    // 차단한 사용자의 갈라는 피드에서 제외
+    let issuesF = issues;
+    if (window.GALLA_blockedIds) {
+        try { const blocked = await window.GALLA_blockedIds(); if (blocked.size) issuesF = issues.filter(i => !blocked.has(i.user_id)); } catch (_) {}
+    }
+    issues = issuesF;
 
     const userIds = [...new Set(issues.map(i => i.user_id).filter(Boolean))];
     // users 테이블 = 닉네임(정본)·레벨·아바타 한 번에

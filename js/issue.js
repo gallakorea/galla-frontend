@@ -386,19 +386,63 @@ window.issueCarouselGo = function(dir) {
     });
 };
 
+async function wireIssueActions(issue) {
+  const supabase = window.supabaseClient;
+  const likeBtn = document.getElementById("issue-like-btn");
+  const likeCount = document.getElementById("issue-like-count");
+  const saveBtn = document.getElementById("issue-save-btn");
+  const shareBtn = document.getElementById("issue-share-btn");
+
+  if (shareBtn) shareBtn.onclick = () => {
+    const url = window.GALLA_shareUrl ? window.GALLA_shareUrl("issue", issue.id) : location.href;
+    const title = issue.title ? `⚔️ ${issue.title}` : "GALLA";
+    if (window.GALLA_share) window.GALLA_share({ url, title, text: "찬성이냐 반대냐, 당신의 진영은?" });
+    else if (navigator.share) navigator.share({ title, url }).catch(() => {});
+  };
+  if (!supabase) return;
+
+  const { data: sess } = await supabase.auth.getSession();
+  const uid = sess?.session?.user?.id || null;
+  const needLogin = () => { if (confirm("로그인이 필요합니다. 로그인할까요?")) location.href = "login.html"; };
+
+  // 좋아요
+  let liked = false;
+  const { count: c } = await supabase.from("issue_likes").select("user_id", { count: "exact", head: true }).eq("issue_id", issue.id);
+  let count = c || 0;
+  if (uid) { const { data: m } = await supabase.from("issue_likes").select("issue_id").eq("issue_id", issue.id).eq("user_id", uid).maybeSingle(); liked = !!m; }
+  const paintLike = () => { if (likeCount) likeCount.textContent = count; likeBtn?.classList.toggle("on", liked); };
+  paintLike();
+  if (likeBtn) likeBtn.onclick = async () => {
+    if (!uid) return needLogin();
+    liked = !liked; count += liked ? 1 : -1; paintLike();
+    if (liked) await supabase.from("issue_likes").insert({ issue_id: issue.id, user_id: uid });
+    else await supabase.from("issue_likes").delete().eq("issue_id", issue.id).eq("user_id", uid);
+  };
+
+  // 저장
+  let saved = false;
+  if (uid) { const { data: bm } = await supabase.from("bookmarks").select("issue_id").eq("issue_id", issue.id).eq("user_id", uid).maybeSingle(); saved = !!bm; }
+  const paintSave = () => saveBtn?.classList.toggle("on", saved);
+  paintSave();
+  if (saveBtn) saveBtn.onclick = async () => {
+    if (!uid) return needLogin();
+    saved = !saved; paintSave();
+    if (saved) await supabase.from("bookmarks").insert({ issue_id: issue.id, user_id: uid });
+    else await supabase.from("bookmarks").delete().eq("issue_id", issue.id).eq("user_id", uid);
+  };
+}
+
 function renderIssue(issue) {
   currentIssue = issue;
   issueAuthorId = issue.user_id;
 
-  // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제). 아니면 버튼 숨김.
+  // 헤더 ⋯ : 소유자·관리자 → 수정/삭제, 아니면 → 신고/차단
   const moreBtn = document.getElementById("header-more-btn");
   if (moreBtn) {
-    moreBtn.style.display = "none";
-    if (window.GALLA_canManage) {
-      window.GALLA_canManage(issue.user_id).then(can => {
-        if (!can) return;
-        moreBtn.style.display = "";
-        moreBtn.onclick = () => window.GALLA_openOwnerMenu({
+    moreBtn.onclick = async () => {
+      const canManage = window.GALLA_canManage ? await window.GALLA_canManage(issue.user_id) : false;
+      if (canManage && window.GALLA_openOwnerMenu) {
+        window.GALLA_openOwnerMenu({
           table: "issues", id: issue.id, ownerId: issue.user_id, label: "갈라",
           editFields: [
             { key: "title", label: "제목", type: "text", value: issue.title || "" },
@@ -412,9 +456,17 @@ function renderIssue(issue) {
           },
           onDeleted: () => { location.href = "index.html"; },
         });
-      });
-    }
+      } else if (window.GALLA_openReportMenu) {
+        window.GALLA_openReportMenu({
+          contentType: "issue", contentId: issue.id, authorId: issue.user_id, authorName: issue.author,
+          onBlocked: () => { location.href = "index.html"; },
+        });
+      }
+    };
   }
+
+  // 액션바: 좋아요 / 저장 / 공유 (실동작)
+  wireIssueActions(issue);
 
   // 미디어 렌더링
   renderIssueMedia(issue);

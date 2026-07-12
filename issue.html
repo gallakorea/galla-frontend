@@ -17,15 +17,15 @@
   <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
   <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
 
-    <link rel="stylesheet" href="css/issue.css?v=0712i" />
-    <link rel="stylesheet" href="css/issue.comments.css?v=0712i" />
-    <link rel="stylesheet" href="./css/items.css?v=0712i">
-    <link rel="stylesheet" href="./css/dm.css?v=0712i">
-    <link rel="stylesheet" href="./css/user-sheet.css?v=0712i">
-    <link rel="stylesheet" href="./css/owner-actions.css?v=0712i">
-    <link rel="stylesheet" href="./css/header.css?v=0712i">
-    <link rel="stylesheet" href="./css/nav.css?v=0712i">
-    <link rel="stylesheet" href="./css/shorts.css?v=0712i">
+    <link rel="stylesheet" href="css/issue.css?v=0712j" />
+    <link rel="stylesheet" href="css/issue.comments.css?v=0712j" />
+    <link rel="stylesheet" href="./css/items.css?v=0712j">
+    <link rel="stylesheet" href="./css/dm.css?v=0712j">
+    <link rel="stylesheet" href="./css/user-sheet.css?v=0712j">
+    <link rel="stylesheet" href="./css/owner-actions.css?v=0712j">
+    <link rel="stylesheet" href="./css/header.css?v=0712j">
+    <link rel="stylesheet" href="./css/nav.css?v=0712j">
+    <link rel="stylesheet" href="./css/shorts.css?v=0712j">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -83,6 +83,22 @@
     <section class="issue-caption">
         <h1 id="issue-title"></h1>
         <p id="issue-desc"></p>
+    </section>
+
+    <!-- 액션바: 좋아요 · 저장 · 공유 -->
+    <section class="issue-actions">
+        <button class="ia-btn" id="issue-like-btn" aria-label="좋아요">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8L12 21.2l8.8-8.8a5.5 5.5 0 0 0 0-7.8z"/></svg>
+            <span id="issue-like-count">0</span>
+        </button>
+        <button class="ia-btn" id="issue-save-btn" aria-label="저장">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M17 21l-5-3.7L7 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2z"/></svg>
+            <span>저장</span>
+        </button>
+        <button class="ia-btn" id="issue-share-btn" aria-label="공유">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
+            <span>공유</span>
+        </button>
     </section>
 
     <!-- VOTE -->
@@ -452,27 +468,29 @@
 </div>
 
 <!-- Supabase -->
-<script src="./js/vendor/supabase.js?v=0712i"></script>
-<script src="js/supabase.js?v=0712i"></script>
+<script src="./js/vendor/supabase.js?v=0712j"></script>
+<script src="js/supabase.js?v=0712j"></script>
 
 <!-- 전역 Core (window.* 정의) -->
-<script src="js/vote.core.js?v=0712i"></script>
+<script src="js/vote.core.js?v=0712j"></script>
 
 <!-- 전장 FX 엔진 (파티클/충격파/햅틱) -->
-<script src="js/battle-fx.js?v=0712i"></script>
-<script src="js/items.js?v=0712i"></script>
-<script src="js/dm.js?v=0712i"></script>
-<script src="js/user-sheet.js?v=0712i"></script>
-<script src="js/owner-actions.js?v=0712i"></script>
+<script src="js/battle-fx.js?v=0712j"></script>
+<script src="js/items.js?v=0712j"></script>
+<script src="js/dm.js?v=0712j"></script>
+<script src="js/user-sheet.js?v=0712j"></script>
+<script src="js/owner-actions.js?v=0712j"></script>
+<script src="js/share-sheet.js?v=0712j"></script>
+<script src="js/report-block.js?v=0712j"></script>
 
 <!-- Issue Page Logic (단 한 번!) -->
-<script src="js/media-sound.js?v=0712i"></script>
-<script type="module" src="js/issue.js?v=0712i"></script>
+<script src="js/media-sound.js?v=0712j"></script>
+<script type="module" src="js/issue.js?v=0712j"></script>
 
 <!-- 릴스(쇼츠) 엔진 -->
-<script type="module" src="js/shorts.js?v=0712i"></script>
+<script type="module" src="js/shorts.js?v=0712j"></script>
 
-<script src="./js/nav.js?v=0712i"></script>
+<script src="./js/nav.js?v=0712j"></script>
 
 <script>
 /* --------------------------
