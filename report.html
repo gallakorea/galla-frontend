@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>제보하기 - GALLA</title>
+  <link rel="stylesheet" href="./css/index.css?v=0713w">
+  <link rel="stylesheet" href="./css/nav.css?v=0713w">
+  <link rel="stylesheet" href="./css/report.css?v=0713w">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+</head>
+<body data-page="report">
+<div id="app">
+  <header class="rp-header">
+    <button class="rp-back" onclick="history.length>1?history.back():location.href='index.html'" aria-label="뒤로">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="rp-title">🕵️ 제보하기</div>
+    <div class="rp-back" style="visibility:hidden"></div>
+  </header>
+
+  <main class="rp-main">
+    <div class="rp-reward">
+      <span class="rp-reward-ic">🎁</span>
+      <div class="rp-reward-tx"><b>제보하면 100 GP</b> 즉시 지급 · <b>채택되면 +2,000 GP</b><br>
+        <small>사진·영상·링크로 생생한 제보일수록 채택 확률이 올라가요 (하루 3회까지 보상)</small></div>
+    </div>
+
+    <label class="rp-label">제목 *</label>
+    <input id="rp-title" class="rp-input" placeholder="무슨 일이 있었나요? 한 줄로">
+
+    <label class="rp-label">카테고리</label>
+    <div class="rp-cats" id="rp-cats">
+      <button class="rp-cat on" data-c="사회">사회</button>
+      <button class="rp-cat" data-c="정치">정치</button>
+      <button class="rp-cat" data-c="경제">경제</button>
+      <button class="rp-cat" data-c="연예">연예</button>
+      <button class="rp-cat" data-c="스포츠">스포츠</button>
+      <button class="rp-cat" data-c="기타">기타</button>
+    </div>
+
+    <label class="rp-label">내용</label>
+    <textarea id="rp-body" class="rp-input rp-textarea" rows="6" placeholder="언제·어디서·무슨 일이 있었는지 자세히 적어주세요. (선택)"></textarea>
+
+    <label class="rp-label">사진 · 영상 첨부</label>
+    <div class="rp-media" id="rp-media"></div>
+    <label class="rp-add-media">
+      <input type="file" id="rp-file" accept="image/*,video/*" multiple hidden>
+      <span>＋ 사진 · 영상 추가</span>
+    </label>
+
+    <label class="rp-label">관련 링크</label>
+    <div class="rp-link-add">
+      <input id="rp-link-url" class="rp-input" placeholder="https:// 기사·영상·게시글 링크">
+      <button id="rp-link-go" class="rp-link-btn" type="button">추가</button>
+    </div>
+    <div class="rp-links" id="rp-links"></div>
+
+    <button id="rp-submit" class="rp-submit">🕵️ 제보하고 100 GP 받기</button>
+    <p class="rp-note">허위·악의적 제보는 보상 회수 및 이용 제한될 수 있어요. 개인정보·명예훼손 유의.</p>
+  </main>
+</div>
+
+<script src="./js/vendor/supabase.js?v=0713w"></script>
+<script src="js/supabase.js?v=0713w"></script>
+<script src="js/media-upload.js?v=0713w"></script>
+<script src="js/report.js?v=0713w"></script>
+<script src="./js/nav.js?v=0713w"></script>
+</body>
+</html>

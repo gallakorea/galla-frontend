@@ -49,7 +49,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
 
   // ─────────── 대시보드 ───────────
@@ -120,6 +120,43 @@
       const [act, id] = b.dataset.act.split(":");
       const r = await rpc("admin_resolve_report", { p_id: Number(id), p_action: act });
       if (r?.ok) { toast(act === "delete" ? "삭제·처리됨" : "기각됨"); b.closest("tr").remove(); } else alert("처리 실패");
+    };
+  }
+
+  // ─────────── 제보 관리 ───────────
+  let tFilter = "pending";
+  async function renderTips() {
+    main().innerHTML = `<h1 class="ad-h1">🕵️ 제보 관리</h1>
+      <div class="ad-segs" id="t-filter" style="margin-bottom:14px">${[["pending", "🕒 대기"], ["approved", "✅ 채택"], ["rejected", "✖ 반려"], ["all", "전체"]].map(([k, l]) => `<button data-v="${k}" class="${tFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div id="t-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    $("#t-filter").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; tFilter = b.dataset.v; renderTips(); };
+    const d = await rpc("admin_tips", { p_status: tFilter, p_limit: 80 });
+    const rows = d?.rows || [];
+    $("#t-list").innerHTML = rows.length ? rows.map(t => {
+      const media = Array.isArray(t.media) ? t.media : [];
+      const links = Array.isArray(t.links) ? t.links : [];
+      const st = { pending: "대기", approved: "채택", rejected: "반려" }[t.status] || t.status;
+      return `<div class="ad-tip" data-id="${t.id}">
+        <div class="ad-tip-h"><b>${esc(t.title)}</b> <span class="ad-tag st-${t.status === "approved" ? "done" : t.status === "rejected" ? "rejected" : "pending"}">${st}</span>
+          <span class="ad-tk-m">${esc(t.nickname || "-")} · ${esc(t.category || "-")} · ${ago(t.created_at)} · 지급 ${fmt(t.reward_gp || 0)}GP</span></div>
+        ${t.body ? `<div class="ad-tip-b">${esc(t.body)}</div>` : ""}
+        ${media.length ? `<div class="ad-tip-media">${media.map(m => m.kind === "video"
+          ? `<video src="${esc(m.url)}" muted playsinline controls></video>`
+          : `<a href="${esc(m.url)}" target="_blank"><img src="${esc(m.url)}"></a>`).join("")}</div>` : ""}
+        ${links.length ? `<div class="ad-tip-links">${links.map(l => `<a href="${esc(l)}" target="_blank" rel="noopener">🔗 ${esc(l)}</a>`).join("")}</div>` : ""}
+        ${t.status === "pending" ? `<div class="ad-tip-acts">
+          <button class="ad-btn primary" data-act="approve">✅ 채택 (+2,000GP)</button>
+          <button class="ad-btn danger" data-act="reject">✖ 반려</button></div>`
+          : t.admin_note ? `<div class="ad-tk-r">↳ ${esc(t.admin_note)}</div>` : ""}
+      </div>`;
+    }).join("") : `<div class="ad-soon">해당 상태의 제보가 없어요.</div>`;
+    $("#t-list").onclick = async e => {
+      const b = e.target.closest("[data-act]"); if (!b) return;
+      const card = b.closest(".ad-tip"); const id = card.dataset.id; const act = b.dataset.act;
+      if (act === "reject" && !confirm("이 제보를 반려할까요?")) return;
+      const note = act === "approve" ? prompt("채택 메모(선택)") : prompt("반려 사유(선택)");
+      const r = await rpc("admin_review_tip", { p_id: id, p_action: act, p_note: note || null });
+      if (r?.ok) { toast(act === "approve" ? "채택 · +2,000GP 지급" : "반려 처리"); renderTips(); } else alert("처리 실패");
     };
   }
 

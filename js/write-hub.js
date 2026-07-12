@@ -25,6 +25,11 @@
       desc: '자유롭게 이야기하고 토론하는 게시글',
       accent: '#f5cf6b',
     },
+    report: {
+      key: 'report', emoji: '🕵️', title: '제보하기',
+      desc: '사진·영상·링크로 제보하고 GP 보상 받기',
+      accent: '#33d17a',
+    },
   };
 
   let sheet = null;
@@ -71,6 +76,7 @@
     if (type === 'galla')   location.href = 'write.html';
     if (type === 'predict') location.href = 'galla-predict.html?compose=1';
     if (type === 'plaza')   location.href = 'plaza.html?compose=1';
+    if (type === 'report')  location.href = 'report.html';
   }
 
   window.openWriteHub = async function (context) {
