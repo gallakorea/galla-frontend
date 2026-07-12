@@ -377,6 +377,32 @@ function renderIssue(issue) {
   currentIssue = issue;
   issueAuthorId = issue.user_id;
 
+  // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제). 아니면 버튼 숨김.
+  const moreBtn = document.getElementById("header-more-btn");
+  if (moreBtn) {
+    moreBtn.style.display = "none";
+    if (window.GALLA_canManage) {
+      window.GALLA_canManage(issue.user_id).then(can => {
+        if (!can) return;
+        moreBtn.style.display = "";
+        moreBtn.onclick = () => window.GALLA_openOwnerMenu({
+          table: "issues", id: issue.id, ownerId: issue.user_id, label: "갈라",
+          editFields: [
+            { key: "title", label: "제목", type: "text", value: issue.title || "" },
+            { key: "description", label: "설명", type: "textarea", value: issue.description || "" },
+            { key: "category", label: "카테고리", type: "text", value: issue.category || "" },
+          ],
+          onSaved: (patch) => {
+            if (patch.title != null) { const t = qs("issue-title"); if (t) t.innerText = patch.title; }
+            if (patch.category != null) { const c = qs("issue-category"); if (c) c.innerText = patch.category; }
+            if (patch.description != null) { const d = qs("issue-desc"); if (d) d.innerText = patch.description; }
+          },
+          onDeleted: () => { location.href = "index.html"; },
+        });
+      });
+    }
+  }
+
   // 미디어 렌더링
   renderIssueMedia(issue);
 

@@ -128,7 +128,7 @@ async function fetchPostDetail() {
 
   const { data, error } = await supabase
     .from("plaza_posts")
-    .select("title, body, category, nickname, view_count, created_at")
+    .select("id, user_id, title, body, category, nickname, view_count, created_at")
     .eq("id", postId)
     .single();
 
@@ -142,6 +142,32 @@ async function fetchPostDetail() {
   if (postMetaEl) {
     postMetaEl.textContent =
       `${data.nickname} · ${data.category} · 조회 ${(data.view_count || 0) + 1}`;
+  }
+
+  // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제)
+  const moreBtn = document.getElementById("header-more-btn");
+  if (moreBtn) {
+    moreBtn.style.display = "none";
+    if (window.GALLA_canManage) {
+      window.GALLA_canManage(data.user_id).then((can) => {
+        if (!can) return;
+        moreBtn.style.display = "";
+        moreBtn.onclick = () =>
+          window.GALLA_openOwnerMenu({
+            table: "plaza_posts", id: data.id, ownerId: data.user_id, label: "광장 글",
+            editFields: [
+              { key: "title", label: "제목", type: "text", value: data.title || "" },
+              { key: "body", label: "본문", type: "textarea", value: data.body || "" },
+              { key: "category", label: "카테고리", type: "text", value: data.category || "" },
+            ],
+            onSaved: (patch) => {
+              if (patch.title != null && postTitleEl) postTitleEl.textContent = patch.title;
+              if (patch.body != null && postContentEl) postContentEl.innerHTML = renderPostBody(patch.body);
+            },
+            onDeleted: () => { location.href = "plaza.html"; },
+          });
+      });
+    }
   }
 }
 

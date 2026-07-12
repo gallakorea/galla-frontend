@@ -87,6 +87,27 @@ async function loadMarket(){
   if(error||!m){ $('pmdMain').innerHTML='<div class="empty-zone">마켓을 찾을 수 없습니다.</div>'; return; }
   MARKET = m;
 
+  // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제) — 질문·풀은 거래 공정성상 잠금
+  const moreBtn = document.getElementById('header-more-btn');
+  if(moreBtn && window.GALLA_canManage){
+    moreBtn.style.display='none';
+    window.GALLA_canManage(m.created_by).then(can=>{
+      if(!can) return;
+      moreBtn.style.display='';
+      moreBtn.onclick=()=>window.GALLA_openOwnerMenu({
+        table:'markets', id:m.id, ownerId:m.created_by, label:'예측',
+        deleteHint:'거래가 있으면 삭제할 수 없습니다 (마감/정산 이용).',
+        editFields:[
+          { key:'description', label:'설명', type:'textarea', value:m.description||'' },
+          { key:'category', label:'카테고리', type:'text', value:m.category||'' },
+          { key:'close_at', label:'마감 시각', type:'datetime', value:m.close_at||'' },
+        ],
+        onSaved:()=>location.reload(),
+        onDeleted:()=>{ location.href='galla-predict.html'; },
+      });
+    });
+  }
+
   // 저장(북마크) 상태
   MY_SAVED = false;
   if(ME){
