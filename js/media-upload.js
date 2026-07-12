@@ -82,14 +82,17 @@
     if (!supabase) throw new Error('Supabase 초기화 실패');
     const token = await getAccessToken();
 
-    // 영상은 업로드 전에 브라우저에서 720p/~2.5Mbps로 재인코딩해 용량 축소
-    // (미지원 브라우저·실패 시 원본 그대로 반환하므로 업로드는 절대 안 깨짐)
-    if (kind === 'video' && window.GALLA_COMPRESS_VIDEO) {
+    // ⚠️ 클라이언트 영상 재인코딩 비활성화 (2026-07-12)
+    //   실시간 canvas+WebAudio+MediaRecorder 트랜스코딩이 오디오 싱크를 깨뜨려
+    //   ("소리가 나오다 끊김") 원본 그대로 업로드하도록 되돌림. 오디오 정상성 우선.
+    //   영상 용량/스트리밍의 진짜 해결책은 서버측 Cloudflare Stream(적응형 HLS).
+    //   재인코딩 로직은 js/video-compress.js 에 보존(미사용).
+    const ENABLE_CLIENT_VIDEO_COMPRESS = false;
+    if (ENABLE_CLIENT_VIDEO_COMPRESS && kind === 'video' && window.GALLA_COMPRESS_VIDEO) {
       try {
         if (onProgress) onProgress(0);
         const before = file.size;
         file = await window.GALLA_COMPRESS_VIDEO(file, p => {
-          // 압축 구간을 진행률 0~50%로 매핑, 업로드가 나머지 50~100%
           if (onProgress) onProgress(Math.round(p * 0.5));
         });
         if (file.size < before) {
