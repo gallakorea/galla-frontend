@@ -1,154 +1,77 @@
 console.log("[issue-news.js] loaded");
 
-let requested = false;
-let polling = false;
-
+/* ==================================================
+   관련 보도 — 내부 수집 뉴스(news_articles_raw)에서
+   이슈 키워드로 자동 매칭. 카드 클릭 시 원문(외부)으로 이동.
+   서버 RPC: issue_related_news(issue_id)
+================================================== */
 export async function loadAiNews(issue) {
   const supabase = window.supabaseClient;
   if (!supabase || !issue?.id) return;
 
-  /* ==================================================
-     1) done 뉴스 조회
-  ================================================== */
-  const { data: rows } = await supabase
-    .from("ai_news")
-    .select("*")
-    .eq("issue_id", issue.id)
-    .eq("mode", "news")
+  const { data, error } = await supabase.rpc("issue_related_news", { p_issue_id: issue.id });
+  const rows = data?.rows || [];
 
-  if (rows && rows.length >= 2) {
-    render(rows);
-    return;
-  }
-
-
-  /* ==================================================
-     2) job 상태 조회
-     ⚠️ row 자체가 없을 수 있음
-  ================================================== */
-  const { data: jobs } = await supabase
-    .from("ai_news_jobs")
-    .select("status")
-    .eq("issue_id", issue.id)
-    .eq("mode", "news")
-    .limit(1);
-
-  const job = jobs?.[0];
-
-  /* ==================================================
-     🔥 핵심 분기
-  ================================================== */
-
-  // ✅ job row 자체가 없음 → 기사 없음 취급
-  if (!job) {
-    renderInsufficient();
-    return;
-  }
-
-  // ✅ 기사 부족 확정
-  if (job.status === "insufficient") {
-    renderInsufficient();
-    return;
-  }
-
-  // ⏳ 생성 중
-  if (job.status === "pending") {
-    poll(issue, 2000);
-    return;
-  }
-
-  // ❌ 실패했거나 처음인데, 자동 생성은 1회만
-  if ((job.status === "failed" || job.status === "none") && !requested) {
-    requested = true;
-
-    await supabase.functions.invoke("generate-ai-news", {
-      body: {
-        issue_id: issue.id,
-        title: issue.title,
-        description: issue.description || "",
-      },
-    });
-
-    poll(issue, 2000);
-  }
+  if (error || !rows.length) { renderInsufficient(); return; }
+  render(rows);
 }
 
-/* ==================================================
-   Poll
-================================================== */
-function poll(issue, ms) {
-  if (polling) return;
-  polling = true;
+const A = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-  setTimeout(async () => {
-    polling = false;
-    await loadAiNews(issue);
-  }, ms);
+function host(u) { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } }
+function srcLabel(a) {
+  const s = a.source || "";
+  if (s === "naver_api" || s === "rss" || !s) return host(a.url) || "뉴스";
+  return s;
+}
+function ago(ts) {
+  if (!ts) return "";
+  const d = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (d < 3600) return Math.max(1, Math.floor(d / 60)) + "분 전";
+  if (d < 86400) return Math.floor(d / 3600) + "시간 전";
+  return Math.floor(d / 86400) + "일 전";
 }
 
-/* ==================================================
-   RENDER
-================================================== */
 function render(list) {
-  document.getElementById("ai-skeleton-pro")?.remove();
-  document.getElementById("ai-skeleton-con")?.remove();
-
-  draw("ai-news-pro", list.filter(n => n.stance === "pro"));
-  draw("ai-news-con", list.filter(n => n.stance === "con"));
-
-  document.querySelector(".ai-news")?.removeAttribute("hidden");
-}
-
-function renderInsufficient() {
-  // 스켈레톤 제거
-  document.getElementById("ai-skeleton-pro")?.remove();
-  document.getElementById("ai-skeleton-con")?.remove();
-
   const section = document.querySelector(".ai-news");
   if (!section) return;
-
-  // 🔥 핵심: 내부를 통째로 교체
-  section.innerHTML = `
-    <div class="ai-news-header">
-      📰 관련 뉴스 근거
-    </div>
-
-    <div class="ai-news-insufficient">
-      <div class="ai-news-placeholder">
-        <div class="ai-news-placeholder-title">
-          아직 언론에서 충분히 다뤄지지 않은 논점입니다
-        </div>
-        <div class="ai-news-placeholder-desc">
-          이 이슈는 의견과 논점은 존재하지만,<br/>
-          복수의 언론 보도가 확인되기 전까지는<br/>
-          뉴스 영역이 활성화되지 않습니다.
-        </div>
-        <div class="ai-news-placeholder-sub">
-          언론 보도가 축적되면 자동으로 반영됩니다.
-        </div>
+  const cards = list.map(n => {
+    const url = n.url;
+    if (!url || !/^https?:\/\//i.test(url)) return "";
+    return `<a class="report-card" href="${A(url)}" target="_blank" rel="noopener noreferrer">
+      <div class="report-mid">
+        <div class="report-src">${A(srcLabel(n))}${n.published_at ? ` · <span class="report-time">${ago(n.published_at)}</span>` : ""}</div>
+        <div class="report-title">${A(n.title)}</div>
       </div>
-    </div>
-  `;
+      <div class="report-go">↗</div>
+    </a>`;
+  }).join("");
 
+  section.innerHTML = `
+    <div class="ai-box ai-news-box">
+      <div class="ai-box-header">
+        <h3 class="white-title">📰 관련 보도</h3>
+        <p class="ai-tip">이 이슈를 다룬 실제 언론 보도입니다. 클릭하면 원문으로 이동합니다.</p>
+      </div>
+      <div class="report-list">${cards}</div>
+    </div>`;
   section.removeAttribute("hidden");
 }
 
-function draw(id, list) {
-  const root = document.getElementById(id);
-  if (!root) return;
-
-  root.innerHTML = "";
-
-  list.slice(0, 3).forEach(n => {
-    const el = document.createElement("div");
-    el.className = "ai-news-item";
-    el.innerHTML = `
-      <div class="ai-news-card">
-        <div class="ai-news-source">${n.source}</div>
-        <div class="ai-news-title">${n.title}</div>
+function renderInsufficient() {
+  const section = document.querySelector(".ai-news");
+  if (!section) return;
+  section.innerHTML = `
+    <div class="ai-news-header">📰 관련 보도</div>
+    <div class="ai-news-insufficient">
+      <div class="ai-news-placeholder">
+        <div class="ai-news-placeholder-title">아직 언론에서 다뤄지지 않은 논점입니다</div>
+        <div class="ai-news-placeholder-desc">
+          이 이슈와 매칭되는 최근 언론 보도가<br/>확인되지 않았습니다.
+        </div>
+        <div class="ai-news-placeholder-sub">보도가 축적되면 자동으로 반영됩니다.</div>
       </div>
-    `;
-    el.onclick = () => window.open(n.link, "_blank", "noopener,noreferrer");
-    root.appendChild(el);
-  });
+    </div>`;
+  section.removeAttribute("hidden");
 }

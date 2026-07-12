@@ -2079,3 +2079,15 @@ body {
 .rel-news-title { font-size: 14px; line-height: 1.35; color: #eef0f4; font-weight: 600;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .rel-news-go { flex: 0 0 auto; color: #8a8f9a; font-size: 15px; font-weight: 900; }
+
+/* 📰 관련 보도 (내부 뉴스 자동 매칭) */
+.report-list { display: flex; flex-direction: column; gap: 8px; }
+.report-card { display: flex; align-items: center; gap: 10px; text-decoration: none;
+  background: #101216; border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 11px 12px; }
+.report-card:active { transform: scale(.99); }
+.report-mid { flex: 1; min-width: 0; }
+.report-src { font-size: 11px; font-weight: 800; color: #5b8cff; margin-bottom: 3px; }
+.report-time { color: #7a8090; font-weight: 600; }
+.report-title { font-size: 13.5px; line-height: 1.4; color: #e7ebf3; font-weight: 600;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.report-go { flex: 0 0 auto; color: #8a8f9a; font-size: 14px; font-weight: 900; }
