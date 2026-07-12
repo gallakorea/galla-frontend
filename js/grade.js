@@ -27,13 +27,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const g = await window.GALLA_gallianOf(supabase, userId);
 
-    // 메인 카드
-    set("tierName", g.tier.name);
+    // 메인 카드 — 등급 + 서브레벨(Lv), 진행바는 '다음 목표'까지의 잦은 진척도
+    set("tierName", `${g.tier.name} · Lv.${g.subLevel}`);
     set("tierDesc", DESC[g.tier.key] || "");
-    setW("tierProgress", g.progress);
-    set("xpText", g.next
-      ? `갈라 지수 ${g.gi.toLocaleString()} / ${g.next.min.toLocaleString()} GI`
-      : `갈라 지수 ${g.gi.toLocaleString()} GI · 최고 등급`);
+    setW("tierProgress", g.subProgress);
+    // 근접목표 프레이밍: "앞으로 N GI면 ○○!" (이탈방지)
+    set("xpText", g.goal.remaining > 0
+      ? `앞으로 ${g.goal.remaining.toLocaleString()} GI → ${g.goal.label} 🔥  (누적 ${g.gi.toLocaleString()} GI)`
+      : `갈라 지수 ${g.gi.toLocaleString()} GI`);
     const aura = document.getElementById("tierAura");
     if (aura) aura.className = `tier-aura ${g.tier.key}-aura`;
     const nameEl = document.getElementById("tierName");
@@ -49,13 +50,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     set("giBattleText",   `${g.parts.battle.toLocaleString()} GI`);
     set("giPredictText",  `${g.parts.predict.toLocaleString()} GI`);
 
-    // 등급 계층 리스트에서 현재 등급 하이라이트
+    // 등급 사다리: 각 등급에 필요 갈라 지수(GI) 표시 — 위로 갈수록 급격히 어려워짐을 시각화
+    (window.GALLA_GALLIAN_TIERS || []).forEach(t => {
+      const b = document.querySelector(`.tier-box.${t.key}`);
+      if (!b || b.querySelector(".tier-req")) return;
+      const req = document.createElement("div");
+      req.className = "tier-req";
+      req.style.cssText = "font-size:11px;font-weight:800;margin-top:6px;color:" + t.color;
+      req.textContent = t.min === 0 ? "시작 등급" : `필요 ${t.min.toLocaleString()} GI · 각 등급 Lv.1~5`;
+      b.querySelector(".tier-sub")?.after(req);
+    });
+
+    // 현재 등급 하이라이트
     const box = document.querySelector(`.tier-box.${g.tier.key}`);
     if (box) {
       box.style.borderColor = g.tier.color;
       box.style.boxShadow = `0 0 18px ${g.tier.color}44`;
       const t = box.querySelector(".tier-title");
-      if (t) t.insertAdjacentHTML("beforeend", ' <span style="font-size:10px;font-weight:900;color:#0a0a0b;background:' + g.tier.color + ';padding:2px 7px;border-radius:99px;vertical-align:2px;">현재</span>');
+      if (t) t.insertAdjacentHTML("beforeend", ` <span style="font-size:10px;font-weight:900;color:#0a0a0b;background:${g.tier.color};padding:2px 7px;border-radius:99px;vertical-align:2px;">현재 Lv.${g.subLevel}</span>`);
     }
 
     // 업적 도감 (실데이터)

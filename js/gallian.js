@@ -9,15 +9,18 @@
    ========================================================= */
 (function () {
   // 유머러스·한국적 서사 — 눈팅하던 뉴비가 전설의 갈라 대장군으로 진화
+  // 임계값: 초반은 금방(온보딩 몰입), 상위로 갈수록 급격히 어려워짐(약 3배씩)
   const TIERS = [
-    { key: "spark",     name: "🌱 눈팅 뉴비",   sub: "일단 스크롤만 내리는 관망러",       min: 0,    color: "#9aa0ad" },
-    { key: "breaker",   name: "🔥 발끈러",       sub: "못 참고 첫 댓글을 단 각성러",        min: 100,  color: "#4fc3f7" },
-    { key: "vanguard",  name: "⌨️ 키보드 전사",  sub: "손가락이 근질근질한 참전러",         min: 300,  color: "#3d6bff" },
-    { key: "authority", name: "🎤 여론 논객",    sub: "판을 읽고 흔드는 입담꾼",            min: 800,  color: "#c9d1e0" },
-    { key: "dominion",  name: "🌪️ 갈라 선동가",  sub: "댓글창을 쥐락펴락하는 여론몰이",     min: 2000, color: "#f5cf6b" },
-    { key: "apex",      name: "👑 갈라 대장군",  sub: "전장을 평정한 전설의 논객",          min: 5000, color: "#ff8a3d" },
+    { key: "spark",     name: "🌱 눈팅 뉴비",   sub: "일단 스크롤만 내리는 관망러",       min: 0,     color: "#9aa0ad" },
+    { key: "breaker",   name: "🔥 발끈러",       sub: "못 참고 첫 댓글을 단 각성러",        min: 150,   color: "#4fc3f7" },
+    { key: "vanguard",  name: "⌨️ 키보드 전사",  sub: "손가락이 근질근질한 참전러",         min: 500,   color: "#3d6bff" },
+    { key: "authority", name: "🎤 여론 논객",    sub: "판을 읽고 흔드는 입담꾼",            min: 1500,  color: "#c9d1e0" },
+    { key: "dominion",  name: "🌪️ 갈라 선동가",  sub: "댓글창을 쥐락펴락하는 여론몰이",     min: 4500,  color: "#f5cf6b" },
+    { key: "apex",      name: "👑 갈라 대장군",  sub: "전장을 평정한 전설의 논객",          min: 15000, color: "#ff8a3d" },
   ];
-  const BASE_GRANT = 10000; // 예측 지갑 기본 지급분(순이익 계산 기준)
+  const SUB_LEVELS = 5;      // 각 등급 내부 서브레벨(Lv.1~5) — 잦은 소진급으로 몰입 유지
+  const APEX_STEP = 5000;    // 대장군 이후 무한 프레스티지: 5,000 GI마다 Lv +1
+  const BASE_GRANT = 10000;  // 예측 지갑 기본 지급분(순이익 계산 기준)
 
   window.GALLA_GALLIAN_TIERS = TIERS;
 
@@ -52,8 +55,36 @@
       ? Math.min(100, Math.round(((gi - tier.min) / (next.min - tier.min)) * 100))
       : 100;
 
+    // 서브레벨(Lv) — 등급 내부를 잘게 쪼개 잦은 소진급으로 몰입 유지
+    const into = gi - tier.min;
+    let subLevel, subCount, subFloor, subCeil;
+    if (next) {
+      const step = (next.min - tier.min) / SUB_LEVELS;
+      subCount = SUB_LEVELS;
+      subLevel = Math.min(SUB_LEVELS, 1 + Math.floor(into / step));
+      subFloor = tier.min + (subLevel - 1) * step;
+      subCeil = tier.min + subLevel * step;
+    } else {
+      // 대장군: 무한 프레스티지 레벨
+      subCount = Infinity;
+      subLevel = 1 + Math.floor(into / APEX_STEP);
+      subFloor = tier.min + (subLevel - 1) * APEX_STEP;
+      subCeil = tier.min + subLevel * APEX_STEP;
+    }
+    const subProgress = Math.min(100, Math.round((gi - subFloor) / (subCeil - subFloor) * 100));
+
+    // 가장 가까운 목표(다음 서브레벨 or 다음 등급) — "앞으로 N GI!" 이탈방지 프레이밍
+    const atTierTop = next && subLevel >= SUB_LEVELS;
+    const goalGi = atTierTop ? next.min : Math.ceil(subCeil);
+    const remaining = Math.max(0, goalGi - gi);
+    const goalLabel = (next && atTierTop)
+      ? `${next.name} 승급`
+      : `${tier.name} Lv.${subLevel + 1}`;
+
     return {
       gi, tier: { ...tier, index: idx }, next, progress,
+      subLevel, subCount, subProgress,
+      goal: { label: goalLabel, remaining, isPromotion: !!(next && atTierTop) },
       parts: { activity, battle, predict },
       raw: { issues, comments, votes, plaza, acts, trades, balance },
     };
