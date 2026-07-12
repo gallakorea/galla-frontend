@@ -1,11 +1,13 @@
 console.log("[issue.stats.js] loaded");
 
 /**
- * 테스트 정책 (고정)
- * - 참여자 2명 미만: 통계 비공개(안내만)
- * - 참여자 2명 이상: 성별 참여 비율만 공개 + 나머지는 "더 보기"로 펼침
+ * 통계 공개 정책
+ * - 참여자 30명 미만: 통계 전체 비공개(안내만). n≥30 = 통계적으로 유의미한 최소 표본.
+ * - 버킷(성별/나이대/지역 각 항목)은 5명 미만이면 숨김
+ *   → "서울 여성 1명 100% 찬성" 같은 소표본 노이즈·개인식별(신원노출) 방지.
  */
-const MIN_PARTICIPANTS = 2;
+const MIN_PARTICIPANTS = 30;
+const MIN_BUCKET = 5;
 
 export async function loadStats(issueId) {
   lockAllStats(0);
@@ -51,12 +53,13 @@ export async function loadStats(issueId) {
   });
 
   const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
-  const partArr = (o) => { const t = Object.values(o).reduce((s, n) => s + n, 0); return Object.entries(o).map(([k, n]) => ({ label: k, name: k, percent: pct(n, t) })); };
-  const voteArr = (o) => Object.entries(o).map(([k, { pro, con }]) => ({ label: k, pro: pct(pro, pro + con), con: pct(con, pro + con) }));
+  // 버킷별 최소 인원(MIN_BUCKET) 미만은 숨김 (소표본 노이즈·개인식별 방지)
+  const partArr = (o) => { const t = Object.values(o).reduce((s, n) => s + n, 0); return Object.entries(o).filter(([, n]) => n >= MIN_BUCKET).map(([k, n]) => ({ label: k, name: k, percent: pct(n, t) })); };
+  const voteArr = (o) => Object.entries(o).filter(([, v]) => (v.pro + v.con) >= MIN_BUCKET).map(([k, { pro, con }]) => ({ label: k, pro: pct(pro, pro + con), con: pct(con, pro + con) }));
 
   const genderKnown = partGender.남성 + partGender.여성;
   const stats = {
-    gender: genderKnown ? { male: pct(partGender.남성, genderKnown), female: pct(partGender.여성, genderKnown) } : null,
+    gender: genderKnown >= MIN_BUCKET ? { male: pct(partGender.남성, genderKnown), female: pct(partGender.여성, genderKnown) } : null,
     age: partArr(partAge),
     region: partArr(partRegion),
     gender_vote: voteArr(vg),
