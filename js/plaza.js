@@ -428,6 +428,7 @@ async function fetchPlazaPosts() {
     .from("plaza_posts")
     .select(`
       id,
+      user_id,
       category,
       title,
       nickname,
@@ -497,7 +498,7 @@ function renderPlazaPosts(posts) {
         <div class="post-body">
           <div class="post-head">
             <span class="post-cat">${escP(post.category || "광장")}</span>
-            <span class="post-author">${escP(post.nickname || "익명")}</span>
+            <span class="post-author"${post.user_id ? ` data-user-id="${post.user_id}" data-user-nick="${escP(post.nickname || "익명")}"` : ""}>${escP(post.nickname || "익명")}</span>
             <span class="post-time">${timeAgoK(post.created_at)}</span>
           </div>
           <div class="post-title">${escP(post.title)}</div>

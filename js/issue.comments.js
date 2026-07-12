@@ -872,6 +872,12 @@ function displayName(c) {
   if (c.is_anonymous) return "익명";
   return profileMap[c.user_id]?.nickname || "익명";
 }
+// 닉네임 클릭 → 유저 시트 (익명·본인 제외는 시트가 처리)
+function nameSpan(c) {
+  const nm = displayName(c);
+  if (c.is_anonymous || !c.user_id) return `<span class="user-name">${nm}</span>`;
+  return `<span class="user-name userlink" data-user-id="${c.user_id}" data-user-nick="${nm.replace(/"/g, "&quot;")}">${nm}</span>`;
+}
 function displayLevel(c) {
   return profileMap[c.user_id]?.level || 1;
 }
@@ -962,7 +968,7 @@ function makeReply(r) {
   <div class="reply${ko}${infil}" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
     <div class="head">
       <div class="user">
-        <span class="user-name">${displayName(r)}</span>
+        ${nameSpan(r)}
         <span class="level-badge">Lv.${displayLevel(r)}</span>
         ${relTag(r)}
       </div>
@@ -994,7 +1000,7 @@ function makeComment(c) {
     <div class="head">
       <div class="user">
         <span class="side-icon"></span>
-        <span class="user-name">${displayName(c)}</span>
+        ${nameSpan(c)}
         <span class="level-badge">Lv.${displayLevel(c)}</span>
         ${relTag(c)}
         ${isAce ? `<span class="ace-badge">👑 에이스</span>` : ``}
