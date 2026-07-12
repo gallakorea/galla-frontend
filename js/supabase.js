@@ -34,6 +34,20 @@
     return `<img class="${cls || ''}" src="${src}" alt="프로필" loading="lazy" ` +
            `onerror="this.onerror=null;this.src='${window.GALLA_DEFAULT_AVATAR}'">`;
   };
+
+  // 작성자(아바타/이름) 클릭 → 해당 유저 마이페이지 (인스타식). 전역 캡처 위임.
+  if (!window.__GALLA_PROFILE_NAV__) {
+    window.__GALLA_PROFILE_NAV__ = true;
+    document.addEventListener("click", function (e) {
+      const el = e.target.closest("[data-profile-uid]");
+      if (!el) return;
+      const uid = el.getAttribute("data-profile-uid");
+      if (!uid) return;
+      e.preventDefault();
+      e.stopPropagation();
+      location.href = "mypage.html?user=" + encodeURIComponent(uid);
+    }, true);
+  }
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
   function loadUmd() {

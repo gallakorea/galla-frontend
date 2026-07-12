@@ -472,13 +472,18 @@ if (explainWrap) {
     qs("issue-time").innerText = new Date(issue.created_at).toLocaleDateString();
   }
 
-  qs("issue-author").innerText = "작성자 · " + (issue.author || "익명");
+  const authorEl = qs("issue-author");
+  authorEl.innerText = "작성자 · " + (issue.author || "익명");
 
-  // 작성자 프로필 사진 (없으면 기본 갈라 아이콘)
+  // 작성자 프로필 사진 (없으면 기본 갈라 아이콘) + 클릭 시 마이페이지 이동
   const avEl = document.querySelector(".media-author-head .mah-avatar");
   if (avEl && window.GALLA_avatarImg) {
     avEl.classList.remove("generic");
     avEl.innerHTML = window.GALLA_avatarImg(issue.author_avatar);
+  }
+  if (!issue.is_anonymous && issue.user_id) {
+    if (avEl) avEl.setAttribute("data-profile-uid", issue.user_id);
+    if (authorEl) authorEl.setAttribute("data-profile-uid", issue.user_id);
   }
 }
 

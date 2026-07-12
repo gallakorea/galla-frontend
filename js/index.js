@@ -182,10 +182,10 @@ function renderCard(data) {
 
         <div class="media-author-head">
             <div class="mah-left">
-                <div class="mah-avatar">${avatarImg}</div>
+                <div class="mah-avatar"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${avatarImg}</div>
                 <div class="mah-info">
                     <div class="mah-line1">
-                        <span class="author-name">${data.author}</span>
+                        <span class="author-name"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${data.author}</span>
                         <span class="level-badge">Lv.${data.level}</span>
                     </div>
                     <div class="mah-line2">${data.category} · ${data.time}</div>

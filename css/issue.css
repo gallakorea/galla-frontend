@@ -1921,6 +1921,8 @@ body {
 }
 .media-author-head .mah-avatar.generic { background: linear-gradient(135deg, #2a3550, #4a2e3a); }
 .media-author-head .mah-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+[data-profile-uid] { cursor: pointer; }
+#issue-author[data-profile-uid]:active, .media-author-head .mah-avatar[data-profile-uid]:active { opacity: .7; }
 .media-author-head .mah-info { min-width: 0; }
 .media-author-head .mah-line1 { display: flex; align-items: center; gap: 6px; }
 .media-author-head .mah-line1 .author-name { font-size: 14px; font-weight: 700; }

@@ -455,10 +455,10 @@ function __openShortsInternal(list, startId, startTime) {
     <!-- LEFT META (AUTHOR) -->
     <div class="shorts-meta">
       <div class="shorts-author">
-        ${window.GALLA_avatarImg ? window.GALLA_avatarImg(item.avatar_url, "author-avatar") : `<div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>`}
+        <span class="author-avatar-link" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${window.GALLA_avatarImg ? window.GALLA_avatarImg(item.avatar_url, "author-avatar") : `<div class="author-avatar author-avatar-init">${(item.author || "익").trim().charAt(0) || "익"}</div>`}</span>
         <div class="author-info">
           <div class="author-line">
-            <span class="author-name">${item.author || "익명"}</span>
+            <span class="author-name" ${item.user_id ? `data-profile-uid="${item.user_id}"` : ""}>${item.author || "익명"}</span>
             ${item.level !== "" ? `<span class="author-level">Lv.${item.level}</span>` : ""}
           </div>
           ${item.category ? `<div class="shorts-cat">${item.category}</div>` : ""}
@@ -740,7 +740,7 @@ function bindTapControls() {
 
   const isControl = t =>
     t.closest &&
-    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,.shorts-goto,#shortsCommentModal");
+    t.closest(".shorts-vote,.vote-btn,.shorts-actions,.shorts-action-btn,#shortsCloseBtn,.shorts-top,.author-follow,.shorts-goto,#shortsCommentModal,[data-profile-uid]");
 
   overlay.addEventListener("pointerdown", e => {
     if (isControl(e.target)) return;
