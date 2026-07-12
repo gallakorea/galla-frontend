@@ -17,6 +17,10 @@
 (function () {
   let ME = null; // { uid, admin }
 
+  // 앱 공통 카테고리(write.html select와 동일) — 수정 시 드롭다운으로 노출
+  const CATEGORIES = ["정치·사회","경제·투자","직장·경력","연애·결혼","생활·일상","패션·뷰티","엔터·스포츠","세계·여행","음식·맛집","19금","기타"];
+  window.GALLA_CATEGORIES = CATEGORIES;
+
   // 페이지마다 클라이언트를 window.supabaseClient 또는 window.supabase 에 둠 → 둘 다 지원
   function sb() {
     const c = window.supabaseClient;
@@ -101,6 +105,15 @@
       if (f.type === 'textarea') {
         input = el('textarea', 'oa-input oa-textarea');
         input.value = f.value || '';
+      } else if (f.type === 'select') {
+        input = el('select', 'oa-input oa-select');
+        const opts = f.options || CATEGORIES;
+        opts.forEach(opt => {
+          const o = document.createElement('option');
+          o.value = opt; o.textContent = opt;
+          if (opt === f.value) o.selected = true;
+          input.appendChild(o);
+        });
       } else if (f.type === 'datetime') {
         input = el('input', 'oa-input');
         input.type = 'datetime-local';

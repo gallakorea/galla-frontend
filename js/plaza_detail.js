@@ -158,7 +158,7 @@ async function fetchPostDetail() {
             editFields: [
               { key: "title", label: "제목", type: "text", value: data.title || "" },
               { key: "body", label: "본문", type: "textarea", value: data.body || "" },
-              { key: "category", label: "카테고리", type: "text", value: data.category || "" },
+              { key: "category", label: "카테고리", type: "select", options: window.GALLA_CATEGORIES, value: data.category || "" },
             ],
             onSaved: (patch) => {
               if (patch.title != null && postTitleEl) postTitleEl.textContent = patch.title;

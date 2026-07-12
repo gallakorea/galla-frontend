@@ -403,7 +403,7 @@ function renderIssue(issue) {
           editFields: [
             { key: "title", label: "제목", type: "text", value: issue.title || "" },
             { key: "description", label: "설명", type: "textarea", value: issue.description || "" },
-            { key: "category", label: "카테고리", type: "text", value: issue.category || "" },
+            { key: "category", label: "카테고리", type: "select", options: window.GALLA_CATEGORIES, value: issue.category || "" },
           ],
           onSaved: (patch) => {
             if (patch.title != null) { const t = qs("issue-title"); if (t) t.innerText = patch.title; }

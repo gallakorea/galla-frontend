@@ -43,6 +43,10 @@
 }
 .oa-input:focus { border-color: #3d6bff; }
 .oa-textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+.oa-select { appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239aa0ad' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 34px; }
+.oa-select option { background: #16171c; color: #fff; }
 .oa-row { display: flex; gap: 10px; margin-top: 20px; }
 .oa-btn {
   flex: 1; padding: 13px; border: none; border-radius: 12px;

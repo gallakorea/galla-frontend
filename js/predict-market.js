@@ -99,7 +99,7 @@ async function loadMarket(){
         deleteHint:'거래가 있으면 삭제할 수 없습니다 (마감/정산 이용).',
         editFields:[
           { key:'description', label:'설명', type:'textarea', value:m.description||'' },
-          { key:'category', label:'카테고리', type:'text', value:m.category||'' },
+          { key:'category', label:'카테고리', type:'select', options:window.GALLA_CATEGORIES, value:m.category||'' },
           { key:'close_at', label:'마감 시각', type:'datetime', value:m.close_at||'' },
         ],
         onSaved:()=>location.reload(),
