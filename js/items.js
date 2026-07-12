@@ -11,6 +11,8 @@
       desc: "60초 쿨다운을 무시하고 즉시 다시 공격·방어·지원" },
     { key: "infiltrate_pass", emoji: "🕵️", name: "침투권", price: 500, group: "battle", kind: "consumable",
       desc: "오늘의 적진 침투 한도 +1 (기본 3회)" },
+    { key: "reply_pass",      emoji: "🗯️", name: "대댓글 연장권", price: 300, group: "battle", kind: "consumable",
+      desc: "오늘의 대댓글 한도 +15 (기본 40회)" },
     { key: "revive",          emoji: "✨", name: "부활권", price: 800, group: "battle", kind: "consumable",
       desc: "격파당한 내 댓글을 HP 50으로 부활" },
     // ── 꾸미기 ──

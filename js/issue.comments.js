@@ -135,6 +135,28 @@ export async function initCommentSystem(issueId) {
 ====================== */
 let INFILTRATE = false;      // 침투 모드 (상대 진영으로 글쓰기)
 let INFIL_LEFT = null;       // 오늘 남은 침투 횟수
+let REPLY_LEFT = null;       // 오늘 남은 대댓글 횟수 (기본 40/일)
+
+/* 🗯️ 대댓글 연장권 — 하루 한도 소진 시 보유하면 사용 제안(+15). 침투권과 동일 패턴 */
+async function ensureReplyQuota() {
+  if (REPLY_LEFT === null) {
+    try { const { data } = await window.supabaseClient.rpc("reply_status"); REPLY_LEFT = data?.left ?? 40; }
+    catch (_) { REPLY_LEFT = 40; }
+  }
+  if (REPLY_LEFT > 0) return true;
+  // 소진 → 연장권 제안
+  const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+  if ((inv.reply_pass || 0) <= 0) {
+    alert("오늘의 대댓글 횟수(40회)를 모두 썼어요. 내일 다시 이어가거나\n🗯️ 대댓글 연장권(+15)으로 이어갈 수 있어요. (설정 › GP 상점)");
+    return false;
+  }
+  if (!confirm(`오늘 대댓글 40회를 다 썼어요.\n🗯️ 대댓글 연장권을 써서 15회 더 이어갈까요? (보유 ${inv.reply_pass})`)) return false;
+  const { data: ur } = await window.supabaseClient.rpc("use_reply_pass");
+  if (!ur?.ok) { alert("연장권 사용에 실패했어요."); return false; }
+  REPLY_LEFT += 15;
+  window.BattleFX?.banner?.("🗯️ 대댓글 연장권 사용! +15", "cheer");
+  return true;
+}
 
 async function initComposerUI() {
   const bottom = document.querySelector(".battle-input-bottom");
@@ -158,6 +180,8 @@ async function initComposerUI() {
 
   const { data: st } = await window.supabaseClient.rpc("infiltration_status");
   INFIL_LEFT = st?.left ?? 3;
+  try { const { data: rs } = await window.supabaseClient.rpc("reply_status"); REPLY_LEFT = rs?.left ?? 40; }
+  catch (_) { REPLY_LEFT = 40; }
 
   bottom.innerHTML = `
     <div class="composer-side ${my}" id="composer-side">
@@ -1460,6 +1484,9 @@ async function submitInline() {
 async function submitBattleReply(type, targetId, targetUser, text) {
   const supabase = window.supabaseClient;
 
+  // 대댓글 하루 한도 검사 (소진 시 연장권 제안)
+  if (!(await ensureReplyQuota())) return;
+
   // 답글의 답글도 최상위 스레드에 붙인다(1depth) — 대상은 @멘션으로 보존
   const rootId = rootIdOf(targetId);
   const content = rootId !== targetId ? `@${targetUser} ${text}` : text;
@@ -1473,10 +1500,16 @@ async function submitBattleReply(type, targetId, targetUser, text) {
     battle_action: type
   }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action").single();
   if (insertErr) {
+    if (String(insertErr.message || "").includes("reply_limit")) {
+      REPLY_LEFT = 0;
+      alert("오늘의 대댓글 횟수를 모두 썼어요. 🗯️ 대댓글 연장권으로 이어갈 수 있어요. (설정 › GP 상점)");
+      return;
+    }
     console.error("[battle reply] insert failed", insertErr);
     alert("답글 등록에 실패했습니다.");
     return;
   }
+  if (REPLY_LEFT !== null) REPLY_LEFT = Math.max(0, REPLY_LEFT - 1);
 
   // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
   const { data: bd } = await supabase.rpc("battle_action", {
