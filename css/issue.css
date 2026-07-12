@@ -2033,3 +2033,21 @@ body {
 .gi-in .gi-dv-pro { width: var(--giW); }
 .gi-in .gi-dv-con { width: var(--giW); }
 .gi-dv-mid { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,.35); transform: translateX(-50%); z-index: 2; }
+
+/* 🔴 일기토 LIVE 관전 배너 (이슈 상단) */
+.duel-live-banner {
+  display: flex; align-items: center; gap: 10px; margin: 8px 12px; padding: 11px 14px;
+  border-radius: 14px; text-decoration: none; cursor: pointer;
+  background: linear-gradient(100deg, #2a0e14, #14161c);
+  border: 1px solid rgba(255,45,45,.4);
+  box-shadow: 0 0 18px rgba(255,45,45,.14);
+  animation: dlbGlow 2s ease-in-out infinite;
+}
+.dlb-live { flex: 0 0 auto; font-size: 11px; font-weight: 900; color: #fff;
+  background: #ff2d2d; padding: 3px 8px; border-radius: 99px; animation: dpulseB 1.2s infinite; }
+.dlb-txt { flex: 1; min-width: 0; color: #f0f0f2; font-size: 13px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlb-go { flex: 0 0 auto; color: #ff8098; font-weight: 900; font-size: 13px; }
+@keyframes dlbGlow { 50% { box-shadow: 0 0 26px rgba(255,45,45,.28); } }
+@keyframes dpulseB { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce){ .duel-live-banner,.dlb-live{ animation:none; } }

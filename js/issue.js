@@ -145,6 +145,9 @@ window.ISSUE_FACTIONS = {
 
 renderIssue(issue);
 
+// 🔴 이 이슈에 진행 중인 일기토가 있으면 관전 배너
+checkLiveDuel(issue.id);
+
 // 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)
 await forceInitialVoteSync(issue.id);
 
@@ -194,6 +197,29 @@ if (typeof loadAiNews === "function") {
 /* 캐러셀 상태 */
 let issueCarouselIdx = 0;
 let issueCarouselTotal = 0;
+
+// 🔴 이 이슈에 걸린 진행 중(live/voting) 일기토 관전 배너
+async function checkLiveDuel(issueId) {
+  try {
+    const supabase = window.supabaseClient;
+    const { data } = await supabase.from("duels")
+      .select("id,topic,status")
+      .eq("issue_id", issueId).in("status", ["live", "voting"])
+      .order("live_started_at", { ascending: false }).limit(1).maybeSingle();
+    if (!data) return;
+    document.getElementById("duel-live-banner")?.remove();
+    const a = document.createElement("a");
+    a.id = "duel-live-banner";
+    a.className = "duel-live-banner";
+    a.href = "duel.html?id=" + data.id;
+    a.innerHTML = `<span class="dlb-live">🔴 LIVE</span>
+      <span class="dlb-txt">지금 일기토 생중계 — “${(data.topic || "").replace(/</g, "&lt;")}”</span>
+      <span class="dlb-go">관전 ›</span>`;
+    const header = document.querySelector("#app > .header");
+    if (header) header.insertAdjacentElement("afterend", a);
+    else document.getElementById("app")?.prepend(a);
+  } catch (e) { /* 무해 */ }
+}
 
 function renderIssueMedia(issue) {
     const wrap = document.getElementById('issue-media-wrap');

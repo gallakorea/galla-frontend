@@ -1470,7 +1470,8 @@ function ensureInlineComposer() {
     <div class="ic-row">
       <input id="ic-input" maxlength="500" autocomplete="off">
       <button type="button" id="ic-send" class="ic-send"></button>
-    </div>`;
+    </div>
+    <button type="button" id="ic-duel" class="ic-duel" hidden>⚔️ 이 싸움, 일기토로 끝장내기</button>`;
   box.querySelector(".ic-close").addEventListener("click", closeInlineComposer);
   box.querySelector("#ic-send").addEventListener("click", submitInline);
   box.querySelector("#ic-input").addEventListener("keydown", e => {
@@ -1504,6 +1505,21 @@ function openInlineComposer(type, targetId, targetUser, unit) {
     const replies = unit.querySelector(":scope > .replies") || unit;
     replies.insertAdjacentElement("afterend", box);
   }
+  // 격론 escalation: 적을 공격하는 순간 = 일기토 신청 최적 타이밍
+  const duelBtn = box.querySelector("#ic-duel");
+  const targetUid = unit.querySelector(".user-name[data-user-id]")?.getAttribute("data-user-id");
+  const meId = ME?.userId || null;
+  if (type === "attack" && targetUid && targetUid !== meId) {
+    duelBtn.hidden = false;
+    duelBtn.innerHTML = `⚔️ ${escT(targetUser)}에게 일기토 신청 — 실시간으로 끝장내기`;
+    duelBtn.onclick = () => {
+      location.href = `duel.html?challenge=${targetUid}&issue=${window.CURRENT_ISSUE_ID || ""}`;
+    };
+  } else {
+    duelBtn.hidden = true;
+    duelBtn.onclick = null;
+  }
+
   input.value = "";
   input.focus();
   window.BattleFX?.haptic("tap");
