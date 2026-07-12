@@ -1,23 +1,27 @@
 /* =========================================================
-   🛠 갈라 관제센터 — 접근제어 + 모듈 라우팅
-   P1: 대시보드(트래픽). P2~ 콘텐츠/회원/정산/AS/업로드/운영
+   🛠 갈라 관제센터 — 접근제어 + 전 모듈(대시보드/콘텐츠/회원/신고/정산/AS/업로드/운영)
    ========================================================= */
 (function () {
   const $ = (s, r) => (r || document).querySelector(s);
   const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
   const fmt = (n) => (n || 0).toLocaleString();
+  const ago = (ts) => { if (!ts) return ""; const s = (Date.now() - new Date(ts).getTime()) / 1000; if (s < 60) return "방금"; if (s < 3600) return Math.floor(s / 60) + "분 전"; if (s < 86400) return Math.floor(s / 3600) + "시간 전"; return Math.floor(s / 86400) + "일 전"; };
   let sb, ME = null;
   const main = () => document.getElementById("ad-main");
+  const rpc = (fn, args) => sb.rpc(fn, args).then(r => r.data);
 
   function countUp(el, target) {
-    if (!el) return;
-    const dur = 700, t0 = performance.now();
-    const step = (t) => {
-      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(target * e).toLocaleString();
-      if (p < 1) requestAnimationFrame(step);
-    };
+    if (!el) return; const t0 = performance.now();
+    const step = (t) => { const p = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - p, 3); el.textContent = Math.round(target * e).toLocaleString(); if (p < 1) requestAnimationFrame(step); };
     requestAnimationFrame(step);
+  }
+  function toast(m) { const d = document.createElement("div"); d.className = "ad-toast"; d.textContent = m; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+  function modal(html) {
+    const w = document.createElement("div"); w.className = "ad-modal";
+    w.innerHTML = `<div class="ad-modal-dim"></div><div class="ad-modal-box">${html}</div>`;
+    document.body.appendChild(w);
+    w.querySelector(".ad-modal-dim").onclick = () => w.remove();
+    return w;
   }
 
   async function boot() {
@@ -29,78 +33,203 @@
     if (!prof?.admin_flag) { alert("관리자 전용 페이지입니다."); location.href = "index.html"; return; }
     document.getElementById("admin-gate").remove();
     document.getElementById("admin-app").hidden = false;
-    wireShell();
-    route("dashboard");
-    pollOnline();
+    wireShell(); route("dashboard"); pollOnline();
   }
-
   function wireShell() {
     const sidebar = $("#ad-sidebar"), scrim = $("#ad-scrim");
-    const closeDrawer = () => { sidebar.classList.remove("open"); scrim.classList.remove("show"); };
+    const close = () => { sidebar.classList.remove("open"); scrim.classList.remove("show"); };
     $("#ad-burger").onclick = () => { sidebar.classList.toggle("open"); scrim.classList.toggle("show"); };
-    scrim.onclick = closeDrawer;
+    scrim.onclick = close;
     document.querySelectorAll(".ad-navitem").forEach(b => b.onclick = () => {
       document.querySelectorAll(".ad-navitem").forEach(x => x.classList.remove("active"));
-      b.classList.add("active"); closeDrawer(); route(b.dataset.mod);
+      b.classList.add("active"); close(); route(b.dataset.mod);
     });
   }
-
   async function pollOnline() {
-    const paint = async () => {
-      const { data } = await sb.rpc("admin_traffic");
-      const el = $("#ad-online");
-      if (el && data?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(data.realtime)}명`;
-    };
+    const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
+  function route(mod) { (MODS[mod] || renderDashboard)(); }
 
-  const MODS = {
-    dashboard: renderDashboard,
-    content: placeholder("📝 콘텐츠 관리", "P2 — 통합 목록·인사이트·수정/삭제·인기관리"),
-    members: placeholder("👥 회원 관리", "P3 — 우수/요주의/블랙리스트·경고/정지"),
-    reports: placeholder("🚨 신고·모더레이션", "P2 — 신고 큐 처리"),
-    settle: placeholder("💰 정산·출금", "P4 — 출금 승인/거절"),
-    support: placeholder("🎧 고객지원", "P4 — AS 티켓"),
-    upload: placeholder("⬆️ 직접 업로드", "P4 — 관리자 콘텐츠 발행"),
-    ops: placeholder("⚙️ 운영·감사", "P4 — 공지·시즌정산·감사로그"),
-  };
-  function placeholder(title, desc) {
-    return async () => { main().innerHTML = `<h1 class="ad-h1">${title}</h1><div class="ad-soon">🚧 ${esc(desc)}</div>`; };
-  }
-  function route(mod) { (MODS[mod] || MODS.dashboard)(); }
-
+  // ─────────── 대시보드 ───────────
   async function renderDashboard() {
     main().innerHTML = `<div class="ad-loading">집계 중…</div>`;
-    const [{ data: t }, { data: g }] = await Promise.all([sb.rpc("admin_traffic"), sb.rpc("admin_growth")]);
+    const [t, g] = await Promise.all([rpc("admin_traffic"), rpc("admin_growth")]);
     if (!t?.ok) { main().innerHTML = `<div class="ad-soon">데이터를 불러오지 못했어요.</div>`; return; }
     const td = t.today || {};
-    const kpi = (label, id, hint, accent) => `
-      <div class="ad-kpi ${accent || ""}"><div class="ad-kpi-l">${label}</div>
-        <div class="ad-kpi-v" id="${id}">0</div><div class="ad-kpi-h">${hint || ""}</div></div>`;
-    main().innerHTML = `
-      <h1 class="ad-h1">📊 대시보드</h1>
+    const kpi = (l, id, h, a) => `<div class="ad-kpi ${a || ""}"><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v" id="${id}">0</div><div class="ad-kpi-h">${h || ""}</div></div>`;
+    const mini = (l, v) => `<div class="ad-mini-i"><div class="ad-mini-v">${fmt(v)}</div><div class="ad-mini-l">${l}</div></div>`;
+    main().innerHTML = `<h1 class="ad-h1">📊 대시보드</h1>
       <div class="ad-kpis">
         ${kpi("실시간 접속 (1h)", "k-rt", `최근 5분 ${fmt(t.online5m)}명`, "live")}
-        ${kpi("DAU (오늘)", "k-dau", "오늘 활동 유저")}
-        ${kpi("WAU (7일)", "k-wau", "주간 활동 유저")}
-        ${kpi("MAU (30일)", "k-mau", "월간 활동 유저")}
-        ${kpi("누적 회원", "k-total", `오늘 가입 +${fmt(td.signups)}`, "gold")}
-      </div>
+        ${kpi("DAU (오늘)", "k-dau", "오늘 활동 유저")}${kpi("WAU (7일)", "k-wau", "주간")}${kpi("MAU (30일)", "k-mau", "월간")}
+        ${kpi("누적 회원", "k-total", `오늘 가입 +${fmt(td.signups)}`, "gold")}</div>
       <div class="ad-grid2">
-        <div class="ad-card"><div class="ad-card-h">⏱ 시간당 활동 (최근 24h)</div>
-          <div class="ad-chart">${window.AdminCharts.lineChart(t.hourly || [], { color: "#5b8cff" })}</div></div>
-        <div class="ad-card"><div class="ad-card-h">📈 성장 추이 (14일) <span class="ad-legend"><i style="background:#f5cf6b"></i>가입 <i style="background:#33d17a"></i>DAU</span></div>
-          <div class="ad-chart">${window.AdminCharts.dualLine((g?.days || []).map(d => ({ label: d.d, a: d.signups, b: d.dau })), {})}</div></div>
-      </div>
-      <div class="ad-card"><div class="ad-card-h">🔥 오늘 활동량</div>
-        <div class="ad-mini">
-          ${miniStat("📝 갈라 발의", td.issues)}${miniStat("🗳️ 투표", td.votes)}${miniStat("💬 댓글", td.comments)}
-          ${miniStat("⚔️ 일기토", td.duels)}${miniStat("📈 예측거래", td.trades)}${miniStat("🙋 신규가입", td.signups)}
-        </div></div>`;
-    countUp($("#k-rt"), t.realtime); countUp($("#k-dau"), t.dau); countUp($("#k-wau"), t.wau);
-    countUp($("#k-mau"), t.mau); countUp($("#k-total"), t.total_users);
+        <div class="ad-card"><div class="ad-card-h">⏱ 시간당 활동 (최근 24h)</div><div class="ad-chart">${AdminCharts.lineChart(t.hourly || [], { color: "#5b8cff" })}</div></div>
+        <div class="ad-card"><div class="ad-card-h">📈 성장 추이 (14일) <span class="ad-legend"><i style="background:#f5cf6b"></i>가입 <i style="background:#33d17a"></i>DAU</span></div><div class="ad-chart">${AdminCharts.dualLine((g?.days || []).map(d => ({ label: d.d, a: d.signups, b: d.dau })), {})}</div></div></div>
+      <div class="ad-card"><div class="ad-card-h">🔥 오늘 활동량</div><div class="ad-mini">
+        ${mini("📝 갈라 발의", td.issues)}${mini("🗳️ 투표", td.votes)}${mini("💬 댓글", td.comments)}${mini("⚔️ 일기토", td.duels)}${mini("📈 예측거래", td.trades)}${mini("🙋 신규가입", td.signups)}</div></div>`;
+    countUp($("#k-rt"), t.realtime); countUp($("#k-dau"), t.dau); countUp($("#k-wau"), t.wau); countUp($("#k-mau"), t.mau); countUp($("#k-total"), t.total_users);
   }
-  const miniStat = (label, v) => `<div class="ad-mini-i"><div class="ad-mini-v">${fmt(v)}</div><div class="ad-mini-l">${label}</div></div>`;
+
+  // ─────────── 콘텐츠 관리 ───────────
+  let cState = { type: "all", sort: "recent", q: "" };
+  async function renderContent() {
+    main().innerHTML = `<h1 class="ad-h1">📝 콘텐츠 관리</h1>
+      <div class="ad-toolbar">
+        <div class="ad-segs" id="c-type">${["all", "issue", "plaza", "market", "news"].map(k => `<button data-v="${k}" class="${cState.type === k ? "on" : ""}">${({ all: "전체", issue: "이슈", plaza: "광장", market: "예측", news: "뉴스" }[k])}</button>`).join("")}</div>
+        <div class="ad-segs" id="c-sort">${["recent", "popular"].map(k => `<button data-v="${k}" class="${cState.sort === k ? "on" : ""}">${k === "recent" ? "최신" : "인기"}</button>`).join("")}</div>
+        <input class="ad-search" id="c-q" placeholder="제목 검색…" value="${esc(cState.q)}">
+      </div>
+      <div class="ad-card" id="c-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    $("#c-type").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; cState.type = b.dataset.v; renderContent(); };
+    $("#c-sort").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; cState.sort = b.dataset.v; renderContent(); };
+    $("#c-q").onkeydown = e => { if (e.key === "Enter") { cState.q = e.target.value.trim(); renderContent(); } };
+    const d = await rpc("admin_content", { p_type: cState.type, p_sort: cState.sort, p_q: cState.q || null, p_limit: 50 });
+    const rows = d?.rows || [];
+    const link = { issue: "issue.html?id=", plaza: "plaza_detail.html?id=", market: "predict-market.html?id=", news: "search.html" };
+    $("#c-list").innerHTML = rows.length ? `<table class="ad-table"><thead><tr><th>제목</th><th>유형</th><th>작성자</th><th>👍</th><th>💬</th><th>❤️</th><th></th></tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td><a href="${link[r.type] + (r.type === 'news' ? '' : r.id)}" target="_blank" class="ad-clink">${esc(r.title || "(제목없음)")}</a></td>
+        <td><span class="ad-tag t-${r.type}">${({ issue: "이슈", plaza: "광장", market: "예측", news: "뉴스" }[r.type])}</span></td>
+        <td>${esc(r.author || "-")}</td><td>${fmt(r.votes)}</td><td>${fmt(r.comments)}</td><td>${fmt(r.likes)}</td>
+        <td><button class="ad-btn danger" data-del="${r.type}:${r.id}">삭제</button></td></tr>`).join("")}
+      </tbody></table>` : `<div class="ad-soon">콘텐츠가 없어요.</div>`;
+    $("#c-list").onclick = async e => {
+      const b = e.target.closest("[data-del]"); if (!b) return;
+      const [type, id] = b.dataset.del.split(":");
+      if (!confirm("이 콘텐츠를 삭제할까요? (되돌릴 수 없음)")) return;
+      const r = await rpc("admin_delete_content", { p_type: type, p_id: id });
+      if (r?.ok) { toast("삭제됨"); b.closest("tr").remove(); } else alert("삭제 실패");
+    };
+  }
+
+  // ─────────── 신고·모더레이션 ───────────
+  async function renderReports() {
+    main().innerHTML = `<h1 class="ad-h1">🚨 신고·모더레이션</h1><div class="ad-card" id="r-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    const d = await rpc("admin_reports", { p_limit: 80 });
+    const rows = d?.rows || [];
+    $("#r-list").innerHTML = rows.length ? `<table class="ad-table"><thead><tr><th>대상</th><th>미리보기</th><th>사유</th><th>신고자</th><th>시각</th><th></th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td><span class="ad-tag">${esc(r.content_type)}</span> #${esc(r.content_id)}</td>
+        <td class="ad-prev">${esc(r.preview || "-")}</td><td>${esc(r.reason || "-")}</td><td>${esc(r.reporter || "-")}</td><td>${ago(r.created_at)}</td>
+        <td><button class="ad-btn danger" data-act="delete:${r.id}">콘텐츠 삭제</button> <button class="ad-btn ghost" data-act="dismiss:${r.id}">기각</button></td></tr>`).join("")}
+      </tbody></table>` : `<div class="ad-soon">처리할 신고가 없어요. 👍</div>`;
+    $("#r-list").onclick = async e => {
+      const b = e.target.closest("[data-act]"); if (!b) return;
+      const [act, id] = b.dataset.act.split(":");
+      const r = await rpc("admin_resolve_report", { p_id: Number(id), p_action: act });
+      if (r?.ok) { toast(act === "delete" ? "삭제·처리됨" : "기각됨"); b.closest("tr").remove(); } else alert("처리 실패");
+    };
+  }
+
+  // ─────────── 회원 관리 ───────────
+  let mFilter = "all", mQ = "";
+  async function renderMembers() {
+    main().innerHTML = `<h1 class="ad-h1">👥 회원 관리</h1>
+      <div class="ad-toolbar">
+        <div class="ad-segs" id="m-filter">${[["all", "전체"], ["top", "⭐ 우수"], ["watch", "⚠️ 요주의"], ["banned", "⛔ 블랙리스트"]].map(([k, l]) => `<button data-v="${k}" class="${mFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
+        <input class="ad-search" id="m-q" placeholder="닉네임 검색…" value="${esc(mQ)}"></div>
+      <div class="ad-card" id="m-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    $("#m-filter").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; mFilter = b.dataset.v; renderMembers(); };
+    $("#m-q").onkeydown = e => { if (e.key === "Enter") { mQ = e.target.value.trim(); renderMembers(); } };
+    const d = await rpc("admin_users", { p_filter: mFilter, p_q: mQ || null, p_limit: 60 });
+    const rows = d?.rows || [];
+    $("#m-list").innerHTML = rows.length ? `<table class="ad-table"><thead><tr><th>닉네임</th><th>Lv</th><th>보유 GP</th><th>누적 GP</th><th>경고</th><th>상태</th><th></th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${esc(r.nickname || "익명")}${r.admin ? ' <span class="ad-tag t-admin">관리자</span>' : ''}</td>
+        <td>${r.level || 1}</td><td>${fmt(r.gp)}</td><td>${fmt(r.lifetime)}</td>
+        <td>${r.warning > 0 ? `<span class="ad-warn">${r.warning}</span>` : "0"}</td>
+        <td>${r.banned ? '<span class="ad-tag t-ban">정지</span>' : '정상'}</td>
+        <td><button class="ad-btn ghost" data-uid="${r.user_id}">관리</button></td></tr>`).join("")}
+      </tbody></table>` : `<div class="ad-soon">해당 회원이 없어요.</div>`;
+    $("#m-list").onclick = e => { const b = e.target.closest("[data-uid]"); if (b) openMember(b.dataset.uid); };
+  }
+  async function openMember(uid) {
+    const d = await rpc("admin_user_detail", { p_user: uid });
+    if (!d?.ok) { alert("조회 실패"); return; }
+    const w = modal(`<div class="ad-modal-h">👤 ${esc(d.nickname || "익명")} ${d.admin ? '<span class="ad-tag t-admin">관리자</span>' : ''} ${d.banned ? '<span class="ad-tag t-ban">정지</span>' : ''}</div>
+      <div class="ad-mstat">${[["발의", d.issues], ["댓글", d.comments], ["투표", d.votes], ["보유GP", d.gp], ["경고", d.warning], ["피신고", d.reports_against]].map(([l, v]) => `<div><b>${fmt(v)}</b><span>${l}</span></div>`).join("")}</div>
+      ${d.email ? `<div class="ad-mrow">✉️ ${esc(d.email)} · 가입 ${ago(d.created_at)}</div>` : ""}
+      ${d.banned ? `<div class="ad-mrow ban">⛔ 정지 사유: ${esc(d.ban_reason || "-")}</div>` : ""}
+      <div class="ad-mactions">
+        <button class="ad-btn ghost" data-a="warn+">⚠️ 경고 +1</button>
+        <button class="ad-btn ghost" data-a="warn-">경고 -1</button>
+        <button class="ad-btn ghost" data-a="gp">💰 GP 지급</button>
+        ${d.banned ? `<button class="ad-btn primary" data-a="unban">✅ 정지 해제</button>` : `<button class="ad-btn danger" data-a="ban">⛔ 정지</button>`}
+        <button class="ad-btn ${d.admin ? "danger" : "primary"}" data-a="role">${d.admin ? "관리자 해제" : "관리자 지정"}</button>
+      </div>`);
+    w.querySelector(".ad-mactions").onclick = async e => {
+      const b = e.target.closest("[data-a]"); if (!b) return; const a = b.dataset.a;
+      if (a === "warn+") await rpc("admin_adjust_warning", { p_user: uid, p_delta: 1 });
+      else if (a === "warn-") await rpc("admin_adjust_warning", { p_user: uid, p_delta: -1 });
+      else if (a === "gp") { const amt = parseInt(prompt("지급할 GP (음수=차감)", "1000") || "0"); if (amt) await rpc("admin_grant_gp", { p_user: uid, p_amount: amt, p_reason: "admin_grant" }); }
+      else if (a === "ban") { const reason = prompt("정지 사유", "커뮤니티 규정 위반"); if (reason != null) await rpc("admin_set_ban", { p_user: uid, p_reason: reason, p_days: null }); }
+      else if (a === "unban") await rpc("admin_unban", { p_user: uid });
+      else if (a === "role") await rpc("admin_set_role", { p_user: uid, p_admin: !d.admin });
+      toast("적용됨"); w.remove(); renderMembers();
+    };
+  }
+
+  // ─────────── 정산·출금 ───────────
+  async function renderSettle() {
+    main().innerHTML = `<h1 class="ad-h1">💰 정산·출금</h1><div class="ad-card" id="s-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    const d = await rpc("admin_withdrawals", { p_status: "all" });
+    const rows = d?.rows || [];
+    $("#s-list").innerHTML = rows.length ? `<div class="ad-card-h">대기 ${fmt(d.pending)}건</div><table class="ad-table"><thead><tr><th>닉네임</th><th>은행</th><th>계좌</th><th>예금주</th><th>금액</th><th>상태</th><th></th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${esc(r.nickname || "-")}</td><td>${esc(r.bank || "-")}</td><td>${esc(r.account || "-")}</td><td>${esc(r.holder || "-")}</td><td>₩${fmt(r.amount)}</td>
+        <td><span class="ad-tag st-${r.status}">${({ pending: "대기", approved: "승인", done: "완료", rejected: "거절" }[r.status] || r.status)}</span></td>
+        <td>${r.status === "pending" ? `<button class="ad-btn primary" data-w="approved:${r.id}">승인</button> <button class="ad-btn danger" data-w="rejected:${r.id}">거절</button>` : r.status === "approved" ? `<button class="ad-btn primary" data-w="done:${r.id}">완료처리</button>` : ""}</td></tr>`).join("")}
+      </tbody></table>` : `<div class="ad-soon">출금 요청이 없어요.</div>`;
+    $("#s-list").onclick = async e => { const b = e.target.closest("[data-w]"); if (!b) return; const [st, id] = b.dataset.w.split(":"); const r = await rpc("admin_process_withdrawal", { p_id: Number(id), p_status: st }); if (r?.ok) { toast("처리됨"); renderSettle(); } };
+  }
+
+  // ─────────── 고객지원 AS ───────────
+  async function renderSupport() {
+    main().innerHTML = `<h1 class="ad-h1">🎧 고객지원</h1><div class="ad-card" id="t-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    const d = await rpc("admin_tickets", { p_status: "all" });
+    const rows = d?.rows || [];
+    $("#t-list").innerHTML = rows.length ? `<div class="ad-card-h">미처리 ${fmt(d.open)}건</div>${rows.map(r => `
+      <div class="ad-ticket"><div class="ad-tk-h"><b>${esc(r.subject)}</b> <span class="ad-tag st-${r.status}">${({ open: "신규", answered: "답변", closed: "종료" }[r.status])}</span> <span class="ad-tk-m">${esc(r.nickname || "-")} · ${ago(r.created_at)}</span></div>
+        <div class="ad-tk-b">${esc(r.body)}</div>
+        ${r.reply ? `<div class="ad-tk-r">↳ ${esc(r.reply)}</div>` : `<button class="ad-btn primary" data-reply="${r.id}">답변하기</button>`}</div>`).join("")}` : `<div class="ad-soon">문의가 없어요.</div>`;
+    $("#t-list").onclick = async e => { const b = e.target.closest("[data-reply]"); if (!b) return; const rep = prompt("답변 내용"); if (!rep) return; const r = await rpc("admin_reply_ticket", { p_id: Number(b.dataset.reply), p_reply: rep }); if (r?.ok) { toast("답변 전송"); renderSupport(); } };
+  }
+
+  // ─────────── 직접 업로드 ───────────
+  async function renderUpload() {
+    main().innerHTML = `<h1 class="ad-h1">⬆️ 직접 업로드</h1>
+      <div class="ad-card ad-form">
+        <label>제목</label><input id="u-title" class="ad-input" maxlength="140" placeholder="이슈 제목">
+        <label>설명</label><textarea id="u-desc" class="ad-input" rows="4" placeholder="설명"></textarea>
+        <label>카테고리</label><input id="u-cat" class="ad-input" value="사회">
+        <button class="ad-btn primary" id="u-go">🚀 이슈 발행</button>
+        <div class="ad-note">미디어·상세 옵션이 필요하면 일반 글쓰기(write.html)를 사용하세요. 여기선 텍스트 이슈 즉시 발행.</div>
+      </div>`;
+    $("#u-go").onclick = async () => {
+      const title = $("#u-title").value.trim(); if (!title) { $("#u-title").focus(); return; }
+      const r = await rpc("admin_publish_issue", { p_title: title, p_desc: $("#u-desc").value.trim(), p_category: $("#u-cat").value.trim() || "사회" });
+      if (r?.ok) { toast("발행됨!"); location.href = "issue.html?id=" + r.id; } else alert("발행 실패");
+    };
+  }
+
+  // ─────────── 운영·감사 ───────────
+  async function renderOps() {
+    main().innerHTML = `<h1 class="ad-h1">⚙️ 운영·감사</h1>
+      <div class="ad-grid2">
+        <div class="ad-card"><div class="ad-card-h">📢 전체 공지 발송</div>
+          <input id="o-msg" class="ad-input" placeholder="공지 메시지 (전 회원 알림)"><button class="ad-btn primary" id="o-send" style="margin-top:8px">발송</button></div>
+        <div class="ad-card"><div class="ad-card-h">🏆 시즌 정산</div>
+          <div class="ad-note">현재 시즌을 종료하고 TOP3에 시즌 칭호 지급 + 다음 시즌 시작.</div>
+          <button class="ad-btn danger" id="o-season" style="margin-top:8px">이번 시즌 정산 실행</button></div>
+      </div>
+      <div class="ad-card"><div class="ad-card-h">🧾 감사 로그</div><div id="o-audit"><div class="ad-loading">불러오는 중…</div></div></div>`;
+    $("#o-send").onclick = async () => { const m = $("#o-msg").value.trim(); if (!m) return; if (!confirm("전 회원에게 공지를 발송할까요?")) return; const r = await rpc("admin_broadcast", { p_message: m }); if (r?.ok) toast(`${fmt(r.sent)}명에게 발송`); };
+    $("#o-season").onclick = async () => { if (!confirm("이번 시즌을 정산할까요? (되돌릴 수 없음)")) return; const r = await rpc("season_resolve"); if (r?.ok) toast("시즌 정산 완료"); else alert("정산 실패: " + (r?.reason || "")); };
+    const a = await rpc("admin_audit_list", { p_limit: 60 });
+    const rows = a?.rows || [];
+    $("#o-audit").innerHTML = rows.length ? `<table class="ad-table"><thead><tr><th>시각</th><th>관리자</th><th>액션</th><th>대상</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${ago(r.created_at)}</td><td>${esc(r.actor || "-")}</td><td><span class="ad-tag">${esc(r.action)}</span></td><td>${esc(r.target || "")}</td></tr>`).join("")}</tbody></table>` : `<div class="ad-soon">기록이 없어요.</div>`;
+  }
 
   window.GALLA_ADMIN = { route };
   boot();

@@ -90,3 +90,57 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
   .ad-kpi-v { font-size: 26px; }
 }
 @media (max-width: 420px) { .ad-kpis { grid-template-columns: 1fr 1fr; } }
+
+/* ===== P2~P4 컴포넌트 ===== */
+.ad-toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.ad-segs { display: inline-flex; gap: 4px; background: #0c0d11; border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.ad-segs button { border: none; background: none; color: #9aa0ad; font-weight: 800; font-size: 12.5px; padding: 7px 12px; border-radius: 8px; cursor: pointer; }
+.ad-segs button.on { background: linear-gradient(135deg, var(--blue), #3d6bff); color: #fff; }
+.ad-search { flex: 1; min-width: 160px; background: #0c0d11; border: 1px solid var(--line); border-radius: 10px; color: #fff; padding: 9px 12px; font-size: 13px; }
+
+.ad-clink { color: #cdd6f0; text-decoration: none; font-weight: 700; }
+.ad-clink:hover { color: var(--blue); }
+.ad-prev { color: #9aa0ad; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-tag { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,.08); color: #c9d1e0; }
+.ad-tag.t-issue { background: rgba(61,107,255,.2); color: #6f9bff; }
+.ad-tag.t-plaza { background: rgba(51,209,122,.18); color: #5ce09a; }
+.ad-tag.t-market { background: rgba(245,207,107,.18); color: var(--gold); }
+.ad-tag.t-news { background: rgba(161,123,255,.2); color: #b79bff; }
+.ad-tag.t-admin { background: rgba(61,107,255,.25); color: #8fb0ff; }
+.ad-tag.t-ban { background: rgba(255,79,110,.2); color: #ff8098; }
+.ad-tag.st-pending { background: rgba(245,207,107,.18); color: var(--gold); }
+.ad-tag.st-approved, .ad-tag.st-answered { background: rgba(61,107,255,.2); color: #6f9bff; }
+.ad-tag.st-done, .ad-tag.st-closed { background: rgba(51,209,122,.18); color: #5ce09a; }
+.ad-tag.st-rejected { background: rgba(255,79,110,.18); color: #ff8098; }
+.ad-tag.st-open { background: rgba(255,79,110,.18); color: #ff8098; }
+.ad-warn { background: rgba(255,79,110,.2); color: #ff8098; font-weight: 900; padding: 1px 8px; border-radius: 99px; }
+.ad-table td button + button { margin-left: 4px; }
+
+/* 모달 */
+.ad-modal { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.ad-modal-dim { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+.ad-modal-box { position: relative; width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+.ad-modal-h { font-weight: 900; font-size: 17px; margin-bottom: 12px; }
+.ad-mstat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.ad-mstat > div { background: #0c0d11; border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; }
+.ad-mstat b { display: block; font-size: 18px; font-weight: 900; } .ad-mstat span { font-size: 11px; color: #8a8f9a; }
+.ad-mrow { font-size: 12.5px; color: #9aa0ad; margin: 6px 0; } .ad-mrow.ban { color: #ff8098; }
+.ad-mactions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+/* 티켓 */
+.ad-ticket { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 8px; }
+.ad-tk-h { display: flex; align-items: center; gap: 8px; }
+.ad-tk-m { color: #8a8f9a; font-size: 11px; margin-left: auto; }
+.ad-tk-b { color: #c9d1e0; font-size: 13px; margin: 8px 0; line-height: 1.5; }
+.ad-tk-r { color: #6f9bff; font-size: 13px; background: rgba(61,107,255,.08); border-radius: 8px; padding: 8px; }
+
+/* 폼 */
+.ad-form label { display: block; font-size: 12px; font-weight: 800; color: #8b90a0; margin: 10px 0 4px; }
+.ad-input { width: 100%; background: #0c0d11; border: 1px solid var(--line); border-radius: 10px; color: #fff; padding: 10px 12px; font-size: 14px; font-family: inherit; }
+.ad-note { color: #6c7280; font-size: 11.5px; margin-top: 8px; line-height: 1.5; }
+
+/* 토스트 */
+.ad-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 300; background: #16171c; border: 1px solid var(--line); color: #eef0f4; font-weight: 800; font-size: 13px; padding: 11px 18px; border-radius: 99px; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+
+.ad-table { overflow-x: auto; display: block; }
+@media (max-width: 900px) { .ad-table { font-size: 12px; } .ad-prev { max-width: 120px; } }
