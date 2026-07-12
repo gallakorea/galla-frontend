@@ -590,6 +590,7 @@ qs("btn-vote-pro")?.addEventListener("click", async () => {
   }
 
   loadVoteStats(issueId);
+  loadStats(issueId);   // 인구통계 인포그래픽도 투표 반영해 갱신
 });
 
 qs("btn-vote-con")?.addEventListener("click", async () => {
@@ -605,6 +606,7 @@ qs("btn-vote-con")?.addEventListener("click", async () => {
   }
 
   loadVoteStats(issueId);
+  loadStats(issueId);   // 인구통계 인포그래픽도 투표 반영해 갱신
 });
 
 /* ==========================================================================

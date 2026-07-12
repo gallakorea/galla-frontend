@@ -8,47 +8,82 @@ console.log("[issue.stats.js] loaded");
 const MIN_PARTICIPANTS = 2;
 
 export async function loadStats(issueId) {
-  lockAllStats(0);   // ← 🔥 이 줄을 여기 추가
+  lockAllStats(0);
   const supabase = window.supabaseClient;
 
-  const { count: total, error } = await supabase
-    .from("votes")          // 🔥 투표 기준으로 변경
-    .select("id", { count: "exact", head: true })
-    .eq("issue_id", issueId);
+  // 🔥 실제 투표(votes.type='pro'|'con') + 투표자 인구통계로 집계
+  const { data: votes, error } = await supabase
+    .from("votes").select("user_id, type").eq("issue_id", issueId);
+  if (error) { console.error("[issue.stats] votes error:", error); lockAllStats(0); return; }
 
-  if (error) {
-    console.error("[issue.stats] count error:", error);
-    lockAllStats(0);
-    return;
+  const total = votes ? votes.length : 0;
+  if (total < MIN_PARTICIPANTS) { lockAllStats(total); return; }
+
+  // 투표자 인구통계
+  const uids = [...new Set(votes.map(v => v.user_id).filter(Boolean))];
+  let uMap = {};
+  if (uids.length) {
+    const { data: users } = await supabase.from("users").select("id, gender, birth_date, region").in("id", uids);
+    (users || []).forEach(u => (uMap[u.id] = u));
   }
 
-  // 0~1명 → 안내만
-  if (!total || total < MIN_PARTICIPANTS) {
-    lockAllStats(total || 0);
-    return;
-  }
+  const ageBucket = (bd) => {
+    if (!bd) return null;
+    const y = new Date(bd).getFullYear(); if (!y) return null;
+    const age = new Date().getFullYear() - y;
+    if (age < 20) return "10대"; if (age < 30) return "20대"; if (age < 40) return "30대";
+    if (age < 50) return "40대"; if (age < 60) return "50대"; return "60대+";
+  };
+  const genderLabel = (g) => (g === "male" || g === "남성") ? "남성" : ((g === "female" || g === "여성") ? "여성" : null);
 
-  // 2명 이상 → 성별만 + 더보기
-  unlockBasicStats();
+  const partGender = { 남성: 0, 여성: 0 };
+  const partAge = {}, partRegion = {};
+  const vg = {}, va = {}, vr = {};
+  const bump = (o, k) => { if (k) o[k] = (o[k] || 0) + 1; };
+  const bumpV = (o, k, t) => { if (!k) return; o[k] = o[k] || { pro: 0, con: 0 }; o[k][t === "con" ? "con" : "pro"]++; };
 
-  // ✅ 임시 더미 데이터 (UI 테스트용)
+  votes.forEach(v => {
+    const u = uMap[v.user_id] || {};
+    const g = genderLabel(u.gender), a = ageBucket(u.birth_date), r = u.region || null;
+    if (g) partGender[g]++;
+    bump(partAge, a); bump(partRegion, r);
+    bumpV(vg, g, v.type); bumpV(va, a, v.type); bumpV(vr, r, v.type);
+  });
+
+  const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
+  const partArr = (o) => { const t = Object.values(o).reduce((s, n) => s + n, 0); return Object.entries(o).map(([k, n]) => ({ label: k, name: k, percent: pct(n, t) })); };
+  const voteArr = (o) => Object.entries(o).map(([k, { pro, con }]) => ({ label: k, pro: pct(pro, pro + con), con: pct(con, pro + con) }));
+
+  const genderKnown = partGender.남성 + partGender.여성;
   const stats = {
-    gender: { male: 54, female: 46 },
-    age: [
-      { label: "20대", percent: 40 },
-      { label: "30대", percent: 60 }
-    ],
-    region: [
-      { name: "서울", percent: 60 },
-      { name: "부산", percent: 40 }
-    ],
-    gender_vote: [{ label: "남성", pro: 55, con: 45 }],
-    age_vote: [{ label: "20대", pro: 60, con: 40 }],
-    region_vote: [{ label: "서울", pro: 70, con: 30 }],
-    ai_summary: "AI 분석을 준비 중입니다."
+    gender: genderKnown ? { male: pct(partGender.남성, genderKnown), female: pct(partGender.여성, genderKnown) } : null,
+    age: partArr(partAge),
+    region: partArr(partRegion),
+    gender_vote: voteArr(vg),
+    age_vote: voteArr(va),
+    region_vote: voteArr(vr),
+    ai_summary: "AI 종합 분석은 준비 중입니다.",
   };
 
+  unlockAllStats();
   renderAllStats(stats);
+  hideEmptyStats(stats);   // 데이터 없는 섹션(성별 등)은 숨김
+}
+
+// 실제 데이터가 없는 통계 섹션(제목+콘텐츠)을 숨긴다
+function hideEmptyStats(stats) {
+  const titles = getStatTitles();
+  const conts = ["#gender-dual", "#age-chart", "#region-heatmap", "#gender-vote", "#age-vote", "#region-vote", "#ai-summary"].map(s => document.querySelector(s));
+  const empty = [
+    !stats.gender,
+    !stats.age.length,
+    !stats.region.length,
+    !stats.gender_vote.length,
+    !stats.age_vote.length,
+    !stats.region_vote.length,
+    false,
+  ];
+  empty.forEach((e, i) => { if (titles[i]) titles[i].hidden = e; if (conts[i]) conts[i].hidden = e; });
 }
 
 /* ======================================================
