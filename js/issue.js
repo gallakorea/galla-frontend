@@ -125,6 +125,15 @@ if (!issueId || Number.isNaN(issueId)) {
     return;
   }
 
+  // 작성자명 해석: 비익명이면 실제 닉네임(users.nickname 정본), 익명이면 "익명"
+  let __authorName = "익명";
+  if (!issue.is_anonymous && issue.user_id) {
+    const { data: prof } = await supabase
+      .from("users").select("nickname").eq("id", issue.user_id).maybeSingle();
+    __authorName = prof?.nickname || "익명";
+  }
+  issue.author = __authorName;
+
 // 진영 이름은 글쓴이가 정한다(faction_a/b) — 댓글 배틀·채팅 등 전역에서 사용
 window.ISSUE_FACTIONS = {
   pro: issue.faction_a || "찬성",
@@ -459,7 +468,7 @@ if (explainWrap) {
     qs("issue-time").innerText = new Date(issue.created_at).toLocaleDateString();
   }
 
-  qs("issue-author").innerText = "작성자 · 익명";
+  qs("issue-author").innerText = "작성자 · " + (issue.author || "익명");
 }
 
 /* ==========================================================================
