@@ -8,13 +8,14 @@
    window.GALLA_gallianOf(supabase, userId) → Promise<gallian>
    ========================================================= */
 (function () {
+  // 유머러스·한국적 서사 — 눈팅하던 뉴비가 전설의 갈라 대장군으로 진화
   const TIERS = [
-    { key: "spark",     name: "SPARK",     sub: "불씨 · 시작의 갈라리안",   min: 0,    color: "#9aa0ad" },
-    { key: "breaker",   name: "BREAKER",   sub: "논리를 깨우는 각성자",     min: 100,  color: "#4fc3f7" },
-    { key: "vanguard",  name: "VANGUARD",  sub: "전투선의 선봉대",          min: 300,  color: "#3d6bff" },
-    { key: "authority", name: "AUTHORITY", sub: "권력자",                   min: 800,  color: "#c9d1e0" },
-    { key: "dominion",  name: "DOMINION",  sub: "전장을 지배하는 존재",     min: 2000, color: "#f5cf6b" },
-    { key: "apex",      name: "APEX",      sub: "초월자 · 정점",            min: 5000, color: "#ff8a3d" },
+    { key: "spark",     name: "🌱 눈팅 뉴비",   sub: "일단 스크롤만 내리는 관망러",       min: 0,    color: "#9aa0ad" },
+    { key: "breaker",   name: "🔥 발끈러",       sub: "못 참고 첫 댓글을 단 각성러",        min: 100,  color: "#4fc3f7" },
+    { key: "vanguard",  name: "⌨️ 키보드 전사",  sub: "손가락이 근질근질한 참전러",         min: 300,  color: "#3d6bff" },
+    { key: "authority", name: "🎤 여론 논객",    sub: "판을 읽고 흔드는 입담꾼",            min: 800,  color: "#c9d1e0" },
+    { key: "dominion",  name: "🌪️ 갈라 선동가",  sub: "댓글창을 쥐락펴락하는 여론몰이",     min: 2000, color: "#f5cf6b" },
+    { key: "apex",      name: "👑 갈라 대장군",  sub: "전장을 평정한 전설의 논객",          min: 5000, color: "#ff8a3d" },
   ];
   const BASE_GRANT = 10000; // 예측 지갑 기본 지급분(순이익 계산 기준)
 

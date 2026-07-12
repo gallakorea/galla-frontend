@@ -13,12 +13,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userId = sessionData.session.user.id;
 
   const DESC = {
-    spark:     "이제 막 불씨를 얻은 갈라리안입니다. 참전할수록 지수가 오릅니다.",
-    breaker:   "논리를 깨우는 각성자. 전장에서 존재감이 드러나기 시작했습니다.",
-    vanguard:  "전장의 선봉에서 의견의 흐름을 바꾸는 정예 갈라리안입니다.",
-    authority: "발언에 무게가 실리는 권력자. 전장이 당신을 주목합니다.",
-    dominion:  "전장을 지배하는 존재. 흐름이 당신을 중심으로 움직입니다.",
-    apex:      "초월자 · 정점. 갈라리안이 도달할 수 있는 마지막 형태입니다.",
+    spark:     "아직은 조용히 눈팅만… 하지만 곧 참지 못하고 첫 댓글을 달 운명.",
+    breaker:   "드디어 발끈해서 참전 개시! 손가락에 슬슬 불이 붙기 시작했습니다.",
+    vanguard:  "키보드에 불나는 참전러. 이제 웬만한 떡밥은 그냥 못 지나칩니다.",
+    authority: "판을 읽고 흔드는 입담꾼. 당신 한 마디에 댓글창 분위기가 바뀝니다.",
+    dominion:  "댓글창을 쥐락펴락하는 여론몰이. 전장이 당신을 중심으로 돕니다.",
+    apex:      "전장을 평정한 전설의 논객. 갈라리안이 오를 수 있는 최정점입니다.",
   };
 
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
