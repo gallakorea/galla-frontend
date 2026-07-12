@@ -60,16 +60,16 @@ if (window.visualViewport) {
 ========================= */
 window.__SHORTS_ENGINE_READY__ = false;
 
-window.openShorts = function (list, startId) {
+window.openShorts = function (list, startId, startTime) {
   try {
     if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-      window.__OPEN_SHORTS_INTERNAL__(list, startId);
+      window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime);
     } else {
       console.warn("[SHORTS] __OPEN_SHORTS_INTERNAL__ missing, queueing");
-      window.__SHORTS_OPEN_QUEUE__.push({ list, startId });
+      window.__SHORTS_OPEN_QUEUE__.push({ list, startId, startTime });
       document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-          window.__OPEN_SHORTS_INTERNAL__(list, startId);
+          window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime);
         }
       }, { once: true });
     }
@@ -81,7 +81,9 @@ window.openShorts = function (list, startId) {
 /* =========================
    CORE OPEN
 ========================= */
-function __openShortsInternal(list, startId) {
+function __openShortsInternal(list, startId, startTime) {
+  // 이어보기: 시작 아이템을 이 위치(초)부터 재생 (인덱스 인라인에서 넘어옴)
+  window.__SHORTS_PENDING_SEEK__ = (startTime && startTime > 0.3) ? { id: Number(startId), time: startTime } : null;
   // 🔥 HARD FIX: 항상 video_url 있는 항목만, 순서 고정
   shortsList = (list || [])
     .filter(v => v && v.video_url)
@@ -112,14 +114,23 @@ function __openShortsInternal(list, startId) {
   // Clear overlay for fresh rendering
   overlay.innerHTML = `
     <div id="shortsContainer">
-      <div id="shortsVoteBar" class="shorts-vote">
-        <button class="vote-btn pro" data-vote="pro" data-issue-id="">👍 찬성이오</button>
-        <button class="vote-btn con" data-vote="con" data-issue-id="">👎 난 반댈세</button>
-      </div>
+      <div class="shorts-scrim shorts-scrim-top"></div>
+      <div class="shorts-scrim shorts-scrim-bottom"></div>
       <div class="shorts-top">
-        <button id="shortsCloseBtn">←</button>
+        <button id="shortsCloseBtn" class="sh-icon-btn" aria-label="닫기">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button id="shortsMuteBtn" class="sh-icon-btn" aria-label="소리">
+          <svg class="ic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+          <svg class="ic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
+        </button>
       </div>
       <div id="shortsTrack"></div>
+      <div id="shortsProgress"><div id="shortsProgressFill"></div></div>
+      <div id="shortsVoteBar" class="shorts-vote">
+        <button class="vote-btn pro" data-vote="pro" data-issue-id=""><span>👍</span> 찬성이오</button>
+        <button class="vote-btn con" data-vote="con" data-issue-id=""><span>👎</span> 난 반댈세</button>
+      </div>
     </div>
   `;
   // ===== Inject overlay styles for shorts meta (once) =====
@@ -128,97 +139,38 @@ function __openShortsInternal(list, startId) {
     style.id = "shortsMetaStyle";
     style.textContent = `
 .shorts-meta{
-  position:absolute;
-  left:14px;
-  top:58px;               /* 좌측 상단 (뒤로가기 버튼 아래) */
-  right:70px;             /* 우측 액션 버튼과 겹치지 않게 */
-  max-width:none;
-  z-index:30;
-  color:#fff;
-  font-family:system-ui,-apple-system,BlinkMacSystemFont;
+  position:absolute; left:16px; right:84px;
+  bottom:calc(env(safe-area-inset-bottom) + 96px);  /* 하단 정렬(인스타/틱톡식) */
+  z-index:30; color:#fff;
+  font-family:"Pretendard",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
   pointer-events:auto;
-  text-shadow:0 1px 6px rgba(0,0,0,.6);
 }
-
-.shorts-author{
-  display:flex;
-  gap:10px;
-}
-
+.shorts-author{ display:flex; gap:11px; align-items:flex-start; }
 .author-avatar{
-  width:44px;
-  height:44px;
-  border-radius:50%;
-  object-fit:cover;
-  border:1px solid rgba(255,255,255,.4);
+  width:46px; height:46px; border-radius:50%; object-fit:cover; flex:none;
+  border:2px solid rgba(255,255,255,.92); box-shadow:0 2px 12px rgba(0,0,0,.55);
 }
 .author-avatar-init{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:800;
-  font-size:18px;
-  color:#fff;
-  background:linear-gradient(135deg,#ff9b2f,#ff6a00);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; font-size:18px; color:#0a0a0b;
+  background:linear-gradient(135deg,#f5cf6b,#ff9b4d);
 }
-.shorts-cat{
-  font-size:12px;
-  opacity:.75;
-  margin-top:2px;
-}
-
-.author-info{
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
-
-.author-line{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-size:15px;
-  font-weight:800;
-  line-height:1.2;
-}
-
+.author-info{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+.author-line{ display:flex; align-items:center; gap:7px; font-size:15.5px; font-weight:800; line-height:1.15; }
+.author-name{ text-shadow:0 1px 6px rgba(0,0,0,.75); }
 .author-level{
-  font-size:12px;
-  padding:2px 8px;
-  border-radius:10px;
-  background:rgba(255,255,255,.18);
-  font-weight:700;
+  font-size:11px; padding:2px 8px; border-radius:999px; font-weight:800;
+  background:rgba(245,207,107,.2); color:#f5cf6b; border:1px solid rgba(245,207,107,.42);
 }
-
-.author-follow{
-  margin-left:6px;
-  font-size:12px;
-  padding:4px 10px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.45);
-  background:rgba(0,0,0,.45);
-  color:#fff;
-  font-weight:700;
-  cursor:pointer;
-}
-
+.shorts-cat{ font-size:12px; color:#f5cf6b; font-weight:700; opacity:.95; text-shadow:0 1px 4px rgba(0,0,0,.6); }
 .shorts-title{
-  margin-top:6px;
-  font-size:15px;
-  font-weight:700;
-  line-height:1.35;
-  opacity:.95;
+  margin-top:2px; font-size:14.5px; font-weight:600; line-height:1.42; color:#f2f3f5;
+  text-shadow:0 1px 6px rgba(0,0,0,.7);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
 }
 .shorts-goto{ cursor:pointer; }
 .shorts-goto:active{ opacity:.7; }
-.shorts-goto-chip{
-  display:inline-flex; align-items:center;
-  margin-left:8px; padding:2px 9px;
-  font-size:11px; font-weight:800; white-space:nowrap;
-  color:#fff; background:rgba(255,255,255,.16);
-  border:1px solid rgba(255,255,255,.35); border-radius:999px;
-  vertical-align:2px;
-}
+.shorts-goto-chip, .author-follow{ display:none; }
 `;
     document.head.appendChild(style);
   }
@@ -231,9 +183,10 @@ function __openShortsInternal(list, startId) {
     <style>
     /* ===== Shorts Comment Modal UI (Issue Tone) ===== */
     #shortsCommentModal .comment-sheet{
-      background:linear-gradient(180deg,#0e0e0e,#030303);
+      background:#0d0e12;
       color:#fff;
-      box-shadow:0 -10px 40px rgba(0,0,0,.9);
+      border-top:1px solid rgba(255,255,255,.08);
+      box-shadow:0 -20px 60px rgba(0,0,0,.6);
     }
     .comment-summary{
       padding:14px;
@@ -255,8 +208,7 @@ function __openShortsInternal(list, startId) {
     }
     .comment-summary .bar-pro{
       height:100%;
-      background:linear-gradient(90deg,#5bbcff,#4da3ff);
-      box-shadow:0 0 8px rgba(91,188,255,.6);
+      background:linear-gradient(90deg,#3d6bff,#6f93ff);
     }
     .comment-summary .summary-meta{
       margin-top:6px;
@@ -274,12 +226,9 @@ function __openShortsInternal(list, startId) {
       padding:6px;
       gap:0;
 
-      border-radius:18px;
-      background:#0d0d0d;
-      border:2px solid #000;
-      box-shadow:
-        inset 0 0 0 2px rgba(255,255,255,.15),
-        0 6px 18px rgba(0,0,0,.6);
+      border-radius:14px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
     }
     .comment-tabs .stance-tab{
       flex:1;
@@ -287,21 +236,20 @@ function __openShortsInternal(list, startId) {
       border-radius:10px;
       border:none;
       background:transparent;
-      color:#bbb;
+      color:#9aa0ad;
       font-weight:800;
-      letter-spacing:1px;
+      letter-spacing:.5px;
       transition:.15s;
     }
     .comment-tabs .stance-tab.active{
       color:#fff;
-      background:linear-gradient(180deg,#1a1a1a,#050505);
-      box-shadow:0 0 16px rgba(255,255,255,.35);
+      background:rgba(255,255,255,.08);
     }
     .comment-tabs .stance-tab.active.pro{
-      box-shadow:0 0 16px rgba(91,188,255,.6);
+      background:rgba(61,107,255,.2); color:#a9c0ff;
     }
     .comment-tabs .stance-tab.active.con{
-      box-shadow:0 0 16px rgba(255,107,107,.6);
+      background:rgba(255,77,103,.2); color:#ffb3c0;
     }
 
     /* ===============================
@@ -521,19 +469,29 @@ function __openShortsInternal(list, startId) {
       </div>
     </div>
 
-    <!-- RIGHT ACTIONS (INSTAGRAM STYLE) -->
+    <!-- RIGHT ACTIONS -->
     <div class="shorts-actions">
       <button class="shorts-action-btn comment" aria-label="댓글">
-        <svg viewBox="0 0 24 24">
+        <span class="sa-ic"><svg viewBox="0 0 24 24">
           <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
-        </svg>
+        </svg></span>
+        <span class="sa-label">댓글</span>
       </button>
 
       <button class="shorts-action-btn share" aria-label="공유">
-        <svg viewBox="0 0 24 24">
+        <span class="sa-ic"><svg viewBox="0 0 24 24">
           <path d="M22 2L11 13"/>
           <path d="M22 2L15 22L11 13L2 9L22 2Z"/>
-        </svg>
+        </svg></span>
+        <span class="sa-label">공유</span>
+      </button>
+
+      <button class="shorts-action-btn goto shorts-goto" data-goto="${item.id}" aria-label="게시물">
+        <span class="sa-ic"><svg viewBox="0 0 24 24">
+          <path d="M4 5a1 1 0 0 1 1-1h9l6 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>
+          <path d="M14 4v6h6"/>
+        </svg></span>
+        <span class="sa-label">게시물</span>
       </button>
     </div>
     `;
@@ -583,6 +541,37 @@ function __openShortsInternal(list, startId) {
       window.GALLA_VOTE(issueId, type, { scope: "shorts" });
     }
   });
+
+  // 음소거 토글(전역 사운드 선호와 통일)
+  const muteBtn = overlay.querySelector("#shortsMuteBtn");
+  const syncMute = () => {
+    const on = window.GALLA_soundOn ? window.GALLA_soundOn() : !window.__REELS_MUTED__;
+    overlay.classList.toggle("is-muted", !on);
+  };
+  muteBtn?.addEventListener("click", e => {
+    e.stopPropagation();
+    if (window.GALLA_setSound) window.GALLA_setSound(!(window.GALLA_soundOn && window.GALLA_soundOn()));
+    else window.__REELS_MUTED__ = !window.__REELS_MUTED__;
+    const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    if (cur) cur.muted = !!window.__REELS_MUTED__;
+    syncMute();
+  });
+  window.addEventListener("galla:sound", syncMute);
+  syncMute();
+}
+
+/* 진행바: 현재 영상의 재생 위치를 하단 바에 반영 */
+function bindShortsProgress(v) {
+  const fill = document.getElementById("shortsProgressFill");
+  if (!fill) return;
+  if (window.__shortsProgVideo && window.__shortsProgHandler) {
+    window.__shortsProgVideo.removeEventListener("timeupdate", window.__shortsProgHandler);
+  }
+  const h = () => { if (v.duration) fill.style.width = (v.currentTime / v.duration * 100) + "%"; };
+  v.addEventListener("timeupdate", h);
+  window.__shortsProgVideo = v;
+  window.__shortsProgHandler = h;
+  h();
 }
 
 /* =========================
@@ -612,6 +601,18 @@ function playOnlyCurrent() {
       v.setAttribute("loop", "");
       // 소리는 기본 ON, 사용자가 음소거하면 다음 영상까지 그 상태 유지(스티키)
       v.muted = !!window.__REELS_MUTED__;
+
+      // 이어보기: 인덱스에서 넘어온 재생 위치 적용(해당 아이템 최초 활성화 시 1회)
+      const seek = window.__SHORTS_PENDING_SEEK__;
+      if (seek && shortsList[currentIndex] && seek.id === shortsList[currentIndex].id) {
+        const apply = () => { try { if (v.duration && seek.time < v.duration - 0.3) v.currentTime = seek.time; } catch (_) {} };
+        if (v.readyState >= 1) apply();
+        else v.addEventListener("loadedmetadata", apply, { once: true });
+        window.__SHORTS_PENDING_SEEK__ = null;
+      }
+
+      // 진행바 연결(현재 영상 timeupdate)
+      bindShortsProgress(v);
 
       const playPromise = v.play();
       if (playPromise && typeof playPromise.catch === "function") {
@@ -865,6 +866,15 @@ function updateShortsVoteBar() {
    CLOSE
 ========================= */
 function closeShorts() {
+  // 이어보기(역방향): 현재 릴스 재생 위치를 인덱스 인라인 영상에 반영
+  try {
+    const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    const id = shortsList[currentIndex]?.id;
+    if (cur && id != null && cur.currentTime > 0.3) {
+      const inline = document.getElementById("vid-" + id);
+      if (inline) inline.currentTime = cur.currentTime;
+    }
+  } catch (_) {}
   document.body.style.overflow = "";
   document.body.classList.remove("shorts-open");
   window.__CURRENT_SHORT_ISSUE_ID__ = null;
@@ -1344,42 +1354,4 @@ document.addEventListener("click", async e => {
   loadShortsComments();
 });
   // ===== Inject overlay styles for shorts actions (once) =====
-  if (!document.getElementById("shortsActionsStyle")) {
-    const style = document.createElement("style");
-    style.id = "shortsActionsStyle";
-    style.textContent = `
-.shorts-actions {
-  position:absolute;
-  right:12px;
-  bottom:96px;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-  z-index:5;
-}
-
-.shorts-action-btn{
-  background:none;
-  border:none;
-  padding:0;
-  width:44px;
-  height:44px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.shorts-action-btn svg{
-  width:26px;
-  height:26px;
-  stroke:#fff;
-  stroke-width:1.8;
-  fill:none;
-}
-
-.shorts-action-btn:active svg{
-  transform:scale(.92);
-}
-`;
-    document.head.appendChild(style);
-  }
+  // (액션 레일 스타일은 css/shorts.css 로 이관 — 중복 주입 제거)

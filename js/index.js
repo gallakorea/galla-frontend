@@ -278,10 +278,13 @@ window.openReels = function (startId) {
             user_id: c.user_id, faction_a: c.faction_a, faction_b: c.faction_b
         }));
     if (!vids.length) return;
+    // 이어보기: 인라인 미리보기의 현재 재생 위치를 릴스로 넘김
+    const inlineVid = document.getElementById('vid-' + startId);
+    const startTime = inlineVid && !isNaN(inlineVid.currentTime) ? inlineVid.currentTime : 0;
     // 인라인 미리보기 정지 (소리 중복 방지)
     document.querySelectorAll('.card-media video').forEach(v => v.pause());
     if (typeof window.openShorts === 'function') {
-        window.openShorts(vids, Number(startId));
+        window.openShorts(vids, Number(startId), startTime);
     } else {
         location.href = `issue.html?id=${startId}`;
     }
