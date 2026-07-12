@@ -29,7 +29,13 @@
       .ga-draw{width:100%;margin-top:14px;padding:15px;border:none;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;
         background:linear-gradient(135deg,#7b5cff,#a17bff);color:#fff;box-shadow:0 8px 24px -8px rgba(123,92,255,.7)}
       .ga-draw:disabled{opacity:.6}
+      .ga-odds-btn{width:100%;margin-top:8px;padding:9px;border:1px solid rgba(255,255,255,.14);border-radius:10px;background:transparent;color:#c9d1e0;font-weight:800;font-size:12.5px;cursor:pointer}
+      .ga-odds{margin-top:8px;background:rgba(255,255,255,.04);border-radius:12px;padding:6px 10px}
+      .ga-odds table{width:100%;font-size:12px;color:#c9d1e0;border-collapse:collapse}
+      .ga-odds td{padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
+      .ga-odds td:last-child{text-align:right;font-weight:900;color:#f5cf6b}
       .ga-note{color:#8a8f9a;font-size:11.5px;margin-top:10px;line-height:1.5}
+      .ga-note b{color:#ff8098}
       .ga-close{width:100%;margin-top:8px;padding:12px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}
     `;
     document.head.appendChild(s);
@@ -88,12 +94,30 @@
       <div class="ga-machine" id="ga-machine">🎰</div>
       <div id="ga-reward-wrap"></div>
       <button class="ga-draw" id="ga-draw">🎰 뽑기 (700 GP)</button>
-      <div class="ga-note">칭호 · 닉네임 스타일 · 스티커팩 · GP가 랜덤으로! (0.5% 확률 💎5,000GP 잭팟)</div>
+      <button class="ga-odds-btn" id="ga-odds-btn">📊 확률 공개 보기</button>
+      <div class="ga-odds" id="ga-odds" hidden>
+        <table>
+          <tr><td>🗑️ 꽝</td><td>30%</td></tr>
+          <tr><td>+100 GP</td><td>20%</td></tr>
+          <tr><td>+300 GP</td><td>16%</td></tr>
+          <tr><td>스티커팩(미보유)·+400GP</td><td>13%</td></tr>
+          <tr><td>+1,000 GP</td><td>9%</td></tr>
+          <tr><td>칭호(미보유)·+800GP</td><td>7%</td></tr>
+          <tr><td>닉스타일(미보유)·+1,500GP</td><td>2.5%</td></tr>
+          <tr><td>🔥 +2,000 GP</td><td>1.5%</td></tr>
+          <tr><td>💎 잭팟 +5,000 GP</td><td>1%</td></tr>
+        </table>
+      </div>
+      <div class="ga-note">GP는 서비스 내 재화이며 <b>현금으로 환전·환급되지 않습니다.</b> 확률형 아이템 확률은 위와 같이 공개됩니다.</div>
       <button class="ga-close">닫기</button></div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".dim").onclick = () => sheet.remove();
     sheet.querySelector(".ga-close").onclick = () => sheet.remove();
     sheet.querySelector("#ga-draw").onclick = draw;
+    sheet.querySelector("#ga-odds-btn").onclick = () => {
+      const o = sheet.querySelector("#ga-odds"); o.hidden = !o.hidden;
+      sheet.querySelector("#ga-odds-btn").textContent = o.hidden ? "📊 확률 공개 보기" : "📊 확률 접기";
+    };
     await refreshBal();
   };
 })();

@@ -68,7 +68,7 @@
           <span class="shop-bal" id="shopBal">– GP</span>
         </div>
         <div class="shop-list" id="shopList"></div>
-        <div class="shop-note">GP는 출석·데일리 미션·예측으로 모을 수 있어요</div>
+        <div class="shop-note">GP는 출석·데일리 미션·예측으로 모을 수 있어요<br><span style="opacity:.7;font-size:11px">※ GP는 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
