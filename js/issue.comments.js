@@ -94,10 +94,13 @@ function renderCommentText(text) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-  return escaped.replace(
+  let html = escaped.replace(
     /\[gif:(.*?)\]/g,
     (_, url) => `<img src="${url.replace(/"/g, "")}" class="comment-gif">`
   );
+  // 갈라 전용 스티커 [emo:key] → <img> (emoticon.js가 제공)
+  if (window.GALLA_renderEmoticons) html = window.GALLA_renderEmoticons(html);
+  return html;
 }
 
 export async function initCommentSystem(issueId) {
@@ -1062,6 +1065,21 @@ function makeReply(r) {
   </div>`;
 }
 
+// 격론 감지: 이 댓글 스레드에서 나와 작성자가 답글을 주고받은 정도
+// 일정 수준(양방향 왕복)이 쌓이면 그 댓글에 '⚔️ 일기토' 버튼 자동 노출
+function duelHeat(c) {
+  if (!c.user_id || c.is_anonymous || !ME.userId || c.user_id === ME.userId) return false;
+  const thread = [c, ...(replyMap[c.id] || [])];
+  let me = 0, foe = 0;
+  thread.forEach(r => { if (r.user_id === ME.userId) me++; else if (r.user_id === c.user_id) foe++; });
+  return (me >= 2 && foe >= 1) || (me >= 1 && foe >= 2);
+}
+function duelHeatBtn(c) {
+  if (!duelHeat(c)) return "";
+  const nick = (profileMap[c.user_id]?.nickname || feedNickCache[c.user_id] || "상대").replace(/"/g, "&quot;");
+  return `<button type="button" class="c-duel" data-uid="${c.user_id}" data-nick="${nick}">⚔️ 일기토로 끝장</button>`;
+}
+
 function makeComment(c) {
   const replies = replyMap[c.id] || [];
   const battleButtons = battleButtonsFor(c);
@@ -1094,6 +1112,7 @@ function makeComment(c) {
     <div class="actions">
       ${likeUI(c)}
       ${battleButtons}
+      ${duelHeatBtn(c)}
       <span class="cp-chip" title="이 댓글이 받은 공격+방어+지원+추천을 합친 전투력">⚡ 전투력 ${power}</span>
       <span class="action-more">⋯</span>
     </div>
@@ -1215,6 +1234,13 @@ function bindEvents() {
   eventsBound = true;
 
   document.addEventListener("click", async e => {
+    // ⚔️ 격론 → 일기토 신청 (그 상대·이 이슈로)
+    const cd = e.target.closest(".c-duel");
+    if (cd) {
+      e.stopPropagation();
+      location.href = `duel.html?challenge=${cd.dataset.uid}&issue=${window.CURRENT_ISSUE_ID || ""}`;
+      return;
+    }
     // ✨ 부활권: 격파당한 내 댓글 부활
     if (e.target.classList.contains("revive-btn")) {
       e.stopPropagation();
@@ -1487,8 +1513,7 @@ function ensureInlineComposer() {
     <div class="ic-row">
       <input id="ic-input" maxlength="500" autocomplete="off">
       <button type="button" id="ic-send" class="ic-send"></button>
-    </div>
-    <button type="button" id="ic-duel" class="ic-duel" hidden>⚔️ 이 싸움, 일기토로 끝장내기</button>`;
+    </div>`;
   box.querySelector(".ic-close").addEventListener("click", closeInlineComposer);
   box.querySelector("#ic-send").addEventListener("click", submitInline);
   box.querySelector("#ic-input").addEventListener("keydown", e => {
@@ -1522,21 +1547,6 @@ function openInlineComposer(type, targetId, targetUser, unit) {
     const replies = unit.querySelector(":scope > .replies") || unit;
     replies.insertAdjacentElement("afterend", box);
   }
-  // 격론 escalation: 적을 공격하는 순간 = 일기토 신청 최적 타이밍
-  const duelBtn = box.querySelector("#ic-duel");
-  const targetUid = unit.querySelector(".user-name[data-user-id]")?.getAttribute("data-user-id");
-  const meId = ME?.userId || null;
-  if (type === "attack" && targetUid && targetUid !== meId) {
-    duelBtn.hidden = false;
-    duelBtn.innerHTML = `⚔️ ${escT(targetUser)}에게 일기토 신청 — 실시간으로 끝장내기`;
-    duelBtn.onclick = () => {
-      location.href = `duel.html?challenge=${targetUid}&issue=${window.CURRENT_ISSUE_ID || ""}`;
-    };
-  } else {
-    duelBtn.hidden = true;
-    duelBtn.onclick = null;
-  }
-
   input.value = "";
   input.focus();
   window.BattleFX?.haptic("tap");

@@ -1234,15 +1234,14 @@ body.kb-open .battle-input-bar {
   background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); color:#8b8b93;
 }
 
-/* ⚔️ 격론 → 일기토 escalation 버튼 (공격 컴포저) */
-.ic-duel {
-  display: block; width: 100%; margin-top: 8px; padding: 11px;
-  border: none; border-radius: 12px; cursor: pointer;
-  font-weight: 900; font-size: 13.5px; color: #0a0a0b;
+/* ⚔️ 격론 자동감지 → 댓글의 일기토 버튼 (답글 왕복이 쌓이면 자동 노출) */
+.c-duel {
+  border: none; cursor: pointer; border-radius: 99px; padding: 5px 12px;
+  font-weight: 900; font-size: 12px; color: #0a0a0b;
   background: linear-gradient(135deg, #f5cf6b, #e0a93a);
-  box-shadow: 0 0 16px rgba(245,207,107,.3);
-  animation: icDuelPulse 2.2s ease-in-out infinite;
+  box-shadow: 0 0 14px rgba(245,207,107,.35);
+  animation: cDuelPulse 1.8s ease-in-out infinite;
 }
-.ic-duel:active { transform: scale(.97); }
-@keyframes icDuelPulse { 50% { box-shadow: 0 0 22px rgba(245,207,107,.55); } }
-@media (prefers-reduced-motion: reduce) { .ic-duel { animation: none; } }
+.c-duel:active { transform: scale(.94); }
+@keyframes cDuelPulse { 50% { box-shadow: 0 0 22px rgba(245,207,107,.65); transform: translateY(-1px); } }
+@media (prefers-reduced-motion: reduce) { .c-duel { animation: none; } }
