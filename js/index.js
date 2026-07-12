@@ -180,7 +180,6 @@ function renderCard(data) {
 
     return `
     <div class="card${data.pinned ? ' pinned' : ''}" data-id="${data.id}" data-link="issue.html?id=${data.id}">
-        ${data.pinned ? `<div class="pin-badge">📌 부스트</div>` : ''}
         <div class="media-author-head">
             <div class="mah-left">
                 <div class="mah-avatar"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${avatarImg}</div>
@@ -189,7 +188,7 @@ function renderCard(data) {
                         <span class="author-name"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${data.author}</span>
                         <span class="level-badge">Lv.${data.level}</span>
                     </div>
-                    <div class="mah-line2">${data.category} · ${data.time}</div>
+                    <div class="mah-line2">${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${data.category} · ${data.time}</div>
                 </div>
             </div>
             ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
