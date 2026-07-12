@@ -212,6 +212,7 @@
     // 비-라이브 상태들은 단순 카드, live/voting은 옥타곤
     if (D.status === "pending") return renderPending();
     if (D.status === "scheduled") return renderScheduled();
+    if (D.status === "judging") return renderJudging();
     if (D.status === "declined" || D.status === "expired" || D.status === "noshow" || D.status === "finished")
       return renderClosed();
     return renderOctagon(); // live | voting
@@ -468,6 +469,28 @@
     ch.subscribe(); chans.push(ch);
   }
 
+  // ═══════════ AI 심판 판정 중 ═══════════
+  let judgeTriggered = {};
+  async function renderJudging() {
+    root().innerHTML = ringHeader() + `
+      <div class="duel-card judging-card">
+        <div class="judge-orb">⚖️</div>
+        <div class="judge-msg">🤖 AI 심판이 대화록을 읽고 판정 중…</div>
+        <div class="judge-sub">관중 표심이 갈리지 않아 AI가 승부를 가립니다</div>
+      </div>`;
+    triggerAiJudge(D.id);
+    const ch = sb.channel("duel-judge-" + D.id)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "duels", filter: "id=eq." + D.id },
+        p => { if (p.new.status !== D.status) { Object.assign(D, p.new); renderArena(D.id); } });
+    ch.subscribe(); chans.push(ch);
+  }
+  async function triggerAiJudge(id) {
+    if (judgeTriggered[id]) return; judgeTriggered[id] = true;
+    try { await sb.functions.invoke("duel-ai-judge", { body: { duel_id: Number(id) } }); } catch (e) {}
+    // 폴백: 응답/실시간 누락 대비 재조회
+    setTimeout(async () => { const nd = await loadDuel(id); if (nd && nd.status !== D.status) { D = nd; renderArena(id); } }, 4500);
+  }
+
   async function renderClosed() {
     const box = root();
     // 종료된 대결의 변론 로그도 볼 수 있게
@@ -481,8 +504,11 @@
     else banner = "무효 처리됨";
     const log = (msgs || []).map(m => `<div class="rmsg ${m.side}"><span class="rmsg-body">${esc(m.body)}</span></div>`).join("")
       || `<div class="duel-empty small">변론 기록이 없어요.</div>`;
+    const verdictCard = (D.judge === "ai" && D.verdict)
+      ? `<div class="duel-card verdict-card">🤖 <b>AI 심판</b> · ${esc(D.verdict)}</div>` : "";
     box.innerHTML = ringHeader() + `
       <div class="duel-card result-banner">${banner}</div>
+      ${verdictCard}
       ${(D.status === "finished" || D.status === "noshow") ? `<div class="duel-card result-card">
         <div class="rc-bar"><div class="rc-fill chal" style="width:${cp}%">${c}</div><div class="rc-fill opp" style="width:${100 - cp}%">${o}</div></div>
         <div class="rc-legend"><span>🔵 ${esc(nk(D.challenger))} ${cp}%</span><span>🔴 ${esc(nk(D.opponent))} ${100 - cp}%</span></div></div>` : ""}

@@ -198,3 +198,17 @@
 .rec-f { color: #f5cf6b; }
 .sec-cnt.live { background: #ff2d2d; animation: dpulse 1.2s infinite; }
 .lobby-row.is-live { border-color: rgba(255,45,45,.4); }
+
+/* ⚖️ AI 심판 판정 중 */
+.judging-card { text-align: center; padding: 26px 16px; background: radial-gradient(120% 90% at 50% 0%, #1c1430, #0e0f14); }
+.judge-orb { font-size: 46px; display: inline-block; animation: judgeSpin 1.6s cubic-bezier(.5,0,.5,1) infinite; filter: drop-shadow(0 0 14px rgba(245,207,107,.6)); }
+@keyframes judgeSpin { 0%{transform:rotate(-18deg)} 50%{transform:rotate(18deg)} 100%{transform:rotate(-18deg)} }
+.judge-msg { font-weight: 900; color: #f5cf6b; font-size: 15px; margin-top: 12px; }
+.judge-sub { color: #9aa0ad; font-size: 12.5px; margin-top: 6px; }
+.judge-msg::after { content: ""; animation: judgeDots 1.4s steps(4) infinite; }
+@keyframes judgeDots { 0%{content:""} 25%{content:"."} 50%{content:".."} 75%{content:"..."} }
+
+/* AI 판정평 */
+.verdict-card { text-align: center; color: #eef0f4; font-size: 13.5px; line-height: 1.5;
+  background: linear-gradient(180deg,#1a1626,#0f0f14); border-color: rgba(245,207,107,.25); }
+.verdict-card b { color: #f5cf6b; }
