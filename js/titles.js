@@ -50,24 +50,30 @@
   }
 
   let sheet, tab = "title", bal = 0;
-  let ownedT = new Set(), equipT = null, ownedS = new Set(), equipS = null, ME = null;
+  let ownedT = new Set(), equipT = null, awardsT = [], ownedS = new Set(), equipS = null, ME = null;
 
   async function refresh() {
     const [balR, mt, ms, sess] = await Promise.all([
       sb().rpc("ensure_balance"), sb().rpc("my_titles"), sb().rpc("my_nickstyles"), sb().auth.getSession(),
     ]);
     bal = Math.round(balR.data || 0);
-    ownedT = new Set(mt.data?.owned || []); equipT = mt.data?.equipped || null;
+    ownedT = new Set(mt.data?.owned || []); equipT = mt.data?.equipped || null; awardsT = mt.data?.awards || [];
     ownedS = new Set(ms.data?.owned || []); equipS = ms.data?.equipped || null;
     ME = sess.data?.session?.user?.id || null;
     render();
   }
 
+  function awardRow(a) {
+    const isEq = a.name === equipT;
+    const label = `<span class="nick-title" style="font-size:13px">${a.name}</span>`;
+    const btn = isEq ? `<button class="tt-btn on" disabled>장착 중</button>` : `<button class="tt-btn equip" data-eq="${a.key}">장착</button>`;
+    return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">🏆 ${label}</span>${btn}</div>`;
+  }
   function render() {
     sheet.querySelector("#tt-bal").textContent = bal.toLocaleString() + " GP";
     sheet.querySelectorAll(".tt-tab").forEach(t => t.classList.toggle("on", t.dataset.tab === tab));
     const grid = sheet.querySelector("#tt-grid");
-    if (tab === "title") grid.innerHTML = TITLES.map(titleRow).join("");
+    if (tab === "title") grid.innerHTML = awardsT.map(awardRow).join("") + TITLES.map(titleRow).join("");
     else grid.innerHTML = STYLES.map(styleRow).join("");
     wire(grid);
   }
