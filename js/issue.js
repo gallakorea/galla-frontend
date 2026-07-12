@@ -203,9 +203,9 @@ function renderIssueMedia(issue) {
     if (issue.video_url) {
         wrap.innerHTML = `
         <div class="issue-media issue-media--video" onclick="issueOpenReels()">
-            <video id="issue-vid" loop playsinline muted preload="metadata">
-                <source src="${issue.video_url}" type="video/mp4">
-            </video>
+            <video id="issue-vid" src="${issue.video_url}"
+                   ${issue.thumbnail_url ? `poster="${issue.thumbnail_url}"` : ""}
+                   loop playsinline webkit-playsinline muted preload="metadata"></video>
             <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
             <button class="vid-mute" id="issue-vid-mute"
                     onclick="event.stopPropagation();window.GALLA_setSound(!window.GALLA_soundOn())">🔇</button>

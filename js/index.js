@@ -104,8 +104,9 @@ function renderMedia(data) {
              onclick="event.stopPropagation();openReels(${data.id})">
             <video
                 id="vid-${data.id}"
-                loop playsinline muted preload="metadata">
-                <source src="${data.video_url}" type="video/mp4">
+                src="${data.video_url}"
+                ${data.thumbnail_url ? `poster="${data.thumbnail_url}"` : ""}
+                loop playsinline webkit-playsinline muted preload="metadata">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
