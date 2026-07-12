@@ -207,16 +207,42 @@
     $("#u-tab").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; upTab = b.dataset.v; renderUpload(); };
     ({ issue: upIssue, plaza: upPlaza, market: upMarket, news: upNews }[upTab])();
   }
+  let issueLinks = [];
+  function renderIssueLinks() {
+    const box = $("#i-links"); if (!box) return;
+    box.innerHTML = issueLinks.length ? issueLinks.map((l, i) => `
+      <div class="ad-link-card">
+        ${l.image ? `<span class="ad-link-thumb" style="background-image:url('${esc(l.image)}')"></span>` : `<span class="ad-link-thumb none">🔗</span>`}
+        <span class="ad-link-mid"><span class="ad-link-src">${esc(l.source || "")}</span><span class="ad-link-title">${esc(l.title || l.url)}</span></span>
+        <button class="ad-link-x" data-rm="${i}" title="삭제">✕</button>
+      </div>`).join("") : `<div class="ad-note" style="margin:0">붙인 뉴스 링크가 여기에 관련 뉴스 카드로 쌓입니다.</div>`;
+    box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { issueLinks.splice(+b.dataset.rm, 1); renderIssueLinks(); });
+  }
   function upIssue() {
+    issueLinks = [];
     $("#u-form").innerHTML =
       IN("i-title", "제목 *", "이슈 제목") + IN("i-one", "한줄 요약", "카드에 뜨는 한 줄") +
       TA("i-desc", "설명", "이슈 상세 설명") + IN("i-cat", "카테고리", "", "사회") +
       `<div class="ad-2col">${IN("i-fa", "진영 A", "👍 찬성이오")}${IN("i-fb", "진영 B", "👎 난 반댈세")}</div>` +
       IN("i-thumb", "썸네일 이미지 URL", "https://…") +
-      `<button class="ad-btn primary" id="i-go">🚀 이슈 발행</button><div class="ad-note">진영명 비우면 기본(찬성이오/난 반댈세). 미디어는 URL 입력.</div>`;
+      `<label>관련 뉴스 링크</label>
+       <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="뉴스 기사 URL 붙여넣기 → 추가" style="margin:0">
+       <button class="ad-btn ghost" id="i-link-go" type="button">추가</button></div>
+       <div id="i-links" class="ad-links"></div>` +
+      `<button class="ad-btn primary" id="i-go">🚀 이슈 발행</button><div class="ad-note">진영명 비우면 기본(찬성이오/난 반댈세). 관련 뉴스 링크는 이슈 하단에 카드로 뜨고 클릭 시 외부로 이동합니다.</div>`;
+    renderIssueLinks();
+    const addLink = async () => {
+      const u = $("#i-link-url").value.trim(); if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL을 입력하세요.");
+      const btn = $("#i-link-go"); btn.disabled = true; btn.textContent = "불러오는 중…";
+      const { data } = await sb.functions.invoke("link-preview", { body: { url: u } });
+      issueLinks.push({ url: data?.url || u, title: data?.title || u, source: data?.source || "", image: data?.image || null });
+      $("#i-link-url").value = ""; btn.disabled = false; btn.textContent = "추가"; renderIssueLinks();
+    };
+    $("#i-link-go").onclick = addLink;
+    $("#i-link-url").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); addLink(); } };
     $("#i-go").onclick = async () => {
       const t = $("#i-title").value.trim(); if (!t) return $("#i-title").focus();
-      const r = await rpc("admin_publish_issue", { p_title: t, p_one_line: $("#i-one").value.trim(), p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value.trim() || "사회", p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(), p_thumb: $("#i-thumb").value.trim() });
+      const r = await rpc("admin_publish_issue", { p_title: t, p_one_line: $("#i-one").value.trim(), p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value.trim() || "사회", p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(), p_thumb: $("#i-thumb").value.trim(), p_links: issueLinks });
       if (r?.ok) { toast("이슈 발행됨"); location.href = "issue.html?id=" + r.id; } else alert("발행 실패");
     };
   }

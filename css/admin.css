@@ -148,3 +148,14 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ad-2col label { grid-column: span 1; }
 .ad-form .ad-segs { margin-top: 4px; }
+
+/* 관련 뉴스 링크 빌더 (직접 업로드 > 이슈) */
+.ad-link-add { display: flex; gap: 8px; margin-bottom: 10px; }
+.ad-links { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.ad-link-card { display: flex; align-items: center; gap: 10px; background: #0c0d11; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.ad-link-thumb { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 9px; background: #1a1c22 center/cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.ad-link-thumb.none { color: #6c7280; }
+.ad-link-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ad-link-src { font-size: 11px; font-weight: 800; color: var(--blue); }
+.ad-link-title { font-size: 13px; color: #e7ebf3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-link-x { flex: 0 0 auto; border: none; background: rgba(255,79,110,.14); color: #ff8098; width: 26px; height: 26px; border-radius: 8px; cursor: pointer; font-weight: 900; }

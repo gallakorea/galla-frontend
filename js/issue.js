@@ -6,6 +6,26 @@ import { initCommentSystem } from "./issue.comments.js";
 
 console.log("[issue.js] loaded");
 
+/* 직접 등록한 관련 뉴스 링크 → 카드로 렌더, 클릭 시 외부 이동 */
+function renderRelatedLinks(links) {
+  const sec = document.getElementById("related-links-sec");
+  const root = document.getElementById("related-links-list");
+  if (!sec || !root) return;
+  const list = Array.isArray(links) ? links : [];
+  if (!list.length) { sec.hidden = true; return; }
+  const A = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
+  root.innerHTML = list.map(l => {
+    const url = l && l.url; if (!url || !/^https?:\/\//i.test(url)) return "";
+    return `<a class="rel-news-card" href="${A(url)}" target="_blank" rel="noopener noreferrer">
+      ${l.image ? `<span class="rel-news-thumb" style="background-image:url('${A(l.image)}')"></span>` : `<span class="rel-news-thumb none">🔗</span>`}
+      <span class="rel-news-mid"><span class="rel-news-src">${A(l.source || host(url))}</span><span class="rel-news-title">${A(l.title || url)}</span></span>
+      <span class="rel-news-go">↗</span>
+    </a>`;
+  }).join("");
+  sec.hidden = false;
+}
+
 // 🔥 모바일 세션 지연 대응 (외과적 추가)
 async function waitForSessionReady(timeout = 2500) {
   const start = Date.now();
@@ -142,6 +162,11 @@ forceBattleScrollWithRetry();
 if (typeof loadAiArguments === "function") {
   loadAiArguments(issue);
 }
+
+/* ===============================
+  관련 뉴스 (직접 등록 외부 링크)
+=============================== */
+renderRelatedLinks(issue.related_links);
 
 /* ===============================
   AI NEWS (뉴스)
