@@ -422,10 +422,10 @@ async function toggleBookmark(img) {
 
 async function shareIssue(id) {
     const card = window.cards.find(c => String(c.id) === String(id));
-    const url = new URL(`issue.html?id=${id}`, location.href).href;
+    const url = window.GALLA_shareUrl ? window.GALLA_shareUrl('issue', id) : new URL(`issue.html?id=${id}`, location.href).href;
     if (navigator.share) {
         try {
-            await navigator.share({ title: card?.title || 'GALLA', url });
+            await navigator.share({ title: card?.title ? `⚔️ ${card.title}` : 'GALLA', text: '찬성이냐 반대냐, 당신의 진영은?', url });
             return;
         } catch (err) {
             if (err.name === 'AbortError') return; // 사용자가 공유 취소

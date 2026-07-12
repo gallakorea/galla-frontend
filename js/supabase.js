@@ -35,6 +35,11 @@
            `onerror="this.onerror=null;this.src='${window.GALLA_DEFAULT_AVATAR}'">`;
   };
 
+  // 공유 URL: /share/<type>/<id> (엣지에서 OG 카드 렌더). type: issue|predict|plaza
+  window.GALLA_shareUrl = function (type, id) {
+    return `${location.origin}/share/${type}/${encodeURIComponent(id)}`;
+  };
+
   // 작성자(아바타/이름) 클릭 → 해당 유저 마이페이지 (인스타식). 전역 캡처 위임.
   if (!window.__GALLA_PROFILE_NAV__) {
     window.__GALLA_PROFILE_NAV__ = true;

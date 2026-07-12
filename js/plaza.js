@@ -538,10 +538,9 @@ function renderPlazaPosts(posts) {
 }
 
 /* 공용 공유 (Web Share API + 클립보드 폴백) */
-async function gallaShare(title, path) {
-  const url = new URL(path, location.href).href;
+async function gallaShare(title, url) {
   if (navigator.share) {
-    try { await navigator.share({ title: title || "GALLA", url }); return; }
+    try { await navigator.share({ title: title ? `💬 ${title}` : "GALLA 광장", text: "갈라 광장에서 지금 뜨거운 이야기", url }); return; }
     catch (err) { if (err.name === "AbortError") return; }
   }
   try { await navigator.clipboard.writeText(url); alert("링크가 복사되었습니다."); }
@@ -554,7 +553,7 @@ plazaListEl?.addEventListener("click", (e) => {
   if (!btn) return;
   e.preventDefault();
   e.stopPropagation();
-  gallaShare(btn.dataset.title, `plaza_detail.html?id=${btn.dataset.id}`);
+  gallaShare(btn.dataset.title, window.GALLA_shareUrl ? window.GALLA_shareUrl('plaza', btn.dataset.id) : new URL(`plaza_detail.html?id=${btn.dataset.id}`, location.href).href);
 });
 
 /* 목록 카드 업/다운 투표 (레딧식, 이벤트 위임) */
