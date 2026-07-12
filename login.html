@@ -2,65 +2,77 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>로그인 - GALLA</title>
     <link rel="stylesheet" href="css/login.css">
 </head>
 
 <body data-page="mypage">
 
-<div id="app">
+<div class="auth-wrap">
+  <div class="auth-glow"></div>
 
-    <header class="header">
-        <div class="header-inner">
-            <img src="assets/icons/back.svg" class="back-icon" onclick="history.back()">
-            <div class="header-title">로그인</div>
-            <div class="header-spacer"></div>
-        </div>
-    </header>
+  <button class="auth-back" onclick="history.length>1?history.back():location.href='index.html'" aria-label="뒤로">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+  </button>
 
-    <div class="login-guide">
-        다시 만나 반갑습니다!<br>
-        계정으로 로그인하고 GP, 활동 기록, 보상을 이어가세요.
+  <div class="auth-inner">
+
+    <!-- BRAND -->
+    <div class="auth-brand">
+      <img src="assets/logo.png" alt="GALLA" class="auth-logo" />
+      <p class="auth-tagline">여론이 에너지가 되는 곳</p>
     </div>
 
-    <section class="section">
+    <!-- CARD -->
+    <div class="auth-card">
+      <h1 class="auth-title">다시 오셨군요 👋</h1>
+      <p class="auth-sub">로그인하고 GP·활동 기록·보상을 이어가세요.</p>
 
-        <div class="input-group">
-            <div class="input-label">아이디 (이메일)</div>
-            <input type="email" id="email" class="input-field" placeholder="example@galla.com">
+      <div class="field">
+        <label class="field-label" for="email">이메일</label>
+        <input type="email" id="email" class="field-input" placeholder="example@galla.com" autocomplete="email" inputmode="email">
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="password">비밀번호</label>
+        <div class="pw-wrap">
+          <input type="password" id="password" class="field-input" placeholder="비밀번호 입력" autocomplete="current-password">
+          <button type="button" class="pw-toggle" data-for="password" aria-label="비밀번호 표시">👁</button>
         </div>
+      </div>
 
-        <div class="input-group">
-            <div class="input-label">비밀번호</div>
-            <input type="password" id="password" class="input-field" placeholder="비밀번호 입력">
-        </div>
+      <div class="auth-row-right">
+        <span class="link-muted" onclick="location.href='reset.html'">비밀번호를 잊으셨나요?</span>
+      </div>
 
-        <div class="forgot-row">
-            <span onclick="location.href='reset.html'">비밀번호 재설정 ></span>
-        </div>
+      <button class="auth-btn" id="loginBtn">로그인</button>
 
-        <button class="login-btn" id="loginBtn">로그인</button>
+      <div class="auth-foot">
+        아직 계정이 없나요? <span class="link-gold" onclick="location.href='signup.html'">회원가입</span>
+      </div>
+    </div>
 
-        <div class="signup-link">
-            계정이 없나요? <span onclick="location.href='signup.html'">회원가입</span>
-        </div>
-
-    </section>
-
+  </div>
 </div>
 
 <!-- Supabase CDN -->
 <script src="./js/vendor/supabase.js"></script>
-
-<!-- OUR SCRIPTS -->
 <script src="js/supabase.js"></script>
 <script src="js/login.js"></script>
 
-<!-- 디버그용 -->
+<!-- 비밀번호 표시/숨김 (부가 UX) -->
 <script>
-console.log("[login.html] window.supabase =", window.supabase);
-console.log("[login.html] window.supabaseClient =", window.supabaseClient);
+  document.querySelectorAll('.pw-toggle').forEach(function(b){
+    b.addEventListener('click', function(){
+      var i = document.getElementById(b.dataset.for);
+      if(!i) return;
+      var show = i.type === 'password';
+      i.type = show ? 'text' : 'password';
+      b.textContent = show ? '🙈' : '👁';
+      b.classList.toggle('on', show);
+    });
+  });
 </script>
 
 </body>
