@@ -602,11 +602,31 @@ async function loadVoteStats(issueId) {
   const proPercent = total ? Math.round((pro / total) * 100) : 0;
   const conPercent = total ? 100 - proPercent : 0;
 
-  qs("vote-pro-bar").style.width = `${proPercent}%`;
-  qs("vote-con-bar").style.width = `${conPercent}%`;
-  qs("vote-pro-text").innerText = `${proPercent}%`;
-  qs("vote-con-text").innerText = `${conPercent}%`;
+  // 동적 채움(0→목표 트랜지션) + 퍼센트 카운트업
+  const pb = qs("vote-pro-bar"), cb = qs("vote-con-bar");
+  if (pb && cb) {
+    requestAnimationFrame(() => { pb.style.width = `${proPercent}%`; cb.style.width = `${conPercent}%`; });
+  }
+  countUpText(qs("vote-pro-text"), proPercent, "%");
+  countUpText(qs("vote-con-text"), conPercent, "%");
 }
+
+// 숫자 카운트업 애니메이션 (인포그래픽 공용)
+function countUpText(el, target, suffix = "") {
+  if (!el) return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { el.innerText = `${target}${suffix}`; return; }
+  const start = parseFloat(el.dataset.cv || "0") || 0;
+  const dur = 700, t0 = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3); // easeOutCubic
+    const val = Math.round(start + (target - start) * e);
+    el.innerText = `${val}${suffix}`;
+    if (p < 1) requestAnimationFrame(step); else el.dataset.cv = String(target);
+  };
+  requestAnimationFrame(step);
+}
+window.GALLA_countUp = countUpText;
 
 /* ==========================================================================
    4. Vote

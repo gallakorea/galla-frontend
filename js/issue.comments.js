@@ -656,6 +656,8 @@ async function initBattleFeed(issueId) {
         const repliesBox = rootUnit?.querySelector(":scope > .replies");
         if (repliesBox) {
           repliesBox.insertAdjacentHTML("beforeend", makeReply(c));
+          const el = repliesBox.lastElementChild; el?.classList.add("just-in");
+          if (el) window.BattleFX?.burstAt?.(el, "spawn");
           applySideColoring();
           updateReplyMeta(rootUnit, rootId);
         }
@@ -665,6 +667,8 @@ async function initBattleFeed(issueId) {
         if (list && state[c.faction].page === 1) {
           list.querySelector(".empty-zone")?.remove();
           list.insertAdjacentHTML("afterbegin", makeComment(c));
+          const el = list.firstElementChild; el?.classList.add("just-in");
+          if (el) { window.BattleFX?.burstAt?.(el, "spawn"); el.scrollIntoView({ behavior: "smooth", block: "nearest" }); }
           applySideColoring();
         }
       }
@@ -1236,7 +1240,9 @@ function renderWarDashboard() {
 
   const set = (id, v) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = v;
+    if (!el) return;
+    if (typeof v === "number" && window.GALLA_countUp) window.GALLA_countUp(el, v, "");
+    else el.textContent = v;
   };
   set("stat-pro-total", w.pro.total);
   set("stat-pro-same", w.pro.same);
