@@ -613,6 +613,7 @@ qs("btn-vote-pro")?.addEventListener("click", async () => {
   const voteType = await window.GALLA_CHECK_VOTE(issueId);
   if (voteType === "pro" || voteType === "con") {
     applyVoteUI(voteType);
+    document.dispatchEvent(new CustomEvent("galla:voted", { detail: { issueId, faction: voteType } }));
   }
 
   loadVoteStats(issueId);
@@ -629,6 +630,7 @@ qs("btn-vote-con")?.addEventListener("click", async () => {
   const voteType = await window.GALLA_CHECK_VOTE(issueId);
   if (voteType === "pro" || voteType === "con") {
     applyVoteUI(voteType);
+    document.dispatchEvent(new CustomEvent("galla:voted", { detail: { issueId, faction: voteType } }));
   }
 
   loadVoteStats(issueId);

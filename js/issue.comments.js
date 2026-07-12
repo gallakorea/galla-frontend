@@ -128,6 +128,23 @@ export async function initCommentSystem(issueId) {
   bindEvents();
   initBattleFeed(issueId);
   renderHonors();
+
+  // 페이지를 연 뒤 투표하면 컴포저/전투버튼이 즉시 풀리도록 (새로고침 불필요)
+  if (!window.__GALLA_VOTE_SYNC__) {
+    window.__GALLA_VOTE_SYNC__ = true;
+    document.addEventListener("galla:voted", async (e) => {
+      const f = e.detail?.faction;
+      if (f !== "pro" && f !== "con") return;
+      if (ME.faction === f) return;
+      ME.faction = f;
+      window.MY_VOTE_TYPE = f;
+      authorVoteMap[ME.userId] = f;   // 침투 노출 판정에 내 진영 반영
+      await initComposerUI();
+      renderSide("pro");
+      renderSide("con");
+      renderMorale();
+    });
+  }
 }
 
 /* ======================
