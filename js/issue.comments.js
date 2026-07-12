@@ -902,6 +902,45 @@ function nameSpan(c) {
   if (c.is_anonymous || !c.user_id) return `<span class="user-name">${nm}</span>`;
   return `<span class="user-name userlink" data-user-id="${c.user_id}" data-user-nick="${nm.replace(/"/g, "&quot;")}">${nm}</span>`;
 }
+
+// ⋯ 액션 시트: 일기토 신청 / 신고 / 차단 (자체 스타일)
+function openCommentMoreMenu({ uid, nick, cid }) {
+  const meId = ME?.userId || null;
+  const isOther = uid && uid !== meId;
+  document.getElementById("cmm-sheet")?.remove();
+  const sheet = document.createElement("div");
+  sheet.id = "cmm-sheet";
+  sheet.style.cssText = "position:fixed;inset:0;z-index:99998;display:flex;align-items:flex-end;justify-content:center";
+  const opt = (icon, label, cls) => `<button class="cmm-opt ${cls}" style="display:flex;gap:10px;align-items:center;width:100%;padding:15px 18px;border:none;background:transparent;color:#eef0f4;font-size:15px;font-weight:700;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06)"><span style="font-size:18px">${icon}</span>${label}</button>`;
+  sheet.innerHTML = `
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+    <div style="position:relative;width:100%;max-width:480px;background:#16171c;border-radius:18px 18px 0 0;padding:8px 0 max(8px,env(safe-area-inset-bottom));animation:cmmUp .22s ease">
+      ${isOther ? opt("⚔️", `<b style="color:#f5cf6b">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
+      ${isOther ? opt("🚨", "신고", "report") : ""}
+      ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("🙈", "내 댓글", "self")}
+      <button class="cmm-opt cancel" style="width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer">닫기</button>
+    </div>`;
+  if (!document.getElementById("cmm-css")) {
+    const s = document.createElement("style"); s.id = "cmm-css";
+    s.textContent = "@keyframes cmmUp{from{transform:translateY(100%)}}.cmm-opt:active{background:rgba(255,255,255,.06)!important}";
+    document.head.appendChild(s);
+  }
+  document.body.appendChild(sheet);
+  const close = () => sheet.remove();
+  sheet.firstElementChild.addEventListener("click", close);
+  sheet.querySelector(".cancel").addEventListener("click", close);
+  sheet.querySelector(".duel")?.addEventListener("click", () => {
+    close();
+    location.href = `duel.html?challenge=${uid}&issue=${window.CURRENT_ISSUE_ID || ""}`;
+  });
+  const goReport = () => {
+    close();
+    if (window.GALLA_openReportMenu) window.GALLA_openReportMenu({ contentType: "comment", contentId: cid, authorId: uid, authorName: nick });
+    else alert("신고 기능을 불러오지 못했어요.");
+  };
+  sheet.querySelector(".report")?.addEventListener("click", goReport);
+  sheet.querySelector(".block")?.addEventListener("click", goReport);
+}
 function displayLevel(c) {
   return profileMap[c.user_id]?.level || 1;
 }
@@ -1310,9 +1349,14 @@ function bindEvents() {
       return;
     }
 
-    // ⋯ 메뉴
+    // ⋯ 메뉴 — 일기토 신청 / 신고 / 차단
     if (e.target.classList.contains("action-more")) {
-      alert("신고 / 차단 기능은 다음 단계에서 연결됩니다.");
+      const unit = e.target.closest(".comment");
+      const nameEl = unit?.querySelector(".user-name[data-user-id]");
+      const uid = nameEl?.getAttribute("data-user-id");
+      const nick = nameEl?.getAttribute("data-user-nick") || "상대";
+      const cid = unit?.getAttribute("data-id");
+      openCommentMoreMenu({ uid, nick, cid });
       return;
     }
 

@@ -39,6 +39,7 @@
         </div>
         <div class="us-actions">
           <button class="us-btn" data-act="profile">👤 프로필 보기</button>
+          <button class="us-btn" data-act="duel" id="usDuel">⚔️ 일기토 신청</button>
           <button class="us-btn primary" data-act="dm" id="usDm">✉️ 메시지 보내기</button>
         </div>
       </div>`;
@@ -50,6 +51,7 @@
       if (!act) return;
       const uid = sheet.dataset.uid, nick = sheet.dataset.nick || "";
       if (act === "profile") { location.href = `mypage.html?user=${uid}`; }
+      else if (act === "duel") { close(); location.href = `duel.html?challenge=${uid}`; }
       else if (act === "dm") {
         close();
         if (window.startDM) window.startDM(uid, nick);
@@ -70,8 +72,10 @@
     const ava = sheet.querySelector("#usAva");
     ava.textContent = (name.charAt(0) || "?").toUpperCase();
     ava.style.background = avatarColor(uid);
-    // 본인이면 메시지 버튼 숨김
-    sheet.querySelector("#usDm").style.display = (me && me === uid) ? "none" : "";
+    // 본인이면 메시지·일기토 버튼 숨김
+    const self = (me && me === uid);
+    sheet.querySelector("#usDm").style.display = self ? "none" : "";
+    sheet.querySelector("#usDuel").style.display = self ? "none" : "";
     requestAnimationFrame(() => sheet.classList.add("open"));
   };
 

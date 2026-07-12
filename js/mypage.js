@@ -144,8 +144,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (window.startDM) window.startDM(viewUserId, name);
         };
 
+        const duelBtn = document.createElement("button");
+        duelBtn.className = "action-btn secondary";
+        duelBtn.textContent = "⚔️ 일기토";
+        duelBtn.onclick = () => { location.href = `duel.html?challenge=${viewUserId}`; };
+
         profileActions.appendChild(followBtn);
         profileActions.appendChild(messageBtn);
+        profileActions.appendChild(duelBtn);
     }
 
     // ============================

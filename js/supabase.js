@@ -40,6 +40,62 @@
     return `${location.origin}/share/${type}/${encodeURIComponent(id)}`;
   };
 
+  // ───────────────────────────────────────────────
+  // 코스메틱: 닉네임 골드(🎨 nick_deco) 전역 자동 렌더
+  // 렌더 지점을 건드리지 않고, 닉네임 요소([data-profile-uid]/[data-user-id])에
+  // 골드 클래스를 자동 부여한다. user_cosmetics(공개 조회)로 보유 여부 판별.
+  // ───────────────────────────────────────────────
+  window.GALLA_decoCache = window.GALLA_decoCache || {}; // uid -> {nick_gold, emoticon}
+  window.GALLA_loadDecos = async function (uids) {
+    const cache = window.GALLA_decoCache;
+    const need = [...new Set(uids)].filter(u => u && !(u in cache));
+    if (!need.length || !window.supabaseClient) return;
+    need.forEach(u => { cache[u] = cache[u] || null; }); // 로딩 마킹(중복요청 방지)
+    try {
+      const { data } = await window.supabaseClient
+        .from("user_cosmetics").select("user_id,nick_gold,emoticon").in("user_id", need);
+      (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon }; });
+    } catch (e) { /* 무해 */ }
+    need.forEach(u => { if (!cache[u]) cache[u] = {}; });
+  };
+  window.GALLA_isGoldNick = uid => !!(window.GALLA_decoCache[uid] && window.GALLA_decoCache[uid].nick_gold);
+
+  const NICK_SEL = ".author-name[data-profile-uid], .user-name[data-user-id], [data-nick-uid]";
+  let _ngPending = false;
+  async function _applyNickGold() {
+    _ngPending = false;
+    const els = [...document.querySelectorAll(NICK_SEL)].filter(el => !el.hasAttribute("data-gold-done"));
+    if (!els.length) return;
+    const map = new Map();
+    els.forEach(el => {
+      el.setAttribute("data-gold-done", "1");
+      const uid = el.getAttribute("data-profile-uid") || el.getAttribute("data-user-id") || el.getAttribute("data-nick-uid");
+      if (!uid) return;
+      if (!map.has(uid)) map.set(uid, []);
+      map.get(uid).push(el);
+    });
+    if (!map.size) return;
+    await window.GALLA_loadDecos([...map.keys()]);
+    map.forEach((list, uid) => { if (window.GALLA_isGoldNick(uid)) list.forEach(el => el.classList.add("nick-gold")); });
+  }
+  window.GALLA_refreshNickGold = function () {
+    if (_ngPending) return;
+    _ngPending = true;
+    requestAnimationFrame(() => { window.supabaseClient ? _applyNickGold() : setTimeout(_applyNickGold, 300); });
+  };
+  if (!window.__GALLA_NICKGOLD__) {
+    window.__GALLA_NICKGOLD__ = true;
+    const start = () => {
+      window.GALLA_refreshNickGold();
+      try {
+        const mo = new MutationObserver(() => window.GALLA_refreshNickGold());
+        mo.observe(document.body, { childList: true, subtree: true });
+      } catch (e) {}
+    };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+    else start();
+  }
+
   // 작성자(아바타/이름) 클릭 → 해당 유저 마이페이지 (인스타식). 전역 캡처 위임.
   if (!window.__GALLA_PROFILE_NAV__) {
     window.__GALLA_PROFILE_NAV__ = true;

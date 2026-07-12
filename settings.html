@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/settings.css?v=0712n">
-    <link rel="stylesheet" href="./css/items.css?v=0712n">
-    <link rel="stylesheet" href="./css/nav.css?v=0712n">
+    <link rel="stylesheet" href="./css/settings.css?v=0712o">
+    <link rel="stylesheet" href="./css/items.css?v=0712o">
+    <link rel="stylesheet" href="./css/nav.css?v=0712o">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -103,6 +103,11 @@
             <span class="tile-name">GP 상점</span>
             <span class="tile-sub">전투·꾸미기·도전</span>
         </div>
+        <div class="menu-tile duel" data-target="duel.html">
+            <span class="tile-ic">⚔️</span>
+            <span class="tile-name">일기토</span>
+            <span class="tile-sub">1:1 논쟁 대결·투표</span>
+        </div>
     </section>
 
     <!-- 💰 지갑/정산/기부: 2단계 오픈 시 hidden 제거로 복원 -->
@@ -181,7 +186,7 @@
     </div>
     </nav>
 
-    <script src="./js/nav.js?v=0712n"></script>
+    <script src="./js/nav.js?v=0712o"></script>
 
 </div>
 
@@ -212,19 +217,19 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- Supabase SDK (단 1회) -->
-<script src="./js/vendor/supabase.js?v=0712n"></script>
+<script src="./js/vendor/supabase.js?v=0712o"></script>
 
 <!-- Supabase Client 생성 -->
-<script src="js/supabase.js?v=0712n"></script>
+<script src="js/supabase.js?v=0712o"></script>
 
 <!-- 갈라치기 성향 로직 -->
-<script src="js/galla-type.js?v=0712n"></script>
+<script src="js/galla-type.js?v=0712o"></script>
 
 <!-- GP 상점 -->
-<script src="js/items.js?v=0712n"></script>
+<script src="js/items.js?v=0712o"></script>
 
 <!-- Settings 페이지 로직 -->
-<script src="js/settings.js?v=0712n"></script>
+<script src="js/settings.js?v=0712o"></script>
 
 <script>
   document.getElementById('shopTile')?.addEventListener('click', function(e){

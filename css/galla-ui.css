@@ -103,3 +103,20 @@ body {
 /* ---- 문의하기 ---- */
 .textarea { min-height: 120px; }
 .info-box { color: #9a9aa0 !important; font-size: 13px !important; line-height: 1.6 !important; padding: 15px 16px !important; }
+
+/* ============================================================
+   🎨 닉네임 골드(nick_deco) — 보유자 닉네임 골드 반짝임 (전역)
+   supabase.js가 닉네임 요소에 .nick-gold 를 자동 부여
+   ============================================================ */
+.nick-gold {
+  background: linear-gradient(92deg, #f7d774 0%, #fff2b8 20%, #e8a93a 45%, #ffe89a 65%, #d98f24 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  font-weight: 900 !important;
+  text-shadow: 0 0 10px rgba(245,207,107,.35);
+  animation: nickGoldShine 3.4s linear infinite;
+}
+.nick-gold::after { content: " 👑"; -webkit-text-fill-color: initial; color: #f5cf6b; font-size: .82em; text-shadow: none; }
+@keyframes nickGoldShine { 0% { background-position: 0% 0; } 100% { background-position: 220% 0; } }
+@media (prefers-reduced-motion: reduce) { .nick-gold { animation: none; } }
