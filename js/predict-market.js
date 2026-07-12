@@ -452,14 +452,17 @@ function renderComments(body){
     const roleBadge = isHolder
       ? `<span class="pmd-cmt-role holder">💰 홀더</span>`
       : `<span class="pmd-cmt-role watch">👁 관전</span>`;
-    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}"${borderStyle}>
+    const mine = c.user_id && ME && c.user_id === ME.id;
+    const cmtMenu = mine ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="market_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>` : '';
+    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}"${borderStyle}>
       <div class="pmd-cmt-head">
         <span class="pmd-side-chip ${c.side}"${chipStyle}>${cmtSideLabel(c.side, c.outcome_id)}</span>
         <span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>
         ${roleBadge}
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
+        ${cmtMenu}
       </div>
-      <div class="pmd-cmt-body">${cmtBody(c.content)}</div>
+      <div class="pmd-cmt-body" data-cmt-text>${cmtBody(c.content)}</div>
       <div class="pmd-cmt-actions">
         <button class="pmd-cmt-like ${liked?'on':''}" data-id="${c.id}">♥ <span>${likeAgg[c.id]||0}</span></button>
         <button class="pmd-cmt-reply" data-id="${c.id}">답글</button>

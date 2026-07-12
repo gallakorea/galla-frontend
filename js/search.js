@@ -784,11 +784,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const cmt = (c, isReply, topId) => {
       const liked = myLikes.has(c.id);
-      return `<div class="gnc ${isReply ? "reply" : ""}" data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
+      const mine = c.user_id && ME && c.user_id === ME.id;
+      const cmtMenu = mine ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="galla_news_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>` : "";
+      return `<div class="gnc ${isReply ? "reply" : ""}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
         <div class="gnc-av">${esc((nick(c.user_id).trim().charAt(0) || "익"))}</div>
         <div class="gnc-main">
-          <div class="gnc-head"><span class="gnc-name">${esc(nick(c.user_id))}</span><span class="gnc-time">${timeAgo(c.created_at)}</span></div>
-          <div class="gnc-text">${cmtBody(c.content)}</div>
+          <div class="gnc-head"><span class="gnc-name">${esc(nick(c.user_id))}</span><span class="gnc-time">${timeAgo(c.created_at)}</span>${cmtMenu}</div>
+          <div class="gnc-text" data-cmt-text>${cmtBody(c.content)}</div>
           <div class="gnc-actions">
             <button class="gnc-like ${liked ? "on" : ""}" data-id="${c.id}">♥ <span>${likeAgg[c.id] || 0}</span></button>
             <button class="gnc-reply" data-id="${c.id}">답글</button>

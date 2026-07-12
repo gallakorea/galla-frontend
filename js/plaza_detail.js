@@ -177,7 +177,7 @@ let myCommentVotes = {};
 async function fetchComments(commentCountEl) {
   const { data, error } = await supabase
     .from("plaza_comments")
-    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count")
+    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
@@ -193,12 +193,14 @@ async function fetchComments(commentCountEl) {
     body: c.body,
     created_at: c.created_at,
     like_count: c.like_count || 0,
-    dislike_count: c.dislike_count || 0
+    dislike_count: c.dislike_count || 0,
+    user_id: c.user_id
   }));
 
   // 로그인 상태면 내 투표 불러와 하이라이트
   myCommentVotes = {};
   const session = await getSessionSafe();
+  window.__PLAZA_MY_UID = session?.user?.id || null;
   if (session?.user && comments.length) {
     const { data: votes } = await supabase
       .from("plaza_comment_votes")
@@ -232,7 +234,11 @@ function commentVoteHtml(c) {
     <button class="cv-btn cv-dislike ${my === -1 ? "on" : ""}" data-cid="${c.id}" data-v="-1">👎 <span>${c.dislike_count}</span></button>`;
 }
 function commentHeaderHtml(c) {
-  return `<div class="comment-meta"><span class="cm-nick">${c.nickname || "익명"}</span><span class="cm-time">${timeAgoK(c.created_at)}</span></div>`;
+  const mine = c.user_id && c.user_id === window.__PLAZA_MY_UID;
+  const menu = mine
+    ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="plaza_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="body" aria-label="더보기">⋯</button>`
+    : "";
+  return `<div class="comment-meta"><span class="cm-nick">${c.nickname || "익명"}</span><span class="cm-time">${timeAgoK(c.created_at)}</span>${menu}</div>`;
 }
 
 /* 투표 처리 (이벤트 위임) */
@@ -276,13 +282,13 @@ function renderComments(list) {
 
   roots.forEach(root => {
     const rootLi = document.createElement("li");
-    rootLi.className = "comment root";
+    rootLi.className = "comment root"; rootLi.setAttribute("data-cmt-item","");
 
     const replies = list.filter(r => r.parent_id === root.id);
 
     rootLi.innerHTML = `
       ${commentHeaderHtml(root)}
-      <div class="comment-body">${root.body}</div>
+      <div class="comment-body" data-cmt-text>${root.body}</div>
 
       <div class="comment-actions">
         ${commentVoteHtml(root)}
@@ -409,14 +415,14 @@ function renderReplies(replies, container) {
 
   replies.forEach(reply => {
     const li = document.createElement("li");
-    li.className = "comment reply";
+    li.className = "comment reply"; li.setAttribute("data-cmt-item","");
 
     // ✅ 각 대댓글은 독립적으로 아래로 시작
     li.style.marginTop = "16px";
 
     li.innerHTML = `
       ${commentHeaderHtml(reply)}
-      <div class="comment-body">${reply.body}</div>
+      <div class="comment-body" data-cmt-text>${reply.body}</div>
       <div class="comment-actions">
         ${commentVoteHtml(reply)}
         <button class="reply-btn">답글 달기</button>

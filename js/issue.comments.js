@@ -937,7 +937,8 @@ function openCommentMoreMenu({ uid, nick, cid }) {
     <div style="position:relative;width:100%;max-width:480px;background:#16171c;border-radius:18px 18px 0 0;padding:8px 0 max(8px,env(safe-area-inset-bottom));animation:cmmUp .22s ease">
       ${isOther ? opt("⚔️", `<b style="color:#f5cf6b">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
       ${isOther ? opt("🚨", "신고", "report") : ""}
-      ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("🙈", "내 댓글", "self")}
+      ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("✏️", "댓글 수정", "edit")}
+      ${isOther ? "" : opt("🗑️", "댓글 삭제", "del")}
       <button class="cmm-opt cancel" style="width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer">닫기</button>
     </div>`;
   if (!document.getElementById("cmm-css")) {
@@ -960,6 +961,27 @@ function openCommentMoreMenu({ uid, nick, cid }) {
   };
   sheet.querySelector(".report")?.addEventListener("click", goReport);
   sheet.querySelector(".block")?.addEventListener("click", goReport);
+  // 내 댓글 수정/삭제 (소프트삭제: status='deleted')
+  sheet.querySelector(".edit")?.addEventListener("click", () => {
+    close();
+    const raw = allRows.find(r => String(r.id) === String(cid))?.content || "";
+    window.GALLA_cmtEdit?.({
+      table: "comments", id: cid, bodyCol: "content", current: raw,
+      onSaved: (txt) => {
+        const row = allRows.find(r => String(r.id) === String(cid)); if (row) row.content = txt;
+        const unit = document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`);
+        const body = unit?.querySelector(":scope > .body");
+        if (body) body.innerHTML = renderCommentText(txt);
+      },
+    });
+  });
+  sheet.querySelector(".del")?.addEventListener("click", () => {
+    close();
+    window.GALLA_cmtDelete?.({
+      table: "comments", id: cid, soft: true,
+      onDone: () => { document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.remove(); },
+    });
+  });
 }
 function displayLevel(c) {
   return profileMap[c.user_id]?.level || 1;
