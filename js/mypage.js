@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <button class="hdr-btn" aria-label="뒤로" onclick="history.length>1?history.back():location.href='index.html'">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
-                <span class="mp-hdr-title" id="mpHdrTitle"></span>
+                <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
                 <button class="hdr-btn" aria-label="더보기" id="mpMoreBtn">
                     <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
                 </button>`;
