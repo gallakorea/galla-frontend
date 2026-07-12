@@ -54,9 +54,15 @@
 
     if (!data?.ok) {
       machine.textContent = "🎰";
-      rewardBox.innerHTML = `<div style="color:#ff8098;font-weight:800;margin-top:8px">${data?.reason === "insufficient" ? "GP가 부족해요 (700GP 필요)" : "뽑기 실패"}</div>`;
-      btn.disabled = false; return;
+      let msg = "뽑기 실패";
+      if (data?.reason === "insufficient") msg = "GP가 부족해요 (700GP 필요)";
+      else if (data?.reason === "daily_limit") msg = `오늘 뽑기 한도(${data.limit}회)를 다 썼어요. 내일 다시!`;
+      rewardBox.innerHTML = `<div style="color:#ff8098;font-weight:800;margin-top:8px">${msg}</div>`;
+      if (data?.reason === "daily_limit") btn.textContent = "오늘 한도 소진";
+      else btn.disabled = false;
+      return;
     }
+    if (data.limit) btn.textContent = `🎰 뽑기 (700 GP) · 오늘 ${data.used}/${data.limit}`;
     const color = GRADE[data.grade] || GRADE.common;
     machine.textContent = data.type === "gp" ? "💰" : "🎁";
     rewardBox.innerHTML = `<div class="ga-reward" style="border-color:${color};background:${color}22">
