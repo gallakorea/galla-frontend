@@ -21,13 +21,24 @@ async function waitForClient() {
     const signupBtn = document.getElementById("signupBtn");
 
     let selectedRegion = null;
+    let selectedGender = null;
 
-    document.querySelectorAll(".region-chip").forEach(chip => {
+    // 지역 칩 (성별 칩 제외)
+    document.querySelectorAll(".region-chip:not(.gender-chip)").forEach(chip => {
         chip.addEventListener("click", () => {
-            document.querySelectorAll(".region-chip").forEach(c => c.classList.remove("active"));
+            document.querySelectorAll(".region-chip:not(.gender-chip)").forEach(c => c.classList.remove("active"));
             chip.classList.add("active");
             selectedRegion = chip.textContent.trim();
             document.getElementById("selectedRegion").textContent = selectedRegion;
+        });
+    });
+
+    // 성별 칩
+    document.querySelectorAll(".gender-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+            document.querySelectorAll(".gender-chip").forEach(c => c.classList.remove("active"));
+            chip.classList.add("active");
+            selectedGender = chip.dataset.gender;
         });
     });
 
@@ -62,6 +73,10 @@ async function waitForClient() {
             return;
         }
 
+        // 통계 필수 정보: 성별 · 지역
+        if (!selectedGender) { alert("성별을 선택해주세요. (여론 통계에 필요해요)"); return; }
+        if (!selectedRegion) { alert("사는 지역을 선택해주세요. (여론 통계에 필요해요)"); return; }
+
         // 필수 약관 동의 확인
         const agreeAge = document.getElementById("agreeAge").checked;
         const agreeTerms = document.getElementById("agreeTerms").checked;
@@ -86,6 +101,7 @@ async function waitForClient() {
                         nickname,
                         phone: phone || null,
                         region: selectedRegion || null,
+                        gender: selectedGender || null,
                         anonymous,
                         birth_date: birthDate,
                         age_verified: true,

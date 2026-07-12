@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>회원가입 - GALLA</title>
-    <link rel="stylesheet" href="css/signup.css?v=0712k">
+    <link rel="stylesheet" href="css/signup.css?v=0712l">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -68,14 +68,24 @@
         <input type="tel" id="phone" class="field-input" placeholder="010-0000-0000" inputmode="tel">
       </div>
 
+      <p class="stats-note">📊 생년월일·성별·지역은 <b>여론 통계</b>를 위해 필요해요 (필수)</p>
+
       <div class="field">
-        <label class="field-label" for="birthdate">생년월일 <span class="req">*</span> <span class="field-optional">만 14세 이상 가입 가능</span></label>
+        <label class="field-label" for="birthdate">생년월일 <span class="req">*</span> <span class="field-optional">만 14세 이상</span></label>
         <input type="date" id="birthdate" class="field-input" placeholder="YYYY-MM-DD">
         <div class="pw-hint" id="ageHint"></div>
       </div>
 
       <div class="field">
-        <label class="field-label">사는 지역 <span class="field-optional">선택</span></label>
+        <label class="field-label">성별 <span class="req">*</span></label>
+        <div class="region-grid gender-grid">
+          <div class="region-chip gender-chip" data-gender="male">남성</div>
+          <div class="region-chip gender-chip" data-gender="female">여성</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">사는 지역 <span class="req">*</span></label>
         <div class="region-grid">
           <div class="region-chip">서울</div><div class="region-chip">부산</div>
           <div class="region-chip">대구</div><div class="region-chip">인천</div>
@@ -144,8 +154,8 @@
 </div>
 
 <!-- Supabase -->
-<script src="./js/vendor/supabase.js?v=0712k"></script>
-<script src="./js/supabase.js?v=0712k"></script>
+<script src="./js/vendor/supabase.js?v=0712l"></script>
+<script src="./js/supabase.js?v=0712l"></script>
 
 <!-- LOGIN CHECK + WAIT -->
 <script>
@@ -229,7 +239,7 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- signup 기능 -->
-<script src="./js/signup.js?v=0712k"></script>
+<script src="./js/signup.js?v=0712l"></script>
 
 </body>
 </html>
