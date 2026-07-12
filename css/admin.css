@@ -144,3 +144,7 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 
 .ad-table { overflow-x: auto; display: block; }
 @media (max-width: 900px) { .ad-table { font-size: 12px; } .ad-prev { max-width: 120px; } }
+
+.ad-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ad-2col label { grid-column: span 1; }
+.ad-form .ad-segs { margin-top: 4px; }

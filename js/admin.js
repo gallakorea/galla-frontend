@@ -27,10 +27,10 @@
   async function boot() {
     sb = await waitForSupabaseClient();
     const { data: s } = await sb.auth.getSession();
-    if (!s?.session) { location.href = "login.html?returnTo=%2Fadmin.html"; return; }
+    if (!s?.session) { location.href = "admin-login.html"; return; }
     ME = s.session.user.id;
     const { data: prof } = await sb.from("user_profiles").select("admin_flag").eq("user_id", ME).maybeSingle();
-    if (!prof?.admin_flag) { alert("관리자 전용 페이지입니다."); location.href = "index.html"; return; }
+    if (!prof?.admin_flag) { location.href = "admin-login.html"; return; }
     document.getElementById("admin-gate").remove();
     document.getElementById("admin-app").hidden = false;
     wireShell(); route("dashboard"); pollOnline();
@@ -195,20 +195,72 @@
     $("#t-list").onclick = async e => { const b = e.target.closest("[data-reply]"); if (!b) return; const rep = prompt("답변 내용"); if (!rep) return; const r = await rpc("admin_reply_ticket", { p_id: Number(b.dataset.reply), p_reply: rep }); if (r?.ok) { toast("답변 전송"); renderSupport(); } };
   }
 
-  // ─────────── 직접 업로드 ───────────
-  async function renderUpload() {
+  // ─────────── 직접 업로드 (유형별 맞춤 업로더) ───────────
+  let upTab = "issue";
+  const IN = (id, label, ph, val) => `<label>${label}</label><input id="${id}" class="ad-input" placeholder="${ph || ""}" value="${val || ""}">`;
+  const TA = (id, label, ph, rows) => `<label>${label}</label><textarea id="${id}" class="ad-input" rows="${rows || 4}" placeholder="${ph || ""}"></textarea>`;
+  function renderUpload() {
+    const tabs = [["issue", "📝 이슈"], ["plaza", "💬 광장"], ["market", "📈 예측"], ["news", "📰 뉴스"]];
     main().innerHTML = `<h1 class="ad-h1">⬆️ 직접 업로드</h1>
-      <div class="ad-card ad-form">
-        <label>제목</label><input id="u-title" class="ad-input" maxlength="140" placeholder="이슈 제목">
-        <label>설명</label><textarea id="u-desc" class="ad-input" rows="4" placeholder="설명"></textarea>
-        <label>카테고리</label><input id="u-cat" class="ad-input" value="사회">
-        <button class="ad-btn primary" id="u-go">🚀 이슈 발행</button>
-        <div class="ad-note">미디어·상세 옵션이 필요하면 일반 글쓰기(write.html)를 사용하세요. 여기선 텍스트 이슈 즉시 발행.</div>
-      </div>`;
-    $("#u-go").onclick = async () => {
-      const title = $("#u-title").value.trim(); if (!title) { $("#u-title").focus(); return; }
-      const r = await rpc("admin_publish_issue", { p_title: title, p_desc: $("#u-desc").value.trim(), p_category: $("#u-cat").value.trim() || "사회" });
-      if (r?.ok) { toast("발행됨!"); location.href = "issue.html?id=" + r.id; } else alert("발행 실패");
+      <div class="ad-segs" id="u-tab" style="margin-bottom:14px">${tabs.map(([k, l]) => `<button data-v="${k}" class="${upTab === k ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div class="ad-card ad-form" id="u-form"></div>`;
+    $("#u-tab").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; upTab = b.dataset.v; renderUpload(); };
+    ({ issue: upIssue, plaza: upPlaza, market: upMarket, news: upNews }[upTab])();
+  }
+  function upIssue() {
+    $("#u-form").innerHTML =
+      IN("i-title", "제목 *", "이슈 제목") + IN("i-one", "한줄 요약", "카드에 뜨는 한 줄") +
+      TA("i-desc", "설명", "이슈 상세 설명") + IN("i-cat", "카테고리", "", "사회") +
+      `<div class="ad-2col">${IN("i-fa", "진영 A", "👍 찬성이오")}${IN("i-fb", "진영 B", "👎 난 반댈세")}</div>` +
+      IN("i-thumb", "썸네일 이미지 URL", "https://…") +
+      `<button class="ad-btn primary" id="i-go">🚀 이슈 발행</button><div class="ad-note">진영명 비우면 기본(찬성이오/난 반댈세). 미디어는 URL 입력.</div>`;
+    $("#i-go").onclick = async () => {
+      const t = $("#i-title").value.trim(); if (!t) return $("#i-title").focus();
+      const r = await rpc("admin_publish_issue", { p_title: t, p_one_line: $("#i-one").value.trim(), p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value.trim() || "사회", p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(), p_thumb: $("#i-thumb").value.trim() });
+      if (r?.ok) { toast("이슈 발행됨"); location.href = "issue.html?id=" + r.id; } else alert("발행 실패");
+    };
+  }
+  function upPlaza() {
+    $("#u-form").innerHTML =
+      IN("p-title", "제목 *", "광장 글 제목") + TA("p-body", "본문 *", "자유롭게 작성", 7) +
+      IN("p-cat", "카테고리", "", "자유") + IN("p-cover", "커버 이미지 URL", "https://…") +
+      `<button class="ad-btn primary" id="p-go">🚀 광장 글 발행</button>`;
+    $("#p-go").onclick = async () => {
+      const t = $("#p-title").value.trim(), b = $("#p-body").value.trim(); if (!t || !b) return alert("제목·본문 필수");
+      const r = await rpc("admin_publish_plaza", { p_title: t, p_body: b, p_category: $("#p-cat").value.trim() || "자유", p_cover: $("#p-cover").value.trim() });
+      if (r?.ok) { toast("광장 글 발행됨"); location.href = "plaza_detail.html?id=" + r.id; } else alert("발행 실패");
+    };
+  }
+  function upMarket() {
+    $("#u-form").innerHTML =
+      IN("m-q", "질문 *", "예: 다음 대선 승자는?") + TA("m-desc", "설명", "정산 기준 등", 3) +
+      IN("m-cat", "카테고리", "", "정치") +
+      `<label>마감일 *</label><input id="m-close" class="ad-input" type="datetime-local">` +
+      `<label>유형</label><div class="ad-segs" id="m-type"><button data-v="binary" class="on">예/아니오</button><button data-v="multi">객관식</button></div>` +
+      `<div id="m-outcomes" hidden>${TA("m-opts", "선택지 (줄바꿈으로 구분)", "후보1\n후보2\n후보3", 4)}</div>` +
+      IN("m-img", "대표 이미지 URL", "https://…") +
+      `<button class="ad-btn primary" id="m-go">🚀 예측 마켓 생성</button>`;
+    let mType = "binary";
+    $("#m-type").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; mType = b.dataset.v; $("#m-type").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); $("#m-outcomes").hidden = mType !== "multi"; };
+    $("#m-go").onclick = async () => {
+      const q = $("#m-q").value.trim(); if (!q) return $("#m-q").focus();
+      const close = $("#m-close").value; if (!close) return alert("마감일 필수");
+      let outcomes = null;
+      if (mType === "multi") { const opts = $("#m-opts").value.split("\n").map(s => s.trim()).filter(Boolean); if (opts.length < 2) return alert("객관식은 선택지 2개 이상"); outcomes = opts.map(l => ({ label: l })); }
+      const { data, error } = await sb.rpc("create_market", { p_question: q, p_description: $("#m-desc").value.trim(), p_category: $("#m-cat").value.trim() || "정치", p_image_url: $("#m-img").value.trim() || null, p_close_at: new Date(close).toISOString(), p_outcomes: outcomes });
+      if (error) return alert("생성 실패: " + error.message);
+      toast("마켓 생성됨"); location.href = "predict-market.html?id=" + data;
+    };
+  }
+  function upNews() {
+    $("#u-form").innerHTML =
+      IN("n-title", "제목 *", "뉴스 제목") + TA("n-sum", "요약", "한두 문장 요약", 2) +
+      TA("n-body", "본문 *", "기사 본문", 8) + IN("n-cat", "카테고리", "", "사회") + IN("n-hero", "대표 이미지 URL", "https://…") +
+      `<button class="ad-btn primary" id="n-go">🚀 갈라뉴스 게시</button><div class="ad-note">AI 자동 생성이 필요하면 운영 탭의 크론/엣지 함수를 사용하세요.</div>`;
+    $("#n-go").onclick = async () => {
+      const t = $("#n-title").value.trim(), b = $("#n-body").value.trim(); if (!t || !b) return alert("제목·본문 필수");
+      const r = await rpc("admin_publish_news", { p_title: t, p_summary: $("#n-sum").value.trim(), p_body: b, p_category: $("#n-cat").value.trim() || "사회", p_hero: $("#n-hero").value.trim() });
+      if (r?.ok) { toast("뉴스 게시됨"); } else alert("게시 실패");
     };
   }
 

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관제센터 로그인 - GALLA ADMIN</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <meta name="theme-color" content="#0a0a0b">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+      background: radial-gradient(120% 80% at 50% -10%, #131727 0%, #08090c 60%);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; color: #eef0f4; }
+    .al-box { width: 100%; max-width: 380px; background: linear-gradient(180deg, #14151a, #0e0f13);
+      border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 32px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    .al-logo { text-align: center; font-size: 30px; margin-bottom: 4px; }
+    .al-title { text-align: center; font-weight: 900; font-size: 20px; letter-spacing: -.3px; }
+    .al-title b { color: #5b8cff; }
+    .al-sub { text-align: center; color: #8a8f9a; font-size: 12.5px; margin: 6px 0 22px; }
+    .al-label { font-size: 12px; font-weight: 800; color: #8b90a0; margin: 12px 0 5px; display: block; }
+    .al-input { width: 100%; background: #0c0d11; border: 1px solid rgba(255,255,255,.14); border-radius: 12px;
+      color: #fff; padding: 13px 14px; font-size: 15px; font-family: inherit; }
+    .al-input:focus { outline: none; border-color: #5b8cff; box-shadow: 0 0 0 3px rgba(91,140,255,.15); }
+    .al-btn { width: 100%; margin-top: 20px; padding: 14px; border: none; border-radius: 12px; cursor: pointer;
+      font-weight: 900; font-size: 15px; background: linear-gradient(135deg, #5b8cff, #3d6bff); color: #fff; }
+    .al-btn:disabled { opacity: .6; }
+    .al-err { color: #ff8098; font-size: 13px; text-align: center; margin-top: 14px; min-height: 18px; font-weight: 700; }
+    .al-foot { text-align: center; margin-top: 18px; }
+    .al-foot a { color: #6c7280; font-size: 12px; text-decoration: none; }
+    .al-lock { display: inline-block; font-size: 11px; font-weight: 800; color: #f5cf6b; background: rgba(245,207,107,.12);
+      border: 1px solid rgba(245,207,107,.3); padding: 3px 10px; border-radius: 99px; margin: 0 auto 16px; }
+  </style>
+</head>
+<body>
+  <form class="al-box" id="al-form" autocomplete="on">
+    <div class="al-logo">🛠</div>
+    <div class="al-title">갈라 <b>관제센터</b></div>
+    <div class="al-sub">관리자 전용 · 서비스와 분리된 접근</div>
+    <div style="text-align:center"><span class="al-lock">🔒 ADMIN ONLY</span></div>
+    <label class="al-label">관리자 이메일</label>
+    <input class="al-input" id="al-email" type="email" placeholder="admin@galla.im" autocomplete="username" required>
+    <label class="al-label">비밀번호</label>
+    <input class="al-input" id="al-pw" type="password" placeholder="••••••••" autocomplete="current-password" required>
+    <button class="al-btn" id="al-go" type="submit">관제센터 입장</button>
+    <div class="al-err" id="al-err"></div>
+    <div class="al-foot"><a href="index.html">← 서비스로 돌아가기</a></div>
+  </form>
+
+  <script src="./js/vendor/supabase.js?v=0713i"></script>
+  <script src="js/supabase.js?v=0713i"></script>
+  <script src="./js/admin-login.js?v=0713i"></script>
+</body>
+</html>
