@@ -1006,7 +1006,11 @@ function openCommentMoreMenu({ uid, nick, cid }) {
     close();
     if (!confirm("이 댓글을 24시간 하이라이트할까요? (800 GP)")) return;
     const { data } = await window.supabaseClient.rpc("buy_boost", { p_type: "comment", p_id: Number(cid), p_kind: "highlight" });
-    if (!data?.ok) { alert(data?.reason === "insufficient" ? "GP가 부족해요. (800GP 필요)" : "부스트 실패"); return; }
+    if (!data?.ok) {
+      if (data?.reason === "insufficient" && window.GALLA_needGP) window.GALLA_needGP(800, "부스트에 GP가 부족해요");
+      else alert(data?.reason === "insufficient" ? "GP가 부족해요. (800GP 필요)" : "부스트 실패");
+      return;
+    }
     hlSet.add(Number(cid));
     document.querySelector(`.comment[data-id="${cid}"], .reply[data-id="${cid}"]`)?.classList.add("hl");
     window.BattleFX?.banner?.("✨ 하이라이트 적용! (24h)", "cheer");

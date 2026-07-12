@@ -14,6 +14,9 @@
 .shop-title{font-size:15px;font-weight:800;color:#fff;}
 .shop-bal{font-size:13px;font-weight:900;color:#f5cf6b;background:rgba(245,207,107,.12);
   border:1px solid rgba(245,207,107,.3);padding:4px 10px;border-radius:99px;}
+.shop-head-right{display:flex;align-items:center;gap:8px;}
+.shop-charge{border:none;border-radius:99px;padding:5px 12px;font-size:13px;font-weight:900;cursor:pointer;
+  background:linear-gradient(135deg,#5b8cff,#3d6bff);color:#fff;}
 .shop-list{display:flex;flex-direction:column;gap:10px;max-height:64vh;overflow-y:auto;}
 .shop-group-label{font-size:12px;font-weight:800;color:#9aa0ad;margin:8px 2px 0;letter-spacing:-.2px;}
 .shop-group-label:first-child{margin-top:0;}

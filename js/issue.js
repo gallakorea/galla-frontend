@@ -505,7 +505,11 @@ function renderIssue(issue) {
             onClick: async () => {
               if (!confirm("이 갈라를 24시간 피드 상단에 고정할까요? (2,000 GP)")) return;
               const { data } = await supabase.rpc("buy_boost", { p_type: "issue", p_id: Number(issue.id), p_kind: "pin" });
-              if (!data?.ok) { alert(data?.reason === "insufficient" ? "GP가 부족해요. (2,000GP 필요)" : "부스트 실패"); return; }
+              if (!data?.ok) {
+                if (data?.reason === "insufficient" && window.GALLA_needGP) window.GALLA_needGP(2000, "부스트에 GP가 부족해요");
+                else alert(data?.reason === "insufficient" ? "GP가 부족해요. (2,000GP 필요)" : "부스트 실패");
+                return;
+              }
               alert("🚀 상단 고정 완료! 24시간 동안 피드 상단에 노출됩니다.");
             },
           }],

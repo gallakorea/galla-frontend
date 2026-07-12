@@ -67,13 +67,14 @@
         <div class="shop-grip"></div>
         <div class="shop-head">
           <span class="shop-title">🛒 GP 상점</span>
-          <span class="shop-bal" id="shopBal">– GP</span>
+          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button></span>
         </div>
         <div class="shop-list" id="shopList"></div>
         <div class="shop-note">GP는 출석·데일리 미션·예측으로 모을 수 있어요<br><span style="opacity:.7;font-size:11px">※ GP는 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
+    sheet.querySelector("#shopCharge").addEventListener("click", () => window.GALLA_openCharge?.());
     return sheet;
   }
 
@@ -121,7 +122,12 @@
         b.disabled = true; b.textContent = "구매 중…";
         const r = await window.GALLA_buyItem(b.dataset.key);
         if (!r?.ok) {
-          alert(r?.reason === "insufficient" ? "GP가 부족해요." : "구매에 실패했어요.");
+          if (r?.reason === "insufficient" && window.GALLA_needGP) {
+            const need = (r.cost || 0) - (r.balance || 0);
+            window.GALLA_needGP(need > 0 ? need : (r.cost || 0), "아이템 구매에 GP가 부족해요");
+          } else {
+            alert(r?.reason === "insufficient" ? "GP가 부족해요." : "구매에 실패했어요.");
+          }
         } else {
           window.BattleFX?.haptic?.("tap");
         }
