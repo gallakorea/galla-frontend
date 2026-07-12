@@ -10,13 +10,27 @@ let bestList, recommendList, bestMore;
 /* ===========================
  * 비디오 자동재생 옵저버
  * =========================== */
+/* 피드 영상 소리: 기본 ON. 단, 브라우저 정책상 첫 사용자 제스처 전에는
+   소리 켠 자동재생이 막히므로 muted로 시작 → 첫 터치/클릭 때 소리 켜짐 */
+let FEED_SOUND = (localStorage.getItem('feedSound') !== '0'); // 기본 켜짐
+let USER_GESTURED = false;
+
+function feedMuteBtn(v) { return document.getElementById('mute-' + v.id.replace('vid-', '')); }
+function syncMuteBtn(v) { const b = feedMuteBtn(v); if (b) b.textContent = v.muted ? '🔇' : '🔊'; }
+function playWithSound(vid) {
+    const wantSound = FEED_SOUND && USER_GESTURED;
+    vid.muted = !wantSound;
+    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
+    syncMuteBtn(vid);
+}
+
 const videoObserver = new IntersectionObserver(entries => {
     entries.forEach(e => {
         const vid = e.target;
         const ovId = vid.dataset.overlayId;
         const ov = ovId ? document.getElementById(ovId) : null;
         if (e.isIntersecting && e.intersectionRatio > 0.5) {
-            vid.play().catch(() => {});
+            playWithSound(vid);
             if (ov) ov.classList.add('hidden');
         } else {
             vid.pause();
@@ -24,6 +38,31 @@ const videoObserver = new IntersectionObserver(entries => {
         }
     });
 }, { threshold: 0.5 });
+
+// 첫 제스처에 현재 재생 중인 영상 소리 켜기 (정책 우회)
+function onFirstGesture() {
+    if (USER_GESTURED) return;
+    USER_GESTURED = true;
+    document.querySelectorAll('video[id^="vid-"]').forEach(v => {
+        if (!v.paused && FEED_SOUND) { v.muted = false; }
+        syncMuteBtn(v);
+    });
+}
+['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev =>
+    window.addEventListener(ev, onFirstGesture, { passive: true }));
+
+// 개별 음소거 토글 (선호 저장)
+window.toggleFeedMute = function (vidId, btnId) {
+    USER_GESTURED = true;
+    const v = document.getElementById(vidId);
+    if (!v) return;
+    v.muted = !v.muted;
+    FEED_SOUND = !v.muted;
+    localStorage.setItem('feedSound', FEED_SOUND ? '1' : '0');
+    if (!v.muted) v.play().catch(() => {});
+    const btn = document.getElementById(btnId);
+    if (btn) btn.textContent = v.muted ? '🔇' : '🔊';
+};
 
 /* ===========================
  * 캐러셀 상태
@@ -92,6 +131,8 @@ function renderMedia(data) {
                 <source src="${data.video_url}" type="video/mp4">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
+            <button class="vid-mute" id="mute-${data.id}"
+                    onclick="event.stopPropagation();toggleFeedMute('vid-${data.id}','mute-${data.id}')">🔇</button>
             <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
     }
