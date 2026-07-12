@@ -8,16 +8,18 @@
   const sb = () => window.supabaseClient;
   const won = (n) => (n || 0).toLocaleString() + "원";
 
-  // 슈퍼챗 티어 (금액↑ = 강조↑)
+  // 슈퍼챗 티어 (소액 중심 · 금액↑ = 강조↑)
   const TIERS = [
-    { key: "blue",   amount: 1000,   color: "#3b82f6", emoji: "💙" },
-    { key: "sky",    amount: 3000,   color: "#22b8ff", emoji: "🩵" },
-    { key: "teal",   amount: 5000,   color: "#17c3b2", emoji: "💠" },
-    { key: "green",  amount: 10000,  color: "#2fbf71", emoji: "💚" },
-    { key: "yellow", amount: 30000,  color: "#f5c518", emoji: "💛" },
-    { key: "orange", amount: 50000,  color: "#ff9f1c", emoji: "🧡" },
-    { key: "red",    amount: 100000, color: "#ff4d6d", emoji: "❤️" },
+    { key: "blue",   amount: 500,   color: "#3b82f6", emoji: "💙" },
+    { key: "sky",    amount: 1000,  color: "#22b8ff", emoji: "🩵" },
+    { key: "teal",   amount: 2000,  color: "#17c3b2", emoji: "💠" },
+    { key: "green",  amount: 3000,  color: "#2fbf71", emoji: "💚" },
+    { key: "yellow", amount: 5000,  color: "#f5c518", emoji: "💛" },
+    { key: "orange", amount: 10000, color: "#ff9f1c", emoji: "🧡" },
+    { key: "red",    amount: 20000, color: "#ff4d6d", emoji: "❤️" },
   ];
+  const MIN = 500;
+  const tierLabel = (a) => a < 1000 ? a + "원" : a < 10000 ? (a / 1000) + "천" : (a / 10000) + "만";
   const COLOR = Object.fromEntries(TIERS.map(t => [t.key, t.color]));
   const tierColor = (k) => COLOR[k] || "#3b82f6";
   const A = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -99,21 +101,23 @@
   function refreshGo() {
     const a = amount(); const go = sheet.querySelector("#ds-go");
     const br = sheet.querySelector("#ds-break");
+    const ok = a >= MIN;
     const t = TIERS.slice().reverse().find(t => a >= t.amount) || TIERS[0];
-    const col = a >= 1000 ? t.color : "#3a3b42";
-    if (go) { go.style.background = `linear-gradient(135deg, ${col}, ${col}cc)`; go.disabled = a < 1000;
-      go.textContent = a >= 1000 ? `${won(a)} 후원하기` : "금액을 선택하세요"; }
-    if (br) { const fee = Math.floor(a * 0.2); br.innerHTML = a >= 1000
-      ? `발의자에게 <b>${won(a - fee)}</b> 전달 · 수수료 ${won(fee)}(20%)` : ""; }
+    const col = ok ? t.color : "#3a3b42";
+    if (go) { go.style.background = `linear-gradient(135deg, ${col}, ${col}cc)`; go.disabled = !ok;
+      go.textContent = ok ? `${won(a)} 후원하기` : `최소 ${won(MIN)}부터`; }
+    if (br) { const fee = Math.floor(a * 0.2), charity = Math.floor(a * 0.3), net = a - fee - charity;
+      br.innerHTML = ok
+        ? `발의자 <b>${won(net)}</b> · 기부 <b>${won(charity)}</b> · 수수료 ${won(fee)}` : ""; }
   }
   function renderForm() {
     sheet.innerHTML = `
       <div class="ds-grip"></div>
       <div class="ds-title">💝 ${A(cur.creatorName || "발의자")} 후원</div>
-      <div class="ds-sub">유튜브 슈퍼챗처럼 메시지와 함께 후원이 전달됩니다</div>
+      <div class="ds-sub">☕ 커피 한 잔값으로도 응원할 수 있어요 · 메시지도 함께 전달됩니다</div>
       <div class="ds-tiers">${TIERS.map(t => `
         <button class="ds-tier" data-amt="${t.amount}" style="--c:${t.color}">
-          <div class="e">${t.emoji}</div><div class="a">${(t.amount/1000)}천${t.amount>=10000?'':''}</div>
+          <div class="e">${t.emoji}</div><div class="a">${tierLabel(t.amount)}</div>
         </button>`).join("")}</div>
       <div class="ds-custom"><input id="ds-amt" inputmode="numeric" placeholder="직접 입력" value=""><span class="u">원</span></div>
       <textarea class="ds-msg" id="ds-msg" rows="2" maxlength="200" placeholder="응원 메시지 (선택 · 최대 200자)"></textarea>
@@ -121,11 +125,9 @@
         <label class="ds-anon"><input type="checkbox" id="ds-anon"> 익명으로 후원</label>
         <span class="ds-break" id="ds-break"></span>
       </div>
-      <button class="ds-go" id="ds-go" disabled>금액을 선택하세요</button>
-      <div class="ds-note">후원은 발의자에게 전달됩니다(수수료 20%). GP와 무관한 실제 결제이며, 결제 수단 연동은 준비 중입니다.</div>`;
-    // fix tier label (1만+ 표기)
+      <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
+      <div class="ds-note">후원의 <b>50%는 발의자</b>에게, <b>30%는 기부</b>됩니다(수수료 20%). GP와 무관한 실제 결제이며, 결제 수단 연동은 준비 중입니다.</div>`;
     sheet.querySelectorAll(".ds-tier").forEach(b => {
-      const amt = +b.dataset.amt; b.querySelector(".a").textContent = amt >= 10000 ? (amt/10000)+"만" : (amt/1000)+"천";
       b.style.borderColor = "rgba(255,255,255,.12)";
       b.addEventListener("click", () => {
         sheet.querySelectorAll(".ds-tier").forEach(x => { x.classList.remove("on"); x.style.borderColor = "rgba(255,255,255,.12)"; });
@@ -139,7 +141,9 @@
       refreshGo();
     });
     sheet.querySelector("#ds-go").addEventListener("click", submit);
-    refreshGo();
+    // 소액 유도 — 1천원 기본 선택
+    const def = sheet.querySelector('.ds-tier[data-amt="1000"]');
+    if (def) def.click(); else refreshGo();
   }
   async function submit() {
     const a = amount(); if (a < 1000) return;
@@ -231,7 +235,7 @@
           <div class="earn-b"><div class="earn-v">${data.supporter_count}명</div><div class="earn-l">후원자</div></div>
         </div>
         <button class="earn-out" id="earn-out" ${data.available < 10000 ? "disabled" : ""}>${data.available < 10000 ? "출금 최소 1만원" : "출금 신청"}</button>
-        <div class="earn-note">후원금은 수수료 20% 제외 후 정산됩니다. 실제 송금(PG·뱅킹)은 준비 중입니다.</div>
+        <div class="earn-note">후원금의 50%가 발의자에게 정산됩니다(기부 30%·수수료 20% 제외). 실제 송금(PG·뱅킹)은 준비 중입니다.</div>
       </div>`;
     const btn = sec.querySelector("#earn-out");
     if (btn && data.available >= 10000) btn.addEventListener("click", async () => {
