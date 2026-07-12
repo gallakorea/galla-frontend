@@ -14,7 +14,10 @@
 .shop-title{font-size:15px;font-weight:800;color:#fff;}
 .shop-bal{font-size:13px;font-weight:900;color:#f5cf6b;background:rgba(245,207,107,.12);
   border:1px solid rgba(245,207,107,.3);padding:4px 10px;border-radius:99px;}
-.shop-list{display:flex;flex-direction:column;gap:10px;}
+.shop-list{display:flex;flex-direction:column;gap:10px;max-height:64vh;overflow-y:auto;}
+.shop-group-label{font-size:12px;font-weight:800;color:#9aa0ad;margin:8px 2px 0;letter-spacing:-.2px;}
+.shop-group-label:first-child{margin-top:0;}
+.si-buy.owned{background:rgba(255,255,255,.06);color:#8b909b;border:1px solid rgba(255,255,255,.1);cursor:default;}
 .shop-item{display:flex;align-items:center;gap:12px;padding:13px 13px;border-radius:14px;
   background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);}
 .si-emoji{font-size:24px;width:42px;height:42px;flex:none;border-radius:11px;

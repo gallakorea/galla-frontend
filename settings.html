@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>설정 - GALLA</title>
     <link rel="stylesheet" href="./css/settings.css">
+    <link rel="stylesheet" href="./css/items.css">
     <link rel="stylesheet" href="./css/nav.css">
 </head>
 
@@ -87,6 +88,11 @@
             <span class="tile-ic">🎯</span>
             <span class="tile-name">데일리 미션</span>
             <span class="tile-sub">오늘의 보상 받기</span>
+        </div>
+        <div class="menu-tile shop" id="shopTile">
+            <span class="tile-ic">🛒</span>
+            <span class="tile-name">GP 상점</span>
+            <span class="tile-sub">전투·꾸미기·도전</span>
         </div>
     </section>
 
@@ -205,8 +211,18 @@ function waitForSupabaseClient() {
 <!-- 갈라치기 성향 로직 -->
 <script src="js/galla-type.js"></script>
 
+<!-- GP 상점 -->
+<script src="js/items.js"></script>
+
 <!-- Settings 페이지 로직 -->
 <script src="js/settings.js"></script>
+
+<script>
+  document.getElementById('shopTile')?.addEventListener('click', function(e){
+    e.stopPropagation();
+    window.openShop && window.openShop();
+  });
+</script>
 
 </body>
 </html>
