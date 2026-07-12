@@ -1248,3 +1248,14 @@ body.kb-open .battle-input-bar {
   .comment,.reply,.comment.just-in,.reply.just-in,.hp-fill{animation:none!important}
   .hp-fill{transition:none}
 }
+
+/* ⚔ 전황표 3박스 (이슈 배틀 헤더 — 피드 카드와 동일 정보) */
+.bm-war{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px}
+.bmw-box{background:#0f1116;border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 6px;text-align:center}
+.bmw-box.pro{border-color:rgba(91,140,255,.35);background:linear-gradient(180deg,rgba(61,107,255,.12),#0f1116)}
+.bmw-box.con{border-color:rgba(255,77,109,.35);background:linear-gradient(180deg,rgba(255,77,109,.12),#0f1116)}
+.bmw-label{font-size:11px;font-weight:800;color:#9aa0ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bmw-box.pro .bmw-label{color:#7fa0ff}.bmw-box.con .bmw-label{color:#ff8f9c}
+.bmw-stat{font-size:13px;font-weight:700;color:#e7ebf3;margin-top:5px}
+.bmw-stat b{font-size:17px;font-weight:900;color:#fff}
+.bmw-sub{font-size:10.5px;color:#7a8090;margin-top:3px}

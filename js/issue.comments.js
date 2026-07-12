@@ -510,7 +510,23 @@ function renderMorale() {
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
     <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : `${fLabel(lead)} 진영 우세`} · ${proPct}%</div>
-    <div class="bm-stats">⚡ 총 교전 <b id="stat-total">0</b> · 💥 <span id="stat-atk">0</span> · 🛡 <span id="stat-def">0</span> · 💣 <span id="stat-sup">0</span></div>
+    <div class="bm-war">
+      <div class="bmw-box pro">
+        <div class="bmw-label">👍 ${fLabel("pro")}</div>
+        <div class="bmw-stat">총 댓글 <b id="stat-pro-total">0</b></div>
+        <div class="bmw-sub">동진영 <span id="stat-pro-same">0</span> · 적진 <span id="stat-pro-oppo">0</span></div>
+      </div>
+      <div class="bmw-box neutral">
+        <div class="bmw-label">⚡ 전체 전장</div>
+        <div class="bmw-stat">총 교전 <b id="stat-total">0</b></div>
+        <div class="bmw-sub">💥<span id="stat-atk">0</span> · 💣<span id="stat-sup">0</span> · 🛡<span id="stat-def">0</span></div>
+      </div>
+      <div class="bmw-box con">
+        <div class="bmw-label">👎 ${fLabel("con")}</div>
+        <div class="bmw-stat">총 댓글 <b id="stat-con-total">0</b></div>
+        <div class="bmw-sub">동진영 <span id="stat-con-same">0</span> · 적진 <span id="stat-con-oppo">0</span></div>
+      </div>
+    </div>
     ${ME.faction
       ? `<div class="bm-mine ${ME.faction}">🎖 내 진영: ${fLabel(ME.faction)} — <b>적군</b>을 공격하고 <b>아군</b>을 지켜라!</div>
          <button type="button" class="fc-enter ${ME.faction}" id="fc-open">
