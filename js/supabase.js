@@ -170,6 +170,14 @@
         SUPABASE_ANON_KEY
       );
       console.log("[supabase] client ready");
+      // 📊 활동 계측 핑 — 세션·시간당 1회(로그인 유저). DAU/MAU/실시간용
+      try {
+        const hk = "galla_ping_" + new Date().toISOString().slice(0, 13); // 시간 단위 키
+        if (!localStorage.getItem(hk)) {
+          const { data: s } = await window.supabaseClient.auth.getSession();
+          if (s?.session) { window.supabaseClient.rpc("activity_ping"); localStorage.setItem(hk, "1"); }
+        }
+      } catch (e) {}
     } catch (e) {
       console.error("[supabase] bootstrap failed", e);
     }

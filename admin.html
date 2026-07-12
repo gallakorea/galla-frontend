@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>갈라 관제센터 - ADMIN</title>
+  <link rel="stylesheet" href="./css/admin.css?v=0713g">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <meta name="theme-color" content="#0a0a0b">
+</head>
+<body>
+  <div id="admin-gate" class="admin-gate">권한 확인 중…</div>
+
+  <div id="admin-app" class="admin-app" hidden>
+    <!-- 상단바 (모바일 햄버거 / PC 로고) -->
+    <header class="ad-topbar">
+      <button class="ad-burger" id="ad-burger" aria-label="메뉴">☰</button>
+      <div class="ad-brand">🛠 갈라 <b>관제센터</b></div>
+      <div class="ad-top-right"><span id="ad-online" class="ad-online">● –</span></div>
+    </header>
+
+    <!-- 사이드바 -->
+    <aside class="ad-sidebar" id="ad-sidebar">
+      <div class="ad-side-brand">🛠 갈라 관제센터</div>
+      <nav class="ad-nav" id="ad-nav">
+        <button class="ad-navitem active" data-mod="dashboard"><span>📊</span> 대시보드</button>
+        <button class="ad-navitem" data-mod="content"><span>📝</span> 콘텐츠 관리</button>
+        <button class="ad-navitem" data-mod="members"><span>👥</span> 회원 관리</button>
+        <button class="ad-navitem" data-mod="reports"><span>🚨</span> 신고·모더레이션</button>
+        <button class="ad-navitem" data-mod="settle"><span>💰</span> 정산·출금</button>
+        <button class="ad-navitem" data-mod="support"><span>🎧</span> 고객지원</button>
+        <button class="ad-navitem" data-mod="upload"><span>⬆️</span> 직접 업로드</button>
+        <button class="ad-navitem" data-mod="ops"><span>⚙️</span> 운영·감사</button>
+      </nav>
+      <a class="ad-exit" href="index.html">← 서비스로 나가기</a>
+    </aside>
+    <div class="ad-scrim" id="ad-scrim"></div>
+
+    <!-- 콘텐츠 영역 -->
+    <main class="ad-main" id="ad-main"><div class="ad-loading">불러오는 중…</div></main>
+  </div>
+
+  <script src="./js/vendor/supabase.js?v=0713g"></script>
+  <script src="js/supabase.js?v=0713g"></script>
+  <script src="./js/admin-charts.js?v=0713g"></script>
+  <script src="./js/admin.js?v=0713g"></script>
+</body>
+</html>

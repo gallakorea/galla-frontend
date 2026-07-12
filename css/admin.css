@@ -1,233 +1,92 @@
-/* -------------------------------------------------
-   ADMIN PAGE (관리자 대시보드)
-   - 통계 카드
-   - 탭(신고 / 유저 / 이슈)
-   - 리스트 테이블
-   - 검색 / 필터
-   - 상세 모달
---------------------------------------------------- */
+/* =========================================================
+   🛠 갈라 관제센터 — 반응형(PC 사이드바 / 모바일 드로어)
+   ========================================================= */
+* { box-sizing: border-box; }
+:root { --side: 232px; --bg: #0a0a0b; --card: #14151a; --line: rgba(255,255,255,.08); --gold: #f5cf6b; --blue: #5b8cff; }
+html, body { margin: 0; background: var(--bg); color: #eef0f4;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; -webkit-font-smoothing: antialiased; }
+.admin-gate { display: flex; align-items: center; justify-content: center; height: 100vh; color: #8a8f9a; }
 
-.admin-page {
-    /* NOTE: Navigation spacing is handled globally in css/nav.css */
-    padding: 90px 18px 24px;
+.admin-app { min-height: 100vh; }
+
+/* 상단바 (모바일 우선 노출, PC에선 숨김) */
+.ad-topbar { position: sticky; top: 0; z-index: 40; display: none; align-items: center; gap: 12px;
+  height: 54px; padding: 0 14px; background: rgba(10,10,11,.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.ad-burger { border: none; background: none; color: #eef0f4; font-size: 22px; cursor: pointer; }
+.ad-brand { font-weight: 900; font-size: 16px; } .ad-brand b { color: var(--gold); }
+.ad-top-right { margin-left: auto; }
+.ad-online { font-size: 12px; font-weight: 800; color: #33d17a; white-space: nowrap; }
+
+/* 사이드바 (PC 고정) */
+.ad-sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--side); z-index: 50;
+  background: linear-gradient(180deg, #101116, #0b0c10); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; padding: 16px 12px; }
+.ad-side-brand { font-weight: 900; font-size: 17px; color: #f5f5f2; padding: 6px 8px 16px; }
+.ad-side-brand::first-letter { }
+.ad-nav { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.ad-navitem { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: none;
+  background: none; color: #c9d1e0; font-size: 14px; font-weight: 700; padding: 11px 12px; border-radius: 10px; cursor: pointer; }
+.ad-navitem span { font-size: 16px; width: 20px; text-align: center; }
+.ad-navitem:hover { background: rgba(255,255,255,.05); }
+.ad-navitem.active { background: linear-gradient(135deg, var(--blue), #3d6bff); color: #fff; }
+.ad-exit { display: block; color: #8a8f9a; text-decoration: none; font-size: 12px; padding: 10px 12px; margin-top: 8px; border-top: 1px solid var(--line); }
+
+.ad-scrim { display: none; position: fixed; inset: 0; z-index: 45; background: rgba(0,0,0,.5); }
+
+/* 메인 */
+.ad-main { margin-left: var(--side); padding: 24px 28px 60px; max-width: 1200px; }
+.ad-loading, .ad-soon { color: #8a8f9a; padding: 40px 8px; }
+.ad-soon { background: var(--card); border: 1px dashed var(--line); border-radius: 14px; padding: 30px; text-align: center; }
+.ad-h1 { font-size: 22px; font-weight: 900; margin: 0 0 18px; }
+
+/* KPI 카드 */
+.ad-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+.ad-kpi { background: linear-gradient(180deg, var(--card), #0e0f13); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.ad-kpi.live { border-color: rgba(51,209,122,.4); }
+.ad-kpi.gold { border-color: rgba(245,207,107,.35); }
+.ad-kpi-l { font-size: 12px; color: #8a8f9a; font-weight: 700; }
+.ad-kpi-v { font-size: 30px; font-weight: 900; margin: 6px 0 2px; letter-spacing: -.5px; }
+.ad-kpi.live .ad-kpi-v { color: #33d17a; } .ad-kpi.gold .ad-kpi-v { color: var(--gold); }
+.ad-kpi-h { font-size: 11px; color: #6c7280; }
+
+/* 차트 카드 */
+.ad-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.ad-card { background: linear-gradient(180deg, var(--card), #0e0f13); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.ad-card-h { font-size: 14px; font-weight: 900; color: #d7dce6; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.ad-legend { margin-left: auto; font-size: 11px; color: #8a8f9a; font-weight: 700; }
+.ad-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin: 0 3px 0 8px; vertical-align: middle; }
+.ad-chart { width: 100%; }
+.ad-svg { width: 100%; height: auto; display: block; }
+
+/* 미니 통계 */
+.ad-mini { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.ad-mini-i { text-align: center; background: #0c0d11; border: 1px solid var(--line); border-radius: 12px; padding: 12px 6px; }
+.ad-mini-v { font-size: 20px; font-weight: 900; color: #f5f5f2; }
+.ad-mini-l { font-size: 11px; color: #8a8f9a; margin-top: 3px; }
+
+/* 공용 테이블/리스트 (P2~) */
+.ad-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ad-table th { text-align: left; color: #8a8f9a; font-weight: 700; padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.ad-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.05); }
+.ad-btn { border: none; border-radius: 8px; padding: 7px 12px; font-weight: 800; font-size: 12px; cursor: pointer; }
+.ad-btn.primary { background: linear-gradient(135deg, var(--blue), #3d6bff); color: #fff; }
+.ad-btn.danger { background: rgba(255,79,110,.16); color: #ff8098; border: 1px solid rgba(255,79,110,.4); }
+.ad-btn.ghost { background: rgba(255,255,255,.06); color: #c9d1e0; }
+
+@keyframes adDot { 50% { opacity: .35; } }
+.dotlive { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #33d17a; margin-right: 4px; animation: adDot 1.3s infinite; }
+
+/* ============ 모바일 (≤900px) ============ */
+@media (max-width: 900px) {
+  .ad-topbar { display: flex; }
+  .ad-sidebar { transform: translateX(-100%); transition: transform .25s ease; width: 260px; }
+  .ad-sidebar.open { transform: translateX(0); }
+  .ad-scrim.show { display: block; }
+  .ad-main { margin-left: 0; padding: 16px 14px 60px; }
+  .ad-kpis { grid-template-columns: repeat(2, 1fr); }
+  .ad-grid2 { grid-template-columns: 1fr; }
+  .ad-mini { grid-template-columns: repeat(3, 1fr); }
+  .ad-h1 { font-size: 19px; }
+  .ad-kpi-v { font-size: 26px; }
 }
-
-/* -------------------------------------------------
-   PAGE TITLE
---------------------------------------------------- */
-.admin-title {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 22px;
-}
-
-/* -------------------------------------------------
-   DASHBOARD SUMMARY CARDS
---------------------------------------------------- */
-.admin-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 26px;
-}
-
-.stat-card {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 16px;
-}
-
-.stat-card-title {
-    font-size: 13px;
-    color: #aaa;
-    margin-bottom: 6px;
-}
-
-.stat-card-value {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-/* -------------------------------------------------
-   TABS
---------------------------------------------------- */
-.admin-tabs {
-    display: flex;
-    overflow-x: auto;
-    gap: 10px;
-    margin-bottom: 22px;
-}
-
-.admin-tab {
-    padding: 10px 14px;
-    border-radius: 10px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    font-size: 13.5px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.admin-tab.active {
-    border-color: var(--accent-yellow);
-    color: var(--accent-yellow);
-}
-
-/* -------------------------------------------------
-   SEARCH BOX
---------------------------------------------------- */
-.admin-search-box {
-    margin-bottom: 18px;
-}
-
-.admin-search-input {
-    width: 100%;
-    padding: 12px 16px;
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 10px;
-    color: #fff;
-}
-
-.admin-search-input:focus {
-    outline: none;
-    border-color: var(--accent-yellow);
-}
-
-/* -------------------------------------------------
-   LIST TABLE
---------------------------------------------------- */
-.admin-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.admin-row {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 14px;
-}
-
-.admin-row-title {
-    font-size: 15px;
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-
-.admin-row-meta {
-    font-size: 12px;
-    color: #aaa;
-    margin-bottom: 10px;
-}
-
-.admin-row-actions {
-    display: flex;
-    gap: 10px;
-}
-
-.admin-btn {
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    background: #222;
-    border: 1px solid #333;
-    cursor: pointer;
-}
-
-.btn-approve {
-    color: var(--accent-green);
-}
-
-.btn-reject {
-    color: var(--accent-red);
-}
-
-.btn-detail {
-    color: var(--accent-blue);
-}
-
-/* -------------------------------------------------
-   MODAL
---------------------------------------------------- */
-.admin-modal-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(10,10,10,0.65);
-    visibility: hidden;
-    opacity: 0;
-    transition: 0.25s ease;
-    z-index: 800;
-}
-
-.admin-modal-overlay.active {
-    visibility: visible;
-    opacity: 1;
-}
-
-.admin-modal {
-    position: fixed;
-    top: 50%; left: 50%;
-    width: 85%;
-    max-width: 420px;
-    background: #141414;
-    border-radius: 16px;
-    padding: 20px;
-    transform: translate(-50%, -40%);
-    opacity: 0;
-    transition: .3s ease;
-    z-index: 900;
-}
-
-.admin-modal.active {
-    transform: translate(-50%, -50%);
-    opacity: 1;
-}
-
-.admin-modal h3 {
-    font-size: 18px;
-    margin-bottom: 12px;
-}
-
-.admin-modal p {
-    font-size: 14px;
-    color: #ccc;
-    margin-bottom: 16px;
-    line-height: 1.45;
-}
-
-.admin-modal-btns {
-    display: flex;
-    gap: 10px;
-}
-
-.admin-modal-btns button {
-    flex: 1;
-    padding: 12px 0;
-    border-radius: 10px;
-    font-size: 14px;
-    background: #222;
-    border: 1px solid #333;
-}
-
-.modal-close {
-    color: var(--accent-yellow);
-}
-
-.modal-action {
-    color: var(--accent-red);
-}
-
-/* -------------------------------------------------
-   Responsive
---------------------------------------------------- */
-@media (min-width: 768px) {
-    .admin-page {
-        max-width: 800px;
-        margin: 0 auto;
-    }
-}
-
+@media (max-width: 420px) { .ad-kpis { grid-template-columns: 1fr 1fr; } }
