@@ -92,7 +92,12 @@ function bindUI() {
     if (!ME) { location.href = 'login.html'; return; }
     const { data, error } = await supa.rpc('claim_daily');
     if (error) return toast('오류가 발생했습니다.');
-    if (data.ok) { toast(`출석 완료! +${fmt(data.claimed)}P`); $('pointBalance').textContent = fmt(data.balance) + 'P'; }
+    if (data.ok) {
+      const day = data.day_in_week || 1;
+      const jackpot = day === 7 ? ' 🎉 7일 잭팟!' : '';
+      toast(`🔥 ${data.streak}일 연속 출석! +${fmt(data.claimed)}P${jackpot}`);
+      $('pointBalance').textContent = fmt(data.balance) + 'P';
+    }
     else if (data.reason === 'already') toast('오늘 출석 포인트는 이미 받았어요.');
   });
 

@@ -45,7 +45,8 @@
 
     const activity = issues * 50 + comments * 10 + votes * 2 + (ppR.count || 0) * 15 + (pcR.count || 0) * 5;
     const battle = acts * 8;
-    const predict = trades * 10 + Math.round(Math.max(0, balance - BASE_GRANT) * 0.05);
+    // 예측 지수는 거래 활동만 반영 — 보유 잔액과 분리(소비해도 등급 안 떨어짐)
+    const predict = trades * 10;
     const gi = activity + battle + predict;
 
     let tier = TIERS[0], idx = 0;
