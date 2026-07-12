@@ -111,6 +111,16 @@ select.input-field option { background: #16171c; color: #fff; }
   border: 1px solid var(--line); }
 .multi-img-badge { position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 800; color: #0a0a0b;
   background: var(--g-gold); padding: 2px 7px; border-radius: 99px; }
+/* 개별 삭제(✕) */
+.multi-img-del { position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; border-radius: 50%;
+  border: none; cursor: pointer; background: rgba(0,0,0,.66); color: #fff; font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.multi-img-del:active { transform: scale(.9); }
+/* 사진 추가(＋) 타일 */
+.multi-img-add { flex: 0 0 auto; width: 92px; height: 115px; border-radius: 10px; cursor: pointer;
+  background: rgba(255,255,255,.03); border: 1.5px dashed rgba(255,255,255,.18); color: var(--g-blue);
+  font-size: 30px; line-height: 1; display: flex; align-items: center; justify-content: center; }
+.multi-img-add:hover { border-color: var(--g-blue); background: rgba(61,107,255,.06); }
 
 /* 대표 썸네일 3:4 */
 .card-thumb-head { margin-bottom: 12px; }

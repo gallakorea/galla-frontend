@@ -50,42 +50,73 @@ document.addEventListener('DOMContentLoaded', () => {
   // 업로드에 쓸 최종 이미지(4:5로 크롭 완료된 File 배열). 원본 대신 이걸 올린다.
   let croppedImages = [];
 
-  // label[for] 이 네이티브로 파일창을 염 (모바일 안전).
-  // 같은 파일 재선택 시에도 change가 뜨도록 열릴 때 value 초기화.
-  thumbInput.addEventListener('click', () => { thumbInput.value = ''; });
-  thumbInput.addEventListener('change', async e => {
-    const files = [...(e.target.files || [])];
-    if (files.length === 0) return;
-    if (files.length > MAX_IMAGES) {
-      alert(`이미지는 최대 ${MAX_IMAGES}장까지 선택할 수 있습니다.`);
-      thumbInput.value = '';
+  // 선택된 사진 미리보기 렌더 — 각 장 삭제(✕) + 마지막에 추가(＋) 타일
+  function renderThumbs() {
+    if (!croppedImages.length) {
       thumbPreview.innerHTML = '';
-      croppedImages = [];
+      // 드롭존을 다시 보이게
+      if (thumbBtn) thumbBtn.style.display = '';
       return;
     }
-
-    // 4:5 세로 프레임으로 확정 — 가로 사진은 보여질 부분을 직접 선택하게 함
-    thumbPreview.innerHTML = `<div class="guide-text">사진 처리 중…</div>`;
-    try {
-      croppedImages = typeof window.GALLA_PROCESS_IMAGES === 'function'
-        ? await window.GALLA_PROCESS_IMAGES(files)
-        : files;
-    } catch (err) {
-      console.error('[CROP ERROR]', err);
-      croppedImages = files;
-    }
-
+    // 사진이 있으면 큰 드롭존은 감추고, 스트립 안 '추가' 타일로 대체
+    if (thumbBtn) thumbBtn.style.display = 'none';
     thumbPreview.innerHTML = `
       <div class="multi-img-strip">
         ${croppedImages.map((f, i) => `
           <div class="multi-img-item">
             <img src="${URL.createObjectURL(f)}">
             ${i === 0 ? '<span class="multi-img-badge">대표</span>' : ''}
+            <button type="button" class="multi-img-del" data-idx="${i}" aria-label="삭제">✕</button>
           </div>
         `).join('')}
+        ${croppedImages.length < MAX_IMAGES
+          ? `<button type="button" class="multi-img-add" id="thumbAddMore" aria-label="사진 추가">＋</button>`
+          : ''}
       </div>
-      ${croppedImages.length > 1 ? `<div class="guide-text">${croppedImages.length}장 선택됨 · 캐러셀로 노출됩니다</div>` : ''}
+      <div class="guide-text">${croppedImages.length}/${MAX_IMAGES}장 · 첫 장이 대표${croppedImages.length > 1 ? ' · 캐러셀로 노출' : ''}</div>
     `;
+  }
+
+  async function addFiles(files) {
+    files = [...(files || [])].filter(Boolean);
+    if (!files.length) return;
+    const room = MAX_IMAGES - croppedImages.length;
+    if (room <= 0) { alert(`이미지는 최대 ${MAX_IMAGES}장까지 올릴 수 있습니다.`); return; }
+    if (files.length > room) {
+      alert(`${room}장만 더 추가할 수 있어 처음 ${room}장만 담았습니다.`);
+      files = files.slice(0, room);
+    }
+    const prev = thumbPreview.innerHTML;
+    thumbPreview.insertAdjacentHTML('afterbegin', `<div class="guide-text" id="thumbProc">사진 처리 중…</div>`);
+    let processed;
+    try {
+      processed = typeof window.GALLA_PROCESS_IMAGES === 'function'
+        ? await window.GALLA_PROCESS_IMAGES(files)
+        : files;
+    } catch (err) {
+      console.error('[CROP ERROR]', err);
+      processed = files;
+    }
+    croppedImages = croppedImages.concat(processed);   // 기존에 이어붙이기(교체 아님)
+    renderThumbs();
+  }
+
+  // label[for] 이 네이티브로 파일창을 염. 재선택 위해 열릴 때 value 초기화.
+  thumbInput.addEventListener('click', () => { thumbInput.value = ''; });
+  thumbInput.addEventListener('change', e => { addFiles(e.target.files); });
+
+  // 스트립 내 삭제(✕) / 추가(＋) 위임
+  thumbPreview.addEventListener('click', e => {
+    const del = e.target.closest('.multi-img-del');
+    if (del) {
+      croppedImages.splice(Number(del.dataset.idx), 1);
+      renderThumbs();
+      return;
+    }
+    if (e.target.closest('.multi-img-add')) {
+      thumbInput.value = '';
+      thumbInput.click();
+    }
   });
 
   const videoInput = document.getElementById('video');
@@ -144,6 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mode === 'photo') {
       videoInput.value = '';
       videoPreview.innerHTML = '';
+      renderThumbs(); // 이전에 담아둔 사진 스트립 복원
     } else {
       thumbInput.value = '';
       thumbPreview.innerHTML = '';
