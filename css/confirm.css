@@ -1,93 +1,83 @@
-/* BASE */
-body {
-  margin: 0;
-  background: #000;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+/* =========================================================
+   GALLA · 발행 전 적합성 검사 (confirm) — 리팩토링
+   배경/헤더는 nav.css 전역 규칙을 따름
+========================================================= */
+* { box-sizing: border-box; }
+:root {
+  --g-gold: #f5cf6b; --g-blue: #3d6bff; --g-red: #ff4d67; --g-green: #35e0a0;
+  --card: linear-gradient(180deg, #16171c, #0e0f13);
+  --line: rgba(255,255,255,.08);
+  --txt: #f3f4f6; --sub: #9aa0ad; --dim: #6b7280;
+}
+html, body {
+  margin: 0; color: var(--txt);
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; letter-spacing: -.01em;
 }
 
-/* confirm 페이지에서는 flex 절대 금지 */
-body[data-page="confirm"] {
-  display: block;
-}
+/* 상단 앱바 (write와 동일 톤) */
+.wr-appbar { position: sticky; top: 0; z-index: 50;
+  display: grid; grid-template-columns: 40px 1fr 40px; align-items: center;
+  height: 54px; padding: 0 12px; padding-top: env(safe-area-inset-top);
+  background: rgba(10,10,11,.72); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.wr-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #fff; cursor: pointer; }
+.wr-back svg { width: 22px; height: 22px; }
+.wr-appbar-title { text-align: center; font-size: 16px; font-weight: 800; }
 
-/* APP ROOT */
-.app-root {
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100vh;
-  padding-bottom: 140px; /* 하단 네비 공간 */
-}
+/* 레이아웃 */
+.cf-main { padding: 0 0 160px; }
+.cf-inner { max-width: 520px; margin: 0 auto; padding: 20px 16px; }
 
-/* HEADER */
-.header {
-  border-bottom: 1px solid #111;
-}
-.header-inner {
-  height: 54px;
-  padding: 0 16px;
-  display: flex;
-  align-items: center;
-}
-.logo { width: 105px; }
+/* 히어로 */
+.cf-hero { text-align: center; padding: 18px 8px 22px; }
+.cf-shield { width: 68px; height: 68px; margin: 0 auto 14px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center; font-size: 32px;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(245,207,107,.2), rgba(245,207,107,.04));
+  border: 1px solid rgba(245,207,107,.3); box-shadow: 0 10px 30px rgba(245,207,107,.12); }
+.cf-title { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -.5px; }
+.cf-desc { margin: 8px 0 0; font-size: 13px; color: var(--sub); line-height: 1.6; }
 
-/* MAIN */
-.confirm-main {
-  padding: 24px 16px;
-}
+/* 검사 리스트 */
+.cf-checks { display: flex; flex-direction: column; gap: 10px; }
+.confirm-item { position: relative; padding: 16px 16px 16px 56px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--line);
+  font-size: 12.5px; color: var(--sub); line-height: 1.5; transition: border-color .2s ease;
+  animation: cfIn .35s ease both; }
+.cf-checks .confirm-item:nth-child(2) { animation-delay: .06s; }
+.cf-checks .confirm-item:nth-child(3) { animation-delay: .12s; }
+@keyframes cfIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.confirm-item strong { display: block; font-size: 14.5px; font-weight: 800; color: #fff; margin-bottom: 3px; }
 
-.confirm-title {
-  font-size: 20px;
-  font-weight: 800;
-}
+/* 상태 아이콘 (::before — confirm.js가 innerHTML을 바꿔도 클래스 기반이라 유지) */
+.confirm-item::before { content: ""; position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 900; }
+.confirm-item.loading::before { content: ""; border: 2.5px solid rgba(255,255,255,.15);
+  border-top-color: var(--g-gold); animation: cfSpin .7s linear infinite; }
+@keyframes cfSpin { to { transform: translateY(-50%) rotate(360deg); } }
+.confirm-item.pass { border-color: rgba(53,224,160,.35); }
+.confirm-item.pass::before { content: "✓"; background: rgba(53,224,160,.16); color: var(--g-green); }
+.confirm-item.warn { border-color: rgba(245,207,107,.4); }
+.confirm-item.warn::before { content: "!"; background: rgba(245,207,107,.16); color: var(--g-gold); }
+.confirm-item.fail { border-color: rgba(255,77,103,.45); }
+.confirm-item.fail::before { content: "✕"; background: rgba(255,77,103,.16); color: var(--g-red); }
 
-.confirm-desc {
-  font-size: 13px;
-  color: #aaa;
-  margin-top: 6px;
-}
+.cf-note { margin-top: 18px; padding: 14px 16px; border-radius: 12px;
+  background: rgba(255,255,255,.03); border: 1px solid var(--line);
+  font-size: 12px; color: var(--sub); line-height: 1.6; }
 
-/* SECTION */
-.confirm-section {
-  margin-top: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+/* 확정 단계에선 탭 네비 숨김 — 액션바가 유일한 하단 컨트롤 (nav.css보다 뒤에 없어 !important) */
+.nav { display: none !important; }
 
-.confirm-item {
-  padding: 16px;
-  border-radius: 14px;
-  background: #111;
-  border: 1px solid #222;
-  font-size: 14px;
-}
-
-.confirm-item.loading { opacity: .5; }
-.confirm-item.pass { border-color: #2f80ff; }
-
-/* ACTIONS */
-.confirm-actions {
-  margin-top: 26px;
-  display: flex;
-  gap: 10px;
-}
-
-.btn-sub, .btn-main {
-  flex: 1;
-  padding: 14px;
-  border-radius: 12px;
-  font-weight: 800;
-}
-
-.btn-sub {
-  background: #1a1a1a;
-  border: 1px solid #333;
-  color: #fff;
-}
-
-.btn-main {
-  background: #2f80ff;
-  border: none;
-  color: #fff;
-}
+/* 스티키 액션바 */
+.cf-actionbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+  display: flex; gap: 10px; max-width: 520px; margin: 0 auto;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, #0a0a0b 30%); }
+.cf-btn { flex: 1; padding: 15px; border-radius: 14px; cursor: pointer; font-size: 15px; font-weight: 900; border: none; }
+.cf-btn.ghost { flex: 1; background: rgba(255,255,255,.06); border: 1px solid var(--line); color: #fff; }
+.cf-btn.main { flex: 1.6; background: linear-gradient(135deg, var(--g-gold), #ffe08a); color: #0a0a0b;
+  box-shadow: 0 8px 24px rgba(245,207,107,.24); }
+.cf-btn.main:disabled { opacity: .55; box-shadow: none; }
+.cf-btn:active { transform: translateY(1px); }
