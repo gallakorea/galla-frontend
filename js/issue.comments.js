@@ -97,7 +97,10 @@ function renderCommentText(text) {
     .replace(/>/g, "&gt;");
   let html = escaped.replace(
     /\[gif:(.*?)\]/g,
-    (_, url) => `<img src="${url.replace(/"/g, "")}" class="comment-gif">`
+    (_, url) => {
+      const clean = url.trim().replace(/["'<>]/g, "");
+      return /^https:\/\//.test(clean) ? `<img src="${clean}" class="comment-gif" loading="lazy">` : "";
+    }
   );
   // 갈라 전용 스티커 [emo:key] → <img> (emoticon.js가 제공)
   if (window.GALLA_renderEmoticons) html = window.GALLA_renderEmoticons(html);

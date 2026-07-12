@@ -77,24 +77,6 @@ function applyVoteUI(stance) {
 
 
 /* ==========================================================================
-   0-1. GIF
-========================================================================== */
-async function searchGif(query) {
-  const { data, error } = await window.supabaseClient.functions.invoke(
-    "gif-search",
-    { body: { q: query } }
-  );
-
-  if (error) {
-    console.error("GIF search error:", error);
-    return [];
-  }
-
-  return data.results;
-}
-
-
-/* ==========================================================================
    1. URL → issue id
 ========================================================================== */
 const params = new URLSearchParams(location.search);
@@ -859,26 +841,6 @@ async function checkAuthorSupport(issueId) {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  
-    /* ==============================
-     🎞 GIF 버튼 연동 — 여기
-  ============================== */
-  document.querySelector(".gif-btn")?.addEventListener("click", async () => {
-    const panel = document.getElementById("gif-panel");
-    panel.hidden = !panel.hidden;
-
-    if (!panel.hidden) {
-      const gifs = await searchGif("battle");
-      panel.innerHTML = gifs.map(g =>
-        `<img
-          src="${g.media_formats.gif.url}"
-          class="gif-thumb"
-          data-url="${g.media_formats.gif.url}"
-        >`
-      ).join("");
-    }
-  });
-  
   const supportModal = document.getElementById("support-modal");
   if (!supportModal) return;
 
@@ -910,25 +872,6 @@ window.addEventListener("DOMContentLoaded", () => {
       if (confirmBtn) confirmBtn.disabled = false;
     });
   });
-});
-
-// ============================
-// GIF 선택 → 입력창 삽입
-// ============================
-
-document.addEventListener("click", (e) => {
-  const img = e.target.closest(".gif-thumb");
-  if (!img) return;
-
-  const url = img.dataset.url;
-
-  const input = document.getElementById("battle-comment-input");
-  if (!input) return;
-
-  input.value += ` [gif:${url}] `;
-
-  // 패널 닫기
-  document.getElementById("gif-panel").hidden = true;
 });
 
 // ================================

@@ -24,6 +24,8 @@
       desc: "킹받네·현타·극혐 등 감정 스티커 9종 (영구)" },
     { key: "sticker_pack_3",  emoji: "💢", name: "정시밈 스티커팩", price: 1000, group: "deco", kind: "unlock",
       desc: "내로남불·유체이탈·국뽕 등 시사 밈 9종 (영구)" },
+    { key: "gif_pack",        emoji: "🎬", name: "GIF 사용권", price: 1500, group: "deco", kind: "unlock",
+      desc: "댓글·전투에 움짤(GIF)을 검색해서 붙일 수 있어요 (영구)" },
     // ── 도전 ──
     { key: "duel_ticket",     emoji: "⚔️", name: "일기토 신청서", price: 700, group: "duel", kind: "consumable",
       desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청" },
