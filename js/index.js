@@ -19,12 +19,23 @@ function playWithSound(vid) {
     if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
 }
 
+// 화면 밖 영상은 src를 안 박아 iOS가 메타데이터를 미리 받지 않도록(느림 방지).
+// 뷰포트 근처에 오면 그때 src 주입 → 버퍼링 시작.
+function ensureVideoSrc(vid) {
+    if (!vid.getAttribute('src') && vid.dataset.src) {
+        vid.setAttribute('src', vid.dataset.src);
+        vid.preload = 'auto';
+        try { vid.load(); } catch (e) {}
+    }
+}
+
 const videoObserver = new IntersectionObserver(entries => {
     entries.forEach(e => {
         const vid = e.target;
         const ovId = vid.dataset.overlayId;
         const ov = ovId ? document.getElementById(ovId) : null;
         if (e.isIntersecting && e.intersectionRatio > 0.5) {
+            ensureVideoSrc(vid);
             playWithSound(vid);
             if (ov) ov.classList.add('hidden');
         } else {
@@ -33,6 +44,11 @@ const videoObserver = new IntersectionObserver(entries => {
         }
     });
 }, { threshold: 0.5 });
+
+// 살짝 앞선 프리로더 — 곧 볼 영상만 미리 버퍼(스크롤해도 끊김 없이 즉시 재생)
+const videoPreloader = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) ensureVideoSrc(e.target); });
+}, { rootMargin: '400px 0px' });
 
 // 개별 음소거 토글 → 전역 선호를 뒤집어 전 영상·페이지에 통일 반영
 window.toggleFeedMute = function (vidId, btnId) {
@@ -104,9 +120,9 @@ function renderMedia(data) {
              onclick="event.stopPropagation();openReels(${data.id})">
             <video
                 id="vid-${data.id}"
-                src="${data.video_url}"
+                data-src="${data.video_url}"
                 ${data.thumbnail_url ? `poster="${data.thumbnail_url}"` : ""}
-                loop playsinline webkit-playsinline muted preload="metadata">
+                loop playsinline webkit-playsinline muted preload="none">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
@@ -590,6 +606,7 @@ function attachEvents() {
     // 비디오 자동재생 옵저버 등록
     document.querySelectorAll('.card-media video').forEach(v => {
         videoObserver.observe(v);
+        videoPreloader.observe(v);
         v.addEventListener('loadedmetadata', () => {
             const t = Math.floor(v.duration);
             const dur = document.getElementById(`dur-${v.id.replace('vid-', '')}`);
