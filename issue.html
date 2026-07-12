@@ -17,15 +17,15 @@
   <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
   <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
 
-    <link rel="stylesheet" href="css/issue.css?v=0713s" />
-    <link rel="stylesheet" href="css/issue.comments.css?v=0713s" />
-    <link rel="stylesheet" href="./css/items.css?v=0713s">
-    <link rel="stylesheet" href="./css/dm.css?v=0713s">
-    <link rel="stylesheet" href="./css/user-sheet.css?v=0713s">
-    <link rel="stylesheet" href="./css/owner-actions.css?v=0713s">
-    <link rel="stylesheet" href="./css/header.css?v=0713s">
-    <link rel="stylesheet" href="./css/nav.css?v=0713s">
-    <link rel="stylesheet" href="./css/shorts.css?v=0713s">
+    <link rel="stylesheet" href="css/issue.css?v=0713t" />
+    <link rel="stylesheet" href="css/issue.comments.css?v=0713t" />
+    <link rel="stylesheet" href="./css/items.css?v=0713t">
+    <link rel="stylesheet" href="./css/dm.css?v=0713t">
+    <link rel="stylesheet" href="./css/user-sheet.css?v=0713t">
+    <link rel="stylesheet" href="./css/owner-actions.css?v=0713t">
+    <link rel="stylesheet" href="./css/header.css?v=0713t">
+    <link rel="stylesheet" href="./css/nav.css?v=0713t">
+    <link rel="stylesheet" href="./css/shorts.css?v=0713t">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -123,9 +123,6 @@
         <!-- ✅ 이 줄 추가 (없어서 UX가 깨졌음) -->
         <p id="vote-status-text" class="vote-status-text"></p>
     </section>
-
-    <!-- 진영 밀어주기 (투표 직후 · GP 소비 액션) -->
-    <section id="faction-section" class="faction-section"></section>
 
     <!-- SUMMARY -->
     <section class="issue-explain">
@@ -287,6 +284,9 @@
         <div class="donate-list" id="donate-list"></div>
     </section>
 
+<!-- 진영 지원 (댓글 전쟁 바로 위 · 지원 아이템으로 내 진영 밀어주기) -->
+    <section id="faction-section" class="faction-section"></section>
+
 <!-- =========================
    FACTION COMMENT ZONE
 ========================= -->
@@ -367,35 +367,35 @@
 
 
 <!-- Supabase -->
-<script src="./js/vendor/supabase.js?v=0713s"></script>
-<script src="js/supabase.js?v=0713s"></script>
+<script src="./js/vendor/supabase.js?v=0713t"></script>
+<script src="js/supabase.js?v=0713t"></script>
 
 <!-- 전역 Core (window.* 정의) -->
-<script src="js/vote.core.js?v=0713s"></script>
+<script src="js/vote.core.js?v=0713t"></script>
 
 <!-- 전장 FX 엔진 (파티클/충격파/햅틱) -->
-<script src="js/battle-fx.js?v=0713s"></script>
-<script src="js/items.js?v=0713s"></script>
-<script src="js/emoticon.js?v=0713s"></script>
-<script src="js/gif.js?v=0713s"></script>
-<script src="js/donate.js?v=0713s"></script>
-<script src="js/charge.js?v=0713s"></script>
-<script src="js/faction.js?v=0713s"></script>
-<script src="js/dm.js?v=0713s"></script>
-<script src="js/user-sheet.js?v=0713s"></script>
-<script src="js/owner-actions.js?v=0713s"></script>
-<script src="js/share-sheet.js?v=0713s"></script>
-<script src="js/report-block.js?v=0713s"></script>
-<script src="js/comment-actions.js?v=0713s"></script>
+<script src="js/battle-fx.js?v=0713t"></script>
+<script src="js/items.js?v=0713t"></script>
+<script src="js/emoticon.js?v=0713t"></script>
+<script src="js/gif.js?v=0713t"></script>
+<script src="js/donate.js?v=0713t"></script>
+<script src="js/charge.js?v=0713t"></script>
+<script src="js/faction.js?v=0713t"></script>
+<script src="js/dm.js?v=0713t"></script>
+<script src="js/user-sheet.js?v=0713t"></script>
+<script src="js/owner-actions.js?v=0713t"></script>
+<script src="js/share-sheet.js?v=0713t"></script>
+<script src="js/report-block.js?v=0713t"></script>
+<script src="js/comment-actions.js?v=0713t"></script>
 
 <!-- Issue Page Logic (단 한 번!) -->
-<script src="js/media-sound.js?v=0713s"></script>
-<script type="module" src="js/issue.js?v=0713s"></script>
+<script src="js/media-sound.js?v=0713t"></script>
+<script type="module" src="js/issue.js?v=0713t"></script>
 
 <!-- 릴스(쇼츠) 엔진 -->
-<script type="module" src="js/shorts.js?v=0713s"></script>
+<script type="module" src="js/shorts.js?v=0713t"></script>
 
-<script src="./js/nav.js?v=0713s"></script>
+<script src="./js/nav.js?v=0713t"></script>
 
 <script>
 /* --------------------------
