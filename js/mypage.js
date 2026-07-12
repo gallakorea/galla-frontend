@@ -83,8 +83,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
             };
         }
-        // 방문자에게 비공개 탭 숨김 (Save/뉴스/즐겨찾기는 본인만)
-        ["save", "news", "follower"].forEach(t => {
+        // 방문자에게 비공개 탭 숨김 (뉴스=저장한 뉴스는 본인만). 갈라/예측/광장은 공개 My만.
+        ["news"].forEach(t => {
             document.querySelector(`.tab[data-tab="${t}"]`)?.setAttribute("hidden", "");
         });
     }
@@ -274,6 +274,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // My 갈라 — 내가 만든 이슈
     // =====================================================
     const renderMy = async () => {
+        tabContent.className = "content-area";
         tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
 
         const { data: issues, error } = await supabase
@@ -832,6 +833,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     // =====================================================
+    // 갈라 탭 — My 갈라 / Saved 갈라 서브탭 (mpSubBar 사용)
+    // =====================================================
+    let gallaSubTab = "mine"; // mine | saved
+    const clearSubBar = () => { const s = document.getElementById("mpSubBar"); if (s) s.innerHTML = ""; };
+    const renderGalla = () => {
+        const subBar = document.getElementById("mpSubBar");
+        if (subBar) {
+            if (isMyPage) {
+                subBar.innerHTML = `
+                    <div class="mp-subtabs">
+                        <button class="mp-subtab ${gallaSubTab === "mine" ? "active" : ""}" data-sub="mine">My 갈라</button>
+                        <button class="mp-subtab ${gallaSubTab === "saved" ? "active" : ""}" data-sub="saved">Saved 갈라</button>
+                    </div>`;
+                subBar.querySelector(".mp-subtabs").onclick = e => {
+                    const b = e.target.closest(".mp-subtab");
+                    if (!b || b.dataset.sub === gallaSubTab) return;
+                    gallaSubTab = b.dataset.sub;
+                    renderGalla();
+                };
+            } else {
+                subBar.innerHTML = ""; // 방문자는 공개 이슈(My)만
+            }
+        }
+        if (gallaSubTab === "saved" && isMyPage) renderSave();
+        else renderMy();
+    };
+
+    // =====================================================
     // My 예측 — 내가 만든 예측 / 저장한 예측 (서브탭 + 그리드)
     // =====================================================
     let predictSubTab = "mine"; // mine | saved
@@ -1183,26 +1212,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const menu = tab.dataset.tab;
 
             switch (menu) {
-                case "my": renderMy(); break;          // 2단계 복원용
-                case "battle": renderBattle(); break;  // 2단계 복원용
-                case "save": renderSave(); break;
-                case "news": renderNews(); break;
-                case "predict": renderPredict(); break;
-                case "plaza": renderPlaza(); break;
-                case "follower": renderFollower(); break;
+                case "galla": renderGalla(); break;              // 갈라(My/Saved 서브탭)
+                case "predict": clearSubBar(); renderPredict(); break;
+                case "news": clearSubBar(); renderNews(); break;
+                case "plaza": clearSubBar(); renderPlaza(); break;
             }
         });
     });
 
     // ---------------------------
-    // 기본 탭: 내 프로필=Save 갈라 / 방문자=My 광장(공개)
+    // 기본 탭: 갈라 (본인=My/Saved, 방문자=공개 My)
     // ---------------------------
-    if (isMyPage) {
-        renderSave();
-    } else {
-        tabs.forEach(t => t.classList.remove("active"));
-        const plazaTab = document.querySelector('.tab[data-tab="plaza"]');
-        plazaTab?.classList.add("active");
-        renderPlaza();
-    }
+    renderGalla();
 });

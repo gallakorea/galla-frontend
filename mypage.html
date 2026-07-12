@@ -4,11 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>마이페이지 - GALLA</title>
-    <link rel="stylesheet" href="css/mypage.css?v=0712d">
-    <link rel="stylesheet" href="./css/header.css?v=0712d">
-    <link rel="stylesheet" href="./css/notifications.css?v=0712d">
-    <link rel="stylesheet" href="./css/dm.css?v=0712d">
-    <link rel="stylesheet" href="./css/nav.css?v=0712d">
+    <link rel="stylesheet" href="css/mypage.css?v=0712e">
+    <link rel="stylesheet" href="./css/header.css?v=0712e">
+    <link rel="stylesheet" href="./css/notifications.css?v=0712e">
+    <link rel="stylesheet" href="./css/write-hub.css?v=0712e">
+    <link rel="stylesheet" href="./css/dm.css?v=0712e">
+    <link rel="stylesheet" href="./css/nav.css?v=0712e">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -27,7 +28,9 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner header-3">
-            <span class="hdr-spacer" aria-hidden="true"></span>
+            <button class="hdr-btn hdr-write" data-write-hub="galla" aria-label="글쓰기">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
             <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
             <div class="mp-hdr-actions" id="mpHdrActions">
                 <button class="hdr-btn" id="hdrNoti" aria-label="알림">
@@ -87,16 +90,16 @@
         <div class="profile-actions" id="profileActions"></div>
     </section>
 
-    <!-- TABS
-         ⚠️ 1단계: My 갈라 / Battle 갈라 숨김. 2단계 오픈 시 hidden 속성만 제거하면 복원. -->
+    <!-- TABS: 갈라 / 예측 / 뉴스 / 광장 (각 산하 My·Saved 서브탭) -->
     <section class="tabs">
-        <div class="tab" data-tab="my" hidden>My 갈라</div>
-        <div class="tab" data-tab="battle" hidden>Battle 갈라</div>
-        <div class="tab active" data-tab="save">Save 갈라</div>
-        <div class="tab" data-tab="predict">My 예측</div>
-        <div class="tab" data-tab="news">Save 뉴스</div>
-        <div class="tab" data-tab="plaza">My 광장</div>
+        <div class="tab active" data-tab="galla">갈라</div>
+        <div class="tab" data-tab="predict">예측</div>
+        <div class="tab" data-tab="news">뉴스</div>
+        <div class="tab" data-tab="plaza">광장</div>
     </section>
+
+    <!-- SUB TABS (갈라 전용; 예측·광장은 tabContent 내부에서 렌더) -->
+    <div id="mpSubBar" class="mp-subbar"></div>
 
     <!-- CONTENT -->
     <section id="tabContent" class="content-area"></section>
@@ -138,17 +141,18 @@
     </div>
 </nav>
 
-<script src="./js/nav.js?v=0712d"></script>
+<script src="./js/nav.js?v=0712e"></script>
 
 <!-- Supabase -->
-<script src="js/supabase.js?v=0712d"></script>
+<script src="js/supabase.js?v=0712e"></script>
 
 <!-- 알림 + DM -->
-<script src="js/notifications.js?v=0712d"></script>
-<script src="js/dm.js?v=0712d"></script>
+<script src="js/notifications.js?v=0712e"></script>
+<script src="js/dm.js?v=0712e"></script>
+<script src="js/write-hub.js?v=0712e"></script>
 
 <!-- My Page 기능 -->
-<script src="js/mypage.js?v=0712d"></script>
+<script src="js/mypage.js?v=0712e"></script>
 
 </body>
 </html>

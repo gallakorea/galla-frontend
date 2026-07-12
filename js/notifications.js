@@ -103,6 +103,13 @@
         if (!el.getAttribute("href") || el.getAttribute("href") === "#") e.preventDefault();
       });
     });
+
+    // 드로어를 열면 '확인'으로 간주 → 빨간점(뱃지) 제거 + DB 읽음 처리
+    // (목록의 unread 하이라이트는 이번 열람 동안 유지)
+    if (unread > 0) {
+      window.supabaseClient.from("notifications").update({ read: true }).eq("user_id", ME).eq("read", false);
+      setBadge(0);
+    }
   }
   function closeDrawer() {
     document.getElementById("noti-drawer")?.classList.remove("open");

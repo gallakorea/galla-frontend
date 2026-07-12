@@ -362,6 +362,7 @@ body {
 #mpQuickView .qv-act.on .ic-bookmark { fill: #f5c518; }
 
 /* My 광장 서브탭 (내가 쓴 글 / 저장한 글) */
+.mp-subbar:empty { display: none; }
 .mp-subtabs {
     display: flex; gap: 8px;
     padding: 12px 14px 10px;
