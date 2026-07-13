@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>인증 확인 - GALLA</title>
+  <meta name="theme-color" content="#000000" />
+  <style>
+    html,body{margin:0;height:100%;background:#000;color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+    .wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+    .logo{font-size:30px;font-weight:900;font-style:italic;letter-spacing:-1px;color:#fff;margin-bottom:26px}
+    .spin{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.14);border-top-color:#6f86ff;animation:sp .7s linear infinite}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .emoji{font-size:44px;line-height:1}
+    .tt{font-size:19px;font-weight:900;margin:16px 0 6px;letter-spacing:-.3px}
+    .sb{font-size:14px;color:#a9b0c0;line-height:1.6;max-width:300px}
+    .btn{margin-top:22px;display:inline-block;background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff;text-decoration:none;font-weight:800;font-size:15px;padding:13px 30px;border-radius:13px;border:none;cursor:pointer;font-family:inherit}
+    .hide{display:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">GALLA</div>
+    <div id="loading"><div class="spin"></div><div class="sb" style="margin-top:18px">인증을 확인하고 있어요…</div></div>
+    <div id="result" class="hide">
+      <div class="emoji" id="rEmoji">🎉</div>
+      <div class="tt" id="rTitle"></div>
+      <div class="sb" id="rSub"></div>
+      <a class="btn hide" id="rBtn"></a>
+    </div>
+  </div>
+
+  <script src="/js/vendor/supabase.js?v=0714w"></script>
+  <script src="/js/supabase.js?v=0714w"></script>
+  <script>
+    (async function () {
+      var p = new URLSearchParams(location.search);
+      var token_hash = p.get("token_hash") || p.get("token");
+      var type = p.get("type") || "signup";
+
+      function show(emoji, title, sub, btnLabel, btnHref) {
+        document.getElementById("loading").classList.add("hide");
+        var r = document.getElementById("result"); r.classList.remove("hide");
+        document.getElementById("rEmoji").textContent = emoji;
+        document.getElementById("rTitle").textContent = title;
+        document.getElementById("rSub").textContent = sub;
+        var b = document.getElementById("rBtn");
+        if (btnLabel) { b.textContent = btnLabel; b.href = btnHref; b.classList.remove("hide"); }
+      }
+
+      if (!token_hash) { show("⚠️", "잘못된 링크예요", "인증 정보가 없어요. 메일의 버튼을 다시 눌러주세요.", "홈으로", "/index.html"); return; }
+
+      var sb;
+      try { sb = await window.waitForSupabaseClient(); } catch (e) {}
+      if (!sb) { show("⚠️", "잠시 후 다시 시도해주세요", "연결에 실패했어요.", "다시 시도", location.href); return; }
+
+      var res = await sb.auth.verifyOtp({ token_hash: token_hash, type: type });
+      if (res.error) {
+        show("⌛", "링크가 만료됐어요", "인증 링크는 잠시 후 만료됩니다. 로그인 화면에서 다시 요청해 주세요.", "로그인하러 가기", "/login.html");
+        return;
+      }
+
+      // 성공 — 세션 수립됨
+      if (type === "recovery") {
+        show("🔑", "인증됐어요!", "새 비밀번호를 설정할게요…", null, null);
+        setTimeout(function () { location.replace("/change-password.html"); }, 900);
+        return;
+      }
+      if (type === "email_change") {
+        show("✅", "이메일이 변경됐어요", "설정 화면으로 이동할게요.", null, null);
+        setTimeout(function () { location.replace("/settings.html"); }, 1300);
+        return;
+      }
+      // signup / magiclink → 로그인 완료
+      try { localStorage.setItem("galla_welcome_pending", "new"); } catch (e) {}
+      show("🎉", "인증 완료!", "갈라에 오신 걸 환영해요. 이제 여론 전투에 참전하세요 ⚔️", null, null);
+      setTimeout(function () { location.replace("/index.html"); }, 1400);
+    })();
+  </script>
+</body>
+</html>
