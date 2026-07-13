@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     plaza: "plaza.html", mypage: "mypage.html",
   };
   const curIdx = PAGE_ORDER.indexOf(currentPage);
-  if (curIdx !== -1) {
+  {
     // 제스처 시작점이 가로 스크롤 요소/미디어/입력이면 스와이프 무시 (캐러셀·칩·영상 보호)
     const inHScroll = (el) => {
       for (let n = el; n && n !== document.documentElement; n = n.parentElement) {
@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 상세/설정 페이지(plaza_detail·predict-market·settings·mypage 하위 등)는 nav 하이라이트용으로
     // data-page를 탭 이름과 공유하지만 파일은 다르다 → 탭 좌우전환 대신 '직전 페이지(뒤로가기)'로.
     const curFile = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-    const isTabRoot = (PAGE_URL[currentPage] || "").toLowerCase() === curFile;
+    const isTabRoot = curIdx !== -1 && (PAGE_URL[currentPage] || "").toLowerCase() === curFile;
 
     if (!isTabRoot) {
       // 왼→오 스와이프 = 뒤로가기 (수평 의도 확정 시에만, 세로 스크롤/가로스크롤/모달 보호)

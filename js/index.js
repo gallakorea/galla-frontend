@@ -5,6 +5,7 @@
 let cards = [];
 window.cards = cards;
 let feed = [];
+let viewFeed = [];   // 카테고리 필터 적용된 렌더 대상(전체면 feed와 동일)
 let bestList, recommendList, bestMore;
 
 /* ===========================
@@ -739,10 +740,24 @@ async function loadData() {
     ]);
     feed = interleave(cards, predictionCards, plazaCards);
     window.feed = feed;
+    viewFeed = feed;
 
     loadBest();
     loadRecommend();
 }
+
+// 인덱스 카테고리 칩 — 검색페이지로 이동하지 않고 '그 자리에서' 피드를 필터
+window.GALLA_filterFeed = function (cat, el) {
+    document.querySelectorAll('.category-section .chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    viewFeed = (!cat || cat === '전체') ? feed : feed.filter(it => (it.data && it.data.category) === cat);
+    rec = 3;
+    if (recommendList) recommendList.innerHTML = '';
+    loadBest();
+    loadRecommend();
+    if (bestList && !viewFeed.length) bestList.innerHTML = '<div class="feed-empty" style="padding:40px 16px;text-align:center;color:var(--muted,#8a8f9a);font-size:14px">이 카테고리엔 아직 갈라가 없어요.</div>';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 // 이슈 2개마다 예측 1개, 3개마다 광장 1개를 끼워 배치
 function interleave(issues, predicts, plazas = []) {
@@ -947,15 +962,15 @@ async function loadWarData(issueIds) {
 
 function loadBest() {
     bestList.innerHTML = '';
-    feed.slice(0, 3).forEach(item => bestList.innerHTML += renderFeedItem(item));
+    viewFeed.slice(0, 3).forEach(item => bestList.innerHTML += renderFeedItem(item));
     attachEvents();
 }
 
 let rec = 3;
 function loadRecommend() {
     for (let i = 0; i < 3; i++) {
-        if (!feed[rec]) return;
-        recommendList.innerHTML += renderFeedItem(feed[rec]);
+        if (!viewFeed[rec]) return;
+        recommendList.innerHTML += renderFeedItem(viewFeed[rec]);
         rec++;
     }
     attachEvents();

@@ -168,3 +168,33 @@ body::before {
 .js-follow.following { background: rgba(255,255,255,.06); color: var(--text-low); border-color: var(--line-1); }
 .pmd-follow { margin-left: auto; align-self: center; }
 .pz-follow { display: inline-block; margin-top: 10px; }
+
+/* ===== 플래티넘/실버 잔재 일소 → 세련된 블랙톤 (전 페이지 공용, 2026-07-13) ===== */
+/* 플래티넘·샴페인 그라데이션 버튼 → 프리미엄 딥블랙 */
+.cf-btn.main,
+.si-buy:not(.no),
+.oa-btn-gold {
+  background: linear-gradient(180deg, #24262e 0%, #0c0d11 100%) !important;
+  color: #f4f5f8 !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06) !important;
+}
+.cf-btn.main:active,
+.si-buy:not(.no):active,
+.oa-btn-gold:active { filter: brightness(1.18); }
+.cf-btn.main:disabled { opacity: .5 !important; box-shadow: none !important; }
+
+/* 플래티넘 필 배지(부스트/핀/보유) → 다크 글래스 */
+.pin-chip, .pin-badge, .si-owned {
+  background: rgba(255,255,255,.08) !important;
+  color: #e7ebf3 !important;
+  -webkit-text-fill-color: #e7ebf3 !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+}
+/* 부스트/하이라이트 강조선 — 플래티넘 → 은은한 인디고 */
+.card.pinned { border-color: rgba(111,134,255,.38) !important; }
+.comment.hl, .reply.hl { border-color: rgba(111,134,255,.4) !important; }
+.comment.hl::before, .reply.hl::before {
+  background: rgba(111,134,255,.16) !important; color: #cdd6ff !important;
+  -webkit-text-fill-color: #cdd6ff !important;
+}

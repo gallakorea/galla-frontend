@@ -856,12 +856,7 @@ function goRemix(stance) {
    9. Back + Swipe
 ========================================================================== */
 qs("btn-back")?.addEventListener("click", () => history.back());
-
-let startX = 0;
-document.addEventListener("touchstart", e => (startX = e.touches[0].clientX));
-document.addEventListener("touchend", e => {
-  if (e.changedTouches[0].clientX - startX > 80) history.back();
-});
+// 좌→우 스와이프 뒤로가기는 nav.js가 전 페이지 공통으로 처리(비-탭 페이지). 중복 제거.
 
 /* ==========================================================================
    10. Author Support
