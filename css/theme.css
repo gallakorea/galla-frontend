@@ -117,3 +117,21 @@ body::before {
   box-shadow: 0 8px 24px rgba(255,81,112,.28), inset 0 1px 0 rgba(255,255,255,.18) !important;
 }
 .donate-cta:active { filter: brightness(.96); }
+
+/* ===== 작성자 헤더 정리·통일 (index·issue) — 인스타식 미니멀 ===== */
+/* 등급 프리픽스("🌱 눈팅 뉴비")·레벨 배지 숨겨 깔끔하게, "작성자" 프리픽스는 JS에서 제거됨 */
+.media-author-head .nick-title,
+.media-author-head .level-badge { display: none !important; }
+.media-author-head { align-items: center !important; }
+.media-author-head .mah-line1 { gap: 6px !important; }
+.media-author-head .mah-line1 .author-name {
+  font-size: 14px !important; font-weight: 700 !important;
+  color: var(--text-hi) !important; letter-spacing: -.1px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.media-author-head .mah-line2 { color: var(--text-low) !important; font-size: 12px !important; }
+/* 팔로우 버튼 톤 통일 */
+.media-author-head .follow-btn {
+  border: 1px solid var(--line-2) !important; background: transparent !important;
+  color: var(--text-mid) !important; font-weight: 800 !important;
+}

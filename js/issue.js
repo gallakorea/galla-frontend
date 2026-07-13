@@ -588,7 +588,7 @@ if (explainWrap) {
   }
 
   const authorEl = qs("issue-author");
-  authorEl.innerText = "작성자 · " + (issue.author || "익명");
+  authorEl.innerText = issue.author || "익명";
 
   // 작성자 프로필 사진 (없으면 기본 갈라 아이콘) + 클릭 시 마이페이지 이동
   const avEl = document.querySelector(".media-author-head .mah-avatar");
