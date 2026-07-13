@@ -105,3 +105,9 @@ body::before {
 .faction-btn-b { background: #170f12 !important; }
 .faction-btn-a.voted { background: var(--pro-solid) !important; border-color: var(--pro-solid) !important; color: #fff !important; }
 .faction-btn-b.voted { background: var(--con-solid) !important; border-color: var(--con-solid) !important; color: #fff !important; }
+
+/* ===== 후원하기 CTA 톤다운 (밝은 핑크 → 차분한 로즈, 글로우↓) ===== */
+.donate-cta {
+  background: linear-gradient(135deg, #c25a72, #a5485d) !important;
+  box-shadow: 0 6px 18px rgba(176,74,96,.22) !important;
+}
