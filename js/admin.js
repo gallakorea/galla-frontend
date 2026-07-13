@@ -51,6 +51,11 @@
   }
   const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
+  // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
+  function navTo(mod) {
+    document.querySelectorAll(".ad-navitem").forEach(x => x.classList.toggle("active", x.dataset.mod === mod));
+    route(mod);
+  }
 
   // ─────────── 대시보드 ───────────
   async function renderDashboard() {
@@ -58,19 +63,43 @@
     const [t, g] = await Promise.all([rpc("admin_traffic"), rpc("admin_growth")]);
     if (!t?.ok) { main().innerHTML = `<div class="ad-soon">데이터를 불러오지 못했어요.</div>`; return; }
     const td = t.today || {};
-    const kpi = (l, id, h, a) => `<div class="ad-kpi ${a || ""}"><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v" id="${id}">0</div><div class="ad-kpi-h">${h || ""}</div></div>`;
-    const mini = (l, v) => `<div class="ad-mini-i"><div class="ad-mini-v">${fmt(v)}</div><div class="ad-mini-l">${l}</div></div>`;
+    const kpi = (l, id, h, a, go) => `<div class="ad-kpi ${a || ""}${go ? " clickable" : ""}"${go ? ` data-go="${go}"` : ""}><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v" id="${id}">0</div><div class="ad-kpi-h">${h || ""}</div></div>`;
+    const mini = (l, v, go) => `<div class="ad-mini-i${go ? " clickable" : ""}"${go ? ` data-go="${go}"` : ""}><div class="ad-mini-v">${fmt(v)}</div><div class="ad-mini-l">${l}</div></div>`;
     main().innerHTML = `<h1 class="ad-h1">📊 대시보드</h1>
       <div class="ad-kpis">
         ${kpi("실시간 접속 (1h)", "k-rt", `최근 5분 ${fmt(t.online5m)}명`, "live")}
-        ${kpi("DAU (오늘)", "k-dau", "오늘 활동 유저")}${kpi("WAU (7일)", "k-wau", "주간")}${kpi("MAU (30일)", "k-mau", "월간")}
-        ${kpi("누적 회원", "k-total", `오늘 가입 +${fmt(td.signups)}`, "gold")}</div>
+        ${kpi("DAU (오늘)", "k-dau", "오늘 활동 유저", "", "members")}${kpi("WAU (7일)", "k-wau", "주간", "", "members")}${kpi("MAU (30일)", "k-mau", "월간", "", "members")}
+        ${kpi("누적 회원", "k-total", `오늘 가입 +${fmt(td.signups)}`, "gold", "members")}</div>
+      <div class="ad-card ad-live"><div class="ad-card-h">🟢 실시간 접속 현황 <span class="ad-live-refresh">2분 이내 활동 기준 · 자동 갱신</span></div>
+        <div id="ad-presence"><div class="ad-loading">접속 현황 집계 중…</div></div></div>
       <div class="ad-grid2">
         <div class="ad-card"><div class="ad-card-h">⏱ 시간당 활동 (최근 24h)</div><div class="ad-chart">${AdminCharts.lineChart(t.hourly || [], { color: "#5b8cff" })}</div></div>
         <div class="ad-card"><div class="ad-card-h">📈 성장 추이 (14일) <span class="ad-legend"><i style="background:#c9d1e0"></i>가입 <i style="background:#33d17a"></i>DAU</span></div><div class="ad-chart">${AdminCharts.dualLine((g?.days || []).map(d => ({ label: d.d, a: d.signups, b: d.dau })), {})}</div></div></div>
       <div class="ad-card"><div class="ad-card-h">🔥 오늘 활동량</div><div class="ad-mini">
-        ${mini("📝 갈라 발의", td.issues)}${mini("🗳️ 투표", td.votes)}${mini("💬 댓글", td.comments)}${mini("⚔️ 일기토", td.duels)}${mini("📈 예측거래", td.trades)}${mini("🙋 신규가입", td.signups)}</div></div>`;
+        ${mini("📝 갈라 발의", td.issues, "content")}${mini("🗳️ 투표", td.votes)}${mini("💬 댓글", td.comments, "content")}${mini("⚔️ 일기토", td.duels, "content")}${mini("📈 예측거래", td.trades, "content")}${mini("🙋 신규가입", td.signups, "members")}</div></div>`;
     countUp($("#k-rt"), t.realtime); countUp($("#k-dau"), t.dau); countUp($("#k-wau"), t.wau); countUp($("#k-mau"), t.mau); countUp($("#k-total"), t.total_users);
+    // 카드 클릭 → 해당 모듈로 즉시 이동 (영속 #ad-main에 1회만 위임 등록)
+    if (!main().__goWired) { main().__goWired = true; main().addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) navTo(g.dataset.go); }); }
+    // 실시간 접속 현황(회원 명단/비회원 수/지역) — 최초 렌더 + 20초 자동 갱신
+    paintPresence();
+    clearInterval(dashPresenceTimer);
+    dashPresenceTimer = setInterval(() => { if ($("#ad-presence")) paintPresence(); else clearInterval(dashPresenceTimer); }, 20000);
+  }
+  let dashPresenceTimer = null;
+  async function paintPresence() {
+    const box = $("#ad-presence"); if (!box) return;
+    const d = await rpc("admin_presence");
+    if (!d?.ok) { box.innerHTML = `<div class="ad-soon">접속 현황을 불러오지 못했어요.</div>`; return; }
+    const members = d.members || [], regions = d.regions || [];
+    const regionChips = regions.length ? `<div class="ad-live-regions">${regions.map(r => `<span class="ad-region-chip">📍 ${esc(r.region)} <b>${fmt(r.c)}</b></span>`).join("")}</div>` : "";
+    const memberList = members.length ? `<div class="ad-live-members">${members.map(m => `
+      <div class="ad-live-mrow"><span class="dotlive"></span><b>${esc(m.nickname)}</b><span class="ad-live-region">📍 ${esc(m.region)}</span><span class="ad-live-ago">${ago(m.last_seen)}</span></div>`).join("")}</div>`
+      : `<div class="ad-soon" style="padding:14px">지금 접속 중인 회원이 없어요.</div>`;
+    box.innerHTML = `<div class="ad-live-stat">
+        <div class="ad-live-i on"><div class="ad-live-v">${fmt(d.member_count)}</div><div class="ad-live-l">🟢 접속 회원</div></div>
+        <div class="ad-live-i"><div class="ad-live-v">${fmt(d.guest_count)}</div><div class="ad-live-l">👤 비회원(게스트)</div></div>
+        <div class="ad-live-i"><div class="ad-live-v">${fmt((d.member_count || 0) + (d.guest_count || 0))}</div><div class="ad-live-l">합계 접속</div></div>
+      </div>${regionChips}${memberList}`;
   }
 
   // ─────────── 콘텐츠 관리 ───────────
@@ -225,9 +254,17 @@
         <button class="ad-btn ghost" data-a="gp">💰 GP 지급</button>
         ${d.banned ? `<button class="ad-btn primary" data-a="unban">✅ 정지 해제</button>` : `<button class="ad-btn danger" data-a="ban">⛔ 정지</button>`}
         <button class="ad-btn ${d.admin ? "danger" : "primary"}" data-a="role">${d.admin ? "관리자 해제" : "관리자 지정"}</button>
+        ${d.admin ? "" : `<button class="ad-btn danger" data-a="delete">🗑 회원 삭제</button>`}
       </div>`);
     w.querySelector(".ad-mactions").onclick = async e => {
       const b = e.target.closest("[data-a]"); if (!b) return; const a = b.dataset.a;
+      if (a === "delete") {
+        if (!confirm(`정말 '${d.nickname || "익명"}' 회원을 삭제할까요?\n이 회원의 계정·작성글·댓글이 모두 영구 삭제되며 되돌릴 수 없어요.`)) return;
+        const r = await rpc("admin_delete_user", { p_user: uid });
+        if (r?.ok) { toast("회원이 삭제됐어요"); w.remove(); renderMembers(); }
+        else alert("삭제 실패: " + ({ self: "본인 계정은 삭제할 수 없어요", is_admin: "관리자는 삭제할 수 없어요", forbidden: "권한이 없어요" }[r?.reason] || r?.reason || "알 수 없는 오류"));
+        return;
+      }
       if (a === "warn+") await rpc("admin_adjust_warning", { p_user: uid, p_delta: 1 });
       else if (a === "warn-") await rpc("admin_adjust_warning", { p_user: uid, p_delta: -1 });
       else if (a === "gp") { const amt = parseInt(prompt("지급할 GP (음수=차감)", "1000") || "0"); if (amt) await rpc("admin_grant_gp", { p_user: uid, p_amount: amt, p_reason: "admin_grant" }); }

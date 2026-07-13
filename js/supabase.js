@@ -218,6 +218,20 @@
           if (s?.session) { window.supabaseClient.rpc("activity_ping"); localStorage.setItem(hk, "1"); }
         }
       } catch (e) {}
+
+      // 🟢 실시간 presence 하트비트 — 회원/비회원(anon) 모두. 화면 표시 중 45초마다.
+      try {
+        let sid = localStorage.getItem("galla_sid");
+        if (!sid) { sid = "s_" + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem("galla_sid", sid); }
+        let tz = null; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+        const beat = () => {
+          if (document.hidden) return;
+          try { window.supabaseClient.rpc("presence_ping", { p_session: sid, p_tz: tz }); } catch (e) {}
+        };
+        beat();
+        setInterval(beat, 45000);
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) beat(); });
+      } catch (e) {}
     } catch (e) {
       console.error("[supabase] bootstrap failed", e);
     }

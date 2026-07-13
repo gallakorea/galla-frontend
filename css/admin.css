@@ -76,6 +76,29 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 @keyframes adDot { 50% { opacity: .35; } }
 .dotlive { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #33d17a; margin-right: 4px; animation: adDot 1.3s infinite; }
 
+/* ============ 클릭 가능한 대시보드 카드 ============ */
+.ad-kpi.clickable, .ad-mini-i.clickable { cursor: pointer; transition: transform .12s ease, border-color .12s ease; }
+.ad-kpi.clickable:hover { transform: translateY(-2px); border-color: rgba(91,140,255,.5); }
+.ad-mini-i.clickable:hover { border-color: rgba(91,140,255,.5); transform: translateY(-1px); }
+
+/* ============ 실시간 접속 현황 ============ */
+.ad-live-refresh { font-size: 11px; color: #6c7280; font-weight: 600; margin-left: auto; }
+.ad-live-stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.ad-live-i { background: #0c0d11; border: 1px solid var(--line); border-radius: 12px; padding: 14px 8px; text-align: center; }
+.ad-live-i.on { border-color: rgba(51,209,122,.4); }
+.ad-live-v { font-size: 26px; font-weight: 900; letter-spacing: -.5px; }
+.ad-live-i.on .ad-live-v { color: #33d17a; }
+.ad-live-l { font-size: 11px; color: #8a8f9a; margin-top: 3px; }
+.ad-live-regions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.ad-region-chip { font-size: 12px; color: #b9c0cc; background: #0c0d11; border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; }
+.ad-region-chip b { color: #5b8cff; margin-left: 2px; }
+.ad-live-members { display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto; }
+.ad-live-mrow { display: flex; align-items: center; gap: 8px; padding: 9px 8px; border-radius: 9px; font-size: 13px; }
+.ad-live-mrow:hover { background: #0c0d11; }
+.ad-live-mrow b { font-weight: 800; color: #eef1f6; }
+.ad-live-region { font-size: 12px; color: #9aa0ac; }
+.ad-live-ago { font-size: 11px; color: #6c7280; margin-left: auto; }
+
 /* ============ 모바일 (≤900px) ============ */
 @media (max-width: 900px) {
   .ad-topbar { display: flex; }
