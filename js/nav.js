@@ -245,3 +245,64 @@ document.addEventListener("DOMContentLoaded", () => {
     }, { passive: true });
   }
 });
+/* =========================================================
+   📲 PWA 당겨서 새로고침 (Pull-to-Refresh)
+   - standalone(홈화면 앱)에선 브라우저 네이티브 P2R이 없어 직접 구현
+   - 스크롤 최상단에서 아래로 당기면 인디케이터 → 임계 넘겨 놓으면 reload
+   - 세로 당김만 반응(가로 탭 스와이프와 방향으로 분리, 충돌 없음)
+   ========================================================= */
+(function () {
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (!standalone) return; // 일반 브라우저는 네이티브 P2R 사용
+
+  const THRESH = 72, MAX = 130;
+  let startY = 0, pulling = false, dist = 0, ready = false, sp = null, bar = null;
+
+  function mount() {
+    if (document.getElementById("ptr-ind")) return;
+    const css = document.createElement("style");
+    css.textContent =
+      "#ptr-ind{position:fixed;left:0;right:0;top:0;z-index:2147483000;display:flex;align-items:flex-start;justify-content:center;height:0;overflow:hidden;pointer-events:none}" +
+      "#ptr-ind .ptr-sp{width:26px;height:26px;margin-top:12px;border-radius:50%;border:2.5px solid rgba(255,255,255,.16);border-top-color:#6f86ff;opacity:0}" +
+      "#ptr-ind.spin .ptr-sp{animation:ptrspin .7s linear infinite;opacity:1!important;border-top-color:#8ea2ff}" +
+      "@keyframes ptrspin{to{transform:rotate(360deg)}}";
+    document.head.appendChild(css);
+    bar = document.createElement("div"); bar.id = "ptr-ind";
+    bar.innerHTML = '<div class="ptr-sp"></div>';
+    document.body.appendChild(bar);
+    sp = bar.querySelector(".ptr-sp");
+  }
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+
+  const scroller = () => document.scrollingElement || document.documentElement;
+  const overlayOpen = () => document.querySelector(
+    "#dm-root.open, .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
+    "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
+  );
+
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length !== 1 || !bar || overlayOpen() || scroller().scrollTop > 0) { pulling = false; return; }
+    startY = e.touches[0].clientY; pulling = true; dist = 0; ready = false;
+    bar.style.transition = "none";
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!pulling) return;
+    const dy = e.touches[0].clientY - startY;
+    if (dy <= 0 || scroller().scrollTop > 0) { pulling = false; bar.style.height = "0"; sp.style.opacity = "0"; return; }
+    dist = Math.min(dy * 0.5, MAX);
+    bar.style.height = dist + "px";
+    sp.style.opacity = String(Math.min(dist / THRESH, 1));
+    sp.style.transform = "rotate(" + (dist * 3) + "deg)";
+    ready = dist >= THRESH;
+    if (e.cancelable) e.preventDefault(); // 최상단 당김 = 바운스 대신 인디케이터
+  }, { passive: false });
+
+  document.addEventListener("touchend", () => {
+    if (!pulling) return;
+    pulling = false;
+    bar.style.transition = "height .22s cubic-bezier(.2,.9,.3,1)";
+    if (ready) { bar.style.height = THRESH + "px"; bar.classList.add("spin"); setTimeout(() => location.reload(), 180); }
+    else { bar.style.height = "0"; setTimeout(() => { if (sp) sp.style.opacity = "0"; }, 230); }
+  }, { passive: true });
+})();
