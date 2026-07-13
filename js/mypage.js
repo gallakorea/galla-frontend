@@ -320,13 +320,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         tabContent.className = "content-area grid";
         tabContent.innerHTML = "";
 
-        issues.forEach(issue => {
+        const qvItems = issues.map(i => ({ type: "issue", id: i.id }));
+        issues.forEach((issue, myIdx) => {
             const firstImg = Array.isArray(issue.images) && issue.images.length ? issue.images[0] : null;
             tabContent.appendChild(igCard({
                 thumb: issue.card_thumb_url || issue.thumbnail_url || firstImg || null,
                 title: issue.title,
                 badge: issue.video_url ? "▶" : "",
-                onClick: () => { location.href = `issue.html?id=${issue.id}`; }
+                onClick: () => openQvList(qvItems, myIdx)   // 이탈 금지 — 마이페이지 내 퀵뷰로 소비
             }));
         });
     };
@@ -407,9 +408,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 </div>
             `;
 
-            card.onclick = () => {
-                location.href = `issue.html?id=${battle.origin_issue_id}`;
-            };
+            card.onclick = () => openQvList([{ type: "issue", id: battle.origin_issue_id }], 0); // 이탈 금지 — 퀵뷰
 
             tabContent.appendChild(card);
         });
