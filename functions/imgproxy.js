@@ -37,7 +37,7 @@ export async function onRequest(context) {
         "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
       },
       redirect: "follow",
-      signal: AbortSignal.timeout(8000), // 일부 사이트(ruliweb 등)가 CF 엣지 IP를 느리게 드롭 → 빨리 실패시켜 onerror 유도
+      signal: AbortSignal.timeout(5000), // 일부 사이트(ruliweb 등)가 CF 엣지 IP를 느리게 드롭 → 빨리 실패시켜 onerror(스켈레톤 제거) 유도
       cf: { cacheTtl: 604800, cacheEverything: true },
     });
   } catch { return new Response("fetch fail", { status: 502 }); }
