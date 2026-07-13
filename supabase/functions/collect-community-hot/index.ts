@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+const UA_PC = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
 // 안전 사전필터 — 혐오·불법·정치극단·개인정보·성인 유발 키워드
 const BLOCK = ["일베","전라디언","홍어","분탕","좌좀","우꼴","한남충","김치녀","된장녀","자살","마약","도박","성인","19금","야동","불법촬영","주작","박제","신상털","섹스","자위","성기"];
@@ -17,27 +18,58 @@ function cleanTitle(t: string) {
 function titleKey(t: string) { return cleanTitle(t).replace(/[^가-힣a-z0-9]/gi, "").toLowerCase(); }
 
 // 소스 설정 (베스트/인기 페이지 + 게시글 링크 패턴). 일베 제외. 구조 변경 시 여기만 조정.
-const SOURCES: { name: string; url: string; re: RegExp; base: string }[] = [
+// ua:"pc" 는 모바일 UA를 차단/다른레이아웃 주는 사이트(뽐뿌·보배·클리앙)용.
+type Src = { name: string; url: string; re: RegExp; base: string; ua?: "pc"; warm?: string };
+const SOURCES: Src[] = [
   { name: "dcinside",   url: "https://m.dcinside.com/board/dcbest",                        re: /\/board\/[\w]+\/\d+/,                             base: "https://m.dcinside.com" },
-  { name: "fmkorea",    url: "https://m.fmkorea.com/best",                                 re: /^\/\d{6,}$/,                                      base: "https://m.fmkorea.com" },
-  { name: "theqoo",     url: "https://theqoo.net/hot",                                     re: /^\/hot\/\d+$/,                                    base: "https://theqoo.net" },
   { name: "ruliweb",    url: "https://bbs.ruliweb.com/best",                               re: /\/(best|community|news)\/board\/\d+\/read\/\d+/,  base: "https://bbs.ruliweb.com" },
   { name: "arca.live",  url: "https://arca.live/b/live",                                   re: /\/b\/[\w]+\/\d{5,}/,                              base: "https://arca.live" },
-  { name: "inven",      url: "https://m.inven.co.kr/webzine/news/",                        re: /\/webzine\/news\/\?news=\d+/,                     base: "https://m.inven.co.kr" },
+  { name: "inven",      url: "https://m.inven.co.kr/board/webzine/2097",                   re: /\/board\/webzine\/\d+\/\d+/,                      base: "https://m.inven.co.kr" },
   { name: "mlbpark",    url: "https://mlbpark.donga.com/mp/best.php",                      re: /\/mp\/b\.php\?[^"'#]*b=/,                         base: "https://mlbpark.donga.com" },
-  { name: "ppomppu",    url: "https://m.ppomppu.co.kr/new/hotlist.php",                    re: /view\.php\?[^"'#]*no=\d+/,                        base: "https://m.ppomppu.co.kr/new/" },
-  { name: "clien",      url: "https://m.clien.net/service/group/allrecommend",            re: /\/service\/board\/\w+\/\d+/,                      base: "https://m.clien.net" },
+  { name: "ppomppu",    url: "https://www.ppomppu.co.kr/hot.php",                          re: /\/zboard\/view\.php\?[^"'#]*no=\d+/,              base: "https://www.ppomppu.co.kr", ua: "pc" },
   { name: "pann",       url: "https://m.pann.nate.com/talk/ranking",                       re: /\/talk\/\d{5,}/,                                  base: "https://m.pann.nate.com" },
   { name: "instiz",     url: "https://www.instiz.net/pt",                                  re: /\/pt\/\d{5,}/,                                    base: "https://www.instiz.net" },
-  { name: "bobaedream", url: "https://www.bobaedream.co.kr/list?code=best",               re: /\/view\?[^"'#]*No=\d+/,                           base: "https://www.bobaedream.co.kr" },
-  { name: "etoland",    url: "https://www.etoland.co.kr/bbs/hit.php",                      re: /\/bbs\/board\.php\?[^"'#]*wr_id=\d+/,             base: "https://www.etoland.co.kr" },
+  { name: "bobaedream", url: "https://www.bobaedream.co.kr/list?code=best",               re: /\/view\?code=best&No=\d+/,                        base: "https://www.bobaedream.co.kr", ua: "pc" },
   { name: "humoruniv",  url: "https://web.humoruniv.com/board/humor/list.html?table=pds", re: /read\.html\?[^"'#]*number=\d+/,                   base: "https://web.humoruniv.com/board/humor/" },
+  { name: "todayhumor", url: "https://m.todayhumor.co.kr/list.php?table=bestofbest",       re: /view\.php\?table=bestofbest&no=\d+/,              base: "https://m.todayhumor.co.kr/" },
+  { name: "82cook",     url: "https://www.82cook.com/entiz/enti.php?bn=15",                re: /\/entiz\/read\.php\?num=\d+/,                     base: "https://www.82cook.com", ua: "pc" },
+  // 서버수집 불가(데이터센터 IP 안티봇/피드잠금)로 제외: fmkorea(보안차단 430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금+차단)·etoland(JS SPA)
 ];
 
-async function collectOne(src: { name: string; url: string; re: RegExp; base: string }) {
+// 실제 브라우저처럼 보이는 헤더 (쿠키 없는 첫 요청을 막는 사이트 대응)
+function browserHeaders(ua: string, referer: string, cookie?: string) {
+  const h: Record<string, string> = {
+    "User-Agent": ua,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+    "Referer": referer,
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Site": "same-origin", "Sec-Fetch-User": "?1",
+  };
+  if (cookie) h["Cookie"] = cookie;
+  return h;
+}
+// Set-Cookie 들을 "k=v; k=v" 요청 쿠키로 병합
+function jar(res: Response): string {
+  const raw = (res.headers as any).getSetCookie?.() as string[] | undefined;
+  const list = raw && raw.length ? raw : (res.headers.get("set-cookie") ? [res.headers.get("set-cookie")!] : []);
+  return list.map((c) => c.split(";")[0]).filter(Boolean).join("; ");
+}
+
+async function collectOne(src: Src) {
   const out: any[] = [];
   try {
-    const r = await fetch(src.url, { headers: { "User-Agent": UA, "Accept-Language": "ko-KR,ko;q=0.9" }, redirect: "follow", signal: AbortSignal.timeout(9000) });
+    const ua = src.ua === "pc" ? UA_PC : UA;
+    // 워밍업: 홈 GET → 세션쿠키 확보 (theqoo/fmkorea/clien 등 쿠키 선요구 대응)
+    let cookie = "";
+    if (src.warm) {
+      try {
+        const w = await fetch(src.warm, { headers: browserHeaders(ua, src.base + "/"), redirect: "follow", signal: AbortSignal.timeout(8000) });
+        cookie = jar(w);
+        await w.body?.cancel();
+      } catch (_) {}
+    }
+    const r = await fetch(src.url, { headers: browserHeaders(ua, src.warm || (src.base + "/"), cookie), redirect: "follow", signal: AbortSignal.timeout(9000) });
     if (!r.ok) return out;
     const doc = new DOMParser().parseFromString(await r.text(), "text/html");
     if (!doc) return out;
