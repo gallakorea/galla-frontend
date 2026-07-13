@@ -19,13 +19,16 @@ const SYS = `너는 한국 예측시장 '갈라예측'의 에디터다. 사람�
 - 반드시 아래 JSON만 출력:
   {"markets":[{"question":"...(예/아니오로 답하는 40자 내 질문)","description":"정산 기준 한 문장(수치·날짜 포함)","category":"...","close_days":5}, ... 정확히 5개]}`;
 
-async function gen() {
+async function gen(headlines: string[]) {
+  const newsBlock = headlines.length
+    ? `\n\n[참고: 최근 인기 뉴스 헤드라인 — 이 중 '베팅으로 즐길 만하고 근시일 내 판가름 나는' 주제를 골라 시의성 있게 활용해라(민감·비극·특정인 사건 헤드라인은 피하고, 경제지표·스포츠·날씨·연예·테크·트렌드 위주로)]\n- ${headlines.join("\n- ")}`
+    : "";
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini", temperature: 0.95, response_format: { type: "json_object" },
-      messages: [{ role: "system", content: SYS }, { role: "user", content: `오늘 날짜: ${new Date().toISOString().slice(0, 10)}. 오늘의 예측 5개를 만들어줘.` }],
+      model: "gpt-4o-mini", temperature: 0.9, response_format: { type: "json_object" },
+      messages: [{ role: "system", content: SYS }, { role: "user", content: `오늘 날짜: ${new Date().toISOString().slice(0, 10)}. 오늘의 예측 5개를 만들어줘.${newsBlock}` }],
     }),
   });
   const j = await r.json();
@@ -37,7 +40,17 @@ Deno.serve(async (req) => {
   if (!OPENAI) return new Response(JSON.stringify({ ok: false, reason: "no_openai_key" }), { headers: { ...cors, "Content-Type": "application/json" } });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-  const out = await gen();
+  // 최근 인기 뉴스(갈라뉴스) 헤드라인을 참고자료로 → 시의성 있는 예측
+  let headlines: string[] = [];
+  try {
+    const { data: news } = await sb.from("galla_news")
+      .select("title").order("created_at", { ascending: false }).limit(30);
+    const seen = new Set<string>();
+    headlines = (news || []).map((n: any) => String(n.title || "").trim())
+      .filter((t: string) => t && !seen.has(t) && seen.add(t)).slice(0, 24);
+  } catch (_) {}
+
+  const out = await gen(headlines);
   const rows = Array.isArray(out?.markets) ? out.markets.slice(0, 5) : [];
   let created = 0; const made: string[] = [];
   for (const m of rows) {
@@ -56,5 +69,5 @@ Deno.serve(async (req) => {
     });
     if (!error && data) { created++; made.push(q); }
   }
-  return new Response(JSON.stringify({ ok: true, created, made }), { headers: { ...cors, "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ ok: true, created, news_used: headlines.length, made }), { headers: { ...cors, "Content-Type": "application/json" } });
 });
