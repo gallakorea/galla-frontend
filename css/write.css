@@ -1,11 +1,11 @@
 /* =========================================================
    GALLA · 새 갈라 만들기 (write) — 프리미엄 다크 리팩토링
-   팔레트: 골드 #f5cf6b / 블루 #3d6bff / 레드 #ff4d67
+   팔레트: 골드 #c9d1e0 / 블루 #3d6bff / 레드 #ff4d67
    배경/헤더 톤은 nav.css 전역 규칙을 따름
 ========================================================= */
 * { box-sizing: border-box; }
 :root {
-  --g-gold: #f5cf6b; --g-blue: #3d6bff; --g-red: #ff4d67;
+  --g-gold: #c9d1e0; --g-blue: #3d6bff; --g-red: #ff4d67;
   --card: linear-gradient(180deg, #16171c, #0e0f13);
   --line: rgba(255,255,255,.08);
   --txt: #f3f4f6; --sub: #9aa0ad; --dim: #6b7280;
@@ -47,8 +47,8 @@ html, body {
 .wizard-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   background: rgba(255,255,255,.06); border: 1px solid var(--line); font-size: 12.5px; font-weight: 800; color: var(--sub); }
 .wizard-step.active { color: #fff; }
-.wizard-step.active .wizard-dot { background: linear-gradient(135deg, var(--g-gold), #ffe6a3); color: #0a0a0b; border: none;
-  box-shadow: 0 3px 12px rgba(245,207,107,.3); }
+.wizard-step.active .wizard-dot { background: linear-gradient(135deg, var(--g-gold), #dfe5f0); color: #0a0a0b; border: none;
+  box-shadow: 0 3px 12px rgba(201,209,224,.3); }
 .wizard-line { flex: 1; height: 2px; border-radius: 2px; background: var(--line); }
 
 /* ---------- 카드 ---------- */
@@ -134,7 +134,7 @@ select.input-field option { background: #16171c; color: #fff; }
 .card-thumb-drop:hover { border-color: var(--g-gold); color: var(--g-gold); }
 .card-thumb-plus { font-size: 28px; line-height: 1; }
 .card-thumb-preview { position: relative; width: 120px; height: 160px; border-radius: 14px; overflow: hidden;
-  border: 1px solid rgba(245,207,107,.5); flex: none; }
+  border: 1px solid rgba(201,209,224,.5); flex: none; }
 .card-thumb-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card-thumb-clear { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%;
   border: none; cursor: pointer; background: rgba(0,0,0,.65); color: #fff; font-size: 13px; display: flex; align-items: center; justify-content: center; }
@@ -171,8 +171,8 @@ select.input-field option { background: #16171c; color: #fff; }
 .stance-option.con input:checked + span { background: rgba(255,77,103,.16); border-color: var(--g-red); color: #ffb0bd; }
 
 /* ---------- AI 버튼 ---------- */
-.ai-main-btn { width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px solid rgba(245,207,107,.4);
-  background: linear-gradient(135deg, rgba(245,207,107,.14), rgba(245,207,107,.04)); color: var(--g-gold);
+.ai-main-btn { width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; border: 1px solid rgba(201,209,224,.4);
+  background: linear-gradient(135deg, rgba(201,209,224,.14), rgba(201,209,224,.04)); color: var(--g-gold);
   font-size: 14px; font-weight: 800; cursor: pointer; }
 .ai-main-btn:active { transform: scale(.99); }
 
@@ -183,7 +183,7 @@ select.input-field option { background: #16171c; color: #fff; }
 .wizard-nav.two { display: flex; gap: 10px; }
 .primary-btn { width: 100%; padding: 15px; border-radius: 14px; border: none; cursor: pointer;
   background: linear-gradient(135deg, var(--g-gold), #ffe08a); color: #0a0a0b; font-size: 15px; font-weight: 900;
-  box-shadow: 0 8px 24px rgba(245,207,107,.22); }
+  box-shadow: 0 8px 24px rgba(201,209,224,.22); }
 .primary-btn:active { transform: translateY(1px); }
 .wizard-nav.two .primary-btn { flex: 2; }
 .ghost-btn { flex: 1; padding: 15px; border-radius: 14px; cursor: pointer;
@@ -234,7 +234,7 @@ select.input-field option { background: #16171c; color: #fff; }
 .ai-tone-option input { position: absolute; opacity: 0; }
 .ai-tone-option span { display: block; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.05);
   border: 1px solid var(--line); font-size: 12.5px; font-weight: 700; color: var(--sub); }
-.ai-tone-option input:checked + span { background: rgba(245,207,107,.14); border-color: rgba(245,207,107,.5); color: var(--g-gold); }
+.ai-tone-option input:checked + span { background: rgba(201,209,224,.14); border-color: rgba(201,209,224,.5); color: var(--g-gold); }
 .textarea.compact { min-height: 70px; }
 .textarea.user-text { min-height: 100px; }
 .textarea.result-text { min-height: 130px; }

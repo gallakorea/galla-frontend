@@ -47,8 +47,8 @@
       .gif-powered{text-align:right;font-size:10px;color:#6c7280;margin-top:6px;font-weight:700}
       .gif-msg{padding:22px 12px;text-align:center;color:#9aa0ad;font-size:13px;column-span:all;line-height:1.5}
       .gif-lock{padding:18px 12px;text-align:center;color:#c9d1e0}
-      .gif-lock b{color:#f5cf6b}
-      .gif-lock button{margin-top:12px;width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,#f5cf6b,#e0a93a);color:#0a0a0b;font-weight:900;cursor:pointer}
+      .gif-lock b{color:#c9d1e0}
+      .gif-lock button{margin-top:12px;width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b;font-weight:900;cursor:pointer}
     `;
     document.head.appendChild(s);
   }

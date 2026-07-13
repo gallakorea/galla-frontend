@@ -50,8 +50,8 @@
       .emo-cell img{width:100%;display:block;border-radius:9px}
       .emo-cell:active{transform:scale(.9)}
       .emo-lock{padding:18px 12px;text-align:center;color:#c9d1e0}
-      .emo-lock b{color:#f5cf6b}
-      .emo-lock button{margin-top:12px;width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,#f5cf6b,#e0a93a);color:#0a0a0b;font-weight:900;cursor:pointer}
+      .emo-lock b{color:#c9d1e0}
+      .emo-lock button{margin-top:12px;width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b;font-weight:900;cursor:pointer}
       .galla-emo{max-width:150px;width:46vw;height:auto;vertical-align:middle;margin:3px 0;border-radius:10px;display:inline-block}
     `;
     document.head.appendChild(s);

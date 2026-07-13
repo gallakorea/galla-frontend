@@ -5,25 +5,25 @@
 .s-av, .s-av-sm img, .s-pod-av img, .s-av-sm .s-av { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .s-hero { text-align: center; padding: 18px 14px; border-radius: 18px; margin-bottom: 14px;
-  background: radial-gradient(120% 90% at 50% 0%, #2a1e0a, #0e0f14 72%); border: 1px solid rgba(245,207,107,.25); }
-.s-season { font-weight: 900; font-size: 22px; color: #f5cf6b; }
+  background: radial-gradient(120% 90% at 50% 0%, #2a1e0a, #0e0f14 72%); border: 1px solid rgba(201,209,224,.25); }
+.s-season { font-weight: 900; font-size: 22px; color: #c9d1e0; }
 .s-cd { color: #eef0f4; font-weight: 800; font-size: 14px; margin-top: 4px; }
 .s-prize { color: #c9d1e0; font-size: 12px; line-height: 1.7; margin-top: 10px; }
-.s-prize b { color: #f5cf6b; }
+.s-prize b { color: #c9d1e0; }
 
 /* 포디움 */
 .s-podium { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 8px; align-items: end; margin-bottom: 14px; }
 .s-pod { text-align: center; background: linear-gradient(180deg,#16171c,#101116); border: 1px solid rgba(255,255,255,.08);
   border-radius: 14px; padding: 12px 6px; }
-.s-pod.p1 { border-color: rgba(245,207,107,.5); box-shadow: 0 0 22px rgba(245,207,107,.18); padding-top: 18px; }
+.s-pod.p1 { border-color: rgba(201,209,224,.5); box-shadow: 0 0 22px rgba(201,209,224,.18); padding-top: 18px; }
 .s-pod.p2 { border-color: rgba(200,209,224,.35); }
 .s-pod.p3 { border-color: rgba(230,160,90,.35); }
 .s-pod.empty { opacity: .25; min-height: 90px; }
 .s-pod-av { width: 52px; height: 52px; margin: 0 auto 6px; border-radius: 50%; position: relative; border: 2px solid rgba(255,255,255,.14); }
-.s-pod.p1 .s-pod-av { width: 62px; height: 62px; border-color: #f5cf6b; }
+.s-pod.p1 .s-pod-av { width: 62px; height: 62px; border-color: #c9d1e0; }
 .s-medal { position: absolute; bottom: -6px; right: -6px; font-size: 20px; }
 .s-pod-name { font-weight: 900; font-size: 13px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.s-pod-gp { color: #f5cf6b; font-weight: 900; font-size: 13px; margin-top: 2px; }
+.s-pod-gp { color: #c9d1e0; font-weight: 900; font-size: 13px; margin-top: 2px; }
 
 .s-me { text-align: center; background: rgba(61,107,255,.12); border: 1px solid rgba(61,107,255,.3);
   border-radius: 12px; padding: 10px; color: #cdd6f0; font-size: 13px; margin-bottom: 12px; }
@@ -37,12 +37,12 @@
 .s-rank { width: 26px; text-align: center; font-weight: 900; color: #9aa0ad; font-size: 13px; }
 .s-av-sm { width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto; }
 .s-nick { flex: 1; font-weight: 800; color: #eef0f4; font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.s-gp { font-weight: 900; color: #f5cf6b; font-size: 13px; }
+.s-gp { font-weight: 900; color: #c9d1e0; font-size: 13px; }
 
 .s-hof { display: flex; flex-direction: column; gap: 4px; }
 .s-hof-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 12px;
-  background: linear-gradient(180deg,#1a1608,#0e0f14); border: 1px solid rgba(245,207,107,.2); }
-.s-hof-title { font-weight: 900; color: #f5cf6b; font-size: 13px; }
+  background: linear-gradient(180deg,#1a1608,#0e0f14); border: 1px solid rgba(201,209,224,.2); }
+.s-hof-title { font-weight: 900; color: #c9d1e0; font-size: 13px; }
 .s-hof-nick { font-weight: 800; color: #eef0f4; font-size: 13px; }
 .s-note { color: #6c7280; font-size: 11.5px; text-align: center; margin-top: 16px; line-height: 1.5; }
 .s-note b { color: #9aa0ad; }

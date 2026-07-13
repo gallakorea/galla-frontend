@@ -22,7 +22,7 @@
       @keyframes ttUp{from{transform:translateY(100%)}}
       .tt-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
       .tt-title{font-weight:900;font-size:17px;color:#f5f5f2}
-      .tt-bal{font-weight:900;color:#f5cf6b;font-size:14px}
+      .tt-bal{font-weight:900;color:#c9d1e0;font-size:14px}
       .tt-tabs{display:flex;gap:6px;margin-bottom:10px}
       .tt-tab{flex:1;border:none;background:rgba(255,255,255,.05);color:#c9d1e0;font-weight:800;font-size:13px;padding:9px 0;border-radius:10px;cursor:pointer}
       .tt-tab.on{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
@@ -31,14 +31,14 @@
       .tt-grid{display:flex;flex-direction:column;gap:8px}
       .tt-item{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#16171c,#101116);
         border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 14px}
-      .tt-item.eq{border-color:rgba(245,207,107,.5);box-shadow:0 0 14px rgba(245,207,107,.15)}
+      .tt-item.eq{border-color:rgba(201,209,224,.5);box-shadow:0 0 14px rgba(201,209,224,.15)}
       .tt-item.locked{opacity:.55}
       .tt-name{flex:1;font-weight:800;color:#f0f0f2;font-size:15px}
       .tt-btn{flex:0 0 auto;border:none;border-radius:10px;padding:9px 14px;font-weight:900;font-size:13px;cursor:pointer}
       .tt-btn.buy{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
       .tt-btn.buy.no{background:#2a2d36;color:#6c7280}
-      .tt-btn.equip{background:rgba(245,207,107,.16);color:#f5cf6b;border:1px solid rgba(245,207,107,.4)}
-      .tt-btn.on{background:linear-gradient(135deg,#f5cf6b,#e0a93a);color:#0a0a0b}
+      .tt-btn.equip{background:rgba(201,209,224,.16);color:#c9d1e0;border:1px solid rgba(201,209,224,.4)}
+      .tt-btn.on{background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b}
       .tt-lock{flex:0 0 auto;font-size:11px;font-weight:800;color:#8b8b93}
       .tt-close{width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}
     `;
@@ -93,7 +93,7 @@
     const note = sheet.querySelector("#tt-note");
     const grid = sheet.querySelector("#tt-grid");
     if (tab === "title") {
-      note.innerHTML = `칭호는 <b style="color:#f5cf6b">활동·등급·시즌으로만 획득</b>돼요 (구매 불가) · 내 갈라 지수 <b>${gi.toLocaleString()} GI</b>`;
+      note.innerHTML = `칭호는 <b style="color:#c9d1e0">활동·등급·시즌으로만 획득</b>돼요 (구매 불가) · 내 갈라 지수 <b>${gi.toLocaleString()} GI</b>`;
       grid.innerHTML =
         `<div class="tt-sub">🏅 등급 칭호</div>` + tiers.map(tierRow).join("") +
         (awards.length ? `<div class="tt-sub">🏆 시즌·업적 칭호</div>` + awards.map(awardRow).join("") : "") +

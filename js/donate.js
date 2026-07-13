@@ -54,7 +54,7 @@
       .ds-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font-size:13px;color:#c9d1e0}
       .ds-anon{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
       .ds-break{font-size:12px;color:#8a8f9a}
-      .ds-break b{color:#f5cf6b}
+      .ds-break b{color:#c9d1e0}
       .ds-go{width:100%;padding:15px;border:none;border-radius:14px;font-weight:900;font-size:16px;color:#fff;cursor:pointer}
       .ds-go:disabled{opacity:.5}
       .ds-note{font-size:11px;color:#6c7280;text-align:center;margin-top:10px;line-height:1.5}
@@ -67,7 +67,7 @@
       .donate-section{padding:14px 16px}
       .donate-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
       .donate-title{font-weight:900;font-size:15px;color:#fff}
-      .donate-total{font-size:12.5px;font-weight:800;color:#f5cf6b}
+      .donate-total{font-size:12.5px;font-weight:800;color:#c9d1e0}
       .donate-desc{font-size:12.5px;color:#8a8f9a;margin:0 0 12px;line-height:1.5}
       .donate-cta{width:100%;padding:13px;border:none;border-radius:14px;font-weight:900;font-size:15px;cursor:pointer;
         background:linear-gradient(135deg,#ff6a88,#ff4d6d);color:#fff;box-shadow:0 6px 20px rgba(255,77,109,.28)}

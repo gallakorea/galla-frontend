@@ -199,7 +199,7 @@ body.shorts-open { overflow: hidden !important; }
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   transition: transform .12s ease, background .15s ease;
 }
-.shorts-action-btn:active .sa-ic { transform: scale(.9); background: rgba(245,207,107,.25); }
+.shorts-action-btn:active .sa-ic { transform: scale(.9); background: rgba(201,209,224,.25); }
 .shorts-action-btn svg {
   width: 25px; height: 25px;
   stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
@@ -477,7 +477,7 @@ body[data-page="shorts"] .nav {
   padding:0 14px;
   font-size:13.5px;
 }
-.comment-input input:focus{ border-color:#f5cf6b; outline:none; }
+.comment-input input:focus{ border-color:#c9d1e0; outline:none; }
 
 .comment-input button{
   display:none;

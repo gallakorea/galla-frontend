@@ -23,8 +23,8 @@ body {
 }
 .tier-name {
   font-size: 34px; font-weight: 900; letter-spacing: 4px;
-  color: #f5cf6b !important;
-  text-shadow: 0 0 26px rgba(245,207,107,.55);
+  color: #c9d1e0 !important;
+  text-shadow: 0 0 26px rgba(201,209,224,.55);
 }
 .tier-desc { margin-top: 10px; font-size: 12.5px; color: #9a9aa0; line-height: 1.6; }
 .xp-bar {
@@ -33,7 +33,7 @@ body {
 }
 .xp-progress {
   position: relative; height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #f5cf6b, #e0972a) !important;
+  background: linear-gradient(90deg, #c9d1e0, #e0972a) !important;
   overflow: hidden;
 }
 .xp-progress::after {
@@ -42,7 +42,7 @@ body {
   background-size: 220% 100%; animation: gShimmer 2.4s linear infinite;
 }
 @keyframes gShimmer { 0%{background-position:-120% 0;} 100%{background-position:220% 0;} }
-.xp-text { margin-top: 9px; font-size: 12px; font-weight: 800; color: #f5cf6b; }
+.xp-text { margin-top: 9px; font-size: 12px; font-weight: 800; color: #c9d1e0; }
 .tier-aura { display: none; }
 
 /* ===== 다음 등급 진척도 ===== */
@@ -59,7 +59,7 @@ body {
 /* ===== 세계관 ===== */
 .lore-card {
   padding: 16px; font-size: 12.5px; color: #9a9aa0; line-height: 1.7;
-  border-left: 3px solid rgba(245,207,107,.5) !important;
+  border-left: 3px solid rgba(201,209,224,.5) !important;
 }
 
 /* ===== 티어 계층 — 티어별 아이덴티티 ===== */
@@ -86,19 +86,19 @@ body {
 .tier-box.dominion { border-left-color: #ff4d67 !important; background: linear-gradient(90deg, rgba(255,77,103,.1), rgba(255,255,255,.01)) !important; }
 .tier-box.dominion .tier-title { color: #ff8595; }
 .tier-box.apex {
-  border-left-color: #f5cf6b !important;
-  background: linear-gradient(90deg, rgba(245,207,107,.14), rgba(224,151,42,.03)) !important;
-  box-shadow: 0 0 22px rgba(245,207,107,.12);
+  border-left-color: #c9d1e0 !important;
+  background: linear-gradient(90deg, rgba(201,209,224,.14), rgba(139,147,163,.03)) !important;
+  box-shadow: 0 0 22px rgba(201,209,224,.12);
 }
 .tier-box.apex .tier-title {
-  color: #f5cf6b;
-  text-shadow: 0 0 14px rgba(245,207,107,.5);
+  color: #c9d1e0;
+  text-shadow: 0 0 14px rgba(201,209,224,.5);
 }
 .tier-box.apex::after {
   content: '👑'; position: absolute; top: 12px; right: 14px; font-size: 16px;
 }
 /* 현재 내 티어 하이라이트 (grade.js가 .current 부여 시) */
-.tier-box.current { outline: 2px solid rgba(245,207,107,.6); box-shadow: 0 0 24px rgba(245,207,107,.25); }
+.tier-box.current { outline: 2px solid rgba(201,209,224,.6); box-shadow: 0 0 24px rgba(201,209,224,.25); }
 
 /* ===== 능력치 ===== */
 .benefit-card { padding: 6px 16px; }
@@ -109,8 +109,8 @@ body {
 .benefit-item:last-child { border-bottom: none; }
 .bt { font-size: 12px; font-weight: 900; letter-spacing: 1.5px; color: #9a9aa0; }
 .bd { font-size: 12px; color: #c9c9cf; font-weight: 600; }
-.apex-benefit .bt { color: #f5cf6b; text-shadow: 0 0 10px rgba(245,207,107,.4); }
-.apex-benefit .bd { color: #f5cf6b; font-weight: 800; }
+.apex-benefit .bt { color: #c9d1e0; text-shadow: 0 0 10px rgba(201,209,224,.4); }
+.apex-benefit .bd { color: #c9d1e0; font-weight: 800; }
 
 /* ===== 업적 도감 ===== */
 .ach-card { padding: 6px 16px; }

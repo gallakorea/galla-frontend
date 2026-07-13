@@ -53,7 +53,7 @@
     const labelIdx = n <= 1 ? [0] : [0, Math.floor(n / 2), n - 1];
     const xlab = labelIdx.map(i => `<text x="${x(i).toFixed(1)}" y="${H - 6}" fill="#6c7280" font-size="10" text-anchor="middle">${esc(data[i]?.label || "")}</text>`).join("");
     return `<svg viewBox="0 0 ${W} ${H}" class="ad-svg" preserveAspectRatio="none">
-      ${line("b", "#33d17a")}${line("a", "#f5cf6b")}${xlab}</svg>`;
+      ${line("b", "#33d17a")}${line("a", "#c9d1e0")}${xlab}</svg>`;
   }
 
   window.AdminCharts = { lineChart, dualLine };

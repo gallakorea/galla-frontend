@@ -15,7 +15,7 @@
     { key: "breaker",   name: "🔥 발끈러",       sub: "못 참고 첫 댓글을 단 각성러",        min: 150,   color: "#4fc3f7" },
     { key: "vanguard",  name: "⌨️ 키보드 전사",  sub: "손가락이 근질근질한 참전러",         min: 500,   color: "#3d6bff" },
     { key: "authority", name: "🎤 여론 논객",    sub: "판을 읽고 흔드는 입담꾼",            min: 1500,  color: "#c9d1e0" },
-    { key: "dominion",  name: "🌪️ 갈라 선동가",  sub: "댓글창을 쥐락펴락하는 여론몰이",     min: 4500,  color: "#f5cf6b" },
+    { key: "dominion",  name: "🌪️ 갈라 선동가",  sub: "댓글창을 쥐락펴락하는 여론몰이",     min: 4500,  color: "#c9d1e0" },
     { key: "apex",      name: "👑 갈라 대장군",  sub: "전장을 평정한 전설의 논객",          min: 15000, color: "#ff8a3d" },
   ];
   const SUB_LEVELS = 5;      // 각 등급 내부 서브레벨(Lv.1~5) — 잦은 소진급으로 몰입 유지

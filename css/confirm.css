@@ -4,7 +4,7 @@
 ========================================================= */
 * { box-sizing: border-box; }
 :root {
-  --g-gold: #f5cf6b; --g-blue: #3d6bff; --g-red: #ff4d67; --g-green: #35e0a0;
+  --g-gold: #c9d1e0; --g-blue: #3d6bff; --g-red: #ff4d67; --g-green: #35e0a0;
   --card: linear-gradient(180deg, #16171c, #0e0f13);
   --line: rgba(255,255,255,.08);
   --txt: #f3f4f6; --sub: #9aa0ad; --dim: #6b7280;
@@ -33,8 +33,8 @@ html, body {
 .cf-hero { text-align: center; padding: 18px 8px 22px; }
 .cf-shield { width: 68px; height: 68px; margin: 0 auto 14px; border-radius: 20px;
   display: flex; align-items: center; justify-content: center; font-size: 32px;
-  background: radial-gradient(120% 120% at 50% 0%, rgba(245,207,107,.2), rgba(245,207,107,.04));
-  border: 1px solid rgba(245,207,107,.3); box-shadow: 0 10px 30px rgba(245,207,107,.12); }
+  background: radial-gradient(120% 120% at 50% 0%, rgba(201,209,224,.2), rgba(201,209,224,.04));
+  border: 1px solid rgba(201,209,224,.3); box-shadow: 0 10px 30px rgba(201,209,224,.12); }
 .cf-title { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -.5px; }
 .cf-desc { margin: 8px 0 0; font-size: 13px; color: var(--sub); line-height: 1.6; }
 
@@ -58,8 +58,8 @@ html, body {
 @keyframes cfSpin { to { transform: translateY(-50%) rotate(360deg); } }
 .confirm-item.pass { border-color: rgba(53,224,160,.35); }
 .confirm-item.pass::before { content: "✓"; background: rgba(53,224,160,.16); color: var(--g-green); }
-.confirm-item.warn { border-color: rgba(245,207,107,.4); }
-.confirm-item.warn::before { content: "!"; background: rgba(245,207,107,.16); color: var(--g-gold); }
+.confirm-item.warn { border-color: rgba(201,209,224,.4); }
+.confirm-item.warn::before { content: "!"; background: rgba(201,209,224,.16); color: var(--g-gold); }
 .confirm-item.fail { border-color: rgba(255,77,103,.45); }
 .confirm-item.fail::before { content: "✕"; background: rgba(255,77,103,.16); color: var(--g-red); }
 
@@ -78,6 +78,6 @@ html, body {
 .cf-btn { flex: 1; padding: 15px; border-radius: 14px; cursor: pointer; font-size: 15px; font-weight: 900; border: none; }
 .cf-btn.ghost { flex: 1; background: rgba(255,255,255,.06); border: 1px solid var(--line); color: #fff; }
 .cf-btn.main { flex: 1.6; background: linear-gradient(135deg, var(--g-gold), #ffe08a); color: #0a0a0b;
-  box-shadow: 0 8px 24px rgba(245,207,107,.24); }
+  box-shadow: 0 8px 24px rgba(201,209,224,.24); }
 .cf-btn.main:disabled { opacity: .55; box-shadow: none; }
 .cf-btn:active { transform: translateY(1px); }

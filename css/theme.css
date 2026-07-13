@@ -29,7 +29,7 @@
   --ok: #2fd07a;
   --danger: #ff4d67;
   /* GP 화폐 — 순화된 샴페인(텍스트 전용, 버튼 금지) */
-  --gp: #e7cd8f;
+  --gp: #cfd7e6;
   /* 반경 */
   --r-sm: 10px;
   --r-md: 14px;
@@ -87,7 +87,7 @@ body::before {
 .rp-reward-tx small { color: var(--text-mid) !important; }
 
 /* GP 잔액/뱃지 — 샴페인 텍스트만(면적 골드 축소) */
-.shop-bal { background: rgba(231,205,143,.08) !important; border-color: rgba(231,205,143,.22) !important; color: var(--gp) !important; }
+.shop-bal { background: rgba(207,215,230,.08) !important; border-color: rgba(207,215,230,.22) !important; color: var(--gp) !important; }
 
 /* ===== 투표(진영 선택) 톤다운 통일 — 채도·명도↓ 프리미엄 (배틀 .bm-* 제외) ===== */
 :root { --pro-solid: #3a54ad; --con-solid: #b04a60; }

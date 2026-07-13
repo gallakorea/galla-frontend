@@ -209,7 +209,7 @@ body {
 }
 
 .ai-style-tabs button.active {
-  background: #ffe27a;
+  background: #dfe5f0;
   color: #111;
   font-weight: 700;
 }
@@ -888,7 +888,7 @@ body { margin:0; background:#000; color:#fff; font-family:-apple-system,BlinkMac
   padding-bottom: 110px; /* index와 동일 */
 }
 
-.required { color: #ffe27a; font-weight: 700; margin-left: 4px; }
+.required { color: #dfe5f0; font-weight: 700; margin-left: 4px; }
 .optional { color: #888; font-weight: 500; margin-left: 4px; }
 
 .guide-text {

@@ -17,17 +17,17 @@ section { padding: 0 16px; }
 .top-section {
   margin: 14px 16px 0; padding: 28px 20px 24px; text-align: center;
   border-radius: 20px !important;
-  background: radial-gradient(130% 120% at 50% 0%, rgba(245,207,107,.16), rgba(13,13,17,.92) 62%), #0d0d11 !important;
-  border: 1px solid rgba(245,207,107,.35) !important;
+  background: radial-gradient(130% 120% at 50% 0%, rgba(201,209,224,.16), rgba(13,13,17,.92) 62%), #0d0d11 !important;
+  border: 1px solid rgba(201,209,224,.35) !important;
   box-shadow: 0 20px 50px -20px rgba(0,0,0,.8);
 }
 .type-badge {
   display: inline-block; padding: 9px 20px; border-radius: 999px;
   font-size: 16px; font-weight: 900;
-  background: rgba(245,207,107,.13) !important;
-  border: 1px solid rgba(245,207,107,.55) !important;
-  color: #f5cf6b !important;
-  text-shadow: 0 0 14px rgba(245,207,107,.45);
+  background: rgba(201,209,224,.13) !important;
+  border: 1px solid rgba(201,209,224,.55) !important;
+  color: #c9d1e0 !important;
+  text-shadow: 0 0 14px rgba(201,209,224,.45);
 }
 .ratio-box { margin-top: 20px; display: flex; justify-content: center; gap: 46px; }
 .ratio-label { font-size: 11px; font-weight: 800; color: #8b8b93; }
@@ -61,7 +61,7 @@ section { padding: 0 16px; }
 .axis-fill.hot     { background: linear-gradient(90deg, #ff4d67, #ff8595) !important; box-shadow: 0 0 10px rgba(255,77,103,.45); }
 .axis-fill.pro-side{ background: linear-gradient(90deg, #3d6bff, #6d8bff) !important; box-shadow: 0 0 10px rgba(61,107,255,.45); }
 .axis-fill.explore { background: linear-gradient(90deg, #35e0c0, #7cf5dd) !important; box-shadow: 0 0 10px rgba(53,224,192,.45); }
-.axis-fill.logic   { background: linear-gradient(90deg, #f5cf6b, #e0972a) !important; box-shadow: 0 0 10px rgba(245,207,107,.45); }
+.axis-fill.logic   { background: linear-gradient(90deg, #c9d1e0, #e0972a) !important; box-shadow: 0 0 10px rgba(201,209,224,.45); }
 .axis-detail { margin-top: 8px; font-size: 11.5px; font-weight: 700; color: #8b8b93; }
 
 /* ===== 토론 패턴 ===== */

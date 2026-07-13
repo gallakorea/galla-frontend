@@ -153,16 +153,16 @@ function __openShortsInternal(list, startId, startTime) {
 .author-avatar-init{
   display:flex; align-items:center; justify-content:center;
   font-weight:800; font-size:18px; color:#0a0a0b;
-  background:linear-gradient(135deg,#f5cf6b,#ff9b4d);
+  background:linear-gradient(135deg,#c9d1e0,#ff9b4d);
 }
 .author-info{ display:flex; flex-direction:column; gap:5px; min-width:0; }
 .author-line{ display:flex; align-items:center; gap:7px; font-size:15.5px; font-weight:800; line-height:1.15; }
 .author-name{ text-shadow:0 1px 6px rgba(0,0,0,.75); }
 .author-level{
   font-size:11px; padding:2px 8px; border-radius:999px; font-weight:800;
-  background:rgba(245,207,107,.2); color:#f5cf6b; border:1px solid rgba(245,207,107,.42);
+  background:rgba(201,209,224,.2); color:#c9d1e0; border:1px solid rgba(201,209,224,.42);
 }
-.shorts-cat{ font-size:12px; color:#f5cf6b; font-weight:700; opacity:.95; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+.shorts-cat{ font-size:12px; color:#c9d1e0; font-weight:700; opacity:.95; text-shadow:0 1px 4px rgba(0,0,0,.6); }
 .shorts-title{
   margin-top:2px; font-size:14.5px; font-weight:600; line-height:1.42; color:#f2f3f5;
   text-shadow:0 1px 6px rgba(0,0,0,.7);

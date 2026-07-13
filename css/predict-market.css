@@ -91,7 +91,7 @@
   color: #888; font-weight: 800; font-size: 13px; cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
-.pmd-tab.active { color: #fff; border-bottom-color: #ffe27a; }
+.pmd-tab.active { color: #fff; border-bottom-color: #dfe5f0; }
 .pmd-tab-body { padding: 14px 0; }
 .pmd-tab-loading, .pmd-tab-empty { padding: 30px; text-align: center; color: #777; font-size: 13px; }
 
@@ -107,7 +107,7 @@
 /* 상위 보유자 */
 .pmd-holders { display: flex; flex-direction: column; gap: 6px; }
 .pmd-holder-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 10px; }
-.pmd-holder-rank { width: 22px; text-align: center; color: #ffe27a; font-weight: 900; }
+.pmd-holder-rank { width: 22px; text-align: center; color: #dfe5f0; font-weight: 900; }
 .pmd-holder-name { flex: 1; font-weight: 700; font-size: 14px; }
 .pmd-holder-side { font-weight: 800; font-size: 12px; padding: 3px 8px; border-radius: 6px; }
 .pmd-holder-side.yes { background: #0a1233; color: #aac4ff; }
@@ -144,7 +144,7 @@
 .pmd-cmt-pick.etc.active { background: rgba(255,255,255,.08); border-color: #666; color: #ddd; }
 .pmd-cmt-inputrow { display: flex; gap: 8px; }
 .pmd-cmt-input { flex: 1; padding: 12px; border-radius: 10px; background: #050505; border: 1px solid #2a2a2a; color: #fff; font-size: 14px; }
-.pmd-cmt-send { padding: 0 18px; border-radius: 10px; border: none; background: #ffe27a; color: #111; font-weight: 900; cursor: pointer; }
+.pmd-cmt-send { padding: 0 18px; border-radius: 10px; border: none; background: #dfe5f0; color: #111; font-weight: 900; cursor: pointer; }
 
 .pmd-cmt-list { display: flex; flex-direction: column; gap: 10px; }
 .pmd-cmt { padding: 12px 14px; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 12px; border-left: 3px solid #2a2a2a; }
@@ -165,7 +165,7 @@
 .pmd-oc { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   padding: 12px 14px; border-radius: 12px; background: #0d0d0d; border: 1px solid #1e1e1e; color: #fff; cursor: pointer; }
 .pmd-oc.on { border-color: #3356ff; background: #0a1020; }
-.pmd-oc.win { border-color: #ffe27a; }
+.pmd-oc.win { border-color: #dfe5f0; }
 .pmd-oc-label { flex: 0 0 40%; font-weight: 700; font-size: 14px; }
 .pmd-oc-bar { flex: 1; height: 8px; border-radius: 999px; background: #1a1a1a; overflow: hidden; }
 .pmd-oc-bar span { display: block; height: 100%; background: #3356ff; border-radius: 999px; }
@@ -192,7 +192,7 @@
 .header-inner .logo { flex: 0 0 auto; }
 
 /* 거래 패널 보유 포인트 */
-.pmd-trade-bal { font-size: 13px; color: #ffe27a; font-weight: 800; margin-bottom: 10px; text-align: right; }
+.pmd-trade-bal { font-size: 13px; color: #dfe5f0; font-weight: 800; margin-bottom: 10px; text-align: right; }
 
 /* @멘션 */
 .pmd-mention { color: #aac4ff; font-weight: 700; }
@@ -300,5 +300,5 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 12px center;
 }
-.pmd-cmt-ocsel:focus { outline: none; border-color: #ffe27a; }
+.pmd-cmt-ocsel:focus { outline: none; border-color: #dfe5f0; }
 .pmd-cmt-ocsel.shake { animation: selShake .45s; }

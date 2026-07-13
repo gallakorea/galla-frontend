@@ -1,6 +1,6 @@
 /* ============================================================
    GALLA 설정 — 게임 프로필 스타일
-   팔레트: 파랑 #3d6bff / 빨강 #ff4d67 / 골드 #f5cf6b / 배경 #0a0a0b
+   팔레트: 파랑 #3d6bff / 빨강 #ff4d67 / 골드 #c9d1e0 / 배경 #0a0a0b
 ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -63,8 +63,8 @@ body {
 .pl-name { font-size: 17px; font-weight: 900; letter-spacing: -.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pl-lv {
     flex: 0 0 auto;
-    font-size: 11px; font-weight: 900; color: #f5cf6b;
-    background: rgba(245,207,107,.13); border: 1px solid rgba(245,207,107,.45);
+    font-size: 11px; font-weight: 900; color: #c9d1e0;
+    background: rgba(201,209,224,.13); border: 1px solid rgba(201,209,224,.45);
     padding: 2px 8px; border-radius: 8px;
 }
 .pl-bio { margin-top: 4px; font-size: 12.5px; color: #9a9aa0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -76,7 +76,7 @@ body {
     display: flex; justify-content: space-between; align-items: baseline;
     font-size: 12px; font-weight: 800; color: #c9c9cf; margin-bottom: 7px;
 }
-.pl-xp-head b { color: #f5cf6b; font-size: 14px; }
+.pl-xp-head b { color: #c9d1e0; font-size: 14px; }
 .pl-xp-next { font-size: 10.5px; color: #6c6c72; }
 .pl-xp-track {
     height: 10px; border-radius: 999px; background: #1c1c22; overflow: hidden;
@@ -84,7 +84,7 @@ body {
 }
 .pl-xp-fill {
     position: relative; height: 100%; width: 0; border-radius: 999px;
-    background: linear-gradient(90deg, #f5cf6b, #e0972a);
+    background: linear-gradient(90deg, #c9d1e0, #e0972a);
     transition: width 1.1s cubic-bezier(.22,1,.36,1);
     overflow: hidden;
 }
@@ -115,7 +115,7 @@ body {
 .rec-num.atk { color: #ff8595; }
 .rec-num.def { color: #7f9dff; }
 .rec-num.sup { color: #55e6ae; }
-.rec-num.gold { color: #f5cf6b; }
+.rec-num.gold { color: #c9d1e0; }
 .rec-label { margin-top: 4px; font-size: 10px; font-weight: 700; color: #8b8b93; }
 
 /* ===== 성향 카드 (기존 구조 재스킨) ===== */
@@ -130,7 +130,7 @@ body {
 .report-title { font-size: 12px; font-weight: 800; color: #9a9aa0; }
 .galla-type-badge {
     display: inline-block; margin-top: 8px;
-    font-size: 16px; font-weight: 900; color: #f5cf6b;
+    font-size: 16px; font-weight: 900; color: #c9d1e0;
 }
 .ratio-box { display: flex; gap: 18px; margin-top: 12px; }
 .ratio-item { text-align: center; }
@@ -158,8 +158,8 @@ body {
 }
 .menu-tile:active { transform: scale(.97); }
 .menu-tile.grade {
-    background: linear-gradient(150deg, rgba(245,207,107,.16), rgba(224,151,42,.05)), #0e0e12;
-    border-color: rgba(245,207,107,.35);
+    background: linear-gradient(150deg, rgba(201,209,224,.16), rgba(139,147,163,.05)), #0e0e12;
+    border-color: rgba(201,209,224,.35);
 }
 .menu-tile.quest {
     background: linear-gradient(150deg, rgba(61,107,255,.16), rgba(61,107,255,.04)), #0e0e12;

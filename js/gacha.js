@@ -5,7 +5,7 @@
 (function () {
   const sb = () => window.supabaseClient || window.supabase;
   const SPIN = ["🏷️","🎨","🔥","💢","💠","👑","🎯","🧠","💎","✨","🕵️","🌪️"];
-  const GRADE = { bust: "#6c7280", common: "#9aa0ad", rare: "#4fc3f7", epic: "#a17bff", legendary: "#f5cf6b" };
+  const GRADE = { bust: "#6c7280", common: "#9aa0ad", rare: "#4fc3f7", epic: "#a17bff", legendary: "#c9d1e0" };
 
   function css() {
     if (document.getElementById("gacha-css")) return;
@@ -17,7 +17,7 @@
         border-radius:22px 22px 0 0;padding:20px 16px max(16px,env(safe-area-inset-bottom));animation:gaUp .24s ease;text-align:center}
       @keyframes gaUp{from{transform:translateY(100%)}}
       .ga-title{font-weight:900;font-size:19px;color:#f5f5f2}
-      .ga-bal{color:#f5cf6b;font-weight:900;font-size:14px;margin-top:2px}
+      .ga-bal{color:#c9d1e0;font-weight:900;font-size:14px;margin-top:2px}
       .ga-machine{width:150px;height:150px;margin:18px auto;border-radius:24px;display:flex;align-items:center;justify-content:center;
         font-size:76px;background:linear-gradient(180deg,#23243a,#14141f);border:2px solid rgba(255,255,255,.12);box-shadow:0 0 40px rgba(123,92,255,.25)}
       .ga-machine.spin{animation:gaShake .35s linear infinite}
@@ -33,7 +33,7 @@
       .ga-odds{margin-top:8px;background:rgba(255,255,255,.04);border-radius:12px;padding:6px 10px}
       .ga-odds table{width:100%;font-size:12px;color:#c9d1e0;border-collapse:collapse}
       .ga-odds td{padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.06);text-align:left}
-      .ga-odds td:last-child{text-align:right;font-weight:900;color:#f5cf6b}
+      .ga-odds td:last-child{text-align:right;font-weight:900;color:#c9d1e0}
       .ga-note{color:#8a8f9a;font-size:11.5px;margin-top:10px;line-height:1.5}
       .ga-note b{color:#ff8098}
       .ga-close{width:100%;margin-top:8px;padding:12px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}

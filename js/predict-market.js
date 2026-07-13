@@ -368,7 +368,7 @@ let CMT_SIDE = null;           // 단일: 'yes'|'no' / 다중: 후보 outcome_id
 let MY_POS_SIDE = null;        // 내 포지션 기준 잠금 진영(단일만)
 
 // 후보별 팀 색 팔레트 (다중 마켓) — 후보 = 팀
-const OC_COLORS = ['#3d6bff','#ff4d67','#35e0a0','#9b5bff','#ff9f40','#f5cf6b','#4dd0e1','#ff7ab6'];
+const OC_COLORS = ['#3d6bff','#ff4d67','#35e0a0','#9b5bff','#ff9f40','#c9d1e0','#4dd0e1','#ff7ab6'];
 function ocColor(ocId){
   const i = OUTCOMES.findIndex(o=>o.id===Number(ocId));
   return i>=0 ? OC_COLORS[i%OC_COLORS.length] : '#8b8b93'; // 기타/미지정=회색

@@ -11,7 +11,7 @@
 .duel-sec-title { color: #c9d1e0; font-weight: 900; font-size: 14px; margin: 18px 2px 8px; display: flex; align-items: center; gap: 6px; }
 .sec-cnt { background: #ff4f6e; color: #fff; font-size: 11px; font-weight: 900; border-radius: 99px; padding: 1px 7px; }
 .duel-hint { color: #6c7280; font-size: 12px; line-height: 1.6; margin-top: 18px; text-align: center; }
-.duel-hint b { color: #f5cf6b; }
+.duel-hint b { color: #c9d1e0; }
 
 .d-av { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
@@ -28,14 +28,14 @@
 .lr-topic { font-weight: 800; color: #f0f0f2; font-size: 14px; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lr-vs { font-size: 12px; color: #9aa0ad; } .lr-vs .vs { color: #6c7280; font-style: italic; margin: 0 3px; }
 .lr-right { text-align: right; flex: 0 0 auto; }
-.lr-cd { font-size: 10px; color: #f5cf6b; margin-top: 3px; }
+.lr-cd { font-size: 10px; color: #c9d1e0; margin-top: 3px; }
 .row-flag { color: #ff4f6e; font-size: 10px; position: absolute; top: 10px; left: 8px; animation: dpulse 1.4s infinite; }
 @keyframes dpulse { 50% { opacity: .3; } }
 
 .d-pill { font-size: 11px; font-weight: 900; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
 .d-pill.wait { background: rgba(154,160,173,.18); color: #c9d1e0; }
 .d-pill.live { background: rgba(61,107,255,.2); color: #6f9bff; }
-.d-pill.vote { background: rgba(245,207,107,.18); color: #f5cf6b; }
+.d-pill.vote { background: rgba(201,209,224,.18); color: #c9d1e0; }
 .d-pill.win  { background: rgba(79,195,247,.2); color: #4fc3f7; }
 .d-pill.lose { background: rgba(255,79,110,.18); color: #ff8098; }
 .d-pill.draw { background: rgba(154,160,173,.18); color: #c9d1e0; }
@@ -69,7 +69,7 @@
 .av-av { width: 66px; height: 66px; margin: 0 auto 8px; border-radius: 50%; position: relative;
   border: 2px solid rgba(255,255,255,.12); }
 .av-av img, .av-av .d-av { width: 100%; height: 100%; border-radius: 50%; }
-.av-side.won .av-av { border-color: #f5cf6b; box-shadow: 0 0 20px rgba(245,207,107,.5); }
+.av-side.won .av-av { border-color: #c9d1e0; box-shadow: 0 0 20px rgba(201,209,224,.5); }
 .av-crown { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 20px; }
 .av-name { font-weight: 900; font-size: 14px; }
 .av-role { font-size: 11px; color: #8a8f9a; margin-top: 2px; }
@@ -104,14 +104,14 @@
 
 /* 결과 바 */
 .result-card { text-align: center; }
-.rc-title { font-weight: 900; font-size: 16px; color: #f5cf6b; margin-bottom: 12px; }
+.rc-title { font-weight: 900; font-size: 16px; color: #c9d1e0; margin-bottom: 12px; }
 .rc-bar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; background: #0c0c0f; }
 .rc-fill { display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; font-size: 13px;
   min-width: 26px; transition: width .5s ease; }
 .rc-fill.chal { background: linear-gradient(135deg, #3356ff, #4f7bff); }
 .rc-fill.opp  { background: linear-gradient(135deg, #ff4f6e, #ff6f88); }
 .rc-legend { display: flex; justify-content: space-between; font-size: 12px; color: #9aa0ad; margin-top: 8px; }
-.rc-legend .voted { color: #f5cf6b; font-weight: 900; }
+.rc-legend .voted { color: #c9d1e0; font-weight: 900; }
 
 /* ============ 신청 세그먼트 ============ */
 .seg { display: flex; gap: 6px; }
@@ -130,13 +130,13 @@
   border: 2px solid rgba(255,255,255,.14); animation: rfIn .5s cubic-bezier(.2,1.3,.5,1) both; }
 .rf.chal .rf-av { border-color: #4f7bff; box-shadow: 0 0 16px rgba(79,123,255,.35); }
 .rf.opp .rf-av { border-color: #ff6f88; box-shadow: 0 0 16px rgba(255,111,136,.35); animation-delay: .1s; }
-.rf.won .rf-av { border-color: #f5cf6b; box-shadow: 0 0 26px rgba(245,207,107,.6); }
+.rf.won .rf-av { border-color: #c9d1e0; box-shadow: 0 0 26px rgba(201,209,224,.6); }
 .rf-av img, .rf-av .d-av { width: 100%; height: 100%; border-radius: 50%; }
 .rf-crown { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 22px; animation: rfIn .4s .3s both; }
 .rf-dot { position: absolute; right: -1px; bottom: -1px; width: 14px; height: 14px; border-radius: 50%;
   background: #555; border: 2px solid #0e0f14; z-index: 2; }
 .rf-dot.on { background: #33d17a; box-shadow: 0 0 8px #33d17a; }
-.rf-dot.typing { background: #f5cf6b; animation: dpulse .8s infinite; }
+.rf-dot.typing { background: #c9d1e0; animation: dpulse .8s infinite; }
 .rf-name { font-weight: 900; font-size: 13px; }
 .rf-vs { flex: 0 0 auto; padding: 0 6px; }
 .ring-timer { font-weight: 900; font-style: italic; color: #c9d1e0; font-size: 20px; min-width: 62px; font-variant-numeric: tabular-nums; }
@@ -192,23 +192,23 @@
 .vpick.opp.on { background: linear-gradient(135deg,#ff4f6e,#ff6f88); border-color: transparent; }
 
 /* 결과 배너 */
-.result-banner { text-align: center; font-weight: 900; font-size: 16px; color: #f5cf6b;
+.result-banner { text-align: center; font-weight: 900; font-size: 16px; color: #c9d1e0;
   background: linear-gradient(180deg,#1c1430,#0e0f14); }
 .act-msg.sub { font-weight: 600; color: #9aa0ad; font-size: 12.5px; }
-.rec-f { color: #f5cf6b; }
+.rec-f { color: #c9d1e0; }
 .sec-cnt.live { background: #ff2d2d; animation: dpulse 1.2s infinite; }
 .lobby-row.is-live { border-color: rgba(255,45,45,.4); }
 
 /* ⚖️ AI 심판 판정 중 */
 .judging-card { text-align: center; padding: 26px 16px; background: radial-gradient(120% 90% at 50% 0%, #1c1430, #0e0f14); }
-.judge-orb { font-size: 46px; display: inline-block; animation: judgeSpin 1.6s cubic-bezier(.5,0,.5,1) infinite; filter: drop-shadow(0 0 14px rgba(245,207,107,.6)); }
+.judge-orb { font-size: 46px; display: inline-block; animation: judgeSpin 1.6s cubic-bezier(.5,0,.5,1) infinite; filter: drop-shadow(0 0 14px rgba(201,209,224,.6)); }
 @keyframes judgeSpin { 0%{transform:rotate(-18deg)} 50%{transform:rotate(18deg)} 100%{transform:rotate(-18deg)} }
-.judge-msg { font-weight: 900; color: #f5cf6b; font-size: 15px; margin-top: 12px; }
+.judge-msg { font-weight: 900; color: #c9d1e0; font-size: 15px; margin-top: 12px; }
 .judge-sub { color: #9aa0ad; font-size: 12.5px; margin-top: 6px; }
 .judge-msg::after { content: ""; animation: judgeDots 1.4s steps(4) infinite; }
 @keyframes judgeDots { 0%{content:""} 25%{content:"."} 50%{content:".."} 75%{content:"..."} }
 
 /* AI 판정평 */
 .verdict-card { text-align: center; color: #eef0f4; font-size: 13.5px; line-height: 1.5;
-  background: linear-gradient(180deg,#1a1626,#0f0f14); border-color: rgba(245,207,107,.25); }
-.verdict-card b { color: #f5cf6b; }
+  background: linear-gradient(180deg,#1a1626,#0f0f14); border-color: rgba(201,209,224,.25); }
+.verdict-card b { color: #c9d1e0; }

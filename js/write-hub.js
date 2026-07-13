@@ -23,7 +23,7 @@
     plaza: {
       key: 'plaza', emoji: '🗣️', title: '광장 글',
       desc: '자유롭게 이야기하고 토론하는 게시글',
-      accent: '#f5cf6b',
+      accent: '#c9d1e0',
     },
     report: {
       key: 'report', emoji: '🕵️', title: '제보하기',

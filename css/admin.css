@@ -2,7 +2,7 @@
    🛠 갈라 관제센터 — 반응형(PC 사이드바 / 모바일 드로어)
    ========================================================= */
 * { box-sizing: border-box; }
-:root { --side: 232px; --bg: #0a0a0b; --card: #14151a; --line: rgba(255,255,255,.08); --gold: #f5cf6b; --blue: #5b8cff; }
+:root { --side: 232px; --bg: #0a0a0b; --card: #14151a; --line: rgba(255,255,255,.08); --gold: #c9d1e0; --blue: #5b8cff; }
 html, body { margin: 0; background: var(--bg); color: #eef0f4;
   font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; -webkit-font-smoothing: antialiased; }
 .admin-gate { display: flex; align-items: center; justify-content: center; height: 100vh; color: #8a8f9a; }
@@ -43,7 +43,7 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
 .ad-kpi { background: linear-gradient(180deg, var(--card), #0e0f13); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
 .ad-kpi.live { border-color: rgba(51,209,122,.4); }
-.ad-kpi.gold { border-color: rgba(245,207,107,.35); }
+.ad-kpi.gold { border-color: rgba(201,209,224,.35); }
 .ad-kpi-l { font-size: 12px; color: #8a8f9a; font-weight: 700; }
 .ad-kpi-v { font-size: 30px; font-weight: 900; margin: 6px 0 2px; letter-spacing: -.5px; }
 .ad-kpi.live .ad-kpi-v { color: #33d17a; } .ad-kpi.gold .ad-kpi-v { color: var(--gold); }
@@ -104,11 +104,11 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-tag { display: inline-block; font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 6px; background: rgba(255,255,255,.08); color: #c9d1e0; }
 .ad-tag.t-issue { background: rgba(61,107,255,.2); color: #6f9bff; }
 .ad-tag.t-plaza { background: rgba(51,209,122,.18); color: #5ce09a; }
-.ad-tag.t-market { background: rgba(245,207,107,.18); color: var(--gold); }
+.ad-tag.t-market { background: rgba(201,209,224,.18); color: var(--gold); }
 .ad-tag.t-news { background: rgba(161,123,255,.2); color: #b79bff; }
 .ad-tag.t-admin { background: rgba(61,107,255,.25); color: #8fb0ff; }
 .ad-tag.t-ban { background: rgba(255,79,110,.2); color: #ff8098; }
-.ad-tag.st-pending { background: rgba(245,207,107,.18); color: var(--gold); }
+.ad-tag.st-pending { background: rgba(201,209,224,.18); color: var(--gold); }
 .ad-tag.st-approved, .ad-tag.st-answered { background: rgba(61,107,255,.2); color: #6f9bff; }
 .ad-tag.st-done, .ad-tag.st-closed { background: rgba(51,209,122,.18); color: #5ce09a; }
 .ad-tag.st-rejected { background: rgba(255,79,110,.18); color: #ff8098; }

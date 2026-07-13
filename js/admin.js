@@ -67,7 +67,7 @@
         ${kpi("누적 회원", "k-total", `오늘 가입 +${fmt(td.signups)}`, "gold")}</div>
       <div class="ad-grid2">
         <div class="ad-card"><div class="ad-card-h">⏱ 시간당 활동 (최근 24h)</div><div class="ad-chart">${AdminCharts.lineChart(t.hourly || [], { color: "#5b8cff" })}</div></div>
-        <div class="ad-card"><div class="ad-card-h">📈 성장 추이 (14일) <span class="ad-legend"><i style="background:#f5cf6b"></i>가입 <i style="background:#33d17a"></i>DAU</span></div><div class="ad-chart">${AdminCharts.dualLine((g?.days || []).map(d => ({ label: d.d, a: d.signups, b: d.dau })), {})}</div></div></div>
+        <div class="ad-card"><div class="ad-card-h">📈 성장 추이 (14일) <span class="ad-legend"><i style="background:#c9d1e0"></i>가입 <i style="background:#33d17a"></i>DAU</span></div><div class="ad-chart">${AdminCharts.dualLine((g?.days || []).map(d => ({ label: d.d, a: d.signups, b: d.dau })), {})}</div></div></div>
       <div class="ad-card"><div class="ad-card-h">🔥 오늘 활동량</div><div class="ad-mini">
         ${mini("📝 갈라 발의", td.issues)}${mini("🗳️ 투표", td.votes)}${mini("💬 댓글", td.comments)}${mini("⚔️ 일기토", td.duels)}${mini("📈 예측거래", td.trades)}${mini("🙋 신규가입", td.signups)}</div></div>`;
     countUp($("#k-rt"), t.realtime); countUp($("#k-dau"), t.dau); countUp($("#k-wau"), t.wau); countUp($("#k-mau"), t.mau); countUp($("#k-total"), t.total_users);

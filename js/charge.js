@@ -22,7 +22,7 @@
       .chg-grip{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:2px auto 12px}
       .chg-title{font-weight:900;font-size:18px;color:#fff;text-align:center}
       .chg-sub{font-size:12.5px;color:#8a8f9a;text-align:center;margin:5px 0 14px}
-      .chg-need{background:rgba(245,207,107,.12);border:1px solid rgba(245,207,107,.3);color:#f5cf6b;
+      .chg-need{background:rgba(201,209,224,.12);border:1px solid rgba(201,209,224,.3);color:#c9d1e0;
         border-radius:12px;padding:10px 12px;font-size:13px;font-weight:800;text-align:center;margin-bottom:12px}
       .chg-first{background:linear-gradient(135deg,#ff6a88,#ff4d6d);color:#fff;border-radius:12px;padding:10px 12px;
         font-size:13px;font-weight:900;text-align:center;margin-bottom:12px}
@@ -33,7 +33,7 @@
       .chg-pkg .g{font-size:16px;font-weight:900;color:#fff}
       .chg-pkg .b{font-size:12px;font-weight:800;color:#5ce09a;margin-left:6px}
       .chg-pkg .fb{font-size:11px;font-weight:800;color:#ff8fa3;margin-left:6px}
-      .chg-pkg .p{margin-left:auto;font-weight:900;font-size:15px;color:#f5cf6b;white-space:nowrap}
+      .chg-pkg .p{margin-left:auto;font-weight:900;font-size:15px;color:#c9d1e0;white-space:nowrap}
       .chg-note{font-size:11px;color:#6c7280;text-align:center;margin-top:12px;line-height:1.5}
       .chg-done{text-align:center;padding:18px 8px}
       .chg-done .ic{font-size:42px} .chg-done h4{font-size:17px;font-weight:900;color:#fff;margin:10px 0 6px}

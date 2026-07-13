@@ -12,12 +12,12 @@
       .faction-section{padding:6px 16px 2px}
       .fac-support{display:flex;align-items:center;gap:12px;
         background:linear-gradient(135deg,#1b1e2b,#171820);
-        border:1px solid rgba(245,207,107,.22);border-radius:16px;padding:13px 14px}
+        border:1px solid rgba(201,209,224,.22);border-radius:16px;padding:13px 14px}
       .fac-s-l{flex:1;min-width:0}
       .fac-s-title{font-weight:900;font-size:14px;color:#fff;line-height:1.3}
       .fac-s-desc{font-size:12px;color:#9aa0ad;margin-top:4px;line-height:1.45}
       .fac-s-btn{flex:0 0 auto;border:none;border-radius:12px;padding:11px 14px;font-weight:900;font-size:13px;cursor:pointer;
-        background:linear-gradient(135deg,#f5cf6b,#e0a93a);color:#0a0a0b;white-space:nowrap}
+        background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b;white-space:nowrap}
       .fac-s-btn:active{transform:scale(.97)}
       @media(max-width:380px){.fac-support{flex-direction:column;align-items:stretch}.fac-s-btn{width:100%}}
     `;

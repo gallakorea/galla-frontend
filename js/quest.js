@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!t) {
       t = document.createElement("div");
       t.id = "q-toast";
-      t.style.cssText = "position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:9999;background:#16171c;border:1px solid #f5cf6b;color:#f5cf6b;font-weight:800;font-size:13.5px;padding:11px 18px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;transition:opacity .2s,transform .2s;";
+      t.style.cssText = "position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:9999;background:#16171c;border:1px solid #c9d1e0;color:#c9d1e0;font-weight:800;font-size:13.5px;padding:11px 18px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;transition:opacity .2s,transform .2s;";
       document.body.appendChild(t);
     }
     t.textContent = msg;

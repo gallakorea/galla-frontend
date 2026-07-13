@@ -1,6 +1,6 @@
 /* ============================================================
    GALLA UI — 공용 디자인 시스템 오버라이드 (게임 톤앤매너)
-   설정/대전모드 팔레트: 파랑 #3d6bff / 빨강 #ff4d67 / 골드 #f5cf6b / 배경 #0a0a0b
+   설정/대전모드 팔레트: 파랑 #3d6bff / 빨강 #ff4d67 / 골드 #c9d1e0 / 배경 #0a0a0b
    각 페이지의 기존 CSS "뒤에" 로드해 기존 클래스명을 재스킨한다.
    대상: account-edit, galla-type, grade, quest, change-password,
          login-history, support, terms, privacy
@@ -78,7 +78,7 @@ body {
 ============================================================ */
 
 /* ---- 로그인 기록 ---- */
-.log-date { color: #f5cf6b !important; font-weight: 800; font-size: 12px !important; }
+.log-date { color: #c9d1e0 !important; font-weight: 800; font-size: 12px !important; }
 .log-agent { color: #c9c9cf !important; font-size: 13px !important; line-height: 1.5; }
 .log-card { padding: 15px 16px !important; }
 
@@ -114,17 +114,17 @@ body {
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
   font-weight: 900 !important;
-  text-shadow: 0 0 10px rgba(245,207,107,.35);
+  text-shadow: 0 0 10px rgba(201,209,224,.35);
   animation: nickGoldShine 3.4s linear infinite;
 }
-.nick-gold::after { content: " 👑"; -webkit-text-fill-color: initial; color: #f5cf6b; font-size: .82em; text-shadow: none; }
+.nick-gold::after { content: " 👑"; -webkit-text-fill-color: initial; color: #c9d1e0; font-size: .82em; text-shadow: none; }
 @keyframes nickGoldShine { 0% { background-position: 0% 0; } 100% { background-position: 220% 0; } }
 @media (prefers-reduced-motion: reduce) { .nick-gold { animation: none; } }
 
 /* 🏷️ 장착 칭호 배지 (닉네임 앞) — supabase.js가 자동 삽입 */
 .nick-title {
   display: inline-block; font-size: .72em; font-weight: 900; vertical-align: middle;
-  color: #f5cf6b; background: rgba(245,207,107,.14); border: 1px solid rgba(245,207,107,.35);
+  color: #c9d1e0; background: rgba(201,209,224,.14); border: 1px solid rgba(201,209,224,.35);
   border-radius: 99px; padding: 1px 7px; margin-right: 5px; line-height: 1.5; white-space: nowrap;
 }
 

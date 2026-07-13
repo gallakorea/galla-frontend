@@ -970,7 +970,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
   sheet.innerHTML = `
     <div style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
     <div style="position:relative;width:100%;max-width:480px;background:#16171c;border-radius:18px 18px 0 0;padding:8px 0 max(8px,env(safe-area-inset-bottom));animation:cmmUp .22s ease">
-      ${isOther ? opt("⚔️", `<b style="color:#f5cf6b">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
+      ${isOther ? opt("⚔️", `<b style="color:#c9d1e0">일기토 신청</b> · ${escT(nick)}`, "duel") : ""}
       ${isOther ? opt("🚨", "신고", "report") : ""}
       ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("✏️", "댓글 수정", "edit")}
       ${isOther ? "" : opt("✨", "하이라이트 (800GP · 24h)", "hl")}
@@ -1541,8 +1541,8 @@ function bindEvents() {
       if (FX) {
         if (wasInfiltration) {
           FX.burstAt(input, "ko");
-          FX.shockwave(input, "rgba(245,207,107,.9)");
-          FX.flash("rgba(245,207,107,.14)", 220);
+          FX.shockwave(input, "rgba(201,209,224,.9)");
+          FX.flash("rgba(201,209,224,.14)", 220);
           FX.banner("🕵️ 적진 침투 성공!", "warn");
           FX.haptic("attack");
         } else {

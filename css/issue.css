@@ -582,7 +582,7 @@ body {
 
 .age-fill {
     height: 100%;
-    background: linear-gradient(90deg, #ffe27a, #ffcf48);
+    background: linear-gradient(90deg, #dfe5f0, #ffcf48);
 }
 
 /* 지역 히트맵 */
@@ -653,7 +653,7 @@ body {
 }
 
 .sort-btn.active {
-    background: #ffe27a;
+    background: #dfe5f0;
     color: #000;
 }
 
@@ -676,7 +676,7 @@ body {
 
 #main-reply-btn {
     padding: 0 14px;
-    background: #ffe27a;
+    background: #dfe5f0;
     border-radius: 10px;
     color: #000;
     font-weight: 900;
@@ -751,7 +751,7 @@ body {
 }
 
 .reply-submit {
-    background: #ffe27a;
+    background: #dfe5f0;
     color: #111;
 }
 
@@ -855,7 +855,7 @@ body {
     width: 100%;
     padding: 16px 0;
     background: none;
-    color: #ffe27a;
+    color: #dfe5f0;
     border: none;
     font-size: 16px;
     cursor: pointer;
@@ -952,7 +952,7 @@ body {
 .progress-bar {
     height: 100%;
     width: 0%;
-    background: #ffe27a;
+    background: #dfe5f0;
     border-radius: 3px;
     transition: width .15s linear;
 }
@@ -1309,7 +1309,7 @@ body {
   border-radius: 14px;
   font-size: 15px;
   font-weight: 900;
-  background: #ffe27a;
+  background: #dfe5f0;
   color: #000;
   border: none;
   cursor: pointer;
@@ -1493,13 +1493,13 @@ body {
 
 /* 활성 선택 */
 .support-level.active {
-  border-color: #ffe27a;
+  border-color: #dfe5f0;
   background: #161616;
-  color: #ffe27a; /* 🔥 핵심 */
+  color: #dfe5f0; /* 🔥 핵심 */
 }
 
 .support-level.active .level-title {
-  color: #ffe27a;
+  color: #dfe5f0;
 }
 
 /* 직접 입력 */
@@ -1519,20 +1519,20 @@ body {
 /* 실행 버튼 */
 .support-confirm {
   color: #000;
-  background: #ffe27a;
+  background: #dfe5f0;
 }
 
 /* =========================
    SUPPORT LEVEL ACTIVE (FINAL)
 ========================= */
 .support-level.active {
-  border-color: #ffe27a;
+  border-color: #dfe5f0;
   background: #161616;
-  box-shadow: 0 0 0 1px rgba(255,226,122,0.6);
+  box-shadow: 0 0 0 1px rgba(223,229,240,0.6);
 }
 
 .support-level.active .level-title {
-  color: #ffe27a;
+  color: #dfe5f0;
 }
 
 .support-level.active .level-desc {
@@ -1943,9 +1943,9 @@ body {
 
 /* vote.core.js active-vote 호환 */
 .faction-btn.active-vote {
-    background: #ffe27a !important;
+    background: #dfe5f0 !important;
     color: #111 !important;
-    border-color: #ffe27a !important;
+    border-color: #dfe5f0 !important;
 }
 
 /* ===== 인스타식 작성자 헤더 (미디어 위) — 이슈 페이지 ===== */
@@ -2079,9 +2079,9 @@ body {
 @media (prefers-reduced-motion: reduce){ .duel-live-banner,.dlb-live{ animation:none; } }
 
 /* 🚀 부스트: 상단 고정 카드 배지 */
-.card.pinned { border: 1px solid rgba(245,207,107,.4); box-shadow: 0 0 20px rgba(245,207,107,.12); position: relative; }
+.card.pinned { border: 1px solid rgba(201,209,224,.4); box-shadow: 0 0 20px rgba(201,209,224,.12); position: relative; }
 .pin-badge { position: absolute; top: 10px; right: 10px; z-index: 3; font-size: 11px; font-weight: 900;
-  color: #0a0a0b; background: linear-gradient(135deg,#f5cf6b,#e0a93a); padding: 3px 9px; border-radius: 99px; }
+  color: #0a0a0b; background: linear-gradient(135deg,#c9d1e0,#8b93a3); padding: 3px 9px; border-radius: 99px; }
 
 /* ✨ 투표바 동적 채움 + 시머 (인포그래픽) */
 #vote-pro-bar, #vote-con-bar { transition: width .85s cubic-bezier(.25,1,.35,1); background-size: 200% 100%; }
@@ -2120,4 +2120,4 @@ body {
 
 /* 관련 링크·근거 tip / 유형 배지 */
 .rel-news-tip { color: #8a8f9a; font-size: 12px; margin: 0 0 10px; padding: 0 2px; }
-.rel-news-type { color: #f5cf6b; font-weight: 800; }
+.rel-news-type { color: #c9d1e0; font-weight: 800; }

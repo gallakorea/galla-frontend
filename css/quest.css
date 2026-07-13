@@ -1,6 +1,6 @@
 /* ============================================================
    데일리 퀘스트 — 게임 미션 보드 (galla-ui 팔레트)
-   파랑 #3d6bff / 골드 #f5cf6b / 배경 #0a0a0b
+   파랑 #3d6bff / 골드 #c9d1e0 / 배경 #0a0a0b
 ============================================================ */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -20,16 +20,16 @@ body {
 .ring { transform: rotate(-90deg); display: block; }
 .ring-bg { fill: none; stroke: #1c1c22; stroke-width: 11; }
 .ring-progress {
-  fill: none; stroke: #f5cf6b; stroke-width: 11; stroke-linecap: round;
+  fill: none; stroke: #c9d1e0; stroke-width: 11; stroke-linecap: round;
   stroke-dasharray: 439.8; stroke-dashoffset: 439.8;
   transition: stroke-dashoffset 1s cubic-bezier(.22,1,.36,1);
-  filter: drop-shadow(0 0 8px rgba(245,207,107,.55));
+  filter: drop-shadow(0 0 8px rgba(201,209,224,.55));
 }
 .ring-center {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-#progress-percent { font-size: 30px; font-weight: 900; color: #f5cf6b; text-shadow: 0 0 18px rgba(245,207,107,.45); }
+#progress-percent { font-size: 30px; font-weight: 900; color: #c9d1e0; text-shadow: 0 0 18px rgba(201,209,224,.45); }
 .progress-label { margin-top: 4px; font-size: 11px; font-weight: 700; color: #8b8b93; }
 
 /* ===== 데일리 퀘스트 카드 ===== */
@@ -68,28 +68,28 @@ body {
 .today-reward {
   margin-top: 28px; padding: 20px 18px; border-radius: 20px;
   position: relative; overflow: hidden;
-  background: radial-gradient(120% 130% at 50% -10%, rgba(245,207,107,.16), #0c0c0f 60%);
-  border: 1px solid rgba(245,207,107,.35);
+  background: radial-gradient(120% 130% at 50% -10%, rgba(201,209,224,.16), #0c0c0f 60%);
+  border: 1px solid rgba(201,209,224,.35);
   box-shadow: 0 16px 40px -18px rgba(0,0,0,.8);
 }
 .tr-header { font-size: 14px; font-weight: 900; }
 .tr-gp-total { margin-top: 14px; display: flex; justify-content: space-between; align-items: baseline; }
 .tr-label { font-size: 11.5px; font-weight: 700; color: #8b8b93; }
-.tr-total-gp { font-size: 24px; font-weight: 900; color: #f5cf6b; text-shadow: 0 0 16px rgba(245,207,107,.5); }
+.tr-total-gp { font-size: 24px; font-weight: 900; color: #c9d1e0; text-shadow: 0 0 16px rgba(201,209,224,.5); }
 .tr-bar-wrap { position: relative; margin-top: 12px; height: 10px; }
 .tr-bar-bg { position: absolute; inset: 0; border-radius: 999px; background: #1c1c22; }
 .tr-bar-fill {
   position: absolute; top: 0; left: 0; height: 100%; border-radius: 999px;
-  background: linear-gradient(90deg, #f5cf6b, #e0972a);
-  box-shadow: 0 0 12px rgba(245,207,107,.5);
+  background: linear-gradient(90deg, #c9d1e0, #e0972a);
+  box-shadow: 0 0 12px rgba(201,209,224,.5);
   transition: width .8s cubic-bezier(.22,1,.36,1);
 }
 .tr-progress-text { margin-top: 8px; font-size: 11px; font-weight: 800; color: #9a9aa0; text-align: right; }
 .tr-btn {
   margin-top: 15px; width: 100%; padding: 14px; border: none; border-radius: 13px;
   font-size: 15px; font-weight: 900; cursor: pointer;
-  background: linear-gradient(135deg, #f5cf6b, #e0972a); color: #1a1408;
-  box-shadow: 0 10px 26px -10px rgba(224,151,42,.7);
+  background: linear-gradient(135deg, #c9d1e0, #e0972a); color: #1a1408;
+  box-shadow: 0 10px 26px -10px rgba(139,147,163,.7);
   transition: transform .1s ease;
 }
 .tr-btn:active { transform: scale(.985); }
@@ -143,14 +143,14 @@ body {
 .reward-area {
   margin-top: 28px; padding: 22px 18px; border-radius: 20px; text-align: center;
   background: linear-gradient(180deg, #131418, #0c0c0f);
-  border: 1px dashed rgba(245,207,107,.4);
+  border: 1px dashed rgba(201,209,224,.4);
 }
 .reward-icon { font-size: 40px; animation: qBounce 2.2s ease-in-out infinite; }
 @keyframes qBounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
 .reward-btn {
   margin-top: 12px; padding: 12px 22px; border-radius: 999px; cursor: pointer;
-  background: rgba(245,207,107,.12); border: 1px solid rgba(245,207,107,.5);
-  color: #f5cf6b; font-size: 14px; font-weight: 900;
+  background: rgba(201,209,224,.12); border: 1px solid rgba(201,209,224,.5);
+  color: #c9d1e0; font-size: 14px; font-weight: 900;
   transition: transform .1s ease;
 }
 .reward-btn:active { transform: scale(.97); }
@@ -159,8 +159,8 @@ body {
 .q-claim{ width:100%; margin-top:12px; padding:11px; border-radius:11px; border:none;
   font-size:13.5px; font-weight:800; cursor:pointer;
   background:#26262a; color:#7c8088; }
-.q-claim.ready{ background:linear-gradient(135deg,#f5cf6b,#ffe6a3); color:#0a0a0b;
-  box-shadow:0 4px 16px rgba(245,207,107,.28); animation:qpulse 1.6s ease-in-out infinite; }
+.q-claim.ready{ background:linear-gradient(135deg,#c9d1e0,#dfe5f0); color:#0a0a0b;
+  box-shadow:0 4px 16px rgba(201,209,224,.28); animation:qpulse 1.6s ease-in-out infinite; }
 .q-claim.done{ background:rgba(61,107,255,.14); color:#8fb6ff; border:1px solid rgba(61,107,255,.4); }
 .q-claim:disabled{ cursor:default; }
 @keyframes qpulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.015); } }
@@ -169,7 +169,7 @@ body {
 /* GP 상점 진입 버튼 */
 .shop-entry{ width:100%; display:flex; flex-direction:column; gap:4px; align-items:flex-start;
   padding:16px; border-radius:14px; cursor:pointer; text-align:left;
-  background:linear-gradient(135deg,rgba(245,207,107,.16),rgba(245,207,107,.05));
-  border:1px solid rgba(245,207,107,.4); color:#f5cf6b; font-size:14.5px; font-weight:800; }
+  background:linear-gradient(135deg,rgba(201,209,224,.16),rgba(201,209,224,.05));
+  border:1px solid rgba(201,209,224,.4); color:#c9d1e0; font-size:14.5px; font-weight:800; }
 .shop-entry-sub{ font-size:12px; font-weight:600; color:#b9a05a; }
 .shop-entry:active{ transform:scale(.985); }

@@ -537,7 +537,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 .plaza-guide {
-  background: linear-gradient(180deg, rgba(245,207,107,.06), transparent) !important;
+  background: linear-gradient(180deg, rgba(201,209,224,.06), transparent) !important;
   border-bottom: 1px solid rgba(255,255,255,.05) !important;
   color: #9a9aa0 !important; font-size: 12.5px !important; line-height: 1.6 !important;
 }
@@ -555,7 +555,7 @@ html, body {
 }
 .post-content img, .post-content video { border-radius: 12px !important; }
 .post-content a { color: #7f9dff !important; }
-.post-content .pb-quote { border-left: 3px solid rgba(245,207,107,.5) !important; color: #c9c9cf !important; }
+.post-content .pb-quote { border-left: 3px solid rgba(201,209,224,.5) !important; color: #c9c9cf !important; }
 
 /* 액션 바 (추천 pill / 댓글 / 저장 / 공유) */
 .post-action-bar {
@@ -563,12 +563,12 @@ html, body {
   border: 1px solid rgba(255,255,255,.08) !important; border-radius: 999px !important;
 }
 .vote-pill { background: rgba(255,255,255,.04) !important; }
-.vote-btn:hover { color: #f5cf6b !important; }
-.vote-btn.on.vote-up, .vote-up.on { color: #f5cf6b !important; }
+.vote-btn:hover { color: #c9d1e0 !important; }
+.vote-btn.on.vote-up, .vote-up.on { color: #c9d1e0 !important; }
 .vote-btn.on.vote-down, .vote-down.on { color: #ff5c5c !important; }
 .vote-score { color: #f5f5f2 !important; font-weight: 900 !important; }
 .circle-btn { border: 1px solid rgba(255,255,255,.1) !important; color: #c9c9cf !important; }
-.circle-btn.on, .bookmark-btn.on { color: #f5cf6b !important; }
+.circle-btn.on, .bookmark-btn.on { color: #c9d1e0 !important; }
 
 /* 댓글 입력 */
 .comment-write textarea {
@@ -577,7 +577,7 @@ html, body {
 }
 .comment-write textarea:focus { border-color: #3d6bff !important; outline: none; }
 .comment-write button {
-  background: linear-gradient(135deg, #f5cf6b, #e0972a) !important;
+  background: linear-gradient(135deg, #c9d1e0, #e0972a) !important;
   color: #1a1408 !important; border: none !important; border-radius: 12px !important;
   font-weight: 900 !important;
 }
