@@ -196,7 +196,18 @@
       await loadUmd();
       window.supabaseClient = window.supabase.createClient(
         SUPABASE_URL,
-        SUPABASE_ANON_KEY
+        SUPABASE_ANON_KEY,
+        {
+          auth: {
+            // 인스타식 지속 로그인: 로그아웃 전까지 세션 유지 + 토큰 자동 갱신
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage,
+            // 전 페이지(광장 자체 클라이언트 포함) 세션 공유용 고정 키
+            storageKey: "sb-bidqauputnhkqepvdzrr-auth-token",
+          },
+        }
       );
       console.log("[supabase] client ready");
       // 📊 활동 계측 핑 — 세션·시간당 1회(로그인 유저). DAU/MAU/실시간용
