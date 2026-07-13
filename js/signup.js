@@ -124,6 +124,8 @@ async function waitForClient() {
 
             console.log("[signup.js] Auth 성공 — userId:", userId);
 
+            // 가입 후 '첫 로그인' 때 특별 환영을 띄우기 위한 플래그
+            try { localStorage.setItem("galla_fresh_signup", "1"); } catch (e) {}
             alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
             location.href = "index.html";
 

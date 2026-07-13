@@ -67,7 +67,18 @@ function waitForClient() {
             return;
         }
 
-        alert("로그인 성공!");
+        // 단계별 위트 환영: 로그인 누적 횟수를 세어 index에서 welcome.js가 인사
+        try {
+            const n = (parseInt(localStorage.getItem("galla_login_count") || "0", 10) || 0) + 1;
+            localStorage.setItem("galla_login_count", String(n));
+            // 갓 가입(가입 직후 첫 로그인)이면 'new' 우선
+            if (localStorage.getItem("galla_fresh_signup")) {
+                localStorage.removeItem("galla_fresh_signup");
+                localStorage.setItem("galla_welcome_pending", "new");
+            } else {
+                localStorage.setItem("galla_welcome_pending", String(n));
+            }
+        } catch (e) {}
         location.href = "index.html";
     });
 
