@@ -55,6 +55,37 @@ document.addEventListener("DOMContentLoaded", () => {
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
     );
 
+    // 이 페이지가 '탭 자기 자신'(탭 루트)인지 판별.
+    // 상세/설정 페이지(plaza_detail·predict-market·settings·mypage 하위 등)는 nav 하이라이트용으로
+    // data-page를 탭 이름과 공유하지만 파일은 다르다 → 탭 좌우전환 대신 '직전 페이지(뒤로가기)'로.
+    const curFile = (location.pathname.split("/").pop() || "index.html").toLowerCase();
+    const isTabRoot = (PAGE_URL[currentPage] || "").toLowerCase() === curFile;
+
+    if (!isTabRoot) {
+      // 왼→오 스와이프 = 뒤로가기 (수평 의도 확정 시에만, 세로 스크롤/가로스크롤/모달 보호)
+      let bx = 0, by = 0, bdx = 0, bArmed = false, bLock = 0; // bLock: 0 미정 · 1 수평확정 · 2 취소
+      document.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) { bArmed = false; return; }
+        bArmed = !inHScroll(e.target) && !overlayOpen();
+        bx = e.touches[0].clientX; by = e.touches[0].clientY; bdx = 0; bLock = 0;
+      }, { passive: true });
+      document.addEventListener("touchmove", (e) => {
+        if (!bArmed || e.touches.length !== 1 || bLock === 2) return;
+        const dx = e.touches[0].clientX - bx, dy = e.touches[0].clientY - by;
+        bdx = dx;
+        if (!bLock) {
+          if (Math.abs(dy) > 14 && Math.abs(dy) >= Math.abs(dx)) { bLock = 2; return; } // 세로 스크롤 양보
+          if (dx > 16 && dx > Math.abs(dy) * 1.4) bLock = 1;                            // 오른쪽 수평 확정
+          else if (dx < -10) bLock = 2;                                                 // 왼쪽 스와이프는 무시
+        }
+      }, { passive: true });
+      document.addEventListener("touchend", () => {
+        if (bLock === 1 && bdx > 80 && history.length > 1) history.back();
+        bArmed = false; bLock = 0; bdx = 0;
+      }, { passive: true });
+      return; // 탭 좌우전환 로직은 바인딩하지 않음
+    }
+
     /* ── 인스타식 인터랙티브 드래그 전환 ──
        손가락에 1:1로 페이지가 붙어 끌리고, 옆 페이지 카드가 갭을 두고 따라온다.
        놓는 순간 거리/속도로 커밋 판정 → 끝까지 밀려나간 뒤 이동, 아니면 스냅백 */

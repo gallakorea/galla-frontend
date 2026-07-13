@@ -18,7 +18,7 @@ function cleanTitle(t: string) {
 function titleKey(t: string) { return cleanTitle(t).replace(/[^가-힣a-z0-9]/gi, "").toLowerCase(); }
 
 // 소스 설정 (베스트/인기 페이지 + 게시글 링크 패턴). 일베 제외. 구조 변경 시 여기만 조정.
-// ua:"pc" 는 모바일 UA를 차단/다른레이아웃 주는 사이트(뽐뿌·보배·클리앙)용.
+// ua:"pc" 는 모바일 UA를 차단/다른레이아웃 주는 사이트용. 전 소스 모바일에서 링크 정상 열림 확인분만.
 type Src = { name: string; url: string; re: RegExp; base: string; ua?: "pc"; warm?: string };
 const SOURCES: Src[] = [
   { name: "dcinside",   url: "https://m.dcinside.com/board/dcbest",                        re: /\/board\/[\w]+\/\d+/,                             base: "https://m.dcinside.com" },
@@ -26,14 +26,11 @@ const SOURCES: Src[] = [
   { name: "arca.live",  url: "https://arca.live/b/live",                                   re: /\/b\/[\w]+\/\d{5,}/,                              base: "https://arca.live" },
   { name: "inven",      url: "https://m.inven.co.kr/board/webzine/2097",                   re: /\/board\/webzine\/\d+\/\d+/,                      base: "https://m.inven.co.kr" },
   { name: "mlbpark",    url: "https://mlbpark.donga.com/mp/best.php",                      re: /\/mp\/b\.php\?[^"'#]*b=/,                         base: "https://mlbpark.donga.com" },
-  { name: "ppomppu",    url: "https://www.ppomppu.co.kr/hot.php",                          re: /\/zboard\/view\.php\?[^"'#]*no=\d+/,              base: "https://www.ppomppu.co.kr", ua: "pc" },
   { name: "pann",       url: "https://m.pann.nate.com/talk/ranking",                       re: /\/talk\/\d{5,}/,                                  base: "https://m.pann.nate.com" },
   { name: "instiz",     url: "https://www.instiz.net/pt",                                  re: /\/pt\/\d{5,}/,                                    base: "https://www.instiz.net" },
-  { name: "bobaedream", url: "https://www.bobaedream.co.kr/list?code=best",               re: /\/view\?code=best&No=\d+/,                        base: "https://www.bobaedream.co.kr", ua: "pc" },
-  { name: "todayhumor", url: "https://m.todayhumor.co.kr/list.php?table=bestofbest",       re: /view\.php\?table=bestofbest&no=\d+/,              base: "https://m.todayhumor.co.kr/" },
   { name: "82cook",     url: "https://www.82cook.com/entiz/enti.php?bn=15",                re: /\/entiz\/read\.php\?num=\d+/,                     base: "https://www.82cook.com", ua: "pc" },
-  // 서버수집 불가(데이터센터 IP 안티봇/피드잠금/글읽기차단)로 제외:
-  // fmkorea(보안차단 430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금)·etoland(JS SPA)·humoruniv(글페이지 차단)
+  // 제외: fmkorea(보안차단430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금)·etoland(JS SPA)·humoruniv(글페이지차단) = 서버수집 불가
+  //       ppomppu(모바일 클릭시 빈페이지)·bobaedream(best링크 순환만료)·todayhumor(모바일 링크 문제) = 모바일 링크 신뢰성 미달
 ];
 
 // 실제 브라우저처럼 보이는 헤더 (쿠키 없는 첫 요청을 막는 사이트 대응)
