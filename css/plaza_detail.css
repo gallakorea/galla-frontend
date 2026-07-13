@@ -9,7 +9,7 @@ body {
 #app {
   max-width:480px;
   margin:0 auto;
-  padding-bottom:96px;
+  padding-bottom:calc(124px + env(safe-area-inset-bottom));
 }
 
 /* GUIDE */

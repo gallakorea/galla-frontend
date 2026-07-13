@@ -170,10 +170,15 @@ body::before {
 .pz-follow { display: inline-block; margin-top: 10px; }
 
 /* ===== 플래티넘/실버 잔재 일소 → 세련된 블랙톤 (전 페이지 공용, 2026-07-13) ===== */
-/* 플래티넘·샴페인 그라데이션 버튼 → 프리미엄 딥블랙 */
+/* 플래티넘·샴페인·금색 그라데이션 버튼 → 프리미엄 딥블랙 (배틀 참전 버튼은 정체성상 예외) */
 .cf-btn.main,
 .si-buy:not(.no),
-.oa-btn-gold {
+.oa-btn-gold,
+.auth-btn,
+.btn-main.full,
+.comment-write button,
+.plaza-write-bar button,
+.donate-tier.on, .champ-btn {
   background: linear-gradient(180deg, #24262e 0%, #0c0d11 100%) !important;
   color: #f4f5f8 !important;
   border: 1px solid rgba(255,255,255,.14) !important;
@@ -181,8 +186,12 @@ body::before {
 }
 .cf-btn.main:active,
 .si-buy:not(.no):active,
-.oa-btn-gold:active { filter: brightness(1.18); }
-.cf-btn.main:disabled { opacity: .5 !important; box-shadow: none !important; }
+.oa-btn-gold:active,
+.auth-btn:active,
+.btn-main.full:active,
+.comment-write button:active,
+.plaza-write-bar button:active { filter: brightness(1.18); transform: translateY(1px); }
+.cf-btn.main:disabled, .auth-btn:disabled, .btn-main.full:disabled { opacity: .5 !important; box-shadow: none !important; }
 
 /* 플래티넘 필 배지(부스트/핀/보유) → 다크 글래스 */
 .pin-chip, .pin-badge, .si-owned {
@@ -198,3 +207,15 @@ body::before {
   background: rgba(111,134,255,.16) !important; color: #cdd6ff !important;
   -webkit-text-fill-color: #cdd6ff !important;
 }
+
+/* ===== 하단 네비 겹침 방지 (2026-07-13) ===== */
+/* 모달·시트·드로어가 열리면 플로팅 네비 숨김 (네비 z-index가 높아 모달을 덮던 문제) */
+body:has(#createModal:not([hidden])) .nav,
+body:has(#plaza-write-modal:not(.hidden)) .nav,
+body:has(.wh-sheet.open) .nav,
+body:has(.shop-sheet.open) .nav,
+body:has(.noti-drawer.open) .nav,
+body:has(#dm-root.open) .nav,
+body:has(.glm-dim.open) .nav,
+body:has(.bugr-dim) .nav,
+body:has(.ssh-dim.open) .nav { display: none !important; }
