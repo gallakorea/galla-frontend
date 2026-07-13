@@ -79,7 +79,8 @@ Deno.serve(async (req) => {
     const body = `${out.body}\n\n🔗 원문 보기: ${it.src_url}\n(출처: ${it.source})`;
     const { data: post, error } = await sb.from("plaza_posts").insert({
       user_id: null, nickname: BOT_NICK, title: String(out.title).slice(0, 80),
-      body, content: [], category: cat, cover_image: it.thumb || null,
+      body, content: [], category: cat,
+      thumbnail: it.thumb || null, cover_image: it.thumb || null, // plaza.js는 thumbnail 컬럼을 렌더
     }).select("id").single();
     if (error) {
       await sb.from("community_hot").update({ status: "failed", skip_reason: error.message.slice(0, 200) }).eq("id", it.id);

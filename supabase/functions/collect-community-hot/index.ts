@@ -85,6 +85,21 @@ function pageTitle(html: string): string {
   return cleanTitle(t);
 }
 
+// 글 대표 이미지 = og:image(없으면 twitter:image). 로고/플레이스홀더는 제외, 절대 https URL 반환.
+function pageImage(html: string, pageUrl: string): string | null {
+  const m = html.match(/<meta[^>]+property=["']og:image(?::url)?["'][^>]*content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:image["']/i)
+    || html.match(/<meta[^>]+name=["']twitter:image["'][^>]*content=["']([^"']+)["']/i);
+  let u = decodeEntities((m?.[1] || "").trim());
+  if (!u) return null;
+  try { u = new URL(u, pageUrl).href; } catch { return null; }
+  u = u.replace(/^http:\/\//i, "https://");
+  // 로고·기본이미지·아이콘·빈이미지 필터(대표성 없음)
+  if (/(temp|logo|ico[_-]|icon|no[_-]?image|noimg|default|blank|avatar|profile|sprite|_bi[._]|[/_-]og[-_.]|share_?default)/i.test(u)) return null;
+  if (!/\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(u) && !/(dcinside|instiz|inven|pann|nate|donga|82cook|arca|ruliweb)/i.test(u)) return null;
+  return u;
+}
+
 async function collectOne(src: Src) {
   const out: any[] = [];
   try {
@@ -121,7 +136,7 @@ async function collectOne(src: Src) {
         const t = pageTitle(html);
         if (!t || t.length < 6 || t.length > 120) continue;  // 제목 못 얻음/삭제 → 버림
         const key = titleKey(t); if (!key) continue;
-        out.push({ source: src.name, src_title: t, src_url: url, title_key: key, thumb: null, score: 0 });
+        out.push({ source: src.name, src_title: t, src_url: url, title_key: key, thumb: pageImage(html, url), score: 0 });
       } catch (_) {}
     }
   } catch (_) {}

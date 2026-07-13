@@ -478,6 +478,15 @@ let PLAZA_ME = null;
 let MY_PLAZA_SAVED = {};
 let MY_PLAZA_VOTES = {};
 
+// 외부 커뮤 썸네일은 핫링크 차단이 많아 galla.im 자체 프록시(/imgproxy)로 경유시킨다.
+// 로컬(/...)·Supabase 스토리지·이미 프록시된 URL은 그대로 둔다.
+function proxifyThumb(u) {
+  if (!u || typeof u !== "string") return u;
+  if (u.startsWith("/") || u.includes("/imgproxy?") || u.includes("supabase.co/storage")) return u;
+  if (!/^https?:\/\//i.test(u)) return u;
+  return "/imgproxy?u=" + encodeURIComponent(u);
+}
+
 function renderPlazaPosts(posts) {
   plazaListEl.innerHTML = "";
 
@@ -489,7 +498,7 @@ function renderPlazaPosts(posts) {
   posts.forEach(post => {
     const li = document.createElement("li");
     li.className = "plaza-post";
-    const thumb = post.thumbnail || extractFirstImage(post.body);
+    const thumb = proxifyThumb(post.thumbnail) || extractFirstImage(post.body);
     const cmtCount = post.plaza_comments?.[0]?.count ?? 0;
     const saved = !!MY_PLAZA_SAVED[post.id];
     const excerpt = plazaExcerpt(post.body);
@@ -527,7 +536,7 @@ function renderPlazaPosts(posts) {
         ${
           thumb
             ? `<div class="plaza-thumb">
-                 <img src="${thumb}" alt="thumbnail" />
+                 <img src="${thumb}" alt="thumbnail" loading="lazy" onerror="this.closest('.plaza-thumb')?.remove()" />
                </div>`
             : ``
         }
