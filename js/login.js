@@ -63,7 +63,23 @@ function waitForClient() {
 
         if (error) {
             console.log(error);
-            alert("로그인 실패: " + error.message);
+            const msg = error.message || "";
+            // 이메일 미인증 → 인증메일 재발송으로 자가복구 (인증메일 못 받아 막힌 유저 구제)
+            if (error.code === "email_not_confirmed" || /not confirmed/i.test(msg)) {
+                if (confirm("이메일 인증이 아직 안 됐어요.\n인증 메일을 다시 보내드릴까요?")) {
+                    try {
+                        const { error: rErr } = await supabase.auth.resend({ type: "signup", email: emailVal });
+                        if (rErr) throw rErr;
+                        alert("인증 메일을 보냈어요! ✉️\n메일함(스팸함도)을 확인하고 링크를 눌러 인증을 완료해주세요.");
+                    } catch (rE) {
+                        const m = (rE && rE.message) || "";
+                        if (/rate/i.test(m)) alert("잠시 후 다시 시도해주세요. (짧은 시간에 여러 번 요청됨)");
+                        else alert("재발송에 실패했어요. 잠시 후 다시 시도해주세요.");
+                    }
+                }
+                return;
+            }
+            alert("로그인 실패: " + msg);
             return;
         }
 
