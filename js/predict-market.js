@@ -157,17 +157,19 @@ function renderCreator(){
   const name = esc(CREATOR?.nickname || '갈라 크리에이터');
   const init = (CREATOR?.nickname || '갈').trim().charAt(0) || '갈';
   const lv = CREATOR?.level ?? 1;
+  const uid = CREATOR?.user_id || MARKET?.created_by || "";
+  const followBtn = uid ? `<button class="js-follow pmd-follow" data-uid="${uid}">+ 팔로우</button>` : "";
   return `
     <div class="pmd-creator">
-      <div class="pmd-creator-av">${init}</div>
+      <div class="pmd-creator-av"${uid ? ` data-profile-uid="${uid}"` : ""}>${init}</div>
       <div class="pmd-creator-info">
         <div class="pmd-creator-line">
-          <span class="pmd-creator-name">${name}</span>
-          <span class="pmd-creator-lv">Lv.${lv}</span>
+          <span class="pmd-creator-name"${uid ? ` data-profile-uid="${uid}"` : ""}>${name}</span>
           <span class="pmd-creator-tag">🔮 크리에이터</span>
         </div>
         <div class="pmd-creator-sub">이 예측을 만든 크리에이터</div>
       </div>
+      ${followBtn}
     </div>`;
 }
 

@@ -142,6 +142,14 @@ async function fetchPostDetail() {
   if (postMetaEl) {
     postMetaEl.textContent =
       `${data.nickname} · ${data.category} · 조회 ${(data.view_count || 0) + 1}`;
+    if (data.user_id) postMetaEl.setAttribute("data-profile-uid", data.user_id);
+  }
+  // 작성자 팔로우 버튼 (post-meta 옆)
+  if (data.user_id && postMetaEl && !document.getElementById("pz-follow")) {
+    const fb = document.createElement("button");
+    fb.id = "pz-follow"; fb.className = "js-follow pz-follow"; fb.dataset.uid = data.user_id;
+    fb.textContent = "+ 팔로우";
+    postMetaEl.parentNode.insertBefore(fb, postMetaEl.nextSibling);
   }
 
   // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제)

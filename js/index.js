@@ -394,7 +394,7 @@ function applySocialState() {
 }
 
 async function toggleFollow(btn) {
-    if (!social.userId) return openModal('로그인이 필요합니다.');
+    if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
     const supabase = window.supabaseClient;
     const uid = btn.dataset.uid;
     const on = social.follows.has(uid);
@@ -416,7 +416,7 @@ async function toggleFollow(btn) {
 }
 
 async function toggleBookmark(img) {
-    if (!social.userId) return openModal('로그인이 필요합니다.');
+    if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
     const supabase = window.supabaseClient;
     const id = img.dataset.id;
     const on = social.bookmarks.has(id);

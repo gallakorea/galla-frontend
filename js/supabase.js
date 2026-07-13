@@ -87,7 +87,12 @@
         if (d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
           const b = document.createElement("span");
           b.className = "nick-title";
-          b.textContent = d.title;
+          // "🌱 눈팅 뉴비" → 아이콘/이름 분리 (작성자 헤더에선 아이콘만 노출)
+          const t = String(d.title).trim();
+          const sp = t.indexOf(" ");
+          const ico = sp > 0 ? t.slice(0, sp) : t;
+          const nm = sp > 0 ? t.slice(sp + 1) : "";
+          b.innerHTML = `<span class="nt-ico">${ico}</span>` + (nm ? `<span class="nt-name">${nm}</span>` : "");
           el.parentNode.insertBefore(b, el);
         }
       });
@@ -125,6 +130,30 @@
       location.href = "mypage.html?user=" + encodeURIComponent(uid);
     }, true);
   }
+
+  // 공용 로그인 유도 모달 (톤앤매너 통일) — 전 페이지 공통
+  window.GALLA_needLogin = function (msg) {
+    let m = document.getElementById("galla-login-modal");
+    if (!m) {
+      m = document.createElement("div");
+      m.id = "galla-login-modal";
+      m.className = "glm-dim";
+      m.innerHTML =
+        '<div class="glm-card" role="dialog" aria-modal="true">' +
+        '<div class="glm-ico">🔒</div>' +
+        '<div class="glm-title">로그인이 필요해요</div>' +
+        '<div class="glm-msg"></div>' +
+        '<div class="glm-btns">' +
+        '<button class="glm-cancel" type="button">닫기</button>' +
+        '<button class="glm-go" type="button">로그인하기</button>' +
+        "</div></div>";
+      document.body.appendChild(m);
+      m.addEventListener("click", (e) => { if (e.target === m || e.target.classList.contains("glm-cancel")) m.classList.remove("open"); });
+      m.querySelector(".glm-go").addEventListener("click", () => { location.href = "login.html"; });
+    }
+    m.querySelector(".glm-msg").textContent = msg || "이 기능은 로그인 후 이용할 수 있어요.";
+    requestAnimationFrame(() => m.classList.add("open"));
+  };
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
   function loadUmd() {
