@@ -801,8 +801,15 @@ function plazaExcerpt(body) {
 }
 
 /* 홈 피드용 광장 카드 (톤 유지, '광장'으로 명확히 구분) */
+// 외부 커뮤 썸네일은 핫링크 차단 많아 galla.im 자체 프록시 경유(원본은 그대로)
+function plazaProxify(u) {
+    if (!u || typeof u !== 'string') return u;
+    if (u.startsWith('/') || u.includes('/imgproxy?') || u.includes('supabase.co/storage')) return u;
+    if (!/^https?:\/\//i.test(u)) return u;
+    return '/imgproxy?u=' + encodeURIComponent(u);
+}
 function renderPlazaCard(p) {
-    const cover = p.cover_image || p.thumbnail || '';
+    const cover = plazaProxify(p.cover_image || p.thumbnail || '');
     const excerpt = plazaExcerpt(p.body);
     const cat = p.category ? escHtml(p.category) : '광장';
     return `
@@ -817,7 +824,7 @@ function renderPlazaCard(p) {
           <div class="pz-title">${escHtml(p.title || '(제목 없음)')}</div>
           ${excerpt ? `<div class="pz-excerpt">${escHtml(excerpt)}</div>` : ''}
         </div>
-        ${cover ? `<div class="pz-thumb"><img src="${escHtml(cover)}" loading="lazy" alt=""></div>` : ''}
+        ${cover ? `<div class="pz-thumb"><img src="${escHtml(cover)}" loading="lazy" alt="" style="opacity:0;transition:opacity .18s" onload="this.style.opacity=1" onerror="this.closest('.pz-thumb')?.remove()"></div>` : ''}
       </div>
       <div class="pz-foot">
         <span>👍 ${p.up_count || 0}</span>

@@ -536,7 +536,9 @@ function renderPlazaPosts(posts) {
         ${
           thumb
             ? `<div class="plaza-thumb">
-                 <img src="${thumb}" alt="thumbnail" loading="lazy" onerror="this.closest('.plaza-thumb')?.remove()" />
+                 <img src="${thumb}" alt="" loading="lazy" style="opacity:0;transition:opacity .18s"
+                      onload="this.style.opacity=1"
+                      onerror="this.closest('.plaza-thumb')?.remove()" />
                </div>`
             : ``
         }
