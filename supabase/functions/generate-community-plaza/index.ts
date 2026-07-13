@@ -37,6 +37,10 @@ Deno.serve(async (req) => {
   if (!OPENAI) return new Response(JSON.stringify({ ok: false, reason: "no_openai_key" }), { headers: { ...cors, "Content-Type": "application/json" } });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+  // 오래된 미처리분(36h+)은 만료 처리 — new 백로그 무한증식 방지
+  await sb.from("community_hot").update({ status: "skipped", skip_reason: "expired" })
+    .eq("status", "new").lt("created_at", new Date(Date.now() - 36 * 3600e3).toISOString());
+
   const { data: rows } = await sb.from("community_hot").select("*").eq("status", "new").order("created_at", { ascending: false }).limit(10);
   let published = 0, skipped = 0;
   for (const it of (rows || [])) {
