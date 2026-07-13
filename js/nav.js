@@ -37,6 +37,28 @@ document.addEventListener("DOMContentLoaded", () => {
     plaza: "plaza.html", mypage: "mypage.html",
   };
   const curIdx = PAGE_ORDER.indexOf(currentPage);
+
+  // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다.
+  //    ⚠️ 스와이프 분기(return)보다 '앞'에 둬야 비-탭 페이지(광장상세·이슈 등)에서도 동작.
+  const navEl = document.querySelector(".nav");
+  if (navEl) {
+    let lastY = window.scrollY, ticking = false;
+    window.addEventListener("scroll", () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY, dy = y - lastY;
+        if (Math.abs(dy) > 4) {                 // 미세 스크롤 무시(떨림 방지)
+          if (dy > 0 && y > 60) navEl.classList.add("nav--mini");
+          else if (dy < 0)      navEl.classList.remove("nav--mini");
+          lastY = y;
+        }
+        if (y <= 10) navEl.classList.remove("nav--mini"); // 최상단은 원래 크기
+        ticking = false;
+      });
+    }, { passive: true });
+  }
+
   {
     // 제스처 시작점이 가로 스크롤 요소/미디어/입력이면 스와이프 무시 (캐러셀·칩·영상 보호)
     const inHScroll = (el) => {
@@ -220,29 +242,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, { passive: true });
 
     document.addEventListener("touchcancel", () => { if (locked) { stage.style.transition = "transform .2s"; place(0); setTimeout(reset, 220); } }, { passive: true });
-  }
-
-  // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다
-  const nav = document.querySelector(".nav");
-  if (nav) {
-    let lastY = window.scrollY;
-    let ticking = false;
-    window.addEventListener("scroll", () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        const y = window.scrollY;
-        const dy = y - lastY;
-        if (Math.abs(dy) > 4) {           // 미세 스크롤 무시 (떨림 방지)
-          if (dy > 0 && y > 60) nav.classList.add("nav--mini");
-          else if (dy < 0)      nav.classList.remove("nav--mini");
-          lastY = y;
-        }
-        // 최상단에서는 항상 원래 크기
-        if (y <= 10) nav.classList.remove("nav--mini");
-        ticking = false;
-      });
-    }, { passive: true });
   }
 });
 /* =========================================================
