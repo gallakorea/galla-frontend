@@ -66,6 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!(n instanceof Element)) break;
         const tag = n.tagName;
         if (tag === "VIDEO" || tag === "INPUT" || tag === "TEXTAREA" || n.isContentEditable) return true;
+        // 인덱스 사진 캐러셀(트랜스폼 기반, overflow 아님) — 좌우 스와이프는 슬라이드 이동이므로 페이지 전환 금지
+        if (n.classList && n.classList.contains("carousel-wrap")) return true;
         const s = getComputedStyle(n);
         if ((s.overflowX === "auto" || s.overflowX === "scroll") && n.scrollWidth > n.clientWidth + 2) return true;
       }

@@ -154,7 +154,7 @@ body.shorts-open { overflow: hidden !important; }
 /* 재생 진행바 */
 #shortsProgress {
   position: absolute; left: 0; right: 0;
-  bottom: calc(env(safe-area-inset-bottom) + 78px);
+  bottom: calc(env(safe-area-inset-bottom) + 162px);
   height: 3px; background: rgba(255,255,255,.18); z-index: 10009;
 }
 #shortsProgressFill {
@@ -169,7 +169,7 @@ body.shorts-open { overflow: hidden !important; }
 .shorts-actions {
   position: absolute;
   right: 10px;
-  bottom: calc(env(safe-area-inset-bottom) + 96px);
+  bottom: calc(env(safe-area-inset-bottom) + 172px);
   top: auto; transform: none;
 
   display: flex;

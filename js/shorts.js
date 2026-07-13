@@ -137,7 +137,7 @@ function __openShortsInternal(list, startId, startTime) {
     style.textContent = `
 .shorts-meta{
   position:absolute; left:16px; right:84px;
-  bottom:calc(env(safe-area-inset-bottom) + 96px);  /* 하단 정렬(인스타/틱톡식) */
+  bottom:calc(env(safe-area-inset-bottom) + 172px);  /* 통합 진영바(약 135px) 위로 — 가림 방지 */
   z-index:30; color:#fff;
   font-family:"Pretendard",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
   pointer-events:auto;
