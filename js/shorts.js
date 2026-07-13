@@ -127,10 +127,7 @@ function __openShortsInternal(list, startId, startTime) {
       </div>
       <div id="shortsTrack"></div>
       <div id="shortsProgress"><div id="shortsProgressFill"></div></div>
-      <div id="shortsVoteBar" class="shorts-vote">
-        <button class="vote-btn pro" data-vote="pro" data-issue-id=""><span>👍</span> 찬성이오</button>
-        <button class="vote-btn con" data-vote="con" data-issue-id=""><span>👎</span> 난 반댈세</button>
-      </div>
+      <div id="shortsVoteBar" class="shorts-vote gv"></div>
     </div>
   `;
   // ===== Inject overlay styles for shorts meta (once) =====
@@ -527,18 +524,23 @@ function __openShortsInternal(list, startId, startTime) {
   document.body.style.overflow = "hidden";
 
   const voteBar = overlay.querySelector("#shortsVoteBar");
-  voteBar?.addEventListener("click", e => {
+  voteBar?.addEventListener("click", async e => {
     e.preventDefault();
     e.stopPropagation();
 
-    const btn = e.target.closest(".vote-btn");
+    const btn = e.target.closest(".gv-btn");
     if (!btn) return;
 
-    const type = btn.dataset.vote;
+    const type = btn.classList.contains("gv-pro") ? "pro" : "con";
     const issueId = voteBar.dataset.issueId;
 
     if (window.GALLA_VOTE && issueId) {
-      window.GALLA_VOTE(issueId, type, { scope: "shorts" });
+      const stance = await window.GALLA_VOTE(issueId, type, { scope: "shorts" });
+      // 바/명수 재조회 + 동적 애니메이션
+      if (window.GALLA_VoteBar && typeof window.GALLA_GET_VOTE_STATS === "function") {
+        const s = await window.GALLA_GET_VOTE_STATS(issueId);
+        if (s) window.GALLA_VoteBar.update(voteBar, s, { voted: stance || type, myStance: stance || type, animate: true });
+      }
     }
   });
 
@@ -589,8 +591,7 @@ function moveToIndex(idx, instant = false) {
   window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
 
   playOnlyCurrent();
-  updateShortsVoteBar();
-  syncVote();
+  updateShortsVoteBar();   // 통합 진영바: 마운트 + 통계/내진영 반영
 }
 
 function playOnlyCurrent() {
@@ -836,30 +837,28 @@ function syncVote() {
 
 function updateShortsVoteBar() {
   const bar = document.getElementById("shortsVoteBar");
-  if (!bar) return;
-  const issueId = shortsList[currentIndex]?.id;
-  bar.dataset.issueId = issueId;
-  // Guard for missing issueId, and log
-  if (!issueId) {
-    console.warn("[SHORTS][VOTE] missing issueId");
-    return;
-  }
-  console.info("[SHORTS][VOTE] sync issueId =", issueId);
-  // Sync issueId onto each vote button, and reset active-vote class
-  // 진영명(있으면) 반영 — 없으면 기본 찬성/반대
+  if (!bar || !window.GALLA_VoteBar) return;
   const cur = shortsList[currentIndex] || {};
-  const proBtn = bar.querySelector('.vote-btn.pro');
-  const conBtn = bar.querySelector('.vote-btn.con');
-  if (proBtn) proBtn.textContent = `👍 ${cur.faction_a || "찬성이오"}`;
-  if (conBtn) conBtn.textContent = `👎 ${cur.faction_b || "난 반댈세"}`;
+  const issueId = cur.id;
+  bar.dataset.issueId = issueId || "";
+  if (!issueId) { console.warn("[SHORTS][VOTE] missing issueId"); return; }
 
-  bar.querySelectorAll(".vote-btn").forEach(btn => {
-    btn.dataset.issueId = issueId;
-    btn.classList.remove("active-vote");
+  // 통합 진영바 마운트(슬라이드마다 진영명 갱신)
+  window.GALLA_VoteBar.mount(bar, {
+    factionA: cur.faction_a || "찬성이오", factionB: cur.faction_b || "난 반댈세",
+    pro: 0, con: 0
   });
-  if (window.GALLA_CHECK_VOTE) {
-    window.GALLA_CHECK_VOTE(issueId, { force: true, scope: "shorts" });
-  }
+  // 실제 통계 + 내 진영 반영(애니메이션 없이 초기 세팅)
+  (async () => {
+    if (typeof window.GALLA_GET_VOTE_STATS === "function") {
+      const s = await window.GALLA_GET_VOTE_STATS(issueId);
+      if (s && bar.dataset.issueId == String(issueId)) window.GALLA_VoteBar.update(bar, s, { animate: false });
+    }
+    if (typeof window.GALLA_GET_MY_VOTE === "function") {
+      const mine = await window.GALLA_GET_MY_VOTE(issueId);
+      if (mine && bar.dataset.issueId == String(issueId)) window.GALLA_VoteBar.setMine(bar, mine);
+    }
+  })();
 }
 
 /* =========================

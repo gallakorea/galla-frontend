@@ -87,25 +87,8 @@ async function forceInitialVoteSync(issueId) {
 }
 
 function applyVoteUI(stance) {
-  const btnPro = qs("btn-vote-pro");
-  const btnCon = qs("btn-vote-con");
-  if (!btnPro || !btnCon) return;
-
-  if (!stance) {
-    btnPro.classList.remove("voted");
-    btnCon.classList.remove("voted");
-    btnPro.disabled = false;
-    btnCon.disabled = false;
-    return;
-  }
-
-  btnPro.disabled = true;
-  btnCon.disabled = true;
-  btnPro.classList.add("disabled");
-  btnCon.classList.add("disabled");
-
-  if (stance === "pro") btnPro.classList.add("voted");
-  if (stance === "con") btnCon.classList.add("voted");
+  const gv = qs("issue-gv");
+  if (gv && window.GALLA_VoteBar) window.GALLA_VoteBar.setMine(gv, stance);
 }
 
 
@@ -534,11 +517,11 @@ function renderIssue(issue) {
   // 미디어 렌더링
   renderIssueMedia(issue);
 
-  // 진영 버튼 라벨 적용
-  const btnPro = qs("btn-vote-pro");
-  const btnCon = qs("btn-vote-con");
-  if (btnPro && issue.faction_a) btnPro.textContent = `👍 ${issue.faction_a}`;
-  if (btnCon && issue.faction_b) btnCon.textContent = `👎 ${issue.faction_b}`;
+  // 진영 버튼 라벨 적용(통합 진영바 .gv-name)
+  const nameA = qs("btn-vote-pro")?.querySelector(".gv-name");
+  const nameB = qs("btn-vote-con")?.querySelector(".gv-name");
+  if (nameA && issue.faction_a) nameA.textContent = issue.faction_a;
+  if (nameB && issue.faction_b) nameB.textContent = issue.faction_b;
 
   qs("issue-category").innerText = issue.category || "";
   qs("issue-title").innerText = issue.title || "";
@@ -605,7 +588,7 @@ if (explainWrap) {
 /* ==========================================================================
    Vote Stats
 ========================================================================== */
-async function loadVoteStats(issueId) {
+async function loadVoteStats(issueId, votedSide) {
   const supabase = window.supabaseClient;
 
   const { data, error } = await supabase
@@ -626,17 +609,11 @@ async function loadVoteStats(issueId) {
     if (v.type === "con") con++;
   });
 
-  const total = pro + con;
-  const proPercent = total ? Math.round((pro / total) * 100) : 0;
-  const conPercent = total ? 100 - proPercent : 0;
-
-  // 동적 채움(0→목표 트랜지션) + 퍼센트 카운트업
-  const pb = qs("vote-pro-bar"), cb = qs("vote-con-bar");
-  if (pb && cb) {
-    requestAnimationFrame(() => { pb.style.width = `${proPercent}%`; cb.style.width = `${conPercent}%`; });
+  // 통합 진영바로 동적 갱신(바 채움/니들/명수 카운트업/+1 팝/튐)
+  const gv = qs("issue-gv");
+  if (gv && window.GALLA_VoteBar) {
+    window.GALLA_VoteBar.update(gv, { pro, con }, { voted: votedSide || null, animate: true });
   }
-  countUpText(qs("vote-pro-text"), proPercent, "%");
-  countUpText(qs("vote-con-text"), conPercent, "%");
 }
 
 // 숫자 카운트업 애니메이션 (인포그래픽 공용)
@@ -660,39 +637,28 @@ window.GALLA_countUp = countUpText;
    4. Vote
 ========================================================================== */
 
-qs("btn-vote-pro")?.addEventListener("click", async () => {
-  if (!issueId) return;
-  if (typeof window.GALLA_VOTE !== "function") return;
-  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
-
-  await window.GALLA_VOTE(issueId, "pro");
-
-  const voteType = await window.GALLA_CHECK_VOTE(issueId);
-  if (voteType === "pro" || voteType === "con") {
-    applyVoteUI(voteType);
-    document.dispatchEvent(new CustomEvent("galla:voted", { detail: { issueId, faction: voteType } }));
-  }
-
-  loadVoteStats(issueId);
-  loadStats(issueId);   // 인구통계 인포그래픽도 투표 반영해 갱신
-});
-
-qs("btn-vote-con")?.addEventListener("click", async () => {
-  if (!issueId) return;
-  if (typeof window.GALLA_VOTE !== "function") return;
-  if (typeof window.GALLA_CHECK_VOTE !== "function") return;
-
-  await window.GALLA_VOTE(issueId, "con");
-
-  const voteType = await window.GALLA_CHECK_VOTE(issueId);
-  if (voteType === "pro" || voteType === "con") {
-    applyVoteUI(voteType);
-    document.dispatchEvent(new CustomEvent("galla:voted", { detail: { issueId, faction: voteType } }));
-  }
-
-  loadVoteStats(issueId);
-  loadStats(issueId);   // 인구통계 인포그래픽도 투표 반영해 갱신
-});
+// 통합 진영바 마운트 + 클릭 위임(재마운트해도 컨테이너 리스너 유지)
+(function initIssueVoteBar() {
+  const gv = qs("issue-gv");
+  if (!gv || !window.GALLA_VoteBar) return;
+  window.GALLA_VoteBar.mount(gv, {
+    factionA: "찬성이오", factionB: "난 반댈세", pro: 0, con: 0,
+    proAttr: 'id="btn-vote-pro"', conAttr: 'id="btn-vote-con"'
+  });
+  gv.addEventListener("click", async (e) => {
+    const b = e.target.closest(".gv-btn"); if (!b) return;
+    if (!issueId || typeof window.GALLA_VOTE !== "function" || typeof window.GALLA_CHECK_VOTE !== "function") return;
+    const type = b.classList.contains("gv-pro") ? "pro" : "con";
+    await window.GALLA_VOTE(issueId, type);
+    const voteType = await window.GALLA_CHECK_VOTE(issueId);
+    if (voteType === "pro" || voteType === "con") {
+      applyVoteUI(voteType);
+      document.dispatchEvent(new CustomEvent("galla:voted", { detail: { issueId, faction: voteType } }));
+    }
+    loadVoteStats(issueId, voteType || type);   // 방금 진영 → 팝/튐 애니메이션
+    loadStats(issueId);
+  });
+})();
 
 /* ==========================================================================
    Support Actions (Pro / Con)

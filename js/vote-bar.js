@@ -1,0 +1,91 @@
+/* ============================================================
+   GALLA 통합 진영 선택바 컴포넌트 — window.GALLA_VoteBar
+   index / issue / shorts 3면 공용. 마크업·명수표시·동적 애니메이션 통일.
+   ============================================================ */
+(function () {
+  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+  const pct = (pro, con) => { const t = (pro || 0) + (con || 0); return t ? Math.round((pro / t) * 100) : 50; };
+  const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // 내부 HTML(버튼 옵션). btn 속성은 페이지별 클릭 훅을 그대로 실어줌.
+  function html(o) {
+    o = o || {};
+    const A = esc(o.factionA || "찬성이오"), B = esc(o.factionB || "난 반댈세");
+    const pro = o.pro || 0, con = o.con || 0, total = pro + con;
+    const pp = pct(pro, con), cp = 100 - pp;
+    const buttons = o.buttons === false ? "" : `<div class="gv-btns">
+      <button class="gv-btn gv-pro ${o.proClass || ""}" ${o.proAttr || ""}><span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
+      <button class="gv-btn gv-con ${o.conClass || ""}" ${o.conAttr || ""}><span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
+    </div>`;
+    return `${buttons}
+      <div class="gv-bar">
+        <div class="gv-fill gv-fill-pro" style="width:${pp}%"><i class="gv-sheen"></i></div>
+        <div class="gv-fill gv-fill-con" style="width:${cp}%"><i class="gv-sheen"></i></div>
+        <div class="gv-pct gv-pct-pro${pp < 14 ? " gv-hide" : ""}">${pp}%</div>
+        <div class="gv-pct gv-pct-con${cp < 14 ? " gv-hide" : ""}">${cp}%</div>
+        <div class="gv-needle" style="left:${pp}%"></div>
+        <div class="gv-pop gv-pop-pro">+1</div><div class="gv-pop gv-pop-con">+1</div>
+      </div>
+      <div class="gv-stats">
+        <span class="gv-side gv-side-pro"><b class="gv-c-pro">${total ? pro : "–"}</b>${total ? "명" : ""}</span>
+        <span class="gv-total"><b class="gv-c-total">${total}</b>명 참전</span>
+        <span class="gv-side gv-side-con">${total ? '' : ''}<b class="gv-c-con">${total ? con : "–"}</b>${total ? "명" : ""}</span>
+      </div>`;
+  }
+
+  // 컨테이너에 마운트. 이후 update로 갱신.
+  function mount(el, o) { if (!el) return; el.classList.add("gv"); el.innerHTML = html(Object.assign({}, o, { buttons: o && o.buttons })); applyLead(el, (o && o.pro) || 0, (o && o.con) || 0); if (o && o.myStance) setMine(el, o.myStance); }
+
+  function applyLead(el, pro, con) {
+    el.classList.remove("gv-lead-pro", "gv-lead-con");
+    if (pro > con) el.classList.add("gv-lead-pro");
+    else if (con > pro) el.classList.add("gv-lead-con");
+  }
+  function setMine(el, stance) {
+    const a = el.querySelector(".gv-pro"), b = el.querySelector(".gv-con");
+    a && a.classList.toggle("gv-mine", stance === "pro");
+    b && b.classList.toggle("gv-mine", stance === "con");
+    if (stance === "pro" || stance === "con") el.classList.add("gv-locked");
+  }
+
+  function countUp(el, to, suffix) {
+    if (!el) return; suffix = suffix || "";
+    const from = parseFloat(el.dataset.v || el.textContent) || 0;
+    if (reduce() || from === to) { el.textContent = to + suffix; el.dataset.v = to; return; }
+    const t0 = performance.now(), dur = 650;
+    el.classList.remove("gv-tick"); void el.offsetWidth; el.classList.add("gv-tick");
+    const step = (t) => {
+      const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = Math.round(from + (to - from) * e) + suffix;
+      if (p < 1) requestAnimationFrame(step); else { el.textContent = to + suffix; el.dataset.v = to; }
+    };
+    requestAnimationFrame(step);
+  }
+
+  // 통계 갱신 + 화려한 애니메이션. voted: 방금 투표한 진영('pro'|'con'), animate: 튐/팝 효과.
+  function update(el, stats, opts) {
+    if (!el) return; opts = opts || {}; stats = stats || {};
+    const pro = stats.pro || 0, con = stats.con || 0, total = pro + con;
+    const pp = pct(pro, con), cp = 100 - pp;
+    const q = (s) => el.querySelector(s);
+    const fp = q(".gv-fill-pro"), fc = q(".gv-fill-con"), nd = q(".gv-needle");
+    if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%";
+    const pctP = q(".gv-pct-pro"), pctC = q(".gv-pct-con");
+    if (pctP) { pctP.classList.toggle("gv-hide", pp < 14); countUp(pctP, pp, "%"); }
+    if (pctC) { pctC.classList.toggle("gv-hide", cp < 14); countUp(pctC, cp, "%"); }
+    const cP = q(".gv-c-pro"), cC = q(".gv-c-con"), cT = q(".gv-c-total");
+    if (total) { countUp(cP, pro); countUp(cC, con); countUp(cT, total); }
+    applyLead(el, pro, con);
+    if (opts.myStance) setMine(el, opts.myStance);
+    if (opts.animate !== false && (opts.voted || opts.bump)) {
+      const bar = q(".gv-bar");
+      if (bar) { bar.classList.remove("gv-bump"); void bar.offsetWidth; bar.classList.add("gv-bump"); }
+    }
+    if (opts.voted === "pro" || opts.voted === "con") {
+      const pop = q(opts.voted === "pro" ? ".gv-pop-pro" : ".gv-pop-con");
+      if (pop && !reduce()) { pop.classList.remove("go"); void pop.offsetWidth; pop.classList.add("go"); }
+    }
+  }
+
+  window.GALLA_VoteBar = { html, mount, update, setMine, pct };
+})();

@@ -1,0 +1,83 @@
+/* ============================================================
+   GALLA 통합 진영 선택바 (index / issue / shorts 공용)
+   - 버튼 + 세그먼트 바 + %/명 스탯 + 화려한 동적 애니메이션
+   - 색: theme.css의 --pro-solid / --con-solid 사용
+   ============================================================ */
+.gv { --gv-pro: var(--pro-solid, #3a54ad); --gv-con: var(--con-solid, #b04a60); width: 100%; }
+
+/* 버튼 */
+.gv-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+.gv-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 8px; border-radius: 12px; font-size: 14px; font-weight: 800;
+  border: 1px solid; cursor: pointer; letter-spacing: -.2px;
+  transition: transform .12s ease, background .18s ease, box-shadow .18s ease, color .18s ease;
+  -webkit-tap-highlight-color: transparent; background: #0c0e14;
+}
+.gv-btn .gv-emoji { font-size: 15px; }
+.gv-btn .gv-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gv-pro { color: #a9bcff; border-color: rgba(90,120,255,.4); }
+.gv-con { color: #ffabbc; border-color: rgba(255,90,120,.4); }
+.gv-btn:active { transform: scale(.96); }
+.gv-pro.gv-mine { background: var(--gv-pro); border-color: var(--gv-pro); color: #fff; box-shadow: 0 4px 18px -4px var(--gv-pro); }
+.gv-con.gv-mine { background: var(--gv-con); border-color: var(--gv-con); color: #fff; box-shadow: 0 4px 18px -4px var(--gv-con); }
+.gv.gv-locked .gv-btn:not(.gv-mine) { opacity: .55; }
+
+/* 바 */
+.gv-bar {
+  position: relative; height: 30px; border-radius: 9px; overflow: hidden;
+  background: #14151b; display: flex; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+}
+.gv-fill { position: relative; height: 100%; overflow: hidden; transition: width .75s cubic-bezier(.34,1.35,.5,1); }
+.gv-fill-pro { background: linear-gradient(90deg, color-mix(in srgb, var(--gv-pro) 78%, #000), var(--gv-pro)); }
+.gv-fill-con { background: linear-gradient(90deg, var(--gv-con), color-mix(in srgb, var(--gv-con) 78%, #000)); }
+/* 흐르는 광택 */
+.gv-sheen { position: absolute; inset: 0; background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.28) 48%, transparent 76%); transform: translateX(-120%); }
+.gv-lead-pro .gv-fill-pro .gv-sheen, .gv-lead-con .gv-fill-con .gv-sheen { animation: gvSheen 2.4s ease-in-out infinite; }
+@keyframes gvSheen { 0% { transform: translateX(-120%); } 55%,100% { transform: translateX(320%); } }
+/* 우세 진영 은은한 발광 */
+.gv-lead-pro .gv-fill-pro { box-shadow: inset 0 0 22px -4px rgba(120,150,255,.6); }
+.gv-lead-con .gv-fill-con { box-shadow: inset 0 0 22px -4px rgba(255,120,150,.6); }
+
+/* 바 위 % */
+.gv-pct { position: absolute; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); pointer-events: none; z-index: 2; transition: opacity .3s; }
+.gv-pct-pro { left: 10px; } .gv-pct-con { right: 10px; }
+.gv-pct.gv-hide { opacity: 0; }
+
+/* 경계 니들 */
+.gv-needle { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #fff; border-radius: 2px; box-shadow: 0 0 8px rgba(255,255,255,.85); z-index: 3; transition: left .75s cubic-bezier(.34,1.35,.5,1); }
+
+/* +1 팝 */
+.gv-pop { position: absolute; top: 50%; font-size: 15px; font-weight: 900; color: #fff; opacity: 0; z-index: 4; pointer-events: none; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
+.gv-pop-pro { left: 14px; } .gv-pop-con { right: 14px; }
+.gv-pop.go { animation: gvPop 1s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes gvPop { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: 1; transform: translateY(-4px) scale(1.25); } 100% { opacity: 0; transform: translateY(-24px) scale(1); } }
+
+/* 방금 움직인 바 튐 */
+.gv-bar.gv-bump { animation: gvBump .5s ease; }
+@keyframes gvBump { 0%,100% { transform: scaleY(1); } 35% { transform: scaleY(1.22); } }
+
+/* 스탯(명) */
+.gv-stats { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; font-size: 12px; font-weight: 700; }
+.gv-side { display: inline-flex; align-items: baseline; gap: 2px; }
+.gv-side-pro { color: #7f9bff; } .gv-side-con { color: #ff7f9c; }
+.gv-side b { font-size: 15px; font-weight: 900; }
+.gv-total { color: #8a90a0; font-weight: 700; }
+.gv-total b { color: #cfd4de; font-weight: 900; }
+
+/* 카운트업 숫자 강조 순간 */
+.gv-tick { animation: gvTick .5s ease; }
+@keyframes gvTick { 0% { transform: scale(1); } 40% { transform: scale(1.35); filter: brightness(1.5); } 100% { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .gv-fill, .gv-needle { transition: none; }
+  .gv-sheen, .gv-pop.go, .gv-bar.gv-bump, .gv-tick { animation: none !important; }
+}
+
+/* ── 쇼츠(릴스) 오버레이 맥락: 어두운 영상 위, 세로 스택 + 대비 강화 ── */
+.shorts-vote.gv { display: block !important; padding: 12px 12px 14px; border-radius: 16px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.55)); }
+.shorts-vote .gv-btns { margin-bottom: 9px; }
+.shorts-vote .gv-bar { background: rgba(255,255,255,.16); height: 26px; }
+.shorts-vote .gv-btn { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); background: rgba(10,12,20,.5); padding: 11px 8px; }
+.shorts-vote .gv-stats { margin-top: 7px; }
+.shorts-vote .gv-total { color: #c9cede; }

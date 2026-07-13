@@ -217,19 +217,7 @@ function renderCard(data) {
             <div class="card-title">${data.title}</div>
             ${data.oneLine ? `<div class="card-desc">${data.oneLine}</div>` : ''}
 
-            <div class="faction-btns">
-                <button class="faction-btn faction-btn-a vote-btn" data-type="pro">👍 ${factionA}</button>
-                <button class="faction-btn faction-btn-b vote-btn" data-type="con">👎 ${factionB}</button>
-            </div>
-
-            <div class="vote-bar">
-                <div class="vote-pro" style="width:${proPct}%"></div>
-                <div class="vote-con" style="width:${conPct}%"></div>
-            </div>
-            <div class="vote-stats">
-                <span>${proPct}% · ${data.pro}명</span>
-                <span>${conPct}% · ${data.con}명</span>
-            </div>
+            <div class="gv">${window.GALLA_VoteBar ? window.GALLA_VoteBar.html({ factionA, factionB, pro: data.pro, con: data.con, proClass: 'vote-btn', conClass: 'vote-btn', proAttr: 'data-type="pro"', conAttr: 'data-type="con"' }) : ''}</div>
 
             <div class="war-dashboard goto-comments">
                 <div class="war-title">⚔ 전황표</div>
@@ -311,13 +299,8 @@ window.openReels = function (startId) {
  * 투표 UI
  * =========================== */
 async function applyVoteUI(cardEl, stance) {
-    const btnA = cardEl.querySelector('.faction-btn-a');
-    const btnB = cardEl.querySelector('.faction-btn-b');
-    if (!btnA || !btnB) return;
-    if (stance === 'pro') btnA.classList.add('voted');
-    else if (stance === 'con') btnB.classList.add('voted');
-    btnA.classList.add('disabled');
-    btnB.classList.add('disabled');
+    const gv = cardEl.querySelector('.gv');
+    if (gv && window.GALLA_VoteBar) window.GALLA_VoteBar.setMine(gv, stance);
 }
 
 async function waitForSessionReady(timeout = 2500) {
@@ -459,7 +442,13 @@ function attachEvents() {
             const card = btn.closest('.card');
             const id = Number(card.dataset.id);
             if (typeof window.GALLA_VOTE !== 'function') return;
-            await window.GALLA_VOTE(id, type);
+            const stance = await window.GALLA_VOTE(id, type);
+            // 투표 반영 — 바/명수 재조회 후 동적 애니메이션
+            const gv = card.querySelector('.gv');
+            if (gv && window.GALLA_VoteBar && typeof window.GALLA_GET_VOTE_STATS === 'function') {
+                const s = await window.GALLA_GET_VOTE_STATS(id);
+                if (s) window.GALLA_VoteBar.update(gv, s, { voted: stance || type, myStance: stance || type, animate: true });
+            }
         };
     });
 
