@@ -29,7 +29,9 @@ const SOURCES: Src[] = [
   { name: "pann",       url: "https://m.pann.nate.com/talk/ranking",                       re: /\/talk\/\d{5,}/,                                  base: "https://m.pann.nate.com" },
   { name: "instiz",     url: "https://www.instiz.net/pt",                                  re: /\/pt\/\d{5,}/,                                    base: "https://www.instiz.net" },
   { name: "82cook",     url: "https://www.82cook.com/entiz/enti.php?bn=15",                re: /\/entiz\/read\.php\?num=\d+/,                     base: "https://www.82cook.com", ua: "pc" },
-  // 제외: fmkorea(보안차단430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금)·etoland(JS SPA)·humoruniv(글페이지차단) = 서버수집 불가
+  { name: "damoang",    url: "https://damoang.net/",                                       re: /^\/[a-z]+\/\d{5,}/,                               base: "https://damoang.net", ua: "pc" },
+  // 제외: fmkorea(보안차단430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금)·etoland(JS SPA)·humoruniv(글페이지차단)·slrclub(데이터센터차단) = 서버수집 불가
+  //       ppomppu·bobaedream·todayhumor·gasengi·hygall·orbi = 모바일링크/구조 문제
   //       ppomppu(모바일 클릭시 빈페이지)·bobaedream(best링크 순환만료)·todayhumor(모바일 링크 문제) = 모바일 링크 신뢰성 미달
 ];
 
@@ -77,8 +79,9 @@ function pageTitle(html: string): string {
   let t = decodeEntities(og?.[1] || html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "").replace(/\s+/g, " ").trim();
   // 마지막 구분자(- | :) 뒤 조각이 사이트/보드명 토큰을 포함하면 꼬리로 보고 제거
   //  예) "제목 - 실시간 베스트 갤러리", "제목 - 베스트 라이브", "제목 | 네이트 판", "제목 : MLBPARK", "제목 - OO 채널"
-  const SUFFIX = /\s*[-|:｜–]\s*[^-|:｜–]*(갤러리|채널|라이브|웹진|인벤|MLBPARK|네이트|인스티즈|보배드림|82cook|오늘의유머|웃긴대학|명조|디시인사이드|루리웹|아카라이브|에펨코리아)[^-|:｜–]*$/i;
-  if (SUFFIX.test(t)) t = t.replace(SUFFIX, "").trim();
+  const SUFFIX = /\s*[-|:｜–]\s*[^-|:｜–]*(갤러리|채널|라이브|웹진|인벤|MLBPARK|네이트|인스티즈|보배드림|82cook|오늘의유머|웃긴대학|명조|디시인사이드|루리웹|아카라이브|에펨코리아|SLR클럽|다모앙|damoang|자유게시판|게시판)[^-|:｜–]*$/i;
+  // 다모앙 "제목 - 자유게시판 | 다모앙…"처럼 꼬리가 2단이면 2회까지 제거
+  for (let i = 0; i < 2 && SUFFIX.test(t); i++) t = t.replace(SUFFIX, "").trim();
   return cleanTitle(t);
 }
 
