@@ -45,6 +45,10 @@
     tg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M21.9 4.3 2.9 11.6c-1.1.4-1 1 0 1.3l4.9 1.5 1.8 5.9c.2.6.1.9.8.9.5 0 .7-.2 1-.5l2.4-2.3 5 3.7c.9.5 1.6.3 1.8-.9L23.8 5.4c.3-1.4-.5-2-1.9-1.1z"/></svg>',
     link: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
     more: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><path d="M8 11l8-5M8 13l8 5"/></svg>',
+    threads: '<svg viewBox="0 0 192 192" fill="#fff"><path d="M141.5 89c-.7-.3-1.4-.6-2.1-.9-1.2-22.7-13.6-35.7-34.5-35.9-11.7-.1-21.9 4.8-28.2 14.8l11.3 7.8c4.6-7 11.9-8.5 16.9-8.5 6.6.1 11.6 2 14.8 5.7 2.3 2.7 3.9 6.5 4.7 11.2-6-1-12.5-1.3-19.4-.9-19.5 1.1-32 12.5-31.2 28.3.4 8 4.4 14.9 11.2 19.4 5.7 3.8 13.1 5.7 20.8 5.3 10.1-.6 18-4.4 23.6-11.5 4.2-5.3 6.9-12.2 8.1-20.9 4.9 3 8.5 6.9 10.5 11.6 3.4 8 3.6 21.1-7 31.7-9.3 9.3-20.5 13.3-37.4 13.4-18.7-.1-32.9-6.1-42.1-17.8-8.6-11-13.1-26.8-13.3-47s4.7-36 13.3-47c9.2-11.7 23.4-17.7 42.1-17.8 18.8.1 33.3 6.1 42.8 17.9 4.7 5.8 8.2 13.1 10.5 21.6l13.2-3.5c-2.8-10.5-7.2-19.6-13.2-27C155.6 8.2 137.4.2 113.6 0h-.1C89.8.2 71.8 8.2 60.3 23.8 50 37.9 44.7 57.4 44.5 82v.1c.2 24.6 5.5 44.1 15.8 58.2 11.5 15.6 29.5 23.6 53.3 23.8h.1c21.2-.1 36.1-5.7 48.4-18 16.1-16.1 15.6-36.3 10.3-48.7-3.8-8.9-11-16.1-20.9-20.4zm-38.5 41c-8.5.5-17.4-3.3-17.8-11.3-.3-5.9 4.2-12.5 18.3-13.3 1.6-.1 3.2-.1 4.7-.1 5.1 0 9.9.5 14.3 1.5-1.6 20.5-11.3 22.9-19.5 23.2z"/></svg>',
+    insta: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5.5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.1" fill="#fff" stroke="none"/></svg>',
+    whatsapp: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.6-.8-2.6-1.4-3.7-3.2-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5-.1-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1.1 2.8 1.2 3c.1.2 2.1 3.2 5 4.5 1.8.8 2.5.8 3.4.7.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-2.9.9.9-2.8-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>',
+    email: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   };
 
   window.GALLA_share = function (cfg) {
@@ -66,6 +70,10 @@
       { k: "x", label: "X", bg: "#000", fn: () => open(`https://twitter.com/intent/tweet?text=${et}&url=${eu}`) },
       { k: "fb", label: "페이스북", bg: "#1877F2", fn: () => open(`https://www.facebook.com/sharer/sharer.php?u=${eu}`) },
       { k: "tg", label: "텔레그램", bg: "#2AABEE", fn: () => open(`https://t.me/share/url?url=${eu}&text=${et}`) },
+      { k: "threads", label: "쓰레드", bg: "#000", fn: () => open(`https://www.threads.net/intent/post?text=${encodeURIComponent((text || title) + " " + url)}`) },
+      { k: "insta", label: "인스타그램", bg: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)", fn: () => { copyLink(url); toast("링크 복사됨 · 인스타 스토리/DM에 붙여넣기"); } },
+      { k: "whatsapp", label: "왓츠앱", bg: "#25D366", fn: () => open(`https://wa.me/?text=${encodeURIComponent((text || title) + " " + url)}`) },
+      { k: "email", label: "이메일", bg: "#5a6472", fn: () => { location.href = `mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent((text ? text + "\n\n" : "") + url)}`; } },
       { k: "link", label: "링크 복사", bg: "#2a2c33", fn: () => copyLink(url) },
     ];
     if (navigator.share) items.push({ k: "more", label: "더보기", bg: "#2a2c33", fn: async () => { try { await navigator.share({ title, text, url }); } catch (_) {} } });
