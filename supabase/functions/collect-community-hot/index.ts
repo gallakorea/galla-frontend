@@ -30,10 +30,10 @@ const SOURCES: Src[] = [
   { name: "pann",       url: "https://m.pann.nate.com/talk/ranking",                       re: /\/talk\/\d{5,}/,                                  base: "https://m.pann.nate.com" },
   { name: "instiz",     url: "https://www.instiz.net/pt",                                  re: /\/pt\/\d{5,}/,                                    base: "https://www.instiz.net" },
   { name: "bobaedream", url: "https://www.bobaedream.co.kr/list?code=best",               re: /\/view\?code=best&No=\d+/,                        base: "https://www.bobaedream.co.kr", ua: "pc" },
-  { name: "humoruniv",  url: "https://web.humoruniv.com/board/humor/list.html?table=pds", re: /read\.html\?[^"'#]*number=\d+/,                   base: "https://web.humoruniv.com/board/humor/" },
   { name: "todayhumor", url: "https://m.todayhumor.co.kr/list.php?table=bestofbest",       re: /view\.php\?table=bestofbest&no=\d+/,              base: "https://m.todayhumor.co.kr/" },
   { name: "82cook",     url: "https://www.82cook.com/entiz/enti.php?bn=15",                re: /\/entiz\/read\.php\?num=\d+/,                     base: "https://www.82cook.com", ua: "pc" },
-  // 서버수집 불가(데이터센터 IP 안티봇/피드잠금)로 제외: fmkorea(보안차단 430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금+차단)·etoland(JS SPA)
+  // 서버수집 불가(데이터센터 IP 안티봇/피드잠금/글읽기차단)로 제외:
+  // fmkorea(보안차단 430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금)·etoland(JS SPA)·humoruniv(글페이지 차단)
 ];
 
 // 실제 브라우저처럼 보이는 헤더 (쿠키 없는 첫 요청을 막는 사이트 대응)
@@ -56,35 +56,76 @@ function jar(res: Response): string {
   return list.map((c) => c.split(";")[0]).filter(Boolean).join("; ");
 }
 
+// 인코딩 자동감지 fetch (한국 커뮤 상당수가 euc-kr/cp949 → UTF-8로 읽으면 모지바케)
+async function fetchDecoded(url: string, ua: string, referer: string, cookie?: string): Promise<string | null> {
+  const r = await fetch(url, { headers: browserHeaders(ua, referer, cookie), redirect: "follow", signal: AbortSignal.timeout(9000) });
+  if (!r.ok) return null;
+  const buf = new Uint8Array(await r.arrayBuffer());
+  let cs = (r.headers.get("content-type") || "").match(/charset=["']?([\w-]+)/i)?.[1]?.toLowerCase() || "";
+  if (!cs) cs = new TextDecoder("latin1").decode(buf.slice(0, 3072)).match(/charset=["']?([\w-]+)/i)?.[1]?.toLowerCase() || "";
+  if (["euc-kr", "ks_c_5601-1987", "ksc5601", "cp949", "x-windows-949"].includes(cs)) cs = "euc-kr";
+  try { return new TextDecoder(cs || "utf-8").decode(buf); } catch { return new TextDecoder("utf-8").decode(buf); }
+}
+
+function decodeEntities(s: string) {
+  return s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+    .replace(/&#0?39;/g, "'").replace(/&#x27;/gi, "'").replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(+d)).replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)));
+}
+
+// 글 페이지에서 진짜 제목 = og:title 우선(없으면 <title>), 사이트명 꼬리 제거
+function pageTitle(html: string): string {
+  const og = html.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']*)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']*)["'][^>]*property=["']og:title["']/i);
+  let t = decodeEntities(og?.[1] || html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "").replace(/\s+/g, " ").trim();
+  // 마지막 구분자(- | :) 뒤 조각이 사이트/보드명 토큰을 포함하면 꼬리로 보고 제거
+  //  예) "제목 - 실시간 베스트 갤러리", "제목 - 베스트 라이브", "제목 | 네이트 판", "제목 : MLBPARK", "제목 - OO 채널"
+  const SUFFIX = /\s*[-|:｜–]\s*[^-|:｜–]*(갤러리|채널|라이브|웹진|인벤|MLBPARK|네이트|인스티즈|보배드림|82cook|오늘의유머|웃긴대학|명조|디시인사이드|루리웹|아카라이브|에펨코리아)[^-|:｜–]*$/i;
+  if (SUFFIX.test(t)) t = t.replace(SUFFIX, "").trim();
+  return cleanTitle(t);
+}
+
 async function collectOne(src: Src) {
   const out: any[] = [];
   try {
     const ua = src.ua === "pc" ? UA_PC : UA;
-    // 워밍업: 홈 GET → 세션쿠키 확보 (theqoo/fmkorea/clien 등 쿠키 선요구 대응)
+    // 워밍업: 홈 GET → 세션쿠키 확보
     let cookie = "";
     if (src.warm) {
       try {
         const w = await fetch(src.warm, { headers: browserHeaders(ua, src.base + "/"), redirect: "follow", signal: AbortSignal.timeout(8000) });
-        cookie = jar(w);
-        await w.body?.cancel();
+        cookie = jar(w); await w.body?.cancel();
       } catch (_) {}
     }
-    const r = await fetch(src.url, { headers: browserHeaders(ua, src.warm || (src.base + "/"), cookie), redirect: "follow", signal: AbortSignal.timeout(9000) });
-    if (!r.ok) return out;
-    const doc = new DOMParser().parseFromString(await r.text(), "text/html");
+    // 1) 목록에서 후보 URL만 추출(앵커 텍스트는 신뢰 안 함 — 순위번호/날짜/접두어/깨진인코딩 섞임)
+    const listHtml = await fetchDecoded(src.url, ua, src.warm || (src.base + "/"), cookie);
+    if (!listHtml) return out;
+    const doc = new DOMParser().parseFromString(listHtml, "text/html");
     if (!doc) return out;
-    const seen = new Set<string>();
+    const urls: string[] = []; const seenU = new Set<string>();
+    const baseNoSlash = src.base.replace(/\/+$/, "");
     doc.querySelectorAll("a").forEach((a: any) => {
       const href = a.getAttribute("href") || "";
       if (!src.re.test(href)) return;
-      const title = cleanTitle(a.textContent || "");
-      if (title.length < 6 || title.length > 120) return;
-      const key = titleKey(title); if (!key || seen.has(key)) return; seen.add(key);
-      const url = href.startsWith("http") ? href : src.base + (href.startsWith("/") ? href : "/" + href);
-      out.push({ source: src.name, src_title: title, src_url: url, title_key: key, thumb: null, score: 0 });
+      let url = href.startsWith("http") ? href : baseNoSlash + (href.startsWith("/") ? href : "/" + href);
+      url = url.replace(/(https?:\/\/)|\/{2,}/g, (m, p) => p ? p : "/"); // protocol 제외 // → /
+      if (seenU.has(url)) return; seenU.add(url);
+      urls.push(url);
     });
+    // 2) 상위 6개 글 페이지를 순차로 열어 og:title(정확한 제목) 확보 + 생존검증
+    //    (순차 = 사이트 스로틀/봇차단 회피). 삭제글은 og:title이 사이트명뿐이라 꼬리제거 후 빈값 → 버림.
+    for (const url of urls.slice(0, 6)) {
+      try {
+        const html = await fetchDecoded(url, ua, src.url, cookie);
+        if (!html) continue;
+        const t = pageTitle(html);
+        if (!t || t.length < 6 || t.length > 120) continue;  // 제목 못 얻음/삭제 → 버림
+        const key = titleKey(t); if (!key) continue;
+        out.push({ source: src.name, src_title: t, src_url: url, title_key: key, thumb: null, score: 0 });
+      } catch (_) {}
+    }
   } catch (_) {}
-  return out.slice(0, 12);  // 소스당 최대 12
+  return out;
 }
 
 Deno.serve(async (req) => {
