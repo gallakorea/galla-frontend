@@ -58,8 +58,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // 이 페이지가 '탭 자기 자신'(탭 루트)인지 판별.
     // 상세/설정 페이지(plaza_detail·predict-market·settings·mypage 하위 등)는 nav 하이라이트용으로
     // data-page를 탭 이름과 공유하지만 파일은 다르다 → 탭 좌우전환 대신 '직전 페이지(뒤로가기)'로.
-    const curFile = (location.pathname.split("/").pop() || "index.html").toLowerCase();
-    const isTabRoot = curIdx !== -1 && (PAGE_URL[currentPage] || "").toLowerCase() === curFile;
+    // ⚠️ Cloudflare Pages는 확장자 없는 clean URL(/galla-predict, /search)로 서빙 →
+    //    .html 유무를 무시하고 비교해야 탭 루트 판별이 맞음(안 그러면 index 빼고 전부 오판).
+    const norm = (s) => (s || "").toLowerCase().replace(/\.html$/, "");
+    const curFile = norm(location.pathname.split("/").pop() || "index.html");
+    const isTabRoot = curIdx !== -1 && norm(PAGE_URL[currentPage]) === curFile;
 
     if (!isTabRoot) {
       // 왼→오 스와이프 = 뒤로가기 (수평 의도 확정 시에만, 세로 스크롤/가로스크롤/모달 보호)
