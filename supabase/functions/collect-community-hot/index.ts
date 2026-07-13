@@ -29,9 +29,9 @@ const SOURCES: Src[] = [
   { name: "pann",       url: "https://m.pann.nate.com/talk/ranking",                       re: /\/talk\/\d{5,}/,                                  base: "https://m.pann.nate.com" },
   { name: "instiz",     url: "https://www.instiz.net/pt",                                  re: /\/pt\/\d{5,}/,                                    base: "https://www.instiz.net" },
   { name: "82cook",     url: "https://www.82cook.com/entiz/enti.php?bn=15",                re: /\/entiz\/read\.php\?num=\d+/,                     base: "https://www.82cook.com", ua: "pc" },
-  { name: "damoang",    url: "https://damoang.net/",                                       re: /^\/[a-z]+\/\d{5,}/,                               base: "https://damoang.net", ua: "pc" },
   // 제외: fmkorea(보안차단430)·theqoo(피드잠금)·clien(빈스텁)·dogdrip(RSS잠금)·etoland(JS SPA)·humoruniv(글페이지차단)·slrclub(데이터센터차단) = 서버수집 불가
   //       ppomppu·bobaedream·todayhumor·gasengi·hygall·orbi = 모바일링크/구조 문제
+  //       damoang = 기술상 정상이나 자유게시판 정치색 과다로 제외(사용자 결정)
   //       ppomppu(모바일 클릭시 빈페이지)·bobaedream(best링크 순환만료)·todayhumor(모바일 링크 문제) = 모바일 링크 신뢰성 미달
 ];
 
