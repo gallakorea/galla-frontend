@@ -69,20 +69,18 @@ async function vote(issueId, type) {
     return null;
   }
 
-  const { error } = await supabase.from("votes").insert({
+  // upsert: 첫 투표=삽입, 다른 진영 재투표=갱신(전환). (issue_id,user_id) 유니크 기준.
+  // insert만 하면 재투표가 23505로 막혀 진영 전환 시 바가 안 움직였음.
+  const { error } = await supabase.from("votes").upsert({
     issue_id: issueId,
     user_id: session.user.id,
     type
-  });
+  }, { onConflict: "issue_id,user_id" });
 
   votingInProgress = false;
 
-  // 이미 투표한 경우
   if (error) {
-    if (error.code === "23505" || error.status === 409) {
-      return await getMyVote(issueId);
-    }
-    console.error("[VOTE] insert error", error);
+    console.error("[VOTE] upsert error", error);
     return null;
   }
 
