@@ -88,3 +88,20 @@ body::before {
 
 /* GP 잔액/뱃지 — 샴페인 텍스트만(면적 골드 축소) */
 .shop-bal { background: rgba(231,205,143,.08) !important; border-color: rgba(231,205,143,.22) !important; color: var(--gp) !important; }
+
+/* ===== 투표(진영 선택) 톤다운 통일 — 채도·명도↓ 프리미엄 (배틀 .bm-* 제외) ===== */
+:root { --pro-solid: #3a54ad; --con-solid: #b04a60; }
+.vote-pro,
+.vote-section .vote-pro,
+.stats-section .vote-pro { background: var(--pro-solid) !important; }
+.vote-con,
+.vote-section .vote-con,
+.stats-section .vote-con { background: var(--con-solid) !important; }
+.vote-bar, .vote-section .vote-bar, .stats-section .vote-bar { background: #191a20 !important; }
+
+/* 투표 버튼 — 미투표(은은) / 투표(톤다운 채움) */
+.faction-btn-a { background: #0e1320 !important; color: #93a6cf !important; border: 1px solid #232f52 !important; }
+.faction-btn-b { background: #17101300 !important; color: #cf99a4 !important; border: 1px solid #472b33 !important; }
+.faction-btn-b { background: #170f12 !important; }
+.faction-btn-a.voted { background: var(--pro-solid) !important; border-color: var(--pro-solid) !important; color: #fff !important; }
+.faction-btn-b.voted { background: var(--con-solid) !important; border-color: var(--con-solid) !important; color: #fff !important; }
