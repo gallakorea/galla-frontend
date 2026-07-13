@@ -37,7 +37,7 @@ export async function loadAiArguments(issue) {
   }
 
   /* 3️⃣ DOM 렌더 */
-  renderArguments(pro, con);
+  renderArguments(pro, con, issue);
 }
 
 /* ==========================================================================
@@ -87,19 +87,26 @@ async function waitForArguments(issueId, retry = 10) {
 /* ==========================================================================
    Render
 ========================================================================== */
-function renderArguments(pro, con) {
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function renderArguments(pro, con, issue) {
   const wrap = document.getElementById("ai-argument-card");
   if (!wrap) return;
 
-const proEl = document.getElementById("ai-argument-pro-line");
-const conEl = document.getElementById("ai-argument-con-line");
+  const aName = esc(issue?.faction_a || "찬성");
+  const bName = esc(issue?.faction_b || "반대");
+
+  const proEl = document.getElementById("ai-argument-pro-line");
+  const conEl = document.getElementById("ai-argument-con-line");
 
   if (proEl) {
-    proEl.innerHTML = `<p>${pro.title}</p>`;
+    proEl.innerHTML = `<span class="arg-label">👍 ${aName} 측 논점</span><p>${esc(pro.title)}</p>`;
   }
-
   if (conEl) {
-    conEl.innerHTML = `<p>${con.title}</p>`;
+    conEl.innerHTML = `<span class="arg-label">👎 ${bName} 측 논점</span><p>${esc(con.title)}</p>`;
   }
 
   wrap.removeAttribute("hidden");

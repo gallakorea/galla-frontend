@@ -1766,7 +1766,7 @@ body {
   border: 1px solid var(--line-1, rgba(255,255,255,.07));
 }
 .argument p { margin: 0; }
-.argument::before {
+.arg-label {
   display: block; font-size: 11px; font-weight: 800;
   letter-spacing: .2px; margin-bottom: 6px;
 }
@@ -1780,14 +1780,14 @@ body {
   background: linear-gradient(180deg, rgba(58,84,173,.14), rgba(58,84,173,.03));
   border-color: rgba(58,84,173,.4);
 }
-.argument.pro::before { content: "👍 찬성 측 논점"; color: #8ba6ff; }
+.argument.pro .arg-label { color: #8ba6ff; }
 
 .argument.con {
   color: #e7ebf3;
   background: linear-gradient(180deg, rgba(176,74,96,.14), rgba(176,74,96,.03));
   border-color: rgba(176,74,96,.4);
 }
-.argument.con::before { content: "👎 반대 측 논점"; color: #e78d9c; }
+.argument.con .arg-label { color: #e78d9c; }
 .argument.pro p, .argument.con p { color: #e7ebf3; }
 
 .ai-news-placeholder {
