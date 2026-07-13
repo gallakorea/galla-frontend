@@ -99,10 +99,15 @@ body::before {
 .stats-section .vote-con { background: var(--con-solid) !important; }
 .vote-bar, .vote-section .vote-bar, .stats-section .vote-bar { background: #191a20 !important; }
 
-/* 투표 버튼 — 미투표(은은) / 투표(톤다운 채움) */
-.faction-btn-a { background: #0e1320 !important; color: #93a6cf !important; border: 1px solid #232f52 !important; }
-.faction-btn-b { background: #17101300 !important; color: #cf99a4 !important; border: 1px solid #472b33 !important; }
-.faction-btn-b { background: #170f12 !important; }
+/* 투표 버튼 — 미투표(진영 틴트로 톤업) / 투표(채움) */
+.faction-btn-a {
+  background: linear-gradient(180deg, rgba(58,84,173,.26), rgba(58,84,173,.12)) !important;
+  color: #c4d2f7 !important; border: 1px solid rgba(96,124,220,.55) !important;
+}
+.faction-btn-b {
+  background: linear-gradient(180deg, rgba(176,74,96,.26), rgba(176,74,96,.12)) !important;
+  color: #f4c2cc !important; border: 1px solid rgba(210,105,128,.55) !important;
+}
 .faction-btn-a.voted { background: var(--pro-solid) !important; border-color: var(--pro-solid) !important; color: #fff !important; }
 .faction-btn-b.voted { background: var(--con-solid) !important; border-color: var(--con-solid) !important; color: #fff !important; }
 
