@@ -712,4 +712,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.disabled = false;
     }
   });
+
+  // 공유 — 인덱스와 동일: /share/plaza/<id> OG URL + 공용 공유 시트(배너 미리보기)
+  document.querySelector(".share-btn")?.addEventListener("click", () => {
+    const url = window.GALLA_shareUrl ? window.GALLA_shareUrl("plaza", postId) : location.href;
+    const title = postTitleEl && postTitleEl.textContent ? `💬 ${postTitleEl.textContent}` : "GALLA 광장";
+    if (window.GALLA_share) return window.GALLA_share({ url, title, text: "갈라 광장에서 지금 뜨거운 이야기" });
+    if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
+    navigator.clipboard?.writeText(url).then(() => alert("링크가 복사되었습니다."));
+  });
 })();

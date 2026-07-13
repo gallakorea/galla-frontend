@@ -58,9 +58,12 @@ document.addEventListener('click', async e => {
 /* 마켓 공유 (위임) */
 document.addEventListener('click', async e => {
   if (!e.target.closest('#pmdShareBtn')) return;
-  const url = new URL(`predict-market.html?id=${marketId}`, location.href).href;
+  // 인덱스와 동일: /share/<type>/<id> OG URL + 공용 공유 시트
+  const url = window.GALLA_shareUrl ? window.GALLA_shareUrl('predict', marketId) : new URL(`predict-market.html?id=${marketId}`, location.href).href;
+  const title = MARKET?.question ? `🔮 ${MARKET.question}` : 'GALLA 갈라예측';
+  if (window.GALLA_share) return window.GALLA_share({ url, title, text: '당신의 예측은? 포인트로 겨루는 갈라예측' });
   if (navigator.share) {
-    try { await navigator.share({ title: MARKET?.question || 'GALLA', url }); return; }
+    try { await navigator.share({ title, url }); return; }
     catch (err) { if (err.name === 'AbortError') return; }
   }
   try { await navigator.clipboard.writeText(url); toast('링크가 복사되었습니다.'); }

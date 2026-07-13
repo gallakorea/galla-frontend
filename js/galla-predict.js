@@ -296,8 +296,10 @@ function bindMarketActions(wrap) {
 
       if (act === 'share') {
         const url = window.GALLA_shareUrl ? window.GALLA_shareUrl('predict', id) : new URL(`predict-market.html?id=${id}`, location.href).href;
+        const stitle = btn.dataset.title ? `🔮 ${btn.dataset.title}` : 'GALLA 갈라예측';
+        if (window.GALLA_share) return window.GALLA_share({ url, title: stitle, text: '당신의 예측은? 포인트로 겨루는 갈라예측' });
         if (navigator.share) {
-          try { await navigator.share({ title: btn.dataset.title ? `🔮 ${btn.dataset.title}` : 'GALLA 갈라예측', text: '당신의 예측은? 포인트로 겨루는 갈라예측', url }); return; }
+          try { await navigator.share({ title: stitle, text: '당신의 예측은? 포인트로 겨루는 갈라예측', url }); return; }
           catch (err) { if (err.name === 'AbortError') return; }
         }
         try { await navigator.clipboard.writeText(url); toast('링크가 복사되었습니다.'); }
