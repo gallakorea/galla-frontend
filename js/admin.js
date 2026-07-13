@@ -49,7 +49,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
 
   // ─────────── 대시보드 ───────────
@@ -157,6 +157,37 @@
       const note = act === "approve" ? prompt("채택 메모(선택)") : prompt("반려 사유(선택)");
       const r = await rpc("admin_review_tip", { p_id: id, p_action: act, p_note: note || null });
       if (r?.ok) { toast(act === "approve" ? "채택 · +2,000GP 지급" : "반려 처리"); renderTips(); } else alert("처리 실패");
+    };
+  }
+
+  // ─────────── 버그 신고 ───────────
+  let bugFilter = "new";
+  async function renderBugs() {
+    main().innerHTML = `<h1 class="ad-h1">🐞 버그 신고</h1>
+      <div class="ad-segs" id="bg-filter" style="margin-bottom:14px">${[["new", "🆕 새 신고"], ["reviewing", "🔧 확인중"], ["resolved", "✅ 해결"], ["wontfix", "🚫 보류"], ["", "전체"]].map(([k, l]) => `<button data-v="${k}" class="${bugFilter === k ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div id="bg-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    $("#bg-filter").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; bugFilter = b.dataset.v; renderBugs(); };
+    const d = await rpc("admin_bug_reports", { p_status: bugFilter || null, p_limit: 150 });
+    const rows = d?.rows || [];
+    const stmap = { new: "새 신고", reviewing: "확인중", resolved: "해결", wontfix: "보류" };
+    $("#bg-list").innerHTML = rows.length ? rows.map(b => `<div class="ad-tip" data-id="${b.id}">
+        <div class="ad-tip-h"><span class="ad-tag st-${b.status === "resolved" ? "done" : b.status === "new" ? "open" : "pending"}">${stmap[b.status] || b.status}</span>
+          <span class="ad-tk-m">${esc(b.reporter || "익명")} · ${ago(b.created_at)} · ${esc(b.viewport || "")} · v${esc(b.app_version || "-")}</span></div>
+        <div class="ad-tip-b" style="white-space:pre-wrap">${esc(b.message)}</div>
+        <div class="ad-tk-m" style="margin-top:6px">📍 ${esc(b.page_url || "-")}</div>
+        <div class="ad-tk-m" style="opacity:.6;font-size:11px">${esc(b.user_agent || "")}</div>
+        ${b.admin_note ? `<div class="ad-tk-r">↳ ${esc(b.admin_note)}</div>` : ""}
+        <div class="ad-tip-acts" style="margin-top:8px">
+          <button class="ad-btn" data-act="reviewing">🔧 확인중</button>
+          <button class="ad-btn primary" data-act="resolved">✅ 해결</button>
+          <button class="ad-btn danger" data-act="wontfix">🚫 보류</button></div>
+      </div>`).join("") : `<div class="ad-soon">해당 상태의 버그 신고가 없어요.</div>`;
+    $("#bg-list").onclick = async e => {
+      const btn = e.target.closest("[data-act]"); if (!btn) return;
+      const id = Number(btn.closest(".ad-tip").dataset.id); const st = btn.dataset.act;
+      const note = (st === "resolved" || st === "wontfix") ? prompt("메모(선택)") : null;
+      const r = await rpc("admin_resolve_bug", { p_id: id, p_status: st, p_note: note || null });
+      if (r?.ok) { toast("상태 변경: " + (stmap[st] || st)); renderBugs(); } else alert("처리 실패");
     };
   }
 
