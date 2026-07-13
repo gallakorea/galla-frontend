@@ -1,0 +1,90 @@
+/* ============================================================
+   GALLA THEME — 전 페이지 톤앤매너 통일 최상위 레이어
+   모든 페이지 CSS "뒤에" 로드되어 색·배경·버튼을 통일한다.
+   원칙: 프리미엄 다크(순흑 배경) · 단일 인디고 액센트 · 골드 버튼 금지
+   배틀 댓글 시스템(.bm-*, .army-*, 전장 HUD)은 정체성 유지 위해 건드리지 않음.
+   ============================================================ */
+:root {
+  /* 배경 계층 */
+  --bg: #000;
+  --surface-1: #0c0d11;
+  --surface-2: #14151a;
+  --surface-3: #1c1e26;
+  /* 선/구분 */
+  --line-1: rgba(255,255,255,.07);
+  --line-2: rgba(255,255,255,.12);
+  /* 텍스트 */
+  --text-hi: #f3f4f6;
+  --text-mid: #a4abb8;
+  --text-low: #6b7280;
+  /* 브랜드 액센트 (단일 인디고) */
+  --accent: #4361ff;
+  --accent-2: #6f86ff;
+  --accent-grad: linear-gradient(135deg, #6a7bff 0%, #3a5bff 100%);
+  --accent-glow: 0 6px 22px rgba(67,97,255,.32);
+  /* 진영 (배틀 정체성, 고급 톤) */
+  --pro: #4d8dff;
+  --con: #ff5a6e;
+  /* 상태 */
+  --ok: #2fd07a;
+  --danger: #ff4d67;
+  /* GP 화폐 — 순화된 샴페인(텍스트 전용, 버튼 금지) */
+  --gp: #e7cd8f;
+  /* 반경 */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+}
+
+/* ===== 순흑 배경 통일 (아이폰 status bar/safe-area와 일치) ===== */
+html { background: #000 !important; }
+body {
+  background: #000 !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* radial/그라디언트 배경 오버라이드로 생기던 헤더-본문 색 이질감 제거 */
+
+/* 안전영역 상단이 항상 검정으로 채워지도록 (노치/상태바 밀림 방지) */
+body::before {
+  content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
+  background: #000; z-index: 2147483000; pointer-events: none;
+}
+
+/* ===== 골드 버튼 전면 폐지 → 세련된 인디고 액센트 =====
+   (배틀 코어 아님. CTA/락/탭/일기토 버튼 통일) */
+.rp-submit,
+.fac-s-btn,
+.tt-btn.on,
+.emo-lock button,
+.gif-lock button,
+.c-duel,
+.si-buy:not(.no):not(.owned) {
+  background: var(--accent-grad) !important;
+  color: #fff !important;
+  box-shadow: var(--accent-glow) !important;
+}
+.c-duel { box-shadow: 0 0 16px rgba(67,97,255,.45) !important; }
+@keyframes cDuelPulse { 50% { box-shadow: 0 0 24px rgba(67,97,255,.7) !important; transform: translateY(-1px); } }
+
+/* 상점 충전 버튼도 동일 액센트 (이미 파랑이지만 톤 통일) */
+.shop-charge { background: var(--accent-grad) !important; }
+
+/* ===== 스크롤바/선택 — 프리미엄 디테일 ===== */
+::selection { background: rgba(67,97,255,.35); color: #fff; }
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.14) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: rgba(255,255,255,.13); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+
+/* ===== 큰 골드 배너 → 프리미엄 뉴트럴 (배틀 골드유닛·GP 배지는 유지) ===== */
+.rp-reward {
+  background: linear-gradient(135deg, rgba(67,97,255,.10), rgba(255,255,255,.02)) !important;
+  border-color: var(--line-2) !important;
+}
+.rp-reward-tx { color: var(--text-hi) !important; }
+.rp-reward-tx b { color: var(--gp) !important; }
+.rp-reward-tx small { color: var(--text-mid) !important; }
+
+/* GP 잔액/뱃지 — 샴페인 텍스트만(면적 골드 축소) */
+.shop-bal { background: rgba(231,205,143,.08) !important; border-color: rgba(231,205,143,.22) !important; color: var(--gp) !important; }
