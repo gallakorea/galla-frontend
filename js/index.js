@@ -14,10 +14,16 @@ let bestList, recommendList, bestMore;
 /* 피드 영상 소리 — 전역 사운드 선호(media-sound.js) 사용. 인덱스·릴스·이슈 통일 */
 function syncMuteBtn(vid) { window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns(); }
 function playWithSound(vid) {
-    const wantSound = window.GALLA_soundOn && window.GALLA_soundOn() && window.GALLA_gestured;
-    vid.muted = !wantSound;
-    vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
-    if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
+    if (!vid.paused) return;              // 이미 재생 중이면 재호출 무시(깜빡임 방지)
+    vid.muted = true;                     // 항상 음소거로 시작 → iOS 자동재생 허용(리젝트/재시도 없음)
+    const p = vid.play();
+    if (p && typeof p.then === 'function') {
+        p.then(() => {
+            // 재생이 시작된 뒤에만 사운드 선호+제스처면 음소거 해제
+            if (window.GALLA_soundOn && window.GALLA_soundOn() && window.GALLA_gestured) vid.muted = false;
+            if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
+        }).catch(() => {});
+    }
 }
 
 // 화면 밖 영상은 src를 안 박아 iOS가 메타데이터를 미리 받지 않도록(느림 방지).
@@ -68,11 +74,12 @@ function ensureFeedVideoFallback() {
         document.querySelectorAll('.card-media video').forEach(v => {
             const r = v.getBoundingClientRect();
             if (!r.height) return;
-            if (r.top < vh + 400 && r.bottom > -400) ensureVideoSrc(v);        // 근처면 버퍼
-            const vis = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
-            if (vis / r.height > 0.5 && vis > bestVis) { bestVis = vis; best = v; }
+            if (r.top < vh + 700 && r.bottom > -700) ensureVideoSrc(v);        // 넉넉히 미리 버퍼(깜빡임 방지)
+            const ratio = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height;
+            // 화면 밖(35% 미만)만 정지 — 보이는 영상은 건드리지 않아 깜빡임 없음
+            if (ratio < 0.35) { if (!v.paused) v.pause(); }
+            if (ratio > 0.5 && ratio > bestVis) { bestVis = ratio; best = v; }
         });
-        document.querySelectorAll('.card-media video').forEach(v => { if (v !== best && !v.paused) v.pause(); });
         if (best && best.paused && !document.body.classList.contains('shorts-open')) playWithSound(best);
     };
     if (!__feedVideoFallbackBound) {
@@ -693,8 +700,8 @@ function attachEvents() {
 
     // 비디오 자동재생 옵저버 등록
     document.querySelectorAll('.card-media video').forEach(v => {
-        videoObserver.observe(v);
-        videoPreloader.observe(v);
+        // 재생/정지는 sweep(ensureFeedVideoFallback) 단일 제어 → 관찰자와 경쟁 제거(깜빡임 방지).
+        videoPreloader.observe(v);   // 미리 버퍼링만
         v.addEventListener('loadedmetadata', () => {
             const t = Math.floor(v.duration);
             const dur = document.getElementById(`dur-${v.id.replace('vid-', '')}`);
