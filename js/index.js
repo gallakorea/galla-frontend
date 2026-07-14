@@ -443,6 +443,8 @@ function attachEvents() {
             const id = Number(card.dataset.id);
             if (typeof window.GALLA_VOTE !== 'function') return;
             const gv = card.querySelector('.gv');
+            // 0) 이미 투표했으면 서버 기준으로 잠금+안내 후 중단(변경 불가)
+            if (gv && window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(gv, id)) return;
             // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임)
             if (gv && window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(gv, type);
             // 2) 실제 투표 + 서버 수치로 수렴

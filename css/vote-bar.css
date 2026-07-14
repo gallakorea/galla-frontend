@@ -79,6 +79,17 @@
   .gv-sheen, .gv-pop.go, .gv-bar.gv-bump, .gv-tick { animation: none !important; }
 }
 
+/* 이미 선택 안내 토스트 */
+.gv-notice {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 88px);
+  transform: translateX(-50%) translateY(14px); z-index: 100001;
+  background: rgba(18,19,26,.96); color: #fff; font-size: 13.5px; font-weight: 800;
+  padding: 12px 20px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 32px -8px rgba(0,0,0,.7); opacity: 0; pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease; max-width: 90vw; text-align: center;
+}
+.gv-notice.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 /* ── 쇼츠(릴스) 오버레이 맥락: 어두운 영상 위, 세로 스택 + 대비 강화 ── */
 .shorts-vote.gv { display: block !important; padding: 12px 12px 14px; border-radius: 16px; background: linear-gradient(180deg, transparent, rgba(0,0,0,.55)); }
 .shorts-vote .gv-btns { margin-bottom: 9px; }

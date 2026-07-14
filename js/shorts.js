@@ -535,6 +535,8 @@ function __openShortsInternal(list, startId, startTime) {
     const issueId = voteBar.dataset.issueId;
 
     if (window.GALLA_VOTE && issueId) {
+      // 0) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
+      if (window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(voteBar, issueId)) return;
       // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임)
       if (window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(voteBar, type);
       // 2) 실제 투표 + 서버 수치로 조용히 수렴

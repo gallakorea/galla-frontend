@@ -112,5 +112,28 @@
     }
   }
 
-  window.GALLA_VoteBar = { html, mount, update, setMine, applyVote, pct };
+  // 공용 안내 토스트
+  let _noticeEl;
+  function notice(msg) {
+    if (!_noticeEl) { _noticeEl = document.createElement("div"); _noticeEl.className = "gv-notice"; document.body.appendChild(_noticeEl); }
+    _noticeEl.textContent = msg;
+    _noticeEl.classList.remove("show"); void _noticeEl.offsetWidth; _noticeEl.classList.add("show");
+    clearTimeout(_noticeEl._t); _noticeEl._t = setTimeout(() => _noticeEl.classList.remove("show"), 1900);
+  }
+
+  // 클릭 시 서버 실제 투표 확인 → 이미 투표했으면 잠금+안내 후 true 반환(진행 중단).
+  // 로드 직후 하이라이트 복원 전이라도 서버 기준으로 확정 잠금.
+  async function guardLocked(el, issueId) {
+    if (!window.GALLA_GET_MY_VOTE) return false;
+    let my = null;
+    try { my = await window.GALLA_GET_MY_VOTE(issueId); } catch (e) {}
+    if (my === "pro" || my === "con") {
+      setMine(el, my);
+      notice("이미 진영을 선택했어요 · 변경할 수 없어요");
+      return true;
+    }
+    return false;
+  }
+
+  window.GALLA_VoteBar = { html, mount, update, setMine, applyVote, guardLocked, notice, pct };
 })();

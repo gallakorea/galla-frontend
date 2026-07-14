@@ -649,6 +649,8 @@ window.GALLA_countUp = countUpText;
     const b = e.target.closest(".gv-btn"); if (!b) return;
     if (!issueId || typeof window.GALLA_VOTE !== "function" || typeof window.GALLA_CHECK_VOTE !== "function") return;
     const type = b.classList.contains("gv-pro") ? "pro" : "con";
+    // 0) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
+    if (window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(gv, issueId)) return;
     // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임 + 팝/튐)
     if (window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(gv, type);
     // 2) 실제 투표 + 서버 수치로 조용히 수렴
