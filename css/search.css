@@ -1307,4 +1307,15 @@ body[data-page="news"] #app { padding-bottom: 94px; }
   font-size: 12px; font-weight: 700; color: #8a909c; text-decoration: none;
 }
 .np-main { padding: 0; }
-body[data-page="news"] .news-viewer-reader { padding: 4px 16px 24px; }
+
+/* .news-viewer-reader 는 옛 모달 무대용으로 position:absolute; inset:0 이다.
+   페이지에선 그러면 헤더 밑으로 깔린다 → 일반 흐름으로 되돌린다. */
+body[data-page="news"] .news-viewer-reader {
+  position: static; inset: auto; overflow: visible;
+  background: transparent;
+  padding: 16px 16px 28px;
+}
+body[data-page="news"] .news-viewer-fallback {
+  position: static; inset: auto;
+  min-height: 60vh;
+}
