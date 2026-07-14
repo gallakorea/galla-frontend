@@ -132,8 +132,3 @@
   font-weight: 800;
   text-decoration: none;
 }
-
-/* 헤더 뒤로가기는 오른쪽 배치 (제목은 정중앙 유지) */
-.cr-head .cr-spacer { order: 1; }
-.cr-head .cr-title  { order: 2; }
-.cr-head .cr-back   { order: 3; }
