@@ -13,7 +13,8 @@ html {
 ========================= */
 
 .header {
-  position: relative;
+  /* 상단 고정(sticky): 스크롤/복원 위치와 무관하게 항상 노치 아래에 붙어 잘리지 않음 */
+  position: sticky;
   top: 0;
   z-index: 1000;
 
@@ -23,9 +24,6 @@ html {
 
   /* 아이폰 노치/상태바 안전영역 확보 (viewport-fit=cover 시 상단 가림 방지) */
   padding-top: env(safe-area-inset-top);
-
-  transition: transform 0.25s ease;
-  will-change: transform;
 }
 
 /* 내부 컨테이너 */
