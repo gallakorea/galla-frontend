@@ -22,7 +22,16 @@
     // 그 외 = hls.js
     if (window.Hls && window.Hls.isSupported()) {
       try { if (video._hls) { video._hls.destroy(); } } catch (e) {}
-      var hls = new window.Hls({ maxBufferLength: 12, capLevelToPlayerSize: true, startLevel: -1, backBufferLength: 8 });
+      // abrEwmaDefaultEstimate: 첫 세그먼트 화질 추정을 3.5Mbps로 올려 240p가 아닌
+      // 480~720p로 시작(뿌옇게 시작 방지). capLevelToPlayerSize로 과도한 화질은 억제.
+      var hls = new window.Hls({
+        maxBufferLength: 12,
+        capLevelToPlayerSize: true,
+        startLevel: -1,
+        backBufferLength: 8,
+        abrEwmaDefaultEstimate: 3500000,
+        maxStarvationDelay: 2,
+      });
       video._hls = hls;
       hls.loadSource(url);
       hls.attachMedia(video);
