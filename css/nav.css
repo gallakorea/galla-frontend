@@ -121,3 +121,20 @@ body {
   background: transparent !important;
   border-bottom: none !important;
 }
+
+/* ============================================================
+   마이페이지 탭 = 프로필 사진 (인스타식)
+   로그인 시 내 사진, 비로그인 시 기본 원형 아이콘.
+============================================================ */
+.nav-item img.nav-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #1c1c22;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .28);
+}
+/* 현재 탭이면 흰 링으로 강조 (다른 아이콘의 active 처리와 톤 통일) */
+.nav-item.active img.nav-avatar {
+  box-shadow: 0 0 0 2px #fff;
+}
