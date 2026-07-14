@@ -241,7 +241,7 @@ function renderIssueMedia(issue) {
                    loop playsinline webkit-playsinline muted preload="none"></video>
             <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
             <button class="vid-mute" id="issue-vid-mute"
-                    onclick="event.stopPropagation();window.GALLA_setSound(!window.GALLA_soundOn())">🔇</button>
+                    onclick="event.stopPropagation();var _v=document.getElementById('issue-vid');window.GALLA_setSound(_v?_v.muted:!window.GALLA_soundOn())">🔇</button>
             <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
 
@@ -250,6 +250,12 @@ function renderIssueMedia(issue) {
             // HLS(.m3u8) 부착 — iOS 네이티브 / 그 외 hls.js
             if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
             else vid.src = vid.dataset.src;
+            // 릴스/인덱스에서 보던 위치 이어보기(?t=초)
+            const seekT = parseFloat(new URLSearchParams(location.search).get('t')) || 0;
+            if (seekT > 0.3) {
+                const applySeek = () => { try { if (vid.duration && seekT < vid.duration - 0.3) vid.currentTime = seekT; } catch (e) {} };
+                if (vid.readyState >= 1) applySeek(); else vid.addEventListener('loadedmetadata', applySeek, { once: true });
+            }
             vid.addEventListener('loadedmetadata', () => {
                 const t = Math.floor(vid.duration);
                 const dur = document.getElementById('issue-vid-dur');
@@ -382,9 +388,10 @@ window.issueOpenReels = function() {
         faction_a: i.faction_a || "", faction_b: i.faction_b || ""
     };
     const v = document.getElementById('issue-vid');
+    const startTime = v && !isNaN(v.currentTime) ? v.currentTime : 0;   // 보던 위치 이어보기
     if (v) v.pause();
     if (typeof window.openShorts === 'function') {
-        window.openShorts([item], i.id);
+        window.openShorts([item], i.id, startTime);
     }
 };
 

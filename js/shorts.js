@@ -785,7 +785,11 @@ function onTap(el, fn) {
 function wireSlideControls(section, item) {
   onTap(section.querySelector(".shorts-action-btn.comment"), () => { openCommentModal(); loadShortsComments(); });
   onTap(section.querySelector(".shorts-action-btn.share"), () => shareShort(item));
-  section.querySelectorAll(".shorts-goto").forEach(g => onTap(g, () => { location.href = "issue.html?id=" + item.id; }));
+  section.querySelectorAll(".shorts-goto").forEach(g => onTap(g, () => {
+    const cv = document.querySelectorAll("#shortsTrack video")[currentIndex];
+    const t = (cv && cv.currentTime > 0.3) ? "&t=" + cv.currentTime.toFixed(1) : "";   // 보던 위치 이어보기
+    location.href = "issue.html?id=" + item.id + t;
+  }));
   section.querySelectorAll("[data-profile-uid]").forEach(p => onTap(p, () => {
     const uid = p.getAttribute("data-profile-uid");
     if (uid) location.href = "mypage.html?user=" + encodeURIComponent(uid);
@@ -982,7 +986,9 @@ document.addEventListener("click", e => {
   if (!go || !go.dataset.goto) return;
   e.preventDefault();
   e.stopPropagation();
-  location.href = `issue.html?id=${go.dataset.goto}`;
+  const cv = document.querySelectorAll("#shortsTrack video")[currentIndex];
+  const t = (cv && cv.currentTime > 0.3) ? `&t=${cv.currentTime.toFixed(1)}` : "";
+  location.href = `issue.html?id=${go.dataset.goto}${t}`;
 });
 
 document.addEventListener("click", e => {

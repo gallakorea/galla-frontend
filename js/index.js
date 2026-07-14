@@ -93,9 +93,10 @@ function ensureFeedVideoFallback() {
     setTimeout(sweep, 1000);
 }
 
-// 개별 음소거 토글 → 전역 선호를 뒤집어 전 영상·페이지에 통일 반영
+// 개별 음소거 토글 → 재생 중 영상의 실제 음소거 상태 기준 토글(선호와 어긋남 방지)
 window.toggleFeedMute = function (vidId, btnId) {
-    window.GALLA_setSound(!window.GALLA_soundOn());
+    const v = document.getElementById(vidId);
+    window.GALLA_setSound(v ? v.muted : !window.GALLA_soundOn());
 };
 // 다른 곳(릴스·이슈)에서 선호가 바뀌면 버튼 아이콘 동기화
 document.addEventListener('galla:sound', () => window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns());
