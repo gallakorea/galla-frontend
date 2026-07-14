@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GALLA - 검색</title>
-  <link rel="stylesheet" href="./css/search.css?v=0716e" />
-  <link rel="stylesheet" href="./css/header.css?v=0716e">
-  <link rel="stylesheet" href="./css/nav.css?v=0716e">
+  <link rel="stylesheet" href="./css/search.css?v=0716f" />
+  <link rel="stylesheet" href="./css/header.css?v=0716f">
+  <link rel="stylesheet" href="./css/nav.css?v=0716f">
+  <link rel="stylesheet" href="./css/write-hub.css?v=0716f">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -16,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0716e">
+  <link rel="stylesheet" href="./css/theme.css?v=0716f">
 </head>
 
 <body data-page="search">
@@ -24,12 +25,15 @@
 
 <header class="header header-common">
   <div class="header-inner header-3">
-    <span class="hdr-spacer" aria-hidden="true"></span>
+    <button class="hdr-btn hdr-write" data-write-hub="galla" aria-label="글쓰기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
     <a href="index.html" class="logo-link">
       <img src="assets/logo.png" class="logo" alt="GALLA" />
     </a>
-    <button class="header-action" aria-label="share">
-      <img src="assets/icons/icon-share.svg" alt="share" />
+    <button class="hdr-btn hdr-dm" id="searchDmBtn" aria-label="메시지">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
+      <span class="dm-badge" hidden></span>
     </button>
   </div>
 </header>
@@ -154,11 +158,21 @@
     </div>
 </nav>
 
-<script src="./js/vendor/supabase.js?v=0716e"></script>
-<script src="js/supabase.js?v=0716e"></script>
-<script src="js/comment-actions.js?v=0716e"></script>
-<script src="./js/search.js?v=0716e"></script>
-<script src="./js/nav.js?v=0716e"></script>
+<script src="./js/vendor/supabase.js?v=0716f"></script>
+<script src="js/supabase.js?v=0716f"></script>
+<script src="js/comment-actions.js?v=0716f"></script>
+<script src="js/write-hub.js?v=0716f"></script>
+<script src="js/dm.js?v=0716f"></script>
+<script src="./js/search.js?v=0716f"></script>
+<script src="./js/nav.js?v=0716f"></script>
+<script>
+  // 헤더 DM 버튼 연결(광장과 동일)
+  (function () {
+    var t = setInterval(function () {
+      if (window.supabaseClient && window.initDM) { clearInterval(t); window.initDM("#searchDmBtn"); }
+    }, 40);
+  })();
+</script>
 
 </div>
 </body>

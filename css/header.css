@@ -30,17 +30,49 @@ html {
   will-change: transform;
 }
 
-/* ⚠️ 인덱스: html/body의 overflow-x:hidden이 overflow-y를 auto로 강제해
-   position:sticky가 깨지고 헤더가 스크롤과 함께 떠내려감(자동 숨김도 무력화).
-   → fixed로 확실히 상단 고정하고, 콘텐츠는 #app padding-top으로 헤더 높이만큼 확보. */
-body[data-page="index"] .header.header-common {
+/* ⚠️ html/body의 overflow-x:hidden이 overflow-y를 auto로 강제해 position:sticky가
+   깨지고 헤더가 스크롤과 함께 떠내려감(자동 숨김도 무력화).
+   → 대상 페이지 헤더를 fixed로 상단 고정하고, 콘텐츠는 #app padding-top으로 확보. */
+body[data-page="index"] .header,
+body[data-page="predict"] .header,
+body[data-page="search"] .header,
+body[data-page="plaza"] .header,
+body[data-page="mypage"] .header {
   position: fixed;
   left: 0;
   right: 0;
   top: 0;
 }
-body[data-page="index"] #app {
+body[data-page="index"] #app,
+body[data-page="predict"] #app,
+body[data-page="search"] #app,
+body[data-page="plaza"] #app,
+body[data-page="mypage"] #app {
   padding-top: calc(65px + env(safe-area-inset-top));
+}
+
+/* 인스타식: 헤더 아이콘 버튼을 반투명 검정 원 안에 (＋·♥·DM·설정·공유) */
+.header-inner.header-3 .hdr-btn,
+.header-inner.header-3 .header-action {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(38, 38, 44, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.header-inner.header-3 .header-action img { width: 20px; height: 20px; }
+/* 마이페이지 우측 액션(그룹) 안의 버튼도 동일하게 */
+.header-inner.header-3 .mp-hdr-actions .hdr-btn { background: rgba(38, 38, 44, 0.72); }
+
+/* 마이페이지: 헤더 전체가 아니라 ＋ 버튼만 스크롤에 따라 숨김/표시 */
+body[data-page="mypage"] .hdr-write {
+  transition: transform .28s ease, opacity .28s ease;
+}
+body[data-page="mypage"] .hdr-write.hide {
+  transform: translateY(-160%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* 내부 컨테이너 */

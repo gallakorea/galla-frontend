@@ -51,9 +51,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다.
   //    ⚠️ 스와이프 분기(return)보다 '앞'에 둬야 비-탭 페이지(광장상세·이슈 등)에서도 동작.
   const navEl = document.querySelector(".nav");
-  // 인덱스 헤더(＋·로고·♥)도 같은 핸들러로 인스타식 자동 숨김 — 네비와 100% 동기화.
-  const hideHeaderEl = document.body.dataset.page === "index"
-    ? document.querySelector(".header.header-common") : null;
+  // 헤더 자동 숨김(인스타식) — 네비와 같은 핸들러로 100% 동기화.
+  //   index/predict/search/plaza: 헤더 전체를 숨김
+  //   mypage: ＋ 버튼만 숨김(나머지 로고·DM·설정은 유지)
+  const _page = document.body.dataset.page;
+  const hideHeaderEl = ["index", "predict", "search", "plaza"].includes(_page)
+    ? document.querySelector(".header")
+    : (_page === "mypage" ? document.querySelector(".header .hdr-write") : null);
   if (navEl || hideHeaderEl) {
     // 스크롤 주체가 기기마다 window/documentElement/body로 달라 세 곳에서 위치를 읽는다.
     const getY = () => window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
