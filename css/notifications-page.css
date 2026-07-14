@@ -1,0 +1,193 @@
+/* =========================================================
+   notifications-page.css — 인스타식 알림 페이지
+========================================================= */
+
+/* 헤더: ← / 알림 / 모두 읽음 */
+.header-inner.np-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 64px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 14px;
+}
+.np-back {
+  flex: none;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #fff; cursor: pointer;
+  touch-action: manipulation;
+}
+.np-back svg { width: 22px; height: 22px; }
+.np-back:active { transform: scale(.9); }
+.np-title { flex: 1 1 auto; font-size: 17px; font-weight: 900; color: #fff; }
+.np-readall {
+  flex: none;
+  padding: 7px 11px;
+  min-height: 32px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: #c9d1e0;
+  font-size: 11.5px; font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.np-readall:active { transform: scale(.95); }
+
+.np-main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 8px 0 90px;
+}
+
+/* 유형 필터 칩 */
+.np-filters {
+  display: flex;
+  gap: 7px;
+  padding: 6px 14px 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.np-filters::-webkit-scrollbar { display: none; }
+.np-chip {
+  flex: none;
+  padding: 8px 13px;
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.13);
+  background: rgba(255,255,255,.05);
+  color: #b8bfcc;
+  font-size: 12.5px; font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.np-chip.active {
+  background: #fff;
+  color: #0a0a0b;
+  border-color: #fff;
+}
+.np-chip:active { transform: scale(.95); }
+
+/* 시간 그룹 */
+.np-group { margin-bottom: 6px; }
+.np-gtitle {
+  padding: 12px 16px 8px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #fff;
+}
+
+/* 알림 한 줄 */
+.np-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 14px;
+  text-decoration: none;
+  color: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.np-item:active { background: rgba(255,255,255,.05); }
+.np-item.unread { background: rgba(77,163,255,.08); }
+
+/* 프로필 사진 + 유형 배지 */
+.np-avawrap { flex: none; position: relative; width: 46px; height: 46px; }
+.np-ava {
+  display: block; width: 46px; height: 46px;
+  border-radius: 50%; overflow: hidden;
+  background: #1c1c22;
+  border: 1px solid rgba(255,255,255,.12);
+  cursor: pointer;
+}
+.np-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.np-badge {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px;
+  background: #26262c;
+  border: 2px solid #0a0a0b;
+}
+.np-badge.t-like    { background: #2f6bff; }
+.np-badge.t-dislike { background: #ff4f6e; }
+.np-badge.t-comment { background: #3a3a44; }
+.np-badge.t-follow  { background: #35e0a0; }
+.np-badge.t-attack  { background: #ff6a3d; }
+.np-badge.t-win     { background: #ffc400; }
+
+/* 본문 */
+.np-mid { flex: 1 1 auto; min-width: 0; }
+.np-msg {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 1.42;
+  color: #e8ebf0;
+}
+.np-time {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: #8a8f9a;
+  font-weight: 700;
+}
+
+/* 우측: 콘텐츠 썸네일 */
+.np-thumb {
+  flex: none;
+  width: 44px; height: 44px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #16161b;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+}
+.np-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.np-thumb.none { border: 1px solid rgba(255,255,255,.08); }
+
+/* 우측: 팔로우 버튼 (팔로워 알림) */
+.np-follow {
+  flex: none;
+  min-height: 32px;
+  padding: 7px 15px;
+  border-radius: 9px;
+  border: none;
+  background: #2f6bff;
+  color: #fff;
+  font-size: 12.5px; font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.np-follow:active { transform: scale(.95); }
+.np-follow.done {
+  background: rgba(255,255,255,.08);
+  color: #b8bfcc;
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+/* 빈 상태 */
+.np-empty {
+  padding: 60px 24px;
+  text-align: center;
+  color: #8a8f9a;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.np-login {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  background: #2f6bff;
+  color: #fff;
+  font-weight: 800;
+  text-decoration: none;
+}

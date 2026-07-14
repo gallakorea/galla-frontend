@@ -169,7 +169,8 @@
       });
       return;
     }
-    btn.addEventListener("click", openDrawer);
+    // 인스타식: 하트를 누르면 드로어가 아니라 '알림 페이지'로 이동
+    btn.addEventListener("click", () => { location.href = "notifications.html"; });
     await loadUnread();
     subscribe();
   };
