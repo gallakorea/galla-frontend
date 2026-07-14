@@ -148,16 +148,17 @@ let __carouselResizeBound = false;
  * 미디어 렌더러
  * =========================== */
 function renderMedia(data) {
-    // 영상
+    // 영상 — iOS 인라인 자동재생: src를 처음부터 넣고 preload=metadata로 첫 프레임 표시.
     if (data.video_url) {
         return `
         <div class="card-media card-media--video"
              onclick="event.stopPropagation();openReels(${data.id})">
             <video
                 id="vid-${data.id}"
+                src="${data.video_url}"
                 data-src="${data.video_url}"
                 ${data.thumbnail_url ? `poster="${data.thumbnail_url}"` : ""}
-                autoplay loop playsinline webkit-playsinline muted preload="none">
+                autoplay loop playsinline webkit-playsinline muted preload="metadata">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
