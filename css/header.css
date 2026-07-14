@@ -21,6 +21,9 @@ html {
   background: #000;
   border-bottom: 1px solid #111;
 
+  /* 아이폰 노치/상태바 안전영역 확보 (viewport-fit=cover 시 상단 가림 방지) */
+  padding-top: env(safe-area-inset-top);
+
   transition: transform 0.25s ease;
   will-change: transform;
 }
