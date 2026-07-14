@@ -30,6 +30,19 @@ html {
   will-change: transform;
 }
 
+/* ⚠️ 인덱스: html/body의 overflow-x:hidden이 overflow-y를 auto로 강제해
+   position:sticky가 깨지고 헤더가 스크롤과 함께 떠내려감(자동 숨김도 무력화).
+   → fixed로 확실히 상단 고정하고, 콘텐츠는 #app padding-top으로 헤더 높이만큼 확보. */
+body[data-page="index"] .header.header-common {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+body[data-page="index"] #app {
+  padding-top: calc(65px + env(safe-area-inset-top));
+}
+
 /* 내부 컨테이너 */
 .header-inner {
   height: 64px;              /* 숨 막힌다고 해서 여유 줌 */
