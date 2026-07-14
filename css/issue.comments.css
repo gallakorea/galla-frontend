@@ -1563,3 +1563,46 @@ body.kb-open .battle-input-bar {
 
 /* 격파된 댓글의 영향력 칩은 0임을 시각적으로 */
 .cp-chip.ko { opacity: .4; text-decoration: line-through; }
+
+/* ── 종료 카운트다운 / 정산 결과 배너 ── */
+.fl-countdown {
+  margin-bottom: 9px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #c9d1e0;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+.fl-countdown b { color: #fff; font-weight: 900; }
+.fl-countdown.urgent {
+  color: #ffd977;
+  border-color: rgba(255, 200, 60, .45);
+  background: rgba(255, 196, 0, .1);
+}
+.fl-countdown.urgent b { color: #ffdf7a; }
+.fl-countdown.ending { color: #ffd977; }
+
+.fl-settled {
+  margin-bottom: 9px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.fl-settled b { font-weight: 900; }
+.fl-settled small {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, .72);
+}
+.fl-settled.pro  { background: linear-gradient(135deg, rgba(51,86,255,.35), rgba(51,86,255,.12)); border: 1px solid rgba(77,163,255,.55); }
+.fl-settled.con  { background: linear-gradient(135deg, rgba(255,79,110,.35), rgba(255,79,110,.12)); border: 1px solid rgba(255,92,92,.55); }
+.fl-settled.draw { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18); color: #c9d1e0; }

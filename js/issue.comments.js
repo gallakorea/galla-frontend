@@ -448,6 +448,36 @@ function combatPower(c) {
   return Math.round(influence(c) * 10) / 10;
 }
 
+/* 종료 카운트다운 / 정산 결과 배너
+   - 진행 중: 남은 시간 (7일 뒤 자동 종료)
+   - 종료됨: 승리 진영 + 최종 구성(여론/대전) */
+function settleBannerHTML() {
+  const iss = window.GALLA_ISSUE;
+  if (!iss || !iss.ends_at) return "";
+
+  if (iss.settled_at && iss.winner) {
+    const w = iss.winner;
+    if (w === "draw") {
+      return `<div class="fl-settled draw">🤝 <b>무승부</b> — 전선 50 : 50으로 끝났습니다.</div>`;
+    }
+    const pct = w === "pro" ? iss.final_pro_pct : 100 - iss.final_pro_pct;
+    const vp = w === "pro" ? iss.final_vote_pct : 100 - iss.final_vote_pct;
+    const bp = w === "pro" ? iss.final_battle_pct : 100 - iss.final_battle_pct;
+    return `<div class="fl-settled ${w}">
+      🏆 <b>${fLabel(w)} 진영 승리</b> · 최종 ${Math.round(pct)}%
+      <small>여론 ${Math.round(vp)}% · 댓글 대전 ${Math.round(bp)}%</small>
+    </div>`;
+  }
+
+  const left = new Date(iss.ends_at).getTime() - Date.now();
+  if (left <= 0) return `<div class="fl-countdown ending">⏳ 종료 — 곧 결과가 확정됩니다</div>`;
+  const d = Math.floor(left / 86400000);
+  const h = Math.floor((left % 86400000) / 3600000);
+  const m = Math.floor((left % 3600000) / 60000);
+  const t = d > 0 ? `${d}일 ${h}시간` : h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+  return `<div class="fl-countdown${d === 0 ? " urgent" : ""}">⏳ 종료까지 <b>${t}</b> — 끝나면 승리 진영에 <b>GP 보상</b></div>`;
+}
+
 /* 전선 종합: 여론·대전·최종 비율(모두 pro 기준 0~1) */
 function frontline() {
   let bPro = 0, bCon = 0;
@@ -558,6 +588,7 @@ function renderMorale() {
     : lead === "even" ? "⚖️ 팽팽한 접전" : `${fLabel(lead)} 진영 우세`;
 
   bar.innerHTML = `
+    ${settleBannerHTML()}
     <div class="bm-top">
       <span class="bm-side pro ${lead === "pro" ? "lead" : ""}">${fLabel("pro")} ${proPct}%</span>
       <span class="bm-vs">전선</span>

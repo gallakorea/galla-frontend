@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=0716u";
-import { loadAiNews } from "./issue-news.js?v=0716u";
-import { loadStats } from "./issue.stats.js?v=0716u";
-import { initCommentSystem } from "./issue.comments.js?v=0716u";
+import { loadAiArguments } from "./issue-argument.js?v=0716v";
+import { loadAiNews } from "./issue-news.js?v=0716v";
+import { loadStats } from "./issue.stats.js?v=0716v";
+import { initCommentSystem } from "./issue.comments.js?v=0716v";
 
 
 console.log("[issue.js] loaded");
@@ -140,6 +140,9 @@ window.ISSUE_FACTIONS = {
   pro: issue.faction_a || "찬성",
   con: issue.faction_b || "반대"
 };
+
+// 전선 게이지가 종료 카운트다운·정산 결과를 그릴 수 있도록 공개
+window.GALLA_ISSUE = issue;
 
 renderIssue(issue);
 
