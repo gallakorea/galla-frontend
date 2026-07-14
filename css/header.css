@@ -94,6 +94,10 @@ body[data-page="mypage"] #app {
 
 /* 내부 컨테이너 */
 .header-inner {
+  /* ⚠️ box-sizing 전역 선언이 페이지마다 있고 없다(서치엔 없다).
+     content-box면 480 + 좌우 18px = 516px가 되어 헤더만 본문(480)보다
+     양쪽 18px씩 넓어진다. 여기서 못 박는다. */
+  box-sizing: border-box;
   height: 64px;              /* 숨 막힌다고 해서 여유 줌 */
   max-width: 480px;
   margin: 0 auto;
