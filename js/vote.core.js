@@ -69,18 +69,31 @@ async function vote(issueId, type) {
     return null;
   }
 
-  // upsert: 첫 투표=삽입, 다른 진영 재투표=갱신(전환). (issue_id,user_id) 유니크 기준.
-  // insert만 하면 재투표가 23505로 막혀 진영 전환 시 바가 안 움직였음.
-  const { error } = await supabase.from("votes").upsert({
+  // 진영 확정(변경 불가): 이미 투표했으면 기존 진영을 그대로 반환(전환 금지).
+  const already = await getMyVote(issueId);
+  if (already === "pro" || already === "con") {
+    votingInProgress = false;
+    return already;
+  }
+
+  // 첫 투표만 insert. (issue_id,user_id) 유니크 + UPDATE 정책 제거로 서버단에서도 변경 차단.
+  const { error } = await supabase.from("votes").insert({
     issue_id: issueId,
     user_id: session.user.id,
     type
-  }, { onConflict: "issue_id,user_id" });
+  });
 
   votingInProgress = false;
 
   if (error) {
-    console.error("[VOTE] upsert error", error);
+    // 23505 = 이미 투표(동시성) → 기존 진영 확정 반환
+    if (error.code === "23505") {
+      __votePrefetched.delete(Number(issueId));
+      __voteCache.delete(Number(issueId));
+      const cur = await getMyVote(issueId);
+      return cur || null;
+    }
+    console.error("[VOTE] insert error", error);
     return null;
   }
 

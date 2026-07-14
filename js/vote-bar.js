@@ -97,7 +97,8 @@
     let con = bar ? (parseInt(bar.dataset.con, 10) || 0) : 0;
     const a = el.querySelector(".gv-pro"), c = el.querySelector(".gv-con");
     const prev = a && a.classList.contains("gv-mine") ? "pro" : (c && c.classList.contains("gv-mine") ? "con" : null);
-    if (prev === type) { setMine(el, type); return; }  // 같은 진영 재클릭 → 변화 없음
+    // 진영 확정(변경 불가): 이미 투표했으면 어떤 버튼을 눌러도 변화·이펙트 없음
+    if (prev) { setMine(el, prev); return; }
     if (type === "pro") pro++; else con++;
     if (prev === "pro" && pro > 0) pro--; else if (prev === "con" && con > 0) con--;
     update(el, { pro, con }, { voted: type, myStance: type, animate: true });
