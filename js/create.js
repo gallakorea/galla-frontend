@@ -31,9 +31,13 @@
   (async function init() {
     const { logged, admin } = await me();
 
+    // 비로그인: 차단형 confirm 대신 인라인 안내 (페이지가 그대로 보이게)
     if (!logged) {
-      if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
-      else history.length > 1 ? history.back() : (location.href = "index.html");
+      document.getElementById("crList").innerHTML = `
+        <div class="cr-need">
+          <p>로그인하면 갈라를 발제하고, 예측 마켓을 열고, 광장에 글을 쓸 수 있어요.</p>
+          <a class="cr-login" href="login.html">로그인하기</a>
+        </div>`;
       return;
     }
 
