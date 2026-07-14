@@ -570,6 +570,10 @@ if (explainWrap) {
     qs("issue-time").innerText = new Date(issue.created_at).toLocaleDateString();
   }
 
+  // 조회수(유튜브식): 세션당 1회 증가, 즉시 표시
+  setViews(issue.view_count || 0);
+  bumpViewOnce(issue.id);
+
   const authorEl = qs("issue-author");
   authorEl.innerText = issue.author || "익명";
 
@@ -632,6 +636,26 @@ function countUpText(el, target, suffix = "") {
   requestAnimationFrame(step);
 }
 window.GALLA_countUp = countUpText;
+
+// 유튜브식 숫자 축약
+function fmtK(n) {
+  n = Number(n) || 0;
+  if (n < 1000) return String(n);
+  if (n < 10000) return (n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0).replace(/\.0$/, "") + "천";
+  if (n < 100000000) return (n / 10000).toFixed(n % 10000 >= 1000 ? 1 : 0).replace(/\.0$/, "") + "만";
+  return (n / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
+}
+function setViews(n) { const el = qs("issue-views"); if (el) el.innerText = "조회 " + fmtK(n); }
+async function bumpViewOnce(issueId) {
+  if (!issueId) return;
+  const key = "gv_viewed_" + issueId;
+  try { if (sessionStorage.getItem(key)) return; } catch (e) {}
+  try {
+    const { data } = await window.supabaseClient.rpc("bump_view", { p_issue: issueId });
+    if (typeof data === "number") setViews(data);
+    try { sessionStorage.setItem(key, "1"); } catch (e) {}
+  } catch (e) {}
+}
 
 /* ==========================================================================
    4. Vote

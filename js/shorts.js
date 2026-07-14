@@ -863,6 +863,13 @@ function syncVote() {
   }
 }
 
+function bumpReelView(issueId) {
+  if (!issueId) return;
+  const key = "gv_viewed_" + issueId;
+  try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch (e) {}
+  try { window.supabaseClient?.rpc("bump_view", { p_issue: issueId }); } catch (e) {}
+}
+
 function updateShortsVoteBar() {
   const bar = document.getElementById("shortsVoteBar");
   if (!bar || !window.GALLA_VoteBar) return;
@@ -870,6 +877,7 @@ function updateShortsVoteBar() {
   const issueId = cur.id;
   bar.dataset.issueId = issueId || "";
   if (!issueId) { console.warn("[SHORTS][VOTE] missing issueId"); return; }
+  bumpReelView(issueId);   // 조회수(유튜브식): 릴스 시청도 세션당 1회 카운트
 
   // 통합 진영바 마운트(슬라이드마다 진영명 갱신)
   window.GALLA_VoteBar.mount(bar, {

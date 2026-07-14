@@ -177,6 +177,18 @@ function renderMedia(data) {
  * =========================== */
 const moreIcon = `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
 
+// 유튜브식 숫자 축약 (1234→1.2천, 12345→1.2만)
+function formatK(n) {
+    n = Number(n) || 0;
+    if (n < 1000) return String(n);
+    if (n < 10000) return (n / 1000).toFixed(n < 10000 && n % 1000 >= 100 ? 1 : 0).replace(/\.0$/, '') + '천';
+    if (n < 100000000) return (n / 10000).toFixed(n % 10000 >= 1000 ? 1 : 0).replace(/\.0$/, '') + '만';
+    return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '억';
+}
+window.GALLA_formatK = formatK;
+
+const heartSvg = `<svg viewBox="0 0 24 24" class="lk-ic"><path d="M12 21s-6.7-4.3-9.3-8.2C.9 10 1.6 6.4 4.5 5.2 6.7 4.3 9 5.1 10.3 6.9L12 9l1.7-2.1C15 5.1 17.3 4.3 19.5 5.2c2.9 1.2 3.6 4.8 1.8 7.6C18.7 16.7 12 21 12 21z"/></svg>`;
+
 function renderCard(data) {
     const total = (data.pro + data.con) || 1;
     const proPct = Math.round((data.pro / total) * 100);
@@ -205,7 +217,7 @@ function renderCard(data) {
                         <span class="author-name"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${data.author}</span>
                         <span class="level-badge">Lv.${data.level}</span>
                     </div>
-                    <div class="mah-line2">${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${data.category} · ${data.time}</div>
+                    <div class="mah-line2">${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${data.category} · ${data.time} · 조회 ${formatK(data.views)}</div>
                 </div>
             </div>
             ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
@@ -242,6 +254,7 @@ function renderCard(data) {
 
             <div class="card-footer">
                 <div class="footer-icons">
+                    <button class="like-btn" data-id="${data.id}" data-likes="${data.likes || 0}" aria-label="좋아요">${heartSvg}<span class="lk-count">${data.likes ? formatK(data.likes) : ''}</span></button>
                     <img src="assets/icons/icon-comment.svg" class="goto-comments">
                     <img src="assets/icons/icon-bookmark.svg" class="bookmark-btn" data-id="${data.id}">
                     <img src="assets/icons/icon-share.svg" class="share-btn" data-id="${data.id}">
@@ -338,6 +351,7 @@ const social = {
     userId: null,
     follows: new Set(),     // 내가 팔로우한 user_id
     bookmarks: new Set(),   // 내가 북마크한 issue_id (문자열)
+    likes: new Set(),       // 내가 좋아요한 issue_id (문자열)
     loaded: false
 };
 
@@ -347,12 +361,14 @@ async function initSocial() {
     const user = data?.session?.user;
     if (user) {
         social.userId = user.id;
-        const [f, b] = await Promise.all([
+        const [f, b, l] = await Promise.all([
             supabase.from('follows').select('following').eq('follower', user.id),
-            supabase.from('bookmarks').select('issue_id').eq('user_id', user.id)
+            supabase.from('bookmarks').select('issue_id').eq('user_id', user.id),
+            supabase.from('issue_likes').select('issue_id').eq('user_id', user.id)
         ]);
         f.data?.forEach(r => social.follows.add(r.following));
         b.data?.forEach(r => social.bookmarks.add(String(r.issue_id)));
+        l.data?.forEach(r => social.likes.add(String(r.issue_id)));
     }
     social.loaded = true;
     applySocialState();
@@ -375,6 +391,39 @@ function applySocialState() {
     document.querySelectorAll('.bookmark-btn').forEach(img => {
         img.classList.toggle('active', social.bookmarks.has(img.dataset.id));
     });
+    document.querySelectorAll('.like-btn').forEach(btn => {
+        btn.classList.toggle('on', social.likes.has(btn.dataset.id));
+    });
+}
+
+async function toggleLike(btn) {
+    if (!social.userId) return window.GALLA_needLogin ? window.GALLA_needLogin('로그인이 필요해요.') : openModal('로그인이 필요합니다.');
+    const supabase = window.supabaseClient;
+    const id = btn.dataset.id;
+    const on = social.likes.has(id);
+    const cEl = btn.querySelector('.lk-count');
+    const base = Number(btn.dataset.likes) || 0;
+    const next = Math.max(0, base + (on ? -1 : 1));
+    // 낙관적 토글 (모든 동일 id 카드 동기화)
+    if (on) social.likes.delete(id); else social.likes.add(id);
+    document.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
+        b.dataset.likes = next;
+        b.classList.toggle('on', !on);
+        const c = b.querySelector('.lk-count'); if (c) c.textContent = next ? formatK(next) : '';
+    });
+    if (!on) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); }
+
+    const { error } = on
+        ? await supabase.from('issue_likes').delete().eq('user_id', social.userId).eq('issue_id', Number(id))
+        : await supabase.from('issue_likes').insert({ user_id: social.userId, issue_id: Number(id) });
+    if (error && error.code !== '23505') {
+        if (on) social.likes.add(id); else social.likes.delete(id);
+        document.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
+            b.dataset.likes = base;
+            b.classList.toggle('on', on);
+            const c = b.querySelector('.lk-count'); if (c) c.textContent = base ? formatK(base) : '';
+        });
+    }
 }
 
 async function toggleFollow(btn) {
@@ -469,6 +518,14 @@ function attachEvents() {
         btn.onclick = e => {
             e.stopPropagation();
             toggleFollow(btn);
+        };
+    });
+
+    // 좋아요
+    document.querySelectorAll('.like-btn').forEach(btn => {
+        btn.onclick = e => {
+            e.stopPropagation();
+            toggleLike(btn);
         };
     });
 
@@ -659,7 +716,7 @@ async function loadData() {
         .from('issues')
         .select(`
             id, title, one_line, category, created_at,
-            pro_count, con_count, sup_pro, sup_con,
+            pro_count, con_count, sup_pro, sup_con, view_count, like_count,
             user_id, thumbnail_url, video_url, images,
             faction_a, faction_b
         `)
@@ -696,6 +753,8 @@ async function loadData() {
         oneLine: row.one_line,
         pro: row.pro_count || 0,
         con: row.con_count || 0,
+        views: row.view_count || 0,
+        likes: row.like_count || 0,
         thumb: row.thumbnail_url,
         video_url: row.video_url,
         faction_a: row.faction_a,
