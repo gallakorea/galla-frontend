@@ -168,6 +168,9 @@ function __openShortsInternal(list, startId, startTime) {
 .shorts-goto{ cursor:pointer; }
 .shorts-goto:active{ opacity:.7; }
 .shorts-goto-chip, .author-follow{ display:none; }
+/* iOS는 cursor:pointer 없으면 click을 디스패치 안 함 → 탭 대상 전부 지정 */
+.author-name, .author-avatar-link, .author-avatar, .author-avatar-init{ cursor:pointer; }
+.shorts-action-btn{ cursor:pointer; }
 `;
     document.head.appendChild(style);
   }
@@ -494,6 +497,7 @@ function __openShortsInternal(list, startId, startTime) {
     `;
 
     track.appendChild(section);
+    wireSlideControls(section, item);
   });
 
   currentIndex = Math.max(
@@ -737,6 +741,26 @@ function curVideoAndSection() {
   return { video, section };
 }
 
+// 슬라이드 컨트롤 직접 바인딩 — 문서 위임/iOS click 디스패치 이슈에 안전.
+function shareShort(item) {
+  if (!item) return;
+  const url = location.origin + "/share/issue/" + item.id;
+  const title = (item.title || "GALLA").trim();
+  if (window.GALLA_share) window.GALLA_share({ url, title, text: title });
+  else if (navigator.share) navigator.share({ url, title }).catch(() => {});
+  else { try { navigator.clipboard.writeText(url); } catch (e) {} }
+}
+function wireSlideControls(section, item) {
+  const bind = (el, fn) => el && el.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); fn(e); });
+  bind(section.querySelector(".shorts-action-btn.comment"), () => { openCommentModal(); loadShortsComments(); });
+  bind(section.querySelector(".shorts-action-btn.share"), () => shareShort(item));
+  section.querySelectorAll(".shorts-goto").forEach(g => bind(g, () => { location.href = "issue.html?id=" + item.id; }));
+  section.querySelectorAll("[data-profile-uid]").forEach(p => bind(p, () => {
+    const uid = p.getAttribute("data-profile-uid");
+    if (uid) location.href = "mypage.html?user=" + encodeURIComponent(uid);
+  }));
+}
+
 function bindTapControls() {
   let tapTimer = null;
   let waitingSecond = false;
@@ -939,7 +963,7 @@ document.addEventListener("click", e => {
   }
 
   if (btn.classList.contains("share")) {
-    console.log("[SHORTS] share issue:", issueId);
+    shareShort(shortsList[currentIndex] || { id: issueId });
   }
 });
 
