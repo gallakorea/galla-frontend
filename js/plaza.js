@@ -522,7 +522,10 @@ function renderPlazaPosts(posts) {
                 <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
               </button>
             </span>
-            <span>💬 ${cmtCount}</span>
+            <span class="pv-cmt">
+              <svg class="ic-comment" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+              ${cmtCount}
+            </span>
             <span>조회 ${post.view_count || 0}</span>
             <button class="plaza-save-btn ${saved ? "on" : ""}" data-id="${post.id}" aria-label="저장">
               <svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg>

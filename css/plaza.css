@@ -743,6 +743,10 @@ html, body {
 }
 .plaza-post .post-stats span { display: inline-flex; align-items: center; gap: 3px; }
 
+/* 댓글 아이콘 — 이모지(💬) 대신 다른 아이콘과 같은 규약의 SVG */
+.pv-cmt { gap: 4px !important; }
+.pv-cmt .ic-comment { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+
 
 
 /* 목록 카드 저장: 통계 줄 인라인 SVG 북마크 (조회 바로 옆) */
