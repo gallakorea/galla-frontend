@@ -24,6 +24,10 @@ html {
 
   /* 아이폰 노치/상태바 안전영역 확보 (viewport-fit=cover 시 상단 가림 방지) */
   padding-top: env(safe-area-inset-top);
+
+  /* 인스타식 자동 숨김/표시 부드러운 전환 */
+  transition: transform .28s ease;
+  will-change: transform;
 }
 
 /* 내부 컨테이너 */
