@@ -1,11 +1,8 @@
 // 핫 영상 수집 — YouTube Data API v3 '인기 급상승'(chart=mostPopular, KR)
 // 30분마다 크론이 호출. 영상은 저장/재호스팅하지 않고 메타데이터만 담는다(재생은 공식 iframe).
 //
-// 피드(feed) 단위로 수집: '전체' + 방송 카테고리.
-// 유튜브에 없는 카테고리(드라마·맛집먹방·취미·경제금융)는 수집한 전체 풀에서
-// 제목/채널/설명 신호로 뽑아낸다.
+// 피드(feed) = 방송 카테고리. 유튜브 카테고리 몇 개 + 키워드를 묶어 하나로 만든다.
 // PK가 (feed, video_id)라 같은 영상이 여러 피드에 들어갈 수 있고, rank는 피드 안에서 매긴다.
-// videos.list = 1 unit/호출 → 14호출 × 48회/일 ≈ 672 unit (무료 쿼터 10,000/일).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supa = createClient(
@@ -16,56 +13,33 @@ const supa = createClient(
 const KEY = Deno.env.get("YOUTUBE_API_KEY");
 const REGION = "KR";
 
-// 유튜브 videoCategoryId 로 바로 받는 피드
-const API_FEEDS: { feed: string; cat: string | null; max: number }[] = [
-  { feed: "all",    cat: null, max: 50 },
-  { feed: "news",   cat: "25", max: 40 }, // 뉴스·시사
-  { feed: "ent",    cat: "24", max: 40 }, // 예능·엔터
-  { feed: "music",  cat: "10", max: 40 }, // 음악
-  { feed: "movie",  cat: "1",  max: 40 }, // 영화·애니
-  { feed: "comic",  cat: "23", max: 40 }, // 코믹
-  { feed: "game",   cat: "20", max: 40 }, // 게임
-  { feed: "sports", cat: "17", max: 40 }, // 스포츠
-  { feed: "life",   cat: "22", max: 40 }, // 라이프스타일·브이로그
-  { feed: "beauty", cat: "26", max: 40 }, // 뷰티·패션 (Howto & Style)
-  { feed: "tech",   cat: "28", max: 40 }, // IT·과학
-  { feed: "animal", cat: "15", max: 40 }, // 동물·펫
-  // 여행(19)·교육(27)은 한국 인기차트가 비어 있어(items 0) 아래 키워드로 뽑는다.
-];
+/* ── 키워드 (유튜브에 없는 분류) ───────────────────────── */
+const KW = {
+  drama: /드라마|\d+\s*회|\d+\s*화|예고|하이라이트|스페셜\s*클립|메이킹|EP\.?\s*\d+|티저|명장면/i,
+  dramaCh: /드라마|스튜디오|tvN|JTBC|SBS|KBS|MBC|ENA|넷플릭스|Netflix|Drama|채널A|TV조선/i,
+  food: /먹방|맛집|먹어|리얼사운드|ASMR\s*먹|쿡방|레시피|요리|한끼|폭식|메뉴|식당|맛있|존맛|국밥|치킨|디저트|카페|백종원|편의점\s*신상/i,
+  travel: /여행|캠핑|백패킹|배낭|호캉스|호텔|리조트|항공|공항|제주|부산|유럽|일본\s*여행|동남아|기차\s*여행|로드트립|투어|해외/i,
+  hobby: /취미|만들기|DIY|조립|프라모델|피규어|낚시|등산|자전거|사진\s*찍|그림\s*그리|뜨개|목공|다꾸|키보드\s*빌드|하울|언박싱/i,
+  money: /주식|증시|코스피|나스닥|부동산|금리|환율|비트코인|코인|재테크|투자|연금|세금|월급|적금|대출|경제|물가|배당|ETF/i,
+  edu: /강의|배우기|기초|입문|공부|수능|토익|영어|문법|정리해|알려드림|해설|원리|역사|과학|총정리|하는\s*법/i,
+};
 
-// 키워드로 뽑는 피드 — 위에서 모은 전체 풀에서 걸러낸다
-const KEYWORD_FEEDS: { feed: string; re: RegExp; ch?: RegExp }[] = [
-  {
-    // 드라마: 회차·예고·방송사 신호가 함께 있어야 한다(영화 예고편과 섞이지 않게)
-    feed: "drama",
-    re: /드라마|\d+\s*회|\d+\s*화|예고|하이라이트|스페셜\s*클립|메이킹|EP\.?\s*\d+|티저|명장면/i,
-    ch: /드라마|스튜디오|tvN|JTBC|SBS|KBS|MBC|ENA|넷플릭스|Netflix|Drama|채널A|TV조선/i,
-  },
-  {
-    feed: "food",
-    re: /먹방|맛집|먹어|리얼사운드|ASMR\s*먹|쿡방|레시피|요리|한끼|폭식|메뉴|식당|맛있|존맛|물회|국밥|치킨|디저트|카페\s*투어/i,
-  },
-  {
-    feed: "hobby",
-    re: /취미|만들기|DIY|조립|프라모델|피규어|캠핑|낚시|등산|자전거|사진\s*찍|그림\s*그리|뜨개|목공|다꾸|키보드\s*빌드|하울/i,
-  },
-  {
-    feed: "money",
-    re: /주식|증시|코스피|나스닥|부동산|금리|환율|비트코인|코인|재테크|투자|연금|세금|월급|적금|대출|경제|물가|배당|ETF/i,
-  },
-  {
-    feed: "travel",
-    re: /여행|캠핑|백패킹|배낭|호캉스|호텔|리조트|항공|공항|제주|부산|유럽|일본\s*여행|동남아|기차\s*여행|로드트립|투어|해외/i,
-  },
-  {
-    feed: "edu",
-    re: /강의|배우기|기초|입문|공부|수능|토익|영어|문법|정리해|알려드림|해설|원리|역사|과학|총정리|팁\s*\d|하는\s*법/i,
-  },
+/* ── 피드 정의 ─────────────────────────────────────────
+   cats: 유튜브 videoCategoryId · kw: 전체 풀에서 걸러낼 키워드
+   편수가 얇던 분류(드라마·취미·경제·교육·여행)를 큰 축에 통폐합했다. */
+type Feed = { feed: string; cats: string[]; kw?: RegExp[]; kwCh?: RegExp };
+const FEEDS: Feed[] = [
+  { feed: "news",   cats: ["25"],       kw: [KW.money] },              // 뉴스·경제
+  { feed: "ent",    cats: ["24", "23"] },                              // 예능·코믹
+  { feed: "drama",  cats: ["1"],        kw: [KW.drama], kwCh: KW.dramaCh }, // 드라마·영화
+  { feed: "music",  cats: ["10"] },                                    // 음악
+  { feed: "game",   cats: ["20", "17"] },                              // 게임·스포츠
+  { feed: "food",   cats: [],           kw: [KW.food] },               // 맛집·먹방
+  { feed: "life",   cats: ["22"],       kw: [KW.travel, KW.hobby] },   // 라이프·여행·취미
+  { feed: "beauty", cats: ["26"] },                                    // 뷰티·패션
+  { feed: "animal", cats: ["15"] },                                    // 동물
+  { feed: "tech",   cats: ["28"],       kw: [KW.edu] },                // IT·과학·교육
 ];
-
-// 쇼츠 판별: 유튜브는 세로 60초 이하(최근 3분까지)를 쇼츠로 본다.
-// API가 쇼츠 여부를 안 주므로 길이 + #Shorts 해시태그로 판단한다.
-const SHORTS_RE = /#shorts?|#쇼츠/i;
 
 function bestThumb(t: any): string | null {
   if (!t) return null;
@@ -79,14 +53,39 @@ function durSec(iso: string | null): number {
   return (+(m[1] || 0)) * 3600 + (+(m[2] || 0)) * 60 + (+(m[3] || 0));
 }
 
-function isShort(v: any): boolean {
-  const sec = durSec(v.contentDetails?.duration ?? null);
-  if (sec > 0 && sec <= 60) return true;
-  const text = `${v.snippet?.title ?? ""} ${v.snippet?.description ?? ""}`;
-  return sec > 0 && sec <= 180 && SHORTS_RE.test(text);
+/* ── 쇼츠 판별 ─────────────────────────────────────────
+   API는 쇼츠 여부를 안 준다. 길이만으로는 3분짜리 쇼츠가 롱폼에 섞인다.
+   유튜브는 '세로 영상'에만 원본비율 썸네일(oardefault.jpg)을 만든다 →
+   그게 존재하면 세로 = 쇼츠. (가로 영상은 404) */
+const SHORT_MAX_SEC = 185;   // 쇼츠 상한 3분 + 여유
+
+async function isVertical(id: string): Promise<boolean> {
+  try {
+    const r = await fetch(`https://i.ytimg.com/vi/${id}/oardefault.jpg`, { method: "HEAD" });
+    return r.ok;
+  } catch { return false; }
 }
 
-function toRow(v: any, feed: string, rank: number, now: string) {
+// 동시 요청은 적당히 제한 (수백 개를 한꺼번에 던지지 않게)
+async function markShorts(pool: Map<string, any>): Promise<Set<string>> {
+  const cand = [...pool.values()]
+    .filter((v) => {
+      const s = durSec(v.contentDetails?.duration ?? null);
+      return s > 0 && s <= SHORT_MAX_SEC;
+    })
+    .map((v) => v.id);
+
+  const shorts = new Set<string>();
+  const SIZE = 20;
+  for (let i = 0; i < cand.length; i += SIZE) {
+    const batch = cand.slice(i, i + SIZE);
+    const res = await Promise.all(batch.map(isVertical));
+    batch.forEach((id, j) => { if (res[j]) shorts.add(id); });
+  }
+  return shorts;
+}
+
+function toRow(v: any, feed: string, rank: number, now: string, shorts: Set<string>) {
   const sec = durSec(v.contentDetails?.duration ?? null);
   return {
     feed,
@@ -102,7 +101,7 @@ function toRow(v: any, feed: string, rank: number, now: string) {
     comment_count: Number(v.statistics?.commentCount ?? 0),
     duration: v.contentDetails?.duration ?? null,
     duration_sec: sec,
-    is_short: isShort(v),
+    is_short: shorts.has(v.id),
     category_id: v.snippet?.categoryId ?? null,
     rank,
     collected_at: now,
@@ -120,39 +119,59 @@ async function fetchChart(cat: string | null, max: number): Promise<any[]> {
 
   const res = await fetch(url.toString());
   const data = await res.json();
-  // 카테고리에 따라 KR 차트가 비어 있을 수 있다 → 그 피드만 건너뛴다.
+  // 카테고리에 따라 KR 차트가 비어 있을 수 있다 → 그냥 건너뛴다.
   if (!res.ok || !Array.isArray(data.items)) return [];
   return data.items;
 }
+
+const views = (v: any) => Number(v.statistics?.viewCount ?? 0);
 
 Deno.serve(async () => {
   if (!KEY) return json({ ok: false, error: "YOUTUBE_API_KEY 미설정" }, 500);
 
   const now = new Date().toISOString();
-  const rows: any[] = [];
-  const counts: Record<string, number> = {};
-  const pool = new Map<string, any>();   // 키워드 피드를 뽑을 전체 풀
+  const pool = new Map<string, any>();          // 전체 풀(키워드 매칭용)
+  const byCat = new Map<string, any[]>();       // 카테고리별 원본
 
-  for (const { feed, cat, max } of API_FEEDS) {
-    const items = await fetchChart(cat, max);
-    items.forEach((v, i) => rows.push(toRow(v, feed, i + 1, now)));
-    counts[feed] = items.length;
-    for (const v of items) pool.set(v.id, v);
+  // 1) 전체 인기차트
+  const allItems = await fetchChart(null, 50);
+  allItems.forEach((v) => pool.set(v.id, v));
+
+  // 2) 필요한 카테고리만 한 번씩
+  const cats = [...new Set(FEEDS.flatMap((f) => f.cats))];
+  for (const c of cats) {
+    const items = await fetchChart(c, 45);
+    byCat.set(c, items);
+    items.forEach((v) => pool.set(v.id, v));
   }
 
+  // 3) 쇼츠 판별 (세로 썸네일 존재 여부)
+  const shorts = await markShorts(pool);
+
+  // 4) 피드 조립
+  const rows: any[] = [];
+  const counts: Record<string, number> = {};
+
+  allItems.forEach((v, i) => rows.push(toRow(v, "all", i + 1, now, shorts)));
+  counts["all"] = allItems.length;
+
   const all = [...pool.values()];
-  for (const { feed, re, ch } of KEYWORD_FEEDS) {
-    const hits = all.filter((v) => {
-      const t = v.snippet?.title ?? "";
-      const d = (v.snippet?.description ?? "").slice(0, 200);
-      const c = v.snippet?.channelTitle ?? "";
-      if (!re.test(`${t} ${d} ${c}`)) return false;
-      return ch ? ch.test(`${t} ${c}`) : true;
-    }).sort(
-      (a, b) => Number(b.statistics?.viewCount ?? 0) - Number(a.statistics?.viewCount ?? 0),
-    );
-    hits.forEach((v, i) => rows.push(toRow(v, feed, i + 1, now)));
-    counts[feed] = hits.length;
+  for (const f of FEEDS) {
+    const picked = new Map<string, any>();
+    for (const c of f.cats) (byCat.get(c) || []).forEach((v) => picked.set(v.id, v));
+    for (const re of f.kw || []) {
+      for (const v of all) {
+        const t = v.snippet?.title ?? "";
+        const d = (v.snippet?.description ?? "").slice(0, 200);
+        const ch = v.snippet?.channelTitle ?? "";
+        if (!re.test(`${t} ${d} ${ch}`)) continue;
+        if (f.kwCh && !f.kwCh.test(`${t} ${ch}`)) continue;
+        picked.set(v.id, v);
+      }
+    }
+    const list = [...picked.values()].sort((a, b) => views(b) - views(a));
+    list.forEach((v, i) => rows.push(toRow(v, f.feed, i + 1, now, shorts)));
+    counts[f.feed] = list.length;
   }
 
   if (!rows.length) return json({ ok: false, error: "youtube_api_failed" }, 502);
@@ -162,13 +181,14 @@ Deno.serve(async () => {
     .upsert(rows, { onConflict: "feed,video_id" });
   if (error) return json({ ok: false, error: "upsert_failed", detail: error.message }, 500);
 
-  // 이번 수집에 없던(=차트에서 내려간) 영상 정리 — 목록이 무한정 커지지 않게
+  // 이번 수집에 없던(=차트에서 내려간) 영상 정리
   await supa.from("youtube_hot").delete().lt("collected_at", now);
 
   return json({
     ok: true,
     total: rows.length,
-    shorts: rows.filter((r) => r.is_short).length,
+    uniqueVideos: pool.size,
+    shorts: shorts.size,
     feeds: counts,
     region: REGION,
   });

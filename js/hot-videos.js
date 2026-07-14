@@ -8,30 +8,25 @@
    - window.GALLA_HotShelf(el, n) 로 핫트렌드 탭에서도 재사용
 ========================================================= */
 (function () {
-  // 방송 카테고리 — 라벨/아이콘은 여기서만 관리
+  // 방송 카테고리 — 라벨/아이콘은 여기서만 관리.
+  // 편수가 얇던 분류(영화·코믹·스포츠·여행·취미·경제·교육)는 큰 축에 통폐합했다.
+  // (수집기 FEEDS와 id가 1:1로 맞아야 한다)
   const CATS = [
-    { id: "all",    label: "전체",       emoji: "🔥" },
-    { id: "news",   label: "뉴스·시사",   emoji: "📰" },
-    { id: "ent",    label: "예능",       emoji: "🎭" },
-    { id: "drama",  label: "드라마",     emoji: "🎬" },
-    { id: "movie",  label: "영화·애니",   emoji: "🍿" },
-    { id: "music",  label: "음악",       emoji: "🎵" },
-    { id: "comic",  label: "코믹",       emoji: "😂" },
-    { id: "game",   label: "게임",       emoji: "🎮" },
-    { id: "sports", label: "스포츠",     emoji: "⚽" },
-    { id: "food",   label: "맛집·먹방",   emoji: "🍜" },
-    { id: "travel", label: "여행",       emoji: "✈️" },
-    { id: "life",   label: "라이프스타일", emoji: "🏠" },
-    { id: "beauty", label: "뷰티·패션",   emoji: "💄" },
-    { id: "animal", label: "동물",       emoji: "🐾" },
-    { id: "hobby",  label: "취미",       emoji: "🎨" },
-    { id: "money",  label: "경제·금융",   emoji: "📈" },
-    { id: "tech",   label: "IT·과학",    emoji: "💻" },
-    { id: "edu",    label: "교육",       emoji: "📚" },
+    { id: "all",    label: "전체",         emoji: "🔥" },
+    { id: "news",   label: "뉴스·경제",     emoji: "📰" },
+    { id: "ent",    label: "예능·코믹",     emoji: "🎭" },
+    { id: "drama",  label: "드라마·영화",   emoji: "🎬" },
+    { id: "music",  label: "음악",         emoji: "🎵" },
+    { id: "game",   label: "게임·스포츠",   emoji: "🎮" },
+    { id: "food",   label: "맛집·먹방",     emoji: "🍜" },
+    { id: "life",   label: "라이프·여행·취미", emoji: "🏠" },
+    { id: "beauty", label: "뷰티·패션",     emoji: "💄" },
+    { id: "animal", label: "동물",         emoji: "🐾" },
+    { id: "tech",   label: "IT·과학·교육",  emoji: "💻" },
   ];
   // '전체' 화면에 선반으로 깔 카테고리 순서
-  const SHELVES = ["news", "ent", "drama", "movie", "music", "game", "sports",
-                   "food", "travel", "beauty", "animal", "money"];
+  const SHELVES = ["news", "ent", "drama", "music", "game",
+                   "food", "life", "beauty", "animal", "tech"];
 
   const cache = new Map();      // feed → rows (롱폼+쇼츠 전부)
   let current = "all";
