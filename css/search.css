@@ -1247,3 +1247,29 @@ body[data-page="search"] .header-inner {
   background: none; border: 0; color: #8a909c;
   font-size: 13px; cursor: pointer; touch-action: manipulation;
 }
+
+/* ============================================================
+   뉴스 뷰어 = 페이지 (모달 아님)
+   상단 ✕ 대신 ← 뒤로가기. 노치/세이프에어리어 고려.
+============================================================ */
+.news-viewer-header {
+  height: auto;
+  min-height: 52px;
+  padding: calc(6px + env(safe-area-inset-top)) 8px 6px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  background: #08080b;
+}
+.news-viewer-header button#news-viewer-close {
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; flex: 0 0 38px;
+  border-radius: 50%;
+  color: #e8eaef; cursor: pointer;
+  touch-action: manipulation;
+}
+#news-viewer-close svg { width: 19px; height: 19px; }
+#news-viewer-close:active { background: rgba(255,255,255,.09); }
+#news-viewer-title {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 14px; font-weight: 800; color: #e8eaef;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

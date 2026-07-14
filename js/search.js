@@ -59,11 +59,37 @@ document.addEventListener("DOMContentLoaded", async () => {
   const viewerFallback = document.getElementById("news-viewer-fallback");
   const viewerFallbackBtn = document.getElementById("news-viewer-fallback-btn");
 
-  function closeNewsViewer() {
+  /* 뉴스 뷰어는 '모달'이 아니라 '페이지'처럼 동작해야 한다.
+     모달이면 뒤로가기 스와이프가 검색 페이지를 통째로 떠나버려서(=앱 밖으로 튕김)
+     읽다가 뒤로 젖히면 엉뚱한 데로 간다.
+     → 열 때 히스토리 항목을 하나 쌓고, 뒤로가기(스와이프 포함)로 닫는다. */
+  let viewerPushed = false;
+
+  function hideViewer() {
     viewerModal.classList.add("hidden");
     viewerReader.innerHTML = "";
     document.body.style.overflow = "";
   }
+
+  // 뷰어를 열 때 호출 — 이미 열려 있으면(기사 안에서 원문 열기) 더 쌓지 않는다
+  function pushViewerState() {
+    if (viewerPushed) return;
+    viewerPushed = true;
+    history.pushState({ gallaViewer: true }, "");
+  }
+
+  // 사용자가 '닫기'를 누른 경우 — 뒤로가기와 같은 동작이어야 히스토리가 어긋나지 않는다
+  function closeNewsViewer() {
+    if (viewerPushed) history.back();   // → popstate에서 hideViewer()
+    else hideViewer();
+  }
+
+  window.addEventListener("popstate", () => {
+    if (!viewerPushed) return;
+    viewerPushed = false;
+    hideViewer();
+  });
+
   viewerClose?.addEventListener("click", closeNewsViewer);
 
   /* ================= 탭 ================= */
@@ -637,6 +663,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     viewerReader.hidden = false;
     viewerReader.scrollTop = 0;
     viewerReader.innerHTML = `<div class="reader-loading">불러오는 중…</div>`;
+    pushViewerState();
     viewerModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
@@ -936,6 +963,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     viewerReader.hidden = false;
     viewerReader.scrollTop = 0;
     viewerReader.innerHTML = `<div class="reader-loading">기사를 불러오는 중…</div>`;
+    pushViewerState();
     viewerModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
