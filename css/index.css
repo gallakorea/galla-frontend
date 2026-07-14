@@ -439,6 +439,8 @@ body { display: block; }
     color: #d6dae2;
     line-height: 1;
 }
+/* 좋아요 0개면 카운트가 빈 span으로 남아 gap(5px)만 먹어 첫 간격만 넓어진다 */
+.like-btn .lk-count:empty { display: none; }
 .like-btn.on { color: #ff3b5c; }
 .like-btn.on .lk-ic { fill: #ff3b5c; stroke: #ff3b5c; }
 .like-btn.on .lk-count { color: #ff5b78; }
