@@ -555,7 +555,8 @@
     // 공유 랜딩에서 들어온 경우 — /search.html?video=<id> → 그 영상 바로 열기
     const want = new URLSearchParams(location.search).get("video");
     if (want) {
-      openHotTab();
+      // 탭 전환은 search.js가 바인딩한 뒤여야 먹는다(같은 DOMContentLoaded에서 경쟁)
+      setTimeout(openHotTab, 0);
       (async () => {
         const rows = await loadFeed("all");
         const v = rows.find((x) => x.video_id === want);
