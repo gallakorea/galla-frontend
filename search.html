@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GALLA - 검색</title>
-  <link rel="stylesheet" href="./css/search.css?v=0717f" />
-  <link rel="stylesheet" href="./css/header.css?v=0717f">
-  <link rel="stylesheet" href="./css/nav.css?v=0717f">
-  <link rel="stylesheet" href="./css/write-hub.css?v=0717f">
+  <link rel="stylesheet" href="./css/search.css?v=0717g" />
+  <link rel="stylesheet" href="./css/header.css?v=0717g">
+  <link rel="stylesheet" href="./css/nav.css?v=0717g">
+  <link rel="stylesheet" href="./css/write-hub.css?v=0717g">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0717f">
+  <link rel="stylesheet" href="./css/theme.css?v=0717g">
 </head>
 
 <body data-page="search">
@@ -47,6 +47,7 @@
     <button type="button" class="tab-item active" data-tab="search">🔍 검색</button>
     <button type="button" class="tab-item" data-tab="trending">🔥 핫트렌드</button>
     <button type="button" class="tab-item" data-tab="news">📰 갈라뉴스</button>
+    <button type="button" class="tab-item" data-tab="hot">🎬 핫영상</button>
   </div>
 
   <!-- TAB CONTENT -->
@@ -95,9 +96,31 @@
       <div id="top-news-list"></div>
     </div>
 
+    <!-- ===== 핫영상 (유튜브 인기 급상승) ===== -->
+    <div class="tab-panel" data-panel="hot">
+      <p class="hv-sub">지금 한국에서 가장 뜨거운 영상 — 30분마다 갱신됩니다.</p>
+      <div id="hot-video-list" class="hv-list"></div>
+    </div>
+
   </div>
 </section>
 </main>
+
+<!-- 영상 재생 (공식 유튜브 플레이어 임베드) -->
+<div id="hv-player" class="hv-player hidden">
+  <div class="hv-dim"></div>
+  <div class="hv-box">
+    <div class="hv-head">
+      <span class="hv-title" id="hvTitle"></span>
+      <button type="button" class="hv-close" id="hvClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="hv-frame" id="hvFrame"></div>
+    <div class="hv-actions">
+      <a class="hv-yt" id="hvOpen" href="#" target="_blank" rel="noopener noreferrer">유튜브에서 보기 ↗</a>
+      <button type="button" class="hv-galla" id="hvGalla">⚔️ 이걸로 갈라치기</button>
+    </div>
+  </div>
+</div>
 
 <!-- =================================================
      📰 NEWS VIEWER MODAL (IN-APP IFRAME)
@@ -158,13 +181,14 @@
     </div>
 </nav>
 
-<script src="./js/vendor/supabase.js?v=0717f"></script>
-<script src="js/supabase.js?v=0717f"></script>
-<script src="js/comment-actions.js?v=0717f"></script>
-<script src="js/write-hub.js?v=0717f"></script>
-<script src="js/dm.js?v=0717f"></script>
-<script src="./js/search.js?v=0717f"></script>
-<script src="./js/nav.js?v=0717f"></script>
+<script src="./js/vendor/supabase.js?v=0717g"></script>
+<script src="js/supabase.js?v=0717g"></script>
+<script src="js/comment-actions.js?v=0717g"></script>
+<script src="js/write-hub.js?v=0717g"></script>
+<script src="js/dm.js?v=0717g"></script>
+<script src="./js/search.js?v=0717g"></script>
+<script src="js/hot-videos.js?v=0717g"></script>
+<script src="./js/nav.js?v=0717g"></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {

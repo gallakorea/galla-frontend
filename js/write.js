@@ -19,6 +19,19 @@ document.addEventListener('DOMContentLoaded', () => {
   'input[name="authorStance"]'
 );
 
+  /* 🎬 핫영상 → '이걸로 갈라치기'로 넘어온 경우 제목·본문 미리 채우기.
+     (유튜브 영상은 우리가 호스팅하지 않으므로 미디어는 직접 올려야 한다) */
+  try {
+    const seed = JSON.parse(sessionStorage.getItem('GALLA_SEED') || 'null');
+    if (seed && seed.url) {
+      sessionStorage.removeItem('GALLA_SEED');
+      if (titleEl && !titleEl.value) titleEl.value = seed.title || '';
+      if (descEl && !descEl.value) {
+        descEl.value = '이 영상을 두고 의견이 갈립니다.\n\n출처: ' + (seed.source || '유튜브') + '\n' + seed.url;
+      }
+    }
+  } catch (_) {}
+
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
