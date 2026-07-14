@@ -51,10 +51,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다.
   //    ⚠️ 스와이프 분기(return)보다 '앞'에 둬야 비-탭 페이지(광장상세·이슈 등)에서도 동작.
   const navEl = document.querySelector(".nav");
-  // 헤더 인스타식 동작(로고는 고정, 아이콘만) — 네비 축소와 같은 핸들러로 100% 동기화.
+  // 헤더 인스타식 자동 숨김 — 네비 축소와 같은 핸들러로 100% 동기화.
   //   .hdr-scrolled : 스크롤(작동) 상태 → 아이콘에 원 표시(최상단에선 원 없음)
-  //   .hdr-icons-out: 아래로 스크롤 → 아이콘만 위로 숨김(로고·헤더바는 그대로)
-  //   mypage는 CSS에서 ＋만 숨김 대상으로 제한.
+  //   .hdr-hidden   : 아래로 스크롤 → 헤더 전체(로고·＋·♥·금액·DM·설정)가 위로 사라짐
+  //                   위로 스크롤하면 다시 표시. 전 페이지 동일.
   const _page = document.body.dataset.page;
   const hdrEl = ["index", "predict", "search", "plaza", "mypage"].includes(_page)
     ? document.querySelector(".header") : null;
@@ -68,20 +68,20 @@ document.addEventListener("DOMContentLoaded", () => {
       requestAnimationFrame(() => {
         ticking = false;
         const y = getY(), dy = y - lastY;
-        if (y <= 10) {                           // 최상단: 원 제거 + 아이콘 표시 + 네비 원래크기
+        if (y <= 10) {                           // 최상단: 원 제거 + 헤더 표시 + 네비 원래크기
           navEl && navEl.classList.remove("nav--mini");
-          if (hdrEl) { hdrEl.classList.remove("hdr-scrolled"); hdrEl.classList.remove("hdr-icons-out"); }
+          if (hdrEl) { hdrEl.classList.remove("hdr-scrolled"); hdrEl.classList.remove("hdr-hidden"); }
           lastY = y;
           return;
         }
         hdrEl && hdrEl.classList.add("hdr-scrolled"); // 스크롤 상태 = 아이콘 원 표시
         if (Math.abs(dy) > 4) {                  // 미세 스크롤 무시(떨림 방지)
-          if (dy > 0 && y > 60) {                // 아래로 → 아이콘 숨김/네비 축소
+          if (dy > 0 && y > 60) {                // 아래로 → 헤더 전체 숨김/네비 축소
             navEl && navEl.classList.add("nav--mini");
-            hdrEl && hdrEl.classList.add("hdr-icons-out");
-          } else if (dy < 0) {                    // 위로 → 아이콘 표시/네비 복원
+            hdrEl && hdrEl.classList.add("hdr-hidden");
+          } else if (dy < 0) {                    // 위로 → 헤더 표시/네비 복원
             navEl && navEl.classList.remove("nav--mini");
-            hdrEl && hdrEl.classList.remove("hdr-icons-out");
+            hdrEl && hdrEl.classList.remove("hdr-hidden");
           }
           lastY = y;
         }

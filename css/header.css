@@ -73,18 +73,10 @@ body[data-page="mypage"] #app {
   backdrop-filter: blur(6px);
 }
 
-/* 아래로 스크롤: 아이콘만 위로 사라짐(로고·헤더바는 고정) */
-.header.hdr-icons-out .hdr-btn,
-.header.hdr-icons-out .header-action {
-  transform: translateY(-170%);
-  opacity: 0;
-  pointer-events: none;
-}
-/* 마이페이지: ＋ 버튼만 숨김 대상, 나머지(DM·설정)는 항상 유지 */
-body[data-page="mypage"] .header.hdr-icons-out .hdr-btn:not(.hdr-write) {
-  transform: none;
-  opacity: 1;
-  pointer-events: auto;
+/* 아래로 스크롤: 헤더 전체(로고·＋·♥·금액·DM·설정 모두)가 위로 사라짐.
+   위로 스크롤하면 다시 내려옴. 전 페이지 동일. */
+.header.hdr-hidden {
+  transform: translateY(-100%);
 }
 
 /* 내부 컨테이너 */
