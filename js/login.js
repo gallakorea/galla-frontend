@@ -29,6 +29,20 @@ function waitForClient() {
     }
 
     /* ----------------------------------------------------
+       🔥 자동 로그인 — 이미 세션이 있으면 로그인 화면 건너뛰고 홈으로
+    ---------------------------------------------------- */
+    try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess?.session?.user) { location.replace("index.html"); return; }
+    } catch (e) {}
+
+    /* 이메일 기억 — 지난 로그인 이메일 자동 채움 */
+    try {
+        const last = localStorage.getItem("galla_last_email");
+        if (last && email && !email.value) email.value = last;
+    } catch (e) {}
+
+    /* ----------------------------------------------------
        🔥 Enter 키로도 로그인 실행
     ---------------------------------------------------- */
     function handleEnter(event) {
@@ -89,6 +103,9 @@ function waitForClient() {
             alert("로그인 실패: " + msg);
             return;
         }
+
+        // 다음 방문 이메일 자동 채움용 저장
+        try { localStorage.setItem("galla_last_email", emailVal); } catch (e) {}
 
         // 단계별 위트 환영: 로그인 누적 횟수를 세어 index에서 welcome.js가 인사
         try {
