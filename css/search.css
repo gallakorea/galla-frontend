@@ -820,8 +820,12 @@ body[data-page="search"] .header-inner {
 }
 
 /* 갈라뉴스 카드 지표 */
+/* 좋아요·싫어요·댓글·저장·공유를 전부 왼쪽에 붙여 한 줄로.
+   버튼이 각자 좌우 패딩(7px)을 가지므로 gap은 0으로 두고,
+   음수 마진으로 첫 아이콘을 제목과 좌측 정렬한다. */
 .gn-cardstats {
-  display: flex; align-items: center; gap: 12px; margin-top: 7px;
+  display: flex; align-items: center; gap: 2px;
+  margin-top: 7px; margin-left: -7px;
   font-size: 12px; color: #8a93a6;
 }
 .gn-cardstats .gn-saved { color: #6d8bff; font-weight: 700; }
@@ -1356,8 +1360,6 @@ body[data-page="news"] .news-viewer-fallback {
 .gn-cardstats .gnc-act:active { background: rgba(255,255,255,.07); }
 .gn-cardstats .gn-save-btn.on { color: #f5c518; }
 .gn-cardstats .gn-save-btn.on .st-ic { fill: #f5c518; }
-/* 공유는 오른쪽 끝으로 */
-.gn-cardstats .gn-share-btn { margin-left: auto; }
 
 /* 갈라뉴스 상세 액션바 아이콘 (이모지 → SVG) */
 .gn-act .ic-like, .gn-act .ic-dislike, .gn-act .ic-comment,
