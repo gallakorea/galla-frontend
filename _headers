@@ -1,0 +1,23 @@
+# Cloudflare Pages 보안 헤더 (전 경로)
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Frame-Options: SAMEORIGIN
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  X-Permitted-Cross-Domain-Policies: none
+
+# 민감 페이지는 캐시 금지(설정/계정/인증)
+/settings.html
+  Cache-Control: no-store
+/account-edit.html
+  Cache-Control: no-store
+/auth/*
+  Cache-Control: no-store
+/admin.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+/admin-login.html
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
