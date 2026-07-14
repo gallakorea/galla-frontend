@@ -949,6 +949,9 @@ body[data-page="search"] .header-inner {
   display: flex; gap: 10px;
   padding: 0 0 4px;
   overflow-x: auto; scroll-snap-type: x proximity;
+  /* scroll-snap은 타일을 스크롤포트 시작선에 붙여서 좌측 패딩을 먹어버린다.
+     scroll-padding 을 줘야 첫 타일이 패딩 안쪽에 스냅된다. */
+  scroll-padding-left: 16px;
   scrollbar-width: none;
 }
 /* 풀블리드는 핫영상 패널 안에서만 */
