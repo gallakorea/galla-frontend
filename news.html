@@ -2,12 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>발행 전 적합성 검사 · GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <link rel="stylesheet" href="./css/confirm.css?v=0718k" />
-  <link rel="stylesheet" href="./css/header.css?v=0718k" />
-  <link rel="stylesheet" href="./css/nav.css?v=0718k" />
-  <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
+  <title>뉴스 - GALLA</title>
+  <link rel="stylesheet" href="./css/search.css?v=0718k" />
+  <link rel="stylesheet" href="./css/nav.css?v=0718k">
+  <!-- GALLA 앱 아이콘 / PWA -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
   <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
@@ -19,47 +18,28 @@
   <link rel="stylesheet" href="./css/theme.css?v=0718k">
 </head>
 
-<body data-page="write">
-<div class="app-root">
+<body data-page="news">
+<div id="app">
 
-  <!-- TOP APP BAR -->
-  <header class="wr-appbar">
-    <button type="button" class="wr-back" id="backTop" aria-label="뒤로">
+  <!-- 기사 페이지 헤더 — 뒤로가기는 브라우저/스와이프와 동일하게 동작 -->
+  <header class="np-head">
+    <button class="np-back" data-back="search.html" aria-label="뒤로">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
-    <div class="wr-appbar-title">적합성 검사</div>
-    <span class="wr-appbar-sp"></span>
+    <span class="np-title" id="np-title">뉴스</span>
+    <a class="np-ext" id="np-ext" href="#" target="_blank" rel="noopener noreferrer">원문 ↗</a>
   </header>
 
-  <main class="cf-main">
-    <div class="cf-inner">
+  <main class="np-main">
+    <div id="np-reader" class="news-viewer-reader"></div>
 
-      <!-- HERO -->
-      <div class="cf-hero">
-        <div class="cf-shield">🛡️</div>
-        <h1 class="cf-title">발행 전 적합성 검사</h1>
-        <p class="cf-desc">콘텐츠는 공개되며 책임은 작성자에게 있습니다.<br>GALLA는 위험 요소를 사전에 고지합니다.</p>
-      </div>
-
-      <!-- CHECK LIST -->
-      <section class="cf-checks">
-        <div id="check-title" class="confirm-item loading"><strong>제목</strong><br>검사 중…</div>
-        <div id="check-oneline" class="confirm-item loading"><strong>한줄 요약</strong><br>검사 중…</div>
-        <div id="check-description" class="confirm-item loading"><strong>본문</strong><br>검사 중…</div>
-      </section>
-
-      <div class="cf-note">
-        ⚖️ 검사는 명백한 위험 요소를 걸러내기 위한 참고용이며, 최종 판단과 책임은 작성자에게 있습니다.
-      </div>
-
+    <!-- 본문 추출 실패 시 -->
+    <div id="np-fallback" class="news-viewer-fallback" hidden>
+      <p class="nvf-title"></p>
+      <p class="nvf-desc">이 기사는 본문을 불러오지 못했어요.</p>
+      <a class="nvf-btn" id="np-fallback-btn" href="#" target="_blank" rel="noopener noreferrer">원문 기사 열기 ↗</a>
     </div>
   </main>
-
-  <!-- STICKY ACTION -->
-  <div class="cf-actionbar">
-    <button id="backBtn" class="cf-btn ghost">뒤로 가기</button>
-    <button id="publishBtn" class="cf-btn main" disabled>최종 발행</button>
-  </div>
 
 </div>
 
@@ -82,16 +62,13 @@
     </button>
   </div>
 </nav>
-<script src="./js/nav.js?v=0718k"></script>
 
 <script src="./vendor/supabase.js?v=0718k"></script>
-<script src="./js/supabase.js?v=0718k"></script>
-<script src="./js/confirm.js?v=0718k"></script>
-<script>
-  document.getElementById('backTop')?.addEventListener('click', function(){
-    document.getElementById('backBtn')?.click();
-  });
-</script>
+<script src="js/supabase.js?v=0718k"></script>
+<script src="js/back.js?v=0718k"></script>
+<script src="js/comment-actions.js?v=0718k"></script>
+<script src="js/news-page.js?v=0718k"></script>
+<script src="./js/nav.js?v=0718k"></script>
 
 </body>
 </html>

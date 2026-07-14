@@ -1273,3 +1273,38 @@ body[data-page="search"] .header-inner {
   font-size: 14px; font-weight: 800; color: #e8eaef;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* ============================================================
+   news.html — 기사 '페이지'
+============================================================ */
+body[data-page="news"] { background: #08080b; }
+body[data-page="news"] #app { padding-bottom: 94px; }
+
+.np-head {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 8px;
+  padding: calc(6px + env(safe-area-inset-top)) 8px 6px;
+  min-height: 52px;
+  background: rgba(8,8,11,.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.np-back {
+  display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; flex: 0 0 38px;
+  border: 0; border-radius: 50%; background: none;
+  color: #e8eaef; cursor: pointer; touch-action: manipulation;
+}
+.np-back svg { width: 19px; height: 19px; }
+.np-back:active { background: rgba(255,255,255,.09); }
+.np-title {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 14px; font-weight: 800; color: #e8eaef;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.np-ext {
+  flex: 0 0 auto; padding: 0 8px;
+  font-size: 12px; font-weight: 700; color: #8a909c; text-decoration: none;
+}
+.np-main { padding: 0; }
+body[data-page="news"] .news-viewer-reader { padding: 4px 16px 24px; }

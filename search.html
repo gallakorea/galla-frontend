@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GALLA - 검색</title>
-  <link rel="stylesheet" href="./css/search.css?v=0718j" />
-  <link rel="stylesheet" href="./css/header.css?v=0718j">
-  <link rel="stylesheet" href="./css/nav.css?v=0718j">
-  <link rel="stylesheet" href="./css/write-hub.css?v=0718j">
+  <link rel="stylesheet" href="./css/search.css?v=0718k" />
+  <link rel="stylesheet" href="./css/header.css?v=0718k">
+  <link rel="stylesheet" href="./css/nav.css?v=0718k">
+  <link rel="stylesheet" href="./css/write-hub.css?v=0718k">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0718j">
+  <link rel="stylesheet" href="./css/theme.css?v=0718k">
 </head>
 
 <body data-page="search">
@@ -185,30 +185,9 @@
   </div>
 </div>
 
-<!-- =================================================
-     📰 NEWS VIEWER — 모달이 아니라 '페이지'로 동작한다.
-     열 때 히스토리를 쌓아 뒤로가기(스와이프 포함)로 목록에 돌아온다.
-================================================= -->
-<div id="news-viewer-modal" class="news-viewer-modal hidden">
-
-  <div class="news-viewer-header">
-    <button id="news-viewer-close" aria-label="뒤로">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <span id="news-viewer-title">기사 보기</span>
-    <a id="news-viewer-ext" href="#" target="_blank" rel="noopener noreferrer">원문 ↗</a>
-  </div>
-
-  <div class="news-viewer-stage">
-    <div id="news-viewer-reader" class="news-viewer-reader"></div>
-    <div id="news-viewer-fallback" class="news-viewer-fallback" hidden>
-      <p class="nvf-title"></p>
-      <p class="nvf-desc">이 기사는 본문을 불러오지 못했어요.</p>
-      <a class="nvf-btn" id="news-viewer-fallback-btn" href="#" target="_blank" rel="noopener noreferrer">원문 기사 열기 ↗</a>
-    </div>
-  </div>
-
-</div>
+<!-- 기사 읽기는 news.html '진짜 페이지'가 담당한다 (예전의 뷰어 모달은 제거).
+     모달을 pushState로 페이지 흉내내면 사파리 스와이프 뒤로가기가 목록을 스치고
+     이전 문서까지 튕겨 나간다. -->
 
 <!-- ============================= -->
 <!-- ✅ 통합 NAV -->
@@ -247,14 +226,14 @@
     </div>
 </nav>
 
-<script src="./vendor/supabase.js?v=0718j"></script>
-<script src="js/supabase.js?v=0718j"></script>
-<script src="js/comment-actions.js?v=0718j"></script>
-<script src="js/write-hub.js?v=0718j"></script>
-<script src="js/dm.js?v=0718j"></script>
-<script src="./js/search.js?v=0718j"></script>
-<script src="js/hot-videos.js?v=0718j"></script>
-<script src="./js/nav.js?v=0718j"></script>
+<script src="./vendor/supabase.js?v=0718k"></script>
+<script src="js/supabase.js?v=0718k"></script>
+<script src="js/comment-actions.js?v=0718k"></script>
+<script src="js/write-hub.js?v=0718k"></script>
+<script src="js/dm.js?v=0718k"></script>
+<script src="./js/search.js?v=0718k"></script>
+<script src="js/hot-videos.js?v=0718k"></script>
+<script src="./js/nav.js?v=0718k"></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {
