@@ -110,17 +110,10 @@ body {
     border: 1px solid #1f2438;
 }
 
-/* 검색 페이지 헤더 강제 리셋 */
-body[data-page="search"] .header {
-    position: sticky !important;
-    left: 0 !important;
-    transform: none !important;
-    max-width: 480px !important;
-    margin: 0 auto !important;
-}
+/* 검색 페이지 헤더 정렬 — 위치·변형(fixed·자동숨김)은 공용 header.css에 위임 */
 body[data-page="search"] .header-inner {
-    max-width: 480px !important;
-    margin: 0 auto !important;
+    max-width: 480px;
+    margin: 0 auto;
 }
 
 /* ===== TAB MENU ===== */
