@@ -873,6 +873,16 @@ async function loadComments(issueId) {
       .select("user_id,nickname,level")
       .in("user_id", userIds);
     profiles?.forEach(p => profileMap[p.user_id] = p);
+
+    // 프로필 사진 — avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
+    const { data: avatars } = await supabase
+      .from("users")
+      .select("id,avatar_url")
+      .in("id", userIds);
+    avatars?.forEach(u => {
+      if (!profileMap[u.id]) profileMap[u.id] = { nickname: "익명", level: 1 };
+      profileMap[u.id].avatar_url = u.avatar_url;
+    });
   }
 
   // 작성자별 이 이슈 투표 진영 (침투 노출용 — votes SELECT 공개 정책)
@@ -956,6 +966,20 @@ function nameSpan(c) {
   const nm = displayName(c);
   if (c.is_anonymous || !c.user_id) return `<span class="user-name">${nm}</span>`;
   return `<span class="user-name userlink" data-user-id="${c.user_id}" data-user-nick="${nm.replace(/"/g, "&quot;")}">${nm}</span>`;
+}
+
+/* 프로필 사진 — 클릭 시 마이페이지 이동(data-profile-uid 전역 핸들러가 처리).
+   익명 댓글은 이동 없이 기본 아이콘만. size: 'c'(댓글) | 'r'(답글) */
+function avatarHTML(c, size) {
+  const cls = `c-avatar c-avatar-${size || "c"}`;
+  const url = profileMap[c.user_id]?.avatar_url;
+  const src = (c.is_anonymous || !c.user_id)
+    ? (window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png")
+    : (window.GALLA_avatarSrc ? window.GALLA_avatarSrc(url) : (url || ""));
+  const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
+  const img = `<img src="${src}" alt="프로필" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
+  if (c.is_anonymous || !c.user_id) return `<span class="${cls} anon-av">${img}</span>`;
+  return `<span class="${cls}" data-profile-uid="${c.user_id}" role="button" aria-label="프로필 보기">${img}</span>`;
 }
 
 // ⋯ 액션 시트: 일기토 신청 / 신고 / 차단 (자체 스타일)
@@ -1118,14 +1142,12 @@ function makeReply(r) {
       : "";
   const ko = r.hp <= 0 ? " ko" : "";
   const infil = isInfiltrator(r) ? " infil-unit" : "";
+  // 대댓글은 단순화 — 작은 아바타 + 닉네임만(레벨·아군태그 생략), HP는 얇은 바
   return `
   <div class="reply${ko}${infil}" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
     <div class="head">
-      <div class="user">
-        ${nameSpan(r)}
-        <span class="level-badge">Lv.${displayLevel(r)}</span>
-        ${relTag(r)}
-      </div>
+      ${avatarHTML(r, "r")}
+      <div class="user">${nameSpan(r)}</div>
       ${hpBarHTML(r)}
     </div>
     <div class="body">${chip}${renderCommentText(r.content)}</div>
@@ -1167,12 +1189,13 @@ function makeComment(c) {
   return `
     <div class="comment${ko}${isAce ? " ace" : ""}${infil}${hlSet.has(c.id) ? " hl" : ""}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
     <div class="head">
+      ${avatarHTML(c, "c")}
       <div class="user">
         <span class="side-icon"></span>
         ${nameSpan(c)}
         <span class="level-badge">Lv.${displayLevel(c)}</span>
         ${relTag(c)}
-        ${isAce ? `<span class="ace-badge">👑 에이스</span>` : ``}
+        ${isAce ? `<span class="ace-badge" title="에이스">👑</span>` : ``}
         ${c.is_anonymous ? `<span class="anon">익명</span>` : ``}
       </div>
       ${hpBarHTML(c)}

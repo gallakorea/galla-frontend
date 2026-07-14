@@ -36,9 +36,10 @@
   background:linear-gradient(180deg,#1a1a1a,#020202)
 }
 
-.head{display:flex;justify-content:space-between;font-size:11px}
-.user{display:flex;gap:6px}
-.anon{font-size:10px;padding:1px 5px;border-radius:4px;background:#333;opacity:.7}
+.head{display:flex;align-items:center;gap:8px;font-size:11px}
+/* 신원 영역: 한 줄 고정 + 말줄임 → 배지들이 2줄로 깨지지 않는다 */
+.user{display:flex;align-items:center;gap:5px;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden}
+.anon{font-size:10px;padding:1px 5px;border-radius:4px;background:#333;opacity:.7;flex:none}
 
 .hp-wrap{
   display:flex;
@@ -1319,3 +1320,64 @@ body.kb-open .battle-input-bar {
 @media (prefers-reduced-motion: reduce){
   .bm-side.lead,.bm-vs,.bm-pro::after,.bm-con::after,.bm-needle,.bm-status,.bmw-box,.bmw-box.win.pro,.bmw-box.win.con,.bmw-box.neutral::after,.bmw-box.win::before{ animation: none !important; }
 }
+
+/* ============================================================
+   전투 댓글 신원 영역 고도화 (프로필 사진 · 닉네임 · 레벨 · 등급)
+   - 헤더는 항상 한 줄. 배지가 2줄로 깨지지 않는다.
+   - 프로필 사진 클릭 → 마이페이지 (data-profile-uid 전역 핸들러)
+============================================================ */
+
+/* 프로필 사진 */
+.c-avatar {
+  flex: none;
+  display: block;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1c1c22;
+  border: 1px solid rgba(255,255,255,.14);
+  cursor: pointer;
+  line-height: 0;
+}
+.c-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.c-avatar:active { transform: scale(.92); }
+.c-avatar.anon-av { cursor: default; opacity: .55; }
+.c-avatar-c { width: 32px; height: 32px; }   /* 댓글 */
+.c-avatar-r { width: 22px; height: 22px; }   /* 답글(단순화) */
+
+/* 진영 링 — 프로필 테두리로 아군/적군 한눈에 */
+.comment[data-side="pro"] > .head > .c-avatar { border-color: rgba(77,163,255,.75); }
+.comment[data-side="con"] > .head > .c-avatar { border-color: rgba(255,92,92,.75); }
+
+/* 닉네임 — 길면 말줄임(줄바꿈 금지) */
+.user .user-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+/* 배지들은 절대 줄어들지 않게 */
+.user .level-badge,
+.user .rel-tag,
+.user .ace-badge,
+.user .nick-title,
+.user .side-icon { flex: none; }
+
+/* 칭호 배지는 댓글 헤더에선 아이콘만 (전체 텍스트는 줄바꿈 유발) */
+.comment .nick-title,
+.reply .nick-title { display: inline-flex !important; align-items: center; margin-right: 1px; }
+.comment .nick-title .nt-name,
+.reply .nick-title .nt-name { display: none !important; }
+.comment .nick-title .nt-ico,
+.reply .nick-title .nt-ico { font-size: 12px; line-height: 1; }
+
+/* 에이스는 왕관 아이콘만 (텍스트 '에이스' 제거로 공간 확보) */
+.ace-badge { flex: none; padding: 1px 5px; }
+
+/* HP는 오른쪽 고정 폭 */
+.head .hp-wrap { flex: none; margin-left: auto; }
+
+/* ── 대댓글 단순화 ── */
+.reply .head { gap: 6px; }
+.reply .user { gap: 4px; font-size: 11px; }
+.reply .head .hp-wrap { transform: scale(.9); transform-origin: right center; }
