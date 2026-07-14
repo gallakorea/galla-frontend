@@ -750,12 +750,36 @@ function shareShort(item) {
   else if (navigator.share) navigator.share({ url, title }).catch(() => {});
   else { try { navigator.clipboard.writeText(url); } catch (e) {} }
 }
+// 모바일 신뢰성: click 대신 touchend(탭) 직접 처리 + 데스크톱 click 폴백.
+// 릴스 오버레이 제스처와 충돌 없이 확실히 발화(스와이프면 무시).
+function onTap(el, fn) {
+  if (!el) return;
+  let sx = 0, sy = 0, moved = false, handled = false;
+  el.addEventListener("touchstart", (e) => {
+    const t = e.touches[0]; sx = t.clientX; sy = t.clientY; moved = false;
+  }, { passive: true });
+  el.addEventListener("touchmove", (e) => {
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) moved = true;
+  }, { passive: true });
+  el.addEventListener("touchend", (e) => {
+    if (moved) return;                 // 스와이프 → 슬라이드 이동에 양보
+    e.preventDefault();                // 뒤따르는 ghost click 억제(중복 방지)
+    e.stopPropagation();
+    handled = true; setTimeout(() => { handled = false; }, 600);
+    fn(e);
+  });
+  el.addEventListener("click", (e) => {
+    if (handled) { handled = false; return; }  // 터치로 이미 처리됨
+    e.preventDefault(); e.stopPropagation();
+    fn(e);
+  });
+}
 function wireSlideControls(section, item) {
-  const bind = (el, fn) => el && el.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); fn(e); });
-  bind(section.querySelector(".shorts-action-btn.comment"), () => { openCommentModal(); loadShortsComments(); });
-  bind(section.querySelector(".shorts-action-btn.share"), () => shareShort(item));
-  section.querySelectorAll(".shorts-goto").forEach(g => bind(g, () => { location.href = "issue.html?id=" + item.id; }));
-  section.querySelectorAll("[data-profile-uid]").forEach(p => bind(p, () => {
+  onTap(section.querySelector(".shorts-action-btn.comment"), () => { openCommentModal(); loadShortsComments(); });
+  onTap(section.querySelector(".shorts-action-btn.share"), () => shareShort(item));
+  section.querySelectorAll(".shorts-goto").forEach(g => onTap(g, () => { location.href = "issue.html?id=" + item.id; }));
+  section.querySelectorAll("[data-profile-uid]").forEach(p => onTap(p, () => {
     const uid = p.getAttribute("data-profile-uid");
     if (uid) location.href = "mypage.html?user=" + encodeURIComponent(uid);
   }));
