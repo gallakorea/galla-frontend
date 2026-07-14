@@ -95,6 +95,27 @@
     rows.filter((v) => (mode === "short" ? v.is_short : !v.is_short))
         .map((v, i) => ({ ...v, rank: i + 1 }));
 
+  // '전체 + 쇼츠'는 feed='all'(유튜브 종합 인기차트)에 쇼츠가 거의 없다.
+  // 그래서 모든 카테고리의 쇼츠를 모아 조회수 순으로 보여준다.
+  async function loadAllShorts() {
+    if (cache.has("__shorts")) return cache.get("__shorts");
+    const c = await sb();
+    if (!c) return [];
+    const { data, error } = await c
+      .from("youtube_hot")
+      .select("video_id,title,channel_title,thumbnail,view_count,like_count,duration,is_short,published_at")
+      .eq("is_short", true)
+      .order("view_count", { ascending: false })
+      .limit(200);
+    const seen = new Set();
+    const rows = (error ? [] : (data || []))
+      .filter((v) => !seen.has(v.video_id) && seen.add(v.video_id))   // 피드별로 중복 저장됨
+      .slice(0, 60)
+      .map((v, i) => ({ ...v, rank: i + 1 }));
+    cache.set("__shorts", rows);
+    return rows;
+  }
+
   /* ---------- 카드 템플릿 ---------- */
   const attrs = (v) =>
     `data-id="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}"`;
@@ -198,7 +219,7 @@
   }
 
   async function renderAll(el) {
-    const rows = pick(await loadFeed("all"));
+    const rows = mode === "short" ? await loadAllShorts() : pick(await loadFeed("all"));
     if (!rows.length) {
       el.innerHTML = `<div class="hv-empty">${mode === "short" ? "쇼츠" : "롱폼"} 영상이 아직 없어요.</div>`;
       return;
