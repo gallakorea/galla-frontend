@@ -230,7 +230,13 @@ function formatK(n) {
 }
 window.GALLA_formatK = formatK;
 
-const heartSvg = `<svg viewBox="0 0 24 24" class="lk-ic"><path d="M12 21s-6.7-4.3-9.3-8.2C.9 10 1.6 6.4 4.5 5.2 6.7 4.3 9 5.1 10.3 6.9L12 9l1.7-2.1C15 5.1 17.3 4.3 19.5 5.2c2.9 1.2 3.6 4.8 1.8 7.6C18.7 16.7 12 21 12 21z"/></svg>`;
+/* 피드 액션 아이콘 — 전부 인라인 SVG로 통일한다.
+   (예전엔 하트만 SVG, 나머지는 <img>라 굵기·크기·베이스라인이 제각각이었다)
+   24×24 viewBox · stroke 1.8 · round cap/join 으로 광학 무게를 맞춤. */
+const heartSvg = `<svg viewBox="0 0 24 24" class="fi-ic lk-ic" aria-hidden="true"><path d="M12 20.3l-1.4-1.3C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.6 11.5L12 20.3z"/></svg>`;
+const commentSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>`;
+const bookmarkSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg>`;
+const shareSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>`;
 
 function renderCard(data) {
     const total = (data.pro + data.con) || 1;
@@ -297,10 +303,10 @@ function renderCard(data) {
 
             <div class="card-footer">
                 <div class="footer-icons">
-                    <button class="like-btn" data-id="${data.id}" data-likes="${data.likes || 0}" aria-label="좋아요">${heartSvg}<span class="lk-count">${data.likes ? formatK(data.likes) : ''}</span></button>
-                    <img src="assets/icons/icon-comment.svg" class="goto-comments">
-                    <img src="assets/icons/icon-bookmark.svg" class="bookmark-btn" data-id="${data.id}">
-                    <img src="assets/icons/icon-share.svg" class="share-btn" data-id="${data.id}">
+                    <button type="button" class="fi-btn like-btn" data-id="${data.id}" data-likes="${data.likes || 0}" aria-label="좋아요">${heartSvg}<span class="lk-count">${data.likes ? formatK(data.likes) : ''}</span></button>
+                    <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
+                    <button type="button" class="fi-btn bookmark-btn" data-id="${data.id}" aria-label="저장">${bookmarkSvg}</button>
+                    <button type="button" class="fi-btn share-btn" data-id="${data.id}" aria-label="공유">${shareSvg}</button>
                 </div>
                 <button class="more-btn card-more" data-id="${data.id}" data-uid="${data.user_id || ''}" aria-label="더보기">${moreIcon}</button>
             </div>
