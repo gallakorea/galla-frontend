@@ -1381,3 +1381,105 @@ body.kb-open .battle-input-bar {
 .reply .head { gap: 6px; }
 .reply .user { gap: 4px; font-size: 11px; }
 .reply .head .hp-wrap { transform: scale(.9); transform-origin: right center; }
+
+/* ============================================================
+   모바일 탭 영역 확보
+   기존엔 텍스트 크기 그대로라 좋아요 버튼이 23×20px → 손가락으로 못 누름.
+   패딩·최소높이를 줘서 실제 누를 수 있는 버튼으로 만든다.
+============================================================ */
+.actions > .like,
+.actions > .dislike,
+.actions > .action-attack,
+.actions > .action-defend,
+.actions > .action-support,
+.actions > .action-locked,
+.actions > .c-duel,
+.actions > .action-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 34px;
+  padding: 6px 11px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .1);
+  font-weight: 700;
+  touch-action: manipulation;              /* 300ms 지연 제거 */
+  -webkit-tap-highlight-color: transparent;
+}
+.actions > .like:active,
+.actions > .dislike:active,
+.actions > .action-attack:active,
+.actions > .action-defend:active,
+.actions > .action-support:active,
+.actions > .c-duel:active,
+.actions > .action-more:active {
+  transform: scale(.94);
+  background: rgba(255, 255, 255, .16);
+}
+.actions { gap: 6px; }
+.actions > .action-more { margin-left: auto; padding: 6px 12px; }
+
+/* 답글 액션도 동일하게(살짝 작게) */
+.reply-actions > .like,
+.reply-actions > .dislike,
+.reply-actions > .action-attack,
+.reply-actions > .action-defend,
+.reply-actions > .action-support,
+.reply-actions > .action-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .08);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.reply-actions > .like:active,
+.reply-actions > .dislike:active,
+.reply-actions > .action-defend:active,
+.reply-actions > .action-support:active { transform: scale(.94); }
+.reply-actions { gap: 6px; }
+
+/* ── 하단 메타행: '답글 N'은 실제 버튼, 나머지는 통계 표시 ── */
+.reply-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 1;
+}
+.reply-meta .rm-replies {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  background: rgba(255, 255, 255, .06);
+  color: #dfe4ee;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.reply-meta .rm-replies:active { transform: scale(.95); background: rgba(255,255,255,.16); }
+/* 통계는 버튼처럼 보이지 않게 */
+.reply-meta .rm-stat {
+  color: #8a8f9a;
+  font-weight: 700;
+  cursor: default;
+  user-select: none;
+}
+/* 답글로 이동 시 잠깐 강조 */
+.replies-flash { animation: repliesFlash .9s ease; border-radius: 8px; }
+@keyframes repliesFlash {
+  0%, 100% { background: transparent; }
+  30%      { background: rgba(255, 255, 255, .1); }
+}

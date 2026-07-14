@@ -1211,7 +1211,12 @@ function makeComment(c) {
       <span class="action-more">⋯</span>
     </div>
 
-    <div class="reply-meta">💬 ${replies.length} · 💥 ${c.attack_count || 0} · 🛡 ${c.defense_count || 0} · 💣 ${c.support_count || 0}</div>
+    <div class="reply-meta">
+      ${replies.length
+        ? `<button type="button" class="rm-replies" data-id="${c.id}">💬 답글 ${replies.length}</button>`
+        : `<span class="rm-stat">💬 답글 0</span>`}
+      <span class="rm-stat" title="이 댓글이 받은 공격·방어·지원 횟수">💥 ${c.attack_count || 0} · 🛡 ${c.defense_count || 0} · 💣 ${c.support_count || 0}</span>
+    </div>
 
     <div class="replies" data-id="${c.id}">
       ${hiddenCount > 0 ? `<button type="button" class="reply-older" data-id="${c.id}">이전 답글 ${hiddenCount}개 보기</button>` : ``}
@@ -1365,6 +1370,19 @@ function bindEvents() {
       return;
     }
 
+
+    // 💬 답글 N → 그 댓글의 답글 목록으로 이동
+    const rm = e.target.closest(".rm-replies");
+    if (rm) {
+      e.stopPropagation();
+      const box = document.querySelector(`.replies[data-id="${rm.dataset.id}"]`);
+      if (box) {
+        box.scrollIntoView({ behavior: "smooth", block: "center" });
+        box.classList.add("replies-flash");
+        setTimeout(() => box.classList.remove("replies-flash"), 900);
+      }
+      return;
+    }
 
     // 🔒 진영 미선택(미투표) → 참전 안내
     if (e.target.classList.contains("action-locked")) {
