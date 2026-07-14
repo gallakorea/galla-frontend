@@ -9,6 +9,13 @@
   X-Permitted-Cross-Domain-Policies: none
   Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.galla.im https://bidqauputnhkqepvdzrr.supabase.co https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://videodelivery.net; media-src 'self' blob: https://cdn.galla.im https://bidqauputnhkqepvdzrr.supabase.co https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://videodelivery.net; font-src 'self' data:; frame-src https://challenges.cloudflare.com https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://iframe.cloudflarestream.com; connect-src 'self' https://bidqauputnhkqepvdzrr.supabase.co wss://bidqauputnhkqepvdzrr.supabase.co https://cdn.galla.im https://challenges.cloudflare.com https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://videodelivery.net https://upload.cloudflarestream.com; worker-src 'self' blob:; manifest-src 'self'
 
+# HTML 문서는 항상 재검증(no-cache) — 버전(?v=)이 HTML 안에 있어 HTML이 캐시되면
+# 자산 갱신이 반영되지 않음. no-cache로 항상 최신 HTML을 받게 함(변경 즉시 반영).
+/
+  Cache-Control: no-cache
+/*.html
+  Cache-Control: no-cache
+
 # 민감 페이지는 캐시 금지(설정/계정/인증)
 /settings.html
   Cache-Control: no-store
