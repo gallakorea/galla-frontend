@@ -1010,7 +1010,9 @@ body[data-page="search"] .header-inner {
   font-size: 13.5px; font-weight: 700; line-height: 1.35; color: #eef0f4;
 }
 .hv-ch { display: block; margin-top: 4px; font-size: 11.5px; color: #9aa0ac; }
-.hv-stat { display: block; margin-top: 2px; font-size: 11px; color: #6f757f; }
+.hv-stat { display: flex; align-items: center; gap: 7px; margin-top: 2px; font-size: 11px; color: #6f757f; }
+.hv-stat-i { display: inline-flex; align-items: center; gap: 3px; }
+.hv-ic { width: 13px; height: 13px; display: block; flex: 0 0 13px; }
 
 .hv-empty { padding: 60px 20px; text-align: center; color: #8a8f9a; font-size: 13.5px; line-height: 1.7; }
 
