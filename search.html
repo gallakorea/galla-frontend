@@ -110,14 +110,26 @@
 
     <!-- ===== 지금 뜨는 ===== -->
     <div class="tab-panel" data-panel="trending">
-      <h2 class="section-title">🔥 핫트렌드 키워드</h2>
+      <h2 class="section-title">
+        <svg class="sec-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 22a7 7 0 0 0 7-7c0-4-3-6-4.5-9.5C14 8 12.5 8.5 11 7 9 9 8.5 10.5 8.5 12c0 1-1 1.5-1.5 1 -.7 1-2 2-2 2a7 7 0 0 0 7 7z"/>
+          <path d="M12 22a3 3 0 0 0 3-3c0-1.6-1.2-2.4-1.8-3.8-.7 1-1.5 1.3-2.4.5-.8.9-1.8 1.6-1.8 3.3a3 3 0 0 0 3 3z"/>
+        </svg>
+        핫트렌드 키워드
+      </h2>
       <p class="section-sub">최근 6시간 뉴스에서 가장 많이 언급된 키워드</p>
       <div id="trending-hot" class="trending-hot"></div>
 
       <!-- 지금 뜨는 유튜브 영상 (핫영상 탭과 같은 데이터) -->
       <section class="hv-sec" id="trending-videos" style="margin-top:20px;">
         <div class="hv-sec-h">
-          <span class="hv-sec-t">🎬 지금 뜨는 영상</span>
+          <span class="hv-sec-t">
+            <svg class="sec-ic yt-ic" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#FF0000" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8z"/>
+              <path fill="#fff" d="M9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
+            </svg>
+            뜨는 핫유튜브
+          </span>
           <button type="button" class="hv-more" data-tab-goto="hot">더보기
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
           </button>

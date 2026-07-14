@@ -45,6 +45,18 @@ const ST = {
   share: stIc('<path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/>'),
 };
 
+/* 섹션 제목 아이콘 — 탭 아이콘과 같은 도형을 써서 이름·모양을 통일한다.
+   (핫트렌드 탭의 "인기 갈라뉴스 / 뜨는 이슈 / 뜨는 예측 / 뜨는 광장") */
+const secIc = (d) =>
+  `<svg class="sec-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const SEC = {
+  news: secIc('<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V18a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2V5.5z"/><path d="M16 9h2.5A1.5 1.5 0 0 1 20 10.5V18a2 2 0 0 1-2 2"/><path d="M7.5 8h5M7.5 11.5h5M7.5 15h3"/>'),
+  issue: secIc('<path d="M12 3l7 4v5c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V7l7-4z"/><path d="M9.2 12.2l1.9 1.9 3.7-3.9"/>'),
+  predict: secIc('<path d="M3.5 17l5.5-5.5 3.5 3.5L21 6.5"/><path d="M15.5 6.5H21V12"/>'),
+  plaza: secIc('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
+};
+
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
 
@@ -571,8 +583,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="sr-go">›</div>
       </a>`);
 
-    const html = trGroup("📰 인기 뉴스", gnewsItems) + trGroup("🗳 뜨는 이슈", issueItems)
-      + trGroup("🔮 뜨는 예측", marketItems) + trGroup("🗣 뜨는 갈라 광장", plazaItems);
+    const html = trGroup(`${SEC.news} 인기 갈라뉴스`, gnewsItems)
+      + trGroup(`${SEC.issue} 뜨는 갈라 이슈`, issueItems)
+      + trGroup(`${SEC.predict} 뜨는 갈라예측`, marketItems)
+      + trGroup(`${SEC.plaza} 뜨는 갈라 광장`, plazaItems);
     gallaWrap.innerHTML = html || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
     gallaWrap.onclick = e => {
       trMoreClick(e);

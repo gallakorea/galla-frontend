@@ -1385,3 +1385,13 @@ body[data-page="news"] .news-viewer-fallback {
 .gn-cardstats .gn-like-btn.on .st-ic { fill: rgba(109,139,255,.25); }
 .gn-cardstats .gn-dislike-btn.on { color: #ff6f86; }
 .gn-cardstats .gn-dislike-btn.on .st-ic { fill: rgba(255,111,134,.25); }
+
+/* 섹션 제목 아이콘 (이모지 → SVG). 탭 아이콘과 같은 도형·규약. */
+.section-title, .tr-group-head, .hv-sec-t {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sec-ic { width: 17px; height: 17px; flex: 0 0 17px; display: block; }
+/* 큰 제목(핫트렌드 키워드, 18px)은 아이콘도 그만큼 키운다 */
+.section-title .sec-ic { width: 19px; height: 19px; flex: 0 0 19px; }
