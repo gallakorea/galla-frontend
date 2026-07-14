@@ -1148,3 +1148,102 @@ body[data-page="search"] .header-inner {
   animation: hvToast .22s ease;
 }
 @keyframes hvToast { from { opacity: 0; transform: translate(-50%, 8px); } }
+
+/* ============================================================
+   핫영상 2차 — 롱폼/쇼츠 토글 · 쇼츠 그리드 · 대댓글
+============================================================ */
+
+/* 롱폼 / 쇼츠 세그먼트 */
+.hv-mode {
+  display: flex; gap: 4px; margin: 0 0 14px; padding: 4px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 13px;
+}
+.hv-mode-btn {
+  flex: 1 1 0; display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 38px; border: 0; border-radius: 10px;
+  background: none; color: #8a909c;
+  font-size: 13px; font-weight: 800; cursor: pointer;
+  touch-action: manipulation;
+  transition: background .16s, color .16s;
+}
+.hv-mode-btn svg { width: 17px; height: 17px; }
+.hv-mode-btn.on { background: #fff; color: #0a0a0c; }
+
+/* 쇼츠 배지 */
+.hv-sbadge {
+  position: absolute; right: 5px; bottom: 5px;
+  padding: 2px 6px; border-radius: 5px;
+  background: rgba(255,60,86,.92);
+  font-size: 10px; font-weight: 900; color: #fff;
+}
+
+/* 쇼츠 타일(선반) — 9:16 */
+.hv-tile-s { flex-basis: 118px; }
+.hv-tile-s .hv-tile-th { aspect-ratio: 9/16; }
+
+/* 쇼츠 그리드 */
+.hv-sgrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.hv-scell {
+  display: block; padding: 0; background: none; border: 0;
+  text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.hv-scell-th {
+  position: relative; display: block; width: 100%; aspect-ratio: 9/16;
+  border-radius: 10px; overflow: hidden; background: #12141c;
+}
+.hv-scell-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hv-scell:active .hv-scell-th { transform: scale(.97); }
+.hv-scell-v {
+  position: absolute; left: 5px; bottom: 5px;
+  font-size: 10.5px; font-weight: 800; color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,.9);
+}
+.hv-scell-t {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin-top: 6px; font-size: 11.5px; font-weight: 700; line-height: 1.32; color: #e8eaef;
+}
+.hv-scell-c { display: block; margin-top: 2px; font-size: 10.5px; color: #6f757f;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 댓글 액션 (좋아요 / 답글 / 삭제) */
+.hv-cmt-a { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
+.hv-cl, .hv-cr, .hv-cx {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 30px; padding: 0 7px;
+  background: none; border: 0; border-radius: 8px;
+  color: #6f757f; font-size: 11.5px; font-weight: 700;
+  cursor: pointer; touch-action: manipulation;
+}
+.hv-cl svg { width: 14px; height: 14px; }
+.hv-cl:active, .hv-cr:active, .hv-cx:active { background: rgba(255,255,255,.07); }
+.hv-cl.on { color: #ff4d67; }
+.hv-cl.on svg { fill: #ff4d67; }
+.hv-cx { margin-left: auto; }
+.hv-cx:active { color: #ff4d67; }
+
+/* 대댓글 — 들여쓰기 + 세로 가이드 */
+.hv-cmt-r {
+  margin-left: 22px; padding-left: 12px;
+  border-left: 2px solid rgba(255,255,255,.08);
+}
+.hv-cmt-r .hv-cmt-av { flex-basis: 24px; width: 24px; height: 24px; }
+
+/* 답글 대상 바 */
+.hv-replyto {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 14px; padding: 8px 12px;
+  border-radius: 10px; background: rgba(61,107,255,.12);
+  border: 1px solid rgba(61,107,255,.22);
+  font-size: 11.5px; color: #aeb5c2;
+}
+.hv-replyto[hidden] { display: none; }
+.hv-replyto b { color: #7fa0ff; font-weight: 800; }
+.hv-replyto button {
+  margin-left: auto; min-width: 28px; min-height: 28px;
+  background: none; border: 0; color: #8a909c;
+  font-size: 13px; cursor: pointer; touch-action: manipulation;
+}

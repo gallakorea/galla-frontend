@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GALLA - 검색</title>
-  <link rel="stylesheet" href="./css/search.css?v=0717n" />
-  <link rel="stylesheet" href="./css/header.css?v=0717n">
-  <link rel="stylesheet" href="./css/nav.css?v=0717n">
-  <link rel="stylesheet" href="./css/write-hub.css?v=0717n">
+  <link rel="stylesheet" href="./css/search.css?v=0718a" />
+  <link rel="stylesheet" href="./css/header.css?v=0718a">
+  <link rel="stylesheet" href="./css/nav.css?v=0718a">
+  <link rel="stylesheet" href="./css/write-hub.css?v=0718a">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0717n">
+  <link rel="stylesheet" href="./css/theme.css?v=0718a">
 </head>
 
 <body data-page="search">
@@ -110,6 +110,19 @@
     <!-- ===== 핫영상 (유튜브 인기 급상승) ===== -->
     <div class="tab-panel" data-panel="hot">
       <p class="hv-sub">지금 한국에서 가장 뜨거운 영상 — 30분마다 갱신됩니다.</p>
+
+      <!-- 롱폼 / 쇼츠 분리 -->
+      <div class="hv-mode">
+        <button type="button" class="hv-mode-btn on" data-mode="long">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M10 9.5l5 2.5-5 2.5z" fill="currentColor" stroke="none"/></svg>
+          롱폼
+        </button>
+        <button type="button" class="hv-mode-btn" data-mode="short">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 9.5l4 2.5-4 2.5z" fill="currentColor" stroke="none"/></svg>
+          쇼츠
+        </button>
+      </div>
+
       <!-- 방송 카테고리 칩 (JS가 채움) -->
       <div id="hv-cats" class="hv-cats"></div>
       <div id="hot-video-list"></div>
@@ -153,6 +166,11 @@
     <!-- 댓글 (댓글 버튼으로 토글) -->
     <div class="hv-cmt-wrap hidden" id="hvCmtWrap">
       <div class="hv-cmt-list" id="hvCmtList"></div>
+      <!-- 답글 대상 표시 -->
+      <div class="hv-replyto" id="hvReplyTo" hidden>
+        <span><b id="hvReplyNick"></b>님에게 답글</span>
+        <button type="button" id="hvReplyX" aria-label="취소">✕</button>
+      </div>
       <div class="hv-cmt-bar">
         <input id="hvCmtInput" class="hv-cmt-in" placeholder="댓글 남기기…" maxlength="1000" autocomplete="off">
         <button type="button" class="hv-cmt-send" id="hvCmtSend">게시</button>
@@ -226,14 +244,14 @@
     </div>
 </nav>
 
-<script src="./js/vendor/supabase.js?v=0717n"></script>
-<script src="js/supabase.js?v=0717n"></script>
-<script src="js/comment-actions.js?v=0717n"></script>
-<script src="js/write-hub.js?v=0717n"></script>
-<script src="js/dm.js?v=0717n"></script>
-<script src="./js/search.js?v=0717n"></script>
-<script src="js/hot-videos.js?v=0717n"></script>
-<script src="./js/nav.js?v=0717n"></script>
+<script src="./js/vendor/supabase.js?v=0718a"></script>
+<script src="js/supabase.js?v=0718a"></script>
+<script src="js/comment-actions.js?v=0718a"></script>
+<script src="js/write-hub.js?v=0718a"></script>
+<script src="js/dm.js?v=0718a"></script>
+<script src="./js/search.js?v=0718a"></script>
+<script src="js/hot-videos.js?v=0718a"></script>
+<script src="./js/nav.js?v=0718a"></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {

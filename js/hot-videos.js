@@ -1,34 +1,41 @@
 /* =========================================================
    hot-videos.js — 검색 > 🎬 핫영상 (유튜브 인기 급상승)
    - youtube_hot(피드별, 30분 크론 수집)을 카테고리로 나눠 렌더
+   - 롱폼 / 쇼츠 분리 (is_short)
    - '전체'는 히어로 + TOP10 + 카테고리별 가로 선반(넷플릭스식)
-   - 카테고리 선택 시 해당 피드 전체 목록
    - 재생은 공식 유튜브 iframe (우리가 호스팅하지 않음 = ToS 준수)
-   - 플레이어에 좋아요/댓글/공유 (galla 자체 소셜)
+   - 플레이어: 좋아요 · 댓글(대댓글·댓글좋아요) · 공유(갈라 랜딩)
    - window.GALLA_HotShelf(el, n) 로 핫트렌드 탭에서도 재사용
 ========================================================= */
 (function () {
   // 방송 카테고리 — 라벨/아이콘은 여기서만 관리
   const CATS = [
-    { id: "all",    label: "전체",     emoji: "🔥" },
-    { id: "news",   label: "뉴스·시사", emoji: "📰" },
-    { id: "ent",    label: "예능",     emoji: "🎭" },
-    { id: "drama",  label: "드라마",   emoji: "🎬" },
-    { id: "movie",  label: "영화·애니", emoji: "🍿" },
-    { id: "music",  label: "음악",     emoji: "🎵" },
-    { id: "comic",  label: "코믹",     emoji: "😂" },
-    { id: "game",   label: "게임",     emoji: "🎮" },
-    { id: "sports", label: "스포츠",   emoji: "⚽" },
-    { id: "life",   label: "일상",     emoji: "🧳" },
-    { id: "beauty", label: "뷰티·패션", emoji: "💄" },
-    { id: "tech",   label: "IT·과학",  emoji: "💻" },
-    { id: "animal", label: "동물",     emoji: "🐾" },
+    { id: "all",    label: "전체",       emoji: "🔥" },
+    { id: "news",   label: "뉴스·시사",   emoji: "📰" },
+    { id: "ent",    label: "예능",       emoji: "🎭" },
+    { id: "drama",  label: "드라마",     emoji: "🎬" },
+    { id: "movie",  label: "영화·애니",   emoji: "🍿" },
+    { id: "music",  label: "음악",       emoji: "🎵" },
+    { id: "comic",  label: "코믹",       emoji: "😂" },
+    { id: "game",   label: "게임",       emoji: "🎮" },
+    { id: "sports", label: "스포츠",     emoji: "⚽" },
+    { id: "food",   label: "맛집·먹방",   emoji: "🍜" },
+    { id: "travel", label: "여행",       emoji: "✈️" },
+    { id: "life",   label: "라이프스타일", emoji: "🏠" },
+    { id: "beauty", label: "뷰티·패션",   emoji: "💄" },
+    { id: "animal", label: "동물",       emoji: "🐾" },
+    { id: "hobby",  label: "취미",       emoji: "🎨" },
+    { id: "money",  label: "경제·금융",   emoji: "📈" },
+    { id: "tech",   label: "IT·과학",    emoji: "💻" },
+    { id: "edu",    label: "교육",       emoji: "📚" },
   ];
   // '전체' 화면에 선반으로 깔 카테고리 순서
-  const SHELVES = ["news", "ent", "drama", "movie", "music", "game", "sports", "comic"];
+  const SHELVES = ["news", "ent", "drama", "movie", "music", "game", "sports",
+                   "food", "travel", "beauty", "animal", "money"];
 
-  const cache = new Map();   // feed → rows
+  const cache = new Map();      // feed → rows (롱폼+쇼츠 전부)
   let current = "all";
+  let mode = "long";            // 'long' | 'short'
   let booted = false;
 
   const $ = (s, r = document) => r.querySelector(s);
@@ -46,7 +53,6 @@
     return String(n);
   }
 
-  // PT1H2M3S → 1:02:03
   function dur(iso) {
     const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "");
     if (!m) return "";
@@ -75,22 +81,27 @@
     if (!c) return [];
     const { data, error } = await c
       .from("youtube_hot")
-      .select("video_id,title,channel_title,thumbnail,view_count,like_count,duration,published_at,rank")
+      .select("video_id,title,channel_title,thumbnail,view_count,like_count,duration,is_short,published_at,rank")
       .eq("feed", feed)
       .order("rank", { ascending: true })
-      .limit(50);
+      .limit(60);
     const rows = error ? [] : (data || []);
     cache.set(feed, rows);
     return rows;
   }
 
+  // 현재 모드(롱폼/쇼츠)에 맞는 것만. 순위는 모드 안에서 다시 매긴다.
+  const pick = (rows) =>
+    rows.filter((v) => (mode === "short" ? v.is_short : !v.is_short))
+        .map((v, i) => ({ ...v, rank: i + 1 }));
+
   /* ---------- 카드 템플릿 ---------- */
-  const dataAttrs = (v) =>
+  const attrs = (v) =>
     `data-id="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}"`;
 
   function heroHTML(v) {
     return `
-      <button type="button" class="hv-hero" ${dataAttrs(v)}>
+      <button type="button" class="hv-hero" ${attrs(v)}>
         <img src="${esc(v.thumbnail || "")}" alt="">
         <span class="hv-hero-sh"></span>
         <span class="hv-hero-badge">🔥 지금 1위</span>
@@ -104,26 +115,42 @@
       </button>`;
   }
 
-  // 가로 선반용 카드(세로형)
+  // 가로 선반 타일 — 쇼츠는 9:16 세로
   function tileHTML(v) {
+    const s = v.is_short;
     return `
-      <button type="button" class="hv-tile" ${dataAttrs(v)}>
+      <button type="button" class="hv-tile${s ? " hv-tile-s" : ""}" ${attrs(v)}>
         <span class="hv-tile-th">
           <img src="${esc(v.thumbnail || "")}" alt="" loading="lazy">
-          ${v.duration ? `<span class="hv-dur">${dur(v.duration)}</span>` : ""}
+          ${s ? `<span class="hv-sbadge">쇼츠</span>`
+              : (v.duration ? `<span class="hv-dur">${dur(v.duration)}</span>` : "")}
         </span>
         <span class="hv-tile-t">${esc(v.title)}</span>
         <span class="hv-tile-m">조회 ${shortNum(v.view_count)}</span>
       </button>`;
   }
 
-  // 목록용 카드(가로형)
-  function rowHTML(v, showRank) {
+  // 쇼츠 그리드 셀 (세로 카드)
+  function shortHTML(v) {
     return `
-      <button type="button" class="hv-card" ${dataAttrs(v)}>
+      <button type="button" class="hv-scell" ${attrs(v)}>
+        <span class="hv-scell-th">
+          <img src="${esc(v.thumbnail || "")}" alt="" loading="lazy">
+          <span class="hv-rank">${v.rank}</span>
+          <span class="hv-scell-v">▶ ${shortNum(v.view_count)}</span>
+        </span>
+        <span class="hv-scell-t">${esc(v.title)}</span>
+        <span class="hv-scell-c">${esc(v.channel_title || "")}</span>
+      </button>`;
+  }
+
+  // 롱폼 목록 카드 (가로)
+  function rowHTML(v) {
+    return `
+      <button type="button" class="hv-card" ${attrs(v)}>
         <span class="hv-thumb">
           <img src="${esc(v.thumbnail || "")}" alt="" loading="lazy">
-          ${showRank ? `<span class="hv-rank">${v.rank}</span>` : ""}
+          <span class="hv-rank">${v.rank}</span>
           ${v.duration ? `<span class="hv-dur">${dur(v.duration)}</span>` : ""}
         </span>
         <span class="hv-meta">
@@ -157,63 +184,67 @@
                 <span class="hv-chip-e">${c.emoji}</span>${c.label}
               </button>`,
     ).join("");
-    // 선택 칩을 가운데로 — scrollIntoView는 조상(페이지)까지 가로로 밀어버려서
-    // 선반/카드가 왼쪽으로 잘린다. 칩 컨테이너의 scrollLeft만 직접 옮긴다.
+    // scrollIntoView는 조상(페이지)까지 가로로 밀어버린다 → 컨테이너만 직접 옮긴다
     const on = el.querySelector(".hv-chip.on");
     if (on) el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+
+    $$mode();
+  }
+
+  function $$mode() {
+    document.querySelectorAll(".hv-mode-btn").forEach((b) => {
+      b.classList.toggle("on", b.dataset.mode === mode);
+    });
   }
 
   async function renderAll(el) {
-    const rows = await loadFeed("all");
+    const rows = pick(await loadFeed("all"));
     if (!rows.length) {
-      el.innerHTML = `<div class="hv-empty">아직 수집된 영상이 없어요.<br>잠시 후 다시 확인해 주세요.</div>`;
+      el.innerHTML = `<div class="hv-empty">${mode === "short" ? "쇼츠" : "롱폼"} 영상이 아직 없어요.</div>`;
       return;
     }
 
-    const hero = rows[0];
-    const top = rows.slice(1, 11);
+    if (mode === "short") {
+      el.innerHTML = sectionHTML(
+        "⚡ 급상승 쇼츠", `${rows.length}편`,
+        `<div class="hv-sgrid">${rows.map(shortHTML).join("")}</div>`,
+      ) + SHELVES.map((f) => `<div class="hv-shelf-slot" data-feed="${f}"></div>`).join("");
+    } else {
+      el.innerHTML =
+        heroHTML(rows[0]) +
+        sectionHTML("실시간 급상승", "TOP 10",
+          `<div class="hv-list">${rows.slice(1, 11).map(rowHTML).join("")}</div>`) +
+        SHELVES.map((f) => `<div class="hv-shelf-slot" data-feed="${f}"></div>`).join("");
+    }
 
-    el.innerHTML =
-      heroHTML(hero) +
-      sectionHTML(
-        "실시간 급상승",
-        "TOP 10",
-        `<div class="hv-list">${top.map((v) => rowHTML(v, true)).join("")}</div>`,
-      ) +
-      // 선반은 자리만 잡아두고 병렬로 채운다(첫 화면이 빨리 뜨도록)
-      SHELVES.map(
-        (f) => `<div class="hv-shelf-slot" data-feed="${f}"></div>`,
-      ).join("");
-
-    // 카테고리 선반 병렬 로드
-    await Promise.all(
-      SHELVES.map(async (f) => {
-        const slot = el.querySelector(`.hv-shelf-slot[data-feed="${f}"]`);
-        if (!slot) return;
-        const list = await loadFeed(f);
-        if (!list.length) { slot.remove(); return; }
-        const c = label(f);
-        slot.outerHTML = sectionHTML(
-          `${c.emoji} ${c.label}`,
-          "",
-          `<div class="hv-shelf">${list.slice(0, 12).map(tileHTML).join("")}</div>`,
-          f,
-        );
-      }),
-    );
+    // 카테고리 선반은 병렬로 채운다(첫 화면이 빨리 뜨도록)
+    await Promise.all(SHELVES.map(async (f) => {
+      const slot = el.querySelector(`.hv-shelf-slot[data-feed="${f}"]`);
+      if (!slot) return;
+      const list = pick(await loadFeed(f));
+      if (!list.length) { slot.remove(); return; }
+      const c = label(f);
+      slot.outerHTML = sectionHTML(
+        `${c.emoji} ${c.label}`, "",
+        `<div class="hv-shelf">${list.slice(0, 12).map(tileHTML).join("")}</div>`,
+        f,
+      );
+    }));
   }
 
   async function renderFeed(el, feed) {
-    const rows = await loadFeed(feed);
+    const rows = pick(await loadFeed(feed));
     const c = label(feed);
     if (!rows.length) {
-      el.innerHTML = `<div class="hv-empty">${c.label} 카테고리엔 지금 뜨는 영상이 없어요.</div>`;
+      el.innerHTML = `<div class="hv-empty">${c.label}에 지금 뜨는 ${mode === "short" ? "쇼츠" : "롱폼"} 영상이 없어요.</div>`;
       return;
     }
     el.innerHTML = sectionHTML(
       `${c.emoji} ${c.label}`,
-      `인기 ${rows.length}편`,
-      `<div class="hv-list">${rows.map((v) => rowHTML(v, true)).join("")}</div>`,
+      `${mode === "short" ? "쇼츠" : "인기"} ${rows.length}편`,
+      mode === "short"
+        ? `<div class="hv-sgrid">${rows.map(shortHTML).join("")}</div>`
+        : `<div class="hv-list">${rows.map(rowHTML).join("")}</div>`,
     );
   }
 
@@ -230,15 +261,18 @@
     if (current === feed) return;
     current = feed;
     render();
-    document.querySelector('.tab-panel[data-panel="hot"]')?.scrollIntoView({ block: "start" });
+  }
+
+  function setMode(m) {
+    if (mode === m) return;
+    mode = m;
+    render();
   }
 
   /* =======================================================
-     플레이어 + 소셜 (좋아요 / 댓글 / 공유)
+     플레이어 + 소셜
   ======================================================= */
   let vid = null, vtitle = "", liked = false, likeN = 0;
-
-  const ytUrl = (id) => `https://www.youtube.com/watch?v=${id}`;
 
   async function loadSocial() {
     const c = await sb();
@@ -252,16 +286,21 @@
   }
 
   function paintLike() {
-    const b = $("#hvLike");
-    b.classList.toggle("on", liked);
+    $("#hvLike").classList.toggle("on", liked);
     $("#hvLikeN").textContent = likeN ? shortNum(likeN) : "좋아요";
   }
 
-  async function toggleLike() {
+  async function me() {
     const c = await sb();
-    if (!c) return;
     const { data: { user } } = await c.auth.getUser();
-    if (!user) { location.href = "login.html"; return; }
+    if (!user) { location.href = "login.html"; return null; }
+    return user;
+  }
+
+  async function toggleLike() {
+    const user = await me();
+    if (!user) return;
+    const c = await sb();
 
     // 낙관적 갱신 — 실패하면 되돌린다
     const was = liked;
@@ -269,15 +308,42 @@
     likeN += liked ? 1 : -1;
     paintLike();
 
-    const q = liked
-      ? c.from("video_likes").insert({ video_id: vid, user_id: user.id })
-      : c.from("video_likes").delete().eq("video_id", vid).eq("user_id", user.id);
-    const { error } = await q;
+    const { error } = liked
+      ? await c.from("video_likes").insert({ video_id: vid, user_id: user.id })
+      : await c.from("video_likes").delete().eq("video_id", vid).eq("user_id", user.id);
     if (error) {
       liked = was;
       likeN += liked ? 1 : -1;
       paintLike();
     }
+  }
+
+  /* ---------- 댓글 (대댓글 + 좋아요) ---------- */
+  let replyTo = null;   // 답글 대상 댓글 id
+
+  function cmtHTML(m, isReply) {
+    const av = m.avatar_url
+      ? `<img class="hv-cmt-av" src="${esc(m.avatar_url)}" alt="">`
+      : `<span class="hv-cmt-av hv-cmt-av0">${esc((m.nickname || "갈")[0])}</span>`;
+    return `
+      <div class="hv-cmt${isReply ? " hv-cmt-r" : ""}" data-cid="${m.id}">
+        ${av}
+        <div class="hv-cmt-b">
+          <div class="hv-cmt-h">
+            <span class="hv-cmt-n">${esc(m.nickname)}</span>
+            <span class="hv-cmt-d">${timeAgo(m.created_at)}</span>
+          </div>
+          <div class="hv-cmt-t">${esc(m.body)}</div>
+          <div class="hv-cmt-a">
+            <button type="button" class="hv-cl${m.liked ? " on" : ""}" data-like="${m.id}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21.2l7.7-7.8 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+              <span>${Number(m.likes) || ""}</span>
+            </button>
+            ${isReply ? "" : `<button type="button" class="hv-cr" data-reply="${m.id}" data-nick="${esc(m.nickname)}">답글</button>`}
+            ${m.mine ? `<button type="button" class="hv-cx" data-del="${m.id}">삭제</button>` : ""}
+          </div>
+        </div>
+      </div>`;
   }
 
   async function loadComments() {
@@ -287,37 +353,57 @@
     const { data, error } = await c.rpc("video_comment_list", { p_video_id: vid });
     if (error || !data?.length) {
       box.innerHTML = `<div class="hv-cmt-empty">첫 댓글을 남겨보세요.</div>`;
+      $("#hvCommentN").textContent = "0";
       return;
     }
-    box.innerHTML = data.map((m) => `
-      <div class="hv-cmt" data-cid="${m.id}">
-        ${m.avatar_url
-          ? `<img class="hv-cmt-av" src="${esc(m.avatar_url)}" alt="">`
-          : `<span class="hv-cmt-av hv-cmt-av0">${esc((m.nickname || "갈")[0])}</span>`}
-        <div class="hv-cmt-b">
-          <div class="hv-cmt-h">
-            <span class="hv-cmt-n">${esc(m.nickname)}</span>
-            <span class="hv-cmt-d">${timeAgo(m.created_at)}</span>
-            ${m.mine ? `<button type="button" class="hv-cmt-x" data-del="${m.id}">삭제</button>` : ""}
-          </div>
-          <div class="hv-cmt-t">${esc(m.body)}</div>
-        </div>
-      </div>`).join("");
+    // RPC가 스레드(최상위 → 그 답글들) 순서로 내려준다
+    box.innerHTML = data.map((m) => cmtHTML(m, !!m.parent_id)).join("");
     $("#hvCommentN").textContent = shortNum(data.length);
+  }
+
+  function setReply(id, nick) {
+    replyTo = id;
+    const bar = $("#hvReplyTo");
+    if (id) {
+      bar.hidden = false;
+      $("#hvReplyNick").textContent = nick;
+      $("#hvCmtInput").focus();
+    } else {
+      bar.hidden = true;
+    }
   }
 
   async function sendComment() {
     const inp = $("#hvCmtInput");
     const body = inp.value.trim();
     if (!body) return;
+    const user = await me();
+    if (!user) return;
     const c = await sb();
-    const { data: { user } } = await c.auth.getUser();
-    if (!user) { location.href = "login.html"; return; }
 
     inp.value = "";
-    const { error } = await c.from("video_comments").insert({ video_id: vid, user_id: user.id, body });
+    const row = { video_id: vid, user_id: user.id, body };
+    if (replyTo) row.parent_id = replyTo;
+    const { error } = await c.from("video_comments").insert(row);
     if (error) { inp.value = body; return; }
+    setReply(null);
     loadComments();
+  }
+
+  async function toggleCmtLike(id, btn) {
+    const user = await me();
+    if (!user) return;
+    const c = await sb();
+
+    const on = btn.classList.toggle("on");
+    const span = btn.querySelector("span");
+    const n = (Number(span.textContent) || 0) + (on ? 1 : -1);
+    span.textContent = n > 0 ? n : "";
+
+    const { error } = on
+      ? await c.from("video_comment_likes").insert({ comment_id: id, user_id: user.id })
+      : await c.from("video_comment_likes").delete().eq("comment_id", id).eq("user_id", user.id);
+    if (error) loadComments();   // 어긋나면 서버 기준으로 다시 그린다
   }
 
   async function delComment(id) {
@@ -326,14 +412,20 @@
     loadComments();
   }
 
+  /* ---------- 공유 — 갈라 랜딩으로 ---------- */
   async function share() {
-    const url = ytUrl(vid);
-    const payload = { title: vtitle, text: `${vtitle} — 갈라 핫영상`, url };
+    // 유튜브 링크가 아니라 우리 공유 카드/랜딩을 보낸다
+    const url = `${location.origin}/share/video/${encodeURIComponent(vid)}`;
+    const payload = {
+      title: `🎬 ${vtitle}`,
+      text: `지금 갈라에서 가장 뜨거운 영상 — ${vtitle}`,
+      url,
+    };
     try {
       if (navigator.share) { await navigator.share(payload); return; }
       await navigator.clipboard.writeText(url);
-      toast("링크를 복사했어요");
-    } catch (_) { /* 사용자가 공유를 취소한 경우 — 조용히 넘어간다 */ }
+      toast("갈라 공유 링크를 복사했어요");
+    } catch (_) { /* 사용자가 공유를 취소 — 조용히 넘어간다 */ }
   }
 
   function toast(msg) {
@@ -344,18 +436,20 @@
     setTimeout(() => t.remove(), 1800);
   }
 
+  /* ---------- 플레이어 ---------- */
   function openPlayer(id, title, ch) {
     vid = id; vtitle = title;
     const p = $("#hv-player");
     $("#hvTitle").textContent = title;
     $("#hvCh").textContent = ch || "";
-    $("#hvOpen").href = ytUrl(id);
+    $("#hvOpen").href = `https://www.youtube.com/watch?v=${id}`;
     // youtube-nocookie: 재생 전 추적 쿠키를 심지 않음
     $("#hvFrame").innerHTML =
-      `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0"
+      `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1"
                title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
                encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
     $("#hvCmtWrap").classList.add("hidden");
+    setReply(null);
     p.classList.remove("hidden");
     document.body.style.overflow = "hidden";
     loadSocial();
@@ -368,15 +462,19 @@
     vid = null;
   }
 
-  /* ---------- 핫트렌드 탭에서 재사용하는 선반 ---------- */
+  /* ---------- 핫트렌드 탭에서 재사용 ---------- */
   window.GALLA_HotShelf = async function (el, n = 10) {
     if (!el) return;
-    const rows = await loadFeed("all");
+    const rows = (await loadFeed("all")).filter((v) => !v.is_short);
     if (!rows.length) { el.innerHTML = ""; return; }
     el.innerHTML = `<div class="hv-shelf">${rows.slice(0, n).map(tileHTML).join("")}</div>`;
   };
 
   /* ---------- 바인딩 ---------- */
+  function openHotTab() {
+    document.querySelector('.tab-item[data-tab="hot"]')?.click();
+  }
+
   function bind() {
     document.querySelector('.tab-item[data-tab="hot"]')?.addEventListener("click", () => {
       if (booted) return;
@@ -392,21 +490,21 @@
       window.GALLA_HotShelf($("#trending-video-shelf"), 10);
     });
 
-    // 핫트렌드 → 핫영상 탭으로 이동
     document.addEventListener("click", (e) => {
-      const g = e.target.closest("[data-tab-goto]");
-      if (!g) return;
-      document.querySelector(`.tab-item[data-tab="${g.dataset.tabGoto}"]`)?.click();
-    });
-
-    // 카드/타일/히어로 클릭 → 재생 (선반은 핫트렌드 탭에도 있으므로 document 위임)
-    document.addEventListener("click", (e) => {
-      const card = e.target.closest(".hv-card, .hv-tile, .hv-hero");
+      const card = e.target.closest(".hv-card, .hv-tile, .hv-hero, .hv-scell");
       if (card) { openPlayer(card.dataset.id, card.dataset.title, card.dataset.ch); return; }
+
       const more = e.target.closest(".hv-more");
       if (more) { goto(more.dataset.goto); return; }
+
       const chip = e.target.closest(".hv-chip");
       if (chip) { goto(chip.dataset.feed); return; }
+
+      const mb = e.target.closest(".hv-mode-btn");
+      if (mb) { setMode(mb.dataset.mode); return; }
+
+      const g = e.target.closest("[data-tab-goto]");
+      if (g) { document.querySelector(`.tab-item[data-tab="${g.dataset.tabGoto}"]`)?.click(); return; }
     });
 
     $("#hvClose")?.addEventListener("click", closePlayer);
@@ -422,10 +520,28 @@
     $("#hvCmtInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); }
     });
+    $("#hvReplyX")?.addEventListener("click", () => setReply(null));
+
     $("#hvCmtList")?.addEventListener("click", (e) => {
+      const l = e.target.closest("[data-like]");
+      if (l) { toggleCmtLike(Number(l.dataset.like), l); return; }
+      const r = e.target.closest("[data-reply]");
+      if (r) { setReply(Number(r.dataset.reply), r.dataset.nick); return; }
       const d = e.target.closest("[data-del]");
-      if (d) delComment(d.dataset.del);
+      if (d) { delComment(Number(d.dataset.del)); return; }
     });
+
+    // 공유 랜딩에서 들어온 경우 — /search.html?video=<id> → 그 영상 바로 열기
+    const want = new URLSearchParams(location.search).get("video");
+    if (want) {
+      openHotTab();
+      (async () => {
+        const rows = await loadFeed("all");
+        const v = rows.find((x) => x.video_id === want);
+        if (v) openPlayer(v.video_id, v.title, v.channel_title);
+        else openPlayer(want, "핫영상", "");
+      })();
+    }
   }
 
   document.addEventListener("DOMContentLoaded", bind);
