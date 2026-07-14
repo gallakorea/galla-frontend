@@ -123,4 +123,82 @@
   }
 
   window.GALLA_UPLOAD_MEDIA = uploadMedia;
+
+  /* ===========================================================
+     대용량 영상 전용: Cloudflare Stream 재개가능(tus) 업로드
+     - R2 경유 없이 Stream으로 청크 직접 업로드 → 네트워크가 끊겨도 재개
+     - window.GALLA_UPLOAD_VIDEO_STREAM(file, onProgress?) → { hls, thumbnail, uid }
+  =========================================================== */
+  // tus 청크: 256KiB 배수 + 최소 5MiB 규칙 충족. 50MiB(=200×256KiB).
+  const TUS_CHUNK = 50 * 1024 * 1024;
+  const TUS_MAX_RETRY = 6;
+
+  async function tusHeadOffset(uploadURL, fallback) {
+    try {
+      const r = await fetch(uploadURL, { method: 'HEAD', headers: { 'Tus-Resumable': '1.0.0' } });
+      if (r.ok || r.status === 204) {
+        const o = Number(r.headers.get('Upload-Offset'));
+        if (Number.isFinite(o) && o >= 0) return o;
+      }
+    } catch (_) { /* 무시 */ }
+    return fallback;
+  }
+
+  async function uploadVideoToStream(file, onProgress) {
+    const supabase = window.supabaseClient;
+    if (!supabase) throw new Error('Supabase 초기화 실패');
+    await getAccessToken(); // 로그인 보장
+
+    // 1) Stream tus 업로드 세션(일회용 URL) 발급
+    const { data, error } = await supabase.functions.invoke('stream-upload', {
+      body: { size: file.size, name: file.name },
+    });
+    if (error) throw error;
+    if (!data?.uploadURL) throw new Error(data?.error || '업로드 세션 생성 실패');
+
+    const uploadURL = data.uploadURL;
+    let offset = 0;
+    if (onProgress) onProgress(0);
+
+    // 2) 청크 단위 PATCH 업로드(재개 지원)
+    while (offset < file.size) {
+      const end = Math.min(offset + TUS_CHUNK, file.size);
+      const chunk = file.slice(offset, end); // Blob.slice — 전송 시점까지 메모리에 올리지 않음
+      let attempt = 0, done = false;
+      while (!done) {
+        try {
+          const r = await fetch(uploadURL, {
+            method: 'PATCH',
+            headers: {
+              'Tus-Resumable': '1.0.0',
+              'Upload-Offset': String(offset),
+              'Content-Type': 'application/offset+octet-stream',
+            },
+            body: chunk,
+          });
+          if (r.status === 204 || r.status === 200) {
+            const no = Number(r.headers.get('Upload-Offset'));
+            offset = (Number.isFinite(no) && no > offset) ? no : end;
+            done = true;
+          } else if (r.status === 409 || r.status === 460) {
+            // 오프셋 불일치 → 서버 기준으로 재동기화 후 그 지점부터 다시
+            offset = await tusHeadOffset(uploadURL, offset);
+            done = true;
+          } else {
+            throw new Error('tus_' + r.status);
+          }
+        } catch (e) {
+          attempt++;
+          if (attempt > TUS_MAX_RETRY) throw new Error('stall');
+          await new Promise(res => setTimeout(res, 1500 * attempt)); // 지수적 백오프
+          offset = await tusHeadOffset(uploadURL, offset); // 끊긴 지점 복구
+        }
+      }
+      if (onProgress) onProgress(Math.min(99, Math.round((offset / file.size) * 100)));
+    }
+    if (onProgress) onProgress(100);
+    return { hls: data.hls, thumbnail: data.thumbnail, uid: data.uid };
+  }
+
+  window.GALLA_UPLOAD_VIDEO_STREAM = uploadVideoToStream;
 })();

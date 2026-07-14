@@ -378,16 +378,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (videoFile) {
+          // Cloudflare Stream 재개가능(tus) 직접 업로드 — 대용량/모바일에서도 끊겨도 이어서 재개
           publishBtn.textContent = '영상 업로드 중…';
-          const r2Url = await window.GALLA_UPLOAD_MEDIA(videoFile, 'video',
+          const out = await window.GALLA_UPLOAD_VIDEO_STREAM(videoFile,
             p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; });
-          // Cloudflare Stream 이관(어댑티브 HLS로 즉시 재생) — 실패 시 R2 원본 폴백
-          publishBtn.textContent = '영상 최적화 중…';
-          video_url = r2Url;
-          try {
-            const { data: s, error: se } = await window.supabaseClient.functions.invoke('stream-ingest', { body: { url: r2Url } });
-            if (!se && s && s.hls) { video_url = s.hls; if (!thumbnail_url) thumbnail_url = s.thumbnail; }
-          } catch (e) { console.warn('[stream-ingest] fallback to R2', e); }
+          video_url = out.hls;
+          if (!thumbnail_url && out.thumbnail) thumbnail_url = out.thumbnail;
         }
 
         const cardThumbFile = cardThumbInput && cardThumbInput.files && cardThumbInput.files[0];
