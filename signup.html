@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>회원가입 - GALLA</title>
-    <link rel="stylesheet" href="css/signup.css?v=0717b">
+    <link rel="stylesheet" href="css/signup.css?v=0717c">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0717b">
+  <link rel="stylesheet" href="./css/theme.css?v=0717c">
 </head>
 
 <body data-page="signup">
@@ -22,7 +22,7 @@
 <div class="auth-wrap">
   <div class="auth-glow"></div>
 
-  <button class="auth-back" onclick="history.length>1?history.back():location.href='login.html'" aria-label="뒤로">
+  <button class="auth-back" data-back="login.html" aria-label="뒤로">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
   </button>
 
@@ -155,8 +155,9 @@
 </div>
 
 <!-- Supabase -->
-<script src="./js/vendor/supabase.js?v=0717b"></script>
-<script src="./js/supabase.js?v=0717b"></script>
+<script src="./js/vendor/supabase.js?v=0717c"></script>
+<script src="./js/supabase.js?v=0717c"></script>
+<script src="js/back.js?v=0717c"></script>
 
 <!-- LOGIN CHECK + WAIT -->
 <script>
@@ -240,7 +241,7 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- signup 기능 -->
-<script src="./js/signup.js?v=0717b"></script>
+<script src="./js/signup.js?v=0717c"></script>
 
 </body>
 </html>

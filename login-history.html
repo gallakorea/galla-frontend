@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>로그인 기록 - GALLA</title>
 
-  <link rel="stylesheet" href="./css/index.css?v=0717b">
-  <link rel="stylesheet" href="./css/nav.css?v=0717b">
+  <link rel="stylesheet" href="./css/index.css?v=0717c">
+  <link rel="stylesheet" href="./css/nav.css?v=0717c">
     
   <style>
     body {
@@ -27,7 +27,7 @@
     .log-date { font-size:13px; color:#aaa; margin-bottom:4px; }
     .log-agent { font-size:14px; word-break:break-all; }
   </style>
-  <link rel="stylesheet" href="./css/galla-ui.css?v=0717b">
+  <link rel="stylesheet" href="./css/galla-ui.css?v=0717c">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -37,7 +37,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0717b">
+  <link rel="stylesheet" href="./css/theme.css?v=0717c">
 </head>
 
 <body data-page="mypage">
@@ -46,7 +46,7 @@
 
   <!-- HEADER -->
   <header class="st-header">
-        <button class="st-back" onclick="history.back()" aria-label="뒤로">
+        <button class="st-back" data-back="settings.html" aria-label="뒤로">
             <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div class="st-title">로그인 기록</div>
@@ -96,11 +96,12 @@
     </div>
 </nav>
 
-<script src="./js/nav.js?v=0717b"></script>
+<script src="./js/nav.js?v=0717c"></script>
 
-<script src="./js/vendor/supabase.js?v=0717b"></script>
-<script src="./js/supabase.js?v=0717b"></script>
-<script src="./js/login-history.js?v=0717b"></script>
+<script src="./js/vendor/supabase.js?v=0717c"></script>
+<script src="./js/supabase.js?v=0717c"></script>
+<script src="js/back.js?v=0717c"></script>
+<script src="./js/login-history.js?v=0717c"></script>
 
 </body>
 </html>

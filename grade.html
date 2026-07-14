@@ -6,16 +6,16 @@
     <title>갈라리안 등급 - GALLA</title>
 
     <!-- 공통 스타일 -->
-    <link rel="stylesheet" href="./css/index.css?v=0717b">
-    <link rel="stylesheet" href="./css/grade.css?v=0717b">
-    <link rel="stylesheet" href="./css/nav.css?v=0717b">
+    <link rel="stylesheet" href="./css/index.css?v=0717c">
+    <link rel="stylesheet" href="./css/grade.css?v=0717c">
+    <link rel="stylesheet" href="./css/nav.css?v=0717c">
 
     <style>
         #app {
             padding-bottom: 80px;
         }
     </style>
-  <link rel="stylesheet" href="./css/galla-ui.css?v=0717b">
+  <link rel="stylesheet" href="./css/galla-ui.css?v=0717c">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -25,7 +25,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0717b">
+  <link rel="stylesheet" href="./css/theme.css?v=0717c">
 </head>
 
 <body data-page="mypage">
@@ -34,7 +34,7 @@
 
     <!-- HEADER (프로젝트 표준 구조 적용) -->
     <header class="st-header">
-        <button class="st-back" onclick="history.back()" aria-label="뒤로">
+        <button class="st-back" data-back="mypage.html" aria-label="뒤로">
             <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div class="st-title">갈라리안 등급</div>
@@ -227,11 +227,12 @@
 
 </div>
 
-<script src="./js/vendor/supabase.js?v=0717b"></script>
-<script src="js/supabase.js?v=0717b"></script>
-<script src="./js/gallian.js?v=0717b"></script>
-<script src="./js/grade.js?v=0717b"></script>
-<script src="./js/nav.js?v=0717b"></script>
+<script src="./js/vendor/supabase.js?v=0717c"></script>
+<script src="js/supabase.js?v=0717c"></script>
+<script src="js/back.js?v=0717c"></script>
+<script src="./js/gallian.js?v=0717c"></script>
+<script src="./js/grade.js?v=0717c"></script>
+<script src="./js/nav.js?v=0717c"></script>
 
 </body>
 </html>

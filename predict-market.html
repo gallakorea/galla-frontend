@@ -17,11 +17,11 @@
   <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
   <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
 
-  <link rel="stylesheet" href="./css/galla-predict.css?v=0717b" />
-  <link rel="stylesheet" href="./css/predict-market.css?v=0717b" />
-  <link rel="stylesheet" href="./css/header.css?v=0717b">
-  <link rel="stylesheet" href="./css/nav.css?v=0717b">
-  <link rel="stylesheet" href="./css/owner-actions.css?v=0717b">
+  <link rel="stylesheet" href="./css/galla-predict.css?v=0717c" />
+  <link rel="stylesheet" href="./css/predict-market.css?v=0717c" />
+  <link rel="stylesheet" href="./css/header.css?v=0717c">
+  <link rel="stylesheet" href="./css/nav.css?v=0717c">
+  <link rel="stylesheet" href="./css/owner-actions.css?v=0717c">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -31,7 +31,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0717b">
+  <link rel="stylesheet" href="./css/theme.css?v=0717c">
 </head>
 
 <body data-page="predict">
@@ -39,7 +39,7 @@
 
 <header class="header">
   <div class="header-inner">
-    <button class="back-btn hb-side" onclick="history.length>1?history.back():location.href='galla-predict.html'">← <span class="back-text">뒤로</span></button>
+    <button class="back-btn hb-side" data-back="galla-predict.html">← <span class="back-text">뒤로</span></button>
     <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
     <span class="hb-side"><button class="more-header-btn" id="header-more-btn" style="display:none">⋯</button></span>
   </div>
@@ -74,15 +74,16 @@
 
 </div><!-- /#app -->
 
-<script src="./js/vendor/supabase.js?v=0717b"></script>
-<script src="./js/supabase.js?v=0717b"></script>
-<script src="./js/follow.js?v=0717b"></script>
-<script src="./js/owner-actions.js?v=0717b"></script>
-<script src="js/share-sheet.js?v=0717b"></script>
-<script src="js/report-block.js?v=0717b"></script>
-<script src="js/comment-actions.js?v=0717b"></script>
-<script src="./js/predict-market.js?v=0717b"></script>
-<script src="./js/nav.js?v=0717b"></script>
+<script src="./js/vendor/supabase.js?v=0717c"></script>
+<script src="./js/supabase.js?v=0717c"></script>
+<script src="js/back.js?v=0717c"></script>
+<script src="./js/follow.js?v=0717c"></script>
+<script src="./js/owner-actions.js?v=0717c"></script>
+<script src="js/share-sheet.js?v=0717c"></script>
+<script src="js/report-block.js?v=0717c"></script>
+<script src="js/comment-actions.js?v=0717c"></script>
+<script src="./js/predict-market.js?v=0717c"></script>
+<script src="./js/nav.js?v=0717c"></script>
 
 </body>
 </html>
