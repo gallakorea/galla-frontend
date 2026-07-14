@@ -54,6 +54,9 @@
 .np-filters::-webkit-scrollbar { display: none; }
 .np-chip {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 8px 13px;
   min-height: 34px;
   border-radius: 999px;
@@ -110,9 +113,9 @@
   width: 20px; height: 20px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 10.5px;
   background: #26262c;
   border: 2px solid #0a0a0b;
+  color: #fff;                 /* SVG는 currentColor */
 }
 .np-badge.t-like    { background: #2f6bff; }
 .np-badge.t-dislike { background: #ff4f6e; }
@@ -148,7 +151,7 @@
   overflow: hidden;
   background: #16161b;
   display: flex; align-items: center; justify-content: center;
-  font-size: 17px;
+  color: #6a707c;
 }
 .np-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .np-thumb.none { border: 1px solid rgba(255,255,255,.08); }
@@ -191,3 +194,9 @@
   font-weight: 800;
   text-decoration: none;
 }
+
+
+/* ── SVG 아이콘 공통 (이모지 대체) ── */
+.np-chip .ic   { width: 15px; height: 15px; flex: none; }
+.np-badge .ic  { width: 12px; height: 12px; display: block; }
+.np-thumb .ic  { width: 20px; height: 20px; }

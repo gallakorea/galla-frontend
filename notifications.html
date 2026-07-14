@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>알림 - GALLA</title>
-  <link rel="stylesheet" href="./css/header.css?v=0716w">
-  <link rel="stylesheet" href="./css/nav.css?v=0716w">
-  <link rel="stylesheet" href="./css/notifications-page.css?v=0716w">
+  <link rel="stylesheet" href="./css/header.css?v=0716x">
+  <link rel="stylesheet" href="./css/nav.css?v=0716x">
+  <link rel="stylesheet" href="./css/notifications-page.css?v=0716x">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0716w">
+  <link rel="stylesheet" href="./css/theme.css?v=0716x">
 </head>
 
 <body data-page="mypage">
@@ -37,10 +37,18 @@
     <!-- 유형 필터 (인스타식 칩) -->
     <div class="np-filters" id="npFilters">
       <button class="np-chip active" data-f="all">모두</button>
-      <button class="np-chip" data-f="comment">💬 댓글</button>
-      <button class="np-chip" data-f="like">👍 좋아요</button>
-      <button class="np-chip" data-f="dislike">👎 싫어요</button>
-      <button class="np-chip" data-f="follow">👤 팔로워</button>
+      <button class="np-chip" data-f="comment">
+        <svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>댓글
+      </button>
+      <button class="np-chip" data-f="like">
+        <svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 21h4V9H1v12zM23 10c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>좋아요
+      </button>
+      <button class="np-chip" data-f="dislike">
+        <svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.3.32c0 .41.17.79.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"/></svg>싫어요
+      </button>
+      <button class="np-chip" data-f="follow">
+        <svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>팔로워
+      </button>
     </div>
 
     <div id="npList" class="np-list">
@@ -70,10 +78,10 @@
   </div>
 </nav>
 
-<script src="./js/vendor/supabase.js?v=0716w"></script>
-<script src="js/supabase.js?v=0716w"></script>
-<script src="js/notifications-page.js?v=0716w"></script>
-<script src="./js/nav.js?v=0716w"></script>
+<script src="./js/vendor/supabase.js?v=0716x"></script>
+<script src="js/supabase.js?v=0716x"></script>
+<script src="js/notifications-page.js?v=0716x"></script>
+<script src="./js/nav.js?v=0716x"></script>
 
 </body>
 </html>
