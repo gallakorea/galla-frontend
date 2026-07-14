@@ -117,19 +117,26 @@ body[data-page="search"] .header-inner {
 }
 
 /* ===== TAB MENU ===== */
+/* 탭이 4개가 되면서 375px 화면에서 글자가 두 줄로 깨졌다.
+   → 한 줄 고정(nowrap) + 넘치면 가로 스크롤(스크롤바는 숨김). */
 .tabs-header {
   display: flex;
   gap: 6px;
   padding: 12px 16px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tabs-header::-webkit-scrollbar { display: none; }
 
 .tab-item {
+  flex: 0 0 auto;
+  white-space: nowrap;
   background: #1a1a1a;
   color: #aaa;
   border: 1px solid #333;
   border-bottom: none;
   border-radius: 12px 12px 0 0;
-  padding: 8px 14px;
+  padding: 8px 12px;
   font-size: 13px;
   cursor: pointer;
 }
