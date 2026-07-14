@@ -42,6 +42,7 @@ const ST = {
   dislike: stIc('<path d="M17 13.5V3h3a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1h-3z"/><path d="M17 13.5l-4.2 7.4a1 1 0 0 1-1.4.4l-.6-.4a2.4 2.4 0 0 1-1-2.6l.7-3.3H5.2a2 2 0 0 1-2-2.4l1.4-7A2 2 0 0 1 6.6 4H17"/>'),
   comment: stIc('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
   saved: stIc('<path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/>'),
+  share: stIc('<path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/>'),
 };
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -672,7 +673,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span>${ST.like} ${n.likes}</span>
             <span>${ST.dislike} ${n.dislikes}</span>
             <span>${ST.comment} ${n.cCount}</span>
-            ${n.saved ? `<span class="gn-saved">${ST.saved} 저장됨</span>` : ""}
+            <button type="button" class="gnc-act gn-save-btn ${n.saved ? "on" : ""}"
+                    data-gid="${n.id}" aria-label="저장">${ST.saved}</button>
+            <button type="button" class="gnc-act gn-share-btn"
+                    data-gid="${n.id}" data-title="${esc(n.title)}" aria-label="공유">${ST.share}</button>
           </div>
         </div>
       </div>`;
@@ -740,9 +744,43 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 갈라뉴스 카드 클릭 → 갈라뉴스 리더 (원본 뉴스 카드는 자체 핸들러)
   document.getElementById("top-news-list")?.addEventListener("click", e => {
+    // 저장/공유는 카드 열기보다 먼저 가로챈다
+    const save = e.target.closest(".gn-save-btn");
+    if (save) { e.stopPropagation(); toggleSaveGnCard(save); return; }
+    const share = e.target.closest(".gn-share-btn");
+    if (share) { e.stopPropagation(); shareGnCard(share); return; }
+
     const g = e.target.closest(".news-card.galla");
     if (g && g.dataset.gid) openGallaNews(g.dataset.gid);
   });
+
+  function needLoginGn() {
+    if (ME) return false;
+    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    return true;
+  }
+
+  async function toggleSaveGnCard(btn) {
+    if (needLoginGn()) return;
+    const id = btn.dataset.gid;
+    const on = btn.classList.toggle("on");   // 낙관적 갱신
+    const { error } = on
+      ? await supabase.from("galla_news_bookmarks").insert({ news_id: id, user_id: ME.id })
+      : await supabase.from("galla_news_bookmarks").delete().eq("news_id", id).eq("user_id", ME.id);
+    if (error) { btn.classList.toggle("on"); return; }
+    if (GALLA_CACHE[id]) GALLA_CACHE[id].saved = on;
+  }
+
+  async function shareGnCard(btn) {
+    const url = new URL(`news.html?gn=${btn.dataset.gid}`, location.href).href;
+    const title = btn.dataset.title || "GALLA 뉴스";
+    if (navigator.share) {
+      try { await navigator.share({ title, url }); return; }
+      catch (err) { if (err.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(url); alert("링크가 복사되었습니다."); }
+    catch { alert("링크 복사에 실패했습니다."); }
+  }
 
   // 뉴스 무한 스크롤 (원본 폴백 모드에서만 페이지네이션)
   window.addEventListener("scroll", () => {

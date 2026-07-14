@@ -1343,3 +1343,27 @@ body[data-page="news"] .news-viewer-fallback {
 .sr-stats { display: flex; align-items: center; gap: 10px; }
 .sr-stats span { display: inline-flex; align-items: center; gap: 4px; }
 .gn-cardstats span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* 갈라뉴스 카드 — 저장 / 공유 버튼 */
+.gn-cardstats .gnc-act {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  background: none; border: 0; border-radius: 8px;
+  color: #8a93a6; cursor: pointer; touch-action: manipulation;
+}
+.gn-cardstats .gnc-act:active { background: rgba(255,255,255,.07); }
+.gn-cardstats .gn-save-btn.on { color: #f5c518; }
+.gn-cardstats .gn-save-btn.on .st-ic { fill: #f5c518; }
+/* 공유는 오른쪽 끝으로 */
+.gn-cardstats .gn-share-btn { margin-left: auto; }
+
+/* 갈라뉴스 상세 액션바 아이콘 (이모지 → SVG) */
+.gn-act .ic-like, .gn-act .ic-dislike, .gn-act .ic-comment,
+.gn-act .ic-bookmark, .gn-act .ic-share {
+  width: 17px; height: 17px; display: block; flex: 0 0 17px;
+}
+.gn-act.on.like .ic-like { fill: rgba(109,139,255,.25); }
+.gn-act.on.dislike .ic-dislike { fill: rgba(255,111,134,.25); }
+.gn-act.on.save .ic-bookmark { fill: #f5c518; }
+.gnc-title { display: flex; align-items: center; gap: 6px; }
+.gnc-title .ic-comment { width: 16px; height: 16px; flex: 0 0 16px; }

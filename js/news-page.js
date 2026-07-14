@@ -116,18 +116,31 @@
     loadGnComments(id);
   }
 
-  /* ===== 액션바 (좋아요/싫어요/댓글/저장/공유) ===== */
-  const GN_BM_ICON = '<svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg>';
-  const GN_SHARE_ICON = '<svg class="ic-share" viewBox="0 0 24 24"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>';
+  /* ===== 액션바 (좋아요/싫어요/댓글/저장/공유) =====
+     이모지는 기기마다 크기·모양이 달라 줄 정렬이 흔들린다 → 전부 SVG 통일. */
+  const gnSvg = (cls, d) =>
+    `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+
+  const GN_LIKE_ICON = gnSvg("ic-like",
+    '<path d="M7 10.5V21H4a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1h3z"/><path d="M7 10.5l4.2-7.4a1 1 0 0 1 1.4-.4l.6.4a2.4 2.4 0 0 1 1 2.6L13.5 9h5.3a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 17.4 20H7"/>');
+  const GN_DISLIKE_ICON = gnSvg("ic-dislike",
+    '<path d="M17 13.5V3h3a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1h-3z"/><path d="M17 13.5l-4.2 7.4a1 1 0 0 1-1.4.4l-.6-.4a2.4 2.4 0 0 1-1-2.6l.7-3.3H5.2a2 2 0 0 1-2-2.4l1.4-7A2 2 0 0 1 6.6 4H17"/>');
+  const GN_CMT_ICON = gnSvg("ic-comment",
+    '<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>');
+  const GN_BM_ICON = gnSvg("ic-bookmark",
+    '<path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/>');
+  const GN_SHARE_ICON = gnSvg("ic-share",
+    '<path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/>');
 
   function renderGnActions() {
     const bar = $("#gn-actions");
     if (!bar || !NEWS) return;
     const n = NEWS;
     bar.innerHTML = `
-      <button class="gn-act ${n.myReact === 1 ? "on like" : ""}" data-act="like">👍 <span>${n.likes}</span></button>
-      <button class="gn-act ${n.myReact === -1 ? "on dislike" : ""}" data-act="dislike">👎 <span>${n.dislikes}</span></button>
-      <button class="gn-act" data-act="comment">💬 <span>${n.cCount}</span></button>
+      <button class="gn-act ${n.myReact === 1 ? "on like" : ""}" data-act="like">${GN_LIKE_ICON} <span>${n.likes}</span></button>
+      <button class="gn-act ${n.myReact === -1 ? "on dislike" : ""}" data-act="dislike">${GN_DISLIKE_ICON} <span>${n.dislikes}</span></button>
+      <button class="gn-act" data-act="comment">${GN_CMT_ICON} <span>${n.cCount}</span></button>
       <button class="gn-act gn-icon ${n.saved ? "on save" : ""}" data-act="save" aria-label="저장">${GN_BM_ICON}</button>
       <button class="gn-act gn-icon" data-act="share" aria-label="공유">${GN_SHARE_ICON}</button>`;
     bar.querySelectorAll(".gn-act").forEach((b) => b.addEventListener("click", () => {
@@ -258,7 +271,7 @@
     const remaining = tops.length - shown.length;
 
     box.innerHTML = `
-      <div class="gnc-title">💬 댓글 ${total}</div>
+      <div class="gnc-title">${GN_CMT_ICON} 댓글 ${total}</div>
       <div class="gnc-compose">
         <input id="gncInput" class="gnc-input" maxlength="300" placeholder="의견을 남기고 붙어보세요…">
         <button id="gncSend" class="gnc-send">게시</button>
