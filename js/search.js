@@ -989,10 +989,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   showEmpty(true);
 
   // 딥링크: ?gn=<id> → 갈라뉴스 리더 바로 열기 (마이페이지 '저장한 뉴스' 등)
-  const gnParam = new URLSearchParams(location.search).get("gn");
+  const qs = new URLSearchParams(location.search);
+  const gnParam = qs.get("gn");
   if (gnParam) {
     activateTab("news");
     openGallaNews(gnParam);
+  } else if (qs.get("video")) {
+    // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
+    activateTab("hot");
   } else {
     activateTab("search");
     input.focus();
