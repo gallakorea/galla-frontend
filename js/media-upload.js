@@ -129,8 +129,9 @@
      - R2 경유 없이 Stream으로 청크 직접 업로드 → 네트워크가 끊겨도 재개
      - window.GALLA_UPLOAD_VIDEO_STREAM(file, onProgress?) → { hls, thumbnail, uid }
   =========================================================== */
-  // tus 청크: 256KiB 배수 + 최소 5MiB 규칙 충족. 50MiB(=200×256KiB).
-  const TUS_CHUNK = 50 * 1024 * 1024;
+  // tus 청크: 256KiB 배수 + 최소 5MiB 규칙 충족. 16MiB(=64×256KiB).
+  // 모바일에서 끊겼을 때 재전송량을 줄이려 작게 잡음(재개 granularity ↑).
+  const TUS_CHUNK = 16 * 1024 * 1024;
   const TUS_MAX_RETRY = 6;
 
   async function tusHeadOffset(uploadURL, fallback) {
