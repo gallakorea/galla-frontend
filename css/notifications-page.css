@@ -123,6 +123,14 @@
 .np-badge.t-follow  { background: #35e0a0; }
 .np-badge.t-attack  { background: #ff6a3d; }
 .np-badge.t-win     { background: #ffc400; }
+.np-badge.t-defend  { background: #2f9bff; }
+.np-badge.t-support { background: #35e0a0; }
+.np-badge.t-duel    { background: #b06bff; }
+.np-badge.t-vote    { background: #5a6070; }
+.np-badge.t-dm      { background: #2f6bff; }
+.np-badge.t-donation{ background: #ff5fa2; }
+.np-badge.t-cash    { background: #35e0a0; }
+.np-badge.t-market  { background: #ffa62f; }
 
 /* 본문 */
 .np-mid { flex: 1 1 auto; min-width: 0; }
