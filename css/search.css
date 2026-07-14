@@ -602,13 +602,8 @@ body[data-page="search"] .header-inner {
 /* 지금 뜨는 갈라 이슈는 .search-results 재사용 */
 [data-panel="trending"] .search-results { padding-top: 4px; }
 
-/* 재편 레이아웃: tabs-body 는 좌우 패딩 없음.
-   좌우 16px 여백은 '패널'이 갖는다 — 안 그러면 PC에서 서치만 콘텐츠가
-   480px를 꽉 채워 다른 페이지(카드 448px)보다 넓어 보인다. */
+/* 재편 레이아웃: 패널 내부 요소가 각자 좌우 패딩을 관리 → tabs-body 좌우 패딩 제거 */
 .tabs-body { padding: 12px 0 0; }
-.tab-panel[data-panel="news"],
-.tab-panel[data-panel="trending"] { padding: 0 16px; }
-/* 검색 탭은 내부 요소(.search-bar 등)가 이미 자체 16px 마진을 갖는다 */
 [data-panel="trending"] .section-title,
 [data-panel="trending"] .section-sub { padding: 0 16px; }
 .news-category-chips { padding: 8px 16px 12px; }
@@ -959,8 +954,11 @@ body[data-page="search"] .header-inner {
   scroll-padding-left: 16px;
   scrollbar-width: none;
 }
-/* 선반은 패널 좌우 패딩(16px)을 넘어 가장자리까지 쓴다(풀블리드) */
-.tab-panel .hv-shelf { margin: 0 -16px; padding: 0 16px 4px; }
+/* 풀블리드는 핫영상 패널 안에서만 */
+.tab-panel[data-panel="hot"] .hv-shelf { margin: 0 -16px; padding: 0 16px 4px; }
+/* 핫트렌드 탭의 영상 선반 — 화면 끝에 붙지 않게 좌우 여백 */
+#trending-videos .hv-sec-h { padding-left: 16px; padding-right: 16px; }
+#trending-videos .hv-shelf { padding: 0 16px 4px; }
 .hv-shelf::-webkit-scrollbar { display: none; }
 .hv-tile {
   flex: 0 0 152px; scroll-snap-align: start;
