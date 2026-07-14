@@ -457,8 +457,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // 공용 아이콘 SVG — 전 페이지 통일
-    const BM_ICON = '<svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg>';
-    const SHARE_ICON = '<svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg>';
+    const BM_ICON = '<svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg>';
+    const SHARE_ICON = '<svg class="ic-share" viewBox="0 0 24 24"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>';
 
     function ensureQuickView() {
         let qv = document.getElementById("mpQuickView");

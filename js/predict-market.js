@@ -195,8 +195,8 @@ function render(){
         ${m.resolved ? `<span class="pmd-resolved yes">✔ 정산 완료 · ${esc(multi?(winName||''):(m.outcome==='yes'?'YES':'NO'))} 승리</span>`
           : `<span class="pmd-time">⏰ ${timeLeft(m.close_at)}</span>`}
         <span class="pmd-vol">💰 거래량 ${fmt(m.volume)}P</span>
-        <button class="pmd-save ${MY_SAVED ? 'on' : ''}" id="pmdSaveBtn"><svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M17 21L12 17.25L7 21V5C7 3.89543 7.89543 3 9 3H15C16.1046 3 17 3.89543 17 5V21Z"/></svg> <span class="pmd-save-txt">${MY_SAVED ? '저장됨' : '저장'}</span></button>
-        <button class="pmd-share" id="pmdShareBtn"><svg class="ic-share" viewBox="0 0 24 24"><path d="M22 3L11 14"/><path d="M22 3L15 21L11 14L2 10L22 3Z"/></svg> 공유</button>
+        <button class="pmd-save ${MY_SAVED ? 'on' : ''}" id="pmdSaveBtn"><svg class="ic-bookmark" viewBox="0 0 24 24"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg> <span class="pmd-save-txt">${MY_SAVED ? '저장됨' : '저장'}</span></button>
+        <button class="pmd-share" id="pmdShareBtn"><svg class="ic-share" viewBox="0 0 24 24"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg> 공유</button>
       </div>
     </section>
 
