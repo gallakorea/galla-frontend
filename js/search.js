@@ -65,9 +65,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ================= 탭 ================= */
   let trendingLoaded = false, newsInit = false;
-  function activateTab(name) {
+
+  // 현재 탭을 URL에 남긴다 — 기사(news.html)에서 뒤로 오면 보던 탭으로 복귀해야 한다
+  function rememberTab(name) {
+    const qs = new URLSearchParams(location.search);
+    if (name === "search") qs.delete("tab"); else qs.set("tab", name);
+    const q = qs.toString();
+    history.replaceState(history.state, "", location.pathname + (q ? `?${q}` : ""));
+  }
+
+  function activateTab(name, remember = true) {
     tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
     panels.forEach(p => p.classList.toggle("active", p.dataset.panel === name));
+    if (remember) rememberTab(name);
     if (name === "trending" && !trendingLoaded) { trendingLoaded = true; loadTrending(); }
     if (name === "news" && !newsInit) {
       newsInit = true;
@@ -685,7 +695,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     location.replace(`news.html?gn=${encodeURIComponent(gnParam)}`);
   } else if (qs.get("video")) {
     // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
-    activateTab("hot");
+    activateTab("hot", false);
+  } else if (["trending", "news", "hot"].includes(qs.get("tab"))) {
+    // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
+    activateTab(qs.get("tab"), false);
   } else {
     activateTab("search");
     input.focus();
