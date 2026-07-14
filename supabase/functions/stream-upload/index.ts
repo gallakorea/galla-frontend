@@ -33,9 +33,13 @@ serve(async (req) => {
     // 최대 6GB 가드 (Stream 계정 한도 내)
     if (uploadLength > 6 * 1024 * 1024 * 1024) return json({ error: "too_large" }, 413);
 
-    // Upload-Metadata: "key base64value,key2 base64value2" — name만 설정(공개)
-    const b64 = btoa(unescape(encodeURIComponent(name || `galla-${user.id}`)));
-    const meta = `name ${b64}`;
+    // Upload-Metadata: "key base64value,key2 base64value2"
+    // ⚠️ maxDurationSeconds 미지정 시 Stream이 세션당 기본 4시간(14400s)을 예약 →
+    //    미완료 세션이 쌓이면 저장 할당량을 순식간에 소진. 30분으로 제한해 예약 최소화.
+    const b64 = (s: string) => btoa(unescape(encodeURIComponent(s)));
+    const meta =
+      `name ${b64(name || `galla-${user.id}`)},` +
+      `maxDurationSeconds ${b64("1800")}`;
 
     // direct_user=true → 인증 없이 클라이언트가 PATCH할 수 있는 일회용 tus 업로드 URL
     const cfRes = await fetch(
