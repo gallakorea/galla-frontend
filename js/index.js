@@ -51,6 +51,34 @@ const videoPreloader = new IntersectionObserver(entries => {
     entries.forEach(e => { if (e.isIntersecting) ensureVideoSrc(e.target); });
 }, { rootMargin: '400px 0px' });
 
+// IntersectionObserver 폴백(일부 환경/브라우저에서 IO가 콜백을 안 쏘는 경우 영상이 영영 안 뜸).
+// 스크롤/리사이즈에 맞춰 뷰포트 근처 영상 src 주입 + 가장 많이 보이는 영상 재생.
+let __feedVideoFallbackBound = false;
+function ensureFeedVideoFallback() {
+    const sweep = () => {
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        let best = null, bestVis = 0;
+        document.querySelectorAll('.card-media video').forEach(v => {
+            const r = v.getBoundingClientRect();
+            if (!r.height) return;
+            if (r.top < vh + 400 && r.bottom > -400) ensureVideoSrc(v);        // 근처면 버퍼
+            const vis = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+            if (vis / r.height > 0.5 && vis > bestVis) { bestVis = vis; best = v; }
+        });
+        document.querySelectorAll('.card-media video').forEach(v => { if (v !== best && !v.paused) v.pause(); });
+        if (best && best.paused && !document.body.classList.contains('shorts-open')) playWithSound(best);
+    };
+    if (!__feedVideoFallbackBound) {
+        __feedVideoFallbackBound = true;
+        let t; const onScroll = () => { clearTimeout(t); t = setTimeout(sweep, 100); };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        window.addEventListener('resize', onScroll, { passive: true });
+    }
+    sweep();
+    setTimeout(sweep, 300);
+    setTimeout(sweep, 1000);
+}
+
 // 개별 음소거 토글 → 전역 선호를 뒤집어 전 영상·페이지에 통일 반영
 window.toggleFeedMute = function (vidId, btnId) {
     window.GALLA_setSound(!window.GALLA_soundOn());
@@ -664,6 +692,9 @@ function attachEvents() {
             if (dur) dur.textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
         });
     });
+    // 🎥 안전 폴백: IntersectionObserver가 안 먹는 환경 대비 — 스크롤 시 뷰포트 근처 영상 src 주입 +
+    // 중앙(>50%) 영상 재생/나머지 정지. (영상이 아예 안 뜨던 문제 방지)
+    ensureFeedVideoFallback();
 
     // 투표 상태 복원
     if (typeof window.GALLA_CHECK_VOTE === 'function') {
