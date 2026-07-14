@@ -16,12 +16,14 @@
 /*.html
   Cache-Control: no-cache
 
-# CSS/JS도 항상 재검증(no-cache) — 배포 전파 레이스로 새 ?v= URL에 옛 내용이
-# 캐시되어 기기가 계속 옛 코드를 보는 문제를 근절. 변경 없으면 304라 비용은 미미.
+# CSS/JS도 항상 재검증 — 배포 전파 레이스로 새 ?v= URL에 옛 내용이 캐시되면
+# 기기가 4시간 동안 옛 코드를 계속 실행한다(실제로 겪음).
+# ⚠️ max-age=0, must-revalidate 는 Cloudflare가 14400초로 클램프해 버려서 소용없다.
+#    반드시 no-cache 를 써야 매 요청 재검증한다. 변경 없으면 304라 비용은 미미.
 /css/*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-cache
 /js/*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: no-cache
 
 # 벤더 라이브러리는 바뀌지 않으므로 장기 캐시 유지(위 /js/* 보다 뒤에 둬야 우선)
 /js/vendor/*
