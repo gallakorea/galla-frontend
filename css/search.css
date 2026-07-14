@@ -1319,3 +1319,9 @@ body[data-page="news"] .news-viewer-fallback {
   position: static; inset: auto;
   min-height: 60vh;
 }
+
+/* 핫유튜브 탭 — 이모지 대신 유튜브 브랜드 아이콘 */
+.tab-item.tab-yt {
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.tab-yt .yt-ic { width: 17px; height: 17px; flex: 0 0 17px; display: block; }
