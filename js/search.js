@@ -670,9 +670,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span>· 관련 ${n.source_count || 0}건</span>
           </div>
           <div class="gn-cardstats">
-            <span>${ST.like} ${n.likes}</span>
-            <span>${ST.dislike} ${n.dislikes}</span>
-            <span>${ST.comment} ${n.cCount}</span>
+            <button type="button" class="gnc-act gnc-cnt gn-like-btn ${n.myReact === 1 ? "on" : ""}"
+                    data-gid="${n.id}" data-v="1" aria-label="좋아요">${ST.like} <b>${n.likes}</b></button>
+            <button type="button" class="gnc-act gnc-cnt gn-dislike-btn ${n.myReact === -1 ? "on" : ""}"
+                    data-gid="${n.id}" data-v="-1" aria-label="싫어요">${ST.dislike} <b>${n.dislikes}</b></button>
+            <span class="gnc-cnt">${ST.comment} ${n.cCount}</span>
             <button type="button" class="gnc-act gn-save-btn ${n.saved ? "on" : ""}"
                     data-gid="${n.id}" aria-label="저장">${ST.saved}</button>
             <button type="button" class="gnc-act gn-share-btn"
@@ -744,7 +746,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 갈라뉴스 카드 클릭 → 갈라뉴스 리더 (원본 뉴스 카드는 자체 핸들러)
   document.getElementById("top-news-list")?.addEventListener("click", e => {
-    // 저장/공유는 카드 열기보다 먼저 가로챈다
+    // 좋아요/싫어요/저장/공유는 카드 열기보다 먼저 가로챈다
+    const react = e.target.closest(".gn-like-btn, .gn-dislike-btn");
+    if (react) { e.stopPropagation(); reactGnCard(react); return; }
     const save = e.target.closest(".gn-save-btn");
     if (save) { e.stopPropagation(); toggleSaveGnCard(save); return; }
     const share = e.target.closest(".gn-share-btn");
@@ -753,6 +757,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     const g = e.target.closest(".news-card.galla");
     if (g && g.dataset.gid) openGallaNews(g.dataset.gid);
   });
+
+  /* 카드에서 바로 좋아요/싫어요 — 같은 걸 다시 누르면 취소,
+     반대쪽을 누르면 갈아탄다(상세 페이지의 reactGn과 같은 규칙). */
+  async function reactGnCard(btn) {
+    if (needLoginGn()) return;
+    const id = btn.dataset.gid;
+    const val = Number(btn.dataset.v);
+    const n = GALLA_CACHE[id];
+    if (!n) return;
+
+    const cur = n.myReact || 0;
+    const next = cur === val ? 0 : val;
+
+    const { error } = next === 0
+      ? await supabase.from("galla_news_reactions")
+          .delete().eq("news_id", id).eq("user_id", ME.id)
+      : await supabase.from("galla_news_reactions")
+          .upsert({ news_id: id, user_id: ME.id, value: next }, { onConflict: "news_id,user_id" });
+    if (error) return;
+
+    // 카운트 재계산
+    if (cur === 1) n.likes--; else if (cur === -1) n.dislikes--;
+    if (next === 1) n.likes++; else if (next === -1) n.dislikes++;
+    n.myReact = next;
+
+    const card = btn.closest(".news-card.galla");
+    const like = card.querySelector(".gn-like-btn");
+    const dislike = card.querySelector(".gn-dislike-btn");
+    like.querySelector("b").textContent = n.likes;
+    dislike.querySelector("b").textContent = n.dislikes;
+    like.classList.toggle("on", next === 1);
+    dislike.classList.toggle("on", next === -1);
+  }
 
   function needLoginGn() {
     if (ME) return false;

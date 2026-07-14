@@ -1369,3 +1369,15 @@ body[data-page="news"] .news-viewer-fallback {
 .gn-act.on.save .ic-bookmark { fill: #f5c518; }
 .gnc-title { display: flex; align-items: center; gap: 6px; }
 .gnc-title .ic-comment { width: 16px; height: 16px; flex: 0 0 16px; }
+
+/* 갈라뉴스 카드 — 좋아요/싫어요 (카드에서 바로 누를 수 있다) */
+.gn-cardstats .gnc-cnt {
+  display: inline-flex; align-items: center; gap: 4px;
+  width: auto; min-width: 30px; height: 30px; padding: 0 7px;
+  font-size: 12px; color: #8a93a6;
+}
+.gn-cardstats .gnc-cnt b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.gn-cardstats .gn-like-btn.on { color: #6d8bff; }
+.gn-cardstats .gn-like-btn.on .st-ic { fill: rgba(109,139,255,.25); }
+.gn-cardstats .gn-dislike-btn.on { color: #ff6f86; }
+.gn-cardstats .gn-dislike-btn.on .st-ic { fill: rgba(255,111,134,.25); }
