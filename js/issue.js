@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=0716s";
-import { loadAiNews } from "./issue-news.js?v=0716s";
-import { loadStats } from "./issue.stats.js?v=0716s";
-import { initCommentSystem } from "./issue.comments.js?v=0716s";
+import { loadAiArguments } from "./issue-argument.js?v=0716t";
+import { loadAiNews } from "./issue-news.js?v=0716t";
+import { loadStats } from "./issue.stats.js?v=0716t";
+import { initCommentSystem } from "./issue.comments.js?v=0716t";
 
 
 console.log("[issue.js] loaded");
@@ -628,6 +628,10 @@ async function loadVoteStats(issueId, votedSide) {
   if (gv && window.GALLA_VoteBar) {
     window.GALLA_VoteBar.update(gv, { pro, con }, { voted: votedSide || null, animate: true });
   }
+
+  // 전선 게이지(여론 60% + 댓글대전 40%)가 쓸 수 있도록 투표수를 전역 공개
+  window.GALLA_ISSUE_VOTES = { pro, con };
+  window.dispatchEvent(new CustomEvent("galla:votes", { detail: { pro, con } }));
 }
 
 // 숫자 카운트업 애니메이션 (인포그래픽 공용)

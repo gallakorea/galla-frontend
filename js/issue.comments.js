@@ -136,6 +136,12 @@ export async function initCommentSystem(issueId) {
   initBattleFeed(issueId);
   renderHonors();
 
+  // 투표수가 (재)로드되면 전선 게이지의 '여론' 축을 즉시 반영
+  if (!window.__GALLA_FRONTLINE_SYNC__) {
+    window.__GALLA_FRONTLINE_SYNC__ = true;
+    window.addEventListener("galla:votes", () => renderMorale());
+  }
+
   // 페이지를 연 뒤 투표하면 컴포저/전투버튼이 즉시 풀리도록 (새로고침 불필요)
   if (!window.__GALLA_VOTE_SYNC__) {
     window.__GALLA_VOTE_SYNC__ = true;
@@ -412,9 +418,57 @@ function hpTier(hp) {
   if (hp <= 60) return "mid";
   return "hi";
 }
+/* ============================================================
+   전선 점수 설계 (승패 요인)
+     최종 = 여론(투표) × 0.6  +  댓글대전 × 0.4
+   댓글 하나의 '영향력' = 생존도 × 설득력 × 가중치
+     생존도 = HP/100        → 격파(HP 0)당하면 영향력 0 (공격에 의미가 생김)
+     설득력 = 1 + 추천 + 지원받음 + 방어받음×0.5 − 반대×0.5
+     가중치 = 본댓글 1.0 / 대댓글 0.5
+   ⚠️ 기존 식은 '받은 공격'이 점수를 올려(맞을수록 강해짐) 공격할 이유가 없었고,
+      HP 100이 기본이라 내용 없이 댓글만 많이 써도 이기는 물량전이었다.
+============================================================ */
+const W_VOTE = 0.6;    // 여론(투표) 비중
+const W_BATTLE = 0.4;  // 댓글 대전 비중
+
+function influence(c) {
+  const agg = likeAgg[c.id] || { up: 0, down: 0 };
+  const survival = Math.max(0, Math.min(100, c.hp | 0)) / 100;   // 격파 = 0
+  const persuasion = 1
+    + (agg.up || 0)
+    + (c.support_count || 0)
+    + (c.defense_count || 0) * 0.5
+    - (agg.down || 0) * 0.5;
+  const weight = c.parent_id ? 0.5 : 1;                          // 대댓글은 절반
+  return survival * Math.max(0, persuasion) * weight;
+}
+
+// 화면 표시용(댓글 칩) — 소수 첫째자리
 function combatPower(c) {
-  const agg = likeAgg[c.id] || { up: 0 };
-  return (c.attack_count || 0) + (c.defense_count || 0) + (c.support_count || 0) + (agg.up || 0);
+  return Math.round(influence(c) * 10) / 10;
+}
+
+/* 전선 종합: 여론·대전·최종 비율(모두 pro 기준 0~1) */
+function frontline() {
+  let bPro = 0, bCon = 0;
+  allRows.forEach(r => {
+    const inf = influence(r);
+    if (r.faction === "pro") bPro += inf;
+    else if (r.faction === "con") bCon += inf;
+  });
+  const bTot = bPro + bCon;
+  const battlePro = bTot > 0 ? bPro / bTot : 0.5;   // 댓글 없으면 중립
+
+  const v = window.GALLA_ISSUE_VOTES || { pro: 0, con: 0 };
+  const vTot = (v.pro || 0) + (v.con || 0);
+  const votePro = vTot > 0 ? v.pro / vTot : 0.5;    // 투표 없으면 중립
+
+  const finalPro = votePro * W_VOTE + battlePro * W_BATTLE;
+  return {
+    votePro, battlePro, finalPro,
+    battleRaw: { pro: bPro, con: bCon },
+    votes: v, hasVotes: vTot > 0, hasBattle: bTot > 0,
+  };
 }
 function computeAce() {
   ACE = { pro: null, con: null };
@@ -490,26 +544,46 @@ function renderMorale() {
     bar.className = "battle-morale";
     host.appendChild(bar);
   }
-  let pro = 0, con = 0;
-  allRows.forEach(r => {
-    const p = Math.max(0, r.hp) + combatPower(r) * 4;
-    if (r.faction === "pro") pro += p; else if (r.faction === "con") con += p;
-  });
-  const tot = pro + con || 1;
-  const proPct = Math.round(pro / tot * 100);
+  const F = frontline();
+  const proPct = Math.round(F.finalPro * 100);
+  const votePct = Math.round(F.votePro * 100);
+  const battlePct = Math.round(F.battlePro * 100);
   const lead = proPct > 50 ? "pro" : proPct < 50 ? "con" : "even";
+
+  // 여론에서 지고 있는데 최종은 이기고 있으면 '역전 중' — 댓글 대전의 가치를 즉시 체감시킨다
+  const flipPro = votePct < 50 && proPct > 50;
+  const flipCon = votePct > 50 && proPct < 50;
+  const status = flipPro || flipCon
+    ? `🔥 여론은 밀리지만 <b>댓글 대전 우세로 역전 중!</b>`
+    : lead === "even" ? "⚖️ 팽팽한 접전" : `${fLabel(lead)} 진영 우세`;
+
   bar.innerHTML = `
     <div class="bm-top">
-      <span class="bm-side pro ${lead === "pro" ? "lead" : ""}">${fLabel("pro")} 전투력 ${Math.round(pro)}</span>
-      <span class="bm-vs">VS</span>
-      <span class="bm-side con ${lead === "con" ? "lead" : ""}">${Math.round(con)} 전투력 ${fName("con")} 👎</span>
+      <span class="bm-side pro ${lead === "pro" ? "lead" : ""}">${fLabel("pro")} ${proPct}%</span>
+      <span class="bm-vs">전선</span>
+      <span class="bm-side con ${lead === "con" ? "lead" : ""}">${100 - proPct}% ${fName("con")} 👎</span>
     </div>
     <div class="bm-track">
       <div class="bm-pro" style="width:${proPct}%"></div>
       <div class="bm-con" style="width:${100 - proPct}%"></div>
       <div class="bm-needle" style="left:${proPct}%"></div>
     </div>
-    <div class="bm-status">${lead === "even" ? "⚖️ 팽팽한 접전" : `${fLabel(lead)} 진영 우세`} · ${proPct}%</div>
+    <div class="bm-status ${flipPro || flipCon ? "flip" : ""}">${status} · ${proPct}%</div>
+
+    <!-- 최종 점수가 무엇으로 만들어지는지 분해해서 보여준다 → '댓글을 왜 쓰는가'가 명확해짐 -->
+    <div class="fl-break">
+      <div class="fl-row">
+        <span class="fl-name">🗳 여론<em>60%</em></span>
+        <span class="fl-mini"><i class="fl-p" style="width:${votePct}%"></i></span>
+        <span class="fl-val">${votePct}<small>%</small></span>
+      </div>
+      <div class="fl-row">
+        <span class="fl-name">⚔️ 댓글 대전<em>40%</em></span>
+        <span class="fl-mini"><i class="fl-p" style="width:${battlePct}%"></i></span>
+        <span class="fl-val">${battlePct}<small>%</small></span>
+      </div>
+      <div class="fl-hint">추천·지원을 받으면 <b>영향력</b>이 오르고, <b>격파</b>당하면 0이 됩니다 — 댓글 대전이 전선의 40%를 움직입니다.</div>
+    </div>
     <div class="bm-war">
       <div class="bmw-box pro">
         <div class="bmw-label">👍 ${fLabel("pro")}</div>
@@ -1207,7 +1281,7 @@ function makeComment(c) {
       ${likeUI(c)}
       ${battleButtons}
       ${duelHeatBtn(c)}
-      <span class="cp-chip" title="이 댓글이 받은 공격+방어+지원+추천을 합친 전투력">⚡ 전투력 ${power}</span>
+      <span class="cp-chip${c.hp <= 0 ? " ko" : ""}" title="영향력 = 생존도(HP) × 설득력(추천·지원·방어 − 반대). 격파당하면 0이 됩니다.">⚡ 영향력 ${power}</span>
       <span class="action-more">⋯</span>
     </div>
 

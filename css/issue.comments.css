@@ -1483,3 +1483,83 @@ body.kb-open .battle-input-bar {
   0%, 100% { background: transparent; }
   30%      { background: rgba(255, 255, 255, .1); }
 }
+
+/* ============================================================
+   전선 게이지 구성 분해 (여론 60% + 댓글 대전 40%)
+   최종 점수가 무엇으로 만들어지는지 보여줘야
+   "댓글을 왜 쓰는가"가 유저에게 전달된다.
+============================================================ */
+.fl-break {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+.fl-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.fl-row:last-of-type { margin-bottom: 0; }
+.fl-name {
+  flex: none;
+  width: 104px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #c9d1e0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.fl-name em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 900;
+  color: #8a8f9a;
+  background: rgba(255, 255, 255, .07);
+  padding: 1px 4px;
+  border-radius: 5px;
+}
+.fl-mini {
+  flex: 1 1 auto;
+  height: 7px;
+  border-radius: 999px;
+  background: #ff4f6e;                 /* 반대(con) 바탕 */
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+}
+.fl-mini .fl-p {
+  display: block;
+  height: 100%;
+  background: #3356ff;                 /* 찬성(pro) */
+  transition: width .6s cubic-bezier(.34,1.35,.5,1);
+}
+.fl-val {
+  flex: none;
+  width: 40px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 900;
+  color: #fff;
+}
+.fl-val small { font-size: 9px; opacity: .6; font-weight: 700; }
+.fl-hint {
+  margin-top: 9px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: #8a8f9a;
+}
+.fl-hint b { color: #c9d1e0; }
+
+/* 역전 중 강조 */
+.bm-status.flip {
+  color: #ffd977;
+  font-weight: 900;
+  text-shadow: 0 0 10px rgba(255, 200, 60, .5);
+}
+.bm-status.flip b { color: #ffdf7a; }
+
+/* 격파된 댓글의 영향력 칩은 0임을 시각적으로 */
+.cp-chip.ko { opacity: .4; text-decoration: line-through; }
