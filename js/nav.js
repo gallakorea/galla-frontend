@@ -68,13 +68,20 @@ document.addEventListener("DOMContentLoaded", () => {
       requestAnimationFrame(() => {
         ticking = false;
         const y = getY(), dy = y - lastY;
-        if (y <= 10) {                           // 최상단: 원 제거 + 헤더 표시 + 네비 원래크기
+        if (y <= 10) {                           // 최상단: 원·로고숨김 해제 + 헤더 표시 + 네비 원래크기
           navEl && navEl.classList.remove("nav--mini");
-          if (hdrEl) { hdrEl.classList.remove("hdr-scrolled"); hdrEl.classList.remove("hdr-hidden"); }
+          if (hdrEl) {
+            hdrEl.classList.remove("hdr-scrolled");
+            hdrEl.classList.remove("hdr-hidden");
+            hdrEl.classList.remove("hdr-nologo");
+          }
           lastY = y;
           return;
         }
         hdrEl && hdrEl.classList.add("hdr-scrolled"); // 스크롤 상태 = 아이콘 원 표시
+        // 헤더가 실제로 숨기 시작하는 지점(60px)부터 로고를 감춘다 →
+        // 위로 올려 헤더가 다시 내려와도 로고 없이 아이콘만. 맨 위(≤10px)에서만 로고 복귀.
+        if (y > 60) hdrEl && hdrEl.classList.add("hdr-nologo");
         if (Math.abs(dy) > 4) {                  // 미세 스크롤 무시(떨림 방지)
           if (dy > 0 && y > 60) {                // 아래로 → 헤더 전체 숨김/네비 축소
             navEl && navEl.classList.add("nav--mini");
