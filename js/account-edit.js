@@ -69,11 +69,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================
   // Load existing profile
   // =========================
-  const { data: profile, error: profileError } = await supabase
-    .from("users")
-    .select("nickname, bio, avatar_url, phone")
-    .eq("id", userId)
-    .single();
+  // PII(phone) 포함 → 직접 users 조회 대신 본인전용 RPC
+  const { data: profile, error: profileError } = await supabase.rpc("get_my_account");
 
   if (profileError) {
     console.error("[account-edit] load profile error", profileError);

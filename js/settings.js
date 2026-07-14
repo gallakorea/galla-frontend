@@ -55,11 +55,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =====================
      프로필 정보 로딩
   ===================== */
-  const { data: profile, error: profileErr } = await supabase
-    .from("users")
-    .select("nickname, bio, phone, avatar_url")
-    .eq("id", userId)
-    .single();
+  // 본인 계정정보는 PII(phone 등) 포함이라 SECURITY DEFINER RPC로만 조회(직접 users 조회 차단됨)
+  const { data: profile, error: profileErr } = await supabase.rpc("get_my_account");
 
   if (profileErr) {
     console.error("[settings.js] profile load error", profileErr);

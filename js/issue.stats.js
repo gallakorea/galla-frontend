@@ -13,58 +13,21 @@ export async function loadStats(issueId) {
   lockAllStats(0);
   const supabase = window.supabaseClient;
 
-  // 🔥 실제 투표(votes.type='pro'|'con') + 투표자 인구통계로 집계
-  const { data: votes, error } = await supabase
-    .from("votes").select("user_id, type").eq("issue_id", issueId);
-  if (error) { console.error("[issue.stats] votes error:", error); lockAllStats(0); return; }
+  // 🔒 개인정보 보호: 원시 투표자 성별/생년/지역을 클라이언트로 내리지 않고
+  //    서버(SECURITY DEFINER)에서 집계만 반환. 소표본 억제(참여30·버킷5)도 서버에서 적용.
+  const { data, error } = await supabase.rpc("issue_demographics", { p_issue: issueId });
+  if (error) { console.error("[issue.stats] demographics error:", error); lockAllStats(0); return; }
 
-  const total = votes ? votes.length : 0;
-  if (total < MIN_PARTICIPANTS) { lockAllStats(total); return; }
+  const total = data?.total || 0;
+  if (!data || data.locked || total < MIN_PARTICIPANTS) { lockAllStats(total); return; }
 
-  // 투표자 인구통계
-  const uids = [...new Set(votes.map(v => v.user_id).filter(Boolean))];
-  let uMap = {};
-  if (uids.length) {
-    const { data: users } = await supabase.from("users").select("id, gender, birth_date, region").in("id", uids);
-    (users || []).forEach(u => (uMap[u.id] = u));
-  }
-
-  const ageBucket = (bd) => {
-    if (!bd) return null;
-    const y = new Date(bd).getFullYear(); if (!y) return null;
-    const age = new Date().getFullYear() - y;
-    if (age < 20) return "10대"; if (age < 30) return "20대"; if (age < 40) return "30대";
-    if (age < 50) return "40대"; if (age < 60) return "50대"; return "60대+";
-  };
-  const genderLabel = (g) => (g === "male" || g === "남성") ? "남성" : ((g === "female" || g === "여성") ? "여성" : null);
-
-  const partGender = { 남성: 0, 여성: 0 };
-  const partAge = {}, partRegion = {};
-  const vg = {}, va = {}, vr = {};
-  const bump = (o, k) => { if (k) o[k] = (o[k] || 0) + 1; };
-  const bumpV = (o, k, t) => { if (!k) return; o[k] = o[k] || { pro: 0, con: 0 }; o[k][t === "con" ? "con" : "pro"]++; };
-
-  votes.forEach(v => {
-    const u = uMap[v.user_id] || {};
-    const g = genderLabel(u.gender), a = ageBucket(u.birth_date), r = u.region || null;
-    if (g) partGender[g]++;
-    bump(partAge, a); bump(partRegion, r);
-    bumpV(vg, g, v.type); bumpV(va, a, v.type); bumpV(vr, r, v.type);
-  });
-
-  const pct = (n, d) => d ? Math.round(n / d * 100) : 0;
-  // 버킷별 최소 인원(MIN_BUCKET) 미만은 숨김 (소표본 노이즈·개인식별 방지)
-  const partArr = (o) => { const t = Object.values(o).reduce((s, n) => s + n, 0); return Object.entries(o).filter(([, n]) => n >= MIN_BUCKET).map(([k, n]) => ({ label: k, name: k, percent: pct(n, t) })); };
-  const voteArr = (o) => Object.entries(o).filter(([, v]) => (v.pro + v.con) >= MIN_BUCKET).map(([k, { pro, con }]) => ({ label: k, pro: pct(pro, pro + con), con: pct(con, pro + con) }));
-
-  const genderKnown = partGender.남성 + partGender.여성;
   const stats = {
-    gender: genderKnown >= MIN_BUCKET ? { male: pct(partGender.남성, genderKnown), female: pct(partGender.여성, genderKnown) } : null,
-    age: partArr(partAge),
-    region: partArr(partRegion),
-    gender_vote: voteArr(vg),
-    age_vote: voteArr(va),
-    region_vote: voteArr(vr),
+    gender: data.gender || null,
+    age: data.age || [],
+    region: data.region || [],
+    gender_vote: data.gender_vote || [],
+    age_vote: data.age_vote || [],
+    region_vote: data.region_vote || [],
     ai_summary: "AI 종합 분석은 준비 중입니다.",
   };
 
