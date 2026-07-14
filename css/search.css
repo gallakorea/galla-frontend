@@ -858,9 +858,12 @@ body[data-page="search"] .header-inner {
 
 /* ============================================================
    🎬 핫영상 (유튜브 인기 급상승) — 카테고리 · 선반 · 플레이어
-   탭 패널(.tabs-body)이 16px 패딩을 주므로 여기선 음수 마진으로
-   가장자리까지 쓰는 풀블리드를 만든다.
+   ⚠️ .tabs-body 의 padding:16px 은 다른 CSS에 덮여 실제로 0이다.
+      그러니 이 패널이 자기 좌우 패딩을 직접 갖고,
+      히어로/선반/칩은 -16px 마진으로 가장자리까지 쓴다(풀블리드).
 ============================================================ */
+.tab-panel[data-panel="hot"] { padding: 0 16px; }
+
 .hv-sub { padding: 2px 2px 12px; font-size: 12px; color: #8a8f9a; }
 
 /* ── 카테고리 칩 ── */
@@ -944,10 +947,12 @@ body[data-page="search"] .header-inner {
 /* ── 가로 선반 ── */
 .hv-shelf {
   display: flex; gap: 10px;
-  margin: 0 -16px; padding: 0 16px 4px;
+  padding: 0 0 4px;
   overflow-x: auto; scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
+/* 풀블리드는 핫영상 패널 안에서만 (핫트렌드 탭엔 자기 여백이 따로 있다) */
+.tab-panel[data-panel="hot"] .hv-shelf { margin: 0 -16px; padding: 0 16px 4px; }
 .hv-shelf::-webkit-scrollbar { display: none; }
 .hv-tile {
   flex: 0 0 152px; scroll-snap-align: start;
