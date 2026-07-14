@@ -79,16 +79,8 @@ body[data-page="mypage"] #app {
   transform: translateY(-100%);
 }
 
-/* 로고는 '페이지 최상단'에서만 보인다.
-   스크롤 상태(.hdr-scrolled)에선 위로 올려 헤더가 다시 나타나도 로고는 숨김 →
-   아이콘만 원형으로 떠 있는 인스타식. (visibility로 숨겨 그리드 중앙 폭 유지 → 아이콘 안 밀림) */
-.header .logo {
-  transition: opacity .2s ease;
-}
-.header.hdr-scrolled .logo {
-  opacity: 0;
-  visibility: hidden;
-}
+/* 로고는 따로 숨기지 않는다 — 헤더가 사라질 때 자연스럽게 함께 사라진다.
+   (살짝만 스크롤해도 로고만 툭 사라지면 부자연스러움) */
 
 /* 내부 컨테이너 */
 .header-inner {
