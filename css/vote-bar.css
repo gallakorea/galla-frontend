@@ -24,7 +24,8 @@
 .gv-con.gv-mine { background: var(--gv-con); border-color: var(--gv-con); color: #fff; box-shadow: 0 4px 18px -4px var(--gv-con); }
 /* 진영 확정 — 변경 불가: 미선택은 흐리게+클릭 불가, 선택은 확정 표시 */
 .gv.gv-locked .gv-btn { cursor: default; }
-.gv.gv-locked .gv-btn:not(.gv-mine) { opacity: .42; pointer-events: none; filter: grayscale(.3); }
+/* 미선택 버튼도 클릭은 받게(안내 토스트 노출) — 흐리게만 표시 */
+.gv.gv-locked .gv-btn:not(.gv-mine) { opacity: .42; filter: grayscale(.3); }
 .gv.gv-locked .gv-mine { box-shadow: 0 0 0 2px rgba(255,255,255,.25), 0 4px 18px -4px currentColor; }
 .gv.gv-locked .gv-mine .gv-name::after { content: " ✓"; font-weight: 900; }
 

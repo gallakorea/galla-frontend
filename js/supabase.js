@@ -131,6 +131,18 @@
     }, true);
   }
 
+  // 로그인 여부 확인 + 미로그인 시 모달 (행동 동작 게이트 공용)
+  window.GALLA_isLoggedIn = async function () {
+    try { const { data } = await window.supabaseClient.auth.getSession(); return !!(data && data.session); }
+    catch (e) { return false; }
+  };
+  window.GALLA_requireLogin = async function (msg) {
+    if (await window.GALLA_isLoggedIn()) return true;
+    if (window.GALLA_needLogin) window.GALLA_needLogin(msg || "로그인이 필요해요.");
+    else alert("로그인이 필요합니다.");
+    return false;
+  };
+
   // 공용 로그인 유도 모달 (톤앤매너 통일) — 전 페이지 공통
   window.GALLA_needLogin = function (msg) {
     let m = document.getElementById("galla-login-modal");

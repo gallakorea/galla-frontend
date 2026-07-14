@@ -673,7 +673,9 @@ async function bumpViewOnce(issueId) {
     const b = e.target.closest(".gv-btn"); if (!b) return;
     if (!issueId || typeof window.GALLA_VOTE !== "function" || typeof window.GALLA_CHECK_VOTE !== "function") return;
     const type = b.classList.contains("gv-pro") ? "pro" : "con";
-    // 0) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
+    // 0) 로그인 필수 (미로그인은 이펙트·낙관 반영 전 차단)
+    if (!window.GALLA_requireLogin || !(await window.GALLA_requireLogin("진영 선택은 로그인 후 가능해요."))) return;
+    // 0-1) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
     if (window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(gv, issueId)) return;
     // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임 + 팝/튐)
     if (window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(gv, type);
