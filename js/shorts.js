@@ -445,10 +445,10 @@ function __openShortsInternal(list, startId, startTime) {
     });
 
     section.innerHTML = `
-    <video 
-      src="${item.video_url}" 
-      playsinline
-      preload="auto"
+    <video
+      data-src="${item.video_url}"
+      playsinline webkit-playsinline muted loop
+      preload="none"
       style="width:100%;height:100%;object-fit:cover"
     ></video>
 
@@ -606,6 +606,11 @@ function moveToIndex(idx, instant = false) {
 
 function playOnlyCurrent() {
   document.querySelectorAll("#shortsTrack video").forEach((v, i) => {
+    // 현재/인접 슬라이드만 HLS 부착(즉시 전환 위해 다음 것도 미리 버퍼)
+    if (Math.abs(i - currentIndex) <= 1 && window.GALLA_attachHls && v.dataset.src) {
+      v.preload = "auto";
+      window.GALLA_attachHls(v, v.dataset.src);
+    }
     if (i === currentIndex) {
       // 🔁 무한 재생 (사용자가 멈출 때까지)
       v.loop = true;

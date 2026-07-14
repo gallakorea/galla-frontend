@@ -23,17 +23,18 @@ function playWithSound(vid) {
 // 화면 밖 영상은 src를 안 박아 iOS가 메타데이터를 미리 받지 않도록(느림 방지).
 // 뷰포트 근처에 오면 그때 src 주입 → 버퍼링 시작.
 function ensureVideoSrc(vid) {
-    if (!vid.getAttribute('src') && vid.dataset.src) {
-        vid.setAttribute('src', vid.dataset.src);
-        vid.preload = 'auto';
-        // 데이터가 준비된 순간, 화면에 충분히 보이면 즉시 자동재생(정지프레임=검은화면 iOS 대응).
-        vid.addEventListener('loadeddata', () => {
-            const r = vid.getBoundingClientRect(), vh = window.innerHeight || 0;
-            const vis = r.height ? (Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height) : 0;
-            if (vis > 0.5 && vid.paused && !document.body.classList.contains('shorts-open')) playWithSound(vid);
-        }, { once: true });
-        try { vid.load(); } catch (e) {}
-    }
+    if (vid._srcReady || !vid.dataset.src) return;
+    vid._srcReady = true;
+    vid.preload = 'auto';
+    // 데이터가 준비된 순간, 화면에 충분히 보이면 즉시 자동재생(정지프레임=검은화면 iOS 대응).
+    vid.addEventListener('loadeddata', () => {
+        const r = vid.getBoundingClientRect(), vh = window.innerHeight || 0;
+        const vis = r.height ? (Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height) : 0;
+        if (vis > 0.5 && vid.paused && !document.body.classList.contains('shorts-open')) playWithSound(vid);
+    }, { once: true });
+    // Cloudflare Stream HLS(.m3u8): iOS 네이티브 / 그 외 hls.js. 일반 mp4는 src.
+    if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
+    else { vid.setAttribute('src', vid.dataset.src); try { vid.load(); } catch (e) {} }
 }
 
 const videoObserver = new IntersectionObserver(entries => {
@@ -155,10 +156,9 @@ function renderMedia(data) {
              onclick="event.stopPropagation();openReels(${data.id})">
             <video
                 id="vid-${data.id}"
-                src="${data.video_url}"
                 data-src="${data.video_url}"
-                ${data.thumbnail_url ? `poster="${data.thumbnail_url}"` : ""}
-                autoplay loop playsinline webkit-playsinline muted preload="metadata">
+                ${data.thumb ? `poster="${data.thumb}"` : ""}
+                autoplay loop playsinline webkit-playsinline muted preload="none">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"

@@ -236,9 +236,9 @@ function renderIssueMedia(issue) {
     if (issue.video_url) {
         wrap.innerHTML = `
         <div class="issue-media issue-media--video" onclick="issueOpenReels()">
-            <video id="issue-vid" src="${issue.video_url}"
+            <video id="issue-vid" data-src="${issue.video_url}"
                    ${issue.thumbnail_url ? `poster="${issue.thumbnail_url}"` : ""}
-                   loop playsinline webkit-playsinline muted preload="metadata"></video>
+                   loop playsinline webkit-playsinline muted preload="none"></video>
             <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
             <button class="vid-mute" id="issue-vid-mute"
                     onclick="event.stopPropagation();window.GALLA_setSound(!window.GALLA_soundOn())">🔇</button>
@@ -247,6 +247,9 @@ function renderIssueMedia(issue) {
 
         const vid = document.getElementById('issue-vid');
         if (vid) {
+            // HLS(.m3u8) 부착 — iOS 네이티브 / 그 외 hls.js
+            if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
+            else vid.src = vid.dataset.src;
             vid.addEventListener('loadedmetadata', () => {
                 const t = Math.floor(vid.duration);
                 const dur = document.getElementById('issue-vid-dur');
