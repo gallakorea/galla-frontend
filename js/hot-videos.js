@@ -492,8 +492,14 @@
   };
 
   /* ---------- 바인딩 ---------- */
+  // 탭 전환은 search.js의 핸들러가 늦게 붙어서 click()만으로는 안 먹을 수 있다.
+  // 공유 랜딩으로 들어온 경우엔 직접 active를 갈아끼운다.
   function openHotTab() {
-    document.querySelector('.tab-item[data-tab="hot"]')?.click();
+    document.querySelectorAll(".tab-item").forEach((t) =>
+      t.classList.toggle("active", t.dataset.tab === "hot"));
+    document.querySelectorAll(".tab-panel").forEach((p) =>
+      p.classList.toggle("active", p.dataset.panel === "hot"));
+    if (!booted) { booted = true; render(); }
   }
 
   function bind() {
