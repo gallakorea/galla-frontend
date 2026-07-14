@@ -51,22 +51,38 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다.
   //    ⚠️ 스와이프 분기(return)보다 '앞'에 둬야 비-탭 페이지(광장상세·이슈 등)에서도 동작.
   const navEl = document.querySelector(".nav");
-  if (navEl) {
-    let lastY = window.scrollY, ticking = false;
-    window.addEventListener("scroll", () => {
+  // 인덱스 헤더(＋·로고·♥)도 같은 핸들러로 인스타식 자동 숨김 — 네비와 100% 동기화.
+  const hideHeaderEl = document.body.dataset.page === "index"
+    ? document.querySelector(".header.header-common") : null;
+  if (navEl || hideHeaderEl) {
+    // 스크롤 주체가 기기마다 window/documentElement/body로 달라 세 곳에서 위치를 읽는다.
+    const getY = () => window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    let lastY = getY(), ticking = false;
+    const onScroll = () => {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        const y = window.scrollY, dy = y - lastY;
+        ticking = false;
+        const y = getY(), dy = y - lastY;
         if (Math.abs(dy) > 4) {                 // 미세 스크롤 무시(떨림 방지)
-          if (dy > 0 && y > 60) navEl.classList.add("nav--mini");
-          else if (dy < 0)      navEl.classList.remove("nav--mini");
+          if (dy > 0 && y > 60) {               // 아래로 → 축소/숨김
+            navEl && navEl.classList.add("nav--mini");
+            hideHeaderEl && hideHeaderEl.classList.add("hide");
+          } else if (dy < 0) {                   // 위로 → 복원/표시
+            navEl && navEl.classList.remove("nav--mini");
+            hideHeaderEl && hideHeaderEl.classList.remove("hide");
+          }
           lastY = y;
         }
-        if (y <= 10) navEl.classList.remove("nav--mini"); // 최상단은 원래 크기
-        ticking = false;
+        if (y <= 10) {                           // 최상단은 원래 크기/표시
+          navEl && navEl.classList.remove("nav--mini");
+          hideHeaderEl && hideHeaderEl.classList.remove("hide");
+        }
       });
-    }, { passive: true });
+    };
+    // capture:true — window가 아닌 요소가 스크롤해도(iOS body 등) 잡는다.
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    document.addEventListener("scroll", onScroll, { passive: true, capture: true });
   }
 
   {
