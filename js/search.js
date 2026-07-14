@@ -71,11 +71,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.body.style.overflow = "";
   }
 
-  // 뷰어를 열 때 호출 — 이미 열려 있으면(기사 안에서 원문 열기) 더 쌓지 않는다
-  function pushViewerState() {
+  // 뷰어를 열 때 호출 — 이미 열려 있으면(기사 안에서 원문 열기) 더 쌓지 않는다.
+  // ⚠️ URL을 바꾸지 않고 pushState 하면 사파리의 뒤로가기 스와이프가 그 항목을
+  //    별개 화면으로 보지 않고 '이전 문서'까지 한 번에 건너뛴다(목록을 스치고
+  //    예측 페이지로 튕김). 반드시 URL이 달라지는 항목으로 쌓아야 한다.
+  function pushViewerState(gid) {
     if (viewerPushed) return;
     viewerPushed = true;
-    history.pushState({ gallaViewer: true }, "");
+    const qs = new URLSearchParams(location.search);
+    if (gid) qs.set("gn", gid); else qs.set("article", "1");
+    history.pushState({ gallaViewer: true }, "", `${location.pathname}?${qs}`);
   }
 
   // 사용자가 '닫기'를 누른 경우 — 뒤로가기와 같은 동작이어야 히스토리가 어긋나지 않는다
@@ -663,7 +668,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     viewerReader.hidden = false;
     viewerReader.scrollTop = 0;
     viewerReader.innerHTML = `<div class="reader-loading">불러오는 중…</div>`;
-    pushViewerState();
+    pushViewerState(id);
     viewerModal.classList.remove("hidden");
     document.body.style.overflow = "hidden";
 
