@@ -1326,11 +1326,13 @@ body[data-page="news"] .news-viewer-fallback {
   min-height: 60vh;
 }
 
-/* 핫유튜브 탭 — 이모지 대신 유튜브 브랜드 아이콘 */
-.tab-item.tab-yt {
+/* 탭 아이콘 — 4개 탭 모두 SVG (이모지는 기기마다 크기가 달라 정렬이 흔들린다) */
+.tab-item {
   display: inline-flex; align-items: center; gap: 5px;
 }
-.tab-yt .yt-ic { width: 17px; height: 17px; flex: 0 0 17px; display: block; }
+.tab-ic { width: 16px; height: 16px; flex: 0 0 16px; display: block; }
+/* 유튜브만 브랜드 컬러(빨강)라 살짝 크게 잡아 광학 무게를 맞춘다 */
+.tab-yt .yt-ic { width: 17px; height: 17px; flex: 0 0 17px; }
 
 /* 검색 결과 — 핫유튜브 섹션 */
 .sr-sec-head.sr-yt { display: flex; align-items: center; gap: 6px; }
