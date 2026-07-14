@@ -22,11 +22,21 @@ document.addEventListener("DOMContentLoaded", () => {
       if (baseSrc) img.src = baseSrc;
     }
 
-    // 2️⃣ 클릭 시: 상태 변경 없이 즉시 페이지 이동
-    item.addEventListener("click", () => {
-      if (target && target !== location.pathname.split("/").pop()) {
-        location.href = target;
+    // 2️⃣ 클릭 시: 이미 현재 탭이면 맨 위로 스크롤, 아니면 이동
+    item.addEventListener("click", (e) => {
+      if (page === currentPage) {
+        e.preventDefault();
+        // 저장된 스크롤 복원과 충돌 방지 후 맨 위로(즉시 — 스무스는 피드에서 무시됨)
+        try { localStorage.removeItem("scrollPos"); } catch (_) {}
+        const el = document.scrollingElement || document.documentElement;
+        window.scrollTo(0, 0);
+        try { el.scrollTop = 0; } catch (_) {}
+        document.body.scrollTop = 0;
+        const app = document.getElementById("app");
+        if (app) app.scrollTop = 0;
+        return;
       }
+      if (target) location.href = target;
     });
   });
 
