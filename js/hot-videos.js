@@ -478,6 +478,9 @@
     vid = null;
   }
 
+  // 통합 검색의 유튜브 결과에서도 같은 플레이어를 연다
+  window.GALLA_OpenVideo = openPlayer;
+
   /* ---------- 핫트렌드 탭에서 재사용 ---------- */
   window.GALLA_HotShelf = async function (el, n = 10) {
     if (!el) return;

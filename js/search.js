@@ -224,6 +224,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data || [];
   }
 
+  // 핫유튜브 — youtube_hot 은 피드별로 같은 영상이 중복 저장되므로 video_id 로 합친다
+  async function searchYoutube(q) {
+    const { data } = await supabase
+      .from("youtube_hot")
+      .select("video_id,title,channel_title,thumbnail,view_count,duration,is_short")
+      .ilike("title", `%${q}%`)
+      .order("view_count", { ascending: false })
+      .limit(40);
+    const seen = new Set();
+    return (data || []).filter(v => !seen.has(v.video_id) && seen.add(v.video_id)).slice(0, 10);
+  }
+
   async function searchPlaza(q) {
     const { data } = await supabase
       .from("plaza_posts")
@@ -236,11 +248,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const doSearch = debounce(async q => {
     const my = ++seq;
-    const [issues, markets, news, plaza] = await Promise.all([
-      searchIssues(q), searchMarkets(q), searchNews(q), searchPlaza(q)
+    const [issues, markets, news, videos, plaza] = await Promise.all([
+      searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, issues, markets, news, plaza);
+    renderResults(q, issues, markets, news, videos, plaza);
   }, 240);
 
   function runSearch(kw, addHistory) {
@@ -275,36 +287,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     return null;
   }
 
-  function renderResults(q, issues, markets, news, plaza) {
-    plaza = plaza || [];
-    const total = issues.length + markets.length + news.length + plaza.length;
+  function shortNum(n) {
+    n = Number(n) || 0;
+    if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, "") + "억";
+    if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, "") + "만";
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "천";
+    return String(n);
+  }
+
+  // 섹션 순서: 이슈 → 예측 → 뉴스 → 유튜브 → 광장
+  function renderResults(q, issues, markets, news, videos, plaza) {
+    issues = issues || []; markets = markets || []; news = news || [];
+    videos = videos || []; plaza = plaza || [];
+    const total = issues.length + markets.length + news.length + videos.length + plaza.length;
     if (!total) {
       resultsEl.innerHTML =
-        `<div class="sr-none">‘${esc(q)}’ 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
+        `<div class="sr-none">\u2018${esc(q)}\u2019 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
       return;
     }
     let html = "";
 
-    if (news.length) {
-      html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
-      html += news.map(n =>
-        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
-          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
-          <div class="sr-body">
-            <div class="sr-title">${esc(n.title)}</div>
-            <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
-          </div>
-        </div>`
-      ).join("");
-      html += `</div>`;
-    }
-
+    /* ── 갈라 이슈 ── */
     if (issues.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head">🗳 갈라 이슈 <b>${issues.length}</b></div>`;
       html += issues.map(i => {
         const th = issueThumb(i);
-        const total2 = (i.pro_count || 0) + (i.con_count || 0);
-        const pro = total2 ? Math.round((i.pro_count || 0) / total2 * 100) : 50;
+        const t2 = (i.pro_count || 0) + (i.con_count || 0);
+        const pro = t2 ? Math.round((i.pro_count || 0) / t2 * 100) : 50;
         return `<a class="sr-card" href="issue.html?id=${i.id}">
           <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
           <div class="sr-body">
@@ -318,6 +327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       html += `</div>`;
     }
 
+    /* ── 갈라예측 ── */
     if (markets.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head">🔮 갈라예측 <b>${markets.length}</b></div>`;
       html += markets.map(m => {
@@ -335,6 +345,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       html += `</div>`;
     }
 
+    /* ── 뉴스 ── */
+    if (news.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
+      html += news.map(n =>
+        `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
+          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
+          <div class="sr-body">
+            <div class="sr-title">${esc(n.title)}</div>
+            <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
+          </div>
+        </div>`
+      ).join("");
+      html += `</div>`;
+    }
+
+    /* ── 핫유튜브 ── */
+    if (videos.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head sr-yt">
+        <svg class="yt-ic" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#FF0000" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8z"/>
+          <path fill="#fff" d="M9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
+        </svg>핫유튜브 <b>${videos.length}</b></div>`;
+      html += videos.map(v =>
+        `<div class="sr-card video" data-vid="${esc(v.video_id)}" data-title="${esc(v.title)}" data-ch="${esc(v.channel_title || "")}">
+          <div class="sr-thumb">${isValidThumbnail(v.thumbnail) ? `<img src="${esc(v.thumbnail)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">YT</span>`}
+            ${v.is_short ? `<span class="sr-badge-short">쇼츠</span>` : `<span class="sr-badge-vid">▶</span>`}</div>
+          <div class="sr-body">
+            <div class="sr-title">${esc(v.title)}</div>
+            <div class="sr-meta">${esc(v.channel_title || "")} · 조회 ${shortNum(v.view_count)}</div>
+          </div>
+        </div>`
+      ).join("");
+      html += `</div>`;
+    }
+
+    /* ── 갈라 광장 ── */
     if (plaza.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head">🗣 갈라 광장 <b>${plaza.length}</b></div>`;
       html += plaza.map(p => {
@@ -354,12 +400,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     resultsEl.innerHTML = html;
   }
 
-  // 뉴스 결과 카드 클릭 → 기사 뷰어
   resultsEl.addEventListener("click", e => {
+    // 뉴스 결과 → 기사 페이지
     const news = e.target.closest(".sr-card.news");
     if (news) {
       const url = news.dataset.url;
       if (url) openNewsViewer(url, news.dataset.title, news.dataset.press);
+      return;
+    }
+    // 유튜브 결과 → 핫유튜브 플레이어 (hot-videos.js가 노출)
+    const vid = e.target.closest(".sr-card.video");
+    if (vid && window.GALLA_OpenVideo) {
+      window.GALLA_OpenVideo(vid.dataset.vid, vid.dataset.title, vid.dataset.ch);
     }
   });
 
