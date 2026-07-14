@@ -26,6 +26,12 @@ function ensureVideoSrc(vid) {
     if (!vid.getAttribute('src') && vid.dataset.src) {
         vid.setAttribute('src', vid.dataset.src);
         vid.preload = 'auto';
+        // 데이터가 준비된 순간, 화면에 충분히 보이면 즉시 자동재생(정지프레임=검은화면 iOS 대응).
+        vid.addEventListener('loadeddata', () => {
+            const r = vid.getBoundingClientRect(), vh = window.innerHeight || 0;
+            const vis = r.height ? (Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height) : 0;
+            if (vis > 0.5 && vid.paused && !document.body.classList.contains('shorts-open')) playWithSound(vid);
+        }, { once: true });
         try { vid.load(); } catch (e) {}
     }
 }
@@ -151,7 +157,7 @@ function renderMedia(data) {
                 id="vid-${data.id}"
                 data-src="${data.video_url}"
                 ${data.thumbnail_url ? `poster="${data.thumbnail_url}"` : ""}
-                loop playsinline webkit-playsinline muted preload="none">
+                autoplay loop playsinline webkit-playsinline muted preload="none">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
