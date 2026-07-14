@@ -7,9 +7,12 @@
 body.composer-open { overflow: hidden; }
 body.composer-open .nav { display: none; }
 
-/* ── 공통: 전체화면 ── */
-#plaza-write-modal,
-#createModal {
+/* ── 공통: 전체화면 ──
+   ⚠️ 반드시 '열린 상태'에만 적용할 것.
+      그냥 #createModal { display:block } 으로 두면 [hidden] 의 display:none 을
+      id 선택자가 이겨서, 닫혀 있어도 전체화면으로 떠 예측 피드를 완전히 가린다. */
+#plaza-write-modal:not(.hidden),
+#createModal:not([hidden]) {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -17,6 +20,10 @@ body.composer-open .nav { display: none; }
   background: #0a0a0b;
   padding: 0;
 }
+/* 닫힌 상태는 확실히 숨긴다(다른 규칙이 display를 되살리지 못하게) */
+#plaza-write-modal.hidden,
+#createModal[hidden] { display: none !important; }
+
 #plaza-write-modal .plaza-modal-backdrop { display: none; }
 
 /* ── 공통: 본문 박스를 전체화면 스크롤 영역으로 ── */
