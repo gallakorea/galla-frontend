@@ -51,14 +51,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3️⃣ 인스타식 축소/복원 — 아래로 스크롤하면 작아지고, 위로 올리면 커진다.
   //    ⚠️ 스와이프 분기(return)보다 '앞'에 둬야 비-탭 페이지(광장상세·이슈 등)에서도 동작.
   const navEl = document.querySelector(".nav");
-  // 헤더 자동 숨김(인스타식) — 네비와 같은 핸들러로 100% 동기화.
-  //   index/predict/search/plaza: 헤더 전체를 숨김
-  //   mypage: ＋ 버튼만 숨김(나머지 로고·DM·설정은 유지)
+  // 헤더 인스타식 동작(로고는 고정, 아이콘만) — 네비 축소와 같은 핸들러로 100% 동기화.
+  //   .hdr-scrolled : 스크롤(작동) 상태 → 아이콘에 원 표시(최상단에선 원 없음)
+  //   .hdr-icons-out: 아래로 스크롤 → 아이콘만 위로 숨김(로고·헤더바는 그대로)
+  //   mypage는 CSS에서 ＋만 숨김 대상으로 제한.
   const _page = document.body.dataset.page;
-  const hideHeaderEl = ["index", "predict", "search", "plaza"].includes(_page)
-    ? document.querySelector(".header")
-    : (_page === "mypage" ? document.querySelector(".header .hdr-write") : null);
-  if (navEl || hideHeaderEl) {
+  const hdrEl = ["index", "predict", "search", "plaza", "mypage"].includes(_page)
+    ? document.querySelector(".header") : null;
+  if (navEl || hdrEl) {
     // 스크롤 주체가 기기마다 window/documentElement/body로 달라 세 곳에서 위치를 읽는다.
     const getY = () => window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
     let lastY = getY(), ticking = false;
@@ -68,19 +68,22 @@ document.addEventListener("DOMContentLoaded", () => {
       requestAnimationFrame(() => {
         ticking = false;
         const y = getY(), dy = y - lastY;
-        if (Math.abs(dy) > 4) {                 // 미세 스크롤 무시(떨림 방지)
-          if (dy > 0 && y > 60) {               // 아래로 → 축소/숨김
+        if (y <= 10) {                           // 최상단: 원 제거 + 아이콘 표시 + 네비 원래크기
+          navEl && navEl.classList.remove("nav--mini");
+          if (hdrEl) { hdrEl.classList.remove("hdr-scrolled"); hdrEl.classList.remove("hdr-icons-out"); }
+          lastY = y;
+          return;
+        }
+        hdrEl && hdrEl.classList.add("hdr-scrolled"); // 스크롤 상태 = 아이콘 원 표시
+        if (Math.abs(dy) > 4) {                  // 미세 스크롤 무시(떨림 방지)
+          if (dy > 0 && y > 60) {                // 아래로 → 아이콘 숨김/네비 축소
             navEl && navEl.classList.add("nav--mini");
-            hideHeaderEl && hideHeaderEl.classList.add("hide");
-          } else if (dy < 0) {                   // 위로 → 복원/표시
+            hdrEl && hdrEl.classList.add("hdr-icons-out");
+          } else if (dy < 0) {                    // 위로 → 아이콘 표시/네비 복원
             navEl && navEl.classList.remove("nav--mini");
-            hideHeaderEl && hideHeaderEl.classList.remove("hide");
+            hdrEl && hdrEl.classList.remove("hdr-icons-out");
           }
           lastY = y;
-        }
-        if (y <= 10) {                           // 최상단은 원래 크기/표시
-          navEl && navEl.classList.remove("nav--mini");
-          hideHeaderEl && hideHeaderEl.classList.remove("hide");
         }
       });
     };
