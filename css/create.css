@@ -1,0 +1,115 @@
+/* =========================================================
+   create.css — 인스타식 '새로 만들기' 페이지
+========================================================= */
+
+.header-inner.cr-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 64px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 14px;
+}
+.cr-back {
+  flex: none;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #fff; cursor: pointer;
+  touch-action: manipulation;
+}
+.cr-back svg { width: 22px; height: 22px; }
+.cr-back:active { transform: scale(.9); }
+.cr-title { flex: 1 1 auto; text-align: center; font-size: 17px; font-weight: 900; color: #fff; }
+.cr-spacer { flex: none; width: 36px; }   /* 제목 정중앙 정렬용 */
+
+.cr-main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 18px 16px 100px;
+}
+.cr-h1 {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.cr-sub {
+  font-size: 13px;
+  color: #8a8f9a;
+  margin-bottom: 20px;
+}
+
+.cr-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* 유형 카드 */
+.cr-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  padding: 16px 14px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .18s ease, background .18s ease, transform .12s ease;
+}
+.cr-card:active { transform: scale(.985); }
+.cr-card:not(.locked):hover,
+.cr-card:not(.locked):focus-visible {
+  border-color: color-mix(in srgb, var(--cr) 55%, transparent);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--cr) 14%, transparent),
+    rgba(255,255,255,.02));
+}
+
+/* 유형 아이콘 — 유형색 원 */
+.cr-ico {
+  flex: none;
+  width: 46px; height: 46px;
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--cr) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cr) 40%, transparent);
+  color: var(--cr);
+}
+.cr-ico svg { width: 23px; height: 23px; display: block; }
+
+.cr-tx { flex: 1 1 auto; min-width: 0; }
+.cr-t {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 15px; font-weight: 900; color: #fff;
+  margin-bottom: 3px;
+}
+.cr-d {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #8a8f9a;
+}
+.cr-go { flex: none; color: #5a6070; display: flex; }
+.cr-go svg { width: 20px; height: 20px; }
+
+/* 잠금(갈라 발제 — 운영진 전용) */
+.cr-lock {
+  flex: none;
+  font-size: 9.5px; font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .1);
+  color: #b8bfcc;
+}
+.cr-card.locked { opacity: .55; cursor: default; }
+.cr-card.locked .cr-go { display: none; }
+.cr-card.shake { animation: crShake .35s ease; }
+@keyframes crShake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  50%      { transform: translateX(6px); }
+  75%      { transform: translateX(-3px); }
+}

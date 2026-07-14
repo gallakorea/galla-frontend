@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>새로 만들기 - GALLA</title>
+  <link rel="stylesheet" href="./css/header.css?v=0716z">
+  <link rel="stylesheet" href="./css/nav.css?v=0716z">
+  <link rel="stylesheet" href="./css/create.css?v=0716z">
+  <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=0716z">
+</head>
+
+<body data-page="index">
+<div id="app">
+
+  <header class="header header-common">
+    <div class="header-inner cr-head">
+      <button class="cr-back" aria-label="닫기"
+              onclick="history.length>1?history.back():location.href='index.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <span class="cr-title">새로 만들기</span>
+      <span class="cr-spacer"></span>
+    </div>
+  </header>
+
+  <main class="cr-main">
+    <h1 class="cr-h1">무엇을 만들까요?</h1>
+    <p class="cr-sub">유형을 고르면 그에 맞는 작성 화면으로 이동합니다.</p>
+
+    <div class="cr-list" id="crList">
+      <!-- 갈라 발제 -->
+      <button class="cr-card" data-type="galla" style="--cr:#ff4d67">
+        <span class="cr-ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.92 5H5l9 9 1.92-1.92L6.92 5zM2 20.5L3.5 22l6.6-6.6-1.5-1.5L2 20.5zM19 3l-4.5 4.5 1.5 1.5L21 4.5V3h-2zM14.5 15.5L16 17l-1.9 1.9L15.5 20 22 13.5 20.5 12 14.5 15.5z"/></svg>
+        </span>
+        <span class="cr-tx">
+          <span class="cr-t">갈라 발제 <span class="cr-lock" hidden>곧 열려요</span></span>
+          <span class="cr-d">찬반이 갈리는 이슈를 던져 전투를 시작합니다</span>
+        </span>
+        <span class="cr-go">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+
+      <!-- 예측 마켓 -->
+      <button class="cr-card" data-type="predict" style="--cr:#3d6bff">
+        <span class="cr-ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z"/></svg>
+        </span>
+        <span class="cr-tx">
+          <span class="cr-t">예측 마켓</span>
+          <span class="cr-d">결과를 두고 GP로 베팅하는 마켓을 개설합니다</span>
+        </span>
+        <span class="cr-go">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+
+      <!-- 광장 글 -->
+      <button class="cr-card" data-type="plaza" style="--cr:#c9d1e0">
+        <span class="cr-ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z"/></svg>
+        </span>
+        <span class="cr-tx">
+          <span class="cr-t">광장 글</span>
+          <span class="cr-d">자유롭게 이야기하고 토론하는 게시글을 씁니다</span>
+        </span>
+        <span class="cr-go">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+
+      <!-- 제보 -->
+      <button class="cr-card" data-type="report" style="--cr:#33d17a">
+        <span class="cr-ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+        </span>
+        <span class="cr-tx">
+          <span class="cr-t">제보하기</span>
+          <span class="cr-d">사진·영상·링크로 제보하고 GP 보상을 받습니다</span>
+        </span>
+        <span class="cr-go">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+    </div>
+  </main>
+
+</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-item" data-page="index" data-target="index.html">
+      <img src="./assets/icons/nav-home.svg" data-base="./assets/icons/nav-home.svg" data-active="./assets/icons/nav-home-active.svg">
+    </button>
+    <button class="nav-item" data-page="predict" data-target="galla-predict.html">
+      <img src="./assets/icons/nav-predict.svg" data-base="./assets/icons/nav-predict.svg" data-active="./assets/icons/nav-predict-active.svg">
+    </button>
+    <button class="nav-item" data-page="search" data-target="search.html">
+      <img src="./assets/icons/nav-search.svg" data-base="./assets/icons/nav-search.svg" data-active="./assets/icons/nav-search-active.svg">
+    </button>
+    <button class="nav-item" data-page="plaza" data-target="plaza.html">
+      <img src="./assets/icons/nav-plaza.svg" data-base="./assets/icons/nav-plaza.svg" data-active="./assets/icons/nav-plaza-active.svg">
+    </button>
+    <button class="nav-item" data-page="mypage" data-target="mypage.html">
+      <img src="./assets/icons/nav-user.svg" data-base="./assets/icons/nav-user.svg" data-active="./assets/icons/nav-user-active.svg">
+    </button>
+  </div>
+</nav>
+
+<script src="./js/vendor/supabase.js?v=0716z"></script>
+<script src="js/supabase.js?v=0716z"></script>
+<script src="js/create.js?v=0716z"></script>
+<script src="./js/nav.js?v=0716z"></script>
+
+</body>
+</html>

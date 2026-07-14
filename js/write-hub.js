@@ -121,12 +121,14 @@
     requestAnimationFrame(() => sheet.classList.add('open'));
   };
 
-  // 헤더 + 버튼 자동 바인딩: [data-write-hub="context"] 또는 #hdrWrite
+  // 헤더 ＋ 버튼 → 인스타식 '새로 만들기' 페이지로 이동 (바텀시트 대신)
+  //   유형 선택은 create.html 에서, 선택하면 그 유형의 작성 화면으로 라우팅한다.
+  //   (기존 openWriteHub 시트는 다른 호출처를 위해 남겨두되, ＋ 버튼은 페이지로 간다)
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-write-hub]').forEach(el => {
+    document.querySelectorAll('[data-write-hub], #hdrWrite').forEach(el => {
       el.addEventListener('click', e => {
         e.preventDefault();
-        window.openWriteHub(el.getAttribute('data-write-hub'));
+        location.href = 'create.html';
       });
     });
   });
