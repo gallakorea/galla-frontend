@@ -8,13 +8,14 @@
 /* 버튼 */
 .gv-btns { display: flex; gap: 8px; margin-bottom: 10px; }
 .gv-btn {
-  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 12px 8px; border-radius: 12px; font-size: 14px; font-weight: 800;
+  flex: 1 1 0; min-width: 0; max-width: 50%;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 8px; border-radius: 12px; font-size: 13.5px; font-weight: 800;
   border: 1px solid; cursor: pointer; letter-spacing: -.2px;
   transition: transform .12s ease, background .18s ease, box-shadow .18s ease, color .18s ease;
   -webkit-tap-highlight-color: transparent; background: #0c0e14;
 }
-.gv-btn .gv-emoji { font-size: 15px; }
+.gv-btn .gv-emoji { font-size: 15px; flex: none; }
 .gv-btn .gv-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gv-pro { color: #a9bcff; border-color: rgba(90,120,255,.4); }
 .gv-con { color: #ffabbc; border-color: rgba(255,90,120,.4); }

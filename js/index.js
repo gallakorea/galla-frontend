@@ -442,12 +442,14 @@ function attachEvents() {
             const card = btn.closest('.card');
             const id = Number(card.dataset.id);
             if (typeof window.GALLA_VOTE !== 'function') return;
-            const stance = await window.GALLA_VOTE(id, type);
-            // 투표 반영 — 바/명수 재조회 후 동적 애니메이션
             const gv = card.querySelector('.gv');
+            // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임)
+            if (gv && window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(gv, type);
+            // 2) 실제 투표 + 서버 수치로 수렴
+            const stance = await window.GALLA_VOTE(id, type);
             if (gv && window.GALLA_VoteBar && typeof window.GALLA_GET_VOTE_STATS === 'function') {
                 const s = await window.GALLA_GET_VOTE_STATS(id);
-                if (s) window.GALLA_VoteBar.update(gv, s, { voted: stance || type, myStance: stance || type, animate: true });
+                if (s) window.GALLA_VoteBar.update(gv, s, { myStance: stance || type, animate: false });
             }
         };
     });

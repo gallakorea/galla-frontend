@@ -18,7 +18,7 @@
       <button class="gv-btn gv-con ${o.conClass || ""}" ${o.conAttr || ""}><span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
     </div>`;
     return `${buttons}
-      <div class="gv-bar">
+      <div class="gv-bar" data-pro="${pro}" data-con="${con}">
         <div class="gv-fill gv-fill-pro" style="width:${pp}%"><i class="gv-sheen"></i></div>
         <div class="gv-fill gv-fill-con" style="width:${cp}%"><i class="gv-sheen"></i></div>
         <div class="gv-pct gv-pct-pro${pp < 14 ? " gv-hide" : ""}">${pp}%</div>
@@ -68,6 +68,7 @@
     const pro = stats.pro || 0, con = stats.con || 0, total = pro + con;
     const pp = pct(pro, con), cp = 100 - pp;
     const q = (s) => el.querySelector(s);
+    const bar = q(".gv-bar"); if (bar) { bar.dataset.pro = pro; bar.dataset.con = con; }
     const fp = q(".gv-fill-pro"), fc = q(".gv-fill-con"), nd = q(".gv-needle");
     if (fp) fp.style.width = pp + "%"; if (fc) fc.style.width = cp + "%"; if (nd) nd.style.left = pp + "%";
     const pctP = q(".gv-pct-pro"), pctC = q(".gv-pct-con");
@@ -87,5 +88,20 @@
     }
   }
 
-  window.GALLA_VoteBar = { html, mount, update, setMine, pct };
+  // 낙관적 반영: 현재 표시 수치 + 내 진영(신규/전환)을 즉시 계산해 바를 움직임.
+  // 이후 서버 재조회로 update() 하면 실제값으로 수렴(첫 클릭 지연 체감 제거).
+  function applyVote(el, type) {
+    if (!el || (type !== "pro" && type !== "con")) return;
+    const bar = el.querySelector(".gv-bar");
+    let pro = bar ? (parseInt(bar.dataset.pro, 10) || 0) : 0;
+    let con = bar ? (parseInt(bar.dataset.con, 10) || 0) : 0;
+    const a = el.querySelector(".gv-pro"), c = el.querySelector(".gv-con");
+    const prev = a && a.classList.contains("gv-mine") ? "pro" : (c && c.classList.contains("gv-mine") ? "con" : null);
+    if (prev === type) { setMine(el, type); return; }  // 같은 진영 재클릭 → 변화 없음
+    if (type === "pro") pro++; else con++;
+    if (prev === "pro" && pro > 0) pro--; else if (prev === "con" && con > 0) con--;
+    update(el, { pro, con }, { voted: type, myStance: type, animate: true });
+  }
+
+  window.GALLA_VoteBar = { html, mount, update, setMine, applyVote, pct };
 })();

@@ -649,13 +649,16 @@ window.GALLA_countUp = countUpText;
     const b = e.target.closest(".gv-btn"); if (!b) return;
     if (!issueId || typeof window.GALLA_VOTE !== "function" || typeof window.GALLA_CHECK_VOTE !== "function") return;
     const type = b.classList.contains("gv-pro") ? "pro" : "con";
+    // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임 + 팝/튐)
+    if (window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(gv, type);
+    // 2) 실제 투표 + 서버 수치로 조용히 수렴
     await window.GALLA_VOTE(issueId, type);
     const voteType = await window.GALLA_CHECK_VOTE(issueId);
     if (voteType === "pro" || voteType === "con") {
       applyVoteUI(voteType);
       document.dispatchEvent(new CustomEvent("galla:voted", { detail: { issueId, faction: voteType } }));
     }
-    loadVoteStats(issueId, voteType || type);   // 방금 진영 → 팝/튐 애니메이션
+    loadVoteStats(issueId);   // votedSide 없음 → 팝/튐 중복 없이 실제값 반영
     loadStats(issueId);
   });
 })();

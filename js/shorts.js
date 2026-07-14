@@ -535,11 +535,13 @@ function __openShortsInternal(list, startId, startTime) {
     const issueId = voteBar.dataset.issueId;
 
     if (window.GALLA_VOTE && issueId) {
+      // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임)
+      if (window.GALLA_VoteBar) window.GALLA_VoteBar.applyVote(voteBar, type);
+      // 2) 실제 투표 + 서버 수치로 조용히 수렴
       const stance = await window.GALLA_VOTE(issueId, type, { scope: "shorts" });
-      // 바/명수 재조회 + 동적 애니메이션
       if (window.GALLA_VoteBar && typeof window.GALLA_GET_VOTE_STATS === "function") {
         const s = await window.GALLA_GET_VOTE_STATS(issueId);
-        if (s) window.GALLA_VoteBar.update(voteBar, s, { voted: stance || type, myStance: stance || type, animate: true });
+        if (s && voteBar.dataset.issueId == String(issueId)) window.GALLA_VoteBar.update(voteBar, s, { myStance: stance || type, animate: false });
       }
     }
   });
