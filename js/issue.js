@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=0718q";
-import { loadAiNews } from "./issue-news.js?v=0718q";
-import { loadStats } from "./issue.stats.js?v=0718q";
-import { initCommentSystem } from "./issue.comments.js?v=0718q";
+import { loadAiArguments } from "./issue-argument.js?v=0718r";
+import { loadAiNews } from "./issue-news.js?v=0718r";
+import { loadStats } from "./issue.stats.js?v=0718r";
+import { initCommentSystem } from "./issue.comments.js?v=0718r";
 
 
 console.log("[issue.js] loaded");
@@ -496,7 +496,7 @@ function renderIssue(issue) {
             { key: "category", label: "카테고리", type: "select", options: window.GALLA_CATEGORIES, value: issue.category || "" },
           ],
           extra: [{
-            icon: "🚀", label: "상단 고정 부스트 (2,000GP · 24h)",
+            icon: "boost", label: "상단 고정 부스트 (2,000GP · 24h)",
             onClick: async () => {
               if (!confirm("이 갈라를 24시간 피드 상단에 고정할까요? (2,000 GP)")) return;
               const { data } = await supabase.rpc("buy_boost", { p_type: "issue", p_id: Number(issue.id), p_kind: "pin" });

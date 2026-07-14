@@ -5,6 +5,15 @@
    - 차단: user_blocks insert → onBlocked() (해당 콘텐츠 숨김)
 =========================================================== */
 (function () {
+  /* 이모지는 기기마다 모양·크기가 달라 시트 정렬이 깨진다 → SVG로 통일 */
+  const rbSvg = (d) =>
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const RB_IC = {
+    report: rbSvg('<path d="M10.3 3.9L1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'),
+    block:  rbSvg('<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>'),
+  };
+
   if (!document.getElementById("rb-style")) {
     const st = document.createElement("style"); st.id = "rb-style";
     st.textContent = `
@@ -15,7 +24,9 @@
 .rb-title{font-size:13px;font-weight:700;color:#9aa0ad;text-align:center;margin-bottom:10px}
 .rb-item{width:100%;display:flex;align-items:center;gap:10px;padding:15px 14px;border:none;background:rgba(255,255,255,.03);border-radius:13px;color:#f3f4f6;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;margin-bottom:8px;text-align:left}
 .rb-item:active{background:rgba(255,255,255,.07)}
-.rb-ic{font-size:17px}
+.rb-ic{flex:0 0 22px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;color:#c9d1e0}
+.rb-ic svg{width:21px;height:21px;display:block}
+.rb-danger .rb-ic{color:#ff4d67}
 .rb-danger{color:#ff4d67}
 .rb-cancel{justify-content:center;color:#9aa0ad;background:none}
 .rb-overlay .rb-modal{align-self:center;width:calc(100% - 40px);max-width:400px;background:#16171c;border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:22px 20px;transform:scale(.94);opacity:0;transition:all .18s ease}
@@ -65,10 +76,10 @@
     const ov = overlay();
     const sheet = el("div", "rb-sheet");
     sheet.appendChild(el("div", "rb-grab"));
-    const rep = el("button", "rb-item", '<span class="rb-ic">🚨</span> 신고하기');
+    const rep = el("button", "rb-item", `<span class="rb-ic">${RB_IC.report}</span> 신고하기`);
     rep.onclick = () => { close(); openReport(cfg); };
     sheet.appendChild(rep);
-    const blk = el("button", "rb-item rb-danger", `<span class="rb-ic">🚫</span> ${cfg.authorName ? cfg.authorName + " " : ""}계정 차단`);
+    const blk = el("button", "rb-item rb-danger", `<span class="rb-ic">${RB_IC.block}</span> ${cfg.authorName ? cfg.authorName + " " : ""}계정 차단`);
     blk.onclick = () => { close(); confirmBlock(cfg); };
     if (cfg.authorId) sheet.appendChild(blk);
     const cancel = el("button", "rb-item rb-cancel", "닫기");

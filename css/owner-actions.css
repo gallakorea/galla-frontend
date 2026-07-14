@@ -20,7 +20,11 @@
   font-family: inherit; cursor: pointer; margin-bottom: 8px; text-align: left;
 }
 .oa-item:active { background: rgba(255,255,255,.07); }
-.oa-ic { font-size: 17px; }
+/* 이모지 → SVG. 아이콘 폭을 고정해 라벨 좌측이 정확히 맞물린다 */
+.oa-ic { flex: 0 0 22px; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.oa-ic svg { width: 21px; height: 21px; display: block; }
+.oa-item .oa-ic { color: #c9d1e0; }
+.oa-danger .oa-ic { color: #ff4d67; }
 .oa-danger { color: #ff4d67; }
 .oa-cancel { justify-content: center; color: #9aa0ad; background: none; }
 

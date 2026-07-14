@@ -17,6 +17,19 @@
 (function () {
   let ME = null; // { uid, admin }
 
+  /* 시트 아이콘 — 이모지는 기기마다 모양·크기가 제각각이라 SVG로 통일.
+     24×24 · stroke 1.7 · currentColor (위험 항목은 부모 색을 그대로 물려받음) */
+  const svg = (d) =>
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+
+  const IC = {
+    edit:  svg('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
+    trash: svg('<path d="M3 6h18"/><path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/><path d="M19 6l-.8 13.1a2 2 0 0 1-2 1.9H7.8a2 2 0 0 1-2-1.9L5 6"/><path d="M10 11v6M14 11v6"/>'),
+    boost: svg('<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1 0-2.9a2.1 2.1 0 0 0-3-.1z"/><path d="M12 15l-3-3a12 12 0 0 1 3-6.5C13.7 3.7 16 3 19.5 3c.7 0 1.3.1 1.5.3.2.2.3.8.3 1.5 0 3.5-.7 5.8-2.5 7.5A12 12 0 0 1 12 15z"/><path d="M14.5 9.5h.01"/>'),
+    dot:   svg('<circle cx="12" cy="12" r="2.5"/>'),
+  };
+
   // 앱 공통 카테고리(write.html select와 동일) — 수정 시 드롭다운으로 노출
   const CATEGORIES = ["정치·사회","경제·투자","직장·경력","연애·결혼","생활·일상","패션·뷰티","엔터·스포츠","세계·여행","음식·맛집","19금","기타"];
   window.GALLA_CATEGORIES = CATEGORIES;
@@ -75,18 +88,20 @@
     sheet.appendChild(el('div', 'oa-grab'));
     sheet.appendChild(el('div', 'oa-title', `${cfg.label || '콘텐츠'} 관리`));
 
-    const edit = el('button', 'oa-item', '<span class="oa-ic">✏️</span> 수정하기');
+    const edit = el('button', 'oa-item', `<span class="oa-ic">${IC.edit}</span> 수정하기`);
     edit.onclick = () => { closeSheet(); openEdit(cfg); };
     if (cfg.editFields && cfg.editFields.length) sheet.appendChild(edit);
 
     // 추가 액션(부스트 등): cfg.extra = [{ icon, label, onClick }]
+    // icon 은 IC 의 키('boost' 등)거나 직접 넘긴 SVG 문자열
     (cfg.extra || []).forEach(x => {
-      const b = el('button', 'oa-item', `<span class="oa-ic">${x.icon || '•'}</span> ${x.label}`);
+      const ic = IC[x.icon] || x.icon || IC.dot;
+      const b = el('button', 'oa-item', `<span class="oa-ic">${ic}</span> ${x.label}`);
       b.onclick = () => { closeSheet(); x.onClick && x.onClick(); };
       sheet.appendChild(b);
     });
 
-    const del = el('button', 'oa-item oa-danger', '<span class="oa-ic">🗑</span> 삭제하기');
+    const del = el('button', 'oa-item oa-danger', `<span class="oa-ic">${IC.trash}</span> 삭제하기`);
     del.onclick = () => { closeSheet(); confirmDelete(cfg); };
     sheet.appendChild(del);
 
