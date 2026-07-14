@@ -157,7 +157,10 @@
                 <span class="hv-chip-e">${c.emoji}</span>${c.label}
               </button>`,
     ).join("");
-    el.querySelector(".hv-chip.on")?.scrollIntoView({ inline: "center", block: "nearest" });
+    // 선택 칩을 가운데로 — scrollIntoView는 조상(페이지)까지 가로로 밀어버려서
+    // 선반/카드가 왼쪽으로 잘린다. 칩 컨테이너의 scrollLeft만 직접 옮긴다.
+    const on = el.querySelector(".hv-chip.on");
+    if (on) el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
   }
 
   async function renderAll(el) {
