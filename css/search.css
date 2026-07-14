@@ -951,8 +951,11 @@ body[data-page="search"] .header-inner {
   overflow-x: auto; scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
-/* 풀블리드는 핫영상 패널 안에서만 (핫트렌드 탭엔 자기 여백이 따로 있다) */
+/* 풀블리드는 핫영상 패널 안에서만 */
 .tab-panel[data-panel="hot"] .hv-shelf { margin: 0 -16px; padding: 0 16px 4px; }
+/* 핫트렌드 탭의 영상 선반 — 화면 끝에 붙지 않게 좌우 여백 */
+#trending-videos .hv-sec-h { padding-left: 16px; padding-right: 16px; }
+#trending-videos .hv-shelf { padding: 0 16px 4px; }
 .hv-shelf::-webkit-scrollbar { display: none; }
 .hv-tile {
   flex: 0 0 152px; scroll-snap-align: start;
