@@ -145,3 +145,8 @@ body.composer-open .nav { display: none; }
   touch-action: manipulation;
 }
 #createModal .pm-submit:disabled { background: #2a2d36; color: #6a707c; }
+
+/* 작성화면 헤더도 동일하게 — 뒤로가기 오른쪽 (제목 정중앙 유지) */
+.cp-head .cp-spacer { order: 1; }
+.cp-head .cp-title  { order: 2; }
+.cp-head .cp-back   { order: 3; }
