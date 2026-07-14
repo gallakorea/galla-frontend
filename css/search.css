@@ -1335,3 +1335,11 @@ body[data-page="news"] .news-viewer-fallback {
   background: rgba(255,60,86,.92);
   font-size: 10px; font-weight: 900; color: #fff;
 }
+
+/* 뉴스 카드 통계 아이콘 (이모지 → SVG) */
+.st-ic {
+  width: 14px; height: 14px; display: block; flex: 0 0 14px;
+}
+.sr-stats { display: flex; align-items: center; gap: 10px; }
+.sr-stats span { display: inline-flex; align-items: center; gap: 4px; }
+.gn-cardstats span { display: inline-flex; align-items: center; gap: 4px; }

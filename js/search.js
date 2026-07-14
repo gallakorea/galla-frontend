@@ -32,6 +32,18 @@ function debounce(fn, ms) {
   return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
+/* 카드 통계 아이콘 — 이모지는 기기마다 크기·모양이 달라 줄 정렬이 흔들린다.
+   다른 페이지와 같은 규약(stroke 1.8 · currentColor)의 SVG로 통일. */
+const stIc = (d) =>
+  `<svg class="st-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ST = {
+  like: stIc('<path d="M7 10.5V21H4a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1h3z"/><path d="M7 10.5l4.2-7.4a1 1 0 0 1 1.4-.4l.6.4a2.4 2.4 0 0 1 1 2.6L13.5 9h5.3a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 17.4 20H7"/>'),
+  dislike: stIc('<path d="M17 13.5V3h3a1 1 0 0 1 1 1v8.5a1 1 0 0 1-1 1h-3z"/><path d="M17 13.5l-4.2 7.4a1 1 0 0 1-1.4.4l-.6-.4a2.4 2.4 0 0 1-1-2.6l.7-3.3H5.2a2 2 0 0 1-2-2.4l1.4-7A2 2 0 0 1 6.6 4H17"/>'),
+  comment: stIc('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
+  saved: stIc('<path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/>'),
+};
+
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
 
@@ -320,7 +332,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="sr-cat">${esc(i.category || "")}</div>
             <div class="sr-title">${esc(i.title)}</div>
             <div class="sr-bar"><div class="sr-bar-pro" style="width:${pro}%"></div></div>
-            <div class="sr-meta">👍 ${i.pro_count || 0} · 👎 ${i.con_count || 0}</div>
+            <div class="sr-meta sr-stats"><span>${ST.like} ${i.pro_count || 0}</span><span>${ST.dislike} ${i.con_count || 0}</span></div>
           </div>
         </a>`;
       }).join("");
@@ -390,7 +402,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="sr-body">
             <div class="sr-cat">${esc(p.category || "")}${p.nickname ? " · " + esc(p.nickname) : ""}</div>
             <div class="sr-title">${esc(p.title || "")}</div>
-            <div class="sr-meta">👍 ${p.up_count || 0} · 👎 ${p.down_count || 0}</div>
+            <div class="sr-meta sr-stats"><span>${ST.like} ${p.up_count || 0}</span><span>${ST.dislike} ${p.down_count || 0}</span></div>
           </div>
         </a>`;
       }).join("");
@@ -514,7 +526,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="sr-body">
           <div class="sr-cat">${esc(n.category || "")} · 갈라뉴스</div>
           <div class="sr-title">${esc(n.title)}</div>
-          <div class="sr-meta">👍 ${n._l} · 💬 ${n._c} · ${timeAgo(n.published_at)}</div>
+          <div class="sr-meta sr-stats">
+            <span>${ST.like} ${n._l}</span>
+            <span>${ST.comment} ${n._c}</span>
+            <span>${timeAgo(n.published_at)}</span>
+          </div>
         </div>
       </div>`;
     });
@@ -528,7 +544,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <div class="sr-cat">${esc(i.category || "")}</div>
           <div class="sr-title">${esc(i.title)}</div>
           <div class="sr-bar"><div class="sr-bar-pro" style="width:${pro}%"></div></div>
-          <div class="sr-meta">👍 ${i.pro_count || 0} · 👎 ${i.con_count || 0}</div>
+          <div class="sr-meta sr-stats"><span>${ST.like} ${i.pro_count || 0}</span><span>${ST.dislike} ${i.con_count || 0}</span></div>
         </div>
       </a>`;
     });
@@ -539,7 +555,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="sr-body">
           <div class="sr-cat">${esc(p.category || "")} · 갈라 광장</div>
           <div class="sr-title">${esc(p.title || "")}</div>
-          <div class="sr-meta">👍 ${p.up_count || 0} · 👎 ${p.down_count || 0}</div>
+          <div class="sr-meta sr-stats"><span>${ST.like} ${p.up_count || 0}</span><span>${ST.dislike} ${p.down_count || 0}</span></div>
         </div>
       </a>`;
     });
@@ -653,10 +669,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span>· 관련 ${n.source_count || 0}건</span>
           </div>
           <div class="gn-cardstats">
-            <span>👍 ${n.likes}</span>
-            <span>👎 ${n.dislikes}</span>
-            <span>💬 ${n.cCount}</span>
-            ${n.saved ? `<span class="gn-saved">🔖 저장됨</span>` : ""}
+            <span>${ST.like} ${n.likes}</span>
+            <span>${ST.dislike} ${n.dislikes}</span>
+            <span>${ST.comment} ${n.cCount}</span>
+            ${n.saved ? `<span class="gn-saved">${ST.saved} 저장됨</span>` : ""}
           </div>
         </div>
       </div>`;
