@@ -56,10 +56,15 @@ function waitForClient() {
             return;
         }
 
+        // Cloudflare Turnstile 캡차 토큰(있으면 첨부; Supabase 캡차 비활성 시 무시됨)
+        const captchaToken = (window.turnstile && window.turnstile.getResponse()) || undefined;
+
         const { data: loginData, error } = await supabase.auth.signInWithPassword({
             email: emailVal,
-            password: pwVal
+            password: pwVal,
+            options: captchaToken ? { captchaToken } : undefined
         });
+        try { window.turnstile && window.turnstile.reset(); } catch (e) {}
 
         if (error) {
             console.log(error);
@@ -68,7 +73,9 @@ function waitForClient() {
             if (error.code === "email_not_confirmed" || /not confirmed/i.test(msg)) {
                 if (confirm("이메일 인증이 아직 안 됐어요.\n인증 메일을 다시 보내드릴까요?")) {
                     try {
-                        const { error: rErr } = await supabase.auth.resend({ type: "signup", email: emailVal });
+                        const rToken = (window.turnstile && window.turnstile.getResponse()) || undefined;
+                        const { error: rErr } = await supabase.auth.resend({ type: "signup", email: emailVal, options: rToken ? { captchaToken: rToken } : undefined });
+                        try { window.turnstile && window.turnstile.reset(); } catch (e) {}
                         if (rErr) throw rErr;
                         alert("인증 메일을 보냈어요! ✉️\n메일함(스팸함도)을 확인하고 링크를 눌러 인증을 완료해주세요.");
                     } catch (rE) {

@@ -93,10 +93,12 @@ async function waitForClient() {
             // SECURITY DEFINER)가 users/user_profiles를 생성한다.
             // (이메일 인증이 켜져 있어 signUp 직후엔 세션이 없으므로, 클라이언트에서
             //  직접 INSERT하면 RLS(auth.uid()=id)에 막힌다 → 트리거로 처리)
+            const captchaToken = (window.turnstile && window.turnstile.getResponse()) || undefined;
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
+                    captchaToken,
                     data: {
                         nickname,
                         phone: phone || null,
@@ -110,6 +112,7 @@ async function waitForClient() {
                     }
                 }
             });
+            try { window.turnstile && window.turnstile.reset(); } catch (e) {}
 
             if (signUpError) {
                 alert("회원가입 실패: " + signUpError.message);
