@@ -1,0 +1,140 @@
+/* =========================================================
+   composer-page.css — 작성 모달을 '전용 페이지'처럼 (create.html 과 톤 통일)
+   대상: #plaza-write-modal (광장 글쓰기) · #createModal (예측 마켓 생성)
+========================================================= */
+
+/* 컴포저가 열리면 뒤 배경 스크롤 잠그고 하단 네비를 숨긴다 (페이지 전환 느낌) */
+body.composer-open { overflow: hidden; }
+body.composer-open .nav { display: none; }
+
+/* ── 공통: 전체화면 ── */
+#plaza-write-modal,
+#createModal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: block;              /* 카드 센터링 해제 */
+  background: #0a0a0b;
+  padding: 0;
+}
+#plaza-write-modal .plaza-modal-backdrop { display: none; }
+
+/* ── 공통: 본문 박스를 전체화면 스크롤 영역으로 ── */
+#plaza-write-modal .plaza-modal-box,
+#createModal .pm-modal-inner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: #0a0a0b;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* 상단 헤더 + 하단 액션바 만큼 여백 */
+  padding: calc(60px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));
+}
+
+/* 예측 모달은 자체 헤더가 있으니 감춘다(우리 헤더로 대체) */
+#createModal .pm-modal-header { display: none; }
+#plaza-write-modal .modal-title { display: none; }
+
+/* ── 상단 헤더 (JS가 주입) ── */
+.cp-head {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: calc(60px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 14px 0;
+  background: rgba(10, 10, 11, .92);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+.cp-back {
+  flex: none;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #fff; cursor: pointer;
+  touch-action: manipulation;
+}
+.cp-back svg { width: 22px; height: 22px; }
+.cp-back:active { transform: scale(.9); }
+.cp-title {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 900;
+  color: #fff;
+}
+.cp-spacer { flex: none; width: 36px; }
+
+/* ── 하단 고정 액션바 ── */
+/* 광장: 기존 .modal-actions(취소/등록하기)를 바로 만든다 */
+#plaza-write-modal .modal-actions {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(10, 10, 11, .94);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, .07);
+}
+#plaza-write-modal .modal-actions .btn-cancel,
+#plaza-write-modal .modal-actions .btn-submit {
+  flex: 1 1 0;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#plaza-write-modal .modal-actions .btn-cancel {
+  flex: 0 0 34%;
+  background: rgba(255, 255, 255, .07);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #c9d1e0;
+}
+#plaza-write-modal .modal-actions .btn-submit {
+  background: #2f6bff;
+  border: none;
+  color: #fff;
+}
+#plaza-write-modal .modal-actions .btn-submit:disabled {
+  background: rgba(255, 255, 255, .08);
+  color: #6a707c;
+  cursor: default;
+}
+
+/* 예측: 제출 버튼 하나를 바로 만든다 */
+#createModal .pm-submit {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 5;
+  width: auto;
+  margin: 0;
+  min-height: 48px;
+  height: auto;
+  padding: 15px 16px calc(15px + env(safe-area-inset-bottom));
+  border: none;
+  border-radius: 0;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+  background: #2f6bff;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#createModal .pm-submit:disabled { background: #2a2d36; color: #6a707c; }
