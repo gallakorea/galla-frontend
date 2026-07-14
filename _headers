@@ -16,14 +16,16 @@
 /*.html
   Cache-Control: no-cache
 
-# CSS/JS도 항상 재검증 — 배포 전파 레이스로 새 ?v= URL에 옛 내용이 캐시되면
-# 기기가 4시간 동안 옛 코드를 계속 실행한다(실제로 겪음).
-# ⚠️ max-age=0, must-revalidate 는 Cloudflare가 14400초로 클램프해 버려서 소용없다.
-#    반드시 no-cache 를 써야 매 요청 재검증한다. 변경 없으면 304라 비용은 미미.
+# CSS/JS 재검증.
+# ⚠️ 여기서 no-cache 를 쓰면 Cloudflare가 값을 통째로 버리고 기본 max-age=14400 을
+#    씌워버린다(재검증조차 안 함 → 더 나쁨). 검증됨 2026-07-14.
+#    max-age=0 도 존(Browser Cache TTL 4시간)에 클램프되지만 must-revalidate 는 살아남는다.
+# ➜ 근본 해결은 Cloudflare 존 설정의 Browser Cache TTL 을
+#    "Respect Existing Headers" 로 바꾸는 것.
 /css/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=0, must-revalidate
 /js/*
-  Cache-Control: no-cache
+  Cache-Control: public, max-age=0, must-revalidate
 
 # 벤더 라이브러리는 바뀌지 않으므로 장기 캐시 유지(위 /js/* 보다 뒤에 둬야 우선)
 /js/vendor/*
