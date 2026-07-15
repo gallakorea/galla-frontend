@@ -1309,19 +1309,46 @@ function makeReply(r) {
   </div>`;
 }
 
-// 격론 감지: 이 댓글 스레드에서 나와 작성자가 답글을 주고받은 정도
-// 일정 수준(양방향 왕복)이 쌓이면 그 댓글에 '⚔️ 일기토' 버튼 자동 노출
-function duelHeat(c) {
-  if (!c.user_id || c.is_anonymous || !ME.userId || c.user_id === ME.userId) return false;
-  const thread = [c, ...(replyMap[c.id] || [])];
-  let me = 0, foe = 0;
-  thread.forEach(r => { if (r.user_id === ME.userId) me++; else if (r.user_id === c.user_id) foe++; });
-  return (me >= 2 && foe >= 1) || (me >= 1 && foe >= 2);
+// ⚔️ 격론 감지(정밀 규칙): 한 스레드에서 두 유저가 '실제로 주고받은 왕복(교차)' 횟수 기준.
+//   교차 = 발언자가 A→B 또는 B→A로 바뀐 횟수 (한쪽 도배는 격론이 아님 — 예전 단순 개수 규칙의 오탐 제거)
+//   레벨: 교차 2회(A-B-A) 신경전 → 4회 설전 → 6회+ 전면전. 유령·익명은 집계 제외.
+//   당사자 화면: 단계별 일기토 도전 버튼 / 관전자 화면: 교차 4회+부터 '격론 중' 배지.
+function threadHeat(c) {
+  const thread = [c, ...(replyMap[c.id] || [])]
+    .filter(r => r.user_id && !r.is_anonymous)
+    .sort((x, y) => new Date(x.created_at) - new Date(y.created_at));
+  const seq = thread.map(r => r.user_id);
+  const uniq = [...new Set(seq)];
+  let best = { a: null, b: null, sw: 0 };
+  for (let i = 0; i < uniq.length; i++) for (let j = i + 1; j < uniq.length; j++) {
+    const s = seq.filter(u => u === uniq[i] || u === uniq[j]);
+    let sw = 0;
+    for (let k = 1; k < s.length; k++) if (s[k] !== s[k - 1]) sw++;
+    if (sw > best.sw) best = { a: uniq[i], b: uniq[j], sw };
+  }
+  best.lv = best.sw >= 6 ? 3 : best.sw >= 4 ? 2 : best.sw >= 2 ? 1 : 0;
+  return best;
 }
+const HEAT_LABEL = {
+  1: "⚔️ 신경전 감지 — 일기토로 끝장?",
+  2: "🔥 설전 격화! 일기토 개전",
+  3: "💥 전면전! 지금 옥타곤에서 결판",
+};
 function duelHeatBtn(c) {
-  if (!duelHeat(c)) return "";
-  const nick = (profileMap[c.user_id]?.nickname || feedNickCache[c.user_id] || "상대").replace(/"/g, "&quot;");
-  return `<button type="button" class="c-duel" data-uid="${c.user_id}" data-nick="${nick}">⚔️ 일기토로 끝장</button>`;
+  const h = threadHeat(c);
+  if (!h.lv) return "";
+  const nickOf = uid => (profileMap[uid]?.nickname || feedNickCache[uid] || "상대").replace(/"/g, "&quot;");
+  // 내가 당사자면: 단계별 도전 버튼 (상대 = 나 아닌 쪽)
+  if (ME.userId && (h.a === ME.userId || h.b === ME.userId)) {
+    const foe = h.a === ME.userId ? h.b : h.a;
+    if (!foe || foe === ME.userId) return "";
+    return `<button type="button" class="c-duel lv${h.lv}" data-uid="${foe}" data-nick="${nickOf(foe)}">${HEAT_LABEL[h.lv]}</button>`;
+  }
+  // 관전자: 설전(교차 4회) 이상이면 격론 중 배지 (탭 액션 없음)
+  if (h.lv >= 2) {
+    return `<span class="c-duel-watch">🔥 격론 중 · <b>${nickOf(h.a)}</b> vs <b>${nickOf(h.b)}</b></span>`;
+  }
+  return "";
 }
 
 function makeComment(c) {

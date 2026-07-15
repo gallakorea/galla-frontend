@@ -35,7 +35,7 @@
       </div>
       <div class="us-pop-actions">
         <button class="us-pop-btn" data-act="profile">👤<i>프로필</i></button>
-        <button class="us-pop-btn" data-act="duel" id="upDuel">⚔️<i>일기토</i></button>
+        <button class="us-pop-btn us-follow js-follow" id="upFollow" type="button">＋ 팔로우</button>
         <button class="us-pop-btn primary" data-act="dm" id="upDm">✉️<i>메시지</i></button>
       </div>`;
     document.body.appendChild(pop);
@@ -46,7 +46,6 @@
       const uid = pop.dataset.uid, nick = pop.dataset.nick || "";
       close();
       if (act === "profile") location.href = `mypage.html?user=${uid}`;
-      else if (act === "duel") location.href = `duel.html?challenge=${uid}`;
       else if (act === "dm") {
         if (window.startDM) window.startDM(uid, nick);
         else location.href = `mypage.html?user=${uid}`; // dm 미로드 페이지 폴백
@@ -70,7 +69,17 @@
     ava.style.background = avatarColor(uid);
     const self = (me && me === uid);
     pop.querySelector("#upDm").style.display = self ? "none" : "";
-    pop.querySelector("#upDuel").style.display = self ? "none" : "";
+    // 팔로우/언팔로우 — follow.js(.js-follow) 재사용. 열 때마다 새 버튼으로 갈아끼워
+    // uid 바인딩·상태 페인트를 다시 받는다(팔로잉이면 '팔로잉'으로 표시)
+    const fOld = pop.querySelector("#upFollow");
+    if (fOld) {
+      const f = fOld.cloneNode(false);
+      f.textContent = "＋ 팔로우";
+      f.dataset.uid = uid;
+      fOld.replaceWith(f);
+      f.style.display = (self || !window.GALLA_bindFollow) ? "none" : "";
+      if (!self && window.GALLA_bindFollow) window.GALLA_bindFollow(pop);
+    }
 
     // 앵커(누른 닉네임) 옆에 배치 — 기본은 바로 아래, 화면 밑이면 위로
     pop.style.visibility = "hidden";

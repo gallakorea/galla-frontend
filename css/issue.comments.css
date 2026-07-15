@@ -1220,6 +1220,23 @@ body.kb-open .battle-input-bar {
 @keyframes cDuelPulse { 50% { box-shadow: 0 0 22px rgba(201,209,224,.65); transform: translateY(-1px); } }
 @media (prefers-reduced-motion: reduce) { .c-duel { animation: none; } }
 
+/* 격론 히트 단계 — 신경전(기본) < 설전 < 전면전 순으로 뜨거워진다 */
+.c-duel.lv2 {
+  background: linear-gradient(135deg, #ffb36b, #ff7a45); color: #1a0d05;
+  box-shadow: 0 0 16px rgba(255,140,70,.45); animation-duration: 1.4s;
+}
+.c-duel.lv3 {
+  background: linear-gradient(135deg, #ff6b81, #d0392b); color: #fff;
+  box-shadow: 0 0 20px rgba(255,80,90,.55); animation-duration: 1s;
+}
+/* 관전자용 '격론 중' 배지 — 액션 없음, 구경 유도 */
+.c-duel-watch {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 800;
+  color: #ffb28a; background: rgba(255,122,69,.12); border: 1px solid rgba(255,122,69,.35);
+}
+.c-duel-watch b { color: #ffd7c2; }
+
 /* ✨ 부스트: 하이라이트 댓글 */
 .comment.hl, .reply.hl { border: 1px solid rgba(201,209,224,.5) !important; box-shadow: 0 0 16px rgba(201,209,224,.18); position: relative; }
 .comment.hl::before, .reply.hl::before { content: "✨ 하이라이트"; position: absolute; top: -8px; left: 12px;
