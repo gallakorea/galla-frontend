@@ -552,10 +552,18 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
   70% { box-shadow: 0 0 0 7px rgba(255,60,90,0); } 100% { box-shadow: 0 0 0 0 rgba(255,60,90,0); } }
 @media (prefers-reduced-motion: reduce) { .se-live i { animation: none; } }
 
-/* 디스커버리 섹션 — 검색 빈 화면의 추천 콘텐츠 선반 사이 여백 */
-#se-discover { margin-top: 6px; }
-#se-discover .nh-sec { margin-bottom: 20px; }
-#se-discover .nh-sec .hv-sec-h { margin-left: 0; }
+/* 탐색 카테고리 (검색 빈 화면) — 탭하면 즉시 검색 */
+.se-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.se-cat {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 15px 6px; cursor: pointer;
+  border: 1px solid hsl(var(--ch) 30% 26% / .55); border-radius: 14px;
+  background: linear-gradient(150deg, hsl(var(--ch) 42% 15% / .85), hsl(var(--ch) 38% 10% / .85));
+  transition: transform .12s ease, border-color .2s ease;
+}
+.se-cat:active { transform: scale(.95); border-color: hsl(var(--ch) 60% 45%); }
+.se-cat-e { font-size: 22px; line-height: 1; }
+.se-cat-k { color: #e7ecf6; font-size: 13px; font-weight: 800; }
 
 /* 검색 결과 섹션 */
 .search-results { padding: 0 16px 30px; }

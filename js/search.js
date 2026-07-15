@@ -546,32 +546,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     return markets;
   }
 
-  /* ===== 검색 빈 화면 디스커버리 허브 (지금 뜨는 이슈·예측·광장) ===== */
-  let discoverLoaded = false;
-  async function loadDiscover() {
+  /* ===== 검색 빈 화면: 탐색 카테고리 (탭 → 즉시 검색) =====
+     '지금 뜨는 콘텐츠'류 선반은 핫트렌드 탭과 중복이라 두지 않는다.
+     검색 페이지엔 검색에 특화된 카테고리 바로가기를 둔다. */
+  const SE_CATS = [
+    { k: "정치", e: "🏛" }, { k: "경제", e: "📈" }, { k: "사회", e: "⚖️" },
+    { k: "연예", e: "🎬" }, { k: "스포츠", e: "⚽" }, { k: "세계", e: "🌍" },
+    { k: "IT", e: "💻" }, { k: "게임", e: "🎮" }, { k: "연애", e: "💗" },
+    { k: "부동산", e: "🏠" }, { k: "주식", e: "💹" }, { k: "날씨", e: "☀️" },
+  ];
+  function loadDiscover() {
     const wrap = document.getElementById("se-discover");
-    if (!wrap || discoverLoaded) return;
-    discoverLoaded = true;
-    const [giRes, pzRes, markets] = await Promise.all([
-      supabase.from("issues")
-        .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
-        .order("hot_score", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false }).limit(8),
-      supabase.from("plaza_posts")
-        .select("id,title,category,cover_image,thumbnail,up_count,down_count,score,created_at")
-        .order("score", { ascending: false, nullsFirst: false })
-        .order("created_at", { ascending: false }).limit(8),
-      (async () => {
-        const { data } = await supabase.from("markets")
-          .select("id,question,category,volume,market_type")
-          .eq("resolved", false).order("volume", { ascending: false }).limit(8);
-        return withMarketTops(data || []);
-      })(),
-    ]);
+    if (!wrap) return;
     wrap.innerHTML =
-      ttShelf(SEC.issue, "지금 뜨는 이슈", issueCards(giRes.data || []))
-      + ttShelf(SEC.predict, "인기 갈라예측", marketCards(markets))
-      + ttShelf(SEC.plaza, "화제의 광장", plazaCards(pzRes.data || []));
+      `<div class="se-block"><div class="se-head"><span>탐색 카테고리</span></div>
+        <div class="se-cats">${SE_CATS.map(c => {
+          const h = _hue(c.k);
+          return `<button class="se-cat" data-kw="${esc(c.k)}" style="--ch:${h}">
+            <span class="se-cat-e">${c.e}</span><span class="se-cat-k">${esc(c.k)}</span></button>`;
+        }).join("")}</div></div>`;
+    wrap.onclick = e => {
+      const b = e.target.closest("[data-kw]");
+      if (!b) return;
+      if (window.GALLA_FX) {
+        const r = b.getBoundingClientRect();
+        window.GALLA_FX.burst(r.left + r.width / 2, r.top + r.height / 2, { colors: ["#ff3c5a", "#ffb03c", "#4a7bff", "#33d17a"], count: 12, spread: 58 });
+      }
+      runSearch(b.dataset.kw, true);
+    };
   }
 
   async function loadTrending() {
