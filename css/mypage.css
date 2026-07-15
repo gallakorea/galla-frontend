@@ -548,7 +548,8 @@ body{
   padding:2px 8px; border-radius:99px; white-space:nowrap; }
 
 /* 헤더 단차 제거 — 라디얼 본문 배경이 헤더 뒤로 이어지게 */
-.header{ background:transparent !important; border-bottom:none !important; }
+/* nav.css의 '그라디언트 상단 슬라이스' 헤더 배경을 그대로 쓴다(투과 겹침 방지) */
+.header{ border-bottom:none !important; }
 
 /* =========================================================
    마이페이지 v3 — 프리미엄 다크 폴리시

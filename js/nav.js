@@ -138,6 +138,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // capture:true — window가 아닌 요소가 스크롤해도(iOS body 등) 잡는다.
     window.addEventListener("scroll", onScroll, { passive: true, capture: true });
     document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    // 스크롤 복원으로 '이미 내려간 채' 열리는 경우 — 이벤트 없이도 초기 상태 즉시 반영
+    onScroll();
   }
 
   {
