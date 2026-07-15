@@ -461,33 +461,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     b.remove();
   }
 
+  // 숫자 카운트업 (주식 시세판 느낌) — data-to 만큼 0에서 세어 올라간다
+  function countUp(root) {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      root.querySelectorAll("[data-to]").forEach(el => (el.textContent = el.dataset.to));
+      return;
+    }
+    root.querySelectorAll("[data-to]").forEach(el => {
+      const to = +el.dataset.to || 0, dur = 700, t0 = performance.now();
+      (function tick(t) {
+        const p = Math.min(1, (t - t0) / dur);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3)));   // easeOutCubic
+        if (p < 1) requestAnimationFrame(tick);
+      })(t0);
+    });
+  }
+
   async function loadTrending() {
     const hotWrap = document.getElementById("trending-hot");
     const gallaWrap = document.getElementById("trending-galla");
     hotWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
     gallaWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
 
-    // 1) 실시간 급상승 키워드 — 모멘텀 보드(언급량 막대 랭킹)
+    // 1) 실시간 급상승 키워드 — 라이브 모멘텀 보드(카운트업 · 빛 스윕 · 순차 등장)
     const kws = await computeHotKeywords(15);
     if (kws.length) {
       const max = kws[0].count || 1;
       const rows = kws.map((r, i) => `
-        <button class="tm-row" data-kw="${esc(r.kw)}">
+        <button class="tm-row" style="--i:${i}" data-kw="${esc(r.kw)}">
           <span class="tm-rank r${i < 3 ? i + 1 : 0}">${i + 1}</span>
           <span class="tm-main">
             <span class="tm-kw">${esc(r.kw)}</span>
-            <span class="tm-bar"><span class="tm-fill" style="width:${Math.max(6, Math.round(r.count / max * 100))}%"></span></span>
+            <span class="tm-bar"><span class="tm-fill${i < 3 ? " shine" : ""}" style="width:${Math.max(6, Math.round(r.count / max * 100))}%"></span></span>
           </span>
-          <span class="tm-cnt">${r.count}</span>
+          <span class="tm-cnt" data-to="${r.count}">0</span>
         </button>`);
-      hotWrap.innerHTML = `<div class="tm-board">${trMore(rows, "키워드 더보기")}</div>`;
+      hotWrap.innerHTML =
+        `<div class="tm-live"><span class="tm-live-dot"></span>LIVE · 실시간 집계</div>
+         <div class="tm-board">${trMore(rows, "키워드 더보기")}</div>`;
+      countUp(hotWrap);
     } else {
       hotWrap.innerHTML = `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
     }
     hotWrap.onclick = e => {
       trMoreClick(e);
       const b = e.target.closest("[data-kw]");
-      if (b) { activateTab("search"); runSearch(b.dataset.kw, true); }
+      if (b) {
+        // 키워드 탭 → 재밌는 버스트 후 검색
+        if (window.GALLA_FX) {
+          const r = b.getBoundingClientRect();
+          window.GALLA_FX.burst(r.left + 30, r.top + r.height / 2, { colors: ["#ff3c5a", "#ffb03c", "#4a7bff", "#33d17a"], count: 14, spread: 66 });
+        }
+        activateTab("search"); runSearch(b.dataset.kw, true);
+      }
     };
 
     // 2) 인기 뉴스(갈라뉴스) + 뜨는 이슈 + 뜨는 갈라 광장 + 뜨는 예측
@@ -585,7 +611,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const shelf = (icon, title, cards) => cards.length
       ? `<section class="nh-sec"><div class="hv-sec-h"><span class="hv-sec-t">${icon} ${title}</span></div>
-         <div class="tt-shelf">${cards.join("")}</div></section>` : "";
+         <div class="tt-shelf">${cards.map((c, i) => c.replace("class=\"tt-card", `style="--i:${i}" class="tt-card tt-in`)).join("")}</div></section>` : "";
 
     gallaWrap.innerHTML =
       shelf(SEC.news, "인기 갈라뉴스", gnewsItems)

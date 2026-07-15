@@ -1582,3 +1582,53 @@ body[data-page="news"] .news-viewer-fallback {
   border: 1px solid rgba(61,107,255,.25);
 }
 .tt-pred-pct { font-size: 30px; font-weight: 900; color: #9db6ff; letter-spacing: -1px; }
+
+/* ============================================================
+   핫트렌드 — 타임스퀘어 라이브 이펙트
+============================================================ */
+/* LIVE 배지 */
+.tm-live {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin: 2px 0 12px; padding: 5px 11px; border-radius: 999px;
+  background: rgba(255,60,90,.12); border: 1px solid rgba(255,60,90,.3);
+  font-size: 11px; font-weight: 900; letter-spacing: .5px; color: #ff5b6e;
+}
+.tm-live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #ff3c56;
+  box-shadow: 0 0 0 0 rgba(255,60,86,.7); animation: tmLive 1.5s infinite;
+}
+@keyframes tmLive { 70%,100% { box-shadow: 0 0 0 6px rgba(255,60,86,0); } }
+
+/* 모멘텀 행 순차 등장 */
+.tm-row { opacity: 0; transform: translateY(8px); animation: tmIn .5s ease forwards; animation-delay: calc(var(--i) * 55ms); }
+@keyframes tmIn { to { opacity: 1; transform: none; } }
+
+/* 상위 막대 빛 스윕(네온 스캔) */
+.tm-fill { position: relative; overflow: hidden; }
+.tm-fill.shine::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.85), transparent);
+  transform: translateX(-100%); animation: tmSweep 2.2s ease-in-out infinite;
+}
+@keyframes tmSweep { 0% { transform: translateX(-100%); } 60%,100% { transform: translateX(320%); } }
+
+/* 카운트 숫자 — 시세판 느낌 */
+.tm-cnt { color: #ff8a3c; font-variant-numeric: tabular-nums; }
+.tm-row:nth-child(1) .tm-cnt, .tm-board .tm-row:nth-child(2) .tm-cnt { color: #ff5b6e; }
+
+/* 상위 3위 순위 네온 펄스 */
+.tm-rank.r1, .tm-rank.r2, .tm-rank.r3 { animation: tmRankGlow 2s ease-in-out infinite; }
+@keyframes tmRankGlow { 0%,100% { text-shadow: none; } 50% { text-shadow: 0 0 8px currentColor; } }
+
+/* 도메인 카드 순차 등장 */
+.tt-card.tt-in { opacity: 0; transform: translateY(10px) scale(.98); animation: ttIn .5s cubic-bezier(.2,.8,.3,1) forwards; animation-delay: calc(var(--i) * 60ms); }
+@keyframes ttIn { to { opacity: 1; transform: none; } }
+
+/* 예측 확률 카드 — 은은한 글로우 맥동 */
+.tt-pred-th { animation: ttPredGlow 3.5s ease-in-out infinite; }
+@keyframes ttPredGlow { 0%,100% { box-shadow: inset 0 0 0 0 rgba(109,139,255,0); } 50% { box-shadow: inset 0 0 26px 0 rgba(109,139,255,.28); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-row, .tt-card.tt-in { opacity: 1; transform: none; animation: none; }
+  .tm-fill.shine::after, .tm-rank.r1, .tm-rank.r2, .tm-rank.r3, .tt-pred-th, .tm-live-dot { animation: none; }
+}
