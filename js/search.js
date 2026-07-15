@@ -525,7 +525,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <span class="tt-meta"><span>${m._top ? esc(m._top.label) : ""}</span><span>💰 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</span></span>
       </a>`);
   }
-  function shelf(icon, title, cards) {
+  function ttShelf(icon, title, cards) {
     return cards.length
       ? `<section class="nh-sec"><div class="hv-sec-h"><span class="hv-sec-t">${icon} ${title}</span></div>
          <div class="tt-shelf">${cards.map((c, i) => c.replace('class="tt-card', `style="--i:${i}" class="tt-card tt-in`)).join("")}</div></section>` : "";
@@ -568,13 +568,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         return withMarketTops(data || []);
       })(),
     ]);
-    console.log("[discover]", { gi: (giRes.data || []).length, giErr: giRes.error?.message, pz: (pzRes.data || []).length, pzErr: pzRes.error?.message, mk: markets.length });
-    const html =
-      shelf(SEC.issue, "지금 뜨는 이슈", issueCards(giRes.data || []))
-      + shelf(SEC.predict, "인기 갈라예측", marketCards(markets))
-      + shelf(SEC.plaza, "화제의 광장", plazaCards(pzRes.data || []));
-    console.log("[discover] htmlLen", html.length);
-    wrap.innerHTML = html;
+    wrap.innerHTML =
+      ttShelf(SEC.issue, "지금 뜨는 이슈", issueCards(giRes.data || []))
+      + ttShelf(SEC.predict, "인기 갈라예측", marketCards(markets))
+      + ttShelf(SEC.plaza, "화제의 광장", plazaCards(pzRes.data || []));
   }
 
   async function loadTrending() {
@@ -667,10 +664,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const marketItems = marketCards(markets);
 
     gallaWrap.innerHTML =
-      shelf(SEC.news, "인기 갈라뉴스", gnewsItems)
-      + shelf(SEC.issue, "뜨는 갈라 이슈", issueItems)
-      + shelf(SEC.predict, "뜨는 갈라예측", marketItems)
-      + shelf(SEC.plaza, "뜨는 갈라 광장", plazaItems)
+      ttShelf(SEC.news, "인기 갈라뉴스", gnewsItems)
+      + ttShelf(SEC.issue, "뜨는 갈라 이슈", issueItems)
+      + ttShelf(SEC.predict, "뜨는 갈라예측", marketItems)
+      + ttShelf(SEC.plaza, "뜨는 갈라 광장", plazaItems)
       || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
     gallaWrap.onclick = e => {
       const g = e.target.closest(".gn-trend");
@@ -1102,7 +1099,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ================= INIT ================= */
   renderRecent();
   loadPopular();
-  loadDiscover().catch(e => console.error("[discover]", e));
+  loadDiscover();
   showEmpty(true);
 
   // 옛 딥링크: search.html?gn=<id> → 이제 기사는 news.html 이 담당 (마이페이지 '저장한 뉴스' 등 호환)
