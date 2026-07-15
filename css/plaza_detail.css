@@ -622,3 +622,16 @@ html, body {
 .ghost-toggle.on{ background:linear-gradient(100deg,#4a3f7e,#372f5e); border-color:#7a6bc0; color:#fff; box-shadow:0 0 16px rgba(122,107,192,.25); }
 .ghost-toggle.on .gt-hint::before{ content:"ON"; color:#e9e4ff; }
 .ghost-toggle:active{ transform:scale(.95); }
+
+/* =========================
+   한 줄 컴포저 — 입력창 + 👻 + 등록 (타 게시판과 동일 UX)
+========================= */
+.comment-write { display: flex !important; align-items: center !important; gap: 8px !important; }
+.comment-write textarea {
+  flex: 1 1 auto !important; width: auto !important;
+  height: 44px !important; min-height: 44px !important; padding: 12px !important;
+}
+.comment-write #commentSubmitBtn {
+  flex: 0 0 auto !important; width: auto !important; margin: 0 !important;
+  height: 44px !important; padding: 0 18px !important; white-space: nowrap !important;
+}

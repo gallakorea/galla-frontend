@@ -140,11 +140,29 @@
   window.GALLA_ghostReady = async function (force) {
     if (window.__GHOST_ST && !force) return window.__GHOST_ST;
     try {
-      const { data } = await window.supabaseClient.rpc("ghost_status");
+      // 클라이언트·세션 복원을 기다린 뒤 조회 — 안 기다리면 로그인 상태인데도
+      // anon으로 판정되어 "유령권 필요"가 캐시로 굳는 버그가 있었다
+      for (let i = 0; i < 66 && !window.supabaseClient; i++) await new Promise(r => setTimeout(r, 150));
+      const c = window.supabaseClient;
+      if (!c) { window.__GHOST_ST = { active: false }; return window.__GHOST_ST; }
+      const { data: s } = await c.auth.getSession();
+      if (!s?.session) { window.__GHOST_ST = { active: false }; return window.__GHOST_ST; }
+      const { data } = await c.rpc("ghost_status");
       window.__GHOST_ST = data?.ok ? data : { active: false };
     } catch { window.__GHOST_ST = { active: false }; }
     return window.__GHOST_ST;
   };
+  /* 세션이 늦게 붙거나 로그인/로그아웃 시 — 상태 재조회 + 바인딩된 버튼 전부 다시 그림 */
+  const boundBtns = new Set();
+  (function hookAuth() {
+    const c = window.supabaseClient;
+    if (!c?.auth?.onAuthStateChange) { setTimeout(hookAuth, 400); return; }
+    c.auth.onAuthStateChange(() => {
+      window.GALLA_ghostReady(true).then(() => {
+        boundBtns.forEach(b => { if (document.contains(b)) paintGhostBtn(b); });
+      });
+    });
+  })();
   const ghostDaysLeft = () => {
     const st = window.__GHOST_ST;
     if (!st?.active || !st.until) return 0;
@@ -178,6 +196,7 @@
 
   window.GALLA_ghostBind = function (btn, opts = {}) {
     if (!btn || btn._ghostBound) return; btn._ghostBound = true;
+    boundBtns.add(btn);
     window.GALLA_ghostReady().then(() => paintGhostBtn(btn));
     btn.addEventListener("click", () => {
       const st = window.__GHOST_ST;
