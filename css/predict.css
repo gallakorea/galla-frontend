@@ -122,3 +122,112 @@
   .pm-combo.hot .pm-combo-fire, .pm-badge-live i{ animation:none; }
   .pm-odds-side{ transition:none; }
 }
+
+/* ===== 상세(베팅) 페이지 ===== */
+.pb-wrap{ padding:8px 14px 40px; }
+.pb-cat{ font-size:12px; color:var(--pm-dim); font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pb-q{ font-size:20px; font-weight:900; line-height:1.32; color:#fff; margin:6px 0 4px; }
+.pb-desc{ font-size:13px; color:#9aa3b8; line-height:1.55; margin:6px 0 2px; }
+.pb-hero{ position:relative; border-radius:18px; padding:15px 15px 13px; margin-top:8px;
+  background:var(--pm-panel); border:1px solid var(--pm-line); overflow:hidden; }
+.pb-hero.jackpot{ background:radial-gradient(130% 100% at 50% 0%, #33250a 0%, #16120a 60%, #0e0c08 100%); border-color:#4a380f; }
+.pb-pool-row{ display:flex; align-items:flex-end; justify-content:space-between; margin-top:10px; }
+.pb-pool-lbl{ font-size:11.5px; color:var(--pm-dim); font-weight:700; }
+.pb-pool-n{ font-size:27px; font-weight:900; color:var(--pm-gold); line-height:1.1; text-shadow:0 0 16px rgba(255,207,63,.3); }
+.pb-pool-n small{ font-size:14px; }
+.pb-ppl{ font-size:12px; color:var(--pm-dim); font-weight:700; }
+.pb-ppl b{ color:#c8d0e2; }
+
+/* 결과 선택 (베팅 대상) */
+.pb-outs{ display:flex; gap:9px; margin-top:14px; }
+.pb-out{ flex:1; position:relative; border-radius:14px; padding:13px 10px; cursor:pointer; text-align:center;
+  background:#171a24; border:1.5px solid var(--pm-line); transition:all .15s ease; }
+.pb-out .lb{ display:block; font-size:15px; font-weight:900; color:#dfe5f1; }
+.pb-out .od{ display:block; margin-top:3px; font-size:18px; font-weight:900; }
+.pb-out .pool{ display:block; margin-top:2px; font-size:11px; color:var(--pm-dim); }
+.pb-out.yes .od{ color:var(--pm-yes); } .pb-out.no .od{ color:var(--pm-no); }
+.pb-out.sel.yes{ border-color:var(--pm-yes); background:rgba(74,123,255,.12); box-shadow:0 0 18px rgba(74,123,255,.18); }
+.pb-out.sel.no{ border-color:var(--pm-no); background:rgba(255,60,90,.10); box-shadow:0 0 18px rgba(255,60,90,.16); }
+.pb-out:active{ transform:scale(.97); }
+.pb-out .win{ position:absolute; top:-9px; right:-4px; font-size:16px; }
+
+/* 칩 베팅 */
+.pb-panel{ margin-top:14px; background:var(--pm-panel); border:1px solid var(--pm-line); border-radius:16px; padding:14px; }
+.pb-panel-h{ display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--pm-dim); font-weight:700; }
+.pb-panel-h b{ color:#d7deec; }
+.pb-chips{ display:flex; gap:8px; margin:12px 0 4px; }
+.pb-chip{ flex:1; position:relative; padding:11px 0 9px; border-radius:999px; cursor:pointer; text-align:center;
+  font-size:13px; font-weight:900; color:#e8d9a8;
+  background:radial-gradient(100% 100% at 50% 0%, #2c2410, #191408);
+  border:1.5px dashed #6e5a1e; transition:transform .1s ease; }
+.pb-chip:active{ transform:scale(.92) rotate(-4deg); }
+.pb-chip.allin{ color:#ffb3c1; border-color:#7e2837; background:radial-gradient(100% 100% at 50% 0%, #33121b, #1c0a0f); }
+.pb-custom{ display:flex; gap:8px; margin-top:10px; }
+.pb-custom input{ flex:1; background:#0d0f16; border:1px solid var(--pm-line); border-radius:11px; color:#fff;
+  font-size:15px; font-weight:800; padding:11px 13px; }
+.pb-custom input:focus{ outline:none; border-color:#3a4160; }
+.pb-est{ margin-top:10px; font-size:12.5px; color:var(--pm-dim); display:flex; justify-content:space-between; }
+.pb-est b{ color:var(--pm-gold); font-size:14px; }
+.pb-bet{ width:100%; margin-top:12px; padding:14px; border:none; border-radius:13px; cursor:pointer;
+  font-size:15.5px; font-weight:900; color:#1a1206;
+  background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); box-shadow:0 6px 18px rgba(255,157,46,.25); }
+.pb-bet:disabled{ opacity:.45; box-shadow:none; }
+.pb-bet:active{ transform:scale(.98); }
+.pb-bet.no-side{ background:#242838; color:#8a93a6; }
+
+/* 내 베팅 */
+.pb-mine{ margin-top:12px; padding:12px 14px; border-radius:14px; font-size:13px; font-weight:700;
+  background:rgba(255,207,63,.07); border:1px solid rgba(255,207,63,.25); color:#e8d9a8; }
+.pb-mine b{ color:var(--pm-gold); }
+
+/* 결과·정산 */
+.pb-resolved{ margin-top:12px; padding:16px; border-radius:16px; text-align:center;
+  background:radial-gradient(120% 100% at 50% 0%, #2b2208, #14100a); border:1px solid #4a380f; }
+.pb-resolved .t{ font-size:15px; font-weight:900; color:var(--pm-gold); }
+.pb-resolved .s{ font-size:12.5px; color:#c8b992; margin-top:4px; }
+.pb-win-banner{ margin-top:10px; font-size:22px; font-weight:900; color:var(--pm-gold);
+  text-shadow:0 0 18px rgba(255,207,63,.45); }
+.pb-admin{ margin-top:14px; padding:13px 14px; border-radius:14px; background:#151824; border:1px dashed #303650; }
+.pb-admin .h{ font-size:12px; color:var(--pm-dim); font-weight:800; margin-bottom:9px; }
+.pb-admin-btns{ display:flex; gap:8px; }
+.pb-admin-btn{ flex:1; padding:11px; border-radius:11px; border:1px solid var(--pm-line); background:#1b1f2c;
+  color:#dfe5f1; font-size:13.5px; font-weight:800; cursor:pointer; }
+.pb-admin-btn.yes{ border-color:rgba(74,123,255,.5); color:#a9c2ff; }
+.pb-admin-btn.no{ border-color:rgba(255,60,90,.5); color:#ffb3c1; }
+
+/* 라이브 베팅 피드 */
+.pb-live{ margin-top:16px; }
+.pb-live-h{ display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:900; color:#dfe5f1; margin-bottom:9px; }
+.pb-feed-row{ display:flex; align-items:center; gap:9px; padding:8px 2px; border-bottom:1px solid #171a24; font-size:12.5px; }
+.pb-feed-side{ flex:0 0 auto; font-weight:900; font-size:11.5px; padding:2px 9px; border-radius:999px; }
+.pb-feed-side.yes{ color:#a9c2ff; background:rgba(74,123,255,.14); }
+.pb-feed-side.no{ color:#ffb3c1; background:rgba(255,60,90,.12); }
+.pb-feed-txt{ flex:1; color:#aeb6c8; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pb-feed-txt b{ color:#e6ebf5; }
+.pb-feed-time{ flex:0 0 auto; color:#5c6479; font-size:11px; }
+@keyframes pbIn{ from{opacity:0; transform:translateY(-6px)} to{opacity:1; transform:none} }
+.pb-feed-row.new{ animation:pbIn .4s ease; }
+
+/* 액션바(저장·공유) + 탭 */
+.pb-actions{ display:flex; gap:14px; margin-top:12px; }
+.pb-act{ display:flex; align-items:center; gap:5px; background:none; border:none; color:var(--pm-dim);
+  font-size:12.5px; font-weight:700; cursor:pointer; padding:2px; }
+.pb-act svg{ width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.pb-act.on{ color:var(--pm-gold); } .pb-act.on svg{ fill:currentColor; }
+.pmd-tabs{ display:flex; gap:4px; margin-top:18px; border-bottom:1px solid var(--pm-line); }
+.pmd-tab{ background:none; border:none; padding:10px 13px; color:var(--pm-dim); font-size:13.5px; font-weight:800; cursor:pointer;
+  border-bottom:2px solid transparent; }
+.pmd-tab.active{ color:#fff; border-bottom-color:var(--pm-gold); }
+
+/* 정산 축하 오버레이 */
+.pb-cele{ position:fixed; inset:0; z-index:9000; display:flex; align-items:center; justify-content:center;
+  background:rgba(4,4,8,.82); backdrop-filter:blur(4px); }
+.pb-cele-card{ text-align:center; padding:34px 30px; border-radius:24px; max-width:320px;
+  background:radial-gradient(130% 110% at 50% 0%, #38290a, #16110a); border:1px solid #57420f;
+  box-shadow:0 20px 60px rgba(0,0,0,.6), 0 0 40px rgba(255,190,60,.15); animation:pbIn .5s ease; }
+.pb-cele-emo{ font-size:52px; }
+.pb-cele-t{ font-size:20px; font-weight:900; color:#fff; margin-top:10px; }
+.pb-cele-n{ font-size:34px; font-weight:900; color:var(--pm-gold); margin-top:6px; text-shadow:0 0 22px rgba(255,207,63,.5); }
+.pb-cele-sub{ font-size:12.5px; color:#c8b992; margin-top:8px; }
+.pb-cele-close{ margin-top:18px; padding:11px 30px; border:none; border-radius:999px; cursor:pointer;
+  font-size:14px; font-weight:900; color:#1a1206; background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); }
