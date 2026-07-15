@@ -44,6 +44,88 @@ async function loadMyStreak(){
   MY_STREAK = data?.current || 0;
 }
 
+/* ============ 놀이 안내 (어떻게 돌아가요?) ============ */
+const GUIDE_KEY='galla_predict_guide_seen';
+function renderGuide(){
+  const el=$('pmGuide'); if(!el) return;
+  const seen=localStorage.getItem(GUIDE_KEY)==='1';
+  el.innerHTML=`
+  <div class="pg ${seen?'':'open'}" id="pgBox">
+    <button class="pg-head" id="pgToggle">
+      <span class="pg-head-ic">🎡</span>
+      <span class="pg-head-t">갈라예측, 어떻게 돌아가요?</span>
+      <span class="pg-head-arrow">${seen?'▾':'▴'}</span>
+    </button>
+    <div class="pg-body">
+      <div class="pg-steps">
+
+        <div class="pg-step">
+          <div class="pg-art">
+            <span class="pg-art-main">🤔</span>
+            <span class="pg-art-side l">👍</span>
+            <span class="pg-art-side r">👎</span>
+          </div>
+          <div class="pg-n">1</div>
+          <div class="pg-t">한쪽을 고르고 GP를 건다</div>
+          <div class="pg-s">"이번 주 비 올까?" 예 또는 아니오에 칩을 놓으세요.
+            한 예측엔 <b>한 편만</b> 들 수 있어요. 최소 10GP.</div>
+        </div>
+        <div class="pg-arrow">▼</div>
+
+        <div class="pg-step">
+          <div class="pg-art">
+            <span class="pg-art-main">🍯</span>
+            <span class="pg-coin c1">🪙</span><span class="pg-coin c2">🪙</span><span class="pg-coin c3">🪙</span>
+          </div>
+          <div class="pg-n">2</div>
+          <div class="pg-t">모두의 GP가 한 항아리에 모인다</div>
+          <div class="pg-s">양쪽 베팅이 전부 <b>하나의 상금풀</b>이 돼요.
+            내 편에 사람이 적을수록 배당 <b>×N</b>이 커집니다 — 소수파의 짜릿함!
+            배당은 실시간으로 움직여요.</div>
+        </div>
+        <div class="pg-arrow">▼</div>
+
+        <div class="pg-step">
+          <div class="pg-art"><span class="pg-art-main">⏰</span><span class="pg-art-side r">🏁</span></div>
+          <div class="pg-n">3</div>
+          <div class="pg-t">마감 후, 실제 결과로 정산</div>
+          <div class="pg-s">시간이 끝나면 실제 세상의 결과를 확인해서 <b>정답을 확정</b>해요
+            (이게 '정산'!). 운영진 또는 예측을 만든 사람이 결과 버튼을 누릅니다.
+            정산되면 알림이 와요 🔔</div>
+        </div>
+        <div class="pg-arrow">▼</div>
+
+        <div class="pg-step win">
+          <div class="pg-art"><span class="pg-art-main">🏆</span><span class="pg-coin c1">💰</span><span class="pg-coin c3">✨</span></div>
+          <div class="pg-n">4</div>
+          <div class="pg-t">맞힌 사람들이 항아리를 나눠 갖는다</div>
+          <div class="pg-s">상금풀 <b>전체</b>를 적중자끼리 건 만큼 비율로 분배!
+            틀리면 건 GP는 안녕… 아무도 못 맞히면 <b>전액 환불</b>이라 안심.</div>
+        </div>
+
+      </div>
+      <div class="pg-bonus">
+        <div class="pg-bonus-row">🔥 <b>연승 콤보</b> — 연속으로 맞힐수록 보너스 배수! 2연승 ×1.2 … 10연승 ×2.5</div>
+        <div class="pg-bonus-row">🎰 <b>오늘의 잭팟</b> — 매일 한 예측에 갈라가 보너스 GP를 얹어드려요</div>
+        <div class="pg-bonus-row">🪙 <b>무료 코인</b> — 출석만 해도 베팅할 GP를 매일 드립니다. 현금 아님, 부담 제로!</div>
+      </div>
+      <div class="pg-ex">
+        예시) 상금풀 10,000GP · 예 8,000 vs 아니오 2,000<br>
+        → '아니오'에 1,000GP 걸고 적중하면 <b>내 몫 = 1,000/2,000 × 10,000 = 5,000GP</b> 🎉
+      </div>
+    </div>
+  </div>`;
+  $('pgToggle').onclick=()=>{
+    const box=$('pgBox');
+    const opening=!box.classList.contains('open');
+    box.classList.toggle('open',opening);
+    box.querySelector('.pg-head-arrow').textContent=opening?'▴':'▾';
+    localStorage.setItem(GUIDE_KEY,'1');
+    if(opening&&window.GALLA_FX){ const r=$('pgToggle').getBoundingClientRect(); window.GALLA_FX.burst(r.left+30,r.top+r.height/2,{emojis:['🎡','✨'],count:8,spread:46}); }
+  };
+  if(!seen) localStorage.setItem(GUIDE_KEY,'1');
+}
+
 /* ============ 몰입 배너 ============ */
 function renderCombo(){
   const el=$('pmCombo'); if(!el) return;
@@ -169,7 +251,7 @@ async function loadMarkets(){
     Object.values(OUT_BY_M).forEach(a=>a.sort((x,y)=>x.sort_order-y.sort_order));
   }
   await loadReactionsAndSaves(ids);
-  renderCombo(); renderDaily(); renderJackpot(); renderMarkets();
+  renderGuide(); renderCombo(); renderDaily(); renderJackpot(); renderMarkets();
 }
 
 let RX_AGG={}, MY_RX={}, MY_SAVED={};

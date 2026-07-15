@@ -243,3 +243,49 @@
   background:rgba(74,123,255,.1); border:1px solid rgba(74,123,255,.35);
   padding:7px 12px; border-radius:999px; }
 .pb-issue-link:active{ transform:scale(.97); }
+
+/* ===== 놀이 안내 가이드 (어떻게 돌아가요?) ===== */
+.pg{ margin:8px 0 12px; border-radius:16px; overflow:hidden;
+  background:linear-gradient(150deg,#151a2b,#101321); border:1px solid #262c44; }
+.pg-head{ display:flex; align-items:center; gap:10px; width:100%; padding:13px 15px;
+  background:none; border:none; cursor:pointer; text-align:left; }
+.pg-head-ic{ font-size:22px; }
+.pg-head-t{ flex:1; font-size:14px; font-weight:900; color:#dfe5f1; }
+.pg-head-arrow{ color:#6b7488; font-size:13px; }
+.pg-body{ max-height:0; overflow:hidden; transition:max-height .5s cubic-bezier(.2,.7,.2,1); }
+.pg.open .pg-body{ max-height:1600px; }
+.pg-steps{ padding:4px 15px 0; }
+
+.pg-step{ position:relative; border-radius:14px; padding:14px 14px 13px 15px; margin-bottom:2px;
+  background:#12141f; border:1px solid #232838; }
+.pg-step.win{ background:radial-gradient(130% 100% at 50% 0%, #2b2208, #14100a); border-color:#4a380f; }
+.pg-n{ position:absolute; top:-8px; left:-6px; width:24px; height:24px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); color:#1a1206;
+  font-size:12.5px; font-weight:900; box-shadow:0 3px 8px rgba(0,0,0,.4); }
+.pg-t{ font-size:14px; font-weight:900; color:#fff; margin-top:2px; }
+.pg-s{ font-size:12.5px; color:#9aa3b8; line-height:1.6; margin-top:5px; }
+.pg-s b{ color:#e8d9a8; }
+.pg-step.win .pg-s b{ color:var(--pm-gold); }
+.pg-arrow{ text-align:center; color:#3d4560; font-size:13px; padding:5px 0; }
+
+/* 이모지 그림: 메인 장면 + 양옆 진영/떠다니는 코인 */
+.pg-art{ position:relative; float:right; width:64px; height:52px; margin:-2px -2px 4px 10px; }
+.pg-art-main{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); font-size:32px;
+  filter:drop-shadow(0 3px 8px rgba(0,0,0,.4)); }
+.pg-art-side{ position:absolute; top:0; font-size:16px; }
+.pg-art-side.l{ left:0; } .pg-art-side.r{ right:0; }
+.pg-coin{ position:absolute; font-size:13px; animation:pgCoin 2.2s ease-in-out infinite; }
+.pg-coin.c1{ left:2px; top:2px; }
+.pg-coin.c2{ right:2px; top:6px; animation-delay:.5s; }
+.pg-coin.c3{ left:22px; top:-6px; animation-delay:1.1s; }
+@keyframes pgCoin{ 0%,100%{ transform:translateY(0); opacity:.9 } 50%{ transform:translateY(-6px); opacity:1 } }
+
+.pg-bonus{ margin:10px 15px 0; padding:11px 13px; border-radius:12px;
+  background:rgba(255,207,63,.06); border:1px dashed rgba(255,207,63,.3); }
+.pg-bonus-row{ font-size:12.5px; color:#c8b992; line-height:1.7; }
+.pg-bonus-row b{ color:var(--pm-gold); }
+.pg-ex{ margin:10px 15px 15px; padding:11px 13px; border-radius:12px; font-size:12px; line-height:1.7;
+  color:#8fa1c4; background:rgba(74,123,255,.07); border:1px solid rgba(74,123,255,.22); }
+.pg-ex b{ color:#a9c2ff; }
+@media (prefers-reduced-motion: reduce){ .pg-coin{ animation:none; } .pg-body{ transition:none; } }
