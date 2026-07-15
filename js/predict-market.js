@@ -60,10 +60,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   setInterval(async ()=>{ if(MARKET && !MARKET.resolved && !document.hidden){ await refreshState(); renderHero(); loadFeed(); } }, 30000);
 });
 
+let MY_PAID=0;
 async function refreshBalance(){
   if(!ME) return;
-  const {data}=await supa.rpc('ensure_balance');
-  if(data!=null) MY_BAL=data;
+  // 예측은 무료 GP만 사용 가능(유료 충전 GP는 아이템·꾸미기 등 소각형 전용)
+  const {data}=await supa.rpc('gp_wallet');
+  if(data?.ok){ MY_BAL=data.free; MY_PAID=data.paid; }
 }
 
 async function loadMarket(){
@@ -236,7 +238,7 @@ function renderPanel(closed){
   el.innerHTML=`
     <div class="pb-outs">${outBtns}</div>
     <div class="pb-panel">
-      <div class="pb-panel-h"><span>참여 금액</span><span>보유 <b id="pbBal">${ME?fmt(MY_BAL)+'GP':'로그인 필요'}</b></span></div>
+      <div class="pb-panel-h"><span>참여 금액</span><span>참여 가능 <b id="pbBal">${ME?fmt(MY_BAL)+'GP':'로그인 필요'}</b>${ME&&MY_PAID>0?` <small style="color:#5c6479">(충전 GP ${fmt(MY_PAID)} 별도)</small>`:''}</span></div>
       <div class="pb-chips">
         <button class="pb-chip" data-amt="100">100</button>
         <button class="pb-chip" data-amt="500">500</button>
@@ -282,14 +284,19 @@ async function placeBet(){
   if(!SEL) return toast('결과를 선택하세요.');
   if(amt<10) return toast('최소 10GP부터 참여할 수 있어요.');
   if(amt>MY_BAL){
-    if(window.GALLA_needGP) return window.GALLA_needGP(amt-MY_BAL,'예측 참여');
-    return toast('GP가 부족합니다.');
+    // 예측은 무료 GP 전용 — 충전 유도(needGP)는 오도라 금지. 무료 획득 경로 안내.
+    return toast('무료 GP가 부족해요. 출석·데일리 미션으로 GP를 모아 참여하세요! 🪙');
   }
   const btn=$('pbBet'); btn.disabled=true; btn.textContent='참여 중…';
   try{
     const { data, error } = await supa.rpc('place_bet',{p_market_id:marketId,p_outcome_id:SEL,p_stake:amt});
     if(error) throw error;
     if(!data.ok){
+      if(data.reason==='insufficient' && Number(data.paid)>0){
+        // 유료 충전 GP는 게임 투입 불가 — 정책 안내
+        toast('충전 GP는 예측에 쓸 수 없어요. 무료 GP(출석·미션 보상)가 부족합니다.');
+        return;
+      }
       const msg={closed:'마감된 예측입니다.',insufficient:'GP가 부족합니다.',other_side:'이미 다른 결과에 참여했어요. 한 예측엔 한 편만!',below_min:'최소 참여 금액 미만입니다.',above_max:'최대 참여 한도를 넘었어요.'}[data.reason]||'참여에 실패했습니다.';
       toast(msg); return;
     }

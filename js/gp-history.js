@@ -78,8 +78,17 @@ async function loadGc(){
 }
 
 async function loadBalance(){
-  const { data } = await supa.rpc('ensure_balance');
-  if(data!=null) $('ghBalance').innerHTML = `${fmt(data)}<small> GP</small>`;
+  const { data } = await supa.rpc('gp_wallet');
+  if(data?.ok){
+    $('ghBalance').innerHTML = `${fmt(data.total)}<small> GP</small>`;
+    // 유료 충전 GP는 게임(예측·일기토) 사용 불가 — 보유 시에만 구분 표시
+    if(data.paid > 0){
+      const el=document.createElement('div');
+      el.className='gh-hero-sub';
+      el.innerHTML=`무료(게임 가능) <b>${fmt(data.free)}</b> · 충전(아이템·꾸미기 전용) <b>${fmt(data.paid)}</b>`;
+      $('ghBalance').after(el);
+    }
+  }
 }
 
 /* ============ 예측 내역 ============ */
