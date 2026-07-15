@@ -838,6 +838,12 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
   font-size: 13px; font-weight: 800; color: #fff;
   background: linear-gradient(135deg, #4a7bff, #6d4bff);
 }
+/* 프로필 사진 아바타 — 투명 이미지여도 원형 틀이 보이게 배경·테두리 */
+img.gnc-av {
+  object-fit: cover;
+  background: #171923;
+  border: 1px solid rgba(255, 255, 255, .1);
+}
 .gnc-main { flex: 1; min-width: 0; }
 .gnc-head { display: flex; align-items: center; gap: 8px; }
 .gnc-name { font-size: 13px; font-weight: 800; color: #eef1f7; }

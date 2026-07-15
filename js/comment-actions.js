@@ -63,6 +63,9 @@
     `;
     document.head.appendChild(s);
   }
+  // ⋯ 버튼(.cmt-mini)이 시트를 열기 전까지 기본 브라우저 버튼(테두리 박스)으로
+  // 보이던 문제 — 스타일을 로드 즉시 주입한다
+  if (document.head) css(); else document.addEventListener("DOMContentLoaded", css);
 
   window.GALLA_cmtEdit = function ({ table, id, bodyCol = "content", current = "", onSaved }) {
     css();
