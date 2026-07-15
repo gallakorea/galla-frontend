@@ -151,22 +151,30 @@ body {
 /* ===== 🎮 메뉴 타일 ===== */
 .tile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .menu-tile {
+    /* 타일별 액센트 색은 --tc 로 주입, 없으면 중립 회청 */
+    --tc: 150, 160, 180;
     display: flex; flex-direction: column; gap: 3px;
     padding: 16px 15px; border-radius: 16px; cursor: pointer;
-    border: 1px solid rgba(255,255,255,.09);
-    transition: transform .12s ease;
+    min-height: 92px;
+    background: linear-gradient(150deg, rgba(var(--tc), .15), rgba(var(--tc), .03)), #0e0e12;
+    border: 1px solid rgba(var(--tc), .32);
+    transition: transform .12s ease, border-color .18s ease, box-shadow .18s ease;
 }
+.menu-tile:hover { border-color: rgba(var(--tc), .55); box-shadow: 0 6px 20px rgba(var(--tc), .12); }
 .menu-tile:active { transform: scale(.97); }
-.menu-tile.grade {
-    background: linear-gradient(150deg, rgba(201,209,224,.16), rgba(139,147,163,.05)), #0e0e12;
-    border-color: rgba(201,209,224,.35);
-}
-.menu-tile.quest {
-    background: linear-gradient(150deg, rgba(61,107,255,.16), rgba(61,107,255,.04)), #0e0e12;
-    border-color: rgba(61,107,255,.35);
-}
-.tile-ic { font-size: 24px; }
-.tile-name { font-size: 14px; font-weight: 900; margin-top: 4px; }
+
+/* 타일별 정체성 컬러 */
+.menu-tile.wallet { --tc: 255, 207, 63; }   /* 골드 — 지갑 */
+.menu-tile.grade  { --tc: 201, 209, 224; }   /* 실버 — 등급 */
+.menu-tile.season { --tc: 255, 168, 60; }    /* 앰버 — 시즌 */
+.menu-tile.quest  { --tc: 61, 107, 255; }    /* 블루 — 미션 */
+.menu-tile.shop   { --tc: 56, 210, 122; }    /* 그린 — 상점 */
+.menu-tile.duel   { --tc: 255, 77, 103; }    /* 레드 — 일기토 */
+.menu-tile.titles { --tc: 155, 91, 255; }    /* 퍼플 — 꾸미기 */
+.menu-tile.gacha  { --tc: 255, 122, 182; }   /* 핑크 — 뽑기 */
+
+.tile-ic { font-size: 24px; line-height: 1; height: 28px; display: flex; align-items: center; }
+.tile-name { font-size: 14px; font-weight: 900; margin-top: 4px; color: #fff; }
 .tile-sub { font-size: 11px; color: #8b8b93; font-weight: 700; }
 
 /* ===== 리스트 ===== */
