@@ -81,11 +81,17 @@ function pickLink(block: string): string {
   if (m) { const u = decEnt(m[1]); if (/^https?:/.test(u)) return u; }
   return "";
 }
+// URL 안의 HTML 엔티티 디코드. 특히 &amp; → & : 조선일보 리사이저는 쿼리 파라미터가
+// 정확해야 해서 &amp;가 남으면 auth/width가 깨져 이미지가 403으로 안 뜬다.
+const decUrl = (u: string | null) => u
+  ? u.replace(/&amp;/g, "&").replace(/&#38;/g, "&").replace(/&quot;/g, '"').trim()
+  : u;
+
 function pickImg(block: string): string | null {
   let m = block.match(/<(?:media:thumbnail|media:content|enclosure)[^>]*\burl="([^"]+)"/i);
-  if (m) return m[1];
+  if (m) return decUrl(m[1]);
   m = block.match(/<img[^>]*\bsrc="([^"]+)"/i);
-  return m ? m[1] : null;
+  return m ? decUrl(m[1]) : null;
 }
 
 const diag: Record<string, string> = {};
