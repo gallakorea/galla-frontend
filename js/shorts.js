@@ -101,8 +101,9 @@ function __openShortsInternal(list, startId, startTime) {
     }));
   if (!shortsList.length) return;
 
-  // 릴스 진입 시 소리는 항상 기본 ON (사용자가 세션 중 음소거하면 그때부터 유지)
-  window.__REELS_MUTED__ = false;
+  // 릴스 진입 = 몰입 뷰 → 소리 ON (전역 통일). 여기서 음소거하면 인덱스로도 이어진다.
+  if (window.GALLA_enterImmersive) window.GALLA_enterImmersive();
+  else window.__REELS_MUTED__ = false;
 
   overlay = document.getElementById("shortsOverlay");
   if (!overlay) {

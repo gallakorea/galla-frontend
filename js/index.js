@@ -170,7 +170,7 @@ function renderMedia(data) {
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
-                    onclick="event.stopPropagation();toggleFeedMute('vid-${data.id}','mute-${data.id}')">🔇</button>
+                    onclick="event.stopPropagation();toggleFeedMute('vid-${data.id}','mute-${data.id}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
             <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
     }

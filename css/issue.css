@@ -199,19 +199,29 @@ body {
     padding: 2px 7px;
     border-radius: 5px;
 }
-.issue-vid-mute {
+.issue-vid-mute,
+.issue-media--video .vid-mute {
     position: absolute;
     bottom: 10px;
     left: 10px;
     background: rgba(0,0,0,0.55);
     border: none;
     color: #fff;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 5px;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     cursor: pointer;
     z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    transition: transform .12s ease;
 }
+.issue-media--video .vid-mute:active { transform: scale(.88); }
+.issue-media--video .vid-mute svg { width: 17px; height: 17px; display: block; }
 
 /* 캐러셀 */
 .issue-carousel {

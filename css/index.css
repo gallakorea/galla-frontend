@@ -163,12 +163,21 @@ body { display: block; }
     background: rgba(0,0,0,0.55);
     border: none;
     color: #fff;
-    font-size: 11px;
-    padding: 3px 8px;
-    border-radius: 5px;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     cursor: pointer;
     z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    transition: transform .12s ease;
 }
+.vid-mute:active { transform: scale(.88); }
+.vid-mute svg { width: 17px; height: 17px; display: block; }
 
 /* 캐러셀 */
 .carousel-wrap {

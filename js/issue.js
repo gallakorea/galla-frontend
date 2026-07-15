@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=071910";
-import { loadAiNews } from "./issue-news.js?v=071910";
-import { loadStats } from "./issue.stats.js?v=071910";
-import { initCommentSystem } from "./issue.comments.js?v=071910";
+import { loadAiArguments } from "./issue-argument.js?v=071911";
+import { loadAiNews } from "./issue-news.js?v=071911";
+import { loadStats } from "./issue.stats.js?v=071911";
+import { initCommentSystem } from "./issue.comments.js?v=071911";
 
 
 console.log("[issue.js] loaded");
@@ -244,12 +244,14 @@ function renderIssueMedia(issue) {
                    loop playsinline webkit-playsinline muted preload="none"></video>
             <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
             <button class="vid-mute" id="issue-vid-mute"
-                    onclick="event.stopPropagation();var _v=document.getElementById('issue-vid');window.GALLA_setSound(_v?_v.muted:!window.GALLA_soundOn())">🔇</button>
+                    onclick="event.stopPropagation();var _v=document.getElementById('issue-vid');window.GALLA_setSound(_v?_v.muted:!window.GALLA_soundOn())">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
             <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
         </div>`;
 
         const vid = document.getElementById('issue-vid');
         if (vid) {
+            // 이슈 진입 = 몰입 뷰 → 소리 ON (인스타 로직, 전역 통일). 음소거는 버튼/전역으로.
+            if (window.GALLA_enterImmersive) window.GALLA_enterImmersive();
             // HLS(.m3u8) 부착 — iOS 네이티브 / 그 외 hls.js
             if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
             else vid.src = vid.dataset.src;
@@ -269,8 +271,8 @@ function renderIssueMedia(issue) {
             const observer = new IntersectionObserver(entries => {
                 entries.forEach(e => {
                     if (e.isIntersecting && e.intersectionRatio > 0.5) {
-                        // 전역 사운드 선호 + 제스처 시 소리 재생 (인덱스·릴스와 통일)
-                        const wantSound = window.GALLA_soundOn && window.GALLA_soundOn() && window.GALLA_gestured;
+                        // 전역 사운드 선호면 바로 소리 재생 시도(실패 시 음소거 폴백 → 첫 제스처에 켜짐)
+                        const wantSound = window.GALLA_soundOn && window.GALLA_soundOn();
                         vid.muted = !wantSound;
                         vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
                         window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns();
@@ -373,10 +375,9 @@ window.issueTogglePlay = function() {
 
 window.issueToggleMute = function() {
     const v = document.getElementById('issue-vid');
-    const btn = document.getElementById('issue-vid-mute');
     if (!v) return;
-    v.muted = !v.muted;
-    if (btn) btn.textContent = v.muted ? '🔇' : '🔊';
+    // 전역 선호를 뒤집어 인덱스·릴스와 통일(현재 재생 영상의 실제 음소거 기준)
+    window.GALLA_setSound(v.muted);
 };
 
 /* 이슈 인라인 영상 탭 → 전체화면 릴스 모드 */
