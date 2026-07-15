@@ -61,11 +61,15 @@ Deno.serve(async (req) => {
     const closeAt = new Date(Date.now() + days * 86400e3);
     // 마감 시각을 그 날 21:00 KST(=12:00 UTC)로 정렬
     closeAt.setUTCHours(12, 0, 0, 0);
+    // 매일 첫 마켓은 '오늘의 잭팟' — 플랫폼 보너스 5000GP 주입으로 몰입 유도
+    const isJackpot = created === 0;
     const { data, error } = await sb.rpc("admin_create_market", {
       p_question: q.slice(0, 120),
       p_description: (m?.description ? String(m.description) : "").slice(0, 400) || null,
       p_category: cat,
       p_close_at: closeAt.toISOString(),
+      p_is_jackpot: isJackpot,
+      p_jackpot: isJackpot ? 5000 : 0,
     });
     if (!error && data) { created++; made.push(q); }
   }

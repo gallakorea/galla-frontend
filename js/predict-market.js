@@ -320,9 +320,16 @@ function celebrate(payout){
     <div class="pb-cele-t">예측 적중!</div>
     <div class="pb-cele-n">+${fmt(payout)} GP</div>
     <div class="pb-cele-sub">승자의 몫이 지갑에 지급되었습니다</div>
+    <button class="pb-cele-share">🎺 자랑하기</button>
     <button class="pb-cele-close">확인</button>
   </div>`;
   document.body.appendChild(d);
+  // 결과 공유 카드 — /share/predict OG 랜딩으로 자랑
+  d.querySelector('.pb-cele-share').onclick=()=>{
+    const url=window.GALLA_shareUrl?window.GALLA_shareUrl('predict',marketId):new URL(`predict-market.html?id=${marketId}`,location.href).href;
+    const title=`🏆 예측 적중! +${fmt(payout)}GP — ${MARKET?.question||''}`;
+    if(window.GALLA_share) window.GALLA_share({url,title,text:'나의 예측이 적중했다! 갈라예측에서 겨뤄보자 🎯'});
+  };
   d.querySelector('.pb-cele-close').onclick=()=>d.remove();
   d.onclick=e=>{ if(e.target===d) d.remove(); };
 }

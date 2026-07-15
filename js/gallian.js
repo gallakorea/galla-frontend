@@ -31,7 +31,7 @@
     ] = await Promise.all([
       cnt("issues"), cnt("comments"), cnt("votes"),
       cnt("plaza_posts"), cnt("plaza_comments"),
-      cnt("comment_actions"), cnt("market_trades"),
+      cnt("comment_actions"), cnt("predict_bets"),   // 파리뮤추얼 전환: market_trades → predict_bets
       supabase.from("point_balances").select("balance").eq("user_id", userId).maybeSingle(),
     ]);
 
