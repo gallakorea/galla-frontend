@@ -448,3 +448,43 @@
 .wl-policy ul{ margin:0; padding-left:16px; }
 .wl-policy li{ font-size:11.5px; color:#8a93a6; line-height:1.8; }
 .wl-policy b{ color:#b9c2d4; }
+
+/* 지갑 고도화: 카드 내 최근 내역 미리보기 */
+.wl-mini{ margin:2px 0 12px; padding:10px 12px; border-radius:12px;
+  background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.06); }
+.wl-mini-h{ font-size:10.5px; font-weight:900; color:#6b7488; margin-bottom:6px; letter-spacing:.03em; }
+.wl-mini-row{ display:flex; justify-content:space-between; align-items:center;
+  font-size:12px; color:#aeb6c8; padding:4px 0; }
+.wl-mini-r{ display:flex; align-items:center; gap:8px; }
+.wl-mini-r b.up{ color:#38d27a; } .wl-mini-r b.down{ color:#ff7a90; }
+.wl-mini-r small{ color:#5c6479; font-size:10.5px; }
+
+/* 결제 대기 배지 */
+.wl-pend{ display:inline-flex; align-items:center; margin-left:2px;
+  font-size:10.5px; font-weight:900; color:#ffb03c; background:rgba(255,176,60,.1);
+  border:1px solid rgba(255,176,60,.35); border-radius:999px; padding:4px 9px; }
+
+/* GC 충전 바텀시트 */
+.wl-dim{ position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,.6);
+  opacity:0; pointer-events:none; transition:opacity .25s ease; }
+.wl-dim.open{ opacity:1; pointer-events:auto; }
+.wl-sheet{ position:fixed; left:0; right:0; bottom:0; z-index:9999; max-width:480px; margin:0 auto;
+  background:#15161b; border-radius:20px 20px 0 0; padding:10px 18px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(100%); transition:transform .3s cubic-bezier(.2,.7,.2,1); }
+.wl-sheet.open{ transform:translateY(0); }
+.wl-grip{ width:38px; height:4px; border-radius:999px; background:#33363f; margin:6px auto 12px; }
+.wl-sheet-t{ font-size:16px; font-weight:900; color:#fff; }
+.wl-sheet-s{ font-size:11.5px; color:#8a93a6; margin:4px 0 14px; }
+.wl-loading{ color:#8a93a6; font-size:13px; text-align:center; padding:20px 0; }
+.wl-pkgs{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.wl-pkg{ padding:13px 6px; border-radius:13px; cursor:pointer; text-align:center;
+  background:#1c1d24; border:1.5px solid #2a2e3c; transition:transform .12s ease; }
+.wl-pkg:active{ transform:scale(.95); }
+.wl-pkg-k{ display:block; font-size:13.5px; font-weight:900; color:#eef1f7; }
+.wl-pkg-g{ display:block; margin-top:4px; font-size:11.5px; font-weight:800; color:#ff7a9c; }
+.wl-sheet-note{ font-size:10.5px; color:#6c7280; text-align:center; margin-top:14px; line-height:1.6; }
+.wl-sheet-done{ text-align:center; padding:18px 0 14px; }
+.wl-sheet-done .ic{ font-size:42px; }
+.wl-sheet-done h4{ font-size:16px; font-weight:900; color:#fff; margin:10px 0 8px; }
+.wl-sheet-done p{ font-size:12.5px; color:#9aa3b8; line-height:1.7; margin:0 0 14px; }
+.wl-sheet-done b{ color:#ff7a9c; }
