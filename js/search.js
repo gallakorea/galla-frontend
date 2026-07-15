@@ -568,10 +568,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         return withMarketTops(data || []);
       })(),
     ]);
+    console.log("[discover]", { gi: (giRes.data || []).length, giErr: giRes.error?.message, pz: (pzRes.data || []).length, pzErr: pzRes.error?.message, mk: markets.length });
     const html =
       shelf(SEC.issue, "지금 뜨는 이슈", issueCards(giRes.data || []))
       + shelf(SEC.predict, "인기 갈라예측", marketCards(markets))
       + shelf(SEC.plaza, "화제의 광장", plazaCards(pzRes.data || []));
+    console.log("[discover] htmlLen", html.length);
     wrap.innerHTML = html;
   }
 
