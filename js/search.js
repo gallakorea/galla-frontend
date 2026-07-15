@@ -591,12 +591,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       </a>`;
     });
 
+    // 광장은 썸네일 없는 글이 많다 → 제목 중심 텍스트 카드.
+    //   썸네일 있으면 어둡게 깐 배경으로, 없으면 카테고리 색 그라디언트.
+    const hue = (str) => { let h = 0; for (const c of String(str || "x")) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
     const plazaItems = plaza.map((p, i) => {
       const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
-      return `<a class="tt-card" href="plaza_detail.html?id=${p.id}">
-        ${ttThumb(th, rankBadge(i))}
+      const h = hue(p.category || p.title);
+      const bg = th
+        ? `background-image:linear-gradient(180deg,rgba(10,10,14,.2),rgba(10,10,14,.85)),url('${esc(th)}');background-size:cover;background-position:center;`
+        : `background:linear-gradient(140deg,hsl(${h} 58% 24%),hsl(${(h + 40) % 360} 54% 14%));`;
+      return `<a class="tt-card tt-talk" href="plaza_detail.html?id=${p.id}">
+        <span class="tt-talk-body" style="${bg}">
+          ${rankBadge(i)}
+          <span class="tt-quote">❝</span>
+          <span class="tt-talk-title">${esc(p.title || "")}</span>
+        </span>
         <span class="tt-tag">${esc(p.category || "")} · 갈라 광장</span>
-        <span class="tt-title">${esc(p.title || "")}</span>
         <span class="tt-meta"><span>▲ ${p.up_count || 0}</span><span>▼ ${p.down_count || 0}</span></span>
       </a>`;
     });
