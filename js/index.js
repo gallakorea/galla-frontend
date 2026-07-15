@@ -839,12 +839,18 @@ async function loadData() {
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
     window.cards = cards;
 
-    // 예측 마켓 + 광장 글을 이슈와 교차 배열 (이슈2 · 예측1 · 광장1 리듬)
-    const [predictionCards, plazaCards] = await Promise.all([
+    // 예측·광장·갈라뉴스·핫트렌드 영상·일기토를 이슈와 교차 배열
+    const [predictionCards, plazaCards, newsCards, videoCards, duelCards] = await Promise.all([
         loadPredictionCards(),
-        loadPlazaCards()
+        loadPlazaCards(),
+        loadNewsCards(),
+        loadVideoCards(),
+        loadDuelCards()
     ]);
-    feed = interleave(cards, predictionCards, plazaCards);
+    feed = interleave(cards, {
+        predict: predictionCards, plaza: plazaCards,
+        news: newsCards, video: videoCards, duel: duelCards
+    });
     window.feed = feed;
     viewFeed = feed;
 
@@ -865,17 +871,27 @@ window.GALLA_filterFeed = function (cat, el) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// 이슈 2개마다 예측 1개, 3개마다 광장 1개를 끼워 배치
-function interleave(issues, predicts, plazas = []) {
+// 이슈 사이사이에 타 콘텐츠를 라운드로빈으로 끼워 배치
+// (일기토 라이브는 최상단 근처, 이후 뉴스→예측→영상→광장 순환)
+function interleave(issues, ex = {}) {
+    const queue = [];
+    (ex.duel || []).forEach(d => queue.push({ type: 'duel', data: d }));
+    const order = ['news', 'predict', 'video', 'plaza'];
+    const idx = { news: 0, predict: 0, video: 0, plaza: 0 };
+    let added = true;
+    while (added) {
+        added = false;
+        for (const t of order) {
+            const arr = ex[t] || [];
+            if (idx[t] < arr.length) { queue.push({ type: t, data: arr[idx[t]++] }); added = true; }
+        }
+    }
     const out = [];
-    let pi = 0, zi = 0;
-    issues.forEach((c, i) => {
+    issues.forEach(c => {
         out.push({ type: 'issue', data: c });
-        if ((i + 1) % 2 === 0 && predicts[pi]) out.push({ type: 'predict', data: predicts[pi++] });
-        if ((i + 1) % 3 === 0 && plazas[zi]) out.push({ type: 'plaza', data: plazas[zi++] });
+        if (queue.length) out.push(queue.shift());
     });
-    while (pi < predicts.length) out.push({ type: 'predict', data: predicts[pi++] });
-    while (zi < plazas.length) out.push({ type: 'plaza', data: plazas[zi++] });
+    while (queue.length) out.push(queue.shift());
     return out;
 }
 
@@ -937,6 +953,134 @@ function renderPlazaCard(p) {
         <span>👁 ${p.view_count || 0}</span>
         <span class="pz-go">글 보기 ›</span>
       </div>
+    </div>`;
+}
+
+/* ── 갈라뉴스 카드 ── */
+async function loadNewsCards() {
+    const supabase = window.supabaseClient;
+    const { data: rows } = await supabase
+        .from('galla_news')
+        .select('id, title, summary, category, hero_image, source_count, view_count, published_at')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+        .limit(30);
+    if (!rows || !rows.length) return [];
+    const now = Date.now();
+    return rows.map(n => {
+        const ageH = (now - new Date(n.published_at)) / 3600000;
+        const fresh = ageH < 6 ? 60 : ageH < 24 ? 30 : 0;
+        return { ...n, _score: (n.view_count || 0) * 0.5 + (n.source_count || 0) * 4 + fresh + Math.random() * 10 };
+    }).sort((a, b) => b._score - a._score).slice(0, 8);
+}
+
+function renderNewsCard(n) {
+    const hero = plazaProxify(n.hero_image || '');
+    const sum = (n.summary || '').slice(0, 90);
+    return `
+    <div class="card news-feed-card" onclick="location.href='news.html?gn=${n.id}'">
+      ${hero ? `<div class="nf-hero"><img src="${escHtml(hero)}" loading="lazy" alt="" onerror="this.closest('.nf-hero')?.remove()"></div>` : ''}
+      <div class="nf-body">
+        <div class="nf-head">
+          <span class="nf-badge">📰 갈라뉴스</span>
+          <span class="nf-cat">${escHtml(n.category || '')}</span>
+          ${n.source_count ? `<span class="nf-src">출처 ${n.source_count}곳 종합</span>` : ''}
+        </div>
+        <div class="nf-title">${escHtml(n.title)}</div>
+        ${sum ? `<div class="nf-sum">${escHtml(sum)}</div>` : ''}
+        <div class="nf-foot"><span>👁 ${(n.view_count || 0).toLocaleString('ko-KR')}</span><span class="nf-go">기사 보기 ›</span></div>
+      </div>
+    </div>`;
+}
+
+/* ── 핫트렌드 영상 카드 ── */
+function fmtViews(v) {
+    v = Number(v) || 0;
+    if (v >= 100000000) return (v / 100000000).toFixed(1).replace(/\.0$/, '') + '억';
+    if (v >= 10000) return (v / 10000).toFixed(1).replace(/\.0$/, '') + '만';
+    return v.toLocaleString('ko-KR');
+}
+async function loadVideoCards() {
+    const supabase = window.supabaseClient;
+    const { data: rows } = await supabase
+        .from('youtube_hot')
+        .select('video_id, title, channel_title, thumbnail, view_count, rank, is_short, collected_at')
+        .order('collected_at', { ascending: false })
+        .limit(80);
+    if (!rows || !rows.length) return [];
+    // 최신 수집분만 + video_id 중복 제거 후 랭크순
+    const latest = rows[0].collected_at;
+    const seen = new Set();
+    return rows
+        .filter(v => v.collected_at === latest && !seen.has(v.video_id) && seen.add(v.video_id))
+        .sort((a, b) => (a.rank || 99) - (b.rank || 99))
+        .slice(0, 6);
+}
+
+function renderVideoCard(v) {
+    return `
+    <div class="card video-feed-card" onclick="location.href='search.html?video=${encodeURIComponent(v.video_id)}'">
+      <div class="vf-thumb">
+        <img src="${escHtml(v.thumbnail || '')}" loading="lazy" alt="" onerror="this.style.display='none'">
+        <span class="vf-play">▶</span>
+        ${v.rank ? `<span class="vf-rank">${v.rank}위</span>` : ''}
+        ${v.is_short ? `<span class="vf-short">쇼츠</span>` : ''}
+      </div>
+      <div class="vf-body">
+        <div class="nf-head"><span class="vf-badge">🔥 핫트렌드</span></div>
+        <div class="vf-title">${escHtml(v.title)}</div>
+        <div class="vf-sub">${escHtml(v.channel_title || '')} · 조회수 ${fmtViews(v.view_count)}회</div>
+      </div>
+    </div>`;
+}
+
+/* ── 일기토(듀얼) 카드 — 라이브/투표중 우선, 없으면 최근 종전 ── */
+async function loadDuelCards() {
+    const supabase = window.supabaseClient;
+    let { data: rows } = await supabase
+        .from('duels')
+        .select('id, topic, status, challenger, opponent, vote_challenger, vote_opponent, winner, created_at')
+        .in('status', ['live', 'voting'])
+        .order('created_at', { ascending: false })
+        .limit(3);
+    if (!rows || !rows.length) {
+        const since = new Date(Date.now() - 7 * 86400000).toISOString();
+        const { data: done } = await supabase
+            .from('duels')
+            .select('id, topic, status, challenger, opponent, vote_challenger, vote_opponent, winner, created_at')
+            .eq('status', 'closed').gt('created_at', since)
+            .order('created_at', { ascending: false })
+            .limit(2);
+        rows = done || [];
+    }
+    if (!rows.length) return [];
+    const uids = [...new Set(rows.flatMap(d => [d.challenger, d.opponent]).filter(Boolean))];
+    const { data: us } = await supabase.from('users').select('id, nickname').in('id', uids);
+    const nick = {}; us?.forEach(u => nick[u.id] = u.nickname);
+    return rows.map(d => ({
+        ...d,
+        chalName: nick[d.challenger] || '도전자',
+        oppName: nick[d.opponent] || '상대'
+    }));
+}
+
+function renderDuelCard(d) {
+    const live = d.status === 'live';
+    const voting = d.status === 'voting';
+    const state = live ? '<span class="df-live">🔴 LIVE</span>'
+        : voting ? '<span class="df-voting">🗳 투표 중</span>'
+        : `<span class="df-done">종전 · ${d.winner === d.challenger ? escHtml(d.chalName) : d.winner === d.opponent ? escHtml(d.oppName) : '무승부'} 승</span>`;
+    const cta = live ? '관전하러 가기 ›' : voting ? '투표하러 가기 ›' : '결과 보기 ›';
+    return `
+    <div class="card duel-feed-card${live ? ' live' : ''}" onclick="location.href='duel.html?id=${d.id}'">
+      <div class="nf-head"><span class="df-badge">⚔️ 일기토</span>${state}</div>
+      <div class="df-topic">${escHtml(d.topic || '자유 일기토')}</div>
+      <div class="df-vs">
+        <span class="df-name">${escHtml(d.chalName)}</span>
+        <span class="df-vsmark">VS</span>
+        <span class="df-name">${escHtml(d.oppName)}</span>
+      </div>
+      <div class="nf-foot"><span>🗳 ${(d.vote_challenger || 0) + (d.vote_opponent || 0)}표</span><span class="nf-go">${cta}</span></div>
     </div>`;
 }
 
@@ -1039,6 +1183,9 @@ function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 function renderFeedItem(item){
     if (item.type === 'predict') return renderPredictCard(item.data);
     if (item.type === 'plaza') return renderPlazaCard(item.data);
+    if (item.type === 'news') return renderNewsCard(item.data);
+    if (item.type === 'video') return renderVideoCard(item.data);
+    if (item.type === 'duel') return renderDuelCard(item.data);
     return renderCard(item.data);
 }
 
