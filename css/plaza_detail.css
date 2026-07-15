@@ -9,10 +9,7 @@ body {
 #app {
   max-width:480px;
   margin:0 auto;
-  /* 하단 네비(fixed)는 14px + safe-area + 높이 만큼 화면을 덮는다.
-     124px로는 노치 기기에서 '댓글 등록' 버튼이 네비에 가려 눌리지 않았다.
-     스크롤 끝에서 입력·버튼이 네비 위로 확실히 뜨도록 넉넉히 확보. */
-  padding-bottom:calc(190px + env(safe-area-inset-bottom));
+  padding-bottom:calc(124px + env(safe-area-inset-bottom));
 }
 
 /* GUIDE */
@@ -195,7 +192,9 @@ body {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 56px; /* 하단 네비 높이 */
+  /* 하단 네비(fixed: bottom 14px + safe-area, 높이 ~48px)보다 위에 떠야 한다.
+     56px 하드코딩은 safe-area를 무시해 노치 기기에서 '댓글 등록'이 네비 뒤로 겹쳤다. */
+  bottom: calc(78px + env(safe-area-inset-bottom));
   max-width: 480px;
   margin: 0 auto;
   padding: 12px;
