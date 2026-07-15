@@ -64,20 +64,37 @@
     box-shadow:0 8px 24px rgba(0,0,0,.45);transition:transform .3s cubic-bezier(.2,.9,.3,1.3),opacity .3s ease}
   .gh-bubble.on{transform:translate(-50%,0) scale(1);opacity:1}
   @media (prefers-reduced-motion: reduce){.gh-float,.gh-bubble{transition:none}}
-  /* 👻 유령 토글 (댓글 컴포저 공용) */
-  .ghost-toggle{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:999px;cursor:pointer;
-    font-size:12.5px;font-weight:800;background:#1a1726;border:1px solid #33304a;color:#9a92b5;transition:all .15s ease}
-  .ghost-toggle.sm{padding:6px 10px;font-size:12px}
-  .ghost-toggle .gt-hint{font-size:10.5px;color:#6b6486;font-weight:700}
-  .ghost-toggle.has-pass{color:#c9beea}
-  .ghost-toggle.has-pass .gt-hint{display:none}
-  .ghost-toggle.on{background:linear-gradient(100deg,#5a4b9e,#42387a);border-color:#9d8cf0;color:#fff;
+  /* 👻 유령 토글 — 전 게시판 동일한 콤팩트 알약(페이지별 CSS를 이기도록 !important 정규화).
+     내용은 GALLA_ghostBind의 paintGhostBtn이 통째로 다시 그린다(마크업 제각각 방지). */
+  .ghost-toggle{
+    all:revert;
+    display:inline-flex !important;align-items:center !important;justify-content:center !important;
+    gap:5px !important;flex:0 0 auto !important;width:auto !important;min-width:0 !important;max-width:none !important;
+    height:34px !important;min-height:34px !important;max-height:34px !important;
+    padding:0 11px !important;margin:0 !important;box-sizing:border-box !important;
+    border-radius:999px !important;cursor:pointer;
+    font-size:12px !important;font-weight:800 !important;line-height:1 !important;
+    white-space:nowrap !important;writing-mode:horizontal-tb !important;letter-spacing:0 !important;
+    background:#1a1726 !important;border:1px solid #33304a !important;color:#9a92b5 !important;
+    transition:background .15s ease,color .15s ease,box-shadow .15s ease,transform .1s ease}
+  .ghost-toggle .gt-ic{font-size:15px !important;line-height:1 !important}
+  .ghost-toggle .gt-state{font-size:11px !important;font-weight:900 !important;line-height:1 !important;
+    background:none !important;padding:0 !important;color:inherit !important;letter-spacing:.02em !important;white-space:nowrap !important}
+  .ghost-toggle.has-pass{color:#c9beea !important}
+  /* .sm = 인라인 컴포저용 아이콘-온리(입력창 폭 확보). 상태는 우상단 미니 배지로 */
+  .ghost-toggle.sm{width:34px !important;min-width:34px !important;padding:0 !important;position:relative !important;overflow:visible !important}
+  .ghost-toggle.sm .gt-state{display:none !important}
+  .ghost-toggle.sm::after{content:attr(data-short);position:absolute;top:-7px;right:-9px;
+    font-size:9px;font-weight:900;line-height:1;padding:3px 5px;border-radius:99px;white-space:nowrap;
+    background:#26203c;color:#b9aee0;border:1px solid #4a4070}
+  .ghost-toggle.sm.on::after{background:#8c78e6;color:#fff;border-color:#c9beea}
+  .ghost-toggle.sm[data-short=""]::after{display:none}
+  /* 유령 버튼 옆 게시 버튼이 세로로 깨지지 않게 */
+  .pmd-cmt-send,.gnc-send,.hv-cmt-send{white-space:nowrap !important;flex:0 0 auto !important}
+  .ghost-toggle.on{background:linear-gradient(100deg,#5a4b9e,#42387a) !important;border-color:#9d8cf0 !important;color:#fff !important;
     box-shadow:0 0 18px rgba(140,120,230,.45);animation:ghGlow 1.8s ease-in-out infinite}
   @keyframes ghGlow{0%,100%{box-shadow:0 0 12px rgba(140,120,230,.35)}50%{box-shadow:0 0 24px rgba(140,120,230,.65)}}
   .ghost-toggle:active{transform:scale(.95)}
-  .ghost-toggle .gt-state{font-size:10px;font-weight:900;padding:2px 7px;border-radius:999px;
-    background:rgba(0,0,0,.3);color:#b9aee0;letter-spacing:.02em}
-  .ghost-toggle.on .gt-state{background:#fff;color:#42387a}
   .ghost-av-wrap .ghost-av{width:100%;height:100%;font-size:1em}
   /* 유령 토스트 */
   .gh-toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(14px) scale(.92);z-index:100002;
@@ -145,18 +162,18 @@
   }
   window.GALLA_ghostToast = ghToast;
 
-  /* 토글 버튼 상태 라벨 — 켜짐/꺼짐/보유일수가 항상 보이게 */
+  /* 토글 버튼 — 내용을 통째로 표준 형태(👻 + 짧은 상태)로 다시 그린다.
+     페이지마다 제각각이던 마크업·정렬 문제를 여기서 통일. 긴 설명은 토스트가 담당. */
   function paintGhostBtn(btn) {
     const st = window.__GHOST_ST || {};
     const on = btn.classList.contains("on");
     btn.classList.toggle("has-pass", !!st.active);
-    let lab = btn.querySelector(".gt-state");
-    if (!lab) { lab = document.createElement("span"); lab.className = "gt-state"; btn.appendChild(lab); }
-    if (on) lab.textContent = `ON · ${ghostDaysLeft()}일 남음`;
-    else if (st.active) lab.textContent = `OFF · ${ghostDaysLeft()}일 보유`;
-    else lab.textContent = "유령권 필요";
-    // 기존 정적 힌트는 상태 라벨로 대체
-    btn.querySelector(".gt-hint")?.remove();
+    const d = ghostDaysLeft();
+    const lab = on ? `ON · ${d}일` : st.active ? `OFF · ${d}일` : "유령권 필요";
+    btn.innerHTML = `<span class="gt-ic">👻</span><span class="gt-state">${lab}</span>`;
+    // .sm(아이콘-온리) 미니 배지용 짧은 상태
+    btn.dataset.short = on ? "ON" : st.active ? `${d}일` : "";
+    btn.title = on ? `유령 모드 ON · ${d}일 남음` : st.active ? `유령 모드 OFF · ${d}일 보유` : "유령권 필요 — 탭해서 구매";
   }
 
   window.GALLA_ghostBind = function (btn, opts = {}) {
