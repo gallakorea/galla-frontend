@@ -662,17 +662,13 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const category = categorySelect.value.trim();
   const title = titleInput.value.trim();
 
-  // 표시 이름: 익명 체크 시 랜덤 익명, 기본은 내 닉네임
-  const anonChecked = document.getElementById("plaza-anon")?.checked === true;
-  let displayName = generateAnonNickname();
-  if (!anonChecked) {
-    const { data: prof } = await supabase
-      .from("user_profiles")
-      .select("nickname")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    displayName = prof?.nickname || displayName;
-  }
+  // 광장 글은 실명 (익명은 유령권 댓글 전용)
+  const { data: prof } = await supabase
+    .from("user_profiles")
+    .select("nickname")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const displayName = prof?.nickname || "사용자";
 
   const body = bodyInput.value;
 

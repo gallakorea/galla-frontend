@@ -29,11 +29,19 @@
     // ── 도전 ──
     { key: "duel_ticket",     emoji: "⚔️", name: "일기토 신청서", price: 700, group: "duel", kind: "consumable",
       desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청" },
+    // ── 유령 (기간제) ── kind:'ghost' → buy_ghost_pass(days)
+    { key: "ghost_3",  emoji: "👻", name: "유령권 3일",  price: 800,  group: "ghost", kind: "ghost", days: 3,
+      desc: "3일간 댓글을 정체불명 유령으로! (그때 단 댓글은 영구 익명)" },
+    { key: "ghost_7",  emoji: "👻", name: "유령권 7일",  price: 1500, group: "ghost", kind: "ghost", days: 7,
+      desc: "7일간 유령 활동 · 유저당 고정 페르소나" },
+    { key: "ghost_30", emoji: "👻", name: "유령권 30일", price: 4500, group: "ghost", kind: "ghost", days: 30,
+      desc: "한 달간 유령! 최고 가성비" },
   ];
   const GROUPS = [
     { key: "battle", label: "⚔️ 전투" },
     { key: "deco",   label: "🎨 꾸미기" },
     { key: "duel",   label: "🏟️ 도전" },
+    { key: "ghost",  label: "👻 유령" },
   ];
   window.GALLA_ITEM_CATALOG = CATALOG;
   window.GALLA_hasItem = async function (key) {
@@ -79,21 +87,28 @@
   }
 
   async function refresh() {
-    const [balR, inv] = await Promise.all([
+    const [balR, inv, gh] = await Promise.all([
       sb().rpc("ensure_balance"),
       window.GALLA_myItems(),
+      sb().rpc("ghost_status").then(r => r.data).catch(() => null),
     ]);
     const bal = Math.round(balR.data || 0);
     const balEl = sheet.querySelector("#shopBal");
     if (balEl) balEl.textContent = bal.toLocaleString() + " GP";
+    // 유령권 남은 기간
+    const ghostDays = (gh?.active && gh.until)
+      ? Math.max(0, Math.ceil((new Date(gh.until) - Date.now()) / 86400000)) : 0;
 
     const itemHtml = (it) => {
       const owned = inv[it.key] || 0;
       const isUnlock = it.kind === "unlock";
+      const isGhost = it.kind === "ghost";
       const ownedUnlock = isUnlock && owned > 0;
       const afford = bal >= it.price;
       const ownedBadge = owned
-        ? ` <b class="si-owned">${isUnlock ? "보유 중" : "보유 " + owned}</b>` : "";
+        ? ` <b class="si-owned">${isUnlock ? "보유 중" : "보유 " + owned}</b>`
+        : (isGhost && ghostDays > 0 && it.days === Math.min(...CATALOG.filter(x => x.kind === "ghost").map(x => x.days))
+            ? ` <b class="si-owned">유령 ${ghostDays}일 남음</b>` : "");
       let btn;
       if (ownedUnlock) {
         btn = `<button class="si-buy owned" disabled>보유 중</button>`;
@@ -120,7 +135,12 @@
     list.querySelectorAll(".si-buy:not(.no):not(.owned)").forEach(b => {
       b.addEventListener("click", async () => {
         b.disabled = true; b.textContent = "구매 중…";
-        const r = await window.GALLA_buyItem(b.dataset.key);
+        const it = CATALOG.find(x => x.key === b.dataset.key);
+        // 👻 유령권은 기간제 → buy_ghost_pass(days)
+        const r = it?.kind === "ghost"
+          ? (await sb().rpc("buy_ghost_pass", { p_days: it.days })).data
+          : await window.GALLA_buyItem(b.dataset.key);
+        if (r?.ok && it?.kind === "ghost") window.BattleFX?.banner?.(`👻 유령권 ${it.days}일 활성화!`, "cheer");
         if (!r?.ok) {
           if (r?.reason === "insufficient" && window.GALLA_needGP) {
             const need = (r.cost || 0) - (r.balance || 0);

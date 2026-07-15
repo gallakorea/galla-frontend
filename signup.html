@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>회원가입 - GALLA</title>
-    <link rel="stylesheet" href="css/signup.css?v=071933">
+    <link rel="stylesheet" href="css/signup.css?v=071934">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -14,7 +14,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=071933">
+  <link rel="stylesheet" href="./css/theme.css?v=071934">
 </head>
 
 <body data-page="signup">
@@ -101,13 +101,7 @@
         <div class="region-selected-text">선택한 지역: <span id="selectedRegion">없음</span></div>
       </div>
 
-      <div class="toggle-row">
-        <span class="toggle-txt"><b>익명으로 활동하기</b><small>이름을 감추고 참여해요</small></span>
-        <label class="switch">
-          <input type="checkbox" id="anonymous">
-          <span class="slider"></span>
-        </label>
-      </div>
+      <!-- 익명 활동은 계정 토글 폐지 → 유령권 아이템(👻)으로 이용 (댓글 한정) -->
 
       <!-- 약관·개인정보 동의 (개인정보보호법 제22조 / 정통망법 제50조) -->
       <div class="agree-box">
@@ -155,9 +149,9 @@
 </div>
 
 <!-- Supabase -->
-<script src="./vendor/supabase.js?v=071933"></script>
-<script src="./js/supabase.js?v=071933"></script>
-<script src="js/back.js?v=071933"></script>
+<script src="./vendor/supabase.js?v=071934"></script>
+<script src="./js/supabase.js?v=071934"></script>
+<script src="js/back.js?v=071934"></script>
 
 <!-- LOGIN CHECK + WAIT -->
 <script>
@@ -241,7 +235,7 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- signup 기능 -->
-<script src="./js/signup.js?v=071933"></script>
+<script src="./js/signup.js?v=071934"></script>
 
 </body>
 </html>

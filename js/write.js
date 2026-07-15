@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    const anon = document.getElementById('isAnonymous').checked;
+    const anon = false;   // 발의는 실명 (익명은 유령권 댓글 전용)
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
 

@@ -185,7 +185,7 @@ let myCommentVotes = {};
 async function fetchComments(commentCountEl) {
   const { data, error } = await supabase
     .from("plaza_comments")
-    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id")
+    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id, is_anonymous, ghost_seed")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
@@ -202,7 +202,9 @@ async function fetchComments(commentCountEl) {
     created_at: c.created_at,
     like_count: c.like_count || 0,
     dislike_count: c.dislike_count || 0,
-    user_id: c.user_id
+    user_id: c.user_id,
+    is_anonymous: c.is_anonymous,
+    ghost_seed: c.ghost_seed
   }));
 
   // 로그인 상태면 내 투표 불러와 하이라이트
@@ -246,7 +248,14 @@ function commentHeaderHtml(c) {
   const menu = mine
     ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="plaza_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="body" aria-label="더보기">⋯</button>`
     : "";
-  return `<div class="comment-meta"><span class="cm-nick">${c.nickname || "익명"}</span><span class="cm-time">${timeAgoK(c.created_at)}</span>${menu}</div>`;
+  let nick;
+  if (c.is_anonymous && window.GALLA_ghost) {
+    const g = window.GALLA_ghost(c.ghost_seed);          // 유령 페르소나 (프로필 이동 불가)
+    nick = `<span class="cm-nick ghost-nick" style="color:${g.color}">${g.avatarHTML} ${g.name}</span>`;
+  } else {
+    nick = `<span class="cm-nick">${c.nickname || "익명"}</span>`;
+  }
+  return `<div class="comment-meta">${nick}<span class="cm-time">${timeAgoK(c.created_at)}</span>${menu}</div>`;
 }
 
 /* 투표 처리 (이벤트 위임) */
@@ -371,22 +380,25 @@ async function submitComment(body) {
     return;
   }
 
-  // 표시 이름: 익명 체크 시 랜덤 익명, 기본은 내 닉네임
-  const anonChecked = document.getElementById("comment-anon")?.checked === true;
-  let displayName = generateAnonNickname();
-  if (!anonChecked) {
+  // 유령 토글 — 활성(유령권 보유) 시에만 익명 게시, seed는 서버 트리거가 강제 주입
+  const ghostOn = document.getElementById("comment-ghost")?.classList.contains("on") === true;
+  let displayName = null, isAnon = false;
+  if (ghostOn) {
+    if (!window.__PLAZA_GHOST?.active) {
+      return promptGhostBuy();   // 만료/미보유면 구매 유도
+    }
+    isAnon = true;               // anon_name은 유령 렌더가 seed로 대체하므로 불필요
+  } else {
     const { data: prof } = await supabase
-      .from("user_profiles")
-      .select("nickname")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    displayName = prof?.nickname || displayName;
+      .from("user_profiles").select("nickname").eq("user_id", user.id).maybeSingle();
+    displayName = prof?.nickname || "사용자";
   }
 
   const payload = {
     post_id: postId,
     body,
     anon_name: displayName,
+    is_anonymous: isAnon,
     user_id: user.id,
     parent_id: replyTarget ? replyTarget.parentId : null
   };
@@ -396,6 +408,7 @@ async function submitComment(body) {
     .insert(payload);
 
   if (error) {
+    if (String(error.message || "").includes("no_ghost_pass")) { promptGhostBuy(); return; }
     alert("댓글 등록 실패");
     console.error(error);
     return;
@@ -403,6 +416,29 @@ async function submitComment(body) {
 
   replyTarget = null;
 }
+
+/* 유령 상태 로드 + 토글/구매 유도 */
+async function loadGhostState() {
+  try {
+    const { data } = await supabase.rpc("ghost_status");
+    window.__PLAZA_GHOST = data?.ok ? data : { active: false };
+  } catch { window.__PLAZA_GHOST = { active: false }; }
+  const btn = document.getElementById("comment-ghost");
+  if (btn) btn.classList.toggle("has-pass", !!window.__PLAZA_GHOST.active);
+}
+function promptGhostBuy() {
+  if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요?")) {
+    if (window.openShop) window.openShop(); else location.href = "settings.html";
+  }
+}
+window.GALLA_bindGhostToggle = function () {
+  const btn = document.getElementById("comment-ghost");
+  if (!btn || btn._bound) return; btn._bound = true;
+  btn.addEventListener("click", () => {
+    if (!window.__PLAZA_GHOST?.active) { promptGhostBuy(); return; }
+    btn.classList.toggle("on");
+  });
+};
 
 function scrollToCommentInput() {
   if (!commentInput) return;
@@ -668,6 +704,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   fetchComments(commentCountEl);
+  loadGhostState();
+  window.GALLA_bindGhostToggle && window.GALLA_bindGhostToggle();
 });
 /* =========================
    글 저장(북마크) — 로그인 필수

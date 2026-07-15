@@ -166,6 +166,16 @@ export async function initCommentSystem(issueId) {
 let INFILTRATE = false;      // 침투 모드 (상대 진영으로 글쓰기)
 let INFIL_LEFT = null;       // 오늘 남은 침투 횟수
 let REPLY_LEFT = null;       // 오늘 남은 대댓글 횟수 (기본 40/일)
+let GHOST_ON = false;        // 👻 유령(익명) 참전 모드 (유령권 필요)
+
+async function loadGhostState() {
+  try {
+    const { data } = await window.supabaseClient.rpc("ghost_status");
+    window.__ISSUE_GHOST = data?.ok ? data : { active: false };
+  } catch { window.__ISSUE_GHOST = { active: false }; }
+  const b = document.getElementById("ghost-toggle");
+  if (b) b.classList.toggle("has-pass", !!window.__ISSUE_GHOST.active);
+}
 
 /* 🗯️ 대댓글 연장권 — 하루 한도 소진 시 보유하면 사용 제안(+15). 침투권과 동일 패턴 */
 async function ensureReplyQuota() {
@@ -216,11 +226,28 @@ async function initComposerUI() {
   bottom.innerHTML = `
     <div class="composer-side ${my}" id="composer-side">
       <span class="cs-flag">🎖 ${myLabel} 진영으로 참전 중</span>
+      <button type="button" class="ghost-toggle sm" id="ghost-toggle"><span class="gt-ic">👻</span> 유령</button>
       <button type="button" class="infiltrate-btn" id="infiltrate-btn">
         🕵️ 적진 침투 <b id="infil-left">${INFIL_LEFT}</b>/3
       </button>
     </div>`;
   if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
+
+  // 👻 유령 토글 — 유령권(ghost_status.active) 보유 시 익명 참전
+  loadGhostState();
+  document.getElementById("ghost-toggle").addEventListener("click", () => {
+    if (!window.__ISSUE_GHOST?.active) {
+      if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 구매할까요?")) {
+        if (window.openShop) window.openShop(); else location.href = "settings.html";
+      }
+      return;
+    }
+    GHOST_ON = !GHOST_ON;
+    const b = document.getElementById("ghost-toggle");
+    b.classList.toggle("on", GHOST_ON);
+    if (input) input.placeholder = GHOST_ON ? "👻 유령으로 참전 중…" : (INFILTRATE ? input.placeholder : "아군 전선에 새 의견 쓰기…");
+    window.BattleFX?.haptic?.("tap");
+  });
 
   document.getElementById("infiltrate-btn").addEventListener("click", async () => {
     if (!INFILTRATE && INFIL_LEFT <= 0) {
@@ -947,7 +974,7 @@ async function loadComments(issueId) {
 
   const { data: rows, error } = await supabase
     .from("comments")
-    .select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action")
+    .select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action")
     .eq("issue_id", issueId)
     .neq("status", "deleted")
     .order("created_at", { ascending: false });
@@ -1062,14 +1089,22 @@ async function loadComments(issueId) {
    Rendering
 ====================== */
 
+function ghostPersona(c) {
+  return (window.GALLA_ghost ? window.GALLA_ghost(c.ghost_seed)
+    : { name: "익명의 유령", color: "#8a7bb0", avatarHTML: "" });
+}
 function displayName(c) {
-  if (c.is_anonymous) return "익명";
+  if (c.is_anonymous) return ghostPersona(c).name;
   return profileMap[c.user_id]?.nickname || "익명";
 }
-// 닉네임 클릭 → 유저 시트 (익명·본인 제외는 시트가 처리)
+// 닉네임 클릭 → 유저 시트. 유령은 프로필 이동 불가(ghost.js가 애니메이션 처리)
 function nameSpan(c) {
+  if (c.is_anonymous) {
+    const g = ghostPersona(c);
+    return `<span class="user-name ghost-nick" style="color:${g.color}">${g.name}</span>`;
+  }
   const nm = displayName(c);
-  if (c.is_anonymous || !c.user_id) return `<span class="user-name">${nm}</span>`;
+  if (!c.user_id) return `<span class="user-name">${nm}</span>`;
   return `<span class="user-name userlink" data-user-id="${c.user_id}" data-user-nick="${nm.replace(/"/g, "&quot;")}">${nm}</span>`;
 }
 
@@ -1077,13 +1112,18 @@ function nameSpan(c) {
    익명 댓글은 이동 없이 기본 아이콘만. size: 'c'(댓글) | 'r'(답글) */
 function avatarHTML(c, size) {
   const cls = `c-avatar c-avatar-${size || "c"}`;
+  // 👻 유령: 시드 기반 절차적 아바타 (프로필 이동 불가 → ghost.js 애니메이션)
+  if (c.is_anonymous) {
+    const g = ghostPersona(c);
+    return `<span class="${cls} ghost-av-wrap ghost-nick">${g.avatarHTML}</span>`;
+  }
   const url = profileMap[c.user_id]?.avatar_url;
-  const src = (c.is_anonymous || !c.user_id)
+  const src = (!c.user_id)
     ? (window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png")
     : (window.GALLA_avatarSrc ? window.GALLA_avatarSrc(url) : (url || ""));
   const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
   const img = `<img src="${src}" alt="프로필" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
-  if (c.is_anonymous || !c.user_id) return `<span class="${cls} anon-av">${img}</span>`;
+  if (!c.user_id) return `<span class="${cls} anon-av">${img}</span>`;
   return `<span class="${cls}" data-profile-uid="${c.user_id}" role="button" aria-label="프로필 보기">${img}</span>`;
 }
 
@@ -1669,9 +1709,15 @@ function bindEvents() {
         issue_id: window.CURRENT_ISSUE_ID,
         user_id: ME.userId,
         faction: side,
-        content: text
-      }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action").single();
+        content: text,
+        is_anonymous: GHOST_ON     // 👻 유령 참전 (seed는 서버 트리거가 강제 주입)
+      }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
       if (error) {
+        if (String(error.message || "").includes("no_ghost_pass")) {
+          alert("👻 유령권이 만료됐어요. 상점에서 다시 구매해 주세요.");
+          GHOST_ON = false; document.getElementById("ghost-toggle")?.classList.remove("on");
+          return;
+        }
         if (String(error.message || "").includes("infiltration_limit")) {
           alert("오늘의 침투 횟수(3회)를 모두 썼어요. 내일 다시 침투할 수 있어요.");
           consumeInfiltration(); // 카운터 0 동기화 + 모드 해제
@@ -1809,9 +1855,14 @@ async function submitBattleReply(type, targetId, targetUser, text) {
     parent_id: rootId,
     faction: ME.faction,
     content,
-    battle_action: type
-  }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,battle_action").single();
+    battle_action: type,
+    is_anonymous: GHOST_ON     // 👻 유령 답글
+  }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
   if (insertErr) {
+    if (String(insertErr.message || "").includes("no_ghost_pass")) {
+      alert("👻 유령권이 만료됐어요. 상점에서 다시 구매해 주세요.");
+      GHOST_ON = false; document.getElementById("ghost-toggle")?.classList.remove("on"); return;
+    }
     if (String(insertErr.message || "").includes("reply_limit")) {
       REPLY_LEFT = 0;
       alert("오늘의 대댓글 횟수를 모두 썼어요. 🗯️ 대댓글 연장권으로 이어갈 수 있어요. (설정 › GP 상점)");

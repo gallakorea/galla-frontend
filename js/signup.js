@@ -48,7 +48,6 @@ async function waitForClient() {
         const password2 = pw2Input.value.trim();
         const nickname = nicknameInput.value.trim();
         const phone = phoneInput.value.trim();
-        const anonymous = document.getElementById("anonymous").checked;
         const birthDate = (document.getElementById("birthdate") || {}).value || "";
         const marketingOptIn = document.getElementById("agreeMarketing").checked;
 
@@ -104,7 +103,6 @@ async function waitForClient() {
                         phone: phone || null,
                         region: selectedRegion || null,
                         gender: selectedGender || null,
-                        anonymous,
                         birth_date: birthDate,
                         age_verified: true,
                         terms_agreed: true,
