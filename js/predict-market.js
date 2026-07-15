@@ -284,6 +284,8 @@ async function placeBet(){
     $('pbAmt').value='';
     await refreshState();
     renderHero(); renderMine(); renderPanel(false); loadFeed();
+    // 의견 배틀 컴포저의 진영 잠금(💰 베터)도 즉시 반영 — 새로고침 불필요
+    loadTab(TAB);
   }catch(e){ console.error(e); toast('베팅에 실패했습니다.'); }
   finally{ btn.disabled=false; btn.textContent='🎯 베팅하기'; }
 }
