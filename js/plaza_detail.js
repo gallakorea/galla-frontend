@@ -18,6 +18,9 @@ const supabase = createClient(
 
 // 🔥🔥🔥 여기다
 window.supabase = supabase;
+// 공용 헬퍼(ghost.js·items.js 등)는 window.supabaseClient를 본다 —
+// 이 페이지는 js/supabase.js를 안 쓰므로 여기서 직접 노출(없으면 유령권 연동이 전부 비로그인 판정)
+window.supabaseClient = supabase;
 
 async function getSessionSafe() {
   const { data } = await supabase.auth.getSession();
