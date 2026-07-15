@@ -117,7 +117,8 @@
     else start();
   }
 
-  // 작성자(아바타/이름) 클릭 → 해당 유저 마이페이지 (인스타식). 전역 캡처 위임.
+  // 작성자(아바타/이름) 클릭 — 유저 팝오버(user-sheet.js)가 있으면 그 옆에 팝오버,
+  // 없는 페이지에선 기존처럼 마이페이지로 이동. 전역 캡처 위임.
   if (!window.__GALLA_PROFILE_NAV__) {
     window.__GALLA_PROFILE_NAV__ = true;
     document.addEventListener("click", function (e) {
@@ -127,7 +128,12 @@
       if (!uid) return;
       e.preventDefault();
       e.stopPropagation();
-      location.href = "mypage.html?user=" + encodeURIComponent(uid);
+      if (window.GALLA_openUserSheet) {
+        const nick = el.getAttribute("data-user-nick") || (el.textContent || "").trim().slice(0, 20);
+        window.GALLA_openUserSheet(uid, nick, el);
+      } else {
+        location.href = "mypage.html?user=" + encodeURIComponent(uid);
+      }
     }, true);
   }
 

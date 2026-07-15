@@ -36,6 +36,7 @@
       <div class="us-pop-actions">
         <button class="us-pop-btn" data-act="profile">👤<i>프로필</i></button>
         <button class="us-pop-btn us-follow js-follow" id="upFollow" type="button">＋ 팔로우</button>
+        <button class="us-pop-btn" data-act="duel" id="upDuel">⚔️<i>일기토</i></button>
         <button class="us-pop-btn primary" data-act="dm" id="upDm">✉️<i>메시지</i></button>
       </div>`;
     document.body.appendChild(pop);
@@ -46,6 +47,7 @@
       const uid = pop.dataset.uid, nick = pop.dataset.nick || "";
       close();
       if (act === "profile") location.href = `mypage.html?user=${uid}`;
+      else if (act === "duel") location.href = `duel.html?challenge=${uid}`;
       else if (act === "dm") {
         if (window.startDM) window.startDM(uid, nick);
         else location.href = `mypage.html?user=${uid}`; // dm 미로드 페이지 폴백
@@ -69,6 +71,10 @@
     ava.style.background = avatarColor(uid);
     const self = (me && me === uid);
     pop.querySelector("#upDm").style.display = self ? "none" : "";
+    // ⚔️ 일기토 — 인덱스에서만 직접 도전 버튼 노출.
+    // 댓글 게시판(예측·뉴스·유튜브·광장·이슈)은 격론 자동 감지가 담당(사용자 확정).
+    const duelBtn = pop.querySelector("#upDuel");
+    if (duelBtn) duelBtn.style.display = (!self && document.body.dataset.page === "index") ? "" : "none";
     // 팔로우/언팔로우 — follow.js(.js-follow) 재사용. 열 때마다 새 버튼으로 갈아끼워
     // uid 바인딩·상태 페인트를 다시 받는다(팔로잉이면 '팔로잉'으로 표시)
     const fOld = pop.querySelector("#upFollow");
