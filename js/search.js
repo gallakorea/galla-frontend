@@ -843,34 +843,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       (bm || []).forEach(r => { GALLA_CACHE[r.news_id] = Object.assign(GALLA_CACHE[r.news_id] || {}, seen[r.news_id], { saved: true }); });
     }
 
-    // 섹션 간 중복 제거 — 한 기사는 한 곳에만
-    const used = new Set();
-    const take = (arr, n) => { const out = []; for (const x of (arr || [])) { if (used.has(x.id)) continue; used.add(x.id); out.push(x); if (out.length >= n) break; } return out; };
-
+    /* 섹션 통폐합: 참여가 적으면 '실시간 베스트(hot)'와 '실시간 뉴스(최신)'가 사실상
+       같은 섹션이라 겹친다 → 별도 '실시간 베스트' 섹션을 없애고
+       [히어로] + [많이 본(데이터 있을 때)] + [댓글 많은(데이터 있을 때)] + [실시간 뉴스]로 정리.
+       많이 본/댓글 많은은 데이터가 쌓이면 자연히 채워지는, 성격이 다른 랭킹만 남긴다. */
+    const heroItem = best[0] || latest[0];
     let html = "";
-    // 히어로 + 실시간 베스트
-    if (best.length) {
-      const hero = take(best, 1)[0];
-      if (hero) html += `<div class="nh-block">${nhHero(hero)}</div>`;
-      const bestList = take(best, 5);
-      if (bestList.length) {
-        html += `<section class="nh-sec">${nhSec(`<span class="nh-live"></span>`, `${currentNewsCategory} 실시간 베스트`, "지금 가장 뜨거운")}
-          ${bestList.map(gallaCard).join("")}</section>`;
-      }
-    }
-    // 많이 본 / 댓글 많은 (위에 나온 건 제외)
-    const viewedList = take(viewed, 10);
-    if (viewedList.length) {
+    if (heroItem) html += `<div class="nh-block">${nhHero(heroItem)}</div>`;
+
+    if (viewed.length) {
       html += `<section class="nh-sec">${nhSec("👀", "많이 본 뉴스")}
-        <div class="nh-ranklist">${viewedList.map((n, i) => nhRank(n, i, "view")).join("")}</div></section>`;
+        <div class="nh-ranklist">${viewed.map((n, i) => nhRank(n, i, "view")).join("")}</div></section>`;
     }
-    const commentedList = take(commented, 10);
-    if (commentedList.length) {
+    if (commented.length) {
       html += `<section class="nh-sec">${nhSec(SEC.plaza, "댓글 많은 뉴스")}
-        <div class="nh-ranklist">${commentedList.map((n, i) => nhRank(n, i, "cmt")).join("")}</div></section>`;
+        <div class="nh-ranklist">${commented.map((n, i) => nhRank(n, i, "cmt")).join("")}</div></section>`;
     }
-    // 실시간 뉴스 (위 섹션에 안 나온 최신만)
-    const latestRest = (latest || []).filter(n => !used.has(n.id));
+    // 실시간 뉴스 = 카테고리 최신 스트림(히어로만 중복 회피)
+    const latestRest = (latest || []).filter(n => n.id !== heroItem?.id);
     if (latestRest.length) {
       html += `<section class="nh-sec">${nhSec("⚡", "실시간 뉴스", "최신순")}
         ${latestRest.map(gallaCard).join("")}</section>`;
