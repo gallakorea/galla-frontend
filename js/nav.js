@@ -120,9 +120,10 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
         hdrEl && hdrEl.classList.add("hdr-scrolled"); // 스크롤 상태 = 아이콘 원 표시
-        // 헤더가 실제로 숨기 시작하는 지점(60px)부터 로고를 감춘다 →
-        // 위로 올려 헤더가 다시 내려와도 로고 없이 아이콘만. 맨 위(≤10px)에서만 로고 복귀.
-        if (y > 60) hdrEl && hdrEl.classList.add("hdr-nologo");
+        // 헤더가 투명이라 y>10부터는 본문이 로고 위치까지 올라와 겹칠 수 있다 →
+        // 스크롤 상태에선 로고를 숨기고(페이드) 맨 위(≤10px)에서만 로고 복귀.
+        // (예전 60px 임계값은 10~60px 구간에서 로고×본문 겹침을 남겼다)
+        hdrEl && hdrEl.classList.add("hdr-nologo");
         if (Math.abs(dy) > 4) {                  // 미세 스크롤 무시(떨림 방지)
           if (dy > 0 && y > 60) {                // 아래로 → 헤더 전체 숨김/네비 축소
             navEl && navEl.classList.add("nav--mini");
@@ -138,8 +139,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // capture:true — window가 아닌 요소가 스크롤해도(iOS body 등) 잡는다.
     window.addEventListener("scroll", onScroll, { passive: true, capture: true });
     document.addEventListener("scroll", onScroll, { passive: true, capture: true });
-    // 스크롤 복원으로 '이미 내려간 채' 열리는 경우 — 이벤트 없이도 초기 상태 즉시 반영
-    onScroll();
+    // 스크롤 복원으로 '이미 내려간 채' 열리는 경우 — 투명 헤더가 본문 위에 정지 상태로
+    // 떠 있으면 겹침이 또렷하다. 아래로 스크롤하던 중과 똑같이 '숨김' 상태로 시작하고
+    // (위로 올리면 평소처럼 다시 나타남), 얕은 복원(10~60px)은 로고만 숨긴다.
+    const y0 = getY();
+    if (y0 > 10 && hdrEl) hdrEl.classList.add("hdr-scrolled", "hdr-nologo");
+    if (y0 > 60) {
+      hdrEl && hdrEl.classList.add("hdr-hidden");
+      navEl && navEl.classList.add("nav--mini");
+    }
   }
 
   {

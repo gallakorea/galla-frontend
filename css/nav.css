@@ -116,15 +116,11 @@ html { background: #0a0a0b; }
 body {
   background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) fixed #0a0a0b !important;
 }
-/* 상단 헤더 — body 그라디언트의 '상단 슬라이스'를 그대로 깔아 색단차 없이 이어지되,
-   불투명해서 스크롤된 콘텐츠(히어로 타이틀 등)가 로고 뒤로 비치지 않는다.
-   (transparent!important 시절엔 스크롤 복원으로 10~60px 내려간 채 열리면
-    본문이 fixed 헤더를 그대로 투과해 로고와 겹쳐 보이는 버그가 있었다)
-   background-size:100vw 100vh → radial % 기하가 뷰포트 기준으로 풀려 body와 동일 색. */
+/* 상단 헤더는 투명 — 배경이 위까지 끊김 없이 이어짐.
+   ⚠️ 스크롤 복원으로 내려간 채 열리면 본문이 투과해 로고와 겹칠 수 있어,
+   nav.js가 로드 직후 y>10이면 로고를 즉시 숨긴다(hdr-nologo). */
 .header {
-  background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) !important;
-  background-size: 100vw 100vh !important;
-  background-repeat: no-repeat !important;
+  background: transparent !important;
   border-bottom: none !important;
 }
 
