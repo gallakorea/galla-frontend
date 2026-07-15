@@ -467,15 +467,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     hotWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
     gallaWrap.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
 
-    // 1) 뜨는 키워드 — 실제 뉴스 제목 빈출어 (5개 + 더보기)
+    // 1) 실시간 급상승 키워드 — 모멘텀 보드(언급량 막대 랭킹)
     const kws = await computeHotKeywords(15);
-    const kwItems = kws.map((r, i) =>
-      `<button class="th-chip" data-kw="${esc(r.kw)}">
-        <span class="th-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
-        <span class="th-title">${esc(r.kw)}</span>
-        <span class="th-cnt">${r.count}건</span>
-      </button>`);
-    hotWrap.innerHTML = kwItems.length ? trMore(kwItems, "키워드 더보기") : `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
+    if (kws.length) {
+      const max = kws[0].count || 1;
+      const rows = kws.map((r, i) => `
+        <button class="tm-row" data-kw="${esc(r.kw)}">
+          <span class="tm-rank r${i < 3 ? i + 1 : 0}">${i + 1}</span>
+          <span class="tm-main">
+            <span class="tm-kw">${esc(r.kw)}</span>
+            <span class="tm-bar"><span class="tm-fill" style="width:${Math.max(6, Math.round(r.count / max * 100))}%"></span></span>
+          </span>
+          <span class="tm-cnt">${r.count}</span>
+        </button>`);
+      hotWrap.innerHTML = `<div class="tm-board">${trMore(rows, "키워드 더보기")}</div>`;
+    } else {
+      hotWrap.innerHTML = `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
+    }
     hotWrap.onclick = e => {
       trMoreClick(e);
       const b = e.target.closest("[data-kw]");
@@ -532,64 +540,60 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const gi = giRes.data || [], plaza = pzRes.data || [], markets = mkRes;
 
-    const gnewsItems = gnews.map(n => {
-      const th = isValidThumbnail(n.hero_image);
-      return `<div class="sr-card gn-trend" data-gid="${n.id}">
-        <div class="sr-thumb">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">GALLA</span>`}</div>
-        <div class="sr-body">
-          <div class="sr-cat">${esc(n.category || "")} · 갈라뉴스</div>
-          <div class="sr-title">${esc(n.title)}</div>
-          <div class="sr-meta sr-stats">
-            <span>${ST.like} ${n._l}</span>
-            <span>${ST.comment} ${n._c}</span>
-            <span>${timeAgo(n.published_at)}</span>
-          </div>
-        </div>
-      </div>`;
-    });
-    const issueItems = gi.map(i => {
-      const th = issueThumb(i);
-      const t2 = (i.pro_count || 0) + (i.con_count || 0);
-      const pro = t2 ? Math.round((i.pro_count || 0) / t2 * 100) : 50;
-      return `<a class="sr-card" href="issue.html?id=${i.id}">
-        <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">GALLA</span>`}${i.video_url ? `<span class="sr-badge-vid">▶</span>` : ""}</div>
-        <div class="sr-body">
-          <div class="sr-cat">${esc(i.category || "")}</div>
-          <div class="sr-title">${esc(i.title)}</div>
-          <div class="sr-bar"><div class="sr-bar-pro" style="width:${pro}%"></div></div>
-          <div class="sr-meta sr-stats"><span>${ST.like} ${i.pro_count || 0}</span><span>${ST.dislike} ${i.con_count || 0}</span></div>
-        </div>
+    // 통합 트렌드 카드(가로 캐러셀용). 상위 3개엔 순위 배지.
+    const ttThumb = (url, badge) =>
+      `<span class="tt-th">${isValidThumbnail(url) ? `<img src="${esc(url)}" loading="lazy" onerror="this.style.opacity=0">` : `<span class="sr-noimg">GALLA</span>`}${badge || ""}</span>`;
+    const rankBadge = (i) => i < 3 ? `<span class="tt-rk r${i + 1}">${i + 1}</span>` : "";
+
+    const gnewsItems = gnews.map((n, i) =>
+      `<button class="tt-card gn-trend" data-gid="${n.id}">
+        ${ttThumb(n.hero_image, rankBadge(i))}
+        <span class="tt-tag">${esc(n.category || "")} · 갈라뉴스</span>
+        <span class="tt-title">${esc(n.title)}</span>
+        <span class="tt-meta"><span>${ST.like} ${n._l}</span><span>${ST.comment} ${n._c}</span></span>
+      </button>`);
+
+    const issueItems = gi.map((i2, i) => {
+      const t2 = (i2.pro_count || 0) + (i2.con_count || 0);
+      const pro = t2 ? Math.round((i2.pro_count || 0) / t2 * 100) : 50;
+      return `<a class="tt-card" href="issue.html?id=${i2.id}">
+        ${ttThumb(issueThumb(i2), rankBadge(i) + (i2.video_url ? `<span class="sr-badge-vid">▶</span>` : ""))}
+        <span class="tt-tag">${esc(i2.category || "")} · 갈라 이슈</span>
+        <span class="tt-title">${esc(i2.title)}</span>
+        <span class="tt-bar"><span class="tt-bar-pro" style="width:${pro}%"></span></span>
+        <span class="tt-meta"><span>${ST.like} ${i2.pro_count || 0}</span><span>${ST.dislike} ${i2.con_count || 0}</span></span>
       </a>`;
     });
-    const plazaItems = plaza.map(p => {
+
+    const plazaItems = plaza.map((p, i) => {
       const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
-      return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
-        <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">광장</span>`}</div>
-        <div class="sr-body">
-          <div class="sr-cat">${esc(p.category || "")} · 갈라 광장</div>
-          <div class="sr-title">${esc(p.title || "")}</div>
-          <div class="sr-meta sr-stats"><span>${ST.like} ${p.up_count || 0}</span><span>${ST.dislike} ${p.down_count || 0}</span></div>
-        </div>
+      return `<a class="tt-card" href="plaza_detail.html?id=${p.id}">
+        ${ttThumb(th, rankBadge(i))}
+        <span class="tt-tag">${esc(p.category || "")} · 갈라 광장</span>
+        <span class="tt-title">${esc(p.title || "")}</span>
+        <span class="tt-meta"><span>▲ ${p.up_count || 0}</span><span>▼ ${p.down_count || 0}</span></span>
       </a>`;
     });
-    const marketItems = markets.map(m =>
-      `<a class="sr-card predict" href="predict-market.html?id=${m.id}">
-        <div class="sr-body">
-          <div class="sr-cat">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""}</div>
-          <div class="sr-title">${esc(m.question)}</div>
-          ${m._top ? `<div class="sr-pred"><b>${m._top.p}%</b> <span>${esc(m._top.label)}</span></div>` : ""}
-          <div class="sr-meta">💰 거래량 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</div>
-        </div>
-        <div class="sr-go">›</div>
+
+    const marketItems = markets.map((m, i) =>
+      `<a class="tt-card tt-predict" href="predict-market.html?id=${m.id}">
+        <span class="tt-th tt-pred-th">${rankBadge(i)}<span class="tt-pred-pct">${m._top ? m._top.p + "%" : "?"}</span></span>
+        <span class="tt-tag">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""} · 예측</span>
+        <span class="tt-title">${esc(m.question)}</span>
+        <span class="tt-meta"><span>${m._top ? esc(m._top.label) : ""}</span><span>💰 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</span></span>
       </a>`);
 
-    const html = trGroup(`${SEC.news} 인기 갈라뉴스`, gnewsItems)
-      + trGroup(`${SEC.issue} 뜨는 갈라 이슈`, issueItems)
-      + trGroup(`${SEC.predict} 뜨는 갈라예측`, marketItems)
-      + trGroup(`${SEC.plaza} 뜨는 갈라 광장`, plazaItems);
-    gallaWrap.innerHTML = html || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
+    const shelf = (icon, title, cards) => cards.length
+      ? `<section class="nh-sec"><div class="hv-sec-h"><span class="hv-sec-t">${icon} ${title}</span></div>
+         <div class="tt-shelf">${cards.join("")}</div></section>` : "";
+
+    gallaWrap.innerHTML =
+      shelf(SEC.news, "인기 갈라뉴스", gnewsItems)
+      + shelf(SEC.issue, "뜨는 갈라 이슈", issueItems)
+      + shelf(SEC.predict, "뜨는 갈라예측", marketItems)
+      + shelf(SEC.plaza, "뜨는 갈라 광장", plazaItems)
+      || `<p class="se-muted">아직 갈라 콘텐츠가 없어요.</p>`;
     gallaWrap.onclick = e => {
-      trMoreClick(e);
       const g = e.target.closest(".gn-trend");
       if (g && g.dataset.gid) openGallaNews(g.dataset.gid);
     };

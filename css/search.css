@@ -1510,3 +1510,75 @@ body[data-page="news"] .news-viewer-fallback {
 /* 뉴스 패널: 좌우 16px 여백(카드 폭을 다른 페이지와 통일). 히어로/선반은 -16px로 풀블리드 */
 .tab-panel[data-panel="news"] { padding: 0 16px; }
 .tab-panel[data-panel="news"] .news-card { padding-left: 0; padding-right: 0; }
+
+/* ============================================================
+   핫트렌드 고도화 — 실시간 급상승 모멘텀 보드 + 가로 캐러셀
+============================================================ */
+.tm-board { display: flex; flex-direction: column; gap: 2px; }
+.tm-row {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 9px 4px; background: none; border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  text-align: left; cursor: pointer; touch-action: manipulation;
+}
+.tm-row:active { background: rgba(255,255,255,.04); }
+.tm-rank {
+  flex: 0 0 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 900; color: #5c6270;
+}
+.tm-rank.r1 { color: #ff3c56; } .tm-rank.r2 { color: #ff7a3c; } .tm-rank.r3 { color: #ffb03c; }
+.tm-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.tm-kw { font-size: 14px; font-weight: 800; color: #e8eaef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-bar { height: 5px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
+.tm-fill {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #ff3c56, #ff8a3c);
+  transform-origin: left; animation: tmGrow .6s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes tmGrow { from { transform: scaleX(0); } }
+.tm-cnt { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: #8a909c; font-variant-numeric: tabular-nums; }
+.tm-board .tr-more { margin-top: 10px; }
+
+/* 가로 캐러셀 카드 (통합 트렌드) */
+.tt-shelf {
+  display: flex; gap: 11px; margin: 0 -16px; padding: 0 16px 4px;
+  overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; scroll-padding-left: 16px;
+}
+.tt-shelf::-webkit-scrollbar { display: none; }
+.tt-card {
+  flex: 0 0 190px; scroll-snap-align: start;
+  display: flex; flex-direction: column; padding: 0;
+  background: none; border: 0; text-align: left; cursor: pointer;
+  text-decoration: none; touch-action: manipulation;
+}
+.tt-th {
+  position: relative; display: block; width: 100%; aspect-ratio: 16/9;
+  border-radius: 10px; overflow: hidden; background: #12141c;
+}
+.tt-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tt-card:active .tt-th { transform: scale(.97); }
+.tt-rk {
+  position: absolute; top: 6px; left: 6px;
+  min-width: 20px; height: 20px; padding: 0 5px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 900; color: #fff; background: rgba(0,0,0,.7); backdrop-filter: blur(3px);
+}
+.tt-rk.r1 { background: #ff3c56; } .tt-rk.r2 { background: #ff7a3c; } .tt-rk.r3 { background: #ffa53c; }
+.tt-tag { margin-top: 8px; font-size: 11px; font-weight: 700; color: #7fa0ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tt-title {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  margin-top: 3px; font-size: 13px; font-weight: 700; line-height: 1.35; color: #e8eaef;
+}
+.tt-meta { display: flex; gap: 10px; margin-top: 5px; font-size: 11px; color: #6f757f; }
+.tt-meta span { display: inline-flex; align-items: center; gap: 3px; }
+.tt-meta .st-ic { width: 12px; height: 12px; }
+/* 이슈 진영 바 */
+.tt-bar { height: 4px; margin-top: 6px; border-radius: 999px; background: #ff4d6733; overflow: hidden; }
+.tt-bar-pro { display: block; height: 100%; background: #4a7bff; border-radius: 999px; }
+/* 예측 카드 — 썸네일 대신 확률 그라디언트 */
+.tt-pred-th {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(61,107,255,.28), rgba(109,139,255,.1));
+  border: 1px solid rgba(61,107,255,.25);
+}
+.tt-pred-pct { font-size: 30px; font-weight: 900; color: #9db6ff; letter-spacing: -1px; }
