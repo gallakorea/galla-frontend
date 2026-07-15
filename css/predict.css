@@ -411,3 +411,40 @@
 .gh-gc-bal{ font-size:18px; font-weight:900; color:#eef1f7; }
 .gh-gc-bal b{ color:#ff7a9c; }
 .gh-gc-note{ font-size:11px; color:#8a93a6; margin-top:5px; }
+
+/* ===== 내 지갑 (wallet.html) ===== */
+.wl-main{ max-width:480px; margin:0 auto; padding:12px 16px 100px; }
+.wl-h1{ font-size:21px; font-weight:900; color:#fff; margin:6px 0 2px; }
+.wl-sub{ font-size:12.5px; color:var(--pm-dim); margin:0 0 16px; }
+.wl-card{ border-radius:18px; padding:16px; margin-bottom:13px; border:1px solid var(--pm-line);
+  background:var(--pm-panel); }
+.wl-card.gp{ background:radial-gradient(130% 110% at 50% 0%, #2b2208, #14100a); border-color:#4a380f; }
+.wl-card.gc{ background:radial-gradient(130% 110% at 50% 0%, #2b0f1a, #150a10); border-color:#4a1e30; }
+.wl-card.earn{ background:radial-gradient(130% 110% at 50% 0%, #0f2b1a, #0a150f); border-color:#1e4a30; }
+.wl-card-h{ display:flex; align-items:center; gap:7px; font-size:14px; font-weight:900; color:#eef1f7; }
+.wl-ic{ font-size:18px; }
+.wl-tag{ font-size:10.5px; font-weight:900; padding:2px 8px; border-radius:999px;
+  color:#1a1206; background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); }
+.wl-tag.pink{ background:linear-gradient(100deg,#ff7a9c,#ff4d67); color:#fff; }
+.wl-tag.green{ background:linear-gradient(100deg,#38d27a,#1fa85c); color:#08160e; }
+.wl-big{ font-size:30px; font-weight:900; color:var(--pm-gold); margin:8px 0 2px;
+  text-shadow:0 0 16px rgba(255,207,63,.25); }
+.wl-big small{ font-size:14px; }
+.wl-big.pink{ color:#ff7a9c; text-shadow:0 0 16px rgba(255,122,156,.25); }
+.wl-big.green{ color:#38d27a; text-shadow:0 0 16px rgba(56,210,122,.25); }
+.wl-split{ display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12px; color:#9aa3b8; margin:4px 0 2px; }
+.wl-split b{ color:#dfe5f1; }
+.wl-desc{ font-size:12px; color:#9aa3b8; line-height:1.6; margin:8px 0 12px; }
+.wl-btns{ display:flex; gap:8px; flex-wrap:wrap; }
+.wl-btn{ flex:1; min-width:90px; text-align:center; padding:11px 8px; border-radius:11px; cursor:pointer;
+  font-size:13px; font-weight:800; text-decoration:none;
+  background:#1b1f2c; border:1px solid var(--pm-line); color:#dfe5f1; }
+.wl-btn.gold{ background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); border:none; color:#1a1206; }
+.wl-btn.green{ background:linear-gradient(100deg,#38d27a,#1fa85c); border:none; color:#08160e; }
+.wl-btn:active{ transform:scale(.97); }
+.wl-policy{ margin-top:4px; padding:13px 15px; border-radius:14px;
+  background:#12141c; border:1px dashed #2c3145; }
+.wl-policy-h{ font-size:12.5px; font-weight:900; color:#cfd6e6; margin-bottom:7px; }
+.wl-policy ul{ margin:0; padding-left:16px; }
+.wl-policy li{ font-size:11.5px; color:#8a93a6; line-height:1.8; }
+.wl-policy b{ color:#b9c2d4; }

@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   bindTabs();
   await Promise.all([loadBalance(), loadBets(), loadLedger()]);
+  // 딥링크: ?tab=gc|ledger — 지갑 페이지 '내역' 버튼 등에서 진입
+  const t = new URLSearchParams(location.search).get('tab');
+  if(t){ document.querySelector(`.gh-tab[data-tab="${t}"]`)?.click(); }
 });
 
 function bindTabs(){
