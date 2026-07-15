@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=071918";
-import { loadAiNews } from "./issue-news.js?v=071918";
-import { loadStats } from "./issue.stats.js?v=071918";
-import { initCommentSystem } from "./issue.comments.js?v=071918";
+import { loadAiArguments } from "./issue-argument.js?v=071919";
+import { loadAiNews } from "./issue-news.js?v=071919";
+import { loadStats } from "./issue.stats.js?v=071919";
+import { initCommentSystem } from "./issue.comments.js?v=071919";
 
 
 console.log("[issue.js] loaded");
@@ -396,7 +396,7 @@ async function loadIssueMarket(issueId) {
         <span class="ipb-t">이 이슈의 승패를 예측하세요</span>
         <span class="ipb-s">상금풀 <b>${prize}GP</b> · 적중 시 풀 분배 + 연승 콤보</span>
       </span>
-      <span class="ipb-go">베팅 ›</span>`;
+      <span class="ipb-go">참여 ›</span>`;
     anchor.after(el);
   } catch (e) { console.warn('[issue-market]', e); }
 }

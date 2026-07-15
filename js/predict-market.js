@@ -80,7 +80,7 @@ async function loadMarket(){
       moreBtn.style.display='';
       moreBtn.onclick=()=>window.GALLA_openOwnerMenu({
         table:'markets', id:m.id, ownerId:m.created_by, label:'예측',
-        deleteHint:'베팅이 있으면 삭제할 수 없습니다 (정산 이용).',
+        deleteHint:'참여가 있으면 삭제할 수 없습니다 (정산 이용).',
         editFields:[
           { key:'description', label:'설명', type:'textarea', value:m.description||'' },
           { key:'category', label:'카테고리', type:'select', options:window.GALLA_CATEGORIES, value:m.category||'' },
@@ -118,7 +118,7 @@ function render(){
   <div class="pb-wrap">
     <div class="pb-cat">
       <span>${esc(m.category||'')}</span>
-      ${STATE?.is_jackpot?'<span class="pm-jp-badge">🎰 잭팟</span>':''}
+      ${STATE?.is_jackpot?'<span class="pm-jp-badge">🎁 보너스</span>':''}
       ${m.resolved?'<span class="pm-badge-win">✔ 정산 완료</span>':(closed?'<span>⏳ 마감 · 정산 대기</span>':`<span class="pm-badge-live"><i></i>LIVE · ${timeLeft(m.close_at)}</span>`)}
     </div>
     <div class="pb-q">${esc(m.question)}</div>
@@ -143,13 +143,13 @@ function render(){
     </div>
 
     <div class="pb-live">
-      <div class="pb-live-h"><span class="pm-badge-live"><i></i>LIVE</span> 실시간 베팅</div>
+      <div class="pb-live-h"><span class="pm-badge-live"><i></i>LIVE</span> 실시간 참여</div>
       <div id="pbFeed"></div>
     </div>
 
     <div class="pmd-tabs">
       <button class="pmd-tab active" data-tab="comments">💬 의견 배틀</button>
-      <button class="pmd-tab" data-tab="holders">💰 베터 순위</button>
+      <button class="pmd-tab" data-tab="holders">💰 참여 랭킹</button>
     </div>
     <div id="pmdTabBody"></div>
   </div>`;
@@ -183,7 +183,7 @@ function renderHero(){
     </div>
     <div class="pb-pool-row">
       <div>
-        <div class="pb-pool-lbl">${(STATE.jackpot||0)>0?'잭팟 보너스 포함 상금풀':'현재 상금풀'}</div>
+        <div class="pb-pool-lbl">${(STATE.jackpot||0)>0?'보너스 포함 상금풀':'현재 상금풀'}</div>
         <div class="pb-pool-n glow" data-to="${Math.round(prizePool())}">0<small> GP</small></div>
       </div>
       <div class="pb-ppl">👥 <b>${fmt(STATE.participants||0)}</b>명 참여</div>
@@ -236,17 +236,17 @@ function renderPanel(closed){
   el.innerHTML=`
     <div class="pb-outs">${outBtns}</div>
     <div class="pb-panel">
-      <div class="pb-panel-h"><span>베팅 금액</span><span>보유 <b id="pbBal">${ME?fmt(MY_BAL)+'GP':'로그인 필요'}</b></span></div>
+      <div class="pb-panel-h"><span>참여 금액</span><span>보유 <b id="pbBal">${ME?fmt(MY_BAL)+'GP':'로그인 필요'}</b></span></div>
       <div class="pb-chips">
         <button class="pb-chip" data-amt="100">100</button>
         <button class="pb-chip" data-amt="500">500</button>
         <button class="pb-chip" data-amt="1000">1천</button>
         <button class="pb-chip" data-amt="5000">5천</button>
-        <button class="pb-chip allin" data-amt="allin">올인</button>
+        <button class="pb-chip allin" data-amt="allin">최대</button>
       </div>
       <div class="pb-custom"><input id="pbAmt" type="number" inputmode="numeric" min="10" placeholder="직접 입력 (최소 10GP)"></div>
       <div class="pb-est"><span id="pbEstL">예상 배당</span><b id="pbEst">—</b></div>
-      <button class="pb-bet" id="pbBet">🎯 베팅하기</button>
+      <button class="pb-bet" id="pbBet">🎯 예측하기</button>
     </div>`;
 
   el.querySelectorAll('.pb-out').forEach(b=>b.onclick=()=>{
@@ -280,17 +280,17 @@ async function placeBet(){
   if(needLogin()) return;
   const amt=Number($('pbAmt').value||0);
   if(!SEL) return toast('결과를 선택하세요.');
-  if(amt<10) return toast('최소 10GP부터 베팅할 수 있어요.');
+  if(amt<10) return toast('최소 10GP부터 참여할 수 있어요.');
   if(amt>MY_BAL){
-    if(window.GALLA_needGP) return window.GALLA_needGP(amt-MY_BAL,'예측 베팅');
+    if(window.GALLA_needGP) return window.GALLA_needGP(amt-MY_BAL,'예측 참여');
     return toast('GP가 부족합니다.');
   }
-  const btn=$('pbBet'); btn.disabled=true; btn.textContent='베팅 중…';
+  const btn=$('pbBet'); btn.disabled=true; btn.textContent='참여 중…';
   try{
     const { data, error } = await supa.rpc('place_bet',{p_market_id:marketId,p_outcome_id:SEL,p_stake:amt});
     if(error) throw error;
     if(!data.ok){
-      const msg={closed:'마감된 예측입니다.',insufficient:'GP가 부족합니다.',other_side:'이미 다른 결과에 베팅했어요. 한 예측엔 한 편만!',below_min:'최소 베팅 금액 미만입니다.',above_max:'최대 베팅 한도를 넘었어요.'}[data.reason]||'베팅에 실패했습니다.';
+      const msg={closed:'마감된 예측입니다.',insufficient:'GP가 부족합니다.',other_side:'이미 다른 결과에 참여했어요. 한 예측엔 한 편만!',below_min:'최소 참여 금액 미만입니다.',above_max:'최대 참여 한도를 넘었어요.'}[data.reason]||'참여에 실패했습니다.';
       toast(msg); return;
     }
     MY_BAL=data.balance;
@@ -300,14 +300,14 @@ async function placeBet(){
       window.GALLA_FX.burst(r.left+r.width/2,r.top,{emojis:['🪙','💰','✨'],count:16,spread:80,up:50});
       window.GALLA_FX.flash();
     }
-    toast(`🎯 ${fmt(amt)}GP 베팅! 배당 ×${data.odds}`);
+    toast(`🎯 ${fmt(amt)}GP 예측 참여! 배당 ×${data.odds}`);
     $('pbAmt').value='';
     await refreshState();
     renderHero(); renderMine(); renderPanel(false); loadFeed();
     // 의견 배틀 컴포저의 진영 잠금(💰 베터)도 즉시 반영 — 새로고침 불필요
     loadTab(TAB);
-  }catch(e){ console.error(e); toast('베팅에 실패했습니다.'); }
-  finally{ btn.disabled=false; btn.textContent='🎯 베팅하기'; }
+  }catch(e){ console.error(e); toast('참여에 실패했습니다.'); }
+  finally{ btn.disabled=false; btn.textContent='🎯 예측하기'; }
 }
 
 /* ============ 정산 결과 ============ */
@@ -389,7 +389,7 @@ async function loadFeed(){
   const { data } = await supa.from('predict_bets')
     .select('user_id,outcome_id,stake,odds_at_bet,created_at').eq('market_id',marketId)
     .order('created_at',{ascending:false}).limit(25);
-  if(!data||!data.length){ el.innerHTML='<div class="pmd-tab-empty">첫 베팅의 주인공이 되어보세요!</div>'; return; }
+  if(!data||!data.length){ el.innerHTML='<div class="pmd-tab-empty">첫 예측의 주인공이 되어보세요!</div>'; return; }
   const profs=await fetchProfiles(data.map(b=>b.user_id));
   el.innerHTML=data.map((b,i)=>{
     const o=OUTCOMES.find(x=>x.id===b.outcome_id);
@@ -397,7 +397,7 @@ async function loadFeed(){
     const big=b.stake>=5000?' whale':'';   // 🐋 하이롤러 강조
     return `<div class="pb-feed-row in${big}" style="--i:${i}">
       <span class="pb-feed-side ${side}">${esc(o?o.label:'')}</span>
-      <span class="pb-feed-txt">${b.stake>=5000?'🐋 ':''}<b>${esc(profs[b.user_id]?.nickname||'익명')}</b>님이 <b>${fmt(b.stake)}GP</b> 베팅${b.odds_at_bet?` (×${Number(b.odds_at_bet).toFixed(2)})`:''}</span>
+      <span class="pb-feed-txt">${b.stake>=5000?'🐋 ':''}<b>${esc(profs[b.user_id]?.nickname||'익명')}</b>님이 <b>${fmt(b.stake)}GP</b> 참여${b.odds_at_bet?` (×${Number(b.odds_at_bet).toFixed(2)})`:''}</span>
       <span class="pb-feed-time">${ago(b.created_at)}</span>
     </div>`;
   }).join('');
@@ -509,7 +509,7 @@ function renderComments(body){
     const isHolder=!!(posMap?.[`${c.user_id}:${c.outcome_id||'x'}`]||posMap?.[`${c.user_id}:any`]);
     const chipStyle=multi?` style="${ocChipStyle(c.side,c.outcome_id)}"`:'';
     const borderStyle=multi?` style="border-left-color:${c.outcome_id?ocColor(c.outcome_id):'#8b8b93'}"`:'';
-    const roleBadge=isHolder?`<span class="pmd-cmt-role holder">💰 베터</span>`:`<span class="pmd-cmt-role watch">👁 관전</span>`;
+    const roleBadge=isHolder?`<span class="pmd-cmt-role holder">💰 참여자</span>`:`<span class="pmd-cmt-role watch">👁 관전</span>`;
     const mine=c.user_id&&ME&&c.user_id===ME.id;
     const cmtMenu=mine?`<button class="cmt-mini" data-cmt-menu data-cmt-table="market_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>`:'';
     return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}"${borderStyle}>
@@ -550,7 +550,7 @@ function renderComments(body){
   if(MY_POS_SIDE&&!multi){
     const myOid=Object.keys(my).find(k=>Number(my[k])>0);
     composeTop=`<div class="pmd-cmt-locked ${MY_POS_SIDE}">
-      💰 내 베팅: <b>${esc(ocLabel(myOid))} ${fmt(my[myOid])}GP</b> —
+      💰 내 예측: <b>${esc(ocLabel(myOid))} ${fmt(my[myOid])}GP</b> —
       <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다</div>`;
   } else if(multi){
     if(CMT_SIDE==null) CMT_SIDE=OUTCOMES[0]?String(OUTCOMES[0].id):null;
@@ -562,7 +562,7 @@ function renderComments(body){
     }).join('');
     composeTop=`<div class="pmd-cmt-ask">✍️ 어느 결과에 대한 의견인가요?</div><div class="pmd-cmt-picksel">${chips}</div>`;
   } else {
-    composeTop=`<div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(베팅하면 자동으로 고정돼요)</span></div>
+    composeTop=`<div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(참여하면 자동으로 고정돼요)</span></div>
       <div class="pmd-cmt-picksel">
         <button class="pmd-cmt-pick yes ${CMT_SIDE==='yes'?'active':''}" data-pick="yes">👍 ${cmtSideName('yes')}</button>
         <button class="pmd-cmt-pick no ${CMT_SIDE==='no'?'active':''}" data-pick="no">👎 ${cmtSideName('no')}</button>

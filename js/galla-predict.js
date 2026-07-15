@@ -66,8 +66,8 @@ function renderGuide(){
             <span class="pg-art-side r">👎</span>
           </div>
           <div class="pg-n">1</div>
-          <div class="pg-t">한쪽을 고르고 GP를 건다</div>
-          <div class="pg-s">"이번 주 비 올까?" 예 또는 아니오에 칩을 놓으세요.
+          <div class="pg-t">한쪽을 고르고 GP를 싣는다</div>
+          <div class="pg-s">"이번 주 비 올까?" 예 또는 아니오에 GP를 실어보세요.
             한 예측엔 <b>한 편만</b> 들 수 있어요. 최소 10GP.</div>
         </div>
         <div class="pg-arrow">▼</div>
@@ -79,7 +79,7 @@ function renderGuide(){
           </div>
           <div class="pg-n">2</div>
           <div class="pg-t">모두의 GP가 한 항아리에 모인다</div>
-          <div class="pg-s">양쪽 베팅이 전부 <b>하나의 상금풀</b>이 돼요.
+          <div class="pg-s">양쪽 참여 GP가 전부 <b>하나의 상금풀</b>이 돼요.
             내 편에 사람이 적을수록 배당 <b>×N</b>이 커집니다 — 소수파의 짜릿함!
             배당은 실시간으로 움직여요.</div>
         </div>
@@ -106,8 +106,9 @@ function renderGuide(){
       </div>
       <div class="pg-bonus">
         <div class="pg-bonus-row">🔥 <b>연승 콤보</b> — 연속으로 맞힐수록 보너스 배수! 2연승 ×1.2 … 10연승 ×2.5</div>
-        <div class="pg-bonus-row">🎰 <b>오늘의 잭팟</b> — 매일 한 예측에 갈라가 보너스 GP를 얹어드려요</div>
-        <div class="pg-bonus-row">🪙 <b>무료 코인</b> — 출석만 해도 베팅할 GP를 매일 드립니다. 현금 아님, 부담 제로!</div>
+        <div class="pg-bonus-row">🎁 <b>오늘의 보너스 매치</b> — 매일 한 예측에 갈라가 보너스 GP를 얹어드려요</div>
+        <div class="pg-bonus-row">🪙 <b>무료 코인</b> — 출석만 해도 예측에 쓸 GP를 매일 드립니다. 현금 아님, 부담 제로!</div>
+        <div class="pg-bonus-row" style="opacity:.7">ℹ️ GP는 현금 가치가 없으며 환전·양도·매매할 수 없는 놀이용 포인트입니다.</div>
       </div>
       <div class="pg-ex">
         예시) 상금풀 10,000GP · 예 8,000 vs 아니오 2,000<br>
@@ -154,7 +155,7 @@ function renderDaily(){
   el.innerHTML=`<div class="pm-daily" id="pmDailyBtn">
     <span class="pm-daily-ic">🪙</span>
     <span class="pm-daily-m"><span class="pm-daily-t">오늘의 무료 코인</span>
-      <span class="pm-daily-s">출석하고 예측에 쓸 GP를 받으세요 · 연속 출석 잭팟</span></span>
+      <span class="pm-daily-s">출석하고 예측에 쓸 GP를 받으세요 · 연속 출석 보너스</span></span>
     <span class="pm-daily-go">받기 ›</span>
   </div>`;
   $('pmDailyBtn').onclick = claimDaily;
@@ -165,7 +166,7 @@ async function claimDaily(){
   if(error) return toast('오류가 발생했습니다.');
   const btn=$('pmDailyBtn');
   if(data.ok){
-    const jackpot = (data.day_in_week||1)===7 ? ' 🎉 7일 잭팟!' : '';
+    const jackpot = (data.day_in_week||1)===7 ? ' 🎉 7일 보너스!' : '';
     toast(`🔥 ${data.streak}일 연속 출석! +${fmt(data.claimed)}P${jackpot}`);
     $('pointBalance').textContent=fmt(data.balance)+'P'; MY_POINTS=data.balance;
     if(window.GALLA_FX){ const r=btn.getBoundingClientRect(); window.GALLA_FX.burst(r.left+30,r.top+r.height/2,{emojis:['🪙','✨','💰'],count:12,spread:60}); }
@@ -187,12 +188,12 @@ function renderJackpot(){
   const outs = OUT_BY_M[hero.id]||[];
   el.innerHTML=`<div class="pm-jackpot" data-id="${hero.id}">
     <div class="pm-jp-top">
-      <span class="pm-jp-badge">${hero.is_jackpot?'🎰 오늘의 잭팟':'🔥 지금 가장 뜨거운'}</span>
+      <span class="pm-jp-badge">${hero.is_jackpot?'🎁 오늘의 보너스 매치':'🔥 지금 가장 뜨거운'}</span>
       <span class="pm-jp-timer">⏳ ${timeLeft(hero.close_at)} 남음</span>
     </div>
     <div class="pm-jp-q">${esc(hero.question)}</div>
     <div class="pm-jp-pool">
-      <div class="pm-jp-pool-lbl">${hero.jackpot_bonus>0?'잭팟 보너스 포함 상금풀':'현재 상금풀'}</div>
+      <div class="pm-jp-pool-lbl">${hero.jackpot_bonus>0?'보너스 포함 상금풀':'현재 상금풀'}</div>
       <div class="pm-jp-pool-n" data-to="${Math.round(prize(hero))}">0<small> GP</small></div>
     </div>
     ${oddsBar(hero, outs)}
@@ -299,7 +300,7 @@ function renderMarkets(){
         <div class="pm-card-thumb">${m.image_url?`<img src="${esc(m.image_url)}" loading="lazy">`:'🎯'}</div>
         <div class="pm-card-h">
           <div class="pm-card-q">${esc(m.question)}</div>
-          <div class="pm-card-meta">${esc(m.category||'')} · ${statusBadge}${m.is_jackpot?' · 🎰 잭팟':''}</div>
+          <div class="pm-card-meta">${esc(m.category||'')} · ${statusBadge}${m.is_jackpot?' · 🎁 보너스':''}</div>
         </div>
       </div>
       ${oddsBar(m, outs)}
@@ -474,7 +475,7 @@ async function loadLeaderboard(kind){
     const cap=document.querySelector('#rankKing .lb-caption');
     if(cap) cap.textContent=(season?`🏆 ${season} · `:'')+'예측으로 GP를 가장 많이 딴 적중왕';
     el.innerHTML=(data||[]).map((r,i)=>`<div class="lb-row"><span class="lb-rank ${i<3?'top':''}">${medal(i)}</span>
-      <span class="lb-name">${esc(r.nickname||'익명')} ${title(i,'king')}<br><span class="lb-sub">적중 ${r.wins||0}회 · 베팅 ${r.trades||0}회</span></span>
+      <span class="lb-name">${esc(r.nickname||'익명')} ${title(i,'king')}<br><span class="lb-sub">적중 회 · 참여 회</span></span>
       <span class="lb-stat">${(r.profit||0)>=0?'+':''}${fmt(r.profit)}P</span></div>`).join('')||emptyLB();
   } else {
     const {data}=await supa.from('predict_god_leaderboard').select('*').order('total_volume',{ascending:false}).limit(50);
