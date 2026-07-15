@@ -28,12 +28,18 @@ let votingInProgress = false;
 ========================= */
 async function waitForSessionGuaranteed(timeout = 2000) {
   const supabase = window.supabaseClient;
+  const { data } = await supabase.auth.getSession();
+  if (data?.session) return data.session;
+  // 저장된 auth 토큰 자체가 없으면 비로그인 확정 — 예전엔 여기서 2초를 폴링하며
+  // 인덱스 피드 렌더 전체를 블록했다(비로그인 첫 화면 +2초의 범인)
+  let hasToken = false;
+  try { hasToken = Object.keys(localStorage).some(k => k.startsWith("sb-") && k.includes("auth-token")); } catch (_) {}
+  if (!hasToken) return null;
   const start = Date.now();
-
   while (Date.now() - start < timeout) {
-    const { data } = await supabase.auth.getSession();
-    if (data?.session) return data.session;
     await new Promise(r => setTimeout(r, 100));
+    const { data: d } = await supabase.auth.getSession();
+    if (d?.session) return d.session;
   }
   return null;
 }

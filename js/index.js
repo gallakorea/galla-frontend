@@ -765,6 +765,16 @@ window.addEventListener('pageshow', () => window.scrollTo(0, 0));
 async function loadData() {
     const supabase = window.supabaseClient;
 
+    // 타 콘텐츠(예측·광장·뉴스·영상·일기토)는 이슈와 독립 — 지금 바로 병렬 시작.
+    // (예전엔 이슈 체인이 다 끝난 뒤에야 시작해 첫 렌더가 ~4초까지 밀렸다)
+    const extrasP = Promise.all([
+        loadPredictionCards(),
+        loadPlazaCards(),
+        loadNewsCards(),
+        loadVideoCards(),
+        loadDuelCards()
+    ]);
+
     let { data: issues, error } = await supabase
         .from('issues')
         .select(`
@@ -773,7 +783,8 @@ async function loadData() {
             user_id, thumbnail_url, video_url, images,
             faction_a, faction_b
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(80);
 
     if (error) { console.error(error); return; }
 
@@ -785,11 +796,16 @@ async function loadData() {
     issues = issuesF;
 
     const userIds = [...new Set(issues.map(i => i.user_id).filter(Boolean))];
-    // users 테이블 = 닉네임(정본)·레벨·아바타 한 번에
-    const { data: profiles } = await supabase
-        .from('users')
-        .select('id, nickname, level, avatar_url')
-        .in('id', userIds);
+    const issueIds = issues.map(i => i.id);
+
+    // 작성자·부스트·전황·내투표 — 예전 직렬 4단계(RTT×4)를 한 번에 병렬로
+    const [profilesRes, pinsRes, warMap] = await Promise.all([
+        supabase.from('users').select('id, nickname, level, avatar_url').in('id', userIds),
+        supabase.from('content_boosts').select('target_id').eq('kind', 'pin').gt('until', new Date().toISOString()).then(r => r, () => ({ data: null })),
+        loadWarData(issueIds),
+        window.GALLA_PREFETCH_VOTES ? window.GALLA_PREFETCH_VOTES(issueIds) : Promise.resolve()
+    ]);
+    const profiles = profilesRes.data;
 
     const profileMap = {};
     profiles?.forEach(p => profileMap[p.id] = p);
@@ -817,44 +833,39 @@ async function loadData() {
             : (row.thumbnail_url ? [row.thumbnail_url] : [])
     }));
 
-    const issueIds = cards.map(c => c.id);
+    // 🚀 부스트: 24h 상단 고정된 이슈를 맨 앞으로 + 배지 (위 병렬 쿼리 결과 사용)
+    const pinSet = new Set((pinsRes?.data || []).map(p => Number(p.target_id)));
+    if (pinSet.size) {
+        cards.forEach(c => { if (pinSet.has(Number(c.id))) c.pinned = true; });
+        cards.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    }
 
-    // 🚀 부스트: 24h 상단 고정된 이슈를 맨 앞으로 + 배지
-    try {
-        const { data: pins } = await supabase.from('content_boosts')
-            .select('target_id').eq('kind', 'pin').gt('until', new Date().toISOString());
-        const pinSet = new Set((pins || []).map(p => Number(p.target_id)));
-        if (pinSet.size) {
-            cards.forEach(c => { if (pinSet.has(Number(c.id))) c.pinned = true; });
-            cards.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-        }
-    } catch (_) {}
-
-    // 내 투표 상태를 한 번에 프리페치(카드별 N+1 쿼리 제거) + 전황 집계를 병렬로
-    const [warMap] = await Promise.all([
-        loadWarData(issueIds),
-        window.GALLA_PREFETCH_VOTES ? window.GALLA_PREFETCH_VOTES(issueIds) : Promise.resolve()
-    ]);
     cards = cards.map(c => ({ ...c, war: warMap[c.id] }));
     window.cards = cards;
 
-    // 예측·광장·갈라뉴스·핫트렌드 영상·일기토를 이슈와 교차 배열
-    const [predictionCards, plazaCards, newsCards, videoCards, duelCards] = await Promise.all([
-        loadPredictionCards(),
-        loadPlazaCards(),
-        loadNewsCards(),
-        loadVideoCards(),
-        loadDuelCards()
-    ]);
-    feed = interleave(cards, {
-        predict: predictionCards, plaza: plazaCards,
-        news: newsCards, video: videoCards, duel: duelCards
-    });
+    // 1차 렌더: 이슈만으로 즉시 그린다 — 타 콘텐츠를 기다리지 않음
+    feed = cards.map(c => ({ type: 'issue', data: c }));
     window.feed = feed;
     viewFeed = feed;
-
     loadBest();
     loadRecommend();
+
+    // 타 콘텐츠 도착하면 교차 배열로 병합하고, 이미 표시된 개수만큼 다시 그림
+    extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards]) => {
+        feed = interleave(cards, {
+            predict: predictionCards, plaza: plazaCards,
+            news: newsCards, video: videoCards, duel: duelCards
+        });
+        window.feed = feed;
+        // 그 사이 카테고리 칩을 골랐다면 새 피드 기준으로 필터 재적용
+        const activeCat = document.querySelector('.category-section .chip.active')?.textContent?.trim() || '전체';
+        viewFeed = (activeCat === '전체') ? feed : feed.filter(it => (it.data && it.data.category) === activeCat);
+        const shown = rec;
+        rec = 3;
+        if (recommendList) recommendList.innerHTML = '';
+        loadBest();
+        while (rec < shown && viewFeed[rec]) loadRecommend();
+    }).catch(() => {});
 }
 
 // 인덱스 카테고리 칩 — 검색페이지로 이동하지 않고 '그 자리에서' 피드를 필터
