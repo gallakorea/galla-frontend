@@ -65,11 +65,16 @@
     pop.dataset.uid = uid;
     pop.dataset.nick = nick || "";
     const name = nick || "사용자";
-    pop.querySelector("#upName").textContent = name;
+    const selfPre = (me && me === uid);
+    pop.querySelector("#upName").textContent = selfPre ? `${name} (나)` : name;
     const ava = pop.querySelector("#upAva");
     ava.textContent = (name.charAt(0) || "?").toUpperCase();
     ava.style.background = avatarColor(uid);
     const self = (me && me === uid);
+    // 본인이면 팔로우·메시지·일기토는 숨고 '내 프로필'만 남는다 — 버튼 문구도 맞춰준다
+    const profI = pop.querySelector('[data-act="profile"] i');
+    if (profI) profI.textContent = self ? "내 프로필" : "프로필";
+    pop.classList.toggle("self", self);
     pop.querySelector("#upDm").style.display = self ? "none" : "";
     // ⚔️ 일기토 — 인덱스에서만 직접 도전 버튼 노출.
     // 댓글 게시판(예측·뉴스·유튜브·광장·이슈)은 격론 자동 감지가 담당(사용자 확정).

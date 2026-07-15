@@ -29,6 +29,11 @@
   box-shadow:0 4px 14px rgba(30,95,230,.3);}
 .us-pop-btn.primary i{color:#fff;}
 
+/* 본인 팝오버 — '내 프로필' 하나만 남을 때 어색하게 안 늘어나게 가로형 컴팩트 */
+.us-pop.self{min-width:172px;}
+.us-pop.self .us-pop-btn{flex-direction:row;gap:7px;padding:9px 10px;}
+.us-pop.self .us-pop-btn i{font-size:12px;}
+
 /* 팔로우 토글 (follow.js가 텍스트·following 클래스 관리) */
 .us-pop-btn.us-follow{flex-direction:row;justify-content:center;font-size:11.5px;font-weight:900;
   color:#fff;background:rgba(255,255,255,.09);}
