@@ -952,6 +952,20 @@ async function renderHonors() {
    Data Loading
 ====================== */
 
+/* 내 프로필을 profileMap에 보장 — 새 댓글 낙관적 렌더가 '익명'으로 그려지는 것 방지 */
+async function ensureMyProfile() {
+  if (!ME.userId || profileMap[ME.userId]?.nickname) return;
+  try {
+    const { data: u } = await window.supabaseClient
+      .from("users").select("id,nickname,avatar_url").eq("id", ME.userId).maybeSingle();
+    if (u) {
+      if (!profileMap[ME.userId]) profileMap[ME.userId] = { level: 1 };
+      profileMap[ME.userId].nickname = u.nickname || profileMap[ME.userId].nickname;
+      profileMap[ME.userId].avatar_url = u.avatar_url;
+    }
+  } catch (_) {}
+}
+
 async function loadComments(issueId) {
   const supabase = window.supabaseClient;
 
@@ -1006,16 +1020,20 @@ async function loadComments(issueId) {
       .in("user_id", userIds);
     profiles?.forEach(p => profileMap[p.user_id] = p);
 
-    // 프로필 사진 — avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
+    // 닉네임 정본 + 프로필 사진은 users 테이블 (user_profiles는 PII 잠금·nickname은 캐시일 뿐)
     const { data: avatars } = await supabase
       .from("users")
-      .select("id,avatar_url")
+      .select("id,nickname,avatar_url")
       .in("id", userIds);
     avatars?.forEach(u => {
-      if (!profileMap[u.id]) profileMap[u.id] = { nickname: "익명", level: 1 };
+      if (!profileMap[u.id]) profileMap[u.id] = { level: 1 };
+      // users.nickname이 정본 — 있으면 무조건 우선 (없을 때만 user_profiles 캐시 유지)
+      if (u.nickname) profileMap[u.id].nickname = u.nickname;
       profileMap[u.id].avatar_url = u.avatar_url;
     });
   }
+  // 내가 이 이슈에 첫 댓글을 달 때도 '익명'이 아니라 내 닉네임으로 즉시 그려지도록 보장
+  await ensureMyProfile();
 
   // 작성자별 이 이슈 투표 진영 (침투 노출용 — votes SELECT 공개 정책)
   // 침투 = 작성자 실제 투표 진영 ≠ 글이 놓인 진영. 정체를 숨기지 않고 모두에게 노출한다.
