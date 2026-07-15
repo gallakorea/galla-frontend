@@ -277,7 +277,23 @@
 
   // ─────────── 정산·출금 ───────────
   async function renderSettle() {
-    main().innerHTML = `<h1 class="ad-h1">💰 정산·출금</h1><div class="ad-card" id="s-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    main().innerHTML = `<h1 class="ad-h1">💰 정산·출금</h1>
+      <div class="ad-card" id="s-gc"><div class="ad-loading">갈라코인 회계 불러오는 중…</div></div>
+      <div class="ad-card" id="s-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    // 🪙 갈라코인 회계 불변식 — 발행(충전) = 소비(후원) + 보유. drift는 항상 0이어야 한다.
+    try {
+      const { data: au } = await sb.from("gc_audit").select("*").maybeSingle();
+      if (au) {
+        const ok = Number(au.drift) === 0;
+        const kpi = (l, v, c) => `<div class="ad-kpi"><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v"${c ? ` style="color:${c}"` : ""}>${fmt(v)}</div></div>`;
+        $("#s-gc").innerHTML = `<div class="ad-card-h">🪙 갈라코인(GC) 회계 — 발행 = 소비 + 보유</div>
+          <div class="ad-kpis" style="grid-template-columns:repeat(4,1fr)">
+            ${kpi("발행(충전)", au.issued)}${kpi("후원 소비", au.spent)}${kpi("유저 보유", au.held)}
+            ${kpi("오차(0=정상)", au.drift, ok ? "#33d17a" : "#ff4d67")}
+          </div>
+          ${ok ? "" : `<div class="ad-soon" style="color:#ff4d67">⚠️ 회계 불변식 위반 — 즉시 원장 점검 필요</div>`}`;
+      } else { $("#s-gc").innerHTML = `<div class="ad-card-h">🪙 갈라코인(GC) 회계</div><div class="ad-soon">데이터 없음</div>`; }
+    } catch (_) { $("#s-gc").innerHTML = ""; }
     const d = await rpc("admin_withdrawals", { p_status: "all" });
     const rows = d?.rows || [];
     $("#s-list").innerHTML = rows.length ? `<div class="ad-card-h">대기 ${fmt(d.pending)}건</div><table class="ad-table"><thead><tr><th>닉네임</th><th>은행</th><th>계좌</th><th>예금주</th><th>금액</th><th>상태</th><th></th></tr></thead><tbody>

@@ -68,7 +68,9 @@
           <span class="p">${won(p.krw)}</span>
         </button>`;
       }).join("")}</div>
-      <div class="chg-note">GP는 서비스 내 재화이며 현금으로 환급·환전되지 않습니다.<br>충전 GP는 랭킹(누적 획득)에 반영되지 않아요. · 결제 연동은 준비 중입니다.</div>`;
+      <div class="chg-note">갈라포인트(GP)는 서비스 내 놀이 재화로 <b>환급·환전·양도가 불가</b>하며,
+        크리에이터 후원 재화인 갈라코인(GC)과 <b>상호 전환되지 않습니다</b>.<br>
+        충전 GP는 랭킹(누적 획득)에 반영되지 않아요. · 결제 연동은 준비 중입니다.</div>`;
     sheet.querySelectorAll(".chg-pkg").forEach(b => b.addEventListener("click", () => begin(b.dataset.key)));
   }
   async function begin(key) {

@@ -58,6 +58,9 @@
       .ds-go{width:100%;padding:15px;border:none;border-radius:14px;font-weight:900;font-size:16px;color:#fff;cursor:pointer}
       .ds-go:disabled{opacity:.5}
       .ds-note{font-size:11px;color:#6c7280;text-align:center;margin-top:10px;line-height:1.5}
+      .ds-gc{font-size:12px;font-weight:700;color:#e8d9a8;background:rgba(255,207,63,.08);
+        border:1px solid rgba(255,207,63,.3);border-radius:10px;padding:9px 12px;margin-bottom:10px;text-align:center}
+      .ds-gc b{color:#ffcf3f}
       .ds-done{text-align:center;padding:16px 8px}
       .ds-done .ic{font-size:40px}
       .ds-done h4{font-size:17px;font-weight:900;color:#fff;margin:10px 0 6px}
@@ -85,6 +88,10 @@
 
   // ── 후원 시트 ──
   let dim, sheet, sel = null, cur = null; // cur = {issueId, creatorName}
+  let GC_BAL = 0;   // 갈라코인 잔액 (후원 전용 현금성 재화 — GP와 상호 전환 불가)
+  async function loadGc() {
+    try { const { data } = await sb().rpc("gc_balance"); GC_BAL = data || 0; } catch { GC_BAL = 0; }
+  }
   function build() {
     if (sheet) return;
     css();
@@ -125,8 +132,11 @@
         <label class="ds-anon"><input type="checkbox" id="ds-anon"> 익명으로 후원</label>
         <span class="ds-break" id="ds-break"></span>
       </div>
+      <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다</div>
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
-      <div class="ds-note">후원의 <b>50%는 발의자</b>에게, <b>30%는 기부</b>됩니다(수수료 20%). GP와 무관한 실제 결제이며, 결제 수단 연동은 준비 중입니다.</div>`;
+      <div class="ds-note">후원의 <b>50%는 발의자</b>에게, <b>30%는 기부</b>됩니다(수수료 20%).
+        결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다.
+        갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.</div>`;
     sheet.querySelectorAll(".ds-tier").forEach(b => {
       b.style.borderColor = "rgba(255,255,255,.12)";
       b.addEventListener("click", () => {
@@ -150,6 +160,36 @@
     const msg = sheet.querySelector("#ds-msg").value.trim();
     const anon = sheet.querySelector("#ds-anon").checked;
     const go = sheet.querySelector("#ds-go"); go.disabled = true; go.textContent = "처리 중…";
+
+    // ① GC 잔액이 충분하면 갈라코인으로 즉시 후원 (표준 경로)
+    if (GC_BAL >= a) {
+      const { data, error } = await sb().rpc("gc_donate", { p_issue_id: cur.issueId, p_amount: a, p_message: msg, p_anonymous: anon });
+      if (error || !data?.ok) {
+        const reason = data?.reason;
+        alert(reason === "self" ? "본인이 발의한 이슈는 후원할 수 없어요." :
+              reason === "unauthorized" ? "로그인이 필요해요." :
+              reason === "insufficient" ? "갈라코인 잔액이 부족해요." : "후원에 실패했어요.");
+        go.disabled = false; refreshGo(); return;
+      }
+      GC_BAL = data.balance ?? (GC_BAL - a);
+      window.BattleFX?.haptic?.("tap");
+      if (window.GALLA_FX) window.GALLA_FX.confetti({ count: 60 });
+      sheet.innerHTML = `
+        <div class="ds-grip"></div>
+        <div class="ds-done">
+          <div class="ic">💝</div>
+          <h4>후원 완료!</h4>
+          <p>${won(a)}가 갈라코인으로 전달됐어요.<br>
+          발의자 <b>${won(data.net)}</b> · 기부 <b>${won(data.charity)}</b><br>
+          남은 갈라코인 ${GC_BAL.toLocaleString()} GC</p>
+        </div>
+        <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
+      sheet.querySelector("#ds-close").addEventListener("click", close);
+      renderList(cur.issueId);   // 슈퍼챗 목록 즉시 갱신
+      return;
+    }
+
+    // ② GC 부족 — 건별 결제(pending, PG 연동 예정)
     const { data, error } = await sb().rpc("donate_begin", { p_issue_id: cur.issueId, p_amount: a, p_message: msg, p_anonymous: anon });
     if (error || !data?.ok) {
       const reason = data?.reason;
@@ -165,13 +205,15 @@
         <div class="ic">💳</div>
         <h4>후원이 준비되었습니다</h4>
         <p>${won(a)} 후원 요청이 접수됐어요.<br>
-        카드·간편결제 연동이 완료되면 결제 후<br>발의자에게 전달됩니다. <b>(PG 연동 예정)</b></p>
+        갈라코인 충전·간편결제 연동이 완료되면<br>결제 후 발의자에게 전달됩니다. <b>(PG 연동 예정)</b></p>
       </div>
       <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
     sheet.querySelector("#ds-close").addEventListener("click", close);
   }
-  function open(issueId, creatorName) {
-    build(); cur = { issueId, creatorName }; renderForm();
+  async function open(issueId, creatorName) {
+    build(); cur = { issueId, creatorName };
+    await loadGc();
+    renderForm();
     dim.classList.add("open");
     requestAnimationFrame(() => sheet.classList.add("open"));
   }

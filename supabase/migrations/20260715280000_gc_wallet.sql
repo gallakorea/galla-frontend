@@ -160,3 +160,5 @@ grant execute on function public.gc_charge_packages() to anon, authenticated;
 grant execute on function public.gc_charge_begin(text) to authenticated;
 grant execute on function public.gc_charge_confirm(uuid,text,text) to authenticated, service_role;
 grant execute on function public.gc_donate(bigint,int,text,boolean) to authenticated;
+
+revoke select on public.gc_audit from anon;

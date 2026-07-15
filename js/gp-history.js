@@ -34,7 +34,47 @@ function bindTabs(){
     t.classList.add('active');
     $('ghBets').hidden = t.dataset.tab!=='bets';
     $('ghLedger').hidden = t.dataset.tab!=='ledger';
+    $('ghGc').hidden = t.dataset.tab!=='gc';
+    if(t.dataset.tab==='gc' && !$('ghGc').dataset.loaded) loadGc();
   }));
+}
+
+/* ============ 갈라코인 (후원 전용 현금성 재화 — GP와 전환 불가) ============ */
+async function loadGc(){
+  const el=$('ghGc');
+  el.dataset.loaded='1';
+  el.innerHTML=`<div class="pmd-tab-loading">불러오는 중…</div>`;
+  const [balRes, ledRes] = await Promise.all([
+    supa.rpc('gc_balance'),
+    supa.from('gc_ledger').select('delta,reason,created_at').eq('user_id',ME.id)
+      .order('created_at',{ascending:false}).limit(100),
+  ]);
+  const bal = balRes.data||0;
+  const rows = ledRes.data||[];
+  const head = `
+    <div class="gh-gc-head">
+      <div class="gh-gc-bal">💝 갈라코인 <b>${fmt(bal)}</b> GC</div>
+      <div class="gh-gc-note">크리에이터 후원 전용 · 1GC=1원 · 현금으로만 구매 · GP와 상호 전환 불가</div>
+    </div>`;
+  if(!rows.length){
+    el.innerHTML = head + `<div class="gh-empty">아직 갈라코인 내역이 없어요.<br>
+      <span style="font-size:12px;color:#5c6479">충전(PG 연동 예정) 후 크리에이터를 후원할 수 있습니다.</span></div>`;
+    return;
+  }
+  const label = r => r.reason==='gc:charge' ? ['💳','갈라코인 충전'] : r.reason==='gc:donate' ? ['💝','크리에이터 후원'] : ['🪙',r.reason];
+  let lastDay='';
+  el.innerHTML = head + rows.map(r=>{
+    const [ic,t]=label(r);
+    const day=new Date(r.created_at).toLocaleDateString('ko-KR');
+    const divider = day!==lastDay ? `<div class="gh-day">${day}</div>` : '';
+    lastDay=day;
+    const plus=r.delta>=0;
+    return divider+`<div class="gh-l">
+      <span class="gh-l-ic">${ic}</span>
+      <span class="gh-l-m"><span class="gh-l-t">${esc(t)}</span><span class="gh-time">${ago(r.created_at)}</span></span>
+      <span class="gh-l-d ${plus?'up':'down'}">${plus?'+':''}${fmt(r.delta)}</span>
+    </div>`;
+  }).join('');
 }
 
 async function loadBalance(){
