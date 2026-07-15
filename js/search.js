@@ -176,18 +176,43 @@ document.addEventListener("DOMContentLoaded", async () => {
     return _hotKwCache.slice(0, limit);
   }
 
-  async function loadPopular() {
-    const kws = await computeHotKeywords(10);
-    if (!kws.length) { popularEl.innerHTML =
-      `<p class="se-muted">아직 집계된 인기 검색어가 없어요.</p>`; return; }
-    popularEl.innerHTML = kws.map((r, i) =>
-      `<button class="se-pop" data-kw="${esc(r.kw)}">
+  /* 소스별 실시간 검색어: 갈라(자체) / 구글 트렌드 / 네이트·줌(signal 집계) */
+  let curSrc = "galla";
+  const _srcCache = {};
+  async function fetchSource(src) {
+    if (_srcCache[src]) return _srcCache[src];
+    let items;
+    if (src === "galla") {
+      items = (await computeHotKeywords(10)).map(r => ({ keyword: r.kw, badge: String(r.count) }));
+    } else {
+      const { data } = await supabase.from("portal_search_trends")
+        .select("rank,keyword,traffic").eq("source", src).order("rank").limit(10);
+      items = (data || []).map(r => ({ keyword: r.keyword, badge: r.traffic || "" }));
+    }
+    _srcCache[src] = items;
+    return items;
+  }
+  function renderRank(items) {
+    if (!items.length) { popularEl.innerHTML = `<p class="se-muted">집계된 검색어가 없어요.</p>`; return; }
+    popularEl.innerHTML = items.map((r, i) =>
+      `<button class="se-pop" data-kw="${esc(r.keyword)}">
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
-        <span class="se-pop-title">${esc(r.kw)}</span>
-        <span class="se-pop-cnt">${r.count}</span>
+        <span class="se-pop-title">${esc(r.keyword)}</span>
+        ${r.badge ? `<span class="se-pop-cnt">${esc(r.badge)}</span>` : ""}
        </button>`
     ).join("");
   }
+  async function showSource(src) {
+    curSrc = src;
+    document.querySelectorAll("#se-srcs .se-src").forEach(b => b.classList.toggle("on", b.dataset.src === src));
+    popularEl.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
+    const items = await fetchSource(src);
+    if (curSrc === src) renderRank(items);   // 늦게 온 응답 무시
+  }
+  document.getElementById("se-srcs")?.addEventListener("click", e => {
+    const b = e.target.closest(".se-src");
+    if (b) showSource(b.dataset.src);
+  });
   popularEl.addEventListener("click", e => {
     const b = e.target.closest("[data-kw]");
     if (b) runSearch(b.dataset.kw, true);
@@ -1100,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ================= INIT ================= */
   renderRecent();
-  loadPopular();
+  showSource("galla");
   loadDiscover();
   showEmpty(true);
 
