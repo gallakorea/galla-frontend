@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GALLA - 검색</title>
-  <link rel="stylesheet" href="./css/search.css?v=0719t" />
-  <link rel="stylesheet" href="./css/header.css?v=0719t">
-  <link rel="stylesheet" href="./css/nav.css?v=0719t">
-  <link rel="stylesheet" href="./css/write-hub.css?v=0719t">
+  <link rel="stylesheet" href="./css/search.css?v=0719u" />
+  <link rel="stylesheet" href="./css/header.css?v=0719u">
+  <link rel="stylesheet" href="./css/nav.css?v=0719u">
+  <link rel="stylesheet" href="./css/write-hub.css?v=0719u">
   <!-- DM 패널 스타일 — 없으면 dm-root가 fixed를 못 받아 페이지에 그대로 쏟아진다 -->
-  <link rel="stylesheet" href="./css/dm.css?v=0719t">
+  <link rel="stylesheet" href="./css/dm.css?v=0719u">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -19,7 +19,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=0719t">
+  <link rel="stylesheet" href="./css/theme.css?v=0719u">
 </head>
 
 <body data-page="search">
@@ -83,13 +83,13 @@
     <!-- ===== 통합 검색 ===== -->
     <div class="tab-panel active" data-panel="search">
       <form id="search-form" class="search-bar">
-        <span class="search-bar-ic">🔍</span>
-        <input id="search-input" class="search-input" placeholder="갈라 이슈 · 예측 · 뉴스 검색"
+        <svg class="search-bar-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.2-3.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="search-input" class="search-input" placeholder="이슈 · 예측 · 뉴스 · 유튜브 · 광장 검색"
                autocomplete="off" />
         <button type="button" id="search-clear" class="search-clear" hidden>✕</button>
       </form>
 
-      <!-- 입력 전: 최근/인기 검색어 -->
+      <!-- 입력 전: 최근/인기 검색어 + 디스커버리 -->
       <div id="search-empty" class="search-empty">
         <div class="se-block" id="se-recent-block" hidden>
           <div class="se-head">
@@ -99,9 +99,14 @@
           <div id="se-recent" class="se-chips"></div>
         </div>
         <div class="se-block">
-          <div class="se-head"><span>인기 검색어</span></div>
+          <div class="se-head">
+            <span>실시간 인기 검색어</span>
+            <span class="se-live"><i></i>LIVE</span>
+          </div>
           <div id="se-popular" class="se-poplist"></div>
         </div>
+        <!-- 추천 콘텐츠 디스커버리 (지금 뜨는 이슈·예측·광장) -->
+        <div id="se-discover"></div>
       </div>
 
       <!-- 검색 결과(섹션형) -->
@@ -265,15 +270,15 @@
     </div>
 </nav>
 
-<script src="./vendor/supabase.js?v=0719t"></script>
-<script src="js/supabase.js?v=0719t"></script>
-<script src="js/comment-actions.js?v=0719t"></script>
-<script src="js/write-hub.js?v=0719t"></script>
-<script src="js/dm.js?v=0719t"></script>
-<script src="./js/search.js?v=0719t"></script>
-<script src="js/hot-videos.js?v=0719t"></script>
-<script src="js/fx.js?v=0719t"></script>
-<script src="./js/nav.js?v=0719t"></script>
+<script src="./vendor/supabase.js?v=0719u"></script>
+<script src="js/supabase.js?v=0719u"></script>
+<script src="js/comment-actions.js?v=0719u"></script>
+<script src="js/write-hub.js?v=0719u"></script>
+<script src="js/dm.js?v=0719u"></script>
+<script src="./js/search.js?v=0719u"></script>
+<script src="js/hot-videos.js?v=0719u"></script>
+<script src="js/fx.js?v=0719u"></script>
+<script src="./js/nav.js?v=0719u"></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {

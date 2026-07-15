@@ -184,6 +184,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       `<button class="se-pop" data-kw="${esc(r.kw)}">
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
         <span class="se-pop-title">${esc(r.kw)}</span>
+        <span class="se-pop-cnt">${r.count}</span>
        </button>`
     ).join("");
   }
@@ -477,6 +478,103 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  /* ===== 공용 트렌드 카드 빌더 (지금 뜨는 + 검색 디스커버리 공유) ===== */
+  const _hue = (str) => { let h = 0; for (const c of String(str || "x")) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+  const ttThumb = (url, badge) =>
+    `<span class="tt-th">${isValidThumbnail(url) ? `<img src="${esc(url)}" loading="lazy" onerror="this.style.opacity=0">` : `<span class="sr-noimg">GALLA</span>`}${badge || ""}</span>`;
+  const rankBadge = (i) => i < 3 ? `<span class="tt-rk r${i + 1}">${i + 1}</span>` : "";
+
+  function issueCards(list, ranked = true) {
+    return list.map((i2, i) => {
+      const t2 = (i2.pro_count || 0) + (i2.con_count || 0);
+      const pro = t2 ? Math.round((i2.pro_count || 0) / t2 * 100) : 50;
+      return `<a class="tt-card" href="issue.html?id=${i2.id}">
+        ${ttThumb(issueThumb(i2), (ranked ? rankBadge(i) : "") + (i2.video_url ? `<span class="sr-badge-vid">▶</span>` : ""))}
+        <span class="tt-tag">${esc(i2.category || "")} · 갈라 이슈</span>
+        <span class="tt-title">${esc(i2.title)}</span>
+        <span class="tt-bar"><span class="tt-bar-pro" style="width:${pro}%"></span></span>
+        <span class="tt-meta"><span>${ST.like} ${i2.pro_count || 0}</span><span>${ST.dislike} ${i2.con_count || 0}</span></span>
+      </a>`;
+    });
+  }
+  // 광장은 썸네일 없는 글이 많다 → 제목 중심 텍스트 카드(있으면 어둡게 깐 배경, 없으면 카테고리 색).
+  function plazaCards(list, ranked = true) {
+    return list.map((p, i) => {
+      const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+      const h = _hue(p.category || p.title);
+      const bg = th
+        ? `background-image:linear-gradient(180deg,rgba(10,10,14,.2),rgba(10,10,14,.85)),url('${esc(th)}');background-size:cover;background-position:center;`
+        : `background:linear-gradient(140deg,hsl(${h} 58% 24%),hsl(${(h + 40) % 360} 54% 14%));`;
+      return `<a class="tt-card tt-talk" href="plaza_detail.html?id=${p.id}">
+        <span class="tt-talk-body" style="${bg}">
+          ${ranked ? rankBadge(i) : ""}
+          <span class="tt-quote">❝</span>
+          <span class="tt-talk-title">${esc(p.title || "")}</span>
+        </span>
+        <span class="tt-tag">${esc(p.category || "")} · 갈라 광장</span>
+        <span class="tt-meta"><span>▲ ${p.up_count || 0}</span><span>▼ ${p.down_count || 0}</span></span>
+      </a>`;
+    });
+  }
+  function marketCards(list, ranked = true) {
+    return list.map((m, i) =>
+      `<a class="tt-card tt-predict" href="predict-market.html?id=${m.id}">
+        <span class="tt-th tt-pred-th">${ranked ? rankBadge(i) : ""}<span class="tt-pred-pct">${m._top ? m._top.p + "%" : "?"}</span></span>
+        <span class="tt-tag">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""} · 예측</span>
+        <span class="tt-title">${esc(m.question)}</span>
+        <span class="tt-meta"><span>${m._top ? esc(m._top.label) : ""}</span><span>💰 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</span></span>
+      </a>`);
+  }
+  function shelf(icon, title, cards) {
+    return cards.length
+      ? `<section class="nh-sec"><div class="hv-sec-h"><span class="hv-sec-t">${icon} ${title}</span></div>
+         <div class="tt-shelf">${cards.map((c, i) => c.replace('class="tt-card', `style="--i:${i}" class="tt-card tt-in`)).join("")}</div></section>` : "";
+  }
+  // 마켓 top outcome 계산 (검색/트렌드 공용)
+  async function withMarketTops(markets) {
+    if (markets.length) {
+      const ids = markets.map(m => m.id);
+      const { data: outs } = await supabase.from("market_outcomes")
+        .select("market_id,label,pool_yes,pool_no,sort_order").in("market_id", ids);
+      const byM = {}; (outs || []).forEach(o => (byM[o.market_id] ||= []).push(o));
+      markets.forEach(m => {
+        const list = (byM[m.id] || []).sort((a, b) => a.sort_order - b.sort_order);
+        m._top = list.map(o => ({ label: o.label, p: Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100) })).sort((a, b) => b.p - a.p)[0];
+        m._multi = m.market_type === "multi";
+      });
+    }
+    return markets;
+  }
+
+  /* ===== 검색 빈 화면 디스커버리 허브 (지금 뜨는 이슈·예측·광장) ===== */
+  let discoverLoaded = false;
+  async function loadDiscover() {
+    const wrap = document.getElementById("se-discover");
+    if (!wrap || discoverLoaded) return;
+    discoverLoaded = true;
+    const [giRes, pzRes, markets] = await Promise.all([
+      supabase.from("issues")
+        .select("id,title,category,thumbnail_url,video_url,images,pro_count,con_count,hot_score,created_at")
+        .order("hot_score", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }).limit(8),
+      supabase.from("plaza_posts")
+        .select("id,title,category,cover_image,thumbnail,up_count,down_count,score,created_at")
+        .order("score", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false }).limit(8),
+      (async () => {
+        const { data } = await supabase.from("markets")
+          .select("id,question,category,volume,market_type")
+          .eq("resolved", false).order("volume", { ascending: false }).limit(8);
+        return withMarketTops(data || []);
+      })(),
+    ]);
+    const html =
+      shelf(SEC.issue, "지금 뜨는 이슈", issueCards(giRes.data || []))
+      + shelf(SEC.predict, "인기 갈라예측", marketCards(markets))
+      + shelf(SEC.plaza, "화제의 광장", plazaCards(pzRes.data || []));
+    wrap.innerHTML = html;
+  }
+
   async function loadTrending() {
     const hotWrap = document.getElementById("trending-hot");
     const gallaWrap = document.getElementById("trending-galla");
@@ -533,19 +631,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const { data } = await supabase.from("markets")
           .select("id,question,category,volume,market_type")
           .eq("resolved", false).order("volume", { ascending: false }).limit(10);
-        const markets = data || [];
-        if (markets.length) {
-          const ids = markets.map(m => m.id);
-          const { data: outs } = await supabase.from("market_outcomes")
-            .select("market_id,label,pool_yes,pool_no,sort_order").in("market_id", ids);
-          const byM = {}; (outs || []).forEach(o => (byM[o.market_id] ||= []).push(o));
-          markets.forEach(m => {
-            const list = (byM[m.id] || []).sort((a, b) => a.sort_order - b.sort_order);
-            m._top = list.map(o => ({ label: o.label, p: Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100) })).sort((a, b) => b.p - a.p)[0];
-            m._multi = m.market_type === "multi";
-          });
-        }
-        return markets;
+        return withMarketTops(data || []);
       })(),
     ]);
 
@@ -566,11 +652,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     const gi = giRes.data || [], plaza = pzRes.data || [], markets = mkRes;
 
-    // 통합 트렌드 카드(가로 캐러셀용). 상위 3개엔 순위 배지.
-    const ttThumb = (url, badge) =>
-      `<span class="tt-th">${isValidThumbnail(url) ? `<img src="${esc(url)}" loading="lazy" onerror="this.style.opacity=0">` : `<span class="sr-noimg">GALLA</span>`}${badge || ""}</span>`;
-    const rankBadge = (i) => i < 3 ? `<span class="tt-rk r${i + 1}">${i + 1}</span>` : "";
-
+    // 갈라뉴스는 트렌드 전용 카드(썸네일+좋아요·댓글). 나머진 공용 빌더.
     const gnewsItems = gnews.map((n, i) =>
       `<button class="tt-card gn-trend" data-gid="${n.id}">
         ${ttThumb(n.hero_image, rankBadge(i))}
@@ -578,50 +660,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         <span class="tt-title">${esc(n.title)}</span>
         <span class="tt-meta"><span>${ST.like} ${n._l}</span><span>${ST.comment} ${n._c}</span></span>
       </button>`);
-
-    const issueItems = gi.map((i2, i) => {
-      const t2 = (i2.pro_count || 0) + (i2.con_count || 0);
-      const pro = t2 ? Math.round((i2.pro_count || 0) / t2 * 100) : 50;
-      return `<a class="tt-card" href="issue.html?id=${i2.id}">
-        ${ttThumb(issueThumb(i2), rankBadge(i) + (i2.video_url ? `<span class="sr-badge-vid">▶</span>` : ""))}
-        <span class="tt-tag">${esc(i2.category || "")} · 갈라 이슈</span>
-        <span class="tt-title">${esc(i2.title)}</span>
-        <span class="tt-bar"><span class="tt-bar-pro" style="width:${pro}%"></span></span>
-        <span class="tt-meta"><span>${ST.like} ${i2.pro_count || 0}</span><span>${ST.dislike} ${i2.con_count || 0}</span></span>
-      </a>`;
-    });
-
-    // 광장은 썸네일 없는 글이 많다 → 제목 중심 텍스트 카드.
-    //   썸네일 있으면 어둡게 깐 배경으로, 없으면 카테고리 색 그라디언트.
-    const hue = (str) => { let h = 0; for (const c of String(str || "x")) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
-    const plazaItems = plaza.map((p, i) => {
-      const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
-      const h = hue(p.category || p.title);
-      const bg = th
-        ? `background-image:linear-gradient(180deg,rgba(10,10,14,.2),rgba(10,10,14,.85)),url('${esc(th)}');background-size:cover;background-position:center;`
-        : `background:linear-gradient(140deg,hsl(${h} 58% 24%),hsl(${(h + 40) % 360} 54% 14%));`;
-      return `<a class="tt-card tt-talk" href="plaza_detail.html?id=${p.id}">
-        <span class="tt-talk-body" style="${bg}">
-          ${rankBadge(i)}
-          <span class="tt-quote">❝</span>
-          <span class="tt-talk-title">${esc(p.title || "")}</span>
-        </span>
-        <span class="tt-tag">${esc(p.category || "")} · 갈라 광장</span>
-        <span class="tt-meta"><span>▲ ${p.up_count || 0}</span><span>▼ ${p.down_count || 0}</span></span>
-      </a>`;
-    });
-
-    const marketItems = markets.map((m, i) =>
-      `<a class="tt-card tt-predict" href="predict-market.html?id=${m.id}">
-        <span class="tt-th tt-pred-th">${rankBadge(i)}<span class="tt-pred-pct">${m._top ? m._top.p + "%" : "?"}</span></span>
-        <span class="tt-tag">${esc(m.category || "")}${m._multi ? " · 여러 선택지" : ""} · 예측</span>
-        <span class="tt-title">${esc(m.question)}</span>
-        <span class="tt-meta"><span>${m._top ? esc(m._top.label) : ""}</span><span>💰 ${Math.round(m.volume || 0).toLocaleString("ko-KR")}P</span></span>
-      </a>`);
-
-    const shelf = (icon, title, cards) => cards.length
-      ? `<section class="nh-sec"><div class="hv-sec-h"><span class="hv-sec-t">${icon} ${title}</span></div>
-         <div class="tt-shelf">${cards.map((c, i) => c.replace("class=\"tt-card", `style="--i:${i}" class="tt-card tt-in`)).join("")}</div></section>` : "";
+    const issueItems = issueCards(gi);
+    const plazaItems = plazaCards(plaza);
+    const marketItems = marketCards(markets);
 
     gallaWrap.innerHTML =
       shelf(SEC.news, "인기 갈라뉴스", gnewsItems)
@@ -1059,6 +1100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ================= INIT ================= */
   renderRecent();
   loadPopular();
+  loadDiscover();
   showEmpty(true);
 
   // 옛 딥링크: search.html?gn=<id> → 이제 기사는 news.html 이 담당 (마이페이지 '저장한 뉴스' 등 호환)

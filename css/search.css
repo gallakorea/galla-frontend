@@ -498,7 +498,8 @@ body[data-page="search"] .header-inner {
   border: 1px solid #232634;
   border-radius: 14px;
 }
-.search-bar-ic { opacity: .6; font-size: 15px; }
+.search-bar-ic { opacity: .55; font-size: 15px; }
+svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
 .search-bar .search-input {
   flex: 1; width: auto; margin: 0; padding: 0;
   background: transparent; border: none; color: #fff; font-size: 15px;
@@ -536,7 +537,25 @@ body[data-page="search"] .header-inner {
 }
 .se-pop-rank { width: 20px; font-size: 15px; font-weight: 900; color: #6b7488; }
 .se-pop-rank.hot { color: #ff5470; }
-.se-pop-title { color: #eef1f7; font-size: 14px; font-weight: 600; }
+.se-pop-title { flex: 1; color: #eef1f7; font-size: 14px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.se-pop-cnt { color: #6b7488; font-size: 11.5px; font-weight: 700;
+  background: #191c26; border-radius: 999px; padding: 2px 8px; flex: 0 0 auto; }
+.se-pop:active { opacity: .6; }
+
+/* 실시간 LIVE 배지 (인기 검색어 헤더) */
+.se-live { display: inline-flex; align-items: center; gap: 5px;
+  color: #ff5470; font-size: 10.5px; font-weight: 900; letter-spacing: .04em; }
+.se-live i { width: 6px; height: 6px; border-radius: 50%; background: #ff3c5a;
+  box-shadow: 0 0 0 0 rgba(255,60,90,.6); animation: seLive 1.6s ease-out infinite; }
+@keyframes seLive { 0% { box-shadow: 0 0 0 0 rgba(255,60,90,.55); }
+  70% { box-shadow: 0 0 0 7px rgba(255,60,90,0); } 100% { box-shadow: 0 0 0 0 rgba(255,60,90,0); } }
+@media (prefers-reduced-motion: reduce) { .se-live i { animation: none; } }
+
+/* 디스커버리 섹션 — 검색 빈 화면의 추천 콘텐츠 선반 사이 여백 */
+#se-discover { margin-top: 6px; }
+#se-discover .nh-sec { margin-bottom: 20px; }
+#se-discover .nh-sec .hv-sec-h { margin-left: 0; }
 
 /* 검색 결과 섹션 */
 .search-results { padding: 0 16px 30px; }
