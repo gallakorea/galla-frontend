@@ -48,6 +48,30 @@ async function fetchGoogle(): Promise<{ rank: number; keyword: string; traffic: 
   return out.slice(0, 10);
 }
 
+// 네이버 '많이 본 뉴스'(popularDay) — 언론사별로 묶여 있어 언론사당 1건만 뽑아 다양성 확보.
+// 페이지는 EUC-KR 인코딩이라 디코딩 필수. 결과는 기사 제목 + 원문 링크.
+type Row = { rank: number; keyword: string; traffic: string | null; link?: string | null };
+async function fetchNaver(): Promise<Row[]> {
+  const res = await fetch("https://news.naver.com/main/ranking/popularDay.naver", {
+    headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36" },
+    redirect: "follow",
+  });
+  if (!res.ok) throw new Error("naver " + res.status);
+  const html = new TextDecoder("euc-kr").decode(new Uint8Array(await res.arrayBuffer()));
+  const re = /<a href="(https:\/\/n\.news\.naver\.com\/[^"]+)"[^>]*class="list_title[^"]*"[^>]*>\s*([^<]{3,90})/g;
+  const seen = new Set<string>(); const out: Row[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const url = m[1], title = decode(m[2]);
+    const press = (url.match(/article\/(\d+)\//) || [])[1] || url;
+    if (!title || seen.has(press)) continue;   // 언론사당 1건
+    seen.add(press);
+    out.push({ rank: out.length + 1, keyword: title, traffic: null, link: url });
+    if (out.length >= 12) break;
+  }
+  return out;
+}
+
 async function fetchSignal(): Promise<{ rank: number; keyword: string; traffic: string | null }[]> {
   const res = await fetch("https://api.signal.bz/news/realtime", {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; GallaBot/1.0)", "Accept": "application/json" },
@@ -59,11 +83,11 @@ async function fetchSignal(): Promise<{ rank: number; keyword: string; traffic: 
     .map((x, i) => ({ rank: x.rank ?? i + 1, keyword: String(x.keyword).trim(), traffic: null }));
 }
 
-async function replace(source: string, rows: { rank: number; keyword: string; traffic: string | null }[]) {
+async function replace(source: string, rows: Row[]) {
   if (!rows.length) return 0;
   await supa.from("portal_search_trends").delete().eq("source", source);
   const { error } = await supa.from("portal_search_trends")
-    .insert(rows.map((r) => ({ source, rank: r.rank, keyword: r.keyword, traffic: r.traffic })));
+    .insert(rows.map((r) => ({ source, rank: r.rank, keyword: r.keyword, traffic: r.traffic, link: r.link ?? null })));
   if (error) throw error;
   return rows.length;
 }
@@ -75,6 +99,7 @@ Deno.serve(async (req) => {
   await Promise.all([
     fetchGoogle().then((r) => replace("google", r)).then((n) => (result.google = n)).catch((e) => (result.google = "err:" + e.message)),
     fetchSignal().then((r) => replace("signal", r)).then((n) => (result.signal = n)).catch((e) => (result.signal = "err:" + e.message)),
+    fetchNaver().then((r) => replace("naver", r)).then((n) => (result.naver = n)).catch((e) => (result.naver = "err:" + e.message)),
   ]);
   return new Response(JSON.stringify({ ok: true, ...result }), {
     headers: { ...cors, "Content-Type": "application/json" },

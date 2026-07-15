@@ -186,8 +186,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       items = (await computeHotKeywords(10)).map(r => ({ keyword: r.kw, badge: String(r.count) }));
     } else {
       const { data } = await supabase.from("portal_search_trends")
-        .select("rank,keyword,traffic").eq("source", src).order("rank").limit(10);
-      items = (data || []).map(r => ({ keyword: r.keyword, badge: r.traffic || "" }));
+        .select("rank,keyword,traffic,link").eq("source", src).order("rank").limit(12);
+      items = (data || []).map(r => ({ keyword: r.keyword, badge: r.traffic || "", link: r.link || "" }));
     }
     _srcCache[src] = items;
     return items;
@@ -195,10 +195,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderRank(items) {
     if (!items.length) { popularEl.innerHTML = `<p class="se-muted">집계된 검색어가 없어요.</p>`; return; }
     popularEl.innerHTML = items.map((r, i) =>
-      `<button class="se-pop" data-kw="${esc(r.keyword)}">
+      `<button class="se-pop" data-kw="${esc(r.keyword)}"${r.link ? ` data-link="${esc(r.link)}"` : ""}>
         <span class="se-pop-rank ${i < 3 ? "hot" : ""}">${i + 1}</span>
         <span class="se-pop-title">${esc(r.keyword)}</span>
-        ${r.badge ? `<span class="se-pop-cnt">${esc(r.badge)}</span>` : ""}
+        ${r.badge ? `<span class="se-pop-cnt">${esc(r.badge)}</span>`
+          : (r.link ? `<span class="se-pop-go">›</span>` : "")}
        </button>`
     ).join("");
   }
@@ -215,7 +216,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   popularEl.addEventListener("click", e => {
     const b = e.target.closest("[data-kw]");
-    if (b) runSearch(b.dataset.kw, true);
+    if (!b) return;
+    // 뉴스 소스(네이버 등)는 링크가 있으면 기사 뷰어로, 아니면 통합 검색
+    if (b.dataset.link) { openNewsViewer(b.dataset.link, b.dataset.kw, ""); return; }
+    runSearch(b.dataset.kw, true);
   });
 
   /* ================= 통합 검색 ================= */

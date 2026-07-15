@@ -541,6 +541,7 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .se-pop-cnt { color: #6b7488; font-size: 11.5px; font-weight: 700;
   background: #191c26; border-radius: 999px; padding: 2px 8px; flex: 0 0 auto; }
+.se-pop-go { color: #4b5266; font-size: 16px; font-weight: 700; flex: 0 0 auto; }
 .se-pop:active { opacity: .6; }
 
 /* 실시간 LIVE 배지 (인기 검색어 헤더) */
