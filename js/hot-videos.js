@@ -360,10 +360,10 @@
         ? `<img class="hv-cmt-av" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(m.avatar_url) : m.avatar_url)}" alt=""${uAttr}>`
         : `<span class="hv-cmt-av hv-cmt-av0"${uAttr}>${esc((m.nickname || "갈")[0])}</span>`);
     const lvN = !gh && m.user_id ? window.__GU_CACHE?.[m.user_id]?.level : null;
-    const lvHtml = (lvN ?? null) !== null ? `<span class="gu-lv">Lv.${Number(lvN) || 1}</span>` : "";
+    const tierHtml = !gh && m.user_id && window.GALLA_tierIcon ? `<span class="gu-tier">${window.GALLA_tierIcon(lvN)}</span>` : "";
     const nameHtml = gh
       ? `<span class="hv-cmt-n ghost-nick" style="color:${gh.color}">${gh.name}</span>`
-      : `<span class="hv-cmt-n"${uAttr}>${esc(m.nickname)}</span>${lvHtml}`;
+      : `${tierHtml}<span class="hv-cmt-n"${uAttr}>${esc(m.nickname)}</span>`;
     return `
       <div class="hv-cmt${isReply ? " hv-cmt-r" : ""}" data-cid="${m.id}">
         ${av}

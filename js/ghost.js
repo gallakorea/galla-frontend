@@ -68,15 +68,21 @@
     }
     return window.__GU_CACHE;
   };
+  // 레벨 → 등급 아이콘 (인덱스/마이페이지와 동일 구간)
+  window.GALLA_tierIcon = window.GALLA_tierIcon || function (lv) {
+    lv = Number(lv) || 1;
+    return lv >= 20 ? "👑" : lv >= 10 ? "⚔️" : lv >= 5 ? "🔰" : "🌱";
+  };
   window.GALLA_userBadge = function (uid, fallbackNick, o = {}) {
     const u = Object.assign({}, window.__GU_CACHE[uid] || {}, o);
     const nick = u.nickname || fallbackNick || "익명";
     const av = u.avatar_url
       ? `<img class="gu-av" src="${guEsc(window.GALLA_avatarSrc(u.avatar_url))}" alt="" onerror="this.style.display='none'">`
       : `<span class="gu-av gu-av0">${guEsc((nick || "갈").trim().charAt(0) || "갈")}</span>`;
-    const lv = (u.level ?? null) !== null ? `<span class="gu-lv">Lv.${Number(u.level) || 1}</span>` : "";
+    // 인덱스처럼 등급 아이콘만 닉 앞에 (Lv 숫자 칩 없음)
+    const tier = `<span class="gu-tier">${window.GALLA_tierIcon(u.level)}</span>`;
     const attrs = uid ? ` data-user-id="${guEsc(uid)}" data-user-nick="${guEsc(nick)}"` : "";
-    return `<span class="gu-wrap"${attrs}>${av}<span class="gu-nick">${guEsc(nick)}</span>${lv}</span>`;
+    return `<span class="gu-wrap"${attrs}>${av}${tier}<span class="gu-nick">${guEsc(nick)}</span></span>`;
   };
 
   /* ---- 스타일 주입 ---- */
@@ -132,6 +138,7 @@
   .gu-av0{display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;
     color:#cfcfe0;background:linear-gradient(135deg,#2c2b3a,#1b1a26);line-height:1}
   .gu-nick{font-weight:800;color:#e9e9f0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+  .gu-tier{font-size:12px;line-height:1;flex:0 0 auto}
   .gu-lv{font-size:9.5px;font-weight:900;color:#8fa3ff;background:rgba(90,110,255,.14);
     border:1px solid rgba(120,140,255,.35);padding:1px 6px;border-radius:99px;flex:0 0 auto;line-height:1.3}
   /* 유령 토스트 */
