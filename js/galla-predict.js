@@ -88,9 +88,9 @@ function renderGuide(){
         <div class="pg-step">
           <div class="pg-art"><span class="pg-art-main">⏰</span><span class="pg-art-side r">🏁</span></div>
           <div class="pg-n">3</div>
-          <div class="pg-t">마감 후, 실제 결과로 정산</div>
-          <div class="pg-s">시간이 끝나면 실제 세상의 결과를 확인해서 <b>정답을 확정</b>해요
-            (이게 '정산'!). 운영진 또는 예측을 만든 사람이 결과 버튼을 누릅니다.
+          <div class="pg-t">마감되면 자동으로 정산</div>
+          <div class="pg-s">시간이 끝나면 <b>AI 심판이 실제 뉴스를 근거로 정답을 자동 확정</b>해요
+            (이게 '정산'!). 판정이 애매하면 무리하게 정하지 않고 <b>전액 환불</b>됩니다.
             정산되면 알림이 와요 🔔</div>
         </div>
         <div class="pg-arrow">▼</div>

@@ -366,7 +366,7 @@ function renderAdmin(closed, canResolve){
   const show=(ok)=>{
     if(!ok) return;
     el.innerHTML=`<div class="pb-admin">
-      <div class="h">🛠 정산 — 실제 결과를 선택하면 승자에게 풀이 분배됩니다${closed?'':' (마감 전 정산도 가능)'}</div>
+      <div class="h">🛠 수동 정산(오버라이드) — 마감 후엔 AI가 자동 정산합니다. 결과를 먼저 확정하려면 선택하세요.</div>
       <div class="pb-admin-btns">${OUTCOMES.map(o=>`<button class="pb-admin-btn ${sideOf(o)}" data-oid="${o.id}">${esc(o.label)} 적중</button>`).join('')}</div>
     </div>`;
     el.querySelectorAll('.pb-admin-btn').forEach(b=>b.onclick=async ()=>{
