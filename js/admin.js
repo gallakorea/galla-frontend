@@ -230,15 +230,43 @@
       <div class="ad-card" id="m-list"><div class="ad-loading">불러오는 중…</div></div>`;
     $("#m-filter").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; mFilter = b.dataset.v; renderMembers(); };
     $("#m-q").onkeydown = e => { if (e.key === "Enter") { mQ = e.target.value.trim(); renderMembers(); } };
-    const d = await rpc("admin_users", { p_filter: mFilter, p_q: mQ || null, p_limit: 60 });
+    const d = await rpc("admin_users", { p_filter: mFilter, p_q: mQ || null, p_limit: 300 });
     const rows = d?.rows || [];
-    $("#m-list").innerHTML = rows.length ? `<table class="ad-table"><thead><tr><th>닉네임</th><th>Lv</th><th>보유 GP</th><th>누적 GP</th><th>경고</th><th>상태</th><th></th></tr></thead><tbody>
-      ${rows.map(r => `<tr><td>${esc(r.nickname || "익명")}${r.admin ? ' <span class="ad-tag t-admin">관리자</span>' : ''}</td>
-        <td>${r.level || 1}</td><td>${fmt(r.gp)}</td><td>${fmt(r.lifetime)}</td>
-        <td>${r.warning > 0 ? `<span class="ad-warn">${r.warning}</span>` : "0"}</td>
-        <td>${r.banned ? '<span class="ad-tag t-ban">정지</span>' : '정상'}</td>
-        <td><button class="ad-btn ghost" data-uid="${r.user_id}">관리</button></td></tr>`).join("")}
-      </tbody></table>` : `<div class="ad-soon">해당 회원이 없어요.</div>`;
+    const gender = g => g === "male" ? "남" : g === "female" ? "여" : (g || "-");
+    const cell = (v, cls = "") => `<td class="${cls}">${v}</td>`;
+    $("#m-list").innerHTML = rows.length ? `
+      <div class="ad-sheet-info">전체 ${fmt(rows.length)}명 · 가로 스크롤로 전체 컬럼 확인</div>
+      <div class="ad-sheet-wrap"><table class="ad-sheet"><thead><tr>
+        <th class="stick">닉네임</th><th>상태</th><th>이메일</th><th>전화</th><th>지역</th><th>성별</th><th>출생</th>
+        <th>Lv</th><th>무료GP</th><th>충전GP</th><th>GC</th><th>누적GP</th><th>경고</th>
+        <th>발의</th><th>댓글</th><th>투표</th><th>예측</th><th>보낸후원</th><th>받은수익</th>
+        <th>가입일</th><th>최근접속</th><th class="stick-r">관리</th>
+      </tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        ${cell(`${esc(r.nickname || "익명")}${r.admin ? ' <span class="ad-tag t-admin">관리자</span>' : ''}`, "stick nick")}
+        ${cell(r.banned ? '<span class="ad-tag t-ban">정지</span>' : '<span class="ok">정상</span>')}
+        ${cell(esc(r.email || "-"), "mono")}
+        ${cell(esc(r.phone || "-"), "mono")}
+        ${cell(esc(r.region || "-"))}
+        ${cell(gender(r.gender))}
+        ${cell(r.birth_year || "-")}
+        ${cell(r.level || 1, "num")}
+        ${cell(fmt(r.gp_free), "num")}
+        ${cell(r.gp_paid > 0 ? `<b class="paid">${fmt(r.gp_paid)}</b>` : "0", "num")}
+        ${cell(r.gc > 0 ? `<b class="gc">${fmt(r.gc)}</b>` : "0", "num")}
+        ${cell(fmt(r.lifetime), "num")}
+        ${cell(r.warning > 0 ? `<span class="ad-warn">${r.warning}</span>` : "0", "num")}
+        ${cell(fmt(r.issues), "num")}
+        ${cell(fmt(r.comments), "num")}
+        ${cell(fmt(r.votes), "num")}
+        ${cell(fmt(r.bets), "num")}
+        ${cell(r.don_sent > 0 ? "₩" + fmt(r.don_sent) : "-", "num")}
+        ${cell(r.don_recv > 0 ? `<b class="won">₩${fmt(r.don_recv)}</b>` : "-", "num")}
+        ${cell(r.created_at ? new Date(r.created_at).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" }) : "-", "mono")}
+        ${cell(r.last_ping ? ago(r.last_ping) : "-", "mono")}
+        ${cell(`<button class="ad-btn ghost" data-uid="${r.user_id}">관리</button>`, "stick-r")}
+      </tr>`).join("")}
+      </tbody></table></div>` : `<div class="ad-soon">해당 회원이 없어요.</div>`;
     $("#m-list").onclick = e => { const b = e.target.closest("[data-uid]"); if (b) openMember(b.dataset.uid); };
   }
   async function openMember(uid) {

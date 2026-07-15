@@ -219,3 +219,25 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-tl-d { flex: 0 0 auto; font-weight: 900; }
 .ad-tl-d.up { color: #33d17a; } .ad-tl-d.down { color: #ff6b81; }
 .ad-tl-ts { flex: 0 0 auto; color: #5c6479; font-size: 10.5px; }
+
+/* ── 회원 스프레드시트 ── */
+.ad-sheet-info { font-size: 11.5px; color: #8a8f9a; margin: 0 0 8px; }
+.ad-sheet-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: #0f1014; }
+.ad-sheet-wrap::-webkit-scrollbar { height: 9px; }
+.ad-sheet-wrap::-webkit-scrollbar-thumb { background: #2a2e3a; border-radius: 9px; }
+.ad-sheet { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12px; }
+.ad-sheet th, .ad-sheet td { padding: 8px 11px; white-space: nowrap; border-bottom: 1px solid #171921; text-align: left; }
+.ad-sheet thead th { position: sticky; top: 0; z-index: 2; background: #14161d; color: #9aa0ad;
+  font-weight: 800; font-size: 11px; border-bottom: 1px solid #262a36; }
+.ad-sheet tbody tr:hover td { background: rgba(61,107,255,.06); }
+.ad-sheet td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ad-sheet td.mono { font-size: 11px; color: #aeb4c0; font-variant-numeric: tabular-nums; }
+.ad-sheet .nick { font-weight: 700; color: #e6e9f0; }
+.ad-sheet .ok { color: #33d17a; }
+.ad-sheet b.paid { color: #ffb03c; } .ad-sheet b.gc { color: #ff7a9c; } .ad-sheet b.won { color: #33d17a; }
+/* 좌측 닉네임 · 우측 관리 버튼 고정 */
+.ad-sheet th.stick, .ad-sheet td.stick { position: sticky; left: 0; z-index: 1; background: #12141a; }
+.ad-sheet thead th.stick { z-index: 3; }
+.ad-sheet th.stick-r, .ad-sheet td.stick-r { position: sticky; right: 0; z-index: 1; background: #12141a; text-align: center; }
+.ad-sheet thead th.stick-r { z-index: 3; }
+.ad-sheet tbody tr:hover td.stick, .ad-sheet tbody tr:hover td.stick-r { background: #171a24; }
