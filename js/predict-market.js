@@ -171,20 +171,35 @@ function renderHero(){
   const no=outs.find(o=>o!==yes)||outs[1];
   const py=yes?.pool||0, pn=no?.pool||0, tot=py+pn;
   const yp=tot>0?Math.round(py/tot*100):50;
-  el.innerHTML=`
+  // 잭팟 마켓: 히어로에 반짝이 별이 떠다닌다
+  const sparkles=STATE.is_jackpot
+    ? `<span class="pb-spark s1">✨</span><span class="pb-spark s2">✨</span><span class="pb-spark s3">💫</span><span class="pb-spark s4">🪙</span>` : '';
+  el.innerHTML=`${sparkles}
     <div class="pm-odds">
       <div class="pm-odds-bar" style="height:40px">
-        <div class="pm-odds-side yes" style="width:${Math.max(16,Math.min(84,yp))}%"><span class="lab">${esc(yes?.label||'예')} ${yp}%</span></div>
-        <div class="pm-odds-side no" style="width:${Math.max(16,Math.min(84,100-yp))}%"><span class="lab">${esc(no?.label||'아니오')} ${100-yp}%</span></div>
+        <div class="pm-odds-side yes shine" style="width:${Math.max(16,Math.min(84,yp))}%"><span class="lab">${esc(yes?.label||'예')} ${yp}%</span></div>
+        <div class="pm-odds-side no shine" style="width:${Math.max(16,Math.min(84,100-yp))}%"><span class="lab">${esc(no?.label||'아니오')} ${100-yp}%</span></div>
       </div>
     </div>
     <div class="pb-pool-row">
       <div>
         <div class="pb-pool-lbl">${(STATE.jackpot||0)>0?'잭팟 보너스 포함 상금풀':'현재 상금풀'}</div>
-        <div class="pb-pool-n">${fmt(prizePool())}<small> GP</small></div>
+        <div class="pb-pool-n glow" data-to="${Math.round(prizePool())}">0<small> GP</small></div>
       </div>
       <div class="pb-ppl">👥 <b>${fmt(STATE.participants||0)}</b>명 참여</div>
     </div>`;
+  poolCountUp(el);
+}
+
+/* 상금풀 카운트업 (0 → 목표, easeOutCubic) */
+function poolCountUp(root){
+  const el=root.querySelector('[data-to]'); if(!el) return;
+  const to=+el.dataset.to||0;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){ el.childNodes[0].textContent=fmt(to); return; }
+  const t0=performance.now(), dur=850;
+  (function tick(t){ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.childNodes[0].textContent=fmt(Math.round(to*e));
+    if(k<1) requestAnimationFrame(tick); })(t0);
 }
 
 function renderMine(){
@@ -204,12 +219,17 @@ function renderMine(){
 function renderPanel(closed){
   const el=$('pbPanel'); if(!el) return;
   if(closed){ el.innerHTML=''; return; }
+  // 배당 변동 감지 → 오르면 골드, 내리면 레드 플래시 (주식 시세판)
+  window.__PB_PREV_ODDS ||= {};
   const outBtns=OUTCOMES.map(o=>{
     const od=oddsOf(o);
     const side=sideOf(o);
+    const prev=window.__PB_PREV_ODDS[o.id];
+    const tick=(prev!=null&&od!=null&&Math.abs(od-prev)>0.005)?(od>prev?' tick-up':' tick-down'):'';
+    window.__PB_PREV_ODDS[o.id]=od;
     return `<button class="pb-out ${side} ${SEL===o.id?'sel':''}" data-oid="${o.id}">
       <span class="lb">${esc(o.label)}</span>
-      <span class="od">×${od?od.toFixed(2):'–'}</span>
+      <span class="od${tick}">×${od?od.toFixed(2):'–'}</span>
       <span class="pool">${fmt(o.pool)}GP · ${o.bettors||0}명</span>
     </button>`;
   }).join('');
@@ -374,9 +394,10 @@ async function loadFeed(){
   el.innerHTML=data.map((b,i)=>{
     const o=OUTCOMES.find(x=>x.id===b.outcome_id);
     const side=o?sideOf(o):'yes';
-    return `<div class="pb-feed-row ${i===0?'new':''}">
+    const big=b.stake>=5000?' whale':'';   // 🐋 하이롤러 강조
+    return `<div class="pb-feed-row in${big}" style="--i:${i}">
       <span class="pb-feed-side ${side}">${esc(o?o.label:'')}</span>
-      <span class="pb-feed-txt"><b>${esc(profs[b.user_id]?.nickname||'익명')}</b>님이 <b>${fmt(b.stake)}GP</b> 베팅${b.odds_at_bet?` (×${Number(b.odds_at_bet).toFixed(2)})`:''}</span>
+      <span class="pb-feed-txt">${b.stake>=5000?'🐋 ':''}<b>${esc(profs[b.user_id]?.nickname||'익명')}</b>님이 <b>${fmt(b.stake)}GP</b> 베팅${b.odds_at_bet?` (×${Number(b.odds_at_bet).toFixed(2)})`:''}</span>
       <span class="pb-feed-time">${ago(b.created_at)}</span>
     </div>`;
   }).join('');

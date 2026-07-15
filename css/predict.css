@@ -289,3 +289,66 @@
   color:#8fa1c4; background:rgba(74,123,255,.07); border:1px solid rgba(74,123,255,.22); }
 .pg-ex b{ color:#a9c2ff; }
 @media (prefers-reduced-motion: reduce){ .pg-coin{ animation:none; } .pg-body{ transition:none; } }
+
+/* ===== 상세 페이지 라이브 연출 (타임스퀘어) ===== */
+/* 배당바 빛 스윕 — 네온 사인이 계속 훑고 지나간다 */
+.pm-odds-side.shine{ position:relative; }
+.pm-odds-side.shine::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(105deg, transparent 30%, rgba(255,255,255,.22) 50%, transparent 70%);
+  background-size:220% 100%; animation:pbSweep 2.6s ease-in-out infinite;
+}
+.pm-odds-side.no.shine::after{ animation-delay:1.3s; }
+@keyframes pbSweep{ 0%{background-position:180% 0} 100%{background-position:-80% 0} }
+
+/* 상금풀 골드 글로우 맥동 */
+.pb-pool-n.glow{ animation:pbGlow 2.8s ease-in-out infinite; }
+@keyframes pbGlow{ 0%,100%{ text-shadow:0 0 12px rgba(255,207,63,.25) } 50%{ text-shadow:0 0 26px rgba(255,207,63,.6), 0 0 44px rgba(255,157,46,.25) } }
+
+/* 잭팟 히어로 반짝이 */
+.pb-spark{ position:absolute; pointer-events:none; z-index:1; font-size:14px; opacity:0; animation:pbSpark 3.4s ease-in-out infinite; }
+.pb-spark.s1{ top:12%; left:8%; }
+.pb-spark.s2{ top:20%; right:12%; animation-delay:.9s; }
+.pb-spark.s3{ bottom:30%; left:16%; animation-delay:1.7s; font-size:12px; }
+.pb-spark.s4{ bottom:22%; right:7%; animation-delay:2.4s; font-size:13px; }
+@keyframes pbSpark{ 0%,100%{ opacity:0; transform:translateY(4px) scale(.7) } 50%{ opacity:1; transform:translateY(-6px) scale(1.15) } }
+
+/* 배당 변동 틱 — 오르면 골드 팝, 내리면 레드 딤 (주식 시세판) */
+@keyframes pbTickUp{ 0%{ color:var(--pm-gold); transform:scale(1.3); text-shadow:0 0 14px rgba(255,207,63,.7) } 100%{ transform:scale(1) } }
+@keyframes pbTickDown{ 0%{ color:#ff7a90; transform:scale(.85) } 100%{ transform:scale(1) } }
+.pb-out .od.tick-up{ animation:pbTickUp .9s ease; }
+.pb-out .od.tick-down{ animation:pbTickDown .9s ease; }
+
+/* 칩이 살아 숨쉰다 — 유휴 미세 흔들림(시차) + 올인은 심장박동 */
+@keyframes pbChipIdle{ 0%,100%{ transform:rotate(0) } 25%{ transform:rotate(-2.5deg) } 75%{ transform:rotate(2.5deg) } }
+.pb-chip{ animation:pbChipIdle 3.6s ease-in-out infinite; }
+.pb-chip:nth-child(2){ animation-delay:.4s; } .pb-chip:nth-child(3){ animation-delay:.8s; }
+.pb-chip:nth-child(4){ animation-delay:1.2s; }
+@keyframes pbAllin{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,60,90,.4) } 50%{ box-shadow:0 0 16px 3px rgba(255,60,90,.25) } }
+.pb-chip.allin{ animation:pbChipIdle 3.6s ease-in-out infinite 1.6s, pbAllin 2s ease-in-out infinite; }
+
+/* 베팅하기 버튼 shimmer — 골드 위를 빛줄기가 지나간다 */
+.pb-bet{ position:relative; overflow:hidden; }
+.pb-bet::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(115deg, transparent 35%, rgba(255,255,255,.45) 50%, transparent 65%);
+  background-size:250% 100%; animation:pbSweep 3.2s ease-in-out infinite;
+}
+.pb-bet:disabled::after{ display:none; }
+
+/* 결과 선택 시 펄스 링 */
+@keyframes pbSelRing{ 0%{ box-shadow:0 0 0 0 rgba(255,255,255,.35) } 100%{ box-shadow:0 0 0 14px rgba(255,255,255,0) } }
+.pb-out.sel{ animation:pbSelRing .55s ease-out; }
+
+/* 라이브 피드 순차 등장 + 🐋 하이롤러 골드 하이라이트 */
+.pb-feed-row.in{ opacity:0; animation:pbIn .45s ease forwards; animation-delay:calc(var(--i,0)*60ms); }
+.pb-feed-row.whale{ background:linear-gradient(90deg, rgba(255,207,63,.08), transparent 70%);
+  border-radius:8px; border-bottom-color:rgba(255,207,63,.2); }
+.pb-feed-row.whale .pb-feed-txt b{ color:var(--pm-gold); }
+
+@media (prefers-reduced-motion: reduce){
+  .pm-odds-side.shine::after, .pb-bet::after{ animation:none; display:none; }
+  .pb-pool-n.glow, .pb-spark, .pb-chip, .pb-chip.allin, .pb-out.sel,
+  .pb-out .od.tick-up, .pb-out .od.tick-down{ animation:none; }
+  .pb-feed-row.in{ opacity:1; animation:none; }
+}
