@@ -596,7 +596,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* ================= 뉴스 (실시간) ================= */
-  const NEWS_CATEGORIES = ["전체", "정치", "경제", "사회", "생활문화", "세계", "IT과학", "연예", "스포츠"];
+  const NEWS_CATEGORIES = ["전체", "정치", "경제", "사회", "세계", "IT과학", "스포츠", "문화", "연예"];
   const CATEGORY_SID_MAP = { "정치": 100, "경제": 101, "사회": 102, "생활문화": 103, "세계": 104, "IT과학": 105, "연예": 106, "스포츠": 107 };
   let currentNewsCategory = "전체";
   let newsPage = 0, isLoadingNews = false, hasMoreNews = true;
@@ -626,77 +626,189 @@ document.addEventListener("DOMContentLoaded", async () => {
     newsPage = 0; hasMoreNews = true; isLoadingNews = false;
     const list = document.getElementById("top-news-list");
     if (list) list.innerHTML = "";
-    loadGallaNews();
+    if (currentNewsCategory === "전체") renderNewsHome();
+    else loadCategoryNews();
   }
 
-  /* ===== 갈라뉴스 (AI 종합 기사) ===== */
-  async function loadGallaNews() {
+  const shortN = (n) => {
+    n = Number(n) || 0;
+    if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, "") + "만";
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "천";
+    return String(n);
+  };
+
+  /* 전체 스탯 카드 (좋아요/싫어요/댓글/저장/공유) — 홈·카테고리 공용 */
+  function gallaCard(n) {
+    GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
+    const th = isValidThumbnail(n.hero_image);
+    const me = GALLA_CACHE[n.id];
+    return `<div class="news-card galla" data-gid="${n.id}">
+      <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
+      <div class="news-text">
+        <span class="galla-badge">갈라뉴스</span>
+        <h3 class="news-title">${esc(n.title)}</h3>
+        <div class="news-meta">
+          <span>${esc(n.category || "")}</span>
+          <span class="news-time">${timeAgo(n.published_at)}</span>
+          <span>· 관련 ${n.source_count || 0}건</span>
+        </div>
+        <div class="gn-cardstats">
+          <button type="button" class="gnc-act gnc-cnt gn-like-btn ${me.myReact === 1 ? "on" : ""}"
+                  data-gid="${n.id}" data-v="1" aria-label="좋아요">${ST.like} <b>${n.likes || 0}</b></button>
+          <button type="button" class="gnc-act gnc-cnt gn-dislike-btn ${me.myReact === -1 ? "on" : ""}"
+                  data-gid="${n.id}" data-v="-1" aria-label="싫어요">${ST.dislike} <b>${n.dislikes || 0}</b></button>
+          <span class="gnc-cnt">${ST.comment} ${n.cCount || 0}</span>
+          <button type="button" class="gnc-act gn-save-btn ${me.saved ? "on" : ""}"
+                  data-gid="${n.id}" aria-label="저장">${ST.saved}</button>
+          <button type="button" class="gnc-act gn-share-btn"
+                  data-gid="${n.id}" data-title="${esc(n.title)}" aria-label="공유">${ST.share}</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  /* ===== 갈라뉴스 홈 (섹션형 재편) ===== */
+  const BREAK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>';
+
+  function nhHero(n) {
+    GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
+    return `<button type="button" class="nh-hero" data-gid="${n.id}">
+      <img src="${esc(n.hero_image)}" alt="" onerror="this.style.opacity=0">
+      <span class="nh-hero-sh"></span>
+      <span class="nh-hero-badge">🔴 실시간 베스트</span>
+      <span class="nh-hero-tx">
+        <span class="nh-hero-cat">${esc(n.category || "")}</span>
+        <span class="nh-hero-t">${esc(n.title)}</span>
+        <span class="nh-hero-m">${timeAgo(n.published_at)} · 관련 ${n.source_count || 0}건 · 💬 ${n.cCount || 0}</span>
+      </span>
+    </button>`;
+  }
+  function nhMini(n) {
+    GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
+    return `<button type="button" class="nh-mini" data-gid="${n.id}">
+      <span class="nh-mini-th"><img src="${esc(n.hero_image)}" alt="" loading="lazy" onerror="this.style.opacity=0"></span>
+      <span class="nh-mini-t">${esc(n.title)}</span>
+      <span class="nh-mini-m">${esc(n.category || "")} · ${timeAgo(n.published_at)}</span>
+    </button>`;
+  }
+  function nhRank(n, i, metric) {
+    GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
+    const m = metric === "view" ? `조회 ${shortN(n.view_count)}` : `💬 ${shortN(n.cCount)}`;
+    return `<button type="button" class="nh-rank" data-gid="${n.id}">
+      <span class="nh-rank-no${i < 3 ? " hot" : ""}">${i + 1}</span>
+      <span class="nh-rank-b">
+        <span class="nh-rank-t">${esc(n.title)}</span>
+        <span class="nh-rank-m">${esc(n.category || "")} · ${m}</span>
+      </span>
+      <span class="nh-rank-th">${isValidThumbnail(n.hero_image) ? `<img src="${esc(n.hero_image)}" alt="" loading="lazy" onerror="this.style.opacity=0">` : ""}</span>
+    </button>`;
+  }
+  function nhSec(icon, title, sub) {
+    return `<div class="nh-sec-h">${icon || ""}<span class="nh-sec-t">${title}</span>${sub ? `<span class="nh-sec-s">${sub}</span>` : ""}</div>`;
+  }
+  function shelf(items, fn) {
+    return `<div class="nh-shelf">${items.map(fn).join("")}</div>`;
+  }
+
+  const CAT_ORDER = ["정치", "경제", "사회", "세계", "IT과학", "스포츠", "문화", "연예"];
+
+  async function renderNewsHome() {
+    const list = document.getElementById("top-news-list");
+    if (!list) return;
+    list.innerHTML = `<div class="hv-skel">${"<span></span>".repeat(4)}</div>`;
+
+    const { data: home, error } = await supabase.rpc("galla_news_home");
+    if (error || !home) {          // 폴백: 원본 뉴스
+      newsMode = "raw"; list.innerHTML = ""; loadTopNews(); return;
+    }
+    const best = home.best || [], major = home.major || [], breaking = home.breaking || [];
+    const viewed = home.mostViewed || [], commented = home.mostCommented || [], byCat = home.byCategory || {};
+
+    // 내 저장/반응 상태를 후보 전체에 한 번에 반영
+    const seen = {};
+    [...best, ...major, ...breaking, ...viewed, ...commented, ...Object.values(byCat).flat()]
+      .forEach(n => { seen[n.id] = n; });
+    const ids = Object.keys(seen);
+    if (ME && ids.length) {
+      const [{ data: rx }, { data: bm }] = await Promise.all([
+        supabase.from("galla_news_reactions").select("news_id,value").in("news_id", ids).eq("user_id", ME.id),
+        supabase.from("galla_news_bookmarks").select("news_id").in("news_id", ids).eq("user_id", ME.id),
+      ]);
+      (rx || []).forEach(r => { GALLA_CACHE[r.news_id] = Object.assign(GALLA_CACHE[r.news_id] || {}, seen[r.news_id], { myReact: r.value }); });
+      (bm || []).forEach(r => { GALLA_CACHE[r.news_id] = Object.assign(GALLA_CACHE[r.news_id] || {}, seen[r.news_id], { saved: true }); });
+    }
+
+    let html = "";
+
+    // 속보 스트립
+    if (breaking.length) {
+      html += `<div class="nh-break"><span class="nh-break-tag">${BREAK_SVG} 속보</span>
+        <div class="nh-break-track">${breaking.map(n =>
+          `<button type="button" class="nh-break-item" data-gid="${n.id}">${esc(n.title)}</button>`).join("")}</div></div>`;
+    }
+    // 히어로 + 실시간 베스트
+    if (best.length) {
+      html += `<div class="nh-block">${nhHero(best[0])}</div>`;
+      if (best.length > 1) {
+        html += `<section class="nh-sec">${nhSec(`<span class="nh-live"></span>`, "실시간 베스트", "지금 가장 뜨거운")}
+          ${best.slice(1, 6).map(gallaCard).join("")}</section>`;
+      }
+    }
+    // 주요 뉴스 (보도량 많은 큰 사건)
+    if (major.length) {
+      html += `<section class="nh-sec">${nhSec(SEC.issue, "주요 뉴스", "여러 매체가 주목")}
+        ${shelf(major, nhMini)}</section>`;
+    }
+    // 랭킹: 많이 본 / 댓글 많은
+    if (viewed.length) {
+      html += `<section class="nh-sec">${nhSec("👀", "많이 본 뉴스")}
+        <div class="nh-ranklist">${viewed.map((n, i) => nhRank(n, i, "view")).join("")}</div></section>`;
+    }
+    if (commented.length) {
+      html += `<section class="nh-sec">${nhSec(SEC.plaza, "댓글 많은 뉴스")}
+        <div class="nh-ranklist">${commented.map((n, i) => nhRank(n, i, "cmt")).join("")}</div></section>`;
+    }
+    // 카테고리별
+    CAT_ORDER.forEach(cat => {
+      const arr = byCat[cat];
+      if (!arr || !arr.length) return;
+      html += `<section class="nh-sec">${nhSec("", cat, "")}${shelf(arr, nhMini)}
+        <button type="button" class="nh-more" data-cat="${cat}">${cat} 더보기 ›</button></section>`;
+    });
+
+    list.innerHTML = html || `<p class="se-muted">아직 갈라뉴스가 없어요.</p>`;
+  }
+
+  /* 카테고리 필터: 해당 카테고리 최신 40개 (스탯 카드) */
+  async function loadCategoryNews() {
     const list = document.getElementById("top-news-list");
     if (!list) return;
     newsMode = "galla";
-    list.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
-    let q = supabase.from("galla_news")
-      .select("id,title,summary,category,hero_image,source_count,published_at")
-      .eq("status", "published")
-      .not("hero_image", "is", null).neq("hero_image", "")   // 썸네일 없는 뉴스 제외
+    list.innerHTML = `<div class="hv-skel">${"<span></span>".repeat(4)}</div>`;
+    const { data: news } = await supabase.from("galla_news")
+      .select("id,title,category,hero_image,source_count,published_at")
+      .eq("status", "published").eq("category", currentNewsCategory)
+      .not("hero_image", "is", null).neq("hero_image", "")
       .order("published_at", { ascending: false }).limit(40);
-    if (currentNewsCategory !== "전체") q = q.eq("category", currentNewsCategory);
-    let { data: news } = await q;
-    news = (news || []).filter(n => isValidThumbnail(n.hero_image));
+    const rows = (news || []).filter(n => isValidThumbnail(n.hero_image));
+    if (!rows.length) { list.innerHTML = `<p class="se-muted">이 카테고리엔 아직 뉴스가 없어요.</p>`; return; }
 
-    if (!news || !news.length) {         // 아직 갈라뉴스 없으면 원본 뉴스 폴백
-      newsMode = "raw";
-      list.innerHTML = "";
-      loadTopNews();
-      return;
-    }
-
-    // 반응·댓글·저장 집계(리스트 일괄)
-    const ids = news.map(n => n.id);
+    const ids = rows.map(n => n.id);
     const [cRes, rRes, bRes] = await Promise.all([
       supabase.from("galla_news_comments").select("news_id").in("news_id", ids),
       supabase.from("galla_news_reactions").select("news_id,value,user_id").in("news_id", ids),
       ME ? supabase.from("galla_news_bookmarks").select("news_id").in("news_id", ids).eq("user_id", ME.id) : Promise.resolve({ data: [] }),
     ]);
-    const cCount = {}, likes = {}, dislikes = {}, myReact = {}, saved = new Set();
-    (cRes.data || []).forEach(r => cCount[r.news_id] = (cCount[r.news_id] || 0) + 1);
+    const cC = {}, lk = {}, dk = {}, mr = {}, sv = new Set();
+    (cRes.data || []).forEach(r => cC[r.news_id] = (cC[r.news_id] || 0) + 1);
     (rRes.data || []).forEach(r => {
-      if (r.value === 1) likes[r.news_id] = (likes[r.news_id] || 0) + 1;
-      else dislikes[r.news_id] = (dislikes[r.news_id] || 0) + 1;
-      if (ME && r.user_id === ME.id) myReact[r.news_id] = r.value;
+      if (r.value === 1) lk[r.news_id] = (lk[r.news_id] || 0) + 1; else dk[r.news_id] = (dk[r.news_id] || 0) + 1;
+      if (ME && r.user_id === ME.id) mr[r.news_id] = r.value;
     });
-    (bRes.data || []).forEach(r => saved.add(r.news_id));
-
-    list.innerHTML = news.map(n => {
-      GALLA_CACHE[n.id] = Object.assign(n, {
-        cCount: cCount[n.id] || 0, likes: likes[n.id] || 0, dislikes: dislikes[n.id] || 0,
-        myReact: myReact[n.id] || 0, saved: saved.has(n.id),
-      });
-      const th = isValidThumbnail(n.hero_image);
-      return `<div class="news-card galla" data-gid="${n.id}">
-        <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
-        <div class="news-text">
-          <span class="galla-badge">갈라뉴스</span>
-          <h3 class="news-title">${esc(n.title)}</h3>
-          <div class="news-meta">
-            <span>${esc(n.category || "")}</span>
-            <span class="news-time">${timeAgo(n.published_at)}</span>
-            <span>· 관련 ${n.source_count || 0}건</span>
-          </div>
-          <div class="gn-cardstats">
-            <button type="button" class="gnc-act gnc-cnt gn-like-btn ${n.myReact === 1 ? "on" : ""}"
-                    data-gid="${n.id}" data-v="1" aria-label="좋아요">${ST.like} <b>${n.likes}</b></button>
-            <button type="button" class="gnc-act gnc-cnt gn-dislike-btn ${n.myReact === -1 ? "on" : ""}"
-                    data-gid="${n.id}" data-v="-1" aria-label="싫어요">${ST.dislike} <b>${n.dislikes}</b></button>
-            <span class="gnc-cnt">${ST.comment} ${n.cCount}</span>
-            <button type="button" class="gnc-act gn-save-btn ${n.saved ? "on" : ""}"
-                    data-gid="${n.id}" aria-label="저장">${ST.saved}</button>
-            <button type="button" class="gnc-act gn-share-btn"
-                    data-gid="${n.id}" data-title="${esc(n.title)}" aria-label="공유">${ST.share}</button>
-          </div>
-        </div>
-      </div>`;
-    }).join("");
+    (bRes.data || []).forEach(r => sv.add(r.news_id));
+    rows.forEach(n => { n.cCount = cC[n.id] || 0; n.likes = lk[n.id] || 0; n.dislikes = dk[n.id] || 0;
+      GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n, { myReact: mr[n.id] || 0, saved: sv.has(n.id) }); });
+    list.innerHTML = rows.map(gallaCard).join("");
   }
 
   async function loadTopNews() {
@@ -768,8 +880,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const share = e.target.closest(".gn-share-btn");
     if (share) { e.stopPropagation(); shareGnCard(share); return; }
 
-    const g = e.target.closest(".news-card.galla");
-    if (g && g.dataset.gid) openGallaNews(g.dataset.gid);
+    // 홈 '더보기' → 그 카테고리 필터로
+    const more = e.target.closest(".nh-more");
+    if (more) { currentNewsCategory = more.dataset.cat; renderNewsCategoryChips(); resetNews(); window.scrollTo(0, 0); return; }
+
+    // 홈의 히어로/미니/랭킹/속보 + 스탯카드 모두 기사 열기
+    const openEl = e.target.closest("[data-gid]");
+    if (openEl && openEl.dataset.gid) openGallaNews(openEl.dataset.gid);
   });
 
   /* 카드에서 바로 좋아요/싫어요 — 같은 걸 다시 누르면 취소,

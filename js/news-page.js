@@ -52,9 +52,22 @@
     return true;
   }
 
+  /* 조회수 — 세션당 기사 1회만 증가 (새로고침·재방문 중복 방지) */
+  function bumpViewOnce(id) {
+    try {
+      const key = "gn_viewed";
+      const seen = JSON.parse(sessionStorage.getItem(key) || "[]");
+      if (seen.includes(id)) return;
+      seen.push(id);
+      sessionStorage.setItem(key, JSON.stringify(seen.slice(-200)));
+      supabase.rpc("bump_news_view", { p_id: id });   // 실패해도 무시
+    } catch (_) {}
+  }
+
   /* ================= 갈라뉴스 ================= */
   async function loadGallaNews(id) {
     NEWS_ID = id;
+    bumpViewOnce(id);
     const { data: n } = await supabase.from("galla_news")
       .select("id,title,summary,body,category,hero_image,source_count,published_at")
       .eq("id", id).maybeSingle();
