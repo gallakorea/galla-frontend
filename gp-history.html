@@ -3,26 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>GALLA - 예측 마켓</title>
-  <!-- OG / 공유 카드 기본값 (콘텐츠별은 /share/<type>/<id> 엣지 렌더) -->
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="GALLA 갈라">
-  <meta property="og:title" content="GALLA · 여론이 에너지가 되는 곳">
-  <meta property="og:description" content="찬성이냐 반대냐, 당신의 진영은? 지금 갈라에서 여론 전투에 참전하세요.">
-  <meta property="og:image" content="https://galla.im/assets/og/og-default.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:url" content="https://galla.im/">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
-  <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
-
+  <title>GALLA - GP 내역</title>
   <link rel="stylesheet" href="./css/galla-predict.css?v=071920" />
-  <link rel="stylesheet" href="./css/predict-market.css?v=071920" />
   <link rel="stylesheet" href="./css/predict.css?v=071920" />
   <link rel="stylesheet" href="./css/header.css?v=071920">
   <link rel="stylesheet" href="./css/nav.css?v=071920">
-  <link rel="stylesheet" href="./css/owner-actions.css?v=071920">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -42,17 +27,28 @@
   <div class="header-inner">
     <button class="back-btn hb-side" data-back="galla-predict.html">← <span class="back-text">뒤로</span></button>
     <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
-    <span class="hb-side"><button class="more-header-btn" id="header-more-btn" style="display:none">⋯</button></span>
+    <span class="hb-side"></span>
   </div>
 </header>
 
-<main class="pmd-main" id="pmdMain">
-  <div class="pmd-loading" id="pmdLoading">불러오는 중…</div>
+<main class="gh-main">
+  <!-- 잔액 히어로 -->
+  <section class="gh-hero">
+    <div class="gh-hero-lbl">내 GP 지갑</div>
+    <div class="gh-hero-n" id="ghBalance">–</div>
+    <div class="gh-hero-sub" id="ghSummary"></div>
+  </section>
+
+  <!-- 탭 -->
+  <div class="gh-tabs">
+    <button class="gh-tab active" data-tab="bets">🎯 예측 내역</button>
+    <button class="gh-tab" data-tab="ledger">🪙 GP 내역</button>
+  </div>
+
+  <div id="ghBets" class="gh-pane"></div>
+  <div id="ghLedger" class="gh-pane" hidden></div>
 </main>
 
-<div id="pmToast" class="pm-toast" hidden></div>
-
-<!-- ✅ 통합 NAV -->
 <nav class="nav">
   <div class="nav-inner">
       <button class="nav-item" data-page="index" data-target="index.html">
@@ -78,13 +74,7 @@
 <script src="./vendor/supabase.js?v=071920"></script>
 <script src="./js/supabase.js?v=071920"></script>
 <script src="js/back.js?v=071920"></script>
-<script src="./js/follow.js?v=071920"></script>
-<script src="./js/owner-actions.js?v=071920"></script>
-<script src="js/share-sheet.js?v=071920"></script>
-<script src="js/report-block.js?v=071920"></script>
-<script src="js/comment-actions.js?v=071920"></script>
-<script src="./js/predict-market.js?v=071920"></script>
-<script src="js/fx.js?v=071920"></script>
+<script src="./js/gp-history.js?v=071920"></script>
 <script src="./js/nav.js?v=071920"></script>
 
 </body>

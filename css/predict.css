@@ -352,3 +352,55 @@
   .pb-out .od.tick-up, .pb-out .od.tick-down{ animation:none; }
   .pb-feed-row.in{ opacity:1; animation:none; }
 }
+
+/* ===== GP 지갑 통합 내역 (gp-history) ===== */
+.gh-main{ max-width:480px; margin:0 auto; padding:10px 14px 90px; }
+.gh-hero{ text-align:center; padding:22px 0 16px; border-radius:18px; margin-bottom:14px;
+  background:radial-gradient(120% 100% at 50% 0%, #2b2208, #14100a); border:1px solid #4a380f; }
+.gh-hero-lbl{ font-size:12px; color:#c8b992; font-weight:700; }
+.gh-hero-n{ font-size:34px; font-weight:900; color:var(--pm-gold); margin-top:4px;
+  text-shadow:0 0 18px rgba(255,207,63,.35); }
+.gh-hero-n small{ font-size:16px; }
+.gh-hero-sub{ font-size:12px; color:#9aa3b8; margin-top:7px; }
+.gh-hero-sub b{ color:#dfe5f1; }
+.gh-hero-sub .up{ color:#38d27a; } .gh-hero-sub .down{ color:#ff7a90; }
+
+.gh-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+.gh-tab{ flex:1; padding:11px; border-radius:12px; border:1px solid var(--pm-line);
+  background:#14161f; color:#8a93a6; font-size:13.5px; font-weight:800; cursor:pointer; }
+.gh-tab.active{ background:#1d2130; color:#fff; border-color:#3a4160; }
+
+/* 예측 내역 카드 */
+.gh-bet{ display:block; text-decoration:none; background:var(--pm-panel);
+  border:1px solid var(--pm-line); border-radius:14px; padding:12px 14px; margin-bottom:9px;
+  transition:transform .12s ease; }
+.gh-bet:active{ transform:scale(.98); }
+.gh-bet-top{ display:flex; justify-content:space-between; align-items:center; }
+.gh-badge{ font-size:11px; font-weight:900; padding:3px 9px; border-radius:999px; }
+.gh-badge.live{ color:var(--pm-no); background:rgba(255,60,90,.1); display:inline-flex; align-items:center; gap:5px; }
+.gh-badge.live i{ width:5px; height:5px; border-radius:50%; background:var(--pm-no); animation:pmLive 1.5s ease-out infinite; }
+.gh-badge.win{ color:#1a1206; background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); }
+.gh-badge.lose{ color:#8a93a6; background:#1d2130; }
+.gh-badge.refund{ color:#a9c2ff; background:rgba(74,123,255,.12); }
+.gh-time{ font-size:11px; color:#5c6479; }
+.gh-bet-q{ font-size:13.5px; font-weight:800; color:#e6ebf5; line-height:1.35; margin:7px 0 8px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.gh-bet-foot{ display:flex; justify-content:space-between; align-items:center; }
+.gh-pick{ font-size:12px; color:#9aa3b8; font-weight:700; }
+.gh-r{ font-size:13.5px; font-weight:900; color:#c8d0e2; }
+.gh-r.up{ color:var(--pm-gold); } .gh-r.down{ color:#ff7a90; }
+
+/* GP 원장 */
+.gh-day{ font-size:11.5px; color:#5c6479; font-weight:800; margin:14px 2px 7px; }
+.gh-l{ display:flex; align-items:center; gap:11px; padding:10px 4px;
+  border-bottom:1px solid #171a24; text-decoration:none; }
+.gh-l-ic{ font-size:19px; flex:0 0 auto; }
+.gh-l-m{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.gh-l-t{ font-size:13px; font-weight:700; color:#dfe5f1; }
+.gh-l-d{ font-size:14px; font-weight:900; flex:0 0 auto; }
+.gh-l-d.up{ color:#38d27a; } .gh-l-d.down{ color:#ff7a90; }
+
+.gh-empty{ text-align:center; color:#8a93a6; font-size:13.5px; padding:44px 0; line-height:2; }
+.gh-empty-go{ display:inline-block; margin-top:8px; padding:10px 20px; border-radius:999px;
+  text-decoration:none; font-size:13.5px; font-weight:900; color:#1a1206;
+  background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); }

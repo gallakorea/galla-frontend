@@ -348,7 +348,7 @@ function bindMarketActions(wrap){
 
 /* ============ UI 바인딩 ============ */
 function bindUI(){
-  $('pointPill')?.addEventListener('click', claimDaily);
+  $('pointPill')?.addEventListener('click', ()=>location.href='gp-history.html');
   document.querySelectorAll('.seg-tab').forEach(t=>t.addEventListener('click',()=>{
     document.querySelectorAll('.seg-tab').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
