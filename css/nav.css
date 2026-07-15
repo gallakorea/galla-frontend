@@ -126,7 +126,7 @@ body {
   transition: transform .28s ease, background .25s ease;
 }
 .header.hdr-scrolled {
-  background: rgba(10, 10, 11, .68) !important;
+  background: rgba(10, 10, 11, .88) !important;
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
 }

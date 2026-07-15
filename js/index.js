@@ -755,13 +755,12 @@ function initHeader() {
     // ♥ 알림 클릭은 notifications.js가 바인딩
 }
 
-// 스크롤 복원/저장
-if (localStorage.getItem('scrollPos')) {
-    window.scrollTo(0, Number(localStorage.getItem('scrollPos')));
-}
-window.addEventListener('scroll', () => {
-    localStorage.setItem('scrollPos', window.scrollY);
-});
+// 홈은 항상 '맨 위(로고 보이는 상태)'에서 시작한다 — 스크롤 복원 폐지(사용자 확정).
+// 브라우저 자체 복원(reload/bfcache)도 차단하고, 과거 저장값도 제거.
+try { history.scrollRestoration = 'manual'; } catch (_) {}
+try { localStorage.removeItem('scrollPos'); } catch (_) {}
+window.scrollTo(0, 0);
+window.addEventListener('pageshow', () => window.scrollTo(0, 0));
 
 async function loadData() {
     const supabase = window.supabaseClient;
@@ -856,20 +855,6 @@ async function loadData() {
 
     loadBest();
     loadRecommend();
-    restoreFeedScroll();
-}
-
-// 저장된 피드 위치 복원 — 파스 시점엔 피드가 비어 clamp되므로,
-// 렌더 후 높이가 목표 위치에 닿을 때까지 아이템을 더 채우고 나서 이동한다.
-// (이 scrollTo가 내는 스크롤 이벤트로 nav.js가 헤더를 숨겨 투명 헤더 겹침도 없음)
-function restoreFeedScroll() {
-    const t = Number(localStorage.getItem('scrollPos') || 0);
-    if (!t) return;
-    let guard = 0;
-    while (document.body.offsetHeight < t + window.innerHeight && rec < viewFeed.length && guard++ < 40) {
-        loadRecommend();
-    }
-    window.scrollTo(0, t);
 }
 
 // 인덱스 카테고리 칩 — 검색페이지로 이동하지 않고 '그 자리에서' 피드를 필터
