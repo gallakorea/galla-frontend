@@ -123,6 +123,7 @@ function render(){
     </div>
     <div class="pb-q">${esc(m.question)}</div>
     ${m.description?`<div class="pb-desc">${esc(m.description)}</div>`:''}
+    ${m.issue_id?`<a class="pb-issue-link" href="issue.html?id=${m.issue_id}">⚔️ 원본 이슈에서 진영 대결 보기 →</a>`:''}
 
     <div class="pb-hero ${STATE?.is_jackpot?'jackpot':''}" id="pbHero"></div>
 

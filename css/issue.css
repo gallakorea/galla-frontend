@@ -2131,3 +2131,18 @@ body {
 /* 관련 링크·근거 tip / 유형 배지 */
 .rel-news-tip { color: #8a8f9a; font-size: 12px; margin: 0 0 10px; padding: 0 2px; }
 .rel-news-type { color: #c9d1e0; font-weight: 800; }
+
+/* 이슈 승패 예측 배너 (이슈↔예측 연계) */
+.issue-predict-banner{
+  display:flex; align-items:center; gap:11px; margin:14px 16px 0;
+  padding:13px 15px; border-radius:14px; text-decoration:none;
+  background:radial-gradient(120% 100% at 50% 0%, #2b2208, #14100a);
+  border:1px solid #4a380f; transition:transform .12s ease;
+}
+.issue-predict-banner:active{ transform:scale(.98); }
+.issue-predict-banner .ipb-ic{ font-size:24px; }
+.issue-predict-banner .ipb-m{ flex:1; min-width:0; }
+.issue-predict-banner .ipb-t{ display:block; font-size:14px; font-weight:900; color:#fff; }
+.issue-predict-banner .ipb-s{ display:block; font-size:11.5px; color:#c8b992; margin-top:2px; }
+.issue-predict-banner .ipb-s b{ color:#ffcf3f; }
+.issue-predict-banner .ipb-go{ font-size:13.5px; font-weight:900; color:#ffcf3f; flex:0 0 auto; }

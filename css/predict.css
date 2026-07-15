@@ -236,3 +236,10 @@
 .pb-cele-share{ display:block; width:100%; margin-top:18px; padding:12px; border:none; border-radius:999px; cursor:pointer;
   font-size:14px; font-weight:900; color:#1a1206; background:linear-gradient(100deg,var(--pm-gold),var(--pm-gold2)); }
 .pb-cele-close{ margin-top:9px; background:none; border:1px solid #57420f; color:#c8b992; }
+
+/* 상세 → 원본 이슈 백링크 */
+.pb-issue-link{ display:inline-flex; align-items:center; gap:6px; margin-top:8px;
+  font-size:12.5px; font-weight:800; color:#a9c2ff; text-decoration:none;
+  background:rgba(74,123,255,.1); border:1px solid rgba(74,123,255,.35);
+  padding:7px 12px; border-radius:999px; }
+.pb-issue-link:active{ transform:scale(.97); }

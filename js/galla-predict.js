@@ -286,8 +286,78 @@ function bindUI(){
     chip.classList.add('active'); curCat=chip.dataset.cat; renderMarkets(); renderJackpot();
   });
   $('sortSelect')?.addEventListener('change',e=>{ curSort=e.target.value; renderMarkets(); });
-  // 생성 모달은 P2b(파리뮤추얼 생성)에서 재작성 — 임시 안내
-  window.__openComposeModal=()=>toast('예측 만들기는 곧 새 버전으로 열립니다.');
+
+  /* ---- 예측 만들기 (파리뮤추얼: 하우스 시드, 생성 무료) ---- */
+  window.__openComposeModal=openCreateModal;
+  if(new URLSearchParams(location.search).get('compose')==='1') setTimeout(openCreateModal,60);
+  $('createClose')?.addEventListener('click',()=>{ $('createModal').hidden=true; });
+  $('createModal')?.addEventListener('click',e=>{ if(e.target.id==='createModal') $('createModal').hidden=true; });
+  document.querySelectorAll('.pm-type-tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.pm-type-tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    window.__NEW_TYPE__=t.dataset.type;
+    $('mOutcomesWrap').hidden=t.dataset.type!=='multi';
+    if(t.dataset.type==='multi'&&$('mOutcomes').children.length===0){ addOutcomeRow(); addOutcomeRow(); }
+  }));
+  $('mAddOutcome')?.addEventListener('click',()=>{
+    if($('mOutcomes').children.length>=8) return toast('최대 8개까지 가능합니다.');
+    addOutcomeRow();
+  });
+  $('mImage')?.addEventListener('change',e=>{
+    const f=e.target.files[0];
+    $('mImagePreview').innerHTML=f?`<img src="${URL.createObjectURL(f)}">`:'';
+  });
+  $('createSubmit')?.addEventListener('click',submitMarket);
+}
+
+function openCreateModal(){
+  if(!ME){ if(confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href='login.html'; return; }
+  const d=new Date(Date.now()+7*86400000);
+  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  $('mCloseAt').value=d.toISOString().slice(0,16);
+  $('createModal').hidden=false;
+}
+function addOutcomeRow(val=''){
+  const row=document.createElement('div');
+  row.className='pm-outcome-row';
+  row.innerHTML=`<input class="pm-input pm-outcome-input" maxlength="30" placeholder="선택지 이름" value="${val}">
+    <button type="button" class="pm-outcome-del">✕</button>`;
+  row.querySelector('.pm-outcome-del').addEventListener('click',()=>{
+    if($('mOutcomes').children.length<=2) return toast('최소 2개는 필요합니다.');
+    row.remove();
+  });
+  $('mOutcomes').appendChild(row);
+}
+async function submitMarket(){
+  const q=$('mQuestion').value.trim();
+  const closeAt=$('mCloseAt').value;
+  const type=window.__NEW_TYPE__||'binary';
+  if(!q) return toast('질문을 입력하세요.');
+  if(!closeAt) return toast('마감 일시를 선택하세요.');
+  if(new Date(closeAt)<=new Date()) return toast('마감은 미래 시각이어야 합니다.');
+  let outcomes=null;
+  if(type==='multi'){
+    const labels=[...document.querySelectorAll('.pm-outcome-input')].map(i=>i.value.trim()).filter(Boolean);
+    if(labels.length<2) return toast('선택지를 2개 이상 입력하세요.');
+    outcomes=labels.map(l=>({label:l}));
+  }
+  const btn=$('createSubmit');
+  btn.disabled=true; btn.textContent='만드는 중…';
+  try{
+    let imageUrl=null;
+    const f=$('mImage').files[0];
+    if(f){ btn.textContent='이미지 업로드 중…'; imageUrl=await window.GALLA_UPLOAD_MEDIA(f,'image'); }
+    const { data, error } = await supa.rpc('create_market',{
+      p_question:q, p_description:$('mDesc').value.trim()||null,
+      p_category:$('mCategory').value, p_image_url:imageUrl,
+      p_close_at:new Date(closeAt).toISOString(), p_outcomes:outcomes, p_liquidity:300
+    });
+    if(error) throw error;
+    $('createModal').hidden=true;
+    toast('예측이 만들어졌습니다! 🎯');
+    location.href=`predict-market.html?id=${data}`;
+  }catch(e){ console.error(e); toast('예측 생성에 실패했습니다.'); }
+  finally{ btn.disabled=false; btn.textContent='마켓 만들기'; }
 }
 
 /* ============ 등급 · 리더보드 ============ */
@@ -315,9 +385,14 @@ async function loadLeaderboard(kind){
       <span class="lb-name">${esc(r.nickname||'익명')}<br>${badge(r.points)}</span>
       <span class="lb-stat">${fmt(r.points)}P</span></div>`).join('')||emptyLB();
   } else if(kind==='king'){
-    const {data}=await supa.from('predict_king_leaderboard').select('*').order('profit',{ascending:false}).limit(50);
+    // 시즌 랭킹 우선(없으면 전체) — 시즌명 캡션 표시
+    let {data}=await supa.from('predict_king_season').select('*').order('profit',{ascending:false}).limit(50);
+    let season=data?.[0]?.season||null;
+    if(!data||!data.length){ ({data}=await supa.from('predict_king_leaderboard').select('*').order('profit',{ascending:false}).limit(50)); }
+    const cap=document.querySelector('#rankKing .lb-caption');
+    if(cap) cap.textContent=(season?`🏆 ${season} · `:'')+'예측으로 GP를 가장 많이 딴 적중왕';
     el.innerHTML=(data||[]).map((r,i)=>`<div class="lb-row"><span class="lb-rank ${i<3?'top':''}">${medal(i)}</span>
-      <span class="lb-name">${esc(r.nickname||'익명')} ${title(i,'king')}<br><span class="lb-sub">적중 ${r.wins||0}회</span></span>
+      <span class="lb-name">${esc(r.nickname||'익명')} ${title(i,'king')}<br><span class="lb-sub">적중 ${r.wins||0}회 · 베팅 ${r.trades||0}회</span></span>
       <span class="lb-stat">${(r.profit||0)>=0?'+':''}${fmt(r.profit)}P</span></div>`).join('')||emptyLB();
   } else {
     const {data}=await supa.from('predict_god_leaderboard').select('*').order('total_volume',{ascending:false}).limit(50);

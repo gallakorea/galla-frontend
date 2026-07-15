@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=071914";
-import { loadAiNews } from "./issue-news.js?v=071914";
-import { loadStats } from "./issue.stats.js?v=071914";
-import { initCommentSystem } from "./issue.comments.js?v=071914";
+import { loadAiArguments } from "./issue-argument.js?v=071915";
+import { loadAiNews } from "./issue-news.js?v=071915";
+import { loadStats } from "./issue.stats.js?v=071915";
+import { initCommentSystem } from "./issue.comments.js?v=071915";
 
 
 console.log("[issue.js] loaded");
@@ -195,6 +195,8 @@ if (typeof loadAiNews === "function") {
   }
   // 진영 밀어주기 (faction.js) — GP 소비 액션, 투표 아래
   if (window.GALLA_initFaction) window.GALLA_initFaction(issue);
+  // 이 이슈에 걸린 승패 예측 마켓 배너 (이슈↔예측 연계)
+  loadIssueMarket(issue.id);
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
 
@@ -372,6 +374,32 @@ window.issueTogglePlay = function() {
     if (v.paused) { v.play().catch(()=>{}); o?.classList.add('hidden'); }
     else { v.pause(); o?.classList.remove('hidden'); }
 };
+
+/* 이슈 승패 예측 배너 — 이 이슈에 연계된 미정산 마켓이 있으면 진영바 아래에 노출 */
+async function loadIssueMarket(issueId) {
+  try {
+    const supabase = window.supabaseClient;
+    const { data: m } = await supabase.from('markets')
+      .select('id,question,total_pool,jackpot_bonus,close_at,resolved')
+      .eq('issue_id', issueId).eq('resolved', false)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle();
+    if (!m) return;
+    const anchor = document.getElementById('faction-section');
+    if (!anchor) return;
+    const prize = Math.round((m.total_pool || 0) + (m.jackpot_bonus || 0)).toLocaleString('ko-KR');
+    const el = document.createElement('a');
+    el.className = 'issue-predict-banner';
+    el.href = `predict-market.html?id=${m.id}`;
+    el.innerHTML = `
+      <span class="ipb-ic">🎯</span>
+      <span class="ipb-m">
+        <span class="ipb-t">이 이슈의 승패를 예측하세요</span>
+        <span class="ipb-s">상금풀 <b>${prize}GP</b> · 적중 시 풀 분배 + 연승 콤보</span>
+      </span>
+      <span class="ipb-go">베팅 ›</span>`;
+    anchor.after(el);
+  } catch (e) { console.warn('[issue-market]', e); }
+}
 
 window.issueToggleMute = function() {
     const v = document.getElementById('issue-vid');
