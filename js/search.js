@@ -1100,7 +1100,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ================= INIT ================= */
   renderRecent();
   loadPopular();
-  loadDiscover();
+  loadDiscover().catch(e => console.error("[discover]", e));
   showEmpty(true);
 
   // 옛 딥링크: search.html?gn=<id> → 이제 기사는 news.html 이 담당 (마이페이지 '저장한 뉴스' 등 호환)
