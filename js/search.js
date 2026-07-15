@@ -670,6 +670,47 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ===== 갈라뉴스 홈 (섹션형 재편) ===== */
   const BREAK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>';
 
+  // 속보 티커 — 헤드라인이 왼쪽으로 계속 흐른다. 끊김 없는 루프 위해 목록을 2번 이어붙임.
+  function breakingLine(items) {
+    return items.map(n =>
+      `<button type="button" class="nh-break-item" data-gid="${n.id}">${esc(n.title)}</button>`
+    ).join('<span class="nh-break-dot">•</span>');
+  }
+  function breakingTicker(items) {
+    const line = breakingLine(items);
+    // 개수에 비례한 속도(글자 많을수록 느리게)
+    const dur = Math.max(18, items.length * 4);
+    return `<div class="nh-break">
+      <span class="nh-break-tag">${BREAK_SVG} 속보</span>
+      <div class="nh-break-mask">
+        <div class="nh-break-flow" style="animation-duration:${dur}s">
+          <span class="nh-break-seg">${line}</span>
+          <span class="nh-break-dot">•</span>
+          <span class="nh-break-seg" aria-hidden="true">${line}</span>
+        </div>
+      </div>
+    </div>`;
+  }
+  // 45초마다 최신 속보로 교체 (다른 속보들도 계속 노출)
+  let breakingTimer = null;
+  function startBreakingRefresh() {
+    clearInterval(breakingTimer);
+    breakingTimer = setInterval(async () => {
+      const wrap = document.querySelector(".nh-break-mask");
+      const active = document.querySelector(".tab-item.active")?.dataset.tab === "news";
+      if (!wrap || !active) return;
+      const { data } = await supabase.from("galla_news")
+        .select("id,title").eq("status", "published")
+        .not("hero_image", "is", null).neq("hero_image", "")
+        .order("published_at", { ascending: false }).limit(12);
+      if (!data || !data.length) return;
+      const line = breakingLine(data);
+      wrap.innerHTML = `<div class="nh-break-flow" style="animation-duration:${Math.max(18, data.length * 4)}s">
+        <span class="nh-break-seg">${line}</span><span class="nh-break-dot">•</span>
+        <span class="nh-break-seg" aria-hidden="true">${line}</span></div>`;
+    }, 45000);
+  }
+
   function nhHero(n) {
     GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
     return `<button type="button" class="nh-hero" data-gid="${n.id}">
@@ -740,12 +781,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let html = "";
 
-    // 속보 스트립
-    if (breaking.length) {
-      html += `<div class="nh-break"><span class="nh-break-tag">${BREAK_SVG} 속보</span>
-        <div class="nh-break-track">${breaking.map(n =>
-          `<button type="button" class="nh-break-item" data-gid="${n.id}">${esc(n.title)}</button>`).join("")}</div></div>`;
-    }
+    // 속보: 실시간으로 왼쪽으로 흐르는 티커
+    if (breaking.length) html += breakingTicker(breaking);
     // 히어로 + 실시간 베스트
     if (best.length) {
       html += `<div class="nh-block">${nhHero(best[0])}</div>`;
@@ -777,6 +814,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     list.innerHTML = html || `<p class="se-muted">아직 갈라뉴스가 없어요.</p>`;
+    if (breaking.length) startBreakingRefresh();
   }
 
   /* 카테고리 필터: 해당 카테고리 최신 40개 (스탯 카드) */

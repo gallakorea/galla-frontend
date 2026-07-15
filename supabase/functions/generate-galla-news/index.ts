@@ -61,6 +61,25 @@ async function fetchBody(url: string): Promise<string> {
   } catch { return ""; }
 }
 
+// 제목 단어 집합(2글자 이상) — 소스 관련성 판단용
+function tokenize(s: string): Set<string> {
+  return new Set(
+    (s || "").replace(/[^가-힣A-Za-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 2),
+  );
+}
+
+// 카테고리 키워드 교정 — AI가 경제/정치/스포츠 기사를 문화 등으로 잘못 라벨하는 걸 바로잡는다.
+const CAT_RULES: Array<[string, RegExp]> = [
+  ["경제", /금리|주가|증시|코스피|코스닥|나스닥|환율|부동산|집값|전셋값|물가|수출|무역|반도체|실적|매출|영업이익|투자|재정|예산|세금|대출|연봉|임금|고용|경기|무역수지|가상자산|비트코인/],
+  ["정치", /대통령|국회|여당|야당|의원|장관|정당|총선|대선|외교|정상회담|법안|개헌|탄핵|청와대|대통령실|국정감사|공천/],
+  ["스포츠", /야구|축구|농구|배구|골프|올림픽|월드컵|리그|국가대표|선수|감독|경기|우승|메달|KBO|프로야구|손흥민|류현진/],
+  ["IT과학", /인공지능|반도체|스마트폰|앱\b|플랫폼|우주|위성|백신|바이러스|연구진|논문|과학자|배터리|전기차|로봇/],
+];
+function fixCategory(cat: string, text: string): string {
+  for (const [c, re] of CAT_RULES) if (re.test(text)) return c;
+  return cat;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
@@ -80,7 +99,7 @@ Deno.serve(async (req) => {
   const headlines = arts.map((a, i) => `${i}. ${a.title}`).join("\n");
   const cluster = await chat([
     { role: "system", content: "너는 한국 뉴스 데스크 편집자다. 헤드라인 목록에서 뉴스가치 있는 주제를 골라 같은 사건끼리 묶는다. 광고성/단순 홍보/선정적 가십은 제외. JSON만 출력." },
-    { role: "user", content: `헤드라인:\n${headlines}\n\n지침: 뉴스가치 있는 주제 상위 ${MAX_TOPICS}개를 골라라. 같은 사건인 헤드라인은 index를 묶고(다중 소스 우선), 중요한 단독 기사는 members가 1개인 주제로 넣어도 된다. category는 [정치,경제,사회,세계,IT과학,문화,스포츠,연예] 중 하나.\n형식: {"topics":[{"topic":"핵심 주제 한 줄","category":"정치","members":[0,5]}]}` },
+    { role: "user", content: `헤드라인:\n${headlines}\n\n지침: 뉴스가치 있는 주제 상위 ${MAX_TOPICS}개를 골라라. ⚠️ 같은 '사건·인물·사안'인 헤드라인만 묶어라 — 인물·분야·주제가 다르면 절대 한 members로 묶지 마라(예: 배우 복귀 기사와 축구 경기 기사를 함께 묶으면 안 됨). 확실히 같은 사건이 아니면 각각 members 1개로 분리해라. category는 기사 내용에 맞게 [정치,경제,사회,세계,IT과학,문화,스포츠,연예] 중 하나로 정확히 고른다.\n형식: {"topics":[{"topic":"핵심 주제 한 줄","category":"정치","members":[0,5]}]}` },
   ], 1100);
 
   const topics: Array<{ topic: string; category: string; members: number[] }> = cluster?.topics || [];
@@ -107,22 +126,34 @@ Deno.serve(async (req) => {
     ], 900);
 
     if (!gen?.title || !gen?.body) return null;
-    const hero = members.find((m) => m.thumbnail_url && /^https?:/.test(m.thumbnail_url))?.thumbnail_url || null;
+
+    // ── 관련성 필터 ──────────────────────────────────────
+    // AI 클러스터링이 가끔 무관한 기사(예: 김수현 기사에 음바페)를 한 주제로 묶는다.
+    // 생성된 제목과 단어가 겹치는 소스만 '관련 기사'로 남기고, 썸네일도 거기서 뽑는다.
+    const genTok = tokenize(`${gen.title} ${gen.summary || ""}`);
+    const scored = members.map((m) => ({
+      m, ov: [...tokenize(m.title)].filter((w) => genTok.has(w)).length,
+    })).sort((a, b) => b.ov - a.ov);
+    let rel = scored.filter((s) => s.ov > 0).map((s) => s.m);
+    if (!rel.length) rel = [scored[0].m];          // 하나도 안 겹치면 최상위 1개 유지
+    const hero = rel.find((m) => m.thumbnail_url && /^https?:/.test(m.thumbnail_url))?.thumbnail_url || null;
+
+    const category = fixCategory(gen.category || t.category || "사회", `${gen.title} ${gen.summary || ""}`);
 
     const { data: ins, error } = await supa.from("galla_news").insert({
       title: gen.title, summary: gen.summary || null, body: gen.body,
-      category: gen.category || t.category || "사회", hero_image: hero,
-      topic_key: topicKey, source_count: members.length,
+      category, hero_image: hero,
+      topic_key: topicKey, source_count: rel.length,
     }).select("id").single();
     if (error || !ins) return { topic: t.topic, error: error?.message };
 
     await supa.from("galla_news_sources").insert(
-      members.map((m) => ({
+      rel.map((m) => ({
         news_id: ins.id, url: m.url, press_name: m.press_name,
         title: m.title, thumbnail_url: m.thumbnail_url, published_at: m.published_at,
       })),
     );
-    return { topic: t.topic, id: ins.id, sources: members.length };
+    return { topic: t.topic, id: ins.id, sources: rel.length };
   }
 
   // 병렬 처리(시간 단축) — 토픽 수 늘려도 타임아웃 방지
