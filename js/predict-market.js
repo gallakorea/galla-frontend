@@ -414,8 +414,10 @@ async function fetchProfiles(ids){
   const map={};
   const uniq=[...new Set(ids.filter(Boolean))];
   if(!uniq.length) return map;
-  const { data } = await supa.from('user_profiles').select('user_id,nickname,level').in('user_id',uniq);
-  data?.forEach(p=>map[p.user_id]=p);
+  // 정본 users에서 아바타·레벨까지 (닉네임 정본 + GALLA_userBadge 캐시 공유)
+  if (window.GALLA_userMap) await window.GALLA_userMap(uniq);
+  const { data } = await supa.from('users').select('id,nickname,level,avatar_url').in('id',uniq);
+  data?.forEach(p=>map[p.id]={ user_id:p.id, ...p });
   return map;
 }
 
@@ -523,7 +525,9 @@ function renderComments(body){
     const gh = c.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(c.ghost_seed) : null;
     const nameHtml = gh
       ? `<span class="pmd-cmt-name ghost-nick" style="color:${gh.color}">${gh.avatarHTML} ${gh.name}</span>`
-      : `<span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>`;
+      : (c.user_id && window.GALLA_userBadge
+        ? window.GALLA_userBadge(c.user_id, nick(c.user_id))   // 아바타+닉+레벨, 탭=유저시트
+        : `<span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>`);
     return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(gh?gh.name:nick(c.user_id))}"${borderStyle}>
       <div class="pmd-cmt-head">
         <span class="pmd-side-chip ${c.side}"${chipStyle}>${cmtSideLabel(c.side,c.outcome_id)}</span>

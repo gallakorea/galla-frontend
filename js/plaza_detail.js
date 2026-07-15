@@ -222,6 +222,11 @@ async function fetchComments(commentCountEl) {
     (votes || []).forEach(v => { myCommentVotes[v.comment_id] = v.value; });
   }
 
+  // 작성자 프로필(아바타·닉·레벨) 프리페치 — 유령 댓글 제외
+  if (window.GALLA_userMap) {
+    await window.GALLA_userMap(comments.filter(c => !c.is_anonymous).map(c => c.user_id));
+  }
+
   renderComments(comments);
 
   if (commentCountEl) {
@@ -255,6 +260,9 @@ function commentHeaderHtml(c) {
   if (c.is_anonymous && window.GALLA_ghost) {
     const g = window.GALLA_ghost(c.ghost_seed);          // 유령 페르소나 (프로필 이동 불가)
     nick = `<span class="cm-nick ghost-nick" style="color:${g.color}">${g.avatarHTML} ${g.name}</span>`;
+  } else if (c.user_id && window.GALLA_userBadge) {
+    // 아바타+닉+레벨 배지, 탭하면 유저시트(프로필/메시지)
+    nick = window.GALLA_userBadge(c.user_id, c.nickname);
   } else {
     nick = `<span class="cm-nick">${c.nickname || "익명"}</span>`;
   }

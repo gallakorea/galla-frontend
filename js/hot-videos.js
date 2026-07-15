@@ -353,14 +353,17 @@
   function cmtHTML(m, isReply) {
     // 👻 유령 댓글: 고정 페르소나 (RPC가 실명·아바타 마스킹, seed만 내려줌)
     const gh = m.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(m.ghost_seed) : null;
+    const uAttr = !gh && m.user_id ? ` data-user-id="${esc(m.user_id)}" data-user-nick="${esc(m.nickname || "")}" style="cursor:pointer"` : "";
     const av = gh
       ? `<span class="hv-cmt-av hv-cmt-av0 ghost-nick" style="padding:0;background:none">${gh.avatarHTML}</span>`
       : (m.avatar_url
-        ? `<img class="hv-cmt-av" src="${esc(m.avatar_url)}" alt="">`
-        : `<span class="hv-cmt-av hv-cmt-av0">${esc((m.nickname || "갈")[0])}</span>`);
+        ? `<img class="hv-cmt-av" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(m.avatar_url) : m.avatar_url)}" alt=""${uAttr}>`
+        : `<span class="hv-cmt-av hv-cmt-av0"${uAttr}>${esc((m.nickname || "갈")[0])}</span>`);
+    const lvN = !gh && m.user_id ? window.__GU_CACHE?.[m.user_id]?.level : null;
+    const lvHtml = (lvN ?? null) !== null ? `<span class="gu-lv">Lv.${Number(lvN) || 1}</span>` : "";
     const nameHtml = gh
       ? `<span class="hv-cmt-n ghost-nick" style="color:${gh.color}">${gh.name}</span>`
-      : `<span class="hv-cmt-n">${esc(m.nickname)}</span>`;
+      : `<span class="hv-cmt-n"${uAttr}>${esc(m.nickname)}</span>${lvHtml}`;
     return `
       <div class="hv-cmt${isReply ? " hv-cmt-r" : ""}" data-cid="${m.id}">
         ${av}
@@ -392,6 +395,8 @@
       $("#hvCommentN").textContent = "0";
       return;
     }
+    // 레벨 배지용 프로필 캐시 프리페치 (유령 제외)
+    if (window.GALLA_userMap) await window.GALLA_userMap(data.map((m) => m.user_id));
     // RPC가 스레드(최상위 → 그 답글들) 순서로 내려준다
     box.innerHTML = data.map((m) => cmtHTML(m, !!m.parent_id)).join("");
     $("#hvCommentN").textContent = shortNum(data.length);

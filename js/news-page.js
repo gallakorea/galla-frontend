@@ -211,8 +211,10 @@
   async function fetchProfiles(ids) {
     const uniq = [...new Set(ids.filter(Boolean))];
     if (!uniq.length) return {};
-    const { data } = await supabase.from("user_profiles").select("user_id,nickname").in("user_id", uniq);
-    const m = {}; (data || []).forEach((p) => (m[p.user_id] = p));
+    // 정본 users에서 아바타·레벨까지 (GALLA_userBadge 캐시도 같이 채움)
+    if (window.GALLA_userMap) await window.GALLA_userMap(uniq);
+    const { data } = await supabase.from("users").select("id,nickname,level,avatar_url").in("id", uniq);
+    const m = {}; (data || []).forEach((p) => (m[p.id] = p));
     return m;
   }
   const cmtBody = (c) => esc(c).replace(/@(\S+)/g, '<span class="gnc-mention">@$1</span>');
@@ -259,10 +261,14 @@
         : "";
       // 👻 유령 댓글: 고정 페르소나 이름·아바타, 프로필 이동 차단(ghost.js)
       const g = c.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(c.ghost_seed) : null;
+      const prof = profs[c.user_id] || {};
       const avHtml = g ? `<span class="gnc-av ghost-nick" style="padding:0;background:none">${g.avatarHTML}</span>`
-                       : `<div class="gnc-av">${esc(nick(c.user_id).trim().charAt(0) || "익")}</div>`;
+        : (prof.avatar_url
+          ? `<img class="gnc-av" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(prof.avatar_url) : prof.avatar_url)}" alt="" style="object-fit:cover" data-user-id="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}">`
+          : `<div class="gnc-av" data-user-id="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}">${esc(nick(c.user_id).trim().charAt(0) || "익")}</div>`);
+      const lvHtml = !g && (prof.level ?? null) !== null ? `<span class="gu-lv">Lv.${Number(prof.level) || 1}</span>` : "";
       const nameHtml = g ? `<span class="gnc-name ghost-nick" style="color:${g.color}">${g.name}</span>`
-                         : `<span class="gnc-name">${esc(nick(c.user_id))}</span>`;
+        : `<span class="gnc-name" data-user-id="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}" style="cursor:pointer">${esc(nick(c.user_id))}</span>${lvHtml}`;
       return `<div class="gnc ${isReply ? "reply" : ""}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(g ? g.name : nick(c.user_id))}">
         ${avHtml}
         <div class="gnc-main">

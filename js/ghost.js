@@ -49,6 +49,36 @@
     };
   };
 
+  /* ---- 댓글 작성자 공용 배지: 아바타 + 닉네임 + 레벨, 탭 = 유저시트([data-user-id]) ---- */
+  const guEsc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+  // avatar_url은 'userid/avatar.jpg' 상대경로 — js/supabase.js 미로드 페이지용 폴백 해석기
+  window.GALLA_avatarSrc = window.GALLA_avatarSrc || function (avatarUrl) {
+    if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
+    if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
+    return `https://bidqauputnhkqepvdzrr.supabase.co/storage/v1/object/public/profiles/${avatarUrl}`;
+  };
+  window.__GU_CACHE = window.__GU_CACHE || {};
+  window.GALLA_userMap = async function (ids) {
+    const need = [...new Set((ids || []).filter(Boolean))].filter(id => !window.__GU_CACHE[id]);
+    if (need.length && window.supabaseClient) {
+      try {
+        const { data } = await window.supabaseClient.from("users").select("id,nickname,level,avatar_url").in("id", need);
+        (data || []).forEach(u => (window.__GU_CACHE[u.id] = u));
+      } catch (_) {}
+    }
+    return window.__GU_CACHE;
+  };
+  window.GALLA_userBadge = function (uid, fallbackNick, o = {}) {
+    const u = Object.assign({}, window.__GU_CACHE[uid] || {}, o);
+    const nick = u.nickname || fallbackNick || "익명";
+    const av = u.avatar_url
+      ? `<img class="gu-av" src="${guEsc(window.GALLA_avatarSrc(u.avatar_url))}" alt="" onerror="this.style.display='none'">`
+      : `<span class="gu-av gu-av0">${guEsc((nick || "갈").trim().charAt(0) || "갈")}</span>`;
+    const lv = (u.level ?? null) !== null ? `<span class="gu-lv">Lv.${Number(u.level) || 1}</span>` : "";
+    const attrs = uid ? ` data-user-id="${guEsc(uid)}" data-user-nick="${guEsc(nick)}"` : "";
+    return `<span class="gu-wrap"${attrs}>${av}<span class="gu-nick">${guEsc(nick)}</span>${lv}</span>`;
+  };
+
   /* ---- 스타일 주입 ---- */
   const css = `
   .ghost-av{display:inline-flex;align-items:center;justify-content:center;width:1.9em;height:1.9em;
@@ -96,6 +126,14 @@
   @keyframes ghGlow{0%,100%{box-shadow:0 0 12px rgba(140,120,230,.35)}50%{box-shadow:0 0 24px rgba(140,120,230,.65)}}
   .ghost-toggle:active{transform:scale(.95)}
   .ghost-av-wrap .ghost-av{width:100%;height:100%;font-size:1em}
+  /* 댓글 작성자 배지 (아바타+닉+레벨) */
+  .gu-wrap{display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-width:0;vertical-align:middle}
+  .gu-av{width:22px;height:22px;border-radius:50%;object-fit:cover;flex:0 0 auto;background:#23222e;display:inline-block}
+  .gu-av0{display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;
+    color:#cfcfe0;background:linear-gradient(135deg,#2c2b3a,#1b1a26);line-height:1}
+  .gu-nick{font-weight:800;color:#e9e9f0;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38vw}
+  .gu-lv{font-size:9.5px;font-weight:900;color:#8fa3ff;background:rgba(90,110,255,.14);
+    border:1px solid rgba(120,140,255,.35);padding:1px 6px;border-radius:99px;flex:0 0 auto;line-height:1.3}
   /* 유령 토스트 */
   .gh-toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(14px) scale(.92);z-index:100002;
     max-width:88vw;text-align:center;background:linear-gradient(135deg,#2b2444,#1a1630);color:#efeaff;
