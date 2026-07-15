@@ -244,10 +244,42 @@
   async function openMember(uid) {
     const d = await rpc("admin_user_detail", { p_user: uid });
     if (!d?.ok) { alert("조회 실패"); return; }
-    const w = modal(`<div class="ad-modal-h">👤 ${esc(d.nickname || "익명")} ${d.admin ? '<span class="ad-tag t-admin">관리자</span>' : ''} ${d.banned ? '<span class="ad-tag t-ban">정지</span>' : ''}</div>
-      <div class="ad-mstat">${[["발의", d.issues], ["댓글", d.comments], ["투표", d.votes], ["보유GP", d.gp], ["경고", d.warning], ["피신고", d.reports_against]].map(([l, v]) => `<div><b>${fmt(v)}</b><span>${l}</span></div>`).join("")}</div>
-      ${d.email ? `<div class="ad-mrow">✉️ ${esc(d.email)} · 가입 ${ago(d.created_at)}</div>` : ""}
-      ${d.banned ? `<div class="ad-mrow ban">⛔ 정지 사유: ${esc(d.ban_reason || "-")}</div>` : ""}
+    const idRow = (l, v) => v ? `<div class="ad-idrow"><span>${l}</span><b>${esc(String(v))}</b></div>` : "";
+    const w = modal(`<div class="ad-modal-h">👤 ${esc(d.nickname || "익명")}
+        ${d.admin ? '<span class="ad-tag t-admin">관리자</span>' : ''} ${d.banned ? '<span class="ad-tag t-ban">정지</span>' : ''}
+        <button class="ad-btn ghost" data-a="edit" style="margin-left:auto">✏️ 수정</button></div>
+
+      <!-- 신원 (관리자 전용 열람) -->
+      <div class="ad-idbox">
+        ${idRow("이메일", d.email)}${idRow("전화", d.phone)}
+        ${idRow("지역", d.region)}${idRow("성별", d.gender)}${idRow("출생", d.birth_year)}
+        ${idRow("가입", d.created_at ? new Date(d.created_at).toLocaleDateString("ko-KR") : "")}
+        ${idRow("최근 로그인", d.last_sign_in ? ago(d.last_sign_in) : "")}
+        ${idRow("최근 접속", d.last_ping ? ago(d.last_ping) : "")}
+        ${idRow("UID", uid)}
+        ${d.bio ? idRow("소개", d.bio) : ""}
+      </div>
+
+      <div class="ad-mstat">${[
+        ["발의", d.issues + (d.issues_anon > 0 ? ` <i>(익명${d.issues_anon})</i>` : "")],
+        ["댓글", d.comments + (d.comments_anon > 0 ? ` <i>(익명${d.comments_anon})</i>` : "")],
+        ["광장", (d.plaza_posts || 0) + (d.plaza_comments || 0)], ["투표", d.votes],
+        ["예측", `${d.bets || 0}<i>(적중${d.bet_wins || 0})</i>`],
+        ["무료GP", fmt(d.gp_free)], ["충전GP", fmt(d.gp_paid)], ["GC", fmt(d.gc)],
+        ["보낸후원", "₩" + fmt(d.donations_sent)], ["받은수익", "₩" + fmt(d.donations_recv)],
+        ["경고", d.warning], ["피신고", d.reports_against],
+      ].map(([l, v]) => `<div><b>${v}</b><span>${l}</span></div>`).join("")}</div>
+      ${d.banned ? `<div class="ad-mrow ban">⛔ 정지 사유: ${esc(d.ban_reason || "-")}${d.ban_until ? ` (${new Date(d.ban_until).toLocaleDateString("ko-KR")}까지)` : " (무기한)"}</div>` : ""}
+
+      <!-- 전 활동 내역 (익명 포함) -->
+      <div class="ad-mtabs" id="mt-tabs">
+        <button class="on" data-k="content">📜 활동</button>
+        <button data-k="gp">🪙 GP</button>
+        <button data-k="gc">💝 GC·후원</button>
+        <button data-k="sanction">⚖️ 제재이력</button>
+      </div>
+      <div class="ad-mtl" id="mt-body"><div class="ad-loading">불러오는 중…</div></div>
+
       <div class="ad-mactions">
         <button class="ad-btn ghost" data-a="warn+">⚠️ 경고 +1</button>
         <button class="ad-btn ghost" data-a="warn-">경고 -1</button>
@@ -256,6 +288,65 @@
         <button class="ad-btn ${d.admin ? "danger" : "primary"}" data-a="role">${d.admin ? "관리자 해제" : "관리자 지정"}</button>
         ${d.admin ? "" : `<button class="ad-btn danger" data-a="delete">🗑 회원 삭제</button>`}
       </div>`);
+
+    // ── 타임라인 탭 로드 ──
+    async function loadTl(kind) {
+      const body = w.querySelector("#mt-body");
+      body.innerHTML = `<div class="ad-loading">불러오는 중…</div>`;
+      const t = await rpc("admin_user_timeline", { p_user: uid, p_kind: kind, p_limit: 60 });
+      const rows = t?.rows || [];
+      if (!rows.length) { body.innerHTML = `<div class="ad-soon">내역이 없어요.</div>`; return; }
+      if (kind === "content") {
+        body.innerHTML = rows.map(r => `<a class="ad-tl" href="${esc(r.link || "#")}" target="_blank">
+          <span class="ad-tl-ic">${r.icon || "•"}</span>
+          <span class="ad-tl-m"><span class="ad-tl-l">${esc(r.label)}${r.anon ? ' <span class="ad-tag t-anon">🕶 익명</span>' : ""}</span>
+            <span class="ad-tl-t">${esc(r.text || "")}</span></span>
+          <span class="ad-tl-ts">${ago(r.ts)}</span></a>`).join("");
+      } else if (kind === "gp") {
+        body.innerHTML = rows.map(r => `<div class="ad-tl">
+          <span class="ad-tl-ic">${r.delta >= 0 ? "＋" : "－"}</span>
+          <span class="ad-tl-m"><span class="ad-tl-l">${esc(r.reason)}</span></span>
+          <span class="ad-tl-d ${r.delta >= 0 ? "up" : "down"}">${r.delta >= 0 ? "+" : ""}${fmt(r.delta)}</span>
+          <span class="ad-tl-ts">${ago(r.ts)}</span></div>`).join("");
+      } else if (kind === "gc") {
+        const lbl = r => r.kind === "ledger" ? esc(r.reason)
+          : r.kind === "donation_sent" ? `후원 보냄 → ${esc(r.to || "?")} ₩${fmt(r.amount)}`
+          : r.kind === "donation_recv" ? `후원 받음 ← ${esc(r.from || "?")} ₩${fmt(r.amount)}`
+          : `출금 ₩${fmt(r.amount)} (${esc(r.status)})`;
+        body.innerHTML = rows.map(r => `<div class="ad-tl">
+          <span class="ad-tl-ic">${r.kind === "withdrawal" ? "🏦" : r.kind === "ledger" ? "💝" : "💌"}</span>
+          <span class="ad-tl-m"><span class="ad-tl-l">${lbl(r)}</span></span>
+          ${r.delta != null ? `<span class="ad-tl-d ${r.delta >= 0 ? "up" : "down"}">${r.delta >= 0 ? "+" : ""}${fmt(r.delta)}</span>` : ""}
+          <span class="ad-tl-ts">${ago(r.ts)}</span></div>`).join("");
+      } else {
+        body.innerHTML = rows.map(r => `<div class="ad-tl">
+          <span class="ad-tl-ic">⚖️</span>
+          <span class="ad-tl-m"><span class="ad-tl-l">${esc(r.action)} <small>by ${esc(r.by || "system")}</small></span>
+            <span class="ad-tl-t">${esc(JSON.stringify(r.meta || {})).slice(0, 80)}</span></span>
+          <span class="ad-tl-ts">${ago(r.ts)}</span></div>`).join("");
+      }
+    }
+    w.querySelector("#mt-tabs").onclick = e => {
+      const b = e.target.closest("[data-k]"); if (!b) return;
+      w.querySelectorAll("#mt-tabs button").forEach(x => x.classList.toggle("on", x === b));
+      loadTl(b.dataset.k);
+    };
+    loadTl("content");
+
+    // ── ✏️ 회원 정보 수정 ──
+    w.querySelector('[data-a="edit"]').onclick = async () => {
+      const nick = prompt("닉네임 수정 (2~20자, 빈칸=유지)", d.nickname || "");
+      if (nick === null) return;
+      const bio = prompt("소개 수정 (빈칸=유지)", d.bio || "");
+      if (bio === null && !nick) return;
+      const r = await rpc("admin_update_user", {
+        p_user: uid,
+        p_nickname: nick && nick.trim() && nick.trim() !== d.nickname ? nick.trim() : null,
+        p_bio: bio !== null && bio !== d.bio ? bio : null,
+      });
+      if (r?.ok) { toast("수정됐어요"); w.remove(); openMember(uid); }
+      else alert("수정 실패: " + ({ dup_nickname: "이미 쓰는 닉네임이에요", bad_nickname: "닉네임은 2~20자" }[r?.reason] || r?.reason || ""));
+    };
     w.querySelector(".ad-mactions").onclick = async e => {
       const b = e.target.closest("[data-a]"); if (!b) return; const a = b.dataset.a;
       if (a === "delete") {

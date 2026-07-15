@@ -193,3 +193,29 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-tip-links { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
 .ad-tip-links a { color: #6f9bff; font-size: 12.5px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ad-tip-acts { display: flex; gap: 8px; margin-top: 12px; }
+
+/* ── 회원 360° 상세 ── */
+.ad-idbox { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; margin: 10px 0 12px;
+  padding: 11px 13px; background: #101116; border: 1px solid var(--line); border-radius: 12px; }
+.ad-idrow { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; min-width: 0; }
+.ad-idrow span { color: #8a8f9a; flex: 0 0 auto; }
+.ad-idrow b { color: #e6e9f0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-mstat i { font-style: normal; font-size: 10px; color: #b9925a; }
+.ad-tag.t-anon { background: rgba(155,91,255,.15); color: #c9a8ff; border: 1px solid rgba(155,91,255,.4); }
+.ad-mtabs { display: flex; gap: 6px; margin: 12px 0 8px; }
+.ad-mtabs button { flex: 1; padding: 8px; border-radius: 9px; border: 1px solid var(--line);
+  background: #14151b; color: #8a8f9a; font-size: 12px; font-weight: 800; cursor: pointer; }
+.ad-mtabs button.on { background: #1d1f28; color: #fff; border-color: #3a4160; }
+.ad-mtl { max-height: 300px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px;
+  padding: 4px 10px; background: #0f1014; margin-bottom: 12px; }
+.ad-tl { display: flex; align-items: center; gap: 9px; padding: 8px 2px;
+  border-bottom: 1px solid #171921; font-size: 12px; text-decoration: none; color: inherit; }
+.ad-tl:last-child { border-bottom: none; }
+.ad-tl-ic { flex: 0 0 auto; font-size: 14px; }
+.ad-tl-m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ad-tl-l { color: #dfe3ec; font-weight: 700; }
+.ad-tl-l small { color: #6c7280; font-weight: 600; }
+.ad-tl-t { color: #8a8f9a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-tl-d { flex: 0 0 auto; font-weight: 900; }
+.ad-tl-d.up { color: #33d17a; } .ad-tl-d.down { color: #ff6b81; }
+.ad-tl-ts { flex: 0 0 auto; color: #5c6479; font-size: 10.5px; }
