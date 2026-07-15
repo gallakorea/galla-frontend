@@ -30,8 +30,8 @@
     if (document.getElementById("donate-css")) return;
     const s = document.createElement("style"); s.id = "donate-css";
     s.textContent = `
-      .donate-dim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;opacity:0;transition:opacity .2s}
-      .donate-dim.open{opacity:1}
+      .donate-dim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;opacity:0;pointer-events:none;transition:opacity .2s}
+      .donate-dim.open{opacity:1;pointer-events:auto}
       .donate-sheet{position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#15161b;border-radius:20px 20px 0 0;
         border-top:1px solid rgba(255,255,255,.1);padding:16px 16px calc(16px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;
         transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:88vh;overflow:auto}
