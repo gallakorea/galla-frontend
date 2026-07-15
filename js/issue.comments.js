@@ -168,14 +168,7 @@ let INFIL_LEFT = null;       // 오늘 남은 침투 횟수
 let REPLY_LEFT = null;       // 오늘 남은 대댓글 횟수 (기본 40/일)
 let GHOST_ON = false;        // 👻 유령(익명) 참전 모드 (유령권 필요)
 
-async function loadGhostState() {
-  try {
-    const { data } = await window.supabaseClient.rpc("ghost_status");
-    window.__ISSUE_GHOST = data?.ok ? data : { active: false };
-  } catch { window.__ISSUE_GHOST = { active: false }; }
-  const b = document.getElementById("ghost-toggle");
-  if (b) b.classList.toggle("has-pass", !!window.__ISSUE_GHOST.active);
-}
+// 유령 상태·토글은 공용 ghost.js(GALLA_ghostReady/GALLA_ghostBind)가 담당
 
 /* 🗯️ 대댓글 연장권 — 하루 한도 소진 시 보유하면 사용 제안(+15). 침투권과 동일 패턴 */
 async function ensureReplyQuota() {
@@ -233,21 +226,16 @@ async function initComposerUI() {
     </div>`;
   if (input) input.placeholder = "아군 전선에 새 의견 쓰기…";
 
-  // 👻 유령 토글 — 유령권(ghost_status.active) 보유 시 익명 참전
-  loadGhostState();
-  document.getElementById("ghost-toggle").addEventListener("click", () => {
-    if (!window.__ISSUE_GHOST?.active) {
-      if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 구매할까요?")) {
-        if (window.openShop) window.openShop(); else location.href = "settings.html";
-      }
-      return;
-    }
-    GHOST_ON = !GHOST_ON;
-    const b = document.getElementById("ghost-toggle");
-    b.classList.toggle("on", GHOST_ON);
-    if (input) input.placeholder = GHOST_ON ? "👻 유령으로 참전 중…" : (INFILTRATE ? input.placeholder : "아군 전선에 새 의견 쓰기…");
-    window.BattleFX?.haptic?.("tap");
-  });
+  // 👻 유령 토글 — 공용 바인더(ghost.js: 상태 라벨·페르소나 토스트·구매 유도 내장)
+  if (window.GALLA_ghostBind) {
+    window.GALLA_ghostBind(document.getElementById("ghost-toggle"), {
+      onChange: (on) => {
+        GHOST_ON = on;
+        if (input) input.placeholder = on ? "👻 유령으로 참전 중…" : (INFILTRATE ? input.placeholder : "아군 전선에 새 의견 쓰기…");
+        window.BattleFX?.haptic?.("tap");
+      },
+    });
+  }
 
   document.getElementById("infiltrate-btn").addEventListener("click", async () => {
     if (!INFILTRATE && INFIL_LEFT <= 0) {

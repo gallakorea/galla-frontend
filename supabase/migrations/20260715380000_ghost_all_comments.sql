@@ -42,3 +42,6 @@ language sql stable security definer set search_path to public as $$
   limit 300
 $$;
 grant execute on function public.video_comment_list(text) to anon, authenticated;
+
+-- 유령 댓글은 anon_name이 null(렌더가 ghost_seed 페르소나로 대체) — NOT NULL 해제
+alter table public.plaza_comments alter column anon_name drop not null;

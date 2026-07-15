@@ -71,9 +71,23 @@
   .ghost-toggle .gt-hint{font-size:10.5px;color:#6b6486;font-weight:700}
   .ghost-toggle.has-pass{color:#c9beea}
   .ghost-toggle.has-pass .gt-hint{display:none}
-  .ghost-toggle.on{background:linear-gradient(100deg,#4a3f7e,#372f5e);border-color:#7a6bc0;color:#fff;box-shadow:0 0 16px rgba(122,107,192,.25)}
+  .ghost-toggle.on{background:linear-gradient(100deg,#5a4b9e,#42387a);border-color:#9d8cf0;color:#fff;
+    box-shadow:0 0 18px rgba(140,120,230,.45);animation:ghGlow 1.8s ease-in-out infinite}
+  @keyframes ghGlow{0%,100%{box-shadow:0 0 12px rgba(140,120,230,.35)}50%{box-shadow:0 0 24px rgba(140,120,230,.65)}}
   .ghost-toggle:active{transform:scale(.95)}
-  .ghost-av-wrap .ghost-av{width:100%;height:100%;font-size:1em}`;
+  .ghost-toggle .gt-state{font-size:10px;font-weight:900;padding:2px 7px;border-radius:999px;
+    background:rgba(0,0,0,.3);color:#b9aee0;letter-spacing:.02em}
+  .ghost-toggle.on .gt-state{background:#fff;color:#42387a}
+  .ghost-av-wrap .ghost-av{width:100%;height:100%;font-size:1em}
+  /* 유령 토스트 */
+  .gh-toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(14px) scale(.92);z-index:100002;
+    max-width:88vw;text-align:center;background:linear-gradient(135deg,#2b2444,#1a1630);color:#efeaff;
+    border:1px solid #6a5aa8;border-radius:16px;padding:12px 18px;font-size:13.5px;line-height:1.5;
+    box-shadow:0 12px 36px rgba(0,0,0,.55),0 0 24px rgba(122,107,192,.25);
+    opacity:0;pointer-events:none;transition:opacity .25s ease,transform .3s cubic-bezier(.2,.9,.3,1.25)}
+  .gh-toast.on{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+  .gh-toast small{color:#a89ccb}
+  @media (prefers-reduced-motion: reduce){.ghost-toggle.on{animation:none}.gh-toast{transition:none}}`;
   const st = document.createElement("style"); st.id = "galla-ghost-style"; st.textContent = css;
   document.head.appendChild(st);
 
@@ -114,17 +128,63 @@
     } catch { window.__GHOST_ST = { active: false }; }
     return window.__GHOST_ST;
   };
-  window.GALLA_ghostBind = function (btn) {
+  const ghostDaysLeft = () => {
+    const st = window.__GHOST_ST;
+    if (!st?.active || !st.until) return 0;
+    return Math.max(1, Math.ceil((new Date(st.until) - Date.now()) / 86400000));
+  };
+  /* 유령 전용 토스트 — 어느 페이지든 동일하게 크게 보인다 */
+  function ghToast(html, ms = 2600) {
+    document.getElementById("gh-toast")?.remove();
+    const t = document.createElement("div");
+    t.id = "gh-toast"; t.className = "gh-toast";
+    t.innerHTML = html;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("on"));
+    setTimeout(() => { t.classList.remove("on"); setTimeout(() => t.remove(), 300); }, ms);
+  }
+  window.GALLA_ghostToast = ghToast;
+
+  /* 토글 버튼 상태 라벨 — 켜짐/꺼짐/보유일수가 항상 보이게 */
+  function paintGhostBtn(btn) {
+    const st = window.__GHOST_ST || {};
+    const on = btn.classList.contains("on");
+    btn.classList.toggle("has-pass", !!st.active);
+    let lab = btn.querySelector(".gt-state");
+    if (!lab) { lab = document.createElement("span"); lab.className = "gt-state"; btn.appendChild(lab); }
+    if (on) lab.textContent = `ON · ${ghostDaysLeft()}일 남음`;
+    else if (st.active) lab.textContent = `OFF · ${ghostDaysLeft()}일 보유`;
+    else lab.textContent = "유령권 필요";
+    // 기존 정적 힌트는 상태 라벨로 대체
+    btn.querySelector(".gt-hint")?.remove();
+  }
+
+  window.GALLA_ghostBind = function (btn, opts = {}) {
     if (!btn || btn._ghostBound) return; btn._ghostBound = true;
-    window.GALLA_ghostReady().then(st => btn.classList.toggle("has-pass", !!st.active));
+    window.GALLA_ghostReady().then(() => paintGhostBtn(btn));
     btn.addEventListener("click", () => {
-      if (!window.__GHOST_ST?.active) {
-        if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요? (3일 800GP~)")) {
-          if (window.openShop) window.openShop(); else location.href = "settings.html";
-        }
+      const st = window.__GHOST_ST;
+      if (!st?.active) {
+        ghToast(`👻 <b>유령권이 필요해요</b><br><small>상점에서 3일권(800GP)부터 구매할 수 있어요</small>`);
+        setTimeout(() => {
+          if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요? (3일 800GP~)")) {
+            if (window.openShop) window.openShop(); else location.href = "settings.html";
+          }
+        }, 350);
         return;
       }
-      btn.classList.toggle("on");
+      const on = btn.classList.toggle("on");
+      paintGhostBtn(btn);
+      if (on) {
+        const g = window.GALLA_ghost(st.seed);
+        ghToast(`👻 <b>유령 모드 ON</b> — 지금부터 <b style="color:${g.color}">${g.name}</b>(으)로 활동!<br>
+          <small>${ghostDaysLeft()}일 남음 · 이 기간에 쓴 댓글은 영원히 익명이에요</small>`);
+        const r = btn.getBoundingClientRect();
+        if (window.GALLA_FX) window.GALLA_FX.burst(r.left + r.width / 2, r.top, { emojis: ["👻", "💨", "✨"], count: 12, spread: 60, up: 40 });
+      } else {
+        ghToast(`🙋 <b>유령 모드 OFF</b> — 다시 내 이름으로 활동합니다`);
+      }
+      opts.onChange && opts.onChange(on);
     });
   };
   // 게시 실패 공통 처리: no_ghost_pass면 구매 유도 후 true 반환

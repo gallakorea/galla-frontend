@@ -384,7 +384,7 @@ async function submitComment(body) {
   const ghostOn = document.getElementById("comment-ghost")?.classList.contains("on") === true;
   let displayName = null, isAnon = false;
   if (ghostOn) {
-    if (!window.__PLAZA_GHOST?.active) {
+    if (!window.__GHOST_ST?.active) {
       return promptGhostBuy();   // 만료/미보유면 구매 유도
     }
     isAnon = true;               // anon_name은 유령 렌더가 seed로 대체하므로 불필요
@@ -417,14 +417,9 @@ async function submitComment(body) {
   replyTarget = null;
 }
 
-/* 유령 상태 로드 + 토글/구매 유도 */
+/* 유령 상태/토글 — 공용(ghost.js GALLA_ghostBind: 상태 라벨·토스트·구매 유도 내장) */
 async function loadGhostState() {
-  try {
-    const { data } = await supabase.rpc("ghost_status");
-    window.__PLAZA_GHOST = data?.ok ? data : { active: false };
-  } catch { window.__PLAZA_GHOST = { active: false }; }
-  const btn = document.getElementById("comment-ghost");
-  if (btn) btn.classList.toggle("has-pass", !!window.__PLAZA_GHOST.active);
+  if (window.GALLA_ghostReady) await window.GALLA_ghostReady();
 }
 function promptGhostBuy() {
   if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요?")) {
@@ -433,11 +428,7 @@ function promptGhostBuy() {
 }
 window.GALLA_bindGhostToggle = function () {
   const btn = document.getElementById("comment-ghost");
-  if (!btn || btn._bound) return; btn._bound = true;
-  btn.addEventListener("click", () => {
-    if (!window.__PLAZA_GHOST?.active) { promptGhostBuy(); return; }
-    btn.classList.toggle("on");
-  });
+  if (btn && window.GALLA_ghostBind) window.GALLA_ghostBind(btn);
 };
 
 function scrollToCommentInput() {
