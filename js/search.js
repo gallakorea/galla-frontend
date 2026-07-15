@@ -779,46 +779,36 @@ document.addEventListener("DOMContentLoaded", async () => {
       (bm || []).forEach(r => { GALLA_CACHE[r.news_id] = Object.assign(GALLA_CACHE[r.news_id] || {}, seen[r.news_id], { saved: true }); });
     }
 
-    // 섹션 간 중복 제거 — 한 기사는 한 곳에만. (참여가 적어 베스트≈최신이라 겹친다)
-    const used = new Set();
-    const take = (arr, n) => { const out = []; for (const x of (arr || [])) { if (used.has(x.id)) continue; used.add(x.id); out.push(x); if (out.length >= n) break; } return out; };
-
     let html = "";
 
-    // 속보: 실시간으로 왼쪽으로 흐르는 티커 (스트립은 중복 계산에서 제외 — 그냥 최신 헤드라인)
+    // 속보: 실시간으로 왼쪽으로 흐르는 티커
     if (breaking.length) html += breakingTicker(breaking);
-
     // 히어로 + 실시간 베스트
     if (best.length) {
-      const hero = take(best, 1)[0];
-      if (hero) html += `<div class="nh-block">${nhHero(hero)}</div>`;
-      const bestList = take(best, 5);
-      if (bestList.length) {
+      html += `<div class="nh-block">${nhHero(best[0])}</div>`;
+      if (best.length > 1) {
         html += `<section class="nh-sec">${nhSec(`<span class="nh-live"></span>`, "실시간 베스트", "지금 가장 뜨거운")}
-          ${bestList.map(gallaCard).join("")}</section>`;
+          ${best.slice(1, 6).map(gallaCard).join("")}</section>`;
       }
     }
     // 주요 뉴스 (보도량 많은 큰 사건)
-    const majorList = take(major, 6);
-    if (majorList.length) {
+    if (major.length) {
       html += `<section class="nh-sec">${nhSec(SEC.issue, "주요 뉴스", "여러 매체가 주목")}
-        ${shelf(majorList, nhMini)}</section>`;
+        ${shelf(major, nhMini)}</section>`;
     }
-    // 랭킹: 많이 본 / 댓글 많은 (이미 위에 나온 건 제외)
-    const viewedList = take(viewed, 10);
-    if (viewedList.length) {
+    // 랭킹: 많이 본 / 댓글 많은
+    if (viewed.length) {
       html += `<section class="nh-sec">${nhSec("👀", "많이 본 뉴스")}
-        <div class="nh-ranklist">${viewedList.map((n, i) => nhRank(n, i, "view")).join("")}</div></section>`;
+        <div class="nh-ranklist">${viewed.map((n, i) => nhRank(n, i, "view")).join("")}</div></section>`;
     }
-    const commentedList = take(commented, 10);
-    if (commentedList.length) {
+    if (commented.length) {
       html += `<section class="nh-sec">${nhSec(SEC.plaza, "댓글 많은 뉴스")}
-        <div class="nh-ranklist">${commentedList.map((n, i) => nhRank(n, i, "cmt")).join("")}</div></section>`;
+        <div class="nh-ranklist">${commented.map((n, i) => nhRank(n, i, "cmt")).join("")}</div></section>`;
     }
-    // 카테고리별 (위 섹션에 안 나온 것만)
+    // 카테고리별
     CAT_ORDER.forEach(cat => {
-      const arr = take(byCat[cat], 10);
-      if (arr.length < 2) return;
+      const arr = byCat[cat];
+      if (!arr || !arr.length) return;
       html += `<section class="nh-sec">${nhSec("", cat, "")}${shelf(arr, nhMini)}
         <button type="button" class="nh-more" data-cat="${cat}">${cat} 더보기 ›</button></section>`;
     });
