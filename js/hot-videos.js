@@ -351,15 +351,22 @@
   let replyTo = null;   // 답글 대상 댓글 id
 
   function cmtHTML(m, isReply) {
-    const av = m.avatar_url
-      ? `<img class="hv-cmt-av" src="${esc(m.avatar_url)}" alt="">`
-      : `<span class="hv-cmt-av hv-cmt-av0">${esc((m.nickname || "갈")[0])}</span>`;
+    // 👻 유령 댓글: 고정 페르소나 (RPC가 실명·아바타 마스킹, seed만 내려줌)
+    const gh = m.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(m.ghost_seed) : null;
+    const av = gh
+      ? `<span class="hv-cmt-av hv-cmt-av0 ghost-nick" style="padding:0;background:none">${gh.avatarHTML}</span>`
+      : (m.avatar_url
+        ? `<img class="hv-cmt-av" src="${esc(m.avatar_url)}" alt="">`
+        : `<span class="hv-cmt-av hv-cmt-av0">${esc((m.nickname || "갈")[0])}</span>`);
+    const nameHtml = gh
+      ? `<span class="hv-cmt-n ghost-nick" style="color:${gh.color}">${gh.name}</span>`
+      : `<span class="hv-cmt-n">${esc(m.nickname)}</span>`;
     return `
       <div class="hv-cmt${isReply ? " hv-cmt-r" : ""}" data-cid="${m.id}">
         ${av}
         <div class="hv-cmt-b">
           <div class="hv-cmt-h">
-            <span class="hv-cmt-n">${esc(m.nickname)}</span>
+            ${nameHtml}
             <span class="hv-cmt-d">${timeAgo(m.created_at)}</span>
           </div>
           <div class="hv-cmt-t">${esc(m.body)}</div>
@@ -368,7 +375,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.6 11.5L12 20.3z"/></svg>
               <span>${Number(m.likes) || ""}</span>
             </button>
-            ${isReply ? "" : `<button type="button" class="hv-cr" data-reply="${m.id}" data-nick="${esc(m.nickname)}">답글</button>`}
+            ${isReply ? "" : `<button type="button" class="hv-cr" data-reply="${m.id}" data-nick="${esc(gh ? gh.name : m.nickname)}">답글</button>`}
             ${m.mine ? `<button type="button" class="hv-cx" data-del="${m.id}">삭제</button>` : ""}
           </div>
         </div>
@@ -411,10 +418,16 @@
     const c = await sb();
 
     inp.value = "";
-    const row = { video_id: vid, user_id: user.id, body };
+    const ghostBtn = document.getElementById("hvGhost");
+    const row = { video_id: vid, user_id: user.id, body,
+      is_anonymous: ghostBtn?.classList.contains("on") === true };
     if (replyTo) row.parent_id = replyTo;
     const { error } = await c.from("video_comments").insert(row);
-    if (error) { inp.value = body; return; }
+    if (error) {
+      inp.value = body;
+      if (window.GALLA_ghostInsertError) window.GALLA_ghostInsertError(error, ghostBtn);
+      return;
+    }
     setReply(null);
     loadComments();
   }
@@ -554,6 +567,7 @@
       w.classList.toggle("hidden");
       if (!w.classList.contains("hidden")) loadComments();
     });
+    window.GALLA_ghostBind && window.GALLA_ghostBind(document.getElementById("hvGhost"));
     $("#hvCmtSend")?.addEventListener("click", sendComment);
     $("#hvCmtInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendComment(); }

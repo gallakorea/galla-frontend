@@ -223,7 +223,7 @@
   async function loadGnComments(newsId) {
     GNC_NEWS = newsId; GNC_TOP_LIMIT = 8; GNC_EXPANDED.clear();
     const { data: rows } = await supabase.from("galla_news_comments")
-      .select("id,user_id,content,created_at,parent_id").eq("news_id", newsId)
+      .select("id,user_id,content,created_at,parent_id,is_anonymous,ghost_seed").eq("news_id", newsId)
       .order("created_at", { ascending: true }).limit(500);
     const profs = await fetchProfiles((rows || []).map((c) => c.user_id));
     const ids = (rows || []).map((c) => c.id);
@@ -257,10 +257,16 @@
       const cmtMenu = mine
         ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="galla_news_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>`
         : "";
-      return `<div class="gnc ${isReply ? "reply" : ""}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}">
-        <div class="gnc-av">${esc(nick(c.user_id).trim().charAt(0) || "익")}</div>
+      // 👻 유령 댓글: 고정 페르소나 이름·아바타, 프로필 이동 차단(ghost.js)
+      const g = c.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(c.ghost_seed) : null;
+      const avHtml = g ? `<span class="gnc-av ghost-nick" style="padding:0;background:none">${g.avatarHTML}</span>`
+                       : `<div class="gnc-av">${esc(nick(c.user_id).trim().charAt(0) || "익")}</div>`;
+      const nameHtml = g ? `<span class="gnc-name ghost-nick" style="color:${g.color}">${g.name}</span>`
+                         : `<span class="gnc-name">${esc(nick(c.user_id))}</span>`;
+      return `<div class="gnc ${isReply ? "reply" : ""}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(g ? g.name : nick(c.user_id))}">
+        ${avHtml}
         <div class="gnc-main">
-          <div class="gnc-head"><span class="gnc-name">${esc(nick(c.user_id))}</span><span class="gnc-time">${timeAgo(c.created_at)}</span>${cmtMenu}</div>
+          <div class="gnc-head">${nameHtml}<span class="gnc-time">${timeAgo(c.created_at)}</span>${cmtMenu}</div>
           <div class="gnc-text" data-cmt-text>${cmtBody(c.content)}</div>
           <div class="gnc-actions">
             <button class="gnc-like ${liked ? "on" : ""}" data-id="${c.id}">♥ <span>${likeAgg[c.id] || 0}</span></button>
@@ -287,12 +293,14 @@
       <div class="gnc-title">${GN_CMT_ICON} 댓글 ${total}</div>
       <div class="gnc-compose">
         <input id="gncInput" class="gnc-input" maxlength="300" placeholder="의견을 남기고 붙어보세요…">
+        <button type="button" class="ghost-toggle sm" id="gnc-ghost" title="유령으로 활동"><span class="gt-ic">👻</span></button>
         <button id="gncSend" class="gnc-send">게시</button>
       </div>
       <div class="gnc-list">${tops.length ? shown.map(thread).join("") : '<div class="gnc-empty">첫 댓글을 남겨보세요!</div>'}</div>
       ${remaining > 0 ? `<button id="gncMore" class="gnc-more">댓글 더 보기 (${remaining})</button>` : ""}`;
 
     const inp = $("#gncInput");
+    window.GALLA_ghostBind && window.GALLA_ghostBind(document.getElementById("gnc-ghost"));
     $("#gncSend").addEventListener("click", () => postGnComment(inp.value, null));
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") postGnComment(inp.value, null); });
     $("#gncMore")?.addEventListener("click", () => { GNC_TOP_LIMIT += 10; renderGnComments(); });
@@ -337,9 +345,14 @@
     if (needLogin()) return;
     content = (content || "").trim();
     if (!content) return;
+    const ghostBtn = document.getElementById("gnc-ghost");
     const { error } = await supabase.from("galla_news_comments")
-      .insert({ news_id: GNC_NEWS, user_id: ME.id, content, parent_id: parentId || null });
-    if (error) { alert("댓글 등록 실패"); return; }
+      .insert({ news_id: GNC_NEWS, user_id: ME.id, content, parent_id: parentId || null,
+                is_anonymous: ghostBtn?.classList.contains("on") === true });
+    if (error) {
+      if (window.GALLA_ghostInsertError && window.GALLA_ghostInsertError(error, ghostBtn)) return;
+      alert("댓글 등록 실패"); return;
+    }
     if (parentId) GNC_EXPANDED.add(parentId);
     await loadGnComments(GNC_NEWS);
   }

@@ -103,6 +103,43 @@
   }
   window.GALLA_ghostBlock = ghostBlock;
 
+  /* ---- 공용 컴포저 토글 헬퍼 ----
+     사용: 버튼 마크업(.ghost-toggle#아무id) 넣고 GALLA_ghostBind(btn) 호출.
+     게시 시 is_anonymous = btn.classList.contains('on'). */
+  window.GALLA_ghostReady = async function (force) {
+    if (window.__GHOST_ST && !force) return window.__GHOST_ST;
+    try {
+      const { data } = await window.supabaseClient.rpc("ghost_status");
+      window.__GHOST_ST = data?.ok ? data : { active: false };
+    } catch { window.__GHOST_ST = { active: false }; }
+    return window.__GHOST_ST;
+  };
+  window.GALLA_ghostBind = function (btn) {
+    if (!btn || btn._ghostBound) return; btn._ghostBound = true;
+    window.GALLA_ghostReady().then(st => btn.classList.toggle("has-pass", !!st.active));
+    btn.addEventListener("click", () => {
+      if (!window.__GHOST_ST?.active) {
+        if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요? (3일 800GP~)")) {
+          if (window.openShop) window.openShop(); else location.href = "settings.html";
+        }
+        return;
+      }
+      btn.classList.toggle("on");
+    });
+  };
+  // 게시 실패 공통 처리: no_ghost_pass면 구매 유도 후 true 반환
+  window.GALLA_ghostInsertError = function (error, btn) {
+    if (String(error?.message || "").includes("no_ghost_pass")) {
+      btn?.classList.remove("on");
+      window.__GHOST_ST = { active: false };
+      if (confirm("👻 유령권이 만료됐어요. 상점에서 다시 구매할까요?")) {
+        if (window.openShop) window.openShop(); else location.href = "settings.html";
+      }
+      return true;
+    }
+    return false;
+  };
+
   // 위임: 유령 닉/아바타 탭 → 연출(이동 차단)
   document.addEventListener("click", (e) => {
     const g = e.target.closest(".ghost-nick, .ghost-av");

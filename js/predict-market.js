@@ -482,7 +482,7 @@ async function loadComments(body){
   } else CMT_SIDE=null;
 
   const { data: rows } = await supa.from('market_comments')
-    .select('id,user_id,side,content,created_at,parent_id,outcome_id').eq('market_id',marketId)
+    .select('id,user_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed').eq('market_id',marketId)
     .order('created_at',{ascending:true}).limit(500);
   const profs=await fetchProfiles((rows||[]).map(c=>c.user_id));
   const ids=(rows||[]).map(c=>c.id);
@@ -519,10 +519,15 @@ function renderComments(body){
     const roleBadge=isHolder?`<span class="pmd-cmt-role holder">💰 참여자</span>`:`<span class="pmd-cmt-role watch">👁 관전</span>`;
     const mine=c.user_id&&ME&&c.user_id===ME.id;
     const cmtMenu=mine?`<button class="cmt-mini" data-cmt-menu data-cmt-table="market_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="content" aria-label="더보기">⋯</button>`:'';
-    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(nick(c.user_id))}"${borderStyle}>
+    // 👻 유령 댓글: 고정 페르소나 (프로필 불연결)
+    const gh = c.is_anonymous && window.GALLA_ghost ? window.GALLA_ghost(c.ghost_seed) : null;
+    const nameHtml = gh
+      ? `<span class="pmd-cmt-name ghost-nick" style="color:${gh.color}">${gh.avatarHTML} ${gh.name}</span>`
+      : `<span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>`;
+    return `<div class="pmd-cmt ${c.side} ${isReply?'reply':''}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(gh?gh.name:nick(c.user_id))}"${borderStyle}>
       <div class="pmd-cmt-head">
         <span class="pmd-side-chip ${c.side}"${chipStyle}>${cmtSideLabel(c.side,c.outcome_id)}</span>
-        <span class="pmd-cmt-name">${esc(nick(c.user_id))}</span>
+        ${nameHtml}
         ${roleBadge}
         <span class="pmd-cmt-time">${ago(c.created_at)}</span>
         ${cmtMenu}
@@ -582,6 +587,7 @@ function renderComments(body){
       <div class="pmd-cmt-inputrow">
         <input id="cmtInput" class="pmd-cmt-input" maxlength="300"
           placeholder="${CMT_SIDE!=null?`[${esc(pickName(CMT_SIDE))}] 의견을 남기세요…`:(multi?'먼저 결과를 선택하세요':'먼저 입장을 선택하세요')}">
+        <button type="button" class="ghost-toggle sm" id="pmd-ghost" title="유령으로 활동"><span class="gt-ic">👻</span></button>
         <button id="cmtSend" class="pmd-cmt-send">게시</button>
       </div>
     </div>
@@ -590,6 +596,7 @@ function renderComments(body){
     </div>
     ${remaining>0?`<button id="cmtMore" class="pmd-cmt-more">댓글 더 보기 (${remaining})</button>`:''}`;
 
+  window.GALLA_ghostBind && window.GALLA_ghostBind(document.getElementById('pmd-ghost'));
   body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(b=>b.addEventListener('click',()=>{
     CMT_SIDE=b.dataset.pick;
     body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(x=>{ x.classList.remove('active'); if(multi)x.style.cssText=''; });
@@ -644,7 +651,9 @@ async function postComment(text,pick,parentId,body){
   if(needLogin())return;
   const txt=(text||'').trim();
   if(!txt||txt.startsWith('@')&&txt.replace(/^@\S+\s*/,'').length===0)return toast('의견을 입력하세요.');
-  const payload={market_id:marketId,user_id:ME.id,content:txt};
+  const ghostBtn=document.getElementById('pmd-ghost');
+  const payload={market_id:marketId,user_id:ME.id,content:txt,
+    is_anonymous: ghostBtn?.classList.contains('on')===true};
   if(parentId) payload.parent_id=parentId;
   if(!isMulti()){
     payload.side=pick;
@@ -652,6 +661,9 @@ async function postComment(text,pick,parentId,body){
     if(o) payload.outcome_id=o.id;
   } else { payload.side='yes'; payload.outcome_id=Number(pick)||OUTCOMES[0]?.id; }
   const { error } = await supa.from('market_comments').insert(payload);
-  if(error){ console.error('[cmt] insert',error); return toast('등록 실패'); }
+  if(error){
+    if(window.GALLA_ghostInsertError && window.GALLA_ghostInsertError(error, ghostBtn)) return;
+    console.error('[cmt] insert',error); return toast('등록 실패');
+  }
   loadComments(body);
 }
