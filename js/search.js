@@ -817,36 +817,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (breaking.length) startBreakingRefresh();
   }
 
-  /* 카테고리 필터: 해당 카테고리 최신 40개 (스탯 카드) */
+  /* 카테고리 섹션 피드: 실시간 베스트 · 많이 본 · 댓글 많은 · 실시간 뉴스 */
   async function loadCategoryNews() {
     const list = document.getElementById("top-news-list");
     if (!list) return;
     newsMode = "galla";
+    clearInterval(breakingTimer);
     list.innerHTML = `<div class="hv-skel">${"<span></span>".repeat(4)}</div>`;
-    const { data: news } = await supabase.from("galla_news")
-      .select("id,title,category,hero_image,source_count,published_at")
-      .eq("status", "published").eq("category", currentNewsCategory)
-      .not("hero_image", "is", null).neq("hero_image", "")
-      .order("published_at", { ascending: false }).limit(40);
-    const rows = (news || []).filter(n => isValidThumbnail(n.hero_image));
-    if (!rows.length) { list.innerHTML = `<p class="se-muted">이 카테고리엔 아직 뉴스가 없어요.</p>`; return; }
 
-    const ids = rows.map(n => n.id);
-    const [cRes, rRes, bRes] = await Promise.all([
-      supabase.from("galla_news_comments").select("news_id").in("news_id", ids),
-      supabase.from("galla_news_reactions").select("news_id,value,user_id").in("news_id", ids),
-      ME ? supabase.from("galla_news_bookmarks").select("news_id").in("news_id", ids).eq("user_id", ME.id) : Promise.resolve({ data: [] }),
-    ]);
-    const cC = {}, lk = {}, dk = {}, mr = {}, sv = new Set();
-    (cRes.data || []).forEach(r => cC[r.news_id] = (cC[r.news_id] || 0) + 1);
-    (rRes.data || []).forEach(r => {
-      if (r.value === 1) lk[r.news_id] = (lk[r.news_id] || 0) + 1; else dk[r.news_id] = (dk[r.news_id] || 0) + 1;
-      if (ME && r.user_id === ME.id) mr[r.news_id] = r.value;
-    });
-    (bRes.data || []).forEach(r => sv.add(r.news_id));
-    rows.forEach(n => { n.cCount = cC[n.id] || 0; n.likes = lk[n.id] || 0; n.dislikes = dk[n.id] || 0;
-      GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n, { myReact: mr[n.id] || 0, saved: sv.has(n.id) }); });
-    list.innerHTML = rows.map(gallaCard).join("");
+    const { data: feed, error } = await supabase.rpc("galla_news_category", { p_cat: currentNewsCategory });
+    if (error || !feed) { list.innerHTML = `<p class="se-muted">이 카테고리를 불러오지 못했어요.</p>`; return; }
+    const best = feed.best || [], viewed = feed.mostViewed || [], commented = feed.mostCommented || [], latest = feed.latest || [];
+    if (!best.length && !latest.length) { list.innerHTML = `<p class="se-muted">이 카테고리엔 아직 뉴스가 없어요.</p>`; return; }
+
+    // 내 저장/반응 상태를 후보 전체에 반영
+    const seen = {};
+    [...best, ...viewed, ...commented, ...latest].forEach(n => { seen[n.id] = n; });
+    const ids = Object.keys(seen);
+    if (ME && ids.length) {
+      const [{ data: rx }, { data: bm }] = await Promise.all([
+        supabase.from("galla_news_reactions").select("news_id,value").in("news_id", ids).eq("user_id", ME.id),
+        supabase.from("galla_news_bookmarks").select("news_id").in("news_id", ids).eq("user_id", ME.id),
+      ]);
+      (rx || []).forEach(r => { GALLA_CACHE[r.news_id] = Object.assign(GALLA_CACHE[r.news_id] || {}, seen[r.news_id], { myReact: r.value }); });
+      (bm || []).forEach(r => { GALLA_CACHE[r.news_id] = Object.assign(GALLA_CACHE[r.news_id] || {}, seen[r.news_id], { saved: true }); });
+    }
+
+    let html = "";
+    // 히어로 + 실시간 베스트
+    if (best.length) {
+      html += `<div class="nh-block">${nhHero(best[0])}</div>`;
+      if (best.length > 1) {
+        html += `<section class="nh-sec">${nhSec(`<span class="nh-live"></span>`, `${currentNewsCategory} 실시간 베스트`, "지금 가장 뜨거운")}
+          ${best.slice(1, 6).map(gallaCard).join("")}</section>`;
+      }
+    }
+    // 많이 본 / 댓글 많은
+    if (viewed.length) {
+      html += `<section class="nh-sec">${nhSec("👀", "많이 본 뉴스")}
+        <div class="nh-ranklist">${viewed.map((n, i) => nhRank(n, i, "view")).join("")}</div></section>`;
+    }
+    if (commented.length) {
+      html += `<section class="nh-sec">${nhSec(SEC.plaza, "댓글 많은 뉴스")}
+        <div class="nh-ranklist">${commented.map((n, i) => nhRank(n, i, "cmt")).join("")}</div></section>`;
+    }
+    // 실시간 뉴스 (최신 스트림)
+    const latestRest = latest.filter(n => !best.slice(0, 1).some(b => b.id === n.id));
+    if (latestRest.length) {
+      html += `<section class="nh-sec">${nhSec("⚡", "실시간 뉴스", "최신순")}
+        ${latestRest.map(gallaCard).join("")}</section>`;
+    }
+
+    list.innerHTML = html;
+    document.querySelector(".tab-panel[data-panel='news']")?.scrollIntoView({ block: "start" });
   }
 
   async function loadTopNews() {
