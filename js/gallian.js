@@ -27,12 +27,13 @@
   window.GALLA_gallianOf = async function (supabase, userId) {
     const cnt = (t, col) => supabase.from(t).select(col || "id", { count: "exact", head: true }).eq("user_id", userId);
     const [
-      issuesR, commentsR, votesR, ppR, pcR, actsR, tradesR, balR
+      issuesR, commentsR, votesR, ppR, pcR, actsR, tradesR, balR, meritR
     ] = await Promise.all([
       cnt("issues"), cnt("comments"), cnt("votes"),
       cnt("plaza_posts"), cnt("plaza_comments"),
       cnt("comment_actions"), cnt("predict_bets"),   // 파리뮤추얼 전환: market_trades → predict_bets
       supabase.from("point_balances").select("balance").eq("user_id", userId).maybeSingle(),
+      supabase.rpc("battle_merit_stats", { p_user: userId }),  // 전공(격파·어시·수호)
     ]);
 
     const issues = issuesR.count || 0;
@@ -42,9 +43,11 @@
     const acts = actsR.count || 0;
     const trades = tradesR.count || 0;
     const balance = balR.data?.balance || 0;
+    const merits = meritR?.data || { ko: 0, assist: 0, guard: 0, gp: 0 };  // 전공 (테이블 없으면 0)
 
     const activity = issues * 50 + comments * 10 + votes * 2 + (ppR.count || 0) * 15 + (pcR.count || 0) * 5;
-    const battle = acts * 8;
+    // 전투지수 = 액션량 + 전공(성과) — 격파는 판을 끝내는 성과라 가중 최대
+    const battle = acts * 8 + (merits.ko | 0) * 30 + (merits.assist | 0) * 10 + (merits.guard | 0) * 12;
     // 예측 지수는 거래 활동만 반영 — 보유 잔액과 분리(소비해도 등급 안 떨어짐)
     const predict = trades * 10;
     const gi = activity + battle + predict;
@@ -87,7 +90,7 @@
       subLevel, subCount, subProgress,
       goal: { label: goalLabel, remaining, isPromotion: !!(next && atTierTop) },
       parts: { activity, battle, predict },
-      raw: { issues, comments, votes, plaza, acts, trades, balance },
+      raw: { issues, comments, votes, plaza, acts, trades, balance, merits },
     };
   };
 })();
