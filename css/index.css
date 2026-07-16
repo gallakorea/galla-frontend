@@ -829,3 +829,26 @@ body.shorts-open .header { display: none !important; }
 .card.pinned { border: 1px solid rgba(201,209,224,.4) !important; }
 .pin-chip { display: inline-block; font-size: 10px; font-weight: 900; color: #0a0a0b;
   background: linear-gradient(135deg,#c9d1e0,#8b93a3); padding: 1px 7px; border-radius: 99px; vertical-align: middle; }
+
+/* =========================================================
+   브랜드 푸터 (크롤 가능한 섹션 링크 · 소셜 · 정책)
+   구글 서브링크·브랜드 엔티티 강화용 + 실제 하단 내비게이션.
+   ========================================================= */
+.site-footer{
+  margin-top:26px; padding:30px 20px calc(96px + env(safe-area-inset-bottom));
+  border-top:1px solid rgba(255,255,255,.07);
+  display:flex; flex-direction:column; align-items:center; gap:14px; text-align:center;
+}
+.site-footer .sf-brand{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+.site-footer .sf-logo{ width:96px; height:auto; opacity:.92; }
+.site-footer .sf-slogan{ color:#7f8aa3; font-size:12.5px; letter-spacing:.3px; }
+.site-footer .sf-links{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px 18px; }
+.site-footer .sf-links a{
+  color:#c9d1e0; font-size:13.5px; font-weight:600; text-decoration:none; letter-spacing:-.2px;
+}
+.site-footer .sf-links a:hover{ color:#fff; text-decoration:underline; }
+.site-footer .sf-sub a{ color:#6b7488; font-size:12px; font-weight:500; }
+.site-footer .sf-social{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 16px; margin-top:2px; }
+.site-footer .sf-social a{ color:#6b7488; font-size:12px; text-decoration:none; }
+.site-footer .sf-social a:hover{ color:#c9d1e0; }
+.site-footer .sf-copy{ color:#565e70; font-size:11px; margin-top:6px; line-height:1.5; }
