@@ -131,12 +131,32 @@ document.querySelectorAll(".nav-item").forEach(icon => {
    🎁 친구 초대 카드 — 내 코드(my_ref_code)·실적(my_referral_stats)
    링크 복사/공유. 비로그인은 로그인 유도.
    --------------------------------------------------------- */
+// 🏆 초대 랭킹 — 아무도 없으면 '첫 초대자가 되어보세요'로 동기 부여(빈 상태를 기회로)
+async function paintInviteLb(sb) {
+  const box = document.getElementById("iv-lb-list");
+  if (!box) return;
+  const { data } = await sb.rpc("referral_leaderboard", { p_limit: 5 });
+  const rows = Array.isArray(data) ? data : [];
+  if (!rows.length) {
+    box.innerHTML = `<div class="iv-lb-empty">아직 아무도 초대하지 않았어요 —<br><b>1호 초대자</b>가 되어보세요 👑</div>`;
+    return;
+  }
+  const medal = i => ["🥇", "🥈", "🥉"][i] || `${i + 1}`;
+  box.innerHTML = rows.map((r, i) => `
+    <div class="iv-lb-row">
+      <span class="iv-lb-rk">${medal(i)}</span>
+      <span class="iv-lb-nm">${(r.nickname || "익명").replace(/[<>&"]/g, "")}</span>
+      <span class="iv-lb-ct">${r.invited}명</span>
+    </div>`).join("");
+}
+
 (async function initInvite() {
   const card = document.getElementById("invite-card");
   if (!card) return;
   const linkEl = document.getElementById("iv-link");
   const stats = document.getElementById("iv-stats");
   const sb = await (window.waitForSupabaseClient ? waitForSupabaseClient() : Promise.resolve(window.supabaseClient));
+  paintInviteLb(sb);   // 랭킹은 로그인 여부와 무관하게 표시
   const { data: s } = await sb.auth.getSession();
   const copyBtn = document.getElementById("iv-copy");
   const shareBtn = document.getElementById("iv-share");

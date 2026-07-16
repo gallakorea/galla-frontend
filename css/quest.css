@@ -187,3 +187,13 @@ body {
 .invite-card .iv-btn{ flex:none; background:#20242e; color:#c9d1e0; border:1px solid rgba(255,255,255,.14);
   border-radius:9px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; }
 .invite-card .iv-btn.primary{ background:#3d6bff; border-color:#3d6bff; color:#fff; }
+
+/* 🏆 초대 랭킹 (초대 카드 내부) */
+.invite-card .iv-lb{ margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,.09); }
+.invite-card .iv-lb-h{ font-size:12px; font-weight:800; color:#9aa3b5; margin-bottom:8px; }
+.invite-card .iv-lb-empty{ font-size:12px; color:#6b7488; line-height:1.6; text-align:center; padding:6px 0; }
+.invite-card .iv-lb-empty b{ color:#7aa2ff; }
+.invite-card .iv-lb-row{ display:flex; align-items:center; gap:9px; padding:5px 0; font-size:12.5px; }
+.invite-card .iv-lb-rk{ flex:0 0 20px; text-align:center; font-weight:800; color:#9aa3b5; }
+.invite-card .iv-lb-nm{ flex:1; min-width:0; color:#c9d1e0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.invite-card .iv-lb-ct{ flex:0 0 auto; color:#7aa2ff; font-weight:800; }
