@@ -250,3 +250,14 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-ga-setup code{ background:rgba(255,255,255,.08); padding:1px 6px; border-radius:5px; font-size:12px; }
 .ad-ga-link{ display:inline-block; color:#5b8cff; text-decoration:none; font-weight:700; font-size:13px; }
 .ad-ga-link:hover{ text-decoration:underline; }
+
+/* 관리자 이슈 작성 고도화 (붙여넣기 파싱 + 파일 업로드) */
+.ad-hr{ border:0; border-top:1px solid rgba(255,255,255,.08); margin:14px 0; }
+.ad-3col{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+.ad-3col > div{ min-width:0; }
+.ad-file{ display:block; width:100%; font-size:12px; color:#c9d1e0; margin-top:4px; }
+.ad-file::file-selector-button{ background:#20242e; color:#c9d1e0; border:1px solid rgba(255,255,255,.14); border-radius:8px; padding:6px 10px; margin-right:8px; cursor:pointer; font-size:12px; }
+.ad-file-n{ font-size:11px; color:#7c86f5; margin-top:4px; min-height:14px; word-break:break-all; }
+.ad-more{ margin:12px 0; }
+.ad-more summary{ cursor:pointer; font-size:13px; color:#9aa3b5; padding:6px 0; }
+@media (max-width:640px){ .ad-3col{ grid-template-columns:1fr; } }

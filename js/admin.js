@@ -491,19 +491,68 @@
       </div>`).join("") : `<div class="ad-note" style="margin:0">붙인 뉴스 링크가 여기에 관련 뉴스 카드로 쌓입니다.</div>`;
     box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { issueLinks.splice(+b.dataset.rm, 1); renderIssueLinks(); });
   }
+  // 붙여넣기 원문 → 제목/요약/진영 자동 파싱 (사용자 양식 대응)
+  function parseIssueText(raw) {
+    const lines = String(raw || "").replace(/\r/g, "").split("\n").map(s => s.trim());
+    let title = ""; const body = []; const facs = [];
+    for (const ln of lines) {
+      if (!ln) continue;
+      if (/^#/.test(ln) || /^(#[^\s#]+\s*)+$/.test(ln)) continue;               // 해시태그 줄 삭제
+      let m;
+      if ((m = ln.match(/^제목\s*[:：]\s*(.+)$/))) { if (!title) title = m[1].trim(); continue; }
+      if ((m = ln.match(/^(?:핵심\s*요약|요약)\s*[:：]?\s*(.*)$/))) { if (m[1]) body.push(m[1].trim()); continue; }
+      if (/^[👍👎]/u.test(ln)) { facs.push(ln); continue; }                       // 진영 줄 (u플래그 필수)
+      body.push(ln);
+    }
+    if (!title && body.length) title = body.shift();                             // 제목: 없으면 첫 줄
+    const label = s => s.replace(/^[👍👎]\s*/u, "").split(/\s+[-–—]\s+/)[0].trim(); // ' - ' 앞 라벨만(한 줄)
+    return { title: (title || "").trim(), desc: body.join("\n\n").trim(), fa: facs[0] ? label(facs[0]) : "", fb: facs[1] ? label(facs[1]) : "" };
+  }
+
+  const CATS = ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "19금", "기타"];
+  const DONS = ["사회복지", "아동·청소년 지원", "장애인 지원", "환경 보호", "재난·긴급구호", "교육 및 문화", "동물 보호", "헌혈·재능기부"];
+  const optList = (arr, sel) => arr.map(o => `<option${o === sel ? " selected" : ""}>${o}</option>`).join("");
+
   function upIssue() {
     issueLinks = [];
-    $("#u-form").innerHTML =
-      IN("i-title", "제목 *", "이슈 제목") + IN("i-one", "한줄 요약", "카드에 뜨는 한 줄") +
-      TA("i-desc", "설명", "이슈 상세 설명") + IN("i-cat", "카테고리", "", "사회") +
-      `<div class="ad-2col">${IN("i-fa", "진영 A", "👍 찬성이오")}${IN("i-fb", "진영 B", "👎 난 반댈세")}</div>` +
-      IN("i-thumb", "썸네일 이미지 URL", "https://…") +
-      `<label>관련 링크 · 근거</label>
-       <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="뉴스·커뮤니티·유튜브·자료 등 URL 붙여넣기 → 추가" style="margin:0">
-       <button class="ad-btn ghost" id="i-link-go" type="button">추가</button></div>
-       <div id="i-links" class="ad-links"></div>` +
-      `<button class="ad-btn primary" id="i-go">🚀 이슈 발행</button><div class="ad-note">진영명 비우면 기본(찬성이오/난 반댈세). 관련 링크는 이슈 하단에 근거 카드로 뜨고 클릭 시 외부로 이동합니다.</div>`;
+    $("#u-form").innerHTML = `
+      <label>📋 원문 붙여넣기 <span style="opacity:.6;font-weight:400">— 제목·요약·진영이 자동으로 채워집니다</span></label>
+      <textarea id="i-paste" class="ad-input" rows="7" placeholder="제목·핵심요약·👍 진영 두 줄·#해시태그가 포함된 원문을 그대로 붙여넣으세요."></textarea>
+      <button class="ad-btn ghost" id="i-parse" type="button" style="margin-bottom:14px">⚡ 자동 채움</button>
+      <hr class="ad-hr">
+      ${IN("i-title", "제목 *", "자동 채움됩니다")}
+      ${TA("i-desc", "핵심요약(본문)", "자동 채움됩니다", 5)}
+      <div class="ad-2col">${IN("i-fa", "진영 A", "👍 찬성이오")}${IN("i-fb", "진영 B", "👎 난 반댈세")}</div>
+      <div class="ad-2col">
+        <div><label>카테고리 *</label><select id="i-cat" class="ad-input"><option value="">선택</option>${optList(CATS)}</select></div>
+        <div><label>기부처 *</label><select id="i-don" class="ad-input"><option value="">선택</option>${optList(DONS)}</select></div>
+      </div>
+      <hr class="ad-hr">
+      <div class="ad-3col">
+        <div><label>🖼 사진(여러 장)</label><input id="i-photos" type="file" accept="image/*" multiple class="ad-file"><div class="ad-file-n" id="i-photos-n"></div></div>
+        <div><label>🎬 영상</label><input id="i-video" type="file" accept="video/*" class="ad-file"><div class="ad-file-n" id="i-video-n"></div></div>
+        <div><label>📇 카드 썸네일(3:4)</label><input id="i-card" type="file" accept="image/*" class="ad-file"><div class="ad-file-n" id="i-card-n"></div></div>
+      </div>
+      <details class="ad-more"><summary>관련 링크 · 근거 (선택)</summary>
+        <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="URL 붙여넣기 → 추가" style="margin:0">
+        <button class="ad-btn ghost" id="i-link-go" type="button">추가</button></div>
+        <div id="i-links" class="ad-links"></div>
+      </details>
+      <button class="ad-btn primary" id="i-go">🚀 이슈 발행</button>
+      <div class="ad-note">사진·영상·썸네일은 파일로 올리면 자동 업로드됩니다. 진영명 비우면 기본(찬성이오/난 반댈세).</div>`;
     renderIssueLinks();
+
+    $("#i-parse").onclick = () => {
+      const p = parseIssueText($("#i-paste").value);
+      if (p.title) $("#i-title").value = p.title;
+      if (p.desc) $("#i-desc").value = p.desc;
+      if (p.fa) $("#i-fa").value = p.fa;
+      if (p.fb) $("#i-fb").value = p.fb;
+      toast("자동 채움 완료 — 확인 후 발행하세요");
+    };
+    const fileName = (inp, out) => $(inp).onchange = () => { const fs = $(inp).files; $(out).textContent = fs.length ? (fs.length > 1 ? `${fs.length}개 선택됨` : fs[0].name) : ""; };
+    fileName("#i-photos", "#i-photos-n"); fileName("#i-video", "#i-video-n"); fileName("#i-card", "#i-card-n");
+
     const addLink = async () => {
       const u = $("#i-link-url").value.trim(); if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL을 입력하세요.");
       const btn = $("#i-link-go"); btn.disabled = true; btn.textContent = "불러오는 중…";
@@ -513,10 +562,32 @@
     };
     $("#i-link-go").onclick = addLink;
     $("#i-link-url").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); addLink(); } };
+
     $("#i-go").onclick = async () => {
-      const t = $("#i-title").value.trim(); if (!t) return $("#i-title").focus();
-      const r = await rpc("admin_publish_issue", { p_title: t, p_one_line: $("#i-one").value.trim(), p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value.trim() || "사회", p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(), p_thumb: $("#i-thumb").value.trim(), p_links: issueLinks });
-      if (r?.ok) { toast("이슈 발행됨"); location.href = "issue.html?id=" + r.id; } else alert("발행 실패");
+      const t = $("#i-title").value.trim(); if (!t) { toast("제목이 비었어요. ⚡자동 채움을 먼저 눌러주세요."); return $("#i-title").focus(); }
+      if (!$("#i-cat").value) return toast("카테고리를 선택하세요.");
+      if (!$("#i-don").value) return toast("기부처를 선택하세요.");
+      const btn = $("#i-go"); btn.disabled = true;
+      try {
+        const set = m => btn.textContent = m;
+        let images = [], video_url = null, card_thumb = null, vthumb = null;
+        const photos = [...($("#i-photos").files || [])];
+        for (let i = 0; i < photos.length; i++) { set(`🖼 사진 업로드 ${i + 1}/${photos.length}…`); images.push(await window.GALLA_UPLOAD_MEDIA(photos[i], "image")); }
+        const vf = $("#i-video").files[0];
+        if (vf) { set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO_STREAM(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`)); video_url = out.hls; vthumb = out.thumbnail; }
+        const cf = $("#i-card").files[0];
+        if (cf) { set("📇 썸네일 업로드…"); card_thumb = await window.GALLA_UPLOAD_MEDIA(cf, "image"); }
+        const thumb = images[0] || vthumb || card_thumb || null;
+        set("🚀 발행 중…");
+        const r = await rpc("admin_publish_issue", {
+          p_title: t, p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value,
+          p_one_line: null, p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(),
+          p_thumb: thumb, p_links: issueLinks, p_video: video_url, p_images: images,
+          p_card_thumb: card_thumb, p_donation: $("#i-don").value,
+        });
+        if (r?.ok) { toast("이슈 발행됨"); location.href = "issue.html?id=" + r.id; }
+        else { alert("발행 실패: " + (r?.reason || "알 수 없음")); btn.disabled = false; btn.textContent = "🚀 이슈 발행"; }
+      } catch (e) { console.error(e); alert("업로드/발행 중 오류: " + (e?.message || e)); btn.disabled = false; btn.textContent = "🚀 이슈 발행"; }
     };
   }
   function upPlaza() {
