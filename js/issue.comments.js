@@ -583,6 +583,17 @@ function hitFx(unit, kind) {
   setTimeout(() => unit.classList.remove("fx-hit", "fx-heal"), 600);
 }
 /* HP 바 즉시 갱신(격파 반영) */
+/* HP는 (스레드, 유저) 풀이라 한 명을 때리면 그 사람의 '스레드 내 모든 댓글'이 함께 내려간다.
+   서버(_sync_pool_hp)가 DB를 그렇게 갱신하므로 화면도 같이 반영해야 진실이 맞는다. */
+function applyPoolHp(targetUnit, hp) {
+  if (!targetUnit) return;
+  const uid = targetUnit.dataset.uid;
+  const root = targetUnit.closest(".comment");
+  if (!uid || !root) { applyHpToUnit(targetUnit, hp); return; }
+  const scope = [root, ...root.querySelectorAll(".reply")];
+  scope.filter(el => el.dataset.uid === uid).forEach(el => applyHpToUnit(el, hp));
+}
+
 function applyHpToUnit(unit, hp) {
   if (!unit) return;
   const clamped = Math.max(0, hp | 0);
@@ -710,10 +721,14 @@ async function fetchFeedNicks(ids) {
   (data || []).forEach(p => { feedNickCache[p.user_id] = p.nickname; });
 }
 
+/* ⚔️ 전투 수치 — 서버 battle_action(c_atk/c_def/c_sup)과 반드시 동일하게 유지.
+   v2(2026-07-16): 힐 < 공격이어야 격파가 가능하다. HP는 (스레드,유저) 풀 공유이며
+   유효회복 = min(총회복, 총피해×0.3) 이라 지원을 아무리 눌러도 누적피해 143이면 격파. */
+const BATTLE_DMG = { attack: 14, defend: 6, support: 8 };
 const ACTION_META = {
-  attack:  { icon: "💥", verb: "공격", delta: "-12", cls: "atk" },
-  defend:  { icon: "🛡", verb: "방어", delta: "+8",  cls: "def" },
-  support: { icon: "💣", verb: "지원", delta: "+12", cls: "sup" }
+  attack:  { icon: "💥", verb: "공격", delta: `-${BATTLE_DMG.attack}`,  cls: "atk" },
+  defend:  { icon: "🛡", verb: "방어", delta: `+${BATTLE_DMG.defend}`,  cls: "def" },
+  support: { icon: "💣", verb: "지원", delta: `+${BATTLE_DMG.support}`, cls: "sup" }
 };
 
 function feedLineHTML(a, isNew) {
@@ -853,7 +868,7 @@ function syncUnitHp(commentId, oldHp, newHp) {
   if (!unit) return;
   const shown = Number(unit.dataset.hp);
   if (shown === newHp) return; // 이미 로컬 연출로 반영됨
-  applyHpToUnit(unit, newHp);
+  applyPoolHp(unit, newHp);    // 풀 공유 — 그 사람의 다른 댓글들도 같이 갱신
 
   const FX = window.BattleFX;
   const row = allRows.find(r => r.id === commentId);
@@ -1309,15 +1324,15 @@ setInterval(() => {
 
 function makeReply(r) {
   const chip = r.battle_action === "attack"
-    ? `<span class="reply-chip atk">💥 공격 −12</span>`
+    ? `<span class="reply-chip atk">💥 공격 −${BATTLE_DMG.attack}</span>`
     : r.battle_action === "defend"
-      ? `<span class="reply-chip def">🛡 방어 +8</span>`
+      ? `<span class="reply-chip def">🛡 방어 +${BATTLE_DMG.defend}</span>`
       : "";
   const ko = r.hp <= 0 ? " ko" : "";
   const infil = isInfiltrator(r) ? " infil-unit" : "";
   // 대댓글은 단순화 — 작은 아바타 + 닉네임만(레벨·아군태그 생략), HP는 얇은 바
   return `
-  <div class="reply${ko}${infil}" data-hp="${r.hp}" data-id="${r.id}" data-side="${r.faction}">
+  <div class="reply${ko}${infil}" data-hp="${r.hp}" data-id="${r.id}" data-uid="${r.user_id || ""}" data-side="${r.faction}">
     <div class="head">
       ${avatarHTML(r, "r")}
       <div class="user">${nameSpan(r)}</div>
@@ -1387,7 +1402,7 @@ function makeComment(c) {
   const hiddenCount = replies.length - shown.length;
 
   return `
-    <div class="comment${ko}${isAce ? " ace" : ""}${infil}${hlSet.has(c.id) ? " hl" : ""}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}">
+    <div class="comment${ko}${isAce ? " ace" : ""}${infil}${hlSet.has(c.id) ? " hl" : ""}" data-hp="${c.hp}" data-side="${c.faction}" data-id="${c.id}" data-uid="${c.user_id || ""}">
     <div class="head">
       ${avatarHTML(c, "c")}
       <div class="user">
@@ -1655,9 +1670,9 @@ function bindEvents() {
       // 해당 유닛 HP 즉시 반영 + 힐 FX + 플로팅 텍스트
       const unit = e.target.closest(".reply") || e.target.closest(".comment");
       if (unit) {
-        applyHpToUnit(unit, data.hp);
+        applyPoolHp(unit, data.hp);
         hitFx(unit, "heal");
-        spawnCombatText(unit, "+12 지원!", "heal");
+        spawnCombatText(unit, `+${BATTLE_DMG.support} 지원!`, "heal");
         const FX = window.BattleFX;
         if (FX) {
           FX.burstAt(unit, "support");
@@ -1865,7 +1880,7 @@ function openInlineComposer(type, targetId, targetUser, unit) {
     : `🛡 <b>${escT(targetUser)}</b> 방어 — 지원 근거가 방어막이 됩니다`;
   const input = box.querySelector("#ic-input");
   input.placeholder = type === "attack" ? "반박 근거를 입력…" : "지지 근거를 입력…";
-  box.querySelector("#ic-send").textContent = type === "attack" ? `💥 −12` : `🛡 +8`;
+  box.querySelector("#ic-send").textContent = type === "attack" ? `💥 −${BATTLE_DMG.attack}` : `🛡 +${BATTLE_DMG.defend}`;
 
   // 대상 유닛 바로 아래에 부착 (최상위 댓글이면 스레드 끝, 답글이면 그 답글 뒤)
   if (unit.classList.contains("reply")) {
@@ -1963,12 +1978,12 @@ async function submitBattleReply(type, targetId, targetUser, text) {
       el.dataset.until = String(Date.now() + BATTLE_COOLDOWN_MS);
     });
 
-    applyHpToUnit(targetUnit, bd.hp);
+    applyPoolHp(targetUnit, bd.hp);   // 풀이라 그 사람의 스레드 내 모든 댓글이 함께 내려간다
     const FX = window.BattleFX;
     if (type === "attack") {
       hitFx(targetUnit, "hit");
       const crit = bd.hp <= 0;
-      spawnCombatText(targetUnit, crit ? "-12 격파!" : "-12", crit ? "crit" : "dmg");
+      spawnCombatText(targetUnit, crit ? `-${BATTLE_DMG.attack} 격파!` : `-${BATTLE_DMG.attack}`, crit ? "crit" : "dmg");
       if (FX) {
         FX.shockwave(targetUnit, "rgba(255,80,50,.9)");
         FX.burstAt(targetUnit, crit ? "ko" : "attack");
@@ -1978,7 +1993,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
       if (crit) showKoBanner(targetId);
     } else {
       hitFx(targetUnit, "heal");
-      spawnCombatText(targetUnit, "+8 방어", "heal");
+      spawnCombatText(targetUnit, `+${BATTLE_DMG.defend} 방어`, "heal");
       if (FX) {
         FX.burstAt(targetUnit, "defend");
         FX.shockwave(targetUnit, "rgba(120,190,255,.9)");
