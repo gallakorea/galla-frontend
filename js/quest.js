@@ -180,7 +180,7 @@ async function paintInviteLb(sb) {
     flash(copyBtn, "복사됨!");
   };
   shareBtn.onclick = async () => {
-    const msg = "지금 대한민국 진짜 여론이 갈리는 곳, 갈라(GALLA). 내 링크로 가입하면 +500 GP! " + url;
+    const msg = "오늘의 이슈로 겨루는 실시간 여론 배틀, 갈라(GALLA). 내 링크로 가입하면 +500 GP! " + url;
     if (navigator.share) { try { await navigator.share({ title: "GALLA 갈라", text: msg, url }); } catch (e) {} }
     else { try { await navigator.clipboard.writeText(msg); flash(shareBtn, "복사됨!"); } catch (e) {} }
   };
