@@ -43,23 +43,42 @@ const kind = (path) => {
 };
 
 // 초대 링크(?ref=CODE) → 전용 초대 OG 카드. 일반 홈 카드와 달라야 클릭이 난다.
+// 후킹은 '오늘 최대 격전 이슈'(라이브)로. ⚠️숫자(회원수·표수)는 표본이 작을 때 역효과라
+//   찬반 %는 총 투표 MIN_VOTES 이상일 때만 노출한다.
+const MIN_VOTES = 20;
 async function resolveInvite(params) {
   const code = (params.get("ref") || "").trim();
   if (!/^[A-Za-z0-9]{4,12}$/.test(code)) return null;
-  let nick = null;
-  try {
-    const r = await fetch(`${SB}/rest/v1/rpc/ref_owner`, {
-      method: "POST",
-      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ p_code: code.toUpperCase() }),
-      cf: { cacheTtl: 300, cacheEverything: true },
-    });
-    if (r.ok) nick = await r.json();
-  } catch {}
-  const who = nick && typeof nick === "string" ? `${nick}님이` : "친구가";
+
+  const [nick, hot] = await Promise.all([
+    (async () => {
+      try {
+        const r = await fetch(`${SB}/rest/v1/rpc/ref_owner`, {
+          method: "POST",
+          headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ p_code: code.toUpperCase() }),
+          cf: { cacheTtl: 300, cacheEverything: true },
+        });
+        if (!r.ok) return null;
+        const v = await r.json();
+        return typeof v === "string" && v.trim() ? v.trim() : null;
+      } catch { return null; }
+    })(),
+    sbOne(`issues?status=eq.normal&select=title,pro_count,con_count&order=hot_score.desc.nullslast,created_at.desc&limit=1`),
+  ]);
+
+  const who = nick ? `${nick}님이` : "친구가";
+  let desc;
+  if (hot?.title) {
+    const pro = Number(hot.pro_count) || 0, con = Number(hot.con_count) || 0, tot = pro + con;
+    const pct = tot >= MIN_VOTES ? ` 현재 👍${Math.round((pro / tot) * 100)}% vs 👎${Math.round((con / tot) * 100)}%.` : "";
+    desc = `🔥 지금 갈라 최대 격전 — “${clip(hot.title, 42)}”${pct} 당신은 어느 편? ${who} 보낸 링크로 가입하면 500 GP 즉시 지급.`;
+  } else {
+    desc = `찬반으로 갈라져 싸우는 실시간 여론 배틀, GP로 겨루는 갈라예측. ${who} 보낸 초대 링크로 가입하면 500 GP를 바로 받아요.`;
+  }
   return {
     title: `🎁 ${who} 갈라에 초대했어요 — 가입 즉시 500 GP`,
-    desc: `찬반으로 갈라져 싸우는 실시간 여론 배틀, GP로 겨루는 갈라예측. ${who} 보낸 초대 링크로 가입하면 500 GP를 바로 받아요.`,
+    desc: clip(desc, 180),
     canonical: `${HOST}/?ref=${encodeURIComponent(code)}`,
     image: `${HOST}/assets/og/og-invite.png`,
     ogType: "website",
@@ -210,7 +229,8 @@ export async function onRequest(context) {
     const out = rewrite(res, seo);
     // 크롤러 재방문 대비 짧은 엣지 캐시(원본 HTML은 no-cache지만 변형본은 잠깐 캐시)
     const headers = new Headers(out.headers);
-    headers.set("Cache-Control", "public, max-age=300, must-revalidate");
+    // 초대 카드는 '오늘의 격전'이 바뀌므로 더 짧게(120s), 콘텐츠 카드는 300s
+    headers.set("Cache-Control", `public, max-age=${hasRef ? 120 : 300}, must-revalidate`);
     return new Response(out.body, { status: out.status, headers });
   } catch {
     return context.next();  // 무슨 일이 있어도 원본 서빙(사이트 보호)
