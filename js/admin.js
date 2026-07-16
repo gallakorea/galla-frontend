@@ -76,8 +76,11 @@
         <div class="ad-card"><div class="ad-card-h">⏱ 시간당 활동 (최근 24h)</div><div class="ad-chart">${AdminCharts.lineChart(t.hourly || [], { color: "#5b8cff" })}</div></div>
         <div class="ad-card"><div class="ad-card-h">📈 성장 추이 (14일) <span class="ad-legend"><i style="background:#c9d1e0"></i>가입 <i style="background:#33d17a"></i>DAU</span></div><div class="ad-chart">${AdminCharts.dualLine((g?.days || []).map(d => ({ label: d.d, a: d.signups, b: d.dau })), {})}</div></div></div>
       <div class="ad-card"><div class="ad-card-h">🔥 오늘 활동량</div><div class="ad-mini">
-        ${mini("📝 갈라 발의", td.issues, "content")}${mini("🗳️ 투표", td.votes)}${mini("💬 댓글", td.comments, "content")}${mini("⚔️ 일기토", td.duels, "content")}${mini("📈 예측거래", td.trades, "content")}${mini("🙋 신규가입", td.signups, "members")}</div></div>`;
+        ${mini("📝 갈라 발의", td.issues, "content")}${mini("🗳️ 투표", td.votes)}${mini("💬 댓글", td.comments, "content")}${mini("⚔️ 일기토", td.duels, "content")}${mini("📈 예측거래", td.trades, "content")}${mini("🙋 신규가입", td.signups, "members")}</div></div>
+      <div class="ad-card" id="ad-ga"><div class="ad-card-h">🌐 Google Analytics <span class="ad-live-refresh" id="ga-meta">불러오는 중…</span></div>
+        <div id="ga-body"><div class="ad-loading">GA 지표 집계 중…</div></div></div>`;
     countUp($("#k-rt"), t.realtime); countUp($("#k-dau"), t.dau); countUp($("#k-wau"), t.wau); countUp($("#k-mau"), t.mau); countUp($("#k-total"), t.total_users);
+    paintGA();
     // 카드 클릭 → 해당 모듈로 즉시 이동 (영속 #ad-main에 1회만 위임 등록)
     if (!main().__goWired) { main().__goWired = true; main().addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) navTo(g.dataset.go); }); }
     // 실시간 접속 현황(회원 명단/비회원 수/지역) — 최초 렌더 + 20초 자동 갱신
@@ -85,6 +88,36 @@
     clearInterval(dashPresenceTimer);
     dashPresenceTimer = setInterval(() => { if ($("#ad-presence")) paintPresence(); else clearInterval(dashPresenceTimer); }, 20000);
   }
+  // 🌐 Google Analytics 패널 — 캐시된 GA4 지표(admin_ga). 미연동이면 안내.
+  async function paintGA() {
+    const body = $("#ga-body"), meta = $("#ga-meta"); if (!body) return;
+    const g = await rpc("admin_ga");
+    if (!g?.ok) { body.innerHTML = `<div class="ad-soon">GA 데이터를 불러오지 못했어요.</div>`; if (meta) meta.textContent = ""; return; }
+    if (!g.configured) {
+      if (meta) meta.textContent = "미연동";
+      body.innerHTML = `<div class="ad-ga-setup">
+        <p><b>GA4 연동이 아직 설정되지 않았어요.</b> 아래 3단계로 연결하면 실시간 접속·28일 방문 지표가 여기 표시됩니다.</p>
+        <ol class="ad-ga-steps">
+          <li>GCP에서 <b>서비스계정</b> 생성 → <b>Analytics Data API</b> 사용 설정</li>
+          <li>GA4 속성 관리 → 위 서비스계정을 <b>뷰어</b>로 추가, <b>숫자 Property ID</b> 확인</li>
+          <li>Supabase Secrets에 <code>GA_SA_JSON</code>·<code>GA_PROPERTY_ID</code> 저장 → <code>ga-sync</code> 배포·크론</li>
+        </ol>
+        <a class="ad-ga-link" href="https://analytics.google.com/" target="_blank" rel="noopener">↗ GA4 대시보드 열기</a>
+      </div>`;
+      return;
+    }
+    const r = g.realtime || {}, rep = g.report || {}, tot = rep.totals || {};
+    const ago = g.report_at ? relTime(g.report_at) : "";
+    if (meta) meta.textContent = `업데이트 ${ago}`;
+    const cell = (l, v) => `<div class="ad-mini-i"><div class="ad-mini-v">${fmt(v || 0)}</div><div class="ad-mini-l">${l}</div></div>`;
+    const days = (rep.days || []).map(d => ({ label: (d.d || "").slice(4), a: d.users, b: d.sessions }));
+    body.innerHTML = `<div class="ad-mini" style="margin-bottom:10px">
+        ${cell("🟢 실시간 접속", r.total)}${cell("28일 방문자", tot.users)}${cell("28일 세션", tot.sessions)}${cell("28일 페이지뷰", tot.views)}${cell("28일 신규", tot.newUsers)}</div>
+      <div class="ad-card-h" style="font-size:12px;opacity:.7">📈 28일 방문자·세션</div>
+      <div class="ad-chart">${AdminCharts.dualLine(days, {})}</div>`;
+  }
+  function relTime(iso) { try { const s = (Date.now() - new Date(iso)) / 1000; if (s < 90) return "방금"; if (s < 5400) return Math.round(s / 60) + "분 전"; if (s < 129600) return Math.round(s / 3600) + "시간 전"; return Math.round(s / 86400) + "일 전"; } catch { return ""; } }
+
   let dashPresenceTimer = null;
   async function paintPresence() {
     const box = $("#ad-presence"); if (!box) return;

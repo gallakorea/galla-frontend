@@ -241,3 +241,12 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-sheet th.stick-r, .ad-sheet td.stick-r { position: sticky; right: 0; z-index: 1; background: #12141a; text-align: center; }
 .ad-sheet thead th.stick-r { z-index: 3; }
 .ad-sheet tbody tr:hover td.stick, .ad-sheet tbody tr:hover td.stick-r { background: #171a24; }
+
+/* 🌐 GA 연동 안내 카드 */
+.ad-ga-setup{ font-size:13px; line-height:1.6; color:var(--ad-fg,#c9d1e0); }
+.ad-ga-setup p{ margin:0 0 8px; }
+.ad-ga-steps{ margin:0 0 10px; padding-left:18px; }
+.ad-ga-steps li{ margin:4px 0; }
+.ad-ga-setup code{ background:rgba(255,255,255,.08); padding:1px 6px; border-radius:5px; font-size:12px; }
+.ad-ga-link{ display:inline-block; color:#5b8cff; text-decoration:none; font-weight:700; font-size:13px; }
+.ad-ga-link:hover{ text-decoration:underline; }
