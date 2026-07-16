@@ -1,8 +1,8 @@
 /* ============================================================
-   마이페이지 탭 아이콘 = 프로필 사진 (인스타식)
-   - 로그인: 내 프로필 사진(원형)
-   - 비로그인: 기본 원형 아이콘
-   아이콘 스왑(data-base/active)에 되돌려지지 않도록 두 속성을 제거한다.
+   마이페이지 탭 아이콘 (인스타식)
+   - 로그인 + 프로필 사진 있음: 내 사진(원형)
+   - 비로그인 / 아바타 없음: 기본 사람 아이콘(nav-user.svg) 그대로 유지
+     ⚠️ 비로그인에 갈라 로고(profile-circle-128.png)를 쓰면 안 됨 → 사진 있을 때만 교체
 ============================================================ */
 (async function navProfileIcon() {
   const ready = () => new Promise(r => {
@@ -15,9 +15,7 @@
   const img = item && item.querySelector("img");
   if (!img) return;
 
-  const FALLBACK = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
-  let src = FALLBACK;                       // 비로그인 기본값
-
+  let photo = null;
   try {
     const sb = window.supabaseClient ||
       (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
@@ -27,16 +25,22 @@
       if (uid) {
         // avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
         const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
-        if (u?.avatar_url && window.GALLA_avatarSrc) src = window.GALLA_avatarSrc(u.avatar_url);
+        if (u?.avatar_url && window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u.avatar_url);
       }
     }
   } catch (_) { /* 실패 시 기본 아이콘 유지 */ }
 
+  // 사진이 있을 때만 아바타로 교체. 그 외(비로그인·아바타 없음)는 기본 SVG 아이콘 유지.
+  if (!photo) return;
   img.removeAttribute("data-base");         // 활성/비활성 스왑이 덮어쓰지 않게
   img.removeAttribute("data-active");
   img.classList.add("nav-avatar");
-  img.onerror = function () { this.onerror = null; this.src = FALLBACK; };
-  img.src = src;
+  img.onerror = function () {                // 사진 로드 실패 시 기본 아이콘으로 복귀
+    this.onerror = null;
+    this.classList.remove("nav-avatar");
+    this.src = "./assets/icons/nav-user.svg";
+  };
+  img.src = photo;
 })();
 
 document.addEventListener("DOMContentLoaded", () => {
