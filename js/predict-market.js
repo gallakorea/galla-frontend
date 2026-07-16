@@ -174,7 +174,7 @@ async function renderCreatorBlock(m){
   if(!box || !m.created_by) return;
   if(window.GALLA_userMap) await window.GALLA_userMap([m.created_by]);
   const u=(window.__GU_CACHE||{})[m.created_by]||{};
-  const nick=u.nickname||'갈라 크리에이터';
+  const nick=u.nickname||'갈라 예언자';
   const av=u.avatar_url
     ? `<img src="${esc(window.GALLA_avatarSrc?window.GALLA_avatarSrc(u.avatar_url):u.avatar_url)}" alt="" onerror="this.style.display='none'">`
     : `<span class="pza-init">${esc(nick.trim().charAt(0)||'갈')}</span>`;
@@ -184,7 +184,7 @@ async function renderCreatorBlock(m){
     <span class="pza-av" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${av}</span>
     <span class="pza-info">
       <span class="pza-name" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}"><span class="pza-tier">${tier}</span>${esc(nick)}</span>
-      <span class="pza-sub">이 예측을 만든 크리에이터</span>
+      <span class="pza-sub">🔮 이 판을 연 예언자 — 운명을 걸어보시죠</span>
     </span>
     <button type="button" class="js-follow pza-follow" data-uid="${esc(m.created_by)}">+ 팔로우</button>`;
   window.GALLA_bindFollow && window.GALLA_bindFollow(box);

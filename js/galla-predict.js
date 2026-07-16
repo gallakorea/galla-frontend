@@ -239,10 +239,12 @@ function countUp(root){
 /* ============ 마켓 로드/렌더 ============ */
 async function loadMarkets(){
   const { data, error } = await supa.from('markets')
-    .select('id,question,category,image_url,close_at,resolved,resolved_outcome_id,is_jackpot,jackpot_bonus,total_pool,volume,created_at')
+    .select('id,question,category,image_url,close_at,resolved,resolved_outcome_id,is_jackpot,jackpot_bonus,total_pool,volume,created_at,created_by')
     .order('created_at',{ascending:false});
   if(error){ console.error(error); return; }
   allMarkets = data||[];
+  // 예언자(작성자) 배지용 프로필 프리페치
+  if(window.GALLA_userMap) await window.GALLA_userMap(allMarkets.map(m=>m.created_by));
   OUT_BY_M={};
   const ids=allMarkets.map(m=>m.id);
   if(ids.length){
@@ -301,6 +303,7 @@ function renderMarkets(){
         <div class="pm-card-h">
           <div class="pm-card-q">${esc(m.question)}</div>
           <div class="pm-card-meta">${esc(m.category||'')} · ${statusBadge}${m.is_jackpot?' · 🎁 보너스':''}</div>
+          ${m.created_by && window.GALLA_userBadge ? `<div class="pm-card-by">${window.GALLA_userBadge(m.created_by)}<span class="pm-by-tag">예언자</span></div>` : ''}
         </div>
       </div>
       ${oddsBar(m, outs)}

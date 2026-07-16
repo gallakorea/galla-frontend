@@ -456,6 +456,9 @@ async function fetchPlazaPosts() {
 
   const posts = data || [];
 
+  // 작성자 배지(아바타·등급)용 프로필 프리페치
+  if (window.GALLA_userMap) await window.GALLA_userMap(posts.map(p => p.user_id));
+
   // 내 저장/투표 상태 로드 (로그인 시)
   MY_PLAZA_SAVED = {};
   MY_PLAZA_VOTES = {};
@@ -507,7 +510,9 @@ function renderPlazaPosts(posts) {
         <div class="post-body">
           <div class="post-head">
             <span class="post-cat">${escP(post.category || "광장")}</span>
-            <span class="post-author"${post.user_id ? ` data-user-id="${post.user_id}" data-user-nick="${escP(post.nickname || "익명")}"` : ""}>${escP(post.nickname || "익명")}</span>
+            <span class="post-author">${post.user_id && window.GALLA_userBadge
+              ? window.GALLA_userBadge(post.user_id, post.nickname)
+              : escP(post.nickname || "익명")}</span>
             <span class="post-time">${timeAgoK(post.created_at)}</span>
           </div>
           <div class="post-title">${escP(post.title)}</div>

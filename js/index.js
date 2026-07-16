@@ -914,6 +914,8 @@ async function loadPlazaCards() {
         .order('created_at', { ascending: false })
         .limit(20);
     if (!posts || !posts.length) return [];
+    // 작성자 배지(아바타·등급)용 프로필 프리페치
+    if (window.GALLA_userMap) await window.GALLA_userMap(posts.map(p => p.user_id));
     const now = Date.now();
     return posts.map(p => {
         const ageH = (now - new Date(p.created_at)) / 3600000;
@@ -949,7 +951,9 @@ function renderPlazaCard(p) {
       <div class="pz-head">
         <span class="pz-badge">🏛 광장</span>
         <span class="pz-cat">${cat}</span>
-        <span class="pz-author">${escHtml(p.nickname || '익명')}</span>
+        <span class="pz-author">${p.user_id && window.GALLA_userBadge
+            ? window.GALLA_userBadge(p.user_id, p.nickname)
+            : escHtml(p.nickname || '익명')}</span>
       </div>
       <div class="pz-body">
         <div class="pz-text">
@@ -1122,15 +1126,12 @@ async function loadPredictionCards() {
     outs?.forEach(o => (byM[o.market_id] ||= []).push(o));
     Object.values(byM).forEach(a => a.sort((x, y) => x.sort_order - y.sort_order));
 
-    // 크리에이터(작성자) 프로필 로드
+    // 예언자(작성자) 프로필 로드 — users 정본(아바타 포함), 배지 캐시 공유
     const creatorIds = [...new Set(markets.map(m => m.created_by).filter(Boolean))];
     const profMap = {};
     if (creatorIds.length) {
-        const { data: profs } = await supabase
-            .from('user_profiles')
-            .select('user_id, nickname, level')
-            .in('user_id', creatorIds);
-        profs?.forEach(p => (profMap[p.user_id] = p));
+        if (window.GALLA_userMap) await window.GALLA_userMap(creatorIds);
+        creatorIds.forEach(id => { const u = (window.__GU_CACHE || {})[id]; if (u) profMap[id] = u; });
     }
 
     const pct = o => Math.round(o.pool_no / (o.pool_yes + o.pool_no) * 100);
@@ -1140,8 +1141,9 @@ async function loadPredictionCards() {
         return {
             ...m,
             outcomes: list,
-            creatorName: prof?.nickname || '갈라 크리에이터',
-            creatorLevel: prof?.level ?? 1
+            creatorName: prof?.nickname || '갈라 예언자',
+            creatorLevel: prof?.level ?? 1,
+            creatorAvatar: prof?.avatar_url || null
         };
     });
 }
@@ -1161,9 +1163,13 @@ function renderPredictCard(m) {
         body = `<div class="pf-bar"><div class="pf-bar-yes" style="width:${p}%"></div></div>
             <div class="pf-legend"><span class="pf-yes">👍 YES ${p}%</span><span class="pf-no">👎 NO ${100 - p}%</span></div>`;
     }
-    const cName = escHtml(m.creatorName || '갈라 크리에이터');
-    const cInit = (m.creatorName || '갈').trim().charAt(0) || '갈';
-    const cLv = m.creatorLevel ?? 1;
+    const cName = escHtml(m.creatorName || '갈라 예언자');
+    const cInit = [...(m.creatorName || '갈').trim()][0] || '갈';
+    const cTier = window.GALLA_tierIcon ? window.GALLA_tierIcon(m.creatorLevel) : '🌱';
+    const cAv = m.creatorAvatar && window.GALLA_avatarSrc
+        ? `<img src="${escHtml(window.GALLA_avatarSrc(m.creatorAvatar))}" alt="" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+        : escHtml(cInit);
+    const cAttr = m.created_by ? ` data-user-id="${m.created_by}" data-user-nick="${cName}"` : '';
     return `
     <div class="predict-feed-card" data-mid="${m.id}">
         <div class="pf-top">
@@ -1171,14 +1177,13 @@ function renderPredictCard(m) {
             <span class="pf-cat">${escHtml(m.category || '')}${multi ? ' · 여러 선택지' : ''}</span>
         </div>
         <div class="pf-creator">
-            <div class="pf-avatar">${cInit}</div>
+            <div class="pf-avatar"${cAttr}>${cAv}</div>
             <div class="pf-cinfo">
                 <div class="pf-cline">
-                    <span class="pf-cname">${cName}</span>
-                    <span class="pf-clv">Lv.${cLv}</span>
-                    <span class="pf-ctag">크리에이터</span>
+                    <span class="pf-cname"${cAttr}>${cTier} ${cName}</span>
+                    <span class="pf-ctag">🔮 예언자</span>
                 </div>
-                <div class="pf-csub">이 예측을 만든 크리에이터</div>
+                <div class="pf-csub">이 판을 연 예언자</div>
             </div>
         </div>
         <div class="pf-q">${escHtml(m.question)}</div>
