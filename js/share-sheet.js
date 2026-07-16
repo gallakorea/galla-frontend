@@ -51,8 +51,32 @@
     email: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   };
 
+  // 🎁 공유 = 초대 — 로그인 유저의 초대 코드를 1회 캐시해 갈라 URL에 자동 부착
+  (async function cacheMyRef() {
+    try {
+      if (localStorage.getItem("galla_my_ref")) return;
+      const sb = await (window.waitForSupabaseClient ? waitForSupabaseClient() : null);
+      if (!sb) return;
+      const { data: s } = await sb.auth.getSession();
+      if (!s?.session) return;
+      const { data: code } = await sb.rpc("my_ref_code");
+      if (code) localStorage.setItem("galla_my_ref", code);
+    } catch (e) {}
+  })();
+  function withRef(u) {
+    try {
+      const code = localStorage.getItem("galla_my_ref");
+      if (!code) return u;
+      const url = new URL(u, location.origin);
+      if (!/(^|\.)galla\.im$|localhost/.test(url.hostname)) return u;
+      if (url.searchParams.get("ref")) return u;
+      url.searchParams.set("ref", code);
+      return url.toString();
+    } catch (e) { return u; }
+  }
+
   window.GALLA_share = function (cfg) {
-    const url = cfg.url || location.href;
+    const url = withRef(cfg.url || location.href);
     const title = cfg.title || "GALLA";
     const text = cfg.text || "";
     const eu = encodeURIComponent(url), et = encodeURIComponent(text || title);
