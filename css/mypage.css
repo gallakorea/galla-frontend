@@ -751,7 +751,9 @@ body{
 /* =========================================================
    예측·뉴스·광장 탭 — 그리드 대신 리스트 로우 (가독성·세련)
 ========================================================= */
-.mp-list { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 24px; }
+/* .content-area가 display:flex라 flex 자식은 내용폭으로 줄어든다 → 전체폭 강제.
+   content-area가 이미 16px 좌우 패딩을 주므로 mp-list 자체 좌우 패딩은 0. */
+.mp-list { width: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 0 0 8px; }
 .mp-row {
     display: flex; align-items: center; gap: 12px; cursor: pointer;
     padding: 11px 12px; border-radius: 14px;
