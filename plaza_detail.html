@@ -19,12 +19,12 @@
 
 
   <!-- plaza_detail 전용 CSS만 -->
-  <link rel="stylesheet" href="css/plaza_detail.css?v=071956">
-  <link rel="stylesheet" href="./css/items.css?v=071956">
-  <link rel="stylesheet" href="./css/user-sheet.css?v=071956">
-  <link rel="stylesheet" href="./css/owner-actions.css?v=071956">
-  <link rel="stylesheet" href="./css/header.css?v=071956">
-  <link rel="stylesheet" href="./css/nav.css?v=071956">
+  <link rel="stylesheet" href="css/plaza_detail.css?v=071957">
+  <link rel="stylesheet" href="./css/items.css?v=071957">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=071957">
+  <link rel="stylesheet" href="./css/owner-actions.css?v=071957">
+  <link rel="stylesheet" href="./css/header.css?v=071957">
+  <link rel="stylesheet" href="./css/nav.css?v=071957">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -34,7 +34,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=071956">
+  <link rel="stylesheet" href="./css/theme.css?v=071957">
 </head>
 
 <body data-page="plaza">
@@ -60,7 +60,8 @@
       />
 
       <!-- 더보기 메뉴 -->
-      <button class="more-header-btn" id="header-more-btn">⋯</button>
+      <!-- 소유자·관리자만 JS가 표시 — 기본 표시하면 권한 확인 전 깜빡임 -->
+      <button class="more-header-btn" id="header-more-btn" style="display:none">⋯</button>
 
     </div>
   </header>
@@ -190,19 +191,19 @@
   </nav>
 
 </div>
-<script src="./vendor/supabase.js?v=071956"></script>
-<script src="js/follow.js?v=071956"></script>
-<script src="js/share-sheet.js?v=071956"></script>
-<script src="js/report-block.js?v=071956"></script>
-<script src="js/plaza-render.js?v=071956"></script>
-<script src="js/owner-actions.js?v=071956"></script>
-<script src="js/comment-actions.js?v=071956"></script>
-<script src="js/fx.js?v=071956"></script>
-<script src="js/user-sheet.js?v=071956"></script>
-<script src="js/ghost.js?v=071956"></script>
-<script src="js/items.js?v=071956"></script>
-<script type="module" src="js/plaza_detail.js?v=071956"></script>
-<script src="js/nav.js?v=071956"></script>
-<script src="js/back.js?v=071956"></script>
+<script src="./vendor/supabase.js?v=071957"></script>
+<script src="js/follow.js?v=071957"></script>
+<script src="js/share-sheet.js?v=071957"></script>
+<script src="js/report-block.js?v=071957"></script>
+<script src="js/plaza-render.js?v=071957"></script>
+<script src="js/owner-actions.js?v=071957"></script>
+<script src="js/comment-actions.js?v=071957"></script>
+<script src="js/fx.js?v=071957"></script>
+<script src="js/user-sheet.js?v=071957"></script>
+<script src="js/ghost.js?v=071957"></script>
+<script src="js/items.js?v=071957"></script>
+<script type="module" src="js/plaza_detail.js?v=071957"></script>
+<script src="js/nav.js?v=071957"></script>
+<script src="js/back.js?v=071957"></script>
 </body>
 </html>
