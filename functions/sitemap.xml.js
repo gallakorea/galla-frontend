@@ -41,10 +41,11 @@ export async function onRequest() {
     sb("galla_news?select=id,published_at&status=eq.published&order=published_at.desc&limit=5000"),
   ]);
 
-  (issues || []).forEach(r => parts.push(u(`${HOST}/issue.html?id=${r.id}`, iso(r.created_at), "daily", "0.8")));
-  (plaza || []).forEach(r => parts.push(u(`${HOST}/plaza_detail.html?id=${r.id}`, iso(r.created_at), "weekly", "0.6")));
-  (markets || []).forEach(r => parts.push(u(`${HOST}/predict-market.html?id=${r.id}`, iso(r.created_at), "daily", "0.7")));
-  (news || []).forEach(r => parts.push(u(`${HOST}/news.html?gn=${r.id}`, iso(r.published_at), "weekly", "0.6")));
+  // clean URL(= 실제 200 페이지, 미들웨어가 SEO 메타 주입). .html은 308 리다이렉트되므로 clean 사용.
+  (issues || []).forEach(r => parts.push(u(`${HOST}/issue?id=${r.id}`, iso(r.created_at), "daily", "0.8")));
+  (plaza || []).forEach(r => parts.push(u(`${HOST}/plaza_detail?id=${r.id}`, iso(r.created_at), "weekly", "0.6")));
+  (markets || []).forEach(r => parts.push(u(`${HOST}/predict-market?id=${r.id}`, iso(r.created_at), "daily", "0.7")));
+  (news || []).forEach(r => parts.push(u(`${HOST}/news?gn=${r.id}`, iso(r.published_at), "weekly", "0.6")));
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n` +
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${parts.join("\n")}\n</urlset>`;

@@ -32,59 +32,59 @@ async function sbOne(query) {
   } catch { return null; }
 }
 
-// 경로별 콘텐츠 → SEO 메타 객체
+// 경로 정규화: CF Pages가 /issue.html → /issue 로 308하므로 clean 경로 기준으로 매칭
+const kind = (path) => {
+  const p = path.replace(/\.html$/, "");
+  if (p === "/issue") return "issue";
+  if (p === "/news") return "news";
+  if (p === "/plaza_detail") return "plaza";
+  if (p === "/predict-market") return "predict";
+  return null;
+};
+
+// 경로별 콘텐츠 → SEO 메타 객체 (canonical/og:url은 clean URL = 실제 200 페이지)
 async function resolveSeo(path, params) {
-  if (path === "/issue.html" && params.get("id")) {
+  const k = kind(path);
+  if (k === "issue" && params.get("id")) {
     const row = await sbOne(`issues?id=eq.${encodeURIComponent(params.get("id"))}&select=id,title,one_line,category,created_at,thumbnail_url`);
     if (!row) return null;
-    const title = clip(row.title, 60);
-    const desc = clip(row.one_line || row.title, 150);
-    return {
-      title: `${title} · 갈라`, desc,
-      canonical: `${HOST}/issue.html?id=${row.id}`, image: row.thumbnail_url || DEF_IMG,
-      ogType: "article", kicker: row.category ? `${row.category} · 여론 대결` : "여론 대결",
+    const title = clip(row.title, 60), desc = clip(row.one_line || row.title, 150);
+    const canonical = `${HOST}/issue?id=${row.id}`, image = row.thumbnail_url || DEF_IMG;
+    return { title: `${title} · 갈라`, desc, canonical, image, ogType: "article",
+      kicker: row.category ? `${row.category} · 여론 대결` : "여론 대결",
       h1: row.title, body: row.one_line || "", date: row.created_at,
-      jsonld: articleLd(row.title, desc, row.thumbnail_url || DEF_IMG, `${HOST}/issue.html?id=${row.id}`, row.created_at),
-    };
+      jsonld: articleLd(row.title, desc, image, canonical, row.created_at) };
   }
-  if (path === "/news.html" && params.get("gn")) {
+  if (k === "news" && params.get("gn")) {
     const row = await sbOne(`galla_news?id=eq.${encodeURIComponent(params.get("gn"))}&select=id,title,summary,category,hero_image,published_at,source_count`);
     if (!row) return null;
-    const title = clip(row.title, 60);
-    const desc = clip(row.summary || row.title, 150);
-    return {
-      title: `${title} · 갈라뉴스`, desc,
-      canonical: `${HOST}/news.html?gn=${row.id}`, image: row.hero_image || DEF_IMG,
-      ogType: "article", kicker: `${row.category || "뉴스"} · 갈라뉴스`,
+    const title = clip(row.title, 60), desc = clip(row.summary || row.title, 150);
+    const canonical = `${HOST}/news?gn=${row.id}`, image = row.hero_image || DEF_IMG;
+    return { title: `${title} · 갈라뉴스`, desc, canonical, image, ogType: "article",
+      kicker: `${row.category || "뉴스"} · 갈라뉴스`,
       h1: row.title, body: row.summary || "", date: row.published_at,
-      jsonld: newsLd(row.title, desc, row.hero_image || DEF_IMG, `${HOST}/news.html?gn=${row.id}`, row.published_at),
-    };
+      jsonld: newsLd(row.title, desc, image, canonical, row.published_at) };
   }
-  if (path === "/plaza_detail.html" && params.get("id")) {
+  if (k === "plaza" && params.get("id")) {
     const row = await sbOne(`plaza_posts?id=eq.${encodeURIComponent(params.get("id"))}&select=id,title,body,category,created_at,cover_image,thumbnail,nickname`);
     if (!row) return null;
-    const title = clip(row.title, 60);
-    const desc = clip(plain(row.body) || row.title, 150);
-    return {
-      title: `${title} · 갈라 광장`, desc,
-      canonical: `${HOST}/plaza_detail.html?id=${row.id}`, image: row.cover_image || row.thumbnail || DEF_IMG,
-      ogType: "article", kicker: `${row.category || "광장"} · 갈라 광장`,
+    const title = clip(row.title, 60), desc = clip(plain(row.body) || row.title, 150);
+    const canonical = `${HOST}/plaza_detail?id=${row.id}`, image = row.cover_image || row.thumbnail || DEF_IMG;
+    return { title: `${title} · 갈라 광장`, desc, canonical, image, ogType: "article",
+      kicker: `${row.category || "광장"} · 갈라 광장`,
       h1: row.title, body: plain(row.body), date: row.created_at,
-      jsonld: articleLd(row.title, desc, row.cover_image || row.thumbnail || DEF_IMG, `${HOST}/plaza_detail.html?id=${row.id}`, row.created_at),
-    };
+      jsonld: articleLd(row.title, desc, image, canonical, row.created_at) };
   }
-  if (path === "/predict-market.html" && params.get("id")) {
+  if (k === "predict" && params.get("id")) {
     const row = await sbOne(`markets?id=eq.${encodeURIComponent(params.get("id"))}&select=id,question,description,category,image_url,created_at`);
     if (!row) return null;
     const title = clip(row.question, 60);
     const desc = clip(row.description || `${row.question} — 갈라예측에서 예/아니오에 GP를 걸고 결과를 맞혀보세요.`, 150);
-    return {
-      title: `${title} · 갈라예측`, desc,
-      canonical: `${HOST}/predict-market.html?id=${row.id}`, image: row.image_url || DEF_IMG,
-      ogType: "article", kicker: `${row.category || "예측"} · 갈라예측`,
+    const canonical = `${HOST}/predict-market?id=${row.id}`, image = row.image_url || DEF_IMG;
+    return { title: `${title} · 갈라예측`, desc, canonical, image, ogType: "article",
+      kicker: `${row.category || "예측"} · 갈라예측`,
       h1: row.question, body: row.description || "", date: row.created_at,
-      jsonld: articleLd(row.question, desc, row.image_url || DEF_IMG, `${HOST}/predict-market.html?id=${row.id}`, row.created_at),
-    };
+      jsonld: articleLd(row.question, desc, image, canonical, row.created_at) };
   }
   return null;
 }
@@ -138,14 +138,12 @@ function rewrite(res, seo) {
     .transform(res);
 }
 
-const TARGETS = new Set(["/issue.html", "/news.html", "/plaza_detail.html", "/predict-market.html"]);
-
 export async function onRequest(context) {
   try {
     const { request, next } = context;
     if (request.method !== "GET") return next();
     const url = new URL(request.url);
-    if (!TARGETS.has(url.pathname)) return next();
+    if (!kind(url.pathname)) return next();          // clean/.html 모두 kind()가 판별
     // id/gn 파라미터 없으면 개입 안 함
     if (!url.searchParams.get("id") && !url.searchParams.get("gn")) return next();
 
