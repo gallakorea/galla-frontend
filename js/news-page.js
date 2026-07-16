@@ -105,7 +105,7 @@
 
     const srcHtml = (srcs || []).map((s) => `
       <a class="reader-src" href="${esc(s.url || "#")}" target="_blank" rel="noopener noreferrer">
-        <div class="reader-src-thumb">${isValidThumbnail(s.thumbnail_url) ? `<img src="${esc(s.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
+        <div class="reader-src-thumb">${isValidThumbnail(s.thumbnail_url) ? `<img src="${esc(s.thumbnail_url)}" referrerpolicy="no-referrer" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
         <div class="reader-src-body">
           <div class="reader-src-title">${esc(s.title || "")}</div>
           <div class="reader-src-press">${esc(s.press_name || "")} ↗</div>
@@ -117,7 +117,7 @@
         <span class="reader-badge">갈라뉴스 · AI 종합</span>
         <h1 class="reader-title">${esc(n.title)}</h1>
         <div class="reader-sub">${esc(n.category || "")} · ${timeAgo(n.published_at)}</div>
-        ${isValidThumbnail(n.hero_image) ? `<img class="reader-hero" src="${esc(n.hero_image)}" onerror="this.style.display='none'">` : ""}
+        ${isValidThumbnail(n.hero_image) ? `<img class="reader-hero" src="${esc(n.hero_image)}" referrerpolicy="no-referrer" onerror="this.style.display='none'">` : ""}
         ${bodyParas.map((p) => `<p>${esc(p)}</p>`).join("")}
         <div class="gn-actions" id="gn-actions"></div>
         ${srcHtml ? `<div class="reader-sources"><div class="reader-sources-head">🔗 관련 기사 (출처 · 팩트체크)</div>${srcHtml}</div>` : ""}

@@ -1004,7 +1004,7 @@ function renderNewsCard(n) {
     const sum = (n.summary || '').slice(0, 90);
     return `
     <div class="card news-feed-card" onclick="location.href='news.html?gn=${n.id}'">
-      ${hero ? `<div class="nf-hero"><img src="${escHtml(hero)}" loading="lazy" alt="" onerror="this.closest('.nf-hero')?.remove()"></div>` : ''}
+      ${hero ? `<div class="nf-hero"><img src="${escHtml(hero)}" loading="lazy" alt="" referrerpolicy="no-referrer" onerror="this.closest('.nf-hero')?.remove()"></div>` : ''}
       <div class="nf-body">
         <div class="nf-head">
           <span class="nf-badge">📰 갈라뉴스</span>

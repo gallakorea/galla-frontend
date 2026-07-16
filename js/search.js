@@ -405,7 +405,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       html += `<div class="sr-sec"><div class="sr-sec-head">📰 뉴스 <b>${news.length}</b></div>`;
       html += news.map(n =>
         `<div class="sr-card news" data-url="${esc(n.url || "")}" data-title="${esc(n.title)}" data-press="${esc(n.press_name || "")}">
-          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
+          <div class="sr-thumb">${isValidThumbnail(n.thumbnail_url) ? `<img src="${esc(n.thumbnail_url)}" referrerpolicy="no-referrer" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">NEWS</span>`}</div>
           <div class="sr-body">
             <div class="sr-title">${esc(n.title)}</div>
             <div class="sr-meta">${esc(n.press_name || "")} · ${timeAgo(n.published_at)}</div>
@@ -510,7 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ===== 공용 트렌드 카드 빌더 (지금 뜨는 + 검색 디스커버리 공유) ===== */
   const _hue = (str) => { let h = 0; for (const c of String(str || "x")) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
   const ttThumb = (url, badge) =>
-    `<span class="tt-th">${isValidThumbnail(url) ? `<img src="${esc(url)}" loading="lazy" onerror="this.style.opacity=0">` : `<span class="sr-noimg">GALLA</span>`}${badge || ""}</span>`;
+    `<span class="tt-th">${isValidThumbnail(url) ? `<img src="${esc(url)}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.opacity=0">` : `<span class="sr-noimg">GALLA</span>`}${badge || ""}</span>`;
   const rankBadge = (i) => i < 3 ? `<span class="tt-rk r${i + 1}">${i + 1}</span>` : "";
 
   function issueCards(list, ranked = true) {
@@ -754,7 +754,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const th = isValidThumbnail(n.hero_image);
     const me = GALLA_CACHE[n.id];
     return `<div class="news-card galla" data-gid="${n.id}">
-      <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
+      <div class="news-thumb-16x9">${th ? `<img src="${esc(n.hero_image)}" referrerpolicy="no-referrer" loading="lazy" onerror="galla_imgFail(this)">` : ""}</div>
       <div class="news-text">
         <span class="galla-badge">갈라뉴스</span>
         <h3 class="news-title">${esc(n.title)}</h3>
@@ -825,7 +825,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function nhHero(n) {
     GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
     return `<button type="button" class="nh-hero" data-gid="${n.id}">
-      <img src="${esc(n.hero_image)}" alt="" onerror="this.style.opacity=0">
+      <img src="${esc(n.hero_image)}" alt="" referrerpolicy="no-referrer" onerror="this.style.opacity=0">
       <span class="nh-hero-sh"></span>
       <span class="nh-hero-badge">🔴 실시간 베스트</span>
       <span class="nh-hero-tx">
@@ -838,7 +838,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function nhMini(n) {
     GALLA_CACHE[n.id] = Object.assign(GALLA_CACHE[n.id] || {}, n);
     return `<button type="button" class="nh-mini" data-gid="${n.id}">
-      <span class="nh-mini-th"><img src="${esc(n.hero_image)}" alt="" loading="lazy" onerror="this.style.opacity=0"></span>
+      <span class="nh-mini-th"><img src="${esc(n.hero_image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.opacity=0"></span>
       <span class="nh-mini-t">${esc(n.title)}</span>
       <span class="nh-mini-m">${esc(n.category || "")} · ${timeAgo(n.published_at)}</span>
     </button>`;
@@ -852,7 +852,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         <span class="nh-rank-t">${esc(n.title)}</span>
         <span class="nh-rank-m">${esc(n.category || "")} · ${m}</span>
       </span>
-      <span class="nh-rank-th">${isValidThumbnail(n.hero_image) ? `<img src="${esc(n.hero_image)}" alt="" loading="lazy" onerror="this.style.opacity=0">` : ""}</span>
+      <span class="nh-rank-th">${isValidThumbnail(n.hero_image) ? `<img src="${esc(n.hero_image)}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.opacity=0">` : ""}</span>
     </button>`;
   }
   function nhSec(icon, title, sub) {
@@ -1027,7 +1027,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       card.className = "news-card";
       card.addEventListener("click", () => openNewsViewer(rep.url, rep.title, rep.press_name));
       card.innerHTML = `
-        <div class="news-thumb-16x9"><img src="${esc(rep.thumbnail_url)}" loading="lazy" onerror="galla_imgFail(this)"></div>
+        <div class="news-thumb-16x9"><img src="${esc(rep.thumbnail_url)}" referrerpolicy="no-referrer" loading="lazy" onerror="galla_imgFail(this)"></div>
         <div class="news-text">
           <h3 class="news-title">${esc(rep.title)}</h3>
           <div class="news-meta">
