@@ -1163,17 +1163,18 @@ async function loadPredictionCards() {
 /* 홈 피드용 예측 카드 (톤 유지, 명확히 '예측') */
 function renderPredictCard(m) {
     const multi = m.market_type === 'multi';
-    let body;
+    let body, styleVar = '';
     if (multi) {
         const top = m.outcomes.slice().sort((a, b) => b.p - a.p).slice(0, 3);
         body = `<div class="pf-multi">
-            ${top.map(o => `<div class="pf-multi-row"><span>${escHtml(o.label)}</span><b>${o.p}%</b></div>`).join('')}
+            ${top.map(o => `<div class="pf-multi-row" style="--pf-rp:${o.p}%"><span>${escHtml(o.label)}</span><b class="pf-pct" data-cu="${o.p}">0%</b></div>`).join('')}
             ${m.outcomes.length > 3 ? `<div class="pf-more">+${m.outcomes.length - 3}개 선택지</div>` : ''}
         </div>`;
     } else {
         const p = m.outcomes[0] ? m.outcomes[0].p : 50;
-        body = `<div class="pf-bar"><div class="pf-bar-yes" style="width:${p}%"></div></div>
-            <div class="pf-legend"><span class="pf-yes">👍 YES ${p}%</span><span class="pf-no">👎 NO ${100 - p}%</span></div>`;
+        styleVar = ` style="--pf-p:${p}%"`;
+        body = `<div class="pf-bar"><div class="pf-bar-yes"></div></div>
+            <div class="pf-legend"><span class="pf-yes">👍 YES <span class="pf-pct" data-cu="${p}">0</span>%</span><span class="pf-no">👎 NO <span class="pf-pct" data-cu="${100 - p}">0</span>%</span></div>`;
     }
     const cName = escHtml(m.creatorName || '갈라 예언자');
     const cInit = [...(m.creatorName || '갈').trim()][0] || '갈';
@@ -1183,7 +1184,7 @@ function renderPredictCard(m) {
         : escHtml(cInit);
     const cAttr = m.created_by ? ` data-user-id="${m.created_by}" data-user-nick="${cName}"` : '';
     return `
-    <div class="predict-feed-card" data-mid="${m.id}">
+    <div class="predict-feed-card" data-mid="${m.id}"${styleVar}>
         <div class="pf-top">
             <span class="pf-badge">🔮 갈라예측</span>
             <span class="pf-cat">${escHtml(m.category || '')}${multi ? ' · 여러 선택지' : ''}</span>
@@ -1201,10 +1202,57 @@ function renderPredictCard(m) {
         <div class="pf-q">${escHtml(m.question)}</div>
         ${body}
         <div class="pf-foot">
-            <span class="pf-vol">💰 거래량 ${(Math.round(m.volume)).toLocaleString('ko-KR')}P</span>
-            <span class="pf-go">예측하러 가기 ›</span>
+            <span class="pf-vol">💰 거래량 <b>${(Math.round(m.volume)).toLocaleString('ko-KR')}</b>P</span>
+            <span class="pf-go">예측하러 가기 <span class="pf-arrow">›</span></span>
         </div>
     </div>`;
+}
+
+/* 예측 카드 등장 애니메이션 + 퍼센트 카운트업 — 뷰포트 진입 시 1회.
+   IntersectionObserver 우선, 안 먹는 환경(일부 웹뷰/백그라운드) 대비 스크롤 스윕 폴백 겸용.
+   (base가 opacity:0라 절대 안 보이면 안 됨 → 폴백 필수) */
+function pfReveal(card) {
+    if (!card || card._pfIn) return;
+    card._pfIn = true;
+    card.classList.add('in');
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.querySelectorAll('.pf-pct').forEach(el => {
+        const to = Number(el.dataset.cu) || 0;
+        const suffix = el.textContent.trim().endsWith('%') ? '%' : '';
+        if (reduce) { el.textContent = to + suffix; return; }
+        const t0 = performance.now(), dur = 900;
+        (function step(now) {
+            const p = Math.min(1, (now - t0) / dur);
+            el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))) + suffix;
+            if (p < 1) requestAnimationFrame(step);
+        })(t0);
+    });
+}
+const pfRevealObserver = ('IntersectionObserver' in window) ? new IntersectionObserver((ents) => {
+    ents.forEach(e => { if (e.isIntersecting) { pfRevealObserver.unobserve(e.target); pfReveal(e.target); } });
+}, { threshold: 0.3 }) : null;
+
+let __pfSweepBound = false;
+function pfSweep() {
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    document.querySelectorAll('.predict-feed-card:not(.in)').forEach(c => {
+        const r = c.getBoundingClientRect();
+        if (r.top < vh - 40 && r.bottom > 40) pfReveal(c);   // 화면에 실제로 들어온 카드
+    });
+}
+function pfObserveCards(root) {
+    (root || document).querySelectorAll('.predict-feed-card:not(.in)').forEach(c => {
+        if (pfRevealObserver) pfRevealObserver.observe(c);
+    });
+    if (!__pfSweepBound) {
+        __pfSweepBound = true;
+        let t; const on = () => { clearTimeout(t); t = setTimeout(pfSweep, 80); };
+        window.addEventListener('scroll', on, { passive: true, capture: true });
+        window.addEventListener('resize', on, { passive: true });
+    }
+    // 초기/삽입 직후 이미 보이는 카드 즉시 반영 + IO 미발화 안전망
+    pfSweep();
+    setTimeout(pfSweep, 400);
 }
 function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function renderFeedItem(item){
@@ -1251,6 +1299,7 @@ function loadBest() {
     bestList.innerHTML = '';
     viewFeed.slice(0, 3).forEach(item => bestList.innerHTML += renderFeedItem(item));
     attachEvents();
+    pfObserveCards(bestList);
 }
 
 let rec = 3;
@@ -1261,6 +1310,7 @@ function loadRecommend() {
         rec++;
     }
     attachEvents();
+    pfObserveCards(recommendList);
 }
 
 window.addEventListener('scroll', () => {
