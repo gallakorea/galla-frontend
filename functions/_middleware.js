@@ -131,8 +131,14 @@ function rewrite(res, seo) {
     (seo.body ? `<p>${esc(clip(seo.body, 500))}</p>` : "") +
     `</div>`;
 
+  const rm = { element(el) { el.remove(); } };  // 원본 메타 제거(중복 방지)
   return new HTMLRewriter()
     .on("title", { element(el) { el.setInnerContent(seo.title); } })
+    .on('meta[name="description"]', rm)
+    .on('meta[name="keywords"]', rm)
+    .on('link[rel="canonical"]', rm)
+    .on('meta[property^="og:"]', rm)
+    .on('meta[name^="twitter:"]', rm)
     .on("head", { element(el) { el.append(metaHtml, { html: true }); } })
     .on("body", { element(el) { el.prepend(snapshot, { html: true }); } })
     .transform(res);
