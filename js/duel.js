@@ -228,8 +228,6 @@
   }
 
   function ringHeader() {
-    const c = D.vote_challenger || 0, o = D.vote_opponent || 0, tot = Math.max(1, c + o);
-    const cp = Math.round(c / tot * 100);
     const chalWin = D.result === "challenger", oppWin = D.result === "opponent";
     return `
       <div class="ring-head">
@@ -244,16 +242,8 @@
             <div class="rf-name">${nameTag(D.opponent)}</div>
           </div>
         </div>
-        <div class="momentum"><div class="mo-fill" id="mo-fill" style="width:${cp}%"></div>
-          <span class="mo-c" id="mo-c">${c}</span><span class="mo-o" id="mo-o">${o}</span></div>
         <div class="ring-topic">“${esc(D.topic)}” · 💰${D.stake} 판돈</div>
       </div>`;
-  }
-  function updateMomentum() {
-    const c = D.vote_challenger || 0, o = D.vote_opponent || 0, tot = Math.max(1, c + o);
-    const f = document.getElementById("mo-fill"); if (f) f.style.width = Math.round(c / tot * 100) + "%";
-    const mc = document.getElementById("mo-c"), mo = document.getElementById("mo-o");
-    if (mc) mc.textContent = c; if (mo) mo.textContent = o;
   }
 
   async function renderOctagon() {
@@ -261,13 +251,19 @@
     root().innerHTML = `
       ${ringHeader()}
       <div class="octa">
-        <!-- 🔥 기세 게이지 — 응원 GP가 실시간으로 밀고 당긴다 -->
-        <div class="momentum" id="momentum">
-          <div class="mo-bar">
-            <div class="mo-fill chal" id="mo-chal"><span id="mo-chal-n">0</span></div>
-            <div class="mo-fill opp" id="mo-opp"><span id="mo-opp-n">0</span></div>
+        <!-- 🔥 응원 GP — 게이지와 투척 버튼을 한 덩어리로, 링 바로 아래.
+             예전엔 관중석 스트림 밑(페이지 최하단)에 있어서 스크롤 안 하면 존재 자체를 몰랐다. -->
+        <div class="cgz" id="cgz">
+          <div class="cgz-head">🔥 응원 GP <b id="cgz-tot">0</b> 걸림 — 이긴 편 응원자가 진 편 GP를 나눠 갖습니다</div>
+          <div class="cgz-bar" id="cgz-bar">
+            <div class="cgz-fill chal" id="cgz-chal"><span id="cgz-cn">0</span></div>
+            <div class="cgz-fill opp" id="cgz-opp"><span id="cgz-on">0</span></div>
           </div>
-          <div class="mo-label">🔥 응원 기세 — 이긴 편 응원자가 진 편 응원 GP를 나눠 갖습니다</div>
+          <div class="cgz-names">
+            <span class="cgz-nm chal">🔵 ${esc(nk(D.challenger))}</span>
+            <span class="cgz-nm opp">${esc(nk(D.opponent))} 🔴</span>
+          </div>
+          <div id="cheer-gp"></div>
         </div>
         <div class="ring-label">⚔️ 파이터 링</div>
         <div class="ring-stream" id="ring-stream"></div>
@@ -299,16 +295,22 @@
     bindForfeit();
   }
 
-  /* 🔥 응원 GP 게이지 — ringHeader의 updateMomentum(관중 '투표' 게이지)과는 다른 지표다.
-     투표=누가 이길지 판정 / 응원GP=돈을 건 기세. 이름이 겹치지 않게 분리 유지. */
+  /* 🔥 응원 GP 게이지.
+     ⚠️ 예전엔 이 게이지도 class="momentum"/.mo-fill을 썼는데, 구 투표 게이지가 같은 이름으로
+     .momentum{height:12px;overflow:hidden} + .mo-fill{position:absolute}를 이미 잡아놔서
+     26px 막대가 12px로 눌려 잘리고 두 칸이 겹쳤다("게이지가 안 움직인다"의 정체).
+     구 투표 게이지는 제거했고, 이 게이지는 겹치지 않는 .cgz-* 이름을 쓴다. */
   function paintCheerGauge() {
     const c = D.cheer_chal || 0, o = D.cheer_opp || 0, t = c + o;
-    const cp = t ? Math.round((c / t) * 100) : 50;
-    const f1 = $("#mo-chal"), f2 = $("#mo-opp");
+    const f1 = $("#cgz-chal"), f2 = $("#cgz-opp");
     if (!f1 || !f2) return;
+    const cp = t ? Math.round((c / t) * 100) : 50;
     f1.style.width = cp + "%"; f2.style.width = (100 - cp) + "%";
-    $("#mo-chal-n").textContent = c.toLocaleString();
-    $("#mo-opp-n").textContent = o.toLocaleString();
+    $("#cgz-cn").textContent = c.toLocaleString();
+    $("#cgz-on").textContent = o.toLocaleString();
+    $("#cgz-tot").textContent = t.toLocaleString();
+    // 0이면 50:50이라 '고장난 것처럼' 보인다 → 빈 상태를 명시
+    $("#cgz-bar")?.classList.toggle("empty", t === 0);
   }
 
   /* 🔒 대결 중 이탈 방지 — 판돈이 걸린 실시간 대결이라 실수로 나가면 상대가 피해를 본다.
@@ -336,15 +338,23 @@
     history.pushState({ duelLock: 1 }, "");
     toastLock();
   }
+  /* ⚠️ 예전엔 "나가는 요소"를 열거해서 막았다(a[href], .nav-item, [data-target]).
+     그런데 duel.html의 뒤로가기는 <button class="st-back" data-back="index.html">이라
+     셋 중 무엇에도 안 걸려서 그냥 나가졌다. 열거는 언제든 새 경로가 생기면 또 뚫린다.
+     → 뒤집는다: 링(#duel-root) 안의 클릭만 통과시키고 나머지는 전부 막는다(화이트리스트). */
   function blockNav(e) {
     if (!EXIT_LOCKED) return;
-    const a = e.target.closest("a[href], .nav-item, [data-target]");
-    if (!a || a.id === "ff") return;
-    e.preventDefault(); e.stopPropagation();
+    const t = e.target;
+    if (t.closest("#duel-root") && !t.closest("[data-back], .nav-item, a[href]")) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
     toastLock();
   }
+  let TOASTING = false;
   function toastLock() {
+    if (TOASTING) return;   // 클릭 한 번에 alert이 여러 번 뜨지 않게
+    TOASTING = true;
     alert("⚔️ 대결 중에는 나갈 수 없어요.\n포기하려면 '🏳️ 포기하고 나가기'를 누르세요 (판돈을 잃습니다).");
+    TOASTING = false;
   }
 
   /* 🏳️ 포기하기 */
@@ -367,16 +377,20 @@
 
   /* 🔥 응원 GP — 관중만. 파리뮤추얼(이긴 편이 진 편 풀 분배)이라 '던질 이유'가 있다. */
   function mountCheerGp() {
-    const box = $("#stand-tools"); if (!box || D._isParty || D.status !== "live") return;
-    box.insertAdjacentHTML("afterbegin", `
+    const box = $("#cheer-gp"); if (!box) return;
+    // 왜 못 거는지 침묵하지 않는다 — 버튼이 그냥 없으면 고장으로 보인다
+    if (D._isParty) { box.innerHTML = `<div class="cg-note">당사자는 자기 대결에 응원 GP를 걸 수 없어요</div>`; return; }
+    if (D.status !== "live") { box.innerHTML = `<div class="cg-note">대결 중일 때만 응원 GP를 걸 수 있어요</div>`; return; }
+    if (!ME) { box.innerHTML = `<div class="cg-note">로그인하면 응원 GP를 걸 수 있어요</div>`; return; }
+    box.innerHTML = `
       <div class="cheer-gp">
-        <div class="cg-label">🔥 응원 GP 투척 — 내 편에 걸고, 이기면 진 편 GP를 나눠 갖기</div>
+        <div class="cg-label">내 편에 걸기 — ① 편 선택 → ② 금액 탭</div>
         <div class="cg-teams">
           <button class="cg-team chal" data-team="challenger">🔵 ${esc(nk(D.challenger))}</button>
           <button class="cg-team opp"  data-team="opponent">🔴 ${esc(nk(D.opponent))}</button>
         </div>
         <div class="cg-amts">${[10, 50, 100, 500].map(a => `<button class="cg-amt" data-amt="${a}">${a}</button>`).join("")}</div>
-      </div>`);
+      </div>`;
     let team = null, amt = 50;
     box.querySelectorAll(".cg-team").forEach(b => b.onclick = () => {
       team = b.dataset.team;
@@ -401,7 +415,7 @@
   }
   /* 응원 투척 연출 — 숫자가 링으로 날아가 꽂힌다 */
   function cheerFx(team, amt) {
-    const host = $("#momentum"); if (!host) return;
+    const host = $("#cgz"); if (!host) return;
     const el = document.createElement("div");
     el.className = `cg-fly ${team === "challenger" ? "chal" : "opp"}`;
     el.textContent = `+${amt}`;
@@ -458,8 +472,8 @@
     if (!ME) { box.innerHTML = `<div class="watch-note">로그인하면 응원·투표할 수 있어요</div>`; return; }
     const voteRow = (D.status === "live" || D.status === "voting")
       ? `<div class="vote-row"><span class="vr-label">🗳️ 승자 예측</span>
-           <button class="vpick chal${D._myVote === "challenger" ? " on" : ""}" data-c="challenger">${esc(nk(D.challenger))}</button>
-           <button class="vpick opp${D._myVote === "opponent" ? " on" : ""}" data-c="opponent">${esc(nk(D.opponent))}</button></div>` : "";
+           <button class="vpick chal${D._myVote === "challenger" ? " on" : ""}" data-c="challenger">${esc(nk(D.challenger))} <b id="vc-chal">${D.vote_challenger || 0}</b></button>
+           <button class="vpick opp${D._myVote === "opponent" ? " on" : ""}" data-c="opponent">${esc(nk(D.opponent))} <b id="vc-opp">${D.vote_opponent || 0}</b></button></div>` : "";
     box.innerHTML = `${voteRow}
       <div class="cheer-row">
         <input id="cheer-input" maxlength="200" placeholder="응원·야유 남기기…" autocomplete="off">
@@ -474,6 +488,14 @@
     };
     $("#cheer-send").onclick = cheer;
     $("#cheer-input").addEventListener("keydown", e => { if (e.key === "Enter") cheer(); });
+  }
+
+  /* 승자 예측 표수 — 게이지 대신 버튼 위 숫자로. 두 개의 막대가 각각 뭘 뜻하는지
+     구분이 안 된다는 지적이 있어, 막대는 '응원 GP' 하나만 남기고 표수는 숫자로 뺐다. */
+  function paintVoteCounts() {
+    const a = $("#vc-chal"), b = $("#vc-opp");
+    if (a) a.textContent = D.vote_challenger || 0;
+    if (b) b.textContent = D.vote_opponent || 0;
   }
 
   async function castVote(choice) {
@@ -522,8 +544,8 @@
   function onDuelUpdate(nd) {
     const prevStatus = D.status;
     Object.assign(D, nd);
-    updateMomentum();      // 관중 투표 게이지
     paintCheerGauge();     // 응원 GP 게이지 — 남이 던진 응원도 내 화면에 실시간 반영
+    paintVoteCounts();     // 승자 예측 표수
     if (nd.status !== prevStatus) { renderArena(D.id); return; } // 상태 전환 → 재구성
   }
 

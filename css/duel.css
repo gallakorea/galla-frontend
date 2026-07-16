@@ -143,13 +143,10 @@
 .ring-timer.urgent { color: #ff4f6e; animation: dpulse .6s infinite; }
 @keyframes rfIn { from { opacity: 0; transform: translateY(10px) scale(.8); } }
 
-/* 기세 게이지 */
-.momentum { position: relative; height: 12px; border-radius: 8px; overflow: hidden; margin: 14px 0 8px;
-  background: linear-gradient(90deg,#ff4f6e,#ff4f6e); }
-.mo-fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg,#3356ff,#4f7bff);
-  border-right: 2px solid #fff; transition: width .6s cubic-bezier(.3,1,.4,1); }
-.mo-c, .mo-o { position: absolute; top: -1px; font-size: 10px; font-weight: 900; color: #fff; padding: 0 6px; }
-.mo-c { left: 4px; } .mo-o { right: 4px; }
+/* 구 '기세 게이지'(.momentum/.mo-*)는 제거됨.
+   투표 게이지와 응원 GP 게이지가 같은 클래스명을 공유해 서로를 깨뜨렸다
+   (.momentum{height:12px;overflow:hidden}이 26px 응원 막대를 잘라냄).
+   막대는 응원 GP(.cgz-*) 하나만 남기고, 승자 예측 표수는 버튼 위 숫자로 표시한다. */
 .ring-topic { text-align: center; font-weight: 800; color: #eef0f4; font-size: 14px; margin-top: 4px; }
 
 /* ============ 파이터 링 스트림 ============ */
@@ -220,20 +217,31 @@
 .closed-acts .duel-btn { flex: 1; }
 
 /* ═══════ 일기토 업그레이드: 응원 GP · 포기 · 이탈잠금 ═══════ */
-/* 🔥 응원 GP 기세 게이지 (관중 '투표' 게이지와 별개 지표) */
-.momentum { margin: 8px 0 12px; }
-.momentum .mo-bar {
-  display: flex; height: 26px; border-radius: 99px; overflow: hidden;
+/* 🔥 응원 GP — 게이지 + 투척을 한 덩어리로 묶어 링 바로 아래 배치.
+   전용 접두사(.cgz-)를 써서 다른 게이지와 절대 겹치지 않게 한다. */
+.cgz {
+  position: relative; margin: 10px 0 14px; padding: 11px;
+  background: #101218; border: 1px solid rgba(255,255,255,.10); border-radius: 14px;
+}
+.cgz-head { font-size: 11.5px; color: #9aa3b5; text-align: center; margin-bottom: 8px; }
+.cgz-head b { color: #ffb648; font-size: 13px; }
+.cgz-bar {
+  display: flex; height: 28px; border-radius: 99px; overflow: hidden;
   background: #14161d; border: 1px solid rgba(255,255,255,.10);
 }
-.momentum .mo-fill {
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 900; color: #fff; transition: width .5s cubic-bezier(.2,.9,.3,1);
-  min-width: 34px;
+.cgz-fill {
+  display: flex; align-items: center; justify-content: center; min-width: 30px;
+  font-size: 11px; font-weight: 900; color: #fff;
+  transition: width .55s cubic-bezier(.2,.9,.3,1);
 }
-.momentum .mo-fill.chal { background: linear-gradient(90deg,#2b4fd0,#3d6bff); }
-.momentum .mo-fill.opp  { background: linear-gradient(90deg,#ff4d67,#d0324c); }
-.momentum .mo-label { font-size: 10.5px; color: #6b7488; text-align: center; margin-top: 5px; }
+.cgz-fill.chal { background: linear-gradient(90deg,#2b4fd0,#3d6bff); }
+.cgz-fill.opp  { background: linear-gradient(90deg,#ff4d67,#d0324c); }
+/* 아무도 안 걸었으면 50:50이라 '멈춘 것'처럼 보인다 → 회색으로 빈 상태를 표시 */
+.cgz-bar.empty .cgz-fill { background: #23262f; color: #6b7488; }
+.cgz-names { display: flex; justify-content: space-between; margin-top: 5px; }
+.cgz-nm { font-size: 11px; font-weight: 700; }
+.cgz-nm.chal { color: #7aa2ff; } .cgz-nm.opp { color: #ff8595; }
+.cg-note { font-size: 11px; color: #6b7488; text-align: center; padding: 9px 0 2px; }
 
 /* 응원 투척 연출 — 숫자가 튀어오른다 */
 .cg-fly {
@@ -245,11 +253,11 @@
 @keyframes cgFly { from { opacity: 0; transform: translate(-50%, 14px) scale(.8); }
   40% { opacity: 1; transform: translate(-50%, -8px) scale(1.25); }
   to { opacity: 0; transform: translate(-50%, -34px) scale(1); } }
-.momentum { position: relative; }
+/* .cg-fly의 기준점은 .cgz(position:relative) */
 
 /* 응원 GP 투척 도구 */
-.cheer-gp { background: #12131a; border: 1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 11px; margin-bottom: 10px; }
-.cg-label { font-size: 11px; color: #9aa3b5; margin-bottom: 8px; }
+.cheer-gp { padding: 9px 0 0; }   /* .cgz 안에 들어가므로 자체 배경·테두리 없음 */
+.cg-label { font-size: 11px; color: #9aa3b5; margin-bottom: 8px; text-align: center; }
 .cg-teams { display: flex; gap: 8px; margin-bottom: 8px; }
 .cg-team { flex: 1; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700;
   background: #191d26; color: #c9d1e0; border: 1px solid rgba(255,255,255,.12);
