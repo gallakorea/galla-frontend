@@ -771,6 +771,33 @@ document.addEventListener("DOMContentLoaded", async () => {
         return card;
     };
 
+    // 텍스트 중심 콘텐츠(예측·뉴스·광장)용 리스트 로우 — 썸네일 좌측 + 제목·메타 우측(가독성↑)
+    const mpEsc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const mpRow = ({ thumb, kind, title, meta, onClick }) => {
+        const row = document.createElement("div");
+        row.className = "mp-row";
+        const th = thumb
+            ? `<img src="${mpEsc(thumb)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.mp-row-th').classList.add('noimg')">`
+            : "";
+        row.innerHTML = `
+            <span class="mp-row-th${thumb ? "" : " noimg"}" data-kind="${mpEsc(kind || "")}">${th}</span>
+            <span class="mp-row-main">
+                <span class="mp-row-title">${mpEsc(title || "(제목 없음)")}</span>
+                ${meta ? `<span class="mp-row-meta">${meta}</span>` : ""}
+            </span>
+            <span class="mp-row-go">›</span>`;
+        row.onclick = onClick;
+        return row;
+    };
+    const mpAgo = (iso) => {
+        if (!iso) return "";
+        const s = (Date.now() - new Date(iso).getTime()) / 1000;
+        if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "분 전";
+        if (s < 86400) return Math.floor(s / 3600) + "시간 전";
+        if (s < 2592000) return Math.floor(s / 86400) + "일 전";
+        return new Date(iso).toLocaleDateString("ko-KR", { year: "2-digit", month: "2-digit", day: "2-digit" });
+    };
+
     const emptyMsg = (msg) => `
         <div class="tab-empty" style="color:#777;font-size:14px;padding:24px 16px;">${msg}</div>`;
 
@@ -927,16 +954,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const grid = document.createElement("div");
-        grid.className = "content-grid";
-        tabContent.appendChild(grid);
+        const list = document.createElement("div");
+        list.className = "mp-list";
+        tabContent.appendChild(list);
 
         const qvItems = markets.map(m => ({ type: "market", id: m.id }));
         markets.forEach((m, myIdx) => {
-            grid.appendChild(igCard({
+            list.appendChild(mpRow({
                 thumb: m.image_url,
+                kind: "🔮",
                 title: m.question,
-                badge: "",
+                meta: `<span class="mp-row-tag predict">🔮 갈라예측</span> ${mpAgo(m.created_at)}`,
                 onClick: () => openQvList(qvItems, myIdx)
             }));
         });
@@ -974,14 +1002,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         const newsIds = bms.map(b => b.news_id);
         const { data: newsRows } = await supabase
             .from("galla_news")
-            .select("id, title, hero_image, category")
+            .select("id, title, hero_image, category, published_at")
             .in("id", newsIds);
 
         const newsMap = {};
         (newsRows || []).forEach(n => newsMap[n.id] = n);
 
-        tabContent.className = "content-area grid";
+        tabContent.className = "content-area";
         tabContent.innerHTML = "";
+        const list = document.createElement("div");
+        list.className = "mp-list";
+        tabContent.appendChild(list);
 
         const qvItems = newsIds.filter(id => newsMap[id]).map(id => ({ type: "news", id }));
         let idx = 0;
@@ -989,10 +1020,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             const n = newsMap[id];
             if (!n) return;
             const myIdx = idx++;
-            tabContent.appendChild(igCard({
+            list.appendChild(mpRow({
                 thumb: n.hero_image,
+                kind: "📰",
                 title: n.title,
-                badge: "📰",
+                meta: `<span class="mp-row-tag news">📰 갈라뉴스</span> ${n.category ? mpEsc(n.category) + " · " : ""}${mpAgo(n.published_at)}`,
                 onClick: () => openQvList(qvItems, myIdx)
             }));
         });
@@ -1075,16 +1107,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        const grid = document.createElement("div");
-        grid.className = "content-grid";
-        tabContent.appendChild(grid);
+        const list = document.createElement("div");
+        list.className = "mp-list";
+        tabContent.appendChild(list);
 
         const qvItems = posts.map(p => ({ type: "plaza", id: p.id }));
         posts.forEach((p, myIdx) => {
-            grid.appendChild(igCard({
+            list.appendChild(mpRow({
                 thumb: p.cover_image || p.thumbnail,
+                kind: "🏛",
                 title: p.title,
-                badge: "",
+                meta: `<span class="mp-row-tag plaza">🏛 광장</span> ${mpAgo(p.created_at)}`,
                 onClick: () => openQvList(qvItems, myIdx)
             }));
         });

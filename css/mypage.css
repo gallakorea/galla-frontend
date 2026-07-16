@@ -747,3 +747,42 @@ body{
 
 /* 등장 모션 제거 — 앱 전체가 무모션 */
 .profile-section, .tabs, .content-area{ animation:none; }
+
+/* =========================================================
+   예측·뉴스·광장 탭 — 그리드 대신 리스트 로우 (가독성·세련)
+========================================================= */
+.mp-list { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 24px; }
+.mp-row {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    padding: 11px 12px; border-radius: 14px;
+    background: linear-gradient(180deg, #131418, #0e0f13);
+    border: 1px solid rgba(255,255,255,.07);
+    transition: transform .12s ease, border-color .15s, background .15s;
+}
+.mp-row:active { transform: scale(.99); }
+.mp-row:hover { border-color: rgba(255,255,255,.14); background: linear-gradient(180deg,#16171d,#101116); }
+.mp-row-th {
+    width: 54px; height: 54px; flex: 0 0 54px; border-radius: 11px; overflow: hidden;
+    background: #1b1c24; position: relative; display: block;
+}
+.mp-row-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 썸네일 없으면 종류 이모지 플레이스홀더 */
+.mp-row-th.noimg::after {
+    content: attr(data-kind); position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    background: radial-gradient(120% 120% at 30% 20%, #262838, #14151c);
+}
+.mp-row-th.noimg img { display: none; }
+.mp-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.mp-row-title {
+    font-size: 14px; font-weight: 700; color: #f2f3f7; line-height: 1.4;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.mp-row-meta { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: #8b8f9c; }
+.mp-row-tag {
+    font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+}
+.mp-row-tag.predict { color: #bcd0ff; background: rgba(74,123,255,.16); border: 1px solid rgba(74,123,255,.34); }
+.mp-row-tag.news    { color: #b9c6ff; background: rgba(90,110,255,.14); border: 1px solid rgba(120,140,255,.3); }
+.mp-row-tag.plaza   { color: #d7c9f0; background: rgba(150,100,220,.16); border: 1px solid rgba(160,120,230,.34); }
+.mp-row-go { flex: 0 0 auto; color: #5c6270; font-size: 20px; font-weight: 300; }
