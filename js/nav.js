@@ -44,6 +44,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const navItems = document.querySelectorAll(".nav-item");
 
+  // 현재 탭 재탭 → 있던 위치에서 부드럽게 최상단으로 (거리 비례 duration, 최대 0.6s)
+  // window.scrollTo({behavior:'smooth'})는 일부 페이지(iOS 피드)에서 무시돼 rAF로 직접 이자징
+  function smoothScrollTop() {
+    const getY = () => window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const start = getY();
+    const app = document.getElementById("app");
+    const appStart = app ? app.scrollTop : 0;
+    if (start <= 0 && appStart <= 0) return;
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { window.scrollTo(0, 0); if (app) app.scrollTop = 0; return; }
+    const dur = Math.max(220, Math.min(600, 200 + Math.max(start, appStart) * 0.06));
+    const t0 = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);   // ease-out cubic
+    // rAF가 스로틀되는 환경(백그라운드 탭 등)에서도 멈추지 않게 setTimeout과 경합
+    const tick = (fn) => {
+      let done = false;
+      const run = () => { if (done) return; done = true; fn(performance.now()); };
+      requestAnimationFrame(run);
+      setTimeout(run, 34);
+    };
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur);
+      const k = 1 - ease(p);
+      window.scrollTo(0, Math.round(start * k));
+      if (app && appStart) app.scrollTop = Math.round(appStart * k);
+      if (p < 1) tick(step);
+    })(t0);
+  }
+
+
   navItems.forEach(item => {
     const page = item.dataset.page;
     const target = item.dataset.target;
@@ -63,18 +93,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (baseSrc) img.src = baseSrc;
     }
 
-    // 2️⃣ 클릭 시: 이미 현재 탭이면 맨 위로 스크롤, 아니면 이동
+    // 2️⃣ 클릭 시: 이미 현재 탭이면 '있던 자리에서 스르륵' 맨 위로, 아니면 이동
     item.addEventListener("click", (e) => {
       if (page === currentPage) {
         e.preventDefault();
-        // 저장된 스크롤 복원과 충돌 방지 후 맨 위로(즉시 — 스무스는 피드에서 무시됨)
         try { localStorage.removeItem("scrollPos"); } catch (_) {}
-        const el = document.scrollingElement || document.documentElement;
-        window.scrollTo(0, 0);
-        try { el.scrollTop = 0; } catch (_) {}
-        document.body.scrollTop = 0;
-        const app = document.getElementById("app");
-        if (app) app.scrollTop = 0;
+        smoothScrollTop();
         return;
       }
       if (target) location.href = target;
