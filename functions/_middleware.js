@@ -42,6 +42,30 @@ const kind = (path) => {
   return null;
 };
 
+// 초대 링크(?ref=CODE) → 전용 초대 OG 카드. 일반 홈 카드와 달라야 클릭이 난다.
+async function resolveInvite(params) {
+  const code = (params.get("ref") || "").trim();
+  if (!/^[A-Za-z0-9]{4,12}$/.test(code)) return null;
+  let nick = null;
+  try {
+    const r = await fetch(`${SB}/rest/v1/rpc/ref_owner`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_code: code.toUpperCase() }),
+      cf: { cacheTtl: 300, cacheEverything: true },
+    });
+    if (r.ok) nick = await r.json();
+  } catch {}
+  const who = nick && typeof nick === "string" ? `${nick}님이` : "친구가";
+  return {
+    title: `🎁 ${who} 갈라에 초대했어요 — 가입 즉시 500 GP`,
+    desc: `찬반으로 갈라져 싸우는 실시간 여론 배틀, GP로 겨루는 갈라예측. ${who} 보낸 초대 링크로 가입하면 500 GP를 바로 받아요.`,
+    canonical: `${HOST}/?ref=${encodeURIComponent(code)}`,
+    image: `${HOST}/assets/og/og-invite.png`,
+    ogType: "website",
+  };
+}
+
 // 경로별 콘텐츠 → SEO 메타 객체 (canonical/og:url은 clean URL = 실제 200 페이지)
 async function resolveSeo(path, params) {
   const k = kind(path);
@@ -139,27 +163,29 @@ function rewrite(res, seo) {
     `<meta name="twitter:title" content="${esc(seo.title)}">` +
     `<meta name="twitter:description" content="${esc(seo.desc)}">` +
     `<meta name="twitter:image" content="${esc(seo.image)}">` +
-    `<script type="application/ld+json">${seo.jsonld}</script>` +
-    `<script type="application/ld+json">${breadcrumbLd(seo)}</script>`;
+    // 초대 카드는 검색 색인 대상이 아니라 JSON-LD/스냅샷 없음
+    (seo.jsonld ? `<script type="application/ld+json">${seo.jsonld}</script>` : "") +
+    (seo.h1 ? `<script type="application/ld+json">${breadcrumbLd(seo)}</script>` : "");
 
   // 크롤러가 읽을 본문 스냅샷 — 화면엔 숨김(JS 앱이 실제 UI 렌더). aria-hidden으로 접근성 중복 방지.
-  const snapshot =
-    `<div id="seo-snapshot" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">` +
-    `<p>${esc(seo.kicker)}</p><h1>${esc(seo.h1)}</h1>` +
-    (seo.body ? `<p>${esc(clip(seo.body, 500))}</p>` : "") +
-    `</div>`;
+  const snapshot = seo.h1
+    ? `<div id="seo-snapshot" aria-hidden="true" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">` +
+      `<p>${esc(seo.kicker)}</p><h1>${esc(seo.h1)}</h1>` +
+      (seo.body ? `<p>${esc(clip(seo.body, 500))}</p>` : "") +
+      `</div>`
+    : null;
 
   const rm = { element(el) { el.remove(); } };  // 원본 메타 제거(중복 방지)
-  return new HTMLRewriter()
+  let rw = new HTMLRewriter()
     .on("title", { element(el) { el.setInnerContent(seo.title); } })
     .on('meta[name="description"]', rm)
     .on('meta[name="keywords"]', rm)
     .on('link[rel="canonical"]', rm)
     .on('meta[property^="og:"]', rm)
     .on('meta[name^="twitter:"]', rm)
-    .on("head", { element(el) { el.append(metaHtml, { html: true }); } })
-    .on("body", { element(el) { el.prepend(snapshot, { html: true }); } })
-    .transform(res);
+    .on("head", { element(el) { el.append(metaHtml, { html: true }); } });
+  if (snapshot) rw = rw.on("body", { element(el) { el.prepend(snapshot, { html: true }); } });
+  return rw.transform(res);
 }
 
 export async function onRequest(context) {
@@ -167,15 +193,18 @@ export async function onRequest(context) {
     const { request, next } = context;
     if (request.method !== "GET") return next();
     const url = new URL(request.url);
-    if (!kind(url.pathname)) return next();          // clean/.html 모두 kind()가 판별
-    // id/gn 파라미터 없으면 개입 안 함
-    if (!url.searchParams.get("id") && !url.searchParams.get("gn")) return next();
+    const hasRef = !!url.searchParams.get("ref");
+    const isContent = !!kind(url.pathname) && (url.searchParams.get("id") || url.searchParams.get("gn"));
+    // 초대(?ref=) 또는 콘텐츠 상세일 때만 개입
+    if (!hasRef && !isContent) return next();
 
     const res = await next();
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("text/html")) return res;
 
-    const seo = await resolveSeo(url.pathname, url.searchParams);
+    // ?ref= 는 초대 카드 우선 — 일반 홈 카드와 달라야 초대인 걸 알 수 있다
+    const seo = (hasRef ? await resolveInvite(url.searchParams) : null)
+             || (isContent ? await resolveSeo(url.pathname, url.searchParams) : null);
     if (!seo) return res;
 
     const out = rewrite(res, seo);
