@@ -116,19 +116,12 @@ html { background: #0a0a0b; }
 body {
   background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) fixed #0a0a0b !important;
 }
-/* 상단 헤더 — 맨 위(≤10px)에선 완전 투명(배경이 끊김 없이 이어짐).
-   스크롤 상태(.hdr-scrolled)에선 프로스트 글래스(블러+반투명)로 전환:
-   어떤 위치에서 열리든(스크롤 복원 포함) 본문이 헤더 아이콘·로고와
-   충돌해 보이는 고질병의 근본 차단. 위로 올려 맨 위에 닿으면 다시 투명. */
+/* 상단 헤더는 항상 완전 투명 — 반투명 글래스 밴드는 사용자 요청으로 폐지.
+   (홈은 이제 항상 맨 위에서 시작하므로 정지 상태 겹침은 없고,
+    스크롤 중엔 아이콘 자체의 원형 배경(.hdr-scrolled)이 가독성을 담당) */
 .header {
   background: transparent !important;
   border-bottom: none !important;
-  transition: transform .28s ease, background .25s ease;
-}
-.header.hdr-scrolled {
-  background: rgba(10, 10, 11, .88) !important;
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
 }
 
 /* ============================================================
