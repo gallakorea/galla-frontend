@@ -55,8 +55,27 @@
   <link rel="stylesheet" href="./css/theme.css?v=071974">
   <link rel="stylesheet" href="./css/vote-bar.css?v=071974">
   <link rel="stylesheet" href="./css/vote-fx.css?v=071974">
+  <link rel="stylesheet" href="./css/splash.css?v=071974">
+  <!-- 스플래시 즉시 페인트용 핵심 스타일(외부 CSS 로드 전에도 검은 화면+로고가 바로 뜨게) -->
+  <style>
+    html.splash-lock,html.splash-lock body{overflow:hidden}
+    #galla-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;background:#000;
+      background-image:radial-gradient(60% 50% at 50% 44%,rgba(90,110,180,.16),rgba(0,0,0,0) 62%);
+      opacity:1;transition:opacity .5s ease}
+    #galla-splash.gone{opacity:0;pointer-events:none}
+    html.no-splash #galla-splash{display:none}
+    .gs-logo{width:min(58vw,260px)}.gs-logo img{display:block;width:100%;height:auto}
+  </style>
+  <script>try{if(sessionStorage.getItem('galla_splashed'))document.documentElement.className+=' no-splash';}catch(e){}</script>
 </head>
 <body data-page="index">
+<!-- 앱 스플래시(로딩) 화면 — splash.js가 준비 후 페이드아웃 -->
+<div id="galla-splash" role="status" aria-label="갈라 로딩 중">
+  <div class="gs-logo"><img src="assets/brand/wordmark-white.png?v=071974" alt="갈라" /></div>
+  <div class="gs-bar"></div>
+  <div class="gs-tag">여론이 에너지가 되는 곳</div>
+</div>
 <div id="app">
 
     <header class="header header-common">
@@ -171,6 +190,7 @@
 <script src="js/a2hs.js?v=071974"></script>
 <script src="js/welcome.js?v=071974"></script>
 
+<script src="js/splash.js?v=071974"></script>
 <script src="/js/analytics.js?v=071974"></script>
 <script src="/js/pwa.js?v=071974"></script>
 </body>
