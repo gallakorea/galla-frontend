@@ -126,3 +126,42 @@ document.querySelectorAll(".nav-item").forEach(icon => {
     if (target) location.href = target;
   });
 });
+
+/* ---------------------------------------------------------
+   🎁 친구 초대 카드 — 내 코드(my_ref_code)·실적(my_referral_stats)
+   링크 복사/공유. 비로그인은 로그인 유도.
+   --------------------------------------------------------- */
+(async function initInvite() {
+  const card = document.getElementById("invite-card");
+  if (!card) return;
+  const linkEl = document.getElementById("iv-link");
+  const stats = document.getElementById("iv-stats");
+  const sb = await (window.waitForSupabaseClient ? waitForSupabaseClient() : Promise.resolve(window.supabaseClient));
+  const { data: s } = await sb.auth.getSession();
+  const copyBtn = document.getElementById("iv-copy");
+  const shareBtn = document.getElementById("iv-share");
+
+  if (!s?.session) {
+    stats.textContent = "로그인하고 시작하세요";
+    copyBtn.onclick = shareBtn.onclick = () => (location.href = "login.html");
+    return;
+  }
+  const [{ data: code }, { data: st }] = await Promise.all([
+    sb.rpc("my_ref_code"), sb.rpc("my_referral_stats"),
+  ]);
+  if (!code) { stats.textContent = "잠시 후 다시 시도해주세요"; return; }
+  const url = "https://galla.im/?ref=" + code;
+  linkEl.value = url;
+  stats.textContent = `지금까지 ${st?.invited || 0}명 초대 · +${Number(st?.gp || 0).toLocaleString()} GP`;
+
+  const flash = (btn, t) => { const o = btn.textContent; btn.textContent = t; setTimeout(() => (btn.textContent = o), 1400); };
+  copyBtn.onclick = async () => {
+    try { await navigator.clipboard.writeText(url); } catch (e) { linkEl.select(); document.execCommand("copy"); }
+    flash(copyBtn, "복사됨!");
+  };
+  shareBtn.onclick = async () => {
+    const msg = "지금 대한민국 진짜 여론이 갈리는 곳, 갈라(GALLA). 내 링크로 가입하면 +500 GP! " + url;
+    if (navigator.share) { try { await navigator.share({ title: "GALLA 갈라", text: msg, url }); } catch (e) {} }
+    else { try { await navigator.clipboard.writeText(msg); flash(shareBtn, "복사됨!"); } catch (e) {} }
+  };
+})();

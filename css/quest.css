@@ -173,3 +173,17 @@ body {
   border:1px solid rgba(201,209,224,.4); color:#c9d1e0; font-size:14.5px; font-weight:800; }
 .shop-entry-sub{ font-size:12px; font-weight:600; color:#b9a05a; }
 .shop-entry:active{ transform:scale(.985); }
+
+/* 🎁 친구 초대 카드 */
+.invite-card{ background:linear-gradient(135deg, rgba(61,107,255,.14), rgba(255,77,103,.10));
+  border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:16px; margin-bottom:22px; }
+.invite-card .iv-title{ font-size:15px; font-weight:800; color:#fff; }
+.invite-card .iv-title b{ color:#7aa2ff; }
+.invite-card .iv-sub{ font-size:12px; color:#9aa3b5; margin-top:4px; }
+.invite-card .iv-sub b{ color:#c9d1e0; }
+.invite-card .iv-linkrow{ display:flex; gap:8px; margin-top:12px; }
+.invite-card .iv-link{ flex:1; min-width:0; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.12);
+  border-radius:9px; color:#c9d1e0; font-size:12px; padding:10px 10px; }
+.invite-card .iv-btn{ flex:none; background:#20242e; color:#c9d1e0; border:1px solid rgba(255,255,255,.14);
+  border-radius:9px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; }
+.invite-card .iv-btn.primary{ background:#3d6bff; border-color:#3d6bff; color:#fff; }

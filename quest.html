@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>GALLA 퀘스트</title>
-    <link rel="stylesheet" href="css/quest.css?v=071981">
-    <link rel="stylesheet" href="./css/nav.css?v=071981">
-  <link rel="stylesheet" href="./css/galla-ui.css?v=071981">
+    <link rel="stylesheet" href="css/quest.css?v=071982">
+    <link rel="stylesheet" href="./css/nav.css?v=071982">
+  <link rel="stylesheet" href="./css/galla-ui.css?v=071982">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -16,7 +16,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=071981">
+  <link rel="stylesheet" href="./css/theme.css?v=071982">
 </head>
 
 <body data-page="mypage">
@@ -49,6 +49,20 @@
         <!-- DAILY QUESTS -->
         <h2 class="section-title">데일리 퀘스트</h2>
         <div id="daily-list" class="daily-list"></div>
+
+        <!-- INVITE FRIENDS -->
+        <h2 class="section-title">친구 초대</h2>
+        <div class="invite-card" id="invite-card">
+            <div class="iv-head">
+                <div class="iv-title">🎁 친구를 초대하면 <b>+1,000 GP</b></div>
+                <div class="iv-sub">친구도 가입 즉시 <b>+500 GP</b> · <span id="iv-stats">–</span></div>
+            </div>
+            <div class="iv-linkrow">
+                <input id="iv-link" class="iv-link" readonly value="로그인하면 내 초대 링크가 생겨요" />
+                <button id="iv-copy" class="iv-btn">복사</button>
+                <button id="iv-share" class="iv-btn primary">공유</button>
+            </div>
+        </div>
 
         <!-- TODAY REWARD -->
         <div class="today-reward">
@@ -132,12 +146,12 @@
 </div>
 
 <!-- Supabase -->
-<script src="./vendor/supabase.js?v=071981"></script>
-<script src="js/supabase.js?v=071981"></script>
-<script src="js/back.js?v=071981"></script>
+<script src="./vendor/supabase.js?v=071982"></script>
+<script src="js/supabase.js?v=071982"></script>
+<script src="js/back.js?v=071982"></script>
 
 <!-- Quest JS -->
-<script src="js/quest.js?v=071981"></script>
+<script src="js/quest.js?v=071982"></script>
 
 <!-- ⭐ Login Check + Load Profile -->
 <script>
@@ -168,9 +182,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 </script>
 
-<script src="js/nav.js?v=071981"></script>
+<script src="js/nav.js?v=071982"></script>
 
-<script src="/js/analytics.js?v=071981"></script>
-<script src="/js/pwa.js?v=071981"></script>
+<script src="/js/analytics.js?v=071982"></script>
+<script src="/js/pwa.js?v=071982"></script>
 </body>
 </html>

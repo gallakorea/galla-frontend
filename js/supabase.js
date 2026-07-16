@@ -228,12 +228,35 @@
         }
       );
       console.log("[supabase] client ready");
+      // 🎁 친구 초대(추천인) — ?ref=코드 캡처 → 첫 로그인 세션에서 1회 적용(+GP 양쪽 보상)
+      try {
+        const rp = new URLSearchParams(location.search).get("ref");
+        if (rp && /^[A-Z0-9]{4,12}$/i.test(rp) && !localStorage.getItem("galla_ref_done")) {
+          localStorage.setItem("galla_ref", rp.toUpperCase());
+        }
+      } catch (e) {}
       // 📊 활동 계측 핑 — 세션·시간당 1회(로그인 유저). DAU/MAU/실시간용
       try {
         const hk = "galla_ping_" + new Date().toISOString().slice(0, 13); // 시간 단위 키
         if (!localStorage.getItem(hk)) {
           const { data: s } = await window.supabaseClient.auth.getSession();
           if (s?.session) { window.supabaseClient.rpc("activity_ping"); localStorage.setItem(hk, "1"); }
+        }
+      } catch (e) {}
+      // 🎁 추천 적용 — 로그인 세션이 있고 보관된 코드가 있으면 1회 시도
+      try {
+        const code = localStorage.getItem("galla_ref");
+        if (code && !localStorage.getItem("galla_ref_done")) {
+          const { data: s } = await window.supabaseClient.auth.getSession();
+          if (s?.session) {
+            const { data: r } = await window.supabaseClient.rpc("apply_referral", { p_code: code });
+            // 성공/이미적용/무효코드/기존유저 — 어느 쪽이든 재시도 불필요한 종결 상태
+            if (r && (r.ok || ["already", "bad_code", "not_new", "self"].includes(r.reason))) {
+              localStorage.setItem("galla_ref_done", "1");
+              localStorage.removeItem("galla_ref");
+              if (r.ok) { try { alert("🎁 친구 초대 보너스 +" + (r.invitee_gp || 500) + " GP를 받았어요!"); } catch (e) {} }
+            }
+          }
         }
       } catch (e) {}
 
