@@ -744,8 +744,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     initHeader();
     initSocial();
     if (window.initNotifications) window.initNotifications();
-    await loadData();
+    try { await loadData(); }
+    finally { GALLA_signalReady(); }  // 실패해도 스플래시는 반드시 내린다
 });
+
+/* 스플래시 해제 신호 — splash-boot이 galla:ready 를 기다린다. 중복 호출 무해. */
+function GALLA_signalReady() {
+    if (window.__gallaReadySent) return;
+    window.__gallaReadySent = true;
+    try { window.dispatchEvent(new Event('galla:ready')); } catch (_) {}
+}
 
 /* 헤더: + 글쓰기(권한 게이팅) / ♥ 알림 */
 function initHeader() {
@@ -849,6 +857,9 @@ async function loadData() {
     viewFeed = feed;
     loadBest();
     loadRecommend();
+    // 🚪 스플래시 해제 신호 — 화면에 '진짜 콘텐츠'가 처음 그려진 바로 이 순간.
+    //    (window.load로 내리면 피드 도착 전 빈 화면이 노출됨)
+    GALLA_signalReady();
 
     // 타 콘텐츠 도착하면 교차 배열로 병합하고, 이미 표시된 개수만큼 다시 그림
     extrasP.then(([predictionCards, plazaCards, newsCards, videoCards, duelCards]) => {

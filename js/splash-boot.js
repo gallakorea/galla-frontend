@@ -11,9 +11,11 @@
   try { if (sessionStorage.getItem("galla_splashed")) return; } catch (_) {}
   try { sessionStorage.setItem("galla_splashed", "1"); } catch (_) {}
 
-  var V = (function () {
-    try { return (document.currentScript.src.split("?v=")[1] || "").split("&")[0]; } catch (_) { return ""; }
-  })();
+  var SRC = (function () { try { return document.currentScript.src || ""; } catch (_) { return ""; } })();
+  var V = (SRC.split("?v=")[1] || "").split("&")[0];
+  // ?wait=ready → window.load가 아니라 앱의 'galla:ready'(콘텐츠 첫 렌더)를 기다린다.
+  //   피드가 async라 load 시점엔 아직 빈 화면 → 스플래시가 가려야 할 구간을 놓친다.
+  var WAIT_READY = /[?&]wait=ready\b/.test(SRC);
   var IMG = "/assets/brand/wordmark-white.png" + (V ? "?v=" + V : "");
 
   var css =
@@ -56,7 +58,9 @@
   document.documentElement.appendChild(el);
   document.documentElement.classList.add("splash-lock");
 
-  var start = Date.now(), MIN = 650, MAX = 4000, done = false;
+  var start = Date.now(), done = false;
+  var MIN = 650;                       // 최소 노출(번쩍임 방지)
+  var MAX = WAIT_READY ? 7000 : 4000;  // 세이프가드: 콘텐츠 대기 모드는 네트워크를 기다리므로 넉넉히
   function hide() {
     if (done) return; done = true;
     setTimeout(function () {
@@ -67,7 +71,15 @@
       document.documentElement.classList.remove("splash-lock");
     }, Math.max(0, MIN - (Date.now() - start)));
   }
-  if (document.readyState === "complete") hide();
-  else window.addEventListener("load", hide, { once: true });
+
+  if (WAIT_READY) {
+    // 앱이 콘텐츠를 처음 그린 순간에만 내린다. 신호가 영영 안 와도 MAX가 구제.
+    window.addEventListener("galla:ready", hide, { once: true });
+    if (window.__gallaReadySent) hide();          // 이미 신호가 지나갔다면(경합) 즉시
+  } else if (document.readyState === "complete") {
+    hide();
+  } else {
+    window.addEventListener("load", hide, { once: true });
+  }
   setTimeout(hide, MAX);
 })();
