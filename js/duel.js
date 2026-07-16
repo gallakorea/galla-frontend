@@ -39,6 +39,7 @@
     chans.forEach(c => { try { sb.removeChannel(c); } catch (e) {} });
     timers.forEach(t => clearInterval(t));
     chans = []; timers = [];
+    lockExit(false);   // ★대결이 끝나거나 화면이 바뀌면 반드시 잠금 해제(안 풀면 앱에 갇힌다)
   }
 
   const REASON = {
@@ -89,9 +90,9 @@
           <button data-v="300">300</button><button data-v="500" class="on">500</button><button data-v="1000">1000 GP</button>
         </div>
 
-        <label class="ch-label">제한 시간</label>
+        <label class="ch-label">제한 시간 <span class="ch-hint">짧고 굵게 — 최대 90초</span></label>
         <div class="seg" id="seg-limit">
-          <button data-v="180">3분</button><button data-v="300" class="on">5분</button><button data-v="600">10분</button>
+          <button data-v="60">⚡ 60초</button><button data-v="90" class="on">🔥 90초</button>
         </div>
 
         <label class="ch-label">시작 방식</label>
@@ -108,7 +109,7 @@
     const seg = (id, cb) => root().querySelectorAll(`#${id} button`).forEach(b => b.onclick = () => {
       root().querySelectorAll(`#${id} button`).forEach(x => x.classList.remove("on")); b.classList.add("on"); cb && cb(b.dataset.v);
     });
-    let stake = 500, limit = 300, when = "instant";
+    let stake = 500, limit = 90, when = "instant";   // ⚔️ 기본 90초(서버 허용값 60/90)
     seg("seg-stake", v => stake = +v); seg("seg-limit", v => limit = +v);
     seg("seg-when", v => { when = v; $("#ch-time").style.display = v === "scheduled" ? "" : "none"; });
 
@@ -260,9 +261,18 @@
     root().innerHTML = `
       ${ringHeader()}
       <div class="octa">
+        <!-- 🔥 기세 게이지 — 응원 GP가 실시간으로 밀고 당긴다 -->
+        <div class="momentum" id="momentum">
+          <div class="mo-bar">
+            <div class="mo-fill chal" id="mo-chal"><span id="mo-chal-n">0</span></div>
+            <div class="mo-fill opp" id="mo-opp"><span id="mo-opp-n">0</span></div>
+          </div>
+          <div class="mo-label">🔥 응원 기세 — 이긴 편 응원자가 진 편 응원 GP를 나눠 갖습니다</div>
+        </div>
         <div class="ring-label">⚔️ 파이터 링</div>
         <div class="ring-stream" id="ring-stream"></div>
         <div id="fighter-input"></div>
+        ${isParty ? `<div class="forfeit-row"><button class="duel-btn danger" id="ff">🏳️ 포기하고 나가기</button></div>` : ""}
         <div class="stands-label">👥 관중석 <span id="cheer-cnt"></span></div>
         <div class="stands-stream" id="stands-stream"></div>
         <div id="stand-tools"></div>
@@ -281,8 +291,123 @@
 
     mountFighterInput();
     mountStandTools();
+    mountCheerGp();
+    paintCheerGauge();
     subscribeArena();
     startTimers();
+    if (isParty && D.status === "live") lockExit(true);   // 🔒 대결 중 이탈 방지
+    bindForfeit();
+  }
+
+  /* 🔥 응원 GP 게이지 — ringHeader의 updateMomentum(관중 '투표' 게이지)과는 다른 지표다.
+     투표=누가 이길지 판정 / 응원GP=돈을 건 기세. 이름이 겹치지 않게 분리 유지. */
+  function paintCheerGauge() {
+    const c = D.cheer_chal || 0, o = D.cheer_opp || 0, t = c + o;
+    const cp = t ? Math.round((c / t) * 100) : 50;
+    const f1 = $("#mo-chal"), f2 = $("#mo-opp");
+    if (!f1 || !f2) return;
+    f1.style.width = cp + "%"; f2.style.width = (100 - cp) + "%";
+    $("#mo-chal-n").textContent = c.toLocaleString();
+    $("#mo-opp-n").textContent = o.toLocaleString();
+  }
+
+  /* 🔒 대결 중 이탈 방지 — 판돈이 걸린 실시간 대결이라 실수로 나가면 상대가 피해를 본다.
+     완전 차단은 불가(브라우저 정책)이므로 ①새로고침/닫기 경고 ②앱 내 이동 차단 ③뒤로가기 되돌림. */
+  let EXIT_LOCKED = false;
+  function beforeUnload(e) { e.preventDefault(); e.returnValue = ""; return ""; }
+  function lockExit(on) {
+    if (on === EXIT_LOCKED) return;
+    EXIT_LOCKED = on;
+    if (on) {
+      window.addEventListener("beforeunload", beforeUnload);
+      history.pushState({ duelLock: 1 }, "");           // 뒤로가기 1회 흡수
+      window.addEventListener("popstate", onPop);
+      document.addEventListener("click", blockNav, true);
+      document.body.classList.add("duel-locked");
+    } else {
+      window.removeEventListener("beforeunload", beforeUnload);
+      window.removeEventListener("popstate", onPop);
+      document.removeEventListener("click", blockNav, true);
+      document.body.classList.remove("duel-locked");
+    }
+  }
+  function onPop() {
+    if (!EXIT_LOCKED) return;
+    history.pushState({ duelLock: 1 }, "");
+    toastLock();
+  }
+  function blockNav(e) {
+    if (!EXIT_LOCKED) return;
+    const a = e.target.closest("a[href], .nav-item, [data-target]");
+    if (!a || a.id === "ff") return;
+    e.preventDefault(); e.stopPropagation();
+    toastLock();
+  }
+  function toastLock() {
+    alert("⚔️ 대결 중에는 나갈 수 없어요.\n포기하려면 '🏳️ 포기하고 나가기'를 누르세요 (판돈을 잃습니다).");
+  }
+
+  /* 🏳️ 포기하기 */
+  function bindForfeit() {
+    const b = $("#ff"); if (!b) return;
+    b.onclick = async () => {
+      if (!confirm(`🏳️ 정말 포기할까요?\n판돈 ${D.stake} GP를 잃고 상대가 부전승으로 이깁니다.`)) return;
+      b.disabled = true; b.textContent = "처리 중…";
+      const { data, error } = await sb.rpc("duel_forfeit", { p_duel: D.id });
+      if (error || !data?.ok) {
+        alert(reason(data?.reason) || `포기 처리에 실패했어요.\n(${error?.message || "알 수 없는 오류"})`);
+        b.disabled = false; b.textContent = "🏳️ 포기하고 나가기";
+        if (!data?.reason || STALE.has(data?.reason)) { lockExit(false); renderArena(D.id); }
+        return;
+      }
+      lockExit(false);
+      renderArena(D.id);
+    };
+  }
+
+  /* 🔥 응원 GP — 관중만. 파리뮤추얼(이긴 편이 진 편 풀 분배)이라 '던질 이유'가 있다. */
+  function mountCheerGp() {
+    const box = $("#stand-tools"); if (!box || D._isParty || D.status !== "live") return;
+    box.insertAdjacentHTML("afterbegin", `
+      <div class="cheer-gp">
+        <div class="cg-label">🔥 응원 GP 투척 — 내 편에 걸고, 이기면 진 편 GP를 나눠 갖기</div>
+        <div class="cg-teams">
+          <button class="cg-team chal" data-team="challenger">🔵 ${esc(nk(D.challenger))}</button>
+          <button class="cg-team opp"  data-team="opponent">🔴 ${esc(nk(D.opponent))}</button>
+        </div>
+        <div class="cg-amts">${[10, 50, 100, 500].map(a => `<button class="cg-amt" data-amt="${a}">${a}</button>`).join("")}</div>
+      </div>`);
+    let team = null, amt = 50;
+    box.querySelectorAll(".cg-team").forEach(b => b.onclick = () => {
+      team = b.dataset.team;
+      box.querySelectorAll(".cg-team").forEach(x => x.classList.toggle("on", x === b));
+    });
+    box.querySelectorAll(".cg-amt").forEach(b => b.onclick = async () => {
+      if (!ME) return alert("로그인이 필요해요.");
+      if (!team) return alert("먼저 응원할 편을 고르세요.");
+      amt = +b.dataset.amt;
+      b.disabled = true;
+      const { data, error } = await sb.rpc("duel_cheer_gp", { p_duel: D.id, p_team: team, p_amount: amt });
+      b.disabled = false;
+      if (error || !data?.ok) {
+        const M = { insufficient: "GP가 부족해요.", is_party: "당사자는 응원할 수 없어요.",
+                    not_live: "대결 중일 때만 응원할 수 있어요.", bad_amount: "잘못된 금액이에요." };
+        return alert(M[data?.reason] || "응원에 실패했어요.");
+      }
+      D.cheer_chal = data.chal; D.cheer_opp = data.opp;
+      paintCheerGauge();
+      cheerFx(team, amt);
+    });
+  }
+  /* 응원 투척 연출 — 숫자가 링으로 날아가 꽂힌다 */
+  function cheerFx(team, amt) {
+    const host = $("#momentum"); if (!host) return;
+    const el = document.createElement("div");
+    el.className = `cg-fly ${team === "challenger" ? "chal" : "opp"}`;
+    el.textContent = `+${amt}`;
+    host.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+    try { window.BattleFX?.haptic?.("tap"); } catch (e) {}
   }
 
   function appendMsg(m) {
@@ -397,7 +522,8 @@
   function onDuelUpdate(nd) {
     const prevStatus = D.status;
     Object.assign(D, nd);
-    updateMomentum();
+    updateMomentum();      // 관중 투표 게이지
+    paintCheerGauge();     // 응원 GP 게이지 — 남이 던진 응원도 내 화면에 실시간 반영
     if (nd.status !== prevStatus) { renderArena(D.id); return; } // 상태 전환 → 재구성
   }
 

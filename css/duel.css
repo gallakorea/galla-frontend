@@ -218,3 +218,54 @@
 .closed-note { color: #9aa3b5; font-size: 13px; text-align: center; padding: 16px 12px; }
 .closed-acts { display: flex; gap: 8px; margin-top: 10px; }
 .closed-acts .duel-btn { flex: 1; }
+
+/* ═══════ 일기토 업그레이드: 응원 GP · 포기 · 이탈잠금 ═══════ */
+/* 🔥 응원 GP 기세 게이지 (관중 '투표' 게이지와 별개 지표) */
+.momentum { margin: 8px 0 12px; }
+.momentum .mo-bar {
+  display: flex; height: 26px; border-radius: 99px; overflow: hidden;
+  background: #14161d; border: 1px solid rgba(255,255,255,.10);
+}
+.momentum .mo-fill {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 900; color: #fff; transition: width .5s cubic-bezier(.2,.9,.3,1);
+  min-width: 34px;
+}
+.momentum .mo-fill.chal { background: linear-gradient(90deg,#2b4fd0,#3d6bff); }
+.momentum .mo-fill.opp  { background: linear-gradient(90deg,#ff4d67,#d0324c); }
+.momentum .mo-label { font-size: 10.5px; color: #6b7488; text-align: center; margin-top: 5px; }
+
+/* 응원 투척 연출 — 숫자가 튀어오른다 */
+.cg-fly {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  font-size: 18px; font-weight: 900; pointer-events: none;
+  animation: cgFly .9s cubic-bezier(.2,.9,.3,1) forwards;
+}
+.cg-fly.chal { color: #7aa2ff; } .cg-fly.opp { color: #ff8595; }
+@keyframes cgFly { from { opacity: 0; transform: translate(-50%, 14px) scale(.8); }
+  40% { opacity: 1; transform: translate(-50%, -8px) scale(1.25); }
+  to { opacity: 0; transform: translate(-50%, -34px) scale(1); } }
+.momentum { position: relative; }
+
+/* 응원 GP 투척 도구 */
+.cheer-gp { background: #12131a; border: 1px solid rgba(255,255,255,.10); border-radius: 12px; padding: 11px; margin-bottom: 10px; }
+.cg-label { font-size: 11px; color: #9aa3b5; margin-bottom: 8px; }
+.cg-teams { display: flex; gap: 8px; margin-bottom: 8px; }
+.cg-team { flex: 1; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700;
+  background: #191d26; color: #c9d1e0; border: 1px solid rgba(255,255,255,.12);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cg-team.chal.on { border-color: #3d6bff; background: rgba(61,107,255,.2); color: #fff; }
+.cg-team.opp.on  { border-color: #ff4d67; background: rgba(255,77,103,.2); color: #fff; }
+.cg-amts { display: flex; gap: 6px; }
+.cg-amt { flex: 1; padding: 8px 0; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 800;
+  background: rgba(245,207,107,.12); color: #f5cf6b; border: 1px solid rgba(245,207,107,.35); }
+.cg-amt:active { transform: scale(.95); }
+
+/* 🏳️ 포기 */
+.forfeit-row { margin: 10px 0; }
+.duel-btn.danger { width: 100%; background: transparent; color: #ff8595; border: 1px solid rgba(255,77,103,.45); }
+.duel-btn.danger:hover { background: rgba(255,77,103,.12); }
+
+/* 🔒 대결 중 이탈 잠금 — 나가는 길이 잠겼음을 시각적으로 */
+body.duel-locked .nav { opacity: .35; pointer-events: none; filter: grayscale(1); }
+.ch-hint { font-size: 10px; color: #6b7488; font-weight: 400; margin-left: 4px; }
