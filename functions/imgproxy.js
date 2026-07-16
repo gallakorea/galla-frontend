@@ -26,7 +26,20 @@ export async function onRequest(context) {
   let target;
   try { target = new URL(raw); } catch { return new Response("bad url", { status: 400 }); }
   if (target.protocol !== "https:" && target.protocol !== "http:") return new Response("bad proto", { status: 400 });
-  if (!ALLOW.test(target.hostname)) return new Response("host not allowed", { status: 403 });
+  // IP 리터럴 금지 (SSRF 방지)
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(target.hostname) || target.hostname.includes(":")) {
+    return new Response("host not allowed", { status: 403 });
+  }
+  if (!ALLOW.test(target.hostname)) {
+    // 커뮤 화이트리스트 외(언론사 등 갈라뉴스 hero) — 오픈 프록시 방지를 위해
+    // galla.im(또는 로컬 프리뷰)에서 온 이미지 요청만 통과, https만 허용
+    const ref = context.request.headers.get("Referer") || "";
+    const sfs = context.request.headers.get("Sec-Fetch-Site") || "";
+    const okOrigin = sfs === "same-origin" ||
+      /^https:\/\/([a-z0-9-]+\.)?galla\.im\//i.test(ref) || /localhost|127\.0\.0\.1/.test(ref);
+    if (!okOrigin) return new Response("host not allowed", { status: 403 });
+    if (target.protocol !== "https:") return new Response("bad proto", { status: 400 });
+  }
 
   let resp;
   try {

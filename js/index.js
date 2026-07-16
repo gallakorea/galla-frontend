@@ -881,12 +881,22 @@ window.GALLA_filterFeed = function (cat, el) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// 이슈 사이사이에 타 콘텐츠를 라운드로빈으로 끼워 배치
-// (일기토 라이브는 최상단 근처, 이후 뉴스→예측→영상→광장 순환)
+// Fisher–Yates 셔플 — 이슈 외 콘텐츠는 진입할 때마다 새 배치로 보이게
+function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+// 이슈(시간순 고정) 사이사이에 타 콘텐츠를 라운드로빈으로 끼워 배치
+// — 일기토 라이브는 최상단 근처, 순환 순서 자체도 매 진입 랜덤
 function interleave(issues, ex = {}) {
     const queue = [];
     (ex.duel || []).forEach(d => queue.push({ type: 'duel', data: d }));
-    const order = ['news', 'predict', 'video', 'plaza'];
+    const order = shuffle(['news', 'predict', 'video', 'plaza']);
     const idx = { news: 0, predict: 0, video: 0, plaza: 0 };
     let added = true;
     while (added) {
@@ -981,11 +991,12 @@ async function loadNewsCards() {
         .limit(30);
     if (!rows || !rows.length) return [];
     const now = Date.now();
-    return rows.map(n => {
+    const scored = rows.map(n => {
         const ageH = (now - new Date(n.published_at)) / 3600000;
         const fresh = ageH < 6 ? 60 : ageH < 24 ? 30 : 0;
         return { ...n, _score: (n.view_count || 0) * 0.5 + (n.source_count || 0) * 4 + fresh + Math.random() * 10 };
-    }).sort((a, b) => b._score - a._score).slice(0, 8);
+    }).sort((a, b) => b._score - a._score).slice(0, 12);
+    return shuffle(scored);   // 진입마다 새 배치
 }
 
 function renderNewsCard(n) {
@@ -1022,13 +1033,14 @@ async function loadVideoCards() {
         .order('collected_at', { ascending: false })
         .limit(80);
     if (!rows || !rows.length) return [];
-    // 최신 수집분만 + video_id 중복 제거 후 랭크순
+    // 최신 수집분만 + video_id 중복 제거, 상위 랭크 풀에서 랜덤 추출(진입마다 새 얼굴)
     const latest = rows[0].collected_at;
     const seen = new Set();
-    return rows
+    const pool = rows
         .filter(v => v.collected_at === latest && !seen.has(v.video_id) && seen.add(v.video_id))
         .sort((a, b) => (a.rank || 99) - (b.rank || 99))
-        .slice(0, 6);
+        .slice(0, 18);
+    return pool.sort(() => Math.random() - 0.5).slice(0, 6);
 }
 
 function renderVideoCard(v) {
