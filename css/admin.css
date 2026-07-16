@@ -261,3 +261,12 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-more{ margin:12px 0; }
 .ad-more summary{ cursor:pointer; font-size:13px; color:#9aa3b5; padding:6px 0; }
 @media (max-width:640px){ .ad-3col{ grid-template-columns:1fr; } }
+
+/* 작성자 입장(찬성/반대) 세그먼트 */
+.ad-stance{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:4px 0 10px; }
+.ad-stance button{ display:flex; align-items:center; justify-content:center; gap:6px; padding:11px 10px;
+  border:1px solid rgba(255,255,255,.14); border-radius:10px; background:#191d26; color:#c9d1e0;
+  font-size:13px; cursor:pointer; transition:.15s; }
+.ad-stance button b{ font-weight:700; }
+.ad-stance button[data-st="pro"].on{ border-color:#3d6bff; background:rgba(61,107,255,.16); color:#fff; }
+.ad-stance button[data-st="con"].on{ border-color:#ff4d67; background:rgba(255,77,103,.16); color:#fff; }

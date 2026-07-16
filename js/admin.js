@@ -522,7 +522,12 @@
       <hr class="ad-hr">
       ${IN("i-title", "제목 *", "자동 채움됩니다")}
       ${TA("i-desc", "핵심요약(본문)", "자동 채움됩니다", 5)}
-      <div class="ad-2col">${IN("i-fa", "진영 A", "👍 찬성이오")}${IN("i-fb", "진영 B", "👎 난 반댈세")}</div>
+      <div class="ad-2col">${IN("i-fa", "진영 A (찬성)", "👍 찬성이오")}${IN("i-fb", "진영 B (반대)", "👎 난 반댈세")}</div>
+      <label>작성자 입장 *</label>
+      <div class="ad-stance" id="i-stance">
+        <button type="button" class="on" data-st="pro"><span>👍</span> <b id="i-st-a">찬성이오</b></button>
+        <button type="button" data-st="con"><span>👎</span> <b id="i-st-b">난 반댈세</b></button>
+      </div>
       <div class="ad-2col">
         <div><label>카테고리 *</label><select id="i-cat" class="ad-input"><option value="">선택</option>${optList(CATS)}</select></div>
         <div><label>기부처 *</label><select id="i-don" class="ad-input"><option value="">선택</option>${optList(DONS)}</select></div>
@@ -542,12 +547,22 @@
       <div class="ad-note">사진·영상·썸네일은 파일로 올리면 자동 업로드됩니다. 진영명 비우면 기본(찬성이오/난 반댈세).</div>`;
     renderIssueLinks();
 
+    // 작성자 입장 토글 + 진영 라벨 동기화
+    let stance = "pro";
+    const syncStance = () => {
+      $("#i-st-a").textContent = $("#i-fa").value.trim() || "찬성이오";
+      $("#i-st-b").textContent = $("#i-fb").value.trim() || "난 반댈세";
+    };
+    $("#i-stance").onclick = e => { const b = e.target.closest("[data-st]"); if (!b) return; stance = b.dataset.st; $("#i-stance").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); };
+    $("#i-fa").oninput = syncStance; $("#i-fb").oninput = syncStance;
+
     $("#i-parse").onclick = () => {
       const p = parseIssueText($("#i-paste").value);
       if (p.title) $("#i-title").value = p.title;
       if (p.desc) $("#i-desc").value = p.desc;
       if (p.fa) $("#i-fa").value = p.fa;
       if (p.fb) $("#i-fb").value = p.fb;
+      syncStance();
       toast("자동 채움 완료 — 확인 후 발행하세요");
     };
     const fileName = (inp, out) => $(inp).onchange = () => { const fs = $(inp).files; $(out).textContent = fs.length ? (fs.length > 1 ? `${fs.length}개 선택됨` : fs[0].name) : ""; };
@@ -583,7 +598,7 @@
           p_title: t, p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value,
           p_one_line: null, p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(),
           p_thumb: thumb, p_links: issueLinks, p_video: video_url, p_images: images,
-          p_card_thumb: card_thumb, p_donation: $("#i-don").value,
+          p_card_thumb: card_thumb, p_donation: $("#i-don").value, p_stance: stance,
         });
         if (r?.ok) { toast("이슈 발행됨"); location.href = "issue.html?id=" + r.id; }
         else { alert("발행 실패: " + (r?.reason || "알 수 없음")); btn.disabled = false; btn.textContent = "🚀 이슈 발행"; }
