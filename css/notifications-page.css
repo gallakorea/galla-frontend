@@ -208,3 +208,35 @@
 .np-chip .ic   { width: 15px; height: 15px; flex: none; }
 .np-badge .ic  { width: 12px; height: 12px; display: block; }
 .np-thumb .ic  { width: 20px; height: 20px; }
+
+/* =========================================================
+   스와이프 삭제 셸 + 묶음 아바타 스택 (인스타식)
+========================================================= */
+.np-row { position: relative; overflow: hidden; }
+.np-row .np-item {
+  position: relative; z-index: 1;
+  background: #0a0a0b; /* 밀었을 때 뒤 버튼이 비치지 않게 */
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
+}
+.np-row .np-item.unread { background: #101722; }
+.np-del {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 72px;
+  border: none; cursor: pointer; font-size: 20px;
+  background: linear-gradient(135deg, #ff5c74, #d0392b); color: #fff;
+}
+.np-del:active { filter: brightness(.9); }
+.np-row.removing { transition: height .24s ease, opacity .2s ease; opacity: 0; }
+
+/* 묶음(2인+) 아바타 스택 */
+.np-ava-stack { position: relative; width: 44px; height: 44px; flex: 0 0 44px; display: block; }
+.np-ava-stack .np-ava {
+  position: absolute; width: 34px; height: 34px;
+  border: 2px solid #0a0a0b; border-radius: 50%;
+}
+.np-ava-stack .np-ava:first-child { top: 0; left: 0; }
+.np-ava-stack .np-ava:last-child  { bottom: 0; right: 0; z-index: 1; }
+
+/* 삭제 버튼은 밀고 있는 동안/열린 상태에서만 보인다 (닫힌 행 가장자리 비침 방지) */
+.np-del { opacity: 0; transition: opacity .15s ease; pointer-events: none; }
+.np-row.dragging .np-del, .np-row.swiped .np-del { opacity: 1; pointer-events: auto; }

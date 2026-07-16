@@ -89,23 +89,28 @@
   };
   const typeOf = (t) => TYPE[t] || { ic: "bell", cls: "t-etc", key: "etc" };
 
-  /* 보조 데이터: 보낸 사람 프로필 사진 / 이슈 썸네일 */
+  /* 보조 데이터: 보낸 사람 프로필·닉네임 / 이슈 썸네일 / 내 팔로잉 */
   let AVATARS = {};   // uid -> avatar_url
+  let NICKS = {};     // uid -> nickname
   let THUMBS = {};    // issue_id -> thumbnail_url
+  const FOLLOWING = new Set();  // 내가 팔로우 중인 uid (맞팔로우 라벨용)
 
   async function loadExtras(rows) {
     const sb = window.supabaseClient;
-    const uids = [...new Set(rows.map(r => r.from_user).filter(Boolean))];
-    const iids = [...new Set(rows.map(r => r.issue_id).filter(Boolean))];
+    const uids = [...new Set(rows.map(r => r.from_user).filter(Boolean))].filter(u => !(u in AVATARS));
+    const iids = [...new Set(rows.map(r => r.issue_id).filter(Boolean))].filter(i => !(i in THUMBS));
 
-    if (uids.length) {
-      const { data } = await sb.from("users").select("id,avatar_url").in("id", uids);
-      (data || []).forEach(u => { AVATARS[u.id] = u.avatar_url; });
-    }
-    if (iids.length) {
-      const { data } = await sb.from("issues").select("id,thumbnail_url").in("id", iids);
-      (data || []).forEach(i => { THUMBS[i.id] = i.thumbnail_url; });
-    }
+    const jobs = [];
+    if (uids.length) jobs.push(sb.from("users").select("id,nickname,avatar_url").in("id", uids)
+      .then(({ data }) => (data || []).forEach(u => { AVATARS[u.id] = u.avatar_url; NICKS[u.id] = u.nickname; })));
+    if (iids.length) jobs.push(sb.from("issues").select("id,thumbnail_url").in("id", iids)
+      .then(({ data }) => (data || []).forEach(i => { THUMBS[i.id] = i.thumbnail_url; })));
+    await Promise.all(jobs);
+  }
+
+  async function loadFollowing() {
+    const { data } = await window.supabaseClient.from("follows").select("following").eq("follower", ME);
+    (data || []).forEach(r => FOLLOWING.add(r.following));
   }
 
   function avatarHTML(uid) {
@@ -118,31 +123,80 @@
       : `<span class="np-ava">${tag}</span>`;
   }
 
-  function rowHTML(n) {
+  /* ── 같은 대상·같은 유형 알림 묶기 (인스타식 "A님, B님 외 N명이 …") ── */
+  const GROUPABLE = new Set(["like", "plaza_like", "dislike", "vote", "plaza_vote", "attack", "defend", "support"]);
+  function buildGroups(rows) {
+    const out = [], map = new Map();
+    rows.forEach(r => {
+      const target = r.issue_id || r.link || "";
+      if (GROUPABLE.has(r.type) && target) {
+        const k = r.type + "|" + target;
+        if (map.has(k)) { map.get(k).rows.push(r); return; }
+        const g = { rows: [r] };
+        map.set(k, g); out.push(g);
+      } else {
+        out.push({ rows: [r] });
+      }
+    });
+    return out;
+  }
+  // 메시지 꼬리("…님이 회원님의 갈라를 좋아합니다"의 뒷부분) 추출
+  function msgTail(m) {
+    const s = String(m || "");
+    const i = s.indexOf("님이 ");
+    return i > -1 ? s.slice(i + 3) : s;
+  }
+
+  function rowHTML(g) {
+    const n = g.rows[0];                       // 대표(최신) 알림
     const t = typeOf(n.type);
+    const ids = g.rows.map(r => r.id).join(",");
+    const unread = g.rows.some(r => !r.read);
     const thumb = n.issue_id ? THUMBS[n.issue_id] : null;
 
-    // 우측: 팔로워면 '팔로우' 버튼, 그 외엔 콘텐츠 썸네일
+    // 묶인 알림이면 "A님, B님 외 N명이 …"로 재구성 (서로 다른 사람 기준)
+    const uniqUsers = [...new Set(g.rows.map(r => r.from_user).filter(Boolean))];
+    let msg = n.message || "새 활동";
+    if (g.rows.length > 1 && uniqUsers.length >= 1) {
+      const nick = uid => NICKS[uid] || "갈라이안";
+      const shown = uniqUsers.slice(0, 2).map(u => `<b>${esc(nick(u))}</b>님`).join(", ");
+      const extra = uniqUsers.length - Math.min(uniqUsers.length, 2);
+      msg = `${shown}${extra > 0 ? ` 외 ${extra}명` : ""}이 ${esc(msgTail(n.message))}`;
+    } else {
+      msg = esc(msg);
+    }
+
+    // 우측: 팔로워면 맞팔로우 버튼(이미 팔로우 중이면 팔로잉), 그 외엔 콘텐츠 썸네일
     let right = "";
     if (t.key === "follow" && n.from_user) {
-      right = `<button type="button" class="np-follow" data-uid="${esc(n.from_user)}">팔로우</button>`;
+      const done = FOLLOWING.has(n.from_user);
+      right = `<button type="button" class="np-follow ${done ? "done" : ""}" data-uid="${esc(n.from_user)}">${done ? "팔로잉" : "맞팔로우"}</button>`;
     } else if (thumb) {
       right = `<span class="np-thumb"><img src="${esc(thumb)}" alt="" loading="lazy"></span>`;
     } else {
       right = `<span class="np-thumb none">${svg(t.ic)}</span>`;
     }
 
-    return `<a class="np-item ${n.read ? "" : "unread"}" data-id="${n.id}" href="${esc(n.link || "#")}">
-      <span class="np-avawrap">
-        ${avatarHTML(n.from_user)}
-        <span class="np-badge ${t.cls}">${svg(t.ic)}</span>
-      </span>
-      <span class="np-mid">
-        <span class="np-msg">${esc(n.message || "새 활동")}</span>
-        <span class="np-time">${timeAgo(n.created_at)}</span>
-      </span>
-      ${right}
-    </a>`;
+    // 아바타 — 묶음이면 두 명 스택
+    const ava = (uniqUsers.length >= 2)
+      ? `<span class="np-ava-stack">${avatarHTML(uniqUsers[1])}${avatarHTML(uniqUsers[0])}</span>`
+      : avatarHTML(n.from_user);
+
+    // 스와이프 셸: .np-row > (a.np-item + 삭제 버튼)
+    return `<div class="np-row" data-ids="${ids}">
+      <a class="np-item ${unread ? "unread" : ""}" data-id="${n.id}" data-ids="${ids}" href="${esc(n.link || "#")}">
+        <span class="np-avawrap">
+          ${ava}
+          <span class="np-badge ${t.cls}">${svg(t.ic)}</span>
+        </span>
+        <span class="np-mid">
+          <span class="np-msg">${msg}</span>
+          <span class="np-time">${timeAgo(n.created_at)}${g.rows.length > 1 ? ` · ${g.rows.length}건` : ""}</span>
+        </span>
+        ${right}
+      </a>
+      <button type="button" class="np-del" data-ids="${ids}" aria-label="삭제">🗑</button>
+    </div>`;
   }
 
   function render() {
@@ -152,15 +206,57 @@
       el.innerHTML = `<div class="np-empty">아직 알림이 없어요.<br>갈라에서 활동하면 반응이 여기 쌓입니다!</div>`;
       return;
     }
-    // 시간 그룹으로 묶기
+    // 시간 그룹(오늘/이번 주/이전) 안에서 같은 대상·유형끼리 묶는다
     const groups = { "오늘": [], "이번 주": [], "이전": [] };
     rows.forEach(r => groups[bucket(r.created_at)].push(r));
 
     el.innerHTML = Object.entries(groups)
       .filter(([, list]) => list.length)
       .map(([label, list]) =>
-        `<div class="np-group"><div class="np-gtitle">${label}</div>${list.map(rowHTML).join("")}</div>`)
+        `<div class="np-group"><div class="np-gtitle">${label}</div>${buildGroups(list).map(rowHTML).join("")}</div>`)
       .join("");
+    bindSwipe();
+  }
+
+  /* ── 스와이프 삭제 (인스타식: 왼쪽으로 밀면 🗑, 탭하면 그 알림 묶음 삭제) ── */
+  let OPEN_ROW = null;
+  function closeOpenRow() {
+    if (OPEN_ROW) { OPEN_ROW.querySelector(".np-item").style.transform = ""; OPEN_ROW.classList.remove("swiped"); OPEN_ROW = null; }
+  }
+  function bindSwipe() {
+    listEl().querySelectorAll(".np-row").forEach(row => {
+      const item = row.querySelector(".np-item");
+      let x0 = 0, y0 = 0, dx = 0, dragging = false;
+      row.addEventListener("touchstart", (e) => {
+        const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; dragging = false;
+      }, { passive: true });
+      row.addEventListener("touchmove", (e) => {
+        const t = e.touches[0];
+        const mx = t.clientX - x0, my = t.clientY - y0;
+        if (!dragging && Math.abs(mx) > 12 && Math.abs(mx) > Math.abs(my) * 1.4) {
+          dragging = true;
+          row.classList.add("dragging");
+          if (OPEN_ROW && OPEN_ROW !== row) closeOpenRow();
+        }
+        if (!dragging) return;
+        dx = Math.min(0, Math.max(-96, mx + (row.classList.contains("swiped") ? -72 : 0)));
+        item.style.transform = `translateX(${dx}px)`;
+      }, { passive: true });
+      row.addEventListener("touchend", () => {
+        if (!dragging) return;
+        row.classList.remove("dragging");
+        if (dx < -40) { item.style.transform = "translateX(-72px)"; row.classList.add("swiped"); OPEN_ROW = row; }
+        else { item.style.transform = ""; row.classList.remove("swiped"); if (OPEN_ROW === row) OPEN_ROW = null; }
+      });
+    });
+  }
+  async function deleteRow(rowEl, ids) {
+    rowEl.style.height = rowEl.offsetHeight + "px";
+    requestAnimationFrame(() => { rowEl.classList.add("removing"); rowEl.style.height = "0px"; });
+    setTimeout(() => rowEl.remove(), 260);
+    const idNums = ids.split(",").map(Number);
+    ROWS = ROWS.filter(r => !idNums.includes(r.id));
+    await window.supabaseClient.from("notifications").delete().in("id", idNums);
   }
 
   async function markAllRead() {
@@ -187,7 +283,7 @@
       return;
     }
     ROWS = data || [];
-    await loadExtras(ROWS);
+    await Promise.all([loadExtras(ROWS), loadFollowing()]);
     render();
 
     // 페이지를 연 것 = 확인 → 읽음 처리(뱃지 제거). 목록의 unread 표시는 이번 열람 동안 유지.
@@ -209,8 +305,16 @@
 
     document.getElementById("npReadAll").addEventListener("click", markAllRead);
 
-    // 항목 클릭 → 개별 읽음 + 이동 / 팔로우 버튼
+    // 항목 클릭 → 읽음 + 이동 / 맞팔로우 / 스와이프 삭제 버튼
     listEl().addEventListener("click", async (e) => {
+      const del = e.target.closest(".np-del");
+      if (del) {
+        e.preventDefault(); e.stopPropagation();
+        deleteRow(del.closest(".np-row"), del.dataset.ids);
+        OPEN_ROW = null;
+        return;
+      }
+
       const fb = e.target.closest(".np-follow");
       if (fb) {
         e.preventDefault();
@@ -222,14 +326,18 @@
         // 이미 팔로우 중이어도(중복키) 버튼 상태만 바꾼다
         fb.classList.add("done");
         fb.textContent = error && error.code !== "23505" ? "실패" : "팔로잉";
+        if (!error || error.code === "23505") FOLLOWING.add(uid);
         return;
       }
 
       const item = e.target.closest(".np-item");
       if (!item) return;
+      // 스와이프로 열린 행이 있으면 첫 탭은 '닫기'
+      if (OPEN_ROW) { e.preventDefault(); closeOpenRow(); return; }
       if (item.classList.contains("unread")) {
         item.classList.remove("unread");
-        window.supabaseClient.from("notifications").update({ read: true }).eq("id", Number(item.dataset.id));
+        const ids = (item.dataset.ids || item.dataset.id || "").split(",").map(Number).filter(Boolean);
+        if (ids.length) window.supabaseClient.from("notifications").update({ read: true }).in("id", ids);
       }
       const href = item.getAttribute("href");
       if (!href || href === "#") e.preventDefault();
