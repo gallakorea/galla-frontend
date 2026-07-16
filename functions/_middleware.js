@@ -106,6 +106,23 @@ function newsLd(title, desc, image, url, date) {
 }
 function safeIso(d) { try { return new Date(d).toISOString(); } catch { return new Date().toISOString(); } }
 
+// 검색결과에 "galla.im › 갈라뉴스 › 제목" 표시용 빵부스러기 구조화 데이터
+function breadcrumbLd(seo) {
+  const SEC = {
+    "/issue": ["갈라 이슈", `${HOST}/`],
+    "/news": ["갈라뉴스", `${HOST}/search.html`],
+    "/plaza_detail": ["갈라 광장", `${HOST}/plaza.html`],
+    "/predict-market": ["갈라예측", `${HOST}/galla-predict.html`],
+  };
+  let path = "/";
+  try { path = new URL(seo.canonical).pathname; } catch {}
+  const items = [{ "@type": "ListItem", position: 1, name: "GALLA 갈라", item: `${HOST}/` }];
+  const sec = SEC[path];
+  if (sec) items.push({ "@type": "ListItem", position: 2, name: sec[0], item: sec[1] });
+  items.push({ "@type": "ListItem", position: items.length + 1, name: clip(seo.h1, 60), item: seo.canonical });
+  return JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: items });
+}
+
 // HTMLRewriter로 <head> 메타 교체 + 본문 스냅샷 주입
 function rewrite(res, seo) {
   const metaHtml =
@@ -122,7 +139,8 @@ function rewrite(res, seo) {
     `<meta name="twitter:title" content="${esc(seo.title)}">` +
     `<meta name="twitter:description" content="${esc(seo.desc)}">` +
     `<meta name="twitter:image" content="${esc(seo.image)}">` +
-    `<script type="application/ld+json">${seo.jsonld}</script>`;
+    `<script type="application/ld+json">${seo.jsonld}</script>` +
+    `<script type="application/ld+json">${breadcrumbLd(seo)}</script>`;
 
   // 크롤러가 읽을 본문 스냅샷 — 화면엔 숨김(JS 앱이 실제 UI 렌더). aria-hidden으로 접근성 중복 방지.
   const snapshot =
