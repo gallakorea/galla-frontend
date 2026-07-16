@@ -852,3 +852,39 @@ body.shorts-open .header { display: none !important; }
 .site-footer .sf-social a{ color:#6b7488; font-size:12px; text-decoration:none; }
 .site-footer .sf-social a:hover{ color:#c9d1e0; }
 .site-footer .sf-copy{ color:#565e70; font-size:11px; margin-top:6px; line-height:1.5; }
+
+/* =========================================================
+   피드 로딩 스켈레톤 — 데이터 도착 전 카드 자리를 잡아둔다.
+   목적: ①빈 피드 위로 푸터가 튀어오르는 레이아웃 시프트 차단
+         ②홈 재진입(스플래시는 세션 1회라 안 뜸) 시 빈 화면 대신 로딩감 제공
+   loadBest()의 innerHTML='' 로 자연 제거되므로 JS 훅 불필요.
+   ========================================================= */
+.sk-card{
+  background:#0d0d0d; border:1px solid #1e1e1e; margin:0 16px 24px; border-radius:16px;
+  overflow:hidden; pointer-events:none;
+}
+.sk-card .sk-top{ display:flex; align-items:center; gap:10px; padding:12px 14px; }
+.sk-card .sk-av{ width:34px; height:34px; border-radius:50%; flex:0 0 auto; }
+.sk-card .sk-lines{ display:flex; flex-direction:column; gap:6px; flex:1; min-width:0; }
+.sk-card .sk-lines i{ height:9px; border-radius:5px; display:block; }
+.sk-card .sk-lines i:first-child{ width:34%; }
+.sk-card .sk-lines i:last-child{ width:56%; height:8px; }
+.sk-card .sk-media{ width:100%; aspect-ratio:4/5; }   /* .card-media 와 동일 비율 → 시프트 0 */
+.sk-card .sk-bars{ display:flex; flex-direction:column; gap:8px; padding:14px; }
+.sk-card .sk-bars i{ height:11px; border-radius:6px; display:block; }
+.sk-card .sk-bars i:first-child{ width:78%; }
+.sk-card .sk-bars i:last-child{ width:45%; }
+
+/* 은은한 시머 — 정지된 회색 덩어리보다 '로딩 중'이 읽힌다 */
+.sk-card .sk-av,
+.sk-card .sk-lines i,
+.sk-card .sk-media,
+.sk-card .sk-bars i{
+  background:linear-gradient(100deg,#141414 30%,#1f2230 50%,#141414 70%);
+  background-size:220% 100%;
+  animation:sk-shimmer 1.35s ease-in-out infinite;
+}
+@keyframes sk-shimmer{ 0%{ background-position:170% 0 } 100%{ background-position:-70% 0 } }
+@media (prefers-reduced-motion:reduce){
+  .sk-card .sk-av,.sk-card .sk-lines i,.sk-card .sk-media,.sk-card .sk-bars i{ animation:none; background:#171717 }
+}
