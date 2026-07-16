@@ -123,6 +123,7 @@ function render(){
       ${STATE?.is_jackpot?'<span class="pm-jp-badge">🎁 보너스</span>':''}
       ${m.resolved?'<span class="pm-badge-win">✔ 정산 완료</span>':(closed?'<span>⏳ 마감 · 정산 대기</span>':`<span class="pm-badge-live"><i></i>LIVE · ${timeLeft(m.close_at)}</span>`)}
     </div>
+    ${m.image_url?`<div class="pb-img"><img src="${esc(m.image_url)}" alt="" loading="lazy" onerror="this.closest('.pb-img')?.remove()"></div>`:''}
     <div class="pb-q">${esc(m.question)}</div>
     <div class="pmd-creator" id="pmdCreator" hidden></div>
     ${m.description?`<div class="pb-desc">${esc(m.description)}</div>`:''}
