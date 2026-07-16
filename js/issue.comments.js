@@ -552,6 +552,28 @@ function spawnCombatText(unit, text, kind) {
   unit.appendChild(el);
   setTimeout(() => el.remove(), 1100);
 }
+
+/* 전투 보상 연출 — battle_action 반환의 reward/ko를 GP 배너로. (서버가 무료 GP 지급) */
+function showBattleReward(bd) {
+  if (!bd || !bd.ok) return;
+  const FX = window.BattleFX;
+  const rw = bd.reward || {};
+  const gp = Number(rw.gp || 0);
+  if (gp > 0) {
+    const label = rw.kind === "ko"    ? `💥 격파 성공! +${gp} GP · 전공 +1`
+                : rw.kind === "guard" ? `🛡 아군 수호! +${gp} GP`
+                : `+${gp} GP`;
+    FX?.banner?.(label, "cheer");
+    FX?.haptic?.("cheer");
+    document.dispatchEvent(new CustomEvent("galla:gp-changed"));
+  } else if (bd.ko && bd.refarm) {
+    FX?.banner?.("💥 격파! (재격파는 보상 없음)", "info");
+  } else if (bd.ko) {
+    FX?.banner?.("💥 격파! (오늘 전투 보상 한도 도달)", "info");
+  } else if ((rw.kind === "guard") && gp === 0) {
+    FX?.banner?.("🛡 수호! (오늘 전투 보상 한도 도달)", "info");
+  }
+}
 /* 피격/힐 임팩트 */
 function hitFx(unit, kind) {
   if (!unit) return;
@@ -1643,6 +1665,7 @@ function bindEvents() {
           FX.haptic("heal");
           if (Number(unit.dataset.hp) >= 100) { FX.banner("💪 풀피 지원!", "cheer"); }
         }
+        showBattleReward(data);   // 🛡 수호 보상
         bumpCombo();
         renderMorale();
         renderHonors();
@@ -1964,6 +1987,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
         FX.haptic("cheer");
       }
     }
+    showBattleReward(bd);   // 💥 격파 / 🛡 수호 보상
     bumpCombo();
     renderMorale();
     renderWarDashboard();
