@@ -434,9 +434,12 @@
     const { data, error } = await sb.rpc("duel_respond", { p_duel: D.id, p_accept: accept });
     if (error || !data?.ok) {
       const r = data?.reason;
-      alert(reason(r) || "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      // 사유가 없다 = RPC 자체가 실패(네트워크·세션만료·서버예외). 원인 없이 "실패"만 띄우면
+      // 사용자도 우리도 못 고친다 → 콘솔에 원문 남기고, 화면엔 짧은 힌트를 붙인다.
+      if (!r) console.error("[duel_respond] failed", { error, data, duel: D.id, accept });
+      alert(reason(r) || `요청을 처리하지 못했어요.\n(${error?.message || "알 수 없는 오류"})\n새로고침 후 다시 시도해 주세요.`);
       if (btn) { btn.disabled = false; btn.textContent = btn.dataset.o || "다시 시도"; }
-      if (STALE.has(r)) renderArena(D.id);   // 이미 끝난 결투 등 → 갇히지 않게 최신 상태로
+      if (!r || STALE.has(r)) renderArena(D.id);   // 끝난 결투·원인불명 → 갇히지 않게 최신 상태로
       return;
     }
     renderArena(D.id);
