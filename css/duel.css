@@ -212,3 +212,9 @@
 .verdict-card { text-align: center; color: #eef0f4; font-size: 13.5px; line-height: 1.5;
   background: linear-gradient(180deg,#1a1626,#0f0f14); border-color: rgba(201,209,224,.25); }
 .verdict-card b { color: #c9d1e0; }
+
+/* 종료 화면 — 변론 없이 끝난 판(도망/노쇼)은 빈 '변론 기록' 대신 안내,
+   당사자에겐 재도전 버튼을 줘서 로비로 되돌아가 헤매지 않게 */
+.closed-note { color: #9aa3b5; font-size: 13px; text-align: center; padding: 16px 12px; }
+.closed-acts { display: flex; gap: 8px; margin-top: 10px; }
+.closed-acts .duel-btn { flex: 1; }

@@ -49,7 +49,15 @@
     not_fighter: "파이터만 발언할 수 있어요.", is_party: "당사자는 참여할 수 없어요.",
     time_over: "시간이 종료됐어요.", not_live: "지금은 대결 중이 아니에요.",
     unauthorized: "로그인이 필요합니다.",
+    // ↓ 누락돼 있어서 그냥 "실패"로만 뜨던 사유들 (특히 not_pending: 이미 끝난 결투에 수락)
+    not_pending: "이미 종료되었거나 상대가 취소한 일기토예요.",
+    not_found: "없는 일기토예요. 이미 삭제됐을 수 있어요.",
+    not_opponent: "이 일기토의 상대가 아니에요.",
+    not_scheduled: "예약 상태가 아니에요.", too_early: "아직 입장 시간이 아니에요.",
+    already_voted: "이미 투표했어요.",
   };
+  // 서버 상태와 화면이 어긋난 경우 — 알림만 띄우고 멈추면 사용자가 갇힌다. 최신 상태로 다시 그린다.
+  const STALE = new Set(["not_pending", "not_found", "not_scheduled", "not_live", "time_over"]);
   const reason = (r) => REASON[r];
 
   // ─────────── 라우팅 ───────────
@@ -420,6 +428,20 @@
   }
 
   // ═══════════ 상태별 단순 화면 ═══════════
+  /* 수락/도망 공통 — 중복 클릭 차단 + 상태 어긋나면 알림 후 최신 화면으로 복구 */
+  async function respond(accept, btn) {
+    if (btn) { btn.disabled = true; btn.dataset.o = btn.textContent; btn.textContent = "처리 중…"; }
+    const { data, error } = await sb.rpc("duel_respond", { p_duel: D.id, p_accept: accept });
+    if (error || !data?.ok) {
+      const r = data?.reason;
+      alert(reason(r) || "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      if (btn) { btn.disabled = false; btn.textContent = btn.dataset.o || "다시 시도"; }
+      if (STALE.has(r)) renderArena(D.id);   // 이미 끝난 결투 등 → 갇히지 않게 최신 상태로
+      return;
+    }
+    renderArena(D.id);
+  }
+
   function renderPending() {
     const box = root();
     box.innerHTML = ringHeader() + `<div id="pa"></div>`;
@@ -430,8 +452,8 @@
         <div class="act-msg sub">수락하면 같은 판돈이 잠깁니다. 거절(도망) 시 위약금 200GP를 뺏겨요.</div>
         <div class="act-btns"><button class="duel-btn primary" id="acc">⚔️ 수락하고 참전</button>
         <button class="duel-btn ghost" id="dec">도망가기</button></div></div>`;
-      $("#acc").onclick = async () => { const { data } = await sb.rpc("duel_respond", { p_duel: D.id, p_accept: true }); if (!data?.ok) return alert(reason(data?.reason) || "실패"); renderArena(D.id); };
-      $("#dec").onclick = async () => { if (!confirm("도망가면 위약금 200GP를 잃어요. 정말?")) return; const { data } = await sb.rpc("duel_respond", { p_duel: D.id, p_accept: false }); if (!data?.ok) return alert(reason(data?.reason) || "실패"); renderArena(D.id); };
+      $("#acc").onclick = () => respond(true, $("#acc"));
+      $("#dec").onclick = () => { if (confirm("도망가면 위약금 200GP를 잃어요. 정말?")) respond(false, $("#dec")); };
     } else {
       pa.innerHTML = `<div class="duel-card act-card"><div class="act-msg">⏳ 상대의 수락을 기다리는 중… (판돈 ${D.stake} 잠김)</div></div>`;
       pollStatus();
@@ -502,8 +524,8 @@
     else if (D.status === "noshow") banner = `🏳️ ${esc(nk(D.fled_by))} 노쇼 — ${esc(nk(D.winner))} 부전승`;
     else if (D.status === "declined") banner = `🏳️ ${esc(nk(D.fled_by))} 도망 — 위약금 몰수`;
     else banner = "무효 처리됨";
-    const log = (msgs || []).map(m => `<div class="rmsg ${m.side}"><span class="rmsg-body">${esc(m.body)}</span></div>`).join("")
-      || `<div class="duel-empty small">변론 기록이 없어요.</div>`;
+    const hasLog = (msgs || []).length > 0;
+    const log = (msgs || []).map(m => `<div class="rmsg ${m.side}"><span class="rmsg-body">${esc(m.body)}</span></div>`).join("");
     const verdictCard = (D.judge === "ai" && D.verdict)
       ? `<div class="duel-card verdict-card">🤖 <b>AI 심판</b> · ${esc(D.verdict)}</div>` : "";
     box.innerHTML = ringHeader() + `
@@ -512,8 +534,17 @@
       ${(D.status === "finished" || D.status === "noshow") ? `<div class="duel-card result-card">
         <div class="rc-bar"><div class="rc-fill chal" style="width:${cp}%">${c}</div><div class="rc-fill opp" style="width:${100 - cp}%">${o}</div></div>
         <div class="rc-legend"><span>🔵 ${esc(nk(D.challenger))} ${cp}%</span><span>🔴 ${esc(nk(D.opponent))} ${100 - cp}%</span></div></div>` : ""}
-      <div class="ring-label">📜 변론 기록</div><div class="ring-stream closed">${log}</div>
-      <a class="duel-btn ghost" href="duel.html">로비로</a>`;
+      ${hasLog ? `<div class="ring-label">📜 변론 기록</div><div class="ring-stream closed">${log}</div>`
+               : `<div class="duel-card closed-note">이 일기토는 변론 없이 종료됐어요.</div>`}
+      <div class="closed-acts">
+        ${D._isParty && D.status === "declined" ? `<button class="duel-btn primary" id="again">⚔️ 다시 신청</button>` : ""}
+        <a class="duel-btn ghost" href="duel.html">로비로</a>
+      </div>`;
+    // 도망으로 끝난 판은 재도전이 자연스러운 다음 행동 — 로비로 되돌아가 헤매지 않게
+    $("#again") && ($("#again").onclick = () => {
+      const foe = D.challenger === ME ? D.opponent : D.challenger;
+      location.href = `duel.html?challenge=${foe}&issue=${D.issue_id || ""}`;
+    });
   }
 
   boot();
