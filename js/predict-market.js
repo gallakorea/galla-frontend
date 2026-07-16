@@ -124,6 +124,7 @@ function render(){
       ${m.resolved?'<span class="pm-badge-win">✔ 정산 완료</span>':(closed?'<span>⏳ 마감 · 정산 대기</span>':`<span class="pm-badge-live"><i></i>LIVE · ${timeLeft(m.close_at)}</span>`)}
     </div>
     <div class="pb-q">${esc(m.question)}</div>
+    <div class="pmd-creator" id="pmdCreator" hidden></div>
     ${m.description?`<div class="pb-desc">${esc(m.description)}</div>`:''}
     ${m.issue_id?`<a class="pb-issue-link" href="issue.html?id=${m.issue_id}">⚔️ 원본 이슈에서 진영 대결 보기 →</a>`:''}
 
@@ -161,9 +162,32 @@ function render(){
   renderPanel(closed);
   renderResolved();
   renderAdmin(closed, canResolve);
+  renderCreatorBlock(m);
   loadFeed();
   bindTabs();
   loadTab('comments');
+}
+
+/* 크리에이터 블록 — 아바타·등급·활동명(탭=팝오버)·팔로우 (이슈 상세와 동일 급) */
+async function renderCreatorBlock(m){
+  const box=document.getElementById('pmdCreator');
+  if(!box || !m.created_by) return;
+  if(window.GALLA_userMap) await window.GALLA_userMap([m.created_by]);
+  const u=(window.__GU_CACHE||{})[m.created_by]||{};
+  const nick=u.nickname||'갈라 크리에이터';
+  const av=u.avatar_url
+    ? `<img src="${esc(window.GALLA_avatarSrc?window.GALLA_avatarSrc(u.avatar_url):u.avatar_url)}" alt="" onerror="this.style.display='none'">`
+    : `<span class="pza-init">${esc(nick.trim().charAt(0)||'갈')}</span>`;
+  const tier=window.GALLA_tierIcon?window.GALLA_tierIcon(u.level):'🌱';
+  box.hidden=false;
+  box.innerHTML=`
+    <span class="pza-av" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${av}</span>
+    <span class="pza-info">
+      <span class="pza-name" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}"><span class="pza-tier">${tier}</span>${esc(nick)}</span>
+      <span class="pza-sub">이 예측을 만든 크리에이터</span>
+    </span>
+    <button type="button" class="js-follow pza-follow" data-uid="${esc(m.created_by)}">+ 팔로우</button>`;
+  window.GALLA_bindFollow && window.GALLA_bindFollow(box);
 }
 
 function renderHero(){

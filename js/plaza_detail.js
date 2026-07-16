@@ -125,6 +125,67 @@ let myVote = 0;          // 서버 기준
 let lastRenderedVote = 0; // 🔥 UI 기준 마지막 투표 상태
 let isVotingNow = false; // 🔥 투표 중 loadVoteState 차단
 
+/* 작성자 블록 — 아바타·등급·활동명(탭=팝오버)·팔로우·응원. 봇 수집글(user_id null)은 닉네임만 */
+async function renderAuthorBlock(data) {
+  if (!postMetaEl || document.getElementById("pz-author")) return;
+  const wrap = document.createElement("div");
+  wrap.id = "pz-author"; wrap.className = "pz-author";
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  if (data.user_id) {
+    if (window.GALLA_userMap) await window.GALLA_userMap([data.user_id]);
+    const u = (window.__GU_CACHE || {})[data.user_id] || {};
+    const nick = u.nickname || data.nickname || "갈라이안";
+    const av = u.avatar_url
+      ? `<img src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url) : u.avatar_url)}" alt="" onerror="this.style.display='none'">`
+      : `<span class="pza-init">${esc(nick.trim().charAt(0) || "갈")}</span>`;
+    const tier = window.GALLA_tierIcon ? window.GALLA_tierIcon(u.level) : "🌱";
+    wrap.innerHTML = `
+      <span class="pza-av" data-user-id="${esc(data.user_id)}" data-user-nick="${esc(nick)}">${av}</span>
+      <span class="pza-info">
+        <span class="pza-name" data-user-id="${esc(data.user_id)}" data-user-nick="${esc(nick)}">
+          <span class="pza-tier">${tier}</span>${esc(nick)}
+        </span>
+        <span class="pza-sub">광장 작성자</span>
+      </span>
+      <button type="button" class="js-follow pza-follow" data-uid="${esc(data.user_id)}">+ 팔로우</button>
+      <button type="button" class="pza-cheer" id="pzCheer">💝 응원하기</button>`;
+  } else {
+    // 봇/수집 글 — 표시용 닉네임만 (팔로우·응원 불가)
+    wrap.innerHTML = `
+      <span class="pza-av"><span class="pza-init">${esc([...(data.nickname || "갈").trim()][0] || "갈")}</span></span>
+      <span class="pza-info">
+        <span class="pza-name">${esc(data.nickname || "광장 요정")}</span>
+        <span class="pza-sub">커뮤 소식 수집글</span>
+      </span>`;
+  }
+  postMetaEl.parentNode.insertBefore(wrap, postMetaEl);
+  window.GALLA_bindFollow && window.GALLA_bindFollow(wrap);
+  const cheer = wrap.querySelector("#pzCheer");
+  if (cheer) cheer.addEventListener("click", () => {
+    const nick = wrap.querySelector(".pza-name")?.dataset.userNick || "작성자";
+    if (window.openDonatePlaza) window.openDonatePlaza(data.id, nick);
+  });
+}
+
+/* 응원(슈퍼챗) 스트립 — 후원이 있으면 본문 아래 표시해 후원 촉진 */
+window.GALLA_renderPlazaDonations = async function (postId) {
+  try {
+    const { data } = await supabase.rpc("plaza_donations", { p_post_id: postId, p_limit: 10 });
+    let box = document.getElementById("pz-donates");
+    if (!data?.ok || !data.count) { box?.remove(); return; }
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "pz-donates"; box.className = "pz-donates";
+      document.querySelector(".plaza-post .post-inner")?.appendChild(box);
+    }
+    const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    box.innerHTML = `<div class="pzd-head">💝 응원 <b>${data.count}</b> · 총 <b>${(data.total || 0).toLocaleString()}원</b></div>
+      <div class="pzd-list">${(data.rows || []).slice(0, 5).map(r =>
+        `<div class="pzd-row"><b>${esc(r.name)}</b> ${(r.amount || 0).toLocaleString()}원${r.message ? ` · <span>${esc(r.message)}</span>` : ""}</div>`).join("")}</div>`;
+  } catch (_) {}
+};
+
 async function fetchPostDetail() {
   // 조회수 +1 (비동기, 실패 무시)
   supabase.rpc("increment_plaza_view", { p_post_id: postId }).then(() => {});
@@ -143,17 +204,12 @@ async function fetchPostDetail() {
   if (postTitleEl) postTitleEl.textContent = data.title;
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
   if (postMetaEl) {
-    postMetaEl.textContent =
-      `${data.nickname} · ${data.category} · 조회 ${(data.view_count || 0) + 1}`;
-    if (data.user_id) postMetaEl.setAttribute("data-profile-uid", data.user_id);
+    postMetaEl.textContent = `${data.category} · 조회 ${(data.view_count || 0) + 1}`;
   }
-  // 작성자 팔로우 버튼 (post-meta 옆)
-  if (data.user_id && postMetaEl && !document.getElementById("pz-follow")) {
-    const fb = document.createElement("button");
-    fb.id = "pz-follow"; fb.className = "js-follow pz-follow"; fb.dataset.uid = data.user_id;
-    fb.textContent = "+ 팔로우";
-    postMetaEl.parentNode.insertBefore(fb, postMetaEl.nextSibling);
-  }
+  // 작성자 블록 (이슈 상세와 동일 급): 아바타 + 등급 + 활동명 + 팔로우 + 💝응원
+  renderAuthorBlock(data);
+  // 응원(슈퍼챗) 스트립
+  window.GALLA_renderPlazaDonations && window.GALLA_renderPlazaDonations(data.id);
 
   // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제)
   const moreBtn = document.getElementById("header-more-btn");

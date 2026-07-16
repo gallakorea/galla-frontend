@@ -161,12 +161,18 @@
     const anon = sheet.querySelector("#ds-anon").checked;
     const go = sheet.querySelector("#ds-go"); go.disabled = true; go.textContent = "처리 중…";
 
+    // 대상: 이슈 or 광장 글 — RPC/인자만 다르고 정책(20/50/30)은 동일
+    const isPlaza = !!cur.plazaId;
+    const args = isPlaza
+      ? { p_post_id: cur.plazaId, p_amount: a, p_message: msg, p_anonymous: anon }
+      : { p_issue_id: cur.issueId, p_amount: a, p_message: msg, p_anonymous: anon };
+
     // ① GC 잔액이 충분하면 갈라코인으로 즉시 후원 (표준 경로)
     if (GC_BAL >= a) {
-      const { data, error } = await sb().rpc("gc_donate", { p_issue_id: cur.issueId, p_amount: a, p_message: msg, p_anonymous: anon });
+      const { data, error } = await sb().rpc(isPlaza ? "gc_donate_plaza" : "gc_donate", args);
       if (error || !data?.ok) {
         const reason = data?.reason;
-        alert(reason === "self" ? "본인이 발의한 이슈는 후원할 수 없어요." :
+        alert(reason === "self" ? "본인이 쓴 글은 후원할 수 없어요." :
               reason === "unauthorized" ? "로그인이 필요해요." :
               reason === "insufficient" ? "갈라코인 잔액이 부족해요." : "후원에 실패했어요.");
         go.disabled = false; refreshGo(); return;
@@ -180,20 +186,22 @@
           <div class="ic">💝</div>
           <h4>후원 완료!</h4>
           <p>${won(a)}가 갈라코인으로 전달됐어요.<br>
-          발의자 <b>${won(data.net)}</b> · 기부 <b>${won(data.charity)}</b><br>
+          ${isPlaza ? "작성자" : "발의자"} <b>${won(data.net)}</b> · 기부 <b>${won(data.charity)}</b><br>
           남은 갈라코인 ${GC_BAL.toLocaleString()} GC</p>
         </div>
         <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
       sheet.querySelector("#ds-close").addEventListener("click", close);
-      renderList(cur.issueId);   // 슈퍼챗 목록 즉시 갱신
+      // 슈퍼챗 목록 즉시 갱신
+      if (isPlaza) window.GALLA_renderPlazaDonations?.(cur.plazaId);
+      else renderList(cur.issueId);
       return;
     }
 
     // ② GC 부족 — 건별 결제(pending, PG 연동 예정)
-    const { data, error } = await sb().rpc("donate_begin", { p_issue_id: cur.issueId, p_amount: a, p_message: msg, p_anonymous: anon });
+    const { data, error } = await sb().rpc(isPlaza ? "plaza_donate_begin" : "donate_begin", args);
     if (error || !data?.ok) {
       const reason = data?.reason;
-      alert(reason === "self" ? "본인이 발의한 이슈는 후원할 수 없어요." :
+      alert(reason === "self" ? "본인이 쓴 글은 후원할 수 없어요." :
             reason === "unauthorized" ? "로그인이 필요해요." : "후원 준비에 실패했어요.");
       go.disabled = false; refreshGo(); return;
     }
@@ -210,17 +218,20 @@
       <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
     sheet.querySelector("#ds-close").addEventListener("click", close);
   }
-  async function open(issueId, creatorName) {
-    build(); cur = { issueId, creatorName };
+  async function openWith(c) {
+    build(); cur = c;
     await loadGc();
     renderForm();
     dim.classList.add("open");
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
+  async function open(issueId, creatorName) { return openWith({ issueId, creatorName }); }
   function close() {
     sheet?.classList.remove("open"); dim?.classList.remove("open");
   }
   window.openDonate = open;
+  // 광장 작성자 응원 — 같은 시트, plaza RPC 사용
+  window.openDonatePlaza = (postId, creatorName) => openWith({ plazaId: postId, creatorName });
 
   // ── 슈퍼챗 목록 렌더 + 버튼 배선 ──
   async function renderList(issueId) {
