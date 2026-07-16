@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>오프라인 - GALLA</title>
+  <link rel="icon" href="/assets/app-icons/favicon-32.png">
+  <style>
+    :root { color-scheme: dark; }
+    * { margin: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) #0a0a0b;
+      color: #f2f3f7; font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 24px; gap: 8px;
+    }
+    .logo { width: 96px; height: auto; margin-bottom: 18px; opacity: .95; }
+    h1 { font-size: 20px; font-weight: 900; }
+    p { font-size: 14px; color: #9a9aa4; line-height: 1.6; max-width: 320px; }
+    .icon { font-size: 46px; margin-bottom: 6px; }
+    button {
+      margin-top: 22px; padding: 13px 26px; border: none; border-radius: 999px; cursor: pointer;
+      font-size: 15px; font-weight: 900; color: #fff;
+      background: linear-gradient(135deg, #3d6bff, #6d4bff);
+      box-shadow: 0 6px 20px rgba(74,123,255,.4);
+    }
+    button:active { transform: scale(.97); }
+  </style>
+</head>
+<body>
+  <img class="logo" src="/assets/logo.png" alt="GALLA" onerror="this.style.display='none'">
+  <div class="icon">📡</div>
+  <h1>인터넷 연결이 끊겼어요</h1>
+  <p>네트워크에 다시 연결되면 갈라의 최신 여론·예측·뉴스를 이어서 볼 수 있어요.</p>
+  <button onclick="location.reload()">다시 시도</button>
+  <script>
+    // 온라인 복귀 시 자동 새로고침
+    window.addEventListener('online', () => location.reload());
+  </script>
+<script src="/js/pwa.js?v=071967"></script>
+</body>
+</html>

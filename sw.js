@@ -1,0 +1,96 @@
+/* =========================================================
+   GALLA Service Worker — PWA 오프라인 셸 + 즉시 재방문 로딩
+   설계 원칙(_headers 캐시 정책과 충돌 없이 보완):
+   - 외부 오리진(Supabase REST/RT/Storage/Functions, CDN 이미지·영상)은 손대지 않음(항상 네트워크)
+   - 비 GET 요청은 통과
+   - HTML 문서: network-first → 실패 시 캐시 → 최후 offline.html
+   - 같은 오리진 정적 자원(css/js/vendor/assets): cache-first + 백그라운드 갱신(SWR)
+     ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
+   - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
+   ========================================================= */
+const SW_VERSION = 'galla-sw-v1';
+const STATIC_CACHE = 'galla-static-' + SW_VERSION;
+const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
+
+// 안정 URL만 사전 캐시(버전 박힌 자원은 런타임에 캐시)
+const PRECACHE = ['/offline.html', '/assets/logo.png', '/manifest.webmanifest'];
+
+// 캐시하지 않을 같은-오리진 경로(민감/동적)
+const NO_CACHE_PATHS = [
+  '/settings', '/account-edit', '/auth/', '/admin', '/login', '/reset',
+  '/change-password', '/confirm', '/withdraw', '/imgproxy'
+];
+const isSensitive = (p) => NO_CACHE_PATHS.some(x => p.startsWith(x));
+
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+  e.waitUntil(caches.open(STATIC_CACHE).then(c => c.addAll(PRECACHE).catch(() => {})));
+});
+
+self.addEventListener('activate', (e) => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter(k => k.startsWith('galla-') && !k.endsWith(SW_VERSION))
+      .map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+// 페이지에서 새 SW 즉시 적용 트리거
+self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
+
+self.addEventListener('fetch', (e) => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+
+  let url;
+  try { url = new URL(req.url); } catch { return; }
+
+  // 외부 오리진(Supabase·CDN 등)은 서비스워커 개입 없음
+  if (url.origin !== self.location.origin) return;
+  // 민감 경로는 항상 네트워크
+  if (isSensitive(url.pathname)) return;
+
+  const isDoc = req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html');
+
+  if (isDoc) {
+    // HTML: network-first → 캐시 → offline
+    e.respondWith((async () => {
+      try {
+        const fresh = await fetch(req);
+        if (fresh && fresh.ok) {
+          const c = await caches.open(PAGE_CACHE);
+          c.put(req, fresh.clone());
+        }
+        return fresh;
+      } catch {
+        const cached = await caches.match(req, { ignoreSearch: true });
+        return cached || (await caches.match('/offline.html')) || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // 정적 자원: cache-first + stale-while-revalidate
+  e.respondWith((async () => {
+    const cached = await caches.match(req);
+    if (cached) {
+      fetch(req).then(res => {
+        if (res && res.ok) caches.open(STATIC_CACHE).then(c => c.put(req, res));
+      }).catch(() => {});
+      return cached;
+    }
+    try {
+      const res = await fetch(req);
+      if (res && res.ok && (res.type === 'basic' || res.type === 'default')) {
+        const c = await caches.open(STATIC_CACHE);
+        c.put(req, res.clone());
+      }
+      return res;
+    } catch {
+      return Response.error();
+    }
+  })());
+});
