@@ -1629,3 +1629,24 @@ body.kb-open .battle-input-bar {
 .fl-settled.pro  { background: linear-gradient(135deg, rgba(51,86,255,.35), rgba(51,86,255,.12)); border: 1px solid rgba(77,163,255,.55); }
 .fl-settled.con  { background: linear-gradient(135deg, rgba(255,79,110,.35), rgba(255,79,110,.12)); border: 1px solid rgba(255,92,92,.55); }
 .fl-settled.draw { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.18); color: #c9d1e0; }
+
+/* 🛡 보호막 — 지키는 행위에 아이템을 쓰게 유도하는 액션 + 상태 표시 */
+.action-shield{
+  display:inline-flex; align-items:center; gap:3px; cursor:pointer;
+  padding:4px 9px; border-radius:99px; font-size:11px; font-weight:800;
+  color:#9fc6ff; background:rgba(61,107,255,.12); border:1px solid rgba(61,107,255,.35);
+  transition:.15s; white-space:nowrap;
+}
+.action-shield:hover{ background:rgba(61,107,255,.24); color:#fff; }
+.action-shield:active{ transform:scale(.96); }
+/* 보호막 중인 유닛 — 공격자가 '왜 반만 들어가지?'를 즉시 알게 */
+.comment.shielded, .reply.shielded{
+  box-shadow:0 0 0 1px rgba(61,107,255,.45), 0 0 18px rgba(61,107,255,.18);
+}
+.shield-badge{
+  margin-left:4px; font-size:11px; vertical-align:1px;
+  filter:drop-shadow(0 0 4px rgba(61,107,255,.9));
+  animation:shieldPulse 2s ease-in-out infinite;
+}
+@keyframes shieldPulse{ 0%,100%{opacity:.75} 50%{opacity:1} }
+@media (prefers-reduced-motion:reduce){ .shield-badge{ animation:none } }

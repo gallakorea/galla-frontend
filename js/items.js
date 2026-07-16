@@ -13,6 +13,10 @@
       desc: "오늘의 적진 침투 한도 +1 (기본 3회)" },
     { key: "reply_pass",      emoji: "🗯️", name: "대댓글 연장권", price: 300, group: "battle", kind: "consumable",
       desc: "오늘의 대댓글 한도 +15 (기본 40회)" },
+    { key: "shield",          emoji: "🛡", name: "보호막", price: 400, group: "battle", kind: "consumable",
+      desc: "우리 진영 댓글에 10분간 보호막. 받는 피해가 절반(14→7)으로 줄어듭니다. 상대의 ⚡파쇄엔 뚫립니다." },
+    { key: "breaker",         emoji: "⚡", name: "파쇄", price: 500, group: "battle", kind: "consumable",
+      desc: "상대의 🛡보호막을 부수고 정상 피해로 공격합니다. 보호막이 없으면 소모되지 않습니다." },
     { key: "revive",          emoji: "✨", name: "부활권", price: 800, group: "battle", kind: "consumable",
       desc: "격파당한 내 댓글을 HP 50으로 부활" },
     // ── 꾸미기 ──

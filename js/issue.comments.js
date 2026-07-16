@@ -38,6 +38,52 @@ function markAction(commentId, action) {
 /* ⚡ 쿨다운 리셋권 — 쿨다운에 걸렸을 때 보유 시 사용 제안.
    승인되면 RESET_ARMED에 표시 → battle_action 호출에 p_use_reset 전달(서버가 소비) */
 const RESET_ARMED = new Set();
+/* 🛡↔⚡ 창과 방패 — 보호막 낀 상대를 칠 때 ⚡파쇄를 쓸지 그 자리에서 묻는다.
+   (쓰면 방패를 부수고 정상 피해, 안 쓰면 절반 피해로 그냥 때림 — 선택은 유저 몫) */
+const BREAK_ARMED = new Set();
+async function offerBreaker(commentId) {
+  try {
+    const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+    const qty = inv.breaker || 0;
+    if (qty <= 0) {
+      alert(`🛡 상대가 보호막 중 — 피해가 절반(${Math.ceil(BATTLE_DMG.attack / 2)})만 들어갑니다.\n⚡ 파쇄가 있으면 방패를 부수고 ${BATTLE_DMG.attack} 전부 넣을 수 있어요. (GP 상점)`);
+      return false;
+    }
+    if (!confirm(`🛡 상대가 보호막 중 (피해 절반).\n⚡ 파쇄로 방패를 부수고 공격할까요? (보유 ${qty}개)`)) return false;
+    BREAK_ARMED.add(String(commentId));
+    return true;
+  } catch (_) { return false; }
+}
+/* 이 유닛이 보호막 중인지 — thread_shields(root:uid) 키맵 */
+function isShielded(unit) {
+  if (!unit) return false;
+  const root = unit.closest(".comment");
+  const uid = unit.dataset.uid;
+  if (!root || !uid) return false;
+  return !!SHIELDS[`${root.dataset.id}:${uid}`];
+}
+let SHIELDS = {};
+/* 활성 보호막을 서버 기준으로 다시 읽어 화면에 반영 (10분 만료라 주기적으로도 갱신) */
+async function refreshShields() {
+  try {
+    const { data } = await window.supabaseClient.rpc("thread_shields", { p_issue: window.CURRENT_ISSUE_ID });
+    SHIELDS = data || {};
+  } catch (_) { SHIELDS = {}; }
+  paintShields();
+}
+/* 보호막 상태를 유닛에 표시 — 공격자가 '왜 반만 들어가지?'를 바로 알게 */
+function paintShields() {
+  document.querySelectorAll(".comment, .reply").forEach(el => {
+    const on = isShielded(el);
+    el.classList.toggle("shielded", on);
+    let b = el.querySelector(":scope > .head .shield-badge");
+    if (on && !b) {
+      const head = el.querySelector(":scope > .head .user");
+      head && head.insertAdjacentHTML("beforeend", `<span class="shield-badge" title="보호막 — 받는 피해 절반">🛡</span>`);
+    } else if (!on && b) b.remove();
+  });
+}
+
 async function offerCooldownReset(commentId, action, waitSec) {
   try {
     const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
@@ -135,6 +181,9 @@ export async function initCommentSystem(issueId) {
   bindEvents();
   initBattleFeed(issueId);
   renderHonors();
+  // 🛡 활성 보호막 반영 — 10분 만료라 주기적으로도 다시 읽는다(만료되면 배지가 사라져야 함)
+  refreshShields();
+  setInterval(refreshShields, 60000);
 
   // 투표수가 (재)로드되면 전선 게이지의 '여론' 축을 즉시 반영
   if (!window.__GALLA_FRONTLINE_SYNC__) {
@@ -1301,7 +1350,9 @@ function battleButtonsFor(c) {
     // 적진의 침투자는 '격퇴' — 침입자를 몰아낸다는 게임 서사 (동작은 attack 그대로)
     return battleBtn(c, "attack", isInfiltrator(c) ? "💥격퇴" : null);
   }
-  return battleBtn(c, "defend") + battleBtn(c, "support");
+  // 아군: 방어·지원 + 🛡보호막(아이템). 지키는 행위에 아이템을 쓰게 유도하는 자리.
+  return battleBtn(c, "defend") + battleBtn(c, "support") +
+    `<span class="action-shield" data-id="${c.id}" title="보호막 — 10분간 받는 피해 절반">🛡보호막</span>`;
 }
 
 /* 쿨다운 카운트다운 티커 (1초마다 버튼 라벨 갱신, 끝나면 활성화) */
@@ -1630,7 +1681,34 @@ function bindEvents() {
       const nameEl = targetEl.querySelector(".head .user-name");
       const targetUser = nameEl ? nameEl.textContent.trim() : "익명";
 
+      // 🛡↔⚡ 보호막 낀 상대면 파쇄를 쓸지 먼저 묻는다(취소해도 절반 피해로 공격은 가능)
+      if (type === "attack" && isShielded(targetEl)) await offerBreaker(targetId);
+
       openInlineComposer(type, targetId, targetUser, targetEl);
+      return;
+    }
+
+    // 🛡 보호막 → 아군 유닛에 10분 보호막 (아이템 소모)
+    if (e.target.classList.contains("action-shield")) {
+      if (!requireLogin()) return;
+      const sid = Number(e.target.dataset.id);
+      if (!sid) return;
+      const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+      const have = inv.shield || 0;
+      if (have <= 0) { alert("🛡 보호막이 없어요.\nGP 상점에서 구매할 수 있어요. (설정 › GP 상점)"); return; }
+      if (!confirm(`🛡 보호막을 사용할까요? (보유 ${have}개)\n10분간 받는 피해가 절반(${BATTLE_DMG.attack}→${Math.ceil(BATTLE_DMG.attack / 2)})으로 줄어듭니다.`)) return;
+      const { data, error } = await window.supabaseClient.rpc("use_shield", { p_comment_id: sid });
+      if (error || !data?.ok) {
+        const M = { already_shielded: "이미 보호막이 걸려 있어요.", no_item: "🛡 보호막이 없어요.",
+                    cross_faction: "같은 진영 댓글만 보호할 수 있어요.", no_faction: "먼저 투표해 진영을 정하세요." };
+        alert(M[data?.reason] || "보호막 사용에 실패했어요.");
+        return;
+      }
+      await refreshShields();
+      const u = e.target.closest(".reply, .comment");
+      if (u) { hitFx(u, "heal"); spawnCombatText(u, "🛡 보호막!", "heal"); }
+      window.BattleFX?.burstAt?.(u, "defend");
+      window.BattleFX?.banner?.("🛡 보호막 전개 — 10분간 피해 절반", "cheer");
       return;
     }
 
@@ -1948,9 +2026,12 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   // 전투 액션 기록 + 대상 HP 갱신 (이미 했으면 답글만 등록)
   const { data: bd } = await supabase.rpc("battle_action", {
     p_comment_id: targetId, p_action: type,
-    p_use_reset: RESET_ARMED.has(`${targetId}:${type}`)
+    p_use_reset: RESET_ARMED.has(`${targetId}:${type}`),
+    p_break: BREAK_ARMED.has(String(targetId))
   });
   RESET_ARMED.delete(`${targetId}:${type}`);
+  BREAK_ARMED.delete(String(targetId));
+  if (bd?.ok && (bd.broke || bd.shielded)) refreshShields();   // 방패 상태가 바뀌었으니 서버 기준으로 다시
 
   closeInlineComposer();
 
