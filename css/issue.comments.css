@@ -1164,9 +1164,14 @@ body.kb-open .battle-input-bar {
   background:rgba(255,255,255,.07); border:none; color:#aaa; cursor:pointer; font-size:12px;
 }
 
-.ic-row{ display:flex; gap:7px; }
+/* ⚠️ 이 행엔 이모지·GIF 버튼이 런타임에 주입된다(gif.js attach 등).
+   input에 min-width:0 이 없으면 flex 기본값 min-width:auto 때문에 콘텐츠 최소폭
+   아래로 안 줄어들어, 뒤따르는 전송 버튼(.ic-send)을 화면 밖으로 밀어낸다.
+   좁은 모바일에서 '참전/공격' 버튼이 안 보이던 원인. */
+.ic-row{ display:flex; gap:7px; align-items:center; }
 .ic-row input{
-  flex:1; height:40px; padding:0 14px; border-radius:999px;
+  flex:1 1 auto; min-width:0;   /* ← 반드시 유지: 없으면 전송 버튼 잘림 */
+  height:40px; padding:0 14px; border-radius:999px;
   background:#0a0a0b; border:1px solid #2a2d3a; color:#fff;
   font-size:16px; /* iOS 자동 줌 방지 */
   outline:none;
@@ -1174,7 +1179,8 @@ body.kb-open .battle-input-bar {
 .inline-composer.atk .ic-row input:focus{ border-color:#ff4d67; }
 .inline-composer.def .ic-row input:focus{ border-color:#3d6bff; }
 .ic-send{
-  height:40px; padding:0 16px; border-radius:999px; border:none;
+  flex:0 0 auto;                 /* ← 절대 찌그러지지 않게(전송은 최우선 요소) */
+  height:40px; padding:0 14px; border-radius:999px; border:none;
   font-size:12.5px; font-weight:900; color:#fff; cursor:pointer;
   white-space:nowrap;
   transition:transform .1s ease;
