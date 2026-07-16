@@ -116,7 +116,7 @@
       <div class="ad-card-h" style="font-size:12px;opacity:.7">📈 28일 방문자·세션</div>
       <div class="ad-chart">${AdminCharts.dualLine(days, {})}</div>`;
   }
-  function relTime(iso) { try { const s = (Date.now() - new Date(iso)) / 1000; if (s < 90) return "방금"; if (s < 5400) return Math.round(s / 60) + "분 전"; if (s < 129600) return Math.round(s / 3600) + "시간 전"; return Math.round(s / 86400) + "일 전"; } catch { return ""; } }
+  function relTime(iso) { try { const d = new Date(String(iso).replace(" ", "T")); const s = (Date.now() - d) / 1000; if (!isFinite(s)) return ""; if (s < 90) return "방금"; if (s < 5400) return Math.round(s / 60) + "분 전"; if (s < 129600) return Math.round(s / 3600) + "시간 전"; return Math.round(s / 86400) + "일 전"; } catch { return ""; } }
 
   let dashPresenceTimer = null;
   async function paintPresence() {
