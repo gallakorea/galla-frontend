@@ -74,7 +74,7 @@ async function resolveInvite(params) {
     const pct = tot >= MIN_VOTES ? ` 현재 👍${Math.round((pro / tot) * 100)}% vs 👎${Math.round((con / tot) * 100)}%.` : "";
     desc = `🔥 지금 갈라 최대 격전 — “${clip(hot.title, 42)}”${pct} 당신은 어느 편? ${who} 보낸 링크로 가입하면 500 GP 즉시 지급.`;
   } else {
-    desc = `오늘의 이슈에 진영을 골라 참전하고, 댓글로 겨루는 실시간 여론 배틀. ${who} 보낸 초대 링크로 가입하면 500 GP를 바로 받아요.`;
+    desc = `오늘 터진 이슈에 편 골라 참전하고, 댓글로 한판 붙는 실시간 이슈 커뮤니티. ${who} 보낸 초대 링크로 가입하면 500 GP를 바로 받아요.`;
   }
   return {
     title: `🎁 ${who} 갈라에 초대했어요 — 가입 즉시 500 GP`,
