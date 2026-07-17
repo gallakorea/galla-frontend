@@ -287,8 +287,15 @@
     render();
 
     // 페이지를 연 것 = 확인 → 읽음 처리(뱃지 제거). 목록의 unread 표시는 이번 열람 동안 유지.
+    // ★ await 필수: supabase-js 쿼리 빌더는 thenable이라 await(또는 .then) 하기 전엔
+    //   요청 자체를 보내지 않는다. 예전엔 await이 없어서 이 UPDATE가 한 번도 실행되지 않았고,
+    //   그래서 알림을 확인해도 다시 '안 읽음'으로 되돌아왔다.
     if (ROWS.some(r => !r.read)) {
-      sb.from("notifications").update({ read: true }).eq("user_id", ME).eq("read", false);
+      const { error: upErr } = await sb.from("notifications")
+        .update({ read: true }).eq("user_id", ME).eq("read", false);
+      if (upErr) { console.error("[noti] 읽음 처리 실패", upErr); return; }
+      ROWS.forEach(r => { r.read = true; });
+      window.GALLA_notiRefresh?.();   // 헤더 뱃지·요약칩 즉시 갱신
     }
   }
 
@@ -334,11 +341,9 @@
       if (!item) return;
       // 스와이프로 열린 행이 있으면 첫 탭은 '닫기'
       if (OPEN_ROW) { e.preventDefault(); closeOpenRow(); return; }
-      if (item.classList.contains("unread")) {
-        item.classList.remove("unread");
-        const ids = (item.dataset.ids || item.dataset.id || "").split(",").map(Number).filter(Boolean);
-        if (ids.length) window.supabaseClient.from("notifications").update({ read: true }).in("id", ids);
-      }
+      // 표시만 끈다. DB 읽음 처리는 load()에서 페이지 전체를 이미 끝냈으므로 중복이고,
+      // 여기서 요청을 걸어봐야 바로 이어지는 href 이동에 취소당한다(그래서 예전엔 안 먹혔다).
+      item.classList.remove("unread");
       const href = item.getAttribute("href");
       if (!href || href === "#") e.preventDefault();
     });

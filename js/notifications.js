@@ -1,32 +1,48 @@
 /* =========================================================
-   notifications.js — 활동 알림 (헤더 ♥ 뱃지 + 바텀시트 드로어 + 실시간)
-   - 내 콘텐츠(이슈/댓글/광장)에 대한 타인의 좋아요·공격·방어·답글·투표를 알림
-   - 헤더에 #hdrNoti(♥) + #notiBadge 가 있는 페이지에서 window.initNotifications() 호출
+   notifications.js — 헤더 ♥ 뱃지 + 유형별 요약 칩 + 실시간
+   - #hdrNoti(♥) + #notiBadge 가 있는 페이지에서 window.initNotifications() 호출
+   - 하트를 누르면 notifications.html 로 이동(읽음 처리는 그 페이지가 담당)
+   - 숫자만 있는 뱃지는 "뭐가 왔는지"를 못 알려준다 → 인스타처럼 유형별 요약 칩을 함께 띄운다
+
+   ※ 예전에 있던 바텀시트 드로어(ensureDrawer/openDrawer/markAllRead ~100줄)는 제거했다.
+     하트가 notifications.html 로 가도록 바뀐 뒤로 단 한 번도 호출되지 않는 죽은 코드였고,
+     그 안에 읽음 처리가 들어 있어서 "여기서 처리되겠지"라는 착각을 만들었다.
 ========================================================= */
 (function () {
   let ME = null;
   let CH = null;
   let unread = 0;
+  let hideTimer = null;
 
-  function timeAgo(iso) {
-    const d = (Date.now() - new Date(iso + (iso.endsWith("Z") ? "" : "Z")).getTime()) / 1000;
-    if (d < 60) return "방금";
-    if (d < 3600) return Math.floor(d / 60) + "분 전";
-    if (d < 86400) return Math.floor(d / 3600) + "시간 전";
-    return Math.floor(d / 86400) + "일 전";
-  }
-  function esc(s) {
-    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-  function icon(type) {
-    if (type === "attack") return "💥";
-    if (type === "defend") return "🛡";
-    if (type === "support") return "💣";
-    if (type === "reply" || type === "comment" || type === "plaza_comment") return "💬";
-    if (type === "vote") return "🗳";
-    if (type === "dislike") return "👎";
-    return "👍"; // like, plaza_like
-  }
+  /* 유형 → 요약 그룹.
+     타입 정의의 원본은 js/notifications-page.js 의 TYPE 맵이다(아이콘·필터까지 거기서 관리).
+     여기서는 헤더 요약용으로만 거칠게 묶는다. 맵에 없는 타입은 '기타'로 떨어지므로
+     새 알림 타입이 추가돼도 이 파일을 고치지 않아 깨지지 않는다(라벨만 '기타'가 될 뿐). */
+  const GROUP_OF = {
+    reply: "comment", comment: "comment", plaza_comment: "comment",
+    like: "like", plaza_like: "like",
+    dislike: "dislike",
+    follow: "follow", dm: "follow",
+    vote: "vote", plaza_vote: "vote",
+    attack: "battle", defend: "battle", support: "battle",
+    duel: "battle", duel_result: "battle", duel_challenge: "battle",
+    duel_live: "battle", duel_voting: "battle", duel_decline: "battle",
+    issue_win: "reward", donation: "reward", withdrawal: "reward",
+    market_resolved: "predict",
+  };
+  // 표시 순서 = 아래 배열 순서(사람이 먼저 궁금해하는 것부터)
+  const GROUPS = [
+    { key: "comment", emoji: "💬", label: "댓글" },
+    { key: "like",    emoji: "❤️", label: "좋아요" },
+    { key: "follow",  emoji: "👤", label: "팔로워" },
+    { key: "battle",  emoji: "⚔️", label: "전투" },
+    { key: "vote",    emoji: "🗳", label: "투표" },
+    { key: "reward",  emoji: "🎁", label: "보상" },
+    { key: "predict", emoji: "📈", label: "예측" },
+    { key: "dislike", emoji: "👎", label: "싫어요" },
+    { key: "etc",     emoji: "🔔", label: "기타" },
+  ];
+  const MAX_CHIPS = 3;   // 그 이상은 +N 으로 접는다 — 헤더가 좁아 4개부터 줄바꿈이 난다
 
   function setBadge(n) {
     unread = Math.max(0, n);
@@ -37,99 +53,74 @@
     b.textContent = unread > 99 ? "99+" : String(unread);
   }
 
-  function ensureDrawer() {
-    let d = document.getElementById("noti-drawer");
-    if (d) return d;
-    d = document.createElement("div");
-    d.id = "noti-drawer";
-    d.className = "noti-drawer";
-    d.innerHTML = `
-      <div class="nd-dim"></div>
-      <div class="nd-sheet">
-        <div class="nd-head">
-          <span class="nd-title">활동 알림</span>
-          <button class="nd-readall" id="ndReadAll">모두 읽음</button>
-          <button class="nd-close" aria-label="닫기">✕</button>
-        </div>
-        <div class="nd-list" id="ndList"><div class="nd-empty">불러오는 중…</div></div>
-      </div>`;
-    document.body.appendChild(d);
-    d.querySelector(".nd-dim").onclick = closeDrawer;
-    d.querySelector(".nd-close").onclick = closeDrawer;
-    d.querySelector("#ndReadAll").onclick = markAllRead;
-    return d;
+  function pillEl() {
+    let p = document.getElementById("notiPill");
+    if (p) return p;
+    const btn = document.getElementById("hdrNoti");
+    if (!btn) return null;
+    p = document.createElement("div");
+    p.id = "notiPill";
+    p.className = "noti-pill";
+    p.hidden = true;
+    p.setAttribute("role", "status");
+    // 하트 기준으로 위치를 잡아야 꼬리가 하트를 가리킨다
+    btn.style.position = btn.style.position || "relative";
+    btn.appendChild(p);
+    p.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      location.href = "notifications.html";
+    });
+    return p;
   }
 
-  function rowHTML(n) {
-    const nm = (n.message || "").split("님")[0] || "GA";
-    return `<a class="nd-item ${n.read ? "" : "unread"}" data-id="${n.id}" href="${esc(n.link || "#")}">
-      <span class="nd-ava">${esc(nm.slice(0, 2))}</span>
-      <span class="nd-ic">${icon(n.type)}</span>
-      <span class="nd-tx">
-        <span class="nd-msg">${esc(n.message || "새 활동")}</span>
-        <span class="nd-time">${timeAgo(n.created_at)}</span>
-      </span>
-      ${n.read ? "" : `<span class="nd-dot"></span>`}
-    </a>`;
+  /* 유형별 요약 칩 — 인스타처럼 하트 아래 빨간 알약.
+     계속 떠 있으면 콘텐츠를 가리므로 잠깐 보여주고 접는다(다시 보려면 하트를 누르면 됨). */
+  function renderPill(counts) {
+    const p = pillEl();
+    if (!p) return;
+    const items = GROUPS
+      .map(g => ({ ...g, n: counts[g.key] || 0 }))
+      .filter(g => g.n > 0)
+      .sort((a, b) => b.n - a.n);
+    if (!items.length) { p.hidden = true; return; }
+
+    const head = items.slice(0, MAX_CHIPS);
+    const restN = items.slice(MAX_CHIPS).reduce((s, g) => s + g.n, 0);
+    p.innerHTML = head.map(g =>
+      `<span class="npi" title="${g.label}"><i>${g.emoji}</i><b>${g.n > 99 ? "99+" : g.n}</b></span>`
+    ).join("") + (restN ? `<span class="npi more">+${restN}</span>` : "");
+    p.hidden = false;
+    p.classList.remove("show");
+    requestAnimationFrame(() => p.classList.add("show"));
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      p.classList.remove("show");
+      setTimeout(() => { if (!p.classList.contains("show")) p.hidden = true; }, 260);
+    }, 5000);
   }
 
-  async function openDrawer() {
-    const d = ensureDrawer();
-    d.classList.add("open");
-    window.BattleFX?.haptic?.("tap");
-    const list = document.getElementById("ndList");
+  /* 안 읽은 알림을 유형까지 같이 가져와 집계.
+     count만 세면 숫자밖에 못 보여준다. type만 뽑으므로 페이로드는 여전히 작다. */
+  async function loadUnread() {
     const { data, error } = await window.supabaseClient
       .from("notifications")
-      .select("id,type,message,link,read,created_at,from_user")
+      .select("type")
       .eq("user_id", ME)
-      .order("created_at", { ascending: false })
-      .limit(40);
-    if (error) { list.innerHTML = `<div class="nd-empty">알림을 불러오지 못했어요.</div>`; return; }
-    list.innerHTML = (data && data.length)
-      ? data.map(rowHTML).join("")
-      : `<div class="nd-empty">아직 활동 알림이 없어요.<br>갈라에 참여하면 반응이 여기 쌓여요!</div>`;
-
-    // 클릭 시 개별 읽음 처리 후 이동
-    list.querySelectorAll(".nd-item").forEach(el => {
-      el.addEventListener("click", async (e) => {
-        const id = Number(el.dataset.id);
-        if (el.classList.contains("unread")) {
-          el.classList.remove("unread");
-          el.querySelector(".nd-dot")?.remove();
-          setBadge(unread - 1);
-          await window.supabaseClient.from("notifications").update({ read: true }).eq("id", id);
-        }
-        // href 기본 이동 허용 (링크 없으면 막기)
-        if (!el.getAttribute("href") || el.getAttribute("href") === "#") e.preventDefault();
-      });
+      .eq("read", false)
+      .limit(500);
+    if (error) { console.error("[noti] 안읽음 조회 실패", error); return; }
+    const rows = data || [];
+    const counts = {};
+    rows.forEach(r => {
+      const k = GROUP_OF[r.type] || "etc";
+      counts[k] = (counts[k] || 0) + 1;
     });
-
-    // 드로어를 열면 '확인'으로 간주 → 빨간점(뱃지) 제거 + DB 읽음 처리
-    // (목록의 unread 하이라이트는 이번 열람 동안 유지)
-    if (unread > 0) {
-      window.supabaseClient.from("notifications").update({ read: true }).eq("user_id", ME).eq("read", false);
-      setBadge(0);
-    }
+    setBadge(rows.length);
+    if (rows.length) renderPill(counts);
+    else { const p = document.getElementById("notiPill"); if (p) p.hidden = true; }
   }
-  function closeDrawer() {
-    document.getElementById("noti-drawer")?.classList.remove("open");
-  }
-
-  async function markAllRead() {
-    await window.supabaseClient.from("notifications").update({ read: true }).eq("user_id", ME).eq("read", false);
-    document.querySelectorAll("#ndList .nd-item.unread").forEach(el => {
-      el.classList.remove("unread"); el.querySelector(".nd-dot")?.remove();
-    });
-    setBadge(0);
-  }
-
-  async function loadUnread() {
-    const { count } = await window.supabaseClient
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", ME).eq("read", false);
-    setBadge(count || 0);
-  }
+  // 알림 페이지에서 읽음 처리한 뒤 헤더를 즉시 갱신하려고 노출
+  window.GALLA_notiRefresh = () => { if (ME) loadUnread(); };
 
   function subscribe() {
     if (CH) window.supabaseClient.removeChannel(CH);
@@ -137,22 +128,9 @@
       .channel("noti-" + ME)
       .on("postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: "user_id=eq." + ME },
-        (payload) => {
-          setBadge(unread + 1);
+        () => {
           window.BattleFX?.haptic?.("tap");
-          const list = document.getElementById("ndList");
-          const drawer = document.getElementById("noti-drawer");
-          if (list && drawer?.classList.contains("open")) {
-            list.querySelector(".nd-empty")?.remove();
-            list.insertAdjacentHTML("afterbegin", rowHTML(payload.new));
-            const first = list.firstElementChild;
-            first?.addEventListener("click", async (e) => {
-              first.classList.remove("unread"); first.querySelector(".nd-dot")?.remove();
-              setBadge(unread - 1);
-              await window.supabaseClient.from("notifications").update({ read: true }).eq("id", payload.new.id);
-              if (!first.getAttribute("href") || first.getAttribute("href") === "#") e.preventDefault();
-            });
-          }
+          loadUnread();   // 새 알림의 유형까지 반영해야 하므로 다시 집계한다
         })
       .subscribe();
   }
@@ -163,15 +141,17 @@
     const { data: sess } = await window.supabaseClient.auth.getSession();
     ME = sess?.session?.user?.id || null;
     if (!ME) {
-      // 비로그인: 하트 누르면 로그인 유도
       btn.addEventListener("click", () => {
         if (confirm("로그인하면 내 활동 알림을 볼 수 있어요. 로그인할까요?")) location.href = "login.html";
       });
       return;
     }
-    // 인스타식: 하트를 누르면 드로어가 아니라 '알림 페이지'로 이동
     btn.addEventListener("click", () => { location.href = "notifications.html"; });
     await loadUnread();
     subscribe();
+
+    // 알림 페이지를 보고 '뒤로가기'로 돌아오면 bfcache 복원이라 스크립트가 다시 돌지 않는다
+    // → 이미 읽은 뱃지가 그대로 남아 "확인했는데 또 안 읽음"으로 보인다. 복원 시 다시 집계.
+    window.addEventListener("pageshow", (e) => { if (e.persisted && ME) loadUnread(); });
   };
 })();

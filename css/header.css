@@ -147,6 +147,36 @@ body[data-page="mypage"] #app {
   display: flex; align-items: center; justify-content: center;
 }
 
+/* 🔔 유형별 요약 칩 — 하트 아래 빨간 알약(인스타식).
+   숫자 뱃지만으론 "뭐가 왔는지"를 모른다 → 💬14 ❤️12 👤2 처럼 유형을 보여준다.
+   .hdr-noti(position:relative) 기준으로 매달리고, 꼬리가 하트를 가리킨다. */
+.noti-pill[hidden] { display: none; }
+.noti-pill {
+  position: absolute; top: calc(100% + 9px); right: -2px; z-index: 60;
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 11px; border-radius: 999px;
+  background: #ff3b4e; box-shadow: 0 6px 20px rgba(255,59,78,.35);
+  white-space: nowrap; cursor: pointer;
+  opacity: 0; transform: translateY(-6px) scale(.92); transform-origin: 88% 0;
+  transition: opacity .22s ease, transform .22s cubic-bezier(.2,.9,.3,1);
+}
+.noti-pill.show { opacity: 1; transform: translateY(0) scale(1); }
+/* 꼬리 — 하트를 가리킨다 */
+.noti-pill::before {
+  content: ''; position: absolute; top: -5px; right: 12px;
+  width: 12px; height: 12px; background: #ff3b4e; border-radius: 2px;
+  transform: rotate(45deg);
+}
+.noti-pill .npi {
+  position: relative; display: flex; align-items: center; gap: 4px;
+  color: #fff; font-size: 13px; font-weight: 900; line-height: 1;
+}
+.noti-pill .npi i { font-style: normal; font-size: 12.5px; }
+.noti-pill .npi.more { opacity: .85; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) {
+  .noti-pill { transition: none; }
+}
+
 /* =========================
    HEADER ICON — IMAGE ONLY
 ========================= */
