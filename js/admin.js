@@ -491,22 +491,40 @@
       </div>`).join("") : `<div class="ad-note" style="margin:0">붙인 뉴스 링크가 여기에 관련 뉴스 카드로 쌓입니다.</div>`;
     box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { issueLinks.splice(+b.dataset.rm, 1); renderIssueLinks(); });
   }
-  // 붙여넣기 원문 → 제목/요약/진영 자동 파싱 (사용자 양식 대응)
+  // 붙여넣기 원문 → 제목/한줄평/핵심요약/진영 자동 파싱 (사용자 양식 대응)
   function parseIssueText(raw) {
     const lines = String(raw || "").replace(/\r/g, "").split("\n").map(s => s.trim());
-    let title = ""; const body = []; const facs = [];
+    // sum = '핵심요약:'으로 이름표가 붙은 줄 / free = 이름표 없는 줄. 이 둘을 반드시 구분해야 한다.
+    // 예전엔 한 배열에 섞고 "제목이 없으면 첫 줄을 제목으로" 했는데, '제목:' 줄이 없는 원문에서는
+    // 핵심요약 문단이 통째로 제목으로 끌려갔다(제목은 문단 하나, 본문엔 👍 줄만 남음).
+    let title = "", one = ""; const sum = [], free = [], facs = [];
     for (const ln of lines) {
       if (!ln) continue;
       if (/^#/.test(ln) || /^(#[^\s#]+\s*)+$/.test(ln)) continue;               // 해시태그 줄 삭제
       let m;
       if ((m = ln.match(/^제목\s*[:：]\s*(.+)$/))) { if (!title) title = m[1].trim(); continue; }
-      if ((m = ln.match(/^(?:핵심\s*요약|요약)\s*[:：]?\s*(.*)$/))) { if (m[1]) body.push(m[1].trim()); continue; }
+      if ((m = ln.match(/^(?:한\s*줄\s*평|한\s*줄\s*요약)\s*[:：]\s*(.+)$/))) { if (!one) one = m[1].trim(); continue; }
+      if ((m = ln.match(/^(?:핵심\s*요약|요약)\s*[:：]?\s*(.*)$/))) { if (m[1]) sum.push(m[1].trim()); continue; }
       if (/^[👍👎]/u.test(ln)) { facs.push(ln); continue; }                       // 진영 줄 (u플래그 필수)
-      body.push(ln);
+      free.push(ln);
     }
-    if (!title && body.length) title = body.shift();                             // 제목: 없으면 첫 줄
+    // 제목은 '제목:' 줄, 없으면 이름표 없는 첫 줄. 이름표가 붙은 요약은 절대 제목이 되지 않는다.
+    if (!title && free.length) title = free.shift();
+    const body = sum.concat(free);
     const label = s => s.replace(/^[👍👎]\s*/u, "").split(/\s+[-–—]\s+/)[0].trim(); // ' - ' 앞 라벨만(한 줄)
-    return { title: (title || "").trim(), desc: body.join("\n\n").trim(), fa: facs[0] ? label(facs[0]) : "", fb: facs[1] ? label(facs[1]) : "" };
+    // 👍 줄은 진영 이름(라벨)만 뽑고 버렸었다 → 정작 그 줄의 설명("- " 뒤)이 통째로 사라졌다.
+    // 이제 라벨은 진영으로 쓰고, 줄 자체는 핵심 요약 끝에 붙인다(원문 그대로, 서로 붙여 목록처럼).
+    // #issue-explain-text 는 white-space:pre-wrap 이라 줄바꿈이 그대로 살아난다.
+    const parts = [];
+    if (body.length) parts.push(body.join("\n\n").trim());
+    if (facs.length) parts.push(facs.join("\n"));
+    return {
+      title: (title || "").trim(),
+      one: one,
+      desc: parts.join("\n\n").trim(),
+      fa: facs[0] ? label(facs[0]) : "",
+      fb: facs[1] ? label(facs[1]) : "",
+    };
   }
 
   const CATS = ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "19금", "기타"];
@@ -517,11 +535,12 @@
     issueLinks = [];
     $("#u-form").innerHTML = `
       <label>📋 원문 붙여넣기 <span style="opacity:.6;font-weight:400">— 제목·요약·진영이 자동으로 채워집니다</span></label>
-      <textarea id="i-paste" class="ad-input" rows="7" placeholder="제목·핵심요약·👍 진영 두 줄·#해시태그가 포함된 원문을 그대로 붙여넣으세요."></textarea>
+      <textarea id="i-paste" class="ad-input" rows="7" placeholder="제목·한줄평·핵심요약·👍 진영 두 줄·#해시태그가 포함된 원문을 그대로 붙여넣으세요."></textarea>
       <button class="ad-btn ghost" id="i-parse" type="button" style="margin-bottom:14px">⚡ 자동 채움</button>
       <hr class="ad-hr">
       ${IN("i-title", "제목 *", "자동 채움됩니다")}
-      ${TA("i-desc", "핵심요약(본문)", "자동 채움됩니다", 5)}
+      ${IN("i-one", "한줄평 *", "제목 아래·피드 카드에 보이는 한 줄")}
+      ${TA("i-desc", "핵심요약(본문)", "자동 채움됩니다 — 👍 진영 두 줄까지 포함됩니다", 8)}
       <div class="ad-2col">${IN("i-fa", "진영 A (찬성)", "👍 찬성이오")}${IN("i-fb", "진영 B (반대)", "👎 난 반댈세")}</div>
       <label>작성자 입장 *</label>
       <div class="ad-stance" id="i-stance">
@@ -559,6 +578,7 @@
     $("#i-parse").onclick = () => {
       const p = parseIssueText($("#i-paste").value);
       if (p.title) $("#i-title").value = p.title;
+      if (p.one) $("#i-one").value = p.one;
       if (p.desc) $("#i-desc").value = p.desc;
       if (p.fa) $("#i-fa").value = p.fa;
       if (p.fb) $("#i-fb").value = p.fb;
@@ -580,6 +600,9 @@
 
     $("#i-go").onclick = async () => {
       const t = $("#i-title").value.trim(); if (!t) { toast("제목이 비었어요. ⚡자동 채움을 먼저 눌러주세요."); return $("#i-title").focus(); }
+      // 한줄평은 제목 아래(#issue-desc)와 피드 카드에 그대로 노출된다. 비면 그 자리가 빈칸이 된다
+      // — 예전엔 폼에 칸조차 없어 p_one_line에 항상 null이 가서 관리자 이슈는 전부 빈칸이었다.
+      const one = $("#i-one").value.trim(); if (!one) { toast("한줄평이 비었어요 — 제목 아래와 피드 카드에 보이는 줄입니다."); return $("#i-one").focus(); }
       if (!$("#i-cat").value) return toast("카테고리를 선택하세요.");
       if (!$("#i-don").value) return toast("기부처를 선택하세요.");
       const btn = $("#i-go"); btn.disabled = true;
@@ -596,7 +619,7 @@
         set("🚀 발행 중…");
         const r = await rpc("admin_publish_issue", {
           p_title: t, p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value,
-          p_one_line: null, p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(),
+          p_one_line: one, p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(),
           p_thumb: thumb, p_links: issueLinks, p_video: video_url, p_images: images,
           p_card_thumb: card_thumb, p_donation: $("#i-don").value, p_stance: stance,
         });
