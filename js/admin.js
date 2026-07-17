@@ -539,7 +539,7 @@
       <button class="ad-btn ghost" id="i-parse" type="button" style="margin-bottom:14px">⚡ 자동 채움</button>
       <hr class="ad-hr">
       ${IN("i-title", "제목 *", "자동 채움됩니다")}
-      ${IN("i-one", "한줄평 *", "제목 아래·피드 카드에 보이는 한 줄")}
+      ${IN("i-one", "한줄 요약 *", "제목 아래·피드 카드에 보이는 한 줄 (= 한줄평)")}
       ${TA("i-desc", "핵심요약(본문)", "자동 채움됩니다 — 👍 진영 두 줄까지 포함됩니다", 8)}
       <div class="ad-2col">${IN("i-fa", "진영 A (찬성)", "👍 찬성이오")}${IN("i-fb", "진영 B (반대)", "👎 난 반댈세")}</div>
       <label>작성자 입장 *</label>
@@ -600,9 +600,10 @@
 
     $("#i-go").onclick = async () => {
       const t = $("#i-title").value.trim(); if (!t) { toast("제목이 비었어요. ⚡자동 채움을 먼저 눌러주세요."); return $("#i-title").focus(); }
-      // 한줄평은 제목 아래(#issue-desc)와 피드 카드에 그대로 노출된다. 비면 그 자리가 빈칸이 된다
-      // — 예전엔 폼에 칸조차 없어 p_one_line에 항상 null이 가서 관리자 이슈는 전부 빈칸이었다.
-      const one = $("#i-one").value.trim(); if (!one) { toast("한줄평이 비었어요 — 제목 아래와 피드 카드에 보이는 줄입니다."); return $("#i-one").focus(); }
+      // 한줄 요약(= 한줄평, issues.one_line)은 제목 아래(#issue-desc)와 피드 카드에 그대로 노출된다.
+      // 비면 그 자리가 빈칸이 된다 — 예전엔 폼에 칸조차 없어 p_one_line에 항상 null이 가서
+      // 관리자 이슈는 전부 빈칸이었다. 사용자 write.html의 '한줄 요약(필수)'과 같은 필드다.
+      const one = $("#i-one").value.trim(); if (!one) { toast("한줄 요약이 비었어요 — 제목 아래와 피드 카드에 보이는 줄입니다."); return $("#i-one").focus(); }
       if (!$("#i-cat").value) return toast("카테고리를 선택하세요.");
       if (!$("#i-don").value) return toast("기부처를 선택하세요.");
       const btn = $("#i-go"); btn.disabled = true;
