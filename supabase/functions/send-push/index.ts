@@ -69,6 +69,24 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return j({ error: "bad json" }, 400); }
   if (!body.id) return j({ error: "id required" }, 400);
 
+  // 📞 통화 벨 푸시 — 메시지 행이 없는 유일한 종류라 '둘 사이에 스레드가 있는가'로 남용을 막는다
+  if (body.kind === "call") {
+    const peer = String(body.id);
+    const lo = me < peer ? me : peer, hi = me < peer ? peer : me;
+    const { data: t } = await sb.from("dm_threads")
+      .select("id").eq("user_lo", lo).eq("user_hi", hi).maybeSingle();
+    if (!t) return j({ error: "no thread" }, 403);
+    const { data: sender } = await sb.from("users").select("nickname").eq("id", me).single();
+    const video = body.video === true;
+    const sent = await pushTo([peer], {
+      title: `📞 ${sender?.nickname || "갈라 친구"}`,
+      body: video ? "페이스톡이 왔어요 — 탭해서 받기" : "보이스톡이 왔어요 — 탭해서 받기",
+      url: `/dm.html?dm=${me}`,
+      tag: `call-${me}`,
+    });
+    return j({ ok: true, sent });
+  }
+
   if (body.kind === "room") {
     const { data: m } = await sb.from("open_messages")
       .select("id,room_id,sender_id,body,kind").eq("id", body.id).single();

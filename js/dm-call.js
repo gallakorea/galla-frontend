@@ -1,28 +1,41 @@
-/* 📞 GALLA 보이스톡 — 1:1 WebRTC 음성 통화
+/* 📞 GALLA 보이스톡·페이스톡 — 1:1 WebRTC 통화
    구조(운영비 ~0원):
-   · 음성은 폰↔폰 직결(P2P) — 서버를 거치지 않는다
-   · 시그널링 = Supabase Realtime broadcast (유저마다 call:<uid> 채널을 듣는다)
-   · STUN = 구글 공용(무료). TURN 없음(v1) — 일부 엄격한 NAT에선 연결 실패 가능, 그땐 문구로 안내
-   · 벨은 '접속 중'인 상대에게만 울린다(dm.html을 열어둔 상태). 백그라운드 벨은 푸시+CallKit 영역 — PWA 한계 */
+   · 미디어는 폰↔폰 직결(P2P). 직결 실패 시에만 Cloudflare TURN 중계(무료 1TB/월)
+   · ICE 설정은 turn-cred 엣지 함수가 1시간짜리 임시 자격증명으로 발급 — 장기 비밀은 서버에만
+   · 시그널링 = Supabase Realtime broadcast (유저마다 call:<uid> 채널)
+   · 벨: 접속 중이면 어느 페이지든 풀스크린 벨(이 파일이 자동 부팅) +
+     부재 시 푸시 '보이스톡이 왔어요'(탭→대화방→부재중 기록에서 다시 걸기)
+   · 앱 출시 대비: 시그널링·UI는 그대로 두고 네이티브 래핑 시 푸시만 FCM/CallKit로 바꿔 끼우면 된다 */
 (function () {
   const I = (w, inner) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
   const IC = {
     phone: I(20, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
     mic: I(18, '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>'),
     micoff: I(18, '<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/>'),
+    cam: I(18, '<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
+    camoff: I(18, '<path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/>'),
+    flip: I(18, '<path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>'),
   };
   let sb = null, ME = null, chanMine = null, chanPeer = null;
-  let pc = null, localStream = null, CUR = null;   // {peer, name, dir:'in'|'out', pendIce:[], offer}
-  let ringT = null, timerT = null, t0 = 0;
-  const CFG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
+  let ringT = null, timerT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user';
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+  /* ── ICE 설정: TURN 자격증명(1시간) 30분 캐시, 실패 시 STUN만 ── */
+  async function iceConfig() {
+    if (iceCache && Date.now() - iceAt < 30 * 60 * 1000) return iceCache;
+    try {
+      const { data } = await sb.functions.invoke('turn-cred', { body: {} });
+      if (data?.iceServers) { iceCache = { iceServers: data.iceServers }; iceAt = Date.now(); return iceCache; }
+    } catch (_) {}
+    return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+  }
+
   function peerChan(uid) {
-    // 채널은 통화 동안만 연다 — send는 구독된 채널에서만 나간다
     return new Promise(res => {
       const ch = sb.channel('call:' + uid);
       ch.subscribe(st => { if (st === 'SUBSCRIBED') res(ch); });
-      setTimeout(() => res(ch), 1500);   // 하네스/저속망 안전판
+      setTimeout(() => res(ch), 1500);
     });
   }
   async function send(msg) {
@@ -30,7 +43,6 @@
     try { await chanPeer.send({ type: 'broadcast', event: 'signal', payload: { ...msg, from: ME, to: CUR?.peer || msg.to } }); } catch (_) {}
   }
 
-  /* ── 수신 대기 (dm.html 부팅 시) ── */
   function listen(_sb, me) {
     sb = _sb; ME = me;
     if (chanMine || !sb || !ME) return;
@@ -42,9 +54,10 @@
     if (p.to !== ME || p.from === ME) return;
     if (p.t === 'offer') {
       if (CUR) { const ch = await peerChan(p.from); ch.send({ type: 'broadcast', event: 'signal', payload: { t: 'busy', from: ME, to: p.from } }); try { sb.removeChannel(ch); } catch (_) {} return; }
-      CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', offer: p.sdp, pendIce: [] };
+      CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
       chanPeer = await peerChan(p.from);
       paintUI('incoming');
+      try { navigator.vibrate?.([300, 150, 300, 150, 300]); } catch (_) {}
       ringT = setTimeout(() => endCall('timeout'), 40000);
       return;
     }
@@ -59,48 +72,56 @@
     }
   }
 
-  async function getMic() {
-    return navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  async function getMedia(video) {
+    return navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true },
+      video: video ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+    });
   }
-  function buildPC() {
-    pc = new RTCPeerConnection(CFG);
+  async function buildPC() {
+    pc = new RTCPeerConnection(await iceConfig());
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', cand: e.candidate }); };
     pc.ontrack = e => {
-      const au = document.getElementById('dm-call-audio');
-      if (au && e.streams[0]) { au.srcObject = e.streams[0]; au.play().catch(() => {}); }
+      const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
+      if (el && e.streams[0]) { el.srcObject = e.streams[0]; el.play?.().catch(() => {}); }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
-      if (pc.connectionState === 'connected') { clearTimeout(ringT); startTimer(); paintUI('oncall'); }
-      else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
+      if (pc.connectionState === 'connected') {
+        clearTimeout(ringT);
+        if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
+        startTimer(); paintUI('oncall');
+      } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
         if (CUR) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       }
     };
   }
 
-  /* ── 발신 ── */
-  async function start(peer, name) {
+  async function start(peer, name, video) {
     if (CUR || !sb || !ME) return;
-    try { localStream = await getMic(); } catch (_) { return toast('마이크 권한이 필요해요'); }
-    CUR = { peer, name: name || '갈라 친구', dir: 'out', pendIce: [] };
+    try { localStream = await getMedia(!!video); }
+    catch (_) { return toast(video ? '카메라·마이크 권한이 필요해요' : '마이크 권한이 필요해요'); }
+    CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [] };
     chanPeer = await peerChan(peer);
-    buildPC();
+    await buildPC();
     paintUI('outgoing');
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
-    send({ t: 'offer', sdp: offer.sdp, name: myName });
-    ringT = setTimeout(() => { toast('응답이 없어요 — 상대가 접속 중일 때만 벨이 울려요'); endCall('noanswer'); }, 30000);
+    send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
+    // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
+    try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+    ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 30000);
   }
 
-  /* ── 수락 ── */
   async function accept() {
     if (!CUR || CUR.dir !== 'in') return;
     clearTimeout(ringT);
-    try { localStream = await getMic(); } catch (_) { endCall('micfail'); return toast('마이크 권한이 필요해요'); }
-    buildPC();
+    try { localStream = await getMedia(CUR.video); }
+    catch (_) { endCall('micfail'); return toast(CUR.video ? '카메라·마이크 권한이 필요해요' : '마이크 권한이 필요해요'); }
+    await buildPC();
     await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
     for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
     const ans = await pc.createAnswer();
@@ -110,9 +131,31 @@
   }
   function decline() { send({ t: 'decline' }); endCall('declined_me', true); }
 
+  /* 통화 기록 — 발신자가 남긴다: 부재중(연결 못 함)·통화 종료(시간).
+     대화방에 말풍선(kind='call')으로 떠서 '다시 걸기' 콜백 깔때기가 된다 */
+  async function logCall(reason) {
+    // ★ CUR 스냅샷 — endCall이 이 함수를 기다리지 않고 CUR을 비우므로,
+    //   await 이후 CUR을 읽으면 null 참조로 조용히 죽는다(기록 유실의 정체)
+    const c = CUR;
+    if (!c || c.dir !== 'out') return;
+    const connected = !!c.connectedAt;
+    if (!connected && !['noanswer', 'declined', 'busy'].includes(reason)) return;
+    try {
+      const { data: tid } = await sb.rpc('dm_thread_with', { other: c.peer });
+      if (!tid) return;
+      const meta = { video: !!c.video, status: connected ? 'ended' : 'missed',
+                     dur: connected ? Math.round((Date.now() - c.connectedAt) / 1000) : 0 };
+      const { data: row } = await sb.from('dm_messages')
+        .insert({ thread_id: tid, sender_id: ME, body: connected ? '통화' : '부재중', kind: 'call', meta })
+        .select().single();
+      if (row && !connected) { try { sb.functions.invoke('send-push', { body: { kind: 'dm', id: row.id } }).catch(() => {}); } catch (_) {} }
+    } catch (_) {}
+  }
+
   function endCall(reason, remote) {
     clearTimeout(ringT); clearInterval(timerT);
     if (!remote && CUR) send({ t: 'hangup' });
+    logCall(reason);
     try { pc?.close(); } catch (_) {}
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
@@ -129,7 +172,6 @@
     }
   }
 
-  /* ── UI ── */
   function startTimer() {
     t0 = Date.now();
     clearInterval(timerT);
@@ -144,6 +186,23 @@
     if (!el) { el = document.createElement('div'); el.id = 'dm-mini-toast'; document.body.appendChild(el); }
     el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2600);
   }
+
+  async function flipCam() {
+    if (!localStream || !CUR?.video) return;
+    facing = facing === 'user' ? 'environment' : 'user';
+    try {
+      const ns = await getMedia(true);
+      const nv = ns.getVideoTracks()[0];
+      const sender = pc.getSenders().find(x => x.track?.kind === 'video');
+      if (sender && nv) await sender.replaceTrack(nv);
+      localStream.getVideoTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
+      localStream.addTrack(nv);
+      ns.getAudioTracks().forEach(t => t.stop());   // 오디오는 기존 트랙 유지
+      const lv = document.getElementById('dm-call-local');
+      if (lv) { lv.srcObject = new MediaStream([nv]); lv.play?.().catch(() => {}); }
+    } catch (_) { toast('카메라 전환에 실패했어요'); }
+  }
+
   function paintUI(state) {
     let box = document.getElementById('dm-call');
     if (!box) {
@@ -152,14 +211,20 @@
       document.body.appendChild(box);
       requestAnimationFrame(() => box.classList.add('on'));
     }
+    const video = !!CUR?.video;
     const name = esc(CUR?.name || '');
-    const avatarLetter = name.charAt(0) || '갈';
-    const stateTxt = { outgoing: '전화 거는 중…', incoming: '보이스톡이 왔어요', connecting: '연결 중…', oncall: '' }[state] || '';
+    const stateTxt = { outgoing: video ? '페이스톡 거는 중…' : '전화 거는 중…',
+                       incoming: video ? '페이스톡이 왔어요' : '보이스톡이 왔어요',
+                       connecting: '연결 중…', oncall: '' }[state] || '';
     box.dataset.state = state;
+    box.classList.toggle('video', video);
     box.innerHTML = `
-      <audio id="dm-call-audio" autoplay></audio>
+      ${video
+        ? `<video id="dm-call-remote" autoplay playsinline></video>
+           <video id="dm-call-local" autoplay playsinline muted></video>`
+        : `<audio id="dm-call-audio" autoplay></audio>`}
       <div class="dmc-card">
-        <span class="dmc-ava${state === 'incoming' || state === 'outgoing' ? ' ring' : ''}">${esc(avatarLetter)}</span>
+        ${video && state === 'oncall' ? '' : `<span class="dmc-ava${state === 'incoming' || state === 'outgoing' ? ' ring' : ''}">${esc(name.charAt(0) || '갈')}</span>`}
         <div class="dmc-name">${name}</div>
         <div class="dmc-state">${stateTxt}<span id="dm-call-timer">${state === 'oncall' ? '00:00' : ''}</span></div>
         <div class="dmc-btns">
@@ -167,22 +232,33 @@
             <button class="dmc-btn accept" data-c="accept" aria-label="받기">${IC.phone}</button>
             <button class="dmc-btn end" data-c="decline" aria-label="거절">${IC.phone}</button>`
           : `
-            ${state === 'oncall' ? `<button class="dmc-btn mute" data-c="mute" aria-label="음소거">${IC.mic}</button>` : ''}
+            ${state === 'oncall' ? `
+              <button class="dmc-btn mute" data-c="mute" aria-label="음소거">${IC.mic}</button>
+              ${video ? `<button class="dmc-btn" data-c="camoff" aria-label="카메라 끄기">${IC.cam}</button>
+                         <button class="dmc-btn" data-c="flip" aria-label="카메라 전환">${IC.flip}</button>` : ''}` : ''}
             <button class="dmc-btn end" data-c="hangup" aria-label="끊기">${IC.phone}</button>`}
         </div>
       </div>`;
+    // 통화 중 로컬 미리보기 재부착
+    if (video && localStream) {
+      const lv = box.querySelector('#dm-call-local');
+      if (lv) { lv.srcObject = new MediaStream(localStream.getVideoTracks()); lv.play?.().catch(() => {}); }
+    }
     box.onclick = e => {
       const c = e.target.closest('[data-c]')?.dataset.c;
       if (c === 'accept') accept();
       else if (c === 'decline') decline();
       else if (c === 'hangup') endCall('ended');
-      else if (c === 'mute') {
-        const t = localStream?.getAudioTracks()[0];
+      else if (c === 'flip') flipCam();
+      else if (c === 'mute' || c === 'camoff') {
+        const kind = c === 'mute' ? 'audio' : 'video';
+        const t = localStream?.getTracks().find(x => x.kind === kind);
         if (!t) return;
         t.enabled = !t.enabled;
-        const b = box.querySelector('[data-c="mute"]');
+        const b = box.querySelector(`[data-c="${c}"]`);
         b.classList.toggle('off', !t.enabled);
-        b.innerHTML = t.enabled ? IC.mic : IC.micoff;
+        if (c === 'mute') b.innerHTML = t.enabled ? IC.mic : IC.micoff;
+        else b.innerHTML = t.enabled ? IC.cam : IC.camoff;
       }
     };
   }
@@ -190,6 +266,22 @@
   window.GALLA_call = {
     listen, start,
     supported: () => !!(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia),
-    _debug: () => ({ cur: CUR && { peer: CUR.peer, dir: CUR.dir }, pcState: pc?.connectionState || null }),
+    _debug: () => ({ cur: CUR && { peer: CUR.peer, dir: CUR.dir, video: CUR.video }, pcState: pc?.connectionState || null }),
   };
+
+  /* 어느 페이지에 있어도 벨이 울린다 — supabaseClient가 뜨면 스스로 수신 대기 */
+  (function autoBoot() {
+    let tries = 0;
+    const go = async () => {
+      const _sb = window.supabaseClient;
+      if (!_sb) { if (tries++ < 25) setTimeout(go, 400); return; }
+      try {
+        const { data } = await _sb.auth.getSession();
+        const uid = data?.session?.user?.id;
+        if (uid) listen(_sb, uid);
+      } catch (_) {}
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
+    else go();
+  })();
 })();
