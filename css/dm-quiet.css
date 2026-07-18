@@ -268,8 +268,8 @@
 .dm-root.page .dm-panel {
   position: relative; transform: none; max-width: none; width: 100%;
   border-left: none; box-shadow: none;
-  /* 헤더(sticky 56px)를 뺀 화면 높이 — 뷰들이 이 안에서 absolute로 선다 */
-  height: calc(100dvh - 56px - env(safe-area-inset-top, 0px));
+  /* 헤더(sticky 64px)를 뺀 화면 높이 — 뷰들이 이 안에서 absolute로 선다 */
+  height: calc(100dvh - 64px - env(safe-area-inset-top, 0px));
 }
 .dm-root.page .dm-view .dm-head .dm-x { visibility: hidden; }   /* 닫기 없음 — 네비가 출구 */
 /* 목록 화면: 플로팅 네비에 가리지 않게 바닥 여백 */
@@ -285,7 +285,10 @@ body.dm-immersive .nav { display: none; }
 /* 페이지 모드: DM 내부 '메시지' 바 제거 — ⚙·✎는 페이지 헤더로 승격됐다 */
 .dm-root.page [data-view="inbox"] > .dm-head { display: none; }
 .hdr-group.hdr-right { justify-self: end; }
-.hdr-group.hdr-right .hdr-btn svg { width: 21px; height: 21px; }
+
+/* dm.html은 페이지 자체 CSS가 없어 UA 기본 body margin 8px가 살아남는다
+   — 헤더가 다른 페이지보다 8px 내려앉던 원인 */
+body[data-page="dm"] { margin: 0; }
 
 /* 페이지 모드 상세 뷰: GALLA 페이지 헤더 제거(이중 헤더 해소) — 상세의 자체 헤드가 유일한 헤더 */
 body[data-page="dm"].dm-detail .header { display: none; }

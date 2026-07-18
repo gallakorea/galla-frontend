@@ -37,6 +37,7 @@ body[data-page="index"] .header,
 body[data-page="predict"] .header,
 body[data-page="search"] .header,
 body[data-page="plaza"] .header,
+body[data-page="trend"] .header,
 body[data-page="mypage"] .header {
   position: fixed;
   left: 0;
@@ -47,6 +48,7 @@ body[data-page="index"] #app,
 body[data-page="predict"] #app,
 body[data-page="search"] #app,
 body[data-page="plaza"] #app,
+body[data-page="trend"] #app,
 body[data-page="mypage"] #app {
   padding-top: calc(65px + env(safe-area-inset-top));
 }
