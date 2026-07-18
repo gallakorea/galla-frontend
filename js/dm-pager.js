@@ -152,8 +152,18 @@
 
   async function mount(host) {
     host.innerHTML = `<div class="pgr-loading">삐삐를 켜는 중…</div>`;
-    const { data } = await sb().rpc('pager_my_box');
-    BOX = data?.ok ? data : { number: '012-????-???' };
+    const { data, error } = await sb().rpc('pager_my_box');
+    if (!data?.ok) {
+      // ★ 물음표 번호 폴백 금지 — '다 똑같은 번호'로 오해된다. 이유를 말하고 재시도.
+      host.innerHTML = `<div class="pgr-empty">
+          삐삐를 켜지 못했어요<br>
+          <span>${esc(data?.reason === 'unauthorized' ? '로그인이 풀렸어요 — 새로고침하거나 다시 로그인해주세요' : (error?.message || '잠시 후 다시 시도해주세요'))}</span><br><br>
+          <button type="button" class="pgr-btn" id="pgr-retry">다시 시도</button>
+        </div>`;
+      host.querySelector('#pgr-retry').onclick = () => mount(host);
+      return;
+    }
+    BOX = data;
     await render(host);
   }
 

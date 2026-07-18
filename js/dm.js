@@ -622,6 +622,17 @@
     if (ME && window.GALLA_call?.supported()) window.GALLA_call.listen(supabase, ME);
     if (ME && window.GALLA_e2e?.supported()) attachMailbox();
     if (ME) attachPagerRealtime();
+    // 계정이 바뀌면(같은 폰에서 로그아웃→다른 계정) 이전 계정 화면·상태가 남지 않게 통째로 리로드
+    try {
+      supabase.auth.onAuthStateChange?.((_ev, sess) => {
+        const uid = sess?.user?.id || null;
+        if (ME && uid && uid !== ME) location.reload();
+      });
+    } catch (_) {}
+    // bfcache 복원 시 삐삐 탭이 열려 있으면 현재 세션 기준으로 다시 그린다
+    window.addEventListener('pageshow', e => {
+      if (e.persisted && !ROOT.querySelector('#dm-pager')?.hidden) loadPager();
+    });
     // ?pager=1 로 들어오면 바로 사서함
     try { if (new URLSearchParams(location.search).get('pager')) setTimeout(() => setTab('pager'), 60); } catch (_) {}
     if (PAGE_MODE()) bindPageHeader();
