@@ -287,10 +287,17 @@
             <span class="dm-reply-info"><b>답장</b> <span id="dm-reply-preview"></span></span>
             <button type="button" class="dm-reply-x" id="dm-reply-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
-          <div class="dm-rec-strip" id="dm-rec-strip" hidden>
-            <span class="dm-rec-dot"></span><b>녹음 중</b> <span id="dm-rec-time">0:00</span>
-            <span class="dm-rec-hint">마이크를 다시 누르면 전송</span>
-            <button type="button" id="dm-rec-cancel">취소</button>
+          <div class="dm-ptt" id="dm-ptt" hidden>
+            <div class="dm-ptt-slot">
+              <span class="dm-ptt-lock" id="dm-ptt-lock">${ICONS.lock}<i>잠금</i></span>
+              <span class="dm-ptt-cancel" id="dm-ptt-cancel">${ICONS.x}<i>취소</i></span>
+            </div>
+            <div class="dm-ptt-panel">
+              <span class="dm-ptt-dot"></span>
+              <span class="dm-ptt-time" id="dm-rec-time">0:00</span>
+              <span class="dm-ptt-wave" id="dm-ptt-wave"></span>
+              <span class="dm-ptt-hint" id="dm-ptt-hint">손을 떼면 전송 · 위로 밀어 취소</span>
+            </div>
           </div>
           <div class="dm-stk" id="dm-stk" hidden>
             <div class="dm-stk-top">
@@ -301,6 +308,7 @@
                 <button type="button" data-sk="gifs">GIF</button>
               </div>
             </div>
+            <div class="dm-stk-styles" id="dm-stk-styles"></div>
             <div class="dm-stk-cats" id="dm-stk-cats"></div>
             <div class="dm-stk-grid" id="dm-stk-grid"><div class="dm-loading">불러오는 중…</div></div>
             <div class="dm-stk-credit" id="dm-stk-credit">움직이는 스티커 · Noto Emoji by Google (CC BY 4.0)</div>
@@ -429,8 +437,7 @@
     ROOT.querySelector('#dm-gnew-go').addEventListener('click', createGroup);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
-    ROOT.querySelector('#dm-voice').addEventListener('click', toggleVoiceRec);
-    ROOT.querySelector('#dm-rec-cancel').addEventListener('click', () => { if (VREC) { VREC._cancel = true; VREC.stop(); } });
+    bindPTT(ROOT.querySelector('#dm-voice'));
     ROOT.querySelector('#dm-sticker').addEventListener('click', toggleStk);
     ROOT.querySelector('#dm-stk-q').addEventListener('input', () => {
       clearTimeout(stkTimer);
@@ -440,6 +447,23 @@
       ROOT.querySelectorAll('.dm-stk-tabs button').forEach(x => x.classList.toggle('on', x === b));
       STK_KIND = b.dataset.sk; paintStk();
     }));
+    ROOT.querySelector('#dm-stk-styles').addEventListener('click', e => {
+      const b = e.target.closest('[data-si]'); if (!b) return;
+      STK_STYLE = b.dataset.si;
+      try { localStorage.setItem('galla_stk_style', STK_STYLE); } catch (_) {}
+      paintStk();
+    });
+    // 이미지 로드 실패 → 다음 스타일 URL로 (capture: error는 버블하지 않는다)
+    ROOT.querySelector('#dm-stk-grid').addEventListener('error', e => {
+      const img = e.target;
+      if (!img.dataset || img.dataset.src !== 'stk') return;
+      let rest = [];
+      try { rest = JSON.parse(img.dataset.alt || '[]'); } catch (_) {}
+      if (!rest.length) { img.style.display = 'none'; return; }
+      const next = rest.shift();
+      img.dataset.alt = JSON.stringify(rest);
+      img.src = next; img.dataset.full = next;
+    }, true);
     ROOT.querySelector('#dm-stk-cats').addEventListener('click', e => {
       const b = e.target.closest('[data-ci]'); if (!b) return;
       STK_CAT = +b.dataset.ci;
@@ -462,7 +486,7 @@
       if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
       const isGif = img.dataset.src === 'giphy';
       sendMessage({ kind: 'gif', body: isGif ? '🎬 GIF' : '🎬 이모티콘',
-                    meta: { url: img.dataset.full, sticker: !isGif, src: img.dataset.src || 'noto' } });
+                    meta: { url: img.dataset.full, sticker: !isGif, src: isGif ? 'giphy' : STK_STYLE } });
     });
     // 음성 재생 — 한 번에 하나만
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
@@ -471,7 +495,14 @@
       if (VAUDIO) { VAUDIO.pause(); VAUDIO._btn && (VAUDIO._btn.innerHTML = ICONS.play); }
       VAUDIO = new Audio(b.dataset.url); VAUDIO._btn = b;
       b.innerHTML = ICONS.pause;
-      VAUDIO.onended = VAUDIO.onpause = () => { b.innerHTML = ICONS.play; };
+      VAUDIO.onpause = () => { b.innerHTML = ICONS.play; };
+      VAUDIO.onended = () => {
+        b.innerHTML = ICONS.play;
+        // 다음 음성 말풍선이 있으면 이어서 — 손 안 대고 죽 듣는다
+        const all = [...ROOT.querySelectorAll('#dm-msgs .dm-vplay')];
+        const next = all[all.indexOf(b) + 1];
+        if (next) setTimeout(() => next.click(), 350);
+      };
       VAUDIO.play().catch(() => { b.innerHTML = ICONS.play; toastMini('재생하지 못했어요'); });
     });
     ROOT.querySelector('#dm-file').addEventListener('change', onPickImage);
@@ -1859,6 +1890,7 @@
      이모지·스티커는 오픈 라이선스라 무제한 무료(갈라의 차별점).
      GIF(GIPHY)는 상점 아이템 자원이라 별도 탭으로 분리해 둔다. */
   let STK_KIND = 'emoji', stkTimer = null, STK_CAT = 0, STK_BOOTED = false;
+  let STK_STYLE = (() => { try { return localStorage.getItem('galla_stk_style') || 'noto'; } catch (_) { return 'noto'; } })();
   function toggleStk() {
     const p = ROOT.querySelector('#dm-stk');
     p.hidden = !p.hidden;
@@ -1866,6 +1898,23 @@
   }
   async function ensureStk() {
     if (!window.GALLA_STK) { try { await loadScript('/js/dm-stickers.js'); } catch (_) {} }
+  }
+  function paintStkStyles() {
+    const box = ROOT.querySelector('#dm-stk-styles');
+    const show = STK_KIND === 'sticker' && window.GALLA_STK;
+    box.hidden = !show;
+    if (!show) { box.innerHTML = ''; return; }
+    box.innerHTML = window.GALLA_STK.styles
+      .map(st => `<button type="button" class="${st.id === STK_STYLE ? 'on' : ''}" data-si="${st.id}">${esc(st.label)}</button>`).join('');
+  }
+  /* 스타일마다 커버리지가 달라(애니메이션 Noto는 ~80%) 순차 폴백시킨다 */
+  function stkImgHTML(it) {
+    const S = window.GALLA_STK;
+    const chain = [STK_STYLE, ...S.styles.map(x => x.id).filter(x => x !== STK_STYLE)];
+    const urls = chain.map(id => S.urlOf(it.cps, id));
+    return `<img src="${esc(urls[0])}" data-full="${esc(urls[0])}" data-src="stk"
+      data-alt="${esc(JSON.stringify(urls.slice(1)))}"
+      loading="lazy" alt="${esc(it.kw.split(' ')[0] || '')}">`;
   }
   function paintStkCats() {
     const box = ROOT.querySelector('#dm-stk-cats');
@@ -1880,6 +1929,7 @@
     const grid = ROOT.querySelector('#dm-stk-grid');
     const credit = ROOT.querySelector('#dm-stk-credit');
     const q = ROOT.querySelector('#dm-stk-q').value.trim();
+    paintStkStyles();
     paintStkCats();
     // GIF는 서버(GIPHY) — 유료 자원 탭
     if (STK_KIND === 'gifs') {
@@ -1906,26 +1956,69 @@
         : `<div class="dm-set-empty">그런 이모지는 없어요</div>`;
     } else {
       credit.hidden = false;
+      credit.textContent = (S.styles.find(x => x.id === STK_STYLE) || S.styles[0]).credit;
       grid.className = 'dm-stk-grid';
       grid.innerHTML = items.length
-        ? items.map(it => `<img src="${esc(S.notoUrl(it.cp))}" data-full="${esc(S.notoUrl(it.cp))}" data-src="noto"
-             onerror="this.onerror=null;this.src='${esc(S.fallbackUrl(it.cp))}';this.dataset.full=this.src;"
-             loading="lazy" alt="${esc(it.kw.split(' ')[0] || '')}">`).join('')
+        ? items.map(stkImgHTML).join('')
         : `<div class="dm-set-empty">그런 스티커는 없어요</div>`;
     }
   }
 
-  /* ---------- 🎙 음성 메시지 (MediaRecorder → R2) ---------- */
-  let VREC = null, vrecT = null, VAUDIO = null;
-  async function toggleVoiceRec() {
-    if (VREC) { VREC.stop(); return; }   // 두 번째 누름 = 전송
-    if (!curThread) return;
-    if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
-    if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia)
-      return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
+  /* ---------- 🎙 워키토키 음성 (위챗 문법) ----------
+     꾹 눌러 말하고 떼면 즉시 전송. 위로 밀면 취소, 더 밀면 잠금(핸즈프리).
+     카톡처럼 '버튼 눌러 → 녹음창 열고 → 녹음 → 전송'하는 단계를 전부 없앤 게 핵심. */
+  let VREC = null, vrecT = null, VAUDIO = null, PTT = null;
+  function bindPTT(btn) {
+    let sx = 0, sy = 0;
+    const CANCEL_DY = -70, LOCK_DY = -130;
+    btn.style.touchAction = 'none';
+    btn.addEventListener('pointerdown', async e => {
+      if (PTT?.locked) { stopVoiceRec(false); return; }   // 잠금 상태에선 탭 = 전송
+      e.preventDefault();
+      sx = e.clientX; sy = e.clientY;
+      PTT = { armed: null, locked: false, id: e.pointerId };
+      try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+      await startVoiceRec();
+    });
+    btn.addEventListener('pointermove', e => {
+      if (!PTT || PTT.locked || !VREC) return;
+      const dy = e.clientY - sy;
+      const next = dy < LOCK_DY ? 'lock' : dy < CANCEL_DY ? 'cancel' : null;
+      if (next !== PTT.armed) { PTT.armed = next; paintPTT(); }
+    });
+    const end = () => {
+      if (!PTT || !VREC) { PTT = null; return; }
+      if (PTT.armed === 'lock') { PTT.locked = true; PTT.armed = null; paintPTT(); return; }   // 손 떼도 계속
+      const cancel = PTT.armed === 'cancel';
+      PTT = null;
+      stopVoiceRec(cancel);
+    };
+    btn.addEventListener('pointerup', end);
+    btn.addEventListener('pointercancel', end);
+  }
+  function paintPTT() {
+    const box = ROOT.querySelector('#dm-ptt');
+    const hint = ROOT.querySelector('#dm-ptt-hint');
+    const btn = ROOT.querySelector('#dm-voice');
+    box.dataset.armed = PTT?.armed || '';
+    box.classList.toggle('locked', !!PTT?.locked);
+    btn.classList.toggle('rec', !!VREC);
+    if (!hint) return;
+    hint.textContent = PTT?.locked ? '핸즈프리 — 마이크를 탭하면 전송'
+      : PTT?.armed === 'cancel' ? '손을 떼면 취소돼요'
+      : PTT?.armed === 'lock' ? '손을 떼면 계속 녹음(핸즈프리)'
+      : '손을 떼면 전송 · 위로 밀어 취소';
+  }
+  async function startVoiceRec() {
+    if (VREC || !curThread) return;
+    if (secretOn(curThread)) { PTT = null; return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)'); }
+    if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
+      PTT = null; return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
+    }
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (_) { return toastMini('마이크 권한이 필요해요 — 설정에서 허용해 주세요'); }
+    catch (_) { PTT = null; return toastMini('마이크 권한이 필요해요 — 설정에서 허용해 주세요'); }
+    if (!PTT) { stream.getTracks().forEach(t => t.stop()); return; }   // 권한 대기 중 손을 뗐다
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
       : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
     const chunks = [];
@@ -1937,9 +2030,9 @@
       stream.getTracks().forEach(t => t.stop());
       const cancelled = rec._cancel;
       const dur = Math.round((Date.now() - t0) / 1000);
-      VREC = null; paintRec(false);
+      VREC = null; PTT = null; paintRec(false);
       if (cancelled) return;
-      if (dur < 1) return toastMini('너무 짧아요 — 꾹 담아서 다시');
+      if (dur < 1) return toastMini('너무 짧아요 — 꾹 눌러서 말해주세요');
       const type = rec.mimeType || 'audio/webm';
       const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
       const f = new File(chunks, 'voice.' + ext, { type });
@@ -1962,20 +2055,32 @@
     };
     rec.start();
     paintRec(true, t0);
+    paintPTT();
+    // 60초 넘으면 자동 전송(무한 녹음 방지)
+    rec._maxT = setTimeout(() => { if (VREC === rec) stopVoiceRec(false); }, 60000);
+  }
+  function stopVoiceRec(cancel) {
+    if (!VREC) return;
+    clearTimeout(VREC._maxT);
+    VREC._cancel = !!cancel;
+    try { VREC.stop(); } catch (_) {}
   }
   function paintRec(on, t0) {
-    const strip = ROOT.querySelector('#dm-rec-strip');
+    const box = ROOT.querySelector('#dm-ptt');
     const btn = ROOT.querySelector('#dm-voice');
-    strip.hidden = !on;
+    box.hidden = !on;
     btn.classList.toggle('rec', on);
     clearInterval(vrecT);
-    if (on) {
-      const el = ROOT.querySelector('#dm-rec-time');
-      vrecT = setInterval(() => {
-        const s = Math.floor((Date.now() - t0) / 1000);
-        el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-      }, 250);
-    }
+    if (!on) { box.dataset.armed = ''; box.classList.remove('locked'); return; }
+    const wave = ROOT.querySelector('#dm-ptt-wave');
+    if (wave && !wave.children.length) wave.innerHTML = '<i></i>'.repeat(18);
+    const el = ROOT.querySelector('#dm-rec-time');
+    vrecT = setInterval(() => {
+      const s = Math.floor((Date.now() - t0) / 1000);
+      el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      // 살아있는 파형(마이크 분석 없이 가볍게 — 배터리·CPU를 안 먹는다)
+      if (wave) [...wave.children].forEach(b => { b.style.height = (6 + Math.random() * 22).toFixed(0) + 'px'; });
+    }, 120);
   }
 
   /* ---------- 전송 ---------- */
