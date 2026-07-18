@@ -606,7 +606,11 @@
     supabase.channel('pager:' + ME)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'pager_messages', filter: 'box_owner=eq.' + ME },
-        ({ new: row }) => pagerRing(row))
+        ({ new: row }) => {
+          pagerRing(row);
+          // 삐삐 탭을 보고 있으면 목록도 즉시 갱신 — '들어왔는데 안 보임' 방지
+          if (!ROOT.querySelector('#dm-pager')?.hidden) window.GALLA_pagerRefresh?.();
+        })
       .subscribe();
   }
 

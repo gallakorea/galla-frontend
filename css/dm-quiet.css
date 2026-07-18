@@ -968,3 +968,7 @@ body.tossface .dm-ptt-hint {
 }
 .pgr-btn.go { background: linear-gradient(180deg, #2a9c58, #1f7a45); border-color: #2a9c58; color: #eafff1; }
 .pgr-btn:disabled { opacity: .5; cursor: default; }
+/* 수신 3케이스 구분 */
+.pgr-row-ic.code { background: rgba(255,255,255,.06); color: #d7dae2; }
+.pgr-row-ic.mix { background: rgba(201,180,88,.12); color: #e6d9a3; }
+.pgr-row.mix { border-color: rgba(201,180,88,.2); }

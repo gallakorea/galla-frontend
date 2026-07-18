@@ -232,10 +232,14 @@
     ]);
     const list = msgs || [];
     const ids = [...new Set(list.map(m => m.sender_id))];
-    let names = {};
+    let names = {}, nums = {};
     if (ids.length) {
-      const { data: us } = await sb().from('users').select('id,nickname').in('id', ids);
+      const [{ data: us }, { data: bs }] = await Promise.all([
+        sb().from('users').select('id,nickname').in('id', ids),
+        sb().from('pager_boxes').select('user_id,number').in('user_id', ids),
+      ]);
       (us || []).forEach(u => { names[u.id] = u.nickname || '익명'; });
+      (bs || []).forEach(b => { nums[b.user_id] = b.number; });
     }
     const unread = list.filter(m => !m.listened_at).length;
 
@@ -268,7 +272,7 @@
 
         <div class="pgr-sec">받은 호출</div>
         <div class="pgr-list">
-          ${list.length ? list.map(m => rowHTML(m, names[m.sender_id])).join('')
+          ${list.length ? list.map(m => rowHTML(m, names[m.sender_id], nums[m.sender_id])).join('')
             : `<div class="pgr-empty">아직 아무도 삐삐를 치지 않았어요.<br><span>번호를 친구에게 알려주세요.</span></div>`}
         </div>
         <div class="pgr-note">삐삐엔 읽음 표시가 없어요. 들었는지는 나만 압니다.</div>
@@ -277,20 +281,29 @@
     host.querySelectorAll('[data-a]').forEach(b => b.onclick = () => act(b.dataset.a, host));
     bindDial(host);
     host.querySelectorAll('[data-msg]').forEach(el => el.onclick = () => openMsg(el.dataset.msg, list, names, host));
+    window.GALLA_pagerRefresh = () => mount(host);   // 실시간 수신 시 목록 즉시 갱신용
   }
 
-  function rowHTML(m, name) {
+  function rowHTML(m, name, senderNum) {
     const t = new Date(m.created_at);
     const when = `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
     const isNew = !m.listened_at;
+    // 3케이스: 숫자만 / 음성만 / 음성+숫자
+    const isMix = m.kind === 'voice' && m.code;
+    const ic = m.kind === 'code' ? '숫자' : isMix ? '음+숫' : '음성';
+    const main = m.kind === 'code'
+      ? esc(m.code) + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '')
+      : isMix
+        ? `▶ ${m.dur || 0}초 · ${esc(m.code)}` + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '')
+        : `▶ ${m.dur || 0}초 음성`;
+    // 그 시절 감성: 발신 '삐삐 번호'가 먼저, 닉네임은 옆에(실용)
+    const who = senderNum ? `${esc(senderNum)} · ${esc(name || '익명')}` : esc(name || '누군가');
     return `
-      <button type="button" class="pgr-row${isNew ? ' new' : ''}" data-msg="${m.id}">
-        <span class="pgr-row-ic">${m.kind === 'code' ? '숫자' : '음성'}</span>
+      <button type="button" class="pgr-row${isNew ? ' new' : ''}${isMix ? ' mix' : ''}" data-msg="${m.id}">
+        <span class="pgr-row-ic${m.kind === 'code' ? ' code' : ''}${isMix ? ' mix' : ''}">${ic}</span>
         <span class="pgr-row-mid">
-          <b>${m.kind === 'code'
-            ? esc(m.code) + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '')
-            : `${m.dur || 0}초 음성` + (m.code ? ` + ${esc(m.code)}` + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '') : '')}</b>
-          <span>${esc(name || '누군가')}</span>
+          <b>${main}</b>
+          <span>${who}</span>
         </span>
         <span class="pgr-row-t">${when}${isNew ? '<em>NEW</em>' : ''}</span>
       </button>`;
@@ -302,6 +315,7 @@
     if (m.kind === 'code') {
       popup({ name: names[m.sender_id], kind: 'code', code: m.code });
     } else if (m.voice_url) {
+      if (m.code) toast(`동봉된 암호: ${m.code}${codeMeaning(m.code) ? ' — ' + codeMeaning(m.code) : ''}`);
       if (PLAYING) { PLAYING.pause(); PLAYING = null; }
       beep('connect');
       setTimeout(() => { PLAYING = new Audio(m.voice_url); PLAYING.play().catch(() => {}); }, 320);
