@@ -163,8 +163,66 @@
       host.querySelector('#pgr-retry').onclick = () => mount(host);
       return;
     }
+    if (!data.activated) { renderActivation(host); return; }
     BOX = data;
     await render(host);
+  }
+
+  /* ── 📟 개통식 — 첫 진입의 의식. 번호를 '받는' 순간이 기억에 남아야 한다 ── */
+  function renderActivation(host) {
+    host.innerHTML = `
+      <div class="pgr-wrap">
+        <div class="pgr-device">
+          <div class="pgr-lcd">
+            <div class="pgr-lcd-top">NO SERVICE</div>
+            <div class="pgr-lcd-main" id="pgr-act-num">--- ----</div>
+            <div class="pgr-lcd-sub">미개통 삐삐</div>
+          </div>
+          <div class="pgr-act-copy">
+            나만의 삐삐 번호를 개통하면<br>친구들이 음성과 암호를 남길 수 있어요
+          </div>
+          <div class="pgr-actions">
+            <button type="button" class="pgr-btn go" data-a="actrand">랜덤으로 개통</button>
+            <button type="button" class="pgr-btn" data-a="actpick">번호 골라 개통</button>
+          </div>
+        </div>
+        <div class="pgr-note">그 시절처럼, 번호 하나로 시작합니다.</div>
+      </div>`;
+    host.querySelector('[data-a="actrand"]').onclick = () => activateRandom(host);
+    host.querySelector('[data-a="actpick"]').onclick = () => pickNumber(host);
+  }
+
+  /* 랜덤 개통 — 액정 숫자 스크램블 → 번호 확정 연출 */
+  async function activateRandom(host) {
+    const numEl = host.querySelector('#pgr-act-num');
+    const topEl = host.querySelector('.pgr-lcd-top');
+    const btns = host.querySelectorAll('.pgr-actions button');
+    btns.forEach(b => b.disabled = true);
+    topEl.textContent = 'CONNECTING…';
+    // 숫자 굴리기(추첨 감성) + 틱 소리
+    let ticks = 0;
+    const roll = setInterval(() => {
+      const r = () => Math.floor(Math.random() * 10);
+      numEl.textContent = `012-${r()}${r()}${r()}-${r()}${r()}${r()}${r()}`;
+      if (ticks++ % 3 === 0) beep('tone');
+    }, 90);
+    const [{ data }] = await Promise.all([
+      sb().rpc('pager_activate_random'),
+      new Promise(r => setTimeout(r, 1800)),   // 연출 최소 시간 — 너무 빨리 끝나면 심심하다
+    ]);
+    clearInterval(roll);
+    if (!data?.ok) {
+      btns.forEach(b => b.disabled = false);
+      topEl.textContent = 'NO SERVICE';
+      return toast('개통에 실패했어요 — 다시 시도해주세요');
+    }
+    numEl.textContent = data.number;
+    topEl.textContent = 'MY PAGER';
+    host.querySelector('.pgr-lcd-sub').textContent = '개통 완료!';
+    beep('connect');
+    try { navigator.vibrate?.([80, 60, 200]); } catch (_) {}
+    toast(`개통을 축하합니다 — ${data.number}`);
+    setTimeout(() => mount(host), 1400);
   }
 
   async function render(host) {
@@ -368,7 +426,9 @@
           go.textContent = '이 번호로 개통'; return;
         }
         beep('connect');
-        toast(`개통 완료! ${data.number}`);
+        try { navigator.vibrate?.([80, 60, 200]); } catch (_) {}
+        toast(`개통을 축하합니다 — ${data.number}`);
+        BOX = BOX || {};
         BOX.number = data.number;
         close();
         mount(host);
