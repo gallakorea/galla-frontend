@@ -445,3 +445,15 @@
   background: rgba(74,222,128,.13); color: #7ee2a0; box-shadow: none;
   border: 1px solid rgba(74,222,128,.35); cursor: default;
 }
+
+/* ═══════ ✏️ 편집 모드 칩 — 길게 누르기에 숨어 있던 관리를 드러낸다 ═══════ */
+.dm-edit-chips { flex: none; display: flex; gap: 6px; }
+.dm-chip {
+  width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 14px;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s cubic-bezier(.2,1.4,.4,1);
+}
+.dm-chip:active { transform: scale(.88); }
+.dm-chip.on { border-color: rgba(255,207,77,.55); background: rgba(255,207,77,.12); }
+.dm-chip.danger:active { background: rgba(255,77,103,.18); border-color: rgba(255,77,103,.45); }

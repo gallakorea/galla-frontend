@@ -99,7 +99,6 @@
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
           <div class="dm-list" id="dm-inbox-wrap">
-            <div class="dm-sort-row"><button id="dm-sort" type="button"></button></div>
             <div id="dm-inbox"></div>
           </div>
           <div class="dm-list" id="dm-friends" hidden>
@@ -200,7 +199,7 @@
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
-      else if (act === 'settings') { showView('settings'); loadSettings(); }
+      else if (act === 'settings') { headMenu(e.target.closest('[data-act]')); }
       else if (act === 'addFriend') { showView('add'); initAdd(); }
       else if (act === 'toFriends') { showView('inbox'); setTab('friends'); }
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
@@ -208,11 +207,6 @@
       if (tab) setTab(tab);
     });
     ROOT.querySelector('#dm-friend-q').addEventListener('input', e => filterFriends(e.target.value));
-    ROOT.querySelector('#dm-sort').addEventListener('click', () => {
-      SORT = SORT === 'recent' ? 'unread' : 'recent';
-      try { localStorage.setItem('galla_dm_sort', SORT); } catch (_) {}
-      loadInbox();
-    });
     // 친구·채팅 행 길게 누르기 → 관리 메뉴 (말풍선 메뉴와 같은 문법)
     bindLongPress(ROOT.querySelector('#dm-friend-list'), '.dm-friend', friendMenu);
     bindLongPress(ROOT.querySelector('#dm-inbox'), '.dm-thread', threadMenu);
@@ -293,10 +287,11 @@
 
   /* ---------- 탭: 채팅 / 친구 ---------- */
   function setTab(tab) {
+    EDIT = false;   // 편집은 일시적 모드 — 탭을 바꾸면 해제(켠 채 넘어가면 다른 탭 메뉴가 '완료'로 떠서 헷갈린다)
     ROOT.querySelectorAll('.dm-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
     ROOT.querySelector('#dm-inbox-wrap').hidden = tab !== 'chats';
     ROOT.querySelector('#dm-friends').hidden = tab !== 'friends';
-    if (tab === 'friends') loadFriends();
+    if (tab === 'friends') loadFriends(); else loadInbox();
   }
 
   /* ---------- 관리 상태 (즐겨찾기·숨김·차단·방 고정·정렬) ---------- */
@@ -353,55 +348,113 @@
     };
   }
 
-  /* ---------- 친구 관리 메뉴: 즐겨찾기 / 숨기기 / 차단 ---------- */
+  /* ---------- 친구/채팅방 액션 (길게 누르기 메뉴와 편집 모드가 공유) ---------- */
+  async function doFriendAct(k, peer, name) {
+    if (k === 'fav') {
+      const fav = PREF.favs.has(peer);
+      if (fav) { PREF.favs.delete(peer); await supabase.from('dm_favs').delete().eq('user_id', ME).eq('peer', peer); }
+      else { PREF.favs.add(peer); await supabase.from('dm_favs').insert({ user_id: ME, peer }); }
+      renderFriends(FRIENDS);
+    } else if (k === 'hide') {
+      PREF.hidden.add(peer);
+      await supabase.from('dm_hidden').insert({ user_id: ME, hidden: peer });
+      renderFriends(FRIENDS);
+    } else if (k === 'block') {
+      if (!confirm(`${name} 님을 차단할까요?\n서로 메시지를 보낼 수 없게 되고, 상대에게는 알리지 않습니다.`)) return;
+      PREF.blocks.add(peer);
+      await supabase.from('dm_blocks').insert({ user_id: ME, blocked: peer });
+      renderFriends(FRIENDS);
+    }
+  }
+  async function doThreadAct(k, tid) {
+    const p = PREF.threads[tid] || {};
+    if (k === 'pin') {
+      const pinned = !p.pinned;
+      PREF.threads[tid] = { ...p, thread_id: tid, pinned };
+      await supabase.from('dm_thread_prefs')
+        .upsert({ thread_id: tid, user_id: ME, pinned }, { onConflict: 'thread_id,user_id' });
+      loadInbox();
+    } else if (k === 'leave') {
+      if (!confirm('이 대화를 나갈까요?\n목록에서 사라지고, 새 메시지가 오면 다시 나타납니다.')) return;
+      const left_at = new Date().toISOString();
+      PREF.threads[tid] = { ...p, thread_id: tid, left_at };
+      await supabase.from('dm_thread_prefs')
+        .upsert({ thread_id: tid, user_id: ME, left_at, pinned: false }, { onConflict: 'thread_id,user_id' });
+      loadInbox();
+    }
+  }
   function friendMenu(el, x, y) {
     const peer = el.dataset.peer, name = el.dataset.name;
-    const fav = PREF.favs.has(peer);
     popMenu(x, y, [
-      { k: 'fav', label: fav ? '⭐ 즐겨찾기 해제' : '⭐ 즐겨찾기' },
+      { k: 'fav', label: PREF.favs.has(peer) ? '⭐ 즐겨찾기 해제' : '⭐ 즐겨찾기' },
       { k: 'hide', label: '👁 목록에서 숨기기' },
       { k: 'block', label: '🚫 차단', danger: true },
-    ], async k => {
-      if (k === 'fav') {
-        if (fav) { PREF.favs.delete(peer); await supabase.from('dm_favs').delete().eq('user_id', ME).eq('peer', peer); }
-        else { PREF.favs.add(peer); await supabase.from('dm_favs').insert({ user_id: ME, peer }); }
-        renderFriends(FRIENDS);
-      } else if (k === 'hide') {
-        PREF.hidden.add(peer);
-        await supabase.from('dm_hidden').insert({ user_id: ME, hidden: peer });
-        renderFriends(FRIENDS);
-      } else if (k === 'block') {
-        if (!confirm(`${name} 님을 차단할까요?\n서로 메시지를 보낼 수 없게 되고, 상대에게는 알리지 않습니다.`)) return;
-        PREF.blocks.add(peer);
-        await supabase.from('dm_blocks').insert({ user_id: ME, blocked: peer });
-        renderFriends(FRIENDS);
-      }
-    });
+    ], k => doFriendAct(k, peer, name));
   }
-
-  /* ---------- 채팅방 관리 메뉴: 고정 / 나가기 ---------- */
   function threadMenu(el, x, y) {
     const tid = el.dataset.tid;
-    const p = PREF.threads[tid] || {};
     popMenu(x, y, [
-      { k: 'pin', label: p.pinned ? '📌 고정 해제' : '📌 상단 고정' },
+      { k: 'pin', label: PREF.threads[tid]?.pinned ? '📌 고정 해제' : '📌 상단 고정' },
       { k: 'leave', label: '🚪 나가기', danger: true },
-    ], async k => {
-      if (k === 'pin') {
-        const pinned = !p.pinned;
-        PREF.threads[tid] = { ...p, thread_id: tid, pinned };
-        await supabase.from('dm_thread_prefs')
-          .upsert({ thread_id: tid, user_id: ME, pinned }, { onConflict: 'thread_id,user_id' });
+    ], k => doThreadAct(k, tid));
+  }
+
+  /* ---------- ⚙ 헤더 메뉴 (카톡의 정렬·편집·설정 드롭다운) ----------
+     긴 여정을 줄인다: 정렬은 여기, 관리는 편집 모드로 드러낸다.
+     길게 누르기 메뉴는 유지하되, 몰라도 편집 모드로 같은 일을 할 수 있다(발견성). */
+  let EDIT = false;
+  function headMenu(anchor) {
+    const r = anchor.getBoundingClientRect();
+    const isFriends = !ROOT.querySelector('#dm-friends').hidden;
+    const items = isFriends
+      ? [
+          { k: 'add', label: '➕ 친구 추가' },
+          { k: 'edit', label: EDIT ? '✅ 편집 완료' : '✏️ 친구 목록 편집' },
+          { k: 'full', label: '⚙ 전체 설정' },
+        ]
+      : [
+          { k: 'sortRecent', label: (SORT === 'recent' ? '✓ ' : ' ') + '최신 메시지 순' },
+          { k: 'sortUnread', label: (SORT === 'unread' ? '✓ ' : ' ') + '안 읽은 메시지 순' },
+          { k: 'edit', label: EDIT ? '✅ 편집 완료' : '✏️ 채팅방 편집' },
+          { k: 'full', label: '⚙ 전체 설정' },
+        ];
+    popMenu(r.right - 170, r.bottom + 6, items, k => {
+      if (k === 'sortRecent' || k === 'sortUnread') {
+        SORT = k === 'sortUnread' ? 'unread' : 'recent';
+        try { localStorage.setItem('galla_dm_sort', SORT); } catch (_) {}
         loadInbox();
-      } else if (k === 'leave') {
-        if (!confirm('이 대화를 나갈까요?\n목록에서 사라지고, 새 메시지가 오면 다시 나타납니다.')) return;
-        const left_at = new Date().toISOString();
-        PREF.threads[tid] = { ...p, thread_id: tid, left_at };
-        await supabase.from('dm_thread_prefs')
-          .upsert({ thread_id: tid, user_id: ME, left_at, pinned: false }, { onConflict: 'thread_id,user_id' });
-        loadInbox();
-      }
+      } else if (k === 'edit') {
+        EDIT = !EDIT;
+        if (isFriends) renderFriends(FRIENDS); else loadInbox();
+      } else if (k === 'add') { showView('add'); initAdd(); }
+      else if (k === 'full') { showView('settings'); loadSettings(); }
     });
+  }
+  /* 편집 모드 행동 칩 — 행 클릭(대화 열기) 대신 관리 버튼이 노출된다 */
+  function editChipsFriend(f) {
+    const fav = PREF.favs.has(f.id);
+    return `<span class="dm-edit-chips">
+      <button class="dm-chip${fav ? ' on' : ''}" data-ek="fav" data-peer="${f.id}" type="button">⭐</button>
+      <button class="dm-chip" data-ek="hide" data-peer="${f.id}" type="button">👁</button>
+      <button class="dm-chip danger" data-ek="block" data-peer="${f.id}" type="button">🚫</button>
+    </span>`;
+  }
+  function editChipsThread(tid) {
+    const pinned = !!PREF.threads[tid]?.pinned;
+    return `<span class="dm-edit-chips">
+      <button class="dm-chip${pinned ? ' on' : ''}" data-ek="pin" data-tid="${tid}" type="button">📌</button>
+      <button class="dm-chip danger" data-ek="leave" data-tid="${tid}" type="button">🚪</button>
+    </span>`;
+  }
+  function bindEditChips(box) {
+    box.querySelectorAll('.dm-chip').forEach(b => b.addEventListener('click', e => {
+      e.stopPropagation(); e.preventDefault();
+      const { ek, peer, tid } = b.dataset;
+      if (peer) {
+        const name = b.closest('.dm-friend')?.dataset.name || '';
+        doFriendAct(ek, peer, name);
+      } else if (tid) doThreadAct(ek, tid);
+    }, true));
   }
 
   /* ---------- 설정: 검색 허용 + 차단/숨김 관리 ---------- */
@@ -463,7 +516,7 @@
           <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
           ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
         </span>
-        <span class="dm-friend-go">💬</span>
+        ${EDIT ? editChipsFriend(f) : '<span class="dm-friend-go">💬</span>'}
       </button>`;
   }
   function renderFriends(list) {
@@ -480,8 +533,9 @@
       (favs.length ? `<div class="dm-sec">⭐ 즐겨찾기 <b>${favs.length}</b></div>` + favs.map(friendRow).join('') : '') +
       `<div class="dm-sec">친구 <b>${rest.length}</b></div>` + rest.map(friendRow).join('');
     box.querySelectorAll('.dm-friend').forEach(el => {
-      el.addEventListener('click', () => startDM(el.dataset.peer, el.dataset.name));
+      el.addEventListener('click', () => { if (!EDIT) startDM(el.dataset.peer, el.dataset.name); });
     });
+    if (EDIT) bindEditChips(box);
     staggerRows(box, '.dm-friend');
   }
   /* ---------- ➕ 친구 추가 (코드·닉네임·맞팔 대기) ---------- */
@@ -601,8 +655,6 @@
   /* ---------- 인박스 (고정 우선 · 정렬 · 나간 방 제외) ---------- */
   async function loadInbox() {
     const box = ROOT.querySelector('#dm-inbox');
-    const sortBtn = ROOT.querySelector('#dm-sort');
-    if (sortBtn) sortBtn.textContent = (SORT === 'unread' ? '안 읽은 메시지 순' : '최신 메시지 순') + ' ▾';
     const [{ data: threads }] = await Promise.all([
       supabase.from('dm_threads')
         .select('id,user_lo,user_hi,last_message,last_sender,last_message_at')
@@ -649,15 +701,16 @@
             <span class="dm-thread-name">${pinned ? '📌 ' : ''}${esc(name)}</span>
             <span class="dm-thread-prev">${esc(preview)}</span>
           </span>
-          <span class="dm-thread-side">
+          ${EDIT ? editChipsThread(t.id) : `<span class="dm-thread-side">
             <span class="dm-thread-time">${timeLabel(t.last_message_at)}</span>
             ${u ? `<span class="dm-dot">${u}</span>` : ''}
-          </span>
+          </span>`}
         </button>`;
     }).join('');
     box.querySelectorAll('.dm-thread').forEach(el => {
-      el.addEventListener('click', () => openThread(el.dataset.tid, el.dataset.peer, el.dataset.name));
+      el.addEventListener('click', () => { if (!EDIT) openThread(el.dataset.tid, el.dataset.peer, el.dataset.name); });
     });
+    if (EDIT) bindEditChips(box);
     staggerRows(box, '.dm-thread');
   }
 
