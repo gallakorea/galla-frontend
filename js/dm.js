@@ -531,14 +531,17 @@
   }
   function attachInboxRealtime() {
     if (inboxChan) return;
-    inboxChan = supabase.channel('dm-inbox')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_threads' },
-        ({ new: t }) => {
-          if (t.user_lo !== ME && t.user_hi !== ME) return;
-          if (t.last_sender !== ME) refreshBadge();
-          if (ROOT && ROOT.classList.contains('open') &&
-              !ROOT.querySelector('[data-view="inbox"]').hidden) loadInbox();
-        })
+    // ★ 비용·부하: 필터 없이 구독하면 '전체 스레드 갱신 × 접속자 수'만큼 서버가 팬아웃을
+    //   계산한다(운영비 질문에 답하다 발견). 스레드의 내 자리가 user_lo일 수도 hi일 수도
+    //   있는데 postgres_changes 필터는 OR을 못 하므로, 같은 채널에 필터 다른 바인딩 2개.
+    const onThread = ({ new: t }) => {
+      if (t.last_sender !== ME) refreshBadge();
+      if (ROOT && ROOT.classList.contains('open') &&
+          !ROOT.querySelector('[data-view="inbox"]').hidden) loadInbox();
+    };
+    inboxChan = supabase.channel('dm-inbox-' + ME)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_threads', filter: 'user_lo=eq.' + ME }, onThread)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'dm_threads', filter: 'user_hi=eq.' + ME }, onThread)
       .subscribe();
   }
 
