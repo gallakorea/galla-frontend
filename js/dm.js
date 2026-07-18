@@ -60,13 +60,22 @@
   /* 프로필 캐시 — 닉네임·아바타·bio는 users에서 읽는다(공개 컬럼).
      user_profiles는 PII 잠금 대상이라 여기 기대면 안 된다. */
   const PROFILES = {};   // id -> {nickname, avatar_url, bio}
+  /* ★ users.avatar_url은 완성 URL이 아니라 스토리지 경로("<uid>/avatar.jpg")다.
+     mypage 등은 storage.getPublicUrl로 변환해 쓴다 — 날것으로 <img src>에 넣으면 전부 깨진다
+     ("프로필 사진이 안 나온다"의 원인). http(s)·data:로 시작하면 이미 완성 URL이니 그대로. */
+  function resolveAvatar(path) {
+    if (!path) return null;
+    if (/^(https?:|data:)/.test(path)) return path;
+    try { return supabase.storage.from('profiles').getPublicUrl(path).data.publicUrl; }
+    catch (_) { return null; }
+  }
   async function profilesFor(ids) {
     const need = [...new Set(ids)].filter(id => id && !(id in PROFILES));
     if (need.length) {
       const { data } = await supabase.from('users')
         .select('id,nickname,avatar_url,bio').in('id', need);
       (data || []).forEach(p => {
-        PROFILES[p.id] = { nickname: p.nickname || '익명', avatar_url: p.avatar_url || null, bio: p.bio || '' };
+        PROFILES[p.id] = { nickname: p.nickname || '익명', avatar_url: resolveAvatar(p.avatar_url), bio: p.bio || '' };
         nickCache[p.id] = p.nickname || '익명';
       });
       need.forEach(id => { if (!(id in PROFILES)) { PROFILES[id] = { nickname: '익명', avatar_url: null, bio: '' }; nickCache[id] = '익명'; } });
@@ -232,6 +241,9 @@
     // 친구·채팅 행 길게 누르기 → 관리 메뉴 (말풍선 메뉴와 같은 문법)
     bindLongPress(ROOT.querySelector('#dm-friend-list'), '.dm-friend', friendMenu);
     bindLongPress(ROOT.querySelector('#dm-inbox'), '.dm-thread', threadMenu);
+    // ⬇️ 당겨서 새로고침 — PWA 전체화면엔 브라우저 기본 당김이 없다
+    bindPullRefresh(ROOT.querySelector('#dm-inbox-wrap'), async () => { PREF.loaded = false; await loadInbox(); refreshBadge(); });
+    bindPullRefresh(ROOT.querySelector('#dm-friends'), async () => { PREF.loaded = false; FRIENDS = []; await loadFriends(); });
     ROOT.querySelector('#dm-form').addEventListener('submit', onSend);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
@@ -336,6 +348,45 @@
     (tp.data || []).forEach(r => { PREF.threads[r.thread_id] = r; });
     PREF.searchable = st.data ? st.data.searchable !== false : true;
     PREF.loaded = true;
+  }
+
+  /* ---------- ⬇️ 당겨서 새로고침 ----------
+     리스트 맨 위에서 아래로 70px 이상 당기면 스피너가 돌고 목록을 다시 불러온다.
+     스크롤 중간에서는 절대 발동하지 않는다(scrollTop 0에서 시작한 제스처만). */
+  function bindPullRefresh(container, onRefresh) {
+    if (!container) return;
+    let startY = 0, pulling = false, busy = false;
+    let bar = document.createElement('div');
+    bar.className = 'dm-ptr';
+    bar.innerHTML = '<span class="dm-ptr-spin"></span>';
+    container.prepend(bar);
+
+    container.addEventListener('touchstart', e => {
+      if (busy || container.scrollTop > 0) { pulling = false; return; }
+      startY = e.touches[0].clientY; pulling = true;
+    }, { passive: true });
+    container.addEventListener('touchmove', e => {
+      if (!pulling || busy) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy <= 0 || container.scrollTop > 0) { bar.style.height = '0px'; return; }
+      // 고무줄 저항 — 당길수록 무거워진다
+      const h = Math.min(90, dy * 0.45);
+      bar.style.height = h + 'px';
+      bar.classList.toggle('ready', h >= 58);
+    }, { passive: true });
+    container.addEventListener('touchend', async () => {
+      if (!pulling || busy) return;
+      pulling = false;
+      const ready = bar.classList.contains('ready');
+      if (!ready) { bar.style.height = '0px'; bar.classList.remove('ready'); return; }
+      busy = true;
+      bar.classList.add('busy'); bar.style.height = '54px';
+      try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
+      try { await onRefresh(); } catch (_) {}
+      bar.classList.remove('busy', 'ready');
+      bar.style.height = '0px';
+      busy = false;
+    });
   }
 
   /* ---------- 길게 누르기 공용 ---------- */
@@ -563,7 +614,7 @@
   /* ---------- ➕ 친구 추가 (코드·닉네임·맞팔 대기) ---------- */
   let FOLLOWING = new Set();
   function addRow(u) {
-    PROFILES[u.id] = PROFILES[u.id] || { nickname: u.nickname || '익명', avatar_url: u.avatar_url, bio: u.bio || '' };
+    PROFILES[u.id] = PROFILES[u.id] || { nickname: u.nickname || '익명', avatar_url: resolveAvatar(u.avatar_url), bio: u.bio || '' };
     nickCache[u.id] = u.nickname || '익명';
     const following = FOLLOWING.has(u.id);
     return `
@@ -1034,7 +1085,7 @@
         const { data } = await supabase.rpc('dm_search', { p_q: q });
         const list = (data || []).filter(u => u.id !== ME);
         if (!list.length) { res.innerHTML = `<div class="dm-empty">검색 결과가 없어요.</div>`; return; }
-        list.forEach(u => { PROFILES[u.id] = { nickname: u.nickname || '익명', avatar_url: u.avatar_url, bio: u.bio || '' }; nickCache[u.id] = u.nickname || '익명'; });
+        list.forEach(u => { PROFILES[u.id] = { nickname: u.nickname || '익명', avatar_url: resolveAvatar(u.avatar_url), bio: u.bio || '' }; nickCache[u.id] = u.nickname || '익명'; });
         res.innerHTML = list.map(u => `
           <button class="dm-thread" data-peer="${u.id}" data-name="${esc(u.nickname || '익명')}">
             ${avaHTML(u.id)}

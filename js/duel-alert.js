@@ -233,9 +233,15 @@
     var d = r.data;
     if (!d || d.status !== "pending" || d.opponent !== me) return null;   // 이미 끝났거나 내 것이 아님
     var u = await sb.from("users").select("id,nickname,avatar_url").in("id", [d.challenger, me]);
+    // avatar_url은 스토리지 경로일 수 있다 → 완성 URL로 변환(안 하면 초상화가 안 뜬다)
+    var ava = function (p) {
+      if (!p) return null;
+      if (/^(https?:|data:)/.test(p)) return p;
+      try { return sb.storage.from('profiles').getPublicUrl(p).data.publicUrl; } catch (e) { return null; }
+    };
     (u.data || []).forEach(function (row) {
-      if (row.id === d.challenger) { d._nick = row.nickname; d._avatar = row.avatar_url; }
-      if (row.id === me) { d._myAvatar = row.avatar_url; }
+      if (row.id === d.challenger) { d._nick = row.nickname; d._avatar = ava(row.avatar_url); }
+      if (row.id === me) { d._myAvatar = ava(row.avatar_url); }
     });
     return d;
   }
