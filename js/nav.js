@@ -125,18 +125,30 @@ document.addEventListener("DOMContentLoaded", () => {
   //   .hdr-hidden   : 아래로 스크롤 → 헤더 전체(로고·＋·♥·금액·DM·설정)가 위로 사라짐
   //                   위로 스크롤하면 다시 표시. 전 페이지 동일.
   const _page = document.body.dataset.page;
-  const hdrEl = ["index", "predict", "search", "plaza", "mypage"].includes(_page)
+  const hdrEl = ["index", "predict", "search", "plaza", "mypage", "trend", "dm"].includes(_page)
     ? document.querySelector(".header") : null;
   if (navEl || hdrEl) {
     // 스크롤 주체가 기기마다 window/documentElement/body로 달라 세 곳에서 위치를 읽는다.
     const getY = () => window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
     let lastY = getY(), ticking = false;
-    const onScroll = () => {
+    // DM 페이지처럼 '창'이 아니라 패널 내부(.dm-list 등)가 스크롤되는 화면 지원 —
+    // capture 리스너는 요소 스크롤도 받지만 좌표를 창에서 읽으면 항상 0이라 무반응이었다.
+    // 이벤트를 낸 요소의 scrollTop을 쓰고, 요소별 직전 위치는 WeakMap으로 따로 기억한다.
+    const innerLast = new WeakMap();
+    let pendingEvt = null;
+    const onScroll = (e) => {
+      pendingEvt = e;
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
         ticking = false;
-        const y = getY(), dy = y - lastY;
+        const t = pendingEvt && pendingEvt.target;
+        const el = (t && t.nodeType === 1 && t !== document.documentElement && t !== document.body &&
+                    t.scrollHeight > t.clientHeight + 1) ? t : null;
+        const y = el ? el.scrollTop : getY();
+        const prev = el ? (innerLast.has(el) ? innerLast.get(el) : y) : lastY;
+        const dy = y - prev;
+        const remember = () => { if (el) innerLast.set(el, y); else lastY = y; };
         if (y <= 10) {                           // 최상단: 원·로고숨김 해제 + 헤더 표시 + 네비 원래크기
           navEl && navEl.classList.remove("nav--mini");
           if (hdrEl) {
@@ -144,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
             hdrEl.classList.remove("hdr-hidden");
             hdrEl.classList.remove("hdr-nologo");
           }
-          lastY = y;
+          remember();
           return;
         }
         hdrEl && hdrEl.classList.add("hdr-scrolled"); // 스크롤 상태 = 아이콘 원 표시
@@ -160,7 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
             navEl && navEl.classList.remove("nav--mini");
             hdrEl && hdrEl.classList.remove("hdr-hidden");
           }
-          lastY = y;
+          remember();
         }
       });
     };
