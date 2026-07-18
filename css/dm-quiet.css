@@ -496,3 +496,4 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 }
 #dm-call.video .dmc-card { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 #dm-call.video[data-state="oncall"] .dmc-name, #dm-call.video[data-state="oncall"] .dmc-state { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+.dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }

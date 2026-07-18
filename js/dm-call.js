@@ -84,10 +84,46 @@
   }
 
   async function getMedia(video) {
-    return navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true },
-      video: video ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
-    });
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
+    try {
+      return await md.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+        video: video ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+      });
+    } catch (e) {
+      // 일부 안드로이드가 고급 제약에서 넘어진다 — 소박한 제약으로 한 번 더
+      if (e && (e.name === 'OverconstrainedError' || e.name === 'TypeError' || e.name === 'AbortError'))
+        return md.getUserMedia({ audio: true, video: !!video });
+      throw e;
+    }
+  }
+  function explainMediaErr(e, video) {
+    const n = (e && e.name) || String(e);
+    if (n === 'NoMediaDevices')
+      return '이 환경에선 마이크 접근이 막혀 있어요 — 아이폰 홈 화면 앱은 iOS 16.4 이상이 필요해요. 사파리에서 galla.im을 열면 바로 돼요';
+    if (n === 'NotAllowedError' || n === 'PermissionDeniedError')
+      return (video ? '카메라·마이크' : '마이크') + ' 권한이 거부돼 있어요 — 브라우저 설정에서 갈라(galla.im)의 권한을 허용해 주세요';
+    if (n === 'NotFoundError') return '마이크를 찾을 수 없어요';
+    if (n === 'NotReadableError') return '다른 앱이 마이크를 쓰고 있어요 — 닫고 다시 시도해 주세요';
+    return '통화를 시작하지 못했어요 (' + n + ')';
+  }
+  /* 실패를 소리 없이 삼키지 않는다 — 이유가 적힌 화면을 남긴다 */
+  function paintErr(name, msg) {
+    let box = document.getElementById('dm-call');
+    if (!box) { box = document.createElement('div'); box.id = 'dm-call'; document.body.appendChild(box); requestAnimationFrame(() => box.classList.add('on')); }
+    box.classList.add('on'); box.classList.remove('video');
+    box.dataset.state = 'error';
+    box.innerHTML = `
+      <div class="dmc-card">
+        <span class="dmc-ava">${esc((name || '갈').charAt(0))}</span>
+        <div class="dmc-name">${esc(name || '')}</div>
+        <div class="dmc-state dmc-err">${esc(msg)}</div>
+        <div class="dmc-btns"><button class="dmc-btn end" data-c="close" aria-label="닫기">${IC.phone}</button></div>
+      </div>`;
+    box.onclick = e => {
+      if (e.target.closest('[data-c="close"]')) { box.classList.remove('on'); setTimeout(() => box.remove(), 250); }
+    };
   }
   async function buildPC() {
     pc = new RTCPeerConnection(await iceConfig());
@@ -120,9 +156,12 @@
 
   async function start(peer, name, video) {
     if (CUR || !sb || !ME) return;
-    try { localStream = await getMedia(!!video); }
-    catch (_) { return toast(video ? '카메라·마이크 권한이 필요해요' : '마이크 권한이 필요해요'); }
+    if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [] };
+    paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
+    try { localStream = await getMedia(!!video); }
+    catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video)); }
+    try {
     chanPeer = await peerChan(peer);
     await buildPC();
     paintUI('outgoing');
@@ -134,13 +173,22 @@
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 30000);
+    } catch (e) {
+      console.error('[call] start', e);
+      const nm = CUR?.name;
+      try { pc?.close(); } catch (_) {} pc = null;
+      try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
+      if (chanPeer) { try { sb.removeChannel(chanPeer); } catch (_) {} chanPeer = null; }
+      CUR = null;
+      paintErr(nm, '통화를 시작하지 못했어요 (' + ((e && e.name) || '오류') + ')');
+    }
   }
 
   async function accept() {
     if (!CUR || CUR.dir !== 'in') return;
     clearTimeout(ringT);
     try { localStream = await getMedia(CUR.video); }
-    catch (_) { endCall('micfail'); return toast(CUR.video ? '카메라·마이크 권한이 필요해요' : '마이크 권한이 필요해요'); }
+    catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
     await buildPC();
     await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
     for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
@@ -243,7 +291,7 @@
     }
     const video = !!CUR?.video;
     const name = esc(CUR?.name || '');
-    const stateTxt = { outgoing: video ? '면상톡 거는 중…' : '육성톡 거는 중…',
+    const stateTxt = { preparing: '연결 준비 중…', outgoing: video ? '면상톡 거는 중…' : '육성톡 거는 중…',
                        incoming: video ? '면상톡이 왔어요 — 면상 까라' : '육성톡이 왔어요',
                        connecting: '연결 중…', oncall: '' }[state] || '';
     box.dataset.state = state;
@@ -291,7 +339,7 @@
 
   window.GALLA_call = {
     listen, start,
-    supported: () => !!(window.RTCPeerConnection && navigator.mediaDevices?.getUserMedia),
+    supported: () => !!window.RTCPeerConnection,   // 마이크 가용성은 시도 시점에 판정 — iOS 홈화면 앱은 mediaDevices가 조건부라 여기서 자르면 오탐
     _debug: () => ({ cur: CUR && { peer: CUR.peer, dir: CUR.dir, video: CUR.video }, pcState: pc?.connectionState || null }),
   };
 
