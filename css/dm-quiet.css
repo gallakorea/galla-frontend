@@ -401,3 +401,27 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 }
 .dm-mem-me { font-style: normal; font-size: 11px; color: #6b7280; font-weight: 700; margin-left: 4px; }
 .dm-gnew-titlewrap[hidden] { display: none !important; }
+
+/* ═══ 비밀대화 · 신고 · 미니 토스트 ═══ */
+.dm-cs-state {
+  font-style: normal; margin-left: auto; font-size: 11px; font-weight: 800;
+  color: #6b7280; padding: 3px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08);
+}
+.dm-cs-state.on { color: #7ee0a3; background: rgba(60,190,120,.1); border-color: rgba(60,190,120,.3); }
+/* 비밀 모드 입력바 — 은은한 초록 락 톤 */
+#dm-form.secret { box-shadow: inset 0 1px 0 rgba(60,190,120,.35); }
+#dm-form.secret textarea { caret-color: #7ee0a3; }
+.dm-e2e-mark { display: inline-flex; margin-left: 5px; opacity: .55; vertical-align: middle; }
+.dm-e2e-mark svg { width: 10px; height: 10px; }
+.dm-e2e-wait { opacity: .75; display: inline-flex; align-items: center; gap: 5px; }
+#dm-mini-toast {
+  position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 14px); z-index: 12000;
+  max-width: min(86vw, 380px); padding: 11px 18px; border-radius: 999px;
+  background: rgba(24,26,34,.96); color: #e6e8ef; font-size: 13px; font-weight: 700;
+  border: 1px solid rgba(255,255,255,.1); box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  opacity: 0; pointer-events: none; transition: all .25s cubic-bezier(.2,.9,.3,1.2);
+  text-align: center;
+}
+#dm-mini-toast.on { opacity: 1; transform: translate(-50%, 0); }

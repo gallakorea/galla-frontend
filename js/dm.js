@@ -39,6 +39,7 @@
     bolt:    I(12, '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
     crew:    I(12, '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    flag:    I(12, '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
     cog:     I(17, '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
   };
 
@@ -46,6 +47,13 @@
   let ME = null, ROOT = null, BTN = null, BADGE = null;
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
   let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set(), GMODE = 'create';
+  const E2E_PLAIN = {};   // msgId -> 복호된 평문(null이면 이 기기에서 못 엶)
+  const SECRETS = (() => { try { return new Set(JSON.parse(localStorage.getItem('galla_dm_secrets') || '[]')); } catch (_) { return new Set(); } })();
+  const secretOn = tid => SECRETS.has(tid);
+  const setSecret = (tid, on) => {
+    if (on) SECRETS.add(tid); else SECRETS.delete(tid);
+    try { localStorage.setItem('galla_dm_secrets', JSON.stringify([...SECRETS])); } catch (_) {}
+  };
   let REPLY = null;            // 답장 대상 {id, body, mine}
   let PENDING_SHARE = null;    // 공유 카드 대기 payload
   let MSGS = {};               // id -> row (인용 렌더용)
@@ -231,6 +239,10 @@
               <span class="dm-set-mid"><b>검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
               <button class="dm-toggle" id="dm-set-search" type="button"></button>
             </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>푸시 알림</b><i>새 메시지를 기기 알림으로 — 아이폰은 홈 화면에 추가한 앱에서만 돼요</i></span>
+              <button class="dm-toggle" id="dm-set-push" type="button"></button>
+            </div>
             <div class="dm-sec">${ICONS.block}차단한 사람</div>
             <div id="dm-block-list"></div>
             <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
@@ -415,8 +427,13 @@
       window.GALLA_navReset?.();
     }
   }
+  let e2eBooted = false;
   function openDM() {
     buildRoot();
+    if (!e2eBooted && ME && window.GALLA_e2e?.supported()) {
+      e2eBooted = true;
+      window.GALLA_e2e.ready(supabase, ME).catch(() => {});
+    }
     if (PAGE_MODE()) bindPageHeader();
     ROOT.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -599,7 +616,8 @@
       <div class="dm-sec">대화 관리</div>
       <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
       <button class="dm-cs-act" data-cs="duel" type="button">${ICONS.swords} 일기토 신청</button>
-      <button class="dm-cs-act disabled" type="button">${ICONS.lock} 비밀대화 <i class="dm-soon">곧</i></button>
+      <button class="dm-cs-act" data-cs="secret" type="button">${ICONS.lock} 비밀대화 <i class="dm-cs-state${secretOn(curThread) ? ' on' : ''}">${secretOn(curThread) ? '켜짐' : '꺼짐'}</i></button>
+      <button class="dm-cs-act danger" data-cs="report" type="button">${ICONS.flag} 신고</button>
       <button class="dm-cs-act danger" data-cs="block" type="button">${ICONS.block} 차단</button>
       <button class="dm-cs-act danger" data-cs="leave" type="button">${ICONS.leave} 채팅방 나가기</button>`;
 
@@ -608,6 +626,19 @@
     box.querySelectorAll('[data-cs]').forEach(b => b.onclick = async () => {
       const k = b.dataset.cs;
       if (k === 'pin') { await doThreadAct('pin', curThread); openChatSet(); }
+      else if (k === 'secret') {
+        if (secretOn(curThread)) { setSecret(curThread, false); paintSecretUI(); openChatSet(); return; }
+        if (!window.GALLA_e2e?.supported()) return toastMini('이 브라우저에선 비밀대화를 쓸 수 없어요');
+        await window.GALLA_e2e.ready(supabase, ME);
+        const ok = await window.GALLA_e2e.peerReady(supabase, ME, curPeer);
+        if (!ok) return toastMini('상대가 아직 비밀대화 준비가 안 됐어요 — 상대가 DM을 한 번 열면 켤 수 있어요');
+        setSecret(curThread, true); paintSecretUI(); openChatSet();
+        toastMini('비밀대화 시작 — 이 기기에서만 열 수 있어요');
+      }
+      else if (k === 'report') {
+        const r0 = b.getBoundingClientRect();
+        reportFlow('user', curPeer, r0.left, r0.top - 10);
+      }
       else if (k === 'duel') { location.href = 'duel.html?challenge=' + encodeURIComponent(curPeer); }
       else if (k === 'block') {
         const before = PREF.blocks.size;
@@ -692,6 +723,30 @@
       const el = e.target.closest(selector);
       if (el && el.dataset.pressed) { delete el.dataset.pressed; e.stopImmediatePropagation(); e.preventDefault(); }
     }, true);
+  }
+  function toastMini(text) {
+    let el = document.getElementById('dm-mini-toast');
+    if (!el) { el = document.createElement('div'); el.id = 'dm-mini-toast'; document.body.appendChild(el); }
+    el.textContent = text;
+    el.classList.add('on');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('on'), 2600);
+  }
+  /* 🚨 신고 — 사유 고르면 접수. 서버 트리거가 관리자에게 알림을 민다 */
+  function reportFlow(kind, id, x, y) {
+    // 메뉴 안에서 호출되면 innerHTML 교체로 클릭 target이 detach돼 document 닫기 핸들러가
+    // 새 메뉴를 같은 틱에 도로 닫는다 — 한 틱 미뤄 연다
+    setTimeout(() => popMenu(x, y, [
+      { k: 'spam', label: '스팸·도배' },
+      { k: 'abuse', label: '욕설·혐오' },
+      { k: 'sexual', label: '성적·불쾌' },
+      { k: 'scam', label: '사기·사칭' },
+      { k: 'etc', label: '기타' },
+    ], async reason => {
+      const { error } = await supabase.from('reports')
+        .insert({ reporter: ME, target_kind: kind, target_id: id, reason });
+      toastMini(error ? '신고 접수에 실패했어요' : '신고가 접수됐어요. 검토 후 조치할게요.');
+    }), 0);
   }
   function popMenu(x, y, items, onPick) {
     const menu = document.getElementById('dm-menu');
@@ -828,6 +883,27 @@
       await supabase.from('dm_settings')
         .upsert({ user_id: ME, searchable: PREF.searchable }, { onConflict: 'user_id' });
     };
+    const ptg = ROOT.querySelector('#dm-set-push');
+    if (ptg) {
+      const paintPush = async () => {
+        const st = await (window.GALLA_pushStatus?.() ?? 'unsupported');
+        ptg.classList.toggle('on', st === 'on');
+        ptg.dataset.st = st;
+      };
+      paintPush();
+      ptg.onclick = async () => {
+        const st = ptg.dataset.st;
+        try {
+          if (st === 'on') { await window.GALLA_pushDisable(); toastMini('푸시 알림을 껐어요'); }
+          else if (st === 'unsupported') { toastMini('이 브라우저는 푸시를 지원하지 않아요 — 아이폰은 홈 화면에 추가 후 앱에서 켜주세요'); }
+          else if (st === 'denied') { toastMini('알림이 차단돼 있어요 — 기기 설정에서 GALLA 알림을 허용해주세요'); }
+          else { await window.GALLA_pushEnable(); toastMini('푸시 알림을 켰어요'); }
+        } catch (e) {
+          toastMini(String(e.message) === 'denied' ? '알림 권한이 거부됐어요' : '푸시 설정에 실패했어요');
+        }
+        paintPush();
+      };
+    }
     const paintList = async (boxId, set, table, col) => {
       const box = ROOT.querySelector(boxId);
       const ids = [...set];
@@ -1277,6 +1353,7 @@
       .insert({ room_id: curRoom.id, sender_id: ME, body }).select().single();
     if (error) { console.error('[dm] room send', error); return; }
     appendRoomMsg(data);
+    window.GALLA_pushSend?.('room', data.id);
   }
   function roomMenu(anchor) {
     if (!curRoom) return;
@@ -1287,10 +1364,14 @@
     const items = [{ k: 'members', label: '멤버 보기' }];
     if (member) items.push({ k: 'invite', label: '멤버 초대' });
     if (own) items.push({ k: 'close', label: (grp ? '채팅방' : '난장') + ' 닫기 (모두 해산)' });
-    else if (member) items.push({ k: 'leave', label: '나가기' });
+    else {
+      items.push({ k: 'report', label: '신고하기' });
+      if (member) items.push({ k: 'leave', label: '나가기' });
+    }
     popMenu(r0.right - 190, r0.bottom + 6, items, async k => {
       if (k === 'members') return openRoomMembers();
       if (k === 'invite') { showView('gnew'); initGnew('invite'); return; }
+      if (k === 'report') return reportFlow('open_room', curRoom.id, r0.right - 190, r0.bottom + 6);
       if (k === 'close' && !confirm('닫으면 대화가 모두 사라져요. 닫을까요?')) return;
       if (k === 'close') await supabase.from('open_rooms').delete().eq('id', curRoom.id);
       else await supabase.from('open_room_members').delete()
@@ -1364,8 +1445,9 @@
       // 서버 미리보기(dm_touch_thread)가 주는 이모지 접두를 라인 SVG로 — DM 아이콘은 전부 SVG 원칙
       const lm = t.last_message || '';
       const pvIcon = lm.startsWith('📷') || lm.startsWith('🎬') ? ICONS.img
-        : lm.startsWith('🔗') ? ICONS.link : '';
-      const pvText = pvIcon ? lm.replace(/^(📷|🎬|🔗)\s*/, '') : lm;
+        : lm.startsWith('🔗') ? ICONS.link
+        : lm.startsWith('🔒') ? ICONS.lock : '';
+      const pvText = pvIcon ? lm.replace(/^(📷|🎬|🔗|🔒)\s*/, '') : lm;
       const preview = (t.last_sender === ME ? '나: ' : '');
       return `
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
@@ -1395,8 +1477,16 @@
   }
 
   /* ---------- 대화 ---------- */
+  function paintSecretUI() {
+    const ta = ROOT.querySelector('#dm-input');
+    const bar = ROOT.querySelector('#dm-form');
+    const on = curThread && secretOn(curThread);
+    if (ta) ta.placeholder = on ? '비밀 메시지 입력… (이 기기에서만 열려요)' : '메시지 입력…';
+    if (bar) bar.classList.toggle('secret', !!on);
+  }
   async function openThread(tid, peer, name) {
     curThread = tid; curPeer = peer;
+    paintSecretUI();
     ROOT.querySelector('#dm-peer').textContent = name;
     await profilesFor([peer]);
     ROOT.querySelector('#dm-peer-ava').innerHTML = avaHTML(peer, 'sm');
@@ -1429,6 +1519,11 @@
       inner = `<span class="dm-bub-body dm-deleted">${ICONS.block} 삭제된 메시지입니다</span>`;
     } else if (m.kind === 'image' && m.meta?.url) {
       inner = `<img class="dm-bub-img" src="${esc(m.meta.url)}" alt="사진" loading="lazy">`;
+    } else if (m.kind === 'e2e') {
+      const plain = E2E_PLAIN[m.id];
+      inner = plain != null && plain !== false
+        ? `<span class="dm-bub-body">${esc(plain)}</span><span class="dm-e2e-mark">${ICONS.lock}</span>`
+        : `<span class="dm-bub-body dm-e2e-wait" data-e2e="${m.id}">${ICONS.lock} ${plain === false ? '이 기기에서 열 수 없는 비밀 메시지' : '비밀 메시지'}</span>`;
     } else if (m.kind === 'share' && m.meta) {
       // 앱 안에서는 내부 링크 우선 — /share/ 엣지 URL은 OG 카드용이라 한 번 더 튕긴다
       const PAGE = { issue: 'issue', predict: 'predict-market', plaza: 'plaza_detail', news: 'news' };
@@ -1449,6 +1544,7 @@
     if (m.reply_to && MSGS[m.reply_to]) {
       const q = MSGS[m.reply_to];
       const qhtml = q.deleted_at ? `${ICONS.block} 삭제된 메시지`
+        : q.kind === 'e2e' ? `${ICONS.lock} 비밀 메시지`
         : q.kind === 'image' ? `${ICONS.img} 사진`
         : q.kind === 'share' ? `${ICONS.link} ${esc(String(q.meta?.title || '공유').slice(0, 40))}`
         : esc(String(q.body || '').slice(0, 60));
@@ -1460,6 +1556,25 @@
         <span class="dm-bub-time">${hhmm(m.created_at)}${mine ? `<b class="dm-receipt" data-read="${m.read_at ? 1 : 0}">${m.read_at ? '읽음' : ''}</b>` : ''}</span>
       </div>`;
   }
+  async function decryptPass() {
+    if (!window.GALLA_e2e?.supported() || !curPeer) return;
+    const peer = curPeer;
+    const nodes = [...ROOT.querySelectorAll('#dm-msgs [data-e2e]')];
+    for (const el of nodes) {
+      const id = el.dataset.e2e, m = MSGS[id];
+      if (!m || curPeer !== peer) return;   // 대화 전환 경합 방지
+      const plain = await window.GALLA_e2e.decrypt(supabase, ME, peer, m.body);
+      E2E_PLAIN[id] = plain != null ? plain : false;
+      const cur = ROOT.querySelector(`#dm-msgs [data-e2e="${id}"]`);
+      if (!cur) continue;
+      if (plain != null) {
+        cur.outerHTML = `<span class="dm-bub-body">${esc(plain)}</span><span class="dm-e2e-mark">${ICONS.lock}</span>`;
+      } else {
+        cur.innerHTML = `${ICONS.lock} 이 기기에서 열 수 없는 비밀 메시지`;
+        cur.removeAttribute('data-e2e');
+      }
+    }
+  }
   function renderMsgs(msgs) {
     const wrap = ROOT.querySelector('#dm-msgs');
     wrap.innerHTML = msgs.map(bubbleHTML).join('');
@@ -1468,6 +1583,7 @@
     kids.slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
     wrap.scrollTop = wrap.scrollHeight;
     paintReceipts();
+    decryptPass();
   }
   function appendMsg(m) {
     MSGS[m.id] = m;
@@ -1477,6 +1593,7 @@
     wrap.lastElementChild?.classList.add('new');   // 새 메시지는 튀어 들어온다
     if (near || m.sender_id === ME) wrap.scrollTop = wrap.scrollHeight;
     paintReceipts();
+    if (m.kind === 'e2e') decryptPass();
   }
   /* 리스트 폭포 등장 — 행마다 28ms씩 시차 */
   function staggerRows(container, selector) {
@@ -1499,7 +1616,9 @@
                   meta: fields.meta || null, reply_to: fields.reply_to || null };
     const { data, error } = await supabase.from('dm_messages').insert(row).select().single();
     if (error) { console.error('[dm] send', error); return null; }
+    if (fields.plain != null) E2E_PLAIN[data.id] = fields.plain;   // 내 화면엔 평문으로
     appendMsg(data);
+    window.GALLA_pushSend?.('dm', data.id);
     return data;
   }
   async function onSend(e) {
@@ -1512,6 +1631,12 @@
     if (sendBtn) { sendBtn.classList.remove('fly'); void sendBtn.offsetWidth; sendBtn.classList.add('fly'); }
     const reply_to = REPLY?.id || null;
     clearReply();
+    if (secretOn(curThread)) {
+      const enc = await window.GALLA_e2e?.encrypt(supabase, ME, curPeer, body);
+      if (!enc) { ta.value = body; return toastMini('비밀대화를 준비하지 못했어요 — 잠시 후 다시 시도해주세요'); }
+      await sendMessage({ body: enc, kind: 'e2e', reply_to, plain: body });
+      return;
+    }
     await sendMessage({ body, reply_to });
   }
   async function onPickImage(e) {
@@ -1561,6 +1686,7 @@
     if (!m.deleted_at) items.push(`<button data-m="reply">답장</button>`);
     if (!m.deleted_at && m.kind === 'text') items.push(`<button data-m="copy">복사</button>`);
     if (mine && !m.deleted_at && fresh) items.push(`<button data-m="unsend" class="danger">보내기 취소</button>`);
+    if (!mine && !m.deleted_at) items.push(`<button data-m="report" class="danger">신고</button>`);
     if (!items.length) return;
     menu.innerHTML = items.join('');
     menu.hidden = false;
@@ -1571,6 +1697,7 @@
       const act = e.target.closest('[data-m]')?.dataset.m;
       menu.hidden = true;
       if (act === 'reply') setReply(m);
+      else if (act === 'report') reportFlow('dm_message', id, x, y);
       else if (act === 'copy') { try { await navigator.clipboard.writeText(m.body); } catch (_) {} }
       else if (act === 'unsend') {
         const { data } = await supabase.rpc('dm_unsend', { p_msg: id });

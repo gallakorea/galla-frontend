@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v1';
+const SW_VERSION = 'galla-sw-v2';
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
@@ -92,5 +92,33 @@ self.addEventListener('fetch', (e) => {
     } catch {
       return Response.error();
     }
+  })());
+});
+
+/* ── Web Push — DM·난장 새 메시지 ───────────────────────────
+   payload: {title, body, url, tag} (send-push 엣지 함수가 만든다) */
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) {}
+  e.waitUntil(self.registration.showNotification(d.title || 'GALLA', {
+    body: d.body || '새 메시지가 도착했어요',
+    icon: '/assets/logo.png',
+    badge: '/assets/logo.png',
+    tag: d.tag || 'galla',       // 같은 방 알림은 갱신(도배 방지)
+    renotify: true,
+    data: { url: d.url || '/dm.html' },
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/dm.html';
+  e.waitUntil((async () => {
+    const wins = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    // 이미 열린 창이 있으면 그 창을 앞으로 + 이동, 없으면 새로
+    for (const w of wins) {
+      try { await w.focus(); await w.navigate(url); return; } catch (_) {}
+    }
+    await clients.openWindow(url);
   })());
 });
