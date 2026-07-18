@@ -45,7 +45,7 @@
   let supabase = window.supabaseClient;
   let ME = null, ROOT = null, BTN = null, BADGE = null;
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
-  let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [];
+  let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set();
   let REPLY = null;            // 답장 대상 {id, body, mine}
   let PENDING_SHARE = null;    // 공유 카드 대기 payload
   let MSGS = {};               // id -> row (인용 렌더용)
@@ -279,6 +279,23 @@
             <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
         </div>
+        <div class="dm-view" data-view="gnew" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="compose" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">단체 채팅</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-gnew">
+            <div class="dm-gnew-titlewrap">
+              <input id="dm-gnew-title" maxlength="30" placeholder="방 이름 (비우면 멤버 이름으로)" autocomplete="off">
+            </div>
+            <div class="dm-sec">친구 선택 <span class="dm-sec-sub" id="dm-gnew-cnt"></span></div>
+            <div id="dm-gnew-list"></div>
+            <div class="dm-gnew-gowrap">
+              <button id="dm-gnew-go" type="button" disabled>${ICONS.crew} 만들기</button>
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="chatset" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toThread" aria-label="뒤로">${ICONS.back}</button>
@@ -296,6 +313,7 @@
           <div class="dm-search-wrap">
             <input id="dm-search" placeholder="닉네임으로 검색…" autocomplete="off">
           </div>
+          <button class="dm-gnew-entry" data-act="gnew" type="button">${ICONS.crew} 단체 채팅 만들기</button>
           <div class="dm-list" id="dm-results"></div>
         </div>
       </div>
@@ -316,6 +334,7 @@
       else if (act === 'newRoom') { roomFormShow(true); }
       else if (act === 'roomToList') { detachRoom(); curRoom = null; showView('inbox'); setTab('rooms'); }
       else if (act === 'roomMenu') { roomMenu(e.target.closest('[data-act]')); }
+      else if (act === 'gnew') { showView('gnew'); initGnew(); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
       if (tab === 'set') { showView('settings'); loadSettings(); }
       else if (tab) setTab(tab);
@@ -335,6 +354,7 @@
     rta.addEventListener('input', () => { rta.style.height = 'auto'; rta.style.height = Math.min(rta.scrollHeight, 120) + 'px'; });
     rta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onRoomSend(e); } });
     bindPullRefresh(ROOT.querySelector('#dm-rooms'), loadRooms);
+    ROOT.querySelector('#dm-gnew-go').addEventListener('click', createGroup);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
     ROOT.querySelector('#dm-file').addEventListener('change', onPickImage);
@@ -718,6 +738,7 @@
   }
   function threadMenu(el, x, y) {
     const tid = el.dataset.tid;
+    if (!tid) return;   // 단체 채팅 행(.dm-gchat)은 1:1 고정/나가기 메뉴 대상이 아니다
     popMenu(x, y, [
       { k: 'pin', label: PREF.threads[tid]?.pinned ? '고정 해제' : '상단 고정' },
       { k: 'leave', label: '나가기', danger: true },
@@ -981,6 +1002,57 @@
   /* ---------- 인박스 (고정 우선 · 정렬 · 나간 방 제외) ---------- */
   /* ---------- 난장: 오픈 채팅방 (카카오 오픈채팅 문법) ----------
      방 목록·멤버 수는 공개, 메시지는 참여자만(RLS가 강제) — 미참여 방은 게이트 화면 */
+  /* ---------- 단체 채팅: 친구 골라 비공개 그룹(kind='group') — 채팅 탭에 산다 ---------- */
+  async function initGnew() {
+    GSEL = new Set();
+    ROOT.querySelector('#dm-gnew-title').value = '';
+    const box = ROOT.querySelector('#dm-gnew-list');
+    box.innerHTML = `<div class="dm-loading">친구 불러오는 중…</div>`;
+    const [{ data: ing }, { data: ers }] = await Promise.all([
+      supabase.from('follows').select('following').eq('follower', ME),
+      supabase.from('follows').select('follower').eq('following', ME),
+    ]);
+    const mine = new Set((ing || []).map(r => r.following));
+    const ids = [...new Set((ers || []).map(r => r.follower))].filter(id => mine.has(id));
+    if (!ids.length) {
+      box.innerHTML = `<div class="dm-empty">맞팔 친구가 있어야 단체 채팅을 만들 수 있어요.</div>`;
+      paintGnewCnt(); return;
+    }
+    await profilesFor(ids);
+    box.innerHTML = ids.map(id => `
+      <button class="dm-friend dm-gpick" data-uid="${id}" type="button">
+        ${avaHTML(id)}
+        <span class="dm-thread-mid"><span class="dm-thread-name">${esc(nickCache[id] || '익명')}</span></span>
+        <span class="dm-gcheck"></span>
+      </button>`).join('');
+    box.querySelectorAll('.dm-gpick').forEach(el => el.addEventListener('click', () => {
+      const id = el.dataset.uid;
+      if (GSEL.has(id)) GSEL.delete(id); else GSEL.add(id);
+      el.classList.toggle('sel', GSEL.has(id));
+      paintGnewCnt();
+    }));
+    staggerRows(box, '.dm-gpick');
+    paintGnewCnt();
+  }
+  function paintGnewCnt() {
+    ROOT.querySelector('#dm-gnew-cnt').textContent =
+      GSEL.size ? `— ${GSEL.size}명 선택` : '— 2명부터 (1명이면 그냥 1:1)';
+    ROOT.querySelector('#dm-gnew-go').disabled = GSEL.size < 2;
+  }
+  async function createGroup() {
+    if (GSEL.size < 2) return;
+    let title = ROOT.querySelector('#dm-gnew-title').value.trim();
+    if (!title) {
+      const names = [...GSEL].slice(0, 3).map(id => nickCache[id] || '익명');
+      title = names.join(', ') + (GSEL.size > 3 ? ` 외 ${GSEL.size - 3}` : '');
+    }
+    const { data: rid, error } = await supabase.rpc('open_group_create',
+      { p_title: title.slice(0, 30), p_members: [...GSEL] });
+    if (error) { console.error('[dm] group create', error); return; }
+    const { data: r } = await supabase.from('open_rooms').select('*').eq('id', rid).single();
+    if (r) { MY_ROOMS.add(r.id); openRoom(r); }
+  }
+
   /* 만들기 폼과 '난장 열기' 토글 바는 상호 배타 — 같이 보이면 '열기'가 두 개라 헷갈린다 */
   function roomFormShow(show) {
     ROOT.querySelector('#dm-room-form').hidden = !show;
@@ -992,7 +1064,8 @@
     if (!box.innerHTML) box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
     const [{ data: rooms }, { data: mine }] = await Promise.all([
       supabase.from('open_rooms')
-        .select('id,owner_id,title,topic,member_count,last_message,last_message_at,created_at')
+        .select('id,owner_id,title,topic,member_count,last_message,last_message_at,created_at,kind')
+        .eq('kind', 'open')
         .order('created_at', { ascending: false }).limit(60),
       supabase.from('open_room_members').select('room_id').eq('user_id', ME),
     ]);
@@ -1166,18 +1239,23 @@
 
   async function loadInbox() {
     const box = ROOT.querySelector('#dm-inbox');
-    const [{ data: threads }] = await Promise.all([
+    // 단체 채팅(kind='group')은 RLS가 '내가 멤버인 방'만 돌려준다 — 채팅 탭에 1:1과 섞어 보인다
+    const [{ data: threads }, { data: groups }] = await Promise.all([
       supabase.from('dm_threads')
         .select('id,user_lo,user_hi,last_message,last_sender,last_message_at')
         .order('last_message_at', { ascending: false }),
+      supabase.from('open_rooms')
+        .select('id,owner_id,title,member_count,last_message,last_message_at,created_at,kind')
+        .eq('kind', 'group'),
       loadPrefs(),
     ]);
+    GROUPS = groups || [];
     // 나간 방은 제외하되, 나간 뒤 새 메시지가 왔으면 다시 보인다(카톡 문법)
     const list = (threads || []).filter(t => {
       const p = PREF.threads[t.id];
       return !(p?.left_at && new Date(t.last_message_at) <= new Date(p.left_at));
     });
-    if (!list.length) {
+    if (!list.length && !GROUPS.length) {
       box.innerHTML = `<div class="dm-empty">아직 대화가 없어요.<br><span>오른쪽 위 연필을 눌러 새 메시지를 시작하세요.</span></div>`;
       return;
     }
@@ -1188,18 +1266,32 @@
     const unreadBy = {};
     (unread || []).forEach(m => { unreadBy[m.thread_id] = (unreadBy[m.thread_id] || 0) + 1; });
 
-    // 정렬: 📌 고정이 항상 맨 위 → 그 안에서 선택한 기준
-    list.sort((a, b) => {
-      const pa = PREF.threads[a.id]?.pinned ? 1 : 0, pb = PREF.threads[b.id]?.pinned ? 1 : 0;
-      if (pa !== pb) return pb - pa;
-      if (SORT === 'unread') {
-        const ua = unreadBy[a.id] || 0, ub = unreadBy[b.id] || 0;
-        if (ua !== ub) return ub - ua;
-      }
-      return new Date(b.last_message_at) - new Date(a.last_message_at);
+    // 정렬: 📌 고정이 항상 맨 위 → 그 안에서 선택한 기준. 단체 채팅도 같은 시간축에 섞인다
+    const items = [
+      ...list.map(t => ({ g: null, t, at: t.last_message_at,
+        pin: PREF.threads[t.id]?.pinned ? 1 : 0, unread: unreadBy[t.id] || 0 })),
+      ...GROUPS.map(g => ({ g, t: null, at: g.last_message_at || g.created_at, pin: 0, unread: 0 })),
+    ];
+    items.sort((a, b) => {
+      if (a.pin !== b.pin) return b.pin - a.pin;
+      if (SORT === 'unread' && a.unread !== b.unread) return b.unread - a.unread;
+      return new Date(b.at) - new Date(a.at);
     });
 
-    box.innerHTML = list.map(t => {
+    box.innerHTML = items.map(it => {
+      if (it.g) {
+        const g = it.g;
+        return `
+        <button class="dm-thread dm-gchat" data-gid="${g.id}">
+          <span class="dm-ava" style="background:linear-gradient(135deg,${avatarColor(g.id)},#1a1c26)">${esc((g.title || '단').charAt(0))}</span>
+          <span class="dm-thread-mid">
+            <span class="dm-thread-name">${esc(g.title)}<span class="dm-room-cnt">${ICONS.crew}${g.member_count}</span></span>
+            <span class="dm-thread-prev">${esc(g.last_message || '대화를 시작해보세요')}</span>
+          </span>
+          <span class="dm-thread-side"><span class="dm-thread-time">${timeLabel(it.at)}</span></span>
+        </button>`;
+      }
+      const t = it.t;
       const peer = t.user_lo === ME ? t.user_hi : t.user_lo;
       const name = nickCache[peer] || '익명';
       const u = unreadBy[t.id] || 0;
@@ -1223,8 +1315,15 @@
           </span>`}
         </button>`;
     }).join('');
-    box.querySelectorAll('.dm-thread').forEach(el => {
+    box.querySelectorAll('.dm-thread[data-tid]').forEach(el => {
       el.addEventListener('click', () => { if (!EDIT) openThread(el.dataset.tid, el.dataset.peer, el.dataset.name); });
+    });
+    box.querySelectorAll('.dm-gchat').forEach(el => {
+      el.addEventListener('click', () => {
+        if (EDIT) return;
+        const g = GROUPS.find(x => x.id === el.dataset.gid);
+        if (g) { MY_ROOMS.add(g.id); openRoom(g); }
+      });
     });
     if (EDIT) bindEditChips(box);
     staggerRows(box, '.dm-thread');
