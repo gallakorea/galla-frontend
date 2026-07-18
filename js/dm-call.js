@@ -83,6 +83,18 @@
     }
   }
 
+  async function micPermState() {
+    try { const st = await navigator.permissions.query({ name: 'microphone' }); return st.state; }
+    catch (_) { return 'unknown'; }
+  }
+  /* 권한 창이 뜨기 직전 안내 — '이번만 허용'을 누르면 통화마다 다시 묻는다는 걸 모른다 */
+  async function primePermHint(video) {
+    const st = await micPermState();
+    if (st === 'prompt' || st === 'unknown') {
+      toast(`${video ? '카메라·마이크' : '마이크'} 창이 뜨면 [허용]을 눌러주세요 — '이번만'은 통화마다 다시 물어요`);
+    }
+    return st;
+  }
   async function getMedia(video) {
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
@@ -109,7 +121,7 @@
     return '통화를 시작하지 못했어요 (' + n + ')';
   }
   /* 실패를 소리 없이 삼키지 않는다 — 이유가 적힌 화면을 남긴다 */
-  function paintErr(name, msg) {
+  function paintErr(name, msg, retry) {
     let box = document.getElementById('dm-call');
     if (!box) { box = document.createElement('div'); box.id = 'dm-call'; document.body.appendChild(box); requestAnimationFrame(() => box.classList.add('on')); }
     clearTimeout(box._rm);   // ★ endCall이 예약한 제거 취소 — 안 하면 에러 화면이 250ms 만에 증발
@@ -120,12 +132,26 @@
         <span class="dmc-ava">${esc((name || '갈').charAt(0))}</span>
         <div class="dmc-name">${esc(name || '')}</div>
         <div class="dmc-state dmc-err">${esc(msg)}</div>
+        ${retry ? `<button class="dmc-retry" data-c="retry" type="button">권한 허용했어요 — 다시 걸기</button>` : ''}
         <div class="dmc-btns"><button class="dmc-btn end" data-c="close" aria-label="닫기">${IC.phone}</button></div>
       </div>`;
     box.onclick = e => {
-      if (e.target.closest('[data-c="close"]')) { box.classList.remove('on'); setTimeout(() => box.remove(), 250); }
+      const c = e.target.closest('[data-c]')?.dataset.c;
+      if (c === 'close') { box.classList.remove('on'); setTimeout(() => box.remove(), 250); }
+      else if (c === 'retry' && retry) { box.remove(); retry(); }
     };
   }
+  /* 설정 화면 등에서 권한을 미리 받아둔다 — 성공 시 즉시 반납(불 안 켬) */
+  window.GALLA_callWarmup = async function () {
+    const st = await micPermState();
+    if (st === 'granted') return 'granted';
+    toast(`마이크 창이 뜨면 [허용]을 눌러주세요 — 한 번 허용하면 통화 때 다시 묻지 않아요`);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach(t => t.stop());
+      return 'granted';
+    } catch (e) { return (e && e.name) || 'error'; }
+  };
   async function buildPC() {
     pc = new RTCPeerConnection(await iceConfig());
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -160,8 +186,9 @@
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [] };
     paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
+    await primePermHint(!!video);
     try { localStream = await getMedia(!!video); }
-    catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video)); }
+    catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video), () => start(peer, name, video)); }
     try {
     chanPeer = await peerChan(peer);
     await buildPC();
@@ -188,6 +215,7 @@
   async function accept() {
     if (!CUR || CUR.dir !== 'in') return;
     clearTimeout(ringT);
+    await primePermHint(CUR.video);
     try { localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
     try {

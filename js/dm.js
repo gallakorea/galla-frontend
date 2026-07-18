@@ -252,6 +252,10 @@
               <span class="dm-set-mid"><b>푸시 알림</b><i>새 메시지를 기기 알림으로 — 아이폰은 홈 화면에 추가한 앱에서만 돼요</i></span>
               <button class="dm-toggle" id="dm-set-push" type="button"></button>
             </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>통화 마이크 권한</b><i>미리 허용해두면 육성톡·면상톡 때 다시 묻지 않아요</i></span>
+              <button class="dm-mic-btn" id="dm-set-mic" type="button">확인 중…</button>
+            </div>
             <div class="dm-sec">${ICONS.block}차단한 사람</div>
             <div id="dm-block-list"></div>
             <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
@@ -957,6 +961,24 @@
           toastMini(String(e.message) === 'denied' ? '알림 권한이 거부됐어요' : '푸시 설정에 실패했어요');
         }
         paintPush();
+      };
+    }
+    const micBtn = ROOT.querySelector('#dm-set-mic');
+    if (micBtn) {
+      const paintMic = async () => {
+        let st = 'unknown';
+        try { st = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (_) {}
+        micBtn.textContent = st === 'granted' ? '허용됨' : st === 'denied' ? '차단됨' : '허용받기';
+        micBtn.classList.toggle('ok', st === 'granted');
+        micBtn.dataset.st = st;
+      };
+      paintMic();
+      micBtn.onclick = async () => {
+        if (micBtn.dataset.st === 'granted') return toastMini('이미 허용돼 있어요');
+        if (micBtn.dataset.st === 'denied') return toastMini('브라우저 설정 → 사이트 설정 → 마이크에서 galla.im을 허용해 주세요');
+        const r = await (window.GALLA_callWarmup?.() ?? 'unsupported');
+        toastMini(r === 'granted' ? '통화 준비 완료 — 이제 다시 묻지 않아요' : '권한을 받지 못했어요');
+        paintMic();
       };
     }
     const paintList = async (boxId, set, table, col) => {
