@@ -230,9 +230,9 @@
             </div>
             <div class="dm-prof-actions">
               <button id="dm-prof-chat" type="button">${ICONS.chat} 메시지</button>
+              <button id="dm-prof-home" type="button">프로필 홈</button>
               <button id="dm-prof-voice" type="button">${ICONS.phone} 육성톡</button>
               <button id="dm-prof-video" type="button">${ICONS.cam} 면상톡</button>
-              <button id="dm-prof-home" type="button">프로필 홈</button>
             </div>
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>

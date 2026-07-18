@@ -53,36 +53,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ============================
     // 헤더 & 탭: 내 프로필 vs 방문자 뷰 분기
     // ============================
-    if (isMyPage) {
-        document.body.classList.add("mp-self");
-        // 내 프로필: 알림(♥) + 메시지(DM) 활성화
-        if (window.initNotifications) window.initNotifications();
-        if (window.initNotifications) window.initNotifications();   // 헤더 DM은 알림으로 교체(네비에 DM 탭)
-    } else {
-        document.body.classList.add("mp-other");
-        // 방문자 뷰 헤더: 뒤로 / 유저명 / 더보기 (개인용 알림·DM·설정 숨김)
-        const hi = document.querySelector(".header-inner");
-        if (hi) {
-            hi.classList.remove("header-3");
-            hi.classList.add("mp-hdr-other");
-            hi.innerHTML = `
-                <button class="hdr-btn" aria-label="뒤로" onclick="history.length>1?history.back():location.href='index.html'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <img src="assets/logo.png" alt="GALLA" class="logo" onclick="location.href='index.html'" />
-                <button class="hdr-btn" aria-label="더보기" id="mpMoreBtn">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
-                </button>`;
-            document.getElementById("mpMoreBtn").onclick = () => {
-                const name = document.getElementById("profileName")?.textContent || "이 사용자";
-                if (navigator.share) {
-                    navigator.share({ title: name, url: location.href }).catch(() => {});
-                } else {
-                    navigator.clipboard?.writeText(location.href);
-                    alert("프로필 링크를 복사했습니다.");
-                }
-            };
-        }
+    // 남의 프로필도 '원래 마이페이지'와 같은 크롬으로 본다 — 커스텀 헤더 교체(뒤로/⋯공유)는
+    // 앱 전체 문법과 어긋나 '이상한 페이지'처럼 보여서 폐기. 데이터 분기(비공개 숨김)만 유지.
+    document.body.classList.add(isMyPage ? "mp-self" : "mp-other");
+    if (window.initNotifications) window.initNotifications();
+    if (!isMyPage) {
         // 방문자에게 비공개 탭 숨김 (뉴스=저장한 뉴스는 본인만). 갈라/예측/광장은 공개 My만.
         ["news"].forEach(t => {
             document.querySelector(`.tab[data-tab="${t}"]`)?.setAttribute("hidden", "");
