@@ -115,11 +115,14 @@
   }
 
   /* ---------- 골격 ---------- */
+  // 페이지 모드(dm.html): 오버레이가 아니라 헤더·네비 사이 본문으로 렌더 —
+  // "DM은 기능이 아니라 페이지" (네비·헤더가 그대로 보여야 한다)
+  const PAGE_MODE = () => document.body.dataset.page === 'dm';
   function buildRoot() {
     if (ROOT) return ROOT;
     ROOT = document.createElement('div');
     ROOT.id = 'dm-root';
-    ROOT.className = 'dm-root';
+    ROOT.className = 'dm-root' + (PAGE_MODE() ? ' page' : '');
     ROOT.innerHTML = `
       <div class="dm-dim"></div>
       <div class="dm-panel" role="dialog" aria-label="메시지">
@@ -259,7 +262,7 @@
         </div>
       </div>
       <div class="dm-menu" id="dm-menu" hidden></div>`;
-    document.body.appendChild(ROOT);
+    (PAGE_MODE() && document.getElementById('dm-page-host') || document.body).appendChild(ROOT);
 
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', e => {
@@ -320,6 +323,8 @@
 
   function showView(name) {
     ROOT.querySelectorAll('.dm-view').forEach(v => { v.hidden = v.dataset.view !== name; });
+    // 페이지 모드: 대화방·프로필 등 몰입 뷰에선 네비를 숨긴다(입력바와 겹침) — 목록에선 유지
+    if (PAGE_MODE()) document.body.classList.toggle('dm-immersive', name !== 'inbox');
   }
   function openDM() {
     buildRoot();
@@ -330,6 +335,7 @@
     loadInbox();
   }
   function closeDM() {
+    if (PAGE_MODE()) { location.href = 'index.html'; return; }
     if (!ROOT) return;
     ROOT.classList.remove('open');
     document.body.style.overflow = '';
@@ -355,6 +361,11 @@
       ME = sess?.session?.user?.id || null;
     }
     if (!ME) return promptLogin();
+    if (!PAGE_MODE()) {   // 페이지로 넘어가서 대화를 고른다 (오버레이 금지)
+      try { sessionStorage.setItem('galla_dm_share', JSON.stringify(payload)); } catch (_) {}
+      location.href = 'dm.html';
+      return;
+    }
     PENDING_SHARE = payload;
     openDM();
   };
@@ -1333,7 +1344,11 @@
       document.body.appendChild(el);
     }
     el.innerHTML = `${avaHTML(peer)}<span class="dm-toast-mid"><b>${esc(p.nickname || '새 메시지')}</b><i>${esc((t.last_message || '').slice(0, 40))}</i></span>`;
-    el.onclick = () => { hide(); startDM(peer, p.nickname); };
+    el.onclick = () => {
+      hide();
+      if (PAGE_MODE()) startDM(peer, p.nickname);
+      else location.href = 'dm.html?dm=' + encodeURIComponent(peer);
+    };
     requestAnimationFrame(() => el.classList.add('on'));
     try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
     clearTimeout(toastTimer);
@@ -1386,18 +1401,40 @@
     if (INITED) { if (ME) refreshBadge(); return; }
     INITED = true;
     if (ME) { refreshBadge(); attachInboxRealtime(); }
-    // 🔗 딥링크: ?dm=1 → 패널, ?dm=<uid> → 그 대화로 직행. 처리 후 URL 청소(새로고침 재발동 방지)
+    // 🔗 딥링크: ?dm=… 은 dm 페이지의 몫 — 다른 페이지에서 받으면 페이지로 넘긴다
     try {
       const q = new URLSearchParams(location.search);
       const dm = q.get('dm');
-      if (dm && ME) {
-        if (dm === '1') openDM();
-        else startDM(dm, null);
-        q.delete('dm');
-        history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+      if (dm && !PAGE_MODE()) { location.replace('dm.html?dm=' + encodeURIComponent(dm)); return; }
+      if (PAGE_MODE()) {
+        // 공유 픽업(갈라 친구 → 페이지로 넘어온 경우)
+        try {
+          const raw = sessionStorage.getItem('galla_dm_share');
+          if (raw) { sessionStorage.removeItem('galla_dm_share'); PENDING_SHARE = JSON.parse(raw); }
+        } catch (_) {}
+        if (ME) {
+          openDM();
+          if (dm && dm !== '1') startDM(dm, null);
+          if (dm) {
+            q.delete('dm');
+            history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+          }
+        } else {
+          // 비로그인: 페이지는 열되 로그인 안내
+          openLoggedOut();
+        }
       }
     } catch (_) {}
   };
+  function openLoggedOut() {
+    buildRoot();
+    ROOT.classList.add('open');
+    showView('inbox');
+    ROOT.querySelector('#dm-inbox').innerHTML =
+      `<div class="dm-empty">로그인하면 메시지를 쓸 수 있어요.<br><br>
+        <button type="button" class="dm-login-cta" onclick="location.href='login.html'">로그인</button></div>`;
+  }
+
   // 네비 DM 탭이 있는 페이지는 호출 없이도 스스로 부팅 (기존 initDM 호출 페이지와 공존)
   (function autoBoot() {
     const boot = async () => {

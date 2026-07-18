@@ -259,3 +259,25 @@
 .dm-toast-mid i { font-style: normal; font-size: 12px; color: #8b93a5;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { #dm-toast { transition: none; } }
+
+/* ═══════ 📄 페이지 모드 (dm.html) — 오버레이가 아니라 본문 ═══════ */
+.dm-root.page {
+  position: static; inset: auto; z-index: auto; pointer-events: auto;
+}
+.dm-root.page .dm-dim { display: none; }
+.dm-root.page .dm-panel {
+  position: relative; transform: none; max-width: none; width: 100%;
+  border-left: none; box-shadow: none;
+  /* 헤더(sticky 56px)를 뺀 화면 높이 — 뷰들이 이 안에서 absolute로 선다 */
+  height: calc(100dvh - 56px - env(safe-area-inset-top, 0px));
+}
+.dm-root.page .dm-view .dm-head .dm-x { visibility: hidden; }   /* 닫기 없음 — 네비가 출구 */
+/* 목록 화면: 플로팅 네비에 가리지 않게 바닥 여백 */
+.dm-root.page .dm-list { padding-bottom: 110px; }
+/* 몰입 뷰(대화방 등)에선 네비 숨김 — showView가 body에 dm-immersive를 단다 */
+body.dm-immersive .nav { display: none; }
+.dm-root.page .dm-msgs { padding-bottom: 8px; }
+.dm-login-cta {
+  margin-top: 4px; padding: 11px 26px; border: none; border-radius: 12px; cursor: pointer;
+  font-size: 14px; font-weight: 900; color: #fff; background: #4361ff;
+}
