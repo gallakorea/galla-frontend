@@ -34,6 +34,9 @@
     link:    I(14, '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>'),
     swords:  I(14, '<path d="M6.92 5H5l9 9 1.92-1.92L6.92 5z"/><path d="M2 20.5L3.5 22l6.6-6.6-1.5-1.5L2 20.5z"/><path d="M19 3l-4.5 4.5 1.5 1.5L21 4.5V3h-2z"/>'),
     lock:    I(14, '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+    like:    I(12, '<path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>'),
+    dislike: I(12, '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/>'),
+    bolt:    I(12, '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
   };
 
@@ -341,7 +344,7 @@
     const b = ROOT.querySelector('#dm-share-banner');
     if (!PENDING_SHARE) { b.hidden = true; return; }
     b.hidden = false;
-    b.innerHTML = `📤 <b>${esc(PENDING_SHARE.title || '콘텐츠')}</b> 를 보낼 대화를 고르세요
+    b.innerHTML = `${ICONS.send} <b>${esc(PENDING_SHARE.title || '콘텐츠')}</b> 를 보낼 대화를 고르세요
       <button type="button" id="dm-share-cancel">취소</button>`;
     b.querySelector('#dm-share-cancel').onclick = () => { PENDING_SHARE = null; paintShareBanner(); };
   }
@@ -429,7 +432,7 @@
         <div class="dm-idcard">
           <div class="dm-id-type">${esc(t.emoji)} ${esc(t.name)}</div>
           <div class="dm-id-bar"><i style="width:${t.proPct}%"></i></div>
-          <div class="dm-id-sub">👍 ${t.proPct}% · 👎 ${t.conPct}%</div>
+          <div class="dm-id-sub dm-id-pct">${ICONS.like} ${t.proPct}% · ${ICONS.dislike} ${t.conPct}%</div>
           <div class="dm-id-tags">${(t.tags || []).slice(0, 4).map(x => `<span>${esc(x)}</span>`).join('')}</div>
         </div>` : ''}
         <div class="dm-idstats">
@@ -488,7 +491,7 @@
         : `<div class="dm-set-empty">주고받은 사진이 없어요</div>`}
       <div class="dm-sec">${ICONS.link}링크 <b>${recentLinks.length}</b></div>
       ${recentLinks.length
-        ? recentLinks.map(l => `<a class="dm-cs-link" href="${esc(l.href)}"${l.galla ? '' : ' target="_blank" rel="noopener"'}>${l.galla ? '⚡ ' : ''}${esc(l.label)}</a>`).join('')
+        ? recentLinks.map(l => `<a class="dm-cs-link" href="${esc(l.href)}"${l.galla ? '' : ' target="_blank" rel="noopener"'}>${l.galla ? ICONS.bolt + ' ' : ''}${esc(l.label)}</a>`).join('')
         : `<div class="dm-set-empty">주고받은 링크가 없어요</div>`}
       <div class="dm-sec">대화 관리</div>
       <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
@@ -946,13 +949,18 @@
       const name = nickCache[peer] || '익명';
       const u = unreadBy[t.id] || 0;
       const pinned = !!PREF.threads[t.id]?.pinned;
-      const preview = (t.last_sender === ME ? '나: ' : '') + (t.last_message || '');
+      // 서버 미리보기(dm_touch_thread)가 주는 이모지 접두를 라인 SVG로 — DM 아이콘은 전부 SVG 원칙
+      const lm = t.last_message || '';
+      const pvIcon = lm.startsWith('📷') || lm.startsWith('🎬') ? ICONS.img
+        : lm.startsWith('🔗') ? ICONS.link : '';
+      const pvText = pvIcon ? lm.replace(/^(📷|🎬|🔗)\s*/, '') : lm;
+      const preview = (t.last_sender === ME ? '나: ' : '');
       return `
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
           ${avaHTML(peer)}
           <span class="dm-thread-mid">
             <span class="dm-thread-name">${pinned ? ICONS.pin : ''}${esc(name)}</span>
-            <span class="dm-thread-prev">${esc(preview)}</span>
+            <span class="dm-thread-prev">${esc(preview)}${pvIcon}${esc(pvText)}</span>
           </span>
           ${EDIT ? editChipsThread(t.id) : `<span class="dm-thread-side">
             <span class="dm-thread-time">${timeLabel(t.last_message_at)}</span>
@@ -999,7 +1007,7 @@
     const mine = m.sender_id === ME;
     let inner;
     if (m.deleted_at) {
-      inner = `<span class="dm-bub-body dm-deleted">🚫 삭제된 메시지입니다</span>`;
+      inner = `<span class="dm-bub-body dm-deleted">${ICONS.block} 삭제된 메시지입니다</span>`;
     } else if (m.kind === 'image' && m.meta?.url) {
       inner = `<img class="dm-bub-img" src="${esc(m.meta.url)}" alt="사진" loading="lazy">`;
     } else if (m.kind === 'share' && m.meta) {
@@ -1021,8 +1029,11 @@
     let quote = '';
     if (m.reply_to && MSGS[m.reply_to]) {
       const q = MSGS[m.reply_to];
-      const qtext = q.deleted_at ? '삭제된 메시지' : q.kind === 'image' ? '📷 사진' : q.kind === 'share' ? '🔗 ' + (q.meta?.title || '공유') : q.body;
-      quote = `<span class="dm-quote">${esc(String(qtext).slice(0, 60))}</span>`;
+      const qhtml = q.deleted_at ? `${ICONS.block} 삭제된 메시지`
+        : q.kind === 'image' ? `${ICONS.img} 사진`
+        : q.kind === 'share' ? `${ICONS.link} ${esc(String(q.meta?.title || '공유').slice(0, 40))}`
+        : esc(String(q.body || '').slice(0, 60));
+      quote = `<span class="dm-quote">${qhtml}</span>`;
     }
     return `
       <div class="dm-bubble ${mine ? 'me' : 'you'}" data-id="${m.id}" data-mine="${mine ? 1 : 0}" data-at="${m.created_at}" data-del="${m.deleted_at ? 1 : 0}">
@@ -1094,14 +1105,14 @@
     const wrap = ROOT.querySelector('#dm-msgs');
     const tmp = document.createElement('div');
     tmp.className = 'dm-bubble me dm-uploading';
-    tmp.innerHTML = `<span class="dm-bub-body">📷 사진 보내는 중…</span>`;
+    tmp.innerHTML = `<span class="dm-bub-body">${ICONS.img} 사진 보내는 중…</span>`;
     wrap.appendChild(tmp); wrap.scrollTop = wrap.scrollHeight;
     try {
       const url = await window.GALLA_UPLOAD_MEDIA(f, 'image');
       tmp.remove();
       await sendMessage({ kind: 'image', body: '📷 사진', meta: { url } });
     } catch (err) {
-      tmp.querySelector('.dm-bub-body').textContent = '⚠️ 사진 전송 실패';
+      tmp.querySelector('.dm-bub-body').textContent = '사진 전송 실패';
       setTimeout(() => tmp.remove(), 2500);
     }
   }
@@ -1110,7 +1121,7 @@
   function setReply(m) {
     REPLY = m;
     const strip = ROOT.querySelector('#dm-reply-strip');
-    const prev = m.deleted_at ? '삭제된 메시지' : m.kind === 'image' ? '📷 사진' : m.kind === 'share' ? '🔗 공유' : m.body;
+    const prev = m.deleted_at ? '삭제된 메시지' : m.kind === 'image' ? '사진' : m.kind === 'share' ? '공유' : m.body;
     ROOT.querySelector('#dm-reply-preview').textContent = String(prev).slice(0, 40);
     strip.hidden = false;
     ROOT.querySelector('#dm-input').focus();

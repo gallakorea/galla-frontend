@@ -234,3 +234,8 @@
 }
 #dm-lightbox.on { opacity: 1; pointer-events: auto; }
 #dm-lightbox img { max-width: 94vw; max-height: 88vh; border-radius: 12px; object-fit: contain; }
+
+/* 텍스트 속 인라인 아이콘 정렬 (미리보기·인용·삭제 표시) */
+.dm-thread-prev svg, .dm-quote svg, .dm-deleted svg, .dm-id-pct svg, .dm-cs-link svg, .dm-share-banner svg {
+  vertical-align: -2px; margin-right: 2px;
+}
