@@ -156,7 +156,9 @@
 .dm-prof-bio { margin-top: 6px; font-size: 13px; color: #8b93a5; line-height: 1.5; }
 .dm-prof-rel { margin-top: 8px; min-height: 18px; }
 .dm-prof-actions {
-  display: flex; gap: 1px; margin: 6px 20px 8px; border-radius: 14px; overflow: hidden;
+  /* 버튼 4개(메시지·육성톡·면상톡·프로필홈) — 2×2 그리드 */
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+  margin: 6px 20px 8px; border-radius: 14px; overflow: hidden;
   border: 1px solid rgba(255,255,255,.09);
 }
 .dm-prof-actions button {

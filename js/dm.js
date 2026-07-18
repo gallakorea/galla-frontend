@@ -230,6 +230,8 @@
             </div>
             <div class="dm-prof-actions">
               <button id="dm-prof-chat" type="button">${ICONS.chat} 메시지</button>
+              <button id="dm-prof-voice" type="button">${ICONS.phone} 육성톡</button>
+              <button id="dm-prof-video" type="button">${ICONS.cam} 면상톡</button>
               <button id="dm-prof-home" type="button">프로필 홈</button>
             </div>
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
@@ -545,6 +547,8 @@
     const f = FRIENDS.find(x => x.id === peer);
     ROOT.querySelector('#dm-prof-rel').innerHTML = f?.mutual ? '<i class="dm-mutual">맞팔</i>' : '';
     ROOT.querySelector('#dm-prof-chat').onclick = () => startDM(peer, p.nickname || name);
+    ROOT.querySelector('#dm-prof-voice').onclick = () => callFrom(peer, p.nickname || name, false);
+    ROOT.querySelector('#dm-prof-video').onclick = () => callFrom(peer, p.nickname || name, true);
     ROOT.querySelector('#dm-prof-home').onclick = () => { location.href = 'mypage.html?user=' + encodeURIComponent(peer); };
 
     // 아이덴티티 — 등급·성향 모듈이 이 페이지에 없으면 그때 끌어온다
@@ -634,6 +638,8 @@
         : `<div class="dm-set-empty">주고받은 링크가 없어요</div>`}
       <div class="dm-sec">대화 관리</div>
       <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
+      <button class="dm-cs-act" data-cs="voice" type="button">${ICONS.phone} 육성톡</button>
+      <button class="dm-cs-act" data-cs="video" type="button">${ICONS.cam} 면상톡</button>
       <button class="dm-cs-act" data-cs="duel" type="button">${ICONS.swords} 일기토 신청</button>
       <button class="dm-cs-act" data-cs="expire" type="button">${ICONS.timer} 사라지는 메시지 <i class="dm-cs-state${curExpire ? ' on' : ''}">${curExpire ? EXP_LABEL[curExpire] : '끔'}</i></button>
       <button class="dm-cs-act" data-cs="secret" type="button">${ICONS.lock} 비밀대화 <i class="dm-cs-state${secretOn(curThread) ? ' on' : ''}">${secretOn(curThread) ? '켜짐' : '꺼짐'}</i></button>
@@ -646,6 +652,7 @@
     box.querySelectorAll('[data-cs]').forEach(b => b.onclick = async () => {
       const k = b.dataset.cs;
       if (k === 'pin') { await doThreadAct('pin', curThread); openChatSet(); }
+      else if (k === 'voice' || k === 'video') { callFrom(curPeer, p.nickname, k === 'video'); }
       else if (k === 'secret') {
         if (secretOn(curThread)) { setSecret(curThread, false); paintSecretUI(); openChatSet(); return; }
         if (!window.GALLA_e2e?.supported()) return toastMini('이 브라우저에선 비밀대화를 쓸 수 없어요');
@@ -834,13 +841,23 @@
       loadInbox();
     }
   }
+  /* 통화 진입 공용 — 지원 확인 + 이름 보정. 프로필·친구 메뉴·서랍이 모두 이리로 */
+  function callFrom(peer, name, video) {
+    if (!window.GALLA_call?.supported()) return toastMini('이 브라우저에선 통화를 지원하지 않아요');
+    window.GALLA_call.start(peer, name || nickCache[peer] || PROFILES[peer]?.nickname, !!video);
+  }
   function friendMenu(el, x, y) {
     const peer = el.dataset.peer, name = el.dataset.name;
     popMenu(x, y, [
+      { k: 'voice', label: '육성톡' },
+      { k: 'video', label: '면상톡' },
       { k: 'fav', label: PREF.favs.has(peer) ? '즐겨찾기 해제' : '즐겨찾기' },
       { k: 'hide', label: '목록에서 숨기기' },
       { k: 'block', label: '차단', danger: true },
-    ], k => doFriendAct(k, peer, name));
+    ], k => {
+      if (k === 'voice' || k === 'video') return callFrom(peer, name, k === 'video');
+      doFriendAct(k, peer, name);
+    });
   }
   function threadMenu(el, x, y) {
     const tid = el.dataset.tid;
