@@ -281,3 +281,8 @@ body.dm-immersive .nav { display: none; }
   margin-top: 4px; padding: 11px 26px; border: none; border-radius: 12px; cursor: pointer;
   font-size: 14px; font-weight: 900; color: #fff; background: #4361ff;
 }
+
+/* 페이지 모드: DM 내부 '메시지' 바 제거 — ⚙·✎는 페이지 헤더로 승격됐다 */
+.dm-root.page [data-view="inbox"] > .dm-head { display: none; }
+.hdr-group.hdr-right { justify-self: end; }
+.hdr-group.hdr-right .hdr-btn svg { width: 21px; height: 21px; }

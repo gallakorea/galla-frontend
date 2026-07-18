@@ -328,6 +328,7 @@
   }
   function openDM() {
     buildRoot();
+    if (PAGE_MODE()) bindPageHeader();
     ROOT.classList.add('open');
     document.body.style.overflow = 'hidden';
     showView('inbox');
@@ -1426,6 +1427,14 @@
       }
     } catch (_) {}
   };
+  /* 페이지 모드: dm.html 상단 헤더의 ⚙·✎ (DM 내부 '메시지' 바는 CSS로 제거 — 헤더로 승격) */
+  function bindPageHeader() {
+    const g = document.getElementById('pgDmGear');
+    const c = document.getElementById('pgDmCompose');
+    if (g && !g.dataset.bound) { g.dataset.bound = '1'; g.addEventListener('click', () => headMenu(g)); }
+    if (c && !c.dataset.bound) { c.dataset.bound = '1'; c.addEventListener('click', () => { buildRoot(); showView('compose'); initSearch(); }); }
+  }
+
   function openLoggedOut() {
     buildRoot();
     ROOT.classList.add('open');
