@@ -103,8 +103,40 @@
             <div id="dm-inbox"></div>
           </div>
           <div class="dm-list" id="dm-friends" hidden>
-            <div class="dm-friend-search"><input id="dm-friend-q" placeholder="친구 검색…" autocomplete="off"></div>
+            <div class="dm-friend-search">
+              <input id="dm-friend-q" placeholder="친구 검색…" autocomplete="off">
+              <button class="dm-add-btn" data-act="addFriend" type="button">➕ 친구 추가</button>
+            </div>
             <div id="dm-friend-list"></div>
+          </div>
+        </div>
+        <div class="dm-view" data-view="add" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toFriends" aria-label="뒤로">‹</button>
+            <span class="dm-title">친구 추가</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-add">
+            <div class="dm-mycode">
+              <div class="dm-mycode-label">내 친구 코드</div>
+              <div class="dm-mycode-code" id="dm-my-code">······</div>
+              <div class="dm-mycode-btns">
+                <button id="dm-code-copy" type="button">📋 복사</button>
+                <button id="dm-code-share" type="button">📤 공유</button>
+              </div>
+              <div class="dm-mycode-hint">코드를 받은 친구는 가입 전이면 가입부터, 이미 갈라인이면 바로 친구가 돼요</div>
+            </div>
+            <div class="dm-sec">🔑 코드로 추가</div>
+            <div class="dm-code-row">
+              <input id="dm-code-in" maxlength="6" placeholder="친구 코드 6자리" autocomplete="off" autocapitalize="characters">
+              <button id="dm-code-go" type="button">찾기</button>
+            </div>
+            <div id="dm-code-result"></div>
+            <div class="dm-sec">🔍 닉네임으로 추가</div>
+            <div class="dm-code-row"><input id="dm-add-q" placeholder="닉네임 검색…" autocomplete="off"></div>
+            <div id="dm-add-results"></div>
+            <div class="dm-sec">💜 나를 팔로우한 사람 <span class="dm-sec-sub">— 맞팔하면 친구</span></div>
+            <div id="dm-followback"></div>
           </div>
         </div>
         <div class="dm-view" data-view="settings" hidden>
@@ -169,6 +201,8 @@
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
       else if (act === 'settings') { showView('settings'); loadSettings(); }
+      else if (act === 'addFriend') { showView('add'); initAdd(); }
+      else if (act === 'toFriends') { showView('inbox'); setTab('friends'); }
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
       if (tab) setTab(tab);
@@ -450,6 +484,111 @@
     });
     staggerRows(box, '.dm-friend');
   }
+  /* ---------- ➕ 친구 추가 (코드·닉네임·맞팔 대기) ---------- */
+  let FOLLOWING = new Set();
+  function addRow(u) {
+    PROFILES[u.id] = PROFILES[u.id] || { nickname: u.nickname || '익명', avatar_url: u.avatar_url, bio: u.bio || '' };
+    nickCache[u.id] = u.nickname || '익명';
+    const following = FOLLOWING.has(u.id);
+    return `
+      <div class="dm-friend dm-add-row" data-peer="${u.id}">
+        ${avaHTML(u.id)}
+        <span class="dm-thread-mid">
+          <span class="dm-thread-name">${esc(u.nickname || '익명')}</span>
+          ${u.bio ? `<span class="dm-thread-prev">${esc(u.bio)}</span>` : ''}
+        </span>
+        <button class="dm-follow-btn${following ? ' done' : ''}" data-uid="${u.id}" type="button" ${following ? 'disabled' : ''}>
+          ${following ? '✓ 친구' : '+ 팔로우'}
+        </button>
+      </div>`;
+  }
+  function bindFollowBtns(box) {
+    box.querySelectorAll('.dm-follow-btn:not(.done)').forEach(btn => btn.onclick = async () => {
+      const uid = btn.dataset.uid;
+      btn.disabled = true; btn.textContent = '…';
+      const { error } = await supabase.from('follows').insert({ follower: ME, following: uid });
+      if (error && error.code !== '23505') {   // 23505 = 이미 팔로우(중복) — 성공으로 간주
+        btn.disabled = false; btn.textContent = '+ 팔로우'; return;
+      }
+      FOLLOWING.add(uid);
+      FRIENDS.push({ id: uid, mutual: false });
+      // 같은 유저가 이 화면의 다른 섹션(코드 결과·검색·맞팔 대기)에도 떠 있을 수 있다
+      // → 전부 ✓로 동기화. 맞팔 대기 행은 이제 '대기'가 아니므로 제거.
+      ROOT.querySelectorAll(`#dm-add .dm-follow-btn[data-uid="${uid}"]`).forEach(b => {
+        b.textContent = '✓ 친구'; b.classList.add('done'); b.disabled = true;
+      });
+      ROOT.querySelectorAll(`#dm-followback .dm-add-row[data-peer="${uid}"]`).forEach(r => r.remove());
+      if (!ROOT.querySelector('#dm-followback .dm-add-row')) {
+        const fb = ROOT.querySelector('#dm-followback');
+        if (fb) fb.innerHTML = '<div class="dm-set-empty">지금은 없어요</div>';
+      }
+      try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
+    });
+  }
+  async function initAdd() {
+    // 내가 팔로우 중인 목록(버튼 상태용) — 친구 탭을 안 거쳤을 수 있으니 직접
+    const { data: ing } = await supabase.from('follows').select('following').eq('follower', ME);
+    FOLLOWING = new Set((ing || []).map(r => r.following));
+
+    // ① 내 친구 코드 — 초대 코드와 같은 코드(가입 유도 겸용)
+    const codeEl = ROOT.querySelector('#dm-my-code');
+    const { data: myCode } = await supabase.rpc('my_ref_code');
+    codeEl.textContent = myCode || '------';
+    const inviteUrl = 'https://galla.im/?ref=' + (myCode || '');
+    ROOT.querySelector('#dm-code-copy').onclick = async () => {
+      try { await navigator.clipboard.writeText(myCode || ''); codeEl.classList.add('flash'); setTimeout(() => codeEl.classList.remove('flash'), 600); } catch (_) {}
+    };
+    ROOT.querySelector('#dm-code-share').onclick = () => {
+      const msg = `갈라에서 친구해요! 내 친구 코드: ${myCode} — ` + inviteUrl;
+      if (window.GALLA_share) window.GALLA_share({ url: inviteUrl, title: 'GALLA 친구 추가', text: msg });
+      else if (navigator.share) navigator.share({ title: 'GALLA', text: msg, url: inviteUrl }).catch(() => {});
+      else navigator.clipboard?.writeText(msg);
+    };
+
+    // ② 코드로 찾기
+    const codeIn = ROOT.querySelector('#dm-code-in');
+    const codeRes = ROOT.querySelector('#dm-code-result');
+    codeRes.innerHTML = '';
+    const lookup = async () => {
+      const q = codeIn.value.trim();
+      if (q.length < 6) { codeRes.innerHTML = '<div class="dm-set-empty">6자리 코드를 입력하세요</div>'; return; }
+      const { data } = await supabase.rpc('dm_find_by_code', { p_code: q });
+      const u = (data || [])[0];
+      codeRes.innerHTML = u ? addRow(u) : '<div class="dm-set-empty">해당 코드의 갈라인이 없어요</div>';
+      if (u) bindFollowBtns(codeRes);
+    };
+    ROOT.querySelector('#dm-code-go').onclick = lookup;
+    codeIn.onkeydown = e => { if (e.key === 'Enter') lookup(); };
+
+    // ③ 닉네임 검색 (검색 허용·차단은 dm_search가 서버에서 거른다)
+    const addQ = ROOT.querySelector('#dm-add-q');
+    const addRes = ROOT.querySelector('#dm-add-results');
+    addRes.innerHTML = '';
+    let t = null;
+    addQ.oninput = () => {
+      clearTimeout(t);
+      const q = addQ.value.trim();
+      if (!q) { addRes.innerHTML = ''; return; }
+      t = setTimeout(async () => {
+        const { data } = await supabase.rpc('dm_search', { p_q: q });
+        const list = (data || []).filter(u => u.id !== ME);
+        addRes.innerHTML = list.length ? list.map(addRow).join('') : '<div class="dm-set-empty">검색 결과가 없어요</div>';
+        bindFollowBtns(addRes);
+      }, 250);
+    };
+
+    // ④ 나를 팔로우한 사람 중 내가 아직 안 한 사람 = 맞팔 대기 (카톡 '추천친구' 대응)
+    const fbBox = ROOT.querySelector('#dm-followback');
+    const { data: ers } = await supabase.from('follows').select('follower').eq('following', ME);
+    const waiting = [...new Set((ers || []).map(r => r.follower))]
+      .filter(id => !FOLLOWING.has(id) && !PREF.blocks.has(id));
+    if (!waiting.length) { fbBox.innerHTML = '<div class="dm-set-empty">지금은 없어요</div>'; return; }
+    await profilesFor(waiting);
+    fbBox.innerHTML = waiting.map(id => addRow({ id, ...PROFILES[id] })).join('');
+    bindFollowBtns(fbBox);
+    staggerRows(fbBox, '.dm-add-row');
+  }
+
   function filterFriends(q) {
     q = (q || '').trim().toLowerCase();
     if (!q) return renderFriends(FRIENDS);
