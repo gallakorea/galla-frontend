@@ -893,3 +893,31 @@ body.tossface .dm-ptt-hint {
   color: #7dffa8; font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px;
 }
 .pgr-code-t { display: flex; align-items: center; }
+
+/* 📟 다이얼(삐삐 걸기) */
+.pgr-dialer { display: grid; gap: 7px; }
+.pgr-dialer .pgr-code-row input { font-size: 17px; letter-spacing: 3px; text-align: center; }
+.pgr-friends-btn {
+  padding: 10px 0; border-radius: 10px; cursor: pointer;
+  background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.14);
+  color: #b9bdc7; font-size: 12.5px; font-weight: 700;
+}
+.pgr-dial-hint { text-align: center; font-size: 11px; color: #6b7280; }
+/* 음성에 숫자 동봉 */
+.pgr-after-btns { display: flex; gap: 7px; }
+.pgr-after-btns button {
+  flex: 1; padding: 11px 0; border-radius: 12px; cursor: pointer; font-size: 12.5px; font-weight: 800;
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #d7dae2;
+}
+.pgr-after-btns button.go { background: #1f7a45; border-color: #2a9c58; color: #eafff1; }
+.pgr-rec-after { display: grid; gap: 8px; }
+.pgr-with-code { display: flex; gap: 6px; }
+.pgr-with-code input {
+  flex: 1; min-width: 0; padding: 9px 13px; border-radius: 10px; font-size: 13px;
+  background: rgba(125,255,168,.05); border: 1px solid rgba(125,255,168,.18); color: #7dffa8;
+  outline: none; font-family: 'Courier New', monospace; letter-spacing: 2px;
+}
+.pgr-with-code button {
+  flex: none; width: 42px; border-radius: 10px; border: 1px solid rgba(125,255,168,.2);
+  background: none; cursor: pointer; font-size: 15px;
+}

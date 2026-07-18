@@ -125,7 +125,7 @@
       <div class="pgr-pop-body">
         <div class="pgr-lcd">
           <div class="pgr-lcd-top">📟 삐삐가 왔습니다</div>
-          <div class="pgr-lcd-main">${kind === 'code' ? esc(code) : '음성 1통'}</div>
+          <div class="pgr-lcd-main">${kind === 'code' ? esc(code) : code ? '음성+' + esc(code) : '음성 1통'}</div>
           <div class="pgr-lcd-sub">${esc(name || '누군가')}${kind === 'code' && codeMeaning(code) ? ' · ' + esc(codeMeaning(code)) : ''}</div>
         </div>
         <div class="pgr-pop-btns">
@@ -187,6 +187,16 @@
           ${BOX.greeting_url ? `<button type="button" class="pgr-greet-play" data-a="playgreet">▶ 내 인사말 듣기 (${BOX.greeting_dur || 0}초)</button>` : ''}
         </div>
 
+        <div class="pgr-sec">삐삐 걸기</div>
+        <div class="pgr-dialer">
+          <div class="pgr-code-row">
+            <input id="pgr-dial-in" inputmode="tel" maxlength="12" placeholder="012-0000-000" autocomplete="off">
+            <button type="button" data-a="dial">호출</button>
+          </div>
+          <button type="button" class="pgr-friends-btn" data-a="pickfriend">주소록(친구)에서 고르기</button>
+          <div class="pgr-dial-hint" id="pgr-dial-hint">번호만 알면 모르는 사람에게도 칠 수 있어요</div>
+        </div>
+
         <div class="pgr-sec">받은 호출</div>
         <div class="pgr-list">
           ${list.length ? list.map(m => rowHTML(m, names[m.sender_id])).join('')
@@ -196,6 +206,7 @@
       </div>`;
 
     host.querySelectorAll('[data-a]').forEach(b => b.onclick = () => act(b.dataset.a, host));
+    bindDial(host);
     host.querySelectorAll('[data-msg]').forEach(el => el.onclick = () => openMsg(el.dataset.msg, list, names, host));
   }
 
@@ -207,7 +218,9 @@
       <button type="button" class="pgr-row${isNew ? ' new' : ''}" data-msg="${m.id}">
         <span class="pgr-row-ic">${m.kind === 'code' ? '숫자' : '음성'}</span>
         <span class="pgr-row-mid">
-          <b>${m.kind === 'code' ? esc(m.code) + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '') : `${m.dur || 0}초 음성`}</b>
+          <b>${m.kind === 'code'
+            ? esc(m.code) + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '')
+            : `${m.dur || 0}초 음성` + (m.code ? ` + ${esc(m.code)}` + (codeMeaning(m.code) ? ` <i>${esc(codeMeaning(m.code))}</i>` : '') : '')}</b>
           <span>${esc(name || '누군가')}</span>
         </span>
         <span class="pgr-row-t">${when}${isNew ? '<em>NEW</em>' : ''}</span>
@@ -234,6 +247,22 @@
   }
 
   async function act(a, host) {
+    if (a === 'dial') {
+      const inp = host.querySelector('#pgr-dial-in');
+      const hint = host.querySelector('#pgr-dial-hint');
+      let n = (inp.value || '').replace(/[^0-9]/g, '');
+      if (n.length < 9) { hint.textContent = '번호를 끝까지 입력해주세요 (012-0000-000)'; return; }
+      n = n.slice(0, 10);
+      const formatted = `${n.slice(0, 3)}-${n.slice(3, 7)}-${n.slice(7)}`;
+      hint.textContent = '연결 중…';
+      const { data } = await sb().rpc('pager_dial', { p_number: formatted });
+      if (!data?.ok) { hint.textContent = '없는 번호예요 — 다시 확인해주세요'; beep('tone'); return; }
+      hint.textContent = '번호만 알면 모르는 사람에게도 칠 수 있어요';
+      inp.value = '';
+      leaveTo(data.user_id, data.nickname);
+      return;
+    }
+    if (a === 'pickfriend') { pickFriend(host); return; }
     if (a === 'book') { openCodebook(null); return; }
     if (a === 'copy') {
       try { await navigator.clipboard.writeText(BOX.number); } catch (_) {}
@@ -244,6 +273,60 @@
     } else if (a === 'greet') {
       recordUI(host, null);   // 대상 없음 = 내 인사말
     }
+  }
+
+  /* 다이얼 입력 자동 하이픈(012-0000-000) */
+  function bindDial(host) {
+    const inp = host.querySelector('#pgr-dial-in');
+    if (!inp) return;
+    inp.addEventListener('input', () => {
+      const d = inp.value.replace(/[^0-9]/g, '').slice(0, 10);
+      inp.value = d.length > 7 ? `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`
+        : d.length > 3 ? `${d.slice(0,3)}-${d.slice(3)}` : d;
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); host.querySelector('[data-a="dial"]')?.click(); }
+    });
+  }
+
+  /* 주소록(맞팔 친구) 골라 걸기 */
+  async function pickFriend(host) {
+    const me = (await sb().auth.getSession()).data?.session?.user?.id;
+    const [{ data: ing }, { data: ers }] = await Promise.all([
+      sb().from('follows').select('following').eq('follower', me),
+      sb().from('follows').select('follower').eq('following', me),
+    ]);
+    const mine = new Set((ing || []).map(r => r.following));
+    const ids = [...new Set((ers || []).map(r => r.follower))].filter(id => mine.has(id));
+    let names = {};
+    if (ids.length) {
+      const { data: us } = await sb().from('users').select('id,nickname').in('id', ids);
+      (us || []).forEach(u => { names[u.id] = u.nickname || '익명'; });
+    }
+    const el = document.createElement('div');
+    el.id = 'pager-book';   // 암호책과 같은 시트 스타일 재사용
+    el.innerHTML = `
+      <div class="pgr-book-body">
+        <div class="pgr-book-head"><b>📟 누구에게 칠까요</b><span>주소록 (맞팔 친구)</span></div>
+        <div class="pgr-book-scroll">
+          ${ids.length ? ids.map(id => `
+            <button type="button" class="pgr-book-row" data-fr="${id}">
+              <b style="min-width:auto">${esc((names[id] || '익').charAt(0))}</b>
+              <span>${esc(names[id] || '익명')}</span><i>호출</i>
+            </button>`).join('')
+          : `<div class="pgr-empty">맞팔 친구가 없어요.<br><span>번호로 직접 걸어보세요.</span></div>`}
+        </div>
+        <button type="button" class="pgr-call-x" data-b="close">닫기</button>
+      </div>`;
+    document.body.appendChild(el);
+    void el.getBoundingClientRect();
+    el.classList.add('on');
+    const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 250); };
+    el.onclick = e => {
+      if (e.target === el || e.target.closest('[data-b="close"]')) return close();
+      const row = e.target.closest('[data-fr]');
+      if (row) { close(); leaveTo(row.dataset.fr, names[row.dataset.fr]); }
+    };
   }
 
   function toast(t) {
@@ -309,9 +392,15 @@
         <button type="button" class="pgr-rec-btn" data-r="start">● 녹음 시작</button>
         <div class="pgr-rec-time" id="pgr-rt"></div>
         <div class="pgr-rec-after" id="pgr-after" hidden>
-          <button type="button" data-r="preview">▶ 들어보기</button>
-          <button type="button" data-r="again">다시</button>
-          <button type="button" data-r="send" class="go">${isGreeting ? '이걸로 저장' : '보내기'}</button>
+          <div class="pgr-after-btns">
+            <button type="button" data-r="preview">▶ 들어보기</button>
+            <button type="button" data-r="again">다시</button>
+            <button type="button" data-r="send" class="go">${isGreeting ? '이걸로 저장' : '보내기'}</button>
+          </div>
+          ${isGreeting ? '' : `<div class="pgr-with-code">
+            <input id="pgr-wc-in" inputmode="numeric" maxlength="10" placeholder="숫자도 함께 (선택 — 예: 486)">
+            <button type="button" data-r="wcbook">📖</button>
+          </div>`}
         </div>
         ${isGreeting ? '' : `<div class="pgr-code">
           <div class="pgr-code-t">말 대신 숫자만 남기기 <button type="button" class="pgr-book-open" data-r="book">📖 암호책 전체</button></div>
@@ -339,6 +428,8 @@
         await sendVoice(peer, modal, stage);
       } else if (r === 'book') {
         openCodebook(code => sendCode(peer, code, modal));
+      } else if (r === 'wcbook') {
+        openCodebook(code => { const i = stage.querySelector('#pgr-wc-in'); if (i) i.value = code; });
       } else if (r === 'sendcode') {
         const v = (stage.querySelector('#pgr-code-in').value || '').replace(/\D/g, '');
         if (!v) return toast('숫자를 입력해주세요');
@@ -403,9 +494,10 @@
         toast('인사말을 저장했어요');
         BOX.greeting_url = url; BOX.greeting_dur = BLOB._dur;
       } else {
-        const { data } = await sb().rpc('pager_leave', { p_to: peer, p_kind: 'voice', p_url: url, p_dur: BLOB._dur, p_code: null });
+        const wc = (stage.querySelector('#pgr-wc-in')?.value || '').replace(/[^0-9.]/g, '') || null;
+        const { data } = await sb().rpc('pager_leave', { p_to: peer, p_kind: 'voice', p_url: url, p_dur: BLOB._dur, p_code: wc });
         if (!data?.ok) throw new Error(data?.reason || 'send');
-        toast('음성을 남겼어요 — 상대가 사서함에서 들을 거예요');
+        toast(wc ? `음성 + ${wc} 를 남겼어요` : '음성을 남겼어요 — 상대가 사서함에서 들을 거예요');
       }
       closeModal(modal);
       window.GALLA_pagerRefresh?.();
