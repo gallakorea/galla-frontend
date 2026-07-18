@@ -226,12 +226,13 @@
   }
 
   async function render(host) {
-    const [{ data: msgs }, meId] = await Promise.all([
-      sb().from('pager_messages').select('*').order('created_at', { ascending: false }).limit(50),
-      Promise.resolve(null),
-    ]);
-    const list = msgs || [];
-    const ids = [...new Set(list.map(m => m.sender_id))];
+    const me = (await sb().auth.getSession()).data?.session?.user?.id;
+    const { data: msgs } = await sb().from('pager_messages').select('*')
+      .order('created_at', { ascending: false }).limit(80);
+    const all = msgs || [];
+    const list = all.filter(m => m.box_owner === me);        // 받은 호출
+    const sent = all.filter(m => m.sender_id === me).slice(0, 15);   // 보낸 호출(이력만)
+    const ids = [...new Set([...list.map(m => m.sender_id), ...sent.map(m => m.box_owner)])];
     let names = {}, nums = {};
     if (ids.length) {
       const [{ data: us }, { data: bs }] = await Promise.all([
@@ -275,6 +276,11 @@
           ${list.length ? list.map(m => rowHTML(m, names[m.sender_id], nums[m.sender_id])).join('')
             : `<div class="pgr-empty">아직 아무도 삐삐를 치지 않았어요.<br><span>번호를 친구에게 알려주세요.</span></div>`}
         </div>
+        ${sent.length ? `
+        <div class="pgr-sec">보낸 호출 <span class="pgr-sec-sub">기록만 남아요 — 다시 들을 순 없어요</span></div>
+        <div class="pgr-list dim">
+          ${sent.map(m => sentRowHTML(m, names[m.box_owner], nums[m.box_owner])).join('')}
+        </div>` : ''}
         <div class="pgr-note">삐삐엔 읽음 표시가 없어요. 들었는지는 나만 압니다.</div>
       </div>`;
 
@@ -284,6 +290,22 @@
     window.GALLA_pagerRefresh = () => mount(host);   // 실시간 수신 시 목록 즉시 갱신용
   }
 
+  /* 보낸 호출 — 재생 버튼 없음(주워담을 수 없는 감성 유지), 무엇을 언제 보냈는지만 */
+  function sentRowHTML(m, name, num) {
+    const t = new Date(m.created_at);
+    const when = `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+    const what = m.kind === 'code' ? esc(m.code)
+      : m.code ? `음성 ${m.dur || 0}초 + ${esc(m.code)}` : `음성 ${m.dur || 0}초`;
+    return `
+      <div class="pgr-row sentrow">
+        <span class="pgr-row-ic sent">발신</span>
+        <span class="pgr-row-mid">
+          <b>${what}</b>
+          <span>→ ${num ? esc(num) + ' · ' : ''}${esc(name || '누군가')}</span>
+        </span>
+        <span class="pgr-row-t">${when}</span>
+      </div>`;
+  }
   function rowHTML(m, name, senderNum) {
     const t = new Date(m.created_at);
     const when = `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
