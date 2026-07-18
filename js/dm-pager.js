@@ -195,12 +195,13 @@
             <button type="button" class="pgr-btn" data-a="greet">${BOX.greeting_url ? '인사말 재녹음' : '인사말 녹음'}</button>
           </div>
           ${BOX.greeting_url ? `<button type="button" class="pgr-greet-play" data-a="playgreet">▶ 내 인사말 듣기 (${BOX.greeting_dur || 0}초)</button>` : ''}
+          <button type="button" class="pgr-pick-open" data-a="pick">원하는 번호로 바꾸기 (선택 개통)</button>
         </div>
 
         <div class="pgr-sec">삐삐 걸기</div>
         <div class="pgr-dialer">
           <div class="pgr-code-row">
-            <input id="pgr-dial-in" inputmode="tel" maxlength="12" placeholder="012-0000-000" autocomplete="off">
+            <input id="pgr-dial-in" inputmode="tel" maxlength="13" placeholder="012-000-0000" autocomplete="off">
             <button type="button" data-a="dial">호출</button>
           </div>
           <button type="button" class="pgr-friends-btn" data-a="pickfriend">주소록(친구)에서 고르기</button>
@@ -261,9 +262,11 @@
       const inp = host.querySelector('#pgr-dial-in');
       const hint = host.querySelector('#pgr-dial-hint');
       let n = (inp.value || '').replace(/[^0-9]/g, '');
-      if (n.length < 9) { hint.textContent = '번호를 끝까지 입력해주세요 (012-0000-000)'; return; }
-      n = n.slice(0, 10);
-      const formatted = `${n.slice(0, 3)}-${n.slice(3, 7)}-${n.slice(7)}`;
+      if (n.length < 10) { hint.textContent = '번호를 끝까지 입력해주세요 (012-000-0000)'; return; }
+      n = n.slice(0, 11);
+      const formatted = n.length === 10
+        ? `${n.slice(0, 3)}-${n.slice(3, 6)}-${n.slice(6)}`      // 012-XXX-XXXX (7자리)
+        : `${n.slice(0, 3)}-${n.slice(3, 7)}-${n.slice(7)}`;     // 012-XXXX-XXXX (8자리, 확장 대비)
       hint.textContent = '연결 중…';
       const { data } = await sb().rpc('pager_dial', { p_number: formatted });
       if (!data?.ok) { hint.textContent = '없는 번호예요 — 다시 확인해주세요'; beep('tone'); return; }
@@ -273,6 +276,7 @@
       return;
     }
     if (a === 'pickfriend') { pickFriend(host); return; }
+    if (a === 'pick') { pickNumber(host); return; }
     if (a === 'book') { openCodebook(null); return; }
     if (a === 'copy') {
       try { await navigator.clipboard.writeText(BOX.number); } catch (_) {}
@@ -290,13 +294,86 @@
     const inp = host.querySelector('#pgr-dial-in');
     if (!inp) return;
     inp.addEventListener('input', () => {
-      const d = inp.value.replace(/[^0-9]/g, '').slice(0, 10);
-      inp.value = d.length > 7 ? `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`
+      const d = inp.value.replace(/[^0-9]/g, '').slice(0, 11);
+      inp.value = d.length > 10 ? `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`
+        : d.length > 6 ? `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`
         : d.length > 3 ? `${d.slice(0,3)}-${d.slice(3)}` : d;
     });
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); host.querySelector('[data-a="dial"]')?.click(); }
     });
+  }
+
+  /* 📱 번호 선택 개통 — 핸드폰 개통처럼. 가용 확인은 즉석, 최종 검증은 서버(경합 방어) */
+  const fmt7 = d => d.length > 3 ? `${d.slice(0, 3)}-${d.slice(3)}` : d;
+  async function pickNumber(host) {
+    // 추천: 삐삐 암호가 들어간 번호 — 감성 + 재미
+    const seeds = ['486', '1004', '8282', '7942', '0404'];
+    const sug = [];
+    for (const c of seeds.sort(() => Math.random() - .5).slice(0, 3)) {
+      const rest = String(Math.floor(Math.random() * Math.pow(10, 7 - c.length))).padStart(7 - c.length, '0');
+      sug.push(Math.random() < .5 ? c + rest : rest + c);
+    }
+    const el = document.createElement('div');
+    el.id = 'pager-book';
+    el.innerHTML = `
+      <div class="pgr-book-body">
+        <div class="pgr-book-head"><b>📱 번호 선택 개통</b><span>012- 뒤 7자리를 정하세요 (뒷자리 4개)</span></div>
+        <div class="pgr-pick-wrap">
+          <div class="pgr-pick-row">
+            <span class="pgr-pick-prefix">012-</span>
+            <input id="pgr-pick-in" inputmode="numeric" maxlength="8" placeholder="000-0000" autocomplete="off">
+          </div>
+          <div class="pgr-pick-stat" id="pgr-pick-stat">숫자 7자리를 입력하세요</div>
+          <div class="pgr-pick-sug">
+            ${sug.map(d => `<button type="button" data-sug="${d}">012-${fmt7(d)}</button>`).join('')}
+          </div>
+          <button type="button" class="pgr-pick-go" id="pgr-pick-go" disabled>이 번호로 개통</button>
+        </div>
+        <button type="button" class="pgr-call-x" data-b="close">닫기</button>
+      </div>`;
+    document.body.appendChild(el);
+    void el.getBoundingClientRect();
+    el.classList.add('on');
+    const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 250); };
+    const inp = el.querySelector('#pgr-pick-in');
+    const stat = el.querySelector('#pgr-pick-stat');
+    const go = el.querySelector('#pgr-pick-go');
+    let checkT = null, okDigits = null;
+    const check = async () => {
+      const d = inp.value.replace(/[^0-9]/g, '');
+      okDigits = null; go.disabled = true;
+      if (d.length < 7) { stat.textContent = '숫자 7자리를 입력하세요'; stat.className = 'pgr-pick-stat'; return; }
+      const n = `012-${d.slice(0, 3)}-${d.slice(3, 7)}`;
+      stat.textContent = '확인 중…';
+      const { data } = await sb().from('pager_boxes').select('user_id').eq('number', n).maybeSingle();
+      if (data) { stat.textContent = `${n} 은 이미 개통된 번호예요`; stat.className = 'pgr-pick-stat bad'; }
+      else { stat.textContent = `${n} 사용 가능!`; stat.className = 'pgr-pick-stat good'; okDigits = d.slice(0, 7); go.disabled = false; }
+    };
+    inp.addEventListener('input', () => {
+      const d = inp.value.replace(/[^0-9]/g, '').slice(0, 7);
+      inp.value = fmt7(d);
+      clearTimeout(checkT); checkT = setTimeout(check, 350);
+    });
+    el.onclick = async e => {
+      if (e.target === el || e.target.closest('[data-b="close"]')) return close();
+      const sg = e.target.closest('[data-sug]');
+      if (sg) { inp.value = fmt7(sg.dataset.sug); check(); return; }
+      if (e.target.closest('#pgr-pick-go') && okDigits) {
+        go.disabled = true; go.textContent = '개통 중…';
+        const { data } = await sb().rpc('pager_pick_number', { p_digits: okDigits });
+        if (!data?.ok) {
+          stat.textContent = data?.reason === 'taken' ? '한발 늦었어요 — 방금 다른 분이 개통했어요' : '개통하지 못했어요';
+          stat.className = 'pgr-pick-stat bad';
+          go.textContent = '이 번호로 개통'; return;
+        }
+        beep('connect');
+        toast(`개통 완료! ${data.number}`);
+        BOX.number = data.number;
+        close();
+        mount(host);
+      }
+    };
   }
 
   /* 주소록(맞팔 친구) 골라 걸기 */

@@ -928,3 +928,37 @@ body.tossface .dm-ptt-hint {
   font-size: 12.5px; font-weight: 800; font-family: 'Courier New', monospace; letter-spacing: 1px;
 }
 .pgr-skip:active { background: rgba(125,255,168,.1); transform: scale(.95); }
+
+/* 📱 번호 선택 개통 */
+.pgr-pick-open {
+  width: 100%; margin-top: 8px; padding: 9px 0; border-radius: 10px; cursor: pointer;
+  background: none; border: 1px dashed rgba(255,255,255,.16); color: #b9bdc7;
+  font-size: 12px; font-weight: 700;
+}
+.pgr-pick-wrap { display: grid; gap: 10px; padding: 4px 2px; }
+.pgr-pick-row {
+  display: flex; align-items: center; gap: 6px; justify-content: center;
+  background: linear-gradient(180deg, #143d22, #0d2b18);
+  border: 2px solid rgba(0,0,0,.5); border-radius: 12px; padding: 12px;
+  box-shadow: inset 0 2px 12px rgba(0,0,0,.6);
+}
+.pgr-pick-prefix { font-size: 24px; color: #5fd88a; font-family: 'Courier New', monospace; letter-spacing: 2px; }
+.pgr-pick-row input {
+  width: 150px; background: none; border: none; outline: none;
+  font-size: 24px; color: #7dffa8; font-family: 'Courier New', monospace; letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(125,255,168,.5);
+}
+.pgr-pick-stat { text-align: center; font-size: 12px; color: #8b909b; min-height: 16px; }
+.pgr-pick-stat.good { color: #7dffa8; }
+.pgr-pick-stat.bad { color: #ff8f9a; }
+.pgr-pick-sug { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.pgr-pick-sug button {
+  padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  background: rgba(125,255,168,.06); border: 1px solid rgba(125,255,168,.2);
+  color: #7dffa8; font-size: 12.5px; font-weight: 800; font-family: 'Courier New', monospace;
+}
+.pgr-pick-go {
+  padding: 13px 0; border-radius: 12px; border: none; cursor: pointer;
+  background: #1f7a45; color: #eafff1; font-size: 14px; font-weight: 800;
+}
+.pgr-pick-go:disabled { opacity: .45; cursor: default; }
