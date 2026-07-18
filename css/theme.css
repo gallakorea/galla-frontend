@@ -215,7 +215,7 @@ body:has(#plaza-write-modal:not(.hidden)) .nav,
 body:has(.wh-sheet.open) .nav,
 body:has(.shop-sheet.open) .nav,
 body:has(.noti-drawer.open) .nav,
-body:has(#dm-root.open) .nav,
+body:has(#dm-root.open:not(.page)) .nav,   /* DM 오버레이만 — dm.html 페이지 모드는 네비 유지 */
 body:has(.glm-dim.open) .nav,
 body:has(.bugr-dim) .nav,
 body:has(.ssh-dim.open) .nav { display: none !important; }
