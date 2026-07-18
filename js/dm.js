@@ -273,7 +273,9 @@
       msgs.addEventListener(ev, () => clearTimeout(pressT)));
     document.addEventListener('click', e => {
       const menu = document.getElementById('dm-menu');
-      if (menu && !menu.hidden && !e.target.closest('#dm-menu')) menu.hidden = true;
+      // ⚠️ 여는 버튼(⚙)은 제외 — 여는 클릭이 document까지 버블돼 같은 틱에 도로 닫아버렸다
+      //   ("설정 버튼이 작동 안 한다"의 정체. 길게 누르기 메뉴는 click으로 안 열려 무사했다)
+      if (menu && !menu.hidden && !e.target.closest('#dm-menu, [data-act="settings"]')) menu.hidden = true;
     });
     return ROOT;
   }
