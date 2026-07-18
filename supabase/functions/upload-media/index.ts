@@ -16,6 +16,7 @@ const corsHeaders = {
 
 const ALLOWED_IMAGE = ["jpg", "jpeg", "png", "gif", "webp", "avif", "heic"];
 const ALLOWED_VIDEO = ["mp4", "mov", "webm", "m4v"];
+const ALLOWED_AUDIO = ["webm", "m4a", "mp4", "ogg", "mp3", "aac"];   // 음성 메시지(MediaRecorder)
 
 const r2 = new AwsClient({
   accessKeyId: R2_ACCESS_KEY_ID,
@@ -53,12 +54,12 @@ serve(async (req) => {
       ({ kind, filename, contentType } = await req.json());
     }
 
-    if (kind !== "image" && kind !== "video") {
+    if (kind !== "image" && kind !== "video" && kind !== "audio") {
       return json({ error: "invalid kind" }, 400);
     }
 
     const ext = (filename?.split(".").pop() || "bin").toLowerCase();
-    const allowed = kind === "image" ? ALLOWED_IMAGE : ALLOWED_VIDEO;
+    const allowed = kind === "image" ? ALLOWED_IMAGE : kind === "audio" ? ALLOWED_AUDIO : ALLOWED_VIDEO;
     if (!allowed.includes(ext)) {
       return json({ error: `unsupported ${kind} type: ${ext}` }, 400);
     }

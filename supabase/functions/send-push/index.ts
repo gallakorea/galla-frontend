@@ -33,7 +33,8 @@ function callerUid(req: Request): string | null {
 const preview = (kind: string, body: string) =>
   kind === "e2e" ? "🔒 비밀 메시지"
   : kind === "image" ? "📷 사진"
-  : kind === "gif" ? "🎬 GIF"
+  : kind === "gif" ? "🎬 이모티콘"
+  : kind === "voice" ? "🎤 음성 메시지"
   : kind === "share" ? "🔗 콘텐츠 공유"
   : (body || "").slice(0, 80);
 

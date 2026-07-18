@@ -39,6 +39,10 @@
     bolt:    I(12, '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
     crew:    I(12, '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    mic:     I(17, '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>'),
+    smile:   I(17, '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'),
+    play:    I(13, '<polygon points="5 3 19 12 5 21 5 3"/>'),
+    pause:   I(13, '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>'),
     cam:     I(17, '<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
     timer:   I(14, '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/>'),
     phone:   I(17, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
@@ -283,10 +287,27 @@
             <span class="dm-reply-info"><b>답장</b> <span id="dm-reply-preview"></span></span>
             <button type="button" class="dm-reply-x" id="dm-reply-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
+          <div class="dm-rec-strip" id="dm-rec-strip" hidden>
+            <span class="dm-rec-dot"></span><b>녹음 중</b> <span id="dm-rec-time">0:00</span>
+            <span class="dm-rec-hint">마이크를 다시 누르면 전송</span>
+            <button type="button" id="dm-rec-cancel">취소</button>
+          </div>
+          <div class="dm-stk" id="dm-stk" hidden>
+            <div class="dm-stk-top">
+              <input id="dm-stk-q" placeholder="이모티콘 검색… (전 세계 무한 공급)" autocomplete="off">
+              <div class="dm-stk-tabs">
+                <button type="button" class="on" data-sk="stickers">이모티콘</button>
+                <button type="button" data-sk="gifs">GIF</button>
+              </div>
+            </div>
+            <div class="dm-stk-grid" id="dm-stk-grid"><div class="dm-loading">불러오는 중…</div></div>
+          </div>
           <form class="dm-inputbar" id="dm-form">
             <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">${ICONS.plus}</button>
             <input type="file" id="dm-file" accept="image/*" hidden>
             <textarea id="dm-input" rows="1" placeholder="메시지 입력…"></textarea>
+            <button type="button" class="dm-ib" id="dm-voice" aria-label="음성 메시지">${ICONS.mic}</button>
+            <button type="button" class="dm-ib" id="dm-sticker" aria-label="이모티콘">${ICONS.smile}</button>
             <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
         </div>
@@ -405,6 +426,31 @@
     ROOT.querySelector('#dm-gnew-go').addEventListener('click', createGroup);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
+    ROOT.querySelector('#dm-voice').addEventListener('click', toggleVoiceRec);
+    ROOT.querySelector('#dm-rec-cancel').addEventListener('click', () => { if (VREC) { VREC._cancel = true; VREC.stop(); } });
+    ROOT.querySelector('#dm-sticker').addEventListener('click', toggleStk);
+    ROOT.querySelector('#dm-stk-q').addEventListener('input', () => { clearTimeout(stkTimer); stkTimer = setTimeout(() => loadStk(), 350); });
+    ROOT.querySelectorAll('.dm-stk-tabs button').forEach(b => b.addEventListener('click', () => {
+      ROOT.querySelectorAll('.dm-stk-tabs button').forEach(x => x.classList.toggle('on', x === b));
+      STK_KIND = b.dataset.sk; loadStk();
+    }));
+    ROOT.querySelector('#dm-stk-grid').addEventListener('click', e => {
+      const img = e.target.closest('img[data-full]');
+      if (!img || !curThread) return;
+      if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
+      sendMessage({ kind: 'gif', body: STK_KIND === 'stickers' ? '🎬 이모티콘' : '🎬 GIF',
+                    meta: { url: img.dataset.full, sticker: STK_KIND === 'stickers' } });
+    });
+    // 음성 재생 — 한 번에 하나만
+    ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
+      const b = e.target.closest('.dm-vplay'); if (!b) return;
+      if (VAUDIO && !VAUDIO.paused && VAUDIO._btn === b) { VAUDIO.pause(); return; }
+      if (VAUDIO) { VAUDIO.pause(); VAUDIO._btn && (VAUDIO._btn.innerHTML = ICONS.play); }
+      VAUDIO = new Audio(b.dataset.url); VAUDIO._btn = b;
+      b.innerHTML = ICONS.pause;
+      VAUDIO.onended = VAUDIO.onpause = () => { b.innerHTML = ICONS.play; };
+      VAUDIO.play().catch(() => { b.innerHTML = ICONS.play; toastMini('재생하지 못했어요'); });
+    });
     ROOT.querySelector('#dm-file').addEventListener('change', onPickImage);
 
     const ta = ROOT.querySelector('#dm-input');
@@ -1524,8 +1570,10 @@
       const lm = t.last_message || '';
       const pvIcon = lm.startsWith('📷') || lm.startsWith('🎬') ? ICONS.img
         : lm.startsWith('🔗') ? ICONS.link
-        : lm.startsWith('🔒') ? ICONS.lock : '';
-      const pvText = pvIcon ? lm.replace(/^(📷|🎬|🔗|🔒)\s*/, '') : lm;
+        : lm.startsWith('🔒') ? ICONS.lock
+        : lm.startsWith('🎤') ? ICONS.mic
+        : lm.startsWith('📞') ? ICONS.phone : '';
+      const pvText = pvIcon ? lm.replace(/^(📷|🎬|🔗|🔒|🎤|📞)\s*/, '') : lm;
       const preview = (t.last_sender === ME ? '나: ' : '');
       return `
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
@@ -1618,6 +1666,15 @@
       inner = `<span class="dm-bub-body dm-deleted">${ICONS.block} 삭제된 메시지입니다</span>`;
     } else if (m.kind === 'image' && m.meta?.url) {
       inner = `<img class="dm-bub-img" src="${esc(m.meta.url)}" alt="사진" loading="lazy">`;
+    } else if (m.kind === 'gif' && m.meta?.url) {
+      inner = `<img class="dm-bub-img dm-stkimg" src="${esc(m.meta.url)}" loading="lazy" alt="이모티콘">`;
+    } else if (m.kind === 'voice' && m.meta?.url) {
+      const d = m.meta.dur || 0;
+      inner = `<span class="dm-voice">
+          <button type="button" class="dm-vplay" data-url="${esc(m.meta.url)}">${ICONS.play}</button>
+          <span class="dm-vwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <b>${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}</b>
+        </span>`;
     } else if (m.kind === 'call') {
       const v = !!m.meta?.video;
       const missed = m.meta?.status !== 'ended';
@@ -1657,12 +1714,14 @@
       const qhtml = q.deleted_at ? `${ICONS.block} 삭제된 메시지`
         : q.kind === 'e2e' ? `${ICONS.lock} 비밀 메시지`
         : q.kind === 'image' ? `${ICONS.img} 사진`
+        : q.kind === 'voice' ? `${ICONS.mic} 음성 메시지`
+        : q.kind === 'gif' ? `${ICONS.img} 이모티콘`
         : q.kind === 'share' ? `${ICONS.link} ${esc(String(q.meta?.title || '공유').slice(0, 40))}`
         : esc(String(q.body || '').slice(0, 60));
       quote = `<span class="dm-quote">${qhtml}</span>`;
     }
     return `
-      <div class="dm-bubble ${mine ? 'me' : 'you'}" data-id="${m.id}" data-mine="${mine ? 1 : 0}" data-at="${m.created_at}" data-del="${m.deleted_at ? 1 : 0}">
+      <div class="dm-bubble ${mine ? 'me' : 'you'}${m.kind === 'gif' ? ' stk' : ''}" data-id="${m.id}" data-mine="${mine ? 1 : 0}" data-at="${m.created_at}" data-del="${m.deleted_at ? 1 : 0}">
         ${quote}${inner}
         <span class="dm-bub-time">${hhmm(m.created_at)}${mine ? `<b class="dm-receipt" data-read="${m.read_at ? 1 : 0}">${m.read_at ? '읽음' : ''}</b>` : ''}</span>
       </div>`;
@@ -1770,6 +1829,90 @@
     mine.forEach(r => { r.textContent = ''; });
     for (let i = mine.length - 1; i >= 0; i--) {
       if (mine[i].dataset.read === '1') { mine[i].textContent = '읽음'; break; }
+    }
+  }
+
+  /* ---------- 😀 무한 이모티콘 (GIPHY 스티커·GIF — 서버 프록시, 무제한) ---------- */
+  let STK_KIND = 'stickers', stkTimer = null, STK_LOADED = false;
+  function toggleStk() {
+    const p = ROOT.querySelector('#dm-stk');
+    p.hidden = !p.hidden;
+    if (!p.hidden && !STK_LOADED) loadStk();
+  }
+  async function loadStk() {
+    const grid = ROOT.querySelector('#dm-stk-grid');
+    grid.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const q = ROOT.querySelector('#dm-stk-q').value.trim();
+    try {
+      const { data } = await supabase.functions.invoke('gif-search', { body: { q, kind: STK_KIND, limit: 30 } });
+      const list = data?.results || [];
+      STK_LOADED = true;
+      grid.innerHTML = list.length
+        ? list.map(g => `<img src="${esc(g.preview)}" data-full="${esc(g.url)}" loading="lazy" alt="">`).join('')
+        : `<div class="dm-set-empty">검색 결과가 없어요</div>`;
+    } catch (_) { grid.innerHTML = `<div class="dm-set-empty">불러오지 못했어요</div>`; }
+  }
+
+  /* ---------- 🎙 음성 메시지 (MediaRecorder → R2) ---------- */
+  let VREC = null, vrecT = null, VAUDIO = null;
+  async function toggleVoiceRec() {
+    if (VREC) { VREC.stop(); return; }   // 두 번째 누름 = 전송
+    if (!curThread) return;
+    if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
+    if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia)
+      return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (_) { return toastMini('마이크 권한이 필요해요 — 설정에서 허용해 주세요'); }
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+    const chunks = [];
+    const t0 = Date.now();
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    VREC = rec;
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      const cancelled = rec._cancel;
+      const dur = Math.round((Date.now() - t0) / 1000);
+      VREC = null; paintRec(false);
+      if (cancelled) return;
+      if (dur < 1) return toastMini('너무 짧아요 — 꾹 담아서 다시');
+      const type = rec.mimeType || 'audio/webm';
+      const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+      const f = new File(chunks, 'voice.' + ext, { type });
+      if (!window.GALLA_UPLOAD_MEDIA) {
+        try { await loadScript('/js/media-upload.js'); } catch (_) { return toastMini('전송을 준비하지 못했어요'); }
+      }
+      const wrap = ROOT.querySelector('#dm-msgs');
+      const tmp = document.createElement('div');
+      tmp.className = 'dm-bubble me dm-uploading';
+      tmp.innerHTML = `<span class="dm-bub-body">${ICONS.mic} 음성 보내는 중…</span>`;
+      wrap.appendChild(tmp); wrap.scrollTop = wrap.scrollHeight;
+      try {
+        const url = await window.GALLA_UPLOAD_MEDIA(f, 'audio');
+        tmp.remove();
+        await sendMessage({ kind: 'voice', body: '🎤 음성 메시지', meta: { url, dur } });
+      } catch (_) {
+        tmp.querySelector('.dm-bub-body').textContent = '음성 전송 실패';
+        setTimeout(() => tmp.remove(), 2500);
+      }
+    };
+    rec.start();
+    paintRec(true, t0);
+  }
+  function paintRec(on, t0) {
+    const strip = ROOT.querySelector('#dm-rec-strip');
+    const btn = ROOT.querySelector('#dm-voice');
+    strip.hidden = !on;
+    btn.classList.toggle('rec', on);
+    clearInterval(vrecT);
+    if (on) {
+      const el = ROOT.querySelector('#dm-rec-time');
+      vrecT = setInterval(() => {
+        const s = Math.floor((Date.now() - t0) / 1000);
+        el.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      }, 250);
     }
   }
 
