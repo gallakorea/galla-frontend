@@ -1695,3 +1695,12 @@ body[data-page="news"] .news-viewer-fallback {
   text-shadow: 0 1px 6px rgba(0,0,0,.5);
 }
 .tt-talk:active .tt-talk-body { transform: scale(.97); }
+
+/* ═══ 탭 개편: 기본 라인 SVG ↔ 선택 시 컬러 SVG (유튜브 문법 전 탭 통일) ═══ */
+.tab-item .ic-color { display: none; }
+.tab-item.active .ic-color { display: block; }
+.tab-item.active .ic-line { display: none; }
+/* 5탭이 한눈에 — 라벨 축약에 맞춰 여백 타이트 */
+.tabs-header { gap: 4px; }
+.tab-item { padding: 8px 9px; font-size: 12.5px; gap: 5px; }
+.tab-ic { width: 15px; height: 15px; flex: 0 0 15px; }
