@@ -13,6 +13,25 @@
    2차(별도): E2E 비밀대화(WebCrypto ECDH), 차단/신고, 푸시
    ========================================================= */
 (function () {
+  /* 라인 SVG 아이콘 — 옵시디언 콰이엇 (claude.ai/design apply/dm-js-patch.md) */
+  const I = (w, inner) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  const ICONS = {
+    x:       I(19, '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+    sliders: I(18, '<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>'),
+    edit:    I(18, '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>'),
+    back:    I(21, '<polyline points="15 18 9 12 15 6"/>'),
+    plus:    I(17, '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>'),
+    send:    I(15, '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>'),
+    search:  I(15, '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>'),
+    chat:    I(15, '<path d="M21 11.5a8.38 8.38 0 0 1-8.38 8.38 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.38 8.38 0 0 1 8.38-8.38h.5a8.48 8.48 0 0 1 8.12 8.12v.5z"/>'),
+    pin:     `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6f86ff" stroke-width="2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/></svg>`,
+    star:    `<svg width="11" height="11" viewBox="0 0 24 24" fill="#6f86ff" stroke="#6f86ff" stroke-width="1" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+    block:   `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff4d67" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+    eyeoff:  I(12, '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'),
+    down:    I(11, '<polyline points="6 9 12 15 18 9"/>'),
+    leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
+  };
+
   let supabase = window.supabaseClient;
   let ME = null, ROOT = null, BTN = null, BADGE = null;
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
@@ -86,16 +105,16 @@
       <div class="dm-panel" role="dialog" aria-label="메시지">
         <div class="dm-view" data-view="inbox">
           <div class="dm-head has-btns">
-            <button class="dm-x" data-act="close" aria-label="닫기">✕</button>
+            <button class="dm-x" data-act="close" aria-label="닫기">${ICONS.x}</button>
             <span class="dm-title">메시지</span>
             <span class="dm-head-btns">
-              <button class="dm-gear" data-act="settings" aria-label="메시지 설정">⚙</button>
-              <button class="dm-compose" data-act="compose" aria-label="새 메시지">✎</button>
+              <button class="dm-gear" data-act="settings" aria-label="메시지 설정">${ICONS.sliders}</button>
+              <button class="dm-compose" data-act="compose" aria-label="새 메시지">${ICONS.edit}</button>
             </span>
           </div>
           <div class="dm-tabs" role="tablist">
-            <button class="dm-tab on" data-tab="chats" role="tab">💬 채팅</button>
-            <button class="dm-tab" data-tab="friends" role="tab">👥 친구</button>
+            <button class="dm-tab on" data-tab="chats" role="tab">채팅</button>
+            <button class="dm-tab" data-tab="friends" role="tab">친구</button>
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
           <div class="dm-list" id="dm-inbox-wrap">
@@ -104,14 +123,14 @@
           <div class="dm-list" id="dm-friends" hidden>
             <div class="dm-friend-search">
               <input id="dm-friend-q" placeholder="친구 검색…" autocomplete="off">
-              <button class="dm-add-btn" data-act="addFriend" type="button">➕ 친구 추가</button>
+              <button class="dm-add-btn" data-act="addFriend" type="button">${ICONS.plus} 친구 추가</button>
             </div>
             <div id="dm-friend-list"></div>
           </div>
         </div>
         <div class="dm-view" data-view="add" hidden>
           <div class="dm-head">
-            <button class="dm-back" data-act="toFriends" aria-label="뒤로">‹</button>
+            <button class="dm-back" data-act="toFriends" aria-label="뒤로">${ICONS.back}</button>
             <span class="dm-title">친구 추가</span>
             <span class="dm-head-sp"></span>
           </div>
@@ -120,44 +139,44 @@
               <div class="dm-mycode-label">내 친구 코드</div>
               <div class="dm-mycode-code" id="dm-my-code">······</div>
               <div class="dm-mycode-btns">
-                <button id="dm-code-copy" type="button">📋 복사</button>
-                <button id="dm-code-share" type="button">📤 공유</button>
+                <button id="dm-code-copy" type="button">복사</button>
+                <button id="dm-code-share" type="button">공유</button>
               </div>
               <div class="dm-mycode-hint">코드를 받은 친구는 가입 전이면 가입부터, 이미 갈라인이면 바로 친구가 돼요</div>
             </div>
-            <div class="dm-sec">🔑 코드로 추가</div>
+            <div class="dm-sec">코드로 추가</div>
             <div class="dm-code-row">
               <input id="dm-code-in" maxlength="6" placeholder="친구 코드 6자리" autocomplete="off" autocapitalize="characters">
               <button id="dm-code-go" type="button">찾기</button>
             </div>
             <div id="dm-code-result"></div>
-            <div class="dm-sec">🔍 닉네임으로 추가</div>
+            <div class="dm-sec">${ICONS.search}닉네임으로 추가</div>
             <div class="dm-code-row"><input id="dm-add-q" placeholder="닉네임 검색…" autocomplete="off"></div>
             <div id="dm-add-results"></div>
-            <div class="dm-sec">💜 나를 팔로우한 사람 <span class="dm-sec-sub">— 맞팔하면 친구</span></div>
+            <div class="dm-sec">나를 팔로우한 사람 <span class="dm-sec-sub">— 맞팔하면 친구</span></div>
             <div id="dm-followback"></div>
           </div>
         </div>
         <div class="dm-view" data-view="settings" hidden>
           <div class="dm-head">
-            <button class="dm-back" data-act="toInbox" aria-label="뒤로">‹</button>
+            <button class="dm-back" data-act="toInbox" aria-label="뒤로">${ICONS.back}</button>
             <span class="dm-title">메시지 설정</span>
             <span class="dm-head-sp"></span>
           </div>
           <div class="dm-list" id="dm-settings">
             <div class="dm-set-row">
-              <span class="dm-set-mid"><b>🔍 검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
+              <span class="dm-set-mid"><b>검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
               <button class="dm-toggle" id="dm-set-search" type="button"></button>
             </div>
-            <div class="dm-sec">🚫 차단한 사람</div>
+            <div class="dm-sec">${ICONS.block}차단한 사람</div>
             <div id="dm-block-list"></div>
-            <div class="dm-sec">👁 숨긴 친구</div>
+            <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
             <div id="dm-hidden-list"></div>
           </div>
         </div>
         <div class="dm-view" data-view="thread" hidden>
           <div class="dm-head">
-            <button class="dm-back" data-act="toInbox" aria-label="뒤로">‹</button>
+            <button class="dm-back" data-act="toInbox" aria-label="뒤로">${ICONS.back}</button>
             <span class="dm-peer-wrap">
               <span class="dm-head-ava" id="dm-peer-ava"></span>
               <span class="dm-peer-col">
@@ -173,15 +192,15 @@
             <button type="button" class="dm-reply-x" id="dm-reply-x">✕</button>
           </div>
           <form class="dm-inputbar" id="dm-form">
-            <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">＋</button>
+            <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">${ICONS.plus}</button>
             <input type="file" id="dm-file" accept="image/*" hidden>
             <textarea id="dm-input" rows="1" placeholder="메시지 입력…"></textarea>
-            <button type="submit" class="dm-send" aria-label="전송">➤</button>
+            <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
         </div>
         <div class="dm-view" data-view="compose" hidden>
           <div class="dm-head">
-            <button class="dm-back" data-act="toInbox" aria-label="뒤로">‹</button>
+            <button class="dm-back" data-act="toInbox" aria-label="뒤로">${ICONS.back}</button>
             <span class="dm-title">새 메시지</span>
             <span class="dm-head-sp"></span>
           </div>
@@ -386,16 +405,16 @@
   function friendMenu(el, x, y) {
     const peer = el.dataset.peer, name = el.dataset.name;
     popMenu(x, y, [
-      { k: 'fav', label: PREF.favs.has(peer) ? '⭐ 즐겨찾기 해제' : '⭐ 즐겨찾기' },
-      { k: 'hide', label: '👁 목록에서 숨기기' },
-      { k: 'block', label: '🚫 차단', danger: true },
+      { k: 'fav', label: PREF.favs.has(peer) ? '즐겨찾기 해제' : '즐겨찾기' },
+      { k: 'hide', label: '목록에서 숨기기' },
+      { k: 'block', label: '차단', danger: true },
     ], k => doFriendAct(k, peer, name));
   }
   function threadMenu(el, x, y) {
     const tid = el.dataset.tid;
     popMenu(x, y, [
-      { k: 'pin', label: PREF.threads[tid]?.pinned ? '📌 고정 해제' : '📌 상단 고정' },
-      { k: 'leave', label: '🚪 나가기', danger: true },
+      { k: 'pin', label: PREF.threads[tid]?.pinned ? '고정 해제' : '상단 고정' },
+      { k: 'leave', label: '나가기', danger: true },
     ], k => doThreadAct(k, tid));
   }
 
@@ -408,15 +427,15 @@
     const isFriends = !ROOT.querySelector('#dm-friends').hidden;
     const items = isFriends
       ? [
-          { k: 'add', label: '➕ 친구 추가' },
-          { k: 'edit', label: EDIT ? '✅ 편집 완료' : '✏️ 친구 목록 편집' },
-          { k: 'full', label: '⚙ 전체 설정' },
+          { k: 'add', label: '친구 추가' },
+          { k: 'edit', label: EDIT ? '편집 완료' : '친구 목록 편집' },
+          { k: 'full', label: '전체 설정' },
         ]
       : [
           { k: 'sortRecent', label: (SORT === 'recent' ? '✓ ' : ' ') + '최신 메시지 순' },
           { k: 'sortUnread', label: (SORT === 'unread' ? '✓ ' : ' ') + '안 읽은 메시지 순' },
-          { k: 'edit', label: EDIT ? '✅ 편집 완료' : '✏️ 채팅방 편집' },
-          { k: 'full', label: '⚙ 전체 설정' },
+          { k: 'edit', label: EDIT ? '편집 완료' : '채팅방 편집' },
+          { k: 'full', label: '전체 설정' },
         ];
     popMenu(r.right - 170, r.bottom + 6, items, k => {
       if (k === 'sortRecent' || k === 'sortUnread') {
@@ -434,16 +453,16 @@
   function editChipsFriend(f) {
     const fav = PREF.favs.has(f.id);
     return `<span class="dm-edit-chips">
-      <button class="dm-chip${fav ? ' on' : ''}" data-ek="fav" data-peer="${f.id}" type="button">⭐</button>
-      <button class="dm-chip" data-ek="hide" data-peer="${f.id}" type="button">👁</button>
-      <button class="dm-chip danger" data-ek="block" data-peer="${f.id}" type="button">🚫</button>
+      <button class="dm-chip${fav ? ' on' : ''}" data-ek="fav" data-peer="${f.id}" type="button">${ICONS.star}</button>
+      <button class="dm-chip" data-ek="hide" data-peer="${f.id}" type="button">${ICONS.eyeoff}</button>
+      <button class="dm-chip danger" data-ek="block" data-peer="${f.id}" type="button">${ICONS.block}</button>
     </span>`;
   }
   function editChipsThread(tid) {
     const pinned = !!PREF.threads[tid]?.pinned;
     return `<span class="dm-edit-chips">
-      <button class="dm-chip${pinned ? ' on' : ''}" data-ek="pin" data-tid="${tid}" type="button">📌</button>
-      <button class="dm-chip danger" data-ek="leave" data-tid="${tid}" type="button">🚪</button>
+      <button class="dm-chip${pinned ? ' on' : ''}" data-ek="pin" data-tid="${tid}" type="button">${ICONS.pin}</button>
+      <button class="dm-chip danger" data-ek="leave" data-tid="${tid}" type="button">${ICONS.leave}</button>
     </span>`;
   }
   function bindEditChips(box) {
@@ -461,7 +480,7 @@
   async function loadSettings() {
     await loadPrefs(true);
     const tg = ROOT.querySelector('#dm-set-search');
-    const paintTg = () => { tg.classList.toggle('on', PREF.searchable); tg.textContent = PREF.searchable ? '켜짐' : '꺼짐'; };
+    const paintTg = () => { tg.classList.toggle('on', PREF.searchable); tg.textContent = '';   /* 스위치는 CSS가 그림 */ };
     paintTg();
     tg.onclick = async () => {
       PREF.searchable = !PREF.searchable;
@@ -516,7 +535,7 @@
           <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
           ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
         </span>
-        ${EDIT ? editChipsFriend(f) : '<span class="dm-friend-go">💬</span>'}
+        ${EDIT ? editChipsFriend(f) : '<span class="dm-friend-go">${ICONS.chat}</span>'}
       </button>`;
   }
   function renderFriends(list) {
@@ -530,7 +549,7 @@
     const favs = vis.filter(f => PREF.favs.has(f.id));
     const rest = vis.filter(f => !PREF.favs.has(f.id));
     box.innerHTML =
-      (favs.length ? `<div class="dm-sec">⭐ 즐겨찾기 <b>${favs.length}</b></div>` + favs.map(friendRow).join('') : '') +
+      (favs.length ? `<div class="dm-sec">${ICONS.star}즐겨찾기 <b>${favs.length}</b></div>` + favs.map(friendRow).join('') : '') +
       `<div class="dm-sec">친구 <b>${rest.length}</b></div>` + rest.map(friendRow).join('');
     box.querySelectorAll('.dm-friend').forEach(el => {
       el.addEventListener('click', () => { if (!EDIT) startDM(el.dataset.peer, el.dataset.name); });
@@ -667,7 +686,7 @@
       return !(p?.left_at && new Date(t.last_message_at) <= new Date(p.left_at));
     });
     if (!list.length) {
-      box.innerHTML = `<div class="dm-empty">아직 대화가 없어요.<br><span>✎ 를 눌러 새 메시지를 시작하세요.</span></div>`;
+      box.innerHTML = `<div class="dm-empty">아직 대화가 없어요.<br><span>오른쪽 위 연필을 눌러 새 메시지를 시작하세요.</span></div>`;
       return;
     }
     const peers = list.map(t => t.user_lo === ME ? t.user_hi : t.user_lo);
@@ -698,7 +717,7 @@
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
           ${avaHTML(peer)}
           <span class="dm-thread-mid">
-            <span class="dm-thread-name">${pinned ? '📌 ' : ''}${esc(name)}</span>
+            <span class="dm-thread-name">${pinned ? ICONS.pin : ''}${esc(name)}</span>
             <span class="dm-thread-prev">${esc(preview)}</span>
           </span>
           ${EDIT ? editChipsThread(t.id) : `<span class="dm-thread-side">
@@ -875,9 +894,9 @@
     const mine = bubbleEl.dataset.mine === '1';
     const fresh = Date.now() - new Date(m.created_at).getTime() < 5 * 60 * 1000;
     const items = [];
-    if (!m.deleted_at) items.push(`<button data-m="reply">↩️ 답장</button>`);
-    if (!m.deleted_at && m.kind === 'text') items.push(`<button data-m="copy">📋 복사</button>`);
-    if (mine && !m.deleted_at && fresh) items.push(`<button data-m="unsend" class="danger">🗑 보내기 취소</button>`);
+    if (!m.deleted_at) items.push(`<button data-m="reply">답장</button>`);
+    if (!m.deleted_at && m.kind === 'text') items.push(`<button data-m="copy">복사</button>`);
+    if (mine && !m.deleted_at && fresh) items.push(`<button data-m="unsend" class="danger">보내기 취소</button>`);
     if (!items.length) return;
     menu.innerHTML = items.join('');
     menu.hidden = false;

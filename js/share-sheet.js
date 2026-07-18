@@ -94,7 +94,7 @@
   }
   async function sendToDM(cfg, url) {
     try {
-      if (!window.GALLA_dmShare) await Promise.all([loadOnce('/js/dm.js'), loadOnce('/css/dm.css')]);
+      if (!window.GALLA_dmShare) await Promise.all([loadOnce('/js/dm.js'), loadOnce('/css/dm.css'), loadOnce('/css/dm-quiet.css')]);
       // /share/<type>/<id> 규약에서 콘텐츠 종류를 복원 → DM 카드가 앱 내부 링크로 연결된다
       const m = String(url).match(/\/share\/(\w+)\/(\d+)/);
       window.GALLA_dmShare({
