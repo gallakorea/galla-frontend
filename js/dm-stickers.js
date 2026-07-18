@@ -106,6 +106,14 @@
       url: cps => `https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/png/512/emoji_u${cps.filter(c => c !== 'fe0f').join('_').toLowerCase()}.png` },
     { id: 'twe',   label: '트위터', credit: 'Twemoji · X (CC BY 4.0)',
       url: cps => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${cps.filter(c => c !== 'fe0f').join('-').toLowerCase()}.svg` },
+    { id: 'fluent', label: '입체', credit: 'Fluent Emoji · Microsoft (MIT)', needsMap: 'GALLA_FLUENT',
+      url: cps => {
+        // 이름 기반 경로라 매핑이 필요하다 — js/dm-fluent.js가 없으면 빈 문자열(폴백 체인이 받는다)
+        const m = window.GALLA_FLUENT;
+        const key = cps.join('-').toLowerCase();
+        const p = m && (m[key] || m[cps.filter(c => c !== 'fe0f').join('-').toLowerCase()]);
+        return p ? `https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/${p.split('/').map(encodeURIComponent).join('/')}.png` : '';
+      } },
     { id: 'blob',  label: '블롭', credit: 'Blobmoji (Apache 2.0 / CC BY 4.0)',
       url: cps => `https://cdn.jsdelivr.net/gh/C1710/blobmoji@main/svg/emoji_u${cps.filter(c => c !== 'fe0f').join('_').toLowerCase()}.svg` },
     { id: 'open',  label: '손그림', credit: 'OpenMoji (CC BY-SA 4.0)',

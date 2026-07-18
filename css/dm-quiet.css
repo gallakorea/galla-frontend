@@ -521,11 +521,12 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 
 /* 😀 이모티콘 시트 */
 .dm-stk {
-  height: 264px; display: flex; flex-direction: column;
+  /* 칩 줄(스타일·카테고리)과 크레딧이 붙으면서 그리드가 눌렸다 — 시트를 키워 2줄 이상 보이게 */
+  height: min(46vh, 340px); display: flex; flex-direction: column;
   border-top: 1px solid rgba(255,255,255,.07); background: #0b0c12;
 }
 .dm-stk[hidden] { display: none !important; }
-.dm-stk-top { display: flex; gap: 8px; padding: 10px 14px 6px; align-items: center; }
+.dm-stk-top { display: flex; gap: 8px; padding: 8px 14px 5px; align-items: center; }
 .dm-stk-top input {
   flex: 1; padding: 9px 14px; border-radius: 999px; font-size: 13px;
   background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: #fff; outline: none;
@@ -577,7 +578,7 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 }
 .dm-emo:active { background: rgba(255,255,255,.08); transform: scale(.85); }
 /* 카테고리 칩 */
-.dm-stk-cats { display: flex; gap: 5px; overflow-x: auto; padding: 2px 12px 6px; scrollbar-width: none; }
+.dm-stk-cats { display: flex; gap: 5px; overflow-x: auto; padding: 0 12px 4px; scrollbar-width: none; }
 .dm-stk-cats::-webkit-scrollbar { display: none; }
 .dm-stk-cats[hidden] { display: none !important; }
 .dm-stk-cats button {
@@ -638,7 +639,7 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 .dm-ib.rec { color: #fff; background: #ff4d67; transform: scale(1.15); }
 
 /* 스티커 스타일 칩 */
-.dm-stk-styles { display: flex; gap: 5px; padding: 2px 12px 4px; }
+.dm-stk-styles { display: flex; gap: 5px; padding: 0 12px 3px; overflow-x: auto; scrollbar-width: none; }
 .dm-stk-styles[hidden] { display: none !important; }
 .dm-stk-styles button {
   flex: none; padding: 5px 11px; border-radius: 8px; cursor: pointer;
@@ -660,3 +661,20 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   font-size: 21px; line-height: 1; display: flex; align-items: center; justify-content: center;
 }
 .dm-mixbase.on { background: rgba(67,97,255,.2); border-color: rgba(67,97,255,.5); transform: scale(1.08); }
+
+/* 🇰🇷 토스페이스 — 원본 TTF 그대로(라이선스상 서브셋·포맷변환 금지).
+   @font-face는 '실제로 쓰일 때만' 내려받으므로, 켠 사람만 12MB를 받는다. */
+@font-face {
+  font-family: 'TossFace';
+  src: url('/assets/fonts/TossFaceFontMac.ttf') format('truetype');
+  font-display: swap;
+}
+body.tossface .dm-emo,
+body.tossface .dm-bub-body,
+body.tossface #dm-input,
+body.tossface .dm-thread-prev,
+body.tossface .dm-thread-name,
+body.tossface .dm-ptt-hint {
+  font-family: 'TossFace', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+               'Malgun Gothic', 'Noto Sans KR', sans-serif;
+}

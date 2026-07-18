@@ -448,10 +448,22 @@
       ROOT.querySelectorAll('.dm-stk-tabs button').forEach(x => x.classList.toggle('on', x === b));
       STK_KIND = b.dataset.sk; paintStk();
     }));
-    ROOT.querySelector('#dm-stk-styles').addEventListener('click', e => {
+    ROOT.querySelector('#dm-stk-styles').addEventListener('click', async e => {
+      const tf = e.target.closest('[data-tf]');
+      if (tf) {
+        const on = tf.dataset.tf === '1';
+        if (on && !TOSSFACE) toastMini('토스페이스를 처음 켜면 12MB를 받아요 — 한 번만 받으면 계속 써요');
+        TOSSFACE = on;
+        try { localStorage.setItem(TF_KEY, on ? '1' : '0'); } catch (_) {}
+        applyTossface(); paintStk();
+        return;
+      }
       const b = e.target.closest('[data-si]'); if (!b) return;
       STK_STYLE = b.dataset.si;
       try { localStorage.setItem('galla_stk_style', STK_STYLE); } catch (_) {}
+      // 입체(Fluent)는 이름 매핑표가 있어야 URL이 나온다
+      const st = window.GALLA_STK?.styles.find(x => x.id === STK_STYLE);
+      if (st?.needsMap && !window[st.needsMap]) { try { await loadScript('/js/dm-fluent.js'); } catch (_) {} }
       paintStk();
     });
     // 이미지 로드 실패 → 다음 스타일 URL로 (capture: error는 버블하지 않는다)
@@ -558,6 +570,8 @@
   let e2eBooted = false;
   function openDM() {
     buildRoot();
+    applyTossface();
+    if (STK_STYLE === 'fluent' && !window.GALLA_FLUENT) loadScript('/js/dm-fluent.js').catch(() => {});
     if (!e2eBooted && ME && window.GALLA_e2e?.supported()) {
       e2eBooted = true;
       window.GALLA_e2e.ready(supabase, ME).catch(() => {});
@@ -1932,15 +1946,28 @@
     const list = Object.keys(combos);
     grid.className = 'dm-stk-grid';
     grid.innerHTML = list.length
-      ? list.map(other => {
+      ? list.map((other, i) => {
           const url = kitchenUrl(combos[other]);
-          return `<img src="${esc(url)}" data-full="${esc(url)}" data-src="mix" loading="lazy" alt="">`;
+          return `<img src="${esc(url)}" data-full="${esc(url)}" data-src="mix"${i >= 12 ? ' loading="lazy"' : ''} alt="">`;
         }).join('')
       : `<div class="dm-set-empty">이 이모지는 조합이 없어요</div>`;
     cats.querySelector('.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
   }
+  /* 🇰🇷 토스페이스 — 국산 이모지 폰트(원본 그대로 사용, 라이선스상 서브셋·이미지화 금지).
+     12MB라 켤 때만 내려받는다(@font-face는 실제 사용 시에만 다운로드). */
+  const TF_KEY = 'galla_tossface';
+  let TOSSFACE = (() => { try { return localStorage.getItem(TF_KEY) === '1'; } catch (_) { return false; } })();
+  function applyTossface() {
+    document.body.classList.toggle('tossface', TOSSFACE);
+  }
   function paintStkStyles() {
     const box = ROOT.querySelector('#dm-stk-styles');
+    if (STK_KIND === 'emoji') {
+      box.hidden = false;
+      box.innerHTML = `<button type="button" class="${!TOSSFACE ? 'on' : ''}" data-tf="0">기본</button>`
+        + `<button type="button" class="${TOSSFACE ? 'on' : ''}" data-tf="1">토스페이스 🇰🇷</button>`;
+      return;
+    }
     const show = STK_KIND === 'sticker' && window.GALLA_STK;
     box.hidden = !show;
     if (!show) { box.innerHTML = ''; return; }
@@ -1948,13 +1975,15 @@
       .map(st => `<button type="button" class="${st.id === STK_STYLE ? 'on' : ''}" data-si="${st.id}">${esc(st.label)}</button>`).join('');
   }
   /* 스타일마다 커버리지가 달라(애니메이션 Noto는 ~80%) 순차 폴백시킨다 */
-  function stkImgHTML(it) {
+  function stkImgHTML(it, i) {
     const S = window.GALLA_STK;
     const chain = [STK_STYLE, ...S.styles.map(x => x.id).filter(x => x !== STK_STYLE)];
-    const urls = chain.map(id => S.urlOf(it.cps, id));
+    const urls = chain.map(id => S.urlOf(it.cps, id)).filter(Boolean);
+    if (!urls.length) return '';
+    // ★ 첫 화면 몫은 eager — 시트가 짧으면 lazy 관찰이 멈춰 아무것도 안 뜨는 일이 있었다
+    const lazy = i >= 12 ? ' loading="lazy"' : '';
     return `<img src="${esc(urls[0])}" data-full="${esc(urls[0])}" data-src="stk"
-      data-alt="${esc(JSON.stringify(urls.slice(1)))}"
-      loading="lazy" alt="${esc(it.kw.split(' ')[0] || '')}">`;
+      data-alt="${esc(JSON.stringify(urls.slice(1)))}"${lazy} alt="${esc(it.kw.split(' ')[0] || '')}">`;
   }
   function paintStkCats() {
     const box = ROOT.querySelector('#dm-stk-cats');
@@ -1983,7 +2012,7 @@
         const { data } = await supabase.functions.invoke('gif-search', { body: { q, kind: 'gifs', limit: 30 } });
         const list = data?.results || [];
         grid.innerHTML = list.length
-          ? list.map(g => `<img src="${esc(g.preview)}" data-full="${esc(g.url)}" data-src="giphy" loading="lazy" alt="">`).join('')
+          ? list.map((g, i) => `<img src="${esc(g.preview)}" data-full="${esc(g.url)}" data-src="giphy"${i >= 12 ? ' loading="lazy"' : ''} alt="">`).join('')
           : `<div class="dm-set-empty">검색 결과가 없어요</div>`;
       } catch (_) { grid.innerHTML = `<div class="dm-set-empty">불러오지 못했어요</div>`; }
       return;
@@ -1992,7 +2021,8 @@
     if (!S) { grid.innerHTML = `<div class="dm-set-empty">이모티콘을 불러오지 못했어요</div>`; return; }
     const items = S.search(q) || S.cats[STK_CAT].items;
     if (STK_KIND === 'emoji') {
-      credit.hidden = true;
+      credit.hidden = !TOSSFACE;
+      credit.textContent = '이 서비스에는 토스팀에서 제공한 토스페이스가 적용되어 있습니다';
       grid.className = 'dm-stk-grid emoji';
       grid.innerHTML = items.length
         ? items.map(it => `<button type="button" class="dm-emo" data-ch="${esc(S.charOf(it.cp))}">${esc(S.charOf(it.cp))}</button>`).join('')

@@ -52,3 +52,7 @@
 /admin-login.html
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
+
+# 토스페이스 원본(12MB) — 한 번 받으면 계속 쓰도록 장기 캐시. 라이선스상 서브셋 불가.
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
