@@ -85,20 +85,43 @@
       <div class="dm-dim"></div>
       <div class="dm-panel" role="dialog" aria-label="메시지">
         <div class="dm-view" data-view="inbox">
-          <div class="dm-head">
+          <div class="dm-head has-btns">
             <button class="dm-x" data-act="close" aria-label="닫기">✕</button>
             <span class="dm-title">메시지</span>
-            <button class="dm-compose" data-act="compose" aria-label="새 메시지">✎</button>
+            <span class="dm-head-btns">
+              <button class="dm-gear" data-act="settings" aria-label="메시지 설정">⚙</button>
+              <button class="dm-compose" data-act="compose" aria-label="새 메시지">✎</button>
+            </span>
           </div>
           <div class="dm-tabs" role="tablist">
             <button class="dm-tab on" data-tab="chats" role="tab">💬 채팅</button>
             <button class="dm-tab" data-tab="friends" role="tab">👥 친구</button>
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
-          <div class="dm-list" id="dm-inbox"></div>
+          <div class="dm-list" id="dm-inbox-wrap">
+            <div class="dm-sort-row"><button id="dm-sort" type="button"></button></div>
+            <div id="dm-inbox"></div>
+          </div>
           <div class="dm-list" id="dm-friends" hidden>
             <div class="dm-friend-search"><input id="dm-friend-q" placeholder="친구 검색…" autocomplete="off"></div>
             <div id="dm-friend-list"></div>
+          </div>
+        </div>
+        <div class="dm-view" data-view="settings" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toInbox" aria-label="뒤로">‹</button>
+            <span class="dm-title">메시지 설정</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-settings">
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>🔍 검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
+              <button class="dm-toggle" id="dm-set-search" type="button"></button>
+            </div>
+            <div class="dm-sec">🚫 차단한 사람</div>
+            <div id="dm-block-list"></div>
+            <div class="dm-sec">👁 숨긴 친구</div>
+            <div id="dm-hidden-list"></div>
           </div>
         </div>
         <div class="dm-view" data-view="thread" hidden>
@@ -142,11 +165,20 @@
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
+      else if (act === 'settings') { showView('settings'); loadSettings(); }
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
       if (tab) setTab(tab);
     });
     ROOT.querySelector('#dm-friend-q').addEventListener('input', e => filterFriends(e.target.value));
+    ROOT.querySelector('#dm-sort').addEventListener('click', () => {
+      SORT = SORT === 'recent' ? 'unread' : 'recent';
+      try { localStorage.setItem('galla_dm_sort', SORT); } catch (_) {}
+      loadInbox();
+    });
+    // 친구·채팅 행 길게 누르기 → 관리 메뉴 (말풍선 메뉴와 같은 문법)
+    bindLongPress(ROOT.querySelector('#dm-friend-list'), '.dm-friend', friendMenu);
+    bindLongPress(ROOT.querySelector('#dm-inbox'), '.dm-thread', threadMenu);
     ROOT.querySelector('#dm-form').addEventListener('submit', onSend);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
@@ -225,9 +257,148 @@
   /* ---------- 탭: 채팅 / 친구 ---------- */
   function setTab(tab) {
     ROOT.querySelectorAll('.dm-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
-    ROOT.querySelector('#dm-inbox').hidden = tab !== 'chats';
+    ROOT.querySelector('#dm-inbox-wrap').hidden = tab !== 'chats';
     ROOT.querySelector('#dm-friends').hidden = tab !== 'friends';
     if (tab === 'friends') loadFriends();
+  }
+
+  /* ---------- 관리 상태 (즐겨찾기·숨김·차단·방 고정·정렬) ---------- */
+  let SORT = 'recent';
+  try { SORT = localStorage.getItem('galla_dm_sort') || 'recent'; } catch (_) {}
+  const PREF = { favs: new Set(), hidden: new Set(), blocks: new Set(), threads: {}, searchable: true, loaded: false };
+  async function loadPrefs(force) {
+    if (PREF.loaded && !force) return;
+    const [f, h, b, tp, st] = await Promise.all([
+      supabase.from('dm_favs').select('peer').eq('user_id', ME),
+      supabase.from('dm_hidden').select('hidden').eq('user_id', ME),
+      supabase.from('dm_blocks').select('blocked').eq('user_id', ME),
+      supabase.from('dm_thread_prefs').select('thread_id,pinned,left_at').eq('user_id', ME),
+      supabase.from('dm_settings').select('searchable').eq('user_id', ME).maybeSingle(),
+    ]);
+    PREF.favs = new Set((f.data || []).map(r => r.peer));
+    PREF.hidden = new Set((h.data || []).map(r => r.hidden));
+    PREF.blocks = new Set((b.data || []).map(r => r.blocked));
+    PREF.threads = {};
+    (tp.data || []).forEach(r => { PREF.threads[r.thread_id] = r; });
+    PREF.searchable = st.data ? st.data.searchable !== false : true;
+    PREF.loaded = true;
+  }
+
+  /* ---------- 길게 누르기 공용 ---------- */
+  function bindLongPress(container, selector, handler) {
+    let t = null;
+    container.addEventListener('contextmenu', e => {
+      const el = e.target.closest(selector); if (!el) return;
+      e.preventDefault(); handler(el, e.clientX, e.clientY);
+    });
+    container.addEventListener('pointerdown', e => {
+      const el = e.target.closest(selector); if (!el) return;
+      t = setTimeout(() => { el.dataset.pressed = '1'; handler(el, e.clientX, e.clientY); }, 480);
+    });
+    ['pointerup', 'pointermove', 'pointercancel'].forEach(ev =>
+      container.addEventListener(ev, () => clearTimeout(t)));
+    // 길게 눌러 메뉴를 연 경우 이어지는 클릭(대화 열기)을 무시
+    container.addEventListener('click', e => {
+      const el = e.target.closest(selector);
+      if (el && el.dataset.pressed) { delete el.dataset.pressed; e.stopImmediatePropagation(); e.preventDefault(); }
+    }, true);
+  }
+  function popMenu(x, y, items, onPick) {
+    const menu = document.getElementById('dm-menu');
+    menu.innerHTML = items.map(i => `<button data-m="${i.k}"${i.danger ? ' class="danger"' : ''}>${i.label}</button>`).join('');
+    menu.hidden = false;
+    menu.style.left = Math.min(x, window.innerWidth - 180) + 'px';
+    menu.style.top = Math.min(y, window.innerHeight - items.length * 44 - 20) + 'px';
+    menu.onclick = e => {
+      const k = e.target.closest('[data-m]')?.dataset.m;
+      menu.hidden = true;
+      if (k) onPick(k);
+    };
+  }
+
+  /* ---------- 친구 관리 메뉴: 즐겨찾기 / 숨기기 / 차단 ---------- */
+  function friendMenu(el, x, y) {
+    const peer = el.dataset.peer, name = el.dataset.name;
+    const fav = PREF.favs.has(peer);
+    popMenu(x, y, [
+      { k: 'fav', label: fav ? '⭐ 즐겨찾기 해제' : '⭐ 즐겨찾기' },
+      { k: 'hide', label: '👁 목록에서 숨기기' },
+      { k: 'block', label: '🚫 차단', danger: true },
+    ], async k => {
+      if (k === 'fav') {
+        if (fav) { PREF.favs.delete(peer); await supabase.from('dm_favs').delete().eq('user_id', ME).eq('peer', peer); }
+        else { PREF.favs.add(peer); await supabase.from('dm_favs').insert({ user_id: ME, peer }); }
+        renderFriends(FRIENDS);
+      } else if (k === 'hide') {
+        PREF.hidden.add(peer);
+        await supabase.from('dm_hidden').insert({ user_id: ME, hidden: peer });
+        renderFriends(FRIENDS);
+      } else if (k === 'block') {
+        if (!confirm(`${name} 님을 차단할까요?\n서로 메시지를 보낼 수 없게 되고, 상대에게는 알리지 않습니다.`)) return;
+        PREF.blocks.add(peer);
+        await supabase.from('dm_blocks').insert({ user_id: ME, blocked: peer });
+        renderFriends(FRIENDS);
+      }
+    });
+  }
+
+  /* ---------- 채팅방 관리 메뉴: 고정 / 나가기 ---------- */
+  function threadMenu(el, x, y) {
+    const tid = el.dataset.tid;
+    const p = PREF.threads[tid] || {};
+    popMenu(x, y, [
+      { k: 'pin', label: p.pinned ? '📌 고정 해제' : '📌 상단 고정' },
+      { k: 'leave', label: '🚪 나가기', danger: true },
+    ], async k => {
+      if (k === 'pin') {
+        const pinned = !p.pinned;
+        PREF.threads[tid] = { ...p, thread_id: tid, pinned };
+        await supabase.from('dm_thread_prefs')
+          .upsert({ thread_id: tid, user_id: ME, pinned }, { onConflict: 'thread_id,user_id' });
+        loadInbox();
+      } else if (k === 'leave') {
+        if (!confirm('이 대화를 나갈까요?\n목록에서 사라지고, 새 메시지가 오면 다시 나타납니다.')) return;
+        const left_at = new Date().toISOString();
+        PREF.threads[tid] = { ...p, thread_id: tid, left_at };
+        await supabase.from('dm_thread_prefs')
+          .upsert({ thread_id: tid, user_id: ME, left_at, pinned: false }, { onConflict: 'thread_id,user_id' });
+        loadInbox();
+      }
+    });
+  }
+
+  /* ---------- 설정: 검색 허용 + 차단/숨김 관리 ---------- */
+  async function loadSettings() {
+    await loadPrefs(true);
+    const tg = ROOT.querySelector('#dm-set-search');
+    const paintTg = () => { tg.classList.toggle('on', PREF.searchable); tg.textContent = PREF.searchable ? '켜짐' : '꺼짐'; };
+    paintTg();
+    tg.onclick = async () => {
+      PREF.searchable = !PREF.searchable;
+      paintTg();
+      await supabase.from('dm_settings')
+        .upsert({ user_id: ME, searchable: PREF.searchable }, { onConflict: 'user_id' });
+    };
+    const paintList = async (boxId, set, table, col) => {
+      const box = ROOT.querySelector(boxId);
+      const ids = [...set];
+      if (!ids.length) { box.innerHTML = `<div class="dm-set-empty">없음</div>`; return; }
+      await profilesFor(ids);
+      box.innerHTML = ids.map(id => `
+        <div class="dm-set-row">
+          ${avaHTML(id)}
+          <span class="dm-set-mid"><b>${esc(PROFILES[id]?.nickname || '익명')}</b></span>
+          <button class="dm-unset" data-id="${id}" type="button">해제</button>
+        </div>`).join('');
+      box.querySelectorAll('.dm-unset').forEach(btn => btn.onclick = async () => {
+        const id = btn.dataset.id;
+        set.delete(id);
+        await supabase.from(table).delete().eq('user_id', ME).eq(col, id);
+        paintList(boxId, set, table, col);
+      });
+    };
+    paintList('#dm-block-list', PREF.blocks, 'dm_blocks', 'blocked');
+    paintList('#dm-hidden-list', PREF.hidden, 'dm_hidden', 'hidden');
   }
 
   /* ---------- 친구 (팔로우 기반 — 갈라의 친구는 팔로우 관계) ---------- */
@@ -238,31 +409,39 @@
     const [{ data: ing }, { data: ers }] = await Promise.all([
       supabase.from('follows').select('following').eq('follower', ME),
       supabase.from('follows').select('follower').eq('following', ME),
+      loadPrefs(),
     ]);
     const followers = new Set((ers || []).map(r => r.follower));
     FRIENDS = (ing || []).map(r => ({ id: r.following, mutual: followers.has(r.following) }))
       .sort((a, b) => (b.mutual ? 1 : 0) - (a.mutual ? 1 : 0));   // 맞팔 먼저
-    if (!FRIENDS.length) {
-      box.innerHTML = `<div class="dm-empty">아직 친구가 없어요.<br><span>마음에 드는 사람을 팔로우하면 여기에 떠요.</span></div>`;
-      return;
-    }
     await profilesFor(FRIENDS.map(f => f.id));
     renderFriends(FRIENDS);
   }
+  function friendRow(f) {
+    const p = PROFILES[f.id] || {};
+    return `
+      <button class="dm-friend" data-peer="${f.id}" data-name="${esc(p.nickname || '익명')}">
+        ${avaHTML(f.id)}
+        <span class="dm-thread-mid">
+          <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
+          ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
+        </span>
+        <span class="dm-friend-go">💬</span>
+      </button>`;
+  }
   function renderFriends(list) {
     const box = ROOT.querySelector('#dm-friend-list');
-    box.innerHTML = `<div class="dm-sec">친구 <b>${list.length}</b></div>` + list.map(f => {
-      const p = PROFILES[f.id] || {};
-      return `
-        <button class="dm-friend" data-peer="${f.id}" data-name="${esc(p.nickname || '익명')}">
-          ${avaHTML(f.id)}
-          <span class="dm-thread-mid">
-            <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
-            ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
-          </span>
-          <span class="dm-friend-go">💬</span>
-        </button>`;
-    }).join('');
+    // 숨김·차단은 목록에서 제외 (해제는 ⚙ 설정에서)
+    const vis = list.filter(f => !PREF.hidden.has(f.id) && !PREF.blocks.has(f.id));
+    if (!vis.length) {
+      box.innerHTML = `<div class="dm-empty">아직 친구가 없어요.<br><span>마음에 드는 사람을 팔로우하면 여기에 떠요.</span></div>`;
+      return;
+    }
+    const favs = vis.filter(f => PREF.favs.has(f.id));
+    const rest = vis.filter(f => !PREF.favs.has(f.id));
+    box.innerHTML =
+      (favs.length ? `<div class="dm-sec">⭐ 즐겨찾기 <b>${favs.length}</b></div>` + favs.map(friendRow).join('') : '') +
+      `<div class="dm-sec">친구 <b>${rest.length}</b></div>` + rest.map(friendRow).join('');
     box.querySelectorAll('.dm-friend').forEach(el => {
       el.addEventListener('click', () => startDM(el.dataset.peer, el.dataset.name));
     });
@@ -276,33 +455,55 @@
     }));
   }
 
-  /* ---------- 인박스 ---------- */
+  /* ---------- 인박스 (고정 우선 · 정렬 · 나간 방 제외) ---------- */
   async function loadInbox() {
     const box = ROOT.querySelector('#dm-inbox');
-    const { data: threads } = await supabase.from('dm_threads')
-      .select('id,user_lo,user_hi,last_message,last_sender,last_message_at')
-      .order('last_message_at', { ascending: false });
-    if (!threads || !threads.length) {
+    const sortBtn = ROOT.querySelector('#dm-sort');
+    if (sortBtn) sortBtn.textContent = (SORT === 'unread' ? '안 읽은 메시지 순' : '최신 메시지 순') + ' ▾';
+    const [{ data: threads }] = await Promise.all([
+      supabase.from('dm_threads')
+        .select('id,user_lo,user_hi,last_message,last_sender,last_message_at')
+        .order('last_message_at', { ascending: false }),
+      loadPrefs(),
+    ]);
+    // 나간 방은 제외하되, 나간 뒤 새 메시지가 왔으면 다시 보인다(카톡 문법)
+    const list = (threads || []).filter(t => {
+      const p = PREF.threads[t.id];
+      return !(p?.left_at && new Date(t.last_message_at) <= new Date(p.left_at));
+    });
+    if (!list.length) {
       box.innerHTML = `<div class="dm-empty">아직 대화가 없어요.<br><span>✎ 를 눌러 새 메시지를 시작하세요.</span></div>`;
       return;
     }
-    const peers = threads.map(t => t.user_lo === ME ? t.user_hi : t.user_lo);
+    const peers = list.map(t => t.user_lo === ME ? t.user_hi : t.user_lo);
     await nicksFor(peers);
     const { data: unread } = await supabase.from('dm_messages')
       .select('thread_id').is('read_at', null).neq('sender_id', ME);
     const unreadBy = {};
     (unread || []).forEach(m => { unreadBy[m.thread_id] = (unreadBy[m.thread_id] || 0) + 1; });
 
-    box.innerHTML = threads.map(t => {
+    // 정렬: 📌 고정이 항상 맨 위 → 그 안에서 선택한 기준
+    list.sort((a, b) => {
+      const pa = PREF.threads[a.id]?.pinned ? 1 : 0, pb = PREF.threads[b.id]?.pinned ? 1 : 0;
+      if (pa !== pb) return pb - pa;
+      if (SORT === 'unread') {
+        const ua = unreadBy[a.id] || 0, ub = unreadBy[b.id] || 0;
+        if (ua !== ub) return ub - ua;
+      }
+      return new Date(b.last_message_at) - new Date(a.last_message_at);
+    });
+
+    box.innerHTML = list.map(t => {
       const peer = t.user_lo === ME ? t.user_hi : t.user_lo;
       const name = nickCache[peer] || '익명';
       const u = unreadBy[t.id] || 0;
+      const pinned = !!PREF.threads[t.id]?.pinned;
       const preview = (t.last_sender === ME ? '나: ' : '') + (t.last_message || '');
       return `
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
           ${avaHTML(peer)}
           <span class="dm-thread-mid">
-            <span class="dm-thread-name">${esc(name)}</span>
+            <span class="dm-thread-name">${pinned ? '📌 ' : ''}${esc(name)}</span>
             <span class="dm-thread-prev">${esc(preview)}</span>
           </span>
           <span class="dm-thread-side">
@@ -570,8 +771,9 @@
       const q = inp.value.trim();
       if (q.length < 1) { res.innerHTML = ''; return; }
       searchTimer = setTimeout(async () => {
-        const { data } = await supabase.from('users')
-          .select('id,nickname,avatar_url,bio').ilike('nickname', `%${q}%`).limit(20);
+        // ★ users 직접 ilike가 아니라 dm_search RPC — '검색 허용' 꺼둔 사람과
+        //   차단 관계는 서버가 결과에서 제외한다(클라 필터는 우회 가능).
+        const { data } = await supabase.rpc('dm_search', { p_q: q });
         const list = (data || []).filter(u => u.id !== ME);
         if (!list.length) { res.innerHTML = `<div class="dm-empty">검색 결과가 없어요.</div>`; return; }
         list.forEach(u => { PROFILES[u.id] = { nickname: u.nickname || '익명', avatar_url: u.avatar_url, bio: u.bio || '' }; nickCache[u.id] = u.nickname || '익명'; });
