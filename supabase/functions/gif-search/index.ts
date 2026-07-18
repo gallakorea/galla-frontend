@@ -21,7 +21,7 @@ serve(async (req) => {
     const b = await req.json();
     q = (b.q || "").toString().trim().slice(0, 60);
     limit = Math.min(+b.limit || 24, 40);
-    if (b.kind === "stickers") kind = "stickers";   // 😀 무한 이모티콘 — 투명 스티커
+    if (b.kind === "stickers") kind = "stickers";   // 😀 투명 스티커
   } catch (_) {}
 
   const base = `https://api.giphy.com/v1/${kind}`;

@@ -305,6 +305,7 @@
               <div class="dm-stk-tabs">
                 <button type="button" class="on" data-sk="emoji">이모지</button>
                 <button type="button" data-sk="sticker">스티커</button>
+                <button type="button" data-sk="mix">믹스</button>
                 <button type="button" data-sk="gifs">GIF</button>
               </div>
             </div>
@@ -465,6 +466,8 @@
       img.src = next; img.dataset.full = next;
     }, true);
     ROOT.querySelector('#dm-stk-cats').addEventListener('click', e => {
+      const mb = e.target.closest('[data-mb]');
+      if (mb) { MIX_BASE = mb.dataset.mb; paintMix(); return; }
       const b = e.target.closest('[data-ci]'); if (!b) return;
       STK_CAT = +b.dataset.ci;
       ROOT.querySelector('#dm-stk-q').value = '';
@@ -484,9 +487,11 @@
       const img = e.target.closest('img[data-full]');
       if (!img || !curThread) return;
       if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
-      const isGif = img.dataset.src === 'giphy';
+      const src = img.dataset.src;
+      const isGif = src === 'giphy';
       sendMessage({ kind: 'gif', body: isGif ? '🎬 GIF' : '🎬 이모티콘',
-                    meta: { url: img.dataset.full, sticker: !isGif, src: isGif ? 'giphy' : STK_STYLE } });
+                    meta: { url: img.dataset.full, sticker: !isGif,
+                            src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : STK_STYLE } });
     });
     // 음성 재생 — 한 번에 하나만
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
@@ -1899,6 +1904,41 @@
   async function ensureStk() {
     if (!window.GALLA_STK) { try { await loadScript('/js/dm-stickers.js'); } catch (_) {} }
   }
+  /* 🍳 믹스 — 구글 이모지 키친 합성. 재료 하나 고르면 그놈으로 만든 병맛 조합이 쏟아진다 */
+  let MIX_BASE = null;
+  const kitchenUrl = v => {
+    const [date, l, r] = v.split('|');
+    return `https://www.gstatic.com/android/keyboard/emojikitchen/${date}/u${l}/u${l}_u${r}.png`;
+  };
+  async function ensureKitchen() {
+    if (!window.GALLA_KITCHEN) { try { await loadScript('/js/dm-kitchen.js'); } catch (_) {} }
+    return !!window.GALLA_KITCHEN;
+  }
+  async function paintMix() {
+    const grid = ROOT.querySelector('#dm-stk-grid');
+    const cats = ROOT.querySelector('#dm-stk-cats');
+    const credit = ROOT.querySelector('#dm-stk-credit');
+    grid.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    if (!(await ensureKitchen())) { grid.innerHTML = `<div class="dm-set-empty">믹스를 불러오지 못했어요</div>`; return; }
+    const K = window.GALLA_KITCHEN, S = window.GALLA_STK;
+    const keys = Object.keys(K);
+    if (!MIX_BASE || !K[MIX_BASE]) MIX_BASE = keys[0];
+    cats.hidden = false;   // 카테고리 자리를 '재료 줄'로 재활용
+    cats.innerHTML = keys.map(k =>
+      `<button type="button" class="dm-mixbase${k === MIX_BASE ? ' on' : ''}" data-mb="${k}">${esc(S.charOf(k.split('-')))}</button>`).join('');
+    credit.hidden = false;
+    credit.textContent = '이모지 키친 · Google (Gboard 공개 이미지)';
+    const combos = K[MIX_BASE] || {};
+    const list = Object.keys(combos);
+    grid.className = 'dm-stk-grid';
+    grid.innerHTML = list.length
+      ? list.map(other => {
+          const url = kitchenUrl(combos[other]);
+          return `<img src="${esc(url)}" data-full="${esc(url)}" data-src="mix" loading="lazy" alt="">`;
+        }).join('')
+      : `<div class="dm-set-empty">이 이모지는 조합이 없어요</div>`;
+    cats.querySelector('.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
   function paintStkStyles() {
     const box = ROOT.querySelector('#dm-stk-styles');
     const show = STK_KIND === 'sticker' && window.GALLA_STK;
@@ -1929,6 +1969,9 @@
     const grid = ROOT.querySelector('#dm-stk-grid');
     const credit = ROOT.querySelector('#dm-stk-credit');
     const q = ROOT.querySelector('#dm-stk-q').value.trim();
+    ROOT.querySelector('#dm-stk-q').placeholder = STK_KIND === 'mix'
+      ? '아래에서 재료 이모지를 골라보세요' : '이모티콘 검색… (웃음, 하트, 빡침…)';
+    if (STK_KIND === 'mix') { ROOT.querySelector('#dm-stk-styles').hidden = true; return paintMix(); }
     paintStkStyles();
     paintStkCats();
     // GIF는 서버(GIPHY) — 유료 자원 탭

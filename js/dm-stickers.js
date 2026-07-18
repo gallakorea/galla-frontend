@@ -106,6 +106,8 @@
       url: cps => `https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/png/512/emoji_u${cps.filter(c => c !== 'fe0f').join('_').toLowerCase()}.png` },
     { id: 'twe',   label: '트위터', credit: 'Twemoji · X (CC BY 4.0)',
       url: cps => `https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/${cps.filter(c => c !== 'fe0f').join('-').toLowerCase()}.svg` },
+    { id: 'blob',  label: '블롭', credit: 'Blobmoji (Apache 2.0 / CC BY 4.0)',
+      url: cps => `https://cdn.jsdelivr.net/gh/C1710/blobmoji@main/svg/emoji_u${cps.filter(c => c !== 'fe0f').join('_').toLowerCase()}.svg` },
     { id: 'open',  label: '손그림', credit: 'OpenMoji (CC BY-SA 4.0)',
       url: cps => `https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg/${cps.filter(c => c !== 'fe0f').join('-').toUpperCase()}.svg` },
   ];

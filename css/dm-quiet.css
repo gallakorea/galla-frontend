@@ -652,3 +652,11 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
     들어오면 입력바가 화면 밖으로 밀려났다. 메시지 영역이 줄어들어야 한다) */
 .dm-view[data-view="thread"] { position: relative; overflow: hidden; }
 .dm-view[data-view="thread"] > .dm-msgs { min-height: 0; }
+
+/* 🍳 믹스 재료 줄 */
+.dm-mixbase {
+  flex: none; width: 40px; height: 40px; border-radius: 12px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.03);
+  font-size: 21px; line-height: 1; display: flex; align-items: center; justify-content: center;
+}
+.dm-mixbase.on { background: rgba(67,97,255,.2); border-color: rgba(67,97,255,.5); transform: scale(1.08); }
