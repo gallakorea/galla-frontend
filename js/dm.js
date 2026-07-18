@@ -45,7 +45,7 @@
   let supabase = window.supabaseClient;
   let ME = null, ROOT = null, BTN = null, BADGE = null;
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
-  let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set();
+  let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set(), GMODE = 'create';
   let REPLY = null;            // 답장 대상 {id, body, mine}
   let PENDING_SHARE = null;    // 공유 카드 대기 payload
   let MSGS = {};               // id -> row (인용 렌더용)
@@ -281,8 +281,8 @@
         </div>
         <div class="dm-view" data-view="gnew" hidden>
           <div class="dm-head">
-            <button class="dm-back" data-act="compose" aria-label="뒤로">${ICONS.back}</button>
-            <span class="dm-title">단체 채팅</span>
+            <button class="dm-back" data-act="gnewBack" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title" id="dm-gnew-headtitle">단체 채팅</span>
             <span class="dm-head-sp"></span>
           </div>
           <div class="dm-list" id="dm-gnew">
@@ -295,6 +295,14 @@
               <button id="dm-gnew-go" type="button" disabled>${ICONS.crew} 만들기</button>
             </div>
           </div>
+        </div>
+        <div class="dm-view" data-view="roommem" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toRoom" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">멤버</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-roommem"></div>
         </div>
         <div class="dm-view" data-view="chatset" hidden>
           <div class="dm-head">
@@ -334,7 +342,12 @@
       else if (act === 'newRoom') { roomFormShow(true); }
       else if (act === 'roomToList') { detachRoom(); curRoom = null; showView('inbox'); setTab('rooms'); }
       else if (act === 'roomMenu') { roomMenu(e.target.closest('[data-act]')); }
-      else if (act === 'gnew') { showView('gnew'); initGnew(); }
+      else if (act === 'gnew') { showView('gnew'); initGnew('create'); }
+      else if (act === 'gnewBack') {
+        if (GMODE === 'invite') showView('room');
+        else { showView('compose'); initSearch(); }
+      }
+      else if (act === 'toRoom') { showView('room'); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
       if (tab === 'set') { showView('settings'); loadSettings(); }
       else if (tab) setTab(tab);
@@ -1003,19 +1016,29 @@
   /* ---------- 난장: 오픈 채팅방 (카카오 오픈채팅 문법) ----------
      방 목록·멤버 수는 공개, 메시지는 참여자만(RLS가 강제) — 미참여 방은 게이트 화면 */
   /* ---------- 단체 채팅: 친구 골라 비공개 그룹(kind='group') — 채팅 탭에 산다 ---------- */
-  async function initGnew() {
+  async function initGnew(mode) {
+    GMODE = mode || 'create';
     GSEL = new Set();
+    const invite = GMODE === 'invite';
+    ROOT.querySelector('#dm-gnew-headtitle').textContent = invite ? '멤버 초대' : '단체 채팅';
+    ROOT.querySelector('.dm-gnew-titlewrap').hidden = invite;   // 초대엔 방 이름이 없다
     ROOT.querySelector('#dm-gnew-title').value = '';
     const box = ROOT.querySelector('#dm-gnew-list');
     box.innerHTML = `<div class="dm-loading">친구 불러오는 중…</div>`;
-    const [{ data: ing }, { data: ers }] = await Promise.all([
+    const [{ data: ing }, { data: ers }, memRes] = await Promise.all([
       supabase.from('follows').select('following').eq('follower', ME),
       supabase.from('follows').select('follower').eq('following', ME),
+      invite ? supabase.from('open_room_members').select('user_id').eq('room_id', curRoom.id)
+             : Promise.resolve({ data: [] }),
     ]);
+    const already = new Set((memRes.data || []).map(m => m.user_id));
     const mine = new Set((ing || []).map(r => r.following));
-    const ids = [...new Set((ers || []).map(r => r.follower))].filter(id => mine.has(id));
+    const ids = [...new Set((ers || []).map(r => r.follower))]
+      .filter(id => mine.has(id) && !already.has(id));
     if (!ids.length) {
-      box.innerHTML = `<div class="dm-empty">맞팔 친구가 있어야 단체 채팅을 만들 수 있어요.</div>`;
+      box.innerHTML = invite
+        ? `<div class="dm-empty">초대할 수 있는 친구가 없어요.<br><span>맞팔 친구가 모두 이미 방에 있어요.</span></div>`
+        : `<div class="dm-empty">맞팔 친구가 있어야 단체 채팅을 만들 수 있어요.</div>`;
       paintGnewCnt(); return;
     }
     await profilesFor(ids);
@@ -1035,11 +1058,28 @@
     paintGnewCnt();
   }
   function paintGnewCnt() {
+    const invite = GMODE === 'invite';
+    const min = invite ? 1 : 2;
     ROOT.querySelector('#dm-gnew-cnt').textContent =
-      GSEL.size ? `— ${GSEL.size}명 선택` : '— 2명부터 (1명이면 그냥 1:1)';
-    ROOT.querySelector('#dm-gnew-go').disabled = GSEL.size < 2;
+      GSEL.size ? `— ${GSEL.size}명 선택` : (invite ? '' : '— 2명부터 (1명이면 그냥 1:1)');
+    const go = ROOT.querySelector('#dm-gnew-go');
+    go.disabled = GSEL.size < min;
+    go.innerHTML = `${ICONS.crew} ${invite ? '초대하기' : '만들기'}`;
   }
   async function createGroup() {
+    if (GMODE === 'invite') {
+      if (!GSEL.size || !curRoom) return;
+      const { error } = await supabase.from('open_room_members')
+        .insert([...GSEL].map(u => ({ room_id: curRoom.id, user_id: u })));
+      if (error) { console.error('[dm] invite', error); return; }
+      // 멤버 수는 서버 트리거가 정답 — 방 행을 다시 읽어 헤더에 반영
+      const { data: fresh } = await supabase.from('open_rooms')
+        .select('*').eq('id', curRoom.id).single();
+      if (fresh) curRoom = fresh;
+      ROOT.querySelector('#dm-room-sub').textContent = `${curRoom.member_count}명`;
+      showView('room');
+      return;
+    }
     if (GSEL.size < 2) return;
     let title = ROOT.querySelector('#dm-gnew-title').value.trim();
     if (!title) {
@@ -1051,6 +1091,25 @@
     if (error) { console.error('[dm] group create', error); return; }
     const { data: r } = await supabase.from('open_rooms').select('*').eq('id', rid).single();
     if (r) { MY_ROOMS.add(r.id); openRoom(r); }
+  }
+
+  /* 멤버 보기 — 방장 먼저, 방장 배지 */
+  async function openRoomMembers() {
+    showView('roommem');
+    const box = ROOT.querySelector('#dm-roommem');
+    box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const { data: mem } = await supabase.from('open_room_members')
+      .select('user_id,joined_at').eq('room_id', curRoom.id).order('joined_at');
+    const ids = (mem || []).map(m => m.user_id)
+      .sort((a, b) => (b === curRoom.owner_id) - (a === curRoom.owner_id));
+    await profilesFor(ids);
+    box.innerHTML = `<div class="dm-sec">${ICONS.crew}멤버 ${ids.length}명</div>` + ids.map(id => `
+      <div class="dm-friend dm-mem-row">
+        ${avaHTML(id)}
+        <span class="dm-thread-mid"><span class="dm-thread-name">${esc(nickCache[id] || '익명')}${id === ME ? ' <i class="dm-mem-me">나</i>' : ''}</span></span>
+        ${id === curRoom.owner_id ? `<span class="dm-mem-owner">방장</span>` : ''}
+      </div>`).join('');
+    staggerRows(box, '.dm-mem-row');
   }
 
   /* 만들기 폼과 '난장 열기' 토글 바는 상호 배타 — 같이 보이면 '열기'가 두 개라 헷갈린다 */
@@ -1223,17 +1282,23 @@
     if (!curRoom) return;
     const r0 = anchor.getBoundingClientRect();
     const own = curRoom.owner_id === ME;
-    const items = own
-      ? [{ k: 'close', label: '난장 닫기 (모두 해산)' }]
-      : (MY_ROOMS.has(curRoom.id) ? [{ k: 'leave', label: '나가기' }] : []);
-    if (!items.length) return;
+    const member = MY_ROOMS.has(curRoom.id);
+    const grp = curRoom.kind === 'group';
+    const items = [{ k: 'members', label: '멤버 보기' }];
+    if (member) items.push({ k: 'invite', label: '멤버 초대' });
+    if (own) items.push({ k: 'close', label: (grp ? '채팅방' : '난장') + ' 닫기 (모두 해산)' });
+    else if (member) items.push({ k: 'leave', label: '나가기' });
     popMenu(r0.right - 190, r0.bottom + 6, items, async k => {
-      if (k === 'close' && !confirm('난장을 닫으면 대화가 모두 사라져요. 닫을까요?')) return;
+      if (k === 'members') return openRoomMembers();
+      if (k === 'invite') { showView('gnew'); initGnew('invite'); return; }
+      if (k === 'close' && !confirm('닫으면 대화가 모두 사라져요. 닫을까요?')) return;
       if (k === 'close') await supabase.from('open_rooms').delete().eq('id', curRoom.id);
       else await supabase.from('open_room_members').delete()
         .eq('room_id', curRoom.id).eq('user_id', ME);
+      const wasGrp = grp;
       detachRoom(); curRoom = null;
-      showView('inbox'); setTab('rooms');
+      showView('inbox');
+      if (wasGrp) { setTab('chats'); } else setTab('rooms');
     });
   }
 

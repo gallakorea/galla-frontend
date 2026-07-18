@@ -392,3 +392,12 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   background: #4361ff; color: #fff; font-size: 15px; font-weight: 800;
 }
 .dm-gnew-gowrap button:disabled { background: rgba(255,255,255,.07); color: #6b7280; cursor: default; }
+
+/* 멤버 목록 */
+.dm-mem-owner {
+  flex: none; font-size: 11px; font-weight: 800; color: #cdd9ff;
+  padding: 3px 9px; border-radius: 999px;
+  background: rgba(67,97,255,.14); border: 1px solid rgba(67,97,255,.3);
+}
+.dm-mem-me { font-style: normal; font-size: 11px; color: #6b7280; font-weight: 700; margin-left: 4px; }
+.dm-gnew-titlewrap[hidden] { display: none !important; }
