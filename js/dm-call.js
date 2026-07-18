@@ -112,6 +112,7 @@
   function paintErr(name, msg) {
     let box = document.getElementById('dm-call');
     if (!box) { box = document.createElement('div'); box.id = 'dm-call'; document.body.appendChild(box); requestAnimationFrame(() => box.classList.add('on')); }
+    clearTimeout(box._rm);   // ★ endCall이 예약한 제거 취소 — 안 하면 에러 화면이 250ms 만에 증발
     box.classList.add('on'); box.classList.remove('video');
     box.dataset.state = 'error';
     box.innerHTML = `
@@ -189,13 +190,20 @@
     clearTimeout(ringT);
     try { localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
-    await buildPC();
-    await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
-    for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
-    const ans = await pc.createAnswer();
-    await pc.setLocalDescription(ans);
-    send({ t: 'answer', sdp: ans.sdp });
-    paintUI('connecting');
+    try {
+      await buildPC();
+      await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
+      for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+      const ans = await pc.createAnswer();
+      await pc.setLocalDescription(ans);
+      send({ t: 'answer', sdp: ans.sdp });
+      paintUI('connecting');
+    } catch (e) {
+      console.error('[call] accept', e);
+      const nm = CUR?.name;
+      endCall('acceptfail', true);
+      paintErr(nm, '통화 연결에 실패했어요 (' + ((e && e.name) || '오류') + ')');
+    }
   }
   function decline() { send({ t: 'decline' }); endCall('declined_me', true); }
 
@@ -234,9 +242,10 @@
     if (box) {
       if (reason === 'busy') toast('상대가 통화 중이에요');
       else if (reason === 'declined') toast('상대가 통화를 거절했어요');
-      else if (reason === 'netfail') toast('연결에 실패했어요 — 네트워크 환경 문제일 수 있어요');
+      else if (reason === 'netfail') toast('연결에 실패했어요 — 잠시 후 다시 시도해 주세요');
       box.classList.remove('on');
-      setTimeout(() => box.remove(), 250);
+      // 제거는 예약으로 — 직후 paintErr가 같은 박스를 재활용할 수 있게 취소 가능해야 한다
+      box._rm = setTimeout(() => box.remove(), 250);
     }
   }
 
