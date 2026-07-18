@@ -109,6 +109,8 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .dm-share-src { font-size: 10.5px; color: #7aa2ff; font-weight: 700; }
 
+/* display:flex가 [hidden]의 display:none을 이겨서 빈 바가 보이던 버그 — [hidden] 우선 명시 */
+.dm-share-banner[hidden] { display: none; }
 .dm-share-banner {
   margin: 8px 12px 0; padding: 9px 11px; border-radius: 11px; font-size: 12px; color: #cfd6e4;
   background: rgba(61,107,255,.12); border: 1px solid rgba(61,107,255,.3);
@@ -118,6 +120,7 @@
 .dm-share-banner button { margin-left: auto; border: none; background: rgba(255,255,255,.08);
   color: #9aa3b5; font-size: 11px; padding: 4px 9px; border-radius: 7px; cursor: pointer; }
 
+.dm-reply-strip[hidden] { display: none; }
 .dm-reply-strip {
   display: flex; align-items: center; gap: 8px; padding: 7px 12px;
   background: #14161d; border-top: 1px solid rgba(255,255,255,.08); font-size: 12px; color: #9aa3b5;
@@ -143,3 +146,70 @@
 }
 .dm-menu button:active { background: rgba(255,255,255,.08); }
 .dm-menu button.danger { color: #ff8595; }
+
+/* ═══════ 카톡 구조 도입: 채팅/친구 탭 · 실제 아바타 · 고급 다크 ═══════ */
+/* 세그먼트 탭 — 갈라 액센트(인디고), 알약형 */
+.dm-tabs {
+  display: flex; gap: 6px; padding: 10px 14px 8px; flex: none;
+}
+.dm-tab {
+  flex: 1; padding: 9px 0; border: 1px solid rgba(255,255,255,.08); border-radius: 999px;
+  background: rgba(255,255,255,.03); color: #8b909b; font-size: 13px; font-weight: 800;
+  cursor: pointer; transition: all .18s ease; letter-spacing: -.2px;
+}
+.dm-tab.on {
+  background: linear-gradient(135deg, rgba(61,107,255,.22), rgba(43,79,208,.14));
+  border-color: rgba(61,107,255,.55); color: #cdd9ff;
+  box-shadow: 0 0 18px -6px rgba(61,107,255,.5), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.dm-tab:active { transform: scale(.97); }
+
+/* 아바타 — 사진이면 사진, 아니면 첫 글자 그라디언트. 은은한 링으로 마감 */
+.dm-ava { overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,.09), 0 4px 12px rgba(0,0,0,.35); }
+.dm-ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* 행 다듬기 — 여백을 키우고 구분선을 죽여 카톡처럼 조용하게 */
+.dm-thread, .dm-friend {
+  display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+  padding: 13px 16px; background: none; border: none; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,.035);
+  transition: background .15s ease;
+}
+.dm-thread:active, .dm-friend:active { background: rgba(61,107,255,.07); }
+.dm-thread-name { font-size: 15px; font-weight: 800; color: #f3f4f6; letter-spacing: -.2px; }
+.dm-thread-prev { font-size: 12.5px; color: #7c828f; margin-top: 2px; }
+
+/* 안읽음 — 갈라 액센트 인디고 알약(알림의 빨강과 구분: 빨강=경고, 인디고=메시지) */
+.dm-dot {
+  min-width: 19px; height: 19px; padding: 0 6px; border-radius: 999px;
+  background: linear-gradient(135deg, #3d6bff, #2b4fd0); color: #fff;
+  font-size: 10.5px; font-weight: 900; line-height: 19px; text-align: center;
+  box-shadow: 0 3px 10px -3px rgba(61,107,255,.8);
+}
+.dm-unread .dm-thread-name { color: #fff; }
+.dm-unread .dm-thread-prev { color: #aeb6c4; font-weight: 600; }
+
+/* 친구 탭 */
+.dm-friend-search { padding: 4px 14px 10px; }
+.dm-friend-search input {
+  width: 100%; box-sizing: border-box; padding: 10px 14px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; color: #f3f4f6; font-size: 13.5px; outline: none;
+}
+.dm-friend-search input:focus { border-color: rgba(61,107,255,.5); }
+.dm-sec {
+  padding: 6px 16px 8px; font-size: 11.5px; font-weight: 800; color: #6b7280;
+  letter-spacing: .3px;
+}
+.dm-sec b { color: #9ab4ff; }
+.dm-mutual {
+  display: inline-block; margin-left: 6px; padding: 1.5px 7px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 900; font-style: normal; vertical-align: 1px;
+  color: #9ab4ff; background: rgba(61,107,255,.14); border: 1px solid rgba(61,107,255,.35);
+}
+.dm-friend-go {
+  flex: none; width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.07);
+}
+.dm-friend:active .dm-friend-go { background: rgba(61,107,255,.2); border-color: rgba(61,107,255,.5); }

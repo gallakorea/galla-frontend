@@ -38,15 +38,30 @@
   };
   const hhmm = ts => new Date(ts).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 
-  async function nicksFor(ids) {
-    const need = [...new Set(ids)].filter(id => id && !(id in nickCache));
+  /* 프로필 캐시 — 닉네임·아바타·bio는 users에서 읽는다(공개 컬럼).
+     user_profiles는 PII 잠금 대상이라 여기 기대면 안 된다. */
+  const PROFILES = {};   // id -> {nickname, avatar_url, bio}
+  async function profilesFor(ids) {
+    const need = [...new Set(ids)].filter(id => id && !(id in PROFILES));
     if (need.length) {
-      const { data } = await supabase.from('user_profiles')
-        .select('user_id, nickname').in('user_id', need);
-      (data || []).forEach(p => { nickCache[p.user_id] = p.nickname || '익명'; });
-      need.forEach(id => { if (!(id in nickCache)) nickCache[id] = '익명'; });
+      const { data } = await supabase.from('users')
+        .select('id,nickname,avatar_url,bio').in('id', need);
+      (data || []).forEach(p => {
+        PROFILES[p.id] = { nickname: p.nickname || '익명', avatar_url: p.avatar_url || null, bio: p.bio || '' };
+        nickCache[p.id] = p.nickname || '익명';
+      });
+      need.forEach(id => { if (!(id in PROFILES)) { PROFILES[id] = { nickname: '익명', avatar_url: null, bio: '' }; nickCache[id] = '익명'; } });
     }
-    return nickCache;
+    return PROFILES;
+  }
+  async function nicksFor(ids) { await profilesFor(ids); return nickCache; }
+  /* 아바타 — 실제 사진이 있으면 사진, 없으면 첫 글자 + 유저 고유색 그라디언트 */
+  function avaHTML(id, size) {
+    const p = PROFILES[id] || {};
+    const cls = 'dm-ava' + (size === 'lg' ? ' lg' : '');
+    if (p.avatar_url) return `<span class="${cls}"><img src="${esc(p.avatar_url)}" alt="" loading="lazy"></span>`;
+    const name = p.nickname || '익';
+    return `<span class="${cls}" style="background:linear-gradient(135deg,${avatarColor(id)},#1a1c26)">${esc(name.charAt(0))}</span>`;
   }
 
   /* 다른 페이지에 없는 모듈(media-upload 등)을 필요할 때만 끌어온다 */
@@ -75,8 +90,16 @@
             <span class="dm-title">메시지</span>
             <button class="dm-compose" data-act="compose" aria-label="새 메시지">✎</button>
           </div>
+          <div class="dm-tabs" role="tablist">
+            <button class="dm-tab on" data-tab="chats" role="tab">💬 채팅</button>
+            <button class="dm-tab" data-tab="friends" role="tab">👥 친구</button>
+          </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
           <div class="dm-list" id="dm-inbox"></div>
+          <div class="dm-list" id="dm-friends" hidden>
+            <div class="dm-friend-search"><input id="dm-friend-q" placeholder="친구 검색…" autocomplete="off"></div>
+            <div id="dm-friend-list"></div>
+          </div>
         </div>
         <div class="dm-view" data-view="thread" hidden>
           <div class="dm-head">
@@ -120,7 +143,10 @@
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
+      const tab = e.target.closest('.dm-tab')?.dataset.tab;
+      if (tab) setTab(tab);
     });
+    ROOT.querySelector('#dm-friend-q').addEventListener('input', e => filterFriends(e.target.value));
     ROOT.querySelector('#dm-form').addEventListener('submit', onSend);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
@@ -196,6 +222,60 @@
     openDM();
   };
 
+  /* ---------- 탭: 채팅 / 친구 ---------- */
+  function setTab(tab) {
+    ROOT.querySelectorAll('.dm-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+    ROOT.querySelector('#dm-inbox').hidden = tab !== 'chats';
+    ROOT.querySelector('#dm-friends').hidden = tab !== 'friends';
+    if (tab === 'friends') loadFriends();
+  }
+
+  /* ---------- 친구 (팔로우 기반 — 갈라의 친구는 팔로우 관계) ---------- */
+  let FRIENDS = [];   // [{id, mutual}]
+  async function loadFriends() {
+    const box = ROOT.querySelector('#dm-friend-list');
+    if (!FRIENDS.length) box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const [{ data: ing }, { data: ers }] = await Promise.all([
+      supabase.from('follows').select('following').eq('follower', ME),
+      supabase.from('follows').select('follower').eq('following', ME),
+    ]);
+    const followers = new Set((ers || []).map(r => r.follower));
+    FRIENDS = (ing || []).map(r => ({ id: r.following, mutual: followers.has(r.following) }))
+      .sort((a, b) => (b.mutual ? 1 : 0) - (a.mutual ? 1 : 0));   // 맞팔 먼저
+    if (!FRIENDS.length) {
+      box.innerHTML = `<div class="dm-empty">아직 친구가 없어요.<br><span>마음에 드는 사람을 팔로우하면 여기에 떠요.</span></div>`;
+      return;
+    }
+    await profilesFor(FRIENDS.map(f => f.id));
+    renderFriends(FRIENDS);
+  }
+  function renderFriends(list) {
+    const box = ROOT.querySelector('#dm-friend-list');
+    box.innerHTML = `<div class="dm-sec">친구 <b>${list.length}</b></div>` + list.map(f => {
+      const p = PROFILES[f.id] || {};
+      return `
+        <button class="dm-friend" data-peer="${f.id}" data-name="${esc(p.nickname || '익명')}">
+          ${avaHTML(f.id)}
+          <span class="dm-thread-mid">
+            <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
+            ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
+          </span>
+          <span class="dm-friend-go">💬</span>
+        </button>`;
+    }).join('');
+    box.querySelectorAll('.dm-friend').forEach(el => {
+      el.addEventListener('click', () => startDM(el.dataset.peer, el.dataset.name));
+    });
+  }
+  function filterFriends(q) {
+    q = (q || '').trim().toLowerCase();
+    if (!q) return renderFriends(FRIENDS);
+    renderFriends(FRIENDS.filter(f => {
+      const p = PROFILES[f.id] || {};
+      return (p.nickname || '').toLowerCase().includes(q) || (p.bio || '').toLowerCase().includes(q);
+    }));
+  }
+
   /* ---------- 인박스 ---------- */
   async function loadInbox() {
     const box = ROOT.querySelector('#dm-inbox');
@@ -220,7 +300,7 @@
       const preview = (t.last_sender === ME ? '나: ' : '') + (t.last_message || '');
       return `
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
-          <span class="dm-ava" style="background:${avatarColor(peer)}">${esc(name.charAt(0))}</span>
+          ${avaHTML(peer)}
           <span class="dm-thread-mid">
             <span class="dm-thread-name">${esc(name)}</span>
             <span class="dm-thread-prev">${esc(preview)}</span>
@@ -490,14 +570,18 @@
       const q = inp.value.trim();
       if (q.length < 1) { res.innerHTML = ''; return; }
       searchTimer = setTimeout(async () => {
-        const { data } = await supabase.from('user_profiles')
-          .select('user_id,nickname').ilike('nickname', `%${q}%`).limit(20);
-        const list = (data || []).filter(u => u.user_id !== ME);
+        const { data } = await supabase.from('users')
+          .select('id,nickname,avatar_url,bio').ilike('nickname', `%${q}%`).limit(20);
+        const list = (data || []).filter(u => u.id !== ME);
         if (!list.length) { res.innerHTML = `<div class="dm-empty">검색 결과가 없어요.</div>`; return; }
+        list.forEach(u => { PROFILES[u.id] = { nickname: u.nickname || '익명', avatar_url: u.avatar_url, bio: u.bio || '' }; nickCache[u.id] = u.nickname || '익명'; });
         res.innerHTML = list.map(u => `
-          <button class="dm-thread" data-peer="${u.user_id}" data-name="${esc(u.nickname || '익명')}">
-            <span class="dm-ava" style="background:${avatarColor(u.user_id)}">${esc((u.nickname || '익').charAt(0))}</span>
-            <span class="dm-thread-mid"><span class="dm-thread-name">${esc(u.nickname || '익명')}</span></span>
+          <button class="dm-thread" data-peer="${u.id}" data-name="${esc(u.nickname || '익명')}">
+            ${avaHTML(u.id)}
+            <span class="dm-thread-mid">
+              <span class="dm-thread-name">${esc(u.nickname || '익명')}</span>
+              ${u.bio ? `<span class="dm-thread-prev">${esc(u.bio)}</span>` : ''}
+            </span>
           </button>`).join('');
         res.querySelectorAll('.dm-thread').forEach(el => {
           el.addEventListener('click', () => startDM(el.dataset.peer, el.dataset.name));
