@@ -305,12 +305,21 @@
               <div class="dm-stk-tabs">
                 <button type="button" class="on" data-sk="emoji">이모지</button>
                 <button type="button" data-sk="sticker">스티커</button>
+                <button type="button" data-sk="mine">내 것</button>
                 <button type="button" data-sk="mix">믹스</button>
                 <button type="button" data-sk="gifs">GIF</button>
               </div>
             </div>
             <div class="dm-stk-styles" id="dm-stk-styles"></div>
             <div class="dm-stk-cats" id="dm-stk-cats"></div>
+            <div class="dm-mk" id="dm-mk" hidden>
+              <div class="dm-mk-presets" id="dm-mk-presets"></div>
+              <div class="dm-mk-row">
+                <input id="dm-mk-q" maxlength="80" placeholder="어떤 이모티콘? (예: 커피 들고 조는 고양이)" autocomplete="off">
+                <button type="button" id="dm-mk-go">만들기</button>
+              </div>
+              <div class="dm-mk-hint" id="dm-mk-hint"></div>
+            </div>
             <div class="dm-stk-grid" id="dm-stk-grid"><div class="dm-loading">불러오는 중…</div></div>
             <div class="dm-stk-credit" id="dm-stk-credit">움직이는 스티커 · Noto Emoji by Google (CC BY 4.0)</div>
           </div>
@@ -477,6 +486,21 @@
       img.dataset.alt = JSON.stringify(rest);
       img.src = next; img.dataset.full = next;
     }, true);
+    ROOT.querySelector('#dm-mk').addEventListener('click', e => {
+      const pre = e.target.closest('[data-mk]');
+      if (pre) { const p = MK_PRESETS[+pre.dataset.mk]; ROOT.querySelector('#dm-mk-q').value = p.p; makeSticker(p.p); return; }
+      if (e.target.closest('#dm-mk-go')) makeSticker(ROOT.querySelector('#dm-mk-q').value);
+    });
+    ROOT.querySelector('#dm-mk-q').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); makeSticker(e.target.value); }
+    });
+    // 내가 만든 것 길게 누르기 → 삭제
+    bindLongPress(ROOT.querySelector('#dm-stk-grid'), 'img[data-src="mine"]', (el, x, y) => {
+      popMenu(x, y, [{ k: 'del', label: '삭제', danger: true }], async () => {
+        await supabase.from('my_stickers').delete().eq('id', el.dataset.id);
+        paintMine();
+      });
+    });
     ROOT.querySelector('#dm-stk-cats').addEventListener('click', e => {
       const mb = e.target.closest('[data-mb]');
       if (mb) { MIX_BASE = mb.dataset.mb; paintMix(); return; }
@@ -503,7 +527,7 @@
       const isGif = src === 'giphy';
       sendMessage({ kind: 'gif', body: isGif ? '🎬 GIF' : '🎬 이모티콘',
                     meta: { url: img.dataset.full, sticker: !isGif,
-                            src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : STK_STYLE } });
+                            src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : src === 'mine' ? 'ai' : STK_STYLE } });
     });
     // 음성 재생 — 한 번에 하나만
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
@@ -1960,6 +1984,75 @@
   function applyTossface() {
     document.body.classList.toggle('tossface', TOSSFACE);
   }
+  /* 🎨 나만의 이모티콘 — AI 생성(유료). 가격·품질은 서버 설정(app_settings)에서 온다 */
+  let MK_CFG = null, MK_BUSY = false;
+  const MK_PRESETS = [
+    { label: '내 갈라리안', p: '한국 커뮤니티 마스코트 캐릭터, 자신감 넘치는 표정' },
+    { label: '빡친 나', p: '화가 잔뜩 나서 김이 나는 귀여운 캐릭터' },
+    { label: '오열', p: '폭포수처럼 눈물 흘리며 우는 귀여운 캐릭터' },
+    { label: '떡상 기원', p: '로켓 타고 하늘로 올라가는 신난 캐릭터' },
+    { label: '월요병', p: '이불 속에서 나오기 싫어하는 좀비 같은 캐릭터' },
+    { label: '치킨 뜯기', p: '치킨을 행복하게 뜯어먹는 통통한 캐릭터' },
+  ];
+  async function ensureMkCfg() {
+    if (MK_CFG) return MK_CFG;
+    const { data } = await supabase.from('app_settings').select('v').eq('k', 'ai_sticker').maybeSingle();
+    MK_CFG = data?.v || { price: 500, set_price: 1500, daily_limit: 20 };
+    return MK_CFG;
+  }
+  async function paintMine() {
+    const grid = ROOT.querySelector('#dm-stk-grid');
+    const mk = ROOT.querySelector('#dm-mk');
+    ROOT.querySelector('#dm-stk-styles').hidden = true;
+    ROOT.querySelector('#dm-stk-cats').hidden = true;
+    ROOT.querySelector('#dm-stk-credit').hidden = true;
+    mk.hidden = false;
+    const cfg = await ensureMkCfg();
+    ROOT.querySelector('#dm-mk-presets').innerHTML =
+      MK_PRESETS.map((p, i) => `<button type="button" data-mk="${i}">${esc(p.label)}</button>`).join('');
+    ROOT.querySelector('#dm-mk-go').textContent = `만들기 ${cfg.price}GP`;
+    ROOT.querySelector('#dm-mk-hint').textContent = MK_BUSY
+      ? '그리는 중… 20초쯤 걸려요' : `AI가 그려줘요 · 하루 ${cfg.daily_limit}개까지`;
+    grid.className = 'dm-stk-grid';
+    grid.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const { data } = await supabase.from('my_stickers')
+      .select('id,url').eq('user_id', ME).order('created_at', { ascending: false }).limit(60);
+    const list = data || [];
+    grid.innerHTML = list.length
+      ? list.map((r, i) => `<img src="${esc(r.url)}" data-full="${esc(r.url)}" data-src="mine" data-id="${r.id}"${i >= 12 ? ' loading="lazy"' : ''} alt="">`).join('')
+      : `<div class="dm-set-empty">아직 만든 이모티콘이 없어요<br>위에 원하는 걸 적고 만들어보세요</div>`;
+  }
+  async function makeSticker(prompt) {
+    if (MK_BUSY) return;
+    const cfg = await ensureMkCfg();
+    if (!prompt || prompt.trim().length < 2) return toastMini('무엇을 그릴지 적어주세요');
+    MK_BUSY = true;
+    const hint = ROOT.querySelector('#dm-mk-hint');
+    const go = ROOT.querySelector('#dm-mk-go');
+    go.disabled = true; hint.textContent = '그리는 중… 20초쯤 걸려요';
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-sticker', { body: { prompt, count: 1 } });
+      if (error || !data?.ok) {
+        const why = data?.error || error?.message || '';
+        hint.textContent =
+          why === 'insufficient' ? `GP가 부족해요 (${cfg.price}GP 필요)` :
+          why === 'daily_limit' ? '오늘 만들 수 있는 개수를 다 썼어요' :
+          why === 'blocked_ip' ? `'${data.word}'처럼 남의 캐릭터·실존 인물은 만들 수 없어요` :
+          why === 'blocked_moderation' ? '이런 내용은 만들 수 없어요' :
+          '만들지 못했어요 — GP는 돌려드렸어요';
+        return;
+      }
+      ROOT.querySelector('#dm-mk-q').value = '';
+      // ⚠️ 순서 주의: paintMine이 안내문을 다시 그리므로 상태를 먼저 풀고, 완료 문구는 그 뒤에
+      MK_BUSY = false;
+      await paintMine();
+      hint.textContent = `완성! ${data.charged}GP 사용 · 남은 GP ${Math.round(data.balance)}`;
+    } catch (_) {
+      hint.textContent = '만들지 못했어요 — GP는 돌려드렸어요';
+    } finally {
+      MK_BUSY = false; go.disabled = false;
+    }
+  }
   function paintStkStyles() {
     const box = ROOT.querySelector('#dm-stk-styles');
     if (STK_KIND === 'emoji') {
@@ -2000,6 +2093,8 @@
     const q = ROOT.querySelector('#dm-stk-q').value.trim();
     ROOT.querySelector('#dm-stk-q').placeholder = STK_KIND === 'mix'
       ? '아래에서 재료 이모지를 골라보세요' : '이모티콘 검색… (웃음, 하트, 빡침…)';
+    ROOT.querySelector('#dm-mk').hidden = STK_KIND !== 'mine';
+    if (STK_KIND === 'mine') return paintMine();
     if (STK_KIND === 'mix') { ROOT.querySelector('#dm-stk-styles').hidden = true; return paintMix(); }
     paintStkStyles();
     paintStkCats();
