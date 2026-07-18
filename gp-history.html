@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>GALLA - GP 내역</title>
-  <link rel="stylesheet" href="./css/galla-predict.css?v=072018" />
-  <link rel="stylesheet" href="./css/predict.css?v=072018" />
-  <link rel="stylesheet" href="./css/header.css?v=072018">
-  <link rel="stylesheet" href="./css/nav.css?v=072018">
+  <link rel="stylesheet" href="./css/galla-predict.css?v=072019" />
+  <link rel="stylesheet" href="./css/predict.css?v=072019" />
+  <link rel="stylesheet" href="./css/header.css?v=072019">
+  <link rel="stylesheet" href="./css/nav.css?v=072019">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072018">
+  <link rel="stylesheet" href="./css/theme.css?v=072019">
 </head>
 
 <body data-page="predict">
@@ -62,12 +62,8 @@
       <button class="nav-item" data-page="predict" data-target="galla-predict.html">
         <img src="./assets/icons/nav-predict.svg" data-base="./assets/icons/nav-predict.svg" data-active="./assets/icons/nav-predict-active.svg">
       </button>
-      <button class="nav-item" data-page="search" data-target="search.html">
-        <img src="./assets/icons/nav-search.svg" data-base="./assets/icons/nav-search.svg" data-active="./assets/icons/nav-search-active.svg">
-      </button>
-      <button class="nav-item" data-page="plaza" data-target="plaza.html">
-        <img src="./assets/icons/nav-plaza.svg" data-base="./assets/icons/nav-plaza.svg" data-active="./assets/icons/nav-plaza-active.svg">
-      </button>
+      <button class="nav-item nav-dm" data-page="dm" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
+      <button class="nav-item" data-page="trend" data-target="search.html"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
       <button class="nav-item" data-page="mypage" data-target="mypage.html">
         <img src="./assets/icons/nav-user.svg" data-base="./assets/icons/nav-user.svg" data-active="./assets/icons/nav-user-active.svg">
       </button>
@@ -76,13 +72,13 @@
 
 </div><!-- /#app -->
 
-<script src="./vendor/supabase.js?v=072018"></script>
-<script src="./js/supabase.js?v=072018"></script>
-<script src="js/back.js?v=072018"></script>
-<script src="./js/gp-history.js?v=072018"></script>
-<script src="./js/nav.js?v=072018"></script>
+<script src="./vendor/supabase.js?v=072019"></script>
+<script src="./js/supabase.js?v=072019"></script>
+<script src="js/back.js?v=072019"></script>
+<script src="./js/gp-history.js?v=072019"></script>
+<script src="./js/nav.js?v=072019"></script>
 
-<script src="/js/analytics.js?v=072018"></script>
-<script src="/js/pwa.js?v=072018"></script>
+<script src="/js/analytics.js?v=072019"></script>
+<script src="/js/pwa.js?v=072019"></script>
 </body>
 </html>

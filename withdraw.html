@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>출금 요청 - GALLA</title>
 
-    <link rel="stylesheet" href="./css/withdraw.css?v=072018">
-    <link rel="stylesheet" href="./css/nav.css?v=072018">
+    <link rel="stylesheet" href="./css/withdraw.css?v=072019">
+    <link rel="stylesheet" href="./css/nav.css?v=072019">
 
     <style>
         /* 네비게이션 아이콘 반전 방지 */
@@ -28,7 +28,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072018">
+  <link rel="stylesheet" href="./css/theme.css?v=072019">
 </head>
 
 <body data-page="mypage">
@@ -154,17 +154,9 @@
              data-active="./assets/icons/nav-predict-active.svg">
       </button>
 
-      <button class="nav-item" data-page="search" data-target="search.html">
-        <img src="./assets/icons/nav-search.svg"
-             data-base="./assets/icons/nav-search.svg"
-             data-active="./assets/icons/nav-search-active.svg">
-      </button>
+      <button class="nav-item nav-dm" data-page="dm" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
 
-      <button class="nav-item" data-page="plaza" data-target="plaza.html">
-        <img src="./assets/icons/nav-plaza.svg"
-             data-base="./assets/icons/nav-plaza.svg"
-             data-active="./assets/icons/nav-plaza-active.svg">
-      </button>
+      <button class="nav-item" data-page="trend" data-target="search.html"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
 
       <button class="nav-item" data-page="mypage" data-target="mypage.html">
         <img src="./assets/icons/nav-user.svg"
@@ -178,8 +170,8 @@
 <!-- ========================================== -->
 <!-- Supabase + 로그인 체크 + 로딩 대기 -->
 <!-- ========================================== -->
-<script src="./vendor/supabase.js?v=072018"></script>
-<script src="./js/supabase.js?v=072018"></script>
+<script src="./vendor/supabase.js?v=072019"></script>
+<script src="./js/supabase.js?v=072019"></script>
 
 <script>
 function waitForSupabaseClient() {
@@ -232,11 +224,11 @@ window.addEventListener("scroll", () => {
 
 
 <!-- 실제 출금 로직 -->
-<script src="./js/withdraw.js?v=072018"></script>
+<script src="./js/withdraw.js?v=072019"></script>
 
-<script src="./js/nav.js?v=072018"></script>
+<script src="./js/nav.js?v=072019"></script>
 
-<script src="/js/analytics.js?v=072018"></script>
-<script src="/js/pwa.js?v=072018"></script>
+<script src="/js/analytics.js?v=072019"></script>
+<script src="/js/pwa.js?v=072019"></script>
 </body>
 </html>

@@ -48,7 +48,7 @@ if (new URLSearchParams(location.search).get("compose") === "1") {
   setTimeout(openPlazaWriteModal, 60);
 }
 // 헤더 DM 버튼 초기화
-if (window.initDM) window.initDM("#plazaDmBtn");
+if (window.initNotifications) window.initNotifications();   // 헤더 DM은 알림으로 교체(네비에 DM 탭)
 
 function closePlazaWriteModal() {
   modal.classList.add("hidden");

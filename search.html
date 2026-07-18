@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>통합검색 · 실시간 뜨는 뉴스·이슈·핫영상 | GALLA 갈라</title>
+  <title>트렌드 · 검색·핫트렌드·갈라뉴스·광장 | GALLA 갈라</title>
   <meta name="description" content="갈라 통합검색 — 실시간 급상승 키워드, 여러 언론을 AI가 종합한 갈라뉴스, 지금 뜨는 이슈와 핫유튜브를 한 곳에서. 대한민국 실시간 트렌드.">
   <meta name="keywords" content="갈라 검색, 실시간 검색어, 실시간 뉴스, 갈라뉴스, 급상승 키워드, 핫이슈, 핫영상, 트렌드, GALLA">
   <link rel="canonical" href="https://galla.im/search.html">
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="통합검색 · 실시간 뜨는 뉴스·이슈·핫영상"><meta property="og:description" content="실시간 급상승 키워드·갈라뉴스·핫이슈를 한 곳에서."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/search.html">
-  <link rel="stylesheet" href="./css/search.css?v=072018" />
-  <link rel="stylesheet" href="./css/header.css?v=072018">
-  <link rel="stylesheet" href="./css/nav.css?v=072018">
-  <link rel="stylesheet" href="./css/write-hub.css?v=072018">
+  <link rel="stylesheet" href="./css/search.css?v=072019" />
+  <link rel="stylesheet" href="./css/header.css?v=072019">
+  <link rel="stylesheet" href="./css/nav.css?v=072019">
+  <link rel="stylesheet" href="./css/write-hub.css?v=072019">
   <!-- DM 패널 스타일 — 없으면 dm-root가 fixed를 못 받아 페이지에 그대로 쏟아진다 -->
-  <link rel="stylesheet" href="./css/dm.css?v=072018">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072018">
+  <link rel="stylesheet" href="./css/dm.css?v=072019">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072019">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -24,14 +24,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/items.css?v=072018">
-  <link rel="stylesheet" href="./css/user-sheet.css?v=072018">
-  <link rel="stylesheet" href="./css/theme.css?v=072018">
+  <link rel="stylesheet" href="./css/items.css?v=072019">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=072019">
+  <link rel="stylesheet" href="./css/theme.css?v=072019">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072018"></script>
+  <script src="/js/splash-boot.js?v=072019"></script>
 </head>
 
-<body data-page="search">
+<body data-page="trend">
 <div id="app">
 
 <header class="header header-common">
@@ -42,10 +42,10 @@
     <a href="index.html" class="logo-link">
       <img src="assets/logo.png" class="logo" alt="GALLA" />
     </a>
-    <button class="hdr-btn hdr-dm" id="searchDmBtn" aria-label="메시지">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
-      <span class="dm-badge" hidden></span>
-    </button>
+    <button class="hdr-btn hdr-noti" id="hdrNoti" aria-label="알림">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="noti-badge" id="notiBadge" hidden></span>
+        </button>
   </div>
 </header>
 
@@ -83,6 +83,13 @@
         <path fill="#fff" d="M9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/>
       </svg>
       핫유튜브
+    </button>
+    <button type="button" class="tab-item" data-tab="plaza" onclick="location.href='plaza.html'">
+      <svg class="tab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      광장
     </button>
   </div>
 
@@ -267,17 +274,9 @@
              data-active="./assets/icons/nav-predict-active.svg">
       </button>
 
-      <button class="nav-item" data-page="search" data-target="search.html">
-        <img src="./assets/icons/nav-search.svg"
-             data-base="./assets/icons/nav-search.svg"
-             data-active="./assets/icons/nav-search-active.svg">
-      </button>
+      <button class="nav-item nav-dm" data-page="dm" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
 
-      <button class="nav-item" data-page="plaza" data-target="plaza.html">
-        <img src="./assets/icons/nav-plaza.svg"
-             data-base="./assets/icons/nav-plaza.svg"
-             data-active="./assets/icons/nav-plaza-active.svg">
-      </button>
+      <button class="nav-item" data-page="trend" data-target="search.html"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
 
       <button class="nav-item" data-page="mypage" data-target="mypage.html">
         <img src="./assets/icons/nav-user.svg"
@@ -287,32 +286,33 @@
     </div>
 </nav>
 
-<script src="./vendor/supabase.js?v=072018"></script>
-<script src="js/supabase.js?v=072018"></script>
-<script src="js/comment-actions.js?v=072018"></script>
-<script src="js/write-hub.js?v=072018"></script>
-<script src="js/dm.js?v=072018"></script>
-<script src="./js/search.js?v=072018"></script>
-<script src="js/hot-videos.js?v=072018"></script>
-<script src="js/fx.js?v=072018"></script>
-<script src="js/follow.js?v=072018"></script>
-<script src="js/user-sheet.js?v=072018"></script>
-<script src="js/ghost.js?v=072018"></script>
-<script src="js/items.js?v=072018"></script>
-<script src="./js/nav.js?v=072018"></script>
+<script src="./vendor/supabase.js?v=072019"></script>
+<script src="js/supabase.js?v=072019"></script>
+<script src="js/comment-actions.js?v=072019"></script>
+<script src="js/write-hub.js?v=072019"></script>
+<script src="js/dm.js?v=072019"></script>
+<script src="js/notifications.js?v=072019"></script>
+<script src="./js/search.js?v=072019"></script>
+<script src="js/hot-videos.js?v=072019"></script>
+<script src="js/fx.js?v=072019"></script>
+<script src="js/follow.js?v=072019"></script>
+<script src="js/user-sheet.js?v=072019"></script>
+<script src="js/ghost.js?v=072019"></script>
+<script src="js/items.js?v=072019"></script>
+<script src="./js/nav.js?v=072019"></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {
     var t = setInterval(function () {
-      if (window.supabaseClient && window.initDM) { clearInterval(t); window.initDM("#searchDmBtn"); }
+      if (window.supabaseClient && window.initNotifications) { clearInterval(t); window.initNotifications(); }
     }, 40);
   })();
 </script>
 
 </div>
-<script src="/js/analytics.js?v=072018"></script>
-<script src="js/duel-alert.js?v=072018"></script>
-<script src="js/bug-report.js?v=072018"></script>
-<script src="/js/pwa.js?v=072018"></script>
+<script src="/js/analytics.js?v=072019"></script>
+<script src="js/duel-alert.js?v=072019"></script>
+<script src="js/bug-report.js?v=072019"></script>
+<script src="/js/pwa.js?v=072019"></script>
 </body>
 </html>

@@ -1309,19 +1309,50 @@
 
   /* ---------- 뱃지 ---------- */
   async function refreshBadge() {
-    if (!ME || !BADGE) return;
+    if (!ME) return;
     const { count } = await supabase.from('dm_messages')
       .select('id', { count: 'exact', head: true }).is('read_at', null).neq('sender_id', ME);
-    if (count && count > 0) { BADGE.textContent = count > 99 ? '99+' : count; BADGE.hidden = false; }
-    else BADGE.hidden = true;
+    const paint = el => {
+      if (!el) return;
+      if (count && count > 0) { el.textContent = count > 99 ? '99+' : count; el.hidden = false; }
+      else el.hidden = true;
+    };
+    paint(BADGE);
+    paint(document.getElementById('navDmBadge'));   // 하단 네비 DM 탭 뱃지
   }
+  /* 📨 새 메시지 토스트 — DM을 안 보고 있을 때 어느 화면에서든 알린다. 탭하면 그 대화로. */
+  let toastTimer = null;
+  async function showDmToast(t) {
+    const peer = t.user_lo === ME ? t.user_hi : t.user_lo;
+    await profilesFor([peer]);
+    const p = PROFILES[peer] || {};
+    let el = document.getElementById('dm-toast');
+    if (!el) {
+      el = document.createElement('button');
+      el.id = 'dm-toast'; el.type = 'button';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `${avaHTML(peer)}<span class="dm-toast-mid"><b>${esc(p.nickname || '새 메시지')}</b><i>${esc((t.last_message || '').slice(0, 40))}</i></span>`;
+    el.onclick = () => { hide(); startDM(peer, p.nickname); };
+    requestAnimationFrame(() => el.classList.add('on'));
+    try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
+    clearTimeout(toastTimer);
+    function hide() { el.classList.remove('on'); }
+    toastTimer = setTimeout(hide, 5000);
+  }
+
   function attachInboxRealtime() {
     if (inboxChan) return;
     // ★ 비용·부하: 필터 없이 구독하면 '전체 스레드 갱신 × 접속자 수'만큼 서버가 팬아웃을
     //   계산한다(운영비 질문에 답하다 발견). 스레드의 내 자리가 user_lo일 수도 hi일 수도
     //   있는데 postgres_changes 필터는 OR을 못 하므로, 같은 채널에 필터 다른 바인딩 2개.
     const onThread = ({ new: t }) => {
-      if (t.last_sender !== ME) refreshBadge();
+      if (t.last_sender !== ME) {
+        refreshBadge();
+        // 그 대화를 보고 있지 않다면 토스트 — 보고 있으면 attachThread가 이미 그린다
+        const viewing = ROOT && ROOT.classList.contains('open') && curThread === t.id;
+        if (!viewing) showDmToast(t);
+      }
       if (ROOT && ROOT.classList.contains('open') &&
           !ROOT.querySelector('[data-view="inbox"]').hidden) loadInbox();
     };
@@ -1335,15 +1366,46 @@
     if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html';
   }
 
+  window.GALLA_openDM = function () { ME ? openDM() : promptLogin(); };
+  let INITED = false;
   window.initDM = async function (btnSelector) {
     supabase = window.supabaseClient || supabase;
     if (!supabase) return;
-    BTN = document.querySelector(btnSelector);
-    if (!BTN) return;
-    BADGE = BTN.querySelector('.dm-badge');
+    // 헤더 버튼(있으면) + 하단 네비 DM 탭(있으면) 둘 다 바인딩
+    BTN = btnSelector ? document.querySelector(btnSelector) : null;
+    if (BTN) BADGE = BTN.querySelector('.dm-badge');
+    const navBtn = document.querySelector('.nav-item[data-page="dm"]');
+    if (!BTN && !navBtn && INITED) return;
     const { data: sess } = await supabase.auth.getSession();
     ME = sess?.session?.user?.id || null;
-    BTN.addEventListener('click', () => { ME ? openDM() : promptLogin(); });
+    if (BTN) BTN.addEventListener('click', () => { ME ? openDM() : promptLogin(); });
+    if (navBtn && !navBtn.dataset.dmBound) {
+      navBtn.dataset.dmBound = '1';
+      navBtn.addEventListener('click', () => { ME ? openDM() : promptLogin(); });
+    }
+    if (INITED) { if (ME) refreshBadge(); return; }
+    INITED = true;
     if (ME) { refreshBadge(); attachInboxRealtime(); }
+    // 🔗 딥링크: ?dm=1 → 패널, ?dm=<uid> → 그 대화로 직행. 처리 후 URL 청소(새로고침 재발동 방지)
+    try {
+      const q = new URLSearchParams(location.search);
+      const dm = q.get('dm');
+      if (dm && ME) {
+        if (dm === '1') openDM();
+        else startDM(dm, null);
+        q.delete('dm');
+        history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
+      }
+    } catch (_) {}
   };
+  // 네비 DM 탭이 있는 페이지는 호출 없이도 스스로 부팅 (기존 initDM 호출 페이지와 공존)
+  (function autoBoot() {
+    const boot = async () => {
+      const sb = window.supabaseClient || (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+      if (!sb) return;
+      if (document.querySelector('.nav-item[data-page="dm"]') && !INITED) window.initDM(null);
+    };
+    if (document.readyState !== 'loading') boot();
+    else document.addEventListener('DOMContentLoaded', boot, { once: true });
+  })();
 })();

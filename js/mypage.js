@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.body.classList.add("mp-self");
         // 내 프로필: 알림(♥) + 메시지(DM) 활성화
         if (window.initNotifications) window.initNotifications();
-        if (window.initDM) window.initDM("#mpDmBtn");
+        if (window.initNotifications) window.initNotifications();   // 헤더 DM은 알림으로 교체(네비에 DM 탭)
     } else {
         document.body.classList.add("mp-other");
         // 방문자 뷰 헤더: 뒤로 / 유저명 / 더보기 (개인용 알림·DM·설정 숨김)

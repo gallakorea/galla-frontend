@@ -97,6 +97,28 @@ document.addEventListener("DOMContentLoaded", () => {
       if (baseSrc) img.src = baseSrc;
     }
 
+    // 2️⃣-DM: DM 탭은 페이지 이동이 아니라 오버레이 패널 — dm.js가 없으면 그때 끌어온다
+    if (page === "dm") {
+      item.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (!window.GALLA_openDM) {
+          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || "").match(/[?&]v=(\d+)/);
+          const q = v ? "?v=" + v[1] : "";
+          const load = (href, css) => new Promise((res) => {
+            const el = document.createElement(css ? "link" : "script");
+            if (css) { el.rel = "stylesheet"; el.href = href + q; } else el.src = href + q;
+            el.onload = res; el.onerror = res;
+            document.head.appendChild(el);
+          });
+          await Promise.all([load("/css/dm.css", 1), load("/css/dm-quiet.css", 1)]);
+          await load("/js/dm.js");
+          if (window.initDM) await window.initDM(null);
+        }
+        window.GALLA_openDM && window.GALLA_openDM();
+      });
+      return;
+    }
+
     // 2️⃣ 클릭 시: 이미 현재 탭이면 '있던 자리에서 스르륵' 맨 위로, 아니면 이동
     item.addEventListener("click", (e) => {
       if (page === currentPage) {
@@ -110,10 +132,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // 4️⃣ 좌우 스와이프 페이지 전환 — 네비 순서대로 (홈 ↔ 예측 ↔ 서치 ↔ 광장 ↔ 마이)
-  const PAGE_ORDER = ["index", "predict", "search", "plaza", "mypage"];
+  const PAGE_ORDER = ["index", "predict", "trend", "mypage"];   // 트렌드=서치+광장 허브, DM은 오버레이
   const PAGE_URL = {
-    index: "index.html", predict: "galla-predict.html", search: "search.html",
-    plaza: "plaza.html", mypage: "mypage.html",
+    index: "index.html", predict: "galla-predict.html", trend: "search.html",
+    mypage: "mypage.html",
   };
   const curIdx = PAGE_ORDER.indexOf(currentPage);
 
