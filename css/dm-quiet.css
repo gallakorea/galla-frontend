@@ -295,3 +295,65 @@ body[data-page="dm"].dm-detail .header { display: none; }
 body[data-page="dm"].dm-detail .dm-root.page .dm-panel { height: 100dvh; height: calc(100dvh - env(safe-area-inset-top, 0px)); }
 /* 노치 안전영역 — 헤더가 사라진 자리의 상단 여백 */
 body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-area-inset-top, 0px)); }
+
+/* ═══ 난장 — 오픈 채팅방 ═══ */
+/* 탭바 오른쪽 끝 설정(⚙) — 텍스트 탭들과 밑줄 문법을 공유하되 아이콘만 */
+.dm-tabs { display: flex; align-items: stretch; }
+.dm-tab.dm-tab-set {
+  margin-left: auto; display: flex; align-items: center;
+  color: #6b7280; padding: 8px 2px 11px;
+}
+.dm-tab.dm-tab-set:active { opacity: .6; }
+
+/* 난장 상단 바: 안내 문구 + 열기 버튼 */
+.dm-room-bar { justify-content: space-between; align-items: center; }
+.dm-room-hint { font-size: 12px; color: #6b7280; letter-spacing: -.2px; }
+
+/* 난장 만들기 폼 */
+.dm-room-form { padding: 14px 20px 4px; display: grid; gap: 8px; }
+.dm-room-form input {
+  width: 100%; box-sizing: border-box; padding: 11px 14px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; color: #fff; font-size: 14px; outline: none;
+}
+.dm-room-form input:focus { border-color: rgba(67,97,255,.5); }
+.dm-room-form-btns { display: flex; gap: 8px; justify-content: flex-end; }
+.dm-room-form-btns button {
+  padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 800;
+  border: 1px solid rgba(255,255,255,.1); background: none; color: #8b909b; cursor: pointer;
+}
+.dm-room-form-btns #dm-room-go {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #4361ff; border-color: #4361ff; color: #fff;
+}
+
+/* 방 행: 멤버 수 칩 */
+.dm-room-cnt {
+  display: inline-flex; align-items: center; gap: 3px; margin-left: 7px;
+  font-size: 11px; font-weight: 700; color: #6b7280;
+}
+.dm-room-cnt svg { stroke: #6b7280; }
+
+/* 미참여 게이트 — 주제 소개 + 뛰어들기 */
+.dm-room-gate {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 24px; text-align: center;
+}
+.dm-gate-ava { width: 72px; height: 72px; font-size: 28px; border-radius: 24px; }
+.dm-gate-title { font-size: 19px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
+.dm-gate-topic { font-size: 13.5px; color: #9aa0ad; max-width: 280px; line-height: 1.5; }
+.dm-gate-cnt { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #6b7280; }
+.dm-gate-join {
+  margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 12px 28px; border-radius: 999px; border: none; cursor: pointer;
+  background: #4361ff; color: #fff; font-size: 15px; font-weight: 800;
+  box-shadow: 0 8px 24px -8px rgba(67,97,255,.55);
+}
+.dm-gate-join:active { transform: scale(.96); }
+
+/* 단체 말풍선 — 남의 말엔 아바타+닉네임(1:1엔 없는 문법) */
+.dm-gmsg { display: flex; gap: 8px; align-items: flex-end; }
+.dm-gmsg .dm-gava { flex: none; }
+.dm-gcol { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; min-width: 0; }
+.dm-gname { font-size: 11.5px; font-weight: 700; color: #8b909b; padding-left: 4px; }
+.dm-gmsg .dm-bubble.you { margin: 0; }

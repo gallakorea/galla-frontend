@@ -38,11 +38,13 @@
     dislike: I(12, '<path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z"/><path d="M17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/>'),
     bolt:    I(12, '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
+    crew:    I(12, '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
   };
 
   let supabase = window.supabaseClient;
   let ME = null, ROOT = null, BTN = null, BADGE = null;
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
+  let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [];
   let REPLY = null;            // 답장 대상 {id, body, mine}
   let PENDING_SHARE = null;    // 공유 카드 대기 payload
   let MSGS = {};               // id -> row (인용 렌더용)
@@ -138,6 +140,8 @@
           <div class="dm-tabs" role="tablist">
             <button class="dm-tab on" data-tab="chats" role="tab">채팅</button>
             <button class="dm-tab" data-tab="friends" role="tab">친구</button>
+            <button class="dm-tab" data-tab="rooms" role="tab">난장</button>
+            <button class="dm-tab dm-tab-set" data-tab="set" role="tab" aria-label="메시지 설정">${ICONS.sliders}</button>
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
           <div class="dm-list" id="dm-inbox-wrap">
@@ -149,6 +153,21 @@
               <button class="dm-add-btn" data-act="addFriend" type="button">${ICONS.plus} 친구 추가</button>
             </div>
             <div id="dm-friend-list"></div>
+          </div>
+          <div class="dm-list" id="dm-rooms" hidden>
+            <form class="dm-room-form" id="dm-room-form" hidden>
+              <input id="dm-room-title" maxlength="30" placeholder="난장 이름 (예: 오늘의 축구 한판)" autocomplete="off">
+              <input id="dm-room-topic" maxlength="100" placeholder="주제 한 줄 (선택)" autocomplete="off">
+              <div class="dm-room-form-btns">
+                <button type="button" id="dm-room-cancel">취소</button>
+                <button type="submit" id="dm-room-go">${ICONS.plus} 열기</button>
+              </div>
+            </form>
+            <div class="dm-friend-search dm-room-bar">
+              <span class="dm-room-hint">주제를 정해 아무나 뛰어드는 오픈 채팅</span>
+              <button class="dm-add-btn" data-act="newRoom" type="button">${ICONS.plus} 난장 열기</button>
+            </div>
+            <div id="dm-room-list"></div>
           </div>
         </div>
         <div class="dm-view" data-view="add" hidden>
@@ -241,6 +260,24 @@
             <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
         </div>
+        <div class="dm-view" data-view="room" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="roomToList" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-peer-wrap">
+              <span class="dm-peer-col">
+                <span class="dm-title" id="dm-room-name">난장</span>
+                <span class="dm-peer-sub" id="dm-room-sub"></span>
+              </span>
+            </span>
+            <button class="dm-gear" data-act="roomMenu" aria-label="난장 메뉴">${ICONS.menu}</button>
+          </div>
+          <div class="dm-msgs" id="dm-room-msgs"></div>
+          <div class="dm-room-gate" id="dm-room-gate" hidden></div>
+          <form class="dm-inputbar" id="dm-room-send">
+            <textarea id="dm-room-input" rows="1" placeholder="메시지 입력…"></textarea>
+            <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
+          </form>
+        </div>
         <div class="dm-view" data-view="chatset" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toThread" aria-label="뒤로">${ICONS.back}</button>
@@ -275,8 +312,12 @@
       else if (act === 'chatset') { openChatSet(); }
       else if (act === 'toThread') { showView('thread'); }
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
+      else if (act === 'newRoom') { const f = ROOT.querySelector('#dm-room-form'); f.hidden = !f.hidden; if (!f.hidden) ROOT.querySelector('#dm-room-title').focus(); }
+      else if (act === 'roomToList') { detachRoom(); curRoom = null; showView('inbox'); setTab('rooms'); }
+      else if (act === 'roomMenu') { roomMenu(e.target.closest('[data-act]')); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
-      if (tab) setTab(tab);
+      if (tab === 'set') { showView('settings'); loadSettings(); }
+      else if (tab) setTab(tab);
     });
     ROOT.querySelector('#dm-friend-q').addEventListener('input', e => filterFriends(e.target.value));
     // 친구·채팅 행 길게 누르기 → 관리 메뉴 (말풍선 메뉴와 같은 문법)
@@ -286,6 +327,13 @@
     bindPullRefresh(ROOT.querySelector('#dm-inbox-wrap'), async () => { PREF.loaded = false; await loadInbox(); refreshBadge(); });
     bindPullRefresh(ROOT.querySelector('#dm-friends'), async () => { PREF.loaded = false; FRIENDS = []; await loadFriends(); });
     ROOT.querySelector('#dm-form').addEventListener('submit', onSend);
+    ROOT.querySelector('#dm-room-form').addEventListener('submit', onCreateRoom);
+    ROOT.querySelector('#dm-room-cancel').addEventListener('click', () => { ROOT.querySelector('#dm-room-form').hidden = true; });
+    ROOT.querySelector('#dm-room-send').addEventListener('submit', onRoomSend);
+    const rta = ROOT.querySelector('#dm-room-input');
+    rta.addEventListener('input', () => { rta.style.height = 'auto'; rta.style.height = Math.min(rta.scrollHeight, 120) + 'px'; });
+    rta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onRoomSend(e); } });
+    bindPullRefresh(ROOT.querySelector('#dm-rooms'), loadRooms);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
     ROOT.querySelector('#dm-file').addEventListener('change', onPickImage);
@@ -316,7 +364,7 @@
       const menu = document.getElementById('dm-menu');
       // ⚠️ 여는 버튼(⚙)은 제외 — 여는 클릭이 document까지 버블돼 같은 틱에 도로 닫아버렸다
       //   ("설정 버튼이 작동 안 한다"의 정체. 길게 누르기 메뉴는 click으로 안 열려 무사했다)
-      if (menu && !menu.hidden && !e.target.closest('#dm-menu, [data-act="settings"]')) menu.hidden = true;
+      if (menu && !menu.hidden && !e.target.closest('#dm-menu, [data-act="settings"], [data-act="roomMenu"]')) menu.hidden = true;
     });
     return ROOT;
   }
@@ -328,7 +376,7 @@
     // · 네비는 입력바와 물리적으로 겹치는 '대화방'에서만 숨김 — 프로필·설정 등은 유지
     if (PAGE_MODE()) {
       document.body.classList.toggle('dm-detail', name !== 'inbox');
-      document.body.classList.toggle('dm-immersive', name === 'thread');
+      document.body.classList.toggle('dm-immersive', name === 'thread' || name === 'room');
       // 직전 뷰의 스크롤이 만든 헤더 숨김·네비 축소가 눌러붙지 않게 전환마다 리셋
       window.GALLA_navReset?.();
     }
@@ -348,6 +396,7 @@
     ROOT.classList.remove('open');
     document.body.style.overflow = '';
     detachThread();
+    detachRoom(); curRoom = null;
     curThread = curPeer = null;
     PENDING_SHARE = null;
     clearReply();
@@ -384,7 +433,8 @@
     ROOT.querySelectorAll('.dm-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
     ROOT.querySelector('#dm-inbox-wrap').hidden = tab !== 'chats';
     ROOT.querySelector('#dm-friends').hidden = tab !== 'friends';
-    if (tab === 'friends') loadFriends(); else loadInbox();
+    ROOT.querySelector('#dm-rooms').hidden = tab !== 'rooms';
+    if (tab === 'friends') loadFriends(); else if (tab === 'rooms') loadRooms(); else loadInbox();
   }
 
   /* ---------- 관리 상태 (즐겨찾기·숨김·차단·방 고정·정렬) ---------- */
@@ -928,6 +978,185 @@
   }
 
   /* ---------- 인박스 (고정 우선 · 정렬 · 나간 방 제외) ---------- */
+  /* ---------- 난장: 오픈 채팅방 (카카오 오픈채팅 문법) ----------
+     방 목록·멤버 수는 공개, 메시지는 참여자만(RLS가 강제) — 미참여 방은 게이트 화면 */
+  async function loadRooms() {
+    const box = ROOT.querySelector('#dm-room-list');
+    if (!box.innerHTML) box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const [{ data: rooms }, { data: mine }] = await Promise.all([
+      supabase.from('open_rooms')
+        .select('id,owner_id,title,topic,member_count,last_message,last_message_at,created_at')
+        .order('created_at', { ascending: false }).limit(60),
+      supabase.from('open_room_members').select('room_id').eq('user_id', ME),
+    ]);
+    MY_ROOMS = new Set((mine || []).map(r => r.room_id));
+    ROOMS = (rooms || []).sort((a, b) =>
+      new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
+    const joined = ROOMS.filter(r => MY_ROOMS.has(r.id));
+    const others = ROOMS.filter(r => !MY_ROOMS.has(r.id));
+    if (!ROOMS.length) {
+      box.innerHTML = `<div class="dm-empty">아직 열린 난장이 없어요.<br><span>첫 판을 벌여보세요 — 주제는 자유.</span></div>`;
+      return;
+    }
+    const sec = t => `<div class="dm-sec">${t}</div>`;
+    box.innerHTML =
+      (joined.length ? sec('참여 중') + joined.map(roomRow).join('') : '') +
+      (others.length ? sec('둘러보기') + others.map(roomRow).join('') : '');
+    box.querySelectorAll('.dm-room-row').forEach(el => {
+      el.addEventListener('click', () => {
+        const r = ROOMS.find(x => x.id === el.dataset.rid);
+        if (r) openRoom(r);
+      });
+    });
+    staggerRows(box, '.dm-room-row');
+  }
+  function roomRow(r) {
+    const t = r.last_message_at || r.created_at;
+    const mineRoom = MY_ROOMS.has(r.id);
+    return `
+      <button class="dm-thread dm-room-row" data-rid="${r.id}">
+        <span class="dm-ava" style="background:linear-gradient(135deg,${avatarColor(r.id)},#1a1c26)">${esc((r.title || '난').charAt(0))}</span>
+        <span class="dm-thread-mid">
+          <span class="dm-thread-name">${esc(r.title)}<span class="dm-room-cnt">${ICONS.crew}${r.member_count}</span></span>
+          <span class="dm-thread-prev">${esc(mineRoom ? (r.last_message || r.topic || '대화를 시작해보세요') : (r.topic || r.last_message || '새 난장'))}</span>
+        </span>
+        <span class="dm-thread-side"><span class="dm-thread-time">${timeLabel(t)}</span></span>
+      </button>`;
+  }
+  async function onCreateRoom(e) {
+    e.preventDefault();
+    const title = ROOT.querySelector('#dm-room-title').value.trim();
+    const topic = ROOT.querySelector('#dm-room-topic').value.trim();
+    if (!title) return;
+    const { data: rid, error } = await supabase.rpc('open_room_create', { p_title: title, p_topic: topic });
+    if (error) { console.error('[dm] room create', error); return; }
+    ROOT.querySelector('#dm-room-form').hidden = true;
+    ROOT.querySelector('#dm-room-title').value = '';
+    ROOT.querySelector('#dm-room-topic').value = '';
+    await loadRooms();
+    const r = ROOMS.find(x => x.id === rid);
+    if (r) openRoom(r);
+  }
+  async function openRoom(r) {
+    curRoom = r;
+    ROOT.querySelector('#dm-room-name').textContent = r.title;
+    ROOT.querySelector('#dm-room-sub').textContent = `${r.member_count}명`;
+    showView('room');
+    paintRoomGate(!MY_ROOMS.has(r.id));
+    if (MY_ROOMS.has(r.id)) {
+      await loadRoomMsgs();
+      attachRoom(r.id);
+      setTimeout(() => ROOT.querySelector('#dm-room-input')?.focus(), 50);
+    }
+  }
+  /* 미참여 방: 메시지는 RLS가 막는다 — 주제 소개 + 뛰어들기 게이트 */
+  function paintRoomGate(show) {
+    const gate = ROOT.querySelector('#dm-room-gate');
+    const bar = ROOT.querySelector('#dm-room-send');
+    const msgs = ROOT.querySelector('#dm-room-msgs');
+    gate.hidden = !show; bar.hidden = show; msgs.hidden = show;
+    if (!show) return;
+    const r = curRoom;
+    gate.innerHTML = `
+      <span class="dm-gate-ava dm-ava lg" style="background:linear-gradient(135deg,${avatarColor(r.id)},#1a1c26)">${esc((r.title || '난').charAt(0))}</span>
+      <div class="dm-gate-title">${esc(r.title)}</div>
+      ${r.topic ? `<div class="dm-gate-topic">${esc(r.topic)}</div>` : ''}
+      <div class="dm-gate-cnt">${ICONS.crew} ${r.member_count}명이 떠드는 중</div>
+      <button type="button" class="dm-gate-join" id="dm-room-join-btn">${ICONS.bolt} 뛰어들기</button>`;
+    gate.querySelector('#dm-room-join-btn').onclick = async () => {
+      const { error } = await supabase.from('open_room_members').insert({ room_id: r.id, user_id: ME });
+      if (error) { console.error('[dm] room join', error); return; }
+      MY_ROOMS.add(r.id); r.member_count++;
+      ROOT.querySelector('#dm-room-sub').textContent = `${r.member_count}명`;
+      paintRoomGate(false);
+      await loadRoomMsgs();
+      attachRoom(r.id);
+    };
+  }
+  async function loadRoomMsgs() {
+    const wrap = ROOT.querySelector('#dm-room-msgs');
+    wrap.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const { data: msgs } = await supabase.from('open_messages')
+      .select('id,sender_id,body,kind,created_at')
+      .eq('room_id', curRoom.id).order('created_at', { ascending: false }).limit(100);
+    const list = (msgs || []).reverse();
+    await profilesFor(list.map(m => m.sender_id));
+    wrap.innerHTML = list.map(roomBubbleHTML).join('');
+    [...wrap.children].slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+  /* 단체방 문법: 남의 말은 아바타+닉네임을 단다(1:1엔 없던 것) */
+  function roomBubbleHTML(m) {
+    const mine = m.sender_id === ME;
+    const bubble = `<div class="dm-bubble ${mine ? 'me' : 'you'}" data-id="${m.id}">
+        <span class="dm-bub-body">${esc(m.body)}</span>
+        <span class="dm-bub-time">${hhmm(m.created_at)}</span>
+      </div>`;
+    if (mine) return bubble;
+    return `<div class="dm-gmsg" data-id="${m.id}">
+        <span class="dm-gava" data-user="${m.sender_id}">${avaHTML(m.sender_id, 'sm')}</span>
+        <span class="dm-gcol">
+          <span class="dm-gname">${esc(nickCache[m.sender_id] || '익명')}</span>
+          ${bubble}
+        </span>
+      </div>`;
+  }
+  function appendRoomMsg(m) {
+    const wrap = ROOT.querySelector('#dm-room-msgs');
+    if (wrap.querySelector(`[data-id="${m.id}"]`)) return;   // 실시간·로컬 중복 방지
+    const near = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
+    wrap.insertAdjacentHTML('beforeend', roomBubbleHTML(m));
+    wrap.lastElementChild?.classList.add('new');
+    if (near || m.sender_id === ME) wrap.scrollTop = wrap.scrollHeight;
+  }
+  function attachRoom(rid) {
+    detachRoom();
+    // ⚠️ 핸들러는 지역 ch를 참조 — 모듈 변수(roomChan)를 참조하면 방 전환 경합에 진다(1:1에서 배운 것)
+    const ch = supabase.channel('openroom:' + rid)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'open_messages', filter: 'room_id=eq.' + rid },
+        async ({ new: m }) => {
+          if (curRoom?.id !== rid) return;
+          await profilesFor([m.sender_id]);
+          appendRoomMsg(m);
+        })
+      .subscribe();
+    roomChan = ch;
+  }
+  function detachRoom() {
+    if (roomChan) { try { supabase.removeChannel(roomChan); } catch (_) {} roomChan = null; }
+  }
+  async function onRoomSend(e) {
+    e.preventDefault();
+    const ta = ROOT.querySelector('#dm-room-input');
+    const body = ta.value.trim();
+    if (!body || !curRoom) return;
+    ta.value = ''; ta.style.height = 'auto';
+    const btn = ROOT.querySelector('#dm-room-send .dm-send');
+    if (btn) { btn.classList.remove('fly'); void btn.offsetWidth; btn.classList.add('fly'); }
+    const { data, error } = await supabase.from('open_messages')
+      .insert({ room_id: curRoom.id, sender_id: ME, body }).select().single();
+    if (error) { console.error('[dm] room send', error); return; }
+    appendRoomMsg(data);
+  }
+  function roomMenu(anchor) {
+    if (!curRoom) return;
+    const r0 = anchor.getBoundingClientRect();
+    const own = curRoom.owner_id === ME;
+    const items = own
+      ? [{ k: 'close', label: '난장 닫기 (모두 해산)' }]
+      : (MY_ROOMS.has(curRoom.id) ? [{ k: 'leave', label: '나가기' }] : []);
+    if (!items.length) return;
+    popMenu(r0.right - 190, r0.bottom + 6, items, async k => {
+      if (k === 'close' && !confirm('난장을 닫으면 대화가 모두 사라져요. 닫을까요?')) return;
+      if (k === 'close') await supabase.from('open_rooms').delete().eq('id', curRoom.id);
+      else await supabase.from('open_room_members').delete()
+        .eq('room_id', curRoom.id).eq('user_id', ME);
+      detachRoom(); curRoom = null;
+      showView('inbox'); setTab('rooms');
+    });
+  }
+
   async function loadInbox() {
     const box = ROOT.querySelector('#dm-inbox');
     const [{ data: threads }] = await Promise.all([
