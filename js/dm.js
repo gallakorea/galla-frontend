@@ -161,7 +161,7 @@
               <input id="dm-room-topic" maxlength="100" placeholder="주제 한 줄 (선택)" autocomplete="off">
               <div class="dm-room-form-btns">
                 <button type="button" id="dm-room-cancel">취소</button>
-                <button type="submit" id="dm-room-go">${ICONS.plus} 열기</button>
+                <button type="submit" id="dm-room-go">${ICONS.plus} 난장 열기</button>
               </div>
             </form>
             <div class="dm-friend-search dm-room-bar">
@@ -313,7 +313,7 @@
       else if (act === 'chatset') { openChatSet(); }
       else if (act === 'toThread') { showView('thread'); }
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
-      else if (act === 'newRoom') { const f = ROOT.querySelector('#dm-room-form'); f.hidden = !f.hidden; if (!f.hidden) ROOT.querySelector('#dm-room-title').focus(); }
+      else if (act === 'newRoom') { roomFormShow(true); }
       else if (act === 'roomToList') { detachRoom(); curRoom = null; showView('inbox'); setTab('rooms'); }
       else if (act === 'roomMenu') { roomMenu(e.target.closest('[data-act]')); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
@@ -329,7 +329,7 @@
     bindPullRefresh(ROOT.querySelector('#dm-friends'), async () => { PREF.loaded = false; FRIENDS = []; await loadFriends(); });
     ROOT.querySelector('#dm-form').addEventListener('submit', onSend);
     ROOT.querySelector('#dm-room-form').addEventListener('submit', onCreateRoom);
-    ROOT.querySelector('#dm-room-cancel').addEventListener('click', () => { ROOT.querySelector('#dm-room-form').hidden = true; });
+    ROOT.querySelector('#dm-room-cancel').addEventListener('click', () => roomFormShow(false));
     ROOT.querySelector('#dm-room-send').addEventListener('submit', onRoomSend);
     const rta = ROOT.querySelector('#dm-room-input');
     rta.addEventListener('input', () => { rta.style.height = 'auto'; rta.style.height = Math.min(rta.scrollHeight, 120) + 'px'; });
@@ -981,6 +981,12 @@
   /* ---------- 인박스 (고정 우선 · 정렬 · 나간 방 제외) ---------- */
   /* ---------- 난장: 오픈 채팅방 (카카오 오픈채팅 문법) ----------
      방 목록·멤버 수는 공개, 메시지는 참여자만(RLS가 강제) — 미참여 방은 게이트 화면 */
+  /* 만들기 폼과 '난장 열기' 토글 바는 상호 배타 — 같이 보이면 '열기'가 두 개라 헷갈린다 */
+  function roomFormShow(show) {
+    ROOT.querySelector('#dm-room-form').hidden = !show;
+    ROOT.querySelector('.dm-room-bar').hidden = show;
+    if (show) ROOT.querySelector('#dm-room-title').focus();
+  }
   async function loadRooms() {
     const box = ROOT.querySelector('#dm-room-list');
     if (!box.innerHTML) box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
@@ -1031,7 +1037,7 @@
     if (!title) return;
     const { data: rid, error } = await supabase.rpc('open_room_create', { p_title: title, p_topic: topic });
     if (error) { console.error('[dm] room create', error); return; }
-    ROOT.querySelector('#dm-room-form').hidden = true;
+    roomFormShow(false);
     ROOT.querySelector('#dm-room-title').value = '';
     ROOT.querySelector('#dm-room-topic').value = '';
     await loadRooms();
