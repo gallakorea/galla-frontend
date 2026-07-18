@@ -462,3 +462,12 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 .dmc-btn.end svg { transform: rotate(135deg); }
 .dmc-btn.mute.off { background: rgba(255,72,88,.25); color: #ff8f9a; }
 @media (prefers-reduced-motion: reduce) { .dmc-ava.ring, .dmc-btn.accept { animation: none; } }
+
+/* ⏳ 사라지는 메시지 배너 */
+.dm-exp-note {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 14px; font-size: 12px; color: #c9b458;
+  background: rgba(201,180,88,.07); border-bottom: 1px solid rgba(201,180,88,.14);
+}
+.dm-exp-note b { font-weight: 800; }
+.dm-exp-note svg { stroke: #c9b458; }

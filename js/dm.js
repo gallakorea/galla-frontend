@@ -39,6 +39,7 @@
     bolt:    I(12, '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
     crew:    I(12, '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    timer:   I(14, '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M9 2h6"/>'),
     phone:   I(17, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
     flag:    I(12, '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
     cog:     I(17, '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
@@ -48,6 +49,8 @@
   let ME = null, ROOT = null, BTN = null, BADGE = null;
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
   let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set(), GMODE = 'create';
+  let curExpire = null;   // 현재 스레드의 사라지는 메시지 타이머(초)
+  const EXP_LABEL = { 3600: '1시간', 86400: '24시간', 604800: '7일' };
   const E2E_PLAIN = {};   // msgId -> 복호된 평문(null이면 이 기기에서 못 엶)
   const SECRETS = (() => { try { return new Set(JSON.parse(localStorage.getItem('galla_dm_secrets') || '[]')); } catch (_) { return new Set(); } })();
   const secretOn = tid => SECRETS.has(tid);
@@ -625,6 +628,7 @@
       <div class="dm-sec">대화 관리</div>
       <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
       <button class="dm-cs-act" data-cs="duel" type="button">${ICONS.swords} 일기토 신청</button>
+      <button class="dm-cs-act" data-cs="expire" type="button">${ICONS.timer} 사라지는 메시지 <i class="dm-cs-state${curExpire ? ' on' : ''}">${curExpire ? EXP_LABEL[curExpire] : '끔'}</i></button>
       <button class="dm-cs-act" data-cs="secret" type="button">${ICONS.lock} 비밀대화 <i class="dm-cs-state${secretOn(curThread) ? ' on' : ''}">${secretOn(curThread) ? '켜짐' : '꺼짐'}</i></button>
       <button class="dm-cs-act danger" data-cs="report" type="button">${ICONS.flag} 신고</button>
       <button class="dm-cs-act danger" data-cs="block" type="button">${ICONS.block} 차단</button>
@@ -647,6 +651,24 @@
       else if (k === 'report') {
         const r0 = b.getBoundingClientRect();
         reportFlow('user', curPeer, r0.left, r0.top - 10);
+      }
+      else if (k === 'expire') {
+        const r0 = b.getBoundingClientRect();
+        // ⚠️ 여는 클릭이 document 닫기 핸들러에 잡히지 않게 한 틱 미룬다(⚙ 메뉴에서 배운 것)
+        setTimeout(() => popMenu(r0.left, Math.max(60, r0.top - 170), [
+          { k: '0', label: (!curExpire ? '✓ ' : ' ') + '끄기' },
+          { k: '3600', label: (curExpire === 3600 ? '✓ ' : ' ') + '1시간 뒤 사라짐' },
+          { k: '86400', label: (curExpire === 86400 ? '✓ ' : ' ') + '24시간 뒤 사라짐' },
+          { k: '604800', label: (curExpire === 604800 ? '✓ ' : ' ') + '7일 뒤 사라짐' },
+        ], async v => {
+          const secs = Number(v) || null;
+          const { error } = await supabase.from('dm_threads')
+            .update({ expire_secs: secs }).eq('id', curThread);
+          if (error) return toastMini('설정하지 못했어요');
+          curExpire = secs;
+          paintExpBanner(); openChatSet();
+          toastMini(secs ? `${EXP_LABEL[secs]} 뒤 메시지가 자동으로 사라져요 — 서버에서도 지워져요` : '사라지는 메시지를 껐어요');
+        }), 0);
       }
       else if (k === 'duel') { location.href = 'duel.html?challenge=' + encodeURIComponent(curPeer); }
       else if (k === 'block') {
@@ -1423,7 +1445,7 @@
 
     // 정렬: 📌 고정이 항상 맨 위 → 그 안에서 선택한 기준. 단체 채팅도 같은 시간축에 섞인다
     const items = [
-      ...list.map(t => ({ g: null, t, at: t.last_message_at,
+      ...list.map(t => ({ g: null, t, at: t.last_message_at || 0,
         pin: PREF.threads[t.id]?.pinned ? 1 : 0, unread: unreadBy[t.id] || 0 })),
       ...GROUPS.map(g => ({ g, t: null, at: g.last_message_at || g.created_at, pin: 0, unread: 0 })),
     ];
@@ -1466,7 +1488,7 @@
             <span class="dm-thread-prev">${esc(preview)}${pvIcon}${esc(pvText)}</span>
           </span>
           ${EDIT ? editChipsThread(t.id) : `<span class="dm-thread-side">
-            <span class="dm-thread-time">${timeLabel(t.last_message_at)}</span>
+            <span class="dm-thread-time">${t.last_message_at ? timeLabel(t.last_message_at) : ''}</span>
             ${u ? `<span class="dm-dot">${u}</span>` : ''}
           </span>`}
         </button>`;
@@ -1493,9 +1515,23 @@
     if (ta) ta.placeholder = on ? '비밀 메시지 입력… (이 기기에서만 열려요)' : '메시지 입력…';
     if (bar) bar.classList.toggle('secret', !!on);
   }
+  function paintExpBanner() {
+    const view = ROOT.querySelector('[data-view="thread"]');
+    let note = view.querySelector('.dm-exp-note');
+    if (!curExpire) { note?.remove(); return; }
+    if (!note) {
+      note = document.createElement('div');
+      note.className = 'dm-exp-note';
+      view.querySelector('.dm-head').after(note);
+    }
+    note.innerHTML = `${ICONS.timer} 메시지가 <b>${EXP_LABEL[curExpire]}</b> 뒤 사라져요`;
+  }
   async function openThread(tid, peer, name) {
     curThread = tid; curPeer = peer;
     paintSecretUI();
+    curExpire = null; paintExpBanner();
+    supabase.from('dm_threads').select('expire_secs').eq('id', tid).maybeSingle()
+      .then(({ data }) => { if (curThread === tid) { curExpire = data?.expire_secs || null; paintExpBanner(); } });
     ROOT.querySelector('#dm-peer').textContent = name;
     await profilesFor([peer]);
     ROOT.querySelector('#dm-peer-ava').innerHTML = avaHTML(peer, 'sm');
