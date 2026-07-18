@@ -128,3 +128,7 @@
 /* 모션 — 폭포 등장은 유지하되 장식 애니메이션은 제거 */
 .dm-unread .dm-dot { animation: none; }
 .dm-send.fly { animation: none; }
+
+/* 아바타 사진은 글자 폴백 위에 절대배치 — 깨지면 img가 스스로 사라져 글자가 드러난다 */
+.dm-ava { position: relative; }
+.dm-ava img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: inherit; }

@@ -78,9 +78,12 @@
   function avaHTML(id, size) {
     const p = PROFILES[id] || {};
     const cls = 'dm-ava' + (size === 'lg' ? ' lg' : size === 'sm' ? ' sm' : '');
-    if (p.avatar_url) return `<span class="${cls}"><img src="${esc(p.avatar_url)}" alt="" loading="lazy"></span>`;
     const name = p.nickname || '익';
-    return `<span class="${cls}" style="background:linear-gradient(135deg,${avatarColor(id)},#1a1c26)">${esc(name.charAt(0))}</span>`;
+    const letter = `<span class="${cls}" style="background:linear-gradient(135deg,${avatarColor(id)},#1a1c26)">${esc(name.charAt(0))}</span>`;
+    if (!p.avatar_url) return letter;
+    // 사진이 깨지면(404 등) 브라우저의 '?' 깨진 이미지 대신 글자 아바타로 — img를 글자 위에 얹고
+    // 로드 실패 시 제거해 뒤의 글자가 드러난다
+    return `<span class="${cls}" style="background:linear-gradient(135deg,${avatarColor(id)},#1a1c26)">${esc(name.charAt(0))}<img src="${esc(p.avatar_url)}" alt="" loading="lazy" onerror="this.remove()"></span>`;
   }
 
   /* 다른 페이지에 없는 모듈(media-upload 등)을 필요할 때만 끌어온다 */
@@ -535,7 +538,7 @@
           <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
           ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
         </span>
-        ${EDIT ? editChipsFriend(f) : '<span class="dm-friend-go">${ICONS.chat}</span>'}
+        ${EDIT ? editChipsFriend(f) : `<span class="dm-friend-go">${ICONS.chat}</span>`}
       </button>`;
   }
   function renderFriends(list) {
