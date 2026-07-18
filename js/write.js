@@ -140,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   videoInput.addEventListener('click', () => { videoInput.value = ''; });
 
   /* 🔥 영상 미리보기 안정화 */
-  videoInput.addEventListener('change', e => {
+  videoInput.addEventListener('change', async e => {
     const f = e.target.files[0];
     if (!f) return;
 
@@ -154,7 +154,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     video.load();
     videoPreview.appendChild(video);
+
+    // 🚀 고르는 즉시 배경 업로드 시작 — 제목·진영을 입력하는 동안 전송이 끝나 있게.
+    //    발행 버튼을 누른 뒤에 올리면 그 시간을 사용자가 고스란히 기다린다.
+    if (!window.GALLA_bgVideo) return;
+    const bar = ensureVideoBar();
+    const r = await window.GALLA_bgVideo.pick(f);
+    if (!r.ok) {
+      // 길이 초과는 여기서 잡아야 한다 — 발행 때 실패시키면 그때까지 쓴 글이 헛수고가 된다
+      const msg = r.reason === 'too_long'
+        ? `영상이 너무 길어요 (${r.duration}초) — 최대 ${r.max}초까지 올릴 수 있어요.`
+        : r.reason === 'too_large' ? '영상 파일이 너무 커요.' : '영상을 읽지 못했어요.';
+      bar.textContent = '⚠️ ' + msg;
+      bar.className = 'vup-bar err';
+      videoInput.value = '';
+      videoPreview.innerHTML = '';
+      return;
+    }
+    bar.className = 'vup-bar';
+    const tick = setInterval(() => {
+      const p = window.GALLA_bgVideo.progress();
+      bar.textContent = window.GALLA_bgVideo.isDone()
+        ? '✅ 영상 준비 완료 — 바로 발행할 수 있어요'
+        : `⬆️ 영상 미리 올리는 중… ${p}% (글을 계속 쓰셔도 됩니다)`;
+      if (window.GALLA_bgVideo.isDone()) clearInterval(tick);
+    }, 400);
   });
+
+  // 업로드 상태 줄 — 미리보기 바로 아래
+  function ensureVideoBar() {
+    let b = document.getElementById('vupBar');
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'vupBar';
+      b.className = 'vup-bar';
+      videoPreview.insertAdjacentElement('afterend', b);
+    }
+    b.textContent = '⬆️ 영상 미리 올리는 중… 0%';
+    return b;
+  }
 
   /* ================= 진영 이름 → 입장 라벨 연동 ================= */
   const factionAEl = document.getElementById('factionA');
@@ -188,6 +226,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mode === 'photo') {
       videoInput.value = '';
       videoPreview.innerHTML = '';
+      // 사진으로 바꿨는데 영상 전송이 계속 돌면 데이터만 태운다 → 중단
+      window.GALLA_bgVideo && window.GALLA_bgVideo.clear();
+      document.getElementById('vupBar')?.remove();
       renderThumbs(); // 이전에 담아둔 사진 스트립 복원
     } else {
       thumbInput.value = '';
@@ -391,10 +432,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (videoFile) {
-          // Cloudflare Stream 재개가능(tus) 직접 업로드 — 대용량/모바일에서도 끊겨도 이어서 재개
+          // 영상을 고른 순간 이미 배경 업로드가 돌고 있다 → 끝났으면 즉시, 진행 중이면 이어받는다.
+          // (배경 업로드가 실패했거나 없으면 result()가 알아서 지금 올린다)
           publishBtn.textContent = '영상 업로드 중…';
-          const out = await window.GALLA_UPLOAD_VIDEO_STREAM(videoFile,
-            p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; });
+          const onP = p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; };
+          const out = window.GALLA_bgVideo
+            ? await window.GALLA_bgVideo.result(videoFile, onP)
+            : await window.GALLA_UPLOAD_VIDEO_STREAM(videoFile, onP);
           video_url = out.hls;
           if (!thumbnail_url && out.thumbnail) thumbnail_url = out.thumbnail;
         }

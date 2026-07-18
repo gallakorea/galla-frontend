@@ -145,9 +145,11 @@
     return fallback;
   }
 
-  async function uploadVideoToStream(file, onProgress) {
+  async function uploadVideoToStream(file, onProgress, signal) {
     const supabase = window.supabaseClient;
     if (!supabase) throw new Error('Supabase 초기화 실패');
+    const abort = () => { if (signal && signal.aborted) throw new Error('aborted'); };
+    abort();
     await getAccessToken(); // 로그인 보장
 
     // 1) Stream tus 업로드 세션(일회용 URL) 발급
@@ -163,6 +165,7 @@
 
     // 2) 청크 단위 PATCH 업로드(재개 지원)
     while (offset < file.size) {
+      abort();   // 영상을 바꾸거나 화면을 떠나면 여기서 조용히 빠져나온다
       const end = Math.min(offset + TUS_CHUNK, file.size);
       const chunk = file.slice(offset, end); // Blob.slice — 전송 시점까지 메모리에 올리지 않음
       let attempt = 0, done = false;
@@ -176,6 +179,7 @@
               'Content-Type': 'application/offset+octet-stream',
             },
             body: chunk,
+            signal,
           });
           if (r.status === 204 || r.status === 200) {
             const no = Number(r.headers.get('Upload-Offset'));
@@ -189,9 +193,12 @@
             throw new Error('tus_' + r.status);
           }
         } catch (e) {
+          // 중단은 오류가 아니다 — 재시도하지 말고 즉시 빠져나온다(안 그러면 취소해도 계속 돈다)
+          if (e && (e.name === 'AbortError' || e.message === 'aborted')) throw new Error('aborted');
           attempt++;
           if (attempt > TUS_MAX_RETRY) throw new Error('stall');
           await new Promise(res => setTimeout(res, 1500 * attempt)); // 지수적 백오프
+          abort();
           offset = await tusHeadOffset(uploadURL, offset); // 끊긴 지점 복구
         }
       }

@@ -248,3 +248,22 @@ select.input-field option { background: #16171c; color: #fff; }
 .speech-modal-inner video { width: 100%; border-radius: 14px; display: block; background: #000; }
 .speech-close { position: absolute; top: -44px; right: 16px; width: 36px; height: 36px; border-radius: 50%;
   border: none; cursor: pointer; background: rgba(255,255,255,.12); color: #fff; font-size: 16px; }
+
+/* 🚀 영상 배경 업로드 상태 — 고르는 즉시 올라가고 있음을 알린다.
+   이게 없으면 사용자는 아무 일도 안 일어나는 줄 알고 발행 때 또 기다린다고 생각한다. */
+.vup-bar {
+  margin: 8px 0 4px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(61, 107, 255, .12);
+  border: 1px solid rgba(61, 107, 255, .3);
+  color: #9ab4ff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.vup-bar.err {
+  background: rgba(255, 77, 103, .12);
+  border-color: rgba(255, 77, 103, .35);
+  color: #ff9aa8;
+}
