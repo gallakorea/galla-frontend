@@ -146,7 +146,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const el = (t && t.nodeType === 1 && t !== document.documentElement && t !== document.body &&
                     t.scrollHeight > t.clientHeight + 1) ? t : null;
         const y = el ? el.scrollTop : getY();
-        const prev = el ? (innerLast.has(el) ? innerLast.get(el) : y) : lastY;
+        // ★ 첫 목격 시 시딩 필수 — 안 하면 prev=y로 두고 기록을 안 해 dy가 영원히 0
+        //   (매 이벤트가 '첫 이벤트'가 됨 → 축소/숨김이 절대 발동 안 함. 실물 재현으로 잡음)
+        if (el && !innerLast.has(el)) innerLast.set(el, y);
+        const prev = el ? innerLast.get(el) : lastY;
         const dy = y - prev;
         const remember = () => { if (el) innerLast.set(el, y); else lastY = y; };
         if (y <= 10) {                           // 최상단: 원·로고숨김 해제 + 헤더 표시 + 네비 원래크기
@@ -175,6 +178,14 @@ document.addEventListener("DOMContentLoaded", () => {
           remember();
         }
       });
+    };
+    // 뷰 전환형 페이지(DM 등)용: 다른 스크롤러에서 만든 축소/숨김 상태를 즉시 해제.
+    // 없으면 '대화방에서 내리고 → 목록 복귀' 때 목록이 짧아 스크롤 불가면 헤더가
+    // 로고 없이(아이콘만) 영구히 남는다.
+    window.GALLA_navReset = () => {
+      navEl && navEl.classList.remove("nav--mini");
+      if (hdrEl) hdrEl.classList.remove("hdr-hidden", "hdr-nologo", "hdr-scrolled");
+      lastY = getY();
     };
     // capture:true — window가 아닌 요소가 스크롤해도(iOS body 등) 잡는다.
     window.addEventListener("scroll", onScroll, { passive: true, capture: true });

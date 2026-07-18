@@ -324,7 +324,11 @@
   function showView(name) {
     ROOT.querySelectorAll('.dm-view').forEach(v => { v.hidden = v.dataset.view !== name; });
     // 페이지 모드: 대화방·프로필 등 몰입 뷰에선 네비를 숨긴다(입력바와 겹침) — 목록에선 유지
-    if (PAGE_MODE()) document.body.classList.toggle('dm-immersive', name !== 'inbox');
+    if (PAGE_MODE()) {
+      document.body.classList.toggle('dm-immersive', name !== 'inbox');
+      // 직전 뷰의 스크롤이 만든 헤더 숨김·네비 축소가 눌러붙지 않게 전환마다 리셋
+      window.GALLA_navReset?.();
+    }
   }
   function openDM() {
     buildRoot();
