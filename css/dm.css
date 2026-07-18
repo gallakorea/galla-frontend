@@ -241,3 +241,143 @@
   color: #c9d1e0; font-size: 12px; font-weight: 800; }
 .dm-unset:active { background: rgba(255,77,103,.15); border-color: rgba(255,77,103,.4); }
 .dm-set-empty { padding: 10px 16px 16px; font-size: 12.5px; color: #565b66; }
+
+/* ═══════════════════════════════════════════════════════════════
+   ✨ DM 모션 레이어 — "1차원적" 정적 UI에 생명을. 원칙:
+   · 모든 움직임은 스프링 곡선(cubic-bezier(.2,1.2,.3,1)) — 선형은 죽은 움직임
+   · 등장은 폭포(stagger), 상호작용은 즉답(≤180ms), 장식은 은은하게
+   · prefers-reduced-motion이면 전부 끈다 — 멀미 나는 고급짐은 고급이 아니다
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 패널 — 유리 질감 + 스프링 슬라이드 */
+.dm-dim { backdrop-filter: blur(7px) saturate(1.2); -webkit-backdrop-filter: blur(7px) saturate(1.2); }
+.dm-panel {
+  background:
+    radial-gradient(90% 40% at 80% 0%, rgba(61,107,255,.10) 0%, transparent 60%),
+    radial-gradient(120% 80% at 50% 0%, #13141a 0%, #08090c 60%);
+  transition: transform .42s cubic-bezier(.2,1.1,.3,1);
+  box-shadow: -24px 0 60px rgba(0,0,0,.55);
+}
+
+/* 리스트 폭포 등장 — JS(staggerRows)가 --i를 심는다 */
+.dm-thread.in, .dm-friend.in {
+  opacity: 0;
+  animation: dmRowIn .38s cubic-bezier(.2,1.2,.3,1) both;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+@keyframes dmRowIn {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* 말풍선 — 내 것은 인디고 그라디언트+글로우, 상대는 유리판. 꼬리 비대칭 */
+.dm-bubble {
+  max-width: 76%; padding: 9px 13px; margin: 3px 14px; width: fit-content;
+  border-radius: 18px; position: relative;
+  font-size: 14.5px; line-height: 1.5; color: #f3f4f6;
+  transition: transform .12s ease;
+}
+.dm-bubble:active { transform: scale(.97); }
+.dm-bubble.me {
+  margin-left: auto;
+  background: linear-gradient(135deg, #3f6dff 0%, #2b4fd0 100%);
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 6px 18px -8px rgba(61,107,255,.65), inset 0 1px 0 rgba(255,255,255,.14);
+}
+.dm-bubble.you {
+  margin-right: auto;
+  background: rgba(255,255,255,.055);
+  border: 1px solid rgba(255,255,255,.08);
+  border-bottom-left-radius: 6px;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+/* 메시지 등장 — 초기 로드는 폭포(in), 실시간 새 메시지는 방향성 있는 팝(new) */
+.dm-bubble.in {
+  opacity: 0;
+  animation: dmMsgIn .34s cubic-bezier(.2,1.2,.3,1) both;
+  animation-delay: calc(var(--i, 0) * 26ms);
+}
+@keyframes dmMsgIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+.dm-bubble.new.me  { animation: dmPopMe .38s cubic-bezier(.2,1.5,.35,1) both; }
+.dm-bubble.new.you { animation: dmPopYou .38s cubic-bezier(.2,1.5,.35,1) both; }
+@keyframes dmPopMe  { from { opacity: 0; transform: translate(16px, 8px) scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes dmPopYou { from { opacity: 0; transform: translate(-16px, 8px) scale(.9); } to { opacity: 1; transform: none; } }
+
+.dm-bub-time { display: inline-block; margin-left: 8px; font-size: 9.5px; color: rgba(255,255,255,.5); vertical-align: bottom; }
+.dm-bubble.you .dm-bub-time { color: #6b7488; }
+.dm-receipt { animation: dmFade .3s ease both; }
+@keyframes dmFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* 타이핑 말풍선 — 점 3개가 파도친다 */
+.dm-typing { padding: 13px 15px; }
+.dm-typing-dots { display: inline-flex; gap: 5px; }
+.dm-typing-dots i {
+  width: 7px; height: 7px; border-radius: 50%; background: #8b93a5;
+  animation: dmDots 1.15s ease-in-out infinite;
+}
+.dm-typing-dots i:nth-child(2) { animation-delay: .15s; }
+.dm-typing-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes dmDots { 0%, 60%, 100% { transform: none; opacity: .45; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+/* 헤더 아바타 + 온라인 맥동 링 */
+.dm-peer-wrap { flex-direction: row !important; align-items: center; justify-content: center; gap: 9px; }
+.dm-peer-col { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.dm-peer-col .dm-title { text-align: left; font-size: 15px; }
+.dm-head-ava { position: relative; flex: none; display: none; }
+.dm-head-ava:not(:empty) { display: block; }
+.dm-ava.sm { width: 32px; height: 32px; font-size: 13px; }
+.dm-head-ava.on::after {
+  content: ''; position: absolute; right: -1px; bottom: -1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #4ade80; border: 2px solid #0a0a0c;
+  animation: dmPulse 2s ease-in-out infinite;
+}
+@keyframes dmPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,.5); }
+  50% { box-shadow: 0 0 0 5px rgba(74,222,128,0); }
+}
+
+/* 입력바 — 포커스 글로우 + 전송 비행 */
+.dm-inputbar { gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,.06); }
+#dm-input {
+  transition: border-color .2s ease, box-shadow .2s ease;
+  border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 9px 15px;
+  background: rgba(255,255,255,.05);
+}
+#dm-input:focus {
+  outline: none; border-color: rgba(61,107,255,.55);
+  box-shadow: 0 0 0 3px rgba(61,107,255,.12), 0 0 18px -6px rgba(61,107,255,.4);
+}
+.dm-send {
+  width: 38px; height: 38px; border: none; border-radius: 50%; cursor: pointer;
+  background: linear-gradient(135deg, #3f6dff, #2b4fd0); color: #fff; font-size: 15px;
+  box-shadow: 0 5px 14px -5px rgba(61,107,255,.7);
+  transition: transform .15s cubic-bezier(.2,1.4,.4,1);
+}
+.dm-send:active { transform: scale(.88); }
+.dm-send.fly { animation: dmFly .45s cubic-bezier(.3,1.2,.4,1); }
+@keyframes dmFly {
+  0% { transform: none; }
+  35% { transform: translate(3px, -6px) rotate(-14deg) scale(1.08); }
+  70% { transform: translate(-1px, 2px) rotate(3deg) scale(.96); }
+  100% { transform: none; }
+}
+
+/* 메뉴·시트 등장도 스프링으로 */
+.dm-menu { animation: dmMenuIn .22s cubic-bezier(.2,1.3,.35,1) both; transform-origin: top left; }
+@keyframes dmMenuIn { from { opacity: 0; transform: scale(.85) translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* 안읽음 뱃지 — 새로 뜰 때 통통 */
+.dm-unread .dm-dot { animation: dmBounce .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes dmBounce { from { transform: scale(.4); } 60% { transform: scale(1.18); } to { transform: none; } }
+
+/* 스크롤바 — 가늘게 */
+.dm-list::-webkit-scrollbar, .dm-msgs::-webkit-scrollbar { width: 3px; }
+.dm-list::-webkit-scrollbar-thumb, .dm-msgs::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 99px; }
+
+/* 접근성 — 움직임 최소화 설정이면 전부 정지 */
+@media (prefers-reduced-motion: reduce) {
+  .dm-panel, .dm-thread.in, .dm-friend.in, .dm-bubble.in, .dm-bubble.new,
+  .dm-typing-dots i, .dm-head-ava.on::after, .dm-send.fly, .dm-menu,
+  .dm-unread .dm-dot { animation: none !important; transition: none !important; opacity: 1 !important; transform: none !important; }
+}

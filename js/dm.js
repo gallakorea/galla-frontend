@@ -58,7 +58,7 @@
   /* 아바타 — 실제 사진이 있으면 사진, 없으면 첫 글자 + 유저 고유색 그라디언트 */
   function avaHTML(id, size) {
     const p = PROFILES[id] || {};
-    const cls = 'dm-ava' + (size === 'lg' ? ' lg' : '');
+    const cls = 'dm-ava' + (size === 'lg' ? ' lg' : size === 'sm' ? ' sm' : '');
     if (p.avatar_url) return `<span class="${cls}"><img src="${esc(p.avatar_url)}" alt="" loading="lazy"></span>`;
     const name = p.nickname || '익';
     return `<span class="${cls}" style="background:linear-gradient(135deg,${avatarColor(id)},#1a1c26)">${esc(name.charAt(0))}</span>`;
@@ -128,8 +128,11 @@
           <div class="dm-head">
             <button class="dm-back" data-act="toInbox" aria-label="뒤로">‹</button>
             <span class="dm-peer-wrap">
-              <span class="dm-title" id="dm-peer">대화</span>
-              <span class="dm-peer-sub" id="dm-peer-sub"></span>
+              <span class="dm-head-ava" id="dm-peer-ava"></span>
+              <span class="dm-peer-col">
+                <span class="dm-title" id="dm-peer">대화</span>
+                <span class="dm-peer-sub" id="dm-peer-sub"></span>
+              </span>
             </span>
             <span class="dm-head-sp"></span>
           </div>
@@ -445,6 +448,7 @@
     box.querySelectorAll('.dm-friend').forEach(el => {
       el.addEventListener('click', () => startDM(el.dataset.peer, el.dataset.name));
     });
+    staggerRows(box, '.dm-friend');
   }
   function filterFriends(q) {
     q = (q || '').trim().toLowerCase();
@@ -515,12 +519,15 @@
     box.querySelectorAll('.dm-thread').forEach(el => {
       el.addEventListener('click', () => openThread(el.dataset.tid, el.dataset.peer, el.dataset.name));
     });
+    staggerRows(box, '.dm-thread');
   }
 
   /* ---------- 대화 ---------- */
   async function openThread(tid, peer, name) {
     curThread = tid; curPeer = peer;
     ROOT.querySelector('#dm-peer').textContent = name;
+    await profilesFor([peer]);
+    ROOT.querySelector('#dm-peer-ava').innerHTML = avaHTML(peer, 'sm');
     setPeerSub('');
     showView('thread');
     const wrap = ROOT.querySelector('#dm-msgs');
@@ -581,6 +588,9 @@
   function renderMsgs(msgs) {
     const wrap = ROOT.querySelector('#dm-msgs');
     wrap.innerHTML = msgs.map(bubbleHTML).join('');
+    // 마지막 12개만 폭포 등장(--i) — 긴 대화 전체를 애니메이션하면 소음이다
+    const kids = [...wrap.children];
+    kids.slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
     wrap.scrollTop = wrap.scrollHeight;
     paintReceipts();
   }
@@ -589,8 +599,15 @@
     const wrap = ROOT.querySelector('#dm-msgs');
     const near = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
     wrap.insertAdjacentHTML('beforeend', bubbleHTML(m));
+    wrap.lastElementChild?.classList.add('new');   // 새 메시지는 튀어 들어온다
     if (near || m.sender_id === ME) wrap.scrollTop = wrap.scrollHeight;
     paintReceipts();
+  }
+  /* 리스트 폭포 등장 — 행마다 28ms씩 시차 */
+  function staggerRows(container, selector) {
+    [...container.querySelectorAll(selector)].slice(0, 14).forEach((el, i) => {
+      el.style.setProperty('--i', i); el.classList.add('in');
+    });
   }
   /* '읽음'은 내 마지막 읽힌 메시지에만 — 전부 달면 소음이다(카톡과 같은 문법) */
   function paintReceipts() {
@@ -616,6 +633,8 @@
     const body = ta.value.trim();
     if (!body || !curThread) return;
     ta.value = ''; ta.style.height = 'auto';
+    const sendBtn = ROOT.querySelector('.dm-send');
+    if (sendBtn) { sendBtn.classList.remove('fly'); void sendBtn.offsetWidth; sendBtn.classList.add('fly'); }
     const reply_to = REPLY?.id || null;
     clearReply();
     await sendMessage({ body, reply_to });
@@ -699,6 +718,29 @@
     if (!s) return;
     s.textContent = text || (peerOnline ? '온라인' : '');
     s.className = 'dm-peer-sub' + (cls ? ' ' + cls : peerOnline && !text ? ' on' : '');
+    // 온라인이면 헤더 아바타에 초록 링이 맥동한다
+    ROOT.querySelector('#dm-peer-ava')?.classList.toggle('on', peerOnline);
+  }
+
+  /* 타이핑 말풍선 — 헤더 텍스트만으로는 심심하다. 상대 자리에서 점 3개가 튄다. */
+  let typingBubbleTimer = null;
+  function showTypingBubble() {
+    const wrap = ROOT.querySelector('#dm-msgs');
+    if (!wrap) return;
+    let el = wrap.querySelector('.dm-typing');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'dm-bubble you dm-typing';
+      el.innerHTML = '<span class="dm-typing-dots"><i></i><i></i><i></i></span>';
+      wrap.appendChild(el);
+      wrap.scrollTop = wrap.scrollHeight;
+    }
+    clearTimeout(typingBubbleTimer);
+    typingBubbleTimer = setTimeout(hideTypingBubble, 3500);
+  }
+  function hideTypingBubble() {
+    clearTimeout(typingBubbleTimer);
+    ROOT?.querySelector('.dm-typing')?.remove();
   }
   function sendTyping() {
     if (!msgChan || !curThread) return;
@@ -724,6 +766,7 @@
             if (q) MSGS[q.id] = q;
           }
           setPeerSub('');   // 메시지가 왔으면 입력 중 표시는 끝
+          hideTypingBubble();
           appendMsg(m);
           markRead(tid);
         })
@@ -733,6 +776,7 @@
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
         if (!payload || payload.user === ME) return;
         setPeerSub('입력 중…', 'typing');
+        showTypingBubble();
         clearTimeout(typingHideTimer);
         typingHideTimer = setTimeout(() => setPeerSub(''), 3000);
       })
