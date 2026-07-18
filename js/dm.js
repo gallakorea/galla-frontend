@@ -161,6 +161,7 @@
             <button class="dm-tab on" data-tab="chats" role="tab">채팅</button>
             <button class="dm-tab" data-tab="friends" role="tab">친구</button>
             <button class="dm-tab" data-tab="rooms" role="tab">난장</button>
+            <button class="dm-tab" data-tab="pager" role="tab">삐삐</button>
             <button class="dm-tab dm-tab-set" data-tab="set" role="tab" aria-label="메시지 설정">${ICONS.cog}</button>
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
@@ -174,6 +175,7 @@
             </div>
             <div id="dm-friend-list"></div>
           </div>
+          <div class="dm-list" id="dm-pager" hidden></div>
           <div class="dm-list" id="dm-rooms" hidden>
             <form class="dm-room-form" id="dm-room-form" hidden>
               <input id="dm-room-title" maxlength="30" placeholder="난장 이름 (예: 오늘의 축구 한판)" autocomplete="off">
@@ -237,6 +239,7 @@
               <button id="dm-prof-home" type="button">프로필 홈</button>
               <button id="dm-prof-voice" type="button">${ICONS.phone} 육성톡</button>
               <button id="dm-prof-video" type="button">${ICONS.cam} 면상톡</button>
+              <button id="dm-prof-pager" type="button" class="span2">📟 삐삐 남기기</button>
             </div>
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
@@ -591,6 +594,22 @@
       window.GALLA_navReset?.();
     }
   }
+  /* 삐삐 알림은 채팅 토스트가 아니라 '액정 팝업'으로 — 감성이 곧 기능이다 */
+  async function pagerRing(row) {
+    if (!(await ensurePager())) return;
+    let name = nickCache[row.sender_id];
+    if (!name) { await profilesFor([row.sender_id]); name = nickCache[row.sender_id]; }
+    window.GALLA_PAGER.popup({ name, kind: row.kind, code: row.code });
+  }
+  function attachPagerRealtime() {
+    if (!ME) return;
+    supabase.channel('pager:' + ME)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'pager_messages', filter: 'box_owner=eq.' + ME },
+        ({ new: row }) => pagerRing(row))
+      .subscribe();
+  }
+
   let e2eBooted = false;
   function openDM() {
     buildRoot();
@@ -602,6 +621,9 @@
     }
     if (ME && window.GALLA_call?.supported()) window.GALLA_call.listen(supabase, ME);
     if (ME && window.GALLA_e2e?.supported()) attachMailbox();
+    if (ME) attachPagerRealtime();
+    // ?pager=1 로 들어오면 바로 사서함
+    try { if (new URLSearchParams(location.search).get('pager')) setTimeout(() => setTab('pager'), 60); } catch (_) {}
     if (PAGE_MODE()) bindPageHeader();
     ROOT.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -653,7 +675,11 @@
     ROOT.querySelector('#dm-inbox-wrap').hidden = tab !== 'chats';
     ROOT.querySelector('#dm-friends').hidden = tab !== 'friends';
     ROOT.querySelector('#dm-rooms').hidden = tab !== 'rooms';
-    if (tab === 'friends') loadFriends(); else if (tab === 'rooms') loadRooms(); else loadInbox();
+    ROOT.querySelector('#dm-pager').hidden = tab !== 'pager';
+    if (tab === 'friends') loadFriends();
+    else if (tab === 'rooms') loadRooms();
+    else if (tab === 'pager') loadPager();
+    else loadInbox();
   }
 
   /* ---------- 관리 상태 (즐겨찾기·숨김·차단·방 고정·정렬) ---------- */
@@ -696,6 +722,7 @@
     ROOT.querySelector('#dm-prof-chat').onclick = () => startDM(peer, p.nickname || name);
     ROOT.querySelector('#dm-prof-voice').onclick = () => callFrom(peer, p.nickname || name, false);
     ROOT.querySelector('#dm-prof-video').onclick = () => callFrom(peer, p.nickname || name, true);
+    ROOT.querySelector('#dm-prof-pager').onclick = () => pagerLeave(peer, p.nickname || name);
     ROOT.querySelector('#dm-prof-home').onclick = () => { location.href = 'mypage.html?user=' + encodeURIComponent(peer); };
 
     // 아이덴티티 — 등급·성향 모듈이 이 페이지에 없으면 그때 끌어온다
@@ -787,6 +814,7 @@
       <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
       <button class="dm-cs-act" data-cs="voice" type="button">${ICONS.phone} 육성톡</button>
       <button class="dm-cs-act" data-cs="video" type="button">${ICONS.cam} 면상톡</button>
+      <button class="dm-cs-act" data-cs="pager" type="button">📟 삐삐 남기기 <i class="dm-cs-note">사서함에 음성/숫자</i></button>
       <button class="dm-cs-act" data-cs="duel" type="button">${ICONS.swords} 일기토 신청</button>
       <button class="dm-cs-act" data-cs="expire" type="button">${ICONS.timer} 사라지는 메시지 <i class="dm-cs-state${curExpire ? ' on' : ''}">${curExpire ? EXP_LABEL[curExpire] : '끔'}</i></button>
       <button class="dm-cs-act" data-cs="secret" type="button">${ICONS.lock} 비밀대화 <i class="dm-cs-state${secretOn(curThread) ? ' on' : ''}">${secretOn(curThread) ? '켜짐' : '꺼짐'}</i></button>
@@ -800,6 +828,7 @@
       const k = b.dataset.cs;
       if (k === 'pin') { await doThreadAct('pin', curThread); openChatSet(); }
       else if (k === 'voice' || k === 'video') { callFrom(curPeer, p.nickname, k === 'video'); }
+      else if (k === 'pager') { pagerLeave(curPeer, p.nickname); }
       else if (k === 'secret') {
         if (secretOn(curThread)) { setSecret(curThread, false); paintSecretUI(); openChatSet(); return; }
         if (!window.GALLA_e2e?.supported()) return toastMini('이 브라우저에선 비밀대화를 쓸 수 없어요');
@@ -998,11 +1027,13 @@
     popMenu(x, y, [
       { k: 'voice', label: '육성톡' },
       { k: 'video', label: '면상톡' },
+      { k: 'pager', label: '📟 삐삐 남기기' },
       { k: 'fav', label: PREF.favs.has(peer) ? '즐겨찾기 해제' : '즐겨찾기' },
       { k: 'hide', label: '목록에서 숨기기' },
       { k: 'block', label: '차단', danger: true },
     ], k => {
       if (k === 'voice' || k === 'video') return callFrom(peer, name, k === 'video');
+      if (k === 'pager') return pagerLeave(peer, name);
       doFriendAct(k, peer, name);
     });
   }
@@ -1309,6 +1340,27 @@
   }
 
   /* ---------- 인박스 (고정 우선 · 정렬 · 나간 방 제외) ---------- */
+  /* ---------- 📟 삐삐 (음성사서함) — 채팅과 다른 문법이라 별도 모듈 ---------- */
+  async function ensurePager() {
+    if (!window.GALLA_PAGER) { try { await loadScript('/js/dm-pager.js'); } catch (_) {} }
+    return !!window.GALLA_PAGER;
+  }
+  async function loadPager() {
+    const host = ROOT.querySelector('#dm-pager');
+    host.innerHTML = `<div class="dm-loading">삐삐를 켜는 중…</div>`;
+    if (!(await ensurePager())) { host.innerHTML = `<div class="dm-set-empty">삐삐를 불러오지 못했어요</div>`; return; }
+    window.GALLA_PAGER.mount(host);
+    window.GALLA_pagerRefresh = () => window.GALLA_PAGER.mount(host);
+  }
+  async function pagerLeave(peer, name) {
+    if (!(await ensurePager())) return toastMini('삐삐를 불러오지 못했어요');
+    window.GALLA_PAGER.leaveTo(peer, name || nickCache[peer] || PROFILES[peer]?.nickname);
+  }
+  window.GALLA_openPager = () => {
+    if (PAGE_MODE()) { showView('inbox'); setTab('pager'); }
+    else location.href = 'dm.html?pager=1';
+  };
+
   /* ---------- 난장: 오픈 채팅방 (카카오 오픈채팅 문법) ----------
      방 목록·멤버 수는 공개, 메시지는 참여자만(RLS가 강제) — 미참여 방은 게이트 화면 */
   /* ---------- 단체 채팅: 친구 골라 비공개 그룹(kind='group') — 채팅 탭에 산다 ---------- */
