@@ -286,3 +286,9 @@ body.dm-immersive .nav { display: none; }
 .dm-root.page [data-view="inbox"] > .dm-head { display: none; }
 .hdr-group.hdr-right { justify-self: end; }
 .hdr-group.hdr-right .hdr-btn svg { width: 21px; height: 21px; }
+
+/* 페이지 모드 상세 뷰: GALLA 페이지 헤더 제거(이중 헤더 해소) — 상세의 자체 헤드가 유일한 헤더 */
+body[data-page="dm"].dm-detail .header { display: none; }
+body[data-page="dm"].dm-detail .dm-root.page .dm-panel { height: 100dvh; height: calc(100dvh - env(safe-area-inset-top, 0px)); }
+/* 노치 안전영역 — 헤더가 사라진 자리의 상단 여백 */
+body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-area-inset-top, 0px)); }

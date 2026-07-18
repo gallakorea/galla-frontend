@@ -323,9 +323,12 @@
 
   function showView(name) {
     ROOT.querySelectorAll('.dm-view').forEach(v => { v.hidden = v.dataset.view !== name; });
-    // 페이지 모드: 대화방·프로필 등 몰입 뷰에선 네비를 숨긴다(입력바와 겹침) — 목록에선 유지
+    // 페이지 모드 크롬 규칙:
+    // · 페이지 헤더(GALLA)는 메인(목록)에서만 — 상세(대화방·프로필…)는 자체 헤드가 유일한 헤더
+    // · 네비는 입력바와 물리적으로 겹치는 '대화방'에서만 숨김 — 프로필·설정 등은 유지
     if (PAGE_MODE()) {
-      document.body.classList.toggle('dm-immersive', name !== 'inbox');
+      document.body.classList.toggle('dm-detail', name !== 'inbox');
+      document.body.classList.toggle('dm-immersive', name === 'thread');
       // 직전 뷰의 스크롤이 만든 헤더 숨김·네비 축소가 눌러붙지 않게 전환마다 리셋
       window.GALLA_navReset?.();
     }
