@@ -79,3 +79,67 @@
   border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;
   padding:11px 14px;font-size:14.5px;outline:none;}
 .dm-search-wrap input:focus{border-color:#c9d1e0;}
+
+/* ═══════ DM 고도화 1차: 영수증·입력중·답장·이미지·공유카드·메뉴 ═══════ */
+.dm-peer-wrap { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.dm-peer-sub { font-size: 10.5px; color: #6b7488; line-height: 1.2; min-height: 13px; }
+.dm-peer-sub.on { color: #4ade80; }        /* 온라인 = 초록 */
+.dm-peer-sub.typing { color: #7aa2ff; }    /* 입력 중 = 파랑 */
+
+.dm-receipt { margin-left: 5px; font-size: 9.5px; font-weight: 700; color: #7aa2ff; font-style: normal; }
+.dm-bub-body.dm-deleted { color: #6b7488; font-style: italic; }
+.dm-uploading { opacity: .6; }
+
+.dm-bub-img { display: block; max-width: 200px; max-height: 260px; border-radius: 12px; object-fit: cover; }
+
+.dm-quote {
+  display: block; font-size: 11px; color: #9aa3b5; margin-bottom: 4px;
+  padding: 4px 8px; border-left: 2px solid #3d6bff; background: rgba(255,255,255,.05);
+  border-radius: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px;
+}
+
+.dm-share-card {
+  display: flex; gap: 9px; align-items: center; text-decoration: none;
+  background: #101218; border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
+  padding: 9px; min-width: 190px; max-width: 240px;
+}
+.dm-share-thumb { flex: 0 0 48px; height: 48px; border-radius: 9px; background: #23262f center/cover no-repeat; }
+.dm-share-mid { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dm-share-title { font-size: 12.5px; font-weight: 800; color: #eef0f4; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dm-share-src { font-size: 10.5px; color: #7aa2ff; font-weight: 700; }
+
+.dm-share-banner {
+  margin: 8px 12px 0; padding: 9px 11px; border-radius: 11px; font-size: 12px; color: #cfd6e4;
+  background: rgba(61,107,255,.12); border: 1px solid rgba(61,107,255,.3);
+  display: flex; align-items: center; gap: 6px;
+}
+.dm-share-banner b { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-share-banner button { margin-left: auto; border: none; background: rgba(255,255,255,.08);
+  color: #9aa3b5; font-size: 11px; padding: 4px 9px; border-radius: 7px; cursor: pointer; }
+
+.dm-reply-strip {
+  display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+  background: #14161d; border-top: 1px solid rgba(255,255,255,.08); font-size: 12px; color: #9aa3b5;
+}
+.dm-reply-strip b { color: #7aa2ff; margin-right: 5px; }
+.dm-reply-info { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dm-reply-x { border: none; background: none; color: #6b7488; cursor: pointer; font-size: 12px; }
+
+.dm-attach {
+  flex: 0 0 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.08); color: #c9d1e0; font-size: 18px; font-weight: 700; line-height: 1;
+}
+.dm-attach:active { transform: scale(.92); }
+
+.dm-menu {
+  position: fixed; z-index: 2147483500; min-width: 150px;
+  background: #1b1d25; border: 1px solid rgba(255,255,255,.14); border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.6); overflow: hidden; padding: 4px;
+}
+.dm-menu button {
+  display: block; width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+  color: #eef0f4; font-size: 13px; font-weight: 700; padding: 10px 12px; border-radius: 8px;
+}
+.dm-menu button:active { background: rgba(255,255,255,.08); }
+.dm-menu button.danger { color: #ff8595; }

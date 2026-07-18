@@ -43,6 +43,7 @@
     x: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M18.9 2H22l-7.6 8.7L23 22h-6.8l-5-6.6L5.4 22H2.3l8.1-9.3L1.5 2h7l4.5 6zM17.7 20h1.7L7 4H5.2z"/></svg>',
     fb: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg>',
     tg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M21.9 4.3 2.9 11.6c-1.1.4-1 1 0 1.3l4.9 1.5 1.8 5.9c.2.6.1.9.8.9.5 0 .7-.2 1-.5l2.4-2.3 5 3.7c.9.5 1.6.3 1.8-.9L23.8 5.4c.3-1.4-.5-2-1.9-1.1z"/></svg>',
+    dm: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
     link: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>',
     more: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/><path d="M8 11l8-5M8 13l8 5"/></svg>',
     threads: '<svg viewBox="0 0 192 192" fill="#fff"><path d="M141.5 89c-.7-.3-1.4-.6-2.1-.9-1.2-22.7-13.6-35.7-34.5-35.9-11.7-.1-21.9 4.8-28.2 14.8l11.3 7.8c4.6-7 11.9-8.5 16.9-8.5 6.6.1 11.6 2 14.8 5.7 2.3 2.7 3.9 6.5 4.7 11.2-6-1-12.5-1.3-19.4-.9-19.5 1.1-32 12.5-31.2 28.3.4 8 4.4 14.9 11.2 19.4 5.7 3.8 13.1 5.7 20.8 5.3 10.1-.6 18-4.4 23.6-11.5 4.2-5.3 6.9-12.2 8.1-20.9 4.9 3 8.5 6.9 10.5 11.6 3.4 8 3.6 21.1-7 31.7-9.3 9.3-20.5 13.3-37.4 13.4-18.7-.1-32.9-6.1-42.1-17.8-8.6-11-13.1-26.8-13.3-47s4.7-36 13.3-47c9.2-11.7 23.4-17.7 42.1-17.8 18.8.1 33.3 6.1 42.8 17.9 4.7 5.8 8.2 13.1 10.5 21.6l13.2-3.5c-2.8-10.5-7.2-19.6-13.2-27C155.6 8.2 137.4.2 113.6 0h-.1C89.8.2 71.8 8.2 60.3 23.8 50 37.9 44.7 57.4 44.5 82v.1c.2 24.6 5.5 44.1 15.8 58.2 11.5 15.6 29.5 23.6 53.3 23.8h.1c21.2-.1 36.1-5.7 48.4-18 16.1-16.1 15.6-36.3 10.3-48.7-3.8-8.9-11-16.1-20.9-20.4zm-38.5 41c-8.5.5-17.4-3.3-17.8-11.3-.3-5.9 4.2-12.5 18.3-13.3 1.6-.1 3.2-.1 4.7-.1 5.1 0 9.9.5 14.3 1.5-1.6 20.5-11.3 22.9-19.5 23.2z"/></svg>',
@@ -75,6 +76,34 @@
     } catch (e) { return u; }
   }
 
+  /* ⚡ 갈라 DM으로 보내기 — dm.js가 없는 페이지(index 등)에선 필요할 때만 끌어온다 */
+  function loadOnce(src) {
+    return new Promise((res, rej) => {
+      const v = ([...document.scripts].map(s => s.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+      const url = src + (v ? '?v=' + v[1] : '');
+      if (src.endsWith('.css')) {
+        if ([...document.styleSheets].some(s => (s.href || '').includes(src))) return res();
+        const l = el('link'); l.rel = 'stylesheet'; l.href = url;
+        l.onload = res; l.onerror = () => rej(new Error(src));
+        document.head.appendChild(l); return;
+      }
+      const s = el('script'); s.src = url;
+      s.onload = res; s.onerror = () => rej(new Error(src));
+      document.head.appendChild(s);
+    });
+  }
+  async function sendToDM(cfg, url) {
+    try {
+      if (!window.GALLA_dmShare) await Promise.all([loadOnce('/js/dm.js'), loadOnce('/css/dm.css')]);
+      // /share/<type>/<id> 규약에서 콘텐츠 종류를 복원 → DM 카드가 앱 내부 링크로 연결된다
+      const m = String(url).match(/\/share\/(\w+)\/(\d+)/);
+      window.GALLA_dmShare({
+        type: m ? m[1] : 'link', id: m ? Number(m[2]) : null,
+        title: cfg.title || 'GALLA', thumb: cfg.thumb || null, url,
+      });
+    } catch (e) { copyLink(url); }   // DM을 못 열면 최소한 링크 복사로
+  }
+
   window.GALLA_share = function (cfg) {
     const url = withRef(cfg.url || location.href);
     const title = cfg.title || "GALLA";
@@ -90,6 +119,9 @@
 
     const grid = el("div", "ssh-grid");
     const items = [
+      // ⚡ 갈라 DM — 선순환의 핵심 고리. 콘텐츠가 DM 카드로 흐르고, 받은 사람이 탭하면
+      //   콘텐츠로 유입된다. 그래서 외부 SNS보다 앞, 첫 자리.
+      { k: "dm", label: "갈라 친구", bg: "linear-gradient(135deg,#3d6bff,#2b4fd0)", fn: () => sendToDM(cfg, url) },
       { k: "kakao", label: "카카오톡", bg: "#FEE500", fn: () => { copyLink(url); toast("링크 복사됨 · 카톡에 붙여넣으면 카드가 떠요"); } },
       { k: "x", label: "X", bg: "#000", fn: () => open(`https://twitter.com/intent/tweet?text=${et}&url=${eu}`) },
       { k: "fb", label: "페이스북", bg: "#1877F2", fn: () => open(`https://www.facebook.com/sharer/sharer.php?u=${eu}`) },
