@@ -39,6 +39,7 @@
     bolt:    I(12, '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
     crew:    I(12, '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    phone:   I(17, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
     flag:    I(12, '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
     cog:     I(17, '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
   };
@@ -259,7 +260,10 @@
                 <span class="dm-peer-sub" id="dm-peer-sub"></span>
               </span>
             </span>
-            <button class="dm-gear" data-act="chatset" aria-label="대화 설정">${ICONS.menu}</button>
+            <span class="dm-head-btns">
+              <button class="dm-gear" data-act="voicecall" aria-label="보이스톡">${ICONS.phone}</button>
+              <button class="dm-gear" data-act="chatset" aria-label="대화 설정">${ICONS.menu}</button>
+            </span>
           </div>
           <div class="dm-msgs" id="dm-msgs"></div>
           <div class="dm-reply-strip" id="dm-reply-strip" hidden>
@@ -360,6 +364,10 @@
         else { showView('compose'); initSearch(); }
       }
       else if (act === 'toRoom') { showView('room'); }
+      else if (act === 'voicecall') {
+        if (!window.GALLA_call?.supported()) toastMini('이 브라우저에선 통화를 지원하지 않아요');
+        else window.GALLA_call.start(curPeer, nickCache[curPeer] || PROFILES[curPeer]?.nickname);
+      }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
       if (tab === 'set') { showView('settings'); loadSettings(); }
       else if (tab) setTab(tab);
@@ -434,6 +442,7 @@
       e2eBooted = true;
       window.GALLA_e2e.ready(supabase, ME).catch(() => {});
     }
+    if (ME && window.GALLA_call?.supported()) window.GALLA_call.listen(supabase, ME);
     if (PAGE_MODE()) bindPageHeader();
     ROOT.classList.add('open');
     document.body.style.overflow = 'hidden';
