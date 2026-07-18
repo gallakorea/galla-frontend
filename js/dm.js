@@ -2091,9 +2091,10 @@
         const url = await window.GALLA_UPLOAD_MEDIA(f, 'audio');
         tmp.remove();
         await sendMessage({ kind: 'voice', body: '🎤 음성 메시지', meta: { url, dur } });
-      } catch (_) {
-        tmp.querySelector('.dm-bub-body').textContent = '음성 전송 실패';
-        setTimeout(() => tmp.remove(), 2500);
+      } catch (err) {
+        console.error('[dm] voice upload', err);
+        tmp.querySelector('.dm-bub-body').textContent = '음성 전송 실패 — ' + (err?.message || '업로드 오류');
+        setTimeout(() => tmp.remove(), 4000);
       }
     };
     rec.start();
@@ -2131,7 +2132,14 @@
     const row = { thread_id: curThread, sender_id: ME, body: fields.body || '', kind: fields.kind || 'text',
                   meta: fields.meta || null, reply_to: fields.reply_to || null };
     const { data, error } = await supabase.from('dm_messages').insert(row).select().single();
-    if (error) { console.error('[dm] send', error); return null; }
+    if (error) {
+      console.error('[dm] send', error);
+      // 조용한 실패 금지 — DB 제약·권한 문제를 사용자가 알 수 있어야 한다
+      toastMini(/check constraint/i.test(error.message || '')
+        ? '이 종류의 메시지를 아직 보낼 수 없어요 (서버 설정)'
+        : '메시지를 보내지 못했어요 — 잠시 후 다시');
+      return null;
+    }
     if (fields.plain != null) E2E_PLAIN[data.id] = fields.plain;   // 내 화면엔 평문으로
     appendMsg(data);
     window.GALLA_pushSend?.('dm', data.id);
