@@ -34,12 +34,16 @@
   function peerChan(uid) {
     return new Promise(res => {
       const ch = sb.channel('call:' + uid);
-      ch.subscribe(st => { if (st === 'SUBSCRIBED') res(ch); });
-      setTimeout(() => res(ch), 1500);
+      let done = false;
+      ch.subscribe(st => { if (st === 'SUBSCRIBED' && !done) { done = true; res(ch); } });
+      // 모바일망에선 조인이 1~2초를 넘기도 한다 — 성급히 돌려주면 미가입 send로 유실된다
+      setTimeout(() => { if (!done) { done = true; res(ch); } }, 8000);
     });
   }
   async function send(msg) {
     if (!chanPeer) return;
+    // 채널이 아직 조인 전이면 잠깐 기다린다 — 미가입 채널 send는 소리 없이 버려진다
+    for (let i = 0; i < 20 && chanPeer.state !== 'joined'; i++) await new Promise(r => setTimeout(r, 250));
     try { await chanPeer.send({ type: 'broadcast', event: 'signal', payload: { ...msg, from: ME, to: CUR?.peer || msg.to } }); } catch (_) {}
   }
 
@@ -62,7 +66,14 @@
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
-    if (p.t === 'answer') { try { await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp }); } catch (e) { console.error('[call]', e); } }
+    if (p.t === 'answer') {
+      try {
+        await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp });
+        // ★ answer보다 먼저 도착해 버퍼된 ICE 후보를 여기서 소비 — 발신자 쪽에 이 소비가
+        //   없어서 실망(교차망)에서 '연결 중' 고착이 났다(수신자만 accept에서 소비하고 있었다)
+        for (const c of (CUR?.pendIce || []).splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+      } catch (e) { console.error('[call]', e); }
+    }
     else if (p.t === 'ice') {
       if (pc && pc.remoteDescription) { try { await pc.addIceCandidate(p.cand); } catch (_) {} }
       else CUR.pendIce.push(p.cand);
