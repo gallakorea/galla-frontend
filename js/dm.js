@@ -169,6 +169,26 @@
             <div id="dm-followback"></div>
           </div>
         </div>
+        <div class="dm-view" data-view="profile" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toFriends" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">프로필</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-prof">
+            <div class="dm-prof-hero">
+              <div class="dm-prof-ava" id="dm-prof-ava"></div>
+              <div class="dm-prof-name" id="dm-prof-name"></div>
+              <div class="dm-prof-bio" id="dm-prof-bio"></div>
+              <div class="dm-prof-rel" id="dm-prof-rel"></div>
+            </div>
+            <div class="dm-prof-actions">
+              <button id="dm-prof-chat" type="button">${ICONS.chat} 메시지</button>
+              <button id="dm-prof-home" type="button">프로필 홈</button>
+            </div>
+            <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
+          </div>
+        </div>
         <div class="dm-view" data-view="settings" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toInbox" aria-label="뒤로">${ICONS.back}</button>
@@ -350,6 +370,63 @@
     (tp.data || []).forEach(r => { PREF.threads[r.thread_id] = r; });
     PREF.searchable = st.data ? st.data.searchable !== false : true;
     PREF.loaded = true;
+  }
+
+  /* ---------- 👤 친구 프로필 (카톡 프로필 화면 문법) ----------
+     친구를 누르면 바로 채팅이 아니라 프로필로 — 그 사람의 아이덴티티(갈라리안 등급·
+     갈라치기 성향·전적)를 보여준다. 채팅은 여기의 '메시지' 버튼으로. */
+  let PROF_TOKEN = 0;
+  async function openProfile(peer, name) {
+    const token = ++PROF_TOKEN;   // 빨리 뒤로 갔다가 다른 프로필을 열면 늦은 응답이 덮어쓰지 않게
+    showView('profile');
+    await profilesFor([peer]);
+    if (token !== PROF_TOKEN) return;
+    const p = PROFILES[peer] || {};
+    ROOT.querySelector('#dm-prof-ava').innerHTML = avaHTML(peer, 'lg');
+    ROOT.querySelector('#dm-prof-name').textContent = p.nickname || name || '익명';
+    ROOT.querySelector('#dm-prof-bio').textContent = p.bio || '';
+    const f = FRIENDS.find(x => x.id === peer);
+    ROOT.querySelector('#dm-prof-rel').innerHTML = f?.mutual ? '<i class="dm-mutual">맞팔</i>' : '';
+    ROOT.querySelector('#dm-prof-chat').onclick = () => startDM(peer, p.nickname || name);
+    ROOT.querySelector('#dm-prof-home').onclick = () => { location.href = 'mypage.html?user=' + encodeURIComponent(peer); };
+
+    // 아이덴티티 — 등급·성향 모듈이 이 페이지에 없으면 그때 끌어온다
+    const box = ROOT.querySelector('#dm-prof-identity');
+    box.innerHTML = '<div class="dm-loading">아이덴티티 분석 중…</div>';
+    try {
+      const need = [];
+      if (!window.GALLA_gallianOf) need.push(loadScript('/js/gallian.js'));
+      if (!window.GALLA_computeType) need.push(loadScript('/js/galla-type.js'));
+      await Promise.all(need);
+      const [g, t] = await Promise.all([
+        window.GALLA_gallianOf(supabase, peer),
+        window.GALLA_computeType(supabase, peer).catch(() => null),
+      ]);
+      if (token !== PROF_TOKEN) return;
+      const r = g.raw || {};
+      box.innerHTML = `
+        <div class="dm-sec">아이덴티티</div>
+        <div class="dm-idcard">
+          <div class="dm-id-tier" style="color:${esc(g.tier.color)}">${esc(g.tier.name)} <b>Lv.${g.subLevel}</b></div>
+          <div class="dm-id-sub">${esc(g.tier.sub)} · 갈라 지수 ${g.gi.toLocaleString()}</div>
+        </div>
+        ${t && !t.rookie ? `
+        <div class="dm-idcard">
+          <div class="dm-id-type">${esc(t.emoji)} ${esc(t.name)}</div>
+          <div class="dm-id-bar"><i style="width:${t.proPct}%"></i></div>
+          <div class="dm-id-sub">👍 ${t.proPct}% · 👎 ${t.conPct}%</div>
+          <div class="dm-id-tags">${(t.tags || []).slice(0, 4).map(x => `<span>${esc(x)}</span>`).join('')}</div>
+        </div>` : ''}
+        <div class="dm-idstats">
+          <span><b>${r.issues || 0}</b>갈라</span>
+          <span><b>${r.comments || 0}</b>댓글</span>
+          <span><b>${r.acts || 0}</b>전투</span>
+          <span><b>${r.votes || 0}</b>투표</span>
+        </div>`;
+    } catch (e) {
+      if (token !== PROF_TOKEN) return;
+      box.innerHTML = '<div class="dm-set-empty">아직 분석할 활동이 없어요</div>';
+    }
   }
 
   /* ---------- ⬇️ 당겨서 새로고침 ----------
@@ -608,7 +685,8 @@
       (favs.length ? `<div class="dm-sec">${ICONS.star}즐겨찾기 <b>${favs.length}</b></div>` + favs.map(friendRow).join('') : '') +
       `<div class="dm-sec">친구 <b>${rest.length}</b></div>` + rest.map(friendRow).join('');
     box.querySelectorAll('.dm-friend').forEach(el => {
-      el.addEventListener('click', () => { if (!EDIT) startDM(el.dataset.peer, el.dataset.name); });
+      // 카톡 문법: 친구 탭에선 프로필 먼저, 채팅은 프로필의 '메시지' 버튼으로
+      el.addEventListener('click', () => { if (!EDIT) openProfile(el.dataset.peer, el.dataset.name); });
     });
     if (EDIT) bindEditChips(box);
     staggerRows(box, '.dm-friend');
