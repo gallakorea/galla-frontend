@@ -201,7 +201,7 @@
           <div class="dm-msgs" id="dm-msgs"></div>
           <div class="dm-reply-strip" id="dm-reply-strip" hidden>
             <span class="dm-reply-info"><b>답장</b> <span id="dm-reply-preview"></span></span>
-            <button type="button" class="dm-reply-x" id="dm-reply-x">✕</button>
+            <button type="button" class="dm-reply-x" id="dm-reply-x"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
           <form class="dm-inputbar" id="dm-form">
             <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">${ICONS.plus}</button>
