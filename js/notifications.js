@@ -29,6 +29,7 @@
     duel_live: "battle", duel_voting: "battle", duel_decline: "battle",
     issue_win: "reward", donation: "reward", withdrawal: "reward",
     market_resolved: "predict",
+    pager: "pager",
   };
   // 표시 순서 = 아래 배열 순서(사람이 먼저 궁금해하는 것부터)
   const GROUPS = [
@@ -38,6 +39,7 @@
     { key: "battle",  emoji: "⚔️", label: "전투" },
     { key: "vote",    emoji: "🗳", label: "투표" },
     { key: "reward",  emoji: "🎁", label: "보상" },
+    { key: "pager",   emoji: "📟", label: "삐삐" },
     { key: "predict", emoji: "📈", label: "예측" },
     { key: "dislike", emoji: "👎", label: "싫어요" },
     { key: "etc",     emoji: "🔔", label: "기타" },

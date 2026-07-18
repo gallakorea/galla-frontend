@@ -86,6 +86,9 @@
     donation:        { ic: "gift",    cls: "t-donation", key: "reward" },
     withdrawal:      { ic: "cash",    cls: "t-cash",    key: "reward" },
     market_resolved: { ic: "chart",   cls: "t-market",  key: "predict" },
+    pager:           { ic: "bell",    cls: "t-pager",   key: "pager" },
+    report:          { ic: "bell",    cls: "t-etc",     key: "etc" },
+    bug_report:      { ic: "bell",    cls: "t-etc",     key: "etc" },
   };
   const typeOf = (t) => TYPE[t] || { ic: "bell", cls: "t-etc", key: "etc" };
 
