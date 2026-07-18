@@ -921,3 +921,10 @@ body.tossface .dm-ptt-hint {
   flex: none; width: 42px; border-radius: 10px; border: 1px solid rgba(125,255,168,.2);
   background: none; cursor: pointer; font-size: 15px;
 }
+/* # 인사말 건너뛰기 — 우물정자 감성 */
+.pgr-skip {
+  display: block; margin: 2px auto 0; padding: 8px 20px; border-radius: 999px; cursor: pointer;
+  background: none; border: 1px solid rgba(125,255,168,.3); color: #7dffa8;
+  font-size: 12.5px; font-weight: 800; font-family: 'Courier New', monospace; letter-spacing: 1px;
+}
+.pgr-skip:active { background: rgba(125,255,168,.1); transform: scale(.95); }

@@ -362,12 +362,20 @@
     await new Promise(r => setTimeout(r, 700));
     el.querySelector('.pgr-lcd-top').textContent = '사서함 연결됨';
     if (box?.greeting_url) {
-      stage.innerHTML = `<div class="pgr-dial">인사말 재생 중…</div>`;
+      // 그 시절 문법: "삐 소리 후 녹음… 우물정자(#)를 누르시면 건너뜁니다"
+      stage.innerHTML = `<div class="pgr-dial">인사말 재생 중…</div>
+        <button type="button" class="pgr-skip" id="pgr-skip"># 건너뛰기</button>`;
       await new Promise(res => {
         const au = new Audio(box.greeting_url);
-        au.onended = au.onerror = res;
-        au.play().catch(res);
-        setTimeout(res, 12000);
+        let done = false;
+        const fin = () => { if (done) return; done = true; try { au.pause(); } catch (_) {} res(); };
+        au.onended = au.onerror = fin;
+        au.play().catch(fin);
+        stage.querySelector('#pgr-skip').onclick = () => { beep('tone'); fin(); };
+        // 키보드 #(shift+3)로도 — 진짜 우물정자
+        const onKey = e => { if (e.key === '#') { beep('tone'); fin(); document.removeEventListener('keydown', onKey); } };
+        document.addEventListener('keydown', onKey);
+        setTimeout(fin, 12000);
       });
     } else {
       stage.innerHTML = `<div class="pgr-dial">인사말이 없는 사서함입니다</div>`;
