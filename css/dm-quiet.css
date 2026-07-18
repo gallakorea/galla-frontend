@@ -188,3 +188,49 @@
 }
 .dm-idstats span { font-size: 11px; color: #6b7488; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .dm-idstats b { font-size: 15px; font-weight: 900; color: #eef0f4; }
+
+/* ═══════ ≡ 대화 설정 서랍 ═══════ */
+.dm-cs-peer {
+  display: flex; align-items: center; gap: 13px; width: 100%; text-align: left;
+  padding: 16px 20px; background: none; border: none; cursor: pointer;
+  box-shadow: inset 0 -1px 0 0 rgba(255,255,255,.05);
+}
+.dm-cs-peer:active { background: rgba(255,255,255,.04); }
+.dm-cs-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 4px 20px 10px;
+}
+.dm-cs-thumb {
+  aspect-ratio: 1; border: none; border-radius: 10px; cursor: pointer;
+  background-color: #16171c; background-size: cover; background-position: center;
+}
+.dm-cs-thumb:active { opacity: .7; }
+.dm-cs-link {
+  display: block; padding: 12px 20px; text-decoration: none;
+  font-size: 13px; font-weight: 700; color: #9ab4ff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  box-shadow: inset 0 -1px 0 0 rgba(255,255,255,.04);
+}
+.dm-cs-link:active { background: rgba(255,255,255,.04); }
+.dm-cs-act {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 14px 20px; background: none; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: #eef0f4;
+  box-shadow: inset 0 -1px 0 0 rgba(255,255,255,.04);
+}
+.dm-cs-act:active { background: rgba(255,255,255,.04); }
+.dm-cs-act.danger { color: #ff8595; }
+.dm-cs-act.disabled { color: #565b66; cursor: default; }
+.dm-soon {
+  font-style: normal; font-size: 9.5px; font-weight: 900; color: #9ab4ff;
+  padding: 2px 7px; border-radius: 999px; background: rgba(67,97,255,.13);
+  border: 1px solid rgba(67,97,255,.3); margin-left: 2px;
+}
+
+/* 사진 라이트박스 */
+#dm-lightbox {
+  position: fixed; inset: 0; z-index: 2147483600; background: rgba(0,0,0,.92);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .18s ease;
+}
+#dm-lightbox.on { opacity: 1; pointer-events: auto; }
+#dm-lightbox img { max-width: 94vw; max-height: 88vh; border-radius: 12px; object-fit: contain; }

@@ -29,6 +29,11 @@
     block:   `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ff4d67" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
     eyeoff:  I(12, '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'),
     down:    I(11, '<polyline points="6 9 12 15 18 9"/>'),
+    menu:    I(18, '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>'),
+    img:     I(14, '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'),
+    link:    I(14, '<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>'),
+    swords:  I(14, '<path d="M6.92 5H5l9 9 1.92-1.92L6.92 5z"/><path d="M2 20.5L3.5 22l6.6-6.6-1.5-1.5L2 20.5z"/><path d="M19 3l-4.5 4.5 1.5 1.5L21 4.5V3h-2z"/>'),
+    lock:    I(14, '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
     leave:   I(12, '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'),
   };
 
@@ -216,7 +221,7 @@
                 <span class="dm-peer-sub" id="dm-peer-sub"></span>
               </span>
             </span>
-            <span class="dm-head-sp"></span>
+            <button class="dm-gear" data-act="chatset" aria-label="대화 설정">${ICONS.menu}</button>
           </div>
           <div class="dm-msgs" id="dm-msgs"></div>
           <div class="dm-reply-strip" id="dm-reply-strip" hidden>
@@ -229,6 +234,14 @@
             <textarea id="dm-input" rows="1" placeholder="메시지 입력…"></textarea>
             <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
+        </div>
+        <div class="dm-view" data-view="chatset" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toThread" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">대화 설정</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-chatset"></div>
         </div>
         <div class="dm-view" data-view="compose" hidden>
           <div class="dm-head">
@@ -253,6 +266,8 @@
       else if (act === 'settings') { headMenu(e.target.closest('[data-act]')); }
       else if (act === 'addFriend') { showView('add'); initAdd(); }
       else if (act === 'toFriends') { showView('inbox'); setTab('friends'); }
+      else if (act === 'chatset') { openChatSet(); }
+      else if (act === 'toThread') { showView('thread'); }
       else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
       const tab = e.target.closest('.dm-tab')?.dataset.tab;
       if (tab) setTab(tab);
@@ -427,6 +442,91 @@
       if (token !== PROF_TOKEN) return;
       box.innerHTML = '<div class="dm-set-empty">아직 분석할 활동이 없어요</div>';
     }
+  }
+
+  /* ---------- ≡ 대화 설정 (카톡 채팅방 서랍 문법) ----------
+     사진/링크 모아보기 · 상대 프로필 · 고정 · 일기토 · 차단 · 나가기.
+     데이터는 이미 열린 대화의 MSGS를 그대로 쓴다(재조회 없음). */
+  function openChatSet() {
+    if (!curThread || !curPeer) return;
+    showView('chatset');
+    const p = PROFILES[curPeer] || {};
+    const rows = Object.values(MSGS).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    // 📸 사진 (최근 9장) — 이 대화에서 주고받은 것
+    const imgs = rows.filter(m => m.kind === 'image' && !m.deleted_at && m.meta?.url).slice(-9).reverse();
+    // 🔗 링크 — 본문 URL + 공유 카드
+    const links = [];
+    rows.forEach(m => {
+      if (m.deleted_at) return;
+      if (m.kind === 'share' && m.meta) {
+        const PAGE = { issue: 'issue', predict: 'predict-market', plaza: 'plaza_detail', news: 'news' };
+        const href = (m.meta.type && PAGE[m.meta.type] && m.meta.id)
+          ? `${PAGE[m.meta.type]}.html?id=${m.meta.id}` : (m.meta.url || null);
+        if (href) links.push({ href, label: m.meta.title || '공유 콘텐츠', galla: true });
+      } else if (m.kind === 'text' && m.body) {
+        (m.body.match(/https?:\/\/[^\s<>"']+/g) || []).forEach(u => {
+          let host = u; try { host = new URL(u).hostname; } catch (_) {}
+          links.push({ href: u, label: host, galla: false });
+        });
+      }
+    });
+    const recentLinks = links.slice(-8).reverse();
+
+    const box = ROOT.querySelector('#dm-chatset');
+    box.innerHTML = `
+      <button class="dm-cs-peer" id="dm-cs-peer" type="button">
+        ${avaHTML(curPeer, 'sm')}
+        <span class="dm-thread-mid">
+          <span class="dm-thread-name">${esc(p.nickname || '대화 상대')}</span>
+          <span class="dm-thread-prev">프로필 보기 ›</span>
+        </span>
+      </button>
+      <div class="dm-sec">${ICONS.img}사진 <b>${imgs.length}</b></div>
+      ${imgs.length
+        ? `<div class="dm-cs-grid">${imgs.map(m => `<button type="button" class="dm-cs-thumb" data-url="${esc(m.meta.url)}" style="background-image:url('${esc(m.meta.url)}')"></button>`).join('')}</div>`
+        : `<div class="dm-set-empty">주고받은 사진이 없어요</div>`}
+      <div class="dm-sec">${ICONS.link}링크 <b>${recentLinks.length}</b></div>
+      ${recentLinks.length
+        ? recentLinks.map(l => `<a class="dm-cs-link" href="${esc(l.href)}"${l.galla ? '' : ' target="_blank" rel="noopener"'}>${l.galla ? '⚡ ' : ''}${esc(l.label)}</a>`).join('')
+        : `<div class="dm-set-empty">주고받은 링크가 없어요</div>`}
+      <div class="dm-sec">대화 관리</div>
+      <button class="dm-cs-act" data-cs="pin" type="button">${ICONS.pin} ${PREF.threads[curThread]?.pinned ? '고정 해제' : '상단 고정'}</button>
+      <button class="dm-cs-act" data-cs="duel" type="button">${ICONS.swords} 일기토 신청</button>
+      <button class="dm-cs-act disabled" type="button">${ICONS.lock} 비밀대화 <i class="dm-soon">곧</i></button>
+      <button class="dm-cs-act danger" data-cs="block" type="button">${ICONS.block} 차단</button>
+      <button class="dm-cs-act danger" data-cs="leave" type="button">${ICONS.leave} 채팅방 나가기</button>`;
+
+    box.querySelector('#dm-cs-peer').onclick = () => openProfile(curPeer, p.nickname);
+    box.querySelectorAll('.dm-cs-thumb').forEach(t => t.onclick = () => openLightbox(t.dataset.url));
+    box.querySelectorAll('[data-cs]').forEach(b => b.onclick = async () => {
+      const k = b.dataset.cs;
+      if (k === 'pin') { await doThreadAct('pin', curThread); openChatSet(); }
+      else if (k === 'duel') { location.href = 'duel.html?challenge=' + encodeURIComponent(curPeer); }
+      else if (k === 'block') {
+        const before = PREF.blocks.size;
+        await doFriendAct('block', curPeer, p.nickname || '');
+        if (PREF.blocks.size > before) { detachThread(); curThread = curPeer = null; showView('inbox'); loadInbox(); }
+      }
+      else if (k === 'leave') {
+        await doThreadAct('leave', curThread);
+        // 나갔으면(취소 안 했으면) 목록으로
+        if (PREF.threads[curThread]?.left_at) { detachThread(); curThread = curPeer = null; showView('inbox'); }
+      }
+    });
+  }
+
+  /* 사진 크게 보기 — 패널 안 라이트박스(탭하면 닫힘) */
+  function openLightbox(url) {
+    let lb = document.getElementById('dm-lightbox');
+    if (!lb) {
+      lb = document.createElement('div');
+      lb.id = 'dm-lightbox';
+      lb.addEventListener('click', () => { lb.classList.remove('on'); });
+      document.body.appendChild(lb);
+    }
+    lb.innerHTML = `<img src="${esc(url)}" alt="">`;
+    requestAnimationFrame(() => lb.classList.add('on'));
   }
 
   /* ---------- ⬇️ 당겨서 새로고침 ----------
