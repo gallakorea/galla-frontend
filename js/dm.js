@@ -294,13 +294,16 @@
           </div>
           <div class="dm-stk" id="dm-stk" hidden>
             <div class="dm-stk-top">
-              <input id="dm-stk-q" placeholder="이모티콘 검색… (전 세계 무한 공급)" autocomplete="off">
+              <input id="dm-stk-q" placeholder="이모티콘 검색… (웃음, 하트, 빡침…)" autocomplete="off">
               <div class="dm-stk-tabs">
-                <button type="button" class="on" data-sk="stickers">이모티콘</button>
+                <button type="button" class="on" data-sk="emoji">이모지</button>
+                <button type="button" data-sk="sticker">스티커</button>
                 <button type="button" data-sk="gifs">GIF</button>
               </div>
             </div>
+            <div class="dm-stk-cats" id="dm-stk-cats"></div>
             <div class="dm-stk-grid" id="dm-stk-grid"><div class="dm-loading">불러오는 중…</div></div>
+            <div class="dm-stk-credit" id="dm-stk-credit">움직이는 스티커 · Noto Emoji by Google (CC BY 4.0)</div>
           </div>
           <form class="dm-inputbar" id="dm-form">
             <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">${ICONS.plus}</button>
@@ -429,17 +432,37 @@
     ROOT.querySelector('#dm-voice').addEventListener('click', toggleVoiceRec);
     ROOT.querySelector('#dm-rec-cancel').addEventListener('click', () => { if (VREC) { VREC._cancel = true; VREC.stop(); } });
     ROOT.querySelector('#dm-sticker').addEventListener('click', toggleStk);
-    ROOT.querySelector('#dm-stk-q').addEventListener('input', () => { clearTimeout(stkTimer); stkTimer = setTimeout(() => loadStk(), 350); });
+    ROOT.querySelector('#dm-stk-q').addEventListener('input', () => {
+      clearTimeout(stkTimer);
+      stkTimer = setTimeout(() => paintStk(), STK_KIND === 'gifs' ? 350 : 120);   // 로컬 검색은 즉각
+    });
     ROOT.querySelectorAll('.dm-stk-tabs button').forEach(b => b.addEventListener('click', () => {
       ROOT.querySelectorAll('.dm-stk-tabs button').forEach(x => x.classList.toggle('on', x === b));
-      STK_KIND = b.dataset.sk; loadStk();
+      STK_KIND = b.dataset.sk; paintStk();
     }));
+    ROOT.querySelector('#dm-stk-cats').addEventListener('click', e => {
+      const b = e.target.closest('[data-ci]'); if (!b) return;
+      STK_CAT = +b.dataset.ci;
+      ROOT.querySelector('#dm-stk-q').value = '';
+      paintStk();
+    });
     ROOT.querySelector('#dm-stk-grid').addEventListener('click', e => {
+      // 이모지: 입력창에 삽입(인스타 문법 — 글과 섞어 쓴다)
+      const emo = e.target.closest('.dm-emo');
+      if (emo) {
+        const ta = ROOT.querySelector('#dm-input');
+        const at = ta.selectionStart ?? ta.value.length;
+        ta.value = ta.value.slice(0, at) + emo.dataset.ch + ta.value.slice(ta.selectionEnd ?? at);
+        ta.focus(); ta.selectionStart = ta.selectionEnd = at + emo.dataset.ch.length;
+        return;
+      }
+      // 스티커·GIF: 바로 전송
       const img = e.target.closest('img[data-full]');
       if (!img || !curThread) return;
       if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
-      sendMessage({ kind: 'gif', body: STK_KIND === 'stickers' ? '🎬 이모티콘' : '🎬 GIF',
-                    meta: { url: img.dataset.full, sticker: STK_KIND === 'stickers' } });
+      const isGif = img.dataset.src === 'giphy';
+      sendMessage({ kind: 'gif', body: isGif ? '🎬 GIF' : '🎬 이모티콘',
+                    meta: { url: img.dataset.full, sticker: !isGif, src: img.dataset.src || 'noto' } });
     });
     // 음성 재생 — 한 번에 하나만
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
@@ -1832,25 +1855,64 @@
     }
   }
 
-  /* ---------- 😀 무한 이모티콘 (GIPHY 스티커·GIF — 서버 프록시, 무제한) ---------- */
-  let STK_KIND = 'stickers', stkTimer = null, STK_LOADED = false;
+  /* ---------- 😀 무한 이모티콘 ----------
+     이모지·스티커는 오픈 라이선스라 무제한 무료(갈라의 차별점).
+     GIF(GIPHY)는 상점 아이템 자원이라 별도 탭으로 분리해 둔다. */
+  let STK_KIND = 'emoji', stkTimer = null, STK_CAT = 0, STK_BOOTED = false;
   function toggleStk() {
     const p = ROOT.querySelector('#dm-stk');
     p.hidden = !p.hidden;
-    if (!p.hidden && !STK_LOADED) loadStk();
+    if (!p.hidden) { if (!STK_BOOTED) { STK_BOOTED = true; ensureStk().then(paintStk); } else paintStk(); }
   }
-  async function loadStk() {
+  async function ensureStk() {
+    if (!window.GALLA_STK) { try { await loadScript('/js/dm-stickers.js'); } catch (_) {} }
+  }
+  function paintStkCats() {
+    const box = ROOT.querySelector('#dm-stk-cats');
+    const free = STK_KIND === 'emoji' || STK_KIND === 'sticker';
+    box.hidden = !free || !window.GALLA_STK;
+    if (box.hidden) { box.innerHTML = ''; return; }
+    box.innerHTML = window.GALLA_STK.cats
+      .map((c, i) => `<button type="button" class="${i === STK_CAT ? 'on' : ''}" data-ci="${i}">${esc(c.label)}</button>`).join('');
+  }
+  async function paintStk() {
+    await ensureStk();
     const grid = ROOT.querySelector('#dm-stk-grid');
-    grid.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+    const credit = ROOT.querySelector('#dm-stk-credit');
     const q = ROOT.querySelector('#dm-stk-q').value.trim();
-    try {
-      const { data } = await supabase.functions.invoke('gif-search', { body: { q, kind: STK_KIND, limit: 30 } });
-      const list = data?.results || [];
-      STK_LOADED = true;
-      grid.innerHTML = list.length
-        ? list.map(g => `<img src="${esc(g.preview)}" data-full="${esc(g.url)}" loading="lazy" alt="">`).join('')
-        : `<div class="dm-set-empty">검색 결과가 없어요</div>`;
-    } catch (_) { grid.innerHTML = `<div class="dm-set-empty">불러오지 못했어요</div>`; }
+    paintStkCats();
+    // GIF는 서버(GIPHY) — 유료 자원 탭
+    if (STK_KIND === 'gifs') {
+      credit.hidden = true;
+      grid.className = 'dm-stk-grid';
+      grid.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
+      try {
+        const { data } = await supabase.functions.invoke('gif-search', { body: { q, kind: 'gifs', limit: 30 } });
+        const list = data?.results || [];
+        grid.innerHTML = list.length
+          ? list.map(g => `<img src="${esc(g.preview)}" data-full="${esc(g.url)}" data-src="giphy" loading="lazy" alt="">`).join('')
+          : `<div class="dm-set-empty">검색 결과가 없어요</div>`;
+      } catch (_) { grid.innerHTML = `<div class="dm-set-empty">불러오지 못했어요</div>`; }
+      return;
+    }
+    const S = window.GALLA_STK;
+    if (!S) { grid.innerHTML = `<div class="dm-set-empty">이모티콘을 불러오지 못했어요</div>`; return; }
+    const items = S.search(q) || S.cats[STK_CAT].items;
+    if (STK_KIND === 'emoji') {
+      credit.hidden = true;
+      grid.className = 'dm-stk-grid emoji';
+      grid.innerHTML = items.length
+        ? items.map(it => `<button type="button" class="dm-emo" data-ch="${esc(S.charOf(it.cp))}">${esc(S.charOf(it.cp))}</button>`).join('')
+        : `<div class="dm-set-empty">그런 이모지는 없어요</div>`;
+    } else {
+      credit.hidden = false;
+      grid.className = 'dm-stk-grid';
+      grid.innerHTML = items.length
+        ? items.map(it => `<img src="${esc(S.notoUrl(it.cp))}" data-full="${esc(S.notoUrl(it.cp))}" data-src="noto"
+             onerror="this.onerror=null;this.src='${esc(S.fallbackUrl(it.cp))}';this.dataset.full=this.src;"
+             loading="lazy" alt="${esc(it.kw.split(' ')[0] || '')}">`).join('')
+        : `<div class="dm-set-empty">그런 스티커는 없어요</div>`;
+    }
   }
 
   /* ---------- 🎙 음성 메시지 (MediaRecorder → R2) ---------- */

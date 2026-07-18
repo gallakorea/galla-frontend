@@ -579,3 +579,28 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 .dm-vwave i:nth-child(2n) { height: 15px; } .dm-vwave i:nth-child(3n) { height: 11px; }
 .dm-vwave i:nth-child(5n) { height: 18px; }
 .dm-voice b { font-size: 11.5px; font-variant-numeric: tabular-nums; opacity: .8; }
+
+/* 이모지 그리드(문자) — 스티커 그리드와 다른 밀도 */
+.dm-stk-grid.emoji { grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.dm-emo {
+  border: none; background: none; cursor: pointer; padding: 0;
+  font-size: 26px; line-height: 1.5; border-radius: 8px;
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+}
+.dm-emo:active { background: rgba(255,255,255,.08); transform: scale(.85); }
+/* 카테고리 칩 */
+.dm-stk-cats { display: flex; gap: 5px; overflow-x: auto; padding: 2px 12px 6px; scrollbar-width: none; }
+.dm-stk-cats::-webkit-scrollbar { display: none; }
+.dm-stk-cats[hidden] { display: none !important; }
+.dm-stk-cats button {
+  flex: none; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03);
+  color: #8b909b; font-size: 12px; font-weight: 700;
+}
+.dm-stk-cats button.on { background: rgba(67,97,255,.16); border-color: rgba(67,97,255,.4); color: #cdd9ff; }
+/* 라이선스 크레딧 — CC BY 표기 의무 */
+.dm-stk-credit {
+  flex: none; padding: 5px 14px 8px; font-size: 10px; color: #4b5563; text-align: center;
+  background: #0b0c12;   /* 스크롤되는 그리드가 글자 뒤로 비쳐 겹쳐 보이던 것 차단 */
+}
+.dm-stk-credit[hidden] { display: none !important; }
