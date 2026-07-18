@@ -29,7 +29,8 @@ async function getTurnKey(): Promise<{ key_id: string; api_token: string } | nul
   const { data } = await sb.from("app_private_kv").select("v").eq("k", "cf_turn_key").maybeSingle();
   if (data?.v?.key_id) return data.v as { key_id: string; api_token: string };
   // 부트스트랩: TURN 키 생성 시도
-  const acc = Deno.env.get("CF_ACCOUNT_ID"), tok = Deno.env.get("CF_STREAM_TOKEN");
+  // CF_CALLS_TOKEN(전용, 권장)이 있으면 우선 — 없으면 Stream 토큰으로 시도
+  const acc = Deno.env.get("CF_ACCOUNT_ID"), tok = Deno.env.get("CF_CALLS_TOKEN") || Deno.env.get("CF_STREAM_TOKEN");
   if (!acc || !tok) return null;
   try {
     const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acc}/calls/turn_keys`, {
@@ -51,6 +52,11 @@ async function getTurnKey(): Promise<{ key_id: string; api_token: string } | nul
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  // 진단: TURN 준비 여부만 답한다(자격증명 없음) — anon 허용, 모니터링용
+  if (new URL(req.url).searchParams.get("diag")) {
+    const key = await getTurnKey();
+    return j({ turn: !!key });
+  }
   if (!callerUid(req)) return j({ error: "auth" }, 401);   // 로그인 유저만 — 무료 릴레이 남용 방지
   const key = await getTurnKey();
   if (!key) return j(STUN_ONLY);

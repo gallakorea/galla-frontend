@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const video = body.video === true;
     const sent = await pushTo([peer], {
       title: `📞 ${sender?.nickname || "갈라 친구"}`,
-      body: video ? "페이스톡이 왔어요 — 탭해서 받기" : "보이스톡이 왔어요 — 탭해서 받기",
+      body: video ? "면상톡이 왔어요 — 면상 까라" : "육성톡이 왔어요 — 탭해서 받기",
       url: `/dm.html?dm=${me}`,
       tag: `call-${me}`,
     });

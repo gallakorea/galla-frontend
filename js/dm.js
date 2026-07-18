@@ -51,6 +51,8 @@
   let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
   let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set(), GMODE = 'create';
   let curExpire = null;   // 현재 스레드의 사라지는 메시지 타이머(초)
+  let mailChan = null;
+  const PEER_THREADS = {};   // peerId -> threadId (우편함 시도-복호 후보)
   const EXP_LABEL = { 3600: '1시간', 86400: '24시간', 604800: '7일' };
   const E2E_PLAIN = {};   // msgId -> 복호된 평문(null이면 이 기기에서 못 엶)
   const SECRETS = (() => { try { return new Set(JSON.parse(localStorage.getItem('galla_dm_secrets') || '[]')); } catch (_) { return new Set(); } })();
@@ -265,8 +267,8 @@
               </span>
             </span>
             <span class="dm-head-btns">
-              <button class="dm-gear" data-act="voicecall" aria-label="보이스톡">${ICONS.phone}</button>
-              <button class="dm-gear" data-act="videocall" aria-label="페이스톡">${ICONS.cam}</button>
+              <button class="dm-gear" data-act="voicecall" aria-label="육성톡">${ICONS.phone}</button>
+              <button class="dm-gear" data-act="videocall" aria-label="면상톡">${ICONS.cam}</button>
               <button class="dm-gear" data-act="chatset" aria-label="대화 설정">${ICONS.menu}</button>
             </span>
           </div>
@@ -450,6 +452,7 @@
       window.GALLA_e2e.ready(supabase, ME).catch(() => {});
     }
     if (ME && window.GALLA_call?.supported()) window.GALLA_call.listen(supabase, ME);
+    if (ME && window.GALLA_e2e?.supported()) attachMailbox();
     if (PAGE_MODE()) bindPageHeader();
     ROOT.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -650,7 +653,7 @@
         const ok = await window.GALLA_e2e.peerReady(supabase, ME, curPeer);
         if (!ok) return toastMini('상대가 아직 비밀대화 준비가 안 됐어요 — 상대가 DM을 한 번 열면 켤 수 있어요');
         setSecret(curThread, true); paintSecretUI(); openChatSet();
-        toastMini('비밀대화 시작 — 이 기기에서만 열 수 있어요');
+        toastMini('비밀대화 시작 — 발신자 기록이 서버에 남지 않고, 이 기기에서만 열려요');
       }
       else if (k === 'report') {
         const r0 = b.getBoundingClientRect();
@@ -1431,6 +1434,7 @@
       loadPrefs(),
     ]);
     GROUPS = groups || [];
+    (threads || []).forEach(t => { PEER_THREADS[t.user_lo === ME ? t.user_hi : t.user_lo] = t.id; });
     // 나간 방은 제외하되, 나간 뒤 새 메시지가 왔으면 다시 보인다(카톡 문법)
     const list = (threads || []).filter(t => {
       const p = PREF.threads[t.id];
@@ -1547,8 +1551,15 @@
       .select('id,sender_id,body,kind,meta,reply_to,deleted_at,read_at,created_at')
       .eq('thread_id', tid).order('created_at', { ascending: true });
     MSGS = {};
-    (msgs || []).forEach(m => { MSGS[m.id] = m; });
-    renderMsgs(msgs || []);
+    PEER_THREADS[peer] = tid;
+    const hist = secHist(tid).map(r => {
+      E2E_PLAIN[r.id] = r.b;
+      return { id: r.id, sender_id: r.s, kind: 'e2e', body: '', created_at: new Date(r.ts).toISOString() };
+    });
+    const merged = [...(msgs || []), ...hist]
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    merged.forEach(m => { MSGS[m.id] = m; });
+    renderMsgs(merged);
     await markRead(tid);
     attachThread(tid);
     // 공유 대기 중이었으면 카드 전송
@@ -1575,7 +1586,7 @@
       inner = `<span class="dm-call-card${missed ? ' missed' : ''}">
           ${ICONS.phone}
           <span class="dm-call-mid">
-            <b>${missed ? '부재중 ' : ''}${v ? '페이스톡' : '보이스톡'}</b>
+            <b>${missed ? '부재중 ' : ''}${v ? '면상톡' : '육성톡'}</b>
             <i>${missed ? (mine ? '응답 없음' : '전화가 왔었어요') : `${Math.floor(d / 60)}분 ${d % 60}초`}</i>
           </span>
           <button type="button" class="dm-callback" data-peer="${mine ? curPeer : m.sender_id}" data-video="${v ? 1 : 0}">다시 걸기</button>
@@ -1617,6 +1628,58 @@
         <span class="dm-bub-time">${hhmm(m.created_at)}${mine ? `<b class="dm-receipt" data-read="${m.read_at ? 1 : 0}">${m.read_at ? '읽음' : ''}</b>` : ''}</span>
       </div>`;
   }
+  /* ── 📬 비밀대화 우편함 — 서버엔 발신자 없는 암호문만, 역사는 이 기기에만 ── */
+  function secHist(tid) {
+    try { return JSON.parse(localStorage.getItem('galla_sec_hist:' + tid) || '[]'); }
+    catch (_) { return []; }
+  }
+  function secHistAdd(tid, rec) {
+    const h = secHist(tid);
+    if (h.some(x => x.id === rec.id)) return;
+    h.push(rec);
+    while (h.length > 200) h.shift();
+    try { localStorage.setItem('galla_sec_hist:' + tid, JSON.stringify(h)); } catch (_) {}
+  }
+  function attachMailbox() {
+    if (mailChan || !ME) return;
+    mailChan = supabase.channel('mailbox:' + ME)
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'secret_mailbox', filter: 'recipient=eq.' + ME },
+        ({ new: row }) => handleMail(row))
+      .subscribe();
+    drainMailbox();   // 접속 없던 사이 쌓인 우편 수거
+  }
+  async function drainMailbox() {
+    const { data } = await supabase.from('secret_mailbox').select('*').order('created_at');
+    for (const row of (data || [])) await handleMail(row);
+  }
+  /* 발신자 칸이 없으므로 '내 비밀대화 상대들'의 키로 시도-복호한다 —
+     GCM 인증 실패 = 그 상대가 아님. 성공한 키의 주인이 곧 발신자다(키가 서명이다). */
+  async function handleMail(row) {
+    if (!window.GALLA_e2e?.supported() || !row?.payload) return;
+    if (!Object.keys(PEER_THREADS).length) {
+      const { data: ths } = await supabase.from('dm_threads').select('id,user_lo,user_hi');
+      (ths || []).forEach(t => { PEER_THREADS[t.user_lo === ME ? t.user_hi : t.user_lo] = t.id; });
+    }
+    for (const [peer, tid] of Object.entries(PEER_THREADS)) {
+      const plain = await window.GALLA_e2e.decrypt(supabase, ME, peer, row.payload);
+      if (plain == null) continue;
+      let env; try { env = JSON.parse(plain); } catch (_) { env = { b: plain }; }
+      if (env.f && env.f !== peer) continue;   // 키 주인과 주장 발신자 불일치 = 위조
+      const rec = { id: 'sec' + row.id, s: peer, b: String(env.b || ''), ts: env.ts || Date.parse(row.created_at) };
+      secHistAdd(tid, rec);
+      E2E_PLAIN[rec.id] = rec.b;
+      if (curThread === tid) {
+        const m = { id: rec.id, sender_id: peer, kind: 'e2e', body: '', created_at: new Date(rec.ts).toISOString() };
+        MSGS[m.id] = m; appendMsg(m);
+      } else {
+        toastMini('비밀 메시지가 도착했어요');
+      }
+      await supabase.from('secret_mailbox').delete().eq('id', row.id);   // 수거 즉시 서버에서 소멸
+      return;
+    }
+  }
+
   async function decryptPass() {
     if (!window.GALLA_e2e?.supported() || !curPeer) return;
     const peer = curPeer;
@@ -1693,9 +1756,18 @@
     const reply_to = REPLY?.id || null;
     clearReply();
     if (secretOn(curThread)) {
-      const enc = await window.GALLA_e2e?.encrypt(supabase, ME, curPeer, body);
+      // 📬 우편함: 발신자·스레드가 암호문 '안'에만 있다 — dm_messages를 거치지 않는다
+      const ts = Date.now();
+      const env = JSON.stringify({ f: ME, t: curThread, b: body, ts });
+      const enc = await window.GALLA_e2e?.encrypt(supabase, ME, curPeer, env);
       if (!enc) { ta.value = body; return toastMini('비밀대화를 준비하지 못했어요 — 잠시 후 다시 시도해주세요'); }
-      await sendMessage({ body: enc, kind: 'e2e', reply_to, plain: body });
+      const { error } = await supabase.from('secret_mailbox').insert({ recipient: curPeer, payload: enc });
+      if (error) { ta.value = body; return toastMini('보내지 못했어요 — 잠시 후 다시'); }
+      const rec = { id: 'secL' + ts, s: ME, b: body, ts };
+      secHistAdd(curThread, rec);
+      E2E_PLAIN[rec.id] = body;
+      const m = { id: rec.id, sender_id: ME, kind: 'e2e', body: '', created_at: new Date(ts).toISOString() };
+      MSGS[m.id] = m; appendMsg(m);
       return;
     }
     await sendMessage({ body, reply_to });

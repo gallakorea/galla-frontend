@@ -18,7 +18,7 @@
   };
   let sb = null, ME = null, chanMine = null, chanPeer = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
-  let ringT = null, timerT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user';
+  let ringT = null, timerT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* ── ICE 설정: TURN 자격증명(1시간) 30분 캐시, 실패 시 STUN만 ── */
@@ -83,8 +83,17 @@
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', cand: e.candidate }); };
     pc.ontrack = e => {
-      const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
-      if (el && e.streams[0]) { el.srcObject = e.streams[0]; el.play?.().catch(() => {}); }
+      // ★ 스트림은 변수로 들고 있는다 — paintUI가 innerHTML을 다시 그릴 때마다
+      //   <audio>/<video>가 새 요소로 바뀌므로 매번 재부착해야 한다
+      //   (이걸 안 해서 '연결됐는데 소리가 안 들리는' 버그가 났다)
+      if (e.streams[0]) remoteStream = e.streams[0];
+      attachMedia();
+    };
+    pc.oniceconnectionstatechange = () => {
+      if (!pc) return;
+      if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt) {
+        clearTimeout(ringT); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall');
+      }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
@@ -159,7 +168,7 @@
     try { pc?.close(); } catch (_) {}
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
-    localStream = null;
+    localStream = null; remoteStream = null;
     if (chanPeer) { try { sb.removeChannel(chanPeer); } catch (_) {} chanPeer = null; }
     CUR = null;
     const box = document.getElementById('dm-call');
@@ -172,6 +181,16 @@
     }
   }
 
+  function attachMedia() {
+    if (remoteStream) {
+      const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
+      if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }
+    }
+    if (CUR?.video && localStream) {
+      const lv = document.getElementById('dm-call-local');
+      if (lv && !lv.srcObject) { lv.srcObject = new MediaStream(localStream.getVideoTracks()); lv.play?.().catch(() => {}); }
+    }
+  }
   function startTimer() {
     t0 = Date.now();
     clearInterval(timerT);
@@ -213,8 +232,8 @@
     }
     const video = !!CUR?.video;
     const name = esc(CUR?.name || '');
-    const stateTxt = { outgoing: video ? '페이스톡 거는 중…' : '전화 거는 중…',
-                       incoming: video ? '페이스톡이 왔어요' : '보이스톡이 왔어요',
+    const stateTxt = { outgoing: video ? '면상톡 거는 중…' : '육성톡 거는 중…',
+                       incoming: video ? '면상톡이 왔어요 — 면상 까라' : '육성톡이 왔어요',
                        connecting: '연결 중…', oncall: '' }[state] || '';
     box.dataset.state = state;
     box.classList.toggle('video', video);
@@ -239,11 +258,7 @@
             <button class="dmc-btn end" data-c="hangup" aria-label="끊기">${IC.phone}</button>`}
         </div>
       </div>`;
-    // 통화 중 로컬 미리보기 재부착
-    if (video && localStream) {
-      const lv = box.querySelector('#dm-call-local');
-      if (lv) { lv.srcObject = new MediaStream(localStream.getVideoTracks()); lv.play?.().catch(() => {}); }
-    }
+    attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
     box.onclick = e => {
       const c = e.target.closest('[data-c]')?.dataset.c;
       if (c === 'accept') accept();
