@@ -307,6 +307,8 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 
 /* 난장 상단 바: 안내 문구 + 열기 버튼 */
 .dm-room-bar { justify-content: space-between; align-items: center; }
+/* ⚠️ hidden 속성은 클래스의 display:flex에 진다(.dm-friend-search 상속) — 못 박아야 실제로 사라진다 */
+.dm-room-bar[hidden], .dm-room-form[hidden] { display: none !important; }
 .dm-room-hint { font-size: 12px; color: #6b7280; letter-spacing: -.2px; }
 
 /* 난장 만들기 폼 */
