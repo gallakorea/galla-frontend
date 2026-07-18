@@ -10,22 +10,85 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  /* ── 삐삐 암호책 — 모르면 못 읽는 게 재미의 절반이었다 ── */
-  const CODES = [
-    { n: '1004', m: '천사' },
-    { n: '486', m: '사랑해' },
-    { n: '8282', m: '빨리빨리' },
-    { n: '1010235', m: '열렬히 사모해' },
-    { n: '0404', m: '영원히 사랑해' },
-    { n: '7942', m: '친구사이' },
-    { n: '100', m: '백점 (최고야)' },
-    { n: '505', m: 'SOS (도와줘)' },
-    { n: '1717', m: '일찍일찍' },
-    { n: '9090', m: '구경 와' },
-    { n: '0242', m: '오늘 사이 좋게' },
-    { n: '3535', m: '사무치게 사무치게' },
+  /* ── 삐삐 암호책 — 모르면 못 읽는 게 재미의 절반이었다.
+     그 시절 실제로 쓰이던 숫자어들 + 숫자 발음 말장난. 카테고리로 골라 보낸다. ── */
+  const CODEBOOK = [
+    { cat: '사랑', list: [
+      { n: '486', m: '사랑해' },
+      { n: '1004', m: '천사' },
+      { n: '0404', m: '영원히 사랑해' },
+      { n: '0124', m: '영원히 사랑해 (영원히♥)' },
+      { n: '1010235', m: '열렬히 사모해' },
+      { n: '8949', m: '빨리 사귀자' },
+      { n: '2825', m: '이제 그만 빨리와' },
+      { n: '3505', m: '사랑해 오빠' },
+      { n: '4500', m: '사랑해 (사오빵빵)' },
+      { n: '7179', m: '친한 친구 이상' },
+    ]},
+    { cat: '우정', list: [
+      { n: '7942', m: '친구사이' },
+      { n: '79', m: '친구' },
+      { n: '337', m: '삼삼칠 박수 (축하해)' },
+      { n: '100', m: '백점 (최고야)' },
+      { n: '2848', m: '이판사판 (한번 붙자)' },
+      { n: '7676', m: '착찹착찹 (심란해)' },
+      { n: '5555', m: '오~ 대박' },
+      { n: '1818', m: '(화났다는 뜻…)' },
+    ]},
+    { cat: '일상', list: [
+      { n: '8282', m: '빨리빨리' },
+      { n: '275', m: '이리 와' },
+      { n: '1414', m: '식사했어?' },
+      { n: '1717', m: '일찍일찍 다녀' },
+      { n: '9090', m: '구경 와' },
+      { n: '981', m: '굿바이' },
+      { n: '505', m: 'SOS (도와줘)' },
+      { n: '1200', m: '지금 바빠' },
+      { n: '0027', m: '땡땡이 치자' },
+      { n: '045', m: '빵 사와' },
+    ]},
+    { cat: '뒤집어 읽기', list: [
+      { n: '07734', m: '뒤집으면 hELLO (안녕)' },
+      { n: '35006', m: '뒤집으면 gOOSE (거위…?)' },
+      { n: '0.7734', m: '뒤집으면 hELLO' },
+      { n: '3535', m: '사무치게 사무치게 (보고싶어)' },
+      { n: '0242', m: '오늘 사이 좋게' },
+    ]},
   ];
+  const CODES = CODEBOOK.flatMap(c => c.list);
   const codeMeaning = n => (CODES.find(c => c.n === n) || {}).m || '';
+
+  /* ── 📖 암호책 화면 — 골라서 보내거나(onPick), 그냥 구경하거나 ── */
+  function openCodebook(onPick) {
+    const el = document.createElement('div');
+    el.id = 'pager-book';
+    el.innerHTML = `
+      <div class="pgr-book-body">
+        <div class="pgr-book-head">
+          <b>📖 추억의 삐삐 암호책</b>
+          <span>${onPick ? '골라서 바로 호출' : '이런 뜻이었습니다'}</span>
+        </div>
+        <div class="pgr-book-scroll">
+          ${CODEBOOK.map(c => `
+            <div class="pgr-book-cat">${esc(c.cat)}</div>
+            ${c.list.map(x => `
+              <button type="button" class="pgr-book-row" data-bn="${esc(x.n)}" ${onPick ? '' : 'disabled'}>
+                <b>${esc(x.n)}</b><span>${esc(x.m)}</span>${onPick ? '<i>호출</i>' : ''}
+              </button>`).join('')}
+          `).join('')}
+        </div>
+        <button type="button" class="pgr-call-x" data-b="close">닫기</button>
+      </div>`;
+    document.body.appendChild(el);
+    void el.getBoundingClientRect();   // 강제 리플로우 — rAF는 스로틀 탭에서 안 불려 모달이 투명하게 남는다
+    el.classList.add('on');
+    const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 250); };
+    el.onclick = e => {
+      if (e.target === el || e.target.closest('[data-b="close"]')) return close();
+      const row = e.target.closest('[data-bn]');
+      if (row && onPick) { close(); onPick(row.dataset.bn); }
+    };
+  }
 
   /* ── 소리: 파일 없이 합성한다(용량 0, 저작권 0). 그 시절 '삐-삐-' ── */
   let AC = null;
@@ -118,7 +181,8 @@
           </div>
           <div class="pgr-actions">
             <button type="button" class="pgr-btn" data-a="copy">번호 복사</button>
-            <button type="button" class="pgr-btn" data-a="greet">${BOX.greeting_url ? '인사말 다시 녹음' : '인사말 녹음'}</button>
+            <button type="button" class="pgr-btn" data-a="book">📖 암호책</button>
+            <button type="button" class="pgr-btn" data-a="greet">${BOX.greeting_url ? '인사말 재녹음' : '인사말 녹음'}</button>
           </div>
           ${BOX.greeting_url ? `<button type="button" class="pgr-greet-play" data-a="playgreet">▶ 내 인사말 듣기 (${BOX.greeting_dur || 0}초)</button>` : ''}
         </div>
@@ -170,6 +234,7 @@
   }
 
   async function act(a, host) {
+    if (a === 'book') { openCodebook(null); return; }
     if (a === 'copy') {
       try { await navigator.clipboard.writeText(BOX.number); } catch (_) {}
       window.GALLA_dmToast?.('번호를 복사했어요') || toast('번호를 복사했어요');
@@ -200,7 +265,8 @@
       </div><div class="pgr-call-stage" id="pgr-stage"></div>
       <button type="button" class="pgr-call-x" data-c="close">닫기</button></div>`;
     document.body.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('on'));
+    void el.getBoundingClientRect();   // 강제 리플로우 — rAF는 스로틀 탭에서 안 불려 모달이 투명하게 남는다
+    el.classList.add('on');
     el.onclick = e => {
       if (e.target.closest('[data-c="close"]')) { stopRec(true); el.classList.remove('on'); setTimeout(() => el.remove(), 250); }
     };
@@ -248,7 +314,7 @@
           <button type="button" data-r="send" class="go">${isGreeting ? '이걸로 저장' : '보내기'}</button>
         </div>
         ${isGreeting ? '' : `<div class="pgr-code">
-          <div class="pgr-code-t">말 대신 숫자만 남기기</div>
+          <div class="pgr-code-t">말 대신 숫자만 남기기 <button type="button" class="pgr-book-open" data-r="book">📖 암호책 전체</button></div>
           <div class="pgr-code-chips">${CODES.slice(0, 8).map(c => `<button type="button" data-code="${c.n}">${c.n}<i>${esc(c.m)}</i></button>`).join('')}</div>
           <div class="pgr-code-row"><input id="pgr-code-in" inputmode="numeric" maxlength="10" placeholder="직접 입력 (숫자)"><button type="button" data-r="sendcode">호출</button></div>
         </div>`}
@@ -271,6 +337,8 @@
         stage.querySelector('#pgr-rt').textContent = '';
       } else if (r === 'send') {
         await sendVoice(peer, modal, stage);
+      } else if (r === 'book') {
+        openCodebook(code => sendCode(peer, code, modal));
       } else if (r === 'sendcode') {
         const v = (stage.querySelector('#pgr-code-in').value || '').replace(/\D/g, '');
         if (!v) return toast('숫자를 입력해주세요');
@@ -370,11 +438,12 @@
       </div><div class="pgr-call-stage" id="pgr-stage"></div>
       <button type="button" class="pgr-call-x" data-c="close">닫기</button></div>`;
     document.body.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('on'));
+    void el.getBoundingClientRect();   // 강제 리플로우 — rAF는 스로틀 탭에서 안 불려 모달이 투명하게 남는다
+    el.classList.add('on');
     el.onclick = e => { if (e.target.closest('[data-c="close"]')) { stopRec(true); closeModal(el); } };
     recordStage(el.querySelector('#pgr-stage'), null, el);
     window.GALLA_pagerRefresh = () => mount(host);
   }
 
-  window.GALLA_PAGER = { mount, beep, popup, leaveTo, CODES, codeMeaning };
+  window.GALLA_PAGER = { mount, beep, popup, leaveTo, CODES, CODEBOOK, codeMeaning, openCodebook };
 })();
