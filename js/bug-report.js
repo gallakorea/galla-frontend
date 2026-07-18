@@ -37,14 +37,47 @@
       ".bugr-go{background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff}" +
       ".bugr-go:disabled{opacity:.5}" +
       "#bugr-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(10px);z-index:2147483500;background:#16171c;border:1px solid rgba(255,255,255,.12);color:#eef0f4;font-weight:800;font-size:13px;padding:11px 18px;border-radius:99px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}" +
-      "#bugr-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}";
+      "#bugr-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}" +
+      ".bugr-chip.err{color:#ffcf4d;border-color:rgba(255,207,77,.35);background:rgba(255,207,77,.1)}" +
+      // 흔들기 확인 · 오류 알림 공용 바 (하단 네비 위에 뜬다)
+      "#bugr-shake{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));" +
+        "z-index:2147483450;display:flex;align-items:center;gap:8px;max-width:460px;margin:0 auto;" +
+        "background:#16171d;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:10px 12px;" +
+        "box-shadow:0 12px 34px rgba(0,0,0,.55);opacity:0;transform:translateY(12px);" +
+        "transition:opacity .2s,transform .2s}" +
+      "#bugr-shake.show{opacity:1;transform:none}" +
+      "#bugr-shake span{flex:1;min-width:0;font-size:13px;font-weight:800;color:#eef0f4;" +
+        "overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" +
+      "#bugr-shake button{flex:0 0 auto;padding:8px 12px;border:none;border-radius:9px;cursor:pointer;" +
+        "font-size:12.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#6a7bff,#3a5bff)}" +
+      "#bugr-shake button.no{padding:8px 10px;background:rgba(255,255,255,.07);color:#9aa0ad;font-weight:700}" +
+      "@media (prefers-reduced-motion:reduce){#bugr-shake{transition:none}}";
     document.head.appendChild(s);
   }
 
+  /* 최근 발생한 JS 오류를 기억해 둔다 — 사용자가 "안 돼요"라고만 적어도
+     실제 스택이 함께 가면 원인 추적이 비교할 수 없이 빨라진다. */
+  let LAST_ERR = null;
+  function noteError(kind, msg, extra) {
+    LAST_ERR = { kind, msg: String(msg || "").slice(0, 300), extra: String(extra || "").slice(0, 300), at: Date.now() };
+  }
+  window.addEventListener("error", (e) => {
+    if (e.message) noteError("js", e.message, (e.filename || "") + ":" + (e.lineno || ""));
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const r = e.reason;
+    noteError("promise", (r && (r.message || r.error_description)) || r, r && r.stack);
+  });
+  // 다른 코드가 "이 오류를 신고에 붙여줘"라고 알릴 수 있는 통로
+  window.GALLA_noteError = (msg, extra) => noteError("manual", msg, extra);
+
   window.GALLA_openBugReport = function (prefillPage) {
+    if (document.querySelector(".bugr-dim")) return;   // 흔들다 두 장 겹치는 것 방지
     css();
     const page = prefillPage || location.href;
     const dev = (navigator.userAgent.match(/(iPhone|iPad|Android|Macintosh|Windows)[^);]*/) || ["기기정보"])[0];
+    // 최근 2분 안의 오류만 유효 — 한참 전 오류를 엉뚱한 신고에 붙이면 오히려 수사를 망친다
+    const err = LAST_ERR && (Date.now() - LAST_ERR.at < 120000) ? LAST_ERR : null;
     const dim = document.createElement("div"); dim.className = "bugr-dim";
     dim.innerHTML =
       '<div class="bugr-card" role="dialog" aria-modal="true">' +
@@ -55,6 +88,7 @@
       '<span class="bugr-chip">📍 ' + page.replace(/^https?:\/\//, "").slice(0, 60) + '</span>' +
       '<span class="bugr-chip">📱 ' + dev.slice(0, 40) + '</span>' +
       '<span class="bugr-chip">🖥 ' + window.innerWidth + '×' + window.innerHeight + '</span>' +
+      (err ? '<span class="bugr-chip err">⚠️ 오류 기록 자동 첨부</span>' : "") +
       '</div>' +
       '<div class="bugr-btns">' +
       '<button class="bugr-cancel" type="button">닫기</button>' +
@@ -71,8 +105,13 @@
       try {
         const c = sb();
         if (!c) throw new Error("no client");
+        // 오류 기록은 본문 끝에 붙인다 — bug_reports에 전용 컬럼이 없고, 컬럼을 새로 파는 것보다
+        // 관리자가 신고를 읽을 때 한눈에 같이 보이는 편이 실제로 더 쓸모 있다.
+        const body = err
+          ? msg + "\n\n---\n[자동 첨부] " + err.kind + ": " + err.msg + (err.extra ? "\n" + err.extra : "")
+          : msg;
         const { error } = await c.rpc("submit_bug", {
-          p_message: msg, p_page_url: page, p_user_agent: navigator.userAgent,
+          p_message: body, p_page_url: page, p_user_agent: navigator.userAgent,
           p_viewport: window.innerWidth + "x" + window.innerHeight, p_app_version: APPV,
         });
         if (error) throw error;
@@ -83,5 +122,91 @@
       }
     });
     requestAnimationFrame(() => { dim.classList.add("open"); ta.focus(); });
+  };
+
+  /* ─────────────────────────────────────────────────────────
+     📳 흔들면 신고 — 버그를 만난 그 화면에서 바로 열린다.
+     설정까지 걸어가야 했던 게 접수 0건의 주원인이었다. 여기서 열면 자동 첨부되는
+     '어느 페이지' 정보도 설정 화면이 아니라 진짜 문제의 화면이 잡힌다.
+     ───────────────────────────────────────────────────────── */
+  const SHAKE_G = 22;        // 가속도 임계 — 주머니 속 걸음걸이로는 안 걸리는 값
+  const SHAKE_HITS = 3;      // 연속 3회 흔들어야(오작동 방지)
+  const SHAKE_WINDOW = 1200; // 1.2초 안에
+  let hits = [], lastShake = 0;
+
+  function onMotion(e) {
+    const a = e.accelerationIncludingGravity;
+    if (!a) return;
+    const g = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+    if (g < SHAKE_G) return;
+    const now = Date.now();
+    hits = hits.filter((t) => now - t < SHAKE_WINDOW);
+    hits.push(now);
+    if (hits.length < SHAKE_HITS) return;
+    if (now - lastShake < 3000) return;          // 한 번 열고 나면 잠시 쉰다
+    hits = []; lastShake = now;
+    if (document.querySelector(".bugr-dim")) return;
+    try { window.BattleFX && window.BattleFX.haptic && window.BattleFX.haptic("warn"); } catch (e2) {}
+    askShake();
+  }
+
+  // 흔들자마자 신고창을 띄우면 실수로 흔든 사람에게 성가시다 → 한 단계 확인을 둔다
+  function askShake() {
+    css();
+    const t = document.createElement("div");
+    t.id = "bugr-shake";
+    t.innerHTML = '<span>😵 문제가 있었나요?</span><button type="button">🐞 신고하기</button>' +
+                  '<button type="button" class="no" aria-label="닫기">✕</button>';
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
+    const kill = () => { t.classList.remove("show"); setTimeout(() => t.remove(), 200); };
+    const bs = t.querySelectorAll("button");
+    bs[0].onclick = () => { kill(); window.GALLA_openBugReport(); };
+    bs[1].onclick = kill;
+    setTimeout(kill, 6000);
+  }
+
+  // iOS 13+는 사용자 제스처 안에서 권한을 요청해야 한다. 설정에서 켤 때만 물어보고,
+  // 그 외에는 조용히 붙인다(Android·구형 iOS는 권한 개념이 없다).
+  function enableShake() {
+    if (window.__bugrShakeOn) return;
+    window.__bugrShakeOn = true;
+    window.addEventListener("devicemotion", onMotion);
+  }
+  window.GALLA_enableShakeReport = function () {
+    const D = window.DeviceMotionEvent;
+    if (D && typeof D.requestPermission === "function") {
+      return D.requestPermission().then((r) => {
+        if (r === "granted") { enableShake(); return true; }
+        return false;
+      }).catch(() => false);
+    }
+    enableShake();
+    return Promise.resolve(true);
+  };
+  // 권한이 필요 없는 기기에서는 로드 즉시 활성화
+  if (!(window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission === "function")) {
+    enableShake();
+  }
+
+  /* ─────────────────────────────────────────────────────────
+     ⚠️ 오류 알림 + 신고 버튼 — window.GALLA_errorToast(메시지, 원인)
+     기존 실패 안내는 대부분 네이티브 alert()이라 버튼을 붙일 수 없다.
+     이 유틸로 바꿔 부르면 '신고' 버튼이 함께 뜨고 원인이 자동 첨부된다.
+     ───────────────────────────────────────────────────────── */
+  window.GALLA_errorToast = function (message, cause) {
+    css();
+    if (cause) noteError("manual", message, typeof cause === "string" ? cause : (cause && cause.message));
+    const t = document.createElement("div");
+    t.id = "bugr-shake";
+    t.innerHTML = '<span>⚠️ ' + String(message || "문제가 발생했어요").slice(0, 60) + "</span>" +
+                  '<button type="button">🐞 신고</button><button type="button" class="no" aria-label="닫기">✕</button>';
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("show"));
+    const kill = () => { t.classList.remove("show"); setTimeout(() => t.remove(), 200); };
+    const bs = t.querySelectorAll("button");
+    bs[0].onclick = () => { kill(); window.GALLA_openBugReport(); };
+    bs[1].onclick = kill;
+    setTimeout(kill, 8000);
   };
 })();
