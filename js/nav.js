@@ -1,4 +1,27 @@
 /* ============================================================
+   📲 앱 설치 프롬프트 캡처 (전 페이지)
+   beforeinstallprompt는 페이지 로드 직후 딱 한 번 날아온다 — 여기서 잡아두지
+   않으면 나중에 어떤 화면에서도 '설치하기' 버튼을 만들 수 없다.
+   a2hs.js(하단 배너)와 mic-help.js(권한 시트)가 이 API를 함께 쓴다.
+============================================================ */
+(function gallaInstallCapture() {
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; });
+  window.addEventListener('appinstalled', () => {
+    deferred = null;
+    try { localStorage.setItem('galla_installed', '1'); } catch (_) {}
+  });
+  window.GALLA_canInstall = () => !!deferred;
+  window.GALLA_promptInstall = async () => {
+    if (!deferred) return 'unavailable';
+    deferred.prompt();
+    const { outcome } = await deferred.userChoice;
+    if (outcome === 'accepted') deferred = null;
+    return outcome;
+  };
+})();
+
+/* ============================================================
    마이페이지 탭 아이콘 (인스타식)
    - 로그인 + 프로필 사진 있음: 내 사진(원형)
    - 비로그인 / 아바타 없음: 기본 사람 아이콘(nav-user.svg) 그대로 유지

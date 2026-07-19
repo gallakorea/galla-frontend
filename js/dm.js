@@ -1278,7 +1278,14 @@
       paintMic();
       micBtn.onclick = async () => {
         if (micBtn.dataset.st === 'granted') return toastMini('이미 허용돼 있어요');
-        if (micBtn.dataset.st === 'denied') return toastMini('브라우저 설정 → 사이트 설정 → 마이크에서 galla.im을 허용해 주세요');
+        if (micBtn.dataset.st === 'denied') {
+          // 말로만 안내하면 못 찾는다 — 위치를 짚어주는 시트를 연다
+          if (!window.GALLA_micHelp) {
+            const v = ([...document.scripts].map(s => s.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+            await new Promise(res => { const s = document.createElement('script'); s.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); s.onload = s.onerror = res; document.head.appendChild(s); });
+          }
+          return void window.GALLA_micHelp?.({});
+        }
         const r = await (window.GALLA_callWarmup?.() ?? 'unsupported');
         toastMini(r === 'granted' ? '통화 준비 완료 — 이제 다시 묻지 않아요' : '권한을 받지 못했어요');
         paintMic();

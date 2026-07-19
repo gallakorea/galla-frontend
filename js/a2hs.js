@@ -28,6 +28,7 @@
 
   let deferredPrompt = null;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredPrompt = e; });
+  // nav.js의 공용 캡처가 먼저 잡은 경우에도 설치가 되게 (둘 다 같은 이벤트를 받는다)
   window.addEventListener("appinstalled", () => { st.installed = true; save(); close(); });
 
   function css() {
@@ -74,8 +75,8 @@
     bar.innerHTML = `
       <img class="a2hs-ic" src="/assets/app-icons/icon-192.png" alt="갈라" onerror="this.style.display='none'">
       <div class="a2hs-tx">
-        <div class="a2hs-tt">갈라를 홈 화면에 추가</div>
-        <div class="a2hs-sb">앱처럼 빠르게 열고, 로그인도 계속 유지돼요</div>
+        <div class="a2hs-tt">앱으로 깔면 훨씬 편해요</div>
+        <div class="a2hs-sb">삐삐·메시지 알림 바로 받고, 마이크 허용도 한 번만. 로그인 유지 + 전체 화면</div>
       </div>
       <button class="a2hs-go" id="a2hs-go">추가</button>
       <button class="a2hs-x" id="a2hs-x" aria-label="닫기">✕</button>`;
@@ -86,8 +87,13 @@
   }
 
   async function onAdd() {
-    if (isAndroid && deferredPrompt) {
+    if (isAndroid && (deferredPrompt || window.GALLA_canInstall?.())) {
       close();
+      if (!deferredPrompt) {                       // nav.js 공용 캡처가 잡은 경우
+        const outcome = await window.GALLA_promptInstall();
+        if (outcome === "accepted") { st.installed = true; save(); } else { cooldown(30); }
+        return;
+      }
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === "accepted") { st.installed = true; save(); } else { cooldown(30); }

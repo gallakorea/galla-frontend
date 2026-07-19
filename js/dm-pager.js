@@ -865,6 +865,18 @@
      ② isTypeSupported/new MediaRecorder/start()가 try 밖에서 던지면 아무 일도 안 일어난다
      ③ 일부 안드로이드는 timeslice 없이는 dataavailable을 안 흘려 0바이트로 끝난다
      → 전부 감싸고, 실패는 반드시 화면에 남긴다. */
+  /* 권한·환경 문제는 문구만 던지지 않는다 — 바로 고칠 수 있는 시트를 연다 */
+  async function openMicHelp(reason) {
+    if (!window.GALLA_micHelp) {
+      const v = ([...document.scripts].map(s => s.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : '');
+        s.onload = res; s.onerror = rej; document.head.appendChild(s);
+      }).catch(() => {});
+    }
+    window.GALLA_micHelp?.({ reason });
+  }
   function recErrMsg(e) {
     const n = (e && e.name) || String(e);
     if (n === 'NoMediaRecorder')
@@ -935,6 +947,8 @@
       }, 250);
     } catch (e) {
       console.error('[pager:rec]', e);
+      // 안내로 끝내지 않고 '해결 경로'를 띄운다 — 설정에서 찾아 헤매지 않게
+      openMicHelp(recErrMsg(e));
       try { stream?.getTracks().forEach(t => t.stop()); } catch (_) {}
       REC = null;
       if (btn) { btn.disabled = false; btn.textContent = '● 녹음 시작'; }
