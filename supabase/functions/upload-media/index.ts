@@ -16,7 +16,7 @@ const corsHeaders = {
 
 const ALLOWED_IMAGE = ["jpg", "jpeg", "png", "gif", "webp", "avif", "heic"];
 const ALLOWED_VIDEO = ["mp4", "mov", "webm", "m4v"];
-const ALLOWED_AUDIO = ["webm", "m4a", "mp4", "ogg", "mp3", "aac"];   // 음성 메시지(MediaRecorder)
+const ALLOWED_AUDIO = ["webm", "m4a", "mp4", "ogg", "mp3", "aac", "3gp", "3gpp"];   // 음성 메시지(MediaRecorder — 안드로이드는 3gp/aac로 떨어지기도)
 
 const r2 = new AwsClient({
   accessKeyId: R2_ACCESS_KEY_ID,

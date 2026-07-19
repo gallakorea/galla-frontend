@@ -860,36 +860,86 @@
       }
     };
   }
+  /* 안드로이드에서 '녹음 시작 안 됨'의 정체는 대부분 조용한 예외다:
+     ① 인앱 웹뷰(카톡·인스타·네이버)엔 MediaRecorder가 아예 없다
+     ② isTypeSupported/new MediaRecorder/start()가 try 밖에서 던지면 아무 일도 안 일어난다
+     ③ 일부 안드로이드는 timeslice 없이는 dataavailable을 안 흘려 0바이트로 끝난다
+     → 전부 감싸고, 실패는 반드시 화면에 남긴다. */
+  function recErrMsg(e) {
+    const n = (e && e.name) || String(e);
+    if (n === 'NoMediaRecorder')
+      return '이 브라우저에선 녹음이 막혀 있어요 — 카톡·인스타 안의 브라우저라면 [크롬으로 열기]를 눌러주세요';
+    if (n === 'NoMediaDevices')
+      return '이 환경에선 마이크를 쓸 수 없어요 — 크롬·사파리에서 galla.im을 열어주세요';
+    if (n === 'NotAllowedError' || n === 'PermissionDeniedError')
+      return '마이크 권한이 거부돼 있어요 — 브라우저 설정 → 사이트 설정 → 마이크에서 galla.im을 허용해주세요';
+    if (n === 'NotFoundError') return '마이크를 찾을 수 없어요';
+    if (n === 'NotReadableError') return '다른 앱이 마이크를 쓰고 있어요 — 닫고 다시 시도해주세요';
+    if (n === 'SecurityError') return '보안 정책(HTTPS)이 아니라 녹음할 수 없어요';
+    return '녹음을 시작하지 못했어요 (' + n + ')';
+  }
+  function pickRecMime() {
+    if (typeof MediaRecorder === 'undefined') return null;
+    const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus',
+                   'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/3gpp'];
+    for (const m of cands) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {} }
+    return '';   // 빈 문자열 = 브라우저 기본값으로 시도
+  }
+  async function getMicStream() {
+    const md = navigator.mediaDevices;
+    if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
+    try {
+      return await md.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      // 일부 안드로이드가 고급 제약에서 넘어진다 — 소박하게 한 번 더
+      if (e && ['OverconstrainedError', 'TypeError', 'AbortError', 'NotReadableError'].includes(e.name))
+        return md.getUserMedia({ audio: true });
+      throw e;
+    }
+  }
   async function startRec(stage) {
-    let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (_) { return toast('마이크 권한이 필요해요'); }
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
-    CHUNKS = []; BLOB = null; RECURL = null;
-    const t0 = Date.now();
-    REC = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
-    REC.ondataavailable = e => { if (e.data?.size) CHUNKS.push(e.data); };
-    REC.onstop = () => {
-      stream.getTracks().forEach(t => t.stop());
-      clearInterval(RECT);
-      const cancel = REC._cancel; const dur = Math.round((Date.now() - t0) / 1000);
+    const btn = stage.querySelector('[data-r="start"]');
+    const rt = stage.querySelector('#pgr-rt');
+    let stream = null;
+    try {
+      if (typeof MediaRecorder === 'undefined') { const e = new Error('norec'); e.name = 'NoMediaRecorder'; throw e; }
+      if (btn) { btn.disabled = true; btn.textContent = '마이크 준비 중…'; }
+      stream = await getMicStream();
+      const mime = pickRecMime();
+      CHUNKS = []; BLOB = null; RECURL = null;
+      const t0 = Date.now();
+      REC = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      REC.ondataavailable = e => { if (e.data?.size) CHUNKS.push(e.data); };
+      REC.onerror = ev => { toast(recErrMsg(ev?.error || ev)); stopRec(true); };
+      REC.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        clearInterval(RECT);
+        const cancel = REC._cancel; const dur = Math.round((Date.now() - t0) / 1000);
+        REC = null;
+        if (btn) btn.textContent = '● 녹음 시작';
+        if (cancel) return;
+        BLOB = new Blob(CHUNKS, { type: mime || 'audio/webm' });
+        if (!BLOB.size) { BLOB = null; if (rt) rt.textContent = ''; return toast('소리가 담기지 않았어요 — 다시 시도해주세요'); }
+        BLOB._dur = Math.max(1, dur);
+        RECURL = URL.createObjectURL(BLOB);
+        if (rt) rt.textContent = `${BLOB._dur}초 녹음됨`;
+        stage.querySelector('#pgr-after').hidden = false;
+      };
+      REC.start(250);   // ★ timeslice — 없으면 일부 안드로이드가 데이터를 안 흘린다
+      if (btn) { btn.disabled = false; btn.textContent = '■ 그만 (녹음 중)'; }
+      RECT = setInterval(() => {
+        const s = Math.floor((Date.now() - t0) / 1000);
+        if (rt) rt.textContent = `${s}초…`;
+        if (s >= 60) stopRec(false);
+      }, 250);
+    } catch (e) {
+      console.error('[pager:rec]', e);
+      try { stream?.getTracks().forEach(t => t.stop()); } catch (_) {}
       REC = null;
-      stage.querySelector('[data-r="start"]').textContent = '● 녹음 시작';
-      if (cancel) return;
-      BLOB = new Blob(CHUNKS, { type: mime || 'audio/webm' });
-      BLOB._dur = Math.max(1, dur);
-      RECURL = URL.createObjectURL(BLOB);
-      stage.querySelector('#pgr-rt').textContent = `${BLOB._dur}초 녹음됨`;
-      stage.querySelector('#pgr-after').hidden = false;
-    };
-    REC.start();
-    stage.querySelector('[data-r="start"]').textContent = '■ 그만 (녹음 중)';
-    RECT = setInterval(() => {
-      const s = Math.floor((Date.now() - t0) / 1000);
-      stage.querySelector('#pgr-rt').textContent = `${s}초…`;
-      if (s >= 60) stopRec(false);
-    }, 250);
+      if (btn) { btn.disabled = false; btn.textContent = '● 녹음 시작'; }
+      if (rt) rt.textContent = '';
+      toast(recErrMsg(e));
+    }
   }
   async function uploadVoice() {
     if (!window.GALLA_UPLOAD_MEDIA) {
@@ -901,7 +951,10 @@
       });
     }
     const type = BLOB.type || 'audio/webm';
-    const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+    // 기기가 고른 포맷을 그대로 따른다(안드로이드는 webm이 아닐 수 있다)
+    const ext = /mp4|m4a/.test(type) ? 'm4a' : /ogg/.test(type) ? 'ogg'
+      : /aac/.test(type) ? 'aac' : /3gp/.test(type) ? '3gp'
+      : /mpeg|mp3/.test(type) ? 'mp3' : 'webm';
     const f = new File([BLOB], 'pager.' + ext, { type });
     return window.GALLA_UPLOAD_MEDIA(f, 'audio');
   }
