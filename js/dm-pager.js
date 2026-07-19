@@ -805,7 +805,12 @@
   let REC = null, RECT = null, CHUNKS = [], BLOB = null, RECURL = null;
   function stopRec(cancel) {
     clearInterval(RECT);
-    if (REC && REC.state !== 'inactive') { REC._cancel = cancel; try { REC.stop(); } catch (_) {} }
+    if (REC && REC.state !== 'inactive') {
+      REC._cancel = cancel;
+      // 아직 한 조각도 안 들어온 기기 대비 — 멈추기 직전에 데이터를 달라고 한다
+      try { if (!CHUNKS.length) REC.requestData(); } catch (_) {}
+      try { REC.stop(); } catch (_) {}
+    }
   }
   function recordStage(stage, peer, modal) {
     const isGreeting = !peer;
@@ -897,17 +902,38 @@
     for (const m of cands) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {} }
     return '';   // 빈 문자열 = 브라우저 기본값으로 시도
   }
+  /* 🎯 '무조건 되게' — 채팅방 음성 메시지(검증된 경로)와 똑같이 요청하고,
+     실패하면 조건을 하나씩 낮추며 스스로 재시도한다.
+     ⚠️ 삐삐는 녹음 직전에 인사말·비프를 재생한다 — 안드로이드는 재생 중인
+        오디오가 장치를 붙들고 있으면 마이크 열기가 실패(NotReadableError)하므로
+        무조건 먼저 소리를 정리하고 시작한다. */
+  function releaseAudio() {
+    try { PLAYING?.pause(); PLAYING = null; } catch (_) {}
+    document.querySelectorAll('audio').forEach(a => { try { a.pause(); } catch (_) {} });
+    try { if (AC && AC.state === 'running') AC.suspend(); } catch (_) {}
+  }
   async function getMicStream() {
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
-    try {
-      return await md.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
-    } catch (e) {
-      // 일부 안드로이드가 고급 제약에서 넘어진다 — 소박하게 한 번 더
-      if (e && ['OverconstrainedError', 'TypeError', 'AbortError', 'NotReadableError'].includes(e.name))
-        return md.getUserMedia({ audio: true });
-      throw e;
+    releaseAudio();
+    // ① 채팅방과 동일한 가장 단순한 요청(이게 실기기에서 검증된 조합)
+    // ② 잠깐 쉬고 재시도(장치 해제가 늦는 기기)
+    // ③ 기본 마이크를 명시적으로 지정
+    const attempts = [
+      () => md.getUserMedia({ audio: true }),
+      async () => { await new Promise(r => setTimeout(r, 400)); return md.getUserMedia({ audio: true }); },
+      () => md.getUserMedia({ audio: { deviceId: 'default' } }),
+    ];
+    let last;
+    for (const attempt of attempts) {
+      try { return await attempt(); }
+      catch (e) {
+        last = e;
+        console.warn('[pager:mic] 재시도', e.name);
+        if (e.name === 'NotAllowedError' || e.name === 'SecurityError') break;   // 권한 거부는 재시도 무의미
+      }
     }
+    throw last;
   }
   async function startRec(stage) {
     const btn = stage.querySelector('[data-r="start"]');
@@ -938,7 +964,9 @@
         if (rt) rt.textContent = `${BLOB._dur}초 녹음됨`;
         stage.querySelector('#pgr-after').hidden = false;
       };
-      REC.start(250);   // ★ timeslice — 없으면 일부 안드로이드가 데이터를 안 흘린다
+      // 채팅방 음성과 동일하게 start() — timeslice는 일부 기기에서 되레 첫 청크를 잘랐다.
+      // 대신 데이터가 하나도 안 쌓이면 stop 직전에 requestData로 받아낸다.
+      REC.start();
       if (btn) { btn.disabled = false; btn.textContent = '■ 그만 (녹음 중)'; }
       RECT = setInterval(() => {
         const s = Math.floor((Date.now() - t0) / 1000);

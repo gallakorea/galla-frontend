@@ -152,50 +152,35 @@
     el.id = 'mic-help';
 
     let head, sub, body;
+    /* ⚠️ permissions.query는 거짓말을 한다 — 실기기에서 'denied'인데 getUserMedia가
+       정상 동작하는 조합을 확인했다(채팅방 음성은 되는데 삐삐만 안 되던 사건).
+       그래서 조회 결과로 '불가'를 단정하지 않는다. 언제나 '다시 시도'를 1번 버튼으로
+       올리고, 설정 안내는 그 다음에 둔다 — 눌러서 되면 그게 정답이다. */
     if (isInApp) {
       head = '🎙 여기선 녹음을 못 해요';
-      sub = '카톡·인스타 같은 앱 <b>안에 있는 브라우저</b>라서 마이크가 막혀 있어요. 설정을 바꿔도 안 돼요 — 크롬으로 열면 바로 됩니다.';
+      sub = '카톡·인스타 같은 앱 <b>안에 있는 브라우저</b>라서 마이크가 막혀 있어요. 크롬으로 열면 바로 됩니다.';
       body = `<button class="mh-btn" data-mh="chrome" type="button">${isAndroid ? '크롬으로 열기' : '주소 복사해서 사파리로 열기'}</button>
         <div class="mh-steps">
-          <div class="mh-step"><span class="n">＋</span><span class="t">안 열리면 오른쪽 위 <b>⋮ (또는 ⋯)</b> → <b>다른 브라우저로 열기</b>를 눌러주세요</span></div>
+          <div class="mh-step"><span class="n">＋</span><span class="t">안 열리면 오른쪽 위 <b>⋮ (또는 ⋯)</b> → <b>다른 브라우저로 열기</b></span></div>
         </div>`;
-    } else if (isStandalone) {
-      /* 🚨 실기기에서 확인된 안드로이드 제약(2026-07-19):
-         PWA를 설치하면 안드로이드가 WebAPK라는 앱을 자동 생성하는데, 그 앱에
-         RECORD_AUDIO 권한이 들어가지 않는다. 그래서 [앱 정보 → 권한] 목록에
-         '마이크' 항목 자체가 없다("허용된 권한 없음"). 없는 권한은 켤 수 없다.
-         → 설치형에서 설정을 아무리 만져도 녹음은 불가. 크롬으로 여는 게 유일한 해법. */
-      head = '🎙 설치한 앱에선 녹음이 안 돼요';
-      sub = '안드로이드가 홈 화면 앱을 만들 때 <b>마이크 권한을 넣어주지 않아요</b>. 그래서 설정에 마이크 항목 자체가 없습니다 — 사장님 잘못이 아니에요. <b>크롬으로 열면 바로 녹음됩니다.</b>';
-      body = `
-        <button class="mh-btn" data-mh="chrome" type="button">크롬에서 열어서 녹음하기</button>
+    } else {
+      head = '🎙 마이크를 켜주세요';
+      sub = st === 'denied'
+        ? '아래 <b>[마이크 켜고 다시 시도]</b>를 먼저 눌러보세요. 그래도 안 되면 설정에서 허용으로 바꾸면 됩니다.'
+        : '아래 버튼을 누르면 권한 창이 떠요. <b>[허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 다음에 또 물어봅니다.';
+      body = `<button class="mh-btn" data-mh="ask" type="button">마이크 켜고 다시 시도</button>
+        ${st === 'denied' ? `
         <div class="mh-steps">
-          <div class="mh-step"><span class="n">?</span><span class="t">확인해보고 싶으시면: 홈 아이콘 꾹 → <b>앱 정보 → 권한</b>에 <b>마이크가 없으면</b> 이 경우예요</span></div>
-          <div class="mh-step"><span class="n">✓</span><span class="t">크롬에서는 마이크가 <b>정상 동작</b>해요 — 삐삐도 통화도</span></div>
-        </div>`;
-    } else if (st === 'denied') {
-      head = '🎙 마이크가 차단돼 있어요';
-      sub = '한 번 <b>차단</b>을 누르면 브라우저가 기억해서 다시 묻지 않아요. 주소창 왼쪽 아이콘에서 <b>허용</b>으로 바꿔주세요.';
-      body = `
-        <div class="mh-art">
-          <div class="mh-bar">
-            <span class="mh-lock">${isIOS ? 'ぁA' : `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.1" fill="currentColor" stroke="none"/><circle cx="10" cy="17" r="2.1" fill="currentColor" stroke="none"/></svg>`}</span>
-            <span class="mh-url">galla.im</span>
-          </div>
-          <div class="mh-point">↑ 주소창 <b>맨 왼쪽</b>의 ${isIOS ? '<b>ぁA</b>' : '<b>이 모양(슬라이더)</b>'} 아이콘을 눌러주세요</div>
-        </div>
-        <div class="mh-steps">
-          <div class="mh-step"><span class="n">1</span><span class="t">주소창 왼쪽 <b>${isIOS ? 'ぁA' : '슬라이더 모양'}</b> 아이콘 탭</span></div>
-          <div class="mh-step"><span class="n">2</span><span class="t">${isIOS ? '<b>웹사이트 설정</b>' : '<b>권한</b> (또는 사이트 설정)'} 선택</span></div>
-          <div class="mh-step"><span class="n">3</span><span class="t"><b>마이크 → 허용</b>으로 변경</span></div>
+          <div class="mh-step"><span class="n">1</span><span class="t">${isStandalone
+            ? '위 버튼이 안 되면 <b>크롬에서 열어</b> 녹음해주세요(설치한 앱은 마이크가 막힌 기기가 있어요)'
+            : `주소창 왼쪽 <b>${isIOS ? 'ぁA' : '슬라이더 모양'}</b> 아이콘 탭`}</span></div>
+          ${isStandalone ? '' : `
+          <div class="mh-step"><span class="n">2</span><span class="t">${isIOS ? '<b>웹사이트 설정</b>' : '<b>권한</b> (또는 사이트 설정)'} → <b>마이크 → 허용</b></span></div>`}
           <div class="mh-step"><span class="n">✓</span><span class="t">허용하는 즉시 <b>여기가 자동으로 바뀝니다</b></span></div>
         </div>
         <div class="mh-watch" id="mh-watch">🔎 마이크 설정을 지켜보는 중…</div>
-        <button class="mh-btn ghost" data-mh="reload" type="button">허용했어요 — 새로고침</button>`;
-    } else {
-      head = '🎙 마이크 사용을 허용해주세요';
-      sub = '아래 버튼을 누르면 권한 창이 떠요. <b>[허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 녹음할 때마다 다시 물어봅니다.';
-      body = `<button class="mh-btn" data-mh="ask" type="button">마이크 허용하기</button>`;
+        ${isStandalone && isAndroid ? '<button class="mh-btn ghost" data-mh="chrome" type="button">크롬에서 열기</button>' : ''}
+        <button class="mh-btn ghost" data-mh="reload" type="button">허용했어요 — 새로고침</button>` : ''}`;
     }
 
     el.innerHTML = `
@@ -228,15 +213,25 @@
         return;
       }
       if (a === 'ask') {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-          s.getTracks().forEach(t => t.stop());
-          close();
-          window.dispatchEvent(new CustomEvent('galla:mic-granted'));
-        } catch (_) {
-          close();
-          setTimeout(() => open({ reason: '권한을 받지 못했어요' }), 260);
+        const btn = e.target.closest('[data-mh="ask"]');
+        if (btn) { btn.disabled = true; btn.textContent = '마이크 여는 중…'; }
+        // 재생 중인 소리가 장치를 붙들고 있으면 실패한다 — 먼저 정리
+        document.querySelectorAll('audio,video').forEach(m => { try { m.pause(); } catch (_) {} });
+        for (const req of [
+          () => navigator.mediaDevices.getUserMedia({ audio: true }),
+          async () => { await new Promise(r => setTimeout(r, 400)); return navigator.mediaDevices.getUserMedia({ audio: true }); },
+        ]) {
+          try {
+            const s = await req();
+            s.getTracks().forEach(t => t.stop());
+            close();
+            window.dispatchEvent(new CustomEvent('galla:mic-granted'));
+            return;
+          } catch (err) { console.warn('[michelp] ask', err.name); }
         }
+        if (btn) { btn.disabled = false; btn.textContent = '한 번 더 시도'; }
+        const w = el.querySelector('#mh-watch');
+        if (w) { w.textContent = '아직이에요 — 아래 안내대로 허용해주세요'; }
       }
     };
   }
