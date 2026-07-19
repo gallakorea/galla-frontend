@@ -2372,10 +2372,13 @@
          대화 정렬이 깨졌다
      → 배경은 스크롤되지 않는 부모(뷰)에, 눈은 별도 오버레이 층에 그린다. */
   function bgTargets() {
+    /* ⚠️ 미리보기는 두 곳(테마·화면 설정)에 있다. querySelector로 하나만 잡으면
+       DOM에서 먼저 나오는 '숨겨진' 미리보기만 칠해져, 보고 있는 화면은 그대로였다
+       (배경을 골라도 미리보기가 안 바뀌던 원인). 전부 칠한다. */
     return [
       ROOT?.querySelector('.dm-view[data-view="thread"]'),
       ROOT?.querySelector('.dm-view[data-view="room"]'),
-      ROOT?.querySelector('.dm-prev-in'),
+      ...(ROOT ? ROOT.querySelectorAll('.dm-prev-in') : []),
     ].filter(Boolean);
   }
   function applyDisplay() {
