@@ -76,6 +76,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error("[account-edit] load profile error", profileError);
   } else if (profile) {
     nicknameInput.value = profile.nickname || "";
+    // 실시간 중복 확인 — 지금 쓰는 닉네임은 '내 것'으로 통과시킨다
+    window.__nickOriginal = profile.nickname || "";
+    window.__nickCheck = window.GALLA_bindNickCheck?.(nicknameInput, { current: window.__nickOriginal });
     bioInput.value = profile.bio || "";
     syncCounts();
 
@@ -167,7 +170,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const nickname = nicknameInput.value.trim();
       const bio = bioInput.value.trim();
 
-      if (nickname) updatePayload.nickname = nickname;
+      if (nickname) {
+        // 서버가 최종 판정하지만, 확인이 '사용 불가'로 나온 상태면 여기서 멈춘다(왕복 낭비 방지)
+        if (window.__nickCheck && window.__nickCheck.state.ok === false && nickname !== window.__nickOriginal) {
+          alert(document.querySelector('.nick-stat')?.textContent || '닉네임을 다시 확인해주세요');
+          return;
+        }
+        updatePayload.nickname = nickname;
+      }
       updatePayload.bio = bio;
 
       // 전화번호: 숫자만 저장. 입력이 있으면 10~11자리 검증
@@ -191,7 +201,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       if (updateError) {
         console.error("[account-edit] users update error", updateError);
-        alert("프로필 저장 실패");
+        // 닉네임 제약 위반은 사람 말로 — '저장 실패'만 뜨면 원인을 알 수 없다
+        const nickMsg = window.GALLA_nickError?.(updateError);
+        alert(nickMsg || "프로필 저장 실패");
         return;
       }
 

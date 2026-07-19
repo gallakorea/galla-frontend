@@ -219,3 +219,8 @@ body:has(#dm-root.open:not(.page)) .nav,   /* DM 오버레이만 — dm.html 페
 body:has(.glm-dim.open) .nav,
 body:has(.bugr-dim) .nav,
 body:has(.ssh-dim.open) .nav { display: none !important; }
+
+/* 🪪 닉네임 실시간 확인 상태 */
+.nick-stat { margin-top: 6px; font-size: 12px; color: #8b909b; min-height: 16px; }
+.nick-stat.good { color: #2fd07a; }
+.nick-stat.bad { color: #ff6b7a; }

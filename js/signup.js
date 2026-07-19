@@ -17,6 +17,7 @@ async function waitForClient() {
     const pwInput = document.getElementById("password");
     const pw2Input = document.getElementById("password2");
     const nicknameInput = document.getElementById("nickname");
+    window.GALLA_bindNickCheck?.(nicknameInput);
     const phoneInput = document.getElementById("phone");
     const signupBtn = document.getElementById("signupBtn");
 
@@ -60,6 +61,21 @@ async function waitForClient() {
             alert("비밀번호가 일치하지 않습니다.");
             return;
         }
+
+        // 닉네임 중복·형식 — 서버가 최종 판정하지만, 가입은 되고 닉네임만 날아가는 일을 막는다
+        try {
+            const { data: nk } = await supabase.rpc("nickname_available", { p_nick: nickname });
+            if (nk && !nk.ok) {
+                alert({
+                    length: "닉네임은 2~12자로 지어주세요",
+                    charset: "닉네임엔 한글·영문·숫자와 _ . - 만 쓸 수 있어요",
+                    reserved: "사용할 수 없는 닉네임이에요",
+                    taken: "이미 누군가 쓰고 있는 닉네임이에요",
+                }[nk.reason] || "닉네임을 다시 확인해주세요");
+                nicknameInput.focus();
+                return;
+            }
+        } catch (_) { /* 확인 실패 시 진행 — 서버 제약이 최종 방어 */ }
 
         // 만 14세 이상 확인 (개인정보보호법 제22조의2)
         const age = window.GALLA_ageFromBirth ? window.GALLA_ageFromBirth(birthDate) : null;
