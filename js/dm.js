@@ -2869,10 +2869,86 @@
       nav.classList.remove('pop'); void nav.getBoundingClientRect(); nav.classList.add('pop');
       nav.title = pgN ? `안 읽은 메시지 ${dmN} · 안 들은 삐삐 ${pgN}` : `안 읽은 메시지 ${dmN}`;
     }
+    if (total > LAST_NAV_N) showMsgBanner(dmN, pgN);
     LAST_NAV_N = total;
   }
   // 삐삐 수신·확인 때도 네비 숫자를 맞춘다
   document.addEventListener('galla:pager-unread', () => { refreshBadge(); });
+
+  /* 📢 상단 배너 — 뱃지와 역할을 나눈다.
+       · 뱃지(하단 네비): 상시 '몇 개 쌓였나'
+       · 토스트/삐삐 액정팝업: '지금 막 도착했다'
+       · 이 배너: 앱에 들어왔는데 **안 읽은 게 쌓여 있다**는 걸 놓치지 않게
+     같은 소식을 세 번 알리지 않도록: DM 페이지에선 안 뜨고, 닫으면 그 세션 동안
+     다시 안 뜨며, 숫자가 더 늘어났을 때만 다시 등장한다. */
+  const BANNER_KEY = 'galla_msg_banner_dismissed';
+  function bannerCSS() {
+    if (document.getElementById('msgban-css')) return;
+    const st = document.createElement('style');
+    st.id = 'msgban-css';
+    st.textContent = `
+      #msg-banner{position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top,0px));
+        z-index:11400;max-width:460px;margin:0 auto;display:flex;align-items:center;gap:11px;
+        padding:11px 12px;border-radius:15px;cursor:pointer;text-align:left;
+        background:linear-gradient(135deg,#2b3aa8,#1b2a80);border:1px solid rgba(255,255,255,.14);
+        box-shadow:0 14px 40px rgba(0,0,0,.5);color:#fff;font:800 13.5px/1.45 inherit;
+        transform:translateY(-140%);transition:transform .34s cubic-bezier(.2,1,.3,1)}
+      #msg-banner.on{transform:translateY(0)}
+      #msg-banner .mb-ic{flex:0 0 auto;width:34px;height:34px;border-radius:11px;display:flex;
+        align-items:center;justify-content:center;background:rgba(255,255,255,.16)}
+      #msg-banner .mb-ic svg{width:18px;height:18px;fill:#fff}
+      #msg-banner .mb-tx{flex:1;min-width:0}
+      #msg-banner .mb-tx i{display:block;font-style:normal;font-weight:600;font-size:12px;opacity:.82;margin-top:1px}
+      #msg-banner .mb-go{flex:0 0 auto;background:rgba(255,255,255,.18);border:none;border-radius:9px;
+        padding:7px 11px;color:#fff;font-weight:900;font-size:12.5px;cursor:pointer}
+      #msg-banner .mb-x{flex:0 0 auto;background:none;border:none;color:rgba(255,255,255,.72);
+        font-size:17px;line-height:1;cursor:pointer;padding:2px 3px}
+      @media (prefers-reduced-motion:reduce){#msg-banner{transition:none}}
+    `;
+    document.head.appendChild(st);
+  }
+  let bannerShownAt = 0;
+  function showMsgBanner(dmN, pgN) {
+    if (PAGE_MODE() || document.body.dataset.page === 'dm') return;   // DM 안에선 불필요
+    const total = dmN + pgN;
+    if (total <= 0) return;
+    try {
+      const seen = +(sessionStorage.getItem(BANNER_KEY) || 0);
+      if (total <= seen) return;            // 이미 닫은 만큼이면 다시 안 띄운다
+    } catch (_) {}
+    bannerCSS();
+    let el = document.getElementById('msg-banner');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'msg-banner';
+      el.setAttribute('role', 'status');
+      document.body.appendChild(el);
+    }
+    const icon = pgN && !dmN ? 'pager' : 'chat';
+    const title = pgN && !dmN ? `삐삐 ${pgN}통이 와 있어요`
+      : dmN && !pgN ? `안 읽은 메시지 ${dmN}개`
+      : `메시지 ${dmN}개 · 삐삐 ${pgN}통`;
+    const sub = pgN ? '사서함에 접속하면 들을 수 있어요' : '탭하면 바로 열려요';
+    el.innerHTML = `<span class="mb-ic">${window.GALLA_svgIcon ? window.GALLA_svgIcon(icon) : ''}</span>
+      <span class="mb-tx"><b>${esc(title)}</b><i>${esc(sub)}</i></span>
+      <button class="mb-go" type="button">보기</button>
+      <button class="mb-x" type="button" aria-label="닫기">×</button>`;
+    const close = (remember) => {
+      el.classList.remove('on');
+      if (remember) { try { sessionStorage.setItem(BANNER_KEY, String(total)); } catch (_) {} }
+      setTimeout(() => el.remove(), 340);
+    };
+    el.onclick = e => {
+      if (e.target.closest('.mb-x')) return close(true);
+      close(true);
+      location.href = pgN && !dmN ? 'dm.html?pager=1' : 'dm.html';
+    };
+    void el.getBoundingClientRect();
+    el.classList.add('on');
+    bannerShownAt = Date.now();
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { if (document.getElementById('msg-banner')) close(false); }, 8000);
+  }
   /* 📨 새 메시지 토스트 — DM을 안 보고 있을 때 어느 화면에서든 알린다. 탭하면 그 대화로. */
   let toastTimer = null;
   async function showDmToast(t) {
