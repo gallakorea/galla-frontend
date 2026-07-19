@@ -2456,13 +2456,10 @@
       PTT = null; return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
     }
     let stream = micLive();
-    // 음질 우선(통화용 처리 끄고 48kHz) → 실패하면 검증된 단순 요청
-    const HIFI = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true, sampleRate: 48000, channelCount: 1 } };
+    // ⚠️ 음질 제약(처리 끄기·48kHz)은 일부 안드로이드에서 '무음 스트림'을 만든다 —
+    // 검증된 단순 요청만 쓰고 음질은 비트레이트로 확보한다
     try {
-      if (!stream) {
-        try { stream = await navigator.mediaDevices.getUserMedia(HIFI); }
-        catch (_) { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-      }
+      if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micCache().stream = stream; clearTimeout(micCache().timer);
     }
     catch (e) {

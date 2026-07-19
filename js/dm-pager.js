@@ -957,16 +957,11 @@
     // ① 채팅방과 동일한 가장 단순한 요청(이게 실기기에서 검증된 조합)
     // ② 잠깐 쉬고 재시도(장치 해제가 늦는 기기)
     // ③ 기본 마이크를 명시적으로 지정
-    /* 음질: 기본 {audio:true}는 통화용 처리(에코제거·잡음억제·자동증폭)가 걸려
-       목소리가 먹먹해진다. 음성 '메모'는 원음에 가까울수록 좋으므로 처리를 끄고
-       48kHz 모노로 요청한다. 단 이 제약을 못 받는 기기가 있어 실패하면
-       검증된 단순 요청으로 내려간다. */
-    const HIFI = { audio: {
-      echoCancellation: false, noiseSuppression: false, autoGainControl: true,
-      sampleRate: 48000, channelCount: 1,
-    } };
+    /* ⚠️ 음질을 올리려고 제약(echoCancellation:false, sampleRate 48000 등)을 걸었더니
+       일부 안드로이드가 '무음 스트림'을 돌려줘 녹음이 통째로 실패했다.
+       음질보다 '되는 것'이 먼저다 — 실기기에서 검증된 단순 요청만 쓴다.
+       음질은 비트레이트(128k)로만 확보한다. */
     const attempts = [
-      () => md.getUserMedia(HIFI),
       () => md.getUserMedia({ audio: true }),
       async () => { await new Promise(r => setTimeout(r, 400)); return md.getUserMedia({ audio: true }); },
       () => md.getUserMedia({ audio: { deviceId: 'default' } }),
