@@ -2842,19 +2842,37 @@
   }
   window.startDM = startDM;
 
-  /* ---------- 뱃지 ---------- */
+  /* ---------- 뱃지 ----------
+     하단 네비의 메시지 탭은 '안 읽은 DM + 안 들은 삐삐'를 합쳐 보여준다.
+     삐삐를 빼면 호출이 와 있어도 네비가 조용해서 못 알아챈다. */
+  let LAST_NAV_N = 0;
   async function refreshBadge() {
     if (!ME) return;
-    const { count } = await supabase.from('dm_messages')
-      .select('id', { count: 'exact', head: true }).is('read_at', null).neq('sender_id', ME);
-    const paint = el => {
+    const [dm, pg] = await Promise.all([
+      supabase.from('dm_messages').select('id', { count: 'exact', head: true })
+        .is('read_at', null).neq('sender_id', ME),
+      supabase.from('pager_messages').select('id', { count: 'exact', head: true })
+        .eq('box_owner', ME).is('listened_at', null),
+    ]);
+    const dmN = dm?.count || 0, pgN = pg?.count || 0;
+    const total = dmN + pgN;
+    const paint = (el, n) => {
       if (!el) return;
-      if (count && count > 0) { el.textContent = count > 99 ? '99+' : count; el.hidden = false; }
+      if (n > 0) { el.textContent = n > 99 ? '99+' : n; el.hidden = false; }
       else el.hidden = true;
     };
-    paint(BADGE);
-    paint(document.getElementById('navDmBadge'));   // 하단 네비 DM 탭 뱃지
+    paint(BADGE, dmN);                                    // DM 화면 안의 뱃지는 메시지만
+    const nav = document.getElementById('navDmBadge');
+    paint(nav, total);                                    // 네비는 삐삐까지 합산
+    // 새로 늘어났을 때만 살짝 튀어 시선을 끈다(계속 흔들리면 피로하다)
+    if (nav && total > LAST_NAV_N) {
+      nav.classList.remove('pop'); void nav.getBoundingClientRect(); nav.classList.add('pop');
+      nav.title = pgN ? `안 읽은 메시지 ${dmN} · 안 들은 삐삐 ${pgN}` : `안 읽은 메시지 ${dmN}`;
+    }
+    LAST_NAV_N = total;
   }
+  // 삐삐 수신·확인 때도 네비 숫자를 맞춘다
+  document.addEventListener('galla:pager-unread', () => { refreshBadge(); });
   /* 📨 새 메시지 토스트 — DM을 안 보고 있을 때 어느 화면에서든 알린다. 탭하면 그 대화로. */
   let toastTimer = null;
   async function showDmToast(t) {

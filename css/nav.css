@@ -143,6 +143,16 @@ body {
 
 /* DM 탭 안읽음 뱃지 — 인디고(메시지 색 의미 체계) */
 .nav-item { position: relative; }
+
+/* 새 메시지·삐삐가 늘어난 순간에만 한 번 튀어 시선을 끈다(상시 애니메이션은 피로) */
+@keyframes navBadgePop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.45); }
+  70% { transform: scale(.92); }
+  100% { transform: scale(1); }
+}
+.nav-badge.pop { animation: navBadgePop .5s cubic-bezier(.2,1.2,.3,1); }
+@media (prefers-reduced-motion: reduce) { .nav-badge.pop { animation: none; } }
 .nav-badge[hidden] { display: none; }
 .nav-badge {
   position: absolute; top: 4px; right: 50%; margin-right: -18px;
