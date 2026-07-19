@@ -47,9 +47,9 @@
       #nav-jog.on .njg-item.pick{transform:translate(var(--dx),var(--dy)) scale(1.18)}
       .njg-item.pick b{color:#fff}
       /* 손가락 위치를 따라다니는 링 */
+      /* 링은 손가락을 매 프레임 직접 따라간다 — transition을 걸면 한 박자 늦어 끈적인다 */
       .njg-ring{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;
-        border:2px solid rgba(255,255,255,.35);pointer-events:none;
-        transition:transform .06s linear}
+        border:2px solid rgba(255,255,255,.35);pointer-events:none;will-change:transform}
       .njg-hint{position:absolute;left:0;right:0;text-align:center;font-size:12px;font-weight:800;
         color:#aab2c0;text-shadow:0 1px 4px rgba(0,0,0,.8)}
       @media (prefers-reduced-motion:reduce){
@@ -96,6 +96,7 @@
       el.innerHTML = `<i>${t.icon}</i><b>${t.label}</b>` +
         (bd[t.id] ? `<span class="njg-n">${bd[t.id]}</span>` : '');
       el._pos = { x: ox + dx, y: oy + dy };
+      el._deg = deg;                      // 각도로 고르기 위해 기억
       layer.appendChild(el);
       return el;
     });
@@ -112,6 +113,7 @@
     layer.appendChild(hint);
 
     document.body.appendChild(layer);
+    document.body.style.overscrollBehavior = 'none';
     void layer.getBoundingClientRect();
     layer.classList.add('on');
     try { navigator.vibrate?.(14); } catch (_) {}
@@ -122,67 +124,89 @@
     const btn = document.querySelector('.nav-item.nav-dm, .nav-item[data-page="dm"]');
     if (!btn || btn.dataset.jogBound) return;
     btn.dataset.jogBound = '1';
+    /* 이 버튼 위에서는 브라우저 스크롤·확대 제스처를 쓰지 않는다.
+       ⚠️ 이게 없으면 손가락이 움직이는 순간 브라우저가 제스처를 가져가면서
+       touchcancel이 날아와 메뉴가 사라진다 — '고르러 가다 없어지던' 원인. */
+    btn.style.touchAction = 'none';
 
-    let holdT = null, ui = null, picked = null, sx = 0, sy = 0, moved = false;
+    let holdT = null, ui = null, picked = null, sx = 0, sy = 0;
+    let raf = 0, lastX = 0, lastY = 0;
 
     const clear = () => {
       clearTimeout(holdT); holdT = null;
-      if (ui) { ui.layer.classList.remove('on'); const l = ui.layer; setTimeout(() => l.remove(), 200); }
+      cancelAnimationFrame(raf); raf = 0;
+      if (ui) { const l = ui.layer; l.classList.remove('on'); setTimeout(() => l.remove(), 200); }
+      document.body.style.overscrollBehavior = '';
       ui = null; picked = null;
     };
 
-    const update = (x, y) => {
-      if (!ui) return;
-      ui.ring.style.transform = `translate(${x - parseFloat(ui.ring.style.left)}px, ${y - parseFloat(ui.ring.style.top)}px)`;
-      let best = null, bestD = PICK_R;
+    /* 각도로 고른다 — 거리 원 안에 정확히 들어가야 하는 방식은 손이 조금만
+       빗나가도 선택이 풀려 뚝뚝 끊긴다. 조그셔틀처럼 '방향'만 맞으면 잡힌다. */
+    const DEAD = 34;                     // 이 안쪽은 '고르지 않음'(취소 구역)
+    const pickFor = (x, y) => {
+      const dx = x - sx, dy = y - sy;
+      if (Math.hypot(dx, dy) < DEAD) return null;
+      let deg = Math.atan2(dy, dx) * 180 / Math.PI;   // -180~180
+      if (deg > 0) deg -= 360;                        // 위쪽 반원을 -180~-0 범위로
+      let best = null, bestD = 1e9;
       ui.items.forEach(el => {
-        const d = Math.hypot(x - el._pos.x, y - el._pos.y);
+        let d = Math.abs(((el._deg - 360) - deg + 540) % 360 - 180);
         if (d < bestD) { bestD = d; best = el; }
       });
+      return best;
+    };
+
+    const draw = () => {
+      raf = 0;
+      if (!ui) return;
+      const x = lastX, y = lastY;
+      ui.ring.style.transform = `translate(${x - sx}px, ${y - sy}px)`;
+      const best = pickFor(x, y);
       if (best !== picked) {
         ui.items.forEach(el => el.classList.toggle('pick', el === best));
         picked = best;
-        if (best) {
-          ui.hint.textContent = best.querySelector('b').textContent + ' — 손을 떼면 이동';
-          try { navigator.vibrate?.(8); } catch (_) {}
-        } else {
-          ui.hint.textContent = '손가락을 움직여 고르고, 떼면 이동';
-        }
+        ui.hint.textContent = best
+          ? best.querySelector('b').textContent + ' — 손을 떼면 이동'
+          : '방향으로 고르세요 · 가운데는 취소';
+        try { navigator.vibrate?.(8); } catch (_) {}
       }
     };
+    const queue = (x, y) => {
+      lastX = x; lastY = y;
+      if (!raf) raf = requestAnimationFrame(draw);   // 매 프레임 한 번만 그린다
+    };
 
-    btn.addEventListener('touchstart', e => {
-      if (e.touches.length !== 1) return;
-      const t = e.touches[0];
-      sx = t.clientX; sy = t.clientY; moved = false;
+    btn.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      sx = e.clientX; sy = e.clientY;
+      try { btn.setPointerCapture(e.pointerId); } catch (_) {}   // 손가락이 어디로 가든 계속 받는다
       clearTimeout(holdT);
       holdT = setTimeout(() => { ui = open(btn, sx, sy); }, HOLD_MS);
-    }, { passive: true });
+    });
 
-    btn.addEventListener('touchmove', e => {
-      const t = e.touches[0];
+    btn.addEventListener('pointermove', e => {
       if (!ui) {
-        // 아직 안 펼쳐졌는데 많이 움직이면 스크롤 의도 — 취소
-        if (Math.hypot(t.clientX - sx, t.clientY - sy) > 12) { clearTimeout(holdT); holdT = null; }
+        if (Math.hypot(e.clientX - sx, e.clientY - sy) > 14) { clearTimeout(holdT); holdT = null; }
         return;
       }
-      moved = true;
-      e.preventDefault?.();
-      update(t.clientX, t.clientY);
-    }, { passive: false });
+      e.preventDefault();
+      queue(e.clientX, e.clientY);
+    });
 
-    const end = () => {
-      const tab = picked?.dataset.tab;
+    const finish = e => {
       const wasOpen = !!ui;
+      const tab = picked?.dataset.tab;
+      try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
       clear();
-      if (!wasOpen) return;                     // 짧게 눌렀으면 기본 동작(링크 이동)에 맡긴다
-      if (!tab) { go(null); return; }
-      go(tab);
+      if (!wasOpen) return;              // 짧게 눌렀으면 기본 동작(DM 열기)에 맡긴다
+      go(tab || null);
     };
-    btn.addEventListener('touchend', end, { passive: true });
-    btn.addEventListener('touchcancel', () => clear(), { passive: true });
+    btn.addEventListener('pointerup', finish);
+    /* ⚠️ pointercancel에서 '이동'까지 하면 엉뚱한 곳으로 튄다. 닫기만 한다.
+       다만 캡처를 쓰기 때문에 실제로 취소가 오는 일은 거의 없다. */
+    btn.addEventListener('pointercancel', () => clear());
+    btn.addEventListener('contextmenu', e => { if (ui) e.preventDefault(); });
 
-    /* 펼친 상태에서 떼면 클릭이 뒤따라 발생해 두 번 이동한다 — 막는다 */
     btn.addEventListener('click', e => {
       if (btn._skipClick) { e.preventDefault(); e.stopPropagation(); btn._skipClick = false; }
     }, true);
