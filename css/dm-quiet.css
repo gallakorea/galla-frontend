@@ -1053,3 +1053,72 @@ body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible;
 }
 .pgr-dial-go:disabled { opacity: .4; cursor: default; }
 .pgr-dial-hint.bad { color: #ff8f9a; }
+
+
+/* ═══ 📖 삐삐 사용 설명서 — 90년대 취급설명서 감성 ═══ */
+#pager-guide {
+  position: fixed; inset: 0; z-index: 14800; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 90% at 50% 20%, #0b2416 0%, #050608 70%);
+  opacity: 0; transition: opacity .26s ease; padding: 20px;
+}
+#pager-guide.on { opacity: 1; }
+.pgr-gd-body {
+  width: 100%; max-width: 420px; box-sizing: border-box;
+  padding: 22px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px; background: #0e1116; border: 1px solid rgba(125,255,168,.18);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(125,255,168,.08);
+  transform: translateY(14px) scale(.98); transition: transform .3s cubic-bezier(.2,.9,.3,1.15);
+  text-align: center;
+}
+#pager-guide.on .pgr-gd-body { transform: none; }
+.pgr-gd-art {
+  background: linear-gradient(180deg, #0d2b18, #081510);
+  border: 1px solid rgba(125,255,168,.14); border-radius: 16px;
+  padding: 10px; margin-bottom: 16px;
+}
+.pgr-art-svg { width: 100%; height: auto; max-height: 168px; display: block; }
+.pgr-gd-t {
+  font-size: 19px; font-weight: 900; color: #fff; letter-spacing: -.3px; margin-bottom: 10px;
+}
+.pgr-gd-b {
+  font-size: 13.5px; line-height: 1.85; color: #b9bdc7; min-height: 118px;
+}
+.pgr-gd-b b { color: #7dffa8; font-weight: 800; }
+.pgr-gd-b i { color: #8b909b; font-style: normal; font-size: 12.5px; }
+.pgr-gd-dots { display: flex; gap: 6px; justify-content: center; margin: 14px 0 16px; }
+.pgr-gd-dots i {
+  width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.18);
+  transition: all .25s ease;
+}
+.pgr-gd-dots i.on { width: 18px; border-radius: 3px; background: #7dffa8; }
+.pgr-gd-btns { display: flex; gap: 8px; }
+.pgr-gd-btns button {
+  flex: 1; padding: 13px 0; border-radius: 12px; cursor: pointer; font-size: 13.5px; font-weight: 800;
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); color: #b9bdc7;
+}
+.pgr-gd-btns button.go {
+  flex: 1.6; border: none; background: linear-gradient(180deg, #2a9c58, #1f7a45); color: #eafff1;
+}
+.pgr-gd-btns button:active { transform: scale(.97); }
+.pgr-guide-open {
+  width: 100%; margin-top: 8px; padding: 11px 0; border-radius: 12px; cursor: pointer;
+  background: rgba(125,255,168,.07); border: 1px solid rgba(125,255,168,.22);
+  color: #7dffa8; font-size: 12.5px; font-weight: 800;
+}
+
+/* 삽화 애니메이션 — 삐삐는 떨고, 액정은 깜빡이고, 숫자는 떠다닌다 */
+@keyframes artShake { 0%,100%{transform:translate(0,0) rotate(0)} 25%{transform:translate(-1.5px,1px) rotate(-1deg)} 75%{transform:translate(1.5px,-1px) rotate(1deg)} }
+@keyframes artBlink { 0%,45%{opacity:1} 55%,70%{opacity:.25} 80%,100%{opacity:1} }
+@keyframes artWave { 0%{opacity:.2} 50%{opacity:1} 100%{opacity:.2} }
+@keyframes artFloat1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes artFloat2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+@keyframes artSpark { 0%,100%{opacity:.35; transform:scale(.9)} 50%{opacity:1; transform:scale(1.15)} }
+.art-shake { animation: artShake .28s infinite; transform-origin: center; }
+.art-blink { animation: artBlink 1.6s infinite; }
+.art-wave { animation: artWave 1.2s infinite; }
+.art-float1 { animation: artFloat1 2.6s ease-in-out infinite; }
+.art-float2 { animation: artFloat2 3.1s ease-in-out infinite; }
+.art-spark { animation: artSpark 1.8s ease-in-out infinite; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .art-shake, .art-blink, .art-wave, .art-float1, .art-float2, .art-spark { animation: none; }
+}

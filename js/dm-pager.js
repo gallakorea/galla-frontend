@@ -208,6 +208,150 @@
     window.addEventListener('pageshow', e => { if (e.persisted) wake(); });
   }
 
+
+  /* ── 📖 삐삐 사용 설명서 — 처음 온 사람에게 '그 시절'을 5장으로 설명한다.
+     그림은 전부 인라인 SVG(외부 파일 0, 오프라인 OK, 레티나 선명). ── */
+  const GUIDE_KEY = 'galla_pager_guide_v1';
+
+  const ART = {
+    // 진동하는 삐삐 기기
+    pager: `<svg viewBox="0 0 200 150" class="pgr-art-svg">
+      <g class="art-shake">
+        <rect x="46" y="18" width="108" height="118" rx="16" fill="#1a1d24" stroke="#7dffa8" stroke-width="2"/>
+        <rect x="58" y="32" width="84" height="46" rx="6" fill="#0d2b18" stroke="#2a9c58" stroke-width="1.5"/>
+        <text x="100" y="62" text-anchor="middle" font-family="Courier New,monospace" font-size="20" fill="#7dffa8" class="art-blink">486</text>
+        <circle cx="76" cy="98" r="9" fill="#2a3240"/><circle cx="100" cy="98" r="9" fill="#2a3240"/><circle cx="124" cy="98" r="9" fill="#2a3240"/>
+        <rect x="76" y="116" width="48" height="7" rx="3.5" fill="#2a3240"/>
+        <rect x="96" y="6" width="8" height="14" rx="3" fill="#7dffa8"/>
+      </g>
+      <g class="art-wave" stroke="#7dffa8" stroke-width="2.5" fill="none" stroke-linecap="round">
+        <path d="M32 60 Q20 75 32 90"/><path d="M18 48 Q0 75 18 102"/>
+        <path d="M168 60 Q180 75 168 90"/><path d="M182 48 Q200 75 182 102"/>
+      </g>
+    </svg>`,
+    // 번호 뽑기 액정
+    number: `<svg viewBox="0 0 200 150" class="pgr-art-svg">
+      <rect x="18" y="34" width="164" height="70" rx="12" fill="#0d2b18" stroke="#2a9c58" stroke-width="2"/>
+      <text x="100" y="66" text-anchor="middle" font-family="Courier New,monospace" font-size="11" fill="#5fd88a" letter-spacing="3">MY PAGER</text>
+      <text x="100" y="90" text-anchor="middle" font-family="Courier New,monospace" font-size="21" fill="#7dffa8" letter-spacing="1" class="art-blink">012-486-1004</text>
+      <g fill="#ffe89a" class="art-spark">
+        <path d="M36 24 l3 7 7 3 -7 3 -3 7 -3-7 -7-3 7-3z"/>
+        <path d="M166 110 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5-6 -6-2.5 6-2.5z"/>
+      </g>
+    </svg>`,
+    // 떠다니는 숫자 암호
+    codes: `<svg viewBox="0 0 200 150" class="pgr-art-svg">
+      <g font-family="Courier New,monospace" font-weight="bold">
+        <text x="34" y="42" font-size="22" fill="#7dffa8" class="art-float1">486</text>
+        <text x="118" y="34" font-size="18" fill="#5fd88a" class="art-float2">8282</text>
+        <text x="26" y="106" font-size="18" fill="#5fd88a" class="art-float2">1004</text>
+        <text x="108" y="118" font-size="20" fill="#7dffa8" class="art-float1">0404</text>
+        <text x="70" y="76" font-size="13" fill="#e6d9a3" class="art-blink">사 랑 해</text>
+      </g>
+      <g stroke="#2a9c58" stroke-width="1.2" opacity=".5" fill="none">
+        <path d="M60 48 L92 70"/><path d="M140 44 L112 68"/><path d="M56 98 L88 84"/><path d="M118 108 L104 86"/>
+      </g>
+    </svg>`,
+    // 공중전화 + 수화기
+    phone: `<svg viewBox="0 0 200 150" class="pgr-art-svg">
+      <rect x="58" y="16" width="84" height="118" rx="10" fill="#1a1d24" stroke="#7dffa8" stroke-width="2"/>
+      <rect x="70" y="28" width="60" height="28" rx="4" fill="#0d2b18" stroke="#2a9c58" stroke-width="1.5"/>
+      <text x="100" y="48" text-anchor="middle" font-family="Courier New,monospace" font-size="15" fill="#7dffa8" class="art-blink">삐—</text>
+      <g fill="#2a3240">
+        <rect x="72" y="66" width="14" height="11" rx="2"/><rect x="93" y="66" width="14" height="11" rx="2"/><rect x="114" y="66" width="14" height="11" rx="2"/>
+        <rect x="72" y="82" width="14" height="11" rx="2"/><rect x="93" y="82" width="14" height="11" rx="2"/><rect x="114" y="82" width="14" height="11" rx="2"/>
+        <rect x="72" y="98" width="14" height="11" rx="2"/><rect x="114" y="98" width="14" height="11" rx="2"/>
+      </g>
+      <rect x="93" y="98" width="14" height="11" rx="2" fill="#7dffa8" class="art-blink"/>
+      <text x="100" y="107" text-anchor="middle" font-size="9" fill="#0d2b18" font-weight="bold">#</text>
+      <g stroke="#7dffa8" stroke-width="3" fill="none" stroke-linecap="round" class="art-shake">
+        <path d="M22 44 q0 -14 14 -14 l6 0 q6 0 6 8 l0 6 q0 6 -6 6 l-4 0"/>
+        <path d="M22 44 l0 42"/>
+        <path d="M22 86 q0 14 14 14 l6 0 q6 0 6 -8 l0 -6"/>
+      </g>
+    </svg>`,
+    // 채팅 vs 삐삐
+    versus: `<svg viewBox="0 0 200 150" class="pgr-art-svg">
+      <g opacity=".45">
+        <rect x="12" y="26" width="70" height="98" rx="10" fill="#16171c" stroke="#3a3f4a" stroke-width="1.5"/>
+        <rect x="20" y="38" width="42" height="12" rx="6" fill="#3450d6"/>
+        <rect x="32" y="56" width="42" height="12" rx="6" fill="#2a3240"/>
+        <rect x="20" y="74" width="50" height="12" rx="6" fill="#3450d6"/>
+        <text x="47" y="104" text-anchor="middle" font-size="8" fill="#6b7280">읽음 · 입력중…</text>
+        <text x="47" y="116" text-anchor="middle" font-size="9" fill="#8b909b">지금</text>
+      </g>
+      <text x="100" y="82" text-anchor="middle" font-size="15" fill="#e6d9a3" font-weight="bold">VS</text>
+      <g>
+        <rect x="118" y="26" width="70" height="98" rx="10" fill="#1a1d24" stroke="#7dffa8" stroke-width="2"/>
+        <rect x="128" y="40" width="50" height="26" rx="5" fill="#0d2b18" stroke="#2a9c58" stroke-width="1.2"/>
+        <text x="153" y="58" text-anchor="middle" font-family="Courier New,monospace" font-size="13" fill="#7dffa8" class="art-blink">1004</text>
+        <text x="153" y="88" text-anchor="middle" font-size="8" fill="#5fd88a">읽었는지 모름</text>
+        <text x="153" y="104" text-anchor="middle" font-size="8" fill="#5fd88a">답장 버튼 없음</text>
+        <text x="153" y="118" text-anchor="middle" font-size="9" fill="#e6d9a3">기다림</text>
+      </g>
+    </svg>`,
+  };
+
+  const GUIDE = [
+    { art: ART.pager, t: '삐삐? 그게 뭔데요',
+      b: '1997년. 문자 한 통에 30원 하던 시절,\n우리는 이 조그만 기계로 사랑을 고백했습니다.\n화면엔 <b>숫자만</b> 뜹니다.\n무슨 뜻인지는… <i>알아서 해석하세요.</i>' },
+    { art: ART.number, t: '일단 번호부터 받으세요',
+      b: '개통하면 <b>나만의 번호</b>가 나옵니다.\n랜덤으로 뽑거나, 마음에 드는 번호를 직접 고르거나.\n<b>486</b>이나 <b>1004</b>가 박힌 번호를 잡으면\n그날 하루 종일 어깨가 올라갑니다.' },
+    { art: ART.codes, t: '숫자로 말합니다',
+      b: '<b>486</b> 사랑해 · <b>8282</b> 빨리빨리 · <b>1004</b> 천사\n\n상대가 못 알아들으면? 그것도 낭만입니다.\n암호책은 앱 안에 있으니 <i>커닝하세요.</i>' },
+    { art: ART.phone, t: '목소리도 남깁니다',
+      b: '상대 사서함에 접속하면\n그 사람이 녹음한 <b>인사말</b>이 흘러나옵니다.\n<b>삐—</b> 소리가 나면 그때부터 녹음.\n급하면 <b>#</b>을 눌러 건너뛰세요.\n<i>(그 시절에도 다들 눌렀습니다)</i>' },
+    { art: ART.versus, t: '채팅이랑은 다릅니다',
+      b: '읽음 표시 <b>없습니다</b>.\n입력 중… <b>없습니다</b>.\n답장 버튼도 <b>없습니다</b>.\n\n상대가 들었는지 알 수 없고,\n그래서 하루 종일 궁금합니다.\n<b>그게 삐삐입니다.</b>' },
+  ];
+
+  function openGuide(onDone) {
+    let i = 0;
+    const el = document.createElement('div');
+    el.id = 'pager-guide';
+    const paint = () => {
+      const g = GUIDE[i], last = i === GUIDE.length - 1;
+      el.innerHTML = `
+        <div class="pgr-gd-body">
+          <div class="pgr-gd-art">${g.art}</div>
+          <div class="pgr-gd-t">${g.t}</div>
+          <div class="pgr-gd-b">${g.b.replace(/\n/g, '<br>')}</div>
+          <div class="pgr-gd-dots">${GUIDE.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+          <div class="pgr-gd-btns">
+            ${i > 0 ? '<button type="button" data-g="prev">이전</button>' : '<button type="button" data-g="skip">건너뛰기</button>'}
+            <button type="button" data-g="${last ? 'done' : 'next'}" class="go">${last ? '번호 받으러 가기' : '다음'}</button>
+          </div>
+        </div>`;
+    };
+    paint();
+    document.body.appendChild(el);
+    void el.getBoundingClientRect();
+    el.classList.add('on');
+    beep('connect');
+    const close = (done) => {
+      try { localStorage.setItem(GUIDE_KEY, '1'); } catch (_) {}
+      el.classList.remove('on');
+      setTimeout(() => { el.remove(); if (done) onDone?.(); }, 260);
+    };
+    el.onclick = e => {
+      const g = e.target.closest('[data-g]')?.dataset.g;
+      if (!g) return;
+      if (g === 'next') { i++; paint(); beep('tone'); }
+      else if (g === 'prev') { i--; paint(); }
+      else if (g === 'skip') close(false);
+      else if (g === 'done') close(true);
+    };
+    // 좌우 스와이프로도 넘긴다
+    let sx = 0;
+    el.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true });
+    el.addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - sx;
+      if (Math.abs(dx) < 50) return;
+      if (dx < 0 && i < GUIDE.length - 1) { i++; paint(); }
+      else if (dx > 0 && i > 0) { i--; paint(); }
+    });
+  }
+
   /* ── 📟 개통식 — 첫 진입의 의식. 번호를 '받는' 순간이 기억에 남아야 한다 ── */
   function renderActivation(host, waiting) {
     host.innerHTML = `
@@ -226,11 +370,17 @@
             <button type="button" class="pgr-btn go" data-a="actrand">랜덤으로 개통</button>
             <button type="button" class="pgr-btn" data-a="actpick">번호 골라 개통</button>
           </div>
+          <button type="button" class="pgr-guide-open" data-a="guide">📖 삐삐가 뭔가요? (30초 설명서)</button>
         </div>
         <div class="pgr-note">그 시절처럼, 번호 하나로 시작합니다.</div>
       </div>`;
     host.querySelector('[data-a="actrand"]').onclick = () => activateRandom(host);
     host.querySelector('[data-a="actpick"]').onclick = () => pickNumber(host);
+    host.querySelector('[data-a="guide"]').onclick = () => openGuide();
+    // 처음 온 사람에겐 설명서를 먼저 — '이게 뭐지?'로 이탈하지 않게
+    let seen = false;
+    try { seen = localStorage.getItem(GUIDE_KEY) === '1'; } catch (_) {}
+    if (!seen) setTimeout(() => openGuide(), 500);
   }
 
   /* 랜덤 개통 — 액정 숫자 스크램블 → 번호 확정 연출 */
@@ -296,6 +446,7 @@
           <div class="pgr-actions">
             <button type="button" class="pgr-btn" data-a="copy">번호 복사</button>
             <button type="button" class="pgr-btn" data-a="book">📖 암호책</button>
+            <button type="button" class="pgr-btn" data-a="guide">❓ 사용법</button>
             <button type="button" class="pgr-btn" data-a="greet">${BOX.greeting_url ? '인사말 재녹음' : '인사말 녹음'}</button>
           </div>
           ${BOX.greeting_url ? `<button type="button" class="pgr-greet-play" data-a="playgreet">▶ 내 인사말 듣기 (${BOX.greeting_dur || 0}초)</button>` : ''}
@@ -426,6 +577,7 @@
     }
     if (a === 'pickfriend') { pickFriend(host); return; }
     if (a === 'pick') { pickNumber(host); return; }
+    if (a === 'guide') { openGuide(); return; }
     if (a === 'book') { openCodebook(null); return; }
     if (a === 'copy') {
       try { await navigator.clipboard.writeText(BOX.number); } catch (_) {}
@@ -808,5 +960,5 @@
     window.GALLA_pagerRefresh = () => mount(host);
   }
 
-  window.GALLA_PAGER = { mount, refresh, beep, popup, leaveTo, CODES, CODEBOOK, codeMeaning, openCodebook };
+  window.GALLA_PAGER = { mount, refresh, beep, popup, leaveTo, CODES, CODEBOOK, codeMeaning, openCodebook, openGuide };
 })();
