@@ -1373,17 +1373,22 @@ html[data-dm-face="serif"] .dm-bubble { font-family: ui-serif, "Apple SD Gothic 
   border: 2px solid rgba(255,255,255,.12); background-size: 40px 40px;
 }
 .dm-bg-sw.on { border-color: #4361ff; box-shadow: 0 0 0 3px rgba(67,97,255,.25); }
-/* ❄️ 눈 내리는 채팅방 */
-.snowing { position: relative; overflow: hidden; }
-.snowflake {
-  position: absolute; top: -14px; color: #fff; pointer-events: none; z-index: 0;
-  animation: snowFall linear infinite; font-style: normal;
+/* ❄️ 눈 내리는 채팅방 — 스크롤 영역이 아니라 '뷰' 위에 얹는 오버레이.
+   스크롤 컨텐츠가 되면 대화가 멈춘 것처럼 굴고 말풍선 정렬까지 깨진다(실제로 겪음) */
+.dm-bg-host { position: relative; background-repeat: repeat; }
+.dm-bg-host > .dm-msgs, .dm-bg-host > .dm-prev-in { background: transparent; }
+.dm-snow {
+  position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+}
+.dm-snow i {
+  position: absolute; top: -14px; color: #fff; font-style: normal;
+  animation: snowFall linear infinite;
 }
 @keyframes snowFall {
   0%   { transform: translateY(-14px) translateX(0) rotate(0deg); }
-  100% { transform: translateY(105%) translateX(18px) rotate(180deg); }
+  100% { transform: translateY(105vh) translateX(18px) rotate(180deg); }
 }
-@media (prefers-reduced-motion: reduce) { .snowflake { display: none; } }
+@media (prefers-reduced-motion: reduce) { .dm-snow { display: none; } }
 
 
 /* 🎨 테마 — 포인트 색 */
@@ -1429,3 +1434,17 @@ html[data-stk-size="l"] .dm-bubble.stk img { width: 148px; height: 148px; }
   margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .dm-cat-go { flex: 0 0 auto; color: #5d6472; font-size: 19px; line-height: 1; }
+
+
+/* 배경을 깔아도 말풍선·입력창이 눈·무늬 위에 오게 */
+.dm-bg-host > .dm-msgs, .dm-bg-host > .dm-inputbar, .dm-bg-host > .dm-head { position: relative; z-index: 1; }
+
+
+/* 키워드 강조 — 등록한 낱말이 대화에 보이면 눈에 띄게 */
+mark.dm-kw { background: rgba(255,212,121,.28); color: #ffe6a8; border-radius: 4px; padding: 0 2px; }
+
+/* ⌨️ 키보드가 올라오면 '실제로 보이는 높이'에 맞춘다(--dm-vvh는 JS가 넣는다).
+   dvh만 믿으면 기기마다 입력창이 키보드 뒤로 숨거나 화면이 밀린다. */
+body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
+  height: var(--dm-vvh, calc(100dvh - env(safe-area-inset-top, 0px)));
+}

@@ -278,8 +278,8 @@
               <a class="dm-mic-btn" href="/account-edit.html">관리</a>
             </div>
             <div class="dm-set-row">
-              <span class="dm-set-mid"><b>내 아이템함</b><i>이모티콘·유령권 등 보유 아이템</i></span>
-              <a class="dm-mic-btn" href="/mypage.html">보관함</a>
+              <span class="dm-set-mid"><b>내 아이템함 · 상점</b><i>이모티콘·유령권 등 보유 아이템과 구매</i></span>
+              <button class="dm-mic-btn" data-act="openShop" type="button">열기</button>
             </div>
 
             <div class="dm-sec">${ICONS.block}차단한 사람</div>
@@ -930,13 +930,22 @@
         else { showView('compose'); initSearch(); }
       }
       else if (act === 'toRoom') { if (DEPTH > 0) history.back(); else showView('room'); }
-      else if (act === 'goPager') { showView('inbox'); setTab('pager'); }
+      else if (act === 'goPager') { backToInbox('pager'); }
       else if (act === 'notiSet') { showView('notiset'); loadNotiSet(); }
       else if (act === 'chatSet2') { showView('chatset2'); loadChatSet2(); }
       else if (act === 'displaySet') { showView('display'); loadDisplay(); }
       else if (act === 'themeSet') { showView('theme'); loadTheme(); applyDisplay(); }
       else if (act === 'callSet') { showView('callset'); loadCallSet(); }
       else if (act === 'privacySet') { showView('privacy'); loadPrivacy(); }
+      else if (act === 'openShop') {
+        // 상점은 items.js가 띄운다 — 없으면 불러온 뒤 연다(엉뚱한 페이지로 보내지 않는다)
+        if (!window.openShop) {
+          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/items.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+        }
+        if (window.openShop) window.openShop();
+        else location.href = 'mypage.html';
+      }
       else if (act === 'etcSet') { showView('etc'); loadEtc(); }
       else if (act === 'clearCalls') { await clearCalls(e.target.closest('[data-act]')); }
       else if (act === 'clearSearch') {
@@ -954,7 +963,7 @@
       else if (act === 'backupSet') { showView('backup'); }
       else if (act === 'clearCache') { await clearCaches(e.target.closest('[data-act]')); }
       else if (act === 'exportChats') { await exportChats(e.target.closest('[data-act]')); }
-      else if (act === 'goRooms') { showView('inbox'); setTab('rooms'); }
+      else if (act === 'goRooms') { backToInbox('rooms'); }
       else if (act === 'toSettings') { goBack(); }
       else if (act === 'bugReport') {
         if (!window.GALLA_openBugReport) {
@@ -1169,7 +1178,7 @@
       POPPING = true;
       leaveView(CUR_VIEW);
       showView(target);
-      if (target === 'inbox') loadInbox();
+      if (target === 'inbox') { loadInbox(); applyPendingTab(); }
       POPPING = false;
     });
     // 상세에서 오른쪽으로 밀면 뒤로(전 기기 동일 동작 — 엣지 스와이프가 없는 기기 대비)
@@ -1198,6 +1207,20 @@
     showView('inbox');
     if (fallbackTab) setTab(fallbackTab); else loadInbox();
   }
+  let PENDING_TAB = null;
+  /* 설정 안쪽에서 '목록의 어떤 탭'으로 가고 싶을 때 —
+     showView('inbox')는 쌓인 히스토리를 되감으므로(비동기) 그 직후에 탭을 바꾸면
+     popstate 렌더에 덮인다. 그래서 탭을 예약해두고 렌더가 끝난 뒤 적용한다. */
+  function backToInbox(tab) {
+    PENDING_TAB = tab || null;
+    if (CUR_VIEW === 'inbox') { applyPendingTab(); return; }
+    showView('inbox');
+  }
+  function applyPendingTab() {
+    if (!PENDING_TAB) return;
+    const t = PENDING_TAB; PENDING_TAB = null;
+    setTab(t);
+  }
   function showView(name) {
     if (PAGE_MODE() && !POPPING && name !== CUR_VIEW) {
       if (name !== 'inbox') {
@@ -1206,7 +1229,7 @@
         // 목록 복귀는 쌓아둔 항목을 되감아 소비한다 → 렌더는 popstate가 맡는다.
         // (되감기가 불발되는 환경 대비 안전망)
         const n = DEPTH;
-        setTimeout(() => { if (DEPTH === n && CUR_VIEW !== 'inbox') { DEPTH = 0; showView('inbox'); } }, 400);
+        setTimeout(() => { if (DEPTH === n && CUR_VIEW !== 'inbox') { DEPTH = 0; showView('inbox'); applyPendingTab(); } }, 400);
         history.go(-n);
         return;
       }
@@ -1275,6 +1298,24 @@
   /* iOS 키보드가 문서를 밀어 올린 뒤 되돌리지 않아 헤더가 어긋나는 문제 —
      포커스가 빠지거나 키보드가 닫히면(visualViewport 변화) 문서를 원위치로 되돌린다.
      CSS로 문서 스크롤을 잠갔지만, iOS는 그래도 밀 때가 있어 JS로 한 번 더 받친다. */
+  /* ⌨️ 키보드가 올라오면 실제로 보이는 높이가 줄어드는데, 100dvh는 기기마다
+     반응이 제각각이라 입력창이 키보드 뒤로 숨거나 화면이 밀린다.
+     visualViewport가 알려주는 '진짜 보이는 높이'를 CSS 변수로 넘겨 패널이 그 안에 맞춘다. */
+  function bindViewportFit() {
+    if (window.__dmVvBound || !window.visualViewport) return;
+    window.__dmVvBound = true;
+    const vv = window.visualViewport;
+    const fit = () => {
+      document.documentElement.style.setProperty('--dm-vvh', Math.round(vv.height) + 'px');
+      // 키보드가 열리면 대화 맨 아래를 계속 보여준다
+      const msgs = ROOT?.querySelector('#dm-msgs');
+      if (msgs && document.activeElement?.id === 'dm-input') msgs.scrollTop = msgs.scrollHeight;
+    };
+    vv.addEventListener('resize', fit);
+    vv.addEventListener('scroll', fit);
+    fit();
+  }
+
   function lockPageScroll() {
     if (!PAGE_MODE() || window.__dmScrollLock) return;
     window.__dmScrollLock = true;
@@ -1327,6 +1368,7 @@
     if (ME && window.GALLA_e2e?.supported()) attachMailbox();
     if (ME) { attachPagerRealtime(); refreshPagerBadge(); }
     lockPageScroll();
+    bindViewportFit();
     // 계정이 바뀌면(같은 폰에서 로그아웃→다른 계정) 이전 계정 화면·상태가 남지 않게 통째로 리로드
     try {
       supabase.auth.onAuthStateChange?.((_ev, sess) => {
@@ -2283,42 +2325,60 @@
     const inner = BG_PATTERNS[id] || BG_PATTERNS.dots;
     return `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>${inner}</svg>")`;
   }
-  /* 설정을 화면 전체에 반영 — 미리보기와 실제 대화가 같은 규칙을 쓴다 */
+  /* 설정을 화면 전체에 반영.
+     ⚠️ 배경과 눈을 .dm-msgs(스크롤 영역) 안에 넣었더니 두 가지가 깨졌다:
+       · 눈송이가 스크롤 컨텐츠가 돼 scrollHeight를 늘려 대화가 멈춘 것처럼 굴었고
+       · 눈송이가 '첫 자식'이 되면서 말풍선 바닥 정렬(margin-top:auto)을 훔쳐가
+         대화 정렬이 깨졌다
+     → 배경은 스크롤되지 않는 부모(뷰)에, 눈은 별도 오버레이 층에 그린다. */
+  function bgTargets() {
+    return [
+      ROOT?.querySelector('.dm-view[data-view="thread"]'),
+      ROOT?.querySelector('.dm-view[data-view="room"]'),
+      ROOT?.querySelector('.dm-prev-in'),
+    ].filter(Boolean);
+  }
   function applyDisplay() {
     const r = document.documentElement;
     r.style.setProperty('--dm-font-scale', (UI.fontScale || 100) / 100);
     r.dataset.dmFace = UI.fontFace || 'sys';
-    const msgs = [ROOT?.querySelector('#dm-msgs'), ROOT?.querySelector('#dm-room-msgs'), ROOT?.querySelector('.dm-prev-in')];
-    msgs.forEach(el => {
-      if (!el) return;
-      if (UI.bgKind === 'color') { el.style.background = UI.bgValue; el.style.backgroundImage = ''; }
-      else if (UI.bgKind === 'pattern') { el.style.background = '#0b0c10'; el.style.backgroundImage = patternURL(UI.bgValue); }
-      else if (UI.bgKind === 'photo' && UI.bgValue) {
-        el.style.background = `#000 center/cover no-repeat`;
+    bgTargets().forEach(el => {
+      el.classList.add('dm-bg-host');
+      if (UI.bgKind === 'color') {
+        el.style.backgroundColor = UI.bgValue; el.style.backgroundImage = '';
+      } else if (UI.bgKind === 'pattern') {
+        el.style.backgroundColor = '#0b0c10'; el.style.backgroundImage = patternURL(UI.bgValue);
+      } else if (UI.bgKind === 'photo' && UI.bgValue) {
+        el.style.backgroundColor = '#000';
         el.style.backgroundImage = `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), url(${UI.bgValue})`;
-      } else { el.style.background = ''; el.style.backgroundImage = ''; }
-      el.classList.toggle('snowing', !!UI.snow);
-    });
-    ROOT?.querySelectorAll('.snowflake').forEach(n => n.remove());
-    if (UI.snow) startSnow();
-  }
-  /* ❄️ 눈 — 가벼운 CSS 애니메이션 요소 몇 개. 배터리를 갉아먹지 않게 24개로 제한 */
-  function startSnow() {
-    [ROOT?.querySelector('#dm-msgs'), ROOT?.querySelector('.dm-prev-in')].forEach(host => {
-      if (!host || host.querySelector('.snowflake')) return;
-      for (let i = 0; i < 24; i++) {
-        const f = document.createElement('i');
-        f.className = 'snowflake';
-        f.style.left = Math.random() * 100 + '%';
-        f.style.animationDuration = (5 + Math.random() * 7) + 's';
-        f.style.animationDelay = (-Math.random() * 10) + 's';
-        f.style.opacity = 0.25 + Math.random() * 0.5;
-        f.style.fontSize = (7 + Math.random() * 9) + 'px';
-        f.textContent = '❄';
-        host.appendChild(f);
+        el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center';
+      } else {
+        el.style.backgroundColor = ''; el.style.backgroundImage = '';
       }
+      paintSnow(el);
     });
   }
+  /* ❄️ 눈 — 스크롤과 무관한 오버레이 층에만 그린다(레이아웃에 영향 0) */
+  function paintSnow(host) {
+    let layer = host.querySelector(':scope > .dm-snow');
+    if (!UI.snow) { layer?.remove(); return; }
+    if (layer) return;                     // 이미 내리는 중이면 다시 만들지 않는다
+    layer = document.createElement('div');
+    layer.className = 'dm-snow';
+    layer.setAttribute('aria-hidden', 'true');
+    for (let i = 0; i < 24; i++) {
+      const f = document.createElement('i');
+      f.style.left = Math.random() * 100 + '%';
+      f.style.animationDuration = (5 + Math.random() * 7) + 's';
+      f.style.animationDelay = (-Math.random() * 10) + 's';
+      f.style.opacity = 0.25 + Math.random() * 0.5;
+      f.style.fontSize = (7 + Math.random() * 9) + 'px';
+      f.textContent = '❄';
+      layer.appendChild(f);
+    }
+    host.appendChild(layer);
+  }
+
   function loadDisplay() {
     const host = ROOT.querySelector('#dm-display');
     if (!host) return;
@@ -3461,7 +3521,7 @@
             <span class="dm-share-src">GALLA에서 보기 ›</span>
           </span></a>`;
     } else {
-      inner = `<span class="dm-bub-body">${esc(m.body)}</span>`;
+      inner = `<span class="dm-bub-body">${markKeywords(esc(m.body))}</span>`;
     }
     // 인용(답장)
     let quote = '';
@@ -3558,6 +3618,19 @@
      답장을 걸 만큼은 아닌 반응을 가볍게 남기는 자리. */
   const QUICK = ['❤️', '😂', '👍', '😮', '😢', '🔥'];
   let REACTS = {};                    // messageId -> { emoji: [userId…] }
+  /* 키워드 알림은 토스트에서만 표시돼 '작동 안 한다'고 느껴졌다 —
+     대화 안에서도 해당 낱말을 표시해 눈으로 확인되게 한다. */
+  function markKeywords(html) {
+    const ks = String(UI.keywords || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (!ks.length) return html;
+    let out = html;
+    ks.forEach(k => {
+      const safe = esc(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      out = out.replace(new RegExp(safe, 'g'), m => `<mark class="dm-kw">${m}</mark>`);
+    });
+    return out;
+  }
+
   function reactChips(id) {
     const r = REACTS[id];
     if (!r) return '';
