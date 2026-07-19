@@ -24,9 +24,17 @@
     || (isAndroid && /; wv\)/.test(UA));
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-  async function permState() {
-    try { return (await navigator.permissions.query({ name: 'microphone' })).state; }
-    catch (_) { return 'unknown'; }
+  async function permState(withVideo) {
+    try {
+      const mic = (await navigator.permissions.query({ name: 'microphone' })).state;
+      if (!withVideo) return mic;
+      let cam = 'unknown';
+      try { cam = (await navigator.permissions.query({ name: 'camera' })).state; } catch (_) {}
+      // 통화는 둘 다 있어야 한다 — 하나라도 막혀 있으면 막힌 것으로 본다
+      if (mic === 'denied' || cam === 'denied') return 'denied';
+      if (mic === 'granted' && (cam === 'granted' || cam === 'unknown')) return 'granted';
+      return 'prompt';
+    } catch (_) { return 'unknown'; }
   }
 
   function css() {
@@ -152,7 +160,9 @@
     const reason = (opts && opts.reason) || '';
     css();
     close();
-    const st = await permState();
+    const wantVideo = !!(opts && opts.video);
+    const M = wantVideo ? '카메라·마이크' : '마이크';
+    const st = await permState(wantVideo);
     const el = document.createElement('div');
     el.id = 'mic-help';
 
@@ -188,14 +198,14 @@
          **안드로이드가 브라우저 앱에 마이크 권한을 안 준 상태**라는 뜻이다.
          이 경우 팝업도 안 뜨고, 사이트 설정을 아무리 뒤져도 바꿀 게 없다.
          → 안내의 1순위는 '앱 권한', 사이트 설정은 그 다음. */
-      head = '🎙 크롬에서 마이크가 꺼져 있어요';
-      sub = '허용 팝업이 <b>아예 안 뜨죠?</b> 그럼 십중팔구 <b>크롬의 마이크 전역 스위치가 꺼져 있어요</b> — 이게 꺼지면 모든 사이트가 요청 단계에서 바로 거절돼요. 아래 ①번만 켜면 됩니다.';
+      head = `🎙 크롬에서 ${M}가 꺼져 있어요`;
+      sub = `허용 팝업이 <b>아예 안 뜨죠?</b> 그럼 십중팔구 <b>크롬의 ${M} 전역 스위치가 꺼져 있어요</b> — 이게 꺼지면 모든 사이트가 요청 단계에서 바로 거절돼요. 아래 ①번만 켜면 됩니다.${wantVideo ? '<br><b>통화는 카메라와 마이크 둘 다</b> 필요해요 — 같은 자리에서 둘 다 켜주세요.' : ''}`;
       body = `
         <div class="mh-steps">
-          <div class="mh-tt">① 크롬의 마이크 <b>전역 스위치</b> — 여기가 꺼져 있으면 팝업 자체가 안 떠요</div>
-          <div class="mh-step"><span class="n">1</span><span class="t">크롬 <b>⋮ → 설정 → 사이트 설정 → 마이크</b></span></div>
+          <div class="mh-tt">① 크롬의 ${M} <b>전역 스위치</b> — 여기가 꺼져 있으면 팝업 자체가 안 떠요</div>
+          <div class="mh-step"><span class="n">1</span><span class="t">크롬 <b>⋮ → 설정 → 사이트 설정 → 마이크</b>${wantVideo ? ' <b>(그리고 카메라)</b>' : ''}</span></div>
           <div class="mh-step"><span class="n">2</span><span class="t">맨 위 토글이 <b>“차단됨”</b>이면 <b>켜기</b> (사이트에서 마이크 사용을 요청할 수 있음)</span></div>
-          <div class="mh-step"><span class="n">3</span><span class="t">'차단됨' 목록에 <b>galla.im</b>이 있으면 눌러서 <b>액세스 재설정</b></span></div>
+          <div class="mh-step"><span class="n">3</span><span class="t">'차단됨' 목록에 <b>galla.im</b>이 있으면 눌러서 <b>액세스 재설정</b>${wantVideo ? ' — <b>카메라 메뉴에서도 동일하게</b>' : ''}</span></div>
         </div>
         <div class="mh-steps">
           <div class="mh-tt">② 그래도 팝업이 안 뜨면 — 휴대폰 설정에서 ${'${앱}'}의 마이크</div>
@@ -218,9 +228,9 @@
       sub = sub.split('${앱}').join(appName);
       body = body.split('${앱}').join(appName);
     } else {
-      head = '🎙 마이크를 켜주세요';
-      sub = '아래 버튼을 누르면 권한 창이 떠요. <b>[앱 사용 중에만 허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 다음에 또 물어봅니다.';
-      body = `<button class="mh-btn" data-mh="ask" type="button">마이크 켜고 다시 시도</button>`;
+      head = `🎙 ${M}를 켜주세요`;
+      sub = `아래 버튼을 누르면 권한 창이 떠요. <b>[앱 사용 중에만 허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 다음에 또 물어봅니다.${wantVideo ? ' 통화는 <b>카메라·마이크 둘 다</b> 필요해서 창이 두 번 뜰 수 있어요.' : ''}`;
+      body = `<button class="mh-btn" data-mh="ask" type="button">${M} 켜고 다시 시도</button>`;
     }
 
     el.innerHTML = `
@@ -237,7 +247,7 @@
 
     /* 사용자가 설정 화면에서 허용하는 순간을 스스로 알아챈다 —
        "돌아와서 새로고침"까지 시키면 절반은 길을 잃는다. */
-    if (st === 'denied') watchPermission(el);
+    if (st === 'denied') watchPermission(el, wantVideo);
 
     el.onclick = async e => {
       const a = e.target.closest('[data-mh]')?.dataset.mh;
@@ -257,9 +267,10 @@
         if (btn) { btn.disabled = true; btn.textContent = '마이크 여는 중…'; }
         // 재생 중인 소리가 장치를 붙들고 있으면 실패한다 — 먼저 정리
         document.querySelectorAll('audio,video').forEach(m => { try { m.pause(); } catch (_) {} });
+        const want = wantVideo ? { audio: true, video: true } : { audio: true };
         for (const req of [
-          () => navigator.mediaDevices.getUserMedia({ audio: true }),
-          async () => { await new Promise(r => setTimeout(r, 400)); return navigator.mediaDevices.getUserMedia({ audio: true }); },
+          () => navigator.mediaDevices.getUserMedia(want),
+          async () => { await new Promise(r => setTimeout(r, 400)); return navigator.mediaDevices.getUserMedia(want); },
         ]) {
           try {
             const s = await req();
@@ -278,19 +289,19 @@
   }
 
   /* permissions의 change 이벤트 + 폴링 이중 감시(안드로이드는 change가 안 오기도 한다) */
-  function watchPermission(el) {
+  function watchPermission(el, withVideo) {
     let done = false;
     const finish = () => {
       if (done) return;
       done = true;
       const w = el.querySelector('#mh-watch');
-      if (w) { w.textContent = '✅ 마이크가 켜졌어요! 잠시 후 이어서 진행할게요'; w.classList.add('ok'); }
+      if (w) { w.textContent = '✅ 켜졌어요! 잠시 후 이어서 진행할게요'; w.classList.add('ok'); }
       clearInterval(iv);
       setTimeout(() => { close(); window.dispatchEvent(new CustomEvent('galla:mic-granted')); location.reload(); }, 1200);
     };
     const iv = setInterval(async () => {
       if (!document.getElementById('mic-help')) return clearInterval(iv);
-      if (await permState() === 'granted') finish();
+      if (await permState(withVideo) === 'granted') finish();
     }, 1500);
     navigator.permissions?.query({ name: 'microphone' })
       .then(p => { p.onchange = () => { if (p.state === 'granted') finish(); }; })

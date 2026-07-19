@@ -159,13 +159,23 @@
         <span class="dmc-ava">${esc((name || '갈').charAt(0))}</span>
         <div class="dmc-name">${esc(name || '')}</div>
         <div class="dmc-state dmc-err">${esc(msg)}</div>
+        ${/권한|허용|막혀/.test(msg || '') ? `<button class="dmc-retry" data-c="fix" type="button">권한 켜는 법 보기</button>` : ''}
         ${retry ? `<button class="dmc-retry" data-c="retry" type="button">권한 허용했어요 — 다시 걸기</button>` : ''}
         <div class="dmc-btns"><button class="dmc-btn end" data-c="close" aria-label="닫기">${IC.phone}</button></div>
       </div>`;
-    box.onclick = e => {
+    box.onclick = async e => {
       const c = e.target.closest('[data-c]')?.dataset.c;
       if (c === 'close') { box.classList.remove('on'); setTimeout(() => box.remove(), 250); }
       else if (c === 'retry' && retry) { box.remove(); retry(); }
+      else if (c === 'fix') {
+        // 통화는 카메라까지 필요하다 — 마이크·카메라를 한 자리에서 해결
+        if (!window.GALLA_micHelp) {
+          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+        }
+        window.GALLA_micHelp?.({ video: /카메라/.test(msg || '') });
+        window.addEventListener('galla:mic-granted', () => { box.remove(); retry?.(); }, { once: true });
+      }
     };
   }
   /* 설정 화면 등에서 권한을 미리 받아둔다 — 성공 시 즉시 반납(불 안 켬) */
