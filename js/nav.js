@@ -436,8 +436,12 @@ document.addEventListener("DOMContentLoaded", () => {
     "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
   ) || document.body.classList.contains("dm-detail");
 
+  // ⚠️ DM 페이지 제외: 문서가 스크롤 잠금 상태라 항상 scrollTop 0 → 어느 탭에서 당겨도
+  //    전역 PTR이 발동해 location.reload() → 기본 탭(채팅)으로 튕겼다.
+  //    DM은 목록마다 자체 당겨서 새로고침이 있으므로 전역은 끈다.
+  const isDmPage = () => document.body.dataset.page === "dm";
   document.addEventListener("touchstart", (e) => {
-    if (e.touches.length !== 1 || !bar || overlayOpen() || scroller().scrollTop > 0) { pulling = false; return; }
+    if (e.touches.length !== 1 || !bar || overlayOpen() || isDmPage() || scroller().scrollTop > 0) { pulling = false; return; }
     startY = e.touches[0].clientY; pulling = true; dist = 0; ready = false;
     bar.style.transition = "none";
   }, { passive: true });

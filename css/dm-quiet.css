@@ -1135,3 +1135,22 @@ body[data-page="dm"] {
   height: 100dvh; overflow: hidden; overscroll-behavior: none;
   position: relative;
 }
+
+
+/* ═══ 삐삐 입력 행 넘침 봉쇄 ═══
+   원인: 그리드/플렉스 아이템은 기본 min-width:auto라 '내용 최소폭' 아래로 안 줄어든다.
+        <input>은 기본 intrinsic 폭(약 20자)이 커서 좁은 화면·iOS에서 행 전체를
+        컨테이너 밖으로 밀어냈다(호출 버튼이 화면 밖으로).
+   해법: 컨테이너를 minmax(0,1fr)로, 아이템에 min-width:0, 입력은 flex:1 1 0 + width:0
+        (내재 폭 기여를 0으로 만들어 순수 남은 공간만 차지하게). */
+.pgr-dialer { grid-template-columns: minmax(0, 1fr); }
+.pgr-dialer > *, .pgr-pick-wrap > *, .pgr-mk > * { min-width: 0; }
+.pgr-dial-row, .pgr-pick-row, .pgr-code-row, .pgr-with-code, .pgr-mk-row {
+  min-width: 0; max-width: 100%;
+}
+.pgr-dial-row input, .pgr-pick-row input, .pgr-code-row input,
+.pgr-with-code input, .pgr-mk-row input {
+  flex: 1 1 0; width: 0; min-width: 0;
+}
+/* 어떤 경우에도 가로 스크롤은 만들지 않는다 */
+.pgr-wrap, #dm-pager { overflow-x: hidden; }

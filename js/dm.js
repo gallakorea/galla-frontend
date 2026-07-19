@@ -677,8 +677,14 @@
     window.addEventListener('pageshow', e => {
       if (e.persisted && !ROOT.querySelector('#dm-pager')?.hidden) loadPager();
     });
-    // ?pager=1 로 들어오면 바로 사서함
-    try { if (new URLSearchParams(location.search).get('pager')) setTimeout(() => setTab('pager'), 60); } catch (_) {}
+    // ?pager=1 로 들어오면 바로 사서함, 아니면 마지막으로 보던 탭 복원
+    try {
+      if (new URLSearchParams(location.search).get('pager')) setTimeout(() => setTab('pager'), 60);
+      else {
+        const last = sessionStorage.getItem(TAB_KEY);
+        if (last && last !== 'chats') setTimeout(() => setTab(last), 60);
+      }
+    } catch (_) {}
     if (PAGE_MODE()) bindPageHeader();
     ROOT.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -724,7 +730,10 @@
   };
 
   /* ---------- 탭: 채팅 / 친구 ---------- */
+  const TAB_KEY = 'galla_dm_tab';
   function setTab(tab) {
+    // 리로드·복귀 후에도 보던 탭으로 돌아오게(채팅으로 튕기지 않게)
+    try { sessionStorage.setItem(TAB_KEY, tab); } catch (_) {}
     EDIT = false;   // 편집은 일시적 모드 — 탭을 바꾸면 해제(켠 채 넘어가면 다른 탭 메뉴가 '완료'로 떠서 헷갈린다)
     ROOT.querySelectorAll('.dm-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
     ROOT.querySelector('#dm-inbox-wrap').hidden = tab !== 'chats';
