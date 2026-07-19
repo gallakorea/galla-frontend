@@ -411,19 +411,20 @@
       else if (act === 'compose') showView('compose'), initSearch();
       else if (act === 'settings') { headMenu(e.target.closest('[data-act]')); }
       else if (act === 'addFriend') { showView('add'); initAdd(); }
-      else if (act === 'toFriends') { showView('inbox'); setTab('friends'); }
+      else if (act === 'toFriends') { goBack('friends'); }
       else if (act === 'chatset') { openChatSet(); }
-      else if (act === 'toThread') { showView('thread'); }
-      else if (act === 'toInbox') { detachThread(); curThread = curPeer = null; clearReply(); showView('inbox'); loadInbox(); }
+      else if (act === 'toThread') { if (DEPTH > 0) history.back(); else showView('thread'); }
+      else if (act === 'toInbox') { goBack(); }
       else if (act === 'newRoom') { roomFormShow(true); }
-      else if (act === 'roomToList') { detachRoom(); curRoom = null; showView('inbox'); setTab('rooms'); }
+      else if (act === 'roomToList') { goBack('rooms'); }
       else if (act === 'roomMenu') { roomMenu(e.target.closest('[data-act]')); }
       else if (act === 'gnew') { showView('gnew'); initGnew('create'); }
       else if (act === 'gnewBack') {
-        if (GMODE === 'invite') showView('room');
+        if (DEPTH > 0) history.back();
+        else if (GMODE === 'invite') showView('room');
         else { showView('compose'); initSearch(); }
       }
-      else if (act === 'toRoom') { showView('room'); }
+      else if (act === 'toRoom') { if (DEPTH > 0) history.back(); else showView('room'); }
       else if (act === 'voicecall' || act === 'videocall') {
         if (!window.GALLA_call?.supported()) toastMini('이 브라우저에선 통화를 지원하지 않아요');
         else window.GALLA_call.start(curPeer, nickCache[curPeer] || PROFILES[curPeer]?.nickname, act === 'videocall');
@@ -576,6 +577,20 @@
     });
     ['pointerup', 'pointermove', 'pointercancel'].forEach(ev =>
       msgs.addEventListener(ev, () => clearTimeout(pressT)));
+    // 브라우저·제스처 뒤로가기 → 직전 DM 뷰로
+    window.addEventListener('popstate', e => {
+      if (!PAGE_MODE() || !ROOT) return;
+      const target = e.state?.dmv || 'inbox';
+      DEPTH = e.state?.d || 0;
+      if (target === CUR_VIEW) return;
+      POPPING = true;
+      leaveView(CUR_VIEW);
+      showView(target);
+      if (target === 'inbox') loadInbox();
+      POPPING = false;
+    });
+    // 상세에서 오른쪽으로 밀면 뒤로(전 기기 동일 동작 — 엣지 스와이프가 없는 기기 대비)
+    bindDetailSwipeBack();
     document.addEventListener('click', e => {
       const menu = document.getElementById('dm-menu');
       // ⚠️ 여는 버튼(⚙)은 제외 — 여는 클릭이 document까지 버블돼 같은 틱에 도로 닫아버렸다
@@ -585,7 +600,35 @@
     return ROOT;
   }
 
+  /* DM 상세는 '페이지 안의 페이지'다. 브라우저 뒤로가기/오른쪽 스와이프가 dm.html을
+     통째로 떠나 제각각인 곳으로 가지 않도록, 상세로 들어갈 때 히스토리를 쌓는다.
+     → 뒤로가기 = 직전 뷰. 화면의 뒤로 버튼도 같은 경로(history.back)를 쓴다. */
+  let CUR_VIEW = 'inbox', POPPING = false, DEPTH = 0;
+  function leaveView(name) {
+    if (name === 'thread') { detachThread(); curThread = curPeer = null; clearReply(); }
+    else if (name === 'room') { detachRoom(); curRoom = null; }
+  }
+  /* 뒤로 = 직전 뷰. 우리가 쌓은 히스토리가 있으면 그걸 쓰고, 없으면 목록으로. */
+  function goBack(fallbackTab) {
+    if (DEPTH > 0) { history.back(); return; }
+    leaveView(CUR_VIEW);
+    showView('inbox');
+    if (fallbackTab) setTab(fallbackTab); else loadInbox();
+  }
   function showView(name) {
+    if (PAGE_MODE() && !POPPING && name !== CUR_VIEW) {
+      if (name !== 'inbox') {
+        history.pushState({ dmv: name, d: ++DEPTH }, '');
+      } else if (DEPTH > 0) {
+        // 목록 복귀는 쌓아둔 항목을 되감아 소비한다 → 렌더는 popstate가 맡는다.
+        // (되감기가 불발되는 환경 대비 안전망)
+        const n = DEPTH;
+        setTimeout(() => { if (DEPTH === n && CUR_VIEW !== 'inbox') { DEPTH = 0; showView('inbox'); } }, 400);
+        history.go(-n);
+        return;
+      }
+    }
+    CUR_VIEW = name;
     ROOT.querySelectorAll('.dm-view').forEach(v => { v.hidden = v.dataset.view !== name; });
     // 페이지 모드 크롬 규칙:
     // · 페이지 헤더(GALLA)는 메인(목록)에서만 — 상세(대화방·프로필…)는 자체 헤드가 유일한 헤더
@@ -597,6 +640,28 @@
       window.GALLA_navReset?.();
     }
   }
+  /* 상세 뷰에서 오른쪽으로 밀면 뒤로 — 뒤로 버튼과 완전히 같은 동작.
+     가로 스크롤 영역(이모티콘 시트·암호책 등)과 통화·모달 위에선 무시한다. */
+  function bindDetailSwipeBack() {
+    let sx = 0, sy = 0, armed = false;
+    const NO_SWIPE = '.dm-stk-grid, .dm-stk-cats, .dm-stk-styles, .dm-mk-presets, .pgr-book-scroll, .dm-msgs img, input, textarea';
+    ROOT.addEventListener('touchstart', e => {
+      armed = false;
+      if (e.touches.length !== 1) return;
+      if (!document.body.classList.contains('dm-detail')) return;
+      if (document.querySelector('#pager-call.on, #pager-book.on, #dm-call.on, #pager-guide.on')) return;
+      if (e.target.closest(NO_SWIPE)) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; armed = true;
+    }, { passive: true });
+    ROOT.addEventListener('touchend', e => {
+      if (!armed) return;
+      armed = false;
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (dx > 72 && Math.abs(dx) > Math.abs(dy) * 1.6) goBack();
+    }, { passive: true });
+  }
+
   /* 삐삐 알림은 채팅 토스트가 아니라 '액정 팝업'으로 — 감성이 곧 기능이다 */
   async function pagerRing(row) {
     if (!(await ensurePager())) return;
