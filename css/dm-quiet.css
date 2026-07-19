@@ -1226,28 +1226,52 @@ body[data-page="dm"] {
 .dm-time-row em { font-style: normal; color: #8b909b; }
 .dm-set-time { width: 108px; }
 #dm-dnd-range.off { opacity: .42; pointer-events: none; }
-/* 화면 잠금 PIN */
+/* 🔒 화면 잠금 — 점 4개 + 키패드 (은행 앱 문법) */
 .dm-pin-dim {
   position: fixed; inset: 0; z-index: 2000002; display: flex; align-items: center; justify-content: center;
-  background: rgba(4,5,9,.82); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 20px;
+  background: rgba(4,5,9,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  padding: 20px; opacity: 0; transition: opacity .18s ease;
 }
-.dm-pin {
-  width: 100%; max-width: 320px; background: #12141a; border: 1px solid rgba(255,255,255,.1);
-  border-radius: 20px; padding: 22px 20px; text-align: center;
+.dm-pin-dim.on { opacity: 1; }
+.dm-pin { width: 100%; max-width: 320px; text-align: center; }
+.dm-pin-ic {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 46px; height: 46px; border-radius: 15px; margin-bottom: 12px;
+  background: rgba(255,255,255,.07); color: #cdd9ff;
 }
-.dm-pin b { display: block; font-size: 16.5px; font-weight: 900; color: #fff; }
-.dm-pin i { display: block; font-style: normal; font-size: 12.5px; color: #98a0b0; margin: 6px 0 16px; }
-.dm-pin-in {
-  width: 100%; box-sizing: border-box; text-align: center; letter-spacing: 14px; font-size: 26px;
-  padding: 12px; border-radius: 12px; background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.14); color: #fff; font-weight: 900;
+.dm-pin-ic svg { width: 20px; height: 20px; }
+.dm-pin b { display: block; font-size: 18px; font-weight: 900; color: #fff; }
+.dm-pin i { display: block; font-style: normal; font-size: 13px; color: #98a0b0; margin: 6px 0 22px; }
+/* 입력 상태를 점으로 */
+.dm-pin-dots { display: flex; justify-content: center; gap: 16px; margin-bottom: 26px; }
+.dm-pin-dots span {
+  width: 13px; height: 13px; border-radius: 50%;
+  background: rgba(255,255,255,.13); transition: background .15s, transform .15s;
 }
-.dm-pin-btns { display: flex; gap: 8px; margin-top: 16px; }
-.dm-pin-btns button {
-  flex: 1; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 900; cursor: pointer;
-  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); color: #dfe3ec;
+.dm-pin-dots span.on { background: var(--accent-2, #6a7bff); transform: scale(1.15); }
+/* 키패드 */
+.dm-pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.dm-pin-pad button {
+  height: 58px; border-radius: 16px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.05);
+  color: #fff; font-size: 21px; font-weight: 800; font-family: inherit;
 }
-.dm-pin-btns button.pri { background: linear-gradient(135deg,#6a7bff,#3a5bff); border: none; color: #fff; }
+.dm-pin-pad button:active { background: rgba(255,255,255,.16); transform: scale(.96); }
+.dm-pin-pad .dm-pin-del { font-size: 18px; color: #b9c3d4; }
+.dm-pin-pad .dm-pin-txt { font-size: 12.5px; font-weight: 800; color: #8fa0ff; border-color: transparent; background: none; }
+.dm-pin-cancel {
+  margin-top: 18px; background: none; border: none; cursor: pointer;
+  color: #8b909b; font-size: 13.5px; font-weight: 700; font-family: inherit;
+}
+/* 틀리면 흔든다 */
+@keyframes pinShake {
+  0%,100% { transform: translateX(0) }
+  20% { transform: translateX(-9px) } 40% { transform: translateX(8px) }
+  60% { transform: translateX(-5px) } 80% { transform: translateX(4px) }
+}
+.dm-pin.bad { animation: pinShake .4s; }
+.dm-pin.bad .dm-pin-dots span { background: #ff6b81; }
+@media (prefers-reduced-motion: reduce) { .dm-pin.bad { animation: none } }
 /* 키워드가 걸린 알림은 눈에 띄게 */
 #dm-toast.kw { border-color: rgba(255,212,121,.5); box-shadow: 0 12px 34px rgba(255,190,60,.25); }
 

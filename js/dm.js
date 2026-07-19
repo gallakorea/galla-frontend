@@ -2645,48 +2645,103 @@
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('galla-dm-lock:' + pin));
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
   }
-  function askPin(title, sub) {
+  /* 🔒 잠금 입력 — 카톡·은행 앱처럼 점 4개 + 숫자 키패드.
+     작은 입력창에 키보드를 띄우면 답답하고, 남이 보기도 쉽다. */
+  function askPin(title, sub, opts) {
+    const o = opts || {};
     return new Promise(resolve => {
       const dim = document.createElement('div');
       dim.className = 'dm-pin-dim';
-      dim.innerHTML = `<div class="dm-pin">
-        <b>${esc(title)}</b><i>${esc(sub || '')}</i>
-        <input type="password" inputmode="numeric" maxlength="4" class="dm-pin-in" autocomplete="off">
-        <div class="dm-pin-btns">
-          <button type="button" data-p="cancel">취소</button>
-          <button type="button" data-p="ok" class="pri">확인</button>
-        </div></div>`;
+      dim.innerHTML = `
+        <div class="dm-pin">
+          <span class="dm-pin-ic">${ICONS.lock}</span>
+          <b>${esc(title)}</b><i>${esc(sub || '')}</i>
+          <div class="dm-pin-dots" id="pin-dots">${'<span></span>'.repeat(4)}</div>
+          <div class="dm-pin-pad">
+            ${[1,2,3,4,5,6,7,8,9].map(n => `<button type="button" data-k="${n}">${n}</button>`).join('')}
+            ${o.forgot ? `<button type="button" class="dm-pin-txt" data-k="forgot">잊었어요</button>` : '<span></span>'}
+            <button type="button" data-k="0">0</button>
+            <button type="button" class="dm-pin-del" data-k="del" aria-label="지우기">⌫</button>
+          </div>
+          <button type="button" class="dm-pin-cancel" data-k="cancel">취소</button>
+        </div>`;
       document.body.appendChild(dim);
-      const input = dim.querySelector('.dm-pin-in');
-      setTimeout(() => input.focus(), 60);
-      const done = v => { dim.remove(); resolve(v); };
+      void dim.getBoundingClientRect(); dim.classList.add('on');
+      const dots = dim.querySelector('#pin-dots');
+      let val = '';
+      const paint = () => [...dots.children].forEach((d, i) => d.classList.toggle('on', i < val.length));
+      const done = v => { dim.classList.remove('on'); setTimeout(() => dim.remove(), 200); resolve(v); };
       dim.onclick = e => {
-        if (e.target === dim || e.target.closest('[data-p="cancel"]')) return done(null);
-        if (e.target.closest('[data-p="ok"]')) return done(input.value.trim());
+        if (e.target === dim) return done(null);
+        const k = e.target.closest('[data-k]')?.dataset.k;
+        if (!k) return;
+        if (k === 'cancel') return done(null);
+        if (k === 'forgot') return done('__forgot__');
+        try { navigator.vibrate?.(8); } catch (_) {}
+        if (k === 'del') { val = val.slice(0, -1); return paint(); }
+        if (val.length >= 4) return;
+        val += k; paint();
+        if (val.length === 4) setTimeout(() => done(val), 130);   // 네 자리 채우면 자동 확인
       };
-      input.onkeydown = e => { if (e.key === 'Enter') done(input.value.trim()); };
+      // 물리 키보드도 받는다(데스크톱)
+      dim._key = e => {
+        if (/^[0-9]$/.test(e.key) && val.length < 4) { val += e.key; paint(); if (val.length === 4) setTimeout(() => done(val), 130); }
+        else if (e.key === 'Backspace') { val = val.slice(0, -1); paint(); }
+        else if (e.key === 'Escape') done(null);
+      };
+      document.addEventListener('keydown', dim._key);
+      const off = () => document.removeEventListener('keydown', dim._key);
+      const orig = resolve;
+      resolve = v => { off(); orig(v); };
     });
   }
+  /* 틀렸을 때 — 흔들어서 알린다(문구만 바꾸면 잘 안 보인다) */
+  function shakePin() {
+    const box = document.querySelector('.dm-pin');
+    if (!box) return;
+    box.classList.remove('bad'); void box.getBoundingClientRect(); box.classList.add('bad');
+    try { navigator.vibrate?.([12, 60, 12]); } catch (_) {}
+  }
+
   async function toggleLock(btn) {
     if (UI.lockPin) {
-      const cur = await askPin('잠금 해제', '현재 비밀번호를 입력하세요');
+      const cur = await askPin('잠금 해제', '현재 비밀번호를 입력하세요', { forgot: true });
       if (cur === null) return;
-      if (await pinHash(cur) !== UI.lockPin) return toastMini('비밀번호가 달라요');
+      if (cur === '__forgot__') return forgotPin();
+      if (await pinHash(cur) !== UI.lockPin) { shakePin(); return toastMini('비밀번호가 달라요'); }
       UI.lockPin = ''; savePrefs();
       try { sessionStorage.removeItem('galla_dm_unlocked'); } catch (_) {}
       toastMini('화면 잠금을 껐어요');
     } else {
-      const a = await askPin('화면 잠금 설정', '숫자 4자리를 정하세요');
+      const a = await askPin('비밀번호 만들기', '메시지를 열 때 쓸 숫자 4자리');
       if (a === null) return;
-      if (!/^\d{4}$/.test(a)) return toastMini('숫자 4자리로 입력해주세요');
       const b = await askPin('한 번 더', '같은 숫자를 다시 입력하세요');
       if (b === null) return;
-      if (a !== b) return toastMini('두 번 입력한 값이 달라요');
+      if (a !== b) { shakePin(); return toastMini('두 번 입력한 값이 달라요'); }
       UI.lockPin = await pinHash(a); savePrefs();
       try { sessionStorage.setItem('galla_dm_unlocked', '1'); } catch (_) {}
       toastMini('이 기기에서 메시지를 열 때 물어볼게요');
     }
     paintLockBtn(btn);
+  }
+  /* 🔑 비밀번호를 잊었을 때 —
+     이 잠금은 '계정 비밀번호'가 아니라 이 기기에만 저장된 숫자다. 서버에 없으니
+     이메일로 되찾을 대상이 아니다. 대신 더 상위 권한인 '계정 로그인'으로 푼다:
+     로그아웃 → 이메일·비밀번호(또는 메일 인증)로 다시 로그인하면 잠금이 풀린다.
+     대화는 서버에 있으므로 사라지지 않는다. */
+  async function forgotPin() {
+    const ok = confirm(
+      '화면 잠금 비밀번호는 이 기기에만 저장돼요(서버에 없어서 찾아드릴 수 없어요).\n\n' +
+      '대신 계정으로 다시 로그인하면 잠금이 풀립니다.\n' +
+      '· 대화 내용은 그대로 남아요\n' +
+      '· 로그인 화면에서 비밀번호를 잊었다면 이메일로 재설정할 수 있어요\n\n' +
+      '지금 로그아웃하고 다시 로그인할까요?'
+    );
+    if (!ok) return;
+    UI.lockPin = ''; savePrefs();
+    try { sessionStorage.removeItem('galla_dm_unlocked'); } catch (_) {}
+    try { await supabase.auth.signOut(); } catch (_) {}
+    location.href = 'login.html?after=dm';
   }
   function paintLockBtn(btn) {
     const b = btn || ROOT?.querySelector('#dm-set-lock');
@@ -2698,15 +2753,19 @@
   async function ensureUnlocked() {
     if (!UI.lockPin) return true;
     try { if (sessionStorage.getItem('galla_dm_unlocked') === '1') return true; } catch (_) {}
-    for (let i = 0; i < 3; i++) {
-      const v = await askPin('메시지 잠금', '비밀번호 4자리를 입력하세요');
+    for (let i = 0; i < 5; i++) {
+      const left = 5 - i;
+      const v = await askPin('메시지 잠금', i === 0 ? '비밀번호 4자리를 입력하세요' : `틀렸어요 · ${left}번 남음`, { forgot: true });
       if (v === null) return false;
+      if (v === '__forgot__') { await forgotPin(); return false; }
       if (await pinHash(v) === UI.lockPin) {
         try { sessionStorage.setItem('galla_dm_unlocked', '1'); } catch (_) {}
         return true;
       }
-      toastMini('비밀번호가 달라요');
+      shakePin();
+      await new Promise(r => setTimeout(r, 420));
     }
+    toastMini('비밀번호를 5번 틀렸어요 — 잠시 후 다시 시도해주세요');
     return false;
   }
 
