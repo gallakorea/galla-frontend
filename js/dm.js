@@ -161,7 +161,7 @@
             <button class="dm-tab on" data-tab="chats" role="tab">채팅</button>
             <button class="dm-tab" data-tab="friends" role="tab">친구</button>
             <button class="dm-tab" data-tab="rooms" role="tab">난장</button>
-            <button class="dm-tab" data-tab="pager" role="tab">삐삐</button>
+            <button class="dm-tab" data-tab="pager" role="tab">삐삐<span class="dm-tab-dot" id="pgr-tab-dot" hidden></span></button>
             <button class="dm-tab dm-tab-set" data-tab="set" role="tab" aria-label="메시지 설정">${ICONS.cog}</button>
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
@@ -447,6 +447,9 @@
     rta.addEventListener('input', () => { rta.style.height = 'auto'; rta.style.height = Math.min(rta.scrollHeight, 120) + 'px'; });
     rta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onRoomSend(e); } });
     bindPullRefresh(ROOT.querySelector('#dm-rooms'), loadRooms);
+    bindPullRefresh(ROOT.querySelector('#dm-pager'), async () => { await window.GALLA_PAGER?.refresh(ROOT.querySelector('#dm-pager')); });
+    // 삐삐 미확인 수 → 탭 점. 삐삐 화면을 안 봐도 '왔다'는 걸 안다
+    document.addEventListener('galla:pager-unread', e => paintPagerDot(e.detail));
     ROOT.querySelector('#dm-gnew-go').addEventListener('click', createGroup);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
     ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
@@ -609,6 +612,7 @@
         { event: 'INSERT', schema: 'public', table: 'pager_messages', filter: 'box_owner=eq.' + ME },
         ({ new: row }) => {
           pagerRing(row);
+          refreshPagerBadge();
           // 삐삐 탭을 보고 있으면 목록도 즉시 갱신 — '들어왔는데 안 보임' 방지
           if (!ROOT.querySelector('#dm-pager')?.hidden) window.GALLA_pagerRefresh?.();
         })
@@ -626,7 +630,7 @@
     }
     if (ME && window.GALLA_call?.supported()) window.GALLA_call.listen(supabase, ME);
     if (ME && window.GALLA_e2e?.supported()) attachMailbox();
-    if (ME) attachPagerRealtime();
+    if (ME) { attachPagerRealtime(); refreshPagerBadge(); }
     // 계정이 바뀌면(같은 폰에서 로그아웃→다른 계정) 이전 계정 화면·상태가 남지 않게 통째로 리로드
     try {
       supabase.auth.onAuthStateChange?.((_ev, sess) => {
@@ -1360,6 +1364,22 @@
   async function ensurePager() {
     if (!window.GALLA_PAGER) { try { await loadScript('/js/dm-pager.js'); } catch (_) {} }
     return !!window.GALLA_PAGER;
+  }
+  function paintPagerDot(n) {
+    const dot = ROOT?.querySelector('#pgr-tab-dot');
+    if (!dot) return;
+    dot.hidden = !n;
+    dot.textContent = n > 99 ? '99+' : (n || '');
+  }
+  /* 삐삐 탭에 들어가지 않아도 미확인 수를 안다(뱃지 전용 가벼운 조회) */
+  async function refreshPagerBadge() {
+    if (!ME) return;
+    try {
+      const { count } = await supabase.from('pager_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('box_owner', ME).is('listened_at', null);
+      paintPagerDot(count || 0);
+    } catch (_) {}
   }
   async function loadPager() {
     const host = ROOT.querySelector('#dm-pager');

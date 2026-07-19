@@ -168,6 +168,46 @@
     await render(host);
   }
 
+  /* ── 🔄 조용한 새로고침 — 스크롤·재생 상태를 흔들지 않고 목록만 다시 그린다 ── */
+  let REFRESHING = false;
+  async function refresh(host) {
+    if (REFRESHING || !host || host.hidden) return;
+    // 사용자가 뭔가 하는 중이면(모달·녹음) 건드리지 않는다
+    if (document.getElementById('pager-call') || document.getElementById('pager-book') || REC) return;
+    REFRESHING = true;
+    try {
+      const { data } = await sb().rpc('pager_my_box');
+      if (!data?.ok) return;
+      if (!data.activated) { renderActivation(host, data.waiting || 0); return; }
+      BOX = data;
+      const scroller = host;                       // #dm-pager 자체가 스크롤 컨테이너
+      const y = scroller.scrollTop;
+      const dialVal = host.querySelector('#pgr-dial-in')?.value || '';
+      await render(host);
+      scroller.scrollTop = y;                      // 읽던 자리 유지
+      const di = host.querySelector('#pgr-dial-in');
+      if (di && dialVal) di.value = dialVal;       // 입력 중이던 번호 보존
+    } catch (_) {} finally { REFRESHING = false; }
+  }
+
+  /* 자동 갱신: ① 앱 복귀(탭 전환·홈에서 돌아옴) ② 주기(25초) ③ 온라인 복구
+     실시간(postgres_changes)이 주력이지만, 모바일은 백그라운드에서 소켓이 자주 끊긴다.
+     그때도 '다녀와야 보이는' 일이 없도록 3중으로 받친다. */
+  let autoBound = false, pollT = null;
+  function startAuto(host) {
+    clearInterval(pollT);
+    pollT = setInterval(() => {
+      if (document.visibilityState === 'visible' && !host.hidden) refresh(host);
+    }, 25000);
+    if (autoBound) return;
+    autoBound = true;
+    const wake = () => { if (document.visibilityState === 'visible') refresh(host); };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    window.addEventListener('online', wake);
+    window.addEventListener('pageshow', e => { if (e.persisted) wake(); });
+  }
+
   /* ── 📟 개통식 — 첫 진입의 의식. 번호를 '받는' 순간이 기억에 남아야 한다 ── */
   function renderActivation(host, waiting) {
     host.innerHTML = `
@@ -287,8 +327,12 @@
 
     host.querySelectorAll('[data-a]').forEach(b => b.onclick = () => act(b.dataset.a, host));
     bindDial(host);
+    startAuto(host);   // 실시간이 끊겨도 스스로 갱신되게
     host.querySelectorAll('[data-msg]').forEach(el => el.onclick = () => openMsg(el.dataset.msg, list, names, host));
-    window.GALLA_pagerRefresh = () => mount(host);   // 실시간 수신 시 목록 즉시 갱신용
+    // 실시간·복귀·주기 갱신은 전부 이 경로로 — 스크롤 위치와 열린 상태를 지킨다
+    window.GALLA_pagerRefresh = () => refresh(host);
+    window.GALLA_pagerUnread = unread;
+    document.dispatchEvent(new CustomEvent('galla:pager-unread', { detail: unread }));
   }
 
   /* 보낸 호출 — 재생 버튼 없음(주워담을 수 없는 감성 유지), 무엇을 언제 보냈는지만 */
@@ -729,5 +773,5 @@
     window.GALLA_pagerRefresh = () => mount(host);
   }
 
-  window.GALLA_PAGER = { mount, beep, popup, leaveTo, CODES, CODEBOOK, codeMeaning, openCodebook };
+  window.GALLA_PAGER = { mount, refresh, beep, popup, leaveTo, CODES, CODEBOOK, codeMeaning, openCodebook };
 })();

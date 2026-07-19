@@ -1001,3 +1001,12 @@ body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible;
 /* 받은 호출 목록이 플로팅 네비에 가리지 않게(네비 64px + 여유 + 안전영역) */
 .dm-root.page #dm-pager { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
 .pgr-list { padding-bottom: 4px; }
+
+/* 삐삐 탭 미확인 점 — 탭을 안 열어도 '왔다'는 걸 안다 */
+.dm-tab-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px; margin-left: 5px;
+  border-radius: 999px; background: #2fd07a; color: #04150b;
+  font-size: 10px; font-weight: 900; vertical-align: middle;
+}
+.dm-tab-dot[hidden] { display: none !important; }
