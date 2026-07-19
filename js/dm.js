@@ -2431,13 +2431,41 @@
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
     VREC = rec;
     rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    /* 입력 레벨 감시 — 권한이 나도 무음만 담기는 경우가 있다(마이크 가림·다른 앱
+       점유·블루투스 기기). 파일 크기는 정상이라 보내고 나서야 알게 되므로 미리 잡는다. */
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const an = ac.createAnalyser(); an.fftSize = 512;
+      ac.createMediaStreamSource(stream).connect(an);
+      const buf = new Uint8Array(an.fftSize);
+      rec._peak = 0;
+      rec._lvl = setInterval(() => {
+        an.getByteTimeDomainData(buf);
+        for (let i = 0; i < buf.length; i++) {
+          const d = Math.abs(buf[i] - 128);
+          if (d > rec._peak) rec._peak = d;
+        }
+      }, 120);
+      rec._ac = ac;
+    } catch (_) {}
     rec.onstop = async () => {
       stream.getTracks().forEach(t => t.stop());
+      clearInterval(rec._lvl);
+      try { rec._ac?.close(); } catch (_) {}
+      const peak = rec._peak || 0;
       const cancelled = rec._cancel;
       const dur = Math.round((Date.now() - t0) / 1000);
       VREC = null; PTT = null; paintRec(false);
       if (cancelled) return;
       if (dur < 1) return toastMini('너무 짧아요 — 꾹 눌러서 말해주세요');
+      // peak 3 미만 = 사실상 무음(정상 발화는 보통 20 이상) — 보내기 전에 잡는다
+      if (peak < 3) {
+        if (!window.GALLA_micHelp) {
+          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+        }
+        return void window.GALLA_micHelp?.({ silent: true });
+      }
       const type = rec.mimeType || 'audio/webm';
       const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
       const f = new File(chunks, 'voice.' + ext, { type });
