@@ -537,7 +537,20 @@
       if (m.code) toast(`동봉된 암호: ${m.code}${codeMeaning(m.code) ? ' — ' + codeMeaning(m.code) : ''}`);
       if (PLAYING) { PLAYING.pause(); PLAYING = null; }
       beep('connect');
-      setTimeout(() => { PLAYING = new Audio(m.voice_url); PLAYING.play().catch(() => {}); }, 320);
+      // mp4 등은 바로 스트리밍(즉시 재생). 길이 정보가 없는 옛 webm만 통째로 받는다
+      setTimeout(async () => {
+        PLAYING = new Audio();
+        PLAYING.preload = 'auto';
+        if (/\.webm(\?|$)/i.test(m.voice_url)) {
+          try {
+            const r = await fetch(m.voice_url);
+            PLAYING.src = URL.createObjectURL(await r.blob());
+          } catch (_) { PLAYING.src = m.voice_url; }
+        } else {
+          PLAYING.src = m.voice_url;
+        }
+        PLAYING.play().catch(() => {});
+      }, 320);
     }
     if (!m.listened_at) {
       await sb().from('pager_messages').update({ listened_at: new Date().toISOString() }).eq('id', id);
@@ -944,7 +957,16 @@
     // ① 채팅방과 동일한 가장 단순한 요청(이게 실기기에서 검증된 조합)
     // ② 잠깐 쉬고 재시도(장치 해제가 늦는 기기)
     // ③ 기본 마이크를 명시적으로 지정
+    /* 음질: 기본 {audio:true}는 통화용 처리(에코제거·잡음억제·자동증폭)가 걸려
+       목소리가 먹먹해진다. 음성 '메모'는 원음에 가까울수록 좋으므로 처리를 끄고
+       48kHz 모노로 요청한다. 단 이 제약을 못 받는 기기가 있어 실패하면
+       검증된 단순 요청으로 내려간다. */
+    const HIFI = { audio: {
+      echoCancellation: false, noiseSuppression: false, autoGainControl: true,
+      sampleRate: 48000, channelCount: 1,
+    } };
     const attempts = [
+      () => md.getUserMedia(HIFI),
       () => md.getUserMedia({ audio: true }),
       async () => { await new Promise(r => setTimeout(r, 400)); return md.getUserMedia({ audio: true }); },
       () => md.getUserMedia({ audio: { deviceId: 'default' } }),
@@ -972,7 +994,9 @@
       const mime = pickRecMime();
       CHUNKS = []; BLOB = null; RECURL = null;
       const t0 = Date.now();
-      REC = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      // 비트레이트를 명시하지 않으면 기기 기본값이 낮게 잡혀 음질이 뭉개진다
+      const bps = 128000;   // 말소리엔 충분히 여유 있는 값(기기 기본값이 낮게 잡히는 걸 방지)
+      REC = new MediaRecorder(stream, Object.assign(mime ? { mimeType: mime } : {}, { audioBitsPerSecond: bps }));
       REC.ondataavailable = e => { if (e.data?.size) CHUNKS.push(e.data); };
       REC.onerror = ev => { toast(recErrMsg(ev?.error || ev)); stopRec(true); };
       REC.onstop = () => {

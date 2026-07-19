@@ -544,14 +544,20 @@
       VAUDIO = new Audio(); VAUDIO._btn = b;
       /* 길이 정보가 없는 webm은 스트리밍(범위 요청)으로 재생하면 소리가 안 나는
          기기가 있다 — 통째로 받아 blob으로 틀면 안정적이다. 실패하면 원래 URL로. */
+      /* mp4 등은 바로 스트리밍해 즉시 재생한다. 통째로 받아오면 그만큼 기다려야 해
+         '로딩이 길다'고 느껴진다 — 길이 정보가 없는 옛 webm에만 blob을 쓴다. */
       (async () => {
-        try {
-          const res = await fetch(b.dataset.url);
-          if (!res.ok) throw new Error(res.status);
-          const blob = await res.blob();
-          VAUDIO._obj = URL.createObjectURL(blob);
-          VAUDIO.src = VAUDIO._obj;
-        } catch (_) { VAUDIO.src = b.dataset.url; }
+        VAUDIO.preload = 'auto';
+        if (/\.webm(\?|$)/i.test(b.dataset.url)) {
+          try {
+            const res = await fetch(b.dataset.url);
+            if (!res.ok) throw new Error(res.status);
+            VAUDIO._obj = URL.createObjectURL(await res.blob());
+            VAUDIO.src = VAUDIO._obj;
+          } catch (_) { VAUDIO.src = b.dataset.url; }
+        } else {
+          VAUDIO.src = b.dataset.url;
+        }
         VAUDIO.play().catch(() => { b.innerHTML = ICONS.play; toastMini('재생하지 못했어요'); });
       })();
       b.innerHTML = ICONS.pause;
@@ -2450,7 +2456,15 @@
       PTT = null; return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
     }
     let stream = micLive();
-    try { if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: true }); micCache().stream = stream; clearTimeout(micCache().timer); }
+    // 음질 우선(통화용 처리 끄고 48kHz) → 실패하면 검증된 단순 요청
+    const HIFI = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true, sampleRate: 48000, channelCount: 1 } };
+    try {
+      if (!stream) {
+        try { stream = await navigator.mediaDevices.getUserMedia(HIFI); }
+        catch (_) { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      }
+      micCache().stream = stream; clearTimeout(micCache().timer);
+    }
     catch (e) {
       PTT = null; MIC_OK = false;
       console.warn('[dm] voice mic', e?.name);
@@ -2467,7 +2481,8 @@
       : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
     const chunks = [];
     const t0 = Date.now();
-    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    const bps = 128000;   // 말소리엔 충분히 여유 있는 값(기기 기본값이 낮게 잡히는 걸 방지)
+    const rec = new MediaRecorder(stream, Object.assign(mime ? { mimeType: mime } : {}, { audioBitsPerSecond: bps }));
     VREC = rec;
     rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
     /* 입력 레벨 감시 — 권한이 나도 무음만 담기는 경우가 있다(마이크 가림·다른 앱
