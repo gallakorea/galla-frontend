@@ -2361,6 +2361,27 @@
     try { MIC_OK = (await navigator.permissions.query({ name: 'microphone' })).state === 'granted'; }
     catch (_) {}
   })();
+  /* 🎤 마이크 재사용 — 한 번 열어둔 스트림을 잠깐 붙들었다가 반납한다.
+     연속으로 녹음할 때 권한 요청·장치 열기를 반복하지 않아 특히 아이폰에서
+     "매번 묻는" 느낌이 줄어든다. 다만 마이크 표시등이 오래 켜져 있으면
+     불안하므로 15초만 유지하고, 화면을 벗어나면 즉시 반납한다. */
+  const MIC_HOLD_MS = 15000;
+  function micCache() { return (window.__gallaMic = window.__gallaMic || {}); }
+  function micLive() {
+    const c = micCache();
+    return c.stream && c.stream.getAudioTracks().some(t => t.readyState === 'live') ? c.stream : null;
+  }
+  function micRelease(now) {
+    const c = micCache();
+    if (!c.stream) return;
+    clearTimeout(c.timer);
+    const stop = () => { try { c.stream.getTracks().forEach(t => t.stop()); } catch (_) {} c.stream = null; };
+    if (now) stop(); else c.timer = setTimeout(stop, MIC_HOLD_MS);
+  }
+  if (!window.__gallaMicBound) {
+    window.__gallaMicBound = true;
+    document.addEventListener('visibilitychange', () => { if (document.hidden) micRelease(true); });
+  }
   async function warmMic() {
     if (MIC_OK) return true;
     try {
@@ -2428,14 +2449,14 @@
     if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
       PTT = null; return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
     }
-    let stream;
-    try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    let stream = micLive();
+    try { if (!stream) stream = await navigator.mediaDevices.getUserMedia({ audio: true }); micCache().stream = stream; clearTimeout(micCache().timer); }
     catch (e) {
       PTT = null; MIC_OK = false;
       console.warn('[dm] voice mic', e?.name);
       return toastMini('마이크를 열지 못했어요 — 한 번 더 눌러주세요');
     }
-    if (!PTT) { stream.getTracks().forEach(t => t.stop()); return; }   // 권한 대기 중 손을 뗐다
+    if (!PTT) { micRelease(); return; }   // 권한 대기 중 손을 뗐다
     /* ⚠️ mp4 우선. MediaRecorder가 만든 webm은 길이(duration) 정보가 없어
        안드로이드에서 '재생은 되는데 소리가 안 나는' 일이 생기고,
        iOS 사파리는 webm을 아예 재생하지 못한다(= 아이폰에선 안 들림).
@@ -2467,7 +2488,7 @@
       rec._ac = ac;
     } catch (_) {}
     rec.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop());
+      micRelease();          // 곧바로 끄지 않고 잠깐 붙들었다가 반납(연속 녹음 대비)
       clearInterval(rec._lvl);
       try { rec._ac?.close(); } catch (_) {}
       const peak = rec._peak || 0;

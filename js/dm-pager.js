@@ -914,10 +914,33 @@
     document.querySelectorAll('audio').forEach(a => { try { a.pause(); } catch (_) {} });
     try { if (AC && AC.state === 'running') AC.suspend(); } catch (_) {}
   }
+  /* 🎤 마이크 재사용 — 한 번 열어둔 스트림을 잠깐 붙들었다가 반납한다.
+     연속으로 녹음할 때 권한 요청·장치 열기를 반복하지 않아 특히 아이폰에서
+     "매번 묻는" 느낌이 줄어든다. 다만 마이크 표시등이 오래 켜져 있으면
+     불안하므로 15초만 유지하고, 화면을 벗어나면 즉시 반납한다. */
+  const MIC_HOLD_MS = 15000;
+  function micCache() { return (window.__gallaMic = window.__gallaMic || {}); }
+  function micLive() {
+    const c = micCache();
+    return c.stream && c.stream.getAudioTracks().some(t => t.readyState === 'live') ? c.stream : null;
+  }
+  function micRelease(now) {
+    const c = micCache();
+    if (!c.stream) return;
+    clearTimeout(c.timer);
+    const stop = () => { try { c.stream.getTracks().forEach(t => t.stop()); } catch (_) {} c.stream = null; };
+    if (now) stop(); else c.timer = setTimeout(stop, MIC_HOLD_MS);
+  }
+  if (!window.__gallaMicBound) {
+    window.__gallaMicBound = true;
+    document.addEventListener('visibilitychange', () => { if (document.hidden) micRelease(true); });
+  }
   async function getMicStream() {
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
     releaseAudio();
+    const live = micLive();
+    if (live) { clearTimeout(micCache().timer); return live; }
     // ① 채팅방과 동일한 가장 단순한 요청(이게 실기기에서 검증된 조합)
     // ② 잠깐 쉬고 재시도(장치 해제가 늦는 기기)
     // ③ 기본 마이크를 명시적으로 지정
@@ -928,7 +951,7 @@
     ];
     let last;
     for (const attempt of attempts) {
-      try { return await attempt(); }
+      try { const s = await attempt(); micCache().stream = s; return s; }
       catch (e) {
         last = e;
         console.warn('[pager:mic] 재시도', e.name);
@@ -953,7 +976,7 @@
       REC.ondataavailable = e => { if (e.data?.size) CHUNKS.push(e.data); };
       REC.onerror = ev => { toast(recErrMsg(ev?.error || ev)); stopRec(true); };
       REC.onstop = () => {
-        stream.getTracks().forEach(t => t.stop());
+        micRelease();        // 잠깐 붙들었다가 반납 — 연속으로 남길 때 다시 안 묻는다
         clearInterval(RECT);
         clearInterval(REC._lvl);
         try { REC._ac?.close(); } catch (_) {}
@@ -1004,7 +1027,7 @@
       console.error('[pager:rec]', e);
       // 안내로 끝내지 않고 '해결 경로'를 띄운다 — 설정에서 찾아 헤매지 않게
       openMicHelp(recErrMsg(e));
-      try { stream?.getTracks().forEach(t => t.stop()); } catch (_) {}
+      micRelease(true);
       REC = null;
       if (btn) { btn.disabled = false; btn.textContent = '● 녹음 시작'; }
       if (rt) rt.textContent = '';

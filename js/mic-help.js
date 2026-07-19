@@ -239,6 +239,7 @@
         <div class="mh-sub">${sub}</div>
         ${reason ? `<div class="mh-sub" style="color:#ff9aa5">⚠ ${reason}</div>` : ''}
         ${body}
+        <a class="mh-btn ghost" href="/help-permissions.html" style="display:block;text-align:center;text-decoration:none">기기별 자세한 도움말 보기</a>
         ${appCardHTML()}
       </div>`;
     document.body.appendChild(el);
