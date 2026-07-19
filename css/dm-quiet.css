@@ -1170,3 +1170,39 @@ body[data-page="dm"] {
 }
 /* 어떤 경우에도 가로 스크롤은 만들지 않는다 */
 .pgr-wrap, #dm-pager { overflow-x: hidden; }
+
+
+/* ═══════ ⚙ 메시지 설정 — 카톡식 섹션 구조 ═══════ */
+/* 내 정보 카드 — '나'부터 보여주고 시작한다 */
+.dm-set-me {
+  display: flex; align-items: center; gap: 12px; padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.dm-set-me-ava .dm-ava { width: 52px; height: 52px; font-size: 19px; }
+.dm-set-me-tx { flex: 1; min-width: 0; }
+.dm-set-me-tx b { display: block; font-size: 16px; font-weight: 900; color: #fff; }
+.dm-set-me-tx i { display: block; font-style: normal; font-size: 12px; color: #8b909b; margin-top: 2px; }
+.dm-set-manage {
+  flex: none; padding: 7px 14px; border-radius: 999px; text-decoration: none;
+  border: 1px solid rgba(255,255,255,.16); color: #dfe3ec; font-size: 12.5px; font-weight: 800;
+}
+/* 글자 크기 세그먼트 */
+.dm-seg { flex: none; display: inline-flex; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1); border-radius: 10px; overflow: hidden; }
+.dm-seg button {
+  border: none; background: none; color: #9aa1af; cursor: pointer;
+  padding: 7px 11px; font-size: 12px; font-weight: 800;
+}
+.dm-seg button.on { background: #4361ff; color: #fff; }
+/* 안내 문단 */
+.dm-set-note {
+  margin: 2px 14px 10px; padding: 11px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+  font-size: 12px; line-height: 1.6; color: #98a0b0;
+}
+.dm-set-ver { padding: 18px 16px 28px; text-align: center; font-size: 11.5px; color: #5d6472; }
+
+/* 대화 글자 크기 — 설정이 html[data-dm-font]에 심는다 */
+html[data-dm-font="s"] .dm-bubble { font-size: 13px; }
+html[data-dm-font="m"] .dm-bubble { font-size: 14.5px; }
+html[data-dm-font="l"] .dm-bubble { font-size: 16.5px; }
