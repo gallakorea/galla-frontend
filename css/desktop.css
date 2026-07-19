@@ -1,0 +1,179 @@
+/* =========================================================
+   🖥 데스크톱 레이어 — '라이브 3단' (A안)
+   ---------------------------------------------------------
+   원칙: 모바일이 기본이다. 이 파일 전체가 @media (min-width:1100px) 안에만
+   존재하므로, 좁은 화면에서는 로드돼도 단 한 줄도 적용되지 않는다.
+   모바일 코드는 만지지 않는다 — 넓어지면 이 레이어가 '덮어쓸' 뿐이다.
+
+   구조:  [좌측 레일 220]  [센터 칼럼 520(모바일 화면 그대로)]  [우측 라이브 300]
+   센터를 모바일 폭으로 유지하는 이유 — 51개 화면이 그 폭으로 설계됐고,
+   억지로 늘리면 전부 다시 만들어야 한다. 대신 남는 폭을 '살아있는 정보'로 채운다.
+   ========================================================= */
+/* 기본(모바일)에선 레일이 존재해도 절대 그리지 않는다 —
+   미디어쿼리 밖에 없으면 좁힐 때 요소가 일반 블록으로 페이지 끝에 쌓인다(실측) */
+#pc-left, #pc-right { display: none; }
+
+@media (min-width: 1100px) {
+  #pc-left { display: flex; }
+  #pc-right { display: block; }
+
+
+  :root {
+    --pc-col: 520px;        /* 센터(모바일 화면) 폭 */
+    --pc-left: 220px;       /* 좌측 레일 */
+    --pc-right: 300px;      /* 우측 라이브 패널 */
+    --pc-gap: 28px;
+  }
+
+  /* ── 캔버스: 순흑 유지 + 미세한 앰비언트(정체성 색) ── */
+  body {
+    background:
+      radial-gradient(40% 60% at 8% 10%, rgba(67, 97, 255, .05), transparent 60%),
+      radial-gradient(36% 50% at 94% 88%, rgba(67, 97, 255, .04), transparent 60%),
+      #000;
+  }
+
+  /* ── 센터 칼럼: 본문·헤더를 520px로 모아 가운데 ── */
+  .header { max-width: var(--pc-col); margin: 0 auto; }
+  main, .feed, .page-stage, #app, .container {
+    max-width: var(--pc-col);
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  /* DM은 페이지 전체가 앱 화면 — 패널만 센터 폭으로 */
+  body[data-page="dm"] .dm-root.page .dm-panel {
+    max-width: var(--pc-col);
+    margin: 0 auto;
+    border-left: 1px solid rgba(255, 255, 255, .06);
+    border-right: 1px solid rgba(255, 255, 255, .06);
+  }
+
+  /* ── 모바일 전용 요소는 데스크톱에서 끈다 ── */
+  .nav { display: none !important; }            /* 하단 네비 → 좌측 레일이 대신한다 */
+  .a2hs-bar, .a2hs-dim { display: none !important; }   /* 홈 화면 추가 유도(모바일 전용) */
+  #nav-jog { display: none !important; }        /* 조그셔틀(터치 전용) */
+
+  /* ── 좌측 레일 ── */
+  #pc-left {
+    position: fixed;
+    top: 0; bottom: 0;
+    left: calc(50% - var(--pc-col)/2 - var(--pc-gap) - var(--pc-left));
+    width: var(--pc-left);
+    display: flex; flex-direction: column;
+    padding: 26px 10px 22px;
+    z-index: 900;
+  }
+  #pc-left .pcl-logo {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 12px 22px; text-decoration: none;
+  }
+  #pc-left .pcl-logo img { width: 34px; height: 34px; border-radius: 10px; }
+  #pc-left .pcl-logo b {
+    font-size: 20px; font-weight: 900; letter-spacing: -.02em; color: #fff;
+  }
+  #pc-left .pcl-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 14px; margin: 2px 0;
+    border-radius: 14px; text-decoration: none; cursor: pointer;
+    color: #b8bfcd; font-size: 15.5px; font-weight: 700;
+    transition: background .14s, color .14s;
+    position: relative;
+    border: none; background: none; font-family: inherit; text-align: left; width: 100%;
+  }
+  #pc-left .pcl-item svg { width: 22px; height: 22px; flex: none; }
+  #pc-left .pcl-item:hover { background: rgba(255, 255, 255, .06); color: #fff; }
+  #pc-left .pcl-item.on { color: #fff; font-weight: 900; }
+  #pc-left .pcl-item.on::before {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 18px; border-radius: 2px;
+    background: var(--accent, #4361ff);
+  }
+  #pc-left .pcl-badge {
+    margin-left: auto; min-width: 19px; height: 19px; padding: 0 5px;
+    border-radius: 999px; background: #ff4d67; color: #fff;
+    font-size: 10.5px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #pc-left .pcl-write {
+    margin-top: 14px; padding: 13px;
+    border: none; border-radius: 14px; cursor: pointer;
+    background: var(--accent-grad, linear-gradient(135deg, #6a7bff, #3a5bff));
+    color: #fff; font-size: 15px; font-weight: 900; font-family: inherit;
+    box-shadow: var(--accent-glow, 0 6px 22px rgba(67, 97, 255, .32));
+    transition: transform .12s;
+  }
+  #pc-left .pcl-write:active { transform: scale(.97); }
+  #pc-left .pcl-foot {
+    margin-top: auto; padding: 0 12px;
+    font-size: 11.5px; line-height: 1.9; color: #4d5361;
+  }
+  #pc-left .pcl-foot a { color: #6a7182; text-decoration: none; }
+  #pc-left .pcl-foot a:hover { color: #9aa2b5; }
+
+  /* ── 우측 라이브 패널 ── */
+  #pc-right {
+    position: fixed;
+    top: 0; bottom: 0;
+    left: calc(50% + var(--pc-col)/2 + var(--pc-gap));
+    width: var(--pc-right);
+    padding: 26px 0 22px;
+    overflow-y: auto;
+    z-index: 900;
+    scrollbar-width: none;
+  }
+  #pc-right::-webkit-scrollbar { display: none; }
+  .pcr-card {
+    background: rgba(255, 255, 255, .035);
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 18px;
+    padding: 16px 16px 10px;
+    margin-bottom: 14px;
+  }
+  .pcr-card h3 {
+    display: flex; align-items: center; gap: 8px;
+    margin: 0 0 10px; font-size: 13.5px; font-weight: 900; color: #dfe3ec;
+  }
+  .pcr-card h3 .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #2fd07a; animation: pcrPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pcrPulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  .pcr-row {
+    display: block; padding: 10px 2px; text-decoration: none; cursor: pointer;
+    border-top: 1px solid rgba(255, 255, 255, .05);
+  }
+  .pcr-row:hover b { color: var(--accent-2, #8fa0ff); }
+  .pcr-row b {
+    display: block; font-size: 13.5px; font-weight: 700; color: #e7ebf3;
+    line-height: 1.45; transition: color .12s;
+    overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .pcr-row i {
+    display: block; margin-top: 3px; font-style: normal;
+    font-size: 11.5px; color: #767e8f;
+  }
+  /* 예측 오즈 바 */
+  .pcr-odds {
+    display: flex; height: 5px; border-radius: 3px; overflow: hidden;
+    margin-top: 7px; background: rgba(255, 255, 255, .08);
+  }
+  .pcr-odds span { height: 100%; }
+  .pcr-odds .yes { background: #3f74e0; }
+  .pcr-odds .no  { background: #c0455e; }
+  .pcr-more {
+    display: block; text-align: center; padding: 9px 0 4px;
+    font-size: 12px; font-weight: 800; color: #6a7182; text-decoration: none;
+  }
+  .pcr-more:hover { color: #9aa2b5; }
+  .pcr-empty { padding: 12px 2px; font-size: 12.5px; color: #5d6472; }
+
+  /* 레일이 겹치는 애매한 폭(1100~1279px)에서는 우측 패널만 유지하고 레일 라벨 축소 */
+  @media (max-width: 1279px) {
+    :root { --pc-left: 68px; }
+    #pc-left .pcl-item span, #pc-left .pcl-logo b, #pc-left .pcl-foot { display: none; }
+    #pc-left .pcl-item { justify-content: center; padding: 13px 0; }
+    #pc-left .pcl-badge { position: absolute; top: 4px; right: 8px; margin: 0; }
+    #pc-left .pcl-write { font-size: 0; padding: 13px 0; }
+    #pc-left .pcl-write::before { content: '✎'; font-size: 17px; }
+  }
+}
