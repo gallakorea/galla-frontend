@@ -512,6 +512,8 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: #cdd9ff; cursor: pointer;
 }
 .dm-mic-btn.ok { color: #7ee0a3; border-color: rgba(60,190,120,.35); background: rgba(60,190,120,.08); }
+/* 같은 자리에 <a>로도 쓴다(도움말 링크) — 버튼과 동일하게 보이게 */
+a.dm-mic-btn { text-decoration: none !important; display: inline-flex; align-items: center; }
 
 /* ═══ 인스타식 입력바 · 무한 이모티콘 · 음성 메시지 ═══ */
 .dm-ib {

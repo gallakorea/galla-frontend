@@ -263,6 +263,10 @@
               <span class="dm-set-mid"><b>통화 마이크 권한</b><i>미리 허용해두면 육성톡·면상톡 때 다시 묻지 않아요</i></span>
               <button class="dm-mic-btn" id="dm-set-mic" type="button">확인 중…</button>
             </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>마이크·카메라가 안 될 때</b><i>기기별로 권한 켜는 방법 — 녹음·통화가 안 되면 여기</i></span>
+              <a class="dm-mic-btn" href="/help-permissions.html">도움말</a>
+            </div>
             <div class="dm-sec">${ICONS.block}차단한 사람</div>
             <div id="dm-block-list"></div>
             <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>

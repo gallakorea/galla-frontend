@@ -52,6 +52,8 @@
   footer { margin-top: 26px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08);
     font-size: 12.5px; color: #6f7788; }
   footer a { color: #8fa0ff; }
+  footer button { background: none; border: none; padding: 0; font: inherit; font-weight: 900;
+    color: #8fa0ff; text-decoration: underline; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -140,9 +142,11 @@
 </section>
 
 <footer>
-  그래도 안 되면 앱 안 <b>버그 신고</b>로 알려주세요. 어떤 기기·브라우저인지 함께 적어주시면 빠르게 도와드릴 수 있어요.<br>
+  그래도 안 되면 <button type="button" id="bug">🐞 버그 신고하기</button>를 눌러주세요.
+  어떤 기기·브라우저인지 자동으로 함께 전송돼서 빠르게 도와드릴 수 있어요.<br><br>
   <a href="/dm.html">← 메시지로 돌아가기</a>
 </footer>
+<script src="/js/bug-report.js"></script>
 
 <script>
 (function () {
@@ -223,6 +227,10 @@
     if (isAndroid) { location.href = 'intent://galla.im/dm.html#Intent;scheme=https;package=com.android.chrome;end'; return; }
     try { navigator.clipboard.writeText(url); alert('주소를 복사했어요. 사파리에 붙여넣어 주세요.'); }
     catch (_) { alert('사파리에서 galla.im 을 열어주세요.'); }
+  };
+  document.getElementById('bug').onclick = () => {
+    if (window.GALLA_openBugReport) return window.GALLA_openBugReport(location.href);
+    location.href = '/dm.html';   // 모듈이 안 뜨면 앱으로 보내 거기서 신고
   };
 })();
 </script>
