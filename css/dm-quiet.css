@@ -1122,3 +1122,16 @@ body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible;
 @media (prefers-reduced-motion: reduce) {
   .art-shake, .art-blink, .art-wave, .art-float1, .art-float2, .art-spark { animation: none; }
 }
+
+
+/* ═══ DM 페이지: 문서 스크롤 잠금 (iOS 키보드 대응) ═══
+   증상: 삐삐 걸기 입력을 눌렀다 빠져나오면 헤더가 탭바 위로 내려앉아 겹침.
+   원인: iOS는 입력에 포커스가 가면 '문서'를 강제로 밀어 올려 키보드 자리를 만든다.
+        DM은 내부 스크롤 구조라 문서가 스크롤될 일이 없는데도 밀리고, 키보드가
+        닫혀도 그 오프셋이 남아 sticky 헤더와 본문이 어긋난다.
+   대응: 문서 자체를 스크롤 불가로 못 박아 밀릴 여지를 없앤다(+JS가 복원). */
+html:has(body[data-page="dm"]) { height: 100%; overflow: hidden; }
+body[data-page="dm"] {
+  height: 100dvh; overflow: hidden; overscroll-behavior: none;
+  position: relative;
+}

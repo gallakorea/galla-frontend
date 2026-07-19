@@ -619,6 +619,33 @@
       .subscribe();
   }
 
+  /* iOS 키보드가 문서를 밀어 올린 뒤 되돌리지 않아 헤더가 어긋나는 문제 —
+     포커스가 빠지거나 키보드가 닫히면(visualViewport 변화) 문서를 원위치로 되돌린다.
+     CSS로 문서 스크롤을 잠갔지만, iOS는 그래도 밀 때가 있어 JS로 한 번 더 받친다. */
+  function lockPageScroll() {
+    if (!PAGE_MODE() || window.__dmScrollLock) return;
+    window.__dmScrollLock = true;
+    const snap = () => {
+      // 내부 스크롤러는 그대로 두고 '문서'만 원위치
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+      const se = document.scrollingElement;
+      if (se && se.scrollTop !== 0) se.scrollTop = 0;
+    };
+    // 입력에서 빠져나올 때(키보드 닫힘)
+    document.addEventListener('focusout', () => setTimeout(snap, 60), true);
+    // 포커스 직후에도 문서가 밀리면 되돌린다(내부 스크롤러가 알아서 보여준다)
+    document.addEventListener('focusin', e => {
+      if (e.target.matches?.('input, textarea')) setTimeout(snap, 120);
+    }, true);
+    // 키보드 열림/닫힘은 visualViewport 크기 변화로 잡힌다
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => setTimeout(snap, 60));
+      window.visualViewport.addEventListener('scroll', snap);
+    }
+    window.addEventListener('orientationchange', () => setTimeout(snap, 200));
+    document.addEventListener('scroll', snap, { passive: true });
+  }
+
   let e2eBooted = false;
   function openDM() {
     buildRoot();
@@ -638,6 +665,7 @@
     if (ME && window.GALLA_call?.supported()) window.GALLA_call.listen(supabase, ME);
     if (ME && window.GALLA_e2e?.supported()) attachMailbox();
     if (ME) { attachPagerRealtime(); refreshPagerBadge(); }
+    lockPageScroll();
     // 계정이 바뀌면(같은 폰에서 로그아웃→다른 계정) 이전 계정 화면·상태가 남지 않게 통째로 리로드
     try {
       supabase.auth.onAuthStateChange?.((_ev, sess) => {
