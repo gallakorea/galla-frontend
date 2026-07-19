@@ -1234,6 +1234,11 @@
       if (!document.body.classList.contains('dm-detail')) return;
       if (document.querySelector('#pager-call.on, #pager-book.on, #dm-call.on, #pager-guide.on')) return;
       if (e.target.closest(NO_SWIPE)) return;
+      /* ⚠️ 화면 왼쪽 가장자리는 브라우저의 '뒤로가기 제스처' 구역이다.
+         여기서 우리가 또 뒤로가기를 하면 두 단계 물러나 엉뚱한 화면으로 나간다
+         (설정 상세에서 밀었더니 설정이 아니라 DM 목록으로 빠지던 원인).
+         가장자리는 브라우저에 맡기고, 우리는 안쪽 스와이프만 처리한다. */
+      if (e.touches[0].clientX <= 28) return;
       sx = e.touches[0].clientX; sy = e.touches[0].clientY; armed = true;
     }, { passive: true });
     ROOT.addEventListener('touchend', e => {
