@@ -541,6 +541,11 @@
       const b = e.target.closest('.dm-vplay'); if (!b) return;
       if (VAUDIO && !VAUDIO.paused && VAUDIO._btn === b) { VAUDIO.pause(); return; }
       if (VAUDIO) { VAUDIO.pause(); VAUDIO._btn && (VAUDIO._btn.innerHTML = ICONS.play); }
+      // iOS는 webm 재생 불가 — 다 받고 실패하는 대신 바로 알린다
+      if (IS_IOS && /\.webm(\?|$)/i.test(b.dataset.url)) {
+        VAUDIO = null;
+        return toastMini('이 음성은 옛 형식이라 아이폰에서 재생할 수 없어요 — 새 음성부터는 정상이에요');
+      }
       VAUDIO = new Audio(); VAUDIO._btn = b;
       /* 길이 정보가 없는 webm은 스트리밍(범위 요청)으로 재생하면 소리가 안 나는
          기기가 있다 — 통째로 받아 blob으로 틀면 안정적이다. 실패하면 원래 URL로. */
