@@ -107,7 +107,14 @@
     const url = location.href;
     if (isAndroid) {
       const noScheme = url.replace(/^https?:\/\//, '');
+      const t0 = Date.now();
       location.href = `intent://${noScheme}#Intent;scheme=https;package=com.android.chrome;end`;
+      // 크롬이 없거나 인텐트가 막히면 아무 일도 안 일어난다 — 그때만 복사로 대체
+      setTimeout(() => {
+        if (document.hidden || Date.now() - t0 > 2500) return;   // 전환 성공
+        try { navigator.clipboard?.writeText(url); } catch (_) {}
+        alert('크롬이 열리지 않았어요.\n주소를 복사했으니 크롬 주소창에 붙여넣어 주세요.\n\n' + url);
+      }, 1200);
       return true;
     }
     try {
@@ -126,9 +133,9 @@
       <div class="mh-app">
         <h5>📲 앱으로 설치하면 이 고생이 없어요</h5>
         <ul>
-          <li>마이크 허용을 <b>딱 한 번</b>만 — 매번 안 물어봐요</li>
-          <li>삐삐·메시지 <b>알림이 바로</b> 와요 (브라우저는 자주 놓쳐요)</li>
-          <li>주소창 없는 <b>전체 화면</b>, 실행도 훨씬 빨라요</li>
+          <li><b>알림</b>을 놓치지 않아요 — 삐삐가 오면 바로</li>
+          <li>주소창 없는 <b>전체 화면</b>으로 앱처럼 써요</li>
+          <li>실행이 <b>훨씬 빨라요</b> (⚠ 단, 녹음은 크롬에서 해주세요)</li>
         </ul>
         <button class="mh-btn" data-mh="${can ? 'install' : 'installhow'}" type="button">
           ${can ? '홈 화면에 갈라 설치하기' : '설치 방법 보기'}
@@ -152,27 +159,20 @@
         <div class="mh-steps">
           <div class="mh-step"><span class="n">＋</span><span class="t">안 열리면 오른쪽 위 <b>⋮ (또는 ⋯)</b> → <b>다른 브라우저로 열기</b>를 눌러주세요</span></div>
         </div>`;
-    } else if (st === 'denied' && isStandalone) {
-      /* 설치형(PWA)엔 주소창이 없다 — 안드로이드 시스템 설정이 유일한 경로.
-         홈 화면 아이콘 길게 누르기가 가장 빠르다(설정 앱을 헤맬 필요 없음). */
-      head = '🎙 마이크가 차단돼 있어요';
-      sub = '앱으로 설치해서 쓰고 계셔서 <b>주소창이 없어요</b>. 휴대폰 설정에서 갈라의 마이크를 켜주세요 — 홈 화면에서 바로 갈 수 있어요.';
+    } else if (isStandalone) {
+      /* 🚨 실기기에서 확인된 안드로이드 제약(2026-07-19):
+         PWA를 설치하면 안드로이드가 WebAPK라는 앱을 자동 생성하는데, 그 앱에
+         RECORD_AUDIO 권한이 들어가지 않는다. 그래서 [앱 정보 → 권한] 목록에
+         '마이크' 항목 자체가 없다("허용된 권한 없음"). 없는 권한은 켤 수 없다.
+         → 설치형에서 설정을 아무리 만져도 녹음은 불가. 크롬으로 여는 게 유일한 해법. */
+      head = '🎙 설치한 앱에선 녹음이 안 돼요';
+      sub = '안드로이드가 홈 화면 앱을 만들 때 <b>마이크 권한을 넣어주지 않아요</b>. 그래서 설정에 마이크 항목 자체가 없습니다 — 사장님 잘못이 아니에요. <b>크롬으로 열면 바로 녹음됩니다.</b>';
       body = `
-        <div class="mh-art">
-          <div class="mh-home">
-            <div class="mh-appicon">갈라<span class="mh-press"></span></div>
-            <div class="mh-bubble">ⓘ 앱 정보</div>
-          </div>
-          <div class="mh-point">↑ 홈 화면의 <b>갈라 아이콘을 꾹 누르면</b> 이 메뉴가 나와요</div>
-        </div>
+        <button class="mh-btn" data-mh="chrome" type="button">크롬에서 열어서 녹음하기</button>
         <div class="mh-steps">
-          <div class="mh-step"><span class="n">1</span><span class="t">홈 화면 <b>갈라 아이콘 길게 누르기</b></span></div>
-          <div class="mh-step"><span class="n">2</span><span class="t"><b>ⓘ 앱 정보</b> 탭 (또는 위로 끌어올리기)</span></div>
-          <div class="mh-step"><span class="n">3</span><span class="t"><b>권한 → 마이크 → 허용</b></span></div>
-          <div class="mh-step"><span class="n">✓</span><span class="t">허용하는 즉시 <b>여기가 자동으로 바뀝니다</b> — 기다리시면 돼요</span></div>
-        </div>
-        <div class="mh-watch" id="mh-watch">🔎 마이크 설정을 지켜보는 중…</div>
-        <button class="mh-btn ghost" data-mh="reload" type="button">허용했어요 — 새로고침</button>`;
+          <div class="mh-step"><span class="n">?</span><span class="t">확인해보고 싶으시면: 홈 아이콘 꾹 → <b>앱 정보 → 권한</b>에 <b>마이크가 없으면</b> 이 경우예요</span></div>
+          <div class="mh-step"><span class="n">✓</span><span class="t">크롬에서는 마이크가 <b>정상 동작</b>해요 — 삐삐도 통화도</span></div>
+        </div>`;
     } else if (st === 'denied') {
       head = '🎙 마이크가 차단돼 있어요';
       sub = '한 번 <b>차단</b>을 누르면 브라우저가 기억해서 다시 묻지 않아요. 주소창 왼쪽 아이콘에서 <b>허용</b>으로 바꿔주세요.';
