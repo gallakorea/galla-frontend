@@ -1029,3 +1029,27 @@ body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible;
 .pgr-mk, .pgr-book-body, .pgr-call-body { box-sizing: border-box; }
 .pgr-row { width: 100%; max-width: 100%; }
 .pgr-list { max-width: 100%; overflow-x: hidden; }
+
+
+/* 📟 다이얼 — 012 고정 프리픽스(타이핑 대상 아님) */
+.pgr-dial-row {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(180deg, #0f2a1a, #0a1f13);
+  border: 1px solid rgba(125,255,168,.14); border-radius: 14px; padding: 10px 12px;
+}
+.pgr-dial-prefix {
+  flex: none; font-size: 19px; color: #5fd88a; letter-spacing: 2px;
+  font-family: 'Courier New', monospace; user-select: none;
+}
+.pgr-dial-row input {
+  flex: 1; min-width: 0; background: none; border: none; outline: none;
+  font-size: 19px; color: #7dffa8; letter-spacing: 3px;
+  font-family: 'Courier New', monospace; text-shadow: 0 0 8px rgba(125,255,168,.4);
+}
+.pgr-dial-row input::placeholder { color: rgba(125,255,168,.28); text-shadow: none; }
+.pgr-dial-go {
+  flex: none; padding: 9px 16px; border-radius: 999px; border: none; cursor: pointer;
+  background: #1f7a45; color: #eafff1; font-size: 13px; font-weight: 900;
+}
+.pgr-dial-go:disabled { opacity: .4; cursor: default; }
+.pgr-dial-hint.bad { color: #ff8f9a; }

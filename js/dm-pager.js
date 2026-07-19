@@ -304,9 +304,10 @@
 
         <div class="pgr-sec">삐삐 걸기</div>
         <div class="pgr-dialer">
-          <div class="pgr-code-row">
-            <input id="pgr-dial-in" inputmode="tel" maxlength="13" placeholder="012-000-0000" autocomplete="off">
-            <button type="button" data-a="dial">호출</button>
+          <div class="pgr-dial-row">
+            <span class="pgr-dial-prefix">012-</span>
+            <input id="pgr-dial-in" inputmode="numeric" maxlength="9" placeholder="000-0000" autocomplete="off">
+            <button type="button" class="pgr-dial-go" data-a="dial">호출</button>
           </div>
           <button type="button" class="pgr-friends-btn" data-a="pickfriend">주소록(친구)에서 고르기</button>
           <div class="pgr-dial-hint" id="pgr-dial-hint">번호만 알면 모르는 사람에게도 칠 수 있어요</div>
@@ -400,17 +401,26 @@
     if (a === 'dial') {
       const inp = host.querySelector('#pgr-dial-in');
       const hint = host.querySelector('#pgr-dial-hint');
-      let n = (inp.value || '').replace(/[^0-9]/g, '');
-      if (n.length < 10) { hint.textContent = '번호를 끝까지 입력해주세요 (012-000-0000)'; return; }
-      n = n.slice(0, 11);
-      const formatted = n.length === 10
-        ? `${n.slice(0, 3)}-${n.slice(3, 6)}-${n.slice(6)}`      // 012-XXX-XXXX (7자리)
-        : `${n.slice(0, 3)}-${n.slice(3, 7)}-${n.slice(7)}`;     // 012-XXXX-XXXX (8자리, 확장 대비)
+      const d = (inp.value || '').replace(/[^0-9]/g, '');
+      if (d.length < DIAL_MAX) {
+        hint.textContent = `뒤 ${DIAL_MAX}자리를 끝까지 입력해주세요`;
+        hint.className = 'pgr-dial-hint bad';
+        return;
+      }
+      const formatted = d.length === 7
+        ? `012-${d.slice(0, 3)}-${d.slice(3)}`        // 012-XXX-XXXX (현재)
+        : `012-${d.slice(0, 4)}-${d.slice(4)}`;       // 012-XXXX-XXXX (8자리 시대)
       hint.textContent = '연결 중…';
       const { data } = await sb().rpc('pager_dial', { p_number: formatted });
-      if (!data?.ok) { hint.textContent = '없는 번호예요 — 다시 확인해주세요'; beep('tone'); return; }
+      if (!data?.ok) {
+        hint.textContent = '없는 번호예요 — 다시 확인해주세요';
+        hint.className = 'pgr-dial-hint bad';
+        beep('tone'); return;
+      }
       hint.textContent = '번호만 알면 모르는 사람에게도 칠 수 있어요';
+      hint.className = 'pgr-dial-hint';
       inp.value = '';
+      host.querySelector('[data-a="dial"]').disabled = true;
       leaveTo(data.user_id, data.nickname);
       return;
     }
@@ -428,19 +438,44 @@
     }
   }
 
-  /* 다이얼 입력 자동 하이픈(012-0000-000) */
+  /* 다이얼 입력 — 012는 화면에 고정(타이핑 대상 아님), 뒤 7자리만 받는다.
+     8자리 시대가 오면 allow8이 켜지고 한 자리 더 허용된다(다이얼은 양쪽 호환). */
+  let DIAL_MAX = 7;
   function bindDial(host) {
     const inp = host.querySelector('#pgr-dial-in');
+    const hint = host.querySelector('#pgr-dial-hint');
     if (!inp) return;
+    // 현재 시대(7자리/8자리) 확인 — 실패해도 기본 7
+    sb().from('app_settings').select('v').eq('k', 'pager').maybeSingle()
+      .then(({ data }) => { if (data?.v && data.v.allow7 === false) DIAL_MAX = 8; })
+      .catch(() => {});
+
+    const fmt = d => d.length > 3 ? `${d.slice(0, 3)}-${d.slice(3)}` : d;
     inp.addEventListener('input', () => {
-      const d = inp.value.replace(/[^0-9]/g, '').slice(0, 11);
-      inp.value = d.length > 10 ? `${d.slice(0,3)}-${d.slice(3,7)}-${d.slice(7)}`
-        : d.length > 6 ? `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`
-        : d.length > 3 ? `${d.slice(0,3)}-${d.slice(3)}` : d;
+      let d = inp.value.replace(/[^0-9]/g, '');
+      if (d.length > DIAL_MAX) {
+        d = d.slice(0, DIAL_MAX);
+        // "7자리 넘어가면 알람" — 조용히 자르지 않고 이유를 말한다
+        hint.textContent = `삐삐 번호는 012 뒤 ${DIAL_MAX}자리예요`;
+        hint.className = 'pgr-dial-hint bad';
+        try { navigator.vibrate?.(40); } catch (_) {}
+        beep('tone');
+        clearTimeout(inp._warnT);
+        inp._warnT = setTimeout(() => {
+          hint.textContent = '번호만 알면 모르는 사람에게도 칠 수 있어요';
+          hint.className = 'pgr-dial-hint';
+        }, 2200);
+      } else if (hint.classList.contains('bad')) {
+        hint.textContent = '번호만 알면 모르는 사람에게도 칠 수 있어요';
+        hint.className = 'pgr-dial-hint';
+      }
+      inp.value = fmt(d);
+      host.querySelector('[data-a="dial"]').disabled = d.length < DIAL_MAX;
     });
     inp.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); host.querySelector('[data-a="dial"]')?.click(); }
     });
+    host.querySelector('[data-a="dial"]').disabled = true;
   }
 
   /* 📱 번호 선택 개통 — 핸드폰 개통처럼. 가용 확인은 즉석, 최종 검증은 서버(경합 방어) */
