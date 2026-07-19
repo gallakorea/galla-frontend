@@ -24,7 +24,7 @@
   ];
   const HOLD_MS = 380;      // 이보다 길게 눌러야 펼쳐진다
   const RADIUS = 104;       // 부채꼴 반지름
-  const DEAD_R = 22;        // 이 안쪽만 '고르지 않음'(취소). 조금만 움직여도 선택되게 좁혔다
+  const DEAD_R = 14;        // 이 안쪽만 취소. 나머지는 거리와 무관하게 '방향'으로 다 잡힌다
   const STICKY = 10;        // 이미 고른 것은 10° 이상 확실히 벗어나야 바뀐다(경계 깜빡임 방지)
 
   function css() {
@@ -198,12 +198,48 @@
       if (!raf) raf = requestAnimationFrame(draw);   // 매 프레임 한 번만 그린다
     };
 
+    /* ⚠️ 아이폰은 화면 맨 아래에서 위로 미는 동작을 '홈 제스처'로 가로채며
+       pointercancel을 던진다. 네비가 바로 그 자리에 있어서, 위로 올리면
+       포인터가 끊기고 선택이 풀렸다(제보).
+       → ① 취소돼도 메뉴를 닫지 않는다 ② 문서 전체에서 touch 이벤트로 계속 추적한다
+         ③ 손을 떼는 건 어떤 경로로든(pointerup·touchend) 받는다 */
+    let docBound = false;
+    const onMove = (x, y) => { if (ui) queue(x, y); };
+    const docPointerMove = e => { if (ui) { e.preventDefault?.(); onMove(e.clientX, e.clientY); } };
+    const docTouchMove = e => {
+      if (!ui || !e.touches[0]) return;
+      e.preventDefault();                       // 페이지가 따라 움직이지 않게
+      onMove(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const docEnd = e => {
+      if (!ui) { unbindDoc(); return; }
+      const t = e.changedTouches && e.changedTouches[0];
+      if (t) onMove(t.clientX, t.clientY);      // 뗀 위치 기준으로 마지막 판정
+      finish(e);
+    };
+    function bindDoc() {
+      if (docBound) return;
+      docBound = true;
+      document.addEventListener('pointermove', docPointerMove, { passive: false });
+      document.addEventListener('touchmove', docTouchMove, { passive: false });
+      document.addEventListener('pointerup', docEnd);
+      document.addEventListener('touchend', docEnd);
+    }
+    function unbindDoc() {
+      if (!docBound) return;
+      docBound = false;
+      document.removeEventListener('pointermove', docPointerMove, { passive: false });
+      document.removeEventListener('touchmove', docTouchMove, { passive: false });
+      document.removeEventListener('pointerup', docEnd);
+      document.removeEventListener('touchend', docEnd);
+    }
+
     btn.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       sx = e.clientX; sy = e.clientY;
-      try { btn.setPointerCapture(e.pointerId); } catch (_) {}   // 손가락이 어디로 가든 계속 받는다
+      try { btn.setPointerCapture(e.pointerId); } catch (_) {}
       clearTimeout(holdT);
-      holdT = setTimeout(() => { ui = open(btn, sx, sy); }, HOLD_MS);
+      holdT = setTimeout(() => { ui = open(btn, sx, sy); bindDoc(); }, HOLD_MS);
     });
 
     btn.addEventListener('pointermove', e => {
@@ -215,18 +251,19 @@
       queue(e.clientX, e.clientY);
     });
 
-    const finish = e => {
+    function finish(e) {
       const wasOpen = !!ui;
       const tab = picked?.dataset.tab;
-      try { btn.releasePointerCapture(e.pointerId); } catch (_) {}
+      try { if (e?.pointerId != null) btn.releasePointerCapture(e.pointerId); } catch (_) {}
+      unbindDoc();
       clear();
-      if (!wasOpen) return;              // 짧게 눌렀으면 기본 동작(DM 열기)에 맡긴다
+      if (!wasOpen) return;
       go(tab || null);
-    };
+    }
     btn.addEventListener('pointerup', finish);
-    /* ⚠️ pointercancel에서 '이동'까지 하면 엉뚱한 곳으로 튄다. 닫기만 한다.
-       다만 캡처를 쓰기 때문에 실제로 취소가 오는 일은 거의 없다. */
-    btn.addEventListener('pointercancel', () => clear());
+    /* 취소가 와도 닫지 않는다 — iOS 홈 제스처 때문에 자주 온다.
+       문서 touch 이벤트가 계속 추적하고, 손을 뗄 때 확정된다. */
+    btn.addEventListener('pointercancel', () => { if (!ui) clear(); });
     btn.addEventListener('contextmenu', e => { if (ui) e.preventDefault(); });
 
     btn.addEventListener('click', e => {
