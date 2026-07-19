@@ -22,29 +22,35 @@
     reply: "comment", comment: "comment", plaza_comment: "comment",
     like: "like", plaza_like: "like",
     dislike: "dislike",
-    follow: "follow", dm: "follow",
+    follow: "follow",
     vote: "vote", plaza_vote: "vote",
     attack: "battle", defend: "battle", support: "battle",
     duel: "battle", duel_result: "battle", duel_challenge: "battle",
     duel_live: "battle", duel_voting: "battle", duel_decline: "battle",
     issue_win: "reward", donation: "reward", withdrawal: "reward",
     market_resolved: "predict",
-    pager: "pager",
   };
   // 표시 순서 = 아래 배열 순서(사람이 먼저 궁금해하는 것부터)
   const GROUPS = [
-    { key: "comment", emoji: "💬", label: "댓글" },
-    { key: "like",    emoji: "❤️", label: "좋아요" },
-    { key: "follow",  emoji: "👤", label: "팔로워" },
-    { key: "battle",  emoji: "⚔️", label: "전투" },
-    { key: "vote",    emoji: "🗳", label: "투표" },
-    { key: "reward",  emoji: "🎁", label: "보상" },
-    { key: "pager",   emoji: "📟", label: "삐삐" },
-    { key: "predict", emoji: "📈", label: "예측" },
-    { key: "dislike", emoji: "👎", label: "싫어요" },
-    { key: "etc",     emoji: "🔔", label: "기타" },
+    { key: "comment", icon: "comment", label: "댓글" },
+    { key: "like",    icon: "like",    label: "좋아요" },
+    { key: "follow",  icon: "follow",  label: "팔로워" },
+    { key: "battle",  icon: "swords",  label: "전투" },
+    { key: "vote",    icon: "vote",    label: "투표" },
+    { key: "reward",  icon: "gift",    label: "보상" },
+    { key: "predict", icon: "chart",   label: "예측" },
+    { key: "dislike", icon: "dislike", label: "싫어요" },
+    { key: "etc",     icon: "bell",    label: "기타" },
   ];
+  /* 💬 메시지(DM·삐삐)는 활동 알림과 성격이 다르다 — 읽을 곳도 DM이고,
+     하트 뱃지에까지 섞이면 같은 소식이 두 군데서 두 번 카운트된다.
+     → 하트(활동)에서는 빼고, DM 뱃지·삐삐 액정 팝업이 담당한다.
+     알림함에서는 [메시지] 탭에서 따로 볼 수 있다. */
+  const MSG_TYPES = new Set(["dm", "pager"]);
   const MAX_CHIPS = 3;   // 그 이상은 +N 으로 접는다 — 헤더가 좁아 4개부터 줄바꿈이 난다
+
+  // 공용 SVG 아이콘(noti-icons.js) — 없으면 빈 문자열로 조용히 넘어간다
+  function icon(name) { return window.GALLA_svgIcon ? window.GALLA_svgIcon(name) : ""; }
 
   function setBadge(n) {
     unread = Math.max(0, n);
@@ -89,7 +95,7 @@
     const head = items.slice(0, MAX_CHIPS);
     const restN = items.slice(MAX_CHIPS).reduce((s, g) => s + g.n, 0);
     p.innerHTML = head.map(g =>
-      `<span class="npi" title="${g.label}"><i>${g.emoji}</i><b>${g.n > 99 ? "99+" : g.n}</b></span>`
+      `<span class="npi" title="${g.label}"><i>${icon(g.icon)}</i><b>${g.n > 99 ? "99+" : g.n}</b></span>`
     ).join("") + (restN ? `<span class="npi more">+${restN}</span>` : "");
     p.hidden = false;
     p.classList.remove("show");
@@ -111,7 +117,8 @@
       .eq("read", false)
       .limit(500);
     if (error) { console.error("[noti] 안읽음 조회 실패", error); return; }
-    const rows = data || [];
+    // 메시지(DM·삐삐)는 활동 알림에서 제외 — DM 뱃지가 이미 알려준다
+    const rows = (data || []).filter(r => !MSG_TYPES.has(r.type));
     const counts = {};
     rows.forEach(r => {
       const k = GROUP_OF[r.type] || "etc";

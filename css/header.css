@@ -173,7 +173,9 @@ body[data-page="mypage"] #app {
   position: relative; display: flex; align-items: center; gap: 4px;
   color: #fff; font-size: 13px; font-weight: 900; line-height: 1;
 }
-.noti-pill .npi i { font-style: normal; font-size: 12.5px; }
+.noti-pill .npi i { font-style: normal; font-size: 12.5px; display: inline-flex; align-items: center; }
+/* 이모지 → SVG 교체: 글자 크기에 맞춰 따라오게(색은 currentColor) */
+.noti-pill .npi i .ic { width: 13px; height: 13px; display: block; }
 .noti-pill .npi.more { opacity: .85; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) {
   .noti-pill { transition: none; }
