@@ -1392,7 +1392,12 @@
     });
     // ?pager=1 로 들어오면 바로 사서함, 아니면 마지막으로 보던 탭 복원
     try {
-      if (new URLSearchParams(location.search).get('pager')) setTimeout(() => setTab('pager'), 60);
+      const qp = new URLSearchParams(location.search);
+      if (qp.get('pager')) setTimeout(() => setTab('pager'), 60);
+      // 네비 길게 눌러 고른 탭으로 바로 진입(?tab=friends 등)
+      else if (['chats', 'friends', 'rooms', 'pager'].includes(qp.get('tab'))) {
+        setTimeout(() => setTab(qp.get('tab')), 60);
+      }
       else {
         const last = sessionStorage.getItem(TAB_KEY);
         if (last && last !== 'chats') setTimeout(() => setTab(last), 60);
@@ -1444,6 +1449,7 @@
 
   /* ---------- 탭: 채팅 / 친구 ---------- */
   const TAB_KEY = 'galla_dm_tab';
+  window.GALLA_dmSetTab = t => { try { showView('inbox'); setTab(t); } catch (_) {} };
   function setTab(tab) {
     // 리로드·복귀 후에도 보던 탭으로 돌아오게(채팅으로 튕기지 않게)
     try { sessionStorage.setItem(TAB_KEY, tab); } catch (_) {}
