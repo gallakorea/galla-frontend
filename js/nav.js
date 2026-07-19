@@ -218,10 +218,14 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     };
     // 모달/시트/드로어가 열려 있으면 스와이프 무시
+    // ⚠️ #dm-root.open은 '오버레이로 뜬 DM'일 때만 차단 대상. dm.html의 페이지 모드(.page)는
+    //    그냥 하나의 탭 페이지라 좌우 스와이프가 다른 탭처럼 동작해야 한다.
+    //    (대화방·프로필 같은 상세는 body.dm-detail로 따로 막는다)
     const overlayOpen = () => document.querySelector(
-      "#dm-root.open, .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
-      "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
-    );
+      "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
+      "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
+      "#pager-call.on, #pager-book.on, #dm-call.on"
+    ) || document.body.classList.contains("dm-detail");
 
     // 이 페이지가 '탭 자기 자신'(탭 루트)인지 판별.
     // 상세/설정 페이지(plaza_detail·predict-market·settings·mypage 하위 등)는 nav 하이라이트용으로
@@ -421,9 +425,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const scroller = () => document.scrollingElement || document.documentElement;
   const overlayOpen = () => document.querySelector(
-    "#dm-root.open, .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
+    "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
     "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
-  );
+  ) || document.body.classList.contains("dm-detail");
 
   document.addEventListener("touchstart", (e) => {
     if (e.touches.length !== 1 || !bar || overlayOpen() || scroller().scrollTop > 0) { pulling = false; return; }

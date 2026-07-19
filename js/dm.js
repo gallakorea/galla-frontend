@@ -622,6 +622,13 @@
   let e2eBooted = false;
   function openDM() {
     buildRoot();
+    // ⚠️ CSS가 늦거나 캐시가 꼬여도 '옛 오버레이 화면(왼쪽 X)'이 뜨지 않게 JS로 못 박는다
+    if (PAGE_MODE()) {
+      ROOT.classList.add('page');
+      const oldHead = ROOT.querySelector('[data-view="inbox"] > .dm-head');
+      if (oldHead) oldHead.hidden = true;
+      ROOT.querySelector('.dm-dim')?.remove();
+    }
     applyTossface();
     if (STK_STYLE === 'fluent' && !window.GALLA_FLUENT) loadScript('/js/dm-fluent.js').catch(() => {});
     if (!e2eBooted && ME && window.GALLA_e2e?.supported()) {

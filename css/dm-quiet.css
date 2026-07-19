@@ -1010,3 +1010,22 @@ body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible;
   font-size: 10px; font-weight: 900; vertical-align: middle;
 }
 .dm-tab-dot[hidden] { display: none !important; }
+
+
+/* ① 보낸 호출 행 폭 — 발신 배지/시간이 밀려 레이아웃이 터지던 문제 */
+.pgr-row.sentrow { cursor: default; align-items: center; }
+.pgr-row.sentrow .pgr-row-mid { min-width: 0; flex: 1; }
+.pgr-row.sentrow .pgr-row-mid b,
+.pgr-row.sentrow .pgr-row-mid span {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pgr-row .pgr-row-t { flex: none; white-space: nowrap; }
+.pgr-row-ic { flex: none; }
+
+
+/* 📟 삐삐 컴포넌트 박스 모델 못 박기 — box-sizing이 없어 패딩만큼(14px) 컨테이너를 넘쳐
+   '보낸 호출' 행이 오른쪽으로 삐져나갔다. 페이지마다 전역 box-sizing 유무가 달라 여기서 확정. */
+.pgr-wrap, .pgr-wrap *, .pgr-row, .pgr-device, .pgr-list, .pgr-dialer,
+.pgr-mk, .pgr-book-body, .pgr-call-body { box-sizing: border-box; }
+.pgr-row { width: 100%; max-width: 100%; }
+.pgr-list { max-width: 100%; overflow-x: hidden; }
