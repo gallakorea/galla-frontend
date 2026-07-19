@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>마이크 진단 - GALLA</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 18px 16px calc(30px + env(safe-area-inset-bottom,0px));
+    background: #0a0b0f; color: #e7ebf3; font: 15px/1.6 -apple-system, "Noto Sans KR", sans-serif; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  .sub { color: #98a0b0; font-size: 13px; margin-bottom: 16px; }
+  button { width: 100%; border: none; border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 900;
+    color: #fff; background: linear-gradient(135deg,#6a7bff,#3a5bff); cursor: pointer; margin-bottom: 10px; }
+  button.ghost { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
+  button:disabled { opacity: .5 }
+  .row { display: flex; gap: 10px; padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.07); font-size: 13.5px; }
+  .row .k { color: #98a0b0; flex: 0 0 42%; }
+  .row .v { flex: 1; font-weight: 700; word-break: break-all; }
+  .ok { color: #6ee7a4 } .bad { color: #ff8fa0 } .warn { color: #ffd479 }
+  #box { background: #12141a; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; margin-bottom: 14px; overflow: hidden; }
+  #log { background: #0e1015; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 12px;
+    font: 12px/1.5 ui-monospace, monospace; color: #b9c3d4; white-space: pre-wrap; min-height: 60px; }
+</style>
+</head>
+<body>
+<h1>🎙 마이크 진단</h1>
+<div class="sub">아래 버튼을 누르고, 결과를 그대로 캡처해서 보내주세요.</div>
+
+<button id="run">진단 시작 (3초 녹음)</button>
+<button id="copy" class="ghost">결과 복사하기</button>
+
+<div id="box"></div>
+<div id="log">대기 중…</div>
+
+<script>
+const box = document.getElementById('box');
+const logEl = document.getElementById('log');
+const lines = [];
+const log = t => { lines.push(t); logEl.textContent = lines.join('\n'); };
+const rows = [];
+function row(k, v, cls) {
+  rows.push(k + ': ' + v);
+  box.insertAdjacentHTML('beforeend',
+    `<div class="row"><span class="k">${k}</span><span class="v ${cls||''}">${v}</span></div>`);
+}
+
+function env() {
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  row('실행 환경', standalone ? '설치한 앱(PWA)' : '브라우저 탭', standalone ? 'warn' : 'ok');
+  row('보안 연결(HTTPS)', isSecureContext ? '예' : '아니오', isSecureContext ? 'ok' : 'bad');
+  row('mediaDevices', navigator.mediaDevices ? '있음' : '없음', navigator.mediaDevices ? 'ok' : 'bad');
+  row('MediaRecorder', typeof MediaRecorder !== 'undefined' ? '있음' : '없음',
+      typeof MediaRecorder !== 'undefined' ? 'ok' : 'bad');
+  if (typeof MediaRecorder !== 'undefined') {
+    const ok = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4','audio/aac','audio/3gpp']
+      .filter(m => { try { return MediaRecorder.isTypeSupported(m); } catch (_) { return false; } });
+    row('지원 코덱', ok.length ? ok.join(', ') : '없음', ok.length ? 'ok' : 'bad');
+  }
+  row('브라우저', navigator.userAgent.slice(0, 90));
+}
+
+async function run() {
+  box.innerHTML = ''; rows.length = 0; lines.length = 0;
+  document.getElementById('run').disabled = true;
+  env();
+
+  let state = 'unknown';
+  try { state = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e) { state = '조회 불가'; }
+  row('권한 상태', state, state === 'granted' ? 'ok' : state === 'denied' ? 'bad' : 'warn');
+
+  log('① 마이크 요청…');
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    row('마이크 열기', '성공', 'ok');
+    log('② 마이크 열림 — 트랙 ' + stream.getAudioTracks().length + '개');
+  } catch (e) {
+    row('마이크 열기', '실패 (' + (e.name || e) + ')', 'bad');
+    log('❌ 여기서 실패: ' + (e.name || '') + ' / ' + (e.message || ''));
+    document.getElementById('run').disabled = false;
+    return;
+  }
+
+  if (typeof MediaRecorder === 'undefined') {
+    row('녹음', '불가 — MediaRecorder 없음', 'bad');
+    stream.getTracks().forEach(t => t.stop());
+    document.getElementById('run').disabled = false;
+    return;
+  }
+
+  const mime = ['audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus','audio/mp4','audio/aac','audio/3gpp']
+    .find(m => { try { return MediaRecorder.isTypeSupported(m); } catch (_) { return false; } }) || '';
+  log('③ 녹음 시작 (' + (mime || '브라우저 기본') + ')… 3초만 말해보세요');
+
+  try {
+    const chunks = [];
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+    rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    rec.onerror = ev => log('❌ 녹음 오류: ' + (ev.error && ev.error.name));
+    const done = new Promise(res => { rec.onstop = res; });
+    rec.start(250);
+    row('녹음 시작', '성공 (' + (mime || '기본') + ')', 'ok');
+    await new Promise(r => setTimeout(r, 3000));
+    rec.stop();
+    await done;
+    stream.getTracks().forEach(t => t.stop());
+
+    const blob = new Blob(chunks, { type: mime || 'audio/webm' });
+    row('녹음 결과', blob.size + ' 바이트', blob.size > 1000 ? 'ok' : 'bad');
+    log(blob.size > 1000 ? '✅ 정상 녹음됨 — 아래에서 들어보세요' : '❌ 소리가 담기지 않음(0바이트에 가까움)');
+    if (blob.size) {
+      const url = URL.createObjectURL(blob);
+      logEl.insertAdjacentHTML('afterend',
+        '<audio controls src="' + url + '" style="width:100%;margin-top:12px"></audio>');
+    }
+  } catch (e) {
+    row('녹음', '실패 (' + (e.name || e) + ')', 'bad');
+    log('❌ 녹음 단계에서 실패: ' + (e.name || '') + ' / ' + (e.message || ''));
+    try { stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+  }
+  document.getElementById('run').disabled = false;
+}
+
+document.getElementById('run').onclick = run;
+document.getElementById('copy').onclick = async () => {
+  const txt = rows.join('\n') + '\n---\n' + lines.join('\n');
+  try { await navigator.clipboard.writeText(txt); alert('복사했어요! 붙여넣어서 보내주세요.'); }
+  catch (_) { alert(txt); }
+};
+</script>
+</body>
+</html>
