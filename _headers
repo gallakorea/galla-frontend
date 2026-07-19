@@ -4,7 +4,11 @@
   X-Frame-Options: SAMEORIGIN
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=(), magnetometer=(), gyroscope=()
+  # ⚠️ microphone/camera를 ()로 막으면 갈라 자신도 못 쓴다 — 브라우저가 권한 팝업조차
+  #    띄우지 않고 즉시 NotAllowedError를 던지고, 크롬 사이트 설정엔 흔적도 안 남는다.
+  #    (삐삐 녹음·음성 메시지·육성톡·면상톡이 전부 이 한 줄로 죽어 있었다)
+  #    self만 허용 = 우리 페이지는 쓰고, 삽입된 외부 iframe은 못 쓰게 하는 올바른 설정.
+  Permissions-Policy: geolocation=(), camera=(self), microphone=(self), payment=(), usb=(), magnetometer=(), gyroscope=()
   Cross-Origin-Opener-Policy: same-origin-allow-popups
   X-Permitted-Cross-Domain-Policies: none
   Content-Security-Policy: upgrade-insecure-requests; default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https://cdn.galla.im https://bidqauputnhkqepvdzrr.supabase.co https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://videodelivery.net; font-src 'self' data:; frame-src https://challenges.cloudflare.com https://www.youtube.com https://www.youtube-nocookie.com https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://iframe.cloudflarestream.com; connect-src 'self' https://bidqauputnhkqepvdzrr.supabase.co wss://bidqauputnhkqepvdzrr.supabase.co https://cdn.galla.im https://challenges.cloudflare.com https://customer-g7dnvj6akfr55r4w.cloudflarestream.com https://videodelivery.net https://upload.cloudflarestream.com https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com; worker-src 'self' blob:; manifest-src 'self'
