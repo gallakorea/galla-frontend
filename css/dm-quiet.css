@@ -1448,3 +1448,25 @@ mark.dm-kw { background: rgba(255,212,121,.28); color: #ffe6a8; border-radius: 4
 body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
   height: var(--dm-vvh, calc(100dvh - env(safe-area-inset-top, 0px)));
 }
+
+
+/* 배경 미리보기 — 실제 대화방처럼 헤더·말풍선·입력창까지 흉내낸다 */
+.dm-prev-label { font-size: 11.5px; font-weight: 900; color: #7f8695; padding: 0 2px 7px; }
+.dm-prev-in { justify-content: flex-start; min-height: 168px; padding: 0 0 0 0; overflow: hidden; }
+.dm-prev-head {
+  padding: 9px 12px; font-size: 12px; font-weight: 800; color: #cfd5e0;
+  background: rgba(0,0,0,.32); border-bottom: 1px solid rgba(255,255,255,.07);
+  position: relative; z-index: 1;
+}
+.dm-prev-in .dm-bubble { margin: 8px 12px 0; position: relative; z-index: 1; }
+.dm-prev-bar {
+  margin: 10px 12px 12px; padding: 9px 13px; border-radius: 999px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  font-size: 12.5px; color: #8b909b; position: relative; z-index: 1;
+}
+/* 무늬 스와치에 이름 표시 */
+.dm-bg-sw { position: relative; }
+.dm-bg-pat span {
+  position: absolute; left: 0; right: 0; bottom: 3px; text-align: center;
+  font-size: 10px; font-weight: 800; color: #cfd5e0; text-shadow: 0 1px 2px rgba(0,0,0,.8);
+}

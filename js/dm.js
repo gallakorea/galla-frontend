@@ -448,9 +448,12 @@
           <div class="dm-list" id="dm-display">
             <!-- 바꾸면 바로 보이는 미리보기 — 설명보다 눈이 빠르다 -->
             <div class="dm-prev" id="dm-prev">
+              <div class="dm-prev-label">미리보기</div>
               <div class="dm-prev-in">
+                <div class="dm-prev-head">대화 상대</div>
                 <div class="dm-bubble you">우주 통신규약을 꿈꾸는 갈라</div>
                 <div class="dm-bubble me">가나다라 ABC 123</div>
+                <div class="dm-prev-bar">메시지 입력…</div>
               </div>
             </div>
 
@@ -2315,16 +2318,22 @@
   /* 🖼 화면 — 글자·글씨체·배경·눈 효과·화면 방향.
      배경 무늬는 외부 이미지 없이 직접 그린 SVG라 저작권·용량 걱정이 없다. */
   const BG_COLORS = ['#0b0c10', '#101826', '#161226', '#0f1f1a', '#241318', '#1c1a10'];
+  /* 무늬는 외부 이미지 없이 직접 그린 SVG.
+     ⚠️ 속성에 큰따옴표를 쓰면 url("…") 값이 거기서 끊긴다 — 무늬가 통째로 안 나왔다.
+     작은따옴표만 쓰고, 전체를 encodeURIComponent로 감싸 안전하게 만든다. */
   const BG_PATTERNS = {
-    dots:   `<circle cx="10" cy="10" r="1.4" fill="%23ffffff22"/>`,
-    grid:   `<path d="M0 20h40M20 0v40" stroke="%23ffffff14" stroke-width="1"/>`,
-    waves:  `<path d="M0 20q10-10 20 0t20 0" fill="none" stroke="%23ffffff18" stroke-width="1.4"/>`,
-    stars:  `<path d="M20 8l1.8 5.4H27l-4.4 3.2 1.7 5.4-4.3-3.4-4.3 3.4 1.7-5.4L13 13.4h5.2z" fill="%23ffffff14"/>`,
+    dots:  `<circle cx='10' cy='10' r='1.4' fill='rgba(255,255,255,.13)'/>`,
+    grid:  `<path d='M0 20h40M20 0v40' stroke='rgba(255,255,255,.08)' stroke-width='1'/>`,
+    waves: `<path d='M0 20q10-10 20 0t20 0' fill='none' stroke='rgba(255,255,255,.1)' stroke-width='1.4'/>`,
+    stars: `<path d='M20 8l1.8 5.4H27l-4.4 3.2 1.7 5.4-4.3-3.4-4.3 3.4 1.7-5.4L13 13.4h5.2z' fill='rgba(255,255,255,.09)'/>`,
   };
+  const PATTERN_LABEL = { dots: '점', grid: '격자', waves: '물결', stars: '별' };
   function patternURL(id) {
     const inner = BG_PATTERNS[id] || BG_PATTERNS.dots;
-    return `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>${inner}</svg>")`;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>${inner}</svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   }
+
   /* 설정을 화면 전체에 반영.
      ⚠️ 배경과 눈을 .dm-msgs(스크롤 영역) 안에 넣었더니 두 가지가 깨졌다:
        · 눈송이가 스크롤 컨텐츠가 돼 scrollHeight를 늘려 대화가 멈춘 것처럼 굴었고
@@ -2405,10 +2414,11 @@
     // 색상·무늬
     const cbox = host.querySelector('#dm-bg-colors');
     if (cbox) cbox.innerHTML = BG_COLORS.map(c =>
-      `<button type="button" class="dm-bg-sw${UI.bgKind === 'color' && UI.bgValue === c ? ' on' : ''}" data-color="${c}" style="background:${c}"></button>`).join('');
+      `<button type="button" class="dm-bg-sw${UI.bgKind === 'color' && UI.bgValue === c ? ' on' : ''}" data-color="${c}" style="background-color:${c}"></button>`).join('');
     const pbox = host.querySelector('#dm-bg-patterns');
     if (pbox) pbox.innerHTML = Object.keys(BG_PATTERNS).map(id =>
-      `<button type="button" class="dm-bg-sw${UI.bgKind === 'pattern' && UI.bgValue === id ? ' on' : ''}" data-pat="${id}" style="background:#0b0c10 ${patternURL(id)}"></button>`).join('');
+      `<button type="button" class="dm-bg-sw dm-bg-pat${UI.bgKind === 'pattern' && UI.bgValue === id ? ' on' : ''}" data-pat="${id}"
+        style="background-color:#0b0c10;background-image:${patternURL(id)}"><span>${PATTERN_LABEL[id] || ''}</span></button>`).join('');
     host.querySelectorAll('[data-color],[data-pat]').forEach(b => {
       b.onclick = () => {
         if (b.dataset.color) { UI.bgKind = 'color'; UI.bgValue = b.dataset.color; }
