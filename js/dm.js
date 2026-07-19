@@ -2340,6 +2340,24 @@
      꾹 눌러 말하고 떼면 즉시 전송. 위로 밀면 취소, 더 밀면 잠금(핸즈프리).
      카톡처럼 '버튼 눌러 → 녹음창 열고 → 녹음 → 전송'하는 단계를 전부 없앤 게 핵심. */
   let VREC = null, vrecT = null, VAUDIO = null, PTT = null;
+  /* 🎤 마이크 예열 — 꾹 누르는 순간 권한 팝업이 뜨면 그 팝업이 포인터를 가로채
+     pointercancel이 나고, 손을 뗀 것으로 처리돼 녹음이 조용히 취소된다.
+     ([허용]을 눌러도 이미 늦다 = "녹음이 안 된다"의 정체)
+     → 첫 사용 때는 녹음 대신 권한만 받아두고, 다음 누름부터 바로 녹음한다. */
+  let MIC_OK = false;
+  (async () => {
+    try { MIC_OK = (await navigator.permissions.query({ name: 'microphone' })).state === 'granted'; }
+    catch (_) {}
+  })();
+  async function warmMic() {
+    if (MIC_OK) return true;
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+      s.getTracks().forEach(t => t.stop());
+      MIC_OK = true;
+      return true;
+    } catch (_) { return false; }
+  }
   function bindPTT(btn) {
     let sx = 0, sy = 0;
     const CANCEL_DY = -70, LOCK_DY = -130;
@@ -2347,6 +2365,17 @@
     btn.addEventListener('pointerdown', async e => {
       if (PTT?.locked) { stopVoiceRec(false); return; }   // 잠금 상태에선 탭 = 전송
       e.preventDefault();
+      // 권한이 아직이면 이번 누름은 '허용받기'로만 쓴다 — 팝업과 녹음을 겹치지 않게
+      if (!MIC_OK) {
+        const ok = await warmMic();
+        PTT = null;
+        if (ok) return toastMini('마이크 준비 완료 — 이제 꾹 누르고 말해보세요');
+        if (!window.GALLA_micHelp) {
+          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+        }
+        return void window.GALLA_micHelp?.({});
+      }
       sx = e.clientX; sy = e.clientY;
       PTT = { armed: null, locked: false, id: e.pointerId };
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
@@ -2389,7 +2418,11 @@
     }
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (_) { PTT = null; return toastMini('마이크 권한이 필요해요 — 설정에서 허용해 주세요'); }
+    catch (e) {
+      PTT = null; MIC_OK = false;
+      console.warn('[dm] voice mic', e?.name);
+      return toastMini('마이크를 열지 못했어요 — 한 번 더 눌러주세요');
+    }
     if (!PTT) { stream.getTracks().forEach(t => t.stop()); return; }   // 권한 대기 중 손을 뗐다
     const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
       : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
