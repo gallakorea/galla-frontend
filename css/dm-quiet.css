@@ -1470,3 +1470,17 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
   position: absolute; left: 0; right: 0; bottom: 3px; text-align: center;
   font-size: 10px; font-weight: 800; color: #cfd5e0; text-shadow: 0 1px 2px rgba(0,0,0,.8);
 }
+
+
+/* 😀 그림체 고르기 — 이름 대신 '같은 이모지를 그림체별로' 보여준다 */
+.dm-stk-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 9px; }
+.dm-stk-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+  padding: 12px 8px 10px; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+}
+.dm-stk-card img, .dm-stk-card .dm-stk-fb { width: 46px; height: 46px; font-size: 38px; line-height: 46px; }
+.dm-stk-card b { font-size: 12.5px; font-weight: 900; color: #e7ebf3; }
+.dm-stk-card i { font-style: normal; font-size: 10.5px; color: #8b909b; text-align: center; line-height: 1.35; }
+.dm-stk-card.on { border-color: var(--accent, #4361ff); background: rgba(67,97,255,.14); }
+.dm-stk-card.on b { color: #fff; }

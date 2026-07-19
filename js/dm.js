@@ -412,8 +412,8 @@
           <div class="dm-list" id="dm-stickerset">
             <div class="dm-sec">${ICONS.smile}기본 스타일</div>
             <div class="dm-set-col">
-              <span class="dm-set-mid"><b>이모티콘 피커를 열면 이 스타일부터</b><i>같은 이모지도 그림체가 달라요</i></span>
-              <span class="dm-stk-styles-set" id="dm-stk-styles"></span>
+              <span class="dm-set-mid"><b>어떤 그림체를 좋아하세요?</b><i>같은 😀도 그림체마다 느낌이 달라요 — 고른 그림체로 먼저 열려요</i></span>
+              <div class="dm-stk-pick" id="dm-stk-style-pick"></div>
             </div>
             <div class="dm-sec">${ICONS.chat}표시</div>
             <div class="dm-set-row">
@@ -2269,24 +2269,55 @@
 
   /* 😀 이모티콘 설정 — 실제 피커(dm-stickers.js)와 같은 저장소를 쓴다 */
   const STK_RECENT_KEY = 'galla_stk_recent';
-  function loadStickerSet() {
+  async function loadStickerSet() {
     const host = ROOT.querySelector('#dm-stickerset');
     if (!host) return;
-    // 스타일 목록은 피커 모듈이 진실의 원천 — 여기서 또 정의하면 어긋난다
-    const styles = window.GALLA_STK?.styles || [
-      { id: 'noto', label: '움직임' }, { id: 'notos', label: '노토' },
-      { id: 'twe', label: '트위터' }, { id: 'fluent', label: '입체' },
-    ];
-    const sbox = host.querySelector('#dm-stk-styles');
+    if (!window.GALLA_STK) {
+      const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+      for (const f of ['/js/dm-fluent.js', '/js/dm-stickers.js']) {
+        await new Promise(res => { const sc = document.createElement('script'); sc.src = f + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+      }
+    }
+    /* ⚠️ '노토·트위터·블롭'은 개발자 용어다 — 사용자는 그게 뭔지 알 수 없다.
+       같은 이모지를 그림체별로 실제로 그려 보여주고, 이름은 느낌말로 바꾼다. */
+    const SAMPLE = '😀';
+    const NICE = {
+      noto:   { name: '움직이는', hint: '살아 움직여요' },
+      notos:  { name: '동글동글', hint: '가장 익숙한 그림체' },
+      twe:    { name: '깔끔한',   hint: '단순하고 또렷해요' },
+      fluent: { name: '입체',     hint: '3D처럼 도톰해요' },
+      blob:   { name: '말랑',     hint: '옛 안드로이드 물방울' },
+      open:   { name: '손그림',   hint: '연필로 그린 느낌' },
+      toss:   { name: '토스',     hint: '토스페이스' },
+    };
+    const styles = window.GALLA_STK?.styles || [];
+    const sbox = host.querySelector('#dm-stk-style-pick');
     if (sbox) {
-      sbox.innerHTML = styles.map(st =>
-        `<button type="button" class="dm-stk-st${(UI.stkStyle || styles[0].id) === st.id ? ' on' : ''}" data-st="${st.id}">${esc(st.label)}</button>`).join('');
+      if (!styles.length) {
+        sbox.innerHTML = '<span class="dm-set-empty">이모티콘을 준비하는 중이에요 — 잠시 후 다시 열어주세요</span>';
+      } else {
+        const cps = window.GALLA_STK.cpsOf(SAMPLE);
+        const cur = UI.stkStyle || styles[0].id;
+        sbox.innerHTML = styles.map(st => {
+          let url = '';
+          try { url = window.GALLA_STK.urlOf(cps, st.id) || ''; } catch (_) {}
+          const n = NICE[st.id] || { name: st.label, hint: '' };
+          return `<button type="button" class="dm-stk-card${cur === st.id ? ' on' : ''}" data-st="${st.id}">
+            ${url ? `<img src="${esc(url)}" alt="">` : `<span class="dm-stk-fb">${SAMPLE}</span>`}
+            <b>${esc(n.name)}</b><i>${esc(n.hint)}</i></button>`;
+        }).join('');
+        // 못 불러오는 그림체는 빈 네모를 남기지 말고 숨긴다
+        sbox.querySelectorAll('img').forEach(im => {
+          im.onerror = () => im.closest('.dm-stk-card')?.remove();
+        });
+      }
       sbox.onclick = e => {
         const b = e.target.closest('[data-st]');
         if (!b) return;
         UI.stkStyle = b.dataset.st; savePrefs();
         try { localStorage.setItem('galla_stk_style', UI.stkStyle); } catch (_) {}
-        loadStickerSet();
+        sbox.querySelectorAll('.dm-stk-card').forEach(c => c.classList.toggle('on', c.dataset.st === UI.stkStyle));
+        toastMini('기본 그림체를 바꿨어요');
       };
     }
     host.querySelectorAll('[data-pref]').forEach(btn => {
