@@ -248,6 +248,65 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="theme" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">테마</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-theme">
+            <div class="dm-prev"><div class="dm-prev-in">
+              <div class="dm-bubble you">이 색이 갈라의 포인트가 돼요</div>
+              <div class="dm-bubble me">내 말풍선은 이렇게 보여요</div>
+            </div></div>
+            <div class="dm-sec">${ICONS.sliders || ICONS.chat}포인트 색</div>
+            <div class="dm-set-col">
+              <span class="dm-set-mid"><i>버튼·내 말풍선·강조에 쓰이는 색이에요. 앱 전체에 바로 적용됩니다.</i></span>
+              <span class="dm-theme-row" id="dm-accents"></span>
+            </div>
+            <div class="dm-set-note">
+              🌙 갈라는 <b>밤에 보기 좋은 어두운 화면</b>을 기본으로 설계했어요(순흑 배경 + 인디고).
+              밝은 화면(라이트 모드)은 색만 바꾸는 게 아니라 51개 화면을 다시 맞춰야 해서
+              따로 준비 중입니다 — 지금은 포인트 색으로 취향을 맞춰주세요.
+            </div>
+          </div>
+        </div>
+        <div class="dm-view" data-view="stickerset" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">이모티콘</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-stickerset">
+            <div class="dm-sec">${ICONS.smile}기본 스타일</div>
+            <div class="dm-set-col">
+              <span class="dm-set-mid"><b>이모티콘 피커를 열면 이 스타일부터</b><i>같은 이모지도 그림체가 달라요</i></span>
+              <span class="dm-stk-styles-set" id="dm-stk-styles"></span>
+            </div>
+            <div class="dm-sec">${ICONS.chat}표시</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>이모티콘 크기</b><i>대화에 붙는 이모티콘 크기</i></span>
+              <span class="dm-seg" data-pref-seg="stkSize">
+                <button type="button" data-v="s">작게</button>
+                <button type="button" data-v="m">보통</button>
+                <button type="button" data-v="l">크게</button>
+              </span>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>최근 쓴 것 먼저</b><i>자주 쓰는 이모티콘을 피커 맨 앞에 모아둬요</i></span>
+              <button class="dm-toggle" data-pref="stkRecent" type="button"></button>
+            </div>
+            <div class="dm-sec">${ICONS.more}정리</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>최근 사용 기록</b><i id="dm-stk-recent-sub">불러오는 중…</i></span>
+              <button class="dm-mic-btn" data-act="stkClear" type="button">비우기</button>
+            </div>
+            <div class="dm-set-note">
+              🎨 갈라의 이모티콘은 <b>전부 무료 오픈 라이선스</b>예요(Noto·Twemoji·Fluent 등).
+              구독 없이 다 쓰실 수 있고, 나만의 이모티콘은 상점에서 만들 수 있어요.
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="display" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
@@ -578,7 +637,15 @@
             <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
             <div id="dm-hidden-list"></div>
 
-            <div class="dm-sec">${ICONS.sliders || ICONS.chat}화면</div>
+            <div class="dm-sec">${ICONS.sliders || ICONS.chat}꾸미기</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>테마</b><i>포인트 색 바꾸기</i></span>
+              <button class="dm-mic-btn" data-act="themeSet" type="button">설정</button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>이모티콘</b><i>기본 그림체·크기·최근 기록</i></span>
+              <button class="dm-mic-btn" data-act="stickerSet" type="button">설정</button>
+            </div>
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>화면</b><i>글자 크기·글씨체·배경화면·화면 방향</i></span>
               <button class="dm-mic-btn" data-act="displaySet" type="button">설정</button>
@@ -769,6 +836,12 @@
       else if (act === 'notiSet') { showView('notiset'); loadNotiSet(); }
       else if (act === 'chatSet2') { showView('chatset2'); loadChatSet2(); }
       else if (act === 'displaySet') { showView('display'); loadDisplay(); }
+      else if (act === 'themeSet') { showView('theme'); loadTheme(); applyDisplay(); }
+      else if (act === 'stickerSet') { showView('stickerset'); loadStickerSet(); }
+      else if (act === 'stkClear') {
+        try { localStorage.removeItem(STK_RECENT_KEY); } catch (_) {}
+        toastMini('최근 사용 기록을 비웠어요'); loadStickerSet();
+      }
       else if (act === 'bgPhoto') { ROOT.querySelector('#dm-bg-file')?.click(); }
       else if (act === 'bgReset') { UI.bgKind = 'none'; UI.bgValue = ''; savePrefs(); applyDisplay(); loadDisplay(); toastMini('기본 배경으로 되돌렸어요'); }
       else if (act === 'dataSet') { showView('dataset'); loadDataSet(); }
@@ -1669,6 +1742,10 @@
     bgKind: 'none',          // 배경: none | color | pattern | photo
     bgValue: '',             // 색상값 / 패턴 id / 사진 dataURL
     snow: false,             // 눈 내리는 채팅방
+    accent: 'indigo',        // 포인트 색 테마
+    stkStyle: '',            // 이모티콘 기본 스타일(빈값=모듈 기본)
+    stkSize: 'm',            // 이모티콘 크기
+    stkRecent: true,         // 최근 쓴 이모티콘 먼저 보여주기
     photoQuality: 'high',    // 사진 화질: origin | high | save
     dataSaver: false,        // 모바일 데이터에서 미디어 아끼기
   };
@@ -1828,6 +1905,88 @@
       el.autoplay = !!UI.autoplay;
       if (!UI.autoplay) { try { el.pause(); } catch (_) {} }
     });
+  }
+
+  /* 🎨 테마 — 포인트 색만 바꾼다. 어두운 화면은 갈라의 정체성이라 유지하고,
+     라이트 모드는 51개 화면을 다시 맞추는 별도 과제라 지금은 약속하지 않는다. */
+  const ACCENTS = {
+    indigo:  { name: '인디고', c1: '#6a7bff', c2: '#3a5bff' },
+    gold:    { name: '골드',   c1: '#f5c451', c2: '#d99b1f' },
+    emerald: { name: '에메랄드', c1: '#48d99b', c2: '#1fa771' },
+    rose:    { name: '로즈',   c1: '#ff7d9b', c2: '#e0435f' },
+    violet:  { name: '바이올렛', c1: '#b57cff', c2: '#7c3ff0' },
+    cyan:    { name: '시안',   c1: '#5fd5f0', c2: '#1f9fc4' },
+  };
+  function applyAccent() {
+    const a = ACCENTS[UI.accent] || ACCENTS.indigo;
+    const r = document.documentElement.style;
+    r.setProperty('--accent', a.c2);
+    r.setProperty('--accent-2', a.c1);
+    r.setProperty('--accent-grad', `linear-gradient(135deg, ${a.c1} 0%, ${a.c2} 100%)`);
+    r.setProperty('--accent-glow', `0 6px 22px ${a.c2}52`);
+    r.setProperty('--dm-mine', a.c2);
+  }
+  applyAccent();
+  function loadTheme() {
+    const box = ROOT.querySelector('#dm-accents');
+    if (!box) return;
+    box.innerHTML = Object.entries(ACCENTS).map(([id, a]) =>
+      `<button type="button" class="dm-acc${UI.accent === id ? ' on' : ''}" data-acc="${id}"
+        style="background:linear-gradient(135deg,${a.c1},${a.c2})"><span>${a.name}</span></button>`).join('');
+    box.onclick = e => {
+      const b = e.target.closest('[data-acc]');
+      if (!b) return;
+      UI.accent = b.dataset.acc; savePrefs(); applyAccent(); loadTheme();
+      toastMini(`${ACCENTS[UI.accent].name}으로 바꿨어요`);
+    };
+  }
+
+  /* 😀 이모티콘 설정 — 실제 피커(dm-stickers.js)와 같은 저장소를 쓴다 */
+  const STK_RECENT_KEY = 'galla_stk_recent';
+  function loadStickerSet() {
+    const host = ROOT.querySelector('#dm-stickerset');
+    if (!host) return;
+    // 스타일 목록은 피커 모듈이 진실의 원천 — 여기서 또 정의하면 어긋난다
+    const styles = window.GALLA_STK?.styles || [
+      { id: 'noto', label: '움직임' }, { id: 'notos', label: '노토' },
+      { id: 'twe', label: '트위터' }, { id: 'fluent', label: '입체' },
+    ];
+    const sbox = host.querySelector('#dm-stk-styles');
+    if (sbox) {
+      sbox.innerHTML = styles.map(st =>
+        `<button type="button" class="dm-stk-st${(UI.stkStyle || styles[0].id) === st.id ? ' on' : ''}" data-st="${st.id}">${esc(st.label)}</button>`).join('');
+      sbox.onclick = e => {
+        const b = e.target.closest('[data-st]');
+        if (!b) return;
+        UI.stkStyle = b.dataset.st; savePrefs();
+        try { localStorage.setItem('galla_stk_style', UI.stkStyle); } catch (_) {}
+        loadStickerSet();
+      };
+    }
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); };
+    });
+    const seg = host.querySelector('[data-pref-seg="stkSize"]');
+    if (seg) {
+      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.stkSize));
+      paintSeg();
+      seg.onclick = e => {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        UI.stkSize = b.dataset.v; savePrefs(); paintSeg();
+        document.documentElement.dataset.stkSize = UI.stkSize;
+      };
+    }
+    document.documentElement.dataset.stkSize = UI.stkSize;
+    const sub = host.querySelector('#dm-stk-recent-sub');
+    if (sub) {
+      let n = 0;
+      try { n = (JSON.parse(localStorage.getItem(STK_RECENT_KEY) || '[]') || []).length; } catch (_) {}
+      sub.textContent = n ? `최근 쓴 이모티콘 ${n}개를 기억하고 있어요` : '아직 기록이 없어요';
+    }
   }
 
   /* 🖼 화면 — 글자·글씨체·배경·눈 효과·화면 방향.

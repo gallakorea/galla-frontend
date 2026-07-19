@@ -64,7 +64,8 @@
 
 /* 말풍선 — 플랫. 내 것 #3450d6, 상대 #16171c (보더·블러·글로우 제거) */
 .dm-bubble.me {
-  background: #3450d6 !important;
+  /* 테마(포인트 색)를 따른다 — 설정에서 바꾸면 여기가 바로 반영된다 */
+  background: var(--dm-mine, #3450d6) !important;
   box-shadow: none !important;
 }
 .dm-bubble.you {
@@ -1383,3 +1384,26 @@ html[data-dm-face="serif"] .dm-bubble { font-family: ui-serif, "Apple SD Gothic 
   100% { transform: translateY(105%) translateX(18px) rotate(180deg); }
 }
 @media (prefers-reduced-motion: reduce) { .snowflake { display: none; } }
+
+
+/* 🎨 테마 — 포인트 색 */
+.dm-theme-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.dm-acc {
+  position: relative; width: 84px; height: 56px; border-radius: 14px; cursor: pointer;
+  border: 2px solid rgba(255,255,255,.12); display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 5px;
+}
+.dm-acc span { font-size: 11.5px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.dm-acc.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.18); }
+
+/* 😀 이모티콘 설정 */
+.dm-stk-styles-set { display: flex; flex-wrap: wrap; gap: 7px; }
+.dm-stk-st {
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; font-size: 12.5px; font-weight: 800;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: #cfd5e0;
+}
+.dm-stk-st.on { background: var(--accent, #4361ff); border-color: var(--accent, #4361ff); color: #fff; }
+/* 이모티콘 크기 — 대화에 붙는 스티커에 적용 */
+html[data-stk-size="s"] .dm-bubble.stk img { width: 84px; height: 84px; }
+html[data-stk-size="m"] .dm-bubble.stk img { width: 116px; height: 116px; }
+html[data-stk-size="l"] .dm-bubble.stk img { width: 148px; height: 148px; }
