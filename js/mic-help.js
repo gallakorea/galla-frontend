@@ -161,7 +161,20 @@
        정상 동작하는 조합을 확인했다(채팅방 음성은 되는데 삐삐만 안 되던 사건).
        그래서 조회 결과로 '불가'를 단정하지 않는다. 언제나 '다시 시도'를 1번 버튼으로
        올리고, 설정 안내는 그 다음에 둔다 — 눌러서 되면 그게 정답이다. */
-    if (isInApp) {
+    if (opts && opts.silent) {
+      /* 권한은 났는데 무음만 녹음된 경우. 원인을 단정하지 않고 흔한 순서대로 짚는다
+         (블루투스를 '제일 흔한 원인'으로 단정했다가 실기기에서 아니었다). */
+      head = '🎙 소리가 담기지 않았어요';
+      sub = '마이크는 열렸는데 <b>소리가 안 들어왔어요</b>. 아래를 순서대로 확인해보세요 — 대부분 첫 번째에서 해결돼요.';
+      body = `
+        <div class="mh-steps">
+          <div class="mh-step"><span class="n">1</span><span class="t"><b>마이크 구멍을 손이나 케이스가 막고</b> 있지 않은지 — 폰 아래쪽이에요</span></div>
+          <div class="mh-step"><span class="n">2</span><span class="t">녹음기·통화·회의 앱을 <b>최근 앱에서 밀어 완전히 종료</b> (마이크를 붙들고 있으면 무음이 들어와요)</span></div>
+          <div class="mh-step"><span class="n">3</span><span class="t"><b>블루투스 이어폰·스피커</b>가 연결돼 있으면 잠시 꺼보세요 — 그 기기 마이크로 녹음될 수 있어요</span></div>
+          <div class="mh-step"><span class="n">4</span><span class="t">그래도면 <b>폰 재시작</b> — 마이크를 안 놓는 앱이 있을 때 가장 확실해요</span></div>
+        </div>
+        <button class="mh-btn" data-mh="close" type="button">확인했어요 — 다시 녹음할게요</button>`;
+    } else if (isInApp) {    } else if (isInApp) {
       head = '🎙 여기선 녹음을 못 해요';
       sub = '카톡·인스타 같은 앱 <b>안에 있는 브라우저</b>라서 마이크가 막혀 있어요. 크롬으로 열면 바로 됩니다.';
       body = `<button class="mh-btn" data-mh="chrome" type="button">${isAndroid ? '크롬으로 열기' : '주소 복사해서 사파리로 열기'}</button>

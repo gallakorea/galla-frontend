@@ -871,7 +871,7 @@
      ③ 일부 안드로이드는 timeslice 없이는 dataavailable을 안 흘려 0바이트로 끝난다
      → 전부 감싸고, 실패는 반드시 화면에 남긴다. */
   /* 권한·환경 문제는 문구만 던지지 않는다 — 바로 고칠 수 있는 시트를 연다 */
-  async function openMicHelp(reason) {
+  async function openMicHelp(reason, extra) {
     if (!window.GALLA_micHelp) {
       const v = ([...document.scripts].map(s => s.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
       await new Promise((res, rej) => {
@@ -880,7 +880,7 @@
         s.onload = res; s.onerror = rej; document.head.appendChild(s);
       }).catch(() => {});
     }
-    window.GALLA_micHelp?.({ reason });
+    window.GALLA_micHelp?.({ reason, ...(extra || {}) });
   }
   function recErrMsg(e) {
     const n = (e && e.name) || String(e);
@@ -953,12 +953,20 @@
       REC.onstop = () => {
         stream.getTracks().forEach(t => t.stop());
         clearInterval(RECT);
+        clearInterval(REC._lvl);
+        try { REC._ac?.close(); } catch (_) {}
+        const peak = REC._peak || 0;
         const cancel = REC._cancel; const dur = Math.round((Date.now() - t0) / 1000);
         REC = null;
         if (btn) btn.textContent = '● 녹음 시작';
         if (cancel) return;
         BLOB = new Blob(CHUNKS, { type: mime || 'audio/webm' });
         if (!BLOB.size) { BLOB = null; if (rt) rt.textContent = ''; return toast('소리가 담기지 않았어요 — 다시 시도해주세요'); }
+        // peak 3 미만 = 사실상 무음(정상 발화는 보통 20 이상)
+        if (peak < 3) {
+          BLOB = null; if (rt) rt.textContent = '';
+          return openMicHelp('', { silent: true });
+        }
         BLOB._dur = Math.max(1, dur);
         RECURL = URL.createObjectURL(BLOB);
         if (rt) rt.textContent = `${BLOB._dur}초 녹음됨`;
@@ -966,6 +974,23 @@
       };
       // 채팅방 음성과 동일하게 start() — timeslice는 일부 기기에서 되레 첫 청크를 잘랐다.
       // 대신 데이터가 하나도 안 쌓이면 stop 직전에 requestData로 받아낸다.
+      // 입력 레벨 감시 — 권한이 나도 블루투스 라우팅·앱 점유로 무음이 들어올 수 있다.
+      // 바이트 수는 정상인데 소리만 없는 이 경우가 사용자에겐 가장 답답하다.
+      try {
+        const ac = new (window.AudioContext || window.webkitAudioContext)();
+        const an = ac.createAnalyser(); an.fftSize = 512;
+        ac.createMediaStreamSource(stream).connect(an);
+        const buf = new Uint8Array(an.fftSize);
+        REC._peak = 0;
+        REC._lvl = setInterval(() => {
+          an.getByteTimeDomainData(buf);
+          for (let i = 0; i < buf.length; i++) {
+            const d = Math.abs(buf[i] - 128);
+            if (d > REC._peak) REC._peak = d;
+          }
+        }, 120);
+        REC._ac = ac;
+      } catch (_) {}
       REC.start();
       if (btn) { btn.disabled = false; btn.textContent = '■ 그만 (녹음 중)'; }
       RECT = setInterval(() => {
