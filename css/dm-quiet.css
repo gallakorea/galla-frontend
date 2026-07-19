@@ -1257,3 +1257,31 @@ html[data-dm-font="l"] .dm-bubble { font-size: 16.5px; }
 /* 밀어서 답장 — 충분히 밀면 색이 살아나 '놓으면 걸린다'를 알려준다 */
 .dm-bubble.reply-armed { box-shadow: -3px 0 0 0 #4361ff; }
 .dm-msgs .dm-bubble { will-change: transform; }
+
+
+/* ❤️ 메시지 리액션 — 말풍선 아래 작은 칩 */
+.dm-reacts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.dm-reacts:empty { display: none; }
+.dm-react {
+  display: inline-flex; align-items: center; gap: 3px; cursor: pointer;
+  padding: 2px 7px; border-radius: 999px; font-size: 12.5px; line-height: 1.5;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); color: #e7ebf3;
+  animation: reactPop .32s cubic-bezier(.2,1.4,.3,1);
+}
+.dm-react.mine { background: rgba(67,97,255,.24); border-color: rgba(120,150,255,.5); }
+.dm-react b { font-size: 11px; font-weight: 900; opacity: .9; }
+@keyframes reactPop { 0% { transform: scale(.4); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+/* 꾹 눌러서 고르는 팝오버 */
+.dm-react-pop {
+  position: fixed; z-index: 2000003; display: flex; gap: 2px; padding: 6px;
+  background: #1b1e26; border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.5);
+  opacity: 0; transform: scale(.86); transition: opacity .16s, transform .16s cubic-bezier(.2,1.3,.3,1);
+}
+.dm-react-pop.on { opacity: 1; transform: scale(1); }
+.dm-react-pop button {
+  border: none; background: none; cursor: pointer; font-size: 21px; line-height: 1;
+  padding: 5px 6px; border-radius: 50%;
+}
+.dm-react-pop button:active { background: rgba(255,255,255,.12); }
+@media (prefers-reduced-motion: reduce) { .dm-react, .dm-react-pop { animation: none; transition: none } }

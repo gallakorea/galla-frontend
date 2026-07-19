@@ -275,6 +275,10 @@
               <button class="dm-toggle" data-pref="swipeReply" type="button"></button>
             </div>
             <div class="dm-set-row">
+              <span class="dm-set-mid"><b>두 번 탭해서 리액션</b><i>말풍선을 두 번 탭하면 ❤️ — 꾹 누르면 골라서 달 수 있어요</i></span>
+              <button class="dm-toggle" data-pref="reactions" type="button"></button>
+            </div>
+            <div class="dm-set-row">
               <span class="dm-set-mid"><b>글자 크기</b><i>대화 글씨를 크게·작게</i></span>
               <span class="dm-seg" data-pref-seg="fontsize">
                 <button type="button" data-v="s">작게</button>
@@ -729,6 +733,7 @@
     });
     // 음성 재생 — 한 번에 하나만
     bindSwipeReply(ROOT.querySelector('#dm-msgs'));
+    bindReact(ROOT.querySelector('#dm-msgs'));
     applyChatPrefs();
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
       const b = e.target.closest('.dm-vplay'); if (!b) return;
@@ -1474,6 +1479,7 @@
     swipeReply: true,        // 말풍선 밀어서 답장
     voiceBtn: true,          // 입력창 간편녹음 버튼
     autoplay: true,          // 영상 말풍선 자동재생
+    reactions: true,         // 두 번 탭 리액션
   };
   let UI = { ...PREF_DEF };
   try { UI = { ...PREF_DEF, ...JSON.parse(localStorage.getItem(PREF_KEY) || '{}') }; } catch (_) {}
@@ -2552,6 +2558,7 @@
       <div class="dm-bubble ${mine ? 'me' : 'you'}${m.kind === 'gif' ? ' stk' : ''}" data-id="${m.id}" data-mine="${mine ? 1 : 0}" data-at="${m.created_at}" data-del="${m.deleted_at ? 1 : 0}">
         ${quote}${inner}
         <span class="dm-bub-time">${hhmm(m.created_at)}${mine ? `<b class="dm-receipt" data-read="${m.read_at ? 1 : 0}">${m.read_at ? '읽음' : ''}</b>` : ''}</span>
+        <span class="dm-reacts" data-for="${m.id}">${reactChips(m.id)}</span>
       </div>`;
   }
   /* ── 📬 비밀대화 우편함 — 서버엔 발신자 없는 암호문만, 역사는 이 기기에만 ── */
@@ -2625,9 +2632,104 @@
       }
     }
   }
+  /* ❤️ 리액션 — 말풍선 두 번 탭이면 하트, 꾹 누르면 골라 달기.
+     답장을 걸 만큼은 아닌 반응을 가볍게 남기는 자리. */
+  const QUICK = ['❤️', '😂', '👍', '😮', '😢', '🔥'];
+  let REACTS = {};                    // messageId -> { emoji: [userId…] }
+  function reactChips(id) {
+    const r = REACTS[id];
+    if (!r) return '';
+    return Object.entries(r).map(([em, users]) =>
+      `<button type="button" class="dm-react${users.includes(ME) ? ' mine' : ''}" data-react="${esc(em)}" data-msg="${esc(id)}">${em}${users.length > 1 ? `<b>${users.length}</b>` : ''}</button>`
+    ).join('');
+  }
+  function paintReacts(id) {
+    ROOT?.querySelectorAll(`.dm-reacts[data-for="${CSS.escape(String(id))}"]`).forEach(el => {
+      el.innerHTML = reactChips(id);
+    });
+  }
+  async function loadReacts(ids) {
+    if (!ids.length) return;
+    const { data } = await supabase.from('dm_reactions').select('message_id, user_id, emoji').in('message_id', ids);
+    REACTS = {};
+    (data || []).forEach(r => {
+      (REACTS[r.message_id] = REACTS[r.message_id] || {});
+      (REACTS[r.message_id][r.emoji] = REACTS[r.message_id][r.emoji] || []).push(r.user_id);
+    });
+  }
+  /* 낙관적 갱신 — 네트워크를 기다리면 '두 번 탭'의 맛이 죽는다 */
+  async function toggleReact(msgId, emoji) {
+    const cur = REACTS[msgId] || {};
+    const mineEmoji = Object.keys(cur).find(em => cur[em].includes(ME));
+    const same = mineEmoji === emoji;
+    // 화면 먼저
+    if (mineEmoji) {
+      cur[mineEmoji] = cur[mineEmoji].filter(u => u !== ME);
+      if (!cur[mineEmoji].length) delete cur[mineEmoji];
+    }
+    if (!same) (cur[emoji] = cur[emoji] || []).push(ME);
+    REACTS[msgId] = cur;
+    paintReacts(msgId);
+    if (UI.sound) { try { navigator.vibrate?.(8); } catch (_) {} }
+    // 서버
+    try {
+      if (same) await supabase.from('dm_reactions').delete().eq('message_id', msgId).eq('user_id', ME);
+      else await supabase.from('dm_reactions').upsert({ message_id: msgId, user_id: ME, emoji }, { onConflict: 'message_id,user_id' });
+    } catch (e) { console.warn('[dm] react', e); }
+  }
+  function openReactPicker(msgId, anchor) {
+    document.querySelector('.dm-react-pop')?.remove();
+    const pop = document.createElement('div');
+    pop.className = 'dm-react-pop';
+    pop.innerHTML = QUICK.map(em => `<button type="button" data-em="${em}">${em}</button>`).join('');
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.top = Math.max(8, r.top - 52) + 'px';
+    pop.style.left = Math.min(Math.max(8, r.left), innerWidth - pop.offsetWidth - 8) + 'px';
+    void pop.getBoundingClientRect(); pop.classList.add('on');
+    pop.onclick = e => {
+      const b = e.target.closest('[data-em]');
+      if (b) toggleReact(msgId, b.dataset.em);
+      pop.remove();
+    };
+    setTimeout(() => document.addEventListener('click', () => pop.remove(), { once: true }), 0);
+  }
+  /* 두 번 탭 + 꾹 누르기 바인딩 */
+  function bindReact(wrap) {
+    if (!wrap || wrap.dataset.reactBound) return;
+    wrap.dataset.reactBound = '1';
+    let lastTap = 0, lastId = null, pressT = null;
+    wrap.addEventListener('click', e => {
+      if (e.target.closest('.dm-react')) {
+        const b = e.target.closest('.dm-react');
+        return toggleReact(b.dataset.msg, b.dataset.react);
+      }
+      if (!UI.reactions) return;
+      const b = e.target.closest('.dm-bubble');
+      if (!b || b.classList.contains('dm-typing')) return;
+      const now = Date.now();
+      if (lastId === b.dataset.id && now - lastTap < 320) { toggleReact(b.dataset.id, '❤️'); lastTap = 0; return; }
+      lastTap = now; lastId = b.dataset.id;
+    });
+    wrap.addEventListener('touchstart', e => {
+      if (!UI.reactions) return;
+      const b = e.target.closest('.dm-bubble');
+      if (!b) return;
+      clearTimeout(pressT);
+      pressT = setTimeout(() => openReactPicker(b.dataset.id, b), 520);
+    }, { passive: true });
+    ['touchend', 'touchmove', 'touchcancel'].forEach(t =>
+      wrap.addEventListener(t, () => clearTimeout(pressT), { passive: true }));
+  }
+
   function renderMsgs(msgs) {
     const wrap = ROOT.querySelector('#dm-msgs');
+    // 리액션을 먼저 받아와 첫 렌더부터 함께 그린다(뒤늦게 튀어나오면 지저분하다)
+    loadReacts(msgs.map(m => m.id)).then(() => {
+      msgs.forEach(m => paintReacts(m.id));
+    }).catch(() => {});
     wrap.innerHTML = msgs.map(bubbleHTML).join('');
+    bindReact(wrap);
     // 마지막 12개만 폭포 등장(--i) — 긴 대화 전체를 애니메이션하면 소음이다
     const kids = [...wrap.children];
     kids.slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
@@ -3290,6 +3392,24 @@
     //   msgChan을 읽으면 null 참조로 터진다(테스트 하네스가 실제로 잡아낸 경합).
     const ch = supabase.channel('dm-thread-' + tid, { config: { presence: { key: ME } } });
     ch
+      /* 리액션 실시간 — 상대가 하트를 달면 내 화면에도 바로 뜬다.
+         메시지 단위 필터가 없으므로(테이블에 thread_id가 없다) 들어온 뒤
+         현재 방 메시지인지 확인하고 반영한다. */
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'dm_reactions' },
+        ({ eventType, new: n, old: o }) => {
+          const row = n && n.message_id ? n : o;
+          if (!row || !MSGS[row.message_id]) return;
+          const id = row.message_id;
+          const cur = REACTS[id] = REACTS[id] || {};
+          // 한 사람당 하나 — 이전 것 제거 후 반영
+          Object.keys(cur).forEach(em => {
+            cur[em] = cur[em].filter(u => u !== row.user_id);
+            if (!cur[em].length) delete cur[em];
+          });
+          if (eventType !== 'DELETE' && n?.emoji) (cur[n.emoji] = cur[n.emoji] || []).push(n.user_id);
+          paintReacts(id);
+        })
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'dm_messages', filter: `thread_id=eq.${tid}` },
         async ({ new: m }) => {
