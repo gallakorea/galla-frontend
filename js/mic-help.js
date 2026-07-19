@@ -84,6 +84,11 @@
       .mh-bubble{background:#22252e;border:1px solid rgba(255,255,255,.12);border-radius:11px;
         padding:9px 13px;font-size:13px;color:#e7ebf3;font-weight:800}
       @keyframes mhPress{0%,100%{transform:scale(1);opacity:.25}50%{transform:scale(1.13);opacity:1}}
+      .mh-tt{font-size:12px;font-weight:900;color:#8f97a8;padding:2px 2px 8px;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:4px}
+      .mh-warn{background:rgba(255,212,121,.1);border:1px solid rgba(255,212,121,.28);border-radius:12px;
+        padding:11px 12px;margin-bottom:10px;font-size:12.5px;line-height:1.6;color:#ffd479}
+      .mh-warn b{color:#fff}
+      .mh-watch.bad{background:rgba(255,143,160,.14);border-color:rgba(255,143,160,.4);color:#ff9aa5}
       /* 권한 감시 배너 */
       .mh-watch{display:flex;align-items:center;justify-content:center;gap:7px;
         background:rgba(58,91,255,.12);border:1px solid rgba(106,123,255,.32);border-radius:12px;
@@ -163,24 +168,40 @@
         <div class="mh-steps">
           <div class="mh-step"><span class="n">＋</span><span class="t">안 열리면 오른쪽 위 <b>⋮ (또는 ⋯)</b> → <b>다른 브라우저로 열기</b></span></div>
         </div>`;
+    } else if (st === 'denied') {
+      /* 🔑 실기기 증거로 확정(사장님 스크린샷 3장):
+         사이트 권한 패널에 '알림·소리'만 있고 **마이크 항목 자체가 없다**.
+         사이트가 차단된 거라면 항목이 생긴다 — 없다는 건 사이트 문제가 아니라
+         **안드로이드가 브라우저 앱에 마이크 권한을 안 준 상태**라는 뜻이다.
+         이 경우 팝업도 안 뜨고, 사이트 설정을 아무리 뒤져도 바꿀 게 없다.
+         → 안내의 1순위는 '앱 권한', 사이트 설정은 그 다음. */
+      head = '🎙 안드로이드에서 마이크가 꺼져 있어요';
+      sub = '사이트 설정에 <b>마이크 항목이 아예 없죠?</b> 그건 사이트가 아니라 <b>${앱}에 마이크 권한이 없다</b>는 뜻이에요. 휴대폰 설정에서 한 번만 켜주면 됩니다.';
+      body = `
+        <div class="mh-steps">
+          <div class="mh-tt">① 휴대폰 설정에서 ${'${앱}'}의 마이크 켜기 — 이게 진짜 원인</div>
+          <div class="mh-step"><span class="n">1</span><span class="t">휴대폰 <b>설정</b> 앱 열기</span></div>
+          <div class="mh-step"><span class="n">2</span><span class="t"><b>애플리케이션</b> (또는 앱) → <b>${'${앱}'}</b> 찾기</span></div>
+          <div class="mh-step"><span class="n">3</span><span class="t"><b>권한</b> → <b>마이크</b> → <b>앱 사용 중에만 허용</b></span></div>
+          <div class="mh-step"><span class="n">4</span><span class="t">갈라로 돌아와 <b>다시 녹음</b> — 이번엔 팝업이 뜨고 녹음됩니다</span></div>
+        </div>
+        <div class="mh-warn">🔎 <b>더 빠른 길</b>: 홈 화면에서 <b>${'${앱}'} 아이콘을 꾹 눌러</b> → <b>ⓘ 앱 정보</b> → <b>권한</b> → <b>마이크</b>. 3번 만에 도착해요.<br>권한 목록에 <b>마이크가 안 보이면</b> 맨 위 <b>“권한 더보기 / 모든 권한”</b>을 눌러보세요.</div>
+        <div class="mh-steps">
+          <div class="mh-tt">② 그래도 안 되면 — 사이트 차단 지우기</div>
+          <div class="mh-step"><span class="n">1</span><span class="t">주소창 왼쪽 <b>슬라이더 모양</b> 아이콘 → 맨 아래 <b>권한 재설정</b></span></div>
+          <div class="mh-step"><span class="n">2</span><span class="t">크롬 <b>⋮ → 설정 → 사이트 설정 → 마이크</b>에서 <b>galla.im</b> 확인</span></div>
+        </div>
+        <div class="mh-watch" id="mh-watch">🔎 마이크 설정을 지켜보는 중… (켜지면 자동으로 이어집니다)</div>
+        <button class="mh-btn" data-mh="ask" type="button">켰어요 — 다시 시도</button>
+        ${isStandalone && isAndroid ? '<button class="mh-btn ghost" data-mh="chrome" type="button">크롬에서 열기</button>' : ''}
+        <button class="mh-btn ghost" data-mh="reload" type="button">새로고침</button>`;
+      const appName = isStandalone ? '갈라 앱' : '크롬';
+      sub = sub.split('${앱}').join(appName);
+      body = body.split('${앱}').join(appName);
     } else {
       head = '🎙 마이크를 켜주세요';
-      sub = st === 'denied'
-        ? '아래 <b>[마이크 켜고 다시 시도]</b>를 먼저 눌러보세요. 그래도 안 되면 설정에서 허용으로 바꾸면 됩니다.'
-        : '아래 버튼을 누르면 권한 창이 떠요. <b>[허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 다음에 또 물어봅니다.';
-      body = `<button class="mh-btn" data-mh="ask" type="button">마이크 켜고 다시 시도</button>
-        ${st === 'denied' ? `
-        <div class="mh-steps">
-          <div class="mh-step"><span class="n">1</span><span class="t">${isStandalone
-            ? '위 버튼이 안 되면 <b>크롬에서 열어</b> 녹음해주세요(설치한 앱은 마이크가 막힌 기기가 있어요)'
-            : `주소창 왼쪽 <b>${isIOS ? 'ぁA' : '슬라이더 모양'}</b> 아이콘 탭`}</span></div>
-          ${isStandalone ? '' : `
-          <div class="mh-step"><span class="n">2</span><span class="t">${isIOS ? '<b>웹사이트 설정</b>' : '<b>권한</b> (또는 사이트 설정)'} → <b>마이크 → 허용</b></span></div>`}
-          <div class="mh-step"><span class="n">✓</span><span class="t">허용하는 즉시 <b>여기가 자동으로 바뀝니다</b></span></div>
-        </div>
-        <div class="mh-watch" id="mh-watch">🔎 마이크 설정을 지켜보는 중…</div>
-        ${isStandalone && isAndroid ? '<button class="mh-btn ghost" data-mh="chrome" type="button">크롬에서 열기</button>' : ''}
-        <button class="mh-btn ghost" data-mh="reload" type="button">허용했어요 — 새로고침</button>` : ''}`;
+      sub = '아래 버튼을 누르면 권한 창이 떠요. <b>[앱 사용 중에만 허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 다음에 또 물어봅니다.';
+      body = `<button class="mh-btn" data-mh="ask" type="button">마이크 켜고 다시 시도</button>`;
     }
 
     el.innerHTML = `
@@ -229,9 +250,10 @@
             return;
           } catch (err) { console.warn('[michelp] ask', err.name); }
         }
-        if (btn) { btn.disabled = false; btn.textContent = '한 번 더 시도'; }
+        if (btn) { btn.disabled = false; btn.textContent = '그냥 한 번 더 시도'; }
         const w = el.querySelector('#mh-watch');
-        if (w) { w.textContent = '아직이에요 — 아래 안내대로 허용해주세요'; }
+        // 팝업조차 안 뜨는 건 '차단이 저장된' 상태 — 재설정 없이는 백번 눌러도 같다
+        if (w) { w.textContent = '⚠ 팝업이 안 떠요 — 위 [권한 재설정]을 먼저 해주세요'; w.classList.add('bad'); }
       }
     };
   }
