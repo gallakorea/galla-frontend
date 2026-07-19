@@ -937,13 +937,24 @@
       else if (act === 'callSet') { showView('callset'); loadCallSet(); }
       else if (act === 'privacySet') { showView('privacy'); loadPrivacy(); }
       else if (act === 'openShop') {
-        // 상점은 items.js가 띄운다 — 없으면 불러온 뒤 연다(엉뚱한 페이지로 보내지 않는다)
+        /* 상점은 items.js가 띄운다.
+           ⚠️ 스크립트만 불러오면 열리긴 하는데 items.css가 없어 모든 요소가
+           position:static으로 깔려 화면 흐름에 파묻힌다 — '안 열린다'로 보였다.
+           스타일을 먼저 붙이고 연다. */
+        const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+        const ver = v ? '?v=' + v[1] : '';
+        if (!document.querySelector('link[href*="items.css"]')) {
+          await new Promise(res => {
+            const l = document.createElement('link');
+            l.rel = 'stylesheet'; l.href = '/css/items.css' + ver;
+            l.onload = l.onerror = res; document.head.appendChild(l);
+          });
+        }
         if (!window.openShop) {
-          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
-          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/items.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/items.js' + ver; sc.onload = sc.onerror = res; document.head.appendChild(sc); });
         }
         if (window.openShop) window.openShop();
-        else location.href = 'mypage.html';
+        else toastMini('상점을 여는 데 실패했어요 — 잠시 후 다시 시도해주세요');
       }
       else if (act === 'etcSet') { showView('etc'); loadEtc(); }
       else if (act === 'clearCalls') { await clearCalls(e.target.closest('[data-act]')); }
