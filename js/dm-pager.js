@@ -821,7 +821,7 @@
     if (REC && REC.state !== 'inactive') {
       REC._cancel = cancel;
       // 아직 한 조각도 안 들어온 기기 대비 — 멈추기 직전에 데이터를 달라고 한다
-      try { if (!CHUNKS.length) REC.requestData(); } catch (_) {}
+      try { if (!IS_IOS && !CHUNKS.length) REC.requestData(); } catch (_) {}
       try { REC.stop(); } catch (_) {}
     }
   }
@@ -895,6 +895,11 @@
     }
     window.GALLA_micHelp?.({ reason, ...(extra || {}) });
   }
+  /* ⚠️ iOS: MediaRecorder와 Web Audio(AudioContext)가 같은 스트림을 동시에 물면
+     녹음이 0바이트로 끝난다 — 소리 크기 측정을 아이폰에선 건너뛴다.
+     (안드로이드는 정상이라 무음 감지를 유지한다) */
+  const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   function recErrMsg(e) {
     const n = (e && e.name) || String(e);
     if (n === 'NoMediaRecorder')
@@ -1006,8 +1011,9 @@
         if (cancel) return;
         BLOB = new Blob(CHUNKS, { type: mime || 'audio/webm' });
         if (!BLOB.size) { BLOB = null; if (rt) rt.textContent = ''; return toast('소리가 담기지 않았어요 — 다시 시도해주세요'); }
-        // peak 3 미만 = 사실상 무음(정상 발화는 보통 20 이상)
-        if (peak < 3) {
+        // peak 3 미만 = 사실상 무음(정상 발화는 보통 20 이상).
+        // 측정 자체를 못 한 기기(IS_IOS)는 판정하지 않는다 — 오탐이 더 나쁘다
+        if (!IS_IOS && peak < 3) {
           BLOB = null; if (rt) rt.textContent = '';
           return openMicHelp('', { silent: true });
         }
@@ -1021,6 +1027,7 @@
       // 입력 레벨 감시 — 권한이 나도 블루투스 라우팅·앱 점유로 무음이 들어올 수 있다.
       // 바이트 수는 정상인데 소리만 없는 이 경우가 사용자에겐 가장 답답하다.
       try {
+        if (IS_IOS) throw new Error('skip-ios');
         const ac = new (window.AudioContext || window.webkitAudioContext)();
         const an = ac.createAnalyser(); an.fftSize = 512;
         ac.createMediaStreamSource(stream).connect(an);

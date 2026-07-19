@@ -2371,6 +2371,11 @@
      연속으로 녹음할 때 권한 요청·장치 열기를 반복하지 않아 특히 아이폰에서
      "매번 묻는" 느낌이 줄어든다. 다만 마이크 표시등이 오래 켜져 있으면
      불안하므로 15초만 유지하고, 화면을 벗어나면 즉시 반납한다. */
+  /* ⚠️ iOS: MediaRecorder와 Web Audio(AudioContext)가 같은 스트림을 동시에 물면
+     녹음이 0바이트로 끝난다 — 소리 크기 측정을 아이폰에선 건너뛴다.
+     (안드로이드는 정상이라 무음 감지를 유지한다) */
+  const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const MIC_HOLD_MS = 15000;
   function micCache() { return (window.__gallaMic = window.__gallaMic || {}); }
   function micLive() {
@@ -2485,6 +2490,7 @@
     /* 입력 레벨 감시 — 권한이 나도 무음만 담기는 경우가 있다(마이크 가림·다른 앱
        점유·블루투스 기기). 파일 크기는 정상이라 보내고 나서야 알게 되므로 미리 잡는다. */
     try {
+      if (IS_IOS) throw new Error('skip-ios');
       const ac = new (window.AudioContext || window.webkitAudioContext)();
       const an = ac.createAnalyser(); an.fftSize = 512;
       ac.createMediaStreamSource(stream).connect(an);
@@ -2509,8 +2515,8 @@
       VREC = null; PTT = null; paintRec(false);
       if (cancelled) return;
       if (dur < 1) return toastMini('너무 짧아요 — 꾹 눌러서 말해주세요');
-      // peak 3 미만 = 사실상 무음(정상 발화는 보통 20 이상) — 보내기 전에 잡는다
-      if (peak < 3) {
+      // peak 3 미만 = 무음. 측정을 못 한 기기(IS_IOS)는 판정하지 않는다
+      if (!IS_IOS && peak < 3) {
         if (!window.GALLA_micHelp) {
           const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
           await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
