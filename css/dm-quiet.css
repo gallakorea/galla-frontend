@@ -419,7 +419,9 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 .dm-e2e-wait { opacity: .75; display: inline-flex; align-items: center; gap: 5px; }
 #dm-mini-toast {
   position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px));
-  transform: translate(-50%, 14px); z-index: 12000;
+  /* 모달(#pager-call 14000·통화·검색 1000002) 위에 떠야 한다 —
+     아래 깔리면 에러 안내가 통째로 안 보여 '아무 반응 없음'으로 오인된다 */
+  transform: translate(-50%, 14px); z-index: 2000000;
   max-width: min(86vw, 380px); padding: 11px 18px; border-radius: 999px;
   background: rgba(24,26,34,.96); color: #e6e8ef; font-size: 13px; font-weight: 700;
   border: 1px solid rgba(255,255,255,.1); box-shadow: 0 10px 30px rgba(0,0,0,.5);
@@ -427,6 +429,8 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   text-align: center;
 }
 #dm-mini-toast.on { opacity: 1; transform: translate(-50%, 0); }
+/* 녹음 실패 사유는 모달 안에 남긴다(토스트는 사라지지만 이건 남는다) */
+.pgr-err { color: #ff9aa5; font-size: 12.5px; line-height: 1.55; margin-top: 8px; }
 
 /* ═══ 보이스톡 ═══ */
 #dm-call {

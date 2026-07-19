@@ -902,6 +902,7 @@
     const rt = stage.querySelector('#pgr-rt');
     let stream = null;
     try {
+      stage.querySelector('.pgr-err')?.remove();
       if (typeof MediaRecorder === 'undefined') { const e = new Error('norec'); e.name = 'NoMediaRecorder'; throw e; }
       if (btn) { btn.disabled = true; btn.textContent = '마이크 준비 중…'; }
       stream = await getMicStream();
@@ -938,6 +939,10 @@
       REC = null;
       if (btn) { btn.disabled = false; btn.textContent = '● 녹음 시작'; }
       if (rt) rt.textContent = '';
+      // 토스트는 2.4초 뒤 사라진다 — 사유는 모달 안에 남겨둔다
+      let box = stage.querySelector('.pgr-err');
+      if (!box) { box = document.createElement('div'); box.className = 'pgr-err'; stage.appendChild(box); }
+      box.textContent = '⚠ ' + recErrMsg(e);
       toast(recErrMsg(e));
     }
   }
