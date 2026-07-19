@@ -247,7 +247,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const overlayOpen = () => document.querySelector(
       "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
-      "#pager-call.on, #pager-book.on, #dm-call.on"
+      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog"
     ) || document.body.classList.contains("dm-detail");
 
     // 이 페이지가 '탭 자기 자신'(탭 루트)인지 판별.
@@ -268,6 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
         bx = e.touches[0].clientX; by = e.touches[0].clientY; bdx = 0; bLock = 0;
       }, { passive: true });
       document.addEventListener("touchmove", (e) => {
+        if (document.getElementById('nav-jog')) { bArmed = false; return; }   // 조그셔틀 중엔 양보
         if (!bArmed || e.touches.length !== 1 || bLock === 2) return;
         const dx = e.touches[0].clientX - bx, dy = e.touches[0].clientY - by;
         bdx = dx;
@@ -362,6 +363,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener("touchmove", (e) => {
       if (!armed || e.touches.length !== 1) return;
+      /* ⚠️ 스와이프는 '누르는 순간' 무장된다. 조그셔틀은 380ms 뒤에 열리므로
+         touchstart의 overlayOpen() 검사만으론 늦다 — 이동 중에도 확인해
+         메뉴가 열렸으면 즉시 손을 뗀다(페이지가 같이 밀려 고르기 힘들었다). */
+      if (document.getElementById('nav-jog')) { reset(); return; }
       const x = e.touches[0].clientX, y = e.touches[0].clientY;
       const dx = x - sx, dy = y - sy;
 
@@ -456,7 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const scroller = () => document.scrollingElement || document.documentElement;
   const overlayOpen = () => document.querySelector(
     "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
-    "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden)"
+    "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), #nav-jog"
   ) || document.body.classList.contains("dm-detail");
 
   // ⚠️ DM 페이지 제외: 문서가 스크롤 잠금 상태라 항상 scrollTop 0 → 어느 탭에서 당겨도

@@ -123,6 +123,14 @@
 
     document.body.appendChild(layer);
     document.body.style.overscrollBehavior = 'none';
+    /* ⚠️ 네비의 좌우 페이지 스와이프가 같이 동작하면 화면이 밀려 고르기 힘들다.
+       overlayOpen()이 #nav-jog를 보고 멈추지만, 이미 시작된 드래그는
+       touchcancel을 보내 확실히 끊는다. */
+    try {
+      document.dispatchEvent(new TouchEvent('touchcancel', { bubbles: true }));
+    } catch (_) {
+      document.dispatchEvent(new Event('touchcancel', { bubbles: true }));
+    }
     void layer.getBoundingClientRect();
     layer.classList.add('on');
     try { navigator.vibrate?.(14); } catch (_) {}
