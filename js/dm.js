@@ -541,9 +541,22 @@
       const b = e.target.closest('.dm-vplay'); if (!b) return;
       if (VAUDIO && !VAUDIO.paused && VAUDIO._btn === b) { VAUDIO.pause(); return; }
       if (VAUDIO) { VAUDIO.pause(); VAUDIO._btn && (VAUDIO._btn.innerHTML = ICONS.play); }
-      VAUDIO = new Audio(b.dataset.url); VAUDIO._btn = b;
+      VAUDIO = new Audio(); VAUDIO._btn = b;
+      /* 길이 정보가 없는 webm은 스트리밍(범위 요청)으로 재생하면 소리가 안 나는
+         기기가 있다 — 통째로 받아 blob으로 틀면 안정적이다. 실패하면 원래 URL로. */
+      (async () => {
+        try {
+          const res = await fetch(b.dataset.url);
+          if (!res.ok) throw new Error(res.status);
+          const blob = await res.blob();
+          VAUDIO._obj = URL.createObjectURL(blob);
+          VAUDIO.src = VAUDIO._obj;
+        } catch (_) { VAUDIO.src = b.dataset.url; }
+        VAUDIO.play().catch(() => { b.innerHTML = ICONS.play; toastMini('재생하지 못했어요'); });
+      })();
       b.innerHTML = ICONS.pause;
       VAUDIO.onpause = () => { b.innerHTML = ICONS.play; };
+      VAUDIO.onerror = () => { b.innerHTML = ICONS.play; toastMini('재생하지 못했어요'); };
       VAUDIO.onended = () => {
         b.innerHTML = ICONS.play;
         // 다음 음성 말풍선이 있으면 이어서 — 손 안 대고 죽 듣는다
@@ -551,7 +564,6 @@
         const next = all[all.indexOf(b) + 1];
         if (next) setTimeout(() => next.click(), 350);
       };
-      VAUDIO.play().catch(() => { b.innerHTML = ICONS.play; toastMini('재생하지 못했어요'); });
     });
     ROOT.querySelector('#dm-file').addEventListener('change', onPickImage);
 
@@ -2424,8 +2436,14 @@
       return toastMini('마이크를 열지 못했어요 — 한 번 더 눌러주세요');
     }
     if (!PTT) { stream.getTracks().forEach(t => t.stop()); return; }   // 권한 대기 중 손을 뗐다
-    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-      : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
+    /* ⚠️ mp4 우선. MediaRecorder가 만든 webm은 길이(duration) 정보가 없어
+       안드로이드에서 '재생은 되는데 소리가 안 나는' 일이 생기고,
+       iOS 사파리는 webm을 아예 재생하지 못한다(= 아이폰에선 안 들림).
+       mp4는 길이가 정상이고 모든 기기에서 재생된다. */
+    const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4'
+      : MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2') ? 'audio/mp4;codecs=mp4a.40.2'
+      : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
     const chunks = [];
     const t0 = Date.now();
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);

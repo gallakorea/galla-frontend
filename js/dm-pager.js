@@ -897,8 +897,10 @@
   }
   function pickRecMime() {
     if (typeof MediaRecorder === 'undefined') return null;
-    const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus',
-                   'audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/3gpp'];
+    // mp4 우선 — webm은 길이 정보가 없어 재생이 무음이 되거나(안드로이드)
+    // 아예 재생 불가(iOS)인 기기가 있다
+    const cands = ['audio/mp4', 'audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus',
+                   'audio/webm', 'audio/ogg;codecs=opus', 'audio/aac', 'audio/3gpp'];
     for (const m of cands) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {} }
     return '';   // 빈 문자열 = 브라우저 기본값으로 시도
   }
