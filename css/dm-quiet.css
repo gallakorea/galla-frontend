@@ -1252,3 +1252,8 @@ html[data-dm-font="l"] .dm-bubble { font-size: 16.5px; }
 .dm-pin-btns button.pri { background: linear-gradient(135deg,#6a7bff,#3a5bff); border: none; color: #fff; }
 /* 키워드가 걸린 알림은 눈에 띄게 */
 #dm-toast.kw { border-color: rgba(255,212,121,.5); box-shadow: 0 12px 34px rgba(255,190,60,.25); }
+
+
+/* 밀어서 답장 — 충분히 밀면 색이 살아나 '놓으면 걸린다'를 알려준다 */
+.dm-bubble.reply-armed { box-shadow: -3px 0 0 0 #4361ff; }
+.dm-msgs .dm-bubble { will-change: transform; }

@@ -246,6 +246,54 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="chatset2" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">채팅</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-chatset2">
+            <div class="dm-sec">${ICONS.chat}채팅방</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>메시지 입력 중 상태 보기</b><i>상대가 입력 중인 걸 보고, 내 상태도 알려줘요. 끄면 양쪽 다 안 보여요</i></span>
+              <button class="dm-toggle" data-pref="typing" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>내 난장 관리</b><i>내가 만들거나 들어간 오픈 채팅방</i></span>
+              <button class="dm-mic-btn" data-act="goRooms" type="button">관리</button>
+            </div>
+
+            <div class="dm-sec">${ICONS.chat}미디어</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>동영상 자동재생</b><i>말풍선 속 영상을 자동으로 재생해요 (데이터 절약하려면 끄기)</i></span>
+              <button class="dm-toggle" data-pref="autoplay" type="button"></button>
+            </div>
+
+            <div class="dm-sec">${ICONS.chat}말풍선</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>밀어서 답장</b><i>말풍선을 오른쪽으로 살짝 밀면 답장이 걸려요</i></span>
+              <button class="dm-toggle" data-pref="swipeReply" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>글자 크기</b><i>대화 글씨를 크게·작게</i></span>
+              <span class="dm-seg" data-pref-seg="fontsize">
+                <button type="button" data-v="s">작게</button>
+                <button type="button" data-v="m">보통</button>
+                <button type="button" data-v="l">크게</button>
+              </span>
+            </div>
+
+            <div class="dm-sec">${ICONS.send}입력창</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>엔터로 보내기</b><i>끄면 엔터는 줄바꿈, 보내기는 전송 버튼으로</i></span>
+              <button class="dm-toggle" data-pref="enter" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>간편녹음 버튼</b><i>입력창의 🎤 버튼 — 꾹 눌러 음성 메시지를 보내요</i></span>
+              <button class="dm-toggle" data-pref="voiceBtn" type="button"></button>
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="notiset" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
@@ -343,18 +391,10 @@
               <button class="dm-toggle" id="dm-set-push" type="button"></button>
             </div>
 
-            <div class="dm-sec">${ICONS.chat || ''}채팅</div>
+            <div class="dm-sec">${ICONS.chat}채팅</div>
             <div class="dm-set-row">
-              <span class="dm-set-mid"><b>엔터로 보내기</b><i>끄면 엔터는 줄바꿈, 보내기는 전송 버튼으로</i></span>
-              <button class="dm-toggle" data-pref="enter" type="button"></button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>글자 크기</b><i>대화 글씨를 크게·작게</i></span>
-              <span class="dm-seg" data-pref-seg="fontsize">
-                <button type="button" data-v="s">작게</button>
-                <button type="button" data-v="m">보통</button>
-                <button type="button" data-v="l">크게</button>
-              </span>
+              <span class="dm-set-mid"><b>채팅</b><i>입력 중 표시·밀어서 답장·글자 크기·간편녹음·자동재생</i></span>
+              <button class="dm-mic-btn" data-act="chatSet2" type="button">설정</button>
             </div>
 
             <div class="dm-sec">📟 삐삐</div>
@@ -566,6 +606,8 @@
       else if (act === 'toRoom') { if (DEPTH > 0) history.back(); else showView('room'); }
       else if (act === 'goPager') { showView('inbox'); setTab('pager'); }
       else if (act === 'notiSet') { showView('notiset'); loadNotiSet(); }
+      else if (act === 'chatSet2') { showView('chatset2'); loadChatSet2(); }
+      else if (act === 'goRooms') { showView('inbox'); setTab('rooms'); }
       else if (act === 'toSettings') { goBack(); }
       else if (act === 'bugReport') {
         if (!window.GALLA_openBugReport) {
@@ -686,6 +728,8 @@
                             src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : src === 'mine' ? 'ai' : STK_STYLE } });
     });
     // 음성 재생 — 한 번에 하나만
+    bindSwipeReply(ROOT.querySelector('#dm-msgs'));
+    applyChatPrefs();
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
       const b = e.target.closest('.dm-vplay'); if (!b) return;
       if (VAUDIO && !VAUDIO.paused && VAUDIO._btn === b) { VAUDIO.pause(); return; }
@@ -1426,6 +1470,10 @@
     keywords: '',            // 키워드 알림(쉼표 구분)
     dndOn: false, dndFrom: '23:00', dndTo: '07:00',   // 집중(방해금지) 시간
     lockPin: '',             // 화면 잠금 PIN(해시)
+    typing: true,            // 입력 중 상태 주고받기
+    swipeReply: true,        // 말풍선 밀어서 답장
+    voiceBtn: true,          // 입력창 간편녹음 버튼
+    autoplay: true,          // 영상 말풍선 자동재생
   };
   let UI = { ...PREF_DEF };
   try { UI = { ...PREF_DEF, ...JSON.parse(localStorage.getItem(PREF_KEY) || '{}') }; } catch (_) {}
@@ -1530,6 +1578,38 @@
       p2.className = p1.className;
       p2.onclick = () => { p1.click(); setTimeout(() => { p2.className = p1.className; }, 400); };
     }
+  }
+
+  /* 채팅 상세 — 토글은 전부 실제 동작에 연결돼 있다(입력중 표시·밀어서 답장·
+     간편녹음 버튼·자동재생·엔터 전송·글자 크기). */
+  function loadChatSet2() {
+    const host = ROOT.querySelector('#dm-chatset2');
+    if (!host) return;
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); applyChatPrefs(); };
+    });
+    const seg = host.querySelector('[data-pref-seg="fontsize"]');
+    if (seg) {
+      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.fontsize));
+      paintSeg();
+      seg.onclick = e => {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        UI.fontsize = b.dataset.v; savePrefs(); paintSeg();
+      };
+    }
+  }
+  /* 설정을 화면에 즉시 반영 — 저장만 하고 안 먹는 설정은 만들지 않는다 */
+  function applyChatPrefs() {
+    const v = ROOT?.querySelector('#dm-voice');
+    if (v) v.hidden = !UI.voiceBtn;
+    ROOT?.querySelectorAll('video[data-dm-vid]').forEach(el => {
+      el.autoplay = !!UI.autoplay;
+      if (!UI.autoplay) { try { el.pause(); } catch (_) {} }
+    });
   }
 
   /* 🔒 화면 잠금 — 이 기기에서만 쓰는 4자리 잠금.
@@ -3071,6 +3151,46 @@
   }
 
   /* ---------- 답장 ---------- */
+  /* 👉 밀어서 답장 — 말풍선을 오른쪽으로 살짝 밀면 답장이 걸린다.
+     세로 스크롤을 방해하지 않도록 가로 이동이 세로보다 확실히 클 때만 반응하고,
+     설정에서 끌 수 있다. */
+  function bindSwipeReply(wrap) {
+    if (!wrap || wrap.dataset.swipeBound) return;
+    wrap.dataset.swipeBound = '1';
+    let sx = 0, sy = 0, el = null, on = false;
+    wrap.addEventListener('touchstart', e => {
+      el = null; on = false;
+      if (!UI.swipeReply || e.touches.length !== 1) return;
+      const b = e.target.closest('.dm-bubble');
+      if (!b || b.classList.contains('dm-typing')) return;
+      el = b; sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    }, { passive: true });
+    wrap.addEventListener('touchmove', e => {
+      if (!el) return;
+      const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+      if (!on && Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.8) on = true;
+      if (!on) return;
+      const shift = Math.max(0, Math.min(64, dx));
+      el.style.transform = `translateX(${shift}px)`;
+      el.style.transition = 'none';
+      el.classList.toggle('reply-armed', shift > 44);
+    }, { passive: true });
+    const end = () => {
+      if (!el) return;
+      const armed = el.classList.contains('reply-armed');
+      el.style.transition = 'transform .2s cubic-bezier(.2,1,.3,1)';
+      el.style.transform = '';
+      el.classList.remove('reply-armed');
+      if (armed) {
+        const m = MSGS[el.dataset.id];
+        if (m) { setReply(m); try { navigator.vibrate?.(10); } catch (_) {} }
+      }
+      el = null; on = false;
+    };
+    wrap.addEventListener('touchend', end, { passive: true });
+    wrap.addEventListener('touchcancel', end, { passive: true });
+  }
+
   function setReply(m) {
     REPLY = m;
     const strip = ROOT.querySelector('#dm-reply-strip');
@@ -3135,7 +3255,9 @@
 
   /* 타이핑 말풍선 — 헤더 텍스트만으로는 심심하다. 상대 자리에서 점 3개가 튄다. */
   let typingBubbleTimer = null;
+  // 끈 사람은 남의 것도 안 본다(주고받기가 대칭이어야 공평하다)
   function showTypingBubble() {
+    if (!UI.typing) return;                // 내 상태를 안 주면 남의 것도 안 본다(대칭)
     const wrap = ROOT.querySelector('#dm-msgs');
     if (!wrap) return;
     let el = wrap.querySelector('.dm-typing');
@@ -3154,6 +3276,7 @@
     ROOT?.querySelector('.dm-typing')?.remove();
   }
   function sendTyping() {
+    if (!UI.typing) return;                // [입력 중 상태] 끔 — 내 것도 안 보낸다
     if (!msgChan || !curThread) return;
     if (typingTimer) return;               // 1.5초에 한 번만 쏜다
     typingTimer = setTimeout(() => { typingTimer = null; }, 1500);
