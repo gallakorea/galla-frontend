@@ -2091,12 +2091,32 @@
       sub.textContent = count ? `내가 남긴 통화 기록 ${count}건` : '남은 통화 기록이 없어요';
     })();
   }
-  /* 권한 버튼 공용 — 마이크·카메라가 같은 흐름을 쓴다(중복 구현 금지) */
+  /* 권한 버튼 공용 — 마이크·카메라가 같은 흐름을 쓴다(중복 구현 금지).
+     ⚠️ permissions.query는 사파리 등에서 마이크·카메라를 아예 지원하지 않아
+     늘 'unknown'을 준다 → 허용해놨는데도 계속 '허용받기'로 보였다(제보).
+     그래서 3단으로 확인한다:
+       ① permissions.query (되는 브라우저)
+       ② enumerateDevices의 라벨 — 권한을 준 적이 있어야 기기 이름이 보인다
+       ③ 이 기기에서 성공했던 기록(localStorage) */
+  const PERM_OK_KEY = n => 'galla_perm_' + n;
+  async function realPermState(permName, kind) {
+    try {
+      const st = (await navigator.permissions.query({ name: permName })).state;
+      if (st === 'granted' || st === 'denied') return st;
+    } catch (_) {}
+    try {
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      const mine = devs.filter(d => d.kind === kind);
+      if (mine.length && mine.some(d => d.label)) return 'granted';   // 라벨이 보이면 허용된 것
+    } catch (_) {}
+    try { if (localStorage.getItem(PERM_OK_KEY(permName)) === '1') return 'granted'; } catch (_) {}
+    return 'prompt';
+  }
   async function bindPermButton(btn, permName, constraints) {
     if (!btn) return;
+    const kind = constraints.video ? 'videoinput' : 'audioinput';
     const paint = async () => {
-      let st = 'unknown';
-      try { st = (await navigator.permissions.query({ name: permName })).state; } catch (_) {}
+      const st = await realPermState(permName, kind);
       btn.textContent = st === 'granted' ? '허용됨' : st === 'denied' ? '차단됨' : '허용받기';
       btn.classList.toggle('ok', st === 'granted');
       btn.dataset.st = st;
@@ -2107,8 +2127,10 @@
       try {
         const s = await navigator.mediaDevices.getUserMedia(constraints);
         s.getTracks().forEach(t => t.stop());
-        toastMini('준비 완료');
+        try { localStorage.setItem(PERM_OK_KEY(permName), '1'); } catch (_) {}
+        toastMini('준비 완료 — 이제 다시 묻지 않아요');
       } catch (_) {
+        try { localStorage.removeItem(PERM_OK_KEY(permName)); } catch (_) {}
         if (!window.GALLA_micHelp) {
           const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
           await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
@@ -3870,7 +3892,8 @@
      → 첫 사용 때는 녹음 대신 권한만 받아두고, 다음 누름부터 바로 녹음한다. */
   let MIC_OK = false;
   (async () => {
-    try { MIC_OK = (await navigator.permissions.query({ name: 'microphone' })).state === 'granted'; }
+    // 같은 판정을 쓴다 — permissions.query가 막힌 브라우저에서도 예열을 건너뛰게
+    try { MIC_OK = (await realPermState('microphone', 'audioinput')) === 'granted'; }
     catch (_) {}
   })();
   /* 🎤 마이크 재사용 — 한 번 열어둔 스트림을 잠깐 붙들었다가 반납한다.
