@@ -110,6 +110,9 @@
     }
   }
 
+  /* 설정(js/dm.js의 로컬 취향)을 통화가 실제로 반영한다 — 저장만 하고 무시하면 가짜다 */
+  const PREF = () => (window.GALLA_dmPrefs ? window.GALLA_dmPrefs() : {});
+
   async function micPermState() {
     try { const st = await navigator.permissions.query({ name: 'microphone' }); return st.state; }
     catch (_) { return 'unknown'; }
@@ -126,9 +129,13 @@
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
     try {
+      // [면상톡 저데이터] — 화질을 낮춰 데이터·불안정 회선에 대응
+      const low = !!PREF().lowData;
       return await md.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
-        video: video ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } } : false,
+        video: video ? (low
+          ? { facingMode: facing, width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { max: 20 } }
+          : { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }) : false,
       });
     } catch (e) {
       // 일부 안드로이드가 고급 제약에서 넘어진다 — 소박한 제약으로 한 번 더
@@ -275,6 +282,7 @@
   /* 통화 기록 — 발신자가 남긴다: 부재중(연결 못 함)·통화 종료(시간).
      대화방에 말풍선(kind='call')으로 떠서 '다시 걸기' 콜백 깔때기가 된다 */
   async function logCall(reason) {
+    if (PREF().callLog === false) return;   // [대화에 통화 기록 남기기] 끔
     // ★ CUR 스냅샷 — endCall이 이 함수를 기다리지 않고 CUR을 비우므로,
     //   await 이후 CUR을 읽으면 null 참조로 조용히 죽는다(기록 유실의 정체)
     const c = CUR;
@@ -315,6 +323,11 @@
   }
 
   function attachMedia() {
+    // [통화 음량] 설정을 실제 재생에 반영 — 폰 볼륨과 별개로 상대 목소리만 조절
+    setTimeout(() => {
+      const v = Math.min(1, (PREF().callVolume ?? 100) / 100);
+      document.querySelectorAll('#dm-call audio, #dm-call video').forEach(el => { el.volume = v; });
+    }, 120);
     if (remoteStream) {
       const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
       if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }

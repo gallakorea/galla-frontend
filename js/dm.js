@@ -248,6 +248,80 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="callset" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">통화</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-callset">
+            <div class="dm-sec">${ICONS.phone}통화 기록</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>대화에 통화 기록 남기기</b><i>육성톡·면상톡을 하면 대화방에 기록이 남아요(다시 걸기 편해요)</i></span>
+              <button class="dm-toggle" data-pref="callLog" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>통화 이력 지우기</b><i id="dm-calllog-sub">대화방에 남은 통화 기록을 모두 삭제해요</i></span>
+              <button class="dm-mic-btn" data-act="clearCalls" type="button">초기화</button>
+            </div>
+
+            <div class="dm-sec">${ICONS.bell}벨소리</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>전화 올 때 소리</b><i>고르면 바로 들려드려요 · 내 기기에만 적용돼요</i></span>
+              <span class="dm-seg" data-pref-seg="ringTone">
+                <button type="button" data-v="none">무음</button>
+                <button type="button" data-v="ring">기본</button>
+                <button type="button" data-v="pager">삐삐</button>
+              </span>
+            </div>
+
+            <div class="dm-sec">${ICONS.sliders || ICONS.chat}통화 중</div>
+            <div class="dm-set-col">
+              <span class="dm-set-mid"><b>상대 목소리 크기</b><i id="dm-vol-txt">폰 볼륨과 별개로 조절해요</i></span>
+              <span class="dm-size-row"><em>🔈</em>
+                <input type="range" id="dm-callvol" min="0" max="150" step="10">
+                <em class="big">🔊</em></span>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>면상톡 저데이터</b><i>화질을 낮춰 데이터를 아끼고, 신호가 약할 때 더 안정적이에요</i></span>
+              <button class="dm-toggle" data-pref="lowData" type="button"></button>
+            </div>
+          </div>
+        </div>
+        <div class="dm-view" data-view="etc" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">기타</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-etc">
+            <div class="dm-sec">${ICONS.more}편의 기능</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>흔들어서 버그 신고</b><i>폰을 흔들면 신고 창이 열려요 — 이상한 화면을 바로 알려주세요</i></span>
+              <button class="dm-toggle" data-pref="shake" type="button"></button>
+            </div>
+
+            <div class="dm-sec">${ICONS.chat}동영상</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>자동 재생</b><i>피드·릴스의 영상을 알아서 재생할지</i></span>
+              <span class="dm-seg" data-pref-seg="videoAuto">
+                <button type="button" data-v="always">항상</button>
+                <button type="button" data-v="wifi">Wi-Fi만</button>
+                <button type="button" data-v="never">안 함</button>
+              </span>
+            </div>
+
+            <div class="dm-sec">${ICONS.search}검색</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>최근 검색어 저장</b><i>끄면 검색 기록을 남기지 않아요</i></span>
+              <button class="dm-toggle" data-pref="searchHistory" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>검색 기록 지우기</b><i id="dm-search-sub">지금까지 저장된 검색어를 지워요</i></span>
+              <button class="dm-mic-btn" data-act="clearSearch" type="button">지우기</button>
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="theme" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
@@ -651,6 +725,12 @@
               <button class="dm-mic-btn" data-act="displaySet" type="button">설정</button>
             </div>
 
+            <div class="dm-sec">${ICONS.phone}통화</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>통화</b><i>벨소리·통화 음량·저데이터·통화 기록</i></span>
+              <button class="dm-mic-btn" data-act="callSet" type="button">설정</button>
+            </div>
+
             <div class="dm-sec">${ICONS.lock}데이터·백업</div>
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>데이터 및 저장공간</b><i>저장공간·사진 화질·데이터 절약</i></span>
@@ -662,6 +742,10 @@
             </div>
 
             <div class="dm-sec">${ICONS.more}기타</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>기타</b><i>흔들어 신고·동영상 자동재생·검색 기록</i></span>
+              <button class="dm-mic-btn" data-act="etcSet" type="button">설정</button>
+            </div>
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>버그 신고</b><i>안 되는 게 있으면 알려주세요 — 기기 정보가 함께 전송돼요</i></span>
               <button class="dm-mic-btn" data-act="bugReport" type="button">신고</button>
@@ -837,6 +921,13 @@
       else if (act === 'chatSet2') { showView('chatset2'); loadChatSet2(); }
       else if (act === 'displaySet') { showView('display'); loadDisplay(); }
       else if (act === 'themeSet') { showView('theme'); loadTheme(); applyDisplay(); }
+      else if (act === 'callSet') { showView('callset'); loadCallSet(); }
+      else if (act === 'etcSet') { showView('etc'); loadEtc(); }
+      else if (act === 'clearCalls') { await clearCalls(e.target.closest('[data-act]')); }
+      else if (act === 'clearSearch') {
+        try { localStorage.removeItem('galla_recent_searches'); } catch (_) {}
+        toastMini('검색 기록을 지웠어요'); loadEtc();
+      }
       else if (act === 'stickerSet') { showView('stickerset'); loadStickerSet(); }
       else if (act === 'stkClear') {
         try { localStorage.removeItem(STK_RECENT_KEY); } catch (_) {}
@@ -1746,6 +1837,13 @@
     stkStyle: '',            // 이모티콘 기본 스타일(빈값=모듈 기본)
     stkSize: 'm',            // 이모티콘 크기
     stkRecent: true,         // 최근 쓴 이모티콘 먼저 보여주기
+    callLog: true,           // 통화 기록을 대화에 남기기
+    ringTone: 'ring',        // 벨소리: ring | pager | none
+    callVolume: 100,         // 상대 목소리 크기 0~150
+    lowData: false,          // 면상톡 저데이터
+    shake: true,             // 흔들어서 버그 신고
+    videoAuto: 'always',     // 동영상 자동재생: always | wifi | never
+    searchHistory: true,     // 최근 검색어 저장
     photoQuality: 'high',    // 사진 화질: origin | high | save
     dataSaver: false,        // 모바일 데이터에서 미디어 아끼기
   };
@@ -1905,6 +2003,90 @@
       el.autoplay = !!UI.autoplay;
       if (!UI.autoplay) { try { el.pause(); } catch (_) {} }
     });
+  }
+
+  /* 📞 통화 설정 — 값은 dm-call.js가 window.GALLA_dmPrefs()로 읽어 실제로 쓴다.
+     여기서 저장만 하고 통화가 무시하면 그건 가짜 설정이다. */
+  function loadCallSet() {
+    const host = ROOT.querySelector('#dm-callset');
+    if (!host) return;
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); };
+    });
+    const seg = host.querySelector('[data-pref-seg="ringTone"]');
+    if (seg) {
+      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.ringTone));
+      paintSeg();
+      seg.onclick = e => {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        UI.ringTone = b.dataset.v; savePrefs(); paintSeg();
+        if (UI.ringTone !== 'none') playTone(UI.ringTone === 'pager' ? 'pager' : 'ding');   // 미리듣기
+      };
+    }
+    const vol = host.querySelector('#dm-callvol'), vtxt = host.querySelector('#dm-vol-txt');
+    if (vol) {
+      vol.value = UI.callVolume;
+      const paint = () => { if (vtxt) vtxt.textContent = `현재 ${UI.callVolume}% ${UI.callVolume === 100 ? '(기본)' : UI.callVolume > 100 ? '— 크게' : ''}`; };
+      paint();
+      vol.oninput = () => {
+        UI.callVolume = +vol.value; savePrefs(); paint();
+        // 통화 중이면 즉시 반영
+        document.querySelectorAll('#dm-call audio, #dm-call video').forEach(el => { el.volume = Math.min(1, UI.callVolume / 100); });
+      };
+    }
+    // 통화 기록 개수
+    (async () => {
+      const sub = host.querySelector('#dm-calllog-sub');
+      if (!sub) return;
+      const { count } = await supabase.from('dm_messages')
+        .select('id', { count: 'exact', head: true }).eq('kind', 'call').eq('sender_id', ME);
+      sub.textContent = count ? `내가 남긴 통화 기록 ${count}건` : '남은 통화 기록이 없어요';
+    })();
+  }
+  async function clearCalls(btn) {
+    if (!confirm('대화방에 남은 통화 기록을 모두 지울까요?\n(대화 내용은 그대로 남습니다)')) return;
+    if (btn) { btn.disabled = true; btn.textContent = '지우는 중…'; }
+    const { error } = await supabase.from('dm_messages').delete().eq('kind', 'call').eq('sender_id', ME);
+    if (btn) { btn.disabled = false; btn.textContent = '초기화'; }
+    toastMini(error ? '지우지 못했어요' : '통화 기록을 지웠어요');
+    loadCallSet();
+  }
+
+  /* ⚙ 기타 */
+  function loadEtc() {
+    const host = ROOT.querySelector('#dm-etc');
+    if (!host) return;
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => {
+        UI[k] = !UI[k]; savePrefs(); paint();
+        if (k === 'shake' && UI.shake) window.GALLA_enableShakeReport?.();
+      };
+    });
+    const seg = host.querySelector('[data-pref-seg="videoAuto"]');
+    if (seg) {
+      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.videoAuto));
+      paintSeg();
+      seg.onclick = e => {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        UI.videoAuto = b.dataset.v; savePrefs(); paintSeg();
+        document.documentElement.dataset.videoAuto = UI.videoAuto;   // 피드·릴스가 읽는다
+      };
+    }
+    document.documentElement.dataset.videoAuto = UI.videoAuto;
+    const sub = host.querySelector('#dm-search-sub');
+    if (sub) {
+      let n = 0;
+      try { n = (JSON.parse(localStorage.getItem('galla_recent_searches') || '[]') || []).length; } catch (_) {}
+      sub.textContent = n ? `저장된 검색어 ${n}개` : '저장된 검색어가 없어요';
+    }
   }
 
   /* 🎨 테마 — 포인트 색만 바꾼다. 어두운 화면은 갈라의 정체성이라 유지하고,
