@@ -976,3 +976,10 @@ body.tossface .dm-ptt-hint {
 .pgr-list.dim .pgr-row { opacity: .62; cursor: default; }
 .pgr-row-ic.sent { background: rgba(255,255,255,.05); color: #8b909b; }
 .pgr-sec-sub { font-weight: 600; font-size: 10.5px; color: #4b5563; margin-left: 6px; }
+/* 개통식 — 기다리는 호출 배너 */
+.pgr-act-wait {
+  margin: 10px 4px 0; padding: 10px 12px; border-radius: 12px; text-align: center;
+  background: rgba(201,180,88,.1); border: 1px solid rgba(201,180,88,.3);
+  color: #e6d9a3; font-size: 12.5px;
+}
+.pgr-act-wait b { color: #ffe89a; }

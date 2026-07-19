@@ -602,7 +602,8 @@
     window.GALLA_PAGER.popup({ name, kind: row.kind, code: row.code });
   }
   function attachPagerRealtime() {
-    if (!ME) return;
+    if (!ME || window.__pagerRingOn) return;   // dm-call.js가 이미 전 페이지 구독 중이면 중복 금지
+    window.__pagerRingOn = true;
     supabase.channel('pager:' + ME)
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'pager_messages', filter: 'box_owner=eq.' + ME },

@@ -53,6 +53,33 @@
     chanMine = sb.channel('call:' + ME)
       .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload || {}))
       .subscribe();
+    // 📟 삐삐 액정 팝업도 전 페이지에서 — dm 페이지 밖에서도 '삐삐가 왔습니다'가 떠야 한다
+    if (!window.__pagerRingOn) {
+      window.__pagerRingOn = true;
+      sb.channel('pagering:' + ME)
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'pager_messages', filter: 'box_owner=eq.' + ME },
+          async ({ new: row }) => {
+            try {
+              if (!window.GALLA_PAGER) {
+                const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+                await new Promise((res, rej) => {
+                  const sc = document.createElement('script');
+                  sc.src = '/js/dm-pager.js' + (v ? '?v=' + v[1] : '');
+                  sc.onload = res; sc.onerror = rej; document.head.appendChild(sc);
+                });
+              }
+              let name = '누군가';
+              try {
+                const { data: u } = await sb.from('users').select('nickname').eq('id', row.sender_id).maybeSingle();
+                name = u?.nickname || name;
+              } catch (_) {}
+              window.GALLA_PAGER.popup({ name, kind: row.kind, code: row.code });
+              window.GALLA_pagerRefresh?.();   // 삐삐 화면이 열려 있으면 목록도
+            } catch (_) {}
+          })
+        .subscribe();
+    }
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;

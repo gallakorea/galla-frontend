@@ -141,7 +141,7 @@
       const p = e.target.closest('[data-p]')?.dataset.p;
       if (!p) return;
       close();
-      if (p === 'go') window.GALLA_openPager?.();
+      if (p === 'go') { if (window.GALLA_openPager) window.GALLA_openPager(); else location.href = 'dm.html?pager=1'; }
     };
     clearTimeout(el._t);
     el._t = setTimeout(close, 12000);
@@ -163,13 +163,13 @@
       host.querySelector('#pgr-retry').onclick = () => mount(host);
       return;
     }
-    if (!data.activated) { renderActivation(host); return; }
+    if (!data.activated) { renderActivation(host, data.waiting || 0); return; }
     BOX = data;
     await render(host);
   }
 
   /* ── 📟 개통식 — 첫 진입의 의식. 번호를 '받는' 순간이 기억에 남아야 한다 ── */
-  function renderActivation(host) {
+  function renderActivation(host, waiting) {
     host.innerHTML = `
       <div class="pgr-wrap">
         <div class="pgr-device">
@@ -178,6 +178,7 @@
             <div class="pgr-lcd-main" id="pgr-act-num">--- ----</div>
             <div class="pgr-lcd-sub">미개통 삐삐</div>
           </div>
+          ${waiting ? `<div class="pgr-act-wait">📨 이미 도착한 호출 <b>${waiting}통</b>이 개통을 기다리고 있어요</div>` : ''}
           <div class="pgr-act-copy">
             나만의 삐삐 번호를 개통하면<br>친구들이 음성과 암호를 남길 수 있어요
           </div>
