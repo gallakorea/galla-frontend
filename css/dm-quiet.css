@@ -1484,3 +1484,17 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 .dm-stk-card i { font-style: normal; font-size: 10.5px; color: #8b909b; text-align: center; line-height: 1.35; }
 .dm-stk-card.on { border-color: var(--accent, #4361ff); background: rgba(67,97,255,.14); }
 .dm-stk-card.on b { color: #fff; }
+
+
+/* 색 스와치에 이름 + 선택 표시(✓) — '눌렀는데 반응이 없다'는 오해를 막는다 */
+.dm-bg-sw { width: 56px; height: 52px; }
+.dm-bg-sw > span {
+  position: absolute; left: 0; right: 0; bottom: 4px; text-align: center;
+  font-size: 10px; font-weight: 800; color: #dfe3ec; text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+.dm-bg-sw.on::after {
+  content: '✓'; position: absolute; top: 3px; right: 5px;
+  font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9);
+}
+/* 미리보기를 조금 키워 배경이 실제로 보이게 */
+.dm-prev-in { min-height: 196px; }

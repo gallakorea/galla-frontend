@@ -2348,7 +2348,18 @@
 
   /* 🖼 화면 — 글자·글씨체·배경·눈 효과·화면 방향.
      배경 무늬는 외부 이미지 없이 직접 그린 SVG라 저작권·용량 걱정이 없다. */
-  const BG_COLORS = ['#0b0c10', '#101826', '#161226', '#0f1f1a', '#241318', '#1c1a10'];
+  /* ⚠️ 처음엔 전부 #0b0c10 언저리라 골라도 '변화 없음'으로 보였다(실제로 그런 제보).
+     어두운 화면을 지키되 서로는 확실히 구분되는 색으로 다시 골랐다. */
+  const BG_COLORS = [
+    { v: '#0b0c10', n: '기본' },
+    { v: '#12203c', n: '네이비' },
+    { v: '#241640', n: '퍼플' },
+    { v: '#0f2a20', n: '포레스트' },
+    { v: '#35131f', n: '와인' },
+    { v: '#0d2b30', n: '틸' },
+    { v: '#2a2612', n: '카키' },
+    { v: '#1b2430', n: '슬레이트' },
+  ];
   /* 무늬는 외부 이미지 없이 직접 그린 SVG.
      ⚠️ 속성에 큰따옴표를 쓰면 url("…") 값이 거기서 끊긴다 — 무늬가 통째로 안 나왔다.
      작은따옴표만 쓰고, 전체를 encodeURIComponent로 감싸 안전하게 만든다. */
@@ -2448,7 +2459,8 @@
     // 색상·무늬
     const cbox = host.querySelector('#dm-bg-colors');
     if (cbox) cbox.innerHTML = BG_COLORS.map(c =>
-      `<button type="button" class="dm-bg-sw${UI.bgKind === 'color' && UI.bgValue === c ? ' on' : ''}" data-color="${c}" style="background-color:${c}"></button>`).join('');
+      `<button type="button" class="dm-bg-sw${UI.bgKind === 'color' && UI.bgValue === c.v ? ' on' : ''}" data-color="${c.v}"
+        style="background-color:${c.v}"><span>${c.n}</span></button>`).join('');
     const pbox = host.querySelector('#dm-bg-patterns');
     if (pbox) pbox.innerHTML = Object.keys(BG_PATTERNS).map(id =>
       `<button type="button" class="dm-bg-sw dm-bg-pat${UI.bgKind === 'pattern' && UI.bgValue === id ? ' on' : ''}" data-pat="${id}"
@@ -2458,6 +2470,7 @@
         if (b.dataset.color) { UI.bgKind = 'color'; UI.bgValue = b.dataset.color; }
         else { UI.bgKind = 'pattern'; UI.bgValue = b.dataset.pat; }
         savePrefs(); applyDisplay(); loadDisplay();
+        toastMini('배경을 바꿨어요 — 대화방에도 적용됐어요');
       };
     });
     // 로컬 토글(눈)
