@@ -264,13 +264,20 @@ document.addEventListener("DOMContentLoaded", () => {
     /* ── 인스타식 인터랙티브 드래그 전환 ──
        손가락에 1:1로 페이지가 붙어 끌리고, 옆 페이지 카드가 갭을 두고 따라온다.
        놓는 순간 거리/속도로 커밋 판정 → 끝까지 밀려나간 뒤 이동, 아니면 스냅백 */
+    // ⚠️ PAGE_ORDER와 반드시 같은 키를 가질 것 — 여기 빠진 탭으로 스와이프하면
+    //    미리보기 생성에서 오류가 나 드래그가 통째로 죽는다(dm·trend가 빠져 있었음).
     const PAGE_META = {
       index:   { name: "홈",   icon: "assets/icons/nav-home-active.svg" },
       predict: { name: "예측", icon: "assets/icons/nav-predict-active.svg" },
+      dm:      { name: "메시지", icon: "assets/icons/nav-dm-active.svg" },
+      trend:   { name: "트렌드", icon: "assets/icons/nav-trend-active.svg" },
+      mypage:  { name: "마이", icon: "assets/icons/nav-user-active.svg" },
+      // 레거시 키(예전 네비) — 혹시 남은 페이지가 참조할 수 있어 유지
       search:  { name: "검색", icon: "assets/icons/nav-search-active.svg" },
       plaza:   { name: "광장", icon: "assets/icons/nav-plaza-active.svg" },
-      mypage:  { name: "마이", icon: "assets/icons/nav-user-active.svg" },
     };
+    // 미리보기는 없어도 이동은 돼야 한다 — 메타가 비어도 죽지 않게 안전 접근
+    const metaOf = (k) => PAGE_META[k] || { name: "", icon: "" };
     const GAP = 14; // 페이지 사이 검은 틈 (인스타 감성)
 
     // 페이지 콘텐츠를 스테이지로 감싼다 (nav·이후 생성되는 모달들은 바깥에 남음)
@@ -342,8 +349,8 @@ document.addEventListener("DOMContentLoaded", () => {
         dir = dx < 0 ? 1 : -1;
         targetKey = PAGE_ORDER[curIdx + dir] || null;
         if (targetKey) {
-          const m = PAGE_META[targetKey];
-          peek.innerHTML = `<img src="${m.icon}" alt=""><span>${m.name}</span>`;
+          const m = metaOf(targetKey);
+          peek.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
         }
         locked = true;
         setDrag(true);
@@ -358,8 +365,8 @@ document.addEventListener("DOMContentLoaded", () => {
         dir = d2;
         targetKey = PAGE_ORDER[curIdx + dir] || null;
         if (targetKey) {
-          const m = PAGE_META[targetKey];
-          peek.innerHTML = `<img src="${m.icon}" alt=""><span>${m.name}</span>`;
+          const m = metaOf(targetKey);
+          peek.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
         } else peek.innerHTML = "";
       }
       // 목적지 없으면 고무줄 저항
