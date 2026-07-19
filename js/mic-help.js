@@ -74,7 +74,22 @@
       .mh-app ul{margin:0 0 12px;padding-left:17px}
       .mh-app li{font-size:12.5px;color:#c3c9d6;line-height:1.75}
       .mh-app li b{color:#fff}
-      @media (prefers-reduced-motion:reduce){.mh-lock{animation:none}#mic-help,.mh-body{transition:none}}
+      /* 설치형(PWA)용 — 홈 화면 아이콘 길게 누르기 그림 */
+      .mh-home{display:flex;align-items:center;gap:14px;justify-content:center;padding:6px 0 2px}
+      .mh-appicon{position:relative;width:56px;height:56px;border-radius:15px;flex:0 0 auto;
+        background:linear-gradient(135deg,#4a63ff,#2036c8);color:#fff;font-size:14px;font-weight:900;
+        display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(58,91,255,.4)}
+      .mh-press{position:absolute;inset:-6px;border-radius:20px;border:2.5px solid #7d8cff;
+        animation:mhPress 1.7s ease-in-out infinite}
+      .mh-bubble{background:#22252e;border:1px solid rgba(255,255,255,.12);border-radius:11px;
+        padding:9px 13px;font-size:13px;color:#e7ebf3;font-weight:800}
+      @keyframes mhPress{0%,100%{transform:scale(1);opacity:.25}50%{transform:scale(1.13);opacity:1}}
+      /* 권한 감시 배너 */
+      .mh-watch{display:flex;align-items:center;justify-content:center;gap:7px;
+        background:rgba(58,91,255,.12);border:1px solid rgba(106,123,255,.32);border-radius:12px;
+        padding:11px;margin-bottom:9px;font-size:12.5px;font-weight:800;color:#b9c3ff}
+      .mh-watch.ok{background:rgba(47,208,122,.14);border-color:rgba(47,208,122,.4);color:#7ef0ae}
+      @media (prefers-reduced-motion:reduce){.mh-lock,.mh-press{animation:none}#mic-help,.mh-body{transition:none}}
     `;
     document.head.appendChild(s);
   }
@@ -137,21 +152,46 @@
         <div class="mh-steps">
           <div class="mh-step"><span class="n">＋</span><span class="t">안 열리면 오른쪽 위 <b>⋮ (또는 ⋯)</b> → <b>다른 브라우저로 열기</b>를 눌러주세요</span></div>
         </div>`;
-    } else if (st === 'denied') {
+    } else if (st === 'denied' && isStandalone) {
+      /* 설치형(PWA)엔 주소창이 없다 — 안드로이드 시스템 설정이 유일한 경로.
+         홈 화면 아이콘 길게 누르기가 가장 빠르다(설정 앱을 헤맬 필요 없음). */
       head = '🎙 마이크가 차단돼 있어요';
-      sub = '한 번 <b>차단</b>을 누르면 브라우저가 기억해서 다시 묻지 않아요. 아래 위치에서 <b>허용</b>으로 바꿔주세요.';
+      sub = '앱으로 설치해서 쓰고 계셔서 <b>주소창이 없어요</b>. 휴대폰 설정에서 갈라의 마이크를 켜주세요 — 홈 화면에서 바로 갈 수 있어요.';
       body = `
         <div class="mh-art">
-          <div class="mh-bar"><span class="mh-lock">ⓘ</span><span class="mh-url">galla.im</span></div>
-          <div class="mh-point">↑ 주소창 <b>맨 왼쪽</b>의 이 아이콘을 눌러주세요</div>
+          <div class="mh-home">
+            <div class="mh-appicon">갈라<span class="mh-press"></span></div>
+            <div class="mh-bubble">ⓘ 앱 정보</div>
+          </div>
+          <div class="mh-point">↑ 홈 화면의 <b>갈라 아이콘을 꾹 누르면</b> 이 메뉴가 나와요</div>
         </div>
         <div class="mh-steps">
-          <div class="mh-step"><span class="n">1</span><span class="t">주소창 왼쪽 <b>${isIOS ? 'ぁA (또는 자물쇠)' : 'ⓘ 자물쇠'}</b> 아이콘 탭</span></div>
+          <div class="mh-step"><span class="n">1</span><span class="t">홈 화면 <b>갈라 아이콘 길게 누르기</b></span></div>
+          <div class="mh-step"><span class="n">2</span><span class="t"><b>ⓘ 앱 정보</b> 탭 (또는 위로 끌어올리기)</span></div>
+          <div class="mh-step"><span class="n">3</span><span class="t"><b>권한 → 마이크 → 허용</b></span></div>
+          <div class="mh-step"><span class="n">✓</span><span class="t">허용하는 즉시 <b>여기가 자동으로 바뀝니다</b> — 기다리시면 돼요</span></div>
+        </div>
+        <div class="mh-watch" id="mh-watch">🔎 마이크 설정을 지켜보는 중…</div>
+        <button class="mh-btn ghost" data-mh="reload" type="button">허용했어요 — 새로고침</button>`;
+    } else if (st === 'denied') {
+      head = '🎙 마이크가 차단돼 있어요';
+      sub = '한 번 <b>차단</b>을 누르면 브라우저가 기억해서 다시 묻지 않아요. 주소창 왼쪽 아이콘에서 <b>허용</b>으로 바꿔주세요.';
+      body = `
+        <div class="mh-art">
+          <div class="mh-bar">
+            <span class="mh-lock">${isIOS ? 'ぁA' : `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.1" fill="currentColor" stroke="none"/><circle cx="10" cy="17" r="2.1" fill="currentColor" stroke="none"/></svg>`}</span>
+            <span class="mh-url">galla.im</span>
+          </div>
+          <div class="mh-point">↑ 주소창 <b>맨 왼쪽</b>의 ${isIOS ? '<b>ぁA</b>' : '<b>이 모양(슬라이더)</b>'} 아이콘을 눌러주세요</div>
+        </div>
+        <div class="mh-steps">
+          <div class="mh-step"><span class="n">1</span><span class="t">주소창 왼쪽 <b>${isIOS ? 'ぁA' : '슬라이더 모양'}</b> 아이콘 탭</span></div>
           <div class="mh-step"><span class="n">2</span><span class="t">${isIOS ? '<b>웹사이트 설정</b>' : '<b>권한</b> (또는 사이트 설정)'} 선택</span></div>
           <div class="mh-step"><span class="n">3</span><span class="t"><b>마이크 → 허용</b>으로 변경</span></div>
-          <div class="mh-step"><span class="n">4</span><span class="t">돌아와서 아래 <b>새로고침</b>을 누르면 끝!</span></div>
+          <div class="mh-step"><span class="n">✓</span><span class="t">허용하는 즉시 <b>여기가 자동으로 바뀝니다</b></span></div>
         </div>
-        <button class="mh-btn" data-mh="reload" type="button">허용했어요 — 새로고침</button>`;
+        <div class="mh-watch" id="mh-watch">🔎 마이크 설정을 지켜보는 중…</div>
+        <button class="mh-btn ghost" data-mh="reload" type="button">허용했어요 — 새로고침</button>`;
     } else {
       head = '🎙 마이크 사용을 허용해주세요';
       sub = '아래 버튼을 누르면 권한 창이 떠요. <b>[허용]</b>을 눌러주세요 — <b>“이번만”</b>을 고르면 녹음할 때마다 다시 물어봅니다.';
@@ -169,6 +209,10 @@
     document.body.appendChild(el);
     void el.getBoundingClientRect();   // 강제 리플로우 — rAF는 백그라운드 탭에서 얼어붙는다
     el.classList.add('on');
+
+    /* 사용자가 설정 화면에서 허용하는 순간을 스스로 알아챈다 —
+       "돌아와서 새로고침"까지 시키면 절반은 길을 잃는다. */
+    if (st === 'denied') watchPermission(el);
 
     el.onclick = async e => {
       const a = e.target.closest('[data-mh]')?.dataset.mh;
@@ -195,6 +239,26 @@
         }
       }
     };
+  }
+
+  /* permissions의 change 이벤트 + 폴링 이중 감시(안드로이드는 change가 안 오기도 한다) */
+  function watchPermission(el) {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      const w = el.querySelector('#mh-watch');
+      if (w) { w.textContent = '✅ 마이크가 켜졌어요! 잠시 후 이어서 진행할게요'; w.classList.add('ok'); }
+      clearInterval(iv);
+      setTimeout(() => { close(); window.dispatchEvent(new CustomEvent('galla:mic-granted')); location.reload(); }, 1200);
+    };
+    const iv = setInterval(async () => {
+      if (!document.getElementById('mic-help')) return clearInterval(iv);
+      if (await permState() === 'granted') finish();
+    }, 1500);
+    navigator.permissions?.query({ name: 'microphone' })
+      .then(p => { p.onchange = () => { if (p.state === 'granted') finish(); }; })
+      .catch(() => {});
   }
 
   window.GALLA_micHelp = open;
