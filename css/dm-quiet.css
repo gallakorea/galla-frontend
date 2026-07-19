@@ -1407,3 +1407,25 @@ html[data-dm-face="serif"] .dm-bubble { font-family: ui-serif, "Apple SD Gothic 
 html[data-stk-size="s"] .dm-bubble.stk img { width: 84px; height: 84px; }
 html[data-stk-size="m"] .dm-bubble.stk img { width: 116px; height: 116px; }
 html[data-stk-size="l"] .dm-bubble.stk img { width: 148px; height: 148px; }
+
+
+/* ═══════ ⚙ 설정 메인 — 카테고리 행 ═══════ */
+/* 한 화면에 다 늘어놓지 않는다. 어디로 갈지만 보여주고 세부는 안에서. */
+.dm-cat {
+  display: flex; align-items: center; gap: 13px; cursor: pointer;
+  padding: 15px 16px; border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.dm-cat:active { background: rgba(255,255,255,.04); }
+.dm-cat-ic {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+  background: rgba(255,255,255,.06); color: #cdd9ff;
+}
+.dm-cat-ic svg { width: 17px; height: 17px; }
+.dm-cat-tx { flex: 1; min-width: 0; }
+.dm-cat-tx b { display: block; font-size: 15px; font-weight: 800; color: #fff; }
+.dm-cat-tx i {
+  display: block; font-style: normal; font-size: 12px; color: #8b909b;
+  margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dm-cat-go { flex: 0 0 auto; color: #5d6472; font-size: 19px; line-height: 1; }

@@ -248,6 +248,46 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="privacy" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">개인 · 보안</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-privacy">
+            <div class="dm-sec">${ICONS.lock}나를 찾는 방법</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
+              <button class="dm-toggle" id="dm-set-search" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>그룹채팅방 참여 설정</b><i>친구가 아닌 사람이 단체방에 초대하면 먼저 확인하고 들어가요</i></span>
+              <button class="dm-toggle" id="dm-set-gate" type="button"></button>
+            </div>
+
+            <div class="dm-sec">${ICONS.lock}잠금</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>화면 잠금</b><i id="dm-lock-sub">메시지를 열 때 4자리 비밀번호를 물어봐요 (이 기기에만 저장)</i></span>
+              <button class="dm-mic-btn" id="dm-set-lock" type="button">꺼짐</button>
+            </div>
+            <div class="dm-set-note">🔒 비밀대화는 대화방 메뉴에서 켤 수 있어요. 켜면 이 기기에서만 풀리는 자물쇠로 잠겨 서버도 내용을 못 봅니다.</div>
+
+            <div class="dm-sec">${ICONS.more}계정</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>개인정보 관리</b><i>닉네임·프로필·계정 정보</i></span>
+              <a class="dm-mic-btn" href="/account-edit.html">관리</a>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>내 아이템함</b><i>이모티콘·유령권 등 보유 아이템</i></span>
+              <a class="dm-mic-btn" href="/mypage.html">보관함</a>
+            </div>
+
+            <div class="dm-sec">${ICONS.block}차단한 사람</div>
+            <div id="dm-block-list"></div>
+            <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
+            <div id="dm-hidden-list"></div>
+          </div>
+        </div>
         <div class="dm-view" data-view="callset" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
@@ -273,6 +313,20 @@
                 <button type="button" data-v="ring">기본</button>
                 <button type="button" data-v="pager">삐삐</button>
               </span>
+            </div>
+
+            <div class="dm-sec">${ICONS.lock}권한</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>마이크 권한</b><i>미리 허용해두면 통화·음성 메시지에서 다시 묻지 않아요</i></span>
+              <button class="dm-mic-btn" id="dm-set-mic" type="button">확인 중…</button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>카메라 권한</b><i>면상톡(영상통화)에 필요해요</i></span>
+              <button class="dm-mic-btn" id="dm-set-cam" type="button">확인 중…</button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>마이크·카메라가 안 될 때</b><i>기기별로 권한 켜는 방법</i></span>
+              <a class="dm-mic-btn" href="/help-permissions.html">도움말</a>
             </div>
 
             <div class="dm-sec">${ICONS.sliders || ICONS.chat}통화 중</div>
@@ -337,6 +391,10 @@
             <div class="dm-set-col">
               <span class="dm-set-mid"><i>버튼·내 말풍선·강조에 쓰이는 색이에요. 앱 전체에 바로 적용됩니다.</i></span>
               <span class="dm-theme-row" id="dm-accents"></span>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>이모티콘</b><i>기본 그림체·크기·최근 기록</i></span>
+              <button class="dm-mic-btn" data-act="stickerSet" type="button">설정</button>
             </div>
             <div class="dm-set-note">
               🌙 갈라는 <b>밤에 보기 좋은 어두운 화면</b>을 기본으로 설계했어요(순흑 배경 + 인디고).
@@ -518,12 +576,14 @@
               <button class="dm-toggle" data-pref="typing" type="button"></button>
             </div>
             <div class="dm-set-row">
-              <span class="dm-set-mid"><b>그룹채팅방 참여 설정</b><i>친구가 아닌 사람이 단체방에 초대하면 <b>먼저 확인</b>하고 들어가요</i></span>
-              <button class="dm-toggle" id="dm-set-gate" type="button"></button>
-            </div>
-            <div class="dm-set-row">
               <span class="dm-set-mid"><b>내 난장 관리</b><i>내가 만들거나 들어간 오픈 채팅방</i></span>
               <button class="dm-mic-btn" data-act="goRooms" type="button">관리</button>
+            </div>
+
+            <div class="dm-sec">📟 삐삐</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>내 삐삐 번호</b><i id="dm-set-pager-sub">확인 중…</i></span>
+              <button class="dm-mic-btn" data-act="goPager" type="button">사서함</button>
             </div>
 
             <div class="dm-sec">${ICONS.chat}미디어</div>
@@ -645,110 +705,64 @@
             <span class="dm-head-sp"></span>
           </div>
           <div class="dm-list" id="dm-settings">
-            <!-- 내 정보 카드 — 카톡처럼 '나'부터 보여주고 시작한다 -->
+            <!-- 내 정보 -->
             <div class="dm-set-me" id="dm-set-me">
               <span class="dm-set-me-ava" id="dm-set-ava"></span>
               <span class="dm-set-me-tx"><b id="dm-set-nick">…</b><i id="dm-set-sub">불러오는 중</i></span>
               <a class="dm-set-manage" href="/account-edit.html">관리</a>
             </div>
 
-            <div class="dm-sec">${ICONS.bell}알림</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>알림</b><i id="dm-set-noti-sub">푸시·알림음·미리보기·키워드·집중 시간</i></span>
-              <button class="dm-mic-btn" data-act="notiSet" type="button">설정</button>
+            <!-- 카테고리만 남긴다. 세부는 각 화면에서 —
+                 한 화면에 다 늘어놓으면 '설정이 많다'가 아니라 '못 찾겠다'가 된다 -->
+            <div class="dm-cat" data-act="notiSet">
+              <span class="dm-cat-ic">${ICONS.bell}</span>
+              <span class="dm-cat-tx"><b>알림</b><i>푸시 · 알림음 · 미리보기 · 키워드 · 집중 시간</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>푸시 알림</b><i>앱을 닫아도 새 메시지를 기기 알림으로 — 아이폰은 홈 화면에 추가한 앱에서만 돼요</i></span>
-              <button class="dm-toggle" id="dm-set-push" type="button"></button>
+            <div class="dm-cat" data-act="chatSet2">
+              <span class="dm-cat-ic">${ICONS.chat}</span>
+              <span class="dm-cat-tx"><b>채팅</b><i>입력 중 표시 · 밀어서 답장 · 리액션 · 삐삐</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-
-            <div class="dm-sec">${ICONS.chat}채팅</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>채팅</b><i>입력 중 표시·밀어서 답장·글자 크기·간편녹음·자동재생</i></span>
-              <button class="dm-mic-btn" data-act="chatSet2" type="button">설정</button>
+            <div class="dm-cat" data-act="displaySet">
+              <span class="dm-cat-ic">${ICONS.sliders}</span>
+              <span class="dm-cat-tx"><b>화면</b><i>글자 크기 · 글씨체 · 배경화면 · 화면 방향</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-
-            <div class="dm-sec">📟 삐삐</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>내 삐삐 번호</b><i id="dm-set-pager-sub">확인 중…</i></span>
-              <button class="dm-mic-btn" data-act="goPager" type="button">사서함</button>
+            <div class="dm-cat" data-act="themeSet">
+              <span class="dm-cat-ic">${ICONS.smile}</span>
+              <span class="dm-cat-tx"><b>테마 · 이모티콘</b><i>포인트 색 · 기본 그림체 · 크기</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-
-            <div class="dm-sec">${ICONS.phone || ''}통화·미디어</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>마이크 권한</b><i>미리 허용해두면 육성톡·음성 메시지에서 다시 묻지 않아요</i></span>
-              <button class="dm-mic-btn" id="dm-set-mic" type="button">확인 중…</button>
+            <div class="dm-cat" data-act="callSet">
+              <span class="dm-cat-ic">${ICONS.phone}</span>
+              <span class="dm-cat-tx"><b>통화</b><i>벨소리 · 음량 · 저데이터 · 마이크/카메라 권한</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>카메라 권한</b><i>면상톡(영상통화)에 필요해요</i></span>
-              <button class="dm-mic-btn" id="dm-set-cam" type="button">확인 중…</button>
+            <div class="dm-cat" data-act="privacySet">
+              <span class="dm-cat-ic">${ICONS.lock}</span>
+              <span class="dm-cat-tx"><b>개인 · 보안</b><i>검색 허용 · 화면 잠금 · 차단 · 숨김</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>마이크·카메라가 안 될 때</b><i>기기별로 권한 켜는 방법 — 녹음·통화가 안 되면 여기</i></span>
-              <a class="dm-mic-btn" href="/help-permissions.html">도움말</a>
+            <div class="dm-cat" data-act="dataSet">
+              <span class="dm-cat-ic">${ICONS.image || ICONS.chat}</span>
+              <span class="dm-cat-tx"><b>데이터 · 저장공간</b><i>사용 공간 · 사진 화질 · 데이터 절약</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-
-            <div class="dm-sec">${ICONS.lock || ''}개인·보안</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
-              <button class="dm-toggle" id="dm-set-search" type="button"></button>
+            <div class="dm-cat" data-act="backupSet">
+              <span class="dm-cat-ic">${ICONS.eyeoff || ICONS.chat}</span>
+              <span class="dm-cat-tx"><b>백업</b><i>대화 보관 안내 · 내보내기</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>화면 잠금</b><i id="dm-lock-sub">메시지를 열 때 4자리 비밀번호를 물어봐요 (이 기기에만 저장)</i></span>
-              <button class="dm-mic-btn" id="dm-set-lock" type="button">꺼짐</button>
+            <div class="dm-cat" data-act="etcSet">
+              <span class="dm-cat-ic">${ICONS.more}</span>
+              <span class="dm-cat-tx"><b>기타</b><i>흔들어 신고 · 동영상 자동재생 · 검색 기록</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>개인정보 관리</b><i>닉네임·프로필·계정 정보</i></span>
-              <a class="dm-mic-btn" href="/account-edit.html">관리</a>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>내 아이템함</b><i>이모티콘·유령권 등 보유 아이템</i></span>
-              <a class="dm-mic-btn" href="/mypage.html">보관함</a>
-            </div>
-            <div class="dm-set-note">🔒 비밀대화는 대화방 메뉴에서 켤 수 있어요. 켜면 이 기기에서만 풀리는 자물쇠로 잠겨 서버도 내용을 못 봅니다.</div>
-            <div class="dm-sec">${ICONS.block}차단한 사람</div>
-            <div id="dm-block-list"></div>
-            <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
-            <div id="dm-hidden-list"></div>
-
-            <div class="dm-sec">${ICONS.sliders || ICONS.chat}꾸미기</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>테마</b><i>포인트 색 바꾸기</i></span>
-              <button class="dm-mic-btn" data-act="themeSet" type="button">설정</button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>이모티콘</b><i>기본 그림체·크기·최근 기록</i></span>
-              <button class="dm-mic-btn" data-act="stickerSet" type="button">설정</button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>화면</b><i>글자 크기·글씨체·배경화면·화면 방향</i></span>
-              <button class="dm-mic-btn" data-act="displaySet" type="button">설정</button>
-            </div>
-
-            <div class="dm-sec">${ICONS.phone}통화</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>통화</b><i>벨소리·통화 음량·저데이터·통화 기록</i></span>
-              <button class="dm-mic-btn" data-act="callSet" type="button">설정</button>
-            </div>
-
-            <div class="dm-sec">${ICONS.lock}데이터·백업</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>데이터 및 저장공간</b><i>저장공간·사진 화질·데이터 절약</i></span>
-              <button class="dm-mic-btn" data-act="dataSet" type="button">설정</button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>백업</b><i>대화 보관 안내 · 내보내기</i></span>
-              <button class="dm-mic-btn" data-act="backupSet" type="button">열기</button>
-            </div>
-
-            <div class="dm-sec">${ICONS.more}기타</div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>기타</b><i>흔들어 신고·동영상 자동재생·검색 기록</i></span>
-              <button class="dm-mic-btn" data-act="etcSet" type="button">설정</button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>버그 신고</b><i>안 되는 게 있으면 알려주세요 — 기기 정보가 함께 전송돼요</i></span>
-              <button class="dm-mic-btn" data-act="bugReport" type="button">신고</button>
+            <div class="dm-cat" data-act="bugReport">
+              <span class="dm-cat-ic">🐞</span>
+              <span class="dm-cat-tx"><b>버그 신고</b><i>안 되는 게 있으면 알려주세요</i></span>
+              <span class="dm-cat-go">${ICONS.chev || '›'}</span>
             </div>
             <div class="dm-set-ver" id="dm-set-ver"></div>
           </div>
@@ -922,6 +936,7 @@
       else if (act === 'displaySet') { showView('display'); loadDisplay(); }
       else if (act === 'themeSet') { showView('theme'); loadTheme(); applyDisplay(); }
       else if (act === 'callSet') { showView('callset'); loadCallSet(); }
+      else if (act === 'privacySet') { showView('privacy'); loadPrivacy(); }
       else if (act === 'etcSet') { showView('etc'); loadEtc(); }
       else if (act === 'clearCalls') { await clearCalls(e.target.closest('[data-act]')); }
       else if (act === 'clearSearch') {
@@ -1947,11 +1962,27 @@
       to.onchange = () => { UI.dndTo = to.value || '07:00'; savePrefs(); };
     }
     paintDnd();
-    // 상세 화면의 푸시 토글은 설정 화면 것과 같은 동작을 공유
-    const p2 = host.querySelector('#dm-set-push2'), p1 = ROOT.querySelector('#dm-set-push');
-    if (p2 && p1) {
-      p2.className = p1.className;
-      p2.onclick = () => { p1.click(); setTimeout(() => { p2.className = p1.className; }, 400); };
+    // 푸시 토글 — 이제 이 화면이 유일한 자리라 직접 배선한다
+    const ptg = host.querySelector('#dm-set-push2');
+    if (ptg) {
+      const paintPush = async () => {
+        const st = await (window.GALLA_pushStatus?.() ?? 'unsupported');
+        ptg.classList.toggle('on', st === 'on');
+        ptg.dataset.st = st;
+      };
+      paintPush();
+      ptg.onclick = async () => {
+        const st = ptg.dataset.st;
+        try {
+          if (st === 'on') { await window.GALLA_pushDisable(); toastMini('푸시 알림을 껐어요'); }
+          else if (st === 'unsupported') { toastMini('이 브라우저는 푸시를 지원하지 않아요 — 아이폰은 홈 화면에 추가 후 앱에서 켜주세요'); }
+          else if (st === 'denied') { toastMini('알림이 차단돼 있어요 — 기기 설정에서 갈라 알림을 허용해주세요'); }
+          else { await window.GALLA_pushEnable(); toastMini('푸시 알림을 켰어요'); }
+        } catch (e) {
+          toastMini(String(e.message) === 'denied' ? '알림 권한이 거부됐어요' : '푸시 설정에 실패했어요');
+        }
+        paintPush();
+      };
     }
   }
 
@@ -1960,6 +1991,16 @@
   async function loadChatSet2() {
     const host = ROOT.querySelector('#dm-chatset2');
     if (!host) return;
+    // 내 삐삐 번호 (설정 메인에서 이 화면으로 옮겨왔다)
+    (async () => {
+      const el = host.querySelector('#dm-set-pager-sub');
+      if (!el) return;
+      try {
+        const { data } = await supabase.rpc('pager_my_box');
+        el.textContent = data?.activated === false ? '아직 개통 전이에요 — 사서함에서 번호를 받으세요'
+          : (data?.number || '번호를 불러오지 못했어요');
+      } catch (_) { el.textContent = '번호를 불러오지 못했어요'; }
+    })();
     /* 그룹 초대 게이트는 '서버가 판단할 설정'이라 계정에 저장한다
        (로컬에 두면 다른 사람이 나를 초대할 때 서버가 알 수 없다) */
     const gate = host.querySelector('#dm-set-gate');
@@ -2038,6 +2079,9 @@
         document.querySelectorAll('#dm-call audio, #dm-call video').forEach(el => { el.volume = Math.min(1, UI.callVolume / 100); });
       };
     }
+    // 마이크·카메라 권한 (메인에서 이 화면으로 옮겨왔다)
+    bindPermButton(host.querySelector('#dm-set-mic'), 'microphone', { audio: true });
+    bindPermButton(host.querySelector('#dm-set-cam'), 'camera', { video: true });
     // 통화 기록 개수
     (async () => {
       const sub = host.querySelector('#dm-calllog-sub');
@@ -2047,6 +2091,34 @@
       sub.textContent = count ? `내가 남긴 통화 기록 ${count}건` : '남은 통화 기록이 없어요';
     })();
   }
+  /* 권한 버튼 공용 — 마이크·카메라가 같은 흐름을 쓴다(중복 구현 금지) */
+  async function bindPermButton(btn, permName, constraints) {
+    if (!btn) return;
+    const paint = async () => {
+      let st = 'unknown';
+      try { st = (await navigator.permissions.query({ name: permName })).state; } catch (_) {}
+      btn.textContent = st === 'granted' ? '허용됨' : st === 'denied' ? '차단됨' : '허용받기';
+      btn.classList.toggle('ok', st === 'granted');
+      btn.dataset.st = st;
+    };
+    await paint();
+    btn.onclick = async () => {
+      if (btn.dataset.st === 'granted') return toastMini('이미 허용돼 있어요');
+      try {
+        const s = await navigator.mediaDevices.getUserMedia(constraints);
+        s.getTracks().forEach(t => t.stop());
+        toastMini('준비 완료');
+      } catch (_) {
+        if (!window.GALLA_micHelp) {
+          const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+          await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
+        }
+        window.GALLA_micHelp?.({ video: !!constraints.video });
+      }
+      paint();
+    };
+  }
+
   async function clearCalls(btn) {
     if (!confirm('대화방에 남은 통화 기록을 모두 지울까요?\n(대화 내용은 그대로 남습니다)')) return;
     if (btn) { btn.disabled = true; btn.textContent = '지우는 중…'; }
@@ -2489,38 +2561,8 @@
   }
 
   async function loadSettings() {
-    await loadPrefs(true);
-    const tg = ROOT.querySelector('#dm-set-search');
-    const paintTg = () => { tg.classList.toggle('on', PREF.searchable); tg.textContent = '';   /* 스위치는 CSS가 그림 */ };
-    paintTg();
-    tg.onclick = async () => {
-      PREF.searchable = !PREF.searchable;
-      paintTg();
-      await supabase.from('dm_settings')
-        .upsert({ user_id: ME, searchable: PREF.searchable }, { onConflict: 'user_id' });
-    };
-    const ptg = ROOT.querySelector('#dm-set-push');
-    if (ptg) {
-      const paintPush = async () => {
-        const st = await (window.GALLA_pushStatus?.() ?? 'unsupported');
-        ptg.classList.toggle('on', st === 'on');
-        ptg.dataset.st = st;
-      };
-      paintPush();
-      ptg.onclick = async () => {
-        const st = ptg.dataset.st;
-        try {
-          if (st === 'on') { await window.GALLA_pushDisable(); toastMini('푸시 알림을 껐어요'); }
-          else if (st === 'unsupported') { toastMini('이 브라우저는 푸시를 지원하지 않아요 — 아이폰은 홈 화면에 추가 후 앱에서 켜주세요'); }
-          else if (st === 'denied') { toastMini('알림이 차단돼 있어요 — 기기 설정에서 GALLA 알림을 허용해주세요'); }
-          else { await window.GALLA_pushEnable(); toastMini('푸시 알림을 켰어요'); }
-        } catch (e) {
-          toastMini(String(e.message) === 'denied' ? '알림 권한이 거부됐어요' : '푸시 설정에 실패했어요');
-        }
-        paintPush();
-      };
-    }
-    // ── 내 정보 카드 ──
+    /* 메인은 '어디로 갈지'만 보여준다 — 세부 배선은 각 하위 화면의 로더가 맡는다.
+       (한 화면에 다 늘어놓으면 설정이 많은 게 아니라 못 찾는 화면이 된다) */
     (async () => {
       await profilesFor([ME]);
       const me = PROFILES[ME] || {};
@@ -2531,115 +2573,71 @@
       const sub = ROOT.querySelector('#dm-set-sub');
       if (sub) sub.textContent = '프로필·닉네임 변경은 [관리]에서';
     })();
-
-    // ── 로컬 토글 (미리보기·배너·소리·엔터) ──
-    ROOT.querySelectorAll('[data-pref]').forEach(btn => {
-      const k = btn.dataset.pref;
-      const paint = () => btn.classList.toggle('on', !!UI[k]);
-      paint();
-      btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); toastMini(UI[k] ? '켰어요' : '껐어요'); };
-    });
-    // ── 글자 크기 세그먼트 ──
-    const seg = ROOT.querySelector('[data-pref-seg="fontsize"]');
-    if (seg) {
-      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.fontsize));
-      paintSeg();
-      seg.onclick = e => {
-        const b = e.target.closest('button[data-v]');
-        if (!b) return;
-        UI.fontsize = b.dataset.v; savePrefs(); paintSeg();
-      };
-    }
-    // ── 삐삐 번호 ──
-    (async () => {
-      const el = ROOT.querySelector('#dm-set-pager-sub');
-      if (!el) return;
-      try {
-        const { data } = await supabase.rpc('pager_my_box');
-        el.textContent = data?.activated === false ? '아직 개통 전이에요 — 사서함에서 번호를 받으세요'
-          : (data?.number || '번호를 불러오지 못했어요');
-      } catch (_) { el.textContent = '번호를 불러오지 못했어요'; }
-    })();
-    // ── 카메라 권한 ──
-    const camBtn = ROOT.querySelector('#dm-set-cam');
-    if (camBtn) {
-      const paintCam = async () => {
-        let st = 'unknown';
-        try { st = (await navigator.permissions.query({ name: 'camera' })).state; } catch (_) {}
-        camBtn.textContent = st === 'granted' ? '허용됨' : st === 'denied' ? '차단됨' : '허용받기';
-        camBtn.classList.toggle('ok', st === 'granted');
-        camBtn.dataset.st = st;
-      };
-      paintCam();
-      camBtn.onclick = async () => {
-        if (camBtn.dataset.st === 'granted') return toastMini('이미 허용돼 있어요');
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ video: true });
-          s.getTracks().forEach(t => t.stop());
-          toastMini('카메라 준비 완료');
-        } catch (_) {
-          if (!window.GALLA_micHelp) {
-            const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
-            await new Promise(res => { const sc = document.createElement('script'); sc.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); sc.onload = sc.onerror = res; document.head.appendChild(sc); });
-          }
-          window.GALLA_micHelp?.({ video: true });
-        }
-        paintCam();
-      };
-    }
-    // ── 버전 표기 ──
     const verEl = ROOT.querySelector('#dm-set-ver');
     if (verEl) {
       const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
       verEl.textContent = 'GALLA · 버전 ' + (v ? v[1] : '-');
     }
+  }
 
-    const lockBtn = ROOT.querySelector('#dm-set-lock');
-    if (lockBtn) { paintLockBtn(lockBtn); lockBtn.onclick = () => toggleLock(lockBtn); }
+  /* 차단·숨김 목록 — 개인·보안 화면에서 쓴다(예전엔 loadSettings 안에 있었다) */
+  const paintList = async (boxId, set, table, col) => {
+    const box = ROOT.querySelector(boxId);
+    if (!box) return;
+    const ids = [...set];
+    if (!ids.length) { box.innerHTML = `<div class="dm-set-empty">없음</div>`; return; }
+    await profilesFor(ids);
+    box.innerHTML = ids.map(id => `
+      <div class="dm-set-row">
+        ${avaHTML(id)}
+        <span class="dm-set-mid"><b>${esc(PROFILES[id]?.nickname || '익명')}</b></span>
+        <button class="dm-unset" data-id="${id}" type="button">해제</button>
+      </div>`).join('');
+    box.querySelectorAll('.dm-unset').forEach(btn => btn.onclick = async () => {
+      const id = btn.dataset.id;
+      set.delete(id);
+      await supabase.from(table).delete().eq('user_id', ME).eq(col, id);
+      paintList(boxId, set, table, col);
+    });
+  };
 
-    const micBtn = ROOT.querySelector('#dm-set-mic');
-    if (micBtn) {
-      const paintMic = async () => {
-        let st = 'unknown';
-        try { st = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (_) {}
-        micBtn.textContent = st === 'granted' ? '허용됨' : st === 'denied' ? '차단됨' : '허용받기';
-        micBtn.classList.toggle('ok', st === 'granted');
-        micBtn.dataset.st = st;
-      };
-      paintMic();
-      micBtn.onclick = async () => {
-        if (micBtn.dataset.st === 'granted') return toastMini('이미 허용돼 있어요');
-        if (micBtn.dataset.st === 'denied') {
-          // 말로만 안내하면 못 찾는다 — 위치를 짚어주는 시트를 연다
-          if (!window.GALLA_micHelp) {
-            const v = ([...document.scripts].map(s => s.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
-            await new Promise(res => { const s = document.createElement('script'); s.src = '/js/mic-help.js' + (v ? '?v=' + v[1] : ''); s.onload = s.onerror = res; document.head.appendChild(s); });
-          }
-          return void window.GALLA_micHelp?.({});
-        }
-        const r = await (window.GALLA_callWarmup?.() ?? 'unsupported');
-        toastMini(r === 'granted' ? '통화 준비 완료 — 이제 다시 묻지 않아요' : '권한을 받지 못했어요');
-        paintMic();
+  /* 🔐 개인·보안 — 메인에 흩어져 있던 항목을 한자리에 모았다 */
+  async function loadPrivacy() {
+    const host = ROOT.querySelector('#dm-privacy');
+    if (!host) return;
+    await loadPrefs(true);
+    // 검색 허용
+    const sBtn = host.querySelector('#dm-set-search');
+    if (sBtn) {
+      const paint = () => sBtn.classList.toggle('on', !!PREF.searchable);
+      paint();
+      sBtn.onclick = async () => {
+        PREF.searchable = !PREF.searchable;
+        paint();
+        await supabase.from('dm_settings')
+          .upsert({ user_id: ME, searchable: PREF.searchable }, { onConflict: 'user_id' });
+        toastMini(PREF.searchable ? '검색으로 나를 찾을 수 있어요' : '검색에서 나를 숨겼어요');
       };
     }
-    const paintList = async (boxId, set, table, col) => {
-      const box = ROOT.querySelector(boxId);
-      const ids = [...set];
-      if (!ids.length) { box.innerHTML = `<div class="dm-set-empty">없음</div>`; return; }
-      await profilesFor(ids);
-      box.innerHTML = ids.map(id => `
-        <div class="dm-set-row">
-          ${avaHTML(id)}
-          <span class="dm-set-mid"><b>${esc(PROFILES[id]?.nickname || '익명')}</b></span>
-          <button class="dm-unset" data-id="${id}" type="button">해제</button>
-        </div>`).join('');
-      box.querySelectorAll('.dm-unset').forEach(btn => btn.onclick = async () => {
-        const id = btn.dataset.id;
-        set.delete(id);
-        await supabase.from(table).delete().eq('user_id', ME).eq(col, id);
-        paintList(boxId, set, table, col);
-      });
-    };
+    // 그룹 초대 게이트(서버 저장)
+    const gate = host.querySelector('#dm-set-gate');
+    if (gate) {
+      const { data } = await supabase.from('dm_user_settings').select('gate_group_invite').eq('user_id', ME).maybeSingle();
+      let on = !!data?.gate_group_invite;
+      const paint = () => gate.classList.toggle('on', on);
+      paint();
+      gate.onclick = async () => {
+        on = !on; paint();
+        const { error } = await supabase.from('dm_user_settings')
+          .upsert({ user_id: ME, gate_group_invite: on, updated_at: new Date().toISOString() });
+        if (error) { on = !on; paint(); toastMini('설정을 저장하지 못했어요'); }
+        else toastMini(on ? '모르는 사람의 초대는 먼저 확인할게요' : '초대를 바로 받습니다');
+      };
+    }
+    // 화면 잠금
+    const lockBtn = host.querySelector('#dm-set-lock');
+    if (lockBtn) { paintLockBtn(lockBtn); lockBtn.onclick = () => toggleLock(lockBtn); }
+    // 차단·숨김 목록
     paintList('#dm-block-list', PREF.blocks, 'dm_blocks', 'blocked');
     paintList('#dm-hidden-list', PREF.hidden, 'dm_hidden', 'hidden');
   }
