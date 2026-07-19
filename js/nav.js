@@ -125,7 +125,9 @@ document.addEventListener("DOMContentLoaded", () => {
   //   .hdr-hidden   : 아래로 스크롤 → 헤더 전체(로고·＋·♥·금액·DM·설정)가 위로 사라짐
   //                   위로 스크롤하면 다시 표시. 전 페이지 동일.
   const _page = document.body.dataset.page;
-  const hdrEl = ["index", "predict", "search", "plaza", "mypage", "trend", "dm"].includes(_page)
+  // ⚠️ "dm" 제외: DM은 내부 스크롤 컨테이너 구조라 헤더가 오르내리면 탭바(채팅·친구·난장·삐삐)와
+  //    겹쳐 보인다("정렬이 무너짐"). DM 헤더는 항상 고정.
+  const hdrEl = ["index", "predict", "search", "plaza", "mypage", "trend"].includes(_page)
     ? document.querySelector(".header") : null;
   if (navEl || hdrEl) {
     // 스크롤 주체가 기기마다 window/documentElement/body로 달라 세 곳에서 위치를 읽는다.

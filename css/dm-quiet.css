@@ -983,3 +983,21 @@ body.tossface .dm-ptt-hint {
   color: #e6d9a3; font-size: 12.5px;
 }
 .pgr-act-wait b { color: #ffe89a; }
+
+
+/* ═══ DM 페이지 크롬 안정화 ═══
+   증상: 삐삐 등에서 스크롤 시 헤더와 탭바(채팅·친구·난장·삐삐)가 겹쳐 보임.
+   원인: 내부 스크롤 컨테이너 + 헤더 자동 숨김이 만나면 슬라이드 중 두 줄이 교차한다.
+   대응: ① nav.js에서 dm 헤더 자동숨김 제외 ② 탭바를 불투명 sticky로 못 박아
+        어떤 상황에서도 다른 요소가 뒤에 비치지 않게. */
+.dm-root.page .dm-tabs {
+  position: sticky; top: 0; z-index: 5;
+  background: #000;                       /* 뒤 내용이 비쳐 '겹친 것처럼' 보이는 것 차단 */
+}
+/* 헤더는 DM 페이지에서 항상 제자리 — 자동 숨김 클래스가 남아 있어도 무력화 */
+body[data-page="dm"] .header.hdr-hidden { transform: none; }
+body[data-page="dm"] .header.hdr-nologo .logo { opacity: 1; visibility: visible; }
+
+/* 받은 호출 목록이 플로팅 네비에 가리지 않게(네비 64px + 여유 + 안전영역) */
+.dm-root.page #dm-pager { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+.pgr-list { padding-bottom: 4px; }
