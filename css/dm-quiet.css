@@ -1285,3 +1285,14 @@ html[data-dm-font="l"] .dm-bubble { font-size: 16.5px; }
 }
 .dm-react-pop button:active { background: rgba(255,255,255,.12); }
 @media (prefers-reduced-motion: reduce) { .dm-react, .dm-react-pop { animation: none; transition: none } }
+
+
+/* 데이터·백업 화면 */
+.dm-set-val { flex: none; font-size: 13.5px; font-weight: 900; color: #cdd9ff; }
+.dm-backup-hero {
+  margin: 14px; padding: 16px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(106,123,255,.16), rgba(58,91,255,.05));
+  border: 1px solid rgba(106,123,255,.28);
+}
+.dm-backup-hero b { display: block; font-size: 15px; font-weight: 900; color: #fff; margin-bottom: 6px; }
+.dm-backup-hero i { display: block; font-style: normal; font-size: 12.5px; line-height: 1.65; color: #c3c9d6; }

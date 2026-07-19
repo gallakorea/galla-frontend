@@ -246,6 +246,65 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="dataset" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">데이터 및 저장공간</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-dataset">
+            <div class="dm-sec">${ICONS.lock}저장공간 관리</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>이 기기가 쓰는 공간</b><i id="dm-storage-sub">계산 중…</i></span>
+              <span class="dm-set-val" id="dm-storage-val">…</span>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>임시 데이터 삭제</b><i>캐시된 이미지·화면 파일을 지워요. 대화는 지워지지 않아요</i></span>
+              <button class="dm-mic-btn" data-act="clearCache" type="button">삭제</button>
+            </div>
+
+            <div class="dm-sec">${ICONS.img || ICONS.chat}미디어 전송 품질</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>사진 화질</b><i>낮출수록 빨리 가고 데이터를 아껴요</i></span>
+              <span class="dm-seg" data-pref-seg="photoQuality">
+                <button type="button" data-v="save">절약</button>
+                <button type="button" data-v="high">고화질</button>
+                <button type="button" data-v="origin">원본</button>
+              </span>
+            </div>
+            <div class="dm-set-note" id="dm-quality-note"></div>
+
+            <div class="dm-sec">${ICONS.chat}미디어 자동 다운로드</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>데이터 절약 모드</b><i>모바일 데이터일 땐 사진을 눌러야 불러와요 (Wi-Fi에선 평소대로)</i></span>
+              <button class="dm-toggle" data-pref="dataSaver" type="button"></button>
+            </div>
+          </div>
+        </div>
+        <div class="dm-view" data-view="backup" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">백업</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-backup">
+            <div class="dm-backup-hero">
+              <b>대화는 서버에 안전하게 있어요</b>
+              <i>갈라는 대화를 계정에 저장해요. 폰을 바꾸거나 앱을 지웠다 깔아도 로그인만 하면 그대로 있습니다 — 따로 백업하지 않아도 돼요.</i>
+            </div>
+            <div class="dm-sec">${ICONS.chat}내 대화 내려받기</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>대화 내보내기</b><i id="dm-export-sub">텍스트 파일로 저장 — 보관하거나 검색용으로 쓰세요</i></span>
+              <button class="dm-mic-btn" data-act="exportChats" type="button">내보내기</button>
+            </div>
+            <div class="dm-set-note">
+              ⚠️ <b>비밀대화</b>는 이 기기에서만 풀리는 자물쇠로 잠겨 있어요. 서버에도 암호문만 있어서 <b>백업·복원·내보내기 모두 안 됩니다</b> — 기기를 바꾸면 이전 비밀대화는 볼 수 없어요. 그게 비밀대화의 약속입니다.
+            </div>
+            <div class="dm-set-note">
+              📟 삐삐 음성과 사진은 계정에 함께 보관돼요. 다만 <b>보낸 삐삐는 원래 다시 볼 수 없습니다</b>(그 시절 규칙이에요).
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="chatset2" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
@@ -444,7 +503,17 @@
             <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
             <div id="dm-hidden-list"></div>
 
-            <div class="dm-sec">${ICONS.more || ''}기타</div>
+            <div class="dm-sec">${ICONS.lock}데이터·백업</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>데이터 및 저장공간</b><i>저장공간·사진 화질·데이터 절약</i></span>
+              <button class="dm-mic-btn" data-act="dataSet" type="button">설정</button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>백업</b><i>대화 보관 안내 · 내보내기</i></span>
+              <button class="dm-mic-btn" data-act="backupSet" type="button">열기</button>
+            </div>
+
+            <div class="dm-sec">${ICONS.more}기타</div>
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>버그 신고</b><i>안 되는 게 있으면 알려주세요 — 기기 정보가 함께 전송돼요</i></span>
               <button class="dm-mic-btn" data-act="bugReport" type="button">신고</button>
@@ -611,6 +680,10 @@
       else if (act === 'goPager') { showView('inbox'); setTab('pager'); }
       else if (act === 'notiSet') { showView('notiset'); loadNotiSet(); }
       else if (act === 'chatSet2') { showView('chatset2'); loadChatSet2(); }
+      else if (act === 'dataSet') { showView('dataset'); loadDataSet(); }
+      else if (act === 'backupSet') { showView('backup'); }
+      else if (act === 'clearCache') { await clearCaches(e.target.closest('[data-act]')); }
+      else if (act === 'exportChats') { await exportChats(e.target.closest('[data-act]')); }
       else if (act === 'goRooms') { showView('inbox'); setTab('rooms'); }
       else if (act === 'toSettings') { goBack(); }
       else if (act === 'bugReport') {
@@ -1480,6 +1553,8 @@
     voiceBtn: true,          // 입력창 간편녹음 버튼
     autoplay: true,          // 영상 말풍선 자동재생
     reactions: true,         // 두 번 탭 리액션
+    photoQuality: 'high',    // 사진 화질: origin | high | save
+    dataSaver: false,        // 모바일 데이터에서 미디어 아끼기
   };
   let UI = { ...PREF_DEF };
   try { UI = { ...PREF_DEF, ...JSON.parse(localStorage.getItem(PREF_KEY) || '{}') }; } catch (_) {}
@@ -1616,6 +1691,108 @@
       el.autoplay = !!UI.autoplay;
       if (!UI.autoplay) { try { el.pause(); } catch (_) {} }
     });
+  }
+
+  /* 💾 데이터·저장공간 — 숫자는 추정이 아니라 브라우저가 알려주는 실측값을 쓴다 */
+  const QUALITY_NOTE = {
+    save:   '가로 1080px로 줄여 보내요. 카톡 "일반 화질"쯤 — 데이터가 가장 적게 들어요.',
+    high:   '가로 1600px로 줄여 보내요. 눈으로 보기엔 원본과 거의 같아요(기본값).',
+    origin: '찍은 그대로 보내요. 화질은 최고지만 용량이 크고 느려요.',
+  };
+  const fmtBytes = n => n >= 1073741824 ? (n / 1073741824).toFixed(2) + 'GB'
+    : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB'
+    : n >= 1024 ? Math.round(n / 1024) + 'KB' : (n || 0) + 'B';
+  async function loadDataSet() {
+    const host = ROOT.querySelector('#dm-dataset');
+    if (!host) return;
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); };
+    });
+    const seg = host.querySelector('[data-pref-seg="photoQuality"]');
+    const note = host.querySelector('#dm-quality-note');
+    const paintSeg = () => {
+      seg?.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.photoQuality));
+      if (note) note.textContent = QUALITY_NOTE[UI.photoQuality] || '';
+    };
+    paintSeg();
+    if (seg) seg.onclick = e => {
+      const b = e.target.closest('button[data-v]');
+      if (!b) return;
+      UI.photoQuality = b.dataset.v; savePrefs(); paintSeg();
+    };
+    // 실제 사용량 — navigator.storage.estimate()가 브라우저 실측치를 준다
+    const val = host.querySelector('#dm-storage-val'), sub = host.querySelector('#dm-storage-sub');
+    try {
+      const est = await navigator.storage.estimate();
+      if (val) val.textContent = fmtBytes(est.usage || 0);
+      if (sub) sub.textContent = est.quota
+        ? `이 브라우저가 갈라에 허용한 공간 ${fmtBytes(est.quota)} 중`
+        : '캐시된 이미지·화면 파일';
+    } catch (_) {
+      if (val) val.textContent = '알 수 없음';
+      if (sub) sub.textContent = '이 브라우저는 사용량을 알려주지 않아요';
+    }
+  }
+  async function clearCaches(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '지우는 중…'; }
+    let freed = 0;
+    try {
+      const before = (await navigator.storage.estimate()).usage || 0;
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      const after = (await navigator.storage.estimate()).usage || 0;
+      freed = Math.max(0, before - after);
+    } catch (_) {}
+    if (btn) { btn.disabled = false; btn.textContent = '삭제'; }
+    toastMini(freed ? `${fmtBytes(freed)}를 비웠어요` : '비울 임시 데이터가 없었어요');
+    loadDataSet();
+  }
+  /* 📤 대화 내보내기 — 서버에 있다고 해서 '내 것'이 아닌 건 아니다.
+     읽을 수 있는 텍스트로 뽑아준다(비밀대화는 원리상 제외). */
+  async function exportChats(btn) {
+    if (!ME) return;
+    if (btn) { btn.disabled = true; btn.textContent = '모으는 중…'; }
+    try {
+      const { data: ths } = await supabase.from('dm_threads').select('id,user_lo,user_hi');
+      const peers = (ths || []).map(t => (t.user_lo === ME ? t.user_hi : t.user_lo));
+      await profilesFor(peers);
+      let out = `GALLA 대화 내보내기\n생성: ${new Date().toLocaleString('ko-KR')}\n\n`;
+      let n = 0;
+      for (const t of (ths || [])) {
+        const peer = t.user_lo === ME ? t.user_hi : t.user_lo;
+        const name = PROFILES[peer]?.nickname || '상대';
+        const { data: ms } = await supabase.from('dm_messages')
+          .select('sender_id, kind, body, created_at, deleted_at')
+          .eq('thread_id', t.id).order('created_at').limit(2000);
+        const rows = (ms || []).filter(m => !m.deleted_at && m.kind !== 'e2e');
+        if (!rows.length) continue;
+        out += `\n───── ${name} 님과의 대화 (${rows.length}개) ─────\n`;
+        rows.forEach(m => {
+          const who = m.sender_id === ME ? '나' : name;
+          const when = new Date(String(m.created_at) + 'Z').toLocaleString('ko-KR');
+          const what = m.kind === 'text' ? (m.body || '')
+            : m.kind === 'voice' ? '[음성 메시지]'
+            : m.kind === 'image' ? '[사진]' : `[${m.kind}]`;
+          out += `[${when}] ${who}: ${what}\n`;
+          n++;
+        });
+      }
+      out += `\n\n총 ${n}개 메시지 · 비밀대화는 이 기기에서만 풀리므로 포함되지 않았습니다.\n`;
+      const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `galla-대화-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      toastMini(`${n}개 메시지를 내보냈어요`);
+    } catch (e) {
+      console.error('[dm] export', e);
+      toastMini('내보내기에 실패했어요');
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '내보내기'; }
   }
 
   /* 🔒 화면 잠금 — 이 기기에서만 쓰는 4자리 잠금.
@@ -3230,10 +3407,37 @@
     }
     await sendMessage({ body, reply_to });
   }
+  /* 사진 화질 설정을 실제 전송에 반영 — 설정만 있고 안 먹으면 가짜다.
+     캔버스로 긴 변을 줄여 JPEG로 다시 굽는다(원본 선택 시 그대로 통과). */
+  const QUALITY_MAX = { save: 1080, high: 1600, origin: 0 };
+  function shrinkImage(file) {
+    const max = QUALITY_MAX[UI.photoQuality] || 0;
+    if (!max || !/^image\/(jpe?g|png|webp)$/i.test(file.type)) return Promise.resolve(file);
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const long = Math.max(img.width, img.height);
+        if (long <= max) return resolve(file);             // 이미 작으면 손대지 않는다
+        const r = max / long;
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(b => {
+          if (!b || b.size >= file.size) return resolve(file);   // 되레 커지면 원본이 낫다
+          resolve(new File([b], file.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', UI.photoQuality === 'save' ? 0.72 : 0.86);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
   async function onPickImage(e) {
-    const f = e.target.files && e.target.files[0];
+    let f = e.target.files && e.target.files[0];
     e.target.value = '';
     if (!f || !curThread) return;
+    f = await shrinkImage(f);
     if (!window.GALLA_UPLOAD_MEDIA) {
       try { await loadScript('/js/media-upload.js'); } catch (_) { return alert('사진 전송을 준비하지 못했어요.'); }
     }
