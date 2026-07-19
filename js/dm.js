@@ -168,6 +168,8 @@
           </div>
           <div class="dm-share-banner" id="dm-share-banner" hidden></div>
           <div class="dm-list" id="dm-inbox-wrap">
+            <div class="dm-invites" id="dm-invites" hidden></div>
+            <div class="dm-folders" id="dm-folders" hidden></div>
             <div id="dm-inbox"></div>
           </div>
           <div class="dm-list" id="dm-friends" hidden>
@@ -318,6 +320,10 @@
               <button class="dm-toggle" data-pref="typing" type="button"></button>
             </div>
             <div class="dm-set-row">
+              <span class="dm-set-mid"><b>그룹채팅방 참여 설정</b><i>친구가 아닌 사람이 단체방에 초대하면 <b>먼저 확인</b>하고 들어가요</i></span>
+              <button class="dm-toggle" id="dm-set-gate" type="button"></button>
+            </div>
+            <div class="dm-set-row">
               <span class="dm-set-mid"><b>내 난장 관리</b><i>내가 만들거나 들어간 오픈 채팅방</i></span>
               <button class="dm-mic-btn" data-act="goRooms" type="button">관리</button>
             </div>
@@ -354,6 +360,10 @@
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>간편녹음 버튼</b><i>입력창의 🎤 버튼 — 꾹 눌러 음성 메시지를 보내요</i></span>
               <button class="dm-toggle" data-pref="voiceBtn" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>키보드 툴바</b><i>입력창 위에 사진·이모티콘·GIF·음성·삐삐 바로가기 줄을 띄워요</i></span>
+              <button class="dm-toggle" data-pref="kbToolbar" type="button"></button>
             </div>
           </div>
         </div>
@@ -577,6 +587,13 @@
             </div>
             <div class="dm-stk-grid" id="dm-stk-grid"><div class="dm-loading">불러오는 중…</div></div>
             <div class="dm-stk-credit" id="dm-stk-credit">움직이는 스티커 · Noto Emoji by Google (CC BY 4.0)</div>
+          </div>
+          <div class="dm-kbtool" id="dm-kbtool" hidden>
+            <button type="button" data-kb="photo">🖼 사진</button>
+            <button type="button" data-kb="emoji">😀 이모티콘</button>
+            <button type="button" data-kb="gif">GIF</button>
+            <button type="button" data-kb="voice">🎤 음성</button>
+            <button type="button" data-kb="pager">📟 삐삐</button>
           </div>
           <form class="dm-inputbar" id="dm-form">
             <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">${ICONS.plus}</button>
@@ -805,6 +822,23 @@
                             src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : src === 'mine' ? 'ai' : STK_STYLE } });
     });
     // 음성 재생 — 한 번에 하나만
+    // 키보드 툴바 — 새 기능을 또 만들지 않고 이미 있는 버튼을 눌러준다
+    ROOT.querySelector('#dm-kbtool')?.addEventListener('click', e => {
+      const k = e.target.closest('[data-kb]')?.dataset.kb;
+      if (!k) return;
+      if (k === 'photo') ROOT.querySelector('#dm-attach')?.click();
+      else if (k === 'emoji' || k === 'gif') ROOT.querySelector('#dm-sticker')?.click();
+      else if (k === 'voice') toastMini('🎤 버튼을 꾹 누르면 음성이 녹음돼요');
+      else if (k === 'pager') pagerLeave(curPeer, nickCache[curPeer]);
+    });
+    // 폴더 칩
+    ROOT.querySelector('#dm-folders')?.addEventListener('click', e => {
+      const b = e.target.closest('[data-f]');
+      if (!b) return;
+      CUR_FOLDER = b.dataset.f;
+      paintFolderBar();
+      loadInbox();
+    });
     bindSwipeReply(ROOT.querySelector('#dm-msgs'));
     bindReact(ROOT.querySelector('#dm-msgs'));
     applyChatPrefs();
@@ -1474,8 +1508,9 @@
     if (!tid) return;   // 단체 채팅 행(.dm-gchat)은 1:1 고정/나가기 메뉴 대상이 아니다
     popMenu(x, y, [
       { k: 'pin', label: PREF.threads[tid]?.pinned ? '고정 해제' : '상단 고정' },
+      { k: 'folder', label: '폴더로 옮기기' },
       { k: 'leave', label: '나가기', danger: true },
-    ], k => doThreadAct(k, tid));
+    ], k => (k === 'folder' ? assignFolder(tid) : doThreadAct(k, tid)));
   }
 
   /* ---------- ⚙ 헤더 메뉴 (카톡의 정렬·편집·설정 드롭다운) ----------
@@ -1553,6 +1588,7 @@
     voiceBtn: true,          // 입력창 간편녹음 버튼
     autoplay: true,          // 영상 말풍선 자동재생
     reactions: true,         // 두 번 탭 리액션
+    kbToolbar: false,        // 입력창 위 빠른 도구 줄
     photoQuality: 'high',    // 사진 화질: origin | high | save
     dataSaver: false,        // 모바일 데이터에서 미디어 아끼기
   };
@@ -1663,9 +1699,25 @@
 
   /* 채팅 상세 — 토글은 전부 실제 동작에 연결돼 있다(입력중 표시·밀어서 답장·
      간편녹음 버튼·자동재생·엔터 전송·글자 크기). */
-  function loadChatSet2() {
+  async function loadChatSet2() {
     const host = ROOT.querySelector('#dm-chatset2');
     if (!host) return;
+    /* 그룹 초대 게이트는 '서버가 판단할 설정'이라 계정에 저장한다
+       (로컬에 두면 다른 사람이 나를 초대할 때 서버가 알 수 없다) */
+    const gate = host.querySelector('#dm-set-gate');
+    if (gate) {
+      const { data } = await supabase.from('dm_user_settings').select('gate_group_invite').eq('user_id', ME).maybeSingle();
+      let on = !!data?.gate_group_invite;
+      const paint = () => gate.classList.toggle('on', on);
+      paint();
+      gate.onclick = async () => {
+        on = !on; paint();
+        const { error } = await supabase.from('dm_user_settings')
+          .upsert({ user_id: ME, gate_group_invite: on, updated_at: new Date().toISOString() });
+        if (error) { on = !on; paint(); toastMini('설정을 저장하지 못했어요'); }
+        else toastMini(on ? '모르는 사람의 초대는 먼저 확인할게요' : '초대를 바로 받습니다');
+      };
+    }
     host.querySelectorAll('[data-pref]').forEach(btn => {
       const k = btn.dataset.pref;
       const paint = () => btn.classList.toggle('on', !!UI[k]);
@@ -1687,6 +1739,8 @@
   function applyChatPrefs() {
     const v = ROOT?.querySelector('#dm-voice');
     if (v) v.hidden = !UI.voiceBtn;
+    const kb = ROOT?.querySelector('#dm-kbtool');
+    if (kb) kb.hidden = !UI.kbToolbar;
     ROOT?.querySelectorAll('video[data-dm-vid]').forEach(el => {
       el.autoplay = !!UI.autoplay;
       if (!UI.autoplay) { try { el.pause(); } catch (_) {} }
@@ -2517,6 +2571,100 @@
     });
   }
 
+  /* 📁 채팅방 폴더 — 대화가 쌓이면 목록이 무너진다. 계정에 저장해 폰을 바꿔도 그대로. */
+  let FOLDERS = [], THREAD_FOLDER = {}, CUR_FOLDER = 'all';
+  async function loadFolders() {
+    const [{ data: fs }, { data: tf }] = await Promise.all([
+      supabase.from('dm_folders').select('id,name,sort').order('sort'),
+      supabase.from('dm_thread_folders').select('thread_id,folder_id'),
+    ]);
+    FOLDERS = fs || [];
+    THREAD_FOLDER = {};
+    (tf || []).forEach(r => { THREAD_FOLDER[r.thread_id] = r.folder_id; });
+  }
+  function paintFolderBar() {
+    const bar = ROOT.querySelector('#dm-folders');
+    if (!bar) return;
+    bar.hidden = !FOLDERS.length;
+    if (!FOLDERS.length) return;
+    bar.innerHTML = `<button type="button" class="dm-fchip${CUR_FOLDER === 'all' ? ' on' : ''}" data-f="all">전체</button>` +
+      FOLDERS.map(f => `<button type="button" class="dm-fchip${CUR_FOLDER === f.id ? ' on' : ''}" data-f="${f.id}">${esc(f.name)}</button>`).join('');
+  }
+  async function assignFolder(threadId) {
+    const opts = FOLDERS.map(f => `<button type="button" data-fid="${f.id}">${esc(f.name)}${THREAD_FOLDER[threadId] === f.id ? ' ✓' : ''}</button>`).join('');
+    const dim = document.createElement('div');
+    dim.className = 'dm-pin-dim';
+    dim.innerHTML = `<div class="dm-pin dm-folder-pick">
+      <b>폴더로 옮기기</b><i>대화를 정리해두면 찾기 쉬워요</i>
+      <div class="dm-folder-list">${opts || '<span class="dm-set-empty">아직 폴더가 없어요</span>'}</div>
+      <div class="dm-pin-btns">
+        <button type="button" data-fid="">폴더에서 빼기</button>
+        <button type="button" data-new="1" class="pri">+ 새 폴더</button>
+      </div></div>`;
+    document.body.appendChild(dim);
+    dim.onclick = async e => {
+      if (e.target === dim) return dim.remove();
+      const nw = e.target.closest('[data-new]');
+      if (nw) {
+        const name = (prompt('폴더 이름 (12자 이내)') || '').trim();
+        if (!name) return;
+        const { data, error } = await supabase.from('dm_folders')
+          .insert({ user_id: ME, name: name.slice(0, 12), sort: FOLDERS.length }).select().single();
+        if (error) return toastMini('폴더를 만들지 못했어요');
+        FOLDERS.push(data);
+        await supabase.from('dm_thread_folders').upsert({ user_id: ME, thread_id: threadId, folder_id: data.id });
+        THREAD_FOLDER[threadId] = data.id;
+        dim.remove(); paintFolderBar(); loadInbox();
+        return;
+      }
+      const b = e.target.closest('[data-fid]');
+      if (!b) return;
+      const fid = b.dataset.fid;
+      if (fid) {
+        await supabase.from('dm_thread_folders').upsert({ user_id: ME, thread_id: threadId, folder_id: fid });
+        THREAD_FOLDER[threadId] = fid;
+      } else {
+        await supabase.from('dm_thread_folders').delete().eq('user_id', ME).eq('thread_id', threadId);
+        delete THREAD_FOLDER[threadId];
+      }
+      dim.remove(); paintFolderBar(); loadInbox();
+    };
+  }
+
+  /* 🚪 대기 중인 그룹 초대 — 설정을 켠 사람에게만 생긴다.
+     읽기 전에 '누가·어떤 방으로' 부르는지 보고 결정하게 한다. */
+  async function paintInvites() {
+    const host = ROOT.querySelector('#dm-invites');
+    if (!host) return;
+    const { data: pend } = await supabase.from('open_room_members')
+      .select('room_id').eq('user_id', ME).eq('state', 'pending');
+    const ids = (pend || []).map(r => r.room_id);
+    if (!ids.length) { host.hidden = true; host.innerHTML = ''; return; }
+    const { data: rooms } = await supabase.from('open_rooms')
+      .select('id,title,owner_id,member_count').in('id', ids);
+    await profilesFor((rooms || []).map(r => r.owner_id));
+    host.hidden = false;
+    host.innerHTML = (rooms || []).map(r => `
+      <div class="dm-invite" data-room="${r.id}">
+        <span class="dm-invite-tx">
+          <b>${esc(r.title || '단체 채팅')}</b>
+          <i>${esc(PROFILES[r.owner_id]?.nickname || '누군가')}님이 초대했어요 · ${r.member_count || 0}명</i>
+        </span>
+        <button type="button" class="dm-invite-no" data-inv="no">거절</button>
+        <button type="button" class="dm-invite-ok" data-inv="ok">참여</button>
+      </div>`).join('');
+    host.onclick = async e => {
+      const b = e.target.closest('[data-inv]');
+      if (!b) return;
+      const row = b.closest('[data-room]');
+      const accept = b.dataset.inv === 'ok';
+      const { error } = await supabase.rpc('room_invite_respond', { p_room: row.dataset.room, p_accept: accept });
+      if (error) return toastMini('처리하지 못했어요');
+      toastMini(accept ? '참여했어요' : '초대를 거절했어요');
+      loadInbox();
+    };
+  }
+
   async function loadInbox() {
     const box = ROOT.querySelector('#dm-inbox');
     // 단체 채팅(kind='group')은 RLS가 '내가 멤버인 방'만 돌려준다 — 채팅 탭에 1:1과 섞어 보인다
@@ -2528,13 +2676,18 @@
         .select('id,owner_id,title,member_count,last_message,last_message_at,created_at,kind')
         .eq('kind', 'group'),
       loadPrefs(),
+      loadFolders(),
     ]);
     GROUPS = groups || [];
+    paintFolderBar();
+    paintInvites();
     (threads || []).forEach(t => { PEER_THREADS[t.user_lo === ME ? t.user_hi : t.user_lo] = t.id; });
     // 나간 방은 제외하되, 나간 뒤 새 메시지가 왔으면 다시 보인다(카톡 문법)
     const list = (threads || []).filter(t => {
       const p = PREF.threads[t.id];
-      return !(p?.left_at && new Date(t.last_message_at) <= new Date(p.left_at));
+      if (p?.left_at && new Date(t.last_message_at) <= new Date(p.left_at)) return false;
+      if (CUR_FOLDER !== 'all' && THREAD_FOLDER[t.id] !== CUR_FOLDER) return false;   // 폴더 필터
+      return true;
     });
     if (!list.length && !GROUPS.length) {
       box.innerHTML = `<div class="dm-empty">아직 대화가 없어요.<br><span>오른쪽 위 연필을 눌러 새 메시지를 시작하세요.</span></div>`;
