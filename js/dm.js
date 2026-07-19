@@ -246,6 +246,79 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="notiset" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">알림</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-notiset">
+            <div class="dm-set-warn" id="dm-noti-warn" hidden>
+              <b>기기 설정의 갈라 알림이 꺼져 있어요</b>
+              <i>새 메시지를 바로 확인하려면 알림을 켜 주세요.</i>
+              <a class="dm-mic-btn" href="/help-permissions.html">설정하러 가기</a>
+            </div>
+            <div class="dm-sec">${ICONS.bell}기본</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>푸시 알림</b><i>앱을 닫아도 기기 알림으로 받아요</i></span>
+              <button class="dm-toggle" id="dm-set-push2" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>알림음</b><i>소리를 고르면 바로 들려드려요</i></span>
+              <span class="dm-seg" data-pref-seg="tone">
+                <button type="button" data-v="none">무음</button>
+                <button type="button" data-v="ding">딩동</button>
+                <button type="button" data-v="pager">삐삐</button>
+              </span>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>소리</b><i>알림음을 재생해요</i></span>
+              <button class="dm-toggle" data-pref="sound" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>진동</b><i>짧게 울려요</i></span>
+              <button class="dm-toggle" data-pref="vibrate" type="button"></button>
+            </div>
+
+            <div class="dm-sec">${ICONS.chat}표시 방식</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>내용 미리보기</b><i>끄면 "새 메시지"만 뜨고 본문은 감춰요</i></span>
+              <button class="dm-toggle" data-pref="preview" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>사진·이모티콘 미리보기</b><i>이미지 알림에 썸네일을 함께 보여줘요</i></span>
+              <button class="dm-toggle" data-pref="mediaPreview" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>앱 실행 중 알림</b><i>갈라를 보고 있을 때도 알림을 띄워요</i></span>
+              <button class="dm-toggle" data-pref="foreground" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>안 읽은 알림 배너</b><i>앱에 들어왔을 때 쌓인 메시지·삐삐를 상단에 알려요</i></span>
+              <button class="dm-toggle" data-pref="banner" type="button"></button>
+            </div>
+
+            <div class="dm-sec">${ICONS.search}키워드 알림</div>
+            <div class="dm-set-col">
+              <span class="dm-set-mid"><b>이 단어가 오면 꼭 알려주세요</b><i>쉼표로 여러 개 — 집중 시간에도 이 알림만은 울려요</i></span>
+              <input class="dm-set-input" id="dm-kw" placeholder="예: 회의, 급해, 내이름" maxlength="120">
+            </div>
+
+            <div class="dm-sec">${ICONS.lock}집중 시간</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>방해받지 않기</b><i>이 시간엔 소리·진동·배너를 모두 끕니다</i></span>
+              <button class="dm-toggle" data-pref="dndOn" type="button"></button>
+            </div>
+            <div class="dm-set-row" id="dm-dnd-range">
+              <span class="dm-set-mid"><b>시간대</b><i>자정을 넘겨도 괜찮아요</i></span>
+              <span class="dm-time-row">
+                <input type="time" class="dm-set-time" id="dm-dnd-from">
+                <em>~</em>
+                <input type="time" class="dm-set-time" id="dm-dnd-to">
+              </span>
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="settings" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toInbox" aria-label="뒤로">${ICONS.back}</button>
@@ -262,20 +335,12 @@
 
             <div class="dm-sec">${ICONS.bell}알림</div>
             <div class="dm-set-row">
+              <span class="dm-set-mid"><b>알림</b><i id="dm-set-noti-sub">푸시·알림음·미리보기·키워드·집중 시간</i></span>
+              <button class="dm-mic-btn" data-act="notiSet" type="button">설정</button>
+            </div>
+            <div class="dm-set-row">
               <span class="dm-set-mid"><b>푸시 알림</b><i>앱을 닫아도 새 메시지를 기기 알림으로 — 아이폰은 홈 화면에 추가한 앱에서만 돼요</i></span>
               <button class="dm-toggle" id="dm-set-push" type="button"></button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>내용 미리보기</b><i>끄면 알림에 "새 메시지"만 뜨고 내용은 감춰요 (어깨너머 방지)</i></span>
-              <button class="dm-toggle" data-pref="preview" type="button"></button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>안 읽은 알림 배너</b><i>앱에 들어왔을 때 상단에 쌓인 메시지·삐삐를 알려줘요</i></span>
-              <button class="dm-toggle" data-pref="banner" type="button"></button>
-            </div>
-            <div class="dm-set-row">
-              <span class="dm-set-mid"><b>소리·진동</b><i>새 메시지가 오면 짧게 알려요</i></span>
-              <button class="dm-toggle" data-pref="sound" type="button"></button>
             </div>
 
             <div class="dm-sec">${ICONS.chat || ''}채팅</div>
@@ -316,6 +381,18 @@
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>검색 허용</b><i>끄면 다른 사람이 닉네임 검색으로 나를 찾을 수 없어요</i></span>
               <button class="dm-toggle" id="dm-set-search" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>화면 잠금</b><i id="dm-lock-sub">메시지를 열 때 4자리 비밀번호를 물어봐요 (이 기기에만 저장)</i></span>
+              <button class="dm-mic-btn" id="dm-set-lock" type="button">꺼짐</button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>개인정보 관리</b><i>닉네임·프로필·계정 정보</i></span>
+              <a class="dm-mic-btn" href="/account-edit.html">관리</a>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>내 아이템함</b><i>이모티콘·유령권 등 보유 아이템</i></span>
+              <a class="dm-mic-btn" href="/mypage.html">보관함</a>
             </div>
             <div class="dm-set-note">🔒 비밀대화는 대화방 메뉴에서 켤 수 있어요. 켜면 이 기기에서만 풀리는 자물쇠로 잠겨 서버도 내용을 못 봅니다.</div>
             <div class="dm-sec">${ICONS.block}차단한 사람</div>
@@ -488,6 +565,8 @@
       }
       else if (act === 'toRoom') { if (DEPTH > 0) history.back(); else showView('room'); }
       else if (act === 'goPager') { showView('inbox'); setTab('pager'); }
+      else if (act === 'notiSet') { showView('notiset'); loadNotiSet(); }
+      else if (act === 'toSettings') { goBack(); }
       else if (act === 'bugReport') {
         if (!window.GALLA_openBugReport) {
           const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
@@ -808,6 +887,14 @@
   let e2eBooted = false;
   function openDM() {
     buildRoot();
+    // 화면 잠금이 켜져 있으면 먼저 확인 — 실패하면 목록을 가린 채 되돌아간다
+    if (UI.lockPin) {
+      ensureUnlocked().then(ok => {
+        if (ok) return;
+        if (PAGE_MODE()) location.href = 'index.html';
+        else closeDM();
+      });
+    }
     // ⚠️ CSS가 늦거나 캐시가 꼬여도 '옛 오버레이 화면(왼쪽 X)'이 뜨지 않게 JS로 못 박는다
     if (PAGE_MODE()) {
       ROOT.classList.add('page');
@@ -1331,7 +1418,15 @@
   /* 🎛 로컬 설정(계정이 아니라 이 기기의 취향) — 서버 왕복 없이 즉시 반영된다.
      겉모습만 늘리지 않고 전부 실제 동작에 연결한다. */
   const PREF_KEY = 'galla_dm_prefs';
-  const PREF_DEF = { preview: true, banner: true, sound: true, enter: true, fontsize: 'm' };
+  const PREF_DEF = {
+    preview: true, banner: true, sound: true, vibrate: true, enter: true, fontsize: 'm',
+    mediaPreview: true,      // 사진·이모티콘 미리보기
+    foreground: true,        // 앱을 보고 있을 때도 알림 띄우기
+    tone: 'ding',            // 알림음: none | ding | pager
+    keywords: '',            // 키워드 알림(쉼표 구분)
+    dndOn: false, dndFrom: '23:00', dndTo: '07:00',   // 집중(방해금지) 시간
+    lockPin: '',             // 화면 잠금 PIN(해시)
+  };
   let UI = { ...PREF_DEF };
   try { UI = { ...PREF_DEF, ...JSON.parse(localStorage.getItem(PREF_KEY) || '{}') }; } catch (_) {}
   window.GALLA_dmPrefs = () => UI;
@@ -1339,10 +1434,175 @@
     try { localStorage.setItem(PREF_KEY, JSON.stringify(UI)); } catch (_) {}
     applyPrefs();
   }
+  /* 알림음은 파일 없이 합성한다(저작권·용량 0). 미리듣기와 실제 알림이 같은 소리. */
+  let TONE_AC = null;
+  function playTone(kind) {
+    const k = kind || UI.tone;
+    if (k === 'none') return;
+    try {
+      TONE_AC = TONE_AC || new (window.AudioContext || window.webkitAudioContext)();
+      const ac = TONE_AC;
+      if (ac.state === 'suspended') ac.resume();
+      const now = ac.currentTime;
+      const notes = k === 'pager' ? [[1400, 0], [1400, .12], [1100, .24]] : [[880, 0], [1320, .09]];
+      notes.forEach(([f, t]) => {
+        const o = ac.createOscillator(), g = ac.createGain();
+        o.type = k === 'pager' ? 'square' : 'sine';
+        o.frequency.value = f;
+        g.gain.setValueAtTime(.0001, now + t);
+        g.gain.exponentialRampToValueAtTime(.16, now + t + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, now + t + .1);
+        o.connect(g); g.connect(ac.destination);
+        o.start(now + t); o.stop(now + t + .12);
+      });
+    } catch (_) {}
+  }
+  /* 집중(방해금지) 시간이면 소리·진동·배너를 모두 죽인다. 자정을 넘는 범위도 처리. */
+  function inDND() {
+    if (!UI.dndOn) return false;
+    const [fh, fm] = String(UI.dndFrom || '23:00').split(':').map(Number);
+    const [th, tm] = String(UI.dndTo || '07:00').split(':').map(Number);
+    const d = new Date(), cur = d.getHours() * 60 + d.getMinutes();
+    const a = fh * 60 + fm, b = th * 60 + tm;
+    return a <= b ? (cur >= a && cur < b) : (cur >= a || cur < b);
+  }
+  function hitsKeyword(text) {
+    const ks = String(UI.keywords || '').split(',').map(x => x.trim()).filter(Boolean);
+    if (!ks.length) return null;
+    const t = String(text || '');
+    return ks.find(k => t.includes(k)) || null;
+  }
+  window.GALLA_dmNotify = { playTone, inDND, hitsKeyword };
+
   function applyPrefs() {
     document.documentElement.dataset.dmFont = UI.fontsize;   // CSS가 글자 크기를 받는다
   }
   applyPrefs();
+
+  /* 알림 상세 — 토글·세그먼트·입력을 한 화면에서 즉시 반영한다.
+     '설정만 있고 안 먹는 항목'을 만들지 않으려고 전부 showDmToast/배너에 연결돼 있다. */
+  function loadNotiSet() {
+    const host = ROOT.querySelector('#dm-notiset');
+    if (!host) return;
+    // 기기 알림이 꺼져 있으면 맨 위에 경고(카톡과 동일한 자리)
+    const warn = host.querySelector('#dm-noti-warn');
+    if (warn) warn.hidden = !(typeof Notification !== 'undefined' && Notification.permission === 'denied');
+
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => {
+        UI[k] = !UI[k]; savePrefs(); paint();
+        if (k === 'sound' && UI.sound) playTone();          // 켜는 즉시 들려준다
+        if (k === 'dndOn') paintDnd();
+      };
+    });
+    const seg = host.querySelector('[data-pref-seg="tone"]');
+    if (seg) {
+      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.tone));
+      paintSeg();
+      seg.onclick = e => {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        UI.tone = b.dataset.v; savePrefs(); paintSeg(); playTone();   // 고르면 바로 미리듣기
+      };
+    }
+    const kw = host.querySelector('#dm-kw');
+    if (kw) {
+      kw.value = UI.keywords || '';
+      kw.oninput = () => { UI.keywords = kw.value; savePrefs(); };
+    }
+    const from = host.querySelector('#dm-dnd-from'), to = host.querySelector('#dm-dnd-to');
+    const paintDnd = () => {
+      const row = host.querySelector('#dm-dnd-range');
+      if (row) row.classList.toggle('off', !UI.dndOn);
+    };
+    if (from && to) {
+      from.value = UI.dndFrom; to.value = UI.dndTo;
+      from.onchange = () => { UI.dndFrom = from.value || '23:00'; savePrefs(); };
+      to.onchange = () => { UI.dndTo = to.value || '07:00'; savePrefs(); };
+    }
+    paintDnd();
+    // 상세 화면의 푸시 토글은 설정 화면 것과 같은 동작을 공유
+    const p2 = host.querySelector('#dm-set-push2'), p1 = ROOT.querySelector('#dm-set-push');
+    if (p2 && p1) {
+      p2.className = p1.className;
+      p2.onclick = () => { p1.click(); setTimeout(() => { p2.className = p1.className; }, 400); };
+    }
+  }
+
+  /* 🔒 화면 잠금 — 이 기기에서만 쓰는 4자리 잠금.
+     계정 비밀번호가 아니라 '어깨너머·잠깐 빌려준 폰' 대비용이라 로컬에만 둔다.
+     평문 저장은 안 하고 해시만 남긴다. */
+  async function pinHash(pin) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('galla-dm-lock:' + pin));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  function askPin(title, sub) {
+    return new Promise(resolve => {
+      const dim = document.createElement('div');
+      dim.className = 'dm-pin-dim';
+      dim.innerHTML = `<div class="dm-pin">
+        <b>${esc(title)}</b><i>${esc(sub || '')}</i>
+        <input type="password" inputmode="numeric" maxlength="4" class="dm-pin-in" autocomplete="off">
+        <div class="dm-pin-btns">
+          <button type="button" data-p="cancel">취소</button>
+          <button type="button" data-p="ok" class="pri">확인</button>
+        </div></div>`;
+      document.body.appendChild(dim);
+      const input = dim.querySelector('.dm-pin-in');
+      setTimeout(() => input.focus(), 60);
+      const done = v => { dim.remove(); resolve(v); };
+      dim.onclick = e => {
+        if (e.target === dim || e.target.closest('[data-p="cancel"]')) return done(null);
+        if (e.target.closest('[data-p="ok"]')) return done(input.value.trim());
+      };
+      input.onkeydown = e => { if (e.key === 'Enter') done(input.value.trim()); };
+    });
+  }
+  async function toggleLock(btn) {
+    if (UI.lockPin) {
+      const cur = await askPin('잠금 해제', '현재 비밀번호를 입력하세요');
+      if (cur === null) return;
+      if (await pinHash(cur) !== UI.lockPin) return toastMini('비밀번호가 달라요');
+      UI.lockPin = ''; savePrefs();
+      try { sessionStorage.removeItem('galla_dm_unlocked'); } catch (_) {}
+      toastMini('화면 잠금을 껐어요');
+    } else {
+      const a = await askPin('화면 잠금 설정', '숫자 4자리를 정하세요');
+      if (a === null) return;
+      if (!/^\d{4}$/.test(a)) return toastMini('숫자 4자리로 입력해주세요');
+      const b = await askPin('한 번 더', '같은 숫자를 다시 입력하세요');
+      if (b === null) return;
+      if (a !== b) return toastMini('두 번 입력한 값이 달라요');
+      UI.lockPin = await pinHash(a); savePrefs();
+      try { sessionStorage.setItem('galla_dm_unlocked', '1'); } catch (_) {}
+      toastMini('이 기기에서 메시지를 열 때 물어볼게요');
+    }
+    paintLockBtn(btn);
+  }
+  function paintLockBtn(btn) {
+    const b = btn || ROOT?.querySelector('#dm-set-lock');
+    if (!b) return;
+    b.textContent = UI.lockPin ? '켜짐' : '꺼짐';
+    b.classList.toggle('ok', !!UI.lockPin);
+  }
+  /* 잠금이 켜져 있으면 DM을 열 때 한 번 묻는다(세션 내 1회) */
+  async function ensureUnlocked() {
+    if (!UI.lockPin) return true;
+    try { if (sessionStorage.getItem('galla_dm_unlocked') === '1') return true; } catch (_) {}
+    for (let i = 0; i < 3; i++) {
+      const v = await askPin('메시지 잠금', '비밀번호 4자리를 입력하세요');
+      if (v === null) return false;
+      if (await pinHash(v) === UI.lockPin) {
+        try { sessionStorage.setItem('galla_dm_unlocked', '1'); } catch (_) {}
+        return true;
+      }
+      toastMini('비밀번호가 달라요');
+    }
+    return false;
+  }
 
   async function loadSettings() {
     await loadPrefs(true);
@@ -1449,6 +1709,9 @@
       const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
       verEl.textContent = 'GALLA · 버전 ' + (v ? v[1] : '-');
     }
+
+    const lockBtn = ROOT.querySelector('#dm-set-lock');
+    if (lockBtn) { paintLockBtn(lockBtn); lockBtn.onclick = () => toggleLock(lockBtn); }
 
     const micBtn = ROOT.querySelector('#dm-set-mic');
     if (micBtn) {
@@ -3066,7 +3329,7 @@
   }
   let bannerShownAt = 0;
   function showMsgBanner(dmN, pgN) {
-    if (!UI.banner) return;                                          // 설정에서 끔
+    if (!UI.banner || inDND()) return;                               // 설정에서 끔 / 집중 시간
     if (PAGE_MODE() || document.body.dataset.page === 'dm') return;   // DM 안에선 불필요
     const total = dmN + pgN;
     if (total <= 0) return;
@@ -3110,6 +3373,8 @@
   /* 📨 새 메시지 토스트 — DM을 안 보고 있을 때 어느 화면에서든 알린다. 탭하면 그 대화로. */
   let toastTimer = null;
   async function showDmToast(t) {
+    if (!UI.foreground && !document.hidden) return;      // [앱 실행 중 알림] 끔
+    if (inDND() && !hitsKeyword(t.last_message || '')) return;   // 집중 시간
     const peer = t.user_lo === ME ? t.user_hi : t.user_lo;
     await profilesFor([peer]);
     const p = PROFILES[peer] || {};
@@ -3120,9 +3385,17 @@
       document.body.appendChild(el);
     }
     // [내용 미리보기]가 꺼져 있으면 본문을 감춘다(어깨너머 방지)
-    const body = UI.preview ? esc((t.last_message || '').slice(0, 40)) : '새 메시지가 도착했어요';
-    el.innerHTML = `${avaHTML(peer)}<span class="dm-toast-mid"><b>${esc(p.nickname || '새 메시지')}</b><i>${body}</i></span>`;
-    if (UI.sound) { try { navigator.vibrate?.(12); } catch (_) {} }
+    const raw = t.last_message || '';
+    const kw = hitsKeyword(raw);
+    const body = UI.preview ? esc(raw.slice(0, 40)) : '새 메시지가 도착했어요';
+    el.classList.toggle('kw', !!kw);
+    el.innerHTML = `${avaHTML(peer)}<span class="dm-toast-mid"><b>${esc(p.nickname || '새 메시지')}${kw ? ` · 「${esc(kw)}」` : ''}</b><i>${body}</i></span>`;
+    // 집중 시간엔 조용히(키워드는 예외 — 놓치면 안 되는 말이라 등록한 것)
+    const quiet = inDND() && !kw;
+    if (!quiet) {
+      if (UI.sound) playTone();
+      if (UI.vibrate) { try { navigator.vibrate?.(kw ? [12, 60, 12] : 12); } catch (_) {} }
+    }
     el.onclick = () => {
       hide();
       if (PAGE_MODE()) startDM(peer, p.nickname);
