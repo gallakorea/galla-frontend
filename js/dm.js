@@ -460,7 +460,7 @@
             <div class="dm-sec">${ICONS.chat}글자 크기</div>
             <div class="dm-set-col">
               <span class="dm-size-row"><em>가</em>
-                <input type="range" id="dm-fsize" min="85" max="130" step="5">
+                <input type="range" id="dm-fsize" min="80" max="150" step="5">
                 <em class="big">가</em></span>
               <span class="dm-set-mid"><i id="dm-fsize-txt"></i></span>
             </div>
@@ -605,12 +605,8 @@
               <button class="dm-toggle" data-pref="reactions" type="button"></button>
             </div>
             <div class="dm-set-row">
-              <span class="dm-set-mid"><b>글자 크기</b><i>대화 글씨를 크게·작게</i></span>
-              <span class="dm-seg" data-pref-seg="fontsize">
-                <button type="button" data-v="s">작게</button>
-                <button type="button" data-v="m">보통</button>
-                <button type="button" data-v="l">크게</button>
-              </span>
+              <span class="dm-set-mid"><b>글자 크기</b><i id="dm-chat-size-sub">대화 글씨 크기 — 화면 설정에서 조절해요</i></span>
+              <button class="dm-mic-btn" data-act="displaySet" type="button">조절</button>
             </div>
 
             <div class="dm-sec">${ICONS.send}입력창</div>
@@ -1960,7 +1956,10 @@
   window.GALLA_dmNotify = { playTone, inDND, hitsKeyword };
 
   function applyPrefs() {
-    document.documentElement.dataset.dmFont = UI.fontsize;   // CSS가 글자 크기를 받는다
+    /* ⚠️ 글자 크기 조절기가 두 곳(3단 + 슬라이더)에 있어 서로 곱해졌다.
+       "보통"을 눌러도 슬라이더가 130%면 커진 채라 '안 먹는다'로 보였다.
+       조절기는 슬라이더 하나로 통합하고, 3단은 기본값(m)으로 고정한다. */
+    document.documentElement.dataset.dmFont = 'm';
     const r = document.documentElement;
     r.style.setProperty('--dm-font-scale', (UI.fontScale || 100) / 100);
     r.dataset.dmFace = UI.fontFace || 'sys';
@@ -2073,16 +2072,9 @@
       paint();
       btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); applyChatPrefs(); };
     });
-    const seg = host.querySelector('[data-pref-seg="fontsize"]');
-    if (seg) {
-      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.fontsize));
-      paintSeg();
-      seg.onclick = e => {
-        const b = e.target.closest('button[data-v]');
-        if (!b) return;
-        UI.fontsize = b.dataset.v; savePrefs(); paintSeg();
-      };
-    }
+    // 글자 크기는 화면 설정의 슬라이더 하나로 통합 — 여기선 현재 값만 알려준다
+    const sizeSub = host.querySelector('#dm-chat-size-sub');
+    if (sizeSub) sizeSub.textContent = `지금 ${UI.fontScale}% — 화면 설정에서 조절해요`;
   }
   /* 설정을 화면에 즉시 반영 — 저장만 하고 안 먹는 설정은 만들지 않는다 */
   function applyChatPrefs() {
@@ -2441,7 +2433,10 @@
     const sl = host.querySelector('#dm-fsize'), txt = host.querySelector('#dm-fsize-txt');
     if (sl) {
       sl.value = UI.fontScale;
-      const paint = () => { if (txt) txt.textContent = `현재 ${UI.fontScale}% ${UI.fontScale === 100 ? '(기본)' : ''}`; };
+      const paint = () => {
+        const px = Math.round(14.5 * (UI.fontScale / 100) * 10) / 10;
+        if (txt) txt.textContent = `${UI.fontScale}% · 글씨 ${px}px${UI.fontScale === 100 ? ' (기본)' : ''}`;
+      };
       paint();
       sl.oninput = () => { UI.fontScale = +sl.value; savePrefs(); applyDisplay(); paint(); };
     }
