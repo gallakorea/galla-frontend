@@ -10,15 +10,22 @@
      · 아무것도 안 고르고 떼면 그냥 DM 열기
    ========================================================= */
 (function () {
+  const I = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   const TABS = [
-    { id: 'chats',   label: '채팅', icon: '💬' },
-    { id: 'friends', label: '친구', icon: '👥' },
-    { id: 'rooms',   label: '난장', icon: '🔥' },
-    { id: 'pager',   label: '삐삐', icon: '📟' },
+    { id: 'chats',   label: '채팅',
+      icon: I('<path d="M21 11.5a8.4 8.4 0 0 1-8.4 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-8.4h.5a8.5 8.5 0 0 1 8.1 8.1z"/>') },
+    { id: 'friends', label: '친구',
+      icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
+    { id: 'rooms',   label: '난장',
+      icon: I('<path d="M12 2s4.5 4.2 4.5 8.2a4.5 4.5 0 0 1-9 0c0-1.3.5-2.5 1.2-3.6"/><path d="M12 22a6 6 0 0 0 6-6c0-2-1-3.6-2.2-5"/><path d="M12 22a6 6 0 0 1-6-6c0-1.4.5-2.6 1.3-3.8"/>') },
+    { id: 'pager',   label: '삐삐',
+      icon: I('<rect x="2" y="5" width="20" height="14" rx="2.4"/><rect x="5" y="8" width="9" height="5" rx="1"/><circle cx="17.5" cy="9.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/>') },
   ];
   const HOLD_MS = 380;      // 이보다 길게 눌러야 펼쳐진다
   const RADIUS = 104;       // 부채꼴 반지름
-  const PICK_R = 42;        // 이 거리 안에 들어오면 '고른 것'
+  const DEAD_R = 22;        // 이 안쪽만 '고르지 않음'(취소). 조금만 움직여도 선택되게 좁혔다
+  const STICKY = 10;        // 이미 고른 것은 10° 이상 확실히 벗어나야 바뀐다(경계 깜빡임 방지)
 
   function css() {
     if (document.getElementById('navjog-css')) return;
@@ -36,7 +43,9 @@
         transform:translate(0,0) scale(.3);opacity:0;
         transition:transform .26s cubic-bezier(.2,1.3,.3,1),opacity .18s,background .15s,border-color .15s}
       #nav-jog.on .njg-item{transform:translate(var(--dx),var(--dy)) scale(1);opacity:1}
-      .njg-item i{font-style:normal;font-size:21px;line-height:1}
+      .njg-item i{font-style:normal;display:flex;line-height:0;color:#cdd9ff}
+      .njg-item i svg{width:22px;height:22px}
+      .njg-item.pick i{color:#fff}
       .njg-item b{font-size:10.5px;font-weight:900;color:#cfd5e0}
       .njg-item .njg-n{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;
         border-radius:999px;background:#ff4d67;border:2px solid #0a0b0f;color:#fff;
@@ -78,10 +87,10 @@
     layer.style.setProperty('--jy', oy + 'px');
 
     /* 위쪽 반원에 부채꼴로 배치 — 아래는 네비·손가락이라 가린다.
-       양끝이 네비에 붙지 않게 212°~328°로 살짝 좁혀 위로 띄운다. */
+       200°~340°로 넓게 펼쳐 '위로 올리는' 동작에서도 방향이 또렷하게 갈린다. */
     const bd = badges();
     const items = TABS.map((t, i) => {
-      const deg = 212 + (116 / (TABS.length - 1)) * i;
+      const deg = 200 + (140 / (TABS.length - 1)) * i;
       const rad = deg * Math.PI / 180;
       const dx = Math.cos(rad) * RADIUS, dy = Math.sin(rad) * RADIUS;
       const el = document.createElement('button');
@@ -142,17 +151,22 @@
 
     /* 각도로 고른다 — 거리 원 안에 정확히 들어가야 하는 방식은 손이 조금만
        빗나가도 선택이 풀려 뚝뚝 끊긴다. 조그셔틀처럼 '방향'만 맞으면 잡힌다. */
-    const DEAD = 34;                     // 이 안쪽은 '고르지 않음'(취소 구역)
+    const angDiff = (a, b) => Math.abs(((a - b + 540) % 360) - 180);
     const pickFor = (x, y) => {
       const dx = x - sx, dy = y - sy;
-      if (Math.hypot(dx, dy) < DEAD) return null;
-      let deg = Math.atan2(dy, dx) * 180 / Math.PI;   // -180~180
-      if (deg > 0) deg -= 360;                        // 위쪽 반원을 -180~-0 범위로
+      if (Math.hypot(dx, dy) < DEAD_R) return null;
+      const deg = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
       let best = null, bestD = 1e9;
       ui.items.forEach(el => {
-        let d = Math.abs(((el._deg - 360) - deg + 540) % 360 - 180);
+        const d = angDiff((el._deg + 360) % 360, deg);
         if (d < bestD) { bestD = d; best = el; }
       });
+      /* 경계에서 두 항목이 엎치락뒤치락하면 깜빡여서 '해제된 것처럼' 보인다 —
+         이미 고른 게 있으면 확실히(10° 이상) 더 가까워질 때만 바꾼다. */
+      if (picked && best !== picked) {
+        const cur = angDiff((picked._deg + 360) % 360, deg);
+        if (cur - bestD < STICKY) return picked;
+      }
       return best;
     };
 
