@@ -1341,3 +1341,45 @@ html[data-dm-font="l"] .dm-bubble { font-size: 16.5px; }
   color: #cfd5e0; font-size: 12.5px; font-weight: 800;
 }
 .dm-kbtool button:active { background: rgba(255,255,255,.12); }
+
+
+/* ═══════ 🖼 화면 설정 ═══════ */
+/* 글자 크기·글씨체는 CSS 변수로 받아 미리보기와 실제 대화가 같은 규칙을 쓴다 */
+html { --dm-font-scale: 1; }
+.dm-msgs .dm-bubble, .dm-prev-in .dm-bubble { font-size: calc(14.5px * var(--dm-font-scale)); }
+html[data-dm-font="s"] .dm-bubble { font-size: calc(13px * var(--dm-font-scale)); }
+html[data-dm-font="l"] .dm-bubble { font-size: calc(16.5px * var(--dm-font-scale)); }
+html[data-dm-face="round"] .dm-bubble { font-family: ui-rounded, "Apple SD Gothic Neo", system-ui, sans-serif; letter-spacing: -.1px; }
+html[data-dm-face="serif"] .dm-bubble { font-family: ui-serif, "Apple SD Gothic Neo", Georgia, serif; }
+
+/* 미리보기 카드 */
+.dm-prev { padding: 14px 14px 4px; }
+.dm-prev-in {
+  position: relative; overflow: hidden; border-radius: 16px; padding: 14px 12px;
+  min-height: 132px; background: #0b0c10; border: 1px solid rgba(255,255,255,.08);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.dm-prev-in .dm-bubble { position: relative; z-index: 1; }
+/* 글자 크기 슬라이더 */
+.dm-size-row { display: flex; align-items: center; gap: 12px; }
+.dm-size-row em { font-style: normal; color: #98a0b0; font-size: 13px; }
+.dm-size-row em.big { font-size: 21px; color: #dfe3ec; }
+.dm-size-row input[type="range"] { flex: 1; min-width: 0; accent-color: #4361ff; }
+/* 배경 스와치 */
+.dm-bg-row { display: flex; flex-wrap: wrap; gap: 9px; }
+.dm-bg-sw {
+  width: 46px; height: 46px; border-radius: 12px; cursor: pointer;
+  border: 2px solid rgba(255,255,255,.12); background-size: 40px 40px;
+}
+.dm-bg-sw.on { border-color: #4361ff; box-shadow: 0 0 0 3px rgba(67,97,255,.25); }
+/* ❄️ 눈 내리는 채팅방 */
+.snowing { position: relative; overflow: hidden; }
+.snowflake {
+  position: absolute; top: -14px; color: #fff; pointer-events: none; z-index: 0;
+  animation: snowFall linear infinite; font-style: normal;
+}
+@keyframes snowFall {
+  0%   { transform: translateY(-14px) translateX(0) rotate(0deg); }
+  100% { transform: translateY(105%) translateX(18px) rotate(180deg); }
+}
+@media (prefers-reduced-motion: reduce) { .snowflake { display: none; } }

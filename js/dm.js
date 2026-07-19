@@ -248,6 +248,71 @@
             <div id="dm-prof-identity"><div class="dm-loading">아이덴티티 분석 중…</div></div>
           </div>
         </div>
+        <div class="dm-view" data-view="display" hidden>
+          <div class="dm-head">
+            <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
+            <span class="dm-title">화면</span>
+            <span class="dm-head-sp"></span>
+          </div>
+          <div class="dm-list" id="dm-display">
+            <!-- 바꾸면 바로 보이는 미리보기 — 설명보다 눈이 빠르다 -->
+            <div class="dm-prev" id="dm-prev">
+              <div class="dm-prev-in">
+                <div class="dm-bubble you">우주 통신규약을 꿈꾸는 갈라</div>
+                <div class="dm-bubble me">가나다라 ABC 123</div>
+              </div>
+            </div>
+
+            <div class="dm-sec">${ICONS.chat}글자 크기</div>
+            <div class="dm-set-col">
+              <span class="dm-size-row"><em>가</em>
+                <input type="range" id="dm-fsize" min="85" max="130" step="5">
+                <em class="big">가</em></span>
+              <span class="dm-set-mid"><i id="dm-fsize-txt"></i></span>
+            </div>
+
+            <div class="dm-sec">${ICONS.edit}글씨체</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>대화 글씨체</b><i>읽기 편한 쪽으로 골라주세요</i></span>
+              <span class="dm-seg" data-pref-seg="fontFace">
+                <button type="button" data-v="sys">기본</button>
+                <button type="button" data-v="round">둥근</button>
+                <button type="button" data-v="serif">명조</button>
+              </span>
+            </div>
+
+            <div class="dm-sec">${ICONS.img || ICONS.chat}배경화면</div>
+            <div class="dm-set-col">
+              <span class="dm-set-mid"><b>색상 배경</b></span>
+              <span class="dm-bg-row" id="dm-bg-colors"></span>
+            </div>
+            <div class="dm-set-col">
+              <span class="dm-set-mid"><b>무늬 배경</b><i>직접 그린 무늬라 저작권 걱정이 없어요</i></span>
+              <span class="dm-bg-row" id="dm-bg-patterns"></span>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>앨범에서 사진 선택</b><i>내 사진을 대화 배경으로</i></span>
+              <button class="dm-mic-btn" data-act="bgPhoto" type="button">고르기</button>
+              <input type="file" id="dm-bg-file" accept="image/*" hidden>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>배경 없애기</b><i>기본 검정 배경으로 되돌려요</i></span>
+              <button class="dm-mic-btn" data-act="bgReset" type="button">초기화</button>
+            </div>
+
+            <div class="dm-sec">❄️ 배경 효과</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>눈 내리는 채팅방</b><i>대화창에 눈이 내려요. 집중이 안 되면 꺼두세요</i></span>
+              <button class="dm-toggle" data-pref="snow" type="button"></button>
+            </div>
+
+            <div class="dm-sec">${ICONS.sliders || ICONS.chat}화면 방향</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>세로 고정</b><i id="dm-orient-sub">폰을 눕혀도 화면이 돌지 않아요</i></span>
+              <button class="dm-toggle" id="dm-set-orient" type="button"></button>
+            </div>
+          </div>
+        </div>
         <div class="dm-view" data-view="dataset" hidden>
           <div class="dm-head">
             <button class="dm-back" data-act="toSettings" aria-label="뒤로">${ICONS.back}</button>
@@ -513,6 +578,12 @@
             <div class="dm-sec">${ICONS.eyeoff}숨긴 친구</div>
             <div id="dm-hidden-list"></div>
 
+            <div class="dm-sec">${ICONS.sliders || ICONS.chat}화면</div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>화면</b><i>글자 크기·글씨체·배경화면·화면 방향</i></span>
+              <button class="dm-mic-btn" data-act="displaySet" type="button">설정</button>
+            </div>
+
             <div class="dm-sec">${ICONS.lock}데이터·백업</div>
             <div class="dm-set-row">
               <span class="dm-set-mid"><b>데이터 및 저장공간</b><i>저장공간·사진 화질·데이터 절약</i></span>
@@ -697,6 +768,9 @@
       else if (act === 'goPager') { showView('inbox'); setTab('pager'); }
       else if (act === 'notiSet') { showView('notiset'); loadNotiSet(); }
       else if (act === 'chatSet2') { showView('chatset2'); loadChatSet2(); }
+      else if (act === 'displaySet') { showView('display'); loadDisplay(); }
+      else if (act === 'bgPhoto') { ROOT.querySelector('#dm-bg-file')?.click(); }
+      else if (act === 'bgReset') { UI.bgKind = 'none'; UI.bgValue = ''; savePrefs(); applyDisplay(); loadDisplay(); toastMini('기본 배경으로 되돌렸어요'); }
       else if (act === 'dataSet') { showView('dataset'); loadDataSet(); }
       else if (act === 'backupSet') { showView('backup'); }
       else if (act === 'clearCache') { await clearCaches(e.target.closest('[data-act]')); }
@@ -842,6 +916,7 @@
     bindSwipeReply(ROOT.querySelector('#dm-msgs'));
     bindReact(ROOT.querySelector('#dm-msgs'));
     applyChatPrefs();
+    applyDisplay();
     ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
       const b = e.target.closest('.dm-vplay'); if (!b) return;
       if (VAUDIO && !VAUDIO.paused && VAUDIO._btn === b) { VAUDIO.pause(); return; }
@@ -1589,6 +1664,11 @@
     autoplay: true,          // 영상 말풍선 자동재생
     reactions: true,         // 두 번 탭 리액션
     kbToolbar: false,        // 입력창 위 빠른 도구 줄
+    fontScale: 100,          // 글자 크기 85~130 (%)
+    fontFace: 'sys',         // 글씨체: sys | round | serif
+    bgKind: 'none',          // 배경: none | color | pattern | photo
+    bgValue: '',             // 색상값 / 패턴 id / 사진 dataURL
+    snow: false,             // 눈 내리는 채팅방
     photoQuality: 'high',    // 사진 화질: origin | high | save
     dataSaver: false,        // 모바일 데이터에서 미디어 아끼기
   };
@@ -1641,6 +1721,9 @@
 
   function applyPrefs() {
     document.documentElement.dataset.dmFont = UI.fontsize;   // CSS가 글자 크기를 받는다
+    const r = document.documentElement;
+    r.style.setProperty('--dm-font-scale', (UI.fontScale || 100) / 100);
+    r.dataset.dmFace = UI.fontFace || 'sys';
   }
   applyPrefs();
 
@@ -1744,6 +1827,149 @@
     ROOT?.querySelectorAll('video[data-dm-vid]').forEach(el => {
       el.autoplay = !!UI.autoplay;
       if (!UI.autoplay) { try { el.pause(); } catch (_) {} }
+    });
+  }
+
+  /* 🖼 화면 — 글자·글씨체·배경·눈 효과·화면 방향.
+     배경 무늬는 외부 이미지 없이 직접 그린 SVG라 저작권·용량 걱정이 없다. */
+  const BG_COLORS = ['#0b0c10', '#101826', '#161226', '#0f1f1a', '#241318', '#1c1a10'];
+  const BG_PATTERNS = {
+    dots:   `<circle cx="10" cy="10" r="1.4" fill="%23ffffff22"/>`,
+    grid:   `<path d="M0 20h40M20 0v40" stroke="%23ffffff14" stroke-width="1"/>`,
+    waves:  `<path d="M0 20q10-10 20 0t20 0" fill="none" stroke="%23ffffff18" stroke-width="1.4"/>`,
+    stars:  `<path d="M20 8l1.8 5.4H27l-4.4 3.2 1.7 5.4-4.3-3.4-4.3 3.4 1.7-5.4L13 13.4h5.2z" fill="%23ffffff14"/>`,
+  };
+  function patternURL(id) {
+    const inner = BG_PATTERNS[id] || BG_PATTERNS.dots;
+    return `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>${inner}</svg>")`;
+  }
+  /* 설정을 화면 전체에 반영 — 미리보기와 실제 대화가 같은 규칙을 쓴다 */
+  function applyDisplay() {
+    const r = document.documentElement;
+    r.style.setProperty('--dm-font-scale', (UI.fontScale || 100) / 100);
+    r.dataset.dmFace = UI.fontFace || 'sys';
+    const msgs = [ROOT?.querySelector('#dm-msgs'), ROOT?.querySelector('#dm-room-msgs'), ROOT?.querySelector('.dm-prev-in')];
+    msgs.forEach(el => {
+      if (!el) return;
+      if (UI.bgKind === 'color') { el.style.background = UI.bgValue; el.style.backgroundImage = ''; }
+      else if (UI.bgKind === 'pattern') { el.style.background = '#0b0c10'; el.style.backgroundImage = patternURL(UI.bgValue); }
+      else if (UI.bgKind === 'photo' && UI.bgValue) {
+        el.style.background = `#000 center/cover no-repeat`;
+        el.style.backgroundImage = `linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)), url(${UI.bgValue})`;
+      } else { el.style.background = ''; el.style.backgroundImage = ''; }
+      el.classList.toggle('snowing', !!UI.snow);
+    });
+    ROOT?.querySelectorAll('.snowflake').forEach(n => n.remove());
+    if (UI.snow) startSnow();
+  }
+  /* ❄️ 눈 — 가벼운 CSS 애니메이션 요소 몇 개. 배터리를 갉아먹지 않게 24개로 제한 */
+  function startSnow() {
+    [ROOT?.querySelector('#dm-msgs'), ROOT?.querySelector('.dm-prev-in')].forEach(host => {
+      if (!host || host.querySelector('.snowflake')) return;
+      for (let i = 0; i < 24; i++) {
+        const f = document.createElement('i');
+        f.className = 'snowflake';
+        f.style.left = Math.random() * 100 + '%';
+        f.style.animationDuration = (5 + Math.random() * 7) + 's';
+        f.style.animationDelay = (-Math.random() * 10) + 's';
+        f.style.opacity = 0.25 + Math.random() * 0.5;
+        f.style.fontSize = (7 + Math.random() * 9) + 'px';
+        f.textContent = '❄';
+        host.appendChild(f);
+      }
+    });
+  }
+  function loadDisplay() {
+    const host = ROOT.querySelector('#dm-display');
+    if (!host) return;
+    applyDisplay();
+    // 글자 크기
+    const sl = host.querySelector('#dm-fsize'), txt = host.querySelector('#dm-fsize-txt');
+    if (sl) {
+      sl.value = UI.fontScale;
+      const paint = () => { if (txt) txt.textContent = `현재 ${UI.fontScale}% ${UI.fontScale === 100 ? '(기본)' : ''}`; };
+      paint();
+      sl.oninput = () => { UI.fontScale = +sl.value; savePrefs(); applyDisplay(); paint(); };
+    }
+    // 글씨체
+    const seg = host.querySelector('[data-pref-seg="fontFace"]');
+    if (seg) {
+      const paintSeg = () => seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === UI.fontFace));
+      paintSeg();
+      seg.onclick = e => {
+        const b = e.target.closest('button[data-v]');
+        if (!b) return;
+        UI.fontFace = b.dataset.v; savePrefs(); applyDisplay(); paintSeg();
+      };
+    }
+    // 색상·무늬
+    const cbox = host.querySelector('#dm-bg-colors');
+    if (cbox) cbox.innerHTML = BG_COLORS.map(c =>
+      `<button type="button" class="dm-bg-sw${UI.bgKind === 'color' && UI.bgValue === c ? ' on' : ''}" data-color="${c}" style="background:${c}"></button>`).join('');
+    const pbox = host.querySelector('#dm-bg-patterns');
+    if (pbox) pbox.innerHTML = Object.keys(BG_PATTERNS).map(id =>
+      `<button type="button" class="dm-bg-sw${UI.bgKind === 'pattern' && UI.bgValue === id ? ' on' : ''}" data-pat="${id}" style="background:#0b0c10 ${patternURL(id)}"></button>`).join('');
+    host.querySelectorAll('[data-color],[data-pat]').forEach(b => {
+      b.onclick = () => {
+        if (b.dataset.color) { UI.bgKind = 'color'; UI.bgValue = b.dataset.color; }
+        else { UI.bgKind = 'pattern'; UI.bgValue = b.dataset.pat; }
+        savePrefs(); applyDisplay(); loadDisplay();
+      };
+    });
+    // 로컬 토글(눈)
+    host.querySelectorAll('[data-pref]').forEach(btn => {
+      const k = btn.dataset.pref;
+      const paint = () => btn.classList.toggle('on', !!UI[k]);
+      paint();
+      btn.onclick = () => { UI[k] = !UI[k]; savePrefs(); paint(); applyDisplay(); };
+    });
+    // 사진 배경
+    const file = host.querySelector('#dm-bg-file');
+    if (file) file.onchange = async e => {
+      const f = e.target.files?.[0]; e.target.value = '';
+      if (!f) return;
+      const small = await shrinkTo(f, 720, 0.7);
+      const rd = new FileReader();
+      rd.onload = () => {
+        try {
+          UI.bgKind = 'photo'; UI.bgValue = rd.result; savePrefs();
+          applyDisplay(); loadDisplay(); toastMini('배경을 바꿨어요');
+        } catch (_) { toastMini('사진이 너무 커요 — 더 작은 사진으로 해주세요'); }
+      };
+      rd.readAsDataURL(small);
+    };
+    // 화면 방향 — standalone(홈 화면 앱)에서만 잠글 수 있다. 브라우저는 막혀 있다
+    const ori = host.querySelector('#dm-set-orient'), osub = host.querySelector('#dm-orient-sub');
+    if (ori) {
+      const locked = !!UI.portraitLock;
+      ori.classList.toggle('on', locked);
+      const can = !!(screen.orientation && screen.orientation.lock);
+      if (osub && !can) osub.textContent = '이 브라우저에선 고정할 수 없어요 — 홈 화면에 추가한 앱에서 됩니다';
+      ori.onclick = async () => {
+        UI.portraitLock = !UI.portraitLock; savePrefs();
+        ori.classList.toggle('on', !!UI.portraitLock);
+        try {
+          if (UI.portraitLock) await screen.orientation.lock('portrait');
+          else screen.orientation.unlock();
+        } catch (_) { toastMini('이 브라우저에선 방향을 고정할 수 없어요 — 앱으로 설치하면 됩니다'); }
+      };
+    }
+  }
+  /* 사진 축소 공용 — 배경/전송이 같은 방식을 쓴다 */
+  function shrinkTo(file, max, q) {
+    return new Promise(resolve => {
+      const img = new Image(); const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const long = Math.max(img.width, img.height);
+        const r = long > max ? max / long : 1;
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * r); cv.height = Math.round(img.height * r);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(b => resolve(b || file), 'image/jpeg', q);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
     });
   }
 
