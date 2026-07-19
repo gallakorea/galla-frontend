@@ -22,11 +22,11 @@
   const NAV = [
     { key: 'index',   label: '홈',      href: 'index.html',
       icon: I('<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>') },
-    { key: 'predict', label: '갈라예측', href: 'predict.html',
+    { key: 'predict', label: '갈라예측', href: 'galla-predict.html',
       icon: I('<path d="M3.5 18.5 9.5 12l4 4L21 7"/><path d="M15 7h6v6"/>') },
     { key: 'dm',      label: '메시지',   href: 'dm.html',
       icon: I('<path d="M21 11.5a8.4 8.4 0 0 1-8.4 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-8.4h.5a8.5 8.5 0 0 1 8.1 8.1z"/>') },
-    { key: 'trend',   label: '트렌드',   href: 'trend.html',
+    { key: 'trend',   label: '트렌드',   href: 'search.html',
       icon: I('<path d="M12 2s4.5 4.2 4.5 8.2a4.5 4.5 0 0 1-9 0C7.5 8.9 8 7.7 8.7 6.6"/><path d="M12 22a6 6 0 0 0 6-6c0-2-1-3.6-2.2-5"/><path d="M12 22a6 6 0 0 1-6-6c0-1.4.5-2.6 1.3-3.8"/>') },
     { key: 'mypage',  label: '마이',     href: 'mypage.html',
       icon: I('<circle cx="12" cy="8" r="4"/><path d="M4 21c0-3.5 3.6-6 8-6s8 2.5 8 6"/>') },
