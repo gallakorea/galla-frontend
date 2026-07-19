@@ -651,8 +651,18 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 /* PTT 오버레이 기준점 + 시트가 열려도 대화방이 화면을 넘지 않게
    (flex 자식은 기본 min-height:auto라 내용만큼 버틴다 → 이모티콘 시트 264px가
     들어오면 입력바가 화면 밖으로 밀려났다. 메시지 영역이 줄어들어야 한다) */
-.dm-view[data-view="thread"] { position: relative; overflow: hidden; }
+/* 대화방은 position:relative여야 내부 시트(이모티콘·답장 미리보기)가 이 안에 갇힌다.
+   단 relative가 되는 순간 inset:0 채움이 풀려 '내용 높이'로 쪼그라든다
+   (헤드+말풍선+입력바만 그려지고 나머지가 검게 남던 정렬 붕괴의 정체).
+   → 패널(flex column)의 유일한 흐름 자식이므로 flex로 다시 꽉 채운다. */
+.dm-view[data-view="thread"] {
+  position: relative; overflow: hidden;
+  flex: 1 1 auto; min-height: 0; height: 100%;
+}
 .dm-view[data-view="thread"] > .dm-msgs { min-height: 0; }
+/* 대화가 적어도 말풍선은 바닥에 붙는다(채팅 문법). justify-content:flex-end는
+   내용이 길어지면 위쪽이 잘리므로 첫 자식 margin-top:auto로 처리 */
+.dm-msgs > :first-child { margin-top: auto; }
 
 /* 🍳 믹스 재료 줄 */
 .dm-mixbase {
