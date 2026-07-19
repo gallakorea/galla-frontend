@@ -175,11 +175,17 @@
          **안드로이드가 브라우저 앱에 마이크 권한을 안 준 상태**라는 뜻이다.
          이 경우 팝업도 안 뜨고, 사이트 설정을 아무리 뒤져도 바꿀 게 없다.
          → 안내의 1순위는 '앱 권한', 사이트 설정은 그 다음. */
-      head = '🎙 안드로이드에서 마이크가 꺼져 있어요';
-      sub = '사이트 설정에 <b>마이크 항목이 아예 없죠?</b> 그건 사이트가 아니라 <b>${앱}에 마이크 권한이 없다</b>는 뜻이에요. 휴대폰 설정에서 한 번만 켜주면 됩니다.';
+      head = '🎙 크롬에서 마이크가 꺼져 있어요';
+      sub = '허용 팝업이 <b>아예 안 뜨죠?</b> 그럼 십중팔구 <b>크롬의 마이크 전역 스위치가 꺼져 있어요</b> — 이게 꺼지면 모든 사이트가 요청 단계에서 바로 거절돼요. 아래 ①번만 켜면 됩니다.';
       body = `
         <div class="mh-steps">
-          <div class="mh-tt">① 휴대폰 설정에서 ${'${앱}'}의 마이크 켜기 — 이게 진짜 원인</div>
+          <div class="mh-tt">① 크롬의 마이크 <b>전역 스위치</b> — 여기가 꺼져 있으면 팝업 자체가 안 떠요</div>
+          <div class="mh-step"><span class="n">1</span><span class="t">크롬 <b>⋮ → 설정 → 사이트 설정 → 마이크</b></span></div>
+          <div class="mh-step"><span class="n">2</span><span class="t">맨 위 토글이 <b>“차단됨”</b>이면 <b>켜기</b> (사이트에서 마이크 사용을 요청할 수 있음)</span></div>
+          <div class="mh-step"><span class="n">3</span><span class="t">'차단됨' 목록에 <b>galla.im</b>이 있으면 눌러서 <b>액세스 재설정</b></span></div>
+        </div>
+        <div class="mh-steps">
+          <div class="mh-tt">② 그래도 팝업이 안 뜨면 — 휴대폰 설정에서 ${'${앱}'}의 마이크</div>
           <div class="mh-step"><span class="n">1</span><span class="t">휴대폰 <b>설정</b> 앱 열기</span></div>
           <div class="mh-step"><span class="n">2</span><span class="t"><b>애플리케이션</b> (또는 앱) → <b>${'${앱}'}</b> 찾기</span></div>
           <div class="mh-step"><span class="n">3</span><span class="t"><b>권한</b> → <b>마이크</b> → <b>앱 사용 중에만 허용</b></span></div>
@@ -187,7 +193,7 @@
         </div>
         <div class="mh-warn">🔎 <b>더 빠른 길</b>: 홈 화면에서 <b>${'${앱}'} 아이콘을 꾹 눌러</b> → <b>ⓘ 앱 정보</b> → <b>권한</b> → <b>마이크</b>. 3번 만에 도착해요.<br>권한 목록에 <b>마이크가 안 보이면</b> 맨 위 <b>“권한 더보기 / 모든 권한”</b>을 눌러보세요.</div>
         <div class="mh-steps">
-          <div class="mh-tt">② 그래도 안 되면 — 사이트 차단 지우기</div>
+          <div class="mh-tt">③ 주소창에서 빠르게 — 슬라이더 아이콘 → 권한 재설정</div>
           <div class="mh-step"><span class="n">1</span><span class="t">주소창 왼쪽 <b>슬라이더 모양</b> 아이콘 → 맨 아래 <b>권한 재설정</b></span></div>
           <div class="mh-step"><span class="n">2</span><span class="t">크롬 <b>⋮ → 설정 → 사이트 설정 → 마이크</b>에서 <b>galla.im</b> 확인</span></div>
         </div>
