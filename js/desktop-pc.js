@@ -159,7 +159,7 @@
       fill('pcr-predict', (data || []).map(m => `
         <a class="pcr-row" href="predict-market.html?id=${m.id}">
           <b>${esc(m.question)}</b>
-          <i>판돈 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i>
+          <i>상금풀 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i>
         </a>`).join(''), 'predict.html', '예측 전체 보기');
     } catch (_) { fill('pcr-predict', ''); }
 

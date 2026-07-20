@@ -45,7 +45,7 @@
   const REASON = {
     no_ticket: "일기토 신청서가 없어요. 상점에서 구매하세요.",
     already: "이 상대와 진행 중인 일기토가 이미 있어요.",
-    insufficient: "GP(판돈)가 부족해요.",
+    insufficient: "대결에 필요한 GP가 부족해요.",
     bad_opponent: "잘못된 상대예요.", no_topic: "주제를 입력하세요.",
     not_fighter: "파이터만 발언할 수 있어요.", is_party: "당사자는 참여할 수 없어요.",
     time_over: "시간이 종료됐어요.", not_live: "지금은 대결 중이 아니에요.",
@@ -85,7 +85,7 @@
         <label class="ch-label">논쟁 주제</label>
         <input id="ch-topic" maxlength="140" placeholder="예: 부먹 vs 찍먹, 진리는 하나다" />
 
-        <label class="ch-label">판돈 (승자 독식)</label>
+        <label class="ch-label">대결 GP (승자 독식)</label>
         <div class="seg" id="seg-stake">
           <button data-v="300">300</button><button data-v="500" class="on">500</button><button data-v="1000">1000 GP</button>
         </div>
@@ -101,7 +101,7 @@
         </div>
         <input id="ch-time" type="datetime-local" style="display:none" />
 
-        <div class="ch-cost">신청서 1장 + 판돈이 잠깁니다 · 상대가 도망가면 위약금 획득</div>
+        <div class="ch-cost">신청서 1장 + 대결 GP가 잠깁니다 · 상대가 도망가면 위약금 획득</div>
         <button id="ch-send" class="duel-btn primary">⚔️ 결투 신청</button>
         <button id="ch-cancel" class="duel-btn ghost">취소</button>
       </div>`;
@@ -251,7 +251,7 @@
             <div class="rf-name">${nameTag(D.opponent)}</div>
           </div>
         </div>
-        <div class="ring-topic">“${esc(D.topic)}” · 💰${D.stake} 판돈</div>
+        <div class="ring-topic">“${esc(D.topic)}” · 💰${D.stake} GP</div>
       </div>`;
   }
 
@@ -322,7 +322,7 @@
     $("#cgz-bar")?.classList.toggle("empty", t === 0);
   }
 
-  /* 🔒 대결 중 이탈 방지 — 판돈이 걸린 실시간 대결이라 실수로 나가면 상대가 피해를 본다.
+  /* 🔒 대결 중 이탈 방지 — GP가 걸린 실시간 대결이라 실수로 나가면 상대가 피해를 본다.
      완전 차단은 불가(브라우저 정책)이므로 ①새로고침/닫기 경고 ②앱 내 이동 차단 ③뒤로가기 되돌림. */
   let EXIT_LOCKED = false;
   function beforeUnload(e) { e.preventDefault(); e.returnValue = ""; return ""; }
@@ -362,7 +362,7 @@
   function toastLock() {
     if (TOASTING) return;   // 클릭 한 번에 alert이 여러 번 뜨지 않게
     TOASTING = true;
-    alert("⚔️ 대결 중에는 나갈 수 없어요.\n포기하려면 '🏳️ 포기하고 나가기'를 누르세요 (판돈을 잃습니다).");
+    alert("⚔️ 대결 중에는 나갈 수 없어요.\n포기하려면 '🏳️ 포기하고 나가기'를 누르세요 (걸어둔 GP를 잃습니다).");
     TOASTING = false;
   }
 
@@ -370,7 +370,7 @@
   function bindForfeit() {
     const b = $("#ff"); if (!b) return;
     b.onclick = async () => {
-      if (!confirm(`🏳️ 정말 포기할까요?\n판돈 ${D.stake} GP를 잃고 상대가 부전승으로 이깁니다.`)) return;
+      if (!confirm(`🏳️ 정말 포기할까요?\n걸어둔 ${D.stake} GP를 잃고 상대가 부전승으로 이깁니다.`)) return;
       b.disabled = true; b.textContent = "처리 중…";
       const { data, error } = await sb.rpc("duel_forfeit", { p_duel: D.id });
       if (error || !data?.ok) {
@@ -608,14 +608,14 @@
     const pa = $("#pa");
     if (D._isOpp) {
       pa.innerHTML = `<div class="duel-card act-card">
-        <div class="act-msg">💰 판돈 <b>${D.stake} GP</b> · ${D.mode === "instant" ? "수락 즉시 실시간 대결 시작" : "예약 대결"}</div>
-        <div class="act-msg sub">수락하면 같은 판돈이 잠깁니다. 거절(도망) 시 위약금 200GP를 뺏겨요.</div>
+        <div class="act-msg">💰 대결 GP <b>${D.stake}</b> · ${D.mode === "instant" ? "수락 즉시 실시간 대결 시작" : "예약 대결"}</div>
+        <div class="act-msg sub">수락하면 같은 GP가 잠깁니다. 거절(도망) 시 위약금 200GP를 뺏겨요.</div>
         <div class="act-btns"><button class="duel-btn primary" id="acc">⚔️ 수락하고 참전</button>
         <button class="duel-btn ghost" id="dec">도망가기</button></div></div>`;
       $("#acc").onclick = () => respond(true, $("#acc"));
       $("#dec").onclick = () => { if (confirm("도망가면 위약금 200GP를 잃어요. 정말?")) respond(false, $("#dec")); };
     } else {
-      pa.innerHTML = `<div class="duel-card act-card"><div class="act-msg">⏳ 상대의 수락을 기다리는 중… (판돈 ${D.stake} 잠김)</div></div>`;
+      pa.innerHTML = `<div class="duel-card act-card"><div class="act-msg">⏳ 상대의 수락을 기다리는 중… (${D.stake} GP 잠김)</div></div>`;
       pollStatus();
     }
   }
@@ -680,7 +680,7 @@
     const c = D.vote_challenger || 0, o = D.vote_opponent || 0, tot = Math.max(1, c + o);
     const cp = Math.round(c / tot * 100);
     let banner = "";
-    if (D.status === "finished") banner = D.result === "draw" ? "🤝 무승부 — 판돈 환불" : `🏆 ${esc(nk(D.winner))} 승리 · 판돈 ${D.stake * 2} 획득`;
+    if (D.status === "finished") banner = D.result === "draw" ? "🤝 무승부 — GP 반환" : `🏆 ${esc(nk(D.winner))} 승리 · ${D.stake * 2} GP 획득`;
     else if (D.status === "noshow") banner = `🏳️ ${esc(nk(D.fled_by))} 노쇼 — ${esc(nk(D.winner))} 부전승`;
     else if (D.status === "declined") banner = `🏳️ ${esc(nk(D.fled_by))} 도망 — 위약금 몰수`;
     else banner = "무효 처리됨";

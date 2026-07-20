@@ -1,6 +1,6 @@
 /* =========================================================
-   galla-predict.js — 갈라예측 카지노 로비 (파리뮤추얼)
-   오늘의 잭팟 · 연승 콤보 · 데일리 무료코인 · 실시간 배당 카드
+   galla-predict.js — 갈라예측 아케이드 로비 (파리뮤추얼)
+   오늘의 대박 보너스 · 연승 콤보 · 데일리 무료코인 · 실시간 리턴 카드
 ========================================================= */
 let supa = null, ME = null;
 let allMarkets = [], OUT_BY_M = {}, curCat = '', curSort = 'volume';
@@ -80,8 +80,8 @@ function renderGuide(){
           <div class="pg-n">2</div>
           <div class="pg-t">모두의 GP가 한 항아리에 모인다</div>
           <div class="pg-s">양쪽 참여 GP가 전부 <b>하나의 상금풀</b>이 돼요.
-            내 편에 사람이 적을수록 배당 <b>×N</b>이 커집니다 — 소수파의 짜릿함!
-            배당은 실시간으로 움직여요.</div>
+            내 편에 사람이 적을수록 리턴 <b>×N</b>이 커집니다 — 소수파의 짜릿함!
+            리턴 배수는 실시간으로 움직여요.</div>
         </div>
         <div class="pg-arrow">▼</div>
 
@@ -181,7 +181,7 @@ function renderJackpot(){
   const el=$('pmJackpot'); if(!el) return;
   const open = allMarkets.filter(m=>!m.resolved && new Date(m.close_at)>Date.now());
   if(!open.length){ el.innerHTML=''; return; }
-  // 잭팟 지정 우선, 없으면 상금풀(총풀+잭팟) 최대
+  // 보너스 지정 우선, 없으면 상금풀(총풀+보너스) 최대
   let hero = open.find(m=>m.is_jackpot);
   const prize = m => (m.total_pool||0)+(m.jackpot_bonus||0);
   if(!hero){ hero = open.slice().sort((a,b)=>prize(b)-prize(a))[0]; }

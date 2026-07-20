@@ -163,7 +163,7 @@
             '<div class="dch-role">수비자</div></div>' +
         "</div>" +
         '<div class="dch-topic">“' + esc(d.topic || "일기토") + '”</div>' +
-        '<div class="dch-meta">💰 ' + (d.stake || 0).toLocaleString() + " GP 판돈 · ⏱ " + secs + "</div>" +
+        '<div class="dch-meta">💰 ' + (d.stake || 0).toLocaleString() + " GP 대결 · ⏱ " + secs + "</div>" +
         '<div class="dch-acts2">' +
           '<button class="dch-yes">⚔️ 받아친다</button>' +
           '<button class="dch-no">나중에</button>' +

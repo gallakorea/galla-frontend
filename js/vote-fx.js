@@ -1,7 +1,7 @@
 /* ============================================================
    GALLA 진영 선택 축하 이펙트 — window.GALLA_VoteFX.celebrate(opts)
    opts: { type:'pro'|'con', faction, origin:{x,y} }
-   색종이 폭발 + 큰 글자 터짐 + 화면 플래시 + 충격파 + 코인 샤워(카지노).
+   색종이 폭발 + 큰 글자 터짐 + 화면 플래시 + 충격파 + 코인 샤워(아케이드).
    ============================================================ */
 (function () {
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -92,7 +92,7 @@
         frag.appendChild(e); life.push([e, 1600]);
       }
 
-      // 코인 샤워(카지노 잭팟) — 상단에서 쏟아짐
+      // 코인 샤워(아케이드 대박) — 상단에서 쏟아짐
       for (let i = 0; i < 22; i++) {
         const c = document.createElement("span");
         c.className = "gvfx-coin"; c.textContent = pick(COINS);

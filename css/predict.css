@@ -1,5 +1,5 @@
 /* =========================================================
-   predict.css — 갈라예측 카지노 재설계 (파리뮤추얼)
+   predict.css — 갈라예측 아케이드 재설계 (파리뮤추얼)
    galla-predict.css 위에 얹는 신규 레이어. 다크+네온/골드.
 ========================================================= */
 :root{
@@ -41,7 +41,7 @@
 .pm-daily-s{ font-size:11.5px; color:#7fb89a; margin-top:1px; }
 .pm-daily-go{ font-size:13px; font-weight:900; color:#38d27a; }
 
-/* ===== 오늘의 잭팟 히어로 ===== */
+/* ===== 오늘의 대박 보너스 히어로 ===== */
 .pm-jackpot{
   position:relative; overflow:hidden; margin-bottom:18px;
   border-radius:20px; padding:18px 16px 16px;
@@ -123,7 +123,7 @@
   .pm-odds-side{ transition:none; }
 }
 
-/* ===== 상세(베팅) 페이지 ===== */
+/* ===== 상세(참여) 페이지 ===== */
 .pb-wrap{ padding:8px 14px 40px; }
 .pb-cat{ font-size:12px; color:var(--pm-dim); font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .pb-q{ font-size:20px; font-weight:900; line-height:1.32; color:#fff; margin:6px 0 4px; }
@@ -138,7 +138,7 @@
 .pb-ppl{ font-size:12px; color:var(--pm-dim); font-weight:700; }
 .pb-ppl b{ color:#c8d0e2; }
 
-/* 결과 선택 (베팅 대상) */
+/* 결과 선택 (참여 대상) */
 .pb-outs{ display:flex; gap:9px; margin-top:14px; }
 .pb-out{ flex:1; position:relative; border-radius:14px; padding:13px 10px; cursor:pointer; text-align:center;
   background:#171a24; border:1.5px solid var(--pm-line); transition:all .15s ease; }
@@ -151,7 +151,7 @@
 .pb-out:active{ transform:scale(.97); }
 .pb-out .win{ position:absolute; top:-9px; right:-4px; font-size:16px; }
 
-/* 칩 베팅 */
+/* 칩 참여 */
 .pb-panel{ margin-top:14px; background:var(--pm-panel); border:1px solid var(--pm-line); border-radius:16px; padding:14px; }
 .pb-panel-h{ display:flex; justify-content:space-between; align-items:center; font-size:12.5px; color:var(--pm-dim); font-weight:700; }
 .pb-panel-h b{ color:#d7deec; }
@@ -175,7 +175,7 @@
 .pb-bet:active{ transform:scale(.98); }
 .pb-bet.no-side{ background:#242838; color:#8a93a6; }
 
-/* 내 베팅 */
+/* 내 참여 */
 .pb-mine{ margin-top:12px; padding:12px 14px; border-radius:14px; font-size:13px; font-weight:700;
   background:rgba(255,207,63,.07); border:1px solid rgba(255,207,63,.25); color:#e8d9a8; }
 .pb-mine b{ color:var(--pm-gold); }
@@ -195,7 +195,7 @@
 .pb-admin-btn.yes{ border-color:rgba(74,123,255,.5); color:#a9c2ff; }
 .pb-admin-btn.no{ border-color:rgba(255,60,90,.5); color:#ffb3c1; }
 
-/* 라이브 베팅 피드 */
+/* 라이브 참여 피드 */
 .pb-live{ margin-top:16px; }
 .pb-live-h{ display:flex; align-items:center; gap:7px; font-size:13.5px; font-weight:900; color:#dfe5f1; margin-bottom:9px; }
 .pb-feed-row{ display:flex; align-items:center; gap:9px; padding:8px 2px; border-bottom:1px solid #171a24; font-size:12.5px; }
@@ -291,7 +291,7 @@
 @media (prefers-reduced-motion: reduce){ .pg-coin{ animation:none; } .pg-body{ transition:none; } }
 
 /* ===== 상세 페이지 라이브 연출 (타임스퀘어) ===== */
-/* 배당바 빛 스윕 — 네온 사인이 계속 훑고 지나간다 */
+/* 리턴바 빛 스윕 — 네온 사인이 계속 훑고 지나간다 */
 .pm-odds-side.shine{ position:relative; }
 .pm-odds-side.shine::after{
   content:""; position:absolute; inset:0; pointer-events:none;
@@ -305,7 +305,7 @@
 .pb-pool-n.glow{ animation:pbGlow 2.8s ease-in-out infinite; }
 @keyframes pbGlow{ 0%,100%{ text-shadow:0 0 12px rgba(255,207,63,.25) } 50%{ text-shadow:0 0 26px rgba(255,207,63,.6), 0 0 44px rgba(255,157,46,.25) } }
 
-/* 잭팟 히어로 반짝이 */
+/* 대박 보너스 히어로 반짝이 */
 .pb-spark{ position:absolute; pointer-events:none; z-index:1; font-size:14px; opacity:0; animation:pbSpark 3.4s ease-in-out infinite; }
 .pb-spark.s1{ top:12%; left:8%; }
 .pb-spark.s2{ top:20%; right:12%; animation-delay:.9s; }
@@ -313,13 +313,13 @@
 .pb-spark.s4{ bottom:22%; right:7%; animation-delay:2.4s; font-size:13px; }
 @keyframes pbSpark{ 0%,100%{ opacity:0; transform:translateY(4px) scale(.7) } 50%{ opacity:1; transform:translateY(-6px) scale(1.15) } }
 
-/* 배당 변동 틱 — 오르면 골드 팝, 내리면 레드 딤 (주식 시세판) */
+/* 리턴 변동 틱 — 오르면 골드 팝, 내리면 레드 딤 (주식 시세판) */
 @keyframes pbTickUp{ 0%{ color:var(--pm-gold); transform:scale(1.3); text-shadow:0 0 14px rgba(255,207,63,.7) } 100%{ transform:scale(1) } }
 @keyframes pbTickDown{ 0%{ color:#ff7a90; transform:scale(.85) } 100%{ transform:scale(1) } }
 .pb-out .od.tick-up{ animation:pbTickUp .9s ease; }
 .pb-out .od.tick-down{ animation:pbTickDown .9s ease; }
 
-/* 칩이 살아 숨쉰다 — 유휴 미세 흔들림(시차) + 올인은 심장박동 */
+/* 칩이 살아 숨쉰다 — 유휴 미세 흔들림(시차) + MAX는 심장박동 */
 @keyframes pbChipIdle{ 0%,100%{ transform:rotate(0) } 25%{ transform:rotate(-2.5deg) } 75%{ transform:rotate(2.5deg) } }
 .pb-chip{ animation:pbChipIdle 3.6s ease-in-out infinite; }
 .pb-chip:nth-child(2){ animation-delay:.4s; } .pb-chip:nth-child(3){ animation-delay:.8s; }
@@ -327,7 +327,7 @@
 @keyframes pbAllin{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,60,90,.4) } 50%{ box-shadow:0 0 16px 3px rgba(255,60,90,.25) } }
 .pb-chip.allin{ animation:pbChipIdle 3.6s ease-in-out infinite 1.6s, pbAllin 2s ease-in-out infinite; }
 
-/* 베팅하기 버튼 shimmer — 골드 위를 빛줄기가 지나간다 */
+/* 참여하기 버튼 shimmer — 골드 위를 빛줄기가 지나간다 */
 .pb-bet{ position:relative; overflow:hidden; }
 .pb-bet::after{
   content:""; position:absolute; inset:0; pointer-events:none;

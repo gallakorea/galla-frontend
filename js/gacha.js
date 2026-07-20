@@ -105,7 +105,7 @@
           <tr><td>칭호(미보유)·+800GP</td><td>7%</td></tr>
           <tr><td>닉스타일(미보유)·+1,500GP</td><td>2.5%</td></tr>
           <tr><td>🔥 +2,000 GP</td><td>1.5%</td></tr>
-          <tr><td>💎 잭팟 +5,000 GP</td><td>1%</td></tr>
+          <tr><td>💎 대박 보너스 +5,000 GP</td><td>1%</td></tr>
         </table>
       </div>
       <div class="ga-note">GP는 서비스 내 재화이며 <b>현금으로 환전·환급되지 않습니다.</b> 확률형 아이템 확률은 위와 같이 공개됩니다.</div>

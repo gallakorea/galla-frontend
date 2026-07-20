@@ -102,7 +102,7 @@
     if (type === "pro") pro++; else con++;
     if (prev === "pro" && pro > 0) pro--; else if (prev === "con" && con > 0) con--;
     update(el, { pro, con }, { voted: type, myStance: type, animate: true });
-    // 🎉 화려한 축하 이펙트(카지노풍 폭발 + 큰 글자)
+    // 🎉 화려한 축하 이펙트(아케이드풍 폭발 + 큰 글자)
     if (window.GALLA_VoteFX) {
       const btn = type === "pro" ? a : c;
       const name = btn && btn.querySelector(".gv-name") ? btn.querySelector(".gv-name").textContent : null;

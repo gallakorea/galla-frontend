@@ -1,7 +1,7 @@
 /* =========================================================
-   predict-market.js — 예측 상세/베팅 (파리뮤추얼 · 카지노)
-   한 결과에 GP를 건다. 배당 = 상금풀 ÷ 그 결과 풀 (실시간).
-   정산 시 승자들이 풀 전체를 베팅 비율로 분배 + 연승 콤보.
+   predict-market.js — 예측 상세/참여 (파리뮤추얼 · 아케이드)
+   한 결과에 GP로 참여한다. 리턴 = 상금풀 ÷ 그 결과 풀 (실시간).
+   정산 시 승자들이 풀 전체를 참여 비율로 분배 + 연승 콤보.
 ========================================================= */
 let supa = null, ME = null, MARKET = null, OUTCOMES = [], STATE = null;
 let SEL = null;            // 선택한 outcome id
@@ -22,7 +22,7 @@ function ocLabel(id){ const o=OUTCOMES.find(x=>x.id===Number(id)); return o?o.la
 // 이진 마켓의 '예'가 sort 0 — 사이드 클래스(색)용
 function sideOf(o){ return o.sort===0||o.sort_order===0 ? 'yes' : 'no'; }
 
-/* 상금풀·배당 헬퍼 (STATE 기반) */
+/* 상금풀·리턴 헬퍼 (STATE 기반) */
 function prizePool(){ return (STATE?.total_pool||0) + (STATE?.jackpot||0); }
 function oddsOf(o){ return o.pool>0 ? prizePool()/o.pool : null; }
 
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await refreshBalance();
   if(!marketId){ $('pmdMain').innerHTML='<div class="empty-zone">잘못된 접근입니다.</div>'; return; }
   await loadMarket();
-  // 라이브 갱신: 30초마다 풀·배당·피드 재조회 (열려있을 때만)
+  // 라이브 갱신: 30초마다 풀·리턴·피드 재조회 (열려있을 때만)
   setInterval(async ()=>{ if(MARKET && !MARKET.resolved && !document.hidden){ await refreshState(); renderHero(); loadFeed(); } }, 30000);
 });
 
@@ -198,7 +198,7 @@ function renderHero(){
   const no=outs.find(o=>o!==yes)||outs[1];
   const py=yes?.pool||0, pn=no?.pool||0, tot=py+pn;
   const yp=tot>0?Math.round(py/tot*100):50;
-  // 잭팟 마켓: 히어로에 반짝이 별이 떠다닌다
+  // 보너스 마켓: 히어로에 반짝이 별이 떠다닌다
   const sparkles=STATE.is_jackpot
     ? `<span class="pb-spark s1">✨</span><span class="pb-spark s2">✨</span><span class="pb-spark s3">💫</span><span class="pb-spark s4">🪙</span>` : '';
   el.innerHTML=`${sparkles}
@@ -246,7 +246,7 @@ function renderMine(){
 function renderPanel(closed){
   const el=$('pbPanel'); if(!el) return;
   if(closed){ el.innerHTML=''; return; }
-  // 배당 변동 감지 → 오르면 골드, 내리면 레드 플래시 (주식 시세판)
+  // 리턴 변동 감지 → 오르면 골드, 내리면 레드 플래시 (주식 시세판)
   window.__PB_PREV_ODDS ||= {};
   const outBtns=OUTCOMES.map(o=>{
     const od=oddsOf(o);
@@ -272,7 +272,7 @@ function renderPanel(closed){
         <button class="pb-chip allin" data-amt="allin">최대</button>
       </div>
       <div class="pb-custom"><input id="pbAmt" type="number" inputmode="numeric" min="10" placeholder="직접 입력 (최소 10GP)"></div>
-      <div class="pb-est"><span id="pbEstL">예상 배당</span><b id="pbEst">—</b></div>
+      <div class="pb-est"><span id="pbEstL">예상 리턴</span><b id="pbEst">—</b></div>
       <button class="pb-bet" id="pbBet">🎯 예측하기</button>
     </div>`;
 
@@ -293,7 +293,7 @@ function renderPanel(closed){
   updateEst();
 }
 
-/* 예상 배당: 내 베팅이 풀에 들어간 후 기준 (파리뮤추얼) */
+/* 예상 리턴: 내 참여분이 풀에 들어간 후 기준 (파리뮤추얼) */
 function updateEst(){
   const est=$('pbEst'); if(!est) return;
   const amt=Number($('pbAmt')?.value||0);
@@ -332,11 +332,11 @@ async function placeBet(){
       window.GALLA_FX.burst(r.left+r.width/2,r.top,{emojis:['🪙','💰','✨'],count:16,spread:80,up:50});
       window.GALLA_FX.flash();
     }
-    toast(`🎯 ${fmt(amt)}GP 예측 참여! 배당 ×${data.odds}`);
+    toast(`🎯 ${fmt(amt)}GP 예측 참여! 리턴 ×${data.odds}`);
     $('pbAmt').value='';
     await refreshState();
     renderHero(); renderMine(); renderPanel(false); loadFeed();
-    // 의견 배틀 컴포저의 진영 잠금(💰 베터)도 즉시 반영 — 새로고침 불필요
+    // 의견 배틀 컴포저의 진영 잠금(💰 참여자)도 즉시 반영 — 새로고침 불필요
     loadTab(TAB);
   }catch(e){ console.error(e); toast('참여에 실패했습니다.'); }
   finally{ btn.disabled=false; btn.textContent='🎯 예측하기'; }
@@ -415,7 +415,7 @@ function renderAdmin(closed, canResolve){
   else if(window.GALLA_canManage) window.GALLA_canManage(MARKET.created_by).then(show);
 }
 
-/* ============ 라이브 베팅 피드 ============ */
+/* ============ 라이브 참여 피드 ============ */
 async function loadFeed(){
   const el=$('pbFeed'); if(!el) return;
   const { data } = await supa.from('predict_bets')
@@ -446,7 +446,7 @@ async function fetchProfiles(ids){
   return map;
 }
 
-/* ============ 탭: 의견 배틀 / 베터 순위 ============ */
+/* ============ 탭: 의견 배틀 / 참여 랭킹 ============ */
 let TAB='comments';
 function bindTabs(){
   document.querySelectorAll('.pmd-tab').forEach(b=>b.addEventListener('click',()=>{
@@ -463,11 +463,11 @@ async function loadTab(kind){
 }
 function emptyTab(msg){ return `<div class="pmd-tab-empty">${msg}</div>`; }
 
-/* ----- 베터 순위: 베팅 큰 순 ----- */
+/* ----- 참여 랭킹: 참여 GP 큰 순 ----- */
 async function loadHolders(body){
   const { data } = await supa.from('predict_bets')
     .select('user_id,outcome_id,stake').eq('market_id',marketId);
-  if(!data||!data.length){ body.innerHTML=emptyTab('아직 베터가 없습니다.'); return; }
+  if(!data||!data.length){ body.innerHTML=emptyTab('아직 참여자가 없습니다.'); return; }
   const agg={};
   data.forEach(b=>{ const k=b.user_id+':'+b.outcome_id; (agg[k]||={user_id:b.user_id,outcome_id:b.outcome_id,total:0}).total+=b.stake; });
   const rows=Object.values(agg).sort((a,b)=>b.total-a.total).slice(0,30);
@@ -482,7 +482,7 @@ async function loadHolders(body){
     </div>`;}).join('')+`</div>`;
 }
 
-/* ----- 댓글: 의견 배틀 (베팅 진영 잠금 + 홀더 뱃지 + 대댓글 @멘션) ----- */
+/* ----- 댓글: 의견 배틀 (참여 진영 잠금 + 홀더 뱃지 + 대댓글 @멘션) ----- */
 let CMT_SIDE=null, MY_POS_SIDE=null;
 let CMT_DATA=null, CMT_TOP_LIMIT=8;
 const CMT_EXPANDED=new Set();
@@ -498,7 +498,7 @@ function ocChipStyle(side, ocId){
 function cmtBody(content){ return esc(content).replace(/@(\S+)/g,'<span class="pmd-mention">@$1</span>'); }
 
 async function loadComments(body){
-  // 내 베팅으로 진영 잠금 (파리뮤추얼: my_bets의 outcome → side)
+  // 내 참여로 진영 잠금 (파리뮤추얼: my_bets의 outcome → side)
   MY_POS_SIDE=null;
   const my=STATE?.my_bets||{};
   const myOid=Object.keys(my).find(k=>Number(my[k])>0);
@@ -518,7 +518,7 @@ async function loadComments(body){
     const { data: likes } = await supa.from('market_comment_likes').select('comment_id,user_id').in('comment_id',ids);
     likes?.forEach(l=>{ likeAgg[l.comment_id]=(likeAgg[l.comment_id]||0)+1; if(ME&&l.user_id===ME.id) myLikes.add(l.comment_id); });
   }
-  // 작성자 실베팅 여부(💰 베터 뱃지) — predict_bets 기준
+  // 작성자 실참여 여부(💰 참여자 뱃지) — predict_bets 기준
   const posMap={};
   const authorIds=[...new Set((rows||[]).map(c=>c.user_id).filter(Boolean))];
   if(authorIds.length){

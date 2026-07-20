@@ -254,7 +254,7 @@
 .pmd-side-chip.yes { color: #aac4ff; background: rgba(51,86,255,.2); border: 1px solid rgba(109,139,255,.5); }
 .pmd-side-chip.no  { color: #ffaaba; background: rgba(255,79,110,.16); border: 1px solid rgba(255,111,134,.5); }
 
-/* 역할 뱃지 — 팀색(칩)과 분리. 홀더=골드(돈 걸림) / 관전=회색(베팅 안 함) */
+/* 역할 뱃지 — 팀색(칩)과 분리. 홀더=골드(참여) / 관전=회색(미참여) */
 .pmd-cmt-role {
   font-size: 9.5px; font-weight: 800;
   padding: 1px 7px; border-radius: 6px; white-space: nowrap;

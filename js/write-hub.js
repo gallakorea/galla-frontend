@@ -17,7 +17,7 @@
     },
     predict: {
       key: 'predict', emoji: '📈', title: '예측 마켓',
-      desc: '결과를 두고 포인트로 베팅하는 마켓 개설',
+      desc: '결과를 두고 포인트로 예측하는 마켓 개설',
       accent: '#3d6bff',
     },
     plaza: {

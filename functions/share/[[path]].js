@@ -150,7 +150,7 @@ export async function onRequestGet(context) {
     const row = await sbOne(`markets?id=eq.${encodeURIComponent(id)}&select=question,description,image_url`);
     if (row) {
       title = `🔮 ${clip(row.question, 60)}`;
-      desc = `당신의 예측은? 포인트로 겨루는 갈라예측 — 지금 베팅하고 예측왕에 도전하세요.`;
+      desc = `당신의 예측은? 포인트로 겨루는 갈라예측 — 지금 참여하고 예측왕에 도전하세요.`;
       image = row.image_url || defImg;
       dest = `${origin}/predict-market.html?id=${encodeURIComponent(id)}`;
     }

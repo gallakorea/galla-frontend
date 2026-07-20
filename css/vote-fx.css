@@ -1,5 +1,5 @@
 /* ============================================================
-   GALLA 진영 선택 축하 이펙트 (카지노풍 폭발 + 큰 글자 터짐)
+   GALLA 진영 선택 축하 이펙트 (아케이드풍 폭발 + 큰 글자 터짐)
    #gv-fx : 전체화면 오버레이(포인터 통과). JS가 파티클 주입.
    ============================================================ */
 #gv-fx {
@@ -81,7 +81,7 @@
   100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(.9) rotate(var(--rot)); }
 }
 
-/* 상단에서 쏟아지는 코인 샤워(카지노 잭팟) */
+/* 상단에서 쏟아지는 코인 샤워(아케이드 대박) */
 .gvfx-coin {
   position: absolute; top: -6vh; left: var(--x, 50%); font-size: var(--sz, 22px);
   opacity: 0; will-change: transform, opacity;
