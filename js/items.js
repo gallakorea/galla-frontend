@@ -79,7 +79,7 @@
         <div class="shop-grip"></div>
         <div class="shop-head">
           <span class="shop-title">🛒 GP 상점</span>
-          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button></span>
+          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button><button class="shop-x" id="shopX" aria-label="닫기">✕</button></span>
         </div>
         <div class="shop-tabs">
           <button class="shop-tab on" data-t="buy" type="button">🛒 구매</button>
@@ -91,6 +91,33 @@
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
+    sheet.querySelector("#shopX").addEventListener("click", () => sheet.classList.remove("open"));
+
+    /* 위에서 아래로 끌어 닫기 — 딤 탭만으로는 닫는 법이 안 보인다(사장님 지적).
+       리스트 스크롤과 안 싸우게 상단부(그립·헤더·탭)에서 시작한 드래그만 받는다. */
+    const card = sheet.querySelector(".shop-card");
+    let sy = null, dy = 0, dragging = false;
+    card.addEventListener("pointerdown", (e) => {
+      if (e.target.closest(".shop-list, .shop-note, button, a, input")) return;
+      sy = e.clientY; dy = 0; dragging = true;
+      card.style.transition = "none";
+      try { card.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    card.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      dy = Math.max(0, e.clientY - sy);
+      card.style.transform = `translateY(${dy}px)`;
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      card.style.transition = "";
+      card.style.transform = "";
+      if (dy > 110) sheet.classList.remove("open");   // 충분히 내렸으면 닫힘, 아니면 스프링백
+      dy = 0;
+    };
+    card.addEventListener("pointerup", endDrag);
+    card.addEventListener("pointercancel", endDrag);
     sheet.querySelector("#shopCharge").addEventListener("click", () => window.GALLA_openCharge?.());
     /* hidden 속성은 .shop-list{display:flex}에 진다(명세: CSS display가 이김)
        — 실제로 두 리스트가 겹쳐 보이는 사고가 났다. 클래스로 확실히 끈다. */
