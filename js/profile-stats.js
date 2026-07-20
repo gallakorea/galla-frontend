@@ -77,17 +77,33 @@
       body.innerHTML = `<div class="ps-empty">${kind === "followers" ? "아직 팔로워가 없어요." : "아직 팔로우한 사람이 없어요."}</div>`;
       return;
     }
-    const { data: users } = await sb().from("users").select("id,nickname,avatar_url").in("id", ids);
+    const { data: users } = await sb().from("users").select("id,nickname,avatar_url,level").in("id", ids);
     const byId = Object.fromEntries((users || []).map(u => [u.id, u]));
+    /* avatar_url은 스토리지 '경로'(uid/avatar.jpg) — 공개 URL로 변환해야 이미지가 뜬다
+       (마이페이지 프로필과 동일 규약: storage.from('avatars').getPublicUrl) */
+    const avaSrc = (u) => {
+      if (!u.avatar_url) return null;
+      if (/^https?:/.test(u.avatar_url)) return u.avatar_url;
+      try { return sb().storage.from("profiles").getPublicUrl(u.avatar_url).data.publicUrl; }
+      catch (_) { return null; }
+    };
+    /* 등급 아이콘 — 마이페이지 tierChip과 같은 레벨 구간 */
+    const tierIc = (lv) => (lv >= 20 ? "👑" : lv >= 10 ? "⚔️" : lv >= 5 ? "🔰" : "🌱");
     body.innerHTML = ids.map(id => {
       const u = byId[id] || {};
       return `
         <div class="ps-row" data-uid="${id}">
-          ${u.avatar_url ? `<img class="ps-ava" src="${esc(u.avatar_url)}">` : `<span class="ps-ava ps-ava-d">👤</span>`}
-          <b class="ps-nick">${esc(u.nickname || "익명")}</b>
+          ${avaSrc(u) ? `<img class="ps-ava" src="${esc(avaSrc(u))}">` : `<span class="ps-ava ps-ava-d">👤</span>`}
+          <b class="ps-nick"><span class="ps-tier">${tierIc(Number(u.level) || 1)}</span>${esc(u.nickname || "익명")}</b>
           <button class="ps-follow js-follow" data-uid="${id}" type="button">+ 팔로우</button>
         </div>`;
     }).join("");
+    /* 깨진 아바타(만료 URL 등) → 기본 아이콘으로 교체 */
+    body.querySelectorAll("img.ps-ava").forEach(img => img.addEventListener("error", () => {
+      const d = document.createElement("span");
+      d.className = "ps-ava ps-ava-d"; d.textContent = "👤";
+      img.replaceWith(d);
+    }));
     window.GALLA_bindFollow?.(body);   // 팔로우 상태 페인트·토글·내 계정 숨김 위임
     body.querySelectorAll(".ps-row").forEach(r => r.addEventListener("click", (e) => {
       if (e.target.closest(".js-follow")) return;
@@ -184,7 +200,7 @@
       const chip = document.createElement("span");
       chip.id = "mpDuelRec";
       chip.className = "mp-duel-rec";
-      chip.innerHTML = `⚔️ ${total}전 <b>${w}승</b> ${l}패${d ? " " + d + "무" : ""} · 승률 ${rate}%`;
+      chip.innerHTML = `⚔️ 일기토 ${total}전 <b>${w}승</b> ${l}패${d ? " " + d + "무" : ""} · 승률 ${rate}%`;
       chip.title = "일기토 전적 (완료된 대결 기준)";
       host.appendChild(chip);
     } catch (_) {}
