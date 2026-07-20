@@ -107,8 +107,9 @@
         const style = d.nick_style || (d.nick_gold ? "gold" : null);
         if (style) el.classList.add("ns-" + style);
         if (style === "gold") el.classList.add("nick-gold");
-        // 장착 칭호 배지 — 닉네임 앞에 1회 삽입
-        if (d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
+        // 장착 칭호 배지 — 폐지(2026-07-20 사장님: 장착식 칭호는 등급과 어긋나 혼란만).
+        //   등급 표시는 등급 화면·레벨 칩이 담당한다.
+        if (false && d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
           const b = document.createElement("span");
           b.className = "nick-title";
           // "🌱 눈팅 뉴비" → 아이콘/이름 분리 (작성자 헤더에선 아이콘만 노출)

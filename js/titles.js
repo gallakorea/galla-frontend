@@ -50,15 +50,14 @@
     document.head.appendChild(s);
   }
 
-  let sheet, tab = "title", bal = 0, ME = null, myNick = "내 닉네임";
+  let sheet, tab = "style", bal = 0, ME = null, myNick = "내 닉네임";
   let gi = 0, tiers = [], awards = [], equipT = null, ownedS = new Set(), equipS = null;
 
   async function refresh() {
-    const [balR, et, ms, sess] = await Promise.all([
-      sb().rpc("ensure_balance"), sb().rpc("my_earned_titles"), sb().rpc("my_nickstyles"), sb().auth.getSession(),
+    const [balR, ms, sess] = await Promise.all([
+      sb().rpc("ensure_balance"), sb().rpc("my_nickstyles"), sb().auth.getSession(),
     ]);
     bal = Math.round(balR.data || 0);
-    gi = et.data?.gi || 0; tiers = et.data?.tiers || []; awards = et.data?.awards || []; equipT = et.data?.equipped || null;
     ownedS = new Set(ms.data?.owned || []); equipS = ms.data?.equipped || null;
     ME = sess.data?.session?.user?.id || null;
     if (ME && myNick === "내 닉네임") {
@@ -100,10 +99,11 @@
 
   function render() {
     sheet.querySelector("#tt-bal").textContent = bal.toLocaleString() + " GP";
-    sheet.querySelectorAll(".tt-tab").forEach(t => t.classList.toggle("on", t.dataset.tab === tab));
     const note = sheet.querySelector("#tt-note");
     const grid = sheet.querySelector("#tt-grid");
-    if (tab === "title") {
+    /* 🏷️ 칭호 선택 폐지(사장님) — 등급은 등급 화면이 진실이고, 장착식 칭호는
+       '뉴비가 여론 논객' 같은 뒤죽박죽만 만든다. 스타일 단독 시트로. */
+    if (false) {
       note.innerHTML = `칭호는 <b style="color:#c9d1e0">활동·등급·시즌으로만 획득</b>돼요 (구매 불가) · 내 갈라 지수 <b>${gi.toLocaleString()} GI</b>`;
       grid.innerHTML =
         `<div class="tt-sub">🏅 등급 칭호</div>` + tiers.map(tierRow).join("") +
@@ -169,18 +169,13 @@
     document.getElementById("tt-sheet")?.remove();
     sheet = document.createElement("div"); sheet.id = "tt-sheet"; sheet.className = "tt-sheet";
     sheet.innerHTML = `<div class="dim"></div><div class="tt-card">
-      <div class="tt-head"><span class="tt-title">🎨 꾸미기</span><span class="tt-bal" id="tt-bal">– GP</span></div>
-      <div class="tt-tabs">
-        <button class="tt-tab on" data-tab="title">🏷️ 칭호</button>
-        <button class="tt-tab" data-tab="style">🎨 닉네임 스타일</button>
-      </div>
+      <div class="tt-head"><span class="tt-title">🎨 닉네임 스타일</span><span class="tt-bal" id="tt-bal">– GP</span></div>
       <div class="tt-note" id="tt-note"></div>
       <div class="tt-grid" id="tt-grid"></div>
       <button class="tt-close">닫기</button></div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".dim").onclick = () => sheet.remove();
     sheet.querySelector(".tt-close").onclick = () => sheet.remove();
-    sheet.querySelectorAll(".tt-tab").forEach(t => t.onclick = () => { tab = t.dataset.tab; render(); });
     await refresh();
   };
 })();
