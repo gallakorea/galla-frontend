@@ -35,13 +35,19 @@
       .gifp-btn:hover{background:rgba(255,255,255,.12);opacity:1}
       .gifp-btn img{height:12px;display:block;pointer-events:none}
       .gif-powered img.gif-brand{height:12px;vertical-align:middle;margin-left:3px;opacity:.85}
-      .gif-panel{position:fixed;z-index:9999;width:min(380px,94vw);background:#16171c;border:1px solid rgba(255,255,255,.12);
-        border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.55);padding:10px;transform:translateY(6px);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s}
-      .gif-panel.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+      .gif-dim{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .16s}
+      .gif-dim.open{opacity:1;pointer-events:auto}
+      .gif-panel{position:fixed;z-index:9999;left:50%;bottom:0;width:min(420px,100vw);
+        transform:translate(-50%,105%);background:#16171c;border:1px solid rgba(255,255,255,.12);border-bottom:none;
+        border-radius:18px 18px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.55);
+        padding:8px 12px calc(12px + env(safe-area-inset-bottom));
+        opacity:0;pointer-events:none;transition:transform .18s ease,opacity .18s}
+      .gif-panel.open{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+      .gif-grab{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:2px auto 10px}
       .gif-search{display:flex;gap:6px;margin-bottom:8px}
       .gif-search input{flex:1;background:#0c0d11;border:1px solid rgba(255,255,255,.14);border-radius:10px;color:#fff;padding:9px 12px;font-size:14px;font-family:inherit}
       .gif-search input:focus{outline:none;border-color:#5b8cff}
-      .gif-grid{column-count:2;column-gap:8px;max-height:280px;overflow:auto;padding:2px}
+      .gif-grid{column-count:2;column-gap:8px;max-height:min(46vh,340px);overflow:auto;padding:2px;overscroll-behavior:contain}
       .gif-cell{width:100%;display:block;border-radius:9px;margin-bottom:8px;cursor:pointer;background:#0c0d11}
       .gif-cell:active{transform:scale(.97)}
       .gif-powered{text-align:right;font-size:10px;color:#6c7280;margin-top:6px;font-weight:700}
@@ -53,25 +59,31 @@
     document.head.appendChild(s);
   }
 
-  let panel = null, curInput = null, curBtn = null, seq = 0, tmr = null;
+  /* 버튼 위에 앵커하는 팝업은 모바일 키보드·페이지 스크롤과 계속 싸운다(두 번 실패).
+     → 하단 시트로 전환: 페이지 스크롤과 무관하고, 키보드가 떠도 그 위에 올라탄다. */
+  let panel = null, dim = null, curInput = null, seq = 0, tmr = null;
   function buildPanel() {
     if (panel) return panel;
+    dim = document.createElement("div"); dim.className = "gif-dim";
+    dim.addEventListener("click", closePanel);
+    /* 딤 위 터치로 뒤 페이지가 스크롤되지 않게 */
+    dim.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
+    document.body.appendChild(dim);
     panel = document.createElement("div"); panel.className = "gif-panel";
     document.body.appendChild(panel);
-    document.addEventListener("click", (e) => {
-      if (panel.classList.contains("open") && !panel.contains(e.target) && !e.target.closest(".gifp-btn")) closePanel();
-    });
-    /* resize·scroll에 닫으면 안 된다 — 모바일에서 검색창을 탭하는 순간
-       키보드가 뜨며 resize/scroll이 발생해 '쓰려고 하면 닫히는' 버그가 됐다.
-       (GIF 목록 스크롤도 capture에 걸려 닫혔다) 닫는 대신 버튼 기준으로 재배치. */
-    const reflow = () => {
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanel(); });
+    /* 키보드(visualViewport 축소)가 뜨면 시트를 키보드 바로 위로 올린다 */
+    const vv = window.visualViewport;
+    const lift = () => {
       if (!panel.classList.contains("open")) return;
-      if (!curBtn || !curBtn.isConnected) { closePanel(); return; }
-      positionPanel(curBtn);
+      const off = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      panel.style.bottom = off + "px";
+      const grid = panel.querySelector(".gif-grid");
+      if (grid && vv) grid.style.maxHeight = Math.max(150, Math.round(vv.height * 0.45)) + "px";
     };
-    window.addEventListener("resize", reflow);
-    window.visualViewport?.addEventListener("resize", reflow);
-    window.addEventListener("scroll", (e) => { if (panel.contains(e.target)) return; reflow(); }, true);
+    vv?.addEventListener("resize", lift);
+    vv?.addEventListener("scroll", lift);
+    panel._lift = lift;
     return panel;
   }
 
@@ -100,7 +112,7 @@
   async function renderPanel() {
     const has = await owns();
     if (!has) {
-      panel.innerHTML = `<div class="gif-lock"><div style="font-size:28px">🔒</div>
+      panel.innerHTML = `<div class="gif-grab"></div><div class="gif-lock"><div style="font-size:28px">🔒</div>
         <div style="margin-top:6px"><b>🎬 GIF 사용권</b>을 잠금 해제하세요</div>
         <div style="font-size:12px;color:#8a8f9a;margin-top:4px">댓글·전투에 움짤(GIF)을 붙일 수 있어요</div>
         <button type="button" id="gif-buy">🛒 상점에서 구매 (1,500 GP)</button></div>`;
@@ -108,6 +120,7 @@
       return;
     }
     panel.innerHTML = `
+      <div class="gif-grab"></div>
       <div class="gif-search"><input type="text" id="gif-q" placeholder="GIF 검색 (예: 반박, ㅋㅋ, 팩트)" autocomplete="off"></div>
       <div class="gif-grid"></div>
       <div class="gif-powered">Powered by <img class="gif-brand" src="/assets/giphy-logo.svg" alt="GIPHY"></div>`;
@@ -129,20 +142,19 @@
     closePanel();
   }
 
-  function positionPanel(btn) {
-    const r = btn.getBoundingClientRect(); buildPanel();
-    const w = Math.min(380, window.innerWidth * 0.94);
-    panel.style.width = w + "px";
-    panel.style.left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8) + "px";
-    panel.style.top = "auto"; panel.style.bottom = (window.innerHeight - r.top + 8) + "px";
+  function closePanel() {
+    panel?.classList.remove("open"); dim?.classList.remove("open");
+    if (panel) panel.style.bottom = "0px";
   }
-  function closePanel() { panel?.classList.remove("open"); }
   async function togglePanel(btn, input) {
     buildPanel();
     if (panel.classList.contains("open") && curInput === input) { closePanel(); return; }
-    curInput = input; curBtn = btn; positionPanel(btn);
+    curInput = input;
     await renderPanel();
-    requestAnimationFrame(() => panel.classList.add("open"));
+    requestAnimationFrame(() => {
+      panel.classList.add("open"); dim.classList.add("open");
+      panel._lift?.();
+    });
   }
 
   function attach(row, input) {
