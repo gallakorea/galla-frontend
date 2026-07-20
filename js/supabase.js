@@ -99,7 +99,7 @@
 .nick-gold{background:linear-gradient(92deg,#f7d774 0%,#fff2b8 20%,#e8a93a 45%,#ffe89a 65%,#d98f24 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;text-shadow:0 0 10px rgba(201,209,224,.35);animation:nickGoldShine 3.4s linear infinite}
 .nick-gold::after{content:" 👑";-webkit-text-fill-color:initial;color:#c9d1e0;font-size:.82em;text-shadow:none}
 @keyframes nickGoldShine{0%{background-position:0% 0}100%{background-position:220% 0}}
-.nick-tier{display:inline-block;font-size:.82em;margin-right:3px;vertical-align:baseline;filter:saturate(1.1)}
+.nick-tier{display:inline-block;font-size:.9em;margin-right:4px;vertical-align:baseline;-webkit-text-fill-color:initial!important;color:initial!important;background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;animation:none!important;text-shadow:none!important;filter:saturate(1.1)}
 .nick-title{display:inline-block;font-size:.72em;font-weight:900;vertical-align:middle;color:#c9d1e0;background:rgba(201,209,224,.14);border:1px solid rgba(201,209,224,.35);border-radius:99px;padding:1px 7px;margin-right:5px;line-height:1.5;white-space:nowrap}
 .ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;background-size:200% 100%}
 .ns-neon{background-image:linear-gradient(92deg,#00e5ff,#3d6bff,#00e5ff);text-shadow:0 0 10px rgba(0,229,255,.5);animation:nsShine 3s linear infinite}
@@ -168,14 +168,17 @@
         const style = d.nick_style === "none" ? null : (d.nick_style || (d.nick_gold ? "gold" : null));
         if (style) el.classList.add("ns-" + style);
         if (style === "gold") el.classList.add("nick-gold");
-        // 🏅 등급 아이콘 — 갈라리안 등급표(GI 임계값)와 일치. 선택 불가·자동 부여.
-        if (el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-tier"))) {
+        // 🏅 등급 아이콘 — 갈라리안 등급표(GI)와 일치. 선택 불가·자동 부여.
+        // 이름 '안쪽' 첫 요소로 넣는다(형제로 넣으면 세로 레이아웃 카드에서
+        // 아이콘이 이름 위 별도 줄로 떠버린다 — 사장님 재현). CSS가 그라디언트
+        // 클립을 리셋해 아이콘은 그대로 보인다.
+        if (!(el.firstElementChild && el.firstElementChild.classList.contains("nick-tier"))) {
           const t = window.GALLA_gallianTier(d.gi || 0);
           const tb = document.createElement("span");
           tb.className = "nick-tier";
           tb.title = t.label + " · " + (d.gi || 0).toLocaleString() + " GI";
           tb.textContent = t.icon;
-          el.parentNode.insertBefore(tb, el);
+          el.insertBefore(tb, el.firstChild);
         }
         // 장착 칭호 배지 — 폐지(2026-07-20 사장님: 장착식 칭호는 등급과 어긋나 혼란만).
         //   등급 표시는 등급 화면·레벨 칩이 담당한다.
@@ -207,6 +210,10 @@
       el.removeAttribute("data-gold-done");
       el.classList.remove("nick-gold");
       [...el.classList].filter(c => c.startsWith("ns-")).forEach(c => el.classList.remove(c));
+      // 등급 아이콘은 이름 '안쪽' 첫 자식 — 여기서 제거
+      const ch = el.firstElementChild;
+      if (ch && ch.classList.contains("nick-tier")) ch.remove();
+      // 레거시(이전 형제로 넣던 버전) 잔재도 청소
       const t = el.previousElementSibling;
       if (t && (t.classList.contains("nick-title") || t.classList.contains("nick-tier"))) t.remove();
     });
