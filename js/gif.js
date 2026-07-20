@@ -53,7 +53,7 @@
     document.head.appendChild(s);
   }
 
-  let panel = null, curInput = null, seq = 0, tmr = null;
+  let panel = null, curInput = null, curBtn = null, seq = 0, tmr = null;
   function buildPanel() {
     if (panel) return panel;
     panel = document.createElement("div"); panel.className = "gif-panel";
@@ -61,8 +61,17 @@
     document.addEventListener("click", (e) => {
       if (panel.classList.contains("open") && !panel.contains(e.target) && !e.target.closest(".gifp-btn")) closePanel();
     });
-    window.addEventListener("resize", closePanel);
-    window.addEventListener("scroll", closePanel, true);
+    /* resize·scroll에 닫으면 안 된다 — 모바일에서 검색창을 탭하는 순간
+       키보드가 뜨며 resize/scroll이 발생해 '쓰려고 하면 닫히는' 버그가 됐다.
+       (GIF 목록 스크롤도 capture에 걸려 닫혔다) 닫는 대신 버튼 기준으로 재배치. */
+    const reflow = () => {
+      if (!panel.classList.contains("open")) return;
+      if (!curBtn || !curBtn.isConnected) { closePanel(); return; }
+      positionPanel(curBtn);
+    };
+    window.addEventListener("resize", reflow);
+    window.visualViewport?.addEventListener("resize", reflow);
+    window.addEventListener("scroll", (e) => { if (panel.contains(e.target)) return; reflow(); }, true);
     return panel;
   }
 
@@ -131,7 +140,7 @@
   async function togglePanel(btn, input) {
     buildPanel();
     if (panel.classList.contains("open") && curInput === input) { closePanel(); return; }
-    curInput = input; positionPanel(btn);
+    curInput = input; curBtn = btn; positionPanel(btn);
     await renderPanel();
     requestAnimationFrame(() => panel.classList.add("open"));
   }
