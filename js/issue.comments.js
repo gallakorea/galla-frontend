@@ -84,12 +84,18 @@ function paintShields() {
   });
 }
 
+/* '상점 가서 사세요'라고 말만 하지 않는다 — 의향을 묻고 그 자리에서 상점을 연다 */
+function askShop(msg) {
+  if (!window.openShop) { alert(msg); return; }
+  if (confirm(msg + "\n\n🛒 지금 상점에서 구매할까요?")) window.openShop();
+}
+
 async function offerCooldownReset(commentId, action, waitSec) {
   try {
     const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
     const qty = inv.cooldown_reset || 0;
     if (qty <= 0) {
-      alert(`재시도까지 ${waitSec}초 남았어요.\n(⚡ 쿨다운 리셋권이 있으면 바로 가능 — GP 상점)`);
+      askShop(`재시도까지 ${waitSec}초 남았어요.\n⚡ 쿨다운 리셋권(300 GP)이 있으면 기다림 없이 바로 가능해요.`);
       return false;
     }
     if (!confirm(`쿨다운 ${waitSec}초 남음.\n⚡ 쿨다운 리셋권을 사용해 바로 실행할까요? (보유 ${qty}개)`)) return false;
@@ -229,7 +235,7 @@ async function ensureReplyQuota() {
   // 소진 → 연장권 제안
   const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
   if ((inv.reply_pass || 0) <= 0) {
-    alert("오늘의 대댓글 횟수(40회)를 모두 썼어요. 내일 다시 이어가거나\n🗯️ 대댓글 연장권(+15)으로 이어갈 수 있어요. (설정 › GP 상점)");
+    askShop("오늘의 대댓글 횟수(40회)를 모두 썼어요.\n🗯️ 대댓글 연장권(+15회, 300 GP)으로 바로 이어갈 수 있어요.");
     return false;
   }
   if (!confirm(`오늘 대댓글 40회를 다 썼어요.\n🗯️ 대댓글 연장권을 써서 15회 더 이어갈까요? (보유 ${inv.reply_pass})`)) return false;
@@ -292,7 +298,7 @@ async function initComposerUI() {
       const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
       const passes = inv.infiltrate_pass || 0;
       if (passes <= 0) {
-        alert("오늘의 침투 횟수를 모두 썼어요. 내일 다시 침투할 수 있어요.\n(🕵️ 침투권이 있으면 한도 +1 — GP 상점)");
+        askShop("오늘의 침투 횟수를 모두 썼어요.\n🕵️ 침투권(500 GP)이 있으면 한도 +1이에요.");
         return;
       }
       if (!confirm(`오늘 침투 한도를 모두 썼어요.\n🕵️ 침투권을 사용해 한도를 +1 할까요? (보유 ${passes}개)`)) return;
@@ -1631,7 +1637,7 @@ function bindEvents() {
       const rid = Number(e.target.dataset.id);
       const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
       const owned = inv.revive || 0;
-      if (owned <= 0) { alert("✨ 부활권이 없어요. GP 상점에서 구매할 수 있어요. (800 GP)"); return; }
+      if (owned <= 0) { askShop("✨ 부활권이 없어요. (800 GP)"); return; }
       if (!confirm(`✨ 부활권을 사용해 이 댓글을 HP 50으로 부활시킬까요? (보유 ${owned}개)`)) return;
       const { data: rv } = await window.supabaseClient.rpc("use_revive", { p_comment_id: rid });
       if (!rv?.ok) { alert("부활에 실패했어요: " + (rv?.reason || "오류")); return; }
@@ -1706,7 +1712,7 @@ function bindEvents() {
       if (!sid) return;
       const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
       const have = inv.shield || 0;
-      if (have <= 0) { alert("🛡 보호막이 없어요.\nGP 상점에서 구매할 수 있어요. (설정 › GP 상점)"); return; }
+      if (have <= 0) { askShop("🛡 보호막이 없어요. (400 GP)\n10분간 받는 피해가 절반으로 줄어요."); return; }
       if (!confirm(`🛡 보호막을 사용할까요? (보유 ${have}개)\n10분간 받는 피해가 절반(${BATTLE_DMG.attack}→${Math.ceil(BATTLE_DMG.attack / 2)})으로 줄어듭니다.`)) return;
       const { data, error } = await window.supabaseClient.rpc("use_shield", { p_comment_id: sid });
       if (error || !data?.ok) {
@@ -1874,7 +1880,7 @@ function bindEvents() {
       }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
       if (error) {
         if (String(error.message || "").includes("no_ghost_pass")) {
-          alert("👻 유령권이 만료됐어요. 상점에서 다시 구매해 주세요.");
+          askShop("👻 유령권이 만료됐어요.");
           GHOST_ON = false; document.getElementById("ghost-toggle")?.classList.remove("on");
           return;
         }
@@ -2029,12 +2035,12 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
   if (insertErr) {
     if (String(insertErr.message || "").includes("no_ghost_pass")) {
-      alert("👻 유령권이 만료됐어요. 상점에서 다시 구매해 주세요.");
+      askShop("👻 유령권이 만료됐어요.");
       GHOST_ON = false; document.getElementById("ghost-toggle")?.classList.remove("on"); return;
     }
     if (String(insertErr.message || "").includes("reply_limit")) {
       REPLY_LEFT = 0;
-      alert("오늘의 대댓글 횟수를 모두 썼어요. 🗯️ 대댓글 연장권으로 이어갈 수 있어요. (설정 › GP 상점)");
+      askShop("오늘의 대댓글 횟수를 모두 썼어요.\n🗯️ 대댓글 연장권(+15회, 300 GP)으로 바로 이어갈 수 있어요.");
       return;
     }
     console.error("[battle reply] insert failed", insertErr);

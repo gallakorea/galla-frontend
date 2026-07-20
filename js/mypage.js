@@ -81,8 +81,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         missionBtn.textContent = "오늘의 미션";
         missionBtn.onclick = () => location.href = "quest.html";
 
+        /* 상점 직행 — 기존엔 설정 안까지 들어가야 했다(사장님 UX 지적) */
+        const shopBtn = document.createElement("button");
+        shopBtn.className = "action-btn secondary";
+        shopBtn.textContent = "🛒 상점";
+        shopBtn.onclick = () => window.openShop ? window.openShop() : (location.href = "settings.html");
+
         profileActions.appendChild(editBtn);
         profileActions.appendChild(missionBtn);
+        profileActions.appendChild(shopBtn);
     } else {
         const followBtn = document.createElement("button");
         followBtn.className = "action-btn primary";
