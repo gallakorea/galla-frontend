@@ -15,10 +15,16 @@
     cam: I(18, '<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
     camoff: I(18, '<path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><line x1="1" y1="1" x2="23" y2="23"/>'),
     flip: I(18, '<path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>'),
+    spk: I(18, '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>'),
+    spkoff: I(18, '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
+    rec: I(18, '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>'),
   };
   let sb = null, ME = null, chanMine = null, chanPeer = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
+  let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
+  let REMUTE = false;                  // 상대 소리 끔
+  let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
   /* ── ICE 설정: TURN 자격증명(1시간) 30분 캐시, 실패 시 STUN만 ── */
@@ -105,6 +111,22 @@
       if (pc && pc.remoteDescription) { try { await pc.addIceCandidate(p.cand); } catch (_) {} }
       else CUR.pendIce.push(p.cand);
     }
+    else if (p.t === 'reoffer') {
+      // 통화 중 전환(영상↔음성) 재협상 — 상대가 영상을 켜면 내 화면도 영상 레이아웃으로
+      try {
+        await pc.setRemoteDescription({ type: 'offer', sdp: p.sdp });
+        const ans = await pc.createAnswer();
+        ans.sdp = tuneOpus(ans.sdp);
+        await pc.setLocalDescription(ans);
+        send({ t: 'reanswer', sdp: ans.sdp });
+        const nowVideo = !!p.video || !!(remoteStream && remoteStream.getVideoTracks().some(t => t.readyState === 'live'));
+        if (CUR.video !== nowVideo) { CUR.video = nowVideo; SPK = nowVideo; paintUI('oncall'); toast(nowVideo ? '상대가 면상톡으로 전환했어요' : '상대가 음성으로 전환했어요'); }
+      } catch (e) { console.error('[call] reoffer', e); }
+    }
+    else if (p.t === 'reanswer') {
+      try { await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp }); } catch (e) { console.error('[call] reanswer', e); }
+    }
+    else if (p.t === 'recnotice') { toast('⏺ 상대가 통화를 녹음하고 있어요'); }
     else if (p.t === 'hangup' || p.t === 'decline' || p.t === 'busy') {
       endCall(p.t === 'busy' ? 'busy' : p.t === 'decline' ? 'declined' : 'ended', true);
     }
@@ -125,6 +147,20 @@
     }
     return st;
   }
+  /* Opus 고음질 튜닝 — WebRTC 기본은 저비트레이트 좁은대역이라 통화가 먹먹하다.
+     FEC(패킷손실 복구)·64kbps·48kHz 광대역·DTX off(끊김 없는 연속 음질). */
+  function tuneOpus(sdp) {
+    try {
+      const m = sdp.match(/a=rtpmap:(\d+)\s+opus\/48000/i);
+      if (!m) return sdp;
+      const pt = m[1];
+      const params = 'minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=64000;maxplaybackrate=48000;usedtx=0;cbr=0';
+      const fmtpRe = new RegExp('a=fmtp:' + pt + ' [^\\r\\n]*');
+      if (fmtpRe.test(sdp)) return sdp.replace(fmtpRe, 'a=fmtp:' + pt + ' ' + params);
+      return sdp.replace(new RegExp('(a=rtpmap:' + pt + ' opus/48000/2\\r?\\n)'), '$1a=fmtp:' + pt + ' ' + params + '\r\n');
+    } catch (_) { return sdp; }
+  }
+
   async function getMedia(video) {
     const md = navigator.mediaDevices;
     if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
@@ -132,7 +168,10 @@
       // [면상톡 저데이터] — 화질을 낮춰 데이터·불안정 회선에 대응
       const low = !!PREF().lowData;
       return await md.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true },
+        audio: {
+          echoCancellation: true, noiseSuppression: true, autoGainControl: true,
+          channelCount: 1, sampleRate: 48000, sampleSize: 16,
+        },
         video: video ? (low
           ? { facingMode: facing, width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { max: 20 } }
           : { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }) : false,
@@ -238,6 +277,7 @@
     await buildPC();
     paintUI('outgoing');
     const offer = await pc.createOffer();
+    offer.sdp = tuneOpus(offer.sdp);
     await pc.setLocalDescription(offer);
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
@@ -267,6 +307,7 @@
       await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
       for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
       const ans = await pc.createAnswer();
+      ans.sdp = tuneOpus(ans.sdp);
       await pc.setLocalDescription(ans);
       send({ t: 'answer', sdp: ans.sdp });
       paintUI('connecting');
@@ -302,6 +343,8 @@
   }
 
   function endCall(reason, remote) {
+    if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
+    SPK = false; REMUTE = false;
     clearTimeout(ringT); clearInterval(timerT);
     if (!remote && CUR) send({ t: 'hangup' });
     logCall(reason);
@@ -331,6 +374,7 @@
     if (remoteStream) {
       const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
       if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }
+      applyAudioRoute();   // 상대 소리 끔 상태 유지
     }
     if (CUR?.video && localStream) {
       const lv = document.getElementById('dm-call-local');
@@ -368,6 +412,94 @@
     } catch (_) { toast('카메라 전환에 실패했어요'); }
   }
 
+  /* ── 재협상 — 통화 중 트랙 추가/제거(영상↔음성 전환)를 상대와 합의 ── */
+  async function renegotiate() {
+    if (!pc) return;
+    const offer = await pc.createOffer();
+    offer.sdp = tuneOpus(offer.sdp);
+    await pc.setLocalDescription(offer);
+    send({ t: 'reoffer', sdp: offer.sdp, video: !!CUR?.video });
+  }
+
+  /* 📹 음성 → 면상톡 전환: 내 카메라를 켜서 트랙을 추가하고 재협상 */
+  async function upgradeToVideo() {
+    if (!CUR || CUR.video) return;
+    try {
+      const ns = await getMedia(true);
+      const nv = ns.getVideoTracks()[0];
+      if (!nv) throw new Error('nocam');
+      ns.getAudioTracks().forEach(t => t.stop());   // 오디오는 기존 트랙 유지
+      localStream.addTrack(nv);
+      pc.addTrack(nv, localStream);
+      CUR.video = true;
+      SPK = true;                                    // 면상톡은 스피커가 자연스럽다
+      await renegotiate();
+      paintUI('oncall');
+      toast('📹 면상톡으로 전환했어요');
+    } catch (e) { toast('카메라를 켤 수 없어요'); }
+  }
+
+  /* 📞 면상톡 → 음성 전환: 영상 트랙 제거·정지 후 재협상 */
+  async function downgradeToAudio() {
+    if (!CUR || !CUR.video) return;
+    try {
+      pc.getSenders().filter(x => x.track?.kind === 'video').forEach(sn => { try { pc.removeTrack(sn); } catch (_) {} });
+      localStream.getVideoTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
+      CUR.video = false;
+      SPK = false;                                   // 음성은 수화부로
+      await renegotiate();
+      paintUI('oncall');
+      toast('📞 음성 통화로 전환했어요');
+    } catch (e) { toast('전환에 실패했어요'); }
+  }
+
+  /* 🔊 스피커 모드 — iOS는 <audio>=스피커 / <video playsinline>=수화부로 라우팅된다.
+     싱크 요소를 갈아끼우는 것이 웹에서 가장 확실한 라우팅 전환. */
+  function applyAudioRoute() {
+    const sink = document.getElementById('dm-call-audio') || document.getElementById('dm-call-remote');
+    if (sink) sink.muted = REMUTE;
+  }
+
+  /* ⏺ 통화 녹음 — 내 목소리+상대 목소리를 믹스해 저장 후 대화방에 남긴다.
+     (한국: 대화 당사자 간 녹음은 합법. 저장 전 상대에게 자동 고지 문자를 보낸다) */
+  async function toggleRecord(btn) {
+    if (recRec) { try { recRec.stop(); } catch (_) {} return; }
+    if (!localStream || !remoteStream) return toast('연결된 뒤에 녹음할 수 있어요');
+    try {
+      recCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const dest = recCtx.createMediaStreamDestination();
+      [localStream, remoteStream].forEach(st => {
+        if (st.getAudioTracks().length) recCtx.createMediaStreamSource(new MediaStream(st.getAudioTracks())).connect(dest);
+      });
+      const mime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+      recRec = new MediaRecorder(dest.stream, mime ? { mimeType: mime, audioBitsPerSecond: 96000 } : undefined);
+      recChunks = []; recT0 = Date.now();
+      recRec.ondataavailable = e => { if (e.data?.size) recChunks.push(e.data); };
+      recRec.onstop = async () => {
+        const dur = Math.round((Date.now() - recT0) / 1000);
+        const blob = new Blob(recChunks, { type: recRec.mimeType || 'audio/webm' });
+        recRec = null; try { recCtx.close(); } catch (_) {} recCtx = null;
+        document.querySelector('[data-c="rec"]')?.classList.remove('recing');
+        if (dur < 1 || !blob.size) return;
+        toast('📼 녹음 저장 중…');
+        try {
+          if (!window.GALLA_UPLOAD_MEDIA) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = '/js/media-upload.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+          const ext = (recChunks[0]?.type || blob.type).includes('mp4') ? 'm4a' : 'webm';
+          const f = new File([blob], `call-rec.${ext}`, { type: blob.type });
+          const url = await window.GALLA_UPLOAD_MEDIA(f, 'audio');
+          const { data: tid } = await sb.rpc('dm_thread_with', { other: CUR?.peer });
+          if (tid) await sb.from('dm_messages').insert({
+            thread_id: tid, sender_id: ME, body: '📼 통화 녹음', kind: 'voice', meta: { url, dur, rec: true } });
+          toast('📼 통화 녹음을 대화방에 저장했어요');
+        } catch (e) { toast('녹음 저장에 실패했어요'); }
+      };
+      recRec.start(1000);
+      btn?.classList.add('recing');
+      toast('⏺ 녹음 시작 — 상대에게도 고지돼요');
+      send({ t: 'recnotice' });   // 상대 화면에 '녹음 중' 고지
+    } catch (e) { recRec = null; toast('이 기기에선 통화 녹음이 안 돼요'); }
+  }
+
   function paintUI(state) {
     let box = document.getElementById('dm-call');
     if (!box) {
@@ -387,7 +519,9 @@
       ${video
         ? `<video id="dm-call-remote" autoplay playsinline></video>
            <video id="dm-call-local" autoplay playsinline muted></video>`
-        : `<audio id="dm-call-audio" autoplay></audio>`}
+        : (SPK
+          ? `<audio id="dm-call-audio" autoplay></audio>`
+          : `<video id="dm-call-audio" autoplay playsinline style="width:0;height:0;position:absolute;opacity:0;pointer-events:none"></video>`)}
       <div class="dmc-card">
         ${video && state === 'oncall' ? '' : `<span class="dmc-ava${state === 'incoming' || state === 'outgoing' ? ' ring' : ''}">${esc(name.charAt(0) || '갈')}</span>`}
         <div class="dmc-name">${name}</div>
@@ -398,9 +532,15 @@
             <button class="dmc-btn end" data-c="decline" aria-label="거절">${IC.phone}</button>`
           : `
             ${state === 'oncall' ? `
-              <button class="dmc-btn mute" data-c="mute" aria-label="음소거">${IC.mic}</button>
-              ${video ? `<button class="dmc-btn" data-c="camoff" aria-label="카메라 끄기">${IC.cam}</button>
-                         <button class="dmc-btn" data-c="flip" aria-label="카메라 전환">${IC.flip}</button>` : ''}` : ''}
+              <button class="dmc-btn mute" data-c="mute" aria-label="내 마이크 끄기">${IC.mic}</button>
+              <button class="dmc-btn${SPK ? ' on2' : ''}" data-c="spk" aria-label="스피커">${IC.spk}</button>
+              <button class="dmc-btn${REMUTE ? ' off' : ''}" data-c="remute" aria-label="상대 소리 끄기">${REMUTE ? IC.spkoff : IC.spk}</button>
+              <button class="dmc-btn rec" data-c="rec" aria-label="통화 녹음">${IC.rec}</button>
+              ${video
+                ? `<button class="dmc-btn" data-c="camoff" aria-label="카메라 끄기">${IC.cam}</button>
+                   <button class="dmc-btn" data-c="flip" aria-label="카메라 전환">${IC.flip}</button>
+                   <button class="dmc-btn" data-c="toaudio" aria-label="음성으로 전환">${IC.phone}</button>`
+                : `<button class="dmc-btn" data-c="tovideo" aria-label="면상톡으로 전환">${IC.cam}</button>`}` : ''}
             <button class="dmc-btn end" data-c="hangup" aria-label="끊기">${IC.phone}</button>`}
         </div>
       </div>`;
@@ -411,6 +551,11 @@
       else if (c === 'decline') decline();
       else if (c === 'hangup') endCall('ended');
       else if (c === 'flip') flipCam();
+      else if (c === 'spk') { SPK = !SPK; paintUI(box.dataset.state); }
+      else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); paintUI(box.dataset.state); }
+      else if (c === 'rec') toggleRecord(e.target.closest('[data-c="rec"]'));
+      else if (c === 'tovideo') upgradeToVideo();
+      else if (c === 'toaudio') downgradeToAudio();
       else if (c === 'mute' || c === 'camoff') {
         const kind = c === 'mute' ? 'audio' : 'video';
         const t = localStream?.getTracks().find(x => x.kind === kind);

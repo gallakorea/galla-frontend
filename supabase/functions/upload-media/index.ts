@@ -17,6 +17,8 @@ const corsHeaders = {
 const ALLOWED_IMAGE = ["jpg", "jpeg", "png", "gif", "webp", "avif", "heic"];
 const ALLOWED_VIDEO = ["mp4", "mov", "webm", "m4v"];
 const ALLOWED_AUDIO = ["webm", "m4a", "mp4", "ogg", "mp3", "aac", "3gp", "3gpp"];   // 음성 메시지(MediaRecorder — 안드로이드는 3gp/aac로 떨어지기도)
+// DM 파일 전송 — 문서·압축 위주. 실행형(exe/sh)·웹렌더형(html/svg, 공개 URL XSS)은 금지
+const ALLOWED_FILE = ["pdf", "txt", "md", "csv", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "hwp", "hwpx", "zip", "7z", "key", "pages", "numbers"];
 
 const r2 = new AwsClient({
   accessKeyId: R2_ACCESS_KEY_ID,
@@ -54,12 +56,12 @@ serve(async (req) => {
       ({ kind, filename, contentType } = await req.json());
     }
 
-    if (kind !== "image" && kind !== "video" && kind !== "audio") {
+    if (kind !== "image" && kind !== "video" && kind !== "audio" && kind !== "file") {
       return json({ error: "invalid kind" }, 400);
     }
 
     const ext = (filename?.split(".").pop() || "bin").toLowerCase();
-    const allowed = kind === "image" ? ALLOWED_IMAGE : kind === "audio" ? ALLOWED_AUDIO : ALLOWED_VIDEO;
+    const allowed = kind === "image" ? ALLOWED_IMAGE : kind === "audio" ? ALLOWED_AUDIO : kind === "file" ? ALLOWED_FILE : ALLOWED_VIDEO;
     if (!allowed.includes(ext)) {
       return json({ error: `unsupported ${kind} type: ${ext}` }, 400);
     }

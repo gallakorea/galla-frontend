@@ -1521,3 +1521,48 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 }
 /* 미리보기를 조금 키워 배경이 실제로 보이게 */
 .dm-prev-in { min-height: 196px; }
+
+/* ── 통화 컨트롤 확장 (스피커·녹음·전환) ── */
+#dm-call .dmc-btn.on2 { background: rgba(106,123,255,.35); border-color: #6a7bff; }
+#dm-call .dmc-btn.rec { color: #ff5d75; }
+#dm-call .dmc-btn.rec.recing { background: rgba(255,77,103,.28); border-color: #ff4d67; animation: dmcRec 1.1s ease-in-out infinite; }
+@keyframes dmcRec { 0%,100% { box-shadow: 0 0 0 0 rgba(255,77,103,.5); } 50% { box-shadow: 0 0 0 8px rgba(255,77,103,0); } }
+#dm-call .dmc-btns { flex-wrap: wrap; justify-content: center; gap: 12px; max-width: 320px; margin: 0 auto; }
+
+/* ── ➕ 카톡식 첨부 시트 ── */
+.dm-att-sheet { position: fixed; inset: 0; z-index: 11500; pointer-events: none; }
+.dm-att-sheet.open { pointer-events: auto; }
+.dm-att-dim { position: absolute; inset: 0; background: rgba(0,0,0,.45); opacity: 0; transition: opacity .16s; }
+.dm-att-sheet.open .dm-att-dim { opacity: 1; }
+.dm-att-card {
+  position: absolute; left: 0; right: 0; bottom: 0; max-width: 520px; margin: 0 auto;
+  background: linear-gradient(180deg,#16171c,#0c0c0f);
+  border: 1px solid rgba(255,255,255,.08); border-bottom: none;
+  border-radius: 22px 22px 0 0; padding: 8px 14px calc(20px + env(safe-area-inset-bottom));
+  transform: translateY(100%); transition: transform .24s cubic-bezier(.2,.8,.2,1);
+}
+.dm-att-sheet.open .dm-att-card { transform: translateY(0); }
+.dm-att-grip { width: 38px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 6px auto 14px; }
+.dm-att-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 8px; }
+.dm-att-item {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  background: none; border: none; cursor: pointer; padding: 6px 0; font-family: inherit;
+  transition: transform .12s;
+}
+.dm-att-item:active { transform: scale(.92); }
+.dm-att-ic {
+  width: 54px; height: 54px; border-radius: 18px; font-size: 24px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09);
+}
+.dm-att-lb { font-size: 11.5px; font-weight: 700; color: #b8bfcd; }
+
+/* 📁 파일 메시지 카드 */
+.dm-file-card {
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+  padding: 4px 2px; min-width: 180px;
+}
+.dm-file-ic { font-size: 26px; }
+.dm-file-mid { display: flex; flex-direction: column; min-width: 0; }
+.dm-file-mid b { color: #e7ebf3; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.dm-file-mid i { color: #8a90a0; font-size: 11px; font-style: normal; margin-top: 2px; }

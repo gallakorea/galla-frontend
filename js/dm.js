@@ -833,6 +833,7 @@
           <form class="dm-inputbar" id="dm-form">
             <button type="button" class="dm-attach" id="dm-attach" aria-label="사진 보내기">${ICONS.plus}</button>
             <input type="file" id="dm-file" accept="image/*" hidden>
+            <input type="file" id="dm-file-any" hidden>
             <textarea id="dm-input" rows="1" placeholder="메시지 입력…"></textarea>
             <button type="button" class="dm-ib" id="dm-voice" aria-label="음성 메시지">${ICONS.mic}</button>
             <button type="button" class="dm-ib" id="dm-sticker" aria-label="이모티콘">${ICONS.smile}</button>
@@ -1010,7 +1011,8 @@
     document.addEventListener('galla:pager-unread', e => paintPagerDot(e.detail));
     ROOT.querySelector('#dm-gnew-go').addEventListener('click', createGroup);
     ROOT.querySelector('#dm-reply-x').addEventListener('click', clearReply);
-    ROOT.querySelector('#dm-attach').addEventListener('click', () => ROOT.querySelector('#dm-file').click());
+    ROOT.querySelector('#dm-attach').addEventListener('click', openAttachSheet);
+    ROOT.querySelector('#dm-file-any').addEventListener('change', onPickFile);
     bindPTT(ROOT.querySelector('#dm-voice'));
     ROOT.querySelector('#dm-sticker').addEventListener('click', toggleStk);
     ROOT.querySelector('#dm-stk-q').addEventListener('input', () => {
@@ -3619,6 +3621,12 @@
           <span class="dm-vwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
           <b>${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}</b>
         </span>`;
+    } else if (m.kind === 'file' && m.meta?.url) {
+      const kb = m.meta.size ? (m.meta.size < 1048576 ? Math.round(m.meta.size/1024)+'KB' : (m.meta.size/1048576).toFixed(1)+'MB') : '';
+      inner = `<a class="dm-file-card" href="${esc(m.meta.url)}" target="_blank" rel="noopener" download>
+          <span class="dm-file-ic">📁</span>
+          <span class="dm-file-mid"><b>${esc(m.meta.name || '파일')}</b><i>${kb} · 받기</i></span>
+        </a>`;
     } else if (m.kind === 'call') {
       const v = !!m.meta?.video;
       const missed = m.meta?.status !== 'ended';
@@ -4380,6 +4388,90 @@
       img.src = url;
     });
   }
+  /* ➕ 카톡식 첨부 시트 — 실제 작동하는 항목만(가짜 토글 금지).
+     금융 이전(선물·송금)은 정책상 제외. */
+  function openAttachSheet() {
+    if (!curPeer) return;
+    document.getElementById('dm-attach-sheet')?.remove();
+    const peer = curPeer, name = nickCache[peer] || PROFILES[peer]?.nickname || '상대';
+    const items = [
+      { k: 'album',  ic: '🖼', label: '앨범',    cls: 'a-album' },
+      { k: 'file',   ic: '📁', label: '파일',    cls: 'a-file' },
+      { k: 'voice',  ic: '📞', label: '음성통화', cls: 'a-voice' },
+      { k: 'video',  ic: '📹', label: '페이스톡', cls: 'a-video' },
+      { k: 'voicemsg', ic: '🎤', label: '음성메시지', cls: 'a-vmsg' },
+      { k: 'pager',  ic: '📟', label: '삐삐',    cls: 'a-pager' },
+      { k: 'location', ic: '📍', label: '위치',  cls: 'a-loc' },
+      { k: 'sticker', ic: '😀', label: '이모티콘', cls: 'a-stk' },
+    ];
+    const sh = document.createElement('div');
+    sh.id = 'dm-attach-sheet';
+    sh.className = 'dm-att-sheet';
+    sh.innerHTML = `
+      <div class="dm-att-dim"></div>
+      <div class="dm-att-card">
+        <div class="dm-att-grip"></div>
+        <div class="dm-att-grid">
+          ${items.map(it => `
+            <button type="button" class="dm-att-item ${it.cls}" data-k="${it.k}">
+              <span class="dm-att-ic">${it.ic}</span><span class="dm-att-lb">${it.label}</span>
+            </button>`).join('')}
+        </div>
+      </div>`;
+    ROOT.appendChild(sh);
+    const close = () => { sh.classList.remove('open'); setTimeout(() => sh.remove(), 200); };
+    sh.querySelector('.dm-att-dim').addEventListener('click', close);
+    sh.querySelectorAll('.dm-att-item').forEach(b => b.addEventListener('click', () => {
+      const k = b.dataset.k; close();
+      if (k === 'album') ROOT.querySelector('#dm-file').click();
+      else if (k === 'file') ROOT.querySelector('#dm-file-any').click();
+      else if (k === 'voice') callFrom(peer, name, false);
+      else if (k === 'video') callFrom(peer, name, true);
+      else if (k === 'voicemsg') toastMini('🎤 마이크 버튼을 꾹 눌러 녹음하세요');
+      else if (k === 'pager') pagerLeave(peer, name);
+      else if (k === 'location') shareLocation();
+      else if (k === 'sticker') toggleStk();
+    }));
+    requestAnimationFrame(() => sh.classList.add('open'));
+  }
+
+  /* 📁 임의 파일 전송 — 이미지 외 문서·음악 등 */
+  async function onPickFile(e) {
+    let f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f || !curThread) return;
+    if (f.size > 50 * 1024 * 1024) return toastMini('50MB 이하 파일만 보낼 수 있어요');
+    if (!window.GALLA_UPLOAD_MEDIA) { try { await loadScript('/js/media-upload.js'); } catch (_) { return alert('파일 전송을 준비하지 못했어요.'); } }
+    const wrap = ROOT.querySelector('#dm-msgs');
+    const tmp = document.createElement('div');
+    tmp.className = 'dm-bubble me dm-uploading';
+    tmp.innerHTML = `<span class="dm-bub-body">📁 파일 보내는 중…</span>`;
+    wrap.appendChild(tmp); wrap.scrollTop = wrap.scrollHeight;
+    try {
+      const url = await window.GALLA_UPLOAD_MEDIA(f, 'file');
+      tmp.remove();
+      await sendMessage({ kind: 'file', body: '📁 ' + f.name, meta: { url, name: f.name, size: f.size } });
+    } catch (err) {
+      tmp.querySelector('.dm-bub-body').textContent = '파일 전송 실패';
+      setTimeout(() => tmp.remove(), 2500);
+    }
+  }
+
+  /* 📍 위치 공유 — 현재 좌표를 지도 링크로. (좌표는 메시지 본문에만, URL 파라미터 노출 최소) */
+  function shareLocation() {
+    if (!navigator.geolocation) return toastMini('이 기기는 위치를 지원하지 않아요');
+    toastMini('📍 위치 확인 중…');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: la, longitude: lo } = pos.coords;
+        const url = `https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}`;
+        sendMessage({ kind: 'text', body: `📍 내 위치를 공유했어요\n${url}` });
+      },
+      () => toastMini('위치 권한이 필요해요 (설정에서 허용)'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
   async function onPickImage(e) {
     let f = e.target.files && e.target.files[0];
     e.target.value = '';
