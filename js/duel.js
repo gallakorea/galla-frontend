@@ -76,14 +76,20 @@
     teardown();
     if (!ME) { alert("로그인이 필요합니다."); location.href = "login.html"; return; }
     if (oppId === ME) { alert("자기 자신에게는 신청할 수 없어요."); location.href = "duel.html"; return; }
+    /* 주제는 사용자가 짓는 게 아니라 '논쟁하던 그 이슈'에서 온다(사장님 룰).
+       이슈 맥락 없이 들어온 신청(직접 URL 등)은 받지 않는다. */
+    if (!issueId) { alert("일기토는 논쟁 중인 이슈 댓글에서만 신청할 수 있어요."); location.href = "duel.html"; return; }
+    const { data: issueRow } = await sb.from("issues").select("title").eq("id", +issueId).maybeSingle();
+    const fixedTopic = (issueRow?.title || "").trim();
+    if (!fixedTopic) { alert("이슈를 찾을 수 없어요. 댓글에서 다시 신청해 주세요."); location.href = "duel.html"; return; }
     await loadNicks([oppId]);
     root().innerHTML = `
       <div class="duel-card challenge-card">
         <div class="ch-title">⚔️ 일기토 신청</div>
         <div class="ch-opp">${avatar(av(oppId))}<div><div class="ch-oppname">${nameTag(oppId)}</div><div class="ch-sub">에게 1:1 실시간 설전을 신청</div></div></div>
 
-        <label class="ch-label">논쟁 주제</label>
-        <input id="ch-topic" maxlength="140" placeholder="예: 부먹 vs 찍먹, 진리는 하나다" />
+        <label class="ch-label">논쟁 주제 <span class="ch-hint">논쟁 중인 이슈에서 자동으로 가져와요</span></label>
+        <div class="ch-topic-fixed">“${esc(fixedTopic)}”</div>
 
         <label class="ch-label">대결 GP (승자 독식)</label>
         <div class="seg" id="seg-stake">
@@ -115,8 +121,7 @@
 
     $("#ch-cancel").onclick = () => history.length > 1 ? history.back() : (location.href = "duel.html");
     $("#ch-send").onclick = async () => {
-      const topic = $("#ch-topic").value.trim();
-      if (!topic) { $("#ch-topic").focus(); return; }
+      const topic = fixedTopic.slice(0, 140);   // 임의 작성 불가 — 이슈 제목 고정
       let sched = null;
       if (when === "scheduled") {
         const t = $("#ch-time").value; if (!t) { $("#ch-time").focus(); return; }

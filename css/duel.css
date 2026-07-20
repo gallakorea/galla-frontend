@@ -277,3 +277,10 @@
 /* 🔒 대결 중 이탈 잠금 — 나가는 길이 잠겼음을 시각적으로 */
 body.duel-locked .nav { opacity: .35; pointer-events: none; filter: grayscale(1); }
 .ch-hint { font-size: 10px; color: #6b7488; font-weight: 400; margin-left: 4px; }
+
+/* 논쟁 주제 고정 표시 — 입력이 아니라 이슈에서 온 주제 */
+.ch-topic-fixed {
+  padding: 13px 14px; border-radius: 13px;
+  background: rgba(106,123,255,.08); border: 1px solid rgba(106,123,255,.25);
+  color: #dfe3f5; font-size: 14.5px; font-weight: 800; line-height: 1.5;
+}
