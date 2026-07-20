@@ -1640,13 +1640,51 @@ body.kb-open .battle-input-bar {
 .action-shield:hover{ background:rgba(61,107,255,.24); color:#fff; }
 .action-shield:active{ transform:scale(.96); }
 /* 보호막 중인 유닛 — 공격자가 '왜 반만 들어가지?'를 즉시 알게 */
+/* 🛡 보호막 유닛 — 한눈에 '방패 켜진 놈'이 보이고, 부수고 싶어지게 */
 .comment.shielded, .reply.shielded{
-  box-shadow:0 0 0 1px rgba(61,107,255,.45), 0 0 18px rgba(61,107,255,.18);
+  position:relative;
+  animation:shieldBreath 2.2s ease-in-out infinite;
 }
+@keyframes shieldBreath{
+  0%,100%{ box-shadow:0 0 0 1.5px rgba(90,140,255,.55), 0 0 14px rgba(61,107,255,.20), inset 0 0 14px rgba(61,107,255,.07); }
+  50%    { box-shadow:0 0 0 2px   rgba(120,170,255,.9),  0 0 30px rgba(80,130,255,.45), inset 0 0 22px rgba(80,130,255,.14); }
+}
+/* 에너지 빛줄기가 주기적으로 방패 표면을 훑는다 */
+.comment.shielded::after, .reply.shielded::after{
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:1;
+  background:linear-gradient(115deg, transparent 32%, rgba(140,180,255,.15) 45%, rgba(255,255,255,.12) 50%, rgba(140,180,255,.15) 55%, transparent 68%);
+  background-size:250% 100%;
+  animation:shieldSweep 2.6s linear infinite;
+}
+@keyframes shieldSweep{ 0%{background-position:130% 0} 100%{background-position:-150% 0} }
 .shield-badge{
-  margin-left:4px; font-size:11px; vertical-align:1px;
-  filter:drop-shadow(0 0 4px rgba(61,107,255,.9));
-  animation:shieldPulse 2s ease-in-out infinite;
+  margin-left:4px; font-size:13px; vertical-align:1px; display:inline-block;
+  filter:drop-shadow(0 0 6px rgba(100,150,255,1));
+  animation:shieldFloat 1.7s ease-in-out infinite;
 }
-@keyframes shieldPulse{ 0%,100%{opacity:.75} 50%{opacity:1} }
-@media (prefers-reduced-motion:reduce){ .shield-badge{ animation:none } }
+@keyframes shieldFloat{ 0%,100%{transform:translateY(0) scale(1); opacity:.85} 50%{transform:translateY(-2px) scale(1.12); opacity:1} }
+
+/* ⚡ 파쇄 실행 — 방패가 깨지는 순간 */
+.shatter-flash{
+  animation:shatterFlash .5s ease-out !important;
+}
+@keyframes shatterFlash{
+  0%{ box-shadow:0 0 0 3px rgba(160,200,255,1), 0 0 60px rgba(120,170,255,.9), inset 0 0 40px rgba(160,200,255,.5); filter:brightness(1.9); }
+  30%{ filter:brightness(1.4); }
+  100%{ box-shadow:none; filter:brightness(1); }
+}
+.shatter-shake{ animation:shatterShake .45s cubic-bezier(.36,.07,.19,.97) !important; }
+@keyframes shatterShake{
+  10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(3px)}
+  30%,50%,70%{transform:translateX(-5px)} 40%,60%{transform:translateX(5px)} 100%{transform:none}
+}
+.shard{
+  position:fixed; z-index:12100; pointer-events:none; width:12px; height:12px;
+  background:linear-gradient(135deg,#cfe0ff,#5a8cff);
+  clip-path:polygon(50% 0, 100% 60%, 20% 100%);
+  filter:drop-shadow(0 0 5px rgba(120,170,255,.9));
+}
+@media (prefers-reduced-motion:reduce){
+  .shield-badge, .comment.shielded, .reply.shielded, .comment.shielded::after, .reply.shielded::after{ animation:none }
+  .comment.shielded, .reply.shielded{ box-shadow:0 0 0 1.5px rgba(90,140,255,.6), 0 0 18px rgba(61,107,255,.25); }
+}

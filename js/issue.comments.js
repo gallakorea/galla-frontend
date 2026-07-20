@@ -55,6 +55,39 @@ async function offerBreaker(commentId) {
     return true;
   } catch (_) { return false; }
 }
+/* ⚡ 파쇄 연출 — 방패가 산산조각 나는 순간. 700GP 쓴 맛이 나야 한다 */
+function breakerFx(unit) {
+  if (!unit) return;
+  try {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    unit.classList.remove("shatter-flash", "shatter-shake");
+    void unit.offsetWidth;                       // 애니메이션 재시동
+    unit.classList.add("shatter-flash", "shatter-shake");
+    setTimeout(() => unit.classList.remove("shatter-flash", "shatter-shake"), 600);
+    spawnCombatText?.(unit, "⚡ 방패 파쇄!", "crit");
+    window.BattleFX?.banner?.("⚡ 파쇄! 방패가 부서졌다 — 풀데미지", "rally");
+    window.BattleFX?.haptic?.("hit");
+    if (reduced) return;
+    // 유리 파편 — 유닛 중심에서 사방으로 튄다
+    const r = unit.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + Math.min(r.height / 2, 90);
+    for (let i = 0; i < 16; i++) {
+      const sh = document.createElement("div");
+      sh.className = "shard";
+      const size = 6 + Math.random() * 12;
+      sh.style.width = size + "px"; sh.style.height = size + "px";
+      sh.style.left = cx + "px"; sh.style.top = cy + "px";
+      document.body.appendChild(sh);
+      const ang = (Math.PI * 2 * i) / 16 + Math.random() * .5;
+      const dist = 70 + Math.random() * 130;
+      sh.animate([
+        { transform: "translate(-50%,-50%) rotate(0deg) scale(1)", opacity: 1 },
+        { transform: `translate(calc(-50% + ${Math.cos(ang) * dist}px), calc(-50% + ${Math.sin(ang) * dist + 60}px)) rotate(${(Math.random() - .5) * 720}deg) scale(.4)`, opacity: 0 }
+      ], { duration: 550 + Math.random() * 300, easing: "cubic-bezier(.15,.8,.4,1)" }).onfinish = () => sh.remove();
+    }
+  } catch (_) {}
+}
+
 /* 이 유닛이 보호막 중인지 — thread_shields(root:uid) 키맵 */
 function isShielded(unit) {
   if (!unit) return false;
@@ -2073,6 +2106,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
   });
   RESET_ARMED.delete(`${targetId}:${type}`);
   BREAK_ARMED.delete(String(targetId));
+  if (bd?.ok && bd.broke) breakerFx(document.querySelector(`.comment[data-id="${targetId}"], .reply[data-id="${targetId}"]`));
   if (bd?.ok && (bd.broke || bd.shielded)) refreshShields();   // 방패 상태가 바뀌었으니 서버 기준으로 다시
 
   closeInlineComposer();
