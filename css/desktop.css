@@ -114,7 +114,8 @@
   #pc-right {
     position: fixed;
     top: 0; bottom: 0;
-    left: calc(50% + var(--pc-col)/2 + var(--pc-gap));
+    /* 1100~1160px 폭에선 수식 위치가 화면 밖으로 나가 오른쪽이 잘렸다 — 화면 안으로 클램프 */
+    left: min(calc(50% + var(--pc-col)/2 + var(--pc-gap)), calc(100vw - var(--pc-right) - 12px));
     width: var(--pc-right);
     padding: 26px 0 22px;
     overflow-y: auto;

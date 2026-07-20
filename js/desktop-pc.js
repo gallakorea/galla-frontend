@@ -33,10 +33,22 @@
   ];
 
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  /* 타임존 오프셋(+00:00 등)이 이미 붙은 ISO에 'Z'를 또 붙이면 Invalid Date(NaN) */
+  const ts = iso => { const s = String(iso);
+    return new Date(/Z$|[+-]\d\d:?\d\d$/.test(s) ? s : s + 'Z').getTime(); };
   const ago = iso => {
-    const d = (Date.now() - new Date(String(iso).endsWith('Z') ? iso : iso + 'Z').getTime()) / 1000;
+    const t = ts(iso); if (!isFinite(t)) return '';
+    const d = (Date.now() - t) / 1000;
     if (d < 60) return '방금'; if (d < 3600) return Math.floor(d / 60) + '분 전';
     if (d < 86400) return Math.floor(d / 3600) + '시간 전'; return Math.floor(d / 86400) + '일 전';
+  };
+  const until = iso => {
+    const t = ts(iso); if (!isFinite(t)) return '';
+    const d = (t - Date.now()) / 1000;
+    if (d <= 0) return '마감 임박';
+    if (d < 3600) return '마감 ' + Math.max(1, Math.floor(d / 60)) + '분 남음';
+    if (d < 86400) return '마감 ' + Math.floor(d / 3600) + '시간 남음';
+    return '마감 ' + Math.floor(d / 86400) + '일 남음';
   };
 
   function buildLeft() {
@@ -147,7 +159,7 @@
       fill('pcr-predict', (data || []).map(m => `
         <a class="pcr-row" href="predict-market.html?id=${m.id}">
           <b>${esc(m.question)}</b>
-          <i>판돈 ${Number(m.total_pool || 0).toLocaleString()} GP · ${new Date(m.close_at) > new Date() ? '마감 ' + ago(m.close_at).replace(' 전', '') + ' 남음' : '마감 임박'}</i>
+          <i>판돈 ${Number(m.total_pool || 0).toLocaleString()} GP · ${until(m.close_at)}</i>
         </a>`).join(''), 'predict.html', '예측 전체 보기');
     } catch (_) { fill('pcr-predict', ''); }
 

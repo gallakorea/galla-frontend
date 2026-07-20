@@ -635,3 +635,14 @@ html, body {
   flex: 0 0 auto !important; width: auto !important; margin: 0 !important;
   height: 44px !important; padding: 0 18px !important; white-space: nowrap !important;
 }
+
+/* =========================================================
+   헤더-본문 폭 동기화 (태블릿·좁은 PC 창 481~1099px)
+   헤더는 header.css가 fixed(left:0/right:0 = 전폭)로 고정하는데
+   이 페이지 본문(#app)은 480px 캡 — 그 사이 폭에서 헤더의 +·♥가
+   화면 양끝으로 찢어져 '폭 정렬 무너짐'으로 보였다.
+   1100px+는 desktop.css가 헤더·본문을 함께 520으로 묶으므로 제외.
+   ========================================================= */
+@media (min-width: 481px) and (max-width: 1099.98px) {
+  .header { max-width: 480px; margin-left: auto; margin-right: auto; }
+}
