@@ -3250,7 +3250,12 @@
       <button type="button" class="dm-gate-join" id="dm-room-join-btn">${ICONS.bolt} 뛰어들기</button>`;
     gate.querySelector('#dm-room-join-btn').onclick = async () => {
       const { error } = await supabase.from('open_room_members').insert({ room_id: r.id, user_id: ME });
-      if (error) { console.error('[dm] room join', error); return; }
+      // 이미 멤버(중복키)면 그대로 입장 처리 — 조용한 실패가 '버튼이 안 먹는' 증상이 됐다
+      if (error && error.code !== '23505') {
+        console.error('[dm] room join', error);
+        toastMini('뛰어들기에 실패했어요 — 잠시 후 다시');
+        return;
+      }
       MY_ROOMS.add(r.id); r.member_count++;
       ROOT.querySelector('#dm-room-sub').textContent = `${r.member_count}명`;
       paintRoomGate(false);

@@ -344,6 +344,7 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 10px; padding: 24px; text-align: center;
 }
+.dm-room-gate[hidden] { display: none !important; }  /* hidden은 display 규칙에 진다 — 명시 차단(상점 탭과 같은 버그) */
 .dm-gate-ava { width: 72px; height: 72px; font-size: 28px; border-radius: 24px; }
 .dm-gate-title { font-size: 19px; font-weight: 800; color: #fff; letter-spacing: -.3px; }
 .dm-gate-topic { font-size: 13.5px; color: #9aa0ad; max-width: 280px; line-height: 1.5; }
@@ -1583,3 +1584,6 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 .dm-file-mid { display: flex; flex-direction: column; min-width: 0; }
 .dm-file-mid b { color: #e7ebf3; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
 .dm-file-mid i { color: #8a90a0; font-size: 11px; font-style: normal; margin-top: 2px; }
+
+/* 난장 게이트 표시 중 메시지·입력바 숨김도 display 규칙에 지지 않게 */
+#dm-room-msgs[hidden], #dm-room-send[hidden] { display: none !important; }
