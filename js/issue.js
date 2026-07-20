@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072131";
-import { loadAiNews } from "./issue-news.js?v=072131";
-import { loadStats } from "./issue.stats.js?v=072131";
-import { initCommentSystem } from "./issue.comments.js?v=072131";
+import { loadAiArguments } from "./issue-argument.js?v=072132";
+import { loadAiNews } from "./issue-news.js?v=072132";
+import { loadStats } from "./issue.stats.js?v=072132";
+import { initCommentSystem } from "./issue.comments.js?v=072132";
 
 
 console.log("[issue.js] loaded");
@@ -510,6 +510,19 @@ async function wireIssueActions(issue) {
 function renderIssue(issue) {
   currentIssue = issue;
   issueAuthorId = issue.user_id;
+
+  /* 팔로우 버튼: 정적 마크업이라 배선이 없었다(내 글에도 떠 있던 원인).
+     공용 모듈(follow.js .js-follow)에 연결 — 상태 페인트·토글·내 글 숨김을 전부 위임 */
+  const fb = document.getElementById("follow-btn");
+  if (fb) {
+    if (issue.user_id && !issue.is_anonymous) {
+      fb.classList.add("js-follow");
+      fb.dataset.uid = issue.user_id;
+      window.GALLA_bindFollow?.();
+    } else {
+      fb.style.display = "none"; // 익명 발제 등 팔로우 대상 없음
+    }
+  }
 
   // 헤더 ⋯ : 소유자·관리자 → 수정/삭제, 아니면 → 신고/차단
   const moreBtn = document.getElementById("header-more-btn");
