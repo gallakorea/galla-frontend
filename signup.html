@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>회원가입 - GALLA</title>
-    <link rel="stylesheet" href="css/signup.css?v=072137">
+    <link rel="stylesheet" href="css/signup.css?v=072138">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -14,82 +14,84 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072137">
+  <link rel="stylesheet" href="./css/theme.css?v=072138">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072137"></script>
+  <script src="/js/splash-boot.js?v=072138"></script>
 </head>
 
 <body data-page="signup">
 
-<div class="auth-wrap">
+<div class="auth-wrap sw-wrap">
   <div class="auth-glow"></div>
 
-  <button class="auth-back" data-back="login.html" aria-label="뒤로">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-  </button>
+  <!-- 상단: 뒤로(스텝 back) + 진행바 -->
+  <div class="sw-top">
+    <button class="auth-back sw-back" id="swBack" aria-label="뒤로">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div class="sw-progress"><div class="sw-progress-fill" id="swFill"></div></div>
+    <span class="sw-count" id="swCount">1/8</span>
+  </div>
 
-  <div class="auth-inner">
+  <div class="auth-inner sw-inner">
 
-    <div class="auth-brand">
-      <img src="assets/logo.png" alt="GALLA" class="auth-logo" />
-      <p class="auth-tagline">여론이 에너지가 되는 곳</p>
-    </div>
+    <!-- 타입폼식: 한 화면 한 질문 -->
+    <div class="sw-track" id="swTrack">
 
-    <div class="auth-card">
-      <h1 class="auth-title">전장에 합류하기 ⚔️</h1>
-      <p class="auth-sub">가입하고 <b class="reward-inline">+50 GP</b>로 첫 참전을 시작하세요.</p>
+      <!-- 1. 이메일 -->
+      <section class="sw-step" data-step="email">
+        <p class="sw-hello">전장에 합류하기 ⚔️ <b class="reward-inline">+50 GP</b></p>
+        <h2 class="sw-q">이메일 주소를<br>알려주세요</h2>
+        <p class="sw-hint">로그인과 계정 확인에 쓰여요.</p>
+        <input type="email" id="email" class="field-input sw-input" placeholder="example@galla.com" autocomplete="email" inputmode="email" enterkeyhint="next">
+        <div class="pw-hint" id="emailHint"></div>
+      </section>
 
-      <div class="field">
-        <label class="field-label" for="email">이메일 <span class="req">*</span></label>
-        <input type="email" id="email" class="field-input" placeholder="example@galla.com" autocomplete="email" inputmode="email">
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="password">비밀번호 <span class="req">*</span></label>
+      <!-- 2. 비밀번호 -->
+      <section class="sw-step" data-step="password">
+        <h2 class="sw-q">비밀번호를<br>만들어주세요</h2>
+        <p class="sw-hint">8자 이상을 권장해요.</p>
         <div class="pw-wrap">
-          <input type="password" id="password" class="field-input" placeholder="8자 이상 권장" autocomplete="new-password">
+          <input type="password" id="password" class="field-input sw-input" placeholder="비밀번호" autocomplete="new-password" enterkeyhint="next">
           <button type="button" class="pw-toggle" data-for="password" aria-label="표시">👁</button>
         </div>
-      </div>
-
-      <div class="field">
-        <label class="field-label" for="password2">비밀번호 확인 <span class="req">*</span></label>
-        <div class="pw-wrap">
-          <input type="password" id="password2" class="field-input" placeholder="비밀번호 다시 입력" autocomplete="new-password">
+        <div class="pw-wrap" style="margin-top:10px">
+          <input type="password" id="password2" class="field-input sw-input" placeholder="비밀번호 다시 입력" autocomplete="new-password" enterkeyhint="next">
           <button type="button" class="pw-toggle" data-for="password2" aria-label="표시">👁</button>
         </div>
         <div class="pw-hint" id="pwHint"></div>
-      </div>
+      </section>
 
-      <div class="field">
-        <label class="field-label" for="nickname">닉네임 (활동명) <span class="req">*</span></label>
-        <input type="text" id="nickname" class="field-input" placeholder="갈라에서 사용할 이름" maxlength="20">
-      </div>
+      <!-- 3. 닉네임 -->
+      <section class="sw-step" data-step="nickname">
+        <h2 class="sw-q">갈라에서 쓸<br>이름을 지어주세요</h2>
+        <p class="sw-hint">2~12자 · 한글·영문·숫자·_ . - / 나중에 바꿀 수 있어요.</p>
+        <input type="text" id="nickname" class="field-input sw-input" placeholder="닉네임 (활동명)" maxlength="20" enterkeyhint="next">
+      </section>
 
-      <div class="field">
-        <label class="field-label" for="phone">휴대폰 번호 <span class="field-optional">선택 · 정산 시 필요</span></label>
-        <input type="tel" id="phone" class="field-input" placeholder="010-0000-0000" inputmode="tel">
-      </div>
-
-      <p class="stats-note">📊 생년월일·성별·지역은 <b>여론 통계</b>를 위해 필요해요 (필수)</p>
-
-      <div class="field">
-        <label class="field-label" for="birthdate">생년월일 <span class="req">*</span> <span class="field-optional">만 14세 이상</span></label>
-        <input type="date" id="birthdate" class="field-input" placeholder="YYYY-MM-DD">
+      <!-- 4. 생년월일 -->
+      <section class="sw-step" data-step="birth">
+        <h2 class="sw-q">생년월일을<br>알려주세요</h2>
+        <p class="sw-hint">📊 여론 통계에 쓰여요 · 만 14세 이상 가입 가능</p>
+        <input type="date" id="birthdate" class="field-input sw-input">
         <div class="pw-hint" id="ageHint"></div>
-      </div>
+      </section>
 
-      <div class="field">
-        <label class="field-label">성별 <span class="req">*</span></label>
-        <div class="region-grid gender-grid">
+      <!-- 5. 성별 -->
+      <section class="sw-step" data-step="gender">
+        <h2 class="sw-q">성별을<br>선택해주세요</h2>
+        <p class="sw-hint">📊 세대·성별 여론 지형을 그리는 데 쓰여요.</p>
+        <div class="region-grid gender-grid sw-chips">
           <div class="region-chip gender-chip" data-gender="male">남성</div>
           <div class="region-chip gender-chip" data-gender="female">여성</div>
         </div>
-      </div>
+      </section>
 
-      <div class="field">
-        <label class="field-label">사는 지역 <span class="req">*</span></label>
-        <div class="region-grid">
+      <!-- 6. 지역 -->
+      <section class="sw-step" data-step="region">
+        <h2 class="sw-q">어느 지역에<br>살고 계세요?</h2>
+        <p class="sw-hint">📊 지역별 여론 지도를 만드는 데 쓰여요.</p>
+        <div class="region-grid sw-chips">
           <div class="region-chip">서울</div><div class="region-chip">부산</div>
           <div class="region-chip">대구</div><div class="region-chip">인천</div>
           <div class="region-chip">광주</div><div class="region-chip">대전</div>
@@ -101,59 +103,66 @@
           <div class="region-chip">제주</div><div class="region-chip">해외</div>
         </div>
         <div class="region-selected-text">선택한 지역: <span id="selectedRegion">없음</span></div>
-      </div>
+      </section>
 
-      <!-- 익명 활동은 계정 토글 폐지 → 유령권 아이템(👻)으로 이용 (댓글 한정) -->
+      <!-- 7. 휴대폰 (선택) -->
+      <section class="sw-step" data-step="phone">
+        <h2 class="sw-q">휴대폰 번호<br><small class="sw-opt">(선택)</small></h2>
+        <p class="sw-hint">정산(GP 후원 수익)이 있을 때만 필요해요. 건너뛰어도 돼요.</p>
+        <input type="tel" id="phone" class="field-input sw-input" placeholder="010-0000-0000" inputmode="tel" enterkeyhint="done">
+      </section>
 
-      <!-- 약관·개인정보 동의 (개인정보보호법 제22조 / 정통망법 제50조) -->
-      <div class="agree-box">
-        <label class="agree-item agree-all">
-          <input type="checkbox" id="agreeAll">
-          <span class="ag-mark"></span>
-          <b>전체 동의</b>
-        </label>
-        <div class="agree-list">
-          <label class="agree-item">
-            <input type="checkbox" id="agreeAge" class="agree-req">
+      <!-- 8. 약관 동의 + 가입 -->
+      <section class="sw-step" data-step="agree">
+        <h2 class="sw-q">마지막이에요!<br>약관에 동의해주세요</h2>
+        <div class="agree-box">
+          <label class="agree-item agree-all">
+            <input type="checkbox" id="agreeAll">
             <span class="ag-mark"></span>
-            <span class="ag-txt"><em>[필수]</em> 만 14세 이상입니다</span>
+            <b>전체 동의</b>
           </label>
-          <label class="agree-item">
-            <input type="checkbox" id="agreeTerms" class="agree-req">
-            <span class="ag-mark"></span>
-            <span class="ag-txt"><em>[필수]</em> <a href="terms.html" target="_blank" rel="noopener">이용약관</a> 동의</span>
-          </label>
-          <label class="agree-item">
-            <input type="checkbox" id="agreePrivacy" class="agree-req">
-            <span class="ag-mark"></span>
-            <span class="ag-txt"><em>[필수]</em> <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a> 동의</span>
-          </label>
-          <label class="agree-item">
-            <input type="checkbox" id="agreeMarketing">
-            <span class="ag-mark"></span>
-            <span class="ag-txt"><em class="opt">[선택]</em> 마케팅·이벤트 정보 수신 동의 (이메일·앱 푸시)</span>
-          </label>
+          <div class="agree-list">
+            <label class="agree-item">
+              <input type="checkbox" id="agreeAge" class="agree-req">
+              <span class="ag-mark"></span>
+              <span class="ag-txt"><em>[필수]</em> 만 14세 이상입니다</span>
+            </label>
+            <label class="agree-item">
+              <input type="checkbox" id="agreeTerms" class="agree-req">
+              <span class="ag-mark"></span>
+              <span class="ag-txt"><em>[필수]</em> <a href="terms.html" target="_blank" rel="noopener">이용약관</a> 동의</span>
+            </label>
+            <label class="agree-item">
+              <input type="checkbox" id="agreePrivacy" class="agree-req">
+              <span class="ag-mark"></span>
+              <span class="ag-txt"><em>[필수]</em> <a href="privacy.html" target="_blank" rel="noopener">개인정보 수집·이용</a> 동의</span>
+            </label>
+            <label class="agree-item">
+              <input type="checkbox" id="agreeMarketing">
+              <span class="ag-mark"></span>
+              <span class="ag-txt"><em class="opt">[선택]</em> 마케팅·이벤트 정보 수신 동의 (이메일·앱 푸시)</span>
+            </label>
+          </div>
         </div>
-      </div>
+        <div class="reward-box">🎁 가입 완료 시 <span class="reward-gp">+50 GP</span> 지급!</div>
+        <button class="auth-btn" id="signupBtn">⚔️ 가입하고 참전하기</button>
+      </section>
 
-      <div class="reward-box">
-        🎁 모든 항목 입력 시 <span class="reward-gp">+50 GP</span> 지급!
-      </div>
+    </div>
 
-      <button class="auth-btn" id="signupBtn">회원가입</button>
-
-      <div class="auth-foot">
-        이미 계정이 있나요? <span class="link-gold" onclick="location.href='login.html'">로그인</span>
-      </div>
+    <!-- 하단 다음 버튼 (마지막 스텝에선 숨김) -->
+    <div class="sw-foot" id="swFoot">
+      <button class="auth-btn sw-next" id="swNext">다음</button>
+      <div class="auth-foot">이미 계정이 있나요? <span class="link-gold" onclick="location.href='login.html'">로그인</span></div>
     </div>
 
   </div>
 </div>
 
 <!-- Supabase -->
-<script src="./vendor/supabase.js?v=072137"></script>
-<script src="./js/supabase.js?v=072137"></script>
-<script src="js/back.js?v=072137"></script>
+<script src="./vendor/supabase.js?v=072138"></script>
+<script src="./js/supabase.js?v=072138"></script>
+<script src="js/back.js?v=072138"></script>
 
 <!-- LOGIN CHECK + WAIT -->
 <script>
@@ -237,10 +246,11 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- signup 기능 -->
-<script src="./js/nickname-check.js?v=072137"></script>
-  <script src="./js/signup.js?v=072137"></script>
+<script src="./js/nickname-check.js?v=072138"></script>
+<script src="./js/signup.js?v=072138"></script>
+<script src="./js/signup-wizard.js?v=072138"></script>
 
-<script src="/js/analytics.js?v=072137"></script>
-<script src="/js/pwa.js?v=072137"></script>
+<script src="/js/analytics.js?v=072138"></script>
+<script src="/js/pwa.js?v=072138"></script>
 </body>
 </html>

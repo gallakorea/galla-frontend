@@ -157,3 +157,54 @@ body {
 
 .auth-foot { text-align: center; margin-top: 18px; font-size: 13.5px; color: var(--sub); }
 .link-gold { color: var(--g-gold); font-weight: 800; cursor: pointer; }
+
+/* =========================================================
+   📝 타입폼식 가입 위저드
+========================================================= */
+.sw-top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; align-items: center; gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 12px;
+  background: linear-gradient(#000 70%, transparent);
+}
+.sw-back { position: static; flex: 0 0 auto; }
+.sw-progress {
+  flex: 1; height: 5px; border-radius: 3px; overflow: hidden;
+  background: rgba(255,255,255,.09);
+}
+.sw-progress-fill {
+  height: 100%; width: 12%;
+  background: linear-gradient(90deg, #6a7bff, #3a5bff);
+  border-radius: 3px; transition: width .3s cubic-bezier(.3,.8,.3,1);
+}
+.sw-count { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: #6a7182; }
+
+.sw-inner { padding-top: 76px; }
+.sw-track { position: relative; min-height: 60vh; }
+.sw-step {
+  position: absolute; inset: 0; display: none;
+  opacity: 0; transform: translateX(28px);
+}
+.sw-step.on {
+  position: relative; display: block;
+  animation: swIn .3s cubic-bezier(.25,.9,.3,1) forwards;
+}
+@keyframes swIn { to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .sw-step.on { animation: none; opacity: 1; transform: none; } }
+
+.sw-hello { font-size: 13px; font-weight: 800; color: #9aa2b5; margin: 0 0 14px; }
+.sw-q {
+  margin: 0 0 8px; font-size: 25px; font-weight: 900; line-height: 1.32;
+  letter-spacing: -.02em; color: #fff;
+}
+.sw-q .sw-opt { font-size: 15px; color: #8a8f9c; font-weight: 800; }
+.sw-hint { margin: 0 0 18px; font-size: 13px; color: #7a8090; line-height: 1.6; }
+.sw-input { font-size: 16.5px; padding: 15px 16px; }
+.sw-chips .region-chip { font-size: 14px; padding: 11px 0; }
+
+.sw-foot {
+  position: sticky; bottom: 0; padding: 14px 0 calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, #000 30%);
+}
+.sw-foot.hide { display: none; }
+.sw-next { width: 100%; }
