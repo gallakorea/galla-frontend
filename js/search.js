@@ -109,7 +109,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderNewsCategoryChips();
       resetNews();
     }
-    if (name === "search") input.focus();
+    // 검색 탭 진입 시 자동 포커스 금지 — 키보드가 화면을 덮어 목록부터 못 본다(사장님).
+    // 키보드는 사용자가 검색창을 직접 탭했을 때만.
   }
   tabs.forEach(btn => {
     btn.addEventListener("click", e => {
@@ -1146,6 +1147,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     activateTab(qs.get("tab"), false);
   } else {
     activateTab("search");
-    input.focus();
+    // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
   }
 });
