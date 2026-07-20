@@ -490,7 +490,10 @@
         if (dur < 1 || !blob.size) return;
         toast('📼 녹음 저장 중…');
         try {
-          if (!window.GALLA_UPLOAD_MEDIA) await new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = '/js/media-upload.js'; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
+          if (!window.GALLA_UPLOAD_MEDIA) await new Promise((res, rej) => {
+            const v = ([...document.scripts].map(x => x.src).find(u => /[?&]v=/.test(u)) || '').match(/[?&]v=(\d+)/);
+            const sc = document.createElement('script'); sc.src = '/js/media-upload.js' + (v ? '?v=' + v[1] : '');
+            sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
           const ext = (recChunks[0]?.type || blob.type).includes('mp4') ? 'm4a' : 'webm';
           const f = new File([blob], `call-rec.${ext}`, { type: blob.type });
           const url = await window.GALLA_UPLOAD_MEDIA(f, 'audio');

@@ -27,15 +27,16 @@
 /*.html
   Cache-Control: no-cache
 
-# 우리 코드(CSS/JS)는 항상 재검증 — 바뀌지 않았으면 304라 비용은 미미하다.
-# ⚠️ 여기서 no-cache 를 쓰면 Cloudflare가 값을 통째로 버리고 기본 max-age 를
-#    씌워버린다(재검증조차 안 함 → 더 나쁨). 반드시 max-age=0, must-revalidate.
-# 존 설정 Browser Cache TTL = "Respect Existing Headers" 여야 이 값이 지켜진다
-#    (4 hours 로 두면 클램프돼서 옛 코드가 4시간 살아남는다). 2026-07-14 적용됨.
+# 우리 코드(CSS/JS) — 장기 캐시 + immutable (2026-07-21 성능 개편).
+# 모든 참조가 ?v=NNNNNN 버전드라 배포 때 URL이 바뀐다 → 재검증 자체가 불필요.
+# 이전의 max-age=0(매 방문 47개 304 왕복)이 재방문 체감을 잡아먹고 있었다.
+# ⚠️ 전제: 코드 참조는 반드시 ?v= 를 달 것(무버전 참조는 영영 낡는다) —
+#    자동 범프가 붙여주며, 동적 로드는 loadScript()가 v를 상속한다.
+# ⚠️ 존 Browser Cache TTL = "Respect Existing Headers" 유지(2026-07-14 설정).
 /css/*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=31536000, immutable
 /js/*
-  Cache-Control: public, max-age=0, must-revalidate
+  Cache-Control: public, max-age=31536000, immutable
 
 # 벤더 라이브러리는 바뀌지 않으므로 장기 캐시.
 # ⚠️ /js/vendor/ 에 두면 위 /js/* 규칙과 헤더가 합쳐져(둘 다 매치) 앞의 max-age=0 이

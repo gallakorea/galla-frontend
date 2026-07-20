@@ -87,3 +87,13 @@
   }
   setTimeout(hide, MAX);
 })();
+
+/* ⚡ 프리커넥트 — 첫 API/미디어 요청 전에 DNS+TLS 핸드셰이크를 미리 끝낸다.
+   splash-boot는 전 페이지 head에서 동기 실행되므로 여기가 최적 지점. */
+(function () {
+  ['https://bidqauputnhkqepvdzrr.supabase.co', 'https://cdn.galla.im'].forEach(h => {
+    const l = document.createElement('link');
+    l.rel = 'preconnect'; l.href = h; l.crossOrigin = 'anonymous';
+    document.head.appendChild(l);
+  });
+})();
