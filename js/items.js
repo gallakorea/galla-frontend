@@ -8,38 +8,38 @@
   const CATALOG = [
     // ── 전투 ──
     { key: "cooldown_reset",  emoji: "⚡", name: "쿨다운 리셋권", price: 300, group: "battle", kind: "consumable",
-      desc: "60초 쿨다운을 무시하고 즉시 다시 공격·방어·지원" },
+      desc: "60초 쿨다운을 무시하고 즉시 다시 공격·방어·지원", use: "이슈 전투에서 쿨다운 중에 공격·방어·지원을 누르면 사용을 물어봐요" },
     { key: "infiltrate_pass", emoji: "🕵️", name: "침투권", price: 500, group: "battle", kind: "consumable",
-      desc: "오늘의 적진 침투 한도 +1 (기본 3회)" },
+      desc: "오늘의 적진 침투 한도 +1 (기본 3회)", use: "적진 침투 한도(하루 3회) 소진 시 자동으로 제안돼요" },
     { key: "reply_pass",      emoji: "🗯️", name: "대댓글 연장권", price: 300, group: "battle", kind: "consumable",
-      desc: "오늘의 대댓글 한도 +15 (기본 40회)" },
+      desc: "오늘의 대댓글 한도 +15 (기본 40회)", use: "대댓글 한도(하루 40회) 소진 시 자동으로 제안돼요" },
     { key: "shield",          emoji: "🛡", name: "보호막", price: 400, group: "battle", kind: "consumable",
-      desc: "우리 진영 댓글에 10분간 보호막. 받는 피해가 절반(14→7)으로 줄어듭니다. 상대의 ⚡파쇄엔 뚫립니다." },
+      desc: "우리 진영 댓글에 10분간 보호막. 받는 피해가 절반(14→7)으로 줄어듭니다. 상대의 ⚡파쇄엔 뚫립니다.", use: "이슈 댓글의 🛡 버튼 — 같은 진영 댓글에 걸어요" },
     { key: "breaker",         emoji: "⚡", name: "파쇄", price: 500, group: "battle", kind: "consumable",
-      desc: "상대의 🛡보호막을 부수고 정상 피해로 공격합니다. 보호막이 없으면 소모되지 않습니다." },
+      desc: "상대의 🛡보호막을 부수고 정상 피해로 공격합니다. 보호막이 없으면 소모되지 않습니다.", use: "보호막 낀 상대를 공격하는 순간 자동으로 제안돼요" },
     { key: "revive",          emoji: "✨", name: "부활권", price: 800, group: "battle", kind: "consumable",
-      desc: "격파당한 내 댓글을 HP 50으로 부활" },
+      desc: "격파당한 내 댓글을 HP 50으로 부활", use: "격파당한 내 댓글에 뜨는 ✨부활 버튼으로 써요" },
     // ── 꾸미기 ──
     { key: "emoticon_pack",   emoji: "😎", name: "이모티콘 사용권", price: 1000, group: "deco", kind: "unlock",
-      desc: "댓글·전투에 갈라 이모티콘을 붙일 수 있어요 (영구)" },
+      desc: "댓글·전투에 갈라 이모티콘을 붙일 수 있어요 (영구)", use: "댓글 입력창의 😀 피커가 열려요" },
     { key: "nick_deco",       emoji: "🎨", name: "닉네임 꾸미기", price: 1500, group: "deco", kind: "unlock",
-      desc: "닉네임에 골드 반짝임 효과를 입혀요 (영구) · 스타일 팩은 설정>꾸미기" },
+      desc: "닉네임에 골드 반짝임 효과를 입혀요 (영구) · 스타일 팩은 설정>꾸미기", use: "구매 즉시 내 닉네임에 골드 효과가 적용돼요" },
     { key: "sticker_pack_2",  emoji: "🔥", name: "감정폭발 스티커팩", price: 1000, group: "deco", kind: "unlock",
-      desc: "킹받네·현타·극혐 등 감정 스티커 9종 (영구)" },
+      desc: "킹받네·현타·극혐 등 감정 스티커 9종 (영구)", use: "댓글 😀 피커에 스티커 탭이 추가돼요" },
     { key: "sticker_pack_3",  emoji: "💢", name: "정시밈 스티커팩", price: 1000, group: "deco", kind: "unlock",
-      desc: "내로남불·유체이탈·국뽕 등 시사 밈 9종 (영구)" },
+      desc: "내로남불·유체이탈·국뽕 등 시사 밈 9종 (영구)", use: "댓글 😀 피커에 스티커 탭이 추가돼요" },
     { key: "gif_pack",        emoji: "🎬", name: "GIF 사용권", price: 1500, group: "deco", kind: "unlock",
-      desc: "댓글·전투에 움짤(GIF)을 검색해서 붙일 수 있어요 (영구)" },
+      desc: "댓글·전투에 움짤(GIF)을 검색해서 붙일 수 있어요 (영구)", use: "댓글 입력창의 GIF 버튼이 열려요" },
     // ── 도전 ──
     { key: "duel_ticket",     emoji: "⚔️", name: "일기토 신청서", price: 700, group: "duel", kind: "consumable",
-      desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청" },
+      desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청", use: "상대 댓글 ⋯ 메뉴·프로필의 ⚔️ 일기토 신청 시 1장 쓰여요" },
     // ── 유령 (기간제) ── kind:'ghost' → buy_ghost_pass(days)
     { key: "ghost_3",  emoji: "👻", name: "유령권 3일",  price: 800,  group: "ghost", kind: "ghost", days: 3,
-      desc: "3일간 댓글을 정체불명 유령으로! (그때 단 댓글은 영구 익명)" },
+      desc: "3일간 댓글을 정체불명 유령으로! (그때 단 댓글은 영구 익명)", use: "이슈·광장 댓글의 👻 토글로 유령 댓글을 써요" },
     { key: "ghost_7",  emoji: "👻", name: "유령권 7일",  price: 1500, group: "ghost", kind: "ghost", days: 7,
-      desc: "7일간 유령 활동 · 유저당 고정 페르소나" },
+      desc: "7일간 유령 활동 · 유저당 고정 페르소나", use: "이슈·광장 댓글의 👻 토글로 유령 댓글을 써요" },
     { key: "ghost_30", emoji: "👻", name: "유령권 30일", price: 4500, group: "ghost", kind: "ghost", days: 30,
-      desc: "한 달간 유령! 최고 가성비" },
+      desc: "한 달간 유령! 최고 가성비", use: "이슈·광장 댓글의 👻 토글로 유령 댓글을 써요" },
   ];
   const GROUPS = [
     { key: "battle", label: "⚔️ 전투" },
@@ -117,14 +117,15 @@
       if (ownedUnlock) {
         btn = `<button class="si-buy owned" disabled>보유 중</button>`;
       } else {
-        btn = `<button class="si-buy${afford ? "" : " no"}" data-key="${it.key}" ${afford ? "" : "disabled"}>${it.price.toLocaleString()} GP</button>`;
+        btn = `<button class="si-buy${afford ? "" : " no"}" data-key="${it.key}" data-owned="${owned}" ${afford ? "" : "disabled"}>${it.price.toLocaleString()} GP</button>`;
       }
       return `
-        <div class="shop-item">
+        <div class="shop-item${owned ? " has-owned" : ""}">
           <span class="si-emoji">${it.emoji}</span>
           <span class="si-mid">
             <span class="si-name">${it.name}${ownedBadge}</span>
             <span class="si-desc">${it.desc}</span>
+            ${it.use ? `<span class="si-use">📍 ${it.use}</span>` : ""}
           </span>
           ${btn}
         </div>`;
@@ -138,8 +139,12 @@
 
     list.querySelectorAll(".si-buy:not(.no):not(.owned)").forEach(b => {
       b.addEventListener("click", async () => {
-        b.disabled = true; b.textContent = "구매 중…";
         const it = CATALOG.find(x => x.key === b.dataset.key);
+        /* 이미 갖고 있는 소모품 — 보유를 못 보고 또 사는 사고가 실제로 났다(일기토 4연속) */
+        const ownedNow = Number(b.dataset.owned || 0);
+        if (it?.kind === "consumable" && ownedNow > 0 &&
+            !confirm(`이미 ${it.name} ${ownedNow}개를 갖고 있어요.\n1개 더 구매할까요?`)) return;
+        b.disabled = true; b.textContent = "구매 중…";
         // 👻 유령권은 기간제 → buy_ghost_pass(days)
         const r = it?.kind === "ghost"
           ? (await sb().rpc("buy_ghost_pass", { p_days: it.days })).data

@@ -41,3 +41,12 @@
   background:rgba(201,209,224,.12);color:#c9d1e0;font-size:11px;font-weight:800;cursor:pointer;
   animation:revPulse 1.8s ease-in-out infinite;}
 @keyframes revPulse{0%,100%{box-shadow:0 0 0 0 rgba(201,209,224,.3)}50%{box-shadow:0 0 10px 2px rgba(201,209,224,.25)}}
+
+/* 사용처 안내 + 보유 강조 (중복 구매 방지) */
+.si-use { display:block; margin-top:3px; font-size:11px; color:#7d86ff; line-height:1.45; }
+.si-owned {
+  display:inline-block; margin-left:6px; padding:1.5px 8px; border-radius:999px;
+  background:#2a2410; border:1px solid #f5c34255; color:#f5c342;
+  font-size:10.5px; font-weight:900; vertical-align:1px;
+}
+.shop-item.has-owned { background:rgba(245,195,66,.045); border-radius:12px; }
