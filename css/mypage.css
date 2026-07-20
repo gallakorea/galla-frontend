@@ -788,3 +788,62 @@ body{
 .mp-row-tag.news    { color: #b9c6ff; background: rgba(90,110,255,.14); border: 1px solid rgba(120,140,255,.3); }
 .mp-row-tag.plaza   { color: #d7c9f0; background: rgba(150,100,220,.16); border: 1px solid rgba(160,120,230,.34); }
 .mp-row-go { flex: 0 0 auto; color: #5c6270; font-size: 20px; font-weight: 300; }
+
+/* =========================================================
+   📊 프로필 통계 인터랙션 (My Drop·팔로워·지지·반발)
+========================================================= */
+.stat-unit.ps-clickable { cursor: pointer; transition: transform .12s; }
+.stat-unit.ps-clickable:active { transform: scale(.94); }
+
+#pstat-sheet { position: fixed; inset: 0; z-index: 11300; pointer-events: none; }
+#pstat-sheet.open { pointer-events: auto; }
+#pstat-sheet .ps-dim { position: absolute; inset: 0; background: rgba(0,0,0,.5); opacity: 0; transition: opacity .18s; }
+#pstat-sheet.open .ps-dim { opacity: 1; }
+#pstat-sheet .ps-card {
+  position: absolute; left: 0; right: 0; bottom: 0; max-width: 520px; margin: 0 auto;
+  background: linear-gradient(180deg,#16171c,#0c0c0f);
+  border: 1px solid rgba(255,255,255,.08); border-bottom: none;
+  border-radius: 22px 22px 0 0;
+  padding: 8px 16px calc(18px + env(safe-area-inset-bottom));
+  transform: translateY(100%); transition: transform .26s cubic-bezier(.2,.8,.2,1);
+}
+#pstat-sheet.open .ps-card { transform: translateY(0); }
+.ps-grip { width: 38px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 6px auto 12px; }
+.ps-grip, .ps-head { touch-action: none; }
+.ps-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.ps-tab {
+  flex: 1; padding: 9px 0; border-radius: 11px; cursor: pointer;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+  color: #8a8f9c; font-size: 13px; font-weight: 800; font-family: inherit;
+}
+.ps-tab.on { background: rgba(125,134,255,.14); border-color: #7d86ff66; color: #dfe3f5; }
+.ps-title { font-size: 15px; font-weight: 900; color: #fff; margin: 2px 2px 10px; }
+.ps-body { max-height: 56vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.ps-row {
+  display: flex; align-items: center; gap: 11px; padding: 10px 8px;
+  border-radius: 13px; cursor: pointer;
+}
+.ps-row:hover { background: rgba(255,255,255,.045); }
+.ps-ava { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex: none; }
+.ps-ava-d { display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,.08); font-size: 17px; }
+.ps-nick { flex: 1; font-size: 14px; font-weight: 800; color: #e7ebf3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ps-follow {
+  flex: none; border: none; border-radius: 999px; padding: 7px 13px; cursor: pointer;
+  background: linear-gradient(135deg,#6a7bff,#3a5bff); color: #fff; font-size: 12px; font-weight: 900; font-family: inherit;
+}
+.ps-follow.following { background: rgba(255,255,255,.08); color: #9aa0ad; }
+.ps-empty { padding: 34px 10px; text-align: center; color: #7a8090; font-size: 13.5px; }
+.ps-explain { padding: 6px 4px 16px; font-size: 14px; line-height: 1.8; color: #c3c9d6; }
+.ps-pro { color: #7fa8ff; font-weight: 900; } .ps-con { color: #ff8798; font-weight: 900; }
+.ps-cta {
+  width: 100%; padding: 13px; border: none; border-radius: 13px; cursor: pointer;
+  background: linear-gradient(135deg,#6a7bff,#3a5bff); color: #fff; font-size: 14px; font-weight: 900; font-family: inherit;
+}
+#pstat-toast {
+  position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(8px);
+  z-index: 11400; padding: 10px 17px; border-radius: 999px;
+  background: rgba(24,26,34,.97); border: 1px solid rgba(255,255,255,.14);
+  color: #dfe3ec; font-size: 12.5px; font-weight: 800; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
+}
+#pstat-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
