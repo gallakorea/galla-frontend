@@ -49,7 +49,8 @@ async function offerBreaker(commentId) {
       alert(`🛡 상대가 보호막 중 — 피해가 절반(${Math.ceil(BATTLE_DMG.attack / 2)})만 들어갑니다.\n⚡ 파쇄가 있으면 방패를 부수고 ${BATTLE_DMG.attack} 전부 넣을 수 있어요. (GP 상점)`);
       return false;
     }
-    if (!confirm(`🛡 상대가 보호막 중 (피해 절반).\n⚡ 파쇄로 방패를 부수고 공격할까요? (보유 ${qty}개)`)) return false;
+    if (!(await ask({ emoji: "⚡", title: "파쇄로 방패를 부술까요?",
+      body: `상대가 🛡 보호막 중이라 피해가 절반만 들어가요.\n파쇄를 쓰면 방패를 부수고 ${BATTLE_DMG.attack} 전부! (보유 ${qty}개)`, ok: "⚡ 파쇄 공격" }))) return false;
     BREAK_ARMED.add(String(commentId));
     return true;
   } catch (_) { return false; }
@@ -84,10 +85,13 @@ function paintShields() {
   });
 }
 
+/* 기본 confirm은 갈라 톤을 해친다 — 공용 확인 모달로. 미로드 시 confirm 폴백 */
+const ask = (o) => window.GALLA_ask ? window.GALLA_ask(o) : Promise.resolve(confirm(o.title + "\n" + (o.body || "")));
+
 /* '상점 가서 사세요'라고 말만 하지 않는다 — 의향을 묻고 그 자리에서 상점을 연다 */
-function askShop(msg) {
+async function askShop(msg) {
   if (!window.openShop) { alert(msg); return; }
-  if (confirm(msg + "\n\n🛒 지금 상점에서 구매할까요?")) window.openShop();
+  if (await ask({ emoji: "🛒", title: "상점에서 구매할까요?", body: msg, ok: "상점 가기" })) window.openShop();
 }
 
 async function offerCooldownReset(commentId, action, waitSec) {
@@ -98,7 +102,8 @@ async function offerCooldownReset(commentId, action, waitSec) {
       askShop(`재시도까지 ${waitSec}초 남았어요.\n⚡ 쿨다운 리셋권(300 GP)이 있으면 기다림 없이 바로 가능해요.`);
       return false;
     }
-    if (!confirm(`쿨다운 ${waitSec}초 남음.\n⚡ 쿨다운 리셋권을 사용해 바로 실행할까요? (보유 ${qty}개)`)) return false;
+    if (!(await ask({ emoji: "⚡", title: "쿨다운을 건너뛸까요?",
+      body: `재시도까지 ${waitSec}초 남았어요.\n리셋권을 쓰면 바로 실행! (보유 ${qty}개)`, ok: "⚡ 바로 실행" }))) return false;
     RESET_ARMED.add(`${commentId}:${action}`);
     ME.actions.delete(`${commentId}:${action}`); // 로컬 쿨다운 해제
     return true;
@@ -1642,7 +1647,8 @@ function bindEvents() {
       const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
       const owned = inv.revive || 0;
       if (owned <= 0) { askShop("✨ 부활권이 없어요. (800 GP)"); return; }
-      if (!confirm(`✨ 부활권을 사용해 이 댓글을 HP 50으로 부활시킬까요? (보유 ${owned}개)`)) return;
+      if (!(await ask({ emoji: "✨", title: "댓글을 부활시킬까요?",
+        body: `부활권을 사용해 HP 50으로 되살립니다. (보유 ${owned}개)`, ok: "✨ 부활" }))) return;
       const { data: rv } = await window.supabaseClient.rpc("use_revive", { p_comment_id: rid });
       if (!rv?.ok) { alert("부활에 실패했어요: " + (rv?.reason || "오류")); return; }
       const unit = e.target.closest(".reply, .comment");
@@ -1703,7 +1709,12 @@ function bindEvents() {
       const targetUser = nameEl ? nameEl.textContent.trim() : "익명";
 
       // 🛡↔⚡ 보호막 낀 상대면 파쇄를 쓸지 먼저 묻는다(취소해도 절반 피해로 공격은 가능)
-      if (type === "attack" && isShielded(targetEl)) await offerBreaker(targetId);
+      // 판정 직전에 서버 기준으로 새로 읽는다 — 60초 주기 캐시만 믿으면
+      // '방금 걸린 방패'를 몰라 파쇄 제안이 안 뜬다(사장님 재현)
+      if (type === "attack") {
+        await refreshShields();
+        if (isShielded(targetEl)) await offerBreaker(targetId);
+      }
 
       openInlineComposer(type, targetId, targetUser, targetEl);
       return;
@@ -1717,7 +1728,8 @@ function bindEvents() {
       const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
       const have = inv.shield || 0;
       if (have <= 0) { askShop("🛡 보호막이 없어요. (400 GP)\n10분간 받는 피해가 절반으로 줄어요."); return; }
-      if (!confirm(`🛡 보호막을 사용할까요? (보유 ${have}개)\n10분간 받는 피해가 절반(${BATTLE_DMG.attack}→${Math.ceil(BATTLE_DMG.attack / 2)})으로 줄어듭니다.`)) return;
+      if (!(await ask({ emoji: "🛡", title: "보호막을 사용할까요?",
+        body: `보유 ${have}개\n10분간 받는 피해가 절반(${BATTLE_DMG.attack}→${Math.ceil(BATTLE_DMG.attack / 2)})으로 줄어요.\n상대의 ⚡파쇄엔 뚫립니다.`, ok: "🛡 사용" }))) return;
       const { data, error } = await window.supabaseClient.rpc("use_shield", { p_comment_id: sid });
       if (error || !data?.ok) {
         const M = { already_shielded: "이미 보호막이 걸려 있어요.", no_item: "🛡 보호막이 없어요.",
