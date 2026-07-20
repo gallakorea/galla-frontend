@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>회원가입 - GALLA</title>
-    <link rel="stylesheet" href="css/signup.css?v=072140">
+    <link rel="stylesheet" href="css/signup.css?v=072141">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -14,9 +14,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072140">
+  <link rel="stylesheet" href="./css/theme.css?v=072141">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072140"></script>
+  <script src="/js/splash-boot.js?v=072141"></script>
 </head>
 
 <body data-page="signup">
@@ -173,9 +173,9 @@
 </div>
 
 <!-- Supabase -->
-<script src="./vendor/supabase.js?v=072140"></script>
-<script src="./js/supabase.js?v=072140"></script>
-<script src="js/back.js?v=072140"></script>
+<script src="./vendor/supabase.js?v=072141"></script>
+<script src="./js/supabase.js?v=072141"></script>
+<script src="js/back.js?v=072141"></script>
 
 <!-- LOGIN CHECK + WAIT -->
 <script>
@@ -220,6 +220,8 @@ function waitForSupabaseClient() {
   window.GALLA_ageFromBirth = function(v){
     if(!v) return null;
     var d = new Date(v); if(isNaN(d)) return null;
+    // 자판으로 연도를 입력하는 중엔 0092-… 같은 값이 지나간다 — 완성 전엔 판단하지 않는다
+    if(d.getFullYear() < 1900) return null;
     var t = new Date(), a = t.getFullYear() - d.getFullYear();
     var m = t.getMonth() - d.getMonth();
     if(m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
@@ -227,11 +229,14 @@ function waitForSupabaseClient() {
   };
   if(bd){
     bd.max = new Date().toISOString().slice(0,10);
+    bd.min = '1900-01-01';
     bd.addEventListener('input', function(){
       var a = window.GALLA_ageFromBirth(bd.value);
       if(a === null){ ageHint.textContent=''; ageHint.className='pw-hint'; }
       else if(a < 14){ ageHint.textContent='✕ 만 14세 미만은 가입할 수 없습니다'; ageHint.className='pw-hint no'; ageAgree.checked=false; }
-      else { ageHint.textContent='✓ 가입 가능 연령입니다 (만 '+a+'세)'; ageHint.className='pw-hint ok'; ageAgree.checked=true; }
+      /* 만 나이 숫자는 표시하지 않는다 — 세는 나이와 달라 '계산이 틀렸다'는
+         인상을 주고, 본인 나이를 되비추는 것도 불쾌 요소 (사장님 지적) */
+      else { ageHint.textContent='✓ 가입 가능한 나이예요'; ageHint.className='pw-hint ok'; ageAgree.checked=true; }
       syncAgreeAll(); refreshSignupBtn();
     });
   }
@@ -259,11 +264,11 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- signup 기능 -->
-<script src="./js/nickname-check.js?v=072140"></script>
-<script src="./js/signup.js?v=072140"></script>
-<script src="./js/signup-wizard.js?v=072140"></script>
+<script src="./js/nickname-check.js?v=072141"></script>
+<script src="./js/signup.js?v=072141"></script>
+<script src="./js/signup-wizard.js?v=072141"></script>
 
-<script src="/js/analytics.js?v=072140"></script>
-<script src="/js/pwa.js?v=072140"></script>
+<script src="/js/analytics.js?v=072141"></script>
+<script src="/js/pwa.js?v=072141"></script>
 </body>
 </html>
