@@ -79,7 +79,7 @@
         <div class="shop-grip"></div>
         <div class="shop-head">
           <span class="shop-title">🛒 GP 상점</span>
-          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button><button class="shop-x" id="shopX" aria-label="닫기">✕</button></span>
+          <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button></span>
         </div>
         <div class="shop-tabs">
           <button class="shop-tab on" data-t="buy" type="button">🛒 구매</button>
@@ -91,7 +91,6 @@
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
-    sheet.querySelector("#shopX").addEventListener("click", () => sheet.classList.remove("open"));
 
     /* 위에서 아래로 끌어 닫기 — 딤 탭만으로는 닫는 법이 안 보인다(사장님 지적).
        리스트 스크롤과 안 싸우게 상단부(그립·헤더·탭)에서 시작한 드래그만 받는다. */

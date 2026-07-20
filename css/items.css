@@ -67,10 +67,4 @@
 .shop-list.off { display: none !important; }
 
 /* 시트 닫기 — ✕ 버튼 + 상단부 드래그 */
-.shop-x {
-  border: none; background: rgba(255,255,255,.07); color: #9aa0ad;
-  width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-  font-size: 13px; font-weight: 900; line-height: 1;
-}
-.shop-x:hover { background: rgba(255,255,255,.13); color: #fff; }
 .shop-grip, .shop-head, .shop-tabs { touch-action: none; }  /* 드래그 제스처 전용 영역 */
