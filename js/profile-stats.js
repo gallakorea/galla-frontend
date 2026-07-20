@@ -156,6 +156,38 @@
     bind("statFollowers", () => openFollowSheet("followers"));
     bind("statSupports", openVoteExplain);
     bind("statOppose", openVoteExplain);
+
+    renderDuelRecord();
+  }
+
+  /* ── ⚔️ 일기토 전적 — 끝난 대결만 센다(수락 안 된 신청·도망은 전적 아님) ── */
+  async function renderDuelRecord() {
+    try {
+      const { data } = await sb().from("duels")
+        .select("challenger,opponent,winner,result,status")
+        .eq("status", "finished")
+        .or(`challenger.eq.${viewUserId},opponent.eq.${viewUserId}`)
+        .limit(500);
+      const rows = data || [];
+      if (!rows.length) return;   // 전적 없으면 칩 자체를 안 단다
+      let w = 0, l = 0, d = 0;
+      rows.forEach(r => {
+        if (r.result === "draw") d++;
+        else if (r.winner === viewUserId) w++;
+        else if (r.winner) l++;
+      });
+      const total = w + l + d;
+      if (!total) return;
+      const rate = Math.round(w / total * 100);
+      const host = document.querySelector(".level-row") || document.querySelector(".mp-idline");
+      if (!host || document.getElementById("mpDuelRec")) return;
+      const chip = document.createElement("span");
+      chip.id = "mpDuelRec";
+      chip.className = "mp-duel-rec";
+      chip.innerHTML = `⚔️ ${total}전 <b>${w}승</b> ${l}패${d ? " " + d + "무" : ""} · 승률 ${rate}%`;
+      chip.title = "일기토 전적 (완료된 대결 기준)";
+      host.appendChild(chip);
+    } catch (_) {}
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();

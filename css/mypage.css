@@ -847,3 +847,12 @@ body{
   opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s;
 }
 #pstat-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ⚔️ 일기토 전적 칩 */
+.mp-duel-rec {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 8px; padding: 3px 11px; border-radius: 999px;
+  background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.12);
+  font-size: 11.5px; font-weight: 800; color: #b8bfcd; white-space: nowrap;
+}
+.mp-duel-rec b { color: #ffd06a; }
