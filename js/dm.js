@@ -4394,15 +4394,19 @@
     if (!curPeer) return;
     document.getElementById('dm-attach-sheet')?.remove();
     const peer = curPeer, name = nickCache[peer] || PROFILES[peer]?.nickname || '상대';
+    // 갈라 용어 그대로: 육성톡(음성통화)·면상톡(영상통화)·육성 투척(음성 메시지)·삐삐.
+    // 아이콘은 DM 원칙대로 1.8px 라인 SVG(ICONS) — 이모지 금지.
+    const locIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    const fileIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>';
     const items = [
-      { k: 'album',  ic: '🖼', label: '앨범',    cls: 'a-album' },
-      { k: 'file',   ic: '📁', label: '파일',    cls: 'a-file' },
-      { k: 'voice',  ic: '📞', label: '음성통화', cls: 'a-voice' },
-      { k: 'video',  ic: '📹', label: '페이스톡', cls: 'a-video' },
-      { k: 'voicemsg', ic: '🎤', label: '음성메시지', cls: 'a-vmsg' },
-      { k: 'pager',  ic: '📟', label: '삐삐',    cls: 'a-pager' },
-      { k: 'location', ic: '📍', label: '위치',  cls: 'a-loc' },
-      { k: 'sticker', ic: '😀', label: '이모티콘', cls: 'a-stk' },
+      { k: 'album',    ic: ICONS.img,   label: '사진' },
+      { k: 'file',     ic: fileIc,      label: '파일' },
+      { k: 'voice',    ic: ICONS.phone, label: '육성톡' },
+      { k: 'video',    ic: ICONS.cam,   label: '면상톡' },
+      { k: 'voicemsg', ic: ICONS.mic,   label: '육성 투척' },
+      { k: 'pager',    ic: ICONS.bell,  label: '삐삐' },
+      { k: 'location', ic: locIc,       label: '위치' },
+      { k: 'sticker',  ic: ICONS.smile, label: '이모티콘' },
     ];
     const sh = document.createElement('div');
     sh.id = 'dm-attach-sheet';
@@ -4412,8 +4416,8 @@
       <div class="dm-att-card">
         <div class="dm-att-grip"></div>
         <div class="dm-att-grid">
-          ${items.map(it => `
-            <button type="button" class="dm-att-item ${it.cls}" data-k="${it.k}">
+          ${items.map((it, i) => `
+            <button type="button" class="dm-att-item" data-k="${it.k}" style="--i:${i}">
               <span class="dm-att-ic">${it.ic}</span><span class="dm-att-lb">${it.label}</span>
             </button>`).join('')}
         </div>
@@ -4427,7 +4431,7 @@
       else if (k === 'file') ROOT.querySelector('#dm-file-any').click();
       else if (k === 'voice') callFrom(peer, name, false);
       else if (k === 'video') callFrom(peer, name, true);
-      else if (k === 'voicemsg') toastMini('🎤 마이크 버튼을 꾹 눌러 녹음하세요');
+      else if (k === 'voicemsg') toastMini('입력창 옆 마이크를 꾹 — 육성을 투척하세요');
       else if (k === 'pager') pagerLeave(peer, name);
       else if (k === 'location') shareLocation();
       else if (k === 'sticker') toggleStk();

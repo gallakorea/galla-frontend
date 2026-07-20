@@ -168,10 +168,9 @@
       // [면상톡 저데이터] — 화질을 낮춰 데이터·불안정 회선에 대응
       const low = !!PREF().lowData;
       return await md.getUserMedia({
-        audio: {
-          echoCancellation: true, noiseSuppression: true, autoGainControl: true,
-          channelCount: 1, sampleRate: 48000, sampleSize: 16,
-        },
+        // ⚠️ sampleRate/channelCount 같은 하드 제약은 iOS에서 AEC(에코 제거)를
+        //    무력화하는 사례가 있다 — 처리 계열 3종만 요청(울림의 주범 제거)
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         video: video ? (low
           ? { facingMode: facing, width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { max: 20 } }
           : { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }) : false,
@@ -180,6 +179,12 @@
       // 일부 안드로이드가 고급 제약에서 넘어진다 — 소박한 제약으로 한 번 더
       if (e && (e.name === 'OverconstrainedError' || e.name === 'TypeError' || e.name === 'AbortError'))
         return md.getUserMedia({ audio: true, video: !!video });
+      // 카메라가 없거나 다른 앱이 점유 중인 폰 — 면상톡을 육성톡으로 강등해 연결은 살린다
+      if (video && e && (e.name === 'NotFoundError' || e.name === 'NotReadableError' || e.name === 'DevicesNotFoundError' || e.name === 'TrackStartError')) {
+        const st = await md.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        st._videoFallback = true;
+        return st;
+      }
       throw e;
     }
   }
@@ -272,6 +277,7 @@
     await primePermHint(!!video);
     try { localStream = await getMedia(!!video); }
     catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video), () => start(peer, name, video)); }
+    if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 걸어요'); }
     try {
     chanPeer = await peerChan(peer);
     await buildPC();
@@ -302,6 +308,7 @@
     await primePermHint(CUR.video);
     try { localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
+    if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
       await buildPC();
       await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });

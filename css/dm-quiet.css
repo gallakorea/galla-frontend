@@ -1542,20 +1542,32 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
   transform: translateY(100%); transition: transform .24s cubic-bezier(.2,.8,.2,1);
 }
 .dm-att-sheet.open .dm-att-card { transform: translateY(0); }
-.dm-att-grip { width: 38px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 6px auto 14px; }
-.dm-att-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 8px; }
+.dm-att-grip { width: 38px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.22); margin: 6px auto 16px; }
+.dm-att-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 6px; padding: 0 2px 4px; }
 .dm-att-item {
-  display: flex; flex-direction: column; align-items: center; gap: 7px;
-  background: none; border: none; cursor: pointer; padding: 6px 0; font-family: inherit;
-  transition: transform .12s;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: none; border: none; cursor: pointer; padding: 4px 0; font-family: inherit;
+  opacity: 0; transform: translateY(10px);
+  transition: transform .14s;
 }
-.dm-att-item:active { transform: scale(.92); }
+.dm-att-sheet.open .dm-att-item {
+  animation: dmAttIn .32s cubic-bezier(.2,.9,.3,1.1) forwards;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+@keyframes dmAttIn { to { opacity: 1; transform: translateY(0); } }
+.dm-att-item:active .dm-att-ic { transform: scale(.9); }
 .dm-att-ic {
-  width: 54px; height: 54px; border-radius: 18px; font-size: 24px;
+  width: 56px; height: 56px; border-radius: 19px;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09);
+  background: linear-gradient(180deg, rgba(106,123,255,.13), rgba(106,123,255,.05));
+  border: 1px solid rgba(106,123,255,.22);
+  color: #aab4ff; transition: transform .14s;
 }
-.dm-att-lb { font-size: 11.5px; font-weight: 700; color: #b8bfcd; }
+.dm-att-ic svg { width: 23px; height: 23px; }
+.dm-att-lb { font-size: 11.5px; font-weight: 800; color: #9aa2b5; letter-spacing: -.01em; }
+@media (prefers-reduced-motion: reduce) {
+  .dm-att-item { opacity: 1; transform: none; animation: none !important; }
+}
 
 /* 📁 파일 메시지 카드 */
 .dm-file-card {
