@@ -84,6 +84,10 @@
       h.classList.add('reorder-mode');
       el.classList.add('reordering');
       hint('좌우로 끌어 순서를 바꾸고, 놓으면 저장돼요');
+      /* 페이지 좌우 스와이프는 '누르는 순간' 무장된다 — 정렬 모드가 열리는 시점엔
+         이미 드래그가 진행 중이라(조그셔틀과 동일) touchcancel로 확실히 끊는다 */
+      try { document.dispatchEvent(new TouchEvent('touchcancel', { bubbles: true })); }
+      catch (_) { document.dispatchEvent(new Event('touchcancel', { bubbles: true })); }
       try { navigator.vibrate?.(12); } catch (_) {}
     };
 
@@ -157,6 +161,11 @@
       e.preventDefault();
       if (!raf) raf = requestAnimationFrame(render);
     });
+
+    /* 정렬 중 문서 전체의 touchmove를 막는다 — 헤더 가로 스크롤과 페이지가
+       손가락을 따라 움직이면 탭을 놓을 자리를 못 잡는다 */
+    const blockTouch = e => { if (drag) e.preventDefault(); };
+    document.addEventListener('touchmove', blockTouch, { passive: false });
 
     h.addEventListener('pointerup', () => end(true));
     /* 브라우저가 제스처를 가져가도(스크롤 등) 저장까지는 해준다 — 작업을 날리는 게 최악 */

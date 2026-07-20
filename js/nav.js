@@ -268,7 +268,7 @@ document.addEventListener("DOMContentLoaded", () => {
         bx = e.touches[0].clientX; by = e.touches[0].clientY; bdx = 0; bLock = 0;
       }, { passive: true });
       document.addEventListener("touchmove", (e) => {
-        if (document.getElementById('nav-jog')) { bArmed = false; return; }   // 조그셔틀 중엔 양보
+        if (document.getElementById('nav-jog') || document.querySelector('.tab-item.reordering')) { bArmed = false; return; }   // 조그셔틀·탭 정렬 중엔 양보
         if (!bArmed || e.touches.length !== 1 || bLock === 2) return;
         const dx = e.touches[0].clientX - bx, dy = e.touches[0].clientY - by;
         bdx = dx;
@@ -366,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
       /* ⚠️ 스와이프는 '누르는 순간' 무장된다. 조그셔틀은 380ms 뒤에 열리므로
          touchstart의 overlayOpen() 검사만으론 늦다 — 이동 중에도 확인해
          메뉴가 열렸으면 즉시 손을 뗀다(페이지가 같이 밀려 고르기 힘들었다). */
-      if (document.getElementById('nav-jog')) { reset(); return; }
+      if (document.getElementById('nav-jog') || document.querySelector('.tab-item.reordering')) { reset(); return; }
       const x = e.touches[0].clientX, y = e.touches[0].clientY;
       const dx = x - sx, dy = y - sy;
 
