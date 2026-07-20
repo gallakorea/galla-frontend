@@ -24,10 +24,24 @@
 
   /* ── 스텝별 통과 조건 — 막히면 이유를 그 자리에서 말해준다 ── */
   const CHECKS = {
-    email() {
+    async email() {
       const v = $("email").value.trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { hintEl("emailHint", "✕ 이메일 형식을 확인해주세요", false); return false; }
-      hintEl("emailHint", "", true); return true;
+      /* 중복은 이 자리에서 바로 — 마지막 제출까지 갔다가 '이미 가입됨'으로 튕기면 최악의 이탈 */
+      try {
+        hintEl("emailHint", "확인 중…", true);
+        const { data: ea } = await window.supabaseClient.rpc("email_available", { p_email: v });
+        if (ea && !ea.ok) {
+          if (ea.reason === "taken") {
+            hintEl("emailHint", "✕ 이미 가입된 이메일이에요 — 로그인해 주세요", false);
+            const h = $("emailHint");
+            if (h && !h.querySelector("a")) h.insertAdjacentHTML("beforeend",
+              ' <a href="login.html" style="color:#9daaff;font-weight:800">로그인 →</a>');
+          } else hintEl("emailHint", "✕ 이메일 형식을 확인해주세요", false);
+          return false;
+        }
+      } catch (_) { /* 확인 실패 시 진행 — signUp이 최종 방어 */ }
+      hintEl("emailHint", "✓ 사용할 수 있는 이메일이에요", true); return true;
     },
     password() {
       const a = $("password").value, b = $("password2").value;
