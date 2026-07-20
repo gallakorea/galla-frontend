@@ -45,6 +45,30 @@
   // 렌더 지점을 건드리지 않고, 닉네임 요소([data-profile-uid]/[data-user-id])에
   // 골드 클래스를 자동 부여한다. user_cosmetics(공개 조회)로 보유 여부 판별.
   // ───────────────────────────────────────────────
+  /* 닉네임 스타일 CSS 자체 주입 — galla-ui.css를 안 싣는 페이지(설정·홈 등)에서
+     클래스만 붙고 스타일이 없어 '장착해도 변화 없음'이 됐다(사장님 재현).
+     도색기와 CSS는 한 몸이어야 한다: 여기서 함께 주입해 전 페이지 자립. */
+  (function injectNickCss() {
+    if (document.getElementById("nick-style-css")) return;
+    const st = document.createElement("style");
+    st.id = "nick-style-css";
+    st.textContent = `
+.nick-gold{background:linear-gradient(92deg,#f7d774 0%,#fff2b8 20%,#e8a93a 45%,#ffe89a 65%,#d98f24 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;text-shadow:0 0 10px rgba(201,209,224,.35);animation:nickGoldShine 3.4s linear infinite}
+.nick-gold::after{content:" 👑";-webkit-text-fill-color:initial;color:#c9d1e0;font-size:.82em;text-shadow:none}
+@keyframes nickGoldShine{0%{background-position:0% 0}100%{background-position:220% 0}}
+.nick-title{display:inline-block;font-size:.72em;font-weight:900;vertical-align:middle;color:#c9d1e0;background:rgba(201,209,224,.14);border:1px solid rgba(201,209,224,.35);border-radius:99px;padding:1px 7px;margin-right:5px;line-height:1.5;white-space:nowrap}
+.ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;background-size:200% 100%}
+.ns-neon{background-image:linear-gradient(92deg,#00e5ff,#3d6bff,#00e5ff);text-shadow:0 0 10px rgba(0,229,255,.5);animation:nsShine 3s linear infinite}
+.ns-ice{background-image:linear-gradient(92deg,#bfefff,#7fd4ff,#e8f8ff,#9fd8ff);text-shadow:0 0 8px rgba(150,220,255,.45);animation:nsShine 4s linear infinite}
+.ns-fire{background-image:linear-gradient(92deg,#ffd24a,#ff6a00,#ff2d2d,#ff9a3d);text-shadow:0 0 10px rgba(255,90,0,.5);animation:nsShine 2.2s linear infinite}
+.ns-toxic{background-image:linear-gradient(92deg,#b6ff2e,#39d17a,#c9ff4a);text-shadow:0 0 9px rgba(120,230,80,.5);animation:nsShine 3s linear infinite}
+.ns-royal{background-image:linear-gradient(92deg,#c9a3ff,#7b5cff,#a17bff,#e0c9ff);text-shadow:0 0 10px rgba(150,110,255,.5);animation:nsShine 3.4s linear infinite}
+.ns-rainbow{background-image:linear-gradient(92deg,#ff4f6e,#ffcf6b,#4fd17a,#4fc3f7,#a17bff,#ff4f6e);background-size:300% 100%;animation:nsShine 2.4s linear infinite}
+@keyframes nsShine{0%{background-position:0% 0}100%{background-position:200% 0}}
+@media (prefers-reduced-motion:reduce){.nick-gold,.ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{animation:none}}`;
+    (document.head || document.documentElement).appendChild(st);
+  })();
+
   window.GALLA_decoCache = window.GALLA_decoCache || {}; // uid -> {nick_gold, emoticon}
   window.GALLA_loadDecos = async function (uids) {
     const cache = window.GALLA_decoCache;
