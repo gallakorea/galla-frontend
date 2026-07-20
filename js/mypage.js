@@ -154,21 +154,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         const hdrTitle = document.getElementById("mpHdrTitle");
         if (hdrTitle) hdrTitle.textContent = viewProfile.nickname || "프로필";
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
-        const lv = viewProfile.level || 1;
-        if (levelEl) levelEl.textContent = "Lv. " + lv;
-        // 아바타 위 등급 칩 — 갈라리안 등급표(GI)와 일치 (grade 페이지와 동일 기준)
+        // 레벨·등급 칩 — 죽은 users.level 대신 갈라리안 GI 등급으로 통일
+        // (설정·grade 페이지와 동일: 예 "여론 논객 Lv.3")
+        if (levelEl) levelEl.textContent = "…";
         const tierChip = document.getElementById("tierChip");
-        if (tierChip) {
-            tierChip.textContent = "🌱";   // GI 로딩 전 기본
-            (async () => {
-                try {
-                    const { data: giMap } = await supabase.rpc("gi_of_users", { p_uids: [viewUserId] });
-                    const t = window.GALLA_gallianTier ? window.GALLA_gallianTier((giMap || {})[viewUserId] || 0) : { icon: "🌱" };
-                    tierChip.textContent = t.icon;
-                    tierChip.title = t.label;
-                } catch (_) {}
-            })();
-        }
+        if (tierChip) tierChip.textContent = "🌱";
+        (async () => {
+            try {
+                // grade 페이지와 '완전히' 동일한 full 계산(merit·예측 포함)으로 통일
+                const g = window.GALLA_gallianOf ? await window.GALLA_gallianOf(supabase, viewUserId) : null;
+                const t = g?.tier || { icon: "🌱", name: "눈팅 뉴비" };
+                const sl = g?.subLevel || 1;
+                if (levelEl) levelEl.textContent = `${t.name} Lv.${sl}`;
+                if (tierChip) { tierChip.textContent = t.icon; tierChip.title = `${t.name} Lv.${sl}`; }
+            } catch (_) { if (levelEl) levelEl.textContent = "눈팅 뉴비 Lv.1"; }
+        })();
         // 전투력 = 이 유저가 벌인 전투 액션(공격/방어/지원) 총량
         (async () => {
             const powerEl = document.getElementById("powerText");

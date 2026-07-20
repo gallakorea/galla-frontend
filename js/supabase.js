@@ -16,8 +16,9 @@
     };
   }
 
-  /* 🏅 갈라리안 등급표(GI 기반) — grade 페이지/gallian.js와 동일 6단계.
-     닉네임 도색 등급 아이콘의 단일 진실. early-return 위에 둬 재주입에도 견고. */
+  /* 🏅 갈라리안 등급표(GI 기반) — grade 페이지/gallian.js와 동일 6단계 + 서브레벨.
+     전 페이지 '레벨/등급'의 단일 진실. users.level(죽은 컬럼)은 쓰지 않는다.
+     early-return 위에 둬 재주입에도 견고. */
   if (!window.GALLA_gallianTier) {
     const GALLIAN_TIERS = [
       { icon: "🌱", label: "눈팅 뉴비",   min: 0 },
@@ -27,12 +28,34 @@
       { icon: "🌪️", label: "갈라 선동가", min: 4500 },
       { icon: "👑", label: "갈라 대장군", min: 15000 },
     ];
-    window.GALLA_gallianTier = function (gi) {
+    const SUB = 5, APEX_STEP = 5000;   // gallian.js와 동일 상수
+    /* GI → 등급 + 서브레벨(Lv.1~5) + 진행도. gallian.js 공식과 동일. */
+    window.GALLA_gallianOfGi = function (gi) {
       gi = Number(gi) || 0;
-      let t = GALLIAN_TIERS[0];
-      for (const x of GALLIAN_TIERS) if (gi >= x.min) t = x;
-      return t;
+      let idx = 0;
+      for (let i = 0; i < GALLIAN_TIERS.length; i++) if (gi >= GALLIAN_TIERS[i].min) idx = i;
+      const t = GALLIAN_TIERS[idx], next = GALLIAN_TIERS[idx + 1] || null;
+      const into = gi - t.min;
+      let subLevel, floor, ceil;
+      if (next) {
+        const step = (next.min - t.min) / SUB;
+        subLevel = Math.min(SUB, 1 + Math.floor(into / step));
+        floor = t.min + (subLevel - 1) * step; ceil = t.min + subLevel * step;
+      } else {
+        subLevel = 1 + Math.floor(into / APEX_STEP);
+        floor = t.min + (subLevel - 1) * APEX_STEP; ceil = t.min + subLevel * APEX_STEP;
+      }
+      const subProgress = Math.min(100, Math.round((gi - floor) / (ceil - floor) * 100));
+      const atTop = next && subLevel >= SUB;
+      const goalGi = atTop ? next.min : Math.ceil(ceil);
+      return {
+        icon: t.icon, label: t.label, min: t.min, index: idx, gi, subLevel, subProgress,
+        goalRemaining: Math.max(0, goalGi - gi),
+        goalLabel: atTop ? `${next.label} 승급` : `${t.label} Lv.${subLevel + 1}`,
+      };
     };
+    /* 등급 아이콘·이름만 필요할 때(도색기) — 위 헬퍼의 얇은 래퍼 */
+    window.GALLA_gallianTier = function (gi) { return window.GALLA_gallianOfGi(gi); };
   }
 
   /* ⚠️ 여기서 early-return 하지 않는다 — 그러면 아래 아바타 헬퍼·닉네임

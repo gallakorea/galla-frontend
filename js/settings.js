@@ -167,22 +167,23 @@ document.addEventListener("DOMContentLoaded", async () => {
      🎮 레벨 · 전투력 · XP 게이지
      전투력 = 갈라×50 + 댓글×10 + 전투액션×5 + 받은찬반×2
   ===================== */
-  const levelEl = document.getElementById("plLevel");
-  const { data: lvRow } = await supabase.from("users").select("level").eq("id", userId).single();
-  const level = lvRow?.level || 1;
-  if (levelEl) levelEl.textContent = "Lv." + level;
-
+  // 레벨·전투력·XP — 죽은 users.level 폐지, 갈라리안 GI로 통일(마이페이지·grade와 동일)
   const totalActs = acts.attack + acts.defend + acts.support;
-  const proN = Number(document.getElementById("statPro")?.textContent) || 0;
-  const conN = Number(document.getElementById("statCon")?.textContent) || 0;
-  const power = (myIssueCount ?? 0) * 50 + (commentCount ?? 0) * 10 + totalActs * 5 + (proN + conN) * 2;
-  const xpPct = Math.min(99, power % 100); // 다음 레벨 진행도(연출용)
-
+  const levelEl = document.getElementById("plLevel");
   const powerEl = document.getElementById("plPower");
   const xpFill = document.getElementById("plXpFill");
   const xpLabel = document.getElementById("plXpLabel");
-  if (xpLabel) xpLabel.textContent = `다음 레벨까지 ${100 - xpPct}%`;
-  requestAnimationFrame(() => { if (xpFill) xpFill.style.width = xpPct + "%"; });
+  try {
+    // grade·마이페이지와 완전히 동일한 full 계산으로 통일
+    const g = window.GALLA_gallianOf ? await window.GALLA_gallianOf(supabase, userId) : null;
+    if (g) {
+      if (levelEl) levelEl.textContent = `${g.tier.name} Lv.${g.subLevel}`;
+      if (xpLabel) xpLabel.textContent = g.goal?.remaining > 0 ? `다음 레벨까지 ${g.goal.remaining.toLocaleString()} GI` : "최고 레벨";
+      requestAnimationFrame(() => { if (xpFill) xpFill.style.width = (g.subProgress || 0) + "%"; });
+    }
+  } catch (_) {}
+  // 전투력 = 전투 액션(공격·방어·지원) 총량 — 마이페이지와 동일 정의(전투지수)
+  const power = totalActs;
 
   /* 숫자 카운트업 연출 (전적 + 전투력) */
   const countUp = (el, target) => {
