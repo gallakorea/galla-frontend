@@ -208,3 +208,26 @@ body {
 }
 .sw-foot.hide { display: none; }
 .sw-next { width: 100%; }
+
+/* 필수/선택 뱃지 · 선택 스텝 유도 */
+.sw-badge {
+  display: inline-block; margin-bottom: 10px; padding: 3px 11px;
+  border-radius: 999px; font-size: 11px; font-weight: 900; letter-spacing: .02em;
+}
+.sw-badge.req { background: rgba(106,123,255,.16); border: 1px solid #6a7bff55; color: #9daaff; }
+.sw-badge.opt { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #8a8f9c; }
+.sw-benefits {
+  margin: 0 0 16px; padding: 12px 14px; border-radius: 13px;
+  background: rgba(106,123,255,.07); border: 1px solid rgba(106,123,255,.18);
+  font-size: 12.5px; color: #b8c0d8; line-height: 2;
+}
+.sw-benefits b { color: #dfe3f5; }
+.sw-skip {
+  display: block; margin: 16px auto 0; padding: 8px 14px;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 700; color: #6a7182; text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.sw-skip:hover { color: #9aa2b5; }
+.ag-perk { display: block; margin-top: 2px; color: #8f96ab; font-size: 11px; }
+.sw-next:disabled { opacity: .38; }

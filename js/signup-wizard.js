@@ -75,18 +75,37 @@
     count.textContent = (cur + 1) + "/" + steps.length;
     const last = cur === steps.length - 1;
     foot.classList.toggle("hide", last);
-    nextBtn.textContent = steps[cur].dataset.step === "phone" && !$("phone").value.trim() ? "건너뛰기" : "다음";
+    nextBtn.textContent = "다음";
+    updateNextState();
     // 입력 스텝이면 전환이 끝난 뒤 포커스 (즉시 하면 슬라이드가 끊긴다)
     const inp = steps[cur].querySelector(".sw-input");
     if (inp && steps[cur].dataset.step !== "birth") setTimeout(() => { try { inp.focus({ preventScroll: true }); } catch (_) {} }, 260);
   }
 
+  /* 필수 스텝: 최소 입력 전엔 '다음'을 잠근다 — 넘어갈 수 없음이 눈에 보이게.
+     선택 스텝(phone)은 입력해야 '다음'이 열리고, 건너뛰기는 아래 보조 링크로만. */
+  const FILLED = {
+    email: () => $("email").value.trim().length > 3,
+    password: () => $("password").value.length >= 6 && $("password2").value.length >= 6,
+    nickname: () => $("nickname").value.trim().length >= 2,
+    birth: () => !!$("birthdate").value,
+    gender: () => !!document.querySelector(".gender-chip.active"),
+    region: () => !!document.querySelector(".region-chip.active:not(.gender-chip)"),
+    phone: () => $("phone").value.trim().length >= 9,
+    agree: () => true,
+  };
+  function updateNextState() {
+    const key = steps[cur].dataset.step;
+    nextBtn.disabled = !(FILLED[key] ? FILLED[key]() : true);
+  }
+  track.addEventListener("input", updateNextState);
+  track.addEventListener("change", updateNextState);
+
   async function next() {
     const key = steps[cur].dataset.step;
     nextBtn.disabled = true;
     const ok = await CHECKS[key]();
-    nextBtn.disabled = false;
-    if (!ok) return;
+    if (!ok) { updateNextState(); return; }
     if (cur < steps.length - 1) { cur++; paint(); try { navigator.vibrate?.(6); } catch (_) {} }
   }
   function prev() {
@@ -112,10 +131,10 @@
     setTimeout(() => { if (CHECKS[steps[cur].dataset.step]()) { if (cur < steps.length - 1) { cur++; paint(); } } }, 220);
   });
 
-  // 휴대폰 입력 여부에 따라 '다음/건너뛰기' 라벨 실시간 전환
-  $("phone")?.addEventListener("input", () => {
-    if (steps[cur].dataset.step === "phone")
-      nextBtn.textContent = $("phone").value.trim() ? "다음" : "건너뛰기";
+  // 선택 스텝의 보조 스킵 — 눈에 덜 띄는 링크로만 건너뛴다
+  $("swSkipPhone")?.addEventListener("click", () => {
+    if (steps[cur].dataset.step !== "phone") return;
+    cur++; paint();
   });
 
   paint();
