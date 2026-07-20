@@ -127,7 +127,16 @@
         p_opponent: oppId, p_topic: topic, p_issue_id: issueId ? +issueId : null,
         p_stake: stake, p_limit: limit, p_scheduled_at: sched,
       });
-      if (error || !data?.ok) { btn.disabled = false; btn.textContent = "⚔️ 결투 신청"; alert(reason(data?.reason) || "신청 실패"); return; }
+      if (error || !data?.ok) {
+        btn.disabled = false; btn.textContent = "⚔️ 결투 신청";
+        if (data?.reason === "no_ticket" && window.openShop) {
+          alert(reason("no_ticket"));
+          window.openShop(); // '상점에서 구매하세요'라고 말만 하지 말고 바로 연다
+        } else {
+          alert(reason(data?.reason) || "신청 실패");
+        }
+        return;
+      }
       location.href = "duel.html?id=" + data.id;
     };
   }

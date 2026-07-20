@@ -154,11 +154,33 @@
           }
         } else {
           window.BattleFX?.haptic?.("tap");
+          /* 성공이 '보이게' — 피드백이 진동뿐이라 성공한 줄 모르고
+             연타 재구매하는 사고가 실제로 났다(일기토 신청서 4연속 결제) */
+          if (it?.kind !== "ghost") shopToast(`✅ ${it?.name || "아이템"} 구매 완료${it?.kind === "consumable" && r.qty ? ` · 보유 ${r.qty}개` : ""}`);
         }
         await refresh();
         document.dispatchEvent(new CustomEvent("galla:items-changed"));
       });
     });
+  }
+
+  let toastT = null;
+  function shopToast(msg) {
+    if (!sheet) return;
+    let t = sheet.querySelector(".shop-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.className = "shop-toast";
+      t.style.cssText = "position:absolute;left:50%;top:54px;transform:translateX(-50%);z-index:5;" +
+        "background:#173a22;border:1px solid #2fd07a55;color:#8ff0b4;font-size:13px;font-weight:800;" +
+        "padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.45);white-space:nowrap;" +
+        "opacity:0;transition:opacity .15s";
+      sheet.querySelector(".shop-card")?.appendChild(t);
+    }
+    t.textContent = msg;
+    requestAnimationFrame(() => { t.style.opacity = "1"; });
+    clearTimeout(toastT);
+    toastT = setTimeout(() => { t.style.opacity = "0"; }, 2200);
   }
 
   window.openShop = async function () {
