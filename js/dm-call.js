@@ -269,8 +269,27 @@
     };
   }
 
+  /* 통화는 앱 전용(사장님 결정) — 웹은 수화부 라우팅·에코 제어가 막혀
+     통화 품질을 보장할 수 없다. 웹에서는 안내만. */
+  function appOnlyNotice() {
+    const box = document.createElement('div');
+    box.id = 'dm-call-apponly';
+    box.style.cssText = 'position:fixed;inset:0;z-index:100002;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6)';
+    box.innerHTML = `
+      <div style="width:min(320px,88vw);background:linear-gradient(180deg,#181a20,#0d0e12);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:26px 20px 16px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+        <div style="font-size:34px;margin-bottom:10px">📱</div>
+        <div style="font-size:16px;font-weight:900;color:#fff;line-height:1.4">육성톡·면상톡은<br>갈라 앱 전용이에요</div>
+        <div style="margin-top:8px;font-size:13px;color:#9aa2b5;line-height:1.65">최고 음질과 안정적인 연결을 위해<br>앱에서 이용해 주세요.</div>
+        <button type="button" style="width:100%;margin-top:18px;padding:13px 0;border:none;border-radius:13px;cursor:pointer;background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff;font-size:14px;font-weight:900;font-family:inherit">확인</button>
+      </div>`;
+    box.querySelector('button').onclick = () => box.remove();
+    box.addEventListener('click', e => { if (e.target === box) box.remove(); });
+    document.body.appendChild(box);
+  }
+
   async function start(peer, name, video) {
     if (CUR || !sb || !ME) return;
+    if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [] };
     paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
@@ -304,6 +323,9 @@
 
   async function accept() {
     if (!CUR || CUR.dir !== 'in') return;
+    // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게).
+    // 안내만 띄우고 벨은 유지.
+    if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     clearTimeout(ringT);
     await primePermHint(CUR.video);
     try { localStream = await getMedia(CUR.video); }

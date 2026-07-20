@@ -132,6 +132,15 @@
     }, true);
   }
 
+  /* 📱 갈라 앱(네이티브 셸) 감지 — Capacitor 브리지 또는 UA 마커(GallaApp).
+     통화 등 앱 전용 기능의 게이트 판별에 사용. */
+  window.GALLA_isApp = function () {
+    try {
+      if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true;
+    } catch (_) {}
+    return /GallaApp/i.test(navigator.userAgent || "");
+  };
+
   window.GALLA_decoCache = window.GALLA_decoCache || {}; // uid -> {nick_gold, emoticon}
   window.GALLA_loadDecos = async function (uids) {
     const cache = window.GALLA_decoCache;
