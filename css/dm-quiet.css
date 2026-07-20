@@ -662,11 +662,16 @@ a.dm-mic-btn { text-decoration: none !important; display: inline-flex; align-ite
    단 relative가 되는 순간 inset:0 채움이 풀려 '내용 높이'로 쪼그라든다
    (헤드+말풍선+입력바만 그려지고 나머지가 검게 남던 정렬 붕괴의 정체).
    → 패널(flex column)의 유일한 흐름 자식이므로 flex로 다시 꽉 채운다. */
-.dm-view[data-view="thread"] {
+.dm-view[data-view="thread"],
+.dm-view[data-view="room"] {
   position: relative; overflow: hidden;
   flex: 1 1 auto; min-height: 0; height: 100%;
+  /* ⚠️ display를 여기서 만지지 않는다 — .dm-view[hidden]{display:none}과 동률
+     특정성이라 이 파일이 나중에 로드되며 숨김 뷰를 되살려버린다(실측 직전 회피).
+     기본 .dm-view가 이미 flex column. */
 }
-.dm-view[data-view="thread"] > .dm-msgs { min-height: 0; }
+.dm-view[data-view="thread"] > .dm-msgs,
+.dm-view[data-view="room"] > .dm-msgs { min-height: 0; flex: 1 1 auto; overflow-y: auto; }
 /* 대화가 적어도 말풍선은 바닥에 붙는다(채팅 문법). justify-content:flex-end는
    내용이 길어지면 위쪽이 잘리므로 첫 자식 margin-top:auto로 처리 */
 .dm-msgs > :first-child { margin-top: auto; }
