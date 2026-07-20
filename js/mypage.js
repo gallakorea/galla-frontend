@@ -844,6 +844,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     let gallaSubTab = "mine"; // mine | saved
     const clearSubBar = () => { const s = document.getElementById("mpSubBar"); if (s) s.innerHTML = ""; };
+    /* 서브탭을 갈라 탭과 '같은 위치'(#mpSubBar)에 그린다 — 예측·광장이
+       tabContent 안에 그려 위치가 어긋나던 문제(사장님). onSwitch로 재렌더 */
+    const paintSubBar = (active, tabs, onSwitch) => {
+        const subBar = document.getElementById("mpSubBar");
+        if (!subBar) return;
+        if (!isMyPage) { subBar.innerHTML = ""; return; }
+        subBar.innerHTML = `<div class="mp-subtabs">${tabs.map(t =>
+            `<button class="mp-subtab ${active === t.k ? "active" : ""}" data-sub="${t.k}">${t.label}</button>`).join("")}</div>`;
+        subBar.querySelector(".mp-subtabs").onclick = e => {
+            const b = e.target.closest(".mp-subtab");
+            if (!b || b.dataset.sub === active) return;
+            onSwitch(b.dataset.sub);
+        };
+    };
     const renderGalla = () => {
         const subBar = document.getElementById("mpSubBar");
         if (subBar) {
@@ -878,6 +892,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const showSaved = isMyPage;
         if (!showSaved) predictSubTab = "mine";
+        paintSubBar(predictSubTab, [
+            { k: "mine", label: "내가 만든 예측" }, { k: "saved", label: "저장한 예측" },
+        ], v => { predictSubTab = v; renderPredict(); });
 
         let markets = [];
         if (predictSubTab === "mine") {
@@ -917,21 +934,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         tabContent.className = "content-area";
         tabContent.innerHTML = "";
-
-        if (showSaved) {
-            const bar = document.createElement("div");
-            bar.className = "mp-subtabs";
-            bar.innerHTML = `
-                <button class="mp-subtab ${predictSubTab === "mine" ? "active" : ""}" data-sub="mine">내가 만든 예측</button>
-                <button class="mp-subtab ${predictSubTab === "saved" ? "active" : ""}" data-sub="saved">저장한 예측</button>`;
-            bar.onclick = e => {
-                const b = e.target.closest(".mp-subtab");
-                if (!b || b.dataset.sub === predictSubTab) return;
-                predictSubTab = b.dataset.sub;
-                renderPredict();
-            };
-            tabContent.appendChild(bar);
-        }
 
         if (!markets.length) {
             const empty = document.createElement("div");
@@ -1030,6 +1032,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 저장한 글은 본인 페이지에서만 (RLS도 본인만 조회 가능)
         const showSaved = isMyPage;
         if (!showSaved) plazaSubTab = "mine";
+        paintSubBar(plazaSubTab, [
+            { k: "mine", label: "내가 쓴 글" }, { k: "saved", label: "저장한 글" },
+        ], v => { plazaSubTab = v; renderPlaza(); });
 
         let posts = [];
         if (plazaSubTab === "mine") {
@@ -1070,21 +1075,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 서브탭 바 + 그리드 컨테이너
         tabContent.className = "content-area";
         tabContent.innerHTML = "";
-
-        if (showSaved) {
-            const bar = document.createElement("div");
-            bar.className = "mp-subtabs";
-            bar.innerHTML = `
-                <button class="mp-subtab ${plazaSubTab === "mine" ? "active" : ""}" data-sub="mine">내가 쓴 글</button>
-                <button class="mp-subtab ${plazaSubTab === "saved" ? "active" : ""}" data-sub="saved">저장한 글</button>`;
-            bar.onclick = e => {
-                const b = e.target.closest(".mp-subtab");
-                if (!b || b.dataset.sub === plazaSubTab) return;
-                plazaSubTab = b.dataset.sub;
-                renderPlaza();
-            };
-            tabContent.appendChild(bar);
-        }
 
         if (!posts.length) {
             const empty = document.createElement("div");
@@ -1226,9 +1216,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             switch (menu) {
                 case "galla": renderGalla(); break;              // 갈라(My/Saved 서브탭)
-                case "predict": clearSubBar(); renderPredict(); break;
+                case "predict": renderPredict(); break;
                 case "news": clearSubBar(); renderNews(); break;
-                case "plaza": clearSubBar(); renderPlaza(); break;
+                case "plaza": renderPlaza(); break;
             }
         });
     });
