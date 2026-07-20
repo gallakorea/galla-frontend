@@ -56,6 +56,7 @@
 .nick-gold{background:linear-gradient(92deg,#f7d774 0%,#fff2b8 20%,#e8a93a 45%,#ffe89a 65%,#d98f24 100%);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;text-shadow:0 0 10px rgba(201,209,224,.35);animation:nickGoldShine 3.4s linear infinite}
 .nick-gold::after{content:" 👑";-webkit-text-fill-color:initial;color:#c9d1e0;font-size:.82em;text-shadow:none}
 @keyframes nickGoldShine{0%{background-position:0% 0}100%{background-position:220% 0}}
+.nick-tier{display:inline-block;font-size:.82em;margin-right:3px;vertical-align:baseline;filter:saturate(1.1)}
 .nick-title{display:inline-block;font-size:.72em;font-weight:900;vertical-align:middle;color:#c9d1e0;background:rgba(201,209,224,.14);border:1px solid rgba(201,209,224,.35);border-radius:99px;padding:1px 7px;margin-right:5px;line-height:1.5;white-space:nowrap}
 .ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;background-size:200% 100%}
 .ns-neon{background-image:linear-gradient(92deg,#00e5ff,#3d6bff,#00e5ff);text-shadow:0 0 10px rgba(0,229,255,.5);animation:nsShine 3s linear infinite}
@@ -76,9 +77,12 @@
     if (!need.length || !window.supabaseClient) return;
     need.forEach(u => { cache[u] = cache[u] || null; }); // 로딩 마킹(중복요청 방지)
     try {
-      const { data } = await window.supabaseClient
-        .from("user_cosmetics").select("user_id,nick_gold,emoticon,title,nick_style").in("user_id", need);
+      const [{ data }, { data: lv }] = await Promise.all([
+        window.supabaseClient.from("user_cosmetics").select("user_id,nick_gold,emoticon,title,nick_style").in("user_id", need),
+        window.supabaseClient.from("users").select("id,level").in("id", need),
+      ]);
       (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title, nick_style: r.nick_style }; });
+      (lv || []).forEach(r => { cache[r.id] = Object.assign(cache[r.id] || {}, { level: r.level }); });
     } catch (e) { /* 무해 */ }
     need.forEach(u => { if (!cache[u]) cache[u] = {}; });
   };
@@ -103,10 +107,21 @@
     map.forEach((list, uid) => {
       const d = window.GALLA_decoCache[uid] || {};
       list.forEach(el => {
-        // 장착 닉네임 스타일(없으면 골드 폴백)
-        const style = d.nick_style || (d.nick_gold ? "gold" : null);
+        // 장착 닉네임 스타일 — 'none'은 명시적 기본(골드 폴백 금지),
+        // null(미설정)일 때만 골드 구매자 폴백
+        const style = d.nick_style === "none" ? null : (d.nick_style || (d.nick_gold ? "gold" : null));
         if (style) el.classList.add("ns-" + style);
         if (style === "gold") el.classList.add("nick-gold");
+        // 🏅 등급 아이콘 — 선택이 아니라 레벨에서 자동 부여(마이페이지 등급 칩과 동일 기준)
+        if (el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-tier"))) {
+          const lvN = Number(d.level) || 1;
+          const ico = lvN >= 20 ? "👑" : lvN >= 10 ? "⚔️" : lvN >= 5 ? "🔰" : "🌱";
+          const tb = document.createElement("span");
+          tb.className = "nick-tier";
+          tb.title = "등급 Lv." + lvN;
+          tb.textContent = ico;
+          el.parentNode.insertBefore(tb, el);
+        }
         // 장착 칭호 배지 — 폐지(2026-07-20 사장님: 장착식 칭호는 등급과 어긋나 혼란만).
         //   등급 표시는 등급 화면·레벨 칩이 담당한다.
         if (false && d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
@@ -138,7 +153,7 @@
       el.classList.remove("nick-gold");
       [...el.classList].filter(c => c.startsWith("ns-")).forEach(c => el.classList.remove(c));
       const t = el.previousElementSibling;
-      if (t && t.classList.contains("nick-title")) t.remove();
+      if (t && (t.classList.contains("nick-title") || t.classList.contains("nick-tier"))) t.remove();
     });
     window.GALLA_refreshNickGold();
   };

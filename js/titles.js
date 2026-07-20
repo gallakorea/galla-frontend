@@ -86,7 +86,7 @@
     return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">🏆 ${label}</span>${right}</div>`;
   }
   function styleRow(t) {
-    const isEq = (t.k === "none" && !equipS) || (t.k === equipS);
+    const isEq = (t.k === "none" && (!equipS || equipS === "none")) || (t.k === equipS && t.k !== "none");
     const own = t.p === 0 || ownedS.has(t.k);
     const cls = t.k === "none" ? "" : (t.k === "gold" ? "nick-gold" : "ns-" + t.k);
     const label = `<span class="tt-name ${cls}" style="flex:0 0 auto;font-size:16px">${t.n}</span>`;
@@ -111,7 +111,7 @@
         `<div class="tt-item" style="opacity:.6"><span class="tt-name none"><span style="color:#8a8f9a;font-weight:700">칭호 없음</span></span>${equipT ? `<button class="tt-btn equip" data-tier="none">해제</button>` : `<button class="tt-btn on" disabled>기본</button>`}</div>`;
     } else {
       note.innerHTML = `닉네임 색/이펙트 — 순수 꾸밈이라 구매할 수 있어요`;
-      const curCls = equipS ? (equipS === "gold" ? "nick-gold" : "ns-" + equipS) : "";
+      const curCls = (equipS && equipS !== "none") ? (equipS === "gold" ? "nick-gold" : "ns-" + equipS) : "";
       grid.innerHTML =
         `<div class="tt-preview">내 닉네임 미리보기
            <b class="tt-preview-nick ${curCls}">${myNick}</b></div>` +
