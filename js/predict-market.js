@@ -179,12 +179,11 @@ async function renderCreatorBlock(m){
   const av=u.avatar_url
     ? `<img src="${esc(window.GALLA_avatarSrc?window.GALLA_avatarSrc(u.avatar_url):u.avatar_url)}" alt="" onerror="this.style.display='none'">`
     : `<span class="pza-init">${esc(nick.trim().charAt(0)||'갈')}</span>`;
-  const tier=window.GALLA_tierIcon?window.GALLA_tierIcon(u.level):'🌱';
   box.hidden=false;
   box.innerHTML=`
     <span class="pza-av" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${av}</span>
     <span class="pza-info">
-      <span class="pza-name" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}"><span class="pza-tier">${tier}</span>${esc(nick)}</span>
+      <span class="pza-name" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${esc(nick)}</span>
       <span class="pza-sub">🔮 이 판을 연 예언자 — 운명을 걸어보시죠</span>
     </span>
     <button type="button" class="js-follow pza-follow" data-uid="${esc(m.created_by)}">+ 팔로우</button>`;
@@ -429,7 +428,7 @@ async function loadFeed(){
     const big=b.stake>=5000?' whale':'';   // 🐋 하이롤러 강조
     return `<div class="pb-feed-row in${big}" style="--i:${i}">
       <span class="pb-feed-side ${side}">${esc(o?o.label:'')}</span>
-      <span class="pb-feed-txt">${b.stake>=5000?'🐋 ':''}<b>${esc(profs[b.user_id]?.nickname||'익명')}</b>님이 <b>${fmt(b.stake)}GP</b> 참여${b.odds_at_bet?` (×${Number(b.odds_at_bet).toFixed(2)})`:''}</span>
+      <span class="pb-feed-txt">${b.stake>=5000?'🐋 ':''}<b data-nick-uid="${esc(b.user_id)}">${esc(profs[b.user_id]?.nickname||'익명')}</b>님이 <b>${fmt(b.stake)}GP</b> 참여${b.odds_at_bet?` (×${Number(b.odds_at_bet).toFixed(2)})`:''}</span>
       <span class="pb-feed-time">${ago(b.created_at)}</span>
     </div>`;
   }).join('');
@@ -477,7 +476,7 @@ async function loadHolders(body){
     const side=o?sideOf(o):'yes';
     return `<div class="pmd-holder-row">
       <span class="pmd-holder-rank">${i+1}</span>
-      <span class="pmd-holder-name">${esc(profs[r.user_id]?.nickname||'익명')}</span>
+      <span class="pmd-holder-name" data-nick-uid="${esc(r.user_id)}">${esc(profs[r.user_id]?.nickname||'익명')}</span>
       <span class="pmd-holder-side ${side}">${esc(o?o.label:'')} ${fmt(r.total)}GP</span>
     </div>`;}).join('')+`</div>`;
 }

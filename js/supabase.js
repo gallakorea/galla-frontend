@@ -16,6 +16,25 @@
     };
   }
 
+  /* 🏅 갈라리안 등급표(GI 기반) — grade 페이지/gallian.js와 동일 6단계.
+     닉네임 도색 등급 아이콘의 단일 진실. early-return 위에 둬 재주입에도 견고. */
+  if (!window.GALLA_gallianTier) {
+    const GALLIAN_TIERS = [
+      { icon: "🌱", label: "눈팅 뉴비",   min: 0 },
+      { icon: "🔥", label: "발끈러",     min: 150 },
+      { icon: "⌨️", label: "키보드 전사", min: 500 },
+      { icon: "🎤", label: "여론 논객",   min: 1500 },
+      { icon: "🌪️", label: "갈라 선동가", min: 4500 },
+      { icon: "👑", label: "갈라 대장군", min: 15000 },
+    ];
+    window.GALLA_gallianTier = function (gi) {
+      gi = Number(gi) || 0;
+      let t = GALLIAN_TIERS[0];
+      for (const x of GALLIAN_TIERS) if (gi >= x.min) t = x;
+      return t;
+    };
+  }
+
   if (window.supabaseClient) return;
 
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
@@ -77,12 +96,15 @@
     if (!need.length || !window.supabaseClient) return;
     need.forEach(u => { cache[u] = cache[u] || null; }); // 로딩 마킹(중복요청 방지)
     try {
-      const [{ data }, { data: lv }] = await Promise.all([
+      // 등급 아이콘은 갈라리안 등급표(GI 기반)와 일치시킨다 — level이 아니라 GI.
+      // gi_of_users 배치 RPC로 need 전체의 갈라 지수를 한 번에 받는다.
+      const [{ data }, giRes] = await Promise.all([
         window.supabaseClient.from("user_cosmetics").select("user_id,nick_gold,emoticon,title,nick_style").in("user_id", need),
-        window.supabaseClient.from("users").select("id,level").in("id", need),
+        window.supabaseClient.rpc("gi_of_users", { p_uids: need }),
       ]);
       (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title, nick_style: r.nick_style }; });
-      (lv || []).forEach(r => { cache[r.id] = Object.assign(cache[r.id] || {}, { level: r.level }); });
+      const giMap = giRes && giRes.data ? giRes.data : {};
+      need.forEach(u => { cache[u] = Object.assign(cache[u] || {}, { gi: Number(giMap[u]) || 0 }); });
     } catch (e) { /* 무해 */ }
     need.forEach(u => { if (!cache[u]) cache[u] = {}; });
   };
@@ -112,14 +134,13 @@
         const style = d.nick_style === "none" ? null : (d.nick_style || (d.nick_gold ? "gold" : null));
         if (style) el.classList.add("ns-" + style);
         if (style === "gold") el.classList.add("nick-gold");
-        // 🏅 등급 아이콘 — 선택이 아니라 레벨에서 자동 부여(마이페이지 등급 칩과 동일 기준)
+        // 🏅 등급 아이콘 — 갈라리안 등급표(GI 임계값)와 일치. 선택 불가·자동 부여.
         if (el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-tier"))) {
-          const lvN = Number(d.level) || 1;
-          const ico = lvN >= 20 ? "👑" : lvN >= 10 ? "⚔️" : lvN >= 5 ? "🔰" : "🌱";
+          const t = window.GALLA_gallianTier(d.gi || 0);
           const tb = document.createElement("span");
           tb.className = "nick-tier";
-          tb.title = "등급 Lv." + lvN;
-          tb.textContent = ico;
+          tb.title = t.label + " · " + (d.gi || 0).toLocaleString() + " GI";
+          tb.textContent = t.icon;
           el.parentNode.insertBefore(tb, el);
         }
         // 장착 칭호 배지 — 폐지(2026-07-20 사장님: 장착식 칭호는 등급과 어긋나 혼란만).

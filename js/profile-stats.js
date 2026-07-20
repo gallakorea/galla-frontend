@@ -77,8 +77,12 @@
       body.innerHTML = `<div class="ps-empty">${kind === "followers" ? "아직 팔로워가 없어요." : "아직 팔로우한 사람이 없어요."}</div>`;
       return;
     }
-    const { data: users } = await sb().from("users").select("id,nickname,avatar_url,level").in("id", ids);
+    const [{ data: users }, giRes] = await Promise.all([
+      sb().from("users").select("id,nickname,avatar_url,level").in("id", ids),
+      sb().rpc("gi_of_users", { p_uids: ids }),
+    ]);
     const byId = Object.fromEntries((users || []).map(u => [u.id, u]));
+    const giMap = (giRes && giRes.data) || {};
     /* avatar_url은 스토리지 '경로'(uid/avatar.jpg) — 공개 URL로 변환해야 이미지가 뜬다
        (마이페이지 프로필과 동일 규약: storage.from('avatars').getPublicUrl) */
     const avaSrc = (u) => {
@@ -87,14 +91,14 @@
       try { return sb().storage.from("profiles").getPublicUrl(u.avatar_url).data.publicUrl; }
       catch (_) { return null; }
     };
-    /* 등급 아이콘 — 마이페이지 tierChip과 같은 레벨 구간 */
-    const tierIc = (lv) => (lv >= 20 ? "👑" : lv >= 10 ? "⚔️" : lv >= 5 ? "🔰" : "🌱");
+    /* 등급 아이콘 — 갈라리안 등급표(GI)와 일치 */
+    const tierIc = (uid) => (window.GALLA_gallianTier ? window.GALLA_gallianTier(giMap[uid] || 0).icon : "🌱");
     body.innerHTML = ids.map(id => {
       const u = byId[id] || {};
       return `
         <div class="ps-row" data-uid="${id}">
           ${avaSrc(u) ? `<img class="ps-ava" src="${esc(avaSrc(u))}">` : `<span class="ps-ava ps-ava-d">👤</span>`}
-          <b class="ps-nick"><span class="ps-tier">${tierIc(Number(u.level) || 1)}</span>${esc(u.nickname || "익명")}</b>
+          <b class="ps-nick"><span class="ps-tier">${tierIc(id)}</span>${esc(u.nickname || "익명")}</b>
           <button class="ps-follow js-follow" data-uid="${id}" type="button">+ 팔로우</button>
         </div>`;
     }).join("");

@@ -1581,7 +1581,7 @@
       <button class="dm-cs-peer" id="dm-cs-peer" type="button">
         ${avaHTML(curPeer, 'sm')}
         <span class="dm-thread-mid">
-          <span class="dm-thread-name">${esc(p.nickname || '대화 상대')}</span>
+          <span class="dm-thread-name" data-nick-uid="${esc(curPeer)}">${esc(p.nickname || '대화 상대')}</span>
           <span class="dm-thread-prev">프로필 보기 ›</span>
         </span>
       </button>
@@ -2805,7 +2805,7 @@
     box.innerHTML = ids.map(id => `
       <div class="dm-set-row">
         ${avaHTML(id)}
-        <span class="dm-set-mid"><b>${esc(PROFILES[id]?.nickname || '익명')}</b></span>
+        <span class="dm-set-mid"><b data-nick-uid="${esc(id)}">${esc(PROFILES[id]?.nickname || '익명')}</b></span>
         <button class="dm-unset" data-id="${id}" type="button">해제</button>
       </div>`).join('');
     box.querySelectorAll('.dm-unset').forEach(btn => btn.onclick = async () => {
@@ -2879,7 +2879,7 @@
       <button class="dm-friend" data-peer="${f.id}" data-name="${esc(p.nickname || '익명')}">
         ${avaHTML(f.id)}
         <span class="dm-thread-mid">
-          <span class="dm-thread-name">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
+          <span class="dm-thread-name" data-nick-uid="${esc(f.id)}">${esc(p.nickname || '익명')}${f.mutual ? ' <i class="dm-mutual">맞팔</i>' : ''}</span>
           ${p.bio ? `<span class="dm-thread-prev">${esc(p.bio)}</span>` : ''}
         </span>
         ${EDIT ? editChipsFriend(f) : `<span class="dm-friend-go">${ICONS.chat}</span>`}
@@ -2915,7 +2915,7 @@
       <div class="dm-friend dm-add-row" data-peer="${u.id}">
         ${avaHTML(u.id)}
         <span class="dm-thread-mid">
-          <span class="dm-thread-name">${esc(u.nickname || '익명')}</span>
+          <span class="dm-thread-name" data-nick-uid="${esc(u.id)}">${esc(u.nickname || '익명')}</span>
           ${u.bio ? `<span class="dm-thread-prev">${esc(u.bio)}</span>` : ''}
         </span>
         <button class="dm-follow-btn${following ? ' done' : ''}" data-uid="${u.id}" type="button" ${following ? 'disabled' : ''}>

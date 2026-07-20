@@ -1189,7 +1189,6 @@ function renderPredictCard(m) {
     }
     const cName = escHtml(m.creatorName || '갈라 예언자');
     const cInit = [...(m.creatorName || '갈').trim()][0] || '갈';
-    const cTier = window.GALLA_tierIcon ? window.GALLA_tierIcon(m.creatorLevel) : '🌱';
     const cAv = m.creatorAvatar && window.GALLA_avatarSrc
         ? `<img src="${escHtml(window.GALLA_avatarSrc(m.creatorAvatar))}" alt="" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
         : escHtml(cInit);
@@ -1204,7 +1203,7 @@ function renderPredictCard(m) {
             <div class="pf-avatar"${cAttr}>${cAv}</div>
             <div class="pf-cinfo">
                 <div class="pf-cline">
-                    <span class="pf-cname"${cAttr}>${cTier} ${cName}</span>
+                    <span class="pf-cname"${cAttr}>${cName}</span>
                     <span class="pf-ctag">🔮 예언자</span>
                 </div>
                 <div class="pf-csub">이 판을 연 예언자</div>

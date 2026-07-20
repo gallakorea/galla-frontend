@@ -294,7 +294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function searchPlaza(q) {
     const { data } = await supabase
       .from("plaza_posts")
-      .select("id,title,category,nickname,cover_image,thumbnail,up_count,down_count,created_at")
+      .select("id,title,category,nickname,user_id,cover_image,thumbnail,up_count,down_count,created_at")
       .or(`title.ilike.%${q}%,body.ilike.%${q}%`)
       .order("created_at", { ascending: false })
       .limit(12);
@@ -443,7 +443,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
           <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">광장</span>`}</div>
           <div class="sr-body">
-            <div class="sr-cat">${esc(p.category || "")}${p.nickname ? " · " + esc(p.nickname) : ""}</div>
+            <div class="sr-cat">${esc(p.category || "")}${p.nickname ? ` · <span data-nick-uid="${esc(p.user_id || "")}">${esc(p.nickname)}</span>` : ""}</div>
             <div class="sr-title">${esc(p.title || "")}</div>
             <div class="sr-meta sr-stats"><span>${ST.like} ${p.up_count || 0}</span><span>${ST.dislike} ${p.down_count || 0}</span></div>
           </div>

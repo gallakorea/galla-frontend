@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072162";
-import { loadAiNews } from "./issue-news.js?v=072162";
-import { loadStats } from "./issue.stats.js?v=072162";
-import { initCommentSystem } from "./issue.comments.js?v=072162";
+import { loadAiArguments } from "./issue-argument.js?v=072163";
+import { loadAiNews } from "./issue-news.js?v=072163";
+import { loadStats } from "./issue.stats.js?v=072163";
+import { initCommentSystem } from "./issue.comments.js?v=072163";
 
 
 console.log("[issue.js] loaded");
@@ -631,6 +631,8 @@ if (explainWrap) {
 
   const authorEl = qs("issue-author");
   authorEl.innerText = issue.author || "익명";
+  // 꾸미기(스타일·등급 아이콘) 도색 대상으로 — data-nick-uid가 있어야 전역 도색기가 칠한다
+  if (issue.user_id && !issue.is_anonymous) authorEl.setAttribute("data-nick-uid", issue.user_id);
 
   // 작성자 프로필 사진 (없으면 기본 갈라 아이콘) + 클릭 시 마이페이지 이동
   const avEl = document.querySelector(".media-author-head .mah-avatar");

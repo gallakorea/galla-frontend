@@ -147,17 +147,27 @@ document.addEventListener("DOMContentLoaded", async () => {
         const levelEl = document.getElementById("levelText");
         const profileImg = document.getElementById("profileImg");
 
-        if (nameEl) nameEl.textContent = viewProfile.nickname || "익명의 사용자";
+        if (nameEl) {
+            nameEl.textContent = viewProfile.nickname || "익명의 사용자";
+            nameEl.setAttribute("data-nick-uid", viewUserId);   // 꾸미기 도색 대상
+        }
         const hdrTitle = document.getElementById("mpHdrTitle");
         if (hdrTitle) hdrTitle.textContent = viewProfile.nickname || "프로필";
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
         const lv = viewProfile.level || 1;
         if (levelEl) levelEl.textContent = "Lv. " + lv;
-        // 아바타 위 전투 티어 칩 + 상단 배지
+        // 아바타 위 등급 칩 — 갈라리안 등급표(GI)와 일치 (grade 페이지와 동일 기준)
         const tierChip = document.getElementById("tierChip");
         if (tierChip) {
-            const tierIcon = lv >= 20 ? "👑" : lv >= 10 ? "⚔️" : lv >= 5 ? "🔰" : "🌱";
-            tierChip.textContent = `${tierIcon} ${lv}`;
+            tierChip.textContent = "🌱";   // GI 로딩 전 기본
+            (async () => {
+                try {
+                    const { data: giMap } = await supabase.rpc("gi_of_users", { p_uids: [viewUserId] });
+                    const t = window.GALLA_gallianTier ? window.GALLA_gallianTier((giMap || {})[viewUserId] || 0) : { icon: "🌱" };
+                    tierChip.textContent = t.icon;
+                    tierChip.title = t.label;
+                } catch (_) {}
+            })();
         }
         // 전투력 = 이 유저가 벌인 전투 액션(공격/방어/지원) 총량
         (async () => {
