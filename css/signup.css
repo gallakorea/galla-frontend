@@ -47,7 +47,7 @@ body {
 }
 .auth-title { font-size: 20px; font-weight: 900; letter-spacing: -.5px; }
 .auth-sub { margin-top: 7px; font-size: 13.5px; color: var(--sub); line-height: 1.5; margin-bottom: 20px; }
-.reward-inline { color: var(--g-gold); font-weight: 900; }
+.reward-inline { color: #9daaff; font-weight: 900; }
 
 .field { margin-bottom: 15px; }
 .field-label { display: block; font-size: 12.5px; font-weight: 700; color: #cfd3db; margin-bottom: 8px; }
@@ -126,8 +126,8 @@ body {
   border: 1.5px solid #3a3d46; background: rgba(255,255,255,.03);
   display: flex; align-items: center; justify-content: center; transition: all .13s ease;
 }
-.ag-mark::after { content: "✓"; font-size: 12px; font-weight: 900; color: #0a0a0b; opacity: 0; transform: scale(.6); transition: all .13s ease; }
-.agree-item input:checked + .ag-mark { background: var(--g-gold); border-color: var(--g-gold); }
+.ag-mark::after { content: "✓"; font-size: 12px; font-weight: 900; color: #fff; opacity: 0; transform: scale(.6); transition: all .13s ease; }
+.agree-item input:checked + .ag-mark { background: #4a5df0; border-color: #4a5df0; }
 .agree-item input:checked + .ag-mark::after { opacity: 1; transform: scale(1); }
 .agree-all { padding-bottom: 12px; margin-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14.5px; }
 .agree-all b { font-weight: 800; }
@@ -135,7 +135,7 @@ body {
 .ag-txt { font-size: 13px; color: #c7ccd6; line-height: 1.4; }
 .ag-txt em { font-style: normal; font-weight: 800; color: var(--g-blue); margin-right: 3px; }
 .ag-txt em.opt { color: var(--dim); }
-.ag-txt a { color: var(--g-gold); text-decoration: underline; text-underline-offset: 2px; }
+.ag-txt a { color: #9daaff; text-decoration: underline; text-underline-offset: 2px; }
 
 /* 보상 배지 */
 .reward-box {
@@ -143,12 +143,12 @@ body {
   background: linear-gradient(135deg, rgba(201,209,224,.14), rgba(201,209,224,.05));
   border: 1px solid rgba(201,209,224,.35); font-size: 13.5px; font-weight: 700; color: #e7d9ac;
 }
-.reward-gp { color: var(--g-gold); font-weight: 900; }
+.reward-gp { color: #9daaff; font-weight: 900; }
 
 /* CTA */
 .auth-btn {
   width: 100%; height: 54px; border: none; border-radius: 14px; cursor: pointer;
-  background: linear-gradient(135deg, var(--g-gold), #ffe08a); color: #0a0a0b; font-size: 16px; font-weight: 900;
+  background: linear-gradient(135deg, #6a7bff, #3a5bff); color: #fff; font-size: 16px; font-weight: 900;
   box-shadow: 0 12px 30px rgba(201,209,224,.24); transition: transform .1s ease, filter .15s ease;
 }
 .auth-btn:hover { filter: brightness(1.04); }
@@ -156,7 +156,7 @@ body {
 .auth-btn:disabled { opacity: .6; box-shadow: none; }
 
 .auth-foot { text-align: center; margin-top: 18px; font-size: 13.5px; color: var(--sub); }
-.link-gold { color: var(--g-gold); font-weight: 800; cursor: pointer; }
+.link-gold { color: #9daaff; font-weight: 800; cursor: pointer; }
 
 /* =========================================================
    📝 타입폼식 가입 위저드
@@ -231,3 +231,30 @@ body {
 .sw-skip:hover { color: #9aa2b5; }
 .ag-perk { display: block; margin-top: 2px; color: #8f96ab; font-size: 11px; }
 .sw-next:disabled { opacity: .38; }
+
+/* iOS date input — 고유 폭·섀도 UI가 100%를 무시하고 화면을 넘던 문제 */
+.sw-input, .field-input {
+  box-sizing: border-box; max-width: 100%; min-width: 0; display: block;
+}
+input[type="date"].field-input {
+  -webkit-appearance: none; appearance: none;
+  text-align: left;
+}
+input[type="date"].field-input::-webkit-date-and-time-value { text-align: left; }
+
+/* iOS·크롬 자동완성이 입력창을 노랗게(샴페인) 칠하던 문제 — 톤앤매너 파괴범.
+   배경을 inset 섀도로 덮고 글자색을 강제한다(표준 우회 기법). */
+input.field-input:-webkit-autofill,
+input.field-input:-webkit-autofill:hover,
+input.field-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #14151b inset !important;
+  box-shadow: 0 0 0 1000px #14151b inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+  border: 1px solid var(--line, #2a2d36) !important;
+  transition: background-color 99999s ease-out;
+}
+input.field-input:autofill {
+  box-shadow: 0 0 0 1000px #14151b inset !important;
+  -webkit-text-fill-color: #fff !important;
+}
