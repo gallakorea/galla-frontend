@@ -46,7 +46,10 @@ async function offerBreaker(commentId) {
     const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
     const qty = inv.breaker || 0;
     if (qty <= 0) {
-      alert(`🛡 상대가 보호막 중 — 피해가 절반(${Math.ceil(BATTLE_DMG.attack / 2)})만 들어갑니다.\n⚡ 파쇄가 있으면 방패를 부수고 ${BATTLE_DMG.attack} 전부 넣을 수 있어요. (GP 상점)`);
+      // 살 기회를 그 자리에서 — '상점 가서 사세요' 문구 금지 규약
+      ask({ emoji: "🛡", title: "상대가 보호막 중!",
+        body: `지금은 피해가 절반(${Math.ceil(BATTLE_DMG.attack / 2)})만 들어가요.\n⚡ 파쇄(500 GP)가 있으면 방패를 부수고 ${BATTLE_DMG.attack} 전부!`,
+        ok: "🛒 파쇄 사러 가기", cancel: "그냥 공격" }).then(go => { if (go) window.openShop?.(); });
       return false;
     }
     if (!(await ask({ emoji: "⚡", title: "파쇄로 방패를 부술까요?",
@@ -63,6 +66,11 @@ function breakerFx(unit) {
     unit.classList.remove("shatter-flash", "shatter-shake");
     void unit.offsetWidth;                       // 애니메이션 재시동
     unit.classList.add("shatter-flash", "shatter-shake");
+    // 화면 전체 섬광 — 파쇄는 700GP짜리 순간이다
+    const fl = document.createElement("div");
+    fl.className = "shatter-screen";
+    document.body.appendChild(fl);
+    setTimeout(() => fl.remove(), 450);
     setTimeout(() => unit.classList.remove("shatter-flash", "shatter-shake"), 600);
     spawnCombatText?.(unit, "⚡ 방패 파쇄!", "crit");
     window.BattleFX?.banner?.("⚡ 파쇄! 방패가 부서졌다 — 풀데미지", "rally");

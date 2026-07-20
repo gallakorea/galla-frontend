@@ -1688,3 +1688,12 @@ body.kb-open .battle-input-bar {
   .shield-badge, .comment.shielded, .reply.shielded, .comment.shielded::after, .reply.shielded::after{ animation:none }
   .comment.shielded, .reply.shielded{ box-shadow:0 0 0 1.5px rgba(90,140,255,.6), 0 0 18px rgba(61,107,255,.25); }
 }
+
+/* 파쇄 전체 화면 섬광 */
+.shatter-screen{
+  position:fixed; inset:0; z-index:12050; pointer-events:none;
+  background:radial-gradient(60% 60% at 50% 45%, rgba(170,200,255,.45), rgba(90,140,255,.12) 55%, transparent 75%);
+  animation:shatterScreen .45s ease-out forwards;
+}
+@keyframes shatterScreen{ 0%{opacity:1} 100%{opacity:0} }
+@media (prefers-reduced-motion:reduce){ .shatter-screen{ display:none } }
