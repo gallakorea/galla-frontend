@@ -126,14 +126,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (window.startDM) window.startDM(viewUserId, name);
         };
 
-        const duelBtn = document.createElement("button");
-        duelBtn.className = "action-btn secondary";
-        duelBtn.textContent = "⚔️ 일기토";
-        duelBtn.onclick = () => { location.href = `duel.html?challenge=${viewUserId}`; };
-
+        /* ⚔️ 일기토 신청 버튼 제거 — 일기토는 '논쟁 중인 댓글'에서만 신청한다.
+           프로필에서 아무한테나 도전하는 구조가 아님(사장님 룰). 전적 열람은 별개. */
         profileActions.appendChild(followBtn);
         profileActions.appendChild(messageBtn);
-        profileActions.appendChild(duelBtn);
     }
 
     // ============================

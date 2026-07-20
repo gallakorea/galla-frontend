@@ -173,7 +173,7 @@
       ${voting.length ? voting.map(lobbyRow).join("") : `<div class="duel-empty">지금 투표 중인 일기토가 없어요.</div>`}
       ${others.length ? `<div class="duel-sec-title">내 일기토</div>${others.map(lobbyRow).join("")}` : ""}
       ${!ME ? `<div class="duel-empty">로그인하면 일기토에 참전할 수 있어요.</div>` : ""}
-      <div class="duel-hint">💡 이슈 댓글의 ⋯ 또는 상대 프로필에서 <b>⚔️ 일기토</b> 로 신청. 신청서는 🛒 상점에서.</div>`;
+      <div class="duel-hint">💡 일기토는 <b>논쟁 중인 이슈 댓글</b>에서만 신청할 수 있어요(⚔️ 격론 버튼). 신청서는 🛒 상점에서.</div>`;
     root().querySelectorAll("[data-goto]").forEach(el => el.onclick = () => location.href = "duel.html?id=" + el.dataset.goto);
   }
   function needsMe(d) {
