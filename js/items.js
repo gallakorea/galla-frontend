@@ -81,12 +81,22 @@
           <span class="shop-title">🛒 GP 상점</span>
           <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button></span>
         </div>
+        <div class="shop-tabs">
+          <button class="shop-tab on" data-t="buy" type="button">🛒 구매</button>
+          <button class="shop-tab" data-t="inv" type="button">🎒 보유 <b id="shopInvCnt" hidden></b></button>
+        </div>
         <div class="shop-list" id="shopList"></div>
+        <div class="shop-list shop-inv" id="shopInv" hidden></div>
         <div class="shop-note">GP는 출석·데일리 미션·예측으로 모을 수 있어요<br><span style="opacity:.7;font-size:11px">※ GP는 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
     sheet.querySelector("#shopCharge").addEventListener("click", () => window.GALLA_openCharge?.());
+    sheet.querySelectorAll(".shop-tab").forEach(t => t.addEventListener("click", () => {
+      sheet.querySelectorAll(".shop-tab").forEach(x => x.classList.toggle("on", x === t));
+      sheet.querySelector("#shopList").hidden = t.dataset.t !== "buy";
+      sheet.querySelector("#shopInv").hidden = t.dataset.t !== "inv";
+    }));
     return sheet;
   }
 
@@ -130,6 +140,28 @@
           ${btn}
         </div>`;
     };
+    /* 🎒 보유 탭 — 갖고 있는 것만 모아 수량·사용처를 크게 보여준다 */
+    const invEl = sheet.querySelector("#shopInv");
+    const ghostRow = ghostDays > 0
+      ? [{ emoji: "👻", name: "유령권", sub: `${ghostDays}일 남음`, use: "이슈·광장 댓글의 👻 토글로 유령 댓글을 써요" }] : [];
+    const invRows = ghostRow.concat(
+      CATALOG.filter(it => it.kind !== "ghost" && (inv[it.key] || 0) > 0)
+        .map(it => ({ emoji: it.emoji, name: it.name,
+          sub: it.kind === "unlock" ? "영구 보유" : `${inv[it.key]}개`, use: it.use }))
+    );
+    const cnt = sheet.querySelector("#shopInvCnt");
+    if (cnt) { cnt.textContent = invRows.length; cnt.hidden = !invRows.length; }
+    invEl.innerHTML = invRows.length
+      ? invRows.map(r => `
+          <div class="shop-item has-owned">
+            <span class="si-emoji">${r.emoji}</span>
+            <span class="si-mid">
+              <span class="si-name">${r.name} <b class="si-owned">${r.sub}</b></span>
+              ${r.use ? `<span class="si-use">📍 ${r.use}</span>` : ""}
+            </span>
+          </div>`).join("")
+      : `<div class="shop-inv-empty">🎒 아직 보유한 아이템이 없어요.<br><small>구매 탭에서 전투·꾸미기 아이템을 만나보세요.</small></div>`;
+
     const list = sheet.querySelector("#shopList");
     list.innerHTML = GROUPS.map(g => {
       const items = CATALOG.filter(it => it.group === g.key);

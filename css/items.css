@@ -50,3 +50,15 @@
   font-size:10.5px; font-weight:900; vertical-align:1px;
 }
 .shop-item.has-owned { background:rgba(245,195,66,.045); border-radius:12px; }
+
+/* 상점 탭 (구매 / 보유) */
+.shop-tabs { display:flex; gap:6px; padding:2px 0 10px; }
+.shop-tab {
+  flex:1; padding:9px 0; border-radius:11px; cursor:pointer;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09);
+  color:#8a8f9c; font-size:13px; font-weight:800; font-family:inherit;
+}
+.shop-tab.on { background:rgba(125,134,255,.14); border-color:#7d86ff66; color:#dfe3f5; }
+.shop-tab b { color:#f5c342; margin-left:2px; }
+.shop-inv-empty { padding:34px 12px; text-align:center; color:#7a8090; font-size:13.5px; line-height:1.7; }
+.shop-inv-empty small { color:#565c69; }
