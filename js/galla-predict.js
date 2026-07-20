@@ -468,7 +468,7 @@ async function loadLeaderboard(kind){
   if(kind==='galla'){
     const {data}=await supa.from('galla_rank').select('*').order('rank',{ascending:true}).limit(50);
     el.innerHTML=(data||[]).map((r,i)=>`<div class="lb-row"><span class="lb-rank ${i<3?'top':''}">${medal(i)}</span>
-      <span class="lb-name">${esc(r.nickname||'익명')}<br>${badge(r.points)}</span>
+      <span class="lb-name" data-nick-uid="${esc(r.user_id||'')}">${esc(r.nickname||'익명')}<br>${badge(r.points)}</span>
       <span class="lb-stat">${fmt(r.points)}P</span></div>`).join('')||emptyLB();
   } else if(kind==='king'){
     // 시즌 랭킹 우선(없으면 전체) — 시즌명 캡션 표시
@@ -478,12 +478,12 @@ async function loadLeaderboard(kind){
     const cap=document.querySelector('#rankKing .lb-caption');
     if(cap) cap.textContent=(season?`🏆 ${season} · `:'')+'예측으로 GP를 가장 많이 딴 적중왕';
     el.innerHTML=(data||[]).map((r,i)=>`<div class="lb-row"><span class="lb-rank ${i<3?'top':''}">${medal(i)}</span>
-      <span class="lb-name">${esc(r.nickname||'익명')} ${title(i,'king')}<br><span class="lb-sub">적중 회 · 참여 회</span></span>
+      <span class="lb-name" data-nick-uid="${esc(r.user_id||'')}">${esc(r.nickname||'익명')} ${title(i,'king')}<br><span class="lb-sub">적중 회 · 참여 회</span></span>
       <span class="lb-stat">${(r.profit||0)>=0?'+':''}${fmt(r.profit)}P</span></div>`).join('')||emptyLB();
   } else {
     const {data}=await supa.from('predict_god_leaderboard').select('*').order('total_volume',{ascending:false}).limit(50);
     el.innerHTML=(data||[]).map((r,i)=>`<div class="lb-row"><span class="lb-rank ${i<3?'top':''}">${medal(i)}</span>
-      <span class="lb-name">${esc(r.nickname||'익명')} ${title(i,'god')}<br><span class="lb-sub">마켓 ${r.markets_created||0}개</span></span>
+      <span class="lb-name" data-nick-uid="${esc(r.user_id||'')}">${esc(r.nickname||'익명')} ${title(i,'god')}<br><span class="lb-sub">마켓 ${r.markets_created||0}개</span></span>
       <span class="lb-stat">💰 ${fmt(r.total_volume)}P · 👥 ${r.participants||0}</span></div>`).join('')||emptyLB();
   }
   el.dataset.loaded='1';

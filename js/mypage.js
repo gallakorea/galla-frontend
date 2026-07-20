@@ -1169,7 +1169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             row.innerHTML = `
                 <img class="user-row-avatar" src="${avatarSrc}">
                 <div class="user-row-info">
-                    <div class="user-row-name">${u.nickname || "익명의 사용자"}</div>
+                    <div class="user-row-name" data-nick-uid="${u.id}">${u.nickname || "익명의 사용자"}</div>
                     <div class="user-row-level">Lv. ${u.level || 1}</div>
                 </div>
             `;

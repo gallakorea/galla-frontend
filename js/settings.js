@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (profile) {
     const $ = id => document.getElementById(id);
 
-    $("profileName") && ($("profileName").textContent = profile.nickname || "익명의 사용자");
+    if ($("profileName")) { $("profileName").textContent = profile.nickname || "익명의 사용자"; if (user && user.id) $("profileName").setAttribute("data-nick-uid", user.id); }
     $("profileBio") && ($("profileBio").textContent = profile.bio || "소개 문구가 없습니다.");
     $("emailValue") && ($("emailValue").textContent = user.email || "-");
     $("phoneValue") && ($("phoneValue").textContent = profile.phone || "-");

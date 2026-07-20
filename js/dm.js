@@ -3089,7 +3089,7 @@
     box.innerHTML = ids.map(id => `
       <button class="dm-friend dm-gpick" data-uid="${id}" type="button">
         ${avaHTML(id)}
-        <span class="dm-thread-mid"><span class="dm-thread-name">${esc(nickCache[id] || '익명')}</span></span>
+        <span class="dm-thread-mid"><span class="dm-thread-name" data-nick-uid="${esc(id)}">${esc(nickCache[id] || '익명')}</span></span>
         <span class="dm-gcheck"></span>
       </button>`).join('');
     box.querySelectorAll('.dm-gpick').forEach(el => el.addEventListener('click', () => {
@@ -3150,7 +3150,7 @@
     box.innerHTML = `<div class="dm-sec">${ICONS.crew}멤버 ${ids.length}명</div>` + ids.map(id => `
       <div class="dm-friend dm-mem-row">
         ${avaHTML(id)}
-        <span class="dm-thread-mid"><span class="dm-thread-name">${esc(nickCache[id] || '익명')}${id === ME ? ' <i class="dm-mem-me">나</i>' : ''}</span></span>
+        <span class="dm-thread-mid"><span class="dm-thread-name" data-nick-uid="${esc(id)}">${esc(nickCache[id] || '익명')}${id === ME ? ' <i class="dm-mem-me">나</i>' : ''}</span></span>
         ${id === curRoom.owner_id ? `<span class="dm-mem-owner">방장</span>` : ''}
       </div>`).join('');
     staggerRows(box, '.dm-mem-row');
@@ -3523,7 +3523,7 @@
         <button class="dm-thread${u ? ' dm-unread' : ''}" data-tid="${t.id}" data-peer="${peer}" data-name="${esc(name)}">
           ${avaHTML(peer)}
           <span class="dm-thread-mid">
-            <span class="dm-thread-name">${pinned ? ICONS.pin : ''}${esc(name)}</span>
+            <span class="dm-thread-name" data-nick-uid="${esc(peer)}">${pinned ? ICONS.pin : ''}${esc(name)}</span>
             <span class="dm-thread-prev">${esc(preview)}${pvIcon}${esc(pvText)}</span>
           </span>
           ${EDIT ? editChipsThread(t.id) : `<span class="dm-thread-side">
@@ -4630,7 +4630,7 @@
           <button class="dm-thread" data-peer="${u.id}" data-name="${esc(u.nickname || '익명')}">
             ${avaHTML(u.id)}
             <span class="dm-thread-mid">
-              <span class="dm-thread-name">${esc(u.nickname || '익명')}</span>
+              <span class="dm-thread-name" data-nick-uid="${esc(u.id)}">${esc(u.nickname || '익명')}</span>
               ${u.bio ? `<span class="dm-thread-prev">${esc(u.bio)}</span>` : ''}
             </span>
           </button>`).join('');

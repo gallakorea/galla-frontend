@@ -183,7 +183,7 @@ async function renderCreatorBlock(m){
   box.innerHTML=`
     <span class="pza-av" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${av}</span>
     <span class="pza-info">
-      <span class="pza-name" data-user-id="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${esc(nick)}</span>
+      <span class="pza-name" data-user-id="${esc(m.created_by)}" data-nick-uid="${esc(m.created_by)}" data-user-nick="${esc(nick)}">${esc(nick)}</span>
       <span class="pza-sub">🔮 이 판을 연 예언자 — 운명을 걸어보시죠</span>
     </span>
     <button type="button" class="js-follow pza-follow" data-uid="${esc(m.created_by)}">+ 팔로우</button>`;

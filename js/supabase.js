@@ -110,7 +110,17 @@
   };
   window.GALLA_isGoldNick = uid => !!(window.GALLA_decoCache[uid] && window.GALLA_decoCache[uid].nick_gold);
 
-  const NICK_SEL = ".author-name[data-profile-uid], .user-name[data-user-id], [data-nick-uid]";
+  /* 도색 대상 셀렉터 — data-nick-uid가 범용 마커. 레거시로 이름 클래스가
+     data-user-id/profile-uid만 가진 경우도 포함(아바타·버튼 오적용 방지 위해
+     '이름' 클래스만 열거). 새 렌더 지점은 data-nick-uid만 붙이면 된다. */
+  const NICK_SEL = [
+    "[data-nick-uid]",
+    ".author-name[data-profile-uid]",
+    ".user-name[data-user-id]",
+    ".pza-name[data-user-id]", ".pmd-holder-name[data-user-id]",
+    ".lb-name[data-user-id]", ".pf-cname[data-user-id]",
+    ".user-row-name[data-user-id]", ".dm-thread-name[data-user-id]",
+  ].join(", ");
   let _ngPending = false;
   async function _applyNickGold() {
     _ngPending = false;
