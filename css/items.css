@@ -62,3 +62,6 @@
 .shop-tab b { color:#f5c342; margin-left:2px; }
 .shop-inv-empty { padding:34px 12px; text-align:center; color:#7a8090; font-size:13.5px; line-height:1.7; }
 .shop-inv-empty small { color:#565c69; }
+
+/* 탭 전환 — hidden 속성은 display:flex에 지므로 클래스로 끈다 */
+.shop-list.off { display: none !important; }

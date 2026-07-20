@@ -86,16 +86,18 @@
           <button class="shop-tab" data-t="inv" type="button">🎒 보유 <b id="shopInvCnt" hidden></b></button>
         </div>
         <div class="shop-list" id="shopList"></div>
-        <div class="shop-list shop-inv" id="shopInv" hidden></div>
+        <div class="shop-list shop-inv off" id="shopInv"></div>
         <div class="shop-note">GP는 출석·데일리 미션·예측으로 모을 수 있어요<br><span style="opacity:.7;font-size:11px">※ GP는 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
     sheet.querySelector("#shopCharge").addEventListener("click", () => window.GALLA_openCharge?.());
+    /* hidden 속성은 .shop-list{display:flex}에 진다(명세: CSS display가 이김)
+       — 실제로 두 리스트가 겹쳐 보이는 사고가 났다. 클래스로 확실히 끈다. */
     sheet.querySelectorAll(".shop-tab").forEach(t => t.addEventListener("click", () => {
       sheet.querySelectorAll(".shop-tab").forEach(x => x.classList.toggle("on", x === t));
-      sheet.querySelector("#shopList").hidden = t.dataset.t !== "buy";
-      sheet.querySelector("#shopInv").hidden = t.dataset.t !== "inv";
+      sheet.querySelector("#shopList").classList.toggle("off", t.dataset.t !== "buy");
+      sheet.querySelector("#shopInv").classList.toggle("off", t.dataset.t !== "inv");
     }));
     return sheet;
   }
