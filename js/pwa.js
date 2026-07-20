@@ -60,5 +60,37 @@
       document.body.appendChild(bar);
       setTimeout(() => bar.remove(), 20000);
     });
+
+    /* ── 버전 프로브 ─────────────────────────────────────────
+       SW의 controllerchange는 sw.js '파일 내용'이 바뀔 때만 발생한다.
+       평소 배포는 자산 버전(?v=)만 바뀌므로 SW는 그대로 → 열려 있는
+       PWA는 영원히 옛 코드를 돈다(사장님이 반나절 옛 버전을 본 원인).
+       → 화면 복귀 때마다(최소 3분 간격) 서버 HTML의 v번호를 읽어
+         내 페이지 v와 다르면 갱신한다. */
+    const myVer = () => {
+      const m = [...document.scripts].map(x => x.src.match(/[?&]v=(\d{6})/)).find(Boolean);
+      return m ? m[1] : null;
+    };
+    let lastProbe = 0;
+    async function probeVersion() {
+      const mine = myVer();
+      if (!mine) return;
+      if (Date.now() - lastProbe < 180000) return;
+      lastProbe = Date.now();
+      try {
+        const html = await (await fetch(location.pathname + location.search, {
+          cache: 'no-store', headers: { 'x-galla-probe': '1' } })).text();
+        const m = html.match(/[?&]v=(\d{6})/);
+        /* '다르면'이 아니라 '더 최신이면'만 — SW 캐시가 옛 HTML을 돌려주면
+           다르다는 이유로 옛 버전으로 리로드하는 루프가 생긴다 */
+        if (!m || Number(m[1]) <= Number(mine)) return;
+        const busy = document.querySelector('#dm-call.on, #pager-call, .dmc-card') ||
+          /INPUT|TEXTAREA/.test(document.activeElement?.tagName || '');
+        if (!busy) location.reload();
+        // 작업 중이면 다음 복귀 때 다시 판정(강제 리로드로 입력을 날리지 않는다)
+      } catch (_) {}
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) probeVersion(); });
+    setTimeout(probeVersion, 4000);   // 앱 복원 직후 1회
   });
 })();
