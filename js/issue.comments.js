@@ -1618,9 +1618,13 @@ function bindEvents() {
      pointerdown preventDefault로 포커스 이동 자체를 막으면
      키보드가 유지되고 화면이 안 움직여 click이 그대로 명중한다. */
   document.addEventListener("pointerdown", e => {
-    if (e.target.closest(".action-attack, .action-defend, .action-support, .action-shield, .ic-send, .ic-close")) {
-      e.preventDefault();
-    }
+    if (!e.target.closest(".action-attack, .action-defend, .action-support, .action-shield, .ic-send, .ic-close")) return;
+    /* 키보드가 떠 있을 때만 포커스를 지킨다 — 무조건 preventDefault하면
+       iOS가 span 버튼의 click 생성을 막아 '보호막 버튼 안 먹음'이 됐다.
+       (키보드 유지가 필요한 상황 = 입력창에 포커스가 있을 때뿐) */
+    const ae = document.activeElement;
+    const typing = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable);
+    if (typing) e.preventDefault();
   });
 
   document.addEventListener("click", async e => {
