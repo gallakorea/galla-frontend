@@ -79,10 +79,11 @@
     const av = u.avatar_url
       ? `<img class="gu-av" src="${guEsc(window.GALLA_avatarSrc(u.avatar_url))}" alt="" onerror="this.style.display='none'">`
       : `<span class="gu-av gu-av0">${guEsc((nick || "갈").trim().charAt(0) || "갈")}</span>`;
-    // 인덱스처럼 등급 아이콘만 닉 앞에 (Lv 숫자 칩 없음)
-    const tier = `<span class="gu-tier">${window.GALLA_tierIcon(u.level)}</span>`;
+    // 등급 아이콘·스타일은 전역 도색기가 갈라리안 등급(GI)으로 자동 부여한다
+    // — 여기서 level 기반 인라인 아이콘을 넣으면 중복·불일치가 된다.
     const attrs = uid ? ` data-user-id="${guEsc(uid)}" data-user-nick="${guEsc(nick)}"` : "";
-    return `<span class="gu-wrap"${attrs}>${av}${tier}<span class="gu-nick">${guEsc(nick)}</span></span>`;
+    const nickAttr = uid ? ` data-nick-uid="${guEsc(uid)}"` : "";
+    return `<span class="gu-wrap"${attrs}>${av}<span class="gu-nick"${nickAttr}>${guEsc(nick)}</span></span>`;
   };
 
   /* ---- 스타일 주입 ---- */

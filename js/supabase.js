@@ -35,8 +35,9 @@
     };
   }
 
-  if (window.supabaseClient) return;
-
+  /* ⚠️ 여기서 early-return 하지 않는다 — 그러면 아래 아바타 헬퍼·닉네임
+     도색기가 client 선존재 페이지(광장 등 자체 createClient)에서 정의 안 돼
+     '꾸미기 미반영'이 된다. client 생성만 아래에서 조건부로. */
   const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 
   // 아바타(프로필 사진) URL 해석: avatar_url은 'userid/avatar.jpg' 상대경로.
@@ -296,6 +297,7 @@
   }
 
   (async () => {
+    if (window.supabaseClient) return;   // 다른 스크립트가 이미 만들었으면 재생성 금지
     try {
       await loadUmd();
       window.supabaseClient = window.supabase.createClient(

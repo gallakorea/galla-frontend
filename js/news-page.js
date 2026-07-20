@@ -266,9 +266,8 @@
         : (prof.avatar_url
           ? `<img class="gnc-av" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(prof.avatar_url) : prof.avatar_url)}" alt="" style="object-fit:cover" data-user-id="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}">`
           : `<div class="gnc-av" data-user-id="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}">${esc(nick(c.user_id).trim().charAt(0) || "익")}</div>`);
-      const tierHtml = !g && window.GALLA_tierIcon ? `<span class="gu-tier">${window.GALLA_tierIcon(prof.level)}</span>` : "";
       const nameHtml = g ? `<span class="gnc-name ghost-nick" style="color:${g.color}">${g.name}</span>`
-        : `${tierHtml}<span class="gnc-name" data-user-id="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}" style="cursor:pointer">${esc(nick(c.user_id))}</span>`;
+        : `<span class="gnc-name" data-user-id="${c.user_id}" data-nick-uid="${c.user_id}" data-user-nick="${esc(nick(c.user_id))}" style="cursor:pointer">${esc(nick(c.user_id))}</span>`;
       return `<div class="gnc ${isReply ? "reply" : ""}" data-cmt-item data-id="${c.id}" data-top="${topId}" data-author="${esc(g ? g.name : nick(c.user_id))}">
         ${avHtml}
         <div class="gnc-main">

@@ -139,13 +139,10 @@ async function renderAuthorBlock(data) {
     const av = u.avatar_url
       ? `<img src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url) : u.avatar_url)}" alt="" onerror="this.style.display='none'">`
       : `<span class="pza-init">${esc(nick.trim().charAt(0) || "갈")}</span>`;
-    const tier = window.GALLA_tierIcon ? window.GALLA_tierIcon(u.level) : "🌱";
     wrap.innerHTML = `
       <span class="pza-av" data-user-id="${esc(data.user_id)}" data-user-nick="${esc(nick)}">${av}</span>
       <span class="pza-info">
-        <span class="pza-name" data-user-id="${esc(data.user_id)}" data-user-nick="${esc(nick)}">
-          <span class="pza-tier">${tier}</span>${esc(nick)}
-        </span>
+        <span class="pza-name" data-user-id="${esc(data.user_id)}" data-nick-uid="${esc(data.user_id)}" data-user-nick="${esc(nick)}">${esc(nick)}</span>
         <span class="pza-sub">광장 작성자</span>
       </span>
       <button type="button" class="js-follow pza-follow" data-uid="${esc(data.user_id)}">+ 팔로우</button>
