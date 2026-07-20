@@ -104,6 +104,21 @@
     _ngPending = true;
     requestAnimationFrame(() => { window.supabaseClient ? _applyNickGold() : setTimeout(_applyNickGold, 300); });
   };
+  /* 장착 변경(꾸미기) 즉시 반영 — data-gold-done 마크 때문에 한 번 칠한
+     요소는 다시 안 칠하므로, 마크·클래스·칭호 배지를 걷어내고 새로 칠한다.
+     ('장착했는데 변화가 없다'의 원흉) */
+  window.GALLA_repaintDecos = function () {
+    document.querySelectorAll("[data-gold-done]").forEach(el => {
+      el.removeAttribute("data-gold-done");
+      el.classList.remove("nick-gold");
+      [...el.classList].filter(c => c.startsWith("ns-")).forEach(c => el.classList.remove(c));
+      const t = el.previousElementSibling;
+      if (t && t.classList.contains("nick-title")) t.remove();
+    });
+    window.GALLA_refreshNickGold();
+  };
+  document.addEventListener("galla:items-changed", () => window.GALLA_repaintDecos());
+
   if (!window.__GALLA_NICKGOLD__) {
     window.__GALLA_NICKGOLD__ = true;
     const start = () => {

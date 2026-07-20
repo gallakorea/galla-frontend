@@ -40,12 +40,17 @@
       .tt-btn.equip{background:rgba(201,209,224,.16);color:#c9d1e0;border:1px solid rgba(201,209,224,.4)}
       .tt-btn.on{background:linear-gradient(135deg,#c9d1e0,#8b93a3);color:#0a0a0b}
       .tt-lock{flex:0 0 auto;font-size:11px;font-weight:800;color:#8b8b93}
+      .tt-preview{display:flex;align-items:center;justify-content:space-between;gap:10px;
+        padding:13px 14px;border-radius:14px;margin-bottom:2px;
+        background:rgba(106,123,255,.07);border:1px solid rgba(106,123,255,.2);
+        color:#8a90a3;font-size:12px;font-weight:800}
+      .tt-preview-nick{font-size:17px;font-weight:900;color:#fff}
       .tt-close{width:100%;margin-top:12px;padding:13px;border:none;border-radius:12px;background:rgba(255,255,255,.06);color:#c9d1e0;font-weight:800;cursor:pointer}
     `;
     document.head.appendChild(s);
   }
 
-  let sheet, tab = "title", bal = 0, ME = null;
+  let sheet, tab = "title", bal = 0, ME = null, myNick = "내 닉네임";
   let gi = 0, tiers = [], awards = [], equipT = null, ownedS = new Set(), equipS = null;
 
   async function refresh() {
@@ -56,23 +61,29 @@
     gi = et.data?.gi || 0; tiers = et.data?.tiers || []; awards = et.data?.awards || []; equipT = et.data?.equipped || null;
     ownedS = new Set(ms.data?.owned || []); equipS = ms.data?.equipped || null;
     ME = sess.data?.session?.user?.id || null;
+    if (ME && myNick === "내 닉네임") {
+      try {
+        const { data: u } = await sb().from("users").select("nickname").eq("id", ME).maybeSingle();
+        if (u?.nickname) myNick = u.nickname;
+      } catch (_) {}
+    }
     render();
   }
 
-  const eqBtn = (isEq) => isEq ? `<button class="tt-btn on" disabled>장착 중</button>` : "";
+  const eqBtn = (isEq) => isEq ? `<button class="tt-btn on" disabled>✓ 사용 중</button>` : "";
   function tierRow(t) {
     const isEq = t.name === equipT;
     const label = `<span class="nick-title" style="font-size:13px">${t.name}</span>`;
     let right;
-    if (isEq) right = `<button class="tt-btn on" disabled>장착 중</button>`;
-    else if (t.unlocked) right = `<button class="tt-btn equip" data-tier="${t.key}">장착</button>`;
+    if (isEq) right = `<button class="tt-btn on" disabled>✓ 사용 중</button>`;
+    else if (t.unlocked) right = `<button class="tt-btn equip" data-tier="${t.key}">선택</button>`;
     else right = `<span class="tt-lock">🔒 ${t.min.toLocaleString()} GI 필요</span>`;
     return `<div class="tt-item${isEq ? " eq" : ""}${t.unlocked ? "" : " locked"}"><span class="tt-name">${label}</span>${right}</div>`;
   }
   function awardRow(a) {
     const isEq = a.name === equipT;
     const label = `<span class="nick-title" style="font-size:13px">${a.name}</span>`;
-    const right = isEq ? `<button class="tt-btn on" disabled>장착 중</button>` : `<button class="tt-btn equip" data-award="${a.key}">장착</button>`;
+    const right = isEq ? `<button class="tt-btn on" disabled>✓ 사용 중</button>` : `<button class="tt-btn equip" data-award="${a.key}">선택</button>`;
     return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">🏆 ${label}</span>${right}</div>`;
   }
   function styleRow(t) {
@@ -81,8 +92,8 @@
     const cls = t.k === "none" ? "" : (t.k === "gold" ? "nick-gold" : "ns-" + t.k);
     const label = `<span class="tt-name ${cls}" style="flex:0 0 auto;font-size:16px">${t.n}</span>`;
     let btn;
-    if (isEq) btn = `<button class="tt-btn on" disabled>장착 중</button>`;
-    else if (own) btn = `<button class="tt-btn equip" data-style="${t.k}">장착</button>`;
+    if (isEq) btn = `<button class="tt-btn on" disabled>✓ 사용 중</button>`;
+    else if (own) btn = `<button class="tt-btn equip" data-style="${t.k}">선택</button>`;
     else btn = `<button class="tt-btn buy${bal >= t.p ? "" : " no"}" data-buystyle="${t.k}" ${bal >= t.p ? "" : "disabled"}>${t.p.toLocaleString()} GP</button>`;
     return `<div class="tt-item${isEq ? " eq" : ""}"><span class="tt-name">${label}</span>${btn}</div>`;
   }
@@ -100,7 +111,11 @@
         `<div class="tt-item" style="opacity:.6"><span class="tt-name none"><span style="color:#8a8f9a;font-weight:700">칭호 없음</span></span>${equipT ? `<button class="tt-btn equip" data-tier="none">해제</button>` : `<button class="tt-btn on" disabled>기본</button>`}</div>`;
     } else {
       note.innerHTML = `닉네임 색/이펙트 — 순수 꾸밈이라 구매할 수 있어요`;
-      grid.innerHTML = STYLES.map(styleRow).join("");
+      const curCls = equipS ? (equipS === "gold" ? "nick-gold" : "ns-" + equipS) : "";
+      grid.innerHTML =
+        `<div class="tt-preview">내 닉네임 미리보기
+           <b class="tt-preview-nick ${curCls}">${myNick}</b></div>` +
+        STYLES.map(styleRow).join("");
     }
     wire(grid);
   }
@@ -121,6 +136,8 @@
     const { data } = await sb().rpc(fn, { p_key: key });
     if (!data?.ok) { alert(data?.reason === "locked" ? `아직 잠김 — ${data.need?.toLocaleString()} GI 필요 (현재 ${data.gi?.toLocaleString()})` : "장착 실패"); return; }
     window.BattleFX?.haptic?.("tap");
+    ttToast(kind === "title" ? "✓ 칭호가 적용됐어요 — 댓글·프로필 닉네임 앞에 붙어요"
+                              : "✓ 스타일이 적용됐어요 — 모든 화면의 내 닉네임에 반영돼요");
     if (ME && window.GALLA_decoCache) {
       const cur = window.GALLA_decoCache[ME] || {};
       if (kind === "title") cur.title = data.title; else cur.nick_style = data.style;
@@ -128,6 +145,21 @@
     }
     document.dispatchEvent(new CustomEvent("galla:items-changed"));
     await refresh();
+  }
+
+  let ttT = null;
+  function ttToast(msg) {
+    let el = document.getElementById("tt-toast");
+    if (!el) {
+      el = document.createElement("div"); el.id = "tt-toast";
+      el.style.cssText = "position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom));transform:translateX(-50%);" +
+        "z-index:99999;padding:10px 16px;border-radius:999px;background:#173a22;border:1px solid #2fd07a55;color:#8ff0b4;" +
+        "font-size:12.5px;font-weight:800;white-space:nowrap;opacity:0;transition:opacity .15s;pointer-events:none";
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    requestAnimationFrame(() => { el.style.opacity = "1"; });
+    clearTimeout(ttT); ttT = setTimeout(() => { el.style.opacity = "0"; }, 2400);
   }
 
   window.GALLA_openTitles = async function () {
