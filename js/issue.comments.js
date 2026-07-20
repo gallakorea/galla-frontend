@@ -1606,6 +1606,17 @@ function bindEvents() {
   if (eventsBound) return;
   eventsBound = true;
 
+  /* iOS: 컴포저 키보드가 떠 있을 때 다른 전투 버튼을 탭하면
+     blur → 키보드 닫힘 → 레이아웃 이동이 click보다 먼저 일어나
+     click이 옛 좌표의 엉뚱한 곳에 떨어진다(버튼 안 먹힘·버퍼).
+     pointerdown preventDefault로 포커스 이동 자체를 막으면
+     키보드가 유지되고 화면이 안 움직여 click이 그대로 명중한다. */
+  document.addEventListener("pointerdown", e => {
+    if (e.target.closest(".action-attack, .action-defend, .action-support, .action-shield, .ic-send, .ic-close")) {
+      e.preventDefault();
+    }
+  });
+
   document.addEventListener("click", async e => {
     // ⚔️ 격론 → 일기토 신청 (그 상대·이 이슈로)
     const cd = e.target.closest(".c-duel");
@@ -1969,6 +1980,15 @@ function openInlineComposer(type, targetId, targetUser, unit) {
   }
   input.value = "";
   input.focus();
+  /* 아이폰: 키보드가 다 올라온 뒤(visualViewport 축소 후) 컴포저가
+     키보드에 가려 있으면 화면 가운데로 끌어올린다 */
+  setTimeout(() => {
+    const r = box.getBoundingClientRect();
+    const vh = window.visualViewport?.height || window.innerHeight;
+    if (r.bottom > vh - 8 || r.top < 0) {
+      try { box.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (_) {}
+    }
+  }, 300);
   window.BattleFX?.haptic("tap");
 }
 
