@@ -113,6 +113,25 @@
     (document.head || document.documentElement).appendChild(st);
   })();
 
+  /* 🖼 전역 이미지 폴백 — 깨진 이미지의 '물음표'가 사용자에게 절대 보이지 않게.
+     개별 렌더의 onerror 누락과 무관하게 캡처 단계에서 일괄 방어.
+     자체 onerror를 가진 이미지(아바타 등 맞춤 폴백)는 존중하고 건드리지 않는다. */
+  if (!window.__GALLA_IMG_FBK__) {
+    window.__GALLA_IMG_FBK__ = true;
+    document.addEventListener("error", (e) => {
+      const el = e.target;
+      if (!(el instanceof HTMLImageElement)) return;
+      if (el.getAttribute("onerror")) return;      // 맞춤 폴백 보유 — 존중
+      if (el.dataset.fbk) return;                  // 폴백도 실패 — 루프 방지
+      el.dataset.fbk = "1";
+      el.src = "/assets/logo.png";
+      el.style.objectFit = "contain";
+      el.style.background = "#101116";
+      el.style.padding = "16%";
+      el.style.opacity = ".45";
+    }, true);
+  }
+
   window.GALLA_decoCache = window.GALLA_decoCache || {}; // uid -> {nick_gold, emoticon}
   window.GALLA_loadDecos = async function (uids) {
     const cache = window.GALLA_decoCache;
