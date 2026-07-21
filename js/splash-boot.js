@@ -97,3 +97,50 @@
     document.head.appendChild(l);
   });
 })();
+
+/* =========================================================
+   ↔️ 스와이프 도착 슬라이드-인 — 인스타식 전환의 '뒷마무리'
+   nav.js가 커밋 직전 sessionStorage(galla_swipe_in)에 방향을 남긴다.
+   head 동기 실행이라 첫 페인트 전에 페이지를 옆으로 젖혀둘 수 있고,
+   준비되면 같은 방향에서 미끄러져 들어와 드래그의 연속성이 이어진다.
+   (전체 100vw 진입은 빈 화면 노출이 길어져 역효과 — 26vw 패럴랙스 정착이
+    네이티브 앱들이 쓰는 착시 폭)
+   ========================================================= */
+(function () {
+  var d = null;
+  try {
+    d = sessionStorage.getItem("galla_swipe_in");
+    if (d) sessionStorage.removeItem("galla_swipe_in");
+  } catch (_) {}
+  if (d !== "r" && d !== "l") return;
+  try { if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (_) {}
+
+  var st = document.createElement("style");
+  st.id = "swipe-in-css";
+  st.textContent =
+    "html.swipe-in{background:#000}" +
+    "html.swipe-in body{transform:translateX(" + (d === "r" ? "" : "-") + "26vw);opacity:.6}" +
+    "html.swipe-in.swipe-in-go body{transform:translateX(0);opacity:1;" +
+      "transition:transform .3s cubic-bezier(.22,.9,.3,1),opacity .3s ease}";
+  document.documentElement.appendChild(st);
+  document.documentElement.classList.add("swipe-in");
+
+  var done = false;
+  var finish = function () {
+    document.documentElement.classList.remove("swipe-in", "swipe-in-go");
+    if (st.parentNode) st.parentNode.removeChild(st);
+  };
+  var go = function () {
+    if (done) return; done = true;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        document.documentElement.classList.add("swipe-in-go");
+        // body transform은 fixed 요소의 기준을 바꾼다 — 전환이 끝나면 반드시 원상복구
+        setTimeout(finish, 380);
+      });
+    });
+  };
+  if (document.readyState !== "loading") go();
+  else document.addEventListener("DOMContentLoaded", go, { once: true });
+  setTimeout(go, 1200); // 세이프가드 — 무슨 일이 있어도 젖힌 채로 남지 않게
+})();

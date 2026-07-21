@@ -321,6 +321,18 @@ document.addEventListener("DOMContentLoaded", () => {
     let sx = 0, sy = 0, dxCur = 0, lastX = 0, lastT = 0, vel = 0;
     let armed = false, locked = false, dir = 0, targetKey = null;
 
+    // 드래그가 수평으로 확정되는 순간 목적지를 미리 받아둔다(prefetch 캐시) —
+    // 손을 떼고 이동할 때 네트워크 공백이 줄어 전환이 이어져 보인다.
+    const warmed = new Set();
+    const warm = (key) => {
+      const url = PAGE_URL[key];
+      if (!url || warmed.has(url)) return;
+      warmed.add(url);
+      const l = document.createElement("link");
+      l.rel = "prefetch"; l.as = "document"; l.href = url;
+      document.head.appendChild(l);
+    };
+
     const W = () => window.innerWidth;
     const setDrag = (on) => {
       stage.classList.toggle("dragging", on);
@@ -377,6 +389,7 @@ document.addEventListener("DOMContentLoaded", () => {
         dir = dx < 0 ? 1 : -1;
         targetKey = PAGE_ORDER[curIdx + dir] || null;
         if (targetKey) {
+          warm(targetKey);
           const m = metaOf(targetKey);
           peek.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
         }
@@ -393,6 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
         dir = d2;
         targetKey = PAGE_ORDER[curIdx + dir] || null;
         if (targetKey) {
+          warm(targetKey);
           const m = metaOf(targetKey);
           peek.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
         } else peek.innerHTML = "";
@@ -418,6 +432,9 @@ document.addEventListener("DOMContentLoaded", () => {
       peek.style.transition = ease;
       if (commit) {
         place(dir > 0 ? -(w + GAP) : (w + GAP));            // 끝까지 밀어내기
+        // 도착 페이지가 같은 방향에서 '밀려 들어오게' 방향을 넘긴다(splash-boot의 슬라이드-인).
+        // 이게 없으면 새 페이지가 제자리에 '짠' 떠서 드래그의 연속성이 끊긴다.
+        try { sessionStorage.setItem("galla_swipe_in", dir > 0 ? "r" : "l"); } catch (_) {}
         const url = PAGE_URL[targetKey];
         setTimeout(() => { location.href = url; }, 210);
       } else {
