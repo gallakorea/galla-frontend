@@ -142,5 +142,7 @@
   };
   if (document.readyState !== "loading") go();
   else document.addEventListener("DOMContentLoaded", go, { once: true });
-  setTimeout(go, 1200); // 세이프가드 — 무슨 일이 있어도 젖힌 채로 남지 않게
+  // 세이프가드 — rAF는 백그라운드 탭에서 얼어붙는다(go가 영영 안 돌 수 있음).
+  // rAF를 거치지 않고 무조건 원상복구해 '젖힌 채 방치'를 차단.
+  setTimeout(finish, 1600);
 })();

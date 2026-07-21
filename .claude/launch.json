@@ -1,11 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    {
-      "name": "galla-static",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8788", "-c-1"],
-      "port": 8788
-    }
+    { "name": "galla-static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8787"], "port": 8787 }
   ]
 }
