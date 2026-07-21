@@ -99,12 +99,11 @@
 })();
 
 /* =========================================================
-   ↔️ 스와이프 도착 슬라이드-인 — 인스타식 전환의 '뒷마무리'
-   nav.js가 커밋 직전 sessionStorage(galla_swipe_in)에 방향을 남긴다.
-   head 동기 실행이라 첫 페인트 전에 페이지를 옆으로 젖혀둘 수 있고,
-   준비되면 같은 방향에서 미끄러져 들어와 드래그의 연속성이 이어진다.
-   (전체 100vw 진입은 빈 화면 노출이 길어져 역효과 — 26vw 패럴랙스 정착이
-    네이티브 앱들이 쓰는 착시 폭)
+   ↔️ 스와이프 도착 슬라이드-인 — 폐지(2026-07-21)
+   첫 페인트에 검게 젖힌 채 떠서 '검은 화면 후 로딩'으로 보였다(사장님 재현).
+   전환의 이음새는 nav.js의 실물 미리보기(peek iframe) 마지막 프레임을
+   브라우저 페인트 홀딩이 이어받는 방식으로 대체.
+   구버전 nav.js가 남긴 플래그는 소비만 하고(잔류 방지) 아무것도 하지 않는다.
    ========================================================= */
 (function () {
   var d = null;
@@ -112,6 +111,7 @@
     d = sessionStorage.getItem("galla_swipe_in");
     if (d) sessionStorage.removeItem("galla_swipe_in");
   } catch (_) {}
+  return; // 슬라이드-인 비활성 — 아래 로직은 혼합 버전 대비 보존
   if (d !== "r" && d !== "l") return;
   try { if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch (_) {}
 

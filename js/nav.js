@@ -460,11 +460,13 @@ document.addEventListener("DOMContentLoaded", () => {
       peek.style.transition = ease;
       if (commit) {
         place(dir > 0 ? -(w + GAP) : (w + GAP));            // 끝까지 밀어내기
-        // 도착 페이지가 같은 방향에서 '밀려 들어오게' 방향을 넘긴다(splash-boot의 슬라이드-인).
-        // 이게 없으면 새 페이지가 제자리에 '짠' 떠서 드래그의 연속성이 끊긴다.
-        try { sessionStorage.setItem("galla_swipe_in", dir > 0 ? "r" : "l"); } catch (_) {}
+        // ⚠️ 도착 슬라이드-인(구 galla_swipe_in)은 폐지 — 새 페이지가 첫 페인트에
+        // 검게 젖힌 상태로 떠서 '검은 화면 후 로딩'으로 보였다(사장님 재현).
+        // 대신 미리보기 프레임이 화면을 다 채운 '마지막 그림'을 브라우저의
+        // 페인트 홀딩이 다음 페이지 첫 페인트까지 유지 → 같은 골격끼리 이어져
+        // 이음새가 사라진다. 애니메이션이 끝난 뒤(280ms) 이동해야 이 그림이 완성된다.
         const url = PAGE_URL[targetKey];
-        setTimeout(() => { location.href = url; }, 210);
+        setTimeout(() => { location.href = url; }, 280);
       } else {
         place(0);                                            // 쫀득한 스냅백
         setTimeout(reset, 280);
