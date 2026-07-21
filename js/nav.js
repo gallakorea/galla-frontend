@@ -318,6 +318,36 @@ document.addEventListener("DOMContentLoaded", () => {
     peek.className = "swipe-peek";
     document.body.appendChild(peek);
 
+    /* 목적지 '실물' 미리보기 — 아이콘+이름 카드는 "안내 페이지가 한 번 보였다
+       넘어간다"로 느껴진다(사장님 지적). 목적지 페이지를 스크립트 차단
+       iframe(sandbox)으로 렌더해 실제 화면 프레임이 끌려오게 한다.
+       스크립트가 없어 데이터는 안 차지만 헤더·네비·배경 스켈레톤이 보여
+       '진짜 그 페이지가 오는' 연속감이 난다. 라벨은 로딩 전 폴백으로만.
+       ⚠️ iframe은 부모를 옮기면 다시 로드된다 — peek 안에 상주시키고 표시만 전환. */
+    const pvLabel = document.createElement("div");
+    pvLabel.className = "peek-label";
+    peek.appendChild(pvLabel);
+    const pvFrames = {};
+    const showPeek = (key) => {
+      const m = metaOf(key);
+      pvLabel.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
+      let f = pvFrames[key];
+      if (!f) {
+        f = document.createElement("iframe");
+        f.className = "peek-frame";
+        f.setAttribute("sandbox", "allow-same-origin"); // JS 차단 — 이중 세션·이중 실시간 채널 방지
+        f.setAttribute("tabindex", "-1");
+        f.src = PAGE_URL[key];
+        pvFrames[key] = f;
+        peek.appendChild(f);
+      }
+      for (const k in pvFrames) pvFrames[k].style.display = (k === key) ? "block" : "none";
+    };
+    const hidePeekFrames = () => {
+      pvLabel.innerHTML = "";
+      for (const k in pvFrames) pvFrames[k].style.display = "none";
+    };
+
     let sx = 0, sy = 0, dxCur = 0, lastX = 0, lastT = 0, vel = 0;
     let armed = false, locked = false, dir = 0, targetKey = null;
 
@@ -390,8 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
         targetKey = PAGE_ORDER[curIdx + dir] || null;
         if (targetKey) {
           warm(targetKey);
-          const m = metaOf(targetKey);
-          peek.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
+          showPeek(targetKey);
         }
         locked = true;
         setDrag(true);
@@ -407,9 +436,8 @@ document.addEventListener("DOMContentLoaded", () => {
         targetKey = PAGE_ORDER[curIdx + dir] || null;
         if (targetKey) {
           warm(targetKey);
-          const m = metaOf(targetKey);
-          peek.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
-        } else peek.innerHTML = "";
+          showPeek(targetKey);
+        } else hidePeekFrames();
       }
       // 목적지 없으면 고무줄 저항
       dxCur = targetKey ? dx : dx * 0.28;
