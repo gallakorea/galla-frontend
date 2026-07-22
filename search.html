@@ -8,13 +8,15 @@
   <meta name="keywords" content="갈라 검색, 실시간 검색어, 실시간 뉴스, 갈라뉴스, 급상승 키워드, 핫이슈, 핫영상, 트렌드, GALLA">
   <link rel="canonical" href="https://galla.im/search.html">
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="통합검색 · 실시간 뜨는 뉴스·이슈·핫영상"><meta property="og:description" content="실시간 급상승 키워드·갈라뉴스·핫이슈를 한 곳에서."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/search.html">
-  <link rel="stylesheet" href="./css/search.css?v=072234" />
-  <link rel="stylesheet" href="./css/header.css?v=072234">
-  <link rel="stylesheet" href="./css/nav.css?v=072234">
-  <link rel="stylesheet" href="./css/write-hub.css?v=072234">
+  <link rel="stylesheet" href="./css/search.css?v=072235" />
+  <link rel="stylesheet" href="css/plaza.css?v=072235"><!-- 광장 패널(통합) -->
+  <link rel="stylesheet" href="./css/composer-page.css?v=072235">
+  <link rel="stylesheet" href="./css/header.css?v=072235">
+  <link rel="stylesheet" href="./css/nav.css?v=072235">
+  <link rel="stylesheet" href="./css/write-hub.css?v=072235">
   <!-- DM 패널 스타일 — 없으면 dm-root가 fixed를 못 받아 페이지에 그대로 쏟아진다 -->
-  <link rel="stylesheet" href="./css/dm.css?v=072234">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072234">
+  <link rel="stylesheet" href="./css/dm.css?v=072235">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072235">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -24,12 +26,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/items.css?v=072234">
-  <link rel="stylesheet" href="./css/user-sheet.css?v=072234">
-  <link rel="stylesheet" href="./css/theme.css?v=072234">
-<link rel="stylesheet" href="./css/desktop.css?v=072234">
+  <link rel="stylesheet" href="./css/items.css?v=072235">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=072235">
+  <link rel="stylesheet" href="./css/theme.css?v=072235">
+<link rel="stylesheet" href="./css/desktop.css?v=072235">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072234"></script>
+  <script src="/js/splash-boot.js?v=072235"></script>
 </head>
 
 <body data-page="trend">
@@ -82,7 +84,7 @@
       <svg class="tab-ic ic-color" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FF0000" d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8z"/><path fill="#fff" d="M9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>
       핫튜브
     </button>
-    <button type="button" class="tab-item" data-tab="plaza" onclick="location.href='plaza.html'">
+    <button type="button" class="tab-item" data-tab="plaza">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <svg class="tab-ic ic-color" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       광장
@@ -191,9 +193,100 @@
       <div id="hot-video-list"></div>
     </div>
 
+    <!-- ===== 광장 (plaza.html 흡수 — 2026-07-22 통합. 트렌드가 단일 소스) ===== -->
+    <div class="tab-panel" data-panel="plaza">
+      <section class="plaza-guide">
+        <p>
+          갈라 광장은 찬반 없는 자유 토론 공간입니다.<br>
+          사진·동영상·링크와 함께 자유롭게 이야기를 나눠요.
+        </p>
+      </section>
+      <section class="plaza-categories">
+        <button class="active">전체</button>
+        <button>정치</button>
+        <button>사회</button>
+        <button>경제</button>
+        <button>투자</button>
+        <button>직장</button>
+        <button>커리어·이직</button>
+        <button>연애</button>
+        <button>결혼·육아</button>
+        <button>인간관계</button>
+        <button>일상</button>
+        <button>패션·뷰티</button>
+        <button>엔터</button>
+        <button>스포츠</button>
+        <button>여행</button>
+        <button>맛집</button>
+        <button>가치·논쟁</button>
+        <button>불만·푸념</button>
+        <button>19금</button>
+        <button>기타</button>
+      </section>
+      <ul class="plaza-list" id="plaza-list"></ul>
+    </div>
+
   </div>
 </section>
 </main>
+
+<!-- 광장 글쓰기 모달 (plaza.html에서 이관 — 패널 밖 fixed 오버레이) -->
+<div id="plaza-write-modal" class="plaza-modal hidden">
+  <div class="plaza-modal-backdrop" onclick="closePlazaWriteModal()"></div>
+  <div class="plaza-modal-box">
+    <h2 class="modal-title">갈라 광장에 글쓰기</h2>
+    <div class="modal-category">
+      <select id="plaza-category">
+        <option value="">카테고리 선택</option>
+        <option>정치</option>
+        <option>사회</option>
+        <option>경제</option>
+        <option>투자</option>
+        <option>직장</option>
+        <option>연애</option>
+        <option>결혼</option>
+        <option>일상</option>
+        <option>패션·뷰티</option>
+        <option>엔터</option>
+        <option>스포츠</option>
+        <option>여행</option>
+        <option>맛집</option>
+        <option>19금</option>
+        <option>기타</option>
+      </select>
+    </div>
+    <input type="text" id="plaza-title" placeholder="제목" maxlength="120" />
+    <div class="editor-toolbar" id="plaza-toolbar">
+      <div class="tb-row">
+        <button type="button" class="tb-btn" data-fmt="bold" title="굵게"><b>B</b></button>
+        <button type="button" class="tb-btn" data-fmt="italic" title="기울임"><i>I</i></button>
+        <button type="button" class="tb-btn" data-fmt="strike" title="취소선"><s>S</s></button>
+        <span class="tb-sep"></span>
+        <button type="button" class="tb-btn" data-fmt="quote" title="인용">❝</button>
+        <button type="button" class="tb-btn" data-fmt="list" title="목록">☰</button>
+        <button type="button" class="tb-btn" data-fmt="link" title="링크">🔗</button>
+      </div>
+      <div class="tb-row">
+        <button type="button" class="tb-btn tb-media" id="tb-photo">📷 사진</button>
+        <button type="button" class="tb-btn tb-media" id="tb-video">🎬 동영상</button>
+        <button type="button" class="tb-btn tb-media" id="tb-extimg">🖼 외부이미지</button>
+        <button type="button" class="tb-btn tb-media" id="tb-embed">▶ 유튜브·임베드</button>
+        <button type="button" class="tb-btn tb-preview" id="tb-preview">👁 미리보기</button>
+      </div>
+    </div>
+    <div class="editor-body" id="editorBody">
+      <textarea id="plaza-body" placeholder="자유롭게 작성하세요. 사진·동영상·링크를 넣고, 이미지는 드래그하거나 붙여넣어 올릴 수 있어요." maxlength="10000"></textarea>
+      <div id="plaza-preview" class="plaza-preview" hidden></div>
+      <div id="plaza-drophint" class="plaza-drophint" hidden>여기에 놓아 업로드</div>
+    </div>
+    <div id="plaza-attach" class="plaza-attach" hidden></div>
+    <div class="char-counter"><span id="char-count">0</span> / 10,000</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePlazaWriteModal()">취소</button>
+      <button class="btn-submit" id="plaza-submit" disabled>등록하기</button>
+    </div>
+  </div>
+</div>
 
 <!-- 영상 재생 (공식 유튜브 플레이어 임베드) + 갈라 소셜 -->
 <div id="hv-player" class="hv-player hidden">
@@ -283,26 +376,32 @@
 </nav>
 
 <!-- 📸 지난 화면 즉시 복원(셸 모드) -->
-<script src="js/snapshot.js?v=072234"></script>
-<script src="./vendor/supabase.js?v=072234"></script>
-<script src="js/supabase.js?v=072234"></script>
-<script src="js/comment-actions.js?v=072234"></script>
-<script src="js/write-hub.js?v=072234"></script>
-<script src="js/dm.js?v=072234"></script>
-<script src="js/noti-icons.js?v=072234"></script>
-<script src="js/notifications.js?v=072234"></script>
-<script src="./js/search.js?v=072234"></script>
-<script src="./js/trend-tab-order.js?v=072234" defer></script>
-<script src="js/hot-videos.js?v=072234"></script>
-<script src="js/fx.js?v=072234"></script>
-<script src="js/follow.js?v=072234"></script>
-<script src="js/user-sheet.js?v=072234"></script>
-<script src="js/ghost.js?v=072234"></script>
-<script src="js/items.js?v=072234"></script>
-<script src="./js/nav.js?v=072234"></script>
-<script src="./js/desktop-pc.js?v=072234" defer></script>
-<script src="./js/nav-jog.js?v=072234" defer></script>
-<script src="./js/dm-call.js?v=072234" defer></script>
+<script src="js/snapshot.js?v=072235"></script>
+<script src="./vendor/supabase.js?v=072235"></script>
+<script src="js/supabase.js?v=072235"></script>
+<script src="js/comment-actions.js?v=072235"></script>
+<script src="js/write-hub.js?v=072235"></script>
+<script src="js/dm.js?v=072235"></script>
+<script src="js/noti-icons.js?v=072235"></script>
+<script src="js/notifications.js?v=072235"></script>
+<script src="./js/search.js?v=072235"></script>
+<!-- 광장(통합) — plaza.html에서 이관한 피드·글쓰기 엔진 -->
+<script src="js/plaza-render.js?v=072235"></script>
+<script src="js/share-sheet.js?v=072235"></script>
+<script src="js/report-block.js?v=072235"></script>
+<script type="module" src="js/plaza.js?v=072235"></script>
+<script src="js/composer-page.js?v=072235"></script>
+<script src="./js/trend-tab-order.js?v=072235" defer></script>
+<script src="js/hot-videos.js?v=072235"></script>
+<script src="js/fx.js?v=072235"></script>
+<script src="js/follow.js?v=072235"></script>
+<script src="js/user-sheet.js?v=072235"></script>
+<script src="js/ghost.js?v=072235"></script>
+<script src="js/items.js?v=072235"></script>
+<script src="./js/nav.js?v=072235"></script>
+<script src="./js/desktop-pc.js?v=072235" defer></script>
+<script src="./js/nav-jog.js?v=072235" defer></script>
+<script src="./js/dm-call.js?v=072235" defer></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {
@@ -313,9 +412,9 @@
 </script>
 
 </div>
-<script src="/js/analytics.js?v=072234"></script>
-<script src="js/duel-alert.js?v=072234"></script>
-<script src="js/bug-report.js?v=072234"></script>
-<script src="/js/pwa.js?v=072234"></script>
+<script src="/js/analytics.js?v=072235"></script>
+<script src="js/duel-alert.js?v=072235"></script>
+<script src="js/bug-report.js?v=072235"></script>
+<script src="/js/pwa.js?v=072235"></script>
 </body>
 </html>

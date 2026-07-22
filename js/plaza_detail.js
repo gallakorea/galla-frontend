@@ -228,7 +228,7 @@ async function fetchPostDetail() {
               if (patch.title != null && postTitleEl) postTitleEl.textContent = patch.title;
               if (patch.body != null && postContentEl) postContentEl.innerHTML = renderPostBody(patch.body);
             },
-            onDeleted: () => { location.href = "plaza.html"; },
+            onDeleted: () => { location.href = "search.html?tab=plaza"; },
           });
       });
     }

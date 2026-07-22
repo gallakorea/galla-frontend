@@ -1144,7 +1144,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } else if (qs.get("video")) {
     // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
     activateTab("hot", false);
-  } else if (["trending", "news", "hot"].includes(qs.get("tab"))) {
+  } else if (["trending", "news", "hot", "plaza"].includes(qs.get("tab"))) {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
   } else {

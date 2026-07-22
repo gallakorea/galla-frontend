@@ -8,7 +8,7 @@
   const ROUTE = {
     galla:   "write.html",
     predict: "galla-predict.html?compose=1",
-    plaza:   "plaza.html?compose=1",
+    plaza:   "search.html?tab=plaza&compose=1",
     report:  "report.html",
   };
 

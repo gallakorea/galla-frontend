@@ -75,7 +75,7 @@
     }
     if (type === 'galla')   location.href = 'write.html';
     if (type === 'predict') location.href = 'galla-predict.html?compose=1';
-    if (type === 'plaza')   location.href = 'plaza.html?compose=1';
+    if (type === 'plaza')   location.href = 'search.html?tab=plaza&compose=1';   // 광장은 트렌드로 통합(2026-07-22)
     if (type === 'report')  location.href = 'report.html';
   }
 

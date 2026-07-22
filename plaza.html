@@ -6,19 +6,28 @@
   <title>갈라 광장 · 찬반 없는 자유 토론·커뮤 핫이슈 | GALLA 갈라</title>
   <meta name="description" content="갈라 광장 — 찬반 없이 자유롭게 한 줄 던지고 댓글로 이어가는 커뮤니티. 오늘의 커뮤 핫이슈와 자유 토론을 실시간으로.">
   <meta name="keywords" content="갈라 광장, 자유 토론, 커뮤니티, 커뮤 핫이슈, 잡담, 익명 게시판, GALLA">
-  <link rel="canonical" href="https://galla.im/plaza.html">
+  <link rel="canonical" href="https://galla.im/search.html?tab=plaza">
+  <script>
+  /* 광장은 트렌드 페이지로 통합(2026-07-22). 이 파일은 검색엔진용 랜딩으로만 남고,
+     방문자는 통합 광장 패널로 즉시 이동한다(compose 등 쿼리 보존). */
+  (function () {
+    var q = new URLSearchParams(location.search);
+    q.set("tab", "plaza");
+    location.replace("search.html?" + q.toString());
+  })();
+  </script>
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="갈라 광장 · 찬반 없는 자유 토론"><meta property="og:description" content="한 줄 던지고 댓글로 이어가는 커뮤니티, 오늘의 커뮤 핫이슈."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/plaza.html">
 
   <!-- plaza 전용 CSS -->
-  <link rel="stylesheet" href="css/plaza.css?v=072234">
-  <link rel="stylesheet" href="./css/header.css?v=072234">
-  <link rel="stylesheet" href="./css/write-hub.css?v=072234">
-  <link rel="stylesheet" href="./css/dm.css?v=072234">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072234">
-  <link rel="stylesheet" href="./css/user-sheet.css?v=072234">
-  <link rel="stylesheet" href="./css/nav.css?v=072234">
-  <link rel="stylesheet" href="./css/trend-tabs.css?v=072234">
-  <link rel="stylesheet" href="./css/composer-page.css?v=072234">
+  <link rel="stylesheet" href="css/plaza.css?v=072235">
+  <link rel="stylesheet" href="./css/header.css?v=072235">
+  <link rel="stylesheet" href="./css/write-hub.css?v=072235">
+  <link rel="stylesheet" href="./css/dm.css?v=072235">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072235">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=072235">
+  <link rel="stylesheet" href="./css/nav.css?v=072235">
+  <link rel="stylesheet" href="./css/trend-tabs.css?v=072235">
+  <link rel="stylesheet" href="./css/composer-page.css?v=072235">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -28,10 +37,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072234">
-<link rel="stylesheet" href="css/desktop.css?v=072234">
+  <link rel="stylesheet" href="./css/theme.css?v=072235">
+<link rel="stylesheet" href="css/desktop.css?v=072235">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072234"></script>
+  <script src="/js/splash-boot.js?v=072235"></script>
 </head>
 
 <body data-page="trend">
@@ -227,29 +236,29 @@
   </nav>
 
 </div>
-<script src="./vendor/supabase.js?v=072234"></script>
-<script src="js/supabase.js?v=072234"></script>
-<script src="js/follow.js?v=072234"></script>
-<script src="js/plaza-render.js?v=072234"></script>
-<script src="js/write-hub.js?v=072234"></script>
-<script src="js/dm.js?v=072234"></script>
-<script src="js/noti-icons.js?v=072234"></script>
-<script src="js/notifications.js?v=072234"></script>
-<script src="js/ghost.js?v=072234"></script>
-<script src="js/user-sheet.js?v=072234"></script>
-<script src="js/share-sheet.js?v=072234"></script>
-<script src="js/report-block.js?v=072234"></script>
-<script type="module" src="js/plaza.js?v=072234"></script>
-<script src="js/composer-page.js?v=072234"></script>
-<script src="js/fx.js?v=072234"></script>
-<script src="js/nav.js?v=072234"></script>
-<script src="js/desktop-pc.js?v=072234" defer></script>
-<script src="js/nav-jog.js?v=072234" defer></script>
-<script src="js/trend-tab-order.js?v=072234" defer></script>
-<script src="js/dm-call.js?v=072234" defer></script>
-<script src="/js/analytics.js?v=072234"></script>
-<script src="js/duel-alert.js?v=072234"></script>
-<script src="js/bug-report.js?v=072234"></script>
-<script src="/js/pwa.js?v=072234"></script>
+<script src="./vendor/supabase.js?v=072235"></script>
+<script src="js/supabase.js?v=072235"></script>
+<script src="js/follow.js?v=072235"></script>
+<script src="js/plaza-render.js?v=072235"></script>
+<script src="js/write-hub.js?v=072235"></script>
+<script src="js/dm.js?v=072235"></script>
+<script src="js/noti-icons.js?v=072235"></script>
+<script src="js/notifications.js?v=072235"></script>
+<script src="js/ghost.js?v=072235"></script>
+<script src="js/user-sheet.js?v=072235"></script>
+<script src="js/share-sheet.js?v=072235"></script>
+<script src="js/report-block.js?v=072235"></script>
+<script type="module" src="js/plaza.js?v=072235"></script>
+<script src="js/composer-page.js?v=072235"></script>
+<script src="js/fx.js?v=072235"></script>
+<script src="js/nav.js?v=072235"></script>
+<script src="js/desktop-pc.js?v=072235" defer></script>
+<script src="js/nav-jog.js?v=072235" defer></script>
+<script src="js/trend-tab-order.js?v=072235" defer></script>
+<script src="js/dm-call.js?v=072235" defer></script>
+<script src="/js/analytics.js?v=072235"></script>
+<script src="js/duel-alert.js?v=072235"></script>
+<script src="js/bug-report.js?v=072235"></script>
+<script src="/js/pwa.js?v=072235"></script>
 </body>
 </html>
