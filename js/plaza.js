@@ -700,35 +700,30 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
     return;
   }
 
-  // 성공 처리
-  closePlazaWriteModal();
-
+  /* 성공 — 폼만 비우고, 모달 close(=composer history.back→create)는 '타지 않는다'.
+     대신 광장으로 직접 replace 이동. 그래야 create로 되돌아가지 않고 자기 글이 뜬
+     광장에 착지한다(사장님 QA). 이미 광장 탭이면 그대로 두고 목록만 갱신. */
   categorySelect.value = "";
   titleInput.value = "";
   charCount.textContent = "0";
   submitBtn.disabled = true;
-
   bodyInput.value = "";
   if (attachStrip) { attachStrip.hidden = true; attachStrip.innerHTML = ""; }
 
-  plazaToast("광장에 글을 올렸어요 🎉");          // 흰색 alert 대신 갈라 토스트
-
-  /* 발행 후 광장 목록으로 확실히 착지 — create 경유로 열렸으면 composer-page가
-     history.back(→create)로 되돌리므로, 그걸 이기려 replace로 광장 탭을 못박는다.
-     이미 광장 탭이 활성인 이 페이지(search.html)로 재진입하는 셈이라 자기 글이 맨 위에 보인다. */
-  fetchPlazaPosts();
-  goPlazaList();   // 즉시 반영(웹/단독)
-  setTimeout(() => {
-    try {
-      // create 경유로 열린 경우 composer가 history.back(→create)로 되돌린다 → 광장으로 못박음
-      const onPlazaNow = document.querySelector('.tab-panel.active')?.dataset.panel === 'plaza'
-        && /search/.test(location.pathname);
-      if (onPlazaNow) return;
-      const appEnv = /GallaApp/i.test(navigator.userAgent) ||
-        (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-      location.replace(appEnv ? 'app-shell.html?tab=trend&sub=plaza' : 'search.html?tab=plaza');
-    } catch (_) {}
-  }, 450);
+  const onPlazaAlready = document.querySelector('.tab-panel.active')?.dataset.panel === 'plaza'
+    && /search/.test(location.pathname);
+  if (onPlazaAlready) {
+    // 단독 트렌드 페이지에서 직접 쓴 경우 — 모달만 닫고 목록 갱신
+    closePlazaWriteModal();
+    plazaToast("광장에 글을 올렸어요 🎉");
+    fetchPlazaPosts();
+    return;
+  }
+  // create 경유(composer 전체화면) — history.back에 지지 않게 즉시 하드 이동
+  const appEnv = /GallaApp/i.test(navigator.userAgent) ||
+    (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  try { sessionStorage.setItem('galla_plaza_posted', '1'); } catch (_) {}   // 착지 후 토스트용
+  location.replace(appEnv ? 'app-shell.html?tab=trend&sub=plaza' : 'search.html?tab=plaza');
 });
 
 /* ── 갈라 톤 토스트 (네이티브 alert 대체) ── */
@@ -786,3 +781,11 @@ supabase
   .subscribe();
 
 fetchPlazaPosts();
+
+/* 광장 발행 후 이 화면으로 착지했으면 완료 토스트를 여기서 띄운다(이동 뒤라 확실히 보임) */
+try {
+  if (sessionStorage.getItem('galla_plaza_posted')) {
+    sessionStorage.removeItem('galla_plaza_posted');
+    setTimeout(() => plazaToast("광장에 글을 올렸어요 🎉"), 400);
+  }
+} catch (_) {}
