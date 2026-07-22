@@ -66,10 +66,14 @@
   // 아바타(프로필 사진) URL 해석: avatar_url은 'userid/avatar.jpg' 상대경로.
   // 없으면 기본 갈라 원형 아이콘. 전역 공용.
   window.GALLA_DEFAULT_AVATAR = "/assets/app-icons/profile-circle-128.png";
-  window.GALLA_avatarSrc = function (avatarUrl) {
+  window.GALLA_avatarSrc = function (avatarUrl, size) {
     if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR;
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
-    return `${SUPABASE_URL}/storage/v1/object/public/profiles/${avatarUrl}`;
+    /* 리사이즈 엔드포인트 경유 — 원본 아바타(≈1MB 실측)를 그대로 받으면
+       DM 목록 등에서 기본 이미지 → 사진 교체 깜빡임이 길어진다(사장님 재현).
+       96px 표시엔 128px(2x)이면 충분: 981KB→4KB 실측. */
+    var w = size || 128;
+    return `${SUPABASE_URL}/storage/v1/render/image/public/profiles/${avatarUrl}?width=${w}&height=${w}&resize=cover`;
   };
   // onerror 시 기본 아이콘으로 폴백하는 <img> 속성 문자열
   window.GALLA_avatarImg = function (avatarUrl, cls) {

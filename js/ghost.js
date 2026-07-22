@@ -55,7 +55,7 @@
   window.GALLA_avatarSrc = window.GALLA_avatarSrc || function (avatarUrl) {
     if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
-    return `https://bidqauputnhkqepvdzrr.supabase.co/storage/v1/object/public/profiles/${avatarUrl}`;
+    return `https://bidqauputnhkqepvdzrr.supabase.co/storage/v1/render/image/public/profiles/${avatarUrl}?width=128&height=128&resize=cover`; // 원본 1MB 방지
   };
   window.__GU_CACHE = window.__GU_CACHE || {};
   window.GALLA_userMap = async function (ids) {
