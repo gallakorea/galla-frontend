@@ -10,15 +10,15 @@
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="갈라 광장 · 찬반 없는 자유 토론"><meta property="og:description" content="한 줄 던지고 댓글로 이어가는 커뮤니티, 오늘의 커뮤 핫이슈."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/plaza.html">
 
   <!-- plaza 전용 CSS -->
-  <link rel="stylesheet" href="css/plaza.css?v=072233">
-  <link rel="stylesheet" href="./css/header.css?v=072233">
-  <link rel="stylesheet" href="./css/write-hub.css?v=072233">
-  <link rel="stylesheet" href="./css/dm.css?v=072233">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072233">
-  <link rel="stylesheet" href="./css/user-sheet.css?v=072233">
-  <link rel="stylesheet" href="./css/nav.css?v=072233">
-  <link rel="stylesheet" href="./css/trend-tabs.css?v=072233">
-  <link rel="stylesheet" href="./css/composer-page.css?v=072233">
+  <link rel="stylesheet" href="css/plaza.css?v=072234">
+  <link rel="stylesheet" href="./css/header.css?v=072234">
+  <link rel="stylesheet" href="./css/write-hub.css?v=072234">
+  <link rel="stylesheet" href="./css/dm.css?v=072234">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072234">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=072234">
+  <link rel="stylesheet" href="./css/nav.css?v=072234">
+  <link rel="stylesheet" href="./css/trend-tabs.css?v=072234">
+  <link rel="stylesheet" href="./css/composer-page.css?v=072234">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -28,10 +28,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072233">
-<link rel="stylesheet" href="css/desktop.css?v=072233">
+  <link rel="stylesheet" href="./css/theme.css?v=072234">
+<link rel="stylesheet" href="css/desktop.css?v=072234">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072233"></script>
+  <script src="/js/splash-boot.js?v=072234"></script>
 </head>
 
 <body data-page="trend">
@@ -44,33 +44,38 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
       </button>
       <img src="assets/logo.png" class="logo" onclick="location.href='index.html'" />
-      <button class="hdr-btn hdr-noti" id="hdrNoti" aria-label="알림">
+      <div class="hdr-right">
+        <button class="hdr-btn hdr-noti" id="hdrNoti" aria-label="알림">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
           <span class="noti-badge" id="notiBadge" hidden></span>
         </button>
+        <button class="hdr-btn hdr-taborder" id="hdrTabOrder" aria-label="탭 순서 편집">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="9" cy="7" r="1.6" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="9" cy="17" r="1.6" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
   <!-- 트렌드 허브 탭 — search.html의 탭과 동일 컴포넌트(광장 활성). 모양 수정 시 함께. -->
   <section class="trend-tabs-page">
   <div class="tabs-header">
-    <button type="button" class="tab-item" onclick="location.href='search.html'">
+    <button type="button" class="tab-item" data-tab="search" onclick="location.href='search.html'">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       검색
     </button>
-    <button type="button" class="tab-item" onclick="location.href='search.html?tab=trending'">
+    <button type="button" class="tab-item" data-tab="trending" onclick="location.href='search.html?tab=trending'">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-4-3-6-4.5-9.5C14 8 12.5 8.5 11 7 9 9 8.5 10.5 8.5 12c0 1-1 1.5-1.5 1-.7 1-2 2-2 2a7 7 0 0 0 7 7z"/></svg>
       핫트렌드
     </button>
-    <button type="button" class="tab-item" onclick="location.href='search.html?tab=news'">
+    <button type="button" class="tab-item" data-tab="news" onclick="location.href='search.html?tab=news'">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V18a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2V5.5z"/><path d="M16 9h2.5A1.5 1.5 0 0 1 20 10.5V18a2 2 0 0 1-2 2"/><path d="M7.5 8h5M7.5 11.5h5M7.5 15h3"/></svg>
       뉴스
     </button>
-    <button type="button" class="tab-item" onclick="location.href='search.html?tab=hot'">
+    <button type="button" class="tab-item" data-tab="hot" onclick="location.href='search.html?tab=hot'">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9.5l5 2.5-5 2.5v-5z"/></svg>
       핫튜브
     </button>
-    <button type="button" class="tab-item active">
+    <button type="button" class="tab-item active" data-tab="plaza">
       <svg class="tab-ic ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <svg class="tab-ic ic-color" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       광장
@@ -222,28 +227,29 @@
   </nav>
 
 </div>
-<script src="./vendor/supabase.js?v=072233"></script>
-<script src="js/supabase.js?v=072233"></script>
-<script src="js/follow.js?v=072233"></script>
-<script src="js/plaza-render.js?v=072233"></script>
-<script src="js/write-hub.js?v=072233"></script>
-<script src="js/dm.js?v=072233"></script>
-<script src="js/noti-icons.js?v=072233"></script>
-<script src="js/notifications.js?v=072233"></script>
-<script src="js/ghost.js?v=072233"></script>
-<script src="js/user-sheet.js?v=072233"></script>
-<script src="js/share-sheet.js?v=072233"></script>
-<script src="js/report-block.js?v=072233"></script>
-<script type="module" src="js/plaza.js?v=072233"></script>
-<script src="js/composer-page.js?v=072233"></script>
-<script src="js/fx.js?v=072233"></script>
-<script src="js/nav.js?v=072233"></script>
-<script src="js/desktop-pc.js?v=072233" defer></script>
-<script src="js/nav-jog.js?v=072233" defer></script>
-<script src="js/dm-call.js?v=072233" defer></script>
-<script src="/js/analytics.js?v=072233"></script>
-<script src="js/duel-alert.js?v=072233"></script>
-<script src="js/bug-report.js?v=072233"></script>
-<script src="/js/pwa.js?v=072233"></script>
+<script src="./vendor/supabase.js?v=072234"></script>
+<script src="js/supabase.js?v=072234"></script>
+<script src="js/follow.js?v=072234"></script>
+<script src="js/plaza-render.js?v=072234"></script>
+<script src="js/write-hub.js?v=072234"></script>
+<script src="js/dm.js?v=072234"></script>
+<script src="js/noti-icons.js?v=072234"></script>
+<script src="js/notifications.js?v=072234"></script>
+<script src="js/ghost.js?v=072234"></script>
+<script src="js/user-sheet.js?v=072234"></script>
+<script src="js/share-sheet.js?v=072234"></script>
+<script src="js/report-block.js?v=072234"></script>
+<script type="module" src="js/plaza.js?v=072234"></script>
+<script src="js/composer-page.js?v=072234"></script>
+<script src="js/fx.js?v=072234"></script>
+<script src="js/nav.js?v=072234"></script>
+<script src="js/desktop-pc.js?v=072234" defer></script>
+<script src="js/nav-jog.js?v=072234" defer></script>
+<script src="js/trend-tab-order.js?v=072234" defer></script>
+<script src="js/dm-call.js?v=072234" defer></script>
+<script src="/js/analytics.js?v=072234"></script>
+<script src="js/duel-alert.js?v=072234"></script>
+<script src="js/bug-report.js?v=072234"></script>
+<script src="/js/pwa.js?v=072234"></script>
 </body>
 </html>

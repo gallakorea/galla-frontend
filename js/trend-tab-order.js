@@ -14,7 +14,7 @@
     return (el.textContent || '').replace(/\s+/g, ' ').trim();
   }
 
-  // 저장된 순서를 실제 탭바에 반영
+  // 저장된 순서를 실제 탭바에 반영 (광장 포함 전 탭 대상)
   function restore() {
     const h = header(); if (!h) return;
     let saved; try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
@@ -22,7 +22,7 @@
     const items = [...h.querySelectorAll('.tab-item')];
     const byKey = Object.fromEntries(items.map(el => [el.dataset.tab, el]));
     saved.forEach(k => { if (byKey[k]) h.appendChild(byKey[k]); });
-    items.forEach(el => { if (!saved.includes(el.dataset.tab)) h.appendChild(el); });
+    items.forEach(el => { if (el.dataset.tab && !saved.includes(el.dataset.tab)) h.appendChild(el); });
   }
   function persist(order) { try { localStorage.setItem(KEY, JSON.stringify(order)); } catch (_) {} }
 
@@ -104,7 +104,7 @@
     document.querySelectorAll('.tabord-overlay').forEach(o => o.remove());
     overlay = null;
     css();
-    const items = [...h.querySelectorAll('.tab-item')];
+    const items = [...h.querySelectorAll('.tab-item')].filter(el => el.dataset.tab);
     const keys = items.map(el => el.dataset.tab);
     const labels = Object.fromEntries(items.map(el => [el.dataset.tab, label(el)]));
 
