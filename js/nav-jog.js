@@ -155,7 +155,17 @@
       if (ui) { const l = ui.layer; l.classList.remove('on'); setTimeout(() => l.remove(), 200); }
       document.body.style.overscrollBehavior = '';
       ui = null; picked = null;
+      unbindDoc();   // ⚠️ 문서 리스너를 반드시 함께 제거 — 안 하면 docTouchMove의
+                     // preventDefault가 남아 '조그 뒤 모든 제스처(트렌드 정렬 등)가
+                     // 막힘'(사장님 재현). 조그가 어떤 경로로 닫혀도 잔재 0.
     };
+    /* 홈 제스처 등으로 조그가 '열린 채' 멈추는 것 방지 — 손을 떼는 어떤 신호든
+       오면(문서 어디서든) 강제로 닫는다. 캡처 단계라 stuck 상태를 확실히 회수. */
+    const forceClose = () => { if (ui || docBound) clear(); };
+    document.addEventListener('pointerup', forceClose, true);
+    document.addEventListener('pointercancel', forceClose, true);
+    window.addEventListener('blur', forceClose);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) forceClose(); });
 
     /* 각도로 고른다 — 거리 원 안에 정확히 들어가야 하는 방식은 손이 조금만
        빗나가도 선택이 풀려 뚝뚝 끊긴다. 조그셔틀처럼 '방향'만 맞으면 잡힌다. */
