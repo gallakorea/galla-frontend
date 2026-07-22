@@ -71,10 +71,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 🐚 셸(iframe) 감지 — 스크롤 축소 신호·제스처를 셸로 중계할 때 사용
   const SHELL_MODE = (() => {
-    try { return window.top !== window.self && new URLSearchParams(location.search).has("shell"); }
-    catch (_) { return false; }
+    try { return window.top !== window.self && !!window.top.document.getElementById("shell-track"); }
+    catch (_) { return false; }   // 크로스오리진/샌드박스(미리보기 peek)면 여기로 — 셸 아님
   })();
   const postShell = (m) => { if (!SHELL_MODE) return; try { window.parent.postMessage(Object.assign({ galla: "shell" }, m), location.origin); } catch (_) {} };
+
+  if (SHELL_MODE) {
+    document.body.classList.add("in-shell");   // 상세 포함 모든 판 페이지: 자기 네비 숨김(셸 네비가 유일)
+    /* 다른 '탭'으로 가는 클릭 가로채기 — 상세 페이지에서도 동일 적용 */
+    const TAB_OF = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
+    const tabOfUrl = (u) => TAB_OF[(u || "").split("?")[0].split("#")[0].split("/").pop()] || null;
+    document.addEventListener("click", (e) => {
+      let tab = null;
+      const a = e.target.closest("a[href]");
+      if (a) tab = tabOfUrl(a.getAttribute("href"));
+      if (!tab) {
+        const o = e.target.closest("[onclick]");
+        if (o) { const oc = o.getAttribute("onclick") || ""; for (const k in TAB_OF) { if (oc.indexOf(k) !== -1) { tab = TAB_OF[k]; break; } } }
+      }
+      if (!tab) return;
+      e.preventDefault(); e.stopPropagation();
+      postShell({ t: "nav", tab });
+    }, true);
+  }
 
   const navItems = document.querySelectorAll(".nav-item");
 
@@ -275,10 +294,9 @@ document.addEventListener("DOMContentLoaded", () => {
        (?shell=1 + iframe일 때만. 단독 사용 시 기존 경로 그대로) */
     const IN_SHELL = SHELL_MODE;
     if (IN_SHELL && isTabRoot) {
-      document.body.classList.add("in-shell");     // 자기 네비 숨김(셸 네비가 담당)
       const post = postShell;
 
-      // 셸 → 판 명령 수신 (조그셔틀의 DM 탭 지정 등)
+      // 셸 → 판 명령 수신 (조그셔틀의 DM 탭 지정, 재탭 시 맨위로 등)
       window.addEventListener("message", (e) => {
         if (e.origin !== location.origin) return;
         const m = e.data;
@@ -286,27 +304,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (m.t === "dmtab" && m.tab) {
           const btn = document.querySelector(`.dm-tab[data-tab="${m.tab}"]`);
           if (btn) btn.click();
+        } else if (m.t === "scrolltop") {
+          smoothScrollTop();
         }
       });
-
-      /* 헤더 로고·바로가기(다른 '탭'으로 가는 클릭) 가로채기 —
-         그대로 두면 iframe 안에서 그 탭의 복사본이 열려 셸 네비와 어긋난다
-         (사장님 재현: 마이에서 로고 → 판은 인덱스, 네비는 마이).
-         캡처 단계에서 끊고 셸에 전환을 위임한다. 탭이 아닌 페이지(이슈 상세 등)는 그대로. */
-      const TAB_OF = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
-      const tabOfUrl = (u) => TAB_OF[(u || "").split("?")[0].split("#")[0].split("/").pop()] || null;
-      document.addEventListener("click", (e) => {
-        let tab = null;
-        const a = e.target.closest("a[href]");
-        if (a) tab = tabOfUrl(a.getAttribute("href"));
-        if (!tab) {
-          const o = e.target.closest("[onclick]");
-          if (o) { const oc = o.getAttribute("onclick") || ""; for (const k in TAB_OF) { if (oc.indexOf(k) !== -1) { tab = TAB_OF[k]; break; } } }
-        }
-        if (!tab) return;
-        e.preventDefault(); e.stopPropagation();   // 캡처 차단 — 인라인 onclick도 실행 전 정지
-        post({ t: "nav", tab });
-      }, true);
       let sx0 = 0, sy0 = 0, lock = 0, lastX = 0, lastT = 0, v = 0; // lock: 0 미정 1 수평 2 취소
       document.addEventListener("touchstart", (e) => {
         if (e.touches.length !== 1) { lock = 2; return; }
