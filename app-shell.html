@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072225&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072225">
-  <link rel="stylesheet" href="./css/nav.css?v=072225">
+  <script src="/js/splash-boot.js?v=072226&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072226">
+  <link rel="stylesheet" href="./css/nav.css?v=072226">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -95,12 +95,24 @@
     });
   }
 
+  // 비로그인 게이트 — DM은 로그인 필수. 세션 토큰 유무로 판별.
+  function isLoggedIn() {
+    try { return !!localStorage.getItem("sb-bidqauputnhkqepvdzrr-auth-token"); } catch (_) { return true; }
+  }
   function go(idx, anim = true) {
-    cur = Math.max(0, Math.min(ORDER.length - 1, idx));
+    idx = Math.max(0, Math.min(ORDER.length - 1, idx));
+    // DM 탭 진입인데 로그인 안 됐으면 → 로그인으로 (판 오염·prewarm 무관하게 전체화면)
+    if (ORDER[idx] === "dm" && !isLoggedIn()) { location.href = "login.html"; return; }
+    cur = idx;
     ensure(ORDER[cur]);
     place(baseX(), anim);
     paintNav();
     try { history.replaceState(null, "", "app-shell.html?tab=" + ORDER[cur]); } catch (_) {}
+    // DM 판이 활성화됐음을 알림 — 판이 로그인 벽 상태면 스스로 로그인으로 이동
+    if (ORDER[cur] === "dm") {
+      const f = panes.dm && panes.dm.querySelector("iframe");
+      if (f && f.contentWindow) { try { f.contentWindow.postMessage({ galla: "shellcmd", t: "active" }, location.origin); } catch (_) {} }
+    }
     // 이웃 선생성 — 다음 스와이프가 이미 살아있는 판으로 떨어지게
     setTimeout(() => { ensure(ORDER[cur + 1]); ensure(ORDER[cur - 1]); }, 600);
   }
@@ -230,6 +242,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072225" defer></script>
+<script src="./js/nav-jog.js?v=072226" defer></script>
 </body>
 </html>

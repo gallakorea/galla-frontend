@@ -4982,12 +4982,36 @@
   }
 
   function openLoggedOut() {
+    /* DM은 개인 메시지 — 비로그인 접근 차단(사장님 지시).
+       ⚠️ 셸은 DM 판을 백그라운드로 미리 로드(prewarm)하므로, 판 로드 시점에
+       무조건 로그인으로 튕기면 앱 열자마자 로그아웃 사용자가 로그인으로 끌려간다.
+       그래서 '이 판이 실제로 보여질 때'만 로그인으로 보낸다:
+       · 단독 페이지(dm.html 직접 진입) → 즉시 로그인
+       · 셸 판(iframe) → 화면에 보이는 순간(active) 로그인. 셸이 신호를 준다. */
+    const inShell = (() => { try { return window.top !== window.self; } catch (_) { return false; } })();
+    const toLogin = () => {
+      try { (inShell ? window.top : window).location.href = 'login.html'; }
+      catch (_) { location.href = 'login.html'; }
+    };
+    if (!inShell) { toLogin(); return; }   // 단독 진입 = 사용자가 직접 온 것 → 즉시
+
+    // 셸: 판이 활성(보임)되면 로그인으로. 우선 로그인 벽만 그려두고 대기.
     buildRoot();
     ROOT.classList.add('open');
     showView('inbox');
     ROOT.querySelector('#dm-inbox').innerHTML =
-      `<div class="dm-empty">로그인하면 메시지를 쓸 수 있어요.<br><br>
-        <button type="button" class="dm-login-cta" onclick="location.href='login.html'">로그인</button></div>`;
+      `<div class="dm-empty" style="padding:60px 24px;text-align:center">
+        <div style="font-size:34px;margin-bottom:12px">🔒</div>
+        <b style="display:block;font-size:16px;color:#fff;margin-bottom:6px">로그인이 필요해요</b>
+        <span style="font-size:13px;color:#9aa0ad;line-height:1.6">DM은 로그인한 사람만 쓸 수 있어요.</span><br><br>
+        <button type="button" class="dm-login-cta" onclick="(window.top||window).location.href='login.html'">로그인하기</button>
+      </div>`;
+    // 셸이 'DM 탭 활성' 신호를 주면 로그인으로. (백그라운드 prewarm 중엔 안 옴)
+    window.addEventListener('message', (e) => {
+      try { if (e.origin !== location.origin) return; } catch (_) {}
+      const m = e.data;
+      if (m && m.galla === 'shellcmd' && m.t === 'active' && !ME) toLogin();
+    });
   }
 
   // 네비 DM 탭이 있는 페이지는 호출 없이도 스스로 부팅 (기존 initDM 호출 페이지와 공존)
