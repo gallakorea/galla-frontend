@@ -44,7 +44,9 @@ async function openPlazaWriteModal() {
 window.openPlazaWriteModal = openPlazaWriteModal;
 // 통합 글쓰기 허브('광장' 선택) / ?compose=1 진입 시 모달 오픈
 window.__openComposeModal = openPlazaWriteModal;
+console.log("[QA-DBG] plaza init href=" + location.href + " top=" + (window.top===window.self ? "self":"iframe"));
 if (new URLSearchParams(location.search).get("compose") === "1") {
+  console.log("[QA-DBG] plaza AUTO-OPEN compose (compose=1 present)");
   setTimeout(openPlazaWriteModal, 60);
 }
 // 헤더 DM 버튼 초기화
