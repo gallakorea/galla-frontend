@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072257&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072257">
-  <link rel="stylesheet" href="./css/nav.css?v=072257">
+  <script src="/js/splash-boot.js?v=072258&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072258">
+  <link rel="stylesheet" href="./css/nav.css?v=072258">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -343,23 +343,12 @@
 
   // 부팅: 현재 탭 즉시 + 이웃 순차
   ensure(ORDER[cur]); go(cur, false);
-  // 서브탭 딥링크(?sub=) — 트렌드를 특정 탭(예: 광장)으로 열기(광장 발행 후 착지 등)
-  {
-    const sub = new URLSearchParams(location.search).get("sub");
-    if (sub && ORDER[cur] === "trend") {
-      const send = () => {
-        const f = panes.trend && panes.trend.querySelector("iframe");
-        if (f && f.contentWindow) f.contentWindow.postMessage({ galla: "shellcmd", t: "trendtab", tab: sub }, location.origin);
-      };
-      setTimeout(send, 1800);   // 판 로드 여유
-    }
-  }
   // 전 판 예열(느긋하게 순차) — 어느 탭을 눌러도 잭 없이 매끈한 슬라이드
   setTimeout(() => ORDER.forEach((t, i) => setTimeout(() => ensure(t), i * 400)), 1800);
   // 스플래시(wait=ready) 해제 신호
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072257" defer></script>
+<script src="./js/nav-jog.js?v=072258" defer></script>
 </body>
 </html>

@@ -716,9 +716,9 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const viaCreate = /[?&]compose=1\b/.test(location.search);
   if (viaCreate) {
     try { sessionStorage.setItem('galla_plaza_posted', '1'); } catch (_) {}
-    const appEnv = /GallaApp/i.test(navigator.userAgent) ||
-      (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    location.replace(appEnv ? 'app-shell.html?tab=trend&sub=plaza' : 'search.html?tab=plaza');
+    // 앱·웹 모두 광장 화면으로. (앱은 nav.js 자가복구가 셸 트렌드로 자연 착지 —
+    //  ?sub= 서브탭 주입은 트렌드 판에서 compose를 재유발하는 부작용이 있어 쓰지 않는다.)
+    location.replace('search.html?tab=plaza');
     return;
   }
   // 트렌드에서 바로 +로 쓴 경우 — 모달만 닫고 목록 갱신(이미 광장 화면)
