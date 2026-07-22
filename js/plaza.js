@@ -714,8 +714,12 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   plazaToast("광장에 글을 올렸어요 🎉");          // 흰색 alert 대신 갈라 토스트
 
   // 발행 후 광장 목록으로 — 자기 글이 뜬 곳을 바로 보게(create로 튀지 않게)
-  goPlazaList();
   fetchPlazaPosts();
+  if (!goPlazaList()) {
+    // 이 페이지에 광장 탭이 없으면(=create 경유로 열린 경우) 광장 패널로 확실히 이동.
+    // composer-page의 history.back(→create)에 덮이지 않게 replace로 못박는다.
+    setTimeout(() => { try { location.replace('search.html?tab=plaza'); } catch (_) {} }, 350);
+  }
 });
 
 /* ── 갈라 톤 토스트 (네이티브 alert 대체) ── */
@@ -736,13 +740,15 @@ function plazaToast(msg) {
   clearTimeout(t._h);
   t._h = setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(-50%) translateY(8px)"; }, 2200);
 }
-/* 광장 목록으로 — 트렌드 통합이라 광장 탭 활성화(단독 페이지면 무해) */
+/* 광장 목록으로 — 트렌드 통합이라 광장 탭 활성화. 이 페이지에 광장 탭이 있으면 true. */
 function goPlazaList() {
   try {
     const tab = document.querySelector('.tab-item[data-tab="plaza"]');
-    if (tab && window.GALLA_trendSetTab) { window.GALLA_trendSetTab("plaza"); return; }
-    if (tab) tab.click();
-  } catch (_) {}
+    if (!tab) return false;
+    if (window.GALLA_trendSetTab) window.GALLA_trendSetTab("plaza");
+    else tab.click();
+    return true;
+  } catch (_) { return false; }
 }
 
 /* =========================
