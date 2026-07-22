@@ -285,12 +285,13 @@ document.addEventListener("DOMContentLoaded", () => {
           if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { lock = 2; return; }   // 세로 스크롤 양보
           if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.4) return;           // 수평 의도 확정 전
           lock = 1;
+          sx0 = x;   // 잠금 지점부터 0으로 재시작 — 첫 프레임 14px 점프 제거(손가락 밀착감)
         }
         e.preventDefault();                                                              // 수평 확정 — 세로 잠금
         const now = performance.now();
         if (now - lastT > 0) v = (x - lastX) / (now - lastT);
         lastX = x; lastT = now;
-        post({ t: "drag", dx });
+        post({ t: "drag", dx: x - sx0 });   // 잠금 지점 기준 재계산 — 첫 이벤트 점프 방지
       }, { passive: false });
       const end = () => { if (lock === 1) post({ t: "end", dx: lastX - sx0, vel: v }); lock = 0; };
       document.addEventListener("touchend", end, { passive: true });
