@@ -169,6 +169,18 @@
     // 백그라운드 전환·창 이탈 시에도 확실히 회수
     window.addEventListener('blur', reset);
     document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
+    /* ★ 자가 복구 — 트렌드 판이 '다시 보일 때마다' 무조건 클린 상태로.
+       셸(capacitor 웹뷰)은 로그인 화면을 다녀와도 페이지를 리로드하지 않고
+       살아있는 채 재개하므로, 한 번 꼬인 잔재가 재설치 전까지 남았다(사장님 재현:
+       DM·마이페이지=로그인 경유 후 정렬 먹통). 복귀 신호마다 reset()으로 원천 차단. */
+    window.addEventListener('pageshow', reset);
+    window.addEventListener('focus', reset);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reset(); });
+    window.addEventListener('message', (e) => {
+      if (e.origin !== location.origin) return;
+      const m = e.data;
+      if (m && m.galla === 'shellcmd' && (m.t === 'active' || m.t === 'scrolltop')) reset();
+    });
     /* 정렬 중에만 문서 전체 touchmove 차단 — 이중 가드(drag AND 실제 .reordering
        DOM 존재)로, 만에 하나 drag가 남아도 문서를 영구 잠그지 않는다. */
     document.addEventListener('touchmove', (e) => {
