@@ -270,9 +270,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     // My 갈라 — 내가 만든 이슈
     // =====================================================
+    /* 탭 그리드 로딩 스피너 — 회색 텍스트 대신 갈라 톤 스피너(로드 완료까지 유지) */
+    const MP_SPINNER = `<div style="display:flex;align-items:center;justify-content:center;padding:64px 0">
+      <i style="width:28px;height:28px;border-radius:50%;border:2.5px solid rgba(255,255,255,.14);border-top-color:#6f86ff;display:block;animation:mpspin .7s linear infinite"></i>
+    </div><style>@keyframes mpspin{to{transform:rotate(360deg)}}</style>`;
+
     const renderMy = async () => {
         tabContent.className = "content-area";
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const { data: issues, error } = await supabase
             .from("issues")
@@ -324,7 +329,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Battle / Save / Favorite (아직 더미 유지)
     // =====================================================
     const renderBattle = async () => {
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         // 1) 내가 만든 원본 이슈 id 목록
         const { data: myIssues, error: myIssuesError } = await supabase
@@ -799,7 +804,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         // Save 갈라 = 저장한 이슈 (예측은 My 예측, 광장은 My 광장에서)
         const { data: ibm } = await supabase
@@ -888,7 +893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderPredict = async () => {
         tabContent.className = "content-area";
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const showSaved = isMyPage;
         if (!showSaved) predictSubTab = "mine";
@@ -970,7 +975,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const { data: bms, error: bmErr } = await supabase
             .from("galla_news_bookmarks")
@@ -1027,7 +1032,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderPlaza = async () => {
         tabContent.className = "content-area";
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         // 저장한 글은 본인 페이지에서만 (RLS도 본인만 조회 가능)
         const showSaved = isMyPage;
@@ -1106,7 +1111,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     const renderFollower = async () => {
         tabContent.className = "content-area";
-        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
+        if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const { data: follows, error: followError } = await supabase
             .from("follows")
