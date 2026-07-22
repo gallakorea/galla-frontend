@@ -336,6 +336,18 @@ document.addEventListener("DOMContentLoaded", () => {
       f.setAttribute("tabindex", "-1");
       f.style.display = "none";
       f.src = PAGE_URL[key];
+      /* 미리보기 본문 채우기 — sandbox라 목적지 JS(스냅샷 주입 포함)가 못 돌므로
+         부모가 직접 지난 콘텐츠 스냅샷(localStorage)을 넣어준다(같은 오리진 허용).
+         이게 없으면 미리보기가 '헤더만 있는 검은 카드'다(에뮬레이터 실측). */
+      f.addEventListener("load", () => {
+        try {
+          const SNAP_SLOT = { index: "best-list", predict: "marketList" };
+          const cid = SNAP_SLOT[key];
+          const c = cid && f.contentDocument && f.contentDocument.getElementById(cid);
+          const h = localStorage.getItem("galla_snap_" + key);
+          if (c && h) c.innerHTML = h;
+        } catch (_) {}
+      });
       pvFrames[key] = f;
       peek.appendChild(f);
     };
