@@ -1,16 +1,14 @@
 /* =========================================================
-   ↔️ 트렌드 탭 순서 바꾸기 — 탭을 꾹 누르면 들리고, 좌우로 끌어 놓는다
+   ↔️ 트렌드 탭 순서 바꾸기 — 편집 버튼 방식 (2026-07-22 재설계)
    ---------------------------------------------------------
-   · 짧게 누르면 평소대로 탭 전환(기존 동작 그대로)
-   · 450ms 꾹 → 정렬 모드: 탭이 살짝 떠오르고, 끌면 형제들이 비켜선다
-   · 놓으면 그 자리에 고정 + localStorage 저장 → 다음 방문에도 내 순서
-   · 조그셔틀에서 배운 것 그대로: 포인터 캡처(벗어나도 유지),
-     rAF 프레임당 1회 렌더, 취소돼도 즉시 죽지 않기
+   · 롱프레스 폐지 — 모바일 브라우저가 롱프레스를 '텍스트 선택'으로 가로채
+     iOS/안드로이드 모두에서 정렬이 안 됐다(사장님 실기기 재현).
+   · 대신 탭바 우측 끝 '편집(⇄)' 버튼 → 편집 모드: 탭이 흔들리며 드래그로 재배치
+     → 완료(✓) 버튼으로 저장·종료. (아이폰 홈화면 앱 정렬 방식)
+   · 편집 모드가 아닐 땐 탭이 평소처럼 전환만 됨 — 제스처 충돌 0.
    ========================================================= */
 (function () {
   const KEY = 'galla_trend_tab_order';
-  const HOLD_MS = 450;
-
   const header = () => document.querySelector('.tabs-header');
 
   /* ── 저장된 순서 복원 — 새 탭이 생겨도(저장 목록에 없어도) 뒤에 붙어 살아남는다 ── */
@@ -28,7 +26,7 @@
   function save() {
     const h = header();
     if (!h) return;
-    const order = [...h.querySelectorAll('.tab-item')].map(el => el.dataset.tab);
+    const order = [...h.querySelectorAll('.tab-item')].map(el => el.dataset.tab).filter(Boolean);
     try { localStorage.setItem(KEY, JSON.stringify(order)); } catch (_) {}
   }
 
@@ -37,33 +35,57 @@
     const s = document.createElement('style');
     s.id = 'tabord-css';
     s.textContent = `
-      .tabs-header, .tabs-header *{ -webkit-touch-callout:none !important; -webkit-user-select:none !important; user-select:none !important; -webkit-tap-highlight-color:transparent; }
-      .tabs-header .tab-item{ touch-action:pan-x; }
+      .tabs-header{ position:relative; padding-right:42px !important; }   /* 우측 버튼 자리 확보 — 탭은 그 아래로 스크롤 */
+      /* 편집 진입 버튼 — 탭바 우측에 떠서 항상 보임 */
+      .taborder-edit{
+        position:absolute; right:5px; top:50%; transform:translateY(-50%); z-index:6;
+        width:34px; height:34px; display:flex; align-items:center; justify-content:center;
+        border:none; border-radius:10px;
+        background:rgba(40,44,58,.96); box-shadow:-8px 0 12px rgba(10,10,14,.9);
+        color:#aeb4c2; cursor:pointer; -webkit-tap-highlight-color:transparent;
+      }
+      .taborder-edit:active{ background:rgba(60,66,86,.98); }
+      .tabs-header.reorder-mode .taborder-edit{ background:#4361ff; color:#fff; }
+      .taborder-edit:active{ background:rgba(255,255,255,.12); }
+      .taborder-edit svg{ width:18px; height:18px; }
+      .tabs-header.reorder-mode .taborder-edit{ background:#4361ff; color:#fff; }
+
+      /* 편집 모드: 탭이 흔들리고, 텍스트 선택 전면 차단 */
+      .tabs-header.reorder-mode .tab-item{
+        -webkit-user-select:none !important; user-select:none !important;
+        -webkit-touch-callout:none !important; touch-action:none;
+        animation:tabWiggle .4s ease-in-out infinite;
+      }
+      .tabs-header.reorder-mode .tab-item:nth-child(even){ animation-delay:.1s; }
+      @keyframes tabWiggle{ 0%,100%{transform:rotate(-1.4deg)} 50%{transform:rotate(1.4deg)} }
       .tab-item.reordering{
-        position:relative;z-index:5;opacity:.95;
-        transform:translateX(var(--drag-x,0)) scale(1.08);
+        position:relative; z-index:5; opacity:.96;
+        transform:translateX(var(--drag-x,0)) scale(1.1) !important;
+        animation:none !important;
         box-shadow:0 10px 26px rgba(0,0,0,.5);
-        border-radius:12px;background:rgba(40,44,58,.98)!important;
-        transition:none!important;
+        border-radius:12px; background:rgba(40,44,58,.98) !important;
+        transition:none !important;
       }
       .tabs-header.reorder-mode .tab-item:not(.reordering){
         transition:transform .18s cubic-bezier(.2,.9,.3,1);
       }
-      .tabs-header.reorder-mode{touch-action:none;overflow-x:hidden;}
-      .tabord-hint{
-        position:fixed;left:50%;transform:translateX(-50%);
-        top:calc(10px + env(safe-area-inset-top,0px));z-index:11500;
-        padding:8px 15px;border-radius:999px;
-        background:rgba(24,26,34,.96);border:1px solid rgba(255,255,255,.14);
-        color:#dfe3ec;font-size:12px;font-weight:800;
-        box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:none;
+      .taborder-hint{
+        position:fixed; left:50%; transform:translateX(-50%);
+        top:calc(10px + env(safe-area-inset-top,0px)); z-index:11500;
+        padding:8px 15px; border-radius:999px;
+        background:rgba(24,26,34,.96); border:1px solid rgba(255,255,255,.14);
+        color:#dfe3ec; font-size:12px; font-weight:800;
+        box-shadow:0 10px 30px rgba(0,0,0,.5); pointer-events:none;
       }
       @media (prefers-reduced-motion:reduce){
-        .tabs-header.reorder-mode .tab-item:not(.reordering){transition:none;}
+        .tabs-header.reorder-mode .tab-item{ animation:none; }
       }
     `;
     document.head.appendChild(s);
   }
+
+  const PEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg>';
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
 
   function boot() {
     const h = header();
@@ -71,36 +93,44 @@
     h.dataset.orderBound = '1';
     restore();
     css();
-    /* 길게 누르면 브라우저 '텍스트 선택'이 포인터를 가로채 홀드가 죽는다
-       (에뮬레이터 실증: 핫트렌드 글자가 파랗게 선택됨). 이벤트 레벨에서 원천 차단. */
-    h.addEventListener('selectstart', e => e.preventDefault());
-    h.addEventListener('contextmenu', e => e.preventDefault());
-    const clearSel = () => { try { const s = window.getSelection(); if (s && s.rangeCount) s.removeAllRanges(); } catch (_) {} };
-    h.addEventListener('touchstart', clearSel, { passive: true });
 
-    let holdT = null, drag = null, raf = 0, lastX = 0;
+    // 편집 버튼 주입
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'taborder-edit';
+    editBtn.setAttribute('aria-label', '탭 순서 편집');
+    editBtn.innerHTML = PEN;
+    h.appendChild(editBtn);
 
-    const hint = (t) => {
-      let el = document.querySelector('.tabord-hint');
+    let editing = false, drag = null, raf = 0, lastX = 0;
+
+    function hint(t) {
+      let el = document.querySelector('.taborder-hint');
       if (!t) { el?.remove(); return; }
-      if (!el) { el = document.createElement('div'); el.className = 'tabord-hint'; document.body.appendChild(el); }
+      if (!el) { el = document.createElement('div'); el.className = 'taborder-hint'; document.body.appendChild(el); }
       el.textContent = t;
-    };
+    }
 
-    const start = (el, x) => {
-      drag = { el, startX: x, baseLeft: el.getBoundingClientRect().left };
+    function enterEdit() {
+      editing = true;
       h.classList.add('reorder-mode');
-      el.classList.add('reordering');
-      hint('좌우로 끌어 순서를 바꾸고, 놓으면 저장돼요');
-      /* 페이지 좌우 스와이프는 '누르는 순간' 무장된다 — 정렬 모드가 열리는 시점엔
-         이미 드래그가 진행 중이라(조그셔틀과 동일) touchcancel로 확실히 끊는다 */
-      try { document.dispatchEvent(new TouchEvent('touchcancel', { bubbles: true })); }
-      catch (_) { document.dispatchEvent(new Event('touchcancel', { bubbles: true })); }
+      editBtn.innerHTML = CHECK;
+      hint('탭을 끌어 순서를 바꾸고, ✓ 를 눌러 저장하세요');
       try { navigator.vibrate?.(12); } catch (_) {}
-    };
+    }
+    function exitEdit() {
+      editing = false;
+      h.classList.remove('reorder-mode');
+      editBtn.innerHTML = PEN;
+      hint(null);
+      save();
+    }
+    editBtn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      editing ? exitEdit() : enterEdit();
+    });
 
-    /* 끄는 동안: 내 탭은 손을 따라가고, 가운데가 이웃의 가운데를 넘으면 자리를 바꾼다.
-       insertBefore로 실제 DOM을 옮기고 기준점을 다시 잡는다(장난감 sortable 문법). */
+    /* ── 편집 모드에서만 동작하는 드래그 정렬 ── */
     const render = () => {
       raf = 0;
       if (!drag) return;
@@ -112,78 +142,47 @@
         const r = sib.getBoundingClientRect();
         const c = r.left + r.width / 2;
         if (dx < 0 && mid < c && sib.compareDocumentPosition(drag.el) & Node.DOCUMENT_POSITION_FOLLOWING) {
-          h.insertBefore(drag.el, sib);
-          rebase();
-          try { navigator.vibrate?.(6); } catch (_) {}
-          break;
+          h.insertBefore(drag.el, sib); rebase(); try { navigator.vibrate?.(6); } catch (_) {} break;
         }
         if (dx > 0 && mid > c && sib.compareDocumentPosition(drag.el) & Node.DOCUMENT_POSITION_PRECEDING) {
-          h.insertBefore(drag.el, sib.nextSibling);
-          rebase();
-          try { navigator.vibrate?.(6); } catch (_) {}
-          break;
+          h.insertBefore(drag.el, sib.nextSibling); rebase(); try { navigator.vibrate?.(6); } catch (_) {} break;
         }
       }
     };
-    /* DOM을 옮긴 뒤엔 '지금 손 위치'가 새 0점 — 안 하면 탭이 순간이동한다 */
-    const rebase = () => {
-      drag.el.style.setProperty('--drag-x', '0px');
-      drag.startX = lastX;
-    };
+    const rebase = () => { drag.el.style.setProperty('--drag-x', '0px'); drag.startX = lastX; };
 
-    const end = (commit) => {
-      clearTimeout(holdT); holdT = null;
-      cancelAnimationFrame(raf); raf = 0;
-      hint(null);
-      if (!drag) return;
-      const el = drag.el;
-      el.classList.remove('reordering');
-      el.style.removeProperty('--drag-x');
-      h.classList.remove('reorder-mode');
-      drag = null;
-      if (commit) {
-        save();
-        el._skipClick = true;                 // 드래그 직후 따라오는 click이 탭을 전환시키지 않게
-        setTimeout(() => { el._skipClick = false; }, 350);
-      }
-    };
-
-    h.addEventListener('pointerdown', e => {
+    h.addEventListener('pointerdown', (e) => {
+      if (!editing) return;                       // 편집 모드에서만
       const el = e.target.closest('.tab-item');
       if (!el) return;
+      e.preventDefault();
+      try { el.setPointerCapture(e.pointerId); } catch (_) {}
       lastX = e.clientX;
-      clearTimeout(holdT);
-      holdT = setTimeout(() => {
-        try { el.setPointerCapture(e.pointerId); } catch (_) {}
-        start(el, lastX);
-      }, HOLD_MS);
+      drag = { el, startX: e.clientX };
+      el.classList.add('reordering');
     });
-
-    h.addEventListener('pointermove', e => {
+    h.addEventListener('pointermove', (e) => {
+      if (!drag) return;
       lastX = e.clientX;
-      if (!drag) {
-        /* 아직 정렬 모드 전 — 가로 스크롤·탭 넘김 의도면 홀드 취소 */
-        if (holdT && Math.abs(e.movementX) + Math.abs(e.movementY) > 8) { clearTimeout(holdT); holdT = null; }
-        return;
-      }
       e.preventDefault();
       if (!raf) raf = requestAnimationFrame(render);
     });
-
-    /* 정렬 중 문서 전체의 touchmove를 막는다 — 헤더 가로 스크롤과 페이지가
-       손가락을 따라 움직이면 탭을 놓을 자리를 못 잡는다 */
-    const blockTouch = e => { if (drag) e.preventDefault(); };
-    document.addEventListener('touchmove', blockTouch, { passive: false });
-
-    h.addEventListener('pointerup', () => end(true));
-    /* 브라우저가 제스처를 가져가도(스크롤 등) 저장까지는 해준다 — 작업을 날리는 게 최악 */
-    h.addEventListener('pointercancel', () => end(true));
-    h.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
-
-    /* 드래그 직후의 click 무효화 — 캡처 단계에서 가로챈다 */
-    h.addEventListener('click', e => {
-      const el = e.target.closest('.tab-item');
-      if (el?._skipClick) { e.preventDefault(); e.stopPropagation(); }
+    const endDrag = () => {
+      cancelAnimationFrame(raf); raf = 0;
+      if (!drag) return;
+      drag.el.classList.remove('reordering');
+      drag.el.style.removeProperty('--drag-x');
+      drag = null;
+      save();   // 실시간 저장 — ✓ 안 눌러도 안전
+    };
+    h.addEventListener('pointerup', endDrag);
+    h.addEventListener('pointercancel', endDrag);
+    // 편집 모드 중 텍스트 선택·컨텍스트 메뉴 원천 차단
+    h.addEventListener('selectstart', (e) => { if (editing) e.preventDefault(); });
+    h.addEventListener('contextmenu', (e) => { if (editing) e.preventDefault(); });
+    // 편집 모드에서 탭 클릭(전환) 차단 — 정렬 중 실수 전환 방지
+    h.addEventListener('click', (e) => {
+      if (editing && e.target.closest('.tab-item')) { e.preventDefault(); e.stopPropagation(); }
     }, true);
   }
 
