@@ -3231,7 +3231,7 @@
     if (MY_ROOMS.has(r.id)) {
       await loadRoomMsgs();
       attachRoom(r.id);
-      setTimeout(() => ROOT.querySelector('#dm-room-input')?.focus(), 50);
+      // 진입 시 자동 포커스 금지(카카오처럼) — 키보드가 미리 올라와 정렬이 깨졌다(사장님)
     }
   }
   /* 미참여 방: 메시지는 RLS가 막는다 — 주제 소개 + 뛰어들기 게이트 */
@@ -3607,7 +3607,7 @@
         type: p.type || 'link', id: p.id || null, title: p.title || '', thumb: p.thumb || null, url: p.url || null,
       }});
     }
-    setTimeout(() => ROOT.querySelector('#dm-input')?.focus(), 50);
+    // 진입 시 자동 포커스 금지(카카오처럼) — 키보드가 미리 올라와 정렬이 깨졌다(사장님)
   }
 
   function bubbleHTML(m) {

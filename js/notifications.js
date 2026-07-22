@@ -125,11 +125,22 @@
       counts[k] = (counts[k] || 0) + 1;
     });
     setBadge(rows.length);
+    LAST_COUNTS = rows.length ? counts : null;
     if (rows.length) renderPill(counts);
     else { const p = document.getElementById("notiPill"); if (p) p.hidden = true; }
   }
   // 알림 페이지에서 읽음 처리한 뒤 헤더를 즉시 갱신하려고 노출
   window.GALLA_notiRefresh = () => { if (ME) loadUnread(); };
+
+  /* 배너 통일 — 셸에서 탭에 '도착'할 때마다 같은 배너를 같은 방식으로 보여준다.
+     (판마다 로드 시점이 달라 배너가 백그라운드에서 이미 접혀 '페이지마다 다르게'
+     보였다: 사장님 재현. 도착 신호(shellcmd active)에 마지막 집계로 재표시) */
+  let LAST_COUNTS = null;
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin) return;
+    const m = e.data;
+    if (m && m.galla === "shellcmd" && m.t === "active" && LAST_COUNTS) renderPill(LAST_COUNTS);
+  });
 
   function subscribe() {
     if (CH) window.supabaseClient.removeChannel(CH);

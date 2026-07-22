@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072244&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072244">
-  <link rel="stylesheet" href="./css/nav.css?v=072244">
+  <script src="/js/splash-boot.js?v=072245&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072245">
+  <link rel="stylesheet" href="./css/nav.css?v=072245">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -155,6 +155,8 @@
     if (anim && tapFx && prev !== cur) glide(prev, wasReady);
     else place(baseX(), anim);
     paintNav();
+    // 탭이 바뀌면 네비 숨김 해제 — 새 활성 판이 dm-detail이면 active 신호에 스스로 다시 숨김
+    { const nv = document.querySelector(".nav"); if (nv && prev !== cur) nv.style.display = ""; }
     try { history.replaceState(null, "", "app-shell.html?tab=" + ORDER[cur]); } catch (_) {}
     // 활성 판에 '활성' 신호 — DM은 로그인 벽 상태면 스스로 로그인 이동, 트렌드는
     // 정렬 엔진이 이 신호로 잔재를 초기화(로그인 경유 뒤 먹통 방지, 사장님 재현).
@@ -215,6 +217,13 @@
       dragging = false; followStop(); place(baseX(), true); settleFeel();
     } else if (m.t === "nav") {
       const i = ORDER.indexOf(m.tab); if (i !== -1) goOrReset(i);
+    } else if (m.t === "navhide") {
+      // DM 상세(채팅방·난장)에선 네비 숨김 — 입력창이 네비에 가렸다(사장님).
+      // 활성 판의 신호만 반영(백그라운드 판이 숨기면 안 됨)
+      const act = panes[ORDER[cur]] && panes[ORDER[cur]].querySelector("iframe");
+      if (act && e.source === act.contentWindow) {
+        const nv = document.querySelector(".nav"); if (nv) nv.style.display = m.on ? "none" : "";
+      }
     } else if (m.t === "mini") {
       // 활성 판의 스크롤 신호만 반영 — 백그라운드 판 복원 신호에 흔들리지 않게
       const act = panes[ORDER[cur]] && panes[ORDER[cur]].querySelector("iframe");
@@ -329,6 +338,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072244" defer></script>
+<script src="./js/nav-jog.js?v=072245" defer></script>
 </body>
 </html>

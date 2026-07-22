@@ -47,6 +47,9 @@
       n.classList.remove("hdr-hidden", "hdr-nologo", "hdr-scrolled", "nav--mini");
     });
     stripBoundFlags(root);
+    // 알림 배너(pill)는 순간 UI — 박제되면 복원 화면에 낡은 배너가 리스너 없이
+    // 남아 '페이지마다 배너가 다르게' 보인다(사장님). 매 로드마다 새로 그린다.
+    root.querySelectorAll("#notiPill, .noti-pill").forEach(function (n) { n.remove(); });
   };
   /* ⚠️ '한 번만 바인딩' 플래그(data-*-bound)를 반드시 벗긴다 — 스냅샷에 박제되면
      복원된 DOM은 리스너가 없는데 플래그만 있어서 write-hub(+버튼)·조그·정렬이

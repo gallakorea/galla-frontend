@@ -344,6 +344,18 @@ document.addEventListener("DOMContentLoaded", () => {
     if (IN_SHELL && isTabRoot) {
       const post = postShell;
 
+      /* DM 상세(채팅방·난장·1:1)에선 셸 네비를 숨긴다 — 안 숨기면 입력창이
+         네비에 가려 안 보였다(사장님 재현). body.dm-detail 토글을 셸로 중계. */
+      const relayNavHide = () =>
+        post({ t: "navhide", on: document.body.classList.contains("dm-detail") });
+      new MutationObserver(relayNavHide)
+        .observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      window.addEventListener("message", (e) => {
+        if (e.origin !== location.origin) return;
+        const m = e.data;
+        if (m && m.galla === "shellcmd" && m.t === "active") relayNavHide();   // 탭 복귀 시 상태 재보고
+      });
+
       // 셸 → 판 명령 수신 (조그셔틀의 DM 탭 지정, 재탭 시 맨위로 등)
       window.addEventListener("message", (e) => {
         if (e.origin !== location.origin) return;
