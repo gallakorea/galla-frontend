@@ -1697,3 +1697,14 @@ body.kb-open .battle-input-bar {
 }
 @keyframes shatterScreen{ 0%{opacity:1} 100%{opacity:0} }
 @media (prefers-reduced-motion:reduce){ .shatter-screen{ display:none } }
+
+/* ═══ 전투 버튼 글자 잘림 방지(2026-07-23, 사장님 안드로이드) ═══
+   안드로이드 웹뷰 폰트 부스팅이 '참전'을 키워 두 줄로 접혀 잘렸다(아이폰은 정상).
+   줄바꿈 금지 + 부스팅 무력화 + 폭 여유. side-btn(진영 선택)도 같은 위험이라 함께. */
+.submit-btn, .side-btn, #battle-comment-submit {
+  white-space: nowrap;
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+  display: inline-flex; align-items: center; justify-content: center;
+  line-height: 1; letter-spacing: -0.2px;
+}
+#battle-comment-submit.submit-btn { max-width: none; min-width: 56px; padding: 0 16px; }
