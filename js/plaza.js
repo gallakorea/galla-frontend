@@ -713,13 +713,22 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
 
   plazaToast("광장에 글을 올렸어요 🎉");          // 흰색 alert 대신 갈라 토스트
 
-  // 발행 후 광장 목록으로 — 자기 글이 뜬 곳을 바로 보게(create로 튀지 않게)
+  /* 발행 후 광장 목록으로 확실히 착지 — create 경유로 열렸으면 composer-page가
+     history.back(→create)로 되돌리므로, 그걸 이기려 replace로 광장 탭을 못박는다.
+     이미 광장 탭이 활성인 이 페이지(search.html)로 재진입하는 셈이라 자기 글이 맨 위에 보인다. */
   fetchPlazaPosts();
-  if (!goPlazaList()) {
-    // 이 페이지에 광장 탭이 없으면(=create 경유로 열린 경우) 광장 패널로 확실히 이동.
-    // composer-page의 history.back(→create)에 덮이지 않게 replace로 못박는다.
-    setTimeout(() => { try { location.replace('search.html?tab=plaza'); } catch (_) {} }, 350);
-  }
+  goPlazaList();   // 즉시 반영(웹/단독)
+  setTimeout(() => {
+    try {
+      // create 경유로 열린 경우 composer가 history.back(→create)로 되돌린다 → 광장으로 못박음
+      const onPlazaNow = document.querySelector('.tab-panel.active')?.dataset.panel === 'plaza'
+        && /search/.test(location.pathname);
+      if (onPlazaNow) return;
+      const appEnv = /GallaApp/i.test(navigator.userAgent) ||
+        (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+      location.replace(appEnv ? 'app-shell.html?tab=trend&sub=plaza' : 'search.html?tab=plaza');
+    } catch (_) {}
+  }, 450);
 });
 
 /* ── 갈라 톤 토스트 (네이티브 alert 대체) ── */
