@@ -710,20 +710,11 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   bodyInput.value = "";
   if (attachStrip) { attachStrip.hidden = true; attachStrip.innerHTML = ""; }
 
-  /* create('새로 만들기') 경유로 열렸는지 = URL에 compose=1. 그 경우 composer가
-     닫힐 때 history.back(→create)로 되돌리므로, 모달을 닫지 말고 광장으로 직접 이동한다.
-     트렌드에서 바로 +로 쓴 경우(compose 없음)는 그냥 모달만 닫고 목록 갱신. */
-  const viaCreate = /[?&]compose=1\b/.test(location.search);
-  if (!viaCreate) {
-    closePlazaWriteModal();
-    plazaToast("광장에 글을 올렸어요 🎉");
-    fetchPlazaPosts();
-    return;
-  }
-  const appEnv = /GallaApp/i.test(navigator.userAgent) ||
-    (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-  try { sessionStorage.setItem('galla_plaza_posted', '1'); } catch (_) {}   // 착지 후 토스트용
-  location.replace(appEnv ? 'app-shell.html?tab=trend&sub=plaza' : 'search.html?tab=plaza');
+  /* 모달 닫고 완료 토스트 + 목록 갱신. (발행 후 강제 이동은 composer history·셸
+     상호작용으로 빈 모달 재등장 등 부작용이 있어 보류 — 토스트로 완료를 명확히 알린다.) */
+  closePlazaWriteModal();
+  plazaToast("광장에 글을 올렸어요 🎉");
+  fetchPlazaPosts();
 });
 
 /* ── 갈라 톤 토스트 (네이티브 alert 대체) ── */
