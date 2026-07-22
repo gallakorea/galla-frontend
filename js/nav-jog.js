@@ -161,9 +161,9 @@
     };
     /* 홈 제스처 등으로 조그가 '열린 채' 멈추는 것 방지 — 손을 떼는 어떤 신호든
        오면(문서 어디서든) 강제로 닫는다. 캡처 단계라 stuck 상태를 확실히 회수. */
+    /* 앱이 백그라운드로 갈 때만 안전 회수 — pointerup/pointercancel로는 절대 닫지
+       않는다(정상 종료는 finish가, iOS 홈 제스처의 잦은 취소는 무시가 원칙). */
     const forceClose = () => { if (ui || docBound) clear(); };
-    document.addEventListener('pointerup', forceClose, true);
-    document.addEventListener('pointercancel', forceClose, true);
     window.addEventListener('blur', forceClose);
     document.addEventListener('visibilitychange', () => { if (document.hidden) forceClose(); });
 
