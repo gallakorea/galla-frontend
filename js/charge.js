@@ -76,20 +76,65 @@
     sheet.querySelectorAll(".chg-pkg").forEach(b => b.addEventListener("click", () => begin(b.dataset.key)));
   }
   async function begin(key) {
+    window.BattleFX?.haptic?.("tap");
+    const isApp = window.GALLA_isApp && window.GALLA_isApp();
+    // 📱 앱: 스토어 인앱결제(IAP) — 애플/구글 정책상 앱 내 GP는 IAP 필수.
+    if (isApp) return beginIAP(key);
+    // 🌐 웹: PG 결제(토스 등) — 웹은 IAP 대상 아님. (PG 연동 스위치 대기)
+    return beginPG(key);
+  }
+
+  /* 인앱결제: 네이티브 결제 플러그인으로 구매 → 스토어 영수증 → verify-iap(서버 검증·지급).
+     ⚠️ 실제 결제 호출은 Capacitor IAP 플러그인이 앱에 포함돼야 동작(네이티브 빌드 과제).
+     플러그인이 없으면 안내만 — 클라가 임의로 GP를 지급할 방법은 없다(서버가 영수증으로만 지급). */
+  async function beginIAP(key) {
+    const IAP = window.CdvPurchase || (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.InAppPurchases);
+    if (!IAP) {
+      sheet.innerHTML = doneHTML("📱", "결제 준비 중",
+        "이 버전에는 인앱결제 모듈이 아직 포함되지 않았어요.<br>다음 앱 업데이트에서 충전이 열립니다.");
+      bindClose(); return;
+    }
+    try {
+      // 실제 결제 플로우(플러그인 계약에 맞춰 네이티브 확정 지점):
+      //   const receipt = await IAP.purchase(iosProductIdByKey(key));
+      //   const out = await window.GALLA_verifyPurchase('apple', { receipt, productId });
+      // 성공 시 out.ok → 지급 완료 토스트 + points-changed 이벤트.
+      sheet.innerHTML = doneHTML("📱", "결제 준비 중",
+        "인앱결제 연결은 다음 앱 빌드에서 활성화됩니다.");
+      bindClose();
+    } catch (e) {
+      sheet.innerHTML = doneHTML("⚠️", "결제 실패", "결제를 완료하지 못했어요. 다시 시도해 주세요.");
+      bindClose();
+    }
+  }
+
+  // 웹 PG: 서버에 pending 충전 생성. 실제 카드/간편결제는 PG(토스) 연동 스위치 후 즉시 지급.
+  async function beginPG(key) {
     const { data, error } = await sb().rpc("charge_begin", { p_key: key });
     if (error || !data?.ok) { alert("충전 준비에 실패했어요."); return; }
-    window.BattleFX?.haptic?.("tap");
-    sheet.innerHTML = `
-      <div class="chg-grip"></div>
-      <div class="chg-done">
-        <div class="ic">💳</div>
-        <h4>${gp(data.total)} 충전 준비 완료</h4>
-        <p>${won(data.krw)} 결제로 <b>${gp(data.total)}</b>가 충전됩니다.${data.first_charge ? "<br>🎉 첫 충전 +50% 보너스 포함!" : ""}<br>
-        카드·간편결제 연동이 완료되면 즉시 지급됩니다. <b>(PG 연동 예정)</b></p>
-      </div>
-      <button class="chg-close" id="chg-close">닫기</button>`;
-    sheet.querySelector("#chg-close").addEventListener("click", close);
+    sheet.innerHTML = doneHTML("💳", `${gp(data.total)} 충전 준비 완료`,
+      `${won(data.krw)} 결제로 <b>${gp(data.total)}</b>가 충전됩니다.${data.first_charge ? "<br>🎉 첫 충전 +50% 보너스 포함!" : ""}<br>카드·간편결제 연동이 완료되면 즉시 지급됩니다. <b>(PG 연동 예정)</b>`);
+    bindClose();
   }
+
+  // 스토어 영수증 검증 브리지 — 네이티브 결제 성공 후 호출(공용).
+  window.GALLA_verifyPurchase = async function (store, payload) {
+    const { data: s } = await sb().auth.getSession();
+    const token = s?.session?.access_token;
+    const res = await fetch(`${sb().supabaseUrl}/functions/v1/verify-iap`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, "apikey": sb().supabaseKey },
+      body: JSON.stringify({ store, ...(payload || {}) }),
+    });
+    const out = await res.json().catch(() => ({ ok: false }));
+    if (out.ok) document.dispatchEvent(new Event("galla:points-changed"));
+    return out;
+  };
+
+  function doneHTML(ic, title, body) {
+    return `<div class="chg-grip"></div><div class="chg-done"><div class="ic">${ic}</div><h4>${title}</h4><p>${body}</p></div><button class="chg-close" id="chg-close">닫기</button>`;
+  }
+  function bindClose() { sheet.querySelector("#chg-close")?.addEventListener("click", close); }
   function open() { dim.classList.add("open"); requestAnimationFrame(() => sheet.classList.add("open")); }
   function close() { sheet?.classList.remove("open"); dim?.classList.remove("open"); }
 
