@@ -321,7 +321,11 @@ document.addEventListener("DOMContentLoaded", () => {
       let sx0 = 0, sy0 = 0, lock = 0, lastX = 0, lastT = 0, v = 0; // lock: 0 미정 1 수평 2 취소
       document.addEventListener("touchstart", (e) => {
         if (e.touches.length !== 1) { lock = 2; return; }
-        lock = inHScroll(e.target) || overlayOpen() ? 2 : 0;
+        /* 탭바(.tabs-header) 위 제스처는 셸 스와이프에서 제외 — 트렌드 탭 롱프레스
+           정렬의 좌우 드래그를 탭 전환으로 오인해 충돌했다(사장님 재현: 셸/PWA/앱).
+           탭바 자체 정렬 엔진이 온전히 처리하게 양보한다. */
+        const onTabBar = !!(e.target.closest && e.target.closest(".tabs-header"));
+        lock = (onTabBar || inHScroll(e.target) || overlayOpen()) ? 2 : 0;
         sx0 = e.touches[0].clientX; sy0 = e.touches[0].clientY;
         lastX = sx0; lastT = performance.now(); v = 0;
       }, { passive: true });
