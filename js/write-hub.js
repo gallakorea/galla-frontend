@@ -151,19 +151,19 @@
     requestAnimationFrame(() => openSheet());
   };
 
-  /* 헤더 ＋ 버튼 → 쓰기 선택 '시트' (2026-07-22 확정)
-     ⚠️ 예전엔 여기서 create.html로 페이지 이동했는데, 셸에선 판이 글쓰기
-     선택 페이지로 오염되고(뒤로가기→홈, 그 탭 재방문 시 글쓰기 선택 화면),
-     index의 시트 바인딩과 겹쳐 '시트가 떴다 사라짐'까지 만들었다(사장님 재현).
-     시트가 유일한 진입점이고, 실제 이동은 go()가 셸 인식으로 처리한다. */
+  /* 헤더 ＋ 버튼 → '새로 만들기' 선택 페이지(create.html) (2026-07-23 사장님 확정)
+     모달/시트는 폐지 — ＋는 무조건 전체화면 선택 페이지로 간다.
+     ⚠️ 반드시 nav()(셸이면 최상위)로 — 판에서 이동하면 판이 오염되고
+     뒤로가기가 홈으로 튀었다(사장님 재현). 캡처 단계로 잡아 다른 페이지의
+     구식 시트 바인딩(index.js 등)보다 먼저 처리한다. */
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-write-hub], #hdrWrite').forEach(el => {
       if (el.dataset.whBound) return;
       el.dataset.whBound = '1';
       el.addEventListener('click', e => {
-        e.preventDefault(); e.stopPropagation();
-        window.openWriteHub(el.dataset.writeHub || 'galla');
-      });
+        e.preventDefault(); e.stopImmediatePropagation();   // 같은 버튼의 구식 시트 바인딩까지 차단
+        nav('create.html');
+      }, true);
     });
   });
 })();

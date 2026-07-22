@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072242&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072242">
-  <link rel="stylesheet" href="./css/nav.css?v=072242">
+  <script src="/js/splash-boot.js?v=072243&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072243">
+  <link rel="stylesheet" href="./css/nav.css?v=072243">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -36,6 +36,11 @@
     #shell-track.settle .shell-pane { transition: transform .3s cubic-bezier(.2,.8,.25,1); }
     #shell-track.settle .pane-scrim { transition: opacity .3s ease; }
     /* 셸 네비는 nav.css 그대로 사용 (트랙 밖 고정 — 전환 중에도 제자리) */
+    /* 활성 탭 글라이더 — 탭이 바뀔 때 표시점이 네비 바 안에서 좌우로 미끄러진다(사장님 주문) */
+    .nav-inner { position: relative; }
+    #nav-glider { position: absolute; top: 3px; left: 0; width: 16px; height: 3px; border-radius: 99px;
+      background: #6f86ff; box-shadow: 0 0 8px rgba(111,134,255,.8);
+      transition: transform .32s cubic-bezier(.22,.9,.3,1), opacity .2s ease; opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body data-page="shell">
@@ -93,6 +98,17 @@
       const img = it.querySelector("img");
       if (img && img.dataset.base) img.src = on ? img.dataset.active : img.dataset.base;
     });
+    // 글라이더 — 활성 탭 위 표시점이 좌우로 미끄러진다
+    const inner = document.querySelector(".nav-inner");
+    if (inner) {
+      let g = document.getElementById("nav-glider");
+      if (!g) { g = document.createElement("i"); g.id = "nav-glider"; inner.appendChild(g); }
+      const act = inner.querySelector('.nav-item[data-page="' + ORDER[cur] + '"]');
+      if (act) {
+        g.style.transform = "translateX(" + (act.offsetLeft + act.offsetWidth / 2 - 8) + "px)";
+        g.style.opacity = "1";
+      }
+    }
   }
 
   /* 마이페이지 아이콘 = 프로필 사진 — 판(nav.js)이 세션 확인 후 밀어주고,
@@ -313,6 +329,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072242" defer></script>
+<script src="./js/nav-jog.js?v=072243" defer></script>
 </body>
 </html>

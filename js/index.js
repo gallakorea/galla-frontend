@@ -757,9 +757,8 @@ function GALLA_signalReady() {
 
 /* 헤더: + 글쓰기(권한 게이팅) / ♥ 알림 */
 function initHeader() {
-    // + 글쓰기: 통합 허브(갈라/예측/광장 선택). 홈이므로 갈라 우선
-    document.getElementById('hdrWrite')?.addEventListener('click',
-        () => window.openWriteHub && window.openWriteHub('galla'));
+    // + 글쓰기: '새로 만들기' 선택 페이지로 (시트 폐지, 2026-07-23 사장님 확정).
+    // 실제 바인딩은 write-hub.js 공용(#hdrWrite→create.html, 셸이면 최상위)이 담당 — 여기선 중복 바인딩 금지.
     // ♥ 알림 클릭은 notifications.js가 바인딩
 }
 
