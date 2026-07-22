@@ -37,7 +37,8 @@
     const s = document.createElement('style');
     s.id = 'tabord-css';
     s.textContent = `
-      .tabs-header, .tabs-header *{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+      .tabs-header, .tabs-header *{ -webkit-touch-callout:none !important; -webkit-user-select:none !important; user-select:none !important; -webkit-tap-highlight-color:transparent; }
+      .tabs-header .tab-item{ touch-action:pan-x; }
       .tab-item.reordering{
         position:relative;z-index:5;opacity:.95;
         transform:translateX(var(--drag-x,0)) scale(1.08);
@@ -74,6 +75,8 @@
        (에뮬레이터 실증: 핫트렌드 글자가 파랗게 선택됨). 이벤트 레벨에서 원천 차단. */
     h.addEventListener('selectstart', e => e.preventDefault());
     h.addEventListener('contextmenu', e => e.preventDefault());
+    const clearSel = () => { try { const s = window.getSelection(); if (s && s.rangeCount) s.removeAllRanges(); } catch (_) {} };
+    h.addEventListener('touchstart', clearSel, { passive: true });
 
     let holdT = null, drag = null, raf = 0, lastX = 0;
 
