@@ -44,9 +44,7 @@ async function openPlazaWriteModal() {
 window.openPlazaWriteModal = openPlazaWriteModal;
 // 통합 글쓰기 허브('광장' 선택) / ?compose=1 진입 시 모달 오픈
 window.__openComposeModal = openPlazaWriteModal;
-console.log("[QA-DBG] plaza init href=" + location.href + " top=" + (window.top===window.self ? "self":"iframe"));
 if (new URLSearchParams(location.search).get("compose") === "1") {
-  console.log("[QA-DBG] plaza AUTO-OPEN compose (compose=1 present)");
   setTimeout(openPlazaWriteModal, 60);
 }
 // 헤더 DM 버튼 초기화
@@ -715,16 +713,14 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   /* 발행 후 광장 목록으로 착지. create('새로 만들기') 경유(URL compose=1)면 composer가
      닫힐 때 history.back(→create)로 되돌리므로, 모달을 닫지 말고 광장으로 직접 이동한다.
      완료 토스트는 sessionStorage 플래그로 착지 화면에서 띄운다. */
-  const viaCreate = /[?&]compose=1\b/.test(location.search);
-  if (viaCreate) {
-    try { sessionStorage.setItem('galla_plaza_posted', '1'); } catch (_) {}
-    // 앱·웹 모두 광장 화면으로. (앱은 nav.js 자가복구가 셸 트렌드로 자연 착지 —
-    //  ?sub= 서브탭 주입은 트렌드 판에서 compose를 재유발하는 부작용이 있어 쓰지 않는다.)
-    location.replace('search.html?tab=plaza');
-    return;
-  }
-  // 트렌드에서 바로 +로 쓴 경우 — 모달만 닫고 목록 갱신(이미 광장 화면)
+  /* 발행 성공 — 페이지 이동 없이 '뒤에 있는 광장 목록'을 노출한다(composer-page가
+     발행 닫기를 create 복귀 대신 그 자리 유지로 처리). compose=1 진입이든 인페이지든
+     동일하게 광장 탭을 활성화하고 목록만 갱신 → 자기 글이 맨 위에 뜬다. */
+  if (window.__composerStayOnPublish) window.__composerStayOnPublish();
   closePlazaWriteModal();
+  const tab = document.querySelector('.tab-item[data-tab="plaza"]');
+  if (tab && window.GALLA_trendSetTab) window.GALLA_trendSetTab('plaza');
+  else if (tab) tab.click();
   plazaToast("광장에 글을 올렸어요 🎉");
   fetchPlazaPosts();
 });

@@ -29,6 +29,11 @@
   let pushed = false;       // history 항목을 쌓았는지
   let pageMode = false;     // '이 페이지 자체가 작성화면'(?compose=1 진입) 인가
   let firstOpen = true;
+  let stayOnClose = false;  // 발행 성공 닫기 — 뒤로가기(create) 대신 '뒤에 있는 목록' 노출
+
+  /* 발행 성공 시 호출: 다음 닫기는 create로 되돌리지 말고 그 자리(목록)에 머문다.
+     compose=1로 들어와도 뒤에 이미 광장/예측 목록이 렌더돼 있어, 모달만 닫으면 목록이 보인다. */
+  window.__composerStayOnPublish = function () { stayOnClose = true; };
 
   // create.html → plaza/predict?compose=1 로 들어온 경우:
   //   이 페이지는 사실상 '작성 페이지'다. history를 더 쌓으면 뒤로가기가
@@ -91,6 +96,13 @@
     pageMode = false;
     document.body.classList.remove("composer-open");
 
+    // 발행 성공으로 닫힌 경우 — 뒤로가기/유형선택으로 이동하지 않고 그 자리(목록)에 머문다.
+    if (stayOnClose) {
+      stayOnClose = false;
+      // page mode였다면 history에 남은 항목을 조용히 정리(뒤로가기 눌러도 create 안 뜨게)
+      if (wasPushed && history.state && history.state.composer) { try { history.back(); } catch (_) {} }
+      return;
+    }
     // page mode에서 자체 버튼(취소/✕)으로 닫으면 피드가 아니라 유형 선택으로 돌아간다
     if (wasPageMode) { goBackToPicker(); return; }
     // 인페이지로 열었다가 자체 버튼으로 닫힌 경우, 쌓아둔 history 항목을 되돌린다
