@@ -131,7 +131,9 @@ body[data-page="mypage"] #app {
 .header-inner.header-3 > :last-child  { justify-self: end; }
 .header-inner.header-3 .logo { justify-self: center; }
 /* 로고 절대 중앙 고정(2026-07-22) — 페이지마다 좌우 버튼 개수·폭이 달라도
-   로고는 화면 정중앙 같은 자리(인덱스 기준). 그리드 흐름에서 빼서 강제한다. */
+   로고는 화면 정중앙 같은 자리(인덱스 기준). 그리드 흐름에서 빼서 강제한다.
+   ⚠️ 로고가 그리드에서 빠지면 남은 두 자식이 1·2번 칸으로 밀려 우측 버튼들이
+   가운데로 끌려온다(사장님 재현) — 좌우 칸을 명시적으로 못 박는다. */
 .header-inner.header-3 { position: relative; }
 .header-inner.header-3 > .logo,
 .header-inner.header-3 > .logo-link {
@@ -139,6 +141,8 @@ body[data-page="mypage"] #app {
   transform: translate(-50%, -50%);
   margin: 0;
 }
+.header-inner.header-3 > :first-child { grid-column: 1; grid-row: 1; justify-self: start; }
+.header-inner.header-3 > :last-child  { grid-column: 3; grid-row: 1; justify-self: end; }
 .hdr-btn {
   width: 40px; height: 40px; padding: 0;
   background: none; border: none; cursor: pointer; color: #fff;

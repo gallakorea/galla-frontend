@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072240&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072240">
-  <link rel="stylesheet" href="./css/nav.css?v=072240">
+  <script src="/js/splash-boot.js?v=072241&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072241">
+  <link rel="stylesheet" href="./css/nav.css?v=072241">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -125,13 +125,18 @@
     if (ORDER[idx] === "dm" && !isLoggedIn()) { location.href = "login.html"; return; }
     const prev = cur;
     cur = idx;
-    ensure(ORDER[cur]);
+    /* ⚠️ 목적지 판이 아직 없으면 iframe 생성이 메인스레드를 전환시간만큼 붙들어
+       슬라이드가 잭 뒤에서 이미 끝나 '순간이동'으로 보인다(사장님 재현: 모션 없음).
+       → 슬라이드부터 시작하고 판 생성은 살짝 뒤로 미룬다(스피너가 받친다). */
+    const wasReady = !!(panes[ORDER[cur]] && panes[ORDER[cur]].querySelector("iframe"));
+    if (wasReady || !anim) ensure(ORDER[cur]);
+    else setTimeout(() => ensure(ORDER[cur]), 90);
     /* 인스타식 탭 이동 모션 — 네비 '탭'으로 이동할 때도 스와이프와 같은
        좌우 슬라이드 + 들어오는 판 패럴랙스 + 나가는 판 스크림(사장님 주문).
        스와이프 커밋(tapFx=false)은 이미 feel()이 연출 중이라 중복 금지. */
     if (anim && tapFx && prev !== cur) {
       const dir = cur > prev ? 1 : -1;
-      const inP = panes[ORDER[cur]];
+      const inP = wasReady ? panes[ORDER[cur]] : null;   // 새 판이면 패럴랙스 생략(슬라이드만)
       if (inP) {
         inP.style.transition = "none";
         inP.style.transform = `translateX(${dir * 0.15 * W()}px)`;   // 15% 뒤에서 따라 들어옴
@@ -142,7 +147,8 @@
       if (sc) sc.style.opacity = "0.28";                              // 나가는 판은 살짝 어둡게
       // 멀리 갈수록 살짝 길게(1탭 0.31s ~ 4탭 0.45s) — 거리감이 느껴지는 속도
       track.style.transitionDuration = Math.min(0.45, 0.24 + 0.07 * Math.abs(cur - prev)) + "s";
-      requestAnimationFrame(() => settleFeel());
+      /* rAF 말고 동기 정리 — rAF가 밀리면 판이 15% 밀린 채 고착될 수 있다 */
+      settleFeel();
       setTimeout(() => { track.style.transitionDuration = ""; }, 520);
     }
     place(baseX(), anim);
@@ -280,10 +286,12 @@
 
   // 부팅: 현재 탭 즉시 + 이웃 순차
   ensure(ORDER[cur]); go(cur, false);
+  // 전 판 예열(느긋하게 순차) — 어느 탭을 눌러도 잭 없이 매끈한 슬라이드
+  setTimeout(() => ORDER.forEach((t, i) => setTimeout(() => ensure(t), i * 400)), 1800);
   // 스플래시(wait=ready) 해제 신호
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072240" defer></script>
+<script src="./js/nav-jog.js?v=072241" defer></script>
 </body>
 </html>
