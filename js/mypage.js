@@ -317,7 +317,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         issues.forEach((issue, myIdx) => {
             const firstImg = Array.isArray(issue.images) && issue.images.length ? issue.images[0] : null;
             tabContent.appendChild(igCard({
-                thumb: issue.card_thumb_url || issue.thumbnail_url || firstImg || null,
+                // 그리드용 썸네일: 영상 이슈는 스트림 전용 썸네일(25KB)을 우선 —
+                // card_thumb(원본 PNG 1~2MB)를 쓰면 27칸에 수십MB를 받아 '한참' 걸린다(실측)
+                thumb: (issue.video_url && /cloudflarestream/.test(issue.thumbnail_url || ""))
+                    ? issue.thumbnail_url + "?width=480&fit=crop"
+                    : (issue.card_thumb_url || issue.thumbnail_url || firstImg || null),
                 title: issue.title,
                 badge: issue.video_url ? "▶" : "",
                 onClick: () => openQvList(qvItems, myIdx)   // 이탈 금지 — 마이페이지 내 퀵뷰로 소비
