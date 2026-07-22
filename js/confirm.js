@@ -223,6 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       /* ---------- 완료 ---------- */
+      try { localStorage.removeItem('galla_write_textdraft'); } catch (_) {}   // 발행 성공 → 텍스트 임시저장 비움
       location.href = `issue.html?id=${published.id}`;
 
     } catch (err) {

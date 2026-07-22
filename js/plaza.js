@@ -695,13 +695,10 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
 
   if (error) {
     console.error("plaza insert error:", error);
-    alert("글 등록 중 오류가 발생했습니다.");
+    plazaToast("글 등록 중 오류가 발생했어요");   // 네이티브 alert → 갈라 토스트(다크톤)
     submitBtn.disabled = false;
     return;
   }
-
-  /* ✅⬇️ 바로 여기 */
-  alert("등록이 완료되었습니다.");
 
   // 성공 처리
   closePlazaWriteModal();
@@ -714,9 +711,39 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   bodyInput.value = "";
   if (attachStrip) { attachStrip.hidden = true; attachStrip.innerHTML = ""; }
 
-  // 리스트 즉시 갱신
+  plazaToast("광장에 글을 올렸어요 🎉");          // 흰색 alert 대신 갈라 토스트
+
+  // 발행 후 광장 목록으로 — 자기 글이 뜬 곳을 바로 보게(create로 튀지 않게)
+  goPlazaList();
   fetchPlazaPosts();
 });
+
+/* ── 갈라 톤 토스트 (네이티브 alert 대체) ── */
+function plazaToast(msg) {
+  let t = document.getElementById("plazaToast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "plazaToast";
+    t.style.cssText = "position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));" +
+      "transform:translateX(-50%) translateY(8px);z-index:2147483400;max-width:88vw;" +
+      "padding:12px 18px;border-radius:14px;background:rgba(24,26,34,.97);color:#fff;" +
+      "font-size:14px;font-weight:800;border:1px solid rgba(255,255,255,.12);" +
+      "box-shadow:0 12px 34px rgba(0,0,0,.55);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  requestAnimationFrame(() => { t.style.opacity = "1"; t.style.transform = "translateX(-50%) translateY(0)"; });
+  clearTimeout(t._h);
+  t._h = setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(-50%) translateY(8px)"; }, 2200);
+}
+/* 광장 목록으로 — 트렌드 통합이라 광장 탭 활성화(단독 페이지면 무해) */
+function goPlazaList() {
+  try {
+    const tab = document.querySelector('.tab-item[data-tab="plaza"]');
+    if (tab && window.GALLA_trendSetTab) { window.GALLA_trendSetTab("plaza"); return; }
+    if (tab) tab.click();
+  } catch (_) {}
+}
 
 /* =========================
    INIT

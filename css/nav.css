@@ -198,3 +198,14 @@ body.in-shell .nav { display: none !important; }
 /* 크로스페이드 연출은 끈다 — 스와이프의 슬라이드가 이미 전환 연출이고,
    스냅샷과 새 페이지 골격이 같아서 '즉시 교체'가 가장 이음새 없다 */
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+
+/* ═══ 작성 전용 전체화면 페이지는 하단 탭 네비 숨김(2026-07-23 QA 고도화) ═══
+   갈라 발제·광장·예측 생성·제보는 '만들기' 흐름이라 탭 네비가 있으면 어수선.
+   인스타처럼 작성 중엔 네비 없이 몰입 — 뒤로가기는 헤더 < 버튼. */
+body[data-page="create"] .nav,
+body[data-page="write"] .nav,
+body[data-page="report"] .nav { display: none !important; }
+/* 네비가 없으니 하단 여백도 회수(작성 버튼이 화면 끝까지) */
+body[data-page="create"] #app,
+body[data-page="write"] #app,
+body[data-page="report"] #app { padding-bottom: 0 !important; }

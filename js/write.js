@@ -19,6 +19,36 @@ document.addEventListener('DOMContentLoaded', () => {
   'input[name="authorStance"]'
 );
 
+  /* ✍️ 텍스트 자동 임시저장(2026-07-23 QA 고도화) — 실수로 뒤로가기 해도
+     제목·요약·카테고리·진영이름은 살아남는다. (미디어는 blob이라 복원 불가 — 재첨부 필요)
+     발행 성공 시 clearTextDraft()로 비운다. */
+  const TDKEY = 'galla_write_textdraft';
+  const _tdEls = () => ({
+    category: categoryEl?.value || '', title: titleEl?.value || '',
+    oneLine: oneLineEl?.value || '', description: descEl?.value || '',
+    factionA: document.getElementById('factionA')?.value || '',
+    factionB: document.getElementById('factionB')?.value || '',
+  });
+  const saveTextDraft = () => { try { localStorage.setItem(TDKEY, JSON.stringify(_tdEls())); } catch (_) {} };
+  window.clearTextDraft = () => { try { localStorage.removeItem(TDKEY); } catch (_) {} };
+  try {
+    const d = JSON.parse(localStorage.getItem(TDKEY) || 'null');
+    if (d && (d.title || d.oneLine || d.description)) {
+      if (categoryEl && d.category) categoryEl.value = d.category;
+      if (titleEl && d.title) titleEl.value = d.title;
+      if (oneLineEl && d.oneLine) oneLineEl.value = d.oneLine;
+      if (descEl && d.description) descEl.value = d.description;
+      const fa = document.getElementById('factionA'), fb = document.getElementById('factionB');
+      if (fa && d.factionA) fa.value = d.factionA;
+      if (fb && d.factionB) fb.value = d.factionB;
+    }
+  } catch (_) {}
+  ['input', 'change'].forEach(ev => {
+    [categoryEl, titleEl, oneLineEl, descEl,
+     document.getElementById('factionA'), document.getElementById('factionB')]
+      .forEach(el => el && el.addEventListener(ev, saveTextDraft));
+  });
+
   /* 🎬 핫영상 → '이걸로 갈라치기'로 넘어온 경우 제목·본문 미리 채우기.
      (유튜브 영상은 우리가 호스팅하지 않으므로 미디어는 직접 올려야 한다) */
   try {

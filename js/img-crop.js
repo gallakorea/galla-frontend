@@ -183,6 +183,12 @@
       zoomEl.value = '1';
       imgEl.src = img.src;
       countEl.textContent = total > 1 ? `${idx + 1} / ${total}` : '';
+      // 힌트 문구를 실제 비율에 맞게 — 정사각/세로 사진에도 '가로 사진이에요'라던 오문구 수정
+      const hintEl = modal.querySelector('.gc-hint');
+      if (hintEl) {
+        const kind = iw > ih ? '가로 사진이에요.' : (iw === ih ? '정사각형 사진이에요.' : '세로 사진이에요.');
+        hintEl.innerHTML = `${kind} 세로(4:5) 화면에 보여질 부분을<br>드래그하거나 확대해서 맞춰 주세요.`;
+      }
       layout();
     });
   }
