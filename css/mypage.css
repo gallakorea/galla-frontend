@@ -859,3 +859,15 @@ body{
 
 /* 팔로워 목록 등급 아이콘 */
 .ps-tier { margin-right: 5px; font-size: 13px; }
+
+/* =========================================================
+   그리드 로딩 쉬머 — cdn 이미지가 느릴 때 셀이 '검게 빈' 것처럼
+   보이던 문제(사장님 재현). 이미지가 덮기 전까지 은은한 스캔 애니메이션.
+   ========================================================= */
+.ig-card, .mp-row-th {
+  background: linear-gradient(110deg, #101014 8%, #1a1a22 18%, #101014 33%) #101014;
+  background-size: 220% 100%;
+  animation: igShimmer 1.5s linear infinite;
+}
+@keyframes igShimmer { to { background-position: -220% 0; } }
+@media (prefers-reduced-motion: reduce) { .ig-card, .mp-row-th { animation: none; } }
