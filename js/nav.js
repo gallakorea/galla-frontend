@@ -427,7 +427,19 @@ document.addEventListener("DOMContentLoaded", () => {
       requestAnimationFrame(() => { stage.style.transition = ""; peek.style.transition = ""; });
     });
 
+    let committing = false; // 커밋(이동 발동) 후 — 새 제스처가 끼어들지 못하게
+    window.addEventListener("pageshow", () => { committing = false; });
     document.addEventListener("touchstart", (e) => {
+      if (committing) { armed = false; return; }   // 이동 진행 중 — 중복 제스처 무시
+      /* 잔류 상태 청소 — 멀티터치·시스템 제스처로 끝맺음(touchend)이 유실되면
+         스테이지가 어중간히 밀린 채 남아 '멈춤'으로 보인다(사장님 재현).
+         새 제스처가 시작되는 순간 무전환으로 원위치시켜 항상 깨끗하게 출발. */
+      if (!locked && stage.style.transform) {
+        stage.style.transition = "none"; peek.style.transition = "none";
+        stage.style.transform = ""; peek.style.transform = "";
+        setDrag(false);
+        requestAnimationFrame(() => { stage.style.transition = ""; peek.style.transition = ""; });
+      }
       if (e.touches.length !== 1) { armed = false; return; }
       armed = !inHScroll(e.target) && !overlayOpen();
       locked = false; dir = 0; dxCur = 0; vel = 0;
@@ -498,7 +510,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // 페인트 홀딩이 다음 페이지 첫 페인트까지 유지 → 같은 골격끼리 이어져
         // 이음새가 사라진다. 애니메이션이 끝난 뒤(280ms) 이동해야 이 그림이 완성된다.
         const url = PAGE_URL[targetKey];
+        committing = true;
         setTimeout(() => { location.href = url; }, 280);
+        // 이동 재시도 세이프가드 — 첫 발동이 씹히거나 지연되면(느린 회선에서
+        // '중간에 멈춘' 것처럼 보였다) 아직 이 문서가 살아있을 때 한 번 더 민다
+        setTimeout(() => { if (!document.hidden && committing) location.href = url; }, 1600);
       } else {
         place(0);                                            // 쫀득한 스냅백
         setTimeout(reset, 280);
