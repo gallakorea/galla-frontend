@@ -41,10 +41,21 @@
     root.querySelectorAll("script").forEach(function (s) { s.remove(); });
     // 이전 스냅샷의 동봉 스타일도 제거 — 매 저장마다 신선하게 다시 수집
     root.querySelectorAll("style[data-snap-style]").forEach(function (s) { s.remove(); });
+    // 스크롤 중 일시 상태(로고 숨김·헤더 숨김·네비 축소)를 벗긴다 — 박제되면
+    // 복원 화면에서 로고가 숨은 채 시작해 '늦게 뜨는' 것처럼 보인다(사장님 재현)
+    root.querySelectorAll(".hdr-hidden, .hdr-nologo, .hdr-scrolled, .nav--mini").forEach(function (n) {
+      n.classList.remove("hdr-hidden", "hdr-nologo", "hdr-scrolled", "nav--mini");
+    });
   };
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (_) {}
   if (saved && saved.length >= CAP) saved = null;
+  // 복원 직후에도 일시 상태를 벗긴다 — 이미 저장돼 있는 구버전 스냅샷 구제
+  var stripTransient = function (root) {
+    root.querySelectorAll(".hdr-hidden, .hdr-nologo, .hdr-scrolled, .nav--mini").forEach(function (n) {
+      n.classList.remove("hdr-hidden", "hdr-nologo", "hdr-scrolled", "nav--mini");
+    });
+  };
 
   /* JS가 주입하는 스타일(<style> — 닉네임 도색·아바타 칩(.gu-av) 등)을 스냅샷에
      동봉한다. 없으면 재생 시점(스크립트 실행 전)에 아바타가 원본 크기로 터진다
@@ -82,7 +93,7 @@
   }
 
   if (cfg.mode === "shell") {
-    if (saved) el.innerHTML = saved;                              // 같은 골격·같은 id — JS가 그대로 바인딩·갱신
+    if (saved) { el.innerHTML = saved; stripTransient(el); }      // 같은 골격·같은 id — JS가 그대로 바인딩·갱신
     var saveShell = function () {
       if (!el.firstElementChild) return;
       var tmp = el.cloneNode(true); disarm(tmp); store(tmp.innerHTML);
