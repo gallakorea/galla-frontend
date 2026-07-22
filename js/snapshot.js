@@ -39,13 +39,27 @@
     // 컨테이너(#app)가 하단 <script> 태그들을 품는 페이지 대비 — 스냅샷에 남기면
     // 방문마다 무한 누적된다(innerHTML 주입 스크립트는 실행은 안 되지만 쌓임. 실측 +20/회)
     root.querySelectorAll("script").forEach(function (s) { s.remove(); });
+    // 이전 스냅샷의 동봉 스타일도 제거 — 매 저장마다 신선하게 다시 수집
+    root.querySelectorAll("style[data-snap-style]").forEach(function (s) { s.remove(); });
   };
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (_) {}
   if (saved && saved.length >= CAP) saved = null;
 
+  /* JS가 주입하는 스타일(<style> — 닉네임 도색·아바타 칩(.gu-av) 등)을 스냅샷에
+     동봉한다. 없으면 재생 시점(스크립트 실행 전)에 아바타가 원본 크기로 터진다
+     (사장님 재현: 미리보기에 갈라 아바타 512px). data-snap-style 마커로 동봉분을
+     구분해 다음 저장 때 이중 수집을 막는다. */
+  var collectCss = function () {
+    var out = [];
+    document.querySelectorAll("style:not([data-snap-style])").forEach(function (s) { out.push(s.textContent); });
+    return '<style data-snap-style>' + out.join("\n") + "</style>";
+  };
   var store = function (h) {
-    try { if (h && h.length < CAP) localStorage.setItem(KEY, h); } catch (_) {}
+    try {
+      h = collectCss() + h;
+      if (h && h.length < CAP) localStorage.setItem(KEY, h);
+    } catch (_) {}
   };
 
   if (cfg.mode === "replace") {
