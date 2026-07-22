@@ -259,6 +259,45 @@ document.addEventListener("DOMContentLoaded", () => {
     const curFile = norm(location.pathname.split("/").pop() || "index.html");
     const isTabRoot = curIdx !== -1 && norm(PAGE_URL[currentPage]) === curFile;
 
+    /* ═══════ 🐚 셸 모드 (app-shell.html 안 iframe) ═══════
+       탭 5개가 셸에 상주해 전환이 즉시다. 이 페이지는 자기 네비·스와이프 엔진을
+       끄고, 제스처를 셸(부모)로 중계만 한다 — 실제 트랙 이동·커밋은 셸이 수행.
+       (?shell=1 + iframe일 때만. 단독 사용 시 기존 경로 그대로) */
+    const IN_SHELL = (() => {
+      try { return window.top !== window.self && new URLSearchParams(location.search).has("shell"); }
+      catch (_) { return false; }
+    })();
+    if (IN_SHELL && isTabRoot) {
+      document.body.classList.add("in-shell");     // 자기 네비 숨김(셸 네비가 담당)
+      const post = (m) => { try { window.parent.postMessage(Object.assign({ galla: "shell" }, m), location.origin); } catch (_) {} };
+      let sx0 = 0, sy0 = 0, lock = 0, lastX = 0, lastT = 0, v = 0; // lock: 0 미정 1 수평 2 취소
+      document.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) { lock = 2; return; }
+        lock = inHScroll(e.target) || overlayOpen() ? 2 : 0;
+        sx0 = e.touches[0].clientX; sy0 = e.touches[0].clientY;
+        lastX = sx0; lastT = performance.now(); v = 0;
+      }, { passive: true });
+      document.addEventListener("touchmove", (e) => {
+        if (lock === 2 || e.touches.length !== 1) return;
+        const x = e.touches[0].clientX, y = e.touches[0].clientY;
+        const dx = x - sx0, dy = y - sy0;
+        if (!lock) {
+          if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { lock = 2; return; }   // 세로 스크롤 양보
+          if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.4) return;           // 수평 의도 확정 전
+          lock = 1;
+        }
+        e.preventDefault();                                                              // 수평 확정 — 세로 잠금
+        const now = performance.now();
+        if (now - lastT > 0) v = (x - lastX) / (now - lastT);
+        lastX = x; lastT = now;
+        post({ t: "drag", dx });
+      }, { passive: false });
+      const end = () => { if (lock === 1) post({ t: "end", dx: lastX - sx0, vel: v }); lock = 0; };
+      document.addEventListener("touchend", end, { passive: true });
+      document.addEventListener("touchcancel", () => { if (lock === 1) post({ t: "cancel" }); lock = 0; }, { passive: true });
+      return; // 자체 스와이프 엔진·미리보기 비활성
+    }
+
     if (!isTabRoot) {
       // 왼→오 스와이프 = 뒤로가기 (수평 의도 확정 시에만, 세로 스크롤/가로스크롤/모달 보호)
       let bx = 0, by = 0, bdx = 0, bArmed = false, bLock = 0; // bLock: 0 미정 · 1 수평확정 · 2 취소
