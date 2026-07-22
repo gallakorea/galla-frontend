@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     const renderMy = async () => {
         tabContent.className = "content-area";
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         const { data: issues, error } = await supabase
             .from("issues")
@@ -324,7 +324,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Battle / Save / Favorite (아직 더미 유지)
     // =====================================================
     const renderBattle = async () => {
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         // 1) 내가 만든 원본 이슈 id 목록
         const { data: myIssues, error: myIssuesError } = await supabase
@@ -799,7 +799,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         // Save 갈라 = 저장한 이슈 (예측은 My 예측, 광장은 My 광장에서)
         const { data: ibm } = await supabase
@@ -888,7 +888,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderPredict = async () => {
         tabContent.className = "content-area";
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         const showSaved = isMyPage;
         if (!showSaved) predictSubTab = "mine";
@@ -970,7 +970,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         const { data: bms, error: bmErr } = await supabase
             .from("galla_news_bookmarks")
@@ -1027,7 +1027,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const renderPlaza = async () => {
         tabContent.className = "content-area";
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         // 저장한 글은 본인 페이지에서만 (RLS도 본인만 조회 가능)
         const showSaved = isMyPage;
@@ -1106,7 +1106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     const renderFollower = async () => {
         tabContent.className = "content-area";
-        tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`;
+        if (!tabContent.firstElementChild) tabContent.innerHTML = `<div style="color:#777">불러오는 중...</div>`; // 스냅샷 표시 중엔 덮지 않음(깜빡임 방지)
 
         const { data: follows, error: followError } = await supabase
             .from("follows")

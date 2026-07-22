@@ -207,7 +207,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function showSource(src) {
     curSrc = src;
     document.querySelectorAll("#se-srcs .se-src").forEach(b => b.classList.toggle("on", b.dataset.src === src));
-    popularEl.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
+    // 스냅샷이 이미 떠 있으면 스피너로 덮지 않는다(깜빡임 방지) — 빈 상태에서만
+    if (!popularEl.firstElementChild) popularEl.innerHTML = `<p class="se-muted">불러오는 중…</p>`;
     const items = await fetchSource(src);
     if (curSrc === src) renderRank(items);   // 늦게 온 응답 무시
   }

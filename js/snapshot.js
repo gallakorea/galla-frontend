@@ -98,30 +98,45 @@
   var clearGhosts = function () {
     el.querySelectorAll("[data-snap-ghost]").forEach(function (n) { n.remove(); });
   };
+  var fadeOutGhosts = function () {
+    var gs = el.querySelectorAll("[data-snap-ghost]");
+    gs.forEach(function (n) { n.style.opacity = "0"; });
+    setTimeout(clearGhosts, 300);
+  };
   if (saved) {
     clearGhosts();                                  // 정적 스켈레톤 → 실물 잔상으로 대체
     var ghost = document.createElement("div");
     ghost.setAttribute("data-snap-ghost", "");
-    ghost.style.cssText = "pointer-events:none";
+    /* 오버레이로 '위에 겹쳐' 둔다 — 일반 블록으로 두면 진짜 UI가 아래에 쌓여
+       이중 화면이 되고, 일찍 걷으면 빈 목록이 노출돼 깜빡인다(사장님 재현).
+       진짜 목록이 채워질 때까지 덮고 있다가 페이드아웃. */
+    ghost.style.cssText = "position:absolute;inset:0;z-index:30;background:#0a0a0b;overflow:hidden;pointer-events:none;transition:opacity .25s ease";
     ghost.setAttribute("aria-hidden", "true");
     // id 전부 제거 — 진짜 UI가 뜰 때 getElementById 충돌이 절대 없어야 한다
     ghost.innerHTML = saved.replace(/\sid="[^"]*"/g, "");
     disarm(ghost);
+    if (!el.style.position) el.style.position = "relative";
     el.appendChild(ghost);
   }
   /* ⚠️ 잔상 걷어내기는 캐시 유무와 무관하게 '항상' 무장해야 한다 —
      캐시 있을 때만 걸었더니 첫 방문의 정적 스켈레톤이 영영 안 걷혀
-     진짜 채팅 UI 위에 이중으로 쌓였다(사장님 실기기 재현). */
-  var sweep = function () {
+     진짜 채팅 UI 위에 이중으로 쌓였다(사장님 실기기 재현).
+     · 캐시 잔상(오버레이): 진짜 목록에 내용이 찰 때까지 유지 후 페이드
+     · 정적 스켈레톤: 진짜 UI가 붙는 즉시 제거 */
+  var realReady = function () {
     for (var i = 0; i < el.children.length; i++) {
-      if (!el.children[i].hasAttribute("data-snap-ghost")) { clearGhosts(); return true; }
+      var c = el.children[i];
+      if (c.hasAttribute("data-snap-ghost")) continue;
+      if (!saved) return true;                                   // 스켈레톤은 UI 등장 즉시
+      if (c.querySelector(".dm-thread, .dm-empty, .dm-room, [data-snap-ready]")) return true;
     }
     return false;
   };
+  var sweep = function () { if (realReady()) { fadeOutGhosts(); return true; } return false; };
   if (!sweep()) {
     var gmo = new MutationObserver(function () { if (sweep()) gmo.disconnect(); });
-    gmo.observe(el, { childList: true });
-    setTimeout(clearGhosts, 15000); // 세이프가드 — 무슨 일이 있어도 잔상은 걷힌다
+    gmo.observe(el, { childList: true, subtree: true });
+    setTimeout(fadeOutGhosts, 8000); // 세이프가드 — 무슨 일이 있어도 잔상은 걷힌다
   }
   var saveGhost = function () {
     if (el.querySelector("[data-snap-ghost]")) return;            // 진짜 UI가 안 떴으면 저장 금지
