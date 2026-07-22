@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072245&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072245">
-  <link rel="stylesheet" href="./css/nav.css?v=072245">
+  <script src="/js/splash-boot.js?v=072246&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072246">
+  <link rel="stylesheet" href="./css/nav.css?v=072246">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -259,11 +259,18 @@
     let x0 = -prevIdx * W();
     try { x0 = new WebKitCSSMatrix(getComputedStyle(track).transform).m41 || x0; } catch (_) {}
     const x1 = baseX();
-    const durMs = Math.min(540, 260 + 70 * Math.abs(cur - prevIdx));
     const dir = x1 < x0 ? 1 : -1;                  // 1: 오른쪽 탭으로
     const inP = paneReady ? panes[ORDER[cur]] : null;    // 새 판이면 패럴랙스 생략
     const sc = panes[ORDER[prevIdx]] && panes[ORDER[prevIdx]].querySelector(".pane-scrim");
-    if (inP) inP.style.transition = "none";
+    /* 멀리 있는 탭도 '옆칸' 한 칸 슬라이드로 — 트랙을 실제 거리만큼 밀면 중간
+       판들(다른 탭·빈 검은판)이 주르륵 스쳐 지나가 지저분했다(에뮬레이터 프레임
+       검증). 인스타처럼: 목적지 판을 잠시 옆칸으로 끌어와 한 칸만 민 뒤,
+       끝나는 순간 진짜 위치로 스냅(화면상 동일)한다. */
+    const far = !!inP && Math.abs(cur - prevIdx) > 1;
+    const slotShift = far ? (prevIdx + dir - cur) * W() : 0;   // 목적지 판→옆칸 이동량
+    const xV = far ? -(prevIdx + dir) * W() : x1;              // 시각적 트랙 목표(한 칸)
+    const durMs = 330;
+    if (inP) { inP.style.transition = "none"; if (far) inP.style.zIndex = "3"; }
     if (sc) sc.style.transition = "none";
     const inFrom = dir * 0.15 * W();
     const t0 = performance.now();
@@ -271,14 +278,14 @@
     (function step(now) {
       if (id !== glideId) return;                  // 새 제스처/글라이드가 인계
       const p = Math.min(1, (now - t0) / durMs), e = ease(p);
-      track.style.transform = `translateX(${x0 + (x1 - x0) * e}px)`;
-      if (inP) inP.style.transform = `translateX(${inFrom * (1 - e)}px)`;
+      track.style.transform = `translateX(${x0 + (xV - x0) * e}px)`;
+      if (inP) inP.style.transform = `translateX(${slotShift + inFrom * (1 - e)}px)`;
       if (sc) sc.style.opacity = String(0.3 * (1 - e));
       if (p < 1) requestAnimationFrame(step);
       else {
-        if (inP) { inP.style.transform = ""; inP.style.transition = ""; }
+        if (inP) { inP.style.transform = ""; inP.style.transition = ""; inP.style.zIndex = ""; }
         if (sc) { sc.style.opacity = "0"; sc.style.transition = ""; }
-        place(x1, false);
+        place(x1, false);                          // 진짜 위치로 스냅 — 화면상 변화 없음
       }
     })(t0);
   }
@@ -338,6 +345,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072245" defer></script>
+<script src="./js/nav-jog.js?v=072246" defer></script>
 </body>
 </html>
