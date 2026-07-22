@@ -235,7 +235,9 @@ export async function initCommentSystem(issueId) {
   renderHonors();
   // 🛡 활성 보호막 반영 — 10분 만료라 주기적으로도 다시 읽는다(만료되면 배지가 사라져야 함)
   refreshShields();
-  setInterval(refreshShields, 60000);
+  // 재init 시 인터벌 중복 방지(실시간 리로드 등)
+  if (window.__shieldTimer) clearInterval(window.__shieldTimer);
+  window.__shieldTimer = setInterval(refreshShields, 60000);
 
   // 투표수가 (재)로드되면 전선 게이지의 '여론' 축을 즉시 반영
   if (!window.__GALLA_FRONTLINE_SYNC__) {

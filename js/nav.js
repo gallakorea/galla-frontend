@@ -346,8 +346,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       /* DM 상세(채팅방·난장·1:1)에선 셸 네비를 숨긴다 — 안 숨기면 입력창이
          네비에 가려 안 보였다(사장님 재현). body.dm-detail 토글을 셸로 중계. */
-      const relayNavHide = () =>
-        post({ t: "navhide", on: document.body.classList.contains("dm-detail") });
+      let lastNavHide = null;
+      const relayNavHide = () => {                 // dm-detail이 '바뀔 때만' 중계 —
+        const on = document.body.classList.contains("dm-detail");  // 스크롤 헤더축소 등
+        if (on === lastNavHide) return;            // 잦은 class 변경에 매번 쏘던 낭비 제거
+        lastNavHide = on; post({ t: "navhide", on });
+      };
       new MutationObserver(relayNavHide)
         .observe(document.body, { attributes: true, attributeFilter: ["class"] });
       window.addEventListener("message", (e) => {
