@@ -275,6 +275,8 @@
       setTimeout(() => { btn._skipClick = false; }, 400);
       const onDm = document.body.dataset.page === 'dm';
       if (onDm && window.GALLA_dmSetTab && tab) return window.GALLA_dmSetTab(tab);
+      // 셸 안이면 페이지 이동 대신 셸 전환(판 상주 유지)
+      if (window.GALLA_shellGo) { window.GALLA_shellGo('dm', tab || null); return; }
       location.href = 'dm.html' + (tab ? '?tab=' + tab : '');
     }
   }

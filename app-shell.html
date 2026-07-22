@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072210&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072210">
-  <link rel="stylesheet" href="./css/nav.css?v=072210">
+  <script src="/js/splash-boot.js?v=072211&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072211">
+  <link rel="stylesheet" href="./css/nav.css?v=072211">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -138,8 +138,29 @@
       dragging = false; followStop(); place(baseX(), true); settleFeel();
     } else if (m.t === "nav") {
       const i = ORDER.indexOf(m.tab); if (i !== -1) go(i);
+    } else if (m.t === "mini") {
+      // 활성 판의 스크롤 신호만 반영 — 백그라운드 판 복원 신호에 흔들리지 않게
+      const act = panes[ORDER[cur]] && panes[ORDER[cur]].querySelector("iframe");
+      if (act && e.source === act.contentWindow) {
+        document.querySelector(".nav").classList.toggle("nav--mini", !!m.on);
+      }
     }
   });
+
+  // 조그셔틀 등 외부 모듈용: 셸 방식 탭 전환(+DM 탭 지정)
+  window.GALLA_shellGo = function (tab, dmTab) {
+    const i = ORDER.indexOf(tab); if (i === -1) return;
+    const had = !!(panes[tab] && panes[tab].querySelector("iframe"));
+    go(i);
+    if (tab === "dm" && dmTab) {
+      const send = () => {
+        const f = panes.dm.querySelector("iframe");
+        if (f && f.contentWindow) f.contentWindow.postMessage({ galla: "shellcmd", t: "dmtab", tab: dmTab }, location.origin);
+      };
+      if (had) send();
+      else setTimeout(send, 2500);   // 새 판이면 로드 여유 후 전달
+    }
+  };
 
   /* 손가락 추종 보간 — 중계된 좌표를 그대로 찍으면 프레임이 계단으로 튄다
      ('막 끌려오는' 느낌의 원인, 사장님 표현). 매 프레임 목표의 42%씩 따라붙는
@@ -193,5 +214,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
+<script src="./js/nav-jog.js?v=072211" defer></script>
 </body>
 </html>

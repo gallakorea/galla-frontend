@@ -69,6 +69,13 @@
 document.addEventListener("DOMContentLoaded", () => {
   const currentPage = document.body.dataset.page;
 
+  // 🐚 셸(iframe) 감지 — 스크롤 축소 신호·제스처를 셸로 중계할 때 사용
+  const SHELL_MODE = (() => {
+    try { return window.top !== window.self && new URLSearchParams(location.search).has("shell"); }
+    catch (_) { return false; }
+  })();
+  const postShell = (m) => { if (!SHELL_MODE) return; try { window.parent.postMessage(Object.assign({ galla: "shell" }, m), location.origin); } catch (_) {} };
+
   const navItems = document.querySelectorAll(".nav-item");
 
   // 현재 탭 재탭 → 있던 위치에서 부드럽게 최상단으로 (거리 비례 duration, 최대 0.6s)
@@ -179,6 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const remember = () => { if (el) innerLast.set(el, y); else lastY = y; };
         if (y <= 10) {                           // 최상단: 원·로고숨김 해제 + 헤더 표시 + 네비 원래크기
           navEl && navEl.classList.remove("nav--mini");
+          postShell({ t: "mini", on: false });
           if (hdrEl) {
             hdrEl.classList.remove("hdr-scrolled");
             hdrEl.classList.remove("hdr-hidden");
@@ -196,9 +204,11 @@ document.addEventListener("DOMContentLoaded", () => {
           if (dy > 0 && y > 60) {                // 아래로 → 헤더 전체 숨김/네비 축소
             navEl && navEl.classList.add("nav--mini");
             hdrEl && hdrEl.classList.add("hdr-hidden");
+            postShell({ t: "mini", on: true });
           } else if (dy < 0) {                    // 위로 → 헤더 표시/네비 복원
             navEl && navEl.classList.remove("nav--mini");
             hdrEl && hdrEl.classList.remove("hdr-hidden");
+            postShell({ t: "mini", on: false });
           }
           remember();
         }
@@ -263,13 +273,21 @@ document.addEventListener("DOMContentLoaded", () => {
        탭 5개가 셸에 상주해 전환이 즉시다. 이 페이지는 자기 네비·스와이프 엔진을
        끄고, 제스처를 셸(부모)로 중계만 한다 — 실제 트랙 이동·커밋은 셸이 수행.
        (?shell=1 + iframe일 때만. 단독 사용 시 기존 경로 그대로) */
-    const IN_SHELL = (() => {
-      try { return window.top !== window.self && new URLSearchParams(location.search).has("shell"); }
-      catch (_) { return false; }
-    })();
+    const IN_SHELL = SHELL_MODE;
     if (IN_SHELL && isTabRoot) {
       document.body.classList.add("in-shell");     // 자기 네비 숨김(셸 네비가 담당)
-      const post = (m) => { try { window.parent.postMessage(Object.assign({ galla: "shell" }, m), location.origin); } catch (_) {} };
+      const post = postShell;
+
+      // 셸 → 판 명령 수신 (조그셔틀의 DM 탭 지정 등)
+      window.addEventListener("message", (e) => {
+        if (e.origin !== location.origin) return;
+        const m = e.data;
+        if (!m || m.galla !== "shellcmd") return;
+        if (m.t === "dmtab" && m.tab) {
+          const btn = document.querySelector(`.dm-tab[data-tab="${m.tab}"]`);
+          if (btn) btn.click();
+        }
+      });
 
       /* 헤더 로고·바로가기(다른 '탭'으로 가는 클릭) 가로채기 —
          그대로 두면 iframe 안에서 그 탭의 복사본이 열려 셸 네비와 어긋난다
@@ -298,6 +316,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }, { passive: true });
       document.addEventListener("touchmove", (e) => {
         if (lock === 2 || e.touches.length !== 1) return;
+        // 트렌드 탭 정렬·조그셔틀 등 자체 드래그 UI가 열려 있으면 전환 양보
+        if (document.querySelector(".tab-item.reordering") || document.getElementById("nav-jog")) { lock = 2; return; }
         const x = e.touches[0].clientX, y = e.touches[0].clientY;
         const dx = x - sx0, dy = y - sy0;
         if (!lock) {
