@@ -710,8 +710,18 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   bodyInput.value = "";
   if (attachStrip) { attachStrip.hidden = true; attachStrip.innerHTML = ""; }
 
-  /* 모달 닫고 완료 토스트 + 목록 갱신. (발행 후 강제 이동은 composer history·셸
-     상호작용으로 빈 모달 재등장 등 부작용이 있어 보류 — 토스트로 완료를 명확히 알린다.) */
+  /* 발행 후 광장 목록으로 착지. create('새로 만들기') 경유(URL compose=1)면 composer가
+     닫힐 때 history.back(→create)로 되돌리므로, 모달을 닫지 말고 광장으로 직접 이동한다.
+     완료 토스트는 sessionStorage 플래그로 착지 화면에서 띄운다. */
+  const viaCreate = /[?&]compose=1\b/.test(location.search);
+  if (viaCreate) {
+    try { sessionStorage.setItem('galla_plaza_posted', '1'); } catch (_) {}
+    const appEnv = /GallaApp/i.test(navigator.userAgent) ||
+      (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    location.replace(appEnv ? 'app-shell.html?tab=trend&sub=plaza' : 'search.html?tab=plaza');
+    return;
+  }
+  // 트렌드에서 바로 +로 쓴 경우 — 모달만 닫고 목록 갱신(이미 광장 화면)
   closePlazaWriteModal();
   plazaToast("광장에 글을 올렸어요 🎉");
   fetchPlazaPosts();
