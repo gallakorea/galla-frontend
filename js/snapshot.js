@@ -73,9 +73,37 @@
     } catch (_) {}
   };
 
+  /* 🌀 로딩 베일 — 지난 화면이 '없을 때'의 규칙(사장님 결정, 인스타 방식):
+     어중간하게 조립되는 과정을 보여주지 않고 갈라 스피너로 덮었다가
+     콘텐츠가 준비되면 페이드로 한 번에 공개한다. 스냅샷이 있으면 베일 없음.
+     네비(9999)보다 아래라 하단 네비는 계속 보인다. */
+  var unveil = null;
+  var veilOn = function (readyCheck, maxMs) {
+    var v = document.createElement("div");
+    v.style.cssText = "position:fixed;inset:0;z-index:9000;background:" +
+      "radial-gradient(120% 80% at 50% -10%,#14141a 0%,#0a0a0b 55%) #0a0a0b;" +
+      "display:flex;align-items:center;justify-content:center;transition:opacity .28s ease;pointer-events:none";
+    v.innerHTML = '<div style="width:30px;height:30px;border-radius:50%;border:2.5px solid rgba(255,255,255,.14);' +
+      'border-top-color:#6f86ff;animation:snapspin .7s linear infinite"></div>' +
+      "<style>@keyframes snapspin{to{transform:rotate(360deg)}}</style>";
+    (document.body || document.documentElement).appendChild(v);
+    unveil = function () {
+      if (!v.parentNode) return;
+      v.style.opacity = "0";
+      setTimeout(function () { v.remove(); }, 300);
+    };
+    if (readyCheck) {
+      var vmo = new MutationObserver(function () { if (readyCheck()) { vmo.disconnect(); unveil(); } });
+      vmo.observe(el, { childList: true, subtree: true });
+      if (readyCheck()) { vmo.disconnect(); unveil(); }
+    }
+    setTimeout(function () { unveil(); }, maxMs || 2800); // 세이프가드 — 베일이 화면을 잡아먹지 않게
+  };
+
   if (cfg.mode === "replace") {
     var injected = false;
     if (saved) { el.innerHTML = saved + '<i hidden ' + MARK + '></i>'; injected = true; }
+    else veilOn(function () { return el.firstElementChild && !el.querySelector(".sk-card"); }, 2800);
     var save = function () {
       if (el.querySelector("[" + MARK + "]")) return;            // 아직 스냅샷 그대로 — 재저장 무의미
       if (!el.firstElementChild || el.querySelector(".sk-card")) return;
@@ -94,6 +122,7 @@
 
   if (cfg.mode === "shell") {
     if (saved) { el.innerHTML = saved; stripTransient(el); }      // 같은 골격·같은 id — JS가 그대로 바인딩·갱신
+    else veilOn(null, 1400);                                       // 셸은 곧 그려지므로 짧게만 가림
     var saveShell = function () {
       if (!el.firstElementChild) return;
       var tmp = el.cloneNode(true); disarm(tmp); store(tmp.innerHTML);
