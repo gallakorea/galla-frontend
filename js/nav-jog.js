@@ -270,6 +270,25 @@
       document.removeEventListener('touchend', docEnd);
     }
 
+    /* 손가락이 실제로 붙어 있는지 — 포인터가 취소돼도 touch 이벤트로 계속 안다.
+       ⚠️ 안드로이드 웹뷰는 상태에 따라 롱프레스 도중 pointercancel을 던지는데,
+       예전엔 그게 홀드 타이머를 죽여 '조그가 아예 안 열림'(앱 재시작 전까지)이
+       됐다(사장님 재현: 페이지 왔다갔다 후 트렌드에서 DM·트렌드 조그 먹통). */
+    let touchOn = false;
+    btn.addEventListener('touchstart', () => { touchOn = true; }, { passive: true });
+    document.addEventListener('touchend', () => {
+      touchOn = false;
+      if (!ui && holdT) { clearTimeout(holdT); holdT = null; }   // 홀드 전 손 뗌 → 평소 탭
+    }, true);
+    document.addEventListener('touchcancel', () => { touchOn = false; }, true);
+    // 홀드 전 스크롤 의도(이동 14px+) — pointermove가 cancel로 끊겨도 touch로 감지
+    btn.addEventListener('touchmove', e => {
+      const t = e.touches[0];
+      if (!ui && holdT && t && Math.hypot(t.clientX - sx, t.clientY - sy) > 14) {
+        clearTimeout(holdT); holdT = null;
+      }
+    }, { passive: true });
+
     btn.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
       sx = e.clientX; sy = e.clientY;
@@ -299,9 +318,11 @@
       cfg.go(tab || null);
     }
     btn.addEventListener('pointerup', finish);
-    /* 취소가 와도 닫지 않는다 — iOS 홈 제스처 때문에 자주 온다.
-       문서 touch 이벤트가 계속 추적하고, 손을 뗄 때 확정된다. */
-    btn.addEventListener('pointercancel', () => { if (!ui) clear(); });
+    /* 취소가 와도 닫지 않는다 — iOS 홈 제스처·안드로이드 웹뷰가 자주 던진다.
+       ① 열린 뒤: 문서 touch 이벤트가 계속 추적, 손 뗄 때 확정.
+       ② 열리기 전: 손가락이 아직 붙어 있으면(touchOn) 홀드 타이머를 살려둔다 —
+          여기서 죽이면 '조그가 아예 안 열림'이 재발한다. 손 뗌은 touchend가 처리. */
+    btn.addEventListener('pointercancel', () => { if (!ui && !touchOn) clear(); });
     btn.addEventListener('contextmenu', e => { if (ui) e.preventDefault(); });
 
     btn.addEventListener('click', e => {
