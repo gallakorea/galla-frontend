@@ -151,7 +151,10 @@
        전엔 높이가 0이라 잔상이 안 보이다가, UI 등장 순간 갑자기 덮어 '깜빡'였다
        (사장님 재현 2차). fixed로 처음부터 화면을 덮고 목록이 차면 페이드아웃.
        z-index는 하단 네비(9999)보다 아래. */
-    ghost.style.cssText = "position:fixed;inset:0;z-index:8990;background:#0a0a0b;overflow:hidden;pointer-events:none;transition:opacity .25s ease";
+    /* top은 헤더(sticky 64px+세이프에어리어) 아래부터 — inset:0으로 화면 전체를
+       덮으면 잔상 내용이 헤더 자리에서 시작해 '헤더 없이 떴다가 밀려 내려가는'
+       점프가 된다(사장님 재현 3차). 실제 헤더는 정적 HTML이라 즉시 그려진다. */
+    ghost.style.cssText = "position:fixed;top:calc(64px + env(safe-area-inset-top,0px));left:0;right:0;bottom:0;z-index:8990;background:#0a0a0b;overflow:hidden;pointer-events:none;transition:opacity .25s ease";
     ghost.setAttribute("aria-hidden", "true");
     // id 전부 제거 — 진짜 UI가 뜰 때 getElementById 충돌이 절대 없어야 한다
     ghost.innerHTML = saved.replace(/\sid="[^"]*"/g, "");
