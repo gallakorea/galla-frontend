@@ -1306,19 +1306,25 @@ async function loadWarData(issueIds) {
 }
 
 function loadBest() {
-    bestList.innerHTML = '';
-    viewFeed.slice(0, 3).forEach(item => bestList.innerHTML += renderFeedItem(item));
+    /* ⚠️ innerHTML += 를 카드마다 반복하면 매번 컨테이너 전체가 재파싱돼
+       이미지가 카드 수만큼 다시 그려진다 = 깜빡임(사장님 재현. 스냅샷 캐시로
+       지난 화면이 먼저 떠 있으면 더 도드라짐). 문자열로 완성해 한 번에 심는다. */
+    const html = viewFeed.slice(0, 3).map(renderFeedItem).join('');
+    if (bestList.innerHTML !== html) bestList.innerHTML = html;
     attachEvents();
     pfObserveCards(bestList);
 }
 
 let rec = 3;
 function loadRecommend() {
+    // insertAdjacentHTML: 기존 카드를 재파싱하지 않고 뒤에만 붙는다(innerHTML += 는 전체 깜빡임)
+    let html = '';
     for (let i = 0; i < 3; i++) {
-        if (!viewFeed[rec]) return;
-        recommendList.innerHTML += renderFeedItem(viewFeed[rec]);
+        if (!viewFeed[rec]) break;
+        html += renderFeedItem(viewFeed[rec]);
         rec++;
     }
+    if (html) recommendList.insertAdjacentHTML('beforeend', html);
     attachEvents();
     pfObserveCards(recommendList);
 }
