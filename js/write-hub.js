@@ -47,10 +47,30 @@
         <div class="wh-list"></div>
       </div>`;
     document.body.appendChild(sheet);
-    const close = () => sheet.classList.remove('open');
-    sheet.querySelector('.wh-dim').addEventListener('click', close);
+    sheet.querySelector('.wh-dim').addEventListener('click', () => closeSheet());
     return sheet;
   }
+
+  /* ── 뒤로가기 = 시트 닫기 (히스토리 연동) ──
+     ⚠️ 없으면 안드로이드 뒤로가기가 앱 히스토리를 밀어 홈으로 튀고,
+     그 판엔 시트가 열린 채 남는다(사장님 재현). 열 때 상태를 쌓고
+     popstate에서 시트만 닫는다. UI로 닫을 땐 그 상태를 back()으로 소모. */
+  let histOpen = false;
+  function openSheet() {
+    sheet.classList.add('open');
+    if (!histOpen) {
+      histOpen = true;
+      try { history.pushState({ galla_wh: 1 }, ''); } catch (_) {}
+    }
+  }
+  function closeSheet(fromPop) {
+    sheet.classList.remove('open');
+    if (histOpen && !fromPop) { histOpen = false; try { history.back(); } catch (_) {} }
+    else histOpen = false;
+  }
+  window.addEventListener('popstate', () => {
+    if (sheet && sheet.classList.contains('open')) closeSheet(true);
+  });
 
   async function isAdmin() {
     try {
@@ -70,15 +90,19 @@
     if (window.top !== window.self) { try { window.top.location.href = url; return; } catch (_) {} }
     location.href = url;
   }
+  /* 이동 직전 시트 정리 — history.back()은 부르지 않는다(최상위 이동과 경합).
+     쌓인 상태는 무해한 셸 항목으로 남는다. */
+  function leaveSheet() { sheet.classList.remove('open'); histOpen = false; }
   function go(type, context) {
     const onPage =
       (type === 'predict' && context === 'predict') ||
       (type === 'plaza' && context === 'plaza');
     if (onPage && typeof window.__openComposeModal === 'function') {
-      sheet.classList.remove('open');
+      closeSheet();
       window.__openComposeModal();
       return;
     }
+    leaveSheet();
     if (type === 'galla')   nav('write.html');
     if (type === 'predict') nav('galla-predict.html?compose=1');
     if (type === 'plaza')   nav('search.html?tab=plaza&compose=1');   // 광장은 트렌드로 통합(2026-07-22)
@@ -124,17 +148,21 @@
       });
     });
 
-    requestAnimationFrame(() => sheet.classList.add('open'));
+    requestAnimationFrame(() => openSheet());
   };
 
-  // 헤더 ＋ 버튼 → 인스타식 '새로 만들기' 페이지로 이동 (바텀시트 대신)
-  //   유형 선택은 create.html 에서, 선택하면 그 유형의 작성 화면으로 라우팅한다.
-  //   (기존 openWriteHub 시트는 다른 호출처를 위해 남겨두되, ＋ 버튼은 페이지로 간다)
+  /* 헤더 ＋ 버튼 → 쓰기 선택 '시트' (2026-07-22 확정)
+     ⚠️ 예전엔 여기서 create.html로 페이지 이동했는데, 셸에선 판이 글쓰기
+     선택 페이지로 오염되고(뒤로가기→홈, 그 탭 재방문 시 글쓰기 선택 화면),
+     index의 시트 바인딩과 겹쳐 '시트가 떴다 사라짐'까지 만들었다(사장님 재현).
+     시트가 유일한 진입점이고, 실제 이동은 go()가 셸 인식으로 처리한다. */
   document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-write-hub], #hdrWrite').forEach(el => {
+      if (el.dataset.whBound) return;
+      el.dataset.whBound = '1';
       el.addEventListener('click', e => {
-        e.preventDefault();
-        location.href = 'create.html';
+        e.preventDefault(); e.stopPropagation();
+        window.openWriteHub(el.dataset.writeHub || 'galla');
       });
     });
   });

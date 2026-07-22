@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072241&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072241">
-  <link rel="stylesheet" href="./css/nav.css?v=072241">
+  <script src="/js/splash-boot.js?v=072242&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072242">
+  <link rel="stylesheet" href="./css/nav.css?v=072242">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -131,27 +131,13 @@
     const wasReady = !!(panes[ORDER[cur]] && panes[ORDER[cur]].querySelector("iframe"));
     if (wasReady || !anim) ensure(ORDER[cur]);
     else setTimeout(() => ensure(ORDER[cur]), 90);
-    /* 인스타식 탭 이동 모션 — 네비 '탭'으로 이동할 때도 스와이프와 같은
-       좌우 슬라이드 + 들어오는 판 패럴랙스 + 나가는 판 스크림(사장님 주문).
+    /* 인스타식 탭 이동 모션 — 네비 '탭'으로 이동할 때도 좌우 슬라이드 +
+       들어오는 판 패럴랙스 + 나가는 판 스크림(사장님 주문).
+       ⚠️ CSS transition은 이 기기 웹뷰에서 씹혔다(사장님 재현 2회) —
+       손가락 드래그와 같은 'JS 프레임 구동'으로 민다(드래그는 확실히 되므로).
        스와이프 커밋(tapFx=false)은 이미 feel()이 연출 중이라 중복 금지. */
-    if (anim && tapFx && prev !== cur) {
-      const dir = cur > prev ? 1 : -1;
-      const inP = wasReady ? panes[ORDER[cur]] : null;   // 새 판이면 패럴랙스 생략(슬라이드만)
-      if (inP) {
-        inP.style.transition = "none";
-        inP.style.transform = `translateX(${dir * 0.15 * W()}px)`;   // 15% 뒤에서 따라 들어옴
-        void inP.offsetWidth;
-        inP.style.transition = "";
-      }
-      const sc = panes[ORDER[prev]] && panes[ORDER[prev]].querySelector(".pane-scrim");
-      if (sc) sc.style.opacity = "0.28";                              // 나가는 판은 살짝 어둡게
-      // 멀리 갈수록 살짝 길게(1탭 0.31s ~ 4탭 0.45s) — 거리감이 느껴지는 속도
-      track.style.transitionDuration = Math.min(0.45, 0.24 + 0.07 * Math.abs(cur - prev)) + "s";
-      /* rAF 말고 동기 정리 — rAF가 밀리면 판이 15% 밀린 채 고착될 수 있다 */
-      settleFeel();
-      setTimeout(() => { track.style.transitionDuration = ""; }, 520);
-    }
-    place(baseX(), anim);
+    if (anim && tapFx && prev !== cur) glide(prev, wasReady);
+    else place(baseX(), anim);
     paintNav();
     try { history.replaceState(null, "", "app-shell.html?tab=" + ORDER[cur]); } catch (_) {}
     // 활성 판에 '활성' 신호 — DM은 로그인 벽 상태면 스스로 로그인 이동, 트렌드는
@@ -238,6 +224,40 @@
     }
   };
 
+  /* ── JS 슬라이드(glide) — 탭 전환 모션. 매 프레임 트랙·판·스크림을 직접 민다.
+     easeOutCubic, 거리 비례 시간(1탭 0.33s ~ 4탭 0.54s). */
+  let glideId = 0;
+  function glide(prevIdx, paneReady) {
+    const id = ++glideId;
+    fOn = false;                                   // 드래그 추종 루프와 배타
+    track.classList.remove("anim", "settle");
+    let x0 = -prevIdx * W();
+    try { x0 = new WebKitCSSMatrix(getComputedStyle(track).transform).m41 || x0; } catch (_) {}
+    const x1 = baseX();
+    const durMs = Math.min(540, 260 + 70 * Math.abs(cur - prevIdx));
+    const dir = x1 < x0 ? 1 : -1;                  // 1: 오른쪽 탭으로
+    const inP = paneReady ? panes[ORDER[cur]] : null;    // 새 판이면 패럴랙스 생략
+    const sc = panes[ORDER[prevIdx]] && panes[ORDER[prevIdx]].querySelector(".pane-scrim");
+    if (inP) inP.style.transition = "none";
+    if (sc) sc.style.transition = "none";
+    const inFrom = dir * 0.15 * W();
+    const t0 = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    (function step(now) {
+      if (id !== glideId) return;                  // 새 제스처/글라이드가 인계
+      const p = Math.min(1, (now - t0) / durMs), e = ease(p);
+      track.style.transform = `translateX(${x0 + (x1 - x0) * e}px)`;
+      if (inP) inP.style.transform = `translateX(${inFrom * (1 - e)}px)`;
+      if (sc) sc.style.opacity = String(0.3 * (1 - e));
+      if (p < 1) requestAnimationFrame(step);
+      else {
+        if (inP) { inP.style.transform = ""; inP.style.transition = ""; }
+        if (sc) { sc.style.opacity = "0"; sc.style.transition = ""; }
+        place(x1, false);
+      }
+    })(t0);
+  }
+
   /* 손가락 추종 보간 — 중계된 좌표를 그대로 찍으면 프레임이 계단으로 튄다
      ('막 끌려오는' 느낌의 원인, 사장님 표현). 매 프레임 목표의 42%씩 따라붙는
      스프링 추종으로 바꾸면 자연스러운 관성이 생긴다. */
@@ -246,6 +266,7 @@
     fTarget = px;
     if (!fOn) {
       fOn = true;
+      glideId++;                                   // 진행 중 글라이드 취소 — 손가락이 우선
       fCur = new WebKitCSSMatrix(getComputedStyle(track).transform).m41 || baseX();
       track.classList.remove("anim");
       (function loop() {
@@ -292,6 +313,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072241" defer></script>
+<script src="./js/nav-jog.js?v=072242" defer></script>
 </body>
 </html>
