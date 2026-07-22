@@ -118,32 +118,65 @@
       }
     };
 
+    let pid = null;   // 추적 중인 포인터 id — 다른 손가락 이벤트 무시
+    /* 어떤 경로로든(탭 오가며 끊김·홈제스처·앱전환) 남은 상태를 완전 회수.
+       ⚠️ 이걸 안 하면 holdT가 손 뗀 뒤 늦게 발화 → drag가 '열린 채' 고정 →
+       아래 document touchmove preventDefault가 문서 전체 스와이프를 영구히
+       막아 '탭 오가면 정렬·전환 다 먹통'이 됐다(사장님 재현). */
+    const reset = () => {
+      clearTimeout(holdT); holdT = null;
+      cancelAnimationFrame(raf); raf = 0;
+      pid = null;
+      if (drag) end(false);
+      // 잔재 클래스/힌트 방어적 제거 (drag가 이미 null이어도)
+      h.classList.remove('reorder-mode');
+      h.querySelectorAll('.tab-item.reordering').forEach(el => {
+        el.classList.remove('reordering'); el.style.removeProperty('--drag-x');
+      });
+      hint(null);
+    };
+
     h.addEventListener('pointerdown', (e) => {
       const el = e.target.closest('.tab-item');
       if (!el) return;
+      reset();                       // 시작 전 항상 클린 슬레이트
+      pid = e.pointerId;
       lastX = e.clientX;
-      clearTimeout(holdT);
       holdT = setTimeout(() => {
-        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        try { el.setPointerCapture(pid); } catch (_) {}
         start(el, lastX);
       }, HOLD_MS);
     });
-    h.addEventListener('pointermove', (e) => {
+    // 이동·해제는 문서 레벨에서 — 손가락이 탭바를 벗어나도 놓치지 않는다
+    const onMove = (e) => {
+      if (pid !== null && e.pointerId !== pid) return;
       lastX = e.clientX;
       if (!drag) {
-        if (holdT && Math.abs(e.movementX) + Math.abs(e.movementY) > 8) { clearTimeout(holdT); holdT = null; }
+        if (holdT && Math.abs(e.movementX) + Math.abs(e.movementY) > 8) { clearTimeout(holdT); holdT = null; pid = null; }
         return;
       }
       e.preventDefault();
       if (!raf) raf = requestAnimationFrame(render);
-    });
-    // 정렬 중 문서 전체 touchmove·선택 차단
-    document.addEventListener('touchmove', (e) => { if (drag) e.preventDefault(); }, { passive: false });
+    };
+    const onUp = (e) => {
+      if (pid !== null && e.pointerId !== pid && e.type !== 'lostpointercapture') return;
+      if (drag) end(true); else reset();
+    };
+    document.addEventListener('pointermove', onMove, { passive: false });
+    document.addEventListener('pointerup', onUp, true);
+    document.addEventListener('pointercancel', onUp, true);
+    document.addEventListener('lostpointercapture', onUp, true);
+    // 백그라운드 전환·창 이탈 시에도 확실히 회수
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
+    /* 정렬 중에만 문서 전체 touchmove 차단 — 이중 가드(drag AND 실제 .reordering
+       DOM 존재)로, 만에 하나 drag가 남아도 문서를 영구 잠그지 않는다. */
+    document.addEventListener('touchmove', (e) => {
+      if (drag && h.querySelector('.tab-item.reordering')) e.preventDefault();
+    }, { passive: false });
     h.addEventListener('touchstart', clearSel, { passive: true });
     h.addEventListener('selectstart', (e) => e.preventDefault());
     h.addEventListener('contextmenu', (e) => { if (drag) e.preventDefault(); });
-    h.addEventListener('pointerup', () => end(true));
-    h.addEventListener('pointercancel', () => end(true));
     // 드래그 직후 click(전환) 무효화
     h.addEventListener('click', (e) => {
       const el = e.target.closest('.tab-item');
