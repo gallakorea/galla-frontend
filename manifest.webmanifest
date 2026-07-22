@@ -3,7 +3,7 @@
   "short_name": "갈라",
   "description": "여론이 에너지가 되는 곳",
   "lang": "ko",
-  "start_url": "/index.html",
+  "start_url": "/app-shell.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
