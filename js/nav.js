@@ -341,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
          이게 없으면 미리보기가 '헤더만 있는 검은 카드'다(에뮬레이터 실측). */
       f.addEventListener("load", () => {
         try {
-          const SNAP_SLOT = { index: "best-list", predict: "marketList" };
+          const SNAP_SLOT = { index: "best-list", predict: "marketList", trend: "app", mypage: "app", dm: "dm-page-host" };
           const cid = SNAP_SLOT[key];
           const c = cid && f.contentDocument && f.contentDocument.getElementById(cid);
           const h = localStorage.getItem("galla_snap_" + key);
