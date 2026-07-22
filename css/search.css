@@ -1706,13 +1706,19 @@ body[data-page="news"] .news-viewer-fallback {
 .tab-ic { width: 15px; height: 15px; flex: 0 0 15px; }
 
 /* ═══ 5탭 폭 맞춤(2026-07-22, 사장님) — 가로 스크롤 금지, 화면 폭에 균등 분할.
-   좁은 기기에선 폰트·아이콘·간격이 자동으로 살짝 줄어 항상 한 줄에 다 보인다. ═══ */
+   좁은 기기에선 폰트·아이콘·간격이 자동으로 살짝 줄어 항상 한 줄에 다 보인다.
+   ⚠️ 안드로이드 웹뷰는 폰트 부스팅(text autosizing)으로 글자를 몰래 키워
+   탭 밖으로 삐져나온다(아이폰은 정상) — text-size-adjust:100%와
+   max-height 지정으로 부스팅을 무력화한다. */
 .tabs-header { overflow-x: hidden; gap: 3px; padding-left: 8px; padding-right: 8px; }
 .tab-item {
   flex: 1 1 0; min-width: 0;
-  display: inline-flex; justify-content: center;
-  padding: 8px 2px; gap: 4px;
-  font-size: clamp(10.5px, 3vw, 12.5px);
-  white-space: nowrap;
+  display: inline-flex; justify-content: center; align-items: center;
+  padding: 8px 1px; gap: 3px;
+  font-size: clamp(10px, 2.9vw, 12px);
+  letter-spacing: -0.3px;
+  white-space: nowrap; overflow: hidden;
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
+  max-height: 34px;   /* 안드로이드 폰트 부스팅은 max-height 있는 요소를 건너뛴다 */
 }
-.tab-ic { width: 14px; height: 14px; flex: 0 0 14px; }
+.tab-ic { width: 13px; height: 13px; flex: 0 0 13px; }

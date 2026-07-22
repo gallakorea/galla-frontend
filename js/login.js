@@ -31,9 +31,21 @@ function waitForClient() {
     /* ----------------------------------------------------
        🔥 자동 로그인 — 이미 세션이 있으면 로그인 화면 건너뛰고 홈으로
     ---------------------------------------------------- */
+    /* 로그인 후 어디로 — 앱/PWA(셸 환경)는 반드시 셸로 복귀해야 한다.
+       ⚠️ index.html로 보내면 앱이 셸 밖(MPA)에서 돌게 돼 조그·스와이프가
+       셸과 다르게 동작 — '로그인 후 조그 먹통, 재시작하면 정상'(사장님 재현)의 원인.
+       판(iframe) 안에서 로그인했으면 셸 전체를 새로 열어 모든 판이 세션을 받게 한다. */
+    function goHome() {
+        const inShell = window.top !== window.self;
+        const isAppEnv = (window.GALLA_isApp && GALLA_isApp()) ||
+            (matchMedia && matchMedia("(display-mode: standalone)").matches);
+        if (inShell) { try { window.top.location.href = "app-shell.html"; return; } catch (_) {} }
+        location.replace(isAppEnv ? "app-shell.html" : "index.html");
+    }
+
     try {
         const { data: sess } = await supabase.auth.getSession();
-        if (sess?.session?.user) { location.replace("index.html"); return; }
+        if (sess?.session?.user) { goHome(); return; }
     } catch (e) {}
 
     /* 이메일 기억 — 지난 로그인 이메일 자동 채움 */
@@ -119,7 +131,7 @@ function waitForClient() {
                 localStorage.setItem("galla_welcome_pending", String(n));
             }
         } catch (e) {}
-        location.href = "index.html";
+        goHome();   // 앱/PWA는 셸로, 웹은 index로 (위 goHome 주석 참고)
     });
 
 })();

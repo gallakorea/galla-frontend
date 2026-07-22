@@ -144,7 +144,13 @@ async function waitForClient() {
             // 가입 후 '첫 로그인' 때 특별 환영을 띄우기 위한 플래그
             try { localStorage.setItem("galla_fresh_signup", "1"); } catch (e) {}
             alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
-            location.href = "index.html";
+            // 앱/PWA(셸 환경)는 셸로 복귀 — index.html로 가면 셸 밖(MPA)에서 돌게 된다
+            {
+                const isAppEnv = (window.GALLA_isApp && GALLA_isApp()) ||
+                    (matchMedia && matchMedia("(display-mode: standalone)").matches);
+                if (window.top !== window.self) { try { window.top.location.href = "app-shell.html"; } catch (_) { location.href = "index.html"; } }
+                else location.href = isAppEnv ? "app-shell.html" : "index.html";
+            }
 
         } catch (err) {
             alert("에러 발생: " + err.message);
