@@ -30,16 +30,18 @@
     if (document.getElementById('tabord-css')) return;
     const s = document.createElement('style'); s.id = 'tabord-css';
     s.textContent = `
-      .tabord-overlay{ position:fixed; inset:0; z-index:12000; display:flex;
-        align-items:flex-end; justify-content:center;
-        background:rgba(0,0,0,.55); opacity:0; transition:opacity .2s ease; }
+      /* 중앙 모달 — 바닥에 붙이면 저장 버튼이 하단 내비 뒤로 가려진다(사장님 재현).
+         화면 중앙에 띄우고 내부 스크롤로, 내비와 절대 겹치지 않게. */
+      .tabord-overlay{ position:fixed; inset:0; z-index:2147483000; display:flex;
+        align-items:center; justify-content:center; padding:22px;
+        background:rgba(0,0,0,.6); opacity:0; transition:opacity .2s ease; }
       .tabord-overlay.on{ opacity:1; }
-      .tabord-sheet{ width:100%; max-width:520px;
+      .tabord-sheet{ width:100%; max-width:440px; max-height:min(78vh,600px); overflow-y:auto;
         background:#15171e; border:1px solid rgba(255,255,255,.09);
-        border-radius:20px 20px 0 0; padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));
-        transform:translateY(18px); transition:transform .24s cubic-bezier(.2,.9,.3,1);
-        box-shadow:0 -18px 50px rgba(0,0,0,.55); }
-      .tabord-overlay.on .tabord-sheet{ transform:translateY(0); }
+        border-radius:20px; padding:18px 16px 20px;
+        transform:scale(.95); transition:transform .22s cubic-bezier(.2,.9,.3,1);
+        box-shadow:0 24px 60px rgba(0,0,0,.6); }
+      .tabord-overlay.on .tabord-sheet{ transform:scale(1); }
       .tabord-head{ display:flex; align-items:center; justify-content:space-between;
         margin:2px 2px 12px; color:#eef1f7; font-size:16px; font-weight:800; }
       .tabord-head button{ background:none; border:none; color:#9aa2b2; font-size:22px;
@@ -98,6 +100,9 @@
 
   function open() {
     const h = header(); if (!h) return;
+    // 이전 시트 잔재 제거 — 안 지우면 두 번째 클릭이 안 열리는 것처럼 보인다(사장님 재현)
+    document.querySelectorAll('.tabord-overlay').forEach(o => o.remove());
+    overlay = null;
     css();
     const items = [...h.querySelectorAll('.tab-item')];
     const keys = items.map(el => el.dataset.tab);
@@ -151,10 +156,14 @@
 
   function boot() {
     restore();
-    const gear = document.getElementById('hdrTabOrder');
-    if (gear && !gear.dataset.bound) {
-      gear.dataset.bound = '1';
-      gear.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    // 문서 위임 클릭 — 헤더가 다시 그려지거나 셸에서 재진입해도 항상 열린다.
+    // (버튼에 직접 바인딩하면 재렌더 시 리스너가 날아가 '두 번째부터 안 열림'이 됐다)
+    if (!document.documentElement.dataset.tabordBound) {
+      document.documentElement.dataset.tabordBound = '1';
+      document.addEventListener('click', (e) => {
+        const g = e.target.closest && e.target.closest('#hdrTabOrder');
+        if (g) { e.preventDefault(); e.stopPropagation(); open(); }
+      });
     }
   }
 
