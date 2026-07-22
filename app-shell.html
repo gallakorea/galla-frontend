@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072209&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072209">
-  <link rel="stylesheet" href="./css/nav.css?v=072209">
+  <script src="/js/splash-boot.js?v=072210&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072210">
+  <link rel="stylesheet" href="./css/nav.css?v=072210">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -120,21 +120,48 @@
       let dx = m.dx;
       // 끝 탭에서 바깥으로는 고무줄 저항
       if ((cur === 0 && dx > 0) || (cur === ORDER.length - 1 && dx < 0)) dx *= 0.28;
-      place(baseX() + dx, false);
-      feel(dx);
+      followTo(baseX() + dx);
     } else if (m.t === "end") {
       if (!dragging) return; dragging = false;
+      followStop();
       const commit = Math.abs(m.dx) > W() * 0.26 || (Math.abs(m.vel || 0) > 0.38);
+      const v = Math.abs(m.vel || 0);
+      // 속도 비례 정착 — 휙 던지면 빠르게(0.18s), 살살 놓으면 느긋하게(0.32s)
+      const dur = Math.max(0.18, Math.min(0.32, 0.34 - v * 0.12));
+      track.style.transitionDuration = dur + "s";
       if (commit && m.dx < 0 && cur < ORDER.length - 1) go(cur + 1);
       else if (commit && m.dx > 0 && cur > 0) go(cur - 1);
       else place(baseX(), true);
       settleFeel();
+      setTimeout(() => { track.style.transitionDuration = ""; }, dur * 1000 + 60);
     } else if (m.t === "cancel") {
-      dragging = false; place(baseX(), true); settleFeel();
+      dragging = false; followStop(); place(baseX(), true); settleFeel();
     } else if (m.t === "nav") {
       const i = ORDER.indexOf(m.tab); if (i !== -1) go(i);
     }
   });
+
+  /* 손가락 추종 보간 — 중계된 좌표를 그대로 찍으면 프레임이 계단으로 튄다
+     ('막 끌려오는' 느낌의 원인, 사장님 표현). 매 프레임 목표의 42%씩 따라붙는
+     스프링 추종으로 바꾸면 자연스러운 관성이 생긴다. */
+  let fTarget = 0, fCur = 0, fOn = false;
+  function followTo(px) {
+    fTarget = px;
+    if (!fOn) {
+      fOn = true;
+      fCur = new WebKitCSSMatrix(getComputedStyle(track).transform).m41 || baseX();
+      track.classList.remove("anim");
+      (function loop() {
+        if (!fOn) return;
+        fCur += (fTarget - fCur) * 0.42;
+        if (Math.abs(fTarget - fCur) < 0.4) fCur = fTarget;
+        track.style.transform = `translateX(${fCur}px)`;
+        feel(fCur - baseX());
+        requestAnimationFrame(loop);
+      })();
+    }
+  }
+  function followStop() { fOn = false; }
 
   /* 드래그 촉감 — 진행도 p에 따라:
      · 나가는(현재) 판: 점점 어두워짐(뒤로 물러나는 느낌)
