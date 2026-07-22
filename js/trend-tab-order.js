@@ -70,6 +70,10 @@
     h.dataset.orderBound = '1';
     restore();
     css();
+    /* 길게 누르면 브라우저 '텍스트 선택'이 포인터를 가로채 홀드가 죽는다
+       (에뮬레이터 실증: 핫트렌드 글자가 파랗게 선택됨). 이벤트 레벨에서 원천 차단. */
+    h.addEventListener('selectstart', e => e.preventDefault());
+    h.addEventListener('contextmenu', e => e.preventDefault());
 
     let holdT = null, drag = null, raf = 0, lastX = 0;
 

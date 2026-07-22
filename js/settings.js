@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const session = sessionData?.session;
 
   if (!session?.user) {
-    alert("로그인이 필요합니다.");
+    if (!document.body.classList.contains("in-shell")) alert("로그인이 필요합니다."); // 셸 백그라운드 판에선 알럿이 셸 전체를 덮는다
     location.href = "login.html";
     return;
   }
