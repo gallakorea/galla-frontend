@@ -46,6 +46,19 @@
     root.querySelectorAll(".hdr-hidden, .hdr-nologo, .hdr-scrolled, .nav--mini").forEach(function (n) {
       n.classList.remove("hdr-hidden", "hdr-nologo", "hdr-scrolled", "nav--mini");
     });
+    stripBoundFlags(root);
+  };
+  /* ⚠️ '한 번만 바인딩' 플래그(data-*-bound)를 반드시 벗긴다 — 스냅샷에 박제되면
+     복원된 DOM은 리스너가 없는데 플래그만 있어서 write-hub(+버튼)·조그·정렬이
+     전부 바인딩을 건너뛰어 먹통이 된다(사장님 재현: 트렌드·마이페이지 +·조그.
+     shell 모드가 #app 전체=헤더·네비까지 복원하는 트렌드·마이만 당했다). */
+  var stripBoundFlags = function (root) {
+    root.querySelectorAll("*").forEach(function (n) {
+      for (var i = n.attributes.length - 1; i >= 0; i--) {
+        var a = n.attributes[i].name;
+        if (/^data-[a-z-]*bound$/.test(a)) n.removeAttribute(a);
+      }
+    });
   };
   var saved = null;
   try { saved = localStorage.getItem(KEY); } catch (_) {}
@@ -55,6 +68,7 @@
     root.querySelectorAll(".hdr-hidden, .hdr-nologo, .hdr-scrolled, .nav--mini").forEach(function (n) {
       n.classList.remove("hdr-hidden", "hdr-nologo", "hdr-scrolled", "nav--mini");
     });
+    stripBoundFlags(root);   // 구버전 저장본의 박제된 바인딩 플래그도 구제
   };
 
   /* JS가 주입하는 스타일(<style> — 닉네임 도색·아바타 칩(.gu-av) 등)을 스냅샷에
