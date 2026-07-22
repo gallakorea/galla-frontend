@@ -6,8 +6,15 @@
    - 첫 방문엔 안 뜨고 2회차부터, 닫으면 30일 쿨다운, "추가함" 표시 시 영구 차단
    ========================================================= */
 (function () {
-  // 1) 이미 홈화면 앱으로 실행 중이면 끝 — 다신 안 뜸
-  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  // 1) 이미 홈화면 앱/네이티브 앱으로 실행 중이면 끝 — 다신 안 뜸.
+  //    ⚠️ Capacitor 앱 웹뷰는 display-mode가 'browser'라 standalone만 보면 앱 안에서도
+  //    '앱으로 깔면 편해요' 배너가 떴다(사장님 에뮬레이터 QA에서 발견).
+  //    → GallaApp UA(=네이티브 앱)·GALLA_isApp도 함께 검사.
+  const isNativeApp = /GallaApp/i.test(navigator.userAgent) ||
+    (typeof window.GALLA_isApp === "function" && window.GALLA_isApp()) ||
+    !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true || isNativeApp;
   if (standalone) return;
 
   const KEY = "galla_a2hs";
