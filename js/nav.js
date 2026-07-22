@@ -511,10 +511,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // 이음새가 사라진다. 애니메이션이 끝난 뒤(280ms) 이동해야 이 그림이 완성된다.
         const url = PAGE_URL[targetKey];
         committing = true;
-        setTimeout(() => { location.href = url; }, 280);
-        // 이동 재시도 세이프가드 — 첫 발동이 씹히거나 지연되면(느린 회선에서
-        // '중간에 멈춘' 것처럼 보였다) 아직 이 문서가 살아있을 때 한 번 더 민다
-        setTimeout(() => { if (!document.hidden && committing) location.href = url; }, 1600);
+        /* 이동은 고정 타이머가 아니라 '밀어내기 애니메이션이 실제로 끝난 순간'에.
+           타이머(280ms)로 쏘면 기기가 버벅여 애니메이션이 늦을 때 어중간한
+           프레임에서 화면이 동결된다(에뮬레이터 연속 스와이프 녹화로 재현 —
+           사장님의 '중간에 멈춤'). transitionend면 마지막 프레임이 항상
+           '미리보기가 화면을 다 채운 완성 상태'다. */
+        let went = false;
+        const go = () => { if (went) return; went = true; location.href = url; };
+        stage.addEventListener("transitionend", go, { once: true });
+        setTimeout(go, 600);   // transitionend 유실 폴백
+        // 이동 재시도 세이프가드 — 발동이 씹히거나 지연되면 한 번 더 민다
+        setTimeout(() => { if (!document.hidden && committing) location.href = url; }, 1800);
       } else {
         place(0);                                            // 쫀득한 스냅백
         setTimeout(reset, 280);
