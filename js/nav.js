@@ -81,14 +81,24 @@ document.addEventListener("DOMContentLoaded", () => {
     /* 다른 '탭'으로 가는 클릭 가로채기 — 상세 페이지에서도 동일 적용 */
     const TAB_OF = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
     const tabOfUrl = (u) => TAB_OF[(u || "").split("?")[0].split("#")[0].split("/").pop()] || null;
+    /* 글쓰기·작성 계열은 '탭'이 아니라 전체화면 화면 — 판(iframe) 안에서 열리면
+       그 판이 글쓰기로 오염되고, 완료/뒤로가 홈으로 튀며 이후 탭들이 다 오염된다
+       (사장님 재현). 셸 최상위(top)로 띄워 셸 자체를 잠시 벗어난다. 완료 시 셸 복귀. */
+    const isCompose = (u) => /\/(write|create)\.html/.test(u) || /[?&]compose=1\b/.test(u);
     document.addEventListener("click", (e) => {
-      let tab = null;
       const a = e.target.closest("a[href]");
-      if (a) tab = tabOfUrl(a.getAttribute("href"));
-      if (!tab) {
-        const o = e.target.closest("[onclick]");
-        if (o) { const oc = o.getAttribute("onclick") || ""; for (const k in TAB_OF) { if (oc.indexOf(k) !== -1) { tab = TAB_OF[k]; break; } } }
+      const o = e.target.closest("[onclick]");
+      const href = a ? a.getAttribute("href") : "";
+      const oc = o ? (o.getAttribute("onclick") || "") : "";
+      // ① 글쓰기 계열 → 셸 밖 전체화면 (+ 버튼: #hdrWrite·[data-write-hub]는 addEventListener라 별도 감지)
+      if (isCompose(href) || /create\.html|write\.html|compose=1/.test(oc) || e.target.closest("#hdrWrite, [data-write-hub]")) {
+        e.preventDefault(); e.stopPropagation();
+        try { window.top.location.href = "create.html"; } catch (_) { location.href = "create.html"; }
+        return;
       }
+      // ② 다른 탭 이동 → 셸 전환
+      let tab = a ? tabOfUrl(href) : null;
+      if (!tab && o) { for (const k in TAB_OF) { if (oc.indexOf(k) !== -1) { tab = TAB_OF[k]; break; } } }
       if (!tab) return;
       e.preventDefault(); e.stopPropagation();
       postShell({ t: "nav", tab });
