@@ -37,6 +37,7 @@
     const s = document.createElement('style');
     s.id = 'tabord-css';
     s.textContent = `
+      .tabs-header, .tabs-header *{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
       .tab-item.reordering{
         position:relative;z-index:5;opacity:.95;
         transform:translateX(var(--drag-x,0)) scale(1.08);

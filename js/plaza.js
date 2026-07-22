@@ -501,7 +501,7 @@ function renderPlazaPosts(posts) {
   posts.forEach(post => {
     const li = document.createElement("li");
     li.className = "plaza-post";
-    const thumb = proxifyThumb(post.thumbnail) || extractFirstImage(post.body);
+    const thumb = (window.GALLA_thumb ? window.GALLA_thumb(proxifyThumb(post.thumbnail) || extractFirstImage(post.body), 480) : (proxifyThumb(post.thumbnail) || extractFirstImage(post.body)));
     const cmtCount = post.plaza_comments?.[0]?.count ?? 0;
     const saved = !!MY_PLAZA_SAVED[post.id];
     const excerpt = plazaExcerpt(post.body);

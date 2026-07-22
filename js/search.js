@@ -441,7 +441,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (plaza.length) {
       html += `<div class="sr-sec"><div class="sr-sec-head">🗣 갈라 광장 <b>${plaza.length}</b></div>`;
       html += plaza.map(p => {
-        const th = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+        const th0 = isValidThumbnail(p.cover_image) ? p.cover_image : (isValidThumbnail(p.thumbnail) ? p.thumbnail : null);
+      const th = th0 && window.GALLA_thumb ? window.GALLA_thumb(th0, 480) : th0;
         return `<a class="sr-card" href="plaza_detail.html?id=${p.id}">
           <div class="sr-thumb">${th ? `<img src="${esc(th)}" loading="lazy" onerror="galla_imgFail(this)">` : `<span class="sr-noimg">광장</span>`}</div>
           <div class="sr-body">
