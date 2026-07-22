@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v3';
+const SW_VERSION = 'galla-sw-v4';
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
@@ -34,6 +34,12 @@ self.addEventListener('activate', (e) => {
       .filter(k => k.startsWith('galla-') && !k.endsWith(SW_VERSION))
       .map(k => caches.delete(k)));
     await self.clients.claim();
+    /* 새 SW로 교체된 순간, 열려 있는 모든 탭을 한 번 새로고침해 옛 코드를 강제 축출.
+       (캐시 세션 사고 대응 — SW 버전이 오를 때만 1회 발생) */
+    try {
+      const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const c of cs) { try { c.navigate(c.url); } catch (_) {} }
+    } catch (_) {}
   })());
 });
 
