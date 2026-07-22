@@ -759,7 +759,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const card = document.createElement("div");
         card.className = "ig-card";
         card.innerHTML = `
-            <img src="${thumb || "./assets/logo.png"}" loading="lazy"
+            <img src="${(window.GALLA_thumb ? window.GALLA_thumb(thumb, 480) : thumb) || "./assets/logo.png"}" loading="lazy"
                  onerror="this.src='./assets/logo.png'">
             ${badge ? `<span class="ig-badge">${badge}</span>` : ""}
             <div class="ig-title">${title || ""}</div>
@@ -774,7 +774,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const row = document.createElement("div");
         row.className = "mp-row";
         const th = thumb
-            ? `<img src="${mpEsc(thumb)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.mp-row-th').classList.add('noimg')">`
+            ? `<img src="${mpEsc(window.GALLA_thumb ? window.GALLA_thumb(thumb, 240) : thumb)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.mp-row-th').classList.add('noimg')">`
             : "";
         row.innerHTML = `
             <span class="mp-row-th${thumb ? "" : " noimg"}" data-kind="${mpEsc(kind || "")}">${th}</span>

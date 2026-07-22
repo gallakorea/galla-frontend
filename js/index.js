@@ -185,7 +185,7 @@ function renderMedia(data) {
         // 캐러셀은 lazy 금지 — 가로 오프스크린이라 안 불러와져 넘기면 빈 슬라이드가 됨
         // 4:5 세로 프레임에 꽉 채움(cover). 가로 사진은 업로드 때 크롭 영역을 선택하므로 이미 세로임.
         const slidesHtml = imgs.map(url =>
-            `<div class="carousel-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
+            `<div class="carousel-slide"><img src="${window.GALLA_thumb ? window.GALLA_thumb(url, 1080) : url}" loading="eager" decoding="async"></div>`).join('');
         return `
         <div class="card-media" onclick="event.stopPropagation()">
             <div class="carousel-wrap">
@@ -204,7 +204,7 @@ function renderMedia(data) {
     if (data.thumb) {
         return `
         <div class="card-media">
-            <img src="${data.thumb}" loading="lazy" alt="">
+            <img src="${window.GALLA_thumb ? window.GALLA_thumb(data.thumb, 1080) : data.thumb}" loading="lazy" alt="">
         </div>`;
     }
 
@@ -981,7 +981,7 @@ function renderPlazaCard(p) {
           <div class="pz-title">${escHtml(p.title || '(제목 없음)')}</div>
           ${excerpt ? `<div class="pz-excerpt">${escHtml(excerpt)}</div>` : ''}
         </div>
-        ${cover ? `<div class="pz-thumb"><img src="${escHtml(cover)}" loading="lazy" alt="" style="opacity:0;transition:opacity .18s" onload="this.style.opacity=1" onerror="this.closest('.pz-thumb')?.remove()"></div>` : ''}
+        ${cover ? `<div class="pz-thumb"><img src="${escHtml(window.GALLA_thumb ? window.GALLA_thumb(cover, 720) : cover)}" loading="lazy" alt="" style="opacity:0;transition:opacity .18s" onload="this.style.opacity=1" onerror="this.closest('.pz-thumb')?.remove()"></div>` : ''}
       </div>
       <div class="pz-foot">
         <span>👍 ${p.up_count || 0}</span>

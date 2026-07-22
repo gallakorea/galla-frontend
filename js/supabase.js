@@ -134,6 +134,22 @@
 
   /* 📱 갈라 앱(네이티브 셸) 감지 — Capacitor 브리지 또는 UA 마커(GallaApp).
      통화 등 앱 전용 기능의 게이트 판별에 사용. */
+  /* 🖼 썸네일 리사이즈 — Cloudflare 이미지 변환(존 활성화 완료, 2026-07-22).
+     원본 PNG(1~2MB)가 그대로 내려와 그리드가 '한참' 걸리던 문제의 근본 해법.
+     cdn.galla.im 원본 → /cdn-cgi/image/ 경유(실측 1.35MB→64KB, 캐시 후 0.2s).
+     스트림 영상 썸네일은 자체 리사이즈 파라미터 사용. 그 외 URL은 원본 유지. */
+  window.GALLA_thumb = function (url, w) {
+    try {
+      if (!url || typeof url !== "string") return url;
+      if (url.indexOf("/cdn-cgi/image/") !== -1) return url;      // 이미 변환됨
+      if (/cloudflarestream\.com\/.+\/thumbnails\//.test(url))
+        return url + (url.indexOf("?") === -1 ? "?" : "&") + "width=" + (w || 480) + "&fit=crop";
+      var m = url.match(/^https:\/\/cdn\.galla\.im\/(.+)$/);
+      if (m) return "https://cdn.galla.im/cdn-cgi/image/width=" + (w || 480) + ",quality=78,format=auto/" + m[1];
+    } catch (_) {}
+    return url;
+  };
+
   window.GALLA_isApp = function () {
     try {
       if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true;
