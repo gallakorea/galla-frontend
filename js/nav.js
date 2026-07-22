@@ -360,6 +360,13 @@ document.addEventListener("DOMContentLoaded", () => {
         warm(PAGE_ORDER[curIdx + 1]); warm(PAGE_ORDER[curIdx - 1]);
         ensureFrame(PAGE_ORDER[curIdx + 1]);
         ensureFrame(PAGE_ORDER[curIdx - 1]);
+        /* 레이아웃 선(先)수행 — display:none 상태의 iframe은 로드만 되고 레이아웃이
+           안 된다. 그 비용이 '첫 드래그' 중에 터지면 제스처 프레임을 먹어
+           커밋 판정 미달 → 스냅백(사장님 재현: 첫 스와이프 튕기고 두 번째 성공).
+           보이지 않게(prewarm=visibility:hidden) 미리 펼쳐 레이아웃까지 끝내둔다. */
+        peek.classList.add("prewarm");
+        for (const k in pvFrames) pvFrames[k].style.display = "block";
+        setTimeout(() => peek.classList.remove("prewarm"), 600);
       });
     }, 2200);
     const showPeek = (key) => {

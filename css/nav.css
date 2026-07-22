@@ -103,6 +103,8 @@
   will-change: transform;
 }
 .swipe-peek.show { display: flex; }
+/* 미리보기 레이아웃 선수행용 — 화면엔 절대 안 보이게 펼치기만 한다 */
+.swipe-peek.prewarm { display: flex; visibility: hidden; }
 /* 로딩 전 폴백 라벨(아이콘+이름) — 실물 iframe이 뜨면 아래에 깔려 안 보임 */
 .swipe-peek .peek-label {
   display: flex; flex-direction: column; align-items: center; gap: 14px;

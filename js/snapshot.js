@@ -93,10 +93,14 @@
     return;
   }
 
-  // ghost — DM처럼 JS가 통째로 만드는 페이지: 조작 불가 잔상만 먼저 보여준다
-  var ghost = null;
+  // ghost — DM처럼 JS가 통째로 만드는 페이지: 조작 불가 잔상만 먼저 보여준다.
+  // 잔상 = HTML의 정적 스켈레톤(캐시 없을 때) 또는 지난 화면 스냅샷(캐시 있을 때).
+  var clearGhosts = function () {
+    el.querySelectorAll("[data-snap-ghost]").forEach(function (n) { n.remove(); });
+  };
   if (saved) {
-    ghost = document.createElement("div");
+    clearGhosts();                                  // 정적 스켈레톤 → 실물 잔상으로 대체
+    var ghost = document.createElement("div");
     ghost.setAttribute("data-snap-ghost", "");
     ghost.style.cssText = "pointer-events:none";
     ghost.setAttribute("aria-hidden", "true");
@@ -104,18 +108,20 @@
     ghost.innerHTML = saved.replace(/\sid="[^"]*"/g, "");
     disarm(ghost);
     el.appendChild(ghost);
-    var gmo = new MutationObserver(function () {
-      // 잔상이 아닌 자식(진짜 UI)이 붙는 순간 잔상 제거
-      for (var i = 0; i < el.children.length; i++) {
-        if (!el.children[i].hasAttribute("data-snap-ghost")) {
-          if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
-          gmo.disconnect();
-          return;
-        }
-      }
-    });
+  }
+  /* ⚠️ 잔상 걷어내기는 캐시 유무와 무관하게 '항상' 무장해야 한다 —
+     캐시 있을 때만 걸었더니 첫 방문의 정적 스켈레톤이 영영 안 걷혀
+     진짜 채팅 UI 위에 이중으로 쌓였다(사장님 실기기 재현). */
+  var sweep = function () {
+    for (var i = 0; i < el.children.length; i++) {
+      if (!el.children[i].hasAttribute("data-snap-ghost")) { clearGhosts(); return true; }
+    }
+    return false;
+  };
+  if (!sweep()) {
+    var gmo = new MutationObserver(function () { if (sweep()) gmo.disconnect(); });
     gmo.observe(el, { childList: true });
-    setTimeout(function () { if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost); }, 15000); // 세이프가드
+    setTimeout(clearGhosts, 15000); // 세이프가드 — 무슨 일이 있어도 잔상은 걷힌다
   }
   var saveGhost = function () {
     if (el.querySelector("[data-snap-ghost]")) return;            // 진짜 UI가 안 떴으면 저장 금지
