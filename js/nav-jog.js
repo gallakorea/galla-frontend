@@ -1,18 +1,21 @@
 /* =========================================================
-   🎛 네비 조그셔틀 — 메시지 아이콘을 꾹 누르면 부채꼴로 펼쳐지고,
-   손가락을 움직여 탭(채팅·친구·난장·삐삐)을 고른 뒤 떼면 그리로 바로 간다.
+   🎛 네비 조그셔틀 — 네비 아이콘을 꾹 누르면 부채꼴로 펼쳐지고,
+   손가락을 움직여 항목을 고른 뒤 떼면 그리로 바로 간다.
    ---------------------------------------------------------
-   왜 만드나: DM에 들어가서 → 탭을 찾아 누르는 두 단계를, 한 동작으로 줄인다.
+   왜 만드나: 들어가서 → 탭을 찾아 누르는 두 단계를, 한 동작으로 줄인다.
    원칙:
-     · 짧게 누르면 평소대로 DM 열기(기존 동작을 방해하지 않는다)
+     · 짧게 누르면 평소대로 열기(기존 동작을 방해하지 않는다)
      · 길게 눌러야 펼쳐진다(오작동 방지 380ms)
      · 손가락을 떼는 순간 '그때 골라져 있던 것'이 실행된다(조그셔틀 문법)
-     · 아무것도 안 고르고 떼면 그냥 DM 열기
+     · 아무것도 안 고르고 떼면 그냥 기본 열기
+   대상: DM 버튼(채팅·친구·난장·삐삐), 트렌드 버튼(검색·핫트렌드·뉴스·핫튜브·광장).
+   트렌드 조그는 사용자가 저장한 탭 순서(galla_trend_tab_order)를 그대로 따른다.
    ========================================================= */
 (function () {
   const I = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-  const TABS = [
+
+  const DM_TABS = [
     { id: 'chats',   label: '채팅',
       icon: I('<path d="M21 11.5a8.4 8.4 0 0 1-8.4 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.4 8.4 0 0 1 8.4-8.4h.5a8.5 8.5 0 0 1 8.1 8.1z"/>') },
     { id: 'friends', label: '친구',
@@ -22,6 +25,31 @@
     { id: 'pager',   label: '삐삐',
       icon: I('<rect x="2" y="5" width="20" height="14" rx="2.4"/><rect x="5" y="8" width="9" height="5" rx="1"/><circle cx="17.5" cy="9.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="17.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/>') },
   ];
+
+  /* 트렌드 허브 탭 — search.html 탭바와 같은 항목·아이콘 톤 */
+  const TREND_TABS = [
+    { id: 'search',   label: '검색',
+      icon: I('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>') },
+    { id: 'trending', label: '핫트렌드',
+      icon: I('<path d="M12 22a7 7 0 0 0 7-7c0-4-3-6-4.5-9.5C14 8 12.5 8.5 11 7 9 9 8.5 10.5 8.5 12c0 1-1 1.5-1.5 1-.7 1-2 2-2 2a7 7 0 0 0 7 7z"/>') },
+    { id: 'news',     label: '뉴스',
+      icon: I('<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V18a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2V5.5z"/><path d="M16 9h2.5A1.5 1.5 0 0 1 20 10.5V18a2 2 0 0 1-2 2"/><path d="M7.5 8h5M7.5 11.5h5M7.5 15h3"/>') },
+    { id: 'hot',      label: '핫튜브',
+      icon: I('<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9.5l5 2.5-5 2.5v-5z"/>') },
+    { id: 'plaza',    label: '광장',
+      icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
+  ];
+  /* 사용자가 저장한 탭 순서를 조그에도 반영 — 탭바와 조그가 항상 같은 순서.
+     열 때마다 읽는다(설정 시트에서 방금 바꾼 순서도 즉시 반영). */
+  function trendTabsOrdered() {
+    let saved; try { saved = JSON.parse(localStorage.getItem('galla_trend_tab_order') || 'null'); } catch (_) {}
+    if (!Array.isArray(saved) || !saved.length) return TREND_TABS;
+    const byId = Object.fromEntries(TREND_TABS.map(t => [t.id, t]));
+    const out = saved.map(k => byId[k]).filter(Boolean);
+    TREND_TABS.forEach(t => { if (!saved.includes(t.id)) out.push(t); });
+    return out;
+  }
+
   const HOLD_MS = 380;      // 이보다 길게 눌러야 펼쳐진다
   const RADIUS = 104;       // 부채꼴 반지름
   const DEAD_R = 14;        // 이 안쪽만 취소. 나머지는 거리와 무관하게 '방향'으로 다 잡힌다
@@ -69,15 +97,15 @@
     document.head.appendChild(s);
   }
 
-  /* 안 읽은 수를 탭별로 얹어준다 — 고르기 전에 어디에 소식이 있는지 보인다 */
-  function badges() {
+  /* 안 읽은 수를 탭별로 얹어준다 — 고르기 전에 어디에 소식이 있는지 보인다 (DM 전용) */
+  function dmBadges() {
     const out = {};
     const nav = document.getElementById('navDmBadge');
     if (nav && !nav.hidden) out.chats = nav.textContent;      // 합산값(대략)
     return out;
   }
 
-  function open(btn, ox, oy) {
+  function open(tabs, badges, ox, oy) {
     css();
     let layer = document.getElementById('nav-jog');
     if (layer) layer.remove();
@@ -88,9 +116,9 @@
 
     /* 위쪽 반원에 부채꼴로 배치 — 아래는 네비·손가락이라 가린다.
        200°~340°로 넓게 펼쳐 '위로 올리는' 동작에서도 방향이 또렷하게 갈린다. */
-    const bd = badges();
-    const items = TABS.map((t, i) => {
-      const deg = 200 + (140 / (TABS.length - 1)) * i;
+    const bd = badges ? badges() : {};
+    const items = tabs.map((t, i) => {
+      const deg = 200 + (140 / (tabs.length - 1)) * i;
       const rad = deg * Math.PI / 180;
       const dx = Math.cos(rad) * RADIUS, dy = Math.sin(rad) * RADIUS;
       const el = document.createElement('button');
@@ -137,8 +165,9 @@
     return { layer, items, ring, hint };
   }
 
-  function boot() {
-    const btn = document.querySelector('.nav-item.nav-dm, .nav-item[data-page="dm"]');
+  /* ── 공용 바인더 — 버튼 하나에 조그 문법 전체(홀드·각도 선택·마무리·자가 회수)를 건다.
+     cfg: { tabs():[]  badges()?:{}  go(tabId|null) } */
+  function bindJog(btn, cfg) {
     if (!btn || btn.dataset.jogBound) return;
     btn.dataset.jogBound = '1';
     /* 이 버튼 위에서는 브라우저 스크롤·확대 제스처를 쓰지 않는다.
@@ -156,11 +185,8 @@
       document.body.style.overscrollBehavior = '';
       ui = null; picked = null;
       unbindDoc();   // ⚠️ 문서 리스너를 반드시 함께 제거 — 안 하면 docTouchMove의
-                     // preventDefault가 남아 '조그 뒤 모든 제스처(트렌드 정렬 등)가
-                     // 막힘'(사장님 재현). 조그가 어떤 경로로 닫혀도 잔재 0.
+                     // preventDefault가 남아 '조그 뒤 모든 제스처가 막힘'(사장님 재현).
     };
-    /* 홈 제스처 등으로 조그가 '열린 채' 멈추는 것 방지 — 손을 떼는 어떤 신호든
-       오면(문서 어디서든) 강제로 닫는다. 캡처 단계라 stuck 상태를 확실히 회수. */
     /* 앱이 백그라운드로 갈 때만 안전 회수 — pointerup/pointercancel로는 절대 닫지
        않는다(정상 종료는 finish가, iOS 홈 제스처의 잦은 취소는 무시가 원칙). */
     const forceClose = () => { if (ui || docBound) clear(); };
@@ -249,7 +275,7 @@
       sx = e.clientX; sy = e.clientY;
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
       clearTimeout(holdT);
-      holdT = setTimeout(() => { ui = open(btn, sx, sy); bindDoc(); }, HOLD_MS);
+      holdT = setTimeout(() => { ui = open(cfg.tabs(), cfg.badges, sx, sy); bindDoc(); }, HOLD_MS);
     });
 
     btn.addEventListener('pointermove', e => {
@@ -268,7 +294,9 @@
       unbindDoc();
       clear();
       if (!wasOpen) return;
-      go(tab || null);
+      btn._skipClick = true;
+      setTimeout(() => { btn._skipClick = false; }, 400);
+      cfg.go(tab || null);
     }
     btn.addEventListener('pointerup', finish);
     /* 취소가 와도 닫지 않는다 — iOS 홈 제스처 때문에 자주 온다.
@@ -279,16 +307,32 @@
     btn.addEventListener('click', e => {
       if (btn._skipClick) { e.preventDefault(); e.stopPropagation(); btn._skipClick = false; }
     }, true);
+  }
 
-    function go(tab) {
-      btn._skipClick = true;
-      setTimeout(() => { btn._skipClick = false; }, 400);
-      const onDm = document.body.dataset.page === 'dm';
-      if (onDm && window.GALLA_dmSetTab && tab) return window.GALLA_dmSetTab(tab);
-      // 셸 안이면 페이지 이동 대신 셸 전환(판 상주 유지)
-      if (window.GALLA_shellGo) { window.GALLA_shellGo('dm', tab || null); return; }
-      location.href = 'dm.html' + (tab ? '?tab=' + tab : '');
-    }
+  function boot() {
+    /* DM 조그 */
+    bindJog(document.querySelector('.nav-item.nav-dm, .nav-item[data-page="dm"]'), {
+      tabs: () => DM_TABS,
+      badges: dmBadges,
+      go(tab) {
+        const onDm = document.body.dataset.page === 'dm';
+        if (onDm && window.GALLA_dmSetTab && tab) return window.GALLA_dmSetTab(tab);
+        // 셸 안이면 페이지 이동 대신 셸 전환(판 상주 유지)
+        if (window.GALLA_shellGo) { window.GALLA_shellGo('dm', tab || null); return; }
+        location.href = 'dm.html' + (tab ? '?tab=' + tab : '');
+      },
+    });
+
+    /* 트렌드 조그 — 탭바 순서(사용자 저장)를 그대로 따른다 */
+    bindJog(document.querySelector('.nav-item[data-page="trend"]'), {
+      tabs: trendTabsOrdered,
+      go(tab) {
+        const onTrend = document.body.dataset.page === 'trend';
+        if (onTrend && window.GALLA_trendSetTab && tab) return window.GALLA_trendSetTab(tab);
+        if (window.GALLA_shellGo) { window.GALLA_shellGo('trend', tab || null); return; }
+        location.href = 'search.html' + (tab ? '?tab=' + tab : '');
+      },
+    });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

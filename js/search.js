@@ -118,6 +118,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       activateTab(btn.dataset.tab);
     });
   });
+  /* 조그셔틀(트렌드 버튼 꾹→방향 선택)에서 바로 탭 전환 — nav-jog.js가 호출 */
+  window.GALLA_trendSetTab = (t) => activateTab(t);
+  /* 셸에서 조그로 골라 들어올 때 — 셸이 트렌드 판에 trendtab 명령을 보낸다 */
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin) return;
+    const m = e.data;
+    if (m && m.galla === "shellcmd" && m.t === "trendtab" && m.tab) activateTab(m.tab);
+  });
 
   /* ================= 최근 검색어 (localStorage) ================= */
   const RECENT_KEY = "galla_recent_searches";
