@@ -710,16 +710,16 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   bodyInput.value = "";
   if (attachStrip) { attachStrip.hidden = true; attachStrip.innerHTML = ""; }
 
-  const onPlazaAlready = document.querySelector('.tab-panel.active')?.dataset.panel === 'plaza'
-    && /search/.test(location.pathname);
-  if (onPlazaAlready) {
-    // 단독 트렌드 페이지에서 직접 쓴 경우 — 모달만 닫고 목록 갱신
+  /* create('새로 만들기') 경유로 열렸는지 = URL에 compose=1. 그 경우 composer가
+     닫힐 때 history.back(→create)로 되돌리므로, 모달을 닫지 말고 광장으로 직접 이동한다.
+     트렌드에서 바로 +로 쓴 경우(compose 없음)는 그냥 모달만 닫고 목록 갱신. */
+  const viaCreate = /[?&]compose=1\b/.test(location.search);
+  if (!viaCreate) {
     closePlazaWriteModal();
     plazaToast("광장에 글을 올렸어요 🎉");
     fetchPlazaPosts();
     return;
   }
-  // create 경유(composer 전체화면) — history.back에 지지 않게 즉시 하드 이동
   const appEnv = /GallaApp/i.test(navigator.userAgent) ||
     (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
   try { sessionStorage.setItem('galla_plaza_posted', '1'); } catch (_) {}   // 착지 후 토스트용
