@@ -64,6 +64,15 @@
   width: 27px;
   height: 27px;
   display: block;
+  /* iOS 길게누르기: 아이콘이 '이미지'라 공유/저장 시트가 떠 조그셔틀을 덮었다(사장님 재현).
+     이미지를 터치 대상에서 제외(버튼이 받음) + 콜아웃·선택·드래그 전면 차단. */
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.nav, .nav * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* =========================================================
