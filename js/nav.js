@@ -328,19 +328,32 @@ document.addEventListener("DOMContentLoaded", () => {
     pvLabel.className = "peek-label";
     peek.appendChild(pvLabel);
     const pvFrames = {};
+    const ensureFrame = (key) => {
+      if (!key || pvFrames[key]) return;
+      const f = document.createElement("iframe");
+      f.className = "peek-frame";
+      f.setAttribute("sandbox", "allow-same-origin"); // JS 차단 — 이중 세션·이중 실시간 채널 방지
+      f.setAttribute("tabindex", "-1");
+      f.style.display = "none";
+      f.src = PAGE_URL[key];
+      pvFrames[key] = f;
+      peek.appendChild(f);
+    };
+    /* 이웃 탭 미리보기 선(先)로딩 — 드래그 시작 후에 만들면 폰 네트워크에선
+       그릴 시간이 없어 '검은 카드'만 보인다(에뮬레이터 프레임 실측로 확정).
+       페이지가 자리잡은 뒤 유휴 시점에 좌우 이웃을 미리 만들어 둔다. */
+    setTimeout(() => {
+      const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+      idle(() => {
+        warm(PAGE_ORDER[curIdx + 1]); warm(PAGE_ORDER[curIdx - 1]);
+        ensureFrame(PAGE_ORDER[curIdx + 1]);
+        ensureFrame(PAGE_ORDER[curIdx - 1]);
+      });
+    }, 2200);
     const showPeek = (key) => {
       const m = metaOf(key);
       pvLabel.innerHTML = m.icon ? `<img src="${m.icon}" alt=""><span>${m.name}</span>` : `<span>${m.name}</span>`;
-      let f = pvFrames[key];
-      if (!f) {
-        f = document.createElement("iframe");
-        f.className = "peek-frame";
-        f.setAttribute("sandbox", "allow-same-origin"); // JS 차단 — 이중 세션·이중 실시간 채널 방지
-        f.setAttribute("tabindex", "-1");
-        f.src = PAGE_URL[key];
-        pvFrames[key] = f;
-        peek.appendChild(f);
-      }
+      ensureFrame(key);
       for (const k in pvFrames) pvFrames[k].style.display = (k === key) ? "block" : "none";
     };
     const hidePeekFrames = () => {
