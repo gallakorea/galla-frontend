@@ -147,10 +147,11 @@
     clearGhosts();                                  // 정적 스켈레톤 → 실물 잔상으로 대체
     var ghost = document.createElement("div");
     ghost.setAttribute("data-snap-ghost", "");
-    /* 오버레이로 '위에 겹쳐' 둔다 — 일반 블록으로 두면 진짜 UI가 아래에 쌓여
-       이중 화면이 되고, 일찍 걷으면 빈 목록이 노출돼 깜빡인다(사장님 재현).
-       진짜 목록이 채워질 때까지 덮고 있다가 페이드아웃. */
-    ghost.style.cssText = "position:absolute;inset:0;z-index:30;background:#0a0a0b;overflow:hidden;pointer-events:none;transition:opacity .25s ease";
+    /* 화면(viewport) 기준 오버레이 — 컨테이너 기준(absolute)이면 진짜 UI가 뜨기
+       전엔 높이가 0이라 잔상이 안 보이다가, UI 등장 순간 갑자기 덮어 '깜빡'였다
+       (사장님 재현 2차). fixed로 처음부터 화면을 덮고 목록이 차면 페이드아웃.
+       z-index는 하단 네비(9999)보다 아래. */
+    ghost.style.cssText = "position:fixed;inset:0;z-index:8990;background:#0a0a0b;overflow:hidden;pointer-events:none;transition:opacity .25s ease";
     ghost.setAttribute("aria-hidden", "true");
     // id 전부 제거 — 진짜 UI가 뜰 때 getElementById 충돌이 절대 없어야 한다
     ghost.innerHTML = saved.replace(/\sid="[^"]*"/g, "");

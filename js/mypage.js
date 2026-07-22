@@ -276,7 +276,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     </div><style>@keyframes mpspin{to{transform:rotate(360deg)}}</style>`;
 
     const renderMy = async () => {
-        tabContent.className = "content-area";
+        // 스냅샷 그리드가 떠 있는 동안 grid 클래스를 벗기면 첫 사진이 전체 폭으로 터진다(사장님 재현)
+        if (!tabContent.firstElementChild) tabContent.className = "content-area";
         if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const { data: issues, error } = await supabase
@@ -800,7 +801,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Save 갈라 — 내가 북마크한 이슈 (인스타 그리드)
     // =====================================================
     const renderSave = async () => {
-        tabContent.className = "content-area";
+        if (!tabContent.firstElementChild) tabContent.className = "content-area"; // 스냅샷 유지 중 grid 박탈 금지
         if (!isMyPage) {
             tabContent.innerHTML = emptyMsg("저장한 갈라는 본인만 볼 수 있습니다.");
             return;
@@ -894,7 +895,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     let predictSubTab = "mine"; // mine | saved
 
     const renderPredict = async () => {
-        tabContent.className = "content-area";
+        // 스냅샷 그리드가 떠 있는 동안 grid 클래스를 벗기면 첫 사진이 전체 폭으로 터진다(사장님 재현)
+        if (!tabContent.firstElementChild) tabContent.className = "content-area";
         if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const showSaved = isMyPage;
@@ -971,7 +973,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 저장한 뉴스 — 갈라뉴스 북마크 (인스타 그리드)
     // =====================================================
     const renderNews = async () => {
-        tabContent.className = "content-area";
+        if (!tabContent.firstElementChild) tabContent.className = "content-area"; // 스냅샷 유지 중 grid 박탈 금지
         if (!isMyPage) {
             tabContent.innerHTML = emptyMsg("저장한 뉴스는 본인만 볼 수 있습니다.");
             return;
@@ -1033,7 +1035,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     let plazaSubTab = "mine"; // mine | saved
 
     const renderPlaza = async () => {
-        tabContent.className = "content-area";
+        // 스냅샷 그리드가 떠 있는 동안 grid 클래스를 벗기면 첫 사진이 전체 폭으로 터진다(사장님 재현)
+        if (!tabContent.firstElementChild) tabContent.className = "content-area";
         if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         // 저장한 글은 본인 페이지에서만 (RLS도 본인만 조회 가능)
@@ -1112,7 +1115,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 즐겨찾기 — 나를 팔로우하는 사용자
     // =====================================================
     const renderFollower = async () => {
-        tabContent.className = "content-area";
+        // 스냅샷 그리드가 떠 있는 동안 grid 클래스를 벗기면 첫 사진이 전체 폭으로 터진다(사장님 재현)
+        if (!tabContent.firstElementChild) tabContent.className = "content-area";
         if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
         const { data: follows, error: followError } = await supabase
