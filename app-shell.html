@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072255&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072255">
-  <link rel="stylesheet" href="./css/nav.css?v=072255">
+  <script src="/js/splash-boot.js?v=072256&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072256">
+  <link rel="stylesheet" href="./css/nav.css?v=072256">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -36,11 +36,14 @@
     #shell-track.settle .shell-pane { transition: transform .3s cubic-bezier(.2,.8,.25,1); }
     #shell-track.settle .pane-scrim { transition: opacity .3s ease; }
     /* 셸 네비는 nav.css 그대로 사용 (트랙 밖 고정 — 전환 중에도 제자리) */
-    /* 활성 탭 글라이더 — 탭이 바뀔 때 표시점이 네비 바 안에서 좌우로 미끄러진다(사장님 주문) */
+    /* 활성 탭 글라이더 — 인스타식: 활성 아이콘 '뒤'에 알약(캡슐) 배경이 좌우로 미끄러진다.
+       (얇은 선 → 캡슐로 교체, 사장님 레퍼런스) 아이콘은 캡슐 위에 뜨게 z-index 정리. */
     .nav-inner { position: relative; }
-    #nav-glider { position: absolute; top: 3px; left: 0; width: 16px; height: 3px; border-radius: 99px;
-      background: #6f86ff; box-shadow: 0 0 8px rgba(111,134,255,.8);
-      transition: transform .32s cubic-bezier(.22,.9,.3,1), opacity .2s ease; opacity: 0; pointer-events: none; }
+    .nav-inner .nav-item { position: relative; z-index: 1; }   /* 아이콘이 캡슐 위 */
+    #nav-glider { position: absolute; top: 50%; left: 0; width: 56px; height: 40px; margin-top: -20px;
+      border-radius: 20px; background: rgba(255, 255, 255, .12); z-index: 0;
+      transition: transform .34s cubic-bezier(.22, .9, .3, 1), opacity .2s ease;
+      opacity: 0; pointer-events: none; }
   </style>
 </head>
 <body data-page="shell">
@@ -105,7 +108,8 @@
       if (!g) { g = document.createElement("i"); g.id = "nav-glider"; inner.appendChild(g); }
       const act = inner.querySelector('.nav-item[data-page="' + ORDER[cur] + '"]');
       if (act) {
-        g.style.transform = "translateX(" + (act.offsetLeft + act.offsetWidth / 2 - 8) + "px)";
+        // 캡슐을 활성 아이콘 중앙에 정렬(캡슐 폭 56의 절반 = 28)
+        g.style.transform = "translateX(" + (act.offsetLeft + act.offsetWidth / 2 - 28) + "px)";
         g.style.opacity = "1";
       }
     }
@@ -356,6 +360,6 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072255" defer></script>
+<script src="./js/nav-jog.js?v=072256" defer></script>
 </body>
 </html>
