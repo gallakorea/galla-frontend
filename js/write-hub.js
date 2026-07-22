@@ -64,6 +64,12 @@
     } catch (_) { return { logged: false, admin: false }; }
   }
 
+  /* 셸 판(iframe) 안이면 최상위로 이동 — 판이 글쓰기 화면으로 오염되는 것 방지.
+     compose=1 딥링크는 nav.js의 '앱=셸 복귀' 가드가 건드리지 않는다(작성 흐름 보호). */
+  function nav(url) {
+    if (window.top !== window.self) { try { window.top.location.href = url; return; } catch (_) {} }
+    location.href = url;
+  }
   function go(type, context) {
     const onPage =
       (type === 'predict' && context === 'predict') ||
@@ -73,10 +79,10 @@
       window.__openComposeModal();
       return;
     }
-    if (type === 'galla')   location.href = 'write.html';
-    if (type === 'predict') location.href = 'galla-predict.html?compose=1';
-    if (type === 'plaza')   location.href = 'search.html?tab=plaza&compose=1';   // 광장은 트렌드로 통합(2026-07-22)
-    if (type === 'report')  location.href = 'report.html';
+    if (type === 'galla')   nav('write.html');
+    if (type === 'predict') nav('galla-predict.html?compose=1');
+    if (type === 'plaza')   nav('search.html?tab=plaza&compose=1');   // 광장은 트렌드로 통합(2026-07-22)
+    if (type === 'report')  nav('report.html');
   }
 
   window.openWriteHub = async function (context) {

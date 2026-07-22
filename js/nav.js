@@ -90,8 +90,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const o = e.target.closest("[onclick]");
       const href = a ? a.getAttribute("href") : "";
       const oc = o ? (o.getAttribute("onclick") || "") : "";
-      // ① 글쓰기 계열 → 셸 밖 전체화면 (+ 버튼: #hdrWrite·[data-write-hub]는 addEventListener라 별도 감지)
-      if (isCompose(href) || /create\.html|write\.html|compose=1/.test(oc) || e.target.closest("#hdrWrite, [data-write-hub]")) {
+      // ① 글쓰기 계열 링크 → 셸 밖 전체화면.
+      //    ⚠️ + 버튼(#hdrWrite·[data-write-hub])은 가로채지 않는다 — 얘는 '쓰기 선택
+      //    시트'를 여는 버튼인데, 여기서 create.html로 낚아채면 시트가 떴다가 페이지가
+      //    통째로 넘어가며 사라졌다(사장님 재현). 시트의 실제 이동은 write-hub.js가
+      //    셸 인식으로 처리한다.
+      if (isCompose(href) || /create\.html|write\.html|compose=1/.test(oc)) {
         e.preventDefault(); e.stopPropagation();
         try { window.top.location.href = "create.html"; } catch (_) { location.href = "create.html"; }
         return;
@@ -297,6 +301,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const norm = (s) => (s || "").toLowerCase().replace(/\.html$/, "");
     const curFile = norm(location.pathname.split("/").pop() || "index.html");
     const isTabRoot = curIdx !== -1 && norm(PAGE_URL[currentPage]) === curFile;
+
+    /* ═══ 앱/PWA = 항상 셸 — MPA 탈출 자가 회복 ═══
+       로그인·글쓰기 등 최상위 이동을 거치면 앱이 셸 밖(MPA)에서 돌게 되고,
+       조그·스와이프가 셸과 달라져 '먹통'으로 보였다(사장님 재현: 로그인 후).
+       앱/PWA 환경에서 탭 루트에 단독으로 떨어지면 셸의 같은 탭으로 즉시 복귀한다.
+       예외: ?compose=1(작성 흐름 딥링크)은 건드리지 않는다. 웹 브라우저는 MPA 유지(SEO). */
+    if (!SHELL_MODE && window.top === window.self && isTabRoot &&
+        !/[?&]compose=1\b/.test(location.search)) {
+      const appEnv = /GallaApp/.test(navigator.userAgent) ||
+        (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+      if (appEnv) { location.replace("app-shell.html?tab=" + currentPage); return; }
+    }
 
     /* ═══════ 🐚 셸 모드 (app-shell.html 안 iframe) ═══════
        탭 5개가 셸에 상주해 전환이 즉시다. 이 페이지는 자기 네비·스와이프 엔진을
