@@ -270,6 +270,25 @@ document.addEventListener("DOMContentLoaded", () => {
     if (IN_SHELL && isTabRoot) {
       document.body.classList.add("in-shell");     // 자기 네비 숨김(셸 네비가 담당)
       const post = (m) => { try { window.parent.postMessage(Object.assign({ galla: "shell" }, m), location.origin); } catch (_) {} };
+
+      /* 헤더 로고·바로가기(다른 '탭'으로 가는 클릭) 가로채기 —
+         그대로 두면 iframe 안에서 그 탭의 복사본이 열려 셸 네비와 어긋난다
+         (사장님 재현: 마이에서 로고 → 판은 인덱스, 네비는 마이).
+         캡처 단계에서 끊고 셸에 전환을 위임한다. 탭이 아닌 페이지(이슈 상세 등)는 그대로. */
+      const TAB_OF = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
+      const tabOfUrl = (u) => TAB_OF[(u || "").split("?")[0].split("#")[0].split("/").pop()] || null;
+      document.addEventListener("click", (e) => {
+        let tab = null;
+        const a = e.target.closest("a[href]");
+        if (a) tab = tabOfUrl(a.getAttribute("href"));
+        if (!tab) {
+          const o = e.target.closest("[onclick]");
+          if (o) { const oc = o.getAttribute("onclick") || ""; for (const k in TAB_OF) { if (oc.indexOf(k) !== -1) { tab = TAB_OF[k]; break; } } }
+        }
+        if (!tab) return;
+        e.preventDefault(); e.stopPropagation();   // 캡처 차단 — 인라인 onclick도 실행 전 정지
+        post({ t: "nav", tab });
+      }, true);
       let sx0 = 0, sy0 = 0, lock = 0, lastX = 0, lastT = 0, v = 0; // lock: 0 미정 1 수평 2 취소
       document.addEventListener("touchstart", (e) => {
         if (e.touches.length !== 1) { lock = 2; return; }
