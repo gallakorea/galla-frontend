@@ -38,12 +38,37 @@
   const img = item && item.querySelector("img");
   if (!img) return;
 
-  let photo = null;
+  const AV_KEY = "galla_nav_avatar";
+  const apply = (url) => {
+    if (url) {
+      img.removeAttribute("data-base");     // 활성/비활성 스왑이 덮어쓰지 않게
+      img.removeAttribute("data-active");
+      img.classList.add("nav-avatar");
+      img.onerror = function () {           // 사진 로드 실패 시 기본 아이콘으로 복귀
+        this.onerror = null;
+        this.classList.remove("nav-avatar");
+        this.src = "./assets/icons/nav-user.svg";
+      };
+      if (img.src !== url) img.src = url;
+    } else {
+      img.classList.remove("nav-avatar");
+      img.dataset.base = "./assets/icons/nav-user.svg";
+      img.dataset.active = "./assets/icons/nav-user-active.svg";
+      img.src = (document.body.dataset.page === "mypage") ? img.dataset.active : img.dataset.base;
+    }
+  };
+
+  /* ⚡ 캐시 즉시 적용 — 네트워크를 기다리지 않아 아바타가 바로 보인다.
+     ('안 나올 때도 있고 느리고 제각각' 원인 = 페이지마다 supabase 왕복 대기) */
+  try { const c = localStorage.getItem(AV_KEY); if (c) apply(c); } catch (_) {}
+
+  let photo = null, checked = false;
   try {
     const sb = window.supabaseClient ||
       (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
     if (sb) {
       const { data } = await sb.auth.getSession();
+      checked = true;                        // 세션 확인 완료(있든 없든)
       const uid = data?.session?.user?.id;
       if (uid) {
         // avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
@@ -51,19 +76,16 @@
         if (u?.avatar_url && window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u.avatar_url);
       }
     }
-  } catch (_) { /* 실패 시 기본 아이콘 유지 */ }
+  } catch (_) { /* 실패 시 캐시/기본 아이콘 유지 */ }
 
-  // 사진이 있을 때만 아바타로 교체. 그 외(비로그인·아바타 없음)는 기본 SVG 아이콘 유지.
-  if (!photo) return;
-  img.removeAttribute("data-base");         // 활성/비활성 스왑이 덮어쓰지 않게
-  img.removeAttribute("data-active");
-  img.classList.add("nav-avatar");
-  img.onerror = function () {                // 사진 로드 실패 시 기본 아이콘으로 복귀
-    this.onerror = null;
-    this.classList.remove("nav-avatar");
-    this.src = "./assets/icons/nav-user.svg";
-  };
-  img.src = photo;
+  if (!checked) return;                      // supabase 미탑재 페이지 — 캐시 상태 유지
+  try {
+    if (photo) localStorage.setItem(AV_KEY, photo);
+    else localStorage.removeItem(AV_KEY);    // 로그아웃 — 다음부터 기본 아이콘
+    // 셸 네비(최상위)에도 반영 — 판이 아니라 셸의 아이콘이 실제로 보이는 것
+    if (window.top !== window.self && window.top.GALLA_setNavAvatar) window.top.GALLA_setNavAvatar(photo);
+  } catch (_) {}
+  apply(photo);
 })();
 
 document.addEventListener("DOMContentLoaded", () => {

@@ -130,6 +130,15 @@ body[data-page="mypage"] #app {
 .header-inner.header-3 > :first-child { justify-self: start; }
 .header-inner.header-3 > :last-child  { justify-self: end; }
 .header-inner.header-3 .logo { justify-self: center; }
+/* 로고 절대 중앙 고정(2026-07-22) — 페이지마다 좌우 버튼 개수·폭이 달라도
+   로고는 화면 정중앙 같은 자리(인덱스 기준). 그리드 흐름에서 빼서 강제한다. */
+.header-inner.header-3 { position: relative; }
+.header-inner.header-3 > .logo,
+.header-inner.header-3 > .logo-link {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
 .hdr-btn {
   width: 40px; height: 40px; padding: 0;
   background: none; border: none; cursor: pointer; color: #fff;
