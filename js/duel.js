@@ -68,92 +68,122 @@
   const STALE = new Set(["not_pending", "not_found", "not_scheduled", "not_live", "time_over"]);
   const reason = (r) => REASON[r];
 
-  /* ═══════════ 🎆 DFX — 옥타곤 전용 화려한 연출 엔진(자체 내장) ═══════════
-     아이템 사용 순간을 '축제'로. 파티클 폭발·화면 플래시·흔들림·컨페티·KO 배너.
-     reduced-motion이면 전부 조용히 스킵. */
+  /* ═══════════ ✦ DFX — 옥타곤 SVG 연출 엔진 ═══════════
+     이모지 없이 전부 인라인 SVG. 톤은 theme.css: 인디고 액센트 + 진영색(pro/con).
+     빛줄기 파티클·확산 링·글로우 플래시·흔들림·컨페티·아이콘 배너. reduced-motion 스킵. */
   const DFX = (() => {
     const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const NS = "http://www.w3.org/2000/svg";
     let layer;
     const L = () => { if (!layer || !layer.isConnected) { layer = document.createElement("div"); layer.className = "dfx-layer"; document.body.appendChild(layer); } return layer; };
     const rnd = (a, b) => a + Math.random() * (b - a);
-    const center = () => { const o = document.querySelector(".octa") || document.body; const r = o.getBoundingClientRect(); return [r.left + r.width / 2, Math.max(140, r.top + Math.min(r.height, innerHeight) * 0.34)]; };
-    function burst(x, y, emojis, count = 20, spread = 130) {
-      if (reduce) return;
-      const l = L();
+    const PAL = {
+      accent: ["#6a7bff", "#4361ff", "#8b9bff", "#aab6ff"],
+      pro:    ["#4d8dff", "#6fa4ff", "#9bc0ff", "#c3d8ff"],
+      con:    ["#ff5a6e", "#ff8a9c", "#ffb3bf", "#ffd4db"],
+    };
+    const center = () => { const o = document.querySelector(".octa") || document.body; const r = o.getBoundingClientRect(); return [r.left + r.width / 2, Math.max(150, r.top + Math.min(r.height, innerHeight) * 0.34)]; };
+    // 파티클 = SVG 빛줄기(rect) 또는 4각 스파클(path)
+    function particle(color, spark) {
+      const s = document.createElementNS(NS, "svg"); s.setAttribute("class", "dfx-p");
+      if (spark) {
+        s.setAttribute("viewBox", "0 0 24 24");
+        const p = document.createElementNS(NS, "path");
+        p.setAttribute("d", "M12 0 L14.4 9.6 L24 12 L14.4 14.4 L12 24 L9.6 14.4 L0 12 L9.6 9.6 Z");
+        p.setAttribute("fill", color); s.appendChild(p);
+      } else {
+        s.setAttribute("viewBox", "0 0 6 24");
+        const r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", "1.5"); r.setAttribute("width", "3"); r.setAttribute("height", "24"); r.setAttribute("rx", "1.5");
+        r.setAttribute("fill", color); s.appendChild(r);
+      }
+      return s;
+    }
+    function burst(x, y, pal, count = 22, spread = 150) {
+      if (reduce) return; const l = L(); const cols = PAL[pal] || PAL.accent;
       for (let i = 0; i < count; i++) {
-        const p = document.createElement("span"); p.className = "dfx-p";
-        p.textContent = emojis[i % emojis.length]; p.style.fontSize = rnd(15, 34) + "px";
-        p.style.left = x + "px"; p.style.top = y + "px";
-        const ang = (Math.PI * 2 * i) / count + rnd(-0.35, 0.35), dist = spread + rnd(0, spread);
-        l.appendChild(p);
-        requestAnimationFrame(() => { p.style.transform = `translate(${Math.cos(ang) * dist}px,${Math.sin(ang) * dist - 46}px) rotate(${rnd(-240, 240)}deg) scale(${rnd(.5, 1.5)})`; p.style.opacity = "0"; });
-        setTimeout(() => p.remove(), 1050);
+        const spark = i % 4 === 0;
+        const el = particle(cols[i % cols.length], spark);
+        const sz = spark ? rnd(10, 17) : rnd(4, 7);
+        el.style.width = sz + "px"; el.style.height = (spark ? sz : sz * 3.4) + "px";
+        el.style.left = x + "px"; el.style.top = y + "px";
+        const ang = (Math.PI * 2 * i) / count + rnd(-0.28, 0.28), dist = spread + rnd(0, spread);
+        const base = ang * 180 / Math.PI + 90;
+        el.style.transform = `translate(-50%,-50%) rotate(${base}deg)`;
+        l.appendChild(el);
+        const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 42;
+        requestAnimationFrame(() => { el.style.transform = `translate(-50%,-50%) translate(${dx}px,${dy}px) rotate(${base + rnd(-40, 40)}deg) scale(${spark ? rnd(.5, 1.1) : rnd(.3, .8)})`; el.style.opacity = "0"; });
+        setTimeout(() => el.remove(), 1000);
       }
     }
     function ring(x, y, color) {
       if (reduce) return;
-      const r = document.createElement("span"); r.className = "dfx-ring";
-      r.style.left = x + "px"; r.style.top = y + "px"; r.style.borderColor = color || "#ffd76a";
-      L().appendChild(r);
-      requestAnimationFrame(() => { r.style.transform = "translate(-50%,-50%) scale(3.2)"; r.style.opacity = "0"; });
-      setTimeout(() => r.remove(), 720);
+      const s = document.createElementNS(NS, "svg"); s.setAttribute("class", "dfx-ring"); s.setAttribute("viewBox", "0 0 100 100");
+      const c = document.createElementNS(NS, "circle"); c.setAttribute("cx", "50"); c.setAttribute("cy", "50"); c.setAttribute("r", "46");
+      c.setAttribute("fill", "none"); c.setAttribute("stroke", color || "#4361ff"); c.setAttribute("stroke-width", "2.5");
+      s.appendChild(c); s.style.left = x + "px"; s.style.top = y + "px"; L().appendChild(s);
+      requestAnimationFrame(() => { s.style.transform = "translate(-50%,-50%) scale(3)"; s.style.opacity = "0"; });
+      setTimeout(() => s.remove(), 720);
     }
     function flash(color) {
-      if (reduce) return;
-      const f = document.createElement("div"); f.className = "dfx-flash";
-      f.style.background = `radial-gradient(circle at 50% 38%, ${color || "rgba(255,180,80,.55)"}, transparent 68%)`;
-      L().appendChild(f);
+      if (reduce) return; const f = document.createElement("div"); f.className = "dfx-flash";
+      f.style.background = `radial-gradient(circle at 50% 36%, ${color}, transparent 66%)`; L().appendChild(f);
       requestAnimationFrame(() => f.classList.add("on"));
-      setTimeout(() => { f.classList.remove("on"); setTimeout(() => f.remove(), 340); }, 150);
+      setTimeout(() => { f.classList.remove("on"); setTimeout(() => f.remove(), 340); }, 140);
     }
     function shake(hard) { if (reduce) return; document.body.classList.add(hard ? "dfx-shake-hard" : "dfx-shake"); setTimeout(() => document.body.classList.remove("dfx-shake", "dfx-shake-hard"), hard ? 620 : 460); }
-    function confetti(colors, n = 80) {
-      if (reduce) return;
-      const l = L(), cols = colors || ["#ff3c5a", "#ffb03c", "#4a7bff", "#33d17a", "#b388ff"];
+    function confetti(pal, n = 56) {
+      if (reduce) return; const l = L(); const cols = PAL[pal] || PAL.accent;
       for (let i = 0; i < n; i++) {
-        const p = document.createElement("span"); p.className = "dfx-conf";
-        const s = rnd(6, 12); p.style.width = s + "px"; p.style.height = s * rnd(.5, 1.5) + "px";
-        p.style.background = cols[i % cols.length]; if (Math.random() > .6) p.style.borderRadius = "50%";
-        p.style.left = rnd(0, innerWidth) + "px"; p.style.top = rnd(-40, -8) + "px";
-        p.style.transition = `transform ${rnd(1.5, 2.6)}s cubic-bezier(.2,.6,.4,1), opacity .4s ease ${rnd(1, 1.9)}s`;
-        l.appendChild(p);
-        requestAnimationFrame(() => { p.style.transform = `translate(${rnd(-70, 70)}px, ${innerHeight + 90}px) rotate(${rnd(180, 960)}deg)`; p.style.opacity = "0"; });
-        setTimeout(() => p.remove(), 2700);
+        const el = particle(cols[i % cols.length], i % 5 === 0);
+        const w = rnd(4, 8); el.style.width = w + "px"; el.style.height = w * rnd(1.6, 3) + "px";
+        el.style.left = rnd(0, innerWidth) + "px"; el.style.top = rnd(-40, -8) + "px";
+        el.style.transition = `transform ${rnd(1.5, 2.6)}s cubic-bezier(.2,.6,.4,1), opacity .5s ease ${rnd(1, 1.9)}s`;
+        l.appendChild(el);
+        requestAnimationFrame(() => { el.style.transform = `translate(${rnd(-70, 70)}px, ${innerHeight + 90}px) rotate(${rnd(180, 960)}deg)`; el.style.opacity = "0"; });
+        setTimeout(() => el.remove(), 2700);
       }
     }
-    /* 화면 중앙에 큼직하게 솟아오르는 텍스트(줌+회전) */
-    function bigText(html, cls) {
-      const b = document.createElement("div"); b.className = "dfx-big " + (cls || "");
-      b.innerHTML = html; L().appendChild(b);
+    const ICON = {
+      clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.2v5l3.2 2"/>',
+      mic:   '<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>',
+      rematch: '<path d="M3.5 9a8.5 8.5 0 0 1 14-3l1.7 1.6"/><path d="M19.2 3v4.6h-4.6"/><path d="M20.5 15a8.5 8.5 0 0 1-14 3L4.8 16.4"/><path d="M4.8 21v-4.6h4.6"/>',
+      horn:  '<path d="M3 10v4a1 1 0 0 0 1 1h2l6 4V5L6 9H4a1 1 0 0 0-1 1Z"/><path d="M16 8.5a5 5 0 0 1 0 7"/>',
+    };
+    function bigText(icon, text, sub, tone) {
+      const b = document.createElement("div"); b.className = "dfx-big tone-" + (tone || "accent");
+      b.innerHTML = `<span class="dfx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[icon] || ""}</svg></span>`
+        + `<span class="dfx-tx">${text}${sub ? `<em>${sub}</em>` : ""}</span>`;
+      L().appendChild(b);
       requestAnimationFrame(() => b.classList.add("show"));
-      setTimeout(() => { b.classList.add("out"); setTimeout(() => b.remove(), 420); }, 1500);
+      setTimeout(() => { b.classList.add("out"); setTimeout(() => b.remove(), 440); }, 1500);
+      return b;
     }
     function haptic(k) { try { window.BattleFX?.haptic?.(k); } catch (e) {} }
-    return { burst, ring, flash, shake, confetti, bigText, center, haptic, reduce };
+    return { burst, ring, flash, shake, confetti, bigText, center, haptic, reduce, ICON };
   })();
 
-  /* 아이템별 화려한 연출 — 사용 즉시 호출 */
+  /* 아이템별 연출 — 사용 즉시 호출(전부 SVG·톤 준수) */
   function fxExtend() {
     const [cx, cy] = DFX.center();
-    DFX.ring(cx, cy, "#ffd76a"); DFX.ring(cx, cy, "#fff2c0");
-    DFX.burst(cx, cy, ["⏰", "⏱️", "🕐", "✨", "💫", "⌛"], 22, 140);
-    DFX.bigText("⏱️ <b>+60초</b>", "gold");
+    DFX.ring(cx, cy, "#6a7bff"); DFX.ring(cx, cy, "#4361ff");
+    DFX.burst(cx, cy, "accent", 24, 150);
+    DFX.bigText("clock", "시간 연장", "+60초", "accent");
     DFX.haptic("hit");
   }
   function fxBoost(team, box) {
     const r = (box || document.querySelector(".octa") || document.body).getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.top + Math.min(r.height, innerHeight) * 0.7;
-    DFX.burst(x, y, ["📢", "💥", "🌟", "🔊", "⚡"], 18, 120);
-    DFX.confetti(team === "challenger" ? ["#4a7bff", "#7ba6ff", "#cfe0ff"] : ["#ff4d67", "#ff8a9c", "#ffd0d8"], 60);
-    DFX.bigText("📢 <b>부스트!</b> <span class='dfx-x'>1.7×</span>", "boost");
+    const x = r.left + r.width / 2, y = r.top + Math.min(r.height, innerHeight) * 0.66;
+    const pal = team === "challenger" ? "pro" : "con";
+    DFX.burst(x, y, pal, 20, 130); DFX.confetti(pal, 54);
+    DFX.bigText("horn", "응원 부스트", "×1.7", pal);
     DFX.haptic("hit");
   }
   function fxRematch() {
     const [cx, cy] = DFX.center();
-    DFX.flash("rgba(255,90,60,.5)"); DFX.shake();
-    DFX.burst(cx, cy, ["🔥", "🔁", "⚔️", "💢", "🔥"], 26, 160);
-    DFX.confetti(["#ff5a3c", "#ffb03c", "#ff3c5a"], 70);
-    DFX.bigText("🔁 <b>설욕전!</b>", "fire");
+    DFX.flash("rgba(255,90,110,.42)"); DFX.shake();
+    DFX.burst(cx, cy, "con", 26, 160); DFX.confetti("con", 62);
+    DFX.bigText("rematch", "설욕전", "REMATCH", "con");
     DFX.haptic("hit");
   }
 
@@ -500,7 +530,7 @@
           <button class="cg-team opp"  data-team="opponent">🔴 ${esc(nk(D.opponent))}</button>
         </div>
         <div class="cg-amts">${[10, 50, 100, 500].map(a => `<button class="cg-amt" data-amt="${a}">${a}</button>`).join("")}</div>
-        <button class="cg-boost" id="cg-boost" title="응원 부스트">📢 부스트 <span class="cg-boost-x">1.7×</span></button>
+        <button class="cg-boost" id="cg-boost" title="응원 부스트"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${DFX.ICON.horn}</svg> 부스트 <span class="cg-boost-x">1.7×</span></button>
       </div>`;
     let team = null, amt = 50, boost = false;
     box.querySelectorAll(".cg-team").forEach(b => b.onclick = () => {
@@ -524,8 +554,8 @@
       D.cheer_chal = data.chal; D.cheer_opp = data.opp;
       paintCheerGauge();
       cheerFx(team, amt);
-      if (boost && data.boosted) { fxBoost(team, box); finisherToast("📢 부스트 적용! 배당 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
-      else if (boost && !data.boosted) { alert("부스트권이 없어 일반 응원으로 걸렸어요. 상점에서 📢 부스트를 구매하세요."); boost = false; if (boostBtn) boostBtn.classList.remove("on"); askBuy("duel_cheer_boost"); }
+      if (boost && data.boosted) { fxBoost(team, box); finisherToast("부스트 적용! 배당 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
+      else if (boost && !data.boosted) { alert("부스트권이 없어 일반 응원으로 걸렸어요. 상점에서 부스트권을 구매하세요."); boost = false; if (boostBtn) boostBtn.classList.remove("on"); askBuy("duel_cheer_boost"); }
     });
   }
   /* 응원 투척 연출 — 숫자가 링으로 날아가 꽂힌다 */
@@ -544,26 +574,22 @@
     const mine = m.user_id === ME;
     const el = document.createElement("div");
     el.className = `rmsg ${m.side}${mine ? " mine" : ""}${m.is_finisher ? " finisher" : ""} pop`;
-    el.innerHTML = `${m.is_finisher ? `<span class="rmsg-fin">🎤 결정타</span>` : ""}<span class="rmsg-body">${esc(m.body)}</span>`;
+    el.innerHTML = `${m.is_finisher ? `<span class="rmsg-fin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${DFX.ICON.mic}</svg>결정타</span>` : ""}<span class="rmsg-body">${esc(m.body)}</span>`;
     box.appendChild(el);
     box.scrollTop = box.scrollHeight;
     window.BattleFX?.haptic?.(m.is_finisher ? "hit" : "tap");
     if (m.is_finisher) finisherBanner(m.side);   // 관중석에 '결정타!' 배너
   }
-  /* 🎤 결정타 — 화면 전체가 번쩍이고 흔들리는 KO급 연출. 관전자·상대 모두 회심의 한 방을 목격 */
+  /* 결정타 — 화면 전체가 번쩍이고 흔들리는 KO급 연출(SVG·진영색). 모두가 회심의 한 방을 목격 */
   function finisherBanner(side) {
     const nk_ = side === "challenger" ? nk(D.challenger) : nk(D.opponent);
-    const col = side === "challenger" ? "rgba(74,123,255,.5)" : "rgba(255,90,110,.5)";
-    DFX.flash(col); DFX.shake(true);
+    const tone = side === "challenger" ? "pro" : "con";
+    DFX.flash(side === "challenger" ? "rgba(77,141,255,.45)" : "rgba(255,90,110,.45)");
+    DFX.shake(true);
     const [cx, cy] = DFX.center();
-    DFX.burst(cx, cy, ["💥", "🎤", "🔥", "⚡", "💢", "✨"], 30, 190);
-    DFX.confetti(side === "challenger" ? ["#4a7bff", "#7ba6ff", "#ffd76a"] : ["#ff4d67", "#ff8a9c", "#ffd76a"], 60);
-    const b = document.createElement("div");
-    b.className = `fin-banner ${side}`;
-    b.innerHTML = `<span class="fin-ko">🎤 결정타!</span><span class="fin-who">${esc(nk_)}의 회심의 한 방</span>`;
-    document.body.appendChild(b);
-    requestAnimationFrame(() => b.classList.add("show"));
-    setTimeout(() => { b.classList.remove("show"); setTimeout(() => b.remove(), 400); }, 2200);
+    DFX.burst(cx, cy, tone, 30, 190);
+    DFX.confetti(tone, 58);
+    DFX.bigText("mic", "결정타", esc(nk_), tone);
     DFX.haptic("hit");
   }
   function appendCheer(c) {
@@ -586,14 +612,33 @@
     const iAmChal = ME === D.challenger;
     const extended = iAmChal ? D.chal_extended : D.opp_extended;
     const finished = iAmChal ? D.chal_finisher : D.opp_finisher;
-    box.innerHTML = `<div class="fi-tools">
-        <button id="fi-ext" class="fi-tool${extended ? " used" : ""}" ${extended ? "disabled" : ""} title="시간 연장권">⏱️ 연장${extended ? "완료" : ""}</button>
-        <button id="fi-fin" class="fi-tool fin${finished ? " used" : ""}" ${finished ? "disabled" : ""} title="결정타">🎤 결정타${finished ? "완료" : ""}</button>
+    const svg = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const IC = DFX.ICON;
+    const IC_ITEM = svg('<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/>');   // 아이템(파워)
+    const IC_SEND = svg('<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/>');
+    // 아이템 진입로 = 채팅 입력창 "옆" 아이콘(기존 컴포저 UX와 통일). 탭 → 팝오버
+    box.innerHTML = `<div class="fi-wrap">
+      <div class="fi-pop" id="fi-pop" hidden>
+        <button class="fip-item" id="fi-ext" ${extended ? "disabled" : ""}>
+          <span class="fip-ic">${svg(IC.clock)}</span>
+          <span class="fip-txt"><b>시간 연장</b><em>${extended ? "이미 사용함" : "제한시간 +60초 · 판당 1회"}</em></span>
+          <span class="fip-state">${extended ? "완료" : "+60s"}</span></button>
+        <button class="fip-item fin" id="fi-fin" ${finished ? "disabled" : ""}>
+          <span class="fip-ic">${svg(IC.mic)}</span>
+          <span class="fip-txt"><b>결정타</b><em>${finished ? "이미 사용함" : "다음 발화를 강조 · 판당 1회"}</em></span>
+          <span class="fip-state">${finished ? "완료" : "1회"}</span></button>
       </div>
       <div class="fi-row">
-      <input id="fi-input" maxlength="500" placeholder="상대에게 한 방 날리기…" autocomplete="off">
-      <button id="fi-send" class="fi-send">▶</button></div>`;
-    let armFin = false;
+        <button id="fi-items" class="fi-items" aria-label="아이템">${IC_ITEM}</button>
+        <input id="fi-input" maxlength="500" placeholder="상대에게 한 방 날리기…" autocomplete="off">
+        <button id="fi-send" class="fi-send" aria-label="전송"><span class="fi-fin-badge" hidden>${svg(IC.mic)}</span>${IC_SEND}</button>
+      </div></div>`;
+    let armFin = false, popOpen = false;
+    const pop = $("#fi-pop"), itemsBtn = $("#fi-items"), sendBadge = box.querySelector(".fi-fin-badge");
+    const closePop = () => { popOpen = false; pop.hidden = true; itemsBtn.classList.remove("on"); };
+    const togglePop = () => { popOpen = !popOpen; pop.hidden = !popOpen; itemsBtn.classList.toggle("on", popOpen); };
+    itemsBtn.onclick = (e) => { e.stopPropagation(); togglePop(); };
+    document.addEventListener("click", (e) => { if (popOpen && !box.contains(e.target)) closePop(); });
     const send = async () => {
       const inp = $("#fi-input"); const t = inp.value.trim(); if (!t) return;
       const useFin = armFin;
@@ -601,11 +646,12 @@
       const { data } = await sb.rpc("duel_say", { p_duel: D.id, p_body: t, p_finisher: useFin });
       if (!data?.ok) {
         if (data?.reason === "time_over") return renderArena(D.id);
-        if (data?.reason === "no_finisher") { alert("결정타가 없어요. 상점에서 🎤 결정타를 구매하세요."); askBuy("duel_finisher_pass"); }
+        if (data?.reason === "no_finisher") { alert("결정타가 없어요. 상점에서 구매하세요."); askBuy("duel_finisher_pass"); }
         else alert(reason(data?.reason) || "전송 실패");
         inp.value = t; return;
       }
-      if (useFin) { armFin = false; const fb = $("#fi-fin"); if (fb) { fb.disabled = true; fb.classList.add("used"); fb.textContent = "🎤 결정타완료"; } }
+      if (useFin) { armFin = false; sendBadge.hidden = true; $("#fi-send").classList.remove("armed"); inp.placeholder = "상대에게 한 방 날리기…";
+        const fb = $("#fi-fin"); if (fb) { fb.disabled = true; fb.classList.remove("armed"); fb.querySelector(".fip-state").textContent = "완료"; } }
     };
     $("#fi-send").onclick = send;
     $("#fi-input").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
@@ -613,26 +659,29 @@
     // ⏱️ 시간 연장권 — 판당 1회 +60초
     const extBtn = $("#fi-ext");
     if (extBtn && !extended) extBtn.onclick = async () => {
-      extBtn.disabled = true;
+      extBtn.disabled = true; closePop();
       const { data } = await sb.rpc("duel_extend_time", { p_duel: D.id });
       if (!data?.ok) {
         extBtn.disabled = false;
-        if (data?.reason === "no_item") { alert("시간 연장권이 없어요. 상점에서 ⏱️ 연장권을 구매하세요."); askBuy("duel_extend_pass"); }
+        if (data?.reason === "no_item") { alert("시간 연장권이 없어요. 상점에서 구매하세요."); askBuy("duel_extend_pass"); }
         else alert(reason(data?.reason) || "연장 실패");
         return;
       }
       D.live_ends_at = data.live_ends_at;
-      extBtn.classList.add("used"); extBtn.textContent = "⏱️ 연장완료";
+      extBtn.classList.add("used"); extBtn.querySelector(".fip-state").textContent = "완료";
       fxExtend();
-      finisherToast("⏱️ 60초 연장됐어요!");
+      finisherToast("60초 연장됐어요!");
       const t = document.getElementById("ring-timer"); if (t) { t.classList.remove("dfx-timer-pop"); void t.offsetWidth; t.classList.add("dfx-timer-pop"); }
     };
-    // 🎤 결정타 — 다음 발화 1회를 하이라이트로 (토글)
+    // 결정타 — 다음 발화 1회를 하이라이트로 (토글)
     const finBtn = $("#fi-fin");
     if (finBtn && !finished) finBtn.onclick = () => {
       armFin = !armFin;
       finBtn.classList.toggle("armed", armFin);
-      const inp = $("#fi-input"); if (inp) inp.placeholder = armFin ? "🎤 회심의 한 방을 결정타로!" : "상대에게 한 방 날리기…";
+      finBtn.querySelector(".fip-state").textContent = armFin ? "장전됨" : "1회";
+      sendBadge.hidden = !armFin; $("#fi-send").classList.toggle("armed", armFin);
+      const inp = $("#fi-input"); if (inp) inp.placeholder = armFin ? "회심의 한 방을 결정타로!" : "상대에게 한 방 날리기…";
+      closePop();
     };
   }
   /* 옥타곤 상단 짧은 토스트(연장/안내) — 배너보다 가벼운 알림 */
@@ -870,28 +919,29 @@
                : `<div class="duel-card closed-note">이 일기토는 변론 없이 종료됐어요.</div>`}
       <div class="closed-acts">
         ${D._isParty && D.status === "declined" ? `<button class="duel-btn primary" id="again">⚔️ 다시 신청</button>` : ""}
-        ${isLoser ? `<button class="duel-btn primary" id="rematch">🔁 설욕전 신청</button>` : ""}
+        ${isLoser ? `<button class="duel-btn primary rematch-btn" id="rematch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${DFX.ICON.rematch}</svg> 설욕전 신청</button>` : ""}
         <a class="duel-btn ghost" href="duel.html">로비로</a>
       </div>`;
+    const REMATCH_LABEL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${DFX.ICON.rematch}</svg> 설욕전 신청`;
     // 도망으로 끝난 판은 재도전이 자연스러운 다음 행동 — 로비로 되돌아가 헤매지 않게
     $("#again") && ($("#again").onclick = () => {
       const foe = D.challenger === ME ? D.opponent : D.challenger;
       location.href = `duel.html?challenge=${foe}&issue=${D.issue_id || ""}`;
     });
-    // 🔁 설욕전 — 진 사람이 같은 상대·주제로 신청서 없이 즉시 재도전
+    // 설욕전 — 진 사람이 같은 상대·주제로 신청서 없이 즉시 재도전
     $("#rematch") && ($("#rematch").onclick = async () => {
       const btn = $("#rematch"); btn.disabled = true; btn.textContent = "신청 중…";
       const { data } = await sb.rpc("duel_rematch", { p_duel: D.id });
       if (!data?.ok) {
-        btn.disabled = false; btn.textContent = "🔁 설욕전 신청";
-        if (data?.reason === "no_rematch") { alert("설욕전권이 없어요. 상점에서 🔁 설욕전권을 구매하세요."); return askBuy("duel_rematch_pass"); }
+        btn.disabled = false; btn.innerHTML = REMATCH_LABEL;
+        if (data?.reason === "no_rematch") { alert("설욕전권이 없어요. 상점에서 구매하세요."); return askBuy("duel_rematch_pass"); }
         if (data?.reason === "insufficient") return alert(`대결 GP(${D.stake})가 부족해요.`);
         if (data?.reason === "already") return alert("이미 이 상대와 진행 중인 대결이 있어요.");
         return alert(reason(data?.reason) || "설욕전 신청 실패");
       }
-      btn.textContent = "✅ 신청 완료!";
+      btn.textContent = "신청 완료!";
       fxRematch();
-      finisherToast("🔁 설욕전을 신청했어요! 상대의 수락을 기다립니다");
+      finisherToast("설욕전을 신청했어요! 상대의 수락을 기다립니다");
       setTimeout(() => { location.href = "duel.html?id=" + data.id; }, 1700);
     });
   }
