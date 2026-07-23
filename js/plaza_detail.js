@@ -1,6 +1,10 @@
 // 로컬 vendor UMD 전역 사용 (esm.sh 16모듈 폭포수 로드 제거)
 const { createClient } = window.supabase;
 
+// 광장 글 카테고리 어휘(search.html #plaza-category와 동일) — 수정 모달 드롭다운용.
+// owner-actions의 복합형 GALLA_CATEGORIES('정치·사회')와 달라 별도 정의한다.
+const PLAZA_CATEGORIES = ["정치","사회","경제","투자","직장","연애","결혼","일상","패션·뷰티","엔터","스포츠","여행","맛집","19금","기타"];
+
 const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
@@ -222,7 +226,7 @@ async function fetchPostDetail() {
             editFields: [
               { key: "title", label: "제목", type: "text", value: data.title || "" },
               { key: "body", label: "본문", type: "textarea", value: data.body || "" },
-              { key: "category", label: "카테고리", type: "select", options: window.GALLA_CATEGORIES, value: data.category || "" },
+              { key: "category", label: "카테고리", type: "select", options: PLAZA_CATEGORIES, value: data.category || "" },
             ],
             onSaved: (patch) => {
               if (patch.title != null && postTitleEl) postTitleEl.textContent = patch.title;

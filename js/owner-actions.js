@@ -65,6 +65,13 @@
     return e;
   }
 
+  // 앱 셸(app-shell) 안의 iframe pane인지 — 셸 하단 네비가 iframe 위를 덮으므로
+  // 바텀시트 하단(닫기)이 가리지 않도록 여백을 더해준다
+  function inShell() {
+    try { return window.top !== window.self && !!window.top.document.getElementById('shell-track'); }
+    catch (_) { return false; }
+  }
+
   function closeSheet() {
     const ex = document.querySelector('.oa-overlay');
     if (ex) ex.remove();
@@ -85,6 +92,7 @@
 
     const ov = overlay();
     const sheet = el('div', 'oa-sheet');
+    if (inShell()) sheet.classList.add('oa-shell-pad');
     sheet.appendChild(el('div', 'oa-grab'));
     sheet.appendChild(el('div', 'oa-title', `${cfg.label || '콘텐츠'} 관리`));
 
@@ -129,7 +137,10 @@
         input.value = f.value || '';
       } else if (f.type === 'select') {
         input = el('select', 'oa-input oa-select');
-        const opts = f.options || CATEGORIES;
+        const opts = (f.options || CATEGORIES).slice();
+        // 현재 값이 옵션에 없으면 맨 앞에 넣어 그대로 선택 — 기존 카테고리가
+        // 첫 항목으로 뒤바뀌어 저장되는 오염(예: 광장 '일상' → '정치·사회')을 차단
+        if (f.value && !opts.includes(f.value)) opts.unshift(f.value);
         opts.forEach(opt => {
           const o = document.createElement('option');
           o.value = opt; o.textContent = opt;
