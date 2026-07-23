@@ -57,3 +57,11 @@ revoke execute on function public._bh_flag(text,text,text,text,text) from public
 --  · ⑧ 신고 적체: reports 48h+ 미처리.
 --  · 새 critical/high 발견 시 관리자(admin_flag/role=admin) notifications('bug_hunt') 발송.
 --  · 실증: 크론 헤더 주입 실수로 4개 크론이 syntax error로 실패하던 것을 봇이 즉시 포착→수정.
+
+-- ── 알림 발송 (2026-07-24): 웹푸시 + 이메일 ──
+--  · 엣지함수 bug-alert(verify_jwt=false, x-bug-secret 헤더 인증) — 관리자 push_subscriptions에 웹푸시(VAPID),
+--    RESEND_API_KEY 있으면 gallakorea@gmail.com로 이메일.
+--  · 공유 시크릿: Supabase secret BUG_ALERT_SECRET == app_config('bug_alert_secret')(RLS 잠금).
+--  · run_bug_hunt: 새 critical/high 발견 시 net.http_post로 bug-alert 호출(x-bug-secret 전달).
+--  · 실증: 재스캔 시 net._http_response에 {ok:true,pushed:1} 200 확인(관리자 기기 웹푸시 발송).
+--  · 이메일은 RESEND_API_KEY 시크릿 추가 시 자동 활성(현재 미설정 → emailed:false).
