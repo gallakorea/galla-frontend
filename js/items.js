@@ -33,6 +33,14 @@
     // ── 도전 ──
     { key: "duel_ticket",     emoji: "⚔️", name: "일기토 신청서", price: 700, group: "duel", kind: "consumable",
       desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청", use: "상대 댓글 ⋯ 메뉴·프로필의 ⚔️ 일기토 신청 시 1장 쓰여요" },
+    { key: "duel_extend_pass", emoji: "⏱️", name: "시간 연장권", price: 400, group: "duel", kind: "consumable",
+      desc: "라이브 일기토 도중 제한시간을 60초 연장 (판당 1회)", use: "옥타곤 하단 ⏱️ 버튼으로 1장 쓰여요" },
+    { key: "duel_finisher_pass", emoji: "🎤", name: "결정타", price: 300, group: "duel", kind: "consumable",
+      desc: "회심의 한마디를 크게 강조! 관중석에 '결정타' 배너가 떠요 (판당 1회)", use: "옥타곤 입력창의 🎤 결정타를 켜고 발화하면 1장 쓰여요" },
+    { key: "duel_rematch_pass", emoji: "🔁", name: "설욕전권", price: 500, group: "duel", kind: "consumable",
+      desc: "패배한 일기토를 같은 상대·주제로 신청서 없이 즉시 재도전", use: "결과 화면의 🔁 설욕전 버튼으로 1장 쓰여요" },
+    { key: "duel_cheer_boost", emoji: "📢", name: "응원 부스트", price: 300, group: "duel", kind: "consumable",
+      desc: "관중 응원 베팅의 배당 지분을 1.7배로! 이긴 편일 때 몫이 커져요", use: "옥타곤 응원 시 📢 부스트를 켜면 1장 쓰여요" },
     // ── 유령 (기간제) ── kind:'ghost' → buy_ghost_pass(days)
     { key: "ghost_3",  emoji: "👻", name: "유령권 3일",  price: 800,  group: "ghost", kind: "ghost", days: 3,
       desc: "3일간 댓글을 정체불명 유령으로! (그때 단 댓글은 영구 익명)", use: "이슈·광장 댓글의 👻 토글로 유령 댓글을 써요" },

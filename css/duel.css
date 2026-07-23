@@ -284,3 +284,58 @@ body.duel-locked .nav { opacity: .35; pointer-events: none; filter: grayscale(1)
   background: rgba(106,123,255,.08); border: 1px solid rgba(106,123,255,.25);
   color: #dfe3f5; font-size: 14.5px; font-weight: 800; line-height: 1.5;
 }
+
+/* ═══════════ ⚔️ 일기토 고도화 아이템 4종 (2026-07-23) ═══════════ */
+
+/* ⏱️🎤 파이터 툴 바 — 입력창 위 연장·결정타 */
+.fi-tools { display: flex; gap: 8px; margin: 8px 0 2px; }
+.fi-tool {
+  flex: 1; padding: 8px 6px; border-radius: 10px; cursor: pointer;
+  font-size: 12px; font-weight: 800; font-family: inherit;
+  background: rgba(255,255,255,.05); color: #cdd3df; border: 1px solid rgba(255,255,255,.14);
+  transition: transform .1s, background .15s, border-color .15s;
+}
+.fi-tool:active { transform: scale(.95); }
+.fi-tool.fin { color: #ffd76a; border-color: rgba(255,201,64,.4); }
+.fi-tool.fin.armed { background: linear-gradient(135deg,#ffb347,#ff7a45); color: #1a0f00; border-color: transparent; box-shadow: 0 0 14px rgba(255,150,60,.55); }
+.fi-tool.used { opacity: .4; cursor: default; }
+
+/* 🎤 결정타 발화 — 링 안에서 크게 강조 */
+.rmsg.finisher {
+  max-width: 92%; padding: 12px 14px; font-size: 15px; font-weight: 700;
+  border-width: 2px !important; box-shadow: 0 0 18px rgba(255,150,60,.4);
+  background: linear-gradient(135deg, rgba(255,150,60,.22), rgba(255,90,60,.16)) !important;
+  border-color: rgba(255,170,70,.7) !important;
+  animation: finPop .4s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes finPop { 0% { transform: scale(.6) rotate(-2deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.rmsg-fin { display: block; font-size: 10px; font-weight: 900; letter-spacing: .5px; color: #ff9a3c; margin-bottom: 3px; }
+
+/* 🎤 결정타 배너 — 화면 상단 번쩍 */
+.fin-banner {
+  position: fixed; left: 50%; top: 74px; transform: translate(-50%, -18px) scale(.9);
+  z-index: 99998; padding: 12px 22px; border-radius: 14px; font-size: 14px; font-weight: 800; color: #1a0f00;
+  background: linear-gradient(135deg,#ffcf5c,#ff8a3d); box-shadow: 0 10px 34px rgba(255,140,50,.55);
+  opacity: 0; transition: opacity .3s, transform .35s cubic-bezier(.2,1.3,.5,1); pointer-events: none; white-space: nowrap;
+}
+.fin-banner.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.fin-banner.opponent { background: linear-gradient(135deg,#ff9db0,#ff5470); color: #2a0008; }
+
+/* 옥타곤 토스트(연장·부스트 안내) */
+.duel-toast {
+  position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 12px);
+  z-index: 99997; background: rgba(20,21,26,.97); border: 1px solid rgba(255,255,255,.14);
+  color: #fff; font-size: 13px; font-weight: 700; padding: 11px 18px; border-radius: 12px;
+  opacity: 0; transition: all .28s ease; pointer-events: none; white-space: nowrap;
+}
+.duel-toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 📢 응원 부스트 토글 */
+.cg-boost {
+  width: 100%; margin-top: 8px; padding: 9px; border-radius: 9px; cursor: pointer;
+  font-size: 12px; font-weight: 800; font-family: inherit;
+  background: rgba(255,255,255,.05); color: #cdd3df; border: 1px solid rgba(255,255,255,.14);
+}
+.cg-boost .cg-boost-x { font-weight: 900; color: #ffd76a; }
+.cg-boost.on { background: linear-gradient(135deg,#7b5bff,#a24bff); color: #fff; border-color: transparent; box-shadow: 0 0 14px rgba(140,80,255,.5); }
+.cg-boost.on .cg-boost-x { color: #fff; }

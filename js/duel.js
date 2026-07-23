@@ -56,6 +56,13 @@
     not_opponent: "이 일기토의 상대가 아니에요.",
     not_scheduled: "예약 상태가 아니에요.", too_early: "아직 입장 시간이 아니에요.",
     already_voted: "이미 투표했어요.",
+    // ⚔️ 고도화 아이템 사유
+    already_extended: "이 판에서 이미 시간을 연장했어요. (1회)",
+    finisher_used: "이 판에서 결정타를 이미 썼어요. (1회)",
+    no_item: "시간 연장권이 없어요. 상점에서 구매하세요.",
+    no_finisher: "결정타가 없어요. 상점에서 구매하세요.",
+    no_rematch: "설욕전권이 없어요. 상점에서 구매하세요.",
+    not_over: "아직 끝나지 않은 대결이에요.", not_party: "이 대결의 당사자가 아니에요.",
   };
   // 서버 상태와 화면이 어긋난 경우 — 알림만 띄우고 멈추면 사용자가 갇힌다. 최신 상태로 다시 그린다.
   const STALE = new Set(["not_pending", "not_found", "not_scheduled", "not_live", "time_over"]);
@@ -404,18 +411,21 @@
           <button class="cg-team opp"  data-team="opponent">🔴 ${esc(nk(D.opponent))}</button>
         </div>
         <div class="cg-amts">${[10, 50, 100, 500].map(a => `<button class="cg-amt" data-amt="${a}">${a}</button>`).join("")}</div>
+        <button class="cg-boost" id="cg-boost" title="응원 부스트">📢 부스트 <span class="cg-boost-x">1.7×</span></button>
       </div>`;
-    let team = null, amt = 50;
+    let team = null, amt = 50, boost = false;
     box.querySelectorAll(".cg-team").forEach(b => b.onclick = () => {
       team = b.dataset.team;
       box.querySelectorAll(".cg-team").forEach(x => x.classList.toggle("on", x === b));
     });
+    const boostBtn = $("#cg-boost");
+    if (boostBtn) boostBtn.onclick = () => { boost = !boost; boostBtn.classList.toggle("on", boost); };
     box.querySelectorAll(".cg-amt").forEach(b => b.onclick = async () => {
       if (!ME) return alert("로그인이 필요해요.");
       if (!team) return alert("먼저 응원할 편을 고르세요.");
       amt = +b.dataset.amt;
       b.disabled = true;
-      const { data, error } = await sb.rpc("duel_cheer_gp", { p_duel: D.id, p_team: team, p_amount: amt });
+      const { data, error } = await sb.rpc("duel_cheer_gp", { p_duel: D.id, p_team: team, p_amount: amt, p_boost: boost });
       b.disabled = false;
       if (error || !data?.ok) {
         const M = { insufficient: "GP가 부족해요.", is_party: "당사자는 응원할 수 없어요.",
@@ -425,6 +435,8 @@
       D.cheer_chal = data.chal; D.cheer_opp = data.opp;
       paintCheerGauge();
       cheerFx(team, amt);
+      if (boost && data.boosted) { finisherToast("📢 부스트 적용! 배당 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
+      else if (boost && !data.boosted) { alert("부스트권이 없어 일반 응원으로 걸렸어요. 상점에서 📢 부스트를 구매하세요."); boost = false; if (boostBtn) boostBtn.classList.remove("on"); askBuy("duel_cheer_boost"); }
     });
   }
   /* 응원 투척 연출 — 숫자가 링으로 날아가 꽂힌다 */
@@ -442,11 +454,23 @@
     const box = document.getElementById("ring-stream"); if (!box) return;
     const mine = m.user_id === ME;
     const el = document.createElement("div");
-    el.className = `rmsg ${m.side}${mine ? " mine" : ""} pop`;
-    el.innerHTML = `<span class="rmsg-body">${esc(m.body)}</span>`;
+    el.className = `rmsg ${m.side}${mine ? " mine" : ""}${m.is_finisher ? " finisher" : ""} pop`;
+    el.innerHTML = `${m.is_finisher ? `<span class="rmsg-fin">🎤 결정타</span>` : ""}<span class="rmsg-body">${esc(m.body)}</span>`;
     box.appendChild(el);
     box.scrollTop = box.scrollHeight;
-    window.BattleFX?.haptic?.("tap");
+    window.BattleFX?.haptic?.(m.is_finisher ? "hit" : "tap");
+    if (m.is_finisher) finisherBanner(m.side);   // 관중석에 '결정타!' 배너
+  }
+  /* 🎤 결정타 — 화면 상단에 잠깐 번쩍이는 배너. 관전자·상대 모두 회심의 한 방을 알아챈다 */
+  function finisherBanner(side) {
+    const nk_ = side === "challenger" ? nk(D.challenger) : nk(D.opponent);
+    const b = document.createElement("div");
+    b.className = `fin-banner ${side}`;
+    b.innerHTML = `🎤 <b>결정타!</b> ${esc(nk_)}의 회심의 한 방`;
+    document.body.appendChild(b);
+    requestAnimationFrame(() => b.classList.add("show"));
+    setTimeout(() => { b.classList.remove("show"); setTimeout(() => b.remove(), 350); }, 2200);
+    try { window.BattleFX?.haptic?.("hit"); } catch (e) {}
   }
   function appendCheer(c) {
     const box = document.getElementById("stands-stream"); if (!box) return;
@@ -465,20 +489,64 @@
       box.innerHTML = `<div class="watch-note">👀 관전 중 — 아래 관중석에서 응원·투표하세요</div>`;
       return;
     }
-    box.innerHTML = `<div class="fi-row">
+    const iAmChal = ME === D.challenger;
+    const extended = iAmChal ? D.chal_extended : D.opp_extended;
+    const finished = iAmChal ? D.chal_finisher : D.opp_finisher;
+    box.innerHTML = `<div class="fi-tools">
+        <button id="fi-ext" class="fi-tool${extended ? " used" : ""}" ${extended ? "disabled" : ""} title="시간 연장권">⏱️ 연장${extended ? "완료" : ""}</button>
+        <button id="fi-fin" class="fi-tool fin${finished ? " used" : ""}" ${finished ? "disabled" : ""} title="결정타">🎤 결정타${finished ? "완료" : ""}</button>
+      </div>
+      <div class="fi-row">
       <input id="fi-input" maxlength="500" placeholder="상대에게 한 방 날리기…" autocomplete="off">
       <button id="fi-send" class="fi-send">▶</button></div>`;
+    let armFin = false;
     const send = async () => {
       const inp = $("#fi-input"); const t = inp.value.trim(); if (!t) return;
+      const useFin = armFin;
       inp.value = "";
-      const { data } = await sb.rpc("duel_say", { p_duel: D.id, p_body: t });
-      if (!data?.ok) { if (data?.reason === "time_over") return renderArena(D.id); alert(reason(data?.reason) || "전송 실패"); inp.value = t; }
+      const { data } = await sb.rpc("duel_say", { p_duel: D.id, p_body: t, p_finisher: useFin });
+      if (!data?.ok) {
+        if (data?.reason === "time_over") return renderArena(D.id);
+        if (data?.reason === "no_finisher") { alert("결정타가 없어요. 상점에서 🎤 결정타를 구매하세요."); askBuy("duel_finisher_pass"); }
+        else alert(reason(data?.reason) || "전송 실패");
+        inp.value = t; return;
+      }
+      if (useFin) { armFin = false; const fb = $("#fi-fin"); if (fb) { fb.disabled = true; fb.classList.add("used"); fb.textContent = "🎤 결정타완료"; } }
     };
     $("#fi-send").onclick = send;
     $("#fi-input").addEventListener("keydown", e => { if (e.key === "Enter") send(); });
-    // 타이핑 프레즌스
     $("#fi-input").addEventListener("input", () => trackTyping());
+    // ⏱️ 시간 연장권 — 판당 1회 +60초
+    const extBtn = $("#fi-ext");
+    if (extBtn && !extended) extBtn.onclick = async () => {
+      extBtn.disabled = true;
+      const { data } = await sb.rpc("duel_extend_time", { p_duel: D.id });
+      if (!data?.ok) {
+        extBtn.disabled = false;
+        if (data?.reason === "no_item") { alert("시간 연장권이 없어요. 상점에서 ⏱️ 연장권을 구매하세요."); askBuy("duel_extend_pass"); }
+        else alert(reason(data?.reason) || "연장 실패");
+        return;
+      }
+      D.live_ends_at = data.live_ends_at;
+      extBtn.classList.add("used"); extBtn.textContent = "⏱️ 연장완료";
+      finisherToast("⏱️ 60초 연장됐어요!");
+    };
+    // 🎤 결정타 — 다음 발화 1회를 하이라이트로 (토글)
+    const finBtn = $("#fi-fin");
+    if (finBtn && !finished) finBtn.onclick = () => {
+      armFin = !armFin;
+      finBtn.classList.toggle("armed", armFin);
+      const inp = $("#fi-input"); if (inp) inp.placeholder = armFin ? "🎤 회심의 한 방을 결정타로!" : "상대에게 한 방 날리기…";
+    };
   }
+  /* 옥타곤 상단 짧은 토스트(연장/안내) — 배너보다 가벼운 알림 */
+  function finisherToast(msg) {
+    const t = document.createElement("div"); t.className = "duel-toast"; t.textContent = msg;
+    document.body.appendChild(t); requestAnimationFrame(() => t.classList.add("show"));
+    setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 1800);
+  }
+  /* 아이템이 없을 때 상점으로 유도 — askShop 패턴(문구 금지·즉시 열기) */
+  function askBuy(key) { try { window.openShop?.(key); } catch (e) {} }
 
   function mountStandTools() {
     const box = document.getElementById("stand-tools"); if (!box) return;
@@ -684,6 +752,9 @@
     const { data: msgs } = await sb.from("duel_messages").select("*").eq("duel_id", D.id).order("created_at").limit(200);
     const c = D.vote_challenger || 0, o = D.vote_opponent || 0, tot = Math.max(1, c + o);
     const cp = Math.round(c / tot * 100);
+    // 🔁 설욕전: 승부가 갈린 판(무승부·무효 제외)에서 '진 당사자'에게만 재도전 버튼
+    const isLoser = D._isParty && ME && D.winner && D.result !== "draw"
+      && (ME === D.challenger || ME === D.opponent) && ME !== D.winner;
     let banner = "";
     if (D.status === "finished") banner = D.result === "draw" ? "🤝 무승부 — GP 반환" : `🏆 ${esc(nk(D.winner))} 승리 · ${D.stake * 2} GP 획득`;
     else if (D.status === "noshow") banner = `🏳️ ${esc(nk(D.fled_by))} 노쇼 — ${esc(nk(D.winner))} 부전승`;
@@ -703,12 +774,28 @@
                : `<div class="duel-card closed-note">이 일기토는 변론 없이 종료됐어요.</div>`}
       <div class="closed-acts">
         ${D._isParty && D.status === "declined" ? `<button class="duel-btn primary" id="again">⚔️ 다시 신청</button>` : ""}
+        ${isLoser ? `<button class="duel-btn primary" id="rematch">🔁 설욕전 신청</button>` : ""}
         <a class="duel-btn ghost" href="duel.html">로비로</a>
       </div>`;
     // 도망으로 끝난 판은 재도전이 자연스러운 다음 행동 — 로비로 되돌아가 헤매지 않게
     $("#again") && ($("#again").onclick = () => {
       const foe = D.challenger === ME ? D.opponent : D.challenger;
       location.href = `duel.html?challenge=${foe}&issue=${D.issue_id || ""}`;
+    });
+    // 🔁 설욕전 — 진 사람이 같은 상대·주제로 신청서 없이 즉시 재도전
+    $("#rematch") && ($("#rematch").onclick = async () => {
+      const btn = $("#rematch"); btn.disabled = true; btn.textContent = "신청 중…";
+      const { data } = await sb.rpc("duel_rematch", { p_duel: D.id });
+      if (!data?.ok) {
+        btn.disabled = false; btn.textContent = "🔁 설욕전 신청";
+        if (data?.reason === "no_rematch") { alert("설욕전권이 없어요. 상점에서 🔁 설욕전권을 구매하세요."); return askBuy("duel_rematch_pass"); }
+        if (data?.reason === "insufficient") return alert(`대결 GP(${D.stake})가 부족해요.`);
+        if (data?.reason === "already") return alert("이미 이 상대와 진행 중인 대결이 있어요.");
+        return alert(reason(data?.reason) || "설욕전 신청 실패");
+      }
+      btn.textContent = "✅ 신청 완료!";
+      finisherToast("🔁 설욕전을 신청했어요! 상대의 수락을 기다립니다");
+      setTimeout(() => { location.href = "duel.html?id=" + data.id; }, 1400);
     });
   }
 
