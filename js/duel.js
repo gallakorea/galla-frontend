@@ -149,6 +149,8 @@
       mic:   '<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>',
       rematch: '<path d="M3.5 9a8.5 8.5 0 0 1 14-3l1.7 1.6"/><path d="M19.2 3v4.6h-4.6"/><path d="M20.5 15a8.5 8.5 0 0 1-14 3L4.8 16.4"/><path d="M4.8 21v-4.6h4.6"/>',
       horn:  '<path d="M3 10v4a1 1 0 0 0 1 1h2l6 4V5L6 9H4a1 1 0 0 0-1 1Z"/><path d="M16 8.5a5 5 0 0 1 0 7"/>',
+      roar:  '<circle cx="4.5" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 1 0 7"/><path d="M11.5 5.5a9 9 0 0 1 0 13"/><path d="M14.5 3a12.5 12.5 0 0 1 0 18"/>',
+      play:  '<path d="M7 4.5v15l12-7.5z"/>',
     };
     function bigText(icon, text, sub, tone) {
       const b = document.createElement("div"); b.className = "dfx-big tone-" + (tone || "accent");
@@ -185,6 +187,22 @@
     DFX.burst(cx, cy, "con", 26, 160); DFX.confetti("con", 62);
     DFX.bigText("rematch", "설욕전", "REMATCH", "con");
     DFX.haptic("hit");
+  }
+  /* 🦁 사자후 — 최강 연출: 화면 강타 + 3중 음파링 + 대량 파티클 + 배너 */
+  function fxRoar(side) {
+    const tone = side === "opponent" ? "con" : side === "challenger" ? "pro" : "con";
+    const [cx, cy] = DFX.center();
+    DFX.flash(tone === "con" ? "rgba(255,90,110,.5)" : "rgba(77,141,255,.5)");
+    DFX.shake(true);
+    setTimeout(() => DFX.shake(true), 260);              // 두 번 강타
+    DFX.ring(cx, cy, "#ff5a6e");
+    setTimeout(() => DFX.ring(cx, cy, "#ff8a9c"), 120);
+    setTimeout(() => DFX.ring(cx, cy, "#ffd4db"), 240);  // 퍼지는 음파 3중
+    DFX.burst(cx, cy, tone, 36, 210);
+    DFX.confetti(tone, 80);
+    DFX.bigText("roar", "사자후", "獅子吼", tone);
+    DFX.haptic("hit");
+    setTimeout(() => DFX.haptic("hit"), 200);
   }
 
   // ─────────── 라우팅 ───────────
@@ -573,8 +591,25 @@
     const box = document.getElementById("ring-stream"); if (!box) return;
     const mine = m.user_id === ME;
     const el = document.createElement("div");
+    const svg = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    if (m.is_roar && m.roar_url) {
+      // 🦁 사자후 — 재생 가능한 음성 버블
+      el.className = `rmsg ${m.side}${mine ? " mine" : ""} roar pop`;
+      el.innerHTML = `<span class="rmsg-roar">${svg(DFX.ICON.roar)}사자후</span>`
+        + `<button class="roar-play" aria-label="재생">${svg(DFX.ICON.play)}<span class="roar-wave"><i></i><i></i><i></i><i></i><i></i></span><em>3초</em></button>`;
+      const audio = new Audio(m.roar_url);
+      const btn = el.querySelector(".roar-play");
+      btn.onclick = () => { try { audio.currentTime = 0; audio.play(); btn.classList.add("playing"); } catch (e) {} };
+      audio.onended = () => btn.classList.remove("playing");
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+      fxRoar(m.side);
+      // 새로 도착한 사자후는 자동 재생(관전 몰입)
+      if (!mine) { try { audio.play(); btn.classList.add("playing"); } catch (e) {} }
+      return;
+    }
     el.className = `rmsg ${m.side}${mine ? " mine" : ""}${m.is_finisher ? " finisher" : ""} pop`;
-    el.innerHTML = `${m.is_finisher ? `<span class="rmsg-fin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${DFX.ICON.mic}</svg>결정타</span>` : ""}<span class="rmsg-body">${esc(m.body)}</span>`;
+    el.innerHTML = `${m.is_finisher ? `<span class="rmsg-fin">${svg(DFX.ICON.mic)}결정타</span>` : ""}<span class="rmsg-body">${esc(m.body)}</span>`;
     box.appendChild(el);
     box.scrollTop = box.scrollHeight;
     window.BattleFX?.haptic?.(m.is_finisher ? "hit" : "tap");
@@ -612,6 +647,7 @@
     const iAmChal = ME === D.challenger;
     const extended = iAmChal ? D.chal_extended : D.opp_extended;
     const finished = iAmChal ? D.chal_finisher : D.opp_finisher;
+    const roared = iAmChal ? D.chal_roar : D.opp_roar;
     const svg = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const IC = DFX.ICON;
     const IC_ITEM = svg('<path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/>');   // 아이템(파워)
@@ -627,6 +663,10 @@
           <span class="fip-ic">${svg(IC.mic)}</span>
           <span class="fip-txt"><b>결정타</b><em>${finished ? "이미 사용함" : "다음 발화를 강조 · 판당 1회"}</em></span>
           <span class="fip-state">${finished ? "완료" : "1회"}</span></button>
+        <button class="fip-item roar" id="fi-roar" ${roared ? "disabled" : ""}>
+          <span class="fip-ic">${svg(IC.roar)}</span>
+          <span class="fip-txt"><b>🦁 사자후</b><em>${roared ? "이미 사용함" : "3초 음성으로 압도 · 판당 1회"}</em></span>
+          <span class="fip-state">${roared ? "완료" : "3초"}</span></button>
       </div>
       <div class="fi-row">
         <button id="fi-items" class="fi-items" aria-label="아이템">${IC_ITEM}</button>
@@ -683,6 +723,9 @@
       const inp = $("#fi-input"); if (inp) inp.placeholder = armFin ? "회심의 한 방을 결정타로!" : "상대에게 한 방 날리기…";
       closePop();
     };
+    // 🦁 사자후 — 3초 음성 녹음 → 발사
+    const roarBtn = $("#fi-roar");
+    if (roarBtn && !roared) roarBtn.onclick = () => { closePop(); openRoarRecorder(); };
   }
   /* 옥타곤 상단 짧은 토스트(연장/안내) — 배너보다 가벼운 알림 */
   function finisherToast(msg) {
@@ -692,6 +735,116 @@
   }
   /* 아이템이 없을 때 상점으로 유도 — askShop 패턴(문구 금지·즉시 열기) */
   function askBuy(key) { try { window.openShop?.(key); } catch (e) {} }
+
+  /* 🦁 사자후 — 3초 음성 녹음(채팅방 음성과 동일: MediaRecorder→R2). 녹음→들어보기→발사 */
+  function openRoarRecorder() {
+    const ROAR_MAX = 3;   // 초
+    let rec = null, chunks = [], blob = null, url = null, stream = null, timer = null, mime = "";
+    const svg = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const IC = DFX.ICON;
+    const ov = document.createElement("div");
+    ov.className = "roar-ov";
+    ov.innerHTML = `<div class="roar-sheet">
+        <div class="roar-head"><span class="roar-ic">${svg(IC.roar)}</span><b>사자후</b><span class="roar-sub">3초 음성으로 상대를 압도</span></div>
+        <div class="roar-stage" id="roar-stage">
+          <div class="roar-ring" id="roar-ring"><span id="roar-count">3</span></div>
+          <div class="roar-hint" id="roar-hint">버튼을 누르면 3초간 녹음돼요</div>
+        </div>
+        <div class="roar-acts" id="roar-acts">
+          <button class="roar-btn rec" id="roar-rec">${svg(IC.roar)} 녹음</button>
+        </div>
+        <button class="roar-x" id="roar-x">닫기</button>
+      </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add("on"));
+    const $$ = (s) => ov.querySelector(s);
+    const close = () => { try { rec && rec.state !== "inactive" && rec.stop(); } catch (e) {} stopStream(); ov.classList.remove("on"); setTimeout(() => ov.remove(), 220); };
+    const stopStream = () => { try { stream?.getTracks().forEach(t => t.stop()); } catch (e) {} stream = null; };
+    $$("#roar-x").onclick = close;
+    ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+
+    function pickMime() {
+      if (typeof MediaRecorder === "undefined") return null;
+      const c = ["audio/mp4", "audio/mp4;codecs=mp4a.40.2", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/aac"];
+      for (const m of c) { try { if (MediaRecorder.isTypeSupported(m)) return m; } catch (_) {} }
+      return "";
+    }
+    async function startRec() {
+      try {
+        if (typeof MediaRecorder === "undefined") { alert("이 브라우저에선 녹음이 막혀 있어요. 크롬으로 열어주세요."); return; }
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        mime = pickMime(); chunks = []; blob = null; url = null;
+        rec = new MediaRecorder(stream, Object.assign(mime ? { mimeType: mime } : {}, { audioBitsPerSecond: 128000 }));
+        rec.ondataavailable = e => { if (e.data?.size) chunks.push(e.data); };
+        rec.onstop = () => {
+          stopStream(); clearInterval(timer);
+          blob = new Blob(chunks, { type: mime || "audio/webm" });
+          if (!blob.size) { blob = null; $$("#roar-hint").textContent = "소리가 담기지 않았어요. 다시 시도해주세요."; resetRec(); return; }
+          url = URL.createObjectURL(blob);
+          $$("#roar-ring").classList.remove("recording");
+          $$("#roar-hint").textContent = "들어보고 발사하세요";
+          $$("#roar-count").textContent = "🦁";
+          $$("#roar-acts").innerHTML = `
+            <button class="roar-btn ghost" id="roar-play">${svg(IC.play)} 들어보기</button>
+            <button class="roar-btn ghost" id="roar-again">다시</button>
+            <button class="roar-btn go" id="roar-fire">발사 🦁</button>`;
+          $$("#roar-play").onclick = () => { try { new Audio(url).play(); } catch (e) {} };
+          $$("#roar-again").onclick = resetRec;
+          $$("#roar-fire").onclick = fire;
+        };
+        // 3초 카운트다운 자동 종료
+        $$("#roar-ring").classList.add("recording");
+        $$("#roar-hint").textContent = "녹음 중… 크게 외쳐요!";
+        let left = ROAR_MAX; $$("#roar-count").textContent = left;
+        $$("#roar-acts").innerHTML = `<button class="roar-btn rec on" disabled>● 녹음 중…</button>`;
+        rec.start();
+        timer = setInterval(() => { left -= 1; $$("#roar-count").textContent = Math.max(0, left); if (left <= 0) { clearInterval(timer); try { rec.state !== "inactive" && rec.stop(); } catch (e) {} } }, 1000);
+      } catch (e) {
+        stopStream();
+        const n = e?.name || "";
+        if (n === "NotAllowedError" || n === "SecurityError") { try { window.GALLA_micHelp?.({ reason: "" }); } catch (_) {} alert("마이크 권한이 필요해요."); }
+        else alert("녹음을 시작하지 못했어요 (" + (n || "오류") + ")");
+        resetRec();
+      }
+    }
+    function resetRec() {
+      blob = null; url = null; clearInterval(timer);
+      $$("#roar-ring").classList.remove("recording");
+      $$("#roar-count").textContent = "3"; $$("#roar-hint").textContent = "버튼을 누르면 3초간 녹음돼요";
+      $$("#roar-acts").innerHTML = `<button class="roar-btn rec" id="roar-rec">${svg(IC.roar)} 녹음</button>`;
+      $$("#roar-rec").onclick = startRec;
+    }
+    async function fire() {
+      if (!blob) return;
+      const fb = $$("#roar-fire"); if (fb) { fb.disabled = true; fb.textContent = "발사 중…"; }
+      try {
+        if (!window.GALLA_UPLOAD_MEDIA) {
+          await new Promise((res, rej) => {
+            const vm = ([...document.scripts].map(s => s.src).find(u => /[?&]v=/.test(u)) || "").match(/[?&]v=(\d+)/);
+            const s = document.createElement("script"); s.src = "/js/media-upload.js" + (vm ? "?v=" + vm[1] : "");
+            s.onload = res; s.onerror = rej; document.head.appendChild(s);
+          });
+        }
+        const type = blob.type || "audio/webm";
+        const ext = /mp4|m4a/.test(type) ? "m4a" : /ogg/.test(type) ? "ogg" : /aac/.test(type) ? "aac" : "webm";
+        const file = new File([blob], "roar." + ext, { type });
+        const upUrl = await window.GALLA_UPLOAD_MEDIA(file, "audio");
+        const { data } = await sb.rpc("duel_roar", { p_duel: D.id, p_url: upUrl, p_dur: 3 });
+        if (!data?.ok) {
+          if (fb) { fb.disabled = false; fb.textContent = "발사 🦁"; }
+          if (data?.reason === "no_roar") { alert("사자후가 없어요. 상점에서 구매하세요."); close(); return askBuy("duel_roar_pass"); }
+          if (data?.reason === "roar_used") { alert("이 판에서 사자후를 이미 썼어요."); return close(); }
+          if (data?.reason === "time_over") { close(); return renderArena(D.id); }
+          return alert(reason(data?.reason) || "발사 실패");
+        }
+        close();
+      } catch (e) {
+        if (fb) { fb.disabled = false; fb.textContent = "발사 🦁"; }
+        alert("발사에 실패했어요. 다시 시도해주세요.");
+      }
+    }
+    $$("#roar-rec").onclick = startRec;
+  }
 
   function mountStandTools() {
     const box = document.getElementById("stand-tools"); if (!box) return;
