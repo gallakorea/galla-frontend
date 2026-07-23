@@ -339,3 +339,44 @@ body.duel-locked .nav { opacity: .35; pointer-events: none; filter: grayscale(1)
 .cg-boost .cg-boost-x { font-weight: 900; color: #ffd76a; }
 .cg-boost.on { background: linear-gradient(135deg,#7b5bff,#a24bff); color: #fff; border-color: transparent; box-shadow: 0 0 14px rgba(140,80,255,.5); }
 .cg-boost.on .cg-boost-x { color: #fff; }
+
+/* ═══════════ 🎆 DFX — 옥타곤 아이템 연출 엔진 ═══════════ */
+.dfx-layer { position: fixed; inset: 0; z-index: 99990; pointer-events: none; overflow: hidden; }
+.dfx-p { position: absolute; transform: translate(-50%,-50%); transition: transform 1s cubic-bezier(.15,.7,.3,1), opacity .95s ease; will-change: transform, opacity; }
+.dfx-ring { position: absolute; width: 60px; height: 60px; margin: -30px 0 0 -30px; border: 3px solid #ffd76a; border-radius: 50%; opacity: .9; transition: transform .7s cubic-bezier(.1,.7,.3,1), opacity .7s ease; }
+.dfx-flash { position: fixed; inset: 0; opacity: 0; transition: opacity .15s ease; }
+.dfx-flash.on { opacity: 1; }
+.dfx-conf { position: absolute; will-change: transform, opacity; }
+/* 화면 중앙 빅텍스트 — 줌인+살짝 회전 후 솟아오르며 사라짐 */
+.dfx-big {
+  position: fixed; left: 50%; top: 38%; z-index: 99992; pointer-events: none;
+  transform: translate(-50%,-50%) scale(.3) rotate(-8deg); opacity: 0;
+  font-size: 40px; font-weight: 900; letter-spacing: -1px; white-space: nowrap;
+  color: #fff; text-shadow: 0 4px 24px rgba(0,0,0,.6);
+  transition: transform .34s cubic-bezier(.15,1.5,.4,1), opacity .3s ease;
+}
+.dfx-big.show { transform: translate(-50%,-50%) scale(1) rotate(0); opacity: 1; }
+.dfx-big.out { transform: translate(-50%,-140%) scale(1.1); opacity: 0; transition: transform .42s ease, opacity .42s ease; }
+.dfx-big b { background: linear-gradient(135deg,#fff,#ffe08a); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.dfx-big.gold b { background: linear-gradient(135deg,#ffe9a8,#ff9e3d); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.dfx-big.fire { color: #ff7a45; }
+.dfx-big.fire b { background: linear-gradient(135deg,#ffd76a,#ff4d3c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.dfx-big.boost { color: #b388ff; }
+.dfx-big .dfx-x { font-size: 30px; color: #ffd76a; }
+/* 화면 흔들림 */
+@keyframes dfxShake { 0%,100%{transform:translate(0,0)} 20%{transform:translate(-6px,3px)} 40%{transform:translate(6px,-3px)} 60%{transform:translate(-4px,-2px)} 80%{transform:translate(4px,2px)} }
+@keyframes dfxShakeHard { 0%,100%{transform:translate(0,0) rotate(0)} 15%{transform:translate(-11px,5px) rotate(-.6deg)} 35%{transform:translate(11px,-6px) rotate(.6deg)} 55%{transform:translate(-8px,4px) rotate(-.4deg)} 75%{transform:translate(8px,-4px) rotate(.4deg)} }
+body.dfx-shake { animation: dfxShake .46s ease; }
+body.dfx-shake-hard { animation: dfxShakeHard .6s cubic-bezier(.36,.07,.19,.97); }
+/* 타이머 연장 팝 */
+@keyframes dfxTimerPop { 0%{transform:scale(1)} 40%{transform:scale(1.55); color:#ffd76a} 100%{transform:scale(1)} }
+.dfx-timer-pop { animation: dfxTimerPop .55s ease; }
+
+/* 🎤 결정타 배너 — KO급 2줄 */
+.fin-banner .fin-ko { display: block; font-size: 20px; font-weight: 900; }
+.fin-banner .fin-who { display: block; font-size: 12px; font-weight: 700; opacity: .85; margin-top: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dfx-big, .dfx-p, .dfx-ring, .dfx-flash, .dfx-conf { display: none !important; }
+  body.dfx-shake, body.dfx-shake-hard { animation: none !important; }
+}

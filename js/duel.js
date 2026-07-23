@@ -68,6 +68,95 @@
   const STALE = new Set(["not_pending", "not_found", "not_scheduled", "not_live", "time_over"]);
   const reason = (r) => REASON[r];
 
+  /* ═══════════ 🎆 DFX — 옥타곤 전용 화려한 연출 엔진(자체 내장) ═══════════
+     아이템 사용 순간을 '축제'로. 파티클 폭발·화면 플래시·흔들림·컨페티·KO 배너.
+     reduced-motion이면 전부 조용히 스킵. */
+  const DFX = (() => {
+    const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let layer;
+    const L = () => { if (!layer || !layer.isConnected) { layer = document.createElement("div"); layer.className = "dfx-layer"; document.body.appendChild(layer); } return layer; };
+    const rnd = (a, b) => a + Math.random() * (b - a);
+    const center = () => { const o = document.querySelector(".octa") || document.body; const r = o.getBoundingClientRect(); return [r.left + r.width / 2, Math.max(140, r.top + Math.min(r.height, innerHeight) * 0.34)]; };
+    function burst(x, y, emojis, count = 20, spread = 130) {
+      if (reduce) return;
+      const l = L();
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement("span"); p.className = "dfx-p";
+        p.textContent = emojis[i % emojis.length]; p.style.fontSize = rnd(15, 34) + "px";
+        p.style.left = x + "px"; p.style.top = y + "px";
+        const ang = (Math.PI * 2 * i) / count + rnd(-0.35, 0.35), dist = spread + rnd(0, spread);
+        l.appendChild(p);
+        requestAnimationFrame(() => { p.style.transform = `translate(${Math.cos(ang) * dist}px,${Math.sin(ang) * dist - 46}px) rotate(${rnd(-240, 240)}deg) scale(${rnd(.5, 1.5)})`; p.style.opacity = "0"; });
+        setTimeout(() => p.remove(), 1050);
+      }
+    }
+    function ring(x, y, color) {
+      if (reduce) return;
+      const r = document.createElement("span"); r.className = "dfx-ring";
+      r.style.left = x + "px"; r.style.top = y + "px"; r.style.borderColor = color || "#ffd76a";
+      L().appendChild(r);
+      requestAnimationFrame(() => { r.style.transform = "translate(-50%,-50%) scale(3.2)"; r.style.opacity = "0"; });
+      setTimeout(() => r.remove(), 720);
+    }
+    function flash(color) {
+      if (reduce) return;
+      const f = document.createElement("div"); f.className = "dfx-flash";
+      f.style.background = `radial-gradient(circle at 50% 38%, ${color || "rgba(255,180,80,.55)"}, transparent 68%)`;
+      L().appendChild(f);
+      requestAnimationFrame(() => f.classList.add("on"));
+      setTimeout(() => { f.classList.remove("on"); setTimeout(() => f.remove(), 340); }, 150);
+    }
+    function shake(hard) { if (reduce) return; document.body.classList.add(hard ? "dfx-shake-hard" : "dfx-shake"); setTimeout(() => document.body.classList.remove("dfx-shake", "dfx-shake-hard"), hard ? 620 : 460); }
+    function confetti(colors, n = 80) {
+      if (reduce) return;
+      const l = L(), cols = colors || ["#ff3c5a", "#ffb03c", "#4a7bff", "#33d17a", "#b388ff"];
+      for (let i = 0; i < n; i++) {
+        const p = document.createElement("span"); p.className = "dfx-conf";
+        const s = rnd(6, 12); p.style.width = s + "px"; p.style.height = s * rnd(.5, 1.5) + "px";
+        p.style.background = cols[i % cols.length]; if (Math.random() > .6) p.style.borderRadius = "50%";
+        p.style.left = rnd(0, innerWidth) + "px"; p.style.top = rnd(-40, -8) + "px";
+        p.style.transition = `transform ${rnd(1.5, 2.6)}s cubic-bezier(.2,.6,.4,1), opacity .4s ease ${rnd(1, 1.9)}s`;
+        l.appendChild(p);
+        requestAnimationFrame(() => { p.style.transform = `translate(${rnd(-70, 70)}px, ${innerHeight + 90}px) rotate(${rnd(180, 960)}deg)`; p.style.opacity = "0"; });
+        setTimeout(() => p.remove(), 2700);
+      }
+    }
+    /* 화면 중앙에 큼직하게 솟아오르는 텍스트(줌+회전) */
+    function bigText(html, cls) {
+      const b = document.createElement("div"); b.className = "dfx-big " + (cls || "");
+      b.innerHTML = html; L().appendChild(b);
+      requestAnimationFrame(() => b.classList.add("show"));
+      setTimeout(() => { b.classList.add("out"); setTimeout(() => b.remove(), 420); }, 1500);
+    }
+    function haptic(k) { try { window.BattleFX?.haptic?.(k); } catch (e) {} }
+    return { burst, ring, flash, shake, confetti, bigText, center, haptic, reduce };
+  })();
+
+  /* 아이템별 화려한 연출 — 사용 즉시 호출 */
+  function fxExtend() {
+    const [cx, cy] = DFX.center();
+    DFX.ring(cx, cy, "#ffd76a"); DFX.ring(cx, cy, "#fff2c0");
+    DFX.burst(cx, cy, ["⏰", "⏱️", "🕐", "✨", "💫", "⌛"], 22, 140);
+    DFX.bigText("⏱️ <b>+60초</b>", "gold");
+    DFX.haptic("hit");
+  }
+  function fxBoost(team, box) {
+    const r = (box || document.querySelector(".octa") || document.body).getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + Math.min(r.height, innerHeight) * 0.7;
+    DFX.burst(x, y, ["📢", "💥", "🌟", "🔊", "⚡"], 18, 120);
+    DFX.confetti(team === "challenger" ? ["#4a7bff", "#7ba6ff", "#cfe0ff"] : ["#ff4d67", "#ff8a9c", "#ffd0d8"], 60);
+    DFX.bigText("📢 <b>부스트!</b> <span class='dfx-x'>1.7×</span>", "boost");
+    DFX.haptic("hit");
+  }
+  function fxRematch() {
+    const [cx, cy] = DFX.center();
+    DFX.flash("rgba(255,90,60,.5)"); DFX.shake();
+    DFX.burst(cx, cy, ["🔥", "🔁", "⚔️", "💢", "🔥"], 26, 160);
+    DFX.confetti(["#ff5a3c", "#ffb03c", "#ff3c5a"], 70);
+    DFX.bigText("🔁 <b>설욕전!</b>", "fire");
+    DFX.haptic("hit");
+  }
+
   // ─────────── 라우팅 ───────────
   async function boot() {
     sb = await waitForSupabaseClient();
@@ -435,7 +524,7 @@
       D.cheer_chal = data.chal; D.cheer_opp = data.opp;
       paintCheerGauge();
       cheerFx(team, amt);
-      if (boost && data.boosted) { finisherToast("📢 부스트 적용! 배당 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
+      if (boost && data.boosted) { fxBoost(team, box); finisherToast("📢 부스트 적용! 배당 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
       else if (boost && !data.boosted) { alert("부스트권이 없어 일반 응원으로 걸렸어요. 상점에서 📢 부스트를 구매하세요."); boost = false; if (boostBtn) boostBtn.classList.remove("on"); askBuy("duel_cheer_boost"); }
     });
   }
@@ -461,16 +550,21 @@
     window.BattleFX?.haptic?.(m.is_finisher ? "hit" : "tap");
     if (m.is_finisher) finisherBanner(m.side);   // 관중석에 '결정타!' 배너
   }
-  /* 🎤 결정타 — 화면 상단에 잠깐 번쩍이는 배너. 관전자·상대 모두 회심의 한 방을 알아챈다 */
+  /* 🎤 결정타 — 화면 전체가 번쩍이고 흔들리는 KO급 연출. 관전자·상대 모두 회심의 한 방을 목격 */
   function finisherBanner(side) {
     const nk_ = side === "challenger" ? nk(D.challenger) : nk(D.opponent);
+    const col = side === "challenger" ? "rgba(74,123,255,.5)" : "rgba(255,90,110,.5)";
+    DFX.flash(col); DFX.shake(true);
+    const [cx, cy] = DFX.center();
+    DFX.burst(cx, cy, ["💥", "🎤", "🔥", "⚡", "💢", "✨"], 30, 190);
+    DFX.confetti(side === "challenger" ? ["#4a7bff", "#7ba6ff", "#ffd76a"] : ["#ff4d67", "#ff8a9c", "#ffd76a"], 60);
     const b = document.createElement("div");
     b.className = `fin-banner ${side}`;
-    b.innerHTML = `🎤 <b>결정타!</b> ${esc(nk_)}의 회심의 한 방`;
+    b.innerHTML = `<span class="fin-ko">🎤 결정타!</span><span class="fin-who">${esc(nk_)}의 회심의 한 방</span>`;
     document.body.appendChild(b);
     requestAnimationFrame(() => b.classList.add("show"));
-    setTimeout(() => { b.classList.remove("show"); setTimeout(() => b.remove(), 350); }, 2200);
-    try { window.BattleFX?.haptic?.("hit"); } catch (e) {}
+    setTimeout(() => { b.classList.remove("show"); setTimeout(() => b.remove(), 400); }, 2200);
+    DFX.haptic("hit");
   }
   function appendCheer(c) {
     const box = document.getElementById("stands-stream"); if (!box) return;
@@ -529,7 +623,9 @@
       }
       D.live_ends_at = data.live_ends_at;
       extBtn.classList.add("used"); extBtn.textContent = "⏱️ 연장완료";
+      fxExtend();
       finisherToast("⏱️ 60초 연장됐어요!");
+      const t = document.getElementById("ring-timer"); if (t) { t.classList.remove("dfx-timer-pop"); void t.offsetWidth; t.classList.add("dfx-timer-pop"); }
     };
     // 🎤 결정타 — 다음 발화 1회를 하이라이트로 (토글)
     const finBtn = $("#fi-fin");
@@ -794,8 +890,9 @@
         return alert(reason(data?.reason) || "설욕전 신청 실패");
       }
       btn.textContent = "✅ 신청 완료!";
+      fxRematch();
       finisherToast("🔁 설욕전을 신청했어요! 상대의 수락을 기다립니다");
-      setTimeout(() => { location.href = "duel.html?id=" + data.id; }, 1400);
+      setTimeout(() => { location.href = "duel.html?id=" + data.id; }, 1700);
     });
   }
 
