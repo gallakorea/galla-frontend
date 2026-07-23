@@ -102,7 +102,7 @@
           <tr><td>+300 GP</td><td>16%</td></tr>
           <tr><td>스티커팩(미보유)·+400GP</td><td>13%</td></tr>
           <tr><td>+1,000 GP</td><td>9%</td></tr>
-          <tr><td>칭호(미보유)·+800GP</td><td>7%</td></tr>
+          <tr><td>+800 GP</td><td>7%</td></tr>
           <tr><td>닉스타일(미보유)·+1,500GP</td><td>2.5%</td></tr>
           <tr><td>🔥 +2,000 GP</td><td>1.5%</td></tr>
           <tr><td>💎 대박 보너스 +5,000 GP</td><td>1%</td></tr>
