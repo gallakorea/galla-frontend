@@ -396,12 +396,16 @@ function bindUI(){
   $('createSubmit')?.addEventListener('click',submitMarket);
 }
 
+let __predDraft=null;
 function openCreateModal(){
   if(!ME){ if(confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href='login.html'; return; }
   const d=new Date(Date.now()+7*86400000);
   d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
   $('mCloseAt').value=d.toISOString().slice(0,16);
   $('createModal').hidden=false;
+  // 공용 임시저장 — 예측 질문·설명·카테고리 복원
+  if(!__predDraft && window.GALLA_draft) __predDraft=window.GALLA_draft('predict',['mQuestion','mDesc','mCategory']);
+  if(__predDraft) __predDraft.restore();
 }
 function addOutcomeRow(val=''){
   const row=document.createElement('div');
@@ -440,6 +444,7 @@ async function submitMarket(){
     });
     if(error) throw error;
     $('createModal').hidden=true;
+    if(__predDraft) __predDraft.clear();   // 생성 성공 → 임시저장 삭제
     toast('예측이 만들어졌습니다! 🎯');
     location.href=`predict-market.html?id=${data}`;
   }catch(e){ console.error(e); toast('예측 생성에 실패했습니다.'); }

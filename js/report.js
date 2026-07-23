@@ -11,6 +11,10 @@
   const files = [];   // {file, kind, url(local preview)}
   const links = [];
 
+  // 공용 임시저장 — 제보 제목·본문(미디어·링크는 세션 한정이라 제외)
+  const __rpDraft = window.GALLA_draft && window.GALLA_draft('report', ['rp-title', 'rp-body']);
+  if (__rpDraft) __rpDraft.restore();
+
   // 카테고리
   $("rp-cats").addEventListener("click", (e) => {
     const b = e.target.closest(".rp-cat"); if (!b) return;
@@ -89,6 +93,7 @@
   });
 
   function done(d) {
+    if (__rpDraft) __rpDraft.clear();   // 접수 성공 → 임시저장 삭제
     document.querySelector(".rp-main").innerHTML = `
       <div class="rp-done">
         <div class="rp-done-ic">✅</div>

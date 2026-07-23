@@ -34,11 +34,15 @@ async function requirePlazaLogin() {
   return null;
 }
 
+// 공용 임시저장 — 광장 글(제목·본문·카테고리)
+const __plazaDraft = window.GALLA_draft &&
+  window.GALLA_draft('plaza', ['plaza-title', 'plaza-body', 'plaza-category']);
 async function openPlazaWriteModal() {
   const user = await requirePlazaLogin();
   if (!user) return;
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
+  if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
 }
 // expose for inline HTML handlers
 window.openPlazaWriteModal = openPlazaWriteModal;
@@ -716,6 +720,7 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   /* 발행 성공 — 페이지 이동 없이 '뒤에 있는 광장 목록'을 노출한다(composer-page가
      발행 닫기를 create 복귀 대신 그 자리 유지로 처리). compose=1 진입이든 인페이지든
      동일하게 광장 탭을 활성화하고 목록만 갱신 → 자기 글이 맨 위에 뜬다. */
+  if (__plazaDraft) __plazaDraft.clear();      // 발행 성공 → 임시저장 삭제
   if (window.__composerStayOnPublish) window.__composerStayOnPublish();
   closePlazaWriteModal();
   const tab = document.querySelector('.tab-item[data-tab="plaza"]');
