@@ -49,7 +49,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
@@ -251,6 +251,64 @@
       const r = await rpc("admin_resolve_bug", { p_id: id, p_status: st, p_note: note || null });
       if (r?.ok) { toast("상태 변경: " + (stmap[st] || st)); renderBugs(); } else alert("처리 실패");
     };
+  }
+
+  // ─────────── 🤖 버그헌터 (자동 스캔 발견) ───────────
+  const SEV = { critical: ["치명", "#ff4d67"], high: ["높음", "#ff9a3c"], medium: ["보통", "#6f86ff"], low: ["낮음", "#8a8f9a"] };
+  const CATLBL = { security: "🔒 보안", economy: "💰 경제", stuck: "⛔ 멈춤", errors: "🩺 에러", data: "🗂 데이터" };
+  let bhResolved = false;
+  async function renderBugHunter() {
+    main().innerHTML = `<h1 class="ad-h1">🤖 버그헌터 <span style="font-size:12px;color:#8a8f9a;font-weight:600">30분마다 자동 스캔</span></h1>
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+        <button class="ad-btn primary" id="bh-run">🔍 지금 검사</button>
+        <button class="ad-btn" id="bh-toggle">${bhResolved ? "미해결만 보기" : "해결된 것도 보기"}</button>
+        <span id="bh-stat" class="ad-tk-m"></span>
+      </div>
+      <div id="bh-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    $("#bh-run").onclick = async () => {
+      $("#bh-run").disabled = true; $("#bh-run").textContent = "검사 중…";
+      const r = await rpc("admin_bug_hunt_run", {});
+      toast(r?.ok ? `검사 완료 · 미해결 ${r.open}건` : "검사 실패");
+      renderBugHunter();
+    };
+    $("#bh-toggle").onclick = () => { bhResolved = !bhResolved; renderBugHunter(); };
+    const rows = (await rpc("admin_bug_hunt", { p_include_resolved: bhResolved })) || [];
+    const open = rows.filter(r => !r.resolved).length;
+    $("#bh-stat").textContent = `미해결 ${open}건`;
+    $("#bh-list").innerHTML = rows.length ? rows.map(f => {
+      const [sl, sc] = SEV[f.severity] || SEV.low;
+      return `<div class="ad-tip" data-id="${f.id}" style="opacity:${f.resolved ? .5 : 1}">
+        <div class="ad-tip-h">
+          <span class="ad-tag" style="background:${sc}22;color:${sc};border:1px solid ${sc}55">${sl}</span>
+          <span class="ad-tk-m">${CATLBL[f.category] || f.category} · ${f.hits}회 · 최근 ${ago(f.last_seen)}${f.resolved ? " · ✅해결" : ""}</span>
+        </div>
+        <div class="ad-tip-b" style="font-weight:800">${esc(f.title)}</div>
+        <div class="ad-tk-m" style="white-space:pre-wrap;margin-top:4px">${esc(f.detail || "")}</div>
+        ${f.resolved ? "" : `<div class="ad-tip-acts" style="margin-top:8px"><button class="ad-btn primary" data-act="resolve">✅ 해결 처리</button></div>`}
+      </div>`;
+    }).join("") : `<div class="ad-soon">🎉 발견된 문제가 없어요. 시스템 건강합니다.</div>`;
+    $("#bh-list").onclick = async e => {
+      const btn = e.target.closest("[data-act]"); if (!btn) return;
+      const id = Number(btn.closest(".ad-tip").dataset.id);
+      const r = await rpc("admin_bug_hunt_resolve", { p_id: id });
+      if (r?.ok) { toast("해결 처리됨"); renderBugHunter(); } else alert("처리 실패");
+    };
+  }
+
+  // ─────────── 🩺 에러 로그 (실사용자 JS 에러) ───────────
+  let errHours = 48;
+  async function renderErrors() {
+    main().innerHTML = `<h1 class="ad-h1">🩺 에러 로그 <span style="font-size:12px;color:#8a8f9a;font-weight:600">실사용자 발생 JS 에러</span></h1>
+      <div class="ad-segs" id="er-range" style="margin-bottom:14px">${[[6, "6시간"], [24, "24시간"], [48, "48시간"], [168, "7일"]].map(([h, l]) => `<button data-h="${h}" class="${errHours === h ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div id="er-list"><div class="ad-loading">불러오는 중…</div></div>`;
+    $("#er-range").onclick = e => { const b = e.target.closest("[data-h]"); if (!b) return; errHours = +b.dataset.h; renderErrors(); };
+    const rows = (await rpc("admin_client_errors", { p_hours: errHours, p_limit: 100 })) || [];
+    $("#er-list").innerHTML = rows.length ? rows.map(e => `<div class="ad-tip">
+        <div class="ad-tip-h"><span class="ad-tag st-open">${e.hits}회</span>
+          <span class="ad-tk-m">${e.users}명 · 최근 ${ago(e.last_seen)} · v${esc(e.sample_ver || "-")} · ${esc(e.sample_path || "")}</span></div>
+        <div class="ad-tip-b" style="white-space:pre-wrap;font-weight:700">${esc(e.message)}</div>
+        ${e.sample_stack ? `<details style="margin-top:6px"><summary class="ad-tk-m" style="cursor:pointer">스택 보기</summary><pre style="white-space:pre-wrap;font-size:11px;color:#8a8f9a;margin-top:4px">${esc(e.sample_stack)}</pre></details>` : ""}
+      </div>`).join("") : `<div class="ad-soon">해당 기간 수집된 에러가 없어요. 👍</div>`;
   }
 
   // ─────────── 회원 관리 ───────────
