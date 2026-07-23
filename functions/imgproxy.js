@@ -41,10 +41,6 @@ export async function onRequest(context) {
     if (target.protocol !== "https:") return new Response("bad proto", { status: 400 });
   }
 
-  // 썸네일은 피드에서 작게 표시되므로 엣지에서 리사이즈·재압축(WebP)해 전송량을 줄인다.
-  // ?w= 로 너비 지정(기본 900, 최대 1200). Image Resizing 미가용 시 cf.image는 무시되고 원본 반환(무해).
-  const wq = parseInt(url.searchParams.get("w") || "900", 10);
-  const width = Math.min(1200, Math.max(200, isNaN(wq) ? 900 : wq));
   let resp;
   try {
     resp = await fetch(target.href, {
@@ -55,10 +51,7 @@ export async function onRequest(context) {
       },
       redirect: "follow",
       signal: AbortSignal.timeout(5000), // 일부 사이트(ruliweb 등)가 CF 엣지 IP를 느리게 드롭 → 빨리 실패시켜 onerror(스켈레톤 제거) 유도
-      cf: {
-        cacheTtl: 604800, cacheEverything: true,
-        image: { width, quality: 76, fit: "scale-down", format: "webp", metadata: "none" },
-      },
+      cf: { cacheTtl: 604800, cacheEverything: true },
     });
   } catch { return new Response("fetch fail", { status: 502 }); }
 
