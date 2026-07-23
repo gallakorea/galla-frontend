@@ -49,3 +49,11 @@ revoke execute on function public._bh_flag(text,text,text,text,text) from public
 -- run_bug_hunt() : anon/auth/public 실행 revoke(크론·관리자RPC만)
 
 -- cron: select cron.schedule('bug_hunt','*/30 * * * *',$$select public.run_bug_hunt()$$);
+
+-- ── 고도화 (2026-07-24): 자기감시·자동치유·관리자알림 ──
+--  · _bh_flag → boolean 반환(신규/재발 여부) — 새 critical/high만 알림.
+--  · 자동 치유: 멈춘 live/voting 일기토를 duel_resolve로 강제 진행(2단계 finish).
+--  · ⑦ 크론 자기감시: cron.job_run_details 최근 40분 3회+ 실패 잡 감지(봇이 자기 배포 회귀도 잡음).
+--  · ⑧ 신고 적체: reports 48h+ 미처리.
+--  · 새 critical/high 발견 시 관리자(admin_flag/role=admin) notifications('bug_hunt') 발송.
+--  · 실증: 크론 헤더 주입 실수로 4개 크론이 syntax error로 실패하던 것을 봇이 즉시 포착→수정.
