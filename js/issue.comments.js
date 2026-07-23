@@ -1097,7 +1097,19 @@ async function ensureMyProfile() {
 async function loadComments(issueId) {
   const supabase = window.supabaseClient;
 
-  const { data: sess } = await supabase.auth.getSession();
+  // 🔥 세션 복원 지연(iOS Safari 등) 대응 — 로그인 상태면 세션이 준비될 때까지 잠깐 기다린다.
+  //    안 그러면 getSession()이 일시적으로 null → 내 투표(진영)를 못 읽어, 로그인·투표를
+  //    했는데도 컴포저/전투 버튼이 잘못 잠긴다("투표 후 참전"). vote-bar(forceInitialVoteSync)와
+  //    동일한 대비를 댓글 시스템에도 적용. 로그아웃 유저는 토큰이 없어 대기 없이 통과.
+  let hasToken = false;
+  try { hasToken = Object.keys(localStorage).some(k => /^sb-.*-auth-token$/.test(k)); } catch (_) {}
+  let sess = (await supabase.auth.getSession())?.data || null;
+  if (hasToken) {
+    for (let i = 0; i < 20 && !sess?.session; i++) {
+      await new Promise(r => setTimeout(r, 120));
+      sess = (await supabase.auth.getSession())?.data || null;
+    }
+  }
   ME.userId = sess?.session?.user?.id || null;
 
   // 내 진영 = 이 이슈에 대한 내 투표 (서버 RPC도 동일 기준으로 강제)
