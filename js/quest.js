@@ -17,10 +17,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderDaily();
     updateRing();
     updateTodayReward();
+    initChest(data.chest_opened);
   }
 
-  // 미션별 '하러 가기' 목적지 — 진영 투표·참전 댓글·전투 액션은 이슈(홈 피드), 예측은 갈라예측
-  const GO = { vote: "index.html", comment: "index.html", battle: "index.html", predict: "galla-predict.html" };
+  // 미션별 '하러 가기' 목적지 — 예측은 갈라예측, 그 외(투표·댓글·전투·광장·DM)는 홈 피드(이슈)
+  function goFor(key) { return /predict/.test(key) ? "galla-predict.html" : "index.html"; }
 
   function cardHtml(q) {
     const pct = Math.min(100, Math.round((q.progress / q.goal) * 100));
@@ -29,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (q.claimed) btn = `<button class="q-claim done" disabled>수령 완료 ✓</button>`;
     else if (done) btn = `<button class="q-claim ready" data-key="${q.key}">+${q.reward} GP 받기</button>`;
     // 미완료: 죽은 '+N GP' 버튼 대신 실제 활동으로 보내는 딥링크(고도화 — 미션을 바로 수행 가능)
-    else btn = `<a class="q-claim go" href="${GO[q.key] || "index.html"}">하러 가기 →</a>`;
+    else btn = `<a class="q-claim go" href="${goFor(q.key)}">하러 가기 →</a>`;
     return `
       <div class="quest-card ${q.claimed ? "completed" : ""}" data-key="${q.key}">
         <div class="quest-top">
@@ -58,13 +59,68 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (btn) { btn.disabled = true; btn.textContent = "받는 중…"; }
     const { data, error } = await supabase.rpc("claim_mission", { p_key: key });
     if (error || !data?.ok) {
-      if (data?.reason === "already") { await loadMissions(); return; }
+      if (data?.reason === "already") { await refreshAll(); return; }
       alert("보상 수령에 실패했어요. 잠시 후 다시 시도해주세요.");
       if (btn) { btn.disabled = false; }
       return;
     }
     toast(`🎉 +${data.reward} GP 획득! (보유 ${Math.round(data.balance).toLocaleString()} GP)`);
-    await loadMissions();
+    await refreshAll();
+  }
+
+  // 일간·주간·스페셜을 한번에 새로고침(수령 후 전 섹션 반영)
+  async function refreshAll() { await Promise.all([loadMissions(), loadWeekly(), loadSpecial()]); }
+
+  /* ---------- 주간 퀘스트(실데이터) ---------- */
+  const weeklyWrapper = document.getElementById("weekly-list");
+  async function loadWeekly() {
+    if (!weeklyWrapper) return;
+    const { data, error } = await supabase.rpc("weekly_mission_status");
+    if (error || !data?.ok) { weeklyWrapper.innerHTML = ""; return; }
+    weeklyWrapper.innerHTML = (data.missions || []).map(cardHtml).join("");
+    weeklyWrapper.querySelectorAll(".q-claim.ready").forEach(b =>
+      b.addEventListener("click", (e) => { e.stopPropagation(); claim(b.dataset.key, b); }));
+  }
+
+  /* ---------- 스페셜 이벤트(실데이터) ---------- */
+  async function loadSpecial() {
+    const card = document.getElementById("special-card");
+    if (!card) return;
+    const { data, error } = await supabase.rpc("special_event_status");
+    const ev = data?.event;
+    if (error || !data?.ok || !ev) { card.style.display = "none"; return; }
+    const pct = Math.min(100, Math.round((ev.progress / ev.goal) * 100));
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set("sp-desc", ev.title.replace(/^[^—]*—\s*/, "")); // '— ' 뒤 설명만
+    set("sp-progtext", `${ev.progress} / ${ev.goal}`);
+    const fill = document.getElementById("sp-fill"); if (fill) fill.style.width = pct + "%";
+    const btn = document.getElementById("sp-btn");
+    if (!btn) return;
+    const done = ev.progress >= ev.goal;
+    btn.disabled = false;
+    if (ev.claimed) { btn.textContent = `+${ev.reward} GP 수령 완료 ✓`; btn.disabled = true; btn.onclick = null; }
+    else if (done) { btn.textContent = `+${ev.reward} GP 받기`; btn.onclick = () => claim("special", btn); }
+    else { btn.textContent = `핫이슈로 가기 → (+${ev.reward} GP)`; btn.onclick = () => (location.href = "index.html"); }
+  }
+
+  /* ---------- 오늘의 상자(하루 1회 랜덤 GP) ---------- */
+  async function initChest(chestOpened) {
+    const btn = document.getElementById("reward-btn");
+    if (!btn) return;
+    if (chestOpened) { btn.textContent = "오늘 상자 열기 완료 ✓"; btn.disabled = true; return; }
+    btn.disabled = false;
+    btn.textContent = "오늘 상자 열기 →";
+    btn.onclick = async () => {
+      btn.disabled = true; btn.textContent = "여는 중…";
+      const { data, error } = await supabase.rpc("claim_daily_chest");
+      if (error || !data?.ok) {
+        if (data?.reason === "already") { btn.textContent = "오늘 상자 열기 완료 ✓"; return; }
+        btn.disabled = false; btn.textContent = "오늘 상자 열기 →";
+        alert("상자를 여는 데 실패했어요. 잠시 후 다시 시도해주세요."); return;
+      }
+      btn.textContent = "오늘 상자 열기 완료 ✓";
+      toast(`🎁 상자에서 +${data.reward} GP! (보유 ${Math.round(data.balance).toLocaleString()} GP)`);
+    };
   }
 
   function updateRing() {
@@ -117,11 +173,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     t._h = setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(-50%)"; }, 2600);
   }
 
-  // 주간 퀘스트는 다음 단계 — 자리표시
-  const weekly = document.getElementById("weekly-list");
-  if (weekly) weekly.innerHTML = `<div style="color:#7a7f8a;font-size:13px;padding:16px 4px;">주간 퀘스트는 곧 열립니다 🔜</div>`;
-
-  loadMissions();
+  refreshAll();
 });
 
 document.querySelectorAll(".nav-item").forEach(icon => {

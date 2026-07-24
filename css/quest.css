@@ -130,6 +130,10 @@ body {
 .special-content { position: relative; padding: 20px 18px; }
 .special-title { font-size: 16px; font-weight: 900; }
 .special-desc { margin-top: 6px; font-size: 12.5px; color: #c9c9cf; font-weight: 600; }
+/* 스페셜 진행바 */
+.sp-prog { margin-top: 12px; height: 7px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
+.sp-prog-fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg,#ffd76a,#ff4d67); transition: width .4s ease; }
+.sp-progtext { margin-top: 6px; font-size: 11.5px; font-weight: 800; color: #ffd76a; }
 .special-btn {
   margin-top: 15px; padding: 12px 18px; border: none; border-radius: 12px;
   font-size: 13.5px; font-weight: 900; cursor: pointer;
@@ -138,6 +142,7 @@ body {
   transition: transform .1s ease;
 }
 .special-btn:active { transform: scale(.97); }
+.special-btn:disabled { opacity: .6; cursor: default; box-shadow: none; }
 
 /* ===== 데일리 상자 ===== */
 .reward-area {
