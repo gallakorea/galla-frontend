@@ -7,6 +7,14 @@
      부재 시 푸시 '보이스톡이 왔어요'(탭→대화방→부재중 기록에서 다시 걸기)
    · 앱 출시 대비: 시그널링·UI는 그대로 두고 네이티브 래핑 시 푸시만 FCM/CallKit로 바꿔 끼우면 된다 */
 (function () {
+  // 🔊 수신음 엔진 자동 로드(GALLA_SFX) — 통화는 어느 페이지서든 부팅되므로 여기서 보장
+  if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
+    try {
+      const s = document.createElement('script');
+      s.src = '/js/dm-sound.js?v=072383'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      document.head.appendChild(s);
+    } catch (_) {}
+  }
   const I = (w, inner) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
   const IC = {
     phone: I(20, '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>'),
@@ -95,6 +103,7 @@
       chanPeer = await peerChan(p.from);
       paintUI('incoming');
       try { navigator.vibrate?.([300, 150, 300, 150, 300]); } catch (_) {}
+      try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리
       ringT = setTimeout(() => endCall('timeout'), 40000);
       return;
     }
@@ -254,13 +263,13 @@
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
       if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt) {
-        clearTimeout(ringT); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall');
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall');
       }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       if (pc.connectionState === 'connected') {
-        clearTimeout(ringT);
+        clearTimeout(ringT); stopRings();
         if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
         startTimer(); paintUI('oncall');
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
@@ -301,6 +310,7 @@
     chanPeer = await peerChan(peer);
     await buildPC();
     paintUI('outgoing');
+    try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
     const offer = await pc.createOffer();
     offer.sdp = tuneOpus(offer.sdp);
     await pc.setLocalDescription(offer);
@@ -371,9 +381,11 @@
     } catch (_) {}
   }
 
+  function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
+    stopRings();   // 🔕 벨·링백 정지
     clearTimeout(ringT); clearInterval(timerT);
     if (!remote && CUR) send({ t: 'hangup' });
     logCall(reason);

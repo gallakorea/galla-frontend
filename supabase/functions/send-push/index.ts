@@ -38,7 +38,21 @@ const preview = (kind: string, body: string) =>
   : kind === "share" ? "🔗 콘텐츠 공유"
   : (body || "").slice(0, 80);
 
-async function pushTo(userIds: string[], payload: Record<string, unknown>) {
+// 🔔 카테고리별 수신거부·방해금지(DND) 반영 — 서버가 발송 직전 걸러낸다.
+// push_allowed(uid, cat): 설정 없으면 true(기본 수신). 실패해도 보수적으로 발송(끊김 방지).
+async function filterAllowed(userIds: string[], cat: string): Promise<string[]> {
+  const out = await Promise.all(userIds.map(async (u) => {
+    try {
+      const { data, error } = await sb.rpc("push_allowed", { p_user: u, p_cat: cat });
+      if (error) return u;                 // RPC 에러 시 발송(기존 동작 유지)
+      return data === false ? null : u;
+    } catch { return u; }
+  }));
+  return out.filter((u): u is string => !!u);
+}
+
+async function pushTo(userIds: string[], payload: Record<string, unknown>, cat = "dm") {
+  userIds = await filterAllowed(userIds, cat);
   if (!userIds.length) return 0;
   const { data: subs } = await sb.from("push_subscriptions")
     .select("endpoint,p256dh,auth,user_id").in("user_id", userIds).limit(200);
@@ -84,7 +98,7 @@ Deno.serve(async (req) => {
       body: video ? "면상톡이 왔어요 — 면상 까라" : "육성톡이 왔어요 — 탭해서 받기",
       url: `/dm.html?dm=${me}`,
       tag: `call-${me}`,
-    });
+    }, "call");
     return j({ ok: true, sent });
   }
 
@@ -103,7 +117,7 @@ Deno.serve(async (req) => {
       body: `${sender?.nickname || "누군가"}: ${preview(m.kind, m.body)}`,
       url: "/dm.html",
       tag: `room-${m.room_id}`,
-    });
+    }, "room");
     return j({ ok: true, sent });
   }
 
@@ -121,6 +135,6 @@ Deno.serve(async (req) => {
     body: preview(m.kind, m.body),
     url: `/dm.html?dm=${me}`,
     tag: `dm-${m.thread_id}`,
-  });
+  }, "dm");
   return j({ ok: true, sent });
 });

@@ -695,6 +695,24 @@
                 <input type="time" class="dm-set-time" id="dm-dnd-to">
               </span>
             </div>
+
+            <div class="dm-sec">${ICONS.bell}푸시 받을 종류 <i class="dm-sec-note">기기가 꺼져 있어도 서버가 지켜줘요</i></div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>1:1 메시지</b><i>끄면 상대가 보내도 푸시가 안 와요</i></span>
+              <button class="dm-toggle" data-npref="dm" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>통화</b><i>육성톡·면상톡 호출 알림</i></span>
+              <button class="dm-toggle" data-npref="call" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>난장·단체</b><i>오픈챗·단체방 새 메시지</i></span>
+              <button class="dm-toggle" data-npref="room" type="button"></button>
+            </div>
+            <div class="dm-set-row">
+              <span class="dm-set-mid"><b>활동</b><i>좋아요·댓글·팔로우 등 소식</i></span>
+              <button class="dm-toggle" data-npref="activity" type="button"></button>
+            </div>
           </div>
         </div>
         <div class="dm-view" data-view="settings" hidden>
@@ -1617,6 +1635,7 @@
       <button class="dm-cs-act" data-cs="duel" type="button">${ICONS.swords} 일기토 신청</button>
       <button class="dm-cs-act" data-cs="expire" type="button">${ICONS.timer} 사라지는 메시지 <i class="dm-cs-state${curExpire ? ' on' : ''}">${curExpire ? EXP_LABEL[curExpire] : '끔'}</i></button>
       <button class="dm-cs-act" data-cs="secret" type="button">${ICONS.lock} 비밀대화 <i class="dm-cs-state${secretOn(curThread) ? ' on' : ''}">${secretOn(curThread) ? '켜짐' : '꺼짐'}</i></button>
+      <button class="dm-cs-act" data-cs="mute" type="button">${ICONS.bell || '🔔'} 알림 <i class="dm-cs-state${isThreadMuted(curThread) ? '' : ' on'}">${isThreadMuted(curThread) ? '음소거' : '켜짐'}</i></button>
       <button class="dm-cs-act danger" data-cs="report" type="button">${ICONS.flag} 신고</button>
       <button class="dm-cs-act danger" data-cs="block" type="button">${ICONS.block} 차단</button>
       <button class="dm-cs-act danger" data-cs="leave" type="button">${ICONS.leave} 채팅방 나가기</button>`;
@@ -1636,6 +1655,11 @@
         if (!ok) return toastMini('상대가 아직 비밀대화 준비가 안 됐어요 — 상대가 DM을 한 번 열면 켤 수 있어요');
         setSecret(curThread, true); paintSecretUI(); openChatSet();
         toastMini('비밀대화 시작 — 발신자 기록이 서버에 남지 않고, 이 기기에서만 열려요');
+      }
+      else if (k === 'mute') {
+        const on = !isThreadMuted(curThread);
+        setThreadMuted(curThread, on); openChatSet();
+        toastMini(on ? '이 대화 알림을 껐어요' : '이 대화 알림을 켰어요');
       }
       else if (k === 'report') {
         const r0 = b.getBoundingClientRect();
@@ -1948,6 +1972,37 @@
     try { localStorage.setItem(PREF_KEY, JSON.stringify(UI)); } catch (_) {}
     applyPrefs();
   }
+
+  /* 🔔 서버 기반 알림 수신 설정(카테고리 수신거부 + DND) — 기기가 꺼져 있어도
+     지켜지려면 서버에 있어야 한다. 로컬 UI 토글은 이 기기의 소리/진동/배너용이고,
+     아래 NP는 '푸시를 서버가 아예 안 쏘게' 하는 스위치다. */
+  let NP = { dm: true, call: true, room: true, activity: true };
+  let NP_LOADED = false, NP_SYNC_T = null;
+  function loadNotifyPrefs(after) {
+    if (NP_LOADED) { after && after(); return; }
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('get_my_notify_prefs');
+        const p = Array.isArray(data) ? data[0] : data;
+        if (p) NP = { dm: p.dm !== false, call: p.call !== false, room: p.room !== false, activity: p.activity !== false };
+      } catch (_) {}
+      NP_LOADED = true; after && after();
+    })();
+  }
+  function syncNotifyPrefs() {   // 디바운스 저장(연타 방지)
+    clearTimeout(NP_SYNC_T);
+    NP_SYNC_T = setTimeout(async () => {
+      try {
+        const off = -new Date().getTimezoneOffset();   // UTC 대비 분(KST=+540)
+        await supabase.rpc('set_my_notify_prefs', {
+          p_dm: NP.dm !== false, p_call: NP.call !== false,
+          p_room: NP.room !== false, p_activity: NP.activity !== false,
+          p_dnd_on: !!UI.dndOn, p_dnd_from: UI.dndFrom || '23:00',
+          p_dnd_to: UI.dndTo || '07:00', p_tz_off: off,
+        });
+      } catch (_) {}
+    }, 350);
+  }
   /* 알림음은 파일 없이 합성한다(저작권·용량 0). 미리듣기와 실제 알림이 같은 소리. */
   let TONE_AC = null;
   function playTone(kind) {
@@ -1986,7 +2041,18 @@
     const t = String(text || '');
     return ks.find(k => t.includes(k)) || null;
   }
-  window.GALLA_dmNotify = { playTone, inDND, hitsKeyword };
+  const isDnd = inDND;   // 별칭
+  /* 대화별 음소거 — 특정 방만 소리·진동 끄기(로컬 기기 단위). localStorage Set */
+  const MUTE_KEY = 'galla_dm_muted';
+  let MUTED = new Set();
+  try { MUTED = new Set(JSON.parse(localStorage.getItem(MUTE_KEY) || '[]')); } catch (_) {}
+  function isThreadMuted(id) { return MUTED.has(String(id)); }
+  function setThreadMuted(id, on) {
+    id = String(id);
+    if (on) MUTED.add(id); else MUTED.delete(id);
+    try { localStorage.setItem(MUTE_KEY, JSON.stringify([...MUTED])); } catch (_) {}
+  }
+  window.GALLA_dmNotify = { playTone, inDND, hitsKeyword, isThreadMuted, setThreadMuted };
 
   function applyPrefs() {
     /* ⚠️ 글자 크기 조절기가 두 곳(3단 + 슬라이더)에 있어 서로 곱해졌다.
@@ -2040,9 +2106,23 @@
     };
     if (from && to) {
       from.value = UI.dndFrom; to.value = UI.dndTo;
-      from.onchange = () => { UI.dndFrom = from.value || '23:00'; savePrefs(); };
-      to.onchange = () => { UI.dndTo = to.value || '07:00'; savePrefs(); };
+      from.onchange = () => { UI.dndFrom = from.value || '23:00'; savePrefs(); syncNotifyPrefs(); };
+      to.onchange = () => { UI.dndTo = to.value || '07:00'; savePrefs(); syncNotifyPrefs(); };
     }
+    // dndOn 토글도 서버 동기화(기기 꺼져도 방해금지 지켜지게)
+    host.querySelectorAll('[data-pref="dndOn"]').forEach(b => {
+      const prev = b.onclick;
+      b.onclick = (e) => { if (prev) prev.call(b, e); syncNotifyPrefs(); };
+    });
+    // 🔔 서버 기반 카테고리 수신거부 — get/set_my_notify_prefs
+    host.querySelectorAll('[data-npref]').forEach(btn => {
+      const k = btn.dataset.npref;
+      const paint = () => btn.classList.toggle('on', NP[k] !== false);
+      paint();
+      btn.onclick = () => { NP[k] = NP[k] === false ? true : false; paint(); syncNotifyPrefs(); };
+    });
+    loadNotifyPrefs(() => host.querySelectorAll('[data-npref]').forEach(b =>
+      b.classList.toggle('on', NP[b.dataset.npref] !== false)));
     paintDnd();
     // 푸시 토글 — 이제 이 화면이 유일한 자리라 직접 배선한다
     const ptg = host.querySelector('#dm-set-push2');
@@ -4816,6 +4896,9 @@
           hideTypingBubble();
           appendMsg(m);
           markRead(tid);
+          // 🔊 수신음 — 소리 선호 + 방해금지 아님 + 이 대화 음소거 아님
+          if (UI.sound && !isDnd() && !isThreadMuted(tid)) { try { window.GALLA_SFX?.ding(); } catch (_) {} }
+          if (UI.vibrate && !isDnd() && !isThreadMuted(tid)) { try { navigator.vibrate?.(12); } catch (_) {} }
         })
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'dm_messages', filter: `thread_id=eq.${tid}` },
