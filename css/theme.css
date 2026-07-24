@@ -224,3 +224,20 @@ body:has(.ssh-dim.open) .nav { display: none !important; }
 .nick-stat { margin-top: 6px; font-size: 12px; color: #8b909b; min-height: 16px; }
 .nick-stat.good { color: #2fd07a; }
 .nick-stat.bad { color: #ff6b7a; }
+
+/* ═══════════════════════════════════════════════════════════
+   🔒 인스타식 선택 정책 — UI는 전역 선택 금지 + iOS 롱프레스 콜아웃(Copy/Translate/Share) 차단.
+   실제로 복사할 텍스트만 예외: 입력창(input/textarea/contenteditable)과 채팅 메시지 텍스트(.dm-bub-body).
+   (사장님: 채팅 대화 텍스트 외엔 전 페이지 어디서도 선택 안 되게 — 인스타처럼)
+   ═══════════════════════════════════════════════════════════ */
+html { -webkit-touch-callout: none; }
+html, body {
+  -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+}
+img, svg, video, canvas, a { -webkit-user-drag: none; }
+input, textarea, select,
+[contenteditable="true"], [contenteditable=""],
+.dm-bub-body, .selectable, [data-selectable] {
+  -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
+  -webkit-touch-callout: default;
+}
