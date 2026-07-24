@@ -196,16 +196,25 @@
         }
         if (kind === "selection") { if (H.selectionChanged) { H.selectionChanged(); return true; } }
         if (H.impact) {
-          var style = kind === "heavy" ? "HEAVY" : (kind === "light" || kind === "soft" || kind === "selection") ? "LIGHT" : "MEDIUM";
+          // 🔥 격렬한 진동 — 진영/예측 선택: HEAVY 3연타 + notification 펀치로 '쾅쾅쾅!'
+          if (kind === "vote" || kind === "strong") {
+            H.impact({ style: "HEAVY" });
+            setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 55);
+            setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 120);
+            setTimeout(function () { try { H.notification ? H.notification({ type: "SUCCESS" }) : H.impact({ style: "RIGID" }); } catch (_) {} }, 205);
+            return true;
+          }
+          var style = kind === "heavy" ? "HEAVY" : (kind === "light" || kind === "soft") ? "LIGHT" : "MEDIUM";
           H.impact({ style: style });
-          if (kind === "heavy") setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 55); // '격렬한' 더블탭
+          if (kind === "heavy") setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 55); // 더블탭
           return true;
         }
       }
     } catch (_) {}
     try {
       if (navigator.vibrate) {
-        var p = kind === "heavy" ? [35, 30, 45] : kind === "success" ? [12, 40, 12] : kind === "error" ? [30, 40, 30]
+        var p = (kind === "vote" || kind === "strong") ? [50, 25, 50, 25, 80]
+          : kind === "heavy" ? [35, 30, 45] : kind === "success" ? [12, 40, 12] : kind === "error" ? [30, 40, 30]
           : (kind === "light" || kind === "selection" || kind === "soft") ? 9 : 18;
         navigator.vibrate(p); return true;
       }

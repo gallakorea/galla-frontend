@@ -253,7 +253,7 @@ function renderPanel(closed){
     const prev=window.__PB_PREV_ODDS[o.id];
     const tick=(prev!=null&&od!=null&&Math.abs(od-prev)>0.005)?(od>prev?' tick-up':' tick-down'):'';
     window.__PB_PREV_ODDS[o.id]=od;
-    return `<button class="pb-out ${side} ${SEL===o.id?'sel':''}" data-haptic="heavy" data-oid="${o.id}">
+    return `<button class="pb-out ${side} ${SEL===o.id?'sel':''}" data-haptic="vote" data-oid="${o.id}">
       <span class="lb">${esc(o.label)}</span>
       <span class="od${tick}">×${od?od.toFixed(2):'–'}</span>
       <span class="pool">${fmt(o.pool)}GP · ${o.bettors||0}명</span>
@@ -607,14 +607,14 @@ function renderComments(body){
       const on=String(CMT_SIDE)===String(o.id);
       const c=ocColor(o.id);
       const st=on?`background:${c}22;border-color:${c};color:${c}`:'';
-      return `<button class="pmd-cmt-pick ${on?'active':''}" data-pick="${o.id}" data-haptic="heavy" style="${st}">🎯 ${esc(o.label)}</button>`;
+      return `<button class="pmd-cmt-pick ${on?'active':''}" data-pick="${o.id}" data-haptic="vote" style="${st}">🎯 ${esc(o.label)}</button>`;
     }).join('');
     composeTop=`<div class="pmd-cmt-ask">✍️ 어느 결과에 대한 의견인가요?</div><div class="pmd-cmt-picksel">${chips}</div>`;
   } else {
     composeTop=`<div class="pmd-cmt-ask">✍️ 어느 입장으로 의견을 남길까요? <span class="pmd-cmt-ask-sub">(참여하면 자동으로 고정돼요)</span></div>
       <div class="pmd-cmt-picksel">
-        <button class="pmd-cmt-pick yes ${CMT_SIDE==='yes'?'active':''}" data-pick="yes" data-haptic="heavy">👍 ${cmtSideName('yes')}</button>
-        <button class="pmd-cmt-pick no ${CMT_SIDE==='no'?'active':''}" data-pick="no" data-haptic="heavy">👎 ${cmtSideName('no')}</button>
+        <button class="pmd-cmt-pick yes ${CMT_SIDE==='yes'?'active':''}" data-pick="yes" data-haptic="vote">👍 ${cmtSideName('yes')}</button>
+        <button class="pmd-cmt-pick no ${CMT_SIDE==='no'?'active':''}" data-pick="no" data-haptic="vote">👎 ${cmtSideName('no')}</button>
       </div>`;
   }
 
