@@ -104,7 +104,7 @@
       ctx.globalAlpha = Math.max(0, p.life);
       ctx.fillStyle = p.color;
       if (p.star) drawStar(p);
-      else { ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill(); }
+      else { ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0, p.size * p.life), 0, Math.PI * 2); ctx.fill(); }  // 반지름 음수 방지(life<0 → IndexSizeError)
     }
     ctx.globalAlpha = 1;
     rafId = requestAnimationFrame(loop);

@@ -79,7 +79,7 @@
 
   /* 문자 → 코드포인트 배열(VS16 포함). 키캡·ZWJ는 SETS에서 뺐다 */
   const cpsOf = ch => [...ch].map(c => c.codePointAt(0).toString(16));
-  const charOf = cps => cps.map(h => String.fromCodePoint(parseInt(h, 16))).join('');
+  const charOf = cps => (Array.isArray(cps) ? cps : []).map(h => String.fromCodePoint(parseInt(h, 16))).join('');
 
   const cats = Object.keys(SETS).map(label => {
     const seen = new Set();
@@ -119,7 +119,7 @@
     { id: 'open',  label: '손그림', credit: 'OpenMoji (CC BY-SA 4.0)',
       url: cps => `https://cdn.jsdelivr.net/npm/openmoji@15.0.0/color/svg/${cps.filter(c => c !== 'fe0f').join('-').toUpperCase()}.svg` },
   ];
-  const urlOf = (cps, styleId) => (styles.find(s => s.id === styleId) || styles[0]).url(cps);
+  const urlOf = (cps, styleId) => (Array.isArray(cps) && cps.length) ? (styles.find(s => s.id === styleId) || styles[0]).url(cps) : '';
 
   function search(q) {
     const s = (q || '').trim().toLowerCase();

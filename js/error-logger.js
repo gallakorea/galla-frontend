@@ -18,6 +18,8 @@
     /Load failed$/i,               // 사용자 네트워크 순단(취소된 fetch)
     /The operation was aborted/i,
     /play\(\) request was interrupted/i,  // 오디오/비디오 재생 인터럽트(무해)
+    /Transition was skipped/i,            // View Transitions API 경고(무해) — 에러 아님
+    /Skipping view transition/i,          // skipTransition() 호출 시 브라우저 경고(무해)
   ];
   function noise(msg, src) {
     var s = (msg || '') + ' ' + (src || '');
