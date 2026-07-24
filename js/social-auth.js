@@ -43,18 +43,20 @@
     const c = sb();
     if (!c) { alert("잠시 후 다시 시도해주세요."); return; }
     try {
+      // 매번 계정 선택 화면 강제 → 다른 구글 계정 선택/추가 가능(안 그러면 같은 계정으로 자동로그인)
+      const qp = { prompt: "select_account" };
       // 네이티브 앱: 인앱 브라우저로 열고 딥링크로 복귀(사파리로 안 튐)
       if (isNativeApp()) {
         setupNativeAuthListener();
         const { data, error } = await c.auth.signInWithOAuth({
-          provider, options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+          provider, options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true, queryParams: qp },
         });
         if (error) throw error;
         if (data?.url) await window.Capacitor.Plugins.Browser.open({ url: data.url, presentationStyle: "popover" });
         return;
       }
       // 웹: 기존 리다이렉트
-      const { error } = await c.auth.signInWithOAuth({ provider, options: { redirectTo: CALLBACK } });
+      const { error } = await c.auth.signInWithOAuth({ provider, options: { redirectTo: CALLBACK, queryParams: qp } });
       if (error) alert(/provider/i.test(error.message) ? "이 로그인은 아직 준비 중입니다." : "로그인 실패: " + error.message);
     } catch (e) { alert("로그인 실패 — " + (e?.message || "잠시 후 다시 시도해 주세요.")); }
   }
