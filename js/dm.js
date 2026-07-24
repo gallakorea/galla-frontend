@@ -3205,7 +3205,8 @@
       const recency = h < 1 ? 30 : h < 6 ? 18 : h < 24 ? 8 : h < 72 ? 3 : 0;
       return (r.member_count || 1) * 10 + recency;
     };
-    const hot = others.filter(r => (r.member_count || 1) >= 2 && heat(r) >= 20)
+    // '뜨는'은 최근 활동(24h 내) 또는 3인+ 방만 — 오래된 소규모 방은 랭킹서 제외
+    const hot = others.filter(r => (r.member_count || 1) >= 2 && heat(r) >= 24)
       .sort((a, b) => heat(b) - heat(a)).slice(0, 4);
     const hotIds = new Set(hot.map(r => r.id));
     const browse = others.filter(r => !hotIds.has(r.id));
