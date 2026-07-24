@@ -1591,17 +1591,19 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 /* ═══════════ 카톡식 프로스트 입력 도크 (2026-07-24) ═══════════
    입력바를 메시지 위에 반투명 유리로 띄운다. .dm-view가 position:absolute inset:0 이라
    그 안에서 하단 절대배치 가능. 메시지는 아래로 흘러 유리 뒤로 비친다. */
-.dm-view .dm-msgs { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
+.dm-view .dm-msgs { padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
+/* 🫧 둥근 플로팅 필 입력바(사장님 지정 모양) — 양옆·아래 띄우고 큰 라운드, 카톡/아이메시지 톤.
+   앱(WKWebView 셸 iframe)에선 backdrop blur가 안 뜨니 반투명 배경 자체로 유리처럼 읽히게. */
 .dm-inputbar {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 8;
-  /* 앱(WKWebView 셸 iframe)에선 backdrop-filter blur가 안 뜬다 → 무거운 불투명 슬래브 대신,
-     '거의 투명한' 배경으로 바 자체는 배경에 녹이고 안의 입력 필·버튼만 떠 보이게(iMessage/카톡 톤).
-     메시지는 하단 패딩으로 바 뒤에 안 오므로 지저분한 비침도 없다. blur는 지원 기기 보너스. */
-  background: linear-gradient(180deg, rgba(10,11,15,0), rgba(10,11,15,.86) 55%) !important;
+  position: absolute; left: 10px; right: 10px; z-index: 8;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  border-radius: 26px !important;
+  padding: 6px 8px !important;
+  background: rgba(38,41,52,.72) !important;
   backdrop-filter: blur(24px) saturate(1.6);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  border-top: none !important;
-  box-shadow: none;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 8px 26px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.07) !important;
 }
 .dm-inputbar textarea {
   background: rgba(255,255,255,.10) !important;
