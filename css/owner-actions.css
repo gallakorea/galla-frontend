@@ -13,7 +13,7 @@
 .oa-sheet.show { transform: none; }
 /* 앱 셸 iframe 안에서는 셸 하단 네비(+조그)가 시트를 덮으므로 여백을 넉넉히 더한다
    (72px는 부족 — 삭제/닫기 버튼이 네비에 가려 안 눌림, 사장님 제보 2026-07-24) */
-.oa-sheet.oa-shell-pad { padding-bottom: calc(18px + env(safe-area-inset-bottom) + 100px); }
+.oa-sheet.oa-shell-pad { padding-bottom: calc(18px + env(safe-area-inset-bottom) + 128px); }
 .oa-grab { width: 40px; height: 4px; border-radius: 999px; background: #3a3d46; margin: 6px auto 12px; }
 .oa-title { font-size: 13px; font-weight: 700; color: #9aa0ad; text-align: center; margin-bottom: 10px; }
 .oa-item {
@@ -31,12 +31,18 @@
 .oa-danger { color: #ff4d67; }
 .oa-cancel { justify-content: center; color: #9aa0ad; background: none; }
 
-/* 수정/삭제 확인 모달 */
+/* 수정/삭제 확인 모달
+   상단 앵커 — 세로 중앙이면 키보드가 입력창을 덮어 글을 못 씀(사장님 제보 2026-07-24).
+   위에 붙이고 자체 스크롤을 줘서, 키보드가 올라와도 입력창/버튼이 늘 보이게 한다. */
 .oa-overlay .oa-modal {
-  align-self: center; width: calc(100% - 40px); max-width: 400px;
+  align-self: flex-start;
+  margin-top: max(56px, calc(env(safe-area-inset-top) + 24px));
+  margin-bottom: auto;
+  max-height: calc(100dvh - 96px); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  width: calc(100% - 40px); max-width: 400px;
   background: #16171c; border: 1px solid rgba(255,255,255,.08);
   border-radius: 18px; padding: 22px 20px;
-  transform: scale(.94); opacity: 0; transition: all .18s ease;
+  transform: scale(.94); opacity: 0; transition: transform .18s ease, opacity .18s ease;
 }
 .oa-modal.show { transform: none; opacity: 1; }
 .oa-modal-title { font-size: 17px; font-weight: 800; color: #fff; margin-bottom: 16px; }
