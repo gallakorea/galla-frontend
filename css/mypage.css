@@ -568,7 +568,8 @@ body{
 .mp-ava-ring{ padding:0; border-radius:50%; background:none; }
 .profile-img{
   width:76px; height:76px; border:1.5px solid rgba(255,255,255,.16);
-  object-fit:cover; object-position:center; background:#16171c;
+  object-fit:cover; object-position:center;
+  background:#000;  /* 사진 로드 전엔 로고 대신 '검은 원'(사장님 요청). 사진은 cover로 꽉 참 */
 }
 .mp-tier-chip{
   background:linear-gradient(180deg,#1d1e24,#121318);
