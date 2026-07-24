@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072383";
-import { loadAiNews } from "./issue-news.js?v=072383";
-import { loadStats } from "./issue.stats.js?v=072383";
-import { initCommentSystem } from "./issue.comments.js?v=072383";
+import { loadAiArguments } from "./issue-argument.js?v=072384";
+import { loadAiNews } from "./issue-news.js?v=072384";
+import { loadStats } from "./issue.stats.js?v=072384";
+import { initCommentSystem } from "./issue.comments.js?v=072384";
 
 
 console.log("[issue.js] loaded");
@@ -150,7 +150,9 @@ renderIssue(issue);
 checkLiveDuel(issue.id);
 
 // 🔥 투표 상태 초기 동기화 (모바일 새로고침 대응)
-await forceInitialVoteSync(issue.id);
+// ⚡ 병렬화: 투표바 동기화는 세션을 최대 2.5초 기다릴 수 있는데 댓글과 의존성이 없다.
+//    await로 앞을 막으면 댓글 표시가 그만큼 늦어져서, 백그라운드로 돌린다.
+forceInitialVoteSync(issue.id);
 
 await initCommentSystem(issue.id);
 forceBattleScrollWithRetry();

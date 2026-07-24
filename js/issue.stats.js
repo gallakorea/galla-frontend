@@ -10,7 +10,7 @@ const MIN_PARTICIPANTS = 30;
 const MIN_BUCKET = 5;
 
 export async function loadStats(issueId) {
-  lockAllStats(0);
+  showSkel();   // ⏳ 집계 전엔 스켈레톤만 — '빈 통계 UI가 떴다가 잠금 안내로 바뀌는' 플래시 제거
   const supabase = window.supabaseClient;
 
   // 🔒 개인정보 보호: 원시 투표자 성별/생년/지역을 클라이언트로 내리지 않고
@@ -103,7 +103,20 @@ function ensureMoreButton() {
    LOCK / UNLOCK
 ====================================================== */
 
+/* ⏳ 스켈레톤: 집계 RPC가 도는 동안만 노출. 잠금/해제 어느 쪽으로 끝나든 반드시 숨긴다. */
+function showSkel() {
+  const skel = qs("#stats-skel");
+  if (skel) skel.hidden = false;
+  const locked = qs("#stats-locked");
+  if (locked) locked.hidden = true;
+  qs("#stats-section .stats-header") && (qs("#stats-section .stats-header").hidden = true);
+  getStatTitles().forEach(el => (el.hidden = true));
+  getStatContents().forEach(el => (el.hidden = true));
+}
+function hideSkel() { const skel = qs("#stats-skel"); if (skel) skel.hidden = true; }
+
 function lockAllStats(total) {
+  hideSkel();
   const locked = qs("#stats-locked");
   const header = qs("#stats-section .stats-header");
   const titles = getStatTitles();
@@ -135,6 +148,7 @@ function lockAllStats(total) {
 }
 
 function unlockBasicStats() {
+  hideSkel();
   const locked = qs("#stats-locked");
   const header = qs("#stats-section .stats-header");
   const titles = getStatTitles();
@@ -163,6 +177,7 @@ function unlockBasicStats() {
 }
 
 function unlockAllStats() {
+  hideSkel();
   const locked = qs("#stats-locked");
   const header = qs("#stats-section .stats-header");
   const titles = getStatTitles();

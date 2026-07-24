@@ -543,6 +543,22 @@ body {
     margin-bottom: 22px;
 }
 
+/* ⏳ 통계 로딩 스켈레톤 — 집계 전 빈 통계 UI 플래시 대신 */
+.stats-skel { padding: 4px 0 8px; }
+.stats-skel[hidden] { display: none !important; }
+.stats-skel-title {
+    height: 22px; width: 52%; border-radius: 7px; margin: 0 0 18px;
+    background: linear-gradient(90deg, rgba(255,255,255,.06) 25%, rgba(255,255,255,.13) 37%, rgba(255,255,255,.06) 63%);
+    background-size: 400% 100%; animation: statsShimmer 1.4s ease-in-out infinite;
+}
+.stats-skel-card {
+    height: 168px; border-radius: 16px;
+    background: linear-gradient(90deg, rgba(255,255,255,.05) 25%, rgba(255,255,255,.11) 37%, rgba(255,255,255,.05) 63%);
+    background-size: 400% 100%; animation: statsShimmer 1.4s ease-in-out infinite;
+}
+@keyframes statsShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .stats-skel-title, .stats-skel-card { animation: none; } }
+
 .stat-title {
     font-size: 17px;
     font-weight: 800;

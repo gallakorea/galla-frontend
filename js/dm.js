@@ -3343,6 +3343,18 @@
     const r = ROOMS.find(x => x.id === rid);
     if (r) openRoom(r);
   }
+  /* 🔗 방 id로 바로 열기(딥링크) — 진영 난장은 서버 RPC가 이미 가입시켜 놨으므로
+     멤버십을 확인해 MY_ROOMS에 반영하면 '뛰어들기 게이트' 없이 바로 대화가 열린다. */
+  async function openRoomById(rid) {
+    if (!rid) return;
+    buildRoot();
+    const { data: r, error } = await supabase.from('open_rooms').select('*').eq('id', rid).single();
+    if (error || !r) { toastMini('방을 찾을 수 없어요'); return; }
+    const { data: mem } = await supabase.from('open_room_members')
+      .select('user_id').eq('room_id', rid).eq('user_id', ME).maybeSingle();
+    if (mem) MY_ROOMS.add(r.id);
+    openRoom(r);
+  }
   async function openRoom(r) {
     curRoom = r;
     ROOT.querySelector('#dm-room-name').textContent = r.title;
@@ -5176,7 +5188,9 @@
     try {
       const q = new URLSearchParams(location.search);
       const dm = q.get('dm');
+      const room = q.get('room');   // 🔗 난장 딥링크(진영 난장·공유 등)
       if (dm && !PAGE_MODE()) { location.replace('dm.html?dm=' + encodeURIComponent(dm)); return; }
+      if (room && !PAGE_MODE()) { location.replace('dm.html?room=' + encodeURIComponent(room)); return; }
       if (PAGE_MODE()) {
         // 공유 픽업(갈라 친구 → 페이지로 넘어온 경우)
         try {
@@ -5186,8 +5200,9 @@
         if (ME) {
           openDM();
           if (dm && dm !== '1') startDM(dm, null);
-          if (dm) {
-            q.delete('dm');
+          if (room) openRoomById(room);
+          if (dm || room) {
+            q.delete('dm'); q.delete('room');
             history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
           }
         } else {

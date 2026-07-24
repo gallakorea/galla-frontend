@@ -17,16 +17,16 @@
   <meta name="twitter:image" content="https://galla.im/assets/og/og-default.png">
   <meta name="description" content="찬성이냐 반대냐, 당신의 진영은? 여론이 에너지가 되는 곳, 갈라.">
 
-    <link rel="stylesheet" href="css/issue.css?v=072383" />
-    <link rel="stylesheet" href="css/issue.comments.css?v=072383" />
-    <link rel="stylesheet" href="./css/items.css?v=072383">
-    <link rel="stylesheet" href="./css/dm.css?v=072383">
-    <link rel="stylesheet" href="./css/dm-quiet.css?v=072383">
-    <link rel="stylesheet" href="./css/user-sheet.css?v=072383">
-    <link rel="stylesheet" href="./css/owner-actions.css?v=072383">
-    <link rel="stylesheet" href="./css/header.css?v=072383">
-    <link rel="stylesheet" href="./css/nav.css?v=072383">
-    <link rel="stylesheet" href="./css/shorts.css?v=072383">
+    <link rel="stylesheet" href="css/issue.css?v=072384" />
+    <link rel="stylesheet" href="css/issue.comments.css?v=072384" />
+    <link rel="stylesheet" href="./css/items.css?v=072384">
+    <link rel="stylesheet" href="./css/dm.css?v=072384">
+    <link rel="stylesheet" href="./css/dm-quiet.css?v=072384">
+    <link rel="stylesheet" href="./css/user-sheet.css?v=072384">
+    <link rel="stylesheet" href="./css/owner-actions.css?v=072384">
+    <link rel="stylesheet" href="./css/header.css?v=072384">
+    <link rel="stylesheet" href="./css/nav.css?v=072384">
+    <link rel="stylesheet" href="./css/shorts.css?v=072384">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -36,12 +36,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072383">
-  <link rel="stylesheet" href="./css/vote-bar.css?v=072383">
-  <link rel="stylesheet" href="./css/vote-fx.css?v=072383">
-<link rel="stylesheet" href="./css/desktop.css?v=072383">
+  <link rel="stylesheet" href="./css/theme.css?v=072384">
+  <link rel="stylesheet" href="./css/vote-bar.css?v=072384">
+  <link rel="stylesheet" href="./css/vote-fx.css?v=072384">
+<link rel="stylesheet" href="./css/desktop.css?v=072384">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072383"></script>
+  <script src="/js/splash-boot.js?v=072384"></script>
 </head>
 
 <body data-page="issue">
@@ -232,40 +232,48 @@
     </section>
 
     <!-- STATISTICS -->
+    <!-- ⚠️ 플래시 방지: 통계 본문(헤더·제목·콘텐츠)은 기본 hidden.
+         JS(loadStats)가 표본(≥30명) 확인 후에만 잠금해제한다. 로딩 중엔 스켈레톤만. -->
     <section id="stats-section" class="stats-section">
-        <!-- 🔒 통계 잠금 안내 (100명 미만) -->
+        <!-- 통계 로딩 스켈레톤 — 집계 전 '빈 통계 UI 플래시' 대신 이걸 보여준다 -->
+        <div id="stats-skel" class="stats-skel">
+          <div class="stats-skel-title"></div>
+          <div class="stats-skel-card"></div>
+        </div>
+
+        <!-- 🔒 통계 잠금 안내 (표본 부족) -->
         <div id="stats-locked" class="ai-news-placeholder" hidden>
         <div class="ai-news-placeholder-title">
             아직 통계가 공개되지 않았습니다
         </div>
         <div class="ai-news-placeholder-desc">
-            참여자가 100명 이상 모이면<br>
+            참여자가 30명 이상 모이면<br>
             여론 통계가 자동으로 공개됩니다.
         </div>
         </div>
 
-        <div class="stats-header white-title">📊 여론 통계 인포그래픽</div>
+        <div class="stats-header white-title" hidden>📊 여론 통계 인포그래픽</div>
 
-        <h2 class="stat-title white-title">👥 성별 참여 비율</h2>
-        <div id="gender-dual"></div>
+        <h2 class="stat-title white-title" hidden>👥 성별 참여 비율</h2>
+        <div id="gender-dual" hidden></div>
 
-        <h2 class="stat-title white-title">🎂 나이대 참여 비율</h2>
-        <div id="age-chart"></div>
+        <h2 class="stat-title white-title" hidden>🎂 나이대 참여 비율</h2>
+        <div id="age-chart" hidden></div>
 
-        <h2 class="stat-title white-title">🗺️ 지역별 참여 히트맵</h2>
-        <div id="region-heatmap" class="region-heatmap"></div>
+        <h2 class="stat-title white-title" hidden>🗺️ 지역별 참여 히트맵</h2>
+        <div id="region-heatmap" class="region-heatmap" hidden></div>
 
-        <h2 class="stat-title white-title">⚔️ 성별 찬반 비율</h2>
-        <div id="gender-vote"></div>
+        <h2 class="stat-title white-title" hidden>⚔️ 성별 찬반 비율</h2>
+        <div id="gender-vote" hidden></div>
 
-        <h2 class="stat-title white-title">⚔️ 나이대 찬반 비율</h2>
-        <div id="age-vote"></div>
+        <h2 class="stat-title white-title" hidden>⚔️ 나이대 찬반 비율</h2>
+        <div id="age-vote" hidden></div>
 
-        <h2 class="stat-title white-title">⚔️ 지역별 찬반 비율</h2>
-        <div id="region-vote"></div>
+        <h2 class="stat-title white-title" hidden>⚔️ 지역별 찬반 비율</h2>
+        <div id="region-vote" hidden></div>
 
-        <h2 class="stat-title white-title">🎙️ AI 종합 의견</h2>
-        <div id="ai-summary" class="ai-summary"></div>
+        <h2 class="stat-title white-title" hidden>🎙️ AI 종합 의견</h2>
+        <div id="ai-summary" class="ai-summary" hidden></div>
     </section>
     
         <!-- 발의자 후원 (슈퍼챗형) -->
@@ -354,48 +362,48 @@
 
 
 <!-- Supabase -->
-<script src="/js/error-logger.js?v=072383"></script>
-  <script src="./vendor/supabase.js?v=072383"></script>
-<script src="js/supabase.js?v=072383"></script>
-<script src="js/back.js?v=072383"></script>
-<script src="./vendor/hls.min.js?v=072383"></script>
-<script src="./js/hls-attach.js?v=072383"></script>
+<script src="/js/error-logger.js?v=072384"></script>
+  <script src="./vendor/supabase.js?v=072384"></script>
+<script src="js/supabase.js?v=072384"></script>
+<script src="js/back.js?v=072384"></script>
+<script src="./vendor/hls.min.js?v=072384"></script>
+<script src="./js/hls-attach.js?v=072384"></script>
 
 <!-- 전역 Core (window.* 정의) -->
-<script src="js/vote-bar.js?v=072383"></script>
-<script src="js/vote-fx.js?v=072383"></script>
-<script src="js/vote.core.js?v=072383"></script>
+<script src="js/vote-bar.js?v=072384"></script>
+<script src="js/vote-fx.js?v=072384"></script>
+<script src="js/vote.core.js?v=072384"></script>
 
 <!-- 전장 FX 엔진 (파티클/충격파/햅틱) -->
-<script src="js/battle-fx.js?v=072383"></script>
-<script src="js/galla-ask.js?v=072383"></script>
-<script src="js/items.js?v=072383"></script>
-<script src="js/emoticon.js?v=072383"></script>
-<script src="js/gif.js?v=072383"></script>
-<script src="js/donate.js?v=072383"></script>
-<script src="js/charge.js?v=072383"></script>
-<script src="js/faction.js?v=072383"></script>
-<script src="js/dm.js?v=072383"></script>
-<script src="js/follow.js?v=072383"></script>
-<script src="js/user-sheet.js?v=072383"></script>
-<script src="js/owner-actions.js?v=072383"></script>
-<script src="js/share-sheet.js?v=072383"></script>
-<script src="js/report-block.js?v=072383"></script>
-<script src="js/comment-actions.js?v=072383"></script>
+<script src="js/battle-fx.js?v=072384"></script>
+<script src="js/galla-ask.js?v=072384"></script>
+<script src="js/items.js?v=072384"></script>
+<script src="js/emoticon.js?v=072384"></script>
+<script src="js/gif.js?v=072384"></script>
+<script src="js/donate.js?v=072384"></script>
+<script src="js/charge.js?v=072384"></script>
+<script src="js/faction.js?v=072384"></script>
+<script src="js/dm.js?v=072384"></script>
+<script src="js/follow.js?v=072384"></script>
+<script src="js/user-sheet.js?v=072384"></script>
+<script src="js/owner-actions.js?v=072384"></script>
+<script src="js/share-sheet.js?v=072384"></script>
+<script src="js/report-block.js?v=072384"></script>
+<script src="js/comment-actions.js?v=072384"></script>
 
 <!-- Issue Page Logic (단 한 번!) -->
-<script src="js/media-sound.js?v=072383"></script>
-<script type="module" src="js/issue.js?v=072383"></script>
+<script src="js/media-sound.js?v=072384"></script>
+<script type="module" src="js/issue.js?v=072384"></script>
 
 <!-- 릴스(쇼츠) 엔진 -->
-<script type="module" src="js/shorts.js?v=072383"></script>
+<script type="module" src="js/shorts.js?v=072384"></script>
 
-<script src="js/fx.js?v=072383"></script>
-<script src="js/ghost.js?v=072383"></script>
-<script src="./js/nav.js?v=072383"></script>
-<script src="./js/desktop-pc.js?v=072383" defer></script>
-<script src="./js/nav-jog.js?v=072383" defer></script>
-<script src="./js/dm-call.js?v=072383" defer></script>
+<script src="js/fx.js?v=072384"></script>
+<script src="js/ghost.js?v=072384"></script>
+<script src="./js/nav.js?v=072384"></script>
+<script src="./js/desktop-pc.js?v=072384" defer></script>
+<script src="./js/nav-jog.js?v=072384" defer></script>
+<script src="./js/dm-call.js?v=072384" defer></script>
 
 <script>
 /* --------------------------
@@ -408,9 +416,9 @@ document.getElementById("btn-back").addEventListener("click", () => {
 </script>
 
 
-<script src="/js/analytics.js?v=072383"></script>
-<script src="js/duel-alert.js?v=072383"></script>
-<script src="js/bug-report.js?v=072383"></script>
-<script src="/js/pwa.js?v=072383"></script>
+<script src="/js/analytics.js?v=072384"></script>
+<script src="js/duel-alert.js?v=072384"></script>
+<script src="js/bug-report.js?v=072384"></script>
+<script src="/js/pwa.js?v=072384"></script>
 </body>
 </html>

@@ -410,6 +410,9 @@ function ensureChatUI() {
         <button class="fc-close" aria-label="닫기">✕</button>
       </div>
       <div class="fc-notice">🔒 우리 진영만 볼 수 있는 방입니다. 작전을 논의하세요!</div>
+      <button class="fc-nanjang" id="fc-nanjang" type="button">
+        🔥 난장으로 판 키우기 <i>이미지·투표·실시간 대군… 아군 총집결</i>
+      </button>
       <div class="fc-list" id="fc-list"></div>
       <div class="fc-inputrow">
         <input id="fc-input" maxlength="500" placeholder="아군에게 메시지 보내기…">
@@ -420,6 +423,7 @@ function ensureChatUI() {
 
   sheet.querySelector(".fc-dim").onclick = closeFactionChat;
   sheet.querySelector(".fc-close").onclick = closeFactionChat;
+  sheet.querySelector("#fc-nanjang").onclick = escalateToNanjang;
   const input = sheet.querySelector("#fc-input");
   const send = () => sendFactionChat(input);
   sheet.querySelector("#fc-send").onclick = send;
@@ -499,6 +503,38 @@ function closeFactionChat() {
   sheet?.classList.remove("open");
   CHAT_OPEN = false;
   if (CHAT_CHANNEL) { window.supabaseClient.removeChannel(CHAT_CHANNEL); CHAT_CHANNEL = null; }
+}
+
+/* 🔥 난장 파이프라인 — 같은 편만. 이슈×진영 전용 난장(kind='faction')을 찾거나 만들고 입장.
+   서버(issue_faction_room)가 '내 투표=이 진영'을 검증하므로 적군은 애초에 못 들어온다.
+   (반대 진영을 한 방에 몰아넣는 유도는 없음 — 그건 개싸움이 되니까. 각 진영은 각자의 난장.) */
+let NANJANG_BUSY = false;
+async function escalateToNanjang() {
+  if (NANJANG_BUSY) return;
+  const supabase = window.supabaseClient;
+  if (!ME.faction) { alert("난장은 투표한 사람만 — 먼저 진영을 정해 주세요!"); return; }
+  const btn = document.getElementById("fc-nanjang");
+  NANJANG_BUSY = true;
+  if (btn) { btn.disabled = true; btn.dataset.label = btn.innerHTML; btn.innerHTML = "🔥 난장 판 까는 중…"; }
+  try {
+    const { data: rid, error } = await supabase.rpc("issue_faction_room", { p_issue: window.CURRENT_ISSUE_ID });
+    if (error || !rid) {
+      const msg = error?.message === "no_vote"
+        ? "투표한 사람만 난장에 참전할 수 있어요."
+        : "난장을 여는 데 실패했어요 — 잠시 후 다시 시도해 주세요.";
+      alert(msg);
+      return;
+    }
+    window.BattleFX?.haptic("heavy");
+    // 난장(DM 페이지)으로 이동 — 딥링크가 방을 바로 연다
+    location.href = "dm.html?room=" + encodeURIComponent(rid);
+  } catch (e) {
+    console.error("[nanjang] escalate", e);
+    alert("난장을 여는 데 실패했어요.");
+  } finally {
+    NANJANG_BUSY = false;
+    if (btn) { btn.disabled = false; if (btn.dataset.label) btn.innerHTML = btn.dataset.label; }
+  }
 }
 
 async function sendFactionChat(input) {
