@@ -14,6 +14,37 @@ function waitForClient() {
     });
 }
 
+// 로그인 후 돌아갈 곳(gated 탭/페이지) — ?next= 우선, 없으면 같은 오리진 referrer.
+function _computeLoginNext() {
+    try {
+        const p = new URLSearchParams(location.search).get("next");
+        if (p) return p;
+    } catch (_) {}
+    try {
+        const r = document.referrer;
+        if (r && new URL(r).origin === location.origin) {
+            const u = new URL(r);
+            const path = u.pathname.replace(/^\//, "");
+            if (path && !/login\.html|app-shell\.html/.test(path)) return path + u.search;
+        }
+    } catch (_) {}
+    return null;
+}
+const LOGIN_NEXT = _computeLoginNext();
+try { if (LOGIN_NEXT) sessionStorage.setItem("galla_login_next", LOGIN_NEXT); } catch (_) {}
+
+// 🧭 셸 판(iframe) 안에서 로그인이 열렸으면 → 풀스크린으로 튀어나온다.
+//    (그러지 않으면 셸 하단 nav가 로그인 화면 위에 남아 로그아웃 상태로 탭을 눌러대는
+//     '뒤로가기 미로'가 된다 — 사장님 제보 2026-07-24.)
+(function popOutOfShell() {
+    try {
+        if (window.top !== window.self && window.top.document.getElementById("shell-track")) {
+            const nx = LOGIN_NEXT ? "?next=" + encodeURIComponent(LOGIN_NEXT) : "";
+            window.top.location.replace("login.html" + nx);
+        }
+    } catch (_) { /* 크로스오리진 등 — 무시 */ }
+})();
+
 (async () => {
     await waitForClient();
 
@@ -39,8 +70,23 @@ function waitForClient() {
         const inShell = window.top !== window.self;
         const isAppEnv = (window.GALLA_isApp && GALLA_isApp()) ||
             (matchMedia && matchMedia("(display-mode: standalone)").matches);
-        if (inShell) { try { window.top.location.href = "app-shell.html"; return; } catch (_) {} }
-        location.replace(isAppEnv ? "app-shell.html" : "index.html");
+        // 원래 가려던 곳(next) 복원 — gated 탭(DM·마이 등)을 눌러 로그인했으면 거기로.
+        let next = null;
+        try { next = new URLSearchParams(location.search).get("next") || sessionStorage.getItem("galla_login_next"); } catch (_) {}
+        try { sessionStorage.removeItem("galla_login_next"); } catch (_) {}
+        const TAB = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
+        const base = next ? next.split("?")[0] : null;
+
+        if (isAppEnv) {
+            // 앱/PWA: 반드시 셸로 복귀(셸 밖이면 조그·스와이프 먹통). next가 탭이면 그 탭을 연다.
+            let dest = "app-shell.html";
+            if (base && TAB[base]) dest = "app-shell.html?tab=" + TAB[base];
+            if (inShell) { try { window.top.location.href = dest; return; } catch (_) {} }
+            location.replace(dest);
+        } else {
+            // 웹 브라우저(MPA): next 페이지로 그대로, 없으면 홈.
+            location.replace(next || "index.html");
+        }
     }
 
     try {

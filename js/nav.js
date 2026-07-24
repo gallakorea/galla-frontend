@@ -209,7 +209,10 @@ document.addEventListener("DOMContentLoaded", () => {
         smoothScrollTop();
         return;
       }
-      if (target) location.href = target;
+      // 표준 탭바: 탭 전환은 히스토리를 쌓지 않는다(replace) — 탭끼리 '뒤로가기'가
+      // 거슬러 올라가 홈으로 흐르던 문제 제거(사장님 제보). 서브페이지(상세·설정 등)만
+      // href(push)로 열려 뒤로가기가 그 탭으로 정상 복귀.
+      if (target) location.replace(target);
     });
   });
 
@@ -669,11 +672,12 @@ document.addEventListener("DOMContentLoaded", () => {
            사장님의 '중간에 멈춤'). transitionend면 마지막 프레임이 항상
            '미리보기가 화면을 다 채운 완성 상태'다. */
         let went = false;
-        const go = () => { if (went) return; went = true; location.href = url; };
+        // 스와이프 탭 전환도 replace(탭끼리 히스토리 안 쌓음 — 클릭과 동일 규칙)
+        const go = () => { if (went) return; went = true; location.replace(url); };
         stage.addEventListener("transitionend", go, { once: true });
         setTimeout(go, 600);   // transitionend 유실 폴백
         // 이동 재시도 세이프가드 — 발동이 씹히거나 지연되면 한 번 더 민다
-        setTimeout(() => { if (!document.hidden && committing) location.href = url; }, 1800);
+        setTimeout(() => { if (!document.hidden && committing) location.replace(url); }, 1800);
       } else {
         place(0);                                            // 쫀득한 스냅백
         setTimeout(reset, 280);
