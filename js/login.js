@@ -62,22 +62,31 @@ try {
     window.addEventListener("popstate", _cancelLogin);
 } catch (_) {}
 
-// 👈 좌측 스와이프 → 홈 (사장님 요청) — 풀스크린 로그인엔 탭 스와이프가 없어 손쉬운 탈출로 제공.
+// 👉👈 수평 스와이프 → 홈 (사장님 요청) — 네이티브 WebView는 iOS 가장자리 back 제스처가
+//    history.back을 안 쏘는 경우가 많아, '방향 무관' 수평 스와이프를 직접 감지한다.
+//    document 캡처 단계에 붙여 입력창 위에서도 잡히게(로그인엔 가로 스크롤 UI가 없어 안전).
 (function loginSwipeHome() {
     var x0 = null, y0 = null, t0 = 0;
-    var el = document.querySelector(".auth-wrap") || document.body;
-    el.addEventListener("touchstart", function (e) {
+    document.addEventListener("touchstart", function (e) {
         if (e.touches.length !== 1) { x0 = null; return; }
         x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
-    }, { passive: true });
-    el.addEventListener("touchend", function (e) {
+    }, { passive: true, capture: true });
+    document.addEventListener("touchend", function (e) {
         if (x0 == null) return;
         var t = e.changedTouches[0];
         var dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
         x0 = null;
-        // 좌측 수평 스와이프: 왼쪽으로 충분히 + 가로 우세 + 빠르게
-        if (dx < -70 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 700) _cancelLogin();
-    }, { passive: true });
+        // 좌/우 어느 쪽이든 충분한 수평 스와이프 + 세로 흔들림보다 가로 우세 + 빠르게 → 홈
+        if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 800) _cancelLogin();
+    }, { passive: true, capture: true });
+    // 마우스 드래그(데스크톱/디버그)도 지원
+    var mx = null, my = null, mt = 0;
+    document.addEventListener("mousedown", function (e) { mx = e.clientX; my = e.clientY; mt = Date.now(); }, true);
+    document.addEventListener("mouseup", function (e) {
+        if (mx == null) return;
+        var dx = e.clientX - mx, dy = e.clientY - my, dt = Date.now() - mt; mx = null;
+        if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 1.4 && dt < 800) _cancelLogin();
+    }, true);
 })();
 
 (async () => {
