@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v8';   // v7: 옛 plaza.js(비로그인 광장 백지) 캐시 강제 폐기
+const SW_VERSION = 'galla-sw-v9';   // v9: 코드(js/css) network-first — 버전 엇갈림 원천 차단
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
@@ -76,7 +76,27 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // 정적 자원: cache-first + stale-while-revalidate
+  // 코드(js/css)는 network-first — 버전 엇갈림(옛 JS가 새 HTML에 얹혀 깨지는) 원천 차단.
+  //   네트워크 실패(오프라인)에서만 캐시로 폴백. 정적 자원 URL이 ?v=NNN 이라 대역폭 낭비도 거의 없음.
+  const isCode = /\.(?:js|css)(?:\?|$)/i.test(url.pathname + url.search) || /\.(?:js|css)$/i.test(url.pathname);
+  if (isCode) {
+    e.respondWith((async () => {
+      try {
+        const res = await fetch(req);
+        if (res && res.ok && (res.type === 'basic' || res.type === 'default')) {
+          const c = await caches.open(STATIC_CACHE);
+          c.put(req, res.clone());
+        }
+        return res;
+      } catch {
+        const cached = await caches.match(req);
+        return cached || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // 그 외 정적 자원(이미지·폰트·벤더 등): cache-first + stale-while-revalidate
   e.respondWith((async () => {
     const cached = await caches.match(req);
     if (cached) {
