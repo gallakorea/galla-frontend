@@ -14,8 +14,29 @@ window.supabaseClient = window.supabaseClient || supabase;
    LIST STATE
 ========================= */
 
-const plazaListEl = document.querySelector(".plaza-list");
+let plazaListEl = document.querySelector(".plaza-list");
 let currentCategory = "전체";
+
+/* 🩹 자가치유: 서버/CF가 이 문서에만 '광장 패널 없는 옛 HTML'을 주는 경우가 있다
+   (내비게이션 요청엔 옛 HTML, page fetch엔 최신 — 사장님 크롬 직접진단으로 확정).
+   그럴 때 page fetch로 받은 최신 HTML에서 광장 패널만 떼어 심는다. page fetch는 항상 최신. */
+async function ensurePlazaPanel() {
+  if (document.querySelector('.tab-panel[data-panel="plaza"]')) { plazaListEl = document.querySelector('.plaza-list'); return; }
+  try {
+    const html = await fetch(location.pathname + '?ph=' + Date.now(), { cache: 'reload' }).then(r => r.text());
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const panel = doc.querySelector('.tab-panel[data-panel="plaza"]');
+    const body = document.querySelector('.tabs-body');
+    if (panel && body && !document.querySelector('.tab-panel[data-panel="plaza"]')) {
+      body.appendChild(document.importNode(panel, true));
+      plazaListEl = document.querySelector('.plaza-list');
+      if (document.querySelector('.tab-item.active')?.dataset.tab === 'plaza')
+        document.querySelector('.tab-panel[data-panel="plaza"]')?.classList.add('active');
+      bindPlazaCategories();   // 심은 뒤 카테고리 버튼 재바인딩
+      console.info('[plaza] 광장 패널 자가치유 완료');
+    }
+  } catch (e) { console.warn('[plaza] panel heal skip:', e); }
+}
 
 /* =========================
    MODAL OPEN / CLOSE
@@ -81,16 +102,19 @@ const categorySelect = document.getElementById("plaza-category");
    CATEGORY FILTER
 ========================= */
 
-document.querySelectorAll(".plaza-categories button").forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll(".plaza-categories button")
-      .forEach(b => b.classList.remove("active"));
-
-    btn.classList.add("active");
-    currentCategory = btn.textContent.trim();
-    fetchPlazaPosts();
+function bindPlazaCategories() {
+  document.querySelectorAll(".plaza-categories button").forEach(btn => {
+    if (btn.dataset.bound) return; btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".plaza-categories button")
+        .forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentCategory = btn.textContent.trim();
+      fetchPlazaPosts();
+    });
   });
-});
+}
+bindPlazaCategories();
 
 const titleInput = document.getElementById("plaza-title");
 const submitBtn = document.getElementById("plaza-submit");
@@ -428,6 +452,7 @@ function timeAgoK(iso) {
 }
 
 async function fetchPlazaPosts() {
+  await ensurePlazaPanel();   // 🩹 광장 패널이 없으면(옛 HTML) 먼저 심는다
   let query = supabase
     .from("plaza_posts")
     .select(`
@@ -514,6 +539,7 @@ function proxifyThumb(u) {
 }
 
 function renderPlazaPosts(posts) {
+  plazaListEl = plazaListEl || document.querySelector(".plaza-list");   // 늦게 심긴 패널 대응
   if (!plazaListEl) { console.warn("[plaza] .plaza-list 없음 — 렌더 스킵"); return; }
   plazaListEl.innerHTML = "";
 
@@ -592,8 +618,9 @@ async function gallaShare(title, url) {
   catch { alert("링크 복사에 실패했습니다."); }
 }
 
-/* 목록 카드 공유 (이벤트 위임) */
-plazaListEl?.addEventListener("click", (e) => {
+/* 목록 카드 공유 (document 위임 — 패널이 늦게 심겨도 동작) */
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".plaza-list")) return;
   const btn = e.target.closest(".plaza-share-btn");
   if (!btn) return;
   e.preventDefault();
@@ -603,7 +630,8 @@ plazaListEl?.addEventListener("click", (e) => {
 
 /* 목록 카드 업/다운 투표 (레딧식, 이벤트 위임) */
 let plazaVoting = false;
-plazaListEl?.addEventListener("click", async (e) => {
+document.addEventListener("click", async (e) => {
+  if (!e.target.closest(".plaza-list")) return;
   const btn = e.target.closest(".pv-btn");
   if (!btn) return;
   e.preventDefault();
@@ -619,7 +647,7 @@ plazaListEl?.addEventListener("click", async (e) => {
 
   const id = btn.dataset.id;
   const val = Number(btn.dataset.v);
-  const scoreEl = plazaListEl.querySelector(`.pv-score[data-id="${id}"]`);
+  const scoreEl = document.querySelector(`.plaza-list .pv-score[data-id="${id}"]`);
   const wrap = btn.closest(".pv-vote");
   const upB = wrap.querySelector(".pv-up"), downB = wrap.querySelector(".pv-down");
 
@@ -638,8 +666,9 @@ plazaListEl?.addEventListener("click", async (e) => {
   }
 });
 
-/* 목록 카드 저장 토글 (이벤트 위임) */
-plazaListEl?.addEventListener("click", async (e) => {
+/* 목록 카드 저장 토글 (document 위임) */
+document.addEventListener("click", async (e) => {
+  if (!e.target.closest(".plaza-list")) return;
   const btn = e.target.closest(".plaza-save-btn");
   if (!btn) return;
   e.preventDefault();
