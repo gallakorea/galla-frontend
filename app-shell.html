@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072422&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072422">
-  <link rel="stylesheet" href="./css/nav.css?v=072422">
+  <script src="/js/splash-boot.js?v=072423&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072423">
+  <link rel="stylesheet" href="./css/nav.css?v=072423">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -138,14 +138,24 @@
   };
   try { const av = localStorage.getItem("galla_nav_avatar"); if (av) GALLA_setNavAvatar(av); } catch (_) {}
 
-  // 비로그인 게이트 — DM은 로그인 필수. 세션 토큰 유무로 판별.
+  // 비로그인 게이트 — DM·마이페이지는 로그인 필수. 세션 토큰 유무로 판별.
   function isLoggedIn() {
     try { return !!localStorage.getItem("sb-bidqauputnhkqepvdzrr-auth-token"); } catch (_) { return true; }
   }
+  // 로그인 필요한 탭 — 로그아웃 상태에선 '백그라운드 프리로드 금지'가 핵심.
+  //   프리로드하면 그 판(mypage 등)이 스스로 로그인으로 리다이렉트 → pop-out이 앱 전체를
+  //   로그인으로 튕긴다(공개 탭에 있어도!). '트렌드 진입 시 로그인 뜸'의 원인(사장님 제보).
+  const GATED_TABS = { dm: 1, mypage: 1 };
+  // 프리로드용 ensure — 로그아웃 상태의 gated 탭은 건너뛴다(활성 진입은 go()가 로그인으로 처리).
+  function preloadEnsure(tab) {
+    if (!tab) return;
+    if (GATED_TABS[tab] && !isLoggedIn()) return;
+    ensure(tab);
+  }
   function go(idx, anim = true, tapFx = true) {
     idx = Math.max(0, Math.min(ORDER.length - 1, idx));
-    // DM 탭 진입인데 로그인 안 됐으면 → 로그인으로 (판 오염·prewarm 무관하게 전체화면)
-    if (ORDER[idx] === "dm" && !isLoggedIn()) { location.href = "login.html"; return; }
+    // DM·마이페이지 탭 진입인데 로그인 안 됐으면 → 로그인으로 (전체화면, 원위치 복귀 next)
+    if (GATED_TABS[ORDER[idx]] && !isLoggedIn()) { location.href = "login.html?next=" + URLS[ORDER[idx]]; return; }
     const prev = cur;
     cur = idx;
     /* ⚠️ 목적지 판이 아직 없으면 iframe 생성이 메인스레드를 전환시간만큼 붙들어
@@ -172,7 +182,7 @@
       if (f && f.contentWindow) { try { f.contentWindow.postMessage({ galla: "shellcmd", t: "active" }, location.origin); } catch (_) {} }
     }
     // 이웃 선생성 — 다음 스와이프가 이미 살아있는 판으로 떨어지게
-    setTimeout(() => { ensure(ORDER[cur + 1]); ensure(ORDER[cur - 1]); }, 600);
+    setTimeout(() => { preloadEnsure(ORDER[cur + 1]); preloadEnsure(ORDER[cur - 1]); }, 600);
   }
 
   /* 재탭: 판이 상세 페이지에 가 있으면 탭 루트로 복귀, 이미 루트면 맨위로.
@@ -344,14 +354,14 @@
 
   window.addEventListener("resize", () => place(baseX(), false));
 
-  // 부팅: 현재 탭 즉시 + 이웃 순차
-  ensure(ORDER[cur]); go(cur, false);
-  // 전 판 예열(느긋하게 순차) — 어느 탭을 눌러도 잭 없이 매끈한 슬라이드
-  setTimeout(() => ORDER.forEach((t, i) => setTimeout(() => ensure(t), i * 400)), 1800);
+  // 부팅: 현재 탭 즉시 + 이웃 순차 (gated 탭 딥링크는 preloadEnsure가 걸러 go()가 로그인 처리)
+  preloadEnsure(ORDER[cur]); go(cur, false);
+  // 전 판 예열(느긋하게 순차) — 어느 탭을 눌러도 잭 없이 매끈한 슬라이드. gated는 로그아웃 시 제외.
+  setTimeout(() => ORDER.forEach((t, i) => setTimeout(() => preloadEnsure(t), i * 400)), 1800);
   // 스플래시(wait=ready) 해제 신호
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072422" defer></script>
+<script src="./js/nav-jog.js?v=072423" defer></script>
 </body>
 </html>
