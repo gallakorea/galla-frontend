@@ -26,6 +26,11 @@
   Content-Type: application/json
   Cache-Control: no-cache
 
+# Android Digital Asset Links — 패스키(get_login_creds)용. 앱 패키지 im.galla.app + 서명 SHA-256.
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Cache-Control: no-cache
+
 # HTML 문서는 항상 재검증(no-cache) — 버전(?v=)이 HTML 안에 있어 HTML이 캐시되면
 # 자산 갱신이 반영되지 않음. no-cache로 항상 최신 HTML을 받게 함(변경 즉시 반영).
 /

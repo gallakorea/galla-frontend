@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.get_login_creds"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "im.galla.app",
+      "sha256_cert_fingerprints": [
+        "0B:2B:48:DD:4D:E2:E8:5A:6A:05:31:6A:7D:BD:FC:23:D6:4E:B8:96:06:C0:63:89:0C:A5:2D:98:BE:52:8A:09"
+      ]
+    }
+  }
+]
