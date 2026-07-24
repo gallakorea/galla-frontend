@@ -15,6 +15,8 @@
 .soc-google .soc-g { background: #fff; color: #4285F4; font-size: 16px; }
 .soc-naver { background: #03C75A; color: #fff; }
 .soc-naver .soc-n { background: #fff; color: #03C75A; }
+.soc-passkey { background: #22252e; color: #eef1f7; border: 1px solid rgba(255,255,255,.14); }
+.soc-passkey .soc-ic { background: transparent; }
 
 /* 온보딩 모달 */
 .soc-onboard { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: center; justify-content: center; padding: 22px; background: rgba(0,0,0,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
