@@ -482,6 +482,7 @@ async function submitComment(body) {
     return;
   }
 
+  window.GALLA_toast && GALLA_toast(replyTarget ? "💬 답글이 등록됐어요" : "💬 댓글이 등록됐어요");
   replyTarget = null;
 }
 

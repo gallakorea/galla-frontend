@@ -185,23 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             else badgeEl.hidden = true; // 미션 배지는 본인 전용
         }
 
-        if (profileImg) {
-            if (viewProfile.avatar_url) {
-                const { data, error } = supabase
-                    .storage
-                    .from("profiles")
-                    .getPublicUrl(viewProfile.avatar_url);
-
-                if (!error && data?.publicUrl) {
-                    // 🔥 캐시 무효화 파라미터 필수
-                    profileImg.src = `${data.publicUrl}?t=${Date.now()}`;
-                } else {
-                    profileImg.src = "assets/logo.png";
-                }
-            } else {
-                profileImg.src = "assets/logo.png";
-            }
-        }
+        if (profileImg) window.GALLA_setAvatar(profileImg, viewProfile.avatar_url, 256, true);
     }
 
     // =====================================================
@@ -1157,18 +1141,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             const u = userMap[fid];
             if (!u) return;
 
-            let avatarSrc = "assets/logo.png";
-            if (u.avatar_url) {
-                const { data: pub } = supabase.storage
-                    .from("profiles")
-                    .getPublicUrl(u.avatar_url);
-                if (pub?.publicUrl) avatarSrc = `${pub.publicUrl}?t=${Date.now()}`;
-            }
+            const avatarSrc = window.GALLA_avatarSrc(u.avatar_url, 96);
 
             const row = document.createElement("div");
             row.className = "user-row";
             row.innerHTML = `
-                <img class="user-row-avatar" src="${avatarSrc}">
+                <img class="user-row-avatar" src="${avatarSrc}" onerror="this.onerror=null;this.src=window.GALLA_DEFAULT_AVATAR">
                 <div class="user-row-info">
                     <div class="user-row-name" data-nick-uid="${u.id}">${u.nickname || "익명의 사용자"}</div>
                     <div class="user-row-level">Lv. ${u.level || 1}</div>

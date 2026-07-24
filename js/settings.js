@@ -71,15 +71,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("phoneValue") && ($("phoneValue").textContent = profile.phone || "-");
 
     const profileImgEl = document.getElementById("plAvatar") || document.querySelector(".profile-card .profile-img");
-    if (profileImgEl) {
-      if (profile.avatar_url) {
-        const SUPABASE_URL = supabase.supabaseUrl;
-        profileImgEl.src =
-          `${SUPABASE_URL}/storage/v1/render/image/public/profiles/${profile.avatar_url}?width=256&height=256&resize=cover&t=${Date.now()}`;
-      } else {
-        profileImgEl.src = "./assets/logo.png";
-      }
-    }
+    if (profileImgEl) window.GALLA_setAvatar(profileImgEl, profile.avatar_url, 256, true);
   }
 
   /* =====================

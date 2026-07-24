@@ -119,6 +119,17 @@
     var w = size || 128;
     return `${SUPABASE_URL}/storage/v1/render/image/public/profiles/${avatarUrl}?width=${w}&height=${w}&resize=cover`;
   };
+  // 공용 아바타 세터 — 전 페이지 프로필사진 통일(설정·마이·DM·댓글 동일 소스/기본값).
+  // avatar_url이 http(s)면 그대로(구글 등), 상대경로면 리사이즈 경유, 없으면 중립 기본아이콘.
+  // bust=true면 캐시버스트(내 프로필 업로드 직후 갱신용).
+  window.GALLA_setAvatar = function (el, avatarUrl, size, bust) {
+    if (!el) return;
+    var src = window.GALLA_avatarSrc(avatarUrl, size);
+    if (bust && avatarUrl && !/^data:/.test(avatarUrl)) src += (src.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();
+    el.onerror = function () { this.onerror = null; this.src = window.GALLA_DEFAULT_AVATAR; };
+    el.src = src;
+  };
+
   // onerror 시 기본 아이콘으로 폴백하는 <img> 속성 문자열
   window.GALLA_avatarImg = function (avatarUrl, cls) {
     const src = window.GALLA_avatarSrc(avatarUrl);

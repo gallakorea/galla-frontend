@@ -358,6 +358,7 @@
       if (window.GALLA_ghostInsertError && window.GALLA_ghostInsertError(error, ghostBtn)) return;
       alert("댓글 등록 실패"); return;
     }
+    window.GALLA_toast && GALLA_toast(parentId ? "💬 답글이 등록됐어요" : "💬 댓글이 등록됐어요");
     if (parentId) GNC_EXPANDED.add(parentId);
     await loadGnComments(GNC_NEWS);
   }

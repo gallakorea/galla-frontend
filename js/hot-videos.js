@@ -432,6 +432,7 @@
       if (window.GALLA_ghostInsertError) window.GALLA_ghostInsertError(error, ghostBtn);
       return;
     }
+    window.GALLA_toast && GALLA_toast(replyTo ? "💬 답글이 등록됐어요" : "💬 댓글이 등록됐어요");
     setReply(null);
     loadComments();
   }

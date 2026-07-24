@@ -90,13 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       phoneField.value = profile.phone ? formatPhone(profile.phone) : "";
     }
 
-    if (profile.avatar_url) {
-      const SUPABASE_URL = supabase.supabaseUrl;
-      previewImg.src =
-        `${SUPABASE_URL}/storage/v1/render/image/public/profiles/${profile.avatar_url}?width=256&height=256&resize=cover&t=${Date.now()}`;
-    } else {
-      previewImg.src = "./assets/logo.png";
-    }
+    window.GALLA_setAvatar(previewImg, profile.avatar_url, 256, true);
   }
 
   // =========================

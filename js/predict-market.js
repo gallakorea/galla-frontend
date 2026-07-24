@@ -693,5 +693,6 @@ async function postComment(text,pick,parentId,body){
     if(window.GALLA_ghostInsertError && window.GALLA_ghostInsertError(error, ghostBtn)) return;
     console.error('[cmt] insert',error); return toast('등록 실패');
   }
+  (window.GALLA_toast || toast)(parentId ? '💬 답글이 등록됐어요' : '💬 댓글이 등록됐어요');
   loadComments(body);
 }
