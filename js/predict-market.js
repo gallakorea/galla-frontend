@@ -275,7 +275,10 @@ function renderPanel(closed){
       <button class="pb-bet" id="pbBet">🎯 예측하기</button>
     </div>`;
 
-  el.querySelectorAll('.pb-out').forEach(b=>b.onclick=()=>{
+  el.querySelectorAll('.pb-out').forEach(b=>b.onclick=async ()=>{
+    // 로그인 필수 — 미로그인은 결과(입장) 선택 자체를 막고 로그인으로 유도
+    if(window.GALLA_requireLogin){ if(!(await window.GALLA_requireLogin('예측 참여는 로그인 후 가능해요.'))) return; }
+    else if(needLogin()) return;
     SEL=Number(b.dataset.oid);
     el.querySelectorAll('.pb-out').forEach(x=>x.classList.toggle('sel',Number(x.dataset.oid)===SEL));
     updateEst();
@@ -634,7 +637,10 @@ function renderComments(body){
     ${remaining>0?`<button id="cmtMore" class="pmd-cmt-more">댓글 더 보기 (${remaining})</button>`:''}`;
 
   window.GALLA_ghostBind && window.GALLA_ghostBind(document.getElementById('pmd-ghost'));
-  body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(b=>b.addEventListener('click',()=>{
+  body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(b=>b.addEventListener('click',async ()=>{
+    // 로그인 필수 — 미로그인은 입장 선택 자체를 막고 로그인으로 유도
+    if(window.GALLA_requireLogin){ if(!(await window.GALLA_requireLogin('의견 참여는 로그인 후 가능해요.'))) return; }
+    else if(needLogin()) return;
     CMT_SIDE=b.dataset.pick;
     body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(x=>{ x.classList.remove('active'); if(multi)x.style.cssText=''; });
     b.classList.add('active');
