@@ -428,6 +428,9 @@
         {
           global: { fetch: window.__onboardAwareFetch || fetch },
           auth: {
+            // 🔑 네이티브 패스키(WebAuthn) — Supabase Auth 정식(베타) 기능 opt-in.
+            // registerPasskey()/signInWithPasskey() 사용. 대시보드에서 passkey_enabled + RP 설정 필요.
+            experimental: { passkey: true },
             // 인스타식 지속 로그인: 로그아웃 전까지 세션 유지 + 토큰 자동 갱신
             persistSession: true,
             autoRefreshToken: true,

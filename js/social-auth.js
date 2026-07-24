@@ -19,54 +19,17 @@
   /* ══════════ 패스키(WebAuthn) ══════════ */
   const hasPasskey = () => !!(window.PublicKeyCredential && navigator.credentials);
 
-  // base64url <-> ArrayBuffer
-  const b64uToBuf = (s) => {
-    const b64 = s.replace(/-/g, "+").replace(/_/g, "/") + "==".slice((s.length + 3) % 4);
-    const bin = atob(b64); const u = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-    return u.buffer;
-  };
-  const bufToB64u = (buf) => {
-    const u = new Uint8Array(buf); let bin = "";
-    for (let i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
-    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-  };
-
-  async function invokePasskey(payload) {
-    const c = sb();
-    const { data, error } = await c.functions.invoke("passkey", { body: payload });
-    if (error) throw new Error(error.message || "passkey_invoke");
-    if (data?.error) throw new Error(data.error);
-    return data;
-  }
+  // 🔑 네이티브 패스키(Supabase Auth 정식·베타) — WebAuthn 전 과정을 supabase-js가 내부 처리.
+  //    대시보드 passkey_enabled + RP(id=galla.im, origin=https://galla.im) 설정 필요.
 
   // 패스키 등록(로그인 상태에서 "이 기기에 패스키 추가")
   async function passkeyRegister() {
     if (!hasPasskey()) { alert("이 브라우저는 패스키를 지원하지 않아요."); return false; }
+    const c = sb();
+    if (!c?.auth?.registerPasskey) { alert("패스키 준비 중이에요. 잠시 후 다시 시도해 주세요."); return false; }
     try {
-      const { handle, options } = await invokePasskey({ action: "register-begin" });
-      const pub = {
-        ...options,
-        challenge: b64uToBuf(options.challenge),
-        user: { ...options.user, id: b64uToBuf(options.user.id) },
-        excludeCredentials: (options.excludeCredentials || []).map((x) => ({ ...x, id: b64uToBuf(x.id) })),
-      };
-      const cred = await navigator.credentials.create({ publicKey: pub });
-      const r = cred.response;
-      const resp = {
-        id: cred.id, rawId: bufToB64u(cred.rawId), type: cred.type,
-        response: {
-          clientDataJSON: bufToB64u(r.clientDataJSON),
-          attestationObject: bufToB64u(r.attestationObject),
-          transports: (r.getTransports && r.getTransports()) || [],
-        },
-        clientExtensionResults: cred.getClientExtensionResults(),
-        authenticatorAttachment: cred.authenticatorAttachment || undefined,
-      };
-      const label = /iphone|ipad/i.test(navigator.userAgent) ? "iPhone"
-        : /android/i.test(navigator.userAgent) ? "Android"
-        : /mac/i.test(navigator.userAgent) ? "Mac" : "이 기기";
-      await invokePasskey({ action: "register-finish", handle, response: resp, label });
+      const { error } = await c.auth.registerPasskey();
+      if (error) throw error;
       alert("패스키가 등록됐어요. 다음부턴 비번 없이 로그인할 수 있어요 🔑");
       return true;
     } catch (e) {
@@ -81,29 +44,9 @@
   async function passkeyLogin() {
     if (!hasPasskey()) { alert("이 브라우저는 패스키를 지원하지 않아요."); return false; }
     const c = sb();
+    if (!c?.auth?.signInWithPasskey) { alert("패스키 준비 중이에요. 잠시 후 다시 시도해 주세요."); return false; }
     try {
-      const { handle, options } = await invokePasskey({ action: "login-begin" });
-      const pub = {
-        ...options,
-        challenge: b64uToBuf(options.challenge),
-        allowCredentials: (options.allowCredentials || []).map((x) => ({ ...x, id: b64uToBuf(x.id) })),
-      };
-      const cred = await navigator.credentials.get({ publicKey: pub });
-      const r = cred.response;
-      const resp = {
-        id: cred.id, rawId: bufToB64u(cred.rawId), type: cred.type,
-        response: {
-          clientDataJSON: bufToB64u(r.clientDataJSON),
-          authenticatorData: bufToB64u(r.authenticatorData),
-          signature: bufToB64u(r.signature),
-          userHandle: r.userHandle ? bufToB64u(r.userHandle) : undefined,
-        },
-        clientExtensionResults: cred.getClientExtensionResults(),
-        authenticatorAttachment: cred.authenticatorAttachment || undefined,
-      };
-      const out = await invokePasskey({ action: "login-finish", handle, response: resp });
-      if (!out?.token_hash) throw new Error("no_session");
-      const { error } = await c.auth.verifyOtp({ token_hash: out.token_hash, type: "magiclink" });
+      const { error } = await c.auth.signInWithPasskey();
       if (error) throw error;
       // 온보딩 필요하면 처리 후 홈
       try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
