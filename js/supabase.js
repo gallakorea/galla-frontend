@@ -126,8 +126,14 @@
     if (!el) return;
     var src = window.GALLA_avatarSrc(avatarUrl, size);
     if (bust && avatarUrl && !/^data:/.test(avatarUrl)) src += (src.indexOf("?") >= 0 ? "&" : "?") + "t=" + Date.now();
+    // 로딩 중엔 '검은 원'만 보이고(전 사진·로고 플래시 방지), 로드되면 부드럽게 페이드인.
+    try { el.style.background = "#000"; el.style.transition = "opacity .25s ease"; el.style.opacity = "0"; } catch (_) {}
+    var show = function () { try { el.style.opacity = "1"; } catch (_) {} };
+    el.onload = show;
     el.onerror = function () { this.onerror = null; this.src = window.GALLA_DEFAULT_AVATAR; };
     el.src = src;
+    if (el.complete && el.naturalWidth) show();   // 캐시로 이미 완료된 경우
+    setTimeout(show, 500);                          // 안전망(onload 유실 대비 — 절대 안 보이는 일 없게)
   };
 
   // onerror 시 기본 아이콘으로 폴백하는 <img> 속성 문자열

@@ -9,6 +9,14 @@ let MY_STREAK = 0;
 const $ = id => document.getElementById(id);
 function toast(msg){ const t=$('pmToast'); t.textContent=msg; t.hidden=false; clearTimeout(t._t); t._t=setTimeout(()=>t.hidden=true,2200); }
 function fmt(n){ return Math.round(Number(n)||0).toLocaleString('ko-KR'); }
+// 헤더 포인트 알약용 축약 — 금액이 커져도 폭이 안 늘어 로고를 밀거나 겹치지 않게(사장님 요청).
+//   10만 미만: 정확히(99,999) / 1억 미만: 만 단위(99.2만) / 그 이상: 억 단위(1.2억)
+function fmtCompact(n){
+  n = Math.max(0, Math.floor(Number(n)||0));
+  if (n < 100000) return n.toLocaleString('ko-KR');
+  if (n < 100000000){ const m=n/10000; return (m>=100?Math.round(m):(Math.round(m*10)/10))+'만'; }
+  const e=n/100000000; return (e>=100?Math.round(e):(Math.round(e*10)/10))+'억';
+}
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function comboMult(n){ return n>=10?2.5:n>=5?1.8:n>=3?1.4:n>=2?1.2:1; }
 function timeLeft(c){
@@ -36,7 +44,7 @@ async function refreshBalance(){
   if(!ME){ const p=$('pointPill'); if(p) p.hidden=true; return; }
   const p=$('pointPill'); if(p) p.hidden=false;
   const { data, error } = await supa.rpc('ensure_balance');
-  if(!error && data!=null){ MY_POINTS=data; $('pointBalance').textContent=fmt(data)+'P'; }
+  if(!error && data!=null){ MY_POINTS=data; const pb=$('pointBalance'); if(pb){ pb.textContent=fmtCompact(data)+'P'; pb.title=fmt(data)+'P'; } }
 }
 async function loadMyStreak(){
   if(!ME){ MY_STREAK=0; return; }
@@ -168,7 +176,7 @@ async function claimDaily(){
   if(data.ok){
     const jackpot = (data.day_in_week||1)===7 ? ' 🎉 7일 보너스!' : '';
     toast(`🔥 ${data.streak}일 연속 출석! +${fmt(data.claimed)}P${jackpot}`);
-    $('pointBalance').textContent=fmt(data.balance)+'P'; MY_POINTS=data.balance;
+    { const pb=$('pointBalance'); if(pb){ pb.textContent=fmtCompact(data.balance)+'P'; pb.title=fmt(data.balance)+'P'; } } MY_POINTS=data.balance;
     if(window.GALLA_FX){ const r=btn.getBoundingClientRect(); window.GALLA_FX.burst(r.left+30,r.top+r.height/2,{emojis:['🪙','✨','💰'],count:12,spread:60}); }
     btn.classList.add('done'); btn.querySelector('.pm-daily-go').textContent='완료';
     btn.onclick=null;
