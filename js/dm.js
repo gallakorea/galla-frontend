@@ -1541,6 +1541,12 @@
     ROOT.querySelector('#dm-prof-video').onclick = () => callFrom(peer, p.nickname || name, true);
     ROOT.querySelector('#dm-prof-pager').onclick = () => pagerLeave(peer, p.nickname || name);
     ROOT.querySelector('#dm-prof-home').onclick = () => { location.href = 'mypage.html?user=' + encodeURIComponent(peer); };
+    // 나와의 채팅: 자기 자신에게 통화·삐삐는 무의미 → 숨김, 관계칩은 '나'
+    const isSelf = (peer === ME);
+    ['#dm-prof-voice', '#dm-prof-video', '#dm-prof-pager'].forEach(sel => {
+      const b = ROOT.querySelector(sel); if (b) b.style.display = isSelf ? 'none' : '';
+    });
+    if (isSelf) ROOT.querySelector('#dm-prof-rel').innerHTML = '<i class="dm-mutual">나</i>';
 
     // 아이덴티티 — 등급·성향 모듈이 이 페이지에 없으면 그때 끌어온다
     const box = ROOT.querySelector('#dm-prof-identity');
@@ -2966,8 +2972,25 @@
     const followers = new Set((ers || []).map(r => r.follower));
     FRIENDS = (ing || []).map(r => ({ id: r.following, mutual: followers.has(r.following) }))
       .sort((a, b) => (b.mutual ? 1 : 0) - (a.mutual ? 1 : 0));   // 맞팔 먼저
-    await profilesFor(FRIENDS.map(f => f.id));
+    await profilesFor([...FRIENDS.map(f => f.id), ME]);   // 내 프로필도(최상단 나와의 채팅)
     renderFriends(FRIENDS);
+  }
+  // 🙋 카톡식 — 친구목록 최상단 '내 프로필(나와의 채팅)'. 상태 확인 + 나에게 메모.
+  function meFriendRow() {
+    const p = PROFILES[ME] || {};
+    return `<div class="dm-sec">내 프로필</div>
+      <button class="dm-friend dm-me-row" data-me="1">
+        ${avaHTML(ME)}
+        <span class="dm-thread-mid">
+          <span class="dm-thread-name">${esc(p.nickname || '나')} <i class="dm-mutual">나</i></span>
+          <span class="dm-thread-prev">나와의 채팅 · 메모하고 상태 확인</span>
+        </span>
+        <span class="dm-friend-go">${ICONS.chat}</span>
+      </button>`;
+  }
+  function bindMeRow(box) {
+    const el = box.querySelector('.dm-me-row');
+    if (el) el.addEventListener('click', () => openProfile(ME, (PROFILES[ME] || {}).nickname || '나'));
   }
   function friendRow(f) {
     const p = PROFILES[f.id] || {};
@@ -2986,15 +3009,18 @@
     // 숨김·차단은 목록에서 제외 (해제는 ⚙ 설정에서)
     const vis = list.filter(f => !PREF.hidden.has(f.id) && !PREF.blocks.has(f.id));
     if (!vis.length) {
-      box.innerHTML = `<div class="dm-empty">아직 친구가 없어요.<br><span>마음에 드는 사람을 팔로우하면 여기에 떠요.</span></div>`;
+      box.innerHTML = meFriendRow() +
+        `<div class="dm-empty">아직 친구가 없어요.<br><span>마음에 드는 사람을 팔로우하면 여기에 떠요.</span></div>`;
+      bindMeRow(box);
       return;
     }
     const favs = vis.filter(f => PREF.favs.has(f.id));
     const rest = vis.filter(f => !PREF.favs.has(f.id));
-    box.innerHTML =
+    box.innerHTML = meFriendRow() +
       (favs.length ? `<div class="dm-sec">${ICONS.star}즐겨찾기 <b>${favs.length}</b></div>` + favs.map(friendRow).join('') : '') +
       `<div class="dm-sec">친구 <b>${rest.length}</b></div>` + rest.map(friendRow).join('');
-    box.querySelectorAll('.dm-friend').forEach(el => {
+    bindMeRow(box);
+    box.querySelectorAll('.dm-friend:not(.dm-me-row)').forEach(el => {
       // 카톡 문법: 친구 탭에선 프로필 먼저, 채팅은 프로필의 '메시지' 버튼으로
       el.addEventListener('click', () => { if (!EDIT) openProfile(el.dataset.peer, el.dataset.name); });
     });
@@ -4985,10 +5011,14 @@
       ME = sess?.session?.user?.id || null;
     }
     if (!ME) return promptLogin();
-    const { data: tid, error } = await supabase.rpc('dm_thread_with', { other: userId });
+    // 나와의 채팅(셀프 메모) — 자기 자신이면 전용 RPC
+    const rpc = (userId === ME)
+      ? supabase.rpc('dm_self_thread')
+      : supabase.rpc('dm_thread_with', { other: userId });
+    const { data: tid, error } = await rpc;
     if (error) { console.error(error); return; }
     if (!ROOT || !ROOT.classList.contains('open')) openDM();
-    nickCache[userId] = nickname || nickCache[userId] || '익명';
+    nickCache[userId] = nickname || nickCache[userId] || (userId === ME ? '나' : '익명');
     openThread(tid, userId, nickCache[userId]);
   }
   window.startDM = startDM;
