@@ -448,6 +448,9 @@
             // 🔑 네이티브 패스키(WebAuthn) — Supabase Auth 정식(베타) 기능 opt-in.
             // registerPasskey()/signInWithPasskey() 사용. 대시보드에서 passkey_enabled + RP 설정 필요.
             experimental: { passkey: true },
+            // PKCE 플로우 — 네이티브 앱 구글 로그인(딥링크 ?code=…) + exchangeCodeForSession 위해 필수.
+            // 기본값 implicit이면 code verifier 미저장 → "verifier empty" 에러. 웹도 detectSessionInUrl가 처리.
+            flowType: "pkce",
             // 인스타식 지속 로그인: 로그아웃 전까지 세션 유지 + 토큰 자동 갱신
             persistSession: true,
             autoRefreshToken: true,

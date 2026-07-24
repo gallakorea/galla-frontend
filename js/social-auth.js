@@ -27,7 +27,9 @@
         const c = sb();
         let code = null;
         try { code = new URL(url).searchParams.get("code"); } catch (_) {}
-        const { error } = await c.auth.exchangeCodeForSession(code || url);
+        if (!code) { const m = url.match(/[?&]code=([^&#]+)/); if (m) code = decodeURIComponent(m[1]); }
+        if (!code) throw new Error("no_auth_code");
+        const { error } = await c.auth.exchangeCodeForSession(code);
         if (error) throw error;
         try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
         location.replace("index.html");
