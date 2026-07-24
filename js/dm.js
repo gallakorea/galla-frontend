@@ -4416,6 +4416,15 @@
       return true;
     } catch (_) { return false; }
   }
+  // 📳 햅틱 — 네이티브(iOS) Capacitor Haptics 우선, 없으면 웹 vibrate(안드로이드).
+  //    iOS 웹뷰는 navigator.vibrate가 안 먹혀 Haptics 플러그인이 실제 진동을 담당.
+  window.GALLA_haptic = window.GALLA_haptic || function (style) {
+    try {
+      var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (H && H.impact) { H.impact({ style: style === 'light' ? 'LIGHT' : style === 'heavy' ? 'HEAVY' : 'MEDIUM' }); return; }
+    } catch (_) {}
+    try { if (navigator.vibrate) navigator.vibrate(style === 'heavy' ? 30 : style === 'light' ? 10 : 18); } catch (_) {}
+  };
   function bindPTT(btn) {
     let sy = 0;
     const CANCEL_DY = -70;   // 위로 이만큼 밀면 취소(핸즈프리 잠금은 오작동이 잦아 제거 — 손 떼면 항상 전송)
@@ -4437,6 +4446,7 @@
       sy = e.clientY;
       PTT = { armed: null, locked: false, id: e.pointerId };
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+      GALLA_haptic('medium');   // 📳 녹음 시작 — 눌린 느낌(진동)
       // 녹음 중엔 본문 텍스트 선택 차단(꾹 누르다 다른 부분이 선택되던 버그)
       try { document.body.style.userSelect = 'none'; document.body.style.webkitUserSelect = 'none'; } catch (_) {}
       await startVoiceRec();
@@ -4452,6 +4462,7 @@
       if (!PTT || !VREC) { PTT = null; return; }
       const cancel = PTT.armed === 'cancel';
       PTT = null;
+      GALLA_haptic(cancel ? 'light' : 'medium');   // 📳 취소=톡, 전송=탁
       stopVoiceRec(cancel);   // 손 떼면 취소 아니면 전송 (잠금 없음)
     };
     btn.addEventListener('pointerup', end);
