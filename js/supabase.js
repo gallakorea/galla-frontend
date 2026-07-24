@@ -165,6 +165,46 @@
     return `${location.origin}/share/${type}/${encodeURIComponent(id)}`;
   };
 
+  /* ═══ 📳 전역 햅틱 — 네이티브(iOS) Capacitor Haptics 우선, 없으면 웹 vibrate(안드로이드).
+     kind: light | medium | heavy | rigid | soft | success | warning | error | selection ═══ */
+  window.GALLA_haptic = function (kind) {
+    kind = kind || "light";
+    try {
+      var Cap = window.Capacitor, H = Cap && Cap.Plugins && Cap.Plugins.Haptics;
+      if (H) {
+        if (kind === "success" || kind === "warning" || kind === "error") {
+          if (H.notification) { H.notification({ type: kind.toUpperCase() }); return true; }
+        }
+        if (kind === "selection") { if (H.selectionChanged) { H.selectionChanged(); return true; } }
+        if (H.impact) {
+          var style = kind === "heavy" ? "HEAVY" : (kind === "light" || kind === "soft" || kind === "selection") ? "LIGHT" : "MEDIUM";
+          H.impact({ style: style });
+          if (kind === "heavy") setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 55); // '격렬한' 더블탭
+          return true;
+        }
+      }
+    } catch (_) {}
+    try {
+      if (navigator.vibrate) {
+        var p = kind === "heavy" ? [35, 30, 45] : kind === "success" ? [12, 40, 12] : kind === "error" ? [30, 40, 30]
+          : (kind === "light" || kind === "selection" || kind === "soft") ? 9 : 18;
+        navigator.vibrate(p); return true;
+      }
+    } catch (_) {}
+    return false;
+  };
+
+  /* 전역 델리게이트 — 버튼/링크/[data-haptic]을 누르면 자동 햅틱(누른 순간, pointerdown).
+     data-haptic="heavy|success|..."로 강도 지정, 없으면 light. (스크롤은 버튼이 아니라 미발동) */
+  if (!window.__gallaHapticBound) {
+    window.__gallaHapticBound = true;
+    document.addEventListener("pointerdown", function (e) {
+      var el = e.target && e.target.closest && e.target.closest("[data-haptic], button:not([disabled]), [role=\"button\"], .nav-item, .hdr-btn");
+      if (!el) return;
+      window.GALLA_haptic(el.getAttribute("data-haptic") || "light");
+    }, { passive: true, capture: true });
+  }
+
   // ───────────────────────────────────────────────
   // 코스메틱: 닉네임 골드(🎨 nick_deco) 전역 자동 렌더
   // 렌더 지점을 건드리지 않고, 닉네임 요소([data-profile-uid]/[data-user-id])에

@@ -14,8 +14,8 @@
     const pro = o.pro || 0, con = o.con || 0, total = pro + con;
     const pp = pct(pro, con), cp = 100 - pp;
     const buttons = o.buttons === false ? "" : `<div class="gv-btns">
-      <button class="gv-btn gv-pro ${o.proClass || ""}" ${o.proAttr || ""}><span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
-      <button class="gv-btn gv-con ${o.conClass || ""}" ${o.conAttr || ""}><span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
+      <button class="gv-btn gv-pro ${o.proClass || ""}" data-haptic="heavy" ${o.proAttr || ""}><span class="gv-emoji">👍</span><span class="gv-name">${A}</span></button>
+      <button class="gv-btn gv-con ${o.conClass || ""}" data-haptic="heavy" ${o.conAttr || ""}><span class="gv-emoji">👎</span><span class="gv-name">${B}</span></button>
     </div>`;
     return `${buttons}
       <div class="gv-bar" data-pro="${pro}" data-con="${con}">
