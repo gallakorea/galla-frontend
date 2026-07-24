@@ -68,11 +68,27 @@
   }
   window.GALLA_passkeyLogin = passkeyLogin;
 
+  // iOS '홈화면 웹클립 PWA'인지 — 여긴 구글(사파리로 튐)·패스키(iOS가 WebAuthn 차단) 불가.
+  // ⚠️ 네이티브 앱(Capacitor, UA에 GallaApp)은 제외 — Associated Domains로 패스키 가능하므로 버튼 유지.
+  function isStandalonePWA() {
+    if (/GallaApp/i.test(navigator.userAgent || "")) return false;
+    return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+           window.navigator.standalone === true;
+  }
+  window.GALLA_isStandalonePWA = isStandalonePWA;
+
   /* ══════════ 버튼 렌더 (login.html / signup.html) ══════════ */
   function renderButtons(host) {
     if (!host || document.querySelector(".social-auth")) return;
     const box = document.createElement("div");
     box.className = "social-auth";
+    // 홈화면 앱: 구글·패스키가 iOS 한계로 안 됨 → 버튼 대신 안내(사파리에선 됨)
+    if (isStandalonePWA()) {
+      box.innerHTML = '<div class="social-div"><span>다른 로그인</span></div>' +
+        '<div class="soc-hint">🔑 구글·패스키 로그인은 <b>Safari(브라우저)</b>에서 galla.im을 열면 쓸 수 있어요.<br>앱에선 이메일로 로그인해 주세요.</div>';
+      host.appendChild(box);
+      return;
+    }
     let html = '<div class="social-div"><span>간편 로그인</span></div>' +
       '<button type="button" class="soc-btn soc-google" data-act="google"><span class="soc-ic soc-g">G</span> 구글로 계속하기</button>';
     if (hasPasskey())

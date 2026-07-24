@@ -20,6 +20,12 @@
 /offline.html
   Cache-Control: no-cache
 
+# iOS Associated Domains — 패스키(webcredentials)용. Apple이 이 파일로 앱↔galla.im 연결 검증.
+# 확장자 없는 파일이라 Content-Type을 명시(application/json 권장), 리다이렉트 없이 200이어야 함.
+/.well-known/apple-app-site-association
+  Content-Type: application/json
+  Cache-Control: no-cache
+
 # HTML 문서는 항상 재검증(no-cache) — 버전(?v=)이 HTML 안에 있어 HTML이 캐시되면
 # 자산 갱신이 반영되지 않음. no-cache로 항상 최신 HTML을 받게 함(변경 즉시 반영).
 /
