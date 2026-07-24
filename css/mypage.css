@@ -563,13 +563,12 @@ body{
 /* ---- 아바타: 은은한 골드 헤어라인 링 (최종 기준 — 위 정의들 통합 승자) ----
    82px는 스탯 대비 과하게 커 헤더가 무거워 보였다(사장님 제보). 72px + 얇은 링으로
    인스타식 균형. object-fit/position을 여기서 못박아 사진이 항상 중앙 cover로 정렬. */
-.mp-ava-ring{
-  padding:2px; border-radius:50%;
-  background:linear-gradient(145deg, rgba(201,209,224,.5), rgba(201,209,224,.06) 45%, rgba(255,255,255,.05));
-}
+/* 링(padding)·이미지 안쪽 어두운 border를 없앤다 — 그게 사진과 원 사이 '안 차 보이는' 틈의 원인.
+   사진이 원 테두리까지 꽉 차게: 헤어라인은 이미지 자체 border로만(틈 없음). */
+.mp-ava-ring{ padding:0; border-radius:50%; background:none; }
 .profile-img{
-  width:72px; height:72px; border:2px solid #0a0a0b;
-  object-fit:cover; object-position:center;
+  width:76px; height:76px; border:1.5px solid rgba(255,255,255,.16);
+  object-fit:cover; object-position:center; background:#16171c;
 }
 .mp-tier-chip{
   background:linear-gradient(180deg,#1d1e24,#121318);
