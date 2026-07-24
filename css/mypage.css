@@ -881,3 +881,40 @@ body{
 }
 @keyframes igShimmer { to { background-position: -220% 0; } }
 @media (prefers-reduced-motion: reduce) { .ig-card, .mp-row-th { animation: none; } }
+
+/* =========================================================
+   📷 프로필 사진 전체보기(카톡식) — 탭/꾹 누르면 흐린 배경 + 큰 사진 + 액션
+   ========================================================= */
+.av-viewer{ position:fixed; inset:0; z-index:2147483200; opacity:0; transition:opacity .24s ease;
+  display:flex; flex-direction:column; }
+.av-viewer.on{ opacity:1; }
+.av-bg{ position:absolute; inset:0; background-size:cover; background-position:center;
+  filter:blur(34px) brightness(.5) saturate(1.1); transform:scale(1.25); }
+.av-scrim{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.55), rgba(0,0,0,.35) 40%, rgba(0,0,0,.72)); }
+.av-x{ position:absolute; top:calc(env(safe-area-inset-top) + 12px); right:14px; z-index:3;
+  width:40px; height:40px; border-radius:50%; border:none; background:rgba(255,255,255,.12);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; backdrop-filter:blur(6px); }
+.av-x svg{ width:20px; height:20px; }
+.av-stage{ position:relative; z-index:2; flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:18px; padding:0 24px;
+  transform:translateY(10px); transition:transform .28s cubic-bezier(.2,.85,.3,1); }
+.av-viewer.on .av-stage{ transform:translateY(0); }
+.av-photo-wrap{ position:relative; }
+.av-photo{ width:min(66vw, 300px); height:min(66vw, 300px); border-radius:50%; object-fit:cover;
+  background:#000; box-shadow:0 20px 60px rgba(0,0,0,.6); border:1px solid rgba(255,255,255,.14); }
+.av-pen{ position:absolute; right:8px; bottom:8px; width:44px; height:44px; border-radius:50%;
+  border:2px solid rgba(0,0,0,.5); background:rgba(30,32,40,.92); display:flex; align-items:center;
+  justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+.av-pen svg{ width:20px; height:20px; }
+.av-name{ font-size:20px; font-weight:800; color:#fff; text-align:center; letter-spacing:-.3px;
+  text-shadow:0 2px 12px rgba(0,0,0,.6); }
+.av-actions{ position:relative; z-index:2; display:flex; justify-content:center; gap:28px;
+  padding:0 20px calc(env(safe-area-inset-bottom) + 30px); }
+.av-act{ background:none; border:none; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; gap:8px; }
+.av-act .av-act-ic{ width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,.13);
+  display:flex; align-items:center; justify-content:center; backdrop-filter:blur(6px);
+  transition:background .15s; }
+.av-act:active .av-act-ic{ background:rgba(255,255,255,.24); }
+.av-act .av-act-ic svg{ width:24px; height:24px; }
+.av-act b{ font-size:13px; font-weight:600; color:#eef0f4; }

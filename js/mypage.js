@@ -188,7 +188,71 @@ document.addEventListener("DOMContentLoaded", async () => {
             else badgeEl.hidden = true; // 미션 배지는 본인 전용
         }
 
-        if (profileImg) window.GALLA_setAvatar(profileImg, viewProfile.avatar_url, 256, true);
+        if (profileImg) {
+            window.GALLA_setAvatar(profileImg, viewProfile.avatar_url, 256, true);
+            // 📷 카톡식 프로필 사진 전체보기 — 탭/꾹 누르면 흐린 배경 + 큰 사진 + 액션
+            profileImg.style.cursor = "pointer";
+            bindAvatarViewer(profileImg, viewProfile.avatar_url, viewProfile.nickname, viewUserId, isMyPage);
+        }
+    }
+
+    // =====================================================
+    // 📷 프로필 사진 전체보기(카톡식) — 흐린 배경, 큰 원형 사진, 공유/링크/편집
+    // =====================================================
+    function bindAvatarViewer(imgEl, avatarUrl, nick, uid, isSelf) {
+        const escT = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+        const open = () => {
+            const big = window.GALLA_avatarSrc(avatarUrl, 720);
+            const profileUrl = location.origin + "/mypage.html?user=" + encodeURIComponent(uid);
+            const ov = document.createElement("div");
+            ov.className = "av-viewer";
+            ov.innerHTML =
+                '<div class="av-bg" style="background-image:url(\'' + big + '\')"></div>' +
+                '<div class="av-scrim"></div>' +
+                '<button class="av-x" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
+                '<div class="av-stage">' +
+                  '<div class="av-photo-wrap">' +
+                    '<img class="av-photo" src="' + big + '" alt="" onerror="this.onerror=null;this.src=window.GALLA_DEFAULT_AVATAR">' +
+                    (isSelf ? '<button class="av-pen" aria-label="사진 변경"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>' : '') +
+                  '</div>' +
+                  '<div class="av-name">' + escT(nick || "익명") + '</div>' +
+                '</div>' +
+                '<div class="av-actions">' +
+                  '<button class="av-act" data-act="share"><span class="av-act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></span><b>공유하기</b></button>' +
+                  '<button class="av-act" data-act="copy"><span class="av-act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></span><b>링크 복사</b></button>' +
+                  (isSelf ? '<button class="av-act" data-act="edit"><span class="av-act-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span><b>사진 변경</b></button>' : '') +
+                '</div>';
+            document.body.appendChild(ov);
+            requestAnimationFrame(() => ov.classList.add("on"));
+            const close = () => { ov.classList.remove("on"); setTimeout(() => ov.remove(), 240); };
+            ov.querySelector(".av-x").onclick = close;
+            ov.querySelector(".av-scrim").onclick = close;
+            const penEl = ov.querySelector(".av-pen"); if (penEl) penEl.onclick = () => { location.href = "account-edit.html"; };
+            const copyLink = () => {
+                try { navigator.clipboard.writeText(profileUrl); } catch (_) { }
+                (window.GALLA_toast || alert)("🔗 프로필 링크 복사됨");
+            };
+            ov.querySelectorAll(".av-act").forEach(b => {
+                b.onclick = () => {
+                    const a = b.dataset.act;
+                    if (a === "share") {
+                        if (navigator.share) navigator.share({ title: nick || "GALLA", url: profileUrl }).catch(() => { });
+                        else copyLink();
+                    } else if (a === "copy") { copyLink(); }
+                    else if (a === "edit") { location.href = "account-edit.html"; }
+                };
+            });
+            // 아래로 쓸어내리면 닫기
+            let y0 = null;
+            ov.addEventListener("touchstart", (e) => { y0 = e.touches[0].clientY; }, { passive: true });
+            ov.addEventListener("touchend", (e) => { if (y0 != null && e.changedTouches[0].clientY - y0 > 80) close(); y0 = null; }, { passive: true });
+        };
+        // 탭 + 꾹 누르기(롱프레스) 모두 열기
+        imgEl.addEventListener("click", (e) => { e.preventDefault(); open(); });
+        let lpTimer = null;
+        imgEl.addEventListener("touchstart", () => { lpTimer = setTimeout(open, 450); }, { passive: true });
+        imgEl.addEventListener("touchend", () => { clearTimeout(lpTimer); }, { passive: true });
+        imgEl.addEventListener("touchmove", () => { clearTimeout(lpTimer); }, { passive: true });
     }
 
     // =====================================================
