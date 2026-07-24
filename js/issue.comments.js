@@ -222,6 +222,9 @@ export async function initCommentSystem(issueId) {
   const alCon = document.getElementById("al-con");
   if (alPro) alPro.textContent = fLabel("pro");
   if (alCon) alCon.textContent = fLabel("con");
+  const bdCon = document.getElementById("bd-con-name");
+  if (bdCon) bdCon.textContent = fName("con");   // 구분선 '여기부터 OO 진영'
+  initZoneIndicator();                            // 🧭 스크롤 추적 현재구역 표시
 
   await loadComments(issueId);
   await initComposerUI();
@@ -893,6 +896,48 @@ function scrollToComment(id) {
   el.scrollIntoView({ behavior: "smooth", block: "center" });
   el.classList.add("hl");
   setTimeout(() => el.classList.remove("hl"), 1600);
+}
+
+/* 🧭 현재 진영 구역 표시 — 스크롤에 따라 지금 보는 구역(찬/반)을 fixed 배지로 항상 노출.
+   overflow-x:hidden 환경이라 CSS sticky가 불안정 → fixed + 스크롤 계산으로 확실하게 잡는다. */
+let ZONE_IND_BOUND = false;
+function initZoneIndicator() {
+  const ind = document.getElementById("zone-indicator");
+  if (!ind) return;
+  const hide = () => { if (!ind.hidden) { ind.hidden = true; ind.setAttribute("aria-hidden", "true"); } };
+  const update = () => {
+    const pro = document.getElementById("pro-list");
+    const con = document.getElementById("con-list");
+    if (!pro || !con) return hide();
+    const refY = 96;                       // 헤더(64) 아래 기준선
+    const pr = pro.getBoundingClientRect();
+    const cr = con.getBoundingClientRect();
+    const div = document.querySelector(".battle-divider");
+    let side = null;
+    if (cr.top <= refY && cr.bottom >= refY) side = "con";
+    else if (pr.top <= refY && pr.bottom >= refY) side = "pro";
+    else if (div) {                        // 리스트 사이 여백(구분선 근처) 보정
+      const dr = div.getBoundingClientRect();
+      if (pr.bottom <= refY && dr.bottom >= refY) side = "pro";
+      else if (dr.top <= refY && cr.top >= refY) side = "con";
+    }
+    if (!side) return hide();
+    ind.hidden = false; ind.setAttribute("aria-hidden", "false");
+    ind.className = "zone-indicator " + side;
+    ind.querySelector(".zi-ico").textContent = side === "pro" ? "👍" : "👎";
+    ind.querySelector(".zi-name").textContent = " " + fName(side);
+  };
+  update();
+  if (!ZONE_IND_BOUND) {
+    ZONE_IND_BOUND = true;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(() => { update(); ticking = false; });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+  }
 }
 
 /* ======================
