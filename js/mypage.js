@@ -212,7 +212,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 '<button class="av-x" aria-label="닫기"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' +
                 '<div class="av-stage">' +
                   '<div class="av-photo-wrap">' +
-                    '<img class="av-photo" src="' + big + '" alt="" onerror="this.onerror=null;this.src=window.GALLA_DEFAULT_AVATAR">' +
+                    '<img class="av-photo" src="' + big + '" alt="" draggable="false" oncontextmenu="return false" onerror="this.onerror=null;this.src=window.GALLA_DEFAULT_AVATAR">' +
                     (isSelf ? '<button class="av-pen" aria-label="사진 변경"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>' : '') +
                   '</div>' +
                   '<div class="av-name">' + escT(nick || "익명") + '</div>' +
@@ -224,7 +224,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 '</div>';
             document.body.appendChild(ov);
             requestAnimationFrame(() => ov.classList.add("on"));
-            const close = () => { ov.classList.remove("on"); setTimeout(() => ov.remove(), 240); };
+            // 셸(네이티브) 하단 nav를 숨긴다 — 뷰어 하단 액션이 nav와 겹치던 문제(사장님 제보)
+            const navHide = (on) => { try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on }, location.origin); } catch (_) {} };
+            navHide(true);
+            const close = () => { navHide(false); ov.classList.remove("on"); setTimeout(() => ov.remove(), 240); };
             ov.querySelector(".av-x").onclick = close;
             ov.querySelector(".av-scrim").onclick = close;
             const penEl = ov.querySelector(".av-pen"); if (penEl) penEl.onclick = () => { location.href = "account-edit.html"; };
