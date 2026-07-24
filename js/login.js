@@ -62,6 +62,24 @@ try {
     window.addEventListener("popstate", _cancelLogin);
 } catch (_) {}
 
+// 👈 좌측 스와이프 → 홈 (사장님 요청) — 풀스크린 로그인엔 탭 스와이프가 없어 손쉬운 탈출로 제공.
+(function loginSwipeHome() {
+    var x0 = null, y0 = null, t0 = 0;
+    var el = document.querySelector(".auth-wrap") || document.body;
+    el.addEventListener("touchstart", function (e) {
+        if (e.touches.length !== 1) { x0 = null; return; }
+        x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+    }, { passive: true });
+    el.addEventListener("touchend", function (e) {
+        if (x0 == null) return;
+        var t = e.changedTouches[0];
+        var dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+        x0 = null;
+        // 좌측 수평 스와이프: 왼쪽으로 충분히 + 가로 우세 + 빠르게
+        if (dx < -70 && Math.abs(dx) > Math.abs(dy) * 1.6 && dt < 700) _cancelLogin();
+    }, { passive: true });
+})();
+
 (async () => {
     await waitForClient();
 
