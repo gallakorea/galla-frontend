@@ -3,6 +3,50 @@
  * Supabase bootstrap (UMD only, resilient)
  */
 (function () {
+  /* 🔒 온보딩 강제(백엔드 트리거 hint 'onboard_required')를 프론트가 잡아 모달 자동오픈.
+     supabase 클라이언트의 global.fetch로 주입 → 모든 쓰기(딥링크 페이지 포함) 응답을 감시.
+     social-auth.js가 없으면(미게이트 페이지) 즉석 로드해 모달을 띄운다. */
+  if (!window.__onboardAwareFetch) {
+    var _obShown = false;
+    function _obVer() {
+      try {
+        var s = Array.prototype.map.call(document.scripts, function (x) { return x.src; })
+          .find(function (x) { return /js\/supabase\.js/.test(x); });
+        var m = s && s.match(/v=(\d+)/);
+        return m ? ("?v=" + m[1]) : "";
+      } catch (e) { return ""; }
+    }
+    function _obTrigger() {
+      if (_obShown || document.getElementById("soc-onboard")) return;
+      _obShown = true;
+      var open = function () { _obShown = false; if (window.GALLA_openOnboard) window.GALLA_openOnboard(); };
+      if (window.GALLA_openOnboard) return open();
+      var v = _obVer();
+      if (!document.querySelector("link[data-onboard-css]")) {
+        var l = document.createElement("link");
+        l.rel = "stylesheet"; l.href = "/css/auth.css" + v; l.setAttribute("data-onboard-css", "1");
+        document.head.appendChild(l);
+      }
+      var sc = document.createElement("script");
+      sc.src = "/js/social-auth.js" + v;
+      sc.onload = function () { _obShown = false; if (window.GALLA_openOnboard) window.GALLA_openOnboard(); };
+      sc.onerror = function () { _obShown = false; };
+      document.head.appendChild(sc);
+    }
+    window.__onboardAwareFetch = function (input, init) {
+      return fetch(input, init).then(function (res) {
+        try {
+          if (!res.ok && (res.status === 400 || res.status === 403 || res.status === 500)) {
+            res.clone().text().then(function (t) {
+              if (t && t.indexOf("onboard_required") >= 0) _obTrigger();
+            }).catch(function () {});
+          }
+        } catch (e) {}
+        return res;
+      });
+    };
+  }
+
   if (!window.waitForSupabaseClient) {
     window.waitForSupabaseClient = function () {
       return new Promise(resolve => {
@@ -382,6 +426,7 @@
         SUPABASE_URL,
         SUPABASE_ANON_KEY,
         {
+          global: { fetch: window.__onboardAwareFetch || fetch },
           auth: {
             // 인스타식 지속 로그인: 로그아웃 전까지 세션 유지 + 토큰 자동 갱신
             persistSession: true,
