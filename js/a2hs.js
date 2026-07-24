@@ -131,6 +131,9 @@
     requestAnimationFrame(() => dim.classList.add("open"));
   }
 
+  // 다른 곳(트렌드 앱유도 CTA 등)에서 설치 플로우를 직접 부를 수 있게 공개
+  window.GALLA_installApp = onAdd;
+
   // 자연스럽게 — 5초 뒤 슬라이드업
   setTimeout(() => { if (document.body) show(); }, 5000);
 })();
