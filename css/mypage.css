@@ -225,7 +225,7 @@ body {
 }
 .ig-card {
     position: relative;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 3 / 4;   /* 인스타 신형 프로필 그리드처럼 세로형(마이/저장 갈라) */
     overflow: hidden;
     background: #0f0f0f;
     cursor: pointer;
