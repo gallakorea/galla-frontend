@@ -565,11 +565,16 @@ body{
    인스타식 균형. object-fit/position을 여기서 못박아 사진이 항상 중앙 cover로 정렬. */
 /* 링(padding)·이미지 안쪽 어두운 border를 없앤다 — 그게 사진과 원 사이 '안 차 보이는' 틈의 원인.
    사진이 원 테두리까지 꽉 차게: 헤어라인은 이미지 자체 border로만(틈 없음). */
-.mp-ava-ring{ padding:0; border-radius:50%; background:none; }
+/* 아바타 원: 항상 또렷한 링(어두운 사진도 원 경계가 검정 배경에 묻히지 않게) +
+   어두운 프로필 사진을 살짝 밝게(=필터 낀 듯 어둡다는 제보). 사진은 cover로 원을 꽉 채운다. */
+.mp-ava-ring{
+  padding:0; border-radius:50%; background:#000;
+  box-shadow: 0 0 0 1.5px rgba(255,255,255,.28), 0 4px 14px rgba(0,0,0,.5);
+}
 .profile-img{
-  width:76px; height:76px; border:1.5px solid rgba(255,255,255,.16);
-  object-fit:cover; object-position:center;
-  background:#000;  /* 사진 로드 전엔 로고 대신 '검은 원'(사장님 요청). 사진은 cover로 꽉 참 */
+  width:76px; height:76px; border:none; border-radius:50%;
+  object-fit:cover; object-position:center; background:#000;
+  filter: brightness(1.1) saturate(1.05);
 }
 .mp-tier-chip{
   background:linear-gradient(180deg,#1d1e24,#121318);
