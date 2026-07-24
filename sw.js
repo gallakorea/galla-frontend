@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v11';   // v9: 코드(js/css) network-first — 버전 엇갈림 원천 차단
+const SW_VERSION = 'galla-sw-v12';   // v9: 코드(js/css) network-first — 버전 엇갈림 원천 차단
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
@@ -59,17 +59,13 @@ self.addEventListener('fetch', (e) => {
     (req.headers.get('accept') || '').includes('text/html');
 
   if (isDoc) {
-    // HTML: network-first + cache:'reload' 강제.
-    //   ⚠️ 그냥 fetch(req)면 브라우저/CF 엣지가 캐시한 옛 HTML을 받을 수 있다(사장님 재현:
-    //   광장 패널 없는 옛 search.html이 내비게이션에만 서빙됨). reload는 그 캐시를 우회해
-    //   항상 origin 최신본(cf-cache: DYNAMIC)을 가져온다. 실패 시에만 캐시/offline 폴백.
+    // HTML: network-first → 캐시 → offline. (원본 req 그대로 — ⚠️ req.url로 새 요청을 만들면
+    //   .html→clean URL 308 리다이렉트를 따라가 'redirected response'가 되고, 그걸 내비게이션에
+    //   반환하면 브라우저가 거부해 전 페이지가 죽는다. 절대 fetch(req.url)로 바꾸지 말 것.
+    //   CF의 내비게이션-전용 옛 HTML 캐시 문제는 js/plaza.js의 ensurePlazaPanel 자가치유가 처리한다.)
     e.respondWith((async () => {
       try {
-        // ⚠️ 원본 내비게이션 요청(req)을 그대로 fetch하면 Sec-Fetch-Dest:document 헤더 때문에
-        //   CF 엣지가 '내비게이션용으로 캐시한 옛 HTML'을 준다(사장님 크롬 직접진단으로 확정 —
-        //   같은 URL도 fetch(*/*)는 최신, 내비게이션은 옛것). 그래서 URL 문자열로 '새 요청'을
-        //   만들어(내비 헤더 없이) 받는다 → 항상 origin 최신본. 응답 본문(HTML)만 쓰면 되므로 안전.
-        const fresh = await fetch(req.url, { cache: 'reload', credentials: 'same-origin' });
+        const fresh = await fetch(req);
         if (fresh && fresh.ok) {
           const c = await caches.open(PAGE_CACHE);
           c.put(req, fresh.clone());
