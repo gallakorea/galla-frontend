@@ -126,6 +126,23 @@
            `onerror="this.onerror=null;this.src='${window.GALLA_DEFAULT_AVATAR}'">`;
   };
 
+  // 전역 토스트 — 수정/삭제 등 완료 알림(전 페이지 공용). 하단 중앙, 셸 네비 위.
+  window.GALLA_toast = function (msg, ms) {
+    if (!document.getElementById("galla-toast-css")) {
+      const st = document.createElement("style"); st.id = "galla-toast-css";
+      st.textContent = ".galla-toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));" +
+        "transform:translate(-50%,12px);z-index:2147483000;background:rgba(28,30,38,.97);color:#fff;" +
+        "font-size:14.5px;font-weight:800;padding:12px 20px;border-radius:14px;border:1px solid rgba(255,255,255,.12);" +
+        "box-shadow:0 12px 34px rgba(0,0,0,.5);opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;max-width:82vw;text-align:center}" +
+        ".galla-toast.on{opacity:1;transform:translate(-50%,0)}";
+      (document.head || document.documentElement).appendChild(st);
+    }
+    const t = document.createElement("div"); t.className = "galla-toast"; t.textContent = msg;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add("on"));
+    setTimeout(() => { t.classList.remove("on"); setTimeout(() => t.remove(), 260); }, ms || 1900);
+  };
+
   // 공유 URL: /share/<type>/<id> (엣지에서 OG 카드 렌더). type: issue|predict|plaza
   window.GALLA_shareUrl = function (type, id) {
     return `${location.origin}/share/${type}/${encodeURIComponent(id)}`;

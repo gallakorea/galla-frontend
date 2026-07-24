@@ -88,6 +88,7 @@
       const { error } = await sb().from(table).update({ [bodyCol]: v }).eq("id", id);
       if (error) { btn.disabled = false; btn.textContent = "저장"; alert("수정에 실패했어요: " + (error.message || "")); return; }
       close();
+      window.GALLA_toast && GALLA_toast("✅ 댓글을 수정했어요");
       onSaved && onSaved(v);
     };
   };
@@ -98,6 +99,7 @@
     if (soft) ({ error } = await sb().from(table).update({ status: "deleted" }).eq("id", id));
     else ({ error } = await sb().from(table).delete().eq("id", id));
     if (error) { alert("삭제에 실패했어요: " + (error.message || "")); return; }
+    window.GALLA_toast && GALLA_toast("🗑️ 댓글을 삭제했어요");
     onDone && onDone();
   };
 

@@ -179,8 +179,9 @@
         const { error } = await client.from(cfg.table).update(patch).eq('id', cfg.id);
         if (error) throw error;
         closeSheet();
-        if (cfg.onSaved) cfg.onSaved(patch);
-        toast('수정되었습니다');
+        toast('✅ 수정되었습니다');
+        // 이동/리로드(onSaved)가 토스트를 덮지 않게 잠깐 뒤에 실행
+        setTimeout(() => { if (cfg.onSaved) cfg.onSaved(patch); }, 1000);
       } catch (e) {
         save.disabled = false; save.textContent = '저장';
         alert('수정 실패: ' + (e.message || e));
@@ -220,8 +221,9 @@
           throw error;
         }
         closeSheet();
-        toast('삭제되었습니다');
-        if (cfg.onDeleted) cfg.onDeleted();
+        toast('🗑️ 삭제되었습니다');
+        // 페이지 이동(onDeleted)이 토스트를 덮지 않게 잠깐 뒤에 실행
+        setTimeout(() => { if (cfg.onDeleted) cfg.onDeleted(); }, 1100);
       } catch (e) {
         del.disabled = false; del.textContent = '삭제';
         alert('삭제 실패: ' + (e.message || e));
