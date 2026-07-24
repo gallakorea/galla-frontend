@@ -6,13 +6,55 @@
   const CALLBACK = location.origin + "/auth-callback.html";
 
   /* ══════════ 구글 OAuth ══════════ */
+  // Capacitor 네이티브 앱인지 (구글 로그인을 인앱 브라우저+딥링크로 완결)
+  function isNativeApp() {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  }
+  const NATIVE_REDIRECT = "im.galla.app://auth-callback";
+
+  // 딥링크 복귀 리스너 — OAuth 끝나고 im.galla.app://auth-callback?code=... 로 앱이 열리면 세션 확립
+  let _nativeAuthListener = false;
+  function setupNativeAuthListener() {
+    if (_nativeAuthListener || !isNativeApp()) return;
+    const App = window.Capacitor?.Plugins?.App;
+    if (!App) return;
+    _nativeAuthListener = true;
+    App.addListener("appUrlOpen", async (event) => {
+      const url = (event && event.url) || "";
+      if (url.indexOf("auth-callback") < 0) return;
+      try { window.Capacitor?.Plugins?.Browser?.close?.(); } catch (_) {}
+      try {
+        const c = sb();
+        let code = null;
+        try { code = new URL(url).searchParams.get("code"); } catch (_) {}
+        const { error } = await c.auth.exchangeCodeForSession(code || url);
+        if (error) throw error;
+        try { if (await needsOnboard()) await openOnboard(); } catch (_) {}
+        location.replace("index.html");
+      } catch (e) {
+        alert("구글 로그인 처리 실패 — " + (e?.message || "다시 시도해 주세요."));
+      }
+    });
+  }
+
   async function signInSocial(provider) {
     const c = sb();
     if (!c) { alert("잠시 후 다시 시도해주세요."); return; }
     try {
+      // 네이티브 앱: 인앱 브라우저로 열고 딥링크로 복귀(사파리로 안 튐)
+      if (isNativeApp()) {
+        setupNativeAuthListener();
+        const { data, error } = await c.auth.signInWithOAuth({
+          provider, options: { redirectTo: NATIVE_REDIRECT, skipBrowserRedirect: true },
+        });
+        if (error) throw error;
+        if (data?.url) await window.Capacitor.Plugins.Browser.open({ url: data.url, presentationStyle: "popover" });
+        return;
+      }
+      // 웹: 기존 리다이렉트
       const { error } = await c.auth.signInWithOAuth({ provider, options: { redirectTo: CALLBACK } });
       if (error) alert(/provider/i.test(error.message) ? "이 로그인은 아직 준비 중입니다." : "로그인 실패: " + error.message);
-    } catch (_) { alert("로그인 실패 — 잠시 후 다시 시도해 주세요."); }
+    } catch (e) { alert("로그인 실패 — " + (e?.message || "잠시 후 다시 시도해 주세요.")); }
   }
   window.GALLA_signInSocial = signInSocial;
 
@@ -226,5 +268,6 @@
       || document.getElementById("signupBtn")?.parentElement;
     if (host) renderButtons(host);
     onboardGate();
+    setupNativeAuthListener();
   });
 })();
