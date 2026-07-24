@@ -171,9 +171,20 @@
   // registerPlugin('Haptics')로 직접 받아야 한다(이게 '진동 안 옴'의 원인이었음).
   function _hapPlugin() {
     if (window.__gallaHap !== undefined) return window.__gallaHap;
-    var Cap = window.Capacitor, H = null;
+    // ⚠️ 햅틱 코드는 iframe(dm/vote 등) 안에서 도는데 Capacitor 브릿지는 top 문서(app-shell)에만
+    //    주입된다 → iframe의 window.Capacitor는 undefined. same-origin이라 window.top.Capacitor로 접근.
+    var Cap = window.Capacitor;
+    try { if ((!Cap || !Cap.registerPlugin) && window.top && window.top !== window && window.top.Capacitor) Cap = window.top.Capacitor; } catch (_) {}
+    try { if ((!Cap || !Cap.registerPlugin) && window.parent && window.parent !== window && window.parent.Capacitor) Cap = window.parent.Capacitor; } catch (_) {}
+    var H = null;
     try { H = (Cap && Cap.Plugins && Cap.Plugins.Haptics) || (Cap && Cap.registerPlugin && Cap.registerPlugin("Haptics")) || null; } catch (_) { H = null; }
-    return (window.__gallaHap = H);
+    window.__gallaHap = H;
+    if (!H && !window.__hapDiag) {   // 🔍 못 찾으면 1회 진단(임시)
+      window.__hapDiag = 1;
+      var topCap = "x"; try { topCap = (window.top !== window) ? (typeof window.top.Capacitor) : "same"; } catch (_) { topCap = "cross"; }
+      try { (window.GALLA_toast || function (m) { alert(m); })("햅틱진단 self=" + (typeof window.Capacitor) + " top=" + topCap, 4500); } catch (_) {}
+    }
+    return H;
   }
   window.GALLA_haptic = function (kind) {
     kind = kind || "light";
