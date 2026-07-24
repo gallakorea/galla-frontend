@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v9';   // v9: 코드(js/css) network-first — 버전 엇갈림 원천 차단
+const SW_VERSION = 'galla-sw-v10';   // v9: 코드(js/css) network-first — 버전 엇갈림 원천 차단
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
@@ -59,10 +59,13 @@ self.addEventListener('fetch', (e) => {
     (req.headers.get('accept') || '').includes('text/html');
 
   if (isDoc) {
-    // HTML: network-first → 캐시 → offline
+    // HTML: network-first + cache:'reload' 강제.
+    //   ⚠️ 그냥 fetch(req)면 브라우저/CF 엣지가 캐시한 옛 HTML을 받을 수 있다(사장님 재현:
+    //   광장 패널 없는 옛 search.html이 내비게이션에만 서빙됨). reload는 그 캐시를 우회해
+    //   항상 origin 최신본(cf-cache: DYNAMIC)을 가져온다. 실패 시에만 캐시/offline 폴백.
     e.respondWith((async () => {
       try {
-        const fresh = await fetch(req);
+        const fresh = await fetch(req, { cache: 'reload' });
         if (fresh && fresh.ok) {
           const c = await caches.open(PAGE_CACHE);
           c.put(req, fresh.clone());
