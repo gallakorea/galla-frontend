@@ -42,7 +42,7 @@
       .cmt-sheet{position:fixed;inset:0;z-index:99998;display:flex;align-items:flex-end;justify-content:center}
       .cmt-sheet .dim{position:absolute;inset:0;background:rgba(0,0,0,.5)}
       .cmt-sheet .card{position:relative;width:100%;max-width:480px;background:#16171c;border-radius:18px 18px 0 0;
-        padding:8px 0 max(8px,env(safe-area-inset-bottom));animation:cmtUp .22s ease}
+        padding:8px 0 calc(104px + env(safe-area-inset-bottom));animation:cmtUp .22s ease}
       .cmt-sheet .opt{display:flex;gap:10px;align-items:center;width:100%;padding:15px 20px;border:none;background:transparent;
         color:#eef0f4;font-size:15px;font-weight:700;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06)}
       .cmt-sheet .opt.danger{color:#ff6f88}
@@ -77,7 +77,11 @@
       <div class="row"><button class="cancel2" id="cmt-edit-x">취소</button><button class="save" id="cmt-edit-s">저장</button></div>
     </div>`;
     document.body.appendChild(wrap);
-    const ta = wrap.querySelector("#cmt-edit-ta"); ta.value = current; ta.focus();
+    const ta = wrap.querySelector("#cmt-edit-ta"); ta.value = current;
+    // ⚠️ 그냥 focus()하면 iOS 웹뷰가 고정 박스를 스크롤로 끌어올려 입력창이 상단에 잘려 박힌다
+    //    (사장님 제보 '박스 위치 이상'). preventScroll로 스크롤 점프 없이 포커스만 준다.
+    try { ta.focus({ preventScroll: true }); } catch (_) { ta.focus(); }
+    ta.setSelectionRange(ta.value.length, ta.value.length);
     const close = () => wrap.remove();
     wrap.querySelector(".dim").onclick = close;
     wrap.querySelector("#cmt-edit-x").onclick = close;
