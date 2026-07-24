@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>로그인 중 · GALLA</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="./css/theme.css?v=072396">
+  <link rel="stylesheet" href="./css/auth.css?v=072396">
+  <style>
+    body{background:#000;color:#fff;display:flex;align-items:center;justify-content:center;height:100dvh;margin:0;font-family:system-ui}
+    .cb{display:flex;flex-direction:column;align-items:center;gap:16px}
+    .cb-spin{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:#7aa0ff;animation:cbsp 1s linear infinite}
+    @keyframes cbsp{to{transform:rotate(360deg)}}
+    .cb-t{font-size:14px;color:#9aa2b5;font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="cb"><div class="cb-spin"></div><div class="cb-t" id="cbT">로그인 중…</div></div>
+
+  <script src="./vendor/supabase.js?v=072396"></script>
+  <script src="js/supabase.js?v=072396"></script>
+  <script src="js/social-auth.js?v=072396"></script>
+  <script>
+    (async function () {
+      const T = document.getElementById("cbT");
+      // supabaseClient 준비 대기 (supabase.js가 detectSessionInUrl로 해시 토큰을 세션으로 교환)
+      let sb = null;
+      for (let i = 0; i < 40 && !sb; i++) { sb = window.supabaseClient; if (!sb) await new Promise(r => setTimeout(r, 100)); }
+      if (!sb) { location.replace("login.html"); return; }
+
+      // 세션 확립 대기
+      let user = null;
+      for (let i = 0; i < 40; i++) {
+        const { data } = await sb.auth.getUser();
+        if (data?.user) { user = data.user; break; }
+        await new Promise(r => setTimeout(r, 150));
+      }
+      if (!user) { location.replace("login.html?err=oauth"); return; }
+
+      // 소셜 신규면 닉네임·약관 온보딩
+      try {
+        if (window.GALLA_needsOnboard && await window.GALLA_needsOnboard()) {
+          T.textContent = "가입 마무리 중…";
+          await window.GALLA_openOnboard();
+        }
+      } catch (_) {}
+
+      // 완료 → 홈으로 (셸/앱 인식은 index가 알아서)
+      location.replace("index.html");
+    })();
+  </script>
+</body>
+</html>

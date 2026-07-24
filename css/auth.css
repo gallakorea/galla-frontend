@@ -1,0 +1,32 @@
+
+/* ═══════════ 🔐 소셜 로그인 버튼 + 온보딩 (2026-07-24) ═══════════ */
+.social-auth { margin-top: 18px; display: flex; flex-direction: column; gap: 9px; }
+.social-div { display: flex; align-items: center; gap: 10px; color: #6b7080; font-size: 12px; font-weight: 700; margin: 6px 0 8px; }
+.social-div::before, .social-div::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,.1); }
+.soc-btn {
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  width: 100%; height: 50px; border-radius: 13px; border: none; cursor: pointer;
+  font-size: 15px; font-weight: 800; transition: filter .12s, transform .1s;
+}
+.soc-btn:active { transform: scale(.98); filter: brightness(.95); }
+.soc-ic { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; }
+.soc-kakao { background: #FEE500; color: #191600; }
+.soc-google { background: #fff; color: #1f1f1f; }
+.soc-google .soc-g { background: #fff; color: #4285F4; font-size: 16px; }
+.soc-naver { background: #03C75A; color: #fff; }
+.soc-naver .soc-n { background: #fff; color: #03C75A; }
+
+/* 온보딩 모달 */
+.soc-onboard { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: center; justify-content: center; padding: 22px; background: rgba(0,0,0,.72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.soco-card { width: 100%; max-width: 380px; background: #16181f; border: 1px solid rgba(255,255,255,.09); border-radius: 20px; padding: 24px 20px; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+.soco-title { font-size: 20px; font-weight: 900; color: #fff; }
+.soco-sub { font-size: 13px; color: #9aa2b5; margin: 4px 0 18px; }
+.soco-input { width: 100%; box-sizing: border-box; height: 50px; border-radius: 13px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: #fff; font-size: 16px; padding: 0 14px; }
+.soco-input:focus { outline: none; border-color: rgba(140,165,255,.8); }
+.soco-msg { font-size: 12px; min-height: 16px; margin: 6px 2px 4px; color: #35e0a0; font-weight: 700; }
+.soco-msg.bad { color: #ff6b6b; }
+.soco-check { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: #c9cfdb; margin: 8px 0; line-height: 1.4; }
+.soco-check input { margin-top: 2px; flex: none; }
+.soco-check a { color: #7aa0ff; }
+.soco-btn { width: 100%; height: 52px; margin-top: 14px; border-radius: 14px; border: none; cursor: pointer; background: linear-gradient(135deg, #3d6bff, #5a86ff); color: #fff; font-size: 16px; font-weight: 900; }
+.soco-btn:disabled { opacity: .6; }
