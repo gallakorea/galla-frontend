@@ -26,15 +26,19 @@
   async function passkeyRegister() {
     if (!hasPasskey()) { alert("이 브라우저는 패스키를 지원하지 않아요."); return false; }
     const c = sb();
-    if (!c?.auth?.registerPasskey) { alert("패스키 준비 중이에요. 잠시 후 다시 시도해 주세요."); return false; }
+    if (!c?.auth?.registerPasskey) { alert("패스키 모듈이 아직 안 올라왔어요.\n앱을 완전히 껐다 켠 뒤(또는 새로고침) 다시 시도해 주세요."); return false; }
     try {
-      const { error } = await c.auth.registerPasskey();
+      const { data, error } = await c.auth.registerPasskey();
       if (error) throw error;
       alert("패스키가 등록됐어요. 다음부턴 비번 없이 로그인할 수 있어요 🔑");
       return true;
     } catch (e) {
-      if (e && e.name === "NotAllowedError") return false; // 사용자 취소
-      alert("패스키 등록 실패 — " + (e?.message || "다시 시도해 주세요."));
+      console.warn("[passkey register] fail:", e && e.name, e && e.message, e);
+      if (e && e.name === "NotAllowedError") {
+        alert("패스키 등록이 취소됐거나 이 환경에서 막혔어요.\n(" + (e.message || "NotAllowedError") + ")");
+        return false;
+      }
+      alert("패스키 등록 실패 — [" + ((e && e.name) || "?") + "] " + ((e && e.message) || "다시 시도해 주세요."));
       return false;
     }
   }
