@@ -309,8 +309,9 @@ function commentVoteHtml(c) {
     <button class="cv-btn cv-dislike ${my === -1 ? "on" : ""}" data-cid="${c.id}" data-v="-1">👎 <span>${c.dislike_count}</span></button>`;
 }
 function commentHeaderHtml(c) {
-  const mine = c.user_id && c.user_id === window.__PLAZA_MY_UID;
-  const menu = mine
+  // ⋯ 메뉴는 항상 노출 — comment-actions가 내 것/관리자엔 수정·삭제, 남의 것엔 신고를 자동 분기.
+  //   (예전엔 '내 댓글'에만 떠서 광장엔 수정·삭제 진입이 없던 문제 — 사장님 제보)
+  const menu = c.user_id
     ? `<button class="cmt-mini" data-cmt-menu data-cmt-table="plaza_comments" data-cmt-id="${c.id}" data-cmt-uid="${c.user_id}" data-cmt-bodycol="body" aria-label="더보기">⋯</button>`
     : "";
   let nick;

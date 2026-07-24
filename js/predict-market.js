@@ -510,6 +510,11 @@ async function loadComments(body){
   const { data: rows } = await supa.from('market_comments')
     .select('id,user_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed').eq('market_id',marketId)
     .order('created_at',{ascending:true}).limit(500);
+  // 베팅을 안 했어도, 이미 이 예측에 댓글을 남겼다면 '그때 입장'으로 고정한다(한 예측=한 입장, 사장님 요청).
+  if(!isMulti() && !MY_POS_SIDE && ME){
+    const mineC=(rows||[]).find(c=>c.user_id===ME.id && (c.side==='yes'||c.side==='no'));
+    if(mineC){ MY_POS_SIDE=mineC.side; CMT_SIDE=mineC.side; }
+  }
   const profs=await fetchProfiles((rows||[]).map(c=>c.user_id));
   const ids=(rows||[]).map(c=>c.id);
   const likeAgg={}; const myLikes=new Set();
@@ -589,9 +594,13 @@ function renderComments(body){
   const my=STATE?.my_bets||{};
   if(MY_POS_SIDE&&!multi){
     const myOid=Object.keys(my).find(k=>Number(my[k])>0);
-    composeTop=`<div class="pmd-cmt-locked ${MY_POS_SIDE}">
-      💰 내 예측: <b>${esc(ocLabel(myOid))} ${fmt(my[myOid])}GP</b> —
-      <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다</div>`;
+    composeTop=myOid
+      ? `<div class="pmd-cmt-locked ${MY_POS_SIDE}">
+          💰 내 예측: <b>${esc(ocLabel(myOid))} ${fmt(my[myOid])}GP</b> —
+          <b>${cmtSideName(MY_POS_SIDE)} 입장</b>으로 작성됩니다</div>`
+      : `<div class="pmd-cmt-locked ${MY_POS_SIDE}">
+          ✍️ 내 입장: <b>${cmtSideName(MY_POS_SIDE)}</b> — 이 입장으로 계속 작성됩니다
+          <span class="pmd-cmt-ask-sub">(한 예측엔 한 입장)</span></div>`;
   } else if(multi){
     if(CMT_SIDE==null) CMT_SIDE=OUTCOMES[0]?String(OUTCOMES[0].id):null;
     const chips=OUTCOMES.map(o=>{

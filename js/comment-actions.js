@@ -39,10 +39,11 @@
     s.textContent = `
       .cmt-mini{border:none;background:transparent;color:#8a8f9a;cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;border-radius:8px}
       .cmt-mini:active{background:rgba(255,255,255,.08)}
-      .cmt-sheet{position:fixed;inset:0;z-index:99998;display:flex;align-items:flex-end;justify-content:center}
+      .cmt-sheet{position:fixed;inset:0;z-index:99998;display:flex;align-items:flex-end;justify-content:center;
+        padding:0 10px calc(96px + env(safe-area-inset-bottom))}
       .cmt-sheet .dim{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-      .cmt-sheet .card{position:relative;width:100%;max-width:480px;background:#16171c;border-radius:18px 18px 0 0;
-        padding:8px 0 calc(104px + env(safe-area-inset-bottom));animation:cmtUp .22s ease}
+      .cmt-sheet .card{position:relative;width:100%;max-width:460px;background:#16171c;border-radius:18px;
+        padding:6px 0;animation:cmtUp .22s ease;box-shadow:0 12px 40px rgba(0,0,0,.5)}
       .cmt-sheet .opt{display:flex;gap:10px;align-items:center;width:100%;padding:15px 20px;border:none;background:transparent;
         color:#eef0f4;font-size:15px;font-weight:700;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06)}
       .cmt-sheet .opt.danger{color:#ff6f88}
