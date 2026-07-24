@@ -26,10 +26,14 @@ window.supabase = supabase;
 // 이 페이지는 js/supabase.js를 안 쓰므로 여기서 직접 노출(없으면 유령권 연동이 전부 비로그인 판정)
 window.supabaseClient = supabase;
 
+// 세션 조회 메모이즈 — 로드 중 10번 넘게 부르던 auth.getSession()(토큰 갱신 시 네트워크)을
+// 1회로 합쳐 광장 상세 로드를 빠르게(사장님 제보). 로그인/로그아웃 시엔 캐시를 비운다.
+let _sessP = null;
 async function getSessionSafe() {
-  const { data } = await supabase.auth.getSession();
-  return data.session;
+  if (!_sessP) _sessP = supabase.auth.getSession().then(r => r.data.session).catch(() => null);
+  return _sessP;
 }
+try { supabase.auth.onAuthStateChange(() => { _sessP = null; }); } catch (_) {}
 
 /* =========================
    AUTH BUTTONS (LOGIN / SIGNUP / LOGOUT)
@@ -752,10 +756,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     fetchComments(commentCountEl);
   });
 
-  await fetchPostDetail();
+  await fetchPostDetail();   // 글부터 즉시 렌더
 
-  // ✅ 페이지 진입 시 항상 1회 투표 상태 로딩 (로그인/비로그인 공통)
-  await loadVoteState();
+  // 투표상태·댓글·유령상태를 병렬로 — 예전엔 투표(2쿼리)를 기다리느라 댓글이 늦게 떴다(로드 지연).
+  loadVoteState();
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
   supabase.auth.onAuthStateChange(async (event) => {
