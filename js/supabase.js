@@ -167,10 +167,18 @@
 
   /* ═══ 📳 전역 햅틱 — 네이티브(iOS) Capacitor Haptics 우선, 없으면 웹 vibrate(안드로이드).
      kind: light | medium | heavy | rigid | soft | success | warning | error | selection ═══ */
+  // 네이티브 Haptics 플러그인 프록시 — 원격 페이지에선 Plugins.Haptics가 비어 있어
+  // registerPlugin('Haptics')로 직접 받아야 한다(이게 '진동 안 옴'의 원인이었음).
+  function _hapPlugin() {
+    if (window.__gallaHap !== undefined) return window.__gallaHap;
+    var Cap = window.Capacitor, H = null;
+    try { H = (Cap && Cap.Plugins && Cap.Plugins.Haptics) || (Cap && Cap.registerPlugin && Cap.registerPlugin("Haptics")) || null; } catch (_) { H = null; }
+    return (window.__gallaHap = H);
+  }
   window.GALLA_haptic = function (kind) {
     kind = kind || "light";
     try {
-      var Cap = window.Capacitor, H = Cap && Cap.Plugins && Cap.Plugins.Haptics;
+      var H = _hapPlugin();
       if (H) {
         if (kind === "success" || kind === "warning" || kind === "error") {
           if (H.notification) { H.notification({ type: kind.toUpperCase() }); return true; }
