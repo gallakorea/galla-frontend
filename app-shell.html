@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072429&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072429">
-  <link rel="stylesheet" href="./css/nav.css?v=072429">
+  <script src="/js/splash-boot.js?v=072430&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072430">
+  <link rel="stylesheet" href="./css/nav.css?v=072430">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -362,6 +362,43 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072429" defer></script>
+<script src="./js/nav-jog.js?v=072430" defer></script>
+<script>
+/* 🔄 버전 자동 감지 — 새 배포가 뜨면 셸을 통째로 리로드해 '옛 판(iframe) 잔류'와
+   네이티브 앱 웹뷰 캐시를 해소한다(웹은 pwa.js가 처리, 앱 WKWebView는 controllerchange가
+   안 먹혀 옛 화면이 박히던 문제 — 사장님 제보 2026-07-24). version.txt는 no-store로 항상 최신. */
+(function () {
+  var loaded = null;
+  function get() {
+    return fetch('/version.txt?_=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (t) { return t ? t.trim() : null; })
+      .catch(function () { return null; });
+  }
+  function busy() {
+    var a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return true;
+    if (a && a.isContentEditable) return true;
+    // 판 안(iframe)에서 입력 중이면 리로드 보류
+    try {
+      for (var i = 0; i < window.frames.length; i++) {
+        var ia = window.frames[i].document.activeElement;
+        if (ia && (/^(INPUT|TEXTAREA)$/.test(ia.tagName) || ia.isContentEditable)) return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function check() {
+    get().then(function (v) {
+      if (!v) return;
+      if (loaded == null) { loaded = v; return; }
+      if (v !== loaded && !busy()) { loaded = v; try { location.reload(); } catch (_) {} }
+    });
+  }
+  check();
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) check(); });
+  setInterval(check, 90000);
+})();
+</script>
 </body>
 </html>
