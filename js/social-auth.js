@@ -142,6 +142,8 @@
   }
   window.GALLA_needsOnboard = needsOnboard;
 
+  const REGIONS = ["서울","부산","대구","인천","광주","대전","울산","세종","경기","강원","충북","충남","전북","전남","경북","경남","제주","해외"];
+
   function openOnboard() {
     return new Promise((resolve) => {
       if (document.getElementById("soc-onboard")) return resolve(false);
@@ -149,35 +151,89 @@
       wrap.id = "soc-onboard";
       wrap.className = "soc-onboard";
       wrap.innerHTML = `
-        <div class="soco-card">
-          <div class="soco-title">갈라에 오신 걸 환영해요 🎉</div>
-          <div class="soco-sub">닉네임만 정하면 바로 시작해요</div>
-          <input id="soco-nick" class="soco-input" maxlength="16" placeholder="닉네임 (2~16자)" autocomplete="off">
+        <div class="soco-card soco-full">
+          <div class="soco-title">가입을 마무리해요 🎉</div>
+          <div class="soco-sub">활동하려면 아래 정보가 필요해요. 잠깐이면 돼요.</div>
+
+          <label class="soco-lab">닉네임 <em>필수</em></label>
+          <input id="soco-nick" class="soco-input" maxlength="20" placeholder="닉네임 (2~12자)" autocomplete="off">
           <div id="soco-nickmsg" class="soco-msg"></div>
-          <label class="soco-check"><input type="checkbox" id="soco-terms"><span>[필수] 만 14세 이상 · <a href="/terms.html" target="_blank">이용약관</a> · <a href="/privacy.html" target="_blank">개인정보 수집·이용</a> 동의</span></label>
-          <label class="soco-check"><input type="checkbox" id="soco-mkt"><span>[선택] 마케팅 정보 수신 동의</span></label>
-          <button id="soco-go" class="soco-btn" type="button">시작하기</button>
+
+          <label class="soco-lab">생년월일 <em>필수</em></label>
+          <input id="soco-birth" class="soco-input" type="date">
+          <div id="soco-agemsg" class="soco-msg"></div>
+
+          <label class="soco-lab">성별 <em>필수</em></label>
+          <div class="soco-chips" id="soco-gender">
+            <button type="button" class="soco-chip" data-g="male">남성</button>
+            <button type="button" class="soco-chip" data-g="female">여성</button>
+          </div>
+
+          <label class="soco-lab">지역 <em>필수</em></label>
+          <select id="soco-region" class="soco-input soco-select">
+            <option value="">지역 선택</option>
+            ${REGIONS.map(r => `<option value="${r}">${r}</option>`).join("")}
+          </select>
+
+          <label class="soco-lab">휴대폰 <em class="opt">선택</em></label>
+          <input id="soco-phone" class="soco-input" type="tel" inputmode="tel" placeholder="010-0000-0000 (수익 정산·계정 복구에 필요)">
+
+          <label class="soco-check soco-agree"><input type="checkbox" id="soco-terms"><span>[필수] 만 14세 이상 · <a href="/terms.html" target="_blank">이용약관</a> · <a href="/privacy.html" target="_blank">개인정보 수집·이용</a> 동의</span></label>
+          <label class="soco-check"><input type="checkbox" id="soco-mkt"><span>[선택] 마케팅·이벤트 정보 수신 동의 🎁 무료 GP 소식</span></label>
+
+          <div id="soco-err" class="soco-msg"></div>
+          <button id="soco-go" class="soco-btn" type="button">가입 완료하고 시작하기</button>
         </div>`;
       document.body.appendChild(wrap);
       const nick = wrap.querySelector("#soco-nick");
       const msg = wrap.querySelector("#soco-nickmsg");
+      const birth = wrap.querySelector("#soco-birth");
+      const ageMsg = wrap.querySelector("#soco-agemsg");
+      const err = wrap.querySelector("#soco-err");
+      let gender = "";
       if (window.GALLA_bindNickCheck) window.GALLA_bindNickCheck(nick, msg);
+      // 생년월일 max = 만14세
+      const maxD = new Date(); maxD.setFullYear(maxD.getFullYear() - 14);
+      birth.max = maxD.toISOString().slice(0, 10);
+      birth.onchange = () => {
+        if (!birth.value) { ageMsg.textContent = ""; return; }
+        const ok = new Date(birth.value) <= maxD;
+        ageMsg.textContent = ok ? "" : "만 14세 이상만 가입할 수 있어요.";
+        ageMsg.className = "soco-msg" + (ok ? "" : " bad");
+      };
+      wrap.querySelectorAll(".soco-chip").forEach(ch => ch.onclick = () => {
+        gender = ch.dataset.g;
+        wrap.querySelectorAll(".soco-chip").forEach(x => x.classList.toggle("on", x === ch));
+      });
       wrap.querySelector("#soco-go").onclick = async () => {
         const c = sb();
         const n = nick.value.trim();
-        if (n.length < 2) { msg.textContent = "닉네임은 2자 이상이에요."; msg.className = "soco-msg bad"; return; }
-        if (!wrap.querySelector("#soco-terms").checked) { msg.textContent = "필수 약관에 동의해 주세요."; msg.className = "soco-msg bad"; return; }
+        err.textContent = ""; err.className = "soco-msg";
+        if (n.length < 2) return fail("닉네임은 2자 이상이에요.");
+        if (!birth.value) return fail("생년월일을 선택해 주세요.");
+        if (new Date(birth.value) > maxD) return fail("만 14세 이상만 가입할 수 있어요.");
+        if (!gender) return fail("성별을 선택해 주세요.");
+        if (!wrap.querySelector("#soco-region").value) return fail("지역을 선택해 주세요.");
+        if (!wrap.querySelector("#soco-terms").checked) return fail("필수 약관에 동의해 주세요.");
         const btn = wrap.querySelector("#soco-go"); btn.disabled = true; btn.textContent = "설정 중…";
         const { data, error } = await c.rpc("social_onboard", {
-          p_nick: n, p_terms: true, p_marketing: wrap.querySelector("#soco-mkt").checked,
+          p_nick: n, p_terms: true,
+          p_marketing: wrap.querySelector("#soco-mkt").checked,
+          p_birth: birth.value,
+          p_gender: gender,
+          p_region: wrap.querySelector("#soco-region").value,
+          p_phone: wrap.querySelector("#soco-phone").value.trim() || null,
         });
         if (error || !data?.ok) {
           const r = data?.reason;
-          msg.textContent = r === "nick_taken" ? "이미 쓰는 닉네임이에요." : r === "nick_short" ? "닉네임이 너무 짧아요." : "저장 실패 — 다시 시도해 주세요.";
-          msg.className = "soco-msg bad"; btn.disabled = false; btn.textContent = "시작하기"; return;
+          const m = { nick_taken:"이미 쓰는 닉네임이에요.", nick_short:"닉네임이 너무 짧아요.",
+            age14:"만 14세 이상만 가입할 수 있어요.", gender:"성별을 선택해 주세요.",
+            region:"지역을 선택해 주세요.", birth:"생년월일을 선택해 주세요.", terms:"약관에 동의해 주세요." };
+          fail(m[r] || "저장 실패 — 다시 시도해 주세요."); btn.disabled = false; btn.textContent = "가입 완료하고 시작하기"; return;
         }
         wrap.remove(); resolve(true);
       };
+      function fail(t) { err.textContent = t; err.className = "soco-msg bad"; }
     });
   }
   window.GALLA_openOnboard = openOnboard;
@@ -188,10 +244,26 @@
   }
   window.GALLA_ensureOnboarded = ensureOnboarded;
 
+  // ── 온보딩 게이트: 로그인됐는데 미완(소셜/패스키 신규)이면 페이지 진입 시 강제 모달 ──
+  async function onboardGate() {
+    const path = location.pathname;
+    if (/login|signup|auth-callback|reset|confirm/.test(path)) return; // 인증 흐름 페이지 제외
+    let c = sb();
+    for (let i = 0; i < 30 && !c; i++) { await new Promise(r => setTimeout(r, 150)); c = sb(); }
+    if (!c) return;
+    try {
+      const { data } = await c.auth.getUser();
+      if (!data?.user) return;                 // 비로그인은 게이트 없음(둘러보기 허용)
+      if (await needsOnboard()) await openOnboard();
+    } catch (_) {}
+  }
+  window.GALLA_onboardGate = onboardGate;
+
   document.addEventListener("DOMContentLoaded", () => {
     const host = document.querySelector("[data-social-auth]")
       || document.getElementById("loginBtn")?.parentElement
       || document.getElementById("signupBtn")?.parentElement;
     if (host) renderButtons(host);
+    onboardGate();
   });
 })();
