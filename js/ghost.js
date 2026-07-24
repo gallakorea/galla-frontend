@@ -53,7 +53,7 @@
   const guEsc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
   // avatar_url은 'userid/avatar.jpg' 상대경로 — js/supabase.js 미로드 페이지용 폴백 해석기
   window.GALLA_avatarSrc = window.GALLA_avatarSrc || function (avatarUrl) {
-    if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
+    if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/default-avatar.png";
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;
     return `https://bidqauputnhkqepvdzrr.supabase.co/storage/v1/render/image/public/profiles/${avatarUrl}?width=128&height=128&resize=cover`; // 원본 1MB 방지
   };

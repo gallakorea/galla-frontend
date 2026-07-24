@@ -106,7 +106,7 @@
   }
 
   function avatarHTML(uid) {
-    const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
+    const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/default-avatar.png";
     const src = uid && window.GALLA_avatarSrc ? window.GALLA_avatarSrc(AVATARS[uid]) : fallback;
     const tag = `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
     // 프로필 클릭 → 마이페이지 (전역 data-profile-uid 핸들러)

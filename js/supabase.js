@@ -109,7 +109,7 @@
 
   // 아바타(프로필 사진) URL 해석: avatar_url은 'userid/avatar.jpg' 상대경로.
   // 없으면 기본 갈라 원형 아이콘. 전역 공용.
-  window.GALLA_DEFAULT_AVATAR = "/assets/app-icons/profile-circle-128.png";
+  window.GALLA_DEFAULT_AVATAR = "/assets/app-icons/default-avatar.png";
   window.GALLA_avatarSrc = function (avatarUrl, size) {
     if (!avatarUrl) return window.GALLA_DEFAULT_AVATAR;
     if (/^https?:\/\//.test(avatarUrl)) return avatarUrl;

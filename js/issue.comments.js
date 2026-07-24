@@ -1415,9 +1415,9 @@ function avatarHTML(c, size) {
   }
   const url = profileMap[c.user_id]?.avatar_url;
   const src = (!c.user_id)
-    ? (window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png")
+    ? (window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/default-avatar.png")
     : (window.GALLA_avatarSrc ? window.GALLA_avatarSrc(url) : (url || ""));
-  const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/profile-circle-128.png";
+  const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/default-avatar.png";
   const img = `<img src="${src}" alt="프로필" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
   if (!c.user_id) return `<span class="${cls} anon-av">${img}</span>`;
   return `<span class="${cls}" data-profile-uid="${c.user_id}" role="button" aria-label="프로필 보기">${img}</span>`;
