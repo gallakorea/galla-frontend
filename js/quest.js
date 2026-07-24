@@ -19,13 +19,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateTodayReward();
   }
 
+  // 미션별 '하러 가기' 목적지 — 진영 투표·참전 댓글·전투 액션은 이슈(홈 피드), 예측은 갈라예측
+  const GO = { vote: "index.html", comment: "index.html", battle: "index.html", predict: "galla-predict.html" };
+
   function cardHtml(q) {
     const pct = Math.min(100, Math.round((q.progress / q.goal) * 100));
     const done = q.progress >= q.goal;
     let btn;
     if (q.claimed) btn = `<button class="q-claim done" disabled>수령 완료 ✓</button>`;
     else if (done) btn = `<button class="q-claim ready" data-key="${q.key}">+${q.reward} GP 받기</button>`;
-    else btn = `<button class="q-claim" disabled>+${q.reward} GP</button>`;
+    // 미완료: 죽은 '+N GP' 버튼 대신 실제 활동으로 보내는 딥링크(고도화 — 미션을 바로 수행 가능)
+    else btn = `<a class="q-claim go" href="${GO[q.key] || "index.html"}">하러 가기 →</a>`;
     return `
       <div class="quest-card ${q.claimed ? "completed" : ""}" data-key="${q.key}">
         <div class="quest-top">

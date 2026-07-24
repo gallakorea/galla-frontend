@@ -17,7 +17,9 @@ body {
 .st-header {
   position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; justify-content: space-between;
-  height: 56px; padding: 0 10px;
+  min-height: 56px; padding: 0 10px;
+  padding-top: env(safe-area-inset-top); /* 노치/상태바 아래로 — 없으면 뒤로가기 버튼이 상태바에 깔림(사장님 제보) */
+  box-sizing: border-box;
   background: rgba(10,10,11,.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255,255,255,.06);

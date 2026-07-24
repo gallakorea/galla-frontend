@@ -560,12 +560,17 @@ body{
   letter-spacing:-.01em;
 }
 
-/* ---- 아바타: 은은한 골드 헤어라인 링 ---- */
+/* ---- 아바타: 은은한 골드 헤어라인 링 (최종 기준 — 위 정의들 통합 승자) ----
+   82px는 스탯 대비 과하게 커 헤더가 무거워 보였다(사장님 제보). 72px + 얇은 링으로
+   인스타식 균형. object-fit/position을 여기서 못박아 사진이 항상 중앙 cover로 정렬. */
 .mp-ava-ring{
-  padding:2.5px; border-radius:50%;
-  background:linear-gradient(145deg, rgba(201,209,224,.55), rgba(201,209,224,.08) 45%, rgba(255,255,255,.06));
+  padding:2px; border-radius:50%;
+  background:linear-gradient(145deg, rgba(201,209,224,.5), rgba(201,209,224,.06) 45%, rgba(255,255,255,.05));
 }
-.profile-img{ border:2.5px solid #0a0a0b; width:82px; height:82px; }
+.profile-img{
+  width:72px; height:72px; border:2px solid #0a0a0b;
+  object-fit:cover; object-position:center;
+}
 .mp-tier-chip{
   background:linear-gradient(180deg,#1d1e24,#121318);
   border:1px solid rgba(201,209,224,.4); color:#c9d1e0;
