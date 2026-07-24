@@ -45,6 +45,23 @@ try { if (LOGIN_NEXT) sessionStorage.setItem("galla_login_next", LOGIN_NEXT); } 
     } catch (_) { /* 크로스오리진 등 — 무시 */ }
 })();
 
+// 🔙 로그인 취소(뒤로) — pop-out(replace)으로 히스토리가 비어 history.back()이 먹통이었다
+//    (버튼·제스처 모두 무반응, 사장님 제보). 명시적으로 '공개 홈'으로 보낸다.
+function _cancelLogin() {
+    const isAppEnv = (window.GALLA_isApp && GALLA_isApp()) ||
+        (matchMedia && matchMedia("(display-mode: standalone)").matches);
+    location.replace(isAppEnv ? "app-shell.html?tab=index" : "index.html");
+}
+// 백 버튼: back.js(history 기반) 대신 캡처 단계에서 먼저 잡아 명시 이동
+document.querySelectorAll(".auth-back").forEach(function (b) {
+    b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); _cancelLogin(); }, true);
+});
+// 기기/제스처 back 트랩: 히스토리 항목을 하나 심고, 뒤로가면 홈으로.
+try {
+    history.pushState({ galla_login: 1 }, "", location.href);
+    window.addEventListener("popstate", _cancelLogin);
+} catch (_) {}
+
 (async () => {
     await waitForClient();
 
