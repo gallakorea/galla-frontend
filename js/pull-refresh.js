@@ -81,7 +81,12 @@
       active = true;
       ensureInd(); ind.classList.add("on", "snap");
       place(16, 1);
-      setTimeout(function () { location.reload(); }, 280);
+      setTimeout(function () {
+        // 새로고침은 '맨 위'에서 시작해야 헤더 로고가 보인다(nav.js가 스크롤 복원>10px면 로고 숨김).
+        try { history.scrollRestoration = "manual"; } catch (_) {}
+        try { window.scrollTo(0, 0); } catch (_) {}
+        location.reload();
+      }, 280);
     } else if (ind) {
       ind.classList.add("snap"); place(-52, 0);
     }
