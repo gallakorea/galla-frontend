@@ -1266,6 +1266,9 @@
     setTab(t);
   }
   function showView(name) {
+    // 🎤 방/뷰를 벗어나면 진행 중인 음성녹음을 확실히 중단(뒤로·목록복귀 포함) —
+    //    방 나가도 계속 녹음되던 버그 방지(사장님 제보).
+    if (name !== CUR_VIEW) { try { stopVoiceRec(true); PTT = null; if (typeof paintRec === 'function') paintRec(false); } catch (_) {} }
     if (PAGE_MODE() && !POPPING && name !== CUR_VIEW) {
       if (name !== 'inbox') {
         history.pushState({ dmv: name, d: ++DEPTH }, '');
@@ -4398,7 +4401,11 @@
   }
   if (!window.__gallaMicBound) {
     window.__gallaMicBound = true;
-    document.addEventListener('visibilitychange', () => { if (document.hidden) micRelease(true); });
+    // 앱이 숨거나(백그라운드) 페이지가 내려가면 녹음도 확실히 중단 + 마이크 반납
+    const killVoice = () => { try { stopVoiceRec(true); } catch (_) {} micRelease(true); };
+    document.addEventListener('visibilitychange', () => { if (document.hidden) killVoice(); });
+    window.addEventListener('pagehide', killVoice);
+    window.addEventListener('blur', () => { try { if (VREC && document.hidden) killVoice(); } catch (_) {} });
   }
   async function warmMic() {
     if (MIC_OK) return true;
@@ -4410,11 +4417,11 @@
     } catch (_) { return false; }
   }
   function bindPTT(btn) {
-    let sx = 0, sy = 0;
-    const CANCEL_DY = -70, LOCK_DY = -130;
+    let sy = 0;
+    const CANCEL_DY = -70;   // 위로 이만큼 밀면 취소(핸즈프리 잠금은 오작동이 잦아 제거 — 손 떼면 항상 전송)
     btn.style.touchAction = 'none';
+    btn.style.userSelect = 'none'; btn.style.webkitUserSelect = 'none'; btn.style.webkitTouchCallout = 'none';
     btn.addEventListener('pointerdown', async e => {
-      if (PTT?.locked) { stopVoiceRec(false); return; }   // 잠금 상태에선 탭 = 전송
       e.preventDefault();
       // 권한이 아직이면 이번 누름은 '허용받기'로만 쓴다 — 팝업과 녹음을 겹치지 않게
       if (!MIC_OK) {
@@ -4427,23 +4434,25 @@
         }
         return void window.GALLA_micHelp?.({});
       }
-      sx = e.clientX; sy = e.clientY;
+      sy = e.clientY;
       PTT = { armed: null, locked: false, id: e.pointerId };
       try { btn.setPointerCapture(e.pointerId); } catch (_) {}
+      // 녹음 중엔 본문 텍스트 선택 차단(꾹 누르다 다른 부분이 선택되던 버그)
+      try { document.body.style.userSelect = 'none'; document.body.style.webkitUserSelect = 'none'; } catch (_) {}
       await startVoiceRec();
     });
     btn.addEventListener('pointermove', e => {
-      if (!PTT || PTT.locked || !VREC) return;
+      if (!PTT || !VREC) return;
       const dy = e.clientY - sy;
-      const next = dy < LOCK_DY ? 'lock' : dy < CANCEL_DY ? 'cancel' : null;
+      const next = dy < CANCEL_DY ? 'cancel' : null;
       if (next !== PTT.armed) { PTT.armed = next; paintPTT(); }
     });
     const end = () => {
+      try { document.body.style.userSelect = ''; document.body.style.webkitUserSelect = ''; } catch (_) {}
       if (!PTT || !VREC) { PTT = null; return; }
-      if (PTT.armed === 'lock') { PTT.locked = true; PTT.armed = null; paintPTT(); return; }   // 손 떼도 계속
       const cancel = PTT.armed === 'cancel';
       PTT = null;
-      stopVoiceRec(cancel);
+      stopVoiceRec(cancel);   // 손 떼면 취소 아니면 전송 (잠금 없음)
     };
     btn.addEventListener('pointerup', end);
     btn.addEventListener('pointercancel', end);
