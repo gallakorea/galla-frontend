@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072384";
-import { loadAiNews } from "./issue-news.js?v=072384";
-import { loadStats } from "./issue.stats.js?v=072384";
-import { initCommentSystem } from "./issue.comments.js?v=072384";
+import { loadAiArguments } from "./issue-argument.js?v=072385";
+import { loadAiNews } from "./issue-news.js?v=072385";
+import { loadStats } from "./issue.stats.js?v=072385";
+import { initCommentSystem } from "./issue.comments.js?v=072385";
 
 
 console.log("[issue.js] loaded");
@@ -59,6 +59,16 @@ async function waitForSessionReady(timeout = 2500) {
 ========================================================================== */
 function qs(id) {
   return document.getElementById(id);
+}
+
+/* ⚡ 하단 섹션 지연로드 — 뷰포트 600px 접근 시에만 쿼리를 쏜다(초기 로드 가속).
+   요소가 없으면 즉시 실행(안전 폴백). */
+function whenNear(el, fn, margin = "600px") {
+  if (!el || !("IntersectionObserver" in window)) { fn(); return; }
+  const io = new IntersectionObserver((ents, obs) => {
+    if (ents.some(e => e.isIntersecting)) { obs.disconnect(); fn(); }
+  }, { rootMargin: margin });
+  io.observe(el);
 }
 
 let issueAuthorId = null;
@@ -175,13 +185,13 @@ renderRelatedLinks(issue.related_links);
 if (window.GALLA_initDonations) window.GALLA_initDonations(issue);
 
 /* ===============================
-  AI NEWS (뉴스)
+  AI NEWS (뉴스) — ⚡ 하단이라 뷰포트 접근 시 로드
 =============================== */
 if (typeof loadAiNews === "function") {
-  loadAiNews(issue);
+  whenNear(document.querySelector(".ai-news"), () => loadAiNews(issue));
 }
-/* 🔥 통계 */
-  loadStats(issue.id);
+/* 🔥 통계 — ⚡ 최하단이라 스크롤 접근 시 로드(스켈레톤→집계) */
+  whenNear(document.getElementById("stats-section"), () => loadStats(issue.id));
 
   /* ===============================
     REST

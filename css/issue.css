@@ -559,6 +559,18 @@ body {
 @keyframes statsShimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .stats-skel-title, .stats-skel-card { animation: none; } }
 
+/* 통계 잠금 화면 참여 진행바 — '몇 명 더 모이면 공개' 참여 유도 */
+.stats-progress {
+  height: 8px; border-radius: 999px; margin: 12px 0 5px; overflow: hidden;
+  background: rgba(255,255,255,.08);
+}
+.stats-progress > i {
+  display: block; height: 100%; border-radius: 999px; min-width: 6px;
+  background: linear-gradient(90deg, #3d6bff, #7aa0ff);
+  transition: width .6s cubic-bezier(.22,1,.36,1);
+}
+.stats-progress-cap { font-size: 11px; color: #8b90a0; font-weight: 800; text-align: right; }
+
 .stat-title {
     font-size: 17px;
     font-weight: 800;

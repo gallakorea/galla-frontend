@@ -456,6 +456,7 @@ async function openFactionChat() {
   sheet.classList.add("open");
   CHAT_OPEN = true;
   window.BattleFX?.haptic("tap");
+  refreshNanjangBadge();   // 🔥 이미 열린 진영 난장이 있으면 '재입장 · N명' 배지
 
   // 최근 50개 로드 (RLS가 내 진영만 반환)
   const list = document.getElementById("fc-list");
@@ -508,6 +509,20 @@ function closeFactionChat() {
 /* 🔥 난장 파이프라인 — 같은 편만. 이슈×진영 전용 난장(kind='faction')을 찾거나 만들고 입장.
    서버(issue_faction_room)가 '내 투표=이 진영'을 검증하므로 적군은 애초에 못 들어온다.
    (반대 진영을 한 방에 몰아넣는 유도는 없음 — 그건 개싸움이 되니까. 각 진영은 각자의 난장.) */
+/* 이미 열린 우리 진영 난장이 있으면 버튼을 '재입장 · N명 참전 중'으로 — issue_faction_room_peek */
+async function refreshNanjangBadge() {
+  const btn = document.getElementById("fc-nanjang");
+  if (!btn) return;
+  try {
+    const { data } = await window.supabaseClient.rpc("issue_faction_room_peek", { p_issue: window.CURRENT_ISSUE_ID });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row && row.room_id) {
+      btn.classList.add("live");
+      btn.innerHTML = `🔥 난장 다시 입장 <i>이미 ${row.member_count}명 참전 중 · 아군 총집결</i>`;
+    }
+  } catch (_) {}
+}
+
 let NANJANG_BUSY = false;
 async function escalateToNanjang() {
   if (NANJANG_BUSY) return;
@@ -836,6 +851,48 @@ function renderMorale() {
 
   // 슬림 전황 수치 채우기 (전황표 3박스를 이 한 줄로 통합)
   renderWarDashboard();
+  renderBillboard();        // 🏆 명예의 전당(빌보드) 복원 — 항상 최신 상태와 동기화
+}
+
+/* 🏆 명예의 전당(빌보드) — 영향력 최상위 댓글 TOP3(진영색). 클릭 시 그 댓글로 스크롤.
+   b1ebefb 단일리스트 개편 때 사라졌던 빌보드 복원(사장님 요청). allRows만 써서 추가쿼리 0. */
+function renderBillboard() {
+  const host = document.querySelector(".comment-war-header");
+  if (!host) return;
+  const ranked = allRows
+    .filter(c => (c.faction === "pro" || c.faction === "con") && influence(c) > 0)
+    .sort((a, b) => influence(b) - influence(a))
+    .slice(0, 3);
+  let box = document.getElementById("battle-billboard");
+  if (!ranked.length) { if (box) box.remove(); return; }
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "battle-billboard";
+    box.className = "billboard-board";
+    (document.getElementById("battle-morale") || host).after(box);
+  }
+  const medals = ["🥇", "🥈", "🥉"];
+  const nameOf = (c) => c.is_anonymous ? "익명 전사" : (profileMap[c.user_id]?.nickname || actorName(c.user_id));
+  box.innerHTML = `<div class="bb-title">🏆 명예의 전당 · 최강 전사</div>
+    <div class="bb-list">` + ranked.map((c, i) => `
+      <button type="button" class="bb-card ${c.faction}" data-goto="${c.id}">
+        <span class="bb-rank">${medals[i]}</span>
+        <span class="bb-mid">
+          <b class="bb-name">${c.faction === "pro" ? "👍" : "👎"} ${escT(nameOf(c))}</b>
+          <span class="bb-quote">${escT((c.content || "").replace(/\s+/g, " ").slice(0, 42))}</span>
+        </span>
+        <span class="bb-power">⚡${combatPower(c)}</span>
+      </button>`).join("") + `</div>`;
+  box.querySelectorAll("[data-goto]").forEach(btn => {
+    btn.onclick = () => scrollToComment(btn.dataset.goto);
+  });
+}
+function scrollToComment(id) {
+  const el = document.querySelector(`.comment[data-id="${id}"], .reply[data-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.add("hl");
+  setTimeout(() => el.classList.remove("hl"), 1600);
 }
 
 /* ======================

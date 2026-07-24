@@ -28,8 +28,8 @@ export async function loadStats(issueId) {
     gender_vote: data.gender_vote || [],
     age_vote: data.age_vote || [],
     region_vote: data.region_vote || [],
-    ai_summary: "AI 종합 분석은 준비 중입니다.",
   };
+  stats.ai_summary = buildSummary(stats, total);   // 실데이터 종합(클라 계산·무료)
 
   unlockAllStats();
   renderAllStats(stats);
@@ -127,13 +127,15 @@ function lockAllStats(total) {
   if (locked) {
     locked.hidden = false;
 
-    // 기존 안내 구조를 유지하면서 desc만 갱신
+    // 기존 안내 구조를 유지하면서 desc만 갱신 + 실시간 참여 진행바(참여 유도)
     const desc = locked.querySelector(".ai-news-placeholder-desc");
     if (desc) {
+      const pct = Math.min(100, Math.round((total / MIN_PARTICIPANTS) * 100));
+      const left = Math.max(0, MIN_PARTICIPANTS - total);
       desc.innerHTML = `
-        현재 참여자 <b>${total}명</b><br>
-        참여자가 <b>${MIN_PARTICIPANTS}명 이상</b> 모이면<br>
-        여론 통계가 공개됩니다.
+        지금 <b>${total}명</b> 참전 중 · <b>${left}명</b> 더 모이면 통계 공개!
+        <div class="stats-progress"><i style="width:${pct}%"></i></div>
+        <div class="stats-progress-cap">${total} / ${MIN_PARTICIPANTS}명</div>
       `;
     }
   }
@@ -340,8 +342,44 @@ function renderVoteBar(selector, rows) {
   giReveal(root.querySelector(".gi-diverge"));
 }
 
+/* 📊 데이터 종합 브리핑 — 성별/나이대/지역 찬반에서 특징을 뽑아 문장으로.
+   AI가 아니라 '집계된 실데이터'를 그대로 말로 옮긴 것(비용 0·과장 없음). */
+function buildSummary(stats, total) {
+  const parts = [];
+  const lead = (rows) => {
+    if (!rows || !rows.length) return null;
+    let topPro = null, topCon = null;
+    rows.forEach(r => {
+      if (!topPro || r.pro > topPro.pro) topPro = r;
+      if (!topCon || r.con > topCon.con) topCon = r;
+    });
+    return { topPro, topCon };
+  };
+
+  const g = lead(stats.gender_vote);
+  if (g && g.topPro) {
+    if (g.topPro.label === g.topCon.label) {
+      parts.push(`성별로는 <b>${esc(g.topPro.label)}</b>의 목소리가 가장 크고(찬 ${g.topPro.pro}% · 반 ${g.topPro.con}%)`);
+    } else {
+      parts.push(`<b>${esc(g.topPro.label)}</b>은 찬성(${g.topPro.pro}%), <b>${esc(g.topCon.label)}</b>은 반대(${g.topCon.con}%)로 갈렸고`);
+    }
+  }
+  const a = lead(stats.age_vote);
+  if (a && a.topPro) {
+    parts.push(`나이대는 <b>${esc(a.topPro.label)}</b>가 가장 찬성(${a.topPro.pro}%)${a.topCon && a.topCon.label !== a.topPro.label ? `, <b>${esc(a.topCon.label)}</b>가 가장 반대(${a.topCon.con}%)` : ""}`);
+  }
+  const r = lead(stats.region_vote);
+  if (r && r.topPro) {
+    parts.push(`지역별로는 <b>${esc(r.topPro.label)}</b>에서 찬성세가 두드러집니다(${r.topPro.pro}%)`);
+  }
+
+  if (!parts.length) return `참여자 <b>${total}명</b>의 응답을 집계했어요. 성별·나이대·지역별 세부 분포는 위 차트에서 확인하세요.`;
+  return `참여자 <b>${total}명</b> 기준 — ` + parts.join(", ") + ".";
+}
+
 function renderAiSummary(text) {
   const root = qs("#ai-summary");
   if (!root) return;
-  root.innerHTML = text || "AI 종합 의견을 분석 중입니다.";
+  root.innerHTML = text || `집계된 응답으로 종합 브리핑을 준비 중입니다.`;
 }
+function esc(s) { return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
