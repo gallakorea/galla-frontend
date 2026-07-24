@@ -455,28 +455,37 @@ async function fetchPlazaPosts() {
 
   if (error) {
     console.error("❌ plaza fetch error:", error);
+    if (plazaListEl) plazaListEl.innerHTML =
+      `<li class="plaza-post empty">광장을 불러오지 못했어요. <button type="button" id="plaza-retry" style="color:#7aa0ff;background:none;border:0;font-weight:800;cursor:pointer">다시 시도</button></li>`;
+    document.getElementById("plaza-retry")?.addEventListener("click", () => fetchPlazaPosts());
     return;
   }
 
   const posts = data || [];
 
+  // ⚠️ 아래 보강 조회(프로필/저장/투표)는 '있으면 좋은' 부가정보다.
+  //    하나라도 실패해도 목록 자체는 반드시 떠야 한다 — 예전엔 여기서 던지면 광장이 통째로 백지가 됐다.
   // 작성자 배지(아바타·등급)용 프로필 프리페치
-  if (window.GALLA_userMap) await window.GALLA_userMap(posts.map(p => p.user_id));
+  try {
+    if (window.GALLA_userMap) await window.GALLA_userMap(posts.map(p => p.user_id));
+  } catch (e) { console.warn("[plaza] userMap skip:", e); }
 
   // 내 저장/투표 상태 로드 (로그인 시)
   MY_PLAZA_SAVED = {};
   MY_PLAZA_VOTES = {};
-  const { data: sess } = await supabase.auth.getSession();
-  PLAZA_ME = sess?.session?.user || null;
-  if (PLAZA_ME && posts.length) {
-    const ids = posts.map(p => p.id);
-    const [{ data: bms }, { data: votes }] = await Promise.all([
-      supabase.from("plaza_bookmarks").select("post_id").eq("user_id", PLAZA_ME.id).in("post_id", ids),
-      supabase.from("plaza_votes").select("post_id, vote").eq("user_id", PLAZA_ME.id).in("post_id", ids)
-    ]);
-    (bms || []).forEach(b => { MY_PLAZA_SAVED[b.post_id] = true; });
-    (votes || []).forEach(v => { MY_PLAZA_VOTES[v.post_id] = v.vote; });
-  }
+  try {
+    const { data: sess } = await supabase.auth.getSession();
+    PLAZA_ME = sess?.session?.user || null;
+    if (PLAZA_ME && posts.length) {
+      const ids = posts.map(p => p.id);
+      const [bmRes, vRes] = await Promise.all([
+        supabase.from("plaza_bookmarks").select("post_id").eq("user_id", PLAZA_ME.id).in("post_id", ids),
+        supabase.from("plaza_votes").select("post_id, vote").eq("user_id", PLAZA_ME.id).in("post_id", ids)
+      ]);
+      (bmRes.data || []).forEach(b => { MY_PLAZA_SAVED[b.post_id] = true; });
+      (vRes.data || []).forEach(v => { MY_PLAZA_VOTES[v.post_id] = v.vote; });
+    }
+  } catch (e) { console.warn("[plaza] my-state skip:", e); }
 
   renderPlazaPosts(posts);
 }
@@ -495,6 +504,7 @@ function proxifyThumb(u) {
 }
 
 function renderPlazaPosts(posts) {
+  if (!plazaListEl) { console.warn("[plaza] .plaza-list 없음 — 렌더 스킵"); return; }
   plazaListEl.innerHTML = "";
 
   if (posts.length === 0) {
@@ -784,7 +794,8 @@ supabase
   )
   .subscribe();
 
-fetchPlazaPosts();
+// 초기 로드 — 실패해도 조용히 죽지 않게(리트라이 UI는 함수 내부에서 처리)
+fetchPlazaPosts().catch(e => console.error("[plaza] 초기 로드 실패:", e));
 
 /* 광장 발행 후 이 화면으로 착지했으면 완료 토스트를 여기서 띄운다(이동 뒤라 확실히 보임) */
 try {
