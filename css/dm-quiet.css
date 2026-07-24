@@ -1594,11 +1594,22 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 .dm-view .dm-msgs { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
 .dm-inputbar {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 8;
-  background: rgba(38,40,50,.42) !important;      /* 밝은 유리 톤 — 순흑 위에서도 또렷 */
+  /* ⚠️ WKWebView(아이폰 앱)는 셸(#shell-track transform)의 iframe 안에선 backdrop-filter를
+     렌더하지 않는다 → blur만 믿으면 '유리효과 안 뜸'(사장님 재현). 그래서 blur 없이도 유리로
+     읽히는 반투명 그라디언트 + 상단 하이라이트로 기본 룩을 만들고, blur는 지원 기기에 보너스로. */
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,0) 42%) ,
+    linear-gradient(180deg, rgba(44,47,60,.82), rgba(24,26,35,.94)) !important;
   backdrop-filter: blur(26px) saturate(1.8) brightness(1.15);
   -webkit-backdrop-filter: blur(26px) saturate(1.8) brightness(1.15);
-  border-top: 1px solid rgba(255,255,255,.12) !important;
-  box-shadow: 0 -10px 30px rgba(0,0,0,.35);
+  border-top: 1px solid rgba(255,255,255,.14) !important;
+  box-shadow: 0 -12px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+}
+/* backdrop-filter가 '실제로' 도는 기기(=셸 밖 단독 웹 등)에선 더 투명한 진짜 유리로 */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body:not(.in-shell) .dm-inputbar {
+    background: rgba(38,40,50,.42) !important;
+  }
 }
 .dm-inputbar textarea {
   background: rgba(255,255,255,.14) !important;   /* 또렷한 반투명 입력 필 */
