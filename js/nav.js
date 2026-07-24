@@ -100,6 +100,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (SHELL_MODE) {
     document.body.classList.add("in-shell");   // 상세 포함 모든 판 페이지: 자기 네비 숨김(셸 네비가 유일)
+
+    /* 🧭 셸 네비 숨김 중계 — 모든 셸 페이지 공통(탭루트뿐 아니라 이슈 등 서브페이지도).
+       DM 상세(dm-detail)·댓글 컴포저(kb-open)에서 키보드가 열리면 셸 네비가 입력창 위로
+       떠서 겹친다(사장님 재현: 이슈 입력창이 네비에 가림). body 클래스 변화를 셸로 중계해 숨김.
+       ⚠️ 이전엔 isTabRoot 블록 안에만 있어 이슈 페이지엔 안 걸렸다. */
+    (function () {
+      let lastNavHide = null;
+      const relay = () => {
+        const on = document.body.classList.contains("dm-detail")
+                || document.body.classList.contains("kb-open");
+        if (on === lastNavHide) return;
+        lastNavHide = on; postShell({ t: "navhide", on });
+      };
+      new MutationObserver(relay).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      window.addEventListener("message", (e) => {
+        if (e.origin !== location.origin) return;
+        if (e.data && e.data.galla === "shellcmd" && e.data.t === "active") relay();
+      });
+    })();
     /* 다른 '탭'으로 가는 클릭 가로채기 — 상세 페이지에서도 동일 적용 */
     const TAB_OF = { "index.html": "index", "galla-predict.html": "predict", "dm.html": "dm", "search.html": "trend", "mypage.html": "mypage" };
     const tabOfUrl = (u) => TAB_OF[(u || "").split("?")[0].split("#")[0].split("/").pop()] || null;
@@ -343,25 +362,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const IN_SHELL = SHELL_MODE;
     if (IN_SHELL && isTabRoot) {
       const post = postShell;
-
-      /* DM 상세(채팅방·난장·1:1)에선 셸 네비를 숨긴다 — 안 숨기면 입력창이
-         네비에 가려 안 보였다(사장님 재현). body.dm-detail 토글을 셸로 중계.
-         ⊕ 이슈 댓글 컴포저(body.kb-open)도 동일 — 키보드가 열리면 셸 네비가
-           입력창 위로 떠서 겹쳤다. kb-open일 때도 셸 네비를 숨긴다(모든 페이지 공통). */
-      let lastNavHide = null;
-      const relayNavHide = () => {                 // 상태가 '바뀔 때만' 중계 —
-        const on = document.body.classList.contains("dm-detail")
-                || document.body.classList.contains("kb-open");  // 스크롤 헤더축소 등
-        if (on === lastNavHide) return;            // 잦은 class 변경에 매번 쏘던 낭비 제거
-        lastNavHide = on; post({ t: "navhide", on });
-      };
-      new MutationObserver(relayNavHide)
-        .observe(document.body, { attributes: true, attributeFilter: ["class"] });
-      window.addEventListener("message", (e) => {
-        if (e.origin !== location.origin) return;
-        const m = e.data;
-        if (m && m.galla === "shellcmd" && m.t === "active") relayNavHide();   // 탭 복귀 시 상태 재보고
-      });
+      /* navhide(네비 숨김) 중계는 위 SHELL_MODE 블록으로 이관 — 이슈 등 서브페이지도 커버. */
 
       // 셸 → 판 명령 수신 (조그셔틀의 DM 탭 지정, 재탭 시 맨위로 등)
       window.addEventListener("message", (e) => {
