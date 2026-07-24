@@ -49,7 +49,7 @@
       .cmt-sheet .opt:active{background:rgba(255,255,255,.06)}
       .cmt-sheet .cancel{width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer}
       @keyframes cmtUp{from{transform:translateY(100%)}}
-      .cmt-edit{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px}
+      .cmt-edit{position:fixed;inset:0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:calc(64px + env(safe-area-inset-top)) 16px 16px}
       .cmt-edit .dim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
       .cmt-edit .box{position:relative;width:100%;max-width:440px;background:#16171c;border:1px solid rgba(255,255,255,.12);
         border-radius:18px;padding:16px;animation:cmtUp .2s ease}

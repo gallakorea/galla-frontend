@@ -130,11 +130,11 @@
   window.GALLA_toast = function (msg, ms) {
     if (!document.getElementById("galla-toast-css")) {
       const st = document.createElement("style"); st.id = "galla-toast-css";
-      st.textContent = ".galla-toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));" +
-        "transform:translate(-50%,12px);z-index:2147483000;background:rgba(28,30,38,.97);color:#fff;" +
-        "font-size:14.5px;font-weight:800;padding:12px 20px;border-radius:14px;border:1px solid rgba(255,255,255,.12);" +
-        "box-shadow:0 12px 34px rgba(0,0,0,.5);opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;max-width:82vw;text-align:center}" +
-        ".galla-toast.on{opacity:1;transform:translate(-50%,0)}";
+      st.textContent = ".galla-toast{position:fixed;left:50%;top:44%;" +
+        "transform:translate(-50%,-50%) scale(.92);z-index:2147483000;background:rgba(24,26,34,.98);color:#fff;" +
+        "font-size:15.5px;font-weight:800;padding:16px 26px;border-radius:16px;border:1px solid rgba(255,255,255,.14);" +
+        "box-shadow:0 20px 50px rgba(0,0,0,.6);opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:82vw;text-align:center}" +
+        ".galla-toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}";
       (document.head || document.documentElement).appendChild(st);
     }
     const t = document.createElement("div"); t.className = "galla-toast"; t.textContent = msg;

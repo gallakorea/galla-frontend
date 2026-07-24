@@ -179,7 +179,7 @@
         const { error } = await client.from(cfg.table).update(patch).eq('id', cfg.id);
         if (error) throw error;
         closeSheet();
-        toast('✅ 수정되었습니다');
+        (window.GALLA_toast || toast)('✅ 수정되었습니다');
         // 이동/리로드(onSaved)가 토스트를 덮지 않게 잠깐 뒤에 실행
         setTimeout(() => { if (cfg.onSaved) cfg.onSaved(patch); }, 1000);
       } catch (e) {
@@ -221,7 +221,7 @@
           throw error;
         }
         closeSheet();
-        toast('🗑️ 삭제되었습니다');
+        (window.GALLA_toast || toast)('🗑️ 삭제되었습니다');
         // 페이지 이동(onDeleted)이 토스트를 덮지 않게 잠깐 뒤에 실행
         setTimeout(() => { if (cfg.onDeleted) cfg.onDeleted(); }, 1100);
       } catch (e) {
