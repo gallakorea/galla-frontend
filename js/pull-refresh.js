@@ -1,94 +1,95 @@
 /* ─────────────────────────────────────────────────────────────
-   pull-refresh.js — 전 페이지 공통 '당겨서 새로고침'
-   · 스크롤 최상단에서 아래로 당기면 스피너가 내려오고, 임계치(70px) 넘겨 놓으면 reload.
-   · 세로·최상단일 때만 동작 → 가로 스와이프(셸 탭 전환)와 충돌 없음.
-   · window 스크롤뿐 아니라 내부 스크롤 컨테이너(DM 등)도 그 컨테이너가 최상단일 때만.
-   셸(iframe) 안이면 그 판(현재 페이지)만 새로고침된다.
+   pull-refresh.js — 전 페이지 공통 '당겨서 새로고침' (인스타식 세련된 동작)
+   · 최상단에서 아래로 당기면 헤더 아래 중앙에 미니멀 스피너가 페이드·스케일로 나타나고,
+     당길수록 회전. 임계치 넘겨 놓으면 계속 돌다가 새로고침.
+   · 세로·최상단일 때만 → 가로 탭 스와이프 무충돌. 릴스(#shortsOverlay)·[data-no-ptr] 비활성.
+   · 리로드는 '맨 위'에서 시작(헤더 로고가 스크롤 복원으로 숨는 것 방지).
    ───────────────────────────────────────────────────────────── */
 (function () {
-  if (window.__gallaPTR) return;          // 중복 로드 방지
+  if (window.__gallaPTR) return;
   window.__gallaPTR = true;
 
-  var THRESH = 70, MAXPULL = 110;
-  var startY = 0, startX = 0, pulling = false, dist = 0, active = false, ind = null, spin = null;
+  var TRIG = 88;                 // 새로고침 발동 임계치(px)
+  var startY = 0, startX = 0, pulling = false, dy = 0, active = false, ind = null, spin = null;
 
   function winTop() {
     return (window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 0;
   }
-  // 터치 시작 지점의 조상 중 스크롤 컨테이너가 있으면, 그게 최상단인지 확인
   function containerTop(el) {
     for (var n = el; n && n !== document.body && n !== document.documentElement; n = n.parentElement) {
-      var oy;
-      try { oy = getComputedStyle(n).overflowY; } catch (_) { oy = ""; }
-      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 2) {
-        return n.scrollTop <= 0;
-      }
+      var oy; try { oy = getComputedStyle(n).overflowY; } catch (_) { oy = ""; }
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight + 2) return n.scrollTop <= 0;
     }
     return true;
   }
-  // PTR 금지 상황: 릴스(세로 스와이프 충돌) / opt-out 영역([data-no-ptr])
   function blocked(target) {
-    if (document.getElementById("shortsOverlay")) return true;   // 릴스 열림
-    for (var n = target; n && n.nodeType === 1; n = n.parentElement) {
+    if (document.getElementById("shortsOverlay")) return true;      // 릴스
+    for (var n = target; n && n.nodeType === 1; n = n.parentElement)
       if (n.getAttribute && n.getAttribute("data-no-ptr") != null) return true;
-    }
     return false;
   }
   function ensureInd() {
     if (ind) return ind;
     var st = document.createElement("style");
     st.textContent =
-      "#galla-ptr{position:fixed;top:0;left:50%;width:38px;height:38px;margin-left:-19px;" +
-      "border-radius:50%;background:rgba(20,21,26,.97);border:1px solid rgba(255,255,255,.12);" +
-      "display:flex;align-items:center;justify-content:center;z-index:2147483600;pointer-events:none;" +
-      "box-shadow:0 6px 20px rgba(0,0,0,.5);transform:translateY(-52px);opacity:0}" +
-      "#galla-ptr i{width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.22);" +
-      "border-top-color:#6f86ff;display:block}" +
-      "#galla-ptr.on i{animation:gptr .7s linear infinite}" +
-      "#galla-ptr.snap{transition:transform .22s ease,opacity .22s ease}" +
-      "@keyframes gptr{to{transform:rotate(360deg)}}";
+      "#galla-ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 58px);" +
+      "width:30px;height:30px;margin-left:-15px;z-index:2147483600;pointer-events:none;" +
+      "opacity:0;transform:translateY(-6px) scale(.55)}" +
+      "#galla-ptr.snap{transition:opacity .28s ease,transform .28s cubic-bezier(.2,.85,.3,1)}" +
+      "#galla-ptr i{display:block;width:28px;height:28px;border-radius:50%;" +
+        "background:conic-gradient(from 8deg,rgba(160,172,196,0) 0deg,rgba(190,200,222,.10) 60deg,rgba(226,232,246,.95) 355deg);" +
+        "-webkit-mask:radial-gradient(farthest-side,#0000 calc(100% - 3px),#000 0);" +
+        "mask:radial-gradient(farthest-side,#0000 calc(100% - 3px),#000 0)}" +
+      "#galla-ptr.on{opacity:1 !important;transform:translateY(0) scale(1) !important}" +
+      "#galla-ptr.on i{animation:gptrSpin .62s linear infinite}" +
+      "@keyframes gptrSpin{to{transform:rotate(360deg)}}";
     (document.head || document.documentElement).appendChild(st);
     ind = document.createElement("div"); ind.id = "galla-ptr";
     spin = document.createElement("i"); ind.appendChild(spin);
     document.body.appendChild(ind);
     return ind;
   }
-  function place(y, op) { ensureInd(); ind.style.transform = "translateY(" + y + "px)"; ind.style.opacity = op; }
+  // 당기는 동안: 진행도(0~1)에 따라 페이드·스케일·회전 (손가락 추종, transition 없음)
+  function drag(d) {
+    ensureInd();
+    ind.classList.remove("snap", "on");
+    var p = Math.max(0, Math.min(d / TRIG, 1));           // 0~1
+    var over = Math.max(0, d - TRIG);
+    ind.style.opacity = Math.min(1, d / 44);
+    ind.style.transform = "translateY(" + Math.min(d * 0.35, 30) + "px) scale(" + (0.55 + 0.45 * p) + ")";
+    if (spin) spin.style.transform = "rotate(" + (d * 2.6 + over * 1.5) + "deg)";
+  }
+  function reset() { if (ind) { ind.classList.add("snap"); ind.classList.remove("on"); ind.style.opacity = "0"; ind.style.transform = "translateY(-6px) scale(.55)"; } }
 
   document.addEventListener("touchstart", function (e) {
     if (active || e.touches.length !== 1) { pulling = false; return; }
-    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dist = 0;
+    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dy = 0;
     pulling = winTop() && containerTop(e.target) && !blocked(e.target);
-    if (ind) ind.classList.remove("snap");
   }, { passive: true });
 
   document.addEventListener("touchmove", function (e) {
     if (!pulling || active) return;
-    var dy = e.touches[0].clientY - startY;
-    var dx = e.touches[0].clientX - startX;
-    if (dy <= 0 || Math.abs(dx) > Math.abs(dy)) { pulling = false; if (ind) { ind.classList.add("snap"); place(-52, 0); } return; }
-    e.preventDefault();                       // 당기는 동안 네이티브 바운스 억제
-    dist = dy;
-    var pull = Math.min(dy * 0.5, MAXPULL);   // 저항감
-    place(-52 + Math.min(pull + 52, 68), Math.min(1, pull / THRESH));
-    if (spin) spin.style.transform = "rotate(" + (pull * 4) + "deg)";
+    var ny = e.touches[0].clientY - startY;
+    var nx = e.touches[0].clientX - startX;
+    if (ny <= 0 || Math.abs(nx) > Math.abs(ny)) { pulling = false; reset(); return; }
+    e.preventDefault();
+    dy = ny * 0.6;                 // 고무줄 저항감
+    drag(dy);
   }, { passive: false });
 
   document.addEventListener("touchend", function () {
     if (!pulling) return;
     pulling = false;
-    if (dist * 0.5 >= THRESH && !active) {
+    if (dy >= TRIG && !active) {
       active = true;
-      ensureInd(); ind.classList.add("on", "snap");
-      place(16, 1);
+      ensureInd(); ind.classList.add("snap", "on");   // 제자리에서 계속 회전
       setTimeout(function () {
-        // 새로고침은 '맨 위'에서 시작해야 헤더 로고가 보인다(nav.js가 스크롤 복원>10px면 로고 숨김).
-        try { history.scrollRestoration = "manual"; } catch (_) {}
+        try { history.scrollRestoration = "manual"; } catch (_) {}   // 맨 위에서 시작(로고 보이게)
         try { window.scrollTo(0, 0); } catch (_) {}
         location.reload();
-      }, 280);
-    } else if (ind) {
-      ind.classList.add("snap"); place(-52, 0);
+      }, 420);
+    } else {
+      reset();
     }
   }, { passive: true });
 })();
