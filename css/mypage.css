@@ -918,3 +918,11 @@ body{
 .av-act:active .av-act-ic{ background:rgba(255,255,255,.24); }
 .av-act .av-act-ic svg{ width:24px; height:24px; }
 .av-act b{ font-size:13px; font-weight:600; color:#eef0f4; }
+
+/* iOS 롱프레스 시 뜨는 네이티브 이미지 메뉴(Share/Save/Copy) 차단 —
+   아바타 꾹 누르면 우리 전체보기 뷰어만 뜨게(사장님 제보: 네이티브 메뉴가 겹침) */
+.profile-img, .av-photo, .av-bg{
+  -webkit-touch-callout: none;
+  -webkit-user-select: none; user-select: none;
+  -webkit-user-drag: none;
+}

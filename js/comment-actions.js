@@ -50,13 +50,13 @@
       .cmt-sheet .opt:active{background:rgba(255,255,255,.06)}
       .cmt-sheet .cancel{width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer}
       @keyframes cmtUp{from{transform:translateY(100%)}}
-      .cmt-edit{position:fixed;inset:0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:calc(64px + env(safe-area-inset-top)) 16px 16px}
-      .cmt-edit .dim{position:absolute;inset:0;background:rgba(0,0,0,.6)}
-      .cmt-edit .box{position:relative;width:100%;max-width:440px;background:#16171c;border:1px solid rgba(255,255,255,.12);
-        border-radius:18px;padding:16px;animation:cmtUp .2s ease}
+      .cmt-edit{position:fixed;inset:0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:calc(84px + env(safe-area-inset-top)) 14px 14px;box-sizing:border-box}
+      .cmt-edit .dim{position:absolute;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(2px)}
+      .cmt-edit .box{position:relative;width:100%;max-width:440px;box-sizing:border-box;background:#16171c;border:1px solid rgba(255,255,255,.12);
+        border-radius:18px;padding:16px;animation:cmtUp .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.6)}
       .cmt-edit h4{margin:0 0 10px;color:#f5f5f2;font-size:15px}
-      .cmt-edit textarea{width:100%;min-height:110px;background:#0c0c0f;border:1px solid rgba(255,255,255,.14);
-        border-radius:12px;color:#fff;padding:12px;font-size:15px;font-family:inherit;line-height:1.5;resize:vertical}
+      .cmt-edit textarea{width:100%;box-sizing:border-box;min-height:84px;max-height:40vh;background:#0c0c0f;border:1px solid rgba(255,255,255,.14);
+        border-radius:12px;color:#fff;padding:12px;font-size:15px;font-family:inherit;line-height:1.5;resize:none}
       .cmt-edit .row{display:flex;gap:8px;margin-top:12px}
       .cmt-edit .row button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:900;font-size:14px;cursor:pointer}
       .cmt-edit .save{background:linear-gradient(135deg,#3d6bff,#5b8cff);color:#fff}
