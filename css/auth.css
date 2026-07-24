@@ -1,4 +1,8 @@
 
+/* 앱 셸(하단 네비 72px)이 로그인/가입 카드 하단(간편로그인 버튼)을 가리는 것 방지.
+   auth-wrap은 세로 중앙정렬이라 하단 여백을 키우면 카드가 네비 위로 올라온다. */
+.auth-wrap { padding-bottom: calc(92px + env(safe-area-inset-bottom)) !important; }
+
 /* ═══════════ 🔐 소셜 로그인 버튼 + 온보딩 (2026-07-24) ═══════════ */
 .social-auth { margin-top: 18px; display: flex; flex-direction: column; gap: 9px; }
 .social-div { display: flex; align-items: center; gap: 10px; color: #6b7080; font-size: 12px; font-weight: 700; margin: 6px 0 8px; }

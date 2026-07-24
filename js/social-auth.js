@@ -110,7 +110,11 @@
       location.replace("index.html");
       return true;
     } catch (e) {
-      if (e && e.name === "NotAllowedError") return false; // 취소/등록된 패스키 없음
+      // NotAllowedError = 사용자가 취소했거나, 이 기기에 등록된 패스키가 없음
+      if (e && e.name === "NotAllowedError") {
+        alert("사용할 패스키가 없어요.\n먼저 구글/이메일로 로그인한 뒤,\n설정 → '이 기기에 패스키 등록'을 하면 다음부터 패스키로 로그인할 수 있어요. 🔑");
+        return false;
+      }
       alert("패스키 로그인 실패 — " + (e?.message || "다시 시도해 주세요."));
       return false;
     }
