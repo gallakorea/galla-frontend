@@ -61,15 +61,15 @@
       bg: "radial-gradient(120% 90% at 50% 8%, #10233a, #060e18 62%, #05080d)",
       kicker: "룰 #1",
       title: "편을 골라야 입장",
-      sub: "👍 이오, 아니면 👎 아니오.<br>당신이 누른 순간 <b>진영바가 요동칩니다.</b>",
+      sub: "👍 찬성이냐 👎 반대냐, 딱 하나만 고르면 끝.<br>당신이 누른 순간 <b>진영바가 요동칩니다.</b>",
       art: artVoteBar
     },
     {
       bg: "radial-gradient(120% 90% at 50% 8%, #2a2306, #140f04 62%, #0a0803)",
       kicker: "말로만 싸우기? 노잼",
-      title: "예측에 GP 걸고 잭팟",
-      sub: "누가 이길지 맞히면 대박.<br>연승 콤보 터지면 🔥 <b>×5 배당</b> 🔥",
-      art: artJackpot
+      title: "결과를 예측하고 적중시켜라 🎯",
+      sub: "누가 이길지 맞히면 <b>대박 보너스</b>.<br>연승 이어가면 🔥 <b>리턴 ×5</b> 🔥",
+      art: artPredict
     },
     {
       bg: "radial-gradient(120% 90% at 50% 8%, #06281f, #04140f 62%, #030a08)",
@@ -483,16 +483,22 @@
       '<text class="gt-vpop" x="120" y="34" fill="#ffd166" font-size="20" font-weight="900" text-anchor="middle">+1 참전!</text>' +
       "</svg>";
   }
-  function artJackpot() {
+  function artPredict() {
     var coins = "";
     for (var i = 0; i < 9; i++) {
-      coins += '<text class="gt-coin" style="--i:' + i + ';--x:' + (24 + i * 26) + '" x="' + (24 + i * 26) + '" y="0" font-size="20">🪙</text>';
+      coins += '<text class="gt-coin" style="--i:' + i + ';--x:' + (24 + i * 26) + '" x="' + (24 + i * 26) + '" y="0" font-size="18">🪙</text>';
     }
+    // 슬롯머신(사행성 이미지) 대신 과녁+명중 다트 — '예측 적중' 컨셉
     return '<svg class="gt-art" viewBox="0 0 260 160" aria-hidden="true">' +
-      '<g transform="translate(0,26)">' + coins + "</g>" +
-      '<rect x="66" y="70" width="128" height="70" rx="12" fill="#141824" stroke="#ffd166" stroke-width="2"/>' +
-      '<g class="gt-slot"><text x="94" y="118" font-size="30">7️⃣</text><text x="124" y="118" font-size="30">7️⃣</text><text x="154" y="118" font-size="30">7️⃣</text></g>' +
-      '<text class="gt-jack" x="130" y="60" fill="#ffd166" font-size="17" font-weight="900" text-anchor="middle">JACKPOT</text>' +
+      '<g transform="translate(0,20)">' + coins + "</g>" +
+      '<g class="gt-target">' +
+        '<circle cx="130" cy="98" r="46" fill="none" stroke="#3a4050" stroke-width="10"/>' +
+        '<circle cx="130" cy="98" r="32" fill="none" stroke="#5a6270" stroke-width="10"/>' +
+        '<circle cx="130" cy="98" r="18" fill="#ff4d67"/>' +
+        '<circle cx="130" cy="98" r="6" fill="#fff"/>' +
+      "</g>" +
+      '<text class="gt-dart" x="150" y="86" font-size="30">🎯</text>' +
+      '<text class="gt-hit" x="130" y="42" fill="#ffd166" font-size="16" font-weight="900" text-anchor="middle">적중!</text>' +
       "</svg>";
   }
   function artMessenger() {
@@ -682,9 +688,10 @@
       "@keyframes gtPop{0%,42%{opacity:0;transform:translateY(6px)}55%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-10px)}}",
       ".gt-coin{opacity:0}.gt-slide.live .gt-coin{animation:gtCoin 1.5s linear infinite;animation-delay:calc(var(--i)*.13s)}",
       "@keyframes gtCoin{0%{opacity:0;transform:translateY(-30px)}10%{opacity:1}90%{opacity:1}100%{opacity:0;transform:translateY(96px)}}",
-      ".gt-slot{transform-origin:center}.gt-slide.live .gt-slot{animation:gtShake .35s ease-in-out infinite}",
-      "@keyframes gtShake{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}",
-      ".gt-jack{transform-origin:130px 54px}.gt-slide.live .gt-jack{animation:gtVs .6s ease-in-out infinite}",
+      ".gt-target{transform-origin:130px 98px}.gt-slide.live .gt-target{animation:gtVs 1.4s ease-in-out infinite}",
+      ".gt-dart{transform-origin:150px 86px}.gt-slide.live .gt-dart{animation:gtDart 1.1s ease-out infinite}",
+      "@keyframes gtDart{0%{opacity:0;transform:translate(40px,-30px) rotate(30deg)}40%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:1;transform:translate(0,0)}}",
+      ".gt-hit{transform-origin:130px 42px}.gt-slide.live .gt-hit{animation:gtVs .6s ease-in-out infinite}",
       ".gt-slide.live .gt-phone{animation:gtFloat 2.6s ease-in-out infinite}",
       "@keyframes gtFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}",
       ".gt-pager{transform-origin:185px 133px}.gt-slide.live .gt-pager{animation:gtBuzz .22s linear infinite}",
