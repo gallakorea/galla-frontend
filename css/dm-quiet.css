@@ -1594,18 +1594,19 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 .dm-view .dm-msgs { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
 .dm-inputbar {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 8;
-  background: rgba(15,16,20,.55) !important;
-  backdrop-filter: blur(22px) saturate(1.7);
-  -webkit-backdrop-filter: blur(22px) saturate(1.7);
-  border-top: 1px solid rgba(255,255,255,.09) !important;
-  box-shadow: 0 -8px 24px rgba(0,0,0,.28);
+  background: rgba(38,40,50,.42) !important;      /* 밝은 유리 톤 — 순흑 위에서도 또렷 */
+  backdrop-filter: blur(26px) saturate(1.8) brightness(1.15);
+  -webkit-backdrop-filter: blur(26px) saturate(1.8) brightness(1.15);
+  border-top: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 0 -10px 30px rgba(0,0,0,.35);
 }
 .dm-inputbar textarea {
-  background: rgba(255,255,255,.09) !important;
-  border-color: rgba(255,255,255,.14) !important;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  background: rgba(255,255,255,.14) !important;   /* 또렷한 반투명 입력 필 */
+  border-color: rgba(255,255,255,.18) !important;
 }
-.dm-inputbar textarea:focus { border-color: rgba(122,150,255,.7) !important; background: rgba(255,255,255,.12) !important; }
+.dm-inputbar textarea:focus { border-color: rgba(140,165,255,.8) !important; background: rgba(255,255,255,.18) !important; }
+/* 유리 위 버튼도 살짝 밝게 떠 보이게 */
+.dm-inputbar .dm-attach, .dm-inputbar .dm-ib { background: rgba(255,255,255,.08); }
 /* 답장 미리보기·키보드 툴바 = 입력바 바로 위로, 같은 유리 톤 */
 .dm-reply-strip:not([hidden]), .dm-kbtool:not([hidden]) {
   position: absolute; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 7;
