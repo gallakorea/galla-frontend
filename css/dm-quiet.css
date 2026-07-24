@@ -1587,3 +1587,32 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 
 /* 난장 게이트 표시 중 메시지·입력바 숨김도 display 규칙에 지지 않게 */
 #dm-room-msgs[hidden], #dm-room-send[hidden] { display: none !important; }
+
+/* ═══════════ 카톡식 프로스트 입력 도크 (2026-07-24) ═══════════
+   입력바를 메시지 위에 반투명 유리로 띄운다. .dm-view가 position:absolute inset:0 이라
+   그 안에서 하단 절대배치 가능. 메시지는 아래로 흘러 유리 뒤로 비친다. */
+.dm-view .dm-msgs { padding-bottom: calc(64px + env(safe-area-inset-bottom)) !important; }
+.dm-inputbar {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 8;
+  background: rgba(15,16,20,.55) !important;
+  backdrop-filter: blur(22px) saturate(1.7);
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  border-top: 1px solid rgba(255,255,255,.09) !important;
+  box-shadow: 0 -8px 24px rgba(0,0,0,.28);
+}
+.dm-inputbar textarea {
+  background: rgba(255,255,255,.09) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.dm-inputbar textarea:focus { border-color: rgba(122,150,255,.7) !important; background: rgba(255,255,255,.12) !important; }
+/* 답장 미리보기·키보드 툴바 = 입력바 바로 위로, 같은 유리 톤 */
+.dm-reply-strip:not([hidden]), .dm-kbtool:not([hidden]) {
+  position: absolute; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 7;
+  background: rgba(15,16,20,.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+/* 녹음·이모티콘 패널 = 하단 전체 오버레이(입력 위) */
+.dm-ptt:not([hidden]), .dm-stk:not([hidden]) { position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; }
+/* 배경 테마 있는 방(dm-bg-host)에선 유리 뒤로 배경도 비침 */
+.dm-bg-host > .dm-inputbar { z-index: 8; }
