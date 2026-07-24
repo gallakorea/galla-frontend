@@ -163,10 +163,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             try {
                 // grade 페이지와 '완전히' 동일한 full 계산(merit·예측 포함)으로 통일
                 const g = window.GALLA_gallianOf ? await window.GALLA_gallianOf(supabase, viewUserId) : null;
-                const t = g?.tier || { icon: "🌱", name: "눈팅 뉴비" };
+                const t = g?.tier || { name: "🌱 눈팅 뉴비" };
                 const sl = g?.subLevel || 1;
+                // ⚠️ 등급(TIERS)엔 icon 필드가 없다 — 이모지가 name 앞에 붙어있다("🎤 여론 논객").
+                //    t.icon(undefined)을 칩에 넣어 '등급 아이콘이 안 뜨던' 버그. name에서 이모지를 뽑는다.
+                const tierIcon = (t.name || "🌱").trim().split(/\s+/)[0];
                 if (levelEl) levelEl.textContent = `${t.name} Lv.${sl}`;
-                if (tierChip) { tierChip.textContent = t.icon; tierChip.title = `${t.name} Lv.${sl}`; }
+                if (tierChip) { tierChip.textContent = tierIcon; tierChip.title = `${t.name} Lv.${sl}`; }
             } catch (_) { if (levelEl) levelEl.textContent = "눈팅 뉴비 Lv.1"; }
         })();
         // 전투력 = 이 유저가 벌인 전투 액션(공격/방어/지원) 총량
