@@ -3197,10 +3197,23 @@
       box.innerHTML = `<div class="dm-empty">아직 열린 난장이 없어요.<br><span>첫 판을 벌여보세요 — 주제는 자유.</span></div>`;
       return;
     }
+    // 🔥 지금 뜨는 난장 — 멤버수 + 최근 활동 열기(heat)로 랭킹. 미참여 방 중에서만.
+    const now = Date.now();
+    const heat = r => {
+      const last = new Date(r.last_message_at || r.created_at).getTime();
+      const h = (now - last) / 3.6e6;
+      const recency = h < 1 ? 30 : h < 6 ? 18 : h < 24 ? 8 : h < 72 ? 3 : 0;
+      return (r.member_count || 1) * 10 + recency;
+    };
+    const hot = others.filter(r => (r.member_count || 1) >= 2 && heat(r) >= 20)
+      .sort((a, b) => heat(b) - heat(a)).slice(0, 4);
+    const hotIds = new Set(hot.map(r => r.id));
+    const browse = others.filter(r => !hotIds.has(r.id));
     const sec = t => `<div class="dm-sec">${t}</div>`;
     box.innerHTML =
+      (hot.length ? sec('🔥 지금 뜨는 난장') + hot.map((r, i) => hotRoomRow(r, i + 1)).join('') : '') +
       (joined.length ? sec('참여 중') + joined.map(roomRow).join('') : '') +
-      (others.length ? sec('둘러보기') + others.map(roomRow).join('') : '');
+      (browse.length ? sec('둘러보기') + browse.map(roomRow).join('') : '');
     box.querySelectorAll('.dm-room-row').forEach(el => {
       el.addEventListener('click', () => {
         const r = ROOMS.find(x => x.id === el.dataset.rid);
@@ -3208,6 +3221,19 @@
       });
     });
     staggerRows(box, '.dm-room-row');
+  }
+  /* 🔥 인기 난장 랭킹 행 — 순위 + 멤버수 강조 */
+  function hotRoomRow(r, rank) {
+    return `
+      <button class="dm-thread dm-room-row dm-hot-room" data-rid="${r.id}">
+        <span class="dm-hot-rank">${rank}</span>
+        <span class="dm-ava" style="background:linear-gradient(135deg,${avatarColor(r.id)},#1a1c26)">${esc((r.title || '난').charAt(0))}</span>
+        <span class="dm-thread-mid">
+          <span class="dm-thread-name">${esc(r.title)}</span>
+          <span class="dm-thread-prev">${esc(r.topic || r.last_message || '새 난장')}</span>
+        </span>
+        <span class="dm-thread-side"><span class="dm-hot-cnt">${ICONS.crew}${r.member_count}</span></span>
+      </button>`;
   }
   function roomRow(r) {
     const t = r.last_message_at || r.created_at;

@@ -1668,3 +1668,12 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 .dm-pm-btns button { flex: 1; padding: 14px; border: none; border-radius: 13px; font-size: 15px; font-weight: 800; font-family: inherit; cursor: pointer; }
 .dm-pm-cancel { background: rgba(255,255,255,.07); color: #cfd3db; }
 .dm-pm-go { background: var(--accent-grad, linear-gradient(135deg,#6a7bff,#3a5bff)); color: #fff; box-shadow: var(--accent-glow,0 6px 22px rgba(67,97,255,.32)); }
+
+/* ═══════════ 🔥 인기 난장 랭킹 ═══════════ */
+.dm-hot-room { }
+.dm-hot-rank { flex: none; width: 22px; text-align: center; font-size: 15px; font-weight: 900;
+  color: #ff8a3d; font-style: italic; margin-right: -4px; }
+.dm-hot-room:nth-child(2) .dm-hot-rank { color: #ffcf5c; }   /* 1위 골드빛 */
+.dm-hot-cnt { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 800;
+  color: #ff9a3c; background: rgba(255,140,60,.12); padding: 3px 9px; border-radius: 999px; }
+.dm-hot-cnt svg { width: 12px; height: 12px; }
