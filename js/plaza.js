@@ -463,30 +463,40 @@ async function fetchPlazaPosts() {
 
   const posts = data || [];
 
-  // ⚠️ 아래 보강 조회(프로필/저장/투표)는 '있으면 좋은' 부가정보다.
-  //    하나라도 실패해도 목록 자체는 반드시 떠야 한다 — 예전엔 여기서 던지면 광장이 통째로 백지가 됐다.
+  // ✅ 목록을 '먼저' 그린다 — 아래 보강조회(프로필/저장/투표)는 있으면 좋은 부가정보일 뿐,
+  //    그게 실패하든 네트워크에서 멈추든(hang) 목록은 이미 떠 있어야 한다.
+  //    (예전엔 보강조회를 await한 뒤에야 렌더해서, 그게 삐끗하면 광장이 통째로 백지가 됐다.)
+  renderPlazaPosts(posts);
+  if (!posts.length) return;
+
+  // 5초 안에 안 끝나면 포기 — 어떤 부가조회도 목록을 인질로 잡지 못하게
+  const withTimeout = (p, ms = 5000) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
+
   // 작성자 배지(아바타·등급)용 프로필 프리페치
   try {
-    if (window.GALLA_userMap) await window.GALLA_userMap(posts.map(p => p.user_id));
+    if (window.GALLA_userMap) await withTimeout(Promise.resolve(window.GALLA_userMap(posts.map(p => p.user_id))));
   } catch (e) { console.warn("[plaza] userMap skip:", e); }
 
-  // 내 저장/투표 상태 로드 (로그인 시)
+  // 내 저장/투표 상태 로드 (로그인 시에만)
   MY_PLAZA_SAVED = {};
   MY_PLAZA_VOTES = {};
   try {
-    const { data: sess } = await supabase.auth.getSession();
+    const { data: sess } = await withTimeout(supabase.auth.getSession());
     PLAZA_ME = sess?.session?.user || null;
-    if (PLAZA_ME && posts.length) {
+    if (PLAZA_ME) {
       const ids = posts.map(p => p.id);
-      const [bmRes, vRes] = await Promise.all([
+      const res = await withTimeout(Promise.all([
         supabase.from("plaza_bookmarks").select("post_id").eq("user_id", PLAZA_ME.id).in("post_id", ids),
         supabase.from("plaza_votes").select("post_id, vote").eq("user_id", PLAZA_ME.id).in("post_id", ids)
-      ]);
-      (bmRes.data || []).forEach(b => { MY_PLAZA_SAVED[b.post_id] = true; });
-      (vRes.data || []).forEach(v => { MY_PLAZA_VOTES[v.post_id] = v.vote; });
+      ]));
+      if (res) {
+        (res[0].data || []).forEach(b => { MY_PLAZA_SAVED[b.post_id] = true; });
+        (res[1].data || []).forEach(v => { MY_PLAZA_VOTES[v.post_id] = v.vote; });
+      }
     }
   } catch (e) { console.warn("[plaza] my-state skip:", e); }
 
+  // 보강정보(작성자 배지·내 저장/투표 하이라이트)를 반영해 한 번 더 그린다
   renderPlazaPosts(posts);
 }
 
