@@ -345,10 +345,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const post = postShell;
 
       /* DM 상세(채팅방·난장·1:1)에선 셸 네비를 숨긴다 — 안 숨기면 입력창이
-         네비에 가려 안 보였다(사장님 재현). body.dm-detail 토글을 셸로 중계. */
+         네비에 가려 안 보였다(사장님 재현). body.dm-detail 토글을 셸로 중계.
+         ⊕ 이슈 댓글 컴포저(body.kb-open)도 동일 — 키보드가 열리면 셸 네비가
+           입력창 위로 떠서 겹쳤다. kb-open일 때도 셸 네비를 숨긴다(모든 페이지 공통). */
       let lastNavHide = null;
-      const relayNavHide = () => {                 // dm-detail이 '바뀔 때만' 중계 —
-        const on = document.body.classList.contains("dm-detail");  // 스크롤 헤더축소 등
+      const relayNavHide = () => {                 // 상태가 '바뀔 때만' 중계 —
+        const on = document.body.classList.contains("dm-detail")
+                || document.body.classList.contains("kb-open");  // 스크롤 헤더축소 등
         if (on === lastNavHide) return;            // 잦은 class 변경에 매번 쏘던 낭비 제거
         lastNavHide = on; post({ t: "navhide", on });
       };
