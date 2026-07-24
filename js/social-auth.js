@@ -143,6 +143,9 @@
   window.GALLA_needsOnboard = needsOnboard;
 
   const REGIONS = ["서울","부산","대구","인천","광주","대전","울산","세종","경기","강원","충북","충남","전북","전남","경북","경남","제주","해외"];
+  const NOW_Y = new Date().getFullYear();
+  const MAX_BIRTH_Y = NOW_Y - 14;                 // 만 14세 이상
+  const YEARS = Array.from({ length: MAX_BIRTH_Y - 1930 + 1 }, (_, i) => MAX_BIRTH_Y - i);
 
   function openOnboard() {
     return new Promise((resolve) => {
@@ -159,9 +162,11 @@
           <input id="soco-nick" class="soco-input" maxlength="20" placeholder="닉네임 (2~12자)" autocomplete="off">
           <div id="soco-nickmsg" class="soco-msg"></div>
 
-          <label class="soco-lab">생년월일 <em>필수</em></label>
-          <input id="soco-birth" class="soco-input" type="date">
-          <div id="soco-agemsg" class="soco-msg"></div>
+          <label class="soco-lab">출생연도 <em>필수</em></label>
+          <select id="soco-birth" class="soco-input soco-select">
+            <option value="">출생연도 선택</option>
+            ${YEARS.map(y => `<option value="${y}">${y}년</option>`).join("")}
+          </select>
 
           <label class="soco-lab">성별 <em>필수</em></label>
           <div class="soco-chips" id="soco-gender">
@@ -188,19 +193,9 @@
       const nick = wrap.querySelector("#soco-nick");
       const msg = wrap.querySelector("#soco-nickmsg");
       const birth = wrap.querySelector("#soco-birth");
-      const ageMsg = wrap.querySelector("#soco-agemsg");
       const err = wrap.querySelector("#soco-err");
       let gender = "";
       if (window.GALLA_bindNickCheck) window.GALLA_bindNickCheck(nick, msg);
-      // 생년월일 max = 만14세
-      const maxD = new Date(); maxD.setFullYear(maxD.getFullYear() - 14);
-      birth.max = maxD.toISOString().slice(0, 10);
-      birth.onchange = () => {
-        if (!birth.value) { ageMsg.textContent = ""; return; }
-        const ok = new Date(birth.value) <= maxD;
-        ageMsg.textContent = ok ? "" : "만 14세 이상만 가입할 수 있어요.";
-        ageMsg.className = "soco-msg" + (ok ? "" : " bad");
-      };
       wrap.querySelectorAll(".soco-chip").forEach(ch => ch.onclick = () => {
         gender = ch.dataset.g;
         wrap.querySelectorAll(".soco-chip").forEach(x => x.classList.toggle("on", x === ch));
@@ -210,8 +205,7 @@
         const n = nick.value.trim();
         err.textContent = ""; err.className = "soco-msg";
         if (n.length < 2) return fail("닉네임은 2자 이상이에요.");
-        if (!birth.value) return fail("생년월일을 선택해 주세요.");
-        if (new Date(birth.value) > maxD) return fail("만 14세 이상만 가입할 수 있어요.");
+        if (!birth.value) return fail("출생연도를 선택해 주세요.");
         if (!gender) return fail("성별을 선택해 주세요.");
         if (!wrap.querySelector("#soco-region").value) return fail("지역을 선택해 주세요.");
         if (!wrap.querySelector("#soco-terms").checked) return fail("필수 약관에 동의해 주세요.");
@@ -219,7 +213,7 @@
         const { data, error } = await c.rpc("social_onboard", {
           p_nick: n, p_terms: true,
           p_marketing: wrap.querySelector("#soco-mkt").checked,
-          p_birth: birth.value,
+          p_birth_year: parseInt(birth.value, 10),
           p_gender: gender,
           p_region: wrap.querySelector("#soco-region").value,
           p_phone: wrap.querySelector("#soco-phone").value.trim() || null,
@@ -228,7 +222,7 @@
           const r = data?.reason;
           const m = { nick_taken:"이미 쓰는 닉네임이에요.", nick_short:"닉네임이 너무 짧아요.",
             age14:"만 14세 이상만 가입할 수 있어요.", gender:"성별을 선택해 주세요.",
-            region:"지역을 선택해 주세요.", birth:"생년월일을 선택해 주세요.", terms:"약관에 동의해 주세요." };
+            region:"지역을 선택해 주세요.", birth:"출생연도를 선택해 주세요.", terms:"약관에 동의해 주세요." };
           fail(m[r] || "저장 실패 — 다시 시도해 주세요."); btn.disabled = false; btn.textContent = "가입 완료하고 시작하기"; return;
         }
         wrap.remove(); resolve(true);
