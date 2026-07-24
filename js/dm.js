@@ -854,6 +854,7 @@
           <div class="dm-msgs" id="dm-room-msgs"></div>
           <div class="dm-room-gate" id="dm-room-gate" hidden></div>
           <form class="dm-inputbar" id="dm-room-send">
+            <button type="button" class="dm-attach" id="dm-room-plus" aria-label="투표·약속">${ICONS.plus}</button>
             <textarea id="dm-room-input" rows="1" placeholder="메시지 입력…"></textarea>
             <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
@@ -1002,6 +1003,19 @@
     ROOT.querySelector('#dm-room-form').addEventListener('submit', onCreateRoom);
     ROOT.querySelector('#dm-room-cancel').addEventListener('click', () => roomFormShow(false));
     ROOT.querySelector('#dm-room-send').addEventListener('submit', onRoomSend);
+    bindPollDelegation();
+    // + 버튼 → 투표/약속 메뉴
+    ROOT.querySelector('#dm-room-plus')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      ROOT.querySelector('.dm-plus-menu')?.remove();
+      const menu = document.createElement('div');
+      menu.className = 'dm-plus-menu';
+      menu.innerHTML = `<button type="button" data-p="choice">📊 투표 만들기</button><button type="button" data-p="date">📅 약속 잡기</button>`;
+      ROOT.querySelector('#dm-room-send').appendChild(menu);
+      menu.addEventListener('click', ev => { const b = ev.target.closest('[data-p]'); if (b) { menu.remove(); openPollComposer(b.dataset.p); } });
+      const off = (ev) => { if (!menu.contains(ev.target) && !ev.target.closest('#dm-room-plus')) { menu.remove(); document.removeEventListener('click', off); } };
+      setTimeout(() => document.addEventListener('click', off), 0);
+    });
     const rta = ROOT.querySelector('#dm-room-input');
     rta.addEventListener('input', () => { rta.style.height = 'auto'; rta.style.height = Math.min(rta.scrollHeight, 120) + 'px'; });
     rta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onRoomSend(e); } });
@@ -3267,19 +3281,23 @@
     const wrap = ROOT.querySelector('#dm-room-msgs');
     wrap.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
     const { data: msgs } = await supabase.from('open_messages')
-      .select('id,sender_id,body,kind,created_at')
+      .select('id,sender_id,body,kind,meta,created_at')
       .eq('room_id', curRoom.id).order('created_at', { ascending: false }).limit(100);
     const list = (msgs || []).reverse();
     await profilesFor(list.map(m => m.sender_id));
     wrap.innerHTML = list.map(roomBubbleHTML).join('');
     [...wrap.children].slice(-12).forEach((el, i) => { el.style.setProperty('--i', i); el.classList.add('in'); });
     wrap.scrollTop = wrap.scrollHeight;
+    hydratePolls(wrap);
   }
   /* 단체방 문법: 남의 말은 아바타+닉네임을 단다(1:1엔 없던 것) */
   function roomBubbleHTML(m) {
     const mine = m.sender_id === ME;
-    const bubble = `<div class="dm-bubble ${mine ? 'me' : 'you'}" data-id="${m.id}">
-        <span class="dm-bub-body">${esc(m.body)}</span>
+    const bodyHTML = (m.kind === 'poll' && m.meta?.poll_id)
+      ? `<span class="dm-poll" data-poll="${esc(m.meta.poll_id)}"><span class="dm-poll-load">투표 불러오는 중…</span></span>`
+      : `<span class="dm-bub-body">${esc(m.body)}</span>`;
+    const bubble = `<div class="dm-bubble ${mine ? 'me' : 'you'}${m.kind === 'poll' ? ' has-poll' : ''}" data-id="${m.id}">
+        ${bodyHTML}
         <span class="dm-bub-time">${hhmm(m.created_at)}</span>
       </div>`;
     if (mine) return bubble;
@@ -3297,7 +3315,103 @@
     const near = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 80;
     wrap.insertAdjacentHTML('beforeend', roomBubbleHTML(m));
     wrap.lastElementChild?.classList.add('new');
+    if (m.kind === 'poll') hydratePolls(wrap);
     if (near || m.sender_id === ME) wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  /* ───────── 📊 그룹 투표/약속 ───────── */
+  async function hydratePolls(wrap) {
+    const nodes = [...(wrap || ROOT).querySelectorAll('.dm-poll[data-poll]:not(.ready)')];
+    for (const el of nodes) {
+      el.classList.add('ready');
+      const pid = el.dataset.poll;
+      try {
+        const { data } = await supabase.rpc('dm_poll_get', { p_poll: pid });
+        if (!data?.ok) { el.innerHTML = `<span class="dm-poll-load">투표를 열 수 없어요</span>`; continue; }
+        el.innerHTML = pollCardHTML(pid, data);
+      } catch (_) { el.innerHTML = `<span class="dm-poll-load">투표 로드 실패</span>`; }
+    }
+  }
+  function pollCardHTML(pid, d) {
+    const total = d.total || 0;
+    const mine = new Set(d.my_votes || []);
+    const isDate = d.kind === 'date';
+    const opts = (d.options || []).map(o => {
+      const pct = total ? Math.round((o.count / total) * 100) : 0;
+      const picked = mine.has(o.id);
+      const names = (o.voters || []).slice(0, 6).join(', ') + ((o.voters || []).length > 6 ? ' 외' : '');
+      return `<button type="button" class="dm-poll-opt${picked ? ' picked' : ''}" data-opt="${esc(o.id)}" ${d.closed ? 'disabled' : ''} title="${esc(names)}">
+          <span class="dm-poll-fill" style="width:${pct}%"></span>
+          <span class="dm-poll-otxt">${picked ? '● ' : ''}${esc(o.text)}</span>
+          <span class="dm-poll-ocnt">${o.count}표 · ${pct}%</span>
+        </button>`;
+    }).join('');
+    return `<div class="dm-poll-card" data-poll="${esc(pid)}">
+        <div class="dm-poll-head"><b>${isDate ? '📅 약속 잡기' : '📊 투표'}${d.multi ? ' · 복수선택' : ''}</b>${d.closed ? '<span class="dm-poll-closed">마감</span>' : ''}</div>
+        <div class="dm-poll-q">${esc(d.question)}</div>
+        <div class="dm-poll-opts">${opts}</div>
+        <div class="dm-poll-foot"><span>${total}명 참여 · ${esc(d.creator || '')}</span>${(d.is_creator && !d.closed) ? '<button type="button" class="dm-poll-end">마감하기</button>' : ''}</div>
+      </div>`;
+  }
+  // 투표 탭·마감 위임 핸들러(방 메시지 영역에 1회 바인딩)
+  function bindPollDelegation() {
+    const wrap = ROOT.querySelector('#dm-room-msgs');
+    if (!wrap || wrap._pollBound) return; wrap._pollBound = true;
+    wrap.addEventListener('click', async e => {
+      const opt = e.target.closest('.dm-poll-opt');
+      const end = e.target.closest('.dm-poll-end');
+      const card = e.target.closest('.dm-poll-card'); if (!card) return;
+      const pid = card.dataset.poll;
+      if (opt && !opt.disabled) {
+        const { data } = await supabase.rpc('dm_poll_vote', { p_poll: pid, p_options: [opt.dataset.opt] });
+        if (data?.ok) { const host = card.closest('.dm-poll'); if (host) { host.classList.remove('ready'); hydratePolls(ROOT.querySelector('#dm-room-msgs')); } }
+        else if (data?.reason === 'closed') toast('마감된 투표예요');
+      } else if (end) {
+        if (!confirm('투표를 마감할까요?')) return;
+        const { data } = await supabase.rpc('dm_poll_close', { p_poll: pid });
+        if (data?.ok) { const host = card.closest('.dm-poll'); if (host) { host.classList.remove('ready'); hydratePolls(ROOT.querySelector('#dm-room-msgs')); } }
+      }
+    });
+  }
+  // 투표/약속 작성 시트
+  function openPollComposer(kind) {
+    if (!curRoom) return;
+    const isDate = kind === 'date';
+    const el = document.createElement('div');
+    el.className = 'dm-poll-modal';
+    el.innerHTML = `<div class="dm-pm-sheet">
+        <div class="dm-pm-title">${isDate ? '📅 약속 잡기' : '📊 투표 만들기'}</div>
+        <input class="dm-pm-q" maxlength="140" placeholder="${isDate ? '무슨 약속? (예: 다음 모임 언제?)' : '질문 (예: 점심 뭐 먹을까?)'}">
+        <div class="dm-pm-opts" id="dm-pm-opts">
+          ${[0,1].map(i => `<input class="dm-pm-opt" maxlength="80" placeholder="${isDate ? '날짜·시간 (예: 토 저녁 7시)' : '선택지 '+(i+1)}">`).join('')}
+        </div>
+        <button type="button" class="dm-pm-add" id="dm-pm-add">+ 선택지 추가</button>
+        <label class="dm-pm-multi"><input type="checkbox" id="dm-pm-multi"> 복수 선택 허용</label>
+        <div class="dm-pm-btns"><button type="button" class="dm-pm-cancel">취소</button><button type="button" class="dm-pm-go">만들기</button></div>
+      </div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('on'));
+    const close = () => { el.classList.remove('on'); setTimeout(() => el.remove(), 200); };
+    el.addEventListener('click', ev => { if (ev.target === el) close(); });
+    el.querySelector('.dm-pm-cancel').onclick = close;
+    el.querySelector('#dm-pm-add').onclick = () => {
+      const box = el.querySelector('#dm-pm-opts');
+      if (box.children.length >= 10) return;
+      const inp = document.createElement('input');
+      inp.className = 'dm-pm-opt'; inp.maxLength = 80;
+      inp.placeholder = isDate ? '날짜·시간' : '선택지 ' + (box.children.length + 1);
+      box.appendChild(inp); inp.focus();
+    };
+    el.querySelector('.dm-pm-go').onclick = async () => {
+      const q = el.querySelector('.dm-pm-q').value.trim();
+      const opts = [...el.querySelectorAll('.dm-pm-opt')].map(i => i.value.trim()).filter(Boolean);
+      if (!q) return toast('질문을 입력하세요');
+      if (opts.length < 2) return toast('선택지를 2개 이상 입력하세요');
+      const multi = el.querySelector('#dm-pm-multi').checked;
+      const { data } = await supabase.rpc('dm_poll_create', { p_room: curRoom.id, p_kind: isDate ? 'date' : 'choice', p_question: q, p_options: opts, p_multi: multi });
+      if (data?.ok) { close(); toast(isDate ? '약속을 올렸어요' : '투표를 올렸어요'); }
+      else toast('만들지 못했어요');
+    };
   }
   function attachRoom(rid) {
     detachRoom();
