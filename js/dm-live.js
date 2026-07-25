@@ -737,6 +737,10 @@
     const cf = { sessionId: sess.data.sessionId, pc, pubTrack: null, myTrackName: null, subs: new Set(), q: Promise.resolve(), els: [] };
     if (!CUR) { try { pc.close(); } catch (e) {} return; }
     CUR.cf = cf;
+    // 🔧 진단(임시) — 무대 올라와도 소리 안 나는 지점 추적: 마이크/송신/수신/ICE
+    cf.diag = { sess: true, mic: "-", tx: false, rx: 0, ice: pc.iceConnectionState || "new", err: "" };
+    pc.oniceconnectionstatechange = () => { if (CUR && CUR.cf === cf) { cf.diag.ice = pc.iceConnectionState; renderDiag(cf); } };
+    renderDiag(cf);
     CUR.audio = {
       setMuted(m) { try { if (cf.pubTrack) cf.pubTrack.enabled = !m; if (!m) maybePublish(); } catch (e) {} },
       stop() { stopAudio(cf); },
@@ -746,6 +750,7 @@
         const el = document.createElement("audio");
         el.autoplay = true; el.playsInline = true; el.srcObject = new MediaStream([e.track]);
         document.body.appendChild(el); cf.els.push(el);
+        cf.diag.rx++; renderDiag(cf);
         el.play && el.play().catch(() => {});
       } catch (_) {}
     };
@@ -755,8 +760,16 @@
       CUR.channel.on("broadcast", { event: "pubask" }, () => announcePub());
       CUR.channel.send({ type: "broadcast", event: "pubask", payload: {} });
     } catch (e) {}
-    if (note) note.hidden = true;
+    renderDiag(cf);
     await maybePublish();
+  }
+
+  // 🔧 진단 라인 — 무대 오디오 상태를 배너에 표시(임시)
+  function renderDiag(cf) {
+    const note = document.getElementById("lv-audio-note"); if (!note || !cf || !cf.diag) return;
+    const d = cf.diag;
+    note.hidden = false;
+    note.textContent = `🔧 세션 ${d.sess ? "✓" : "✗"} · 마이크 ${d.mic} · 송신 ${d.tx ? "ON" : "OFF"} · 수신 ${d.rx} · ICE ${d.ice}` + (d.err ? ` · ⚠️ ${d.err}` : "");
   }
 
   async function maybePublish() {
@@ -764,7 +777,8 @@
     if (!(CUR.role === "host" || CUR.role === "speaker")) return;
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch (e) { toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); return; }
+    catch (e) { cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf); toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); return; }
+    cf.diag.mic = "ON"; renderDiag(cf);
     const track = stream.getAudioTracks()[0];
     track.enabled = !CUR.muted;
     try {
@@ -777,9 +791,13 @@
       if (res && res.ok && res.data && res.data.sessionDescription) {
         await cf.pc.setRemoteDescription(res.data.sessionDescription);
         cf.pubTrack = track; cf.myTrackName = trackName;
+        cf.diag.tx = true; cf.diag.err = ""; renderDiag(cf);
         announcePub();
-      } else { track.stop(); }
-    } catch (e) { try { track.stop(); } catch (_) {} }
+      } else {
+        cf.diag.err = "pub_fail(" + (res && res.data && res.data.errorDescription || res && res.reason || "?") + ")"; renderDiag(cf);
+        track.stop();
+      }
+    } catch (e) { cf.diag.err = "pub_ex(" + (e && e.name || "?") + ")"; renderDiag(cf); try { track.stop(); } catch (_) {} }
   }
   function announcePub() {
     const cf = CUR && CUR.cf; if (!cf || !cf.myTrackName) return;
@@ -808,6 +826,7 @@
           return;   // 성공
         }
         const err = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
+        if (err && cf.diag) { cf.diag.err = "sub(" + err + ")"; renderDiag(cf); }
         if (err !== "not_found_track_error") break;   // 다른 오류면 재시도 무의미
       } catch (e) { break; }
       await new Promise(r => setTimeout(r, 1300));   // 잠시 후 재시도
