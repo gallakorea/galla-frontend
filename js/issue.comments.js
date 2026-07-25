@@ -2058,6 +2058,19 @@ function bindEvents() {
     }
   });
 
+  // 입력창 자체도 로그인 게이트 — 미로그인이 탭/포커스하면 바로 로그인 유도(키보드 안 뜸)
+  const battleInput = document.getElementById("battle-comment-input");
+  if (battleInput) {
+    const inputGate = (e) => {
+      if (ME.userId) return;            // 로그인 상태면 통과(미투표는 참전 시 안내)
+      if (e) e.preventDefault();
+      battleInput.blur();
+      if (window.GALLA_needLogin) window.GALLA_needLogin("로그인 후 참전할 수 있어요.");
+    };
+    battleInput.addEventListener("pointerdown", inputGate);  // 포커스(키보드) 자체를 막음
+    battleInput.addEventListener("focus", inputGate);         // 프로그램적 포커스 대비
+  }
+
   // 전송 — 하단 바는 '새 최상위 의견(참전/침투)' 전용. 전투 답글은 인라인 컴포저가 처리.
   document.getElementById("battle-comment-submit")
     ?.addEventListener("click", async () => {
