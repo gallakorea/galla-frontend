@@ -108,11 +108,12 @@
         </div>
       </div>`;
     document.body.appendChild(sheet);
+    navHide(true);   // 셸 하단 nav가 시트(취소·열기 버튼)를 가리지 않게
     requestAnimationFrame(() => sheet.classList.add("on"));
     const titleIn = sheet.querySelector("#lv-new-title");
     const topicIn = sheet.querySelector("#lv-new-topic");
     const go = sheet.querySelector("#lv-new-go");
-    const close = () => { sheet.classList.remove("on"); setTimeout(() => sheet.remove(), 200); };
+    const close = () => { navHide(false); sheet.classList.remove("on"); setTimeout(() => sheet.remove(), 200); };
     titleIn.oninput = () => { go.disabled = !titleIn.value.trim(); };
     titleIn.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); topicIn.focus(); } };
     topicIn.onkeydown = e => { if (e.key === "Enter" && titleIn.value.trim()) { e.preventDefault(); go.click(); } };
