@@ -51,6 +51,36 @@
 </head>
 <body data-page="shell">
 
+<!-- 📞 네이티브 WebRTC(iosrtc) 최상위 로더 — iOS 네이티브 앱에서만. CallKit 화면 통화 오디오를 위해
+     웹뷰 WebRTC를 네이티브 libwebrtc로 치환한다(왓츠앱·텔레그램 방식). 웹/안드로이드엔 영향 없음.
+     cordova.js(=Capacitor 브릿지로 exec 라우팅) → cordova_plugins.js → iosrtc 플러그인JS 순서 로드 후 registerGlobals. -->
+<script>
+(function(){
+  var C = window.Capacitor;
+  if (!(C && C.getPlatform && C.getPlatform() === 'ios' && C.isNativePlatform && C.isNativePlatform())) return;
+  window.__iosrtcReady = false;
+  function load(src){ return new Promise(function(res, rej){ var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+  // 순서 보장 로드 → cordova가 부팅되며 cordova.plugins.iosrtc clobber
+  load('/native/cordova.js')
+    .then(function(){ return load('/native/cordova_plugins.js'); })
+    .then(function(){ return load('/native/plugins/cordova-plugin-iosrtc/www/cordova-plugin-iosrtc.js'); })
+    .then(function(){
+      function reg(){
+        try {
+          if (window.cordova && cordova.plugins && cordova.plugins.iosrtc) {
+            cordova.plugins.iosrtc.registerGlobals();
+            // 오디오 라우팅 로그 최소화 + CallKit 수동 오디오와 함께 동작
+            window.__iosrtcReady = true;
+          }
+        } catch(e){}
+      }
+      document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
+      setTimeout(reg, 2500);   // deviceready 폴백
+    })
+    .catch(function(){ /* 로드 실패해도 앱은 기존 웹뷰 WebRTC로 폴백 */ });
+})();
+</script>
+
 
 <div id="shell-track">
   <div class="shell-pane" data-tab="index"></div>
