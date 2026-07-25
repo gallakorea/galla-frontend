@@ -1282,6 +1282,25 @@
     // 🎤 방/뷰를 벗어나면 진행 중인 음성녹음을 확실히 중단(뒤로·목록복귀 포함) —
     //    방 나가도 계속 녹음되던 버그 방지(사장님 제보).
     if (name !== CUR_VIEW) { try { stopVoiceRec(true); PTT = null; if (typeof paintRec === 'function') paintRec(false); } catch (_) {} }
+    // 🔬 임시 진단(입력바 잘림) — 실기기 레이아웃 수치를 client_errors로 보고. 원인 확정 후 제거.
+    if ((name === 'thread' || name === 'room') && !window.__barDiagSent) {
+      window.__barDiagSent = 1;
+      setTimeout(() => {
+        try {
+          const view = ROOT.querySelector(`.dm-view[data-view="${name}"]`);
+          const bar = view?.querySelector('.dm-inputbar');
+          const j = el => { if (!el) return 'x'; const b = el.getBoundingClientRect(); return Math.round(b.left) + '~' + Math.round(b.right) + 'w' + Math.round(b.width); };
+          const ta = bar?.querySelector('textarea');
+          const cs = ta ? getComputedStyle(ta) : null;
+          const pcs = bar ? getComputedStyle(bar) : null;
+          window.GALLA_logError?.(new Error('BARDIAG vw=' + window.innerWidth + ' dpr=' + (window.devicePixelRatio || 0) +
+            ' bar=' + j(bar) + ' send=' + j(bar?.querySelector('.dm-send')) + ' ta=' + j(ta) +
+            ' plus=' + j(bar?.querySelector('.dm-attach')) + ' mic=' + j(bar?.querySelector('#dm-voice,#dm-room-voice')) +
+            (cs ? ' taW=' + cs.width + ' minW=' + cs.minWidth + ' flex=' + cs.flex + ' box=' + cs.boxSizing : '') +
+            (pcs ? ' barPos=' + pcs.position + ' barDisp=' + pcs.display + ' gap=' + pcs.gap : '')), 'bardiag');
+        } catch (e) {}
+      }, 2500);
+    }
     if (PAGE_MODE() && !POPPING && name !== CUR_VIEW) {
       if (name !== 'inbox') {
         history.pushState({ dmv: name, d: ++DEPTH }, '');
