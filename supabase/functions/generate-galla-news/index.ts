@@ -129,9 +129,44 @@ Deno.serve(async (req) => {
     const topicKey = (t.topic || "").replace(/\s+/g, "").toLowerCase().slice(0, 60);
     if (!topicKey) return null;
 
-    // 이미 있으면 skip
+    // ── 중복 방지 ────────────────────────────────────────
+    // ⚠️ topic_key 완전일치만 보던 방식은 사실상 작동하지 않았다(2026-07-25 실측:
+    //    2일 2,272건 / topic_key 2,272개 = 중복 판정 0건, 그런데 "이강인 이적"류는 4~5번씩 생성).
+    //    topic_key가 'AI가 매번 새로 지어내는 주제 문장'에서 나오니 표현이 조금만 달라도 안 겹친다.
+    //    → 원본 기사 URL이 겹치는지로 본다. AI 표현이 어떻든 취재원이 같으면 같은 사건이다.
     const { data: dup } = await supa.from("galla_news").select("id").eq("topic_key", topicKey).maybeSingle();
     if (dup) return null;
+
+    const urls = members.map((m) => m.url).filter(Boolean);
+    if (urls.length) {
+      const since48 = new Date(Date.now() - 48 * 3600e3).toISOString();
+      const { data: seen } = await supa.from("galla_news_sources")
+        .select("news_id, galla_news!inner(created_at)")
+        .in("url", urls)
+        .gte("galla_news.created_at", since48)
+        .limit(1);
+      if (seen && seen.length) return null;   // 같은 원본으로 이미 썼다
+    }
+
+    // URL 겹침만으론 부족하다(2026-07-25 실측): 언론사들이 같은 사건을 몇 시간에 걸쳐
+    // 계속 '새 URL'로 쏟아내므로, 취재원이 달라도 사건은 같은 경우가 남는다
+    // (이강인 이적 → 4~5회 중복의 실제 원인). 그래서 제목 단어 겹침도 함께 본다.
+    {
+      const since48 = new Date(Date.now() - 48 * 3600e3).toISOString();
+      const { data: recent } = await supa.from("galla_news")
+        .select("title").gte("created_at", since48).limit(400);
+      const mine = tokenize(members.map((m) => m.title).join(" "));
+      if (mine.size >= 2) {
+        for (const r of (recent || [])) {
+          const his = tokenize(r.title || "");
+          if (his.size < 2) continue;
+          let ov = 0;
+          for (const w of mine) if (his.has(w)) ov++;
+          // 상대 제목 단어의 60% 이상이 겹치면 같은 사건으로 본다
+          if (ov / his.size >= 0.6) return null;
+        }
+      }
+    }
 
     // 소스 본문 확보 (상위 2개)
     const bodies = await Promise.all(members.slice(0, 2).map((m) => fetchBody(m.url)));
