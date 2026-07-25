@@ -8,6 +8,10 @@
   const sb = () => window.supabaseClient;
   const won = (n) => (n || 0).toLocaleString() + "원";
 
+  // 최소 출금액 — DB의 request_withdrawal이 같은 값으로 강제한다(reason:'min_200000').
+  // 여기 값을 바꾸면 DB도 함께 바꿔야 한다. 안 그러면 눌렀는데 거절되는 화면이 된다.
+  const MIN_WITHDRAW = 200000;
+
   // 슈퍼챗 티어 (소액 중심 · 금액↑ = 강조↑)
   const TIERS = [
     { key: "blue",   amount: 500,   color: "#3b82f6", emoji: "💙" },
@@ -58,6 +62,7 @@
       .ds-go{width:100%;padding:15px;border:none;border-radius:14px;font-weight:900;font-size:16px;color:#fff;cursor:pointer}
       .ds-go:disabled{opacity:.5}
       .ds-note{font-size:11px;color:#6c7280;text-align:center;margin-top:10px;line-height:1.5}
+      .ds-note .earn-more{display:block;margin-top:6px;color:#6b8cff;font-weight:800;text-decoration:none}
       .ds-gc{font-size:12px;font-weight:700;color:#e8d9a8;background:rgba(255,207,63,.08);
         border:1px solid rgba(255,207,63,.3);border-radius:10px;padding:9px 12px;margin-bottom:10px;text-align:center}
       .ds-gc b{color:#ffcf3f}
@@ -136,7 +141,8 @@
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
       <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 기부</b>됩니다(수수료 20%).
         결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다.
-        갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.</div>`;
+        갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.
+        <a href="creator.html" class="earn-more">이 돈은 어디로 가나요? ›</a></div>`;
     sheet.querySelectorAll(".ds-tier").forEach(b => {
       b.style.borderColor = "rgba(255,255,255,.12)";
       b.addEventListener("click", () => {
@@ -269,7 +275,8 @@
       .earn-l{font-size:11px;color:#8a8f9a;margin-top:3px}
       .earn-out{width:100%;padding:12px;border:none;border-radius:12px;font-weight:900;font-size:14px;cursor:pointer;background:linear-gradient(135deg,#ff6a88,#ff4d6d);color:#fff}
       .earn-out:disabled{opacity:.5}
-      .earn-note{font-size:11px;color:#6c7280;text-align:center;margin-top:9px}
+      .earn-note{font-size:11px;color:#6c7280;text-align:center;margin-top:9px;line-height:1.6}
+      .earn-more{display:inline-block;margin-top:4px;color:#6b8cff;font-weight:800;text-decoration:none}
     `;
     document.head.appendChild(s);
   }
@@ -287,19 +294,22 @@
           <div class="earn-b"><div class="earn-v">${won(data.available)}</div><div class="earn-l">출금 가능</div></div>
           <div class="earn-b"><div class="earn-v">${data.supporter_count}명</div><div class="earn-l">후원자</div></div>
         </div>
-        <button class="earn-out" id="earn-out" ${data.available < 10000 ? "disabled" : ""}>${data.available < 10000 ? "출금 최소 1만원" : "출금 신청"}</button>
-        <div class="earn-note">후원금의 75%가 발의자에게 정산됩니다(기부 5%·수수료 20% 제외). 실제 송금(PG·뱅킹)은 준비 중입니다.</div>
+        <button class="earn-out" id="earn-out" ${data.available < MIN_WITHDRAW ? "disabled" : ""}>${data.available < MIN_WITHDRAW ? "출금 최소 20만원" : "출금 신청"}</button>
+        <div class="earn-note">후원금의 75%가 발의자에게 정산됩니다(기부 5%·수수료 20% 제외).
+          <a href="creator.html" class="earn-more">수익 배분 자세히 ›</a></div>
       </div>`;
     const btn = sec.querySelector("#earn-out");
-    if (btn && data.available >= 10000) btn.addEventListener("click", async () => {
+    if (btn && data.available >= MIN_WITHDRAW) btn.addEventListener("click", async () => {
       const bank = prompt("은행명 (예: 국민은행)"); if (!bank) return;
       const acc = prompt("계좌번호"); if (!acc) return;
       const holder = prompt("예금주"); if (!holder) return;
       const amt = parseInt((prompt(`출금 금액 (최대 ${won(data.available)})`, String(data.available)) || "").replace(/[^\d]/g, ""));
-      if (!amt || amt < 10000) return alert("최소 1만원부터 출금할 수 있어요.");
+      if (!amt || amt < MIN_WITHDRAW) return alert("최소 20만원부터 출금할 수 있어요.");
       const { data: r } = await sb().rpc("request_withdrawal", { p_amount: amt, p_bank: bank, p_account: acc, p_holder: holder });
       if (r?.ok) { alert("출금 신청이 접수됐어요. 검토 후 처리됩니다."); window.GALLA_renderEarnings(); }
-      else alert(r?.reason === "insufficient" ? "출금 가능액을 초과했어요." : "출금 신청에 실패했어요.");
+      else alert(r?.reason === "insufficient" ? "출금 가능액을 초과했어요."
+        : r?.reason === "min_200000" ? "최소 20만원부터 출금할 수 있어요."
+        : "출금 신청에 실패했어요.");
     });
     sec.hidden = false;
   };

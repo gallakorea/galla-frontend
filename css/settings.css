@@ -167,6 +167,7 @@ body {
 
 /* 타일별 정체성 컬러 */
 .menu-tile.wallet { --tc: 255, 207, 63; }   /* 골드 — 지갑 */
+.menu-tile.creator { --tc: 47, 167, 106; }   /* 에메랄드 — 크리에이터 수익(원화) */
 .menu-tile.grade  { --tc: 201, 209, 224; }   /* 실버 — 등급 */
 .menu-tile.season { --tc: 255, 168, 60; }    /* 앰버 — 시즌 */
 .menu-tile.quest  { --tc: 61, 107, 255; }    /* 블루 — 미션 */
