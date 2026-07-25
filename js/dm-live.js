@@ -67,8 +67,21 @@
     const rooms = document.getElementById("dm-rooms");
     if (!rooms) return;
     ensureCSS();
+    // 🔎 통합 검색창 = 난장 탭 '맨 위'(난장 열기 바보다 위) — 1회만 주입, 폴링에도 유지
+    if (!document.getElementById("lv-lobby-search")) {
+      const sw = document.createElement("div");
+      sw.id = "lv-lobby-search"; sw.className = "lv-lobby-search";
+      sw.innerHTML = `<input id="lv-lobby-q" placeholder="🔎 난장 검색 (육성·일반 통합)" autocomplete="off">`;
+      rooms.insertBefore(sw, rooms.firstChild);
+      const qi = sw.querySelector("#lv-lobby-q");
+      // 통합 검색 — 같은 검색어로 육성(아래 섹션)과 일반 난장(dm.js 목록)을 동시에 거른다
+      qi.oninput = () => {
+        LOBBY_Q = qi.value; paintLobbyCards();
+        try { window.GALLA_roomFilter && window.GALLA_roomFilter(qi.value); } catch (e) {}
+      };
+    }
     let sec = document.getElementById("dm-live-sec");
-    // 헤더(제목·검색·열기)는 1회만 — 폴링이 검색창을 지우지 않도록 카드만 갱신
+    // 헤더(제목·열기)는 1회만 — 카드만 갱신
     if (!sec) {
       sec = document.createElement("div");
       sec.id = "dm-live-sec";
@@ -79,17 +92,8 @@
           <span class="lv-sec-t">🎙 육성 난장</span>
           <button class="lv-open-btn" id="lv-open" type="button">＋ 육성난장 열기</button>
         </div>
-        <div class="lv-lobby-search">
-          <input id="lv-lobby-q" placeholder="🔎 난장 검색 (육성·일반 통합)" autocomplete="off">
-        </div>
         <div id="lv-lobby-cards"></div>`;
       sec.querySelector("#lv-open").onclick = createLive;
-      const qi = sec.querySelector("#lv-lobby-q");
-      // 통합 검색 — 같은 검색어로 육성(여기)과 일반 난장(dm.js 목록)을 동시에 거른다
-      qi.oninput = () => {
-        LOBBY_Q = qi.value; paintLobbyCards();
-        try { window.GALLA_roomFilter && window.GALLA_roomFilter(qi.value); } catch (e) {}
-      };
     }
     let rows = [];
     try { const { data } = await sb().rpc("list_live_rooms"); rows = data || []; } catch (e) {}
