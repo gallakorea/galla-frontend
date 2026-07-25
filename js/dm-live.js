@@ -240,20 +240,30 @@
   // 서버 reaper(하트비트 멈춤 → 120s 뒤 방 정리)가 최종 안전망이다.
   // ⚠️ visibilitychange(잠금·앱전환)로는 내보내지 않는다 — 육성 청취 중 화면만 꺼도
   //    쫓겨나면 안 되므로(백그라운드 120s까지는 유지, 그 뒤 reaper가 정리).
-  window.addEventListener("pagehide", function () {
+  window.addEventListener("pagehide", function (e) {
     if (!CUR) return;
-    try { sb().rpc("live_leave", { p_room: CUR.roomId }); } catch (e) {}
+    // ⚠️ 호스트는 pagehide로 나가지 않는다 — bfcache/잠깐 백그라운드로 pagehide가 튀면
+    //    방이 통째로 파괴돼 억울하게 튕긴다. 호스트 퇴장은 오직 '방 뽀개기'로만.
+    //    (bfcache로 잠시 숨는 경우 e.persisted=true — 이땐 청중도 나가지 않음)
+    if (CUR.role === "host" || (e && e.persisted)) return;
+    try { sb().rpc("live_leave", { p_room: CUR.roomId }); } catch (e2) {}
   });
 
   async function refreshState() {
     if (!CUR) return;
     heartbeat();   // 폴링마다 생존 신호(별도 hbTimer와 이중화 — 멈추면 120s 뒤 서버 정리)
-    let rows = [];
-    try { const { data } = await sb().rpc("live_room_state", { p_room: CUR.roomId }); rows = data || []; } catch (e) {}
+    let rows = null;   // null = 조회 실패(순단) → 이번 폴링 스킵, 절대 닫지 않음
+    try { const { data, error } = await sb().rpc("live_room_state", { p_room: CUR.roomId }); if (!error) rows = data || []; } catch (e) {}
     if (!CUR) return;
-    // 방이 사라졌거나(종료) 내가 빠졌으면 닫기
+    if (rows === null) return;   // 네트워크 순단 등 조회 실패 — 무대 유지(튕김 방지)
+    // 방이 진짜 비었을 때만 닫는다. 단발 오탐 방지 위해 2회 연속 빈 결과여야 종료.
+    if (!rows.length) {
+      CUR.emptyHits = (CUR.emptyHits || 0) + 1;
+      if (CUR.emptyHits >= 2) { toast("육성 난장이 종료됐어요."); return closeStage(); }
+      return;   // 한 번의 빈 결과로는 닫지 않음
+    }
+    CUR.emptyHits = 0;
     const me = rows.find(r => r.user_id === ME);
-    if (!rows.length) { toast("육성 난장이 종료됐어요."); return closeStage(); }
     CUR.state = rows;
     CUR.nicks = CUR.nicks || {};
     rows.forEach(r => { CUR.nicks[r.user_id] = r.nickname || "익명"; });
@@ -363,10 +373,10 @@
     el.innerHTML = `
       <span class="lv-present-ic">${meta.ic}</span>
       <span class="lv-present-tx"><span class="lv-present-lab">지금 보는 자료 · ${meta.label}</span><b>${esc(p.title || "자료")}</b></span>
-      ${isHost ? `<button class="lv-present-x" id="lv-present-clear" type="button" aria-label="내리기">✕</button>`
-               : `<button class="lv-present-open2" data-url="${esc(meta.url(p.id))}" type="button">열기</button>`}`;
+      <button class="lv-present-open2" data-url="${esc(meta.url(p.id))}" type="button">보기</button>
+      ${isHost ? `<button class="lv-present-x" id="lv-present-clear" type="button" aria-label="내리기">✕</button>` : ""}`;
     const clr = el.querySelector("#lv-present-clear"); if (clr) clr.onclick = clearPresent;
-    // 청중은 '열기'로 방을 나가지 않고 무대 위에 자료를 오버레이로 본다(육성은 계속 들림).
+    // '보기'는 방을 나가지 않고 무대 위에 자료를 오버레이(조작 불가)로 본다. 방장도 동일(오버레이라 안전).
     const ob = el.querySelector(".lv-present-open2");
     if (ob) ob.onclick = () => openContentViewer(ob.dataset.url, p.title);
   }
@@ -380,12 +390,26 @@
       <div class="lv-view-top">
         <button class="lv-view-x" id="lv-view-x" type="button" aria-label="닫기">✕</button>
         <b class="lv-view-title">${esc(title || "자료")}</b>
-        <span class="lv-view-live">🔴 육성 유지</span>
+        <span class="lv-view-live">👀 미리보기 · 조작 불가</span>
       </div>
       <iframe class="lv-view-if" src="${esc(url + (url.indexOf("?") >= 0 ? "&" : "?") + "lvembed=1")}" allow="autoplay"></iframe>`;
     stage.appendChild(v);
     requestAnimationFrame(() => v.classList.add("on"));
     v.querySelector("#lv-view-x").onclick = () => { v.classList.remove("on"); setTimeout(() => v.remove(), 200); };
+    // 읽기 전용 — 스크롤(읽기)은 되지만 진영선택·투표·버튼 등 모든 조작 차단.
+    // 동일 출처 iframe이라 로드 후 캡처 단계에서 클릭/입력을 삼킨다(스크롤=touchmove는 건드리지 않음).
+    const iframe = v.querySelector(".lv-view-if");
+    iframe.addEventListener("load", () => {
+      try {
+        const d = iframe.contentDocument; if (!d) return;
+        const st = d.createElement("style");
+        st.textContent = "input,textarea,select{pointer-events:none!important}";
+        (d.head || d.documentElement).appendChild(st);
+        const swallow = e => { e.stopPropagation(); e.preventDefault(); };
+        ["click", "dblclick", "submit", "keydown", "change", "contextmenu"].forEach(t =>
+          d.addEventListener(t, swallow, true));   // 캡처 단계 → 대상 핸들러 도달 전 차단
+      } catch (e) {}
+    });
   }
 
   /* ── 실시간 채팅 (open_messages 재사용) ─────────────────────────────────── */
