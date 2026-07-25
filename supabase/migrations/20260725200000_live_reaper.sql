@@ -13,15 +13,16 @@ begin
 end $$;
 grant execute on function public.live_heartbeat(uuid) to authenticated;
 
--- 청소: 무응답(>45s) 멤버 삭제 → 호스트가 사라졌거나 산 멤버가 없는 라이브 종료.
+-- 청소: 무응답(>120s) 멤버 삭제 → 호스트가 사라졌거나 산 멤버가 없는 라이브 종료.
+-- (120s = iOS 타이머 스로틀링·잠깐 백그라운드에도 방장이 억울하게 안 잘리도록 넉넉히)
 create or replace function public.live_reap()
 returns void language plpgsql security definer set search_path=public as $$
 begin
-  -- 45초 이상 무응답 멤버 제거(강제종료·백그라운드 이탈)
+  -- 120초 이상 무응답 멤버 제거(강제종료·백그라운드 이탈)
   delete from open_room_members m
    using open_rooms r
    where m.room_id = r.id and r.kind='live' and r.is_live=true
-     and m.last_seen < now() - interval '45 seconds';
+     and m.last_seen < now() - interval '120 seconds';
   -- 살아있는 호스트가 없는 라이브 = 종료
   update open_rooms r set is_live=false, ended_at=now()
    where r.kind='live' and r.is_live=true

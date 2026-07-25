@@ -13,6 +13,7 @@
   let ME = null;
   let CUR = null;          // { room, channel, state, role, muted, hand, audio }
   let refreshTimer = null;
+  let hbTimer = null;
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function toast(m) { try { if (window.GALLA_toast) window.GALLA_toast(m); } catch (e) {} }
@@ -214,17 +215,23 @@
     ov.querySelector("#lv-super").onclick = openSuper;
     ov.querySelector("#lv-share").onclick = shareRoom;
     ov.querySelector("#lv-present-open").onclick = openPresentSearch;
+    heartbeat();                                   // 입장 즉시 1회
     refreshState();
-    refreshTimer = setInterval(refreshState, 4000);   // 안전망 폴링
+    refreshTimer = setInterval(refreshState, 4000);   // 안전망 폴링(하트비트 동승)
+    hbTimer = setInterval(heartbeat, 12000);          // 별도 하트비트(refreshState 실패에도 생존신호 유지)
     connectAudio();   // 음성(있으면), 없으면 '준비중' 표시
   }
+
+  // 생존 신호 — 멈추면 서버 reaper가 120s 뒤 방 정리. 포그라운드 복귀 시 즉시 재송신.
+  function heartbeat() { if (!CUR) return; try { sb().rpc("live_heartbeat", { p_room: CUR.roomId }); } catch (e) {} }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden && CUR) { heartbeat(); refreshState(); } });
 
   function broadcastSync() { try { CUR && CUR.channel && CUR.channel.send({ type: "broadcast", event: "sync", payload: {} }); } catch (e) {} }
 
   // 페이지 실제 언로드 시 최선노력 퇴장. iOS 스와이프 강제종료는 이게 안 불릴 수 있어
-  // 서버 reaper(하트비트 멈춤 → 45s 뒤 방 정리)가 최종 안전망이다.
-  // ⚠️ visibilitychange(잠금·앱전환)로는 내보내지 않는다 — 라이브 청취 중 화면만 꺼도
-  //    쫓겨나면 안 되므로(백그라운드 45s까지는 유지, 그 뒤 reaper가 정리).
+  // 서버 reaper(하트비트 멈춤 → 120s 뒤 방 정리)가 최종 안전망이다.
+  // ⚠️ visibilitychange(잠금·앱전환)로는 내보내지 않는다 — 육성 청취 중 화면만 꺼도
+  //    쫓겨나면 안 되므로(백그라운드 120s까지는 유지, 그 뒤 reaper가 정리).
   window.addEventListener("pagehide", function () {
     if (!CUR) return;
     try { sb().rpc("live_leave", { p_room: CUR.roomId }); } catch (e) {}
@@ -232,8 +239,7 @@
 
   async function refreshState() {
     if (!CUR) return;
-    // 하트비트 — 앱을 강제 종료하면 이게 멈춰 45s 뒤 서버가 방을 자동 정리(유령 라이브 방지)
-    try { sb().rpc("live_heartbeat", { p_room: CUR.roomId }); } catch (e) {}
+    heartbeat();   // 폴링마다 생존 신호(별도 hbTimer와 이중화 — 멈추면 120s 뒤 서버 정리)
     let rows = [];
     try { const { data } = await sb().rpc("live_room_state", { p_room: CUR.roomId }); rows = data || []; } catch (e) {}
     if (!CUR) return;
@@ -659,6 +665,7 @@
 
   function closeStage(silent) {
     if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    if (hbTimer) { clearInterval(hbTimer); hbTimer = null; }
     if (CUR) {
       try { CUR.audio && CUR.audio.stop && CUR.audio.stop(); } catch (e) {}
       try { CUR.channel && sb().removeChannel(CUR.channel); } catch (e) {}
