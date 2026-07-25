@@ -3304,13 +3304,24 @@
     MY_ROOMS = new Set((mine || []).map(r => r.room_id));
     ROOMS = (rooms || []).sort((a, b) =>
       new Date(b.last_message_at || b.created_at) - new Date(a.last_message_at || a.created_at));
-    const joined = ROOMS.filter(r => MY_ROOMS.has(r.id));
-    const others = ROOMS.filter(r => !MY_ROOMS.has(r.id));
-    if (!ROOMS.length) {
-      box.innerHTML = `<div class="dm-empty">아직 열린 난장이 없어요.<br><span>첫 판을 벌여보세요 — 주제는 자유.</span></div>`;
+    renderRoomList();
+  }
+  /* 🔎 통합 난장 검색 — dm-live의 로비 검색창(육성 필터)이 같은 검색어로 여기(일반 난장)도 거른다 */
+  let ROOM_Q = '';
+  window.GALLA_roomFilter = function (q) { ROOM_Q = (q || '').trim().toLowerCase(); renderRoomList(); };
+  function renderRoomList() {
+    const box = ROOT.querySelector('#dm-room-list'); if (!box) return;
+    let list = ROOMS;
+    if (ROOM_Q) list = ROOMS.filter(r => ((r.title || '') + ' ' + (r.topic || '')).toLowerCase().includes(ROOM_Q));
+    const joined = list.filter(r => MY_ROOMS.has(r.id));
+    const others = list.filter(r => !MY_ROOMS.has(r.id));
+    if (!list.length) {
+      box.innerHTML = ROOM_Q
+        ? `<div class="dm-empty">‘${esc(ROOM_Q)}’ 난장을 못 찾았어요.<br><span>직접 열어서 첫 판을 벌여보세요.</span></div>`
+        : `<div class="dm-empty">아직 열린 난장이 없어요.<br><span>첫 판을 벌여보세요 — 주제는 자유.</span></div>`;
       return;
     }
-    // 🔥 지금 뜨는 난장 — 멤버수 + 최근 활동 열기(heat)로 랭킹. 미참여 방 중에서만.
+    // 🔥 지금 뜨는 난장 — 멤버수 + 최근 활동 열기(heat)로 랭킹. 미참여 방 중에서만. 검색 중엔 생략.
     const now = Date.now();
     const heat = r => {
       const last = new Date(r.last_message_at || r.created_at).getTime();
@@ -3319,15 +3330,15 @@
       return (r.member_count || 1) * 10 + recency;
     };
     // '뜨는'은 최근 활동(24h 내) 또는 3인+ 방만 — 오래된 소규모 방은 랭킹서 제외
-    const hot = others.filter(r => (r.member_count || 1) >= 2 && heat(r) >= 24)
+    const hot = ROOM_Q ? [] : others.filter(r => (r.member_count || 1) >= 2 && heat(r) >= 24)
       .sort((a, b) => heat(b) - heat(a)).slice(0, 4);
     const hotIds = new Set(hot.map(r => r.id));
     const browse = others.filter(r => !hotIds.has(r.id));
     const sec = t => `<div class="dm-sec">${t}</div>`;
     box.innerHTML =
       (hot.length ? sec('🔥 지금 뜨는 난장') + hot.map((r, i) => hotRoomRow(r, i + 1)).join('') : '') +
-      (joined.length ? sec('참여 중') + joined.map(roomRow).join('') : '') +
-      (browse.length ? sec('둘러보기') + browse.map(roomRow).join('') : '');
+      (joined.length ? sec(ROOM_Q ? '참여 중 · 검색결과' : '참여 중') + joined.map(roomRow).join('') : '') +
+      (browse.length ? sec(ROOM_Q ? '검색결과' : '둘러보기') + browse.map(roomRow).join('') : '');
     box.querySelectorAll('.dm-room-row').forEach(el => {
       el.addEventListener('click', () => {
         const r = ROOMS.find(x => x.id === el.dataset.rid);

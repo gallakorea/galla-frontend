@@ -80,12 +80,16 @@
           <button class="lv-open-btn" id="lv-open" type="button">＋ 육성난장 열기</button>
         </div>
         <div class="lv-lobby-search">
-          <input id="lv-lobby-q" placeholder="🔎 난장 주제·방장 검색" autocomplete="off">
+          <input id="lv-lobby-q" placeholder="🔎 난장 검색 (육성·일반 통합)" autocomplete="off">
         </div>
         <div id="lv-lobby-cards"></div>`;
       sec.querySelector("#lv-open").onclick = createLive;
       const qi = sec.querySelector("#lv-lobby-q");
-      qi.oninput = () => { LOBBY_Q = qi.value; paintLobbyCards(); };
+      // 통합 검색 — 같은 검색어로 육성(여기)과 일반 난장(dm.js 목록)을 동시에 거른다
+      qi.oninput = () => {
+        LOBBY_Q = qi.value; paintLobbyCards();
+        try { window.GALLA_roomFilter && window.GALLA_roomFilter(qi.value); } catch (e) {}
+      };
     }
     let rows = [];
     try { const { data } = await sb().rpc("list_live_rooms"); rows = data || []; } catch (e) {}
