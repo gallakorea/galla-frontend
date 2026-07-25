@@ -71,6 +71,10 @@
       function reg(){
         if (window.__iosrtcReady) return;
         try {
+          // clobber 자동적용이 안 되면 모듈을 직접 require해 연결
+          if (window.cordova && cordova.require && !(cordova.plugins && cordova.plugins.iosrtc)) {
+            try { var m = cordova.require('cordova-plugin-iosrtc.Plugin'); if (m) { cordova.plugins = cordova.plugins || {}; cordova.plugins.iosrtc = m; } } catch(e){}
+          }
           if (window.cordova && cordova.plugins && cordova.plugins.iosrtc) {
             var before = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
             cordova.plugins.iosrtc.registerGlobals();
