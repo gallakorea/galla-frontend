@@ -18,14 +18,14 @@
   function haptic(k) { try { if (window.GALLA_haptic) window.GALLA_haptic(k || "light"); else if (navigator.vibrate) navigator.vibrate(12); } catch (e) {} }
 
   var STEPS = [
-    { center: true, icon: "🗨️", kicker: "환영합니다", title: "여기가 갈라 메신저",
-      body: "카톡 갈아치우러 온 메신저예요.<br>뭐가 되는지 <b>30초</b>만 구경할래요?" },
+    { center: true, icon: "🗨️", kicker: "환영합니다", title: "여기가 갈라톡",
+      body: "카톡 갈아치우러 온 <b>갈라톡</b>이에요.<br>뭐가 되는지 <b>30초</b>만 구경할래요?" },
     { sel: '.dm-tab[data-tab="rooms"]', icon: "🎪", kicker: "오픈 수다방", title: "난장",
       body: "아무나 들어와 떠드는 <b>오픈챗</b>.<br>주제 하나 걸고 판 벌이면 사람들이 몰려와요." },
     { sel: '.dm-tab[data-tab="pager"]', icon: "📟", kicker: "★ 이건 꼭 ★", title: "삐삐 부활!", big: true,
       body: "90년대 그 삐삐 맞아요. <b>8282</b>(빨리빨리) 쳐서 호출하고,<br>암호책 보고 해독하는 재미 ㅋㅋ" },
-    { center: true, icon: "🎙", kicker: "★ 진짜 무기 ★", title: "워키토키 실시간 음성", big: true, art: artWalkie,
-      body: "대화방에서 버튼을 <b>꾹 누르면 말하고, 떼면 바로 전송</b> —<br>워키토키처럼 실시간! 위로 밀면 취소돼요." },
+    { center: true, icon: "🎙", kicker: "★ 진짜 무기 ★", title: "무전기, 꾹 눌러 말해요", big: true, art: artWalkie,
+      body: "대화방에서 버튼을 <b>꾹 누르면 말하고, 떼면 바로 전송</b> —<br>무전기처럼 실시간! 위로 밀면 취소돼요." },
     { center: true, icon: "📞", kicker: "통화도 됨", title: "육성톡 · 면상톡",
       body: "음성통화(육성톡)·영상통화(면상톡)로 <b>바로 콜</b>.<br>갈라 앱에서 빵빵하게 연결돼요." },
     { center: true, icon: "🚀", kicker: "준비 끝", title: "자, 이제 떠들어봐요!",
