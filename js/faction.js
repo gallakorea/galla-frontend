@@ -36,7 +36,8 @@
         </div>
         <button class="fac-s-btn" id="fac-shop">🎒 지원 아이템</button>
       </div>`;
-    sec.querySelector("#fac-shop").addEventListener("click", () => {
+    sec.querySelector("#fac-shop").addEventListener("click", async () => {
+      if (window.GALLA_requireLogin && !(await window.GALLA_requireLogin("로그인 후 이용할 수 있어요."))) return;
       if (window.openShop) window.openShop();
       else alert("상점을 열 수 없어요.");
     });

@@ -314,7 +314,10 @@
       if (isOwner) { btn.textContent = "🙌 내가 발의한 이슈예요"; btn.disabled = true; btn.style.opacity = ".6"; }
       else {
         const name = document.getElementById("issue-author")?.textContent?.replace(/·.*$/, "").trim() || "발의자";
-        btn.addEventListener("click", () => open(issue.id, name));
+        btn.addEventListener("click", async () => {
+          if (window.GALLA_requireLogin && !(await window.GALLA_requireLogin("로그인 후 후원할 수 있어요."))) return;
+          open(issue.id, name);
+        });
       }
     }
     renderList(issue.id);

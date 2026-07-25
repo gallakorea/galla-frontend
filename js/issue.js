@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072455";
-import { loadAiNews } from "./issue-news.js?v=072455";
-import { loadStats } from "./issue.stats.js?v=072455";
-import { initCommentSystem } from "./issue.comments.js?v=072455";
+import { loadAiArguments } from "./issue-argument.js?v=072456";
+import { loadAiNews } from "./issue-news.js?v=072456";
+import { loadStats } from "./issue.stats.js?v=072456";
+import { initCommentSystem } from "./issue.comments.js?v=072456";
 
 
 console.log("[issue.js] loaded");
@@ -480,9 +480,8 @@ async function wireIssueActions(issue) {
   const saveBtn = document.getElementById("issue-save-btn");
   const shareBtn = document.getElementById("issue-share-btn");
 
-  if (shareBtn) shareBtn.onclick = async () => {
-    // 로그인 게이트 통일 — 미로그인은 다른 액션과 동일하게 로그인 유도
-    if (window.GALLA_requireLogin && !(await window.GALLA_requireLogin("로그인 후 공유할 수 있어요."))) return;
+  if (shareBtn) shareBtn.onclick = () => {
+    // 공유는 로그인 불필요 — 미로그인도 자유롭게 공유(바이럴 성장, 초대코드는 로그인 시 자동 부착)
     const url = window.GALLA_shareUrl ? window.GALLA_shareUrl("issue", issue.id) : location.href;
     const title = issue.title ? `⚔️ ${issue.title}` : "GALLA";
     if (window.GALLA_share) window.GALLA_share({ url, title, text: "찬성이냐 반대냐, 당신의 진영은?" });
