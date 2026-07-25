@@ -92,10 +92,21 @@
         <div class="lv-audience" id="lv-audience"></div>
       </div>
       <div class="lv-chat" id="lv-chat"></div>
+      <div class="lv-react" id="lv-react">
+        <button data-emo="❤️" type="button">❤️</button>
+        <button data-emo="💩" type="button">💩</button>
+        <button data-emo="👏" type="button">👏</button>
+        <button data-emo="🔥" type="button">🔥</button>
+        <button data-emo="😂" type="button">😂</button>
+        <span class="lv-react-sp"></span>
+        <button class="lv-super" id="lv-super" type="button">💸 쏘기</button>
+        <button class="lv-share" id="lv-share" type="button">🔗</button>
+      </div>
       <div class="lv-chatbar">
         <input id="lv-chat-in" maxlength="500" placeholder="라이브 채팅…" autocomplete="off">
         <button id="lv-chat-send" type="button">보내기</button>
       </div>
+      <div class="lv-fx" id="lv-fx"></div>
       <div class="lv-bar" id="lv-bar"></div>`;
     document.body.appendChild(ov);
     requestAnimationFrame(() => ov.classList.add("on"));
@@ -111,8 +122,14 @@
     try {
       CUR.channel = sb().channel("live:" + roomId, { config: { broadcast: { self: false } } });
       CUR.channel.on("broadcast", { event: "sync" }, () => refreshState());
+      CUR.channel.on("broadcast", { event: "react" }, ({ payload }) => spawnFloat(payload && payload.emo));
+      CUR.channel.on("broadcast", { event: "super" }, ({ payload }) => showSuper(payload));
       CUR.channel.subscribe();
     } catch (e) {}
+    // 리액션·후원·공유
+    ov.querySelectorAll("#lv-react [data-emo]").forEach(b => b.onclick = () => sendReaction(b.dataset.emo));
+    ov.querySelector("#lv-super").onclick = openSuper;
+    ov.querySelector("#lv-share").onclick = shareRoom;
     refreshState();
     refreshTimer = setInterval(refreshState, 4000);   // 안전망 폴링
     connectAudio();   // 음성(있으면), 없으면 '준비중' 표시
@@ -170,6 +187,67 @@
     cin.value = "";
     appendMsg({ sender_id: ME, body });   // 낙관적
     try { await sb().from("open_messages").insert({ room_id: CUR.roomId, sender_id: ME, body }); } catch (e) { toast("전송 실패"); }
+  }
+
+  /* ── 실시간 리액션 (❤️/💩 날아다니기) ─────────────────────────────────── */
+  function spawnFloat(emo) {
+    const fx = document.getElementById("lv-fx"); if (!fx || !emo) return;
+    for (let i = 0; i < 5; i++) {
+      const s = document.createElement("span");
+      s.className = "lv-float"; s.textContent = emo;
+      s.style.left = (8 + Math.random() * 84) + "%";
+      s.style.setProperty("--dx", (((Math.random() * 90) | 0) - 45) + "px");
+      s.style.animationDelay = (Math.random() * 0.28).toFixed(2) + "s";
+      s.style.fontSize = (20 + (Math.random() * 18 | 0)) + "px";
+      fx.appendChild(s);
+      setTimeout(() => s.remove(), 2000);
+    }
+  }
+  function sendReaction(emo) {
+    spawnFloat(emo);
+    try { CUR && CUR.channel.send({ type: "broadcast", event: "react", payload: { emo } }); } catch (e) {}
+    try { window.GALLA_haptic && window.GALLA_haptic("light"); } catch (e) {}
+  }
+  function shareRoom() {
+    const title = (document.getElementById("lv-title")?.textContent || "GALLA 라이브 난장").trim();
+    const url = location.origin || "https://galla.im";
+    if (window.GALLA_share) window.GALLA_share({ url, title: "🎙 " + title, text: title + " — 지금 라이브 난장 중! 들으러 와요 🎧" });
+    else if (navigator.share) navigator.share({ title, url }).catch(() => {});
+    else toast("공유를 지원하지 않는 브라우저예요.");
+  }
+
+  /* ── 💸 GC 쏘기 (빵빵 터지는 후원 · 게임 GP와 분리된 현금성 GC) ──────── */
+  async function openSuper() {
+    if (!CUR) return;
+    const host = (CUR.state || []).find(r => r.role === "host");
+    if (host && host.user_id === ME) return toast("내 방엔 후원할 수 없어요.");
+    const amt = parseInt(prompt("💸 쏘기 (갈라코인 GC · 1GC=1원, 최소 500)", "1000") || "", 10);
+    if (!amt || amt < 500) return;
+    const msg = (prompt("응원 메시지 (선택)") || "").trim();
+    try {
+      const { data } = await sb().rpc("gc_donate_live", { p_room: CUR.roomId, p_amount: amt, p_message: msg });
+      if (!data || !data.ok) {
+        if (data && data.reason === "insufficient") { toast("갈라코인(GC)이 부족해요."); if (window.openCharge) window.openCharge(); }
+        else toast(data && data.reason === "self" ? "내 방엔 후원 불가" : "후원에 실패했어요.");
+        return;
+      }
+      const payload = { nick: (CUR.nicks && CUR.nicks[ME]) || "나", amount: amt, msg };
+      showSuper(payload);
+      try { CUR.channel.send({ type: "broadcast", event: "super", payload }); } catch (e) {}
+    } catch (e) { toast("후원에 실패했어요."); }
+  }
+  function showSuper(p) {
+    const fx = document.getElementById("lv-fx"); if (!fx || !p) return;
+    const won = (p.amount || 0).toLocaleString();
+    const card = document.createElement("div");
+    card.className = "lv-super-card";
+    card.innerHTML = `<div class="lv-sc-top">💸 <b>${esc(p.nick || "익명")}</b> 님 <b class="lv-sc-amt">${won}원</b> 쐈다! 🎉</div>` +
+      (p.msg ? `<div class="lv-sc-msg">${esc(p.msg)}</div>` : "");
+    fx.appendChild(card);
+    try { window.GALLA_haptic && window.GALLA_haptic("strong"); } catch (e) {}
+    // 코인 파티클도 빵!
+    for (let i = 0; i < 8; i++) spawnFloat("🪙");
+    setTimeout(() => { card.classList.add("out"); setTimeout(() => card.remove(), 400); }, 4200);
   }
 
   function render() {
@@ -288,14 +366,18 @@
   }
   async function connectAudio() {
     const note = document.getElementById("lv-audio-note");
-    const sess = await sfu("/sessions/new", "POST", {});
-    if (!sess || sess.ok === false || sess.reason === "unconfigured" || !sess.data || !sess.data.sessionId) {
-      if (note) { note.hidden = false; note.textContent = "🔊 음성 서버 준비 중 — 지금은 무대·손들기·역할만 동작해요. (관리자 설정 후 음성 활성화)"; }
-      CUR && (CUR.audio = { setMuted() {}, stop() {} }); return;
-    }
+    const fallback = (msg) => { if (note) { note.hidden = false; note.textContent = msg || "🔊 음성 서버 준비 중 — 무대·손들기·역할·채팅은 동작해요."; } CUR && (CUR.audio = { setMuted() {}, stop() {} }); };
     let pc;
     try { pc = new RTCPeerConnection({ iceServers: await iceServers(), bundlePolicy: "max-bundle" }); }
-    catch (e) { CUR && (CUR.audio = { setMuted() {}, stop() {} }); return; }
+    catch (e) { return fallback(); }
+    // 세션 부트스트랩 — CF Realtime SFU는 /sessions/new에 offer 동봉 필수(recvonly로 시작).
+    pc.addTransceiver("audio", { direction: "recvonly" });
+    let offer;
+    try { offer = await pc.createOffer(); await pc.setLocalDescription(offer); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
+    const sess = await sfu("/sessions/new", "POST", { sessionDescription: { type: "offer", sdp: offer.sdp } });
+    if (!sess || sess.reason === "unconfigured") { try { pc.close(); } catch (e) {} return fallback(); }
+    if (!sess.data || !sess.data.sessionId || !sess.data.sessionDescription) { try { pc.close(); } catch (e) {} return fallback("🔊 음성 연결 실패 — 재입장 시 재시도돼요."); }
+    try { await pc.setRemoteDescription(sess.data.sessionDescription); } catch (e) { try { pc.close(); } catch (_) {} return fallback(); }
     const cf = { sessionId: sess.data.sessionId, pc, pubTrack: null, myTrackName: null, subs: new Set(), q: Promise.resolve(), els: [] };
     if (!CUR) { try { pc.close(); } catch (e) {} return; }
     CUR.cf = cf;
@@ -486,6 +568,23 @@
     .lv-msg{font-size:13px;line-height:1.4;color:#dfe4f0;word-break:break-word}
     .lv-msg b{color:#8aa0ff;font-weight:800;margin-right:5px}
     .lv-msg.mine b{color:#7ef0ae}
+    .lv-react{display:flex;align-items:center;gap:6px;padding:4px 16px 2px}
+    .lv-react button{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;font-size:17px;padding:6px 9px;cursor:pointer;line-height:1}
+    .lv-react button:active{transform:scale(1.25)}
+    .lv-react .lv-react-sp{flex:1}
+    .lv-react .lv-super{font-size:12.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#ff8a3d,#ff3d67);border:0;padding:8px 12px}
+    .lv-react .lv-share{font-size:15px}
+    .lv-fx{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden}
+    .lv-float{position:absolute;bottom:120px;pointer-events:none;animation:lvFloat 1.9s ease-out forwards;will-change:transform,opacity}
+    @keyframes lvFloat{0%{opacity:0;transform:translateY(0) scale(.6)}12%{opacity:1}100%{opacity:0;transform:translateY(-62vh) translateX(var(--dx)) scale(1.25) rotate(12deg)}}
+    .lv-super-card{position:absolute;left:12px;right:12px;top:88px;padding:14px 16px;border-radius:16px;
+      background:linear-gradient(135deg,#ff8a3d,#ff2d55);box-shadow:0 16px 40px rgba(255,45,85,.5);color:#fff;
+      animation:lvSuperIn .5s cubic-bezier(.2,1.5,.35,1) both}
+    .lv-super-card.out{animation:lvSuperOut .4s ease forwards}
+    @keyframes lvSuperIn{0%{opacity:0;transform:translateY(-30px) scale(.8)}100%{opacity:1;transform:none}}
+    @keyframes lvSuperOut{to{opacity:0;transform:translateY(-16px) scale(.96)}}
+    .lv-sc-top{font-size:15px;font-weight:950}.lv-sc-amt{font-size:17px}
+    .lv-sc-msg{font-size:13.5px;margin-top:5px;color:rgba(255,255,255,.95)}
     .lv-chatbar{display:flex;gap:8px;padding:8px 16px}
     .lv-chatbar input{flex:1;min-width:0;background:#161a24;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 15px;color:#fff;font-size:14px}
     .lv-chatbar button{flex:0 0 auto;background:#2b6bff;border:0;border-radius:999px;color:#fff;font-weight:900;font-size:13.5px;padding:0 16px;cursor:pointer}
