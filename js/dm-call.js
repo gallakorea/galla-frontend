@@ -11,7 +11,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072574'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072575'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -695,6 +695,16 @@
     if (callKitPendingAnswer) { callKitPendingAnswer = false; return true; }
     return false;
   };
+  // 📞 최상위 셸(app-shell)이 네이티브에서 받아 중계한 통화 브릿지 메시지 처리
+  //    (네이티브 evalJS는 최상위 웹뷰만 때리므로, 이 iframe은 셸의 postMessage로 받는다)
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin) return;
+    const m = e.data;
+    if (!m || m.galla !== 'shellcmd') return;
+    if (m.t === 'voipToken') { try { window.GALLA_onVoipToken(m.token); } catch (_) {} }
+    else if (m.t === 'callKitAnswer') { try { window.GALLA_callKitAnswer(m.callerId); } catch (_) {} }
+    else if (m.t === 'callKitDecline') { try { window.GALLA_callKitDecline(m.callerId); } catch (_) {} }
+  });
 
   /* 어느 페이지에 있어도 벨이 울린다 — supabaseClient가 뜨면 스스로 수신 대기 */
   (function autoBoot() {
