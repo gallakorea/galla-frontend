@@ -3288,6 +3288,7 @@
     if (show) ROOT.querySelector('#dm-room-title').focus();
   }
   async function loadRooms() {
+    try { window.GALLA_liveRefresh && window.GALLA_liveRefresh(); } catch (_) {}   // 🎙 라이브 난장 상단 섹션 갱신
     const box = ROOT.querySelector('#dm-room-list');
     if (!box.innerHTML) box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
     const [{ data: rooms }, { data: mine }] = await Promise.all([
