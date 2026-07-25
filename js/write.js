@@ -446,8 +446,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const onP = p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; };
           const out = window.GALLA_bgVideo
             ? await window.GALLA_bgVideo.result(videoFile, onP)
-            : await window.GALLA_UPLOAD_VIDEO_STREAM(videoFile, onP);
-          video_url = out.hls;
+            : await window.GALLA_UPLOAD_VIDEO(videoFile, onP);
+          video_url = out.url || out.hls;
           if (!thumbnail_url && out.thumbnail) thumbnail_url = out.thumbnail;
         }
 

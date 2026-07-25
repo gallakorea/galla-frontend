@@ -19,7 +19,26 @@ const SYS = `너는 한국 예측시장 '갈라예측'의 에디터다. 사람�
 - 반드시 아래 JSON만 출력:
   {"markets":[{"question":"...(예/아니오로 답하는 40자 내 질문)","description":"정산 기준 한 문장(수치·날짜 포함)","category":"...","close_days":5}, ... 정확히 5개]}`;
 
+/* AI 일일 상한 — 플랫폼 전체 하루 예산(app_settings.ai_daily_caps)에서 1건 당긴다.
+   한도 초과면 false로 AI 호출을 건너뛴다. DB가 죽었을 땐 통과시킨다(예산 조회 실패로 기능을 멈추지 않게). */
+const AI_FN = "generate-predict-markets";
+async function aiBudgetOk(n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: AI_FN, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    if (j && j.ok === false) { console.warn("[ai-budget] blocked", AI_FN, JSON.stringify(j)); return false; }
+    return true;
+  } catch { return true; }
+}
+
 async function gen(headlines: string[]) {
+  if (!(await aiBudgetOk())) return null;
   const newsBlock = headlines.length
     ? `\n\n[참고: 최근 인기 뉴스 헤드라인 — 이 중 '베팅으로 즐길 만하고 근시일 내 판가름 나는' 주제를 골라 시의성 있게 활용해라(민감·비극·특정인 사건 헤드라인은 피하고, 경제지표·스포츠·날씨·연예·테크·트렌드 위주로)]\n- ${headlines.join("\n- ")}`
     : "";

@@ -6,7 +6,7 @@
    · OpenAI moderation(무료)로 성적·폭력·혐오 차단
    · 유명 IP·실존 인물 키워드 차단 — 나중에 이모티콘을 팔 계획이라면 특히 중요
    · 생성 권한은 이 함수에만(테이블 INSERT 권한을 클라에 주지 않음)
-   · 하루 상한은 charge RPC가 강제 */
+   · 하루 상한: 유저별=charge RPC, 플랫폼 전체=ai_budget_take(GP 차감 전 검사) */
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
@@ -85,6 +85,24 @@ async function uploadR2(bytes: Uint8Array, key: string) {
   return `${R2_PUBLIC_URL}/${key}`;
 }
 
+/* AI 일일 상한 — 플랫폼 전체 하루 예산(app_settings.ai_daily_caps)에서 1건 당긴다.
+   한도 초과면 false. DB가 죽었을 땐 통과시킨다(예산 조회 실패로 기능을 멈추지 않게). */
+const AI_FN = "generate-sticker";
+async function aiBudgetOk(n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: AI_FN, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    if (j && j.ok === false) { console.warn("[ai-budget] blocked", AI_FN, JSON.stringify(j)); return false; }
+    return true;
+  } catch { return true; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const me = callerUid(req);
@@ -104,6 +122,9 @@ Deno.serve(async (req) => {
   const asUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: req.headers.get("Authorization")! } },
   });
+  // 플랫폼 전체 AI 상한 — GP 차감 '전에' 막는다(차감 후 실패는 환불 경로를 태워야 하므로)
+  if (!(await aiBudgetOk(count))) return j({ error: "ai_daily_cap" }, 429);
+
   const { data: charge, error: cErr } = await asUser.rpc("ai_sticker_charge", { p_count: count });
   if (cErr || !charge?.ok) return j({ error: charge?.reason || "charge_failed", detail: charge }, 402);
   const paid = charge.charged as number;

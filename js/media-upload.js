@@ -209,4 +209,20 @@
   }
 
   window.GALLA_UPLOAD_VIDEO_STREAM = uploadVideoToStream;
+
+  /* ===========================================================
+     영상 업로드 단일 입구 — 크기·길이 상관없이 항상 Cloudflare Stream
+     ⚠️ 크기가 작은 영상을 R2로 보내 비용을 아끼는 분기를 넣었다가 되돌렸다(사장님 확정):
+        R2는 통짜 파일 다운로드라 첫 재생이 늦다. 재생 속도가 비용보다 우선이다.
+        영상 비용을 줄일 거면 R2 우회가 아니라 길이 제한·해상도로 줄인다.
+     window.GALLA_UPLOAD_VIDEO(file, onProgress?, signal?)
+       → { url, hls, thumbnail, uid }   (hls는 옛 호출부 호환용 별칭)
+  =========================================================== */
+  async function uploadVideo(file, onProgress, signal) {
+    if (!file) throw new Error('no_file');
+    const out = await uploadVideoToStream(file, onProgress, signal);
+    return { url: out.hls, hls: out.hls, thumbnail: out.thumbnail, uid: out.uid, via: 'stream' };
+  }
+
+  window.GALLA_UPLOAD_VIDEO = uploadVideo;
 })();

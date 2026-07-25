@@ -30,7 +30,26 @@ async function evidenceFor(question: string): Promise<string[]> {
 }
 
 /* AI 심판: '예' | '아니오' | '모름' */
+/* AI 일일 상한 — 플랫폼 전체 하루 예산(app_settings.ai_daily_caps)에서 1건 당긴다.
+   한도 초과면 false로 AI 호출을 건너뛴다. DB가 죽었을 땐 통과시킨다(예산 조회 실패로 기능을 멈추지 않게). */
+const AI_FN = "predict-auto-resolve";
+async function aiBudgetOk(n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: AI_FN, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    if (j && j.ok === false) { console.warn("[ai-budget] blocked", AI_FN, JSON.stringify(j)); return false; }
+    return true;
+  } catch { return true; }
+}
+
 async function judge(question: string, description: string, closeAt: string, evidence: string[]): Promise<string> {
+  if (!(await aiBudgetOk())) return "모름";
   if (!OPENAI) return "모름";
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",

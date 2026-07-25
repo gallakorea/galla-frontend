@@ -31,7 +31,26 @@ const SRC_HINT: Record<string, string> = {
   "82cook": "생활·일상", bobaedream: "기타", ruliweb: "엔터·스포츠", humoruniv: "기타", todayhumor: "기타",
 };
 
+/* AI 일일 상한 — 플랫폼 전체 하루 예산(app_settings.ai_daily_caps)에서 1건 당긴다.
+   한도 초과면 false로 AI 호출을 건너뛴다. DB가 죽었을 땐 통과시킨다(예산 조회 실패로 기능을 멈추지 않게). */
+const AI_FN = "generate-community-plaza";
+async function aiBudgetOk(n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: AI_FN, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    if (j && j.ok === false) { console.warn("[ai-budget] blocked", AI_FN, JSON.stringify(j)); return false; }
+    return true;
+  } catch { return true; }
+}
+
 async function rewrite(title: string, source?: string) {
+  if (!(await aiBudgetOk())) return { ok: false, cap: true, reason: "ai_daily_cap" };
   const hint = source && SRC_HINT[source] ? `\n(출처 커뮤니티: ${source} — 성격상 '${SRC_HINT[source]}'일 확률이 높으나 제목이 우선)` : "";
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -56,6 +75,7 @@ Deno.serve(async (req) => {
     let fixed = 0;
     for (const it of (pub || [])) {
       const out = await rewrite(it.src_title || "", it.source);
+      if (out?.cap) break;
       const cat = (out?.ok && CATEGORIES.includes(out.category)) ? out.category : (SRC_HINT[it.source] || "기타");
       const { error } = await sb.from("plaza_posts").update({ category: cat }).eq("id", it.plaza_post_id);
       if (!error) fixed++;
@@ -71,6 +91,7 @@ Deno.serve(async (req) => {
   let published = 0, skipped = 0;
   for (const it of (rows || [])) {
     const out = await rewrite(it.src_title || "", it.source);
+    if (out?.cap) break;   // AI 일일 상한 — 남은 백로그는 건드리지 않고 내일 다시
     if (!out?.ok) {
       await sb.from("community_hot").update({ status: "skipped", skip_reason: String(out?.reason || "ai_skip").slice(0, 200), processed_at: new Date().toISOString() }).eq("id", it.id);
       skipped++; continue;

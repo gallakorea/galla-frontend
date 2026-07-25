@@ -4386,6 +4386,7 @@
         hint.textContent =
           why === 'insufficient' ? `GP가 부족해요 (${cfg.price}GP 필요)` :
           why === 'daily_limit' ? '오늘 만들 수 있는 개수를 다 썼어요' :
+          why === 'ai_daily_cap' ? '오늘 이모티콘 공장이 꽉 찼어요 — 내일 다시 와줘요 (GP는 안 빠졌어요)' :
           why === 'blocked_ip' ? `'${data.word}'처럼 남의 캐릭터·실존 인물은 만들 수 없어요` :
           why === 'blocked_moderation' ? '이런 내용은 만들 수 없어요' :
           '만들지 못했어요 — GP는 돌려드렸어요';

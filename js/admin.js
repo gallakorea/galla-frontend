@@ -671,7 +671,7 @@
         const photos = [...($("#i-photos").files || [])];
         for (let i = 0; i < photos.length; i++) { set(`🖼 사진 업로드 ${i + 1}/${photos.length}…`); images.push(await window.GALLA_UPLOAD_MEDIA(photos[i], "image")); }
         const vf = $("#i-video").files[0];
-        if (vf) { set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO_STREAM(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`)); video_url = out.hls; vthumb = out.thumbnail; }
+        if (vf) { set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`)); video_url = out.url || out.hls; vthumb = out.thumbnail; }
         const cf = $("#i-card").files[0];
         if (cf) { set("📇 썸네일 업로드…"); card_thumb = await window.GALLA_UPLOAD_MEDIA(cf, "image"); }
         const thumb = images[0] || vthumb || card_thumb || null;

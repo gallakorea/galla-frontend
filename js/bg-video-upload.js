@@ -53,7 +53,7 @@
 
     const ctrl = new AbortController();
     const st = { file, ctrl, pct: 0, done: false, failed: false, promise: null };
-    st.promise = window.GALLA_UPLOAD_VIDEO_STREAM(
+    st.promise = window.GALLA_UPLOAD_VIDEO(
       file,
       (p) => { if (typeof p === 'number') { st.pct = p; emit(p); } },
       ctrl.signal
@@ -82,7 +82,7 @@
       if (out) { if (onProgress) onProgress(100); return out; }
       // 배경 업로드가 실패했다 → 지금 다시(이번엔 오류를 그대로 올린다)
     }
-    return window.GALLA_UPLOAD_VIDEO_STREAM(file, onProgress);
+    return window.GALLA_UPLOAD_VIDEO(file, onProgress);
   }
 
   const SUBS = new Set();

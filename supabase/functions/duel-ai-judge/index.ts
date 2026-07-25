@@ -18,6 +18,24 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 }
 
+/* AI 일일 상한 — 플랫폼 전체 하루 예산(app_settings.ai_daily_caps)에서 1건 당긴다.
+   한도 초과면 false. DB가 죽었을 땐 통과시킨다(예산 조회 실패로 기능을 멈추지 않게). */
+const AI_FN = "duel-ai-judge";
+async function aiBudgetOk(n = 1): Promise<boolean> {
+  try {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_budget_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ p_fn: AI_FN, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    if (j && j.ok === false) { console.warn("[ai-budget] blocked", AI_FN, JSON.stringify(j)); return false; }
+    return true;
+  } catch { return true; }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -43,6 +61,12 @@ Deno.serve(async (req) => {
     if (!msgs || msgs.length === 0) {
       await supa.rpc("duel_apply_ai_verdict", { p_duel: duel_id, p_winner: "draw", p_reason: "변론 기록이 없어 무승부로 판정했어요." });
       return json({ ok: true, winner: "draw" });
+    }
+
+    // AI 일일 상한 초과 — 판정 없이 무승부로 종료(대결이 영구 미결로 남는 게 더 나쁘다)
+    if (!(await aiBudgetOk())) {
+      await supa.rpc("duel_apply_ai_verdict", { p_duel: duel_id, p_winner: "draw", p_reason: "심판이 과부하로 판정을 못해 무승부로 종료했어요." });
+      return json({ ok: true, winner: "draw", capped: true });
     }
 
     const transcript = msgs.map((m) =>
