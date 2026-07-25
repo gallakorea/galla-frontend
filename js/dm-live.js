@@ -156,7 +156,7 @@
       <div class="lv-top">
         <div class="lv-top-info"><span class="lv-live-badge">🔴 LIVE</span><b id="lv-title">${esc(title || "육성 난장")}</b>
           <div id="lv-topic" class="lv-topic">${esc(topic || "")}</div></div>
-        <button class="lv-x" id="lv-x" aria-label="나가기">✕</button>
+        <button class="lv-x" id="lv-x" type="button" aria-label="나가기">나가기</button>
       </div>
       <div class="lv-audio-note" id="lv-audio-note" hidden></div>
       <div class="lv-present" id="lv-present" hidden></div>
@@ -553,6 +553,10 @@
     // 자료(프리젠테이션) 버튼 — 호스트만
     const presBtn = ov.querySelector("#lv-present-open"); if (presBtn) presBtn.hidden = !isHost;
 
+    // 우상단 나가기 버튼 — 청중/스피커 '나가기', 호스트 '방 뽀개기'
+    const xb = ov.querySelector("#lv-x");
+    if (xb) { xb.textContent = isHost ? "🧨 방 뽀개기" : "나가기"; xb.classList.toggle("danger", isHost); }
+
     // 하단 바
     const bar = ov.querySelector("#lv-bar");
     const canSpeak = CUR.role === "host" || CUR.role === "speaker";
@@ -564,15 +568,11 @@
     }
     // 스피커(호스트 제외)는 스스로 청중으로 내려갈 수 있다
     if (CUR.role === "speaker") html += `<button class="lv-bbtn" id="lv-stepdown">🙇 내려가기</button>`;
-    // 호스트 전용 출구 = '방 뽀개기'(확인 필수). 호스트에겐 일반 '나가기'를 숨긴다(나가면 곧 방 파괴라 동일).
-    if (isHost) html += `<button class="lv-bbtn danger" id="lv-end">🧨 방 뽀개기</button>`;
-    else html += `<button class="lv-bbtn" id="lv-leave">나가기</button>`;
+    // 출구(나가기/방 뽀개기)는 우상단 버튼으로 통일 — 하단바 중복 제거
     bar.innerHTML = html;
     const mb = bar.querySelector("#lv-mute"); if (mb) mb.onclick = toggleMute;
     const hb = bar.querySelector("#lv-hand"); if (hb) hb.onclick = toggleHand;
     const sd = bar.querySelector("#lv-stepdown"); if (sd) sd.onclick = stepDown;
-    const eb = bar.querySelector("#lv-end"); if (eb) eb.onclick = endRoom;
-    const lb = bar.querySelector("#lv-leave"); if (lb) lb.onclick = leave;
   }
 
   // 무대/청중 인물 탭 → 프로필 시트(팔로우·언팔 + 호스트면 모더레이션)
@@ -906,7 +906,9 @@
     .lv-top{display:flex;align-items:flex-start;gap:10px;padding:16px 16px 8px}
     .lv-top-info{flex:1;min-width:0}.lv-top-info b{display:block;font-size:18px;font-weight:950;margin-top:6px}
     .lv-topic{font-size:12.5px;color:#b7bdc9;margin-top:2px}
-    .lv-x{width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,.1);border:0;color:#fff;font-size:16px;cursor:pointer}
+    .lv-x{flex:0 0 auto;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:900;cursor:pointer;white-space:nowrap}
+    .lv-x.danger{background:rgba(255,77,103,.16);border-color:rgba(255,77,103,.45);color:#ff9aa5}
+    .lv-x:active{transform:scale(.96)}
     .lv-audio-note{margin:0 16px 6px;padding:9px 12px;border-radius:12px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.3);color:#ffd479;font-size:12px;font-weight:700}
     /* 📌 무대 자료 배너 */
     .lv-present{display:flex;align-items:center;gap:11px;margin:0 16px 8px;padding:11px 13px;border-radius:14px;
