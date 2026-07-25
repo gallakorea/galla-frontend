@@ -353,36 +353,75 @@ document.addEventListener('DOMContentLoaded', () => {
     const thumbImg = thumbPreview.querySelector('img');
     const videoEl = videoPreview.querySelector('video');
 
+    /* ── 미리보기 ─────────────────────────────────────────
+       발행 뒤 이슈 페이지(issue.html)와 '같은 순서·같은 구성'으로 보여준다.
+       예전 미리보기는 순서가 실제와 달랐고(미디어가 중간), 실제로는 없는
+       '🎥 1분 엘리베이터 스피치' 버튼이 떴다 → 사장님 제보로 제거.
+       실제 순서: 작성자 헤드 → 미디어 → 제목·한줄 → 액션바 → 진영 선택 → 핵심 요약 */
+    const esc = (s) => (s == null ? '' : String(s).replace(/[&<>"]/g,
+      c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])));
+
+    const factionA = factionAEl.value.trim() || '찬성이오';
+    const factionB = factionBEl.value.trim() || '난 반댈세';
+    const imgSrcs = croppedImages.map(f => URL.createObjectURL(f));
+
+    let mediaHtml = '';
+    if (videoEl && videoEl.src) {
+      mediaHtml = `<div class="prev-media">
+        <video src="${esc(videoEl.src)}" controls playsinline muted preload="metadata"></video>
+      </div>`;
+    } else if (imgSrcs.length) {
+      mediaHtml = `<div class="prev-media">
+        <img src="${esc(imgSrcs[0])}" alt="">
+        ${imgSrcs.length > 1 ? `<div class="prev-dots">${
+          imgSrcs.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')
+        }</div><div class="prev-count">1/${imgSrcs.length}</div>` : ''}
+      </div>`;
+    } else if (thumbImg) {
+      mediaHtml = `<div class="prev-media"><img src="${esc(thumbImg.src)}" alt=""></div>`;
+    }
+
     issuePreview.innerHTML = `
       <section class="issue-preview">
-        <div class="issue-meta">
-          ${categoryEl.value} · 방금 전 · 예상 기부처: ${donationEl.value}
-        </div>
+        <div class="prev-note">발행하면 이렇게 보여요 · 아래 버튼들은 미리보기라 동작하지 않아요</div>
 
-        <h1 class="issue-title">${titleEl.value}</h1>
-        <p class="issue-one-line">${oneLineEl.value}</p>
-        <div class="issue-author">작성자 · ${anon ? '익명' : '사용자'}</div>
-       
-        <div class="issue-author-stance">
-          발의자 입장 · ${authorStance === 'pro'
-            ? (factionAEl.value.trim() || '찬성이오')
-            : (factionBEl.value.trim() || '난 반댈세')}
-        </div>
-
-        ${thumbImg ? `
-          <div class="preview-thumb-wrap">
-            <img src="${thumbImg.src}" />
+        <div class="prev-card">
+          <div class="prev-head">
+            <div class="prev-avatar"></div>
+            <div class="prev-head-info">
+              <div class="prev-author">작성자 · ${anon ? '익명' : '나'}</div>
+              <div class="prev-sub">${esc(categoryEl.value)} · 방금 전 · 조회 0</div>
+            </div>
+            <span class="prev-follow">+ 팔로우</span>
           </div>
-        ` : ''}
 
-        ${videoEl ? `
-          <button type="button" class="speech-btn" id="openSpeech">
-            🎥 1분 엘리베이터 스피치
-          </button>` : ''}
+          ${mediaHtml}
 
-        <section class="issue-summary">
-          <p>${descEl.value}</p>
-        </section>
+          <div class="prev-caption">
+            <h1>${esc(titleEl.value)}</h1>
+            <p>${esc(oneLineEl.value)}</p>
+          </div>
+
+          <div class="prev-actions-row">
+            <span>♥ 0</span><span>저장</span><span>공유</span>
+          </div>
+
+          <div class="prev-sec">
+            <div class="prev-sec-title">⚔️ 진영 선택</div>
+            <div class="gv" id="prevGv"></div>
+            <p class="prev-stance">내 입장 · ${esc(authorStance === 'pro' ? factionA : factionB)}</p>
+          </div>
+
+          <div class="prev-sec">
+            <div class="prev-sec-title">📝 핵심 요약</div>
+            <p class="prev-body">${esc(descEl.value)}</p>
+          </div>
+
+          <div class="prev-sec prev-sec-dim">
+            <div class="prev-sec-title">💰 예상 기부처</div>
+            <p class="prev-body">${esc(donationEl.value)}</p>
+          </div>
+        </div>
 
         <div class="preview-actions">
           <button type="button" id="editPreview">수정하기</button>
@@ -390,6 +429,13 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </section>
     `;
+
+    // 진영바는 실제 페이지와 같은 컴포넌트를 쓴다(모양이 어긋나지 않게)
+    if (window.GALLA_VoteBar) {
+      window.GALLA_VoteBar.mount(document.getElementById('prevGv'), {
+        factionA, factionB, pro: 0, con: 0, myStance: authorStance,
+      });
+    }
 
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';

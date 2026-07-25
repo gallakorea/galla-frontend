@@ -20,7 +20,12 @@ html, body {
 .wr-appbar {
   position: sticky; top: 0; z-index: 50;
   display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 8px;
-  height: 54px; padding: 0 12px; padding-top: env(safe-area-inset-top);
+  /* ⚠️ height:54px + padding-top:safe-area는 안 된다. box-sizing:border-box라
+     노치 패딩(아이폰 ~47px)이 높이 안쪽을 먹어 내용 영역이 7px만 남고 넘쳐서
+     아래 콘텐츠 위에 겹친다(사장님 제보 스크린샷: 제목이 h1·버튼과 겹침).
+     패딩만큼 높이를 늘려야 한다. */
+  min-height: calc(54px + env(safe-area-inset-top));
+  padding: 0 12px; padding-top: env(safe-area-inset-top);
   background: rgba(10,10,11,.72); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
 }
@@ -195,16 +200,46 @@ select.input-field option { background: #16171c; color: #fff; }
 .issue-preview { margin-top: 22px; background: var(--card); border: 1px solid var(--line);
   border-radius: 18px; padding: 18px; animation: wrRise .35s ease both; }
 @keyframes wrRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.issue-preview .issue-meta { font-size: 12px; color: var(--sub); }
-.issue-preview .issue-title { margin: 10px 0 4px; font-size: 20px; font-weight: 900; line-height: 1.35; }
-.issue-preview .issue-one-line { margin: 0; font-size: 14px; color: #c2c6cf; }
-.issue-preview .issue-author { margin-top: 10px; font-size: 12.5px; color: var(--dim); }
-.issue-preview .issue-author-stance { margin-top: 4px; font-size: 12.5px; color: var(--g-gold); font-weight: 700; }
-.preview-thumb-wrap { margin: 14px 0; border-radius: 14px; overflow: hidden; }
-.preview-thumb-wrap img { width: 100%; display: block; }
-.speech-btn { width: 100%; margin: 12px 0; padding: 12px; border-radius: 12px; border: 1px solid var(--line);
-  background: rgba(255,255,255,.05); color: #fff; font-size: 13.5px; font-weight: 800; cursor: pointer; }
-.issue-summary { margin-top: 12px; font-size: 14px; color: #d4d7de; line-height: 1.65; white-space: pre-wrap; }
+/* 실제 이슈 페이지(issue.html)와 같은 순서·같은 모양으로 보여준다.
+   순서: 작성자 헤드 → 미디어 → 제목·한줄 → 액션바 → 진영 선택 → 핵심 요약 */
+.prev-note { font-size: 12px; color: var(--sub); text-align: center; margin: -4px 0 14px; }
+.prev-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+  background: rgba(255,255,255,.02); }
+
+.prev-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.prev-avatar { width: 34px; height: 34px; border-radius: 50%; flex: none;
+  background: linear-gradient(135deg, #2a2f3a, #1b1f27); border: 1px solid var(--line); }
+.prev-head-info { flex: 1 1 auto; min-width: 0; }
+.prev-author { font-size: 13px; font-weight: 800; }
+.prev-sub { font-size: 11.5px; color: var(--sub); margin-top: 2px; }
+.prev-follow { flex: none; font-size: 11.5px; font-weight: 800; color: var(--g-blue);
+  border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
+
+/* 미디어는 실제 페이지처럼 제목 '위', 4:5 세로 */
+.prev-media { position: relative; background: #000; aspect-ratio: 4 / 5; }
+.prev-media img, .prev-media video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.prev-dots { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 5px; }
+.prev-dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.4); }
+.prev-dots i.on { background: #fff; }
+.prev-count { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 800;
+  color: #fff; background: rgba(0,0,0,.55); border-radius: 999px; padding: 3px 8px; }
+
+.prev-caption { padding: 14px 14px 0; }
+.prev-caption h1 { margin: 0; font-size: 18px; font-weight: 900; line-height: 1.35; }
+.prev-caption p { margin: 6px 0 0; font-size: 13.5px; color: #c2c6cf; line-height: 1.5; }
+
+.prev-actions-row { display: flex; gap: 18px; padding: 12px 14px;
+  font-size: 12.5px; color: var(--sub); border-bottom: 1px solid var(--line); }
+
+.prev-sec { padding: 14px; border-bottom: 1px solid var(--line); }
+.prev-sec:last-child { border-bottom: none; }
+.prev-sec-dim { opacity: .75; }
+.prev-sec-title { font-size: 13.5px; font-weight: 800; margin-bottom: 10px; }
+.prev-stance { margin: 10px 0 0; font-size: 12.5px; font-weight: 700; color: var(--g-gold); }
+.prev-body { margin: 0; font-size: 13.5px; color: #d4d7de; line-height: 1.65; white-space: pre-wrap; }
+
+/* 미리보기 안의 진영바는 보여주기용 — 눌러도 아무 일 없어야 한다 */
+.prev-sec .gv { pointer-events: none; }
 .preview-actions { display: flex; gap: 10px; margin-top: 18px; }
 .preview-actions button { flex: 1; padding: 14px; border-radius: 13px; cursor: pointer; font-size: 14px; font-weight: 800; border: none; }
 #editPreview { background: rgba(255,255,255,.05); border: 1px solid var(--line); color: #fff; }

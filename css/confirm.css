@@ -18,7 +18,9 @@ html, body {
 /* 상단 앱바 (write와 동일 톤) */
 .wr-appbar { position: sticky; top: 0; z-index: 50;
   display: grid; grid-template-columns: 40px 1fr 40px; align-items: center;
-  height: 54px; padding: 0 12px; padding-top: env(safe-area-inset-top);
+  /* ⚠️ write.css와 동일 함정 — height 고정 + safe-area 패딩은 border-box에서 겹침을 만든다 */
+  min-height: calc(54px + env(safe-area-inset-top));
+  padding: 0 12px; padding-top: env(safe-area-inset-top);
   background: rgba(10,10,11,.72); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
 .wr-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
   background: none; border: none; color: #fff; cursor: pointer; }
