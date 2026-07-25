@@ -579,6 +579,10 @@
               <button class="dm-toggle" data-pref="typing" type="button"></button>
             </div>
             <div class="dm-set-row">
+              <span class="dm-set-mid"><b>읽음 표시</b><i>끄면 상대가 내 읽음을 못 보고, 나도 상대 읽음이 안 보여요 — 읽씹 눈치 제로 😎</i></span>
+              <button class="dm-toggle" data-pref="receipts" type="button"></button>
+            </div>
+            <div class="dm-set-row">
               <span class="dm-set-mid"><b>내 난장 관리</b><i>내가 만들거나 들어간 오픈 채팅방</i></span>
               <button class="dm-mic-btn" data-act="goRooms" type="button">관리</button>
             </div>
@@ -2007,6 +2011,7 @@
     dndOn: false, dndFrom: '23:00', dndTo: '07:00',   // 집중(방해금지) 시간
     lockPin: '',             // 화면 잠금 PIN(해시)
     typing: true,            // 입력 중 상태 주고받기
+    receipts: true,          // 읽음 표시 주고받기(끄면 상호 미표시 — 읽씹 눈치 제로, 카톡 차별화)
     swipeReply: true,        // 말풍선 밀어서 답장
     voiceBtn: true,          // 입력창 간편녹음 버튼
     autoplay: true,          // 영상 말풍선 자동재생
@@ -3856,9 +3861,10 @@
     const peers = list.map(t => t.user_lo === ME ? t.user_hi : t.user_lo);
     await nicksFor(peers);
     const { data: unread } = await supabase.from('dm_messages')
-      .select('thread_id').is('read_at', null).neq('sender_id', ME);
+      .select('thread_id,created_at').is('read_at', null).neq('sender_id', ME);
     const unreadBy = {};
-    (unread || []).forEach(m => { unreadBy[m.thread_id] = (unreadBy[m.thread_id] || 0) + 1; });
+    // 읽음 표시 OFF로 read_at이 안 남은 메시지는 로컬 seen 시각으로 걸러 뱃지를 지운다
+    (unread || []).forEach(m => { if (!seenCovers(m.thread_id, m.created_at)) unreadBy[m.thread_id] = (unreadBy[m.thread_id] || 0) + 1; });
 
     // 정렬: 📌 고정이 항상 맨 위 → 그 안에서 선택한 기준. 단체 채팅도 같은 시간축에 섞인다
     const items = [
@@ -4053,7 +4059,7 @@
     return `
       <div class="dm-bubble ${mine ? 'me' : 'you'}${m.kind === 'gif' ? ' stk' : ''}" data-id="${m.id}" data-mine="${mine ? 1 : 0}" data-at="${m.created_at}" data-del="${m.deleted_at ? 1 : 0}">
         ${quote}${inner}
-        <span class="dm-bub-time">${hhmm(m.created_at)}${mine ? `<b class="dm-receipt" data-read="${m.read_at ? 1 : 0}">${m.read_at ? '읽음' : ''}</b>` : ''}</span>
+        <span class="dm-bub-time">${hhmm(m.created_at)}${(mine && UI.receipts) ? `<b class="dm-receipt" data-read="${m.read_at ? 1 : 0}">${m.read_at ? '읽음' : ''}</b>` : ''}</span>
         <span class="dm-reacts" data-for="${m.id}">${reactChips(m.id)}</span>
       </div>`;
   }
@@ -4264,6 +4270,7 @@
   }
   /* '읽음'은 내 마지막 읽힌 메시지에만 — 전부 달면 소음이다(카톡과 같은 문법) */
   function paintReceipts() {
+    if (!UI.receipts) return;   // 읽음 표시 끔 — 상호 미표시(내 것도 안 그린다)
     const mine = [...ROOT.querySelectorAll('.dm-bubble.me .dm-receipt')];
     mine.forEach(r => { r.textContent = ''; });
     for (let i = mine.length - 1; i >= 0; i--) {
@@ -5103,7 +5110,17 @@
     clearTimeout(typingHideTimer);
   }
 
+  /* 읽음 표시 OFF일 때의 로컬 읽음 기록 — 서버 read_at을 안 남기니(상대에게 '읽음' 안 뜸)
+     내 안읽음 뱃지는 이 로컬 시각(seen)으로 대신 지운다. */
+  const SEEN_KEY = 'galla_dm_seen';
+  let SEEN = {}; try { SEEN = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}'); } catch (_) {}
+  function seenCovers(tid, iso) { return !!(SEEN[tid] && iso && SEEN[tid] >= iso); }
+
   async function markRead(tid) {
+    // 로컬 seen은 항상 기록 — 켬→끔 전환 직후에도 뱃지가 정확하다
+    SEEN[tid] = new Date().toISOString();
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(SEEN)); } catch (_) {}
+    if (!UI.receipts) { refreshBadge(); return; }   // 끔: 상대에게 '읽음'을 보내지 않는다
     await supabase.from('dm_messages').update({ read_at: new Date().toISOString() })
       .eq('thread_id', tid).is('read_at', null).neq('sender_id', ME);
     refreshBadge();
@@ -5168,12 +5185,13 @@
   async function refreshBadge() {
     if (!ME) return;
     const [dm, pg] = await Promise.all([
-      supabase.from('dm_messages').select('id', { count: 'exact', head: true })
-        .is('read_at', null).neq('sender_id', ME),
+      // count 대신 행을 받아 로컬 seen(읽음 표시 OFF)으로 거른다 — 안 거르면 뱃지가 영영 안 꺼짐
+      supabase.from('dm_messages').select('thread_id,created_at')
+        .is('read_at', null).neq('sender_id', ME).limit(500),
       supabase.from('pager_messages').select('id', { count: 'exact', head: true })
         .eq('box_owner', ME).is('listened_at', null),
     ]);
-    const dmN = dm?.count || 0, pgN = pg?.count || 0;
+    const dmN = (dm?.data || []).filter(m => !seenCovers(m.thread_id, m.created_at)).length, pgN = pg?.count || 0;
     const total = dmN + pgN;
     const paint = (el, n) => {
       if (!el) return;

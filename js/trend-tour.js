@@ -1,0 +1,193 @@
+/* ============================================================================
+   📈 트렌드 첫 진입 코치마크 투어 — dm-tour와 같은 스포트라이트 엔진(병맛 톤)
+   - 트렌드 페이지 최초 1회(localStorage galla_trend_tour_v1) · 로그인 불필요(공개 페이지)
+   - 각 탭(.tab-item)을 스포트라이트로 뚫고 말풍선 꼬리로 지목
+   ========================================================================== */
+(function () {
+  if (document.body.getAttribute("data-page") !== "trend") return;
+  var KEY = "galla_trend_tour_v1";
+  try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
+
+  function haptic(k) { try { if (window.GALLA_haptic) window.GALLA_haptic(k || "light"); else if (navigator.vibrate) navigator.vibrate(12); } catch (e) {} }
+
+  /* 전 스텝을 실제 요소에 앵커(사장님: 두 개만 연결되고 나머진 붕 떠 보였다) —
+     타깃만 스포트라이트로 밝게 뚫리고 나머지는 어두워져 '어딜 말하는지' 즉시 보인다. */
+  /* 병맛 트렌드 투어 — 탭 순서대로 스포트라이트 */
+  var STEPS = [
+    { sel: ".tabs-header", icon: "📡", kicker: "환영합니다", title: "여기가 트렌드 안테나",
+      body: "세상 돌아가는 거 여기서 다 잡혀요.<br><b>트민남·트민녀</b> 되는 지름길 — <b>20초</b> 컷." },
+    { sel: '.tab-item[data-tab="search"]', icon: "🔎", kicker: "다 털어드림", title: "통합검색", big: true,
+      body: "이슈·예측·뉴스·유튜브·광장까지<br>검색창 <b>하나로 전부</b> 나와요. 네이버 왜 켜요?" },
+    { sel: '.tab-item[data-tab="trending"]', icon: "🔥", kicker: "★ 실검 부활 ★", title: "핫트렌드", big: true,
+      body: "지금 뜨는 <b>실시간 키워드</b>.<br>어제 모르면 아싸, 오늘 알면 <b>트민남·트민녀</b> 😎" },
+    { sel: '.tab-item[data-tab="news"]', icon: "🧠", kicker: "AI가 떠먹여줌", title: "갈라뉴스",
+      body: "기사 수십 개를 <b>AI가 3줄</b>로 씹어서 정리.<br>출근길 3분이면 오늘치 끝." },
+    { sel: '.tab-item[data-tab="hot"]', icon: "▶️", kicker: "알고리즘 무시", title: "핫튜브",
+      body: "지금 <b>터지는 유튜브</b>만 골라 모음.<br>영상 찾아 헤매는 시간, 여기서 아껴요." },
+    { sel: '.tab-item[data-tab="plaza"]', icon: "🗣", kicker: "놀이터", title: "광장",
+      body: "글·짤·밈으로 노는 <b>갈라 커뮤니티</b>.<br>댓글 전투는 덤 — 참전은 자유." },
+    { center: true, icon: "🚀", kicker: "준비 끝", title: "이제 아는 척하러 가요",
+      body: "트렌드 다 꿰고 단톡방에서 <b>먼저 아는 사람</b> 되기.<br>시작해요 👋" }
+  ];
+
+  var idx = 0, OV = null;
+
+  function boot() {
+    injectCSS();
+    OV = document.createElement("div");
+    OV.className = "dmt";
+    OV.innerHTML =
+      '<div class="dmt-scrim"></div>' +
+      '<div class="dmt-ring" hidden></div>' +
+      '<div class="dmt-card">' +
+        '<i class="dmt-tail" hidden></i>' +
+        '<button class="dmt-skip" type="button">건너뛰기 ✕</button>' +
+        '<div class="dmt-art"></div>' +
+        '<div class="dmt-kicker"></div>' +
+        '<div class="dmt-title"></div>' +
+        '<div class="dmt-body"></div>' +
+        '<div class="dmt-foot"><div class="dmt-dots"></div><button class="dmt-next" type="button">다음</button></div>' +
+      "</div>";
+    document.body.appendChild(OV);
+    var dots = OV.querySelector(".dmt-dots");
+    STEPS.forEach(function (_, i) { var d = document.createElement("i"); d.className = "dmt-dot" + (i ? "" : " on"); dots.appendChild(d); });
+
+    OV.querySelector(".dmt-skip").onclick = finish;
+    OV.querySelector(".dmt-next").onclick = function () { if (idx >= STEPS.length - 1) return finish(); go(idx + 1); };
+    OV.querySelector(".dmt-scrim").onclick = function () {}; // 뒤 클릭 차단(안내 중)
+    window.addEventListener("resize", reposition);
+
+    requestAnimationFrame(function () { OV.classList.add("show"); go(0); });
+  }
+
+  function go(i) {
+    idx = i;
+    var s = STEPS[i];
+    var card = OV.querySelector(".dmt-card");
+    OV.querySelector(".dmt-kicker").innerHTML = s.kicker || "";
+    OV.querySelector(".dmt-title").innerHTML = s.title || "";
+    OV.querySelector(".dmt-body").innerHTML = s.body || "";
+    var artBox = OV.querySelector(".dmt-art");
+    artBox.innerHTML = s.art ? s.art() : ('<div class="dmt-emoji' + (s.big ? " big" : "") + '">' + (s.icon || "✨") + "</div>");
+    card.classList.toggle("big", !!s.big);
+    OV.querySelectorAll(".dmt-dot").forEach(function (d, k) { d.classList.toggle("on", k === i); });
+    OV.querySelector(".dmt-next").textContent = (i >= STEPS.length - 1) ? "시작하기 🚀" : "다음";
+    reposition();
+    // 살짝 튀는 등장
+    card.classList.remove("pop"); void card.offsetWidth; card.classList.add("pop");
+    haptic(s.big ? "medium" : "light");
+  }
+
+  function reposition() {
+    if (!OV) return;
+    var s = STEPS[idx], ring = OV.querySelector(".dmt-ring"), card = OV.querySelector(".dmt-card");
+    var el = s && s.sel ? document.querySelector(s.sel) : null;
+    var rect = el && el.getBoundingClientRect();
+    // 코치마크 유지 + 위치 정밀화(사장님 피드백: 방식은 좋은데 '정렬 벗어난 팝업'처럼 보였다)
+    // → 카드는 타깃 위/아래에 앵커하고 '말풍선 꼬리'가 타깃 중심을 정확히 가리킨다.
+    //   화면 밖으로 못 나가게 좌우 클램프. 타깃 없는 스텝(center)만 정중앙.
+    var tail = OV.querySelector(".dmt-tail");
+    var vw = window.innerWidth, vh = window.innerHeight;
+    if (rect && rect.width && rect.height && rect.bottom > 0 && rect.top < vh) {
+      var pad = 8;
+      OV.classList.add("spot");   // 스포트라이트 모드 — 스크림 대신 링 그림자가 딤을 담당
+      ring.hidden = false;
+      ring.style.left = (rect.left - pad) + "px";
+      ring.style.top = (rect.top - pad) + "px";
+      ring.style.width = (rect.width + pad * 2) + "px";
+      ring.style.height = (rect.height + pad * 2) + "px";
+      // 카드 폭을 실측해 타깃 중심에 정렬 + 화면 안(12px 여백)으로 클램프
+      card.style.transform = "none";
+      var cw = card.offsetWidth || Math.min(vw * 0.86, 340);
+      var cx = rect.left + rect.width / 2;
+      var left = Math.max(12, Math.min(cx - cw / 2, vw - 12 - cw));
+      card.style.left = left + "px";
+      var below = vh - rect.bottom;
+      var onTop = below <= 280;   // 아래 공간 부족하면 타깃 위로
+      if (onTop) { card.style.top = "auto"; card.style.bottom = (vh - rect.top + 16) + "px"; }
+      else { card.style.bottom = "auto"; card.style.top = (rect.bottom + 16) + "px"; }
+      // 말풍선 꼬리 — 카드 기준 좌표로 타깃 중심을 가리킨다
+      tail.hidden = false;
+      tail.style.left = Math.max(18, Math.min(cx - left - 7, cw - 32)) + "px";
+      tail.className = "dmt-tail " + (onTop ? "down" : "up");
+    } else {
+      OV.classList.remove("spot");
+      ring.hidden = true; tail.hidden = true;
+      card.style.left = "50%"; card.style.bottom = "auto";
+      card.style.top = "50%";
+      card.style.transform = "translate(-50%,-50%)";
+    }
+  }
+
+  function finish() {
+    try { localStorage.setItem(KEY, "1"); } catch (e) {}
+    window.removeEventListener("resize", reposition);
+    if (!OV) return;
+    OV.classList.remove("show");
+    setTimeout(function () { if (OV) OV.remove(); OV = null; }, 260);
+  }
+
+
+  function injectCSS() {
+    if (document.getElementById("dmt-css")) return;
+    var st = document.createElement("style"); st.id = "dmt-css";
+    st.textContent = [
+      ".dmt{position:fixed;inset:0;z-index:2147482500;opacity:0;transition:opacity .26s ease;",
+        "font-family:'Pretendard',system-ui,-apple-system,sans-serif}",
+      ".dmt.show{opacity:1}",
+      ".dmt-scrim{position:absolute;inset:0;background:rgba(6,8,14,.62);backdrop-filter:blur(1.5px)}",
+      /* 링이 뜨면 스크림은 빠지고, 링의 초대형 그림자가 '타깃만 밝게 뚫린 스포트라이트'를 만든다 */
+      ".dmt.spot .dmt-scrim{background:transparent;backdrop-filter:none}",
+      ".dmt-ring{position:absolute;border-radius:14px;border:2.5px solid #6f86ff;",
+        "box-shadow:0 0 0 4px rgba(111,134,255,.35),0 0 30px rgba(111,134,255,.65),0 0 0 100vmax rgba(4,6,12,.78);",
+        "background:transparent;pointer-events:none;transition:all .3s cubic-bezier(.2,.9,.3,1);",
+        "animation:dmtPulse 1.6s ease-in-out infinite}",
+      /* ⚠️ 펄스에도 100vmax 딤 레이어 유지 — 빠지면 스포트라이트가 깜빡거린다 */
+      "@keyframes dmtPulse{0%,100%{box-shadow:0 0 0 4px rgba(111,134,255,.35),0 0 24px rgba(111,134,255,.45),0 0 0 100vmax rgba(4,6,12,.78)}",
+        "50%{box-shadow:0 0 0 9px rgba(111,134,255,.15),0 0 34px rgba(111,134,255,.8),0 0 0 100vmax rgba(4,6,12,.78)}}",
+      ".dmt-card{position:absolute;width:min(86vw,340px);box-sizing:border-box;padding:18px 18px 14px;",
+        "border-radius:20px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
+        "border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.6);text-align:center;color:#fff}",
+      /* pop은 transform을 안 건드린다(앵커 배치와 충돌) — scale/opacity 속성으로만 */
+      ".dmt-card.pop{animation:dmtPop .34s cubic-bezier(.2,1.4,.35,1)}",
+      "@keyframes dmtPop{0%{opacity:0;scale:.92}100%{opacity:1;scale:1}}",
+      /* 말풍선 꼬리 — 타깃 중심을 가리키는 회전 사각형(카드와 같은 톤·보더) */
+      ".dmt-tail{position:absolute;width:18px;height:18px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
+        "border:1px solid rgba(111,134,255,.5);transform:rotate(45deg)}",
+      ".dmt-tail.up{top:-10px;border-right:0;border-bottom:0}",
+      ".dmt-tail.down{bottom:-10px;border-left:0;border-top:0}",
+      ".dmt-skip{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);",
+        "color:#c8cede;font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:999px;cursor:pointer}",
+      ".dmt-art{display:flex;align-items:center;justify-content:center;margin:2px 0 10px;min-height:52px}",
+      ".dmt-emoji{font-size:40px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.4));animation:dmtBob 1.8s ease-in-out infinite}",
+      ".dmt-emoji.big{font-size:52px}",
+      "@keyframes dmtBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}",
+      ".dmt-svg{width:120px;height:auto;overflow:visible}",
+      ".dmt-walkie{animation:dmtBob 2s ease-in-out infinite}",
+      ".dmt-ptt{animation:dmtPtt 1s ease-in-out infinite;transform-origin:60px 60px;transform-box:fill-box}",
+      "@keyframes dmtPtt{0%,100%{transform:scale(1)}50%{transform:scale(.82)}}",
+      ".dmt-wave{transform-origin:86px 60px;animation:dmtWave 1.2s ease-in-out infinite}",
+      "@keyframes dmtWave{0%,100%{opacity:.4;transform:scale(.9)}50%{opacity:1;transform:scale(1.08)}}",
+      ".dmt-kicker{font-size:11.5px;font-weight:900;color:#ffd166;margin-bottom:7px}",
+      ".dmt-title{font-size:19px;font-weight:950;letter-spacing:-.4px;margin-bottom:8px}",
+      ".dmt-body{font-size:13.5px;line-height:1.6;color:#c3c9d6}",
+      ".dmt-body b{color:#fff;font-weight:900}",
+      ".dmt-foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px}",
+      ".dmt-dots{display:flex;gap:6px}",
+      ".dmt-dot{width:6px;height:6px;border-radius:999px;background:rgba(255,255,255,.24);transition:.3s}",
+      ".dmt-dot.on{width:18px;background:#6f86ff}",
+      ".dmt-next{background:#fff;color:#0b0d16;font-size:13.5px;font-weight:950;border:0;border-radius:999px;",
+        "padding:10px 20px;cursor:pointer}",
+      ".dmt-next:active{transform:scale(.95)}",
+      "@media (prefers-reduced-motion:reduce){.dmt *{animation:none!important}}"
+    ].join("");
+    document.head.appendChild(st);
+  }
+
+  /* DM 리스트(탭)가 그려질 때까지 대기 후 시작 — 스포트라이트 타깃이 있어야 하니까 */
+  var tries = 0;
+  var t = setInterval(function () {
+    if (document.querySelector('.tabs-header .tab-item[data-tab="plaza"]')) { clearInterval(t); setTimeout(boot, 400); }
+    else if (++tries > 60) clearInterval(t);   // 30초 안에 안 뜨면 포기(조용히)
+  }, 500);
+})();

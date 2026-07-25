@@ -179,11 +179,7 @@
     var H = null;
     try { H = (Cap && Cap.Plugins && Cap.Plugins.Haptics) || (Cap && Cap.registerPlugin && Cap.registerPlugin("Haptics")) || null; } catch (_) { H = null; }
     window.__gallaHap = H;
-    if (!H && !window.__hapDiag) {   // 🔍 못 찾으면 1회 진단(임시)
-      window.__hapDiag = 1;
-      var topCap = "x"; try { topCap = (window.top !== window) ? (typeof window.top.Capacitor) : "same"; } catch (_) { topCap = "cross"; }
-      try { (window.GALLA_toast || function (m) { alert(m); })("햅틱진단 self=" + (typeof window.Capacitor) + " top=" + topCap, 4500); } catch (_) {}
-    }
+    // (임시 햅틱 진단 토스트 제거 — 브라우저/PWA에선 플러그인이 없는 게 정상인데 유저에게 노출됐다)
     return H;
   }
   window.GALLA_haptic = function (kind) {
