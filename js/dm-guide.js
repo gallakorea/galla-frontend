@@ -113,7 +113,9 @@
     document.head.appendChild(s);
   }
 
-  // DM UI는 JS 렌더 — .dm-tabs가 생길 때까지 재시도
-  var tries = 0;
-  var t = setInterval(function () { if (mount() || ++tries > 40) clearInterval(t); }, 400);
+  // DM UI는 JS 렌더 + 재렌더될 수 있음 — 탭이 보이는데 배너가 없으면 언제든 다시 꽂는다
+  var t = setInterval(function () {
+    try { if (localStorage.getItem(DISMISS)) { clearInterval(t); return; } } catch (e) {}
+    if (document.querySelector(".dm-tabs") && !document.getElementById("dmgBox")) mount();
+  }, 700);
 })();
