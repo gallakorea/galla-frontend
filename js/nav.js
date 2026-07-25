@@ -334,7 +334,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const overlayOpen = () => document.querySelector(
       "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
-      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog"
+      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog, #lv-stage"
     ) || document.body.classList.contains("dm-detail");
 
     // 이 페이지가 '탭 자기 자신'(탭 루트)인지 판별.

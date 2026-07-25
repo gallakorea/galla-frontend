@@ -24,6 +24,7 @@
   }
   function blocked(target) {
     if (document.getElementById("shortsOverlay")) return true;      // 릴스
+    if (document.getElementById("lv-stage")) return true;          // 🎙 라이브 무대 — 당겨서 새로고침 시 로비로 튕김 방지
     for (var n = target; n && n.nodeType === 1; n = n.parentElement)
       if (n.getAttribute && n.getAttribute("data-no-ptr") != null) return true;
     return false;

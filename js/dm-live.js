@@ -350,8 +350,8 @@
         <span class="lv-name">${esc(s.nickname || "익명")}</span>
       </button>`).join("");
 
-    // 사람 클릭 — 호스트만 모더(승격/강등/뮤트/강퇴)
-    ov.querySelectorAll(".lv-person").forEach(b => b.onclick = () => { if (isHost) hostMenu(b.dataset.uid); });
+    // 사람 클릭 — 프로필 시트(팔로우/언팔 · 호스트면 모더레이션 포함)
+    ov.querySelectorAll(".lv-person").forEach(b => b.onclick = () => openProfile(b.dataset.uid));
 
     // 하단 바
     const bar = ov.querySelector("#lv-bar");
@@ -374,22 +374,50 @@
     bar.querySelector("#lv-leave").onclick = leave;
   }
 
-  async function hostMenu(uid) {
-    if (!CUR || uid === ME) return;
-    const s = CUR.state.find(r => r.user_id === uid); if (!s || s.role === "host") return;
-    const isSpk = s.role === "speaker";
-    const act = prompt(`${s.nickname || "이 사람"} — 1: ${isSpk ? "청중으로 내리기" : "스피커로 올리기"}  2: ${s.muted ? "" : "뮤트"}  3: 강퇴\n번호 입력:`);
-    if (act === "1") {
-      const { data } = await sb().rpc("live_set_role", { p_room: CUR.roomId, p_target: uid, p_role: isSpk ? "listener" : "speaker" });
-      if (data && !data.ok && data.reason === "full") toast("무대가 꽉 찼어요.");
-      broadcastSync(); refreshState();
-    } else if (act === "2" && !s.muted) {
-      await sb().rpc("live_set_mute", { p_room: CUR.roomId, p_target: uid, p_muted: true });
-      broadcastSync(); refreshState();
-    } else if (act === "3") {
-      // 강퇴 = 멤버 삭제(호스트 권한). RLS상 본인만 지우므로 서버 함수로 처리 대신 역할 강등+안내(MVP)
-      toast("강퇴는 곧 지원돼요 — 지금은 청중 강등만 가능해요.");
+  // 무대/청중 인물 탭 → 프로필 시트(팔로우·언팔 + 호스트면 모더레이션)
+  function openProfile(uid) {
+    if (!CUR || !uid) return;
+    const s = (CUR.state || []).find(r => r.user_id === uid); if (!s) return;
+    const ov = document.getElementById("lv-stage"); if (!ov || ov.querySelector("#lv-prof-sheet")) return;
+    const mine = uid === ME;
+    const isHost = CUR.role === "host";
+    const roleLabel = s.role === "host" ? "👑 호스트" : s.role === "speaker" ? "🎙 스피커" : "👥 청중";
+    let mod = "";
+    if (isHost && !mine && s.role !== "host") {
+      const isSpk = s.role === "speaker";
+      mod = `<div class="lv-prof-mod">
+          <button class="lv-prof-mbtn" data-mod="role" type="button">${isSpk ? "🔽 청중으로 내리기" : "🔼 스피커로 올리기"}</button>
+          ${!s.muted ? `<button class="lv-prof-mbtn" data-mod="mute" type="button">🔇 뮤트</button>` : ""}
+        </div>`;
     }
+    const sheet = document.createElement("div");
+    sheet.id = "lv-prof-sheet"; sheet.className = "lv-sheet";
+    sheet.innerHTML = `
+      <div class="lv-sheet-dim"></div>
+      <div class="lv-sheet-card lv-prof-card">
+        <div class="lv-prof-top">
+          <span class="lv-prof-ava">${avatar(s.avatar_url)}</span>
+          <div class="lv-prof-meta"><b>${esc(s.nickname || "익명")}</b><span class="lv-prof-role">${roleLabel}</span></div>
+        </div>
+        ${mine ? `<div class="lv-prof-self">나예요 🙂</div>`
+          : `<button class="js-follow lv-prof-follow" data-uid="${esc(uid)}" type="button">+ 팔로우</button>`}
+        ${mod}
+      </div>`;
+    ov.appendChild(sheet);
+    const close = () => sheet.remove();
+    sheet.querySelector(".lv-sheet-dim").onclick = close;
+    if (window.GALLA_bindFollow) window.GALLA_bindFollow(sheet);   // 팔로우 상태·토글 바인딩
+    sheet.querySelectorAll("[data-mod]").forEach(b => b.onclick = async () => {
+      const kind = b.dataset.mod;
+      if (kind === "role") {
+        const isSpk = s.role === "speaker";
+        const { data } = await sb().rpc("live_set_role", { p_room: CUR.roomId, p_target: uid, p_role: isSpk ? "listener" : "speaker" });
+        if (data && !data.ok && data.reason === "full") toast("무대가 꽉 찼어요.");
+      } else if (kind === "mute") {
+        await sb().rpc("live_set_mute", { p_room: CUR.roomId, p_target: uid, p_muted: true });
+      }
+      close(); broadcastSync(); refreshState();
+    });
   }
 
   async function toggleMute() {
@@ -706,6 +734,19 @@
     .lv-sheet-btns #lv-super-go{flex:1;padding:13px;border-radius:12px;border:0;background:linear-gradient(135deg,#ff8a3d,#ff2d55);color:#fff;font-size:15px;font-weight:950;cursor:pointer}
     .lv-sheet-btns #lv-super-go:disabled{opacity:.45}
     .lv-sc-msg{font-size:13.5px;margin-top:5px;color:rgba(255,255,255,.95)}
+    .lv-prof-card{max-width:480px}
+    .lv-prof-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+    .lv-prof-ava{position:relative;width:60px;height:60px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:#222634;display:flex;align-items:center;justify-content:center}
+    .lv-prof-ava img{width:100%;height:100%;object-fit:cover}
+    .lv-prof-meta{min-width:0}.lv-prof-meta b{display:block;font-size:18px;font-weight:950;color:#fff}
+    .lv-prof-role{font-size:12.5px;color:#8a90a0;font-weight:800}
+    .lv-prof-follow{width:100%;padding:13px;border-radius:12px;border:0;background:linear-gradient(135deg,#6f86ff,#4d63ff);color:#fff;font-size:14.5px;font-weight:900;cursor:pointer}
+    .lv-prof-follow.following{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16)}
+    .lv-prof-follow:active{transform:scale(.98)}
+    .lv-prof-self{text-align:center;color:#8a90a0;font-size:13.5px;font-weight:800;padding:8px 0}
+    .lv-prof-mod{display:flex;gap:8px;margin-top:10px}
+    .lv-prof-mbtn{flex:1;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-size:13px;font-weight:900;cursor:pointer}
+    .lv-prof-mbtn:active{transform:scale(.98)}
     .lv-chatbar{display:flex;gap:8px;padding:8px 16px}
     .lv-chatbar input{flex:1;min-width:0;background:#161a24;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 15px;color:#fff;font-size:14px}
     .lv-chatbar button{flex:0 0 auto;background:#2b6bff;border:0;border-radius:999px;color:#fff;font-weight:900;font-size:13.5px;padding:0 16px;cursor:pointer}
