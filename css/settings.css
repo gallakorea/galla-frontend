@@ -221,3 +221,7 @@ body {
     border: 1px solid rgba(255,255,255,.07); font-size: 14px; font-weight: 600;
     display: flex; justify-content: space-between; cursor: pointer;
 }
+
+/* 관리자 관제센터 링크 — 기본 숨김. admin_flag일 때만 JS가 display:block로 노출.
+   (예전엔 인라인 display:block이 hidden을 덮어써 비관리자에게도 보였다) */
+#ad-admin-link { display: none; }
