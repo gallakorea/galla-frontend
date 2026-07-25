@@ -940,14 +940,15 @@
     if (!id) return null;
     const path = location.pathname;
     const titleOf = (sel, fb) => (document.querySelector(sel)?.textContent || "").trim().slice(0, 30) || fb;
-    if (/issue/.test(path)) return { type: "issue", id, title: titleOf(".issue-title, h1, .st-title", "이슈 토크") };
-    if (/predict-market/.test(path)) return { type: "market", id, title: titleOf(".pmd-q, .market-q, h1", "예측 토크") };
-    if (/plaza_detail/.test(path)) return { type: "plaza", id, title: titleOf(".pz-title, h1", "광장 토크") };
+    if (/issue/.test(path)) return { type: "issue", id, title: titleOf("#issue-title", "이슈 토크") };
+    if (/predict-market/.test(path)) return { type: "market", id, title: titleOf(".pb-q", "예측 토크") };
+    if (/plaza_detail/.test(path)) return { type: "plaza", id, title: titleOf(".post-title", "광장 토크") };
     return null;
   }
   // 콘텐츠 상단(제목 아래)에 '라이브 토크' 초대 배너 주입.
   // ⚠️ 톤 = 대화·수다(전투 아님). 댓글 전투("붙자")와 구분되는 한 발 물러선 '목소리로 얘기하자' 초대.
-  const TB_ANCHOR = { issue: ".issue-title, h1, .st-title", market: ".pmd-q, .market-q, h1", plaza: ".pz-title, h1" };
+  // ⚠️ 실제 DOM 기준(짐작 금지): issue=<h1 id=issue-title>, market=.pb-q(JS렌더), plaza=<h1 class=post-title>
+  const TB_ANCHOR = { issue: "#issue-title", market: ".pb-q", plaza: ".post-title" };
   function tbHTML(ex) {
     if (ex) {   // 진행 중 — 사회적 증거로 강하게 끌어당김
       return `<span class="lv-tb-ic live">🔴</span>
@@ -969,7 +970,8 @@
     bar.id = "lv-topbar"; bar.type = "button"; bar.className = "lv-topbar";
     bar.innerHTML = tbHTML(null);
     anchor.insertAdjacentElement("afterend", bar);
-    bar.onclick = () => window.GALLA_liveLaunch(link.type, link.id, link.title, "");
+    // 제목은 클릭 시점에 다시 읽는다 — 배너 주입 때는 아직 JS 렌더 전이라 비어있을 수 있음
+    bar.onclick = () => { const l = pageLink(); window.GALLA_liveLaunch(link.type, link.id, (l && l.title) || link.title, ""); };
     async function poll() {
       if (!sb() || !document.getElementById("lv-topbar")) return;
       try {
