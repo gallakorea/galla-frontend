@@ -108,6 +108,7 @@
   /* ── 부팅: 스플래시/첫 페인트 후 살짝 지연해서 등장 ──────────────────────── */
   function boot() {
     injectCSS();
+    buildBgm();   // BGM 미리 렌더(첫 제스처에 바로 재생되도록)
     var ov = document.createElement("div");
     ov.className = "gtour";
     ov.setAttribute("role", "dialog");
@@ -369,14 +370,47 @@
   var LEAD = [523.25, 784, 659.25, 1046.5, 880, 784, 659.25, 587.33,
               523.25, 659.25, 784, 880, 1046.5, 880, 784, 659.25];
   var BASS = [130.81, 130.81, 196.00, 196.00, 174.61, 174.61, 196.00, 196.00]; // 2스텝당 1
-  var _music = { on: false, timer: null, next: 0, nodes: [] };
-  function scheduleBar(startT) {
-    for (var i = 0; i < 16; i++) {
-      var t = startT + i * STEP;
-      if (LEAD[i]) tone(LEAD[i], t, STEP * 0.86, "square", 0.05, _music.nodes);
-      if (i % 2 === 0) { var b = BASS[i / 2]; if (b) tone(b, t, STEP * 1.7, "triangle", 0.085, _music.nodes); }
-    }
-    return startT + 16 * STEP;
+  // ⚠️ iOS WKWebView는 AudioContext(합성) 출력을 안 들려주는 경우가 있어, BGM 루프를
+  //    OfflineAudioContext로 미리 WAV로 렌더해 HTMLAudioElement(미디어 경로)로 재생한다.
+  //    미디어 경로는 네이티브 .playback 세션과 함께 무음 스위치도 넘어가 확실히 소리가 난다.
+  var _music = { on: false };
+  var _bgmEl = null, _bgmUrl = null, _bgmBuilding = false;
+  function octone(oc, freq, t0, dur, type, gain) {
+    var o = oc.createOscillator(), g = oc.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain || 0.1, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(oc.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  function abToWavBlob(buf) {
+    var sr = buf.sampleRate, ch = buf.getChannelData(0), n = ch.length, bytes = 44 + n * 2, ab = new ArrayBuffer(bytes), v = new DataView(ab);
+    var s = function (o, str) { for (var i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+    s(0, "RIFF"); v.setUint32(4, bytes - 8, true); s(8, "WAVE"); s(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, "data"); v.setUint32(40, n * 2, true);
+    var off = 44; for (var i = 0; i < n; i++) { var x = Math.max(-1, Math.min(1, ch[i])); v.setInt16(off, x < 0 ? x * 0x8000 : x * 0x7FFF, true); off += 2; }
+    return new Blob([ab], { type: "audio/wav" });
+  }
+  function buildBgm() {
+    if (_bgmEl || _bgmBuilding || reduce) return;
+    _bgmBuilding = true;
+    try {
+      var sr = 22050, barDur = 16 * STEP;
+      var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!OAC) { _bgmBuilding = false; return; }
+      var oc = new OAC(1, Math.ceil(sr * barDur), sr);
+      for (var i = 0; i < 16; i++) {
+        var t = i * STEP;
+        if (LEAD[i]) octone(oc, LEAD[i], t, STEP * 0.86, "square", 0.06);
+        if (i % 2 === 0) { var b = BASS[i / 2]; if (b) octone(oc, b, t, STEP * 1.7, "triangle", 0.09); }
+      }
+      var done = function (buf) {
+        try { _bgmUrl = URL.createObjectURL(abToWavBlob(buf)); _bgmEl = new Audio(_bgmUrl); _bgmEl.loop = true; _bgmEl.volume = 0.5; _bgmEl.setAttribute("playsinline", ""); if (_music.on) { try { _bgmEl.play().catch(function () {}); } catch (e) {} } } catch (e) {}
+        _bgmBuilding = false;
+      };
+      var pr = oc.startRendering();
+      if (pr && pr.then) pr.then(done).catch(function () { _bgmBuilding = false; });
+      else oc.oncomplete = function (e) { done(e.renderedBuffer); };
+    } catch (e) { _bgmBuilding = false; }
   }
   /* 🔓 iOS Web Audio 언락 — WKWebView는 무음 스위치/미디어 세션 때문에 AudioContext 출력을
      죽이는 경우가 있다. 첫 제스처에서 무음 WAV(HTMLMediaElement)를 잠깐 재생해 '미디어 재생'
@@ -401,20 +435,15 @@
   }
   function startMusic() {
     unlockAudio();
-    var c = ac(); if (!c || _music.on) return;
+    if (_muted || _music.on) return;
     _music.on = true;
-    _music.next = scheduleBar(c.currentTime + 0.1);
-    _music.timer = setInterval(function () {
-      var cc = ac(); if (!cc || !_music.on) return;
-      if (_music.next < cc.currentTime + 0.5) _music.next = scheduleBar(_music.next);
-    }, 120);
+    if (!_bgmEl) buildBgm();
+    if (_bgmEl) { try { _bgmEl.currentTime = 0; var p = _bgmEl.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+    // 렌더가 아직이면 buildBgm의 done()이 _music.on을 보고 자동 재생한다.
   }
   function stopMusic() {
     _music.on = false;
-    if (_music.timer) { clearInterval(_music.timer); _music.timer = null; }
-    // 이미 오디오에 예약된 음표까지 즉시 정지(안 그러면 완주 후에도 한 마디 더 남음)
-    _music.nodes.slice().forEach(function (o) { try { o.stop(0); } catch (e) {} try { o.disconnect(); } catch (e) {} });
-    _music.nodes = [];
+    try { if (_bgmEl) _bgmEl.pause(); } catch (e) {}
   }
 
   function setMuted(m) {
