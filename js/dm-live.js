@@ -815,7 +815,7 @@
       const ex = data && data[0];
       if (ex) { await sb().rpc("live_join", { p_room: ex.id }); return openStage(ex.id, ex.title, "", "join"); }
     } catch (e) {}
-    if (!confirm("이 주제로 육성 난장을 열까요?")) return;
+    if (!confirm("이 주제로 목소리 토크(육성 난장)를 열까요?\n사람들이 들으러 올 수 있어요.")) return;
     try {
       const { data: id, error } = await sb().rpc("live_room_create",
         { p_title: title || "육성 난장", p_topic: topic || "", p_link_type: linkType, p_link_id: String(linkId) });
@@ -835,26 +835,42 @@
     if (/plaza_detail/.test(path)) return { type: "plaza", id, title: titleOf(".pz-title, h1", "광장 토크") };
     return null;
   }
-  // 콘텐츠 페이지에 라이브 진입 플로팅 필 주입(+ 진행중이면 인원 표시)
-  async function injectPill() {
-    if (LV_EMBED) return;   // 육성 난장 자료 뷰어 안에선 필 숨김(중첩 개설 방지)
-    const link = pageLink(); if (!link || document.getElementById("lv-pill")) return;
+  // 콘텐츠 상단(제목 아래)에 '라이브 토크' 초대 배너 주입.
+  // ⚠️ 톤 = 대화·수다(전투 아님). 댓글 전투("붙자")와 구분되는 한 발 물러선 '목소리로 얘기하자' 초대.
+  const TB_ANCHOR = { issue: ".issue-title, h1, .st-title", market: ".pmd-q, .market-q, h1", plaza: ".pz-title, h1" };
+  function tbHTML(ex) {
+    if (ex) {   // 진행 중 — 사회적 증거로 강하게 끌어당김
+      return `<span class="lv-tb-ic live">🔴</span>
+        <span class="lv-tb-tx"><b>지금 ${ex.listeners || 1}명이 라이브 토크 중</b><span>듣거나 살짝 끼어들기 · 육성 난장</span></span>
+        <span class="lv-tb-cta on">들어가기</span>`;
+    }
+    return `<span class="lv-tb-ic">🎙</span>
+      <span class="lv-tb-tx"><b>이 주제, 목소리로 떠들어볼까?</b><span>글 말고 실시간 토크로 · 육성 난장</span></span>
+      <span class="lv-tb-cta">열기</span>`;
+  }
+  function injectTopBanner() {
+    if (LV_EMBED) return true;   // 자료 뷰어 임베드면 배너 없음
+    const link = pageLink(); if (!link) return false;
+    if (document.getElementById("lv-topbar")) return true;
+    const anchor = document.querySelector(TB_ANCHOR[link.type]);
+    if (!anchor) return false;   // 제목이 아직 안 그려졌으면 다음 시도까지 대기
     ensureCSS();
-    const pill = document.createElement("button");
-    pill.id = "lv-pill"; pill.type = "button"; pill.className = "lv-pill";
-    pill.innerHTML = `🎙 <span>육성 난장</span>`;
-    document.body.appendChild(pill);
-    pill.onclick = () => window.GALLA_liveLaunch(link.type, link.id, link.title, "");
+    const bar = document.createElement("button");
+    bar.id = "lv-topbar"; bar.type = "button"; bar.className = "lv-topbar";
+    bar.innerHTML = tbHTML(null);
+    anchor.insertAdjacentElement("afterend", bar);
+    bar.onclick = () => window.GALLA_liveLaunch(link.type, link.id, link.title, "");
     async function poll() {
-      if (!sb() || !document.getElementById("lv-pill")) return;
+      if (!sb() || !document.getElementById("lv-topbar")) return;
       try {
         const { data } = await sb().rpc("live_room_for_link", { p_link_type: link.type, p_link_id: String(link.id) });
         const ex = data && data[0];
-        if (ex) { pill.classList.add("on"); pill.innerHTML = `🔴 <span>육성 난장 ${ex.listeners || 1}명</span>`; }
-        else { pill.classList.remove("on"); pill.innerHTML = `🎙 <span>육성 난장 열기</span>`; }
+        bar.classList.toggle("live", !!ex);
+        bar.innerHTML = tbHTML(ex);
       } catch (e) {}
     }
     poll(); setInterval(poll, 15000);
+    return true;
   }
 
   /* ── init ────────────────────────────────────────────────────────────────── */
@@ -870,9 +886,9 @@
         if (++tries > 120) clearInterval(inj);
       }, 1000);
     } else if (!LV_EMBED) {
-      // 이슈/예측/광장 → 라이브 진입 필 (자료 뷰어 임베드면 생략)
+      // 이슈/예측/광장 → 상단 '라이브 토크' 초대 배너 (제목 렌더될 때까지 재시도)
       let tries = 0;
-      const inj = setInterval(() => { if (pageLink()) { clearInterval(inj); injectPill(); } if (++tries > 30) clearInterval(inj); }, 500);
+      const inj = setInterval(() => { if (injectTopBanner() || ++tries > 40) clearInterval(inj); }, 500);
     }
   })();
 
@@ -880,11 +896,18 @@
     if (document.getElementById("lv-css")) return;
     const s = document.createElement("style"); s.id = "lv-css";
     s.textContent = `
-    .lv-pill{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom,0));z-index:2000000;display:flex;align-items:center;gap:6px;
-      background:rgba(20,22,30,.92);color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:11px 15px;font-size:13.5px;font-weight:900;
-      cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.45);backdrop-filter:blur(6px)}
-    .lv-pill.on{background:linear-gradient(135deg,#ff4d67,#ff2d55);border-color:transparent;animation:lvPulse 1.6s ease-in-out infinite}
-    .lv-pill:active{transform:scale(.96)}
+    /* 콘텐츠 상단 '라이브 토크' 초대 배너(전투와 구분되는 대화 톤 — 기본 인디고, 진행 중이면 레드) */
+    .lv-topbar{display:flex;align-items:center;gap:12px;width:calc(100% - 28px);margin:10px 14px 6px;padding:12px 14px;border-radius:16px;cursor:pointer;text-align:left;
+      background:linear-gradient(135deg,rgba(111,134,255,.16),rgba(111,134,255,.04));border:1px solid rgba(111,134,255,.34);color:#fff;box-sizing:border-box}
+    .lv-topbar.live{background:linear-gradient(135deg,rgba(255,77,103,.18),rgba(255,45,85,.05));border-color:rgba(255,77,103,.42)}
+    .lv-topbar:active{transform:scale(.99)}
+    .lv-tb-ic{flex:0 0 auto;font-size:22px;line-height:1}
+    .lv-tb-ic.live{animation:lvPulse 1.4s ease-in-out infinite;border-radius:50%}
+    .lv-tb-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .lv-tb-tx b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lv-tb-tx span{font-size:12px;color:#aeb6c8}
+    .lv-tb-cta{flex:0 0 auto;padding:8px 15px;border-radius:999px;font-size:12.5px;font-weight:900;background:rgba(111,134,255,.9);color:#fff}
+    .lv-tb-cta.on{background:linear-gradient(135deg,#ff4d67,#ff2d55)}
     #dm-live-sec{margin:2px 0 10px}
     .lv-sec-head{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px}
     .lv-sec-t{font-size:14px;font-weight:900;color:#fff}
