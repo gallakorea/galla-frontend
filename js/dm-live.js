@@ -149,6 +149,8 @@
     CUR.nicks = CUR.nicks || {};
     rows.forEach(r => { CUR.nicks[r.user_id] = r.nickname || "익명"; });
     if (me) { CUR.role = me.role; CUR.muted = me.muted; CUR.hand = me.hand_raised; }
+    // 청중→스피커 승격되면 자동으로 마이크 발행
+    if (CUR.cf && (CUR.role === "host" || CUR.role === "speaker") && !CUR.cf.pubTrack) maybePublish();
     render();
   }
 
@@ -469,16 +471,26 @@
   }
   async function subscribe(p) {
     const cf = CUR && CUR.cf; if (!cf) return;
-    try {
-      const res = await sfu(`/sessions/${cf.sessionId}/tracks/new`, "POST",
-        { tracks: [{ location: "remote", sessionId: p.sessionId, trackName: p.trackName }] });
-      if (res && res.ok && res.data && res.data.sessionDescription && res.data.sessionDescription.type === "offer") {
-        await cf.pc.setRemoteDescription(res.data.sessionDescription);
-        const answer = await cf.pc.createAnswer();
-        await cf.pc.setLocalDescription(answer);
-        await sfu(`/sessions/${cf.sessionId}/renegotiate`, "PUT", { sessionDescription: { type: "answer", sdp: answer.sdp } });
-      }
-    } catch (e) { cf.subs.delete(p.uid); }
+    // 발행자가 아직 패킷을 안 보내면 not_found_track_error — 재시도(스피커가 막 켠 경우 대비)
+    for (let i = 0; i < 6; i++) {
+      if (!CUR || CUR.cf !== cf) return;
+      try {
+        const res = await sfu(`/sessions/${cf.sessionId}/tracks/new`, "POST",
+          { tracks: [{ location: "remote", sessionId: p.sessionId, trackName: p.trackName }] });
+        const sd = res && res.data && res.data.sessionDescription;
+        if (res && res.ok && sd && sd.type === "offer") {
+          await cf.pc.setRemoteDescription(sd);
+          const answer = await cf.pc.createAnswer();
+          await cf.pc.setLocalDescription(answer);
+          await sfu(`/sessions/${cf.sessionId}/renegotiate`, "PUT", { sessionDescription: { type: "answer", sdp: answer.sdp } });
+          return;   // 성공
+        }
+        const err = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
+        if (err !== "not_found_track_error") break;   // 다른 오류면 재시도 무의미
+      } catch (e) { break; }
+      await new Promise(r => setTimeout(r, 1300));   // 잠시 후 재시도
+    }
+    cf.subs.delete(p.uid);   // 실패 → 나중에 재-announce 시 다시 구독 가능
   }
   function stopAudio(cf) {
     if (!cf) return;
