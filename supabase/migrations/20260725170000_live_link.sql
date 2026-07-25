@@ -4,6 +4,9 @@ alter table public.open_rooms add column if not exists link_type text;   -- 'iss
 alter table public.open_rooms add column if not exists link_id text;      -- 콘텐츠 id(bigint/uuid 혼용 → text)
 
 -- 라이브 개설(링크 옵션) — 기존 시그니처 교체(추가 인자)
+-- ⚠️ 구버전 2-arg를 반드시 먼저 DROP. 안 지우면 4-arg와 공존 → {p_title,p_topic} 호출이
+--    두 오버로드에 모두 매칭되어 "함수 모호(ambiguous)" 오류로 라이브 개설이 실패한다.
+drop function if exists public.live_room_create(text, text);
 create or replace function public.live_room_create(p_title text, p_topic text default '',
   p_link_type text default null, p_link_id text default null)
 returns uuid language plpgsql security definer set search_path=public as $$
