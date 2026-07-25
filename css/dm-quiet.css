@@ -1628,6 +1628,15 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 /* 배경 테마 있는 방(dm-bg-host)에선 유리 뒤로 배경도 비침 */
 .dm-bg-host > .dm-inputbar { z-index: 8; }
 
+/* 📐 폰 폭 압축 — 실기기(iOS WKWebView)에서 미지의 수평 시프트로 전송버튼이 잘리던 문제.
+   버튼·간격을 줄여 어떤 시프트에도 물리적으로 잘릴 수 없게 ~28pt 여유 확보(사장님 재현 종결). */
+@media (max-width: 480px) {
+  .dm-inputbar { gap: 6px !important; padding: 5px 5px !important; }
+  .dm-inputbar .dm-attach { flex: 0 0 30px; width: 30px; height: 30px; font-size: 16px; }
+  .dm-inputbar .dm-ib { width: 32px; height: 32px; }
+  .dm-inputbar .dm-send { width: 34px; height: 34px; font-size: 13px; flex: 0 0 34px; }
+}
+
 /* ═══════════ 📊 그룹 투표/약속 ═══════════ */
 .dm-bubble.has-poll { max-width: 300px; width: 300px; }
 .dm-poll { display: block; }
