@@ -1354,6 +1354,9 @@
     const vv = window.visualViewport;
     const fit = () => {
       document.documentElement.style.setProperty('--dm-vvh', Math.round(vv.height) + 'px');
+      // 패널 높이를 vvh에 맞췄으니 문서는 반드시 원점 — iOS가 밀어올린 스크롤을 되돌려야
+      // 보이는 영역[0..vvh]과 패널이 일치한다(안 그러면 입력바가 붕 뜬다).
+      try { if (window.scrollY || (document.scrollingElement && document.scrollingElement.scrollTop)) { window.scrollTo(0, 0); document.scrollingElement.scrollTop = 0; } } catch (e) {}
       // 키보드가 열리면 대화 맨 아래를 계속 보여준다
       const msgs = ROOT?.querySelector('#dm-msgs');
       if (msgs && document.activeElement?.id === 'dm-input') msgs.scrollTop = msgs.scrollHeight;

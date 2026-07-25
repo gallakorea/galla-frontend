@@ -4,7 +4,10 @@
   border-radius:999px;background:#ff4d67;border:2px solid #000;color:#fff;
   font-size:9.5px;font-weight:900;line-height:12px;display:flex;align-items:center;justify-content:center;}
 
-.dm-root{position:fixed;inset:0;z-index:11500;pointer-events:none;}
+/* 높이 = visualViewport(--dm-vvh, 키보드 제외 실제 보이는 영역) — 키보드가 열리면 패널이
+   그만큼 줄어 입력바가 키보드 '바로 위'에 앉는다. 안 쓰면 iOS가 페이지를 멋대로 밀어올려
+   입력바가 붕 뜨고 위치가 어긋난다(사장님 재현). */
+.dm-root{position:fixed;top:0;left:0;right:0;bottom:auto;height:var(--dm-vvh,100dvh);z-index:11500;pointer-events:none;}
 .dm-root.open{pointer-events:auto;}
 .dm-dim{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;transition:opacity .2s;}
 .dm-root.open .dm-dim{opacity:1;}
