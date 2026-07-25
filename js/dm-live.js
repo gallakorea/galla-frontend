@@ -8,7 +8,7 @@
    · 후원은 GC(현금성) — 게임 GP와 분리(추후 슈퍼챗)
    ========================================================================== */
 (function () {
-  if (document.body.getAttribute("data-page") !== "dm") return;
+  const IS_DM = document.body.getAttribute("data-page") === "dm";
   const sb = () => window.supabaseClient;
   let ME = null;
   let CUR = null;          // { room, channel, state, role, muted, hand, audio }
@@ -91,10 +91,20 @@
         <div class="lv-aud-label">청중 <span id="lv-aud-n">0</span></div>
         <div class="lv-audience" id="lv-audience"></div>
       </div>
+      <div class="lv-chat" id="lv-chat"></div>
+      <div class="lv-chatbar">
+        <input id="lv-chat-in" maxlength="500" placeholder="라이브 채팅…" autocomplete="off">
+        <button id="lv-chat-send" type="button">보내기</button>
+      </div>
       <div class="lv-bar" id="lv-bar"></div>`;
     document.body.appendChild(ov);
     requestAnimationFrame(() => ov.classList.add("on"));
     ov.querySelector("#lv-x").onclick = () => leave();
+    // 라이브 채팅(open_messages 재사용)
+    const cin = ov.querySelector("#lv-chat-in");
+    ov.querySelector("#lv-chat-send").onclick = sendChat;
+    cin.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } });
+    loadChat();
 
     CUR = { roomId, role: "listener", muted: true, hand: false, state: [], channel: null, audio: null };
     // 실시간 동기화 채널
@@ -119,8 +129,47 @@
     const me = rows.find(r => r.user_id === ME);
     if (!rows.length) { toast("라이브가 종료됐어요."); return closeStage(); }
     CUR.state = rows;
+    CUR.nicks = CUR.nicks || {};
+    rows.forEach(r => { CUR.nicks[r.user_id] = r.nickname || "익명"; });
     if (me) { CUR.role = me.role; CUR.muted = me.muted; CUR.hand = me.hand_raised; }
     render();
+  }
+
+  /* ── 라이브 채팅 (open_messages 재사용) ─────────────────────────────────── */
+  function chatBox() { return document.getElementById("lv-chat"); }
+  function appendMsg(m, atTop) {
+    const box = chatBox(); if (!box || !CUR) return;
+    const nick = (CUR.nicks && CUR.nicks[m.sender_id]) || "익명";
+    const mine = m.sender_id === ME;
+    const row = document.createElement("div");
+    row.className = "lv-msg" + (mine ? " mine" : "");
+    row.innerHTML = `<b>${esc(nick)}</b> <span>${esc(m.body)}</span>`;
+    if (atTop) box.insertBefore(row, box.firstChild); else box.appendChild(row);
+    if (!atTop) box.scrollTop = box.scrollHeight;
+  }
+  async function loadChat() {
+    if (!CUR) return;
+    try {
+      const { data } = await sb().from("open_messages")
+        .select("sender_id,body,created_at").eq("room_id", CUR.roomId)
+        .order("created_at", { ascending: false }).limit(40);
+      const box = chatBox(); if (box) box.innerHTML = "";
+      (data || []).reverse().forEach(m => appendMsg(m));
+    } catch (e) {}
+    // 실시간 신규 메시지
+    try {
+      CUR.chatCh = sb().channel("liveroom:" + CUR.roomId)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "open_messages", filter: "room_id=eq." + CUR.roomId },
+          p => { const m = p.new; if (m && m.sender_id !== ME) appendMsg(m); })
+        .subscribe();
+    } catch (e) {}
+  }
+  async function sendChat() {
+    const cin = document.getElementById("lv-chat-in"); if (!cin || !CUR) return;
+    const body = (cin.value || "").trim(); if (!body) return;
+    cin.value = "";
+    appendMsg({ sender_id: ME, body });   // 낙관적
+    try { await sb().from("open_messages").insert({ room_id: CUR.roomId, sender_id: ME, body }); } catch (e) { toast("전송 실패"); }
   }
 
   function render() {
@@ -217,6 +266,7 @@
     if (CUR) {
       try { CUR.audio && CUR.audio.stop && CUR.audio.stop(); } catch (e) {}
       try { CUR.channel && sb().removeChannel(CUR.channel); } catch (e) {}
+      try { CUR.chatCh && sb().removeChannel(CUR.chatCh); } catch (e) {}
     }
     CUR = null;
     const ov = document.getElementById("lv-stage");
@@ -225,46 +275,189 @@
   }
 
   /* ── 음성(Cloudflare Calls SFU via rtc-sfu 엣지) ─────────────────────────────
-     미설정(관리자가 CF Calls 앱 안 만듦)이면 '음성 준비중' 배너로 후퇴.
-     실제 SFU WebRTC 배선은 CF 앱 설정 후 2기기 테스트와 함께 활성화. */
+     스피커는 마이크 트랙 publish, 전원은 스피커 트랙 subscribe. 세션ID/트랙명은
+     Realtime broadcast('pub')로 교환. 미설정이면 '준비중' 배너로 후퇴.
+     ⚠️ 실기기 2대 테스트 필요(첫 배선) — CF 시크릿 등록 후 검증. */
+  function sfu(path, method, body) {
+    return sb().functions.invoke("rtc-sfu", { body: { path, method, body: body || {} } })
+      .then(r => r && r.data).catch(() => null);
+  }
+  async function iceServers() {
+    try { const { data } = await sb().functions.invoke("turn-cred", { body: {} }); if (data && data.iceServers) return data.iceServers; } catch (e) {}
+    return [{ urls: "stun:stun.cloudflare.com:3478" }];
+  }
   async function connectAudio() {
     const note = document.getElementById("lv-audio-note");
-    let cfg = null;
-    try {
-      const { data } = await sb().functions.invoke("rtc-sfu", { body: { path: "/sessions/new", method: "POST", body: {} } });
-      cfg = data;
-    } catch (e) {}
-    if (!cfg || cfg.reason === "unconfigured" || cfg.ok === false) {
+    const sess = await sfu("/sessions/new", "POST", {});
+    if (!sess || sess.ok === false || sess.reason === "unconfigured" || !sess.data || !sess.data.sessionId) {
       if (note) { note.hidden = false; note.textContent = "🔊 음성 서버 준비 중 — 지금은 무대·손들기·역할만 동작해요. (관리자 설정 후 음성 활성화)"; }
-      CUR && (CUR.audio = { setMuted() {}, stop() {} });
-      return;
+      CUR && (CUR.audio = { setMuted() {}, stop() {} }); return;
     }
-    // TODO(음성 배선): cfg.data.sessionId 로 로컬 트랙 publish(스피커) / 원격 트랙 subscribe(전원).
-    // CF Calls SFU 왕복은 실기기 2대 테스트와 함께 다음 단계에서 활성화.
-    if (note) { note.hidden = false; note.textContent = "🔊 음성 연결 준비됨 — 배선 활성화 예정."; }
-    CUR && (CUR.audio = { setMuted() {}, stop() {} });
+    let pc;
+    try { pc = new RTCPeerConnection({ iceServers: await iceServers(), bundlePolicy: "max-bundle" }); }
+    catch (e) { CUR && (CUR.audio = { setMuted() {}, stop() {} }); return; }
+    const cf = { sessionId: sess.data.sessionId, pc, pubTrack: null, myTrackName: null, subs: new Set(), q: Promise.resolve(), els: [] };
+    if (!CUR) { try { pc.close(); } catch (e) {} return; }
+    CUR.cf = cf;
+    CUR.audio = {
+      setMuted(m) { try { if (cf.pubTrack) cf.pubTrack.enabled = !m; if (!m) maybePublish(); } catch (e) {} },
+      stop() { stopAudio(cf); },
+    };
+    pc.ontrack = (e) => {
+      try {
+        const el = document.createElement("audio");
+        el.autoplay = true; el.playsInline = true; el.srcObject = new MediaStream([e.track]);
+        document.body.appendChild(el); cf.els.push(el);
+        el.play && el.play().catch(() => {});
+      } catch (_) {}
+    };
+    // 다른 스피커 publish 정보 수신 → 구독. 입장 시 현재 pub 요청.
+    try {
+      CUR.channel.on("broadcast", { event: "pub" }, ({ payload }) => onPub(payload));
+      CUR.channel.on("broadcast", { event: "pubask" }, () => announcePub());
+      CUR.channel.send({ type: "broadcast", event: "pubask", payload: {} });
+    } catch (e) {}
+    if (note) note.hidden = true;
+    await maybePublish();
+  }
+
+  async function maybePublish() {
+    const cf = CUR && CUR.cf; if (!cf || cf.pubTrack) return;
+    if (!(CUR.role === "host" || CUR.role === "speaker")) return;
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
+    catch (e) { toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); return; }
+    const track = stream.getAudioTracks()[0];
+    track.enabled = !CUR.muted;
+    try {
+      const tr = cf.pc.addTransceiver(track, { direction: "sendonly" });
+      const offer = await cf.pc.createOffer();
+      await cf.pc.setLocalDescription(offer);
+      const trackName = "mic-" + String(ME).slice(0, 8);
+      const res = await sfu(`/sessions/${cf.sessionId}/tracks/new`, "POST",
+        { sessionDescription: { type: "offer", sdp: offer.sdp }, tracks: [{ location: "local", mid: tr.mid, trackName }] });
+      if (res && res.ok && res.data && res.data.sessionDescription) {
+        await cf.pc.setRemoteDescription(res.data.sessionDescription);
+        cf.pubTrack = track; cf.myTrackName = trackName;
+        announcePub();
+      } else { track.stop(); }
+    } catch (e) { try { track.stop(); } catch (_) {} }
+  }
+  function announcePub() {
+    const cf = CUR && CUR.cf; if (!cf || !cf.myTrackName) return;
+    try { CUR.channel.send({ type: "broadcast", event: "pub", payload: { uid: ME, sessionId: cf.sessionId, trackName: cf.myTrackName } }); } catch (e) {}
+  }
+  function onPub(p) {
+    const cf = CUR && CUR.cf; if (!cf || !p || p.uid === ME || cf.subs.has(p.uid)) return;
+    cf.subs.add(p.uid);
+    // 재협상은 한 번에 하나 — 큐로 직렬화
+    cf.q = cf.q.then(() => subscribe(p)).catch(() => {});
+  }
+  async function subscribe(p) {
+    const cf = CUR && CUR.cf; if (!cf) return;
+    try {
+      const res = await sfu(`/sessions/${cf.sessionId}/tracks/new`, "POST",
+        { tracks: [{ location: "remote", sessionId: p.sessionId, trackName: p.trackName }] });
+      if (res && res.ok && res.data && res.data.sessionDescription && res.data.sessionDescription.type === "offer") {
+        await cf.pc.setRemoteDescription(res.data.sessionDescription);
+        const answer = await cf.pc.createAnswer();
+        await cf.pc.setLocalDescription(answer);
+        await sfu(`/sessions/${cf.sessionId}/renegotiate`, "PUT", { sessionDescription: { type: "answer", sdp: answer.sdp } });
+      }
+    } catch (e) { cf.subs.delete(p.uid); }
+  }
+  function stopAudio(cf) {
+    if (!cf) return;
+    try { cf.pubTrack && cf.pubTrack.stop(); } catch (e) {}
+    try { cf.pc && cf.pc.close(); } catch (e) {}
+    (cf.els || []).forEach(el => { try { el.srcObject = null; el.remove(); } catch (e) {} });
+  }
+
+  /* ── 콘텐츠 → 라이브 파이프라인 (이슈/예측/광장에서 라이브 열기·입장) ──────── */
+  async function ensureMe() {
+    if (ME) return ME;
+    try { const { data } = await sb().auth.getSession(); ME = data?.session?.user?.id || null; } catch (e) {}
+    return ME;
+  }
+  // 열거나(없으면) 입장한다(있으면). 콘텐츠 연계 라이브.
+  window.GALLA_liveLaunch = async function (linkType, linkId, title, topic) {
+    if (!sb()) return;
+    if (!(await ensureMe())) { if (window.GALLA_needLogin) window.GALLA_needLogin("라이브는 로그인 후 이용할 수 있어요."); return; }
+    ensureCSS();
+    try {
+      const { data } = await sb().rpc("live_room_for_link", { p_link_type: linkType, p_link_id: String(linkId) });
+      const ex = data && data[0];
+      if (ex) { await sb().rpc("live_join", { p_room: ex.id }); return openStage(ex.id, ex.title, ""); }
+    } catch (e) {}
+    if (!confirm("이 주제로 라이브 음성 난장을 열까요?")) return;
+    try {
+      const { data: id, error } = await sb().rpc("live_room_create",
+        { p_title: title || "라이브 난장", p_topic: topic || "", p_link_type: linkType, p_link_id: String(linkId) });
+      if (error || !id) return toast("라이브 개설에 실패했어요.");
+      openStage(id, title || "라이브 난장", topic || "");
+    } catch (e) { toast("라이브 개설에 실패했어요."); }
+  };
+
+  // 이 페이지의 콘텐츠 링크 판별
+  function pageLink() {
+    const id = new URLSearchParams(location.search).get("id");
+    if (!id) return null;
+    const path = location.pathname;
+    const titleOf = (sel, fb) => (document.querySelector(sel)?.textContent || "").trim().slice(0, 30) || fb;
+    if (/issue/.test(path)) return { type: "issue", id, title: titleOf(".issue-title, h1, .st-title", "이슈 토크") };
+    if (/predict-market/.test(path)) return { type: "market", id, title: titleOf(".pmd-q, .market-q, h1", "예측 토크") };
+    if (/plaza_detail/.test(path)) return { type: "plaza", id, title: titleOf(".pz-title, h1", "광장 토크") };
+    return null;
+  }
+  // 콘텐츠 페이지에 라이브 진입 플로팅 필 주입(+ 진행중이면 인원 표시)
+  async function injectPill() {
+    const link = pageLink(); if (!link || document.getElementById("lv-pill")) return;
+    ensureCSS();
+    const pill = document.createElement("button");
+    pill.id = "lv-pill"; pill.type = "button"; pill.className = "lv-pill";
+    pill.innerHTML = `🎙 <span>라이브</span>`;
+    document.body.appendChild(pill);
+    pill.onclick = () => window.GALLA_liveLaunch(link.type, link.id, link.title, "");
+    async function poll() {
+      if (!sb() || !document.getElementById("lv-pill")) return;
+      try {
+        const { data } = await sb().rpc("live_room_for_link", { p_link_type: link.type, p_link_id: String(link.id) });
+        const ex = data && data[0];
+        if (ex) { pill.classList.add("on"); pill.innerHTML = `🔴 <span>라이브 ${ex.listeners || 1}명</span>`; }
+        else { pill.classList.remove("on"); pill.innerHTML = `🎙 <span>라이브 열기</span>`; }
+      } catch (e) {}
+    }
+    poll(); setInterval(poll, 15000);
   }
 
   /* ── init ────────────────────────────────────────────────────────────────── */
   (async function init() {
-    const t = setInterval(async () => {
-      if (!sb()) return;
-      clearInterval(t);
-      try { const { data } = await sb().auth.getSession(); ME = data?.session?.user?.id || null; } catch (e) {}
-    }, 200);
-    // 난장 탭이 뜰 때 dm.js가 부르도록 공개 + 안전망(주기적 주입 시도)
-    window.GALLA_liveRefresh = refreshSection;
-    let tries = 0;
-    const inj = setInterval(() => {
-      if (document.getElementById("dm-rooms") && !document.getElementById("dm-rooms").hidden) { refreshSection(); }
-      if (++tries > 120) clearInterval(inj);
-    }, 1000);
+    const t = setInterval(async () => { if (!sb()) return; clearInterval(t); ensureMe(); }, 200);
+    if (IS_DM) {
+      // 난장 탭 상단 LIVE 섹션 — dm.js가 loadRooms에서 부름 + 안전망 폴링
+      window.GALLA_liveRefresh = refreshSection;
+      let tries = 0;
+      const inj = setInterval(() => {
+        const r = document.getElementById("dm-rooms");
+        if (r && !r.hidden) refreshSection();
+        if (++tries > 120) clearInterval(inj);
+      }, 1000);
+    } else {
+      // 이슈/예측/광장 → 라이브 진입 필
+      let tries = 0;
+      const inj = setInterval(() => { if (pageLink()) { clearInterval(inj); injectPill(); } if (++tries > 30) clearInterval(inj); }, 500);
+    }
   })();
 
   function ensureCSS() {
     if (document.getElementById("lv-css")) return;
     const s = document.createElement("style"); s.id = "lv-css";
     s.textContent = `
+    .lv-pill{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom,0));z-index:2000000;display:flex;align-items:center;gap:6px;
+      background:rgba(20,22,30,.92);color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:11px 15px;font-size:13.5px;font-weight:900;
+      cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.45);backdrop-filter:blur(6px)}
+    .lv-pill.on{background:linear-gradient(135deg,#ff4d67,#ff2d55);border-color:transparent;animation:lvPulse 1.6s ease-in-out infinite}
+    .lv-pill:active{transform:scale(.96)}
     #dm-live-sec{margin:2px 0 10px}
     .lv-sec-head{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px}
     .lv-sec-t{font-size:14px;font-weight:900;color:#fff}
@@ -288,7 +481,14 @@
     .lv-topic{font-size:12.5px;color:#b7bdc9;margin-top:2px}
     .lv-x{width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,.1);border:0;color:#fff;font-size:16px;cursor:pointer}
     .lv-audio-note{margin:0 16px 6px;padding:9px 12px;border-radius:12px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.3);color:#ffd479;font-size:12px;font-weight:700}
-    .lv-stage-body{flex:1;overflow-y:auto;padding:6px 16px 12px}
+    .lv-stage-body{flex:0 1 auto;max-height:46vh;overflow-y:auto;padding:6px 16px 12px}
+    .lv-chat{flex:1 1 auto;overflow-y:auto;padding:6px 16px;display:flex;flex-direction:column;gap:6px;min-height:60px;border-top:1px solid rgba(255,255,255,.06)}
+    .lv-msg{font-size:13px;line-height:1.4;color:#dfe4f0;word-break:break-word}
+    .lv-msg b{color:#8aa0ff;font-weight:800;margin-right:5px}
+    .lv-msg.mine b{color:#7ef0ae}
+    .lv-chatbar{display:flex;gap:8px;padding:8px 16px}
+    .lv-chatbar input{flex:1;min-width:0;background:#161a24;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 15px;color:#fff;font-size:14px}
+    .lv-chatbar button{flex:0 0 auto;background:#2b6bff;border:0;border-radius:999px;color:#fff;font-weight:900;font-size:13.5px;padding:0 16px;cursor:pointer}
     .lv-stage-label,.lv-aud-label{font-size:12px;font-weight:900;color:#8a90a0;margin:10px 2px 10px}
     .lv-speakers{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px}
     .lv-audience{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 4px}
