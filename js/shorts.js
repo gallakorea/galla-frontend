@@ -543,13 +543,8 @@ function __openShortsInternal(list, startId, startTime) {
     // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정: 릴스 위 모달은
     //    셸 nav가 떠서 지저분했다). 셸 iframe이면 최상위 문서를 통째로 이동.
     {
-      let uid = null, diag = "";
-      try {
-        if (!window.supabaseClient) diag = "no_client";
-        else { const { data: s, error: se } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; diag = se ? ("err:" + se.message) : (uid ? ("uid:" + String(uid).slice(0, 8)) : "no_session"); }
-      } catch (e) { diag = "ex:" + (e && e.message || "?"); }
-      // 🔬 임시 진단 — 릴스 진영 탭 시 세션 판정 결과 보고(리다이렉트 미동작 추적, 원인 확정 후 제거)
-      try { window.GALLA_logError && window.GALLA_logError(new Error("VOTEDIAG shorts " + diag), "votediag"); } catch (e) {}
+      let uid = null;
+      try { const { data: s2 } = await window.supabaseClient.auth.getSession(); uid = s2?.session?.user?.id || null; } catch (e) {}
       if (!uid) { showShortsLoginPopup("진영 선택은 로그인 후 가능해요"); return; }
     }
 
@@ -670,9 +665,17 @@ function playOnlyCurrent() {
 /* =========================
    TOUCH GESTURE
 ========================= */
+/* 🖐 UI 컨트롤(진영바·액션·상단버튼) 위 터치인가? — 제스처가 이걸 삼키면
+   touchend에서 moveToIndex()가 진영바를 재생성하고, iOS는 '눌렀던 버튼이 사라지면
+   click을 발사하지 않는다' → 아이폰만 진영 버튼 무반응(사장님 재현: PC·안드로이드는 정상). */
+function isReelControl(t) {
+  return !!(t && t.closest && t.closest("#shortsVoteBar, .gv, .shorts-actions, .shorts-action-btn, .shorts-top, .shorts-meta, #shortsLoginPop, button, a, input, textarea"));
+}
+
 function bindGestures() {
   overlay.addEventListener("touchstart", e => {
     if (window.__COMMENT_OPEN__) return;
+    if (isReelControl(e.target)) { isDragging = false; return; }   // 컨트롤 탭은 제스처 대상 아님
     isDragging = true;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
@@ -697,6 +700,9 @@ function bindGestures() {
 
   overlay.addEventListener("touchend", e => {
     if (window.__COMMENT_OPEN__) return;
+    // ⚠️ 컨트롤 위에서 손 떼면 즉시 종료 — 여기서 moveToIndex()를 부르면 진영바가 다시 그려져
+    //    iOS가 click을 취소한다(아이폰 전용 무반응의 직접 원인).
+    if (isReelControl(e.target)) { isDragging = false; return; }
     isDragging = false;
     track.style.transition = "transform 0.35s cubic-bezier(.4,0,.2,1)";
     track.style.opacity = "1";
@@ -948,15 +954,41 @@ function updateShortsVoteBar() {
 /* =========================
    CLOSE
 ========================= */
+
+/* 🛡 릴스 진영/댓글 로그인 게이트 — document 캡처 단계 위임.
+   릴스 위에서 다른 핸들러·레이어가 클릭을 삼켜도 여기서 '먼저' 잡는다(사장님: 강하게 막히는 느낌).
+   미로그인이면 즉시 팝업 + 이벤트 중단(투표 진행 차단). 로그인 상태면 그냥 흘려보낸다. */
+(function () {
+  if (window.__shortsGateBound) return; window.__shortsGateBound = 1;
+  let cachedUid = undefined;
+  async function uid() {
+    try { const { data } = await window.supabaseClient.auth.getSession(); return data?.session?.user?.id || null; }
+    catch (e) { return null; }
+  }
+  document.addEventListener("click", function (e) {
+    if (!document.getElementById("shortsOverlay")) return;          // 릴스 열려있을 때만
+    const t = e.target.closest && e.target.closest(".gv-btn, #shortsCommentSend, #shortsCommentModal .sc-like");
+    if (!t) return;
+    if (cachedUid) return;                                          // 로그인 확인됨 → 통과
+    // 미확인/미로그인 → 일단 막고 세션 확인 후 팝업(또는 재클릭 허용)
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    uid().then(function (u) {
+      cachedUid = u;
+      if (u) { try { t.click(); } catch (_) {} return; }             // 로그인 상태였다면 원래 동작 재실행
+      try { showShortsLoginPopup(t.classList.contains("gv-btn") ? "진영 선택은 로그인 후 가능해요" : "로그인 후 이용할 수 있어요"); } catch (_) {}
+    });
+  }, true);   // ⚠️ capture:true — 버블 차단(stopPropagation)에도 영향받지 않는다
+})();
+
 /* 🔐 릴스 위 로그인 팝업 — 자동 리다이렉트 대신 즉각 보이는 안내(사장님 확정).
    [로그인하기] = 릴스 닫고(영상 레이어 제거) 로그인으로 3중 이동. */
 function showShortsLoginPopup(msg) {
-  const host = document.getElementById("shortsOverlay") || document.body;
+  const host = document.body;   // ⚠️ 반드시 body — 오버레이 안이면 릴스 레이어에 가려질 수 있다
   if (document.getElementById("shortsLoginPop")) return;
   if (!document.getElementById("shortsLoginPopCss")) {
     const st = document.createElement("style"); st.id = "shortsLoginPopCss";
     st.textContent = [
-      "#shortsLoginPop{position:absolute;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(4,6,12,.6)}",
+      "#shortsLoginPop{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(4,6,12,.6)}",
       "#shortsLoginPop .slp-card{width:min(82vw,320px);border-radius:20px;padding:24px 20px 16px;text-align:center;color:#fff;",
         "background:linear-gradient(160deg,rgba(24,27,38,.98),rgba(14,16,22,.98));border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.6)}",
       "#shortsLoginPop .slp-ic{font-size:40px;margin-bottom:10px}",
