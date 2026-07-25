@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>개인정보 처리방침 - GALLA</title>
 
-  <link rel="stylesheet" href="./css/index.css?v=072562">
-  <link rel="stylesheet" href="./css/nav.css?v=072562">
+  <link rel="stylesheet" href="./css/index.css?v=072563">
+  <link rel="stylesheet" href="./css/nav.css?v=072563">
 
   <style>
     body {
@@ -73,6 +73,10 @@
       margin-bottom: 10px;
     }
 
+    .acct-del-wrap { margin-top: 6px; }
+    .acct-del-link { font-size: 12.5px; color: #8a8f9a; text-decoration: underline;
+      text-underline-offset: 3px; }
+    .acct-del-link:active { color: #ff6a6a; }
     .policy li {
       margin-bottom: 6px;
     }
@@ -83,7 +87,7 @@
       color: #777;
     }
   </style>
-  <link rel="stylesheet" href="./css/galla-ui.css?v=072562">
+  <link rel="stylesheet" href="./css/galla-ui.css?v=072563">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -93,8 +97,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072562">
-<link rel="stylesheet" href="./css/desktop.css?v=072562">
+  <link rel="stylesheet" href="./css/theme.css?v=072563">
+<link rel="stylesheet" href="./css/desktop.css?v=072563">
 </head>
 
 <body data-page="mypage">
@@ -221,6 +225,16 @@
         본 방침은 법령 또는 서비스 변경에 따라 수정될 수 있으며, 변경 시 서비스 내 공지를 통해 안내합니다.
       </p>
 
+      <h2>13. 계정 및 개인정보 삭제</h2>
+      <p>
+        회원은 언제든지 본인 계정과 개인정보의 삭제를 요청할 수 있습니다. 삭제 시 로그인 수단과
+        이메일·전화번호 등 개인정보는 즉시 파기되며, 다시 로그인할 수 없습니다.
+        (작성한 게시물·댓글은 작성자 정보와 분리되어 익명 처리될 수 있습니다.)
+      </p>
+      <p class="acct-del-wrap">
+        <a href="#" id="acctDelLink" class="acct-del-link">계정 삭제하기</a>
+      </p>
+
       <div class="meta">
         · 공고일: 2026년 7월 12일 &nbsp;·&nbsp; 시행일: 2026년 7월 12일
       </div>
@@ -259,13 +273,62 @@
     </div>
 </nav>
 
-<script src="./js/nav.js?v=072562"></script>
-<script src="./js/desktop-pc.js?v=072562" defer></script>
-<script src="./js/nav-jog.js?v=072562" defer></script>
+<script src="./js/nav.js?v=072563"></script>
+<script src="./js/desktop-pc.js?v=072563" defer></script>
+<script src="./js/nav-jog.js?v=072563" defer></script>
 
-<script src="js/back.js?v=072562"></script>
-<script src="/js/analytics.js?v=072562"></script>
-<script src="/js/pwa.js?v=072562"></script>
-  <script src="/js/pull-refresh.js?v=072562"></script>
+<script src="js/back.js?v=072563"></script>
+<script src="/js/analytics.js?v=072563"></script>
+<script src="/js/pwa.js?v=072563"></script>
+  <script src="/js/pull-refresh.js?v=072563"></script>
+
+<!-- 계정 삭제 (애플 5.1.1(v)/구글 정책 필수) -->
+<script src="./vendor/supabase.js?v=072563"></script>
+<script src="./js/supabase.js?v=072563"></script>
+<script>
+(function () {
+  var link = document.getElementById('acctDelLink');
+  if (!link) return;
+  link.addEventListener('click', async function (e) {
+    e.preventDefault();
+    var sb = window.supabaseClient ||
+      (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+    if (!sb) { alert('잠시 후 다시 시도해 주세요.'); return; }
+
+    var sess = (await sb.auth.getSession()).data.session;
+    if (!sess) { alert('로그인 후 이용할 수 있어요.'); location.href = 'login.html'; return; }
+
+    // 2단계 확인 — 되돌릴 수 없는 작업
+    if (!confirm('정말 계정을 삭제할까요?\n\n· 로그인 수단과 이메일·전화번호가 즉시 삭제되고\n· 다시 로그인할 수 없습니다.\n· 이 작업은 되돌릴 수 없어요.')) return;
+    var typed = prompt('삭제를 확정하려면 아래에 "삭제"라고 입력해 주세요.');
+    if ((typed || '').trim() !== '삭제') { alert('입력이 일치하지 않아 취소했어요.'); return; }
+
+    link.textContent = '삭제 처리 중…';
+    link.style.pointerEvents = 'none';
+    try {
+      var token = sess.access_token;
+      var res = await fetch(sb.supabaseUrl + '/functions/v1/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': sb.supabaseKey,
+          'Authorization': 'Bearer ' + token,
+        },
+        body: '{}',
+      });
+      var out = await res.json().catch(function () { return { ok: false }; });
+      if (!out.ok) throw new Error(out.reason || 'failed');
+      try { await sb.auth.signOut(); } catch (_) {}
+      try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
+      alert('계정이 삭제되었습니다. 그동안 이용해 주셔서 감사합니다.');
+      location.href = 'index.html';
+    } catch (err) {
+      link.textContent = '계정 삭제하기';
+      link.style.pointerEvents = '';
+      alert('삭제에 실패했어요. 잠시 후 다시 시도하거나 gallakorea@gmail.com 으로 문의해 주세요.');
+    }
+  });
+})();
+</script>
 </body>
 </html>
