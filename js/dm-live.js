@@ -364,14 +364,15 @@
     }
     // 스피커(호스트 제외)는 스스로 청중으로 내려갈 수 있다
     if (CUR.role === "speaker") html += `<button class="lv-bbtn" id="lv-stepdown">🙇 내려가기</button>`;
-    if (isHost) html += `<button class="lv-bbtn danger" id="lv-end">🔴 라이브 종료</button>`;
-    html += `<button class="lv-bbtn" id="lv-leave">나가기</button>`;
+    // 호스트 전용 출구 = '방 뽀개기'(확인 필수). 호스트에겐 일반 '나가기'를 숨긴다(나가면 곧 방 파괴라 동일).
+    if (isHost) html += `<button class="lv-bbtn danger" id="lv-end">🧨 방 뽀개기</button>`;
+    else html += `<button class="lv-bbtn" id="lv-leave">나가기</button>`;
     bar.innerHTML = html;
     const mb = bar.querySelector("#lv-mute"); if (mb) mb.onclick = toggleMute;
     const hb = bar.querySelector("#lv-hand"); if (hb) hb.onclick = toggleHand;
     const sd = bar.querySelector("#lv-stepdown"); if (sd) sd.onclick = stepDown;
     const eb = bar.querySelector("#lv-end"); if (eb) eb.onclick = endRoom;
-    bar.querySelector("#lv-leave").onclick = leave;
+    const lb = bar.querySelector("#lv-leave"); if (lb) lb.onclick = leave;
   }
 
   // 무대/청중 인물 탭 → 프로필 시트(팔로우·언팔 + 호스트면 모더레이션)
@@ -445,7 +446,7 @@
     broadcastSync(); refreshState();
   }
   async function endRoom() {
-    if (!CUR || !confirm("라이브를 종료할까요? 모두 퇴장됩니다.")) return;
+    if (!CUR || !confirm("🧨 방을 뽀갤까요?\n라이브가 끝나고 청중 모두 퇴장돼요.")) return;
     // 청중에게도 종료 안내가 뜨도록 먼저 broadcast
     try { CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🔴 호스트가 라이브를 종료했어요" } }); } catch (e) {}
     try { await sb().rpc("live_end", { p_room: CUR.roomId }); } catch (e) {}
@@ -453,6 +454,8 @@
     toast("🔴 라이브를 종료했어요");
   }
   async function leave() {
+    // 호스트가 나가면 방이 사라진다 → 반드시 '방 뽀개기' 확인을 거친다(✕·나가기 모두)
+    if (CUR && CUR.role === "host") return endRoom();
     const room = CUR && CUR.roomId;
     // 남은 사람들에게 내 퇴장 안내(내 상태가 사라지기 전에)
     try { CUR && CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🚪 " + ((CUR.nicks && CUR.nicks[ME]) || "누군가") + " 님 퇴장" } }); } catch (e) {}
