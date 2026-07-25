@@ -4539,8 +4539,14 @@
   //    iOS 웹뷰는 navigator.vibrate가 안 먹혀 Haptics 플러그인이 실제 진동을 담당.
   window.GALLA_haptic = window.GALLA_haptic || function (style) {
     try {
-      var H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
-      if (H && H.impact) { H.impact({ style: style === 'light' ? 'LIGHT' : style === 'heavy' ? 'HEAVY' : 'MEDIUM' }); return; }
+      var Cap = window.Capacitor;
+      var isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform());   // 웹은 플러그인 미사용(reject 방지)
+      var H = isNative && Cap.Plugins && Cap.Plugins.Haptics;
+      if (H && H.impact) {
+        var r = H.impact({ style: style === 'light' ? 'LIGHT' : style === 'heavy' ? 'HEAVY' : 'MEDIUM' });
+        if (r && r.catch) r.catch(function () {});   // Promise reject 삼키기
+        return;
+      }
     } catch (_) {}
     try { if (navigator.vibrate) navigator.vibrate(style === 'heavy' ? 30 : style === 'light' ? 10 : 18); } catch (_) {}
   };

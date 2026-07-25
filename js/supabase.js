@@ -176,33 +176,40 @@
     var Cap = window.Capacitor;
     try { if ((!Cap || !Cap.registerPlugin) && window.top && window.top !== window && window.top.Capacitor) Cap = window.top.Capacitor; } catch (_) {}
     try { if ((!Cap || !Cap.registerPlugin) && window.parent && window.parent !== window && window.parent.Capacitor) Cap = window.parent.Capacitor; } catch (_) {}
+    // ⚠️ 네이티브 앱(iOS/Android)에서만 플러그인을 쓴다. 웹/PWA에선 registerPlugin이 만든
+    //    프록시를 호출하면 "not implemented" Promise가 reject → unhandledrejection으로 에러가
+    //    떴다(사장님: 웹·안드로이드 햅틱 오류). 웹은 navigator.vibrate로만 처리한다.
+    var isNative = false;
+    try { isNative = !!(Cap && Cap.isNativePlatform && Cap.isNativePlatform()); } catch (_) {}
+    if (!isNative) { window.__gallaHap = null; return null; }
     var H = null;
     try { H = (Cap && Cap.Plugins && Cap.Plugins.Haptics) || (Cap && Cap.registerPlugin && Cap.registerPlugin("Haptics")) || null; } catch (_) { H = null; }
     window.__gallaHap = H;
-    // (임시 햅틱 진단 토스트 제거 — 브라우저/PWA에선 플러그인이 없는 게 정상인데 유저에게 노출됐다)
     return H;
   }
+  // Haptics 메서드는 Promise 반환 → reject가 unhandledrejection이 되지 않게 삼킨다.
+  function _hapCall(fn) { try { var r = fn(); if (r && typeof r.catch === "function") r.catch(function () {}); } catch (_) {} }
   window.GALLA_haptic = function (kind) {
     kind = kind || "light";
     try {
       var H = _hapPlugin();
       if (H) {
         if (kind === "success" || kind === "warning" || kind === "error") {
-          if (H.notification) { H.notification({ type: kind.toUpperCase() }); return true; }
+          if (H.notification) { _hapCall(function () { return H.notification({ type: kind.toUpperCase() }); }); return true; }
         }
-        if (kind === "selection") { if (H.selectionChanged) { H.selectionChanged(); return true; } }
+        if (kind === "selection") { if (H.selectionChanged) { _hapCall(function () { return H.selectionChanged(); }); return true; } }
         if (H.impact) {
           // 🔥 격렬한 진동 — 진영/예측 선택: HEAVY 3연타 + notification 펀치로 '쾅쾅쾅!'
           if (kind === "vote" || kind === "strong") {
-            H.impact({ style: "HEAVY" });
-            setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 55);
-            setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 120);
-            setTimeout(function () { try { H.notification ? H.notification({ type: "SUCCESS" }) : H.impact({ style: "RIGID" }); } catch (_) {} }, 205);
+            _hapCall(function () { return H.impact({ style: "HEAVY" }); });
+            setTimeout(function () { _hapCall(function () { return H.impact({ style: "HEAVY" }); }); }, 55);
+            setTimeout(function () { _hapCall(function () { return H.impact({ style: "HEAVY" }); }); }, 120);
+            setTimeout(function () { _hapCall(function () { return H.notification ? H.notification({ type: "SUCCESS" }) : H.impact({ style: "RIGID" }); }); }, 205);
             return true;
           }
           var style = kind === "heavy" ? "HEAVY" : (kind === "light" || kind === "soft") ? "LIGHT" : "MEDIUM";
-          H.impact({ style: style });
-          if (kind === "heavy") setTimeout(function () { try { H.impact({ style: "HEAVY" }); } catch (_) {} }, 55); // 더블탭
+          _hapCall(function () { return H.impact({ style: style }); });
+          if (kind === "heavy") setTimeout(function () { _hapCall(function () { return H.impact({ style: "HEAVY" }); }); }, 55); // 더블탭
           return true;
         }
       }
