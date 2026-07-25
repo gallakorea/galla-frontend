@@ -207,6 +207,7 @@
       CUR.channel.on("broadcast", { event: "react" }, ({ payload }) => spawnFloat(payload && payload.emo));
       CUR.channel.on("broadcast", { event: "super" }, ({ payload }) => showSuper(payload));
       CUR.channel.on("broadcast", { event: "sys" }, ({ payload }) => sysMsg(payload && payload.text));
+      CUR.channel.on("broadcast", { event: "ended" }, () => onRoomBoom());
       CUR.channel.on("broadcast", { event: "chat" }, ({ payload }) => { if (payload && payload.sender_id !== ME) appendMsg(payload); });
       CUR.channel.on("broadcast", { event: "present" }, ({ payload }) => renderPresent(payload));
       CUR.channel.subscribe();
@@ -672,13 +673,20 @@
     sysMsg("🙇 무대에서 내려왔어요"); toast("🙇 청중으로 내려왔어요");
     broadcastSync(); refreshState();
   }
+  // 청중측: 방장이 방을 뽀갬 → 안내 후 로비로 튕겨나온다
+  function onRoomBoom() {
+    if (!CUR) return;
+    toast("🧨 방장이 방을 뽀갰어요");
+    closeStage();   // 무대 닫고 refreshSection으로 로비 갱신
+  }
   async function endRoom() {
     if (!CUR || !confirm("🧨 방을 뽀갤까요?\n육성 난장이 끝나고 청중 모두 퇴장돼요.")) return;
-    // 청중에게도 종료 안내가 뜨도록 먼저 broadcast
-    try { CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🔴 호스트가 육성 난장을 종료했어요" } }); } catch (e) {}
+    // 청중을 로비로 내보내는 신호 — closeStage로 채널이 닫히기 전에 먼저 쏜다
+    try { CUR.channel.send({ type: "broadcast", event: "ended", payload: {} }); } catch (e) {}
     try { await sb().rpc("live_end", { p_room: CUR.roomId }); } catch (e) {}
-    broadcastSync(); closeStage();
-    toast("🔴 육성 난장을 종료했어요");
+    // broadcast가 소켓으로 빠져나갈 시간을 살짝 준 뒤 무대 닫기(안 그러면 removeChannel이 먼저 끊음)
+    setTimeout(() => { closeStage(); }, 150);
+    toast("🧨 방을 뽀갰어요");
   }
   async function leave() {
     // 호스트가 나가면 방이 사라진다 → 반드시 '방 뽀개기' 확인을 거친다(✕·나가기 모두)
