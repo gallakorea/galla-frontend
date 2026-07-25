@@ -17,19 +17,21 @@
 
   function haptic(k) { try { if (window.GALLA_haptic) window.GALLA_haptic(k || "light"); else if (navigator.vibrate) navigator.vibrate(12); } catch (e) {} }
 
+  /* 전 스텝을 실제 요소에 앵커(사장님: 두 개만 연결되고 나머진 붕 떠 보였다) —
+     타깃만 스포트라이트로 밝게 뚫리고 나머지는 어두워져 '어딜 말하는지' 즉시 보인다. */
   var STEPS = [
-    { center: true, icon: "🗨️", kicker: "환영합니다", title: "여기가 갈라톡",
-      body: "카톡 갈아치우러 온 <b>갈라톡</b>이에요.<br>뭐가 되는지 <b>30초</b>만 구경할래요?" },
+    { sel: ".dm-tabs", icon: "🗨️", kicker: "환영합니다", title: "여기가 갈라톡",
+      body: "카톡 갈아치우러 온 <b>갈라톡</b>이에요.<br>탭 4개가 놀이터 — <b>30초</b>만 구경할래요?" },
     { sel: '.dm-tab[data-tab="rooms"]', icon: "🎙", kicker: "★ 라이브 ★", title: "육성 난장", big: true,
       body: "클럽하우스처럼 <b>목소리로 떠드는 라이브 토크</b>!<br>무대 올라가 말하고, 리액션 날리고, 💸 쏘기로 응원까지." },
     { sel: '.dm-tab[data-tab="rooms"]', icon: "🎪", kicker: "오픈 수다방", title: "난장",
       body: "아무나 들어와 떠드는 <b>오픈챗</b>.<br>주제 하나 걸고 판 벌이면 사람들이 몰려와요." },
     { sel: '.dm-tab[data-tab="pager"]', icon: "📟", kicker: "★ 이건 꼭 ★", title: "삐삐 부활!", big: true,
       body: "90년대 그 삐삐 맞아요. <b>8282</b>(빨리빨리) 쳐서 호출하고,<br>암호책 보고 해독하는 재미 ㅋㅋ" },
-    { center: true, icon: "🎙", kicker: "★ 진짜 무기 ★", title: "무전기, 꾹 눌러 말해요", big: true, art: artWalkie,
-      body: "대화방에서 버튼을 <b>꾹 누르면 말하고, 떼면 바로 전송</b> —<br>무전기처럼 실시간! 위로 밀면 취소돼요." },
-    { center: true, icon: "📞", kicker: "통화도 됨", title: "육성톡 · 면상톡",
-      body: "음성통화(육성톡)·영상통화(면상톡)로 <b>바로 콜</b>.<br>갈라 앱에서 빵빵하게 연결돼요." },
+    { sel: '.dm-tab[data-tab="chats"]', icon: "🎙", kicker: "★ 진짜 무기 ★", title: "무전기, 꾹 눌러 말해요", big: true, art: artWalkie,
+      body: "채팅방에서 🎤 버튼을 <b>꾹 누르면 말하고, 떼면 바로 전송</b> —<br>무전기처럼 실시간! 위로 밀면 취소돼요." },
+    { sel: '.dm-tab[data-tab="friends"]', icon: "📞", kicker: "통화도 됨", title: "육성톡 · 면상톡",
+      body: "친구를 꾹 누르면 음성(육성톡)·영상(면상톡) <b>바로 콜</b>.<br>갈라 앱에서 빵빵하게 연결돼요." },
     { center: true, icon: "🚀", kicker: "준비 끝", title: "자, 이제 떠들어봐요!",
       body: "친구 초대하고 · 난장 열고 · 삐삐 치고 —<br>여기서 다 놀 수 있어요. 카톡, 잘 가 👋" }
   ];
@@ -94,6 +96,7 @@
     var vw = window.innerWidth, vh = window.innerHeight;
     if (rect && rect.width && rect.height && rect.bottom > 0 && rect.top < vh) {
       var pad = 8;
+      OV.classList.add("spot");   // 스포트라이트 모드 — 스크림 대신 링 그림자가 딤을 담당
       ring.hidden = false;
       ring.style.left = (rect.left - pad) + "px";
       ring.style.top = (rect.top - pad) + "px";
@@ -114,6 +117,7 @@
       tail.style.left = Math.max(18, Math.min(cx - left - 7, cw - 32)) + "px";
       tail.className = "dmt-tail " + (onTop ? "down" : "up");
     } else {
+      OV.classList.remove("spot");
       ring.hidden = true; tail.hidden = true;
       card.style.left = "50%"; card.style.bottom = "auto";
       card.style.top = "50%";
@@ -150,12 +154,15 @@
         "font-family:'Pretendard',system-ui,-apple-system,sans-serif}",
       ".dmt.show{opacity:1}",
       ".dmt-scrim{position:absolute;inset:0;background:rgba(6,8,14,.62);backdrop-filter:blur(1.5px)}",
+      /* 링이 뜨면 스크림은 빠지고, 링의 초대형 그림자가 '타깃만 밝게 뚫린 스포트라이트'를 만든다 */
+      ".dmt.spot .dmt-scrim{background:transparent;backdrop-filter:none}",
       ".dmt-ring{position:absolute;border-radius:14px;border:2.5px solid #6f86ff;",
-        "box-shadow:0 0 0 4px rgba(111,134,255,.28),0 0 24px rgba(111,134,255,.5);",
-        "background:rgba(111,134,255,.08);pointer-events:none;transition:all .3s cubic-bezier(.2,.9,.3,1);",
+        "box-shadow:0 0 0 4px rgba(111,134,255,.35),0 0 30px rgba(111,134,255,.65),0 0 0 100vmax rgba(4,6,12,.78);",
+        "background:transparent;pointer-events:none;transition:all .3s cubic-bezier(.2,.9,.3,1);",
         "animation:dmtPulse 1.6s ease-in-out infinite}",
-      "@keyframes dmtPulse{0%,100%{box-shadow:0 0 0 4px rgba(111,134,255,.28),0 0 24px rgba(111,134,255,.4)}",
-        "50%{box-shadow:0 0 0 8px rgba(111,134,255,.12),0 0 30px rgba(111,134,255,.7)}}",
+      /* ⚠️ 펄스에도 100vmax 딤 레이어 유지 — 빠지면 스포트라이트가 깜빡거린다 */
+      "@keyframes dmtPulse{0%,100%{box-shadow:0 0 0 4px rgba(111,134,255,.35),0 0 24px rgba(111,134,255,.45),0 0 0 100vmax rgba(4,6,12,.78)}",
+        "50%{box-shadow:0 0 0 9px rgba(111,134,255,.15),0 0 34px rgba(111,134,255,.8),0 0 0 100vmax rgba(4,6,12,.78)}}",
       ".dmt-card{position:absolute;width:min(86vw,340px);box-sizing:border-box;padding:18px 18px 14px;",
         "border-radius:20px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
         "border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.6);text-align:center;color:#fff}",
@@ -163,10 +170,10 @@
       ".dmt-card.pop{animation:dmtPop .34s cubic-bezier(.2,1.4,.35,1)}",
       "@keyframes dmtPop{0%{opacity:0;scale:.92}100%{opacity:1;scale:1}}",
       /* 말풍선 꼬리 — 타깃 중심을 가리키는 회전 사각형(카드와 같은 톤·보더) */
-      ".dmt-tail{position:absolute;width:14px;height:14px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
-        "border:1px solid rgba(255,255,255,.12);transform:rotate(45deg)}",
-      ".dmt-tail.up{top:-8px;border-right:0;border-bottom:0}",
-      ".dmt-tail.down{bottom:-8px;border-left:0;border-top:0}",
+      ".dmt-tail{position:absolute;width:18px;height:18px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
+        "border:1px solid rgba(111,134,255,.5);transform:rotate(45deg)}",
+      ".dmt-tail.up{top:-10px;border-right:0;border-bottom:0}",
+      ".dmt-tail.down{bottom:-10px;border-left:0;border-top:0}",
       ".dmt-skip{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);",
         "color:#c8cede;font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:999px;cursor:pointer}",
       ".dmt-art{display:flex;align-items:center;justify-content:center;margin:2px 0 10px;min-height:52px}",
