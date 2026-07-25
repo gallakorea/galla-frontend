@@ -539,8 +539,17 @@ function __openShortsInternal(list, startId, startTime) {
     const type = btn.classList.contains("gv-pro") ? "pro" : "con";
     const issueId = voteBar.dataset.issueId;
 
-    // 0) 로그인 필수 — 블록보다 먼저(미로그인은 GALLA_VOTE/issueId 준비 여부와 무관하게 무조건 로그인 유도)
-    if (!window.GALLA_requireLogin || !(await window.GALLA_requireLogin("진영 선택은 로그인 후 가능해요."))) return;
+    // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정: 릴스 위 모달은
+    //    셸 nav가 떠서 지저분했다). 셸 iframe이면 최상위 문서를 통째로 이동.
+    {
+      let uid = null;
+      try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e) {}
+      if (!uid) {
+        const go = "login.html?next=" + encodeURIComponent("index.html");
+        try { (window.top || window).location.href = go; } catch (e) { location.href = go; }
+        return;
+      }
+    }
 
     if (window.GALLA_VOTE && issueId) {
       // 0-1) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
@@ -1377,7 +1386,7 @@ document.addEventListener("click", async e => {
   const likeBtn = e.target.closest("#shortsCommentModal .sc-like");
   if (likeBtn && supabase) {
     if (!SC.myId) {
-      if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+      { const go = "login.html?next=" + encodeURIComponent("index.html"); try { (window.top || window).location.href = go; } catch (e2) { location.href = go; } }
       return;
     }
     const cid = Number(likeBtn.dataset.cid);
@@ -1412,7 +1421,7 @@ document.addEventListener("click", async e => {
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess?.session?.user?.id;
   if (!uid) {
-    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    { const go = "login.html?next=" + encodeURIComponent("index.html"); try { (window.top || window).location.href = go; } catch (e2) { location.href = go; } }
     return;
   }
 
