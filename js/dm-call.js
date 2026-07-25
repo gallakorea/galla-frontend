@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072585'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072586'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -288,7 +288,7 @@
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
       if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt) {
-        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall');
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
       }
     };
     pc.onconnectionstatechange = () => {
@@ -296,7 +296,7 @@
       if (pc.connectionState === 'connected') {
         clearTimeout(ringT); stopRings();
         if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
-        startTimer(); paintUI('oncall');
+        startTimer(); paintUI('oncall'); nativeAudioOn();
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
         if (CUR) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       }
@@ -438,13 +438,16 @@
   function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
   // 📞 네이티브 CallKit 콜 종료 신호 — 웹 통화가 끝나면 CallKit UI도 내려야(수신자에 통화 잔류 방지).
   //    커스텀 URL 스킴을 숨김 iframe으로 열어 AppDelegate에 알린다(메인 프레임 이동 없음).
-  function nativeEndCallKit() {
+  function _nativeCall(action) {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall) {
-        window.webkit.messageHandlers.gallaCall.postMessage({ action: 'end' });
+        window.webkit.messageHandlers.gallaCall.postMessage({ action: action });
       }
     } catch (_) {}
   }
+  function nativeEndCallKit() { _nativeCall('end'); }
+  // 📞 통화 연결 시 네이티브 오디오 유닛 켜기 — 수동 오디오 모드라 켜줘야 양방향 소리(발신·인앱수신 포함).
+  function nativeAudioOn() { _nativeCall('audioOn'); }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
