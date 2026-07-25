@@ -515,6 +515,7 @@ function __openShortsInternal(list, startId, startTime) {
 
   // 🔒 shorts-open 모드 명시 (vote / index 충돌 방지)
   document.body.classList.add("shorts-open");
+  shortsNavHide(true);   // 셸 하단 nav 숨김(릴스는 풀스크린)
   window.__CURRENT_SHORT_ISSUE_ID__ = shortsList[currentIndex]?.id || null;
 
   bindGestures();
@@ -946,7 +947,13 @@ function updateShortsVoteBar() {
 /* =========================
    CLOSE
 ========================= */
+/* 셸(네이티브) 하단 nav 숨김 — 릴스는 풀스크린인데 nav는 부모 문서라 iframe이 못 덮는다(사장님 재현) */
+function shortsNavHide(on) {
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on: on }, location.origin); } catch (e) {}
+}
+
 function closeShorts() {
+  shortsNavHide(false);
   // 이어보기(역방향): 현재 릴스 재생 위치를 인덱스 인라인 영상에 반영
   try {
     const cur = document.querySelectorAll("#shortsTrack video")[currentIndex];

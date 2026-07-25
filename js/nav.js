@@ -108,8 +108,12 @@ document.addEventListener("DOMContentLoaded", () => {
     (function () {
       let lastNavHide = null;
       const relay = () => {
+        // ⚠️ 풀스크린 상태(릴스·육성 무대)도 포함 — 안 하면 body 클래스가 바뀔 때마다
+        //    릴레이가 navhide:false를 쏴서 개별 navhide(true)를 되돌린다(사장님 재현: 릴스 위 nav)
         const on = document.body.classList.contains("dm-detail")
-                || document.body.classList.contains("kb-open");
+                || document.body.classList.contains("kb-open")
+                || document.body.classList.contains("shorts-open")
+                || !!document.getElementById("lv-stage");
         if (on === lastNavHide) return;
         lastNavHide = on; postShell({ t: "navhide", on });
       };
