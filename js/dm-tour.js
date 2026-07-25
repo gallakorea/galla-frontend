@@ -20,6 +20,8 @@
   var STEPS = [
     { center: true, icon: "🗨️", kicker: "환영합니다", title: "여기가 갈라톡",
       body: "카톡 갈아치우러 온 <b>갈라톡</b>이에요.<br>뭐가 되는지 <b>30초</b>만 구경할래요?" },
+    { sel: '.dm-tab[data-tab="rooms"]', icon: "🎙", kicker: "★ 라이브 ★", title: "육성 난장", big: true,
+      body: "클럽하우스처럼 <b>목소리로 떠드는 라이브 토크</b>!<br>무대 올라가 말하고, 리액션 날리고, 💸 쏘기로 응원까지." },
     { sel: '.dm-tab[data-tab="rooms"]', icon: "🎪", kicker: "오픈 수다방", title: "난장",
       body: "아무나 들어와 떠드는 <b>오픈챗</b>.<br>주제 하나 걸고 판 벌이면 사람들이 몰려와요." },
     { sel: '.dm-tab[data-tab="pager"]', icon: "📟", kicker: "★ 이건 꼭 ★", title: "삐삐 부활!", big: true,
