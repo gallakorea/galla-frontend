@@ -121,7 +121,11 @@
     const btn = document.createElement("button");
     btn.type = "button"; btn.className = "emo-btn"; btn.textContent = "😎";
     btn.setAttribute("aria-label", "스티커");
-    btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); togglePanel(btn, row.querySelector("input") || input); });
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (window.GALLA_requireLogin && !(await window.GALLA_requireLogin("로그인 후 이용할 수 있어요."))) return;
+      togglePanel(btn, row.querySelector("input") || input);
+    });
     const submit = row.querySelector(".submit-btn, .ic-send, .gif-btn");
     if (submit) row.insertBefore(btn, submit); else row.appendChild(btn);
   }

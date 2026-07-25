@@ -1785,7 +1785,9 @@ function renderWarDashboard() {
 
 function requireLogin() {
   if (ME.userId) return true;
-  alert("로그인이 필요합니다.");
+  // 전역 통일 모달 — 밋밋한 alert 대신(참전·좋아요·싫어요·이모티콘·GIF·공유 모두 동일)
+  if (window.GALLA_needLogin) window.GALLA_needLogin("로그인 후 참전할 수 있어요.");
+  else alert("로그인이 필요합니다.");
   return false;
 }
 

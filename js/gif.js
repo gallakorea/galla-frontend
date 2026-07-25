@@ -164,7 +164,11 @@
     btn.type = "button"; btn.className = "gifp-btn";
     btn.innerHTML = `<img src="/assets/giphy-logo.svg" alt="GIF">`;
     btn.setAttribute("aria-label", "GIF");
-    btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); togglePanel(btn, row.querySelector("input") || input); });
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (window.GALLA_requireLogin && !(await window.GALLA_requireLogin("로그인 후 이용할 수 있어요."))) return;
+      togglePanel(btn, row.querySelector("input") || input);
+    });
     const submit = row.querySelector(".submit-btn, .ic-send");
     if (submit) row.insertBefore(btn, submit); else row.appendChild(btn);
   }
