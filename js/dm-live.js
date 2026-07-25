@@ -169,16 +169,18 @@
       <div class="lv-chat" id="lv-chat"></div>
       <div class="lv-react" id="lv-react">
         <div class="lv-react-emos">
-          <button data-emo="❤️" type="button">❤️</button>
-          <button data-emo="💩" type="button">💩</button>
-          <button data-emo="👏" type="button">👏</button>
-          <button data-emo="🔥" type="button">🔥</button>
-          <button data-emo="😂" type="button">😂</button>
+          ${["❤️","😂","👏","🔥","💀","😡","😱","🎉","👍","💩"].map(e => `<button data-emo="${e}" type="button">${e}</button>`).join("")}
         </div>
         <div class="lv-react-acts">
-          <button class="lv-present-btn" id="lv-present-open" type="button" aria-label="자료" hidden>📌</button>
-          <button class="lv-super" id="lv-super" type="button">💸 쏘기</button>
-          <button class="lv-share" id="lv-share" type="button" aria-label="공유">🔗</button>
+          <button class="lv-present-btn" id="lv-present-open" type="button" aria-label="자료" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </button>
+          <button class="lv-super" id="lv-super" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg><span>쏘기</span>
+          </button>
+          <button class="lv-share" id="lv-share" type="button" aria-label="공유">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5 15.4 17.5M15.4 6.5 8.6 10.5"/></svg>
+          </button>
         </div>
       </div>
       <div class="lv-chatbar">
@@ -954,9 +956,11 @@
     .lv-react-acts{display:flex;gap:6px;flex:0 0 auto}
     .lv-react button{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;font-size:17px;padding:6px 9px;cursor:pointer;line-height:1}
     .lv-react button:active{transform:scale(1.15)}
-    .lv-react .lv-present-btn{font-size:16px;padding:7px 10px;background:rgba(111,134,255,.9);border:0;color:#fff}
-    .lv-react .lv-super{font-size:12.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#ff8a3d,#ff3d67);border:0;padding:8px 12px}
-    .lv-react .lv-share{font-size:15px}
+    .lv-react-acts button{display:flex;align-items:center;justify-content:center;gap:5px}
+    .lv-react-acts svg{width:18px;height:18px;display:block}
+    .lv-react .lv-present-btn{padding:8px 10px;background:rgba(111,134,255,.92);border:0;color:#fff}
+    .lv-react .lv-super{font-size:13px;font-weight:900;color:#fff;background:linear-gradient(135deg,#ff8a3d,#ff3d67);border:0;padding:7px 13px 7px 11px}
+    .lv-react .lv-share{padding:8px 10px;color:#cfd6e6}
     .lv-fx{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden}
     .lv-float{position:absolute;bottom:120px;pointer-events:none;animation:lvFloat 1.9s ease-out forwards;will-change:transform,opacity}
     @keyframes lvFloat{0%{opacity:0;transform:translateY(0) scale(.6)}12%{opacity:1}100%{opacity:0;transform:translateY(-62vh) translateX(var(--dx)) scale(1.25) rotate(12deg)}}
