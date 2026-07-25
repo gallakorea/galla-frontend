@@ -11,7 +11,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072575'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072576'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -29,7 +29,7 @@
   };
   let sb = null, ME = null, chanMine = null, chanPeer = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
-  let ringT = null, timerT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
+  let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
@@ -98,6 +98,13 @@
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
     if (p.t === 'offer') {
+      // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
+      if (CUR && CUR.peer === p.from) {
+        // 이미 answer를 만들었으면 다시 보내준다(발신자가 answer를 놓쳐 계속 재전송 중일 수 있음).
+        if (CUR._lastAnswer) send({ t: 'answer', sdp: CUR._lastAnswer });
+        return;   // 아직 안 받았으면 무시(수신벨은 이미 떠 있음)
+      }
+      // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { const ch = await peerChan(p.from); ch.send({ type: 'broadcast', event: 'signal', payload: { t: 'busy', from: ME, to: p.from } }); try { sb.removeChannel(ch); } catch (_) {} return; }
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
       chanPeer = await peerChan(p.from);
@@ -112,6 +119,9 @@
     }
     if (!CUR || p.from !== CUR.peer) return;
     if (p.t === 'answer') {
+      if (CUR._gotAnswer) return;   // 재전송된 answer 중복 처리 방지(setRemoteDescription 상태오류 회피)
+      CUR._gotAnswer = true;
+      clearInterval(reoffT); reoffT = null;   // 🔁 answer 받았으니 offer 재전송 중단
       try {
         await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp });
         // ★ answer보다 먼저 도착해 버퍼된 ICE 후보를 여기서 소비 — 발신자 쪽에 이 소비가
@@ -324,6 +334,14 @@
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
     try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+    // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
+    //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
+    //    재구독한 뒤 다음 재전송을 잡도록, answer 받을 때까지 2.5초마다 같은 offer를 다시 쏜다.
+    clearInterval(reoffT);
+    reoffT = setInterval(() => {
+      if (!CUR || CUR.dir !== 'out' || CUR.connectedAt || CUR._gotAnswer) { clearInterval(reoffT); reoffT = null; return; }
+      try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video }); } catch (_) {}
+    }, 2500);
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 30000);
     } catch (e) {
       console.error('[call] start', e);
@@ -353,6 +371,7 @@
       const ans = await pc.createAnswer();
       ans.sdp = tuneOpus(ans.sdp);
       await pc.setLocalDescription(ans);
+      if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
       send({ t: 'answer', sdp: ans.sdp });
       paintUI('connecting');
     } catch (e) {
@@ -407,7 +426,7 @@
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
     stopRings();   // 🔕 벨·링백 정지
-    clearTimeout(ringT); clearInterval(timerT);
+    clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     if (!remote && CUR) send({ t: 'hangup' });
     logCall(reason);
     try { pc?.close(); } catch (_) {}
