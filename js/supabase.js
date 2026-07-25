@@ -579,6 +579,24 @@
         }
       } catch (e) {}
 
+      // 🎁 가입 웰컴 보너스 +500 GP — 초대 없이 가입한 사람도 무조건 1회 지급.
+      //    반드시 위 apply_referral 다음에(초대가입자는 referral:join으로 이미 +500 → 서버가 스킵).
+      //    서버 멱등(claim_welcome_bonus)이라 localStorage 유실돼도 재지급 안 됨 = 민원 원천 차단.
+      try {
+        if (!localStorage.getItem("galla_welcome_done")) {
+          const { data: s } = await window.supabaseClient.auth.getSession();
+          if (s?.session) {
+            const { data: w } = await window.supabaseClient.rpc("claim_welcome_bonus");
+            if (w && w.ok) {
+              localStorage.setItem("galla_welcome_done", "1");
+              if (w.amount > 0) {
+                try { if (window.GALLA_toast) window.GALLA_toast("🎁 가입 축하 보너스 +" + w.amount + " GP!"); else alert("🎁 가입 축하 보너스 +" + w.amount + " GP를 받았어요!"); } catch (e) {}
+              }
+            }
+          }
+        }
+      } catch (e) {}
+
       // 🟢 실시간 presence 하트비트 — 회원/비회원(anon) 모두. 화면 표시 중 45초마다.
       try {
         let sid = localStorage.getItem("galla_sid");

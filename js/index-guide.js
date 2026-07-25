@@ -10,29 +10,10 @@
   if (document.body.getAttribute("data-page") !== "index") return;
   var DISMISS = "galla_index_guide_dismissed";
   var COLLAPSE = "galla_index_guide_collapsed";
-  var BONUS_PENDING = "galla_tour_bonus_pending";
   var PROJ = "bidqauputnhkqepvdzrr";
 
   function loggedIn() { try { return !!localStorage.getItem("sb-" + PROJ + "-auth-token"); } catch (e) { return false; } }
-  function toastMsg(m) { try { if (window.GALLA_toast) return void window.GALLA_toast(m); } catch (e) {} }
-
-  /* 🎁 예전 풀스크린 투어/이 배너에서 남긴 보너스 대기분을 로그인 후 자동 정산 */
-  (function claimPending() {
-    var pend; try { pend = localStorage.getItem(BONUS_PENDING); } catch (e) { return; }
-    if (!pend) return;
-    var tries = 0, iv = setInterval(function () {
-      var sb = window.supabaseClient;
-      if (!sb || !sb.rpc) { if (++tries > 40) clearInterval(iv); return; }
-      clearInterval(iv);
-      sb.auth.getSession().then(function (r) {
-        if (!r || !r.data || !r.data.session) return;
-        sb.rpc("claim_tour_bonus").then(function (res) {
-          try { localStorage.removeItem(BONUS_PENDING); } catch (e) {}
-          var d = res && res.data; if (d && d.ok && d.amount > 0) toastMsg("🎁 온보딩 보너스 +" + d.amount + " GP 지급!");
-        }, function () {});
-      }, function () {});
-    }, 400);
-  })();
+  // 🎁 +500 GP는 로그인 시 supabase.js가 서버(claim_welcome_bonus)로 자동 지급 — 여긴 안내만.
 
   try { if (localStorage.getItem(DISMISS)) return; } catch (e) { return; }
 
@@ -68,7 +49,7 @@
             }).join("") +
           "</div>" +
           '<div class="iog-foot">' +
-            '<button class="iog-cta" id="iogStart" type="button">🎁 +500 GP 받고 시작</button>' +
+            '<button class="iog-cta" id="iogStart" type="button">' + (loggedIn() ? "시작하기 →" : "🎁 가입하고 +500 GP 받기") + "</button>" +
             '<button class="iog-dismiss" id="iogDismiss" type="button">더 이상 안 보기</button>' +
           "</div>" +
         "</div>" +
@@ -92,18 +73,10 @@
   }
 
   function start(wrap) {
-    // 완주(=시작) 보너스: 로그인 상태면 즉시 지급, 아니면 가입 유도 후 자동 지급
-    try { localStorage.setItem(BONUS_PENDING, "1"); } catch (e) {}
     if (loggedIn()) {
-      try {
-        var sb = window.supabaseClient;
-        if (sb && sb.rpc) sb.rpc("claim_tour_bonus").then(function (res) {
-          var d = res && res.data;
-          if (d && d.ok) { try { localStorage.removeItem(BONUS_PENDING); } catch (e) {} if (d.amount > 0) toastMsg("🎁 보너스 +" + d.amount + " GP 지급!"); }
-        }, function () {});
-      } catch (e) {}
-      remove(wrap);   // 시작했으니 안내는 접어 치운다
+      remove(wrap);   // 이미 회원 — 웰컴 GP는 로그인 때 자동 지급됨. 안내만 치운다.
     } else {
+      // 미로그인 → 가입 유도. +500 GP는 가입 후 첫 로그인에서 supabase.js가 서버 지급.
       try { localStorage.setItem(DISMISS, "1"); } catch (e) {}
       location.href = "signup.html";
     }
