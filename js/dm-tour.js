@@ -44,6 +44,7 @@
       '<div class="dmt-scrim"></div>' +
       '<div class="dmt-ring" hidden></div>' +
       '<div class="dmt-card">' +
+        '<i class="dmt-tail" hidden></i>' +
         '<button class="dmt-skip" type="button">건너뛰기 ✕</button>' +
         '<div class="dmt-art"></div>' +
         '<div class="dmt-kicker"></div>' +
@@ -86,21 +87,38 @@
     var s = STEPS[idx], ring = OV.querySelector(".dmt-ring"), card = OV.querySelector(".dmt-card");
     var el = s && s.sel ? document.querySelector(s.sel) : null;
     var rect = el && el.getBoundingClientRect();
-    // 하이라이트 링만 대상 요소에 붙이고, 카드는 '항상 화면 정중앙'(사장님 확정 —
-    // 타깃 기준 배치는 셸/키보드 상황에 따라 위치가 제멋대로 보였다)
-    if (rect && rect.width && rect.height && rect.bottom > 0 && rect.top < window.innerHeight) {
+    // 코치마크 유지 + 위치 정밀화(사장님 피드백: 방식은 좋은데 '정렬 벗어난 팝업'처럼 보였다)
+    // → 카드는 타깃 위/아래에 앵커하고 '말풍선 꼬리'가 타깃 중심을 정확히 가리킨다.
+    //   화면 밖으로 못 나가게 좌우 클램프. 타깃 없는 스텝(center)만 정중앙.
+    var tail = OV.querySelector(".dmt-tail");
+    var vw = window.innerWidth, vh = window.innerHeight;
+    if (rect && rect.width && rect.height && rect.bottom > 0 && rect.top < vh) {
       var pad = 8;
       ring.hidden = false;
       ring.style.left = (rect.left - pad) + "px";
       ring.style.top = (rect.top - pad) + "px";
       ring.style.width = (rect.width + pad * 2) + "px";
       ring.style.height = (rect.height + pad * 2) + "px";
+      // 카드 폭을 실측해 타깃 중심에 정렬 + 화면 안(12px 여백)으로 클램프
+      card.style.transform = "none";
+      var cw = card.offsetWidth || Math.min(vw * 0.86, 340);
+      var cx = rect.left + rect.width / 2;
+      var left = Math.max(12, Math.min(cx - cw / 2, vw - 12 - cw));
+      card.style.left = left + "px";
+      var below = vh - rect.bottom;
+      var onTop = below <= 280;   // 아래 공간 부족하면 타깃 위로
+      if (onTop) { card.style.top = "auto"; card.style.bottom = (vh - rect.top + 16) + "px"; }
+      else { card.style.bottom = "auto"; card.style.top = (rect.bottom + 16) + "px"; }
+      // 말풍선 꼬리 — 카드 기준 좌표로 타깃 중심을 가리킨다
+      tail.hidden = false;
+      tail.style.left = Math.max(18, Math.min(cx - left - 7, cw - 32)) + "px";
+      tail.className = "dmt-tail " + (onTop ? "down" : "up");
     } else {
-      ring.hidden = true;
+      ring.hidden = true; tail.hidden = true;
+      card.style.left = "50%"; card.style.bottom = "auto";
+      card.style.top = "50%";
+      card.style.transform = "translate(-50%,-50%)";
     }
-    card.style.left = "50%"; card.style.bottom = "auto";
-    card.style.top = "50%";
-    card.style.transform = "translate(-50%,-50%)";
   }
 
   function finish() {
@@ -141,8 +159,14 @@
       ".dmt-card{position:absolute;width:min(86vw,340px);box-sizing:border-box;padding:18px 18px 14px;",
         "border-radius:20px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
         "border:1px solid rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.6);text-align:center;color:#fff}",
+      /* pop은 transform을 안 건드린다(앵커 배치와 충돌) — scale/opacity 속성으로만 */
       ".dmt-card.pop{animation:dmtPop .34s cubic-bezier(.2,1.4,.35,1)}",
-      "@keyframes dmtPop{0%{transform:translate(-50%,-50%) scale(.9)}100%{transform:translate(-50%,-50%) scale(1)}}",
+      "@keyframes dmtPop{0%{opacity:0;scale:.92}100%{opacity:1;scale:1}}",
+      /* 말풍선 꼬리 — 타깃 중심을 가리키는 회전 사각형(카드와 같은 톤·보더) */
+      ".dmt-tail{position:absolute;width:14px;height:14px;background:linear-gradient(160deg,rgba(24,27,38,.97),rgba(14,16,22,.97));",
+        "border:1px solid rgba(255,255,255,.12);transform:rotate(45deg)}",
+      ".dmt-tail.up{top:-8px;border-right:0;border-bottom:0}",
+      ".dmt-tail.down{bottom:-8px;border-left:0;border-top:0}",
       ".dmt-skip{position:absolute;top:10px;right:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);",
         "color:#c8cede;font-size:11.5px;font-weight:800;padding:5px 10px;border-radius:999px;cursor:pointer}",
       ".dmt-art{display:flex;align-items:center;justify-content:center;margin:2px 0 10px;min-height:52px}",
