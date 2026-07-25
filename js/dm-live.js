@@ -9,6 +9,9 @@
    ========================================================================== */
 (function () {
   const IS_DM = document.body.getAttribute("data-page") === "dm";
+  // 육성 난장 자료 뷰어(iframe)로 열린 콘텐츠면 '육성 난장 열기' 필을 띄우지 않는다
+  // (뷰어 안에서 또 방을 여는 중첩 방지 — 사장님 제보)
+  let LV_EMBED = false; try { LV_EMBED = new URLSearchParams(location.search).get("lvembed") === "1"; } catch (e) {}
   const sb = () => window.supabaseClient;
   let ME = null;
   let CUR = null;          // { room, channel, state, role, muted, hand, audio }
@@ -374,7 +377,7 @@
         <b class="lv-view-title">${esc(title || "자료")}</b>
         <span class="lv-view-live">🔴 육성 유지</span>
       </div>
-      <iframe class="lv-view-if" src="${esc(url)}" allow="autoplay"></iframe>`;
+      <iframe class="lv-view-if" src="${esc(url + (url.indexOf("?") >= 0 ? "&" : "?") + "lvembed=1")}" allow="autoplay"></iframe>`;
     stage.appendChild(v);
     requestAnimationFrame(() => v.classList.add("on"));
     v.querySelector("#lv-view-x").onclick = () => { v.classList.remove("on"); setTimeout(() => v.remove(), 200); };
@@ -829,6 +832,7 @@
   }
   // 콘텐츠 페이지에 라이브 진입 플로팅 필 주입(+ 진행중이면 인원 표시)
   async function injectPill() {
+    if (LV_EMBED) return;   // 육성 난장 자료 뷰어 안에선 필 숨김(중첩 개설 방지)
     const link = pageLink(); if (!link || document.getElementById("lv-pill")) return;
     ensureCSS();
     const pill = document.createElement("button");
@@ -860,8 +864,8 @@
         if (r && !r.hidden) refreshSection();
         if (++tries > 120) clearInterval(inj);
       }, 1000);
-    } else {
-      // 이슈/예측/광장 → 라이브 진입 필
+    } else if (!LV_EMBED) {
+      // 이슈/예측/광장 → 라이브 진입 필 (자료 뷰어 임베드면 생략)
       let tries = 0;
       const inj = setInterval(() => { if (pageLink()) { clearInterval(inj); injectPill(); } if (++tries > 30) clearInterval(inj); }, 500);
     }
