@@ -296,6 +296,7 @@
         </div>
         <button class="earn-out" id="earn-out" ${data.available < MIN_WITHDRAW ? "disabled" : ""}>${data.available < MIN_WITHDRAW ? "출금 최소 20만원" : "출금 신청"}</button>
         <div class="earn-note">후원금의 75%가 발의자에게 정산됩니다(기부 5%·수수료 20% 제외).
+          실제 송금(PG·뱅킹)은 준비 중입니다.
           <a href="creator.html" class="earn-more">수익 배분 자세히 ›</a></div>
       </div>`;
     const btn = sec.querySelector("#earn-out");

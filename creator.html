@@ -4,11 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>크리에이터 센터 - GALLA</title>
-    <meta name="description" content="GALLA 크리에이터 수익 정책 — 후원의 75%가 창작자에게. 플랫폼 수수료 20%는 영구 고정입니다.">
+    <meta name="description" content="GALLA 크리에이터 수익 정책 — 후원금 배분(창작자 75%·플랫폼 20%·자선 5%)과 출금 기준 안내.">
 
-    <link rel="stylesheet" href="./css/creator.css?v=072546">
-    <link rel="stylesheet" href="./css/index.css?v=072546">
-    <link rel="stylesheet" href="./css/nav.css?v=072546">
+    <link rel="stylesheet" href="./css/creator.css?v=072547">
+    <link rel="stylesheet" href="./css/index.css?v=072547">
+    <link rel="stylesheet" href="./css/nav.css?v=072547">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -18,8 +18,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072546">
-<link rel="stylesheet" href="./css/desktop.css?v=072546">
+  <link rel="stylesheet" href="./css/theme.css?v=072547">
+<link rel="stylesheet" href="./css/desktop.css?v=072547">
 </head>
 
 <body data-page="mypage">
@@ -39,8 +39,15 @@
       <!-- HERO -->
       <section class="cr-hero">
         <div class="cr-hero-badge">CREATOR</div>
-        <h1 class="cr-hero-title">받은 후원의 <b>75%</b>가<br>당신 몫입니다</h1>
-        <p class="cr-hero-sub">플랫폼 수수료 20%는 <b>영구 고정</b>입니다.<br>나중에 올리지 않겠다고 약속합니다.</p>
+        <h1 class="cr-hero-title">받은 후원의 <b>75%</b>가<br>창작자 몫입니다</h1>
+        <p class="cr-hero-sub">플랫폼 수수료는 20%, 자선 기부가 5%입니다.</p>
+      </section>
+
+      <!-- 준비 중 고지 — 실제로 돈이 오간 적이 아직 없다. 이걸 숨기면 안 된다. -->
+      <section class="cr-wip">
+        <div class="cr-wip-h">🚧 아직 준비 중입니다</div>
+        <p>후원 결제와 출금은 <b>결제(PG) 연동 전</b>이라 실제 송금이 이뤄지지 않습니다.
+          아래 내용은 결제가 열릴 때 적용할 <b>예정 기준</b>이며, 열리기 전에 다시 안내합니다.</p>
       </section>
 
       <!-- 배분 -->
@@ -55,7 +62,7 @@
           </div>
           <ul class="cr-legend">
             <li><i class="creator"></i><b>크리에이터 75%</b><span>글·영상을 만든 사람</span></li>
-            <li><i class="fee"></i><b>플랫폼 20%</b><span>서버·결제·운영 — 영구 고정</span></li>
+            <li><i class="fee"></i><b>플랫폼 20%</b><span>서버·결제 대행·운영</span></li>
             <li><i class="charity"></i><b>자선 5%</b><span>발의자가 지정한 기부처로</span></li>
           </ul>
         </div>
@@ -69,17 +76,21 @@
           </div>
         </div>
 
-        <p class="cr-note">비율은 결제 수수료를 제외한 <b>실수령액 기준</b>입니다. 그래서 웹에서 충전한 후원이
-          앱스토어 결제보다 크리에이터에게 더 많이 남습니다.</p>
+        <p class="cr-note">비율은 결제 대행 수수료를 제외한 <b>실수령액 기준</b>으로 계산합니다.
+          결제 수단에 따라 실수령액이 달라지면, 그 뒤의 75%·20%·5% 비율은 그대로 적용됩니다.</p>
       </section>
 
-      <!-- 왜 고정인가 -->
+      <!-- 요율이 바뀔 때 -->
       <section class="cr-sec">
-        <h2 class="cr-h2">🔒 왜 &lsquo;영구 고정&rsquo;인가</h2>
-        <p class="cr-p">플랫폼이 크면 수수료를 올리는 게 업계 관행입니다. 그때마다 창작자가 손해를 봤습니다.
-          우리는 처음부터 감당할 수 있는 숫자를 적고, 그 숫자를 바꾸지 않는 쪽을 택했습니다.</p>
-        <p class="cr-p">지금 20%라고 적힌 것은 <b>이용자가 늘어도 20%</b>라는 뜻입니다.
-          내려갈 수는 있어도 올라가지는 않습니다.</p>
+        <h2 class="cr-h2">📌 요율이 바뀔 때</h2>
+        <p class="cr-p">플랫폼이 커지면 수수료를 올리는 일이 흔합니다. 그래서 우리는 처음부터
+          올리지 않아도 되는 숫자로 시작했습니다. <b>지금 계획은 20%를 유지하는 것</b>입니다.</p>
+        <p class="cr-p">다만 결제·세무 제도가 바뀌는 등 불가피한 경우가 있을 수 있어,
+          &lsquo;절대 안 바꾼다&rsquo;고 말하는 대신 바꿀 때의 규칙을 정해 둡니다.</p>
+        <ul class="cr-list">
+          <li>변경은 <b>최소 30일 전에 공지</b>합니다.</li>
+          <li><b>이미 쌓인 수익에는 소급 적용하지 않습니다.</b> 변경 전에 받은 후원은 변경 전 요율로 정산합니다.</li>
+        </ul>
       </section>
 
       <!-- 출금 -->
@@ -89,7 +100,8 @@
           <li><b>최소 출금액 20만원.</b> 소액 출금은 은행·결제 대행 비용이 수수료보다 커서,
             정산할 때마다 손실이 납니다. 그 비용을 크리에이터 몫에서 떼지 않으려고 기준을 둡니다.</li>
           <li>수익은 <b>원화(GC)</b>로 쌓입니다. 게임에 쓰는 GP와 지갑이 분리돼 있어 섞이지 않습니다.</li>
-          <li>출금 신청 → 본인·계좌 확인 → 지급. 진행 상황은 정산 내역에서 볼 수 있습니다.</li>
+          <li>예정 절차는 <b>출금 신청 → 본인·계좌 확인 → 지급</b>이며, 진행 상황은 정산 내역에서 볼 수 있게 만들고 있습니다.
+            지금은 신청까지만 접수되고 실제 송금은 결제 연동 후에 시작됩니다.</li>
           <li>세금은 관련 법에 따라 원천징수될 수 있습니다.</li>
         </ul>
         <div class="cr-links">
@@ -103,11 +115,12 @@
       <section class="cr-sec">
         <h2 class="cr-h2">🔥 후원은 이렇게 들어옵니다</h2>
         <ul class="cr-list">
-          <li><b>갈라 이슈를 발의한다.</b> 찬반이 팽팽한 주제일수록 사람이 몰리고, 발의자에게 후원이 붙습니다.</li>
-          <li><b>진영에서 활약한다.</b> 좋은 논거로 판을 끌면 같은 진영 사람들이 밀어줍니다.</li>
-          <li><b>육성 난장을 연다.</b> 목소리로 판을 진행하는 방장에게 후원이 몰립니다.</li>
-          <li><b>광장에 꾸준히 쓴다.</b> 팔로워가 쌓이면 후원도 따라옵니다.</li>
+          <li><b>갈라 이슈 발의</b> — 발의자에게 직접 후원할 수 있는 버튼이 이슈 페이지에 붙습니다.</li>
+          <li><b>육성 난장 진행</b> — 방을 여는 사람에게 후원할 수 있습니다.</li>
+          <li><b>광장 글</b> — 글에 후원할 수 있습니다.</li>
         </ul>
+        <p class="cr-note">후원은 보는 사람이 스스로 누르는 것이라 금액을 보장할 수 없습니다.
+          우리가 하는 일은 &lsquo;누를 자리를 만들어 두는 것&rsquo;까지입니다.</p>
         <a class="cr-cta" href="write.html">⚔️ 갈라 이슈 만들기</a>
       </section>
 
@@ -115,7 +128,7 @@
       <section class="cr-sec">
         <h2 class="cr-h2">🤝 기부 5%는 어디로 가나</h2>
         <p class="cr-p">발의자가 이슈를 만들 때 지정한 기부처로 갑니다.
-          모인 금액과 실제 집행 내역은 공개합니다.</p>
+          모인 금액과 집행 내역을 공개하는 페이지를 준비하고 있습니다.</p>
         <div class="cr-links">
           <a class="cr-link" href="donation-usage.html">💚 기부 사용처 보기 <span>›</span></a>
         </div>
@@ -129,7 +142,7 @@
           <li>여러 계정으로 서로 후원해 수익을 부풀린 경우</li>
           <li>허위 사실·명예훼손·혐오 표현으로 신고가 확정된 경우</li>
         </ul>
-        <p class="cr-note">해당 콘텐츠의 수익은 지급하지 않고, 반복되면 크리에이터 자격이 정지됩니다.</p>
+        <p class="cr-note">해당 콘텐츠의 수익은 지급하지 않을 수 있습니다. 자세한 기준은 서비스 이용약관을 따릅니다.</p>
       </section>
 
       <!-- 문의 -->
@@ -145,12 +158,12 @@
 
 </div>
 
-<script src="/js/error-logger.js?v=072546"></script>
-<script src="./vendor/supabase.js?v=072546"></script>
-<script src="./js/supabase.js?v=072546"></script>
-<script src="js/back.js?v=072546"></script>
-<script src="./js/nav.js?v=072546"></script>
-<script src="/js/analytics.js?v=072546"></script>
-<script src="/js/pwa.js?v=072546"></script>
+<script src="/js/error-logger.js?v=072547"></script>
+<script src="./vendor/supabase.js?v=072547"></script>
+<script src="./js/supabase.js?v=072547"></script>
+<script src="js/back.js?v=072547"></script>
+<script src="./js/nav.js?v=072547"></script>
+<script src="/js/analytics.js?v=072547"></script>
+<script src="/js/pwa.js?v=072547"></script>
 </body>
 </html>
