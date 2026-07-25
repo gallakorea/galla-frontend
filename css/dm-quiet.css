@@ -1466,7 +1466,10 @@ html[data-stk-size="l"] .dm-bubble.stk img { width: 148px; height: 148px; }
 
 
 /* 배경을 깔아도 말풍선·입력창이 눈·무늬 위에 오게 */
-.dm-bg-host > .dm-msgs, .dm-bg-host > .dm-inputbar, .dm-bg-host > .dm-head { position: relative; z-index: 1; }
+/* ⚠️ .dm-inputbar는 여기서 제외 — position:relative가 알약(absolute;left/right:10px)을 덮어
+   left:10만 적용된 풀폭 바가 화면 밖으로 밀렸다(사장님 두 폰 재현, BARDIAG로 확정).
+   입력바 스택은 아래 .dm-bg-host > .dm-inputbar { z-index: 8 }가 담당(absolute 유지). */
+.dm-bg-host > .dm-msgs, .dm-bg-host > .dm-head { position: relative; z-index: 1; }
 
 
 /* 키워드 강조 — 등록한 낱말이 대화에 보이면 눈에 띄게 */
