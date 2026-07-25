@@ -550,18 +550,7 @@ function __openShortsInternal(list, startId, startTime) {
       } catch (e) { diag = "ex:" + (e && e.message || "?"); }
       // 🔬 임시 진단 — 릴스 진영 탭 시 세션 판정 결과 보고(리다이렉트 미동작 추적, 원인 확정 후 제거)
       try { window.GALLA_logError && window.GALLA_logError(new Error("VOTEDIAG shorts " + diag), "votediag"); } catch (e) {}
-      if (!uid) {
-        // 릴스부터 닫는다 — iOS는 영상 하드웨어 레이어가 새 화면 위에 눌러붙어
-        // '이동은 됐는데 릴스가 그대로 보이는' 현상이 난다(사장님 통찰).
-        try { closeShorts(); } catch (e) {}
-        await new Promise(r => setTimeout(r, 350));   // 진단 전송 여유
-        const go = "login.html?next=" + encodeURIComponent("index.html");
-        // 1순위: 셸(최상위 문서)에게 이동 요청 — 자기 자신 이동은 WKWebView도 못 막는다
-        try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e) {}
-        try { (window.top || window).location.href = go; } catch (e) {}
-        setTimeout(function () { try { location.href = go; } catch (e) {} }, 400);
-        return;
-      }
+      if (!uid) { showShortsLoginPopup("진영 선택은 로그인 후 가능해요"); return; }
     }
 
     if (window.GALLA_VOTE && issueId) {
@@ -959,6 +948,44 @@ function updateShortsVoteBar() {
 /* =========================
    CLOSE
 ========================= */
+/* 🔐 릴스 위 로그인 팝업 — 자동 리다이렉트 대신 즉각 보이는 안내(사장님 확정).
+   [로그인하기] = 릴스 닫고(영상 레이어 제거) 로그인으로 3중 이동. */
+function showShortsLoginPopup(msg) {
+  const host = document.getElementById("shortsOverlay") || document.body;
+  if (document.getElementById("shortsLoginPop")) return;
+  if (!document.getElementById("shortsLoginPopCss")) {
+    const st = document.createElement("style"); st.id = "shortsLoginPopCss";
+    st.textContent = [
+      "#shortsLoginPop{position:absolute;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(4,6,12,.6)}",
+      "#shortsLoginPop .slp-card{width:min(82vw,320px);border-radius:20px;padding:24px 20px 16px;text-align:center;color:#fff;",
+        "background:linear-gradient(160deg,rgba(24,27,38,.98),rgba(14,16,22,.98));border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.6)}",
+      "#shortsLoginPop .slp-ic{font-size:40px;margin-bottom:10px}",
+      "#shortsLoginPop .slp-t{font-size:17px;font-weight:950;margin-bottom:6px}",
+      "#shortsLoginPop .slp-s{font-size:13px;color:#a7afc0;line-height:1.5;margin-bottom:16px}",
+      "#shortsLoginPop .slp-go{width:100%;padding:13px;border:0;border-radius:12px;font-size:14.5px;font-weight:950;color:#fff;cursor:pointer;",
+        "background:linear-gradient(135deg,#ff4d67,#ff2d55)}",
+      "#shortsLoginPop .slp-x{margin-top:10px;background:none;border:0;color:#8b93a6;font-size:12.5px;font-weight:800;cursor:pointer;padding:4px 8px}"
+    ].join("");
+    document.head.appendChild(st);
+  }
+  const pop = document.createElement("div");
+  pop.id = "shortsLoginPop";
+  pop.innerHTML = '<div class="slp-card"><div class="slp-ic">🔒</div><div class="slp-t">로그인이 필요해요</div>' +
+    '<div class="slp-s">' + (msg || "로그인 후 이용할 수 있어요") + '</div>' +
+    '<button class="slp-go" type="button">로그인하기</button>' +
+    '<button class="slp-x" type="button">나중에</button></div>';
+  host.appendChild(pop);
+  pop.querySelector(".slp-x").onclick = () => pop.remove();
+  pop.addEventListener("click", e => { if (e.target === pop) pop.remove(); });
+  pop.querySelector(".slp-go").onclick = () => {
+    const go = "login.html?next=" + encodeURIComponent("index.html");
+    try { closeShorts(); } catch (e) {}
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e) {}
+    try { (window.top || window).location.href = go; } catch (e) {}
+    setTimeout(function () { try { location.href = go; } catch (e) {} }, 400);
+  };
+}
+
 /* 셸(네이티브) 하단 nav 숨김 — 릴스는 풀스크린인데 nav는 부모 문서라 iframe이 못 덮는다(사장님 재현) */
 function shortsNavHide(on) {
   try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on: on }, location.origin); } catch (e) {}
@@ -1405,7 +1432,7 @@ document.addEventListener("click", async e => {
   const likeBtn = e.target.closest("#shortsCommentModal .sc-like");
   if (likeBtn && supabase) {
     if (!SC.myId) {
-      { const go = "login.html?next=" + encodeURIComponent("index.html"); try { closeShorts(); } catch (e2) {} try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
+      showShortsLoginPopup("로그인 후 이용할 수 있어요");
       return;
     }
     const cid = Number(likeBtn.dataset.cid);
@@ -1440,7 +1467,7 @@ document.addEventListener("click", async e => {
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess?.session?.user?.id;
   if (!uid) {
-    { const go = "login.html?next=" + encodeURIComponent("index.html"); try { closeShorts(); } catch (e2) {} try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
+    showShortsLoginPopup("로그인 후 이용할 수 있어요");
     return;
   }
 
