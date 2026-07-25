@@ -36,7 +36,7 @@ function videoLanding({ origin, url, id, row, defImg }) {
   const ch = clip(row.channel_title || "", 30);
   const image = row.thumbnail || defImg;
   const ogTitle = `🎬 ${title}`;
-  const ogDesc = `지금 한국에서 가장 뜨거운 영상 · 조회 ${short(row.view_count)} — 갈라에서 보고, 한마디 남기고, 갈라치기까지.`;
+  const ogDesc = `지금 한국에서 가장 뜨거운 영상 · 조회 ${short(row.view_count)} — 갈라에서 보고, 한마디 남기고, 한 판까지.`;
   // 앱으로 들어가면 핫영상 탭에서 이 영상이 바로 열린다
   const dest = `${origin}/search.html?video=${encodeURIComponent(id)}`;
 
@@ -105,7 +105,7 @@ function videoLanding({ origin, url, id, row, defImg }) {
 
   <div class="hook">
     <h2>이 영상, 당신은 어느 편입니까?</h2>
-    <p>갈라에선 그냥 보고 끝나지 않습니다. 좋아요를 누르고, 한마디 남기고, 갈라치기로 판을 키우세요. 지금 뜨는 영상 전부가 카테고리별로 정리돼 있습니다.</p>
+    <p>갈라에선 그냥 보고 끝나지 않습니다. 좋아요를 누르고, 한마디 남기고, 갈라로 판을 키우세요. 지금 뜨는 영상 전부가 카테고리별로 정리돼 있습니다.</p>
   </div>
 
   <div class="cta">

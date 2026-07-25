@@ -1182,7 +1182,7 @@ img.gnc-av {
 }
 .hv-yt { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); color: #c9d1e0; }
 .hv-yt:active { transform: scale(.96); }
-/* 갈라치기는 발제 embed 연동 전까지 비활성 */
+/* 갈라는 발제 embed 연동 전까지 비활성 */
 .hv-galla {
   background: rgba(255,77,103,.14); border: 1px solid rgba(255,77,103,.25);
   color: rgba(255,140,158,.8); cursor: not-allowed;

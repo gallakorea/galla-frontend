@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userId = user.id;
 
   /* =====================
-     갈라치기 성향 (실제 행동 기반, 매번 재계산)
+     갈라 성향 (실제 행동 기반, 매번 재계산)
   ===================== */
   (async () => {
     try {
