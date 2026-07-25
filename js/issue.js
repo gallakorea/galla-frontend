@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072532";
-import { loadAiNews } from "./issue-news.js?v=072532";
-import { loadStats } from "./issue.stats.js?v=072532";
-import { initCommentSystem } from "./issue.comments.js?v=072532";
+import { loadAiArguments } from "./issue-argument.js?v=072533";
+import { loadAiNews } from "./issue-news.js?v=072533";
+import { loadStats } from "./issue.stats.js?v=072533";
+import { initCommentSystem } from "./issue.comments.js?v=072533";
 
 
 console.log("[issue.js] loaded");
@@ -753,7 +753,8 @@ async function bumpViewOnce(issueId) {
       try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
       if (!uid) {
         const go = "login.html?next=" + encodeURIComponent("issue.html" + location.search);
-        try { (window.top || window).location.href = go; } catch (e2) { location.href = go; }
+        try { (window.top || window).location.href = go; } catch (e2) {}
+        setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400);
         return;
       }
     }

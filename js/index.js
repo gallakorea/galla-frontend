@@ -576,7 +576,8 @@ function attachEvents() {
                 try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
                 if (!uid) {
                     const go = 'login.html?next=' + encodeURIComponent('index.html');
-                    try { (window.top || window).location.href = go; } catch (e2) { location.href = go; }
+                    try { (window.top || window).location.href = go; } catch (e2) {}
+                    setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400);
                     return;
                 }
             }
