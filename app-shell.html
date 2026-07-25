@@ -65,6 +65,9 @@
     .then(function(){ return load('/native/cordova_plugins.js'); })
     .then(function(){ return load('/native/plugins/cordova-plugin-iosrtc/www/cordova-plugin-iosrtc.js'); })
     .then(function(){
+      var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM';
+      var beaconed=false;
+      function beacon(msg){ if(beaconed)return; beaconed=true; try{ fetch('https://bidqauputnhkqepvdzrr.supabase.co/rest/v1/rpc/log_client_error',{method:'POST',headers:{apikey:AK,Authorization:'Bearer '+AK,'Content-Type':'application/json'},body:JSON.stringify({p_kind:'iosrtc-probe',p_message:String(msg).slice(0,400),p_ver:'rtc1'})}); }catch(e){} }
       function reg(){
         if (window.__iosrtcReady) return;
         try {
@@ -73,14 +76,13 @@
             cordova.plugins.iosrtc.registerGlobals();
             var after = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
             window.__iosrtcReady = true;
-            console.log('IOSRTC_READY registered pc_before=' + before + ' pc_after=' + after);
-          } else {
-            console.log('IOSRTC_WAIT cordova=' + !!window.cordova + ' plugins=' + !!(window.cordova && cordova.plugins) + ' iosrtc=' + !!(window.cordova && cordova.plugins && cordova.plugins.iosrtc));
+            beacon('READY pc_before='+before+' pc_after='+after);
           }
-        } catch(e){ console.log('IOSRTC_ERR ' + (e && e.message)); }
+        } catch(e){ beacon('ERR '+(e&&e.message)); }
       }
-      document.addEventListener('deviceready', function(){ console.log('IOSRTC_DEVICEREADY'); setTimeout(reg, 100); }, { once:true });
-      setTimeout(reg, 2500); setTimeout(reg, 5000); setTimeout(reg, 8000);   // deviceready 폴백 다중
+      document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
+      setTimeout(reg, 2500); setTimeout(reg, 5000);
+      setTimeout(function(){ if(!window.__iosrtcReady) beacon('WAIT cordova='+!!window.cordova+' plugins='+!!(window.cordova&&cordova.plugins)+' iosrtc='+!!(window.cordova&&cordova.plugins&&cordova.plugins.iosrtc)); }, 9000);
     })
     .catch(function(){ /* 로드 실패해도 앱은 기존 웹뷰 WebRTC로 폴백 */ });
 })();
