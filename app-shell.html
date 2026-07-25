@@ -66,16 +66,21 @@
     .then(function(){ return load('/native/plugins/cordova-plugin-iosrtc/www/cordova-plugin-iosrtc.js'); })
     .then(function(){
       function reg(){
+        if (window.__iosrtcReady) return;
         try {
           if (window.cordova && cordova.plugins && cordova.plugins.iosrtc) {
+            var before = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
             cordova.plugins.iosrtc.registerGlobals();
-            // 오디오 라우팅 로그 최소화 + CallKit 수동 오디오와 함께 동작
+            var after = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
             window.__iosrtcReady = true;
+            console.log('IOSRTC_READY registered pc_before=' + before + ' pc_after=' + after);
+          } else {
+            console.log('IOSRTC_WAIT cordova=' + !!window.cordova + ' plugins=' + !!(window.cordova && cordova.plugins) + ' iosrtc=' + !!(window.cordova && cordova.plugins && cordova.plugins.iosrtc));
           }
-        } catch(e){}
+        } catch(e){ console.log('IOSRTC_ERR ' + (e && e.message)); }
       }
-      document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
-      setTimeout(reg, 2500);   // deviceready 폴백
+      document.addEventListener('deviceready', function(){ console.log('IOSRTC_DEVICEREADY'); setTimeout(reg, 100); }, { once:true });
+      setTimeout(reg, 2500); setTimeout(reg, 5000); setTimeout(reg, 8000);   // deviceready 폴백 다중
     })
     .catch(function(){ /* 로드 실패해도 앱은 기존 웹뷰 WebRTC로 폴백 */ });
 })();
