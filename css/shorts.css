@@ -26,29 +26,34 @@ body.shorts-open header { display: none !important; }
 body.shorts-open { overflow: hidden !important; }
 
 /* 릴스 탭 피드백 배지 (음소거 / 2배속) */
+/* 음소거/속도 배지 — SVG 아이콘 원형 필(이모지 폐지, 사장님 확정) */
 .reel-badge {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%) scale(.9);
   background: rgba(0,0,0,.62);
   color: #fff;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: .5px;
-  padding: 10px 18px;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 64px; height: 64px; box-sizing: border-box;
   border-radius: 999px;
   z-index: 40;
   pointer-events: none;
   opacity: 0;
   transition: opacity .15s, transform .15s;
   white-space: nowrap;
+  backdrop-filter: blur(6px);
 }
+.reel-badge svg { width: 30px; height: 30px; display: block; }
+.reel-badge .rb-tx { font-style: normal; font-size: 13px; font-weight: 900; }
 .reel-badge.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* 2배속은 아이콘+텍스트라 알약형(고정 원형 해제) */
 .reel-badge.speed {
   top: 84px; left: 50%;
-  background: rgba(255,106,0,.9);
+  background: rgba(255,106,0,.92);
   color: #000;
+  width: auto; height: auto; padding: 9px 15px;
 }
+.reel-badge.speed svg { width: 20px; height: 20px; }
 
 /* -------------------------
    OVERLAY (SCROLL CONTAINER)

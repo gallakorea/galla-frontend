@@ -118,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
         lastNavHide = on; postShell({ t: "navhide", on });
       };
       new MutationObserver(relay).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+      relay();   // 초기 1회 — 이전 판이 남긴 숨김 상태를 이 판 기준으로 바로 교정
       window.addEventListener("message", (e) => {
         if (e.origin !== location.origin) return;
         if (e.data && e.data.galla === "shellcmd" && e.data.t === "active") relay();

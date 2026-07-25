@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072538&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072538">
-  <link rel="stylesheet" href="./css/nav.css?v=072538">
+  <script src="/js/splash-boot.js?v=072540&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072540">
+  <link rel="stylesheet" href="./css/nav.css?v=072540">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -87,7 +87,12 @@
     const f = document.createElement("iframe");
     f.src = URLS[tab] + "?shell=1";
     f.setAttribute("allow", "camera; microphone; geolocation; autoplay; clipboard-write");
-    f.addEventListener("load", () => { const w = pane.querySelector(".pane-wait"); if (w) setTimeout(() => w.remove(), 150); });
+    f.addEventListener("load", () => {
+      const w = pane.querySelector(".pane-wait"); if (w) setTimeout(() => w.remove(), 150);
+      // 🛟 판이 새로 로드되면 nav 숨김을 초기화 — 어떤 경로로 navhide(true)가 남아도 자동 복구
+      //    (사장님 재현: 릴스 뒤 이슈 페이지에서 내비가 사라져 있었다)
+      const nv = document.querySelector(".nav"); if (nv) nv.style.display = "";
+    });
     pane.appendChild(f);
   }
 
@@ -374,7 +379,7 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072538" defer></script>
+<script src="./js/nav-jog.js?v=072540" defer></script>
 <script>
 /* 🔄 버전 자동 감지 — 새 배포가 뜨면 셸을 통째로 리로드해 '옛 판(iframe) 잔류'와
    네이티브 앱 웹뷰 캐시를 해소한다(웹은 pwa.js가 처리, 앱 WKWebView는 controllerchange가
@@ -413,6 +418,6 @@
 })();
 </script>
 <!-- 🎪 첫 진입 풀스크린 오리엔테이션(최초 1회) — 이후엔 인덱스 상단 인라인 배너(index-guide) -->
-<script src="./js/tour.js?v=072538"></script>
+<script src="./js/tour.js?v=072540"></script>
 </body>
 </html>

@@ -121,10 +121,7 @@ function __openShortsInternal(list, startId, startTime) {
         <button id="shortsCloseBtn" class="sh-icon-btn" aria-label="닫기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <button id="shortsMuteBtn" class="sh-icon-btn" aria-label="소리">
-          <svg class="ic-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-          <svg class="ic-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>
-        </button>
+        <!-- 상단 음성 버튼 제거(사장님 확정) — 음소거는 화면 탭으로 토글, 상태는 중앙 배지로 안내 -->
       </div>
       <div id="shortsTrack"></div>
       <div id="shortsProgress"><div id="shortsProgressFill"></div></div>
@@ -737,7 +734,13 @@ function bindGestures() {
    - 한 번 탭  → 음소거 토글 (음소거하면 다음 영상까지 유지)
    - 더블 탭 후 누르고 있기 → 누르는 동안 2배속, 떼면 1배속
 */
-function reelBadge(section, text, isSpeed) {
+/* 🔊 음소거/소리 배지 아이콘 — 이모지 대신 SVG(톤 통일, 사장님 확정) */
+const REEL_ICONS = {
+  soundOn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  soundOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M22 9l-6 6"/><path d="M16 9l6 6"/></svg>',
+  speed: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l8 6-8 6V6z"/><path d="M13 6l8 6-8 6V6z"/></svg>'
+};
+function reelBadge(section, html, isSpeed) {
   if (!section) return null;
   let b = section.querySelector(`.reel-badge.${isSpeed ? "speed" : "mute"}`);
   if (!b) {
@@ -745,18 +748,18 @@ function reelBadge(section, text, isSpeed) {
     b.className = `reel-badge ${isSpeed ? "speed" : "mute"}`;
     section.appendChild(b);
   }
-  b.textContent = text;
+  b.innerHTML = html;
   return b;
 }
-function flashBadge(section, text) {
-  const b = reelBadge(section, text, false);
+function flashBadge(section, html) {
+  const b = reelBadge(section, html, false);
   if (!b) return;
   b.classList.add("show");
   clearTimeout(b.__t);
   b.__t = setTimeout(() => b.classList.remove("show"), 650);
 }
 function showSpeedBadge(section, on) {
-  const b = reelBadge(section, "2배속 ⏩", true);
+  const b = reelBadge(section, REEL_ICONS.speed + '<i class="rb-tx">2배속</i>', true);
   if (!b) return;
   b.classList.toggle("show", on);
 }
@@ -867,7 +870,7 @@ function bindTapControls() {
       if (window.GALLA_setSound) window.GALLA_setSound(window.__REELS_MUTED__);
       else window.__REELS_MUTED__ = !window.__REELS_MUTED__;
       video.muted = window.__REELS_MUTED__;
-      flashBadge(section, window.__REELS_MUTED__ ? "🔇 음소거" : "🔊 소리 켜짐");
+      flashBadge(section, window.__REELS_MUTED__ ? REEL_ICONS.soundOff : REEL_ICONS.soundOn);
     }, 260);
   });
 
