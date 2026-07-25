@@ -25,6 +25,14 @@
   function blocked(target) {
     if (document.getElementById("shortsOverlay")) return true;      // 릴스
     if (document.getElementById("lv-stage")) return true;          // 🎙 라이브 무대 — 당겨서 새로고침 시 로비로 튕김 방지
+    if (document.body.classList.contains("dm-detail")) return true; // 💬 대화방(1:1·난장) — 리로드하면 로비로 튕김(사장님 재현)
+    // 리로드하면 상태가 날아가는 오버레이 전부(통화·삐삐·조그·시트·모달) — nav.js 스와이프 차단과 동일 기준
+    if (document.querySelector(
+      "#dm-call.on, #pager-call.on, #pager-book.on, #nav-jog, " +
+      "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
+      "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
+      "#lv-new-sheet, #lv-prof-sheet, #lv-pres-sheet, #lv-super-sheet"
+    )) return true;
     for (var n = target; n && n.nodeType === 1; n = n.parentElement)
       if (n.getAttribute && n.getAttribute("data-no-ptr") != null) return true;
     return false;
