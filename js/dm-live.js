@@ -25,37 +25,68 @@
   }
 
   /* ── 난장 탭 상단 LIVE 섹션 주입 ─────────────────────────────────────────── */
+  let LOBBY_ROWS = [];   // 마지막으로 받은 라이브 목록(검색 필터용)
+  let LOBBY_Q = "";      // 로비 검색어(폴링에도 유지)
+
+  function lobbyCards() {
+    let rows = LOBBY_ROWS.slice();
+    // 🔥 핫 정렬 — 청중 많은 순, 동률이면 최근 개설 순
+    rows.sort((a, b) => (b.listeners || 0) - (a.listeners || 0) ||
+      (new Date(b.started_at || 0) - new Date(a.started_at || 0)));
+    const hotMax = rows.length ? (rows[0].listeners || 0) : 0;
+    const q = LOBBY_Q.trim().toLowerCase();
+    if (q) rows = rows.filter(r =>
+      ((r.title || "") + " " + (r.topic || "") + " " + (r.host_nick || "")).toLowerCase().includes(q));
+    if (!rows.length) {
+      return `<div class="lv-empty">${q ? "‘" + esc(LOBBY_Q) + "’ 라이브를 못 찾았어요." : "지금 열린 라이브가 없어요. 직접 무대를 열어보세요 🎤"}</div>`;
+    }
+    return `<div class="lv-cards">` + rows.map(r => {
+      const hot = (r.listeners || 0) >= 3 && (r.listeners || 0) === hotMax;
+      return `
+      <button class="lv-card" data-room="${r.id}" type="button">
+        <span class="lv-live-badge">🔴 LIVE</span>
+        <span class="lv-card-mid">
+          <b class="lv-card-title">${hot ? '<span class="lv-hot">🔥 HOT</span> ' : ""}${esc(r.title)}</b>
+          ${r.topic ? `<span class="lv-card-topic">${esc(r.topic)}</span>` : ""}
+          <span class="lv-card-meta">🎙 ${r.speakers || 0} · 👥 ${r.listeners || 0}명 · ${esc(r.host_nick || "호스트")}</span>
+        </span>
+        <span class="lv-card-go">▶</span>
+      </button>`;
+    }).join("") + `</div>`;
+  }
+  function paintLobbyCards() {
+    const box = document.getElementById("lv-lobby-cards"); if (!box) return;
+    box.innerHTML = lobbyCards();
+    box.querySelectorAll(".lv-card").forEach(b => b.onclick = () => joinLive(b.dataset.room));
+  }
   async function refreshSection() {
     const rooms = document.getElementById("dm-rooms");
     if (!rooms) return;
+    ensureCSS();
     let sec = document.getElementById("dm-live-sec");
+    // 헤더(제목·검색·열기)는 1회만 — 폴링이 검색창을 지우지 않도록 카드만 갱신
     if (!sec) {
       sec = document.createElement("div");
       sec.id = "dm-live-sec";
       const list = document.getElementById("dm-room-list");
       rooms.insertBefore(sec, list || null);
+      sec.innerHTML = `
+        <div class="lv-sec-head">
+          <span class="lv-sec-t">🎙 라이브 난장</span>
+          <button class="lv-open-btn" id="lv-open" type="button">＋ 라이브 열기</button>
+        </div>
+        <div class="lv-lobby-search">
+          <input id="lv-lobby-q" placeholder="🔎 난장 주제·방장 검색" autocomplete="off">
+        </div>
+        <div id="lv-lobby-cards"></div>`;
+      sec.querySelector("#lv-open").onclick = createLive;
+      const qi = sec.querySelector("#lv-lobby-q");
+      qi.oninput = () => { LOBBY_Q = qi.value; paintLobbyCards(); };
     }
     let rows = [];
     try { const { data } = await sb().rpc("list_live_rooms"); rows = data || []; } catch (e) {}
-    const cards = rows.map(r => `
-      <button class="lv-card" data-room="${r.id}" type="button">
-        <span class="lv-live-badge">🔴 LIVE</span>
-        <span class="lv-card-mid">
-          <b class="lv-card-title">${esc(r.title)}</b>
-          ${r.topic ? `<span class="lv-card-topic">${esc(r.topic)}</span>` : ""}
-          <span class="lv-card-meta">🎙 ${r.speakers || 0} · 👥 ${r.listeners || 0}명 · ${esc(r.host_nick || "호스트")}</span>
-        </span>
-        <span class="lv-card-go">▶</span>
-      </button>`).join("");
-    sec.innerHTML = `
-      <div class="lv-sec-head">
-        <span class="lv-sec-t">🎙 라이브 난장</span>
-        <button class="lv-open-btn" id="lv-open" type="button">＋ 라이브 열기</button>
-      </div>
-      ${rows.length ? `<div class="lv-cards">${cards}</div>` : `<div class="lv-empty">지금 열린 라이브가 없어요. 직접 무대를 열어보세요 🎤</div>`}`;
-    sec.querySelector("#lv-open").onclick = createLive;
-    sec.querySelectorAll(".lv-card").forEach(b => b.onclick = () => joinLive(b.dataset.room));
-    ensureCSS();
+    LOBBY_ROWS = rows;
+    paintLobbyCards();
   }
 
   function createLive() {
@@ -123,6 +154,7 @@
         <button class="lv-x" id="lv-x" aria-label="나가기">✕</button>
       </div>
       <div class="lv-audio-note" id="lv-audio-note" hidden></div>
+      <div class="lv-present" id="lv-present" hidden></div>
       <div class="lv-stage-body">
         <div class="lv-stage-label">무대</div>
         <div class="lv-speakers" id="lv-speakers"></div>
@@ -137,6 +169,7 @@
         <button data-emo="🔥" type="button">🔥</button>
         <button data-emo="😂" type="button">😂</button>
         <span class="lv-react-sp"></span>
+        <button class="lv-present-btn" id="lv-present-open" type="button" hidden>📌 자료</button>
         <button class="lv-super" id="lv-super" type="button">💸 쏘기</button>
         <button class="lv-share" id="lv-share" type="button">🔗</button>
       </div>
@@ -164,8 +197,14 @@
       CUR.channel.on("broadcast", { event: "react" }, ({ payload }) => spawnFloat(payload && payload.emo));
       CUR.channel.on("broadcast", { event: "super" }, ({ payload }) => showSuper(payload));
       CUR.channel.on("broadcast", { event: "sys" }, ({ payload }) => sysMsg(payload && payload.text));
+      CUR.channel.on("broadcast", { event: "present" }, ({ payload }) => renderPresent(payload));
       CUR.channel.subscribe();
     } catch (e) {}
+    // 입장 시 현재 띄운 자료 동기화(late-join)
+    (async () => {
+      try { const { data } = await sb().rpc("live_get_present", { p_room: roomId }); const p = data && data[0];
+        if (p && p.present_type) renderPresent({ type: p.present_type, id: p.present_id, title: p.present_title }); } catch (e) {}
+    })();
     // 내가 열었다/입장했다 — 시스템 안내 + 토스트
     if (entry === "open") { sysMsg("🎙 라이브를 열었어요"); toast("🎙 라이브를 열었어요"); }
     else if (entry === "join") { sysMsg("👋 입장했어요"); toast("👋 라이브에 입장했어요"); }
@@ -173,6 +212,7 @@
     ov.querySelectorAll("#lv-react [data-emo]").forEach(b => b.onclick = () => sendReaction(b.dataset.emo));
     ov.querySelector("#lv-super").onclick = openSuper;
     ov.querySelector("#lv-share").onclick = shareRoom;
+    ov.querySelector("#lv-present-open").onclick = openPresentSearch;
     refreshState();
     refreshTimer = setInterval(refreshState, 4000);   // 안전망 폴링
     connectAudio();   // 음성(있으면), 없으면 '준비중' 표시
@@ -216,6 +256,104 @@
     // 청중→스피커 승격되면 자동으로 마이크 발행
     if (CUR.cf && (CUR.role === "host" || CUR.role === "speaker") && !CUR.cf.pubTrack) maybePublish();
     render();
+  }
+
+  /* ── 📌 자료 프리젠테이션 (이슈/예측/뉴스/광장 검색해 무대에 띄우기) ─────────
+     방장은 방송 중 나갈 수 없으니, 콘텐츠를 방 안으로 끌어와 제시한다. 검색→선택→
+     전원 상단 배너 고정(broadcast + 방 상태 저장으로 late-join 동기화). */
+  const PT = {
+    issue:  { ic: "🗳", label: "이슈",   url: id => `issue.html?id=${id}` },
+    market: { ic: "🔮", label: "예측",   url: id => `predict-market.html?id=${id}` },
+    news:   { ic: "📰", label: "뉴스",   url: id => `news.html?gn=${id}` },
+    plaza:  { ic: "🗣", label: "광장",   url: id => `plaza_detail.html?id=${id}` },
+  };
+  async function searchContent(q) {
+    q = (q || "").trim(); if (q.length < 1) return [];
+    const like = `%${q}%`;
+    const runs = [
+      sb().from("issues").select("id,title").or(`title.ilike.${like},category.ilike.${like}`).limit(6)
+        .then(r => (r.data || []).map(x => ({ type: "issue", id: x.id, title: x.title }))),
+      sb().from("markets").select("id,question").ilike("question", like).limit(6)
+        .then(r => (r.data || []).map(x => ({ type: "market", id: x.id, title: x.question }))),
+      sb().from("galla_news").select("id,title").ilike("title", like).limit(6)
+        .then(r => (r.data || []).map(x => ({ type: "news", id: x.id, title: x.title }))),
+      sb().from("plaza_posts").select("id,title").or(`title.ilike.${like},body.ilike.${like}`).limit(6)
+        .then(r => (r.data || []).map(x => ({ type: "plaza", id: x.id, title: x.title }))),
+    ];
+    try { const groups = await Promise.all(runs); return [].concat.apply([], groups); }
+    catch (e) { return []; }
+  }
+  function openPresentSearch() {
+    if (!CUR || CUR.role !== "host") return;
+    const ov = document.getElementById("lv-stage"); if (!ov || ov.querySelector("#lv-pres-sheet")) return;
+    const sheet = document.createElement("div");
+    sheet.id = "lv-pres-sheet"; sheet.className = "lv-sheet";
+    sheet.innerHTML = `
+      <div class="lv-sheet-dim"></div>
+      <div class="lv-sheet-card lv-pres-card">
+        <div class="lv-sheet-h">📌 무대에 자료 띄우기 <small>이슈·예측·뉴스·광장</small></div>
+        <input id="lv-pres-q" class="lv-new-in" placeholder="주제 검색 (예: 대선, 금리, 손흥민…)" autocomplete="off">
+        <div id="lv-pres-res" class="lv-pres-res"><div class="lv-pres-hint">키워드를 입력하면 콘텐츠를 찾아드려요.</div></div>
+        <div class="lv-sheet-btns"><button id="lv-pres-cancel" type="button">닫기</button></div>
+      </div>`;
+    ov.appendChild(sheet);
+    const q = sheet.querySelector("#lv-pres-q");
+    const res = sheet.querySelector("#lv-pres-res");
+    const close = () => sheet.remove();
+    sheet.querySelector("#lv-pres-cancel").onclick = close;
+    sheet.querySelector(".lv-sheet-dim").onclick = close;
+    let t = null;
+    q.oninput = () => {
+      clearTimeout(t);
+      const kw = q.value.trim();
+      if (!kw) { res.innerHTML = `<div class="lv-pres-hint">키워드를 입력하면 콘텐츠를 찾아드려요.</div>`; return; }
+      res.innerHTML = `<div class="lv-pres-hint">검색 중…</div>`;
+      t = setTimeout(async () => {
+        const rows = await searchContent(kw);
+        if (q.value.trim() !== kw) return;   // 오래된 결과 버림
+        if (!rows.length) { res.innerHTML = `<div class="lv-pres-hint">‘${esc(kw)}’ 결과가 없어요.</div>`; return; }
+        res.innerHTML = rows.map(r => `
+          <button class="lv-pres-item" data-type="${esc(r.type)}" data-id="${esc(String(r.id))}" data-title="${esc(r.title || "")}" type="button">
+            <span class="lv-pres-ic">${PT[r.type].ic}</span>
+            <span class="lv-pres-tx"><b>${esc(r.title || "제목 없음")}</b><span>${PT[r.type].label}</span></span>
+            <span class="lv-pres-go">무대로 ›</span>
+          </button>`).join("");
+        res.querySelectorAll(".lv-pres-item").forEach(b => b.onclick = () => {
+          setPresent(b.dataset.type, b.dataset.id, b.dataset.title); close();
+        });
+      }, 280);
+    };
+    setTimeout(() => q.focus(), 60);
+  }
+  async function setPresent(type, id, title) {
+    if (!CUR) return;
+    const payload = { type, id, title };
+    renderPresent(payload);
+    try { CUR.channel.send({ type: "broadcast", event: "present", payload }); } catch (e) {}
+    sysMsg("📌 " + (PT[type] ? PT[type].label : "자료") + " 자료를 무대에 띄웠어요");
+    try { await sb().rpc("live_set_present", { p_room: CUR.roomId, p_type: type, p_id: String(id), p_title: title || "" }); } catch (e) {}
+  }
+  async function clearPresent() {
+    if (!CUR) return;
+    renderPresent(null);
+    try { CUR.channel.send({ type: "broadcast", event: "present", payload: { type: null } }); } catch (e) {}
+    try { await sb().rpc("live_set_present", { p_room: CUR.roomId, p_type: null, p_id: null, p_title: null }); } catch (e) {}
+  }
+  function renderPresent(p) {
+    const el = document.getElementById("lv-present"); if (!el) return;
+    if (!p || !p.type || !PT[p.type]) { el.hidden = true; el.innerHTML = ""; return; }
+    const isHost = CUR && CUR.role === "host";
+    const meta = PT[p.type];
+    el.hidden = false;
+    el.innerHTML = `
+      <span class="lv-present-ic">${meta.ic}</span>
+      <span class="lv-present-tx"><span class="lv-present-lab">지금 보는 자료 · ${meta.label}</span><b>${esc(p.title || "자료")}</b></span>
+      ${isHost ? `<button class="lv-present-x" id="lv-present-clear" type="button" aria-label="내리기">✕</button>`
+               : `<button class="lv-present-open2" data-url="${esc(meta.url(p.id))}" type="button">열기</button>`}`;
+    const clr = el.querySelector("#lv-present-clear"); if (clr) clr.onclick = clearPresent;
+    // 청중은 탭하면 콘텐츠로 이동(라이브를 떠나 볼 수 있음). 호스트는 이동 금지(나가면 방 파괴).
+    const ob = el.querySelector(".lv-present-open2");
+    if (ob) ob.onclick = () => { location.href = ob.dataset.url; };
   }
 
   /* ── 라이브 채팅 (open_messages 재사용) ─────────────────────────────────── */
@@ -384,6 +522,9 @@
 
     // 사람 클릭 — 프로필 시트(팔로우/언팔 · 호스트면 모더레이션 포함)
     ov.querySelectorAll(".lv-person").forEach(b => b.onclick = () => openProfile(b.dataset.uid));
+
+    // 자료(프리젠테이션) 버튼 — 호스트만
+    const presBtn = ov.querySelector("#lv-present-open"); if (presBtn) presBtn.hidden = !isHost;
 
     // 하단 바
     const bar = ov.querySelector("#lv-bar");
@@ -714,6 +855,11 @@
     .lv-sec-head{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px}
     .lv-sec-t{font-size:14px;font-weight:900;color:#fff}
     .lv-open-btn{background:linear-gradient(135deg,#ff4d67,#ff2d55);color:#fff;border:0;border-radius:999px;font-size:12.5px;font-weight:900;padding:7px 13px;cursor:pointer}
+    .lv-lobby-search{margin:0 0 10px}
+    .lv-lobby-search input{width:100%;box-sizing:border-box;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:11px 14px;color:#fff;font-size:13.5px}
+    .lv-lobby-search input:focus{outline:0;border-color:#6f86ff}
+    .lv-lobby-search input::placeholder{color:#6b7280}
+    .lv-hot{font-size:10.5px;font-weight:900;color:#ff9f43}
     .lv-cards{display:flex;flex-direction:column;gap:8px}
     .lv-card{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:14px;cursor:pointer;text-align:left;
       background:linear-gradient(135deg,rgba(255,77,103,.14),rgba(255,45,85,.05));border:1px solid rgba(255,77,103,.34)}
@@ -733,6 +879,27 @@
     .lv-topic{font-size:12.5px;color:#b7bdc9;margin-top:2px}
     .lv-x{width:34px;height:34px;border-radius:999px;background:rgba(255,255,255,.1);border:0;color:#fff;font-size:16px;cursor:pointer}
     .lv-audio-note{margin:0 16px 6px;padding:9px 12px;border-radius:12px;background:rgba(255,209,102,.12);border:1px solid rgba(255,209,102,.3);color:#ffd479;font-size:12px;font-weight:700}
+    /* 📌 무대 자료 배너 */
+    .lv-present{display:flex;align-items:center;gap:11px;margin:0 16px 8px;padding:11px 13px;border-radius:14px;
+      background:linear-gradient(135deg,rgba(111,134,255,.18),rgba(111,134,255,.05));border:1px solid rgba(111,134,255,.4)}
+    .lv-present-ic{font-size:22px;flex:0 0 auto}
+    .lv-present-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+    .lv-present-lab{font-size:10.5px;font-weight:800;color:#8aa0ff;letter-spacing:.2px}
+    .lv-present-tx b{font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lv-present-x{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);border:0;color:#fff;font-size:13px;cursor:pointer}
+    .lv-present-open2{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:0;background:#6f86ff;color:#fff;font-size:12.5px;font-weight:900;cursor:pointer}
+    .lv-present-btn{flex:0 0 auto;font-size:12.5px;font-weight:900;color:#fff;background:rgba(111,134,255,.9);border:0;padding:8px 12px}
+    /* 자료 검색 시트 */
+    .lv-pres-res{max-height:46vh;overflow-y:auto;margin:4px 0 12px;display:flex;flex-direction:column;gap:6px}
+    .lv-pres-hint{padding:22px 8px;text-align:center;font-size:12.5px;color:#8a90a0}
+    .lv-pres-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:12px;cursor:pointer;text-align:left;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+    .lv-pres-item:active{background:rgba(255,255,255,.09)}
+    .lv-pres-ic{font-size:20px;flex:0 0 auto}
+    .lv-pres-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+    .lv-pres-tx b{font-size:13.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    .lv-pres-tx span{font-size:11px;color:#8a90a0;font-weight:700}
+    .lv-pres-go{flex:0 0 auto;font-size:11.5px;font-weight:900;color:#8aa0ff}
     .lv-stage-body{flex:0 1 auto;max-height:46vh;overflow-y:auto;padding:6px 16px 12px}
     .lv-chat{flex:1 1 auto;overflow-y:auto;padding:6px 16px;display:flex;flex-direction:column;gap:6px;min-height:60px;border-top:1px solid rgba(255,255,255,.06)}
     .lv-msg{font-size:13px;line-height:1.4;color:#dfe4f0;word-break:break-word}
