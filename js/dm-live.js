@@ -352,9 +352,26 @@
       ${isHost ? `<button class="lv-present-x" id="lv-present-clear" type="button" aria-label="내리기">✕</button>`
                : `<button class="lv-present-open2" data-url="${esc(meta.url(p.id))}" type="button">열기</button>`}`;
     const clr = el.querySelector("#lv-present-clear"); if (clr) clr.onclick = clearPresent;
-    // 청중은 탭하면 콘텐츠로 이동(라이브를 떠나 볼 수 있음). 호스트는 이동 금지(나가면 방 파괴).
+    // 청중은 '열기'로 방을 나가지 않고 무대 위에 자료를 오버레이로 본다(육성은 계속 들림).
     const ob = el.querySelector(".lv-present-open2");
-    if (ob) ob.onclick = () => { location.href = ob.dataset.url; };
+    if (ob) ob.onclick = () => openContentViewer(ob.dataset.url, p.title);
+  }
+  // 무대 위 자료 뷰어 — 방(육성)을 유지한 채 콘텐츠를 iframe으로 겹쳐 본다.
+  function openContentViewer(url, title) {
+    const stage = document.getElementById("lv-stage"); if (!stage || !url) return;
+    if (stage.querySelector("#lv-view")) return;
+    const v = document.createElement("div");
+    v.id = "lv-view"; v.className = "lv-view";
+    v.innerHTML = `
+      <div class="lv-view-top">
+        <button class="lv-view-x" id="lv-view-x" type="button" aria-label="닫기">✕</button>
+        <b class="lv-view-title">${esc(title || "자료")}</b>
+        <span class="lv-view-live">🔴 육성 유지</span>
+      </div>
+      <iframe class="lv-view-if" src="${esc(url)}" allow="autoplay"></iframe>`;
+    stage.appendChild(v);
+    requestAnimationFrame(() => v.classList.add("on"));
+    v.querySelector("#lv-view-x").onclick = () => { v.classList.remove("on"); setTimeout(() => v.remove(), 200); };
   }
 
   /* ── 실시간 채팅 (open_messages 재사용) ─────────────────────────────────── */
@@ -890,6 +907,14 @@
     .lv-present-x{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1);border:0;color:#fff;font-size:13px;cursor:pointer}
     .lv-present-open2{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:0;background:#6f86ff;color:#fff;font-size:12.5px;font-weight:900;cursor:pointer}
     .lv-present-btn{flex:0 0 auto;font-size:12.5px;font-weight:900;color:#fff;background:rgba(111,134,255,.9);border:0;padding:8px 12px}
+    /* 무대 위 자료 뷰어(iframe) — 방 유지한 채 콘텐츠 보기 */
+    .lv-view{position:absolute;inset:0;z-index:12;display:flex;flex-direction:column;background:#0a0709;opacity:0;transition:opacity .2s ease}
+    .lv-view.on{opacity:1}
+    .lv-view-top{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0)) 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .lv-view-x{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.1);border:0;color:#fff;font-size:15px;cursor:pointer}
+    .lv-view-title{flex:1;min-width:0;font-size:14px;font-weight:900;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lv-view-live{flex:0 0 auto;font-size:10.5px;font-weight:900;color:#ff6a8a}
+    .lv-view-if{flex:1;width:100%;border:0;background:#0a0709}
     /* 자료 검색 시트 */
     .lv-pres-res{max-height:46vh;overflow-y:auto;margin:4px 0 12px;display:flex;flex-direction:column;gap:6px}
     .lv-pres-hint{padding:22px 8px;text-align:center;font-size:12.5px;color:#8a90a0}
