@@ -139,7 +139,7 @@
       </div>
       <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다</div>
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
-      <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 사회적 환원</b>에 쓰입니다(수수료 20%).
+      <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 발의자 이름으로 기부</b>됩니다(수수료 20%).
         결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다.
         갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.
         <a href="creator.html" class="earn-more">이 돈은 어디로 가나요? ›</a></div>`;
