@@ -764,12 +764,16 @@
     await maybePublish();
   }
 
-  // 🔧 진단 라인 — 무대 오디오 상태를 배너에 표시(임시)
+  // 오디오 상태 배너 — 평소엔 숨기고, 실제 문제(마이크 거부·발행 실패·ICE 끊김)일 때만 안내.
   function renderDiag(cf) {
     const note = document.getElementById("lv-audio-note"); if (!note || !cf || !cf.diag) return;
     const d = cf.diag;
-    note.hidden = false;
-    note.textContent = `🔧 세션 ${d.sess ? "✓" : "✗"} · 마이크 ${d.mic} · 송신 ${d.tx ? "ON" : "OFF"} · 수신 ${d.rx} · ICE ${d.ice}` + (d.err ? ` · ⚠️ ${d.err}` : "");
+    let msg = "";
+    if (d.err === "mic_denied") msg = "🎙 마이크 권한이 꺼져 있어요 — 설정에서 허용해 주세요.";
+    else if (d.err && d.err.indexOf("pub") === 0) msg = "🔊 음성 송출에 실패했어요 — 무대를 내렸다 다시 올라와 주세요.";
+    else if (d.ice === "failed" || d.ice === "disconnected") msg = "🔊 음성 연결이 불안정해요 — 네트워크를 확인해 주세요.";
+    if (msg) { note.hidden = false; note.textContent = msg; }
+    else { note.hidden = true; note.textContent = ""; }
   }
 
   async function maybePublish() {
