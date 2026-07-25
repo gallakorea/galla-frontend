@@ -6,7 +6,8 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := auth.uid(); v_creator uuid; v_bal int; v_fee int; v_charity int; v_net int; v_tier text; v_id uuid;
 begin
   if v_uid is null then return jsonb_build_object('ok',false,'reason','unauthorized'); end if;
-  if p_amount is null or p_amount < 500 or p_amount > 1000000 then return jsonb_build_object('ok',false,'reason','bad_amount'); end if;
+  -- 소액 쏘기 유도: 100원부터(사람들은 큰돈을 잘 안 쓴다 → 마이크로 팁으로 진입장벽 낮춤)
+  if p_amount is null or p_amount < 100 or p_amount > 1000000 then return jsonb_build_object('ok',false,'reason','bad_amount'); end if;
   select owner_id into v_creator from open_rooms where id=p_room and kind='live';
   if v_creator is null then return jsonb_build_object('ok',false,'reason','no_room'); end if;
   if v_creator = v_uid then return jsonb_build_object('ok',false,'reason','self'); end if;

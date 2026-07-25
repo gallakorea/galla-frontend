@@ -217,24 +217,56 @@
   }
 
   /* ── 💸 GC 쏘기 (빵빵 터지는 후원 · 게임 GP와 분리된 현금성 GC) ──────── */
-  async function openSuper() {
+  // 소액 원탭 티어 시트(100원부터 — 사람들은 큰돈 안 쓴다)
+  function openSuper() {
     if (!CUR) return;
     const host = (CUR.state || []).find(r => r.role === "host");
-    if (host && host.user_id === ME) return toast("내 방엔 후원할 수 없어요.");
-    const amt = parseInt(prompt("💸 쏘기 (갈라코인 GC · 1GC=1원, 최소 500)", "1000") || "", 10);
-    if (!amt || amt < 500) return;
-    const msg = (prompt("응원 메시지 (선택)") || "").trim();
-    try {
-      const { data } = await sb().rpc("gc_donate_live", { p_room: CUR.roomId, p_amount: amt, p_message: msg });
-      if (!data || !data.ok) {
-        if (data && data.reason === "insufficient") { toast("갈라코인(GC)이 부족해요."); if (window.openCharge) window.openCharge(); }
-        else toast(data && data.reason === "self" ? "내 방엔 후원 불가" : "후원에 실패했어요.");
-        return;
-      }
-      const payload = { nick: (CUR.nicks && CUR.nicks[ME]) || "나", amount: amt, msg };
-      showSuper(payload);
-      try { CUR.channel.send({ type: "broadcast", event: "super", payload }); } catch (e) {}
-    } catch (e) { toast("후원에 실패했어요."); }
+    if (host && host.user_id === ME) return toast("내 방엔 쏘기 안 돼요.");
+    const ov = document.getElementById("lv-stage"); if (!ov || ov.querySelector("#lv-super-sheet")) return;
+    const tiers = [100, 500, 1000, 5000, 10000];
+    const sheet = document.createElement("div");
+    sheet.id = "lv-super-sheet"; sheet.className = "lv-sheet";
+    sheet.innerHTML = `
+      <div class="lv-sheet-dim"></div>
+      <div class="lv-sheet-card">
+        <div class="lv-sheet-h">💸 쏘기 <small>갈라코인(GC) · 1GC=1원 · 100원부터</small></div>
+        <div class="lv-tiers">${tiers.map(t => `<button class="lv-tier" data-amt="${t}" type="button">${t.toLocaleString()}원</button>`).join("")}
+          <button class="lv-tier lv-tier-etc" data-amt="0" type="button">직접</button></div>
+        <input id="lv-super-amt" type="number" min="100" inputmode="numeric" placeholder="직접 입력 (100원부터)" hidden>
+        <input id="lv-super-msg" maxlength="80" placeholder="응원 메시지 (선택)">
+        <div class="lv-sheet-btns"><button id="lv-super-cancel" type="button">취소</button><button id="lv-super-go" type="button" disabled>쏘기</button></div>
+      </div>`;
+    ov.appendChild(sheet);
+    let amt = 0;
+    const go = sheet.querySelector("#lv-super-go");
+    const amtIn = sheet.querySelector("#lv-super-amt");
+    const setAmt = (v) => { amt = v; go.disabled = !(amt >= 100); go.textContent = amt >= 100 ? amt.toLocaleString() + "원 쏘기" : "쏘기"; };
+    sheet.querySelectorAll(".lv-tier").forEach(b => b.onclick = () => {
+      sheet.querySelectorAll(".lv-tier").forEach(x => x.classList.remove("on")); b.classList.add("on");
+      if (b.dataset.amt === "0") { amtIn.hidden = false; amtIn.focus(); setAmt(parseInt(amtIn.value || "0", 10)); }
+      else { amtIn.hidden = true; setAmt(+b.dataset.amt); }
+    });
+    amtIn.oninput = () => setAmt(parseInt(amtIn.value || "0", 10));
+    const close = () => sheet.remove();
+    sheet.querySelector("#lv-super-cancel").onclick = close;
+    sheet.querySelector(".lv-sheet-dim").onclick = close;
+    go.onclick = async () => {
+      if (amt < 100) return;
+      const msg = (sheet.querySelector("#lv-super-msg").value || "").trim();
+      go.disabled = true; go.textContent = "쏘는 중…";
+      try {
+        const { data } = await sb().rpc("gc_donate_live", { p_room: CUR.roomId, p_amount: amt, p_message: msg });
+        if (!data || !data.ok) {
+          if (data && data.reason === "insufficient") { toast("갈라코인(GC)이 부족해요."); if (window.openCharge) window.openCharge(); }
+          else toast(data && data.reason === "self" ? "내 방엔 쏘기 불가" : "쏘기에 실패했어요.");
+          go.disabled = false; setAmt(amt); return;
+        }
+        close();
+        const payload = { nick: (CUR.nicks && CUR.nicks[ME]) || "나", amount: amt, msg };
+        showSuper(payload);
+        try { CUR.channel.send({ type: "broadcast", event: "super", payload }); } catch (e) {}
+      } catch (e) { toast("쏘기에 실패했어요."); go.disabled = false; setAmt(amt); }
+    };
   }
   function showSuper(p) {
     const fx = document.getElementById("lv-fx"); if (!fx || !p) return;
@@ -584,6 +616,19 @@
     @keyframes lvSuperIn{0%{opacity:0;transform:translateY(-30px) scale(.8)}100%{opacity:1;transform:none}}
     @keyframes lvSuperOut{to{opacity:0;transform:translateY(-16px) scale(.96)}}
     .lv-sc-top{font-size:15px;font-weight:950}.lv-sc-amt{font-size:17px}
+    .lv-sheet{position:absolute;inset:0;z-index:9;display:flex;align-items:flex-end;justify-content:center}
+    .lv-sheet-dim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+    .lv-sheet-card{position:relative;width:100%;max-width:480px;background:#15171f;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0));border-top:1px solid rgba(255,255,255,.1)}
+    .lv-sheet-h{font-size:16px;font-weight:950;color:#fff;margin-bottom:12px}.lv-sheet-h small{font-size:11.5px;font-weight:700;color:#8a90a0;margin-left:6px}
+    .lv-tiers{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+    .lv-tier{flex:1 1 28%;min-width:80px;padding:12px 6px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-size:14px;font-weight:900;cursor:pointer}
+    .lv-tier.on{background:linear-gradient(135deg,#ff8a3d,#ff3d67);border-color:transparent}
+    .lv-tier-etc{flex:1 1 28%}
+    #lv-super-amt,#lv-super-msg{width:100%;box-sizing:border-box;background:#0e1015;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px 14px;color:#fff;font-size:14px;margin-bottom:10px}
+    .lv-sheet-btns{display:flex;gap:8px}
+    .lv-sheet-btns #lv-super-cancel{flex:0 0 auto;padding:13px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:none;color:#c8cede;font-weight:800;cursor:pointer}
+    .lv-sheet-btns #lv-super-go{flex:1;padding:13px;border-radius:12px;border:0;background:linear-gradient(135deg,#ff8a3d,#ff2d55);color:#fff;font-size:15px;font-weight:950;cursor:pointer}
+    .lv-sheet-btns #lv-super-go:disabled{opacity:.45}
     .lv-sc-msg{font-size:13.5px;margin-top:5px;color:rgba(255,255,255,.95)}
     .lv-chatbar{display:flex;gap:8px;padding:8px 16px}
     .lv-chatbar input{flex:1;min-width:0;background:#161a24;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 15px;color:#fff;font-size:14px}
