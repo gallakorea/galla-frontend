@@ -198,10 +198,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   ===================== */
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      alert("로그아웃되었습니다.");
-      location.href = "index.html";
+    // 네이티브 alert 폐지 → 우리 팝업(앱=로그아웃 차단·인스타식 / 웹=강한 만류 + "또 오세요")
+    logoutBtn.addEventListener("click", () => {
+      if (window.GALLA_logout) window.GALLA_logout();
+      else { supabase.auth.signOut().then(() => location.href = "index.html"); }
     });
   }
 

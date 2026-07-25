@@ -221,8 +221,3 @@ body {
     border: 1px solid rgba(255,255,255,.07); font-size: 14px; font-weight: 600;
     display: flex; justify-content: space-between; cursor: pointer;
 }
-
-/* 계정 삭제 — 눈에 안 띄게(회색), 누르면 위험 강조 */
-.st-item.st-danger { color: #7b7f8a; }
-.st-item.st-danger .st-ic { opacity: .7; }
-.st-item.st-danger:active { color: #ff6a6a; }
