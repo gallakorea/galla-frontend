@@ -372,14 +372,17 @@
     try { if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)(); if (_ac.state === "suspended") _ac.resume(); } catch (e) { _ac = null; }
     return _ac;
   }
-  function tone(freq, t0, dur, type, gain) {
-    var c = ac(); if (!c) return;
+  function tone(freq, t0, dur, type, gain, track) {
+    var c = ac(); if (!c) return null;
     var o = c.createOscillator(), g = c.createGain();
     o.type = type || "sine"; o.frequency.setValueAtTime(freq, t0);
     g.gain.setValueAtTime(0, t0);
     g.gain.linearRampToValueAtTime(gain || 0.14, t0 + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+    // BGM 음표는 추적 배열에 담아 stopMusic이 예약분까지 즉시 끊을 수 있게
+    if (track) { track.push(o); o.onended = function () { var i = track.indexOf(o); if (i >= 0) track.splice(i, 1); }; }
+    return o;
   }
   function sfx(kind) {
     var c = ac(); if (!c) return;
@@ -401,12 +404,12 @@
   var LEAD = [523.25, 784, 659.25, 1046.5, 880, 784, 659.25, 587.33,
               523.25, 659.25, 784, 880, 1046.5, 880, 784, 659.25];
   var BASS = [130.81, 130.81, 196.00, 196.00, 174.61, 174.61, 196.00, 196.00]; // 2스텝당 1
-  var _music = { on: false, timer: null, next: 0 };
+  var _music = { on: false, timer: null, next: 0, nodes: [] };
   function scheduleBar(startT) {
     for (var i = 0; i < 16; i++) {
       var t = startT + i * STEP;
-      if (LEAD[i]) tone(LEAD[i], t, STEP * 0.86, "square", 0.05);
-      if (i % 2 === 0) { var b = BASS[i / 2]; if (b) tone(b, t, STEP * 1.7, "triangle", 0.085); }
+      if (LEAD[i]) tone(LEAD[i], t, STEP * 0.86, "square", 0.05, _music.nodes);
+      if (i % 2 === 0) { var b = BASS[i / 2]; if (b) tone(b, t, STEP * 1.7, "triangle", 0.085, _music.nodes); }
     }
     return startT + 16 * STEP;
   }
@@ -419,7 +422,13 @@
       if (_music.next < cc.currentTime + 0.5) _music.next = scheduleBar(_music.next);
     }, 120);
   }
-  function stopMusic() { _music.on = false; if (_music.timer) { clearInterval(_music.timer); _music.timer = null; } }
+  function stopMusic() {
+    _music.on = false;
+    if (_music.timer) { clearInterval(_music.timer); _music.timer = null; }
+    // 이미 오디오에 예약된 음표까지 즉시 정지(안 그러면 완주 후에도 한 마디 더 남음)
+    _music.nodes.slice().forEach(function (o) { try { o.stop(0); } catch (e) {} try { o.disconnect(); } catch (e) {} });
+    _music.nodes = [];
+  }
 
   function setMuted(m) {
     _muted = m; try { localStorage.setItem("galla_tour_muted", m ? "1" : "0"); } catch (e) {}

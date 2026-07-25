@@ -539,9 +539,10 @@ function __openShortsInternal(list, startId, startTime) {
     const type = btn.classList.contains("gv-pro") ? "pro" : "con";
     const issueId = voteBar.dataset.issueId;
 
+    // 0) 로그인 필수 — 블록보다 먼저(미로그인은 GALLA_VOTE/issueId 준비 여부와 무관하게 무조건 로그인 유도)
+    if (!window.GALLA_requireLogin || !(await window.GALLA_requireLogin("진영 선택은 로그인 후 가능해요."))) return;
+
     if (window.GALLA_VOTE && issueId) {
-      // 0) 로그인 필수 (미로그인은 이펙트·낙관 반영 전 차단)
-      if (!window.GALLA_requireLogin || !(await window.GALLA_requireLogin("진영 선택은 로그인 후 가능해요."))) return;
       // 0-1) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
       if (window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(voteBar, issueId)) return;
       // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임)
