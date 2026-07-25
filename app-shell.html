@@ -59,36 +59,31 @@
   var C = window.Capacitor;
   if (!(C && C.getPlatform && C.getPlatform() === 'ios' && C.isNativePlatform && C.isNativePlatform())) return;
   window.__iosrtcReady = false;
-  function load(src){ return new Promise(function(res, rej){ var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
-  // 순서 보장 로드 → cordova가 부팅되며 cordova.plugins.iosrtc clobber
-  load('/native/cordova.js')
-    .then(function(){ return load('/native/cordova_plugins.js'); })
-    .then(function(){ return load('/native/plugins/cordova-plugin-iosrtc/www/cordova-plugin-iosrtc.js'); })
-    .then(function(){
-      var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM';
-      var beaconed=false;
-      function beacon(msg){ if(beaconed)return; beaconed=true; try{ fetch('https://bidqauputnhkqepvdzrr.supabase.co/rest/v1/rpc/log_client_error',{method:'POST',headers:{apikey:AK,Authorization:'Bearer '+AK,'Content-Type':'application/json'},body:JSON.stringify({p_kind:'iosrtc-probe',p_message:String(msg).slice(0,400),p_ver:'rtc1'})}); }catch(e){} }
-      function reg(){
-        if (window.__iosrtcReady) return;
-        try {
-          // clobber 자동적용이 안 되면 모듈을 직접 require해 연결
-          if (window.cordova && cordova.require && !(cordova.plugins && cordova.plugins.iosrtc)) {
-            try { var m = cordova.require('cordova-plugin-iosrtc.Plugin'); if (m) { cordova.plugins = cordova.plugins || {}; cordova.plugins.iosrtc = m; } } catch(e){}
-          }
-          if (window.cordova && cordova.plugins && cordova.plugins.iosrtc) {
-            var before = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
-            cordova.plugins.iosrtc.registerGlobals();
-            var after = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
-            window.__iosrtcReady = true;
-            beacon('READY pc_before='+before+' pc_after='+after);
-          }
-        } catch(e){ beacon('ERR '+(e&&e.message)); }
-      }
-      document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
-      setTimeout(reg, 2500); setTimeout(reg, 5000);
-      setTimeout(function(){ if(!window.__iosrtcReady) beacon('WAIT cordova='+!!window.cordova+' plugins='+!!(window.cordova&&cordova.plugins)+' iosrtc='+!!(window.cordova&&cordova.plugins&&cordova.plugins.iosrtc)); }, 9000);
-    })
-    .catch(function(){ /* 로드 실패해도 앱은 기존 웹뷰 WebRTC로 폴백 */ });
+  var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM';
+  var beaconed=false;
+  function beacon(msg){ if(beaconed)return; beaconed=true; try{ fetch('https://bidqauputnhkqepvdzrr.supabase.co/rest/v1/rpc/log_client_error',{method:'POST',headers:{apikey:AK,Authorization:'Bearer '+AK,'Content-Type':'application/json'},body:JSON.stringify({p_kind:'iosrtc-probe',p_message:String(msg).slice(0,400),p_ver:'rtc2'})}); }catch(e){} }
+  function load(src){ return new Promise(function(res, rej){ var s=document.createElement('script'); s.src=src; s.onload=function(){res(true)}; s.onerror=function(){res(false)}; document.head.appendChild(s); }); }
+  var s1=false,s2=false;
+  // cordova.js(=Capacitor exec 브릿지) → iosrtc UMD(window.iosrtc 직접 노출, 내부 require('cordova/exec')는 전역 require로 해결)
+  load('/native/cordova.js').then(function(ok){ s1=ok; return load('/native/iosrtc.umd.js'); }).then(function(ok){
+    s2=ok;
+    function reg(){
+      if (window.__iosrtcReady) return;
+      try {
+        var rtc = window.iosrtc || (window.cordova && cordova.plugins && cordova.plugins.iosrtc);
+        if (rtc && rtc.registerGlobals) {
+          var before = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
+          rtc.registerGlobals();
+          var after = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
+          window.__iosrtcReady = true; window.__iosrtc = rtc;
+          beacon('READY pc_before='+before+' pc_after='+after);
+        }
+      } catch(e){ beacon('ERR '+(e&&e.message)); }
+    }
+    document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
+    setTimeout(reg, 2500); setTimeout(reg, 5000);
+    setTimeout(function(){ if(!window.__iosrtcReady) beacon('WAIT s1='+s1+' s2='+s2+' cordova='+!!window.cordova+' require='+(typeof window.require)+' iosrtc='+(typeof window.iosrtc)+' exec='+!!(window.cordova&&cordova.exec)); }, 9000);
+  });
 })();
 </script>
 
