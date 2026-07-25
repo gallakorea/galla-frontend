@@ -100,7 +100,11 @@
     v.style.cssText = "position:fixed;inset:0;z-index:9000;background:" +
       "radial-gradient(120% 80% at 50% -10%,#14141a 0%,#0a0a0b 55%) #0a0a0b;" +
       "display:flex;align-items:center;justify-content:center;transition:opacity .28s ease;pointer-events:none";
-    v.innerHTML = '<div style="width:30px;height:30px;border-radius:50%;border:2.5px solid rgba(255,255,255,.14);' +
+    // 셸(iframe) 안에서는 셸이 이미 판 스피너를 보여준다 — 여기서 또 돌리면 '스피너 두 개'(사장님 지적).
+    // 베일(검은 막)은 유지해 조립 과정만 가리고, 스피너는 단독 실행(PWA/브라우저)일 때만.
+    var inShell = false; try { inShell = window.self !== window.top; } catch (_) { inShell = true; }
+    v.innerHTML = inShell ? "" :
+      '<div style="width:30px;height:30px;border-radius:50%;border:2.5px solid rgba(255,255,255,.14);' +
       'border-top-color:#6f86ff;animation:snapspin .7s linear infinite"></div>' +
       "<style>@keyframes snapspin{to{transform:rotate(360deg)}}</style>";
     (document.body || document.documentElement).appendChild(v);
