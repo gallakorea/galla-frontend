@@ -551,6 +551,9 @@ function __openShortsInternal(list, startId, startTime) {
       // 🔬 임시 진단 — 릴스 진영 탭 시 세션 판정 결과 보고(리다이렉트 미동작 추적, 원인 확정 후 제거)
       try { window.GALLA_logError && window.GALLA_logError(new Error("VOTEDIAG shorts " + diag), "votediag"); } catch (e) {}
       if (!uid) {
+        // 릴스부터 닫는다 — iOS는 영상 하드웨어 레이어가 새 화면 위에 눌러붙어
+        // '이동은 됐는데 릴스가 그대로 보이는' 현상이 난다(사장님 통찰).
+        try { closeShorts(); } catch (e) {}
         await new Promise(r => setTimeout(r, 350));   // 진단 전송 여유
         const go = "login.html?next=" + encodeURIComponent("index.html");
         // 1순위: 셸(최상위 문서)에게 이동 요청 — 자기 자신 이동은 WKWebView도 못 막는다
@@ -1402,7 +1405,7 @@ document.addEventListener("click", async e => {
   const likeBtn = e.target.closest("#shortsCommentModal .sc-like");
   if (likeBtn && supabase) {
     if (!SC.myId) {
-      { const go = "login.html?next=" + encodeURIComponent("index.html"); try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
+      { const go = "login.html?next=" + encodeURIComponent("index.html"); try { closeShorts(); } catch (e2) {} try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
       return;
     }
     const cid = Number(likeBtn.dataset.cid);
@@ -1437,7 +1440,7 @@ document.addEventListener("click", async e => {
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess?.session?.user?.id;
   if (!uid) {
-    { const go = "login.html?next=" + encodeURIComponent("index.html"); try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
+    { const go = "login.html?next=" + encodeURIComponent("index.html"); try { closeShorts(); } catch (e2) {} try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
     return;
   }
 
