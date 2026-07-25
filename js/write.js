@@ -418,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
 
           <div class="prev-sec prev-sec-dim">
-            <div class="prev-sec-title">💰 예상 기부처</div>
+            <div class="prev-sec-title">💰 기부처</div>
             <p class="prev-body">${esc(donationEl.value)}</p>
           </div>
         </div>

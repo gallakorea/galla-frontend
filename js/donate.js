@@ -120,7 +120,7 @@
       go.textContent = ok ? `${won(a)} 후원하기` : `최소 ${won(MIN)}부터`; }
     if (br) { const fee = Math.floor(a * 0.2), charity = Math.floor(a * 0.05), net = a - fee - charity;
       br.innerHTML = ok
-        ? `발의자 <b>${won(net)}</b> · 기부 <b>${won(charity)}</b> · 수수료 ${won(fee)}` : ""; }
+        ? `발의자 <b>${won(net)}</b> · 환원 <b>${won(charity)}</b> · 수수료 ${won(fee)}` : ""; }
   }
   function renderForm() {
     sheet.innerHTML = `
@@ -139,7 +139,7 @@
       </div>
       <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다</div>
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
-      <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 기부</b>됩니다(수수료 20%).
+      <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 사회적 환원</b>에 쓰입니다(수수료 20%).
         결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다.
         갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.
         <a href="creator.html" class="earn-more">이 돈은 어디로 가나요? ›</a></div>`;
@@ -192,7 +192,7 @@
           <div class="ic">💝</div>
           <h4>후원 완료!</h4>
           <p>${won(a)}가 갈라코인으로 전달됐어요.<br>
-          ${isPlaza ? "작성자" : "발의자"} <b>${won(data.net)}</b> · 기부 <b>${won(data.charity)}</b><br>
+          ${isPlaza ? "작성자" : "발의자"} <b>${won(data.net)}</b> · 환원 <b>${won(data.charity)}</b><br>
           남은 갈라코인 ${GC_BAL.toLocaleString()} GC</p>
         </div>
         <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
@@ -295,7 +295,7 @@
           <div class="earn-b"><div class="earn-v">${data.supporter_count}명</div><div class="earn-l">후원자</div></div>
         </div>
         <button class="earn-out" id="earn-out" ${data.available < MIN_WITHDRAW ? "disabled" : ""}>${data.available < MIN_WITHDRAW ? "출금 최소 20만원" : "출금 신청"}</button>
-        <div class="earn-note">후원금의 75%가 발의자에게 정산됩니다(기부 5%·수수료 20% 제외).
+        <div class="earn-note">후원금의 75%가 발의자에게 정산됩니다(사회 환원 5%·수수료 20% 제외).
           실제 송금(PG·뱅킹)은 준비 중입니다.
           <a href="creator.html" class="earn-more">수익 배분 자세히 ›</a></div>
       </div>`;

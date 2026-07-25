@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>기부 사용처 - GALLA</title>
+    <title>사회적 환원 내역 - GALLA</title>
 
-    <link rel="stylesheet" href="./css/donation-usage.css?v=072550">
-    <link rel="stylesheet" href="./css/index.css?v=072550">
-    <link rel="stylesheet" href="./css/nav.css?v=072550">
+    <link rel="stylesheet" href="./css/donation-usage.css?v=072551">
+    <link rel="stylesheet" href="./css/index.css?v=072551">
+    <link rel="stylesheet" href="./css/nav.css?v=072551">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -17,8 +17,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072550">
-<link rel="stylesheet" href="./css/desktop.css?v=072550">
+  <link rel="stylesheet" href="./css/theme.css?v=072551">
+<link rel="stylesheet" href="./css/desktop.css?v=072551">
 </head>
 
 <body data-page="mypage">
@@ -28,7 +28,7 @@
     <header class="header">
         <div class="header-inner">
             <img src="assets/icons/back.svg" class="back-icon" data-back="index.html">
-            <div class="header-title">기부 사용처</div>
+            <div class="header-title">사회적 환원</div>
             <div class="header-spacer"></div>
         </div>
     </header>
@@ -37,11 +37,11 @@
     <section class="summary-section">
         <div class="summary-card">
             <div class="sum-row">
-                <span>총 기부 금액</span>
+                <span>총 환원 금액</span>
                 <span class="num" id="donationTotal">₩ 0</span>
             </div>
             <div class="sum-row">
-                <span>총 기부 횟수</span>
+                <span>총 환원 횟수</span>
                 <span class="num" id="donationCount">0회</span>
             </div>
         </div>
@@ -49,7 +49,7 @@
 
     <!-- HISTORY -->
     <section class="history-section">
-        <div class="section-title">기부금 사용 내역</div>
+        <div class="section-title">환원 사용 내역</div>
 
         <div id="donationList"></div>
     </section>
@@ -141,7 +141,7 @@ function waitSupabase() {
     listEl.innerHTML = "";
 
     if (!usage || usage.length === 0) {
-        listEl.innerHTML = `<div class="empty-msg">기부 사용 내역이 없습니다.</div>`;
+        listEl.innerHTML = `<div class="empty-msg">환원 사용 내역이 없습니다.</div>`;
         return;
     }
 
@@ -164,17 +164,17 @@ function waitSupabase() {
 </script>
 
 <!-- Supabase -->
-<script src="/js/error-logger.js?v=072550"></script>
-  <script src="./vendor/supabase.js?v=072550"></script>
-<script src="js/supabase.js?v=072550"></script>
-<script src="js/back.js?v=072550"></script>
-<script src="./js/nav.js?v=072550"></script>
-<script src="./js/desktop-pc.js?v=072550" defer></script>
-<script src="./js/nav-jog.js?v=072550" defer></script>
-<script src="./js/dm-call.js?v=072550" defer></script>
+<script src="/js/error-logger.js?v=072551"></script>
+  <script src="./vendor/supabase.js?v=072551"></script>
+<script src="js/supabase.js?v=072551"></script>
+<script src="js/back.js?v=072551"></script>
+<script src="./js/nav.js?v=072551"></script>
+<script src="./js/desktop-pc.js?v=072551" defer></script>
+<script src="./js/nav-jog.js?v=072551" defer></script>
+<script src="./js/dm-call.js?v=072551" defer></script>
 
-<script src="/js/analytics.js?v=072550"></script>
-<script src="/js/pwa.js?v=072550"></script>
-  <script src="/js/pull-refresh.js?v=072550"></script>
+<script src="/js/analytics.js?v=072551"></script>
+<script src="/js/pwa.js?v=072551"></script>
+  <script src="/js/pull-refresh.js?v=072551"></script>
 </body>
 </html>
