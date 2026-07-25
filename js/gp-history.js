@@ -57,7 +57,7 @@ async function loadGc(){
   const head = `
     <div class="gh-gc-head">
       <div class="gh-gc-bal">💝 갈라코인 <b>${fmt(bal)}</b> GC</div>
-      <div class="gh-gc-note">크리에이터 후원 전용 · 현금 충전(수수료 제외 적립) · GP와 상호 전환 불가</div>
+      <div class="gh-gc-note">크리에이터 후원 전용 · 1GC=1원 · 현금 충전 · GP와 상호 전환 불가</div>
     </div>`;
   if(!rows.length){
     el.innerHTML = head + `<div class="gh-empty">아직 갈라코인 내역이 없어요.<br>

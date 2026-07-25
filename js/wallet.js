@@ -161,25 +161,29 @@ async function openGcCharge(){
   gcDim.classList.add('open');
   requestAnimationFrame(()=>gcSheet.classList.add('open'));
 
-  // 결제 채널 — 인앱(애플/구글)은 30% 수수료가 붙어 적립 GC가 줄어든다.
-  // 지금 실행 환경이 네이티브 래퍼(Capacitor)면 그쪽 스토어 요율을, 아니면 웹 요율을 적용한다.
+  // 결제 채널. 코인은 어디서 사든 1개=1원(round).
+  // ⚠️ 앱스토어 심사(anti-steering): 앱 안에서 "웹이 더 싸다"·외부 결제 유도·가격 비교는
+  //    애플·구글 거절 1순위다. 그래서 네이티브에서는 web_krw 비교나 웹 유도 문구를 절대 렌더하지 않는다.
+  //    네이티브 결제가 실제로 열릴 땐 스토어 IAP를 써야 한다(우리 PG로 인앱 판매 불가).
   const channel = gcCharChannel();
+  const isNative = channel!=='web';
   const { data } = await supa.rpc('gc_charge_packages', { p_channel: channel });
   const pkgs = data?.packages||[];
-  const feePct = Math.round((data?.fee_rate||0)*100);
-  const feeLine = feePct>0
-    ? `결제 수수료 ${feePct}%를 제외한 금액이 코인으로 적립돼요.${channel!=='web' ? ' 웹에서 충전하면 더 많이 받아요.' : ''}`
-    : '';
   gcSheet.innerHTML=`<div class="wl-grip"></div><div class="wl-sheet-t">💝 갈라코인 충전</div>
-    <div class="wl-sheet-s">크리에이터 후원 전용 · 갈라포인트와 상호 전환 불가</div>
+    <div class="wl-sheet-s">1코인 = 1원 · 크리에이터 후원 전용 · 갈라포인트와 상호 전환 불가</div>
     <div class="wl-pkgs">${pkgs.map(p=>`
       <button class="wl-pkg" data-key="${esc(p.key)}">
-        <span class="wl-pkg-k">₩${fmt(p.krw)}</span>
         <span class="wl-pkg-g">💝 ${fmt(p.gc)} GC</span>
+        <span class="wl-pkg-k">₩${fmt(p.krw)}</span>
       </button>`).join('')}</div>
-    ${feeLine ? `<div class="wl-sheet-fee">${feeLine}</div>` : ''}
-    <div class="wl-sheet-note">갈라코인은 후원 외에 사용할 수 없고, 갈라포인트와 서로 바꿀 수 없습니다.<br>결제(PG) 연동은 준비 중 — 지금은 충전 요청까지 접수됩니다.</div>`;
+    <div class="wl-sheet-note">갈라코인은 후원 외에 사용할 수 없고, 갈라포인트와 서로 바꿀 수 없습니다.<br>${isNative ? '앱스토어 결제 연동은 준비 중이에요.' : '결제(PG) 연동은 준비 중 — 지금은 충전 요청까지 접수됩니다.'}</div>`;
   gcSheet.querySelectorAll('.wl-pkg').forEach(b=>b.onclick=async ()=>{
+    // 네이티브(iOS/안드로이드)에서는 우리 PG로 인앱 판매하면 스토어 심사에 걸린다.
+    // 스토어 IAP 연동 전까지는 결제 자체를 진행하지 않는다(웹 유도 문구도 금지라 넣지 않음).
+    if(isNative){
+      alert('앱스토어 결제 연동을 준비 중이에요. 조금만 기다려 주세요.');
+      return;
+    }
     b.disabled=true;
     const { data: r, error } = await supa.rpc('gc_charge_begin',{ p_key:b.dataset.key, p_channel:channel });
     if(error||!r?.ok){ alert('충전 준비에 실패했어요.'); b.disabled=false; return; }
