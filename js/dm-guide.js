@@ -25,7 +25,7 @@
   function mount() {
     var tabs = document.querySelector(".dm-tabs");
     if (!tabs || document.getElementById("dmgBox")) return false;
-    css();
+    /* 스타일은 css/dm-quiet.css 상주(스냅샷 잔상 무스타일 번쩍임 방지) */
     // 코치마크 투어가 도는 '첫 회차'엔 접어둔다(투어와 겹쳐 산만해지지 않게 — 사장님 확정).
     // 투어를 마친 다음 방문부터 펼쳐진 상태로 등장. (⚠️ 키는 dm-tour.js의 KEY와 동일하게 유지)
     var tourDone = false; try { tourDone = !!localStorage.getItem("galla_dm_tour_v2"); } catch (e) {}
@@ -85,39 +85,6 @@
     return true;
   }
 
-  function css() {
-    if (document.getElementById("dmg-css")) return;
-    var s = document.createElement("style"); s.id = "dmg-css";
-    s.textContent = [
-      ".dmg-wrap{padding:0 14px;margin:4px 0 8px;transition:opacity .22s ease,transform .22s ease}",
-      ".dmg-wrap.dmg-out{opacity:0;transform:translateY(-8px)}",
-      ".dmg{border-radius:16px;overflow:hidden;background:linear-gradient(160deg,#161826,#0e0f16);border:1px solid rgba(111,134,255,.28)}",
-      ".dmg-head{display:flex;align-items:center;gap:10px;width:100%;padding:12px 15px;background:none;border:0;cursor:pointer;text-align:left}",
-      ".dmg-head-ic{font-size:19px;line-height:1}",
-      ".dmg-head-t{flex:1;font-size:13.5px;font-weight:800;color:#cfd6e6}",
-      ".dmg-head-t b{color:#fff;font-weight:900}",
-      ".dmg-head-arrow{color:#8a93ff;font-size:13px;font-weight:900}",
-      ".dmg-body{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.2,.7,.2,1)}",
-      ".dmg.open .dmg-body{max-height:700px}",
-      ".dmg-steps{padding:2px 14px 4px}",
-      ".dmg-step{display:flex;gap:11px;align-items:center;width:100%;padding:9px 0;border:0;border-top:1px solid rgba(255,255,255,.05);",
-        "background:none;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}",
-      ".dmg-step:first-child{border-top:0}",
-      ".dmg-step:active{opacity:.6}",
-      ".dmg-ic{font-size:20px;line-height:1.1;flex:0 0 auto;width:24px;text-align:center}",
-      ".dmg-go{flex:0 0 auto;color:#6b7488;font-size:18px;font-weight:900;padding-left:4px}",
-      ".dmg-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}",
-      ".dmg-t{font-size:13.5px;font-weight:900;color:#fff}",
-      ".dmg-s{font-size:12px;line-height:1.45;color:#a7afc0}",
-      ".dmg-s b{color:#dfe4f0;font-weight:800}",
-      ".dmg-foot{display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 14px 12px}",
-      ".dmg-dot{color:#4a5163;font-size:12px;font-weight:900}",
-      ".dmg-fold,.dmg-dismiss{padding:4px 6px;border:0;background:none;color:#8b93a6;font-size:12px;font-weight:800;",
-        "cursor:pointer;-webkit-tap-highlight-color:transparent}",
-      ".dmg-fold:active,.dmg-dismiss:active{opacity:.55}"
-    ].join("");
-    document.head.appendChild(s);
-  }
 
   // DM UI는 JS 렌더 + 재렌더될 수 있음 — 탭이 보이는데 배너가 없으면 언제든 다시 꽂는다
   var t = setInterval(function () {
