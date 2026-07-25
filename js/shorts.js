@@ -553,8 +553,9 @@ function __openShortsInternal(list, startId, startTime) {
       if (!uid) {
         await new Promise(r => setTimeout(r, 350));   // 진단 전송 여유
         const go = "login.html?next=" + encodeURIComponent("index.html");
+        // 1순위: 셸(최상위 문서)에게 이동 요청 — 자기 자신 이동은 WKWebView도 못 막는다
+        try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e) {}
         try { (window.top || window).location.href = go; } catch (e) {}
-        // WKWebView가 iframe→top 이동을 조용히 막는 경우 폴백: 판이라도 이동(로그인은 어차피 top 복귀)
         setTimeout(function () { try { location.href = go; } catch (e) {} }, 400);
         return;
       }
@@ -1401,7 +1402,7 @@ document.addEventListener("click", async e => {
   const likeBtn = e.target.closest("#shortsCommentModal .sc-like");
   if (likeBtn && supabase) {
     if (!SC.myId) {
-      { const go = "login.html?next=" + encodeURIComponent("index.html"); try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
+      { const go = "login.html?next=" + encodeURIComponent("index.html"); try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
       return;
     }
     const cid = Number(likeBtn.dataset.cid);
@@ -1436,7 +1437,7 @@ document.addEventListener("click", async e => {
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess?.session?.user?.id;
   if (!uid) {
-    { const go = "login.html?next=" + encodeURIComponent("index.html"); try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
+    { const go = "login.html?next=" + encodeURIComponent("index.html"); try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {} try { (window.top || window).location.href = go; } catch (e2) {} setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400); }
     return;
   }
 
