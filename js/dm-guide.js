@@ -25,7 +25,12 @@
     var tabs = document.querySelector(".dm-tabs");
     if (!tabs || document.getElementById("dmgBox")) return false;
     css();
-    var collapsed = false; try { collapsed = localStorage.getItem(COLLAPSE) === "1"; } catch (e) {}
+    // 코치마크 투어가 도는 '첫 회차'엔 접어둔다(투어와 겹쳐 산만해지지 않게 — 사장님 확정).
+    // 투어를 마친 다음 방문부터 펼쳐진 상태로 등장. (⚠️ 키는 dm-tour.js의 KEY와 동일하게 유지)
+    var tourDone = false; try { tourDone = !!localStorage.getItem("galla_dm_tour_v2"); } catch (e) {}
+    var collapsed;
+    if (!tourDone) collapsed = true;
+    else { try { collapsed = localStorage.getItem(COLLAPSE) === "1"; } catch (e) { collapsed = false; } }
 
     var wrap = document.createElement("section");
     wrap.className = "dmg-wrap";
