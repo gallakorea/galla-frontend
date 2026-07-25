@@ -1,3 +1,7 @@
+/* 페이지 위아래 흔들림(iOS 고무줄 바운스·당겨서 새로고침) 방지 — create 전용 */
+html, body { overscroll-behavior: none; overscroll-behavior-y: none; }
+body[data-page="create"] { min-height: 100dvh; }
+
 /* =========================================================
    create.css — 인스타식 '새로 만들기' 페이지
 ========================================================= */
