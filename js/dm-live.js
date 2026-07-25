@@ -148,8 +148,19 @@
 
   function broadcastSync() { try { CUR && CUR.channel && CUR.channel.send({ type: "broadcast", event: "sync", payload: {} }); } catch (e) {} }
 
+  // 페이지 실제 언로드 시 최선노력 퇴장. iOS 스와이프 강제종료는 이게 안 불릴 수 있어
+  // 서버 reaper(하트비트 멈춤 → 45s 뒤 방 정리)가 최종 안전망이다.
+  // ⚠️ visibilitychange(잠금·앱전환)로는 내보내지 않는다 — 라이브 청취 중 화면만 꺼도
+  //    쫓겨나면 안 되므로(백그라운드 45s까지는 유지, 그 뒤 reaper가 정리).
+  window.addEventListener("pagehide", function () {
+    if (!CUR) return;
+    try { sb().rpc("live_leave", { p_room: CUR.roomId }); } catch (e) {}
+  });
+
   async function refreshState() {
     if (!CUR) return;
+    // 하트비트 — 앱을 강제 종료하면 이게 멈춰 45s 뒤 서버가 방을 자동 정리(유령 라이브 방지)
+    try { sb().rpc("live_heartbeat", { p_room: CUR.roomId }); } catch (e) {}
     let rows = [];
     try { const { data } = await sb().rpc("live_room_state", { p_room: CUR.roomId }); rows = data || []; } catch (e) {}
     if (!CUR) return;
@@ -351,11 +362,14 @@
     } else {
       html += `<button class="lv-bbtn ${CUR.hand ? "act" : ""}" id="lv-hand">${CUR.hand ? "✋ 손 든 상태" : "✋ 손들기"}</button>`;
     }
+    // 스피커(호스트 제외)는 스스로 청중으로 내려갈 수 있다
+    if (CUR.role === "speaker") html += `<button class="lv-bbtn" id="lv-stepdown">🙇 내려가기</button>`;
     if (isHost) html += `<button class="lv-bbtn danger" id="lv-end">🔴 라이브 종료</button>`;
     html += `<button class="lv-bbtn" id="lv-leave">나가기</button>`;
     bar.innerHTML = html;
     const mb = bar.querySelector("#lv-mute"); if (mb) mb.onclick = toggleMute;
     const hb = bar.querySelector("#lv-hand"); if (hb) hb.onclick = toggleHand;
+    const sd = bar.querySelector("#lv-stepdown"); if (sd) sd.onclick = stepDown;
     const eb = bar.querySelector("#lv-end"); if (eb) eb.onclick = endRoom;
     bar.querySelector("#lv-leave").onclick = leave;
   }
@@ -392,6 +406,15 @@
     try { await sb().rpc("live_raise_hand", { p_room: CUR.roomId, p_on: next }); } catch (e) {}
     broadcastSync();
     if (next) toast("✋ 손을 들었어요 — 호스트가 무대로 올려줄 수 있어요.");
+  }
+  async function stepDown() {
+    if (!CUR || CUR.role !== "speaker") return;
+    // 마이크 발행 중단 + 청중으로 강등
+    try { const cf = CUR.cf; if (cf && cf.pubTrack) { cf.pubTrack.stop(); cf.pubTrack = null; cf.myTrackName = null; } } catch (e) {}
+    CUR.role = "listener"; CUR.muted = true; render();
+    try { await sb().rpc("live_step_down", { p_room: CUR.roomId }); } catch (e) {}
+    sysMsg("🙇 무대에서 내려왔어요"); toast("🙇 청중으로 내려왔어요");
+    broadcastSync(); refreshState();
   }
   async function endRoom() {
     if (!CUR || !confirm("라이브를 종료할까요? 모두 퇴장됩니다.")) return;
