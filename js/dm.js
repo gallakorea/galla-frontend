@@ -1017,6 +1017,7 @@
     // 친구·채팅 행 길게 누르기 → 관리 메뉴 (말풍선 메뉴와 같은 문법)
     bindLongPress(ROOT.querySelector('#dm-friend-list'), '.dm-friend', friendMenu);
     bindLongPress(ROOT.querySelector('#dm-inbox'), '.dm-thread', threadMenu);
+    bindEdgeBack();   // 👉 대화방(1:1·난장·단체)에서 왼쪽 엣지 오른쪽 스와이프 = 뒤로가기
     // ⬇️ 당겨서 새로고침 — PWA 전체화면엔 브라우저 기본 당김이 없다
     bindPullRefresh(ROOT.querySelector('#dm-inbox-wrap'), async () => { PREF.loaded = false; await loadInbox(); refreshBadge(); });
     bindPullRefresh(ROOT.querySelector('#dm-friends'), async () => { PREF.loaded = false; FRIENDS = []; await loadFriends(); });
@@ -1258,6 +1259,25 @@
     else if (name === 'room') { detachRoom(); curRoom = null; }
   }
   /* 뒤로 = 직전 뷰. 우리가 쌓은 히스토리가 있으면 그걸 쓰고, 없으면 목록으로. */
+  /* 👉 왼쪽 엣지에서 오른쪽 스와이프 = 뒤로가기 — 대화방(1:1·난장·단체)에서 방 나오기(사장님 요청).
+     셸의 탭 스와이프는 dm-detail에서 꺼져 있어 충돌 없음. 목록/설정 뷰에선 발동 안 함. */
+  function bindEdgeBack() {
+    if (window.__dmEdgeBack) return; window.__dmEdgeBack = 1;
+    let sx = 0, sy = 0, view = null;
+    document.addEventListener('touchstart', e => {
+      const t = e.touches[0]; sx = t.clientX; sy = t.clientY;
+      view = (t.clientX < 30 && (CUR_VIEW === 'thread' || CUR_VIEW === 'room')) ? CUR_VIEW : null;
+    }, { passive: true });
+    document.addEventListener('touchend', e => {
+      if (!view) return;
+      const v = view; view = null;
+      if (CUR_VIEW !== v) return;                       // 스와이프 중 뷰가 바뀌었으면 무시
+      const t = e.changedTouches[0];
+      const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+      if (dx > 70 && dy < 60 && dx > dy * 1.5) goBack(v === 'room' ? 'rooms' : undefined);
+    }, { passive: true });
+  }
+
   function goBack(fallbackTab) {
     if (DEPTH > 0) { history.back(); return; }
     leaveView(CUR_VIEW);
@@ -1892,6 +1912,7 @@
   function friendMenu(el, x, y) {
     const peer = el.dataset.peer, name = el.dataset.name;
     popMenu(x, y, [
+      { k: 'chat', label: '💬 채팅하기' },
       { k: 'voice', label: '육성톡' },
       { k: 'video', label: '면상톡' },
       { k: 'pager', label: '📟 삐삐 남기기' },
@@ -1899,6 +1920,7 @@
       { k: 'hide', label: '목록에서 숨기기' },
       { k: 'block', label: '차단', danger: true },
     ], k => {
+      if (k === 'chat') return startDM(peer, name);
       if (k === 'voice' || k === 'video') return callFrom(peer, name, k === 'video');
       if (k === 'pager') return pagerLeave(peer, name);
       doFriendAct(k, peer, name);
