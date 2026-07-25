@@ -55,16 +55,18 @@
 <script>
 (function(){
   if (!/[?&]rtcprobe/.test(location.search)) return;
+  var done = false;
   function check(){
+    if (done) return; done = true;
     var cap = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
     var cordova = !!window.cordova;
     var iosrtc = !!(window.cordova && window.cordova.plugins && window.cordova.plugins.iosrtc);
-    document.body.innerHTML = '<div style="position:fixed;inset:0;background:#000;color:#0f0;font:16px monospace;padding:48px 24px;z-index:99999;white-space:pre-wrap;line-height:1.6">'
-      + 'RTC PROBE\n\nCapacitor native: ' + cap + '\ncordova bridge: ' + cordova + '\niosrtc plugin: ' + iosrtc
-      + '\n\nUA:\n' + navigator.userAgent + '</div>';
+    var rtcpc = (typeof window.RTCPeerConnection);
+    // 네이티브 alert = 투어/로그인 등 어떤 HTML 위에도 뜨고 body 덮어써도 살아남음
+    alert('RTCPROBE cap:' + cap + ' cordova:' + cordova + ' iosrtc:' + iosrtc + ' RTCPC:' + rtcpc);
   }
-  document.addEventListener('deviceready', function(){ setTimeout(check, 300); });
-  window.addEventListener('load', function(){ setTimeout(check, 1800); });
+  document.addEventListener('deviceready', function(){ setTimeout(check, 800); });
+  setTimeout(check, 4000);   // deviceready가 안 와도 폴백
 })();
 </script>
 
