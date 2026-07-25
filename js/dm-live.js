@@ -16,6 +16,8 @@
 
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function toast(m) { try { if (window.GALLA_toast) window.GALLA_toast(m); } catch (e) {} }
+  // 셸(네이티브) 하단 nav 숨김 — 라이브 무대는 풀스크린이라 nav가 위로 겹쳐 보이면 안 됨
+  function navHide(on) { try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on: on }, location.origin); } catch (e) {} }
   function avatar(u) { return u ? `<img src="${esc(u)}" alt="">` : `<span class="lv-ava-none">🙂</span>`; }
 
   /* ── 난장 탭 상단 LIVE 섹션 주입 ─────────────────────────────────────────── */
@@ -109,6 +111,7 @@
       <div class="lv-fx" id="lv-fx"></div>
       <div class="lv-bar" id="lv-bar"></div>`;
     document.body.appendChild(ov);
+    navHide(true);
     requestAnimationFrame(() => ov.classList.add("on"));
     ov.querySelector("#lv-x").onclick = () => leave();
     // 라이브 채팅(open_messages 재사용)
@@ -383,6 +386,7 @@
     CUR = null;
     const ov = document.getElementById("lv-stage");
     if (ov) { ov.classList.remove("on"); setTimeout(() => ov.remove(), 220); }
+    navHide(false);
     if (!silent) refreshSection();
   }
 

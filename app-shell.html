@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072470&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072470">
-  <link rel="stylesheet" href="./css/nav.css?v=072470">
+  <script src="/js/splash-boot.js?v=072471&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072471">
+  <link rel="stylesheet" href="./css/nav.css?v=072471">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -180,6 +180,11 @@
     {
       const f = panes[ORDER[cur]] && panes[ORDER[cur]].querySelector("iframe");
       if (f && f.contentWindow) { try { f.contentWindow.postMessage({ galla: "shellcmd", t: "active" }, location.origin); } catch (_) {} }
+    }
+    // 떠나는 판에 '비활성' 신호 — 홈 릴스/영상이 백그라운드에서 소리를 계속 흘리던 문제(사장님 제보) 차단
+    if (prev !== cur) {
+      const pf = panes[ORDER[prev]] && panes[ORDER[prev]].querySelector("iframe");
+      if (pf && pf.contentWindow) { try { pf.contentWindow.postMessage({ galla: "shellcmd", t: "inactive" }, location.origin); } catch (_) {} }
     }
     // 이웃 선생성 — 다음 스와이프가 이미 살아있는 판으로 떨어지게
     setTimeout(() => { preloadEnsure(ORDER[cur + 1]); preloadEnsure(ORDER[cur - 1]); }, 600);
@@ -362,7 +367,7 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072470" defer></script>
+<script src="./js/nav-jog.js?v=072471" defer></script>
 <script>
 /* 🔄 버전 자동 감지 — 새 배포가 뜨면 셸을 통째로 리로드해 '옛 판(iframe) 잔류'와
    네이티브 앱 웹뷰 캐시를 해소한다(웹은 pwa.js가 처리, 앱 WKWebView는 controllerchange가
@@ -401,6 +406,6 @@
 })();
 </script>
 <!-- 🎪 첫 진입 풀스크린 오리엔테이션(최초 1회) — 이후엔 인덱스 상단 인라인 배너(index-guide) -->
-<script src="./js/tour.js?v=072470"></script>
+<script src="./js/tour.js?v=072471"></script>
 </body>
 </html>

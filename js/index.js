@@ -43,6 +43,35 @@ function ensureVideoSrc(vid) {
     else { vid.setAttribute('src', vid.dataset.src); try { vid.load(); } catch (e) {} }
 }
 
+/* 홈 판을 떠날 때(다른 탭으로 전환) 모든 영상 정지·음소거 —
+   릴스/인라인 영상이 백그라운드에서 소리를 계속 흘리던 문제(사장님 제보) 차단.
+   셸이 '비활성' 신호를 쏘고, 앱이 백그라운드로 가도(visibilitychange) 동일 처리. */
+function pauseAllVideos() {
+    document.querySelectorAll('video').forEach(v => {
+        try { v.pause(); v.muted = true; } catch (e) {}
+    });
+    if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
+}
+// 홈으로 돌아오면 가장 많이 보이는 피드 영상 재생 재개(셸은 transform으로 판을 밀어 IO가 다시 안 쏨)
+function resumeVisibleVideo() {
+    if (document.body.classList.contains('shorts-open')) return;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    let best = null, bestVis = 0;
+    document.querySelectorAll('.card-media video').forEach(v => {
+        const r = v.getBoundingClientRect(); if (!r.height) return;
+        const ratio = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height;
+        if (ratio > 0.5 && ratio > bestVis) { bestVis = ratio; best = v; }
+    });
+    if (best) { ensureVideoSrc(best); if (best.paused) playWithSound(best); }
+}
+window.addEventListener('message', (e) => {
+    const m = e.data;
+    if (!m || m.galla !== 'shellcmd') return;
+    if (m.t === 'inactive') pauseAllVideos();
+    else if (m.t === 'active') resumeVisibleVideo();
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseAllVideos(); });
+
 const videoObserver = new IntersectionObserver(entries => {
     entries.forEach(e => {
         const vid = e.target;
