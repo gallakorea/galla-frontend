@@ -12,7 +12,15 @@
   var COLLAPSE = "galla_index_guide_collapsed";
   var PROJ = "bidqauputnhkqepvdzrr";
 
-  function loggedIn() { try { return !!localStorage.getItem("sb-" + PROJ + "-auth-token"); } catch (e) { return false; } }
+  // 로그아웃 후 찌꺼기 토큰이 남아 '로그인 중'으로 오판하지 않게 실제 access_token까지 확인
+  function loggedIn() {
+    try {
+      var raw = localStorage.getItem("sb-" + PROJ + "-auth-token");
+      if (!raw) return false;
+      var t = JSON.parse(raw);
+      return !!(t && (t.access_token || (t.currentSession && t.currentSession.access_token)));
+    } catch (e) { return false; }
+  }
   // 🎁 +500 GP는 로그인 시 supabase.js가 서버(claim_welcome_bonus)로 자동 지급 — 여긴 안내만.
 
   try { if (localStorage.getItem(DISMISS)) return; } catch (e) { return; }
