@@ -140,7 +140,9 @@
   async function joinLive(roomId) {
     try {
       const { data } = await sb().rpc("live_join", { p_room: roomId });
-      if (!data || !data.ok) return toast(data && data.reason === "ended" ? "이미 끝난 육성 난장이에요." : "입장에 실패했어요.");
+      if (!data || !data.ok) return toast(
+        data && data.reason === "banned" ? "🚫 이 방에서 내보내져 다시 들어갈 수 없어요." :
+        data && data.reason === "ended" ? "이미 끝난 육성 난장이에요." : "입장에 실패했어요.");
       // 제목은 목록에서 못 가져왔을 수 있으니 상태에서 채운다
       openStage(roomId, "", "", "join");
     } catch (e) { toast("입장에 실패했어요."); }
@@ -208,6 +210,7 @@
       CUR.channel.on("broadcast", { event: "super" }, ({ payload }) => showSuper(payload));
       CUR.channel.on("broadcast", { event: "sys" }, ({ payload }) => sysMsg(payload && payload.text));
       CUR.channel.on("broadcast", { event: "ended" }, () => onRoomBoom());
+      CUR.channel.on("broadcast", { event: "kick" }, ({ payload }) => { if (payload && payload.uid === ME) onKicked(); });
       CUR.channel.on("broadcast", { event: "chat" }, ({ payload }) => { if (payload && payload.sender_id !== ME) appendMsg(payload); });
       CUR.channel.on("broadcast", { event: "present" }, ({ payload }) => renderPresent(payload));
       CUR.channel.subscribe();
@@ -266,6 +269,9 @@
     }
     CUR.emptyHits = 0;
     const me = rows.find(r => r.user_id === ME);
+    // 멤버는 있는데 내가 빠졌으면 = 강퇴/제거됨(broadcast 놓쳤어도 안전망). 단, 한 번이라도 나를 본 뒤에만.
+    if (me) CUR.sawMe = true;
+    else if (CUR.sawMe) { toast("🚫 방장이 내보냈어요"); return closeStage(); }
     CUR.state = rows;
     CUR.nicks = CUR.nicks || {};
     rows.forEach(r => { CUR.nicks[r.user_id] = r.nickname || "익명"; });
@@ -617,6 +623,8 @@
       mod = `<div class="lv-prof-mod">
           <button class="lv-prof-mbtn" data-mod="role" type="button">${isSpk ? "🔽 청중으로 내리기" : "🔼 스피커로 올리기"}</button>
           ${!s.muted ? `<button class="lv-prof-mbtn" data-mod="mute" type="button">🔇 뮤트</button>` : ""}
+          <button class="lv-prof-mbtn" data-mod="host" type="button">👑 방장 넘기기</button>
+          <button class="lv-prof-mbtn danger" data-mod="kick" type="button">🚫 쫓아내기</button>
         </div>`;
     }
     const sheet = document.createElement("div");
@@ -636,6 +644,7 @@
     const close = () => sheet.remove();
     sheet.querySelector(".lv-sheet-dim").onclick = close;
     if (window.GALLA_bindFollow) window.GALLA_bindFollow(sheet);   // 팔로우 상태·토글 바인딩
+    const nm = s.nickname || "이 사람";
     sheet.querySelectorAll("[data-mod]").forEach(b => b.onclick = async () => {
       const kind = b.dataset.mod;
       if (kind === "role") {
@@ -644,6 +653,16 @@
         if (data && !data.ok && data.reason === "full") toast("무대가 꽉 찼어요.");
       } else if (kind === "mute") {
         await sb().rpc("live_set_mute", { p_room: CUR.roomId, p_target: uid, p_muted: true });
+      } else if (kind === "host") {
+        if (!confirm("👑 " + nm + "님에게 방장을 넘길까요?\n넘기면 나는 스피커가 됩니다.")) return;
+        const { data } = await sb().rpc("live_transfer_host", { p_room: CUR.roomId, p_target: uid });
+        if (data && data.ok) { try { CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "👑 방장이 " + nm + "님에게 넘어갔어요" } }); } catch (e) {} sysMsg("👑 " + nm + "님에게 방장을 넘겼어요"); }
+        else toast("방장 넘기기에 실패했어요.");
+      } else if (kind === "kick") {
+        if (!confirm("🚫 " + nm + "님을 내보낼까요?\n다시 들어올 수 없어요.")) return;
+        const { data } = await sb().rpc("live_kick", { p_room: CUR.roomId, p_target: uid });
+        if (data && data.ok) { try { CUR.channel.send({ type: "broadcast", event: "kick", payload: { uid } }); } catch (e) {} sysMsg("🚫 " + nm + "님을 내보냈어요"); }
+        else toast("내보내기에 실패했어요.");
       }
       close(); broadcastSync(); refreshState();
     });
@@ -678,6 +697,12 @@
     if (!CUR) return;
     toast("🧨 방장이 방을 뽀갰어요");
     closeStage();   // 무대 닫고 refreshSection으로 로비 갱신
+  }
+  // 내가 강퇴됨 → 안내 후 로비로
+  function onKicked() {
+    if (!CUR) return;
+    toast("🚫 방장이 내보냈어요");
+    closeStage();
   }
   async function endRoom() {
     if (!CUR || !confirm("🧨 방을 뽀갤까요?\n육성 난장이 끝나고 청중 모두 퇴장돼요.")) return;
