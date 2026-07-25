@@ -11,12 +11,12 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072579&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072579">
-  <link rel="stylesheet" href="./css/nav.css?v=072579">
+  <script src="/js/splash-boot.js?v=072580&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072580">
+  <link rel="stylesheet" href="./css/nav.css?v=072580">
   <!-- 📞 통화 UI(#dm-call) — 엔진이 최상위에서 돌므로 스타일도 최상위에 필요 -->
-  <link rel="stylesheet" href="./css/dm.css?v=072579">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072579">
+  <link rel="stylesheet" href="./css/dm.css?v=072580">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072580">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -62,35 +62,22 @@
   var C = window.Capacitor;
   if (!(C && C.getPlatform && C.getPlatform() === 'ios' && C.isNativePlatform && C.isNativePlatform())) return;
   window.__iosrtcReady = false;
-  var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM';
-  var beaconed=false;
-  function beacon(msg){ if(beaconed)return; beaconed=true; try{ fetch('https://bidqauputnhkqepvdzrr.supabase.co/rest/v1/rpc/log_client_error',{method:'POST',headers:{apikey:AK,Authorization:'Bearer '+AK,'Content-Type':'application/json'},body:JSON.stringify({p_kind:'iosrtc-probe',p_message:String(msg).slice(0,400),p_ver:'rtc3'})}); }catch(e){} }
-  function load(src){ return new Promise(function(res, rej){ var s=document.createElement('script'); s.src=src; s.onload=function(){res(true)}; s.onerror=function(){res(false)}; document.head.appendChild(s); }); }
-  var s1=false,s2=false;
+  function load(src){ return new Promise(function(res){ var s=document.createElement('script'); s.src=src; s.onload=function(){res(true)}; s.onerror=function(){res(false)}; document.head.appendChild(s); }); }
   // cordova.js(=Capacitor exec 브릿지) → iosrtc UMD(window.iosrtc 직접 노출, 내부 require('cordova/exec')는 전역 require로 해결)
-  load('/native/cordova.js').then(function(ok){
-    s1=ok;
+  load('/native/cordova.js').then(function(){
     // UMD iosrtc 내부 require('cordova/exec')가 전역 require로 해결되도록 cordova의 모듈 require를 전역에 노출
     try { if (window.cordova && cordova.require && !window.require) window.require = cordova.require; } catch(e){}
     return load('/native/iosrtc.umd.js');
-  }).then(function(ok){
-    s2=ok;
+  }).then(function(){
     function reg(){
       if (window.__iosrtcReady) return;
       try {
         var rtc = window.iosrtc || (window.cordova && cordova.plugins && cordova.plugins.iosrtc);
-        if (rtc && rtc.registerGlobals) {
-          var before = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
-          rtc.registerGlobals();
-          var after = (window.RTCPeerConnection && window.RTCPeerConnection.name) || 'none';
-          window.__iosrtcReady = true; window.__iosrtc = rtc;
-          beacon('READY pc_before='+before+' pc_after='+after);
-        }
-      } catch(e){ beacon('ERR '+(e&&e.message)); }
+        if (rtc && rtc.registerGlobals) { rtc.registerGlobals(); window.__iosrtcReady = true; window.__iosrtc = rtc; }
+      } catch(e){}
     }
     document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
     setTimeout(reg, 2500); setTimeout(reg, 5000);
-    setTimeout(function(){ if(!window.__iosrtcReady) beacon('WAIT s1='+s1+' s2='+s2+' cReq='+(typeof(window.cordova&&cordova.require))+' gReq='+(typeof window.require)+' iosrtc='+(typeof window.iosrtc)+' exec='+!!(window.cordova&&cordova.exec)); }, 9000);
   });
 })();
 </script>
@@ -460,7 +447,7 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072579" defer></script>
+<script src="./js/nav-jog.js?v=072580" defer></script>
 <script>
 /* 🔄 버전 자동 감지 — 새 배포가 뜨면 셸을 통째로 리로드해 '옛 판(iframe) 잔류'와
    네이티브 앱 웹뷰 캐시를 해소한다(웹은 pwa.js가 처리, 앱 WKWebView는 controllerchange가
@@ -499,14 +486,14 @@
 })();
 </script>
 <!-- 🎪 첫 진입 풀스크린 오리엔테이션(최초 1회) — 이후엔 인덱스 상단 인라인 배너(index-guide) -->
-<script src="./js/tour.js?v=072579"></script>
+<script src="./js/tour.js?v=072580"></script>
 
 <!-- 📞 통화 엔진(최상위) — 네이티브 앱에선 여기서만 네이티브 WebRTC/CallKit로 통화가 돈다.
      supabase 클라(세션 공유) → 수신음 → dm-call 엔진(autoBoot: supabaseClient 뜨면 수신 대기).
      발신은 판(iframe)이 postMessage(callstart)로 넘기고, 이 프레임의 GALLA_call.start가 처리. -->
-<script src="./vendor/supabase.js?v=072579"></script>
-<script src="./js/supabase.js?v=072579"></script>
-<script src="./js/dm-sound.js?v=072579" data-galla-sfx="1"></script>
-<script src="./js/dm-call.js?v=072579"></script>
+<script src="./vendor/supabase.js?v=072580"></script>
+<script src="./js/supabase.js?v=072580"></script>
+<script src="./js/dm-sound.js?v=072580" data-galla-sfx="1"></script>
+<script src="./js/dm-call.js?v=072580"></script>
 </body>
 </html>
