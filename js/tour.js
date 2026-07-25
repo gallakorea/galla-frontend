@@ -378,8 +378,13 @@
   function octone(oc, freq, t0, dur, type, gain) {
     var o = oc.createOscillator(), g = oc.createGain();
     o.type = type || "sine"; o.frequency.setValueAtTime(freq, t0);
-    g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(gain || 0.1, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(oc.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+    // 레가토: 부드러운 어택 → 유지 → 짧은 릴리스. 음 사이 끊김 최소화.
+    var atk = 0.012, rel = 0.03;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(gain || 0.1, t0 + atk);
+    g.gain.setValueAtTime(gain || 0.1, Math.max(t0 + atk, t0 + dur - rel));
+    g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(oc.destination); o.start(t0); o.stop(t0 + dur + 0.03);
   }
   function abToWavBlob(buf) {
     var sr = buf.sampleRate, ch = buf.getChannelData(0), n = ch.length, bytes = 44 + n * 2, ab = new ArrayBuffer(bytes), v = new DataView(ab);
@@ -394,14 +399,17 @@
     if (_bgmEl || _bgmBuilding || reduce) return;
     _bgmBuilding = true;
     try {
-      var sr = 22050, barDur = 16 * STEP;
+      var sr = 22050, BARS = 8, barDur = 16 * STEP, totalDur = BARS * barDur;
       var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
       if (!OAC) { _bgmBuilding = false; return; }
-      var oc = new OAC(1, Math.ceil(sr * barDur), sr);
-      for (var i = 0; i < 16; i++) {
-        var t = i * STEP;
-        if (LEAD[i]) octone(oc, LEAD[i], t, STEP * 0.86, "square", 0.06);
-        if (i % 2 === 0) { var b = BASS[i / 2]; if (b) octone(oc, b, t, STEP * 1.7, "triangle", 0.09); }
+      var oc = new OAC(1, Math.ceil(sr * (totalDur + 0.15)), sr);  // 끝을 무음으로 마감(루프 클릭 방지)
+      for (var r = 0; r < BARS; r++) {
+        for (var i = 0; i < 16; i++) {
+          var t = (r * 16 + i) * STEP;
+          // dur을 스텝보다 살짝 길게 → 다음 음과 겹쳐 끊김 없이 이어짐(레가토)
+          if (LEAD[i]) octone(oc, LEAD[i], t, STEP * 1.04, "square", 0.06);
+          if (i % 2 === 0) { var b = BASS[i / 2]; if (b) octone(oc, b, t, STEP * 2.02, "triangle", 0.09); }
+        }
       }
       var done = function (buf) {
         try { _bgmUrl = URL.createObjectURL(abToWavBlob(buf)); _bgmEl = new Audio(_bgmUrl); _bgmEl.loop = true; _bgmEl.volume = 0.5; _bgmEl.setAttribute("playsinline", ""); if (_music.on) { try { _bgmEl.play().catch(function () {}); } catch (e) {} } } catch (e) {}
