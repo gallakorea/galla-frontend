@@ -11,7 +11,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072576'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072577'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -356,6 +356,8 @@
 
   async function accept() {
     if (!CUR || CUR.dir !== 'in') return;
+    if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
+    CUR._accepting = true;
     // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게).
     // 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();

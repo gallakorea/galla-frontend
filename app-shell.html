@@ -11,9 +11,9 @@
   <meta name="theme-color" content="#000000">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <script src="/js/splash-boot.js?v=072576&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=072576">
-  <link rel="stylesheet" href="./css/nav.css?v=072576">
+  <script src="/js/splash-boot.js?v=072577&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072577">
+  <link rel="stylesheet" href="./css/nav.css?v=072577">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -94,6 +94,10 @@
       const nv = document.querySelector(".nav"); if (nv) nv.style.display = "";
       // 📞 이 판이 새로 떴는데 VoIP 토큰이 이미 와 있으면 넘겨서 저장하게 한다(판이 나중에 생겨도 유실 없게)
       if (window.__voipToken) { try { f.contentWindow.postMessage({ galla: "shellcmd", t: "voipToken", token: window.__voipToken }, location.origin); } catch (_) {} }
+      // 📞 CallKit '받기'가 이 판 생성보다 먼저 왔으면(콜드스타트) 재전송 — offer 도착 시 자동 수락되게
+      if (window.__ckAnswer && Date.now() - window.__ckAnswer.at < 24000) {
+        try { f.contentWindow.postMessage({ galla: "shellcmd", t: "callKitAnswer", callerId: window.__ckAnswer.callerId }, location.origin); } catch (_) {}
+      }
     });
     pane.appendChild(f);
   }
@@ -160,8 +164,14 @@
     window.__voipToken = String(token);   // 나중에 생성되는 판에도 넘기려고 보관(ensure 로드 시 재전송)
     broadcastToPanes({ galla: "shellcmd", t: "voipToken", token: window.__voipToken });
   };
-  window.GALLA_callKitAnswer  = function (callerId) { broadcastToPanes({ galla: "shellcmd", t: "callKitAnswer",  callerId: callerId || "" }); };
-  window.GALLA_callKitDecline = function (callerId) { broadcastToPanes({ galla: "shellcmd", t: "callKitDecline", callerId: callerId || "" }); };
+  window.GALLA_callKitAnswer  = function (callerId) {
+    // 콜드스타트 시 판(iframe)이 아직이면 브로드캐스트가 유실돼 '앱에서 또 수락' 요구가 뜬다.
+    // → 잠깐 보관하고 새 판이 뜰 때 재전송(offer가 늦게 와 수신벨이 뒤늦게 떠도 자동 수락되게).
+    window.__ckAnswer = { callerId: callerId || "", at: Date.now() };
+    broadcastToPanes({ galla: "shellcmd", t: "callKitAnswer", callerId: callerId || "" });
+    setTimeout(() => { if (window.__ckAnswer && Date.now() - window.__ckAnswer.at > 24000) window.__ckAnswer = null; }, 25000);
+  };
+  window.GALLA_callKitDecline = function (callerId) { window.__ckAnswer = null; broadcastToPanes({ galla: "shellcmd", t: "callKitDecline", callerId: callerId || "" }); };
 
   // 비로그인 게이트 — DM·마이페이지는 로그인 필수. 세션 토큰 유무로 판별.
   function isLoggedIn() {
@@ -401,7 +411,7 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=072576" defer></script>
+<script src="./js/nav-jog.js?v=072577" defer></script>
 <script>
 /* 🔄 버전 자동 감지 — 새 배포가 뜨면 셸을 통째로 리로드해 '옛 판(iframe) 잔류'와
    네이티브 앱 웹뷰 캐시를 해소한다(웹은 pwa.js가 처리, 앱 WKWebView는 controllerchange가
@@ -440,6 +450,6 @@
 })();
 </script>
 <!-- 🎪 첫 진입 풀스크린 오리엔테이션(최초 1회) — 이후엔 인덱스 상단 인라인 배너(index-guide) -->
-<script src="./js/tour.js?v=072576"></script>
+<script src="./js/tour.js?v=072577"></script>
 </body>
 </html>
