@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072586'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072587'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -335,6 +335,7 @@
     chanPeer = await peerChan(peer);
     await buildPC();
     paintUI('outgoing');
+    nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
     const offer = await pc.createOffer();
     offer.sdp = tuneOpus(offer.sdp);
@@ -438,16 +439,18 @@
   function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
   // 📞 네이티브 CallKit 콜 종료 신호 — 웹 통화가 끝나면 CallKit UI도 내려야(수신자에 통화 잔류 방지).
   //    커스텀 URL 스킴을 숨김 iframe으로 열어 AppDelegate에 알린다(메인 프레임 이동 없음).
-  function _nativeCall(action) {
+  function _nativeCall(payload) {
     try {
       if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall) {
-        window.webkit.messageHandlers.gallaCall.postMessage({ action: action });
+        window.webkit.messageHandlers.gallaCall.postMessage(payload);
       }
     } catch (_) {}
   }
-  function nativeEndCallKit() { _nativeCall('end'); }
-  // 📞 통화 연결 시 네이티브 오디오 유닛 켜기 — 수동 오디오 모드라 켜줘야 양방향 소리(발신·인앱수신 포함).
-  function nativeAudioOn() { _nativeCall('audioOn'); }
+  function nativeEndCallKit() { _nativeCall({ action: 'end' }); }
+  // 📞 발신 통화를 네이티브 CallKit에 보고 → 발신자도 네이티브 통화화면 + CallKit 오디오(수신측과 대칭 = 소리 확실).
+  function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라') }); }
+  // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
+  function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
