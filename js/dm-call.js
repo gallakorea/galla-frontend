@@ -11,7 +11,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072573'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072574'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -646,14 +646,38 @@
        (VoIP 푸시가 WebRTC offer보다 먼저 도착할 수 있어, offer가 아직이면 예약해 뒀다가 도착 즉시 수락)
      · GALLA_callKitDecline(callerId): '거절/종료' → 웹 통화 거절 */
   let callKitPendingAnswer = false;
-  window.GALLA_onVoipToken = async function (token) {
+  // 📞 VoIP 토큰 저장 — 네이티브가 웹뷰/로그인보다 먼저 토큰을 넘길 수 있어(그럼 유실),
+  //    ①보류했다가 ②세션이 생기는 즉시 저장한다. save_call_token은 idempotent upsert라 재호출 안전.
+  let _pendingVoipToken = null, _voipAuthHooked = false, _voipSaved = '';
+  async function _saveVoipToken(token) {
     try {
       const _sb = window.supabaseClient;
-      if (!_sb || !token) return;
+      if (!_sb || !token) return false;
+      if (_voipSaved === token) return true;   // 이미 저장한 토큰이면 스킵
       const { data } = await _sb.auth.getSession();
-      if (!data?.session?.user?.id) return;   // 로그인 안 됐으면 보류(로그인 후 재전달됨)
+      const uid = data?.session?.user?.id;
+      if (!uid) { _pendingVoipToken = token; return false; }   // 로그인 전 — 보류
       await _sb.rpc('save_call_token', { p_platform: 'ios', p_token: String(token) });
-    } catch (_) {}
+      _voipSaved = token; _pendingVoipToken = null;
+      return true;
+    } catch (_) { return false; }
+  }
+  window.GALLA_onVoipToken = function (token) {
+    if (!token) return;
+    _pendingVoipToken = token;
+    _saveVoipToken(token).then(ok => {
+      if (ok) return;
+      // 아직 로그인 전 → 로그인되는 순간 자동 저장하도록 auth 상태 변화 훅(한 번만)
+      const _sb = window.supabaseClient;
+      if (_sb && !_voipAuthHooked) {
+        _voipAuthHooked = true;
+        try {
+          _sb.auth.onAuthStateChange((_e, sess) => {
+            if (sess?.user?.id && _pendingVoipToken) _saveVoipToken(_pendingVoipToken);
+          });
+        } catch (_) {}
+      }
+    });
   };
   window.GALLA_callKitAnswer = function (callerId) {
     // 이미 offer가 도착해 수신벨이 떠 있으면 바로 수락
@@ -681,7 +705,7 @@
       try {
         const { data } = await _sb.auth.getSession();
         const uid = data?.session?.user?.id;
-        if (uid) listen(_sb, uid);
+        if (uid) { listen(_sb, uid); if (_pendingVoipToken) _saveVoipToken(_pendingVoipToken); }
       } catch (_) {}
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go);
