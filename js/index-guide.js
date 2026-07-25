@@ -8,7 +8,7 @@
    ========================================================================== */
 (function () {
   if (document.body.getAttribute("data-page") !== "index") return;
-  var DISMISS = "galla_index_guide_dismissed";
+  var DISMISS = "galla_index_guide_dismissed_v2";
   var COLLAPSE = "galla_index_guide_collapsed";
   var PROJ = "bidqauputnhkqepvdzrr";
 
@@ -54,8 +54,12 @@
             }).join("") +
           "</div>" +
           '<div class="iog-foot">' +
-            '<button class="iog-cta" id="iogStart" type="button">' + (loggedIn() ? "접어두기" : "🎁 가입하고 +500 GP 받기") + "</button>" +
-            '<button class="iog-dismiss" id="iogDismiss" type="button">더 이상 안 보기</button>' +
+            '<div class="iog-foot-sec">' +
+              '<button class="iog-fold" id="iogFold" type="button">접어두기</button>' +
+              '<span class="iog-foot-dot">·</span>' +
+              '<button class="iog-dismiss" id="iogDismiss" type="button">더 이상 안 보기</button>' +
+            "</div>" +
+            (loggedIn() ? "" : '<button class="iog-cta" id="iogStart" type="button">🎁 가입하고 +500 GP 받기</button>') +
           "</div>" +
         "</div>" +
       "</div>";
@@ -68,7 +72,9 @@
       try { localStorage.setItem(COLLAPSE, open ? "0" : "1"); } catch (e) {}
     };
     wrap.querySelector("#iogDismiss").onclick = function () { remove(wrap); };
-    wrap.querySelector("#iogStart").onclick = function () { start(wrap); };
+    wrap.querySelector("#iogFold").onclick = function () { collapse(wrap); };
+    var startBtn = wrap.querySelector("#iogStart");
+    if (startBtn) startBtn.onclick = function () { start(wrap); };
     // 각 설명 클릭 → 해당 페이지로 이동(셸이면 탭 전환, 아니면 URL)
     wrap.querySelectorAll(".iog-step").forEach(function (btn) {
       btn.onclick = function () { navTo(STEPS[+btn.dataset.i], wrap); };
@@ -100,8 +106,8 @@
     if (loggedIn()) {
       collapse(wrap);   // 이미 회원 — 제거 아님 '접기'. 영구 제거는 [더 이상 안 보기]만.
     } else {
-      // 미로그인 → 가입 유도. +500 GP는 가입 후 첫 로그인에서 supabase.js가 서버 지급.
-      try { localStorage.setItem(DISMISS, "1"); } catch (e) {}
+      // 미로그인 → 가입 유도만. 영구 제거는 [더 이상 안 보기]에서만.
+      // (여기서 DISMISS를 세팅하면 가입 안 하고 돌아왔을 때 배너가 영영 안 나온다)
       location.href = "signup.html";
     }
   }
@@ -132,13 +138,15 @@
       ".iog-t{font-size:14px;font-weight:900;color:#fff}",
       ".iog-s{font-size:12.5px;line-height:1.5;color:#a7afc0}",
       ".iog-s b{color:#dfe4f0;font-weight:800}",
-      ".iog-foot{display:flex;gap:8px;padding:6px 14px 14px}",
-      ".iog-cta{flex:1;padding:12px;border:0;border-radius:12px;font-size:14px;font-weight:950;cursor:pointer;color:#fff;",
+      ".iog-foot{display:flex;flex-direction:column;gap:10px;padding:8px 14px 14px}",
+      ".iog-foot-sec{display:flex;align-items:center;justify-content:center;gap:8px}",
+      ".iog-foot-dot{color:#4a5163;font-size:12px;font-weight:900}",
+      ".iog-fold,.iog-dismiss{padding:4px 6px;border:0;background:none;color:#8b93a6;font-size:12.5px;font-weight:800;",
+        "cursor:pointer;-webkit-tap-highlight-color:transparent}",
+      ".iog-fold:active,.iog-dismiss:active{opacity:.55}",
+      ".iog-cta{width:100%;padding:13px;border:0;border-radius:12px;font-size:14.5px;font-weight:950;cursor:pointer;color:#fff;",
         "background:linear-gradient(135deg,#ff4d67,#ff2d55);box-shadow:0 8px 20px rgba(255,45,85,.3)}",
-      ".iog-cta:active{transform:scale(.98)}",
-      ".iog-dismiss{flex:0 0 auto;padding:12px 14px;border:1px solid rgba(255,255,255,.14);border-radius:12px;",
-        "background:rgba(255,255,255,.05);color:#9aa1b2;font-size:12.5px;font-weight:800;cursor:pointer}",
-      ".iog-dismiss:active{transform:scale(.98)}"
+      ".iog-cta:active{transform:scale(.98)}"
     ].join("");
     document.head.appendChild(s);
   }
