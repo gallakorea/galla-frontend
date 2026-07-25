@@ -113,7 +113,7 @@
     const col = ok ? t.color : "#3a3b42";
     if (go) { go.style.background = `linear-gradient(135deg, ${col}, ${col}cc)`; go.disabled = !ok;
       go.textContent = ok ? `${won(a)} 후원하기` : `최소 ${won(MIN)}부터`; }
-    if (br) { const fee = Math.floor(a * 0.2), charity = Math.floor(a * 0.3), net = a - fee - charity;
+    if (br) { const fee = Math.floor(a * 0.2), charity = Math.floor(a * 0.05), net = a - fee - charity;
       br.innerHTML = ok
         ? `발의자 <b>${won(net)}</b> · 기부 <b>${won(charity)}</b> · 수수료 ${won(fee)}` : ""; }
   }
@@ -134,7 +134,7 @@
       </div>
       <div class="ds-gc" id="ds-gc" ${GC_BAL > 0 ? "" : "hidden"}>🪙 내 갈라코인 <b>${GC_BAL.toLocaleString()}</b> GC — 잔액만큼 즉시 후원됩니다</div>
       <button class="ds-go" id="ds-go" disabled>최소 ${won(MIN)}부터</button>
-      <div class="ds-note">후원의 <b>50%는 발의자</b>에게, <b>30%는 기부</b>됩니다(수수료 20%).
+      <div class="ds-note">후원의 <b>75%는 발의자</b>에게, <b>5%는 기부</b>됩니다(수수료 20%).
         결제는 <b>갈라코인(GC)</b>으로 하며 1GC=1원, 현금으로만 구매됩니다.
         갈라포인트(GP)는 환급·양도 불가 놀이 재화로 후원에 사용할 수 없고, GP↔GC 전환은 불가능합니다.</div>`;
     sheet.querySelectorAll(".ds-tier").forEach(b => {
@@ -288,7 +288,7 @@
           <div class="earn-b"><div class="earn-v">${data.supporter_count}명</div><div class="earn-l">후원자</div></div>
         </div>
         <button class="earn-out" id="earn-out" ${data.available < 10000 ? "disabled" : ""}>${data.available < 10000 ? "출금 최소 1만원" : "출금 신청"}</button>
-        <div class="earn-note">후원금의 50%가 발의자에게 정산됩니다(기부 30%·수수료 20% 제외). 실제 송금(PG·뱅킹)은 준비 중입니다.</div>
+        <div class="earn-note">후원금의 75%가 발의자에게 정산됩니다(기부 5%·수수료 20% 제외). 실제 송금(PG·뱅킹)은 준비 중입니다.</div>
       </div>`;
     const btn = sec.querySelector("#earn-out");
     if (btn && data.available >= 10000) btn.addEventListener("click", async () => {
