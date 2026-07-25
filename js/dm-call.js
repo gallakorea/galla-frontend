@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072581'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072582'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -46,7 +46,6 @@
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  function bcn(m){ try { if (!(window.GALLA_isApp && window.GALLA_isApp())) return; if (sb && sb.rpc) sb.rpc('log_client_error', { p_kind: 'call-flow', p_message: String(m).slice(0, 400), p_ver: 'cold' }); } catch (_) {} }
 
   /* ── ICE 설정: TURN 자격증명(1시간) 30분 캐시, 실패 시 STUN만 ── */
   async function iceConfig() {
@@ -120,7 +119,6 @@
       // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { const ch = await peerChan(p.from); ch.send({ type: 'broadcast', event: 'signal', payload: { t: 'busy', from: ME, to: p.from } }); try { sb.removeChannel(ch); } catch (_) {} return; }
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
-      bcn('IN offer from ' + p.from + ' pendCK=' + callKitPendingAnswer);
       chanPeer = await peerChan(p.from);
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
@@ -389,7 +387,6 @@
       await pc.setLocalDescription(ans);
       if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
       send({ t: 'answer', sdp: ans.sdp });
-      bcn('IN answer sent→' + CUR.peer);
       paintUI('connecting');
     } catch (e) {
       console.error('[call] accept', e);
@@ -439,10 +436,22 @@
     try { navigator.vibrate && navigator.vibrate(0); } catch (_) {}
   }
   function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
+  // 📞 네이티브 CallKit 콜 종료 신호 — 웹 통화가 끝나면 CallKit UI도 내려야(수신자에 통화 잔류 방지).
+  //    커스텀 URL 스킴을 숨김 iframe으로 열어 AppDelegate에 알린다(메인 프레임 이동 없음).
+  function nativeEndCallKit() {
+    try {
+      if (!(window.GALLA_isApp && window.GALLA_isApp())) return;
+      var f = document.createElement('iframe');
+      f.style.display = 'none'; f.src = 'im.galla.app://gallacall/end';
+      document.body.appendChild(f);
+      setTimeout(function () { try { f.remove(); } catch (_) {} }, 600);
+    } catch (_) {}
+  }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
     stopRings();   // 🔕 벨·링백 정지
+    nativeEndCallKit();   // CallKit 콜도 함께 종료(수신자 화면 잔류 방지)
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     if (!remote && CUR) send({ t: 'hangup' });
     logCall(reason);
@@ -717,7 +726,6 @@
   };
   function armCallKitAnswer() {
     callKitPendingAnswer = true;
-    bcn('armed CK (CUR=' + (CUR ? CUR.dir : 'none') + ')');
     setTimeout(() => { callKitPendingAnswer = false; }, 45000);   // 콜드스타트 여유(앱 죽은 상태서 깨어나 구독까지)
   }
   window.GALLA_callKitAnswer = function (callerId) {
