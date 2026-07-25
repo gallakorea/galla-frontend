@@ -184,10 +184,12 @@
     enableShake();
     return Promise.resolve(true);
   };
-  // 권한이 필요 없는 기기에서는 로드 즉시 활성화
-  if (!(window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission === "function")) {
-    enableShake();
-  }
+  // 모든 페이지에서 로드 즉시 리스너를 붙인다.
+  //   · 안드로이드/구형 iOS: 권한 개념이 없어 바로 동작.
+  //   · iOS 13+: 권한이 나기 전엔 이벤트가 안 와서 무해하고, 설정에서 한 번 허용하면
+  //     권한이 오리진에 유지되므로 이후 '모든 페이지'에서 흔들기가 동작한다.
+  //     (기존엔 권한 필요 기기에서 리스너를 안 붙여, 설정 켠 페이지 말고는 흔들어도 무반응이었다.)
+  enableShake();
 
   /* ─────────────────────────────────────────────────────────
      ⚠️ 오류 알림 + 신고 버튼 — window.GALLA_errorToast(메시지, 원인)

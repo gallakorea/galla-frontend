@@ -33,9 +33,9 @@
     { ic: "👊", t: "편 갈라 싸우기", s: "이슈마다 👍/👎 <b>진영</b>을 골라 참전. 회색분자는 문 앞에서 컷!", go: "collapse" },
     { ic: "🎯", t: "갈라예측", s: "결과를 맞히면 GP <b>왕창</b>. 소수파일수록 리턴이 커져요.", tab: "predict", url: "galla-predict.html" },
     { ic: "📟", t: "갈라톡 (메신저)", s: "<b>무전기</b>(꾹 눌러 말하기)·삐삐·음성/영상통화까지. 카톡 은퇴각.", tab: "dm", url: "dm.html" },
-    { ic: "🗣️", t: "광장", s: "글·짤·밈으로 노는 <b>갈라 커뮤니티</b>. 댓글로 전투도.", tab: "trend", url: "search.html" },
-    { ic: "🧠", t: "갈라뉴스", s: "여러 기사를 <b>AI가 3줄</b>로 씹어서 떠먹여줘요.", tab: "trend", url: "search.html" },
-    { ic: "🤩", t: "크리에이터", s: "유튜브처럼 <b>크리에이터</b>로 활동. (자세한 안내는 곧!)", go: "soon" }
+    { ic: "🗣️", t: "광장", s: "글·짤·밈으로 노는 <b>갈라 커뮤니티</b>. 댓글로 전투도.", tab: "trend", subtab: "plaza", url: "search.html?tab=plaza" },
+    { ic: "🧠", t: "갈라뉴스", s: "여러 기사를 <b>AI가 3줄</b>로 씹어서 떠먹여줘요.", tab: "trend", subtab: "news", url: "search.html?tab=news" },
+    { ic: "🤩", t: "크리에이터", s: "받은 후원의 <b>75%</b>가 창작자 몫. 배분·출금 안내.", top: "creator.html" }
   ];
 
   function mount() {
@@ -99,8 +99,14 @@
   function navTo(step, wrap) {
     if (!step) return;
     if (step.go === "collapse") return collapse(wrap);   // 편 갈라 싸우기 = 여기 피드 → 접어서 보여줌
-    if (step.go === "soon") return toastMsg("크리에이터 기능은 곧 공개돼요! 🚀");
-    if (SHELL && step.tab) { try { window.parent.postMessage({ galla: "shell", t: "nav", tab: step.tab }, location.origin); return; } catch (e) {} }
+    if (step.go === "soon") return toastMsg("곧 공개돼요! 🚀");
+    // 판(5탭) 밖 페이지(크리에이터 센터 등) → 최상위 이동
+    if (step.top) {
+      if (SHELL) { try { window.parent.postMessage({ galla: "shell", t: "goto", url: step.top }, location.origin); return; } catch (e) {} }
+      location.href = step.top; return;
+    }
+    // 탭 이동(+뉴스·광장 서브탭)
+    if (SHELL && step.tab) { try { window.parent.postMessage({ galla: "shell", t: "nav", tab: step.tab, subTab: step.subtab }, location.origin); return; } catch (e) {} }
     if (step.url) location.href = step.url;
   }
 
