@@ -11,7 +11,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072571'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072572'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -102,8 +102,9 @@
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
       chanPeer = await peerChan(p.from);
       paintUI('incoming');
-      try { navigator.vibrate?.([300, 150, 300, 150, 300]); } catch (_) {}
-      try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리
+      try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
+      try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
+      startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
       return;
     }
@@ -381,7 +382,23 @@
     } catch (_) {}
   }
 
-  function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} }
+  // 📳 진동 링 — 수신 벨. iOS 네이티브는 navigator.vibrate가 무동작이라 Capacitor 햅틱(GALLA_haptic)으로,
+  //    안드로이드/웹은 navigator.vibrate로. 오디오가 suspended여도 최소한 '왔다'는 알림이 되게.
+  let ringHapT = null;
+  function startRingHaptic() {
+    stopRingHaptic();
+    const buzz = () => {
+      try { window.GALLA_haptic && window.GALLA_haptic('vote'); } catch (_) {}
+      try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 300]); } catch (_) {}
+    };
+    buzz();
+    ringHapT = setInterval(buzz, 2000);
+  }
+  function stopRingHaptic() {
+    if (ringHapT) { clearInterval(ringHapT); ringHapT = null; }
+    try { navigator.vibrate && navigator.vibrate(0); } catch (_) {}
+  }
+  function stopRings() { try { window.GALLA_SFX?.ringInStop(); window.GALLA_SFX?.ringOutStop(); } catch (_) {} stopRingHaptic(); }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
