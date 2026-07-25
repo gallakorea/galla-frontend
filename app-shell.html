@@ -90,6 +90,7 @@
 <script>
 /* ═══ 셸 컨트롤러 — 트랙 이동·탭 생명주기·iframe 제스처 수신 ═══ */
 (function () {
+  if (/[?&]rtcprobe/.test(location.search)) return;   // 🔬 진단 모드: 셸 정지(로그인 리다이렉트 방지)
   const ORDER = ["index", "predict", "dm", "trend", "mypage"];
   const URLS  = { index: "index.html", predict: "galla-predict.html", dm: "dm.html", trend: "search.html", mypage: "mypage.html" };
   const track = document.getElementById("shell-track");
