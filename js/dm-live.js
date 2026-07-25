@@ -940,8 +940,8 @@
     if (!id) return null;
     const path = location.pathname;
     const titleOf = (sel, fb) => (document.querySelector(sel)?.textContent || "").trim().slice(0, 30) || fb;
-    if (/issue/.test(path)) return { type: "issue", id, title: titleOf("#issue-title", "이슈 토크") };
-    if (/predict-market/.test(path)) return { type: "market", id, title: titleOf(".pb-q", "예측 토크") };
+    // 진입 파이프라인은 광장 전용(사장님 확정 2026-07-25) — 이슈·예측은 스크립트 미로드 + 여기서도 차단.
+    // (방 안 '📌 자료' 검색은 이슈/예측/뉴스/광장 4종 유지 — 별개 기능)
     if (/plaza_detail/.test(path)) return { type: "plaza", id, title: titleOf(".post-title", "광장 토크") };
     return null;
   }
