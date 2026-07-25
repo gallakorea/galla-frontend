@@ -7,11 +7,23 @@
      부재 시 푸시 '보이스톡이 왔어요'(탭→대화방→부재중 기록에서 다시 걸기)
    · 앱 출시 대비: 시그널링·UI는 그대로 두고 네이티브 래핑 시 푸시만 FCM/CallKit로 바꿔 끼우면 된다 */
 (function () {
+  // 📞 판(iframe) 모드 — 네이티브 앱에선 통화 엔진이 최상위(app-shell)에서 돈다(거기서만 네이티브 WebRTC/CallKit 브릿지).
+  //    판 안에선 엔진을 띄우지 않고 '발신 요청'만 최상위로 넘긴다. 웹(브라우저)은 페이지가 top이라 이 분기 안 탐 = 기존대로.
+  if (window.top !== window.self) {
+    var _O = location.origin;
+    window.GALLA_call = {
+      start: function (peer, name, video) { try { parent.postMessage({ galla: 'shell', t: 'callstart', peer: peer, name: name || '', video: !!video }, _O); } catch (_) {} },
+      listen: function () {},
+      supported: function () { return true; },
+      _debug: function () { return { iframeForward: true }; }
+    };
+    return;
+  }
   // 🔊 수신음 엔진 자동 로드(GALLA_SFX) — 통화는 어느 페이지서든 부팅되므로 여기서 보장
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072577'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072578'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
