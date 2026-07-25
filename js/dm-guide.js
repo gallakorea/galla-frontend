@@ -8,8 +8,8 @@
    ========================================================================== */
 (function () {
   if (document.body.getAttribute("data-page") !== "dm") return;
-  var DISMISS = "galla_dm_guide_dismissed";
-  var COLLAPSE = "galla_dm_guide_collapsed";
+  var DISMISS = "galla_dm_guide_dismissed_v2";
+  var COLLAPSE = "galla_dm_guide_collapsed_v2";
   try { if (localStorage.getItem(DISMISS)) return; } catch (e) { return; }
 
   // tab: 클릭 시 이동할 DM 탭(data-tab)
