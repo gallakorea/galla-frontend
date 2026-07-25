@@ -18,7 +18,15 @@
 
   function mount() {
     var anchor = document.querySelector(".tabs-header");
-    if (!anchor || document.getElementById("tgBox")) return false;
+    if (!anchor) return false;
+    // ⚠️ 스냅샷 잔상이 복원한 '죽은 복제'(핸들러 없는 정적 HTML) 감지 — 살아있는 마운트는
+    //    __live 프로퍼티가 있다(innerHTML 복제엔 프로퍼티가 없음). 죽은 놈이면 걷어내고 새로 꽂는다.
+    //    (사장님 재현: 접어두기 눌러도 무반응 — 잔상 배너를 누르고 있었다)
+    var ex = document.getElementById("tgBox");
+    if (ex) {
+      if (ex.__live) return false;
+      var dead = ex.closest(".dmg-wrap"); (dead || ex).remove();
+    }
     var collapsed = false; try { collapsed = localStorage.getItem(COLLAPSE) === "1"; } catch (e) {}
 
     var wrap = document.createElement("section");
@@ -48,6 +56,7 @@
     anchor.insertAdjacentElement("afterend", wrap);   // 탭 바로 아래 = 콘텐츠 최상단
 
     var box = wrap.querySelector("#tgBox");
+    box.__live = true;   // 살아있는 마운트 표식(스냅샷 복제와 구분)
     wrap.querySelector("#tgToggle").onclick = function () {
       var open = box.classList.toggle("open");
       wrap.querySelector(".dmg-head-arrow").textContent = open ? "▴" : "▾";
@@ -76,6 +85,7 @@
   var t = setInterval(function () {
     try { if (localStorage.getItem(DISMISS)) { clearInterval(t); return; } }
     catch (e) {}
-    if (document.querySelector(".tabs-header") && !document.getElementById("tgBox")) mount();
+    var ex = document.getElementById("tgBox");
+    if (document.querySelector(".tabs-header") && (!ex || !ex.__live)) mount();
   }, 700);
 })();

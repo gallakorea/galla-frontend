@@ -24,7 +24,13 @@
 
   function mount() {
     var tabs = document.querySelector(".dm-tabs");
-    if (!tabs || document.getElementById("dmgBox")) return false;
+    if (!tabs) return false;
+    // 스냅샷 잔상의 '죽은 복제'(핸들러 없음) 감지 — 살아있는 마운트만 __live 보유. 죽었으면 교체.
+    var ex = document.getElementById("dmgBox");
+    if (ex) {
+      if (ex.__live) return false;
+      var dead = ex.closest(".dmg-wrap"); (dead || ex).remove();
+    }
     /* 스타일은 css/dm-quiet.css 상주(스냅샷 잔상 무스타일 번쩍임 방지) */
     // 코치마크 투어가 도는 '첫 회차'엔 접어둔다(투어와 겹쳐 산만해지지 않게 — 사장님 확정).
     // 투어를 마친 다음 방문부터 펼쳐진 상태로 등장. (⚠️ 키는 dm-tour.js의 KEY와 동일하게 유지)
@@ -60,6 +66,7 @@
     tabs.insertAdjacentElement("beforebegin", wrap);   // 탭 칩들보다 위 = DM 최상단
 
     var box = wrap.querySelector("#dmgBox");
+    box.__live = true;   // 살아있는 마운트 표식(스냅샷 복제와 구분)
     wrap.querySelector("#dmgToggle").onclick = function () {
       var open = box.classList.toggle("open");
       wrap.querySelector(".dmg-head-arrow").textContent = open ? "▴" : "▾";
@@ -89,6 +96,7 @@
   // DM UI는 JS 렌더 + 재렌더될 수 있음 — 탭이 보이는데 배너가 없으면 언제든 다시 꽂는다
   var t = setInterval(function () {
     try { if (localStorage.getItem(DISMISS)) { clearInterval(t); return; } } catch (e) {}
-    if (document.querySelector(".dm-tabs") && !document.getElementById("dmgBox")) mount();
+    var ex = document.getElementById("dmgBox");
+    if (document.querySelector(".dm-tabs") && (!ex || !ex.__live)) mount();
   }, 700);
 })();
