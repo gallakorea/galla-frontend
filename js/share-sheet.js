@@ -8,7 +8,7 @@
   if (!document.getElementById("ssh-style")) {
     const st = document.createElement("style"); st.id = "ssh-style";
     st.textContent = `
-.ssh-overlay{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center}
+.ssh-overlay{position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);display:flex;align-items:flex-end;justify-content:center}
 .ssh-sheet{width:100%;max-width:480px;background:#16171c;border:1px solid rgba(255,255,255,.08);border-radius:22px 22px 0 0;padding:10px 16px calc(20px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .26s cubic-bezier(.2,.8,.3,1)}
 .ssh-sheet.show{transform:none}
 .ssh-grab{width:40px;height:4px;border-radius:999px;background:#3a3d46;margin:6px auto 14px}

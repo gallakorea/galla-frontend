@@ -18,7 +18,11 @@
   function toast(m) { try { if (window.GALLA_toast) window.GALLA_toast(m); } catch (e) {} }
   // 셸(네이티브) 하단 nav 숨김 — 라이브 무대는 풀스크린이라 nav가 위로 겹쳐 보이면 안 됨
   function navHide(on) { try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on: on }, location.origin); } catch (e) {} }
-  function avatar(u) { return u ? `<img src="${esc(u)}" alt="">` : `<span class="lv-ava-none">🙂</span>`; }
+  // ⚠️ users.avatar_url은 완성 URL이 아니라 스토리지 경로("<uid>/avatar.jpg") — 반드시 리졸버 경유
+  function avatar(u) {
+    const src = window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u, 128) : u;
+    return src ? `<img src="${esc(src)}" alt="" onerror="this.style.display='none'">` : `<span class="lv-ava-none">🙂</span>`;
+  }
 
   /* ── 난장 탭 상단 LIVE 섹션 주입 ─────────────────────────────────────────── */
   async function refreshSection() {
@@ -61,7 +65,7 @@
     try {
       const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: topic });
       if (error || !id) return toast("라이브 개설에 실패했어요.");
-      openStage(id, title, topic);
+      openStage(id, title, topic, "open");
     } catch (e) { toast("라이브 개설에 실패했어요."); }
   }
 
@@ -70,12 +74,12 @@
       const { data } = await sb().rpc("live_join", { p_room: roomId });
       if (!data || !data.ok) return toast(data && data.reason === "ended" ? "이미 끝난 라이브예요." : "입장에 실패했어요.");
       // 제목은 목록에서 못 가져왔을 수 있으니 상태에서 채운다
-      openStage(roomId, "", "");
+      openStage(roomId, "", "", "join");
     } catch (e) { toast("입장에 실패했어요."); }
   }
 
   /* ── 무대 오버레이 ───────────────────────────────────────────────────────── */
-  function openStage(roomId, title, topic) {
+  function openStage(roomId, title, topic, entry) {
     ensureCSS();
     closeStage(true);
     const ov = document.createElement("div");
@@ -120,15 +124,19 @@
     cin.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } });
     loadChat();
 
-    CUR = { roomId, role: "listener", muted: true, hand: false, state: [], channel: null, audio: null };
+    CUR = { roomId, role: "listener", muted: true, hand: false, state: [], channel: null, audio: null, memberIds: null };
     // 실시간 동기화 채널
     try {
       CUR.channel = sb().channel("live:" + roomId, { config: { broadcast: { self: false } } });
       CUR.channel.on("broadcast", { event: "sync" }, () => refreshState());
       CUR.channel.on("broadcast", { event: "react" }, ({ payload }) => spawnFloat(payload && payload.emo));
       CUR.channel.on("broadcast", { event: "super" }, ({ payload }) => showSuper(payload));
+      CUR.channel.on("broadcast", { event: "sys" }, ({ payload }) => sysMsg(payload && payload.text));
       CUR.channel.subscribe();
     } catch (e) {}
+    // 내가 열었다/입장했다 — 시스템 안내 + 토스트
+    if (entry === "open") { sysMsg("🎙 라이브를 열었어요"); toast("🎙 라이브를 열었어요"); }
+    else if (entry === "join") { sysMsg("👋 입장했어요"); toast("👋 라이브에 입장했어요"); }
     // 리액션·후원·공유
     ov.querySelectorAll("#lv-react [data-emo]").forEach(b => b.onclick = () => sendReaction(b.dataset.emo));
     ov.querySelector("#lv-super").onclick = openSuper;
@@ -151,7 +159,17 @@
     CUR.state = rows;
     CUR.nicks = CUR.nicks || {};
     rows.forEach(r => { CUR.nicks[r.user_id] = r.nickname || "익명"; });
+    // 입장/퇴장 안내 — 이전 멤버 집합과 비교(나 자신·최초 로드 제외)
+    const ids = new Set(rows.map(r => r.user_id));
+    if (CUR.memberIds) {
+      ids.forEach(id => { if (id !== ME && !CUR.memberIds.has(id)) sysMsg("👋 " + (CUR.nicks[id] || "익명") + " 님 입장"); });
+      CUR.memberIds.forEach(id => { if (id !== ME && !ids.has(id)) sysMsg("🚪 " + (CUR.nicks[id] || "익명") + " 님 퇴장"); });
+    }
+    CUR.memberIds = ids;
+    const wasRole = CUR.role;
     if (me) { CUR.role = me.role; CUR.muted = me.muted; CUR.hand = me.hand_raised; }
+    // 내가 청중→스피커로 승격됐을 때 안내
+    if (wasRole === "listener" && CUR.role === "speaker") { sysMsg("🎤 무대에 올랐어요 — 마이크가 켜졌어요"); toast("🎤 무대에 올랐어요!"); }
     // 청중→스피커 승격되면 자동으로 마이크 발행
     if (CUR.cf && (CUR.role === "host" || CUR.role === "speaker") && !CUR.cf.pubTrack) maybePublish();
     render();
@@ -168,6 +186,15 @@
     row.innerHTML = `<b>${esc(nick)}</b> <span>${esc(m.body)}</span>`;
     if (atTop) box.insertBefore(row, box.firstChild); else box.appendChild(row);
     if (!atTop) box.scrollTop = box.scrollHeight;
+  }
+  // 시스템 안내(입장/퇴장/개설/종료) — 채팅 중앙 회색 라인
+  function sysMsg(text) {
+    const box = chatBox(); if (!box || !text) return;
+    const row = document.createElement("div");
+    row.className = "lv-sys";
+    row.textContent = text;
+    box.appendChild(row);
+    box.scrollTop = box.scrollHeight;
   }
   async function loadChat() {
     if (!CUR) return;
@@ -215,10 +242,13 @@
   }
   function shareRoom() {
     const title = (document.getElementById("lv-title")?.textContent || "GALLA 라이브 난장").trim();
-    const url = location.origin || "https://galla.im";
-    if (window.GALLA_share) window.GALLA_share({ url, title: "🎙 " + title, text: title + " — 지금 라이브 난장 중! 들으러 와요 🎧" });
-    else if (navigator.share) navigator.share({ title, url }).catch(() => {});
-    else toast("공유를 지원하지 않는 브라우저예요.");
+    const url = (location.origin && /^https?:/.test(location.origin) ? location.origin : "https://galla.im") + "/dm.html";
+    const text = title + " — 지금 라이브 난장 중! 들으러 와요 🎧";
+    if (window.GALLA_share) { window.GALLA_share({ url, title: "🎙 " + title, text }); return; }
+    if (navigator.share) { navigator.share({ title: "🎙 " + title, text, url }).catch(() => {}); return; }
+    // 최후 폴백 — 링크 클립보드 복사
+    try { navigator.clipboard.writeText(url); toast("링크를 복사했어요 📋"); }
+    catch (e) { toast("공유를 지원하지 않는 브라우저예요."); }
   }
 
   /* ── 💸 GC 쏘기 (빵빵 터지는 후원 · 게임 GP와 분리된 현금성 GC) ──────── */
@@ -365,15 +395,21 @@
   }
   async function endRoom() {
     if (!CUR || !confirm("라이브를 종료할까요? 모두 퇴장됩니다.")) return;
+    // 청중에게도 종료 안내가 뜨도록 먼저 broadcast
+    try { CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🔴 호스트가 라이브를 종료했어요" } }); } catch (e) {}
     try { await sb().rpc("live_end", { p_room: CUR.roomId }); } catch (e) {}
     broadcastSync(); closeStage();
+    toast("🔴 라이브를 종료했어요");
   }
   async function leave() {
     const room = CUR && CUR.roomId;
+    // 남은 사람들에게 내 퇴장 안내(내 상태가 사라지기 전에)
+    try { CUR && CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🚪 " + ((CUR.nicks && CUR.nicks[ME]) || "누군가") + " 님 퇴장" } }); } catch (e) {}
     closeStage();
     try { if (room) await sb().rpc("live_leave", { p_room: room }); } catch (e) {}
     broadcastSync();
     refreshSection();
+    toast("라이브에서 나왔어요");
   }
 
   function closeStage(silent) {
@@ -517,14 +553,14 @@
     try {
       const { data } = await sb().rpc("live_room_for_link", { p_link_type: linkType, p_link_id: String(linkId) });
       const ex = data && data[0];
-      if (ex) { await sb().rpc("live_join", { p_room: ex.id }); return openStage(ex.id, ex.title, ""); }
+      if (ex) { await sb().rpc("live_join", { p_room: ex.id }); return openStage(ex.id, ex.title, "", "join"); }
     } catch (e) {}
     if (!confirm("이 주제로 라이브 음성 난장을 열까요?")) return;
     try {
       const { data: id, error } = await sb().rpc("live_room_create",
         { p_title: title || "라이브 난장", p_topic: topic || "", p_link_type: linkType, p_link_id: String(linkId) });
       if (error || !id) return toast("라이브 개설에 실패했어요.");
-      openStage(id, title || "라이브 난장", topic || "");
+      openStage(id, title || "라이브 난장", topic || "", "open");
     } catch (e) { toast("라이브 개설에 실패했어요."); }
   };
 
@@ -616,6 +652,7 @@
     .lv-msg{font-size:13px;line-height:1.4;color:#dfe4f0;word-break:break-word}
     .lv-msg b{color:#8aa0ff;font-weight:800;margin-right:5px}
     .lv-msg.mine b{color:#7ef0ae}
+    .lv-sys{align-self:center;font-size:11.5px;color:#8a90a0;background:rgba(255,255,255,.05);border-radius:999px;padding:3px 11px;margin:2px 0}
     .lv-react{display:flex;align-items:center;gap:6px;padding:4px 16px 2px}
     .lv-react button{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;font-size:17px;padding:6px 9px;cursor:pointer;line-height:1}
     .lv-react button:active{transform:scale(1.25)}
