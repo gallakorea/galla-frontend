@@ -134,6 +134,20 @@ async function loadEarn(){
 
 /* ============ GC 충전 시트 (실동작: gc_charge_begin → pending) ============ */
 let gcDim=null, gcSheet=null;
+
+/* 결제 채널 판별 — 인앱 결제는 스토어 수수료(30%)가 붙는다.
+   Capacitor 네이티브 래퍼 안이면 그 플랫폼을, 아니면 'web'을 돌려준다.
+   ⚠️ 여기 값이 서버 요율표(app_settings.charge_fees)의 키와 맞아야 한다: web/ios/android */
+function gcCharChannel(){
+  try{
+    const cap = window.Capacitor;
+    if(cap && (cap.isNativePlatform?.() || cap.isNative)){
+      const p = (cap.getPlatform?.() || '').toLowerCase();
+      if(p==='ios' || p==='android') return p;
+    }
+  }catch(_){}
+  return 'web';
+}
 async function openGcCharge(){
   if(!gcSheet){
     gcDim=document.createElement('div'); gcDim.className='wl-dim';
@@ -142,24 +156,32 @@ async function openGcCharge(){
     gcDim.onclick=closeGcCharge;
   }
   gcSheet.innerHTML=`<div class="wl-grip"></div><div class="wl-sheet-t">💝 갈라코인 충전</div>
-    <div class="wl-sheet-s">1코인 = 1원 · 보너스 없이 정직하게 · 크리에이터 후원 전용</div>
+    <div class="wl-sheet-s">크리에이터 후원 전용 · 갈라포인트와 상호 전환 불가</div>
     <div class="wl-loading">패키지 불러오는 중…</div>`;
   gcDim.classList.add('open');
   requestAnimationFrame(()=>gcSheet.classList.add('open'));
 
-  const { data } = await supa.rpc('gc_charge_packages');
+  // 결제 채널 — 인앱(애플/구글)은 30% 수수료가 붙어 적립 GC가 줄어든다.
+  // 지금 실행 환경이 네이티브 래퍼(Capacitor)면 그쪽 스토어 요율을, 아니면 웹 요율을 적용한다.
+  const channel = gcCharChannel();
+  const { data } = await supa.rpc('gc_charge_packages', { p_channel: channel });
   const pkgs = data?.packages||[];
+  const feePct = Math.round((data?.fee_rate||0)*100);
+  const feeLine = feePct>0
+    ? `결제 수수료 ${feePct}%를 제외한 금액이 코인으로 적립돼요.${channel!=='web' ? ' 웹에서 충전하면 더 많이 받아요.' : ''}`
+    : '';
   gcSheet.innerHTML=`<div class="wl-grip"></div><div class="wl-sheet-t">💝 갈라코인 충전</div>
-    <div class="wl-sheet-s">1코인 = 1원 · 보너스 없이 정직하게 · 크리에이터 후원 전용</div>
+    <div class="wl-sheet-s">크리에이터 후원 전용 · 갈라포인트와 상호 전환 불가</div>
     <div class="wl-pkgs">${pkgs.map(p=>`
       <button class="wl-pkg" data-key="${esc(p.key)}">
         <span class="wl-pkg-k">₩${fmt(p.krw)}</span>
         <span class="wl-pkg-g">💝 ${fmt(p.gc)} GC</span>
       </button>`).join('')}</div>
+    ${feeLine ? `<div class="wl-sheet-fee">${feeLine}</div>` : ''}
     <div class="wl-sheet-note">갈라코인은 후원 외에 사용할 수 없고, 갈라포인트와 서로 바꿀 수 없습니다.<br>결제(PG) 연동은 준비 중 — 지금은 충전 요청까지 접수됩니다.</div>`;
   gcSheet.querySelectorAll('.wl-pkg').forEach(b=>b.onclick=async ()=>{
     b.disabled=true;
-    const { data: r, error } = await supa.rpc('gc_charge_begin',{ p_key:b.dataset.key });
+    const { data: r, error } = await supa.rpc('gc_charge_begin',{ p_key:b.dataset.key, p_channel:channel });
     if(error||!r?.ok){ alert('충전 준비에 실패했어요.'); b.disabled=false; return; }
     gcSheet.innerHTML=`<div class="wl-grip"></div>
       <div class="wl-sheet-done">

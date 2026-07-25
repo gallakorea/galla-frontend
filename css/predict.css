@@ -483,6 +483,7 @@
 .wl-pkg-k{ display:block; font-size:13.5px; font-weight:900; color:#eef1f7; }
 .wl-pkg-g{ display:block; margin-top:4px; font-size:11.5px; font-weight:800; color:#ff7a9c; }
 .wl-sheet-note{ font-size:10.5px; color:#6c7280; text-align:center; margin-top:14px; line-height:1.6; }
+.wl-sheet-fee{ font-size:11.5px; color:#e8d9a8; background:rgba(255,207,63,.08); border:1px solid rgba(255,207,63,.28); border-radius:10px; padding:9px 12px; margin-top:12px; text-align:center; line-height:1.5; }
 .wl-sheet-done{ text-align:center; padding:18px 0 14px; }
 .wl-sheet-done .ic{ font-size:42px; }
 .wl-sheet-done h4{ font-size:16px; font-weight:900; color:#fff; margin:10px 0 8px; }
