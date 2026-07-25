@@ -872,8 +872,11 @@
           <div class="dm-msgs" id="dm-room-msgs"></div>
           <div class="dm-room-gate" id="dm-room-gate" hidden></div>
           <form class="dm-inputbar" id="dm-room-send">
-            <button type="button" class="dm-attach" id="dm-room-plus" aria-label="투표·약속">${ICONS.plus}</button>
+            <button type="button" class="dm-attach" id="dm-room-plus" aria-label="사진·투표·약속">${ICONS.plus}</button>
+            <input type="file" id="dm-room-file" accept="image/*" hidden>
             <textarea id="dm-room-input" rows="1" placeholder="메시지 입력…"></textarea>
+            <button type="button" class="dm-ib" id="dm-room-voice" aria-label="음성 메시지">${ICONS.mic}</button>
+            <button type="button" class="dm-ib" id="dm-room-sticker" aria-label="이모티콘">${ICONS.smile}</button>
             <button type="submit" class="dm-send" aria-label="전송">${ICONS.send}</button>
           </form>
         </div>
@@ -1028,9 +1031,14 @@
       ROOT.querySelector('.dm-plus-menu')?.remove();
       const menu = document.createElement('div');
       menu.className = 'dm-plus-menu';
-      menu.innerHTML = `<button type="button" data-p="choice">📊 투표 만들기</button><button type="button" data-p="date">📅 약속 잡기</button>`;
+      menu.innerHTML = `<button type="button" data-p="photo">📷 사진</button><button type="button" data-p="choice">📊 투표 만들기</button><button type="button" data-p="date">📅 약속 잡기</button>`;
       ROOT.querySelector('#dm-room-send').appendChild(menu);
-      menu.addEventListener('click', ev => { const b = ev.target.closest('[data-p]'); if (b) { menu.remove(); openPollComposer(b.dataset.p); } });
+      menu.addEventListener('click', ev => {
+        const b = ev.target.closest('[data-p]'); if (!b) return;
+        menu.remove();
+        if (b.dataset.p === 'photo') ROOT.querySelector('#dm-room-file').click();
+        else openPollComposer(b.dataset.p);
+      });
       const off = (ev) => { if (!menu.contains(ev.target) && !ev.target.closest('#dm-room-plus')) { menu.remove(); document.removeEventListener('click', off); } };
       setTimeout(() => document.addEventListener('click', off), 0);
     });
@@ -1047,6 +1055,10 @@
     ROOT.querySelector('#dm-file-any').addEventListener('change', onPickFile);
     bindPTT(ROOT.querySelector('#dm-voice'));
     ROOT.querySelector('#dm-sticker').addEventListener('click', toggleStk);
+    // 난장 채팅바 — 1:1과 동일 기능(사진·음성·이모티콘). 같은 패널·전송기를 뷰 라우팅으로 재사용
+    bindPTT(ROOT.querySelector('#dm-room-voice'));
+    ROOT.querySelector('#dm-room-sticker')?.addEventListener('click', toggleStk);
+    ROOT.querySelector('#dm-room-file')?.addEventListener('change', onPickImage);
     ROOT.querySelector('#dm-stk-q').addEventListener('input', () => {
       clearTimeout(stkTimer);
       stkTimer = setTimeout(() => paintStk(), STK_KIND === 'gifs' ? 350 : 120);   // 로컬 검색은 즉각
@@ -1111,21 +1123,21 @@
       // 이모지: 입력창에 삽입(인스타 문법 — 글과 섞어 쓴다)
       const emo = e.target.closest('.dm-emo');
       if (emo) {
-        const ta = ROOT.querySelector('#dm-input');
+        const ta = activeTextarea();   // 1:1·난장 어느 입력창이든 현재 뷰 기준
         const at = ta.selectionStart ?? ta.value.length;
         ta.value = ta.value.slice(0, at) + emo.dataset.ch + ta.value.slice(ta.selectionEnd ?? at);
         ta.focus(); ta.selectionStart = ta.selectionEnd = at + emo.dataset.ch.length;
         return;
       }
-      // 스티커·GIF: 바로 전송
+      // 스티커·GIF: 바로 전송 (난장이면 open_messages로 라우팅)
       const img = e.target.closest('img[data-full]');
-      if (!img || !curThread) return;
-      if (secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
+      if (!img || (!curThread && !inRoomView())) return;
+      if (!inRoomView() && secretOn(curThread)) return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)');
       const src = img.dataset.src;
       const isGif = src === 'giphy';
-      sendMessage({ kind: 'gif', body: isGif ? '🎬 GIF' : '🎬 이모티콘',
-                    meta: { url: img.dataset.full, sticker: !isGif,
-                            src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : src === 'mine' ? 'ai' : STK_STYLE } });
+      sendAny({ kind: 'gif', body: isGif ? '🎬 GIF' : '🎬 이모티콘',
+                meta: { url: img.dataset.full, sticker: !isGif,
+                        src: isGif ? 'giphy' : src === 'mix' ? 'kitchen' : src === 'mine' ? 'ai' : STK_STYLE } });
     });
     // 음성 재생 — 한 번에 하나만
     // 키보드 툴바 — 새 기능을 또 만들지 않고 이미 있는 버튼을 눌러준다
@@ -1149,7 +1161,8 @@
     bindReact(ROOT.querySelector('#dm-msgs'));
     applyChatPrefs();
     applyDisplay();
-    ROOT.querySelector('#dm-msgs').addEventListener('click', e => {
+    // 음성 재생 — 1:1(#dm-msgs)·난장(#dm-room-msgs) 공용 위임(ROOT 레벨)
+    ROOT.addEventListener('click', e => {
       const b = e.target.closest('.dm-vplay'); if (!b) return;
       if (VAUDIO && !VAUDIO.paused && VAUDIO._btn === b) { VAUDIO.pause(); return; }
       if (VAUDIO) { VAUDIO.pause(); VAUDIO._btn && (VAUDIO._btn.innerHTML = ICONS.play); }
@@ -1183,7 +1196,7 @@
       VAUDIO.onended = () => {
         b.innerHTML = ICONS.play;
         // 다음 음성 말풍선이 있으면 이어서 — 손 안 대고 죽 듣는다
-        const all = [...ROOT.querySelectorAll('#dm-msgs .dm-vplay')];
+        const all = [...ROOT.querySelectorAll('#dm-msgs .dm-vplay, #dm-room-msgs .dm-vplay')];
         const next = all[all.indexOf(b) + 1];
         if (next) setTimeout(() => next.click(), 350);
       };
@@ -3456,9 +3469,23 @@
   /* 단체방 문법: 남의 말은 아바타+닉네임을 단다(1:1엔 없던 것) */
   function roomBubbleHTML(m) {
     const mine = m.sender_id === ME;
-    const bodyHTML = (m.kind === 'poll' && m.meta?.poll_id)
-      ? `<span class="dm-poll" data-poll="${esc(m.meta.poll_id)}"><span class="dm-poll-load">투표 불러오는 중…</span></span>`
-      : `<span class="dm-bub-body">${esc(m.body)}</span>`;
+    let bodyHTML;
+    if (m.kind === 'poll' && m.meta?.poll_id) {
+      bodyHTML = `<span class="dm-poll" data-poll="${esc(m.meta.poll_id)}"><span class="dm-poll-load">투표 불러오는 중…</span></span>`;
+    } else if (m.kind === 'image' && m.meta?.url) {
+      bodyHTML = `<img class="dm-bub-img" src="${esc(m.meta.url)}" alt="사진" loading="lazy">`;
+    } else if (m.kind === 'gif' && m.meta?.url) {
+      bodyHTML = `<img class="dm-bub-img dm-stkimg" src="${esc(m.meta.url)}" loading="lazy" alt="이모티콘">`;
+    } else if (m.kind === 'voice' && m.meta?.url) {
+      const d = m.meta.dur || 0;
+      bodyHTML = `<span class="dm-voice">
+          <button type="button" class="dm-vplay" data-url="${esc(m.meta.url)}">${ICONS.play}</button>
+          <span class="dm-vwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <b>${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}</b>
+        </span>`;
+    } else {
+      bodyHTML = `<span class="dm-bub-body">${esc(m.body)}</span>`;
+    }
     const bubble = `<div class="dm-bubble ${mine ? 'me' : 'you'}${m.kind === 'poll' ? ' has-poll' : ''}" data-id="${m.id}">
         ${bodyHTML}
         <span class="dm-bub-time">${hhmm(m.created_at)}</span>
@@ -3593,6 +3620,34 @@
   function detachRoom() {
     if (roomChan) { try { supabase.removeChannel(roomChan); } catch (_) {} roomChan = null; }
   }
+  /* ── 난장 채팅바 = 1:1과 동일 기능(사진·음성·이모티콘) ───────────────────────
+     스티커·녹음 패널과 전송기를 '현재 보이는 뷰'로 라우팅해 그대로 재사용한다. */
+  function inRoomView() { return CUR_VIEW === 'room' && !!curRoom; }
+  function activeMsgsWrap() { return ROOT.querySelector(inRoomView() ? '#dm-room-msgs' : '#dm-msgs'); }
+  function activeTextarea() { return ROOT.querySelector(inRoomView() ? '#dm-room-input' : '#dm-input'); }
+  // 스티커·녹음 패널을 현재 뷰(1:1 또는 난장)로 옮겨 붙인다 — 절대배치 오버레이라 이동만으로 재사용됨
+  function movePanelToActiveView(sel) {
+    const view = ROOT.querySelector(`.dm-view[data-view="${inRoomView() ? 'room' : 'thread'}"]`);
+    const p = ROOT.querySelector(sel);
+    if (view && p && p.parentElement !== view) view.appendChild(p);
+    return p;
+  }
+  // 전송 라우터 — 난장 뷰면 open_messages, 아니면 1:1(dm_messages)
+  async function sendAny(fields) {
+    if (!inRoomView()) return sendMessage(fields);
+    const { data, error } = await supabase.from('open_messages').insert({
+      room_id: curRoom.id, sender_id: ME, body: fields.body || '', kind: fields.kind || 'text', meta: fields.meta || null
+    }).select().single();
+    if (error) {
+      console.error('[dm] room send', error);
+      toastMini(/check constraint/i.test(error.message || '') ? '이 종류의 메시지를 아직 보낼 수 없어요 (서버 설정)' : '메시지를 보내지 못했어요');
+      return null;
+    }
+    appendRoomMsg(data);
+    window.GALLA_pushSend?.('room', data.id);
+    return data;
+  }
+
   async function onRoomSend(e) {
     e.preventDefault();
     const ta = ROOT.querySelector('#dm-room-input');
@@ -4181,7 +4236,7 @@
   let STK_KIND = 'emoji', stkTimer = null, STK_CAT = 0, STK_BOOTED = false;
   let STK_STYLE = (() => { try { return localStorage.getItem('galla_stk_style') || 'noto'; } catch (_) { return 'noto'; } })();
   function toggleStk() {
-    const p = ROOT.querySelector('#dm-stk');
+    const p = movePanelToActiveView('#dm-stk');   // 1:1·난장 어느 뷰에서 열든 그 위에 뜬다
     p.hidden = !p.hidden;
     if (!p.hidden) { if (!STK_BOOTED) { STK_BOOTED = true; ensureStk().then(paintStk); } else paintStk(); }
   }
@@ -4497,8 +4552,9 @@
       : '손을 떼면 전송 · 위로 밀어 취소';
   }
   async function startVoiceRec() {
-    if (VREC || !curThread) return;
-    if (secretOn(curThread)) { PTT = null; return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)'); }
+    if (VREC || (!curThread && !inRoomView())) return;
+    if (!inRoomView() && secretOn(curThread)) { PTT = null; return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)'); }
+    movePanelToActiveView('#dm-ptt');   // 난장에서 녹음해도 패널이 그 뷰 위에 뜨게
     if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
       PTT = null; return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');
     }
@@ -4571,7 +4627,7 @@
       if (!window.GALLA_UPLOAD_MEDIA) {
         try { await loadScript('/js/media-upload.js'); } catch (_) { return toastMini('전송을 준비하지 못했어요'); }
       }
-      const wrap = ROOT.querySelector('#dm-msgs');
+      const wrap = activeMsgsWrap();
       const tmp = document.createElement('div');
       tmp.className = 'dm-bubble me dm-uploading';
       tmp.innerHTML = `<span class="dm-bub-body">${ICONS.mic} 음성 보내는 중…</span>`;
@@ -4579,7 +4635,7 @@
       try {
         const url = await window.GALLA_UPLOAD_MEDIA(f, 'audio');
         tmp.remove();
-        await sendMessage({ kind: 'voice', body: '🎤 음성 메시지', meta: { url, dur } });
+        await sendAny({ kind: 'voice', body: '🎤 음성 메시지', meta: { url, dur } });
       } catch (err) {
         console.error('[dm] voice upload', err);
         tmp.querySelector('.dm-bub-body').textContent = '음성 전송 실패 — ' + (err?.message || '업로드 오류');
@@ -4778,12 +4834,12 @@
   async function onPickImage(e) {
     let f = e.target.files && e.target.files[0];
     e.target.value = '';
-    if (!f || !curThread) return;
+    if (!f || (!curThread && !inRoomView())) return;   // 1:1·난장 공용(난장 채팅바 사진)
     f = await shrinkImage(f);
     if (!window.GALLA_UPLOAD_MEDIA) {
       try { await loadScript('/js/media-upload.js'); } catch (_) { return alert('사진 전송을 준비하지 못했어요.'); }
     }
-    const wrap = ROOT.querySelector('#dm-msgs');
+    const wrap = activeMsgsWrap();
     const tmp = document.createElement('div');
     tmp.className = 'dm-bubble me dm-uploading';
     tmp.innerHTML = `<span class="dm-bub-body">${ICONS.img} 사진 보내는 중…</span>`;
@@ -4791,7 +4847,7 @@
     try {
       const url = await window.GALLA_UPLOAD_MEDIA(f, 'image');
       tmp.remove();
-      await sendMessage({ kind: 'image', body: '📷 사진', meta: { url } });
+      await sendAny({ kind: 'image', body: '📷 사진', meta: { url } });
     } catch (err) {
       tmp.querySelector('.dm-bub-body').textContent = '사진 전송 실패';
       setTimeout(() => tmp.remove(), 2500);
