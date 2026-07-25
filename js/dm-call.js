@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072582'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072583'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -440,11 +440,9 @@
   //    커스텀 URL 스킴을 숨김 iframe으로 열어 AppDelegate에 알린다(메인 프레임 이동 없음).
   function nativeEndCallKit() {
     try {
-      if (!(window.GALLA_isApp && window.GALLA_isApp())) return;
-      var f = document.createElement('iframe');
-      f.style.display = 'none'; f.src = 'im.galla.app://gallacall/end';
-      document.body.appendChild(f);
-      setTimeout(function () { try { f.remove(); } catch (_) {} }, 600);
+      if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall) {
+        window.webkit.messageHandlers.gallaCall.postMessage({ action: 'end' });
+      }
     } catch (_) {}
   }
   function endCall(reason, remote) {
