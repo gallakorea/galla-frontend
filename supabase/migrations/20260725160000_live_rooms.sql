@@ -42,7 +42,7 @@ declare me uuid := auth.uid(); v_id uuid;
 begin
   if me is null then raise exception 'auth'; end if;
   insert into open_rooms(owner_id, title, topic, kind, is_live, started_at, speaker_limit)
-    values (me, coalesce(nullif(btrim(p_title),''),'라이브 난장'), coalesce(btrim(p_topic),''), 'live', true, now(), 8)
+    values (me, coalesce(nullif(btrim(p_title),''),'육성 난장'), coalesce(btrim(p_topic),''), 'live', true, now(), 8)
     returning id into v_id;
   insert into open_room_members(room_id, user_id, role, muted, hand_raised)
     values (v_id, me, 'host', false, false)

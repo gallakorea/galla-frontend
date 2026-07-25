@@ -1,7 +1,7 @@
 /* ============================================================================
-   🎙 라이브 난장 (클럽하우스식 라이브 음성) — 무대 UI + 역할 + 실시간 동기화
+   🎙 육성 난장 (클럽하우스식 라이브 음성) — 무대 UI + 역할 + 실시간 동기화
    ----------------------------------------------------------------------------
-   · 난장 탭 상단에 "🔴 지금 라이브" 섹션 + [라이브 열기] 주입
+   · 난장 탭 상단에 "🔴 지금 라이브" 섹션 + [육성 열기] 주입
    · 방 개설/입장 → 전체화면 무대 오버레이(호스트/스피커 무대 + 청중 + 손들기/승격)
    · 역할·프레즌스는 live_* RPC + Supabase Realtime broadcast 동기화
    · 실제 음성은 Cloudflare Calls SFU(rtc-sfu 엣지) — 미설정이면 '음성 준비중'으로 후퇴
@@ -38,7 +38,7 @@
     if (q) rows = rows.filter(r =>
       ((r.title || "") + " " + (r.topic || "") + " " + (r.host_nick || "")).toLowerCase().includes(q));
     if (!rows.length) {
-      return `<div class="lv-empty">${q ? "‘" + esc(LOBBY_Q) + "’ 라이브를 못 찾았어요." : "지금 열린 라이브가 없어요. 직접 무대를 열어보세요 🎤"}</div>`;
+      return `<div class="lv-empty">${q ? "‘" + esc(LOBBY_Q) + "’ 육성 난장을 못 찾았어요." : "지금 열린 육성 난장이 없어요. 직접 무대를 열어보세요 🎤"}</div>`;
     }
     return `<div class="lv-cards">` + rows.map(r => {
       const hot = (r.listeners || 0) >= 3 && (r.listeners || 0) === hotMax;
@@ -72,8 +72,8 @@
       rooms.insertBefore(sec, list || null);
       sec.innerHTML = `
         <div class="lv-sec-head">
-          <span class="lv-sec-t">🎙 라이브 난장</span>
-          <button class="lv-open-btn" id="lv-open" type="button">＋ 라이브 열기</button>
+          <span class="lv-sec-t">🎙 육성 난장</span>
+          <button class="lv-open-btn" id="lv-open" type="button">＋ 열기</button>
         </div>
         <div class="lv-lobby-search">
           <input id="lv-lobby-q" placeholder="🔎 난장 주제·방장 검색" autocomplete="off">
@@ -97,7 +97,7 @@
     sheet.innerHTML = `
       <div class="lv-sheet-dim"></div>
       <div class="lv-sheet-card lv-new-card">
-        <div class="lv-new-h"><span class="lv-live-badge">🔴 LIVE</span> 라이브 난장 열기</div>
+        <div class="lv-new-h"><span class="lv-live-badge">🔴 LIVE</span> 육성 난장 열기</div>
         <label class="lv-new-l">제목</label>
         <input id="lv-new-title" class="lv-new-in" maxlength="40" placeholder="예: 오늘 이슈 실시간 토크" autocomplete="off">
         <label class="lv-new-l">주제 <small>선택</small></label>
@@ -125,10 +125,10 @@
       go.disabled = true; go.textContent = "여는 중…";
       try {
         const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: topic });
-        if (error || !id) { toast("라이브 개설에 실패했어요."); go.disabled = false; go.textContent = "🎙 열기"; return; }
+        if (error || !id) { toast("육성 난장 개설에 실패했어요."); go.disabled = false; go.textContent = "🎙 열기"; return; }
         close();
         openStage(id, title, topic, "open");
-      } catch (e) { toast("라이브 개설에 실패했어요."); go.disabled = false; go.textContent = "🎙 열기"; }
+      } catch (e) { toast("육성 난장 개설에 실패했어요."); go.disabled = false; go.textContent = "🎙 열기"; }
     };
     setTimeout(() => titleIn.focus(), 60);
   }
@@ -136,7 +136,7 @@
   async function joinLive(roomId) {
     try {
       const { data } = await sb().rpc("live_join", { p_room: roomId });
-      if (!data || !data.ok) return toast(data && data.reason === "ended" ? "이미 끝난 라이브예요." : "입장에 실패했어요.");
+      if (!data || !data.ok) return toast(data && data.reason === "ended" ? "이미 끝난 육성 난장이에요." : "입장에 실패했어요.");
       // 제목은 목록에서 못 가져왔을 수 있으니 상태에서 채운다
       openStage(roomId, "", "", "join");
     } catch (e) { toast("입장에 실패했어요."); }
@@ -150,7 +150,7 @@
     ov.id = "lv-stage";
     ov.innerHTML = `
       <div class="lv-top">
-        <div class="lv-top-info"><span class="lv-live-badge">🔴 LIVE</span><b id="lv-title">${esc(title || "라이브 난장")}</b>
+        <div class="lv-top-info"><span class="lv-live-badge">🔴 LIVE</span><b id="lv-title">${esc(title || "육성 난장")}</b>
           <div id="lv-topic" class="lv-topic">${esc(topic || "")}</div></div>
         <button class="lv-x" id="lv-x" aria-label="나가기">✕</button>
       </div>
@@ -175,7 +175,7 @@
         <button class="lv-share" id="lv-share" type="button">🔗</button>
       </div>
       <div class="lv-chatbar">
-        <input id="lv-chat-in" maxlength="500" placeholder="라이브 채팅…" autocomplete="off">
+        <input id="lv-chat-in" maxlength="500" placeholder="실시간 채팅…" autocomplete="off">
         <button id="lv-chat-send" type="button">보내기</button>
       </div>
       <div class="lv-fx" id="lv-fx"></div>
@@ -184,7 +184,7 @@
     navHide(true);
     requestAnimationFrame(() => ov.classList.add("on"));
     ov.querySelector("#lv-x").onclick = () => leave();
-    // 라이브 채팅(open_messages 재사용)
+    // 실시간 채팅(open_messages 재사용)
     const cin = ov.querySelector("#lv-chat-in");
     ov.querySelector("#lv-chat-send").onclick = sendChat;
     cin.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sendChat(); } });
@@ -207,8 +207,8 @@
         if (p && p.present_type) renderPresent({ type: p.present_type, id: p.present_id, title: p.present_title }); } catch (e) {}
     })();
     // 내가 열었다/입장했다 — 시스템 안내 + 토스트
-    if (entry === "open") { sysMsg("🎙 라이브를 열었어요"); toast("🎙 라이브를 열었어요"); }
-    else if (entry === "join") { sysMsg("👋 입장했어요"); toast("👋 라이브에 입장했어요"); }
+    if (entry === "open") { sysMsg("🎙 육성 난장을 열었어요"); toast("🎙 육성 난장을 열었어요"); }
+    else if (entry === "join") { sysMsg("👋 입장했어요"); toast("👋 육성 난장에 입장했어요"); }
     // 리액션·후원·공유
     ov.querySelectorAll("#lv-react [data-emo]").forEach(b => b.onclick = () => sendReaction(b.dataset.emo));
     ov.querySelector("#lv-super").onclick = openSuper;
@@ -239,7 +239,7 @@
     if (!CUR) return;
     // 방이 사라졌거나(종료) 내가 빠졌으면 닫기
     const me = rows.find(r => r.user_id === ME);
-    if (!rows.length) { toast("라이브가 종료됐어요."); return closeStage(); }
+    if (!rows.length) { toast("육성 난장이 종료됐어요."); return closeStage(); }
     CUR.state = rows;
     CUR.nicks = CUR.nicks || {};
     rows.forEach(r => { CUR.nicks[r.user_id] = r.nickname || "익명"; });
@@ -357,7 +357,7 @@
     if (ob) ob.onclick = () => { location.href = ob.dataset.url; };
   }
 
-  /* ── 라이브 채팅 (open_messages 재사용) ─────────────────────────────────── */
+  /* ── 실시간 채팅 (open_messages 재사용) ─────────────────────────────────── */
   function chatBox() { return document.getElementById("lv-chat"); }
   function appendMsg(m, atTop) {
     const box = chatBox(); if (!box || !CUR) return;
@@ -423,9 +423,9 @@
     try { window.GALLA_haptic && window.GALLA_haptic("light"); } catch (e) {}
   }
   function shareRoom() {
-    const title = (document.getElementById("lv-title")?.textContent || "GALLA 라이브 난장").trim();
+    const title = (document.getElementById("lv-title")?.textContent || "GALLA 육성 난장").trim();
     const url = (location.origin && /^https?:/.test(location.origin) ? location.origin : "https://galla.im") + "/dm.html";
-    const text = title + " — 지금 라이브 난장 중! 들으러 와요 🎧";
+    const text = title + " — 지금 육성 난장 중! 들으러 와요 🎧";
     if (window.GALLA_share) { window.GALLA_share({ url, title: "🎙 " + title, text }); return; }
     if (navigator.share) { navigator.share({ title: "🎙 " + title, text, url }).catch(() => {}); return; }
     // 최후 폴백 — 링크 클립보드 복사
@@ -620,12 +620,12 @@
     broadcastSync(); refreshState();
   }
   async function endRoom() {
-    if (!CUR || !confirm("🧨 방을 뽀갤까요?\n라이브가 끝나고 청중 모두 퇴장돼요.")) return;
+    if (!CUR || !confirm("🧨 방을 뽀갤까요?\n육성 난장이 끝나고 청중 모두 퇴장돼요.")) return;
     // 청중에게도 종료 안내가 뜨도록 먼저 broadcast
-    try { CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🔴 호스트가 라이브를 종료했어요" } }); } catch (e) {}
+    try { CUR.channel.send({ type: "broadcast", event: "sys", payload: { text: "🔴 호스트가 육성 난장을 종료했어요" } }); } catch (e) {}
     try { await sb().rpc("live_end", { p_room: CUR.roomId }); } catch (e) {}
     broadcastSync(); closeStage();
-    toast("🔴 라이브를 종료했어요");
+    toast("🔴 육성 난장을 종료했어요");
   }
   async function leave() {
     // 호스트가 나가면 방이 사라진다 → 반드시 '방 뽀개기' 확인을 거친다(✕·나가기 모두)
@@ -637,7 +637,7 @@
     try { if (room) await sb().rpc("live_leave", { p_room: room }); } catch (e) {}
     broadcastSync();
     refreshSection();
-    toast("라이브에서 나왔어요");
+    toast("육성 난장에서 나왔어요");
   }
 
   function closeStage(silent) {
@@ -767,7 +767,7 @@
     (cf.els || []).forEach(el => { try { el.srcObject = null; el.remove(); } catch (e) {} });
   }
 
-  /* ── 콘텐츠 → 라이브 파이프라인 (이슈/예측/광장에서 라이브 열기·입장) ──────── */
+  /* ── 콘텐츠 → 라이브 파이프라인 (이슈/예측/광장에서 육성 열기·입장) ──────── */
   async function ensureMe() {
     if (ME) return ME;
     try { const { data } = await sb().auth.getSession(); ME = data?.session?.user?.id || null; } catch (e) {}
@@ -776,20 +776,20 @@
   // 열거나(없으면) 입장한다(있으면). 콘텐츠 연계 라이브.
   window.GALLA_liveLaunch = async function (linkType, linkId, title, topic) {
     if (!sb()) return;
-    if (!(await ensureMe())) { if (window.GALLA_needLogin) window.GALLA_needLogin("라이브는 로그인 후 이용할 수 있어요."); return; }
+    if (!(await ensureMe())) { if (window.GALLA_needLogin) window.GALLA_needLogin("육성 난장은 로그인 후 이용할 수 있어요."); return; }
     ensureCSS();
     try {
       const { data } = await sb().rpc("live_room_for_link", { p_link_type: linkType, p_link_id: String(linkId) });
       const ex = data && data[0];
       if (ex) { await sb().rpc("live_join", { p_room: ex.id }); return openStage(ex.id, ex.title, "", "join"); }
     } catch (e) {}
-    if (!confirm("이 주제로 라이브 음성 난장을 열까요?")) return;
+    if (!confirm("이 주제로 육성 난장을 열까요?")) return;
     try {
       const { data: id, error } = await sb().rpc("live_room_create",
-        { p_title: title || "라이브 난장", p_topic: topic || "", p_link_type: linkType, p_link_id: String(linkId) });
-      if (error || !id) return toast("라이브 개설에 실패했어요.");
-      openStage(id, title || "라이브 난장", topic || "", "open");
-    } catch (e) { toast("라이브 개설에 실패했어요."); }
+        { p_title: title || "육성 난장", p_topic: topic || "", p_link_type: linkType, p_link_id: String(linkId) });
+      if (error || !id) return toast("육성 난장 개설에 실패했어요.");
+      openStage(id, title || "육성 난장", topic || "", "open");
+    } catch (e) { toast("육성 난장 개설에 실패했어요."); }
   };
 
   // 이 페이지의 콘텐츠 링크 판별
@@ -809,7 +809,7 @@
     ensureCSS();
     const pill = document.createElement("button");
     pill.id = "lv-pill"; pill.type = "button"; pill.className = "lv-pill";
-    pill.innerHTML = `🎙 <span>라이브</span>`;
+    pill.innerHTML = `🎙 <span>육성 난장</span>`;
     document.body.appendChild(pill);
     pill.onclick = () => window.GALLA_liveLaunch(link.type, link.id, link.title, "");
     async function poll() {
@@ -817,8 +817,8 @@
       try {
         const { data } = await sb().rpc("live_room_for_link", { p_link_type: link.type, p_link_id: String(link.id) });
         const ex = data && data[0];
-        if (ex) { pill.classList.add("on"); pill.innerHTML = `🔴 <span>라이브 ${ex.listeners || 1}명</span>`; }
-        else { pill.classList.remove("on"); pill.innerHTML = `🎙 <span>라이브 열기</span>`; }
+        if (ex) { pill.classList.add("on"); pill.innerHTML = `🔴 <span>육성 난장 ${ex.listeners || 1}명</span>`; }
+        else { pill.classList.remove("on"); pill.innerHTML = `🎙 <span>육성 난장 열기</span>`; }
       } catch (e) {}
     }
     poll(); setInterval(poll, 15000);
