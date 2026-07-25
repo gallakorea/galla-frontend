@@ -168,15 +168,18 @@
       </div>
       <div class="lv-chat" id="lv-chat"></div>
       <div class="lv-react" id="lv-react">
-        <button data-emo="❤️" type="button">❤️</button>
-        <button data-emo="💩" type="button">💩</button>
-        <button data-emo="👏" type="button">👏</button>
-        <button data-emo="🔥" type="button">🔥</button>
-        <button data-emo="😂" type="button">😂</button>
-        <span class="lv-react-sp"></span>
-        <button class="lv-present-btn" id="lv-present-open" type="button" hidden>📌 자료</button>
-        <button class="lv-super" id="lv-super" type="button">💸 쏘기</button>
-        <button class="lv-share" id="lv-share" type="button">🔗</button>
+        <div class="lv-react-emos">
+          <button data-emo="❤️" type="button">❤️</button>
+          <button data-emo="💩" type="button">💩</button>
+          <button data-emo="👏" type="button">👏</button>
+          <button data-emo="🔥" type="button">🔥</button>
+          <button data-emo="😂" type="button">😂</button>
+        </div>
+        <div class="lv-react-acts">
+          <button class="lv-present-btn" id="lv-present-open" type="button" aria-label="자료" hidden>📌</button>
+          <button class="lv-super" id="lv-super" type="button">💸 쏘기</button>
+          <button class="lv-share" id="lv-share" type="button" aria-label="공유">🔗</button>
+        </div>
       </div>
       <div class="lv-chatbar">
         <input id="lv-chat-in" maxlength="500" placeholder="실시간 채팅…" autocomplete="off">
@@ -945,10 +948,13 @@
     .lv-msg b{color:#8aa0ff;font-weight:800;margin-right:5px}
     .lv-msg.mine b{color:#7ef0ae}
     .lv-sys{align-self:center;font-size:11.5px;color:#8a90a0;background:rgba(255,255,255,.05);border-radius:999px;padding:3px 11px;margin:2px 0}
-    .lv-react{display:flex;align-items:center;gap:6px;padding:4px 16px 2px}
+    .lv-react{display:flex;align-items:center;gap:8px;padding:4px 12px 2px}
+    .lv-react-emos{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding:2px 0}
+    .lv-react-emos::-webkit-scrollbar{display:none}
+    .lv-react-acts{display:flex;gap:6px;flex:0 0 auto}
     .lv-react button{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;font-size:17px;padding:6px 9px;cursor:pointer;line-height:1}
-    .lv-react button:active{transform:scale(1.25)}
-    .lv-react .lv-react-sp{flex:1}
+    .lv-react button:active{transform:scale(1.15)}
+    .lv-react .lv-present-btn{font-size:16px;padding:7px 10px;background:rgba(111,134,255,.9);border:0;color:#fff}
     .lv-react .lv-super{font-size:12.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#ff8a3d,#ff3d67);border:0;padding:8px 12px}
     .lv-react .lv-share{font-size:15px}
     .lv-fx{position:absolute;inset:0;pointer-events:none;z-index:5;overflow:hidden}
