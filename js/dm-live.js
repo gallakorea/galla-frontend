@@ -229,10 +229,10 @@
     sheet.innerHTML = `
       <div class="lv-sheet-dim"></div>
       <div class="lv-sheet-card">
-        <div class="lv-sheet-h">💸 쏘기 <small>갈라코인(GC) · 1GC=1원 · 100원부터</small></div>
-        <div class="lv-tiers">${tiers.map(t => `<button class="lv-tier" data-amt="${t}" type="button">${t.toLocaleString()}원</button>`).join("")}
+        <div class="lv-sheet-h">💸 쏘기 <small>갈라코인(GC) · 100 GC부터</small></div>
+        <div class="lv-tiers">${tiers.map(t => `<button class="lv-tier" data-amt="${t}" type="button">${t.toLocaleString()} GC</button>`).join("")}
           <button class="lv-tier lv-tier-etc" data-amt="0" type="button">직접</button></div>
-        <input id="lv-super-amt" type="number" min="100" inputmode="numeric" placeholder="직접 입력 (100원부터)" hidden>
+        <input id="lv-super-amt" type="number" min="100" inputmode="numeric" placeholder="직접 입력 (100 GC부터)" hidden>
         <input id="lv-super-msg" maxlength="80" placeholder="응원 메시지 (선택)">
         <div class="lv-sheet-btns"><button id="lv-super-cancel" type="button">취소</button><button id="lv-super-go" type="button" disabled>쏘기</button></div>
       </div>`;
@@ -240,7 +240,7 @@
     let amt = 0;
     const go = sheet.querySelector("#lv-super-go");
     const amtIn = sheet.querySelector("#lv-super-amt");
-    const setAmt = (v) => { amt = v; go.disabled = !(amt >= 100); go.textContent = amt >= 100 ? amt.toLocaleString() + "원 쏘기" : "쏘기"; };
+    const setAmt = (v) => { amt = v; go.disabled = !(amt >= 100); go.textContent = amt >= 100 ? amt.toLocaleString() + " GC 쏘기" : "쏘기"; };
     sheet.querySelectorAll(".lv-tier").forEach(b => b.onclick = () => {
       sheet.querySelectorAll(".lv-tier").forEach(x => x.classList.remove("on")); b.classList.add("on");
       if (b.dataset.amt === "0") { amtIn.hidden = false; amtIn.focus(); setAmt(parseInt(amtIn.value || "0", 10)); }
@@ -273,7 +273,7 @@
     const won = (p.amount || 0).toLocaleString();
     const card = document.createElement("div");
     card.className = "lv-super-card";
-    card.innerHTML = `<div class="lv-sc-top">💸 <b>${esc(p.nick || "익명")}</b> 님 <b class="lv-sc-amt">${won}원</b> 쐈다! 🎉</div>` +
+    card.innerHTML = `<div class="lv-sc-top">💸 <b>${esc(p.nick || "익명")}</b> 님 <b class="lv-sc-amt">${won} GC</b> 쐈다! 🎉</div>` +
       (p.msg ? `<div class="lv-sc-msg">${esc(p.msg)}</div>` : "");
     fx.appendChild(card);
     try { window.GALLA_haptic && window.GALLA_haptic("strong"); } catch (e) {}
