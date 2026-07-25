@@ -19,19 +19,22 @@
 
   /* 전 스텝을 실제 요소에 앵커(사장님: 두 개만 연결되고 나머진 붕 떠 보였다) —
      타깃만 스포트라이트로 밝게 뚫리고 나머지는 어두워져 '어딜 말하는지' 즉시 보인다. */
+  /* 순서 = 채팅(메인)→육성톡·면상톡→무전기→삐삐→난장→육성 난장 (사장님 확정) */
   var STEPS = [
     { sel: ".dm-tabs", icon: "🗨️", kicker: "환영합니다", title: "여기가 갈라톡",
       body: "카톡 갈아치우러 온 <b>갈라톡</b>이에요.<br>탭 4개가 놀이터 — <b>30초</b>만 구경할래요?" },
-    { sel: '.dm-tab[data-tab="rooms"]', icon: "🎙", kicker: "★ 라이브 ★", title: "육성 난장", big: true,
-      body: "클럽하우스처럼 <b>목소리로 떠드는 라이브 토크</b>!<br>무대 올라가 말하고, 리액션 날리고, 💸 쏘기로 응원까지." },
-    { sel: '.dm-tab[data-tab="rooms"]', icon: "🎪", kicker: "오픈 수다방", title: "난장",
-      body: "아무나 들어와 떠드는 <b>오픈챗</b>.<br>주제 하나 걸고 판 벌이면 사람들이 몰려와요." },
-    { sel: '.dm-tab[data-tab="pager"]', icon: "📟", kicker: "★ 이건 꼭 ★", title: "삐삐 부활!", big: true,
-      body: "90년대 그 삐삐 맞아요. <b>8282</b>(빨리빨리) 쳐서 호출하고,<br>암호책 보고 해독하는 재미 ㅋㅋ" },
-    { sel: '.dm-tab[data-tab="chats"]', icon: "🎙", kicker: "★ 진짜 무기 ★", title: "무전기, 꾹 눌러 말해요", big: true, art: artWalkie,
-      body: "채팅방에서 🎤 버튼을 <b>꾹 누르면 말하고, 떼면 바로 전송</b> —<br>무전기처럼 실시간! 위로 밀면 취소돼요." },
+    { sel: '.dm-tab[data-tab="chats"]', icon: "💬", kicker: "여기가 메인", title: "채팅", big: true,
+      body: "1:1·단체 채팅 다 여기서.<br>사진·음성·GIF에 <b>비밀대화(암호화)</b>까지 돼요." },
     { sel: '.dm-tab[data-tab="friends"]', icon: "📞", kicker: "통화도 됨", title: "육성톡 · 면상톡",
       body: "친구를 꾹 누르면 음성(육성톡)·영상(면상톡) <b>바로 콜</b>.<br>갈라 앱에서 빵빵하게 연결돼요." },
+    { sel: '.dm-tab[data-tab="chats"]', icon: "🎙", kicker: "★ 진짜 무기 ★", title: "무전기, 꾹 눌러 말해요", big: true, art: artWalkie,
+      body: "채팅방에서 🎤 버튼을 <b>꾹 누르면 말하고, 떼면 바로 전송</b> —<br>무전기처럼 실시간! 위로 밀면 취소돼요." },
+    { sel: '.dm-tab[data-tab="pager"]', icon: "📟", kicker: "★ 이건 꼭 ★", title: "삐삐 부활!", big: true,
+      body: "90년대 그 삐삐 맞아요. <b>8282</b>(빨리빨리) 쳐서 호출하고,<br>암호책 보고 해독하는 재미 ㅋㅋ" },
+    { sel: '.dm-tab[data-tab="rooms"]', icon: "🎪", kicker: "오픈 수다방", title: "난장",
+      body: "아무나 들어와 떠드는 <b>오픈챗</b>.<br>주제 하나 걸고 판 벌이면 사람들이 몰려와요." },
+    { sel: '.dm-tab[data-tab="rooms"]', icon: "🎙", kicker: "★ 라이브 ★", title: "육성 난장", big: true,
+      body: "클럽하우스처럼 <b>목소리로 떠드는 라이브 토크</b>!<br>무대 올라가 말하고, 리액션 날리고, 💸 쏘기로 응원까지." },
     { center: true, icon: "🚀", kicker: "준비 끝", title: "자, 이제 떠들어봐요!",
       body: "친구 초대하고 · 난장 열고 · 삐삐 치고 —<br>여기서 다 놀 수 있어요. 카톡, 잘 가 👋" }
   ];
