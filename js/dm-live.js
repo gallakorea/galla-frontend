@@ -73,7 +73,7 @@
       sec.innerHTML = `
         <div class="lv-sec-head">
           <span class="lv-sec-t">🎙 육성 난장</span>
-          <button class="lv-open-btn" id="lv-open" type="button">＋ 열기</button>
+          <button class="lv-open-btn" id="lv-open" type="button">＋ 육성난장 열기</button>
         </div>
         <div class="lv-lobby-search">
           <input id="lv-lobby-q" placeholder="🔎 난장 주제·방장 검색" autocomplete="off">
