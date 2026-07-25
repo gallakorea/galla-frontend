@@ -207,6 +207,7 @@
       CUR.channel.on("broadcast", { event: "react" }, ({ payload }) => spawnFloat(payload && payload.emo));
       CUR.channel.on("broadcast", { event: "super" }, ({ payload }) => showSuper(payload));
       CUR.channel.on("broadcast", { event: "sys" }, ({ payload }) => sysMsg(payload && payload.text));
+      CUR.channel.on("broadcast", { event: "chat" }, ({ payload }) => { if (payload && payload.sender_id !== ME) appendMsg(payload); });
       CUR.channel.on("broadcast", { event: "present" }, ({ payload }) => renderPresent(payload));
       CUR.channel.subscribe();
     } catch (e) {}
@@ -416,7 +417,7 @@
   function chatBox() { return document.getElementById("lv-chat"); }
   function appendMsg(m, atTop) {
     const box = chatBox(); if (!box || !CUR) return;
-    const nick = (CUR.nicks && CUR.nicks[m.sender_id]) || "익명";
+    const nick = m.nick || (CUR.nicks && CUR.nicks[m.sender_id]) || "익명";
     const mine = m.sender_id === ME;
     const row = document.createElement("div");
     row.className = "lv-msg" + (mine ? " mine" : "");
@@ -442,20 +443,17 @@
       const box = chatBox(); if (box) box.innerHTML = "";
       (data || []).reverse().forEach(m => appendMsg(m));
     } catch (e) {}
-    // 실시간 신규 메시지
-    try {
-      CUR.chatCh = sb().channel("liveroom:" + CUR.roomId)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "open_messages", filter: "room_id=eq." + CUR.roomId },
-          p => { const m = p.new; if (m && m.sender_id !== ME) appendMsg(m); })
-        .subscribe();
-    } catch (e) {}
+    // 신규 메시지 = broadcast로 즉시 전달(리액션·쏘기와 동일). postgres_changes 실시간
+    // RLS/구독 이슈로 남의 채팅이 안 뜨던 문제 → 방 채널 broadcast('chat')로 확실히 전달.
   }
   async function sendChat() {
     const cin = document.getElementById("lv-chat-in"); if (!cin || !CUR) return;
     const body = (cin.value || "").trim(); if (!body) return;
     cin.value = "";
-    appendMsg({ sender_id: ME, body });   // 낙관적
-    try { await sb().from("open_messages").insert({ room_id: CUR.roomId, sender_id: ME, body }); } catch (e) { toast("전송 실패"); }
+    const nick = (CUR.nicks && CUR.nicks[ME]) || "나";
+    appendMsg({ sender_id: ME, body, nick });   // 낙관적(내 화면)
+    try { CUR.channel.send({ type: "broadcast", event: "chat", payload: { sender_id: ME, body, nick } }); } catch (e) {}
+    try { await sb().from("open_messages").insert({ room_id: CUR.roomId, sender_id: ME, body }); } catch (e) {}
   }
 
   /* ── 실시간 리액션 (❤️/💩 날아다니기) ─────────────────────────────────── */

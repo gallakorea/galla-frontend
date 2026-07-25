@@ -13,21 +13,22 @@ begin
 end $$;
 grant execute on function public.live_heartbeat(uuid) to authenticated;
 
--- 청소: 무응답(>120s) 멤버 삭제 → 호스트가 사라졌거나 산 멤버가 없는 라이브 종료.
--- (120s = iOS 타이머 스로틀링·잠깐 백그라운드에도 방장이 억울하게 안 잘리도록 넉넉히)
+-- 청소: 무응답(>300s) 멤버 삭제 → '완전히 빈 방'만 종료.
+-- ⚠️ '호스트 없으면 종료'는 활성 방장을 오탐 강퇴시켜(관중 퇴장·순단 등) 폐기.
+--    방장 정상 퇴장은 live_end/live_leave(owner)가 즉시 종료하므로, reaper는 유령(전원 이탈)만 청소.
+-- (300s = iOS 타이머 스로틀링·잠깐 백그라운드에도 방장이 억울하게 안 잘리도록 넉넉히)
 create or replace function public.live_reap()
 returns void language plpgsql security definer set search_path=public as $$
 begin
-  -- 120초 이상 무응답 멤버 제거(강제종료·백그라운드 이탈)
+  -- 300초 이상 무응답 멤버 제거(강제종료·백그라운드 이탈)
   delete from open_room_members m
    using open_rooms r
    where m.room_id = r.id and r.kind='live' and r.is_live=true
-     and m.last_seen < now() - interval '120 seconds';
-  -- 살아있는 호스트가 없는 라이브 = 종료
+     and m.last_seen < now() - interval '300 seconds';
+  -- 멤버가 하나도 안 남은(유령) 라이브만 종료 — 산 사람이 있으면 절대 안 닫는다
   update open_rooms r set is_live=false, ended_at=now()
    where r.kind='live' and r.is_live=true
-     and not exists (select 1 from open_room_members m
-                      where m.room_id=r.id and m.role='host');
+     and not exists (select 1 from open_room_members m where m.room_id=r.id);
 end $$;
 grant execute on function public.live_reap() to authenticated;
 
