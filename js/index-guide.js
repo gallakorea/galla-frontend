@@ -17,13 +17,17 @@
 
   try { if (localStorage.getItem(DISMISS)) return; } catch (e) { return; }
 
+  var SHELL = false; try { SHELL = window.self !== window.top; } catch (e) { SHELL = true; }
+  function toastMsg(m) { try { if (window.GALLA_toast) window.GALLA_toast(m); } catch (e) {} }
+
+  // go: "collapse"=여기(인덱스 피드)로 접기, "soon"=준비중 토스트, {tab,url}=탭 이동
   var STEPS = [
-    { ic: "👊", t: "편 갈라 싸우기", s: "이슈마다 👍/👎 <b>진영</b>을 골라 참전. 회색분자는 문 앞에서 컷!" },
-    { ic: "🎯", t: "갈라예측", s: "결과를 맞히면 GP <b>왕창</b>. 소수파일수록 리턴이 커져요." },
-    { ic: "📟", t: "갈라톡 (메신저)", s: "<b>무전기</b>(꾹 눌러 말하기)·삐삐·음성/영상통화까지. 카톡 은퇴각." },
-    { ic: "🗣️", t: "광장", s: "짤·밈·드립 다 받아주는 <b>아무말 대잔치</b>. 댓글로 전투도." },
-    { ic: "🧠", t: "갈라뉴스", s: "여러 기사를 <b>AI가 3줄</b>로 씹어서 떠먹여줘요." },
-    { ic: "🤩", t: "크리에이터", s: "유튜브처럼 <b>크리에이터</b>로 활동. (자세한 안내는 곧!)" }
+    { ic: "👊", t: "편 갈라 싸우기", s: "이슈마다 👍/👎 <b>진영</b>을 골라 참전. 회색분자는 문 앞에서 컷!", go: "collapse" },
+    { ic: "🎯", t: "갈라예측", s: "결과를 맞히면 GP <b>왕창</b>. 소수파일수록 리턴이 커져요.", tab: "predict", url: "galla-predict.html" },
+    { ic: "📟", t: "갈라톡 (메신저)", s: "<b>무전기</b>(꾹 눌러 말하기)·삐삐·음성/영상통화까지. 카톡 은퇴각.", tab: "dm", url: "dm.html" },
+    { ic: "🗣️", t: "광장", s: "짤·밈·드립 다 받아주는 <b>아무말 대잔치</b>. 댓글로 전투도.", tab: "trend", url: "search.html" },
+    { ic: "🧠", t: "갈라뉴스", s: "여러 기사를 <b>AI가 3줄</b>로 씹어서 떠먹여줘요.", tab: "trend", url: "search.html" },
+    { ic: "🤩", t: "크리에이터", s: "유튜브처럼 <b>크리에이터</b>로 활동. (자세한 안내는 곧!)", go: "soon" }
   ];
 
   function mount() {
@@ -43,13 +47,14 @@
         "</button>" +
         '<div class="iog-body">' +
           '<div class="iog-steps">' +
-            STEPS.map(function (x) {
-              return '<div class="iog-step"><span class="iog-ic">' + x.ic + '</span>' +
-                '<span class="iog-tx"><b class="iog-t">' + x.t + "</b><span class=\"iog-s\">" + x.s + "</span></span></div>";
+            STEPS.map(function (x, i) {
+              return '<button type="button" class="iog-step" data-i="' + i + '"><span class="iog-ic">' + x.ic + '</span>' +
+                '<span class="iog-tx"><b class="iog-t">' + x.t + "</b><span class=\"iog-s\">" + x.s + "</span></span>" +
+                '<span class="iog-go">›</span></button>';
             }).join("") +
           "</div>" +
           '<div class="iog-foot">' +
-            '<button class="iog-cta" id="iogStart" type="button">' + (loggedIn() ? "시작하기 →" : "🎁 가입하고 +500 GP 받기") + "</button>" +
+            '<button class="iog-cta" id="iogStart" type="button">' + (loggedIn() ? "접어두기" : "🎁 가입하고 +500 GP 받기") + "</button>" +
             '<button class="iog-dismiss" id="iogDismiss" type="button">더 이상 안 보기</button>' +
           "</div>" +
         "</div>" +
@@ -64,6 +69,25 @@
     };
     wrap.querySelector("#iogDismiss").onclick = function () { remove(wrap); };
     wrap.querySelector("#iogStart").onclick = function () { start(wrap); };
+    // 각 설명 클릭 → 해당 페이지로 이동(셸이면 탭 전환, 아니면 URL)
+    wrap.querySelectorAll(".iog-step").forEach(function (btn) {
+      btn.onclick = function () { navTo(STEPS[+btn.dataset.i], wrap); };
+    });
+  }
+
+  function collapse(wrap) {
+    var box = wrap.querySelector("#iogBox");
+    if (box) box.classList.remove("open");
+    var arw = wrap.querySelector(".iog-head-arrow"); if (arw) arw.textContent = "▾";
+    try { localStorage.setItem(COLLAPSE, "1"); } catch (e) {}
+  }
+
+  function navTo(step, wrap) {
+    if (!step) return;
+    if (step.go === "collapse") return collapse(wrap);   // 편 갈라 싸우기 = 여기 피드 → 접어서 보여줌
+    if (step.go === "soon") return toastMsg("크리에이터 기능은 곧 공개돼요! 🚀");
+    if (SHELL && step.tab) { try { window.parent.postMessage({ galla: "shell", t: "nav", tab: step.tab }, location.origin); return; } catch (e) {} }
+    if (step.url) location.href = step.url;
   }
 
   function remove(wrap) {
@@ -74,7 +98,7 @@
 
   function start(wrap) {
     if (loggedIn()) {
-      remove(wrap);   // 이미 회원 — 웰컴 GP는 로그인 때 자동 지급됨. 안내만 치운다.
+      collapse(wrap);   // 이미 회원 — 제거 아님 '접기'. 영구 제거는 [더 이상 안 보기]만.
     } else {
       // 미로그인 → 가입 유도. +500 GP는 가입 후 첫 로그인에서 supabase.js가 서버 지급.
       try { localStorage.setItem(DISMISS, "1"); } catch (e) {}
@@ -98,10 +122,13 @@
       ".iog-body{max-height:0;overflow:hidden;transition:max-height .45s cubic-bezier(.2,.7,.2,1)}",
       ".iog.open .iog-body{max-height:900px}",
       ".iog-steps{padding:2px 14px 4px}",
-      ".iog-step{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-top:1px solid rgba(255,255,255,.05)}",
+      ".iog-step{display:flex;gap:12px;align-items:center;width:100%;padding:10px 0;border:0;border-top:1px solid rgba(255,255,255,.05);",
+        "background:none;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}",
       ".iog-step:first-child{border-top:0}",
+      ".iog-step:active{opacity:.6}",
       ".iog-ic{font-size:22px;line-height:1.1;flex:0 0 auto;width:26px;text-align:center}",
-      ".iog-tx{min-width:0;display:flex;flex-direction:column;gap:2px}",
+      ".iog-go{flex:0 0 auto;color:#6b7488;font-size:20px;font-weight:900;padding-left:4px}",
+      ".iog-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}",
       ".iog-t{font-size:14px;font-weight:900;color:#fff}",
       ".iog-s{font-size:12.5px;line-height:1.5;color:#a7afc0}",
       ".iog-s b{color:#dfe4f0;font-weight:800}",

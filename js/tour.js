@@ -12,32 +12,9 @@
 (function () {
   var KEY = "galla_tour_v2";
   var PROJ = "bidqauputnhkqepvdzrr";
-  var BONUS_PENDING = "galla_tour_bonus_pending";
 
   function loggedIn() { try { return !!localStorage.getItem("sb-" + PROJ + "-auth-token"); } catch (e) { return false; } }
-  function toastMsg(m) { try { if (window.GALLA_toast) return void window.GALLA_toast(m); } catch (e) {} }
-
-  /* 🎁 완주 보너스 정산기 — supabase가 있는 어느 페이지에서든(=index 판) 실행.
-     로그아웃으로 완주 후 가입하면, 로그인된 판이 뜨는 순간 여기서 자동 지급된다.
-     ※ iframe 표시 가드보다 먼저 돌아야 셸 자식(index 판)에서도 작동한다. */
-  (function claimPending() {
-    var pend; try { pend = localStorage.getItem(BONUS_PENDING); } catch (e) { return; }
-    if (!pend) return;
-    var tries = 0;
-    var iv = setInterval(function () {
-      var sb = window.supabaseClient;
-      if (!sb || !sb.rpc) { if (++tries > 40) clearInterval(iv); return; }
-      clearInterval(iv);
-      sb.auth.getSession().then(function (r) {
-        if (!r || !r.data || !r.data.session) return;   // 아직 로그인 전 → 플래그 유지
-        sb.rpc("claim_tour_bonus").then(function (res) {
-          try { localStorage.removeItem(BONUS_PENDING); } catch (e) {}
-          var d = res && res.data;
-          if (d && d.ok && d.amount > 0) toastMsg("🎁 온보딩 완주 보너스 +" + d.amount + " GP 지급!");
-        }, function () {});
-      }, function () {});
-    }, 400);
-  })();
+  // 🎁 +500 GP는 이제 '가입 웰컴'으로 서버 자동 지급(supabase.js claim_welcome_bonus) — 투어는 안내만.
 
   // 셸 iframe 안(자식)에서는 투어 표시 안 함 — top 문서(app-shell/직접 index)만
   try { if (window.self !== window.top) return; } catch (e) { return; }
@@ -118,9 +95,9 @@
     },
     {
       bg: "radial-gradient(120% 90% at 50% 8%, #3a1010, #180707 62%, #0b0404)",
-      kicker: "🎁 완주 보너스 도착",
-      title: "끝까지 봤으니 +500 GP",
-      sub: "축하해요, 이탈 안 한 당신 🫡<br>지금 시작하면 <b>보너스 500 GP</b>가 지갑에 쏙.",
+      kicker: "준비 끝",
+      title: "자, 이제 시작해볼까요",
+      sub: "가입하면 <b>+500 GP</b>가 지갑에 쏙 🎁<br>편 고르고, 예측하고, 갈라톡으로 떠들어봐요.",
       art: artFlag,
       cta: true
     }
@@ -137,7 +114,7 @@
     ov.setAttribute("aria-label", "갈라 오리엔테이션");
     ov.innerHTML =
       '<div class="gt-bg"></div>' +
-      '<div class="gt-reward">🎁 끝까지 보면 <b>+500 GP</b></div>' +
+      '<div class="gt-reward">🎁 가입하면 <b>+500 GP</b></div>' +
       '<button class="gt-mute" type="button" aria-label="소리">' + (_muted ? "🔇" : "🔊") + "</button>" +
       '<button class="gt-skip" type="button">건너뛰기 ✕</button>' +
       '<div class="gt-stage"><div class="gt-track"></div></div>' +
@@ -238,20 +215,8 @@
     var goSignup = false;
     if (completed) {
       haptic("boom"); sfx("win");
-      // 완주자에게만 보너스 — 건너뛰기엔 없음(이탈 방지 당근)
-      try { localStorage.setItem(BONUS_PENDING, "1"); } catch (e) {}
-      if (loggedIn()) {
-        // 로그인 상태면 즉시 정산 시도(index 판이면 supabase 있음)
-        try {
-          var sb = window.supabaseClient;
-          if (sb && sb.rpc) sb.rpc("claim_tour_bonus").then(function (res) {
-            var d = res && res.data;
-            if (d && d.ok) { try { localStorage.removeItem(BONUS_PENDING); } catch (e) {} if (d.amount > 0) toastMsg("🎁 완주 보너스 +" + d.amount + " GP 지급!"); }
-          }, function () {});
-        } catch (e) {}
-      } else {
-        goSignup = true;   // 미로그인 완주 → 가입 유도(가입 직후 claimPending이 지급)
-      }
+      // 미로그인 완주 → 가입 유도. +500 GP는 가입 후 첫 로그인에서 supabase.js가 서버 지급(웰컴).
+      if (!loggedIn()) goSignup = true;
     }
 
     stopMusic();
