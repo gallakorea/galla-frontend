@@ -86,6 +86,8 @@
     var s = STEPS[idx], ring = OV.querySelector(".dmt-ring"), card = OV.querySelector(".dmt-card");
     var el = s && s.sel ? document.querySelector(s.sel) : null;
     var rect = el && el.getBoundingClientRect();
+    // 하이라이트 링만 대상 요소에 붙이고, 카드는 '항상 화면 정중앙'(사장님 확정 —
+    // 타깃 기준 배치는 셸/키보드 상황에 따라 위치가 제멋대로 보였다)
     if (rect && rect.width && rect.height && rect.bottom > 0 && rect.top < window.innerHeight) {
       var pad = 8;
       ring.hidden = false;
@@ -93,18 +95,12 @@
       ring.style.top = (rect.top - pad) + "px";
       ring.style.width = (rect.width + pad * 2) + "px";
       ring.style.height = (rect.height + pad * 2) + "px";
-      // 카드: 타깃 아래 공간 있으면 아래, 없으면 위. (하단 nav ~80px 회피)
-      card.style.left = "50%";
-      card.style.transform = "translateX(-50%)";
-      var below = window.innerHeight - rect.bottom;
-      if (below > 260) { card.style.top = (rect.bottom + 18) + "px"; card.style.bottom = "auto"; }
-      else { card.style.top = "auto"; card.style.bottom = (window.innerHeight - rect.top + 18) + "px"; }
     } else {
       ring.hidden = true;
-      card.style.left = "50%"; card.style.transform = "translateX(-50%)";
-      card.style.top = "50%"; card.style.bottom = "auto";
-      card.style.transform = "translate(-50%,-50%)";
     }
+    card.style.left = "50%"; card.style.bottom = "auto";
+    card.style.top = "50%";
+    card.style.transform = "translate(-50%,-50%)";
   }
 
   function finish() {
