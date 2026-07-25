@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072530";
-import { loadAiNews } from "./issue-news.js?v=072530";
-import { loadStats } from "./issue.stats.js?v=072530";
-import { initCommentSystem } from "./issue.comments.js?v=072530";
+import { loadAiArguments } from "./issue-argument.js?v=072531";
+import { loadAiNews } from "./issue-news.js?v=072531";
+import { loadStats } from "./issue.stats.js?v=072531";
+import { initCommentSystem } from "./issue.comments.js?v=072531";
 
 
 console.log("[issue.js] loaded");
@@ -747,8 +747,16 @@ async function bumpViewOnce(issueId) {
     const b = e.target.closest(".gv-btn"); if (!b) return;
     if (!issueId || typeof window.GALLA_VOTE !== "function" || typeof window.GALLA_CHECK_VOTE !== "function") return;
     const type = b.classList.contains("gv-pro") ? "pro" : "con";
-    // 0) 로그인 필수 (미로그인은 이펙트·낙관 반영 전 차단)
-    if (!window.GALLA_requireLogin || !(await window.GALLA_requireLogin("진영 선택은 로그인 후 가능해요."))) return;
+    // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정). 셸이면 최상위 이동.
+    {
+      let uid = null;
+      try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
+      if (!uid) {
+        const go = "login.html?next=" + encodeURIComponent("issue.html" + location.search);
+        try { (window.top || window).location.href = go; } catch (e2) { location.href = go; }
+        return;
+      }
+    }
     // 0-1) 이미 투표했으면 서버 기준 잠금+안내 후 중단(변경 불가)
     if (window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(gv, issueId)) return;
     // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임 + 팝/튐)

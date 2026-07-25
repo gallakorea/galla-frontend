@@ -570,8 +570,16 @@ function attachEvents() {
             const id = Number(card.dataset.id);
             if (typeof window.GALLA_VOTE !== 'function') return;
             const gv = card.querySelector('.gv');
-            // 0) 로그인 필수 — 미로그인은 낙관적 반영·이펙트 전에 차단(콘텐츠 열람만 허용)
-            if (!window.GALLA_requireLogin || !(await window.GALLA_requireLogin('진영 선택은 로그인 후 가능해요.'))) return;
+            // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정). 셸이면 최상위 이동.
+            {
+                let uid = null;
+                try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
+                if (!uid) {
+                    const go = 'login.html?next=' + encodeURIComponent('index.html');
+                    try { (window.top || window).location.href = go; } catch (e2) { location.href = go; }
+                    return;
+                }
+            }
             // 0-1) 이미 투표했으면 서버 기준으로 잠금+안내 후 중단(변경 불가)
             if (gv && window.GALLA_VoteBar && await window.GALLA_VoteBar.guardLocked(gv, id)) return;
             // 1) 낙관적 즉시 반영(첫 클릭에도 바로 움직임)
