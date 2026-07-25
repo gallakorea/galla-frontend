@@ -51,6 +51,24 @@
 </head>
 <body data-page="shell">
 
+<!-- 🔬 iosrtc 브릿지 도달 진단(?rtcprobe 일 때만 — 일반 사용자엔 영향 없음) -->
+<script>
+(function(){
+  if (!/[?&]rtcprobe/.test(location.search)) return;
+  function check(){
+    var cap = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    var cordova = !!window.cordova;
+    var iosrtc = !!(window.cordova && window.cordova.plugins && window.cordova.plugins.iosrtc);
+    document.body.innerHTML = '<div style="position:fixed;inset:0;background:#000;color:#0f0;font:16px monospace;padding:48px 24px;z-index:99999;white-space:pre-wrap;line-height:1.6">'
+      + 'RTC PROBE\n\nCapacitor native: ' + cap + '\ncordova bridge: ' + cordova + '\niosrtc plugin: ' + iosrtc
+      + '\n\nUA:\n' + navigator.userAgent + '</div>';
+  }
+  document.addEventListener('deviceready', function(){ setTimeout(check, 300); });
+  window.addEventListener('load', function(){ setTimeout(check, 1800); });
+})();
+</script>
+
+
 <div id="shell-track">
   <div class="shell-pane" data-tab="index"></div>
   <div class="shell-pane" data-tab="predict"></div>
