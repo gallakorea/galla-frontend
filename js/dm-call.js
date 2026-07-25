@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072578'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072579'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -46,6 +46,13 @@
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // 🔬 통화 흐름 진단 비콘 — 실기기에서 어디서 끊기는지 서버 로그로 본다(네이티브 앱에서만, 웹 노이즈 방지).
+  function bcn(msg) {
+    try {
+      if (!(window.GALLA_isApp && window.GALLA_isApp())) return;
+      if (sb && sb.rpc) sb.rpc('log_client_error', { p_kind: 'call-flow', p_message: String(msg).slice(0, 400), p_ver: 'call1' });
+    } catch (_) {}
+  }
 
   /* ── ICE 설정: TURN 자격증명(1시간) 30분 캐시, 실패 시 STUN만 ── */
   async function iceConfig() {
@@ -119,6 +126,7 @@
       // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { const ch = await peerChan(p.from); ch.send({ type: 'broadcast', event: 'signal', payload: { t: 'busy', from: ME, to: p.from } }); try { sb.removeChannel(ch); } catch (_) {} return; }
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
+      bcn('IN offer from ' + p.from);
       chanPeer = await peerChan(p.from);
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
@@ -132,6 +140,7 @@
     if (!CUR || p.from !== CUR.peer) return;
     if (p.t === 'answer') {
       if (CUR._gotAnswer) return;   // 재전송된 answer 중복 처리 방지(setRemoteDescription 상태오류 회피)
+      bcn('OUT got answer from ' + p.from);
       CUR._gotAnswer = true;
       clearInterval(reoffT); reoffT = null;   // 🔁 answer 받았으니 offer 재전송 중단
       try {
@@ -342,6 +351,7 @@
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
     send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
+    bcn('OUT offer→' + peer + ' (chan=' + (chanPeer && chanPeer.state) + ')');
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
@@ -370,6 +380,7 @@
     if (!CUR || CUR.dir !== 'in') return;
     if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
+    bcn('IN accept() isApp=' + !!(window.GALLA_isApp && window.GALLA_isApp()));
     // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게).
     // 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
@@ -387,8 +398,10 @@
       await pc.setLocalDescription(ans);
       if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
       send({ t: 'answer', sdp: ans.sdp });
+      bcn('IN answer sent→' + CUR.peer + ' (chan=' + (chanPeer && chanPeer.state) + ')');
       paintUI('connecting');
     } catch (e) {
+      bcn('IN accept ERR ' + (e && e.name) + ' ' + (e && e.message));
       console.error('[call] accept', e);
       const nm = CUR?.name;
       endCall('acceptfail', true);
