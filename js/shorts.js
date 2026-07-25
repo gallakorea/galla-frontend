@@ -543,9 +543,15 @@ function __openShortsInternal(list, startId, startTime) {
     // 0) 로그인 필수 — 팝업 없이 '바로' 로그인 페이지로(사장님 확정: 릴스 위 모달은
     //    셸 nav가 떠서 지저분했다). 셸 iframe이면 최상위 문서를 통째로 이동.
     {
-      let uid = null;
-      try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e) {}
+      let uid = null, diag = "";
+      try {
+        if (!window.supabaseClient) diag = "no_client";
+        else { const { data: s, error: se } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; diag = se ? ("err:" + se.message) : (uid ? ("uid:" + String(uid).slice(0, 8)) : "no_session"); }
+      } catch (e) { diag = "ex:" + (e && e.message || "?"); }
+      // 🔬 임시 진단 — 릴스 진영 탭 시 세션 판정 결과 보고(리다이렉트 미동작 추적, 원인 확정 후 제거)
+      try { window.GALLA_logError && window.GALLA_logError(new Error("VOTEDIAG shorts " + diag), "votediag"); } catch (e) {}
       if (!uid) {
+        await new Promise(r => setTimeout(r, 350));   // 진단 전송 여유
         const go = "login.html?next=" + encodeURIComponent("index.html");
         try { (window.top || window).location.href = go; } catch (e) { location.href = go; }
         return;
