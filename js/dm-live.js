@@ -58,15 +58,47 @@
     ensureCSS();
   }
 
-  async function createLive() {
-    const title = (prompt("라이브 난장 제목 (예: 오늘 이슈 토크)") || "").trim();
-    if (!title) return;
-    const topic = (prompt("주제 한 줄 (선택)") || "").trim();
-    try {
-      const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: topic });
-      if (error || !id) return toast("라이브 개설에 실패했어요.");
-      openStage(id, title, topic, "open");
-    } catch (e) { toast("라이브 개설에 실패했어요."); }
+  function createLive() {
+    ensureCSS();
+    if (document.getElementById("lv-new-sheet")) return;
+    const sheet = document.createElement("div");
+    sheet.id = "lv-new-sheet"; sheet.className = "lv-sheet lv-modal";
+    sheet.innerHTML = `
+      <div class="lv-sheet-dim"></div>
+      <div class="lv-sheet-card lv-new-card">
+        <div class="lv-new-h"><span class="lv-live-badge">🔴 LIVE</span> 라이브 난장 열기</div>
+        <label class="lv-new-l">제목</label>
+        <input id="lv-new-title" class="lv-new-in" maxlength="40" placeholder="예: 오늘 이슈 실시간 토크" autocomplete="off">
+        <label class="lv-new-l">주제 <small>선택</small></label>
+        <input id="lv-new-topic" class="lv-new-in" maxlength="40" placeholder="한 줄로 남겨보세요" autocomplete="off">
+        <div class="lv-sheet-btns">
+          <button id="lv-new-cancel" type="button">취소</button>
+          <button id="lv-new-go" type="button" disabled>🎙 열기</button>
+        </div>
+      </div>`;
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add("on"));
+    const titleIn = sheet.querySelector("#lv-new-title");
+    const topicIn = sheet.querySelector("#lv-new-topic");
+    const go = sheet.querySelector("#lv-new-go");
+    const close = () => { sheet.classList.remove("on"); setTimeout(() => sheet.remove(), 200); };
+    titleIn.oninput = () => { go.disabled = !titleIn.value.trim(); };
+    titleIn.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); topicIn.focus(); } };
+    topicIn.onkeydown = e => { if (e.key === "Enter" && titleIn.value.trim()) { e.preventDefault(); go.click(); } };
+    sheet.querySelector("#lv-new-cancel").onclick = close;
+    sheet.querySelector(".lv-sheet-dim").onclick = close;
+    go.onclick = async () => {
+      const title = titleIn.value.trim(); if (!title) return;
+      const topic = topicIn.value.trim();
+      go.disabled = true; go.textContent = "여는 중…";
+      try {
+        const { data: id, error } = await sb().rpc("live_room_create", { p_title: title, p_topic: topic });
+        if (error || !id) { toast("라이브 개설에 실패했어요."); go.disabled = false; go.textContent = "🎙 열기"; return; }
+        close();
+        openStage(id, title, topic, "open");
+      } catch (e) { toast("라이브 개설에 실패했어요."); go.disabled = false; go.textContent = "🎙 열기"; }
+    };
+    setTimeout(() => titleIn.focus(), 60);
   }
 
   async function joinLive(roomId) {
@@ -724,6 +756,21 @@
     @keyframes lvSuperOut{to{opacity:0;transform:translateY(-16px) scale(.96)}}
     .lv-sc-top{font-size:15px;font-weight:950}.lv-sc-amt{font-size:17px}
     .lv-sheet{position:absolute;inset:0;z-index:9;display:flex;align-items:flex-end;justify-content:center}
+    /* 무대 밖(난장 로비)에서 여는 모달 = 화면 최상위 고정 */
+    .lv-modal{position:fixed;z-index:2147483200;opacity:0;transition:opacity .2s ease}
+    .lv-modal.on{opacity:1}
+    .lv-modal .lv-sheet-card{transform:translateY(14px);transition:transform .24s cubic-bezier(.2,.9,.3,1)}
+    .lv-modal.on .lv-sheet-card{transform:none}
+    .lv-new-card{padding-top:20px}
+    .lv-new-h{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:950;color:#fff;margin-bottom:16px}
+    .lv-new-l{display:block;font-size:12px;font-weight:800;color:#8a90a0;margin:0 2px 7px}
+    .lv-new-l small{font-weight:700;color:#5f6675;margin-left:3px}
+    .lv-new-in{width:100%;box-sizing:border-box;background:#0e1015;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:13px 14px;color:#fff;font-size:14.5px;margin-bottom:14px;transition:border-color .15s ease}
+    .lv-new-in:focus{outline:0;border-color:#6f86ff}
+    .lv-new-in::placeholder{color:#5f6675}
+    .lv-sheet-btns #lv-new-cancel{flex:0 0 auto;padding:13px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:none;color:#c8cede;font-weight:800;cursor:pointer}
+    .lv-sheet-btns #lv-new-go{flex:1;padding:13px;border-radius:12px;border:0;background:linear-gradient(135deg,#ff4d67,#ff2d55);color:#fff;font-size:15px;font-weight:950;cursor:pointer}
+    .lv-sheet-btns #lv-new-go:disabled{opacity:.4}
     .lv-sheet-dim{position:absolute;inset:0;background:rgba(0,0,0,.55)}
     .lv-sheet-card{position:relative;width:100%;max-width:480px;background:#15171f;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0));border-top:1px solid rgba(255,255,255,.1)}
     .lv-sheet-h{font-size:16px;font-weight:950;color:#fff;margin-bottom:12px}.lv-sheet-h small{font-size:11.5px;font-weight:700;color:#8a90a0;margin-left:6px}
