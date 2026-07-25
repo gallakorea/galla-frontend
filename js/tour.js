@@ -378,7 +378,29 @@
     }
     return startT + 16 * STEP;
   }
+  /* 🔓 iOS Web Audio 언락 — WKWebView는 무음 스위치/미디어 세션 때문에 AudioContext 출력을
+     죽이는 경우가 있다. 첫 제스처에서 무음 WAV(HTMLMediaElement)를 잠깐 재생해 '미디어 재생'
+     경로를 깨우면 그 뒤 AudioContext가 들린다(게임·Howler가 쓰는 표준 트릭). */
+  var _unlocked = false;
+  function silentWavUri() {
+    var sr = 8000, n = 800, bytes = 44 + n * 2, buf = new ArrayBuffer(bytes), v = new DataView(buf);
+    var s = function (o, str) { for (var i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); };
+    s(0, "RIFF"); v.setUint32(4, bytes - 8, true); s(8, "WAVE"); s(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, "data"); v.setUint32(40, n * 2, true);
+    var u = new Uint8Array(buf), bin = ""; for (var i = 0; i < u.length; i++) bin += String.fromCharCode(u[i]);
+    return "data:audio/wav;base64," + btoa(bin);
+  }
+  function unlockAudio() {
+    if (_unlocked || _muted) return; _unlocked = true;
+    try {
+      var a = new Audio(silentWavUri()); a.loop = true; a.volume = 0.01;
+      var p = a.play(); if (p && p.then) p.then(function () { setTimeout(function () { try { a.pause(); a.src = ""; } catch (e) {} }, 400); }).catch(function () {});
+    } catch (e) {}
+    try { var c = ac(); if (c && c.state === "suspended") c.resume(); } catch (e) {}
+  }
   function startMusic() {
+    unlockAudio();
     var c = ac(); if (!c || _music.on) return;
     _music.on = true;
     _music.next = scheduleBar(c.currentTime + 0.1);
