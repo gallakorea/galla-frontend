@@ -286,8 +286,16 @@
     if (me) { CUR.role = me.role; CUR.muted = me.muted; CUR.hand = me.hand_raised; }
     // 내가 청중→스피커로 승격됐을 때 안내
     if (wasRole === "listener" && CUR.role === "speaker") { sysMsg("🎤 무대에 올랐어요 — 마이크가 켜졌어요"); toast("🎤 무대에 올랐어요!"); }
-    // 청중→스피커 승격되면 자동으로 마이크 발행
-    if (CUR.cf && (CUR.role === "host" || CUR.role === "speaker") && !CUR.cf.pubTrack) maybePublish();
+    if (wasRole !== "host" && CUR.role === "host") { sysMsg("👑 방장이 됐어요"); toast("👑 방장을 넘겨받았어요!"); }
+    // 🎙 마이크 상태를 역할·뮤트에 '강제 일치'시킨다(단일 진실원):
+    //    무대(host/speaker)면 발행, 청중이면 발행 중단, 발행 중이면 뮤트 반영.
+    //    (예전엔 승격만 처리해 강등돼도 소리가 계속 나갔다 — 사장님 재현)
+    if (CUR.cf) {
+      const canSpeak = CUR.role === "host" || CUR.role === "speaker";
+      if (canSpeak && !CUR.cf.pubTrack) maybePublish();
+      else if (!canSpeak && CUR.cf.pubTrack) stopPublish(CUR.cf);
+      if (CUR.cf.pubTrack) CUR.cf.pubTrack.enabled = !CUR.muted;   // 원격(호스트) 뮤트도 실제 반영
+    }
     render();
   }
 
@@ -686,7 +694,7 @@
   async function stepDown() {
     if (!CUR || CUR.role !== "speaker") return;
     // 마이크 발행 중단 + 청중으로 강등
-    try { const cf = CUR.cf; if (cf && cf.pubTrack) { cf.pubTrack.stop(); cf.pubTrack = null; cf.myTrackName = null; } } catch (e) {}
+    try { stopPublish(CUR.cf); } catch (e) {}
     CUR.role = "listener"; CUR.muted = true; render();
     try { await sb().rpc("live_step_down", { p_room: CUR.roomId }); } catch (e) {}
     sysMsg("🙇 무대에서 내려왔어요"); toast("🙇 청중으로 내려왔어요");
@@ -809,12 +817,26 @@
     else { note.hidden = true; note.textContent = ""; }
   }
 
+  // 발행 중단 — 강등/자진하차 시 마이크를 실제로 끈다(트랙 stop = SFU 송출 즉시 중단)
+  function stopPublish(cf) {
+    if (!cf || !cf.pubTrack) return;
+    try { cf.pubTrack.stop(); } catch (e) {}
+    cf.pubTrack = null; cf.myTrackName = null;
+    cf.diag && (cf.diag.tx = false, cf.diag.mic = "-", renderDiag(cf));
+  }
+
   async function maybePublish() {
-    const cf = CUR && CUR.cf; if (!cf || cf.pubTrack) return;
+    const cf = CUR && CUR.cf; if (!cf || cf.pubTrack || cf.pubBusy) return;   // pubBusy = 동시 호출(폴링+승격) 이중 발행 방지
     if (!(CUR.role === "host" || CUR.role === "speaker")) return;
+    cf.pubBusy = true;
     let stream;
     try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } }); }
-    catch (e) { cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf); toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); return; }
+    catch (e) { cf.pubBusy = false; cf.diag.mic = "거부(" + (e && e.name || "err") + ")"; cf.diag.err = "mic_denied"; renderDiag(cf); toast("마이크를 켤 수 없어요 — 권한을 확인해 주세요."); return; }
+    // 승격을 기다리는 사이 강등됐거나 무대가 닫혔으면 즉시 회수
+    if (!CUR || CUR.cf !== cf || cf.pubTrack || !(CUR.role === "host" || CUR.role === "speaker")) {
+      try { stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+      cf.pubBusy = false; return;
+    }
     cf.diag.mic = "ON"; renderDiag(cf);
     const track = stream.getAudioTracks()[0];
     track.enabled = !CUR.muted;
@@ -822,7 +844,8 @@
       const tr = cf.pc.addTransceiver(track, { direction: "sendonly" });
       const offer = await cf.pc.createOffer();
       await cf.pc.setLocalDescription(offer);
-      const trackName = "mic-" + String(ME).slice(0, 8);
+      // 재발행(내려갔다 다시 올라옴) 시 이전 이름과 충돌하지 않게 매번 유니크 접미사
+      const trackName = "mic-" + String(ME).slice(0, 8) + "-" + Date.now().toString(36);
       const res = await sfu(`/sessions/${cf.sessionId}/tracks/new`, "POST",
         { sessionDescription: { type: "offer", sdp: offer.sdp }, tracks: [{ location: "local", mid: tr.mid, trackName }] });
       if (res && res.ok && res.data && res.data.sessionDescription) {
@@ -835,18 +858,23 @@
         track.stop();
       }
     } catch (e) { cf.diag.err = "pub_ex(" + (e && e.name || "?") + ")"; renderDiag(cf); try { track.stop(); } catch (_) {} }
+    cf.pubBusy = false;
   }
   function announcePub() {
     const cf = CUR && CUR.cf; if (!cf || !cf.myTrackName) return;
     try { CUR.channel.send({ type: "broadcast", event: "pub", payload: { uid: ME, sessionId: cf.sessionId, trackName: cf.myTrackName } }); } catch (e) {}
   }
   function onPub(p) {
-    const cf = CUR && CUR.cf; if (!cf || !p || p.uid === ME || cf.subs.has(p.uid)) return;
-    cf.subs.add(p.uid);
+    const cf = CUR && CUR.cf; if (!cf || !p || p.uid === ME) return;
+    // 같은 사람이 '재발행'(내려갔다 다시 올라옴 → 새 trackName)하면 다시 구독해야 한다
+    // — uid로만 중복 제거하면 새 트랙을 영영 못 받는다(승계 방장 소리 안 남).
+    const key = p.uid + "|" + p.trackName;
+    if (cf.subs.has(key)) return;
+    cf.subs.add(key);
     // 재협상은 한 번에 하나 — 큐로 직렬화
-    cf.q = cf.q.then(() => subscribe(p)).catch(() => {});
+    cf.q = cf.q.then(() => subscribe(p, key)).catch(() => {});
   }
-  async function subscribe(p) {
+  async function subscribe(p, key) {
     const cf = CUR && CUR.cf; if (!cf) return;
     // 발행자가 아직 패킷을 안 보내면 not_found_track_error — 재시도(스피커가 막 켠 경우 대비)
     for (let i = 0; i < 6; i++) {
@@ -868,7 +896,7 @@
       } catch (e) { break; }
       await new Promise(r => setTimeout(r, 1300));   // 잠시 후 재시도
     }
-    cf.subs.delete(p.uid);   // 실패 → 나중에 재-announce 시 다시 구독 가능
+    cf.subs.delete(key);   // 실패 → 나중에 재-announce 시 다시 구독 가능
   }
   function stopAudio(cf) {
     if (!cf) return;
