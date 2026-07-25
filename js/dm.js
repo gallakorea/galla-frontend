@@ -4551,9 +4551,15 @@
       : PTT?.armed === 'lock' ? '손을 떼면 계속 녹음(핸즈프리)'
       : '손을 떼면 전송 · 위로 밀어 취소';
   }
+  let WALKIE_OK = null;   // 무전기 사용권 보유 캐시(난장 전용 게이팅 · 1:1은 무료)
   async function startVoiceRec() {
     if (VREC || (!curThread && !inRoomView())) return;
     if (!inRoomView() && secretOn(curThread)) { PTT = null; return toastMini('비밀대화에선 텍스트만 보낼 수 있어요 (암호화 보장)'); }
+    // 📻 난장 무전기 = 유료 아이템(walkie_pass). 구매 유도 문구 없이 즉시 상점(상점 UX 정책).
+    if (inRoomView()) {
+      if (WALKIE_OK === null) { try { WALKIE_OK = !!(await window.GALLA_hasItem?.('walkie_pass')); } catch (_) { WALKIE_OK = false; } }
+      if (!WALKIE_OK) { PTT = null; WALKIE_OK = null; window.openShop?.(); return; }   // 구매 직후 재시도 대비 캐시 리셋
+    }
     movePanelToActiveView('#dm-ptt');   // 난장에서 녹음해도 패널이 그 뷰 위에 뜨게
     if (!window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
       PTT = null; return toastMini('이 브라우저는 음성 메시지를 지원하지 않아요');

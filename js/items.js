@@ -30,6 +30,8 @@
       desc: "내로남불·유체이탈·국뽕 등 시사 밈 9종 (영구)", use: "댓글 😀 피커에 스티커 탭이 추가돼요" },
     { key: "gif_pack",        emoji: "🎬", name: "GIF 사용권", price: 1500, group: "deco", kind: "unlock",
       desc: "댓글·전투에 움짤(GIF)을 검색해서 붙일 수 있어요 (영구)", use: "댓글 입력창의 GIF 버튼이 열려요" },
+    { key: "walkie_pass",     emoji: "📻", name: "무전기 사용권", price: 1200, group: "deco", kind: "unlock",
+      desc: "난장(오픈챗)에서 꾹 눌러 말하는 음성 메시지를 쓸 수 있어요 (영구 · 1:1은 무료)", use: "난장 채팅바의 🎤 버튼이 열려요" },
     // ── 도전 ──
     { key: "duel_ticket",     emoji: "⚔️", name: "일기토 신청서", price: 700, group: "duel", kind: "consumable",
       desc: "원하는 상대에게 1:1 논쟁 대결(일기토)을 신청", use: "상대 댓글 ⋯ 메뉴·프로필의 ⚔️ 일기토 신청 시 1장 쓰여요" },
