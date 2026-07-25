@@ -4,12 +4,12 @@
    전체화면 슬라이드가 아니라, 진짜 DM 화면을 반투명하게 덮고 그 위에서
    병맛 말풍선으로 기능을 하나씩 짚어준다(스포트라이트 코치마크).
    특히 🎙 워키토키(꾹 눌러 실시간 음성)·📟 삐삐를 강조.
-   - 로그인 상태 + DM 페이지 최초 1회(localStorage galla_dm_tour_v1)
+   - 로그인 상태 + DM 페이지 최초 1회(localStorage galla_dm_tour_v2)
    - 실제 요소(난장·삐삐 탭)는 하이라이트 링으로, 방 안 기능(워키토키·통화)은 중앙 카드
    ========================================================================== */
 (function () {
   if (document.body.getAttribute("data-page") !== "dm") return;
-  var KEY = "galla_dm_tour_v1";
+  var KEY = "galla_dm_tour_v2";
   var PROJ = "bidqauputnhkqepvdzrr";
   try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
   function loggedIn() { try { return !!localStorage.getItem("sb-" + PROJ + "-auth-token"); } catch (e) { return false; } }
