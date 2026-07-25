@@ -11,7 +11,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072572'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072573'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -106,6 +106,8 @@
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
+      // 잠금화면 CallKit에서 이미 '받기'를 눌렀다면(푸시가 offer보다 먼저 도착) 즉시 수락
+      try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept(); } catch (_) {}
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
@@ -320,6 +322,8 @@
     send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+    // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
+    try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 30000);
     } catch (e) {
       console.error('[call] start', e);
@@ -634,6 +638,38 @@
     listen, start,
     supported: () => !!window.RTCPeerConnection,   // 마이크 가용성은 시도 시점에 판정 — iOS 홈화면 앱은 mediaDevices가 조건부라 여기서 자르면 오탐
     _debug: () => ({ cur: CUR && { peer: CUR.peer, dir: CUR.dir, video: CUR.video }, pcState: pc?.connectionState || null }),
+  };
+
+  /* ── 📞 네이티브 CallKit / VoIP 푸시 브릿지 (AppDelegate.swift ↔ 웹) ──
+     · GALLA_onVoipToken(token): PushKit 토큰을 받아 save_call_token('ios', …)로 저장 → call-push가 조회
+     · GALLA_callKitAnswer(callerId): 잠금화면에서 '받기' → 웹 통화 수락
+       (VoIP 푸시가 WebRTC offer보다 먼저 도착할 수 있어, offer가 아직이면 예약해 뒀다가 도착 즉시 수락)
+     · GALLA_callKitDecline(callerId): '거절/종료' → 웹 통화 거절 */
+  let callKitPendingAnswer = false;
+  window.GALLA_onVoipToken = async function (token) {
+    try {
+      const _sb = window.supabaseClient;
+      if (!_sb || !token) return;
+      const { data } = await _sb.auth.getSession();
+      if (!data?.session?.user?.id) return;   // 로그인 안 됐으면 보류(로그인 후 재전달됨)
+      await _sb.rpc('save_call_token', { p_platform: 'ios', p_token: String(token) });
+    } catch (_) {}
+  };
+  window.GALLA_callKitAnswer = function (callerId) {
+    // 이미 offer가 도착해 수신벨이 떠 있으면 바로 수락
+    if (CUR && CUR.dir === 'in') { try { accept(); } catch (_) {} return; }
+    // 아직이면 예약 — onSignal(offer)에서 도착 즉시 수락
+    callKitPendingAnswer = true;
+    setTimeout(() => { callKitPendingAnswer = false; }, 30000);   // 30초 안에 offer 안 오면 취소
+  };
+  window.GALLA_callKitDecline = function () {
+    callKitPendingAnswer = false;
+    if (CUR && CUR.dir === 'in') { try { decline(); } catch (_) {} }
+  };
+  // offer 도착 시 CallKit 수락이 예약돼 있었으면 자동 수락되도록 훅
+  window.__gallaCallKitConsume = function () {
+    if (callKitPendingAnswer) { callKitPendingAnswer = false; return true; }
+    return false;
   };
 
   /* 어느 페이지에 있어도 벨이 울린다 — supabaseClient가 뜨면 스스로 수신 대기 */
