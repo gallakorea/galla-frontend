@@ -430,6 +430,8 @@
 
   /* ── 실시간 채팅 (open_messages 재사용) ─────────────────────────────────── */
   function chatBox() { return document.getElementById("lv-chat"); }
+  // 오래된 줄 정리 — 채팅·안내가 수백 줄 쌓여도 DOM이 안 무거워지게(최근 120줄 유지)
+  function trimChat(box) { while (box.children.length > 120) box.removeChild(box.firstChild); }
   function appendMsg(m, atTop) {
     const box = chatBox(); if (!box || !CUR) return;
     const nick = m.nick || (CUR.nicks && CUR.nicks[m.sender_id]) || "익명";
@@ -438,6 +440,7 @@
     row.className = "lv-msg" + (mine ? " mine" : "");
     row.innerHTML = `<b>${esc(nick)}</b> <span>${esc(m.body)}</span>`;
     if (atTop) box.insertBefore(row, box.firstChild); else box.appendChild(row);
+    trimChat(box);
     if (!atTop) box.scrollTop = box.scrollHeight;
   }
   // 시스템 안내(입장/퇴장/개설/종료) — 채팅 중앙 회색 라인
@@ -447,6 +450,7 @@
     row.className = "lv-sys";
     row.textContent = text;
     box.appendChild(row);
+    trimChat(box);
     box.scrollTop = box.scrollHeight;
   }
   async function loadChat() {
@@ -1073,12 +1077,15 @@
     .lv-pres-tx b{font-size:13.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
     .lv-pres-tx span{font-size:11px;color:#8a90a0;font-weight:700}
     .lv-pres-go{flex:0 0 auto;font-size:11.5px;font-weight:900;color:#8aa0ff}
-    .lv-stage-body{flex:0 1 auto;max-height:46vh;overflow-y:auto;padding:6px 16px 12px}
-    .lv-chat{flex:1 1 auto;overflow-y:auto;padding:6px 16px;display:flex;flex-direction:column;gap:6px;min-height:60px;border-top:1px solid rgba(255,255,255,.06)}
+    /* 무대는 컴팩트 고정(스피커 최대 2줄 + 청중 1줄 가로스크롤), 채팅이 남는 공간 전부 —
+       인원·채팅이 늘어도 정렬이 안 무너진다(사장님 재현: 커지면 서로 밀림) */
+    .lv-stage-body{flex:0 0 auto;max-height:34vh;overflow-y:auto;padding:2px 16px 8px}
+    .lv-chat{flex:1 1 0;overflow-y:auto;padding:8px 16px 6px;display:flex;flex-direction:column;gap:5px;min-height:0;border-top:1px solid rgba(255,255,255,.06);
+      -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14px);mask-image:linear-gradient(to bottom,transparent 0,#000 14px)}
     .lv-msg{font-size:13px;line-height:1.4;color:#dfe4f0;word-break:break-word}
     .lv-msg b{color:#8aa0ff;font-weight:800;margin-right:5px}
     .lv-msg.mine b{color:#7ef0ae}
-    .lv-sys{align-self:center;font-size:11.5px;color:#8a90a0;background:rgba(255,255,255,.05);border-radius:999px;padding:3px 11px;margin:2px 0}
+    .lv-sys{align-self:center;font-size:10.5px;color:#7d8496;background:rgba(255,255,255,.045);border-radius:999px;padding:2px 9px;margin:0;line-height:1.6}
     .lv-react{display:flex;align-items:center;gap:8px;padding:4px 12px 2px}
     .lv-react-emos{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding:2px 0}
     .lv-react-emos::-webkit-scrollbar{display:none}
@@ -1145,13 +1152,16 @@
     .lv-chatbar{display:flex;gap:8px;padding:8px 16px}
     .lv-chatbar input{flex:1;min-width:0;background:#161a24;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:11px 15px;color:#fff;font-size:14px}
     .lv-chatbar button{flex:0 0 auto;background:#2b6bff;border:0;border-radius:999px;color:#fff;font-weight:900;font-size:13.5px;padding:0 16px;cursor:pointer}
-    .lv-stage-label,.lv-aud-label{font-size:12px;font-weight:900;color:#8a90a0;margin:10px 2px 10px}
-    .lv-speakers{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 6px}
-    .lv-audience{display:grid;grid-template-columns:repeat(5,1fr);gap:14px 4px}
+    .lv-stage-label,.lv-aud-label{font-size:11.5px;font-weight:900;color:#8a90a0;margin:8px 2px 8px}
+    .lv-speakers{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 6px}
+    /* 청중 = 한 줄 가로 스크롤 — 몇십 명이어도 세로 공간을 안 먹는다 */
+    .lv-audience{display:flex;gap:10px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;-ms-overflow-style:none}
+    .lv-audience::-webkit-scrollbar{display:none}
+    .lv-audience .lv-person{flex:0 0 auto;width:56px}
     .lv-person{background:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff}
-    .lv-ava{position:relative;width:60px;height:60px;border-radius:50%;overflow:visible;display:flex;align-items:center;justify-content:center;
+    .lv-ava{position:relative;width:56px;height:56px;border-radius:50%;overflow:visible;display:flex;align-items:center;justify-content:center;
       background:#222634;border:2px solid transparent}
-    .lv-ava.sm{width:46px;height:46px}
+    .lv-ava.sm{width:42px;height:42px}
     .lv-ava img{width:100%;height:100%;border-radius:50%;object-fit:cover}
     .lv-ava-none{font-size:24px}
     .lv-ava.talk{border-color:#33d17a;box-shadow:0 0 0 4px rgba(51,209,122,.25);animation:lvTalk 1s ease-in-out infinite}
@@ -1160,6 +1170,7 @@
     .lv-mic{position:absolute;bottom:-4px;right:-4px;font-size:14px;background:#0a0709;border-radius:50%;padding:1px}
     .lv-hand{position:absolute;top:-8px;right:-6px;font-size:15px}
     .lv-name{font-size:11.5px;max-width:70px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#dfe4f0}
+    .lv-audience .lv-name{max-width:56px;font-size:10.5px}
     .lv-bar{display:flex;gap:8px;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0))}
     .lv-bbtn{flex:1;padding:14px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(255,255,255,.06);color:#fff;font-size:14px;font-weight:900;cursor:pointer}
     .lv-bbtn.act{background:linear-gradient(135deg,#33d17a,#1fae63);border-color:transparent}
