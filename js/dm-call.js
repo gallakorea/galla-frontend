@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072678'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072679'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -914,6 +914,7 @@
   // 통화 버튼 액션 — 웹 버튼과 네이티브 오버레이(window.GALLA_callAction)가 공용으로 호출한다.
   function callAction(c) {
     if (!c) return;
+    wb('callAction ' + c);   // 🔬 네이티브 버튼 → JS 도달 확인
     const box = document.getElementById('dm-call');
     // 영상통화 통화중이면 버튼 시각 상태는 네이티브가 관리 → paintUI 재실행(영상 재전송) 안 한다.
     const nativeVid = box && box.classList.contains('video') && box.dataset.state === 'oncall';
