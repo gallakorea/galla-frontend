@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072608'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072609'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -126,6 +126,7 @@
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
+    if (p.t === 'offer' || p.t === 'answer') wbeacon('recv ' + p.t + ' from=' + String(p.from).slice(0, 8) + ' hasCUR=' + !!CUR + ' dir=' + (CUR && CUR.dir));
     if (p.t === 'offer') {
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
@@ -398,6 +399,7 @@
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
     send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
+    wbeacon('sent offer to=' + String(peer).slice(0, 8) + ' peerCh=' + (chanPeer && chanPeer.state) + ' mineCh=' + (chanMine && chanMine.state));
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
@@ -446,6 +448,7 @@
       await pc.setLocalDescription(ans);
       if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
       send({ t: 'answer', sdp: ans.sdp });
+      wbeacon('sent answer to=' + String(CUR && CUR.peer).slice(0, 8) + ' peerCh=' + (chanPeer && chanPeer.state));
       paintUI('connecting');
     } catch (e) {
       console.error('[call] accept', e);
