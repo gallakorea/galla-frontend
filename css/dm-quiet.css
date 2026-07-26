@@ -493,21 +493,29 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   background: rgba(67,97,255,.18); color: #cdd9ff; font-size: 12px; font-weight: 800;
 }
 .dm-callback:active { transform: scale(.95); }
-/* 페이스톡 화면 — 상대 풀스크린(웹뷰 뒤 네이티브 레이어) + 컨트롤 오버레이.
-   iosrtc는 <video>를 웹뷰 위 네이티브 레이어로 그린다. z-index<0 + 네이티브 웹뷰 투명화(GallaBridgeVC)로
-   영상을 웹뷰 '뒤'로 보내고, 통화 중 페이지를 투명화해 뒤 영상이 비치게 한다 → DOM 컨트롤이 위에 표시. */
-#dm-call.video { background: transparent; }
-#dm-call-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; }
+/* 페이스톡 화면 — 상대 영상(상단) + 하단 컨트롤 바(영상 없는 영역).
+   ⚠️ iosrtc는 <video>를 웹뷰 위 네이티브 레이어로 그려 DOM을 덮는다(z-index로도 못 내림, 웹뷰 투명화로도
+   안 됨). 컨트롤이 보이려면 그 자리에 '영상을 두지 않는' 수밖에 없다 → 원격영상은 화면 상단 68%만 채우고
+   하단 컨트롤 바 영역은 비운다. iosrtc는 요소의 CSS 크기(clientWidth/Height)를 존중하므로 확실히 동작. */
+#dm-call.video { background: #000; }
+#dm-call-remote {
+  position: absolute; top: 0; left: 0; right: 0; height: 68vh;
+  width: 100%; object-fit: cover; background: #000;
+}
 #dm-call-local {
   position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); right: 16px;
-  width: 108px; aspect-ratio: 3/4; object-fit: cover; border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.2); box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 2;
+  width: 96px; aspect-ratio: 3/4; object-fit: cover; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.25); box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 3;
   transform: scaleX(-1);
 }
-html.gcall-video, html.gcall-video body { background: transparent !important; }
-html.gcall-video #shell-track { visibility: hidden !important; }
-#dm-call.video .dmc-card { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
-#dm-call.video[data-state="oncall"] .dmc-name, #dm-call.video[data-state="oncall"] .dmc-state { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+/* 하단 컨트롤 바 — 영상이 없는 영역이라 버튼이 항상 보인다 */
+#dm-call.video .dmc-card {
+  position: absolute; left: 0; right: 0; bottom: 0; top: 68vh; z-index: 2;
+  background: #0a0a0f; border-top: 1px solid rgba(255,255,255,.1);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+#dm-call.video .dmc-ava { display: none; }
 #dm-call.video[data-state="oncall"] .dmc-name, #dm-call.video[data-state="oncall"] .dmc-state { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 .dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }
 .dmc-retry {
