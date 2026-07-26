@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072677'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072678'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -915,12 +915,15 @@
   function callAction(c) {
     if (!c) return;
     const box = document.getElementById('dm-call');
+    // 영상통화 통화중이면 버튼 시각 상태는 네이티브가 관리 → paintUI 재실행(영상 재전송) 안 한다.
+    const nativeVid = box && box.classList.contains('video') && box.dataset.state === 'oncall';
+    const repaint = () => { if (box && !nativeVid) paintUI(box.dataset.state); };
     if (c === 'accept') accept('tap');
     else if (c === 'decline') decline();
     else if (c === 'hangup') endCall('ended');
     else if (c === 'flip') flipCam();
-    else if (c === 'spk') { SPK = !SPK; applyNativeRoute(); if (box) paintUI(box.dataset.state); }
-    else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); if (box) paintUI(box.dataset.state); }
+    else if (c === 'spk') { SPK = !SPK; applyNativeRoute(); repaint(); }
+    else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); repaint(); }
     else if (c === 'rec') toggleRecord(box && box.querySelector('[data-c="rec"]'));
     else if (c === 'tovideo') upgradeToVideo();
     else if (c === 'toaudio') downgradeToAudio();
