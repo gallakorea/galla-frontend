@@ -2,7 +2,7 @@
    구조(운영비 ~0원):
    · 미디어는 폰↔폰 직결(P2P). 직결 실패 시에만 Cloudflare TURN 중계(무료 1TB/월)
    · ICE 설정은 turn-cred 엣지 함수가 1시간짜리 임시 자격증명으로 발급 — 장기 비밀은 서버에만
-   · 시그널링 = Supabase Realtime broadcast (유저마다 call:<uid> 채널)
+   · 시그널링 = DB 신뢰 전송(call_sig 테이블 + Postgres Changes 상시 구독) — 유실·조인지연 없음(카톡급)
    · 벨: 접속 중이면 어느 페이지든 풀스크린 벨(이 파일이 자동 부팅) +
      부재 시 푸시 '보이스톡이 왔어요'(탭→대화방→부재중 기록에서 다시 걸기)
    · 앱 출시 대비: 시그널링·UI는 그대로 두고 네이티브 래핑 시 푸시만 FCM/CallKit로 바꿔 끼우면 된다 */
@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072612'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072613'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -39,7 +39,7 @@
     spkoff: I(18, '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
     rec: I(18, '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>'),
   };
-  let sb = null, ME = null, chanMine = null, chanPeer = null;
+  let sb = null, ME = null, chanSig = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
@@ -57,27 +57,21 @@
     return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
   }
 
-  function peerChan(uid) {
-    return new Promise(res => {
-      const ch = sb.channel('call:' + uid);
-      let done = false;
-      ch.subscribe(st => { if (st === 'SUBSCRIBED' && !done) { done = true; res(ch); } });
-      // 모바일망에선 조인이 1~2초를 넘기도 한다 — 성급히 돌려주면 미가입 send로 유실된다
-      setTimeout(() => { if (!done) { done = true; res(ch); } }, 8000);
-    });
-  }
-  async function send(msg) {
-    if (!chanPeer) return;
-    // 채널이 아직 조인 전이면 잠깐 기다린다 — 미가입 채널 send는 소리 없이 버려진다
-    for (let i = 0; i < 20 && chanPeer.state !== 'joined'; i++) await new Promise(r => setTimeout(r, 250));
-    try { await chanPeer.send({ type: 'broadcast', event: 'signal', payload: { ...msg, from: ME, to: CUR?.peer || msg.to } }); } catch (_) {}
+  // 📞 시그널링 = DB 신뢰 전송(카톡급). 채널 조인·유실 없이 상대의 상시 구독으로 즉시 배달.
+  function send(msg) {
+    const to = (CUR && CUR.peer) || msg.to;
+    if (!to || !sb) return;
+    try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
   }
 
   function listen(_sb, me) {
     sb = _sb; ME = me;
-    if (chanMine || !sb || !ME) return;
-    chanMine = sb.channel('call:' + ME)
-      .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload || {}))
+    if (chanSig || !sb || !ME) return;
+    // 🟢 통화 시그널링 = DB 신뢰 전송 상시 구독(카톡급) — 로그인 시점부터 열려 있어 조인 지연이 없고,
+    //    DB 기반이라 유실이 없다(offer/answer/ice/hangup 전부 이 경로). 첫 통화도 즉시 전환.
+    chanSig = sb.channel('callsig:' + ME)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_sig', filter: 'to_uid=eq.' + ME },
+        ({ new: row }) => { try { onSignal({ ...(row.payload || {}), t: row.t, from: row.from_uid, to: ME }); } catch (_) {} })
       .subscribe();
     // ⚡ 부팅 시 TURN 자격증명을 미리 데워둔다 — 통화 시작·수락 때 buildPC가 turn-cred를 기다리지 않아
     //    연결 체감이 몇 초 → 1초대로 단축된다(30분 캐시).
@@ -110,21 +104,21 @@
         .subscribe();
     }
   }
-  // 📡 내 수신 채널(call:<ME>) 조인 보장 — 콜드스타트 첫 통화에서 answer가 이 채널로 오는데
-  //    아직 조인 전이면 유실돼 '거는중' 고착(1차 실패)이 난다. 조인될 때까지 대기하고, 죽어 있으면 재구독.
-  async function ensureMineJoined() {
-    for (let i = 0; i < 20; i++) {
-      if (chanMine && chanMine.state === 'joined') return;
-      if (!chanMine || ['closed', 'errored'].includes(chanMine.state)) {
-        try { if (chanMine) sb.removeChannel(chanMine); } catch (_) {}
-        chanMine = null;
+  // 📡 시그널 수신 채널(callsig:<ME>) 조인 보장 — 죽어 있으면 재구독. 통화 시작 전 짧게 확인.
+  async function ensureSigJoined() {
+    for (let i = 0; i < 12; i++) {
+      if (chanSig && chanSig.state === 'joined') return;
+      if (!chanSig || ['closed', 'errored'].includes(chanSig.state)) {
+        try { if (chanSig) sb.removeChannel(chanSig); } catch (_) {}
+        chanSig = null;
         if (sb && ME) {
-          chanMine = sb.channel('call:' + ME)
-            .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload || {}))
+          chanSig = sb.channel('callsig:' + ME)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_sig', filter: 'to_uid=eq.' + ME },
+              ({ new: row }) => { try { onSignal({ ...(row.payload || {}), t: row.t, from: row.from_uid, to: ME }); } catch (_) {} })
             .subscribe();
         }
       }
-      await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => setTimeout(r, 200));
     }
   }
   async function onSignal(p) {
@@ -137,10 +131,9 @@
         return;   // 아직 안 받았으면 무시(수신벨은 이미 떠 있음)
       }
       // 다른 상대와 통화/수신 중이면 진짜 busy
-      if (CUR) { const ch = await peerChan(p.from); ch.send({ type: 'broadcast', event: 'signal', payload: { t: 'busy', from: ME, to: p.from } }); try { sb.removeChannel(ch); } catch (_) {} return; }
+      if (CUR) { send({ t: 'busy', to: p.from }); return; }
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
       try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
-      chanPeer = await peerChan(p.from);
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
@@ -365,8 +358,7 @@
     catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video), () => start(peer, name, video)); }
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 걸어요'); }
     try {
-    chanPeer = await peerChan(peer);
-    await ensureMineJoined();   // 📡 answer 받을 내 채널 조인 보장(콜드스타트 첫 통화 '거는중' 고착 방지)
+    await ensureSigJoined();   // 📡 시그널 수신 채널 조인 보장(첫 통화 즉시 전환)
     await buildPC();
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
@@ -398,7 +390,6 @@
       const nm = CUR?.name;
       try { pc?.close(); } catch (_) {} pc = null;
       try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
-      if (chanPeer) { try { sb.removeChannel(chanPeer); } catch (_) {} chanPeer = null; }
       CUR = null;
       paintErr(nm, '통화를 시작하지 못했어요 (' + ((e && e.name) || '오류') + ')');
     }
@@ -508,7 +499,6 @@
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
     localStream = null; remoteStream = null;
-    if (chanPeer) { try { sb.removeChannel(chanPeer); } catch (_) {} chanPeer = null; }
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
