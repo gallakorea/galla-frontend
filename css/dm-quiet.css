@@ -493,41 +493,19 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   background: rgba(67,97,255,.18); color: #cdd9ff; font-size: 12px; font-weight: 800;
 }
 .dm-callback:active { transform: scale(.95); }
-/* 페이스톡 화면 — 상대 영상(상단) + 하단 컨트롤 바(영상 없는 영역).
-   ⚠️ iosrtc는 <video>를 웹뷰 위 네이티브 레이어로 그려 DOM을 덮는다(z-index로도 못 내림, 웹뷰 투명화로도
-   안 됨). 컨트롤이 보이려면 그 자리에 '영상을 두지 않는' 수밖에 없다 → 원격영상은 화면 상단 68%만 채우고
-   하단 컨트롤 바 영역은 비운다. iosrtc는 요소의 CSS 크기(clientWidth/Height)를 존중하므로 확실히 동작. */
-/* ⚠️ DOM 배경을 그리지 않는다 — 검은 배경이 진짜 영상 네이티브 레이어를 덮어 '가짜 검은 화면'을
-   만들 수 있다. 배경은 네이티브(GallaBridgeVC view=black)에 맡기고 여기선 투명. */
-#dm-call.video { background: transparent; }
-#dm-call-remote {
-  position: absolute; top: 0; left: 0; right: 0; height: 68vh;
-  width: 100%; object-fit: cover; background: transparent;
-}
+/* 페이스톡 — 상대 풀스크린 영상 + 내 PiP. 통화중 컨트롤 버튼은 네이티브 오버레이(CallControlsOverlay,
+   윈도우 레벨)가 영상 위에 그린다 → 웹 버튼은 oncall에서 숨긴다(웹 DOM은 영상에 가려 안 보이므로). */
+#dm-call.video { background: #000; }
+#dm-call-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
 #dm-call-local {
   position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); right: 16px;
-  width: 96px; aspect-ratio: 3/4; object-fit: cover; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.25); box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 3;
+  width: 108px; aspect-ratio: 3/4; object-fit: cover; border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.2); box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 2;
   transform: scaleX(-1);
 }
-/* 하단 컨트롤 바 — 영상이 없는 영역이라 버튼이 항상 보인다 */
-#dm-call.video .dmc-card {
-  position: fixed; left: 0; right: 0; bottom: 0; top: 68vh; z-index: 2147483000;
-  background: #0a0a0f; border-top: 1px solid rgba(255,255,255,.12);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-}
-#dm-call.video .dmc-ava { display: none; }
-#dm-call.video .dmc-name { color: #fff; font-size: 16px; }
-#dm-call.video .dmc-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 0; }
-#dm-call.video .dmc-btn {
-  width: 60px; height: 60px; border-radius: 50%;
-  background: rgba(255,255,255,.14); color: #fff;
-  display: flex; align-items: center; justify-content: center;
-}
-#dm-call.video .dmc-btn.end { background: #ff3b30; }
-#dm-call.video .dmc-btn svg { width: 26px; height: 26px; }
-#dm-call.video[data-state="oncall"] .dmc-name, #dm-call.video[data-state="oncall"] .dmc-state { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+#dm-call.video[data-state="oncall"] .dmc-card { display: none; }   /* 네이티브 오버레이가 버튼 담당 */
+#dm-call.video .dmc-card { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
+#dm-call.video[data-state="incoming"] .dmc-name, #dm-call.video[data-state="outgoing"] .dmc-name { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 .dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }
 .dmc-retry {
   margin-top: 4px; padding: 11px 22px; border: none; border-radius: 999px; cursor: pointer;

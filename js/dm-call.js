@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072673'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072674'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -895,29 +895,34 @@
         </div>
       </div>`;
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
-    box.onclick = e => {
-      const c = e.target.closest('[data-c]')?.dataset.c;
-      if (c === 'accept') accept('tap');
-      else if (c === 'decline') decline();
-      else if (c === 'hangup') endCall('ended');
-      else if (c === 'flip') flipCam();
-      else if (c === 'spk') { SPK = !SPK; applyNativeRoute(); paintUI(box.dataset.state); }
-      else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); paintUI(box.dataset.state); }
-      else if (c === 'rec') toggleRecord(e.target.closest('[data-c="rec"]'));
-      else if (c === 'tovideo') upgradeToVideo();
-      else if (c === 'toaudio') downgradeToAudio();
-      else if (c === 'mute' || c === 'camoff') {
-        const kind = c === 'mute' ? 'audio' : 'video';
-        const t = localStream?.getTracks().find(x => x.kind === kind);
-        if (!t) return;
-        t.enabled = !t.enabled;
-        const b = box.querySelector(`[data-c="${c}"]`);
-        b.classList.toggle('off', !t.enabled);
-        if (c === 'mute') b.innerHTML = t.enabled ? IC.mic : IC.micoff;
-        else b.innerHTML = t.enabled ? IC.cam : IC.camoff;
-      }
-    };
+    // 📞 면상톡: 네이티브 컨트롤 오버레이 표시(웹뷰 위 = 영상 위). 음성/벨은 웹 버튼 유지.
+    if (video && state === 'oncall') _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '' });
+    else _nativeCall({ action: 'videoUI', show: false });
+    box.onclick = e => callAction(e.target.closest('[data-c]')?.dataset.c);
   }
+  // 통화 버튼 액션 — 웹 버튼과 네이티브 오버레이(window.GALLA_callAction)가 공용으로 호출한다.
+  function callAction(c) {
+    if (!c) return;
+    const box = document.getElementById('dm-call');
+    if (c === 'accept') accept('tap');
+    else if (c === 'decline') decline();
+    else if (c === 'hangup') endCall('ended');
+    else if (c === 'flip') flipCam();
+    else if (c === 'spk') { SPK = !SPK; applyNativeRoute(); if (box) paintUI(box.dataset.state); }
+    else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); if (box) paintUI(box.dataset.state); }
+    else if (c === 'rec') toggleRecord(box && box.querySelector('[data-c="rec"]'));
+    else if (c === 'tovideo') upgradeToVideo();
+    else if (c === 'toaudio') downgradeToAudio();
+    else if (c === 'mute' || c === 'camoff') {
+      const kind = c === 'mute' ? 'audio' : 'video';
+      const t = localStream?.getTracks().find(x => x.kind === kind);
+      if (!t) return;
+      t.enabled = !t.enabled;
+      const b = box && box.querySelector(`[data-c="${c}"]`);
+      if (b) { b.classList.toggle('off', !t.enabled); b.innerHTML = c === 'mute' ? (t.enabled ? IC.mic : IC.micoff) : (t.enabled ? IC.cam : IC.camoff); }
+    }
+  }
+  window.GALLA_callAction = callAction;   // 네이티브 컨트롤 오버레이 버튼 → 이 함수로 브릿지
 
   window.GALLA_call = {
     listen, start,
