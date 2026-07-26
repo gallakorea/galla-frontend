@@ -493,15 +493,23 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   background: rgba(67,97,255,.18); color: #cdd9ff; font-size: 12px; font-weight: 800;
 }
 .dm-callback:active { transform: scale(.95); }
-/* 페이스톡 화면 — 상대 풀스크린 + 내 화면 PiP */
-#dm-call.video { background: #000; }
-#dm-call-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* 페이스톡 화면 — 상대 풀스크린 + 내 화면 PiP
+   ⚠️ iosrtc(iOS 네이티브 앱)는 <video>를 웹뷰 '위' 네이티브 레이어로 그린다. 풀스크린 원격영상이
+   DOM 컨트롤을 덮어버리므로, 원격영상에 z-index<0를 줘 iosrtc가 웹뷰 '뒤'로 렌더하게 하고,
+   통화 중(html.gcall-video)엔 페이지 배경을 투명으로 만들어 뒤 영상이 비치게 한다. 컨트롤은 그 위. */
+#dm-call.video { background: transparent; }
+#dm-call-remote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1; background: #000; }
 #dm-call-local {
   position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); right: 16px;
   width: 108px; aspect-ratio: 3/4; object-fit: cover; border-radius: 16px;
   border: 1px solid rgba(255,255,255,.2); box-shadow: 0 8px 24px rgba(0,0,0,.5); z-index: 2;
   transform: scaleX(-1);
 }
+/* 📺 통화 중 페이지 스택 투명화 — 웹뷰 뒤에 깔린 원격영상이 비쳐 보이게(iosrtc 오버레이 정석).
+   app-shell의 iframe 판(#shell-track)은 불투명 콘텐츠라 뒤 영상을 가리므로 통화 중엔 감춘다
+   (#dm-call은 최상위 fixed 오버레이라 판이 안 보여도 무방). */
+html.gcall-video, html.gcall-video body { background: transparent !important; }
+html.gcall-video #shell-track { visibility: hidden !important; }
 #dm-call.video .dmc-card { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 #dm-call.video[data-state="oncall"] .dmc-name, #dm-call.video[data-state="oncall"] .dmc-state { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 .dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }

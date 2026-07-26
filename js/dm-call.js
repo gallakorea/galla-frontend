@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072657'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072658'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -375,6 +375,7 @@
         if (e.track && remoteStream && remoteStream.addTrack) {
           const has = remoteStream.getTracks && remoteStream.getTracks().some(t => t.id === e.track.id);
           if (!has) { try { remoteStream.addTrack(e.track); } catch (_) {} }
+          wb('ontrack ' + e.track.kind + ' rv=' + (remoteStream.getVideoTracks ? remoteStream.getVideoTracks().length : '?') + ' ra=' + (remoteStream.getAudioTracks ? remoteStream.getAudioTracks().length : '?'));
         }
       } catch (_) {}
       attachMedia();
@@ -625,6 +626,7 @@
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
     localStream = null; remoteStream = null;
+    try { document.documentElement.classList.remove('gcall-video'); } catch (_) {}   // 📺 투명 배경 원복
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
@@ -825,6 +827,9 @@
                        connecting: '연결 중…', oncall: '' }[state] || '';
     box.dataset.state = state;
     box.classList.toggle('video', video);
+    // 📺 iosrtc 영상은 웹뷰 위 네이티브 레이어 → 원격영상을 z-index<0로 웹뷰 '뒤'에 깔고, 통화 중엔
+    //    페이지 배경을 투명으로 만들어 뒤 영상이 비치게 한다. DOM 컨트롤은 그 위에 정상 표시.
+    try { document.documentElement.classList.toggle('gcall-video', video && (state === 'oncall' || state === 'connecting')); } catch (_) {}
     box.innerHTML = `
       ${video
         ? `<video id="dm-call-remote" autoplay playsinline></video>
