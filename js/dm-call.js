@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072650'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072651'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -61,7 +61,19 @@
   function send(msg) {
     const to = (CUR && CUR.peer) || msg.to;
     if (!to || !sb) return;
+    if (['offer', 'answer', 'accepted', 'hangup'].includes(msg.t)) wb('tx-' + msg.t);
     try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
+  }
+  // 🔬 통화 흐름 추적(간헐 실패 규명용) — 통화당 몇 줄만 남긴다.
+  function wb(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
+  function statusBeacon(tag) {
+    try {
+      const la = localStream && localStream.getAudioTracks()[0];
+      const ra = remoteStream && remoteStream.getAudioTracks && remoteStream.getAudioTracks()[0];
+      wb(tag + ' ice=' + (pc && pc.iceConnectionState) + ' conn=' + (pc && pc.connectionState) +
+         ' la=' + (la ? (la.enabled ? 'on' : 'mut') : 'none') + ' ra=' + (ra ? ra.readyState : 'none') +
+         ' pre=' + (CUR && (CUR._preconnected ? 'y' : (CUR._preFail ? 'fail' : 'n'))));
+    } catch (_) {}
   }
 
   // ⚡ 콜드스타트 대비 시그널 폴링 — realtime 웹소켓이 막 연결돼 첫 몇 초간 broadcast를 놓칠 때,
@@ -165,6 +177,7 @@
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
+    if (['offer', 'answer', 'accepted', 'hangup'].includes(p.t)) wb('rx-' + p.t);
     if (p.t === 'offer') {
       // 👻 유령 벨 차단 — 콜드스타트 REST 폴링이 '지난 통화'의 offer를 재생할 수 있다.
       //    15초 넘게 묵은 offer는 무시(발신자는 answer 올 때까지 1.2초마다 재전송하므로 산 통화는 안 놓친다).
@@ -581,6 +594,7 @@
     if (!cur || cur._kickArmed) return;
     cur._kickArmed = true;
     [1000, 2500, 5000].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) _nativeCall({ action: 'kick' }); }, d));
+    setTimeout(() => { if (CUR === cur && cur.connectedAt) statusBeacon('6s'); }, 6000);
   }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
