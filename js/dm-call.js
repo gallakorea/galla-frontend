@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072603'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072604'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -308,15 +308,20 @@
       if (e.streams[0]) remoteStream = e.streams[0];
       attachMedia();
     };
+    // ⚠️ 발신자는 answer를 실제로 받은 뒤에만 '통화중'으로 — iosrtc가 미디어 전에 connectionState를
+    //    조기에 'connected'로 보고해(inPkt/outPkt=0) answer도 오기 전 통화중으로 튀는 버그가 있다.
+    //    수신자(dir==='in')는 accept 시점에 이미 협상 완료라 무관.
+    const readyToTalk = () => !CUR || CUR.dir === 'in' || CUR._gotAnswer;
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
-      if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt) {
+      if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt && readyToTalk()) {
         clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
       }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       if (pc.connectionState === 'connected') {
+        if (!readyToTalk()) return;   // answer 전 조기 connected 무시(발신자 오탐 방지)
         clearTimeout(ringT); stopRings();
         if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
         startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
