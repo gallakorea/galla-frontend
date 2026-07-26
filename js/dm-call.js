@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072649'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072650'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -166,6 +166,9 @@
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
     if (p.t === 'offer') {
+      // 👻 유령 벨 차단 — 콜드스타트 REST 폴링이 '지난 통화'의 offer를 재생할 수 있다.
+      //    15초 넘게 묵은 offer는 무시(발신자는 answer 올 때까지 1.2초마다 재전송하므로 산 통화는 안 놓친다).
+      if (p.at && Date.now() - p.at > 15000) return;
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
         // 이미 answer를 만들었으면 다시 보내준다(발신자가 answer를 놓쳐 계속 재전송 중일 수 있음).
@@ -418,7 +421,7 @@
     await pc.setLocalDescription(offer);
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
-    send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
+    send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now() });
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
@@ -430,7 +433,7 @@
     clearInterval(reoffT);
     reoffT = setInterval(() => {
       if (!CUR || CUR.dir !== 'out' || CUR.connectedAt || CUR._gotAnswer) { clearInterval(reoffT); reoffT = null; return; }
-      try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video }); } catch (_) {}
+      try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now() }); } catch (_) {}
     }, 1200);
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 45000);   // 콜드스타트(상대 앱 죽어있음) 여유
     } catch (e) {
