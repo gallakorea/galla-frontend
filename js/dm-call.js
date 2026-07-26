@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072601'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072602'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -479,6 +479,10 @@
     SPK = false; REMUTE = false;
     stopRings();   // 🔕 벨·링백 정지
     nativeEndCallKit();   // CallKit 콜도 함께 종료(수신자 화면 잔류 방지)
+    // ⚠️ CallKit 수락 대기 상태를 반드시 정리 — 안 하면 45초 안에 온 '다음' 수신 통화가
+    //    사용자 탭 없이 자동 수락돼(발신쪽이 받기도 전에 통화 전환) 버린다.
+    callKitPendingAnswer = false;
+    try { window.__ckAnswer = null; } catch (_) {}
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     if (!remote && CUR) send({ t: 'hangup' });
     logCall(reason);
