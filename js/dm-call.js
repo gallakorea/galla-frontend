@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072654'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072655'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -630,6 +630,14 @@
     }
   }
 
+  // 📺 iosrtc 네이티브 비디오 렌더러 수동 부착 — srcObject 설정만으론 loadstart가 안 떠 렌더러가
+  //    영영 안 붙는 케이스(면상톡 검은 화면)를 observeVideo(공식 수동 API)로 즉시 부착한다.
+  function iosrtcAttach(el) {
+    try {
+      const r = window.__iosrtc;
+      if (r && r.observeVideo && el && el.srcObject && !el._iosrtcMediaStreamRendererId) r.observeVideo(el);
+    } catch (_) {}
+  }
   function attachMedia() {
     // [통화 음량] 설정을 실제 재생에 반영 — 폰 볼륨과 별개로 상대 목소리만 조절
     setTimeout(() => {
@@ -639,12 +647,16 @@
     if (remoteStream) {
       const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
       if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }
+      iosrtcAttach(el);   // 📺 iosrtc 네이티브 렌더러 수동 부착(loadstart 미발동 대비 — 화면 안 나오던 원인)
       applyAudioRoute();   // 상대 소리 끔 상태 유지
     }
     if (CUR?.video && localStream) {
       const lv = document.getElementById('dm-call-local');
       if (lv && !lv.srcObject) { lv.srcObject = new MediaStream(localStream.getVideoTracks()); lv.play?.().catch(() => {}); }
+      iosrtcAttach(lv);
     }
+    // 렌더러 위치/크기 동기화(리페인트 직후 좌표 반영)
+    setTimeout(() => { try { window.__iosrtc && window.__iosrtc.refreshVideos && window.__iosrtc.refreshVideos(); } catch (_) {} }, 300);
     // 🔬 면상톡 렌더러 진단(1회) — iosrtc 네이티브 렌더러가 실제로 붙는지 3초 뒤 확인
     if (CUR?.video && !CUR._vidDiag && CUR.connectedAt) {
       CUR._vidDiag = true;
