@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072627'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072628'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -325,20 +325,22 @@
     if (!CUR) throw new Error('cancelled');
     CUR._cf = cf;
     // 2) 로컬 트랙 발행(오디오 음소거로 시작 — 받기 전 상대가 못 듣게)
+    //    ⚠️ tr.mid는 setLocalDescription '후'에야 채워진다 — 그 전에 읽으면 null이라 SFU가 발행 거부.
     const trs = [], items = [];
     localStream.getTracks().forEach(t => {
       if (t.kind === 'audio') t.enabled = false;
       const tr = pc.addTransceiver(t, { direction: 'sendonly' });
       const name = t.kind[0] + '-' + String(ME).slice(0, 6) + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
-      trs.push({ mid: tr.mid, trackName: name }); items.push({ name, kind: t.kind });
+      trs.push({ tr, trackName: name }); items.push({ name, kind: t.kind });
     });
     const pub = await pc.createOffer();
     pub.sdp = tuneOpus(pub.sdp);
     await pc.setLocalDescription(pub);
     const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', {
       sessionDescription: { type: 'offer', sdp: pub.sdp },
-      tracks: trs.map(x => ({ location: 'local', mid: x.mid, trackName: x.trackName })),
+      tracks: trs.map(x => ({ location: 'local', mid: x.tr.mid, trackName: x.trackName })),
     });
+    wbeacon('publish ok=' + (res && res.ok) + ' hasSD=' + !!(res && res.data && res.data.sessionDescription) + ' err=' + (res && res.data && (res.data.errorDescription || (res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode))));
     if (!res || !res.ok || !res.data || !res.data.sessionDescription) throw new Error('sfu-publish');
     await pc.setRemoteDescription(res.data.sessionDescription);
     return { session: cf.session, tracks: items };
