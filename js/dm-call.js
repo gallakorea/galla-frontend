@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072666'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072667'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -633,6 +633,7 @@
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
     localStream = null; remoteStream = null;
+    try { document.documentElement.classList.remove('gcall-video'); } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
@@ -856,6 +857,8 @@
                        connecting: '연결 중…', oncall: '' }[state] || '';
     box.dataset.state = state;
     box.classList.toggle('video', video);
+    // 📺 영상 통화 중엔 페이지를 투명화(영상은 웹뷰 뒤로) → UI가 검은 영상에 안 덮이게
+    try { document.documentElement.classList.toggle('gcall-video', video); } catch (_) {}
     box.innerHTML = `
       ${video
         ? `<video id="dm-call-remote" autoplay playsinline></video>
