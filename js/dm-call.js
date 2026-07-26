@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072665'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072666'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -710,9 +710,11 @@
         } catch (e) { wb('VID-err ' + ((e && e.message) || e)); }
         // 🔬 프레임 유입 측정 — videoWidth가 0이 아니면 프레임이 실제로 들어와 디코드된 것.
         try {
-          const rw = r && r.videoWidth, rh = r && r.videoHeight, lw = l && l.videoWidth, lh = l && l.videoHeight;
-          wb('VW remote=' + rw + 'x' + rh + ' local=' + lw + 'x' + lh +
-             ' rTrkMuted=' + (rt ? rt.muted : '?') + ' recv=' + (pc.getReceivers ? pc.getReceivers().filter(x => x.track && x.track.kind === 'video').length : '?'));
+          const rr = document.getElementById('dm-call-remote'), ll = document.getElementById('dm-call-local');
+          const rvt = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0];
+          wb('VW remote=' + (rr && rr.videoWidth) + 'x' + (rr && rr.videoHeight) + ' local=' + (ll && ll.videoWidth) + 'x' + (ll && ll.videoHeight) +
+             ' rMuted=' + (rvt ? rvt.muted : '?') + ' rEnabled=' + (rvt ? rvt.enabled : '?') +
+             ' vrecv=' + (pc.getReceivers ? pc.getReceivers().filter(x => x.track && x.track.kind === 'video').length : '?'));
         } catch (e) { wb('VW-err ' + ((e && e.message) || e)); }
       }, 4000);
     }
