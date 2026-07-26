@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072617'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072618'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -101,6 +101,21 @@
     // 🟢 통화 시그널링 = DB 트리거 → Realtime Broadcast 직송(카톡급). 로그인 시점부터 상시 구독이라
     //    조인 지연·콜드스타트 없음, 지연 수십 ms. offer/answer/ice/hangup 전부 이 경로 → 첫 통화도 즉시.
     chanSig = newSigChannel();
+    // ⚡ 콜드스타트 수신 폴링 — realtime 웹소켓이 데워지기 전(로그인 직후 ~15초) 들어오는 offer를
+    //    REST로도 확인한다(REST는 워밍업 지연 없음). 이게 없으면 앱 켜자마자 걸려온 첫 통화의 벨이
+    //    5초 늦게 울려 '1차 실패'가 났다. 15초 지나거나 통화가 잡히면 중단(비용 무시 가능).
+    try {
+      sb.from('call_sig').select('id').eq('to_uid', ME).order('id', { ascending: false }).limit(1).then(({ data }) => {
+        let maxId = (data && data[0] && data[0].id) || 0, n = 0;
+        const it = setInterval(async () => {
+          if (++n > 15 || CUR) { clearInterval(it); return; }
+          try {
+            const { data: rows } = await sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).gt('id', maxId).order('id', { ascending: true });
+            for (const r of (rows || [])) { maxId = r.id; if (r.t === 'offer') onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
+          } catch (_) {}
+        }, 1000);
+      }, () => {});
+    } catch (_) {}
     // ⚡ 부팅 시 TURN 자격증명을 미리 데워둔다 — 통화 시작·수락 때 buildPC가 turn-cred를 기다리지 않아
     //    연결 체감이 몇 초 → 1초대로 단축된다(30분 캐시).
     try { iceConfig().catch(() => {}); } catch (_) {}
