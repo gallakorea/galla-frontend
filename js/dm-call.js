@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072646'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072647'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -168,14 +168,13 @@
     if (p.t === 'offer') {
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
-        // 최신 상대 좌표 갱신 + 이미 받았으면 내 좌표(answer)를 다시 보내준다.
-        if (p.session) CUR._remote = { session: p.session, tracks: p.tracks };
-        if (CUR._mine) send({ t: 'answer', session: CUR._mine.session, tracks: CUR._mine.tracks });
-        return;
+        // 이미 answer를 만들었으면 다시 보내준다(발신자가 answer를 놓쳐 계속 재전송 중일 수 있음).
+        if (CUR._lastAnswer) send({ t: 'answer', sdp: CUR._lastAnswer });
+        return;   // 아직 안 받았으면 무시(수신벨은 이미 떠 있음)
       }
       // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { send({ t: 'busy', to: p.from }); return; }
-      CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, _remote: { session: p.session, tracks: p.tracks } };
+      CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
       try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
       startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
       paintUI('incoming');
@@ -183,26 +182,39 @@
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
+      preconnectIncoming();   // 🚀 벨 중 ICE 미리 연결(마이크 음소거) → 받기 누르면 음소거만 풀어 즉시 소리
       // 잠금화면 CallKit에서 이미 '받기'를 눌렀다면(푸시가 offer보다 먼저 도착) 즉시 수락
       try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept('consume'); } catch (_) {}
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
     if (p.t === 'accepted') {
-      // 📞 상대가 '받기'를 누른 즉시 발신자 통화중 전환 + 내 마이크 음소거 해제(상대가 이제 들을 수 있게).
+      // 📞 상대가 '받기'를 누른 순간 — 프리커넥트로 ICE는 이미(또는 곧) 뚫려 있으니
+      //    내 마이크 음소거만 풀고 통화중으로 전환하면 소리가 '즉시' 붙는다(카톡식).
       if (CUR.dir === 'out') {
         try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
-        wbeacon('accepted-unmute out en=' + (localStream && localStream.getAudioTracks().map(t => t.enabled).join(',')) + ' remoteTracks=' + (remoteStream && remoteStream.getTracks().length));
-        if (!CUR.connectedAt) { clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); }
+        if (!CUR.connectedAt) {
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
+        }
       }
       return;
     }
     if (p.t === 'answer') {
-      // 발신자: 수신자의 SFU 좌표를 받아 그 트랙을 구독(미디어 연결). 중복 answer는 무시.
-      if (CUR._gotAnswer) return;
+      if (CUR._gotAnswer) return;   // 재전송된 answer 중복 처리 방지(setRemoteDescription 상태오류 회피)
       CUR._gotAnswer = true;
-      clearInterval(reoffT); reoffT = null;
-      try { cfSubscribe({ session: p.session, tracks: p.tracks }); } catch (e) { console.error('[call] sub', e); }
+      clearInterval(reoffT); reoffT = null;   // 🔁 answer 받았으니 offer 재전송 중단
+      try {
+        await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp });
+        // ★ answer보다 먼저 도착해 버퍼된 ICE 후보를 여기서 소비(교차망 '연결중' 고착 방지)
+        for (const c of (CUR?.pendIce || []).splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+        // 📞 answer는 '미디어 경로만' 연결한다 — 프리커넥트로 링 중에 미리 도착할 수 있으므로
+        //    UI 전환은 하지 않는다(전환·음소거 해제는 'accepted' 신호가 전담).
+        nativeAudioOn();
+      } catch (e) { console.error('[call]', e); }
+    }
+    else if (p.t === 'ice') {
+      if (pc && pc.remoteDescription) { try { await pc.addIceCandidate(p.cand); } catch (_) {} }
+      else CUR.pendIce.push(p.cand);
     }
     else if (p.t === 'reoffer') {
       // 통화 중 전환(영상↔음성) 재협상 — 상대가 영상을 켜면 내 화면도 영상 레이아웃으로
@@ -291,150 +303,6 @@
     if (n === 'NotReadableError') return '다른 앱이 마이크를 쓰고 있어요 — 닫고 다시 시도해 주세요';
     return '통화를 시작하지 못했어요 (' + n + ')';
   }
-
-  // ── ☁️ Cloudflare Calls SFU 미디어 엔진 (1:1 즉시통화) ─────────────────────
-  //    각자 SFU 세션 생성 → 로컬 트랙 발행(오디오는 음소거로 시작) → 상대 트랙 구독.
-  //    ICE는 SFU가 내부 처리(P2P NAT 뚫기 없음). 시그널(call_sig)은 SDP 대신 {session,tracks} 좌표만 교환.
-  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'SFU ' + m, p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
-  function sfu(path, method, body) {
-    return sb.functions.invoke('rtc-sfu', { body: { path, method, body: body || {} } })
-      .then(r => { if (r && r.error) wbeacon('invoke-err ' + path + ' ' + (r.error.message || r.error)); return r && r.data; })
-      .catch(e => { wbeacon('invoke-throw ' + path + ' ' + ((e && e.message) || e)); return null; });
-  }
-  // SFU 세션 생성 + localStream 발행. 반환 {session, tracks:[{name,kind}]}. 실패 시 throw(폴백 유도).
-  async function cfSetup() {
-    const ice = await iceConfig();
-    pc = new RTCPeerConnection({ iceServers: ice.iceServers || [], bundlePolicy: 'max-bundle' });
-    remoteStream = new MediaStream();
-    pc.ontrack = e => {
-      try {
-        if (e.streams && e.streams[0]) remoteStream = e.streams[0];
-        else if (e.track) { remoteStream = remoteStream || new MediaStream(); remoteStream.addTrack(e.track); }
-        // 🔊 난장(dm-live) SFU 방식 — 원격 트랙마다 전용 <audio>를 body에 붙여 iosrtc 네이티브 재생 보장.
-        //    (paintUI가 재생성하는 공용 요소로는 SFU 원격 오디오가 안 울렸다)
-        if (e.track && e.track.kind === 'audio') {
-          const el = document.createElement('audio');
-          el.autoplay = true; el.playsInline = true; el.className = 'dmc-sfu-audio';
-          el.srcObject = new MediaStream([e.track]);
-          document.body.appendChild(el);
-          try { el.play && el.play().catch(() => {}); } catch (_) {}
-        }
-        if (e.track) wbeacon('ontrack ' + e.track.kind + ' rs=' + e.track.readyState + ' en=' + e.track.enabled + ' streams=' + (e.streams ? e.streams.length : 0) + ' recv=' + (pc.getReceivers ? pc.getReceivers().filter(r => r.track && r.track.kind === 'audio').length : '?'));
-        attachMedia();
-      } catch (_) {}
-    };
-    pc.oniceconnectionstatechange = () => { if (pc) wbeacon('iceState ' + pc.iceConnectionState); };
-    pc.onconnectionstatechange = () => {
-      if (!pc) return;
-      wbeacon('pcState ' + pc.connectionState);
-      if (pc.connectionState === 'connected') nativeAudioOn();
-      else if (['failed', 'closed'].includes(pc.connectionState)) { if (CUR && CUR.connectedAt) endCall('netfail'); }
-    };
-    // 🔬 6초 후: (A) SFU 세션 상태 (B) 원격 오디오 실제 레벨 측정
-    //    → 레벨>2면 RTP는 흐르는데 재생만 안 됨(iosrtc ADM 문제), ~0이면 RTP 자체가 안 옴(SFU 중계 문제).
-    setTimeout(async () => {
-      try {
-        if (!CUR || !CUR._cf) return;
-        const s = await sfu('/sessions/' + CUR._cf.session, 'GET', null);
-        const tr = s && s.data && s.data.tracks;
-        wbeacon('sessState ' + (tr ? JSON.stringify(tr).slice(0, 300) : ('nodata reason=' + (s && s.reason))));
-      } catch (_) {}
-      try {
-        if (!remoteStream || !remoteStream.getAudioTracks || !remoteStream.getAudioTracks().length) { wbeacon('remoteLevel no-audio-track'); return; }
-        const AC = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AC();
-        const src = ctx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]));
-        const an = ctx.createAnalyser(); an.fftSize = 512; src.connect(an);
-        const buf = new Uint8Array(an.fftSize);
-        let mx = 0, n = 0;
-        const iv = setInterval(() => {
-          an.getByteTimeDomainData(buf);
-          let peak = 0; for (let i = 0; i < buf.length; i++) { const d = Math.abs(buf[i] - 128); if (d > peak) peak = d; }
-          if (peak > mx) mx = peak;
-          if (++n >= 15) { clearInterval(iv); wbeacon('remoteLevel max=' + mx + (mx > 2 ? ' RTP흐름=YES(재생문제)' : ' RTP흐름=NO(중계문제)')); try { ctx.close(); } catch (_) {} }
-        }, 200);
-      } catch (e) { wbeacon('remoteLevel-err ' + ((e && e.message) || e)); }
-    }, 6000);
-    // 1) 세션 부트스트랩 — CF SFU는 /sessions/new에 recvonly offer 동봉 필수
-    pc.addTransceiver('audio', { direction: 'recvonly' });
-    const boot = await pc.createOffer();
-    await pc.setLocalDescription(boot);
-    const sess = await sfu('/sessions/new', 'POST', { sessionDescription: { type: 'offer', sdp: boot.sdp } });
-    wbeacon('sessNew ok=' + (sess && sess.ok) + ' reason=' + (sess && sess.reason) + ' hasId=' + !!(sess && sess.data && sess.data.sessionId) + ' status=' + (sess && sess.status));
-    if (!sess || sess.reason === 'unconfigured' || !sess.data || !sess.data.sessionId || !sess.data.sessionDescription) {
-      throw new Error('sfu-session(' + (sess && (sess.reason || (sess.data && sess.data.errorDescription)) || '?') + ')');
-    }
-    await pc.setRemoteDescription(sess.data.sessionDescription);
-    const cf = { session: sess.data.sessionId, subs: new Set(), q: Promise.resolve() };
-    if (!CUR) throw new Error('cancelled');
-    CUR._cf = cf;
-    // 2) 로컬 트랙 발행(오디오 음소거로 시작 — 받기 전 상대가 못 듣게)
-    //    ⚠️ tr.mid는 setLocalDescription '후'에야 채워진다 — 그 전에 읽으면 null이라 SFU가 발행 거부.
-    const trs = [], items = [];
-    localStream.getTracks().forEach(t => {
-      // ⚠️ 음소거(enabled=false)로 발행하면 RTP가 안 나가 SFU가 중계할 게 없다(무음). 항상 켜서 발행.
-      //    '받기 전 상대가 못 듣게'는 음소거가 아니라 '구독 시점(받을 때만 구독)'으로 보장한다.
-      const tr = pc.addTransceiver(t, { direction: 'sendonly' });
-      const name = t.kind[0] + '-' + String(ME).slice(0, 6) + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
-      trs.push({ tr, trackName: name }); items.push({ name, kind: t.kind });
-    });
-    const pub = await pc.createOffer();
-    pub.sdp = tuneOpus(pub.sdp);
-    await pc.setLocalDescription(pub);
-    const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', {
-      sessionDescription: { type: 'offer', sdp: pub.sdp },
-      tracks: trs.map(x => ({ location: 'local', mid: x.tr.mid, trackName: x.trackName })),
-    });
-    wbeacon('publish ok=' + (res && res.ok) + ' hasSD=' + !!(res && res.data && res.data.sessionDescription) + ' err=' + (res && res.data && (res.data.errorDescription || (res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode))));
-    if (!res || !res.ok || !res.data || !res.data.sessionDescription) throw new Error('sfu-publish');
-    await pc.setRemoteDescription(res.data.sessionDescription);
-    return { session: cf.session, tracks: items };
-  }
-  // 상대 트랙 구독(SFU가 내 pc로 상대 트랙을 밀어준다). remote = {session, tracks:[{name,kind}]}
-  function cfSubscribe(remote) {
-    const cf = CUR && CUR._cf;
-    wbeacon('cfSubscribe cf=' + !!cf + ' remoteSess=' + (remote && remote.session ? 'y' : 'n') + ' tracks=' + (remote && remote.tracks && remote.tracks.length));
-    if (!cf || !remote || !remote.session || !Array.isArray(remote.tracks)) return;
-    for (const tk of remote.tracks) {
-      if (!tk || !tk.name) continue;
-      const key = remote.session + '|' + tk.name;
-      if (cf.subs.has(key)) continue;
-      cf.subs.add(key);
-      cf.q = cf.q.then(() => cfSubOne(cf, remote.session, tk.name, key)).catch(() => {});
-    }
-  }
-  async function cfSubOne(cf, session, trackName, key) {
-    // 한 번 구독하면 내 세션에 이 원격 트랙이 'active'가 될 때까지 검증. active면 소리 흐름(성공).
-    //    아니면(발행자 RTP가 아직 SFU에 안 닿아 죽은 트랙에 묶임) 재구독. → 비대칭 무음 해결.
-    const isOut = CUR && CUR.dir === 'out';
-    for (let round = 0; round < 12; round++) {
-      if (!CUR || CUR._cf !== cf || !pc) { cf.subs.delete(key); return; }
-      let step = '?';
-      try {
-        const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', { tracks: [{ location: 'remote', sessionId: session, trackName }] });
-        const sd = res && res.data && res.data.sessionDescription;
-        const serr = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
-        if (res && res.ok && sd && sd.type === 'offer') {
-          await pc.setRemoteDescription(sd);
-          const ans = await pc.createAnswer();
-          await pc.setLocalDescription(ans);
-          const rn = await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
-          step = 'offer,reneg=' + (rn && rn.ok);
-        } else { step = 'nooffer ok=' + (res && res.ok) + ' sd=' + (sd && sd.type) + ' err=' + serr; }
-      } catch (e) { step = 'ex=' + ((e && e.message) || e); }
-      await new Promise(r => setTimeout(r, 700));
-      let active = false;
-      try {
-        const s = await sfu('/sessions/' + cf.session, 'GET', null);
-        active = s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active');
-      } catch (_) {}
-      wbeacon((isOut ? 'OUT' : 'IN') + '-sub r=' + round + ' ' + step + ' active=' + active);
-      if (active) return;
-      await new Promise(r => setTimeout(r, 500));
-    }
-    wbeacon('sub-giveup ' + trackName.slice(0, 12));
-    cf.subs.delete(key);
-  }
   /* 실패를 소리 없이 삼키지 않는다 — 이유가 적힌 화면을 남긴다 */
   function paintErr(name, msg, retry) {
     let box = document.getElementById('dm-call');
@@ -488,25 +356,19 @@
       if (e.streams[0]) remoteStream = e.streams[0];
       attachMedia();
     };
-    // ⚠️ 발신자는 answer를 실제로 받은 뒤에만 '통화중'으로 — iosrtc가 미디어 전에 connectionState를
-    //    조기에 'connected'로 보고해(inPkt/outPkt=0) answer도 오기 전 통화중으로 튀는 버그가 있다.
-    //    수신자(dir==='in')는 accept 시점에 이미 협상 완료라 무관.
-    const readyToTalk = () => !CUR || CUR.dir === 'in' || CUR._gotAnswer;
+    // ⚠️ connect 핸들러는 '오디오 유닛 켜기'만 — UI 전환(통화중)은 오직 accept(수신자)와 'accepted'
+    //    신호(발신자)가 제어한다. 프리커넥트(벨 중 ICE 미리 연결) 때 벨 화면이 통화중으로 튀지 않게.
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
-      if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt && readyToTalk()) {
-        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
-      }
+      if (['connected', 'completed'].includes(pc.iceConnectionState)) nativeAudioOn();
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       if (pc.connectionState === 'connected') {
-        if (!readyToTalk()) return;   // answer 전 조기 connected 무시(발신자 오탐 방지)
-        clearTimeout(ringT); stopRings();
-        if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
-        startTimer(); paintUI('oncall'); nativeAudioOn();
+        nativeAudioOn();
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-        if (CUR) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
+        // 링/프리커넥트 중의 일시적 끊김으론 종료하지 않는다(활성 통화만 종료).
+        if (CUR && CUR.connectedAt) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       }
     };
   }
@@ -542,56 +404,109 @@
     try {
     await ensureSigJoined();   // 📡 시그널 수신 채널 조인 보장(첫 통화 즉시 전환)
     startSigPoll();            // ⚡ 콜드스타트 구간 answer를 REST 폴링으로 즉시 잡기(발신 '거는중' 고착 방지)
-    const mine = await cfSetup();   // ☁️ SFU 세션 생성 + 마이크 발행(음소거로 시작)
-    CUR._mine = mine;
-    nativeAudioOn();   // 🔊 오디오 유닛 미리 켬(미디어 흐르는 순간 바로 소리)
+    await buildPC();
+    // 🔇 상대가 받기 전엔 내 마이크 음소거(무음 프레임 전송 — ICE는 미리 뚫리되 소리는 안 새게).
+    //    'accepted' 신호가 오면 음소거를 푼다.
+    try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
+    nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
+                       //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
+    const offer = await pc.createOffer();
+    offer.sdp = tuneOpus(offer.sdp);
+    await pc.setLocalDescription(offer);
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
-    send({ t: 'offer', session: mine.session, tracks: mine.tracks, name: myName, video: !!video });
+    send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
     try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
-    // 🔁 offer(SFU 좌표) 재전송 — 상대가 잠금/백그라운드로 suspend돼 첫 offer를 놓쳤을 수 있어 answer 받을 때까지 반복
+    // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
+    //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
+    //    재구독한 뒤 다음 재전송을 잡도록, answer 받을 때까지 1.2초마다 같은 offer를 다시 쏜다
+    //    (broadcast 유실 복구를 빠르게 — 1차 실패·연결 지연 최소화).
     clearInterval(reoffT);
     reoffT = setInterval(() => {
       if (!CUR || CUR.dir !== 'out' || CUR.connectedAt || CUR._gotAnswer) { clearInterval(reoffT); reoffT = null; return; }
-      try { send({ t: 'offer', session: mine.session, tracks: mine.tracks, name: myName, video: !!video }); } catch (_) {}
+      try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video }); } catch (_) {}
     }, 1200);
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 45000);   // 콜드스타트(상대 앱 죽어있음) 여유
     } catch (e) {
       console.error('[call] start', e);
-      wbeacon('start-catch ' + ((e && e.message) || e));
       const nm = CUR?.name;
       try { pc?.close(); } catch (_) {} pc = null;
       try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
       CUR = null;
-      paintErr(nm, '통화를 시작하지 못했어요 (' + ((e && e.message) || '오류') + ')');
+      paintErr(nm, '통화를 시작하지 못했어요 (' + ((e && e.name) || '오류') + ')');
+    }
+  }
+
+  // 수신자 answer 생성 공용 — PC 구성 → offer 반영 → answer 전송(중복 재전송 포함).
+  //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
+  async function buildAnswer(cur, muted) {
+    await buildPC();
+    if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
+    nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
+    await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
+    for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+    const ans = await pc.createAnswer();
+    ans.sdp = tuneOpus(ans.sdp);
+    await pc.setLocalDescription(ans);
+    cur._lastAnswer = ans.sdp;   // 발신자가 offer를 재전송하면 이 answer를 되돌려준다
+    send({ t: 'answer', sdp: ans.sdp });
+    // 📡 answer 중복 전송 — 시그널 유실 시 발신자 '거는중' 고착 방지(발신자는 _gotAnswer로 중복 무시)
+    [250, 600, 1200, 2200].forEach(d => setTimeout(() => { if (CUR === cur && cur._lastAnswer && !cur.connectedAt) send({ t: 'answer', sdp: cur._lastAnswer }); }, d));
+  }
+
+  // 🚀 벨 울리는 동안 ICE 미리 연결(카톡식 즉시통화) — 마이크 음소거로 answer까지 미리 보내 P2P 경로 완성.
+  //    받기 누르면 음소거만 풀려 소리가 '즉시' 난다. 마이크 권한이 이미 허용된 경우에만(프롬프트로 링 방해 방지).
+  async function preconnectIncoming() {
+    const cur = CUR;
+    if (!cur || cur.dir !== 'in' || pc) return;
+    try {
+      if ((await micPermState()) !== 'granted') return;   // 권한 미허용 → 받기 눌러야 프롬프트(폴백)
+      if (CUR !== cur || pc) return;
+      const stream = await getMedia(cur.video);
+      if (CUR !== cur) { try { stream.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
+      localStream = stream;
+      if (stream._videoFallback && cur.video) cur.video = false;
+      await buildAnswer(cur, true);   // 마이크 음소거로 협상 완료(ICE가 벨 중에 뚫린다)
+      cur._preconnected = true;
+    } catch (_) {
+      cur._preFail = true;
+      try { pc?.close(); } catch (_) {} pc = null;
+      try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
     }
   }
 
   async function accept(via) {
     if (!CUR || CUR.dir !== 'in') return;
-    if (CUR._accepting) return;   // 수락 신호가 여러 번 와도 한 번만
+    if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
+    // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게). 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) { CUR._accepting = false; return appOnlyNotice(); }
     clearTimeout(ringT);
-    send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환
-    [250, 800].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비 재전송
+    send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환 + 발신자 마이크 해제
+    [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
+    // 프리커넥트가 진행 중이면 잠깐 기다려 그 결과 재사용(최대 ~1.6초)
+    for (let i = 0; i < 20 && pc && !CUR._preconnected && !CUR._preFail; i++) await new Promise(r => setTimeout(r, 80));
+    if (CUR && CUR._preconnected && localStream) {
+      // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
+      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
+      if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
+      stopRings(); paintUI('oncall'); nativeAudioOn();
+      return;
+    }
+    // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
     await primePermHint(CUR.video);
-    try { localStream = await getMedia(CUR.video); }
+    try { if (!localStream) localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
-      const mine = await cfSetup();      // ☁️ 내 SFU 세션 + 마이크 발행
-      CUR._mine = mine;
-      cfSubscribe(CUR._remote);          // ☁️ 상대 트랙 구독(SFU 중계)
-      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}   // 받았으니 음소거 해제
-      send({ t: 'answer', session: mine.session, tracks: mine.tracks });
-      [250, 700, 1500].forEach(d => setTimeout(() => { if (CUR && CUR._mine) send({ t: 'answer', session: CUR._mine.session, tracks: CUR._mine.tracks }); }, d));   // 유실 대비
+      if (!pc) await buildAnswer(CUR, false);
+      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn();
     } catch (e) {
@@ -673,7 +588,6 @@
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
     localStream = null; remoteStream = null;
-    try { document.querySelectorAll('.dmc-sfu-audio').forEach(el => { try { el.srcObject = null; el.remove(); } catch (_) {} }); } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
@@ -742,9 +656,37 @@
     send({ t: 'reoffer', sdp: offer.sdp, video: !!CUR?.video });
   }
 
-  /* 📹 통화 중 음성↔면상 전환은 SFU 재발행이 필요 — 추후 지원. 지금은 통화 시작 때 선택한 모드로 진행. */
-  async function upgradeToVideo() { toast('면상톡 전환은 준비 중이에요 — 처음부터 면상톡으로 걸어주세요'); }
-  async function downgradeToAudio() { toast('전환은 준비 중이에요'); }
+  /* 📹 음성 → 면상톡 전환: 내 카메라를 켜서 트랙을 추가하고 재협상 */
+  async function upgradeToVideo() {
+    if (!CUR || CUR.video) return;
+    try {
+      const ns = await getMedia(true);
+      const nv = ns.getVideoTracks()[0];
+      if (!nv) throw new Error('nocam');
+      ns.getAudioTracks().forEach(t => t.stop());   // 오디오는 기존 트랙 유지
+      localStream.addTrack(nv);
+      pc.addTrack(nv, localStream);
+      CUR.video = true;
+      SPK = true;                                    // 면상톡은 스피커가 자연스럽다
+      await renegotiate();
+      paintUI('oncall');
+      toast('📹 면상톡으로 전환했어요');
+    } catch (e) { toast('카메라를 켤 수 없어요'); }
+  }
+
+  /* 📞 면상톡 → 음성 전환: 영상 트랙 제거·정지 후 재협상 */
+  async function downgradeToAudio() {
+    if (!CUR || !CUR.video) return;
+    try {
+      pc.getSenders().filter(x => x.track?.kind === 'video').forEach(sn => { try { pc.removeTrack(sn); } catch (_) {} });
+      localStream.getVideoTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
+      CUR.video = false;
+      SPK = false;                                   // 음성은 수화부로
+      await renegotiate();
+      paintUI('oncall');
+      toast('📞 음성 통화로 전환했어요');
+    } catch (e) { toast('전환에 실패했어요'); }
+  }
 
   /* 🔊 스피커 모드 — iOS는 <audio>=스피커 / <video playsinline>=수화부로 라우팅된다.
      싱크 요소를 갈아끼우는 것이 웹에서 가장 확실한 라우팅 전환. */
