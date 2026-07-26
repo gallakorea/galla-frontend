@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072628'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072629'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -305,7 +305,7 @@
     const ice = await iceConfig();
     pc = new RTCPeerConnection({ iceServers: ice.iceServers || [], bundlePolicy: 'max-bundle' });
     remoteStream = new MediaStream();
-    pc.ontrack = e => { try { if (e.track) remoteStream.addTrack(e.track); attachMedia(); } catch (_) {} };
+    pc.ontrack = e => { try { if (e.track) { remoteStream.addTrack(e.track); wbeacon('ontrack ' + e.track.kind + ' total=' + remoteStream.getTracks().length); } attachMedia(); } catch (_) {} };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       if (pc.connectionState === 'connected') nativeAudioOn();
@@ -347,7 +347,9 @@
   }
   // 상대 트랙 구독(SFU가 내 pc로 상대 트랙을 밀어준다). remote = {session, tracks:[{name,kind}]}
   function cfSubscribe(remote) {
-    const cf = CUR && CUR._cf; if (!cf || !remote || !remote.session || !Array.isArray(remote.tracks)) return;
+    const cf = CUR && CUR._cf;
+    wbeacon('cfSubscribe cf=' + !!cf + ' remoteSess=' + (remote && remote.session ? 'y' : 'n') + ' tracks=' + (remote && remote.tracks && remote.tracks.length));
+    if (!cf || !remote || !remote.session || !Array.isArray(remote.tracks)) return;
     for (const tk of remote.tracks) {
       if (!tk || !tk.name) continue;
       const key = remote.session + '|' + tk.name;
@@ -366,10 +368,12 @@
           await pc.setRemoteDescription(sd);
           const ans = await pc.createAnswer();
           await pc.setLocalDescription(ans);
-          await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
+          const rn = await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
+          wbeacon('subOK try=' + i + ' renegOk=' + (rn && rn.ok));
           return;   // 성공
         }
         const err = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
+        wbeacon('subRetry try=' + i + ' ok=' + (res && res.ok) + ' sdType=' + (sd && sd.type) + ' err=' + err);
         if (err && err !== 'not_found_track_error') break;   // 발행자가 아직 안 켰으면 재시도
       } catch (e) { break; }
       await new Promise(r => setTimeout(r, 900));

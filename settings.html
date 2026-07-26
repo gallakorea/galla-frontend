@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>설정 - GALLA</title>
-    <link rel="stylesheet" href="./css/settings.css?v=072628">
-    <link rel="stylesheet" href="./css/items.css?v=072628">
-    <link rel="stylesheet" href="./css/nav.css?v=072628">
+    <link rel="stylesheet" href="./css/settings.css?v=072629">
+    <link rel="stylesheet" href="./css/items.css?v=072629">
+    <link rel="stylesheet" href="./css/nav.css?v=072629">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -16,8 +16,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072628">
-<link rel="stylesheet" href="./css/desktop.css?v=072628">
+  <link rel="stylesheet" href="./css/theme.css?v=072629">
+<link rel="stylesheet" href="./css/desktop.css?v=072629">
 </head>
 
 <body data-page="mypage">
@@ -211,10 +211,10 @@
     </div>
     </nav>
 
-    <script src="./js/nav.js?v=072628"></script>
-<script src="./js/desktop-pc.js?v=072628" defer></script>
-<script src="./js/nav-jog.js?v=072628" defer></script>
-    <script src="./js/dm-call.js?v=072628" defer></script>
+    <script src="./js/nav.js?v=072629"></script>
+<script src="./js/desktop-pc.js?v=072629" defer></script>
+<script src="./js/nav-jog.js?v=072629" defer></script>
+    <script src="./js/dm-call.js?v=072629" defer></script>
 
 </div>
 
@@ -245,26 +245,26 @@ function waitForSupabaseClient() {
 </script>
 
 <!-- Supabase SDK (단 1회) -->
-<script src="/js/error-logger.js?v=072628"></script>
-  <script src="./vendor/supabase.js?v=072628"></script>
+<script src="/js/error-logger.js?v=072629"></script>
+  <script src="./vendor/supabase.js?v=072629"></script>
 
 <!-- Supabase Client 생성 -->
-<script src="js/supabase.js?v=072628"></script>
-<script src="js/logout-flow.js?v=072628"></script>
-<script src="js/back.js?v=072628"></script>
+<script src="js/supabase.js?v=072629"></script>
+<script src="js/logout-flow.js?v=072629"></script>
+<script src="js/back.js?v=072629"></script>
 
 <!-- 갈라 성향 로직 -->
-<script src="js/galla-type.js?v=072628"></script>
+<script src="js/galla-type.js?v=072629"></script>
 
 <!-- GP 상점 -->
-<script src="js/items.js?v=072628"></script>
-<script src="js/charge.js?v=072628"></script>
-<script src="js/titles.js?v=072628"></script>
-<script src="js/gacha.js?v=072628"></script>
+<script src="js/items.js?v=072629"></script>
+<script src="js/charge.js?v=072629"></script>
+<script src="js/titles.js?v=072629"></script>
+<script src="js/gacha.js?v=072629"></script>
 
 <!-- Settings 페이지 로직 -->
-<script src="js/gallian.js?v=072628"></script>
-<script src="js/social-auth.js?v=072628"></script>
+<script src="js/gallian.js?v=072629"></script>
+<script src="js/social-auth.js?v=072629"></script>
 <script>/* '이 기기에 패스키 등록' 노출 — 패스키 지원 + (홈화면 웹클립 PWA가 아님).
      네이티브 앱(UA에 GallaApp)은 Associated Domains로 패스키 가능하므로 노출 유지. */
   (function(){
@@ -274,8 +274,8 @@ function waitForSupabaseClient() {
       var _pk = document.getElementById('st-passkey'); if (_pk) _pk.hidden = false;
     }
   })();</script>
-<script src="js/settings.js?v=072628"></script>
-<script src="js/bug-report.js?v=072628"></script>
+<script src="js/settings.js?v=072629"></script>
+<script src="js/bug-report.js?v=072629"></script>
 <script>
 /* 📳 흔들어서 신고 — iOS만 권한 동의가 필요하다. 필요한 기기에서만 항목을 보여준다. */
 (function () {
@@ -307,8 +307,8 @@ function waitForSupabaseClient() {
   if(!se?.session) return; const {data:p}=await sb.from('user_profiles').select('admin_flag').eq('user_id',se.session.user.id).maybeSingle();
   if(p&&p.admin_flag){ const el=document.getElementById('ad-admin-link'); if(el) el.style.display='block'; } }catch(e){} })();
 </script>
-<script src="/js/analytics.js?v=072628"></script>
-<script src="/js/pwa.js?v=072628"></script>
-  <script src="/js/pull-refresh.js?v=072628"></script>
+<script src="/js/analytics.js?v=072629"></script>
+<script src="/js/pwa.js?v=072629"></script>
+  <script src="/js/pull-refresh.js?v=072629"></script>
 </body>
 </html>
