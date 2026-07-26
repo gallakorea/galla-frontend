@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072639'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072640'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -404,7 +404,8 @@
     }
   }
   async function cfSubOne(cf, session, trackName, key) {
-    for (let i = 0; i < 8; i++) {
+    // 상대가 방금 발행한 트랙에 RTP가 SFU에 닿을 때까지 not_found로 잠깐 실패 → 짧게 자주 재시도해 '즉시' 붙는다.
+    for (let i = 0; i < 40; i++) {
       if (!CUR || CUR._cf !== cf || !pc) { cf.subs.delete(key); return; }
       try {
         const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', { tracks: [{ location: 'remote', sessionId: session, trackName }] });
@@ -413,15 +414,13 @@
           await pc.setRemoteDescription(sd);
           const ans = await pc.createAnswer();
           await pc.setLocalDescription(ans);
-          const rn = await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
-          wbeacon('subOK try=' + i + ' renegOk=' + (rn && rn.ok));
+          await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
           return;   // 성공
         }
         const err = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
-        wbeacon('subRetry try=' + i + ' ok=' + (res && res.ok) + ' sdType=' + (sd && sd.type) + ' err=' + err);
-        if (err && err !== 'not_found_track_error') break;   // 발행자가 아직 안 켰으면 재시도
+        if (err && err !== 'not_found_track_error') break;   // 발행자가 아직 RTP 안 보냈으면 재시도
       } catch (e) { break; }
-      await new Promise(r => setTimeout(r, 900));
+      await new Promise(r => setTimeout(r, 250));
     }
     cf.subs.delete(key);   // 실패 → 재-answer 시 다시 구독 가능
   }
