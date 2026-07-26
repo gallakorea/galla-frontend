@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072604'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072605'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -139,6 +139,11 @@
         // ★ answer보다 먼저 도착해 버퍼된 ICE 후보를 여기서 소비 — 발신자 쪽에 이 소비가
         //   없어서 실망(교차망)에서 '연결 중' 고착이 났다(수신자만 accept에서 소비하고 있었다)
         for (const c of (CUR?.pendIce || []).splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+        // 📞 상대가 answer를 보냈다 = 받았다. ICE 완결(수 초 소요)을 기다리지 말고 바로 '통화중'으로
+        //    전환(카톡식). 오디오는 실제 연결(connectionState) 시 nativeAudioOn으로 켜진다.
+        if (CUR && CUR.dir === 'out' && !CUR.connectedAt) {
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); schedStats();
+        }
       } catch (e) { console.error('[call]', e); }
     }
     else if (p.t === 'ice') {
