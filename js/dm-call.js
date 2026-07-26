@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072635'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072636'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -319,7 +319,7 @@
           document.body.appendChild(el);
           try { el.play && el.play().catch(() => {}); } catch (_) {}
         }
-        if (e.track) wbeacon('ontrack ' + e.track.kind + ' streams=' + (e.streams ? e.streams.length : 0));
+        if (e.track) wbeacon('ontrack ' + e.track.kind + ' rs=' + e.track.readyState + ' en=' + e.track.enabled + ' streams=' + (e.streams ? e.streams.length : 0) + ' recv=' + (pc.getReceivers ? pc.getReceivers().filter(r => r.track && r.track.kind === 'audio').length : '?'));
         attachMedia();
       } catch (_) {}
     };
