@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072663'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072664'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -708,7 +708,20 @@
              ' rect=' + (rc ? Math.round(rc.width) + 'x' + Math.round(rc.height) : '-') +
              ' blob=' + (remoteStream && typeof remoteStream.getBlobId === 'function' ? 'y' : 'n'));
         } catch (e) { wb('VID-err ' + ((e && e.message) || e)); }
-      }, 3000);
+        // 🔬 실제 프레임 흐름 측정 — getStats로 받은/그린 영상 프레임 수(양방향 진위 판정)
+        try {
+          if (pc && pc.getStats) pc.getStats().then(st => {
+            let inV = null, decoded = 0, recvd = 0, w = 0, h = 0;
+            st.forEach(rep => {
+              if (rep.type === 'inbound-rtp' && (rep.kind === 'video' || rep.mediaType === 'video')) {
+                inV = rep; decoded = rep.framesDecoded || 0; recvd = rep.framesReceived || 0;
+                w = rep.frameWidth || 0; h = rep.frameHeight || 0;
+              }
+            });
+            wb('VFRAMES in=' + !!inV + ' decoded=' + decoded + ' recvd=' + recvd + ' size=' + w + 'x' + h);
+          }, () => {});
+        } catch (_) {}
+      }, 4000);
     }
   }
   function startTimer() {
