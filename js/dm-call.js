@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072629'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072630'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -192,6 +192,7 @@
       // 📞 상대가 '받기'를 누른 즉시 발신자 통화중 전환 + 내 마이크 음소거 해제(상대가 이제 들을 수 있게).
       if (CUR.dir === 'out') {
         try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
+        wbeacon('accepted-unmute out en=' + (localStream && localStream.getAudioTracks().map(t => t.enabled).join(',')) + ' remoteTracks=' + (remoteStream && remoteStream.getTracks().length));
         if (!CUR.connectedAt) { clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); }
       }
       return;
@@ -308,6 +309,7 @@
     pc.ontrack = e => { try { if (e.track) { remoteStream.addTrack(e.track); wbeacon('ontrack ' + e.track.kind + ' total=' + remoteStream.getTracks().length); } attachMedia(); } catch (_) {} };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
+      wbeacon('pcState ' + pc.connectionState);
       if (pc.connectionState === 'connected') nativeAudioOn();
       else if (['failed', 'closed'].includes(pc.connectionState)) { if (CUR && CUR.connectedAt) endCall('netfail'); }
     };
