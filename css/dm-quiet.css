@@ -497,10 +497,12 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
    ⚠️ iosrtc는 <video>를 웹뷰 위 네이티브 레이어로 그려 DOM을 덮는다(z-index로도 못 내림, 웹뷰 투명화로도
    안 됨). 컨트롤이 보이려면 그 자리에 '영상을 두지 않는' 수밖에 없다 → 원격영상은 화면 상단 68%만 채우고
    하단 컨트롤 바 영역은 비운다. iosrtc는 요소의 CSS 크기(clientWidth/Height)를 존중하므로 확실히 동작. */
-#dm-call.video { background: #000; }
+/* ⚠️ DOM 배경을 그리지 않는다 — 검은 배경이 진짜 영상 네이티브 레이어를 덮어 '가짜 검은 화면'을
+   만들 수 있다. 배경은 네이티브(GallaBridgeVC view=black)에 맡기고 여기선 투명. */
+#dm-call.video { background: transparent; }
 #dm-call-remote {
   position: absolute; top: 0; left: 0; right: 0; height: 68vh;
-  width: 100%; object-fit: cover; background: #000;
+  width: 100%; object-fit: cover; background: transparent;
 }
 #dm-call-local {
   position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); right: 16px;
