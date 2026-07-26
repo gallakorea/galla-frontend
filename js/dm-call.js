@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072664'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072665'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -708,19 +708,12 @@
              ' rect=' + (rc ? Math.round(rc.width) + 'x' + Math.round(rc.height) : '-') +
              ' blob=' + (remoteStream && typeof remoteStream.getBlobId === 'function' ? 'y' : 'n'));
         } catch (e) { wb('VID-err ' + ((e && e.message) || e)); }
-        // 🔬 실제 프레임 흐름 측정 — getStats로 받은/그린 영상 프레임 수(양방향 진위 판정)
+        // 🔬 프레임 유입 측정 — videoWidth가 0이 아니면 프레임이 실제로 들어와 디코드된 것.
         try {
-          if (pc && pc.getStats) pc.getStats().then(st => {
-            let inV = null, decoded = 0, recvd = 0, w = 0, h = 0;
-            st.forEach(rep => {
-              if (rep.type === 'inbound-rtp' && (rep.kind === 'video' || rep.mediaType === 'video')) {
-                inV = rep; decoded = rep.framesDecoded || 0; recvd = rep.framesReceived || 0;
-                w = rep.frameWidth || 0; h = rep.frameHeight || 0;
-              }
-            });
-            wb('VFRAMES in=' + !!inV + ' decoded=' + decoded + ' recvd=' + recvd + ' size=' + w + 'x' + h);
-          }, () => {});
-        } catch (_) {}
+          const rw = r && r.videoWidth, rh = r && r.videoHeight, lw = l && l.videoWidth, lh = l && l.videoHeight;
+          wb('VW remote=' + rw + 'x' + rh + ' local=' + lw + 'x' + lh +
+             ' rTrkMuted=' + (rt ? rt.muted : '?') + ' recv=' + (pc.getReceivers ? pc.getReceivers().filter(x => x.track && x.track.kind === 'video').length : '?'));
+        } catch (e) { wb('VW-err ' + ((e && e.message) || e)); }
       }, 4000);
     }
   }
