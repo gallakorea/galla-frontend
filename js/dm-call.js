@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072624'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072625'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -182,18 +182,16 @@
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
-      preconnectIncoming();   // 🚀 벨 울리는 동안 미디어 미리 연결(마이크 음소거) → 받기 누르면 즉시 소리
       // 잠금화면 CallKit에서 이미 '받기'를 눌렀다면(푸시가 offer보다 먼저 도착) 즉시 수락
       try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept('consume'); } catch (_) {}
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
     if (p.t === 'accepted') {
-      // 📞 상대가 '받기'를 누른 즉시 — 발신자 통화중 전환 + 마이크 음소거 해제.
-      //    (링 중 프리커넥트로 미디어(ICE)는 이미 뚫려 있어, 음소거만 풀면 소리가 '즉시' 난다 = 카톡식)
-      if (CUR.dir === 'out') {
-        try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
-        if (!CUR.connectedAt) { clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); }
+      // 📞 상대가 '받기'를 누른 즉시 — SDP answer보다 먼저 도착한다. 발신자를 바로 통화중으로 전환
+      //    (미디어는 곧이어 오는 answer로 붙고, 오디오 유닛은 여기서 미리 켠다).
+      if (CUR.dir === 'out' && !CUR.connectedAt) {
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
       }
       return;
     }
@@ -203,10 +201,16 @@
       clearInterval(reoffT); reoffT = null;   // 🔁 answer 받았으니 offer 재전송 중단
       try {
         await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp });
-        // ★ answer보다 먼저 도착해 버퍼된 ICE 후보를 여기서 소비(교차망 '연결중' 고착 방지)
+        // ★ answer보다 먼저 도착해 버퍼된 ICE 후보를 여기서 소비 — 발신자 쪽에 이 소비가
+        //   없어서 실망(교차망)에서 '연결 중' 고착이 났다(수신자만 accept에서 소비하고 있었다)
         for (const c of (CUR?.pendIce || []).splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
-        // 📞 answer는 '미디어 경로만' 연결한다(프리커넥트로 링 중에 미리 올 수 있으므로).
-        //    발신자 UI 전환·마이크 음소거 해제는 상대가 받은 순간 오는 'accepted' 신호가 담당한다.
+        // 📞 상대가 answer를 보냈다 = 받았다. ICE 완결(수 초 소요)을 기다리지 말고 바로 '통화중'으로
+        //    전환(카톡식). 오디오는 실제 연결(connectionState) 시 nativeAudioOn으로 켜진다.
+        if (CUR && CUR.dir === 'out' && !CUR.connectedAt) {
+          // ⚠️ nativeAudioOn 필수 — iosrtc가 answer 전 spurious 'connected'를 이미 쐈으면 connect 핸들러가
+          //    다시 안 불려 오디오가 안 켜진다(무음). 여기서 명시적으로 켠다.
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
+        }
       } catch (e) { console.error('[call]', e); }
     }
     else if (p.t === 'ice') {
@@ -353,20 +357,24 @@
       if (e.streams[0]) remoteStream = e.streams[0];
       attachMedia();
     };
-    // ⚠️ connect 핸들러는 '오디오 유닛 켜기'만 담당한다. UI 전환(통화중)은 전적으로 accept(수신자)와
-    //    'accepted' 신호(발신자)가 제어한다 — 프리커넥트(링 중 미디어 미리 연결) 때 pc가 받기 전에
-    //    connected가 돼도 발신자가 '통화중'으로 튀지 않도록.
+    // ⚠️ 발신자는 answer를 실제로 받은 뒤에만 '통화중'으로 — iosrtc가 미디어 전에 connectionState를
+    //    조기에 'connected'로 보고해(inPkt/outPkt=0) answer도 오기 전 통화중으로 튀는 버그가 있다.
+    //    수신자(dir==='in')는 accept 시점에 이미 협상 완료라 무관.
+    const readyToTalk = () => !CUR || CUR.dir === 'in' || CUR._gotAnswer;
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
-      if (['connected', 'completed'].includes(pc.iceConnectionState)) nativeAudioOn();
+      if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt && readyToTalk()) {
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
+      }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       if (pc.connectionState === 'connected') {
-        nativeAudioOn();
+        if (!readyToTalk()) return;   // answer 전 조기 connected 무시(발신자 오탐 방지)
+        clearTimeout(ringT); stopRings();
+        if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
+        startTimer(); paintUI('oncall'); nativeAudioOn();
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-        // 링/프리커넥트 중(아직 통화중 아님)의 일시적 끊김으론 종료하지 않는다(활성 통화만 종료).
-        if (!(CUR && CUR.connectedAt)) return;
         if (CUR) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       }
     };
@@ -404,7 +412,6 @@
     await ensureSigJoined();   // 📡 시그널 수신 채널 조인 보장(첫 통화 즉시 전환)
     startSigPoll();            // ⚡ 콜드스타트 구간 answer를 REST 폴링으로 즉시 잡기(발신 '거는중' 고착 방지)
     await buildPC();
-    try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}   // 🔇 상대가 받기 전엔 음소거(수신자가 미리 듣는 것 방지, 받으면 'accepted'에서 해제)
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
@@ -440,70 +447,33 @@
     }
   }
 
-  // 수신자 answer 생성 공용 — PC 구성 → offer 반영 → answer 전송. 마이크는 '음소거'로 붙인다
-  //    (받기 전 상대가 미리 듣는 것 방지). buildAnswer는 프리커넥트/폴백 양쪽에서 재사용.
-  async function buildAnswer(cur) {
-    await buildPC();
-    try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
-    nativeAudioOn();
-    await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
-    for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
-    const ans = await pc.createAnswer();
-    ans.sdp = tuneOpus(ans.sdp);
-    await pc.setLocalDescription(ans);
-    cur._lastAnswer = ans.sdp;
-    send({ t: 'answer', sdp: ans.sdp });
-    [250, 700, 1500].forEach(d => setTimeout(() => { if (CUR && CUR._lastAnswer && !CUR.connectedAt) send({ t: 'answer', sdp: CUR._lastAnswer }); }, d));
-  }
-
-  // 🚀 벨 울리는 동안 미리 미디어 연결(카톡식 즉시통화) — 마이크 음소거로 ICE를 미리 뚫어둔다.
-  //    받기 누르면 음소거만 풀어 '즉시' 소리. 마이크 권한이 이미 허용된 경우에만(프롬프트로 링 방해 방지).
-  async function preconnectIncoming() {
-    const cur = CUR;
-    if (!cur || cur.dir !== 'in' || pc) return;
-    try {
-      if ((await micPermState()) !== 'granted') return;   // 권한 미허용 → 폴백(받기 눌러야 프롬프트)
-      if (CUR !== cur || pc) return;
-      const stream = await getMedia(cur.video);
-      if (CUR !== cur) { try { stream.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
-      localStream = stream;
-      if (stream._videoFallback && cur.video) cur.video = false;
-      await buildAnswer(cur);
-      cur._preconnected = true;
-    } catch (_) {
-      cur._preFail = true;
-      try { pc?.close(); } catch (_) {} pc = null;
-      try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
-    }
-  }
-
   async function accept(via) {
     if (!CUR || CUR.dir !== 'in') return;
-    if (CUR._accepting) return;   // 수락 신호가 여러 번 와도 한 번만
+    if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
-    if (!(window.GALLA_isApp && window.GALLA_isApp())) { CUR._accepting = false; return appOnlyNotice(); }
+    // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게).
+    // 안내만 띄우고 벨은 유지.
+    if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     clearTimeout(ringT);
-    send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환
-    [250, 800].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비 재전송
-    // 프리커넥트 진행 중이면 잠깐 기다려 그 결과 재사용(최대 ~1.6초)
-    for (let i = 0; i < 20 && pc && !CUR._preconnected && !CUR._preFail; i++) await new Promise(r => setTimeout(r, 80));
-    if (CUR && CUR._preconnected && localStream) {
-      // 🚀 링 중 미디어 이미 연결됨 — 음소거만 풀면 즉시 소리
-      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
-      if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn();
-      return;
-    }
-    // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) → 전체 셋업 후 즉시 음소거 해제
+    send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자를 통화중으로 — SDP answer(미디어)는 뒤이어 붙는다(카톡식)
     await primePermHint(CUR.video);
-    try { if (!localStream) localStream = await getMedia(CUR.video); }
+    try { localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
-      if (!pc) await buildAnswer(CUR);
-      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
-      if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn();
+      await buildPC();
+      nativeAudioOn();   // 🔊 수신자도 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
+      await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
+      for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+      const ans = await pc.createAnswer();
+      ans.sdp = tuneOpus(ans.sdp);
+      await pc.setLocalDescription(ans);
+      if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
+      send({ t: 'answer', sdp: ans.sdp });
+      // 📡 answer 중복 전송 — Supabase broadcast는 best-effort라 첫 answer 유실 시 발신자가 '거는중' 고착
+      //    (1차 실패·연결 지연의 주범). 짧게 여러 번 더 쏴 유실을 덮는다(발신자는 _gotAnswer로 중복 무시).
+      [250, 600, 1200, 2200].forEach(d => setTimeout(() => { if (CUR && CUR._lastAnswer && !CUR.connectedAt) send({ t: 'answer', sdp: CUR._lastAnswer }); }, d));
+      paintUI('connecting');
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
