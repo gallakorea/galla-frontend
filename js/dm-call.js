@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072645'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072646'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -192,6 +192,7 @@
       // 📞 상대가 '받기'를 누른 즉시 발신자 통화중 전환 + 내 마이크 음소거 해제(상대가 이제 들을 수 있게).
       if (CUR.dir === 'out') {
         try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
+        wbeacon('accepted-unmute out en=' + (localStream && localStream.getAudioTracks().map(t => t.enabled).join(',')) + ' remoteTracks=' + (remoteStream && remoteStream.getTracks().length));
         if (!CUR.connectedAt) { clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); }
       }
       return;
@@ -294,8 +295,11 @@
   // ── ☁️ Cloudflare Calls SFU 미디어 엔진 (1:1 즉시통화) ─────────────────────
   //    각자 SFU 세션 생성 → 로컬 트랙 발행(오디오는 음소거로 시작) → 상대 트랙 구독.
   //    ICE는 SFU가 내부 처리(P2P NAT 뚫기 없음). 시그널(call_sig)은 SDP 대신 {session,tracks} 좌표만 교환.
+  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'SFU ' + m, p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   function sfu(path, method, body) {
-    return sb.functions.invoke('rtc-sfu', { body: { path, method, body: body || {} } }).then(r => r && r.data).catch(() => null);
+    return sb.functions.invoke('rtc-sfu', { body: { path, method, body: body || {} } })
+      .then(r => { if (r && r.error) wbeacon('invoke-err ' + path + ' ' + (r.error.message || r.error)); return r && r.data; })
+      .catch(e => { wbeacon('invoke-throw ' + path + ' ' + ((e && e.message) || e)); return null; });
   }
   // SFU 세션 생성 + localStream 발행. 반환 {session, tracks:[{name,kind}]}. 실패 시 throw(폴백 유도).
   async function cfSetup() {
@@ -315,19 +319,48 @@
           document.body.appendChild(el);
           try { el.play && el.play().catch(() => {}); } catch (_) {}
         }
+        if (e.track) wbeacon('ontrack ' + e.track.kind + ' rs=' + e.track.readyState + ' en=' + e.track.enabled + ' streams=' + (e.streams ? e.streams.length : 0) + ' recv=' + (pc.getReceivers ? pc.getReceivers().filter(r => r.track && r.track.kind === 'audio').length : '?'));
         attachMedia();
       } catch (_) {}
     };
+    pc.oniceconnectionstatechange = () => { if (pc) wbeacon('iceState ' + pc.iceConnectionState); };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
+      wbeacon('pcState ' + pc.connectionState);
       if (pc.connectionState === 'connected') nativeAudioOn();
       else if (['failed', 'closed'].includes(pc.connectionState)) { if (CUR && CUR.connectedAt) endCall('netfail'); }
     };
-    // 세션 부트스트랩 — CF SFU는 /sessions/new에 recvonly offer 동봉 필수
+    // 🔬 6초 후: (A) SFU 세션 상태 (B) 원격 오디오 실제 레벨 측정
+    //    → 레벨>2면 RTP는 흐르는데 재생만 안 됨(iosrtc ADM 문제), ~0이면 RTP 자체가 안 옴(SFU 중계 문제).
+    setTimeout(async () => {
+      try {
+        if (!CUR || !CUR._cf) return;
+        const s = await sfu('/sessions/' + CUR._cf.session, 'GET', null);
+        const tr = s && s.data && s.data.tracks;
+        wbeacon('sessState ' + (tr ? JSON.stringify(tr).slice(0, 300) : ('nodata reason=' + (s && s.reason))));
+      } catch (_) {}
+      try {
+        if (!remoteStream || !remoteStream.getAudioTracks || !remoteStream.getAudioTracks().length) { wbeacon('remoteLevel no-audio-track'); return; }
+        const AC = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AC();
+        const src = ctx.createMediaStreamSource(new MediaStream([remoteStream.getAudioTracks()[0]]));
+        const an = ctx.createAnalyser(); an.fftSize = 512; src.connect(an);
+        const buf = new Uint8Array(an.fftSize);
+        let mx = 0, n = 0;
+        const iv = setInterval(() => {
+          an.getByteTimeDomainData(buf);
+          let peak = 0; for (let i = 0; i < buf.length; i++) { const d = Math.abs(buf[i] - 128); if (d > peak) peak = d; }
+          if (peak > mx) mx = peak;
+          if (++n >= 15) { clearInterval(iv); wbeacon('remoteLevel max=' + mx + (mx > 2 ? ' RTP흐름=YES(재생문제)' : ' RTP흐름=NO(중계문제)')); try { ctx.close(); } catch (_) {} }
+        }, 200);
+      } catch (e) { wbeacon('remoteLevel-err ' + ((e && e.message) || e)); }
+    }, 6000);
+    // 1) 세션 부트스트랩 — CF SFU는 /sessions/new에 recvonly offer 동봉 필수
     pc.addTransceiver('audio', { direction: 'recvonly' });
     const boot = await pc.createOffer();
     await pc.setLocalDescription(boot);
     const sess = await sfu('/sessions/new', 'POST', { sessionDescription: { type: 'offer', sdp: boot.sdp } });
+    wbeacon('sessNew ok=' + (sess && sess.ok) + ' reason=' + (sess && sess.reason) + ' hasId=' + !!(sess && sess.data && sess.data.sessionId) + ' status=' + (sess && sess.status));
     if (!sess || sess.reason === 'unconfigured' || !sess.data || !sess.data.sessionId || !sess.data.sessionDescription) {
       throw new Error('sfu-session(' + (sess && (sess.reason || (sess.data && sess.data.errorDescription)) || '?') + ')');
     }
@@ -352,6 +385,7 @@
       sessionDescription: { type: 'offer', sdp: pub.sdp },
       tracks: trs.map(x => ({ location: 'local', mid: x.tr.mid, trackName: x.trackName })),
     });
+    wbeacon('publish ok=' + (res && res.ok) + ' hasSD=' + !!(res && res.data && res.data.sessionDescription) + ' err=' + (res && res.data && (res.data.errorDescription || (res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode))));
     if (!res || !res.ok || !res.data || !res.data.sessionDescription) throw new Error('sfu-publish');
     await pc.setRemoteDescription(res.data.sessionDescription);
     return { session: cf.session, tracks: items };
@@ -359,6 +393,7 @@
   // 상대 트랙 구독(SFU가 내 pc로 상대 트랙을 밀어준다). remote = {session, tracks:[{name,kind}]}
   function cfSubscribe(remote) {
     const cf = CUR && CUR._cf;
+    wbeacon('cfSubscribe cf=' + !!cf + ' remoteSess=' + (remote && remote.session ? 'y' : 'n') + ' tracks=' + (remote && remote.tracks && remote.tracks.length));
     if (!cf || !remote || !remote.session || !Array.isArray(remote.tracks)) return;
     for (const tk of remote.tracks) {
       if (!tk || !tk.name) continue;
@@ -370,26 +405,34 @@
   }
   async function cfSubOne(cf, session, trackName, key) {
     // 한 번 구독하면 내 세션에 이 원격 트랙이 'active'가 될 때까지 검증. active면 소리 흐름(성공).
-    //    아니면(발행자 RTP가 아직 SFU에 안 닿아 죽은 트랙에 묶임) 재구독 → 양방향 무음 해결.
-    for (let round = 0; round < 16; round++) {
+    //    아니면(발행자 RTP가 아직 SFU에 안 닿아 죽은 트랙에 묶임) 재구독. → 비대칭 무음 해결.
+    const isOut = CUR && CUR.dir === 'out';
+    for (let round = 0; round < 12; round++) {
       if (!CUR || CUR._cf !== cf || !pc) { cf.subs.delete(key); return; }
+      let step = '?';
       try {
         const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', { tracks: [{ location: 'remote', sessionId: session, trackName }] });
         const sd = res && res.data && res.data.sessionDescription;
+        const serr = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
         if (res && res.ok && sd && sd.type === 'offer') {
           await pc.setRemoteDescription(sd);
           const ans = await pc.createAnswer();
           await pc.setLocalDescription(ans);
-          await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
-        }
-      } catch (_) {}
+          const rn = await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
+          step = 'offer,reneg=' + (rn && rn.ok);
+        } else { step = 'nooffer ok=' + (res && res.ok) + ' sd=' + (sd && sd.type) + ' err=' + serr; }
+      } catch (e) { step = 'ex=' + ((e && e.message) || e); }
       await new Promise(r => setTimeout(r, 700));
+      let active = false;
       try {
         const s = await sfu('/sessions/' + cf.session, 'GET', null);
-        if (s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active')) return;
+        active = s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active');
       } catch (_) {}
+      wbeacon((isOut ? 'OUT' : 'IN') + '-sub r=' + round + ' ' + step + ' active=' + active);
+      if (active) return;
       await new Promise(r => setTimeout(r, 500));
     }
+    wbeacon('sub-giveup ' + trackName.slice(0, 12));
     cf.subs.delete(key);
   }
   /* 실패를 소리 없이 삼키지 않는다 — 이유가 적힌 화면을 남긴다 */
@@ -521,6 +564,7 @@
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 45000);   // 콜드스타트(상대 앱 죽어있음) 여유
     } catch (e) {
       console.error('[call] start', e);
+      wbeacon('start-catch ' + ((e && e.message) || e));
       const nm = CUR?.name;
       try { pc?.close(); } catch (_) {} pc = null;
       try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
