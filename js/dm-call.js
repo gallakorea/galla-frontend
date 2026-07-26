@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072632'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072633'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -344,7 +344,8 @@
     //    ⚠️ tr.mid는 setLocalDescription '후'에야 채워진다 — 그 전에 읽으면 null이라 SFU가 발행 거부.
     const trs = [], items = [];
     localStream.getTracks().forEach(t => {
-      if (t.kind === 'audio') t.enabled = false;
+      // ⚠️ 음소거(enabled=false)로 발행하면 RTP가 안 나가 SFU가 중계할 게 없다(무음). 항상 켜서 발행.
+      //    '받기 전 상대가 못 듣게'는 음소거가 아니라 '구독 시점(받을 때만 구독)'으로 보장한다.
       const tr = pc.addTransceiver(t, { direction: 'sendonly' });
       const name = t.kind[0] + '-' + String(ME).slice(0, 6) + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
       trs.push({ tr, trackName: name }); items.push({ name, kind: t.kind });
