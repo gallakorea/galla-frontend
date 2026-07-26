@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072587'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072601'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -274,6 +274,29 @@
       return 'granted';
     } catch (e) { return (e && e.name) || 'error'; }
   };
+  // 🔬 통화 오디오 진단 — 연결 후 RTP 송/수신량을 supabase에 남긴다(두 번째 통화 무음 원인 규명용)
+  async function statsBeacon(label) {
+    try {
+      if (!pc || !sb) return;
+      let inp = 0, inb = 0, inlvl = -1, outp = 0, outb = 0, nrecv = 0, nsend = 0;
+      const st = await pc.getStats();
+      st.forEach(r => {
+        if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { inp = r.packetsReceived || 0; inb = r.bytesReceived || 0; if (r.audioLevel != null) inlvl = r.audioLevel; }
+        if (r.type === 'outbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { outp = r.packetsSent || 0; outb = r.bytesSent || 0; }
+      });
+      try { nrecv = pc.getReceivers().filter(x => x.track && x.track.kind === 'audio').length; } catch (_) {}
+      try { nsend = pc.getSenders().filter(x => x.track && x.track.kind === 'audio').length; } catch (_) {}
+      const msg = `CALLSTATS ${label} dir=${CUR && CUR.dir} ice=${pc.iceConnectionState} conn=${pc.connectionState} inPkt=${inp} inByt=${inb} inLvl=${inlvl} outPkt=${outp} outByt=${outb} recv=${nrecv} send=${nsend}`;
+      sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: msg, p_ver: 'diag' }).then(() => {}, () => {});
+    } catch (_) {}
+  }
+  function schedStats() {
+    if (!CUR || CUR._statsSched) return;
+    CUR._statsSched = true;
+    setTimeout(() => statsBeacon('3s'), 3000);
+    setTimeout(() => statsBeacon('8s'), 8000);
+  }
+
   async function buildPC() {
     pc = new RTCPeerConnection(await iceConfig());
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -288,7 +311,7 @@
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
       if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt) {
-        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
       }
     };
     pc.onconnectionstatechange = () => {
@@ -296,7 +319,7 @@
       if (pc.connectionState === 'connected') {
         clearTimeout(ringT); stopRings();
         if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
-        startTimer(); paintUI('oncall'); nativeAudioOn();
+        startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
         if (CUR) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       }
