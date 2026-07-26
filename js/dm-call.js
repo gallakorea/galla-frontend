@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072606'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072607'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -369,6 +369,8 @@
     try {
     chanPeer = await peerChan(peer);
     await buildPC();
+    nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
+                       //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
@@ -418,6 +420,7 @@
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
       await buildPC();
+      nativeAudioOn();   // 🔊 수신자도 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
       await pc.setRemoteDescription({ type: 'offer', sdp: CUR.offer });
       for (const c of CUR.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
       const ans = await pc.createAnswer();
