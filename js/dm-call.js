@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072676'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072677'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -689,18 +689,15 @@
       const v = Math.min(1, (PREF().callVolume ?? 100) / 100);
       document.querySelectorAll('#dm-call audio, #dm-call video').forEach(el => { el.volume = v; });
     }, 120);
-    if (remoteStream) {
-      const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
+    // 📞 영상통화: 영상은 '네이티브'가 그린다(웹 DOM 영상은 렌더 안 함 — 같은 트랙 이중 렌더 충돌 방지).
+    //    오디오는 iosrtc ADM이 트랙으로 자동 재생하므로 <audio> 없이도 들린다.
+    const videoCall = !!CUR?.video;
+    if (remoteStream && !videoCall) {
+      const el = document.getElementById('dm-call-audio');
       if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }
-      if (CUR?.video && el) ensureVideoRender(el, remoteStream); else iosrtcAttach(el);
-      applyAudioRoute();   // 상대 소리 끔 상태 유지
+      iosrtcAttach(el);
     }
-    if (CUR?.video && localStream) {
-      const lv = document.getElementById('dm-call-local');
-      // 로컬 미리보기 스트림은 한 번만 만들어 재사용(재시도마다 새로 만들면 렌더러가 계속 초기화됨)
-      if (!CUR._localVid) { try { CUR._localVid = new MediaStream(localStream.getVideoTracks()); } catch (_) {} }
-      if (lv && CUR._localVid) ensureVideoRender(lv, CUR._localVid);
-    }
+    if (remoteStream) applyAudioRoute();   // 상대 소리 끔 상태 유지
     // 📞 면상톡: 원격 영상 트랙이 (늦게) 도착하면 네이티브 통화 화면에 트랙 id를 갱신 → 네이티브가 직접 렌더.
     if (CUR?.video && CUR.connectedAt) {
       const rid = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0] && remoteStream.getVideoTracks()[0].id;

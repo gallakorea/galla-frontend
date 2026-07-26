@@ -504,6 +504,8 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
   transform: scaleX(-1);
 }
 #dm-call.video[data-state="oncall"] .dmc-card { display: none; }   /* 네이티브 오버레이가 버튼 담당 */
+/* 영상통화 통화중: 영상·버튼 모두 네이티브가 그린다 → 웹 영상 요소 숨김(iosrtc 이중 렌더 방지) */
+#dm-call.video[data-state="oncall"] #dm-call-remote, #dm-call.video[data-state="oncall"] #dm-call-local { display: none !important; }
 #dm-call.video .dmc-card { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 #dm-call.video[data-state="incoming"] .dmc-name, #dm-call.video[data-state="outgoing"] .dmc-name { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 .dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }
