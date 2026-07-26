@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072607'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072608'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -105,6 +105,23 @@
             } catch (_) {}
           })
         .subscribe();
+    }
+  }
+  // 📡 내 수신 채널(call:<ME>) 조인 보장 — 콜드스타트 첫 통화에서 answer가 이 채널로 오는데
+  //    아직 조인 전이면 유실돼 '거는중' 고착(1차 실패)이 난다. 조인될 때까지 대기하고, 죽어 있으면 재구독.
+  async function ensureMineJoined() {
+    for (let i = 0; i < 20; i++) {
+      if (chanMine && chanMine.state === 'joined') return;
+      if (!chanMine || ['closed', 'errored'].includes(chanMine.state)) {
+        try { if (chanMine) sb.removeChannel(chanMine); } catch (_) {}
+        chanMine = null;
+        if (sb && ME) {
+          chanMine = sb.channel('call:' + ME)
+            .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload || {}))
+            .subscribe();
+        }
+      }
+      await new Promise(r => setTimeout(r, 250));
     }
   }
   async function onSignal(p) {
@@ -368,6 +385,7 @@
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 걸어요'); }
     try {
     chanPeer = await peerChan(peer);
+    await ensureMineJoined();   // 📡 answer 받을 내 채널 조인 보장(콜드스타트 첫 통화 '거는중' 고착 방지)
     await buildPC();
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
