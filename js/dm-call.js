@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072633'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072634'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -306,7 +306,23 @@
     const ice = await iceConfig();
     pc = new RTCPeerConnection({ iceServers: ice.iceServers || [], bundlePolicy: 'max-bundle' });
     remoteStream = new MediaStream();
-    pc.ontrack = e => { try { if (e.streams && e.streams[0]) remoteStream = e.streams[0]; else if (e.track) remoteStream.addTrack(e.track); if (e.track) wbeacon('ontrack ' + e.track.kind + ' streams=' + (e.streams ? e.streams.length : 0) + ' total=' + remoteStream.getTracks().length); attachMedia(); } catch (_) {} };
+    pc.ontrack = e => {
+      try {
+        if (e.streams && e.streams[0]) remoteStream = e.streams[0];
+        else if (e.track) { remoteStream = remoteStream || new MediaStream(); remoteStream.addTrack(e.track); }
+        // 🔊 난장(dm-live) SFU 방식 — 원격 트랙마다 전용 <audio>를 body에 붙여 iosrtc 네이티브 재생 보장.
+        //    (paintUI가 재생성하는 공용 요소로는 SFU 원격 오디오가 안 울렸다)
+        if (e.track && e.track.kind === 'audio') {
+          const el = document.createElement('audio');
+          el.autoplay = true; el.playsInline = true; el.className = 'dmc-sfu-audio';
+          el.srcObject = new MediaStream([e.track]);
+          document.body.appendChild(el);
+          try { el.play && el.play().catch(() => {}); } catch (_) {}
+        }
+        if (e.track) wbeacon('ontrack ' + e.track.kind + ' streams=' + (e.streams ? e.streams.length : 0));
+        attachMedia();
+      } catch (_) {}
+    };
     pc.oniceconnectionstatechange = () => { if (pc) wbeacon('iceState ' + pc.iceConnectionState); };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
@@ -635,6 +651,7 @@
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
     localStream = null; remoteStream = null;
+    try { document.querySelectorAll('.dmc-sfu-audio').forEach(el => { try { el.srcObject = null; el.remove(); } catch (_) {} }); } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
