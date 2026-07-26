@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072680'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072681'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -609,7 +609,7 @@
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
   function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
   // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
-  function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video)) }); }
+  function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!SPK }); }   // 영상은 SPK가 true로 시작(스피커) → 탭 시 수화부로 전환됨
   // 📞 통화 확립 1초·2.5초 뒤 ADM 강제 재시작(킥) — 프리커넥트/콜드스타트로 오디오 유닛이
   //    비활성 세션에 물려 죽어 있어도 살아나게 하는 안전장치(무음 방지). 통화당 1회 예약.
   function armAudioKick() {
