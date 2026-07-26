@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072602'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072603'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -126,7 +126,7 @@
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
       // 잠금화면 CallKit에서 이미 '받기'를 눌렀다면(푸시가 offer보다 먼저 도착) 즉시 수락
-      try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept(); } catch (_) {}
+      try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept('consume'); } catch (_) {}
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
@@ -390,7 +390,9 @@
     }
   }
 
-  async function accept() {
+  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'WEB ' + m, p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
+  async function accept(via) {
+    wbeacon('accept via=' + (via || '?') + ' dir=' + (CUR && CUR.dir) + ' acc=' + (CUR && CUR._accepting) + ' ckPend=' + callKitPendingAnswer);
     if (!CUR || CUR.dir !== 'in') return;
     if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
@@ -688,7 +690,7 @@
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
     box.onclick = e => {
       const c = e.target.closest('[data-c]')?.dataset.c;
-      if (c === 'accept') accept();
+      if (c === 'accept') accept('tap');
       else if (c === 'decline') decline();
       else if (c === 'hangup') endCall('ended');
       else if (c === 'flip') flipCam();
@@ -757,14 +759,14 @@
   };
   function armCallKitAnswer() {
     callKitPendingAnswer = true;
-    if (CUR && CUR.dir === 'in' && !CUR._accepting) { try { accept(); } catch (_) {} }   // offer 이미 와 있으면 즉시 수락
+    if (CUR && CUR.dir === 'in' && !CUR._accepting) { try { accept('arm'); } catch (_) {} }   // offer 이미 와 있으면 즉시 수락
     setTimeout(() => { callKitPendingAnswer = false; }, 45000);   // 콜드스타트 여유(앱 죽은 상태서 깨어나 구독까지)
   }
   window.GALLA_callKitAnswer = function (callerId) {
     // 영속 스태시 — 통화엔진 로드 전에 이 함수가 다른 정의(app-shell 포워더)로 불렸어도 유실 안 되게
     try { window.__ckAnswer = { callerId: callerId || '', at: Date.now() }; } catch (_) {}
     // 이미 offer가 도착해 수신벨이 떠 있으면 바로 수락
-    if (CUR && CUR.dir === 'in') { try { accept(); } catch (_) {} return; }
+    if (CUR && CUR.dir === 'in') { try { accept('ckAnswer'); } catch (_) {} return; }
     // 아직이면 예약 — onSignal(offer)에서 도착 즉시 수락
     armCallKitAnswer();
   };
