@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072681'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072682'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -689,15 +689,14 @@
       const v = Math.min(1, (PREF().callVolume ?? 100) / 100);
       document.querySelectorAll('#dm-call audio, #dm-call video').forEach(el => { el.volume = v; });
     }, 120);
-    // 📞 영상통화: 영상은 '네이티브'가 그린다(웹 DOM 영상은 렌더 안 함 — 같은 트랙 이중 렌더 충돌 방지).
-    //    오디오는 iosrtc ADM이 트랙으로 자동 재생하므로 <audio> 없이도 들린다.
-    const videoCall = !!CUR?.video;
-    if (remoteStream && !videoCall) {
+    // 📞 영상통화도 영상은 '네이티브'가 그리지만, 원격 오디오는 <audio> 싱크에 붙여야 iosrtc가 재생한다
+    //    (싱크가 없으면 양쪽 다 소리가 안 남 — 영상·음성 공통 오디오 싱크 = #dm-call-audio).
+    if (remoteStream) {
       const el = document.getElementById('dm-call-audio');
       if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }
-      iosrtcAttach(el);
+      if (el) iosrtcAttach(el);
+      applyAudioRoute();   // 상대 소리 끔 상태 유지
     }
-    if (remoteStream) applyAudioRoute();   // 상대 소리 끔 상태 유지
     // 📞 면상톡: 원격 영상 트랙이 (늦게) 도착하면 네이티브 통화 화면에 트랙 id를 갱신 → 네이티브가 직접 렌더.
     if (CUR?.video && CUR.connectedAt) {
       const rid = liveVideoId(remoteStream), lid = liveVideoId(localStream);
@@ -875,7 +874,8 @@
     box.innerHTML = `
       ${video
         ? `<video id="dm-call-remote" autoplay playsinline></video>
-           <video id="dm-call-local" autoplay playsinline muted></video>`
+           <video id="dm-call-local" autoplay playsinline muted></video>
+           <audio id="dm-call-audio" autoplay></audio>`
         : (SPK
           ? `<audio id="dm-call-audio" autoplay></audio>`
           : `<video id="dm-call-audio" autoplay playsinline style="width:0;height:0;position:absolute;opacity:0;pointer-events:none"></video>`)}
