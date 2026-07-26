@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072659'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072660'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -366,17 +366,24 @@
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', cand: e.candidate }); };
     pc.ontrack = e => {
-      // ★ e.streams[0]에 의존하지 않는다 — iosrtc가 통화마다 스트림 구성이 들쭉날쭉해(비디오 트랙 누락·
-      //   비plugin 스트림) 발신자 검은 화면이 났다. 도착하는 트랙을 '내가 만든 plugin 스트림'에 직접 조립.
+      // ⚠️ iosrtc는 '유효한 blobId를 가진 plugin MediaStream'만 렌더한다. ontrack이 주는 원본
+      //   스트림(e.streams[0])이 그 스트림이다 — new MediaStream()+addTrack으로 갈아끼우면 blobId가
+      //   없어 검은 화면이 났다. 원본 스트림을 유지하고, 트랙만 오면 같은 스트림에 합친다(blobId 보존).
       try {
-        if (!remoteStream) {
-          try { remoteStream = new MediaStream(); } catch (_) { remoteStream = (e.streams && e.streams[0]) || null; }
+        const s0 = e.streams && e.streams[0];
+        if (s0 && typeof s0.getBlobId === 'function') {
+          if (remoteStream !== s0) {
+            // 기존 스트림에 있던 트랙을 원본 스트림으로 합쳐 하나로 유지
+            if (remoteStream && remoteStream.getTracks) {
+              remoteStream.getTracks().forEach(t => { try { if (!s0.getTracks().some(x => x.id === t.id)) s0.addTrack(t); } catch (_) {} });
+            }
+            remoteStream = s0;
+          }
+        } else if (e.track) {
+          if (!remoteStream) { try { remoteStream = new MediaStream(); } catch (_) {} }
+          try { if (remoteStream && !remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track); } catch (_) {}
         }
-        if (e.track && remoteStream && remoteStream.addTrack) {
-          const has = remoteStream.getTracks && remoteStream.getTracks().some(t => t.id === e.track.id);
-          if (!has) { try { remoteStream.addTrack(e.track); } catch (_) {} }
-          wb('ontrack ' + e.track.kind + ' rv=' + (remoteStream.getVideoTracks ? remoteStream.getVideoTracks().length : '?') + ' ra=' + (remoteStream.getAudioTracks ? remoteStream.getAudioTracks().length : '?'));
-        }
+        wb('ontrack ' + (e.track && e.track.kind) + ' s0blob=' + !!(s0 && s0.getBlobId && s0.getBlobId()) + ' rv=' + (remoteStream && remoteStream.getVideoTracks ? remoteStream.getVideoTracks().length : '?') + ' ra=' + (remoteStream && remoteStream.getAudioTracks ? remoteStream.getAudioTracks().length : '?'));
       } catch (_) {}
       attachMedia();
     };
