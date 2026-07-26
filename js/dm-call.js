@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072616'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072617'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -57,14 +57,33 @@
     return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
   }
 
-  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'WEB ' + m + ' sig=' + (chanSig && chanSig.state), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   // 📞 시그널링 = DB 신뢰 전송(카톡급). 채널 조인·유실 없이 상대의 상시 구독으로 즉시 배달.
   function send(msg) {
     const to = (CUR && CUR.peer) || msg.to;
     if (!to || !sb) return;
-    if (msg.t === 'offer' || msg.t === 'answer' || msg.t === 'hangup') wbeacon('send ' + msg.t + ' to=' + String(to).slice(0, 8));
     try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
   }
+
+  // ⚡ 콜드스타트 대비 시그널 폴링 — realtime 웹소켓이 막 연결돼 첫 몇 초간 broadcast를 놓칠 때,
+  //    call_sig를 REST로 직접 읽어 offer/answer를 즉시 잡는다(REST는 워밍업 지연 없음). 연결되면 중단.
+  //    onSignal이 중복 신호를 방어하므로 broadcast와 겹쳐도 안전.
+  let pollT = null, lastSigId = 0;
+  async function startSigPoll() {
+    if (pollT || !sb || !ME) return;
+    try {
+      const { data } = await sb.from('call_sig').select('id').eq('to_uid', ME).order('id', { ascending: false }).limit(1);
+      lastSigId = (data && data[0] && data[0].id) || lastSigId;
+    } catch (_) {}
+    let ticks = 0;
+    pollT = setInterval(async () => {
+      if (!CUR || CUR.connectedAt || ++ticks > 24) { stopSigPoll(); return; }   // 연결됐거나 12초 지나면 중단
+      try {
+        const { data } = await sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).gt('id', lastSigId).order('id', { ascending: true });
+        for (const r of (data || [])) { lastSigId = r.id; onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
+      } catch (_) {}
+    }, 500);
+  }
+  function stopSigPoll() { if (pollT) { clearInterval(pollT); pollT = null; } }
 
   // 통화 시그널 broadcast 수신 → onSignal. DB 트리거(call_sig INSERT)가 이 토픽으로 즉시 직송한다.
   function onSigBroadcast(payload) {
@@ -127,7 +146,6 @@
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
-    if (p.t === 'offer' || p.t === 'answer' || p.t === 'hangup') wbeacon('recv ' + p.t + ' from=' + String(p.from).slice(0, 8) + ' hasCUR=' + !!CUR);
     if (p.t === 'offer') {
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
@@ -139,6 +157,7 @@
       if (CUR) { send({ t: 'busy', to: p.from }); return; }
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
       try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
+      startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
@@ -364,6 +383,7 @@
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 걸어요'); }
     try {
     await ensureSigJoined();   // 📡 시그널 수신 채널 조인 보장(첫 통화 즉시 전환)
+    startSigPoll();            // ⚡ 콜드스타트 구간 answer를 REST 폴링으로 즉시 잡기(발신 '거는중' 고착 방지)
     await buildPC();
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
@@ -491,6 +511,7 @@
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
+    stopSigPoll();
     stopRings();   // 🔕 벨·링백 정지
     nativeEndCallKit();   // CallKit 콜도 함께 종료(수신자 화면 잔류 방지)
     // ⚠️ CallKit 수락 대기 상태를 반드시 정리 — 안 하면 45초 안에 온 '다음' 수신 통화가
