@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072605'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072606'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -142,7 +142,9 @@
         // 📞 상대가 answer를 보냈다 = 받았다. ICE 완결(수 초 소요)을 기다리지 말고 바로 '통화중'으로
         //    전환(카톡식). 오디오는 실제 연결(connectionState) 시 nativeAudioOn으로 켜진다.
         if (CUR && CUR.dir === 'out' && !CUR.connectedAt) {
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); schedStats();
+          // ⚠️ nativeAudioOn 필수 — iosrtc가 answer 전 spurious 'connected'를 이미 쐈으면 connect 핸들러가
+          //    다시 안 불려 오디오가 안 켜진다(무음). 여기서 명시적으로 켠다.
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
         }
       } catch (e) { console.error('[call]', e); }
     }
