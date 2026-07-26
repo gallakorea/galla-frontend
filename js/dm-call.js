@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072679'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072680'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -700,9 +700,8 @@
     if (remoteStream) applyAudioRoute();   // 상대 소리 끔 상태 유지
     // 📞 면상톡: 원격 영상 트랙이 (늦게) 도착하면 네이티브 통화 화면에 트랙 id를 갱신 → 네이티브가 직접 렌더.
     if (CUR?.video && CUR.connectedAt) {
-      const rid = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0] && remoteStream.getVideoTracks()[0].id;
-      const lid = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].id;
-      if (rid && CUR._nvRid !== rid) { CUR._nvRid = rid; _nativeCall({ action: 'videoTracks', remoteTrackId: rid, localTrackId: lid || '' }); }
+      const rid = liveVideoId(remoteStream), lid = liveVideoId(localStream);
+      if (rid && (CUR._nvRid !== rid || CUR._nvLid !== lid)) { CUR._nvRid = rid; CUR._nvLid = lid; _nativeCall({ action: 'videoTracks', remoteTrackId: rid, localTrackId: lid }); }
     }
     // 렌더러 위치/크기 동기화(리페인트 직후 좌표 반영)
     setTimeout(() => { try { window.__iosrtc && window.__iosrtc.refreshVideos && window.__iosrtc.refreshVideos(); } catch (_) {} }, 300);
@@ -905,11 +904,18 @@
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
     // 📞 면상톡: 네이티브 통화 화면(원격/로컬 영상 + 버튼) 표시. 영상 트랙 id를 넘겨 네이티브가 직접 그린다.
     if (video && state === 'oncall') {
-      const lid = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].id;
-      const rid = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0] && remoteStream.getVideoTracks()[0].id;
-      _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: lid || '', remoteTrackId: rid || '' });
+      _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: liveVideoId(localStream), remoteTrackId: liveVideoId(remoteStream) });
     } else _nativeCall({ action: 'videoUI', show: false });
     box.onclick = e => callAction(e.target.closest('[data-c]')?.dataset.c);
+  }
+  // 스트림에서 '살아있는 최신' 영상 트랙 id — 음성↔영상 재전환 시 옛 트랙이 누적돼 멈춘 화면이
+  //   나오던 것 방지(readyState 'live'인 마지막 트랙 우선).
+  function liveVideoId(s) {
+    if (!s || !s.getVideoTracks) return '';
+    const ts = s.getVideoTracks();
+    const live = ts.filter(t => t.readyState === 'live');
+    const t = live[live.length - 1] || ts[ts.length - 1];
+    return (t && t.id) || '';
   }
   // 통화 버튼 액션 — 웹 버튼과 네이티브 오버레이(window.GALLA_callAction)가 공용으로 호출한다.
   function callAction(c) {
