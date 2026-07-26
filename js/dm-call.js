@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072662'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072663'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -438,7 +438,7 @@
     await buildPC();
     // 🔇 상대가 받기 전엔 내 마이크 음소거(무음 프레임 전송 — ICE는 미리 뚫리되 소리는 안 새게).
     //    'accepted' 신호가 오면 음소거를 푼다.
-    try { localStream.getTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
+    try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
@@ -478,7 +478,7 @@
   //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
   async function buildAnswer(cur, muted) {
     await buildPC();
-    if (muted) { try { localStream.getTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
+    if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
     await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
