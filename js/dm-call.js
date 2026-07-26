@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072626'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072627'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -294,8 +294,11 @@
   // ── ☁️ Cloudflare Calls SFU 미디어 엔진 (1:1 즉시통화) ─────────────────────
   //    각자 SFU 세션 생성 → 로컬 트랙 발행(오디오는 음소거로 시작) → 상대 트랙 구독.
   //    ICE는 SFU가 내부 처리(P2P NAT 뚫기 없음). 시그널(call_sig)은 SDP 대신 {session,tracks} 좌표만 교환.
+  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'SFU ' + m, p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   function sfu(path, method, body) {
-    return sb.functions.invoke('rtc-sfu', { body: { path, method, body: body || {} } }).then(r => r && r.data).catch(() => null);
+    return sb.functions.invoke('rtc-sfu', { body: { path, method, body: body || {} } })
+      .then(r => { if (r && r.error) wbeacon('invoke-err ' + path + ' ' + (r.error.message || r.error)); return r && r.data; })
+      .catch(e => { wbeacon('invoke-throw ' + path + ' ' + ((e && e.message) || e)); return null; });
   }
   // SFU 세션 생성 + localStream 발행. 반환 {session, tracks:[{name,kind}]}. 실패 시 throw(폴백 유도).
   async function cfSetup() {
@@ -313,8 +316,9 @@
     const boot = await pc.createOffer();
     await pc.setLocalDescription(boot);
     const sess = await sfu('/sessions/new', 'POST', { sessionDescription: { type: 'offer', sdp: boot.sdp } });
+    wbeacon('sessNew ok=' + (sess && sess.ok) + ' reason=' + (sess && sess.reason) + ' hasId=' + !!(sess && sess.data && sess.data.sessionId) + ' status=' + (sess && sess.status));
     if (!sess || sess.reason === 'unconfigured' || !sess.data || !sess.data.sessionId || !sess.data.sessionDescription) {
-      throw new Error('sfu-session(' + (sess && sess.reason || '?') + ')');
+      throw new Error('sfu-session(' + (sess && (sess.reason || (sess.data && sess.data.errorDescription)) || '?') + ')');
     }
     await pc.setRemoteDescription(sess.data.sessionDescription);
     const cf = { session: sess.data.sessionId, subs: new Set(), q: Promise.resolve() };
@@ -499,11 +503,12 @@
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 45000);   // 콜드스타트(상대 앱 죽어있음) 여유
     } catch (e) {
       console.error('[call] start', e);
+      wbeacon('start-catch ' + ((e && e.message) || e));
       const nm = CUR?.name;
       try { pc?.close(); } catch (_) {} pc = null;
       try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
       CUR = null;
-      paintErr(nm, '통화를 시작하지 못했어요 (' + ((e && e.name) || '오류') + ')');
+      paintErr(nm, '통화를 시작하지 못했어요 (' + ((e && e.message) || '오류') + ')');
     }
   }
 
