@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072614'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072615'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -64,15 +64,22 @@
     try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
   }
 
+  // 통화 시그널 broadcast 수신 → onSignal. DB 트리거(call_sig INSERT)가 이 토픽으로 즉시 직송한다.
+  function onSigBroadcast(payload) {
+    try { const d = payload || {}; onSignal({ ...(d.payload || {}), t: d.t, from: d.from_uid, to: ME }); } catch (_) {}
+  }
+  function newSigChannel() {
+    // 프라이빗 broadcast 채널 — 인증은 앱의 전역 realtime 세션(알림·삐삐 RLS 구독과 동일)을 사용.
+    return sb.channel('callsig:' + ME, { config: { private: true } })
+      .on('broadcast', { event: 'sig' }, ({ payload }) => onSigBroadcast(payload))
+      .subscribe();
+  }
   function listen(_sb, me) {
     sb = _sb; ME = me;
     if (chanSig || !sb || !ME) return;
-    // 🟢 통화 시그널링 = DB 신뢰 전송 상시 구독(카톡급) — 로그인 시점부터 열려 있어 조인 지연이 없고,
-    //    DB 기반이라 유실이 없다(offer/answer/ice/hangup 전부 이 경로). 첫 통화도 즉시 전환.
-    chanSig = sb.channel('callsig:' + ME)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_sig', filter: 'to_uid=eq.' + ME },
-        ({ new: row }) => { try { onSignal({ ...(row.payload || {}), t: row.t, from: row.from_uid, to: ME }); } catch (_) {} })
-      .subscribe();
+    // 🟢 통화 시그널링 = DB 트리거 → Realtime Broadcast 직송(카톡급). 로그인 시점부터 상시 구독이라
+    //    조인 지연·콜드스타트 없음, 지연 수십 ms. offer/answer/ice/hangup 전부 이 경로 → 첫 통화도 즉시.
+    chanSig = newSigChannel();
     // ⚡ 부팅 시 TURN 자격증명을 미리 데워둔다 — 통화 시작·수락 때 buildPC가 turn-cred를 기다리지 않아
     //    연결 체감이 몇 초 → 1초대로 단축된다(30분 캐시).
     try { iceConfig().catch(() => {}); } catch (_) {}
@@ -111,12 +118,7 @@
       if (!chanSig || ['closed', 'errored'].includes(chanSig.state)) {
         try { if (chanSig) sb.removeChannel(chanSig); } catch (_) {}
         chanSig = null;
-        if (sb && ME) {
-          chanSig = sb.channel('callsig:' + ME)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'call_sig', filter: 'to_uid=eq.' + ME },
-              ({ new: row }) => { try { onSignal({ ...(row.payload || {}), t: row.t, from: row.from_uid, to: ME }); } catch (_) {} })
-            .subscribe();
-        }
+        if (sb && ME) chanSig = newSigChannel();
       }
       await new Promise(r => setTimeout(r, 200));
     }
