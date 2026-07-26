@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072641'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072642'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -406,25 +406,30 @@
   async function cfSubOne(cf, session, trackName, key) {
     // 한 번 구독하면 내 세션에 이 원격 트랙이 'active'가 될 때까지 검증. active면 소리 흐름(성공).
     //    아니면(발행자 RTP가 아직 SFU에 안 닿아 죽은 트랙에 묶임) 재구독. → 비대칭 무음 해결.
+    const isOut = CUR && CUR.dir === 'out';
     for (let round = 0; round < 12; round++) {
       if (!CUR || CUR._cf !== cf || !pc) { cf.subs.delete(key); return; }
+      let step = '?';
       try {
         const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', { tracks: [{ location: 'remote', sessionId: session, trackName }] });
         const sd = res && res.data && res.data.sessionDescription;
+        const serr = res && res.data && res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode;
         if (res && res.ok && sd && sd.type === 'offer') {
           await pc.setRemoteDescription(sd);
           const ans = await pc.createAnswer();
           await pc.setLocalDescription(ans);
-          await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
-        }
-      } catch (_) {}
-      // 내 세션에 원격 트랙 active 확인
+          const rn = await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
+          step = 'offer,reneg=' + (rn && rn.ok);
+        } else { step = 'nooffer ok=' + (res && res.ok) + ' sd=' + (sd && sd.type) + ' err=' + serr; }
+      } catch (e) { step = 'ex=' + ((e && e.message) || e); }
       await new Promise(r => setTimeout(r, 700));
+      let active = false;
       try {
         const s = await sfu('/sessions/' + cf.session, 'GET', null);
-        const active = s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active');
-        if (active) { wbeacon('sub-active round=' + round); return; }   // ✅ 소리 흐름
+        active = s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active');
       } catch (_) {}
+      wbeacon((isOut ? 'OUT' : 'IN') + '-sub r=' + round + ' ' + step + ' active=' + active);
+      if (active) return;
       await new Promise(r => setTimeout(r, 500));
     }
     wbeacon('sub-giveup ' + trackName.slice(0, 12));
