@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072655'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072656'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -369,7 +369,15 @@
       // ★ 스트림은 변수로 들고 있는다 — paintUI가 innerHTML을 다시 그릴 때마다
       //   <audio>/<video>가 새 요소로 바뀌므로 매번 재부착해야 한다
       //   (이걸 안 해서 '연결됐는데 소리가 안 들리는' 버그가 났다)
-      if (e.streams[0]) remoteStream = e.streams[0];
+      if (e.streams[0]) {
+        remoteStream = e.streams[0];
+        // iosrtc 렌더러는 plugin MediaStream(getBlobId 보유)만 그린다 — 아니면 plugin 클래스로 감싼다.
+        try {
+          if (typeof remoteStream.getBlobId !== 'function' && window.MediaStream) {
+            remoteStream = new MediaStream(remoteStream.getTracks());
+          }
+        } catch (_) {}
+      }
       attachMedia();
     };
     // ⚠️ connect 핸들러는 '오디오 유닛 켜기'만 — UI 전환(통화중)은 오직 accept(수신자)와 'accepted'
@@ -630,12 +638,19 @@
     }
   }
 
-  // 📺 iosrtc 네이티브 비디오 렌더러 수동 부착 — srcObject 설정만으론 loadstart가 안 떠 렌더러가
-  //    영영 안 붙는 케이스(면상톡 검은 화면)를 observeVideo(공식 수동 API)로 즉시 부착한다.
+  // 📺 iosrtc 네이티브 비디오 렌더러 수동 부착 — srcObject만으론 렌더러가 안 붙는 케이스(검은 화면)를
+  //    ①observeVideo(공식 수동 API) ②src=createObjectURL(구식이지만 가장 확실한 경로: 속성 감시에 걸림)
+  //    이중으로 부착한다. iosrtc MediaStream은 Blob 파생이라 createObjectURL이 유효하다.
   function iosrtcAttach(el) {
     try {
       const r = window.__iosrtc;
-      if (r && r.observeVideo && el && el.srcObject && !el._iosrtcMediaStreamRendererId) r.observeVideo(el);
+      if (!r || !el || el._iosrtcMediaStreamRendererId) return;
+      const st = el.srcObject;
+      if (!st) return;
+      if (r.observeVideo) r.observeVideo(el);
+      if (!el._iosrtcMediaStreamRendererId && typeof st.getBlobId === 'function' && !el.getAttribute('src')) {
+        try { el.setAttribute('src', URL.createObjectURL(st)); } catch (_) {}
+      }
     } catch (_) {}
   }
   function attachMedia() {
