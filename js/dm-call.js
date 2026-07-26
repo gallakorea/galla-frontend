@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072661'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072662'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -660,14 +660,14 @@
       }
     } catch (_) {}
   }
-  // 📺 원격 영상 렌더러가 붙을 때까지 재부착 — 프리커넥트(수신자)는 스트림이 영상요소보다 먼저 와서
+  // 📺 영상 렌더러가 붙을 때까지 재부착 — 프리커넥트(수신자)는 스트림이 영상요소보다 먼저 와서
   //    한 번의 부착을 놓친다. srcObject를 null→재설정(loadstart 강제)하고 붙을 때까지 짧게 재시도.
-  function ensureRemoteRender(el) {
+  function ensureVideoRender(el, stream) {
     let n = 0;
     const tick = () => {
-      if (!el || !el.isConnected || !remoteStream) return;
+      if (!el || !el.isConnected || !stream) return;
       if (el._iosrtcMediaStreamRendererId) { try { window.__iosrtc?.refreshVideos?.(); } catch (_) {} return; }
-      try { el.removeAttribute('src'); el.srcObject = null; el.srcObject = remoteStream; } catch (_) {}   // loadstart 재발동
+      try { el.removeAttribute('src'); el.srcObject = null; el.srcObject = stream; } catch (_) {}   // loadstart 재발동
       iosrtcAttach(el);
       try { window.__iosrtc?.refreshVideos?.(); } catch (_) {}
       if (++n < 12) setTimeout(tick, 300);
@@ -683,13 +683,14 @@
     if (remoteStream) {
       const el = document.getElementById(CUR?.video ? 'dm-call-remote' : 'dm-call-audio');
       if (el && el.srcObject !== remoteStream) { el.srcObject = remoteStream; el.play?.().catch(() => {}); }
-      if (CUR?.video && el) ensureRemoteRender(el); else iosrtcAttach(el);
+      if (CUR?.video && el) ensureVideoRender(el, remoteStream); else iosrtcAttach(el);
       applyAudioRoute();   // 상대 소리 끔 상태 유지
     }
     if (CUR?.video && localStream) {
       const lv = document.getElementById('dm-call-local');
-      if (lv && !lv.srcObject) { lv.srcObject = new MediaStream(localStream.getVideoTracks()); lv.play?.().catch(() => {}); }
-      iosrtcAttach(lv);
+      // 로컬 미리보기 스트림은 한 번만 만들어 재사용(재시도마다 새로 만들면 렌더러가 계속 초기화됨)
+      if (!CUR._localVid) { try { CUR._localVid = new MediaStream(localStream.getVideoTracks()); } catch (_) {} }
+      if (lv && CUR._localVid) ensureVideoRender(lv, CUR._localVid);
     }
     // 렌더러 위치/크기 동기화(리페인트 직후 좌표 반영)
     setTimeout(() => { try { window.__iosrtc && window.__iosrtc.refreshVideos && window.__iosrtc.refreshVideos(); } catch (_) {} }, 300);
