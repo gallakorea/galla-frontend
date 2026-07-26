@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072610'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072611'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -385,12 +385,13 @@
     try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
     //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
-    //    재구독한 뒤 다음 재전송을 잡도록, answer 받을 때까지 2.5초마다 같은 offer를 다시 쏜다.
+    //    재구독한 뒤 다음 재전송을 잡도록, answer 받을 때까지 1.2초마다 같은 offer를 다시 쏜다
+    //    (broadcast 유실 복구를 빠르게 — 1차 실패·연결 지연 최소화).
     clearInterval(reoffT);
     reoffT = setInterval(() => {
       if (!CUR || CUR.dir !== 'out' || CUR.connectedAt || CUR._gotAnswer) { clearInterval(reoffT); reoffT = null; return; }
       try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video }); } catch (_) {}
-    }, 2500);
+    }, 1200);
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 45000);   // 콜드스타트(상대 앱 죽어있음) 여유
     } catch (e) {
       console.error('[call] start', e);
@@ -425,6 +426,9 @@
       await pc.setLocalDescription(ans);
       if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
       send({ t: 'answer', sdp: ans.sdp });
+      // 📡 answer 중복 전송 — Supabase broadcast는 best-effort라 첫 answer 유실 시 발신자가 '거는중' 고착
+      //    (1차 실패·연결 지연의 주범). 짧게 여러 번 더 쏴 유실을 덮는다(발신자는 _gotAnswer로 중복 무시).
+      [250, 600, 1200, 2200].forEach(d => setTimeout(() => { if (CUR && CUR._lastAnswer && !CUR.connectedAt) send({ t: 'answer', sdp: CUR._lastAnswer }); }, d));
       paintUI('connecting');
     } catch (e) {
       console.error('[call] accept', e);
