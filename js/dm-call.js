@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072615'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072616'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -57,10 +57,12 @@
     return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
   }
 
+  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'WEB ' + m + ' sig=' + (chanSig && chanSig.state), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   // 📞 시그널링 = DB 신뢰 전송(카톡급). 채널 조인·유실 없이 상대의 상시 구독으로 즉시 배달.
   function send(msg) {
     const to = (CUR && CUR.peer) || msg.to;
     if (!to || !sb) return;
+    if (msg.t === 'offer' || msg.t === 'answer' || msg.t === 'hangup') wbeacon('send ' + msg.t + ' to=' + String(to).slice(0, 8));
     try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
   }
 
@@ -125,6 +127,7 @@
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
+    if (p.t === 'offer' || p.t === 'answer' || p.t === 'hangup') wbeacon('recv ' + p.t + ' from=' + String(p.from).slice(0, 8) + ' hasCUR=' + !!CUR);
     if (p.t === 'offer') {
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
