@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072648'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072649'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -577,7 +577,7 @@
     const cur = CUR;
     if (!cur || cur._kickArmed) return;
     cur._kickArmed = true;
-    [1000, 2500].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) _nativeCall({ action: 'kick' }); }, d));
+    [1000, 2500, 5000].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) _nativeCall({ action: 'kick' }); }, d));
   }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
