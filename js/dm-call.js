@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072656'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072657'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -366,18 +366,17 @@
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', cand: e.candidate }); };
     pc.ontrack = e => {
-      // ★ 스트림은 변수로 들고 있는다 — paintUI가 innerHTML을 다시 그릴 때마다
-      //   <audio>/<video>가 새 요소로 바뀌므로 매번 재부착해야 한다
-      //   (이걸 안 해서 '연결됐는데 소리가 안 들리는' 버그가 났다)
-      if (e.streams[0]) {
-        remoteStream = e.streams[0];
-        // iosrtc 렌더러는 plugin MediaStream(getBlobId 보유)만 그린다 — 아니면 plugin 클래스로 감싼다.
-        try {
-          if (typeof remoteStream.getBlobId !== 'function' && window.MediaStream) {
-            remoteStream = new MediaStream(remoteStream.getTracks());
-          }
-        } catch (_) {}
-      }
+      // ★ e.streams[0]에 의존하지 않는다 — iosrtc가 통화마다 스트림 구성이 들쭉날쭉해(비디오 트랙 누락·
+      //   비plugin 스트림) 발신자 검은 화면이 났다. 도착하는 트랙을 '내가 만든 plugin 스트림'에 직접 조립.
+      try {
+        if (!remoteStream) {
+          try { remoteStream = new MediaStream(); } catch (_) { remoteStream = (e.streams && e.streams[0]) || null; }
+        }
+        if (e.track && remoteStream && remoteStream.addTrack) {
+          const has = remoteStream.getTracks && remoteStream.getTracks().some(t => t.id === e.track.id);
+          if (!has) { try { remoteStream.addTrack(e.track); } catch (_) {} }
+        }
+      } catch (_) {}
       attachMedia();
     };
     // ⚠️ connect 핸들러는 '오디오 유닛 켜기'만 — UI 전환(통화중)은 오직 accept(수신자)와 'accepted'
