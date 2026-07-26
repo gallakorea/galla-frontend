@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072651'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072652'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -210,7 +210,7 @@
       if (CUR.dir === 'out') {
         try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick();
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
         }
       }
       return;
@@ -480,12 +480,15 @@
   //    받기 누르면 음소거만 풀려 소리가 '즉시' 난다. 마이크 권한이 이미 허용된 경우에만(프롬프트로 링 방해 방지).
   async function preconnectIncoming() {
     const cur = CUR;
-    if (!cur || cur.dir !== 'in' || pc) return;
+    // ⚠️ _accepting이면 시작하지 않는다 — accept가 전체 셋업을 담당(동시 getMedia/PC 생성 경합이
+    //    answer 미전송(콜드 1차 무음)을 만들었다). _preRunning 잠금으로 accept가 완료를 기다린다.
+    if (!cur || cur.dir !== 'in' || pc || cur._accepting) return;
+    cur._preRunning = true;
     try {
       if ((await micPermState()) !== 'granted') return;   // 권한 미허용 → 받기 눌러야 프롬프트(폴백)
-      if (CUR !== cur || pc) return;
+      if (CUR !== cur || pc || cur._accepting) return;    // 그 사이 받았으면 accept에 양보
       const stream = await getMedia(cur.video);
-      if (CUR !== cur) { try { stream.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
+      if (CUR !== cur || pc) { try { stream.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
       localStream = stream;
       if (stream._videoFallback && cur.video) cur.video = false;
       await buildAnswer(cur, true);   // 마이크 음소거로 협상 완료(ICE가 벨 중에 뚫린다)
@@ -494,7 +497,7 @@
       cur._preFail = true;
       try { pc?.close(); } catch (_) {} pc = null;
       try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
-    }
+    } finally { cur._preRunning = false; }
   }
 
   async function accept(via) {
@@ -506,13 +509,13 @@
     clearTimeout(ringT);
     send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환 + 발신자 마이크 해제
     [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
-    // 프리커넥트가 진행 중이면 잠깐 기다려 그 결과 재사용(최대 ~1.6초)
-    for (let i = 0; i < 20 && pc && !CUR._preconnected && !CUR._preFail; i++) await new Promise(r => setTimeout(r, 80));
+    // 프리커넥트가 진행 중이면 완료를 기다려 그 결과 재사용(최대 ~2.4초 — 동시 셋업 경합 방지)
+    for (let i = 0; i < 30 && CUR._preRunning; i++) await new Promise(r => setTimeout(r, 80));
     if (CUR && CUR._preconnected && localStream) {
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
       try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -524,7 +527,7 @@
       if (!pc) await buildAnswer(CUR, false);
       try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
@@ -587,6 +590,8 @@
   function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라') }); }
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
   function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
+  // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
+  function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video)) }); }
   // 📞 통화 확립 1초·2.5초 뒤 ADM 강제 재시작(킥) — 프리커넥트/콜드스타트로 오디오 유닛이
   //    비활성 세션에 물려 죽어 있어도 살아나게 하는 안전장치(무음 방지). 통화당 1회 예약.
   function armAudioKick() {
@@ -814,7 +819,7 @@
       else if (c === 'decline') decline();
       else if (c === 'hangup') endCall('ended');
       else if (c === 'flip') flipCam();
-      else if (c === 'spk') { SPK = !SPK; paintUI(box.dataset.state); }
+      else if (c === 'spk') { SPK = !SPK; applyNativeRoute(); paintUI(box.dataset.state); }
       else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); paintUI(box.dataset.state); }
       else if (c === 'rec') toggleRecord(e.target.closest('[data-c="rec"]'));
       else if (c === 'tovideo') upgradeToVideo();
