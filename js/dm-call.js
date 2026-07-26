@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072644'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072645'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -383,12 +383,12 @@
           await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
         }
       } catch (_) {}
-      await new Promise(r => setTimeout(r, 350));
+      await new Promise(r => setTimeout(r, 700));
       try {
         const s = await sfu('/sessions/' + cf.session, 'GET', null);
         if (s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active')) return;
       } catch (_) {}
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 500));
     }
     cf.subs.delete(key);
   }
