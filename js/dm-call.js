@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072674'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072675'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -667,14 +667,19 @@
   // 📺 영상 렌더러가 붙을 때까지 재부착 — 프리커넥트(수신자)는 스트림이 영상요소보다 먼저 와서
   //    한 번의 부착을 놓친다. srcObject를 null→재설정(loadstart 강제)하고 붙을 때까지 짧게 재시도.
   function ensureVideoRender(el, stream) {
-    let n = 0;
+    let n = 0, painted = 0;
     const tick = () => {
       if (!el || !el.isConnected || !stream) return;
-      if (el._iosrtcMediaStreamRendererId) { try { window.__iosrtc?.refreshVideos?.(); } catch (_) {} return; }
-      try { el.removeAttribute('src'); el.srcObject = null; el.srcObject = stream; } catch (_) {}   // loadstart 재발동
-      iosrtcAttach(el);
+      const attached = !!el._iosrtcMediaStreamRendererId;
+      if (!attached) {
+        try { el.removeAttribute('src'); el.srcObject = null; el.srcObject = stream; } catch (_) {}   // loadstart 재발동
+        iosrtcAttach(el);
+      }
+      // ⚠️ 붙어도(rendererId 있어도) iosrtc가 프레임을 간헐적으로 안 그린다(검은 원격). videoWidth로
+      //    실제 그려지는지 보고, 안 그려지면 refreshVideos로 계속 깨운다. 그려진 뒤에도 몇 번 더 확정.
       try { window.__iosrtc?.refreshVideos?.(); } catch (_) {}
-      if (++n < 12) setTimeout(tick, 300);
+      if (attached && el.videoWidth > 0) { if (++painted >= 3) return; }   // 3회 연속 그려짐 확인되면 종료
+      if (++n < 30) setTimeout(tick, 350);   // 붙어도 프레임 그려질 때까지 ~10초 재시도
     };
     tick();
   }
