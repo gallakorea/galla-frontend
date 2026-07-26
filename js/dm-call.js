@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072613'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072614'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -780,9 +780,11 @@
   try { if (window.__ckAnswer && Date.now() - window.__ckAnswer.at < 45000) armCallKitAnswer(); } catch (_) {}
   window.GALLA_callKitDecline = function () {
     callKitPendingAnswer = false;
-    // ⚠️ 이미 수락/연결된 통화면 CallKit 종료 액션을 '거절'로 오해하지 않는다 — 웹으로 받은 뒤
-    //    잔류하던 CallKit 콜이 종료돼도 발신자에게 잘못된 '거절' 신호가 가지 않게(연결 유지).
-    if (CUR && CUR.dir === 'in' && !CUR._accepting && !CUR.connectedAt) { try { decline(); } catch (_) {} }
+    if (!CUR || CUR.dir !== 'in') return;
+    // 통화 중(수락/연결됨)에 CallKit '종료'를 누르면 → 정상 종료로 처리(상대에게 hangup 전송, 발신자 '통화중' 잔류 방지).
+    // 아직 안 받았으면 → 거절.
+    if (CUR._accepting || CUR.connectedAt) { try { endCall('ended'); } catch (_) {} }
+    else { try { decline(); } catch (_) {} }
   };
   // offer 도착 시 CallKit 수락이 예약돼 있었으면 자동 수락되도록 훅
   window.__gallaCallKitConsume = function () {
