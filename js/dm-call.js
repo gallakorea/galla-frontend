@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072653'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072654'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -644,6 +644,22 @@
     if (CUR?.video && localStream) {
       const lv = document.getElementById('dm-call-local');
       if (lv && !lv.srcObject) { lv.srcObject = new MediaStream(localStream.getVideoTracks()); lv.play?.().catch(() => {}); }
+    }
+    // 🔬 면상톡 렌더러 진단(1회) — iosrtc 네이티브 렌더러가 실제로 붙는지 3초 뒤 확인
+    if (CUR?.video && !CUR._vidDiag && CUR.connectedAt) {
+      CUR._vidDiag = true;
+      setTimeout(() => {
+        try {
+          const r = document.getElementById('dm-call-remote'), l = document.getElementById('dm-call-local');
+          const rt = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0];
+          const lt = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0];
+          const rc = r && r.getBoundingClientRect();
+          wb('VID rEl=' + !!r + ' rRend=' + (r && r._iosrtcMediaStreamRendererId) + ' rTrk=' + (rt ? rt.readyState + '/' + rt.enabled : 'none') +
+             ' lRend=' + (l && l._iosrtcMediaStreamRendererId) + ' lTrk=' + (lt ? lt.readyState + '/' + lt.enabled : 'none') +
+             ' rect=' + (rc ? Math.round(rc.width) + 'x' + Math.round(rc.height) : '-') +
+             ' blob=' + (remoteStream && typeof remoteStream.getBlobId === 'function' ? 'y' : 'n'));
+        } catch (e) { wb('VID-err ' + ((e && e.message) || e)); }
+      }, 3000);
     }
   }
   function startTimer() {
