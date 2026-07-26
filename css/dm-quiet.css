@@ -510,12 +510,21 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 }
 /* 하단 컨트롤 바 — 영상이 없는 영역이라 버튼이 항상 보인다 */
 #dm-call.video .dmc-card {
-  position: absolute; left: 0; right: 0; bottom: 0; top: 68vh; z-index: 2;
-  background: #0a0a0f; border-top: 1px solid rgba(255,255,255,.1);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  position: fixed; left: 0; right: 0; bottom: 0; top: 68vh; z-index: 2147483000;
+  background: #0a0a0f; border-top: 1px solid rgba(255,255,255,.12);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 }
 #dm-call.video .dmc-ava { display: none; }
+#dm-call.video .dmc-name { color: #fff; font-size: 16px; }
+#dm-call.video .dmc-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 0; }
+#dm-call.video .dmc-btn {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: rgba(255,255,255,.14); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+#dm-call.video .dmc-btn.end { background: #ff3b30; }
+#dm-call.video .dmc-btn svg { width: 26px; height: 26px; }
 #dm-call.video[data-state="oncall"] .dmc-name, #dm-call.video[data-state="oncall"] .dmc-state { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
 .dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }
 .dmc-retry {
