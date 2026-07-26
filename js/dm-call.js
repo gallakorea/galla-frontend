@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072609'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072610'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -79,6 +79,9 @@
     chanMine = sb.channel('call:' + ME)
       .on('broadcast', { event: 'signal' }, ({ payload }) => onSignal(payload || {}))
       .subscribe();
+    // ⚡ 부팅 시 TURN 자격증명을 미리 데워둔다 — 통화 시작·수락 때 buildPC가 turn-cred를 기다리지 않아
+    //    연결 체감이 몇 초 → 1초대로 단축된다(30분 캐시).
+    try { iceConfig().catch(() => {}); } catch (_) {}
     // 📟 삐삐 액정 팝업도 전 페이지에서 — dm 페이지 밖에서도 '삐삐가 왔습니다'가 떠야 한다
     if (!window.__pagerRingOn) {
       window.__pagerRingOn = true;
@@ -126,7 +129,6 @@
   }
   async function onSignal(p) {
     if (p.to !== ME || p.from === ME) return;
-    if (p.t === 'offer' || p.t === 'answer') wbeacon('recv ' + p.t + ' from=' + String(p.from).slice(0, 8) + ' hasCUR=' + !!CUR + ' dir=' + (CUR && CUR.dir));
     if (p.t === 'offer') {
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
@@ -137,6 +139,7 @@
       // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { const ch = await peerChan(p.from); ch.send({ type: 'broadcast', event: 'signal', payload: { t: 'busy', from: ME, to: p.from } }); try { sb.removeChannel(ch); } catch (_) {} return; }
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
+      try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
       chanPeer = await peerChan(p.from);
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
@@ -162,7 +165,7 @@
         if (CUR && CUR.dir === 'out' && !CUR.connectedAt) {
           // ⚠️ nativeAudioOn 필수 — iosrtc가 answer 전 spurious 'connected'를 이미 쐈으면 connect 핸들러가
           //    다시 안 불려 오디오가 안 켜진다(무음). 여기서 명시적으로 켠다.
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
         }
       } catch (e) { console.error('[call]', e); }
     }
@@ -299,29 +302,6 @@
       return 'granted';
     } catch (e) { return (e && e.name) || 'error'; }
   };
-  // 🔬 통화 오디오 진단 — 연결 후 RTP 송/수신량을 supabase에 남긴다(두 번째 통화 무음 원인 규명용)
-  async function statsBeacon(label) {
-    try {
-      if (!pc || !sb) return;
-      let inp = 0, inb = 0, inlvl = -1, outp = 0, outb = 0, nrecv = 0, nsend = 0;
-      const st = await pc.getStats();
-      st.forEach(r => {
-        if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { inp = r.packetsReceived || 0; inb = r.bytesReceived || 0; if (r.audioLevel != null) inlvl = r.audioLevel; }
-        if (r.type === 'outbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { outp = r.packetsSent || 0; outb = r.bytesSent || 0; }
-      });
-      try { nrecv = pc.getReceivers().filter(x => x.track && x.track.kind === 'audio').length; } catch (_) {}
-      try { nsend = pc.getSenders().filter(x => x.track && x.track.kind === 'audio').length; } catch (_) {}
-      const msg = `CALLSTATS ${label} dir=${CUR && CUR.dir} ice=${pc.iceConnectionState} conn=${pc.connectionState} inPkt=${inp} inByt=${inb} inLvl=${inlvl} outPkt=${outp} outByt=${outb} recv=${nrecv} send=${nsend}`;
-      sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: msg, p_ver: 'diag' }).then(() => {}, () => {});
-    } catch (_) {}
-  }
-  function schedStats() {
-    if (!CUR || CUR._statsSched) return;
-    CUR._statsSched = true;
-    setTimeout(() => statsBeacon('3s'), 3000);
-    setTimeout(() => statsBeacon('8s'), 8000);
-  }
-
   async function buildPC() {
     pc = new RTCPeerConnection(await iceConfig());
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
@@ -340,7 +320,7 @@
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
       if (['connected', 'completed'].includes(pc.iceConnectionState) && CUR && !CUR.connectedAt && readyToTalk()) {
-        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
       }
     };
     pc.onconnectionstatechange = () => {
@@ -349,7 +329,7 @@
         if (!readyToTalk()) return;   // answer 전 조기 connected 무시(발신자 오탐 방지)
         clearTimeout(ringT); stopRings();
         if (CUR && !CUR.connectedAt) CUR.connectedAt = Date.now();
-        startTimer(); paintUI('oncall'); nativeAudioOn(); schedStats();
+        startTimer(); paintUI('oncall'); nativeAudioOn();
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
         if (CUR) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       }
@@ -399,7 +379,6 @@
     let myName = '갈라';
     try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
     send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video });
-    wbeacon('sent offer to=' + String(peer).slice(0, 8) + ' peerCh=' + (chanPeer && chanPeer.state) + ' mineCh=' + (chanMine && chanMine.state));
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
     // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
@@ -424,9 +403,7 @@
     }
   }
 
-  function wbeacon(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'WEB ' + m, p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   async function accept(via) {
-    wbeacon('accept via=' + (via || '?') + ' dir=' + (CUR && CUR.dir) + ' acc=' + (CUR && CUR._accepting) + ' ckPend=' + callKitPendingAnswer);
     if (!CUR || CUR.dir !== 'in') return;
     if (CUR._accepting) return;   // CallKit 수락 신호가 여러 번 와도 한 번만(중복 getMedia/PC 방지)
     CUR._accepting = true;
@@ -448,7 +425,6 @@
       await pc.setLocalDescription(ans);
       if (CUR) CUR._lastAnswer = ans.sdp;   // 발신자가 offer를 계속 재전송하면 이 answer를 되돌려준다
       send({ t: 'answer', sdp: ans.sdp });
-      wbeacon('sent answer to=' + String(CUR && CUR.peer).slice(0, 8) + ' peerCh=' + (chanPeer && chanPeer.state));
       paintUI('connecting');
     } catch (e) {
       console.error('[call] accept', e);
