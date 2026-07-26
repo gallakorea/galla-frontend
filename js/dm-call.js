@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072636'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072637'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -339,12 +339,22 @@
         wbeacon('sessState ' + (tr ? JSON.stringify(tr).slice(0, 400) : ('nodata reason=' + (s && s.reason) + ' ok=' + (s && s.ok))));
       } catch (e) { wbeacon('sessState-err ' + ((e && e.message) || e)); }
     }, 6000);
-    // 1) 세션 부트스트랩 — CF SFU는 /sessions/new에 recvonly offer 동봉 필수
-    pc.addTransceiver('audio', { direction: 'recvonly' });
-    const boot = await pc.createOffer();
-    await pc.setLocalDescription(boot);
-    const sess = await sfu('/sessions/new', 'POST', { sessionDescription: { type: 'offer', sdp: boot.sdp } });
-    wbeacon('sessNew ok=' + (sess && sess.ok) + ' reason=' + (sess && sess.reason) + ' hasId=' + !!(sess && sess.data && sess.data.sessionId) + ' status=' + (sess && sess.status));
+    // 로컬 트랙을 sendonly로 추가 → /sessions/new에서 한 번에 발행(부트스트랩 recvonly 없음 = 오디오 m-line 최소화).
+    //    ⚠️ tr.mid는 setLocalDescription '후'에야 채워진다.
+    const trs = [], items = [];
+    localStream.getTracks().forEach(t => {
+      const tr = pc.addTransceiver(t, { direction: 'sendonly' });
+      const name = t.kind[0] + '-' + String(ME).slice(0, 6) + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+      trs.push({ tr, trackName: name }); items.push({ name, kind: t.kind });
+    });
+    const offer = await pc.createOffer();
+    offer.sdp = tuneOpus(offer.sdp);
+    await pc.setLocalDescription(offer);
+    const sess = await sfu('/sessions/new', 'POST', {
+      sessionDescription: { type: 'offer', sdp: offer.sdp },
+      tracks: trs.map(x => ({ location: 'local', mid: x.tr.mid, trackName: x.trackName })),
+    });
+    wbeacon('sessNew ok=' + (sess && sess.ok) + ' hasId=' + !!(sess && sess.data && sess.data.sessionId) + ' hasSD=' + !!(sess && sess.data && sess.data.sessionDescription) + ' err=' + (sess && sess.data && (sess.data.errorDescription || (sess.data.tracks && sess.data.tracks[0] && sess.data.tracks[0].errorCode))));
     if (!sess || sess.reason === 'unconfigured' || !sess.data || !sess.data.sessionId || !sess.data.sessionDescription) {
       throw new Error('sfu-session(' + (sess && (sess.reason || (sess.data && sess.data.errorDescription)) || '?') + ')');
     }
@@ -352,26 +362,6 @@
     const cf = { session: sess.data.sessionId, subs: new Set(), q: Promise.resolve() };
     if (!CUR) throw new Error('cancelled');
     CUR._cf = cf;
-    // 2) 로컬 트랙 발행(오디오 음소거로 시작 — 받기 전 상대가 못 듣게)
-    //    ⚠️ tr.mid는 setLocalDescription '후'에야 채워진다 — 그 전에 읽으면 null이라 SFU가 발행 거부.
-    const trs = [], items = [];
-    localStream.getTracks().forEach(t => {
-      // ⚠️ 음소거(enabled=false)로 발행하면 RTP가 안 나가 SFU가 중계할 게 없다(무음). 항상 켜서 발행.
-      //    '받기 전 상대가 못 듣게'는 음소거가 아니라 '구독 시점(받을 때만 구독)'으로 보장한다.
-      const tr = pc.addTransceiver(t, { direction: 'sendonly' });
-      const name = t.kind[0] + '-' + String(ME).slice(0, 6) + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
-      trs.push({ tr, trackName: name }); items.push({ name, kind: t.kind });
-    });
-    const pub = await pc.createOffer();
-    pub.sdp = tuneOpus(pub.sdp);
-    await pc.setLocalDescription(pub);
-    const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', {
-      sessionDescription: { type: 'offer', sdp: pub.sdp },
-      tracks: trs.map(x => ({ location: 'local', mid: x.tr.mid, trackName: x.trackName })),
-    });
-    wbeacon('publish ok=' + (res && res.ok) + ' hasSD=' + !!(res && res.data && res.data.sessionDescription) + ' err=' + (res && res.data && (res.data.errorDescription || (res.data.tracks && res.data.tracks[0] && res.data.tracks[0].errorCode))));
-    if (!res || !res.ok || !res.data || !res.data.sessionDescription) throw new Error('sfu-publish');
-    await pc.setRemoteDescription(res.data.sessionDescription);
     return { session: cf.session, tracks: items };
   }
   // 상대 트랙 구독(SFU가 내 pc로 상대 트랙을 밀어준다). remote = {session, tracks:[{name,kind}]}
