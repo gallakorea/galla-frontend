@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072634'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072635'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -330,19 +330,15 @@
       if (pc.connectionState === 'connected') nativeAudioOn();
       else if (['failed', 'closed'].includes(pc.connectionState)) { if (CUR && CUR.connectedAt) endCall('netfail'); }
     };
-    // 🔬 5초 후 실제 수신 패킷 확인 — SFU→폰 미디어가 진짜 흐르는지(무음이 재생문제인지 미수신인지 확정)
+    // 🔬 6초 후 SFU 세션 상태 조회 — 폰↔SFU RTP가 실제로 흐르는지(발신/수신 어디가 막혔는지 확정)
     setTimeout(async () => {
       try {
-        if (!pc || !CUR) return;
-        let inA = 0, inB = 0, ic = '?';
-        const st = await pc.getStats();
-        st.forEach(r => {
-          if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { inA = r.packetsReceived || 0; inB = r.bytesReceived || 0; }
-          if (r.type === 'candidate-pair' && r.state === 'succeeded') ic = 'ok';
-        });
-        wbeacon('stats5s inPkt=' + inA + ' inByt=' + inB + ' pair=' + ic + ' ice=' + pc.iceConnectionState + ' conn=' + pc.connectionState);
-      } catch (e) { wbeacon('stats5s-err ' + ((e && e.message) || e)); }
-    }, 5000);
+        if (!CUR || !CUR._cf) return;
+        const s = await sfu('/sessions/' + CUR._cf.session, 'GET', null);
+        const tr = s && s.data && s.data.tracks;
+        wbeacon('sessState ' + (tr ? JSON.stringify(tr).slice(0, 400) : ('nodata reason=' + (s && s.reason) + ' ok=' + (s && s.ok))));
+      } catch (e) { wbeacon('sessState-err ' + ((e && e.message) || e)); }
+    }, 6000);
     // 1) 세션 부트스트랩 — CF SFU는 /sessions/new에 recvonly offer 동봉 필수
     pc.addTransceiver('audio', { direction: 'recvonly' });
     const boot = await pc.createOffer();
