@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072643'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072644'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -43,8 +43,6 @@
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
-  let SFU_PLAY = false;                // 상대 소리 재생 허용(받기 전엔 false = 미디어는 미리 뚫되 재생만 음소거)
-  function sfuUnmutePlay() { SFU_PLAY = true; try { const els = document.getElementsByClassName('dmc-sfu-audio'); for (let i = 0; i < els.length; i++) { els[i].muted = false; els[i].play && els[i].play().catch(() => {}); } } catch (_) {} }
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -177,24 +175,23 @@
       }
       // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { send({ t: 'busy', to: p.from }); return; }
-      SFU_PLAY = false;   // 받기 전엔 재생 음소거
       CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, _remote: { session: p.session, tracks: p.tracks } };
+      try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
       startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
-      preconnectIncoming();   // 🚀 벨 중 SFU 미디어 미리 연결(재생 음소거) → 받으면 음소거만 풀어 '즉시' 소리
       // 잠금화면 CallKit에서 이미 '받기'를 눌렀다면(푸시가 offer보다 먼저 도착) 즉시 수락
       try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept('consume'); } catch (_) {}
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
     if (p.t === 'accepted') {
-      // 📞 상대가 '받기'를 누른 즉시 — 재생 음소거만 풀면(sfuUnmutePlay) 이미 뚫린 미디어로 '즉시' 소리.
+      // 📞 상대가 '받기'를 누른 즉시 발신자 통화중 전환 + 내 마이크 음소거 해제(상대가 이제 들을 수 있게).
       if (CUR.dir === 'out') {
-        sfuUnmutePlay();
+        try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) { clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); }
       }
       return;
@@ -318,8 +315,6 @@
           document.body.appendChild(el);
           try { el.play && el.play().catch(() => {}); } catch (_) {}
         }
-        // 🔇 받기 전(SFU_PLAY=false)엔 재생 음소거 — 미디어 경로는 미리 뚫되 소리는 안 새게(프라이버시)
-        if (e.track && e.track.kind === 'audio') { const els = document.getElementsByClassName('dmc-sfu-audio'); for (let i = 0; i < els.length; i++) els[i].muted = !SFU_PLAY; }
         attachMedia();
       } catch (_) {}
     };
@@ -375,8 +370,8 @@
   }
   async function cfSubOne(cf, session, trackName, key) {
     // 한 번 구독하면 내 세션에 이 원격 트랙이 'active'가 될 때까지 검증. active면 소리 흐름(성공).
-    //    아니면(발행자 RTP가 아직 SFU에 안 닿아 죽은 트랙에 묶임) 재구독. → 비대칭 무음 해결.
-    for (let round = 0; round < 14; round++) {
+    //    아니면(발행자 RTP가 아직 SFU에 안 닿아 죽은 트랙에 묶임) 재구독 → 양방향 무음 해결.
+    for (let round = 0; round < 16; round++) {
       if (!CUR || CUR._cf !== cf || !pc) { cf.subs.delete(key); return; }
       try {
         const res = await sfu(`/sessions/${cf.session}/tracks/new`, 'POST', { tracks: [{ location: 'remote', sessionId: session, trackName }] });
@@ -388,12 +383,12 @@
           await sfu(`/sessions/${cf.session}/renegotiate`, 'PUT', { sessionDescription: { type: 'answer', sdp: ans.sdp } });
         }
       } catch (_) {}
-      await new Promise(r => setTimeout(r, 400));
+      await new Promise(r => setTimeout(r, 350));
       try {
         const s = await sfu('/sessions/' + cf.session, 'GET', null);
         if (s && s.data && s.data.tracks && s.data.tracks.some(t => t.location === 'remote' && t.trackName === trackName && t.status === 'active')) return;
       } catch (_) {}
-      await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => setTimeout(r, 200));
     }
     cf.subs.delete(key);
   }
@@ -495,7 +490,6 @@
     if (CUR || !sb || !ME) return;
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
-    SFU_PLAY = false;   // 상대가 받기 전엔 재생 음소거(미디어는 미리 뚫되)
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [] };
     paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
     await primePermHint(!!video);
@@ -535,31 +529,6 @@
     }
   }
 
-  // 🚀 벨 울리는 동안 SFU 미디어 미리 연결 — 마이크 발행 + 상대 구독까지 하되 '재생만 음소거'(프라이버시).
-  //    받기 누르면 음소거만 풀어 즉시 소리. 마이크 권한이 이미 허용된 경우만(프롬프트로 링 방해 방지).
-  async function preconnectIncoming() {
-    const cur = CUR;
-    if (!cur || cur.dir !== 'in' || cur._mine || pc) return;
-    try {
-      if ((await micPermState()) !== 'granted') return;   // 권한 미허용 → 폴백(받기 눌러야 프롬프트)
-      if (CUR !== cur || cur._mine || pc) return;
-      localStream = await getMedia(cur.video);
-      if (CUR !== cur) { try { localStream.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null; return; }
-      if (localStream._videoFallback && cur.video) cur.video = false;
-      const mine = await cfSetup();      // 발행(마이크 active) — 단 원격 재생은 SFU_PLAY=false로 음소거
-      cur._mine = mine;
-      cfSubscribe(cur._remote);          // 상대 트랙 미리 구독(재생 음소거 상태)
-      send({ t: 'answer', session: mine.session, tracks: mine.tracks });
-      [400, 1100].forEach(d => setTimeout(() => { if (CUR === cur && cur._mine && !cur.connectedAt) send({ t: 'answer', session: mine.session, tracks: mine.tracks }); }, d));
-      cur._preconnected = true;
-    } catch (_) {
-      cur._preFail = true;
-      try { pc && pc.close(); } catch (_) {} pc = null;
-      try { localStream && localStream.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null;
-      cur._mine = null;
-    }
-  }
-
   async function accept(via) {
     if (!CUR || CUR.dir !== 'in') return;
     if (CUR._accepting) return;   // 수락 신호가 여러 번 와도 한 번만
@@ -568,29 +537,17 @@
     clearTimeout(ringT);
     send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환
     [250, 800].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비 재전송
-    // 프리커넥트가 진행 중이면 잠깐 기다린다(최대 ~1.6초)
-    for (let i = 0; i < 20 && pc && !CUR._preconnected && !CUR._preFail; i++) await new Promise(r => setTimeout(r, 80));
-    if (CUR && CUR._preconnected && CUR._mine) {
-      // 🚀 미디어 이미 뚫림 — 재생 음소거만 풀면 즉시 소리
-      sfuUnmutePlay();
-      if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn();
-      return;
-    }
-    // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) → 전체 셋업 후 재생 허용
     await primePermHint(CUR.video);
-    try { if (!localStream) localStream = await getMedia(CUR.video); }
+    try { localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
-      if (!CUR._mine) {
-        const mine = await cfSetup();
-        CUR._mine = mine;
-        cfSubscribe(CUR._remote);
-        send({ t: 'answer', session: mine.session, tracks: mine.tracks });
-        [250, 700, 1500].forEach(d => setTimeout(() => { if (CUR && CUR._mine) send({ t: 'answer', session: CUR._mine.session, tracks: CUR._mine.tracks }); }, d));
-      }
-      sfuUnmutePlay();
+      const mine = await cfSetup();      // ☁️ 내 SFU 세션 + 마이크 발행
+      CUR._mine = mine;
+      cfSubscribe(CUR._remote);          // ☁️ 상대 트랙 구독(SFU 중계)
+      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}   // 받았으니 음소거 해제
+      send({ t: 'answer', session: mine.session, tracks: mine.tracks });
+      [250, 700, 1500].forEach(d => setTimeout(() => { if (CUR && CUR._mine) send({ t: 'answer', session: CUR._mine.session, tracks: CUR._mine.tracks }); }, d));   // 유실 대비
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn();
     } catch (e) {
@@ -671,7 +628,7 @@
     try { pc?.close(); } catch (_) {}
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
-    localStream = null; remoteStream = null; SFU_PLAY = false;
+    localStream = null; remoteStream = null;
     try { document.querySelectorAll('.dmc-sfu-audio').forEach(el => { try { el.srcObject = null; el.remove(); } catch (_) {} }); } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
