@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072619'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072620'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -67,23 +67,24 @@
   // ⚡ 콜드스타트 대비 시그널 폴링 — realtime 웹소켓이 막 연결돼 첫 몇 초간 broadcast를 놓칠 때,
   //    call_sig를 REST로 직접 읽어 offer/answer를 즉시 잡는다(REST는 워밍업 지연 없음). 연결되면 중단.
   //    onSignal이 중복 신호를 방어하므로 broadcast와 겹쳐도 안전.
-  let pollT = null, lastSigId = 0;
-  async function startSigPoll() {
+  let pollT = null, pollSeen = null;
+  function startSigPoll() {
     if (pollT || !sb || !ME) return;
-    try {
-      const { data } = await sb.from('call_sig').select('id').eq('to_uid', ME).order('id', { ascending: false }).limit(1);
-      lastSigId = (data && data[0] && data[0].id) || lastSigId;
-    } catch (_) {}
+    // ⚠️ '통화 시작 직전(-3초)부터'의 신호를 매번 전부 조회하고, 이미 처리한 id만 건너뛴다.
+    //    (최대 id 기준으로 '이후'만 보면, 콜드 워밍업으로 폴링이 늦게 시작될 때 그 사이 도착한
+    //     answer가 기준 이하라 영영 안 잡혀 발신자가 '통화중' 전환 실패했다.)
+    const since = new Date(Date.now() - 3000).toISOString();
+    pollSeen = new Set();
     let ticks = 0;
     pollT = setInterval(async () => {
       if (!CUR || CUR.connectedAt || ++ticks > 24) { stopSigPoll(); return; }   // 연결됐거나 12초 지나면 중단
       try {
-        const { data } = await sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).gt('id', lastSigId).order('id', { ascending: true });
-        for (const r of (data || [])) { lastSigId = r.id; onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
+        const { data } = await sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).gte('created_at', since).order('id', { ascending: true });
+        for (const r of (data || [])) { if (pollSeen.has(r.id)) continue; pollSeen.add(r.id); onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
       } catch (_) {}
     }, 500);
   }
-  function stopSigPoll() { if (pollT) { clearInterval(pollT); pollT = null; } }
+  function stopSigPoll() { if (pollT) { clearInterval(pollT); pollT = null; } pollSeen = null; }
 
   // 통화 시그널 broadcast 수신 → onSignal. DB 트리거(call_sig INSERT)가 이 토픽으로 즉시 직송한다.
   function onSigBroadcast(payload) {
