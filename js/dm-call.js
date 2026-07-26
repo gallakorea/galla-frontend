@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072675'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072676'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -701,6 +701,12 @@
       if (!CUR._localVid) { try { CUR._localVid = new MediaStream(localStream.getVideoTracks()); } catch (_) {} }
       if (lv && CUR._localVid) ensureVideoRender(lv, CUR._localVid);
     }
+    // 📞 면상톡: 원격 영상 트랙이 (늦게) 도착하면 네이티브 통화 화면에 트랙 id를 갱신 → 네이티브가 직접 렌더.
+    if (CUR?.video && CUR.connectedAt) {
+      const rid = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0] && remoteStream.getVideoTracks()[0].id;
+      const lid = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].id;
+      if (rid && CUR._nvRid !== rid) { CUR._nvRid = rid; _nativeCall({ action: 'videoTracks', remoteTrackId: rid, localTrackId: lid || '' }); }
+    }
     // 렌더러 위치/크기 동기화(리페인트 직후 좌표 반영)
     setTimeout(() => { try { window.__iosrtc && window.__iosrtc.refreshVideos && window.__iosrtc.refreshVideos(); } catch (_) {} }, 300);
     // 🔬 면상톡 렌더러 진단(1회) — iosrtc 네이티브 렌더러가 실제로 붙는지 3초 뒤 확인
@@ -900,9 +906,12 @@
         </div>
       </div>`;
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
-    // 📞 면상톡: 네이티브 컨트롤 오버레이 표시(웹뷰 위 = 영상 위). 음성/벨은 웹 버튼 유지.
-    if (video && state === 'oncall') _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '' });
-    else _nativeCall({ action: 'videoUI', show: false });
+    // 📞 면상톡: 네이티브 통화 화면(원격/로컬 영상 + 버튼) 표시. 영상 트랙 id를 넘겨 네이티브가 직접 그린다.
+    if (video && state === 'oncall') {
+      const lid = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0] && localStream.getVideoTracks()[0].id;
+      const rid = remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks()[0] && remoteStream.getVideoTracks()[0].id;
+      _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: lid || '', remoteTrackId: rid || '' });
+    } else _nativeCall({ action: 'videoUI', show: false });
     box.onclick = e => callAction(e.target.closest('[data-c]')?.dataset.c);
   }
   // 통화 버튼 액션 — 웹 버튼과 네이티브 오버레이(window.GALLA_callAction)가 공용으로 호출한다.
