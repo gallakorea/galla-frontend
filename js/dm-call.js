@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072647'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072648'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -194,7 +194,7 @@
       if (CUR.dir === 'out') {
         try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick();
         }
       }
       return;
@@ -496,7 +496,7 @@
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
       try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick();
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -508,7 +508,7 @@
       if (!pc) await buildAnswer(CUR, false);
       try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick();
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
@@ -571,6 +571,14 @@
   function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라') }); }
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
   function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
+  // 📞 통화 확립 1초·2.5초 뒤 ADM 강제 재시작(킥) — 프리커넥트/콜드스타트로 오디오 유닛이
+  //    비활성 세션에 물려 죽어 있어도 살아나게 하는 안전장치(무음 방지). 통화당 1회 예약.
+  function armAudioKick() {
+    const cur = CUR;
+    if (!cur || cur._kickArmed) return;
+    cur._kickArmed = true;
+    [1000, 2500].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) _nativeCall({ action: 'kick' }); }, d));
+  }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
