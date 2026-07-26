@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072652'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072653'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -208,7 +208,7 @@
       // 📞 상대가 '받기'를 누른 순간 — 프리커넥트로 ICE는 이미(또는 곧) 뚫려 있으니
       //    내 마이크 음소거만 풀고 통화중으로 전환하면 소리가 '즉시' 붙는다(카톡식).
       if (CUR.dir === 'out') {
-        try { localStream && localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
+        try { localStream && localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
           clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
         }
@@ -423,7 +423,7 @@
     await buildPC();
     // 🔇 상대가 받기 전엔 내 마이크 음소거(무음 프레임 전송 — ICE는 미리 뚫리되 소리는 안 새게).
     //    'accepted' 신호가 오면 음소거를 푼다.
-    try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
+    try { localStream.getTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
@@ -463,7 +463,7 @@
   //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
   async function buildAnswer(cur, muted) {
     await buildPC();
-    if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
+    if (muted) { try { localStream.getTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
     await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
@@ -513,7 +513,7 @@
     for (let i = 0; i < 30 && CUR._preRunning; i++) await new Promise(r => setTimeout(r, 80));
     if (CUR && CUR._preconnected && localStream) {
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
-      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
+      try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
       return;
@@ -525,7 +525,7 @@
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
       if (!pc) await buildAnswer(CUR, false);
-      try { localStream.getAudioTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
+      try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
       stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
     } catch (e) {
