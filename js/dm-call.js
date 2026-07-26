@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072622'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072623'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -77,13 +77,13 @@
     pollSeen = new Set();
     let ticks = 0;
     pollT = setInterval(async () => {
-      if (!CUR || CUR.connectedAt || ++ticks > 24) { stopSigPoll(); return; }   // 연결됐거나 12초 지나면 중단
+      if (!CUR || CUR.connectedAt || ++ticks > 48) { stopSigPoll(); return; }   // 연결됐거나 12초 지나면 중단
       try {
         const { data } = await sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).gte('created_at', since).order('id', { ascending: true });
         const fresh = (data || []).filter(r => !pollSeen.has(r.id));
         for (const r of fresh) { pollSeen.add(r.id); onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
       } catch (_) {}
-    }, 500);
+    }, 250);
   }
   function stopSigPoll() { if (pollT) { clearInterval(pollT); pollT = null; } pollSeen = null; }
 
@@ -109,7 +109,7 @@
     try {
       let coldMax = -1, coldN = 0, coldIt = null;   // coldMax<0 = 최초 조회 전(그 사이 온 offer는 created_at로 잡음)
       const coldTick = async () => {
-        if (coldN++ > 30 || CUR) { if (coldIt) clearInterval(coldIt); return; }
+        if (coldN++ > 60 || CUR) { if (coldIt) clearInterval(coldIt); return; }
         try {
           let q = sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).order('id', { ascending: true });
           q = coldMax < 0 ? q.gte('created_at', new Date(Date.now() - 20000).toISOString()) : q.gt('id', coldMax);
@@ -118,7 +118,7 @@
         } catch (_) {}
       };
       coldTick();   // 즉시 1회(대기 없음)
-      coldIt = setInterval(coldTick, 500);   // 이후 0.5초 간격, 최대 15초
+      coldIt = setInterval(coldTick, 250);   // 이후 0.5초 간격, 최대 15초
     } catch (_) {}
     // ⚡ 부팅 시 TURN 자격증명을 미리 데워둔다 — 통화 시작·수락 때 buildPC가 turn-cred를 기다리지 않아
     //    연결 체감이 몇 초 → 1초대로 단축된다(30분 캐시).
@@ -187,6 +187,14 @@
       return;
     }
     if (!CUR || p.from !== CUR.peer) return;
+    if (p.t === 'accepted') {
+      // 📞 상대가 '받기'를 누른 즉시 — SDP answer보다 먼저 도착한다. 발신자를 바로 통화중으로 전환
+      //    (미디어는 곧이어 오는 answer로 붙고, 오디오 유닛은 여기서 미리 켠다).
+      if (CUR.dir === 'out' && !CUR.connectedAt) {
+        clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn();
+      }
+      return;
+    }
     if (p.t === 'answer') {
       if (CUR._gotAnswer) return;   // 재전송된 answer 중복 처리 방지(setRemoteDescription 상태오류 회피)
       CUR._gotAnswer = true;
@@ -447,6 +455,7 @@
     // 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     clearTimeout(ringT);
+    send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자를 통화중으로 — SDP answer(미디어)는 뒤이어 붙는다(카톡식)
     await primePermHint(CUR.video);
     try { localStream = await getMedia(CUR.video); }
     catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
