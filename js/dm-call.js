@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072762'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072763'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -668,18 +668,34 @@
     try { window.GALLA_SFX?.suspendForCall?.(); } catch (_) {}
     _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video && !CUR._spkUserSet)) });
   }
-  // 🔬 연결 3초 뒤 1회: 오디오 RTP가 실제로 흐르는지 + 네이티브 브릿지·싱크 상태 진단.
+  // 🎚 수신 지터버퍼(playout delay) 최소화 — 통화 딜레이의 주범. 0 힌트로 버퍼를 최소로.
+  function setLowLatency() {
+    try {
+      pc && pc.getReceivers && pc.getReceivers().forEach(r => {
+        if (r.track && r.track.kind === 'audio') {
+          try { if ('playoutDelayHint' in r) r.playoutDelayHint = 0; } catch (_) {}
+          try { if ('jitterBufferTarget' in r) r.jitterBufferTarget = 0; } catch (_) {}
+        }
+      });
+    } catch (_) {}
+  }
+  // 🔬 연결 3초 뒤 1회: 오디오 흐름 + 딜레이(중계/RTT/지터버퍼) 진단.
   let _statDiagDone = false;
   function armAudioStatDiag() {
     if (_statDiagDone) return; _statDiagDone = true;
+    setLowLatency();
     setTimeout(async () => {
       try {
-        let ain = 0, aout = 0, pin = 0, pout = 0;
+        let ain = 0, aout = 0, pin = 0, pout = 0, jbd = 0, jbe = 0, rtt = 0, relay = '?';
         const st = pc && await pc.getStats();
         st && st.forEach(r => {
-          if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { ain = r.bytesReceived || 0; pin = r.packetsReceived || 0; }
+          if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { ain = r.bytesReceived || 0; pin = r.packetsReceived || 0; jbd = r.jitterBufferDelay || 0; jbe = r.jitterBufferEmittedCount || 0; }
           if (r.type === 'outbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { aout = r.bytesSent || 0; pout = r.packetsSent || 0; }
+          if (r.type === 'candidate-pair' && (r.nominated || r.selected || r.state === 'succeeded')) { rtt = r.currentRoundTripTime || rtt; }
+          if (r.type === 'local-candidate' && r.candidateType) relay = r.candidateType;   // relay면 TURN 경유
         });
+        const jbMs = jbe > 0 ? Math.round(jbd / jbe * 1000) : -1;
+        wb('LAT rtt=' + Math.round(rtt * 1000) + 'ms jitBuf=' + jbMs + 'ms cand=' + relay);
         const asink = document.getElementById('dm-call-audio');
         const brg = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall);
         // 로컬 마이크 트랙 상태 — muted=true면 iosrtc ADM이 캡처를 못 하는 것(0패킷의 근원 구분)
