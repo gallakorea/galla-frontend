@@ -266,7 +266,9 @@
                 if (m) hash = "#/" + m[1] + (q ? "?" + q : "");
             }
         }
-        try { location.replace("app.html" + hash); } catch (_) {}
+        // 해시만 먼저 세팅(같은 문서라 리로드 아님) → 한 번만 리로드해 세션 반영된 새 부팅.
+        // (예전엔 location.replace + reload를 연달아 불러 이중 네비 레이스로 블랙아웃되던 버그)
+        try { location.hash = hash; } catch (_) {}
         try { location.reload(); } catch (_) {}
     }
 
