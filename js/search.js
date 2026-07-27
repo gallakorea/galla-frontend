@@ -104,13 +104,17 @@ async function initTrendPage() {
       }
       return HOST || null;
     }
+    function dbg(m){let e=document.getElementById('__pd');if(!e){e=document.createElement('div');e.id='__pd';e.style.cssText='position:fixed;top:130px;left:6px;z-index:2147483647;background:#0f0;color:#000;font:11px/1.3 monospace;padding:3px 5px;pointer-events:none;white-space:pre';document.body.appendChild(e);}e.textContent=m;}
     function pin() {
       const host = scroller(); if (!host || !bar) return;
       const hdr = host.querySelector(".header, .header-common");
       const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
       const hostTop = host.getBoundingClientRect().top;
+      const barTop = bar.getBoundingClientRect().top;
+      const vv = window.visualViewport;
+      dbg('hostTop='+Math.round(hostTop)+' sT='+Math.round(host.scrollTop)+' barTop='+Math.round(barTop)+'\nvvOff='+(vv?Math.round(vv.offsetTop):'?')+' vvH='+(vv?Math.round(vv.height):'?')+' winY='+Math.round(window.scrollY));
       const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래
-      const d = Math.round(bar.getBoundingClientRect().top - want);
+      const d = Math.round(barTop - want);
       if (Math.abs(d) > 1) host.scrollTop += d;
     }
     input.addEventListener("focus", () => {
