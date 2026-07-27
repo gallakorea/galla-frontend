@@ -65,6 +65,7 @@ const SEC = {
 const GALLA_TREND_SPA = !!(document.body && document.body.dataset.page === "spa");
 let __trendRoot = null;      // SPA에서 mount()가 넣어주는 view-host
 let __trendInited = false;
+let __searchLiftDrop = null; // 검색바 lift 원복 함수(탭 이탈 시 호출) — liftSearchBarOnFocus가 채움
 
 async function initTrendPage() {
   if (__trendInited) return;
@@ -89,40 +90,51 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 검색 포커스 시 키보드가 검색바를 가리는 문제(실기기 iOS) — 근본 원인은 SPA의
-     .tab-pane transform 안에서 iOS 키보드 자동스크롤이 콘텐츠를 밀어올려 상단 검색바가 사라지는 것.
-     transform 안에선 아무리 보정해도 iOS를 못 이긴다 → 포커스 순간 검색바(form)를 document.body
-     최상위(transform 밖)로 '들어올려' position:fixed로 화면 top에 고정한다. body엔 transform 조상이
-     없어 fixed가 정직하게 동작하고, iOS는 입력창이 이미 상단(키보드 위)이라 콘텐츠를 밀지 않는다.
-     결과(실시간 검색어 등)는 판에 남아 그대로 보인다. blur 시 원위치. */
-  (function liftSearchBarOnFocus() {
-    if (!GALLA_TREND_SPA) return;               // MPA(웹)는 문서 스크롤이라 불필요
-    const bar = form;
-    let lifted = false, slot = null, wrap = null;
-    function lift() {
-      if (lifted || !bar || !bar.parentNode) return;
-      lifted = true;
-      slot = document.createComment("search-bar-slot");
-      bar.parentNode.insertBefore(slot, bar);   // 돌아올 자리 표시
-      wrap = document.createElement("div");
-      wrap.className = "sb-lift";
-      wrap.appendChild(bar);
-      document.body.appendChild(wrap);          // transform 밖(최상위)으로
+  /* ⌨️ 검색 키보드 UX = 전용 검색 모드(고정, 안 튐).
+     SPA .tab-pane transform 안에선 iOS가 키보드로 콘텐츠를 밀어 상단 검색바가 사라지고,
+     포커스 때만 body로 올리면 검색바가 위로 튀어 UX가 나쁘다(사장님 지적).
+     → 검색 입력을 누르면 '검색 패널 전체'를 transform 밖(body) 풀스크린 오버레이로 전환한다.
+     검색바는 오버레이 상단에 고정(안 움직임), 아래에 최근·실시간·결과가 그대로. iOS 밀림 없음.
+     닫기(X/뒤로)로 원복. searchOverlay가 담당. */
+  const searchPanel = document.querySelector('.tab-panel[data-panel="search"]') ||
+                      (emptyEl && emptyEl.closest(".tab-panel")) ||
+                      (form && form.closest(".tab-panel"));
+  (function searchOverlay() {
+    if (!GALLA_TREND_SPA || !searchPanel) return;
+    let open = false, slot = null, overlay = null, closeBtn = null;
+    function enter() {
+      if (open || !searchPanel.parentNode) return;
+      open = true;
+      slot = document.createComment("search-panel-slot");
+      searchPanel.parentNode.insertBefore(slot, searchPanel);
+      overlay = document.createElement("div");
+      overlay.className = "search-overlay";
+      closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "search-overlay-close";
+      closeBtn.setAttribute("aria-label", "검색 닫기");
+      closeBtn.innerHTML = "&#10005;";           // ✕
+      closeBtn.addEventListener("click", exit);
+      overlay.appendChild(closeBtn);
+      overlay.appendChild(searchPanel);          // 패널 통째로 이동(입력+결과 함께)
+      document.body.appendChild(overlay);
+      __searchLiftDrop = exit;                    // 탭 이탈 시 닫기
+      setTimeout(function () { try { input.focus(); } catch (_) {} }, 30);
     }
-    function drop() {
-      if (!lifted) return;
-      lifted = false;
-      if (slot && slot.parentNode) slot.parentNode.insertBefore(bar, slot);
+    function exit() {
+      if (!open) return;
+      open = false;
+      try { input.blur(); } catch (_) {}
+      if (slot && slot.parentNode) slot.parentNode.insertBefore(searchPanel, slot);
       if (slot) slot.remove();
-      if (wrap && wrap.parentNode) wrap.remove();
-      slot = wrap = null;
+      if (overlay && overlay.parentNode) overlay.remove();
+      slot = overlay = closeBtn = null;
     }
-    // pointerdown(포커스 직전)에 미리 올려 둔다 → 재부모화가 focus 이동 전에 끝나 blur 루프 없음
-    input.addEventListener("pointerdown", lift, true);
-    input.addEventListener("focus", lift);
-    input.addEventListener("blur", () => setTimeout(function () {
-      if (document.activeElement !== input) drop();
-    }, 80));
+    // 입력을 '누르면'(포커스 전) 오버레이로 전환 — 재부모화가 포커스 이동 전에 끝나 튐 없음
+    input.addEventListener("pointerdown", function (e) {
+      if (!open) { e.preventDefault(); enter(); }  // 기본 포커스 막고 오버레이에서 포커스
+    });
+    input.addEventListener("focus", enter);
   })();
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
@@ -1239,7 +1251,10 @@ window.GALLA_PAGE_TREND = {
       if (window.GALLA_SPA && window.GALLA_SPA.navHide) window.GALLA_SPA.navHide(on);
     } catch (_) {}
   },
-  deactivate() { /* 판 이탈 훅 — 트렌드는 정지할 엔진 없음(기존 셸과 동일) */ },
+  deactivate() {
+    // 탭 이탈 시 검색 오버레이가 열려 있으면 닫는다(다른 페이지 위에 남지 않게)
+    try { if (__searchLiftDrop) __searchLiftDrop(); } catch (_) {}
+  },
   scrolltop() {
     const h = __trendRoot && (__trendRoot.closest(".view-host") || __trendRoot);
     if (h && h.scrollTo) h.scrollTo({ top: 0, behavior: "smooth" });
