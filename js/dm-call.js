@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072686'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072687'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -619,7 +619,11 @@
     const cur = CUR;
     if (!cur || cur._kickArmed) return;
     cur._kickArmed = true;
-    [1000, 2500, 5000].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) _nativeCall({ action: 'kick' }); }, d));
+    // 🎤 통화 연결됨 — 사용자가 직접 음소거한 게 아니면 마이크를 확실히 켠다(프리커넥트 음소거가 안 풀려
+    //    상대가 내 소리를 못 듣던 것 방지). 킥 시점마다 재확인.
+    const unmute = () => { try { if (CUR === cur && !cur._userMuted) localStream && localStream.getAudioTracks().forEach(t => { if (!t.enabled) t.enabled = true; }); } catch (_) {} };
+    unmute();
+    [200, 1000, 2500, 5000].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) { unmute(); _nativeCall({ action: 'kick' }); } }, d));
     setTimeout(() => { if (CUR === cur && cur.connectedAt) statusBeacon('6s'); }, 6000);
   }
   function endCall(reason, remote) {
@@ -960,6 +964,7 @@
       const t = localStream?.getTracks().find(x => x.kind === kind);
       if (!t) return;
       t.enabled = !t.enabled;
+      if (c === 'mute' && CUR) CUR._userMuted = !t.enabled;   // 사용자가 직접 끈 상태 기록(안전 언뮤트가 안 켜게)
       const b = box && box.querySelector(`[data-c="${c}"]`);
       if (b) { b.classList.toggle('off', !t.enabled); b.innerHTML = c === 'mute' ? (t.enabled ? IC.mic : IC.micoff) : (t.enabled ? IC.cam : IC.camoff); }
     }
