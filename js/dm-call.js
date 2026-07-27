@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072692'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072693'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -633,10 +633,11 @@
     const cur = CUR;
     if (!cur || cur._kickArmed) return;
     cur._kickArmed = true;
-    // 🎤 통화 연결됨 — 사용자가 직접 음소거한 게 아니면 마이크를 확실히 켠다(프리커넥트 음소거가 안 풀려
-    //    상대가 내 소리를 못 듣던 것 방지). 킥 시점마다 재확인.
-    const unmute = () => { try { if (CUR === cur && !cur._userMuted) localStream && localStream.getAudioTracks().forEach(t => { if (!t.enabled) t.enabled = true; }); } catch (_) {} };
+    // 🎤 마이크를 통화 내내 켜진 상태로 유지한다. (손가락이 하단 마이크 버튼을 실수로 눌러 음소거되면
+    //    상대가 소리를 못 듣던 문제 — 당분간 음소거 무시하고 항상 켠다. 정식 음소거는 UX 정리 후 복원.)
+    const unmute = () => { try { if (CUR === cur) localStream && localStream.getAudioTracks().forEach(t => { if (!t.enabled) t.enabled = true; }); } catch (_) {} };
     unmute();
+    cur._micHold = setInterval(() => { if (CUR === cur && cur.connectedAt) unmute(); else { clearInterval(cur._micHold); } }, 800);
     [200, 1000, 2500, 5000].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) { unmute(); _nativeCall({ action: 'kick' }); } }, d));
     setTimeout(() => { if (CUR === cur && cur.connectedAt) statusBeacon('6s'); }, 6000);
   }
@@ -651,6 +652,7 @@
     callKitPendingAnswer = false;
     try { window.__ckAnswer = null; } catch (_) {}
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
+    try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
     if (!remote && CUR) send({ t: 'hangup' });
     logCall(reason);
     try { pc?.close(); } catch (_) {}
