@@ -93,8 +93,52 @@ async function initTrendPage() {
   /* ⌨️ 검색바는 원래 디자인 그대로(제자리, 판 안). 키보드가 덮는 문제는 네이티브(Capacitor Keyboard
      resize=native)가 iOS 키보드 시 웹뷰를 '스크롤' 대신 '리사이즈'하게 해서 잡는다 — 웹은 무보정.
      (앱 재빌드 필요. galla-app: @capacitor/keyboard + KeyboardResize.Native) */
-  /* 🔎 영역 검색(뉴스·핫튜브)은 제거됨 — 실기기에서 리스트 자동갱신이 입력 포커스를 뺏어
-     타이핑 유실·화면 튐이 발생(사장님 신고). 광장 검색·정렬은 별도(plaza.js)로 유지. */
+  /* 🔎 영역 검색(뉴스·핫튜브) — 각 패널 리스트를 텍스트로 실시간 필터.
+     ⚠️ 실기기 이슈: 입력 중 속보 45초 타이머·리스트 리렌더가 포커스를 뺏어 타이핑이 유실됐다.
+     → 입력창이 포커스인 동안 자동갱신을 전면 정지(window.__gallaAreaSearchActive)하고,
+       필터는 display 토글만(리렌더 없음). blur 시 갱신 재개. */
+  window.__gallaAreaSearchActive = false;
+  (function bindAreaSearch() {
+    document.querySelectorAll(".area-search").forEach((form) => {
+      if (form.dataset.bound) return; form.dataset.bound = "1";
+      const input = form.querySelector("input");
+      const clear = form.querySelector(".area-search-clear");
+      const list = document.getElementById(form.getAttribute("data-target"));
+      if (!input || !list) return;
+      let q = "";
+      const apply = () => {
+        let shown = 0;
+        [...list.children].forEach((el) => {
+          if (el.classList && el.classList.contains("area-empty")) { el.remove(); return; }
+          const hit = !q || (el.textContent || "").toLowerCase().indexOf(q) !== -1;
+          el.style.display = hit ? "" : "none";
+          if (hit) shown++;
+        });
+        let empty = list.querySelector(".area-empty");
+        if (q && shown === 0) {
+          if (!empty) { empty = document.createElement("div"); empty.className = "area-empty"; list.appendChild(empty); }
+          empty.textContent = `'${input.value.trim()}' 검색 결과가 없어요.`;
+        } else if (empty) empty.remove();
+      };
+      form.addEventListener("submit", (e) => { e.preventDefault(); input.blur(); });
+      // 폼 아무 곳(패딩·아이콘) 탭 → input 포커스(얇은 입력줄 못 맞추는 문제 방지)
+      form.addEventListener("pointerup", (e) => {
+        if (e.target !== input && e.target !== clear) input.focus();
+      });
+      // 포커스 동안 자동갱신 정지 → 타이핑 유실·화면 튐 차단
+      input.addEventListener("focus", () => { window.__gallaAreaSearchActive = true; });
+      input.addEventListener("blur", () => {
+        window.__gallaAreaSearchActive = false;
+        if (typeof startBreakingRefresh === "function") startBreakingRefresh();
+      });
+      input.addEventListener("input", () => {
+        q = input.value.trim().toLowerCase();
+        if (clear) clear.hidden = !input.value;
+        apply();
+      });
+      clear?.addEventListener("click", () => { input.value = ""; q = ""; clear.hidden = true; apply(); input.focus(); });
+    });
+  })();
 
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
@@ -842,6 +886,8 @@ async function initTrendPage() {
   function startBreakingRefresh() {
     clearInterval(breakingTimer);
     breakingTimer = setInterval(async () => {
+      // 영역검색 입력 중이면 DOM 교체 금지(포커스·키보드 유지)
+      if (window.__gallaAreaSearchActive) return;
       const wrap = document.querySelector(".nh-break-mask");
       const active = document.querySelector(".tab-item.active")?.dataset.tab === "news";
       if (!wrap || !active) return;
