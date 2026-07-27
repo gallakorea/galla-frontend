@@ -104,13 +104,17 @@ async function initTrendPage() {
       }
       return HOST || null;
     }
+    function dbg(msg){ let e=document.getElementById('__pindbg'); if(!e){e=document.createElement('div');e.id='__pindbg';e.style.cssText='position:fixed;top:100px;left:6px;z-index:2147483647;background:#f0f;color:#fff;font:11px/1.4 monospace;padding:4px 6px;max-width:96vw;pointer-events:none;white-space:pre';document.body.appendChild(e);} e.textContent=msg; }
     function pin() {
-      const host = scroller(); if (!host || !bar) return;
+      const host = scroller(); if (!host || !bar) { dbg('no host/bar'); return; }
       const hdr = host.querySelector(".header, .header-common");
       const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
       const hostTop = host.getBoundingClientRect().top;
       const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래 고정
-      const d = Math.round(bar.getBoundingClientRect().top - want);
+      const barTop = bar.getBoundingClientRect().top;
+      const d = Math.round(barTop - want);
+      const vv = window.visualViewport;
+      dbg('host='+(host.className||host.tagName)+' sT='+Math.round(host.scrollTop)+' sH='+host.scrollHeight+' cH='+host.clientHeight+'\nhostTop='+Math.round(hostTop)+' hdrH='+Math.round(headerH)+' barTop='+Math.round(barTop)+' want='+Math.round(want)+' d='+d+'\nwinY='+Math.round(window.scrollY)+' vvOff='+(vv?Math.round(vv.offsetTop):'?')+' vvH='+(vv?Math.round(vv.height):'?'));
       if (Math.abs(d) > 1) host.scrollTop += d;  // 위로 사라져도(d<0) 아래로 밀려도(d>0) 항상 want로
     }
     input.addEventListener("focus", () => {
