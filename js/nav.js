@@ -356,7 +356,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const overlayOpen = () => document.querySelector(
       "#dm-root.open:not(.page), .wh-sheet.open, .shop-sheet.open, .noti-drawer.open, " +
       "#mpQuickView.open, #createModal:not([hidden]), #plaza-write-modal:not(.hidden), " +
-      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog, #lv-stage"
+      "#pager-call.on, #pager-book.on, #dm-call.on, #nav-jog, #lv-stage, " +
+      ".gtour, .gt-stage, .trend-tour"   // 온보딩 투어가 떠 있으면 탭 스와이프 금지(투어가 카테고리 위를 덮어 스와이프를 가로챘다)
     ) || document.body.classList.contains("dm-detail");
 
     // 이 페이지가 '탭 자기 자신'(탭 루트)인지 판별.
@@ -367,13 +368,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const norm = (s) => (s || "").toLowerCase().replace(/\.html$/, "");
     const curFile = norm(location.pathname.split("/").pop() || "index.html");
     const isTabRoot = curIdx !== -1 && norm(PAGE_URL[currentPage]) === curFile;
-    /* 🐞 init 진단 배너 */
-    try {
-      const dbg = document.createElement("div"); dbg.id = "__swipedbg";
-      dbg.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#e00;color:#fff;font:10px monospace;padding:2px 5px;pointer-events:none;white-space:nowrap;overflow:hidden";
-      dbg.textContent = `SHELL:${SHELL_MODE} tabRoot:${isTabRoot} cur:${curFile} pg:${currentPage} idx:${curIdx}`;
-      (document.body || document.documentElement).appendChild(dbg);
-    } catch (_) {}
 
     /* ═══ 앱/PWA = 항상 셸 — MPA 탈출 자가 회복 ═══
        로그인·글쓰기 등 최상위 이동을 거치면 앱이 셸 밖(MPA)에서 돌게 되고,
@@ -422,7 +416,6 @@ document.addEventListener("DOMContentLoaded", () => {
         lock = (onTabBar || onHRow || inHScroll(e.target) || overlayOpen()) ? 2 : 0;
         sx0 = e.touches[0].clientX; sy0 = e.touches[0].clientY;
         lastX = sx0; lastT = performance.now(); v = 0;
-        try { const d=document.getElementById("__swipedbg"); if(d){ const t=e.target; d.textContent=`B382 TGT:${t.tagName}.${String(t.className||"").slice(0,16)} onHRow:${onHRow} lock:${lock}`; } } catch(_){}
       }, { passive: true });
       document.addEventListener("touchmove", (e) => {
         if (lock === 2 || e.touches.length !== 1) return;
