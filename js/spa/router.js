@@ -159,7 +159,10 @@
     layer.innerHTML = '<div class="pane-wait"><i></i></div>';
     stackRoot.appendChild(layer);
     stackRoot.classList.add("on");
-    requestAnimationFrame(() => layer.classList.add("in"));   // 우→좌 슬라이드 인
+    // 우→좌 슬라이드 인 — rAF가 동결(백그라운드 탭·과부하)돼도 반드시 붙게 setTimeout 폴백.
+    // (안 붙으면 상세가 translateX(100%)로 화면 밖에 남아 '안 열림'처럼 보인다)
+    requestAnimationFrame(() => layer.classList.add("in"));
+    setTimeout(() => layer.classList.add("in"), 60);
     armStackSwipe(layer);                                     // 엣지 드래그 백(인스타식)
     // 🔇 상세가 덮으면 가려지는 탭 모듈 비활성 + 표면 밖 미디어 전부 정지
     if (!stack.length) {

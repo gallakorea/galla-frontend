@@ -116,7 +116,9 @@
   // 바깥 탭/스크롤/ESC → 닫기
   document.addEventListener("click", e => {
     if (!pop?.classList.contains("open")) return;
-    if (e.target.closest("#user-pop") || e.target.closest("[data-user-id]")) return;
+    // 팝오버 자신·앵커(닉네임=data-user-id, 작성자아바타=data-profile-uid) 클릭은 닫지 않는다.
+    // (data-profile-uid를 빠뜨려 이슈·뉴스 작성자 탭 시 '열리자마자 닫힘'=안뜸 버그였음)
+    if (e.target.closest("#user-pop") || e.target.closest("[data-user-id]") || e.target.closest("[data-profile-uid]")) return;
     close();
   }, true);
   window.addEventListener("scroll", close, { passive: true, capture: true });
