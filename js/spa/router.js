@@ -425,15 +425,21 @@
     function reset() { document.body.classList.remove("kb-up"); if (lifted) { lifted.style.transform = ""; lifted = null; } }
     // 회전 등으로 커진 높이는 기준 갱신(키보드로 줄어든 값은 기준에서 제외)
     window.addEventListener("resize", () => { if (window.innerHeight > baseH) baseH = window.innerHeight; setTimeout(apply, 0); });
+    // 입력 포커스 = 키보드 올라옴 → kb-up(네비 숨김). IME resize/pan 모드와 무관하게 확실.
+    function isField(t) { return t && (/^(INPUT|TEXTAREA)$/.test(t.tagName) || t.isContentEditable); }
     document.addEventListener("focusin", (e) => {
       const t = e.target;
-      if (!t || !/^(INPUT|TEXTAREA)$/.test(t.tagName) && !t.isContentEditable) return;
-      // 배틀 컴포저는 자체 로직(dm/issue)이 처리 — 중복 방지
+      if (!isField(t)) return;
+      document.body.classList.add("kb-up");
+      // 배틀 컴포저는 자체 로직(dm/issue)이 처리 — lift 중복 방지
       if (t.id === "battle-comment-input" || t.id === "ic-input" || t.closest(".dm-panel")) return;
       const bar = fixedBar(t);
       if (bar) { lifted = bar; setTimeout(apply, 80); setTimeout(apply, 320); }
     });
-    document.addEventListener("focusout", () => setTimeout(reset, 120));
+    document.addEventListener("focusout", () => setTimeout(() => {
+      // 다른 입력으로 옮겨간 게 아니면 키보드 내려감
+      if (!isField(document.activeElement)) reset();
+    }, 120));
     vv.addEventListener("resize", apply);
     vv.addEventListener("scroll", apply);
   })();
