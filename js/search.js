@@ -90,52 +90,9 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 전용 검색 화면(슬라이드 연출) — 검색 입력을 누르면 '검색 패널 통째'를 transform 밖(body)
-     풀스크린 오버레이로 옮기고 아래→위 슬라이드로 연다. 검색바는 상단 고정, 아래에 최근·실시간·결과가
-     그대로. body엔 transform 조상이 없어 iOS 키보드가 콘텐츠를 못 밀어(실기기 확정) 검색바가 항상
-     보인다. 원위치는 slot 주석으로 복귀. 탭 이탈 시 deactivate가 닫는다. */
-  const searchPanel = document.querySelector('.tab-panel[data-panel="search"]') ||
-                      (form && form.closest && form.closest(".tab-panel"));
-  (function searchOverlay() {
-    if (!GALLA_TREND_SPA || !searchPanel) return;
-    let open = false, slot = null, overlay = null;
-    function enter() {
-      if (open || !searchPanel.parentNode) return;
-      open = true;
-      slot = document.createComment("search-panel-slot");
-      searchPanel.parentNode.insertBefore(slot, searchPanel);
-      overlay = document.createElement("div");
-      overlay.className = "search-overlay";       // CSS: translateY(100%) 시작
-      const close = document.createElement("button");
-      close.type = "button";
-      close.className = "search-overlay-close";
-      close.setAttribute("aria-label", "검색 닫기");
-      close.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
-      close.addEventListener("click", exit);
-      overlay.appendChild(close);
-      overlay.appendChild(searchPanel);           // 패널(입력+최근+실시간+결과) 통째 이동
-      document.body.appendChild(overlay);
-      requestAnimationFrame(function () { overlay.classList.add("in"); });  // 슬라이드 업
-      __searchLiftDrop = exit;
-    }
-    function exit() {
-      if (!open) return;
-      open = false;
-      try { input.blur(); } catch (_) {}
-      const ov = overlay, sl = slot;
-      if (ov) ov.classList.remove("in");           // 슬라이드 다운
-      slot = null; overlay = null;
-      setTimeout(function () {                       // 애니메이션 후 원위치
-        if (sl && sl.parentNode) sl.parentNode.insertBefore(searchPanel, sl);
-        if (sl) sl.remove();
-        if (ov && ov.parentNode) ov.remove();
-      }, 300);
-    }
-    // 입력 누르면(pointerdown, 포커스 이동 전) 오버레이 진입 — 네이티브 포커스는 막지 않아 키보드 정상
-    input.addEventListener("pointerdown", function () { if (!open) enter(); });
-    input.addEventListener("focus", function () { if (!open) enter(); });
-    // 오버레이 밖(검색 리스트 항목 클릭 등)에서 결과로 이동하면 search.js가 처리 — 닫기는 back 버튼/탭이탈
-  })();
+  /* ⌨️ 검색바는 원래 디자인 그대로(제자리, 판 안). 키보드가 덮는 문제는 네이티브(Capacitor Keyboard
+     resize=native)가 iOS 키보드 시 웹뷰를 '스크롤' 대신 '리사이즈'하게 해서 잡는다 — 웹은 무보정.
+     (앱 재빌드 필요. galla-app: @capacitor/keyboard + KeyboardResize.Native) */
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
