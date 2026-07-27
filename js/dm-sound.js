@@ -17,8 +17,10 @@
     if (ctx.state === 'suspended' && !_callHold) { try { ctx.resume(); } catch (_) {} }
     return ctx;
   }
-  // 📞 통화 연결 시 호출 — WebAudio 컨텍스트를 재우고 세션을 네이티브 통화에 양보(무음·링백잔류 해소).
-  function suspendForCall() { _callHold = true; try { ctx && ctx.state === 'running' && ctx.suspend(); } catch (_) {} }
+  // ⚠️ WebAudio suspend 폐기 — iOS는 suspend된 AudioContext를 사용자 제스처 없이 resume 못 해
+  //    링백/벨이 영영 무음이 됐다(사장님 "링백 안울려"). 실제 통화 소리는 네이티브(audioSessionDidActivate)가
+  //    처리하므로 WebAudio를 재울 필요가 없다. suspend는 no-op, resume은 항상 살려둔다(안전장치).
+  function suspendForCall() { _callHold = false; }
   function resumeAfterCall() { _callHold = false; try { ctx && ctx.state === 'suspended' && ctx.resume(); } catch (_) {} }
   const unlock = () => { try { ac(); } catch (_) {} };
   ['pointerdown', 'touchstart', 'keydown'].forEach(e =>
