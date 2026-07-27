@@ -104,20 +104,14 @@ async function initTrendPage() {
       }
       return HOST || null;
     }
-    function dbg(msg){ let e=document.getElementById('__pindbg'); if(!e){e=document.createElement('div');e.id='__pindbg';e.style.cssText='position:fixed;top:100px;left:6px;z-index:2147483647;background:#f0f;color:#fff;font:11px/1.4 monospace;padding:4px 6px;max-width:96vw;pointer-events:none;white-space:pre';document.body.appendChild(e);} e.textContent=msg; }
     function pin() {
-      const host = scroller(); if (!host || !bar) { dbg('no host/bar'); return; }
-      const track = document.getElementById('tab-track');
-      const pane = host.closest('.tab-pane');
-      const trackTop0 = track ? Math.round(track.getBoundingClientRect().top) : '?';
-      const paneTop0 = pane ? Math.round(pane.getBoundingClientRect().top) : '?';
-      // 리셋 시도: 문서/스크롤엘리먼트 스크롤 되돌리기
-      try { window.scrollTo(0,0); } catch(_){}
-      try { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(_){}
-      const trackTop1 = track ? Math.round(track.getBoundingClientRect().top) : '?';
-      const hostTop = Math.round(host.getBoundingClientRect().top);
-      const trTransform = track ? getComputedStyle(track).transform : '?';
-      dbg('trackTop '+trackTop0+'→'+trackTop1+' paneTop='+paneTop0+' hostTop='+hostTop+'\nsE.sT='+Math.round((document.scrollingElement||{}).scrollTop||0)+' winY='+Math.round(window.scrollY)+'\ntr='+String(trTransform).slice(0,46));
+      const host = scroller(); if (!host || !bar) return;
+      const hdr = host.querySelector(".header, .header-common");
+      const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
+      const hostTop = host.getBoundingClientRect().top;
+      const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래
+      const d = Math.round(bar.getBoundingClientRect().top - want);
+      if (Math.abs(d) > 1) host.scrollTop += d;
     }
     input.addEventListener("focus", () => {
       // 키보드 애니메이션(~1.4s) 동안 매 프레임 강제 고정 — iOS가 되밀어도 이긴다.
