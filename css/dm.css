@@ -25,12 +25,13 @@
   padding-top:env(safe-area-inset-top);box-sizing:content-box;}
 .dm-title{text-align:center;font-size:16px;font-weight:800;color:#fff;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-/* 갈라톡 워드마크 로고 — "메시지" 텍스트 대신 브랜드 로고체 (GALLA + TALK 액센트) */
-.dm-wordmark{font-weight:900;font-size:18px;letter-spacing:.5px;color:#fff;
-  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;}
-.dm-wordmark i{font-style:normal;font-weight:900;color:#4361ff;margin-left:4px;
-  background:linear-gradient(90deg,#5b7bff,#8a6cff);-webkit-background-clip:text;
-  background-clip:text;-webkit-text-fill-color:transparent;}
+/* 갈라톡 워드마크 — "GALLA"는 실제 로고 이미지(굵은 oblique 브랜드체) 그대로,
+   "TALK"만 같은 굵기·기울기(italic+skew)로 맞춰 로고와 이질감 없게. */
+.dm-wordmark{display:inline-flex;align-items:center;gap:5px;line-height:1;}
+.dm-wm-g{height:18px;width:auto;display:block;}
+.dm-wm-t{font-weight:900;font-style:italic;font-size:19px;letter-spacing:.3px;color:#fff;
+  transform:skewX(-6deg);transform-origin:left center;display:inline-block;
+  font-family:'Helvetica Neue',Arial,sans-serif;}
 .dm-x,.dm-compose,.dm-back{width:40px;height:40px;background:none;border:none;color:#fff;
   font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .dm-back{font-size:30px;}

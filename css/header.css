@@ -147,6 +147,14 @@ body[data-page="mypage"] #app {
 .header-inner.header-3 > .logo-link > .logo { display: block; }
 .header-inner.header-3 > :first-child { grid-column: 1; grid-row: 1; justify-self: start; }
 .header-inner.header-3 > :last-child  { grid-column: 3; grid-row: 1; justify-self: end; }
+/* 전 페이지 로고 크기·위치 강제 통일 — 페이지별 CSS가 .logo를 덮어써도(마이페 height:26px,
+   좌우 버튼 개수 차이 등) 헤더 로고는 항상 같은 크기·화면 정중앙 같은 자리(인덱스 기준). */
+.header-inner.header-3 > .logo,
+.header-inner.header-3 > .logo-link,
+.header-inner.header-3 > .logo-link > .logo {
+  width: 120px !important; height: auto !important;
+}
+.header-inner.header-3 > .logo-link { width: auto !important; }
 .hdr-btn {
   width: 40px; height: 40px; padding: 0;
   background: none; border: none; cursor: pointer; color: #fff;
