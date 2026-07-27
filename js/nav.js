@@ -307,6 +307,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // capture:true — window가 아닌 요소가 스크롤해도(iOS body 등) 잡는다.
     window.addEventListener("scroll", onScroll, { passive: true, capture: true });
     document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+
+    // ⌨️ 키보드 열림 감지 — 안드로이드 adjustResize로 하단 네비가 키보드 위에 떠올라
+    //    콘텐츠를 가리던 것 차단(body.kb-up → nav 슬라이드아웃, css/nav.css). 전 MPA 페이지 공통.
+    (function kbNavHide() {
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const on = () => {
+        const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        document.body.classList.toggle("kb-up", kb > 80);
+      };
+      vv.addEventListener("resize", on);
+      vv.addEventListener("scroll", on);
+    })();
     // 스크롤 복원으로 '이미 내려간 채' 열리는 경우 — 투명 헤더가 본문 위에 정지 상태로
     // 떠 있으면 겹침이 또렷하다. 아래로 스크롤하던 중과 똑같이 '숨김' 상태로 시작하고
     // (위로 올리면 평소처럼 다시 나타남), 얕은 복원(10~60px)은 로고만 숨긴다.

@@ -194,6 +194,10 @@ body {
 /* 🐚 셸 모드 — 탭 페이지가 app-shell iframe 안일 때: 자기 네비 숨김(셸 네비가 담당) */
 body.in-shell .nav { display: none !important; }
 
+/* ⌨️ 키보드 열림 — 하단 네비가 안드로이드 adjustResize로 키보드 위에 떠올라 콘텐츠를
+   가리던 것 차단. 입력 중엔 네비 필요 없으니 밑으로 슬라이드아웃(전 페이지 공통). */
+body.kb-up .nav { transform: translateY(160%) !important; opacity: 0 !important; pointer-events: none !important; }
+
 @view-transition { navigation: auto; }
 /* 크로스페이드 연출은 끈다 — 스와이프의 슬라이드가 이미 전환 연출이고,
    스냅샷과 새 페이지 골격이 같아서 '즉시 교체'가 가장 이음새 없다 */
