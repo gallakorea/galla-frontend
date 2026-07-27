@@ -317,20 +317,35 @@
 
   /* ── 탭 스와이프(직접 터치 — iframe 중계 불필요) ───────────── */
   (function swipe() {
-    let sx = 0, sy = 0, dx = 0, lock = null, t0 = 0, lastX = 0, lastT = 0, vel = 0;
+    let sx = 0, sy = 0, dx = 0, lock = null, t0 = 0, lastX = 0, lastT = 0, vel = 0, hGuard = false;
     const EDGE_GUARD = 24;   // 좌측 엣지는 시스템 뒤로가기와 충돌 방지
+    /* 가로 스크롤 영역(카테고리 칩 행·서브탭·캐러셀·입력) 위 제스처는 탭 스와이프에서 제외 —
+       안 그러면 카테고리를 좌우로 밀 때 탭이 통째로 넘어가 카테고리를 못 고른다(사장님).
+       알려진 칩 행은 클래스로, 그 외 가로 스크롤러는 overflow-x 감지로 확실히 커버. */
+    const HROW_SEL = ".chip-scroll, .news-category-chips, .hv-cats, .cat-chips, .plaza-categories, .hv-mode, .tabs-header, .dm-tabs, .carousel-wrap";
+    function inHScroll(el) {
+      for (let n = el; n && n !== document.body && n.nodeType === 1; n = n.parentElement) {
+        const tag = n.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "VIDEO" || n.isContentEditable) return true;
+        if (n.classList && n.matches && n.matches(HROW_SEL)) return true;
+        try { const s = getComputedStyle(n); if ((s.overflowX === "auto" || s.overflowX === "scroll") && n.scrollWidth > n.clientWidth + 2) return true; } catch (_) {}
+      }
+      return false;
+    }
     track.addEventListener("touchstart", (e) => {
+      hGuard = false;
       if (stack.length) return;                     // 상세 스택 위에선 탭 스와이프 안 함
       // DM 상세(대화방·설정 등)에선 탭 스와이프 끔 — 구 iframe 셸 정책 계승
       // (dm.js의 스와이프 백·말풍선 제스처와 충돌해 판 전체가 끌려가던 것 방지)
       if (document.body.classList.contains("dm-detail")) return;
+      hGuard = inHScroll(e.target);                 // 가로 스크롤러 위면 이 제스처는 탭 전환 금지
       const t = e.touches[0];
       sx = lastX = t.clientX; sy = t.clientY; dx = 0; lock = null; vel = 0;
       t0 = lastT = performance.now();
     }, { passive: true });
     track.addEventListener("touchmove", (e) => {
       // dm-detail 중엔 start가 안 돌아 sx가 이전 제스처 값 — 여기서도 막아야 오계산 잠금이 없다
-      if (stack.length || document.body.classList.contains("dm-detail")) return;
+      if (stack.length || hGuard || document.body.classList.contains("dm-detail")) return;
       const t = e.touches[0];
       const mx = t.clientX - sx, my = t.clientY - sy;
       if (lock === null) {

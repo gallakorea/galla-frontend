@@ -14,12 +14,12 @@
   <script>window.GALLA_callKitAnswer = function(id){ try{ window.__ckAnswer = { callerId: id||'', at: Date.now() }; }catch(e){} };</script>
   <!-- 🧯 긴급 폴백 — localStorage galla_spa=0 이면 구 iframe 셸로(app-shell은 0이 아닐 때만 이리로 오므로 루프 없음) -->
   <script>try{ if(localStorage.getItem('galla_spa')==='0'){ location.replace('app-shell.html'); } }catch(e){}</script>
-  <script>window.GALLA_V = "072754";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
-  <link rel="stylesheet" href="./css/theme.css?v=072754">
-  <link rel="stylesheet" href="./css/nav.css?v=072754">
+  <script>window.GALLA_V = "072755";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
+  <link rel="stylesheet" href="./css/theme.css?v=072755">
+  <link rel="stylesheet" href="./css/nav.css?v=072755">
   <!-- 📞 통화 UI — 엔진이 이 문서(최상위)에서 돌므로 스타일도 여기 -->
-  <link rel="stylesheet" href="./css/dm.css?v=072754">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072754">
+  <link rel="stylesheet" href="./css/dm.css?v=072755">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072755">
   <style>
     /* ═══ 🚀 갈라 SPA 셸 — 단일 문서. 탭 5개 keep-alive 판 + 상세 스택. iframe 없음 ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -115,20 +115,20 @@
 </nav>
 
 <!-- 에러 로거 — SPA 부팅/런타임 에러를 client_errors에 남겨 실기기 진단 가능하게 -->
-<script src="/js/error-logger.js?v=072754"></script>
+<script src="/js/error-logger.js?v=072755"></script>
 <!-- 공유 싱글턴 — 단일 문서라 세션·실시간·통화가 딱 1개 인스턴스로 돈다 -->
-<script src="./vendor/supabase.js?v=072754"></script>
-<script src="./js/supabase.js?v=072754"></script>
-<script src="./js/dm-sound.js?v=072754" data-galla-sfx="1"></script>
-<script src="./js/dm-call.js?v=072754"></script>
+<script src="./vendor/supabase.js?v=072755"></script>
+<script src="./js/supabase.js?v=072755"></script>
+<script src="./js/dm-sound.js?v=072755" data-galla-sfx="1"></script>
+<script src="./js/dm-call.js?v=072755"></script>
 
 <!-- 공용 헤더 기능 — ＋ 글쓰기 허브·알림 벨/뱃지(문서 위임이라 어느 판 헤더든 동작) -->
-<script src="./js/write-hub.js?v=072754"></script>
-<script src="./js/notifications.js?v=072754"></script>
+<script src="./js/write-hub.js?v=072755"></script>
+<script src="./js/notifications.js?v=072755"></script>
 
 <!-- SPA 코어 -->
-<script src="./js/spa/view-loader.js?v=072754"></script>
-<script src="./js/spa/router.js?v=072754"></script>
+<script src="./js/spa/view-loader.js?v=072755"></script>
+<script src="./js/spa/router.js?v=072755"></script>
 <script>
 /* 알림 초기화 — supabase 준비되면 1회(뱃지·실시간 구독). 판들이 재호출해도 idempotent */
 (function boot(){
@@ -158,11 +158,21 @@
     if (a && a.isContentEditable) return true;
     return false;
   }
+  var reloading = false;
+  function hardReload() {
+    if (reloading) return; reloading = true;
+    (async function () {
+      // SW 캐시(Cache API)를 비우고 리로드 — 단순 reload는 옛 코드가 박히던 경우 대비
+      try { if (window.caches) { var ks = await caches.keys(); await Promise.all(ks.map(function (k) { return caches.delete(k); })); } } catch (_) {}
+      try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) { var rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(function (r) { return r.update().catch(function () {}); })); } } catch (_) {}
+      try { location.reload(); } catch (_) { try { location.href = location.pathname + '?_v=' + Date.now() + location.hash; } catch (__) {} }
+    })();
+  }
   function check() {
     get().then(function (v) {
       if (!v) return;
       if (loaded == null) { loaded = v; return; }
-      if (v !== loaded && !busy()) { loaded = v; try { location.reload(); } catch (_) {} }
+      if (v !== loaded && !busy()) { loaded = v; hardReload(); }
     });
   }
   check();
