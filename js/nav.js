@@ -408,7 +408,11 @@ document.addEventListener("DOMContentLoaded", () => {
            정렬의 좌우 드래그를 탭 전환으로 오인해 충돌했다(사장님 재현: 셸/PWA/앱).
            탭바 자체 정렬 엔진이 온전히 처리하게 양보한다. */
         const onTabBar = !!(e.target.closest && e.target.closest(".tabs-header"));
-        lock = (onTabBar || inHScroll(e.target) || overlayOpen()) ? 2 : 0;
+        /* 가로 스크롤 카테고리 칩 행 위 제스처는 셸 스와이프에서 제외 — closest()로 직접 판별
+           (inHScroll 루프가 WebKit/합성터치에서 어긋나는 경우까지 확실히 커버). */
+        const onHRow = !!(e.target.closest && e.target.closest(
+          ".chip-scroll, .news-category-chips, .hv-cats, .cat-chips, .plaza-categories, .hv-mode, .dm-tabs, .tabs-header"));
+        lock = (onTabBar || onHRow || inHScroll(e.target) || overlayOpen()) ? 2 : 0;
         sx0 = e.touches[0].clientX; sy0 = e.touches[0].clientY;
         lastX = sx0; lastT = performance.now(); v = 0;
       }, { passive: true });
