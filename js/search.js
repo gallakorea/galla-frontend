@@ -90,31 +90,11 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 검색 키보드 = 검색바를 '옮기지 않고' 제자리에서 보이게.
-     근본 원인은 판(.tab-pane)의 transform:translateZ(0) — 이 안에선 iOS 키보드가 콘텐츠를
-     밀어 상단 입력창이 사라진다(실기기). translateZ(0)는 시각적으론 0 이동이라, 검색 포커스 동안만
-     이 판의 transform을 none으로 끄면 판이 일반 블록이 되어 iOS가 입력창을 '제자리에서' 보이게
-     정상 스크롤한다(재부모화·이동 없음=안 튐). blur 시 원복. */
-  (function keepSearchVisible() {
-    if (!GALLA_TREND_SPA) return;
-    const paneOf = () => (input.closest ? input.closest(".tab-pane") : null);
-    let saved = null, pane = null;
-    function off() {
-      pane = paneOf(); if (!pane) return;
-      saved = pane.style.transform;
-      pane.style.transform = "none";            // 판 transform 해제 → iOS 키보드 정상 동작
-    }
-    function on() {
-      if (!pane) return;
-      pane.style.transform = saved || "translateZ(0)";
-      pane = null; saved = null;
-    }
-    __searchLiftDrop = on;                        // 탭 이탈 시 복원
-    input.addEventListener("focus", off);
-    input.addEventListener("blur", () => setTimeout(function () {
-      if (document.activeElement !== input) on();
-    }, 60));
-  })();
+  /* ⌨️ 검색바는 '움직이지 않는다'(사장님 요구). 재부모화/lift/오버레이는 다 위치가 튀어 폐기.
+     검색바는 제자리(판 안). 키보드 위 노출은 뷰포트 `interactive-widget=resizes-content`(app.html)에
+     맡긴다 — 지원하는 iOS(시뮬 26.0 등)는 키보드가 레이아웃을 줄여 검색바가 보인다. 일부 실기기
+     iOS(26.5.2)가 이를 무시해 키보드가 검색바를 덮는 건 iOS 버전 이슈로, 웹에서 안 옮기고 잡는 법은 없다.
+     (움직이는 UX보다 '안 움직이고 iOS에 맡김'을 사장님이 택함.) */
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
