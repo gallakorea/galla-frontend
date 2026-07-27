@@ -312,13 +312,14 @@ document.addEventListener("DOMContentLoaded", () => {
     //    콘텐츠를 가리던 것 차단(body.kb-up → nav 슬라이드아웃, css/nav.css). 전 MPA 페이지 공통.
     (function kbNavHide() {
       const vv = window.visualViewport;
-      if (!vv) return;
+      let baseH = window.innerHeight;
       const on = () => {
-        const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        document.body.classList.toggle("kb-up", kb > 80);
+        const gap = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0; // iOS/pan
+        const shrink = baseH - window.innerHeight;                                       // android adjustResize
+        document.body.classList.toggle("kb-up", gap > 80 || shrink > 150);
       };
-      vv.addEventListener("resize", on);
-      vv.addEventListener("scroll", on);
+      window.addEventListener("resize", () => { if (window.innerHeight > baseH) baseH = window.innerHeight; on(); });
+      if (vv) { vv.addEventListener("resize", on); vv.addEventListener("scroll", on); }
     })();
     // 스크롤 복원으로 '이미 내려간 채' 열리는 경우 — 투명 헤더가 본문 위에 정지 상태로
     // 떠 있으면 겹침이 또렷하다. 아래로 스크롤하던 중과 똑같이 '숨김' 상태로 시작하고

@@ -407,16 +407,24 @@
       return null;
     }
     function kbH() { return Math.max(0, window.innerHeight - vv.height - vv.offsetTop); }
+    // 키보드 감지: iOS/adjustPan은 visualViewport 갭, Android adjustResize는 innerHeight 축소로 잡는다.
+    let baseH = window.innerHeight;
+    function kbOpen() {
+      const gap = kbH();                                  // iOS/pan
+      const shrink = baseH - window.innerHeight;          // android adjustResize
+      return gap > 80 || shrink > 150;
+    }
     function apply() {
-      const kb = kbH();
-      // 🔑 키보드 열리면 하단 네비 숨김 — 안드로이드 adjustResize에서 fixed 네비가 키보드 위로
-      //    떠올라 콘텐츠를 가리던 것(전 페이지 공통). 80px 임계로 오탐 방지.
-      document.body.classList.toggle("kb-up", kb > 80);
+      // 🔑 키보드 열리면 하단 네비 숨김 — fixed 네비가 키보드 위로 떠올라 콘텐츠 가리던 것(전 페이지 공통)
+      document.body.classList.toggle("kb-up", kbOpen());
       if (!lifted) return;
+      const kb = kbH();
       lifted.style.transform = kb > 0 ? "translateY(-" + kb + "px)" : "";
       lifted.style.transition = "transform .18s ease";
     }
     function reset() { document.body.classList.remove("kb-up"); if (lifted) { lifted.style.transform = ""; lifted = null; } }
+    // 회전 등으로 커진 높이는 기준 갱신(키보드로 줄어든 값은 기준에서 제외)
+    window.addEventListener("resize", () => { if (window.innerHeight > baseH) baseH = window.innerHeight; setTimeout(apply, 0); });
     document.addEventListener("focusin", (e) => {
       const t = e.target;
       if (!t || !/^(INPUT|TEXTAREA)$/.test(t.tagName) && !t.isContentEditable) return;
