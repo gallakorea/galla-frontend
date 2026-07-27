@@ -104,24 +104,21 @@ async function initTrendPage() {
       }
       return HOST || null;
     }
-    let pinTY = 0;                 // 판에 누적 적용한 보정 translateY
     function paneOf() { return input && input.closest ? input.closest(".tab-pane") : null; }
     function resetPane() {
       const pane = paneOf();
       if (pane) pane.style.transform = "translateZ(0)";
-      pinTY = 0;
     }
     function pin() {
       const host = scroller(); if (!host || !bar) return;
       const pane = paneOf(); if (!pane) return;
-      // iOS는 입력 포커스 시 뷰호스트(판 내용)를 키보드 높이만큼 위로 밀어올린다(hostTop 음수).
-      // outer scrollView·scrollTop로는 못 막으므로, 판 자체를 그만큼 아래로 translate해 상쇄한다.
-      const hostTop = host.getBoundingClientRect().top;
-      if (Math.abs(hostTop) > 1) {
-        pinTY -= hostTop;          // hostTop → 0 이 되도록 누적
-        pane.style.transform = "translateZ(0) translateY(" + Math.round(pinTY) + "px)";
-      }
-      // 판 보정 후, 검색바가 헤더 바로 아래 오도록 뷰호스트 스크롤 미세조정
+      const vv = window.visualViewport;
+      // iOS는 입력 포커스 시 콘텐츠(판 내용)를 '키보드 높이'만큼 위로 밀어올린다(뷰호스트가 화면 밖).
+      // 판을 정확히 키보드 높이만큼 아래로 translate해 상쇄한다. ⚠️ 고정값 — 누적하면 재밀림과
+      // 싸우며 폭주(판이 계속 내려가 검은 화면). innerHeight-visualViewport.height = 키보드 높이.
+      const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+      pane.style.transform = kb > 2 ? ("translateZ(0) translateY(" + kb + "px)") : "translateZ(0)";
+      // 상쇄 후 헤더가 화면 상단에 돌아옴 → 검색바가 헤더 바로 아래 오도록 뷰호스트 스크롤 조정
       const hdr = host.querySelector(".header, .header-common");
       const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
       const want = host.getBoundingClientRect().top + headerH + 6;
