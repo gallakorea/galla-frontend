@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072696'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072697'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -513,9 +513,10 @@
   // 🚀 벨 울리는 동안 ICE 미리 연결(카톡식 즉시통화) — 마이크 음소거로 answer까지 미리 보내 P2P 경로 완성.
   //    받기 누르면 음소거만 풀려 소리가 '즉시' 난다. 마이크 권한이 이미 허용된 경우에만(프롬프트로 링 방해 방지).
   async function preconnectIncoming() {
+    // 🧯 협상 단순화·결정화: 프리커넥트 전면 비활성. 벨 중 미리 협상하던 것이 offer/answer/accept 경로와
+    //    겹쳐 통화마다 한쪽만 되던 레이스의 주범이었다. 이제 '받기' 시점에 딱 한 번 깨끗이 협상한다.
+    return;
     const cur = CUR;
-    // ⚠️ _accepting이면 시작하지 않는다 — accept가 전체 셋업을 담당(동시 getMedia/PC 생성 경합이
-    //    answer 미전송(콜드 1차 무음)을 만들었다). _preRunning 잠금으로 accept가 완료를 기다린다.
     if (!cur || cur.dir !== 'in' || pc || cur._accepting) return;
     cur._preRunning = true;
     try {
