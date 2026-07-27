@@ -1,4 +1,13 @@
-document.addEventListener("DOMContentLoaded", async () => {
+/* ═══ 이중 모드(MPA/SPA) ═══
+   · MPA(settings.html 단독 문서): 기존처럼 DOMContentLoaded 자동 초기화.
+   · SPA(app.html, body[data-page="spa"]): 자동 초기화를 건너뛰고
+     window.GALLA_PAGE_SETTINGS.mount(root, params)를 어댑터(js/spa/views/settings.js)가 호출.
+   로직 동일 — 요소 조회만 root(D)로 스코프해 단일문서 내 id 충돌(profileName 등, 마이페이지와 겹침)을 막는다. */
+async function GALLA_settingsInit(root) {
+  // 조회 루트 — MPA면 document, SPA면 view-host(#app 추출분)
+  const D = (root && root !== document && root.querySelector) ? root : document;
+  const byId = (id) => (D === document) ? document.getElementById(id) : D.querySelector("#" + id);
+
   console.log("[settings.js] Loaded");
 
   /* =====================
@@ -42,12 +51,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       if (!window.GALLA_computeType) return;
       const d = await window.GALLA_computeType(supabase, userId);
-      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      const set = (id, v) => { const el = byId(id); if (el) el.textContent = v; };
       set("gtBadge", `${d.emoji} ${d.name}${d.rookie ? "" : "형"}`);
       set("gtPro", d.proPct + "%");
       set("gtCon", d.conPct + "%");
       set("gtDesc", d.desc);
-      const tagsEl = document.getElementById("gtTags");
+      const tagsEl = byId("gtTags");
       if (tagsEl) tagsEl.innerHTML = (d.tags || []).map(t => `<span>${t}</span>`).join("");
     } catch (e) { console.error("[galla-type card]", e); }
   })();
@@ -63,14 +72,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   if (profile) {
-    const $ = id => document.getElementById(id);
+    const $ = byId;
 
     if ($("profileName")) { $("profileName").textContent = profile.nickname || "익명의 사용자"; if (user && user.id) $("profileName").setAttribute("data-nick-uid", user.id); }
     $("profileBio") && ($("profileBio").textContent = profile.bio || "소개 문구가 없습니다.");
     $("emailValue") && ($("emailValue").textContent = user.email || "-");
     $("phoneValue") && ($("phoneValue").textContent = profile.phone || "-");
 
-    const profileImgEl = document.getElementById("plAvatar") || document.querySelector(".profile-card .profile-img");
+    const profileImgEl = byId("plAvatar") || D.querySelector(".profile-card .profile-img");
     if (profileImgEl) window.GALLA_setAvatar(profileImgEl, profile.avatar_url, 256, true);
   }
 
@@ -78,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
      지갑 / 정산 (현재 0 처리)
   ===================== */
   const setText = (id, value) => {
-    const el = document.getElementById(id);
+    const el = byId(id);
     if (el) el.textContent = value;
   };
 
@@ -161,10 +170,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   ===================== */
   // 레벨·전투력·XP — 죽은 users.level 폐지, 갈라리안 GI로 통일(마이페이지·grade와 동일)
   const totalActs = acts.attack + acts.defend + acts.support;
-  const levelEl = document.getElementById("plLevel");
-  const powerEl = document.getElementById("plPower");
-  const xpFill = document.getElementById("plXpFill");
-  const xpLabel = document.getElementById("plXpLabel");
+  const levelEl = byId("plLevel");
+  const powerEl = byId("plPower");
+  const xpFill = byId("plXpFill");
+  const xpLabel = byId("plXpLabel");
   try {
     // grade·마이페이지와 완전히 동일한 full 계산으로 통일
     const g = window.GALLA_gallianOf ? await window.GALLA_gallianOf(supabase, userId) : null;
@@ -188,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     })(t0);
   };
   countUp(powerEl, power);
-  document.querySelectorAll(".rec-num").forEach(el => {
+  D.querySelectorAll(".rec-num").forEach(el => {
     const v = Number(el.textContent) || 0;
     if (v > 0) countUp(el, v);
   });
@@ -196,7 +205,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =====================
      로그아웃
   ===================== */
-  const logoutBtn = document.getElementById("logoutBtn");
+  const logoutBtn = byId("logoutBtn");
   if (logoutBtn) {
     // 네이티브 alert 폐지 → 우리 팝업(앱=로그아웃 차단·인스타식 / 웹=강한 만류 + "또 오세요")
     logoutBtn.addEventListener("click", () => {
@@ -208,11 +217,73 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* =====================
      네비게이션 이동
   ===================== */
-  document.querySelectorAll("[data-target]").forEach(el => {
+  D.querySelectorAll("[data-target]").forEach(el => {
     el.style.cursor = "pointer";
     el.addEventListener("click", () => {
       const to = el.dataset.target;
       if (to) location.href = to;
     });
   });
-});
+
+  /* =====================
+     SPA 전용 보강 — MPA에선 settings.html 인라인 <script>가 하던 일
+     (view-loader가 인라인 스크립트를 제거하므로 여기서 동일 로직 수행)
+  ===================== */
+  if (D !== document) {
+    // 1) '이 기기에 패스키 등록' 노출 — 패스키 지원 + 홈화면 웹클립 PWA 아님(네이티브 GallaApp은 허용)
+    try {
+      const isWebClip = !/GallaApp/i.test(navigator.userAgent || "") &&
+        ((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true);
+      if (window.PublicKeyCredential && navigator.credentials && !isWebClip) {
+        const pk = byId("st-passkey"); if (pk) pk.hidden = false;
+      }
+    } catch (_) {}
+
+    // 2) 📳 흔들어서 신고 — iOS(권한 요청 필요 기기)에서만 항목 노출
+    try {
+      const DM = window.DeviceMotionEvent;
+      if (DM && typeof DM.requestPermission === "function") {
+        const row = byId("st-shake"), val = byId("st-shake-v");
+        if (row) {
+          row.hidden = false;
+          row.addEventListener("click", () => {
+            if (val) val.textContent = "확인 중…";
+            window.GALLA_enableShakeReport && window.GALLA_enableShakeReport().then(ok => {
+              if (val) val.textContent = ok ? "켜짐 ✓" : "거부됨 — 설정 > Safari에서 동작 접근을 허용해주세요";
+            });
+          });
+        }
+      }
+    } catch (_) {}
+
+    // 3) 칭호·가챠·상점 타일
+    byId("titlesTile")?.addEventListener("click", () => { window.GALLA_openTitles && window.GALLA_openTitles(); });
+    byId("gachaTile")?.addEventListener("click", () => { window.GALLA_openGacha && window.GALLA_openGacha(); });
+    byId("shopTile")?.addEventListener("click", (e) => { e.stopPropagation(); window.openShop && window.openShop(); });
+
+    // 4) 관리자 관제센터 링크 노출
+    try {
+      const { data: p } = await supabase.from("user_profiles").select("admin_flag").eq("user_id", userId).maybeSingle();
+      if (p && p.admin_flag) { const el = byId("ad-admin-link"); if (el) el.style.display = "block"; }
+    } catch (_) {}
+  }
+}
+
+/* ═══ 모드 부트스트랩 ═══
+   SPA 셸(app.html)이면 자동 초기화 금지 — 어댑터가 mount()로 부른다.
+   MPA(단독 문서)면 기존과 동일하게 DOMContentLoaded에서 자동 초기화. */
+(function () {
+  const page = {
+    _root: null,
+    mount(root, params) { page._root = root || document; return GALLA_settingsInit(page._root, params); },
+    unmount() { page._root = null; },   // 타이머·구독 없음 — 카운트업 rAF는 유한 루프
+    scrolltop() {
+      const sc = (page._root && page._root !== document) ? page._root : (document.scrollingElement || document.documentElement);
+      try { sc.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { sc.scrollTop = 0; }
+    },
+  };
+  window.GALLA_PAGE_SETTINGS = page;
+
+  if (document.body && document.body.dataset.page === "spa") return;   // SPA — mount 대기
+  document.addEventListener("DOMContentLoaded", () => { GALLA_settingsInit(document); });
+})();
