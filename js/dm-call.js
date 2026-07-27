@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072689'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072690'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -438,9 +438,10 @@
     await ensureSigJoined();   // 📡 시그널 수신 채널 조인 보장(첫 통화 즉시 전환)
     startSigPoll();            // ⚡ 콜드스타트 구간 answer를 REST 폴링으로 즉시 잡기(발신 '거는중' 고착 방지)
     await buildPC();
-    // 🔇 상대가 받기 전엔 내 마이크 음소거(무음 프레임 전송 — ICE는 미리 뚫리되 소리는 안 새게).
-    //    'accepted' 신호가 오면 음소거를 푼다.
-    try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
+    // 🔇 상대가 받기 전엔 내 마이크 음소거(ICE는 미리 뚫리되 소리는 안 새게). 'accepted'가 오면 푼다.
+    //    ⚠️ 이미 연결됐으면(프리커넥트로 상대가 먼저 받아 accepted가 이 라인보다 먼저 도착) 음소거하지 않는다
+    //       — 안 그러면 해제 뒤 다시 음소거돼 발신자 마이크가 굳는다(레이스).
+    try { if (!CUR.connectedAt && !CUR._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
     nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
@@ -497,7 +498,7 @@
     } catch (_) {
       localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
     }
-    if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
+    if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
     const ans = await pc.createAnswer();
     ans.sdp = tuneOpus(ans.sdp);
