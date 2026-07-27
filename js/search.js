@@ -88,6 +88,36 @@ async function initTrendPage() {
   const emptyEl = document.getElementById("search-empty");
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
+
+  /* ⌨️ 검색 포커스 = 검색바를 헤더 바로 아래에 항상 노출.
+     SPA의 .tab-pane transform이 iOS에서 position:sticky를 깨서, 키보드가 뜨면 검색바(+헤더)가
+     통째로 위로 사라져 '검색을 볼 수 없던' 버그(사장님 실기기 재현). sticky에 기대지 않고
+     포커스 동안 view-host 스크롤을 능동적으로 잡아 검색바를 헤더 밑에 핀한다. */
+  (function pinSearchOnFocus() {
+    if (!GALLA_TREND_SPA) return;               // MPA(웹)는 문서 스크롤이라 iOS 기본동작으로 충분
+    const bar = form;                            // .search-bar (검색 입력 폼)
+    function pin() {
+      const host = HOST; if (!host || !bar) return;
+      const hdr = host.querySelector(".header");
+      const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
+      const hostTop = host.getBoundingClientRect().top;
+      const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래
+      const delta = Math.round(bar.getBoundingClientRect().top - want);
+      if (Math.abs(delta) > 2) host.scrollTop += delta;
+    }
+    input.addEventListener("focus", () => {
+      [60, 180, 320, 520, 780].forEach((t) => setTimeout(pin, t));
+      const vv = window.visualViewport;
+      if (!vv) return;
+      const on = () => pin();
+      vv.addEventListener("resize", on);
+      vv.addEventListener("scroll", on);
+      input.addEventListener("blur", () => {
+        vv.removeEventListener("resize", on);
+        vv.removeEventListener("scroll", on);
+      }, { once: true });
+    });
+  })();
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
