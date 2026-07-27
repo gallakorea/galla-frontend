@@ -44,6 +44,14 @@
 html {
   background: #0a0a0b !important;
 }
+/* 🩹 iOS 노치/상태바 filler — 웹뷰는 노치를 덮지만 그 영역에 헤더 등 검정(#000) 요소가 비쳐
+   상단 safe-area가 시커멓게 떴다(실기기 픽셀 측정: 0~safe-area = (0,0,0), 이하 = #0a0a0b).
+   safe-area 높이만큼 앱 배경색 바를 최상단에 강제로 덮어 단차를 없앤다. env=0인 웹/일반폰은 무효. */
+body::before {
+  content: ""; position: fixed; top: 0; left: 0; right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: #0a0a0b; z-index: 2147483646; pointer-events: none;
+}
 body {
   background: #0a0a0b !important;
   -webkit-font-smoothing: antialiased;
