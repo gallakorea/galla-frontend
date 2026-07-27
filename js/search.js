@@ -89,58 +89,10 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 검색 포커스 = 검색바를 헤더 바로 아래에 항상 노출.
-     SPA의 .tab-pane transform이 iOS에서 position:sticky를 깨서, 키보드가 뜨면 검색바(+헤더)가
-     통째로 위로 사라져 '검색을 볼 수 없던' 버그(사장님 실기기 재현). sticky에 기대지 않고
-     포커스 동안 view-host 스크롤을 능동적으로 잡아 검색바를 헤더 밑에 핀한다. */
-  (function pinSearchOnFocus() {
-    if (!GALLA_TREND_SPA) return;               // MPA(웹)는 문서 스크롤이라 iOS 기본동작으로 충분
-    const bar = form;                            // .search-bar (검색 입력 폼)
-    // 입력창 기준 실제 스크롤 컨테이너를 동적으로 찾는다(HOST 변수 대신 — 더 견고).
-    function scroller() {
-      for (let n = input && input.parentElement; n && n !== document.body; n = n.parentElement) {
-        const cs = getComputedStyle(n);
-        if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 4) return n;
-      }
-      return HOST || null;
-    }
-    function paneOf() { return input && input.closest ? input.closest(".tab-pane") : null; }
-    function resetPane() {
-      const pane = paneOf();
-      if (pane) { pane.style.height = ""; }
-    }
-    function pin() {
-      const host = scroller(); if (!host || !bar) return;
-      const pane = paneOf(); if (!pane) return;
-      const vv = window.visualViewport;
-      // ⌨️ 표준 기법: 판(판=뷰포트 크기) 높이를 '키보드 위 보이는 영역(visualViewport.height)'에 맞춘다.
-      //   그러면 입력창이 항상 판 안(보이는 영역)에 있어 iOS가 콘텐츠를 밀어올릴 이유가 없다(밀림 원천 차단).
-      if (vv && vv.height && Math.round(pane.getBoundingClientRect().height) !== Math.round(vv.height)) {
-        pane.style.height = Math.round(vv.height) + "px";
-      }
-      // 판이 줄면 검색바가 헤더 바로 아래 오도록 뷰호스트 스크롤 조정
-      const hdr = host.querySelector(".header, .header-common");
-      const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
-      const want = host.getBoundingClientRect().top + headerH + 6;
-      const d = Math.round(bar.getBoundingClientRect().top - want);
-      if (Math.abs(d) > 1) host.scrollTop += d;
-    }
-    input.addEventListener("focus", () => {
-      // 포커스 동안 매 프레임 판 보정 유지 — iOS가 뷰호스트를 되밀어도 계속 상쇄한다.
-      let pinning = true;
-      (function loop() { if (!pinning) return; pin(); requestAnimationFrame(loop); })();
-      const vv = window.visualViewport;
-      const on = () => pin();
-      if (vv) { vv.addEventListener("resize", on); vv.addEventListener("scroll", on); }
-      input.addEventListener("blur", () => {
-        pinning = false;
-        if (vv) { vv.removeEventListener("resize", on); vv.removeEventListener("scroll", on); }
-        // 키보드 내려간 뒤 판 보정 원복(안 하면 판이 내려간 채 남아 레이아웃 깨짐)
-        setTimeout(resetPane, 60);
-        setTimeout(resetPane, 260);
-      }, { once: true });
-    });
-  })();
+  /* ⌨️ 검색 포커스 시 키보드가 검색바를 가리는 문제 — SPA(.tab-pane transform) 위에서 iOS가
+     콘텐츠를 밀어올리는 동작과 충돌해, 웹 측 보정(sticky·스크롤핀·판 translate/높이클램프)이
+     모두 검은 화면 등 부작용을 냈다. 웹 훅은 전부 제거(무보정=최소 회귀)하고, 근본 해결은
+     네이티브(GallaBridgeVC: 키보드 시 웹뷰 리사이즈/스크롤 억제)에서 잡는다. */
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
