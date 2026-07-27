@@ -44,25 +44,17 @@
 html {
   background: #0a0a0b !important;
 }
-/* 🩹 iOS 노치/상태바 filler — 웹뷰는 노치를 덮지만 그 영역에 헤더 등 검정(#000) 요소가 비쳐
-   상단 safe-area가 시커멓게 떴다(실기기 픽셀 측정: 0~safe-area = (0,0,0), 이하 = #0a0a0b).
-   safe-area 높이만큼 앱 배경색 바를 최상단에 강제로 덮어 단차를 없앤다. env=0인 웹/일반폰은 무효. */
-body::before {
-  content: ""; position: fixed; top: 0; left: 0; right: 0;
-  height: 120px; /* 🔴 진단: 빨강 바가 화면 최상단(0pt)에 뜨면 웹뷰가 노치를 덮는 것 */
-  background: red; z-index: 2147483646; pointer-events: none;
-}
 body {
   background: #0a0a0b !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-/* radial/그라디언트 배경 오버라이드로 생기던 헤더-본문 색 이질감 제거 */
-
-/* 안전영역 상단이 항상 검정으로 채워지도록 (노치/상태바 밀림 방지) */
+/* 🩹 안전영역(노치/상태바) filler — 상단 safe-area를 앱 배경색으로 채운다.
+   ⚠️ 예전엔 background:#000(순검정)이라 본문(#0a0a0b)과 색 단차가 나 헤더 위가 시커멓게 떴다
+   (실기기 픽셀 측정: 0~safe-area=(0,0,0), 이하=(10,10,11)). 앱 배경색과 일치시켜 단차 제거. */
 body::before {
   content: ""; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
-  background: #000; z-index: 2147483000; pointer-events: none;
+  background: #0a0a0b; z-index: 2147483000; pointer-events: none;
 }
 
 /* ===== 골드 버튼 전면 폐지 → 세련된 인디고 액센트 =====
