@@ -224,6 +224,10 @@
 /* ═══════ DM 관리(카톡 차용): 설정·정렬·토글 ═══════ */
 .dm-head.has-btns { grid-template-columns: 40px 1fr 84px; }
 .dm-head-btns { display: flex; justify-content: flex-end; }
+/* 대화방 헤드: 육성톡·면상톡·설정 3개 아이콘이 40px 칸에 욱여넣어져 빽빽하던 것 —
+   우측 칸을 아이콘 수에 맞춰 auto로 넓히고 살짝 간격을 준다(제목 중앙정렬은 유지). */
+.dm-view[data-view="thread"] .dm-head { grid-template-columns: 40px 1fr auto; }
+.dm-view[data-view="thread"] .dm-head-btns { gap: 2px; padding-right: 2px; }
 .dm-gear { width: 40px; height: 40px; background: none; border: none; color: #9aa3b5;
   font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
