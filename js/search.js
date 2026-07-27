@@ -104,34 +104,43 @@ async function initTrendPage() {
       }
       return HOST || null;
     }
-    function dbg(m){let e=document.getElementById('__pd');if(!e){e=document.createElement('div');e.id='__pd';e.style.cssText='position:fixed;top:130px;left:6px;z-index:2147483647;background:#0f0;color:#000;font:11px/1.3 monospace;padding:3px 5px;pointer-events:none;white-space:pre';document.body.appendChild(e);}e.textContent=m;}
+    let pinTY = 0;                 // 판에 누적 적용한 보정 translateY
+    function paneOf() { return input && input.closest ? input.closest(".tab-pane") : null; }
+    function resetPane() {
+      const pane = paneOf();
+      if (pane) pane.style.transform = "translateZ(0)";
+      pinTY = 0;
+    }
     function pin() {
       const host = scroller(); if (!host || !bar) return;
+      const pane = paneOf(); if (!pane) return;
+      // iOS는 입력 포커스 시 뷰호스트(판 내용)를 키보드 높이만큼 위로 밀어올린다(hostTop 음수).
+      // outer scrollView·scrollTop로는 못 막으므로, 판 자체를 그만큼 아래로 translate해 상쇄한다.
+      const hostTop = host.getBoundingClientRect().top;
+      if (Math.abs(hostTop) > 1) {
+        pinTY -= hostTop;          // hostTop → 0 이 되도록 누적
+        pane.style.transform = "translateZ(0) translateY(" + Math.round(pinTY) + "px)";
+      }
+      // 판 보정 후, 검색바가 헤더 바로 아래 오도록 뷰호스트 스크롤 미세조정
       const hdr = host.querySelector(".header, .header-common");
       const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
-      const hostTop = host.getBoundingClientRect().top;
-      const barTop = bar.getBoundingClientRect().top;
-      const vv = window.visualViewport;
-      dbg('hostTop='+Math.round(hostTop)+' sT='+Math.round(host.scrollTop)+' barTop='+Math.round(barTop)+'\nvvOff='+(vv?Math.round(vv.offsetTop):'?')+' vvH='+(vv?Math.round(vv.height):'?')+' winY='+Math.round(window.scrollY));
-      const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래
-      const d = Math.round(barTop - want);
+      const want = host.getBoundingClientRect().top + headerH + 6;
+      const d = Math.round(bar.getBoundingClientRect().top - want);
       if (Math.abs(d) > 1) host.scrollTop += d;
     }
     input.addEventListener("focus", () => {
-      // 키보드 애니메이션(~1.4s) 동안 매 프레임 강제 고정 — iOS가 되밀어도 이긴다.
+      // 포커스 동안 매 프레임 판 보정 유지 — iOS가 뷰호스트를 되밀어도 계속 상쇄한다.
       let pinning = true;
-      const stop = () => { pinning = false; };
       (function loop() { if (!pinning) return; pin(); requestAnimationFrame(loop); })();
-      setTimeout(stop, 1400);
-      input.addEventListener("blur", stop, { once: true });
       const vv = window.visualViewport;
-      if (!vv) return;
       const on = () => pin();
-      vv.addEventListener("resize", on);
-      vv.addEventListener("scroll", on);
+      if (vv) { vv.addEventListener("resize", on); vv.addEventListener("scroll", on); }
       input.addEventListener("blur", () => {
-        vv.removeEventListener("resize", on);
-        vv.removeEventListener("scroll", on);
+        pinning = false;
+        if (vv) { vv.removeEventListener("resize", on); vv.removeEventListener("scroll", on); }
+        // 키보드 내려간 뒤 판 보정 원복(안 하면 판이 내려간 채 남아 레이아웃 깨짐)
+        setTimeout(resetPane, 60);
+        setTimeout(resetPane, 260);
       }, { once: true });
     });
   })();
