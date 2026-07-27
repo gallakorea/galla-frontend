@@ -490,10 +490,7 @@ body[data-page="search"] .header-inner {
 
 /* 검색 바 */
 .search-bar {
-  /* ⚠️ sticky top:0이면 스크롤/키보드로 올라갈 때 헤더(sticky top:0, z-1000) 뒤로 숨어
-     '검색창이 사라져 타이핑 불가'(사장님 재현). 헤더 높이(64px+safe-area)만큼 내려 붙여
-     항상 헤더 아래 보이게 한다. z도 헤더보다 낮으면 겹칠 때 가리므로 넉넉히. */
-  position: sticky; top: calc(64px + env(safe-area-inset-top)); z-index: 5;
+  position: sticky; top: 0; z-index: 5;
   display: flex; align-items: center; gap: 8px;
   margin: 4px 16px 14px;
   padding: 11px 14px;
@@ -501,6 +498,14 @@ body[data-page="search"] .header-inner {
   border: 1px solid #232634;
   border-radius: 14px;
 }
+/* ⌨️ 검색 포커스 시 검색바를 body 최상위로 올려 fixed 고정(iOS 키보드 밀림 회피, search.js liftSearchBarOnFocus).
+   body엔 transform 조상이 없어 position:fixed가 정직히 동작 → 검색바가 화면 top에 항상 보인다. */
+.sb-lift {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 2147483000;
+  background: #0a0a0b; padding-top: env(safe-area-inset-top);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .55);
+}
+.sb-lift .search-bar { position: static; top: auto; margin: 8px 16px; }
 .search-bar-ic { opacity: .55; font-size: 15px; }
 svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
 .search-bar .search-input {

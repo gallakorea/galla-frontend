@@ -89,10 +89,41 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 검색 포커스 시 키보드가 검색바를 가리는 문제 — SPA(.tab-pane transform) 위에서 iOS가
-     콘텐츠를 밀어올리는 동작과 충돌해, 웹 측 보정(sticky·스크롤핀·판 translate/높이클램프)이
-     모두 검은 화면 등 부작용을 냈다. 웹 훅은 전부 제거(무보정=최소 회귀)하고, 근본 해결은
-     네이티브(GallaBridgeVC: 키보드 시 웹뷰 리사이즈/스크롤 억제)에서 잡는다. */
+  /* ⌨️ 검색 포커스 시 키보드가 검색바를 가리는 문제(실기기 iOS) — 근본 원인은 SPA의
+     .tab-pane transform 안에서 iOS 키보드 자동스크롤이 콘텐츠를 밀어올려 상단 검색바가 사라지는 것.
+     transform 안에선 아무리 보정해도 iOS를 못 이긴다 → 포커스 순간 검색바(form)를 document.body
+     최상위(transform 밖)로 '들어올려' position:fixed로 화면 top에 고정한다. body엔 transform 조상이
+     없어 fixed가 정직하게 동작하고, iOS는 입력창이 이미 상단(키보드 위)이라 콘텐츠를 밀지 않는다.
+     결과(실시간 검색어 등)는 판에 남아 그대로 보인다. blur 시 원위치. */
+  (function liftSearchBarOnFocus() {
+    if (!GALLA_TREND_SPA) return;               // MPA(웹)는 문서 스크롤이라 불필요
+    const bar = form;
+    let lifted = false, slot = null, wrap = null;
+    function lift() {
+      if (lifted || !bar || !bar.parentNode) return;
+      lifted = true;
+      slot = document.createComment("search-bar-slot");
+      bar.parentNode.insertBefore(slot, bar);   // 돌아올 자리 표시
+      wrap = document.createElement("div");
+      wrap.className = "sb-lift";
+      wrap.appendChild(bar);
+      document.body.appendChild(wrap);          // transform 밖(최상위)으로
+    }
+    function drop() {
+      if (!lifted) return;
+      lifted = false;
+      if (slot && slot.parentNode) slot.parentNode.insertBefore(bar, slot);
+      if (slot) slot.remove();
+      if (wrap && wrap.parentNode) wrap.remove();
+      slot = wrap = null;
+    }
+    // pointerdown(포커스 직전)에 미리 올려 둔다 → 재부모화가 focus 이동 전에 끝나 blur 루프 없음
+    input.addEventListener("pointerdown", lift, true);
+    input.addEventListener("focus", lift);
+    input.addEventListener("blur", () => setTimeout(function () {
+      if (document.activeElement !== input) drop();
+    }, 80));
+  })();
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
