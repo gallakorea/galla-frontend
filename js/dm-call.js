@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072760'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072761'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -643,6 +643,8 @@
   function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라'), video: !!(CUR && CUR.video) }); }
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
   function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
+  // 🔬 네이티브(Swift callAudioOn)가 실제 오디오 세션 상태를 여기로 올린다 → 서버 비콘으로 확인
+  window.__nativeCallLog = function (m) { try { wb('NATIVE ' + m); } catch (_) {} };
   // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
   // 영상통화는 기본 스피커(폰을 얼굴에서 떼고 봐서 수화부면 사실상 무음). 단, 사용자가 스피커 버튼을
   //   직접 누르면(_spkUserSet) 그 뜻(SPK)을 존중 → 수화부 전환 가능.
