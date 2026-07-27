@@ -605,7 +605,12 @@ function initWritePage(ctx) {
       }
 
       // Redirect to confirm.html with draft id and mode
-      location.href = `confirm.html?draft=${draftId}&mode=check`;
+      // (SPA 단일문서면 문서 이탈 없이 confirm 뷰를 스택 push — 데이터 전달 방식은 동일: draft id)
+      if (document.body && document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.push) {
+        window.GALLA_SPA.push('confirm', { draft: draftId, mode: 'check' });
+      } else {
+        location.href = `confirm.html?draft=${draftId}&mode=check`;
+      }
     };
 
     if (videoEl) {

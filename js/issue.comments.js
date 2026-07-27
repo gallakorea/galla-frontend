@@ -2457,8 +2457,30 @@ function applySideColoring() {
 ========================================================= */
 (function () {
   const isInput = (el) => el && (el.id === "battle-comment-input" || el.id === "ic-input");
-  const open = () => document.body.classList.add("kb-open");
-  const close = () => document.body.classList.remove("kb-open");
+  const SPA = () => document.body && document.body.dataset.page === "spa";
+
+  /* SPA: 입력바가 transform된 스택 뷰 안 fixed라 iOS의 '키보드 위 자동 추적'이 안 먹는다
+     (containing block이 뷰포트가 아님). visualViewport로 키보드 높이를 직접 계산해 올린다. */
+  function kbLift() {
+    if (!SPA()) return;
+    const bar = document.querySelector(".battle-input-bar");
+    if (!bar) return;
+    const vv = window.visualViewport;
+    const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    bar.style.bottom = kb > 0 ? kb + "px" : "";
+  }
+  function armVV() {
+    const vv = window.visualViewport;
+    if (!vv || armVV._on) return;
+    armVV._on = true;
+    vv.addEventListener("resize", kbLift);
+    vv.addEventListener("scroll", kbLift);
+  }
+  const open = () => { document.body.classList.add("kb-open"); if (SPA()) { armVV(); setTimeout(kbLift, 80); setTimeout(kbLift, 350); } };
+  const close = () => {
+    document.body.classList.remove("kb-open");
+    const bar = document.querySelector(".battle-input-bar"); if (bar) bar.style.bottom = "";
+  };
 
   document.addEventListener("focusin", (e) => { if (isInput(e.target)) open(); });
   document.addEventListener("focusout", (e) => { if (isInput(e.target)) setTimeout(close, 100); });

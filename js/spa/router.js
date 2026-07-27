@@ -130,6 +130,16 @@
     stackRoot.classList.add("on");
     requestAnimationFrame(() => layer.classList.add("in"));   // 우→좌 슬라이드 인
     armStackSwipe(layer);                                     // 엣지 드래그 백(인스타식)
+    // 🔇 상세가 덮으면 '가려지는 쪽' 미디어 정지(홈 영상 소리가 상세까지 따라오던 것)
+    if (!stack.length) {
+      const cp = panes[TABS[cur]];
+      if (cp) {
+        if (cp._mod && cp._mod.deactivate) { try { cp._mod.deactivate(); } catch (_) {} }
+        try { cp.querySelectorAll("video, audio").forEach(m => { try { m.pause(); } catch (_) {} }); } catch (_) {}
+      }
+    } else {
+      try { stack[stack.length - 1].el.querySelectorAll("video, audio").forEach(m => { try { m.pause(); } catch (_) {} }); } catch (_) {}
+    }
     const entry = { el: layer, name, mod: null };
     stack.push(entry);
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
