@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072693'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072694'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -480,15 +480,13 @@
   // 수신자 answer 생성 공용 — PC 구성 → offer 반영 → answer 전송(중복 재전송 포함).
   //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
   async function buildAnswer(cur, muted) {
-    await buildPC(false);   // 트랙은 setRemoteDescription '후'에 넣는다(그래야 수신자 트랙이 offer m-line에 붙어 발신자가 받음)
+    // ★ offer와 대칭으로 트랙을 '먼저' 붙인다(addTrack before) — 그래야 answer에 msid가 실려 발신자
+    //   ontrack이 blobId 있는 스트림을 받고(s0blob=true) 네이티브가 수신자 영상을 그린다.
+    await buildPC(true);
     nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
     await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
-    // ★ 방향을 먼저 sendrecv로 만든 뒤 addTrack(스트림 포함)한다.
-    //   - direction sendrecv: offer의 recvonly 트랜시버를 '보낼 수 있게' → addTrack이 그걸 재사용(새 m-line 안 만듦)
-    //   - addTrack(t, localStream): 스트림(msid)을 붙여야 발신자 ontrack이 blobId 있는 스트림을 받아 렌더·재생함
-    //     (replaceTrack은 msid를 못 붙여 s0blob=false → 발신자가 트랙 받아도 화면·소리가 안 나왔음)
+    // 트랜시버 방향을 sendrecv로 강제(간헐적으로 recvonly로 협상돼 발신자가 못 받던 것 확정 차단)
     try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}
-    localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
     if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
     const ans = await pc.createAnswer();
