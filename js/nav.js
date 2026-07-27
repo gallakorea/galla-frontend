@@ -415,6 +415,15 @@ document.addEventListener("DOMContentLoaded", () => {
         lock = (onTabBar || onHRow || inHScroll(e.target) || overlayOpen()) ? 2 : 0;
         sx0 = e.touches[0].clientX; sy0 = e.touches[0].clientY;
         lastX = sx0; lastT = performance.now(); v = 0;
+        /* 🐞 임시 디버그 — touchstart e.target·게이트 결과를 화면 상단에 표시 */
+        try {
+          let dbg = document.getElementById("__swipedbg");
+          if (!dbg) { dbg = document.createElement("div"); dbg.id = "__swipedbg";
+            dbg.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#f00;color:#fff;font:11px monospace;padding:3px 6px;pointer-events:none;white-space:nowrap;overflow:hidden";
+            document.documentElement.appendChild(dbg); }
+          const t = e.target, tag = t.tagName + "." + (String(t.className||"").slice(0,20));
+          dbg.textContent = `TGT:${tag} onHRow:${onHRow} inH:${inHScroll(e.target)} lock:${lock}`;
+        } catch (_) {}
       }, { passive: true });
       document.addEventListener("touchmove", (e) => {
         if (lock === 2 || e.touches.length !== 1) return;
