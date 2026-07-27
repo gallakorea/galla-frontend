@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072683'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072684'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -730,6 +730,14 @@
              ' lAudio=' + (lat ? lat.readyState + '/en' + lat.enabled : 'none') +
              ' spk=' + (!!(SPK || (CUR && CUR.video && !CUR._spkUserSet))) + ' d=' + (CUR && CUR.dir === 'out' ? 'out' : 'in'));
         } catch (e) { wb('AUD-err ' + ((e && e.message) || e)); }
+        // 🔬 오디오 RTP 유입 측정 — 패킷이 오면 전송은 정상(=재생/에코제거 문제), 0이면 전송 문제
+        try {
+          if (pc && pc.getStats) pc.getStats().then(st => {
+            let inA = null;
+            st.forEach(r => { if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) inA = r; });
+            wb('APKT in=' + !!inA + ' pkts=' + (inA ? (inA.packetsReceived || 0) : '?') + ' bytes=' + (inA ? (inA.bytesReceived || 0) : '?') + ' lvl=' + (inA ? (inA.audioLevel != null ? inA.audioLevel : '?') : '?'));
+          }, () => {});
+        } catch (_) {}
         // 🔬 프레임 유입 측정 — videoWidth가 0이 아니면 프레임이 실제로 들어와 디코드된 것.
         try {
           const rr = document.getElementById('dm-call-remote'), ll = document.getElementById('dm-call-local');
