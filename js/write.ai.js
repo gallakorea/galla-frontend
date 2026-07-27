@@ -1,5 +1,7 @@
 // js/write.ai.js
-document.addEventListener('DOMContentLoaded', () => {
+/* 이중 모드 — MPA면 DOMContentLoaded 자동 실행(기존과 동일),
+   SPA면 write.js의 GALLA_PAGE_WRITE.mount가 GALLA_WRITE_INITS.ai(ctx)로 부른다. */
+function initWriteAi() {
   const runAiBtn = document.getElementById('runAi');
   const applyAiBtn = document.getElementById('applyAi');
 
@@ -95,4 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.style.overflow = '';
     });
   }
-});
+}
+
+window.GALLA_WRITE_INITS = window.GALLA_WRITE_INITS || {};
+window.GALLA_WRITE_INITS.ai = initWriteAi;
+
+if (!(document.body && document.body.dataset.page === 'spa')) {
+  document.addEventListener('DOMContentLoaded', () => initWriteAi());
+}

@@ -87,6 +87,12 @@
   /* 셸 판(iframe) 안이면 최상위로 이동 — 판이 글쓰기 화면으로 오염되는 것 방지.
      compose=1 딥링크는 nav.js의 '앱=셸 복귀' 가드가 건드리지 않는다(작성 흐름 보호). */
   function nav(url) {
+    /* SPA(app.html) 단일문서 — 글쓰기 진입은 문서 이탈 대신 스택 push.
+       (예측/광장 compose=1·제보 등은 아직 스택 미지원 — 기존 이동 그대로) */
+    if (window.GALLA_SPA && document.body && document.body.dataset.page === 'spa') {
+      if (/^\.?\/?create\.html/.test(url)) { window.GALLA_SPA.push('create'); return; }
+      if (/^\.?\/?write\.html/.test(url)) { window.GALLA_SPA.push('write'); return; }
+    }
     if (window.top !== window.self) { try { window.top.location.href = url; return; } catch (_) {} }
     location.href = url;
   }
@@ -115,7 +121,11 @@
     const { logged, admin } = await isAdmin();
     if (!logged) {
       sheet.classList.remove('open');
-      if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html';
+      if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) {
+        // SPA(app.html)면 로그인도 스택 push(문서 유지), 아니면 기존 이동
+        if (window.GALLA_SPA && document.body && document.body.dataset.page === 'spa') window.GALLA_SPA.push('login');
+        else location.href = 'login.html';
+      }
       return;
     }
 

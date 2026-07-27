@@ -1,4 +1,15 @@
-document.addEventListener('DOMContentLoaded', () => {
+/* 이중 모드(2026-07-27) — MPA(단독 문서)면 기존처럼 DOMContentLoaded 자동 초기화,
+   SPA(app.html)면 어댑터(js/spa/views/write.js)가 GALLA_PAGE_WRITE.mount()로 부른다.
+   ctx: { root, params, cleanups } — SPA에서만 전달(타이머·리스너 해제용). */
+function initWritePage(ctx) {
+  ctx = ctx || {};
+  const __root = ctx.root || null;
+  const onCleanup = (fn) => { if (ctx.cleanups) ctx.cleanups.push(fn); };
+  // 스크롤 최상단 — SPA에선 문서가 아니라 스택 뷰(.view-host)가 스크롤 주체
+  const scrollTopSmooth = () => {
+    const host = __root && __root.closest ? __root.closest('.view-host') : null;
+    (host || window).scrollTo({ top: 0, behavior: 'smooth' });
+  };
   // 🚨 WRITE PAGE ENTRY RESET — draft / check state hard clear
   sessionStorage.removeItem('__CURRENT_DRAFT_ID__');
   sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
@@ -180,7 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     bar.className = 'vup-bar';
-    const tick = setInterval(() => {
+    let tick = null;
+    onCleanup(() => { if (tick) clearInterval(tick); });   // SPA unmount 시 진행표시 타이머 해제
+    tick = setInterval(() => {
       const p = window.GALLA_bgVideo.progress();
       bar.textContent = window.GALLA_bgVideo.isDone()
         ? '✅ 영상 준비 완료 — 바로 발행할 수 있어요'
@@ -258,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     wizardSteps.forEach(s => s.classList.toggle('active', Number(s.dataset.step) <= n));
     // 미리보기 열려있으면 접기
     if (issuePreview) issuePreview.innerHTML = '';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollTopSmooth();
   }
 
   function hasMedia() {
@@ -439,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('editPreview').onclick = () => {
       issuePreview.innerHTML = '';
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollTopSmooth();
     };
 
     document.getElementById('publishPreview').onclick = async (e) => {
@@ -623,4 +636,62 @@ document.addEventListener('DOMContentLoaded', () => {
     speechModal.style.display = 'none';
     body.style.overflow = '';
   });
-});
+}
+
+/* 이중 모드 — MPA(단독 문서, body data-page≠'spa')면 기존처럼 자동 초기화. */
+if (!(document.body && document.body.dataset.page === 'spa')) {
+  document.addEventListener('DOMContentLoaded', () => initWritePage());
+}
+
+/* ============ SPA 페이지 훅 ============
+   초기화는 위 initWritePage 그대로. write.ai / draft.restore / draft.save 는
+   각자 window.GALLA_WRITE_INITS 에 init을 등록(MPA에선 각자 DOMContentLoaded 자동 실행).
+   MPA 단독 문서에서는 존재만 하고 아무도 안 부르므로 동작 불변. */
+window.GALLA_PAGE_WRITE = {
+  _root: null,
+  _cleanups: null,
+  async mount(root, params) {
+    this._root = root || null;
+    this._cleanups = [];
+    const ctx = { root: this._root, params: params || {}, cleanups: this._cleanups };
+    initWritePage(ctx);
+    const I = window.GALLA_WRITE_INITS || {};
+    try { I.ai && I.ai(ctx); } catch (e) { console.error('[write spa] ai init', e); }
+    try { I.restore && await I.restore(ctx); } catch (e) { console.error('[write spa] restore init', e); }
+    try { I.save && I.save(ctx); } catch (e) { console.error('[write spa] save init', e); }
+
+    if (root) {
+      // 🔙 상단 뒤로(.wr-back, data-back) — SPA엔 back.js를 싣지 않으니 스택 pop으로
+      root.querySelectorAll('.wr-back').forEach(b => {
+        if (b.dataset.spaBound) return;
+        b.dataset.spaBound = '1';
+        b.addEventListener('click', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          try { window.GALLA_SPA && window.GALLA_SPA.pop(); } catch (_) {}
+        }, true);
+      });
+      // 부가 UX(글자수 카운터·스텝칩) — MPA에선 write.html 인라인 스크립트 담당(SPA에선 로더가 제거)
+      const d = root.querySelector('#description'), c = root.querySelector('#descCount');
+      if (d && c && !d.dataset.spaCount) {
+        d.dataset.spaCount = '1';
+        const upd = () => { c.textContent = d.value.length; };
+        d.addEventListener('input', upd); upd();
+      }
+      const chip = root.querySelector('#wrStepNum');
+      if (chip) {
+        root.querySelectorAll('.wizard-step').forEach(s => s.addEventListener('click', () => { chip.textContent = s.dataset.step; }));
+        const t2 = root.querySelector('#toStep2'), b1 = root.querySelector('#backStep1');
+        if (t2) t2.addEventListener('click', () => { setTimeout(() => { const p2 = root.querySelector('#panel-2'); if (p2 && !p2.hidden) chip.textContent = '2'; }, 0); });
+        if (b1) b1.addEventListener('click', () => { chip.textContent = '1'; });
+      }
+    }
+  },
+  unmount() {
+    (this._cleanups || []).forEach(f => { try { f(); } catch (_) {} });
+    this._cleanups = null;
+    this._root = null;
+    // 배경 영상 업로드 중단(뷰가 사라지면 이어받을 발행도 없다) + 잠긴 body 스크롤 복구
+    try { window.GALLA_bgVideo && window.GALLA_bgVideo.clear(); } catch (_) {}
+    try { document.body.style.overflow = ''; } catch (_) {}
+  }
+};

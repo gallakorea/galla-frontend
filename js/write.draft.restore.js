@@ -1,4 +1,10 @@
-document.addEventListener('DOMContentLoaded', async () => {
+/* 이중 모드 — MPA면 DOMContentLoaded 자동 실행(기존과 동일),
+   SPA면 write.js의 GALLA_PAGE_WRITE.mount가 GALLA_WRITE_INITS.restore(ctx)로 부른다.
+   ctx: { root, params, cleanups } — SPA에선 location.search 대신 params 사용. */
+async function initWriteDraftRestore(ctx) {
+  ctx = ctx || {};
+  const IS_SPA = !!(document.body && document.body.dataset.page === 'spa');
+
   // 🔒 정상 복귀 플래그 정리 (confirm → write / write-remix)
   if (sessionStorage.getItem('__ALLOW_DRAFT_EXIT__') === 'true') {
     sessionStorage.removeItem('__ALLOW_DRAFT_EXIT__');
@@ -6,14 +12,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   console.log('[DRAFT RESTORE] Loaded');
 
-  const params = new URLSearchParams(location.search);
+  // SPA면 mount params, MPA면 location.search
+  const qDraft = (ctx.params && ctx.params.draft != null)
+    ? ctx.params.draft
+    : new URLSearchParams(location.search).get('draft');
 
   // 🔥 draft id 단일 소스: sessionStorage 우선
   let draftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
 
   // confirm → 뒤로가기 복귀 시에만 URL 허용
-  if (!draftId && params.get('draft')) {
-    draftId = params.get('draft');
+  if (!draftId && qDraft) {
+    draftId = qDraft;
     sessionStorage.setItem('__CURRENT_DRAFT_ID__', draftId);
   }
 
@@ -41,6 +50,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (error || !draft) {
       console.warn('[DRAFT RESTORE] draft 없음');
+      if (IS_SPA) {
+        // SPA: 이미 새 write 뷰 위 — 리로드 대신 상태만 초기화(문서 유지)
+        sessionStorage.removeItem('__CURRENT_DRAFT_ID__');
+        return;
+      }
       location.href = 'write.html';
       return;
     }
@@ -147,7 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   /* =================================================
      🚨 진짜 이탈일 때만 삭제
   ================================================= */
-  window.addEventListener('beforeunload', () => {
+  const onBeforeUnload = () => {
     // 🔒 미디어 캐시는 페이지 이탈 시에도 유지
     if (currentDraft?.thumbnail_url) {
       sessionStorage.setItem('__DRAFT_THUMBNAIL_URL__', currentDraft.thumbnail_url);
@@ -200,5 +214,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (e) {
       console.warn('[DRAFT CLEANUP FAIL]', e);
     }
-  });
-});
+  };
+  window.addEventListener('beforeunload', onBeforeUnload);
+  // SPA unmount 시 리스너 해제(재-mount 때 중복 방지)
+  if (ctx.cleanups) ctx.cleanups.push(() => window.removeEventListener('beforeunload', onBeforeUnload));
+}
+
+window.GALLA_WRITE_INITS = window.GALLA_WRITE_INITS || {};
+window.GALLA_WRITE_INITS.restore = initWriteDraftRestore;
+
+if (!(document.body && document.body.dataset.page === 'spa')) {
+  document.addEventListener('DOMContentLoaded', () => initWriteDraftRestore());
+}

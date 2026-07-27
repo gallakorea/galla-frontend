@@ -30,8 +30,13 @@
     if (!res.ok) throw new Error("view fetch " + res.status + " " + url);
     const doc = new DOMParser().parseFromString(await res.text(), "text/html");
 
-    const app = doc.getElementById("app");
-    if (!app) throw new Error("no #app in " + url);
+    let app = doc.getElementById("app");
+    if (!app) {
+      // #app 없는 전체화면 페이지(write.html의 .app-root, login.html의 .auth-wrap 등) —
+      // body 전체를 컨테이너로 합성해 스택 뷰로 쓴다(마크업 불변, 아래에서 크롬만 제거).
+      app = doc.createElement("div");
+      app.innerHTML = doc.body ? doc.body.innerHTML : "";
+    }
     // 셸이 담당하는 크롬 제거 — 페이지 자체 헤더/하단네비/스크립트
     app.querySelectorAll("nav.nav, header.header, script").forEach(n => n.remove());
 

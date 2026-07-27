@@ -7,7 +7,10 @@
    - 코치마크: galla_create_tour_v1 (최초 1회, 카드를 스포트라이트로 지목)
    ========================================================================== */
 (function () {
-  if (document.body.getAttribute("data-page") !== "create") return;
+  var IS_CREATE_MPA = document.body.getAttribute("data-page") === "create";
+  var IS_SPA = document.body.getAttribute("data-page") === "spa";
+  // MPA에선 create 페이지 전용. SPA(app.html)에선 create 뷰 어댑터가 명시 시작한다.
+  if (!IS_CREATE_MPA && !IS_SPA) return;
 
   /* ── 공통 문구(배너·코치마크가 같은 표현을 쓴다) ───────────────────────── */
   var ITEMS = [
@@ -222,15 +225,33 @@
   }
 
   /* ── 부팅 ─────────────────────────────────────────────────────────────── */
-  var tries = 0;
-  var t = setInterval(function () {
-    if (document.querySelector('.cr-card[data-type="plaza"]')) {
-      mountBanner();
-      var done = true; try { done = !!localStorage.getItem(TKEY); } catch (e) {}
-      if (!done && !OV) setTimeout(boot, 350);   // 코치마크는 최초 1회
-      if (++tries > 60) clearInterval(t);
-      return;
+  var pollT = null;
+  function start() {
+    stop();
+    var tries = 0;
+    pollT = setInterval(function () {
+      if (document.querySelector('.cr-card[data-type="plaza"]')) {
+        mountBanner();
+        var done = true; try { done = !!localStorage.getItem(TKEY); } catch (e) {}
+        if (!done && !OV) setTimeout(boot, 350);   // 코치마크는 최초 1회
+        if (++tries > 60) { clearInterval(pollT); pollT = null; }
+        return;
+      }
+      if (++tries > 60) { clearInterval(pollT); pollT = null; }
+    }, 500);
+  }
+  function stop() {
+    if (pollT) { clearInterval(pollT); pollT = null; }
+    // 코치마크 오버레이는 body 소속 — 뷰가 사라질 때 같이 걷는다(SPA unmount)
+    if (OV) {
+      window.removeEventListener("resize", reposition);
+      try { OV.remove(); } catch (e) {}
+      OV = null;
     }
-    if (++tries > 60) clearInterval(t);
-  }, 500);
+  }
+  // SPA(app.html) 훅 — create 뷰 mount/unmount에서 호출(재-mount에도 배너·코치마크 복원)
+  window.GALLA_CREATE_GUIDE_START = start;
+  window.GALLA_CREATE_GUIDE_STOP = stop;
+
+  if (IS_CREATE_MPA) start();   // MPA는 기존처럼 자동 시작
 })();

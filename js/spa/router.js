@@ -94,7 +94,7 @@
     opts = opts || {};
     idx = Math.max(0, Math.min(TABS.length - 1, idx));
     const tab = TABS[idx];
-    if (GATED[tab] && !isLoggedIn()) { location.href = "login.html?next=" + TAB_URL[tab]; return; }
+    if (GATED[tab] && !isLoggedIn()) { push("login", { next: tab }); return; }   // 문서 유지 — 로그인 뷰 push(성공 시 next 탭으로)
     const prev = cur;
     cur = idx;
     ensureTab(tab);

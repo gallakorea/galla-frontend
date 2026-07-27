@@ -2,7 +2,9 @@
 window.__DRAFT_MODE__ = 'edit';
 window.__CHECK_ONLY__ = false;
 
-document.addEventListener('DOMContentLoaded', () => {
+/* 이중 모드 — MPA면 DOMContentLoaded 자동 실행(기존과 동일),
+   SPA면 write.js의 GALLA_PAGE_WRITE.mount가 GALLA_WRITE_INITS.save(ctx)로 부른다. */
+function initWriteDraftSave() {
   // 🚨 remix 페이지에서는 draft.save.js 완전 차단
   if (window.__REMIX_CHECK_ONLY__ === true) {
     console.warn('[draft.save] blocked inside DOMContentLoaded (remix)');
@@ -179,4 +181,11 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.textContent = originalText;
     }
   });
-});
+}
+
+window.GALLA_WRITE_INITS = window.GALLA_WRITE_INITS || {};
+window.GALLA_WRITE_INITS.save = initWriteDraftSave;
+
+if (!(document.body && document.body.dataset.page === 'spa')) {
+  document.addEventListener('DOMContentLoaded', () => initWriteDraftSave());
+}
