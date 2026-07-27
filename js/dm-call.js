@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072694'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072695'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -385,7 +385,10 @@
           if (!remoteStream) { try { remoteStream = new MediaStream(); } catch (_) {} }
           try { if (remoteStream && !remoteStream.getTracks().some(t => t.id === e.track.id)) remoteStream.addTrack(e.track); } catch (_) {}
         }
-        wb('ontrack ' + (e.track && e.track.kind) + ' s0blob=' + !!(s0 && s0.getBlobId && s0.getBlobId()) + ' rv=' + (remoteStream && remoteStream.getVideoTracks ? remoteStream.getVideoTracks().length : '?') + ' ra=' + (remoteStream && remoteStream.getAudioTracks ? remoteStream.getAudioTracks().length : '?'));
+        // 📹 실제 수신 트랙 id를 이벤트에서 직접 잡아 네이티브 렌더에 쓴다(stream 기반 id는 blobId 없는
+        //   스트림에서 헛값일 수 있어 발신자가 수신자 영상을 못 그리던 것 — 이벤트 트랙 id는 확실히 등록됨).
+        if (e.track && e.track.kind === 'video' && CUR) CUR._rvTrackId = e.track.id;
+        wb('ontrack ' + (e.track && e.track.kind) + ' s0blob=' + !!(s0 && s0.getBlobId && s0.getBlobId()) + ' tid=' + (e.track && e.track.id ? e.track.id.slice(0, 8) : '-') + ' rv=' + (remoteStream && remoteStream.getVideoTracks ? remoteStream.getVideoTracks().length : '?') + ' ra=' + (remoteStream && remoteStream.getAudioTracks ? remoteStream.getAudioTracks().length : '?'));
       } catch (_) {}
       attachMedia();
     };
@@ -720,7 +723,7 @@
     }
     // 📞 면상톡: 원격 영상 트랙이 (늦게) 도착하면 네이티브 통화 화면에 트랙 id를 갱신 → 네이티브가 직접 렌더.
     if (CUR?.video && CUR.connectedAt) {
-      const rid = liveVideoId(remoteStream), lid = liveVideoId(localStream);
+      const rid = CUR._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
       if (rid && (CUR._nvRid !== rid || CUR._nvLid !== lid)) { CUR._nvRid = rid; CUR._nvLid = lid; _nativeCall({ action: 'videoTracks', remoteTrackId: rid, localTrackId: lid }); }
     }
     // 렌더러 위치/크기 동기화(리페인트 직후 좌표 반영)
@@ -943,7 +946,7 @@
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
     // 📞 면상톡: 네이티브 통화 화면(원격/로컬 영상 + 버튼) 표시. 영상 트랙 id를 넘겨 네이티브가 직접 그린다.
     if (video && state === 'oncall') {
-      _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: liveVideoId(localStream), remoteTrackId: liveVideoId(remoteStream) });
+      _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: liveVideoId(localStream), remoteTrackId: (CUR && CUR._rvTrackId) || liveVideoId(remoteStream) });
     } else _nativeCall({ action: 'videoUI', show: false });
     box.onclick = e => callAction(e.target.closest('[data-c]')?.dataset.c);
   }
