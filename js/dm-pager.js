@@ -942,6 +942,54 @@
      연속으로 녹음할 때 권한 요청·장치 열기를 반복하지 않아 특히 아이폰에서
      "매번 묻는" 느낌이 줄어든다. 다만 마이크 표시등이 오래 켜져 있으면
      불안하므로 15초만 유지하고, 화면을 벗어나면 즉시 반납한다. */
+  /* 🩺 녹음 실패 진단 비콘 — 실기기에서 "그냥 안 돼요"를 없앤다.
+     단계+에러명을 client_errors로 흘려 관제센터에서 원인을 특정한다. */
+  function beacon(msg) {
+    try {
+      const spa = document.body && document.body.dataset.page === 'spa';
+      window.supabaseClient?.rpc('log_client_error', {
+        p_kind: 'pager-rec',
+        p_message: ('[' + (spa ? 'spa' : 'mpa') + (window.__iosrtcReady ? '/iosrtc' : '') + '] ' + msg).slice(0, 500),
+        p_stack: null, p_source: null, p_line: null, p_col: null,
+        p_ver: spa ? 'spa' : 'mpa',
+        p_path: (location.pathname + location.search).slice(0, 200),
+      }).then(() => {}, () => {});
+    } catch (_) {}
+  }
+
+  /* 📞 iosrtc 함정 — app.html(SPA)은 iOS 네이티브에서 iosrtc.registerGlobals()가
+     navigator.mediaDevices.getUserMedia를 플러그인 구현으로 바꿔치기한다.
+     iosrtc가 주는 스트림은 플러그인제 가짜 MediaStream이라 MediaRecorder에
+     붙지 않는다(생성 시 throw 또는 0바이트) — 삐삐 녹음이 SPA에서만 죽은 원인.
+     dm.html(MPA)은 iosrtc를 문서에 안 실어 원본 getUserMedia 그대로라 멀쩡했다.
+     → 삐삐 녹음은 반드시 '원본 웹 getUserMedia'를 쓴다:
+       ① 셸이 registerGlobals 전에 백업해둔 원본(있으면 최우선)
+       ② 없으면 숨은 same-origin iframe의 오염 안 된 mediaDevices(치환은 최상위 문서만) */
+  function nativeMediaDevices() {
+    const md = navigator.mediaDevices;
+    try {
+      if (md && typeof md.__origGetUserMedia === 'function')
+        return { getUserMedia: c => md.__origGetUserMedia(c) };
+      if (typeof window.__nativeGUM === 'function')
+        return { getUserMedia: c => window.__nativeGUM(c) };
+      if (window.__iosrtcReady) {
+        let ifr = document.getElementById('pgr-gum-frame');
+        if (!ifr) {
+          ifr = document.createElement('iframe');
+          ifr.id = 'pgr-gum-frame';
+          ifr.setAttribute('aria-hidden', 'true');
+          ifr.allow = 'microphone';
+          ifr.style.cssText = 'position:fixed;width:0;height:0;border:0;visibility:hidden;pointer-events:none';
+          document.body.appendChild(ifr);
+        }
+        const imd = ifr.contentWindow?.navigator?.mediaDevices;
+        if (imd?.getUserMedia) return imd;
+        beacon('iosrtc 치환 감지했지만 iframe mediaDevices 없음 — 치환본으로 폴백');
+      }
+    } catch (e) { beacon('nativeMediaDevices 실패: ' + ((e && e.name) || e)); }
+    return md;
+  }
+
   const MIC_HOLD_MS = 15000;
   function micCache() { return (window.__gallaMic = window.__gallaMic || {}); }
   function micLive() {
@@ -960,8 +1008,8 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden) micRelease(true); });
   }
   async function getMicStream() {
-    const md = navigator.mediaDevices;
-    if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; throw e; }
+    const md = nativeMediaDevices();
+    if (!md?.getUserMedia) { const e = new Error('nomedia'); e.name = 'NoMediaDevices'; beacon('mediaDevices 없음'); throw e; }
     releaseAudio();
     const live = micLive();
     if (live) { clearTimeout(micCache().timer); return live; }
@@ -986,6 +1034,7 @@
         if (e.name === 'NotAllowedError' || e.name === 'SecurityError') break;   // 권한 거부는 재시도 무의미
       }
     }
+    beacon('getUserMedia 최종 실패: ' + ((last && last.name) || last));
     throw last;
   }
   async function startRec(stage) {
@@ -1016,11 +1065,12 @@
         if (btn) btn.textContent = '● 녹음 시작';
         if (cancel) return;
         BLOB = new Blob(CHUNKS, { type: mime || 'audio/webm' });
-        if (!BLOB.size) { BLOB = null; if (rt) rt.textContent = ''; return toast('소리가 담기지 않았어요 — 다시 시도해주세요'); }
+        if (!BLOB.size) { BLOB = null; if (rt) rt.textContent = ''; beacon('녹음 0바이트 (mime=' + (mime || 'default') + ' dur=' + dur + 's)'); return toast('소리가 담기지 않았어요 — 다시 시도해주세요'); }
         // peak 3 미만 = 사실상 무음(정상 발화는 보통 20 이상).
         // 측정 자체를 못 한 기기(IS_IOS)는 판정하지 않는다 — 오탐이 더 나쁘다
         if (!IS_IOS && peak < 3) {
           BLOB = null; if (rt) rt.textContent = '';
+          beacon('무음 녹음 (peak=' + peak + ' dur=' + dur + 's)');
           return openMicHelp('', { silent: true });
         }
         BLOB._dur = Math.max(1, dur);
@@ -1057,6 +1107,7 @@
       }, 250);
     } catch (e) {
       console.error('[pager:rec]', e);
+      beacon('녹음 시작 실패: ' + ((e && (e.name || e.message)) || e));
       // 안내로 끝내지 않고 '해결 경로'를 띄운다 — 설정에서 찾아 헤매지 않게
       openMicHelp(recErrMsg(e));
       micRelease(true);
@@ -1107,6 +1158,7 @@
       closeModal(modal);
       window.GALLA_pagerRefresh?.();
     } catch (e) {
+      if (String(e.message) !== 'too_fast') beacon('업로드/전송 실패: ' + ((e && (e.name || e.message)) || e));
       toast(String(e.message) === 'too_fast' ? '조금 천천히 남겨주세요' : '남기지 못했어요');
       btn.disabled = false; btn.textContent = peer ? '보내기' : '이걸로 저장';
     }

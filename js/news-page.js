@@ -168,11 +168,9 @@
 
   async function shareGn() {
     if (!NEWS) return;
-    const url = new URL(`news.html?gn=${NEWS_ID}`, location.href).href;
-    if (navigator.share) {
-      try { await navigator.share({ title: NEWS.title || "GALLA 뉴스", url }); return; }
-      catch (err) { if (err.name === "AbortError") return; }
-    }
+    // OG 카드 URL(/share/…)로 우리 공유 시트 — 네이티브 시트(navigator.share) 대신 GALLA 시트
+    const url = new URL(`/share/news/${NEWS_ID}`, location.href).href;
+    if (window.GALLA_share) { window.GALLA_share({ url, title: NEWS.title || "GALLA 뉴스" }); return; }
     try { await navigator.clipboard.writeText(url); alert("링크가 복사되었습니다."); }
     catch { alert("링크 복사에 실패했습니다."); }
   }
