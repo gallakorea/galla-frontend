@@ -64,6 +64,11 @@
     track.classList.toggle("anim", !!anim);
     track.style.transform = "translateX(" + px + "px)";
   }
+  // 정착 상태는 dvw 단위 — 창 크기가 바뀌어도(회전·데스크톱 리사이즈) 판이 어긋나지 않는다.
+  function settle(anim) {
+    track.classList.toggle("anim", !!anim);
+    track.style.transform = "translateX(" + (-cur * 100) + "dvw)";
+  }
   const baseX = () => -cur * W();
 
   function paintNav() {
@@ -93,7 +98,7 @@
     const prev = cur;
     cur = idx;
     ensureTab(tab);
-    place(baseX(), opts.anim !== false);
+    settle(opts.anim !== false);
     paintNav();
     try { history.replaceState(null, "", "#/" + tab); } catch (_) {}
     // 활성/비활성 훅(P1: 릴스 정지·정렬 초기화 등) — postMessage 대신 직접 호출
@@ -224,7 +229,7 @@
       const commit = Math.abs(dx) > W() * 0.26 || Math.abs(vel) > 0.38;
       if (commit && dx < 0 && cur < TABS.length - 1) activateTab(cur + 1);
       else if (commit && dx > 0 && cur > 0) activateTab(cur - 1);
-      else place(baseX(), true);
+      else settle(true);
       lock = null;
     }, { passive: true });
   })();
@@ -259,7 +264,7 @@
     else push(name, params);
   });
 
-  window.addEventListener("resize", () => place(baseX(), false));
+  window.addEventListener("resize", () => settle(false));
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {

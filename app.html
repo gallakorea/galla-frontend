@@ -21,12 +21,18 @@
   <style>
     /* ═══ 🚀 갈라 SPA 셸 — 단일 문서. 탭 5개 keep-alive 판 + 상세 스택. iframe 없음 ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
+    /* position:fixed — 주입되는 페이지 CSS가 body 레이아웃(display:flex 등)을 바꿔도 트랙이
+       영향 안 받게 문서 흐름에서 분리한다(body flex-center가 트랙을 -1764px로 밀던 실사고). */
     #tab-track {
+      position: fixed; left: 0; top: 0;
       display: flex; height: 100dvh; width: 500dvw;
       will-change: transform; transform: translateX(0);
     }
     #tab-track.anim { transition: transform .3s cubic-bezier(.22,.9,.3,1); }
-    .tab-pane { width: 100dvw; height: 100dvh; flex: 0 0 auto; position: relative; background: #0a0a0b; overflow: hidden; }
+    /* ⚠️ transform: translateZ(0) 필수 — 페이지들의 position:fixed(탭바·컴포저 등)가 '판'을
+       containing block으로 잡게 한다(판=뷰포트 크기라 시각적으로 fixed와 동일). 없으면 fixed가
+       transform된 트랙 기준이 되어 화면 밖으로 날아간다(iframe 시절엔 판이 자기 뷰포트라 없던 문제). */
+    .tab-pane { width: 100dvw; height: 100dvh; flex: 0 0 auto; position: relative; background: #0a0a0b; overflow: hidden; transform: translateZ(0); }
     /* 각 판의 콘텐츠는 자체 세로 스크롤 — 문서 스크롤은 잠금 */
     .tab-pane .view-host { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
     /* 상세 스택 — 탭 위를 덮는 레이어. push=우→좌 슬라이드 인, pop=슬라이드 아웃 */
