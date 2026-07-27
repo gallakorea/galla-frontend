@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072687'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072688'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -482,8 +482,21 @@
     await buildPC(false);   // 트랙은 setRemoteDescription '후'에 넣는다(그래야 수신자 트랙이 offer m-line에 붙어 발신자가 받음)
     nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
     await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
-    // ★ 이제 로컬 트랙 추가 — offer가 만든 recvonly 트랜시버에 붙어 sendrecv가 된다(양방향 미디어)
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    // ★ 수신자 트랙을 'offer가 만든 트랜시버'에 직접 붙이고 방향을 sendrecv로 명시한다.
+    //   (addTrack 자동 연결이 iosrtc에서 간헐적으로 실패해 발신자가 수신자 미디어를 못 받던 것 — 명시적으로 확정)
+    try {
+      const used = new Set();
+      for (const tx of pc.getTransceivers()) {
+        const kind = (tx.receiver && tx.receiver.track && tx.receiver.track.kind) || null;
+        const lt = localStream.getTracks().find(t => t.kind === kind && !used.has(t));
+        if (lt && tx.sender) { try { await tx.sender.replaceTrack(lt); used.add(lt); } catch (_) {} }
+        try { tx.direction = 'sendrecv'; } catch (_) {}
+      }
+      // 트랜시버로 못 붙은 트랙은 addTrack 폴백
+      localStream.getTracks().forEach(t => { if (!used.has(t)) { try { pc.addTrack(t, localStream); } catch (_) {} } });
+    } catch (_) {
+      localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
+    }
     if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
     const ans = await pc.createAnswer();
