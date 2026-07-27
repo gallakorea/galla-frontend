@@ -5,16 +5,21 @@
 (function () {
   if (window.GALLA_SFX) return;
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) { window.GALLA_SFX = { ding(){}, pop(){}, ringInStart(){}, ringInStop(){}, ringOutStart(){}, ringOutStop(){}, unlock(){} }; return; }
-  let ctx = null, master = null;
+  if (!AC) { window.GALLA_SFX = { ding(){}, pop(){}, ringInStart(){}, ringInStop(){}, ringOutStart(){}, ringOutStop(){}, unlock(){}, suspendForCall(){}, resumeAfterCall(){} }; return; }
+  let ctx = null, master = null, _callHold = false;
   function ac() {
     if (!ctx) {
       try { ctx = new AC(); } catch (_) { return null; }
       master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
     }
-    if (ctx.state === 'suspended') { try { ctx.resume(); } catch (_) {} }
+    // 통화 중(_callHold)엔 자동 resume 금지 — WebAudio가 iOS 오디오 세션을 도로 뺏어
+    //   네이티브 WebRTC 통화 소리를 눌러버리는(무음+링백 잔류) 것을 막는다.
+    if (ctx.state === 'suspended' && !_callHold) { try { ctx.resume(); } catch (_) {} }
     return ctx;
   }
+  // 📞 통화 연결 시 호출 — WebAudio 컨텍스트를 재우고 세션을 네이티브 통화에 양보(무음·링백잔류 해소).
+  function suspendForCall() { _callHold = true; try { ctx && ctx.state === 'running' && ctx.suspend(); } catch (_) {} }
+  function resumeAfterCall() { _callHold = false; try { ctx && ctx.state === 'suspended' && ctx.resume(); } catch (_) {} }
   const unlock = () => { try { ac(); } catch (_) {} };
   ['pointerdown', 'touchstart', 'keydown'].forEach(e =>
     window.addEventListener(e, unlock, { once: true, passive: true, capture: true }));
@@ -79,5 +84,5 @@
   function ringOutStart() { ringOutStop(); try { ringOutMotif(); } catch (_) {} ringOutT = setInterval(() => { try { ringOutMotif(); } catch (_) {} }, 3000); }
   function ringOutStop() { if (ringOutT) { clearInterval(ringOutT); ringOutT = null; } }
 
-  window.GALLA_SFX = { ding, pop, ringInStart, ringInStop, ringOutStart, ringOutStop, unlock };
+  window.GALLA_SFX = { ding, pop, ringInStart, ringInStop, ringOutStart, ringOutStop, unlock, suspendForCall, resumeAfterCall };
 })();

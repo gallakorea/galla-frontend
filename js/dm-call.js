@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072758'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072759'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -646,7 +646,12 @@
   // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
   // 영상통화는 기본 스피커(폰을 얼굴에서 떼고 봐서 수화부면 사실상 무음). 단, 사용자가 스피커 버튼을
   //   직접 누르면(_spkUserSet) 그 뜻(SPK)을 존중 → 수화부 전환 가능.
-  function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video && !CUR._spkUserSet)) }); }
+  function applyNativeRoute() {
+    // 🔇 통화 연결 시 WebAudio(링백·벨) 컨텍스트를 재워 iOS 오디오 세션을 네이티브 통화에 양보.
+    //    WebAudio가 세션을 물고 있으면 네이티브 WebRTC 소리가 안 나고 발신 링백도 안 꺼졌다(사장님).
+    try { window.GALLA_SFX?.suspendForCall?.(); } catch (_) {}
+    _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video && !CUR._spkUserSet)) });
+  }
   // 🔬 연결 3초 뒤 1회: 오디오 RTP가 실제로 흐르는지 + 네이티브 브릿지·싱크 상태 진단.
   let _statDiagDone = false;
   function armAudioStatDiag() {
@@ -697,6 +702,8 @@
     pc = null;
     try { localStream?.getTracks().forEach(t => t.stop()); } catch (_) {}
     localStream = null; remoteStream = null;
+    _statDiagDone = false;   // 다음 통화 진단 재무장
+    try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 통화 끝 → WebAudio 복구(다음 벨소리)
     try { document.documentElement.classList.remove('gcall-video'); } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
