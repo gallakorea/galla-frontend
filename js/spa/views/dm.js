@@ -54,6 +54,9 @@ function loadScriptOnce(src) {
 }
 
 export async function mount(root, params) {
+  // DM은 자체 헤드(.dm-head/탭바)를 쓴다 — 페이지 헤더가 남으면 이중 헤더로 정렬이 깨지고
+  // 패널 높이 계산이 어긋나 입력창이 가려진다(사장님 재현). DM 뷰에선 헤더 제거.
+  try { const h = root.querySelector("header.header"); if (h) h.remove(); } catch (_) {}
   for (const src of SCRIPTS) await loadScriptOnce(src);   // 순차 — 의존 순서 보장
   const page = window.GALLA_PAGE_DM;
   if (page && page.mount) await page.mount(root, params || {});

@@ -105,6 +105,8 @@
     if (prev !== cur) {
       const pm = panes[TABS[prev]] && panes[TABS[prev]]._mod;
       if (pm && pm.deactivate) { try { pm.deactivate(); } catch (_) {} }
+      // 🔇 이전 판의 모든 미디어 강제 정지 — 홈 영상 소리가 다른 탭까지 따라오던 것(모듈 훅과 별개의 안전망)
+      try { panes[TABS[prev]] && panes[TABS[prev]].querySelectorAll("video, audio").forEach(m => { try { m.pause(); } catch (_) {} }); } catch (_) {}
     }
     const cm = panes[tab] && panes[tab]._mod;
     if (cm && cm.activate) { try { cm.activate(); } catch (_) {} }
