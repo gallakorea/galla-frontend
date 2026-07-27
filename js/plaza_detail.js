@@ -1,5 +1,10 @@
 // 로컬 vendor UMD 전역 사용 (esm.sh 16모듈 폭포수 로드 제거)
-const { createClient } = window.supabase;
+/* ═══ 이중 모드(MPA/SPA) ═══
+   · MPA(plaza_detail.html 단독 문서): 파일 하단에서 기존처럼 자동 초기화(+자체 클라이언트 생성).
+   · SPA(app.html, body[data-page="spa"]): 자동 초기화를 건너뛰고
+     window.GALLA_PAGE_PLAZA_DETAIL.mount(root, params)를 어댑터(js/spa/views/plaza_detail.js)가 호출.
+     클라이언트는 셸의 window.supabaseClient를 재사용(중복 GoTrue 인스턴스 방지),
+     요소 조회는 root(D) 스코프, id는 params에서 읽는다. */
 
 // 광장 글 카테고리 어휘(search.html #plaza-category와 동일) — 수정 모달 드롭다운용.
 // owner-actions의 복합형 GALLA_CATEGORIES('정치·사회')와 달라 별도 정의한다.
@@ -8,23 +13,11 @@ const PLAZA_CATEGORIES = ["정치","사회","경제","투자","직장","연애",
 const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
-const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  }
-);
+let supabase = null;
 
-// 🔥🔥🔥 여기다
-window.supabase = supabase;
-// 공용 헬퍼(ghost.js·items.js 등)는 window.supabaseClient를 본다 —
-// 이 페이지는 js/supabase.js를 안 쓰므로 여기서 직접 노출(없으면 유령권 연동이 전부 비로그인 판정)
-window.supabaseClient = supabase;
+// 조회 루트 — MPA면 document, SPA면 view-host(#app 추출분)
+let D = document;
+const byId = (id) => (D === document) ? document.getElementById(id) : D.querySelector("#" + id);
 
 // 세션 조회 메모이즈 — 로드 중 10번 넘게 부르던 auth.getSession()(토큰 갱신 시 네트워크)을
 // 1회로 합쳐 광장 상세 로드를 빠르게(사장님 제보). 로그인/로그아웃 시엔 캐시를 비운다.
@@ -33,14 +26,22 @@ async function getSessionSafe() {
   if (!_sessP) _sessP = supabase.auth.getSession().then(r => r.data.session).catch(() => null);
   return _sessP;
 }
-try { supabase.auth.onAuthStateChange(() => { _sessP = null; }); } catch (_) {}
+
+/* auth 리스너 등록 — SPA unmount 때 해제할 수 있게 구독을 모아둔다 */
+const _authSubs = [];
+function onAuth(cb) {
+  try {
+    const { data } = supabase.auth.onAuthStateChange(cb);
+    if (data && data.subscription) _authSubs.push(data.subscription);
+  } catch (_) {}
+}
 
 /* =========================
    AUTH BUTTONS (LOGIN / SIGNUP / LOGOUT)
    ========================= */
-document.addEventListener("DOMContentLoaded", async () => {
-  const loginBtn = document.getElementById("loginBtn");
-  const signupBtn = document.getElementById("signupBtn");
+async function initAuthButtons() {
+  const loginBtn = byId("loginBtn");
+  const signupBtn = byId("signupBtn");
 
   // 🔑 현재 페이지 URL 저장
   const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
@@ -91,31 +92,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // 2) 인증 상태 변화 감지
-  supabase.auth.onAuthStateChange((_event, session) => {
+  onAuth((_event, session) => {
     if (session) {
       showLoggedIn();
     } else {
       showLoggedOut();
     }
   });
-});
-
-const postId = new URLSearchParams(location.search).get("id");
-
-if (!postId) {
-  alert("잘못된 접근입니다.");
-  throw new Error("postId missing");
 }
 
-const commentList = document.getElementById("commentList");
-const postTitleEl = document.querySelector(".post-title");
-const postMetaEl = document.querySelector(".post-meta");
-const postContentEl = document.querySelector(".post-content");
+let postId = null;
 
-document.body.style.paddingBottom = "140px";
-
-/* 댓글 좋아요/싫어요 (이벤트 위임) */
-commentList?.addEventListener("click", handleCommentVote);
+let commentList = null;
+let postTitleEl = null;
+let postMetaEl = null;
+let postContentEl = null;
+let commentInput = null;
 
 /*
 comment = {
@@ -135,7 +127,7 @@ let isVotingNow = false; // 🔥 투표 중 loadVoteState 차단
 
 /* 작성자 블록 — 아바타·등급·활동명(탭=팝오버)·팔로우·응원. 봇 수집글(user_id null)은 닉네임만 */
 async function renderAuthorBlock(data) {
-  if (!postMetaEl || document.getElementById("pz-author")) return;
+  if (!postMetaEl || byId("pz-author")) return;
   const wrap = document.createElement("div");
   wrap.id = "pz-author"; wrap.className = "pz-author";
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -177,12 +169,12 @@ async function renderAuthorBlock(data) {
 window.GALLA_renderPlazaDonations = async function (postId) {
   try {
     const { data } = await supabase.rpc("plaza_donations", { p_post_id: postId, p_limit: 10 });
-    let box = document.getElementById("pz-donates");
+    let box = byId("pz-donates");
     if (!data?.ok || !data.count) { box?.remove(); return; }
     if (!box) {
       box = document.createElement("div");
       box.id = "pz-donates"; box.className = "pz-donates";
-      document.querySelector(".plaza-post .post-inner")?.appendChild(box);
+      D.querySelector(".plaza-post .post-inner")?.appendChild(box);
     }
     const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     box.innerHTML = `<div class="pzd-head">💝 응원 <b>${data.count}</b> · 총 <b>${(data.total || 0).toLocaleString()}원</b></div>
@@ -216,8 +208,8 @@ async function fetchPostDetail() {
   // 응원(슈퍼챗) 스트립
   window.GALLA_renderPlazaDonations && window.GALLA_renderPlazaDonations(data.id);
 
-  // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제)
-  const moreBtn = document.getElementById("header-more-btn");
+  // 소유자·관리자 전용 ⋯ 메뉴 (수정/삭제) — SPA에선 페이지 헤더가 셸 크롬으로 제거돼 없을 수 있다
+  const moreBtn = byId("header-more-btn");
   if (moreBtn) {
     moreBtn.style.display = "none";
     if (window.GALLA_canManage) {
@@ -355,7 +347,7 @@ async function handleCommentVote(e) {
     if (row.my_vote === null || row.my_vote === undefined) delete myCommentVotes[cid];
     else myCommentVotes[cid] = row.my_vote;
     // 해당 댓글의 두 버튼 갱신
-    document.querySelectorAll(`.cv-btn[data-cid="${cid}"]`).forEach(b => {
+    D.querySelectorAll(`.cv-btn[data-cid="${cid}"]`).forEach(b => {
       const v = Number(b.dataset.v);
       b.querySelector("span").textContent = v === 1 ? row.like_count : row.dislike_count;
       b.classList.toggle("on", myCommentVotes[cid] === v);
@@ -454,7 +446,7 @@ async function submitComment(body) {
   }
 
   // 유령 토글 — 활성(유령권 보유) 시에만 익명 게시, seed는 서버 트리거가 강제 주입
-  const ghostOn = document.getElementById("comment-ghost")?.classList.contains("on") === true;
+  const ghostOn = byId("comment-ghost")?.classList.contains("on") === true;
   let displayName = null, isAnon = false;
   if (ghostOn) {
     if (!window.__GHOST_ST?.active) {
@@ -501,13 +493,19 @@ function promptGhostBuy() {
   }
 }
 window.GALLA_bindGhostToggle = function () {
-  const btn = document.getElementById("comment-ghost");
+  const btn = byId("comment-ghost");
   if (btn && window.GALLA_ghostBind) window.GALLA_ghostBind(btn);
 };
 
 function scrollToCommentInput() {
   if (!commentInput) return;
   const rect = commentInput.getBoundingClientRect();
+  if (D !== document && D.scrollTo) {
+    // SPA: 스크롤 주체는 view-host(자체 스크롤 판)
+    const hostRect = D.getBoundingClientRect();
+    D.scrollTo({ top: D.scrollTop + rect.top - hostRect.top - 120, behavior: "smooth" });
+    return;
+  }
   window.scrollTo({
     top: window.scrollY + rect.top - 120,
     behavior: "smooth"
@@ -575,16 +573,15 @@ function renderPostBody(body) {
    - up = +1, down = -1
 ========================= */
 
-document.addEventListener("DOMContentLoaded", async () => {
+async function initVoteAndComments() {
   let voting = false; // 중복 클릭 방지
-  const voteScoreEl = document.getElementById("voteScore");
-  const voteUpBtn = document.querySelector(".vote-up");
-  const voteDownBtn = document.querySelector(".vote-down");
+  const voteScoreEl = byId("voteScore");
+  const voteUpBtn = D.querySelector(".vote-up");
+  const voteDownBtn = D.querySelector(".vote-down");
 
-  const commentPill = document.querySelector(".comment-pill");
-  const commentCountEl = document.getElementById("commentCount");
-  const commentInput = document.getElementById("commentInput");
-  const commentSubmitBtn = document.getElementById("commentSubmitBtn");
+  const commentPill = D.querySelector(".comment-pill");
+  const commentCountEl = byId("commentCount");
+  const commentSubmitBtn = byId("commentSubmitBtn");
 
   // Helper function for vote state loading (PostgREST 직접 조회, 엣지함수 JWT 이슈 회피)
   async function loadVoteState() {
@@ -762,7 +759,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   loadVoteState();
 
   // ✅ 이후 로그인/로그아웃 시에도 다시 동기화
-  supabase.auth.onAuthStateChange(async (event) => {
+  onAuth(async (event) => {
     if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
       await loadVoteState();
     }
@@ -771,12 +768,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   fetchComments(commentCountEl);
   loadGhostState();
   window.GALLA_bindGhostToggle && window.GALLA_bindGhostToggle();
-});
+}
+
 /* =========================
    글 저장(북마크) — 로그인 필수
 ========================= */
-(async function initPlazaBookmark() {
-  const btn = document.getElementById("plazaBookmarkBtn");
+async function initPlazaBookmark() {
+  const btn = byId("plazaBookmarkBtn");
   if (!btn || !postId) return;
 
   let saved = false;
@@ -817,11 +815,103 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // 공유 — 인덱스와 동일: /share/plaza/<id> OG URL + 공용 공유 시트(배너 미리보기)
-  document.querySelector(".share-btn")?.addEventListener("click", () => {
+  D.querySelector(".share-btn")?.addEventListener("click", () => {
     const url = window.GALLA_shareUrl ? window.GALLA_shareUrl("plaza", postId) : location.href;
     const title = postTitleEl && postTitleEl.textContent ? `💬 ${postTitleEl.textContent}` : "GALLA 광장";
     if (window.GALLA_share) return window.GALLA_share({ url, title, text: "갈라 광장에서 지금 뜨거운 이야기" });
     if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
     navigator.clipboard?.writeText(url).then(() => alert("링크가 복사되었습니다."));
   });
-})();
+}
+
+/* =========================
+   초기화 (MPA/SPA 공용 진입점)
+========================= */
+async function initPlazaDetail(root, spaParams) {
+  D = (root && root !== document && root.querySelector) ? root : document;
+
+  // 클라이언트: SPA면 셸의 단일 클라이언트 재사용, MPA면 기존처럼 자체 생성(+전역 노출)
+  if (document.body && document.body.dataset.page === "spa") {
+    supabase = window.supabaseClient ||
+      (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
+    if (!supabase) return;
+  } else {
+    supabase = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      }
+    );
+    // 🔥🔥🔥 여기다
+    window.supabase = supabase;
+    // 공용 헬퍼(ghost.js·items.js 등)는 window.supabaseClient를 본다 —
+    // 이 페이지는 js/supabase.js를 안 쓰므로 여기서 직접 노출(없으면 유령권 연동이 전부 비로그인 판정)
+    window.supabaseClient = supabase;
+  }
+
+  _sessP = null;
+  onAuth(() => { _sessP = null; });
+
+  // id 소스: SPA면 라우터 params, MPA면 쿼리스트링
+  postId = (spaParams && spaParams.id != null)
+    ? String(spaParams.id)
+    : new URLSearchParams(location.search).get("id");
+
+  if (!postId) {
+    alert("잘못된 접근입니다.");
+    return;
+  }
+
+  // 재-mount 대비 상태 리셋(스택은 매번 새로 mount)
+  comments = []; replyTarget = null; myVote = 0; lastRenderedVote = 0;
+  isVotingNow = false; myCommentVotes = {};
+
+  commentList = byId("commentList");
+  postTitleEl = D.querySelector(".post-title");
+  postMetaEl = D.querySelector(".post-meta");
+  postContentEl = D.querySelector(".post-content");
+  commentInput = byId("commentInput");
+
+  // 하단 입력바 여백 — SPA에선 셸 body가 아니라 이 판(view-host)에만 준다
+  ((D === document) ? document.body : D).style.paddingBottom = "140px";
+
+  /* 댓글 좋아요/싫어요 (이벤트 위임) */
+  commentList?.addEventListener("click", handleCommentVote);
+
+  initAuthButtons();
+  await initVoteAndComments();
+  initPlazaBookmark();
+}
+
+/* ═══ 모드 부트스트랩 ═══
+   SPA 셸(app.html)이면 자동 초기화 금지 — 어댑터가 mount()로 부른다.
+   MPA(단독 문서)면 기존과 동일 타이밍(DOMContentLoaded)에 자동 초기화. */
+const __plazaPage = {
+  _root: null,
+  mount(root, params) { __plazaPage._root = root || document; return initPlazaDetail(__plazaPage._root, params || {}); },
+  unmount() {
+    // 실시간 채널·타이머 없음 — auth 리스너만 해제(스택 pop 후 잔류 방지)
+    while (_authSubs.length) { try { _authSubs.pop().unsubscribe(); } catch (_) {} }
+    _sessP = null;
+    __plazaPage._root = null;
+    D = document;
+  },
+  scrolltop() {
+    const sc = (__plazaPage._root && __plazaPage._root !== document) ? __plazaPage._root : (document.scrollingElement || document.documentElement);
+    try { sc.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { sc.scrollTop = 0; }
+  },
+};
+window.GALLA_PAGE_PLAZA_DETAIL = __plazaPage;
+
+if (!(document.body && document.body.dataset.page === "spa")) {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => { initPlazaDetail(document); });
+  } else {
+    initPlazaDetail(document);
+  }
+}

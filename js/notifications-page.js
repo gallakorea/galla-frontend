@@ -4,6 +4,10 @@
    - 시간 그룹: 오늘 / 이번 주 / 이전
    - 프로필 사진 + (팔로워면 팔로우 버튼 / 그 외면 콘텐츠 썸네일)
    - 페이지를 열면 '확인'으로 간주 → 읽음 처리 + 헤더 뱃지 제거
+   ─ 이중 모드(MPA/SPA):
+     · MPA(notifications.html 단독 문서): 기존처럼 로드 즉시 자동 초기화.
+     · SPA(app.html): window.GALLA_PAGE_NOTIFICATIONS.mount(root)를 어댑터가 호출.
+       요소 조회는 root(D) 스코프 — 재-mount 가능(상태 리셋), unmount 시 실시간 채널 해제.
 ========================================================= */
 (function () {
   let ME = null;
@@ -12,7 +16,11 @@
   let TAB = "activity";   // activity | message — 메시지(DM·삐삐)는 성격이 달라 따로 본다
   let CH = null;
 
-  const listEl = () => document.getElementById("npList");
+  // 조회 루트 — MPA면 document, SPA면 view-host
+  let D = document;
+  const byId = (id) => (D === document) ? document.getElementById(id) : D.querySelector("#" + id);
+
+  const listEl = () => byId("npList");
 
   function esc(s) {
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -39,7 +47,7 @@
   }
 
   /* 아이콘은 공용 모듈(noti-icons.js)의 window.GALLA_svgIcon 사용 — 세트를 한 곳에서 관리 */
-  const svg = window.GALLA_svgIcon;
+  const svg = (ic) => window.GALLA_svgIcon(ic);
 
   /* 유형 정의 — 아이콘·색·필터키
      이슈: 댓글·좋아요·싫어요·전투·투표
@@ -196,6 +204,7 @@
     const inTab = ROWS.filter(r => (typeOf(r.type).key === "message") === (TAB === "message"));
     const rows = FILTER === "all" ? inTab : inTab.filter(r => typeOf(r.type).key === FILTER);
     const el = listEl();
+    if (!el) return;
     if (!rows.length) {
       el.innerHTML = `<div class="np-empty">아직 알림이 없어요.<br>갈라에서 활동하면 반응이 여기 쌓입니다!</div>`;
       return;
@@ -257,7 +266,7 @@
     await window.supabaseClient.from("notifications")
       .update({ read: true }).eq("user_id", ME).eq("read", false);
     ROWS.forEach(r => { r.read = true; });
-    document.querySelectorAll(".np-item.unread").forEach(el => el.classList.remove("unread"));
+    D.querySelectorAll(".np-item.unread").forEach(el => el.classList.remove("unread"));
     // 헤더 뱃지도 즉시 끄기
     const b = document.getElementById("notiBadge");
     if (b) b.hidden = true;
@@ -295,28 +304,29 @@
 
   function bind() {
     // 유형 필터
-    const tabsEl = document.getElementById("npTabs");
+    const tabsEl = byId("npTabs");
     if (tabsEl) tabsEl.addEventListener("click", (e) => {
       const b = e.target.closest(".np-tab");
       if (!b) return;
       tabsEl.querySelectorAll(".np-tab").forEach(x => x.classList.toggle("active", x === b));
       TAB = b.dataset.tab;
       FILTER = "all";
-      document.querySelectorAll(".np-chip").forEach(c => c.classList.toggle("active", c.dataset.f === "all"));
+      D.querySelectorAll(".np-chip").forEach(c => c.classList.toggle("active", c.dataset.f === "all"));
       // 메시지 탭에선 활동용 유형 칩이 의미 없다
-      document.getElementById("npFilters").hidden = TAB === "message";
+      const f = byId("npFilters"); if (f) f.hidden = TAB === "message";
       render();
     });
-    document.getElementById("npFilters").addEventListener("click", (e) => {
+    byId("npFilters")?.addEventListener("click", (e) => {
       const chip = e.target.closest(".np-chip");
       if (!chip) return;
-      document.querySelectorAll(".np-chip").forEach(c => c.classList.remove("active"));
+      D.querySelectorAll(".np-chip").forEach(c => c.classList.remove("active"));
       chip.classList.add("active");
       FILTER = chip.dataset.f;
       render();
     });
 
-    document.getElementById("npReadAll").addEventListener("click", markAllRead);
+    // '모두 읽음' — SPA에선 페이지 헤더가 셸 크롬으로 제거돼 버튼이 없을 수 있다(로드 시 자동 읽음 처리로 대체)
+    byId("npReadAll")?.addEventListener("click", markAllRead);
 
     // 항목 클릭 → 읽음 + 이동 / 맞팔로우 / 스와이프 삭제 버튼
     listEl().addEventListener("click", async (e) => {
@@ -369,7 +379,12 @@
       .subscribe();
   }
 
-  (async function init() {
+  async function init(root) {
+    D = (root && root !== document && root.querySelector) ? root : document;
+    // 재-mount 대비 상태 리셋(스택은 매번 새로 mount)
+    ROWS = []; FILTER = "all"; TAB = "activity"; OPEN_ROW = null;
+    AVATARS = {}; NICKS = {}; THUMBS = {}; FOLLOWING.clear();
+
     const sb = window.supabaseClient ||
       (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
     if (!sb) return;
@@ -382,5 +397,25 @@
     bind();
     await load();
     subscribe();
-  })();
+  }
+
+  function teardown() {
+    if (CH) { try { window.supabaseClient?.removeChannel(CH); } catch (_) {} CH = null; }
+    OPEN_ROW = null;
+  }
+
+  /* ═══ 모드 부트스트랩 ═══
+     SPA 셸(app.html)이면 자동 초기화 금지 — 어댑터가 mount()로 부른다. */
+  const page = {
+    _root: null,
+    mount(root, params) { page._root = root || document; return init(page._root, params); },
+    unmount() { teardown(); page._root = null; },
+    scrolltop() {
+      const sc = (page._root && page._root !== document) ? page._root : (document.scrollingElement || document.documentElement);
+      try { sc.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { sc.scrollTop = 0; }
+    },
+  };
+  window.GALLA_PAGE_NOTIFICATIONS = page;
+
+  if (!(document.body && document.body.dataset.page === "spa")) init(document);
 })();

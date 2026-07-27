@@ -2,13 +2,20 @@
    predict-market.js — 예측 상세/참여 (파리뮤추얼 · 아케이드)
    한 결과에 GP로 참여한다. 리턴 = 상금풀 ÷ 그 결과 풀 (실시간).
    정산 시 승자들이 풀 전체를 참여 비율로 분배 + 연승 콤보.
+   ─ 이중 모드(MPA/SPA):
+     · MPA(predict-market.html 단독 문서): 기존처럼 DOMContentLoaded 자동 초기화.
+     · SPA(app.html): window.GALLA_PAGE_PREDICT_MARKET.mount(root, params)를 어댑터가 호출.
+       요소 조회는 root(D) 스코프 — pmToast 등이 갈라예측 탭(galla-predict.html)과 id가 겹친다.
 ========================================================= */
+(function () {   // 전역 오염·충돌 방지 — SPA에선 galla-predict.js(탭)와 같은 문서에 살며 supa·$ 등 이름이 겹친다
 let supa = null, ME = null, MARKET = null, OUTCOMES = [], STATE = null;
 let SEL = null;            // 선택한 outcome id
 let MY_SAVED = false;
 let MY_BAL = 0;
-const $ = id => document.getElementById(id);
-const marketId = Number(new URLSearchParams(location.search).get('id'));
+// 조회 루트 — MPA면 document, SPA면 view-host. $는 항상 현재 루트 스코프로 찾는다.
+let D = document;
+const $ = id => (D === document) ? document.getElementById(id) : D.querySelector('#' + id);
+let marketId = Number(new URLSearchParams(location.search).get('id'));   // SPA에선 mount(params)가 덮어쓴다
 
 function toast(msg){const t=$('pmToast');t.textContent=msg;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(()=>t.hidden=true,2200);}
 function fmt(n){return Math.round(Number(n)||0).toLocaleString('ko-KR');}
@@ -49,16 +56,28 @@ document.addEventListener('click', async e => {
 });
 
 /* ============ init ============ */
-document.addEventListener('DOMContentLoaded', async () => {
+let LIVE_TIMER = null;
+async function initPredictMarket(root, spaParams){
+  D = (root && root !== document && root.querySelector) ? root : document;
+  // 재-mount 대비 상태 리셋(스택은 매번 새로 mount — 다른 마켓 id로 재진입 가능)
+  MARKET=null; OUTCOMES=[]; STATE=null; SEL=null; MY_SAVED=false; MY_BAL=0; MY_PAID=0;
+  TAB='comments'; CMT_SIDE=null; MY_POS_SIDE=null; CMT_DATA=null; CMT_TOP_LIMIT=8; CMT_EXPANDED.clear();
+  window.__PB_PREV_ODDS = {};
+  if (LIVE_TIMER) { clearInterval(LIVE_TIMER); LIVE_TIMER = null; }
+  marketId = Number((spaParams && spaParams.id != null) ? spaParams.id : new URLSearchParams(location.search).get('id'));
+
   supa = await waitForSupabaseClient();
   const { data } = await supa.auth.getSession();
   ME = data?.session?.user || null;
   await refreshBalance();
   if(!marketId){ $('pmdMain').innerHTML='<div class="empty-zone">잘못된 접근입니다.</div>'; return; }
   await loadMarket();
-  // 라이브 갱신: 30초마다 풀·리턴·피드 재조회 (열려있을 때만)
-  setInterval(async ()=>{ if(MARKET && !MARKET.resolved && !document.hidden){ await refreshState(); renderHero(); loadFeed(); } }, 30000);
-});
+  // 라이브 갱신: 30초마다 풀·리턴·피드 재조회 (열려있을 때만) — SPA unmount 시 해제
+  LIVE_TIMER = setInterval(async ()=>{ if(MARKET && !MARKET.resolved && !document.hidden){ await refreshState(); renderHero(); loadFeed(); } }, 30000);
+}
+if (!(document.body && document.body.dataset.page === 'spa')) {
+  document.addEventListener('DOMContentLoaded', () => initPredictMarket(document));
+}
 
 let MY_PAID=0;
 async function refreshBalance(){
@@ -73,8 +92,8 @@ async function loadMarket(){
   if(error||!m){ $('pmdMain').innerHTML='<div class="empty-zone">마켓을 찾을 수 없습니다.</div>'; return; }
   MARKET=m;
 
-  // 소유자·관리자 ⋯ 메뉴
-  const moreBtn=document.getElementById('header-more-btn');
+  // 소유자·관리자 ⋯ 메뉴 (SPA에선 페이지 헤더가 셸 크롬으로 제거돼 없을 수 있다)
+  const moreBtn=$('header-more-btn');
   if(moreBtn && window.GALLA_canManage){
     moreBtn.style.display='none';
     window.GALLA_canManage(m.created_by).then(can=>{
@@ -171,7 +190,7 @@ function render(){
 
 /* 크리에이터 블록 — 아바타·등급·활동명(탭=팝오버)·팔로우 (이슈 상세와 동일 급) */
 async function renderCreatorBlock(m){
-  const box=document.getElementById('pmdCreator');
+  const box=$('pmdCreator');
   if(!box || !m.created_by) return;
   if(window.GALLA_userMap) await window.GALLA_userMap([m.created_by]);
   const u=(window.__GU_CACHE||{})[m.created_by]||{};
@@ -451,8 +470,8 @@ async function fetchProfiles(ids){
 /* ============ 탭: 의견 배틀 / 참여 랭킹 ============ */
 let TAB='comments';
 function bindTabs(){
-  document.querySelectorAll('.pmd-tab').forEach(b=>b.addEventListener('click',()=>{
-    document.querySelectorAll('.pmd-tab').forEach(x=>x.classList.remove('active'));
+  D.querySelectorAll('.pmd-tab').forEach(b=>b.addEventListener('click',()=>{
+    D.querySelectorAll('.pmd-tab').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     TAB=b.dataset.tab; loadTab(TAB);
   }));
@@ -636,7 +655,7 @@ function renderComments(body){
     </div>
     ${remaining>0?`<button id="cmtMore" class="pmd-cmt-more">댓글 더 보기 (${remaining})</button>`:''}`;
 
-  window.GALLA_ghostBind && window.GALLA_ghostBind(document.getElementById('pmd-ghost'));
+  window.GALLA_ghostBind && window.GALLA_ghostBind($('pmd-ghost'));
   body.querySelectorAll('.pmd-cmt-compose .pmd-cmt-pick').forEach(b=>b.addEventListener('click',async ()=>{
     // 로그인 필수 — 미로그인은 입장 선택 자체를 막고 로그인으로 유도
     if(window.GALLA_requireLogin){ if(!(await window.GALLA_requireLogin('의견 참여는 로그인 후 가능해요.'))) return; }
@@ -694,7 +713,7 @@ async function postComment(text,pick,parentId,body){
   if(needLogin())return;
   const txt=(text||'').trim();
   if(!txt||txt.startsWith('@')&&txt.replace(/^@\S+\s*/,'').length===0)return toast('의견을 입력하세요.');
-  const ghostBtn=document.getElementById('pmd-ghost');
+  const ghostBtn=$('pmd-ghost');
   const payload={market_id:marketId,user_id:ME.id,content:txt,
     is_anonymous: ghostBtn?.classList.contains('on')===true};
   if(parentId) payload.parent_id=parentId;
@@ -711,3 +730,25 @@ async function postComment(text,pick,parentId,body){
   (window.GALLA_toast || toast)(parentId ? '💬 답글이 등록됐어요' : '💬 댓글이 등록됐어요');
   loadComments(body);
 }
+
+/* ============ SPA 페이지 훅 ============
+   초기화 로직은 위의 initPredictMarket 그대로 — 여기서는 감싸기만 한다.
+   MPA 단독 문서에서는 존재만 하고 아무도 안 부르므로 동작 불변. */
+window.GALLA_PAGE_PREDICT_MARKET = {
+  _root: null,
+  mount(root, params){
+    this._root = root || document;
+    return initPredictMarket(this._root, params || {});
+  },
+  unmount(){
+    if (LIVE_TIMER) { clearInterval(LIVE_TIMER); LIVE_TIMER = null; }
+    MARKET = null;           // 잔여 콜백 no-op 보장
+    this._root = null;
+    D = document;
+  },
+  scrolltop(){
+    const sc = (this._root && this._root !== document) ? this._root : (document.scrollingElement || document.documentElement);
+    try { sc.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { sc.scrollTop = 0; }
+  },
+};
+})();
