@@ -338,6 +338,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (tag === "VIDEO" || tag === "INPUT" || tag === "TEXTAREA" || n.isContentEditable) return true;
         // 인덱스 사진 캐러셀(트랜스폼 기반, overflow 아님) — 좌우 스와이프는 슬라이드 이동이므로 페이지 전환 금지
         if (n.classList && n.classList.contains("carousel-wrap")) return true;
+        /* 가로 스크롤 카테고리 칩 행 — WebKit(앱)에서 scrollWidth 판정이 어긋나 셸이 스와이프를
+           가로채 카테고리를 못 고르던 문제. 알려진 칩 행은 명시적으로 양보(제자리 고정). */
+        if (n.classList && (n.classList.contains("news-category-chips") ||
+            n.classList.contains("chip-scroll") || n.classList.contains("hv-cats") ||
+            n.classList.contains("cat-chips") || n.classList.contains("plaza-categories") ||
+            n.classList.contains("hv-mode") || n.classList.contains("dm-tabs"))) return true;
         const s = getComputedStyle(n);
         if ((s.overflowX === "auto" || s.overflowX === "scroll") && n.scrollWidth > n.clientWidth + 2) return true;
       }
