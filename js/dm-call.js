@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072759'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072760'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -666,7 +666,14 @@
         });
         const asink = document.getElementById('dm-call-audio');
         const brg = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall);
-        wb('AUD in=' + ain + '/' + pin + 'p out=' + aout + '/' + pout + 'p bridge=' + brg + ' sink=' + (asink ? (asink.srcObject ? 'set' : 'nosrc') : 'noel') + ' spk=' + SPK + ' remute=' + REMUTE);
+        // 로컬 마이크 트랙 상태 — muted=true면 iosrtc ADM이 캡처를 못 하는 것(0패킷의 근원 구분)
+        const lt = localStream && localStream.getAudioTracks && localStream.getAudioTracks()[0];
+        const sndr = pc && pc.getSenders && pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+        const rt = remoteStream && remoteStream.getAudioTracks && remoteStream.getAudioTracks()[0];
+        wb('AUD in=' + ain + '/' + pin + 'p out=' + aout + '/' + pout + 'p brg=' + brg +
+           ' Lmute=' + (lt ? lt.muted : '-') + ' Len=' + (lt ? lt.enabled : '-') + ' Lrs=' + (lt ? lt.readyState : '-') +
+           ' snd=' + (sndr && sndr.track ? sndr.track.readyState : 'none') +
+           ' Rmute=' + (rt ? rt.muted : '-') + ' Rrs=' + (rt ? rt.readyState : '-'));
       } catch (e) { wb('AUD-diag-err ' + String((e && e.name) || e).slice(0, 30)); }
     }, 3000);
   }
