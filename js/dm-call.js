@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072757'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072758'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -403,7 +403,7 @@
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
       wb('ice=' + pc.iceConnectionState);
-      if (['connected', 'completed'].includes(pc.iceConnectionState)) nativeAudioOn();
+      if (['connected', 'completed'].includes(pc.iceConnectionState)) { nativeAudioOn(); armAudioStatDiag(); }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
@@ -647,6 +647,24 @@
   // 영상통화는 기본 스피커(폰을 얼굴에서 떼고 봐서 수화부면 사실상 무음). 단, 사용자가 스피커 버튼을
   //   직접 누르면(_spkUserSet) 그 뜻(SPK)을 존중 → 수화부 전환 가능.
   function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video && !CUR._spkUserSet)) }); }
+  // 🔬 연결 3초 뒤 1회: 오디오 RTP가 실제로 흐르는지 + 네이티브 브릿지·싱크 상태 진단.
+  let _statDiagDone = false;
+  function armAudioStatDiag() {
+    if (_statDiagDone) return; _statDiagDone = true;
+    setTimeout(async () => {
+      try {
+        let ain = 0, aout = 0, pin = 0, pout = 0;
+        const st = pc && await pc.getStats();
+        st && st.forEach(r => {
+          if (r.type === 'inbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { ain = r.bytesReceived || 0; pin = r.packetsReceived || 0; }
+          if (r.type === 'outbound-rtp' && (r.kind === 'audio' || r.mediaType === 'audio')) { aout = r.bytesSent || 0; pout = r.packetsSent || 0; }
+        });
+        const asink = document.getElementById('dm-call-audio');
+        const brg = !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall);
+        wb('AUD in=' + ain + '/' + pin + 'p out=' + aout + '/' + pout + 'p bridge=' + brg + ' sink=' + (asink ? (asink.srcObject ? 'set' : 'nosrc') : 'noel') + ' spk=' + SPK + ' remute=' + REMUTE);
+      } catch (e) { wb('AUD-diag-err ' + String((e && e.name) || e).slice(0, 30)); }
+    }, 3000);
+  }
   // 📞 통화 확립 1초·2.5초 뒤 ADM 강제 재시작(킥) — 프리커넥트/콜드스타트로 오디오 유닛이
   //    비활성 세션에 물려 죽어 있어도 살아나게 하는 안전장치(무음 방지). 통화당 1회 예약.
   function armAudioKick() {
