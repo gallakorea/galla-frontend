@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072682'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072683'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -609,7 +609,9 @@
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
   function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
   // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
-  function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!SPK }); }   // 영상은 SPK가 true로 시작(스피커) → 탭 시 수화부로 전환됨
+  // 영상통화는 기본 스피커(폰을 얼굴에서 떼고 봐서 수화부면 사실상 무음). 단, 사용자가 스피커 버튼을
+  //   직접 누르면(_spkUserSet) 그 뜻(SPK)을 존중 → 수화부 전환 가능.
+  function applyNativeRoute() { _nativeCall({ action: 'route', speaker: !!(SPK || (CUR && CUR.video && !CUR._spkUserSet)) }); }
   // 📞 통화 확립 1초·2.5초 뒤 ADM 강제 재시작(킥) — 프리커넥트/콜드스타트로 오디오 유닛이
   //    비활성 세션에 물려 죽어 있어도 살아나게 하는 안전장치(무음 방지). 통화당 1회 예약.
   function armAudioKick() {
@@ -718,6 +720,16 @@
              ' rect=' + (rc ? Math.round(rc.width) + 'x' + Math.round(rc.height) : '-') +
              ' blob=' + (remoteStream && typeof remoteStream.getBlobId === 'function' ? 'y' : 'n'));
         } catch (e) { wb('VID-err ' + ((e && e.message) || e)); }
+        // 🔬 오디오 진단 — 원격 오디오 트랙 상태 + 라우트 + 싱크 부착(소리 안남 원인 규명)
+        try {
+          const at = remoteStream && remoteStream.getAudioTracks && remoteStream.getAudioTracks()[0];
+          const asink = document.getElementById('dm-call-audio');
+          const lat = localStream && localStream.getAudioTracks && localStream.getAudioTracks()[0];
+          wb('AUD rAudio=' + (at ? at.readyState + '/en' + at.enabled + '/mu' + at.muted : 'none') +
+             ' sink=' + (asink ? (asink.srcObject ? 'set' : 'nosrc') : 'noel') +
+             ' lAudio=' + (lat ? lat.readyState + '/en' + lat.enabled : 'none') +
+             ' spk=' + (!!(SPK || (CUR && CUR.video && !CUR._spkUserSet))) + ' d=' + (CUR && CUR.dir === 'out' ? 'out' : 'in'));
+        } catch (e) { wb('AUD-err ' + ((e && e.message) || e)); }
         // 🔬 프레임 유입 측정 — videoWidth가 0이 아니면 프레임이 실제로 들어와 디코드된 것.
         try {
           const rr = document.getElementById('dm-call-remote'), ll = document.getElementById('dm-call-local');
@@ -929,7 +941,7 @@
     else if (c === 'decline') decline();
     else if (c === 'hangup') endCall('ended');
     else if (c === 'flip') flipCam();
-    else if (c === 'spk') { SPK = !SPK; applyNativeRoute(); repaint(); }
+    else if (c === 'spk') { SPK = !SPK; if (CUR) CUR._spkUserSet = true; applyNativeRoute(); repaint(); }
     else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); repaint(); }
     else if (c === 'rec') toggleRecord(box && box.querySelector('[data-c="rec"]'));
     else if (c === 'tovideo') upgradeToVideo();
