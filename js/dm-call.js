@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072756'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072757'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -364,11 +364,15 @@
     } catch (e) { return (e && e.name) || 'error'; }
   };
   async function buildPC(addLocal = true) {
+    wb('buildPC start addLocal=' + addLocal);
     pc = new RTCPeerConnection(await iceConfig());
+    wb('buildPC pc-ok');
     // 발신자(offer)는 트랙을 먼저 넣고 offer 생성. 수신자(answer)는 setRemoteDescription(offer) '후'에
     //   트랙을 넣어야(addLocal=false로 여기선 스킵) 수신자 트랙이 offer의 m-line에 붙어 발신자가 받는다.
     if (addLocal) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', cand: e.candidate }); };
+    let _iceN = 0;
+    pc.onicecandidate = e => { if (e.candidate) { _iceN++; if (_iceN === 1 || _iceN === 5) wb('icecand#' + _iceN); send({ t: 'ice', cand: e.candidate }); } else wb('icecand-end n=' + _iceN); };
+    pc.onicegatheringstatechange = () => { if (pc) wb('icegather=' + pc.iceGatheringState); };
     pc.ontrack = e => {
       // ⚠️ iosrtc는 '유효한 blobId를 가진 plugin MediaStream'만 렌더한다. ontrack이 주는 원본
       //   스트림(e.streams[0])이 그 스트림이다 — new MediaStream()+addTrack으로 갈아끼우면 blobId가
@@ -398,10 +402,12 @@
     //    신호(발신자)가 제어한다. 프리커넥트(벨 중 ICE 미리 연결) 때 벨 화면이 통화중으로 튀지 않게.
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
+      wb('ice=' + pc.iceConnectionState);
       if (['connected', 'completed'].includes(pc.iceConnectionState)) nativeAudioOn();
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
+      wb('conn=' + pc.connectionState);
       if (pc.connectionState === 'connected') {
         nativeAudioOn();
       } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
@@ -487,14 +493,17 @@
   async function buildAnswer(cur, muted) {
     // 트랙은 setRemoteDescription '후'에 붙인다(양방향 소리 확인된 방식). 발신자가 수신자 영상을 못 보던 건
     //   s0blob과 무관하게 ontrack 이벤트의 실제 트랙 id로 네이티브 렌더를 잡아 해결한다(CUR._rvTrackId).
-    await buildPC(false);
-    nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
-    await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
-    try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}   // 방향 sendrecv 강제
-    localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
-    if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
-    for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
-    const ans = await pc.createAnswer();
+    wb('bA enter muted=' + muted + ' ls=' + (localStream ? localStream.getTracks().length : 'none'));
+    try {
+      await buildPC(false);
+      nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
+      await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
+      wb('bA srd-ok');
+      try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}   // 방향 sendrecv 강제
+      localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
+      if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
+      for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+      const ans = await pc.createAnswer();
     ans.sdp = tuneOpus(ans.sdp);
     await pc.setLocalDescription(ans);
     // 🔬 answer의 각 m-line 방향 확인 — sendrecv여야 발신자가 수신자 미디어를 받는다
@@ -506,10 +515,15 @@
       }).join(' ');
       wb('ANSDIR ' + dirs);
     } catch (_) {}
-    cur._lastAnswer = ans.sdp;   // 발신자가 offer를 재전송하면 이 answer를 되돌려준다
-    send({ t: 'answer', sdp: ans.sdp });
-    // 📡 answer 중복 전송 — 시그널 유실 시 발신자 '거는중' 고착 방지(발신자는 _gotAnswer로 중복 무시)
-    [250, 600, 1200, 2200].forEach(d => setTimeout(() => { if (CUR === cur && cur._lastAnswer && !cur.connectedAt) send({ t: 'answer', sdp: cur._lastAnswer }); }, d));
+      cur._lastAnswer = ans.sdp;   // 발신자가 offer를 재전송하면 이 answer를 되돌려준다
+      send({ t: 'answer', sdp: ans.sdp });
+      wb('bA sent-answer');
+      // 📡 answer 중복 전송 — 시그널 유실 시 발신자 '거는중' 고착 방지(발신자는 _gotAnswer로 중복 무시)
+      [250, 600, 1200, 2200].forEach(d => setTimeout(() => { if (CUR === cur && cur._lastAnswer && !cur.connectedAt) send({ t: 'answer', sdp: cur._lastAnswer }); }, d));
+    } catch (e) {
+      wb('bA THROW ' + String((e && (e.name + ':' + e.message)) || e).slice(0, 90));
+      throw e;
+    }
   }
 
   // 🚀 벨 울리는 동안 ICE 미리 연결(카톡식 즉시통화) — 마이크 음소거로 answer까지 미리 보내 P2P 경로 완성.
@@ -556,9 +570,11 @@
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
+    wb('accept fallback getmedia');
     await primePermHint(CUR.video);
     try { if (!localStream) localStream = await getMedia(CUR.video); }
-    catch (e) { const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
+    catch (e) { wb('accept getmedia FAIL ' + String((e && e.name) || e).slice(0, 40)); const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
+    wb('accept getmedia-ok → buildAnswer');
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
       if (!pc) await buildAnswer(CUR, false);
