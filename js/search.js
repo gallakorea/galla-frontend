@@ -90,51 +90,30 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 검색 키보드 UX = 전용 검색 모드(고정, 안 튐).
-     SPA .tab-pane transform 안에선 iOS가 키보드로 콘텐츠를 밀어 상단 검색바가 사라지고,
-     포커스 때만 body로 올리면 검색바가 위로 튀어 UX가 나쁘다(사장님 지적).
-     → 검색 입력을 누르면 '검색 패널 전체'를 transform 밖(body) 풀스크린 오버레이로 전환한다.
-     검색바는 오버레이 상단에 고정(안 움직임), 아래에 최근·실시간·결과가 그대로. iOS 밀림 없음.
-     닫기(X/뒤로)로 원복. searchOverlay가 담당. */
-  const searchPanel = document.querySelector('.tab-panel[data-panel="search"]') ||
-                      (emptyEl && emptyEl.closest(".tab-panel")) ||
-                      (form && form.closest(".tab-panel"));
-  (function searchOverlay() {
-    if (!GALLA_TREND_SPA || !searchPanel) return;
-    let open = false, slot = null, overlay = null, closeBtn = null;
-    function enter() {
-      if (open || !searchPanel.parentNode) return;
-      open = true;
-      slot = document.createComment("search-panel-slot");
-      searchPanel.parentNode.insertBefore(slot, searchPanel);
-      overlay = document.createElement("div");
-      overlay.className = "search-overlay";
-      closeBtn = document.createElement("button");
-      closeBtn.type = "button";
-      closeBtn.className = "search-overlay-close";
-      closeBtn.setAttribute("aria-label", "검색 닫기");
-      closeBtn.innerHTML = "&#10005;";           // ✕
-      closeBtn.addEventListener("click", exit);
-      overlay.appendChild(closeBtn);
-      overlay.appendChild(searchPanel);          // 패널 통째로 이동(입력+결과 함께)
-      document.body.appendChild(overlay);
-      __searchLiftDrop = exit;                    // 탭 이탈 시 닫기
-      setTimeout(function () { try { input.focus(); } catch (_) {} }, 30);
+  /* ⌨️ 검색 키보드 = 검색바를 '옮기지 않고' 제자리에서 보이게.
+     근본 원인은 판(.tab-pane)의 transform:translateZ(0) — 이 안에선 iOS 키보드가 콘텐츠를
+     밀어 상단 입력창이 사라진다(실기기). translateZ(0)는 시각적으론 0 이동이라, 검색 포커스 동안만
+     이 판의 transform을 none으로 끄면 판이 일반 블록이 되어 iOS가 입력창을 '제자리에서' 보이게
+     정상 스크롤한다(재부모화·이동 없음=안 튐). blur 시 원복. */
+  (function keepSearchVisible() {
+    if (!GALLA_TREND_SPA) return;
+    const paneOf = () => (input.closest ? input.closest(".tab-pane") : null);
+    let saved = null, pane = null;
+    function off() {
+      pane = paneOf(); if (!pane) return;
+      saved = pane.style.transform;
+      pane.style.transform = "none";            // 판 transform 해제 → iOS 키보드 정상 동작
     }
-    function exit() {
-      if (!open) return;
-      open = false;
-      try { input.blur(); } catch (_) {}
-      if (slot && slot.parentNode) slot.parentNode.insertBefore(searchPanel, slot);
-      if (slot) slot.remove();
-      if (overlay && overlay.parentNode) overlay.remove();
-      slot = overlay = closeBtn = null;
+    function on() {
+      if (!pane) return;
+      pane.style.transform = saved || "translateZ(0)";
+      pane = null; saved = null;
     }
-    // 입력을 '누르면'(포커스 전) 오버레이로 전환 — 재부모화가 포커스 이동 전에 끝나 튐 없음
-    input.addEventListener("pointerdown", function (e) {
-      if (!open) { e.preventDefault(); enter(); }  // 기본 포커스 막고 오버레이에서 포커스
-    });
-    input.addEventListener("focus", enter);
+    __searchLiftDrop = on;                        // 탭 이탈 시 복원
+    input.addEventListener("focus", off);
+    input.addEventListener("blur", () => setTimeout(function () {
+      if (document.activeElement !== input) on();
+    }, 60));
   })();
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
