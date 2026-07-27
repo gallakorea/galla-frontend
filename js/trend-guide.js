@@ -3,7 +3,9 @@
    항목 탭 = 해당 트렌드 탭(.tab-item[data-tab]) 클릭. 스타일 = css/guide-banner.css
    ========================================================================== */
 (function () {
-  if (document.body.getAttribute("data-page") !== "trend") return;
+  // MPA: body[data-page=trend] / SPA: 트렌드 뷰 호스트가 마운트된 뒤 로드됨
+  if (document.body.getAttribute("data-page") !== "trend"
+      && !document.querySelector('.view-host[data-page="trend"]')) return;
   var DISMISS = "galla_trend_guide_dismissed";
   var COLLAPSE = "galla_trend_guide_collapsed";
   try { if (localStorage.getItem(DISMISS)) return; } catch (e) { return; }

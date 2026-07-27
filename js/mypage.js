@@ -1,33 +1,42 @@
-document.addEventListener("DOMContentLoaded", async () => {
+/* ═══ 이중 모드(MPA/SPA) ═══
+   · MPA(mypage.html 단독 문서): 파일 하단에서 기존처럼 DOMContentLoaded 자동 초기화.
+   · SPA(app.html, body[data-page="spa"]): 자동 초기화를 건너뛰고
+     window.GALLA_PAGE_MYPAGE.mount(root, params)를 어댑터(js/spa/views/mypage.js)가 호출.
+   로직은 동일 — 페이지 요소 조회만 root(D)로 스코프해 단일문서 내 충돌을 막는다. */
+async function GALLA_mypageInit(root, spaParams) {
+    // 조회 루트 — MPA면 document, SPA면 view-host(#app 추출분)
+    const D = (root && root !== document && root.querySelector) ? root : document;
+    const byId = (id) => (D === document) ? document.getElementById(id) : D.querySelector("#" + id);
+
     // ---------------------------
     // Supabase client 확보 (UMD bootstrap 대응)
     // ---------------------------
     const supabase = await waitForSupabaseClient();
 
     // ---------------------------
-    // 현재 페이지 정보
+    // 현재 페이지 정보 (SPA에선 view-host의 data-page)
     // ---------------------------
-    const currentPage = document.body.dataset.page;
+    const currentPage = (D !== document && D.dataset && D.dataset.page) || document.body.dataset.page;
 
     // ---------------------------
-    // 하단 네비 active 적용
+    // 하단 네비 active 적용 (SPA엔 판 안에 네비가 없어 no-op — 셸 네비는 라우터가 칠한다)
     // ---------------------------
-    document.querySelectorAll(".bottom-nav .nav-item").forEach(item => {
+    D.querySelectorAll(".bottom-nav .nav-item").forEach(item => {
         item.classList.toggle("active", item.dataset.page === currentPage);
     });
 
     // ---------------------------
     // 상단 nav (필요한 경우만 적용)
     // ---------------------------
-    document.querySelectorAll(".nav-item").forEach(item => {
+    D.querySelectorAll(".nav-item").forEach(item => {
         item.classList.toggle("active", item.dataset.page === currentPage);
     });
 
     // ---------------------------
     // 탭 요소
     // ---------------------------
-    const tabs = document.querySelectorAll(".tab");
-    const tabContent = document.getElementById("tabContent");
+    const tabs = D.querySelectorAll(".tab");
+    const tabContent = byId("tabContent");
 
     // ---------------------------
     // 로그인 세션 확보
@@ -46,7 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ============================
     // View User (self vs other)
     // ============================
-    const params = new URLSearchParams(location.search);
+    const params = new URLSearchParams(spaParams || location.search); // SPA는 라우터 params, MPA는 쿼리스트링
     const viewUserId = params.get("user") || userId;
     const isMyPage = viewUserId === userId;
 
@@ -60,14 +69,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!isMyPage) {
         // 방문자에게 비공개 탭 숨김 (뉴스=저장한 뉴스는 본인만). 갈라/예측/광장은 공개 My만.
         ["news"].forEach(t => {
-            document.querySelector(`.tab[data-tab="${t}"]`)?.setAttribute("hidden", "");
+            D.querySelector(`.tab[data-tab="${t}"]`)?.setAttribute("hidden", "");
         });
     }
 
     // ============================
     // Profile Actions (Follow / Message) - Render dynamically
     // ============================
-    const profileActions = document.getElementById("profileActions");
+    const profileActions = byId("profileActions");
     profileActions.innerHTML = "";
 
     if (isMyPage) {
@@ -122,7 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
 
         messageBtn.onclick = () => {
-            const name = document.getElementById("profileName")?.textContent || "";
+            const name = byId("profileName")?.textContent || "";
             if (window.startDM) window.startDM(viewUserId, name);
         };
 
@@ -142,22 +151,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         .single();
 
     if (!viewProfileError && viewProfile) {
-        const nameEl = document.getElementById("profileName");
-        const descEl = document.getElementById("profileDesc");
-        const levelEl = document.getElementById("levelText");
-        const profileImg = document.getElementById("profileImg");
+        const nameEl = byId("profileName");
+        const descEl = byId("profileDesc");
+        const levelEl = byId("levelText");
+        const profileImg = byId("profileImg");
 
         if (nameEl) {
             nameEl.textContent = viewProfile.nickname || "익명의 사용자";
             nameEl.setAttribute("data-nick-uid", viewUserId);   // 꾸미기 도색 대상
         }
-        const hdrTitle = document.getElementById("mpHdrTitle");
+        const hdrTitle = byId("mpHdrTitle");
         if (hdrTitle) hdrTitle.textContent = viewProfile.nickname || "프로필";
         if (descEl) descEl.textContent = viewProfile.bio || "소개 문구가 없습니다.";
         // 레벨·등급 칩 — 죽은 users.level 대신 갈라리안 GI 등급으로 통일
         // (설정·grade 페이지와 동일: 예 "여론 논객 Lv.3")
         if (levelEl) levelEl.textContent = "…";
-        const tierChip = document.getElementById("tierChip");
+        const tierChip = byId("tierChip");
         if (tierChip) tierChip.textContent = "🌱";
         (async () => {
             try {
@@ -174,7 +183,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         })();
         // 전투력 = 이 유저가 벌인 전투 액션(공격/방어/지원) 총량
         (async () => {
-            const powerEl = document.getElementById("powerText");
+            const powerEl = byId("powerText");
             if (!powerEl) return;
             const { count } = await supabase
                 .from("comment_actions")
@@ -182,7 +191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .eq("user_id", viewUserId);
             powerEl.textContent = `⚡ 전투력 ${(count ?? 0).toLocaleString()}`;
         })();
-        const badgeEl = document.getElementById("badgeText");
+        const badgeEl = byId("badgeText");
         if (badgeEl) {
             if (isMyPage) badgeEl.textContent = "🎯 오늘의 미션";
             else badgeEl.hidden = true; // 미션 배지는 본인 전용
@@ -306,7 +315,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         // Update DOM elements (fallback to 0)
         const setStat = (selector, value) => {
-            const el = document.querySelector(selector);
+            const el = D.querySelector(selector);
             if (el) el.textContent = value ?? 0;
         };
         setStat("#statDrop", dropCount ?? 0);
@@ -479,7 +488,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.body.style.overflow = "";
         if (qvDirty) {
             qvDirty = false;
-            document.querySelector(".tab.active")?.click(); // 현재 탭 재렌더
+            D.querySelector(".tab.active")?.click(); // 현재 탭 재렌더
             loadTabCounts(); // 탭 카운트 갱신
         }
     }
@@ -905,11 +914,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 갈라 탭 — My 갈라 / Saved 갈라 서브탭 (mpSubBar 사용)
     // =====================================================
     let gallaSubTab = "mine"; // mine | saved
-    const clearSubBar = () => { const s = document.getElementById("mpSubBar"); if (s) s.innerHTML = ""; };
+    const clearSubBar = () => { const s = byId("mpSubBar"); if (s) s.innerHTML = ""; };
     /* 서브탭을 갈라 탭과 '같은 위치'(#mpSubBar)에 그린다 — 예측·광장이
        tabContent 안에 그려 위치가 어긋나던 문제(사장님). onSwitch로 재렌더 */
     const paintSubBar = (active, tabs, onSwitch) => {
-        const subBar = document.getElementById("mpSubBar");
+        const subBar = byId("mpSubBar");
         if (!subBar) return;
         if (!isMyPage) { subBar.innerHTML = ""; return; }
         subBar.innerHTML = `<div class="mp-subtabs">${tabs.map(t =>
@@ -921,7 +930,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         };
     };
     const renderGalla = () => {
-        const subBar = document.getElementById("mpSubBar");
+        const subBar = byId("mpSubBar");
         if (subBar) {
             if (isMyPage) {
                 subBar.innerHTML = `
@@ -1232,7 +1241,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // =====================================================
     async function loadTabCounts() {
         const setCount = (tabName, n) => {
-            const el = document.querySelector(`.tab[data-tab="${tabName}"]`);
+            const el = D.querySelector(`.tab[data-tab=""]`);
             if (el && typeof n === "number") {
                 el.innerHTML = el.innerHTML.replace(/ <span class="tab-count">.*<\/span>/, "")
                     + ` <span class="tab-count">${n}</span>`;
@@ -1286,4 +1295,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 기본 탭: 갈라 (본인=My/Saved, 방문자=공개 My)
     // ---------------------------
     renderGalla();
-});
+}
+
+/* ═══ 모드 부트스트랩 ═══
+   SPA 셸(app.html)이면 자동 초기화 금지 — 어댑터가 mount()로 부른다.
+   MPA(단독 문서)면 기존과 동일하게 DOMContentLoaded에서 자동 초기화. */
+(function () {
+    const page = {
+        _root: null,
+        mount(root, params) { page._root = root || document; return GALLA_mypageInit(page._root, params); },
+        unmount() {},
+        activate() {},
+        deactivate() {},
+        scrolltop() {
+            const sc = (page._root && page._root !== document) ? page._root : (document.scrollingElement || document.documentElement);
+            try { sc.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { sc.scrollTop = 0; }
+        },
+    };
+    window.GALLA_PAGE_MYPAGE = page;
+
+    if (document.body && document.body.dataset.page === "spa") return;   // SPA — mount 대기
+    if (document.readyState === "loading")
+        document.addEventListener("DOMContentLoaded", () => { GALLA_mypageInit(document); });
+    else GALLA_mypageInit(document);   // (안전망 — 원래 스크립트는 body 끝 동기 로드라 위 분기만 탄다)
+})();

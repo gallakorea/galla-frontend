@@ -603,5 +603,8 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", bind);
+  // MPA(동기 로드) = DOMContentLoaded 대기(기존 그대로) / SPA = 뷰 마운트 후 동적 로드라
+  // 이미 지난 이벤트를 기다리면 영원히 안 붙는다 → 즉시 바인딩
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
 })();

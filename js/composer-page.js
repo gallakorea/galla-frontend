@@ -119,7 +119,7 @@
     spec.close();
   });
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function bootComposerPage() {
     SPECS.forEach((spec) => {
       const el = document.querySelector(spec.sel);
       if (!el) return;
@@ -134,5 +134,8 @@
 
       if (wasOpen) onOpen(el, spec);      // ?compose=1 로 이미 열린 채 진입한 경우
     });
-  });
+  }
+  // MPA(동기 로드) = DOMContentLoaded 대기(기존 그대로) / SPA = 뷰 마운트 후 동적 로드 → 즉시
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootComposerPage);
+  else bootComposerPage();
 })();

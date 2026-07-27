@@ -29,7 +29,7 @@ function timeLeft(c){
 function oddsOf(m, o){ const p=o.pool_gp||0; return p>0 ? ((m.total_pool||0)+(m.jackpot_bonus||0))/p : null; }
 
 /* ============ init ============ */
-document.addEventListener('DOMContentLoaded', async () => {
+async function initPredictPage(){
   supa = await waitForSupabaseClient();
   const { data } = await supa.auth.getSession();
   ME = data?.session?.user || null;
@@ -37,7 +37,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadMyStreak();
   bindUI();
   await loadMarkets();
-});
+}
+/* 이중 모드 — MPA(단독 문서, body data-page≠'spa')면 기존처럼 자동 초기화.
+   SPA(app.html)면 어댑터(js/spa/views/predict.js)가 GALLA_PAGE_PREDICT.mount()를 부를 때까지 대기. */
+if (!(document.body && document.body.dataset.page === 'spa')) {
+  document.addEventListener('DOMContentLoaded', initPredictPage);
+}
 
 let MY_POINTS = 0;
 async function refreshBalance(){
@@ -504,3 +509,29 @@ async function loadLeaderboard(kind){
 function medal(i){ return i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1); }
 function title(i,kind){ if(i!==0) return ''; return kind==='king'?'<span class="lb-title king">👑 예측왕</span>':'<span class="lb-title god">🔮 예측의 신</span>'; }
 function emptyLB(){ return `<div class="empty-zone">아직 랭킹이 없습니다.</div>`; }
+
+/* ============ SPA 페이지 훅 ============
+   초기화 로직은 위의 initPredictPage 그대로 — 여기서는 감싸기만 한다.
+   MPA 단독 문서에서는 존재만 하고 아무도 안 부르므로 동작 불변. */
+window.GALLA_PAGE_PREDICT = {
+  _root: null,
+  _mounted: false,
+  async mount(root){
+    this._root = root || null;
+    if (this._mounted) return;        // keep-alive 재진입 가드
+    this._mounted = true;
+    await initPredictPage();
+  },
+  unmount(){ this._mounted = false; this._root = null; },
+  activate(){
+    // 탭 복귀 시 GP 잔액만 최신화(기존 함수 재사용, 비로그인 no-op)
+    try { if (this._mounted) refreshBalance(); } catch (_) {}
+  },
+  deactivate(){},
+  scrolltop(){
+    const el = this._root && this._root.closest ? this._root : null;
+    const host = el || document.querySelector('.tab-pane[data-tab="predict"] .view-host');
+    if (host && host.scrollTo) host.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};

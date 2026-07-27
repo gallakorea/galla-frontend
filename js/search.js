@@ -57,7 +57,22 @@ const SEC = {
   plaza: secIc('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
 };
 
-document.addEventListener("DOMContentLoaded", async () => {
+/* ═══ 이중 모드(웹 MPA + 단일문서 SPA 뷰) ═══════════════════════
+   · MPA(search.html 단독): 기존 그대로 DOMContentLoaded 자동 초기화(맨 아래 등록).
+   · SPA(app.html, body[data-page="spa"]): 자동 초기화 금지 — 뷰 모듈(js/spa/views/trend.js)이
+     window.GALLA_PAGE_TREND.mount(root)를 호출할 때 초기화한다.
+   로직은 initTrendPage 하나로 동일 — 재작성 없음. */
+const GALLA_TREND_SPA = !!(document.body && document.body.dataset.page === "spa");
+let __trendRoot = null;      // SPA에서 mount()가 넣어주는 view-host
+let __trendInited = false;
+
+async function initTrendPage() {
+  if (__trendInited) return;
+  __trendInited = true;
+  // SPA에선 문서 스크롤이 잠기고 .view-host가 스크롤 컨테이너다
+  const HOST = GALLA_TREND_SPA && __trendRoot
+    ? (__trendRoot.closest(".view-host") || __trendRoot) : null;
+  const toPageTop = () => { if (HOST) HOST.scrollTo(0, 0); else window.scrollTo(0, 0); };
   const supabase = await waitForSupabaseClient();
 
   let ME = null;
@@ -93,6 +108,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 현재 탭을 URL에 남긴다 — 기사(news.html)에서 뒤로 오면 보던 탭으로 복귀해야 한다
   function rememberTab(name) {
+    if (GALLA_TREND_SPA) return;   // SPA에선 주소가 app.html#/trend — 판이 살아있어 복귀 기억 불필요
     const qs = new URLSearchParams(location.search);
     if (name === "search") qs.delete("tab"); else qs.set("tab", name);
     const q = qs.toString();
@@ -1063,7 +1079,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // 홈 '더보기' → 그 카테고리 필터로
     const more = e.target.closest(".nh-more");
-    if (more) { currentNewsCategory = more.dataset.cat; renderNewsCategoryChips(); resetNews(); window.scrollTo(0, 0); return; }
+    if (more) { currentNewsCategory = more.dataset.cat; renderNewsCategoryChips(); resetNews(); toPageTop(); return; }
 
     // 홈의 히어로/미니/랭킹/속보 + 스탯카드 모두 기사 열기
     const openEl = e.target.closest("[data-gid]");
@@ -1132,8 +1148,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // 뉴스 무한 스크롤 (원본 폴백 모드에서만 페이지네이션)
-  window.addEventListener("scroll", () => {
-    const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 250;
+  // SPA에선 문서가 아니라 .view-host가 스크롤되므로 거기에 단다(로직 동일)
+  (HOST || window).addEventListener("scroll", () => {
+    const nearBottom = HOST
+      ? HOST.scrollTop + HOST.clientHeight >= HOST.scrollHeight - 250
+      : window.innerHeight + window.scrollY >= document.body.offsetHeight - 250;
     const active = document.querySelector(".tab-item.active")?.dataset.tab;
     if (nearBottom && active === "news" && newsMode === "raw") loadTopNews();
   });
@@ -1159,4 +1178,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     activateTab("search");
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
   }
-});
+}
+
+/* ═══ 초기화 등록 ═══
+   MPA: 기존과 동일하게 DOMContentLoaded 자동 초기화(단독 문서 보존).
+   SPA: 자동 초기화하지 않는다 — GALLA_PAGE_TREND.mount()가 유일한 진입. */
+if (!GALLA_TREND_SPA) {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initTrendPage);
+  else initTrendPage();   // (이론상 지연 주입 대비 — search.html은 동기 로드라 위 분기)
+}
+
+/* ═══ SPA 뷰 계약 — js/spa/views/trend.js 가 호출 ═══ */
+window.GALLA_PAGE_TREND = {
+  mount(root) { __trendRoot = root || null; return initTrendPage(); },
+  unmount() { /* 탭 판은 keep-alive — 언마운트 없음(라우터 계약) */ },
+  /* 구 셸의 shellcmd 'active' 대응(nav.js relay 이식) — 판 복귀 시
+     네비 숨김 상태를 현재 body 클래스 기준으로 재교정한다 */
+  activate() {
+    try {
+      const on = document.body.classList.contains("dm-detail")
+        || document.body.classList.contains("kb-open")
+        || document.body.classList.contains("shorts-open")
+        || !!document.getElementById("lv-stage");
+      if (window.GALLA_SPA && window.GALLA_SPA.navHide) window.GALLA_SPA.navHide(on);
+    } catch (_) {}
+  },
+  deactivate() { /* 판 이탈 훅 — 트렌드는 정지할 엔진 없음(기존 셸과 동일) */ },
+  scrolltop() {
+    const h = __trendRoot && (__trendRoot.closest(".view-host") || __trendRoot);
+    if (h && h.scrollTo) h.scrollTo({ top: 0, behavior: "smooth" });
+    else window.scrollTo({ top: 0, behavior: "smooth" });
+  },
+  /* 구 셸의 shellcmd 'trendtab' 대응 — 조그셔틀 등에서 서브탭 직접 지정 */
+  setTab(t) { if (t && window.GALLA_trendSetTab) window.GALLA_trendSetTab(t); },
+};

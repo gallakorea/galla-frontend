@@ -2,6 +2,29 @@
  *  INDEX.JS — GALLA v2 (세로형 + 커스텀 진영)
  ********************************************/
 
+/* ── SPA 이중 모드 ─────────────────────────────────────────────
+ * MPA(index.html, body[data-page="index"]): 기존처럼 DOMContentLoaded 자동 초기화.
+ * SPA 셸(app.html, body[data-page="spa"]): 자동 초기화하지 않고
+ *   window.GALLA_PAGE_INDEX.mount(root) 호출을 기다린다(js/spa/views/index.js가 부름).
+ * IDXROOT: 피드 DOM 조회 루트. MPA=document, SPA=홈 판(.view-host).
+ *   단일문서 SPA에서 다른 탭 판의 .card/.vote-btn 등을 오염시키지 않기 위함. */
+const __IDX_MPA = !!(document.body && document.body.dataset.page === 'index');
+let IDXROOT = document;
+
+/* 상세 이동 — SPA 셸에선 스택 push(문서 유지·탭 보존), MPA에선 기존 그대로 location 이동 */
+window.GALLA_goto = function (url) {
+    if (!__IDX_MPA && window.GALLA_SPA && window.GALLA_SPA.push) {
+        const m = String(url).match(/^\.?\/?([a-z0-9_-]+)\.html(?:\?([^#]*))?(?:#.*)?$/i);
+        if (m) {
+            const params = {};
+            if (m[2]) new URLSearchParams(m[2]).forEach((v, k) => params[k] = v);
+            window.GALLA_SPA.push(m[1], params);
+            return;
+        }
+    }
+    location.href = url;
+};
+
 let cards = [];
 window.cards = cards;
 let feed = [];
@@ -47,7 +70,7 @@ function ensureVideoSrc(vid) {
    릴스/인라인 영상이 백그라운드에서 소리를 계속 흘리던 문제(사장님 제보) 차단.
    셸이 '비활성' 신호를 쏘고, 앱이 백그라운드로 가도(visibilitychange) 동일 처리. */
 function pauseAllVideos() {
-    document.querySelectorAll('video').forEach(v => {
+    IDXROOT.querySelectorAll('video').forEach(v => {
         try { v.pause(); v.muted = true; } catch (e) {}
     });
     if (window.GALLA_syncSoundBtns) window.GALLA_syncSoundBtns();
@@ -57,7 +80,7 @@ function resumeVisibleVideo() {
     if (document.body.classList.contains('shorts-open')) return;
     const vh = window.innerHeight || document.documentElement.clientHeight;
     let best = null, bestVis = 0;
-    document.querySelectorAll('.card-media video').forEach(v => {
+    IDXROOT.querySelectorAll('.card-media video').forEach(v => {
         const r = v.getBoundingClientRect(); if (!r.height) return;
         const ratio = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height;
         if (ratio > 0.5 && ratio > bestVis) { bestVis = ratio; best = v; }
@@ -100,7 +123,7 @@ function ensureFeedVideoFallback() {
     const sweep = () => {
         const vh = window.innerHeight || document.documentElement.clientHeight;
         let best = null, bestVis = 0;
-        document.querySelectorAll('.card-media video').forEach(v => {
+        IDXROOT.querySelectorAll('.card-media video').forEach(v => {
             const r = v.getBoundingClientRect();
             if (!r.height) return;
             if (r.top < vh + 700 && r.bottom > -700) ensureVideoSrc(v);        // 넉넉히 미리 버퍼(깜빡임 방지)
@@ -114,7 +137,8 @@ function ensureFeedVideoFallback() {
     if (!__feedVideoFallbackBound) {
         __feedVideoFallbackBound = true;
         let t; const onScroll = () => { clearTimeout(t); t = setTimeout(sweep, 100); };
-        window.addEventListener('scroll', onScroll, { passive: true });
+        // capture: SPA에선 .view-host 내부 스크롤이 window로 버블되지 않음 — 캡처로 잡는다(MPA 동작 동일)
+        window.addEventListener('scroll', onScroll, { passive: true, capture: true });
         window.addEventListener('resize', onScroll, { passive: true });
     }
     sweep();
@@ -162,7 +186,7 @@ function carouselGo(issueId, dir) {
 /* 슬라이드 폭을 측정한 px로 못박음 — 모바일 사파리/크롬에서 flex-basis:100% 순환 참조로
    슬라이드가 이미지 원본/3배 폭이 돼 한 장이 여러 칸에 걸쳐 보이던 문제 원천 차단 */
 function sizeAllCarousels() {
-    document.querySelectorAll('.carousel-wrap').forEach(wrap => {
+    IDXROOT.querySelectorAll('.carousel-wrap').forEach(wrap => {
         const slides = wrap.querySelector('.carousel-slides');
         if (!slides) return;
         const w = wrap.clientWidth;
@@ -378,11 +402,11 @@ window.openReels = function (startId) {
     const inlineVid = document.getElementById('vid-' + startId);
     const startTime = inlineVid && !isNaN(inlineVid.currentTime) ? inlineVid.currentTime : 0;
     // 인라인 미리보기 정지 (소리 중복 방지)
-    document.querySelectorAll('.card-media video').forEach(v => v.pause());
+    IDXROOT.querySelectorAll('.card-media video').forEach(v => v.pause());
     if (typeof window.openShorts === 'function') {
         window.openShorts(vids, Number(startId), startTime);
     } else {
-        location.href = `issue.html?id=${startId}`;
+        window.GALLA_goto(`issue.html?id=${startId}`);
     }
 };
 
@@ -459,17 +483,17 @@ function setFollowUI(btn, on) {
 
 function applySocialState() {
     if (!social.loaded) return;
-    document.querySelectorAll('.follow-btn[data-uid]').forEach(btn => {
+    IDXROOT.querySelectorAll('.follow-btn[data-uid]').forEach(btn => {
         if (social.userId && btn.dataset.uid === social.userId) {
             btn.style.display = 'none';
             return;
         }
         setFollowUI(btn, social.follows.has(btn.dataset.uid));
     });
-    document.querySelectorAll('.bookmark-btn').forEach(img => {
+    IDXROOT.querySelectorAll('.bookmark-btn').forEach(img => {
         img.classList.toggle('active', social.bookmarks.has(img.dataset.id));
     });
-    document.querySelectorAll('.like-btn').forEach(btn => {
+    IDXROOT.querySelectorAll('.like-btn').forEach(btn => {
         btn.classList.toggle('on', social.likes.has(btn.dataset.id));
     });
 }
@@ -484,7 +508,7 @@ async function toggleLike(btn) {
     const next = Math.max(0, base + (on ? -1 : 1));
     // 낙관적 토글 (모든 동일 id 카드 동기화)
     if (on) social.likes.delete(id); else social.likes.add(id);
-    document.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
+    IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
         b.dataset.likes = next;
         b.classList.toggle('on', !on);
         const c = b.querySelector('.lk-count'); if (c) c.textContent = next ? formatK(next) : '';
@@ -496,7 +520,7 @@ async function toggleLike(btn) {
         : await supabase.from('issue_likes').insert({ user_id: social.userId, issue_id: Number(id) });
     if (error && error.code !== '23505') {
         if (on) social.likes.add(id); else social.likes.delete(id);
-        document.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
+        IDXROOT.querySelectorAll(`.like-btn[data-id="${id}"]`).forEach(b => {
             b.dataset.likes = base;
             b.classList.toggle('on', on);
             const c = b.querySelector('.lk-count'); if (c) c.textContent = base ? formatK(base) : '';
@@ -561,7 +585,7 @@ function shareIssue(id) {
  * =========================== */
 function attachEvents() {
     // 투표 버튼
-    document.querySelectorAll('.vote-btn').forEach(btn => {
+    IDXROOT.querySelectorAll('.vote-btn').forEach(btn => {
         btn.onclick = async e => {
             e.stopPropagation();
             if (document.body.classList.contains('shorts-open')) return;
@@ -596,7 +620,7 @@ function attachEvents() {
     });
 
     // 모달
-    document.querySelectorAll('.open-modal').forEach(el => {
+    IDXROOT.querySelectorAll('.open-modal').forEach(el => {
         el.onclick = e => {
             e.stopPropagation();
             openModal(el.dataset.msg);
@@ -604,7 +628,7 @@ function attachEvents() {
     });
 
     // 팔로우
-    document.querySelectorAll('.follow-btn[data-uid]').forEach(btn => {
+    IDXROOT.querySelectorAll('.follow-btn[data-uid]').forEach(btn => {
         btn.onclick = e => {
             e.stopPropagation();
             toggleFollow(btn);
@@ -612,7 +636,7 @@ function attachEvents() {
     });
 
     // 좋아요
-    document.querySelectorAll('.like-btn').forEach(btn => {
+    IDXROOT.querySelectorAll('.like-btn').forEach(btn => {
         btn.onclick = e => {
             e.stopPropagation();
             toggleLike(btn);
@@ -620,7 +644,7 @@ function attachEvents() {
     });
 
     // 북마크
-    document.querySelectorAll('.bookmark-btn').forEach(img => {
+    IDXROOT.querySelectorAll('.bookmark-btn').forEach(img => {
         img.onclick = e => {
             e.stopPropagation();
             toggleBookmark(img);
@@ -628,7 +652,7 @@ function attachEvents() {
     });
 
     // 공유
-    document.querySelectorAll('.share-btn').forEach(img => {
+    IDXROOT.querySelectorAll('.share-btn').forEach(img => {
         img.onclick = e => {
             e.stopPropagation();
             shareIssue(img.dataset.id);
@@ -636,7 +660,7 @@ function attachEvents() {
     });
 
     // ⋯ 더보기: 소유자·관리자 → 수정/삭제, 아니면 → 신고/차단
-    document.querySelectorAll('.card-more').forEach(btn => {
+    IDXROOT.querySelectorAll('.card-more').forEach(btn => {
         btn.onclick = async e => {
             e.stopPropagation();
             const id = btn.dataset.id, uid = btn.dataset.uid || null;
@@ -654,18 +678,18 @@ function attachEvents() {
             } else if (window.GALLA_openReportMenu) {
                 window.GALLA_openReportMenu({
                     contentType: 'issue', contentId: id, authorId: uid, authorName: card?.author,
-                    onBlocked: () => { document.querySelectorAll('.card').forEach(c => { if (window.cards?.find(x => String(x.id) === c.dataset.id)?.user_id === uid) c.remove(); }); },
+                    onBlocked: () => { IDXROOT.querySelectorAll('.card').forEach(c => { if (window.cards?.find(x => String(x.id) === c.dataset.id)?.user_id === uid) c.remove(); }); },
                 });
             }
         };
     });
 
     // 전황표 → 이슈 댓글
-    document.querySelectorAll('.goto-comments').forEach(el => {
+    IDXROOT.querySelectorAll('.goto-comments').forEach(el => {
         el.onclick = e => {
             e.stopPropagation();
             const card = el.closest('.card');
-            location.href = `issue.html?id=${card.dataset.id}#battle-zone`;
+            window.GALLA_goto(`issue.html?id=${card.dataset.id}#battle-zone`);
         };
     });
 
@@ -675,21 +699,23 @@ function attachEvents() {
         document.addEventListener('click', e => {
             const c = e.target.closest('.predict-feed-card');
             if (c && c.dataset.mid) {
-                location.href = `predict-market.html?id=${c.dataset.mid}`;
+                window.GALLA_goto(`predict-market.html?id=${c.dataset.mid}`);
             }
         });
     }
 
     // 카드 전체 클릭
-    document.querySelectorAll('.card').forEach(card => {
+    IDXROOT.querySelectorAll('.card').forEach(card => {
+        if (card.__navBound) return;   // attachEvents 반복 호출 시 중복 리스너 방지(SPA면 push 중복 방지)
+        card.__navBound = true;
         card.addEventListener('click', e => {
             const url = card.dataset.link;
-            if (url) location.href = url;
+            if (url) window.GALLA_goto(url);
         });
     });
 
     // 캐러셀 터치 스와이프 — 손가락 추적 라이브 드래그(인스타 스타일)
-    document.querySelectorAll('.carousel-wrap').forEach(wrap => {
+    IDXROOT.querySelectorAll('.carousel-wrap').forEach(wrap => {
         if (wrap.dataset.swipeBound) return;
         wrap.dataset.swipeBound = '1';
         const slides = wrap.querySelector('.carousel-slides');
@@ -745,7 +771,7 @@ function attachEvents() {
     }
 
     // 비디오 자동재생 옵저버 등록
-    document.querySelectorAll('.card-media video').forEach(v => {
+    IDXROOT.querySelectorAll('.card-media video').forEach(v => {
         // 재생/정지는 sweep(ensureFeedVideoFallback) 단일 제어 → 관찰자와 경쟁 제거(깜빡임 방지).
         videoPreloader.observe(v);   // 미리 버퍼링만
         v.addEventListener('loadedmetadata', () => {
@@ -760,7 +786,7 @@ function attachEvents() {
 
     // 투표 상태 복원
     if (typeof window.GALLA_CHECK_VOTE === 'function') {
-        document.querySelectorAll('.card').forEach(cardEl => {
+        IDXROOT.querySelectorAll('.card').forEach(cardEl => {
             syncVoteWithRetry(cardEl, Number(cardEl.dataset.id));
         });
     }
@@ -772,10 +798,10 @@ function attachEvents() {
 /* ===========================
  * 데이터 로드
  * =========================== */
-document.addEventListener('DOMContentLoaded', async () => {
-    bestList = document.getElementById('best-list');
-    recommendList = document.getElementById('recommend-list');
-    bestMore = document.getElementById('best-more');
+async function initIndexPage() {
+    bestList = IDXROOT.querySelector('#best-list');
+    recommendList = IDXROOT.querySelector('#recommend-list');
+    bestMore = IDXROOT.querySelector('#best-more');
 
     while (!window.supabaseClient) {
         await new Promise(r => setTimeout(r, 30));
@@ -785,7 +811,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.initNotifications) window.initNotifications();
     try { await loadData(); }
     finally { GALLA_signalReady(); }  // 실패해도 스플래시는 반드시 내린다
-});
+}
+// MPA(index.html)에서만 자동 초기화 — SPA 셸에선 GALLA_PAGE_INDEX.mount()가 부른다
+if (__IDX_MPA) document.addEventListener('DOMContentLoaded', initIndexPage);
 
 /* 스플래시 해제 신호 — splash-boot이 galla:ready 를 기다린다. 중복 호출 무해. */
 function GALLA_signalReady() {
@@ -803,10 +831,12 @@ function initHeader() {
 
 // 홈은 항상 '맨 위(로고 보이는 상태)'에서 시작한다 — 스크롤 복원 폐지(사용자 확정).
 // 브라우저 자체 복원(reload/bfcache)도 차단하고, 과거 저장값도 제거.
-try { history.scrollRestoration = 'manual'; } catch (_) {}
-try { localStorage.removeItem('scrollPos'); } catch (_) {}
-window.scrollTo(0, 0);
-window.addEventListener('pageshow', () => window.scrollTo(0, 0));
+if (__IDX_MPA) {   // SPA 셸에선 스크롤 컨테이너가 window가 아니고, 전역 history 설정도 셸 몫
+    try { history.scrollRestoration = 'manual'; } catch (_) {}
+    try { localStorage.removeItem('scrollPos'); } catch (_) {}
+    window.scrollTo(0, 0);
+    window.addEventListener('pageshow', () => window.scrollTo(0, 0));
+}
 
 async function loadData() {
     const supabase = window.supabaseClient;
@@ -907,7 +937,7 @@ async function loadData() {
         });
         window.feed = feed;
         // 그 사이 카테고리 칩을 골랐다면 새 피드 기준으로 필터 재적용
-        const activeCat = document.querySelector('.category-section .chip.active')?.textContent?.trim() || '전체';
+        const activeCat = IDXROOT.querySelector('.category-section .chip.active')?.textContent?.trim() || '전체';
         viewFeed = (activeCat === '전체') ? feed : feed.filter(it => (it.data && it.data.category) === activeCat);
         const shown = rec;
         rec = 3;
@@ -919,7 +949,7 @@ async function loadData() {
 
 // 인덱스 카테고리 칩 — 검색페이지로 이동하지 않고 '그 자리에서' 피드를 필터
 window.GALLA_filterFeed = function (cat, el) {
-    document.querySelectorAll('.category-section .chip').forEach(c => c.classList.remove('active'));
+    IDXROOT.querySelectorAll('.category-section .chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
     viewFeed = (!cat || cat === '전체') ? feed : feed.filter(it => (it.data && it.data.category) === cat);
     rec = 3;
@@ -927,7 +957,8 @@ window.GALLA_filterFeed = function (cat, el) {
     loadBest();
     loadRecommend();
     if (bestList && !viewFeed.length) bestList.innerHTML = '<div class="feed-empty" style="padding:40px 16px;text-align:center;color:var(--muted,#8a8f9a);font-size:14px">이 카테고리엔 아직 갈라가 없어요.</div>';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // SPA에선 스크롤 컨테이너가 view-host — MPA면 window 그대로
+    (IDXROOT !== document ? IDXROOT : window).scrollTo({ top: 0, behavior: 'smooth' });
 };
 
 // Fisher–Yates 셔플 — 이슈 외 콘텐츠는 진입할 때마다 새 배치로 보이게
@@ -1006,7 +1037,7 @@ function renderPlazaCard(p) {
     const excerpt = plazaExcerpt(p.body);
     const cat = p.category ? escHtml(p.category) : '광장';
     return `
-    <div class="card plaza-card" onclick="location.href='plaza_detail.html?id=${p.id}'">
+    <div class="card plaza-card" onclick="GALLA_goto('plaza_detail.html?id=${p.id}')">
       <div class="pz-head">
         <span class="pz-badge">🏛 광장</span>
         <span class="pz-cat">${cat}</span>
@@ -1052,7 +1083,7 @@ function renderNewsCard(n) {
     const hero = plazaProxify(n.hero_image || '');
     const sum = (n.summary || '').slice(0, 90);
     return `
-    <div class="card news-feed-card" onclick="location.href='news.html?gn=${n.id}'">
+    <div class="card news-feed-card" onclick="GALLA_goto('news.html?gn=${n.id}')">
       ${hero ? `<div class="nf-hero"><img src="${escHtml(hero)}" loading="lazy" alt="" referrerpolicy="no-referrer" onerror="this.closest('.nf-hero')?.remove()"></div>` : ''}
       <div class="nf-body">
         <div class="nf-head">
@@ -1094,7 +1125,7 @@ async function loadVideoCards() {
 
 function renderVideoCard(v) {
     return `
-    <div class="card video-feed-card" onclick="location.href='search.html?video=${encodeURIComponent(v.video_id)}'">
+    <div class="card video-feed-card" onclick="GALLA_goto('search.html?video=${encodeURIComponent(v.video_id)}')">
       <div class="vf-thumb">
         <img src="${escHtml(v.thumbnail || '')}" loading="lazy" alt="" onerror="this.style.display='none'">
         <span class="vf-play">▶</span>
@@ -1147,7 +1178,7 @@ function renderDuelCard(d) {
         : `<span class="df-done">종전 · ${d.winner === d.challenger ? escHtml(d.chalName) : d.winner === d.opponent ? escHtml(d.oppName) : '무승부'} 승</span>`;
     const cta = live ? '관전하러 가기 ›' : voting ? '투표하러 가기 ›' : '결과 보기 ›';
     return `
-    <div class="card duel-feed-card${live ? ' live' : ''}" onclick="location.href='duel.html?id=${d.id}'">
+    <div class="card duel-feed-card${live ? ' live' : ''}" onclick="GALLA_goto('duel.html?id=${d.id}')">
       <div class="nf-head"><span class="df-badge">⚔️ 일기토</span>${state}</div>
       <div class="df-topic">${escHtml(d.topic || '자유 일기토')}</div>
       <div class="df-vs">
@@ -1283,13 +1314,13 @@ const pfRevealObserver = ('IntersectionObserver' in window) ? new IntersectionOb
 let __pfSweepBound = false;
 function pfSweep() {
     const vh = window.innerHeight || document.documentElement.clientHeight;
-    document.querySelectorAll('.predict-feed-card:not(.in)').forEach(c => {
+    IDXROOT.querySelectorAll('.predict-feed-card:not(.in)').forEach(c => {
         const r = c.getBoundingClientRect();
         if (r.top < vh - 40 && r.bottom > 40) pfReveal(c);   // 화면에 실제로 들어온 카드
     });
 }
 function pfObserveCards(root) {
-    (root || document).querySelectorAll('.predict-feed-card:not(.in)').forEach(c => {
+    (root || IDXROOT).querySelectorAll('.predict-feed-card:not(.in)').forEach(c => {
         if (pfRevealObserver) pfRevealObserver.observe(c);
     });
     if (!__pfSweepBound) {
@@ -1373,12 +1404,46 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// MODAL
+// MODAL — SPA 셸엔 #modal 마크업이 없다(#app 밖이라 뷰 추출에서 빠짐) → 없으면 만들어 쓴다
+function ensureModal() {
+    let modal = document.getElementById('modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal';
+        modal.className = 'modal';
+        modal.innerHTML = '<div class="modal-content"><p id="modal-text"></p><button id="modal-close">확인</button></div>';
+        document.body.appendChild(modal);
+    }
+    const btn = document.getElementById('modal-close');
+    if (btn && !btn.onclick) btn.onclick = () => { modal.style.display = 'none'; };
+    return modal;
+}
 function openModal(msg) {
-    const modal = document.getElementById('modal');
+    const modal = ensureModal();
     document.getElementById('modal-text').textContent = msg;
     modal.style.display = 'flex';
 }
-document.getElementById('modal-close').onclick = () => {
-    document.getElementById('modal').style.display = 'none';
+// MPA에선 기존처럼 즉시 바인딩(마크업이 이미 있음) — SPA에선 openModal 때 지연 생성
+if (document.getElementById('modal-close')) ensureModal();
+
+/* ═══ SPA 어댑터 — js/spa/views/index.js(뷰 모듈)가 호출한다. MPA에선 안 쓰임 ═══ */
+window.GALLA_PAGE_INDEX = {
+    async mount(root) {
+        IDXROOT = root || document;
+        // SPA 스크롤 컨테이너(.view-host)에 무한 스크롤 바인딩 — window 스크롤은 안 옴
+        if (root && root !== document && !root.__idxInfScroll) {
+            root.__idxInfScroll = true;
+            root.addEventListener('scroll', () => {
+                if (root.scrollTop + root.clientHeight + 400 >= root.scrollHeight) loadRecommend();
+            }, { passive: true });
+        }
+        await initIndexPage();
+    },
+    unmount() { try { pauseAllVideos(); } catch (_) {} },
+    activate() { try { resumeVisibleVideo(); } catch (_) {} },   // 탭 복귀 → 보이는 영상 재개
+    deactivate() { try { pauseAllVideos(); } catch (_) {} },     // 탭 이탈 → 영상·소리 정지(기존 shellcmd inactive 로직)
+    scrolltop() {
+        const el = (IDXROOT && IDXROOT !== document) ? IDXROOT : window;
+        try { el.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) { try { el.scrollTo(0, 0); } catch (e2) {} }
+    }
 };

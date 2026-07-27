@@ -4,7 +4,9 @@
    - 각 탭(.tab-item)을 스포트라이트로 뚫고 말풍선 꼬리로 지목
    ========================================================================== */
 (function () {
-  if (document.body.getAttribute("data-page") !== "trend") return;
+  // MPA: body[data-page=trend] / SPA: 트렌드 뷰 호스트가 마운트된 뒤 로드됨
+  if (document.body.getAttribute("data-page") !== "trend"
+      && !document.querySelector('.view-host[data-page="trend"]')) return;
   var KEY = "galla_trend_tour_v1";
   try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
 
