@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072685'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072686'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -361,9 +361,11 @@
       return 'granted';
     } catch (e) { return (e && e.name) || 'error'; }
   };
-  async function buildPC() {
+  async function buildPC(addLocal = true) {
     pc = new RTCPeerConnection(await iceConfig());
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    // 발신자(offer)는 트랙을 먼저 넣고 offer 생성. 수신자(answer)는 setRemoteDescription(offer) '후'에
+    //   트랙을 넣어야(addLocal=false로 여기선 스킵) 수신자 트랙이 offer의 m-line에 붙어 발신자가 받는다.
+    if (addLocal) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
     pc.onicecandidate = e => { if (e.candidate) send({ t: 'ice', cand: e.candidate }); };
     pc.ontrack = e => {
       // ⚠️ iosrtc는 '유효한 blobId를 가진 plugin MediaStream'만 렌더한다. ontrack이 주는 원본
@@ -477,10 +479,12 @@
   // 수신자 answer 생성 공용 — PC 구성 → offer 반영 → answer 전송(중복 재전송 포함).
   //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
   async function buildAnswer(cur, muted) {
-    await buildPC();
-    if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
+    await buildPC(false);   // 트랙은 setRemoteDescription '후'에 넣는다(그래야 수신자 트랙이 offer m-line에 붙어 발신자가 받음)
     nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
     await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
+    // ★ 이제 로컬 트랙 추가 — offer가 만든 recvonly 트랜시버에 붙어 sendrecv가 된다(양방향 미디어)
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    if (muted) { try { localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
     const ans = await pc.createAnswer();
     ans.sdp = tuneOpus(ans.sdp);
