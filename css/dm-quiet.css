@@ -7,9 +7,9 @@
    (출처: claude.ai/design 'DM 기능 갈라 스타일 업그레이드' apply/dm-quiet.css)
    ============================================================ */
 
-/* 패널 — 아우라 제거, 순흑 */
+/* 패널 — 아우라 제거, 앱 배경색과 통일(#0a0a0b) — 순흑이면 DM만 검게 떠 다른 페이지와 색 단차(사장님 지적) */
 .dm-panel {
-  background: #000 !important;
+  background: #0a0a0b !important;
   box-shadow: -16px 0 40px rgba(0,0,0,.45);
 }
 

@@ -1768,3 +1768,14 @@ body[data-page="news"] .news-viewer-fallback {
 .trd-app-cta .tac-tx small{font-size:11.5px;color:rgba(255,255,255,.82);margin-top:2px}
 .trd-app-cta .tac-go{font-size:20px;font-weight:900;color:#fff}
 @media (prefers-reduced-motion:reduce){.trd-hero-glow,.trd-app-cta{animation:none}}
+
+/* 🔎 영역 검색(뉴스·핫튜브 패널 상단) — 리스트 텍스트 필터 (2026-07-27) */
+.area-search { display: flex; align-items: center; gap: 8px; margin: 4px 16px 10px;
+  background: #12141c; border: 1px solid #232634; border-radius: 12px; padding: 9px 12px; }
+.area-search svg { width: 17px; height: 17px; color: #8b93a7; flex: 0 0 auto; }
+.area-search input { flex: 1; min-width: 0; background: transparent; border: none;
+  color: #fff; font-size: 14px; outline: none; padding: 0; }
+.area-search input::placeholder { color: #6b7280; }
+.area-search-clear { flex: 0 0 auto; background: #2a2e3c; color: #cfd6e6; border: none;
+  width: 20px; height: 20px; border-radius: 50%; font-size: 10px; cursor: pointer; line-height: 1; }
+.area-empty { text-align: center; color: #8b909b; font-size: 13px; padding: 40px 20px; }

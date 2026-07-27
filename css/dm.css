@@ -30,9 +30,17 @@
    ⚠️ GALLA 부분을 다른 페이지 헤더 로고(.logo=height~26px)와 같은 크기로 키워 통일(사장님 요청). */
 .dm-wordmark{display:inline-flex;align-items:center;gap:6px;line-height:1;}
 .dm-wm-g{height:26px;width:auto;display:block;}
-.dm-wm-t{font-weight:900;font-style:italic;font-size:24px;letter-spacing:.3px;color:#fff;
+.dm-wm-t{font-weight:900;font-style:italic;font-size:24px;letter-spacing:.3px;
   transform:skewX(-6deg);transform-origin:left center;display:inline-block;
-  font-family:'Helvetica Neue',Arial,sans-serif;}
+  font-family:'Helvetica Neue',Arial,sans-serif;
+  /* 재밌는 효과: 인디고→퍼플→핑크 그라디언트가 좌→우로 흐르는 샤인(사장님 요청) */
+  background:linear-gradient(100deg,#5b8cff 0%,#8a6cff 38%,#ff5fa2 72%,#5b8cff 100%);
+  background-size:220% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;
+  animation:dmTalkShine 3.6s linear infinite;}
+@keyframes dmTalkShine{to{background-position:220% 0;}}
+@media (prefers-reduced-motion:reduce){.dm-wm-t{animation:none;}}
 /* 브랜드 헤더 높이를 공용 헤더(.header-inner 64px)와 맞춰 로고 세로 위치까지 통일 */
 .dm-head-brand{height:64px;}
 .dm-x,.dm-compose,.dm-back{width:40px;height:40px;background:none;border:none;color:#fff;

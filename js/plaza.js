@@ -16,6 +16,8 @@ window.supabaseClient = window.supabaseClient || supabase;
 
 let plazaListEl = document.querySelector(".plaza-list");
 let currentCategory = "전체";
+let currentSort = "hot";        // hot(후끈=score) | new(최신) | views(조회)
+let plazaSearchQ = "";          // 광장 검색어(제목·본문 ilike)
 
 /* 🩹 자가치유: 서버/CF가 이 문서에만 '광장 패널 없는 옛 HTML'을 주는 경우가 있다
    (내비게이션 요청엔 옛 HTML, page fetch엔 최신 — 사장님 크롬 직접진단으로 확정).
@@ -33,6 +35,7 @@ async function ensurePlazaPanel() {
       if (document.querySelector('.tab-item.active')?.dataset.tab === 'plaza')
         document.querySelector('.tab-panel[data-panel="plaza"]')?.classList.add('active');
       bindPlazaCategories();   // 심은 뒤 카테고리 버튼 재바인딩
+      bindPlazaSortSearch();   // 정렬(후끈/최신/조회)·검색 재바인딩
       console.info('[plaza] 광장 패널 자가치유 완료');
     }
   } catch (e) { console.warn('[plaza] panel heal skip:', e); }
@@ -115,6 +118,33 @@ function bindPlazaCategories() {
   });
 }
 bindPlazaCategories();
+
+function bindPlazaSortSearch() {
+  document.querySelectorAll("#plaza-sorts button").forEach(btn => {
+    if (btn.dataset.bound) return; btn.dataset.bound = "1";
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#plaza-sorts button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentSort = btn.dataset.sort || "hot";
+      fetchPlazaPosts();
+    });
+  });
+  const si = document.getElementById("plaza-search-input");
+  const sc = document.getElementById("plaza-search-clear");
+  const sf = document.getElementById("plaza-search-form");
+  if (si && !si.dataset.bound) {
+    si.dataset.bound = "1";
+    let t = null;
+    si.addEventListener("input", () => {
+      if (sc) sc.hidden = !si.value;
+      clearTimeout(t);
+      t = setTimeout(() => { plazaSearchQ = si.value.trim(); fetchPlazaPosts(); }, 280);
+    });
+    sf?.addEventListener("submit", e => { e.preventDefault(); plazaSearchQ = si.value.trim(); fetchPlazaPosts(); });
+    sc?.addEventListener("click", () => { si.value = ""; sc.hidden = true; plazaSearchQ = ""; fetchPlazaPosts(); si.focus(); });
+  }
+}
+bindPlazaSortSearch();
 
 const titleInput = document.getElementById("plaza-title");
 const submitBtn = document.getElementById("plaza-submit");
@@ -469,11 +499,21 @@ async function fetchPlazaPosts() {
       view_count,
       plaza_comments(count)
     `)
-    .order("score", { ascending: false })
-    .order("created_at", { ascending: false });
+  // 정렬: 후끈(score→최신) / 최신 / 조회
+  if (currentSort === "new") {
+    query = query.order("created_at", { ascending: false });
+  } else if (currentSort === "views") {
+    query = query.order("view_count", { ascending: false }).order("created_at", { ascending: false });
+  } else {
+    query = query.order("score", { ascending: false }).order("created_at", { ascending: false });
+  }
 
   if (currentCategory !== "전체") {
     query = query.eq("category", currentCategory);
+  }
+  if (plazaSearchQ) {
+    const q = plazaSearchQ.replace(/[%,]/g, " ").trim();
+    if (q) query = query.or(`title.ilike.%${q}%,body.ilike.%${q}%`);
   }
 
   const { data, error } = await query;
