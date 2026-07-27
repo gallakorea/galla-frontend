@@ -499,21 +499,26 @@ body[data-page="search"] .header-inner {
   border-radius: 14px;
 }
 /* ⌨️ 전용 검색 오버레이 — 검색 입력을 누르면 '검색 패널 통째'를 body 최상위(transform 밖)
-   풀스크린으로 전환(search.js searchOverlay). transform 조상이 없어 iOS 키보드가 콘텐츠를
-   못 밀고, 검색바는 상단에 고정(안 튐), 아래에 최근·실시간·결과가 그대로 흐른다. */
+   풀스크린으로 슬라이드 전환(search.js searchOverlay). transform 조상이 없어 iOS 키보드가
+   콘텐츠를 못 밀고(실기기 확정), 검색바는 상단 고정, 아래에 최근·실시간·결과가 그대로. */
 .search-overlay {
   position: fixed; inset: 0; z-index: 2147483000;
   background: #0a0a0b; padding-top: env(safe-area-inset-top);
   overflow-y: auto; -webkit-overflow-scrolling: touch;
   display: flex; flex-direction: column;
+  transform: translateY(100%);                 /* 아래에서 시작 */
+  transition: transform .3s cubic-bezier(.22, .9, .3, 1);
+  will-change: transform;
 }
+.search-overlay.in { transform: translateY(0); }    /* 슬라이드 업 */
 .search-overlay-close {
-  align-self: flex-end; flex: 0 0 auto;
-  width: 44px; height: 44px; margin: 2px 6px -6px 0;
-  background: none; border: none; color: #cfd6e6; font-size: 19px; cursor: pointer;
+  align-self: flex-start; flex: 0 0 auto;
+  width: 44px; height: 44px; margin: 2px 0 -4px 6px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: #cfd6e6; cursor: pointer;
 }
 .search-overlay .tab-panel { display: block !important; }
-/* 오버레이 안 검색바는 sticky로 스크롤해도 상단 고정(결과 스크롤 시 계속 보이게) */
+/* 오버레이 안 검색바는 sticky로 스크롤해도 상단 고정 */
 .search-overlay .search-bar { position: sticky; top: 0; z-index: 5; margin: 0 16px 12px; }
 .search-bar-ic { opacity: .55; font-size: 15px; }
 svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }

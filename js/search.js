@@ -90,11 +90,52 @@ async function initTrendPage() {
   const resultsEl = document.getElementById("search-results");
   const recentBlock = document.getElementById("se-recent-block");
 
-  /* ⌨️ 검색바는 '움직이지 않는다'(사장님 요구). 재부모화/lift/오버레이는 다 위치가 튀어 폐기.
-     검색바는 제자리(판 안). 키보드 위 노출은 뷰포트 `interactive-widget=resizes-content`(app.html)에
-     맡긴다 — 지원하는 iOS(시뮬 26.0 등)는 키보드가 레이아웃을 줄여 검색바가 보인다. 일부 실기기
-     iOS(26.5.2)가 이를 무시해 키보드가 검색바를 덮는 건 iOS 버전 이슈로, 웹에서 안 옮기고 잡는 법은 없다.
-     (움직이는 UX보다 '안 움직이고 iOS에 맡김'을 사장님이 택함.) */
+  /* ⌨️ 전용 검색 화면(슬라이드 연출) — 검색 입력을 누르면 '검색 패널 통째'를 transform 밖(body)
+     풀스크린 오버레이로 옮기고 아래→위 슬라이드로 연다. 검색바는 상단 고정, 아래에 최근·실시간·결과가
+     그대로. body엔 transform 조상이 없어 iOS 키보드가 콘텐츠를 못 밀어(실기기 확정) 검색바가 항상
+     보인다. 원위치는 slot 주석으로 복귀. 탭 이탈 시 deactivate가 닫는다. */
+  const searchPanel = document.querySelector('.tab-panel[data-panel="search"]') ||
+                      (form && form.closest && form.closest(".tab-panel"));
+  (function searchOverlay() {
+    if (!GALLA_TREND_SPA || !searchPanel) return;
+    let open = false, slot = null, overlay = null;
+    function enter() {
+      if (open || !searchPanel.parentNode) return;
+      open = true;
+      slot = document.createComment("search-panel-slot");
+      searchPanel.parentNode.insertBefore(slot, searchPanel);
+      overlay = document.createElement("div");
+      overlay.className = "search-overlay";       // CSS: translateY(100%) 시작
+      const close = document.createElement("button");
+      close.type = "button";
+      close.className = "search-overlay-close";
+      close.setAttribute("aria-label", "검색 닫기");
+      close.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
+      close.addEventListener("click", exit);
+      overlay.appendChild(close);
+      overlay.appendChild(searchPanel);           // 패널(입력+최근+실시간+결과) 통째 이동
+      document.body.appendChild(overlay);
+      requestAnimationFrame(function () { overlay.classList.add("in"); });  // 슬라이드 업
+      __searchLiftDrop = exit;
+    }
+    function exit() {
+      if (!open) return;
+      open = false;
+      try { input.blur(); } catch (_) {}
+      const ov = overlay, sl = slot;
+      if (ov) ov.classList.remove("in");           // 슬라이드 다운
+      slot = null; overlay = null;
+      setTimeout(function () {                       // 애니메이션 후 원위치
+        if (sl && sl.parentNode) sl.parentNode.insertBefore(searchPanel, sl);
+        if (sl) sl.remove();
+        if (ov && ov.parentNode) ov.remove();
+      }, 300);
+    }
+    // 입력 누르면(pointerdown, 포커스 이동 전) 오버레이 진입 — 네이티브 포커스는 막지 않아 키보드 정상
+    input.addEventListener("pointerdown", function () { if (!open) enter(); });
+    input.addEventListener("focus", function () { if (!open) enter(); });
+    // 오버레이 밖(검색 리스트 항목 클릭 등)에서 결과로 이동하면 search.js가 처리 — 닫기는 back 버튼/탭이탈
+  })();
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
 
