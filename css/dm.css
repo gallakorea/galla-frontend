@@ -244,8 +244,11 @@
 /* 갈라톡 워드마크 헤더: 좌(+)·우(설정+새메시지) 폭이 달라 로고가 왼쪽으로 쏠렸다 →
    좌우 칸을 84px로 대칭 고정해 GALLA TALK 로고를 화면 정중앙에(다른 페이지 로고와 동일). */
 .dm-head-brand.has-btns { grid-template-columns: 84px 1fr 84px; }
+/* 오버레이(팝오버) 모드: 우측에 닫기(✕)까지 3개 → 우측 칸을 auto로 넓혀 안 잘리게 */
+.dm-root:not(.page) .dm-head-brand.has-btns { grid-template-columns: 84px 1fr auto; }
 .dm-head-brand .dm-x { justify-self: start; }
-.dm-head-btns { display: flex; justify-content: flex-end; }
+.dm-head-btns { display: flex; justify-content: flex-end; align-items: center; }
+.dm-x-close { width: 40px; height: 40px; background: none; border: none; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 /* 대화방 헤드: 육성톡·면상톡·설정 3개 아이콘이 40px 칸에 욱여넣어져 빽빽하던 것 —
    우측 칸을 아이콘 수에 맞춰 auto로 넓히고 살짝 간격을 준다(제목 중앙정렬은 유지). */
 .dm-view[data-view="thread"] .dm-head { grid-template-columns: 40px 1fr auto; }

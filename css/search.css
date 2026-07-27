@@ -1770,11 +1770,15 @@ body[data-page="news"] .news-viewer-fallback {
 @media (prefers-reduced-motion:reduce){.trd-hero-glow,.trd-app-cta{animation:none}}
 
 /* 🔎 영역 검색(뉴스·핫튜브 패널 상단) — 리스트 텍스트 필터 (2026-07-27) */
-.area-search { display: flex; align-items: center; gap: 8px; margin: 4px 16px 10px;
-  background: #12141c; border: 1px solid #232634; border-radius: 12px; padding: 9px 12px; }
+.area-search { display: flex; align-items: center; gap: 8px; margin: 6px 16px 10px;
+  background: #12141c; border: 1px solid #232634; border-radius: 12px; padding: 12px 12px;
+  min-height: 46px; cursor: text; }
 .area-search svg { width: 17px; height: 17px; color: #8b93a7; flex: 0 0 auto; }
+/* font-size 16px 미만이면 iOS가 포커스 시 자동 확대 → 반드시 16px */
 .area-search input { flex: 1; min-width: 0; background: transparent; border: none;
-  color: #fff; font-size: 14px; outline: none; padding: 0; }
+  color: #fff; font-size: 16px; outline: none; padding: 0;
+  -webkit-appearance: none; appearance: none; }
+.area-search input::-webkit-search-cancel-button { display: none; }
 .area-search input::placeholder { color: #6b7280; }
 .area-search-clear { flex: 0 0 auto; background: #2a2e3c; color: #cfd6e6; border: none;
   width: 20px; height: 20px; border-radius: 50%; font-size: 10px; cursor: pointer; line-height: 1; }

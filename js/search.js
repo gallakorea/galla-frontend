@@ -121,6 +121,11 @@ async function initTrendPage() {
         } else if (empty) empty.remove();
       };
       form.addEventListener("submit", (e) => e.preventDefault());
+      /* 폼 아무 곳(패딩·아이콘)을 눌러도 input에 포커스 — 실기기에서 얇은 입력줄을
+         정확히 못 맞춰 '눌러도 키보드가 안 뜨던' 문제 해결. */
+      form.addEventListener("pointerup", (e) => {
+        if (e.target !== input && e.target !== clear) { input.focus(); }
+      });
       input.addEventListener("input", () => {
         q = input.value.trim().toLowerCase();
         if (clear) clear.hidden = !input.value;
