@@ -252,18 +252,22 @@
     const SPA_TABS = ["index", "predict", "dm", "trend", "mypage"];
 
     function spaDone(next) {
-        const SPA = window.GALLA_SPA;
-        try { SPA && SPA.pop(); } catch (_) {}
-        if (!next || !SPA) return;
-        const base = String(next).split("?")[0];
-        const q = String(next).split("?")[1] || "";
-        const params = {};
-        try { new URLSearchParams(q).forEach((v, k) => params[k] = v); } catch (_) {}
-        // next가 탭(파일명 또는 탭명)이면 탭 전환, 아니면 스택 push
-        if (SPA_TAB_OF_URL[base]) { SPA.go(SPA_TAB_OF_URL[base]); return; }
-        if (SPA_TABS.indexOf(base) !== -1) { SPA.go(base); return; }
-        const m = base.match(/^\.?\/?([a-z0-9_-]+)(?:\.html)?$/i);
-        if (m) SPA.push(m[1], params);
+        // 🔄 로그인 성공 = SPA 1회 리부트 — 비로그인 상태로 이미 mount된 탭들(피드·뱃지·GP 등)이
+        //    통째로 낡아 있어, 부분 갱신 대신 세션 반영된 새 부팅이 가장 확실하다(1회뿐이라 저렴).
+        //    next가 탭이면 그 탭으로, 스택 라우트면 해당 라우트로 착지.
+        let hash = "#/index";
+        if (next) {
+            const base = String(next).split("?")[0];
+            const q = String(next).split("?")[1] || "";
+            if (SPA_TAB_OF_URL[base]) hash = "#/" + SPA_TAB_OF_URL[base];
+            else if (SPA_TABS.indexOf(base) !== -1) hash = "#/" + base;
+            else {
+                const m = base.match(/^\.?\/?([a-z0-9_-]+)(?:\.html)?$/i);
+                if (m) hash = "#/" + m[1] + (q ? "?" + q : "");
+            }
+        }
+        try { location.replace("app.html" + hash); } catch (_) {}
+        try { location.reload(); } catch (_) {}
     }
 
     window.GALLA_PAGE_LOGIN = {
