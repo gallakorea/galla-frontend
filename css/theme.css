@@ -82,6 +82,18 @@ body::before {
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-thumb { background: rgba(255,255,255,.13); border-radius: 8px; }
 *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.22); }
+/* 가로 스크롤 칩/카테고리/서브탭 행 — 스크롤바(아래 '줄') 완전 숨김(터치 UI).
+   SPA에선 페이지별 CSS가 늦게 로드돼 전역 8px 스크롤바가 카테고리 밑에 줄로 보였다.
+   theme.css는 항상 먼저 로드되므로 여기서 전역으로 확실히 숨긴다. */
+.cat-chips, .chip-scroll, .news-category-chips, .hv-cats, .hv-mode,
+.plaza-categories, .tabs-header, .tabs-header-scroll, .dm-tabs, .news-category-chips {
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.cat-chips::-webkit-scrollbar, .chip-scroll::-webkit-scrollbar, .news-category-chips::-webkit-scrollbar,
+.hv-cats::-webkit-scrollbar, .hv-mode::-webkit-scrollbar, .plaza-categories::-webkit-scrollbar,
+.tabs-header::-webkit-scrollbar, .tabs-header-scroll::-webkit-scrollbar, .dm-tabs::-webkit-scrollbar {
+  display: none !important; width: 0 !important; height: 0 !important;
+}
 
 /* ===== 큰 골드 배너 → 프리미엄 뉴트럴 (배틀 골드유닛·GP 배지는 유지) ===== */
 .rp-reward {
