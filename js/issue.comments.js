@@ -2151,6 +2151,20 @@ function bindComposerEls() {
           consumeInfiltration(); // 카운터 0 동기화 + 모드 해제
           return;
         }
+        // ⚔️ 참전 제한 룰
+        if (String(error.message || "").includes("battle_ko_locked")) {
+          // 격파당한 내 참전 댓글이 있으면 새 참전 불가 — 부활권으로 되살려 재참전
+          const inv = window.GALLA_myItems ? await window.GALLA_myItems() : {};
+          if ((inv.revive || 0) > 0)
+            alert("💀 격파당한 내 참전 댓글이 있어요.\n먼저 그 댓글의 ✨ 부활권으로 되살려 재참전하세요.\n(새로 똑같이 다시 달 순 없어요 — 그게 격파의 무게예요)");
+          else
+            askShop("💀 격파당하면 새로 참전할 수 없어요.\n✨ 부활권(800 GP)으로 격파된 내 댓글을 되살려 재참전하세요.");
+          return;
+        }
+        if (String(error.message || "").includes("battle_cap_reached")) {
+          alert("이 이슈엔 최대 2번까지 참전할 수 있어요.\n더 하고 싶으면 상대 댓글에 ⚔️ 대댓글로 물고 늘어지세요!");
+          return;
+        }
         console.error("[comment] insert failed", error);
         alert("댓글 등록에 실패했습니다.");
         return;
