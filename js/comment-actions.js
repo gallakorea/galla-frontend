@@ -103,7 +103,14 @@
     let error;
     if (soft) ({ error } = await sb().from(table).update({ status: "deleted" }).eq("id", id));
     else ({ error } = await sb().from(table).delete().eq("id", id));
-    if (error) { alert("삭제에 실패했어요: " + (error.message || "")); return; }
+    if (error) {
+      // 🔒 격파당한 참전 댓글은 삭제 불가 — 삭제로 재참전 잠금을 우회하는 악용 차단
+      if (String(error.message || "").includes("ko_comment_no_delete")) {
+        alert("💀 격파당한 참전 댓글은 삭제할 수 없어요.\n✨ 부활권으로 되살려야 다시 싸울 수 있어요.\n(격파를 삭제로 지울 순 없어요 — 그게 승부의 무게예요)");
+        return;
+      }
+      alert("삭제에 실패했어요: " + (error.message || "")); return;
+    }
     window.GALLA_toast && GALLA_toast("🗑️ 댓글을 삭제했어요");
     onDone && onDone();
   };
