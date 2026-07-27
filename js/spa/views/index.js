@@ -20,6 +20,7 @@ const CLASSIC = [
   "/js/media-sound.js",     // GALLA_soundOn/setSound/muteIcon(전역 사운드 선호)
   "/js/share-sheet.js",     // GALLA_share(공유)
   "/js/owner-actions.js",   // GALLA_canManage/openOwnerMenu/GALLA_CATEGORIES
+  "/js/follow.js",          // GALLA_bindFollow — 카드 팔로우 버튼·유저시트 팔로우(MPA index.html과 동일, 누락 시 시트 내용 비어보임)
   "/js/ghost.js",           // GALLA_userMap/userBadge(유령 페르소나 포함)
   "/js/user-sheet.js",      // 프로필 팝오버(data-user-id 위임)
   "/js/report-block.js",    // GALLA_openReportMenu/blockedIds

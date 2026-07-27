@@ -45,6 +45,8 @@ async function GALLA_mypageInit(root, spaParams) {
     const session = sessionData?.session;
 
     if (!session?.user) {
+        // SPA(app.html): 문서 이탈 없이 로그인 뷰 push. MPA는 기존 그대로.
+        if (document.body.dataset.page === "spa" && window.GALLA_gotoLogin) { window.GALLA_gotoLogin("mypage"); return; }
         if (!document.body.classList.contains("in-shell")) alert("로그인이 필요합니다."); // 셸 백그라운드 판에선 알럿이 셸 전체를 덮는다
         location.href = "login.html";
         return;
@@ -64,6 +66,8 @@ async function GALLA_mypageInit(root, spaParams) {
     // ============================
     // 남의 프로필도 '원래 마이페이지'와 같은 크롬으로 본다 — 커스텀 헤더 교체(뒤로/⋯공유)는
     // 앱 전체 문법과 어긋나 '이상한 페이지'처럼 보여서 폐기. 데이터 분기(비공개 숨김)만 유지.
+    // SPA에선 내 탭(mp-self) 위에 남의 프로필 스택(mp-other)이 겹쳐 mount될 수 있어 갈아끼운다
+    document.body.classList.remove("mp-self", "mp-other");
     document.body.classList.add(isMyPage ? "mp-self" : "mp-other");
     if (window.initNotifications) window.initNotifications();
     if (!isMyPage) {
@@ -127,7 +131,12 @@ async function GALLA_mypageInit(root, spaParams) {
                 await supabase.from("follows")
                     .insert({ follower: userId, following: viewUserId });
             }
-            location.reload();
+            // SPA(app.html): location.reload()는 앱 전체를 재부팅하고 해시(#/mypage?user=)가
+            // 탭으로 해석돼 '내 프로필'로 떨어진다 — 제자리 갱신. MPA는 기존 reload 유지.
+            if (document.body.dataset.page === "spa") {
+                isFollowing = !isFollowing;
+                followBtn.textContent = isFollowing ? "언팔로우" : "팔로우";
+            } else location.reload();
         };
 
         messageBtn.onclick = () => {
@@ -1231,7 +1240,11 @@ async function GALLA_mypageInit(root, spaParams) {
                     <div class="user-row-level">Lv. ${u.level || 1}</div>
                 </div>
             `;
-            row.onclick = () => location.href = `mypage.html?user=${u.id}`;
+            row.onclick = () => {
+                // SPA: 문서 이탈 없이 스택 push(이탈 시 nav.js 셸 복귀가 ?user를 버림). MPA 기존 유지.
+                if (document.body.dataset.page === "spa" && window.GALLA_gotoProfile) { window.GALLA_gotoProfile(u.id); return; }
+                location.href = `mypage.html?user=${u.id}`;
+            };
             tabContent.appendChild(row);
         });
     };
@@ -1303,8 +1316,13 @@ async function GALLA_mypageInit(root, spaParams) {
 (function () {
     const page = {
         _root: null,
-        mount(root, params) { page._root = root || document; return GALLA_mypageInit(page._root, params); },
-        unmount() {},
+        _roots: [],   // SPA 중첩(내 탭 위에 남의 프로필 스택) — 위 판 unmount 시 아래 판 root 복원
+        mount(root, params) {
+            if (page._root) page._roots.push(page._root);
+            page._root = root || document;
+            return GALLA_mypageInit(page._root, params);
+        },
+        unmount() { page._root = page._roots.pop() || page._root; },
         activate() {},
         deactivate() {},
         scrolltop() {

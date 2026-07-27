@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072709";
-import { loadAiNews } from "./issue-news.js?v=072709";
-import { loadStats } from "./issue.stats.js?v=072709";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072709";
+import { loadAiArguments } from "./issue-argument.js?v=072710";
+import { loadAiNews } from "./issue-news.js?v=072710";
+import { loadStats } from "./issue.stats.js?v=072710";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072710";
 
 
 console.log("[issue.js] loaded");
@@ -72,6 +72,12 @@ async function waitForSessionReady(timeout = 2500) {
    0. Utils
 ========================================================================== */
 function qs(id) {
+  // SPA(단일문서): 홈 탭(keep-alive)·다른 스택 뷰가 같은 문서에 공존하므로
+  // 이 뷰(PAGE_ROOT) 안에서 먼저 찾는다. MPA는 PAGE_ROOT === document라 기존과 동일.
+  if (PAGE_ROOT !== document && PAGE_ROOT && PAGE_ROOT.querySelector) {
+    const el = PAGE_ROOT.querySelector("#" + id);
+    if (el) return el;
+  }
   return document.getElementById(id);
 }
 
@@ -207,7 +213,7 @@ if (window.GALLA_initDonations) window.GALLA_initDonations(issue);
   AI NEWS (뉴스) — ⚡ 하단이라 뷰포트 접근 시 로드
 =============================== */
 if (typeof loadAiNews === "function") {
-  whenNear(document.querySelector(".ai-news"), () => loadAiNews(issue));
+  whenNear(PAGE_ROOT.querySelector(".ai-news"), () => loadAiNews(issue));
 }
 /* 🔥 통계 — ⚡ 최하단이라 스크롤 접근 시 로드(스켈레톤→집계) */
   whenNear(document.getElementById("stats-section"), () => loadStats(issue.id));
@@ -464,7 +470,7 @@ window.issueOpenReels = function() {
 };
 
 function sizeIssueCarousel() {
-    const carousel = document.querySelector('.issue-carousel');
+    const carousel = PAGE_ROOT.querySelector('.issue-carousel');
     const slides = document.getElementById('issue-slides');
     if (!carousel || !slides) return;
     const w = carousel.clientWidth;
@@ -672,7 +678,10 @@ if (explainWrap) {
   if (issue.user_id && !issue.is_anonymous) authorEl.setAttribute("data-nick-uid", issue.user_id);
 
   // 작성자 프로필 사진 (없으면 기본 갈라 아이콘) + 클릭 시 마이페이지 이동
-  const avEl = document.querySelector(".media-author-head .mah-avatar");
+  // ⚠️ SPA에선 홈 탭 피드 카드도 .media-author-head/.mah-avatar를 쓴다 — document 전역으로
+  // 찾으면 keep-alive 홈 탭의 '첫 카드' 아바타를 집어 이슈 작성자 사진이 홈 카드에 덮어써지고
+  // 이슈 쪽은 기본 아이콘으로 남는 버그(+data-profile-uid도 엉뚱한 카드에 찍힘). 뷰 스코프 필수.
+  const avEl = PAGE_ROOT.querySelector(".media-author-head .mah-avatar");
   if (avEl && window.GALLA_avatarImg) {
     avEl.classList.remove("generic");
     avEl.innerHTML = window.GALLA_avatarImg(issue.author_avatar);
@@ -1016,14 +1025,14 @@ function initSupportModal() {
   });
 
   // 보탬 레벨 선택
-  document.querySelectorAll(".support-level").forEach(level => {
+  PAGE_ROOT.querySelectorAll(".support-level").forEach(level => {
     level.addEventListener("click", () => {
-      document.querySelectorAll(".support-level.active")
+      PAGE_ROOT.querySelectorAll(".support-level.active")
         .forEach(el => el.classList.remove("active"));
 
       level.classList.add("active");
 
-      const confirmBtn = document.querySelector(".support-confirm");
+      const confirmBtn = PAGE_ROOT.querySelector(".support-confirm");
       if (confirmBtn) confirmBtn.disabled = false;
     });
   });

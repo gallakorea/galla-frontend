@@ -445,6 +445,8 @@
       if (window.GALLA_openUserSheet) {
         const nick = el.getAttribute("data-user-nick") || (el.textContent || "").trim().slice(0, 20);
         window.GALLA_openUserSheet(uid, nick, el);
+      } else if (window.GALLA_gotoProfile) {
+        window.GALLA_gotoProfile(uid);   // SPA면 스택 push, MPA면 mypage.html?user= 이동
       } else {
         location.href = "mypage.html?user=" + encodeURIComponent(uid);
       }
@@ -628,4 +630,17 @@ window.GALLA_gotoLogin = function (next) {
     }
   } catch (_) {}
   location.href = "login.html" + (next ? "?next=" + encodeURIComponent(next) : "");
+};
+/* 👤 프로필 이동 공용 헬퍼 — SPA(app.html)에선 문서 이탈 없이 남의 프로필을 스택 push
+   (mypage.html?user=로 이탈하면 nav.js의 앱/PWA 셸 복귀가 ?user를 버리고 내 마이페이지로
+   보내는 문제가 있었음). MPA에선 기존처럼 mypage.html?user=로 이동(웹 문법 보존). */
+window.GALLA_gotoProfile = function (uid) {
+  if (!uid) return;
+  try {
+    if (document.body && document.body.dataset.page === "spa" && window.GALLA_SPA) {
+      window.GALLA_SPA.push("mypage", { user: String(uid) });
+      return;
+    }
+  } catch (_) {}
+  location.href = "mypage.html?user=" + encodeURIComponent(uid);
 };

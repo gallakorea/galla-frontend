@@ -814,7 +814,10 @@ function wireSlideControls(section, item) {
   }));
   section.querySelectorAll("[data-profile-uid]").forEach(p => onTap(p, () => {
     const uid = p.getAttribute("data-profile-uid");
-    if (uid) location.href = "mypage.html?user=" + encodeURIComponent(uid);
+    if (!uid) return;
+    // SPA(app.html): 릴스 닫고 스택 push(문서 이탈 시 nav.js 셸 복귀가 ?user를 버림)
+    if (document.body.dataset.page === "spa" && window.GALLA_gotoProfile) { try { closeShorts(); } catch (_) {} window.GALLA_gotoProfile(uid); return; }
+    location.href = "mypage.html?user=" + encodeURIComponent(uid);
   }));
 }
 

@@ -111,6 +111,8 @@
     window.GALLA_bindFollow?.(body);   // 팔로우 상태 페인트·토글·내 계정 숨김 위임
     body.querySelectorAll(".ps-row").forEach(r => r.addEventListener("click", (e) => {
       if (e.target.closest(".js-follow")) return;
+      // SPA(app.html): 문서 이탈 없이 스택 push(이탈 시 nav.js 셸 복귀가 ?user를 버림) — 시트는 닫는다
+      if (document.body.dataset.page === "spa" && window.GALLA_gotoProfile) { close(); window.GALLA_gotoProfile(r.dataset.uid); return; }
       location.href = "mypage.html?user=" + r.dataset.uid;
     }));
   }

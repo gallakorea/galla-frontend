@@ -45,10 +45,15 @@
       e.stopPropagation();
       const uid = pop.dataset.uid, nick = pop.dataset.nick || "";
       close();
-      if (act === "profile") location.href = `mypage.html?user=${uid}`;
-      else if (act === "dm") {
+      if (act === "profile") {
+        // SPA: 문서 이탈 금지 — 프로필은 스택 push(본인 포함 — MPA도 항상 ?user=였음)
+        // (mypage.html?user=로 이탈하면 nav.js 앱/PWA 셸 복귀가 ?user를 버려 '내 프로필'이 뜨던 버그)
+        if (window.GALLA_gotoProfile) window.GALLA_gotoProfile(uid);
+        else location.href = `mypage.html?user=${uid}`;
+      } else if (act === "dm") {
         if (window.startDM) window.startDM(uid, nick);
-        else location.href = `mypage.html?user=${uid}`; // dm 미로드 페이지 폴백
+        else if (window.GALLA_gotoProfile) window.GALLA_gotoProfile(uid); // dm 미로드 페이지 폴백
+        else location.href = `mypage.html?user=${uid}`;
       }
     });
     return pop;

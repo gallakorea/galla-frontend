@@ -30,6 +30,38 @@
   let cur = 0;                       // 현재 탭 인덱스
   const stack = [];                  // push된 상세 뷰 [{el, name, mod}]
 
+  /* ═══ 🔇 전역 오디오 거버너 — 활성 표면(현재 탭 또는 최상단 스택) 밖의 미디어는 절대 재생 금지.
+     keep-alive 판이라 화면 밖 홈 영상이 살아있고, 무언가 video.play()를 부르면 소리가 새던 것(사장님
+     재현: "페이지 이동 중/기능 누르면 소리 재생")을 HTMLMediaElement.play 훅으로 원천 차단한다. ═══ */
+  function activeSurface() {
+    if (stack.length) return stack[stack.length - 1].el;   // 스택이 덮여 있으면 그게 유일 활성
+    return panes[TABS[cur]] || null;
+  }
+  function pauseOutside() {
+    const surf = activeSurface();
+    document.querySelectorAll("#tab-track video, #tab-track audio, #stack-root video, #stack-root audio").forEach(m => {
+      if (!surf || !surf.contains(m)) { try { m.pause(); } catch (_) {} }
+    });
+  }
+  (function hookPlay() {
+    const proto = window.HTMLMediaElement && HTMLMediaElement.prototype;
+    if (!proto || proto.__gallaPlayHooked) return;
+    proto.__gallaPlayHooked = true;
+    const orig = proto.play;
+    proto.play = function () {
+      try {
+        const surf = activeSurface();
+        // 셸 밖(통화 UI 등 #tab-track/#stack-root 외부)은 간섭 안 함. 표면 안이면 허용, 밖이면 차단.
+        const inShell = this.closest && (this.closest("#tab-track") || this.closest("#stack-root"));
+        if (inShell && surf && !surf.contains(this)) {
+          try { this.pause(); } catch (_) {}
+          return Promise.reject(new DOMException("blocked by GALLA audio governor", "AbortError"));
+        }
+      } catch (_) {}
+      return orig.apply(this, arguments);
+    };
+  })();
+
   function isLoggedIn() {
     try { return !!localStorage.getItem("sb-bidqauputnhkqepvdzrr-auth-token"); } catch (_) { return true; }
   }
@@ -105,9 +137,8 @@
     if (prev !== cur) {
       const pm = panes[TABS[prev]] && panes[TABS[prev]]._mod;
       if (pm && pm.deactivate) { try { pm.deactivate(); } catch (_) {} }
-      // 🔇 이전 판의 모든 미디어 강제 정지 — 홈 영상 소리가 다른 탭까지 따라오던 것(모듈 훅과 별개의 안전망)
-      try { panes[TABS[prev]] && panes[TABS[prev]].querySelectorAll("video, audio").forEach(m => { try { m.pause(); } catch (_) {} }); } catch (_) {}
     }
+    pauseOutside();   // 🔇 활성 표면 밖 미디어 전부 정지(거버너)
     const cm = panes[tab] && panes[tab]._mod;
     if (cm && cm.activate) { try { cm.activate(); } catch (_) {} }
     if (prev !== cur && window.GALLA_SPA_chromeReset) window.GALLA_SPA_chromeReset();   // 축소 상태 잔류 방지
@@ -130,18 +161,14 @@
     stackRoot.classList.add("on");
     requestAnimationFrame(() => layer.classList.add("in"));   // 우→좌 슬라이드 인
     armStackSwipe(layer);                                     // 엣지 드래그 백(인스타식)
-    // 🔇 상세가 덮으면 '가려지는 쪽' 미디어 정지(홈 영상 소리가 상세까지 따라오던 것)
+    // 🔇 상세가 덮으면 가려지는 탭 모듈 비활성 + 표면 밖 미디어 전부 정지
     if (!stack.length) {
       const cp = panes[TABS[cur]];
-      if (cp) {
-        if (cp._mod && cp._mod.deactivate) { try { cp._mod.deactivate(); } catch (_) {} }
-        try { cp.querySelectorAll("video, audio").forEach(m => { try { m.pause(); } catch (_) {} }); } catch (_) {}
-      }
-    } else {
-      try { stack[stack.length - 1].el.querySelectorAll("video, audio").forEach(m => { try { m.pause(); } catch (_) {} }); } catch (_) {}
+      if (cp && cp._mod && cp._mod.deactivate) { try { cp._mod.deactivate(); } catch (_) {} }
     }
     const entry = { el: layer, name, mod: null };
     stack.push(entry);
+    pauseOutside();
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
     try {
       const v = await L.fetchView(url.indexOf("?") === -1 ? url + "?spa=1" : url + "&spa=1");
@@ -165,6 +192,7 @@
     const entry = stack.pop();
     if (!entry) return false;
     if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
+    pauseOutside();   // 🔇 pop된 상세의 미디어 정지(표면이 아래 탭/스택으로 바뀜)
     if (opts.instant) {
       // 브라우저 뒤로가기 제스처(popstate)발 — Safari가 이미 스냅샷 슬라이드를 보여준 뒤라
       // 우리 애니를 또 돌리면 '두 번 미끄러지거나 튀는' 느낌. 즉시 제거.
