@@ -96,17 +96,30 @@ async function initTrendPage() {
   (function pinSearchOnFocus() {
     if (!GALLA_TREND_SPA) return;               // MPA(웹)는 문서 스크롤이라 iOS 기본동작으로 충분
     const bar = form;                            // .search-bar (검색 입력 폼)
+    // 입력창 기준 실제 스크롤 컨테이너를 동적으로 찾는다(HOST 변수 대신 — 더 견고).
+    function scroller() {
+      for (let n = input && input.parentElement; n && n !== document.body; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 4) return n;
+      }
+      return HOST || null;
+    }
     function pin() {
-      const host = HOST; if (!host || !bar) return;
-      const hdr = host.querySelector(".header");
+      const host = scroller(); if (!host || !bar) return;
+      const hdr = host.querySelector(".header, .header-common");
       const headerH = hdr ? hdr.getBoundingClientRect().height : 0;
       const hostTop = host.getBoundingClientRect().top;
-      const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래
-      const delta = Math.round(bar.getBoundingClientRect().top - want);
-      if (Math.abs(delta) > 2) host.scrollTop += delta;
+      const want = hostTop + headerH + 6;        // 목표: 검색바가 헤더 바로 아래 고정
+      const d = Math.round(bar.getBoundingClientRect().top - want);
+      if (Math.abs(d) > 1) host.scrollTop += d;  // 위로 사라져도(d<0) 아래로 밀려도(d>0) 항상 want로
     }
     input.addEventListener("focus", () => {
-      [60, 180, 320, 520, 780].forEach((t) => setTimeout(pin, t));
+      // 키보드 애니메이션(~1.4s) 동안 매 프레임 강제 고정 — iOS가 되밀어도 이긴다.
+      let pinning = true;
+      const stop = () => { pinning = false; };
+      (function loop() { if (!pinning) return; pin(); requestAnimationFrame(loop); })();
+      setTimeout(stop, 1400);
+      input.addEventListener("blur", stop, { once: true });
       const vv = window.visualViewport;
       if (!vv) return;
       const on = () => pin();
