@@ -1699,7 +1699,7 @@
     ROOT.querySelector('#dm-prof-voice').onclick = () => callFrom(peer, p.nickname || name, false);
     ROOT.querySelector('#dm-prof-video').onclick = () => callFrom(peer, p.nickname || name, true);
     ROOT.querySelector('#dm-prof-pager').onclick = () => pagerLeave(peer, p.nickname || name);
-    ROOT.querySelector('#dm-prof-home').onclick = () => { location.href = 'mypage.html?user=' + encodeURIComponent(peer); };
+    ROOT.querySelector('#dm-prof-home').onclick = () => { if (window.GALLA_gotoProfile) window.GALLA_gotoProfile(peer); else location.href = 'mypage.html?user=' + encodeURIComponent(peer); };
     // 나와의 채팅: 자기 자신에게 통화·삐삐는 무의미 → 숨김, 관계칩은 '나'
     const isSelf = (peer === ME);
     ['#dm-prof-voice', '#dm-prof-video', '#dm-prof-pager'].forEach(sel => {

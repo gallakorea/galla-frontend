@@ -275,7 +275,9 @@
 
   function applyRoute(fromPop) {
     const { path, params } = parseHash();
-    if (TABS.indexOf(path) !== -1) {
+    // mypage?user=… 는 '남의 프로필' — 탭(내 마이)이 아니라 스택 뷰로(params 보존).
+    const asStack = (path === "mypage" && params.user);
+    if (TABS.indexOf(path) !== -1 && !asStack) {
       // 탭 라우트 — 스택이 쌓여 있으면(뒤로가기로 탭에 옴) 다 걷는다.
       // popstate발이면 맨 위 한 장만 슬라이드(이중 애니 방지: 브라우저 제스처면 이미 미끄러졌음),
       // 나머지는 즉시 제거.
@@ -377,7 +379,9 @@
     const name = m[1];
     const params = {};
     if (m[2]) new URLSearchParams(m[2]).forEach((v, k) => params[k] = v);
-    if (TABS.indexOf(name) !== -1) activateTab(TABS.indexOf(name));
+    // mypage?user=… 는 남의 프로필 → 스택 push(params 보존). 그 외 탭은 탭 전환.
+    if (name === "mypage" && params.user) push("mypage", params);
+    else if (TABS.indexOf(name) !== -1) activateTab(TABS.indexOf(name));
     else if (name === "search") activateTab(TABS.indexOf("trend"));
     else push(name, params);
   });
@@ -443,7 +447,7 @@
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {
-    go: (tab) => { const i = TABS.indexOf(tab); if (i !== -1) activateTab(i); },
+    go: (tab) => { const i = TABS.indexOf(tab); if (i === -1) return; while (stack.length) pop({ silent: true }); activateTab(i); },
     push, pop,
     navMini: (on) => { const n = document.querySelector(".nav"); if (n) n.classList.toggle("nav--mini", !!on); },
     navHide: (on) => { const n = document.querySelector(".nav"); if (n) n.style.display = on ? "none" : ""; },
