@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072763'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072764'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -39,7 +39,7 @@
     spkoff: I(18, '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
     rec: I(18, '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>'),
   };
-  let sb = null, ME = null, chanSig = null;
+  let sb = null, ME = null, chanSig = null, _myNick = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
@@ -118,6 +118,9 @@
   function listen(_sb, me) {
     sb = _sb; ME = me;
     if (chanSig || !sb || !ME) return;
+    // ⚡ 발신 지연 줄이기: TURN 자격증명 미리 데우고(첫 buildPC 즉시), 내 닉네임 캐시(오퍼 전 DB조회 제거).
+    try { iceConfig().catch(() => {}); } catch (_) {}
+    try { sb.from('users').select('nickname').eq('id', ME).single().then(r => { _myNick = (r && r.data && r.data.nickname) || _myNick; }, () => {}); } catch (_) {}
     // 🟢 통화 시그널링 = DB 트리거 → Realtime Broadcast 직송(카톡급). 로그인 시점부터 상시 구독이라
     //    조인 지연·콜드스타트 없음, 지연 수십 ms. offer/answer/ice/hangup 전부 이 경로 → 첫 통화도 즉시.
     chanSig = newSigChannel();
@@ -201,10 +204,25 @@
       startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
       paintUI('incoming');
       try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
+      try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화 suspend 해제(벨 무음 방지)
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
-      preconnectIncoming();   // 🚀 벨 중 ICE 미리 연결(마이크 음소거) → 받기 누르면 음소거만 풀어 즉시 소리
+      // 🎤 벨 중 '마이크만' 미리 준비(음소거) → 받기 시 getMedia 대기 0 = 전환 즉시.
+      //    PC·answer는 안 만든다(프리커넥트 레이스 없음). 권한 있을 때만(프롬프트로 벨 방해 X).
+      (async () => {
+        const cur = CUR;
+        try {
+          if ((await micPermState()) !== 'granted') return;
+          if (CUR !== cur || localStream) return;
+          const st = await getMedia(!!p.video);
+          if (CUR !== cur || localStream) { try { st.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
+          try { st.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}   // 음소거 대기
+          localStream = st;
+          wb('mic-prewarm ok');
+        } catch (_) {}
+      })();
+      preconnectIncoming();   // (비활성) 프리커넥트 자리 — 위 마이크 프리웜으로 대체
       // 잠금화면 CallKit에서 이미 '받기'를 눌렀다면(푸시가 offer보다 먼저 도착) 즉시 수락
       try { if (window.__gallaCallKitConsume && window.__gallaCallKitConsume()) accept('consume'); } catch (_) {}
       return;
@@ -461,12 +479,14 @@
                        //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
     paintUI('outgoing');
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
+    try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화의 suspend 해제(안 하면 링백 무음)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
     const offer = await pc.createOffer();
     offer.sdp = tuneOpus(offer.sdp);
     await pc.setLocalDescription(offer);
-    let myName = '갈라';
-    try { const { data } = await sb.from('users').select('nickname').eq('id', ME).single(); myName = data?.nickname || myName; } catch (_) {}
+    // 닉네임은 캐시 사용(오퍼 전 DB조회 블로킹 제거 → 전환 빠르게). 캐시 없으면 백그라운드로 채워 다음 통화에.
+    let myName = _myNick || '갈라';
+    if (!_myNick) { try { sb.from('users').select('nickname').eq('id', ME).single().then(r => { _myNick = (r && r.data && r.data.nickname) || _myNick; }, () => {}); } catch (_) {} }
     send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now() });
     // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
     try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
