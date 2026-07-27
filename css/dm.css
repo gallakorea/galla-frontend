@@ -26,12 +26,15 @@
 .dm-title{text-align:center;font-size:16px;font-weight:800;color:#fff;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* 갈라톡 워드마크 — "GALLA"는 실제 로고 이미지(굵은 oblique 브랜드체) 그대로,
-   "TALK"만 같은 굵기·기울기(italic+skew)로 맞춰 로고와 이질감 없게. */
-.dm-wordmark{display:inline-flex;align-items:center;gap:5px;line-height:1;}
-.dm-wm-g{height:18px;width:auto;display:block;}
-.dm-wm-t{font-weight:900;font-style:italic;font-size:19px;letter-spacing:.3px;color:#fff;
+   "TALK"만 같은 굵기·기울기(italic+skew)로 맞춰 로고와 이질감 없게.
+   ⚠️ GALLA 부분을 다른 페이지 헤더 로고(.logo=height~26px)와 같은 크기로 키워 통일(사장님 요청). */
+.dm-wordmark{display:inline-flex;align-items:center;gap:6px;line-height:1;}
+.dm-wm-g{height:26px;width:auto;display:block;}
+.dm-wm-t{font-weight:900;font-style:italic;font-size:24px;letter-spacing:.3px;color:#fff;
   transform:skewX(-6deg);transform-origin:left center;display:inline-block;
   font-family:'Helvetica Neue',Arial,sans-serif;}
+/* 브랜드 헤더 높이를 공용 헤더(.header-inner 64px)와 맞춰 로고 세로 위치까지 통일 */
+.dm-head-brand{height:64px;}
 .dm-x,.dm-compose,.dm-back{width:40px;height:40px;background:none;border:none;color:#fff;
   font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .dm-back{font-size:30px;}
