@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>GALLA 갈라</title>
+  <meta name="robots" content="noindex"><!-- SPA 셸은 검색 노출 금지 — 콘텐츠는 MPA 페이지들이 담당 -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <!-- 📞 콜드스타트 대비 — CallKit '받기'가 통화엔진 로드 전에 와도 유실 없게 아주 일찍 stash -->
+  <script>window.GALLA_callKitAnswer = function(id){ try{ window.__ckAnswer = { callerId: id||'', at: Date.now() }; }catch(e){} };</script>
+  <script>window.GALLA_V = "072698";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
+  <link rel="stylesheet" href="./css/theme.css?v=072698">
+  <link rel="stylesheet" href="./css/nav.css?v=072698">
+  <!-- 📞 통화 UI — 엔진이 이 문서(최상위)에서 돌므로 스타일도 여기 -->
+  <link rel="stylesheet" href="./css/dm.css?v=072698">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072698">
+  <style>
+    /* ═══ 🚀 갈라 SPA 셸 — 단일 문서. 탭 5개 keep-alive 판 + 상세 스택. iframe 없음 ═══ */
+    html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
+    #tab-track {
+      display: flex; height: 100dvh; width: 500dvw;
+      will-change: transform; transform: translateX(0);
+    }
+    #tab-track.anim { transition: transform .3s cubic-bezier(.22,.9,.3,1); }
+    .tab-pane { width: 100dvw; height: 100dvh; flex: 0 0 auto; position: relative; background: #0a0a0b; overflow: hidden; }
+    /* 각 판의 콘텐츠는 자체 세로 스크롤 — 문서 스크롤은 잠금 */
+    .tab-pane .view-host { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    /* 상세 스택 — 탭 위를 덮는 레이어. push=우→좌 슬라이드 인, pop=슬라이드 아웃 */
+    #stack-root { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+    #stack-root.on { pointer-events: auto; }
+    .stack-view {
+      position: absolute; inset: 0; background: #0a0a0b;
+      transform: translateX(100%); transition: transform .3s cubic-bezier(.22,.9,.3,1);
+    }
+    .stack-view.in { transform: translateX(0); }
+    .stack-view .view-host { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    /* 로딩/에러 */
+    .pane-wait { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+    .pane-wait i { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.14);
+      border-top-color: #6f86ff; animation: spspin .7s linear infinite; }
+    @keyframes spspin { to { transform: rotate(360deg); } }
+    .pane-err { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      color: #9aa0ae; text-align: center; font-size: 14px; line-height: 1.7; }
+    /* 네비(글라이더 캡슐) — 기존 셸 스타일 계승 */
+    .nav-inner { position: relative; }
+    .nav-inner .nav-item { position: relative; z-index: 1; }
+    .nav-inner .nav-item.active { background: none; }
+    #nav-glider { position: absolute; top: 50%; left: 0; width: 56px; height: 40px; margin-top: -20px;
+      border-radius: 20px; background: rgba(255, 255, 255, .12); z-index: 0;
+      transition: transform .34s cubic-bezier(.22, .9, .3, 1), opacity .2s ease;
+      opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body data-page="spa">
+
+<!-- 📞 네이티브 WebRTC(iosrtc) 로더 — iOS 네이티브 앱에서만(기존 셸과 동일) -->
+<script>
+(function(){
+  var C = window.Capacitor;
+  if (!(C && C.getPlatform && C.getPlatform() === 'ios' && C.isNativePlatform && C.isNativePlatform())) return;
+  window.__iosrtcReady = false;
+  function load(src){ return new Promise(function(res){ var s=document.createElement('script'); s.src=src; s.onload=function(){res(true)}; s.onerror=function(){res(false)}; document.head.appendChild(s); }); }
+  load('/native/cordova.js').then(function(){
+    try { if (window.cordova && cordova.require && !window.require) window.require = cordova.require; } catch(e){}
+    return load('/native/iosrtc.umd.js');
+  }).then(function(){
+    function reg(){
+      if (window.__iosrtcReady) return;
+      try {
+        var rtc = window.iosrtc || (window.cordova && cordova.plugins && cordova.plugins.iosrtc);
+        if (rtc && rtc.registerGlobals) { rtc.registerGlobals(); window.__iosrtcReady = true; window.__iosrtc = rtc; }
+      } catch(e){}
+    }
+    document.addEventListener('deviceready', function(){ setTimeout(reg, 100); }, { once:true });
+    setTimeout(reg, 2500); setTimeout(reg, 5000);
+  });
+})();
+</script>
+
+<!-- 탭 판(keep-alive) — 콘텐츠는 라우터가 각 페이지 #app에서 추출해 채운다 -->
+<div id="tab-track">
+  <div class="tab-pane" data-tab="index"></div>
+  <div class="tab-pane" data-tab="predict"></div>
+  <div class="tab-pane" data-tab="dm"></div>
+  <div class="tab-pane" data-tab="trend"></div>
+  <div class="tab-pane" data-tab="mypage"></div>
+</div>
+
+<!-- 상세 스택 — push된 뷰가 탭 위를 덮는다 -->
+<div id="stack-root"></div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-item" data-page="index"><img src="./assets/icons/nav-home.svg" data-base="./assets/icons/nav-home.svg" data-active="./assets/icons/nav-home-active.svg"></button>
+    <button class="nav-item" data-page="predict"><img src="./assets/icons/nav-predict.svg" data-base="./assets/icons/nav-predict.svg" data-active="./assets/icons/nav-predict-active.svg"></button>
+    <button class="nav-item nav-dm" data-page="dm" aria-label="메시지"><img src="./assets/icons/nav-dm.svg" data-base="./assets/icons/nav-dm.svg" data-active="./assets/icons/nav-dm-active.svg"><span class="nav-badge" id="navDmBadge" hidden></span></button>
+    <button class="nav-item" data-page="trend"><img src="./assets/icons/nav-trend.svg" data-base="./assets/icons/nav-trend.svg" data-active="./assets/icons/nav-trend-active.svg"></button>
+    <button class="nav-item" data-page="mypage"><img src="./assets/icons/nav-user.svg" data-base="./assets/icons/nav-user.svg" data-active="./assets/icons/nav-user-active.svg"></button>
+  </div>
+</nav>
+
+<!-- 공유 싱글턴 — 단일 문서라 세션·실시간·통화가 딱 1개 인스턴스로 돈다 -->
+<script src="./vendor/supabase.js?v=072698"></script>
+<script src="./js/supabase.js?v=072698"></script>
+<script src="./js/dm-sound.js?v=072698" data-galla-sfx="1"></script>
+<script src="./js/dm-call.js?v=072698"></script>
+
+<!-- SPA 코어 -->
+<script src="./js/spa/view-loader.js?v=072698"></script>
+<script src="./js/spa/router.js?v=072698"></script>
+
+<script>
+/* 📞 CallKit/VoIP — 단일 문서라 중계 없이 이 문서의 통화 엔진이 직접 받는다.
+   (기존 셸의 broadcastToPanes postMessage 전체가 불필요해짐) */
+</script>
+</body>
+</html>
