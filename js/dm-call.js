@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072695'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072696'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -483,13 +483,13 @@
   // 수신자 answer 생성 공용 — PC 구성 → offer 반영 → answer 전송(중복 재전송 포함).
   //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
   async function buildAnswer(cur, muted) {
-    // ★ offer와 대칭으로 트랙을 '먼저' 붙인다(addTrack before) — 그래야 answer에 msid가 실려 발신자
-    //   ontrack이 blobId 있는 스트림을 받고(s0blob=true) 네이티브가 수신자 영상을 그린다.
-    await buildPC(true);
+    // 트랙은 setRemoteDescription '후'에 붙인다(양방향 소리 확인된 방식). 발신자가 수신자 영상을 못 보던 건
+    //   s0blob과 무관하게 ontrack 이벤트의 실제 트랙 id로 네이티브 렌더를 잡아 해결한다(CUR._rvTrackId).
+    await buildPC(false);
     nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
     await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
-    // 트랜시버 방향을 sendrecv로 강제(간헐적으로 recvonly로 협상돼 발신자가 못 받던 것 확정 차단)
-    try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}
+    try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}   // 방향 sendrecv 강제
+    localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
     if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
     for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
     const ans = await pc.createAnswer();
