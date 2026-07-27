@@ -49,8 +49,8 @@ html {
    safe-area 높이만큼 앱 배경색 바를 최상단에 강제로 덮어 단차를 없앤다. env=0인 웹/일반폰은 무효. */
 body::before {
   content: ""; position: fixed; top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top, 0px);
-  background: #0a0a0b; z-index: 2147483646; pointer-events: none;
+  height: 120px; /* 🔴 진단: 빨강 바가 화면 최상단(0pt)에 뜨면 웹뷰가 노치를 덮는 것 */
+  background: red; z-index: 2147483646; pointer-events: none;
 }
 body {
   background: #0a0a0b !important;
