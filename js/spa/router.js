@@ -129,6 +129,7 @@
     stackRoot.appendChild(layer);
     stackRoot.classList.add("on");
     requestAnimationFrame(() => layer.classList.add("in"));   // 우→좌 슬라이드 인
+    armStackSwipe(layer);                                     // 엣지 드래그 백(인스타식)
     const entry = { el: layer, name, mod: null };
     stack.push(entry);
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
@@ -154,13 +155,69 @@
     const entry = stack.pop();
     if (!entry) return false;
     if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
-    entry.el.classList.remove("in");
-    setTimeout(() => {
+    if (opts.instant) {
+      // 브라우저 뒤로가기 제스처(popstate)발 — Safari가 이미 스냅샷 슬라이드를 보여준 뒤라
+      // 우리 애니를 또 돌리면 '두 번 미끄러지거나 튀는' 느낌. 즉시 제거.
       entry.el.remove();
       if (!stack.length) stackRoot.classList.remove("on");
-    }, 300);
+    } else {
+      entry.el.classList.remove("in");
+      entry.el.style.transform = "";   // 제스처 드래그 잔여 inline 제거 → 클래스 전환으로 슬라이드 아웃
+      setTimeout(() => {
+        entry.el.remove();
+        if (!stack.length) stackRoot.classList.remove("on");
+      }, 300);
+    }
     if (!opts.silent) { try { history.back(); return true; } catch (_) {} }
     return true;
+  }
+
+  /* ── 스택 엣지 스와이프 백 — 인스타식: 좌측 엣지에서 끌면 뷰가 손가락을 따라오고,
+     1/3 이상·빠른 플릭이면 닫힘, 아니면 스프링 복귀. (네이티브 웹뷰엔 브라우저 제스처가
+     없어 이게 유일한 제스처 백 — '바로 튀는 느낌'의 해결) */
+  function armStackSwipe(layer) {
+    let sx = 0, sy = 0, dx = 0, lock = null, lastX = 0, lastT = 0, vel = 0;
+    layer.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      if (t.clientX > 28) { lock = "no"; return; }   // 좌측 엣지에서만 시작
+      sx = lastX = t.clientX; sy = t.clientY; dx = 0; vel = 0; lock = null;
+      lastT = performance.now();
+    }, { passive: true });
+    layer.addEventListener("touchmove", (e) => {
+      if (lock === "no") return;
+      const t = e.touches[0];
+      const mx = t.clientX - sx, my = t.clientY - sy;
+      if (lock === null) {
+        if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+        lock = (mx > 0 && Math.abs(mx) > Math.abs(my) * 1.2) ? "h" : "no";
+        if (lock === "no") return;
+        layer.style.transition = "none";
+      }
+      dx = Math.max(0, mx);
+      const now = performance.now();
+      vel = (t.clientX - lastX) / Math.max(1, now - lastT);
+      lastX = t.clientX; lastT = now;
+      layer.style.transform = "translateX(" + dx + "px)";
+    }, { passive: true });
+    layer.addEventListener("touchend", () => {
+      if (lock !== "h") { lock = null; return; }
+      lock = null;
+      layer.style.transition = "";
+      const commit = dx > W() * 0.32 || vel > 0.45;
+      if (commit && stack.length && stack[stack.length - 1].el === layer) {
+        // 현 위치에서 이어서 화면 밖으로 — 손가락 흐름 그대로 자연스럽게
+        layer.style.transform = "translateX(100%)";
+        const entry = stack.pop();
+        if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
+        setTimeout(() => {
+          entry.el.remove();
+          if (!stack.length) stackRoot.classList.remove("on");
+        }, 300);
+        try { history.back(); } catch (_) {}
+      } else {
+        layer.style.transform = "";   // 스프링 복귀(클래스 .in의 0 위치로 전환)
+      }
+    }, { passive: true });
   }
 
   function qs(params) {
@@ -181,21 +238,37 @@
   function applyRoute(fromPop) {
     const { path, params } = parseHash();
     if (TABS.indexOf(path) !== -1) {
-      // 탭 라우트 — 스택이 쌓여 있으면(뒤로가기로 탭에 옴) 다 걷는다
-      while (stack.length) pop({ silent: true });
+      // 탭 라우트 — 스택이 쌓여 있으면(뒤로가기로 탭에 옴) 다 걷는다.
+      // popstate발이면 맨 위 한 장만 슬라이드(이중 애니 방지: 브라우저 제스처면 이미 미끄러졌음),
+      // 나머지는 즉시 제거.
+      if (fromPop && stack.length === 1 && !recentEdge()) pop({ silent: true });
+      else while (stack.length) pop({ silent: true, instant: fromPop ? recentEdge() : true });
       activateTab(TABS.indexOf(path), { anim: !fromPop });
     } else {
       // 스택 라우트 — popstate로 왔고 마지막 스택과 같으면 무시(이미 표시 중)
       const top = stack[stack.length - 1];
       if (top && top.name === path) return;
-      // 뒤로가기로 스택이 줄어드는 경우
+      // 뒤로가기로 스택이 줄어드는 경우 — 맨 위 한 장은 슬라이드, 그 아래는 즉시
       if (fromPop && stack.length && stack.some(s => s.name === path)) {
-        while (stack.length && stack[stack.length - 1].name !== path) pop({ silent: true });
+        let first = !recentEdge();   // 제스처발이면 첫 장도 instant(이미 미끄러졌음)
+        while (stack.length && stack[stack.length - 1].name !== path) {
+          pop({ silent: true, instant: !first });
+          first = false;
+        }
         return;
       }
       push(path, params, { silent: true });
     }
   }
+
+  // 브라우저/웹뷰의 '엣지 뒤로가기 제스처' 감지 — 좌측 엣지 터치 직후의 popstate는 이미
+  // 네이티브 스냅샷이 미끄러진 뒤라 우리 애니를 생략(instant). 버튼·JS back은 애니 유지.
+  let edgeTouchAt = 0;
+  document.addEventListener("touchstart", (e) => {
+    const t = e.touches && e.touches[0];
+    if (t && t.clientX < 30) edgeTouchAt = Date.now();
+  }, { capture: true, passive: true });
+  const recentEdge = () => Date.now() - edgeTouchAt < 900;
 
   window.addEventListener("popstate", () => applyRoute(true));
 

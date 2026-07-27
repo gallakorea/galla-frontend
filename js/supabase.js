@@ -618,3 +618,14 @@
     }
   })();
 })();
+/* 🔐 로그인 이동 공용 헬퍼 — SPA(app.html)에선 문서 이탈 없이 로그인 뷰를 push하고,
+   MPA/구셸에선 기존처럼 login.html로 이동한다. next: 돌아올 탭명/파일명(선택). */
+window.GALLA_gotoLogin = function (next) {
+  try {
+    if (document.body && document.body.dataset.page === "spa" && window.GALLA_SPA) {
+      window.GALLA_SPA.push("login", next ? { next: String(next) } : {});
+      return;
+    }
+  } catch (_) {}
+  location.href = "login.html" + (next ? "?next=" + encodeURIComponent(next) : "");
+};
