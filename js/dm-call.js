@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072684'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072685'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -495,9 +495,6 @@
   //    받기 누르면 음소거만 풀려 소리가 '즉시' 난다. 마이크 권한이 이미 허용된 경우에만(프롬프트로 링 방해 방지).
   async function preconnectIncoming() {
     const cur = CUR;
-    // 📹 영상통화는 프리커넥트 안 함 — 벨 중 muted 협상이 영상 m-line을 간헐적으로 깨(remote=0x0) 검은화면.
-    //    영상은 받을 때 표준 협상(accept)으로 붙인다. 프리커넥트는 음성통화 즉시성 전용.
-    if (cur && cur.video) return;
     // ⚠️ _accepting이면 시작하지 않는다 — accept가 전체 셋업을 담당(동시 getMedia/PC 생성 경합이
     //    answer 미전송(콜드 1차 무음)을 만들었다). _preRunning 잠금으로 accept가 완료를 기다린다.
     if (!cur || cur.dir !== 'in' || pc || cur._accepting) return;
