@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072691'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072692'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -983,7 +983,7 @@
       if (b) { b.classList.toggle('off', !t.enabled); b.innerHTML = c === 'mute' ? (t.enabled ? IC.mic : IC.micoff) : (t.enabled ? IC.cam : IC.camoff); }
     }
   }
-  window.GALLA_callAction = callAction;   // 네이티브 컨트롤 오버레이 버튼 → 이 함수로 브릿지
+  window.GALLA_callAction = c => { wb('nativeBtn ' + c); callAction(c); };   // 네이티브 오버레이 버튼 → 브릿지(출처 로그)
 
   window.GALLA_call = {
     listen, start,
