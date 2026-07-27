@@ -22,9 +22,11 @@
   //    처리하므로 WebAudio를 재울 필요가 없다. suspend는 no-op, resume은 항상 살려둔다(안전장치).
   function suspendForCall() { _callHold = false; }
   function resumeAfterCall() { _callHold = false; try { ctx && ctx.state === 'suspended' && ctx.resume(); } catch (_) {} }
+  // ⚠️ once:false — 매 제스처마다 resume 시도. iOS는 백그라운드/이전 suspend로 잠든 컨텍스트를
+  //    사용자 제스처 안에서만 깨울 수 있어(once:true면 앱 최초 1회만 → 이후 잠들면 링백/벨 영영 무음).
   const unlock = () => { try { ac(); } catch (_) {} };
   ['pointerdown', 'touchstart', 'keydown'].forEach(e =>
-    window.addEventListener(e, unlock, { once: true, passive: true, capture: true }));
+    window.addEventListener(e, unlock, { passive: true, capture: true }));
 
   /* 한 목소리: (디튠 2겹) 오실 → 로우패스 → 게인. 따뜻하고 두툼한 프리미엄 톤 */
   function voice(freq, t0, dur, opt) {
