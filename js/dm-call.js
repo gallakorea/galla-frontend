@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072688'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072689'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -502,6 +502,15 @@
     const ans = await pc.createAnswer();
     ans.sdp = tuneOpus(ans.sdp);
     await pc.setLocalDescription(ans);
+    // 🔬 answer의 각 m-line 방향 확인 — sendrecv여야 발신자가 수신자 미디어를 받는다
+    try {
+      const dirs = (ans.sdp.match(/m=(audio|video)[\s\S]*?(?=m=|$)/g) || []).map(b => {
+        const k = b.match(/m=(\w+)/)[1];
+        const d = (b.match(/a=(sendrecv|sendonly|recvonly|inactive)/) || [])[1] || '?';
+        return k[0] + ':' + d;
+      }).join(' ');
+      wb('ANSDIR ' + dirs);
+    } catch (_) {}
     cur._lastAnswer = ans.sdp;   // 발신자가 offer를 재전송하면 이 answer를 되돌려준다
     send({ t: 'answer', sdp: ans.sdp });
     // 📡 answer 중복 전송 — 시그널 유실 시 발신자 '거는중' 고착 방지(발신자는 _gotAnswer로 중복 무시)
