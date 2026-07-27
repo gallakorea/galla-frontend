@@ -141,6 +141,10 @@ body[data-page="mypage"] #app {
   transform: translate(-50%, -50%);
   margin: 0;
 }
+/* 로고를 <a class="logo-link">로 감싼 페이지(트렌드 등)는 인라인 baseline 때문에
+   로고가 인덱스(직접 <img>)보다 살짝 내려가 보였다 — line-height 제거로 픽셀 일치. */
+.header-inner.header-3 > .logo-link { display: block; line-height: 0; font-size: 0; }
+.header-inner.header-3 > .logo-link > .logo { display: block; }
 .header-inner.header-3 > :first-child { grid-column: 1; grid-row: 1; justify-self: start; }
 .header-inner.header-3 > :last-child  { grid-column: 3; grid-row: 1; justify-self: end; }
 .hdr-btn {

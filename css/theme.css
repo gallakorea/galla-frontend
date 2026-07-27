@@ -36,10 +36,14 @@
   --r-lg: 18px;
 }
 
-/* ===== 순흑 배경 통일 (아이폰 status bar/safe-area와 일치) ===== */
-html { background: #000 !important; }
+/* ===== 배경 통일 (헤더 위 노치/safe-area와 본문 색 단차 제거) =====
+   html(노치·상태바 영역)을 body와 '동일한 fixed 그라디언트'로 칠해 픽셀 단위로 일치시킨다.
+   순검정(#000)이면 그라디언트 본문과 색 단차가 나 헤더 위가 시커멓게 떠 보였다(사장님 지적). */
+html {
+  background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) fixed #0a0a0b !important;
+}
 body {
-  background: #000 !important;
+  background: radial-gradient(120% 80% at 50% -10%, #14141a 0%, #0a0a0b 55%) fixed #0a0a0b !important;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }

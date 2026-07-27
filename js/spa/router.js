@@ -423,6 +423,23 @@
       lifted.style.transition = "transform .18s ease";
     }
     function reset() { document.body.classList.remove("kb-up"); if (lifted) { lifted.style.transform = ""; lifted = null; } }
+    // 상단 앵커 입력창(트렌드 검색 등)은 키보드가 뜨면 iOS가 내부 스크롤을 어긋나게 밀어
+    // 입력창이 화면 위로 사라진다 → 포함 스크롤 컨테이너를 직접 굴려 확실히 보이게 한다.
+    function scrollerOf(el) {
+      for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if (/(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 4) return n;
+      }
+      return null;
+    }
+    function ensureVisible(t) {
+      const sc = scrollerOf(t); if (!sc) return;
+      const r = t.getBoundingClientRect();
+      const visTop = 84 + (parseFloat(getComputedStyle(document.body).paddingTop) || 0); // 헤더+탭바 여유
+      const visBottom = (window.innerHeight - kbH()) - 12;
+      if (r.top < visTop) sc.scrollTop -= (visTop - r.top) + 8;
+      else if (r.bottom > visBottom) sc.scrollTop += (r.bottom - visBottom) + 8;
+    }
     // 회전 등으로 커진 높이는 기준 갱신(키보드로 줄어든 값은 기준에서 제외)
     window.addEventListener("resize", () => { if (window.innerHeight > baseH) baseH = window.innerHeight; setTimeout(apply, 0); });
     // 입력 포커스 = 키보드 올라옴 → kb-up(네비 숨김). IME resize/pan 모드와 무관하게 확실.
@@ -435,6 +452,7 @@
       if (t.id === "battle-comment-input" || t.id === "ic-input" || t.closest(".dm-panel")) return;
       const bar = fixedBar(t);
       if (bar) { lifted = bar; setTimeout(apply, 80); setTimeout(apply, 320); }
+      else { setTimeout(() => ensureVisible(t), 340); setTimeout(() => ensureVisible(t), 560); }
     });
     document.addEventListener("focusout", () => setTimeout(() => {
       // 다른 입력으로 옮겨간 게 아니면 키보드 내려감

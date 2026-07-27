@@ -158,9 +158,11 @@
       <div class="dm-dim"></div>
       <div class="dm-panel" role="dialog" aria-label="메시지">
         <div class="dm-view" data-view="inbox">
-          <div class="dm-head has-btns">
-            <button class="dm-x" data-act="close" aria-label="닫기">${ICONS.x}</button>
-            <span class="dm-title">메시지</span>
+          <div class="dm-head has-btns dm-head-brand">
+            ${PAGE_MODE()
+              ? `<button class="dm-x" data-write-hub="galla" aria-label="글쓰기">${ICONS.plus}</button>`
+              : `<button class="dm-x" data-act="close" aria-label="닫기">${ICONS.x}</button>`}
+            <span class="dm-title"><span class="dm-wordmark">GALLA<i>TALK</i></span></span>
             <span class="dm-head-btns">
               <button class="dm-gear" data-act="settings" aria-label="메시지 설정">${ICONS.sliders}</button>
               <button class="dm-compose" data-act="compose" aria-label="새 메시지">${ICONS.edit}</button>

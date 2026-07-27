@@ -25,6 +25,12 @@
   padding-top:env(safe-area-inset-top);box-sizing:content-box;}
 .dm-title{text-align:center;font-size:16px;font-weight:800;color:#fff;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* 갈라톡 워드마크 로고 — "메시지" 텍스트 대신 브랜드 로고체 (GALLA + TALK 액센트) */
+.dm-wordmark{font-weight:900;font-size:18px;letter-spacing:.5px;color:#fff;
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;}
+.dm-wordmark i{font-style:normal;font-weight:900;color:#4361ff;margin-left:4px;
+  background:linear-gradient(90deg,#5b7bff,#8a6cff);-webkit-background-clip:text;
+  background-clip:text;-webkit-text-fill-color:transparent;}
 .dm-x,.dm-compose,.dm-back{width:40px;height:40px;background:none;border:none;color:#fff;
   font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .dm-back{font-size:30px;}
@@ -223,6 +229,10 @@
 
 /* ═══════ DM 관리(카톡 차용): 설정·정렬·토글 ═══════ */
 .dm-head.has-btns { grid-template-columns: 40px 1fr 84px; }
+/* 갈라톡 워드마크 헤더: 좌(+)·우(설정+새메시지) 폭이 달라 로고가 왼쪽으로 쏠렸다 →
+   좌우 칸을 84px로 대칭 고정해 GALLA TALK 로고를 화면 정중앙에(다른 페이지 로고와 동일). */
+.dm-head-brand.has-btns { grid-template-columns: 84px 1fr 84px; }
+.dm-head-brand .dm-x { justify-self: start; }
 .dm-head-btns { display: flex; justify-content: flex-end; }
 /* 대화방 헤드: 육성톡·면상톡·설정 3개 아이콘이 40px 칸에 욱여넣어져 빽빽하던 것 —
    우측 칸을 아이콘 수에 맞춰 auto로 넓히고 살짝 간격을 준다(제목 중앙정렬은 유지). */
