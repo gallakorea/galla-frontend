@@ -437,6 +437,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const end = () => { if (lock === 1) post({ t: "end", dx: lastX - sx0, vel: v }); lock = 0; };
       document.addEventListener("touchend", end, { passive: true });
       document.addEventListener("touchcancel", () => { if (lock === 1) post({ t: "cancel" }); lock = 0; }, { passive: true });
+
+      /* 🛡️ 가로 스크롤 칩 행(카테고리 등)은 자기 위 제스처를 셸로 절대 안 넘긴다.
+         위 document 게이트(inHScroll/closest)가 e.target 해석 문제로 놓치는 경우까지 확실히 —
+         행 요소 '자체'에 touchstart/move를 걸어 stopPropagation → nav.js document 리스너 미도달 →
+         drag 미전송 → 페이지 전환 없음. 네이티브 가로 스크롤은 그대로 동작. */
+      const HROW_SEL = ".chip-scroll, .news-category-chips, .hv-cats, .cat-chips, .plaza-categories, .hv-mode";
+      const stopProp = (ev) => { ev.stopPropagation(); };
+      const guardRow = (row) => {
+        if (row.__hrowGuard) return; row.__hrowGuard = 1;
+        row.addEventListener("touchstart", stopProp, { passive: true });
+        row.addEventListener("touchmove", stopProp, { passive: true });
+      };
+      const guardRows = () => { try { document.querySelectorAll(HROW_SEL).forEach(guardRow); } catch (_) {} };
+      guardRows();
+      try { new MutationObserver(guardRows).observe(document.body, { childList: true, subtree: true }); } catch (_) {}
       return; // 자체 스와이프 엔진·미리보기 비활성
     }
 
