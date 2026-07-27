@@ -93,48 +93,8 @@ async function initTrendPage() {
   /* ⌨️ 검색바는 원래 디자인 그대로(제자리, 판 안). 키보드가 덮는 문제는 네이티브(Capacitor Keyboard
      resize=native)가 iOS 키보드 시 웹뷰를 '스크롤' 대신 '리사이즈'하게 해서 잡는다 — 웹은 무보정.
      (앱 재빌드 필요. galla-app: @capacitor/keyboard + KeyboardResize.Native) */
-  /* 🔎 영역 검색(뉴스·핫튜브) — 각 패널 상단 입력이 대상 리스트의 항목을 텍스트로 실시간 필터.
-     리스트가 카테고리/모드 변경으로 재렌더되면 MutationObserver가 현재 필터를 다시 적용. */
-  (function bindAreaSearch() {
-    document.querySelectorAll(".area-search").forEach((form) => {
-      if (form.dataset.bound) return; form.dataset.bound = "1";
-      const input = form.querySelector("input");
-      const clear = form.querySelector(".area-search-clear");
-      const listId = form.getAttribute("data-target");
-      const list = document.getElementById(listId);
-      if (!input || !list) return;
-      let q = "";
-      const apply = () => {
-        const items = list.children;
-        let shown = 0;
-        for (let i = 0; i < items.length; i++) {
-          const el = items[i];
-          if (el.classList && el.classList.contains("area-empty")) { el.remove(); continue; }
-          const hit = !q || (el.textContent || "").toLowerCase().indexOf(q) !== -1;
-          el.style.display = hit ? "" : "none";
-          if (hit) shown++;
-        }
-        let empty = list.querySelector(".area-empty");
-        if (q && shown === 0) {
-          if (!empty) { empty = document.createElement("div"); empty.className = "area-empty"; list.appendChild(empty); }
-          empty.textContent = `'${input.value.trim()}' 검색 결과가 없어요.`;
-        } else if (empty) empty.remove();
-      };
-      form.addEventListener("submit", (e) => e.preventDefault());
-      /* 폼 아무 곳(패딩·아이콘)을 눌러도 input에 포커스 — 실기기에서 얇은 입력줄을
-         정확히 못 맞춰 '눌러도 키보드가 안 뜨던' 문제 해결. */
-      form.addEventListener("pointerup", (e) => {
-        if (e.target !== input && e.target !== clear) { input.focus(); }
-      });
-      input.addEventListener("input", () => {
-        q = input.value.trim().toLowerCase();
-        if (clear) clear.hidden = !input.value;
-        apply();
-      });
-      clear?.addEventListener("click", () => { input.value = ""; q = ""; clear.hidden = true; apply(); input.focus(); });
-      new MutationObserver(() => { if (q) apply(); }).observe(list, { childList: true });
-    });
-  })();
+  /* 🔎 영역 검색(뉴스·핫튜브)은 제거됨 — 실기기에서 리스트 자동갱신이 입력 포커스를 뺏어
+     타이핑 유실·화면 튐이 발생(사장님 신고). 광장 검색·정렬은 별도(plaza.js)로 유지. */
 
   const recentEl = document.getElementById("se-recent");
   const popularEl = document.getElementById("se-popular");
