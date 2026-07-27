@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072761'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072762'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -46,6 +46,10 @@
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // 프라미스 타임아웃 — getUserMedia 등 iosrtc 호출이 간헐적으로 영영 멈추는 것을 깨기 위해.
+  function withTimeout(p, ms, label) {
+    return Promise.race([Promise.resolve(p), new Promise((_, rej) => setTimeout(() => { const e = new Error(label || 'timeout'); e.name = 'Timeout'; rej(e); }, ms))]);
+  }
 
   /* ── ICE 설정: TURN 자격증명(1시간) 30분 캐시, 실패 시 STUN만 ── */
   async function iceConfig() {
@@ -571,9 +575,19 @@
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
     wb('accept fallback getmedia');
-    await primePermHint(CUR.video);
-    try { if (!localStream) localStream = await getMedia(CUR.video); }
-    catch (e) { wb('accept getmedia FAIL ' + String((e && e.name) || e).slice(0, 40)); const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e, v)); }
+    try { await withTimeout(primePermHint(CUR.video), 3000); } catch (_) {}   // 프롬프트가 걸려도 통화는 진행
+    // ⚠️ iosrtc getUserMedia가 '이전 통화 마이크 미해제'로 간헐적으로 영영 멈춤(사장님 로그: getmedia-ok 안 옴).
+    //    → 타임아웃 걸고, 멈추면 네이티브 오디오를 강제로 내렸다가(마이크 해제) 간단 제약으로 재시도.
+    if (!localStream) {
+      try { localStream = await withTimeout(getMedia(CUR.video), 5000, 'gm-timeout'); }
+      catch (e1) {
+        wb('accept getmedia RETRY ' + String((e1 && e1.name) || e1).slice(0, 24));
+        try { _nativeCall({ action: 'end' }); } catch (_) {}   // 네이티브 ADM/마이크 강제 해제
+        await new Promise(r => setTimeout(r, 400));
+        try { localStream = await withTimeout(getMedia(false), 5000, 'gm-timeout2'); }   // 재시도: 오디오만
+        catch (e2) { wb('accept getmedia FAIL ' + String((e2 && e2.name) || e2).slice(0, 30)); const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e2, v)); }
+      }
+    }
     wb('accept getmedia-ok → buildAnswer');
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
