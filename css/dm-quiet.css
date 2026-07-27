@@ -1744,3 +1744,30 @@ body[data-page="spa"] .dm-root.page .dm-view .dm-head { padding-top: calc(env(sa
 body[data-page="spa"].dm-detail .dm-root.page .dm-panel {
   height: var(--dm-vvh, calc(100dvh - env(safe-area-inset-top, 0px)));
 }
+
+/* 🐞 대화방 상단 검은 띠(실기기) — MPA는 문서 자체를 잠가(1160행) 어떤 스크롤/흐름
+   오프셋도 못 생기지만, SPA의 스크롤러는 문서가 아니라 판의 .view-host라
+   dm.js lockPageScroll(문서만 스냅)이 못 받친다. 대응 2중:
+   ① DM 판의 view-host는 아예 스크롤 불가(문서잠금의 SPA 등가물 — DM은 전부 내부 스크롤)
+   ② 상세는 판(.tab-pane, transform 컨테이너) 기준 절대 고정 — 스레드 헤드가
+      safe-area 바로 아래 붙고, 높이는 --dm-vvh(키보드 로직) 그대로 산다. */
+body[data-page="spa"] .tab-pane[data-tab="dm"] .view-host {
+  overflow: hidden; overscroll-behavior: none;
+}
+body[data-page="spa"].dm-detail .dm-root.page {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--dm-vvh, 100dvh);
+  z-index: 5;   /* 판 안 잔여 콘텐츠 위 — 판이 자체 스택 컨텍스트라 셸 네비(9999)·스택(#stack-root)엔 못 오른다 */
+}
+
+/* 🫲 SPA 엣지 스와이프 백(dm.js bindSpaEdgeSwipe) — 끌리는 대화방 뷰가 불투명하게
+   인박스 위에 얹혀 밀리고, 벌어진 틈으로 뒤의 인박스 리스트가 드러난다.
+   배경·그림자는 .dm-panel과 같은 문법(스택 뷰 슬라이드와 같은 감). */
+body[data-page="spa"] .dm-view.dm-sliding {
+  z-index: 3;
+  background:
+    radial-gradient(90% 40% at 80% 0%, rgba(61,107,255,.10) 0%, transparent 60%),
+    radial-gradient(120% 80% at 50% 0%, #13141a 0%, #08090c 60%);
+  box-shadow: -24px 0 60px rgba(0,0,0,.55);
+  will-change: transform;
+}

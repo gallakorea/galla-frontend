@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072706'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072707'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -72,7 +72,9 @@
       const ra = remoteStream && remoteStream.getAudioTracks && remoteStream.getAudioTracks()[0];
       wb(tag + ' ice=' + (pc && pc.iceConnectionState) + ' conn=' + (pc && pc.connectionState) +
          ' la=' + (la ? (la.enabled ? 'on' : 'mut') : 'none') + ' ra=' + (ra ? ra.readyState : 'none') +
-         ' pre=' + (CUR && (CUR._preconnected ? 'y' : (CUR._preFail ? 'fail' : 'n'))));
+         ' pre=' + (CUR && (CUR._preconnected ? 'y' : (CUR._preFail ? 'fail' : 'n'))) +
+         ' eng=' + (window.__iosrtcReady ? 'iosrtc' : 'webkit') + ' spa=' + (document.body && document.body.dataset.page === 'spa' ? 'y' : 'n') +
+         ' sink=' + (document.getElementById('dm-call-audio') ? 'y' : 'n'));
     } catch (_) {}
   }
 

@@ -288,12 +288,16 @@
     const EDGE_GUARD = 24;   // 좌측 엣지는 시스템 뒤로가기와 충돌 방지
     track.addEventListener("touchstart", (e) => {
       if (stack.length) return;                     // 상세 스택 위에선 탭 스와이프 안 함
+      // DM 상세(대화방·설정 등)에선 탭 스와이프 끔 — 구 iframe 셸 정책 계승
+      // (dm.js의 스와이프 백·말풍선 제스처와 충돌해 판 전체가 끌려가던 것 방지)
+      if (document.body.classList.contains("dm-detail")) return;
       const t = e.touches[0];
       sx = lastX = t.clientX; sy = t.clientY; dx = 0; lock = null; vel = 0;
       t0 = lastT = performance.now();
     }, { passive: true });
     track.addEventListener("touchmove", (e) => {
-      if (stack.length) return;
+      // dm-detail 중엔 start가 안 돌아 sx가 이전 제스처 값 — 여기서도 막아야 오계산 잠금이 없다
+      if (stack.length || document.body.classList.contains("dm-detail")) return;
       const t = e.touches[0];
       const mx = t.clientX - sx, my = t.clientY - sy;
       if (lock === null) {

@@ -1029,7 +1029,8 @@
     // 친구·채팅 행 길게 누르기 → 관리 메뉴 (말풍선 메뉴와 같은 문법)
     bindLongPress(ROOT.querySelector('#dm-friend-list'), '.dm-friend', friendMenu);
     bindLongPress(ROOT.querySelector('#dm-inbox'), '.dm-thread', threadMenu);
-    bindEdgeBack();   // 👉 대화방(1:1·난장·단체)에서 왼쪽 엣지 오른쪽 스와이프 = 뒤로가기
+    bindEdgeBack();   // 👉 대화방(1:1·난장·단체)에서 왼쪽 엣지 오른쪽 스와이프 = 뒤로가기 (MPA)
+    bindSpaEdgeSwipe();   // 👉 SPA: 같은 제스처를 '인터랙티브'로 — 뷰가 손가락을 따라온다
     // ⬇️ 당겨서 새로고침 — PWA 전체화면엔 브라우저 기본 당김이 없다
     bindPullRefresh(ROOT.querySelector('#dm-inbox-wrap'), async () => { PREF.loaded = false; await loadInbox(); refreshBadge(); });
     bindPullRefresh(ROOT.querySelector('#dm-friends'), async () => { PREF.loaded = false; FRIENDS = []; await loadFriends(); });
@@ -1278,7 +1279,8 @@
     let sx = 0, sy = 0, view = null;
     document.addEventListener('touchstart', e => {
       const t = e.touches[0]; sx = t.clientX; sy = t.clientY;
-      view = (t.clientX < 30 && (CUR_VIEW === 'thread' || CUR_VIEW === 'room')) ? CUR_VIEW : null;
+      // SPA에선 인터랙티브 엣지 스와이프(bindSpaEdgeSwipe)가 이 구간을 맡는다 — 이중 뒤로 방지
+      view = (!SPA_MODE() && t.clientX < 30 && (CUR_VIEW === 'thread' || CUR_VIEW === 'room')) ? CUR_VIEW : null;
     }, { passive: true });
     document.addEventListener('touchend', e => {
       if (!view) return;
@@ -1287,6 +1289,79 @@
       const t = e.changedTouches[0];
       const dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
       if (dx > 70 && dy < 60 && dx > dy * 1.5) goBack(v === 'room' ? 'rooms' : undefined);
+    }, { passive: true });
+  }
+
+  /* 🫲 SPA 전용: 대화방(1:1·난장) 왼쪽 엣지 '인터랙티브' 스와이프 백 —
+     라우터 armStackSwipe(js/spa/router.js)와 같은 감(수평 잠금·1/3 or 플릭 커밋·스프링 복귀).
+     뷰가 손가락을 따라오고(뒤로 인박스가 비침), 커밋되면 화면 밖으로 이어 밀린 뒤
+     기존 '뒤로'(goBack — 뒤로 버튼과 완전히 같은 경로)를 부른다. 새 상태 로직 없음. */
+  function bindSpaEdgeSwipe() {
+    if (!SPA_MODE() || window.__dmSpaEdge) return; window.__dmSpaEdge = 1;
+    const EDGE = 28, CURVE = 'transform .3s cubic-bezier(.22,.9,.3,1)';   // 라우터와 동일 곡선
+    let sx = 0, sy = 0, dx = 0, lock = null, lastX = 0, lastT = 0, vel = 0;
+    let view = null, inbox = null, inboxWasHidden = false, busy = false;
+    function cleanup(v, restoreInbox) {
+      v.classList.remove('dm-sliding');
+      v.style.transition = ''; v.style.transform = '';
+      if (restoreInbox && inbox && inboxWasHidden) inbox.hidden = true;
+      inbox = null; busy = false;
+    }
+    ROOT.addEventListener('touchstart', e => {
+      view = null; lock = null;
+      if (busy || e.touches.length !== 1) return;
+      if (CUR_VIEW !== 'thread' && CUR_VIEW !== 'room') return;
+      if (document.querySelector('#pager-call.on, #pager-book.on, #dm-call.on, #pager-guide.on')) return;
+      const t = e.touches[0];
+      if (t.clientX > EDGE) return;
+      view = ROOT.querySelector(`.dm-view[data-view="${CUR_VIEW}"]`);
+      if (!view) return;
+      sx = lastX = t.clientX; sy = t.clientY; dx = 0; vel = 0;
+      lastT = performance.now();
+    }, { passive: true });
+    ROOT.addEventListener('touchmove', e => {
+      if (!view || lock === 'no') return;
+      const t = e.touches[0];
+      const mx = t.clientX - sx, my = t.clientY - sy;
+      if (lock === null) {
+        if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+        lock = (mx > 0 && Math.abs(mx) > Math.abs(my) * 1.2) ? 'h' : 'no';
+        if (lock === 'no') return;
+        // 드래그 개시 — 뒤(인박스)를 미리 드러내고, 끌리는 뷰는 불투명 배경(.dm-sliding)
+        inbox = ROOT.querySelector('.dm-view[data-view="inbox"]');
+        inboxWasHidden = !!(inbox && inbox.hidden);
+        if (inbox) inbox.hidden = false;
+        view.classList.add('dm-sliding');
+        view.style.transition = 'none';
+      }
+      dx = Math.max(0, mx);
+      const now = performance.now();
+      vel = (t.clientX - lastX) / Math.max(1, now - lastT);
+      lastX = t.clientX; lastT = now;
+      view.style.transform = 'translateX(' + dx + 'px)';
+    }, { passive: true });
+    ROOT.addEventListener('touchend', () => {
+      if (!view || lock !== 'h') { view = null; lock = null; return; }
+      const v = view, cv = CUR_VIEW;
+      view = null; lock = null; busy = true;
+      v.style.transition = CURVE;
+      const commit = dx > window.innerWidth / 3 || vel > 0.45;   // 라우터와 동일 임계
+      if (commit) {
+        // 현 위치에서 이어서 화면 밖으로 — 그 뒤 기존 '뒤로'(상태 정리는 showView가 담당)
+        requestAnimationFrame(() => { v.style.transform = 'translateX(100%)'; });
+        setTimeout(() => {
+          if (CUR_VIEW === cv) goBack(cv === 'room' ? 'rooms' : undefined);   // 뒤로 버튼과 동일 경로
+          cleanup(v, false);   // 인박스 표시는 showView('inbox')가 확정
+        }, 300);
+      } else {
+        // 스프링 복귀 — 인박스 다시 숨김
+        requestAnimationFrame(() => { v.style.transform = 'translateX(0)'; });
+        setTimeout(() => { cleanup(v, CUR_VIEW === cv); }, 320);
+      }
+    }, { passive: true });
+    ROOT.addEventListener('touchcancel', () => {
+      if (view && lock === 'h') { const v = view; v.style.transition = CURVE; v.style.transform = ''; setTimeout(() => cleanup(v, true), 320); }
+      view = null; lock = null;
     }, { passive: true });
   }
 
