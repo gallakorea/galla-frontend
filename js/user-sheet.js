@@ -89,7 +89,8 @@
       f.dataset.uid = uid;
       fOld.replaceWith(f);
       f.style.display = (self || !window.GALLA_bindFollow) ? "none" : "";
-      if (!self && window.GALLA_bindFollow) window.GALLA_bindFollow(pop);
+      // ⚠️ bindFollow 예외가 나도 팝오버 위치잡기까지 절대 못 가게 막지 않는다("안뜸" 재발 방지)
+      if (!self && window.GALLA_bindFollow) { try { window.GALLA_bindFollow(pop); } catch (_) {} }
     }
 
     // 앵커(누른 닉네임) 옆에 배치 — 기본은 바로 아래, 화면 밑이면 위로

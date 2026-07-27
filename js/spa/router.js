@@ -388,6 +388,42 @@
 
   window.addEventListener("resize", () => settle(false));
 
+  /* ── ⌨️ 전역 키보드 리프트 — SPA에선 컴포저가 transform된 판/스택 안 fixed라 iOS의
+     '키보드 위 자동 추적'이 안 먹어 입력창이 키보드에 가린다(유튜브·뉴스·댓글 등 모든 컴포저).
+     포커스된 입력의 '하단 고정 조상'을 찾아 키보드 높이만큼 밀어 올린다(배틀 컴포저 전용 로직의 일반화). */
+  (function keyboardLift() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    let lifted = null;
+    function fixedBar(el) {
+      for (let n = el; n && n !== document.body; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if ((cs.position === "fixed" || cs.position === "sticky" || cs.position === "absolute") &&
+            (cs.bottom === "0px" || parseFloat(cs.bottom) === 0)) return n;
+      }
+      return null;
+    }
+    function kbH() { return Math.max(0, window.innerHeight - vv.height - vv.offsetTop); }
+    function apply() {
+      if (!lifted) return;
+      const kb = kbH();
+      lifted.style.transform = kb > 0 ? "translateY(-" + kb + "px)" : "";
+      lifted.style.transition = "transform .18s ease";
+    }
+    function reset() { if (lifted) { lifted.style.transform = ""; lifted = null; } }
+    document.addEventListener("focusin", (e) => {
+      const t = e.target;
+      if (!t || !/^(INPUT|TEXTAREA)$/.test(t.tagName) && !t.isContentEditable) return;
+      // 배틀 컴포저는 자체 로직(dm/issue)이 처리 — 중복 방지
+      if (t.id === "battle-comment-input" || t.id === "ic-input" || t.closest(".dm-panel")) return;
+      const bar = fixedBar(t);
+      if (bar) { lifted = bar; setTimeout(apply, 80); setTimeout(apply, 320); }
+    });
+    document.addEventListener("focusout", () => setTimeout(reset, 120));
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+  })();
+
   /* ── 스크롤 크롬 엔진 — nav.js(MPA)의 헤더 숨김·네비 축소를 SPA로 이식.
      문서 캡처 리스너 하나로 모든 스크롤러(.view-host·내부 패널)를 받는다.
      · y≤10: 헤더 완전 복원(로고 포함) + 네비 원래 크기
