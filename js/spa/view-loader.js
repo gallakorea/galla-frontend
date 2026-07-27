@@ -37,8 +37,10 @@
       app = doc.createElement("div");
       app.innerHTML = doc.body ? doc.body.innerHTML : "";
     }
-    // 셸이 담당하는 크롬 제거 — 페이지 자체 헤더/하단네비/스크립트
-    app.querySelectorAll("nav.nav, header.header, script").forEach(n => n.remove());
+    // 셸이 담당하는 크롬만 제거(하단네비·스크립트). ★헤더는 페이지 것을 그대로 보존 —
+    // 페이지마다 헤더 구성이 달라(GP필·설정기어·탭순서 등) 디자인 1:1 유지가 우선.
+    // 헤더 숨김/네비 축소는 라우터의 스크롤 크롬 엔진이 담당한다.
+    app.querySelectorAll("nav.nav, script").forEach(n => n.remove());
 
     const styles = [];
     doc.querySelectorAll('link[rel="stylesheet"]').forEach(l => {

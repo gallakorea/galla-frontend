@@ -108,6 +108,7 @@
     }
     const cm = panes[tab] && panes[tab]._mod;
     if (cm && cm.activate) { try { cm.activate(); } catch (_) {} }
+    if (prev !== cur && window.GALLA_SPA_chromeReset) window.GALLA_SPA_chromeReset();   // 축소 상태 잔류 방지
     // 이웃 예열
     setTimeout(() => {
       const n1 = TABS[cur + 1], n0 = TABS[cur - 1];
@@ -265,6 +266,63 @@
   });
 
   window.addEventListener("resize", () => settle(false));
+
+  /* ── 스크롤 크롬 엔진 — nav.js(MPA)의 헤더 숨김·네비 축소를 SPA로 이식.
+     문서 캡처 리스너 하나로 모든 스크롤러(.view-host·내부 패널)를 받는다.
+     · y≤10: 헤더 완전 복원(로고 포함) + 네비 원래 크기
+     · 아래로(dy>4, y>60): 헤더 숨김(.hdr-hidden) + 네비 축소(.nav--mini)
+     · 위로(dy<-4): 헤더 표시 + 네비 복원
+     · DM 판은 제외(내부 탭바와 겹침 — 기존 정책 계승) */
+  (function scrollChrome() {
+    const navEl = document.querySelector("nav.nav");
+    const innerLast = new WeakMap();
+    let ticking = false, pendingEvt = null;
+    function hostOf(t) {
+      return (t && t.nodeType === 1 && t.closest) ? t.closest(".view-host") : null;
+    }
+    // rAF + 타임아웃 폴백 — 백그라운드(문서 hidden)에서도 멈추지 않게
+    const frame = (fn) => { let done = false; const run = () => { if (done) return; done = true; fn(); };
+      requestAnimationFrame(run); setTimeout(run, 50); };
+    document.addEventListener("scroll", (e) => {
+      pendingEvt = e;
+      if (ticking) return;
+      ticking = true;
+      frame(() => {
+        ticking = false;
+        const t = pendingEvt && pendingEvt.target;
+        const el = (t && t.nodeType === 1 && t.scrollHeight > t.clientHeight + 1) ? t : null;
+        if (!el) return;
+        const host = hostOf(el);
+        if (host && host.dataset.page === "dm") return;   // DM은 헤더 고정(기존 정책)
+        const hdrEl = host ? host.querySelector("header.header") : null;
+        const y = el.scrollTop;
+        if (!innerLast.has(el)) innerLast.set(el, y);     // 첫 목격 시딩(dy=0 고착 방지)
+        const dy = y - innerLast.get(el);
+        if (y <= 10) {
+          navEl && navEl.classList.remove("nav--mini");
+          if (hdrEl) hdrEl.classList.remove("hdr-scrolled", "hdr-hidden", "hdr-nologo");
+          innerLast.set(el, y);
+          return;
+        }
+        if (hdrEl) { hdrEl.classList.add("hdr-scrolled"); hdrEl.classList.add("hdr-nologo"); }
+        if (Math.abs(dy) > 4) {
+          if (dy > 0 && y > 60) {
+            navEl && navEl.classList.add("nav--mini");
+            hdrEl && hdrEl.classList.add("hdr-hidden");
+          } else if (dy < 0) {
+            navEl && navEl.classList.remove("nav--mini");
+            hdrEl && hdrEl.classList.remove("hdr-hidden");
+          }
+          innerLast.set(el, y);
+        }
+      });
+    }, { capture: true, passive: true });
+    // 탭 전환 시 크롬 리셋 — 이전 판의 축소 상태가 새 판에 남지 않게
+    window.GALLA_SPA_chromeReset = function () {
+      navEl && navEl.classList.remove("nav--mini");
+      document.querySelectorAll(".view-host header.header").forEach(h => h.classList.remove("hdr-hidden"));
+    };
+  })();
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {

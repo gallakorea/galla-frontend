@@ -54,11 +54,12 @@
 
   function setBadge(n) {
     unread = Math.max(0, n);
-    const b = document.getElementById("notiBadge");
-    if (!b) return;
-    if (unread <= 0) { b.hidden = true; return; }
-    b.hidden = false;
-    b.textContent = unread > 99 ? "99+" : String(unread);
+    // SPA는 탭마다 헤더가 있어 #notiBadge가 여러 개 — 전부 갱신(MPA는 1개라 동일 동작)
+    document.querySelectorAll('[id="notiBadge"]').forEach(b => {
+      if (unread <= 0) { b.hidden = true; return; }
+      b.hidden = false;
+      b.textContent = unread > 99 ? "99+" : String(unread);
+    });
   }
 
   function pillEl() {
@@ -155,18 +156,34 @@
       .subscribe();
   }
 
+  // ♥ 클릭은 문서 위임 — SPA에서 탭마다 #hdrNoti가 중복돼도 전부 동작(MPA 동일). 1회만 설치.
+  let clickBound = false;
+  function bindNotiClick() {
+    if (clickBound) return;
+    clickBound = true;
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest && e.target.closest('[id="hdrNoti"]');
+      if (!btn) return;
+      const spa = document.body && document.body.dataset.page === "spa" && window.GALLA_SPA;
+      if (!ME) {
+        if (confirm("로그인하면 내 활동 알림을 볼 수 있어요. 로그인할까요?")) {
+          if (spa) window.GALLA_SPA.push("login", {}); else location.href = "login.html";
+        }
+        return;
+      }
+      if (spa) window.GALLA_SPA.push("notifications", {}); else location.href = "notifications.html";
+    });
+  }
+
+  let notiInited = false;   // SPA에서 셸+여러 판이 중복 호출해도 구독은 1회
   window.initNotifications = async function () {
-    const btn = document.getElementById("hdrNoti");
-    if (!btn) return;
+    bindNotiClick();
+    if (!document.querySelector('[id="hdrNoti"]')) return;
+    if (notiInited) { if (ME) loadUnread(); return; }
     const { data: sess } = await window.supabaseClient.auth.getSession();
     ME = sess?.session?.user?.id || null;
-    if (!ME) {
-      btn.addEventListener("click", () => {
-        if (confirm("로그인하면 내 활동 알림을 볼 수 있어요. 로그인할까요?")) location.href = "login.html";
-      });
-      return;
-    }
-    btn.addEventListener("click", () => { location.href = "notifications.html"; });
+    if (!ME) return;
+    notiInited = true;
     await loadUnread();
     subscribe();
 

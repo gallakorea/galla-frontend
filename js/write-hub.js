@@ -166,14 +166,12 @@
      ⚠️ 반드시 nav()(셸이면 최상위)로 — 판에서 이동하면 판이 오염되고
      뒤로가기가 홈으로 튀었다(사장님 재현). 캡처 단계로 잡아 다른 페이지의
      구식 시트 바인딩(index.js 등)보다 먼저 처리한다. */
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-write-hub], #hdrWrite').forEach(el => {
-      if (el.dataset.whBound) return;
-      el.dataset.whBound = '1';
-      el.addEventListener('click', e => {
-        e.preventDefault(); e.stopImmediatePropagation();   // 같은 버튼의 구식 시트 바인딩까지 차단
-        nav('create.html');
-      }, true);
-    });
-  });
+  // 문서 위임(캡처) — SPA에서 헤더가 늦게(뷰 mount 시) 생기고 탭마다 #hdrWrite가 중복돼도
+  // 어느 판의 ＋든 동작한다. MPA에서도 동일(위임이라 바인딩 시점 무관).
+  document.addEventListener('click', e => {
+    const el = e.target.closest && e.target.closest('[data-write-hub], #hdrWrite');
+    if (!el) return;
+    e.preventDefault(); e.stopImmediatePropagation();   // 같은 버튼의 구식 시트 바인딩까지 차단
+    nav('create.html');
+  }, true);
 })();
