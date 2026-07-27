@@ -209,6 +209,17 @@ export async function initCommentSystem(issueId) {
   window.CURRENT_ISSUE_ID = issueId;
   console.log("💬 initCommentSystem:", issueId);
 
+  // SPA 스택 재진입 대비 — 모듈은 1회 평가라 페이지 단위 상태를 여기서 초기화.
+  // (MPA 첫 로드에선 어차피 초기값이라 동작 불변)
+  state.pro = { page: 1, data: [] };
+  state.con = { page: 1, data: [] };
+  BATTLE_MODE = null;
+  INFILTRATE = false; GHOST_ON = false;
+  INFIL_LEFT = null; REPLY_LEFT = null;
+  RESET_ARMED.clear(); BREAK_ARMED.clear();
+  SHIELDS = {};
+  COMBO = { n: 0, t: 0 };
+
   await new Promise(r => requestAnimationFrame(r));
 
   const zone = document.getElementById("battle-zone");
@@ -234,6 +245,7 @@ export async function initCommentSystem(issueId) {
   renderWarDashboard();
   renderMorale();
   bindEvents();
+  startCooldownTicker();
   initBattleFeed(issueId);
   renderHonors();
   // 🛡 활성 보호막 반영 — 10분 만료라 주기적으로도 다시 읽는다(만료되면 배지가 사라져야 함)
@@ -900,7 +912,13 @@ function scrollToComment(id) {
 
 /* 🧭 현재 진영 구역 표시 — 스크롤에 따라 지금 보는 구역(찬/반)을 fixed 배지로 항상 노출.
    overflow-x:hidden 환경이라 CSS sticky가 불안정 → fixed + 스크롤 계산으로 확실하게 잡는다. */
-let ZONE_IND_BOUND = false;
+let ZONE_LST = null;   // { target, onScroll } — unmount/재init 시 해제용
+function unbindZoneIndicator() {
+  if (!ZONE_LST) return;
+  try { ZONE_LST.target.removeEventListener("scroll", ZONE_LST.onScroll); } catch (_) {}
+  try { window.removeEventListener("resize", ZONE_LST.onScroll); } catch (_) {}
+  ZONE_LST = null;
+}
 function initZoneIndicator() {
   const ind = document.getElementById("zone-indicator");
   if (!ind) return;
@@ -928,16 +946,19 @@ function initZoneIndicator() {
     ind.querySelector(".zi-name").textContent = " " + fName(side);
   };
   update();
-  if (!ZONE_IND_BOUND) {
-    ZONE_IND_BOUND = true;
-    let ticking = false;
-    const onScroll = () => {
-      if (ticking) return; ticking = true;
-      requestAnimationFrame(() => { update(); ticking = false; });
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll, { passive: true });
-  }
+  // 재init(SPA 재진입 포함) — 이전 리스너를 걷고 새 DOM에 다시 건다
+  unbindZoneIndicator();
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return; ticking = true;
+    requestAnimationFrame(() => { update(); ticking = false; });
+  };
+  // 스크롤 컨테이너: SPA 스택 뷰는 .view-host가 자체 스크롤(window 스크롤 이벤트가 안 옴).
+  // MPA에선 .view-host가 없어 기존처럼 window.
+  const target = document.getElementById("battle-zone")?.closest(".view-host") || window;
+  target.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  ZONE_LST = { target, onScroll };
 }
 
 /* ======================
@@ -1559,23 +1580,29 @@ function battleButtonsFor(c) {
     `<span class="action-shield" data-id="${c.id}" title="보호막 — 10분간 받는 피해 절반">🛡보호막</span>`;
 }
 
-/* 쿨다운 카운트다운 티커 (1초마다 버튼 라벨 갱신, 끝나면 활성화) */
-setInterval(() => {
-  document.querySelectorAll("[data-cd]").forEach(el => {
-    const until = Number(el.dataset.until);
-    const left = Math.ceil((until - Date.now()) / 1000);
-    const action = el.dataset.cd;
-    const base = el.dataset.lbl || ACTION_LABEL[action];
-    if (left > 0) {
-      el.textContent = `${base} ${left}s`;
-    } else {
-      el.textContent = base;
-      el.classList.remove("cooldown");
-      delete el.dataset.cd;
-      delete el.dataset.until;
-    }
-  });
-}, 1000);
+/* 쿨다운 카운트다운 티커 (1초마다 버튼 라벨 갱신, 끝나면 활성화)
+   — top-level 자동실행이었으나 SPA unmount에서 해제할 수 있게 핸들 보관.
+     initCommentSystem이 시작시키므로 MPA 동작은 동일. */
+let CD_TICKER = null;
+function startCooldownTicker() {
+  if (CD_TICKER) return;
+  CD_TICKER = setInterval(() => {
+    document.querySelectorAll("[data-cd]").forEach(el => {
+      const until = Number(el.dataset.until);
+      const left = Math.ceil((until - Date.now()) / 1000);
+      const action = el.dataset.cd;
+      const base = el.dataset.lbl || ACTION_LABEL[action];
+      if (left > 0) {
+        el.textContent = `${base} ${left}s`;
+      } else {
+        el.textContent = base;
+        el.classList.remove("cooldown");
+        delete el.dataset.cd;
+        delete el.dataset.until;
+      }
+    });
+  }, 1000);
+}
 
 function makeReply(r) {
   const chip = r.battle_action === "attack"
@@ -1809,6 +1836,9 @@ function battleReasonMsg(reason, data) {
 ====================== */
 
 function bindEvents() {
+  // 하단 컴포저(입력창·전송)는 요소 직결 — SPA 재진입 시 새 DOM이라 매번 재바인딩
+  bindComposerEls();
+  // 아래 document 위임 리스너는 문서당 1회면 충분(위임이라 새 DOM에도 그대로 작동)
   if (eventsBound) return;
   eventsBound = true;
 
@@ -2058,9 +2088,15 @@ function bindEvents() {
     }
   });
 
+}
+
+/* 하단 참전 컴포저(입력창·전송 버튼) 바인딩 — 요소별 가드로 중복 방지.
+   MPA에선 1회, SPA에선 mount마다 새 요소에 다시 걸린다. */
+function bindComposerEls() {
   // 입력창 자체도 로그인 게이트 — 미로그인이 탭/포커스하면 바로 로그인 유도(키보드 안 뜸)
   const battleInput = document.getElementById("battle-comment-input");
-  if (battleInput) {
+  if (battleInput && !battleInput.__gateBound) {
+    battleInput.__gateBound = true;
     const inputGate = (e) => {
       if (ME.userId) return;            // 로그인 상태면 통과(미투표는 참전 시 안내)
       if (e) e.preventDefault();
@@ -2072,8 +2108,10 @@ function bindEvents() {
   }
 
   // 전송 — 하단 바는 '새 최상위 의견(참전/침투)' 전용. 전투 답글은 인라인 컴포저가 처리.
-  document.getElementById("battle-comment-submit")
-    ?.addEventListener("click", async () => {
+  const submitBtn = document.getElementById("battle-comment-submit");
+  if (submitBtn && !submitBtn.__bound) {
+    submitBtn.__bound = true;
+    submitBtn.addEventListener("click", async () => {
       if (!requireLogin()) return;
 
       const input = document.getElementById("battle-comment-input");
@@ -2155,6 +2193,7 @@ function bindEvents() {
       renderWarDashboard();
       renderMorale();
     });
+  }
 }
 
 /* ======================
@@ -2424,3 +2463,34 @@ function applySideColoring() {
   document.addEventListener("focusin", (e) => { if (isInput(e.target)) open(); });
   document.addEventListener("focusout", (e) => { if (isInput(e.target)) setTimeout(close, 100); });
 })();
+
+/* =========================================================
+   SPA 언마운트 정리 — issue.js(GALLA_PAGE_ISSUE.unmount)가 호출.
+   MPA(단독 문서)에선 아무도 안 부르므로 동작 불변.
+   해제 대상: 실시간 채널 2개(전장 피드·진영 채팅), 타이머 2개(보호막·쿨다운),
+   스크롤/리사이즈 리스너(구역 표시), body 부착 오버레이(진영채팅 시트·⋯시트),
+   이슈 종속 전역/모듈 상태.
+========================================================= */
+export function destroyCommentSystem() {
+  // 타이머
+  if (window.__shieldTimer) { clearInterval(window.__shieldTimer); window.__shieldTimer = null; }
+  if (CD_TICKER) { clearInterval(CD_TICKER); CD_TICKER = null; }
+  // 실시간 구독
+  try { if (FEED_CHANNEL) { window.supabaseClient.removeChannel(FEED_CHANNEL); FEED_CHANNEL = null; } } catch (_) {}
+  try { closeFactionChat(); } catch (_) {}                 // CHAT_CHANNEL 해제 포함
+  // body에 부착돼 뷰 제거로 안 사라지는 오버레이들
+  document.getElementById("faction-chat")?.remove();
+  document.getElementById("cmm-sheet")?.remove();
+  try { closeInlineComposer(); } catch (_) {}
+  // 전역 리스너(구역 표시 스크롤 추적)
+  unbindZoneIndicator();
+  // 이슈 종속 상태 — 다음 mount의 initCommentSystem/loadComments가 새로 채운다
+  window.CURRENT_ISSUE_ID = null;
+  window.MY_VOTE_TYPE = null;
+  allRows = []; replyMap = {}; likeAgg = {}; profileMap = {}; authorVoteMap = {};
+  hlSet = new Set(); SHIELDS = {}; feedNickCache = {};
+  ACE = { pro: null, con: null };
+  BATTLE_MODE = null;
+  ME.userId = null; ME.faction = null;
+  ME.likes = new Map(); ME.actions = new Map();
+}

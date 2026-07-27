@@ -139,9 +139,16 @@
   }
 
   /* ---------- 골격 ---------- */
+  /* ── SPA 이중 모드 ──
+   * MPA(dm.html, body[data-page="dm"]): 기존 그대로 — 자동 부팅·페이지 모드.
+   * SPA(app.html, body[data-page="spa"]): 자동 부팅 없이 window.GALLA_PAGE_DM.mount(root)를
+   *   기다린다(js/spa/views/dm.js가 부름). 단일문서라 오버레이가 아니라 페이지 모드로 취급 —
+   *   ROOT는 dm 판(.view-host) 안의 #dm-page-host에 선다. */
+  const SPA_MODE = () => document.body.dataset.page === 'spa';
+  let SPA_ROOT = null;   // SPA에서 mount()가 준 dm 판 루트(.view-host) — DOM 스코핑용
   // 페이지 모드(dm.html): 오버레이가 아니라 헤더·네비 사이 본문으로 렌더 —
   // "DM은 기능이 아니라 페이지" (네비·헤더가 그대로 보여야 한다)
-  const PAGE_MODE = () => document.body.dataset.page === 'dm';
+  const PAGE_MODE = () => document.body.dataset.page === 'dm' || SPA_MODE();
   function buildRoot() {
     if (ROOT) return ROOT;
     ROOT = document.createElement('div');
@@ -931,7 +938,8 @@
         </div>
       </div>
       <div class="dm-menu" id="dm-menu" hidden></div>`;
-    (PAGE_MODE() && document.getElementById('dm-page-host') || document.body).appendChild(ROOT);
+    // SPA에선 dm 판(.view-host) 안의 #dm-page-host 우선 — 전역 getElementById는 안전망
+    (PAGE_MODE() && ((SPA_ROOT && SPA_ROOT.querySelector('#dm-page-host')) || document.getElementById('dm-page-host')) || document.body).appendChild(ROOT);
 
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', async e => {
@@ -1345,6 +1353,10 @@
     if (PAGE_MODE()) {
       document.body.classList.toggle('dm-detail', name !== 'inbox');
       document.body.classList.toggle('dm-immersive', name === 'thread' || name === 'room');
+      // SPA 단일문서: 몰입 뷰(대화방·난장)의 셸 네비 숨김을 직접 부른다.
+      // 구 iframe 셸에선 nav.js가 body 클래스를 postMessage(navhide)로 중계했고 그 경로는 그대로 산다.
+      if (SPA_MODE() && window.GALLA_SPA && window.GALLA_SPA.navHide)
+        window.GALLA_SPA.navHide(name === 'thread' || name === 'room');
       // 직전 뷰의 스크롤이 만든 헤더 숨김·네비 축소가 눌러붙지 않게 전환마다 리셋
       window.GALLA_navReset?.();
     }
@@ -1453,7 +1465,11 @@
     if (UI.lockPin) {
       ensureUnlocked().then(ok => {
         if (ok) return;
-        if (PAGE_MODE()) location.href = 'index.html';
+        if (PAGE_MODE()) {
+          // SPA 셸에선 문서를 떠나지 않고 홈 탭으로(문서 이탈 = SPA 전체 파괴)
+          if (SPA_MODE() && window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('index');
+          else location.href = 'index.html';
+        }
         else closeDM();
       });
     }
@@ -1461,7 +1477,8 @@
     if (PAGE_MODE()) {
       ROOT.classList.add('page');
       const oldHead = ROOT.querySelector('[data-view="inbox"] > .dm-head');
-      if (oldHead) oldHead.hidden = true;
+      // SPA엔 페이지 헤더(GALLA 로고줄)가 없다(뷰 추출에서 header 제거) — 내부 dm-head가 헤더 노릇
+      if (oldHead) oldHead.hidden = !SPA_MODE();
       ROOT.querySelector('.dm-dim')?.remove();
     }
     applyTossface();
@@ -1507,7 +1524,11 @@
     loadInbox();
   }
   function closeDM() {
-    if (PAGE_MODE()) { location.href = 'index.html'; return; }
+    if (PAGE_MODE()) {
+      // SPA 셸: 문서 이동 금지 — 홈 탭 전환으로 대체(구 동작과 같은 '출구')
+      if (SPA_MODE() && window.GALLA_SPA && window.GALLA_SPA.go) { window.GALLA_SPA.go('index'); return; }
+      location.href = 'index.html'; return;
+    }
     if (!ROOT) return;
     ROOT.classList.remove('open');
     document.body.style.overflow = '';
@@ -1539,6 +1560,7 @@
       location.href = 'dm.html';
       return;
     }
+    if (SPA_MODE() && window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('dm');   // 공유는 dm 탭에서
     PENDING_SHARE = payload;
     openDM();
   };
@@ -5173,6 +5195,8 @@
       ME = sess?.session?.user?.id || null;
     }
     if (!ME) return promptLogin();
+    // SPA 셸: 다른 탭(유저시트 등)에서 불렸으면 먼저 dm 탭으로 — 이미 dm이면 무해
+    if (SPA_MODE() && window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('dm');
     // 나와의 채팅(셀프 메모) — 자기 자신이면 전용 RPC
     const rpc = (userId === ME)
       ? supabase.rpc('dm_self_thread')
@@ -5370,7 +5394,9 @@
     const { data: sess } = await supabase.auth.getSession();
     ME = sess?.session?.user?.id || null;
     if (BTN) BTN.addEventListener('click', () => { ME ? openDM() : promptLogin(); });
-    if (navBtn && !navBtn.dataset.dmBound) {
+    // SPA 셸에선 네비 클릭을 라우터가 처리한다 — 여기서 또 openDM()을 걸면
+    // 탭 복귀 때마다 인박스로 리셋된다(보던 대화방이 날아감) → 바인딩 금지
+    if (navBtn && !SPA_MODE() && !navBtn.dataset.dmBound) {
       navBtn.dataset.dmBound = '1';
       navBtn.addEventListener('click', () => { ME ? openDM() : promptLogin(); });
     }
@@ -5446,8 +5472,57 @@
     });
   }
 
+  /* ═══ SPA 페이지 훅 — js/spa/views/dm.js(뷰 어댑터)가 부른다. MPA에선 존재만 하고 안 쓰임.
+     초기화 로직은 기존 initDM/openDM 그대로 — 여기서는 감싸기만 한다. ═══ */
+  window.GALLA_PAGE_DM = {
+    _mounted: false,
+    _cls: null,
+    async mount(root, params) {
+      SPA_ROOT = root || null;
+      if (this._mounted) return;          // keep-alive 재진입 가드
+      this._mounted = true;
+      await window.initDM(null);          // 페이지 모드 부팅(PAGE_MODE=SPA에서 true)
+      // 딥링크 파라미터(#/dm?dm=…·room=…·pager=1·tab=…) — dm.html 쿼리 규약 계승
+      try {
+        if (params) {
+          if (params.dm && params.dm !== '1') await startDM(params.dm, null);
+          else if (params.room) openRoomById(params.room);
+          else if (params.pager) setTimeout(() => window.GALLA_dmSetTab('pager'), 80);
+          else if (params.tab) setTimeout(() => window.GALLA_dmSetTab(params.tab), 80);
+        }
+      } catch (_) {}
+    },
+    unmount() { this._mounted = false; SPA_ROOT = null; },
+    activate() {
+      // 탭 복귀 — 이탈 때 걷어둔 body 전역 상태(dm-detail/immersive) 복원 + 뱃지 갱신
+      (this._cls || []).forEach(c => document.body.classList.add(c));
+      this._cls = null;
+      if (window.GALLA_SPA && window.GALLA_SPA.navHide)
+        window.GALLA_SPA.navHide(document.body.classList.contains('dm-immersive'));
+      try { if (ME) refreshBadge(); } catch (_) {}
+    },
+    deactivate() {
+      // 탭 이탈 — dm-detail/immersive는 body 전역 클래스라 다른 판(헤더·네비)을 오염시킨다
+      // → 걷어두고 기억했다가 복귀 때 되돌린다. 네비도 반드시 복원.
+      this._cls = ['dm-detail', 'dm-immersive'].filter(c => document.body.classList.contains(c));
+      this._cls.forEach(c => document.body.classList.remove(c));
+      if (window.GALLA_SPA && window.GALLA_SPA.navHide) window.GALLA_SPA.navHide(false);
+    },
+    scrolltop() {
+      try {
+        const list = ROOT && ROOT.querySelector('.dm-view:not([hidden]) .dm-list:not([hidden])');
+        if (list && list.scrollTo) list.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (_) {}
+    },
+    // 구 셸 shellcmd 'dmtab'(조그셔틀 서브탭 지정)의 SPA 대응 — 같은 동작을 직접 호출로
+    setTab(t) { try { window.GALLA_dmSetTab(t); } catch (_) {} },
+  };
+
   // 네비 DM 탭이 있는 페이지는 호출 없이도 스스로 부팅 (기존 initDM 호출 페이지와 공존)
   (function autoBoot() {
+    // SPA 셸(app.html)에도 .nav-item[data-page="dm"]이 있어 그대로 두면 mount 전에
+    // 부팅해버린다(#dm-page-host가 아직 없어 body에 오버레이로 서는 사고) → mount가 유일한 입구
+    if (SPA_MODE()) return;
     const boot = async () => {
       const sb = window.supabaseClient || (window.waitForSupabaseClient ? await window.waitForSupabaseClient() : null);
       if (!sb) return;

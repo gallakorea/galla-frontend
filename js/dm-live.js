@@ -8,7 +8,8 @@
    · 후원은 GC(현금성) — 게임 GP와 분리(추후 슈퍼챗)
    ========================================================================== */
 (function () {
-  const IS_DM = document.body.getAttribute("data-page") === "dm";
+  // SPA 단일문서(app.html, data-page="spa")에선 dm 뷰 어댑터가 이 파일을 로드한다 — DM 취급
+  const IS_DM = document.body.getAttribute("data-page") === "dm" || document.body.getAttribute("data-page") === "spa";
   // 육성 난장 자료 뷰어(iframe)로 열린 콘텐츠면 '육성 난장 열기' 필을 띄우지 않는다
   // (뷰어 안에서 또 방을 여는 중첩 방지 — 사장님 제보)
   let LV_EMBED = false; try { LV_EMBED = new URLSearchParams(location.search).get("lvembed") === "1"; } catch (e) {}
@@ -21,7 +22,11 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   function toast(m) { try { if (window.GALLA_toast) window.GALLA_toast(m); } catch (e) {} }
   // 셸(네이티브) 하단 nav 숨김 — 라이브 무대는 풀스크린이라 nav가 위로 겹쳐 보이면 안 됨
-  function navHide(on) { try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on: on }, location.origin); } catch (e) {} }
+  // SPA 단일문서면 라우터 API 직접 호출, 구 iframe 셸이면 기존 postMessage 중계(둘 다 유지)
+  function navHide(on) {
+    try { if (window.GALLA_SPA && window.GALLA_SPA.navHide) window.GALLA_SPA.navHide(on); } catch (e) {}
+    try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "navhide", on: on }, location.origin); } catch (e) {}
+  }
   // ⚠️ users.avatar_url은 완성 URL이 아니라 스토리지 경로("<uid>/avatar.jpg") — 반드시 리졸버 경유
   function avatar(u) {
     const src = window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u, 128) : u;

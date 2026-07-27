@@ -1731,3 +1731,16 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
 .dmg-dot{color:#4a5163;font-size:12px;font-weight:900}
 .dmg-fold,.dmg-dismiss{padding:4px 6px;border:0;background:none;color:#8b93a6;font-size:12px;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .dmg-fold:active,.dmg-dismiss:active{opacity:.55}
+
+/* ═══════ 🚀 SPA 단일문서(app.html, body[data-page="spa"]) — dm 판 보정 ═══════
+   위의 페이지 모드 규칙 중 body[data-page="dm"] 키 규칙들이 SPA에선 안 걸린다.
+   SPA엔 페이지 헤더(GALLA 로고줄)가 없으므로(뷰 추출에서 header 제거)
+   내부 dm-head(⚙·✎ 포함)를 헤더로 되살리고, 패널 높이를 판(.view-host)에 맞춘다.
+   MPA(dm.html)·구 iframe 셸에는 절대 안 걸리는 셀렉터만 사용. */
+body[data-page="spa"] .dm-root.page [data-view="inbox"] > .dm-head { display: grid; }
+body[data-page="spa"] .dm-root.page .dm-panel { height: calc(100dvh - env(safe-area-inset-top, 0px)); }
+body[data-page="spa"] .dm-root.page .dm-view .dm-head { padding-top: calc(env(safe-area-inset-top, 0px)); }
+/* 상세(dm-detail)에선 MPA와 같은 문법 — 키보드 실높이(--dm-vvh)에 맞춘다 */
+body[data-page="spa"].dm-detail .dm-root.page .dm-panel {
+  height: var(--dm-vvh, calc(100dvh - env(safe-area-inset-top, 0px)));
+}

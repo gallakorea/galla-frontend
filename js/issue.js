@@ -1,10 +1,24 @@
 import { loadAiArguments } from "./issue-argument.js?v=072698";
 import { loadAiNews } from "./issue-news.js?v=072698";
 import { loadStats } from "./issue.stats.js?v=072698";
-import { initCommentSystem } from "./issue.comments.js?v=072698";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072698";
 
 
 console.log("[issue.js] loaded");
+
+/* ═══ 이중 모드 ═══
+   MPA(단독 issue.html, body data-page='issue')면 기존처럼 모듈 평가 즉시 자동 초기화.
+   SPA(app.html, body data-page='spa')면 어댑터(js/spa/views/issue.js)가
+   window.GALLA_PAGE_ISSUE.mount(root, params)를 부를 때까지 대기. */
+const __ISSUE_SPA = !!(document.body && document.body.dataset.page === "spa");
+let __SPA_PARAMS = null;   // SPA mount(root, params)의 params — 예: { id: "123", t: "3.2" }
+let PAGE_ROOT = document;  // SPA면 .view-host(스택 뷰 스크롤 컨테이너), MPA면 document
+const __CLEAN = [];        // unmount에서 해제할 자원(리스너·옵저버)
+function onCleanup(fn) { __CLEAN.push(fn); }
+/* id·t 등 페이지 파라미터 — SPA는 mount params, MPA는 location.search */
+function pageQuery() {
+  return __SPA_PARAMS ? new URLSearchParams(__SPA_PARAMS) : new URLSearchParams(location.search);
+}
 
 /* 직접 등록한 관련 링크·근거 → 카드로 렌더, 클릭 시 외부 이동
    커뮤니티·유튜브·뉴스·자료 등 유형별 아이콘/라벨 */
@@ -103,21 +117,26 @@ function applyVoteUI(stance) {
 
 
 /* ==========================================================================
-   1. URL → issue id
+   1. URL → issue id — MPA는 location.search, SPA는 mount params
 ========================================================================== */
-const params = new URLSearchParams(location.search);
-const issueId = Number(params.get("id"));
+let issueId = 0;
 
-if (!issueId || Number.isNaN(issueId)) {
-  alert("잘못된 이슈 접근입니다.");
-  location.href = "index.html";
+function resolveIssueId() {
+  issueId = Number(pageQuery().get("id"));
+  if (!issueId || Number.isNaN(issueId)) {
+    alert("잘못된 이슈 접근입니다.");
+    if (__ISSUE_SPA) { try { history.back(); } catch (_) {} }
+    else location.href = "index.html";
+    return false;
+  }
+  return true;
 }
 
 
 /* ==========================================================================
    2. Load Issue
 ========================================================================== */
-(async function loadIssue() {
+async function loadIssue() {
   if (!window.supabaseClient) return;
 
   const supabase = window.supabaseClient;
@@ -212,7 +231,7 @@ if (typeof loadAiNews === "function") {
   checkRemixStatus(issue.id);
   loadRemixCounts(issue.id);
 
-})();
+}
 
 /* ==========================================================================
    3. Render Issue
@@ -241,7 +260,8 @@ async function checkLiveDuel(issueId) {
       <span class="dlb-go">관전 ›</span>`;
     const header = document.querySelector("#app > .header");
     if (header) header.insertAdjacentElement("afterend", a);
-    else document.getElementById("app")?.prepend(a);
+    // SPA 스택 뷰엔 #app이 없다(뷰 호스트가 컨테이너) — 뷰 루트 맨 위에
+    else (document.getElementById("app") || (PAGE_ROOT !== document ? PAGE_ROOT : null))?.prepend(a);
   } catch (e) { /* 무해 */ }
 }
 
@@ -269,8 +289,8 @@ function renderIssueMedia(issue) {
             // HLS(.m3u8) 부착 — iOS 네이티브 / 그 외 hls.js
             if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
             else vid.src = vid.dataset.src;
-            // 릴스/인덱스에서 보던 위치 이어보기(?t=초)
-            const seekT = parseFloat(new URLSearchParams(location.search).get('t')) || 0;
+            // 릴스/인덱스에서 보던 위치 이어보기(?t=초) — SPA는 mount params에서
+            const seekT = parseFloat(pageQuery().get('t')) || 0;
             if (seekT > 0.3) {
                 const applySeek = () => { try { if (vid.duration && seekT < vid.duration - 0.3) vid.currentTime = seekT; } catch (e) {} };
                 if (vid.readyState >= 1) applySeek(); else vid.addEventListener('loadedmetadata', applySeek, { once: true });
@@ -298,7 +318,11 @@ function renderIssueMedia(issue) {
                 });
             }, { threshold: 0.5 });
             observer.observe(vid);
-            document.addEventListener('galla:sound', () => window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns());
+            onCleanup(() => observer.disconnect());   // SPA unmount 시 옵저버 해제
+            // 전역 사운드 동기화 — mount마다 다시 걸리므로 unmount에서 반드시 제거(누적 방지)
+            const onGallaSound = () => window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns();
+            document.addEventListener('galla:sound', onGallaSound);
+            onCleanup(() => document.removeEventListener('galla:sound', onGallaSound));
         }
         return;
     }
@@ -736,7 +760,8 @@ async function bumpViewOnce(issueId) {
 ========================================================================== */
 
 // 통합 진영바 마운트 + 클릭 위임(재마운트해도 컨테이너 리스너 유지)
-(function initIssueVoteBar() {
+// — initIssuePage가 호출(SPA 재진입 시 새 #issue-gv에 다시 마운트돼야 함)
+function initIssueVoteBar() {
   const gv = qs("issue-gv");
   if (!gv || !window.GALLA_VoteBar) return;
   window.GALLA_VoteBar.mount(gv, {
@@ -752,7 +777,7 @@ async function bumpViewOnce(issueId) {
       let uid = null;
       try { const { data: s } = await window.supabaseClient.auth.getSession(); uid = s?.session?.user?.id || null; } catch (e2) {}
       if (!uid) {
-        const go = "login.html?next=" + encodeURIComponent("issue.html" + location.search);
+        const go = "login.html?next=" + encodeURIComponent("issue.html" + (__SPA_PARAMS ? "?id=" + issueId : location.search));
         try { if (window.parent && window.parent !== window) window.parent.postMessage({ galla: "shell", t: "goto", url: go }, location.origin); } catch (e2) {}
         try { (window.top || window).location.href = go; } catch (e2) {}
         setTimeout(function () { try { location.href = go; } catch (e2) {} }, 400);
@@ -773,7 +798,7 @@ async function bumpViewOnce(issueId) {
     loadVoteStats(issueId);   // votedSide 없음 → 팝/튐 중복 없이 실제값 반영
     loadStats(issueId);
   });
-})();
+}
 
 /* ==========================================================================
    Support Actions (Pro / Con)
@@ -912,8 +937,15 @@ function applyRemixJoinedUI(stance) {
   qs("btn-remix-con").disabled = true;
 }
 
-qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
-qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
+/* 정적 컨트롤 바인딩 — initIssuePage가 호출(SPA 재진입 시 새 DOM에 다시) */
+function bindStaticControls() {
+  qs("btn-remix-pro")?.addEventListener("click", () => goRemix("pro"));
+  qs("btn-remix-con")?.addEventListener("click", () => goRemix("con"));
+  // 9. Back — SPA에선 헤더가 셸 담당이라 버튼이 없을 수 있음(?. 무해)
+  qs("btn-back")?.addEventListener("click", () => history.back());
+  // 10-1. 후원(구 support) 모달 — 마크업 있을 때만
+  initSupportModal();
+}
 
 function goRemix(stance) {
   if (!currentIssue) {
@@ -934,9 +966,8 @@ function goRemix(stance) {
 }
 
 /* ==========================================================================
-   9. Back + Swipe
+   9. Back + Swipe — bindStaticControls로 이동(SPA 재진입 대응)
 ========================================================================== */
-qs("btn-back")?.addEventListener("click", () => history.back());
 // 좌→우 스와이프 뒤로가기는 nav.js가 전 페이지 공통으로 처리(비-탭 페이지). 중복 제거.
 
 /* ==========================================================================
@@ -963,9 +994,10 @@ async function checkAuthorSupport(issueId) {
   }
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+function initSupportModal() {
   const supportModal = document.getElementById("support-modal");
-  if (!supportModal) return;
+  if (!supportModal || supportModal.__bound) return;
+  supportModal.__bound = true;
 
   /* 열기 */
   document.getElementById("support-pro-btn")?.addEventListener("click", () => {
@@ -995,7 +1027,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (confirmBtn) confirmBtn.disabled = false;
     });
   });
-});
+}
 
 // ================================
 // HASH SCROLL FIX (Index → Issue)
@@ -1027,3 +1059,46 @@ function forceBattleScrollWithRetry() {
     if (tries > 25) clearInterval(timer);
   }, 100);
 }
+
+/* ==========================================================================
+   11. 페이지 초기화(이중 모드 공용)
+   — 기존 top-level 자동실행(파라미터 파싱 IIFE·loadIssue IIFE·vote바 IIFE·
+     정적 바인딩)을 전부 이 함수로 모았다. ES 모듈은 1회 평가라
+     SPA 스택 재진입(재-mount) 시에도 초기화가 다시 돌아야 하기 때문.
+========================================================================== */
+async function initIssuePage(root, params) {
+  PAGE_ROOT = root || document;
+  __SPA_PARAMS = params || null;
+  if (!resolveIssueId()) return;
+  initIssueVoteBar();
+  bindStaticControls();
+  await loadIssue();
+}
+
+/* MPA(단독 issue.html) — 기존과 동일하게 모듈 평가 즉시 자동 초기화 */
+if (!__ISSUE_SPA) initIssuePage(document, null);
+
+/* ═══ SPA 페이지 훅 — js/spa/views/issue.js(뷰 어댑터)가 호출. MPA에선 존재만 하고 안 쓰임 ═══ */
+window.GALLA_PAGE_ISSUE = {
+  async mount(root, params) {
+    // 스택은 keep-alive가 아니라 매번 새 DOM으로 mount — 1회 가드 없이 항상 재초기화
+    await initIssuePage(root, params || {});
+  },
+  unmount() {
+    // 실시간 구독·타이머·전역 리스너 해제(뒤로가기 후 잔류 방지)
+    try { destroyCommentSystem(); } catch (_) {}
+    while (__CLEAN.length) { try { __CLEAN.pop()(); } catch (_) {} }
+    try { PAGE_ROOT.querySelector && PAGE_ROOT.querySelector("#issue-vid")?.pause(); } catch (_) {}
+    // 이슈 전역 상태 정리 — 다른 뷰가 옛 이슈 데이터를 읽지 않게
+    window.GALLA_ISSUE = null;
+    window.GALLA_ISSUE_VOTES = null;
+    currentIssue = null;
+    issueAuthorId = null;
+    __SPA_PARAMS = null;
+    PAGE_ROOT = document;
+  },
+  scrolltop() {
+    const host = (PAGE_ROOT && PAGE_ROOT !== document) ? PAGE_ROOT : window;
+    try { host.scrollTo({ top: 0, behavior: "smooth" }); } catch (_) { try { host.scrollTo(0, 0); } catch (e2) {} }
+  }
+};
