@@ -21,7 +21,7 @@
     if (_sdkP) return _sdkP;
     _sdkP = new Promise((res, rej) => {
       const s = document.createElement("script");
-      s.src = "/vendor/agora/AgoraRTC_N-production.js?v=072816";
+      s.src = "/vendor/agora/AgoraRTC_N-production.js?v=072817";
       s.async = true; s.onload = () => { beacon("sdk loaded"); res(); }; s.onerror = () => rej(new Error("sdk-load-fail"));
       document.head.appendChild(s);
     });
@@ -57,21 +57,21 @@
         await client.join(d.appId, channel, d.token, uid >>> 0);
         beacon("join ok ch=" + channel.slice(0, 8) + " uid=" + (uid >>> 0));
 
-        // ⚠️ iosrtc가 getUserMedia를 치환하면 Agora createMicrophoneAudioTrack이 'no audio tracks'로 실패한다.
-        //    앱이 백업해둔 원본(네이티브 WebKit) getUserMedia로 트랙을 받아 Agora 커스텀 트랙으로 감싼다.
-        const gum = (navigator.mediaDevices && navigator.mediaDevices.__origGetUserMedia)
-          ? navigator.mediaDevices.__origGetUserMedia
-          : navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-        const mstream = await gum({ audio: true, video: !!video });
-        const aTrack = mstream.getAudioTracks()[0];
-        if (!aTrack) throw new Error("no mic track (native gum)");
-        localMic = AgoraRTC.createCustomAudioTrack({ mediaStreamTrack: aTrack });
-        const pub = [localMic];
-        if (video) {
-          const vTrack = mstream.getVideoTracks()[0];
-          if (vTrack) { localCam = AgoraRTC.createCustomVideoTrack({ mediaStreamTrack: vTrack }); pub.push(localCam); cbs.onLocalVideo && cbs.onLocalVideo(localCam); }
+        // ⚠️ iosrtc가 getUserMedia를 치환하면 Agora가 'no audio tracks'로 실패. Agora 트랙 생성 동안만
+        //    getUserMedia를 원본(네이티브 WebKit)으로 잠깐 교체했다가 되돌린다. (v2 방식 — 확실)
+        const md = navigator.mediaDevices;
+        const orig = md && md.__origGetUserMedia;
+        const swapped = md && md.getUserMedia;
+        beacon("mic-setup origGUM=" + !!orig);
+        try {
+          if (orig) { try { md.getUserMedia = orig; } catch (_) {} }
+          localMic = await AgoraRTC.createMicrophoneAudioTrack();
+          const pub = [localMic];
+          if (video) { localCam = await AgoraRTC.createCameraVideoTrack(); pub.push(localCam); cbs.onLocalVideo && cbs.onLocalVideo(localCam); }
+          await client.publish(pub);
+        } finally {
+          if (orig && swapped) { try { md.getUserMedia = swapped; } catch (_) {} }   // iosrtc판 복원(다른 기능 위해)
         }
-        await client.publish(pub);
         curChannel = channel;
         beacon("publish ok video=" + !!video);
       } catch (e) {
