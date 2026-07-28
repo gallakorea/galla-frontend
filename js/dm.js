@@ -942,33 +942,10 @@
     // SPA에선 dm 판(.view-host) 안의 #dm-page-host 우선 — 전역 getElementById는 안전망
     (PAGE_MODE() && ((SPA_ROOT && SPA_ROOT.querySelector('#dm-page-host')) || document.getElementById('dm-page-host')) || document.body).appendChild(ROOT);
 
-    // 🔒 유령발신(관통 ghost click) 차단 — 오픈소스 ghost-click buster 원리: 통화 끊기 탭은 top 오버레이(다른 문서)에서
-    //    발생하므로 '이 문서(iframe)'엔 선행 touchstart가 없다. '최근(700ms) 터치 없이 들어온 재발신 클릭'은 관통으로 보고 무시.
-    //    (문서 경계 넘는 신호 없이 자체 완결. 데스크톱 마우스는 touch가 없어 __dmLastTouch 미설정 → 정상 통과.) (1회 등록)
-    if (!window.__dmGhostGuard) {
-      window.__dmGhostGuard = true;
-      // 마지막 '눌림(pointerdown/touchstart)'의 대상 요소·시각 기록 — 관통 ghost click은 눌림이 '끊기 버튼'이라
-      //    재발신 버튼을 안 눌렀는데 click만 그리로 떨어진다. 눌림 대상이 재발신 버튼이 아니면 관통으로 판단.
-      const mark = e => { try { window.__dmDownEl = e.target; window.__dmDownAt = Date.now(); } catch (_) {} };
-      document.addEventListener('pointerdown', mark, { capture: true, passive: true });
-      document.addEventListener('touchstart', mark, { capture: true, passive: true });
-    }
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', async e => {
       const cb = e.target.closest('.dm-callback');
-      if (cb) {
-        // 🔒 유령발신 차단 — 통화 끝날 때 top이 보낸 'callEnded' 신호(__dmCallEndedAt)를 이 iframe이 받아,
-        //    종료 1.5초 내 재발신 클릭(관통 ghost click)을 무시한다. '다시 걸기'가 top이 아닌 이 문서에 있어서
-        //    top 방패로는 못 막았던 문제(진단 dt=-1,sh=0)를 문서 경계 넘는 신호로 해결.
-        // 🔒 근원 판별 — 이 click의 '눌림(pointerdown)'이 정말 이 재발신 버튼 위였는가.
-        //    관통(ghost) click은 눌림이 끊기 버튼(다른 요소)이라 cb.contains(눌림요소)=false → 거른다.
-        const downEl = window.__dmDownEl, downAt = window.__dmDownAt || 0;
-        const realPress = downEl && cb.contains(downEl) && (Date.now() - downAt < 2000);
-        const dinfo = downEl ? (downEl.tagName + '.' + (((downEl.className || '') + '').split(' ')[0] || '')).slice(0, 18) : 'null';   // 🔬 눌림요소 정체
-        window.__callTrig = 'redial-btn|de=' + dinfo + '|ct=' + (downEl && cb.contains(downEl) ? 1 : 0) + '|age=' + (Date.now() - downAt);
-        if (!realPress) { window.__callTrig = null; return; }
-        window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
-      }
+      if (cb) { window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return; }
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
@@ -2032,7 +2009,6 @@
   /* 통화 진입 공용 — 지원 확인 + 이름 보정. 프로필·친구 메뉴·서랍이 모두 이리로 */
   function callFrom(peer, name, video) {
     if (!window.GALLA_call?.supported()) return toastMini('이 브라우저에선 통화를 지원하지 않아요');
-    window.__callTrig = 'callFrom';
     window.GALLA_call.start(peer, name || nickCache[peer] || PROFILES[peer]?.nickname, !!video);
   }
   function friendMenu(el, x, y) {
