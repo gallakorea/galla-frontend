@@ -508,6 +508,12 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 #dm-call.video[data-state="oncall"] #dm-call-remote, #dm-call.video[data-state="oncall"] #dm-call-local { display: none !important; }
 #dm-call.video .dmc-card { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 #dm-call.video[data-state="incoming"] .dmc-name, #dm-call.video[data-state="outgoing"] .dmc-name { text-shadow: 0 1px 8px rgba(0,0,0,.8); }
+/* 📹 Agora 면상톡: 영상은 웹뷰 '안'(HTML div)에 렌더 → 컨테이너를 보이고, 버튼도 웹이 관리(네이티브 오버레이 X). */
+#dm-call.agora.video[data-state="oncall"] #dm-call-remote,
+#dm-call.agora.video[data-state="oncall"] #dm-call-local { display: block !important; }
+#dm-call.agora.video[data-state="oncall"] .dmc-card { display: block !important; }
+#dm-call.agora #dm-call-remote video, #dm-call.agora #dm-call-local video { width: 100% !important; height: 100% !important; object-fit: cover; }
+#dm-call.agora #dm-call-local { transform: none; }   /* Agora가 mirror:true 처리 → CSS 미러 중복 제거 */
 .dmc-err { max-width: 300px; line-height: 1.55; color: #ffb3bb; }
 .dmc-retry {
   margin-top: 4px; padding: 11px 22px; border: none; border-radius: 999px; cursor: pointer;

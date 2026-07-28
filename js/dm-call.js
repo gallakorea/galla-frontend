@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072819'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072820'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -57,12 +57,24 @@
     try {
       await window.GALLA_agora.join(cur.callId, agoraUid(), !!cur.video, {
         onPeerLeft: () => { try { if (CUR === cur) endCall('ended', true); } catch (_) {} },
+        onRemoteVideo: (t) => { cur._agRemote = t; renderAgoraVideo(); },   // 상대 카메라 트랙
+        onLocalVideo:  (t) => { cur._agLocal = t;  renderAgoraVideo(); },   // 내 카메라 트랙
       });
       if (CUR === cur) {
         if (!cur.connectedAt) { cur.connectedAt = Date.now(); startTimer(); }
         stopRings(); paintUI('oncall');
       }
     } catch (e) { wb('agora connect FAIL ' + (e && e.message || e)); }
+  }
+  // Agora 영상 트랙을 통화 UI의 div 컨테이너에 재생. 콜백(트랙 도착)과 paintUI(요소 재생성) 양쪽에서 호출되며,
+  //   컨테이너가 아직 없거나 이미 그 컨테이너에 붙어있으면(중복 play 방지) 건너뛴다.
+  function renderAgoraVideo() {
+    if (!AGORA || !CUR) return;
+    try {
+      const r = document.getElementById('dm-call-remote'), l = document.getElementById('dm-call-local');
+      if (r && CUR._agRemote && CUR._agRemote.__el !== r) { try { CUR._agRemote.play('dm-call-remote', { fit: 'cover' }); } catch (_) {} CUR._agRemote.__el = r; }
+      if (l && CUR._agLocal  && CUR._agLocal.__el  !== l) { try { CUR._agLocal.play('dm-call-local',  { fit: 'cover', mirror: true }); } catch (_) {} CUR._agLocal.__el = l; }
+    } catch (_) {}
   }
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
   let REMUTE = false;                  // 상대 소리 끔
@@ -313,6 +325,11 @@
     }
     else if (p.t === 'reanswer') {
       try { await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp }); } catch (e) { console.error('[call] reanswer', e); }
+    }
+    else if (p.t === 'vmode') {
+      // Agora 통화 중 상대의 영상 on/off 알림 — 내 UI 레이아웃을 상대에 맞춘다(영상은 Agora onRemoteVideo로 도착)
+      const nowVideo = !!p.video;
+      if (CUR && CUR.video !== nowVideo) { CUR.video = nowVideo; SPK = nowVideo; paintUI('oncall'); renderAgoraVideo(); toast(nowVideo ? '상대가 면상톡으로 전환했어요' : '상대가 음성으로 전환했어요'); }
     }
     else if (p.t === 'recnotice') { toast('⏺ 상대가 통화를 녹음하고 있어요'); }
     else if (p.t === 'hangup' || p.t === 'decline' || p.t === 'busy') {
@@ -1025,6 +1042,7 @@
   }
 
   async function flipCam() {
+    if (AGORA) { if (CUR?.video) { try { await window.GALLA_agora.switchCamera(); } catch (_) {} } return; }
     if (!localStream || !CUR?.video) return;
     facing = facing === 'user' ? 'environment' : 'user';
     try {
@@ -1052,6 +1070,15 @@
   /* 📹 음성 → 면상톡 전환: 내 카메라를 켜서 트랙을 추가하고 재협상 */
   async function upgradeToVideo() {
     if (!CUR || CUR.video) return;
+    if (AGORA) {
+      try {
+        await window.GALLA_agora.setVideo(true, { onLocalVideo: (t) => { CUR._agLocal = t; renderAgoraVideo(); } });
+        CUR.video = true; SPK = true;
+        send({ t: 'vmode', video: true });   // 상대 UI도 영상 레이아웃으로
+        paintUI('oncall'); renderAgoraVideo(); toast('📹 면상톡으로 전환했어요');
+      } catch (e) { toast('카메라를 켤 수 없어요'); }
+      return;
+    }
     try {
       const ns = await getMedia(true);
       const nv = ns.getVideoTracks()[0];
@@ -1070,6 +1097,16 @@
   /* 📞 면상톡 → 음성 전환: 영상 트랙 제거·정지 후 재협상 */
   async function downgradeToAudio() {
     if (!CUR || !CUR.video) return;
+    if (AGORA) {
+      try {
+        await window.GALLA_agora.setVideo(false);
+        if (CUR._agLocal) CUR._agLocal.__el = null;
+        CUR._agLocal = null; CUR.video = false; SPK = false;
+        send({ t: 'vmode', video: false });
+        paintUI('oncall'); toast('📞 음성 통화로 전환했어요');
+      } catch (e) { toast('전환에 실패했어요'); }
+      return;
+    }
     try {
       pc.getSenders().filter(x => x.track?.kind === 'video').forEach(sn => { try { pc.removeTrack(sn); } catch (_) {} });
       localStream.getVideoTracks().forEach(t => { t.stop(); localStream.removeTrack(t); });
@@ -1146,13 +1183,18 @@
                        connecting: '연결 중…', oncall: '' }[state] || '';
     box.dataset.state = state;
     box.classList.toggle('video', video);
-    // 📺 영상 통화 중엔 페이지를 투명화(영상은 웹뷰 뒤로) → UI가 검은 영상에 안 덮이게
-    try { document.documentElement.classList.toggle('gcall-video', video); } catch (_) {}
+    box.classList.toggle('agora', AGORA);   // Agora 경로: 영상은 HTML에 직접 렌더(네이티브 오버레이 X)
+    // 📺 영상 통화 중엔 페이지를 투명화(영상은 웹뷰 뒤로) → UI가 검은 영상에 안 덮이게.
+    //    단 Agora는 영상이 웹뷰 '안'에 렌더되므로 투명화하면 안 됨.
+    try { document.documentElement.classList.toggle('gcall-video', video && !AGORA); } catch (_) {}
     box.innerHTML = `
       ${video
-        ? `<video id="dm-call-remote" autoplay playsinline></video>
+        ? (AGORA
+          // Agora는 컨테이너 div에 자체 <video>를 넣는다(<video>에 직접 넣으면 렌더 안 됨).
+          ? `<div id="dm-call-remote"></div><div id="dm-call-local"></div>`
+          : `<video id="dm-call-remote" autoplay playsinline></video>
            <video id="dm-call-local" autoplay playsinline muted></video>
-           <audio id="dm-call-audio" autoplay></audio>`
+           <audio id="dm-call-audio" autoplay></audio>`)
         : (SPK
           ? `<audio id="dm-call-audio" autoplay></audio>`
           : `<video id="dm-call-audio" autoplay playsinline style="width:0;height:0;position:absolute;opacity:0;pointer-events:none"></video>`)}
@@ -1179,8 +1221,12 @@
         </div>
       </div>`;
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
-    // 📞 면상톡: 네이티브 통화 화면(원격/로컬 영상 + 버튼) 표시. 영상 트랙 id를 넘겨 네이티브가 직접 그린다.
-    if (video && state === 'oncall') {
+    if (AGORA) {
+      // Agora 면상톡: 네이티브 오버레이 미사용. 저장해둔 Agora 트랙을 새로 만들어진 div에 재생.
+      _nativeCall({ action: 'videoUI', show: false });
+      if (video && state === 'oncall') renderAgoraVideo();
+    } else if (video && state === 'oncall') {
+      // 📞 면상톡(iosrtc): 네이티브 통화 화면(원격/로컬 영상 + 버튼) 표시. 영상 트랙 id를 넘겨 네이티브가 직접 그린다.
       _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: liveVideoId(localStream), remoteTrackId: (CUR && CUR._rvTrackId) || liveVideoId(remoteStream) });
     } else _nativeCall({ action: 'videoUI', show: false });
     box.onclick = e => {
@@ -1205,7 +1251,8 @@
     wb('callAction ' + c);   // 🔬 네이티브 버튼 → JS 도달 확인
     const box = document.getElementById('dm-call');
     // 영상통화 통화중이면 버튼 시각 상태는 네이티브가 관리 → paintUI 재실행(영상 재전송) 안 한다.
-    const nativeVid = box && box.classList.contains('video') && box.dataset.state === 'oncall';
+    //   단 Agora 면상톡은 버튼도 웹이 관리하므로 정상 repaint 한다.
+    const nativeVid = !AGORA && box && box.classList.contains('video') && box.dataset.state === 'oncall';
     const repaint = () => { if (box && !nativeVid) paintUI(box.dataset.state); };
     if (c === 'accept') accept('tap');
     else if (c === 'decline') decline();
