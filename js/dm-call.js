@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072805'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072806'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -865,6 +865,19 @@
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 통화 끝 → WebAudio 복구(다음 벨소리)
     try { document.documentElement.classList.remove('gcall-video'); } catch (_) {}
     try { window.__callEndedAt = Date.now(); } catch (_) {}   // 🔒 종료 직후 '다시 걸기' 관통 클릭(유령발신) 차단용 타임스탬프
+    // 🔒🔒 유령발신 원천차단 — 통화 UI(#dm-call)가 사라진 자리로 '끊기 탭'이 관통해 그 위치의 '다시 걸기'를
+    //    누르는 것 방지. 화면 전체 700ms 투명 방패로 관통 탭/클릭을 삼킨다. (발신자가 끊을 때만 생기던 유령전화)
+    try {
+      if (!document.getElementById('dmc-tapshield')) {
+        const sh = document.createElement('div');
+        sh.id = 'dmc-tapshield';
+        sh.style.cssText = 'position:fixed;inset:0;z-index:100001;background:transparent';
+        const eat = e => { try { e.stopPropagation(); e.preventDefault(); } catch (_) {} };
+        ['click', 'touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup'].forEach(ev => sh.addEventListener(ev, eat, true));
+        document.body.appendChild(sh);
+        setTimeout(() => { try { sh.remove(); } catch (_) {} }, 700);
+      }
+    } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
@@ -1101,6 +1114,7 @@
   }
 
   function paintUI(state) {
+    try { document.getElementById('dmc-tapshield')?.remove(); } catch (_) {}   // 새 통화 UI 뜨면 유령방패 즉시 걷기(수신/전환 가림 방지)
     let box = document.getElementById('dm-call');
     if (!box) {
       box = document.createElement('div');
