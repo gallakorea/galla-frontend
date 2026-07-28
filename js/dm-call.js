@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072771'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072772'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -496,8 +496,9 @@
     //    ⚠️ 이미 연결됐으면(프리커넥트로 상대가 먼저 받아 accepted가 이 라인보다 먼저 도착) 음소거하지 않는다
     //       — 안 그러면 해제 뒤 다시 음소거돼 발신자 마이크가 굳는다(레이스).
     try { if (!CUR.connectedAt && !CUR._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
-    nativeAudioOn();   // 🔊 통화 셋업 시점에 오디오 유닛 미리 켬 — flaky한 connect 이벤트 타이밍에 의존하지
-                       //    않아야 iosrtc ADM이 미디어 흐르는 순간 바로 소리를 낸다(무음 레이스 제거).
+    // ⚠️ 발신 '벨 울리는 동안'엔 네이티브 voiceChat 세션을 켜지 않는다 — 켜면 그 위 WebAudio 링백이
+    //    수화부로 눌려 무음(사장님 "링백 안울림"). 오디오는 'accepted'(상대 받는 순간)·연결 시 켜진다
+    //    (onSignal accepted→nativeAudioOn, ice/conn connected→nativeAudioOn). 무음은 audioSessionDidActivate가 보장.
     paintUI('outgoing');
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화의 suspend 해제(안 하면 링백 무음)
