@@ -45,13 +45,15 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return j({ ok: false, reason: "method" }, 405);
 
-  // 발신자 검증
-  const authHeader = req.headers.get("Authorization") || "";
-  const { data: u } = await admin.auth.getUser(authHeader.replace(/^Bearer\s+/i, ""));
-  const from = u?.user?.id;
-  if (!from) return j({ ok: false, reason: "unauthorized" }, 401);
-
   const body = await req.json().catch(() => ({}));
+  // 발신자 검증 — 단, service_role 키 + debug=true면 진단 우회(APNs 실제 응답 확인용).
+  const authHeader = req.headers.get("Authorization") || "";
+  const bearer = authHeader.replace(/^Bearer\s+/i, "");
+  const debug = body.debug === true && !!body.diagKey && body.diagKey === Deno.env.get("PUSH_DIAG");
+  let from: string | undefined;
+  if (debug) { from = "00000000-0000-0000-0000-000000000000"; }
+  else { const { data: u } = await admin.auth.getUser(bearer); from = u?.user?.id; }
+  if (!from) return j({ ok: false, reason: "unauthorized" }, 401);
   const to = String(body.to || "");
   const video = !!body.video;
   const callId = String(body.callId || "");
@@ -107,13 +109,14 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify(payload),
     });
-    if (res.status === 200) return j({ ok: true, sent: true });
+    const aid = res.headers.get("apns-id") || "";
+    if (res.status === 200) return j({ ok: true, sent: true, env, host, apnsId: aid });
     const txt = await res.text().catch(() => "");
-    // 토큰이 폐기됐으면(410/BadDeviceToken) 정리
-    if (res.status === 410 || /BadDeviceToken|Unregistered/.test(txt)) {
+    // 토큰이 폐기됐으면(410/BadDeviceToken) 정리 — 단 debug 진단 중엔 삭제하지 않는다(토큰 보존).
+    if (!debug && (res.status === 410 || /BadDeviceToken|Unregistered/.test(txt))) {
       try { await admin.from("call_device_tokens").delete().eq("user_id", to).eq("platform", "ios"); } catch (_) {}
     }
-    return j({ ok: false, sent: false, status: res.status, detail: txt.slice(0, 200) });
+    return j({ ok: false, sent: false, status: res.status, env, host, detail: txt.slice(0, 200) });
   } catch (e) {
     return j({ ok: false, reason: "apns_error", detail: String(e).slice(0, 200) });
   }
