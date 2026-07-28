@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072796'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072797'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -58,14 +58,10 @@
     try {
       const { data } = await sb.functions.invoke('turn-cred', { body: {} });
       if (data?.iceServers) {
-        // 📞 TURN 서버가 있으면 '릴레이 강제'(iceTransportPolicy:'relay'). 비대칭 NAT에서 ICE가 한쪽만 뚫려
-        //    '한 방향으로만 소리/영상'이 오던 문제(발신자가 상대 미디어를 못 받음)를 근절 — 릴레이 경로는 대칭이라
-        //    양방향이 보장된다. 신뢰도 우선(약간의 지연·TURN 대역폭 감수). TURN 없으면 일반(host/srflx) 폴백.
-        const hasTurn = data.iceServers.some(s => {
-          const u = Array.isArray(s.urls) ? s.urls : [s.urls];
-          return u.some(x => /^turns?:/.test(String(x)));
-        });
-        iceCache = hasTurn ? { iceServers: data.iceServers, iceTransportPolicy: 'relay' } : { iceServers: data.iceServers };
+        // ⚠️ iceTransportPolicy:'relay'(릴레이 강제)는 폐기 — TURN 할당이 느리면 host 폴백을 막아 '연결 자체 실패'를
+        //    유발했다(v072795 회귀). 한 방향 문제의 실제 원인은 NAT 비대칭이 아니라 '콜드스타트 백그라운드 카메라 차단'
+        //    (→ fg-reacquire로 대응)이라 릴레이 강제는 불필요. 일반(host/srflx/relay 전체) 후보로 되돌린다.
+        iceCache = { iceServers: data.iceServers };
         iceAt = Date.now();
         return iceCache;
       }
