@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072779'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072780'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -206,16 +206,13 @@
       try { send({ t: 'ring' }); } catch (_) {}
       try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
       startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
-      // 📞 네이티브(iOS 앱)는 CallKit이 수신 단일 UI다 — 웹 수신벨/화면을 띄우지 않는다(중복·깜빡임 제거).
-      //    사용자는 CallKit '받기'로 수락(→ GALLA_callKitAnswer → accept). 웹/안드로이드는 웹 수신UI 유지.
-      const _isNativeApp = !!(window.GALLA_isApp && window.GALLA_isApp());
-      if (!_isNativeApp) {
-        paintUI('incoming');
-        try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
-        try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화 suspend 해제(벨 무음 방지)
-        try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
-        startRingHaptic();                                       // 📳 진동 링
-      }
+      // 📞 웹 수신벨 = 포그라운드 통화의 주 UI(realtime로 빠르게). CallKit(VoIP 푸시)은 잠금/백그라운드 보너스.
+      //    ⚠️ VoIP 푸시 스로틀링(오늘 report+end 남발로 유발)으로 푸시가 11초씩 늦으니, 포그라운드는 웹벨에 의존한다.
+      paintUI('incoming');
+      try { window.GALLA_SFX?.unlock?.(); } catch (_) {}
+      try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화 suspend 해제(벨 무음 방지)
+      try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
+      startRingHaptic();                                       // 📳 진동 링
       ringT = setTimeout(() => endCall('timeout'), 40000);
       // 🔬 자가 테스트 '자동 수신' 모드 — CallKit 탭 없이 벨 뜨면 바로 수락(디버그 전용)
       if (_ctMode === 'accept') { setTimeout(() => { try { if (CUR && CUR.dir === 'in' && !CUR._accepting) accept('selftest'); } catch (_) {} }, 900); }
@@ -242,7 +239,7 @@
     if (p.t === 'ring') {
       // 📞 수신자 웹이 offer를 처리함(=포그라운드/도달가능) → 끊을 때 realtime hangup으로 CallKit이 끝나므로
       //    취소 VoIP 푸시를 보내지 않는다(취소 푸시의 reportNewIncomingCall이 깜빡임을 만드는 것 방지).
-      if (CUR.dir === 'out') { CUR._foreground = true; wb('ring-ack fg'); }
+      if (CUR.dir === 'out') { CUR._foreground = true; if (CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } wb('ring-ack fg'); }
       return;
     }
     if (p.t === 'accepted') {
@@ -532,10 +529,14 @@
     if (_ctMode !== 'caller') {
       // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
       try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
-      // 📞 iOS VoIP 푸시 — 즉시 전송(빠른 CallKit 링). CallKit이 수신 단일 UI다(웹 수신벨 없음).
-      //    callId 고정 → 발신자가 끊으면 같은 callId로 '취소 푸시'해 '아직 살아있는' CallKit을 깔끔히 종료(깜빡임 없음).
-      try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video, callId: CUR.callId } }).catch(() => {}); } catch (_) {}
-      CUR._pushSent = true;
+      // 📞 iOS VoIP 푸시 — 3초 지연·조건부. 수신자가 3초 안에 'ring' ack(=포그라운드)를 주면 웹벨로 이미 받으므로
+      //    푸시를 아예 안 보낸다(→ VoIP 스로틀 회복). ack 없으면(=백그라운드/잠금) 그때만 CallKit용 푸시.
+      const _cur = CUR;
+      _cur._pushT = setTimeout(() => {
+        if (CUR !== _cur || _cur.connectedAt || _cur._foreground) { _cur._pushT = null; return; }   // 포그라운드/연결됨이면 안 보냄
+        try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video, callId: _cur.callId } }).catch(() => {}); } catch (_) {}
+        _cur._pushSent = true; _cur._pushT = null;
+      }, 3000);
     }
     // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
     //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
@@ -800,6 +801,7 @@
     try { window.__ckAnswer = null; } catch (_) {}
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
+    try { if (CUR && CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } } catch (_) {}   // 예약된 VoIP 푸시 취소(끊으면 안 보냄)
     if (!remote && CUR) send({ t: 'hangup' });
     // 📞 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시'. ⚠️ 수신자가 포그라운드(_foreground: 'ring' ack 받음)면
     //    realtime hangup으로 이미 끝나므로 보내지 않는다 — 취소 푸시와 realtime이 겹치면 늦은 쪽이 깜빡임을 만든다.
