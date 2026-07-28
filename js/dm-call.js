@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072770'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072771'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -509,10 +509,14 @@
     let myName = _myNick || '갈라';
     if (!_myNick) { try { sb.from('users').select('nickname').eq('id', ME).single().then(r => { _myNick = (r && r.data && r.data.nickname) || _myNick; }, () => {}); } catch (_) {} }
     send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now() });
-    // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
-    try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
-    // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
-    try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+    // 🔬 자가테스트(caller)는 VoIP/푸시를 끈다 — 하네스가 CallKit을 울려놓고 웹으로 자동수락하면
+    //    CallKit이 세션을 물고 안 놓아 다음 통화 활성화가 충돌(caller=false ERR). 순수 웹 수락 경로로 측정.
+    if (_ctMode !== 'caller') {
+      // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
+      try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+      // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
+      try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+    }
     // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
     //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
     //    재구독한 뒤 다음 재전송을 잡도록, answer 받을 때까지 1.2초마다 같은 offer를 다시 쏜다
