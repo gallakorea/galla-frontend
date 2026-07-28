@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072790'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072791'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -255,7 +255,7 @@
       if (CUR.dir === 'out') {
         try { localStream && localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
         }
       }
       return;
@@ -647,7 +647,7 @@
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -672,7 +672,7 @@
       if (!pc) await buildAnswer(CUR, false);
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); applyNativeRoute();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
@@ -801,6 +801,18 @@
     cur._micHold = setInterval(() => { if (CUR === cur && cur.connectedAt) unmute(); else { clearInterval(cur._micHold); } }, 800);
     [200, 1000, 2500, 5000].forEach(d => setTimeout(() => { if (CUR === cur && cur.connectedAt) { unmute(); _nativeCall({ action: 'kick' }); } }, d));
     setTimeout(() => { if (CUR === cur && cur.connectedAt) statusBeacon('6s'); }, 6000);
+  }
+  // 📞 면상톡 렌더 킥 — CallKit 콜드스타트로 첫 렌더를 놓쳐 검은화면일 때, 연결 후 여러 번 force 재부착.
+  //    (같은 트랙id면 네이티브가 스킵하므로 force로 강제 재부착. 트랙이 늦게 살아나도 잡는다.)
+  function armVideoRenderKick() {
+    const cur = CUR;
+    if (!cur || !cur.video || cur._vkArmed) return;
+    cur._vkArmed = true;
+    [800, 1800, 3200, 5000, 7500].forEach(d => setTimeout(() => {
+      if (CUR !== cur || !cur.connectedAt) return;
+      const rid = cur._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
+      if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('vkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
+    }, d));
   }
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
