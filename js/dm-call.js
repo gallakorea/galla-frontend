@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072789'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072790'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -734,7 +734,7 @@
   // 📞 발신 통화를 네이티브 CallKit에 보고 → 발신자도 네이티브 통화화면 + CallKit 오디오(수신측과 대칭 = 소리 확실).
   function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라'), video: !!(CUR && CUR.video) }); }
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
-  function nativeAudioOn() { _nativeCall({ action: 'connected' }); }
+  function nativeAudioOn() { _nativeCall({ action: 'connected', video: !!(CUR && CUR.video) }); }   // video면 네이티브가 .videoChat(스피커) 모드로
   // 🔬 네이티브(Swift callAudioOn)가 실제 오디오 세션 상태를 여기로 올린다 → 서버 비콘으로 확인
   window.__nativeCallLog = function (m) { try { wb('NATIVE ' + m); } catch (_) {} };
   // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
