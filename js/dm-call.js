@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072783'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072784'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -580,7 +580,9 @@
       try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}   // 방향 sendrecv 강제
       localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
       if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
-      for (const c of cur.pendIce.splice(0)) { try { await pc.addIceCandidate(c); } catch (_) {} }
+      for (const c of cur.pendIce.splice(0)) { try { if (!pc) break; await pc.addIceCandidate(c); } catch (_) {} }
+      // ⚠️ addIceCandidate await 도중에도 통화가 끝날 수 있다 → createAnswer 직전 재확인(pc null 크래시 방지).
+      if (CUR !== cur || !pc) { wb('bA abort2 pc=' + (pc ? 'y' : 'n') + ' cur=' + (CUR === cur)); return; }
       const ans = await pc.createAnswer();
     ans.sdp = tuneOpus(ans.sdp);
     await pc.setLocalDescription(ans);
