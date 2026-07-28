@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072795'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072796'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -862,10 +862,35 @@
   window.GALLA_callForegroundKick = function () {
     try {
       const cur = CUR;
-      if (!cur || !cur.video || !cur.connectedAt) return;
-      // 로컬 카메라가 백그라운드에서 멈춰 있으면 트랙을 깨워 프레임을 다시 흘린다.
+      if (!cur || !cur.connectedAt) return;
+      // 🎥 콜드스타트(잠금 백그라운드)로 받으면 iOS가 카메라·마이크 캡처를 막아, 수신자 로컬 트랙은
+      //    '빈 프레임'만 보낸다 → 발신자가 상대 영상·소리를 못 받음(한 방향). 포그라운드가 된 지금
+      //    미디어를 '다시 획득'해 sender 트랙을 교체(replaceTrack=재협상 불필요)하면 그때부터 실제 프레임이 흐른다.
+      //    수신자(dir='in')만 — 발신자는 애초에 포그라운드라 캡처가 살아있다.
+      if (cur.dir === 'in' && !cur._fgReacquired && pc && pc.getSenders) {
+        cur._fgReacquired = true;
+        (async () => {
+          try {
+            const fresh = await withTimeout(getMedia(!!cur.video), 6000, 'fg-gm');
+            if (CUR !== cur || !pc) { try { fresh.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
+            const senders = pc.getSenders();
+            for (const kind of ['audio', 'video']) {
+              const nt = (kind === 'video' ? fresh.getVideoTracks() : fresh.getAudioTracks())[0];
+              if (!nt) continue;
+              if (kind === 'audio' && cur._userMuted) nt.enabled = false;   // 음소거 유지
+              const snd = senders.find(s => s.track && s.track.kind === kind);
+              if (snd) { try { await snd.replaceTrack(nt); } catch (_) {} }
+            }
+            try { localStream && localStream.getTracks().forEach(t => t.stop()); } catch (_) {}
+            localStream = fresh;
+            wb('fg-reacquire ok l=' + ((liveVideoId(fresh) || '-').slice(0, 6)));
+          } catch (e) { cur._fgReacquired = false; wb('fg-reacquire FAIL ' + String((e && e.name) || e).slice(0, 20)); }
+        })();
+      }
+      // 로컬 트랙 깨우기 + 네이티브 렌더 재부착
       try { localStream && localStream.getVideoTracks().forEach(t => { if (t.enabled === false) t.enabled = true; }); } catch (_) {}
-      [0, 400, 1000, 2000].forEach(d => setTimeout(() => {
+      if (!cur.video) return;
+      [0, 500, 1200, 2500, 4000].forEach(d => setTimeout(() => {
         if (CUR !== cur || !cur.connectedAt) return;
         const rid = cur._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
         if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('fgkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
