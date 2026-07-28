@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072813'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072814'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -42,6 +42,7 @@
   let sb = null, ME = null, chanSig = null, _myNick = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
+  let lastCallEndAt = 0;   // 🔒 유령발신 차단 — 통화 종료 직후 튀는 관통(ghost) 발신을 막기 위한 종료시각
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
@@ -498,6 +499,9 @@
 
   async function start(peer, name, video) {
     if (CUR || !sb || !ME) return;
+    // 🔒 유령발신 원천차단 — 통화 종료 직후(2초 내) 발신은 '끊기 탭 관통(ghost click)'으로 튄 것이라 무시.
+    //    사람은 통화 끝나고 '다시 걸기'를 의식적으로 누르므로 2초는 지난다. (같은 스코프라 문서경계·캐시 무관하게 확실)
+    if (Date.now() - lastCallEndAt < 2000) { try { wb('start blocked (ghost <2s)'); } catch (_) {} return; }
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [], callId: (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.round(1e9 * ((ME || 'x').charCodeAt(0) / 128))) };
@@ -834,6 +838,7 @@
     } catch (_) {}
   };
   function endCall(reason, remote) {
+    lastCallEndAt = Date.now();   // 🔒 유령발신 차단용 — 이 직후 2초 발신은 관통으로 무시
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
     stopSigPoll();
