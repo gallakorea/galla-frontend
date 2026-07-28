@@ -12,7 +12,7 @@
   if (window.top !== window.self) {
     var _O = location.origin;
     window.GALLA_call = {
-      start: function (peer, name, video) { try { parent.postMessage({ galla: 'shell', t: 'callstart', peer: peer, name: name || '', video: !!video }, _O); } catch (_) {} },
+      start: function (peer, name, video) { try { parent.postMessage({ galla: 'shell', t: 'callstart', peer: peer, name: name || '', video: !!video, trig: (window.__ct || 'direct') }, _O); window.__ct = null; } catch (_) {} },
       listen: function () {},
       supported: function () { return true; },
       _debug: function () { return { iframeForward: true }; }
@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072802'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072803'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -497,6 +497,7 @@
   }
 
   async function start(peer, name, video) {
+    try { wb('start trig=' + (window.__callTrig || '?') + ' busy=' + (!!CUR) + ' peer=' + String(peer || '').slice(0, 6)); window.__callTrig = null; } catch (_) {}   // 🔬 유령발신 진단
     if (CUR || !sb || !ME) return;
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');

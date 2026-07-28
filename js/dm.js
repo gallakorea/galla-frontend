@@ -945,7 +945,7 @@
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', async e => {
       const cb = e.target.closest('.dm-callback');
-      if (cb) { window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return; }
+      if (cb) { window.__ct = 'redial-btn'; window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return; }
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
@@ -2009,6 +2009,7 @@
   /* 통화 진입 공용 — 지원 확인 + 이름 보정. 프로필·친구 메뉴·서랍이 모두 이리로 */
   function callFrom(peer, name, video) {
     if (!window.GALLA_call?.supported()) return toastMini('이 브라우저에선 통화를 지원하지 않아요');
+    window.__ct = 'callFrom';
     window.GALLA_call.start(peer, name || nickCache[peer] || PROFILES[peer]?.nickname, !!video);
   }
   function friendMenu(el, x, y) {
