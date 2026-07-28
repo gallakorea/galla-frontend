@@ -1,0 +1,48 @@
+<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Agora 연결 테스트</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a0a0b;color:#fff;font-family:-apple-system,system-ui,sans-serif}
+  #st{padding:24px 18px;font-size:20px;line-height:1.7;white-space:pre-wrap}
+  .big{font-size:34px;font-weight:900;margin:18px 0;padding:16px;border-radius:14px;text-align:center}
+  .ok{background:#123d1e;color:#4ade80}.bad{background:#4a1520;color:#f87171}.wait{background:#1a2440;color:#8ab4ff}
+  #log{font-size:13px;color:#9aa;padding:12px 18px;white-space:pre-wrap}
+</style></head><body>
+<div id="hero" class="big wait">준비 중…</div>
+<div id="st">시작하는 중…</div>
+<div id="log"></div>
+<script src="/vendor/agora/AgoraRTC_N-production.js?v=072814"></script>
+<script>
+const SB="https://bidqauputnhkqepvdzrr.supabase.co", ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
+const CH="GALLA_AGORA_SELFTEST";
+const hero=document.getElementById('hero'), st=document.getElementById('st'), logEl=document.getElementById('log');
+const uid=(Math.floor(Math.random()*4000000000)>>>0);
+let lines=[];
+function set(msg,cls){ st.textContent=msg; if(cls){hero.className='big '+cls; hero.textContent=msg;} log(msg); }
+function log(m){ lines.push(new Date().toISOString().slice(11,19)+' '+m); logEl.textContent=lines.slice(-14).join('\n');
+  try{fetch(SB+'/rest/v1/rpc/log_client_error',{method:'POST',headers:{'apikey':ANON,'Authorization':'Bearer '+ANON,'Content-Type':'application/json'},
+    body:JSON.stringify({p_kind:'agora-test',p_message:'uid'+uid+' '+m,p_stack:null,p_source:'agora-test',p_line:null,p_col:null,p_ver:'agoratest',p_path:null})});}catch(e){} }
+(async ()=>{
+  try{
+    log('AgoraRTC '+(window.AgoraRTC?('v'+AgoraRTC.VERSION):'없음!'));
+    if(!window.AgoraRTC){ set('SDK 로드 실패','bad'); return; }
+    set('토큰 받는 중…','wait');
+    const r=await fetch(SB+'/functions/v1/agora-token',{method:'POST',headers:{'apikey':ANON,'Authorization':'Bearer '+ANON,'Content-Type':'application/json'},body:JSON.stringify({channel:CH,uid})});
+    const d=await r.json();
+    if(!d.ok){ set('토큰 실패: '+(d.reason||JSON.stringify(d)),'bad'); return; }
+    log('토큰 OK appId='+d.appId.slice(0,8));
+    const client=AgoraRTC.createClient({mode:'rtc',codec:'vp8'});
+    client.on('user-published',async (u,mt)=>{ await client.subscribe(u,mt); log('상대 발견! '+mt+' 재생'); if(mt==='audio'){u.audioTrack.play();} set('✅ 상대 연결됨! 소리 들리나요?','ok'); });
+    client.on('user-joined',u=>log('user-joined '+u.uid));
+    client.on('connection-state-change',(c,p)=>log('conn '+p+'→'+c));
+    set('채널 입장 중…','wait');
+    await client.join(d.appId,CH,d.token,uid);
+    log('join OK uid='+uid);
+    set('마이크 켜는 중…','wait');
+    const mic=await AgoraRTC.createMicrophoneAudioTrack();
+    await client.publish([mic]);
+    log('publish OK');
+    set('⏳ 상대 기다리는 중…\n(다른 폰도 이 페이지 열기)','wait');
+  }catch(e){ set('에러: '+(e&&e.message||e),'bad'); log('ERR '+(e&&e.stack||e)); }
+})();
+</script></body></html>
