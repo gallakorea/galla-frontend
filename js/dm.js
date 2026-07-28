@@ -942,16 +942,23 @@
     // SPA에선 dm 판(.view-host) 안의 #dm-page-host 우선 — 전역 getElementById는 안전망
     (PAGE_MODE() && ((SPA_ROOT && SPA_ROOT.querySelector('#dm-page-host')) || document.getElementById('dm-page-host')) || document.body).appendChild(ROOT);
 
+    // 🔒 top(통화엔진)이 보내는 'callEnded' 신호 수신 → 유령발신(관통 클릭) 차단용 타임스탬프 (1회 등록)
+    if (!window.__dmCallEndedListener) {
+      window.__dmCallEndedListener = true;
+      window.addEventListener('message', ev => {
+        try { if (ev.origin === location.origin && ev.data && ev.data.galla === 'shell' && ev.data.t === 'callEnded') window.__dmCallEndedAt = Date.now(); } catch (_) {}
+      });
+    }
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', async e => {
       const cb = e.target.closest('.dm-callback');
       if (cb) {
-        // 🔒 유령발신 차단 — 통화 끝나고 UI가 사라지면서 '끊기 탭'이 그 자리에 나타난 '다시 걸기'로
-        //    떨어지는(click-through) 자동 재발신 방지. 종료 1.5초 내·합성(untrusted)·방패 존재 시 무시.
-        const dt = window.__callEndedAt ? (Date.now() - window.__callEndedAt) : -1;
-        const sh = document.getElementById('dmc-tapshield') ? 1 : 0;
-        window.__callTrig = 'redial-btn|tr=' + (e.isTrusted ? 1 : 0) + '|dt=' + dt + '|sh=' + sh;   // 🔬 진단
-        if (!e.isTrusted || sh || (dt >= 0 && dt < 1500)) { window.__callTrig = null; return; }
+        // 🔒 유령발신 차단 — 통화 끝날 때 top이 보낸 'callEnded' 신호(__dmCallEndedAt)를 이 iframe이 받아,
+        //    종료 1.5초 내 재발신 클릭(관통 ghost click)을 무시한다. '다시 걸기'가 top이 아닌 이 문서에 있어서
+        //    top 방패로는 못 막았던 문제(진단 dt=-1,sh=0)를 문서 경계 넘는 신호로 해결.
+        const dt = window.__dmCallEndedAt ? (Date.now() - window.__dmCallEndedAt) : -1;
+        window.__callTrig = 'redial-btn|tr=' + (e.isTrusted ? 1 : 0) + '|dt=' + dt;
+        if (!e.isTrusted || (dt >= 0 && dt < 1500)) { window.__callTrig = null; return; }
         window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
       }
       const act = e.target.closest('[data-act]')?.dataset.act;

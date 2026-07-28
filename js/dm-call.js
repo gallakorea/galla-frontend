@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072807'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072808'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -877,6 +877,13 @@
         document.body.appendChild(sh);
         setTimeout(() => { try { sh.remove(); } catch (_) {} }, 700);
       }
+    } catch (_) {}
+    // 🔒 유령발신 차단(문서 경계 초월) — '다시 걸기' 버튼은 DM iframe(다른 문서)에 있어 top의 방패/타임스탬프가
+    //    무효였다(진단 dt=-1,sh=0). top에서 모든 iframe에 '방금 끊음' 신호를 보내 iframe의 재발신 핸들러가 막게 한다.
+    try {
+      const _m = { galla: 'shell', t: 'callEnded', at: Date.now() };
+      window.postMessage(_m, location.origin);
+      document.querySelectorAll('iframe').forEach(f => { try { f.contentWindow.postMessage(_m, location.origin); } catch (_) {} });
     } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
