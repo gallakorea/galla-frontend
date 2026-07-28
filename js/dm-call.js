@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072780'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072781'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -569,6 +569,8 @@
       nativeAudioOn();   // 🔊 셋업 시점에 오디오 유닛 미리 켬(CallKit didActivate와 이중 안전)
       await pc.setRemoteDescription({ type: 'offer', sdp: cur.offer });
       wb('bA srd-ok');
+      // ⚠️ async await(buildPC·setRemoteDescription) 도중 통화가 끝나면 localStream/pc가 null이 된다 → 크래시 방지 가드.
+      if (CUR !== cur || !localStream || !pc) { wb('bA abort ls=' + (localStream ? 'y' : 'n') + ' pc=' + (pc ? 'y' : 'n') + ' cur=' + (CUR === cur)); return; }
       try { for (const tx of pc.getTransceivers()) { try { tx.direction = 'sendrecv'; } catch (_) {} } } catch (_) {}   // 방향 sendrecv 강제
       localStream.getTracks().forEach(t => { try { pc.addTrack(t, localStream); } catch (_) {} });
       if (muted) { try { if (!cur.connectedAt && !cur._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {} }
