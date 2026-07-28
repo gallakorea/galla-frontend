@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072809'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072810'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -864,33 +864,6 @@
     _statDiagDone = false;   // 다음 통화 진단 재무장
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 통화 끝 → WebAudio 복구(다음 벨소리)
     try { document.documentElement.classList.remove('gcall-video'); } catch (_) {}
-    try { window.__callEndedAt = Date.now(); } catch (_) {}   // 🔒 종료 직후 '다시 걸기' 관통 클릭(유령발신) 차단용 타임스탬프
-    // 🔒🔒 유령발신 원천차단 — 통화 UI(#dm-call)가 사라진 자리로 '끊기 탭'이 관통해 그 위치의 '다시 걸기'를
-    //    누르는 것 방지. 화면 전체 700ms 투명 방패로 관통 탭/클릭을 삼킨다. (발신자가 끊을 때만 생기던 유령전화)
-    try {
-      if (!document.getElementById('dmc-tapshield')) {
-        const sh = document.createElement('div');
-        sh.id = 'dmc-tapshield';
-        sh.style.cssText = 'position:fixed;inset:0;z-index:100001;background:transparent';
-        const eat = e => { try { e.stopPropagation(); e.preventDefault(); } catch (_) {} };
-        ['click', 'touchstart', 'touchend', 'pointerdown', 'pointerup', 'mousedown', 'mouseup'].forEach(ev => sh.addEventListener(ev, eat, true));
-        document.body.appendChild(sh);
-        setTimeout(() => { try { sh.remove(); } catch (_) {} }, 700);
-      }
-    } catch (_) {}
-    // 🔒 유령발신 차단(문서 경계 초월) — '다시 걸기' 버튼은 DM iframe(다른 문서)에 있어 top의 방패/타임스탬프가
-    //    무효였다(진단 dt=-1,sh=0). top에서 모든 iframe에 '방금 끊음' 신호를 보내 iframe의 재발신 핸들러가 막게 한다.
-    try {
-      const _m = { galla: 'shell', t: 'callEnded', at: Date.now() };
-      const frames = document.querySelectorAll('iframe');
-      wb('callEnded bcast top=' + (window.top === window.self) + ' n=' + frames.length);   // 🔬 진단
-      window.postMessage(_m, location.origin);
-      try { window.top && window.top !== window && window.top.postMessage(_m, location.origin); } catch (_) {}
-      try { window.parent && window.parent !== window && window.parent.postMessage(_m, location.origin); } catch (_) {}
-      frames.forEach(f => { try { f.contentWindow.postMessage(_m, location.origin); } catch (_) {} });
-      // 최상위 문서의 모든 iframe에도(엔진이 중첩 프레임일 때 대비)
-      try { if (window.top && window.top.document) window.top.document.querySelectorAll('iframe').forEach(f => { try { f.contentWindow.postMessage(_m, location.origin); } catch (_) {} }); } catch (_) {}
-    } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {
@@ -1127,7 +1100,6 @@
   }
 
   function paintUI(state) {
-    try { document.getElementById('dmc-tapshield')?.remove(); } catch (_) {}   // 새 통화 UI 뜨면 유령방패 즉시 걷기(수신/전환 가림 방지)
     let box = document.getElementById('dm-call');
     if (!box) {
       box = document.createElement('div');
