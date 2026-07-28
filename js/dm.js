@@ -2042,6 +2042,7 @@
           <button type="button" data-rc="go" disabled style="flex:1;padding:13px 0;border:none;border-radius:13px;cursor:pointer;background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff;font-size:14px;font-weight:900;font-family:inherit;opacity:.5">통화</button>
         </div>
       </div>`;
+    try { window.GALLA_call?._ghostLog && window.GALLA_call._ghostLog('redial confirm SHOWN (발신 대기 — 유령이면 여기서 멈춤)'); } catch (_) {}
     const close = () => { try { box.remove(); } catch (_) {} };
     const goBtn = box.querySelector('[data-rc="go"]');
     // 🕒 500ms 지연 활성화 — 끊은 직후 튀는 연속 관통 탭이 [통화]를 못 누르게.
