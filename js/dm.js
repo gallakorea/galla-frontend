@@ -4175,8 +4175,9 @@
             <b>${missed ? '부재중 ' : ''}${v ? '면상톡' : '육성톡'}</b>
             <i>${missed ? (mine ? '응답 없음' : '전화가 왔었어요') : `${Math.floor(d / 60)}분 ${d % 60}초`}</i>
           </span>
-          <button type="button" class="dm-callback" data-peer="${mine ? curPeer : m.sender_id}" data-video="${v ? 1 : 0}">다시 걸기</button>
         </span>`;
+      // 👻 '다시 걸기' 버튼 제거 — 발신자가 끊은 그 자리에 뜨는 이 버튼으로 iOS 유령터치가 떨어져
+      //    저절로 재발신되던 유령전화의 '표적'을 원천 제거. 재발신은 대화 헤더 통화버튼(상단)으로 한다.
     } else if (m.kind === 'e2e') {
       const plain = E2E_PLAIN[m.id];
       inner = plain != null && plain !== false
