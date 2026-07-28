@@ -944,14 +944,19 @@
 
     // 🔒 유령발신 차단 — '다시 걸기' 관통 유령 click은 iOS가 pointerdown+click을 동시 합성해 간격이 ~1ms(사람은 50~150ms).
     //    마지막 pointerdown 시각을 기록해, 재발신 click이 사람 수준 간격일 때만 발신한다. (진단 age=1ms로 확정)
-    if (!window.__dmDownHook) { window.__dmDownHook = true; document.addEventListener('pointerdown', () => { window.__dmDownT = Date.now(); }, { capture: true, passive: true }); }
+    if (!window.__dmDownHook) { window.__dmDownHook = true; document.addEventListener('pointerdown', (ev) => { window.__dmDownT = Date.now(); window.__dmDownEl = ev.target; }, { capture: true, passive: true }); }
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', async e => {
       const cb = e.target.closest('.dm-callback');
       if (cb) {
         const age = window.__dmDownT ? (Date.now() - window.__dmDownT) : -1;
-        try { window.__callTrig = 'redial|age=' + age; } catch (_) {}
-        if (age >= 0 && age < 30) { try { window.__callTrig = null; } catch (_) {} return; }   // 합성 유령(간격<30ms) 차단
+        // 👻 유령 근본 차단: '이 버튼에서 시작된 pointerdown'이 있어야만 발신한다.
+        //   터치 관통(통화 오버레이의 끊기 버튼에서 눌렀다가 오버레이가 사라져 밑의 '다시 걸기'로 click이 떨어짐)이나
+        //   합성 click은 pointerdown이 이 버튼이 아니거나 아예 없어서 걸러진다. + 사람 탭 간격(30~2000ms)만 허용.
+        const downInBtn = !!(window.__dmDownEl && cb.contains(window.__dmDownEl));
+        try { window.__callTrig = 'redial|age=' + age + '|down=' + (downInBtn ? 1 : 0); } catch (_) {}
+        if (!downInBtn || age < 30 || age > 2000) { try { window.__callTrig = null; } catch (_) {} try { window.GALLA_call?._ghostLog && window.GALLA_call._ghostLog('redial rejected down=' + (downInBtn ? 1 : 0) + ' age=' + age); } catch (_) {} return; }
+        window.__dmDownEl = null;   // 소모 — 한 pointerdown은 한 번만
         window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
       }
       const act = e.target.closest('[data-act]')?.dataset.act;
