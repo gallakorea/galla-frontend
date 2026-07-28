@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072793'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072794'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -289,6 +289,10 @@
         if (CUR.video !== nowVideo) { CUR.video = nowVideo; SPK = nowVideo; paintUI('oncall'); toast(nowVideo ? '상대가 면상톡으로 전환했어요' : '상대가 음성으로 전환했어요'); }
       } catch (e) { console.error('[call] reoffer', e); }
     }
+    else if (p.t === 'req-ice-restart') {
+      // 상대(수신자)가 끊김 감지 → 발신자인 내가 ICE 재시작 개시
+      try { iceRestart('peer-req'); } catch (_) {}
+    }
     else if (p.t === 'reanswer') {
       try { await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp }); } catch (e) { console.error('[call] reanswer', e); }
     }
@@ -445,11 +449,24 @@
     //    신호(발신자)가 제어한다. 프리커넥트(벨 중 ICE 미리 연결) 때 벨 화면이 통화중으로 튀지 않게.
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
-      wb('ice=' + pc.iceConnectionState);
-      if (['connected', 'completed'].includes(pc.iceConnectionState)) {
-        // 복구됨 — disconnected 유예 타이머가 걸려 있으면 취소(끊김 오판 방지)
+      const s = pc.iceConnectionState;
+      wb('ice=' + s);
+      if (['connected', 'completed'].includes(s)) {
+        // 복구됨 — 유예/재시작 타이머 취소(끊김 오판 방지)
         if (CUR && CUR._dropT) { clearTimeout(CUR._dropT); CUR._dropT = null; wb('drop-recover'); }
+        if (CUR && CUR._iceReT) { clearTimeout(CUR._iceReT); CUR._iceReT = null; }
+        if (CUR) CUR._iceRestarting = false;
         nativeAudioOn(); armAudioStatDiag();
+      } else if (s === 'failed') {
+        iceRestart('ice-failed');   // 📞 failed=필수 재시작(즉시)
+      } else if (s === 'disconnected') {
+        // disconnected는 일시적일 수 있음 — 2.5초 지속되면 ICE 재시작(빠른 복구). 그래도 안되면 onconnectionstatechange 8초 유예가 종료.
+        if (CUR && CUR.connectedAt && !CUR._iceReT) {
+          CUR._iceReT = setTimeout(() => {
+            if (CUR) CUR._iceReT = null;
+            if (pc && ['disconnected', 'failed', 'checking'].includes(pc.iceConnectionState)) iceRestart('ice-disc');
+          }, 2500);
+        }
       }
     };
     pc.onconnectionstatechange = () => {
@@ -458,9 +475,20 @@
       if (pc.connectionState === 'connected') {
         if (CUR && CUR._dropT) { clearTimeout(CUR._dropT); CUR._dropT = null; wb('drop-recover2'); }
         nativeAudioOn();
-      } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-        // failed/closed = 종결 상태 → 즉시 종료(활성 통화만).
-        if (CUR && CUR.connectedAt) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
+      } else if (pc.connectionState === 'closed') {
+        if (CUR && CUR.connectedAt) endCall('ended');
+      } else if (pc.connectionState === 'failed') {
+        // 📞 failed도 즉시 끊지 않는다 — ICE 재시작으로 복구 시도 후, 8초 유예 안에 안 살아나면 종료.
+        iceRestart('conn-failed');
+        if (CUR && CUR.connectedAt && !CUR._dropT) {
+          wb('conn-failed grace');
+          CUR._dropT = setTimeout(() => {
+            if (!pc || !CUR || !CUR.connectedAt) return;
+            const st = pc.connectionState, ist = pc.iceConnectionState;
+            if (['connected', 'completed'].includes(st) || ['connected', 'completed'].includes(ist)) { wb('failed-recover'); return; }
+            wb('restart-timeout end'); endCall('netfail');
+          }, 8000);
+        }
       } else if (pc.connectionState === 'disconnected') {
         // ⚠️ disconnected는 '일시적' — WebRTC가 스스로 connected로 복구하는 경우가 많다.
         //    즉시 끊으면 한쪽 네트워크 순간 끊김에 통화 전체가 죽는다("한쪽만 끊김"의 원인).
@@ -1005,6 +1033,24 @@
       const lv = document.getElementById('dm-call-local');
       if (lv) { lv.srcObject = new MediaStream([nv]); lv.play?.().catch(() => {}); }
     } catch (_) { toast('카메라 전환에 실패했어요'); }
+  }
+
+  /* 📞 ICE 재시작 — 통화 중 연결 끊김(disconnected/failed) 자동 복구. (Philipp Hancke/BlogGeek 정석)
+     발신자(offerer)만 개시해 glare 방지. 기존 reoffer/reanswer 경로 재사용 — 트랙은 그대로라 검은화면 위험 낮음.
+     수신자가 끊김을 먼저 감지하면 발신자에게 재시작을 요청(req-ice-restart)한다. */
+  async function iceRestart(why) {
+    if (!pc || !CUR || !CUR.connectedAt) return;
+    if (CUR.dir !== 'out') { try { send({ t: 'req-ice-restart' }); } catch (_) {} return; }   // 수신자는 발신자에 요청만
+    if (CUR._iceRestarting) return;
+    CUR._iceRestarting = true;
+    try {
+      const offer = await pc.createOffer({ iceRestart: true });
+      offer.sdp = tuneOpus(offer.sdp);
+      await pc.setLocalDescription(offer);
+      send({ t: 'reoffer', sdp: offer.sdp, video: !!CUR?.video, iceRestart: true });
+      wb('ice-restart tx (' + why + ')');
+    } catch (e) { wb('ice-restart FAIL ' + String((e && e.name) || e).slice(0, 20)); }
+    setTimeout(() => { if (CUR) CUR._iceRestarting = false; }, 6000);   // 6초 후 재시도 허용
   }
 
   /* ── 재협상 — 통화 중 트랙 추가/제거(영상↔음성 전환)를 상대와 합의 ── */
