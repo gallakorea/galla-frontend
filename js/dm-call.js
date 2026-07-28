@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072791'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072792'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -814,6 +814,21 @@
       if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('vkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
     }, d));
   }
+  // 📞 앱이 포그라운드로 돌아온 순간(네이티브 applicationDidBecomeActive) 호출된다.
+  //    CallKit로 받으면 렌더가 백그라운드 전환 중 일어나 영상이 검게 굳는 문제 → 완전히 활성화된 지금 강제 재부착.
+  window.GALLA_callForegroundKick = function () {
+    try {
+      const cur = CUR;
+      if (!cur || !cur.video || !cur.connectedAt) return;
+      // 로컬 카메라가 백그라운드에서 멈춰 있으면 트랙을 깨워 프레임을 다시 흘린다.
+      try { localStream && localStream.getVideoTracks().forEach(t => { if (t.enabled === false) t.enabled = true; }); } catch (_) {}
+      [0, 400, 1000, 2000].forEach(d => setTimeout(() => {
+        if (CUR !== cur || !cur.connectedAt) return;
+        const rid = cur._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
+        if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('fgkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
+      }, d));
+    } catch (_) {}
+  };
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
