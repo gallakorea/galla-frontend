@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072776'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072777'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -200,7 +200,10 @@
       }
       // 다른 상대와 통화/수신 중이면 진짜 busy
       if (CUR) { send({ t: 'busy', to: p.from }); return; }
-      CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [] };
+      CUR = { peer: p.from, name: p.name || '갈라 친구', dir: 'in', video: !!p.video, offer: p.sdp, pendIce: [], callId: p.callId || '' };
+      // 📞 웹이 실시간 offer로 통화를 받았다 = 앱이 포그라운드 → 이 callId의 CallKit 벨은 억제(중복 벨·재울림 방지).
+      //    CallKit은 앱이 백그라운드라 이 offer를 못 받을 때만 울리면 된다.
+      if (p.callId) { try { _nativeCall({ action: 'callHandledInApp', callId: p.callId }); } catch (_) {} }
       try { iceConfig().catch(() => {}); } catch (_) {}   // ⚡ 받기 전에 TURN 미리 데움 → 수락 즉시 answer
       startSigPoll();   // ⚡ 콜드스타트 구간 이후 신호(ice 등)도 REST로 즉시
       paintUI('incoming');
@@ -512,7 +515,7 @@
     // 닉네임은 캐시 사용(오퍼 전 DB조회 블로킹 제거 → 전환 빠르게). 캐시 없으면 백그라운드로 채워 다음 통화에.
     let myName = _myNick || '갈라';
     if (!_myNick) { try { sb.from('users').select('nickname').eq('id', ME).single().then(r => { _myNick = (r && r.data && r.data.nickname) || _myNick; }, () => {}); } catch (_) {} }
-    send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now() });
+    send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now(), callId: CUR.callId });
     // 🔬 자가테스트(caller)는 VoIP/푸시를 끈다 — 하네스가 CallKit을 울려놓고 웹으로 자동수락하면
     //    CallKit이 세션을 물고 안 놓아 다음 통화 활성화가 충돌(caller=false ERR). 순수 웹 수락 경로로 측정.
     if (_ctMode !== 'caller') {
