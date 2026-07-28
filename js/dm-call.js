@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072788'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072789'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1192,8 +1192,8 @@
       try { start(_ctPeer, '자가테스트', vid); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
       if (vid) _ctVideoQA(); else _ctButtonQA();   // 🔬 영상이면 영상 렌더 진단, 음성이면 버튼 QA
     }
-    // 52초 통화 → 끊고 15초 쉬고 반복(버튼+소리 QA 시퀀스 ~40초 확보)
-    _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 52000);
+    // 68초 통화 → 끊고 15초 쉬고 반복(면상톡 버튼+소리 QA 시퀀스 ~55초 확보)
+    _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 68000);
   }
   // 🔬 화면 배너 — 사장님이 '지금 무슨 단계'인지 보고 소리를 확인하게. 양쪽 폰 동기화(발신자가 상대에게도 전송).
   function _qaBanner(text) {
@@ -1233,9 +1233,21 @@
     const lv = () => { try { const t = localStream && localStream.getVideoTracks()[0]; return t ? t.readyState : 'none'; } catch (_) { return 'err'; } };
     const rv = () => { try { const t = remoteStream && remoteStream.getVideoTracks()[0]; return t ? t.readyState : 'none'; } catch (_) { return 'none'; } };
     await nap(2500);
-    wb('QAV tracks localVid=' + lv() + ' remoteVid=' + rv() + ' rvId=' + ((cur._rvTrackId || 'none')).slice(0, 8) + ' brg=' + !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall));
-    await step('📹 면상톡 연결 — 양쪽 얼굴 나오나요?\n(내 화면 + 상대 화면) 15초', 15000);
-    await step('📹 소리도 나나요? 10초', 10000);
+    const micEn = () => { try { const t = localStream && localStream.getAudioTracks()[0]; return t ? t.enabled : '?'; } catch (_) { return 'err'; } };
+    const vidEn = () => { try { const t = localStream && localStream.getVideoTracks()[0]; return t ? t.enabled : '?'; } catch (_) { return 'err'; } };
+    wb('QAV tracks localVid=' + lv() + ' remoteVid=' + rv() + ' rvId=' + ((cur._rvTrackId || 'none')).slice(0, 8));
+    await step('📹 화면 양쪽 나오나요?\n(상대 풀스크린 + 내 화면 우상단) 8초', 8000);
+    await step('🔊 소리 나나요? (스피커폰)\n발신폰 근처서 소리내보세요 8초', 8000);
+    try { callAction('mute'); } catch (_) {} await step('② 음소거 — 소리 끊겨야\nmic꺼짐=' + (micEn() === false) + ' 7초', 7000);
+    wb('QAV-R mute mic=' + micEn() + ' (기대 false)');
+    try { callAction('mute'); } catch (_) {} await step('③ 음소거 해제 — 소리 복구 6초', 6000);
+    try { callAction('camoff'); } catch (_) {} await step('④ 카메라 끄기 — 상대화면서 내가 검게\nvid꺼짐=' + (vidEn() === false) + ' 8초', 8000);
+    wb('QAV-R camoff vid=' + vidEn() + ' (기대 false)');
+    try { callAction('camoff'); } catch (_) {} await step('⑤ 카메라 켜기 — 내 영상 복구 6초', 6000);
+    try { callAction('flip'); } catch (_) {} await step('⑥ 카메라 전환(앞↔뒤) 6초', 6000);
+    try { callAction('spk'); } catch (_) {} await step('⑦ 스피커 토글 SPK=' + SPK + ' 4초', 4000);
+    try { callAction('spk'); } catch (_) {} await nap(500);
+    await step('면상톡 QA 완료 — 곧 재시작', 2000);
     try { send({ t: 'qastep', text: '' }); } catch (_) {} _qaBanner('');
     wb('QAV done');
   }
