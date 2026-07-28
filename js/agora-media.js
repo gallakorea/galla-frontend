@@ -6,12 +6,20 @@
   let client = null, localMic = null, localCam = null, curChannel = null, joining = false;
   const beacon = (m) => { try { window.__agoraLog ? window.__agoraLog(m) : console.log("[agora]", m); } catch (_) {} };
 
+  const _SB = "https://bidqauputnhkqepvdzrr.supabase.co", _ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
   async function token(channel, uid) {
     const sb = window.supabaseClient;
-    if (!sb) throw new Error("no-supabase");
-    const { data, error } = await sb.functions.invoke("agora-token", { body: { channel, uid } });
-    if (error || !data || !data.ok) throw new Error("token-fail:" + (data && data.reason || error && error.message || "?"));
-    return data; // { appId, token, uid, channel }
+    // 세션 access_token을 '명시적으로' Bearer로 실어 직접 호출 (functions.invoke가 유저 토큰을 안 실어 401나던 것 해결)
+    let jwt = _ANON;
+    try { const { data } = await sb.auth.getSession(); if (data && data.session && data.session.access_token) jwt = data.session.access_token; } catch (_) {}
+    const r = await fetch(_SB + "/functions/v1/agora-token", {
+      method: "POST",
+      headers: { "apikey": _ANON, "Authorization": "Bearer " + jwt, "Content-Type": "application/json" },
+      body: JSON.stringify({ channel, uid }),
+    });
+    let d = null; try { d = await r.json(); } catch (_) {}
+    if (!r.ok || !d || !d.ok) throw new Error("token-fail:" + r.status + ":" + (d && d.reason || "?"));
+    return d; // { appId, token, uid, channel }
   }
 
   // SDK(1.2MB) 지연 로드 — 통화 시작 시 1회만 받는다(앱 첫 로드 가볍게).
@@ -21,7 +29,7 @@
     if (_sdkP) return _sdkP;
     _sdkP = new Promise((res, rej) => {
       const s = document.createElement("script");
-      s.src = "/vendor/agora/AgoraRTC_N-production.js?v=072817";
+      s.src = "/vendor/agora/AgoraRTC_N-production.js?v=072818";
       s.async = true; s.onload = () => { beacon("sdk loaded"); res(); }; s.onerror = () => rej(new Error("sdk-load-fail"));
       document.head.appendChild(s);
     });
