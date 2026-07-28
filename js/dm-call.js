@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072814'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072815'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -43,6 +43,27 @@
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
   let lastCallEndAt = 0;   // 🔒 유령발신 차단 — 통화 종료 직후 튀는 관통(ghost) 발신을 막기 위한 종료시각
+  // 📞 Agora 미디어 전환 — 시그널링(벨·수락·CallKit)은 그대로, 소리/영상만 Agora. iosrtc 미디어(getMedia/PC/SDP) 우회.
+  const AGORA = !!(window.GALLA_agora);
+  try { window.__agoraLog = (m) => { try { wb('AG ' + m); } catch (_) {} }; } catch (_) {}
+  function agoraUid() { // ME(유저 uuid)→uint32 결정적 해시(발신·수신 서로 다른 값 보장)
+    const s = String(ME || Math.random()); let h = 2166136261 >>> 0;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    return (h >>> 0) || 1;
+  }
+  async function agoraConnect(cur) {
+    if (!AGORA || !cur || cur._agoraJoined) return;
+    cur._agoraJoined = true;
+    try {
+      await window.GALLA_agora.join(cur.callId, agoraUid(), !!cur.video, {
+        onPeerLeft: () => { try { if (CUR === cur) endCall('ended', true); } catch (_) {} },
+      });
+      if (CUR === cur) {
+        if (!cur.connectedAt) { cur.connectedAt = Date.now(); startTimer(); }
+        stopRings(); paintUI('oncall');
+      }
+    } catch (e) { wb('agora connect FAIL ' + (e && e.message || e)); }
+  }
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
@@ -251,9 +272,9 @@
     }
     if (p.t === 'qastep') { try { _qaBanner(p.text || ''); } catch (_) {} return; }   // 🔬 QA 배너 동기화(수신폰에도 같은 단계 표시)
     if (p.t === 'accepted') {
-      // 📞 상대가 '받기'를 누른 순간 — 프리커넥트로 ICE는 이미(또는 곧) 뚫려 있으니
-      //    내 마이크 음소거만 풀고 통화중으로 전환하면 소리가 '즉시' 붙는다(카톡식).
+      // 📞 상대가 '받기'를 누른 순간. Agora면 발신자도 이제 채널 join(→ 양쪽 미디어 연결).
       if (CUR.dir === 'out') {
+        if (AGORA) { clearTimeout(ringT); agoraConnect(CUR); return; }
         try { localStream && localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
           clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
@@ -507,30 +528,34 @@
     CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [], callId: (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.round(1e9 * ((ME || 'x').charCodeAt(0) / 128))) };
     paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
     await primePermHint(!!video);
-    try { localStream = await getMedia(!!video); }
-    catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video), () => start(peer, name, video)); }
-    if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 걸어요'); }
+    if (!AGORA) {   // iosrtc 미디어 준비 — Agora면 미디어는 join 시 Agora가 잡으므로 우회
+      try { localStream = await getMedia(!!video); }
+      catch (e) { const nm = CUR.name; CUR = null; return paintErr(nm, explainMediaErr(e, video), () => start(peer, name, video)); }
+      if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 걸어요'); }
+    }
     try {
     await ensureSigJoined();   // 📡 시그널 수신 채널 조인 보장(첫 통화 즉시 전환)
     startSigPoll();            // ⚡ 콜드스타트 구간 answer를 REST 폴링으로 즉시 잡기(발신 '거는중' 고착 방지)
+    let offer;
+    if (AGORA) {
+      offer = { sdp: 'agora' };   // 🔊 Agora: 실제 SDP 불필요 — offer는 '벨 울려라' 신호일 뿐, 수락되면 양쪽 join
+    } else {
     await buildPC();
     // 🔇 상대가 받기 전엔 내 마이크 음소거(ICE는 미리 뚫리되 소리는 안 새게). 'accepted'가 오면 푼다.
-    //    ⚠️ 이미 연결됐으면(프리커넥트로 상대가 먼저 받아 accepted가 이 라인보다 먼저 도착) 음소거하지 않는다
-    //       — 안 그러면 해제 뒤 다시 음소거돼 발신자 마이크가 굳는다(레이스).
     try { if (!CUR.connectedAt && !CUR._userMuted) localStream.getAudioTracks().forEach(t => { t.enabled = false; }); } catch (_) {}
-    // ⚠️ 발신 '벨 울리는 동안'엔 네이티브 voiceChat 세션을 켜지 않는다 — 켜면 그 위 WebAudio 링백이
-    //    수화부로 눌려 무음(사장님 "링백 안울림"). 오디오는 'accepted'(상대 받는 순간)·연결 시 켜진다
-    //    (onSignal accepted→nativeAudioOn, ice/conn connected→nativeAudioOn). 무음은 audioSessionDidActivate가 보장.
+    }
+    // ⚠️ 발신 '벨 울리는 동안'엔 네이티브 voiceChat 세션을 켜지 않는다(WebAudio 링백 눌림 방지).
     paintUI('outgoing');
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     _nativeCall({ action: 'ringSession' });   // 📞 발신 벨 동안 .playback 세션(무음스위치 무시) → 링백이 무음모드서도 울림(카톡식)
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화의 suspend 해제(안 하면 링백 무음)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
-    wb('ringout ctx=' + (window.GALLA_SFX && window.GALLA_SFX.debugState ? window.GALLA_SFX.debugState() : 'nofn'));   // 🔬 링백 무음 진단
-    setTimeout(() => wb('ringout+1s ctx=' + (window.GALLA_SFX && window.GALLA_SFX.debugState ? window.GALLA_SFX.debugState() : 'nofn')), 1000);
-    const offer = await pc.createOffer();
-    offer.sdp = tuneOpus(offer.sdp);
+    if (!AGORA) {
+    const o = await pc.createOffer();
+    o.sdp = tuneOpus(o.sdp);
+    offer = o;
     await pc.setLocalDescription(offer);
+    }
     // 닉네임은 캐시 사용(오퍼 전 DB조회 블로킹 제거 → 전환 빠르게). 캐시 없으면 백그라운드로 채워 다음 통화에.
     let myName = _myNick || '갈라';
     if (!_myNick) { try { sb.from('users').select('nickname').eq('id', ME).single().then(r => { _myNick = (r && r.data && r.data.nickname) || _myNick; }, () => {}); } catch (_) {} }
@@ -649,6 +674,8 @@
     if (via === 'tap' && CUR.callId) { try { _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {} }
     send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환 + 발신자 마이크 해제
     [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
+    // 🔊 Agora: 수신자도 채널 join → 양쪽 미디어 연결(iosrtc 프리커넥트·getMedia·buildAnswer 전부 우회)
+    if (AGORA) { await withTimeout(primePermHint(CUR.video), 3000).catch(() => {}); await agoraConnect(CUR); return; }
     // 프리커넥트가 진행 중이면 완료를 기다려 그 결과 재사용(최대 ~2.4초 — 동시 셋업 경합 방지)
     for (let i = 0; i < 30 && CUR._preRunning; i++) await new Promise(r => setTimeout(r, 80));
     if (CUR && CUR._preconnected && localStream) {
@@ -839,6 +866,7 @@
   };
   function endCall(reason, remote) {
     lastCallEndAt = Date.now();   // 🔒 유령발신 차단용 — 이 직후 2초 발신은 관통으로 무시
+    if (AGORA) { try { window.GALLA_agora.leave(); } catch (_) {} }   // 🔊 Agora 채널 나가기
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
     stopSigPoll();
@@ -1189,13 +1217,19 @@
     else if (c === 'tovideo') upgradeToVideo();
     else if (c === 'toaudio') downgradeToAudio();
     else if (c === 'mute' || c === 'camoff') {
-      const kind = c === 'mute' ? 'audio' : 'video';
-      const t = localStream?.getTracks().find(x => x.kind === kind);
-      if (!t) return;
-      t.enabled = !t.enabled;
-      if (c === 'mute' && CUR) CUR._userMuted = !t.enabled;   // 사용자가 직접 끈 상태 기록(안전 언뮤트가 안 켜게)
+      let enabled;
+      if (AGORA) {   // 🔊 Agora 트랙 토글
+        if (c === 'mute') { CUR._agMuted = !CUR._agMuted; enabled = !CUR._agMuted; window.GALLA_agora.setMute(CUR._agMuted); if (CUR) CUR._userMuted = CUR._agMuted; }
+        else { CUR._agCamOff = !CUR._agCamOff; enabled = !CUR._agCamOff; window.GALLA_agora.setCamEnabled(enabled); }
+      } else {
+        const kind = c === 'mute' ? 'audio' : 'video';
+        const t = localStream?.getTracks().find(x => x.kind === kind);
+        if (!t) return;
+        t.enabled = !t.enabled; enabled = t.enabled;
+        if (c === 'mute' && CUR) CUR._userMuted = !t.enabled;
+      }
       const b = box && box.querySelector(`[data-c="${c}"]`);
-      if (b) { b.classList.toggle('off', !t.enabled); b.innerHTML = c === 'mute' ? (t.enabled ? IC.mic : IC.micoff) : (t.enabled ? IC.cam : IC.camoff); }
+      if (b) { b.classList.toggle('off', !enabled); b.innerHTML = c === 'mute' ? (enabled ? IC.mic : IC.micoff) : (enabled ? IC.cam : IC.camoff); }
     }
   }
   window.GALLA_callAction = c => { wb('nativeBtn ' + c); callAction(c); };   // 네이티브 오버레이 버튼 → 브릿지(출처 로그)
