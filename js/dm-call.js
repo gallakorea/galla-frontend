@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072774'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072775'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1080,7 +1080,12 @@
     if (video && state === 'oncall') {
       _nativeCall({ action: 'videoUI', show: true, name: CUR?.name || '', localTrackId: liveVideoId(localStream), remoteTrackId: (CUR && CUR._rvTrackId) || liveVideoId(remoteStream) });
     } else _nativeCall({ action: 'videoUI', show: false });
-    box.onclick = e => callAction(e.target.closest('[data-c]')?.dataset.c);
+    box.onclick = e => {
+      const c = e.target.closest('[data-c]')?.dataset.c;
+      // 🔬 유령 클릭 진단 — trust=false면 합성(프로그램), true면 실제 터치/OS. xy=클릭좌표.
+      wb('boxclick c=' + c + ' trust=' + (e.isTrusted ? 1 : 0) + ' xy=' + Math.round(e.clientX || -1) + ',' + Math.round(e.clientY || -1));
+      callAction(c);
+    };
   }
   // 스트림에서 '살아있는 최신' 영상 트랙 id — 음성↔영상 재전환 시 옛 트랙이 누적돼 멈춘 화면이
   //   나오던 것 방지(readyState 'live'인 마지막 트랙 우선).
