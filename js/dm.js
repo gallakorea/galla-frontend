@@ -964,8 +964,9 @@
         //    관통(ghost) click은 눌림이 끊기 버튼(다른 요소)이라 cb.contains(눌림요소)=false → 거른다.
         const downEl = window.__dmDownEl, downAt = window.__dmDownAt || 0;
         const realPress = downEl && cb.contains(downEl) && (Date.now() - downAt < 2000);
+        const dinfo = downEl ? (downEl.tagName + '.' + (((downEl.className || '') + '').split(' ')[0] || '')).slice(0, 18) : 'null';   // 🔬 눌림요소 정체
+        window.__callTrig = 'redial-btn|de=' + dinfo + '|ct=' + (downEl && cb.contains(downEl) ? 1 : 0) + '|age=' + (Date.now() - downAt);
         if (!realPress) { window.__callTrig = null; return; }
-        window.__callTrig = 'redial-btn';
         window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
       }
       const act = e.target.closest('[data-act]')?.dataset.act;
