@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072767'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072768'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -425,16 +425,34 @@
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
       wb('ice=' + pc.iceConnectionState);
-      if (['connected', 'completed'].includes(pc.iceConnectionState)) { nativeAudioOn(); armAudioStatDiag(); }
+      if (['connected', 'completed'].includes(pc.iceConnectionState)) {
+        // 복구됨 — disconnected 유예 타이머가 걸려 있으면 취소(끊김 오판 방지)
+        if (CUR && CUR._dropT) { clearTimeout(CUR._dropT); CUR._dropT = null; wb('drop-recover'); }
+        nativeAudioOn(); armAudioStatDiag();
+      }
     };
     pc.onconnectionstatechange = () => {
       if (!pc) return;
       wb('conn=' + pc.connectionState);
       if (pc.connectionState === 'connected') {
+        if (CUR && CUR._dropT) { clearTimeout(CUR._dropT); CUR._dropT = null; wb('drop-recover2'); }
         nativeAudioOn();
-      } else if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) {
-        // 링/프리커넥트 중의 일시적 끊김으론 종료하지 않는다(활성 통화만 종료).
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        // failed/closed = 종결 상태 → 즉시 종료(활성 통화만).
         if (CUR && CUR.connectedAt) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
+      } else if (pc.connectionState === 'disconnected') {
+        // ⚠️ disconnected는 '일시적' — WebRTC가 스스로 connected로 복구하는 경우가 많다.
+        //    즉시 끊으면 한쪽 네트워크 순간 끊김에 통화 전체가 죽는다("한쪽만 끊김"의 원인).
+        //    8초 유예 후에도 안 돌아오면 그때 종료. connected 되면 위에서 타이머 취소.
+        if (CUR && CUR.connectedAt && !CUR._dropT) {
+          wb('drop-grace');
+          CUR._dropT = setTimeout(() => {
+            if (!pc || !CUR || !CUR.connectedAt) return;
+            const st = pc.connectionState, ist = pc.iceConnectionState;
+            if (['connected', 'completed'].includes(st) || ['connected', 'completed'].includes(ist)) { wb('drop-late-recover'); return; }
+            wb('drop-timeout end'); endCall('ended');
+          }, 8000);
+        }
       }
     };
   }
