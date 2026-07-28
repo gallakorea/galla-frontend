@@ -2049,7 +2049,13 @@
     setTimeout(() => { try { goBtn.disabled = false; goBtn.style.opacity = '1'; } catch (_) {} }, 500);
     box.addEventListener('click', e => {
       const rc = e.target.closest('[data-rc]')?.dataset.rc;
-      if (rc === 'go') { if (goBtn.disabled) return; close(); try { onConfirm && onConfirm(); } catch (_) {} }
+      if (rc === 'go') {
+        if (goBtn.disabled) return;
+        // 👻 [통화]도 '이 버튼에서 시작된 진짜 pointerdown'이 있어야만 — 합성/관통 클릭은 못 누른다(유령 2연타 차단).
+        const downOnGo = !!(window.__dmDownEl && goBtn.contains(window.__dmDownEl));
+        if (!downOnGo) { try { window.GALLA_call?._ghostLog && window.GALLA_call._ghostLog('redial GO rejected (합성탭) — 유령 차단'); } catch (_) {} return; }
+        window.__dmDownEl = null; close(); try { onConfirm && onConfirm(); } catch (_) {}
+      }
       else if (rc === 'cancel' || e.target === box) close();
     });
     document.body.appendChild(box);
