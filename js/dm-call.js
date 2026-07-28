@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072821'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072822'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -63,6 +63,8 @@
       if (CUR === cur) {
         if (!cur.connectedAt) { cur.connectedAt = Date.now(); startTimer(); }
         stopRings(); paintUI('oncall');
+        nativeAgoraAudio();   // 🔊 링백 세션 정리 + .playAndRecord — 양쪽 마이크 캡처/재생 확실히(한방향 소리 해결)
+        applyNativeRoute();   // 스피커/수화부 라우팅(영상=스피커)
       }
     } catch (e) { wb('agora connect FAIL ' + (e && e.message || e)); }
   }
@@ -788,6 +790,8 @@
   function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라'), video: !!(CUR && CUR.video) }); }
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
   function nativeAudioOn() { _nativeCall({ action: 'connected', video: !!(CUR && CUR.video) }); }   // video면 네이티브가 .videoChat(스피커) 모드로
+  // 📞 Agora 통화 오디오 세션 — 링백 정리 + .playAndRecord(마이크 캡처 가능). iosrtc ADM은 안 켜 Agora와 마이크 충돌 방지.
+  function nativeAgoraAudio() { _nativeCall({ action: 'agoraAudio', video: !!(CUR && CUR.video) }); }
   // 🔬 네이티브(Swift callAudioOn)가 실제 오디오 세션 상태를 여기로 올린다 → 서버 비콘으로 확인
   window.__nativeCallLog = function (m) { try { wb('NATIVE ' + m); } catch (_) {} };
   // 🔈 출력 라우팅 — 음성통화 기본은 수화부(귀), 면상톡·스피커버튼은 스피커(카톡식).
