@@ -90,7 +90,8 @@ Deno.serve(async (req) => {
     video,
     callId,          // 📞 통화 UUID 고정 키 — 취소 푸시가 같은 CallKit 통화를 종료할 수 있게
     cancel,          // 📞 true면 네이티브가 해당 callId의 CallKit 벨을 즉시 종료
-    ts: Date.now(),
+    // 🕒 발신 시각(ms) — 네이티브가 '낡은 벨(유령)'을 나이로 거른다. debug 진단 땐 옛 ts 주입 허용(스로틀 시뮬).
+    ts: (debug && typeof body.ts === "number") ? body.ts : Date.now(),
     // aps는 VoIP 푸시엔 필수는 아니지만 일부 iOS 버전 호환 위해 넣음
     aps: {},
   };

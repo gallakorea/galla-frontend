@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072832'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072833'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -625,6 +625,9 @@
   // 수신자 answer 생성 공용 — PC 구성 → offer 반영 → answer 전송(중복 재전송 포함).
   //    muted=true면 마이크를 음소거로 붙인다(프리커넥트: ICE는 뚫되 받기 전 소리 안 새게).
   async function buildAnswer(cur, muted) {
+    // 🛡️ 죽은 통화 가드 — getMedia가 느려(이전 통화 마이크 미해제) 대기하는 동안 발신자가 끊으면
+    //    cur이 null이 되어 아래 cur.offer에서 'null is not an object'로 터진다. 조용히 접는다.
+    if (!cur || !cur.offer) { wb('bA abort0 cur=' + (cur ? 'y' : 'n') + ' offer=' + (cur && cur.offer ? 'y' : 'n')); return; }
     // 트랙은 setRemoteDescription '후'에 붙인다(양방향 소리 확인된 방식). 발신자가 수신자 영상을 못 보던 건
     //   s0blob과 무관하게 ontrack 이벤트의 실제 트랙 id로 네이티브 렌더를 잡아 해결한다(CUR._rvTrackId).
     wb('bA enter muted=' + muted + ' ls=' + (localStream ? localStream.getTracks().length : 'none'));
@@ -729,6 +732,9 @@
       }
     }
     wb('accept getmedia-ok → buildAnswer');
+    // 🛡️ getMedia가 느린 사이 발신자가 끊었으면(CUR 비워짐) 여기서 접는다 — 죽은 통화에 buildAnswer 하면
+    //    'cur.offer null' 실패로 가짜 '통화 연결 실패' 에러가 뜬다. 마이크만 정리하고 조용히 종료.
+    if (!CUR || CUR.dir !== 'in' || !CUR.offer) { wb('accept abort — ended during getmedia'); try { localStream && localStream.getTracks().forEach(t => t.stop()); } catch (_) {} localStream = null; return; }
     if (localStream._videoFallback && CUR.video) { CUR.video = false; toast('카메라를 쓸 수 없어 육성톡으로 받아요'); }
     try {
       if (!pc) await buildAnswer(CUR, false);
