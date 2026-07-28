@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072799'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072800'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -871,10 +871,11 @@
     try {
       const cur = CUR;
       if (!cur || !cur.connectedAt) return;
-      // 🎥 콜드스타트(잠금 백그라운드)로 받으면 iOS가 카메라·마이크 캡처를 막아, 수신자 로컬 트랙은
-      //    '빈 프레임'만 보낸다 → 발신자가 상대 영상·소리를 못 받음(한 방향). 포그라운드가 된 지금
-      //    미디어를 '다시 획득'해 sender 트랙을 교체(replaceTrack=재협상 불필요)하면 그때부터 실제 프레임이 흐른다.
-      //    수신자(dir='in')만 — 발신자는 애초에 포그라운드라 캡처가 살아있다.
+      // 🎥 [1순위·정석] 네이티브에서 멈춘 카메라 캡처 세션을 직접 되살린다(새 트랙·재협상·깜박임 없음).
+      //    콜드스타트로 iOS가 캡처를 '안 켜진 채' 남긴 것을 startRunning으로 복구(react-native-webrtc 정석).
+      if (cur.dir === 'in' && cur.video) { try { _nativeCall({ action: 'restartCamera' }); } catch (_) {} }
+      // 🎥 [2순위·보조] 네이티브 재시작으로도 안 살아나는 경우 대비 — getMedia로 새 트랙을 받아 replaceTrack.
+      //    콜드스타트(잠금 백그라운드)로 수신자 로컬 트랙이 '빈 프레임'만 보내 발신자가 한 방향으로만 받던 것 복구.
       if (cur.dir === 'in' && !cur._fgReacquired && !cur._fgReacqRunning && pc && pc.getSenders) {
         cur._fgReacqRunning = true;   // 동시 실행 방지(성공해야만 _fgReacquired=true → 실패 시 다음 트리거에 재시도)
         (async () => {
