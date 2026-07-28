@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072820'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072821'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -72,8 +72,9 @@
     if (!AGORA || !CUR) return;
     try {
       const r = document.getElementById('dm-call-remote'), l = document.getElementById('dm-call-local');
-      if (r && CUR._agRemote && CUR._agRemote.__el !== r) { try { CUR._agRemote.play('dm-call-remote', { fit: 'cover' }); } catch (_) {} CUR._agRemote.__el = r; }
-      if (l && CUR._agLocal  && CUR._agLocal.__el  !== l) { try { CUR._agLocal.play('dm-call-local',  { fit: 'cover', mirror: true }); } catch (_) {} CUR._agLocal.__el = l; }
+      wb('AGV render r=' + (!!r) + ' l=' + (!!l) + ' rt=' + (!!CUR._agRemote) + ' lt=' + (!!CUR._agLocal));
+      if (r && CUR._agRemote && CUR._agRemote.__el !== r) { try { CUR._agRemote.play('dm-call-remote', { fit: 'cover' }); CUR._agRemote.__el = r; wb('AGV remote played'); } catch (e) { wb('AGV remote play err ' + (e && e.message)); } }
+      if (l && CUR._agLocal  && CUR._agLocal.__el  !== l) { try { CUR._agLocal.play('dm-call-local',  { fit: 'cover', mirror: true }); CUR._agLocal.__el = l; wb('AGV local played'); } catch (e) { wb('AGV local play err ' + (e && e.message)); } }
     } catch (_) {}
   }
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
