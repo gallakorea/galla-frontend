@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072798'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072799'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -262,7 +262,7 @@
       if (CUR.dir === 'out') {
         try { localStream && localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); armColdReacquire(); applyNativeRoute();
         }
       }
       return;
@@ -686,7 +686,7 @@
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); armColdReacquire(); applyNativeRoute();
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -711,7 +711,7 @@
       if (!pc) await buildAnswer(CUR, false);
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); armColdReacquire(); applyNativeRoute();
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
@@ -853,6 +853,18 @@
       if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('vkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
     }, d));
   }
+  // 📞 콜드스타트 카메라 재획득을 '폴링'으로 능동 구동 — 이벤트(visibilitychange/네이티브 콜백)는
+  //    앱이 '이미 보임 상태로' 콜드부팅되면 안 터져서 놓친다(18:44 케이스). 그래서 수신자는 연결 후
+  //    화면이 보이는 동안 성공할 때까지 계속 재획득을 시도한다. (오픈소스 정석: 포그라운드서 캡처 재시작)
+  function armColdReacquire() {
+    const cur = CUR;
+    if (!cur || cur.dir !== 'in' || !cur.video || cur._coldPollT) return;
+    let n = 0;
+    cur._coldPollT = setInterval(() => {
+      if (CUR !== cur || !cur.connectedAt || cur._fgReacquired || n++ > 40) { clearInterval(cur._coldPollT); cur._coldPollT = null; return; }
+      if (document.visibilityState === 'visible') { wb('cold-poll t=' + n); window.GALLA_callForegroundKick(); }
+    }, 1000);
+  }
   // 📞 앱이 포그라운드로 돌아온 순간(네이티브 applicationDidBecomeActive) 호출된다.
   //    CallKit로 받으면 렌더가 백그라운드 전환 중 일어나 영상이 검게 굳는 문제 → 완전히 활성화된 지금 강제 재부착.
   window.GALLA_callForegroundKick = function () {
@@ -925,6 +937,7 @@
     try { window.__ckAnswer = null; } catch (_) {}
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
+    try { if (CUR && CUR._coldPollT) { clearInterval(CUR._coldPollT); CUR._coldPollT = null; } } catch (_) {}   // 콜드 재획득 폴 정지
     try { if (CUR && CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } } catch (_) {}   // 예약된 VoIP 푸시 취소(끊으면 안 보냄)
     if (!remote && CUR) send({ t: 'hangup' });
     // 📞 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시'. 이제 푸시를 '항상' 보내므로(잠금 대비),
