@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072823'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072824'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -544,6 +544,8 @@
   }
 
   async function start(peer, name, video) {
+    // 🔬 유령 추적 — start()를 부른 트리거·종료후 경과·신뢰클릭 여부를 남긴다(9초 유령 규명).
+    try { wb('start ENTER trig=' + (window.__callTrig || '?') + ' since=' + (Date.now() - lastCallEndAt) + ' cur=' + (CUR ? 1 : 0) + ' peer=' + String(peer || '').slice(0, 6)); window.__callTrig = null; } catch (_) {}
     if (CUR || !sb || !ME) return;
     // 🔒 유령발신 원천차단 — 통화 종료 직후(2초 내) 발신은 '끊기 탭 관통(ghost click)'으로 튄 것이라 무시.
     //    사람은 통화 끝나고 '다시 걸기'를 의식적으로 누르므로 2초는 지난다. (같은 스코프라 문서경계·캐시 무관하게 확실)
