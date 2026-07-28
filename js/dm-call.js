@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072785'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072786'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1188,9 +1188,32 @@
       if (!ME || !sb) { wb('selftest not-ready'); _ctLoopT = setTimeout(_ctCallerCycle, 6000); return; }
       wb('selftest DIAL ' + String(_ctPeer).slice(0, 8));
       try { start(_ctPeer, '자가테스트', false); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
+      _ctButtonQA();   // 🔬 연결되면 버튼 자동 QA(사용자 개입 없이 음소거·스피커·상대소리 검증)
     }
-    // 30초 통화 → 끊고 15초 쉬고 반복
-    _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 30000);
+    // 35초 통화 → 끊고 15초 쉬고 반복(버튼 QA 시간 확보)
+    _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 35000);
+  }
+  // 🔬 버튼 자동 QA — 통화 연결되면 프로그램이 각 버튼을 눌러 결과 상태를 로그로 검증(무인).
+  async function _ctButtonQA() {
+    const cur = CUR; const nap = ms => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < 30 && (!cur || !cur.connectedAt); i++) await nap(500);   // 연결 대기(최대 15초)
+    if (!cur || cur !== CUR || !cur.connectedAt) return;
+    await nap(2000);
+    const micEn = () => { try { const t = localStream && localStream.getAudioTracks()[0]; return t ? t.enabled : '?'; } catch (_) { return 'err'; } };
+    // 1) 음소거 — 누른 뒤 1.3초(강제언뮤트 주기 800ms보다 길게) 후에도 꺼져있어야 정상
+    try { callAction('mute'); } catch (_) {} await nap(1300);
+    wb('QA mute enabled=' + micEn() + ' userMuted=' + (CUR && CUR._userMuted) + ' (기대 enabled=false)');
+    try { callAction('mute'); } catch (_) {} await nap(1000);
+    wb('QA unmute enabled=' + micEn() + ' userMuted=' + (CUR && CUR._userMuted) + ' (기대 enabled=true)');
+    // 2) 스피커 토글
+    const spk0 = SPK; try { callAction('spk'); } catch (_) {} await nap(900);
+    wb('QA spk ' + spk0 + '->' + SPK + ' (기대 반대)');
+    try { callAction('spk'); } catch (_) {} await nap(700);
+    // 3) 상대 소리 끄기
+    const rm0 = REMUTE; try { callAction('remute'); } catch (_) {} await nap(700);
+    wb('QA remute ' + rm0 + '->' + REMUTE + ' (기대 반대)');
+    try { callAction('remute'); } catch (_) {} await nap(500);
+    wb('QA done');
   }
   function _ctApply(mode, peer) {
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
