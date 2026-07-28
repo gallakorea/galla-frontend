@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072775'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072776'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -482,7 +482,7 @@
     if (CUR || !sb || !ME) return;
     if (!(window.GALLA_isApp && window.GALLA_isApp())) return appOnlyNotice();
     if (!window.RTCPeerConnection) return toast('이 브라우저는 통화를 지원하지 않아요');
-    CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [] };
+    CUR = { peer, name: name || '갈라 친구', dir: 'out', video: !!video, pendIce: [], callId: (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.round(1e9 * ((ME || 'x').charCodeAt(0) / 128))) };
     paintUI('preparing');   // 즉시 화면부터 — '눌렀는데 아무 일도 없음'을 없앤다
     await primePermHint(!!video);
     try { localStream = await getMedia(!!video); }
@@ -519,7 +519,8 @@
       // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
       try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
       // 📞 iOS VoIP 푸시 — 잠금화면 CallKit 벨(앱이 백그라운드/종료 상태여도 울림). 토큰 없으면 서버가 조용히 스킵.
-      try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video } }).catch(() => {}); } catch (_) {}
+      //    callId를 함께 보내 CallKit UUID를 이 통화에 고정 → 발신자가 끊으면 같은 callId로 '취소 푸시'해 벨을 끈다.
+      try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video, callId: CUR.callId } }).catch(() => {}); } catch (_) {}
     }
     // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
     //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
@@ -785,6 +786,13 @@
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
     if (!remote && CUR) send({ t: 'hangup' });
+    // 📞 발신자가 끊으면 수신 CallKit 벨/화면도 끄도록 '취소 VoIP 푸시'(같은 callId → 같은 UUID 종료).
+    //    수신 앱이 백그라운드/실시간 콜드라 realtime hangup을 못 받는 경우의 백스톱("발신자 끊어도 수신 벨 계속" 해결).
+    try {
+      if (!remote && CUR && CUR.dir === 'out' && CUR.callId && CUR.peer && sb && sb.functions) {
+        sb.functions.invoke('call-push', { body: { to: CUR.peer, callId: CUR.callId, cancel: true } }).catch(() => {});
+      }
+    } catch (_) {}
     logCall(reason);
     try { pc?.close(); } catch (_) {}
     pc = null;

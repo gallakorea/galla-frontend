@@ -54,6 +54,8 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const to = String(body.to || "");
   const video = !!body.video;
+  const callId = String(body.callId || "");
+  const cancel = !!body.cancel;   // 📞 취소 푸시 — 발신자가 끊음 → 수신 CallKit 벨 종료
   if (!to) return j({ ok: false, reason: "no_target" }, 400);
 
   // 시크릿 준비 여부 — 없으면 조용히 스킵(실시간 시그널로 통화는 그대로 진행됨)
@@ -64,12 +66,14 @@ Deno.serve(async (req) => {
   const env = (Deno.env.get("APNS_ENV") || "production").toLowerCase();
   if (!keyId || !teamId || !p8) return j({ ok: false, reason: "not_configured" });
 
-  // 발신자 이름
+  // 발신자 이름 (취소 푸시엔 불필요 — 스킵)
   let name = "갈라 친구";
-  try {
-    const { data: me } = await admin.from("users").select("nickname").eq("id", from).maybeSingle();
-    if (me?.nickname) name = me.nickname;
-  } catch (_) {}
+  if (!cancel) {
+    try {
+      const { data: me } = await admin.from("users").select("nickname").eq("id", from).maybeSingle();
+      if (me?.nickname) name = me.nickname;
+    } catch (_) {}
+  }
 
   // 상대 iOS VoIP 토큰
   const { data: row } = await admin.from("call_device_tokens")
@@ -82,6 +86,8 @@ Deno.serve(async (req) => {
     callerId: from,
     callerName: name,
     video,
+    callId,          // 📞 통화 UUID 고정 키 — 취소 푸시가 같은 CallKit 통화를 종료할 수 있게
+    cancel,          // 📞 true면 네이티브가 해당 callId의 CallKit 벨을 즉시 종료
     ts: Date.now(),
     // aps는 VoIP 푸시엔 필수는 아니지만 일부 iOS 버전 호환 위해 넣음
     aps: {},
