@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072808'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072809'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -882,8 +882,14 @@
     //    무효였다(진단 dt=-1,sh=0). top에서 모든 iframe에 '방금 끊음' 신호를 보내 iframe의 재발신 핸들러가 막게 한다.
     try {
       const _m = { galla: 'shell', t: 'callEnded', at: Date.now() };
+      const frames = document.querySelectorAll('iframe');
+      wb('callEnded bcast top=' + (window.top === window.self) + ' n=' + frames.length);   // 🔬 진단
       window.postMessage(_m, location.origin);
-      document.querySelectorAll('iframe').forEach(f => { try { f.contentWindow.postMessage(_m, location.origin); } catch (_) {} });
+      try { window.top && window.top !== window && window.top.postMessage(_m, location.origin); } catch (_) {}
+      try { window.parent && window.parent !== window && window.parent.postMessage(_m, location.origin); } catch (_) {}
+      frames.forEach(f => { try { f.contentWindow.postMessage(_m, location.origin); } catch (_) {} });
+      // 최상위 문서의 모든 iframe에도(엔진이 중첩 프레임일 때 대비)
+      try { if (window.top && window.top.document) window.top.document.querySelectorAll('iframe').forEach(f => { try { f.contentWindow.postMessage(_m, location.origin); } catch (_) {} }); } catch (_) {}
     } catch (_) {}
     CUR = null;
     const box = document.getElementById('dm-call');

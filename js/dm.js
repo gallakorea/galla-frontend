@@ -942,10 +942,13 @@
     // SPA에선 dm 판(.view-host) 안의 #dm-page-host 우선 — 전역 getElementById는 안전망
     (PAGE_MODE() && ((SPA_ROOT && SPA_ROOT.querySelector('#dm-page-host')) || document.getElementById('dm-page-host')) || document.body).appendChild(ROOT);
 
-    // 🔒 top(통화엔진)이 보내는 'callEnded' 신호 수신 → 유령발신(관통 클릭) 차단용 타임스탬프 (1회 등록)
-    if (!window.__dmCallEndedListener) {
-      window.__dmCallEndedListener = true;
-      window.addEventListener('message', ev => {
+    // 🔒 유령발신(관통 ghost click) 차단 — 오픈소스 ghost-click buster 원리: 통화 끊기 탭은 top 오버레이(다른 문서)에서
+    //    발생하므로 '이 문서(iframe)'엔 선행 touchstart가 없다. '최근(700ms) 터치 없이 들어온 재발신 클릭'은 관통으로 보고 무시.
+    //    (문서 경계 넘는 신호 없이 자체 완결. 데스크톱 마우스는 touch가 없어 __dmLastTouch 미설정 → 정상 통과.) (1회 등록)
+    if (!window.__dmGhostGuard) {
+      window.__dmGhostGuard = true;
+      document.addEventListener('touchstart', () => { window.__dmLastTouch = Date.now(); }, { capture: true, passive: true });
+      window.addEventListener('message', ev => {   // top 'callEnded' 신호도 보조로 수신
         try { if (ev.origin === location.origin && ev.data && ev.data.galla === 'shell' && ev.data.t === 'callEnded') window.__dmCallEndedAt = Date.now(); } catch (_) {}
       });
     }
@@ -957,8 +960,10 @@
         //    종료 1.5초 내 재발신 클릭(관통 ghost click)을 무시한다. '다시 걸기'가 top이 아닌 이 문서에 있어서
         //    top 방패로는 못 막았던 문제(진단 dt=-1,sh=0)를 문서 경계 넘는 신호로 해결.
         const dt = window.__dmCallEndedAt ? (Date.now() - window.__dmCallEndedAt) : -1;
-        window.__callTrig = 'redial-btn|tr=' + (e.isTrusted ? 1 : 0) + '|dt=' + dt;
-        if (!e.isTrusted || (dt >= 0 && dt < 1500)) { window.__callTrig = null; return; }
+        const tt = window.__dmLastTouch ? (Date.now() - window.__dmLastTouch) : -1;   // 이 문서 선행 터치 경과
+        window.__callTrig = 'redial-btn|tr=' + (e.isTrusted ? 1 : 0) + '|dt=' + dt + '|tt=' + tt;
+        // 관통 click 차단: ①선행 터치가 있었는데(tt>=0) 700ms 넘게 오래됨 = 이 문서에서 안 누름 = 관통 ②합성 클릭 ③종료 1.5초내
+        if ((tt > 700) || !e.isTrusted || (dt >= 0 && dt < 1500)) { window.__callTrig = null; return; }
         window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
       }
       const act = e.target.closest('[data-act]')?.dataset.act;
