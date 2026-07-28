@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072800'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072801'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -860,10 +860,11 @@
     const cur = CUR;
     if (!cur || cur.dir !== 'in' || !cur.video || cur._coldPollT) return;
     let n = 0;
+    // 유한 반복(최대 8회 ~10초) — 화면 보이면 네이티브 카메라 재시작(idempotent, 깜박임 없음). 무한 폴 금지.
     cur._coldPollT = setInterval(() => {
-      if (CUR !== cur || !cur.connectedAt || cur._fgReacquired || n++ > 40) { clearInterval(cur._coldPollT); cur._coldPollT = null; return; }
-      if (document.visibilityState === 'visible') { wb('cold-poll t=' + n); window.GALLA_callForegroundKick(); }
-    }, 1000);
+      if (CUR !== cur || !cur.connectedAt || n++ >= 8) { clearInterval(cur._coldPollT); cur._coldPollT = null; return; }
+      if (document.visibilityState === 'visible') { wb('cold-cam t=' + n); try { _nativeCall({ action: 'restartCamera' }); } catch (_) {} }
+    }, 1200);
   }
   // 📞 앱이 포그라운드로 돌아온 순간(네이티브 applicationDidBecomeActive) 호출된다.
   //    CallKit로 받으면 렌더가 백그라운드 전환 중 일어나 영상이 검게 굳는 문제 → 완전히 활성화된 지금 강제 재부착.
@@ -871,40 +872,10 @@
     try {
       const cur = CUR;
       if (!cur || !cur.connectedAt) return;
-      // 🎥 [1순위·정석] 네이티브에서 멈춘 카메라 캡처 세션을 직접 되살린다(새 트랙·재협상·깜박임 없음).
-      //    콜드스타트로 iOS가 캡처를 '안 켜진 채' 남긴 것을 startRunning으로 복구(react-native-webrtc 정석).
+      // 🎥 정석(react-native-webrtc): 멈춘 카메라 캡처 세션을 네이티브에서 되살린다(startRunning).
+      //    새 트랙·재협상·깜박임 없고 idempotent(이미 켜져 있으면 no-op). ← JS getMedia 재획득 루프는
+      //    vok 판정 실패 시 매초 새 트랙을 만들어 '깜박임 폭풍'을 일으켜 폐기함. 네이티브 재시작만 쓴다.
       if (cur.dir === 'in' && cur.video) { try { _nativeCall({ action: 'restartCamera' }); } catch (_) {} }
-      // 🎥 [2순위·보조] 네이티브 재시작으로도 안 살아나는 경우 대비 — getMedia로 새 트랙을 받아 replaceTrack.
-      //    콜드스타트(잠금 백그라운드)로 수신자 로컬 트랙이 '빈 프레임'만 보내 발신자가 한 방향으로만 받던 것 복구.
-      if (cur.dir === 'in' && !cur._fgReacquired && !cur._fgReacqRunning && pc && pc.getSenders) {
-        cur._fgReacqRunning = true;   // 동시 실행 방지(성공해야만 _fgReacquired=true → 실패 시 다음 트리거에 재시도)
-        (async () => {
-          try {
-            const fresh = await withTimeout(getMedia(!!cur.video), 6000, 'fg-gm');
-            if (CUR !== cur || !pc) { try { fresh.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
-            const senders = pc.getSenders();
-            let vok = !cur.video;   // 영상 필요 없으면 통과
-            for (const kind of ['audio', 'video']) {
-              const nt = (kind === 'video' ? fresh.getVideoTracks() : fresh.getAudioTracks())[0];
-              if (!nt) continue;
-              if (kind === 'audio' && cur._userMuted) nt.enabled = false;   // 음소거 유지
-              const snd = senders.find(s => s.track && s.track.kind === kind);
-              if (snd) { try { await snd.replaceTrack(nt); if (kind === 'video' && nt.readyState === 'live') vok = true; } catch (_) {} }
-            }
-            try { localStream && localStream.getTracks().forEach(t => t.stop()); } catch (_) {}
-            localStream = fresh;
-            if (vok) cur._fgReacquired = true;   // 영상 트랙이 실제 live로 붙었을 때만 완료 처리
-            wb('fg-reacquire ' + (vok ? 'ok' : 'partial') + ' l=' + ((liveVideoId(fresh) || '-').slice(0, 6)));
-            // 새 로컬 트랙으로 네이티브 렌더 재부착(기존 킥 스케줄을 getMedia 지연이 지나쳤을 수 있음)
-            if (cur.video) [0, 300, 900].forEach(d => setTimeout(() => {
-              if (CUR !== cur || !cur.connectedAt) return;
-              const rid = cur._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
-              if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); }
-            }, d));
-          } catch (e) { wb('fg-reacquire FAIL ' + String((e && e.name) || e).slice(0, 20)); }
-          finally { cur._fgReacqRunning = false; }
-        })();
-      }
       // 로컬 트랙 깨우기 + 네이티브 렌더 재부착
       try { localStream && localStream.getVideoTracks().forEach(t => { if (t.enabled === false) t.enabled = true; }); } catch (_) {}
       if (!cur.video) return;
@@ -920,7 +891,7 @@
   document.addEventListener('visibilitychange', () => {
     try {
       if (document.visibilityState !== 'visible') return;
-      if (CUR && CUR.dir === 'in' && CUR.connectedAt && !CUR._fgReacquired) {
+      if (CUR && CUR.dir === 'in' && CUR.connectedAt && CUR.video) {
         wb('visible→fgkick');
         window.GALLA_callForegroundKick();
       }
