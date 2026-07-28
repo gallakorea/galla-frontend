@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072787'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072788'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1182,14 +1182,15 @@
 
   function _ctStop() { _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
   function _ctCallerCycle() {
-    if (_ctMode !== 'caller') return;
+    if (_ctMode !== 'caller' && _ctMode !== 'callerV') return;   // callerV = 면상톡(영상) 자동테스트
     if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; }
     if (!_ctPeer) { wb('selftest caller NO-PEER'); _ctLoopT = setTimeout(_ctCallerCycle, 15000); return; }
     if (!CUR) {
       if (!ME || !sb) { wb('selftest not-ready'); _ctLoopT = setTimeout(_ctCallerCycle, 6000); return; }
-      wb('selftest DIAL ' + String(_ctPeer).slice(0, 8));
-      try { start(_ctPeer, '자가테스트', false); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
-      _ctButtonQA();   // 🔬 연결되면 버튼 자동 QA(사용자 개입 없이 음소거·스피커·상대소리 검증)
+      const vid = (_ctMode === 'callerV');
+      wb('selftest DIAL ' + String(_ctPeer).slice(0, 8) + (vid ? ' [VIDEO]' : ''));
+      try { start(_ctPeer, '자가테스트', vid); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
+      if (vid) _ctVideoQA(); else _ctButtonQA();   // 🔬 영상이면 영상 렌더 진단, 음성이면 버튼 QA
     }
     // 52초 통화 → 끊고 15초 쉬고 반복(버튼+소리 QA 시퀀스 ~40초 확보)
     _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 52000);
@@ -1223,9 +1224,24 @@
     try { send({ t: 'qastep', text: '' }); } catch (_) {} _qaBanner('');
     wb('QA done');
   }
+  // 🔬 면상톡(영상) 자동 진단 — 연결 후 로컬/원격 영상 트랙·네이티브 렌더 상태를 로그로, 배너로 청취·시청 안내.
+  async function _ctVideoQA() {
+    const cur = CUR; const nap = ms => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; i < 30 && (!cur || !cur.connectedAt); i++) await nap(500);
+    if (!cur || cur !== CUR || !cur.connectedAt) { wb('QAV no-connect'); return; }
+    const step = (text, ms) => { _qaBanner(text); try { send({ t: 'qastep', text }); } catch (_) {} wb('QAV ' + text.replace(/\n/g, ' ')); return nap(ms); };
+    const lv = () => { try { const t = localStream && localStream.getVideoTracks()[0]; return t ? t.readyState : 'none'; } catch (_) { return 'err'; } };
+    const rv = () => { try { const t = remoteStream && remoteStream.getVideoTracks()[0]; return t ? t.readyState : 'none'; } catch (_) { return 'none'; } };
+    await nap(2500);
+    wb('QAV tracks localVid=' + lv() + ' remoteVid=' + rv() + ' rvId=' + ((cur._rvTrackId || 'none')).slice(0, 8) + ' brg=' + !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaCall));
+    await step('📹 면상톡 연결 — 양쪽 얼굴 나오나요?\n(내 화면 + 상대 화면) 15초', 15000);
+    await step('📹 소리도 나나요? 10초', 10000);
+    try { send({ t: 'qastep', text: '' }); } catch (_) {} _qaBanner('');
+    wb('QAV done');
+  }
   function _ctApply(mode, peer) {
     const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
-    if (mode === 'caller') { _ctMode = 'caller'; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
+    if (mode === 'caller' || mode === 'callerV') { _ctMode = mode; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
     else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
     else if (_ctMode) { _ctStop(); }
   }
