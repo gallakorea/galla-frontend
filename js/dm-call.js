@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072782'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072783'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -129,18 +129,24 @@
     //    REST로도 확인한다(REST는 워밍업 지연 없음). 이게 없으면 앱 켜자마자 걸려온 첫 통화의 벨이
     //    5초 늦게 울려 '1차 실패'가 났다. 15초 지나거나 통화가 잡히면 중단(비용 무시 가능).
     try {
-      let coldMax = -1, coldN = 0, coldIt = null;   // coldMax<0 = 최초 조회 전(그 사이 온 offer는 created_at로 잡음)
+      // ⚡ 수신 offer 폴 — realtime broadcast가 유휴 웹소켓에서 5~6초씩 늦게 오는 것(사장님 '전화 안옴')의 백스톱.
+      //    부팅 직후 15초는 250ms(빠르게), 이후엔 통화 안 할 때 1.5초 간격으로 '계속' 돈다 → offer 최대 1.5초 내 포착.
+      //    앱이 백그라운드면 setTimeout이 어차피 멈추므로 자원 부담 없음(포그라운드 사용자만).
+      let coldMax = -1, coldN = 0;
       const coldTick = async () => {
-        if (coldN++ > 60 || CUR) { if (coldIt) clearInterval(coldIt); return; }
-        try {
-          let q = sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).order('id', { ascending: true });
-          q = coldMax < 0 ? q.gte('created_at', new Date(Date.now() - 20000).toISOString()) : q.gt('id', coldMax);
-          const { data: rows } = await q;
-          for (const r of (rows || [])) { coldMax = Math.max(coldMax, r.id); if (r.t === 'offer') onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
-        } catch (_) {}
+        if (!sb || !ME) return;
+        if (!CUR) {   // 통화 중이면 startSigPoll이 담당 → 이때만 offer 조회
+          try {
+            let q = sb.from('call_sig').select('id,from_uid,t,payload').eq('to_uid', ME).order('id', { ascending: true });
+            q = coldMax < 0 ? q.gte('created_at', new Date(Date.now() - 20000).toISOString()) : q.gt('id', coldMax);
+            const { data: rows } = await q;
+            for (const r of (rows || [])) { coldMax = Math.max(coldMax, r.id); if (r.t === 'offer') onSigBroadcast({ payload: r.payload, t: r.t, from_uid: r.from_uid }); }
+          } catch (_) {}
+        }
+        coldN++;
+        setTimeout(coldTick, coldN < 60 ? 250 : 1500);   // 첫 15초 250ms → 이후 1.5초 상시
       };
       coldTick();   // 즉시 1회(대기 없음)
-      coldIt = setInterval(coldTick, 250);   // 이후 0.5초 간격, 최대 15초
     } catch (_) {}
     // ⚡ 부팅 시 TURN 자격증명을 미리 데워둔다 — 통화 시작·수락 때 buildPC가 turn-cred를 기다리지 않아
     //    연결 체감이 몇 초 → 1초대로 단축된다(30분 캐시).
