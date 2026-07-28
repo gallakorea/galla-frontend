@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072797'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072798'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -863,24 +863,33 @@
       //    '빈 프레임'만 보낸다 → 발신자가 상대 영상·소리를 못 받음(한 방향). 포그라운드가 된 지금
       //    미디어를 '다시 획득'해 sender 트랙을 교체(replaceTrack=재협상 불필요)하면 그때부터 실제 프레임이 흐른다.
       //    수신자(dir='in')만 — 발신자는 애초에 포그라운드라 캡처가 살아있다.
-      if (cur.dir === 'in' && !cur._fgReacquired && pc && pc.getSenders) {
-        cur._fgReacquired = true;
+      if (cur.dir === 'in' && !cur._fgReacquired && !cur._fgReacqRunning && pc && pc.getSenders) {
+        cur._fgReacqRunning = true;   // 동시 실행 방지(성공해야만 _fgReacquired=true → 실패 시 다음 트리거에 재시도)
         (async () => {
           try {
             const fresh = await withTimeout(getMedia(!!cur.video), 6000, 'fg-gm');
             if (CUR !== cur || !pc) { try { fresh.getTracks().forEach(t => t.stop()); } catch (_) {} return; }
             const senders = pc.getSenders();
+            let vok = !cur.video;   // 영상 필요 없으면 통과
             for (const kind of ['audio', 'video']) {
               const nt = (kind === 'video' ? fresh.getVideoTracks() : fresh.getAudioTracks())[0];
               if (!nt) continue;
               if (kind === 'audio' && cur._userMuted) nt.enabled = false;   // 음소거 유지
               const snd = senders.find(s => s.track && s.track.kind === kind);
-              if (snd) { try { await snd.replaceTrack(nt); } catch (_) {} }
+              if (snd) { try { await snd.replaceTrack(nt); if (kind === 'video' && nt.readyState === 'live') vok = true; } catch (_) {} }
             }
             try { localStream && localStream.getTracks().forEach(t => t.stop()); } catch (_) {}
             localStream = fresh;
-            wb('fg-reacquire ok l=' + ((liveVideoId(fresh) || '-').slice(0, 6)));
-          } catch (e) { cur._fgReacquired = false; wb('fg-reacquire FAIL ' + String((e && e.name) || e).slice(0, 20)); }
+            if (vok) cur._fgReacquired = true;   // 영상 트랙이 실제 live로 붙었을 때만 완료 처리
+            wb('fg-reacquire ' + (vok ? 'ok' : 'partial') + ' l=' + ((liveVideoId(fresh) || '-').slice(0, 6)));
+            // 새 로컬 트랙으로 네이티브 렌더 재부착(기존 킥 스케줄을 getMedia 지연이 지나쳤을 수 있음)
+            if (cur.video) [0, 300, 900].forEach(d => setTimeout(() => {
+              if (CUR !== cur || !cur.connectedAt) return;
+              const rid = cur._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
+              if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); }
+            }, d));
+          } catch (e) { wb('fg-reacquire FAIL ' + String((e && e.name) || e).slice(0, 20)); }
+          finally { cur._fgReacqRunning = false; }
         })();
       }
       // 로컬 트랙 깨우기 + 네이티브 렌더 재부착
@@ -893,6 +902,17 @@
       }, d));
     } catch (_) {}
   };
+  // 📞 웹뷰가 '보임'으로 바뀌는 순간(=앱 포그라운드) 콜드스타트 재획득을 건다. 네이티브 applicationDidBecomeActive가
+  //    웹뷰로 전달 안 될 때(18:31처럼 fg-reacquire 미발동)를 대비한 이중 트리거 — 웹뷰 자체 신호라 더 신뢰도 높다.
+  document.addEventListener('visibilitychange', () => {
+    try {
+      if (document.visibilityState !== 'visible') return;
+      if (CUR && CUR.dir === 'in' && CUR.connectedAt && !CUR._fgReacquired) {
+        wb('visible→fgkick');
+        window.GALLA_callForegroundKick();
+      }
+    } catch (_) {}
+  });
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
