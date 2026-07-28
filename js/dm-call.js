@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072773'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072774'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -501,6 +501,7 @@
     //    (onSignal accepted→nativeAudioOn, ice/conn connected→nativeAudioOn). 무음은 audioSessionDidActivate가 보장.
     paintUI('outgoing');
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
+    _nativeCall({ action: 'ringSession' });   // 📞 발신 벨 동안 .playback 세션(무음스위치 무시) → 링백이 무음모드서도 울림(카톡식)
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화의 suspend 해제(안 하면 링백 무음)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
     wb('ringout ctx=' + (window.GALLA_SFX && window.GALLA_SFX.debugState ? window.GALLA_SFX.debugState() : 'nofn'));   // 🔬 링백 무음 진단
