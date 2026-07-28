@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072804'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072805'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -864,6 +864,7 @@
     _statDiagDone = false;   // 다음 통화 진단 재무장
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 통화 끝 → WebAudio 복구(다음 벨소리)
     try { document.documentElement.classList.remove('gcall-video'); } catch (_) {}
+    try { window.__callEndedAt = Date.now(); } catch (_) {}   // 🔒 종료 직후 '다시 걸기' 관통 클릭(유령발신) 차단용 타임스탬프
     CUR = null;
     const box = document.getElementById('dm-call');
     if (box) {

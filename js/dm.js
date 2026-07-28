@@ -945,7 +945,12 @@
     ROOT.querySelector('.dm-dim').addEventListener('click', closeDM);
     ROOT.addEventListener('click', async e => {
       const cb = e.target.closest('.dm-callback');
-      if (cb) { window.__callTrig = 'redial-btn'; window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return; }
+      if (cb) {
+        // 🔒 유령발신 차단 — 통화 끝나고 UI가 사라지면서 '끊기 탭'이 그 자리에 나타난 '다시 걸기'로
+        //    떨어지는(click-through) 자동 재발신 방지. 종료 1.5초 내 클릭·합성클릭(untrusted)은 무시.
+        if (!e.isTrusted || (window.__callEndedAt && Date.now() - window.__callEndedAt < 1500)) return;
+        window.__callTrig = 'redial-btn'; window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
+      }
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') closeDM();
       else if (act === 'compose') showView('compose'), initSearch();
