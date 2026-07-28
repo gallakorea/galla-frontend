@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072768'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072769'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -45,6 +45,7 @@
   let SPK = false;                     // 스피커 모드(끄면 수화부/이어피스 라우팅)
   let REMUTE = false;                  // 상대 소리 끔
   let recRec = null, recChunks = [], recCtx = null, recT0 = 0;   // 통화 녹음
+  let _ctMode = null, _ctPeer = null, _ctWake = null, _ctLoopT = null;   // 🔬 자가 테스트(디버그): 'caller'|'accept'
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 프라미스 타임아웃 — getUserMedia 등 iosrtc 호출이 간헐적으로 영영 멈추는 것을 깨기 위해.
   function withTimeout(p, ms, label) {
@@ -208,6 +209,8 @@
       try { window.GALLA_SFX?.ringInStart(); } catch (_) {}   // 🔔 수신 벨소리(웹오디오)
       startRingHaptic();                                       // 📳 진동 링 — iOS 네이티브는 navigator.vibrate가 안 먹혀 Capacitor 햅틱으로
       ringT = setTimeout(() => endCall('timeout'), 40000);
+      // 🔬 자가 테스트 '자동 수신' 모드 — CallKit 탭 없이 벨 뜨면 바로 수락(디버그 전용)
+      if (_ctMode === 'accept') { setTimeout(() => { try { if (CUR && CUR.dir === 'in' && !CUR._accepting) accept('selftest'); } catch (_) {} }, 900); }
       // 🎤 벨 중 '마이크만' 미리 준비(음소거) → 받기 시 getMedia 대기 0 = 전환 즉시.
       //    PC·answer는 안 만든다(프리커넥트 레이스 없음). 권한 있을 때만(프롬프트로 벨 방해 X).
       (async () => {
@@ -1113,6 +1116,51 @@
     listen, start,
     supported: () => !!window.RTCPeerConnection,   // 마이크 가용성은 시도 시점에 판정 — iOS 홈화면 앱은 mediaDevices가 조건부라 여기서 자르면 오탐
     _debug: () => ({ cur: CUR && { peer: CUR.peer, dir: CUR.dir, video: CUR.video }, pcState: pc?.connectionState || null }),
+  };
+
+  /* ── 🔬 자가 테스트 하네스 (디버그 전용) ───────────────────────────────
+     실기기 2대가 스스로 걸고/받고/끊어 로그(client_errors 'call-audio')만으로 원인 추적.
+     서버 플래그(get_call_selftest RPC)로 원격 arming — 폰 탭 없이 관리자가 SQL로 켜고 끈다.
+     화면은 Wake Lock으로 유지(iOS 16.4+). 앞단(포그라운드) 통화 경로만 검증한다. */
+  async function _ctWakeOn() {
+    try { if (navigator.wakeLock && !_ctWake) { _ctWake = await navigator.wakeLock.request('screen'); _ctWake.addEventListener('release', () => { _ctWake = null; }); wb('selftest wakelock-on'); } } catch (e) { wb('selftest wakelock-err ' + String((e && e.name) || e).slice(0, 20)); }
+  }
+  function _ctWakeOff() { try { _ctWake && _ctWake.release(); } catch (_) {} _ctWake = null; }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && _ctMode) _ctWakeOn(); });
+
+  function _ctStop() { _ctMode = null; _ctPeer = null; if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; } _ctWakeOff(); wb('selftest STOP'); try { if (CUR) endCall('ended'); } catch (_) {} }
+  function _ctCallerCycle() {
+    if (_ctMode !== 'caller') return;
+    if (_ctLoopT) { clearTimeout(_ctLoopT); _ctLoopT = null; }
+    if (!_ctPeer) { wb('selftest caller NO-PEER'); _ctLoopT = setTimeout(_ctCallerCycle, 15000); return; }
+    if (!CUR) {
+      if (!ME || !sb) { wb('selftest not-ready'); _ctLoopT = setTimeout(_ctCallerCycle, 6000); return; }
+      wb('selftest DIAL ' + String(_ctPeer).slice(0, 8));
+      try { start(_ctPeer, '자가테스트', false); } catch (e) { wb('selftest dial-err ' + String((e && e.name) || e).slice(0, 20)); }
+    }
+    // 30초 통화 → 끊고 15초 쉬고 반복
+    _ctLoopT = setTimeout(() => { try { if (CUR) endCall('ended'); } catch (_) {} _ctLoopT = setTimeout(_ctCallerCycle, 15000); }, 30000);
+  }
+  function _ctApply(mode, peer) {
+    const changed = (mode !== _ctMode) || (peer && peer !== _ctPeer);
+    if (mode === 'caller') { _ctMode = 'caller'; _ctPeer = peer || _ctPeer; _ctWakeOn(); if (changed || !_ctLoopT) _ctCallerCycle(); }
+    else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
+    else if (_ctMode) { _ctStop(); }
+  }
+  // 서버 폴 — 관리자가 SQL로 심은 플래그를 15초마다 읽어 반영(원격 on/off). RPC 없거나 미로그인이면 조용히 스킵.
+  async function _ctPoll() {
+    try {
+      if (sb && ME) { const { data, error } = await sb.rpc('get_call_selftest'); if (!error && data) _ctApply(data.mode || null, data.peer || null); }
+    } catch (_) {}
+    setTimeout(_ctPoll, 15000);
+  }
+  setTimeout(_ctPoll, 5000);
+  // 수동 오버라이드(콘솔/디버그 패널용)
+  window.GALLA_callTest = {
+    accept() { _ctApply('accept'); },
+    caller(peerId) { if (!peerId) return alert('상대 전체 ID 필요'); _ctApply('caller', String(peerId)); },
+    stop: _ctStop,
+    myId: () => ME,
   };
 
   /* ── 📞 네이티브 CallKit / VoIP 푸시 브릿지 (AppDelegate.swift ↔ 웹) ──
