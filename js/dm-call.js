@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072792'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072793'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -245,7 +245,7 @@
     if (p.t === 'ring') {
       // 📞 수신자 웹이 offer를 처리함(=포그라운드/도달가능) → 끊을 때 realtime hangup으로 CallKit이 끝나므로
       //    취소 VoIP 푸시를 보내지 않는다(취소 푸시의 reportNewIncomingCall이 깜빡임을 만드는 것 방지).
-      if (CUR.dir === 'out') { CUR._foreground = true; if (CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } wb('ring-ack fg'); }
+      if (CUR.dir === 'out') { CUR._foreground = true; wb('ring-ack fg'); }   // 📞 푸시는 그대로 보낸다(잠금 대비) — 억제는 수신자 인앱 수락 시 네이티브가
       return;
     }
     if (p.t === 'qastep') { try { _qaBanner(p.text || ''); } catch (_) {} return; }   // 🔬 QA 배너 동기화(수신폰에도 같은 단계 표시)
@@ -536,14 +536,15 @@
     if (_ctMode !== 'caller') {
       // 부재 대비: 상대 기기에 '보이스톡이 왔어요' 푸시(서버가 스레드 관계 검증)
       try { sb.functions.invoke('send-push', { body: { kind: 'call', id: peer, video: !!video } }).catch(() => {}); } catch (_) {}
-      // 📞 iOS VoIP 푸시 — 3초 지연·조건부. 수신자가 3초 안에 'ring' ack(=포그라운드)를 주면 웹벨로 이미 받으므로
-      //    푸시를 아예 안 보낸다(→ VoIP 스로틀 회복). ack 없으면(=백그라운드/잠금) 그때만 CallKit용 푸시.
+      // 📞 iOS VoIP 푸시 — 정석(Apple/Vonage): ring-ack로 '막지 않는다'. 잠금폰은 오직 CallKit 푸시로만
+      //    벨이 울리므로 '항상' 보낸다(수신자가 잠기기 직전 ring-ack만 주고 잠기면, 예전엔 푸시를 막아 연결 자체가 죽었음).
+      //    포그라운드 중복벨은 수신자가 '인앱으로 받는 순간'(callHandledInApp) 네이티브가 그 통화를 억제해 방지.
       const _cur = CUR;
       _cur._pushT = setTimeout(() => {
-        if (CUR !== _cur || _cur.connectedAt || _cur._foreground) { _cur._pushT = null; return; }   // 포그라운드/연결됨이면 안 보냄
+        if (CUR !== _cur || _cur.connectedAt) { _cur._pushT = null; return; }   // 이미 연결됐을 때만 스킵
         try { sb.functions.invoke('call-push', { body: { to: peer, video: !!video, callId: _cur.callId } }).catch(() => {}); } catch (_) {}
         _cur._pushSent = true; _cur._pushT = null;
-      }, 3000);
+      }, 1500);
     }
     // 🔁 offer 재전송 — 상대가 잠금/백그라운드로 suspend돼 있으면 첫 offer(실시간 브로드캐스트)는
     //    큐잉 없이 사라진다(그래서 '받는 쪽 벨은 떴는데 거는 쪽은 계속 거는중'). 푸시로 깨어나 채널에
@@ -639,6 +640,9 @@
     // 웹에서 '받기' — 자동 거절하지 않는다(같은 계정의 앱 기기가 받을 수 있게). 안내만 띄우고 벨은 유지.
     if (!(window.GALLA_isApp && window.GALLA_isApp())) { CUR._accepting = false; return appOnlyNotice(); }
     clearTimeout(ringT);
+    // 📞 인앱(포그라운드) '받기' 탭 순간, 이 통화의 CallKit 푸시를 네이티브가 억제 → 뒤늦게 온 VoIP 푸시의 중복벨 방지.
+    //    CallKit로 받은 경우(ckAnswer/consume/arm)는 억제하지 않는다(그 CallKit이 실제 통화 UI라서).
+    if (via === 'tap' && CUR.callId) { try { _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {} }
     send({ t: 'accepted' });   // 📞 받기 탭 '즉시' 발신자 통화중 전환 + 발신자 마이크 해제
     [300, 900].forEach(d => setTimeout(() => { if (CUR && CUR.connectedAt) send({ t: 'accepted' }); }, d));   // 유실 대비
     // 프리커넥트가 진행 중이면 완료를 기다려 그 결과 재사용(최대 ~2.4초 — 동시 셋업 경합 방지)
@@ -843,11 +847,11 @@
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
     try { if (CUR && CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } } catch (_) {}   // 예약된 VoIP 푸시 취소(끊으면 안 보냄)
     if (!remote && CUR) send({ t: 'hangup' });
-    // 📞 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시'. ⚠️ 수신자가 포그라운드(_foreground: 'ring' ack 받음)면
-    //    realtime hangup으로 이미 끝나므로 보내지 않는다 — 취소 푸시와 realtime이 겹치면 늦은 쪽이 깜빡임을 만든다.
-    //    ack가 없었으면(=백그라운드/잠금) 취소 푸시로 '아직 살아있는' CallKit을 깔끔히 종료(깜빡임 없음).
+    // 📞 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시'. 이제 푸시를 '항상' 보내므로(잠금 대비),
+    //    푸시를 보낸 통화면(_pushSent) 포그라운드 여부와 무관하게 취소 푸시로 CallKit 벨/통화를 깔끔히 종료한다.
+    //    (인앱 수락분은 이미 callHandledInApp로 억제돼 있어 취소 푸시가 와도 무해.)
     try {
-      if (!remote && CUR && CUR.dir === 'out' && !CUR._foreground && CUR._pushSent && CUR.callId && CUR.peer && sb && sb.functions) {
+      if (!remote && CUR && CUR.dir === 'out' && CUR._pushSent && CUR.callId && CUR.peer && sb && sb.functions) {
         sb.functions.invoke('call-push', { body: { to: CUR.peer, callId: CUR.callId, cancel: true } }).catch(() => {});
       }
     } catch (_) {}
