@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072781'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072782'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -647,12 +647,13 @@
     // ⚠️ iosrtc getUserMedia가 '이전 통화 마이크 미해제'로 간헐적으로 영영 멈춤(사장님 로그: getmedia-ok 안 옴).
     //    → 타임아웃 걸고, 멈추면 네이티브 오디오를 강제로 내렸다가(마이크 해제) 간단 제약으로 재시도.
     if (!localStream) {
-      try { localStream = await withTimeout(getMedia(CUR.video), 2000, 'gm-timeout'); }   // 2초 안에 안 오면 멈춘 것 → 복구
+      try { localStream = await withTimeout(getMedia(CUR.video), 6000, 'gm-timeout'); }   // iosrtc getUserMedia는 CallKit 경로서 3~5초 걸릴 수 있음 → 6초
       catch (e1) {
         wb('accept getmedia RETRY ' + String((e1 && e1.name) || e1).slice(0, 24));
-        try { _nativeCall({ action: 'end' }); } catch (_) {}   // 네이티브 ADM/마이크 강제 해제(수신자는 CallKit 없어 무해)
+        // ⚠️ 'end'가 아니라 'micRelease' — 'end'는 CallKit 통화까지 종료해 '받자마자 끊김'을 만든다. 마이크(ADM)만 해제.
+        try { _nativeCall({ action: 'micRelease' }); } catch (_) {}
         await new Promise(r => setTimeout(r, 300));
-        try { localStream = await withTimeout(getMedia(false), 3000, 'gm-timeout2'); }   // 재시도: 오디오만
+        try { localStream = await withTimeout(getMedia(false), 6000, 'gm-timeout2'); }   // 재시도: 오디오만
         catch (e2) { wb('accept getmedia FAIL ' + String((e2 && e2.name) || e2).slice(0, 30)); const nm = CUR.name, v = CUR.video; send({ t: 'decline' }); endCall('micfail', true); return paintErr(nm, explainMediaErr(e2, v)); }
       }
     }
