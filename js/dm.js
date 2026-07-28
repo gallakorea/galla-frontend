@@ -955,9 +955,14 @@
         //   합성 click은 pointerdown이 이 버튼이 아니거나 아예 없어서 걸러진다. + 사람 탭 간격(30~2000ms)만 허용.
         const downInBtn = !!(window.__dmDownEl && cb.contains(window.__dmDownEl));
         try { window.__callTrig = 'redial|age=' + age + '|down=' + (downInBtn ? 1 : 0); } catch (_) {}
-        if (!downInBtn || age < 30 || age > 2000) { try { window.__callTrig = null; } catch (_) {} try { window.GALLA_call?._ghostLog && window.GALLA_call._ghostLog('redial rejected down=' + (downInBtn ? 1 : 0) + ' age=' + age); } catch (_) {} return; }
         window.__dmDownEl = null;   // 소모 — 한 pointerdown은 한 번만
-        window.GALLA_call?.start(cb.dataset.peer, nickCache[cb.dataset.peer], cb.dataset.video === '1'); return;
+        // 👻 유령 완전 차단: '다시 걸기'는 즉시 발신하지 않고 '중앙 확인' 한 단계를 거친다.
+        //   발신자가 끊은 직후 그 자리에 뜬 버튼으로 터치가 떨어지는 유령(down=1이라 타깃/시간 가드 통과)도,
+        //   화면 중앙의 [통화] 버튼까지 또 누르진 못하므로 원천 차단된다. 진짜 사용자만 2단계를 완료.
+        const peer = cb.dataset.peer, nm = nickCache[peer] || PROFILES[peer]?.nickname || '친구', vid = cb.dataset.video === '1';
+        try { window.__callTrig = null; } catch (_) {}
+        confirmRedial(nm, vid, () => { try { window.__callTrig = 'redial-confirmed'; } catch (_) {} window.GALLA_call?.start(peer, nm, vid); });
+        return;
       }
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') closeDM();
@@ -2019,6 +2024,36 @@
       loadInbox();
     }
   }
+  /* 👻 재발신 확인 다이얼로그 — 유령전화 근본 차단.
+     '다시 걸기' 버튼은 발신자가 끊은 그 자리에 뜨므로 터치 관통/합성 탭이 재발신을 유발한다.
+     화면 '중앙'의 [통화] 버튼을 다시 눌러야만 발신되게 해, 유령의 단발 탭은 통과 못 하게 한다.
+     [통화] 버튼은 열린 뒤 500ms간 비활성 → 연속 유령 탭(끊자마자 튀는 관통)도 못 누른다. */
+  function confirmRedial(name, video, onConfirm) {
+    if (document.getElementById('redial-confirm')) return;   // 중복 방지
+    const box = document.createElement('div');
+    box.id = 'redial-confirm';
+    box.style.cssText = 'position:fixed;inset:0;z-index:100003;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.62)';
+    box.innerHTML = `
+      <div style="width:min(300px,86vw);background:linear-gradient(180deg,#181a20,#0d0e12);border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:24px 20px 16px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.6)">
+        <div style="font-size:30px;margin-bottom:8px">${video ? '📹' : '📞'}</div>
+        <div style="font-size:16px;font-weight:900;color:#fff;line-height:1.45">${(name || '친구').replace(/[&<>"]/g, '')}님에게<br>${video ? '면상톡' : '육성톡'}을 다시 걸까요?</div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button type="button" data-rc="cancel" style="flex:1;padding:13px 0;border:none;border-radius:13px;cursor:pointer;background:rgba(255,255,255,.08);color:#cfd3dc;font-size:14px;font-weight:800;font-family:inherit">취소</button>
+          <button type="button" data-rc="go" disabled style="flex:1;padding:13px 0;border:none;border-radius:13px;cursor:pointer;background:linear-gradient(135deg,#6a7bff,#3a5bff);color:#fff;font-size:14px;font-weight:900;font-family:inherit;opacity:.5">통화</button>
+        </div>
+      </div>`;
+    const close = () => { try { box.remove(); } catch (_) {} };
+    const goBtn = box.querySelector('[data-rc="go"]');
+    // 🕒 500ms 지연 활성화 — 끊은 직후 튀는 연속 관통 탭이 [통화]를 못 누르게.
+    setTimeout(() => { try { goBtn.disabled = false; goBtn.style.opacity = '1'; } catch (_) {} }, 500);
+    box.addEventListener('click', e => {
+      const rc = e.target.closest('[data-rc]')?.dataset.rc;
+      if (rc === 'go') { if (goBtn.disabled) return; close(); try { onConfirm && onConfirm(); } catch (_) {} }
+      else if (rc === 'cancel' || e.target === box) close();
+    });
+    document.body.appendChild(box);
+  }
+
   /* 통화 진입 공용 — 지원 확인 + 이름 보정. 프로필·친구 메뉴·서랍이 모두 이리로 */
   function callFrom(peer, name, video) {
     if (!window.GALLA_call?.supported()) return toastMini('이 브라우저에선 통화를 지원하지 않아요');
