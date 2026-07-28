@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072772'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072773'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -503,6 +503,8 @@
     nativeStartOutgoing(CUR.name);   // 📞 발신도 CallKit에 보고 → 발신자도 네이티브 통화화면+CallKit 오디오(대칭)
     try { window.GALLA_SFX?.resumeAfterCall?.(); } catch (_) {}   // 이전 통화의 suspend 해제(안 하면 링백 무음)
     try { window.GALLA_SFX?.ringOutStart(); } catch (_) {}   // 📞 발신 링백
+    wb('ringout ctx=' + (window.GALLA_SFX && window.GALLA_SFX.debugState ? window.GALLA_SFX.debugState() : 'nofn'));   // 🔬 링백 무음 진단
+    setTimeout(() => wb('ringout+1s ctx=' + (window.GALLA_SFX && window.GALLA_SFX.debugState ? window.GALLA_SFX.debugState() : 'nofn')), 1000);
     const offer = await pc.createOffer();
     offer.sdp = tuneOpus(offer.sdp);
     await pc.setLocalDescription(offer);

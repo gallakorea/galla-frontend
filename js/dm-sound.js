@@ -88,5 +88,7 @@
   function ringOutStart() { ringOutStop(); try { ringOutMotif(); } catch (_) {} ringOutT = setInterval(() => { try { ringOutMotif(); } catch (_) {} }, 3000); }
   function ringOutStop() { if (ringOutT) { clearInterval(ringOutT); ringOutT = null; } }
 
-  window.GALLA_SFX = { ding, pop, ringInStart, ringInStop, ringOutStart, ringOutStop, unlock, suspendForCall, resumeAfterCall };
+  // 🔬 진단 — 링백/벨 무음 원인 추적용. ctx 상태(running/suspended/interrupted/closed/none)를 노출.
+  function debugState() { try { return (ctx ? ctx.state : 'none') + (_callHold ? '/hold' : ''); } catch (_) { return 'err'; } }
+  window.GALLA_SFX = { ding, pop, ringInStart, ringInStop, ringOutStart, ringOutStop, unlock, suspendForCall, resumeAfterCall, debugState };
 })();
