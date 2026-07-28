@@ -12,7 +12,7 @@
   if (window.top !== window.self) {
     var _O = location.origin;
     window.GALLA_call = {
-      start: function (peer, name, video) { try { parent.postMessage({ galla: 'shell', t: 'callstart', peer: peer, name: name || '', video: !!video, trig: (window.__ct || 'direct') }, _O); window.__ct = null; } catch (_) {} },
+      start: function (peer, name, video) { try { parent.postMessage({ galla: 'shell', t: 'callstart', peer: peer, name: name || '', video: !!video, trig: (window.__callTrig || 'direct') }, _O); window.__callTrig = null; } catch (_) {} },
       listen: function () {},
       supported: function () { return true; },
       _debug: function () { return { iframeForward: true }; }
@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072803'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072804'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
