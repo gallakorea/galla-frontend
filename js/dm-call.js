@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072831'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072832'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -895,6 +895,9 @@
   };
   function endCall(reason, remote) {
     lastCallEndAt = Date.now();   // 🔒 유령발신 차단용 — 이 직후 2초 발신은 관통으로 무시
+    // 🔒👻 유령 수신벨 차단 — 통화가 끝나면 이 callId를 네이티브 억제목록에 넣어, 애플 VoIP 스로틀로
+    //    뒤늦게(수 초 후) 도착하는 '벨 푸시'가 유령 수신벨을 울리지 않게 한다(발신자·수신자 양쪽에서 호출돼도 무해).
+    try { if (CUR && CUR.callId) _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {}
     if (AGORA) { try { window.GALLA_agora.leave(); } catch (_) {} }   // 🔊 Agora 채널 나가기
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
