@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072822'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072823'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -55,6 +55,9 @@
     if (!AGORA || !cur || cur._agoraJoined) return;
     cur._agoraJoined = true;
     try {
+      // 🔊 ⭐ 마이크 캡처 '전에' 세션을 .playAndRecord로 — 링백(.playback)이나 CallKit 세션 위에서
+      //    Agora가 createMicrophoneAudioTrack을 하면 녹음 불가라 멈춘다. 순서가 핵심(한방향 소리 근본해결).
+      nativeAgoraAudio();
       await window.GALLA_agora.join(cur.callId, agoraUid(), !!cur.video, {
         onPeerLeft: () => { try { if (CUR === cur) endCall('ended', true); } catch (_) {} },
         onRemoteVideo: (t) => { cur._agRemote = t; renderAgoraVideo(); },   // 상대 카메라 트랙
@@ -63,7 +66,7 @@
       if (CUR === cur) {
         if (!cur.connectedAt) { cur.connectedAt = Date.now(); startTimer(); }
         stopRings(); paintUI('oncall');
-        nativeAgoraAudio();   // 🔊 링백 세션 정리 + .playAndRecord — 양쪽 마이크 캡처/재생 확실히(한방향 소리 해결)
+        nativeAgoraAudio();   // 재확정(영상 여부 반영) + 라우팅
         applyNativeRoute();   // 스피커/수화부 라우팅(영상=스피커)
       }
     } catch (e) { wb('agora connect FAIL ' + (e && e.message || e)); }
@@ -261,7 +264,9 @@
       if (_ctMode === 'accept') { setTimeout(() => { try { if (CUR && CUR.dir === 'in' && !CUR._accepting) accept('selftest'); } catch (_) {} }, 900); }
       // 🎤 벨 중 '마이크만' 미리 준비(음소거) → 받기 시 getMedia 대기 0 = 전환 즉시.
       //    PC·answer는 안 만든다(프리커넥트 레이스 없음). 권한 있을 때만(프롬프트로 벨 방해 X).
-      (async () => {
+      //    ⚠️ AGORA면 절대 프리웜 금지 — iosrtc getMedia가 마이크를 잡고 있으면 Agora createMicrophoneAudioTrack이
+      //       그 마이크를 못 잡아 멈춘다(받는 사람만 publish 실패 = '거는 사람만 소리'의 진짜 원인). Agora가 자기 마이크 관리.
+      if (!AGORA) (async () => {
         const cur = CUR;
         try {
           if ((await micPermState()) !== 'granted') return;
