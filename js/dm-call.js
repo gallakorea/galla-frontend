@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072769'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072770'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -70,7 +70,7 @@
     try { sb.rpc('send_call_sig', { p_to: to, p_t: msg.t, p_payload: { ...msg, from: ME } }).then(() => {}, () => {}); } catch (_) {}
   }
   // 🔬 통화 흐름 추적(간헐 실패 규명용) — 통화당 몇 줄만 남긴다.
-  function wb(m) { try { sb && sb.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
+  function wb(m) { try { const c = sb || window.supabaseClient; c && c.rpc('log_client_error', { p_kind: 'call-audio', p_message: 'T ' + m + ' d=' + (CUR ? CUR.dir : '-'), p_ver: 'diag' }).then(() => {}, () => {}); } catch (_) {} }
   function statusBeacon(tag) {
     try {
       const la = localStream && localStream.getAudioTracks()[0];
@@ -1147,14 +1147,28 @@
     else if (mode === 'accept') { _ctMode = 'accept'; _ctWakeOn(); if (changed) wb('selftest ACCEPT-MODE'); }
     else if (_ctMode) { _ctStop(); }
   }
-  // 서버 폴 — 관리자가 SQL로 심은 플래그를 15초마다 읽어 반영(원격 on/off). RPC 없거나 미로그인이면 조용히 스킵.
+  // 서버 폴 — 관리자가 SQL로 심은 플래그를 15초마다 읽어 반영(원격 on/off).
+  //   ⚠️ listen()은 DM 모듈이 떠야 호출돼 sb/ME가 늦다 → 폴이 전역 클라이언트/세션에서 직접 끌어와
+  //      엔진을 부팅(listen)하고, 탭 위치와 무관하게 스스로 켜진다. 하트비트로 상태를 항상 남긴다.
+  let _ctPollN = 0;
   async function _ctPoll() {
+    _ctPollN++;
     try {
-      if (sb && ME) { const { data, error } = await sb.rpc('get_call_selftest'); if (!error && data) _ctApply(data.mode || null, data.peer || null); }
-    } catch (_) {}
+      let _sb = sb || window.supabaseClient, _me = ME;
+      if (_sb && !_me) { try { const { data } = await _sb.auth.getSession(); _me = data && data.session && data.session.user && data.session.user.id || null; } catch (_) {} }
+      if (_sb && _me) {
+        if (!sb || !ME) { try { listen(_sb, _me); } catch (_) {} }   // 엔진 부팅 보장(탭 무관)
+        const { data, error } = await _sb.rpc('get_call_selftest');
+        if (error) { if (_ctPollN <= 3 || _ctMode) wb('selftest rpc-err ' + String(error.message || error).slice(0, 30)); }
+        else {
+          if (_ctPollN <= 2 || _ctMode) wb('selftest poll me=' + String(_me).slice(0, 6) + ' -> ' + ((data && data.mode) || 'null'));
+          _ctApply((data && data.mode) || null, (data && data.peer) || null);
+        }
+      } else if (_ctPollN <= 4) { wb('selftest wait sb=' + !!_sb + ' me=' + !!_me); }
+    } catch (e) { if (_ctPollN <= 3) wb('selftest poll-err ' + String((e && e.name) || e).slice(0, 24)); }
     setTimeout(_ctPoll, 15000);
   }
-  setTimeout(_ctPoll, 5000);
+  setTimeout(_ctPoll, 4000);
   // 수동 오버라이드(콘솔/디버그 패널용)
   window.GALLA_callTest = {
     accept() { _ctApply('accept'); },
