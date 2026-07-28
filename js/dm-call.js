@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072801'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072802'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -57,14 +57,7 @@
     if (iceCache && Date.now() - iceAt < 30 * 60 * 1000) return iceCache;
     try {
       const { data } = await sb.functions.invoke('turn-cred', { body: {} });
-      if (data?.iceServers) {
-        // ⚠️ iceTransportPolicy:'relay'(릴레이 강제)는 폐기 — TURN 할당이 느리면 host 폴백을 막아 '연결 자체 실패'를
-        //    유발했다(v072795 회귀). 한 방향 문제의 실제 원인은 NAT 비대칭이 아니라 '콜드스타트 백그라운드 카메라 차단'
-        //    (→ fg-reacquire로 대응)이라 릴레이 강제는 불필요. 일반(host/srflx/relay 전체) 후보로 되돌린다.
-        iceCache = { iceServers: data.iceServers };
-        iceAt = Date.now();
-        return iceCache;
-      }
+      if (data?.iceServers) { iceCache = { iceServers: data.iceServers }; iceAt = Date.now(); return iceCache; }
     } catch (_) {}
     return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
   }
@@ -262,7 +255,7 @@
       if (CUR.dir === 'out') {
         try { localStream && localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
         if (!CUR.connectedAt) {
-          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); armColdReacquire(); applyNativeRoute();
+          clearTimeout(ringT); stopRings(); CUR.connectedAt = Date.now(); startTimer(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
         }
       }
       return;
@@ -295,10 +288,6 @@
         const nowVideo = !!p.video || !!(remoteStream && remoteStream.getVideoTracks().some(t => t.readyState === 'live'));
         if (CUR.video !== nowVideo) { CUR.video = nowVideo; SPK = nowVideo; paintUI('oncall'); toast(nowVideo ? '상대가 면상톡으로 전환했어요' : '상대가 음성으로 전환했어요'); }
       } catch (e) { console.error('[call] reoffer', e); }
-    }
-    else if (p.t === 'req-ice-restart') {
-      // 상대(수신자)가 끊김 감지 → 발신자인 내가 ICE 재시작 개시
-      try { iceRestart('peer-req'); } catch (_) {}
     }
     else if (p.t === 'reanswer') {
       try { await pc.setRemoteDescription({ type: 'answer', sdp: p.sdp }); } catch (e) { console.error('[call] reanswer', e); }
@@ -456,24 +445,11 @@
     //    신호(발신자)가 제어한다. 프리커넥트(벨 중 ICE 미리 연결) 때 벨 화면이 통화중으로 튀지 않게.
     pc.oniceconnectionstatechange = () => {
       if (!pc) return;
-      const s = pc.iceConnectionState;
-      wb('ice=' + s);
-      if (['connected', 'completed'].includes(s)) {
-        // 복구됨 — 유예/재시작 타이머 취소(끊김 오판 방지)
+      wb('ice=' + pc.iceConnectionState);
+      if (['connected', 'completed'].includes(pc.iceConnectionState)) {
+        // 복구됨 — disconnected 유예 타이머가 걸려 있으면 취소(끊김 오판 방지)
         if (CUR && CUR._dropT) { clearTimeout(CUR._dropT); CUR._dropT = null; wb('drop-recover'); }
-        if (CUR && CUR._iceReT) { clearTimeout(CUR._iceReT); CUR._iceReT = null; }
-        if (CUR) CUR._iceRestarting = false;
         nativeAudioOn(); armAudioStatDiag();
-      } else if (s === 'failed') {
-        iceRestart('ice-failed');   // 📞 failed=필수 재시작(즉시)
-      } else if (s === 'disconnected') {
-        // disconnected는 일시적일 수 있음 — 2.5초 지속되면 ICE 재시작(빠른 복구). 그래도 안되면 onconnectionstatechange 8초 유예가 종료.
-        if (CUR && CUR.connectedAt && !CUR._iceReT) {
-          CUR._iceReT = setTimeout(() => {
-            if (CUR) CUR._iceReT = null;
-            if (pc && ['disconnected', 'failed', 'checking'].includes(pc.iceConnectionState)) iceRestart('ice-disc');
-          }, 2500);
-        }
       }
     };
     pc.onconnectionstatechange = () => {
@@ -482,20 +458,9 @@
       if (pc.connectionState === 'connected') {
         if (CUR && CUR._dropT) { clearTimeout(CUR._dropT); CUR._dropT = null; wb('drop-recover2'); }
         nativeAudioOn();
-      } else if (pc.connectionState === 'closed') {
-        if (CUR && CUR.connectedAt) endCall('ended');
-      } else if (pc.connectionState === 'failed') {
-        // 📞 failed도 즉시 끊지 않는다 — ICE 재시작으로 복구 시도 후, 8초 유예 안에 안 살아나면 종료.
-        iceRestart('conn-failed');
-        if (CUR && CUR.connectedAt && !CUR._dropT) {
-          wb('conn-failed grace');
-          CUR._dropT = setTimeout(() => {
-            if (!pc || !CUR || !CUR.connectedAt) return;
-            const st = pc.connectionState, ist = pc.iceConnectionState;
-            if (['connected', 'completed'].includes(st) || ['connected', 'completed'].includes(ist)) { wb('failed-recover'); return; }
-            wb('restart-timeout end'); endCall('netfail');
-          }, 8000);
-        }
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        // failed/closed = 종결 상태 → 즉시 종료(활성 통화만).
+        if (CUR && CUR.connectedAt) endCall(pc.connectionState === 'failed' ? 'netfail' : 'ended');
       } else if (pc.connectionState === 'disconnected') {
         // ⚠️ disconnected는 '일시적' — WebRTC가 스스로 connected로 복구하는 경우가 많다.
         //    즉시 끊으면 한쪽 네트워크 순간 끊김에 통화 전체가 죽는다("한쪽만 끊김"의 원인).
@@ -686,7 +651,7 @@
       // 🚀 벨 중에 ICE 이미 뚫림 — 마이크 음소거만 풀면 즉시 양방향 소리
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); armColdReacquire(); applyNativeRoute();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
       return;
     }
     // 폴백: 프리커넥트 안 됨(권한 없었거나 실패) — 기존 전체 셋업(마이크 켠 채)
@@ -711,7 +676,7 @@
       if (!pc) await buildAnswer(CUR, false);
       try { localStream.getTracks().forEach(t => { t.enabled = true; }); } catch (_) {}
       if (!CUR.connectedAt) { CUR.connectedAt = Date.now(); startTimer(); }
-      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); armColdReacquire(); applyNativeRoute();
+      stopRings(); paintUI('oncall'); nativeAudioOn(); armAudioKick(); armVideoRenderKick(); applyNativeRoute();
     } catch (e) {
       console.error('[call] accept', e);
       const nm = CUR?.name;
@@ -853,50 +818,21 @@
       if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('vkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
     }, d));
   }
-  // 📞 콜드스타트 카메라 재획득을 '폴링'으로 능동 구동 — 이벤트(visibilitychange/네이티브 콜백)는
-  //    앱이 '이미 보임 상태로' 콜드부팅되면 안 터져서 놓친다(18:44 케이스). 그래서 수신자는 연결 후
-  //    화면이 보이는 동안 성공할 때까지 계속 재획득을 시도한다. (오픈소스 정석: 포그라운드서 캡처 재시작)
-  function armColdReacquire() {
-    const cur = CUR;
-    if (!cur || cur.dir !== 'in' || !cur.video || cur._coldPollT) return;
-    let n = 0;
-    // 유한 반복(최대 8회 ~10초) — 화면 보이면 네이티브 카메라 재시작(idempotent, 깜박임 없음). 무한 폴 금지.
-    cur._coldPollT = setInterval(() => {
-      if (CUR !== cur || !cur.connectedAt || n++ >= 8) { clearInterval(cur._coldPollT); cur._coldPollT = null; return; }
-      if (document.visibilityState === 'visible') { wb('cold-cam t=' + n); try { _nativeCall({ action: 'restartCamera' }); } catch (_) {} }
-    }, 1200);
-  }
   // 📞 앱이 포그라운드로 돌아온 순간(네이티브 applicationDidBecomeActive) 호출된다.
   //    CallKit로 받으면 렌더가 백그라운드 전환 중 일어나 영상이 검게 굳는 문제 → 완전히 활성화된 지금 강제 재부착.
   window.GALLA_callForegroundKick = function () {
     try {
       const cur = CUR;
-      if (!cur || !cur.connectedAt) return;
-      // 🎥 정석(react-native-webrtc): 멈춘 카메라 캡처 세션을 네이티브에서 되살린다(startRunning).
-      //    새 트랙·재협상·깜박임 없고 idempotent(이미 켜져 있으면 no-op). ← JS getMedia 재획득 루프는
-      //    vok 판정 실패 시 매초 새 트랙을 만들어 '깜박임 폭풍'을 일으켜 폐기함. 네이티브 재시작만 쓴다.
-      if (cur.dir === 'in' && cur.video) { try { _nativeCall({ action: 'restartCamera' }); } catch (_) {} }
-      // 로컬 트랙 깨우기 + 네이티브 렌더 재부착
+      if (!cur || !cur.video || !cur.connectedAt) return;
+      // 로컬 카메라가 백그라운드에서 멈춰 있으면 트랙을 깨워 프레임을 다시 흘린다.
       try { localStream && localStream.getVideoTracks().forEach(t => { if (t.enabled === false) t.enabled = true; }); } catch (_) {}
-      if (!cur.video) return;
-      [0, 500, 1200, 2500, 4000].forEach(d => setTimeout(() => {
+      [0, 400, 1000, 2000].forEach(d => setTimeout(() => {
         if (CUR !== cur || !cur.connectedAt) return;
         const rid = cur._rvTrackId || liveVideoId(remoteStream), lid = liveVideoId(localStream);
         if (rid || lid) { _nativeCall({ action: 'videoTracks', remoteTrackId: rid || '', localTrackId: lid || '', force: true }); wb('fgkick r=' + (rid || '-').slice(0, 6) + ' l=' + (lid || '-').slice(0, 6)); }
       }, d));
     } catch (_) {}
   };
-  // 📞 웹뷰가 '보임'으로 바뀌는 순간(=앱 포그라운드) 콜드스타트 재획득을 건다. 네이티브 applicationDidBecomeActive가
-  //    웹뷰로 전달 안 될 때(18:31처럼 fg-reacquire 미발동)를 대비한 이중 트리거 — 웹뷰 자체 신호라 더 신뢰도 높다.
-  document.addEventListener('visibilitychange', () => {
-    try {
-      if (document.visibilityState !== 'visible') return;
-      if (CUR && CUR.dir === 'in' && CUR.connectedAt && CUR.video) {
-        wb('visible→fgkick');
-        window.GALLA_callForegroundKick();
-      }
-    } catch (_) {}
-  });
   function endCall(reason, remote) {
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
@@ -909,7 +845,6 @@
     try { window.__ckAnswer = null; } catch (_) {}
     clearTimeout(ringT); clearInterval(timerT); clearInterval(reoffT); reoffT = null;
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
-    try { if (CUR && CUR._coldPollT) { clearInterval(CUR._coldPollT); CUR._coldPollT = null; } } catch (_) {}   // 콜드 재획득 폴 정지
     try { if (CUR && CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } } catch (_) {}   // 예약된 VoIP 푸시 취소(끊으면 안 보냄)
     if (!remote && CUR) send({ t: 'hangup' });
     // 📞 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시'. 이제 푸시를 '항상' 보내므로(잠금 대비),
@@ -1070,24 +1005,6 @@
       const lv = document.getElementById('dm-call-local');
       if (lv) { lv.srcObject = new MediaStream([nv]); lv.play?.().catch(() => {}); }
     } catch (_) { toast('카메라 전환에 실패했어요'); }
-  }
-
-  /* 📞 ICE 재시작 — 통화 중 연결 끊김(disconnected/failed) 자동 복구. (Philipp Hancke/BlogGeek 정석)
-     발신자(offerer)만 개시해 glare 방지. 기존 reoffer/reanswer 경로 재사용 — 트랙은 그대로라 검은화면 위험 낮음.
-     수신자가 끊김을 먼저 감지하면 발신자에게 재시작을 요청(req-ice-restart)한다. */
-  async function iceRestart(why) {
-    if (!pc || !CUR || !CUR.connectedAt) return;
-    if (CUR.dir !== 'out') { try { send({ t: 'req-ice-restart' }); } catch (_) {} return; }   // 수신자는 발신자에 요청만
-    if (CUR._iceRestarting) return;
-    CUR._iceRestarting = true;
-    try {
-      const offer = await pc.createOffer({ iceRestart: true });
-      offer.sdp = tuneOpus(offer.sdp);
-      await pc.setLocalDescription(offer);
-      send({ t: 'reoffer', sdp: offer.sdp, video: !!CUR?.video, iceRestart: true });
-      wb('ice-restart tx (' + why + ')');
-    } catch (e) { wb('ice-restart FAIL ' + String((e && e.name) || e).slice(0, 20)); }
-    setTimeout(() => { if (CUR) CUR._iceRestarting = false; }, 6000);   // 6초 후 재시도 허용
   }
 
   /* ── 재협상 — 통화 중 트랙 추가/제거(영상↔음성 전환)를 상대와 합의 ── */
