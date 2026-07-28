@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072830'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072831'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1293,6 +1293,8 @@
   }
   window.GALLA_callAction = c => { wb('nativeBtn ' + c); callAction(c); };   // 네이티브 오버레이 버튼 → 브릿지(출처 로그)
 
+  // 🔬 부팅 버전 비콘 — 폰이 실제로 최신 JS를 받았는지 확정(버전전파 진단). cb=페이지에 '다시걸기' 버튼 존재 수.
+  setTimeout(() => { try { wb('boot v=' + (window.GALLA_V || '?') + ' cb=' + document.querySelectorAll('.dm-callback').length); } catch (_) {} }, 6000);
   window.GALLA_call = {
     listen, start,
     _ghostLog: (m) => { try { wb('GHOST ' + m); } catch (_) {} },   // 유령 차단 로그(가드가 실제로 잡는지 확인)
