@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072838'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072839'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1265,7 +1265,6 @@
               <span class="dmc-ctl" data-c="mute"><button class="dmc-btn mute${CUR && CUR._userMuted ? ' off' : ''}" tabindex="-1" aria-label="음소거">${CUR && CUR._userMuted ? IC.micoff : IC.mic}</button><i>음소거</i></span>
               <span class="dmc-ctl" data-c="spk"><button class="dmc-btn${SPK ? ' on2' : ''}" tabindex="-1" aria-label="스피커">${IC.spk}</button><i>스피커</i></span>
               <span class="dmc-ctl" data-c="remute"><button class="dmc-btn${REMUTE ? ' off' : ''}" tabindex="-1" aria-label="상대 소리">${REMUTE ? IC.hearoff : IC.hear}</button><i>상대 소리</i></span>
-              <span class="dmc-ctl" data-c="rec"><button class="dmc-btn rec" tabindex="-1" aria-label="통화 녹음">${IC.rec}</button><i>녹음</i></span>
               ${video
                 ? `<span class="dmc-ctl" data-c="camoff"><button class="dmc-btn" tabindex="-1" aria-label="카메라 끄기">${IC.cam}</button><i>카메라</i></span>
                    <span class="dmc-ctl" data-c="flip"><button class="dmc-btn" tabindex="-1" aria-label="카메라 전환">${IC.flip}</button><i>전환</i></span>
