@@ -262,6 +262,7 @@
         const entry = stack.pop();
         if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
         setTimeout(() => {
+          if (entry.onPop) { try { entry.onPop(); } catch (_) {} }   // ⚠️ compose: 이동한 모달을 원래 탭으로 복원(안 하면 모달 유실→다음 진입 실패)
           entry.el.remove();
           if (!stack.length) stackRoot.classList.remove("on");
         }, 300);
@@ -586,7 +587,11 @@
     head.innerHTML = '<button type="button" class="cp-back" aria-label="뒤로">' + CP_BACK_SVG + '</button>' +
                      '<span class="cp-title">' + title + '</span><span class="cp-spacer"></span>';
     box.prepend(head);
-    head.querySelector(".cp-back").addEventListener("click", () => { try { history.back(); } catch (_) {} });
+    // 뒤로가기 = 스택 pop(애니메이션 슬라이드 아웃 + onPop=모달 원위치). history.back+applyRoute를 타면
+    // 버튼이 좌상단(clientX<30)이라 '엣지 터치'로 오인돼 instant(슬라이드 없이)로 닫혀 '말썽'이었다.
+    head.querySelector(".cp-back").addEventListener("click", () => {
+      try { if (stack.length && stack[stack.length - 1].el === modal.closest(".stack-view")) pop(); else history.back(); } catch (_) { try { history.back(); } catch (_) {} }
+    });
   }
   async function compose(kind) {
     const MAP = {
