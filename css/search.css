@@ -629,6 +629,25 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
 .sr-user-name { font-size: 15px; font-weight: 800; color: #f3f4f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sr-user-bio { font-size: 12.5px; color: #7c828f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sr-user .sr-go { flex: none; color: #4b5163; font-size: 20px; }
+/* 🔖 해시태그 섹션 */
+.sr-hash-head { display: flex; align-items: center; gap: 8px; }
+.sr-hash-sort { margin-left: auto; display: inline-flex; gap: 4px; }
+.sr-hash-sort button {
+  background: #12141c; border: 1px solid #262b3a; color: #8b93a4;
+  font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+}
+.sr-hash-sort button.on { background: rgba(106,123,255,.22); border-color: #6a7bff; color: #cdd6ff; }
+.sr-hash-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #12141c; border: 1px solid #1e2230; border-radius: 12px;
+  padding: 10px 12px; margin-bottom: 8px; text-decoration: none; color: inherit;
+}
+.sr-hash-row:active { border-color: #3356ff; }
+.sr-hash-ic { flex: none; font-size: 18px; }
+.sr-hash-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sr-hash-t { font-size: 14px; font-weight: 700; color: #eef0f4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-hash-c { font-size: 11.5px; color: #6b7280; }
+.sr-hash-row .sr-go { flex: none; color: #4b5163; font-size: 18px; }
 .sr-thumb {
   position: relative; flex: 0 0 84px; width: 84px; height: 84px;
   border-radius: 10px; overflow: hidden; background: #0c0e14;

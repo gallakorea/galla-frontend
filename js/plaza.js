@@ -4,6 +4,31 @@
 // 로컬 vendor UMD 전역 사용 (esm.sh 16모듈 폭포수 로드 제거)
 const { createClient } = window.supabase;
 
+/* 🔖 해시태그 공용 헬퍼 — 전용 입력칸 + 본문 #태그 자동추출을 합쳐 tags[]로. 여러 파일서 중복정의 방지(가드). */
+if (!window.GALLA_collectTags) {
+  window.GALLA_extractHashtags = t => {
+    const out = [];
+    (String(t || '').match(/#([0-9A-Za-z가-힣_]{1,30})/g) || []).forEach(m => {
+      const x = m.slice(1).toLowerCase(); if (x && !out.includes(x)) out.push(x);
+    });
+    return out;
+  };
+  window.GALLA_parseTagInput = v => {
+    const out = [];
+    String(v || '').split(/[\s,]+/).forEach(s => {
+      const x = s.replace(/[^0-9A-Za-z가-힣_]/g, '').toLowerCase();
+      if (x && x.length <= 30 && !out.includes(x)) out.push(x);
+    });
+    return out;
+  };
+  window.GALLA_collectTags = (inputVal, ...texts) => {
+    const out = []; const add = x => { if (x && !out.includes(x)) out.push(x); };
+    window.GALLA_parseTagInput(inputVal).forEach(add);
+    texts.forEach(tx => window.GALLA_extractHashtags(tx).forEach(add));
+    return out.slice(0, 10);
+  };
+}
+
 const SUPABASE_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
 
@@ -773,13 +798,18 @@ submitBtn && submitBtn.addEventListener("click", async (e) => {
   const firstImageMatch = body.match(/\[IMAGE\](.+)/);
   const thumbnail = firstImageMatch ? firstImageMatch[1] : null;
 
+  // 🔖 해시태그 — 전용 입력칸(#plaza-tags) + 본문/제목의 #태그 자동추출을 합친다.
+  const tagsEl = document.getElementById('plaza-tags');
+  const tags = window.GALLA_collectTags(tagsEl ? tagsEl.value : '', title, body);
+
   const payload = {
     category,
     title,
     body,
     thumbnail,
     nickname: displayName,
-    user_id: user.id
+    user_id: user.id,
+    tags: tags.length ? tags : null
   };
 
   const { error } = await supabase

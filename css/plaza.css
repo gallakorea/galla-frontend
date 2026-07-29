@@ -275,6 +275,21 @@ html, body {
   margin-bottom: 10px;
 }
 
+/* 🔖 해시태그 입력칸 */
+.plaza-tags-field { margin: 4px 0 10px; }
+#plaza-tags {
+  width: 100%;
+  background: #111;
+  border: 1px solid #333;
+  color: #7ea2ff;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+#plaza-tags::placeholder { color: #565c6b; font-weight: 400; }
+#plaza-tags:focus { border-color: #3d6bff; outline: none; }
+
 #plaza-body {
   width: 100%;
   height: 120px;

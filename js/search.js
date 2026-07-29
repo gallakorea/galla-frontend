@@ -389,13 +389,56 @@ async function initTrendPage() {
     return data || [];
   }
 
+  /* 🔖 해시태그 검색 — 광장/이슈/예측의 tags[]에서 찾는다(GIN). 최근순/인기순 정렬. */
+  let _hashSort = "recent", _lastQ = "";
+  async function searchHashtag(q, sort) {
+    const t = String(q || "").replace(/^#/, "").toLowerCase().trim();
+    if (!t) return [];
+    const recent = sort !== "popular";
+    const [pl, is, mk] = await Promise.all([
+      supabase.from("plaza_posts").select("id,title,category,score,created_at").contains("tags", [t]).order(recent ? "created_at" : "score", { ascending: false }).limit(15),
+      supabase.from("issues").select("id,title,category,pro_count,con_count,created_at").contains("tags", [t]).order(recent ? "created_at" : "pro_count", { ascending: false }).limit(15),
+      supabase.from("markets").select("id,question,category,volume,created_at").contains("tags", [t]).order(recent ? "created_at" : "volume", { ascending: false }).limit(15),
+    ]);
+    const items = [];
+    (pl.data || []).forEach(p => items.push({ type: "plaza", id: p.id, title: p.title, cat: p.category, created: p.created_at, pop: p.score || 0 }));
+    (is.data || []).forEach(i => items.push({ type: "issue", id: i.id, title: i.title, cat: i.category, created: i.created_at, pop: (i.pro_count || 0) + (i.con_count || 0) }));
+    (mk.data || []).forEach(m => items.push({ type: "market", id: m.id, title: m.question, cat: m.category, created: m.created_at, pop: m.volume || 0 }));
+    items.sort((a, b) => recent ? (new Date(b.created) - new Date(a.created)) : (b.pop - a.pop));
+    return items.slice(0, 20);
+  }
+  const HASH_HREF = { plaza: id => `plaza_detail.html?id=${id}`, issue: id => `issue.html?id=${id}`, market: id => `predict-market.html?id=${id}` };
+  const HASH_IC = { plaza: "🏛", issue: "🗳", market: "🔮" };
+  function hashSectionHTML(q, items, sort) {
+    const t = esc(String(q || "").replace(/^#/, "").trim());
+    const rows = items.map(it => `<a class="sr-hash-row" href="${HASH_HREF[it.type](it.id)}">
+        <span class="sr-hash-ic">${HASH_IC[it.type] || "🔖"}</span>
+        <span class="sr-hash-mid"><span class="sr-hash-t">${esc(it.title || "")}</span><span class="sr-hash-c">${esc(it.cat || "")}</span></span>
+        <span class="sr-go">›</span></a>`).join("");
+    return `<div class="sr-sec" id="sr-hash">
+      <div class="sr-sec-head sr-hash-head">🔖 #${t} <b>${items.length}</b>
+        <span class="sr-hash-sort">
+          <button type="button" class="${sort !== "popular" ? "on" : ""}" onclick="window.__srHashSort&&window.__srHashSort('recent')">최근순</button>
+          <button type="button" class="${sort === "popular" ? "on" : ""}" onclick="window.__srHashSort&&window.__srHashSort('popular')">인기순</button>
+        </span>
+      </div>${rows}</div>`;
+  }
+  // 정렬 토글 — 해시태그 섹션만 다시 조회·교체
+  window.__srHashSort = async (sort) => {
+    _hashSort = sort;
+    const items = await searchHashtag(_lastQ, sort);
+    const el = document.getElementById("sr-hash");
+    if (el) el.outerHTML = items.length ? hashSectionHTML(_lastQ, items, sort) : "";
+  };
+
   const doSearch = debounce(async q => {
     const my = ++seq;
-    const [users, issues, markets, news, videos, plaza] = await Promise.all([
-      searchUsers(q), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q)
+    _lastQ = q;
+    const [users, hashtag, issues, markets, news, videos, plaza] = await Promise.all([
+      searchUsers(q), searchHashtag(q, _hashSort), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, users, issues, markets, news, videos, plaza);
+    renderResults(q, users, hashtag, issues, markets, news, videos, plaza);
   }, 240);
 
   function runSearch(kw, addHistory) {
@@ -439,10 +482,10 @@ async function initTrendPage() {
   }
 
   // 섹션 순서: 이슈 → 예측 → 뉴스 → 유튜브 → 광장
-  function renderResults(q, users, issues, markets, news, videos, plaza) {
-    users = users || []; issues = issues || []; markets = markets || []; news = news || [];
+  function renderResults(q, users, hashtag, issues, markets, news, videos, plaza) {
+    users = users || []; hashtag = hashtag || []; issues = issues || []; markets = markets || []; news = news || [];
     videos = videos || []; plaza = plaza || [];
-    const total = users.length + issues.length + markets.length + news.length + videos.length + plaza.length;
+    const total = users.length + hashtag.length + issues.length + markets.length + news.length + videos.length + plaza.length;
     if (!total) {
       resultsEl.innerHTML =
         `<div class="sr-none">\u2018${esc(q)}\u2019 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
@@ -467,6 +510,9 @@ async function initTrendPage() {
       }).join("");
       html += `</div>`;
     }
+
+    /* ── 🔖 해시태그 (최근순/인기순) ── */
+    if (hashtag.length) html += hashSectionHTML(q, hashtag, _hashSort);
 
     /* ── 갈라 이슈 ── */
     if (issues.length) {
