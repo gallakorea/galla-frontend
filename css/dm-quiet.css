@@ -460,8 +460,10 @@ body[data-page="dm"].dm-detail .dm-view .dm-head { padding-top: calc(env(safe-ar
 #dm-call-timer { color: #7ee0a3; font-weight: 800; font-variant-numeric: tabular-nums; }
 .dmc-btns { display: flex; gap: 26px; margin-top: 26px; }
 /* 🎛️ 통화 컨트롤 = 아이콘 원 + 아래 라벨(네이티브 CallKit 스타일). 아이콘만이라 헷갈리던 것 해소. */
-.dmc-ctl { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 64px; }
-.dmc-ctl > i { font-size: 12px; font-style: normal; color: #c7ccd6; letter-spacing: -.2px; white-space: nowrap; }
+.dmc-ctl { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 64px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dmc-ctl > i { font-size: 12px; font-style: normal; color: #c7ccd6; letter-spacing: -.2px; white-space: nowrap; pointer-events: none; }
+.dmc-ctl .dmc-btn { pointer-events: none; }   /* 탭은 컨트롤(.dmc-ctl[data-c])이 받는다 — 라벨·여백 어디를 눌러도 작동 */
+.dmc-ctl:active .dmc-btn { transform: scale(.92); }
 .dmc-btn {
   width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center; color: #fff;

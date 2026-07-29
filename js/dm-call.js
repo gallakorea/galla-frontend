@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072836'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072837'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1189,7 +1189,7 @@
         const dur = Math.round((Date.now() - recT0) / 1000);
         const blob = new Blob(recChunks, { type: recRec.mimeType || 'audio/webm' });
         recRec = null; try { recCtx.close(); } catch (_) {} recCtx = null;
-        document.querySelector('[data-c="rec"]')?.classList.remove('recing');
+        document.querySelector('[data-c="rec"] .dmc-btn')?.classList.remove('recing');
         wb('rec stop dur=' + dur + ' size=' + blob.size + ' chunks=' + recChunks.length);
         if (dur < 1 || !blob.size) { toast(blob.size ? '녹음이 너무 짧아요' : '녹음된 소리가 없어요(이 기기 제약)'); return; }
         toast('📼 녹음 저장 중…');
@@ -1252,20 +1252,20 @@
         <div class="dmc-state">${stateTxt}<span id="dm-call-timer">${state === 'oncall' ? '00:00' : ''}</span></div>
         <div class="dmc-btns">
           ${state === 'incoming' ? `
-            <span class="dmc-ctl"><button class="dmc-btn accept" data-c="accept" aria-label="받기">${IC.phone}</button><i>받기</i></span>
-            <span class="dmc-ctl"><button class="dmc-btn end" data-c="decline" aria-label="거절">${IC.phone}</button><i>거절</i></span>`
+            <span class="dmc-ctl" data-c="accept"><button class="dmc-btn accept" tabindex="-1" aria-label="받기">${IC.phone}</button><i>받기</i></span>
+            <span class="dmc-ctl" data-c="decline"><button class="dmc-btn end" tabindex="-1" aria-label="거절">${IC.phone}</button><i>거절</i></span>`
           : `
             ${state === 'oncall' ? `
-              <span class="dmc-ctl"><button class="dmc-btn mute${CUR && CUR._userMuted ? ' off' : ''}" data-c="mute" aria-label="음소거">${CUR && CUR._userMuted ? IC.micoff : IC.mic}</button><i>음소거</i></span>
-              <span class="dmc-ctl"><button class="dmc-btn${SPK ? ' on2' : ''}" data-c="spk" aria-label="스피커">${IC.spk}</button><i>스피커</i></span>
-              <span class="dmc-ctl"><button class="dmc-btn${REMUTE ? ' off' : ''}" data-c="remute" aria-label="상대 소리">${REMUTE ? IC.hearoff : IC.hear}</button><i>상대 소리</i></span>
-              <span class="dmc-ctl"><button class="dmc-btn rec" data-c="rec" aria-label="통화 녹음">${IC.rec}</button><i>녹음</i></span>
+              <span class="dmc-ctl" data-c="mute"><button class="dmc-btn mute${CUR && CUR._userMuted ? ' off' : ''}" tabindex="-1" aria-label="음소거">${CUR && CUR._userMuted ? IC.micoff : IC.mic}</button><i>음소거</i></span>
+              <span class="dmc-ctl" data-c="spk"><button class="dmc-btn${SPK ? ' on2' : ''}" tabindex="-1" aria-label="스피커">${IC.spk}</button><i>스피커</i></span>
+              <span class="dmc-ctl" data-c="remute"><button class="dmc-btn${REMUTE ? ' off' : ''}" tabindex="-1" aria-label="상대 소리">${REMUTE ? IC.hearoff : IC.hear}</button><i>상대 소리</i></span>
+              <span class="dmc-ctl" data-c="rec"><button class="dmc-btn rec" tabindex="-1" aria-label="통화 녹음">${IC.rec}</button><i>녹음</i></span>
               ${video
-                ? `<span class="dmc-ctl"><button class="dmc-btn" data-c="camoff" aria-label="카메라 끄기">${IC.cam}</button><i>카메라</i></span>
-                   <span class="dmc-ctl"><button class="dmc-btn" data-c="flip" aria-label="카메라 전환">${IC.flip}</button><i>전환</i></span>
-                   <span class="dmc-ctl"><button class="dmc-btn" data-c="toaudio" aria-label="음성으로 전환">${IC.phone}</button><i>음성</i></span>`
-                : `<span class="dmc-ctl"><button class="dmc-btn" data-c="tovideo" aria-label="면상톡으로 전환">${IC.cam}</button><i>비디오</i></span>`}` : ''}
-            <span class="dmc-ctl"><button class="dmc-btn end" data-c="hangup" aria-label="끊기">${IC.phone}</button><i>종료</i></span>`}
+                ? `<span class="dmc-ctl" data-c="camoff"><button class="dmc-btn" tabindex="-1" aria-label="카메라 끄기">${IC.cam}</button><i>카메라</i></span>
+                   <span class="dmc-ctl" data-c="flip"><button class="dmc-btn" tabindex="-1" aria-label="카메라 전환">${IC.flip}</button><i>전환</i></span>
+                   <span class="dmc-ctl" data-c="toaudio"><button class="dmc-btn" tabindex="-1" aria-label="음성으로 전환">${IC.phone}</button><i>음성</i></span>`
+                : `<span class="dmc-ctl" data-c="tovideo"><button class="dmc-btn" tabindex="-1" aria-label="면상톡으로 전환">${IC.cam}</button><i>비디오</i></span>`}` : ''}
+            <span class="dmc-ctl" data-c="hangup"><button class="dmc-btn end" tabindex="-1" aria-label="끊기">${IC.phone}</button><i>종료</i></span>`}
         </div>
       </div>`;
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
@@ -1308,7 +1308,7 @@
     else if (c === 'flip') flipCam();
     else if (c === 'spk') { SPK = !SPK; if (CUR) CUR._spkUserSet = true; applyNativeRoute(); repaint(); }
     else if (c === 'remute') { REMUTE = !REMUTE; applyAudioRoute(); repaint(); }
-    else if (c === 'rec') toggleRecord(box && box.querySelector('[data-c="rec"]'));
+    else if (c === 'rec') toggleRecord(box && box.querySelector('[data-c="rec"] .dmc-btn'));
     else if (c === 'tovideo') upgradeToVideo();
     else if (c === 'toaudio') downgradeToAudio();
     else if (c === 'mute' || c === 'camoff') {
@@ -1323,7 +1323,7 @@
         t.enabled = !t.enabled; enabled = t.enabled;
         if (c === 'mute' && CUR) CUR._userMuted = !t.enabled;
       }
-      const b = box && box.querySelector(`[data-c="${c}"]`);
+      const b = box && box.querySelector(`[data-c="${c}"] .dmc-btn`);
       if (b) { b.classList.toggle('off', !enabled); b.innerHTML = c === 'mute' ? (enabled ? IC.mic : IC.micoff) : (enabled ? IC.cam : IC.camoff); }
     }
   }
