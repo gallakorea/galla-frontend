@@ -31,6 +31,9 @@
   const stack = [];                  // push된 상세 뷰 [{el, name, mod}]
   let overlay = null;                // 탭 위에 뜬 단일 모달(글쓰기 compose 등)의 뒤로가기 관리 {el, hide, obs}
 
+  // 📳 탭 전환 햅틱 — 인스타처럼 판이 넘어가는 순간 '틱'(iOS selectionChanged). GALLA_haptic은 셸(supabase.js)이 정의.
+  function hap(k) { try { window.GALLA_haptic && window.GALLA_haptic(k || "selection"); } catch (_) {} }
+
   /* ═══ 🔇 전역 오디오 거버너 — 활성 표면(현재 탭 또는 최상단 스택) 밖의 미디어는 절대 재생 금지.
      keep-alive 판이라 화면 밖 홈 영상이 살아있고, 무언가 video.play()를 부르면 소리가 새던 것(사장님
      재현: "페이지 이동 중/기능 누르면 소리 재생")을 HTMLMediaElement.play 훅으로 원천 차단한다. ═══ */
@@ -381,9 +384,9 @@
     }, { passive: true });
     track.addEventListener("touchend", () => {
       if (stack.length || lock !== "h") { lock = null; return; }
-      const commit = Math.abs(dx) > W() * 0.26 || Math.abs(vel) > 0.38;
-      if (commit && dx < 0 && cur < TABS.length - 1) activateTab(cur + 1);
-      else if (commit && dx > 0 && cur > 0) activateTab(cur - 1);
+      const commit = Math.abs(dx) > W() * 0.22 || Math.abs(vel) > 0.32;   // 조금 더 잘 걸리게(쫀쫀·반응)
+      if (commit && dx < 0 && cur < TABS.length - 1) { hap(); activateTab(cur + 1); }
+      else if (commit && dx > 0 && cur > 0) { hap(); activateTab(cur - 1); }
       else settle(true);
       lock = null;
     }, { passive: true });
@@ -399,7 +402,7 @@
         const mod = panes[TABS[cur]] && panes[TABS[cur]]._mod;
         if (mod && mod.scrolltop) { try { mod.scrolltop(); } catch (_) {} }
         else { const h = panes[TABS[cur]].querySelector(".view-host"); if (h) h.scrollTo({ top: 0, behavior: "smooth" }); }
-      } else activateTab(idx);
+      } else { hap(); activateTab(idx); }
     }));
 
   /* ── [data-back] 버튼 — SPA에서 스택이 있으면 pop(문서 이탈·location.href 금지).
