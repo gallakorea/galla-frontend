@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072837'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072838'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1162,6 +1162,9 @@
   function applyAudioRoute() {
     const sink = document.getElementById('dm-call-audio') || document.getElementById('dm-call-remote');
     if (sink) sink.muted = REMUTE;
+    // 🔇 iosrtc는 원격 오디오를 '네이티브'로 재생한다 → 웹 <audio>.muted가 안 먹혀 '상대 소리 끄기'가 무효였다.
+    //    원격 트랙 자체를 enabled=false로 죽여 무음화(표준 WebRTC: 비활성 원격 트랙은 무음 출력).
+    try { if (remoteStream && remoteStream.getAudioTracks) remoteStream.getAudioTracks().forEach(t => { t.enabled = !REMUTE; }); } catch (_) {}
   }
 
   /* ⏺ 통화 녹음 — 내 목소리+상대 목소리를 믹스해 저장 후 대화방에 남긴다.
@@ -1181,6 +1184,9 @@
         }
       });
       wb('rec sources=' + srcN + '/2 ctx=' + recCtx.state);
+      // 🔇 iosrtc 통화 오디오는 네이티브 재생이라 WebAudio가 못 잡는다(createMediaStreamSource InvalidStateError).
+      //    소스가 하나도 안 붙으면 무음 파일만 나오므로, 가짜 녹음을 시작하지 않고 정직하게 알린다(추후 네이티브 녹음 과제).
+      if (srcN === 0) { try { recCtx.close(); } catch (_) {} recCtx = null; return toast('이 기기에선 통화 녹음이 아직 안 돼요'); }
       const mime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
       recRec = new MediaRecorder(dest.stream, mime ? { mimeType: mime, audioBitsPerSecond: 96000 } : undefined);
       recChunks = []; recT0 = Date.now();
