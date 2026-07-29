@@ -1526,6 +1526,20 @@
     vv.addEventListener('resize', fit);
     vv.addEventListener('scroll', fit);
     fit();
+    // ⌨️ 깜빡임 제거 — resize:native가 키보드 열릴 때 웹뷰를 이미 줄여 window.innerHeight가 '키보드 제외 높이'다.
+    //    그런데 --dm-vvh는 visualViewport 이벤트가 애니메이션 도중에야 갱신돼, 그 사이 옛 전체높이가 남아
+    //    입력바가 잠깐 키보드 뒤로 숨었다 나온다. willShow(애니 시작)에서 --dm-vvh를 '현재 innerHeight'로 즉시
+    //    맞추면 입력바가 처음부터 제자리다. (⚠️ innerHeight는 이미 줄어든 값이라 keyboardHeight를 또 빼면 이중차감 → 붕 뜸)
+    try {
+      const KB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
+      if (KB && !window.__dmKbBound) {
+        window.__dmKbBound = true;
+        const setVvh = () => document.documentElement.style.setProperty('--dm-vvh', Math.round(window.innerHeight) + 'px');
+        KB.addListener('keyboardWillShow', setVvh);
+        KB.addListener('keyboardDidShow', setVvh);
+        KB.addListener('keyboardDidHide', setVvh);
+      }
+    } catch (_) {}
   }
 
   function lockPageScroll() {
