@@ -29,6 +29,7 @@
 
   let cur = 0;                       // 현재 탭 인덱스
   const stack = [];                  // push된 상세 뷰 [{el, name, mod}]
+  let overlay = null;                // 탭 위에 뜬 단일 모달(글쓰기 compose 등)의 뒤로가기 관리 {el, hide, obs}
 
   /* ═══ 🔇 전역 오디오 거버너 — 활성 표면(현재 탭 또는 최상단 스택) 밖의 미디어는 절대 재생 금지.
      keep-alive 판이라 화면 밖 홈 영상이 살아있고, 무언가 video.play()를 부르면 소리가 새던 것(사장님
@@ -313,7 +314,11 @@
   }, { capture: true, passive: true });
   const recentEdge = () => Date.now() - edgeTouchAt < 900;
 
-  window.addEventListener("popstate", () => applyRoute(true));
+  window.addEventListener("popstate", () => {
+    // 오버레이(compose 모달)가 떠 있으면 뒤로가기는 '모달 닫기'로 소비 — 라우팅 안 함.
+    if (overlay) { const o = overlay; overlay = null; try { o.obs.disconnect(); } catch (_) {} try { o.hide && o.hide(); } catch (_) {} return; }
+    applyRoute(true);
+  });
 
   /* ── 탭 스와이프(직접 터치 — iframe 중계 불필요) ───────────── */
   (function swipe() {
@@ -534,10 +539,49 @@
     };
   })();
 
+  /* ── 오버레이(글쓰기 compose 모달) — 탭 위에 뜨는 단일 모달의 뒤로가기 통합 ──
+     페이지(galla-predict/plaza)가 모달을 연 직후 openOverlay(el, hide)를 부르면:
+       · history 상태를 한 칸 쌓아 '뒤로가기 = 모달 닫기'가 되게 하고(popstate에서 소비),
+       · 모달이 자체 버튼/바깥탭/발행성공 등 다른 경로로 닫히면(hidden/class 감시)
+         남은 history 상태를 조용히 소모해 스택을 어긋나지 않게 정리한다.
+     ⚠️ MPA(웹)에선 composer-page.js가 담당 → 페이지 쪽에서 SPA일 때만 호출. */
+  function openOverlay(el, hide) {
+    if (!el) return;
+    if (overlay) { try { overlay.obs.disconnect(); } catch (_) {} overlay = null; }
+    const obs = new MutationObserver(() => {
+      const hidden = el.hasAttribute("hidden") || el.classList.contains("hidden");
+      if (hidden && overlay && overlay.el === el) {   // 다른 경로로 닫힘 → history만 소모
+        overlay = null; try { obs.disconnect(); } catch (_) {}
+        try { history.back(); } catch (_) {}
+      }
+    });
+    overlay = { el, hide, obs };
+    try { history.pushState({ ov: 1 }, "", location.hash || ("#/" + TABS[cur])); } catch (_) {}
+    obs.observe(el, { attributes: true, attributeFilter: ["hidden", "class"] });
+  }
+
+  /* ── 글쓰기 compose 진입(예측/광장) — 문서 이탈 없이 SPA 안에서:
+     picker(스택) 정리 → 해당 탭 활성·마운트 대기 → 그 탭의 compose 모달 오픈.
+     모달은 그 탭 페이지가 openOverlay로 뒤로가기까지 연결한다. */
+  async function compose(kind) {
+    const MAP = { predict: { tab: "predict", opener: "GALLA_openCompose_predict" },
+                  plaza:   { tab: "trend",   opener: "GALLA_openCompose_plaza" } };
+    const m = MAP[kind]; if (!m) return;
+    while (stack.length) pop({ silent: true });          // picker 등 상단 스택 제거(모달이 가려지지 않게)
+    const ti = TABS.indexOf(m.tab);
+    activateTab(ti);
+    await ensureTab(m.tab);                              // 탭 마운트 보장(opener 전역 등록됨)
+    for (let i = 0; i < 40; i++) {                       // opener 늦게 정의될 수 있어 짧게 재시도(~2s)
+      const fn = window[m.opener];
+      if (typeof fn === "function") { try { fn(); } catch (_) {} return; }
+      await new Promise(r => setTimeout(r, 50));
+    }
+  }
+
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {
     go: (tab) => { const i = TABS.indexOf(tab); if (i === -1) return; while (stack.length) pop({ silent: true }); activateTab(i); },
-    push, pop,
+    push, pop, compose, openOverlay,
     navMini: (on) => { const n = document.querySelector(".nav"); if (n) n.classList.toggle("nav--mini", !!on); },
     navHide: (on) => { const n = document.querySelector(".nav"); if (n) n.style.display = on ? "none" : ""; },
   };

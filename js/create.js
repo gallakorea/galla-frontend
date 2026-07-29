@@ -72,13 +72,17 @@
         card.classList.add("shake");
         return;
       }
-      const url = ROUTE[card.dataset.type];
+      const type = card.dataset.type;
+      const url = ROUTE[type];
       if (!url) return;
-      // SPA(app.html): 갈라 발제는 스택 push로 문서 유지.
-      // 예측/광장/제보는 compose 규약·미모듈화 페이지라 기존 이동 그대로(동작 보존).
-      if (isSpa() && window.GALLA_SPA && card.dataset.type === "galla") {
-        window.GALLA_SPA.push("write");
-        return;
+      // SPA(app.html): 모든 유형을 문서 이탈 없이 SPA 안에서 연다(스플래시·뒤로가기 붕괴 방지).
+      //   갈라 발제 → write 스택 뷰 / 제보 → report 스택 뷰(뒤로가기=pop)
+      //   예측·광장 → 해당 탭 활성 후 compose 모달(뒤로가기=모달 닫기)
+      if (isSpa() && window.GALLA_SPA) {
+        if (type === "galla")   { window.GALLA_SPA.push("write");   return; }
+        if (type === "report")  { window.GALLA_SPA.push("report");  return; }
+        if (type === "predict") { window.GALLA_SPA.compose("predict"); return; }
+        if (type === "plaza")   { window.GALLA_SPA.compose("plaza");   return; }
       }
       location.href = url;
     });

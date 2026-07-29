@@ -403,6 +403,7 @@ function bindUI(){
 
   /* ---- 예측 만들기 (파리뮤추얼: 하우스 시드, 생성 무료) ---- */
   window.__openComposeModal=openCreateModal;
+  window.GALLA_openCompose_predict=openCreateModal;   // SPA picker(create)가 탭 활성 후 직접 호출
   if(new URLSearchParams(location.search).get('compose')==='1') setTimeout(openCreateModal,60);
   $('createClose')?.addEventListener('click',()=>{ $('createModal').hidden=true; });
   $('createModal')?.addEventListener('click',e=>{ if(e.target.id==='createModal') $('createModal').hidden=true; });
@@ -431,6 +432,10 @@ function openCreateModal(){
   d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
   $('mCloseAt').value=d.toISOString().slice(0,16);
   $('createModal').hidden=false;
+  // SPA: 뒤로가기/엣지 스와이프로 모달이 닫히게 오버레이 등록(문서 이탈 없이)
+  if(document.body&&document.body.dataset.page==='spa'&&window.GALLA_SPA&&window.GALLA_SPA.openOverlay){
+    window.GALLA_SPA.openOverlay($('createModal'), ()=>{ $('createModal').hidden=true; });
+  }
   // 공용 임시저장 — 예측 질문·설명·카테고리 복원
   if(!__predDraft && window.GALLA_draft) __predDraft=window.GALLA_draft('predict',['mQuestion','mDesc','mCategory']);
   if(__predDraft) __predDraft.restore();

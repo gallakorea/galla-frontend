@@ -91,12 +91,17 @@ async function openPlazaWriteModal() {
   if (!user) return;
   modal.classList.remove("hidden");
   document.body.style.overflow = "hidden";
+  // SPA: 뒤로가기/엣지 스와이프로 모달이 닫히게 오버레이 등록(문서 이탈 없이)
+  if (document.body && document.body.dataset.page === "spa" && window.GALLA_SPA && window.GALLA_SPA.openOverlay) {
+    window.GALLA_SPA.openOverlay(modal, () => { modal.classList.add("hidden"); document.body.style.overflow = ""; });
+  }
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
 }
 // expose for inline HTML handlers
 window.openPlazaWriteModal = openPlazaWriteModal;
 // 통합 글쓰기 허브('광장' 선택) / ?compose=1 진입 시 모달 오픈
 window.__openComposeModal = openPlazaWriteModal;
+window.GALLA_openCompose_plaza = openPlazaWriteModal;   // SPA picker(create)가 트렌드 탭 활성 후 직접 호출
 if (new URLSearchParams(location.search).get("compose") === "1") {
   setTimeout(openPlazaWriteModal, 60);
 }
