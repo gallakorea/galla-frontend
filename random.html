@@ -6,8 +6,8 @@
     <title>랜덤 갈라 뽑기 - GALLA</title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="css/random.css?v=072867">
-    <link rel="stylesheet" href="css/index.css?v=072867">
+    <link rel="stylesheet" href="css/random.css?v=072868">
+    <link rel="stylesheet" href="css/index.css?v=072868">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -17,7 +17,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072867">
+  <link rel="stylesheet" href="./css/theme.css?v=072868">
 </head>
 
 <body data-page="random">
@@ -26,16 +26,16 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-inner">
-            <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
+            <img src="assets/logo.png" class="logo" onclick="(window.GALLA_nav||function(u){location.href=u})('index.html')">
 
             <!-- 로그인/로그아웃 자동 전환 -->
             <div class="auth-buttons" id="authButtons">
                 <!-- 로그인 전 -->
-                <button onclick="location.href='login.html'" id="loginBtn">로그인</button>
-                <button onclick="location.href='signup.html'" id="signupBtn">회원가입</button>
+                <button onclick="(window.GALLA_nav||function(u){location.href=u})('login.html')" id="loginBtn">로그인</button>
+                <button onclick="(window.GALLA_nav||function(u){location.href=u})('signup.html')" id="signupBtn">회원가입</button>
 
                 <!-- 로그인 후 -->
-                <button onclick="location.href='mypage.html'" id="mypageBtn" style="display:none;">마이페이지</button>
+                <button onclick="(window.GALLA_nav||function(u){location.href=u})('mypage.html')" id="mypageBtn" style="display:none;">마이페이지</button>
             </div>
         </div>
     </header>
@@ -107,10 +107,10 @@
 </div>
 
 <!-- Scripts -->
-<script src="/js/error-logger.js?v=072867"></script>
-  <script src="./vendor/supabase.js?v=072867"></script>
-<script src="js/supabase.js?v=072867"></script>
-<script src="js/random.js?v=072867"></script>
+<script src="/js/error-logger.js?v=072868"></script>
+  <script src="./vendor/supabase.js?v=072868"></script>
+<script src="js/supabase.js?v=072868"></script>
+<script src="js/random.js?v=072868"></script>
 
 <!-- ⭐ LOGIN 상태 UI 반영 -->
 <script>
@@ -176,8 +176,8 @@ document.getElementById("randomBtn").addEventListener("click", async () => {
     });
 </script>
 
-<script src="/js/analytics.js?v=072867"></script>
-<script src="/js/pwa.js?v=072867"></script>
-  <script src="/js/pull-refresh.js?v=072867"></script>
+<script src="/js/analytics.js?v=072868"></script>
+<script src="/js/pwa.js?v=072868"></script>
+  <script src="/js/pull-refresh.js?v=072868"></script>
 </body>
 </html>

@@ -4,14 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>마이페이지 - GALLA</title>
-    <link rel="stylesheet" href="css/mypage.css?v=072867">
-    <link rel="stylesheet" href="./css/header.css?v=072867">
-    <link rel="stylesheet" href="./css/notifications.css?v=072867">
-    <link rel="stylesheet" href="./css/write-hub.css?v=072867">
-    <link rel="stylesheet" href="./css/dm.css?v=072867">
-    <link rel="stylesheet" href="./css/dm-quiet.css?v=072867">
-    <link rel="stylesheet" href="./css/nav.css?v=072867">
-    <link rel="stylesheet" href="./css/items.css?v=072867">
+    <link rel="stylesheet" href="css/mypage.css?v=072868">
+    <link rel="stylesheet" href="./css/header.css?v=072868">
+    <link rel="stylesheet" href="./css/notifications.css?v=072868">
+    <link rel="stylesheet" href="./css/write-hub.css?v=072868">
+    <link rel="stylesheet" href="./css/dm.css?v=072868">
+    <link rel="stylesheet" href="./css/dm-quiet.css?v=072868">
+    <link rel="stylesheet" href="./css/nav.css?v=072868">
+    <link rel="stylesheet" href="./css/items.css?v=072868">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -21,12 +21,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072867">
-<link rel="stylesheet" href="css/auth.css?v=072867">
-<link rel="stylesheet" href="./css/desktop.css?v=072867">
-  <script src="/js/auth-gate.js?v=072867"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=072868">
+<link rel="stylesheet" href="css/auth.css?v=072868">
+<link rel="stylesheet" href="./css/desktop.css?v=072868">
+  <script src="/js/auth-gate.js?v=072868"></script>
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=072867"></script>
+  <script src="/js/splash-boot.js?v=072868"></script>
 </head>
 
 <body data-page="mypage">
@@ -39,7 +39,7 @@
             <button class="hdr-btn hdr-write" data-write-hub="galla" aria-label="글쓰기">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
-            <img src="assets/logo.png" class="logo" onclick="location.href='index.html'">
+            <img src="assets/logo.png" class="logo" onclick="(window.GALLA_nav||function(u){location.href=u})('index.html')">
             <div class="mp-hdr-actions" id="mpHdrActions">
                 <button class="hdr-btn hdr-noti" id="hdrNoti" aria-label="알림">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
@@ -57,7 +57,7 @@
         <div class="mp-top">
             <div class="mp-ava-ring">
                 <img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" class="profile-img" id="profileImg" alt="">
-                <span class="mp-tier-chip" id="tierChip" onclick="location.href='grade.html'"></span>
+                <span class="mp-tier-chip" id="tierChip" onclick="(window.GALLA_nav||function(u){location.href=u})('grade.html')"></span>
             </div>
             <div class="stats-row">
                 <div class="stat-unit">
@@ -81,12 +81,12 @@
 
         <div class="mp-idline">
             <span class="profile-name" id="profileName"></span>
-            <span class="level" onclick="location.href='grade.html'" id="levelText"></span>
+            <span class="level" onclick="(window.GALLA_nav||function(u){location.href=u})('grade.html')" id="levelText"></span>
             <span class="mp-power" id="powerText"></span>
         </div>
 
         <div class="level-row">
-            <span class="badge" onclick="location.href='quest.html'" id="badgeText"></span>
+            <span class="badge" onclick="(window.GALLA_nav||function(u){location.href=u})('quest.html')" id="badgeText"></span>
         </div>
 
         <div class="profile-desc" id="profileDesc"></div>
@@ -141,36 +141,36 @@
 </nav>
 
 <!-- 📸 지난 화면 즉시 복원(셸 모드) -->
-<script src="js/snapshot.js?v=072867"></script>
-<script src="js/fx.js?v=072867"></script>
-<script src="./js/nav.js?v=072867"></script>
-<script src="./js/desktop-pc.js?v=072867" defer></script>
-<script src="./js/nav-jog.js?v=072867" defer></script>
-<script src="./js/dm-call.js?v=072867" defer></script>
+<script src="js/snapshot.js?v=072868"></script>
+<script src="js/fx.js?v=072868"></script>
+<script src="./js/nav.js?v=072868"></script>
+<script src="./js/desktop-pc.js?v=072868" defer></script>
+<script src="./js/nav-jog.js?v=072868" defer></script>
+<script src="./js/dm-call.js?v=072868" defer></script>
 
 <!-- Supabase -->
-<script src="/js/error-logger.js?v=072867"></script>
-  <script src="js/supabase.js?v=072867"></script>
-<script src="js/social-auth.js?v=072867"></script>
+<script src="/js/error-logger.js?v=072868"></script>
+  <script src="js/supabase.js?v=072868"></script>
+<script src="js/social-auth.js?v=072868"></script>
 
 <!-- 알림 + DM -->
-<script src="js/noti-icons.js?v=072867"></script>
-<script src="js/notifications.js?v=072867"></script>
-<script src="js/dm.js?v=072867"></script>
-<script src="js/write-hub.js?v=072867"></script>
-<script src="js/donate.js?v=072867"></script>
-<script src="js/charge.js?v=072867"></script>
+<script src="js/noti-icons.js?v=072868"></script>
+<script src="js/notifications.js?v=072868"></script>
+<script src="js/dm.js?v=072868"></script>
+<script src="js/write-hub.js?v=072868"></script>
+<script src="js/donate.js?v=072868"></script>
+<script src="js/charge.js?v=072868"></script>
 
 <!-- My Page 기능 -->
-<script src="js/items.js?v=072867"></script>
-<script src="js/profile-stats.js?v=072867"></script>
-<script src="js/gallian.js?v=072867"></script>
-<script src="js/mypage.js?v=072867"></script>
+<script src="js/items.js?v=072868"></script>
+<script src="js/profile-stats.js?v=072868"></script>
+<script src="js/gallian.js?v=072868"></script>
+<script src="js/mypage.js?v=072868"></script>
 
-<script src="/js/analytics.js?v=072867"></script>
-<script src="js/duel-alert.js?v=072867"></script>
-<script src="js/bug-report.js?v=072867"></script>
-<script src="/js/pwa.js?v=072867"></script>
-  <script src="/js/pull-refresh.js?v=072867"></script>
+<script src="/js/analytics.js?v=072868"></script>
+<script src="js/duel-alert.js?v=072868"></script>
+<script src="js/bug-report.js?v=072868"></script>
+<script src="/js/pwa.js?v=072868"></script>
+  <script src="/js/pull-refresh.js?v=072868"></script>
 </body>
 </html>

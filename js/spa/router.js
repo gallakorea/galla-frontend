@@ -412,6 +412,30 @@
     pop();
   }, true);
 
+  /* ── 상대 .html 이름을 SPA 라우트로 — 탭이면 탭전환, 남프로필은 스택, 그 외 push ── */
+  function navTo(name, params) {
+    params = params || {};
+    if (name === "mypage" && params.user) return push("mypage", params);
+    if (TABS.indexOf(name) !== -1) return activateTab(TABS.indexOf(name));
+    if (name === "search") return activateTab(TABS.indexOf("trend"));
+    return push(name, params);
+  }
+
+  /* 🌐 웹/앱 공용 이동 헬퍼 — 인라인 onclick="location.href='X.html'"을 이걸로 바꿔 SPA 이탈 방지.
+     ⚠️ 웹 MPA 안전: body가 'spa'가 아니면(=웹) 무조건 location.href(원래 동작). 앱에서만 라우터로. */
+  window.GALLA_nav = function (url) {
+    try {
+      if (document.body && document.body.dataset.page === "spa") {
+        const s = String(url);
+        if (!/^([a-z]+:)?\/\//i.test(s) && !s.startsWith("#")) {
+          const m = s.match(/^\.?\/?([a-z0-9_-]+)\.html(?:\?(.*))?$/i);
+          if (m) { const p = {}; if (m[2]) new URLSearchParams(m[2]).forEach((v, k) => p[k] = v); return navTo(m[1], p); }
+        }
+      }
+    } catch (_) {}
+    location.href = url;
+  };
+
   /* ── 링크 가로채기 — 문서 내 상대 .html 링크를 라우트로 ────── */
   document.addEventListener("click", (e) => {
     const a = e.target.closest("a[href]");
@@ -421,14 +445,9 @@
     const m = href.match(/^\.?\/?([a-z0-9_-]+)\.html(?:\?(.*))?$/i);
     if (!m) return;
     e.preventDefault();
-    const name = m[1];
     const params = {};
     if (m[2]) new URLSearchParams(m[2]).forEach((v, k) => params[k] = v);
-    // mypage?user=… 는 남의 프로필 → 스택 push(params 보존). 그 외 탭은 탭 전환.
-    if (name === "mypage" && params.user) push("mypage", params);
-    else if (TABS.indexOf(name) !== -1) activateTab(TABS.indexOf(name));
-    else if (name === "search") activateTab(TABS.indexOf("trend"));
-    else push(name, params);
+    navTo(m[1], params);
   });
 
   window.addEventListener("resize", () => settle(false));
