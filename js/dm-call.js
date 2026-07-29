@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072833'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072834'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -42,6 +42,7 @@
   let sb = null, ME = null, chanSig = null, _myNick = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
   let ringT = null, timerT = null, reoffT = null, t0 = 0, iceCache = null, iceAt = 0, facing = 'user', remoteStream = null;
+  const _recentEnded = new Map();   // 👻 방금 끝낸 통화 callId→종료시각(ms). 발신자 reoffer 루프가 decline을 놓쳐 계속 쏘는 '끊으면 바로 다시 전화' 유령 차단용.
   let lastCallEndAt = 0;   // 🔒 유령발신 차단 — 통화 종료 직후 튀는 관통(ghost) 발신을 막기 위한 종료시각
   // 📞 Agora 미디어 전환 — 시그널링(벨·수락·CallKit)은 그대로, 소리/영상만 Agora. iosrtc 미디어(getMedia/PC/SDP) 우회.
   const AGORA = !!(window.GALLA_agora);
@@ -238,6 +239,10 @@
       // 👻 유령 벨 차단 — 콜드스타트 REST 폴링이 '지난 통화'의 offer를 재생할 수 있다.
       //    15초 넘게 묵은 offer는 무시(발신자는 answer 올 때까지 1.2초마다 재전송하므로 산 통화는 안 놓친다).
       if (p.at && Date.now() - p.at > 15000) return;
+      // 👻 "끊으면 바로 다시 전화" 유령 차단 — 내가 방금 끝낸(끊은/거절한) 통화의 재-offer는 새 수신벨을 만들지 않는다.
+      //    발신자 reoffer 루프가 내 decline/hangup을 놓쳐(realtime 유실) 계속 같은 offer를 쏘는 것이라, 같은 callId면 무시.
+      //    새 통화(다른 callId)는 그대로 받는다.
+      if (p.callId && _recentEnded.has(p.callId) && Date.now() - _recentEnded.get(p.callId) < 45000) { wb('rx-offer ignored recently-ended ' + String(p.callId).slice(0, 8)); return; }
       // 같은 상대의 offer 재전송(내가 잠깐 suspend돼 첫 offer를 놓쳤을 수 있음) — busy 처리하면 안 된다.
       if (CUR && CUR.peer === p.from) {
         // 이미 answer를 만들었으면 다시 보내준다(발신자가 answer를 놓쳐 계속 재전송 중일 수 있음).
@@ -609,7 +614,7 @@
     clearInterval(reoffT);
     reoffT = setInterval(() => {
       if (!CUR || CUR.dir !== 'out' || CUR.connectedAt || CUR._gotAnswer) { clearInterval(reoffT); reoffT = null; return; }
-      try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now() }); } catch (_) {}
+      try { send({ t: 'offer', sdp: offer.sdp, name: myName, video: !!video, at: Date.now(), callId: CUR.callId }); } catch (_) {}
     }, 1200);
     ringT = setTimeout(() => { toast('응답이 없어요 — 부재중 알림을 남겼어요'); endCall('noanswer'); }, 45000);   // 콜드스타트(상대 앱 죽어있음) 여유
     } catch (e) {
@@ -904,6 +909,13 @@
     // 🔒👻 유령 수신벨 차단 — 통화가 끝나면 이 callId를 네이티브 억제목록에 넣어, 애플 VoIP 스로틀로
     //    뒤늦게(수 초 후) 도착하는 '벨 푸시'가 유령 수신벨을 울리지 않게 한다(발신자·수신자 양쪽에서 호출돼도 무해).
     try { if (CUR && CUR.callId) _nativeCall({ action: 'callHandledInApp', callId: CUR.callId }); } catch (_) {}
+    // 👻 방금 끝낸 callId 기록 — 발신자 reoffer 유령벨('끊으면 바로 다시 전화') 차단. 오래된 항목은 정리.
+    try {
+      if (CUR && CUR.callId) {
+        _recentEnded.set(CUR.callId, Date.now());
+        if (_recentEnded.size > 40) { const cut = Date.now() - 60000; for (const [k, v] of _recentEnded) if (v < cut) _recentEnded.delete(k); }
+      }
+    } catch (_) {}
     if (AGORA) { try { window.GALLA_agora.leave(); } catch (_) {} }   // 🔊 Agora 채널 나가기
     if (recRec) { try { recRec.stop(); } catch (_) {} }   // 끊기면 녹음도 저장하며 종료
     SPK = false; REMUTE = false;
