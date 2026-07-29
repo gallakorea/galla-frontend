@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072834'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072835'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -930,11 +930,14 @@
     try { if (CUR && CUR._micHold) clearInterval(CUR._micHold); } catch (_) {}
     try { if (CUR && CUR._pushT) { clearTimeout(CUR._pushT); CUR._pushT = null; } } catch (_) {}   // 예약된 VoIP 푸시 취소(끊으면 안 보냄)
     if (!remote && CUR) send({ t: 'hangup' });
-    // 📞 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시'. 이제 푸시를 '항상' 보내므로(잠금 대비),
-    //    푸시를 보낸 통화면(_pushSent) 포그라운드 여부와 무관하게 취소 푸시로 CallKit 벨/통화를 깔끔히 종료한다.
-    //    (인앱 수락분은 이미 callHandledInApp로 억제돼 있어 취소 푸시가 와도 무해.)
+    // 📞👻 발신자가 끊으면 수신 CallKit을 종료하는 '취소 VoIP 푸시' — 단, 상대가 realtime로 도달 가능하면 보내지 않는다.
+    //    iOS는 '모든 VoIP 푸시에 reportNewIncomingCall 강제'라 취소 푸시도 수신화면을 잠깐 띄운다(이름을 안 불러와 '갈라 친구'
+    //    유령 수신벨 = 사장님이 본 '끊으면 바로 다시 전화'). 통화가 연결됐거나(connectedAt) ring-ack를 받았으면(_foreground)
+    //    상대 웹이 살아있어 realtime hangup으로 CallKit이 깔끔히 종료되므로 취소 푸시는 불필요 + 유령만 만든다.
+    //    순수 잠금화면(ring-ack 없음·연결 전, 웹이 offer를 못 받아 CallKit 벨만 뜬 경우)에만 취소 푸시로 그 벨을 끈다.
     try {
-      if (!remote && CUR && CUR.dir === 'out' && CUR._pushSent && CUR.callId && CUR.peer && sb && sb.functions) {
+      if (!remote && CUR && CUR.dir === 'out' && CUR._pushSent && CUR.callId && CUR.peer && sb && sb.functions
+          && !CUR.connectedAt && !CUR._foreground) {
         sb.functions.invoke('call-push', { body: { to: CUR.peer, callId: CUR.callId, cancel: true } }).catch(() => {});
       }
     } catch (_) {}
