@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072866";
-import { loadAiNews } from "./issue-news.js?v=072866";
-import { loadStats } from "./issue.stats.js?v=072866";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072866";
+import { loadAiArguments } from "./issue-argument.js?v=072867";
+import { loadAiNews } from "./issue-news.js?v=072867";
+import { loadStats } from "./issue.stats.js?v=072867";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072867";
 
 
 console.log("[issue.js] loaded");

@@ -402,6 +402,16 @@
       } else activateTab(idx);
     }));
 
+  /* ── [data-back] 버튼 — SPA에서 스택이 있으면 pop(문서 이탈·location.href 금지).
+     모든 페이지 뒤로가기가 data-back을 쓰므로(back.js 미로드 페이지 포함) 여기서 일괄 처리.
+     capture 단계로 각 페이지/back.js의 자체 핸들러보다 먼저 잡고 소비한다. */
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest && e.target.closest("[data-back]");
+    if (!b || !stack.length) return;    // 스택 없으면 기본(MPA/back.js) 동작에 맡김
+    e.preventDefault(); e.stopPropagation();
+    pop();
+  }, true);
+
   /* ── 링크 가로채기 — 문서 내 상대 .html 링크를 라우트로 ────── */
   document.addEventListener("click", (e) => {
     const a = e.target.closest("a[href]");
