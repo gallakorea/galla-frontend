@@ -670,21 +670,25 @@
     layer.appendChild(modal);
     ensureComposeHeader(modal, m.box, m.title);
 
-    // 발행/취소로 모달이 '스스로' 닫히면(hidden) 스택 레이어만 남아 검은 화면 → 스택도 pop.
+    const fn = window[m.opener];               // 폼 열기(로그인 확인·draft 복원) → composer-page.css 전체화면
+    if (typeof fn === "function") { try { fn(); } catch (_) {} }
+    else { modal.hidden = false; modal.classList.remove("hidden"); }
+    // 🐞 무한 '선택페이지 복귀' 근본수정: onPop이 닫을 때 hidden '속성+클래스' 둘 다 건다. 그런데 예측 모달은
+    //   속성만(opener가 속성만 해제), 광장 모달은 클래스만(opener가 클래스만 해제) 쓴다 → 재진입 시 '남은 다른
+    //   하나'가 닫힘으로 오인돼 closeObs가 열자마자 pop. → opener로 연 뒤 둘 다 확실히 제거해 '완전히 열린
+    //   상태'를 만들고, 그 '뒤에' closeObs를 붙인다(붙일 땐 mutation이 없어 fire 안 됨 → 오발동 없음).
+    modal.hidden = false; modal.classList.remove("hidden");
+    document.body.classList.add("composer-open");
+
+    // 발행/취소로 모달이 '스스로' 닫히면 스택 레이어만 남아 검은 화면 → 스택도 pop.
     closeObs = new MutationObserver(() => {
-      const hidden = modal.hasAttribute("hidden") || modal.classList.contains("hidden");
-      if (hidden && modal.__stackMode) {
+      if ((modal.hasAttribute("hidden") || modal.classList.contains("hidden")) && modal.__stackMode) {
         modal.__stackMode = false;
         try { closeObs.disconnect(); } catch (_) {}
         try { history.back(); } catch (_) {}
       }
     });
     closeObs.observe(modal, { attributes: true, attributeFilter: ["hidden", "class"] });
-
-    const fn = window[m.opener];               // 폼 열기(로그인 확인·draft 복원) → composer-page.css 전체화면
-    if (typeof fn === "function") { try { fn(); } catch (_) {} }
-    else { modal.hidden = false; modal.classList.remove("hidden"); }
-    document.body.classList.add("composer-open");
   }
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
