@@ -1,7 +1,10 @@
 /* 🕵️ 제보하기 */
 body[data-page="report"] #app { padding-bottom: 40px; }
+/* ⚠️ SPA 풀스크린(view-host inset:0)에선 헤더가 노치/상태바 뒤로 들어가 뒤로가기 버튼이 가려졌다
+   (진입 시 헤더가 '올라가 있어' 끌어내려야 보이던 문제) → 상단 세이프에어리어만큼 내린다. 웹은 env가 0이라 무영향. */
 .rp-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
-  height: 52px; padding: 0 12px; background: rgba(0,0,0,.85); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.08); }
+  box-sizing: border-box; height: calc(52px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 12px 0;
+  background: rgba(0,0,0,.85); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,.08); }
 .rp-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; }
 .rp-back svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .rp-title { font-size: 16px; font-weight: 900; color: #fff; }
