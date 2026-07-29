@@ -5,6 +5,19 @@
    · 세로·최상단일 때만 → 가로 탭 스와이프 무충돌. 릴스(#shortsOverlay)·[data-no-ptr] 비활성.
    · 리로드는 '맨 위'에서 시작(헤더 로고가 스크롤 복원으로 숨는 것 방지).
    ───────────────────────────────────────────────────────────── */
+/* 🔄 확실한 리로드 — 네이티브 앱 WKWebView는 그냥 location.reload()면 옛 문서를 캐시에서 다시 줘
+   '리로드가 안 되는' 것처럼 보였다. SPA(app.html)에선 URL에 캐시버스터를 붙여 '새 문서'로 강제 재요청
+   (해시=현재 라우트 보존). MPA는 기존 reload. 버전 프로브도 이 함수를 쓴다. */
+if (!window.gallaHardReload) {
+  window.gallaHardReload = function () {
+    try {
+      var isSpa = document.body && document.body.dataset.page === "spa";
+      if (isSpa) { location.replace(location.pathname + "?_r=" + Date.now() + (location.hash || "")); return; }
+    } catch (_) {}
+    try { location.reload(); } catch (_) { try { location.href = location.pathname + "?_r=" + Date.now(); } catch (__) {} }
+  };
+}
+
 (function () {
   if (window.__gallaPTR) return;
   window.__gallaPTR = true;
@@ -95,7 +108,7 @@
       setTimeout(function () {
         try { history.scrollRestoration = "manual"; } catch (_) {}   // 맨 위에서 시작(로고 보이게)
         try { window.scrollTo(0, 0); } catch (_) {}
-        location.reload();
+        gallaHardReload();
       }, 420);
     } else {
       reset();

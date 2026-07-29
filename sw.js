@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v418';   // v13: 카카오 제거·구글+패스키 / v9: 코드 network-first
+const SW_VERSION = 'galla-sw-v419';   // v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역 / v13: 카카오 제거 / v9: 코드 network-first
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
