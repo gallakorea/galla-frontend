@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072835'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072836'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -38,6 +38,9 @@
     spk: I(18, '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>'),
     spkoff: I(18, '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'),
     rec: I(18, '<circle cx="12" cy="12" r="6" fill="currentColor" stroke="none"/>'),
+    // 🎧 '상대 소리'(내가 듣는 것) — 스피커폰 아이콘과 확실히 구분되게 헤드폰 모양
+    hear: I(18, '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="13.5" width="4.5" height="7.5" rx="1.8"/><rect x="17.5" y="13.5" width="4.5" height="7.5" rx="1.8"/>'),
+    hearoff: I(18, '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="13.5" width="4.5" height="7.5" rx="1.8"/><rect x="17.5" y="13.5" width="4.5" height="7.5" rx="1.8"/><line x1="2" y1="2.5" x2="22" y2="22.5"/>'),
   };
   let sb = null, ME = null, chanSig = null, _myNick = null;
   let pc = null, localStream = null, CUR = null;   // {peer,name,dir,video,pendIce,offer,connectedAt}
@@ -1165,13 +1168,19 @@
      (한국: 대화 당사자 간 녹음은 합법. 저장 전 상대에게 자동 고지 문자를 보낸다) */
   async function toggleRecord(btn) {
     if (recRec) { try { recRec.stop(); } catch (_) {} return; }
-    if (!localStream || !remoteStream) return toast('연결된 뒤에 녹음할 수 있어요');
+    if (!localStream || !remoteStream) { wb('rec no-stream ls=' + !!localStream + ' rs=' + !!remoteStream); return toast('연결된 뒤에 녹음할 수 있어요'); }
+    wb('rec start la=' + localStream.getAudioTracks().length + ' ra=' + remoteStream.getAudioTracks().length + ' MR=' + !!window.MediaRecorder);
     try {
       recCtx = new (window.AudioContext || window.webkitAudioContext)();
       const dest = recCtx.createMediaStreamDestination();
+      let srcN = 0;
       [localStream, remoteStream].forEach(st => {
-        if (st.getAudioTracks().length) recCtx.createMediaStreamSource(new MediaStream(st.getAudioTracks())).connect(dest);
+        if (st.getAudioTracks().length) {
+          try { recCtx.createMediaStreamSource(new MediaStream(st.getAudioTracks())).connect(dest); srcN++; }
+          catch (se) { wb('rec src FAIL ' + String((se && se.name) || se).slice(0, 30)); }
+        }
       });
+      wb('rec sources=' + srcN + '/2 ctx=' + recCtx.state);
       const mime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
       recRec = new MediaRecorder(dest.stream, mime ? { mimeType: mime, audioBitsPerSecond: 96000 } : undefined);
       recChunks = []; recT0 = Date.now();
@@ -1181,7 +1190,8 @@
         const blob = new Blob(recChunks, { type: recRec.mimeType || 'audio/webm' });
         recRec = null; try { recCtx.close(); } catch (_) {} recCtx = null;
         document.querySelector('[data-c="rec"]')?.classList.remove('recing');
-        if (dur < 1 || !blob.size) return;
+        wb('rec stop dur=' + dur + ' size=' + blob.size + ' chunks=' + recChunks.length);
+        if (dur < 1 || !blob.size) { toast(blob.size ? '녹음이 너무 짧아요' : '녹음된 소리가 없어요(이 기기 제약)'); return; }
         toast('📼 녹음 저장 중…');
         try {
           if (!window.GALLA_UPLOAD_MEDIA) await new Promise((res, rej) => {
@@ -1197,11 +1207,13 @@
           toast('📼 통화 녹음을 대화방에 저장했어요');
         } catch (e) { toast('녹음 저장에 실패했어요'); }
       };
+      recRec.onerror = ev => wb('rec MR-error ' + String((ev && ev.error && ev.error.name) || ev).slice(0, 30));
       recRec.start(1000);
+      wb('rec started mime=' + (recRec.mimeType || '?'));
       btn?.classList.add('recing');
       toast('⏺ 녹음 시작 — 상대에게도 고지돼요');
       send({ t: 'recnotice' });   // 상대 화면에 '녹음 중' 고지
-    } catch (e) { recRec = null; toast('이 기기에선 통화 녹음이 안 돼요'); }
+    } catch (e) { recRec = null; wb('rec THROW ' + String((e && (e.name + ':' + e.message)) || e).slice(0, 60)); toast('이 기기에선 통화 녹음이 안 돼요'); }
   }
 
   function paintUI(state) {
@@ -1240,20 +1252,20 @@
         <div class="dmc-state">${stateTxt}<span id="dm-call-timer">${state === 'oncall' ? '00:00' : ''}</span></div>
         <div class="dmc-btns">
           ${state === 'incoming' ? `
-            <button class="dmc-btn accept" data-c="accept" aria-label="받기">${IC.phone}</button>
-            <button class="dmc-btn end" data-c="decline" aria-label="거절">${IC.phone}</button>`
+            <span class="dmc-ctl"><button class="dmc-btn accept" data-c="accept" aria-label="받기">${IC.phone}</button><i>받기</i></span>
+            <span class="dmc-ctl"><button class="dmc-btn end" data-c="decline" aria-label="거절">${IC.phone}</button><i>거절</i></span>`
           : `
             ${state === 'oncall' ? `
-              <button class="dmc-btn mute" data-c="mute" aria-label="내 마이크 끄기">${IC.mic}</button>
-              <button class="dmc-btn${SPK ? ' on2' : ''}" data-c="spk" aria-label="스피커">${IC.spk}</button>
-              <button class="dmc-btn${REMUTE ? ' off' : ''}" data-c="remute" aria-label="상대 소리 끄기">${REMUTE ? IC.spkoff : IC.spk}</button>
-              <button class="dmc-btn rec" data-c="rec" aria-label="통화 녹음">${IC.rec}</button>
+              <span class="dmc-ctl"><button class="dmc-btn mute${CUR && CUR._userMuted ? ' off' : ''}" data-c="mute" aria-label="음소거">${CUR && CUR._userMuted ? IC.micoff : IC.mic}</button><i>음소거</i></span>
+              <span class="dmc-ctl"><button class="dmc-btn${SPK ? ' on2' : ''}" data-c="spk" aria-label="스피커">${IC.spk}</button><i>스피커</i></span>
+              <span class="dmc-ctl"><button class="dmc-btn${REMUTE ? ' off' : ''}" data-c="remute" aria-label="상대 소리">${REMUTE ? IC.hearoff : IC.hear}</button><i>상대 소리</i></span>
+              <span class="dmc-ctl"><button class="dmc-btn rec" data-c="rec" aria-label="통화 녹음">${IC.rec}</button><i>녹음</i></span>
               ${video
-                ? `<button class="dmc-btn" data-c="camoff" aria-label="카메라 끄기">${IC.cam}</button>
-                   <button class="dmc-btn" data-c="flip" aria-label="카메라 전환">${IC.flip}</button>
-                   <button class="dmc-btn" data-c="toaudio" aria-label="음성으로 전환">${IC.phone}</button>`
-                : `<button class="dmc-btn" data-c="tovideo" aria-label="면상톡으로 전환">${IC.cam}</button>`}` : ''}
-            <button class="dmc-btn end" data-c="hangup" aria-label="끊기">${IC.phone}</button>`}
+                ? `<span class="dmc-ctl"><button class="dmc-btn" data-c="camoff" aria-label="카메라 끄기">${IC.cam}</button><i>카메라</i></span>
+                   <span class="dmc-ctl"><button class="dmc-btn" data-c="flip" aria-label="카메라 전환">${IC.flip}</button><i>전환</i></span>
+                   <span class="dmc-ctl"><button class="dmc-btn" data-c="toaudio" aria-label="음성으로 전환">${IC.phone}</button><i>음성</i></span>`
+                : `<span class="dmc-ctl"><button class="dmc-btn" data-c="tovideo" aria-label="면상톡으로 전환">${IC.cam}</button><i>비디오</i></span>`}` : ''}
+            <span class="dmc-ctl"><button class="dmc-btn end" data-c="hangup" aria-label="끊기">${IC.phone}</button><i>종료</i></span>`}
         </div>
       </div>`;
     attachMedia();   // 리페인트로 새로 생긴 미디어 요소에 스트림 재부착
