@@ -26,7 +26,7 @@ const SCRIPTS = [
   { src: "/js/search.js" },             // 코어 — GALLA_PAGE_TREND 노출
   { src: "/js/hot-videos.js" },         // 핫튜브(즉시 bind — 이중 모드 처리됨)
   { src: "/js/plaza.js", module: true },// 광장 피드·글쓰기 엔진(원본도 module)
-  { src: "/js/composer-page.js" },      // 광장 작성 모달 페이지화
+  // ⚠️ composer-page.js 제거 — SPA 광장 작성은 라우터 DOM-이동 스택 뷰라 불필요(마운트 실패 지점만 늘림). 웹은 search.html이 직접 로드.
   { src: "/js/trend-tab-order.js" },    // 저장된 서브탭 순서 복원(+편집 시트)
   { src: "/js/trend-guide.js" },        // 상단 안내 배너
   { src: "/js/trend-tour.js" },         // 첫 진입 코치마크
@@ -90,7 +90,6 @@ export async function mount(root, params) {
   wireAppCta(root);
   const p = P();
   if (p && p.mount) await p.mount(root, params || {});
-  try { window.GALLA_composerRescan && window.GALLA_composerRescan(); } catch (_) {}  // 광장 모달 관찰 보장
 }
 
 export function unmount()    { const p = P(); if (p && p.unmount) p.unmount(); }

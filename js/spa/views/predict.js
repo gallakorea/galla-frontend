@@ -24,8 +24,8 @@ const SCRIPTS = [
   "/js/media-upload.js",   // GALLA_UPLOAD_MEDIA (마켓 생성 이미지)
   "/js/draft.js",          // GALLA_draft (작성 임시저장)
   "/js/galla-predict.js",  // 페이지 본체 — GALLA_PAGE_PREDICT 노출
-  "/js/composer-page.js",  // 예측 만들기 모달 → 전체화면 페이지화(웹·앱 공용, 광장과 동일)
 ];
+// ⚠️ composer-page.js는 SPA compose(라우터 DOM-이동 스택 뷰)엔 불필요 — 마운트 실패 지점만 늘림. 웹 MPA는 galla-predict.html이 직접 로드.
 
 const loadedOnce = new Set();
 
@@ -54,7 +54,6 @@ export async function mount(root, params) {
   for (const src of SCRIPTS) await loadScriptOnce(src);   // 순차 — 의존 순서 보장
   const page = window.GALLA_PAGE_PREDICT;
   if (page && page.mount) await page.mount(root, params || {});
-  try { window.GALLA_composerRescan && window.GALLA_composerRescan(); } catch (_) {}  // 모달 관찰 보장
 }
 
 export function unmount() {

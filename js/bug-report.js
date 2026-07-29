@@ -142,7 +142,10 @@
         toast("전송 실패 — 잠시 후 다시 시도해주세요");
       }
     });
-    requestAnimationFrame(() => { dim.classList.add("open"); ta.focus(); });
+    // 슬라이드 인 — 붙인 직후 리플로우를 강제해 초기 transform(translateX 100%)이 '적용된 상태'가 되게 한 뒤
+    // .open으로 전환(안 하면 브라우저가 두 상태를 한 프레임에 합쳐 트랜지션이 안 뜬다 = '슬라이드 안 됨').
+    void dim.offsetWidth;
+    requestAnimationFrame(() => { dim.classList.add("open"); setTimeout(() => { try { ta.focus(); } catch (_) {} }, 260); });
   };
 
   /* ─────────────────────────────────────────────────────────

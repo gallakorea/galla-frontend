@@ -626,11 +626,31 @@
     stack.push(entry);
     try { history.pushState(null, "", "#/" + kind + "-compose"); } catch (_) {}   // 로드 중에도 뒤로가기 동작
 
-    // 2) 탭 마운트(모달 DOM+핸들러 확보). '실제 mount 완료'까지 대기.
+    // 2) 탭 마운트(모달 DOM+핸들러 확보). 실기기에선 콜드 탭 mount가 느리거나 한 번 실패할 수 있어
+    //    '폴링 + 1회 재마운트'로 회복한다(예측 모달 null·광장 리로드 루프 방지).
+    const nap = (ms) => new Promise(r => setTimeout(r, ms));
     await ensureTab(m.tab);
-    if (popped) return;                        // 로드 중 사용자가 뒤로가기 → 중단
+    if (popped) return;
     modal = document.getElementById(m.modal);
-    if (!modal) { layer.innerHTML = '<div class="pane-err">작성 화면을 불러오지 못했어요</div>'; return; }
+    for (let i = 0; i < 25 && !modal; i++) { await nap(60); if (popped) return; modal = document.getElementById(m.modal); }
+    if (!modal) {                              // 아직도 없으면 탭 재마운트 후 재폴링
+      tabReady[m.tab] = false; tabMountP[m.tab] = null;
+      await ensureTab(m.tab);
+      for (let i = 0; i < 30 && !modal; i++) { if (popped) return; modal = document.getElementById(m.modal); if (modal) break; await nap(60); }
+    }
+    if (popped) return;
+    if (!modal) {                              // 진짜 실패 — 죽은 화면 대신 재시도/닫기 제공
+      // 실기기 진단 — 왜 모달을 못 찾았는지(탭 pane 내용=마운트 실패 메시지) DB로 남긴다.
+      try {
+        const paneHTML = ((panes[m.tab] && panes[m.tab].innerHTML) || "").replace(/\s+/g, " ").slice(0, 240);
+        window.GALLA_logError && window.GALLA_logError(new Error("compose-fail " + kind + " tab=" + m.tab + " ready=" + tabReady[m.tab] + " pane=[" + paneHTML + "]"), "compose");
+      } catch (_) {}
+      layer.innerHTML = '<div class="pane-err">작성 화면을 불러오지 못했어요<br>' +
+        '<button type="button" class="pane-retry" style="margin-top:12px;padding:9px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-weight:800">다시 시도</button></div>';
+      const rb = layer.querySelector(".pane-retry");
+      if (rb) rb.addEventListener("click", () => { try { history.back(); } catch (_) {} setTimeout(() => compose(kind), 260); });
+      return;
+    }
     home = modal.parentNode; nextEl = modal.nextSibling;   // 복귀 위치 기억
     modal.__stackMode = true;                  // composer-page.js가 이 모달을 건드리지 않게
 
