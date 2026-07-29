@@ -612,6 +612,23 @@ svg.search-bar-ic { width: 19px; height: 19px; color: #9aa3b8; flex: 0 0 auto; }
   padding: 10px; margin-bottom: 10px; text-decoration: none; color: inherit;
 }
 .sr-card:active { border-color: #3356ff; }
+/* 👤 유저 결과 카드 */
+.sr-user {
+  display: flex; align-items: center; gap: 12px;
+  background: #12141c; border: 1px solid #1e2230; border-radius: 14px;
+  padding: 10px 12px; margin-bottom: 10px; text-decoration: none; color: inherit;
+}
+.sr-user:active { border-color: #3356ff; }
+.sr-ava {
+  flex: 0 0 46px; width: 46px; height: 46px; border-radius: 50%; overflow: hidden;
+  background: linear-gradient(160deg,#3f4bd8,#2530a0); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;
+}
+.sr-ava img { width: 100%; height: 100%; object-fit: cover; }
+.sr-user-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sr-user-name { font-size: 15px; font-weight: 800; color: #f3f4f6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-user-bio { font-size: 12.5px; color: #7c828f; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-user .sr-go { flex: none; color: #4b5163; font-size: 20px; }
 .sr-thumb {
   position: relative; flex: 0 0 84px; width: 84px; height: 84px;
   border-radius: 10px; overflow: hidden; background: #0c0e14;

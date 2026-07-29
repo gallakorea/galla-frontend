@@ -379,13 +379,23 @@ async function initTrendPage() {
     return data || [];
   }
 
+  /* 👤 유저 검색 — 닉네임(공개)으로. 프로필로 이동. */
+  async function searchUsers(q) {
+    const { data } = await supabase
+      .from("users")
+      .select("id,nickname,avatar_url,bio")
+      .ilike("nickname", `%${q}%`)
+      .limit(12);
+    return data || [];
+  }
+
   const doSearch = debounce(async q => {
     const my = ++seq;
-    const [issues, markets, news, videos, plaza] = await Promise.all([
-      searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q)
+    const [users, issues, markets, news, videos, plaza] = await Promise.all([
+      searchUsers(q), searchIssues(q), searchMarkets(q), searchNews(q), searchYoutube(q), searchPlaza(q)
     ]);
     if (my !== seq) return; // 최신 입력만 반영
-    renderResults(q, issues, markets, news, videos, plaza);
+    renderResults(q, users, issues, markets, news, videos, plaza);
   }, 240);
 
   function runSearch(kw, addHistory) {
@@ -429,16 +439,34 @@ async function initTrendPage() {
   }
 
   // 섹션 순서: 이슈 → 예측 → 뉴스 → 유튜브 → 광장
-  function renderResults(q, issues, markets, news, videos, plaza) {
-    issues = issues || []; markets = markets || []; news = news || [];
+  function renderResults(q, users, issues, markets, news, videos, plaza) {
+    users = users || []; issues = issues || []; markets = markets || []; news = news || [];
     videos = videos || []; plaza = plaza || [];
-    const total = issues.length + markets.length + news.length + videos.length + plaza.length;
+    const total = users.length + issues.length + markets.length + news.length + videos.length + plaza.length;
     if (!total) {
       resultsEl.innerHTML =
         `<div class="sr-none">\u2018${esc(q)}\u2019 검색 결과가 없어요.<br><span>다른 키워드로 검색해 보세요.</span></div>`;
       return;
     }
     let html = "";
+
+    /* ── 👤 유저 ── */
+    if (users.length) {
+      html += `<div class="sr-sec"><div class="sr-sec-head">👤 유저 <b>${users.length}</b></div>`;
+      html += users.map(u => {
+        const av = isValidThumbnail(u.avatar_url) ? u.avatar_url : "";
+        const ini = esc((u.nickname || "?").charAt(0));
+        return `<a class="sr-user" href="mypage.html?user=${esc(u.id)}">
+          <span class="sr-ava">${av ? `<img src="${esc(av)}" loading="lazy" onerror="galla_imgFail(this)">` : ini}</span>
+          <span class="sr-user-mid">
+            <span class="sr-user-name">${esc(u.nickname || "이름 없음")}</span>
+            ${u.bio ? `<span class="sr-user-bio">${esc(u.bio)}</span>` : ""}
+          </span>
+          <span class="sr-go">›</span>
+        </a>`;
+      }).join("");
+      html += `</div>`;
+    }
 
     /* ── 갈라 이슈 ── */
     if (issues.length) {
