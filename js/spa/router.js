@@ -619,11 +619,14 @@
         popped = true;
         try {
           if (closeObs) closeObs.disconnect();
-          if (modal) {
+          // ⚠️ 모달이 아직 '이 레이어' 안에 있을 때만 복원. 빠른 재진입으로 새 compose가 이미 이 모달을
+          //    가져갔다면(다른 레이어에 있음) 절대 건드리지 않는다 — 안 그러면 새 compose의 모달을 숨겨
+          //    옮겨버려 새 compose가 즉시 닫혀 '선택페이지로 튕김'이 났다.
+          if (modal && layer.contains(modal)) {
             modal.hidden = true; modal.classList.add("hidden");
             modal.__stackMode = false;
             document.body.classList.remove("composer-open");
-            if (nextEl && nextEl.parentNode === home) home.insertBefore(modal, nextEl); else if (home) home.appendChild(modal);
+            if (home) home.appendChild(modal);
           }
         } catch (_) {}
       },
@@ -656,7 +659,10 @@
       if (rb) rb.addEventListener("click", () => { try { history.back(); } catch (_) {} setTimeout(() => compose(kind), 260); });
       return;
     }
-    home = modal.parentNode; nextEl = modal.nextSibling;   // 복귀 위치 기억
+    // 복귀 위치 = 그 탭의 view-host(안정적). ⚠️ modal.parentNode를 쓰면 '제거 중인 옛 compose 레이어'를
+    //    잡을 수 있어(빠른 재진입 레이스) 복원이 엉킨다. 탭 host로 고정한다.
+    home = (panes[m.tab] && panes[m.tab].querySelector(".view-host")) || panes[m.tab] || modal.parentNode;
+    nextEl = null;
     modal.__stackMode = true;                  // composer-page.js가 이 모달을 건드리지 않게
 
     // 3) 모달을 레이어로 MOVE(핸들러 보존) + 뒤로가기 헤더 + 열기
