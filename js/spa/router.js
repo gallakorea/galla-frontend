@@ -594,54 +594,66 @@
       plaza:   { tab: "trend",   modal: "plaza-write-modal",  box: ".plaza-modal-box", opener: "GALLA_openCompose_plaza",   title: "광장 글쓰기" },
     };
     const m = MAP[kind]; if (!m) return;
-    await ensureTab(m.tab);                    // 탭 마운트(모달 DOM+핸들러 생성). 탭 활성화는 안 함 → 피드 노출 없음.
-    const modal = document.getElementById(m.modal);
-    if (!modal) return;
-    const home = modal.parentNode, nextEl = modal.nextSibling;   // 복귀 위치 기억
-    modal.__stackMode = true;                  // composer-page.js가 이 모달을 건드리지 않게
 
+    // 1) 레이어를 '즉시' 만들어 슬라이드 인(스피너). ⚠️ 콜드 탭(예: 광장=트렌드 첫 진입)은 mount가
+    //    수백ms~수초라, 마운트를 먼저 기다리면 picker가 그동안 멈춰 '진입 안 됨/슬라이드 안 됨'처럼 보였다.
+    //    그래서 탭 마운트를 기다리기 전에 레이어를 띄우고 슬라이드부터 시작한다.
     const layer = document.createElement("div");
     layer.className = "stack-view";
+    layer.innerHTML = '<div class="pane-wait"><i></i></div>';
     stackRoot.appendChild(layer);
     stackRoot.classList.add("on");
-    layer.appendChild(modal);                  // 모달을 레이어로 MOVE(핸들러 보존)
-    ensureComposeHeader(modal, m.box, m.title);
+    armStackSwipe(layer);
+    requestAnimationFrame(() => layer.classList.add("in"));
+    setTimeout(() => layer.classList.add("in"), 60);
 
-    // 발행 성공 등으로 모달이 '스스로' 닫히면(hidden) 스택 레이어만 남아 검은 화면 → 스택도 pop.
-    const closeObs = new MutationObserver(() => {
-      const hidden = modal.hasAttribute("hidden") || modal.classList.contains("hidden");
-      if (hidden && modal.__stackMode) {
-        modal.__stackMode = false;             // 재진입 방지(onPop이 또 pop 안 하게)
-        try { closeObs.disconnect(); } catch (_) {}
-        try { history.back(); } catch (_) {}   // popstate→pop→onPop(원위치 복귀)
-      }
-    });
-    closeObs.observe(modal, { attributes: true, attributeFilter: ["hidden", "class"] });
-
+    let modal = null, home = null, nextEl = null, closeObs = null, popped = false;
     const entry = {
       el: layer, name: kind + "-compose", mod: null,
       onPop: () => {
+        popped = true;
         try {
-          closeObs.disconnect();
-          modal.hidden = true; modal.classList.add("hidden");   // 닫고
-          modal.__stackMode = false;
-          document.body.classList.remove("composer-open");
-          if (nextEl && nextEl.parentNode === home) home.insertBefore(modal, nextEl); else home.appendChild(modal);  // 원위치 복귀
+          if (closeObs) closeObs.disconnect();
+          if (modal) {
+            modal.hidden = true; modal.classList.add("hidden");
+            modal.__stackMode = false;
+            document.body.classList.remove("composer-open");
+            if (nextEl && nextEl.parentNode === home) home.insertBefore(modal, nextEl); else if (home) home.appendChild(modal);
+          }
         } catch (_) {}
       },
     };
     stack.push(entry);
-    armStackSwipe(layer);
+    try { history.pushState(null, "", "#/" + kind + "-compose"); } catch (_) {}   // 로드 중에도 뒤로가기 동작
 
-    // 폼을 '슬라이드 전에' 연다(로그인 확인·draft 복원). opener가 hidden 해제 → composer-page.css 전체화면.
-    const fn = window[m.opener];
+    // 2) 탭 마운트(모달 DOM+핸들러 확보). '실제 mount 완료'까지 대기.
+    await ensureTab(m.tab);
+    if (popped) return;                        // 로드 중 사용자가 뒤로가기 → 중단
+    modal = document.getElementById(m.modal);
+    if (!modal) { layer.innerHTML = '<div class="pane-err">작성 화면을 불러오지 못했어요</div>'; return; }
+    home = modal.parentNode; nextEl = modal.nextSibling;   // 복귀 위치 기억
+    modal.__stackMode = true;                  // composer-page.js가 이 모달을 건드리지 않게
+
+    // 3) 모달을 레이어로 MOVE(핸들러 보존) + 뒤로가기 헤더 + 열기
+    layer.innerHTML = "";
+    layer.appendChild(modal);
+    ensureComposeHeader(modal, m.box, m.title);
+
+    // 발행/취소로 모달이 '스스로' 닫히면(hidden) 스택 레이어만 남아 검은 화면 → 스택도 pop.
+    closeObs = new MutationObserver(() => {
+      const hidden = modal.hasAttribute("hidden") || modal.classList.contains("hidden");
+      if (hidden && modal.__stackMode) {
+        modal.__stackMode = false;
+        try { closeObs.disconnect(); } catch (_) {}
+        try { history.back(); } catch (_) {}
+      }
+    });
+    closeObs.observe(modal, { attributes: true, attributeFilter: ["hidden", "class"] });
+
+    const fn = window[m.opener];               // 폼 열기(로그인 확인·draft 복원) → composer-page.css 전체화면
     if (typeof fn === "function") { try { fn(); } catch (_) {} }
     else { modal.hidden = false; modal.classList.remove("hidden"); }
-    document.body.classList.add("composer-open");        // 하단 네비 숨김(작성 몰입)
-
-    requestAnimationFrame(() => layer.classList.add("in"));
-    setTimeout(() => layer.classList.add("in"), 60);     // 슬라이드 인(rAF 동결 폴백)
-    try { history.pushState(null, "", "#/" + kind + "-compose"); } catch (_) {}
+    document.body.classList.add("composer-open");
   }
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
