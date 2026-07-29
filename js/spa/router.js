@@ -193,6 +193,7 @@
       layer.appendChild(host);
       const mod = await L.loadViewModule(name);
       if (mod && mod.mount) await mod.mount(host, params || {});
+      else if (L.loadPageScripts) await L.loadPageScripts(v.scripts);   // 전용 모듈 없는 페이지: 자체 스크립트 폴백(DCL 캡처)
       entry.mod = mod;
     } catch (e) {
       layer.innerHTML = '<div class="pane-err">불러오지 못했어요<br><small>' + (e && e.message || "") + "</small></div>";
@@ -713,6 +714,18 @@
       else { try { if (entry.onPop) entry.onPop(); } catch (_) {} layer.remove(); }
     };
   }
+
+  /* ✍️ 작성 중인가? — 리로드(버전 프로브·당겨서 새로고침)가 작성 내용을 날리지 않게 판단용.
+     compose 모달/글쓰기·발행·제보·버그신고 스택이 최상단이면 '작성 중'. */
+  window.GALLA_isWriting = function () {
+    try {
+      if (document.body.classList.contains("composer-open")) return true;
+      if (document.querySelector(".bugr-dim")) return true;
+      const top = stack[stack.length - 1];
+      if (top && /^(write|report|bug|confirm)$|-compose$/.test(top.name)) return true;
+    } catch (_) {}
+    return false;
+  };
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {

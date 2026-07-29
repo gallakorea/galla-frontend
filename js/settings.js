@@ -245,7 +245,13 @@ async function GALLA_settingsInit(root) {
     el.style.cursor = "pointer";
     el.addEventListener("click", () => {
       const to = el.dataset.target;
-      if (to) location.href = to;
+      if (!to) return;
+      // SPA면 스택 뷰로 push(문서 이탈·스플래시 없음). 전용 뷰 모듈 없는 페이지는 라우터가 자체 스크립트로 폴백.
+      if (document.body && document.body.dataset.page === "spa" && window.GALLA_SPA && window.GALLA_SPA.push) {
+        const m = to.match(/^\.?\/?([a-z0-9_-]+)\.html(?:\?(.*))?$/i);
+        if (m) { const p = {}; if (m[2]) new URLSearchParams(m[2]).forEach((v, k) => p[k] = v); window.GALLA_SPA.push(m[1], p); return; }
+      }
+      location.href = to;
     });
   });
 

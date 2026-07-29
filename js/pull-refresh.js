@@ -36,6 +36,7 @@ if (!window.gallaHardReload) {
     return true;
   }
   function blocked(target) {
+    if (window.GALLA_isWriting && window.GALLA_isWriting()) return true;  // ✍️ 작성 중(글쓰기·발행·제보·버그신고) 리로드 금지 → 내용 유실 방지
     if (document.getElementById("shortsOverlay")) return true;      // 릴스
     if (document.getElementById("lv-stage")) return true;          // 🎙 라이브 무대 — 당겨서 새로고침 시 로비로 튕김 방지
     if (document.body.classList.contains("dm-detail")) return true; // 💬 대화방(1:1·난장) — 리로드하면 로비로 튕김(사장님 재현)

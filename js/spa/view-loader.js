@@ -48,9 +48,52 @@
       if (href) styles.push(href);
     });
 
-    const out = { app: app.innerHTML, styles, title: (doc.title || "").trim(), bodyClass: doc.body ? doc.body.className : "", dataPage: doc.body ? (doc.body.dataset.page || "") : "" };
+    // 페이지 자체 스크립트 목록(셸 싱글턴·MPA 크롬 제외) — 전용 뷰 모듈이 없을 때 범용 폴백으로 로드.
+    const scripts = [];
+    doc.querySelectorAll("script[src]").forEach(s => {
+      const src = s.getAttribute("src");
+      if (!src || /^([a-z]+:)?\/\//i.test(src)) return;   // 외부/절대 URL 제외
+      const base = src.split("?")[0].split("/").pop();
+      if (SHELL_SCRIPTS.has(base)) return;
+      scripts.push(src);
+    });
+
+    const out = { app: app.innerHTML, styles, scripts, title: (doc.title || "").trim(), bodyClass: doc.body ? doc.body.className : "", dataPage: doc.body ? (doc.body.dataset.page || "") : "" };
     htmlCache.set(url, out);
     return out;
+  }
+
+  // 셸(app.html)이 이미 로드했거나 SPA에서 충돌하는 MPA 전용 크롬 — 페이지 스크립트 폴백에서 제외.
+  const SHELL_SCRIPTS = new Set([
+    "supabase.js", "dm-sound.js", "dm-call.js", "error-logger.js", "nav.js", "back.js",
+    "pwa.js", "analytics.js", "splash-boot.js", "snapshot.js", "pull-refresh.js",
+    "nav-jog.js", "desktop-pc.js"
+  ]);
+  const loadedPageScripts = new Set();
+  /* 전용 뷰 모듈이 없는 페이지(설정 하위 페이지 등)를 SPA 스택 뷰로 띄우기 위한 범용 폴백.
+     페이지 스크립트를 1회 로드하되, SPA에선 DOMContentLoaded가 이미 지나 자동초기화가 안 붙으므로
+     '이 스크립트들이 등록하는 DCL 핸들러만' 가로채 직접 호출한다(기존에 붙은 핸들러는 재실행 안 됨). */
+  async function loadPageScripts(scripts) {
+    if (!scripts || !scripts.length) return;
+    const captured = [];
+    const origAdd = document.addEventListener;
+    document.addEventListener = function (type, fn, opts) {
+      if (type === "DOMContentLoaded") { if (typeof fn === "function") captured.push(fn); return; }
+      return origAdd.call(this, type, fn, opts);
+    };
+    try {
+      for (const src of scripts) {
+        const base = src.split("?")[0].split("/").pop();
+        if (loadedPageScripts.has(base)) continue;
+        loadedPageScripts.add(base);
+        await new Promise(res => {
+          const s = document.createElement("script");
+          s.src = src; s.onload = res; s.onerror = res;
+          document.head.appendChild(s);
+        });
+      }
+    } finally { document.addEventListener = origAdd; }
+    for (const fn of captured) { try { fn(new Event("DOMContentLoaded")); } catch (_) {} }
   }
 
   function injectStyles(styles) {
@@ -77,5 +120,5 @@
     return mod;
   }
 
-  window.GALLA_SPA_LOADER = { fetchView, injectStyles, loadViewModule };
+  window.GALLA_SPA_LOADER = { fetchView, injectStyles, loadViewModule, loadPageScripts };
 })();
