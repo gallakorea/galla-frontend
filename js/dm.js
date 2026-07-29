@@ -1526,6 +1526,22 @@
     vv.addEventListener('resize', fit);
     vv.addEventListener('scroll', fit);
     fit();
+    // ⌨️ 깜빡임 제거 — visualViewport는 키보드 '애니메이션 도중'에야 갱신돼 입력바가 잠깐 키보드 뒤로
+    //    숨었다 다시 나온다. Capacitor 키보드 willShow는 애니메이션 '시작' 시점에 키보드 높이를 주므로,
+    //    그때 --dm-vvh를 즉시 낮춰 입력바가 키보드와 '함께' 올라오게 한다(사라졌다 나타남 제거).
+    try {
+      const KB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
+      if (KB && !window.__dmKbBound) {
+        window.__dmKbBound = true;
+        KB.addListener('keyboardWillShow', info => {
+          const kh = (info && info.keyboardHeight) || 0;
+          if (kh > 0) document.documentElement.style.setProperty('--dm-vvh', Math.max(220, Math.round(window.innerHeight - kh)) + 'px');
+        });
+        KB.addListener('keyboardWillHide', () => {
+          document.documentElement.style.setProperty('--dm-vvh', Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight) + 'px');
+        });
+      }
+    } catch (_) {}
   }
 
   function lockPageScroll() {
