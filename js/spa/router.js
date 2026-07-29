@@ -542,6 +542,23 @@
     navHide: (on) => { const n = document.querySelector(".nav"); if (n) n.style.display = on ? "none" : ""; },
   };
 
+  /* 🎛 네비 조그셔틀(nav-jog.js) 진입점 — 최상위 탭 전환 + 뷰 로드 후 서브탭 지정.
+     조그가 이 함수를 부르면 SPA 안에서 처리(없으면 location.href로 문서 이탈했음 = 조그 먹통의 원인). */
+  window.GALLA_shellGo = function (page, tab) {
+    const i = TABS.indexOf(page); if (i === -1) return;
+    while (stack.length) pop({ silent: true });
+    activateTab(i);
+    if (!tab) return;
+    const setter = page === "dm" ? "GALLA_dmSetTab" : page === "trend" ? "GALLA_trendSetTab" : null;
+    if (!setter) return;
+    // 뷰 모듈(dm.js/search.js)이 setter를 늦게 정의할 수 있어 짧게 재시도(최대 ~2초)
+    let n = 0;
+    (function trySet() {
+      if (typeof window[setter] === "function") { try { window[setter](tab); } catch (_) {} return; }
+      if (n++ < 40) setTimeout(trySet, 50);
+    })();
+  };
+
   /* 마이페이지 아이콘 = 프로필 사진(기존 GALLA_setNavAvatar 계승) */
   window.GALLA_setNavAvatar = function (url) {
     const img = document.querySelector('.nav-item[data-page="mypage"] img');
