@@ -69,27 +69,35 @@
 
   /* ── 탭 콘텐츠 로드(1회, keep-alive) ───────────────────────── */
   const tabReady = {};
-  async function ensureTab(tab) {
-    if (tabReady[tab]) return;
+  const tabMountP = {};   // tab → mount 완료 프로미스(compose가 '진짜 마운트 끝'까지 기다리게)
+  // ⚠️ 반환값이 '실제 mount 완료 프로미스'여야 한다. 예전엔 tabReady 가드로 즉시 return 해서
+  //    compose()가 mount(특히 GALLA_composerRescan)보다 먼저 opener를 호출 → 모달이 관찰자
+  //    부착 전에 열려 페이지화 실패(광장 헤더 없음·뒤로가기 깨짐)했다.
+  function ensureTab(tab) {
+    if (tabReady[tab]) return tabMountP[tab] || Promise.resolve();
     tabReady[tab] = true;
     const pane = panes[tab];
     pane.innerHTML = '<div class="pane-wait"><i></i></div>';
-    try {
-      const v = await L.fetchView(TAB_URL[tab] + "?spa=1");
-      L.injectStyles(v.styles);
-      const host = document.createElement("div");
-      host.className = "view-host";
-      host.dataset.page = v.dataPage || tab;
-      host.innerHTML = v.app;
-      pane.innerHTML = "";
-      pane.appendChild(host);
-      const mod = await L.loadViewModule(tab);
-      if (mod && mod.mount) await mod.mount(host, {});
-      pane._mod = mod;
-    } catch (e) {
-      pane.innerHTML = '<div class="pane-err">불러오지 못했어요<br><small>' + (e && e.message || "") + "</small></div>";
-      tabReady[tab] = false;   // 재시도 가능
-    }
+    tabMountP[tab] = (async () => {
+      try {
+        const v = await L.fetchView(TAB_URL[tab] + "?spa=1");
+        L.injectStyles(v.styles);
+        const host = document.createElement("div");
+        host.className = "view-host";
+        host.dataset.page = v.dataPage || tab;
+        host.innerHTML = v.app;
+        pane.innerHTML = "";
+        pane.appendChild(host);
+        const mod = await L.loadViewModule(tab);
+        if (mod && mod.mount) await mod.mount(host, {});
+        pane._mod = mod;
+      } catch (e) {
+        pane.innerHTML = '<div class="pane-err">불러오지 못했어요<br><small>' + (e && e.message || "") + "</small></div>";
+        tabReady[tab] = false;   // 재시도 가능
+        tabMountP[tab] = null;
+      }
+    })();
+    return tabMountP[tab];
   }
 
   /* ── 탭 전환(슬라이드) ─────────────────────────────────────── */
@@ -567,15 +575,20 @@
     const MAP = { predict: { tab: "predict", opener: "GALLA_openCompose_predict" },
                   plaza:   { tab: "trend",   opener: "GALLA_openCompose_plaza" } };
     const m = MAP[kind]; if (!m) return;
-    while (stack.length) pop({ silent: true });          // picker 등 상단 스택 제거(모달이 가려지지 않게)
+    // ⚠️ 순서 중요 — '피드 플래시(본페이지로 튐)' 방지:
+    //   picker(스택)를 아직 위에 둔 채로 대상 탭을 활성·'진짜 마운트 완료'(rescan=모달 관찰자 부착)까지
+    //   기다린 뒤 모달을 연다. 모달은 z:10000(composer-page.css)이라 picker/피드를 즉시 덮는다.
+    //   그다음에야 picker를 조용히 제거 → 피드가 노출되는 순간이 없다.
     const ti = TABS.indexOf(m.tab);
     activateTab(ti);
-    await ensureTab(m.tab);                              // 탭 마운트 보장(opener 전역 등록됨)
-    for (let i = 0; i < 40; i++) {                       // opener 늦게 정의될 수 있어 짧게 재시도(~2s)
+    await ensureTab(m.tab);
+    for (let i = 0; i < 40; i++) {                       // opener 등록까지 짧게 재시도(~2s)
       const fn = window[m.opener];
-      if (typeof fn === "function") { try { fn(); } catch (_) {} return; }
+      if (typeof fn === "function") { try { fn(); } catch (_) {} break; }
       await new Promise(r => setTimeout(r, 50));
     }
+    await new Promise(r => setTimeout(r, 70));           // 모달이 열려 화면을 덮을 틈
+    while (stack.length) pop({ silent: true, instant: true });  // 이제 picker 제거(모달이 덮어 안 보임 → 즉시)
   }
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
