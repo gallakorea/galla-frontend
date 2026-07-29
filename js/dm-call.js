@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=072839'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=072840'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -810,7 +810,13 @@
   // 📞 발신 통화를 네이티브 CallKit에 보고 → 발신자도 네이티브 통화화면 + CallKit 오디오(수신측과 대칭 = 소리 확실).
   function nativeStartOutgoing(name) { _nativeCall({ action: 'startOutgoing', name: String(name || '갈라'), video: !!(CUR && CUR.video) }); }
   // 📞 연결 완료 보고(발신측 통화시간 카운트 + 오디오 확정).
-  function nativeAudioOn() { _nativeCall({ action: 'connected', video: !!(CUR && CUR.video) }); }   // video면 네이티브가 .videoChat(스피커) 모드로
+  function nativeAudioOn() {
+    // 📞 면상톡은 스피커폰 기본 ON — 웹 SPK를 true로 맞춰 네이티브 스피커 버튼(speakerOn=true)과 동기화한다.
+    //    (안 그러면 SPK=false로 시작해 스피커버튼 탭 시 SPK가 false→true가 돼 '스피커→수화부 전환'이 안 먹음)
+    //    사용자가 한번이라도 토글하면(_spkUserSet) 그 뜻을 존중해 더 강제하지 않는다. 음성통화는 SPK 안 건드림.
+    if (CUR && CUR.video && !CUR._spkUserSet) SPK = true;
+    _nativeCall({ action: 'connected', video: !!(CUR && CUR.video) });
+  }
   // 📞 Agora 통화 오디오 세션 — 링백 정리 + .playAndRecord(마이크 캡처 가능). iosrtc ADM은 안 켜 Agora와 마이크 충돌 방지.
   function nativeAgoraAudio() { _nativeCall({ action: 'agoraAudio', video: !!(CUR && CUR.video) }); }
   // 🔬 네이티브(Swift callAudioOn)가 실제 오디오 세션 상태를 여기로 올린다 → 서버 비콘으로 확인
