@@ -119,6 +119,37 @@
       window.addEventListener("popstate", popH);
     }
     dim.querySelector(".bugr-back").addEventListener("click", () => close());
+
+    // 🖐 엣지 스와이프로 닫기 — 버그신고는 라우터 스택 뷰가 아니라 자체 오버레이라 armStackSwipe가 없어
+    //    제스처 백이 안 됐다. 좌측 엣지에서 끌면 손가락을 따라오고, 1/3 이상·빠른 플릭이면 닫힘(스택과 동일 톤).
+    (function armSwipe() {
+      let sx = 0, sy = 0, dx = 0, lock = null, lastX = 0, lastT = 0, vel = 0;
+      dim.addEventListener("touchstart", (e) => {
+        const t = e.touches[0];
+        if (t.clientX > 28) { lock = "no"; return; }   // 좌측 엣지에서만
+        sx = lastX = t.clientX; sy = t.clientY; dx = 0; vel = 0; lock = null; lastT = performance.now();
+      }, { passive: true });
+      dim.addEventListener("touchmove", (e) => {
+        if (lock === "no") return;
+        const t = e.touches[0], mx = t.clientX - sx, my = t.clientY - sy;
+        if (lock === null) {
+          if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+          lock = (mx > 0 && Math.abs(mx) > Math.abs(my) * 1.2) ? "h" : "no";
+          if (lock === "no") return;
+          dim.style.transition = "none";
+        }
+        dx = Math.max(0, mx);
+        const now = performance.now();
+        vel = (t.clientX - lastX) / Math.max(1, now - lastT); lastX = t.clientX; lastT = now;
+        dim.style.transform = "translateX(" + dx + "px)";
+      }, { passive: true });
+      dim.addEventListener("touchend", () => {
+        if (lock !== "h") { lock = null; return; }
+        lock = null; dim.style.transition = "";
+        if (dx > window.innerWidth * 0.32 || vel > 0.45) { dim.style.transform = "translateX(100%)"; close(); }
+        else { dim.style.transform = ""; }   // 스프링 복귀(.open = translateX(0))
+      }, { passive: true });
+    })();
     go.addEventListener("click", async () => {
       const msg = ta.value.trim();
       if (msg.length < 4) { ta.focus(); toast("조금만 더 자세히 적어주세요"); return; }
