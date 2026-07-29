@@ -90,6 +90,7 @@ export async function mount(root, params) {
   wireAppCta(root);
   const p = P();
   if (p && p.mount) await p.mount(root, params || {});
+  try { window.GALLA_composerRescan && window.GALLA_composerRescan(); } catch (_) {}  // 광장 모달 관찰 보장
 }
 
 export function unmount()    { const p = P(); if (p && p.unmount) p.unmount(); }

@@ -30,6 +30,11 @@
   let pageMode = false;     // '이 페이지 자체가 작성화면'(?compose=1 진입) 인가
   let firstOpen = true;
   let stayOnClose = false;  // 발행 성공 닫기 — 뒤로가기(create) 대신 '뒤에 있는 목록' 노출
+  let spaMode = false;      // SPA(app.html)에서 열림 — 뒤로가기 history는 라우터 오버레이가 소유(이중관리 금지)
+
+  // SPA 셸 여부 — 여기선 라우터가 history를 소유하므로 composer는 '시각적 페이지화'만 담당하고
+  // 뒤로가기/닫기 동기화는 GALLA_SPA.openOverlay 에 위임한다(웹 MPA와 동일 CSS·다른 history 소유자).
+  const IS_SPA = () => !!(window.GALLA_SPA && document.body && document.body.dataset.page === "spa");
 
   /* 발행 성공 시 호출: 다음 닫기는 create로 되돌리지 말고 그 자리(목록)에 머문다.
      compose=1로 들어와도 뒤에 이미 광장/예측 목록이 렌더돼 있어, 모달만 닫으면 목록이 보인다. */
@@ -66,6 +71,7 @@
     head.querySelector(".cp-back").addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+      if (spaMode) { try { history.back(); } catch (_) {} return; }  // 라우터 오버레이가 pop→모달 닫기
       if (pageMode) { goBackToPicker(); return; }   // 이 페이지가 곧 작성화면 → 유형 선택으로
       if (pushed) { history.back(); return; }       // 인페이지로 열었으면 popstate로 닫기
       spec.close();
@@ -77,6 +83,13 @@
     openSpec = spec;
     ensureHeader(el, spec);
     document.body.classList.add("composer-open");
+
+    // SPA: 라우터 오버레이가 뒤로가기/엣지스와이프/닫기 동기화를 소유(문서 history 안 씀 — 라우터와 이중관리 방지)
+    if (IS_SPA() && window.GALLA_SPA.openOverlay) {
+      spaMode = true; pageMode = false; firstOpen = false;
+      try { window.GALLA_SPA.openOverlay(el, () => { try { spec.close(); } catch (_) {} }); } catch (_) {}
+      return;
+    }
 
     // ?compose=1 로 들어와 처음 열린 것 = 이 페이지가 곧 작성화면(page mode)
     pageMode = CAME_FROM_COMPOSE && firstOpen;
@@ -94,10 +107,15 @@
     if (!openSpec) return;
     const wasPushed = pushed;
     const wasPageMode = pageMode;
+    const wasSpa = spaMode;
     openSpec = null;
     pushed = false;
     pageMode = false;
+    spaMode = false;
     document.body.classList.remove("composer-open");
+
+    // SPA: 시각적 정리만. history 소비는 라우터 오버레이(openOverlay의 감시자/ popstate)가 담당.
+    if (wasSpa) { stayOnClose = false; return; }
 
     // 발행 성공으로 닫힌 경우 — 뒤로가기/유형선택으로 이동하지 않고 그 자리(목록)에 머문다.
     if (stayOnClose) {
@@ -114,6 +132,7 @@
 
   window.addEventListener("popstate", () => {
     if (!openSpec) return;
+    if (spaMode) return;                  // SPA는 라우터 오버레이가 popstate를 소유(모달 닫기)
     const spec = openSpec;
     openSpec = null;
     pushed = false;                       // 이미 history가 빠졌으므로 back() 금지
@@ -125,7 +144,8 @@
   function bootComposerPage() {
     SPECS.forEach((spec) => {
       const el = document.querySelector(spec.sel);
-      if (!el) return;
+      if (!el || el.__cpObserved) return;   // 이미 관찰 중이면 스킵(재실행 안전 — 멱등)
+      el.__cpObserved = true;
       let wasOpen = spec.isOpen(el);
       new MutationObserver(() => {
         const now = spec.isOpen(el);
@@ -138,6 +158,11 @@
       if (wasOpen) onOpen(el, spec);      // ?compose=1 로 이미 열린 채 진입한 경우
     });
   }
+  // SPA에서 탭(예측/광장 모달)이 나중에 마운트돼도 관찰되게 — 뷰 mount 후 재스캔용(멱등).
+  // ⚠️ composer-page.js는 문서당 1회만 로드/부팅되므로, 두 번째로 뜨는 탭의 모달은
+  //    이 재스캔이 없으면 관찰되지 않아 페이지화가 안 된다(예측/광장 중 하나가 먹통).
+  window.GALLA_composerRescan = bootComposerPage;
+
   // MPA(동기 로드) = DOMContentLoaded 대기(기존 그대로) / SPA = 뷰 마운트 후 동적 로드 → 즉시
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bootComposerPage);
   else bootComposerPage();

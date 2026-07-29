@@ -427,15 +427,23 @@ function bindUI(){
 
 let __predDraft=null;
 function openCreateModal(){
-  if(!ME){ if(confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href='login.html'; return; }
+  // ME(로그인 유저)가 탭 마운트 직후엔 아직 비어있을 수 있다(비동기 auth) — picker에서 바로 들어오면
+  // 잠깐 재시도 후에도 없으면 그때 로그인 유도(문서이탈 없이 SPA는 스택 push). '피드로 튐' 방지.
+  if(!ME){
+    openCreateModal._t=(openCreateModal._t||0)+1;
+    if(openCreateModal._t<=20) return setTimeout(openCreateModal,120);
+    openCreateModal._t=0;
+    if(confirm('로그인이 필요합니다. 로그인하시겠어요?')){
+      if(document.body&&document.body.dataset.page==='spa'&&window.GALLA_SPA) window.GALLA_SPA.push('login');
+      else location.href='login.html';
+    }
+    return;
+  }
+  openCreateModal._t=0;
   const d=new Date(Date.now()+7*86400000);
   d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
   $('mCloseAt').value=d.toISOString().slice(0,16);
-  $('createModal').hidden=false;
-  // SPA: 뒤로가기/엣지 스와이프로 모달이 닫히게 오버레이 등록(문서 이탈 없이)
-  if(document.body&&document.body.dataset.page==='spa'&&window.GALLA_SPA&&window.GALLA_SPA.openOverlay){
-    window.GALLA_SPA.openOverlay($('createModal'), ()=>{ $('createModal').hidden=true; });
-  }
+  $('createModal').hidden=false;   // composer-page(웹·앱 공용)가 전체화면 페이지화 + 뒤로가기 처리
   // 공용 임시저장 — 예측 질문·설명·카테고리 복원
   if(!__predDraft && window.GALLA_draft) __predDraft=window.GALLA_draft('predict',['mQuestion','mDesc','mCategory']);
   if(__predDraft) __predDraft.restore();

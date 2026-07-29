@@ -5,7 +5,9 @@ body[data-page="report"] #app { padding-bottom: 40px; }
 .rp-back { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; }
 .rp-back svg { width: 24px; height: 24px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .rp-title { font-size: 16px; font-weight: 900; color: #fff; }
-.rp-main { max-width: 520px; margin: 0 auto; padding: 16px; }
+/* ⚠️ SPA에선 body가 data-page="spa"라 '#app padding-bottom'이 안 먹어 제출 버튼이 하단 네비/세이프에어리어에
+   붙어 '스크롤 엉망'처럼 보였다 → 하단 여백을 rp-main에 직접(웹·앱 공통). */
+.rp-main { max-width: 520px; margin: 0 auto; padding: 16px 16px calc(120px + env(safe-area-inset-bottom)); }
 
 .rp-reward { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, rgba(201,209,224,.14), rgba(201,209,224,.05));
   border: 1px solid rgba(201,209,224,.3); border-radius: 16px; padding: 14px; margin-bottom: 20px; }

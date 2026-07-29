@@ -89,12 +89,7 @@ const __plazaDraft = window.GALLA_draft &&
 async function openPlazaWriteModal() {
   const user = await requirePlazaLogin();
   if (!user) return;
-  modal.classList.remove("hidden");
-  document.body.style.overflow = "hidden";
-  // SPA: 뒤로가기/엣지 스와이프로 모달이 닫히게 오버레이 등록(문서 이탈 없이)
-  if (document.body && document.body.dataset.page === "spa" && window.GALLA_SPA && window.GALLA_SPA.openOverlay) {
-    window.GALLA_SPA.openOverlay(modal, () => { modal.classList.add("hidden"); document.body.style.overflow = ""; });
-  }
+  modal.classList.remove("hidden");   // composer-page(웹·앱 공용)가 전체화면 페이지화 + 뒤로가기 처리
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
 }
 // expose for inline HTML handlers

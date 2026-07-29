@@ -10,6 +10,30 @@ async function GALLA_settingsInit(root) {
 
   console.log("[settings.js] Loaded");
 
+  /* 📦 버전 표시 — 배포 빌드번호(GALLA_V) 노출. 웹/앱 공통. '안 보인다' 제보 시 이 값으로 최신 여부 확인.
+     GALLA_V는 SPA 셸(app.html)이 정의. MPA 단독 문서면 스크립트 ?v= 쿼리에서 추출. */
+  try {
+    const vEl = byId("st-version");
+    if (vEl) {
+      let build = window.GALLA_V;
+      if (!build) {
+        const s = document.querySelector('script[src*="settings.js?v="]') || document.querySelector('script[src*="?v="]');
+        const m = s && s.getAttribute("src").match(/[?&]v=([^&]+)/);
+        build = m ? m[1] : "";
+      }
+      vEl.textContent = build ? "1.0.0 · b" + build : "1.0.0";
+    }
+  } catch (_) {}
+
+  // 뒤로가기 — SPA 스택 뷰면 pop(문서 유지). MPA는 back.js의 [data-back]가 담당.
+  if (document.body && document.body.dataset.page === "spa") {
+    const back = (D.querySelector ? D : document).querySelector(".st-back[data-back]");
+    if (back && !back.dataset.spaWired) {
+      back.dataset.spaWired = "1";
+      back.addEventListener("click", (e) => { e.preventDefault(); try { window.GALLA_SPA && window.GALLA_SPA.pop(); } catch (_) {} });
+    }
+  }
+
   /* =====================
      Supabase client 대기
   ===================== */
