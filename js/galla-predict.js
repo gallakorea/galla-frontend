@@ -7,6 +7,12 @@ let allMarkets = [], OUT_BY_M = {}, curCat = '', curSort = 'volume';
 let MY_STREAK = 0;
 
 const $ = id => document.getElementById(id);
+/* 🔖 해시태그 공용 헬퍼(가드) — 전용칸 + 질문/설명 #태그 자동추출을 tags[]로. */
+if (!window.GALLA_collectTags) {
+  window.GALLA_extractHashtags = t => { const o=[]; (String(t||'').match(/#([0-9A-Za-z가-힣_]{1,30})/g)||[]).forEach(m=>{const x=m.slice(1).toLowerCase(); if(x&&!o.includes(x))o.push(x);}); return o; };
+  window.GALLA_parseTagInput = v => { const o=[]; String(v||'').split(/[\s,]+/).forEach(s=>{const x=s.replace(/[^0-9A-Za-z가-힣_]/g,'').toLowerCase(); if(x&&x.length<=30&&!o.includes(x))o.push(x);}); return o; };
+  window.GALLA_collectTags = (inp,...txt)=>{ const o=[]; const add=x=>{if(x&&!o.includes(x))o.push(x);}; window.GALLA_parseTagInput(inp).forEach(add); txt.forEach(tx=>window.GALLA_extractHashtags(tx).forEach(add)); return o.slice(0,10); };
+}
 // 🚀 상세 이동 — SPA 셸(app.html)이면 스택 push(문서 유지 → 스플래시 안 뜸), MPA면 기존 location 이동.
 //    예전엔 location.href로 predict-market.html을 직접 열어 SPA를 떠나며 그 페이지의 splash-boot 스플래시가 번쩍였다.
 function goDetail(url){
@@ -465,6 +471,11 @@ async function submitMarket(){
       p_close_at:new Date(closeAt).toISOString(), p_outcomes:outcomes, p_liquidity:300
     });
     if(error) throw error;
+    // 🔖 해시태그 — 전용칸(#pred-tags) + 질문/설명 #태그 자동추출 → 생성된 마켓에 저장
+    try {
+      const _te=$('pred-tags'); const _tags=window.GALLA_collectTags(_te?_te.value:'', q, $('mDesc').value);
+      if(_tags.length && data) await supa.from('markets').update({ tags:_tags }).eq('id', data);
+    } catch(_){}
     $('createModal').hidden=true;
     if(__predDraft) __predDraft.clear();   // 생성 성공 → 임시저장 삭제
     toast('예측이 만들어졌습니다! 🎯');

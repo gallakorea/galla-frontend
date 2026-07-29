@@ -224,6 +224,7 @@ async function initConfirmPage(ctx) {
           card_thumb_url: draft.card_thumb_url ?? null,
           faction_a: draft.faction_a ?? null,
           faction_b: draft.faction_b ?? null,
+          tags: draft.tags ?? null,   // 🔖 해시태그 — draft에서 발행된 이슈로 전달(검색용)
           status: 'normal',
           moderation_status: 'pending',
           created_at: new Date().toISOString(),

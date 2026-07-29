@@ -1,6 +1,12 @@
 /* 이중 모드(2026-07-27) — MPA(단독 문서)면 기존처럼 DOMContentLoaded 자동 초기화,
    SPA(app.html)면 어댑터(js/spa/views/write.js)가 GALLA_PAGE_WRITE.mount()로 부른다.
    ctx: { root, params, cleanups } — SPA에서만 전달(타이머·리스너 해제용). */
+/* 🔖 해시태그 공용 헬퍼(가드) — 전용칸 + 본문 #태그 자동추출을 tags[]로. */
+if (!window.GALLA_collectTags) {
+  window.GALLA_extractHashtags = t => { const o=[]; (String(t||'').match(/#([0-9A-Za-z가-힣_]{1,30})/g)||[]).forEach(m=>{const x=m.slice(1).toLowerCase(); if(x&&!o.includes(x))o.push(x);}); return o; };
+  window.GALLA_parseTagInput = v => { const o=[]; String(v||'').split(/[\s,]+/).forEach(s=>{const x=s.replace(/[^0-9A-Za-z가-힣_]/g,'').toLowerCase(); if(x&&x.length<=30&&!o.includes(x))o.push(x);}); return o; };
+  window.GALLA_collectTags = (inp,...txt)=>{ const o=[]; const add=x=>{if(x&&!o.includes(x))o.push(x);}; window.GALLA_parseTagInput(inp).forEach(add); txt.forEach(tx=>window.GALLA_extractHashtags(tx).forEach(add)); return o.slice(0,10); };
+}
 function initWritePage(ctx) {
   ctx = ctx || {};
   const __root = ctx.root || null;
@@ -545,6 +551,12 @@ function initWritePage(ctx) {
         moderation_status: 'pending',
         updated_at: new Date().toISOString(),
       };
+      // 🔖 해시태그 — 전용칸(#issue-tags) + 제목·본문 #태그 자동추출
+      {
+        const _tagEl = document.getElementById('issue-tags');
+        const _tags = window.GALLA_collectTags(_tagEl ? _tagEl.value : '', titleEl.value, descEl.value);
+        draftPayload.tags = _tags.length ? _tags : null;
+      }
 
       // INSERT 시 created_at 보장
       let draftId = sessionStorage.getItem('__CURRENT_DRAFT_ID__');
