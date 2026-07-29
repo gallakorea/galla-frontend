@@ -47,8 +47,8 @@ async function initConfirmPage(ctx) {
   const publishBtn = $id('publishBtn');
 
   publishBtn.style.display = 'inline-flex';
-  publishBtn.disabled = false;
-  publishBtn.textContent = '최종 발행';
+  publishBtn.disabled = true;               // 🛡️ 적합성 검사 완료 전까지 발행 잠금(renderCheck가 해제)
+  publishBtn.textContent = '검사 중…';
 
   // 검사 전용 플래그 완전 제거
   sessionStorage.removeItem('__DRAFT_CHECK_ONLY__');
@@ -91,17 +91,69 @@ async function initConfirmPage(ctx) {
   }
 
   /* =====================
-     MOCK 검사 결과
+     🛡️ 적합성 검사 (무료: 규칙 + OpenAI Moderation API)
   ===================== */
-  // 🔥 검사 기능 비활성 상태: 로딩 제거 즉시 PASS 처리
-  ['check-title','check-oneline','check-description'].forEach(id => {
-    const el = $id(id);
-    if (el) el.classList.remove('loading');
-  });
-
-  renderResult($id('check-title'), 'check-title', 'PASS', '문제 없음');
-  renderResult($id('check-oneline'), 'check-oneline', 'PASS', '문제 없음');
-  renderResult($id('check-description'), 'check-description', 'PASS', '문제 없음');
+  let _checkRisk = '안전';
+  const _esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function renderCheck(r) {
+    const flags = (r && r.flags) || [];
+    const level = (r && r.risk_level) || '안전';
+    const score = Math.max(0, Math.min(100, (r && r.risk_score) || 0));
+    _checkRisk = level;
+    const color = level === '위험' ? '#ff4d67' : level === '주의' ? '#ffb020' : '#22c55e';
+    const emo = level === '위험' ? '🚨' : level === '주의' ? '⚠️' : '✅';
+    const sub = level === '안전' ? '문제 될 만한 요소가 없어요. 발행해도 좋아요.'
+      : level === '주의' ? '몇 가지 다듬으면 좋을 점이 있어요. 확인 후 발행하세요.'
+      : '발행 전 꼭 손봐야 할 위험 요소가 있어요.';
+    const sec = $id('check-title') ? $id('check-title').parentElement : null;
+    // 위험도 게이지 (섹션 맨 위)
+    if (sec) {
+      const g = document.createElement('div');
+      g.className = 'cf-risk lv-' + level;
+      g.innerHTML = `<div class="cf-risk-top"><span class="cf-risk-emo">${emo}</span>`
+        + `<span class="cf-risk-lv" style="color:${color}">${level}</span>`
+        + `<span class="cf-risk-score">위험도 ${score}${r && r._failed ? ' · 검사 실패(참고)' : ''}</span></div>`
+        + `<div class="cf-risk-bar"><i style="width:${score}%;background:${color}"></i></div>`
+        + `<div class="cf-risk-sub">${sub}</div>`;
+      sec.prepend(g);
+    }
+    // 필드별 결과
+    const byField = { title: [], one_line: [], description: [], '전체': [] };
+    flags.forEach(f => (byField[f.field] || byField['전체']).push(f));
+    const flagHTML = fs => fs.map(f => `<div class="cf-flag"><span class="cf-flag-badge ${f.severity === '위험' ? 'd' : 'w'}">${_esc(f.category)}</span> ${_esc(f.message)}<div class="cf-flag-sug">💡 ${_esc(f.suggestion)}</div></div>`).join('');
+    const item = (id, key, label) => {
+      const el = $id(id); if (!el) return;
+      el.classList.remove('loading');
+      const fs = byField[key];
+      if (!fs.length) { el.className = 'confirm-item pass'; el.innerHTML = `<strong>${label}</strong><br>문제 없음`; return; }
+      el.className = 'confirm-item ' + (fs.some(f => f.severity === '위험') ? 'danger' : 'warn');
+      el.innerHTML = `<strong>${label}</strong>${flagHTML(fs)}`;
+    };
+    item('check-title', 'title', '제목');
+    item('check-oneline', 'one_line', '한줄 요약');
+    item('check-description', 'description', '본문');
+    if (byField['전체'].length && sec) {
+      const el = document.createElement('div');
+      el.className = 'confirm-item ' + (byField['전체'].some(f => f.severity === '위험') ? 'danger' : 'warn');
+      el.innerHTML = `<strong>전체 콘텐츠</strong>${flagHTML(byField['전체'])}`;
+      sec.appendChild(el);
+    }
+    // 정책: 위험이면 '수정 유도'(경고 후 발행 가능), 아니면 발행
+    if (publishBtn) {
+      publishBtn.disabled = false;
+      publishBtn.textContent = level === '위험' ? '⚠️ 위험 요소 확인 — 그래도 발행' : '최종 발행';
+      publishBtn.classList.toggle('risky', level === '위험');
+    }
+  }
+  // 검사 실행(진행 중 표시는 confirm.html의 loading 상태) — 발행마다 1회.
+  try {
+    const { data } = await supabase.functions.invoke('check-issue', {
+      body: { title: draft.title, one_line: draft.one_line, description: draft.description },
+    });
+    renderCheck(data && data.ok ? data : { risk_level: '안전', risk_score: 0, flags: [], _failed: !data });
+  } catch (_) {
+    renderCheck({ risk_level: '안전', risk_score: 0, flags: [], _failed: true });
+  }
 
   // 🔒 안전장치: confirm 진입 시 자동 발행 절대 금지
   if (!publishBtn) {
@@ -148,6 +200,10 @@ async function initConfirmPage(ctx) {
      🔥 최종 발행 (미디어 이동 포함)
   ===================== */
   publishBtn.onclick = async () => {
+    // 🛡️ 위험 등급이면 발행 전 한 번 더 확인(수정 유도). 그래도 발행하면 책임 고지 하에 진행.
+    if (_checkRisk === '위험' && !confirm('위험 요소가 감지됐어요.\n수정하지 않고 그대로 발행하면 명예훼손·개인정보 노출 등의 책임은 작성자에게 있습니다.\n\n그래도 발행할까요? (취소를 누르면 뒤로 가서 수정할 수 있어요)')) {
+      return;
+    }
     // Removed draft.draft_mode check per instructions
 
     __USER_CONFIRMED_PUBLISH__ = true;

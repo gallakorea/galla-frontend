@@ -83,3 +83,30 @@ html, body {
   box-shadow: 0 8px 24px rgba(201,209,224,.24); }
 .cf-btn.main:disabled { opacity: .55; box-shadow: none; }
 .cf-btn:active { transform: translateY(1px); }
+.cf-btn.main.risky { background: linear-gradient(135deg, #ff4d67, #ff8a9a); color: #fff;
+  box-shadow: 0 8px 24px rgba(255,77,103,.3); }
+
+/* ── 🛡️ 위험도 게이지 ── */
+.cf-risk { padding: 16px; border-radius: 16px; margin-bottom: 14px;
+  background: rgba(255,255,255,.03); border: 1px solid var(--line); animation: cfIn .35s ease both; }
+.cf-risk.lv-주의 { border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.06); }
+.cf-risk.lv-위험 { border-color: rgba(255,77,103,.45); background: rgba(255,77,103,.07); }
+.cf-risk-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cf-risk-emo { font-size: 20px; }
+.cf-risk-lv { font-size: 17px; font-weight: 900; }
+.cf-risk-score { margin-left: auto; font-size: 11.5px; color: var(--sub); font-weight: 700; }
+.cf-risk-bar { height: 7px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+.cf-risk-bar i { display: block; height: 100%; border-radius: 99px; transition: width .5s ease; }
+.cf-risk-sub { margin-top: 10px; font-size: 12.5px; color: var(--sub); line-height: 1.5; }
+
+/* ── 위험 상태 아이템 + 문제 카드 ── */
+.confirm-item.danger { border-color: rgba(255,77,103,.45); }
+.confirm-item.danger::before { content: "✕"; background: rgba(255,77,103,.16); color: var(--g-red); }
+/* 문제 카드는 내용이 길어 아이콘을 상단 정렬 */
+.confirm-item.warn::before, .confirm-item.danger::before { top: 22px; transform: none; }
+.cf-flag { margin-top: 8px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(255,255,255,.04); font-size: 12px; color: #e8ebf2; line-height: 1.5; }
+.cf-flag-badge { display: inline-block; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 6px; margin-right: 6px; }
+.cf-flag-badge.w { background: rgba(255,176,32,.18); color: #ffb020; }
+.cf-flag-badge.d { background: rgba(255,77,103,.2); color: #ff6b7d; }
+.cf-flag-sug { margin-top: 5px; font-size: 11.5px; color: var(--sub); }
