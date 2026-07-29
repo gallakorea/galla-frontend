@@ -7,6 +7,15 @@ let allMarkets = [], OUT_BY_M = {}, curCat = '', curSort = 'volume';
 let MY_STREAK = 0;
 
 const $ = id => document.getElementById(id);
+// 🚀 상세 이동 — SPA 셸(app.html)이면 스택 push(문서 유지 → 스플래시 안 뜸), MPA면 기존 location 이동.
+//    예전엔 location.href로 predict-market.html을 직접 열어 SPA를 떠나며 그 페이지의 splash-boot 스플래시가 번쩍였다.
+function goDetail(url){
+  if (window.GALLA_SPA && window.GALLA_SPA.push) {
+    const m = String(url).match(/^\.?\/?([a-z0-9_-]+)\.html(?:\?([^#]*))?/i);
+    if (m) { const p = {}; if (m[2]) new URLSearchParams(m[2]).forEach((v, k) => p[k] = v); window.GALLA_SPA.push(m[1], p); return; }
+  }
+  location.href = url;
+}
 function toast(msg){ const t=$('pmToast'); t.textContent=msg; t.hidden=false; clearTimeout(t._t); t._t=setTimeout(()=>t.hidden=true,2200); }
 function fmt(n){ return Math.round(Number(n)||0).toLocaleString('ko-KR'); }
 // 헤더 포인트 알약용 축약 — 금액이 커져도 폭이 안 늘어 로고를 밀거나 겹치지 않게(사장님 요청).
@@ -212,7 +221,7 @@ function renderJackpot(){
     ${oddsBar(hero, outs)}
     <button class="pm-jp-go">지금 예측하기 →</button>
   </div>`;
-  el.querySelector('.pm-jackpot').onclick=()=>location.href=`predict-market.html?id=${hero.id}`;
+  el.querySelector('.pm-jackpot').onclick=()=>goDetail(`predict-market.html?id=${hero.id}`);
   countUp(el);
 }
 
@@ -334,7 +343,7 @@ function renderMarkets(){
   }).join('');
 
   wrap.querySelectorAll('.pm-card').forEach(c=>{
-    c.onclick=e=>{ if(e.target.closest('.mc-act')) return; location.href=`predict-market.html?id=${c.dataset.id}`; };
+    c.onclick=e=>{ if(e.target.closest('.mc-act')) return; goDetail(`predict-market.html?id=${c.dataset.id}`); };
   });
   bindMarketActions(wrap);
 }
@@ -459,7 +468,7 @@ async function submitMarket(){
     $('createModal').hidden=true;
     if(__predDraft) __predDraft.clear();   // 생성 성공 → 임시저장 삭제
     toast('예측이 만들어졌습니다! 🎯');
-    location.href=`predict-market.html?id=${data}`;
+    goDetail(`predict-market.html?id=${data}`);
   }catch(e){ console.error(e); toast('예측 생성에 실패했습니다.'); }
   finally{ btn.disabled=false; btn.textContent='마켓 만들기'; }
 }
