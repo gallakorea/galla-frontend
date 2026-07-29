@@ -42,6 +42,9 @@
     new URLSearchParams(location.search).get("compose") === "1";
 
   function goBackToPicker() {
+    // SPA 셸에선 create.html로 문서를 떠나지 않는다(뒤로가기 먹통의 원인). 열린 모달이 있으면 닫고,
+    // (onClose 경유로 이미 닫힌 뒤 호출되면) 그냥 그 자리(피드)에 머문다 — 절대 location 이동 안 함.
+    if (window.GALLA_SPA) { if (openSpec) { try { openSpec.close(); } catch (_) {} } return; }
     if (window.GALLA_back) window.GALLA_back("create.html");
     else location.href = "create.html";
   }
