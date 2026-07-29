@@ -21,10 +21,14 @@
     if (document.getElementById("bugr-css")) return;
     const s = document.createElement("style"); s.id = "bugr-css";
     s.textContent =
-      ".bugr-dim{position:fixed;inset:0;z-index:2147483400;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s;padding:0 0 max(0px,env(safe-area-inset-bottom))}" +
-      ".bugr-dim.open{opacity:1}" +
-      ".bugr-card{width:100%;max-width:480px;background:linear-gradient(180deg,#16171d,#101116);border:1px solid rgba(255,255,255,.1);border-radius:20px 20px 0 0;padding:20px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(24px);transition:transform .24s cubic-bezier(.2,.9,.3,1)}" +
-      ".bugr-dim.open .bugr-card{transform:none}" +
+      // 🐞 전체화면 페이지(모달 아님) — 우→좌 슬라이드 인, 상단 뒤로가기 헤더
+      ".bugr-dim{position:fixed;inset:0;z-index:2147483400;background:#0a0a0b;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.9,.3,1)}" +
+      ".bugr-dim.open{transform:none}" +
+      ".bugr-head{display:flex;align-items:center;gap:4px;height:calc(52px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0 4px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(10,10,11,.92);backdrop-filter:blur(10px);flex:0 0 auto}" +
+      ".bugr-back{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:#fff;padding:0}" +
+      ".bugr-back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}" +
+      ".bugr-htt{font-size:16px;font-weight:900;color:#f3f4f6}" +
+      ".bugr-card{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;width:100%;max-width:520px;margin:0 auto;box-sizing:border-box;padding:18px 16px calc(28px + env(safe-area-inset-bottom))}" +
       ".bugr-tt{font-size:17px;font-weight:900;color:#f3f4f6;display:flex;align-items:center;gap:7px}" +
       ".bugr-sb{font-size:12.5px;color:#9aa0ad;margin:5px 0 14px;line-height:1.5}" +
       ".bugr-ta{width:100%;box-sizing:border-box;min-height:120px;resize:vertical;background:#0e0f13;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;color:#f3f4f6;font-size:14px;line-height:1.5;font-family:inherit}" +
@@ -80,8 +84,11 @@
     const err = LAST_ERR && (Date.now() - LAST_ERR.at < 120000) ? LAST_ERR : null;
     const dim = document.createElement("div"); dim.className = "bugr-dim";
     dim.innerHTML =
-      '<div class="bugr-card" role="dialog" aria-modal="true">' +
-      '<div class="bugr-tt">🐞 버그 신고</div>' +
+      '<div class="bugr-head">' +
+        '<button class="bugr-back" type="button" aria-label="뒤로"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+        '<span class="bugr-htt">🐞 버그 신고</span>' +
+      '</div>' +
+      '<div class="bugr-card" role="region">' +
       '<div class="bugr-sb">불편했던 점이나 오류를 알려주세요. 어디서 무엇을 하다 생겼는지 적어주시면 큰 도움이 됩니다.</div>' +
       '<textarea class="bugr-ta" placeholder="예) 광장에서 글을 열었더니 화면이 깨졌어요. / 예측 공유 버튼이 안 눌려요."></textarea>' +
       '<div class="bugr-ctx">' +
@@ -91,13 +98,27 @@
       (err ? '<span class="bugr-chip err">⚠️ 오류 기록 자동 첨부</span>' : "") +
       '</div>' +
       '<div class="bugr-btns">' +
-      '<button class="bugr-cancel" type="button">닫기</button>' +
       '<button class="bugr-go" type="button">신고 보내기</button>' +
       '</div></div>';
     document.body.appendChild(dim);
     const ta = dim.querySelector(".bugr-ta"), go = dim.querySelector(".bugr-go");
-    const close = () => { dim.classList.remove("open"); setTimeout(() => dim.remove(), 200); };
-    dim.addEventListener("click", (e) => { if (e.target === dim || e.target.classList.contains("bugr-cancel")) close(); });
+    // SPA(app.html)면 뒤로가기/엣지스와이프로도 닫히게 history 한 칸 + popstate 연동(문서 이탈 없음)
+    const isSpa = !!(window.GALLA_SPA && document.body && document.body.dataset.page === "spa");
+    let popH = null;
+    const close = (fromPop) => {
+      dim.classList.remove("open");
+      setTimeout(() => dim.remove(), 240);
+      if (isSpa) {
+        if (popH) { window.removeEventListener("popstate", popH); popH = null; }
+        if (!fromPop) { try { history.back(); } catch (_) {} }   // 사용자 닫기 → 쌓아둔 state 소비
+      }
+    };
+    if (isSpa) {
+      try { history.pushState({ bugr: 1 }, ""); } catch (_) {}
+      popH = () => close(true);
+      window.addEventListener("popstate", popH);
+    }
+    dim.querySelector(".bugr-back").addEventListener("click", () => close());
     go.addEventListener("click", async () => {
       const msg = ta.value.trim();
       if (msg.length < 4) { ta.focus(); toast("조금만 더 자세히 적어주세요"); return; }
