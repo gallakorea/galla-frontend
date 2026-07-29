@@ -205,18 +205,20 @@
     if (!entry) return false;
     if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
     pauseOutside();   // 🔇 pop된 상세의 미디어 정지(표면이 아래 탭/스택으로 바뀜)
+    // onPop: compose 스택은 '이동해온 모달'을 원래 탭으로 되돌린다(슬라이드 아웃 후 실행 → 레이어 제거 직전).
+    const finish = () => {
+      if (entry.onPop) { try { entry.onPop(); } catch (_) {} }
+      entry.el.remove();
+      if (!stack.length) stackRoot.classList.remove("on");
+    };
     if (opts.instant) {
       // 브라우저 뒤로가기 제스처(popstate)발 — Safari가 이미 스냅샷 슬라이드를 보여준 뒤라
       // 우리 애니를 또 돌리면 '두 번 미끄러지거나 튀는' 느낌. 즉시 제거.
-      entry.el.remove();
-      if (!stack.length) stackRoot.classList.remove("on");
+      finish();
     } else {
       entry.el.classList.remove("in");
       entry.el.style.transform = "";   // 제스처 드래그 잔여 inline 제거 → 클래스 전환으로 슬라이드 아웃
-      setTimeout(() => {
-        entry.el.remove();
-        if (!stack.length) stackRoot.classList.remove("on");
-      }, 300);
+      setTimeout(finish, 300);
     }
     if (!opts.silent) { try { history.back(); return true; } catch (_) {} }
     return true;
@@ -568,27 +570,78 @@
     obs.observe(el, { attributes: true, attributeFilter: ["hidden", "class"] });
   }
 
-  /* ── 글쓰기 compose 진입(예측/광장) — 문서 이탈 없이 SPA 안에서:
-     picker(스택) 정리 → 해당 탭 활성·마운트 대기 → 그 탭의 compose 모달 오픈.
-     모달은 그 탭 페이지가 openOverlay로 뒤로가기까지 연결한다. */
+  /* ── 글쓰기 compose 진입(예측/광장) — write/report와 '동일하게' 스택 뷰로:
+     슬라이드 인/아웃 + 뒤로가기=pop(=picker 복귀, 피드 아님).
+     ⚠️ 예측/광장 작성폼은 피드페이지 안의 모달(#createModal·#plaza-write-modal)이라 페이지째 push하면
+        keep-alive 탭과 ID 충돌(getElementById가 숨은 탭 모달을 잡음). 그래서 '탭의 모달 DOM을
+        스택 레이어로 이동'해 재사용한다(핸들러 보존·충돌 없음). pop 시 원래 탭으로 되돌린다.
+     모달은 composer-page.css로 전체화면(position:fixed inset:0 → transform 조상=stack-view 기준)
+        이라 레이어와 함께 슬라이드한다. composer-page.js는 __stackMode 모달을 무시(자체 헤더/history 안 붙임). */
+  const CP_BACK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>';
+  function ensureComposeHeader(modal, boxSel, title) {
+    const box = modal.querySelector(boxSel);
+    if (!box || box.querySelector(".cp-head")) return;
+    const head = document.createElement("div");
+    head.className = "cp-head";
+    head.innerHTML = '<button type="button" class="cp-back" aria-label="뒤로">' + CP_BACK_SVG + '</button>' +
+                     '<span class="cp-title">' + title + '</span><span class="cp-spacer"></span>';
+    box.prepend(head);
+    head.querySelector(".cp-back").addEventListener("click", () => { try { history.back(); } catch (_) {} });
+  }
   async function compose(kind) {
-    const MAP = { predict: { tab: "predict", opener: "GALLA_openCompose_predict" },
-                  plaza:   { tab: "trend",   opener: "GALLA_openCompose_plaza" } };
+    const MAP = {
+      predict: { tab: "predict", modal: "createModal",        box: ".pm-modal-inner",  opener: "GALLA_openCompose_predict", title: "새 예측" },
+      plaza:   { tab: "trend",   modal: "plaza-write-modal",  box: ".plaza-modal-box", opener: "GALLA_openCompose_plaza",   title: "광장 글쓰기" },
+    };
     const m = MAP[kind]; if (!m) return;
-    // ⚠️ 순서 중요 — '피드 플래시(본페이지로 튐)' 방지:
-    //   picker(스택)를 아직 위에 둔 채로 대상 탭을 활성·'진짜 마운트 완료'(rescan=모달 관찰자 부착)까지
-    //   기다린 뒤 모달을 연다. 모달은 z:10000(composer-page.css)이라 picker/피드를 즉시 덮는다.
-    //   그다음에야 picker를 조용히 제거 → 피드가 노출되는 순간이 없다.
-    const ti = TABS.indexOf(m.tab);
-    activateTab(ti);
-    await ensureTab(m.tab);
-    for (let i = 0; i < 40; i++) {                       // opener 등록까지 짧게 재시도(~2s)
-      const fn = window[m.opener];
-      if (typeof fn === "function") { try { fn(); } catch (_) {} break; }
-      await new Promise(r => setTimeout(r, 50));
-    }
-    await new Promise(r => setTimeout(r, 70));           // 모달이 열려 화면을 덮을 틈
-    while (stack.length) pop({ silent: true, instant: true });  // 이제 picker 제거(모달이 덮어 안 보임 → 즉시)
+    await ensureTab(m.tab);                    // 탭 마운트(모달 DOM+핸들러 생성). 탭 활성화는 안 함 → 피드 노출 없음.
+    const modal = document.getElementById(m.modal);
+    if (!modal) return;
+    const home = modal.parentNode, nextEl = modal.nextSibling;   // 복귀 위치 기억
+    modal.__stackMode = true;                  // composer-page.js가 이 모달을 건드리지 않게
+
+    const layer = document.createElement("div");
+    layer.className = "stack-view";
+    stackRoot.appendChild(layer);
+    stackRoot.classList.add("on");
+    layer.appendChild(modal);                  // 모달을 레이어로 MOVE(핸들러 보존)
+    ensureComposeHeader(modal, m.box, m.title);
+
+    // 발행 성공 등으로 모달이 '스스로' 닫히면(hidden) 스택 레이어만 남아 검은 화면 → 스택도 pop.
+    const closeObs = new MutationObserver(() => {
+      const hidden = modal.hasAttribute("hidden") || modal.classList.contains("hidden");
+      if (hidden && modal.__stackMode) {
+        modal.__stackMode = false;             // 재진입 방지(onPop이 또 pop 안 하게)
+        try { closeObs.disconnect(); } catch (_) {}
+        try { history.back(); } catch (_) {}   // popstate→pop→onPop(원위치 복귀)
+      }
+    });
+    closeObs.observe(modal, { attributes: true, attributeFilter: ["hidden", "class"] });
+
+    const entry = {
+      el: layer, name: kind + "-compose", mod: null,
+      onPop: () => {
+        try {
+          closeObs.disconnect();
+          modal.hidden = true; modal.classList.add("hidden");   // 닫고
+          modal.__stackMode = false;
+          document.body.classList.remove("composer-open");
+          if (nextEl && nextEl.parentNode === home) home.insertBefore(modal, nextEl); else home.appendChild(modal);  // 원위치 복귀
+        } catch (_) {}
+      },
+    };
+    stack.push(entry);
+    armStackSwipe(layer);
+
+    // 폼을 '슬라이드 전에' 연다(로그인 확인·draft 복원). opener가 hidden 해제 → composer-page.css 전체화면.
+    const fn = window[m.opener];
+    if (typeof fn === "function") { try { fn(); } catch (_) {} }
+    else { modal.hidden = false; modal.classList.remove("hidden"); }
+    document.body.classList.add("composer-open");        // 하단 네비 숨김(작성 몰입)
+
+    requestAnimationFrame(() => layer.classList.add("in"));
+    setTimeout(() => layer.classList.add("in"), 60);     // 슬라이드 인(rAF 동결 폴백)
+    try { history.pushState(null, "", "#/" + kind + "-compose"); } catch (_) {}
   }
 
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */

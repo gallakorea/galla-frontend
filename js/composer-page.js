@@ -80,6 +80,9 @@
 
   function onOpen(el, spec) {
     if (openSpec) return;
+    // SPA 스택 뷰로 열린 compose(라우터가 모달을 스택 레이어로 이동)면 여기선 아무것도 안 한다 —
+    // 헤더·전체화면·뒤로가기 전부 라우터 스택이 담당(이중 헤더/history 방지).
+    if (el.__stackMode) return;
     openSpec = spec;
     ensureHeader(el, spec);
     document.body.classList.add("composer-open");
