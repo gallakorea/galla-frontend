@@ -24,6 +24,8 @@
       // 🐞 전체화면 페이지(모달 아님) — 우→좌 슬라이드 인, 상단 뒤로가기 헤더
       ".bugr-dim{position:fixed;inset:0;z-index:2147483400;background:#0a0a0b;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.9,.3,1)}" +
       ".bugr-dim.open{transform:none}" +
+      // 라우터 스택 뷰로 열릴 때: 자체 fixed/transform 끄고 스택 레이어(.stack-view=position:absolute inset:0)를 채운다.
+      ".bugr-dim.in-stack{position:absolute;transform:none;transition:none}" +
       ".bugr-head{display:flex;align-items:center;gap:4px;height:calc(52px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0 4px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(10,10,11,.92);backdrop-filter:blur(10px);flex:0 0 auto}" +
       ".bugr-back{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:#fff;padding:0}" +
       ".bugr-back svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}" +
@@ -102,54 +104,54 @@
       '</div></div>';
     document.body.appendChild(dim);
     const ta = dim.querySelector(".bugr-ta"), go = dim.querySelector(".bugr-go");
-    // SPA(app.html)면 뒤로가기/엣지스와이프로도 닫히게 history 한 칸 + popstate 연동(문서 이탈 없음)
-    const isSpa = !!(window.GALLA_SPA && document.body && document.body.dataset.page === "spa");
-    let popH = null;
-    const close = (fromPop) => {
-      dim.classList.remove("open");
-      setTimeout(() => dim.remove(), 240);
-      if (isSpa) {
-        if (popH) { window.removeEventListener("popstate", popH); popH = null; }
-        if (!fromPop) { try { history.back(); } catch (_) {} }   // 사용자 닫기 → 쌓아둔 state 소비
-      }
-    };
-    if (isSpa) {
-      try { history.pushState({ bugr: 1 }, ""); } catch (_) {}
-      popH = () => close(true);
-      window.addEventListener("popstate", popH);
-    }
-    dim.querySelector(".bugr-back").addEventListener("click", () => close());
+    const isSpa = !!(window.GALLA_SPA && window.GALLA_SPA.pushView && document.body && document.body.dataset.page === "spa");
 
-    // 🖐 엣지 스와이프로 닫기 — 버그신고는 라우터 스택 뷰가 아니라 자체 오버레이라 armStackSwipe가 없어
-    //    제스처 백이 안 됐다. 좌측 엣지에서 끌면 손가락을 따라오고, 1/3 이상·빠른 플릭이면 닫힘(스택과 동일 톤).
-    (function armSwipe() {
+    // 🖐 엣지 스와이프로 닫기(웹 MPA 전용 — SPA는 라우터 스택이 담당)
+    function armSwipe(el, closeFn) {
       let sx = 0, sy = 0, dx = 0, lock = null, lastX = 0, lastT = 0, vel = 0;
-      dim.addEventListener("touchstart", (e) => {
+      el.addEventListener("touchstart", (e) => {
         const t = e.touches[0];
-        if (t.clientX > 28) { lock = "no"; return; }   // 좌측 엣지에서만
+        if (t.clientX > 28) { lock = "no"; return; }
         sx = lastX = t.clientX; sy = t.clientY; dx = 0; vel = 0; lock = null; lastT = performance.now();
       }, { passive: true });
-      dim.addEventListener("touchmove", (e) => {
+      el.addEventListener("touchmove", (e) => {
         if (lock === "no") return;
         const t = e.touches[0], mx = t.clientX - sx, my = t.clientY - sy;
         if (lock === null) {
           if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
           lock = (mx > 0 && Math.abs(mx) > Math.abs(my) * 1.2) ? "h" : "no";
           if (lock === "no") return;
-          dim.style.transition = "none";
+          el.style.transition = "none";
         }
         dx = Math.max(0, mx);
         const now = performance.now();
         vel = (t.clientX - lastX) / Math.max(1, now - lastT); lastX = t.clientX; lastT = now;
-        dim.style.transform = "translateX(" + dx + "px)";
+        el.style.transform = "translateX(" + dx + "px)";
       }, { passive: true });
-      dim.addEventListener("touchend", () => {
+      el.addEventListener("touchend", () => {
         if (lock !== "h") { lock = null; return; }
-        lock = null; dim.style.transition = "";
-        if (dx > window.innerWidth * 0.32 || vel > 0.45) { dim.style.transform = "translateX(100%)"; close(); }
-        else { dim.style.transform = ""; }   // 스프링 복귀(.open = translateX(0))
+        lock = null; el.style.transition = "";
+        if (dx > window.innerWidth * 0.32 || vel > 0.45) { el.style.transform = "translateX(100%)"; closeFn(); }
+        else { el.style.transform = ""; }
       }, { passive: true });
-    })();
+    }
+
+    let close;
+    if (isSpa) {
+      // 🚀 라우터 스택 뷰로 — 슬라이드 인/아웃·엣지스와이프·뒤로가기(pop)를 전부 라우터가 담당(다른 페이지와 동일).
+      //    dim의 자체 fixed/transform은 끄고(.in-stack) 스택 레이어를 채운다.
+      dim.classList.add("in-stack");
+      const closeStack = window.GALLA_SPA.pushView(dim, { name: "bug", onPop: () => { try { dim.remove(); } catch (_) {} } });
+      close = () => closeStack();
+      setTimeout(() => { try { ta.focus(); } catch (_) {} }, 340);
+    } else {
+      // 웹 MPA — 자체 오버레이(fixed) + 슬라이드/스와이프.
+      close = () => { dim.classList.remove("open"); setTimeout(() => dim.remove(), 240); };
+      void dim.offsetWidth;                       // 리플로우 강제 → 초기 transform 적용 후 .open 전환(슬라이드 뜸)
+      requestAnimationFrame(() => { dim.classList.add("open"); setTimeout(() => { try { ta.focus(); } catch (_) {} }, 260); });
+      armSwipe(dim, close);
+    }
+    dim.querySelector(".bugr-back").addEventListener("click", () => close());
     go.addEventListener("click", async () => {
       const msg = ta.value.trim();
       if (msg.length < 4) { ta.focus(); toast("조금만 더 자세히 적어주세요"); return; }
@@ -173,10 +175,6 @@
         toast("전송 실패 — 잠시 후 다시 시도해주세요");
       }
     });
-    // 슬라이드 인 — 붙인 직후 리플로우를 강제해 초기 transform(translateX 100%)이 '적용된 상태'가 되게 한 뒤
-    // .open으로 전환(안 하면 브라우저가 두 상태를 한 프레임에 합쳐 트랜지션이 안 뜬다 = '슬라이드 안 됨').
-    void dim.offsetWidth;
-    requestAnimationFrame(() => { dim.classList.add("open"); setTimeout(() => { try { ta.focus(); } catch (_) {} }, 260); });
   };
 
   /* ─────────────────────────────────────────────────────────

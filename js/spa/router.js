@@ -691,10 +691,33 @@
     closeObs.observe(modal, { attributes: true, attributeFilter: ["hidden", "class"] });
   }
 
+  /* ── 임의 DOM을 '스택 뷰'로 push — HTML 페이지가 아니라 JS로 만든 요소(버그신고 등)를 슬라이드 인 +
+     엣지스와이프/뒤로가기(pop)로 닫히게. contentEl은 레이어를 채운다(.stack-view가 위치·전환 담당).
+     반환: 프로그래밍적 닫기 함수(제출 성공 등). onPop은 pop 시 1회 호출(정리·history 정합). */
+  function pushView(contentEl, opts) {
+    opts = opts || {};
+    const layer = document.createElement("div");
+    layer.className = "stack-view";
+    stackRoot.appendChild(layer);
+    stackRoot.classList.add("on");
+    layer.appendChild(contentEl);
+    armStackSwipe(layer);
+    requestAnimationFrame(() => layer.classList.add("in"));
+    setTimeout(() => layer.classList.add("in"), 60);
+    const entry = { el: layer, name: opts.name || "view", mod: null, onPop: opts.onPop || null };
+    stack.push(entry);
+    try { history.pushState(null, "", "#/" + (opts.name || "view")); } catch (_) {}
+    // 프로그래밍적 닫기(제출 성공 등) — 이 레이어가 최상단이면 pop(슬라이드 아웃+onPop+history.back)
+    return function close() {
+      if (stack.length && stack[stack.length - 1].el === layer) { try { pop(); } catch (_) {} }
+      else { try { if (entry.onPop) entry.onPop(); } catch (_) {} layer.remove(); }
+    };
+  }
+
   /* ── 셸 공개 API — 기존 postMessage 프로토콜 대체(직접 호출) ── */
   window.GALLA_SPA = {
     go: (tab) => { const i = TABS.indexOf(tab); if (i === -1) return; while (stack.length) pop({ silent: true }); activateTab(i); },
-    push, pop, compose, openOverlay,
+    push, pop, compose, openOverlay, pushView,
     navMini: (on) => { const n = document.querySelector(".nav"); if (n) n.classList.toggle("nav--mini", !!on); },
     navHide: (on) => { const n = document.querySelector(".nav"); if (n) n.style.display = on ? "none" : ""; },
   };
