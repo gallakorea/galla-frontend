@@ -143,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
       //    셸 인식으로 처리한다.
       if (isCompose(href) || /create\.html|write\.html|compose=1/.test(oc)) {
         e.preventDefault(); e.stopPropagation();
-        try { window.top.location.href = "create.html"; } catch (_) { location.href = "create.html"; }
+        try { window.top.location.href = "create.html"; } catch (_) { (window.GALLA_nav||function(u){location.href=u})("create.html"); }
         return;
       }
       // ② 다른 탭 이동 → 셸 전환

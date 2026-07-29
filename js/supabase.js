@@ -483,7 +483,7 @@
         "</div></div>";
       document.body.appendChild(m);
       m.addEventListener("click", (e) => { if (e.target === m || e.target.classList.contains("glm-cancel")) m.classList.remove("open"); });
-      m.querySelector(".glm-go").addEventListener("click", () => { location.href = "login.html"; });
+      m.querySelector(".glm-go").addEventListener("click", () => { (window.GALLA_nav||function(u){location.href=u})("login.html"); });
     }
     m.querySelector(".glm-msg").textContent = msg || "이 기능은 로그인 후 이용할 수 있어요.";
     requestAnimationFrame(() => m.classList.add("open"));

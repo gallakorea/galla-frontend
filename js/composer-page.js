@@ -51,7 +51,7 @@
     // (onClose 경유로 이미 닫힌 뒤 호출되면) 그냥 그 자리(피드)에 머문다 — 절대 location 이동 안 함.
     if (window.GALLA_SPA) { if (openSpec) { try { openSpec.close(); } catch (_) {} } return; }
     if (window.GALLA_back) window.GALLA_back("create.html");
-    else location.href = "create.html";
+    else (window.GALLA_nav||function(u){location.href=u})("create.html");
   }
 
   const BACK_SVG =

@@ -1665,7 +1665,7 @@
     if (!ME) return promptLogin();
     if (!PAGE_MODE()) {   // 페이지로 넘어가서 대화를 고른다 (오버레이 금지)
       try { sessionStorage.setItem('galla_dm_share', JSON.stringify(payload)); } catch (_) {}
-      location.href = 'dm.html';
+      (window.GALLA_nav||function(u){location.href=u})('dm.html');
       return;
     }
     if (SPA_MODE() && window.GALLA_SPA && window.GALLA_SPA.go) window.GALLA_SPA.go('dm');   // 공유는 dm 탭에서
@@ -3082,7 +3082,7 @@
     UI.lockPin = ''; savePrefs();
     try { sessionStorage.removeItem('galla_dm_unlocked'); } catch (_) {}
     try { await supabase.auth.signOut(); } catch (_) {}
-    location.href = 'login.html?after=dm';
+    (window.GALLA_nav||function(u){location.href=u})('login.html?after=dm');
   }
   function paintLockBtn(btn) {
     const b = btn || ROOT?.querySelector('#dm-set-lock');
@@ -3409,7 +3409,7 @@
   }
   window.GALLA_openPager = () => {
     if (PAGE_MODE()) { showView('inbox'); setTab('pager'); }
-    else location.href = 'dm.html?pager=1';
+    else (window.GALLA_nav||function(u){location.href=u})('dm.html?pager=1');
   };
 
   /* ---------- 난장: 오픈 채팅방 (카카오 오픈채팅 문법) ----------
@@ -5525,7 +5525,7 @@
   }
 
   function promptLogin() {
-    if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href = 'login.html';
+    if (confirm('로그인이 필요합니다. 로그인하시겠어요?')) (window.GALLA_nav||function(u){location.href=u})('login.html');
   }
 
   window.GALLA_openDM = function () { ME ? openDM() : promptLogin(); };
@@ -5596,7 +5596,7 @@
     const inShell = (() => { try { return window.top !== window.self; } catch (_) { return false; } })();
     const toLogin = () => {
       try { (inShell ? window.top : window).location.href = 'login.html'; }
-      catch (_) { location.href = 'login.html'; }
+      catch (_) { (window.GALLA_nav||function(u){location.href=u})('login.html'); }
     };
     if (!inShell) { toLogin(); return; }   // 단독 진입 = 사용자가 직접 온 것 → 즉시
 
@@ -5609,7 +5609,7 @@
         <div style="font-size:34px;margin-bottom:12px">🔒</div>
         <b style="display:block;font-size:16px;color:#fff;margin-bottom:6px">로그인이 필요해요</b>
         <span style="font-size:13px;color:#9aa0ad;line-height:1.6">DM은 로그인한 사람만 쓸 수 있어요.</span><br><br>
-        <button type="button" class="dm-login-cta" onclick="(window.top||window).location.href='login.html'">로그인하기</button>
+        <button type="button" class="dm-login-cta" onclick="(window.top||window).location.href = 'login.html'">로그인하기</button>
       </div>`;
     // 셸이 'DM 탭 활성' 신호를 주면 로그인으로. (백그라운드 prewarm 중엔 안 옴)
     window.addEventListener('message', (e) => {

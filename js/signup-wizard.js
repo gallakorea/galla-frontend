@@ -124,12 +124,12 @@
   }
   function prev() {
     if (cur === 0) {
-      /* 첫 스텝의 뒤로가기: location.href="login.html"로 새 페이지를 밀면
+      /* 첫 스텝의 뒤로가기: (window.GALLA_nav||function(u){location.href=u})("login.html")로 새 페이지를 밀면
          history가 쌓여 로그인↔가입 무한 핑퐁이 된다(사장님 재현).
          온 곳으로 되돌아가는 history.back()이 정답 — 이력이 없으면 로그인으로. */
       if (window.GALLA_back) window.GALLA_back("login.html");
       else if (history.length > 1) history.back();
-      else location.href = "login.html";
+      else (window.GALLA_nav||function(u){location.href=u})("login.html");
       return;
     }
     cur--; paint();

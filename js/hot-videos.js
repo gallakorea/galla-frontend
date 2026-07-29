@@ -322,7 +322,7 @@
   async function me() {
     const c = await sb();
     const { data: { user } } = await c.auth.getUser();
-    if (!user) { location.href = "login.html"; return null; }
+    if (!user) { (window.GALLA_nav||function(u){location.href=u})("login.html"); return null; }
     return user;
   }
 

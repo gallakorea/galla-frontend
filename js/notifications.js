@@ -77,7 +77,7 @@
     btn.appendChild(p);
     p.addEventListener("click", (e) => {
       e.preventDefault(); e.stopPropagation();
-      location.href = "notifications.html";
+      (window.GALLA_nav||function(u){location.href=u})("notifications.html");
     });
     return p;
   }
@@ -167,11 +167,11 @@
       const spa = document.body && document.body.dataset.page === "spa" && window.GALLA_SPA;
       if (!ME) {
         if (confirm("로그인하면 내 활동 알림을 볼 수 있어요. 로그인할까요?")) {
-          if (spa) window.GALLA_SPA.push("login", {}); else location.href = "login.html";
+          if (spa) window.GALLA_SPA.push("login", {}); else (window.GALLA_nav||function(u){location.href=u})("login.html");
         }
         return;
       }
-      if (spa) window.GALLA_SPA.push("notifications", {}); else location.href = "notifications.html";
+      if (spa) window.GALLA_SPA.push("notifications", {}); else (window.GALLA_nav||function(u){location.href=u})("notifications.html");
     });
   }
 

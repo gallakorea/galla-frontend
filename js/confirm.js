@@ -58,7 +58,7 @@ async function initConfirmPage(ctx) {
 
   if (!draftId) {
     alert('임시 저장된 글이 없습니다.');
-    if (spa) { spaBackToWrite(); } else { location.href = 'write.html'; }
+    if (spa) { spaBackToWrite(); } else { (window.GALLA_nav||function(u){location.href=u})('write.html'); }
     return;
   }
 
@@ -71,7 +71,7 @@ async function initConfirmPage(ctx) {
   if (!user) {
     alert('로그인이 필요합니다.');
     if (spa) { try { window.GALLA_SPA && window.GALLA_SPA.push('login', {}); } catch (_) {} }
-    else { location.href = 'login.html'; }
+    else { (window.GALLA_nav||function(u){location.href=u})('login.html'); }
     return;
   }
 
@@ -86,7 +86,7 @@ async function initConfirmPage(ctx) {
 
   if (error || !draft) {
     alert('임시 글을 불러오지 못했습니다.');
-    if (spa) { spaBackToWrite(); } else { location.href = 'write.html'; }
+    if (spa) { spaBackToWrite(); } else { (window.GALLA_nav||function(u){location.href=u})('write.html'); }
     return;
   }
 

@@ -189,7 +189,7 @@ function renderDaily(){
   $('pmDailyBtn').onclick = claimDaily;
 }
 async function claimDaily(){
-  if(!ME){ location.href='login.html'; return; }
+  if(!ME){ (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
   const { data, error } = await supa.rpc('claim_daily');
   if(error) return toast('오류가 발생했습니다.');
   const btn=$('pmDailyBtn');
@@ -366,7 +366,7 @@ function bindMarketActions(wrap){
         try{ await navigator.clipboard.writeText(url); toast('링크가 복사되었습니다.'); }catch{ toast('링크 복사 실패'); }
         return;
       }
-      if(!ME){ if(confirm('로그인이 필요합니다. 로그인하시겠어요?')) location.href='login.html'; return; }
+      if(!ME){ if(confirm('로그인이 필요합니다. 로그인하시겠어요?')) (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
       btn.disabled=true;
       try{
         if(MY_SAVED[id]){ await supa.from('market_bookmarks').delete().eq('market_id',id).eq('user_id',ME.id); delete MY_SAVED[id]; }
@@ -379,7 +379,7 @@ function bindMarketActions(wrap){
 
 /* ============ UI 바인딩 ============ */
 function bindUI(){
-  $('pointPill')?.addEventListener('click', ()=>location.href='gp-history.html');
+  $('pointPill')?.addEventListener('click', ()=>(window.GALLA_nav||function(u){location.href=u})('gp-history.html'));
   document.querySelectorAll('.seg-tab').forEach(t=>t.addEventListener('click',()=>{
     document.querySelectorAll('.seg-tab').forEach(x=>x.classList.remove('active'));
     t.classList.add('active');
@@ -435,7 +435,7 @@ function openCreateModal(){
     openCreateModal._t=0;
     if(confirm('로그인이 필요합니다. 로그인하시겠어요?')){
       if(document.body&&document.body.dataset.page==='spa'&&window.GALLA_SPA) window.GALLA_SPA.push('login');
-      else location.href='login.html';
+      else (window.GALLA_nav||function(u){location.href=u})('login.html');
     }
     return;
   }

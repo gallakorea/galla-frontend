@@ -122,7 +122,7 @@
     } else {
       // 미로그인 → 가입 유도만. 영구 제거는 [더 이상 안 보기]에서만.
       // (여기서 DISMISS를 세팅하면 가입 안 하고 돌아왔을 때 배너가 영영 안 나온다)
-      location.href = "signup.html";
+      (window.GALLA_nav||function(u){location.href=u})("signup.html");
     }
   }
 

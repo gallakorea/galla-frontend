@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=072868";
-import { loadAiNews } from "./issue-news.js?v=072868";
-import { loadStats } from "./issue.stats.js?v=072868";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072868";
+import { loadAiArguments } from "./issue-argument.js?v=072869";
+import { loadAiNews } from "./issue-news.js?v=072869";
+import { loadStats } from "./issue.stats.js?v=072869";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=072869";
 
 
 console.log("[issue.js] loaded");
@@ -521,7 +521,7 @@ async function wireIssueActions(issue) {
 
   const { data: sess } = await supabase.auth.getSession();
   const uid = sess?.session?.user?.id || null;
-  const needLogin = () => { if (window.GALLA_needLogin) window.GALLA_needLogin("팔로우하려면 로그인이 필요해요."); else if (confirm("로그인이 필요합니다. 로그인할까요?")) location.href = "login.html"; };
+  const needLogin = () => { if (window.GALLA_needLogin) window.GALLA_needLogin("팔로우하려면 로그인이 필요해요."); else if (confirm("로그인이 필요합니다. 로그인할까요?")) (window.GALLA_nav||function(u){location.href=u})("login.html"); };
 
   // 좋아요
   let liked = false;
@@ -971,7 +971,7 @@ function goRemix(stance) {
     })
   );
 
-  location.href = "write-remix.html";
+  (window.GALLA_nav||function(u){location.href=u})("write-remix.html");
 }
 
 /* ==========================================================================

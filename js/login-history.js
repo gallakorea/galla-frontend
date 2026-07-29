@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!user) {
     alert("로그인이 필요합니다.");
-    location.href = "login.html";
+    (window.GALLA_nav||function(u){location.href=u})("login.html");
     return;
   }
 

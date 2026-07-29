@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) {
     alert("로그인이 필요합니다.");
-    location.href = "login.html";
+    (window.GALLA_nav||function(u){location.href=u})("login.html");
     return;
   }
   const userId = sessionData.session.user.id;

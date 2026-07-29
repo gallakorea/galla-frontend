@@ -20,8 +20,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { data } = await supa.auth.getSession();
   ME = data?.session?.user || null;
   if(!ME){
-    if(confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) location.href='login.html';
-    else location.href='galla-predict.html';
+    if(confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) (window.GALLA_nav||function(u){location.href=u})('login.html');
+    else (window.GALLA_nav||function(u){location.href=u})('galla-predict.html');
     return;
   }
   bindTabs();

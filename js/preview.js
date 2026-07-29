@@ -1,5 +1,5 @@
 const data = JSON.parse(sessionStorage.getItem('previewData'));
-if (!data) location.href = 'write.html';
+if (!data) (window.GALLA_nav||function(u){location.href=u})('write.html');
 
 document.getElementById('preview').innerHTML = `
   <section class="section-block">
@@ -17,6 +17,6 @@ document.getElementById('preview').innerHTML = `
   </section>
 
   <div class="field-block">
-    <button class="primary-btn" onclick="location.href='write.html'">수정하기</button>
+    <button class="primary-btn" onclick="(window.GALLA_nav||function(u){location.href=u})('write.html')">수정하기</button>
   </div>
 `;

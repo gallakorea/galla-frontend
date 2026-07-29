@@ -5,7 +5,7 @@
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = await waitForSupabaseClient();
   const { data: sess } = await supabase.auth.getSession();
-  if (!sess?.session) { alert("로그인이 필요합니다."); location.href = "login.html"; return; }
+  if (!sess?.session) { alert("로그인이 필요합니다."); (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
 
   const dailyWrapper = document.getElementById("daily-list");
   let MISSIONS = [];
@@ -219,7 +219,7 @@ async function paintInviteLb(sb) {
 
   if (!s?.session) {
     stats.textContent = "로그인하고 시작하세요";
-    copyBtn.onclick = shareBtn.onclick = () => (location.href = "login.html");
+    copyBtn.onclick = shareBtn.onclick = () => ((window.GALLA_nav||function(u){location.href=u})("login.html"));
     return;
   }
   const [{ data: code }, { data: st }] = await Promise.all([

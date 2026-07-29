@@ -55,7 +55,7 @@ async function initWriteDraftRestore(ctx) {
         sessionStorage.removeItem('__CURRENT_DRAFT_ID__');
         return;
       }
-      location.href = 'write.html';
+      (window.GALLA_nav||function(u){location.href=u})('write.html');
       return;
     }
 

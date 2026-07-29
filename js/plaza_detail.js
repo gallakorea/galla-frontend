@@ -228,7 +228,7 @@ async function fetchPostDetail() {
               if (patch.title != null && postTitleEl) postTitleEl.textContent = patch.title;
               if (patch.body != null && postContentEl) postContentEl.innerHTML = renderPostBody(patch.body);
             },
-            onDeleted: () => { location.href = "search.html?tab=plaza"; },
+            onDeleted: () => { (window.GALLA_nav||function(u){location.href=u})("search.html?tab=plaza"); },
           });
       });
     }
@@ -331,7 +331,7 @@ async function handleCommentVote(e) {
 
   const session = await getSessionSafe();
   if (!session?.user) {
-    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : location.href = "login.html");
+    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})("login.html"));
     return true;
   }
 
@@ -440,7 +440,7 @@ async function submitComment(body) {
   const user = session?.user || null;
   if (!user) {
     if (confirm("댓글을 쓰려면 로그인이 필요합니다. 로그인하시겠어요?")) {
-      window.GALLA_gotoLogin ? GALLA_gotoLogin() : (location.href = "login.html");
+      window.GALLA_gotoLogin ? GALLA_gotoLogin() : ((window.GALLA_nav||function(u){location.href=u})("login.html"));
     }
     return;
   }
@@ -489,7 +489,7 @@ async function loadGhostState() {
 }
 function promptGhostBuy() {
   if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요?")) {
-    if (window.openShop) window.openShop(); else location.href = "settings.html";
+    if (window.openShop) window.openShop(); else (window.GALLA_nav||function(u){location.href=u})("settings.html");
   }
 }
 window.GALLA_bindGhostToggle = function () {
@@ -796,7 +796,7 @@ async function initPlazaBookmark() {
   btn.addEventListener("click", async () => {
     const s = await getSessionSafe();
     if (!s?.user) {
-      if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : location.href = "login.html");
+      if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})("login.html"));
       return;
     }
     btn.disabled = true;

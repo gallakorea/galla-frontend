@@ -18,7 +18,7 @@
         m.innerHTML = '<div class="glm-card"><div class="glm-ico">🔒</div><div class="glm-title">로그인이 필요해요</div><div class="glm-msg"></div><div class="glm-btns"><button class="glm-cancel" type="button">닫기</button><button class="glm-go" type="button">로그인하기</button></div></div>';
         document.body.appendChild(m);
         m.addEventListener("click", (e) => { if (e.target === m || e.target.classList.contains("glm-cancel")) m.classList.remove("open"); });
-        m.querySelector(".glm-go").addEventListener("click", () => { location.href = "login.html"; });
+        m.querySelector(".glm-go").addEventListener("click", () => { (window.GALLA_nav||function(u){location.href=u})("login.html"); });
       }
       m.querySelector(".glm-msg").textContent = msg || "이 기능은 로그인 후 이용할 수 있어요.";
       requestAnimationFrame(() => m.classList.add("open"));
@@ -49,7 +49,7 @@
 
   async function toggle(btn) {
     const uid = btn.dataset.uid; if (!uid) return;
-    if (!myId) { window.GALLA_needLogin ? window.GALLA_needLogin("팔로우하려면 로그인이 필요해요.") : (location.href = "login.html"); return; }
+    if (!myId) { window.GALLA_needLogin ? window.GALLA_needLogin("팔로우하려면 로그인이 필요해요.") : ((window.GALLA_nav||function(u){location.href=u})("login.html")); return; }
     const on = follows.has(uid);
     if (on) follows.delete(uid); else follows.add(uid);
     // 같은 uid의 모든 버튼 동기화

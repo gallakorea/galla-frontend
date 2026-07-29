@@ -78,7 +78,7 @@ async function requirePlazaLogin() {
   const user = data?.session?.user || null;
   if (user) return user;
   if (confirm("글을 쓰려면 로그인이 필요합니다. 로그인하시겠어요?")) {
-    location.href = "login.html";
+    (window.GALLA_nav||function(u){location.href=u})("login.html");
   }
   return null;
 }
@@ -706,7 +706,7 @@ document.addEventListener("click", async (e) => {
   const { data: sess } = await supabase.auth.getSession();
   const session = sess?.session;
   if (!session?.user) {
-    if (confirm("투표하려면 로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    if (confirm("투표하려면 로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_nav||function(u){location.href=u})("login.html");
     return;
   }
 
@@ -742,7 +742,7 @@ document.addEventListener("click", async (e) => {
   const { data: sess } = await supabase.auth.getSession();
   const user = sess?.session?.user;
   if (!user) {
-    if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    if (confirm("저장하려면 로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_nav||function(u){location.href=u})("login.html");
     return;
   }
   const id = btn.dataset.id;

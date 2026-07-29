@@ -48,7 +48,7 @@
 
   function needLogin() {
     if (ME) return false;
-    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) location.href = "login.html";
+    if (confirm("로그인이 필요합니다. 로그인하시겠어요?")) (window.GALLA_nav||function(u){location.href=u})("login.html");
     return true;
   }
 

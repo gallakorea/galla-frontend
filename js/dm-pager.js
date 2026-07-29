@@ -141,7 +141,7 @@
       const p = e.target.closest('[data-p]')?.dataset.p;
       if (!p) return;
       close();
-      if (p === 'go') { if (window.GALLA_openPager) window.GALLA_openPager(); else location.href = 'dm.html?pager=1'; }
+      if (p === 'go') { if (window.GALLA_openPager) window.GALLA_openPager(); else (window.GALLA_nav||function(u){location.href=u})('dm.html?pager=1'); }
     };
     clearTimeout(el._t);
     el._t = setTimeout(close, 12000);

@@ -218,14 +218,14 @@
   // ═══════════ 신청 ═══════════
   async function renderChallenge(oppId, issueId) {
     teardown();
-    if (!ME) { alert("로그인이 필요합니다."); location.href = "login.html"; return; }
-    if (oppId === ME) { alert("자기 자신에게는 신청할 수 없어요."); location.href = "duel.html"; return; }
+    if (!ME) { alert("로그인이 필요합니다."); (window.GALLA_nav||function(u){location.href=u})("login.html"); return; }
+    if (oppId === ME) { alert("자기 자신에게는 신청할 수 없어요."); (window.GALLA_nav||function(u){location.href=u})("duel.html"); return; }
     /* 주제는 사용자가 짓는 게 아니라 '논쟁하던 그 이슈'에서 온다(사장님 룰).
        이슈 맥락 없이 들어온 신청(직접 URL 등)은 받지 않는다. */
-    if (!issueId) { alert("일기토는 논쟁 중인 이슈 댓글에서만 신청할 수 있어요."); location.href = "duel.html"; return; }
+    if (!issueId) { alert("일기토는 논쟁 중인 이슈 댓글에서만 신청할 수 있어요."); (window.GALLA_nav||function(u){location.href=u})("duel.html"); return; }
     const { data: issueRow } = await sb.from("issues").select("title").eq("id", +issueId).maybeSingle();
     const fixedTopic = (issueRow?.title || "").trim();
-    if (!fixedTopic) { alert("이슈를 찾을 수 없어요. 댓글에서 다시 신청해 주세요."); location.href = "duel.html"; return; }
+    if (!fixedTopic) { alert("이슈를 찾을 수 없어요. 댓글에서 다시 신청해 주세요."); (window.GALLA_nav||function(u){location.href=u})("duel.html"); return; }
     await loadNicks([oppId]);
     root().innerHTML = `
       <div class="duel-card challenge-card">
@@ -263,7 +263,7 @@
     seg("seg-stake", v => stake = +v); seg("seg-limit", v => limit = +v);
     seg("seg-when", v => { when = v; $("#ch-time").style.display = v === "scheduled" ? "" : "none"; });
 
-    $("#ch-cancel").onclick = () => history.length > 1 ? history.back() : (location.href = "duel.html");
+    $("#ch-cancel").onclick = () => history.length > 1 ? history.back() : ((window.GALLA_nav||function(u){location.href=u})("duel.html"));
     $("#ch-send").onclick = async () => {
       const topic = fixedTopic.slice(0, 140);   // 임의 작성 불가 — 이슈 제목 고정
       let sched = null;

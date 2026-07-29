@@ -48,7 +48,7 @@ async function GALLA_mypageInit(root, spaParams) {
         // SPA(app.html): 문서 이탈 없이 로그인 뷰 push. MPA는 기존 그대로.
         if (document.body.dataset.page === "spa" && window.GALLA_gotoLogin) { window.GALLA_gotoLogin("mypage"); return; }
         if (!document.body.classList.contains("in-shell")) alert("로그인이 필요합니다."); // 셸 백그라운드 판에선 알럿이 셸 전체를 덮는다
-        location.href = "login.html";
+        (window.GALLA_nav||function(u){location.href=u})("login.html");
         return;
     }
 
@@ -87,18 +87,18 @@ async function GALLA_mypageInit(root, spaParams) {
         const editBtn = document.createElement("button");
         editBtn.className = "action-btn primary";
         editBtn.textContent = "프로필 편집";
-        editBtn.onclick = () => location.href = "account-edit.html";
+        editBtn.onclick = () => (window.GALLA_nav||function(u){location.href=u})("account-edit.html");
 
         const missionBtn = document.createElement("button");
         missionBtn.className = "action-btn secondary";
         missionBtn.textContent = "오늘의 미션";
-        missionBtn.onclick = () => location.href = "quest.html";
+        missionBtn.onclick = () => (window.GALLA_nav||function(u){location.href=u})("quest.html");
 
         /* 상점 직행 — 기존엔 설정 안까지 들어가야 했다(사장님 UX 지적) */
         const shopBtn = document.createElement("button");
         shopBtn.className = "action-btn secondary";
         shopBtn.textContent = "🛒 상점";
-        shopBtn.onclick = () => window.openShop ? window.openShop() : (location.href = "settings.html");
+        shopBtn.onclick = () => window.openShop ? window.openShop() : ((window.GALLA_nav||function(u){location.href=u})("settings.html"));
 
         profileActions.appendChild(editBtn);
         profileActions.appendChild(missionBtn);
@@ -248,7 +248,7 @@ async function GALLA_mypageInit(root, spaParams) {
             const close = () => { navHide(false); ov.classList.remove("on"); setTimeout(() => ov.remove(), 240); };
             ov.querySelector(".av-x").onclick = close;
             ov.querySelector(".av-scrim").onclick = close;
-            const penEl = ov.querySelector(".av-pen"); if (penEl) penEl.onclick = () => { location.href = "account-edit.html"; };
+            const penEl = ov.querySelector(".av-pen"); if (penEl) penEl.onclick = () => { (window.GALLA_nav||function(u){location.href=u})("account-edit.html"); };
             const copyLink = () => {
                 try { navigator.clipboard.writeText(profileUrl); } catch (_) { }
                 (window.GALLA_toast || alert)("🔗 프로필 링크 복사됨");
@@ -260,7 +260,7 @@ async function GALLA_mypageInit(root, spaParams) {
                         if (navigator.share) navigator.share({ title: nick || "GALLA", url: profileUrl }).catch(() => { });
                         else copyLink();
                     } else if (a === "copy") { copyLink(); }
-                    else if (a === "edit") { location.href = "account-edit.html"; }
+                    else if (a === "edit") { (window.GALLA_nav||function(u){location.href=u})("account-edit.html"); }
                 };
             });
             // 아래로 쓸어내리면 닫기

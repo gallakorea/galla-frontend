@@ -75,7 +75,7 @@
 
     el.querySelector('.pcl-write').onclick = () => {
       if (window.openWriteHub) window.openWriteHub('galla');
-      else location.href = 'write.html';
+      else (window.GALLA_nav||function(u){location.href=u})('write.html');
     };
     el.querySelector('#pclBug').onclick = async e => {
       e.preventDefault();

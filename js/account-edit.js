@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!session?.user) {
     alert("로그인이 필요합니다.");
-    location.href = "login.html";
+    (window.GALLA_nav||function(u){location.href=u})("login.html");
     return;
   }
 
@@ -202,7 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       alert("계정 정보가 저장되었습니다.");
-      location.href = "mypage.html";
+      (window.GALLA_nav||function(u){location.href=u})("mypage.html");
 
     } catch (err) {
       console.error("[account-edit] unexpected error", err);

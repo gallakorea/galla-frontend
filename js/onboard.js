@@ -91,7 +91,7 @@
           // 로그인 전 선택 → 보류 저장 후 가입으로. 로그인 직후 위 applyPending()이 확정.
           try { localStorage.setItem(PEND, JSON.stringify({ issue_id: iss.id, type: type })); } catch (e) {}
           btn.querySelector("b").textContent = "✓ 선택됨";
-          setTimeout(function () { location.href = "signup.html"; }, 550);
+          setTimeout(function () { (window.GALLA_nav||function(u){location.href=u})("signup.html"); }, 550);
         }
       };
     });

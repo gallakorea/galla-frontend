@@ -223,7 +223,7 @@
     stopMusic();
     var done = function () {
       window.__gtour = null;
-      if (goSignup) { try { location.href = "signup.html"; } catch (e) {} }
+      if (goSignup) { try { (window.GALLA_nav||function(u){location.href=u})("signup.html"); } catch (e) {} }
     };
     if (!ov) return void done();
     if (ov._key) document.removeEventListener("keydown", ov._key);

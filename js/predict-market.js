@@ -23,7 +23,7 @@ function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 function isMulti(){return MARKET && MARKET.market_type==='multi';}
 function ago(ts){const s=Math.floor((Date.now()-new Date(ts))/1000);if(s<60)return '방금';if(s<3600)return Math.floor(s/60)+'분 전';if(s<86400)return Math.floor(s/3600)+'시간 전';return Math.floor(s/86400)+'일 전';}
 function timeLeft(c){const ms=new Date(c)-Date.now();if(ms<=0)return '마감됨';const d=Math.floor(ms/86400000);if(d>=1)return `D-${d}`;const h=Math.floor(ms/3600000);return h>=1?`${h}시간 남음`:`${Math.max(1,Math.floor(ms/60000))}분 남음`;}
-function needLogin(){ if(ME) return false; if(confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : location.href='login.html'); return true; }
+function needLogin(){ if(ME) return false; if(confirm('로그인이 필요합니다. 로그인 페이지로 이동할까요?')) (window.GALLA_gotoLogin ? GALLA_gotoLogin() : (window.GALLA_nav||function(u){location.href=u})('login.html')); return true; }
 function comboMult(n){ return n>=10?2.5:n>=5?1.8:n>=3?1.4:n>=2?1.2:1; }
 function ocLabel(id){ const o=OUTCOMES.find(x=>x.id===Number(id)); return o?o.label:''; }
 // 이진 마켓의 '예'가 sort 0 — 사이드 클래스(색)용
@@ -108,7 +108,7 @@ async function loadMarket(){
           { key:'close_at', label:'마감 시각', type:'datetime', value:m.close_at||'' },
         ],
         onSaved:()=>location.reload(),
-        onDeleted:()=>{ location.href='galla-predict.html'; },
+        onDeleted:()=>{ (window.GALLA_nav||function(u){location.href=u})('galla-predict.html'); },
       });
     });
   }

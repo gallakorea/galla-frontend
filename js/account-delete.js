@@ -8,7 +8,7 @@
     if (!sb) { alert('잠시 후 다시 시도해 주세요.'); return; }
 
     const sess = (await sb.auth.getSession()).data.session;
-    if (!sess) { alert('로그인 후 이용할 수 있어요.'); location.href = 'login.html'; return; }
+    if (!sess) { alert('로그인 후 이용할 수 있어요.'); (window.GALLA_nav||function(u){location.href=u})('login.html'); return; }
 
     if (!confirm('정말 계정을 삭제할까요?\n\n· 로그인 수단과 이메일·전화번호가 즉시 삭제되고\n· 다시 로그인할 수 없습니다.\n· 이 작업은 되돌릴 수 없어요.')) return;
     const typed = prompt('삭제를 확정하려면 아래에 "삭제"라고 입력해 주세요.');

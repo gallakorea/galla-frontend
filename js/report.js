@@ -84,7 +84,7 @@
       const { data: sess } = await sb().auth.getSession();
       if (!sess?.session) {
         if (confirm("로그인이 필요해요. 로그인할까요?")) {
-          if (IS_SPA() && window.GALLA_SPA) window.GALLA_SPA.push("login"); else location.href = "login.html";
+          if (IS_SPA() && window.GALLA_SPA) window.GALLA_SPA.push("login"); else (window.GALLA_nav||function(u){location.href=u})("login.html");
         }
         return;
       }

@@ -50,7 +50,7 @@ function promptLogin() {
   if (__voteLoginPrompted) return;
   __voteLoginPrompted = true;
   const go = confirm("로그인이 필요합니다. 로그인 페이지로 이동할까요?");
-  if (go) location.href = "login.html";
+  if (go) (window.GALLA_nav||function(u){location.href=u})("login.html");
   setTimeout(() => { __voteLoginPrompted = false; }, 500);
 }
 

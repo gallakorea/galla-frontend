@@ -250,7 +250,7 @@
         ghToast(`👻 <b>유령권이 필요해요</b><br><small>상점에서 3일권(800GP)부터 구매할 수 있어요</small>`);
         setTimeout(() => {
           if (confirm("👻 유령으로 활동하려면 유령권이 필요해요.\n상점에서 유령권을 구매할까요? (3일 800GP~)")) {
-            if (window.openShop) window.openShop(); else location.href = "settings.html";
+            if (window.openShop) window.openShop(); else (window.GALLA_nav||function(u){location.href=u})("settings.html");
           }
         }, 350);
         return;
@@ -275,7 +275,7 @@
       btn?.classList.remove("on");
       window.__GHOST_ST = { active: false };
       if (confirm("👻 유령권이 만료됐어요. 상점에서 다시 구매할까요?")) {
-        if (window.openShop) window.openShop(); else location.href = "settings.html";
+        if (window.openShop) window.openShop(); else (window.GALLA_nav||function(u){location.href=u})("settings.html");
       }
       return true;
     }

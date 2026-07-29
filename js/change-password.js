@@ -13,7 +13,7 @@
       const c = sb(); if (!c) return;
       try {
         const { data } = await c.auth.getSession();
-        if (!data?.session) { alert("로그인이 필요합니다."); location.href = "login.html"; }
+        if (!data?.session) { alert("로그인이 필요합니다."); (window.GALLA_nav||function(u){location.href=u})("login.html"); }
       } catch (e) {}
     })();
 
@@ -31,7 +31,7 @@
         const { error } = await c.auth.updateUser({ password: np });
         if (error) throw error;
         alert("비밀번호가 변경되었습니다.");
-        history.length > 1 ? history.back() : (location.href = "settings.html");
+        history.length > 1 ? history.back() : ((window.GALLA_nav||function(u){location.href=u})("settings.html"));
       } catch (e) {
         const msg = (e && e.message) || "";
         if (/same/i.test(msg)) alert("기존 비밀번호와 동일합니다. 다른 비밀번호를 입력해주세요.");
