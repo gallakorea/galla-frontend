@@ -17,12 +17,12 @@
   <!-- 🚀 P4 확정: 앱/PWA 진입은 단일문서 SPA(app.html)가 기본. localStorage galla_spa=0 이면
        구 iframe 셸 폴백(긴급 롤백용). 웹 브라우저는 이 파일에 안 오므로 MPA 무영향. -->
   <script>try{ if(localStorage.getItem('galla_spa')!=='0'){ var t=new URLSearchParams(location.search).get('tab'); location.replace('app.html'+(t?('#/'+t):'')); } }catch(e){}</script>
-  <script src="/js/splash-boot.js?v=073101&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=073101">
-  <link rel="stylesheet" href="./css/nav.css?v=073101">
+  <script src="/js/splash-boot.js?v=073102&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=073102">
+  <link rel="stylesheet" href="./css/nav.css?v=073102">
   <!-- 📞 통화 UI(#dm-call) — 엔진이 최상위에서 돌므로 스타일도 최상위에 필요 -->
-  <link rel="stylesheet" href="./css/dm.css?v=073101">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=073101">
+  <link rel="stylesheet" href="./css/dm.css?v=073102">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=073102">
   <style>
     /* ═══ 🐚 갈라 탭 셸 — 5개 탭이 iframe으로 상주, 전환은 트랙 이동뿐(로딩 0) ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -453,7 +453,7 @@
   setTimeout(() => { try { document.dispatchEvent(new Event("galla:ready")); } catch (_) {} }, 400);
 })();
 </script>
-<script src="./js/nav-jog.js?v=073101" defer></script>
+<script src="./js/nav-jog.js?v=073102" defer></script>
 <script>
 /* 🔄 버전 자동 감지 — 새 배포가 뜨면 셸을 통째로 리로드해 '옛 판(iframe) 잔류'와
    네이티브 앱 웹뷰 캐시를 해소한다(웹은 pwa.js가 처리, 앱 WKWebView는 controllerchange가
@@ -511,17 +511,17 @@
 })();
 </script>
 <!-- 🎪 첫 진입 풀스크린 오리엔테이션(최초 1회) — 이후엔 인덱스 상단 인라인 배너(index-guide) -->
-<script src="./js/tour.js?v=073101"></script>
+<script src="./js/tour.js?v=073102"></script>
 
 <!-- 📞 통화 엔진(최상위) — 네이티브 앱에선 여기서만 네이티브 WebRTC/CallKit로 통화가 돈다.
      supabase 클라(세션 공유) → 수신음 → dm-call 엔진(autoBoot: supabaseClient 뜨면 수신 대기).
      발신은 판(iframe)이 postMessage(callstart)로 넘기고, 이 프레임의 GALLA_call.start가 처리. -->
-<script src="/js/ota.js?v=073101"></script><!-- 📦 OTA 무선 업데이트(네이티브 번들 전용) -->
-<script src="./vendor/supabase.js?v=073101"></script>
-<script src="./js/supabase.js?v=073101"></script>
-<script src="./js/dm-sound.js?v=073101" data-galla-sfx="1"></script>
+<script src="/js/ota.js?v=073102"></script><!-- 📦 OTA 무선 업데이트(네이티브 번들 전용) -->
+<script src="./vendor/supabase.js?v=073102"></script>
+<script src="./js/supabase.js?v=073102"></script>
+<script src="./js/dm-sound.js?v=073102" data-galla-sfx="1"></script>
 <!-- 📞 통화 미디어 = DIY iosrtc. Agora 웹SDK 미사용(CallKit 잠금답변 충돌) — 로드 제거. -->
-<!-- <script src="./js/agora-media.js?v=073101"></script> -->
-<script src="./js/dm-call.js?v=073101"></script>
+<!-- <script src="./js/agora-media.js?v=073102"></script> -->
+<script src="./js/dm-call.js?v=073102"></script>
 </body>
 </html>
