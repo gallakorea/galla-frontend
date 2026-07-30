@@ -1370,7 +1370,7 @@ async function GALLA_mypageInit(root, spaParams) {
                     ${subOf ? `<span class="mp-sh-v">${esc(subOf(r))}</span>` : ""}
                 </div>`;
             }).join("");
-            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-shelf">${cells}</div></section>`;
+            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-sh-grid">${cells}</div></section>`;
         };
         // 애플 뮤직식 리스트 — 예측·광장 공용(작은 아트워크 + 제목 + 서브). 썸네일 없으면 유형 글리프.
         const GLYPH = {
@@ -1400,7 +1400,7 @@ async function GALLA_mypageInit(root, spaParams) {
                     <div class="mp-lv-tt">${esc(r.title || r.caption || "제목 없음")}</div>
                     <div class="mp-lv-meta">${views(r.view_count)} · ${ago(r.created_at)}</div>
                 </div>`).join("");
-            sections.push(`<section class="mp-yt-sec">${head("롱판", "long")}<div class="mp-lshelf">${rows}</div></section>`);
+            sections.push(`<section class="mp-yt-sec">${head("롱판", "long")}<div class="mp-lv-list">${rows}</div></section>`);
         }
         if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
         if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
