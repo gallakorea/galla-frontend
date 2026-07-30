@@ -7,6 +7,8 @@
 (function () {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol === 'file:') return;
+  // 📦 로컬 번들(네이티브 앱)로 로드된 경우 SW 불필요 — 자산이 이미 로컬. 웹/원격로딩은 그대로 등록.
+  if (location.protocol === 'capacitor:' || location.hostname === 'localhost') return;
 
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
