@@ -66,3 +66,39 @@
 
 .grl-loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: #888; }
 .grl-end { height: 100dvh; scroll-snap-align: start; display: flex; align-items: center; justify-content: center; color: #888; font-size: 14px; text-align: center; line-height: 1.7; }
+
+/* ── 릴스 댓글 바텀시트 ── */
+.grl-cdim { position: fixed; inset: 0; z-index: 3200; background: rgba(0,0,0,.5);
+  display: flex; align-items: flex-end; opacity: 0; transition: opacity .2s ease; }
+.grl-cdim.on { opacity: 1; }
+.grl-csheet { width: 100%; max-width: 640px; margin: 0 auto; background: #101014;
+  border-radius: 20px 20px 0 0; max-height: 76vh; display: flex; flex-direction: column;
+  transform: translateY(100%); transition: transform .26s cubic-bezier(.32,.72,0,1); }
+.grl-cdim.on .grl-csheet { transform: none; }
+.grl-cgrip { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.22); margin: 8px auto 2px; }
+.grl-chead { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 10px;
+  font-size: 15px; font-weight: 900; color: #f0f0f4; border-bottom: 1px solid rgba(255,255,255,.06); }
+.grl-chead b { color: #9aa0b0; }
+.grl-cx { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; line-height: 1; }
+.grl-clist { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 0; }
+.grl-cempty { text-align: center; color: #888; padding: 40px 20px; font-size: 14px; }
+.grl-c { display: flex; gap: 10px; padding: 10px 16px; align-items: flex-start; }
+.grl-cava { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #222; flex: 0 0 auto; }
+.grl-cmain { flex: 1; min-width: 0; }
+.grl-cnick { font-size: 13px; font-weight: 800; color: #eef1f8; }
+.grl-cnick span { font-size: 11px; color: #888; font-weight: 600; margin-left: 6px; }
+.grl-cbody { font-size: 14.5px; color: #e2e5ec; line-height: 1.5; margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+.grl-clike { flex: 0 0 auto; background: none; border: none; cursor: pointer; color: #8b8b93;
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 2px; }
+.grl-clike svg { width: 17px; height: 17px; }
+.grl-clike b { font-size: 11px; font-weight: 700; }
+.grl-clike.on { color: #ff3b5c; }
+.grl-clike.on svg { fill: #ff3b5c; }
+.grl-cbar { display: flex; gap: 8px; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255,255,255,.07); background: #101014; }
+.grl-cbar input { flex: 1; padding: 12px 15px; border-radius: 999px; font-size: 15px;
+  background: #0a0a0f; border: 1px solid #232330; color: #fff; }
+.grl-cbar input:focus { outline: none; border-color: #3b82f6; }
+.grl-cbar button { border: none; background: #3b82f6; color: #fff; font-weight: 800; font-size: 14px;
+  padding: 11px 18px; border-radius: 999px; cursor: pointer; }
+.grl-cbar button[disabled] { opacity: .5; }

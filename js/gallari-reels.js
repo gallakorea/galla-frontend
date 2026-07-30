@@ -23,9 +23,8 @@
   let MUTED = true, ME = null, sb = null, PROF = {};
 
   function getStart() {
-    const s = new URLSearchParams(location.search); let t = s.get('start'), ty = s.get('t');
-    if (!t) { const h = location.hash || ''; const qi = h.indexOf('?'); if (qi >= 0) { const q = new URLSearchParams(h.slice(qi + 1)); t = q.get('start'); ty = q.get('t'); } }
-    return t ? { id: t, type: ty || 'post' } : null;
+    const g = (k) => { let v = new URLSearchParams(location.search).get(k); if (!v) { const h = location.hash || ''; const qi = h.indexOf('?'); if (qi >= 0) v = new URLSearchParams(h.slice(qi + 1)).get(k); } return v; };
+    return { id: g('start') || null, type: g('t') || 'post', user: g('user') || null };
   }
 
   async function initReels() {
@@ -36,27 +35,34 @@
     const { data: sess } = await sb.auth.getSession();
     ME = sess?.session?.user?.id || null;
 
-    // 데이터: 숏판(posts) + 이슈 영상
-    const [{ data: posts }, { data: issues }] = await Promise.all([
-      sb.from('posts').select('id,user_id,caption,images,video_url,thumbnail_url,like_count,comment_count,created_at')
-        .eq('kind', 'vertical').eq('is_published', true).neq('moderation_status', 'blocked')
-        .order('created_at', { ascending: false }).limit(24),
-      sb.from('issues').select('id,user_id,title,video_url,thumbnail_url,category,faction_a,faction_b,pro_count,con_count,created_at')
-        .not('video_url', 'is', null).eq('status', 'normal').order('created_at', { ascending: false }).limit(24),
-    ]);
-    const P = (posts || []).map(p => ({ _type: 'post', ...p }));
-    const I = (issues || []).map(i => ({ _type: 'issue', ...i }));
-    // 인터리브: 숏판 2 : 이슈 1 리듬
-    const feed = [];
-    let pi = 0, ii = 0;
-    while (pi < P.length || ii < I.length) {
-      if (pi < P.length) feed.push(P[pi++]);
-      if (pi < P.length) feed.push(P[pi++]);
-      if (ii < I.length) feed.push(I[ii++]);
+    const st = getStart();
+    let feed = [];
+    if (st.user) {
+      // 👤 특정 유저의 숏판만 순차 (마이페이지/프로필에서 진입) — 이슈 섞지 않음
+      const { data: posts } = await sb.from('posts').select('id,user_id,caption,images,video_url,thumbnail_url,like_count,comment_count,created_at')
+        .eq('kind', 'vertical').eq('user_id', st.user).eq('is_published', true).neq('moderation_status', 'blocked')
+        .order('created_at', { ascending: false }).limit(60);
+      feed = (posts || []).map(p => ({ _type: 'post', ...p }));
+    } else {
+      // 🌐 통합(숏판 + 이슈 영상) 인터리브 2:1
+      const [{ data: posts }, { data: issues }] = await Promise.all([
+        sb.from('posts').select('id,user_id,caption,images,video_url,thumbnail_url,like_count,comment_count,created_at')
+          .eq('kind', 'vertical').eq('is_published', true).neq('moderation_status', 'blocked')
+          .order('created_at', { ascending: false }).limit(24),
+        sb.from('issues').select('id,user_id,title,video_url,thumbnail_url,category,faction_a,faction_b,pro_count,con_count,created_at')
+          .not('video_url', 'is', null).eq('status', 'normal').order('created_at', { ascending: false }).limit(24),
+      ]);
+      const P = (posts || []).map(p => ({ _type: 'post', ...p }));
+      const I = (issues || []).map(i => ({ _type: 'issue', ...i }));
+      let pi = 0, ii = 0;
+      while (pi < P.length || ii < I.length) {
+        if (pi < P.length) feed.push(P[pi++]);
+        if (pi < P.length) feed.push(P[pi++]);
+        if (ii < I.length) feed.push(I[ii++]);
+      }
     }
     // 시작 항목 우선 배치
-    const st = getStart();
-    if (st) {
+    if (st.id) {
       const idx = feed.findIndex(x => String(x.id) === String(st.id) && x._type === st.type);
       if (idx > 0) { const [it] = feed.splice(idx, 1); feed.unshift(it); }
     }
@@ -194,34 +200,50 @@
     root.querySelectorAll('.grl-slide').forEach(s => io.observe(s));
   }
 
-  /* ── 댓글 시트(숏판, 일반 댓글) ── */
+  /* ── 댓글 시트(숏판, 일반 댓글) — 바텀시트 + 좋아요/시간, 깔끔 UI ── */
   async function openComments(x, slideEl) {
-    let dim = document.getElementById('grl-cdim');
-    if (!dim) { dim = document.createElement('div'); dim.id = 'grl-cdim'; document.body.appendChild(dim); }
-    dim.className = 'glp'; // 재사용: gallari-post.css 없으니 인라인 스타일
-    dim.style.cssText = 'position:fixed;inset:0;z-index:3200;background:rgba(0,0,0,.5);display:flex;align-items:flex-end';
-    dim.innerHTML = `<div style="width:100%;max-width:640px;margin:0 auto;background:#0e0e12;border-radius:18px 18px 0 0;max-height:80vh;display:flex;flex-direction:column">
-      <div style="padding:12px;text-align:center;font-weight:900;color:#eee;border-bottom:1px solid rgba(255,255,255,.06)">댓글 <span id="grl-cc"></span> <button id="grl-cx" style="float:right;background:none;border:none;color:#888;font-size:20px">✕</button></div>
-      <div id="grl-clist" style="flex:1;overflow:auto;padding:6px 0"><div style="text-align:center;color:#888;padding:30px">불러오는 중…</div></div>
-      <div style="display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.07)">
-        <input id="grl-cin" placeholder="${ME ? '댓글 달기…' : '로그인하고 댓글'}" ${ME ? '' : 'disabled'} style="flex:1;padding:11px 14px;border-radius:999px;background:#0a0a0f;border:1px solid #1c1c1c;color:#fff;font-size:15px">
-        <button id="grl-csend" ${ME ? '' : 'disabled'} style="border:none;background:#3b82f6;color:#fff;font-weight:800;padding:10px 16px;border-radius:999px">게시</button>
+    document.getElementById('grl-cdim')?.remove();
+    const dim = document.createElement('div'); dim.id = 'grl-cdim'; dim.className = 'grl-cdim';
+    dim.innerHTML = `<div class="grl-csheet">
+      <div class="grl-cgrip"></div>
+      <div class="grl-chead"><span>댓글 <b id="grl-cc"></b></span><button class="grl-cx" id="grl-cx" aria-label="닫기">✕</button></div>
+      <div class="grl-clist" id="grl-clist"><div class="grl-cempty">불러오는 중…</div></div>
+      <div class="grl-cbar">
+        <input id="grl-cin" placeholder="${ME ? '따뜻한 댓글 남기기…' : '로그인하고 댓글'}" ${ME ? '' : 'disabled'}>
+        <button id="grl-csend" ${ME ? '' : 'disabled'}>게시</button>
       </div></div>`;
-    dim.onclick = (e) => { if (e.target === dim) dim.remove(); };
-    dim.querySelector('#grl-cx').onclick = () => dim.remove();
+    document.body.appendChild(dim);
+    requestAnimationFrame(() => dim.classList.add('on'));
+    const close = () => { dim.classList.remove('on'); setTimeout(() => dim.remove(), 220); };
+    dim.addEventListener('click', (e) => { if (e.target === dim) close(); });
+    dim.querySelector('#grl-cx').onclick = close;
 
     const list = dim.querySelector('#grl-clist');
     const load = async () => {
-      const { data: cs } = await sb.from('post_comments').select('id,user_id,body,like_count,created_at').eq('post_id', x.id).is('parent_id', null).order('created_at', { ascending: false }).limit(200);
+      const [{ data: cs }, myLikes] = await Promise.all([
+        sb.from('post_comments').select('id,user_id,body,like_count,created_at').eq('post_id', x.id).is('parent_id', null).order('created_at', { ascending: false }).limit(200),
+        Promise.resolve({ data: [] }),
+      ]);
       dim.querySelector('#grl-cc').textContent = (cs || []).length || '';
-      if (!cs || !cs.length) { list.innerHTML = '<div style="text-align:center;color:#888;padding:30px">첫 댓글을 남겨보세요.</div>'; return; }
+      if (!cs || !cs.length) { list.innerHTML = '<div class="grl-cempty">첫 댓글을 남겨보세요 💬</div>'; return; }
       const uids = [...new Set(cs.map(c => c.user_id))];
       const { data: us } = await sb.from('users').select('id,nickname,avatar_url').in('id', uids);
       const U = {}; (us || []).forEach(u => U[u.id] = u);
+      const liked = new Set();
+      if (ME) { const { data: ml } = await sb.from('post_comment_likes').select('comment_id').eq('user_id', ME).in('comment_id', cs.map(c => c.id)); (ml || []).forEach(r => liked.add(r.comment_id)); }
       list.innerHTML = cs.map(c => { const u = U[c.user_id] || {};
-        return `<div style="display:flex;gap:10px;padding:9px 14px"><img src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url, 72) : (u.avatar_url || ''))}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:#222" onerror="this.style.visibility='hidden'">
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:#eef1f8">${esc(u.nickname || '익명')} <span style="font-size:11px;color:#888;font-weight:600">${timeago(c.created_at)}</span></div>
-        <div style="font-size:14px;color:#dfe3ec;margin-top:2px;white-space:pre-wrap;word-break:break-word">${esc(c.body)}</div></div></div>`; }).join('');
+        return `<div class="grl-c"><img class="grl-cava" src="${esc(window.GALLA_avatarSrc ? window.GALLA_avatarSrc(u.avatar_url, 72) : (u.avatar_url || ''))}" onerror="this.style.visibility='hidden'">
+          <div class="grl-cmain"><div class="grl-cnick">${esc(u.nickname || '익명')}<span>${timeago(c.created_at)}</span></div>
+            <div class="grl-cbody">${esc(c.body)}</div></div>
+          <button class="grl-clike${liked.has(c.id) ? ' on' : ''}" data-cid="${c.id}">${IC.heart}<b>${c.like_count || 0}</b></button></div>`;
+      }).join('');
+      list.querySelectorAll('.grl-clike').forEach(b => b.addEventListener('click', async () => {
+        if (!ME) { alert('로그인이 필요해요.'); return; }
+        const cid = Number(b.dataset.cid), cnt = b.querySelector('b');
+        const on = b.classList.toggle('on'); cnt.textContent = Math.max(0, Number(cnt.textContent) + (on ? 1 : -1));
+        const r = on ? await sb.from('post_comment_likes').insert({ comment_id: cid, user_id: ME }) : await sb.from('post_comment_likes').delete().eq('comment_id', cid).eq('user_id', ME);
+        if (r.error && r.error.code !== '23505') { const back = b.classList.toggle('on'); cnt.textContent = Math.max(0, Number(cnt.textContent) + (back ? 1 : -1)); }
+      }));
     };
     load();
     const send = dim.querySelector('#grl-csend'), inp = dim.querySelector('#grl-cin');
@@ -232,9 +254,10 @@
       send.disabled = false;
       if (error) { alert('등록 실패'); return; }
       inp.value = ''; load();
+      try { window.BattleFX?.haptic?.('tap'); } catch (_) {}
       const cc = slideEl.querySelector('.grl-comment .cc'); if (cc) cc.textContent = Number(cc.textContent || 0) + 1;
     };
-    send.onclick = submit; inp.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
+    send.onclick = submit; inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } };
   }
 
   /* ── 상단바(뒤로·음소거)는 슬라이드 위 고정 오버레이 1개 ── */
@@ -248,6 +271,7 @@
     bar.querySelectorAll('button').forEach(b => b.style.pointerEvents = 'auto');
     document.body.appendChild(bar);
     bar.querySelector('#grl-back').onclick = () => {
+      navHide(false);
       document.getElementById('grl-chrome')?.remove();
       if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop && window.GALLA_SPA.pop()) return;
       if (history.length > 1) history.back(); else nav('index.html');
@@ -259,7 +283,13 @@
     };
   }
 
-  async function boot() { await initReels(); chrome(); }
+  function navHide(on) { try { window.GALLA_SPA && window.GALLA_SPA.navHide && window.GALLA_SPA.navHide(on); } catch (_) {} }
+  async function boot() {
+    navHide(true);                                  // 릴스 진입 = 하단 네비 숨김(몰입)
+    window.__grlRestoreNav = () => navHide(false);
+    window.addEventListener('popstate', function once() { window.removeEventListener('popstate', once); navHide(false); });
+    await initReels(); chrome();
+  }
   window.GALLA_PAGE_GALLARI_REELS = { init: boot };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
