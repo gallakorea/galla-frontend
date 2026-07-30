@@ -123,3 +123,15 @@ body {
 .ach-status { font-size: 10.5px; font-weight: 900; padding: 3px 10px; border-radius: 999px; }
 .ach-status.done { color: #55e6ae; background: rgba(53,224,160,.1); border: 1px solid rgba(53,224,160,.4); }
 .ach-status.locked { color: #5c5c62; background: rgba(255,255,255,.04); border: 1px solid #26262e; }
+
+/* 🎬 창작자 트랙 카드 (등급 병행) */
+#creatorTrackCard { margin: 12px 0; padding: 16px; border-radius: 16px;
+  background: linear-gradient(160deg, rgba(168,85,247,.14), rgba(59,130,246,.06)), #121319;
+  border: 1px solid rgba(168,85,247,.3); }
+#creatorTrackCard .ct-head { display: flex; align-items: center; gap: 12px; }
+#creatorTrackCard .ct-emoji { font-size: 30px; }
+#creatorTrackCard .ct-name { font-size: 17px; font-weight: 900; color: #f0e6ff; }
+#creatorTrackCard .ct-sub { font-size: 12px; color: #b7a6d8; margin-top: 2px; }
+#creatorTrackCard .ct-bar { margin-top: 12px; height: 8px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+#creatorTrackCard .ct-fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #a855f7, #6366f1); transition: width .5s ease; }
+#creatorTrackCard .ct-goal { margin-top: 8px; font-size: 12.5px; font-weight: 700; color: #cbb8ee; }

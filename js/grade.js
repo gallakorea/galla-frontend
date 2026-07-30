@@ -46,9 +46,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     setW("giActivity", Math.round((g.parts.activity / total) * 100));
     setW("giBattle",   Math.round((g.parts.battle   / total) * 100));
     setW("giPredict",  Math.round((g.parts.predict  / total) * 100));
+    setW("giCreator",  Math.round(((g.parts.creator || 0) / total) * 100));
     set("giActivityText", `${g.parts.activity.toLocaleString()} GI`);
     set("giBattleText",   `${g.parts.battle.toLocaleString()} GI`);
     set("giPredictText",  `${g.parts.predict.toLocaleString()} GI`);
+    set("giCreatorText",  `${(g.parts.creator || 0).toLocaleString()} GI`);
+
+    // 🎬 창작자 트랙 카드
+    const ct = g.creatorTrack;
+    const ctCard = document.getElementById("creatorTrackCard");
+    if (ct && ctCard) {
+      ctCard.hidden = false;
+      set("ctEmoji", ct.tier.emoji);
+      set("ctName", ct.tier.name);
+      set("ctSub", `창작자 등급 · 창작 지수 ${ct.score.toLocaleString()}`);
+      setW("ctFill", ct.progress);
+      set("ctGoal", ct.next ? `${ct.next.emoji} ${ct.next.name}까지 ${ct.remaining.toLocaleString()} 창작 지수` : "최고 창작 등급 도달 👑");
+    }
 
     // 등급 사다리: 각 등급에 필요 갈라 지수(GI) 표시 — 위로 갈수록 급격히 어려워짐을 시각화
     (window.GALLA_GALLIAN_TIERS || []).forEach(t => {

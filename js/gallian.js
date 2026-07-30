@@ -27,13 +27,14 @@
   window.GALLA_gallianOf = async function (supabase, userId) {
     const cnt = (t, col) => supabase.from(t).select(col || "id", { count: "exact", head: true }).eq("user_id", userId);
     const [
-      issuesR, commentsR, votesR, ppR, pcR, actsR, tradesR, balR, meritR
+      issuesR, commentsR, votesR, ppR, pcR, actsR, tradesR, balR, meritR, cstatR
     ] = await Promise.all([
       cnt("issues"), cnt("comments"), cnt("votes"),
       cnt("plaza_posts"), cnt("plaza_comments"),
       cnt("comment_actions"), cnt("predict_bets"),   // 파리뮤추얼 전환: market_trades → predict_bets
       supabase.from("point_balances").select("balance").eq("user_id", userId).maybeSingle(),
       supabase.rpc("battle_merit_stats", { p_user: userId }),  // 전공(격파·어시·수호)
+      supabase.rpc("creator_stats", { p_user: userId }),       // 🎬 창작(숏판/롱판) 지표
     ]);
 
     const issues = issuesR.count || 0;
@@ -50,7 +51,29 @@
     const battle = acts * 8 + (merits.ko | 0) * 30 + (merits.assist | 0) * 10 + (merits.guard | 0) * 12;
     // 예측 지수는 거래 활동만 반영 — 보유 잔액과 분리(소비해도 등급 안 떨어짐)
     const predict = trades * 10;
-    const gi = activity + battle + predict;
+    // 🎬 창작 지수 — 숏판/롱판 올린 수 + 받은 반응(좋아요·댓글·조회)·팔로워·받은 후원(GC net ₩)
+    const cs = (cstatR && cstatR.data) || {};
+    const creator =
+      (cs.posts | 0) * 30 + (cs.likes | 0) * 3 + (cs.comments | 0) * 5 +
+      Math.round((cs.views | 0) * 0.2) + (cs.followers | 0) * 6 + Math.round((cs.support | 0) * 0.05);
+    const gi = activity + battle + predict + creator;
+
+    // 🎬 창작자 트랙(등급과 병행) — 창작 지수만으로 산정
+    const CREATOR_TIERS = [
+      { min: 0, name: "새싹 크리에이터", emoji: "🌱" },
+      { min: 300, name: "라이징", emoji: "📈" },
+      { min: 1500, name: "인플루언서", emoji: "✨" },
+      { min: 6000, name: "스타", emoji: "🌟" },
+      { min: 20000, name: "레전드", emoji: "👑" },
+    ];
+    let ct = CREATOR_TIERS[0], cti = 0;
+    CREATOR_TIERS.forEach((t, i) => { if (creator >= t.min) { ct = t; cti = i; } });
+    const ctNext = CREATOR_TIERS[cti + 1] || null;
+    const creatorTrack = {
+      score: creator, tier: { ...ct, index: cti }, next: ctNext,
+      progress: ctNext ? Math.min(100, Math.round((creator - ct.min) / (ctNext.min - ct.min) * 100)) : 100,
+      remaining: ctNext ? Math.max(0, ctNext.min - creator) : 0,
+    };
 
     let tier = TIERS[0], idx = 0;
     TIERS.forEach((t, i) => { if (gi >= t.min) { tier = t; idx = i; } });
@@ -89,8 +112,10 @@
       gi, tier: { ...tier, index: idx }, next, progress,
       subLevel, subCount, subProgress,
       goal: { label: goalLabel, remaining, isPromotion: !!(next && atTierTop) },
-      parts: { activity, battle, predict },
-      raw: { issues, comments, votes, plaza, acts, trades, balance, merits },
+      parts: { activity, battle, predict, creator },
+      axes: { battle, predict, creator, community: activity },   // 4축 레이더용
+      creatorTrack,
+      raw: { issues, comments, votes, plaza, acts, trades, balance, merits, creatorStats: cs },
     };
   };
 })();

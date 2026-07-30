@@ -6,16 +6,16 @@
     <title>갈라리안 등급 - GALLA</title>
 
     <!-- 공통 스타일 -->
-    <link rel="stylesheet" href="./css/index.css?v=072891">
-    <link rel="stylesheet" href="./css/grade.css?v=072891">
-    <link rel="stylesheet" href="./css/nav.css?v=072891">
+    <link rel="stylesheet" href="./css/index.css?v=072892">
+    <link rel="stylesheet" href="./css/grade.css?v=072892">
+    <link rel="stylesheet" href="./css/nav.css?v=072892">
 
     <style>
         #app {
             padding-bottom: 80px;
         }
     </style>
-  <link rel="stylesheet" href="./css/galla-ui.css?v=072891">
+  <link rel="stylesheet" href="./css/galla-ui.css?v=072892">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -25,8 +25,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=072891">
-<link rel="stylesheet" href="./css/desktop.css?v=072891">
+  <link rel="stylesheet" href="./css/theme.css?v=072892">
+<link rel="stylesheet" href="./css/desktop.css?v=072892">
 </head>
 
 <body data-page="mypage">
@@ -89,7 +89,22 @@
                 <div class="pi-text" id="giPredictText">0</div>
             </div>
 
+            <div class="progress-item">
+                <div class="pi-label">🎬 창작 지수 (숏판·롱판·받은 반응·후원)</div>
+                <div class="pi-bar"><div class="fill" id="giCreator"></div></div>
+                <div class="pi-text" id="giCreatorText">0</div>
+            </div>
+
         </div>
+    </section>
+
+    <!-- 🎬 창작자 트랙 (등급과 병행) -->
+    <section class="grade-card" id="creatorTrackCard" hidden>
+        <div class="ct-head"><span class="ct-emoji" id="ctEmoji">🌱</span>
+            <div><div class="ct-name" id="ctName">새싹 크리에이터</div><div class="ct-sub" id="ctSub">창작자 등급</div></div>
+        </div>
+        <div class="ct-bar"><div class="ct-fill" id="ctFill"></div></div>
+        <div class="ct-goal" id="ctGoal"></div>
     </section>
 
     <!-- WORLD LORE -->
@@ -220,19 +235,19 @@
 
 </div>
 
-<script src="/js/error-logger.js?v=072891"></script>
-  <script src="./vendor/supabase.js?v=072891"></script>
-<script src="js/supabase.js?v=072891"></script>
-<script src="js/back.js?v=072891"></script>
-<script src="./js/gallian.js?v=072891"></script>
-<script src="./js/grade.js?v=072891"></script>
-<script src="./js/nav.js?v=072891"></script>
-<script src="./js/desktop-pc.js?v=072891" defer></script>
-<script src="./js/nav-jog.js?v=072891" defer></script>
-<script src="./js/dm-call.js?v=072891" defer></script>
+<script src="/js/error-logger.js?v=072892"></script>
+  <script src="./vendor/supabase.js?v=072892"></script>
+<script src="js/supabase.js?v=072892"></script>
+<script src="js/back.js?v=072892"></script>
+<script src="./js/gallian.js?v=072892"></script>
+<script src="./js/grade.js?v=072892"></script>
+<script src="./js/nav.js?v=072892"></script>
+<script src="./js/desktop-pc.js?v=072892" defer></script>
+<script src="./js/nav-jog.js?v=072892" defer></script>
+<script src="./js/dm-call.js?v=072892" defer></script>
 
-<script src="/js/analytics.js?v=072891"></script>
-<script src="/js/pwa.js?v=072891"></script>
-  <script src="/js/pull-refresh.js?v=072891"></script>
+<script src="/js/analytics.js?v=072892"></script>
+<script src="/js/pwa.js?v=072892"></script>
+  <script src="/js/pull-refresh.js?v=072892"></script>
 </body>
 </html>
