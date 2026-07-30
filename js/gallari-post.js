@@ -116,11 +116,20 @@
     let body;
     const donationsHtml = '<div id="glp-donations" class="glp-donations"></div>';
     if (post.kind === 'horizontal') {
+      // 유튜브 watch식: 영상(상단 고정) → 제목 → 조회·시간 → 액션 → 크리에이터(팔로우) → 후원자 → 설명(접기) → 태그 → 댓글 → 다음 영상
+      const metaRow = `<div class="glp-vmeta">조회 ${(post.view_count || 0).toLocaleString()}회 · ${timeago(post.created_at)}</div>`;
+      const creatorRow = `<div class="glp-creator">
+        <img class="glp-ava sm" src="${esc(ava(author))}" data-prof="${esc(post.user_id)}" onerror="this.style.visibility='hidden'">
+        <div class="glp-cr-info"><div class="glp-nick">${esc(author?.nickname || '익명')}</div><div class="glp-cr-sub">GALLA 크리에이터</div></div>
+        ${me && post.user_id !== me ? `<button class="glp-follow-btn js-follow" data-uid="${esc(post.user_id)}">+ 팔로우</button>` : ''}
+      </div>`;
+      const descHtml = post.caption
+        ? `<div class="glp-desc collapsed" id="glp-desc"><div class="glp-desc-body">${esc(post.caption)}</div><button type="button" class="glp-desc-more" id="glp-desc-more">…더보기</button></div>` : '';
       body = mediaHtml
+        + '<div class="glp-watch">'
         + (post.title ? `<div class="glp-title">${esc(post.title)}</div>` : '')
-        + headHtml + actionsHtml + donationsHtml
-        + (post.caption ? `<div class="glp-caption">${esc(post.caption)}</div>` : '')
-        + tagsHtml;
+        + metaRow + actionsHtml + creatorRow + donationsHtml + descHtml + tagsHtml
+        + '</div>';
     } else {
       body = headHtml + mediaHtml + actionsHtml + donationsHtml
         + (post.caption ? `<div class="glp-caption"><b>${esc(author?.nickname || '')}</b>  ${esc(post.caption)}</div>` : '')
@@ -130,6 +139,7 @@
     root.innerHTML = body
       + '<div class="glp-div"></div>'
       + '<div class="glp-csec"><div class="glp-ctitle">댓글 <span id="glp-ccount">' + (post.comment_count || 0) + '</span></div><div class="glp-clist" id="glp-clist"><div class="glp-cempty">불러오는 중…</div></div></div>'
+      + (post.kind === 'horizontal' ? '<div class="glp-div"></div><div id="glp-related" class="glp-related"></div>' : '')
       + '<div class="glp-cbar"><input id="glp-cinput" placeholder="' + (me ? '댓글 달기…' : '로그인하고 댓글 달기') + '" ' + (me ? '' : 'disabled') + '><button id="glp-csend" ' + (me ? '' : 'disabled') + '>게시</button></div>';
 
     // 캐러셀 도트
@@ -189,6 +199,48 @@
     loadComments(sb, id, me, ava);
     const focusC = () => { const el = document.getElementById('glp-cinput'); el && !el.disabled && el.focus(); };
     document.getElementById('glp-cfocus').addEventListener('click', focusC);
+
+    // 조회수 +1 (뷰어도 가능한 SECURITY DEFINER RPC)
+    try { sb.rpc('bump_post_view', { p_id: id }); } catch (_) {}
+
+    // 롱판(유튜브식) 부가 UX — 설명 접기·프로필·팔로우·다음 영상
+    if (post.kind === 'horizontal') {
+      const dmore = document.getElementById('glp-desc-more');
+      const desc = document.getElementById('glp-desc');
+      if (dmore && desc) {
+        // 2줄 안 넘으면 더보기 숨김
+        requestAnimationFrame(() => { const b = desc.querySelector('.glp-desc-body'); if (b && b.scrollHeight <= b.clientHeight + 2) dmore.style.display = 'none'; });
+        dmore.addEventListener('click', () => {
+          desc.classList.toggle('collapsed');
+          dmore.textContent = desc.classList.contains('collapsed') ? '…더보기' : '접기';
+        });
+      }
+      root.querySelectorAll('[data-prof]').forEach(a => a.addEventListener('click', () => nav('mypage.html?user=' + a.dataset.prof)));
+      try { window.GALLA_bindFollow && window.GALLA_bindFollow(root); } catch (_) {}
+      loadRelated(sb, id);
+    }
+  }
+
+  // 다음 영상 — 다른 롱판 목록
+  async function loadRelated(sb, curId) {
+    const box = document.getElementById('glp-related'); if (!box) return;
+    const { data } = await sb.from('posts')
+      .select('id,title,caption,thumbnail_url,images,user_id,view_count,created_at')
+      .eq('kind', 'horizontal').eq('is_published', true).neq('moderation_status', 'blocked').neq('id', curId)
+      .order('created_at', { ascending: false }).limit(12);
+    if (!data || !data.length) { box.innerHTML = ''; return; }
+    const uids = [...new Set(data.map(r => r.user_id))];
+    const { data: us } = await sb.from('users').select('id,nickname').in('id', uids);
+    const U = {}; (us || []).forEach(u => U[u.id] = u);
+    box.innerHTML = '<div class="glp-related-h">다음 영상</div>' + data.map(r => {
+      const t = r.thumbnail_url || (Array.isArray(r.images) && r.images[0]) || '';
+      return `<div class="glp-rel" data-id="${r.id}">
+        <div class="glp-rel-thumb">${t ? `<img src="${esc(t)}" loading="lazy">` : ''}<span class="glp-rel-play">▶</span></div>
+        <div class="glp-rel-info"><div class="glp-rel-t">${esc(r.title || r.caption || '(제목 없음)')}</div>
+          <div class="glp-rel-m">${esc((U[r.user_id] || {}).nickname || '익명')} · 조회 ${(r.view_count || 0).toLocaleString()}회</div></div>
+      </div>`;
+    }).join('');
+    box.querySelectorAll('.glp-rel').forEach(el => el.addEventListener('click', () => nav('gallari-post.html?id=' + el.dataset.id)));
   }
 
   let REPLY_TO = null;
