@@ -20,6 +20,8 @@
     /play\(\) request was interrupted/i,  // 오디오/비디오 재생 인터럽트(무해)
     /Transition was skipped/i,            // View Transitions API 경고(무해) — 에러 아님
     /Skipping view transition/i,          // skipTransition() 호출 시 브라우저 경고(무해)
+    /cordova\/plugin_list not found/i,    // iosrtc 로더가 cordova 준비 전 require — 무해(재시도로 붙음)
+    /module cordova\/.* not found/i,      // 동상: cordova 부팅 타이밍 경고(무해)
   ];
   function noise(msg, src) {
     var s = (msg || '') + ' ' + (src || '');
