@@ -39,6 +39,7 @@ const kind = (path) => {
   if (p === "/news") return "news";
   if (p === "/plaza_detail") return "plaza";
   if (p === "/predict-market") return "predict";
+  if (p === "/gallari-post") return "post";
   return null;
 };
 
@@ -118,6 +119,19 @@ async function resolveSeo(path, params) {
       h1: row.title, body: plain(row.body), date: row.created_at,
       jsonld: articleLd(row.title, desc, image, canonical, row.created_at) };
   }
+  if (k === "post" && params.get("id")) {
+    const row = await sbOne(`posts?id=eq.${encodeURIComponent(params.get("id"))}&is_published=eq.true&select=id,kind,title,caption,thumbnail_url,images,created_at`);
+    if (!row) return null;
+    const heading = row.title || clip(plain(row.caption), 60) || "갈라리 콘텐츠";
+    const title = clip(heading, 60);
+    const desc = clip(plain(row.caption) || row.title || "갈라에서 소통하고 후원하는 콘텐츠.", 150);
+    const canonical = `${HOST}/gallari-post?id=${row.id}`;
+    const image = row.thumbnail_url || (Array.isArray(row.images) && row.images[0]) || DEF_IMG;
+    return { title: `${title} · 갈라리`, desc, canonical, image, ogType: "article",
+      kicker: `갈라리 · ${row.kind === "horizontal" ? "영상" : "콘텐츠"}`,
+      h1: heading, body: plain(row.caption) || "", date: row.created_at,
+      jsonld: articleLd(heading, desc, image, canonical, row.created_at) };
+  }
   if (k === "predict" && params.get("id")) {
     const row = await sbOne(`markets?id=eq.${encodeURIComponent(params.get("id"))}&select=id,question,description,category,image_url,created_at`);
     if (!row) return null;
@@ -156,6 +170,7 @@ function breadcrumbLd(seo) {
     "/news": ["갈라뉴스", `${HOST}/search.html`],
     "/plaza_detail": ["갈라 광장", `${HOST}/plaza.html`],
     "/predict-market": ["갈라예측", `${HOST}/galla-predict.html`],
+    "/gallari-post": ["갈라리", `${HOST}/gallari.html`],
   };
   let path = "/";
   try { path = new URL(seo.canonical).pathname; } catch {}
