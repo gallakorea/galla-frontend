@@ -939,26 +939,9 @@ async function GALLA_mypageInit(root, spaParams) {
         };
     };
     const renderGalla = () => {
-        const subBar = byId("mpSubBar");
-        if (subBar) {
-            if (isMyPage) {
-                subBar.innerHTML = `
-                    <div class="mp-subtabs">
-                        <button class="mp-subtab ${gallaSubTab === "mine" ? "active" : ""}" data-sub="mine">My 갈라</button>
-                        <button class="mp-subtab ${gallaSubTab === "saved" ? "active" : ""}" data-sub="saved">Saved 갈라</button>
-                    </div>`;
-                subBar.querySelector(".mp-subtabs").onclick = e => {
-                    const b = e.target.closest(".mp-subtab");
-                    if (!b || b.dataset.sub === gallaSubTab) return;
-                    gallaSubTab = b.dataset.sub;
-                    renderGalla();
-                };
-            } else {
-                subBar.innerHTML = ""; // 방문자는 공개 이슈(My)만
-            }
-        }
-        if (gallaSubTab === "saved" && isMyPage) renderSave();
-        else renderMy();
+        // 저장(Saved)은 설정 › 보관으로 이동 — 마이페이지는 '내가 만든 것'만
+        clearSubBar();
+        renderMy();
     };
 
     // =====================================================
@@ -971,11 +954,9 @@ async function GALLA_mypageInit(root, spaParams) {
         if (!tabContent.firstElementChild) tabContent.className = "content-area";
         if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
-        const showSaved = isMyPage;
-        if (!showSaved) predictSubTab = "mine";
-        paintSubBar(predictSubTab, [
-            { k: "mine", label: "내가 만든 예측" }, { k: "saved", label: "저장한 예측" },
-        ], v => { predictSubTab = v; renderPredict(); });
+        // 저장은 설정 › 보관으로 — 내가 만든 예측만
+        clearSubBar();
+        predictSubTab = "mine";
 
         let markets = [];
         if (predictSubTab === "mine") {
@@ -1111,12 +1092,9 @@ async function GALLA_mypageInit(root, spaParams) {
         if (!tabContent.firstElementChild) tabContent.className = "content-area";
         if (!tabContent.firstElementChild) tabContent.innerHTML = MP_SPINNER; // 스냅샷 표시 중엔 덮지 않음, 빈 영역은 스피너(사장님 지시)
 
-        // 저장한 글은 본인 페이지에서만 (RLS도 본인만 조회 가능)
-        const showSaved = isMyPage;
-        if (!showSaved) plazaSubTab = "mine";
-        paintSubBar(plazaSubTab, [
-            { k: "mine", label: "내가 쓴 글" }, { k: "saved", label: "저장한 글" },
-        ], v => { plazaSubTab = v; renderPlaza(); });
+        // 저장은 설정 › 보관으로 — 내가 쓴 글만
+        clearSubBar();
+        plazaSubTab = "mine";
 
         let posts = [];
         if (plazaSubTab === "mine") {
@@ -1311,43 +1289,36 @@ async function GALLA_mypageInit(root, spaParams) {
     // ---------------------------
     // 갈라리(콘텐츠) 탭 — 세로 3열 그리드 / 가로 유튜브 리스트 분배
     // ---------------------------
-    let contentSub = "vertical";
-    const renderContent = async (sub) => {
-        contentSub = sub || contentSub;
+    // 숏판/롱판 = 각각 독립 탭. 저장 서브탭 없이 '내가 올린 것'만, 단일 kind 렌더.
+    const renderContent = async (kind) => {
+        kind = kind === "horizontal" ? "horizontal" : "vertical";
         clearSubBar();
         tabContent.className = "content-area";
         tabContent.innerHTML = MP_SPINNER;
         const { data: posts } = await supabase.from("posts")
             .select("id,kind,title,caption,images,video_url,thumbnail_url,like_count,comment_count")
-            .eq("user_id", viewUserId).eq("is_published", true)
+            .eq("user_id", viewUserId).eq("kind", kind).eq("is_published", true)
             .order("created_at", { ascending: false }).limit(60);
-        const all = posts || [];
-        const vert = all.filter(p => p.kind === "vertical");
-        const horz = all.filter(p => p.kind === "horizontal");
+        const items = posts || [];
         const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
         const thumb = p => p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || "";
-        const seg = `<div class="glf-seg" style="padding:10px 0">
-            <button class="${contentSub === "vertical" ? "active" : ""}" data-sub="vertical">⚡ 숏판 ${vert.length}</button>
-            <button class="${contentSub === "horizontal" ? "active" : ""}" data-sub="horizontal">🎬 롱판 ${horz.length}</button></div>`;
-        const list = contentSub === "vertical" ? vert : horz;
         let inner;
-        if (!list.length) inner = `<div class="glf-empty">아직 ${contentSub === "vertical" ? "⚡ 숏판" : "🎬 롱판"} 콘텐츠가 없어요.</div>`;
-        else if (contentSub === "vertical") inner = '<div class="glf-grid">' + vert.map(p =>
+        if (!items.length) inner = `<div class="glf-empty">아직 ${kind === "vertical" ? "⚡ 숏판" : "🎬 롱판"} 콘텐츠가 없어요.</div>`;
+        else if (kind === "vertical") inner = '<div class="glf-grid">' + items.map(p =>
             `<div class="glf-tile" data-id="${p.id}">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
              ${p.video_url ? '<span class="glf-play">▶</span>' : ''}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
-        else inner = '<div class="glf-list">' + horz.map(p =>
+        else inner = '<div class="glf-list">' + items.map(p =>
             `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
              <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
-        tabContent.innerHTML = seg + inner;
-        tabContent.querySelectorAll(".glf-seg button").forEach(b => b.addEventListener("click", () => renderContent(b.dataset.sub)));
+        tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
             (window.GALLA_nav || function (u) { location.href = u; })("gallari-post.html?id=" + el.dataset.id)));
     };
 
-    // 콘텐츠 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출
+    // 숏판·롱판 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출
     (async function revealContentTab() {
-        const ctab = D.querySelector('.tab[data-tab="content"]');
-        if (!ctab) return;
+        const ctabs = D.querySelectorAll('.tab[data-tab="short"], .tab[data-tab="long"]');
+        if (!ctabs.length) return;
         let on = false;
         try {
             const [{ data: fl }, { data: prof }] = await Promise.all([
@@ -1356,7 +1327,7 @@ async function GALLA_mypageInit(root, spaParams) {
             ]);
             on = (fl && (fl.v === true || fl.v === "true")) || !!(prof && prof.admin_flag);
         } catch (_) {}
-        if (on) ctab.hidden = false;
+        if (on) ctabs.forEach(t => t.hidden = false);
     })();
 
     // ---------------------------
@@ -1370,11 +1341,11 @@ async function GALLA_mypageInit(root, spaParams) {
             const menu = tab.dataset.tab;
 
             switch (menu) {
-                case "galla": renderGalla(); break;              // 갈라(My/Saved 서브탭)
-                case "content": clearSubBar(); renderContent(); break;   // 갈라리(콘텐츠)
-                case "predict": renderPredict(); break;
-                case "news": clearSubBar(); renderNews(); break;
-                case "plaza": renderPlaza(); break;
+                case "galla": renderGalla(); break;                          // 내가 만든 이슈
+                case "short": renderContent("vertical"); break;              // ⚡ 숏판
+                case "long":  renderContent("horizontal"); break;            // 🎬 롱판
+                case "predict": renderPredict(); break;                      // 내가 만든 예측
+                case "plaza": renderPlaza(); break;                          // 내가 쓴 광장
             }
         });
     });
