@@ -1,0 +1,66 @@
+/* ============================================================
+   계정/폼 페이지 공용 스타일 (비밀번호 변경·문의하기 등)
+   · .acct-form 래퍼로 스코프 → 전역(SPA 셸) 누수 없음
+   · <link>로 로드되므로 웹(MPA)·앱(SPA) 양쪽에서 동일 적용
+   ============================================================ */
+.acct-form { padding: 8px 0 40px; }
+
+.acct-form .section { padding: 20px 16px; }
+
+.acct-form .input-group { margin-bottom: 20px; }
+
+.acct-form .input-label {
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+.acct-form .input-field {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  background: #0d0d0d;
+  border: 1px solid #1c1c1c;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;          /* iOS 자동 확대 방지 */
+}
+.acct-form .input-field::placeholder { color: #6a6a6a; }
+.acct-form .input-field:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.acct-form .textarea {
+  height: 140px;
+  resize: none;
+  line-height: 1.5;
+}
+
+.acct-form .info-box {
+  background: #0d0d0d;
+  border: 1px solid #1c1c1c;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  color: #bbb;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+.acct-form .info-box a { color: #3b82f6; word-break: break-all; }
+
+.acct-form .save-btn {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+.acct-form .save-btn:active { opacity: .85; }
+.acct-form .save-btn[disabled] { opacity: .5; cursor: default; }

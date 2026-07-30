@@ -123,7 +123,7 @@ body {
 /* ===== 성향 카드 (기존 구조 재스킨) ===== */
 .card { border-radius: 16px; }
 .report-card {
-    position: relative; margin-top: 4px;
+    position: relative; margin-top: 18px;
     padding: 18px 16px;
     background: linear-gradient(160deg, rgba(61,107,255,.1), rgba(255,77,103,.06)), linear-gradient(180deg, #121319, #0c0c10);
     border: 1px solid rgba(255,255,255,.09);
