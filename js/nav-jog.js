@@ -137,10 +137,18 @@
     layer.style.setProperty('--jy', oy + 'px');
 
     /* 위쪽 반원에 부채꼴로 배치 — 아래는 네비·손가락이라 가린다.
-       200°~340°로 넓게 펼쳐 '위로 올리는' 동작에서도 방향이 또렷하게 갈린다. */
+       ⚠️ 버튼이 화면 좌/우 끝(예: 마이페이지=우측 끝)이면 부채꼴이 화면 밖으로
+       넘쳐 항목이 잘린다(사장님 재현). 버튼의 가로 위치(frac)에 따라 부채꼴을
+       화면 '안쪽'으로 기울이고, 가장자리일수록 좁게 펴 잘림을 막는다. */
+    const vw = window.innerWidth || document.documentElement.clientWidth || 400;
+    const frac = Math.max(0, Math.min(1, ox / vw));   // 0=좌단 · 1=우단
+    const lean = 0.5 - frac;                          // 우측 버튼일수록 음수
+    const centerDeg = 270 + lean * 80;                // 위(270) 기준 안쪽으로 기울임
+    const spanDeg = Math.max(95, 150 - Math.abs(lean) * 110);  // 가장자리일수록 좁게
+    const startDeg = centerDeg - spanDeg / 2;
     const bd = badges ? badges() : {};
     const items = tabs.map((t, i) => {
-      const deg = 200 + (140 / (tabs.length - 1)) * i;
+      const deg = tabs.length > 1 ? startDeg + (spanDeg / (tabs.length - 1)) * i : centerDeg;
       const rad = deg * Math.PI / 180;
       const dx = Math.cos(rad) * RADIUS, dy = Math.sin(rad) * RADIUS;
       const el = document.createElement('button');
