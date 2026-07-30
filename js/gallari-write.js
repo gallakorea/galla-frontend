@@ -177,6 +177,20 @@
       if (KIND === 'horizontal' && !title) { alert('제목을 입력해주세요.'); return; }
       if (!videoFile && !hasPhoto) { alert(KIND === 'horizontal' ? '가로 영상을 올려주세요.' : (VMODE === 'video' ? '세로 영상을 올려주세요.' : '사진을 1장 이상 올려주세요.')); return; }
 
+      // 발행 전 자동 모더레이션(check-issue 재사용) — 위험 표현은 업로드 전에 빠르게 차단.
+      let modStatus = 'ok';
+      if (title || caption) {
+        try {
+          submitBtn.disabled = true; submitBtn.textContent = '검사 중…';
+          const { data: chk } = await sb.functions.invoke('check-issue', { body: { title, description: caption } });
+          if (chk && chk.risk_level === '위험') {
+            submitBtn.disabled = false; submitBtn.textContent = '공유';
+            alert('커뮤니티 기준에 맞지 않는 표현이 감지됐어요. 내용을 다듬어 다시 올려주세요.');
+            return;
+          }
+        } catch (_) { modStatus = 'pending'; }   // 검사 실패는 발행을 막지 않되 검토 대기(pending)
+      }
+
       let images = null, video_url = null, thumbnail_url = null;
       const needUp = (hasPhoto && imgItems.some(it => !it.url)) || !!videoFile;
       try {
@@ -220,7 +234,7 @@
         thumbnail_url,
         tags: tags.length ? tags : null,
         is_published: true,
-        moderation_status: 'pending',
+        moderation_status: modStatus,
       };
       const { error } = await sb.from('posts').insert(payload).select('id').single();
       submitBtn.disabled = false; submitBtn.textContent = '공유';
