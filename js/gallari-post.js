@@ -79,14 +79,15 @@
 
     // ---- kind별 조립 ----
     let body;
+    const donationsHtml = '<div id="glp-donations" class="glp-donations"></div>';
     if (post.kind === 'horizontal') {
       body = mediaHtml
         + (post.title ? `<div class="glp-title">${esc(post.title)}</div>` : '')
-        + headHtml + actionsHtml
+        + headHtml + actionsHtml + donationsHtml
         + (post.caption ? `<div class="glp-caption">${esc(post.caption)}</div>` : '')
         + tagsHtml;
     } else {
-      body = headHtml + mediaHtml + actionsHtml
+      body = headHtml + mediaHtml + actionsHtml + donationsHtml
         + (post.caption ? `<div class="glp-caption"><b>${esc(author?.nickname || '')}</b>  ${esc(post.caption)}</div>` : '')
         + tagsHtml;
     }
@@ -119,12 +120,26 @@
       if (r.error && r.error.code !== '23505') { liked = !liked; likeCount += liked ? 1 : -1; btn.classList.toggle('on', liked); c.textContent = likeCount; }
     });
 
-    // 후원(GC) — 상세 결제 플로우는 ④단계에서 연결
+    // 후원(GC) — 갈라코인 후원 시트(donate.js). 창작자 이름 전달.
     document.getElementById('glp-support').addEventListener('click', () => {
-      if (window.GALLA_openSupport) window.GALLA_openSupport({ type: 'post', id, to: post.user_id });
-      else if (window.GALLA_toast) window.GALLA_toast('갈라코인(GC) 후원은 곧 열려요');
-      else alert('갈라코인(GC) 후원은 곧 열려요');
+      if (me && post.user_id === me) { (window.GALLA_toast || alert)('내 콘텐츠예요 — 후원은 받는 쪽이에요'); return; }
+      if (!me) { alert('로그인하고 후원할 수 있어요.'); return; }
+      if (window.openDonatePost) window.openDonatePost(id, author?.nickname || '창작자');
+      else (window.GALLA_toast || alert)('후원 준비 중이에요');
     });
+
+    // 후원자 요약(슈퍼챗) — 후원 성공 시 donate.js가 다시 부른다
+    async function renderDonations() {
+      const box = document.getElementById('glp-donations'); if (!box) return;
+      const { data } = await sb.rpc('post_donations', { p_post_id: id });
+      if (!data || !data.count) { box.innerHTML = ''; return; }
+      const won = (n) => (n || 0).toLocaleString() + '원';
+      const rows = data.rows || [];
+      box.innerHTML = `<div class="glp-don-sum">🎁 후원 ${data.count}명 · ${won(data.total)}</div>`
+        + rows.slice(0, 3).map(r => `<div class="glp-don-row"><b>${esc(r.name)}</b> ${won(r.amount)}${r.message ? ' · ' + esc(r.message) : ''}</div>`).join('');
+    }
+    window.GALLA_renderPostDonations = renderDonations;
+    renderDonations();
 
     // 댓글
     loadComments(sb, id, me, ava);

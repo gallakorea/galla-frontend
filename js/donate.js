@@ -167,15 +167,18 @@
     const anon = sheet.querySelector("#ds-anon").checked;
     const go = sheet.querySelector("#ds-go"); go.disabled = true; go.textContent = "처리 중…";
 
-    // 대상: 이슈 or 광장 글 — RPC/인자만 다르고 정책(20/50/30)은 동일
-    const isPlaza = !!cur.plazaId;
-    const args = isPlaza
-      ? { p_post_id: cur.plazaId, p_amount: a, p_message: msg, p_anonymous: anon }
-      : { p_issue_id: cur.issueId, p_amount: a, p_message: msg, p_anonymous: anon };
+    // 대상: 이슈 / 광장 글 / 갈라리 콘텐츠 — RPC·인자만 다르고 정책(75/5/20)은 동일
+    const kind = cur.postId ? "post" : cur.plazaId ? "plaza" : "issue";
+    const idArg = kind === "post" ? { p_post_id: cur.postId }
+                : kind === "plaza" ? { p_post_id: cur.plazaId }
+                : { p_issue_id: cur.issueId };
+    const args = Object.assign({}, idArg, { p_amount: a, p_message: msg, p_anonymous: anon });
+    const gcRpc = kind === "post" ? "gc_donate_post" : kind === "plaza" ? "gc_donate_plaza" : "gc_donate";
+    const whoLabel = kind === "post" ? "창작자" : kind === "plaza" ? "작성자" : "발의자";
 
     // ① GC 잔액이 충분하면 갈라코인으로 즉시 후원 (표준 경로)
     if (GC_BAL >= a) {
-      const { data, error } = await sb().rpc(isPlaza ? "gc_donate_plaza" : "gc_donate", args);
+      const { data, error } = await sb().rpc(gcRpc, args);
       if (error || !data?.ok) {
         const reason = data?.reason;
         alert(reason === "self" ? "본인이 쓴 글은 후원할 수 없어요." :
@@ -192,19 +195,31 @@
           <div class="ic">💝</div>
           <h4>후원 완료!</h4>
           <p>${won(a)}가 갈라코인으로 전달됐어요.<br>
-          ${isPlaza ? "작성자" : "발의자"} <b>${won(data.net)}</b> · 환원 <b>${won(data.charity)}</b><br>
+          ${whoLabel} <b>${won(data.net)}</b> · 환원 <b>${won(data.charity)}</b><br>
           남은 갈라코인 ${GC_BAL.toLocaleString()} GC</p>
         </div>
         <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
       sheet.querySelector("#ds-close").addEventListener("click", close);
       // 슈퍼챗 목록 즉시 갱신
-      if (isPlaza) window.GALLA_renderPlazaDonations?.(cur.plazaId);
+      if (kind === "plaza") window.GALLA_renderPlazaDonations?.(cur.plazaId);
+      else if (kind === "post") window.GALLA_renderPostDonations?.(cur.postId);
       else renderList(cur.issueId);
       return;
     }
 
-    // ② GC 부족 — 건별 결제(pending, PG 연동 예정)
-    const { data, error } = await sb().rpc(isPlaza ? "plaza_donate_begin" : "donate_begin", args);
+    // ② GC 부족 — 갈라리는 아직 충전(PG) 미연결이라 안내만
+    const beginRpc = kind === "plaza" ? "plaza_donate_begin" : kind === "issue" ? "donate_begin" : null;
+    if (!beginRpc) {
+      window.BattleFX?.haptic?.("tap");
+      sheet.innerHTML = `
+        <div class="ds-grip"></div>
+        <div class="ds-done"><div class="ic">🪙</div><h4>갈라코인이 부족해요</h4>
+        <p>${won(a)} 후원에는 갈라코인이 더 필요해요.<br>충전(간편결제)이 곧 열립니다. <b>(준비 중)</b></p></div>
+        <button class="ds-go" id="ds-close" style="background:#2a2b31">닫기</button>`;
+      sheet.querySelector("#ds-close").addEventListener("click", close);
+      return;
+    }
+    const { data, error } = await sb().rpc(beginRpc, args);
     if (error || !data?.ok) {
       const reason = data?.reason;
       alert(reason === "self" ? "본인이 쓴 글은 후원할 수 없어요." :
@@ -238,6 +253,8 @@
   window.openDonate = open;
   // 광장 작성자 응원 — 같은 시트, plaza RPC 사용
   window.openDonatePlaza = (postId, creatorName) => openWith({ plazaId: postId, creatorName });
+  // 갈라리 창작자 후원 — 같은 시트, gc_donate_post 사용
+  window.openDonatePost = (postId, creatorName) => openWith({ postId, creatorName });
 
   // ── 슈퍼챗 목록 렌더 + 버튼 배선 ──
   async function renderList(issueId) {

@@ -51,6 +51,13 @@
 }
 .glp-support:active { opacity: .9; }
 
+/* 후원자 요약(슈퍼챗) */
+.glp-donations:not(:empty) { margin: 2px 14px 10px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(245,207,63,.07); border: 1px solid rgba(245,207,63,.22); }
+.glp-don-sum { font-size: 13px; font-weight: 900; color: #f5cf6b; }
+.glp-don-row { font-size: 12.5px; color: #cfd5e0; margin-top: 5px; line-height: 1.45; }
+.glp-don-row b { color: #eef1f8; }
+
 /* 캡션/설명 */
 .glp-caption { padding: 4px 14px 14px; color: #dfe3ec; font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
 .glp-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
