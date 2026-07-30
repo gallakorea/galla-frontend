@@ -1328,95 +1328,85 @@ async function GALLA_mypageInit(root, spaParams) {
         plaza:   { label: "광장", dest: id => "plaza_detail.html?id=" + id },
     };
     const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>';
-    let moaItems = [];
 
-    // 인스타 프로필식 통합 피드 — 탭한 항목부터 세로로 쭉. 카드 탭 시 각 상세로.
-    const openMoaFeed = (startIdx) => {
-        if (!moaItems.length) return;
-        const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
-        const ago = ts => {
-            const d = Math.floor((Date.now() - new Date(ts)) / 1000);
-            if (d < 60) return "방금"; if (d < 3600) return Math.floor(d / 60) + "분 전";
-            if (d < 86400) return Math.floor(d / 3600) + "시간 전"; if (d < 2592000) return Math.floor(d / 86400) + "일 전";
-            return new Date(ts).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
-        };
-        const cards = moaItems.map((it, i) => {
-            const lab = ALL_TYPES[it.t].label;
-            const media = it.thumb
-                ? `<div class="mp-fmedia${it.video ? " has-vid" : ""}"><img src="${esc(it.thumb)}" loading="lazy">${it.video ? `<span class="mp-fplay">${PLAY_SVG}</span>` : ""}</div>`
-                : `<div class="mp-ftext"><span>${esc(it.title || "")}</span></div>`;
-            return `<article class="mp-fcard" data-i="${i}" data-t="${it.t}" data-id="${it.id}">
-                <div class="mp-fhead"><span class="mp-fbadge">${esc(lab)}</span><span class="mp-ftime">${ago(it.ts)}</span></div>
-                ${media}
-                ${it.title ? `<div class="mp-fcap">${esc(it.title)}</div>` : ""}
-                <button class="mp-fopen" data-t="${it.t}" data-id="${it.id}">${esc(lab)} 열기 ›</button>
-            </article>`;
-        }).join("");
-        const ov = document.createElement("div");
-        ov.className = "mp-feed";
-        ov.innerHTML =
-            `<div class="mp-fbar"><button class="mp-fback" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><b>게시물</b></div>
-             <div class="mp-fscroll">${cards}</div>`;
-        document.body.appendChild(ov);
-        const close = () => { ov.remove(); window.removeEventListener("popstate", onPop); };
-        const onPop = () => close();
-        ov.querySelector(".mp-fback").addEventListener("click", () => { if (history.state && history.state.moaFeed) history.back(); else close(); });
-        try { history.pushState({ moaFeed: 1 }, ""); window.addEventListener("popstate", onPop); } catch (_) {}
-        const go = (t, id) => (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[t].dest(id));
-        ov.querySelectorAll(".mp-fopen, .mp-fmedia, .mp-ftext").forEach(el => el.addEventListener("click", e => {
-            const c = e.currentTarget.closest(".mp-fcard"); if (c) go(c.dataset.t, c.dataset.id);
-        }));
-        // 탭한 카드로 스크롤
-        requestAnimationFrame(() => {
-            const target = ov.querySelector(`.mp-fcard[data-i="${startIdx}"]`);
-            if (target) target.scrollIntoView({ block: "start" });
-        });
-    };
-
+    // ── 모아 = 유튜브 채널 페이지식 섹션 레이아웃 ──
+    // 숏판=Shorts 그리드(세로 썸네일), 롱판=동영상 리스트(16:9), 갈라·예측·광장=리스트 행.
     const renderAll = async () => {
         clearSubBar();
         tabContent.className = "content-area";
         tabContent.innerHTML = MP_SPINNER;
         const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+        const views = n => { n = +n || 0; if (n >= 10000) return "조회수 " + (n / 10000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, "") + "만회"; if (n >= 1000) return "조회수 " + (n / 1000).toFixed(1).replace(/\.0$/, "") + "천회"; return "조회수 " + n + "회"; };
+        const ago = ts => {
+            const d = Math.floor((Date.now() - new Date(ts)) / 1000);
+            if (d < 60) return "방금"; if (d < 3600) return Math.floor(d / 60) + "분 전";
+            if (d < 86400) return Math.floor(d / 3600) + "시간 전"; if (d < 2592000) return Math.floor(d / 86400) + "일 전";
+            if (d < 31536000) return Math.floor(d / 2592000) + "개월 전"; return Math.floor(d / 31536000) + "년 전";
+        };
         const [iss, pst, mkt, plz] = await Promise.all([
-            supabase.from("issues").select("id,title,thumbnail_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(40),
-            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,video_url,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
-            supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(40),
-            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(40),
+            supabase.from("issues").select("id,title,thumbnail_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(30),
+            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,video_url,view_count,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
+            supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(20),
+            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(20),
         ]);
-        const items = [];
-        (iss.data || []).forEach(r => items.push({ t: "issue", id: r.id, thumb: r.thumbnail_url || (Array.isArray(r.images) && r.images[0]) || "", title: r.title, ts: r.created_at }));
-        (pst.data || []).forEach(r => items.push({ t: r.kind === "horizontal" ? "long" : "short", id: r.id, thumb: r.thumbnail_url || (Array.isArray(r.images) && r.images[0]) || "", title: r.title || r.caption, video: !!r.video_url, ts: r.created_at }));
-        (mkt.data || []).forEach(r => items.push({ t: "predict", id: r.id, thumb: r.image_url || "", title: r.question, ts: r.created_at }));
-        (plz.data || []).forEach(r => items.push({ t: "plaza", id: r.id, thumb: r.thumbnail || r.cover_image || "", title: r.title, ts: r.created_at }));
-        items.sort((a, b) => new Date(b.ts) - new Date(a.ts));
-        moaItems = items;
-        if (!items.length) { tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return; }
-        // 몬드리안 모자이크 — 크기 제각각 직사각형 패턴(4열 기준). 롱판=가로 넓게, 숏판=세로 길게.
-        const SHAPES = [[2, 2], [1, 1], [1, 2], [2, 1], [1, 1], [2, 2], [1, 1], [1, 2], [2, 1], [1, 1], [2, 1], [1, 1]];
-        const BLOCK_COLOR = { predict: "y", plaza: "b", issue: "r" };  // 예측=노랑·광장=파랑·이슈=빨강
-        const CYCLE = ["r", "b", "y", "w"];
-        tabContent.innerHTML = '<div class="mp-mond">' + items.map((it, idx) => {
-            const lab = ALL_TYPES[it.t].label;
-            let [c, r] = SHAPES[idx % SHAPES.length];
-            if (it.t === "long") { c = 2; r = r > 1 ? 1 : r; }      // 가로형 → 폭 넓게
-            else if (it.t === "short") { r = Math.max(r, 2); c = 1; } // 세로형 → 길게
-            if (!it.thumb) { c = 2; r = Math.max(r, 1); }            // 텍스트 색면 → 폭 넓게(글자 안 쪼개지게)
-            const span = `--c:${c};--r:${r}`;
-            if (it.thumb) {
-                return `<div class="mp-all-tile is-media" style="${span}" data-t="${it.t}" data-id="${it.id}">
-                    <img src="${esc(it.thumb)}" loading="lazy">
-                    <span class="mp-all-badge">${esc(lab)}</span>
-                    ${it.video ? `<span class="${c >= 2 && r >= 2 ? "glf-play-lg" : "glf-play"}">${PLAY_SVG}</span>` : ""}
-                </div>`;
-            }
-            const col = BLOCK_COLOR[it.t] || CYCLE[idx % CYCLE.length];
-            return `<div class="mp-all-tile is-block col-${col}" style="${span}" data-t="${it.t}" data-id="${it.id}">
-                <span class="mp-all-badge">${esc(lab)}</span>
-                <span class="mp-btext">${esc((it.title || "").slice(0, 70))}</span>
+        const pdata = pst.data || [];
+        const shorts = pdata.filter(r => r.kind !== "horizontal");
+        const longs = pdata.filter(r => r.kind === "horizontal");
+        const total = (iss.data || []).length + pdata.length + (mkt.data || []).length + (plz.data || []).length;
+        if (!total) { tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return; }
+
+        const thumbOf = r => r.thumbnail_url || r.image_url || r.thumbnail || r.cover_image || (Array.isArray(r.images) && r.images[0]) || "";
+        const wideThumb = (t, id, url, title, meta) =>
+            `<div class="mp-yt-row" data-t="${t}" data-id="${id}">
+                <div class="mp-yt-th">${url ? `<img src="${esc(url)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}</div>
+                <div class="mp-yt-info"><div class="mp-yt-tt">${esc(title || "제목 없음")}</div><div class="mp-yt-meta">${esc(meta)}</div></div>
             </div>`;
-        }).join("") + "</div>";
-        tabContent.querySelectorAll(".mp-all-tile").forEach((el, i) => el.addEventListener("click", () => openMoaFeed(i)));
+
+        const sections = [];
+
+        // 숏판 — Shorts 그리드(세로 9:16)
+        if (shorts.length) {
+            const cells = shorts.map(r => {
+                const th = thumbOf(r);
+                return `<div class="mp-sh-cell" data-t="short" data-id="${r.id}">
+                    ${th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}
+                    <span class="mp-sh-cap">${esc(r.title || r.caption || "")}</span>
+                    <span class="mp-sh-v">${views(r.view_count)}</span>
+                </div>`;
+            }).join("");
+            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">숏판</h3><div class="mp-sh-grid">${cells}</div></section>`);
+        }
+        // 롱판 — 동영상 리스트(16:9)
+        if (longs.length) {
+            const rows = longs.map(r => {
+                const th = thumbOf(r);
+                return `<div class="mp-lv" data-t="long" data-id="${r.id}">
+                    <div class="mp-lv-th">${th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}<span class="mp-lv-play">${PLAY_SVG}</span></div>
+                    <div class="mp-lv-tt">${esc(r.title || r.caption || "제목 없음")}</div>
+                    <div class="mp-lv-meta">${views(r.view_count)} · ${ago(r.created_at)}</div>
+                </div>`;
+            }).join("");
+            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">동영상</h3><div class="mp-lv-list">${rows}</div></section>`);
+        }
+        // 갈라(이슈)
+        if ((iss.data || []).length) {
+            const rows = iss.data.map(r => wideThumb("issue", r.id, thumbOf(r), r.title, ago(r.created_at))).join("");
+            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">갈라</h3><div class="mp-yt-rows">${rows}</div></section>`);
+        }
+        // 예측
+        if ((mkt.data || []).length) {
+            const rows = mkt.data.map(r => wideThumb("predict", r.id, thumbOf(r), r.question, ago(r.created_at))).join("");
+            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">예측</h3><div class="mp-yt-rows">${rows}</div></section>`);
+        }
+        // 광장
+        if ((plz.data || []).length) {
+            const rows = plz.data.map(r => wideThumb("plaza", r.id, thumbOf(r), r.title, views(r.view_count) + " · " + ago(r.created_at))).join("");
+            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">광장</h3><div class="mp-yt-rows">${rows}</div></section>`);
+        }
+
+        tabContent.innerHTML = `<div class="mp-yt">${sections.join("")}</div>`;
+        tabContent.querySelectorAll("[data-t][data-id]").forEach(el => el.addEventListener("click", () =>
+            (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[el.dataset.t].dest(el.dataset.id))));
     };
 
     // 숏판·롱판 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출

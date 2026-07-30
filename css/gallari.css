@@ -65,71 +65,44 @@
 .glf-loading, .glf-empty { text-align: center; color: #8b8b93; padding: 60px 20px; font-size: 14px; line-height: 1.7; }
 .glf-empty b { color: #cfd5e0; }
 
-/* ── 마이페이지 '모아' — 몬드리안 신조형주의 모자이크 ──
-   굵은 검은 격자선 + 크기 제각각 직사각형. 사진=그대로, 사진 없는 글=원색 색면(빨/파/노/백). */
-.mp-mond { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: 23.5vw;
-  grid-auto-flow: dense; gap: 6px; background: #0a0a0b; padding: 6px;
-  border: 3px solid #0a0a0b; }
-@media (min-width: 560px) { .mp-mond { grid-auto-rows: 132px; max-width: 720px; margin: 0 auto; } }
+/* ── 마이페이지 '모아' — 유튜브 채널 페이지식 섹션 레이아웃 ── */
+.mp-yt { padding: 2px 0 10px; max-width: 720px; margin: 0 auto; }
+.mp-yt-sec { padding: 12px 0 16px; border-bottom: 8px solid rgba(255,255,255,.045); }
+.mp-yt-sec:last-child { border-bottom: 0; }
+.mp-yt-h { font-size: 18px; font-weight: 900; color: #f2f4f8; margin: 2px 14px 12px; letter-spacing: -.3px; }
+.mp-yt-ph { width: 100%; height: 100%; background: linear-gradient(150deg, #20222b, #12131a); }
 
-.mp-mond .mp-all-tile { position: relative; overflow: hidden; cursor: pointer; border-radius: 0;
-  grid-column: span var(--c, 1); grid-row: span var(--r, 1);
-  box-shadow: 0 0 0 1px rgba(0,0,0,.9); background: #14151b; }
-.mp-mond .mp-all-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 숏판 = Shorts 그리드(세로 9:16) */
+.mp-sh-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 3px; }
+.mp-sh-cell { position: relative; aspect-ratio: 9/16; overflow: hidden; border-radius: 10px;
+  background: #0d0d0f; cursor: pointer; }
+.mp-sh-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mp-sh-cell::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46%;
+  background: linear-gradient(transparent, rgba(0,0,0,.62)); pointer-events: none; }
+.mp-sh-cap { position: absolute; left: 8px; right: 8px; bottom: 26px; z-index: 1; color: #fff;
+  font-size: 13px; font-weight: 800; line-height: 1.25; text-shadow: 0 1px 4px rgba(0,0,0,.7);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-sh-v { position: absolute; left: 8px; bottom: 7px; z-index: 1; color: rgba(255,255,255,.92);
+  font-size: 11px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 
-/* 유형 배지 — 사진 위엔 좌상단 알약, 색면 위엔 상단 정적 */
-.mp-mond .mp-all-badge { position: absolute; left: 7px; top: 7px; z-index: 2;
-  font-size: 10px; font-weight: 800; letter-spacing: -.2px; color: #fff;
-  background: rgba(0,0,0,.5); padding: 2px 8px; border-radius: 999px;
-  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-.mp-mond .glf-play { position: absolute; top: 8px; right: 8px; color: #fff;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
-.mp-mond .glf-play svg { width: 20px; height: 20px; }
-.mp-mond .glf-play-lg { position: absolute; inset: 0; display: flex; align-items: center;
-  justify-content: center; color: rgba(255,255,255,.94); pointer-events: none; }
-.mp-mond .glf-play-lg svg { width: 44px; height: 44px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+/* 롱판 = 동영상(16:9 큰 썸네일 + 제목 + 메타) */
+.mp-lv-list { display: flex; flex-direction: column; }
+.mp-lv { cursor: pointer; padding-bottom: 16px; }
+.mp-lv-th { position: relative; aspect-ratio: 16/9; background: #0d0d0f; overflow: hidden; }
+.mp-lv-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mp-lv-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.mp-lv-play svg { width: 48px; height: 48px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); opacity: .95; }
+.mp-lv-tt { font-size: 15px; font-weight: 800; color: #f0f2f8; line-height: 1.35; margin: 10px 12px 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-lv-meta { font-size: 12.5px; color: #8b8b93; margin: 4px 12px 0; }
 
-/* 색면(사진 없는 글) — 몬드리안 원색 */
-.mp-mond .is-block { display: flex; flex-direction: column; padding: 11px 13px; }
-.mp-mond .is-block .mp-all-badge { position: static; align-self: flex-start;
-  background: rgba(0,0,0,.22); -webkit-backdrop-filter: none; backdrop-filter: none; }
-.mp-mond .mp-btext { margin-top: auto; font-size: 14px; font-weight: 800; line-height: 1.28;
-  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-  word-break: break-word; }
-.mp-mond .col-r { background: #d42a1f; }
-.mp-mond .col-b { background: #123a9c; }
-.mp-mond .col-y { background: #f4c400; }
-.mp-mond .col-w { background: #f2efe6; }
-.mp-mond .col-r .mp-btext, .mp-mond .col-b .mp-btext { color: #fff; }
-.mp-mond .col-y .mp-btext, .mp-mond .col-w .mp-btext { color: #0a0a0b; }
-.mp-mond .col-y .mp-all-badge, .mp-mond .col-w .mp-all-badge { color: #0a0a0b; background: rgba(0,0,0,.13); }
-
-/* ── 모아 인스타식 통합 피드(오버레이) ── */
-.mp-feed { position: fixed; inset: 0; z-index: 3000; background: #0a0a0b; display: flex; flex-direction: column; }
-.mp-fbar { flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
-  height: calc(50px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 8px 0;
-  background: rgba(10,10,11,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255,255,255,.06); }
-.mp-fback { width: 40px; height: 40px; border: none; background: transparent; color: #eaeaf0; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; }
-.mp-fback svg { width: 24px; height: 24px; }
-.mp-fbar b { font-size: 16px; font-weight: 900; color: #fff; }
-.mp-fscroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
-.mp-fcard { border-bottom: 8px solid #000; scroll-margin-top: 4px; }
-.mp-fhead { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
-.mp-fbadge { font-size: 11px; font-weight: 800; color: #cdd6ea; background: rgba(120,150,220,.14);
-  border: 1px solid rgba(120,150,220,.28); padding: 3px 10px; border-radius: 999px; }
-.mp-ftime { font-size: 12px; color: #8b8b93; }
-.mp-fmedia { position: relative; width: 100%; background: #000; cursor: pointer; }
-.mp-fmedia img { width: 100%; max-height: 78vh; object-fit: contain; display: block; }
-.mp-fplay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  pointer-events: none; }
-.mp-fplay svg { width: 64px; height: 64px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.6)); opacity: .95; }
-.mp-ftext { padding: 6px 16px 4px; cursor: pointer; }
-.mp-ftext span { font-size: 17px; font-weight: 800; color: #eef1f8; line-height: 1.45;
-  display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
-.mp-fcap { padding: 10px 14px 2px; font-size: 14px; color: #dfe3ec; line-height: 1.5;
+/* 갈라·예측·광장 = 리스트 행(작은 16:9 썸네일 + 제목 + 메타) */
+.mp-yt-rows { display: flex; flex-direction: column; }
+.mp-yt-row { display: flex; gap: 10px; padding: 8px 12px; cursor: pointer; align-items: flex-start; }
+.mp-yt-th { position: relative; flex: 0 0 auto; width: 168px; max-width: 44vw; aspect-ratio: 16/9;
+  border-radius: 10px; overflow: hidden; background: #0d0d0f; }
+.mp-yt-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mp-yt-info { min-width: 0; flex: 1; padding-top: 1px; }
+.mp-yt-tt { font-size: 14.5px; font-weight: 800; color: #eef1f8; line-height: 1.36;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.mp-fopen { margin: 10px 14px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-  color: #9fb4e6; font-size: 13px; font-weight: 800; padding: 9px 14px; border-radius: 12px; cursor: pointer; }
+.mp-yt-meta { margin-top: 5px; font-size: 12px; color: #8b8b93; }
