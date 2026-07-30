@@ -168,6 +168,15 @@ export async function onRequestGet(context) {
       image = row.thumbnail || row.cover_image || defImg;
       dest = `${origin}/plaza_detail.html?id=${encodeURIComponent(id)}`;
     }
+  } else if (type === "post" && id) {
+    const row = await sbOne(`posts?id=eq.${encodeURIComponent(id)}&is_published=eq.true&select=title,caption,thumbnail_url,images,kind`);
+    if (row) {
+      const firstImg = Array.isArray(row.images) && row.images.length ? row.images[0] : null;
+      title = `${row.kind === "horizontal" ? "🎬" : "📸"} ${clip(row.title || row.caption || "갈라리 콘텐츠", 60)}`;
+      desc = clip(row.caption || row.title || "갈라리에서 보고, 댓글로 소통하고, 후원으로 응원하세요.", 90);
+      image = row.thumbnail_url || firstImg || defImg;
+      dest = `${origin}/gallari-post.html?id=${encodeURIComponent(id)}`;
+    }
   }
 
   const html = `<!doctype html><html lang="ko"><head>

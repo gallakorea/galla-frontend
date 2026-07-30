@@ -19,6 +19,7 @@
   }
   const HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.5 1-1a5.5 5.5 0 0 0 0-7.9z"/></svg>';
   const CHAT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+  const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>';
 
   async function initGallariPost() {
     const sb = window.supabaseClient;
@@ -71,6 +72,7 @@
     const actionsHtml = `<div class="glp-actions">
       <button class="glp-act glp-like${liked ? ' on' : ''}" id="glp-like">${HEART}<span id="glp-likec">${likeCount}</span></button>
       <button class="glp-act" id="glp-cfocus">${CHAT}<span>${post.comment_count || 0}</span></button>
+      <button class="glp-act" id="glp-share">${SHARE}</button>
       <button class="glp-support" id="glp-support">🎁 후원</button>
     </div>`;
 
@@ -126,6 +128,15 @@
       if (!me) { alert('로그인하고 후원할 수 있어요.'); return; }
       if (window.openDonatePost) window.openDonatePost(id, author?.nickname || '창작자');
       else (window.GALLA_toast || alert)('후원 준비 중이에요');
+    });
+
+    // 공유 — /share/post/<id> OG 엣지 렌더 링크로
+    document.getElementById('glp-share').addEventListener('click', () => {
+      const shareUrl = location.origin + '/share/post/' + id;
+      const text = post.title || post.caption || '갈라리 콘텐츠';
+      if (window.GALLA_share) window.GALLA_share({ url: shareUrl, title: 'GALLA 갈라리', text });
+      else if (navigator.share) navigator.share({ title: 'GALLA', text, url: shareUrl }).catch(() => {});
+      else { try { navigator.clipboard.writeText(shareUrl); } catch (_) {} (window.GALLA_toast || alert)('링크를 복사했어요'); }
     });
 
     // 후원자 요약(슈퍼챗) — 후원 성공 시 donate.js가 다시 부른다
