@@ -34,8 +34,31 @@
       if (myId) {
         const { data } = await c.from("follows").select("following").eq("follower", myId);
         (data || []).forEach(r => follows.add(r.following));
+        subscribeRealtime();   // 팔로우 상태를 전 페이지·전 세션 실시간 동기화
       }
       loaded = true;
+    } catch (e) {}
+  }
+
+  /* 👥 팔로우 관계 실시간 — 다른 기기·다른 화면(피드/이슈/DM 등)에서 내가 팔로우·언팔하면
+     이 페이지의 모든 .js-follow 버튼도 즉시 반영. (follows publication 필요 — DM과 동일 소스) */
+  let rtChan = null;
+  function subscribeRealtime() {
+    if (rtChan || !myId) return;
+    const c = sb(); if (!c || !c.channel) return;
+    try {
+      rtChan = c.channel("follows-btn-" + myId)
+        .on("postgres_changes",
+          { event: "*", schema: "public", table: "follows", filter: "follower=eq." + myId },
+          (payload) => {
+            const isDel = payload.eventType === "DELETE";
+            const row = (isDel ? payload.old : payload.new) || {};
+            const uid = row.following;
+            if (!uid) return;
+            if (isDel) follows.delete(uid); else follows.add(uid);
+            document.querySelectorAll(`.js-follow[data-uid="${uid}"]`).forEach(paint);
+          })
+        .subscribe();
     } catch (e) {}
   }
 
