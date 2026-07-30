@@ -572,7 +572,7 @@
       D.cheer_chal = data.chal; D.cheer_opp = data.opp;
       paintCheerGauge();
       cheerFx(team, amt);
-      if (boost && data.boosted) { fxBoost(team, box); finisherToast("부스트 적용! 배당 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
+      if (boost && data.boosted) { fxBoost(team, box); finisherToast("부스트 적용! 응원 몫 1.7배"); boost = false; if (boostBtn) boostBtn.classList.remove("on"); }
       else if (boost && !data.boosted) { alert("부스트권이 없어 일반 응원으로 걸렸어요. 상점에서 부스트권을 구매하세요."); boost = false; if (boostBtn) boostBtn.classList.remove("on"); askBuy("duel_cheer_boost"); }
     });
   }

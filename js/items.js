@@ -42,7 +42,7 @@
     { key: "duel_rematch_pass", emoji: "🔁", name: "설욕전권", price: 500, group: "duel", kind: "consumable",
       desc: "패배한 일기토를 같은 상대·주제로 신청서 없이 즉시 재도전", use: "결과 화면의 🔁 설욕전 버튼으로 1장 쓰여요" },
     { key: "duel_cheer_boost", emoji: "📢", name: "응원 부스트", price: 300, group: "duel", kind: "consumable",
-      desc: "관중 응원 베팅의 배당 지분을 1.7배로! 이긴 편일 때 몫이 커져요", use: "옥타곤 응원 시 📢 부스트를 켜면 1장 쓰여요" },
+      desc: "관중 응원 몫을 1.7배로! 이긴 편일 때 보상이 커져요", use: "옥타곤 응원 시 📢 부스트를 켜면 1장 쓰여요" },
     { key: "duel_roar_pass", emoji: "🦁", name: "사자후", price: 2000, group: "duel", kind: "consumable",
       desc: "3초 음성으로 상대를 압도! 목소리 그대로 옥타곤에 울려퍼지는 최강 한 방 (판당 1회)", use: "옥타곤 아이템의 🦁 사자후로 3초 녹음해 발사, 1장 쓰여요" },
     // ── 유령 (기간제) ── kind:'ghost' → buy_ghost_pass(days)
