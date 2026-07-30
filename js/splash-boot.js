@@ -7,6 +7,10 @@
    - 준비되면(window load + 최소 노출) 페이드아웃 후 제거. 세이프가드로 무슨 일이 있어도 사라짐.
    ========================================================= */
 (function () {
+  // 📦 네이티브 번들: 진입 문서가 index.html→app.html로 리다이렉트된다. 스플래시는 '최종 문서'인
+  //    app.html에서만 떠야 피드 뜨는 화면을 정확히 덮는다. 리다이렉트 스텁(index/app-shell)에서
+  //    스플래시가 세션플래그를 먼저 먹으면 app.html은 스플래시 없이 로드→FOUC/영상 재로드로 보임(사장님 재현).
+  try { if (location.protocol === "capacitor:" && !/\/app\.html$/.test(location.pathname)) return; } catch (_) {}
   // 이미 이번 세션에 봤으면(재방문·내부 이동) 아예 만들지 않음 — 깜빡임 0.
   try { if (sessionStorage.getItem("galla_splashed")) return; } catch (_) {}
   try { sessionStorage.setItem("galla_splashed", "1"); } catch (_) {}
