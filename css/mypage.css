@@ -514,9 +514,10 @@ body{
 .profile-actions .action-btn.primary{ background:#0a68f5; border:none; }
 .profile-actions button:hover{ background:#303032; }
 
-/* 탭: 인스타식 라인 — 좌측정렬 스크롤(탭 수 가변·비동기 노출에도 흔들림 없게). space-around+overflow 충돌 제거 */
-.tabs{ justify-content:flex-start; padding:0 6px; gap:2px; }
-.tab{ padding:12px 8px; font-size:13px; color:#8e8e93; font-weight:600; }
+/* 탭: 가로 스크롤 완전 차단(손으로 밀려 흔들리지 않게 고정) + 폭을 꽉 채워 균등 스프레드.
+   각 탭 flex:1 → 5개든 3개든 화면 폭을 똑같이 나눠 가짐. 넘칠 일이 없어 스크롤 자체가 사라짐. */
+.tabs{ justify-content:space-between; padding:0 4px; gap:0; overflow-x:hidden !important; touch-action:pan-y; }
+.tab{ flex:1 1 0; text-align:center; padding:12px 4px; font-size:13px; color:#8e8e93; font-weight:600; white-space:nowrap; }
 .tab.active{ color:#fff; }
 .tab.active::after{ left:8px; right:8px; height:1.5px;
   background:#fff; border-radius:0; }
