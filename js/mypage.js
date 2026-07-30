@@ -1317,6 +1317,47 @@ async function GALLA_mypageInit(root, spaParams) {
                 kind === "vertical" ? "gallari-reels.html?start=" + el.dataset.id + "&t=post&user=" + viewUserId : "gallari-post.html?id=" + el.dataset.id)));
     };
 
+    // ---------------------------
+    // 모아 — 내 모든 콘텐츠 통합 그리드(갈라·숏판·롱판·예측·광장). 이모지 아이콘 없이 텍스트 라벨.
+    // ---------------------------
+    const ALL_TYPES = {
+        issue:   { label: "갈라", dest: id => "issue.html?id=" + id },
+        short:   { label: "숏판", dest: id => "gallari-reels.html?user=" + viewUserId + "&start=" + id + "&t=post" },
+        long:    { label: "롱판", dest: id => "gallari-post.html?id=" + id },
+        predict: { label: "예측", dest: id => "predict-market.html?id=" + id },
+        plaza:   { label: "광장", dest: id => "plaza_detail.html?id=" + id },
+    };
+    const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>';
+    const renderAll = async () => {
+        clearSubBar();
+        tabContent.className = "content-area";
+        tabContent.innerHTML = MP_SPINNER;
+        const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+        const [iss, pst, mkt, plz] = await Promise.all([
+            supabase.from("issues").select("id,title,thumbnail_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(40),
+            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,video_url,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
+            supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(40),
+            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(40),
+        ]);
+        const items = [];
+        (iss.data || []).forEach(r => items.push({ t: "issue", id: r.id, thumb: r.thumbnail_url || (Array.isArray(r.images) && r.images[0]) || "", title: r.title, ts: r.created_at }));
+        (pst.data || []).forEach(r => items.push({ t: r.kind === "horizontal" ? "long" : "short", id: r.id, thumb: r.thumbnail_url || (Array.isArray(r.images) && r.images[0]) || "", title: r.title || r.caption, video: !!r.video_url, ts: r.created_at }));
+        (mkt.data || []).forEach(r => items.push({ t: "predict", id: r.id, thumb: r.image_url || "", title: r.question, ts: r.created_at }));
+        (plz.data || []).forEach(r => items.push({ t: "plaza", id: r.id, thumb: r.thumbnail || r.cover_image || "", title: r.title, ts: r.created_at }));
+        items.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+        if (!items.length) { tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return; }
+        tabContent.innerHTML = '<div class="glf-grid mp-all">' + items.map(it => {
+            const lab = ALL_TYPES[it.t].label;
+            return `<div class="glf-tile mp-all-tile" data-t="${it.t}" data-id="${it.id}">
+                ${it.thumb ? `<img src="${esc(it.thumb)}" loading="lazy">` : `<div class="mp-all-text"><b>${esc(lab)}</b><span>${esc((it.title || "").slice(0, 42))}</span></div>`}
+                <span class="mp-all-badge">${esc(lab)}</span>
+                ${it.video ? `<span class="glf-play">${PLAY_SVG}</span>` : ""}
+            </div>`;
+        }).join("") + "</div>";
+        tabContent.querySelectorAll(".mp-all-tile").forEach(el => el.addEventListener("click", () =>
+            (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[el.dataset.t].dest(el.dataset.id))));
+    };
+
     // 숏판·롱판 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출
     (async function revealContentTab() {
         const ctabs = D.querySelectorAll('.tab[data-tab="short"], .tab[data-tab="long"]');
@@ -1343,9 +1384,10 @@ async function GALLA_mypageInit(root, spaParams) {
             const menu = tab.dataset.tab;
 
             switch (menu) {
+                case "all": renderAll(); break;                              // 모아 — 전체 통합 그리드
                 case "galla": renderGalla(); break;                          // 내가 만든 이슈
-                case "short": renderContent("vertical"); break;              // ⚡ 숏판
-                case "long":  renderContent("horizontal"); break;            // 🎬 롱판
+                case "short": renderContent("vertical"); break;              // 숏판
+                case "long":  renderContent("horizontal"); break;            // 롱판
                 case "predict": renderPredict(); break;                      // 내가 만든 예측
                 case "plaza": renderPlaza(); break;                          // 내가 쓴 광장
             }
@@ -1353,9 +1395,9 @@ async function GALLA_mypageInit(root, spaParams) {
     });
 
     // ---------------------------
-    // 기본 탭: 갈라 (본인=My/Saved, 방문자=공개 My)
+    // 기본 탭: 모아 (전체 통합 그리드)
     // ---------------------------
-    renderGalla();
+    renderAll();
 }
 
 /* ═══ 모드 부트스트랩 ═══
