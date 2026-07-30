@@ -1344,68 +1344,67 @@ async function GALLA_mypageInit(root, spaParams) {
             if (d < 31536000) return Math.floor(d / 2592000) + "개월 전"; return Math.floor(d / 31536000) + "년 전";
         };
         const [iss, pst, mkt, plz] = await Promise.all([
-            supabase.from("issues").select("id,title,thumbnail_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(30),
+            supabase.from("issues").select("id,title,thumbnail_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
             supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,video_url,view_count,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
-            supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(20),
-            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(20),
+            supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(6),
+            supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
         ]);
         const pdata = pst.data || [];
-        const shorts = pdata.filter(r => r.kind !== "horizontal");
-        const longs = pdata.filter(r => r.kind === "horizontal");
-        const total = (iss.data || []).length + pdata.length + (mkt.data || []).length + (plz.data || []).length;
-        if (!total) { tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return; }
+        const shorts = pdata.filter(r => r.kind !== "horizontal").slice(0, 6);
+        const longs = pdata.filter(r => r.kind === "horizontal").slice(0, 6);
+        const issues = iss.data || [], markets = mkt.data || [], plazas = plz.data || [];
+        if (!(issues.length + pdata.length + markets.length + plazas.length)) {
+            tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return;
+        }
 
         const thumbOf = r => r.thumbnail_url || r.image_url || r.thumbnail || r.cover_image || (Array.isArray(r.images) && r.images[0]) || "";
-        const wideThumb = (t, id, url, title, meta) =>
-            `<div class="mp-yt-row" data-t="${t}" data-id="${id}">
-                <div class="mp-yt-th">${url ? `<img src="${esc(url)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}</div>
-                <div class="mp-yt-info"><div class="mp-yt-tt">${esc(title || "제목 없음")}</div><div class="mp-yt-meta">${esc(meta)}</div></div>
-            </div>`;
+        // 섹션 헤더 — 누르면 해당 탭으로 이동(› 표시). tab = .tab[data-tab] 키
+        const head = (label, tab) => `<h3 class="mp-yt-h" data-gototab="${tab}">${label}<span class="mp-yt-more">›</span></h3>`;
+        // 세로폼 그리드(9:16) — 갈라·숏판 공용. sub는 선택(조회수 등)
+        const vGrid = (label, tab, t, rows, capOf, subOf) => {
+            const cells = rows.map(r => {
+                const th = thumbOf(r);
+                return `<div class="mp-sh-cell" data-t="${t}" data-id="${r.id}">
+                    ${th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}
+                    <span class="mp-sh-cap">${esc(capOf(r) || "")}</span>
+                    ${subOf ? `<span class="mp-sh-v">${esc(subOf(r))}</span>` : ""}
+                </div>`;
+            }).join("");
+            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-sh-grid">${cells}</div></section>`;
+        };
+        // 리스트 행(작은 16:9) — 예측·광장 공용
+        const listRows = (label, tab, t, rows, titleOf, metaOf) => {
+            const html = rows.map(r =>
+                `<div class="mp-yt-row" data-t="${t}" data-id="${r.id}">
+                    <div class="mp-yt-th">${thumbOf(r) ? `<img src="${esc(thumbOf(r))}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}</div>
+                    <div class="mp-yt-info"><div class="mp-yt-tt">${esc(titleOf(r) || "제목 없음")}</div><div class="mp-yt-meta">${esc(metaOf(r))}</div></div>
+                </div>`).join("");
+            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-yt-rows">${html}</div></section>`;
+        };
 
         const sections = [];
-
-        // 숏판 — Shorts 그리드(세로 9:16)
-        if (shorts.length) {
-            const cells = shorts.map(r => {
-                const th = thumbOf(r);
-                return `<div class="mp-sh-cell" data-t="short" data-id="${r.id}">
-                    ${th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}
-                    <span class="mp-sh-cap">${esc(r.title || r.caption || "")}</span>
-                    <span class="mp-sh-v">${views(r.view_count)}</span>
-                </div>`;
-            }).join("");
-            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">숏판</h3><div class="mp-sh-grid">${cells}</div></section>`);
-        }
-        // 롱판 — 동영상 리스트(16:9)
+        // 순서: 갈라 → 숏판 → 롱판 → 예측 → 광장 (각 최신 6개)
+        if (issues.length) sections.push(vGrid("갈라", "galla", "issue", issues, r => r.title));
+        if (shorts.length) sections.push(vGrid("숏판", "short", "short", shorts, r => r.title || r.caption, r => views(r.view_count)));
         if (longs.length) {
-            const rows = longs.map(r => {
-                const th = thumbOf(r);
-                return `<div class="mp-lv" data-t="long" data-id="${r.id}">
-                    <div class="mp-lv-th">${th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}<span class="mp-lv-play">${PLAY_SVG}</span></div>
+            const rows = longs.map(r =>
+                `<div class="mp-lv" data-t="long" data-id="${r.id}">
+                    <div class="mp-lv-th">${thumbOf(r) ? `<img src="${esc(thumbOf(r))}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}<span class="mp-lv-play">${PLAY_SVG}</span></div>
                     <div class="mp-lv-tt">${esc(r.title || r.caption || "제목 없음")}</div>
                     <div class="mp-lv-meta">${views(r.view_count)} · ${ago(r.created_at)}</div>
-                </div>`;
-            }).join("");
-            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">동영상</h3><div class="mp-lv-list">${rows}</div></section>`);
+                </div>`).join("");
+            sections.push(`<section class="mp-yt-sec">${head("롱판", "long")}<div class="mp-lv-list">${rows}</div></section>`);
         }
-        // 갈라(이슈)
-        if ((iss.data || []).length) {
-            const rows = iss.data.map(r => wideThumb("issue", r.id, thumbOf(r), r.title, ago(r.created_at))).join("");
-            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">갈라</h3><div class="mp-yt-rows">${rows}</div></section>`);
-        }
-        // 예측
-        if ((mkt.data || []).length) {
-            const rows = mkt.data.map(r => wideThumb("predict", r.id, thumbOf(r), r.question, ago(r.created_at))).join("");
-            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">예측</h3><div class="mp-yt-rows">${rows}</div></section>`);
-        }
-        // 광장
-        if ((plz.data || []).length) {
-            const rows = plz.data.map(r => wideThumb("plaza", r.id, thumbOf(r), r.title, views(r.view_count) + " · " + ago(r.created_at))).join("");
-            sections.push(`<section class="mp-yt-sec"><h3 class="mp-yt-h">광장</h3><div class="mp-yt-rows">${rows}</div></section>`);
-        }
+        if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
+        if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
 
         tabContent.innerHTML = `<div class="mp-yt">${sections.join("")}</div>`;
-        tabContent.querySelectorAll("[data-t][data-id]").forEach(el => el.addEventListener("click", () =>
+        // 섹션 헤더 탭 → 해당 탭으로 전환
+        tabContent.querySelectorAll("[data-gototab]").forEach(el => el.addEventListener("click", () => {
+            const tb = D.querySelector('.tab[data-tab="' + el.dataset.gototab + '"]');
+            if (tb) tb.click();
+        }));
+        tabContent.querySelectorAll(".mp-sh-cell[data-id], .mp-lv[data-id], .mp-yt-row[data-id]").forEach(el => el.addEventListener("click", () =>
             (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[el.dataset.t].dest(el.dataset.id))));
     };
 
@@ -1445,10 +1444,21 @@ async function GALLA_mypageInit(root, spaParams) {
         });
     });
 
+    // 조그/외부에서 탭 전환 — 해당 .tab을 눌러 재사용
+    window.GALLA_mypageSetTab = (tab) => {
+        const el = D.querySelector('.tabs .tab[data-tab="' + tab + '"]');
+        if (el && !el.hidden) { el.click(); return true; }
+        return false;
+    };
+
     // ---------------------------
-    // 기본 탭: 모아 (전체 통합 그리드)
+    // 기본 탭: 모아 (전체 통합 그리드) — 단, 조그로 넘어온 대기 탭이 있으면 그 탭
     // ---------------------------
-    renderAll();
+    let pending = null;
+    try { pending = sessionStorage.getItem("galla_mypage_tab"); if (pending) sessionStorage.removeItem("galla_mypage_tab"); } catch (_) {}
+    const pendEl = pending && pending !== "all" ? D.querySelector('.tabs .tab[data-tab="' + pending + '"]') : null;
+    if (pendEl && !pendEl.hidden) pendEl.click();
+    else renderAll();
 }
 
 /* ═══ 모드 부트스트랩 ═══

@@ -69,7 +69,10 @@
 .mp-yt { padding: 2px 0 10px; max-width: 720px; margin: 0 auto; }
 .mp-yt-sec { padding: 12px 0 16px; border-bottom: 8px solid rgba(255,255,255,.045); }
 .mp-yt-sec:last-child { border-bottom: 0; }
-.mp-yt-h { font-size: 18px; font-weight: 900; color: #f2f4f8; margin: 2px 14px 12px; letter-spacing: -.3px; }
+.mp-yt-h { display: inline-flex; align-items: center; gap: 3px; font-size: 18px; font-weight: 900;
+  color: #f2f4f8; margin: 2px 14px 12px; letter-spacing: -.3px; cursor: pointer; }
+.mp-yt-more { font-size: 22px; font-weight: 700; color: #9aa0ae; line-height: 1; margin-top: -1px; }
+.mp-yt-h:active { opacity: .6; }
 .mp-yt-ph { width: 100%; height: 100%; background: linear-gradient(150deg, #20222b, #12131a); }
 
 /* 숏판 = Shorts 그리드(세로 9:16) */

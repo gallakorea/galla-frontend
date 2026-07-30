@@ -39,6 +39,28 @@
     { id: 'plaza',    label: '광장',
       icon: I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>') },
   ];
+  /* 마이페이지 탭 조그 — 모아/갈라/숏판/롱판/예측/광장(마이페이지 탭바와 동일 순서). */
+  const MY_ICONS = {
+    all:     I('<rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/>'),
+    galla:   I('<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>'),
+    short:   I('<rect x="6" y="3" width="12" height="18" rx="2.4"/><path d="M10.5 9l4 3-4 3V9z"/>'),
+    long:    I('<rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10 9l5 3-5 3V9z"/>'),
+    predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
+    plaza:   I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'),
+  };
+  const MY_DEFAULT = [
+    { id: 'all', label: '모아', icon: MY_ICONS.all },
+    { id: 'galla', label: '갈라', icon: MY_ICONS.galla },
+    { id: 'predict', label: '예측', icon: MY_ICONS.predict },
+    { id: 'plaza', label: '광장', icon: MY_ICONS.plaza },
+  ];
+  /* 마이페이지에 있으면 실제 보이는 탭바를 그대로(숨김 숏판/롱판 반영), 아니면 기본 4탭. */
+  function mypageTabs() {
+    const live = Array.from(document.querySelectorAll('.tabs .tab[data-tab]')).filter(t => !t.hidden);
+    if (live.length) return live.map(t => ({ id: t.dataset.tab, label: t.textContent.trim(), icon: MY_ICONS[t.dataset.tab] || '' }));
+    return MY_DEFAULT;
+  }
+
   /* 사용자가 저장한 탭 순서를 조그에도 반영 — 탭바와 조그가 항상 같은 순서.
      열 때마다 읽는다(설정 시트에서 방금 바꾼 순서도 즉시 반영). */
   function trendTabsOrdered() {
@@ -352,6 +374,19 @@
         if (onTrend && window.GALLA_trendSetTab && tab) return window.GALLA_trendSetTab(tab);
         if (window.GALLA_shellGo) { window.GALLA_shellGo('trend', tab || null); return; }
         location.href = 'search.html' + (tab ? '?tab=' + tab : '');
+      },
+    });
+
+    /* 마이페이지 조그 — 모아/갈라/숏판/롱판/예측/광장 */
+    bindJog(document.querySelector('.nav-item[data-page="mypage"]'), {
+      tabs: mypageTabs,
+      go(tab) {
+        // 이미 마이페이지면 그 탭으로 바로 전환
+        if (tab && window.GALLA_mypageSetTab && window.GALLA_mypageSetTab(tab)) return;
+        // 다른 화면에서 왔으면 대기 탭 저장 후 마이페이지로 이동(마운트 시 적용)
+        try { if (tab && tab !== 'all') sessionStorage.setItem('galla_mypage_tab', tab); } catch (_) {}
+        if (window.GALLA_shellGo) { window.GALLA_shellGo('mypage', null); return; }
+        location.href = 'mypage.html';
       },
     });
   }
