@@ -14,12 +14,12 @@
   <script>window.GALLA_callKitAnswer = function(id){ try{ window.__ckAnswer = { callerId: id||'', at: Date.now() }; }catch(e){} };</script>
   <!-- 🧯 긴급 폴백 — localStorage galla_spa=0 이면 구 iframe 셸로(app-shell은 0이 아닐 때만 이리로 오므로 루프 없음) -->
   <script>try{ if(localStorage.getItem('galla_spa')==='0'){ location.replace('app-shell.html'); } }catch(e){}</script>
-  <script>window.GALLA_V = "072871";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
-  <link rel="stylesheet" href="./css/theme.css?v=072871">
-  <link rel="stylesheet" href="./css/nav.css?v=072871">
+  <script>window.GALLA_V = "072872";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
+  <link rel="stylesheet" href="./css/theme.css?v=072872">
+  <link rel="stylesheet" href="./css/nav.css?v=072872">
   <!-- 📞 통화 UI — 엔진이 이 문서(최상위)에서 돌므로 스타일도 여기 -->
-  <link rel="stylesheet" href="./css/dm.css?v=072871">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=072871">
+  <link rel="stylesheet" href="./css/dm.css?v=072872">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=072872">
   <style>
     /* ═══ 🚀 갈라 SPA 셸 — 단일 문서. 탭 5개 keep-alive 판 + 상세 스택. iframe 없음 ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -118,26 +118,26 @@
 </nav>
 
 <!-- 에러 로거 — SPA 부팅/런타임 에러를 client_errors에 남겨 실기기 진단 가능하게 -->
-<script src="/js/error-logger.js?v=072871"></script>
+<script src="/js/error-logger.js?v=072872"></script>
 <!-- 공유 싱글턴 — 단일 문서라 세션·실시간·통화가 딱 1개 인스턴스로 돈다 -->
-<script src="./vendor/supabase.js?v=072871"></script>
-<script src="./js/supabase.js?v=072871"></script>
-<script src="./js/dm-sound.js?v=072871" data-galla-sfx="1"></script>
+<script src="./vendor/supabase.js?v=072872"></script>
+<script src="./js/supabase.js?v=072872"></script>
+<script src="./js/dm-sound.js?v=072872" data-galla-sfx="1"></script>
 <!-- 📞 통화 미디어 = DIY iosrtc(네이티브). Agora 웹SDK는 CallKit 잠금답변 오디오세션 충돌로 미사용(로드 제거 → GALLA_agora 없음 → dm-call.js가 iosrtc 경로). -->
-<!-- <script src="./js/agora-media.js?v=072871"></script> -->
-<script src="./js/dm-call.js?v=072871"></script>
+<!-- <script src="./js/agora-media.js?v=072872"></script> -->
+<script src="./js/dm-call.js?v=072872"></script>
 
 <!-- 공용 헤더 기능 — ＋ 글쓰기 허브·알림 벨/뱃지(문서 위임이라 어느 판 헤더든 동작) -->
-<script src="./js/write-hub.js?v=072871"></script>
-<script src="./js/notifications.js?v=072871"></script>
+<script src="./js/write-hub.js?v=072872"></script>
+<script src="./js/notifications.js?v=072872"></script>
 
 <!-- SPA 코어 -->
-<script src="./js/spa/view-loader.js?v=072871"></script>
-<script src="./js/spa/router.js?v=072871"></script>
+<script src="./js/spa/view-loader.js?v=072872"></script>
+<script src="./js/spa/router.js?v=072872"></script>
 <!-- 🎛 네비 조그셔틀(DM·트렌드 꾹눌러 부채꼴 선택) — SPA에 빠져 있어 조그가 안 먹던 것 추가. GALLA_shellGo(router) 정의 후 로드 -->
-<script src="./js/nav-jog.js?v=072871"></script>
+<script src="./js/nav-jog.js?v=072872"></script>
 <!-- ⬇️ 당겨서 새로고침 — SPA 전역(그동안 DM 등 일부 뷰만 로드돼 메인 탭에선 안 됐음). 싱글턴 가드 있음 -->
-<script src="./js/pull-refresh.js?v=072871"></script>
+<script src="./js/pull-refresh.js?v=072872"></script>
 <script>
 /* 알림 초기화 — supabase 준비되면 1회(뱃지·실시간 구독). 판들이 재호출해도 idempotent */
 (function boot(){

@@ -23,6 +23,7 @@ const SCRIPTS = [
   "/js/bg-video-upload.js",      // GALLA_bgVideo (영상 배경 선업로드)
   "/js/img-crop.js",             // GALLA_PROCESS_IMAGES (4:5 크롭)
   "/js/draft.js",                // GALLA_draft (텍스트 자동 임시저장)
+  "/js/write-media.js",          // GALLA_WriteMedia(미디어 캐시)·GALLA_UploadOverlay(업로드 진행 UI)
   "/js/vote-bar.js",             // GALLA_VoteBar (미리보기 진영바)
   "/js/write.js",                // 페이지 본체 — GALLA_PAGE_WRITE 노출
   "/js/write.ai.js",             // GALLA_WRITE_INITS.ai

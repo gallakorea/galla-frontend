@@ -1,0 +1,92 @@
+/* ============================================================
+   이슈 작성 — 전체화면 업로드 진행 오버레이 (인스타식)
+   js/write-media.js 의 GALLA_UploadOverlay 전용
+   ============================================================ */
+body.gup-lock { overflow: hidden; }
+
+#gUpOverlay {
+  position: fixed; inset: 0;
+  z-index: 2147483600;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, .78);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  opacity: 0; pointer-events: none;
+  transition: opacity .22s ease;
+}
+#gUpOverlay.on { opacity: 1; pointer-events: auto; }
+
+#gUpOverlay .gup-card {
+  width: 100%; max-width: 300px;
+  display: flex; flex-direction: column; align-items: center;
+  transform: translateY(8px) scale(.98);
+  transition: transform .26s cubic-bezier(.32, .72, 0, 1);
+}
+#gUpOverlay.on .gup-card { transform: none; }
+
+#gUpOverlay .gup-thumb {
+  position: relative;
+  width: 200px; height: 250px;          /* 4:5 */
+  border-radius: 20px; overflow: hidden;
+  background: #0d0d0f;
+  border: 1px solid rgba(255, 255, 255, .1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .55);
+}
+#gUpOverlay .gup-thumb-img,
+#gUpOverlay .gup-thumb-vid {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+/* 업로드 중엔 살짝 어둡게(진행감), 완료되면 밝게 */
+#gUpOverlay .gup-thumb::after {
+  content: ""; position: absolute; inset: 0;
+  background: rgba(0, 0, 0, .28);
+  transition: background .3s ease;
+}
+#gUpOverlay.done .gup-thumb::after { background: rgba(0, 0, 0, 0); }
+
+#gUpOverlay .gup-done {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 66px; font-weight: 900; color: #fff;
+  background: rgba(59, 130, 246, .32);
+  opacity: 0; transform: scale(.6);
+  transition: opacity .22s ease, transform .28s cubic-bezier(.2, 1.4, .4, 1);
+}
+#gUpOverlay .gup-done.on { opacity: 1; transform: none; }
+
+#gUpOverlay .gup-label {
+  margin-top: 22px;
+  font-size: 15px; font-weight: 800; color: #eaeaf0; letter-spacing: .2px;
+}
+
+#gUpOverlay .gup-track {
+  margin-top: 14px;
+  width: 200px; height: 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, .14); overflow: hidden;
+}
+#gUpOverlay .gup-fill {
+  height: 100%; width: 0%; border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  transition: width .28s ease;
+}
+
+#gUpOverlay .gup-pct {
+  margin-top: 12px;
+  font-size: 30px; font-weight: 900; color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 사진 즉시 업로드 진행 표시 — 썸네일 위 스피너(고르는 즉시 올라가는 중) */
+.multi-img-item.uploading > img { opacity: .45; }
+.multi-img-up {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.multi-img-up i {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, .3); border-top-color: #fff;
+  animation: gup-spin .7s linear infinite;
+}
+@keyframes gup-spin { to { transform: rotate(360deg); } }

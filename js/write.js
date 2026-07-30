@@ -68,6 +68,9 @@ function initWritePage(ctx) {
   const cardThumbPreview = document.getElementById('cardThumbPreview');
   const cardThumbImg = document.getElementById('cardThumbImg');
   const cardThumbClear = document.getElementById('cardThumbClear');
+  // 즉시 업로드로 확보한 URL(복원·발행 재사용) — 영상/카드썸네일
+  let cachedVideoUrl = null;
+  let cardThumbUrlCache = null;
   if (cardThumbInput) {
     cardThumbInput.addEventListener('change', () => {
       const f = cardThumbInput.files && cardThumbInput.files[0];
@@ -75,56 +78,90 @@ function initWritePage(ctx) {
       cardThumbImg.src = URL.createObjectURL(f);
       cardThumbPreview.hidden = false;
       cardThumbLabel.hidden = true;
+      cardThumbUrlCache = null;
+      // 🚀 고르는 즉시 업로드 → 발행 때 재업로드 없이 URL 재사용
+      (async () => {
+        try {
+          if (typeof window.GALLA_UPLOAD_MEDIA === 'function') {
+            cardThumbUrlCache = await window.GALLA_UPLOAD_MEDIA(f, 'image');
+            window.GALLA_WriteMedia && window.GALLA_WriteMedia.setCardThumb(cardThumbUrlCache);
+          }
+        } catch (e) { console.warn('[write] 카드썸네일 즉시 업로드 실패', e); }
+      })();
     });
     cardThumbClear.addEventListener('click', () => {
       cardThumbInput.value = '';
       cardThumbPreview.hidden = true;
       cardThumbLabel.hidden = false;
+      cardThumbUrlCache = null;
+      try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.setCardThumb(null); } catch (_) {}
     });
   }
 
   const MAX_IMAGES = 10;
 
-  // 업로드에 쓸 최종 이미지(4:5로 크롭 완료된 File 배열). 원본 대신 이걸 올린다.
-  let croppedImages = [];
+  /* 사진 통합 모델 — 각 항목 { file, url, up }
+     · file: 4:5 크롭 완료 File(새로 고른 것)   · url: R2에 '즉시 업로드'로 확보(복원·발행 재사용)
+     · up  : 업로드 진행 중 표시
+     나갔다 와도(앱을 껐다 켜도) url로 복원되고, 발행 땐 재업로드하지 않는다. */
+  let imgItems = [];
+  const imgSources = () => imgItems.map(it => it.url || (it.file ? URL.createObjectURL(it.file) : null)).filter(Boolean);
+  function persistImages() {
+    try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.setImages(imgItems.map(it => it.url).filter(Boolean)); } catch (_) {}
+  }
 
   // 선택된 사진 미리보기 렌더 — 각 장 삭제(✕) + 마지막에 추가(＋) 타일
   function renderThumbs() {
-    if (!croppedImages.length) {
+    if (!imgItems.length) {
       thumbPreview.innerHTML = '';
-      // 드롭존을 다시 보이게
-      if (thumbBtn) thumbBtn.style.display = '';
+      if (thumbBtn) thumbBtn.style.display = '';   // 드롭존을 다시 보이게
       return;
     }
-    // 사진이 있으면 큰 드롭존은 감추고, 스트립 안 '추가' 타일로 대체
     if (thumbBtn) thumbBtn.style.display = 'none';
     thumbPreview.innerHTML = `
       <div class="multi-img-strip">
-        ${croppedImages.map((f, i) => `
-          <div class="multi-img-item">
-            <img src="${URL.createObjectURL(f)}">
+        ${imgItems.map((it, i) => `
+          <div class="multi-img-item${it.up ? ' uploading' : ''}">
+            <img src="${it.url || (it.file ? URL.createObjectURL(it.file) : '')}">
+            ${it.up ? '<span class="multi-img-up"><i></i></span>' : ''}
             ${i === 0 ? '<span class="multi-img-badge">대표</span>' : ''}
             <button type="button" class="multi-img-del" data-idx="${i}" aria-label="삭제">✕</button>
           </div>
         `).join('')}
-        ${croppedImages.length < MAX_IMAGES
+        ${imgItems.length < MAX_IMAGES
           ? `<button type="button" class="multi-img-add" id="thumbAddMore" aria-label="사진 추가">＋</button>`
           : ''}
       </div>
-      <div class="guide-text">${croppedImages.length}/${MAX_IMAGES}장 · 첫 장이 대표${croppedImages.length > 1 ? ' · 캐러셀로 노출' : ''}</div>
+      <div class="guide-text">${imgItems.length}/${MAX_IMAGES}장 · 첫 장이 대표${imgItems.length > 1 ? ' · 캐러셀로 노출' : ''}</div>
     `;
+  }
+
+  // 개별 사진 즉시 업로드 → url 확보 후 캐시 반영
+  async function uploadItem(it) {
+    if (!it.file || it.url) return;
+    it.up = true;
+    try {
+      if (typeof window.GALLA_UPLOAD_MEDIA === 'function') {
+        it.url = await window.GALLA_UPLOAD_MEDIA(it.file, 'image');
+      }
+    } catch (err) {
+      console.warn('[write] 사진 즉시 업로드 실패 — 발행 때 재시도', err);
+    } finally {
+      it.up = false;
+      renderThumbs();
+      persistImages();
+    }
   }
 
   async function addFiles(files) {
     files = [...(files || [])].filter(Boolean);
     if (!files.length) return;
-    const room = MAX_IMAGES - croppedImages.length;
+    const room = MAX_IMAGES - imgItems.length;
     if (room <= 0) { alert(`이미지는 최대 ${MAX_IMAGES}장까지 올릴 수 있습니다.`); return; }
     if (files.length > room) {
       alert(`${room}장만 더 추가할 수 있어 처음 ${room}장만 담았습니다.`);
       files = files.slice(0, room);
     }
-    const prev = thumbPreview.innerHTML;
     thumbPreview.insertAdjacentHTML('afterbegin', `<div class="guide-text" id="thumbProc">사진 처리 중…</div>`);
     let processed;
     try {
@@ -135,8 +172,11 @@ function initWritePage(ctx) {
       console.error('[CROP ERROR]', err);
       processed = files;
     }
-    croppedImages = croppedImages.concat(processed);   // 기존에 이어붙이기(교체 아님)
+    const added = processed.map(f => ({ file: f, url: null, up: true }));
+    imgItems = imgItems.concat(added);   // 기존에 이어붙이기(교체 아님)
     renderThumbs();
+    window.GALLA_WriteMedia && window.GALLA_WriteMedia.setMode('photo');
+    added.forEach(it => uploadItem(it));   // 🚀 고르는 즉시 병렬 업로드
   }
 
   // label[for] 이 네이티브로 파일창을 염. 재선택 위해 열릴 때 value 초기화.
@@ -147,8 +187,9 @@ function initWritePage(ctx) {
   thumbPreview.addEventListener('click', e => {
     const del = e.target.closest('.multi-img-del');
     if (del) {
-      croppedImages.splice(Number(del.dataset.idx), 1);
+      imgItems.splice(Number(del.dataset.idx), 1);
       renderThumbs();
+      persistImages();
       return;
     }
     if (e.target.closest('.multi-img-add')) {
@@ -197,14 +238,28 @@ function initWritePage(ctx) {
       return;
     }
     bar.className = 'vup-bar';
+    cachedVideoUrl = null;
+    window.GALLA_WriteMedia && window.GALLA_WriteMedia.setMode('video');
     let tick = null;
     onCleanup(() => { if (tick) clearInterval(tick); });   // SPA unmount 시 진행표시 타이머 해제
-    tick = setInterval(() => {
+    tick = setInterval(async () => {
       const p = window.GALLA_bgVideo.progress();
-      bar.textContent = window.GALLA_bgVideo.isDone()
+      const done = window.GALLA_bgVideo.isDone();
+      bar.textContent = done
         ? '✅ 영상 준비 완료 — 바로 발행할 수 있어요'
         : `⬆️ 영상 미리 올리는 중… ${p}% (글을 계속 쓰셔도 됩니다)`;
-      if (window.GALLA_bgVideo.isDone()) clearInterval(tick);
+      if (done) {
+        clearInterval(tick);
+        // 🚀 업로드 끝난 URL을 캐시에 저장 → 나갔다 와도(앱을 껐다 켜도) 복원, 발행 땐 재사용
+        try {
+          const out = await window.GALLA_bgVideo.result(f);
+          const url = out && (out.url || out.hls);
+          if (url) {
+            cachedVideoUrl = url;
+            window.GALLA_WriteMedia && window.GALLA_WriteMedia.setVideo(url, f.name);
+          }
+        } catch (_) {}
+      }
     }, 400);
   });
 
@@ -248,11 +303,14 @@ function initWritePage(ctx) {
     mediaTabs.forEach(t => t.classList.toggle('active', t.dataset.media === mode));
     if (panePhoto) panePhoto.hidden = mode !== 'photo';
     if (paneVideo) paneVideo.hidden = mode !== 'video';
+    try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.setMode(mode); } catch (_) {}
 
     // 배타: 선택하지 않은 쪽 미디어는 비워 발행에 섞이지 않도록
     if (mode === 'photo') {
       videoInput.value = '';
       videoPreview.innerHTML = '';
+      cachedVideoUrl = null;
+      try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.clearVideo(); } catch (_) {}
       // 사진으로 바꿨는데 영상 전송이 계속 돌면 데이터만 태운다 → 중단
       window.GALLA_bgVideo && window.GALLA_bgVideo.clear();
       document.getElementById('vupBar')?.remove();
@@ -277,13 +335,14 @@ function initWritePage(ctx) {
     wizardSteps.forEach(s => s.classList.toggle('active', Number(s.dataset.step) <= n));
     // 미리보기 열려있으면 접기
     if (issuePreview) issuePreview.innerHTML = '';
+    try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.setStep(n); } catch (_) {}   // 나갔다 와도 스텝 복원
     scrollTopSmooth();
   }
 
   function hasMedia() {
     return window.__MEDIA_MODE__ === 'photo'
-      ? (croppedImages.length > 0)
-      : (videoInput.files && videoInput.files.length > 0);
+      ? (imgItems.length > 0)
+      : ((videoInput.files && videoInput.files.length > 0) || !!cachedVideoUrl);
   }
 
   document.getElementById('toStep2')?.addEventListener('click', () => {
@@ -303,6 +362,46 @@ function initWritePage(ctx) {
       else if (target === 2 && hasMedia()) goStep(2);
     });
   });
+
+  /* ♻️ 즉시 업로드+복원 — 나갔다 와도(앱을 껐다 켜도) 고른 미디어·스텝을 되살린다.
+     텍스트는 GALLA_draft가 복원, 미디어는 여기(localStorage URL 캐시)로 복원.
+     ⚠️ confirm→뒤로(?draft=…) 복귀는 DB draft 복원(GALLA_WRITE_INITS.restore)이 담당 → 중복 방지 위해 건너뜀. */
+  function restoreMediaCache() {
+    // DB draft 복원 경로(confirm→뒤로)면 양보 — SPA는 params, MPA는 URL ?draft=
+    let _qDraft = ctx.params && ctx.params.draft;
+    if (!_qDraft) { try { _qDraft = new URLSearchParams(location.search).get('draft'); } catch (_) {} }
+    if (_qDraft) return;
+    let c = null;
+    try { c = window.GALLA_WriteMedia && window.GALLA_WriteMedia.get(); } catch (_) {}
+    if (!c) return;
+    const mode = c.mode || (c.video_url ? 'video' : 'photo');
+    let restored = false;
+    if (mode === 'video' && c.video_url) {
+      setMediaMode('video');
+      cachedVideoUrl = c.video_url;
+      videoPreview.innerHTML = '';
+      const v = document.createElement('video');
+      v.src = c.video_url; v.controls = true; v.playsInline = true; v.muted = true;
+      videoPreview.appendChild(v);
+      const bar = ensureVideoBar();
+      bar.textContent = '✅ 영상 준비 완료 — 바로 발행할 수 있어요';
+      restored = true;
+    } else if (Array.isArray(c.images) && c.images.length) {
+      setMediaMode('photo');
+      imgItems = c.images.map(u => ({ file: null, url: u, up: false }));
+      renderThumbs();
+      restored = true;
+    }
+    // 카드 썸네일(선택) 복원
+    if (c.card_thumb_url && cardThumbImg && cardThumbPreview && cardThumbLabel) {
+      cardThumbUrlCache = c.card_thumb_url;
+      cardThumbImg.src = c.card_thumb_url;
+      cardThumbPreview.hidden = false;
+      cardThumbLabel.hidden = true;
+    }
+    if (restored && Number(c.step) === 2) goStep(2);
+  }
+  try { restoreMediaCache(); } catch (e) { console.warn('[write] 미디어 복원 실패', e); }
 
   /* ================= AI MODAL ================= */
   const openAiBtn = document.getElementById('openAiModal');
@@ -382,7 +481,7 @@ function initWritePage(ctx) {
 
     const factionA = factionAEl.value.trim() || '찬성이오';
     const factionB = factionBEl.value.trim() || '난 반댈세';
-    const imgSrcs = croppedImages.map(f => URL.createObjectURL(f));
+    const imgSrcs = imgSources();
 
     let mediaHtml = '';
     if (videoEl && videoEl.src) {
@@ -487,43 +586,73 @@ function initWritePage(ctx) {
       let card_thumb_url = null;
 
       // Cloudflare R2 업로드 (이미지 여러 장 + 영상)
+      // 🚀 즉시 업로드로 이미 URL이 확보돼 있으면 재업로드하지 않고 그대로 쓴다.
       const publishBtn = document.getElementById('publishPreview');
-      const imageFiles = croppedImages.length ? croppedImages : [...(thumbInput.files || [])];
+      const O = window.GALLA_UploadOverlay;
+      const photoMode = window.__MEDIA_MODE__ !== 'video';
       const videoFile = videoInput.files && videoInput.files[0];
+      const cardThumbFile = cardThumbInput && cardThumbInput.files && cardThumbInput.files[0];
+
+      // 아직 안 올라간 게 있으면 인스타식 전체화면 진행 UI를 띄운다(발행 전 검사 직전).
+      const pendingImgItem = photoMode ? imgItems.find(it => !it.url && it.file) : null;
+      const needImg = !!pendingImgItem;
+      const needVid = !!videoFile && !cachedVideoUrl;
+      const needCard = !!cardThumbFile && !cardThumbUrlCache;
+      const showOverlay = !!O && (needImg || needVid || needCard);
 
       try {
         publishBtn.disabled = true;
-        if (imageFiles.length > 0) {
+        publishBtn.textContent = '업로드 중…';
+        if (showOverlay) {
+          O.show({
+            label: '업로드 중…',
+            thumb: needVid ? { file: videoFile } : (needImg ? { file: pendingImgItem.file } : { file: cardThumbFile }),
+          });
+        }
+
+        // 이미지 — 항목별: url 있으면 그대로, 없으면(새로 고른 것) 지금 업로드.
+        //  (복원된 url-only 사진 + 새 file 사진이 섞여도 순서/개수를 잃지 않는다)
+        if (photoMode && imgItems.length > 0) {
           images = [];
-          for (let i = 0; i < imageFiles.length; i++) {
-            const label = `이미지 업로드 중… (${i + 1}/${imageFiles.length})`;
-            publishBtn.textContent = label;
-            images.push(await window.GALLA_UPLOAD_MEDIA(imageFiles[i], 'image',
-              p => { publishBtn.textContent = p == null ? label : `${label} ${p}%`; }));
+          for (let i = 0; i < imgItems.length; i++) {
+            const it = imgItems[i];
+            if (it.url) { images.push(it.url); continue; }
+            if (!it.file) continue;
+            if (O && showOverlay) { O.thumb({ file: it.file }); O.label(`사진 업로드 중… (${i + 1}/${imgItems.length})`); }
+            const u = await window.GALLA_UPLOAD_MEDIA(it.file, 'image',
+              p => { if (O && showOverlay) O.progress(p == null ? 0 : p); });
+            it.url = u;
+            images.push(u);
           }
           thumbnail_url = images[0];
         }
 
+        // 영상 — 배경 업로드가 끝났으면 캐시 URL 즉시, 아니면 여기서 이어/새로 올린다.
         if (videoFile) {
-          // 영상을 고른 순간 이미 배경 업로드가 돌고 있다 → 끝났으면 즉시, 진행 중이면 이어받는다.
-          // (배경 업로드가 실패했거나 없으면 result()가 알아서 지금 올린다)
-          publishBtn.textContent = '영상 업로드 중…';
-          const onP = p => { publishBtn.textContent = p == null ? '영상 업로드 중…' : `영상 업로드 중… ${p}%`; };
+          if (O && showOverlay) { O.thumb({ file: videoFile }); O.label('영상 업로드 중…'); }
+          const onP = p => { if (O && showOverlay) O.progress(p == null ? 0 : p); };
           const out = window.GALLA_bgVideo
             ? await window.GALLA_bgVideo.result(videoFile, onP)
             : await window.GALLA_UPLOAD_VIDEO(videoFile, onP);
           video_url = out.url || out.hls;
           if (!thumbnail_url && out.thumbnail) thumbnail_url = out.thumbnail;
+        } else if (cachedVideoUrl && window.__MEDIA_MODE__ === 'video') {
+          video_url = cachedVideoUrl;   // 복원된(이미 올라간) 영상 재사용
         }
 
-        const cardThumbFile = cardThumbInput && cardThumbInput.files && cardThumbInput.files[0];
+        // 카드 썸네일
         if (cardThumbFile) {
-          publishBtn.textContent = '썸네일 업로드 중…';
+          if (O && showOverlay) { O.thumb({ file: cardThumbFile }); O.label('썸네일 업로드 중…'); }
           card_thumb_url = await window.GALLA_UPLOAD_MEDIA(cardThumbFile, 'image',
-            p => { publishBtn.textContent = p == null ? '썸네일 업로드 중…' : `썸네일 업로드 중… ${p}%`; });
+            p => { if (O && showOverlay) O.progress(p == null ? 0 : p); });
+        } else if (cardThumbUrlCache) {
+          card_thumb_url = cardThumbUrlCache;
         }
+
+        if (O && showOverlay) { O.done('완료'); await new Promise(r => setTimeout(r, 480)); O.hide(); }
       } catch (err) {
         console.error('[UPLOAD ERROR]', err);
+        try { O && O.hide(); } catch (_) {}
         alert(err.message === 'stall'
           ? '업로드가 지연되고 있습니다. 네트워크 상태를 확인하고 다시 시도해주세요.'
           : '미디어 업로드에 실패했습니다. 잠시 후 다시 시도해주세요.');

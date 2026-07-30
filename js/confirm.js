@@ -312,7 +312,8 @@ async function initConfirmPage(ctx) {
       }
 
       /* ---------- 완료 ---------- */
-      try { localStorage.removeItem('galla_draft_write'); } catch (_) {}   // 발행 성공 → 임시저장 비움
+      try { localStorage.removeItem('galla_draft_write'); } catch (_) {}   // 발행 성공 → 텍스트 임시저장 비움
+      try { window.GALLA_WriteMedia ? window.GALLA_WriteMedia.clear() : localStorage.removeItem('galla_write_media'); } catch (_) {}   // 미디어 캐시(사진·영상·스텝)도 비움
 
       if (spa) {
         // SPA — 문서 이동 없이 스택 전부 정리(write·confirm 잔류 방지) 후 홈 탭으로.
