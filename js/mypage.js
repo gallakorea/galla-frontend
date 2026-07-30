@@ -1309,6 +1309,57 @@ async function GALLA_mypageInit(root, spaParams) {
     })();
 
     // ---------------------------
+    // 갈라리(콘텐츠) 탭 — 세로 3열 그리드 / 가로 유튜브 리스트 분배
+    // ---------------------------
+    let contentSub = "vertical";
+    const renderContent = async (sub) => {
+        contentSub = sub || contentSub;
+        clearSubBar();
+        tabContent.className = "content-area";
+        tabContent.innerHTML = MP_SPINNER;
+        const { data: posts } = await supabase.from("posts")
+            .select("id,kind,title,caption,images,video_url,thumbnail_url,like_count,comment_count")
+            .eq("user_id", viewUserId).eq("is_published", true)
+            .order("created_at", { ascending: false }).limit(60);
+        const all = posts || [];
+        const vert = all.filter(p => p.kind === "vertical");
+        const horz = all.filter(p => p.kind === "horizontal");
+        const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+        const thumb = p => p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || "";
+        const seg = `<div class="glf-seg" style="padding:10px 0">
+            <button class="${contentSub === "vertical" ? "active" : ""}" data-sub="vertical">📱 세로 ${vert.length}</button>
+            <button class="${contentSub === "horizontal" ? "active" : ""}" data-sub="horizontal">🖥️ 가로 ${horz.length}</button></div>`;
+        const list = contentSub === "vertical" ? vert : horz;
+        let inner;
+        if (!list.length) inner = `<div class="glf-empty">아직 ${contentSub === "vertical" ? "세로" : "가로"} 콘텐츠가 없어요.</div>`;
+        else if (contentSub === "vertical") inner = '<div class="glf-grid">' + vert.map(p =>
+            `<div class="glf-tile" data-id="${p.id}">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
+             ${p.video_url ? '<span class="glf-play">▶</span>' : ''}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
+        else inner = '<div class="glf-list">' + horz.map(p =>
+            `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
+             <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
+        tabContent.innerHTML = seg + inner;
+        tabContent.querySelectorAll(".glf-seg button").forEach(b => b.addEventListener("click", () => renderContent(b.dataset.sub)));
+        tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
+            (window.GALLA_nav || function (u) { location.href = u; })("gallari-post.html?id=" + el.dataset.id)));
+    };
+
+    // 콘텐츠 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출
+    (async function revealContentTab() {
+        const ctab = D.querySelector('.tab[data-tab="content"]');
+        if (!ctab) return;
+        let on = false;
+        try {
+            const [{ data: fl }, { data: prof }] = await Promise.all([
+                supabase.from("app_settings").select("v").eq("k", "gallari_enabled").maybeSingle(),
+                supabase.from("user_profiles").select("admin_flag").eq("user_id", userId).maybeSingle(),
+            ]);
+            on = (fl && (fl.v === true || fl.v === "true")) || !!(prof && prof.admin_flag);
+        } catch (_) {}
+        if (on) ctab.hidden = false;
+    })();
+
+    // ---------------------------
     // 탭 클릭 이벤트
     // ---------------------------
     tabs.forEach(tab => {
@@ -1320,6 +1371,7 @@ async function GALLA_mypageInit(root, spaParams) {
 
             switch (menu) {
                 case "galla": renderGalla(); break;              // 갈라(My/Saved 서브탭)
+                case "content": clearSubBar(); renderContent(); break;   // 갈라리(콘텐츠)
                 case "predict": renderPredict(); break;
                 case "news": clearSubBar(); renderNews(); break;
                 case "plaza": renderPlaza(); break;
