@@ -1344,7 +1344,7 @@ async function GALLA_mypageInit(root, spaParams) {
             if (d < 31536000) return Math.floor(d / 2592000) + "개월 전"; return Math.floor(d / 31536000) + "년 전";
         };
         const [iss, pst, mkt, plz] = await Promise.all([
-            supabase.from("issues").select("id,title,thumbnail_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
+            supabase.from("issues").select("id,title,thumbnail_url,card_thumb_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
             supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,video_url,view_count,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
             supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(6),
             supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
@@ -1357,7 +1357,10 @@ async function GALLA_mypageInit(root, spaParams) {
             tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return;
         }
 
-        const thumbOf = r => r.thumbnail_url || r.image_url || r.thumbnail || r.cover_image || (Array.isArray(r.images) && r.images[0]) || "";
+        const firstImg = v => Array.isArray(v) ? (typeof v[0] === "string" ? v[0] : (v[0] && (v[0].url || v[0].src))) : "";
+        const thumbOf = r => r.thumbnail_url || r.card_thumb_url || r.image_url || r.thumbnail || r.cover_image || firstImg(r.images) || "";
+        // 썸네일 <img> — CDN 리사이즈(GALLA_thumb) + 로드 실패 시 자동 제거(placeholder 배경 노출)
+        const art = (url, w) => `<img src="${esc(window.GALLA_thumb ? window.GALLA_thumb(url, w || 640) : url)}" loading="lazy" onerror="this.remove()">`;
         // 섹션 헤더 — 누르면 해당 탭으로 이동(› 표시). tab = .tab[data-tab] 키
         const head = (label, tab) => `<h3 class="mp-yt-h" data-gototab="${tab}">${label}<span class="mp-yt-more">›</span></h3>`;
         // 세로폼 그리드(9:16) — 갈라·숏판 공용. sub는 선택(조회수 등)
@@ -1365,7 +1368,7 @@ async function GALLA_mypageInit(root, spaParams) {
             const cells = rows.map(r => {
                 const th = thumbOf(r);
                 return `<div class="mp-sh-cell" data-t="${t}" data-id="${r.id}">
-                    ${th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}
+                    ${th ? art(th) : `<div class="mp-yt-ph"></div>`}
                     <span class="mp-sh-cap">${esc(capOf(r) || "")}</span>
                     ${subOf ? `<span class="mp-sh-v">${esc(subOf(r))}</span>` : ""}
                 </div>`;
@@ -1380,9 +1383,9 @@ async function GALLA_mypageInit(root, spaParams) {
         const listRows = (label, tab, t, rows, titleOf, metaOf) => {
             const html = rows.map(r => {
                 const th = thumbOf(r);
-                const art = th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-am-ph">${GLYPH[t] || ""}</div>`;
+                const artHtml = th ? art(th, 160) : `<div class="mp-am-ph">${GLYPH[t] || ""}</div>`;
                 return `<div class="mp-am-row" data-t="${t}" data-id="${r.id}">
-                    <div class="mp-am-art">${art}</div>
+                    <div class="mp-am-art">${artHtml}</div>
                     <div class="mp-am-info"><div class="mp-am-tt">${esc(titleOf(r) || "제목 없음")}</div><div class="mp-am-sub">${esc(metaOf(r))}</div></div>
                 </div>`;
             }).join("");
@@ -1396,7 +1399,7 @@ async function GALLA_mypageInit(root, spaParams) {
         if (longs.length) {
             const rows = longs.map(r =>
                 `<div class="mp-lv" data-t="long" data-id="${r.id}">
-                    <div class="mp-lv-th">${thumbOf(r) ? `<img src="${esc(thumbOf(r))}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}<span class="mp-lv-play">${PLAY_SVG}</span></div>
+                    <div class="mp-lv-th">${thumbOf(r) ? art(thumbOf(r), 720) : `<div class="mp-yt-ph"></div>`}<span class="mp-lv-play">${PLAY_SVG}</span></div>
                     <div class="mp-lv-tt">${esc(r.title || r.caption || "제목 없음")}</div>
                     <div class="mp-lv-meta">${views(r.view_count)} · ${ago(r.created_at)}</div>
                 </div>`).join("");
