@@ -17,7 +17,11 @@
   "use strict";
 
   const TABS = ["index", "predict", "dm", "trend", "mypage"];
-  const TAB_URL = { index: "index.html", predict: "galla-predict.html", dm: "dm.html", trend: "search.html", mypage: "mypage.html" };
+  // 📦 네이티브 번들에선 index.html = SPA(app.html)로 대체돼 있다(Capacitor가 리다이렉트 없이 SPA를 바로
+  //    로드 → 부팅 깜빡임 제거). 원래 홈피드는 home.html로 보존돼 있으니 홈 탭은 그걸 fetch한다.
+  //    웹(galla.im)은 그대로 index.html(홈피드 MPA)을 fetch.
+  const _BUNDLE = (location.protocol === "capacitor:") || !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const TAB_URL = { index: _BUNDLE ? "home.html" : "index.html", predict: "galla-predict.html", dm: "dm.html", trend: "search.html", mypage: "mypage.html" };
   const GATED = { dm: 1, mypage: 1 };   // 로그인 필수 탭(기존 셸 정책 계승)
 
   const L = window.GALLA_SPA_LOADER;
