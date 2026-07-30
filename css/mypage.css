@@ -514,8 +514,8 @@ body{
 .profile-actions .action-btn.primary{ background:#0a68f5; border:none; }
 .profile-actions button:hover{ background:#303032; }
 
-/* 탭: 인스타식 아이콘 라인 느낌 — 흰색 언더라인, 균등 배치 */
-.tabs{ justify-content:space-around; padding:0; }
+/* 탭: 인스타식 라인 — 좌측정렬 스크롤(탭 수 가변·비동기 노출에도 흔들림 없게). space-around+overflow 충돌 제거 */
+.tabs{ justify-content:flex-start; padding:0 6px; gap:2px; }
 .tab{ padding:12px 8px; font-size:13px; color:#8e8e93; font-weight:600; }
 .tab.active{ color:#fff; }
 .tab.active::after{ left:8px; right:8px; height:1.5px;
