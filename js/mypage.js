@@ -1285,6 +1285,29 @@ async function GALLA_mypageInit(root, spaParams) {
     }
     loadTabCounts();
 
+    // 👥 팔로워 실시간 — 누가 나를 팔로우/언팔하면 카운트(⚡전적·탭 뱃지)·목록을 즉시 반영.
+    //    내 마이페이지 한정(keep-alive 단일 인스턴스 → 채널 누수 없음). follows publication 공유.
+    (function attachFollowerRealtime() {
+        if (!isMyPage || !supabase || !supabase.channel || !viewUserId) return;
+        window.__mpFollowerRT = window.__mpFollowerRT || {};
+        if (window.__mpFollowerRT[viewUserId]) return;
+        window.__mpFollowerRT[viewUserId] = true;
+        supabase.channel("mp-followers-" + viewUserId)
+            .on("postgres_changes",
+                { event: "*", schema: "public", table: "follows", filter: "following=eq." + viewUserId },
+                async () => {
+                    const { count } = await supabase.from("follows")
+                        .select("id", { count: "exact", head: true }).eq("following", viewUserId);
+                    const n = count ?? 0;
+                    const stat = D.querySelector("#statFollowers");
+                    if (stat) stat.textContent = n;
+                    const ftab = D.querySelector('.tab[data-tab="follower"]');
+                    if (ftab) ftab.innerHTML = ftab.innerHTML.replace(/ <span class="tab-count">.*<\/span>/, "") + ` <span class="tab-count">${n}</span>`;
+                    if (ftab && ftab.classList.contains("active") && typeof renderFollower === "function") renderFollower();
+                })
+            .subscribe();
+    })();
+
     // ---------------------------
     // 탭 클릭 이벤트
     // ---------------------------
