@@ -59,6 +59,7 @@
       ? await sb().from("follows").delete().eq("follower", myId).eq("following", uid)
       : await sb().from("follows").insert({ follower: myId, following: uid });
     if (r.error) { if (on) follows.add(uid); else follows.delete(uid); document.querySelectorAll(`.js-follow[data-uid="${uid}"]`).forEach(paint); }
+    else if (!on) { try { window.GALLA_pushSend && window.GALLA_pushSend("follow", uid); } catch (_) {} }   // 📮 팔로우 즉시 푸시(앱 밖에서도 도착)
   }
 
   window.GALLA_bindFollow = async function (root) {

@@ -54,7 +54,7 @@
 
   let supabase = window.supabaseClient;
   let ME = null, ROOT = null, BTN = null, BADGE = null;
-  let curThread = null, curPeer = null, msgChan = null, inboxChan = null;
+  let curThread = null, curPeer = null, msgChan = null, inboxChan = null, followsChan = null;
   let curRoom = null, roomChan = null, MY_ROOMS = new Set(), ROOMS = [], GROUPS = [], GSEL = new Set(), GMODE = 'create';
   let curExpire = null;   // 현재 스레드의 사라지는 메시지 타이머(초)
   let mailChan = null;
@@ -3192,8 +3192,16 @@
     paintList('#dm-hidden-list', PREF.hidden, 'dm_hidden', 'hidden');
   }
 
-  /* ---------- 친구 (팔로우 기반 — 갈라의 친구는 팔로우 관계) ---------- */
-  let FRIENDS = [];   // [{id, mutual}]
+  /* ---------- 친구 (팔로우 기반 — 갈라의 친구는 팔로우 관계) ----------
+     단일 진실: FOLLOWING(내가 팔로우) · FOLLOWERS(나를 팔로우). 실시간(follows 구독)으로
+     이 두 세트를 갱신하고 recomputeFriends()로 친구·맞팔을 즉시 다시 그린다. */
+  let FRIENDS = [];               // [{id, mutual}]
+  let FOLLOWING = new Set();      // 내가 팔로우한 사람
+  let FOLLOWERS = new Set();      // 나를 팔로우한 사람
+  function recomputeFriends() {
+    FRIENDS = [...FOLLOWING].map(id => ({ id, mutual: FOLLOWERS.has(id) }))
+      .sort((a, b) => (b.mutual ? 1 : 0) - (a.mutual ? 1 : 0));   // 맞팔 먼저
+  }
   async function loadFriends() {
     const box = ROOT.querySelector('#dm-friend-list');
     if (!FRIENDS.length) box.innerHTML = `<div class="dm-loading">불러오는 중…</div>`;
@@ -3202,11 +3210,17 @@
       supabase.from('follows').select('follower').eq('following', ME),
       loadPrefs(),
     ]);
-    const followers = new Set((ers || []).map(r => r.follower));
-    FRIENDS = (ing || []).map(r => ({ id: r.following, mutual: followers.has(r.following) }))
-      .sort((a, b) => (b.mutual ? 1 : 0) - (a.mutual ? 1 : 0));   // 맞팔 먼저
+    FOLLOWING = new Set((ing || []).map(r => r.following));
+    FOLLOWERS = new Set((ers || []).map(r => r.follower));
+    recomputeFriends();
     await profilesFor([...FRIENDS.map(f => f.id), ME]);   // 내 프로필도(최상단 나와의 채팅)
     renderFriends(FRIENDS);
+    attachFollowsRealtime();   // 실시간 관계 갱신(맞팔/언팔 즉시 반영)
+  }
+  // 친구 목록이 화면에 떠 있으면 즉시 다시 그린다(실시간 갱신용)
+  function renderFriendsIfVisible() {
+    const wrap = ROOT && ROOT.querySelector('#dm-friends');
+    if (wrap && !wrap.hidden) renderFriends(FRIENDS);
   }
   // 🙋 카톡식 — 친구목록 최상단 '내 프로필(나와의 채팅)'. 상태 확인 + 나에게 메모.
   function meFriendRow() {
@@ -3261,7 +3275,7 @@
     staggerRows(box, '.dm-friend');
   }
   /* ---------- ➕ 친구 추가 (코드·닉네임·맞팔 대기) ---------- */
-  let FOLLOWING = new Set();
+  // FOLLOWING/FOLLOWERS 는 친구 섹션에서 선언(팔로우 기반 단일 진실)
   function addRow(u) {
     PROFILES[u.id] = PROFILES[u.id] || { nickname: u.nickname || '익명', avatar_url: resolveAvatar(u.avatar_url), bio: u.bio || '' };
     nickCache[u.id] = u.nickname || '익명';
@@ -3286,8 +3300,10 @@
       if (error && error.code !== '23505') {   // 23505 = 이미 팔로우(중복) — 성공으로 간주
         btn.disabled = false; btn.textContent = '+ 팔로우'; return;
       }
+      // 📮 상대에게 즉시 푸시(앱을 안 보고 있어도 도착) — 서버가 진짜 팔로우인지 재확인
+      try { window.GALLA_pushSend && window.GALLA_pushSend('follow', uid); } catch (_) {}
       FOLLOWING.add(uid);
-      FRIENDS.push({ id: uid, mutual: false });
+      recomputeFriends();   // 상대가 나를 팔로우 중이면 즉시 맞팔로 반영
       // 같은 유저가 이 화면의 다른 섹션(코드 결과·검색·맞팔 대기)에도 떠 있을 수 있다
       // → 전부 ✓로 동기화. 맞팔 대기 행은 이제 '대기'가 아니므로 제거.
       ROOT.querySelectorAll(`#dm-add .dm-follow-btn[data-uid="${uid}"]`).forEach(b => {
@@ -3354,15 +3370,25 @@
     };
 
     // ④ 나를 팔로우한 사람 중 내가 아직 안 한 사람 = 맞팔 대기 (카톡 '추천친구' 대응)
-    const fbBox = ROOT.querySelector('#dm-followback');
+    await loadFollowback();
+  }
+
+  /* 맞팔 대기(나를 팔로우했는데 내가 아직 안 한 사람) — 실시간 갱신 때 재호출 */
+  async function loadFollowback() {
+    const fbBox = ROOT && ROOT.querySelector('#dm-followback');
+    if (!fbBox) return;
     const { data: ers } = await supabase.from('follows').select('follower').eq('following', ME);
-    const waiting = [...new Set((ers || []).map(r => r.follower))]
-      .filter(id => !FOLLOWING.has(id) && !PREF.blocks.has(id));
+    FOLLOWERS = new Set((ers || []).map(r => r.follower));
+    const waiting = [...FOLLOWERS].filter(id => !FOLLOWING.has(id) && !PREF.blocks.has(id));
     if (!waiting.length) { fbBox.innerHTML = '<div class="dm-set-empty">지금은 없어요</div>'; return; }
     await profilesFor(waiting);
     fbBox.innerHTML = waiting.map(id => addRow({ id, ...PROFILES[id] })).join('');
     bindFollowBtns(fbBox);
     staggerRows(fbBox, '.dm-add-row');
+  }
+  function followbackVisible() {
+    const fb = ROOT && ROOT.querySelector('#dm-followback');
+    return !!(fb && fb.offsetParent !== null);
   }
 
   function filterFriends(q) {
@@ -5503,6 +5529,55 @@
     toastTimer = setTimeout(hide, 5000);
   }
 
+  /* 👥 팔로우 관계 실시간 — 맞팔/언팔/새 팔로워를 친구·맞팔대기 목록에 즉시 반영.
+     follows는 OR 필터 불가 → 같은 채널에 바인딩 2개(내가 following / 내가 follower). */
+  function attachFollowsRealtime() {
+    if (followsChan || !ME) return;
+    followsChan = supabase.channel('follows-' + ME)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: 'following=eq.' + ME }, onFollowsRT)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows', filter: 'follower=eq.' + ME }, onFollowsRT)
+      .subscribe();
+  }
+  async function onFollowsRT(payload) {
+    const isDel = payload.eventType === 'DELETE';
+    const row = (isDel ? payload.old : payload.new) || {};
+    const follower = row.follower, following = row.following;
+    if (!follower || !following) return;
+    const other = follower === ME ? following : follower;
+    try { await profilesFor([other]); } catch (_) {}   // 새 상대 프로필 확보(닉네임·아바타)
+
+    let becameMutual = false;
+    if (following === ME) {
+      // 누군가 나를 팔로우/언팔로우
+      if (isDel) FOLLOWERS.delete(follower); else FOLLOWERS.add(follower);
+      if (FOLLOWING.has(follower)) {          // 내가 이미 팔로우한 사람 → 맞팔 상태 변화
+        becameMutual = !isDel;
+        recomputeFriends();
+        renderFriendsIfVisible();
+      }
+      if (followbackVisible()) { try { await loadFollowback(); } catch (_) {} }   // 맞팔대기 갱신
+    }
+    if (follower === ME) {
+      // 내가 팔로우/언팔로우 (다른 세션·다른 화면 동기화)
+      if (isDel) FOLLOWING.delete(following); else FOLLOWING.add(following);
+      recomputeFriends();
+      renderFriendsIfVisible();
+      syncFollowUI(following, !isDel);
+    }
+    if (becameMutual) {
+      try { const p = PROFILES[follower] || {}; toastMini((p.nickname || '친구') + '님과 맞팔이 됐어요'); } catch (_) {}
+    }
+  }
+  // 팔로우 버튼·맞팔대기 행을 uid 기준으로 동기화
+  function syncFollowUI(uid, following) {
+    if (!ROOT) return;
+    ROOT.querySelectorAll(`.dm-follow-btn[data-uid="${uid}"]`).forEach(b => {
+      if (following) { b.textContent = '✓ 친구'; b.classList.add('done'); b.disabled = true; }
+      else { b.textContent = '+ 팔로우'; b.classList.remove('done'); b.disabled = false; }
+    });
+    if (following) ROOT.querySelectorAll(`#dm-followback .dm-add-row[data-peer="${uid}"]`).forEach(r => r.remove());
+  }
+
   function attachInboxRealtime() {
     if (inboxChan) return;
     // ★ 비용·부하: 필터 없이 구독하면 '전체 스레드 갱신 × 접속자 수'만큼 서버가 팬아웃을
@@ -5549,7 +5624,7 @@
     }
     if (INITED) { if (ME) refreshBadge(); return; }
     INITED = true;
-    if (ME) { refreshBadge(); attachInboxRealtime(); }
+    if (ME) { refreshBadge(); attachInboxRealtime(); attachFollowsRealtime(); }
     // 🔗 딥링크: ?dm=… 은 dm 페이지의 몫 — 다른 페이지에서 받으면 페이지로 넘긴다
     try {
       const q = new URLSearchParams(location.search);

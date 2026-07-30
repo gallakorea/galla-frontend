@@ -121,6 +121,23 @@ Deno.serve(async (req) => {
     return j({ ok: true, sent });
   }
 
+  // 👥 팔로우 — 팔로우 당한 사람에게 즉시 푸시(앱을 안 보고 있어도 도착)
+  //    남용 방지: 함수가 '정말 내가 그를 팔로우했는가'를 서버에서 재확인한다.
+  if (body.kind === "follow") {
+    const target = String(body.id);
+    const { data: rel } = await sb.from("follows")
+      .select("follower").eq("follower", me).eq("following", target).maybeSingle();
+    if (!rel) return j({ error: "not following" }, 403);
+    const { data: sender } = await sb.from("users").select("nickname").eq("id", me).single();
+    const sent = await pushTo([target], {
+      title: "새 팔로워",
+      body: `${sender?.nickname || "갈라 친구"}님이 회원님을 팔로우하기 시작했습니다.`,
+      url: `/mypage.html?user=${me}`,
+      tag: `follow-${me}`,
+    }, "follow");
+    return j({ ok: true, sent });
+  }
+
   // 기본: 1:1 DM
   const { data: m } = await sb.from("dm_messages")
     .select("id,thread_id,sender_id,body,kind").eq("id", body.id).single();
