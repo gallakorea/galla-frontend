@@ -77,3 +77,33 @@
 .mp-all-text b { font-size: 11px; color: #8fa6d8; font-weight: 800; }
 .mp-all-text span { font-size: 12px; color: #cfd5e0; line-height: 1.35;
   display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ── 모아 인스타식 통합 피드(오버레이) ── */
+.mp-feed { position: fixed; inset: 0; z-index: 3000; background: #0a0a0b; display: flex; flex-direction: column; }
+.mp-fbar { flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+  height: calc(50px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 8px 0;
+  background: rgba(10,10,11,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,.06); }
+.mp-fback { width: 40px; height: 40px; border: none; background: transparent; color: #eaeaf0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; }
+.mp-fback svg { width: 24px; height: 24px; }
+.mp-fbar b { font-size: 16px; font-weight: 900; color: #fff; }
+.mp-fscroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+.mp-fcard { border-bottom: 8px solid #000; scroll-margin-top: 4px; }
+.mp-fhead { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; }
+.mp-fbadge { font-size: 11px; font-weight: 800; color: #cdd6ea; background: rgba(120,150,220,.14);
+  border: 1px solid rgba(120,150,220,.28); padding: 3px 10px; border-radius: 999px; }
+.mp-ftime { font-size: 12px; color: #8b8b93; }
+.mp-fmedia { position: relative; width: 100%; background: #000; cursor: pointer; }
+.mp-fmedia img { width: 100%; max-height: 78vh; object-fit: contain; display: block; }
+.mp-fplay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none; }
+.mp-fplay svg { width: 64px; height: 64px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.6)); opacity: .95; }
+.mp-ftext { padding: 6px 16px 4px; cursor: pointer; }
+.mp-ftext span { font-size: 17px; font-weight: 800; color: #eef1f8; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-fcap { padding: 10px 14px 2px; font-size: 14px; color: #dfe3ec; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-fopen { margin: 10px 14px 14px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  color: #9fb4e6; font-size: 13px; font-weight: 800; padding: 9px 14px; border-radius: 12px; cursor: pointer; }

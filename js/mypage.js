@@ -1328,6 +1328,51 @@ async function GALLA_mypageInit(root, spaParams) {
         plaza:   { label: "광장", dest: id => "plaza_detail.html?id=" + id },
     };
     const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>';
+    let moaItems = [];
+
+    // 인스타 프로필식 통합 피드 — 탭한 항목부터 세로로 쭉. 카드 탭 시 각 상세로.
+    const openMoaFeed = (startIdx) => {
+        if (!moaItems.length) return;
+        const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
+        const ago = ts => {
+            const d = Math.floor((Date.now() - new Date(ts)) / 1000);
+            if (d < 60) return "방금"; if (d < 3600) return Math.floor(d / 60) + "분 전";
+            if (d < 86400) return Math.floor(d / 3600) + "시간 전"; if (d < 2592000) return Math.floor(d / 86400) + "일 전";
+            return new Date(ts).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+        };
+        const cards = moaItems.map((it, i) => {
+            const lab = ALL_TYPES[it.t].label;
+            const media = it.thumb
+                ? `<div class="mp-fmedia${it.video ? " has-vid" : ""}"><img src="${esc(it.thumb)}" loading="lazy">${it.video ? `<span class="mp-fplay">${PLAY_SVG}</span>` : ""}</div>`
+                : `<div class="mp-ftext"><span>${esc(it.title || "")}</span></div>`;
+            return `<article class="mp-fcard" data-i="${i}" data-t="${it.t}" data-id="${it.id}">
+                <div class="mp-fhead"><span class="mp-fbadge">${esc(lab)}</span><span class="mp-ftime">${ago(it.ts)}</span></div>
+                ${media}
+                ${it.title ? `<div class="mp-fcap">${esc(it.title)}</div>` : ""}
+                <button class="mp-fopen" data-t="${it.t}" data-id="${it.id}">${esc(lab)} 열기 ›</button>
+            </article>`;
+        }).join("");
+        const ov = document.createElement("div");
+        ov.className = "mp-feed";
+        ov.innerHTML =
+            `<div class="mp-fbar"><button class="mp-fback" aria-label="뒤로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button><b>게시물</b></div>
+             <div class="mp-fscroll">${cards}</div>`;
+        document.body.appendChild(ov);
+        const close = () => { ov.remove(); window.removeEventListener("popstate", onPop); };
+        const onPop = () => close();
+        ov.querySelector(".mp-fback").addEventListener("click", () => { if (history.state && history.state.moaFeed) history.back(); else close(); });
+        try { history.pushState({ moaFeed: 1 }, ""); window.addEventListener("popstate", onPop); } catch (_) {}
+        const go = (t, id) => (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[t].dest(id));
+        ov.querySelectorAll(".mp-fopen, .mp-fmedia, .mp-ftext").forEach(el => el.addEventListener("click", e => {
+            const c = e.currentTarget.closest(".mp-fcard"); if (c) go(c.dataset.t, c.dataset.id);
+        }));
+        // 탭한 카드로 스크롤
+        requestAnimationFrame(() => {
+            const target = ov.querySelector(`.mp-fcard[data-i="${startIdx}"]`);
+            if (target) target.scrollIntoView({ block: "start" });
+        });
+    };
+
     const renderAll = async () => {
         clearSubBar();
         tabContent.className = "content-area";
@@ -1345,6 +1390,7 @@ async function GALLA_mypageInit(root, spaParams) {
         (mkt.data || []).forEach(r => items.push({ t: "predict", id: r.id, thumb: r.image_url || "", title: r.question, ts: r.created_at }));
         (plz.data || []).forEach(r => items.push({ t: "plaza", id: r.id, thumb: r.thumbnail || r.cover_image || "", title: r.title, ts: r.created_at }));
         items.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+        moaItems = items;
         if (!items.length) { tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return; }
         tabContent.innerHTML = '<div class="glf-grid mp-all">' + items.map(it => {
             const lab = ALL_TYPES[it.t].label;
@@ -1354,8 +1400,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 ${it.video ? `<span class="glf-play">${PLAY_SVG}</span>` : ""}
             </div>`;
         }).join("") + "</div>";
-        tabContent.querySelectorAll(".mp-all-tile").forEach(el => el.addEventListener("click", () =>
-            (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[el.dataset.t].dest(el.dataset.id))));
+        tabContent.querySelectorAll(".mp-all-tile").forEach((el, i) => el.addEventListener("click", () => openMoaFeed(i)));
     };
 
     // 숏판·롱판 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출
