@@ -36,7 +36,7 @@
 
       if (error) { box.innerHTML = '<div class="glf-empty">불러오기 실패</div>'; loading = false; return; }
       if (!posts || !posts.length) {
-        box.innerHTML = `<div class="glf-empty"><b>아직 ${kind === 'vertical' ? '세로' : '가로'} 콘텐츠가 없어요.</b><br>첫 갈라리를 올려보세요.</div>`;
+        box.innerHTML = `<div class="glf-empty"><b>아직 ${kind === 'vertical' ? '⚡ 숏판' : '🎬 롱판'} 콘텐츠가 없어요.</b><br>첫 갈라리를 올려보세요.</div>`;
         loading = false; return;
       }
 

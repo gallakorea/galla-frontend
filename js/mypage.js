@@ -1327,11 +1327,11 @@ async function GALLA_mypageInit(root, spaParams) {
         const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
         const thumb = p => p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || "";
         const seg = `<div class="glf-seg" style="padding:10px 0">
-            <button class="${contentSub === "vertical" ? "active" : ""}" data-sub="vertical">📱 세로 ${vert.length}</button>
-            <button class="${contentSub === "horizontal" ? "active" : ""}" data-sub="horizontal">🖥️ 가로 ${horz.length}</button></div>`;
+            <button class="${contentSub === "vertical" ? "active" : ""}" data-sub="vertical">⚡ 숏판 ${vert.length}</button>
+            <button class="${contentSub === "horizontal" ? "active" : ""}" data-sub="horizontal">🎬 롱판 ${horz.length}</button></div>`;
         const list = contentSub === "vertical" ? vert : horz;
         let inner;
-        if (!list.length) inner = `<div class="glf-empty">아직 ${contentSub === "vertical" ? "세로" : "가로"} 콘텐츠가 없어요.</div>`;
+        if (!list.length) inner = `<div class="glf-empty">아직 ${contentSub === "vertical" ? "⚡ 숏판" : "🎬 롱판"} 콘텐츠가 없어요.</div>`;
         else if (contentSub === "vertical") inner = '<div class="glf-grid">' + vert.map(p =>
             `<div class="glf-tile" data-id="${p.id}">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
              ${p.video_url ? '<span class="glf-play">▶</span>' : ''}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
