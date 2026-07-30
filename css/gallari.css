@@ -65,18 +65,42 @@
 .glf-loading, .glf-empty { text-align: center; color: #8b8b93; padding: 60px 20px; font-size: 14px; line-height: 1.7; }
 .glf-empty b { color: #cfd5e0; }
 
-/* ── 마이페이지 '모아' 통합 그리드 — 유형 텍스트 라벨(이모지 없음) ── */
-.mp-all-tile { position: relative; }
+/* ── 마이페이지 '모아' 하이브리드 그리드 — 가로/세로/텍스트 혼합(이모지 없음) ── */
+.mp-all { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 3px;
+  grid-auto-flow: dense; }
+.mp-all-tile { position: relative; overflow: hidden; background: #0d0d0f; cursor: pointer;
+  border-radius: 4px; }
+.mp-all-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* 세로형(숏판·세로 이슈) = 1칸 3:4 */
+.mp-all-tile.is-tall { aspect-ratio: 3/4; }
+/* 가로형(롱판) = 2칸 16:9 배너 */
+.mp-all-tile.is-wide { grid-column: span 2; aspect-ratio: 16/9; }
+/* 텍스트형(사진 없는 예측·광장·글 이슈) = 2칸 가로 카드, 자연 높이 */
+.mp-all-tile.is-text { grid-column: span 2; background: transparent; }
+
 .mp-all-badge { position: absolute; left: 6px; top: 6px; z-index: 2;
   font-size: 10px; font-weight: 800; color: #fff; letter-spacing: -.2px;
   background: rgba(0,0,0,.5); padding: 2px 7px; border-radius: 999px;
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
-.mp-all-text { width: 100%; height: 100%; display: flex; flex-direction: column;
-  align-items: flex-start; justify-content: flex-end; padding: 10px; gap: 4px;
-  background: linear-gradient(160deg, #1a1b22, #101116); }
-.mp-all-text b { font-size: 11px; color: #8fa6d8; font-weight: 800; }
-.mp-all-text span { font-size: 12px; color: #cfd5e0; line-height: 1.35;
-  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-all-tile .glf-play { position: absolute; top: 8px; right: 8px; color: #fff;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.mp-all-tile .glf-play svg, .mp-all-badge + .glf-play svg { width: 20px; height: 20px; }
+.mp-all-tile .glf-play-lg { position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; color: rgba(255,255,255,.92); pointer-events: none; }
+.mp-all-tile .glf-play-lg svg { width: 46px; height: 46px; filter: drop-shadow(0 2px 8px rgba(0,0,0,.5)); }
+
+.mp-all-text { width: 100%; min-height: 96px; display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: center; gap: 7px; padding: 14px 16px;
+  background: linear-gradient(150deg, #191b22, #101116);
+  border: 1px solid rgba(255,255,255,.05); border-radius: 4px; }
+.mp-all-text b { font-size: 11px; font-weight: 800; letter-spacing: .2px;
+  padding: 2px 9px; border-radius: 999px; color: #cdd6ea;
+  background: rgba(120,150,220,.14); border: 1px solid rgba(120,150,220,.28); }
+.mp-all-text b.t-predict { color: #f0d488; background: rgba(220,180,90,.12); border-color: rgba(220,180,90,.3); }
+.mp-all-text b.t-plaza { color: #9fd6c8; background: rgba(90,200,170,.12); border-color: rgba(90,200,170,.3); }
+.mp-all-text b.t-issue { color: #f0a0a8; background: rgba(230,90,110,.12); border-color: rgba(230,90,110,.3); }
+.mp-all-text span { font-size: 14px; color: #e2e5ec; font-weight: 600; line-height: 1.42;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* ── 모아 인스타식 통합 피드(오버레이) ── */
 .mp-feed { position: fixed; inset: 0; z-index: 3000; background: #0a0a0b; display: flex; flex-direction: column; }
