@@ -12,7 +12,7 @@
    ========================================================= */
 (function () {
   const PREFIX = 'galla_draft_';
-  const MAX_AGE = 7 * 24 * 3600 * 1000;   // 7일
+  const MAX_AGE = 30 * 24 * 3600 * 1000;   // 30일 보관(인스타 초안 방식)
 
   function css() {
     if (document.getElementById('galla-draft-css')) return;
@@ -56,6 +56,20 @@
         chip('임시저장됨');
       }, 400);
     };
+    // 디바운스 무시하고 지금 즉시 저장(임시저장 버튼 등에서)
+    const saveNow = () => {
+      clearTimeout(saveT);
+      const o = read();
+      if (!hasText(o)) { try { localStorage.removeItem(K); } catch (_) {} return; }
+      try { localStorage.setItem(K, JSON.stringify({ v: o, t: Date.now() })); } catch (_) {}
+    };
+    // 유효한(만료 안 된, 내용 있는) 임시저장이 있는지
+    const has = () => {
+      let d; try { d = JSON.parse(localStorage.getItem(K) || 'null'); } catch (_) { return false; }
+      if (!d || !d.v) return false;
+      if (Date.now() - (d.t || 0) > MAX_AGE) return false;
+      return hasText(d.v);
+    };
     const clear = () => { clearTimeout(saveT); try { localStorage.removeItem(K); } catch (_) {} };
     const restore = () => {
       let d; try { d = JSON.parse(localStorage.getItem(K) || 'null'); } catch (_) { return false; }
@@ -81,6 +95,6 @@
       ['input', 'change'].forEach(ev => e.addEventListener(ev, save));
     });
 
-    return { save, restore, clear };
+    return { save, saveNow, restore, clear, has };
   };
 })();

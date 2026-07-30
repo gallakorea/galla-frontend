@@ -29,7 +29,7 @@
     if (_sdkP) return _sdkP;
     _sdkP = new Promise((res, rej) => {
       const s = document.createElement("script");
-      s.src = "/vendor/agora/AgoraRTC_N-production.js?v=072872";
+      s.src = "/vendor/agora/AgoraRTC_N-production.js?v=072873";
       s.async = true; s.onload = () => { beacon("sdk loaded"); res(); }; s.onerror = () => rej(new Error("sdk-load-fail"));
       document.head.appendChild(s);
     });

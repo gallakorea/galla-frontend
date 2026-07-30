@@ -15,7 +15,8 @@
 (function () {
   /* ─────────────── 미디어 캐시 (localStorage) ─────────────── */
   const K = 'galla_write_media';
-  const MAX_AGE = 7 * 24 * 3600 * 1000;   // 7일
+  const RETENTION_DAYS = 30;                       // 인스타 초안처럼 30일 보관
+  const MAX_AGE = RETENTION_DAYS * 24 * 3600 * 1000;
 
   function read() {
     try {
@@ -45,6 +46,10 @@
     setStep(n) { write({ step: Number(n) || 1 }); },
     setMode(m) { write({ mode: m }); },
     clear() { try { localStorage.removeItem(K); } catch (_) {} },
+    RETENTION_DAYS,
+    savedAt() { const d = read(); return d ? (d.t || 0) : 0; },
+    // 만료까지 남은 일수(올림). 저장본 없으면 0.
+    daysLeft() { const d = read(); if (!d) return 0; return Math.max(0, Math.ceil((d.t + MAX_AGE - Date.now()) / (24 * 3600 * 1000))); },
   };
 
   /* ─────────────── 업로드 진행 오버레이 (인스타식 전체화면) ─────────────── */
@@ -131,5 +136,43 @@
       document.body.classList.remove('gup-lock');
     },
     isOpen() { return !!(root && root.classList.contains('on')); },
+  };
+
+  /* ─────────────── 액션 시트 (인스타 '다시 시작/임시 저장/계속' 스타일) ───────────────
+     GALLA_ActionSheet({ title, message, actions:[{label, style:'destructive'|'cancel', onClick}] }) */
+  window.GALLA_ActionSheet = function (opts) {
+    opts = opts || {};
+    const wrap = document.createElement('div');
+    wrap.className = 'gsheet';
+    const btns = (opts.actions || []).map((a, i) =>
+      `<button type="button" class="gsheet-btn ${a.style || ''}" data-i="${i}">${a.label || ''}</button>`
+    ).join('');
+    wrap.innerHTML = `
+      <div class="gsheet-card" role="dialog" aria-modal="true">
+        ${opts.title ? `<div class="gsheet-title">${opts.title}</div>` : ''}
+        ${opts.message ? `<div class="gsheet-msg">${opts.message}</div>` : ''}
+        <div class="gsheet-btns">${btns}</div>
+      </div>`;
+    document.body.appendChild(wrap);
+    document.body.classList.add('gup-lock');
+    requestAnimationFrame(() => wrap.classList.add('on'));
+
+    function close() {
+      wrap.classList.remove('on');
+      document.body.classList.remove('gup-lock');
+      setTimeout(() => { try { wrap.remove(); } catch (_) {} }, 220);
+    }
+    wrap.addEventListener('click', (e) => {
+      const b = e.target.closest('.gsheet-btn');
+      if (b) {
+        const a = (opts.actions || [])[Number(b.dataset.i)];
+        close();
+        if (a && a.onClick) { try { a.onClick(); } catch (_) {} }
+        return;
+      }
+      // 배경 탭 = 취소(계속 수정하기)
+      if (e.target === wrap) close();
+    });
+    return { close };
   };
 })();

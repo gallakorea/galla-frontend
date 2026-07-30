@@ -41,7 +41,7 @@ function initWritePage(ctx) {
      발행 성공 시 confirm.js가 galla_draft_write 를 비운다. */
   const __wd = window.GALLA_draft &&
     window.GALLA_draft('write', ['category', 'title', 'oneLine', 'description', 'factionA', 'factionB']);
-  if (__wd) __wd.restore();
+  // ⚠️ 자동복원 안 함 — 재진입 시 '이어서 작성' 배너로 명시적 복원(아래 진입 분기)
   window.clearTextDraft = () => { __wd && __wd.clear(); };
 
   /* 🎬 핫영상 → '이걸로 갈라'로 넘어온 경우 제목·본문 미리 채우기.
@@ -174,6 +174,7 @@ function initWritePage(ctx) {
     }
     const added = processed.map(f => ({ file: f, url: null, up: true }));
     imgItems = imgItems.concat(added);   // 기존에 이어붙이기(교체 아님)
+    if (typeof removeResumeBanner === 'function') removeResumeBanner();   // 새로 고르면 이어쓰기 배너 닫기
     renderThumbs();
     window.GALLA_WriteMedia && window.GALLA_WriteMedia.setMode('photo');
     added.forEach(it => uploadItem(it));   // 🚀 고르는 즉시 병렬 업로드
@@ -239,6 +240,7 @@ function initWritePage(ctx) {
     }
     bar.className = 'vup-bar';
     cachedVideoUrl = null;
+    if (typeof removeResumeBanner === 'function') removeResumeBanner();   // 새로 고르면 이어쓰기 배너 닫기
     window.GALLA_WriteMedia && window.GALLA_WriteMedia.setMode('video');
     let tick = null;
     onCleanup(() => { if (tick) clearInterval(tick); });   // SPA unmount 시 진행표시 타이머 해제
@@ -401,7 +403,85 @@ function initWritePage(ctx) {
     }
     if (restored && Number(c.step) === 2) goStep(2);
   }
-  try { restoreMediaCache(); } catch (e) { console.warn('[write] 미디어 복원 실패', e); }
+
+  /* ── 임시저장 이어쓰기(인스타식) ───────────────────────────────
+     재진입 시 자동 복원하지 않고, 미디어 픽커 상단 '이어서 작성' 배너로 경로를 준다.
+     · 이어서 작성 → 텍스트+미디어+스텝 복원  · 🗑 → 임시저장 삭제(확인 시트)
+     · confirm→뒤로(?draft=)는 DB 복원이 담당 → 배너 대신 텍스트도 여기서 복원. */
+  function removeResumeBanner() { const b = document.getElementById('wrResume'); if (b) b.remove(); }
+  function resumeDraft() {
+    if (__wd) { try { __wd.restore(); } catch (_) {} }
+    try { restoreMediaCache(); } catch (e) { console.warn('[write] 미디어 복원 실패', e); }
+    removeResumeBanner();
+  }
+  function discardDraft() {
+    try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.clear(); } catch (_) {}
+    try { __wd && __wd.clear(); } catch (_) {}
+    try { sessionStorage.removeItem('__CURRENT_DRAFT_ID__'); } catch (_) {}
+    imgItems = []; cachedVideoUrl = null; cardThumbUrlCache = null;
+    renderThumbs();
+    if (videoPreview) videoPreview.innerHTML = '';
+    if (cardThumbPreview) { cardThumbPreview.hidden = true; if (cardThumbLabel) cardThumbLabel.hidden = false; }
+    document.getElementById('vupBar')?.remove();
+    removeResumeBanner();
+  }
+  function showResumeBanner() {
+    removeResumeBanner();
+    const c = (window.GALLA_WriteMedia && window.GALLA_WriteMedia.get()) || {};
+    const thumb = (Array.isArray(c.images) && c.images[0]) || c.card_thumb_url || '';
+    const isVid = !thumb && !!c.video_url;
+    let draftTitle = '';
+    try { const d = JSON.parse(localStorage.getItem('galla_draft_write') || 'null'); if (d && d.v) draftTitle = d.v.title || d.v.oneLine || d.v.category || ''; } catch (_) {}
+    const days = (window.GALLA_WriteMedia && window.GALLA_WriteMedia.daysLeft && window.GALLA_WriteMedia.daysLeft()) || 30;
+    const safe = s => String(s || '').replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
+    const el = document.createElement('div');
+    el.className = 'wr-resume'; el.id = 'wrResume';
+    el.innerHTML =
+      (thumb ? `<img class="wr-resume-thumb" src="${safe(thumb)}">`
+             : `<div class="wr-resume-thumb none">${isVid ? '🎬' : '📝'}</div>`) +
+      `<div class="wr-resume-info">
+         <div class="wr-resume-title">${safe(draftTitle || '작성하던 글')}</div>
+         <div class="wr-resume-sub">임시저장 · ${days}일 후 자동 삭제</div>
+       </div>
+       <button type="button" class="wr-resume-go" id="wrResumeGo">이어서 작성</button>
+       <button type="button" class="wr-resume-del" id="wrResumeDel" aria-label="임시저장 삭제">🗑</button>`;
+    const p1 = document.getElementById('panel-1');
+    if (p1) p1.insertBefore(el, p1.firstChild);
+    el.querySelector('#wrResumeGo').addEventListener('click', resumeDraft);
+    el.querySelector('#wrResumeDel').addEventListener('click', () => {
+      window.GALLA_ActionSheet && window.GALLA_ActionSheet({
+        title: '임시저장을 삭제할까요?',
+        message: '삭제하면 되돌릴 수 없어요.',
+        actions: [
+          { label: '삭제', style: 'destructive', onClick: discardDraft },
+          { label: '취소', style: 'cancel', onClick: () => {} },
+        ],
+      });
+    });
+  }
+
+  // 진입 분기 — 재진입이면 배너, confirm 복귀면 텍스트 복원
+  let _qDraftParam = ctx.params && ctx.params.draft;
+  if (!_qDraftParam) { try { _qDraftParam = new URLSearchParams(location.search).get('draft'); } catch (_) {} }
+  const _hasTextDraft = () => { try { return !!(__wd && __wd.has && __wd.has()); } catch (_) { return false; } };
+  const _hasMediaDraft = () => { try { return !!(window.GALLA_WriteMedia && window.GALLA_WriteMedia.hasMedia()); } catch (_) { return false; } };
+  if (_qDraftParam) {
+    if (__wd) { try { __wd.restore(); } catch (_) {} }
+  } else if (_hasTextDraft() || _hasMediaDraft()) {
+    try { showResumeBanner(); } catch (e) { console.warn('[write] 이어쓰기 배너 실패', e); }
+  }
+
+  /* 뒤로가기 시트(인스타식)용 — GALLA_PAGE_WRITE.mount 의 .wr-back 핸들러가 호출 */
+  window.GALLA_WRITE_hasContent = () => {
+    if (imgItems.length > 0 || cachedVideoUrl) return true;
+    return [categoryEl, titleEl, oneLineEl, descEl, factionAEl, factionBEl].some(el => el && el.value && el.value.trim());
+  };
+  window.GALLA_WRITE_saveDraftNow = () => { try { __wd && __wd.saveNow && __wd.saveNow(); } catch (_) {} };
+  window.GALLA_WRITE_discardDraft = () => {
+    try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.clear(); } catch (_) {}
+    try { __wd && __wd.clear(); } catch (_) {}
+    try { sessionStorage.removeItem('__CURRENT_DRAFT_ID__'); } catch (_) {}
+  };
 
   /* ================= AI MODAL ================= */
   const openAiBtn = document.getElementById('openAiModal');
@@ -807,13 +887,25 @@ window.GALLA_PAGE_WRITE = {
     try { I.save && I.save(ctx); } catch (e) { console.error('[write spa] save init', e); }
 
     if (root) {
-      // 🔙 상단 뒤로(.wr-back, data-back) — SPA엔 back.js를 싣지 않으니 스택 pop으로
+      // 🔙 상단 뒤로(.wr-back) — 작성 내용이 있으면 인스타식 시트(다시 시작/임시 저장/계속),
+      //    없으면 바로 스택 pop. (SPA엔 back.js 미탑재 → 여기서 처리)
       root.querySelectorAll('.wr-back').forEach(b => {
         if (b.dataset.spaBound) return;
         b.dataset.spaBound = '1';
         b.addEventListener('click', (e) => {
           e.preventDefault(); e.stopPropagation();
-          try { window.GALLA_SPA && window.GALLA_SPA.pop(); } catch (_) {}
+          const pop = () => { try { window.GALLA_SPA && window.GALLA_SPA.pop(); } catch (_) {} };
+          const has = window.GALLA_WRITE_hasContent && window.GALLA_WRITE_hasContent();
+          if (!has || !window.GALLA_ActionSheet) { pop(); return; }
+          window.GALLA_ActionSheet({
+            title: '작성을 멈출까요?',
+            message: "임시 저장하면 30일간 보관돼요. 다시 들어오면 사진·영상 고르는 화면에서 이어서 쓸 수 있어요.",
+            actions: [
+              { label: '다시 시작', style: 'destructive', onClick: () => { try { window.GALLA_WRITE_discardDraft && window.GALLA_WRITE_discardDraft(); } catch (_) {} pop(); } },
+              { label: '임시 저장', onClick: () => { try { window.GALLA_WRITE_saveDraftNow && window.GALLA_WRITE_saveDraftNow(); } catch (_) {} try { window.GALLA_toast && window.GALLA_toast('임시 저장됨 · 30일간 보관'); } catch (_) {} pop(); } },
+              { label: '계속 수정하기', style: 'cancel', onClick: () => {} },
+            ],
+          });
         }, true);
       });
       // 부가 UX(글자수 카운터·스텝칩) — MPA에선 write.html 인라인 스크립트 담당(SPA에선 로더가 제거)
