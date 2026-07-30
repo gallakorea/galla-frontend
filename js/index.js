@@ -55,6 +55,11 @@ function ensureVideoSrc(vid) {
     if (vid._srcReady || !vid.dataset.src) return;
     vid._srcReady = true;
     vid.preload = 'auto';
+    // 🎬 인스타식: 단색 어두운 자리 + 로딩 시머 → 영상이 '재생 시작 순간' 페이드인(썸네일 스왑·검은 번쩍임 없음).
+    vid.addEventListener('playing', () => {
+        vid.classList.add('vp-on');
+        const m = vid.closest('.card-media--video'); if (m) m.classList.add('vp-loaded');
+    }, { once: true });
     // 데이터가 준비된 순간, 화면에 충분히 보이면 즉시 자동재생(정지프레임=검은화면 iOS 대응).
     vid.addEventListener('loadeddata', () => {
         const r = vid.getBoundingClientRect(), vh = window.innerHeight || 0;
@@ -217,8 +222,8 @@ function renderMedia(data) {
              onclick="event.stopPropagation();openReels(${data.id})">
             <video
                 id="vid-${data.id}"
+                class="vp-fade"
                 data-src="${data.video_url}"
-                ${data.thumb ? `poster="${data.thumb}"` : ""}
                 autoplay loop playsinline webkit-playsinline muted preload="none">
             </video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>

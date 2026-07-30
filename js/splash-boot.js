@@ -26,7 +26,7 @@
   var css =
     "html.splash-lock,html.splash-lock body{overflow:hidden!important}" +
     "#galla-splash{position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;" +
-      "align-items:center;justify-content:center;background:#000;" +
+      "align-items:center;justify-content:center;background:#0a0a0b;" +
       "background-image:radial-gradient(60% 50% at 50% 44%,rgba(90,110,180,.16) 0%,rgba(0,0,0,0) 62%);" +
       "opacity:1;transition:opacity .5s ease;-webkit-tap-highlight-color:transparent;user-select:none}" +
     "#galla-splash.gone{opacity:0;pointer-events:none}" +

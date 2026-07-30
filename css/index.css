@@ -75,7 +75,7 @@ body { display: block; }
     aspect-ratio: 4 / 5;
     position: relative;
     overflow: hidden;
-    background: #111;
+    background: #0a0a0b;   /* 인스타식 단색 어두운 자리 — 영상/이미지 로드 전 검은 번쩍임 방지(앱 배경과 동일) */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -93,6 +93,18 @@ body { display: block; }
     object-fit: cover;
     display: block;
 }
+/* 🎬 영상 페이드인 — 어두운 자리 위로 '재생 시작 순간' 스르륵(검은 프레임 번쩍임 제거) */
+.card-media video.vp-fade { opacity: 0; transition: opacity .3s ease; position: relative; z-index: 1; }
+.card-media video.vp-fade.vp-on { opacity: 1; }
+/* 로딩 무빙 — 단색 어두운 자리에 은은한 시머(재생 시작하면 사라짐) */
+.card-media--video::after {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.055) 50%, transparent 65%);
+    background-size: 220% 100%;
+    animation: vp-shimmer 1.5s linear infinite;
+}
+.card-media--video.vp-loaded::after { display: none; }
+@keyframes vp-shimmer { 0% { background-position: 120% 0; } 100% { background-position: -120% 0; } }
 
 .card-media img {
     width: 100%;
