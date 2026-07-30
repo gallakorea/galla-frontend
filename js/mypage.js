@@ -1312,7 +1312,9 @@ async function GALLA_mypageInit(root, spaParams) {
              <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
         tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
-            (window.GALLA_nav || function (u) { location.href = u; })("gallari-post.html?id=" + el.dataset.id)));
+            // 숏판 = 릴스로, 롱판 = 유튜브식 상세로
+            (window.GALLA_nav || function (u) { location.href = u; })(
+                kind === "vertical" ? "gallari-reels.html?start=" + el.dataset.id + "&t=post" : "gallari-post.html?id=" + el.dataset.id)));
     };
 
     // 숏판·롱판 탭은 비공개 — gallari_enabled 켜졌거나 운영진일 때만 노출

@@ -89,7 +89,11 @@
 
     function bindItems() {
       box.querySelectorAll('[data-id]').forEach(el => {
-        el.addEventListener('click', () => nav('gallari-post.html?id=' + el.dataset.id));
+        el.addEventListener('click', () => {
+          // 숏판(세로) = 상세 없이 릴스로 / 롱판(가로) = 유튜브식 상세로
+          if (KIND === 'vertical') nav('gallari-reels.html?start=' + el.dataset.id + '&t=post');
+          else nav('gallari-post.html?id=' + el.dataset.id);
+        });
       });
     }
 
