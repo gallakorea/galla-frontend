@@ -75,10 +75,12 @@
 .mp-yt-h:active { opacity: .6; }
 .mp-yt-ph { width: 100%; height: 100%; background: linear-gradient(150deg, #20222b, #12131a); }
 
-/* 숏판 = Shorts 그리드(세로 9:16) */
-.mp-sh-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 0 3px; }
-.mp-sh-cell { position: relative; aspect-ratio: 9/16; overflow: hidden; border-radius: 10px;
-  background: #0d0d0f; cursor: pointer; }
+/* 갈라·숏판 = 세로 9:16 가로 캐러셀(선반) */
+.mp-shelf { display: flex; gap: 8px; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding: 0 14px 2px; scroll-padding-left: 14px; }
+.mp-shelf::-webkit-scrollbar { display: none; }
+.mp-sh-cell { position: relative; flex: 0 0 auto; width: 31vw; max-width: 150px; aspect-ratio: 9/16;
+  scroll-snap-align: start; overflow: hidden; border-radius: 10px; background: #0d0d0f; cursor: pointer; }
 .mp-sh-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mp-sh-cell::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 46%;
   background: linear-gradient(transparent, rgba(0,0,0,.62)); pointer-events: none; }
@@ -88,9 +90,11 @@
 .mp-sh-v { position: absolute; left: 8px; bottom: 7px; z-index: 1; color: rgba(255,255,255,.92);
   font-size: 11px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 
-/* 롱판 = 동영상(16:9 큰 썸네일 + 제목 + 메타) */
-.mp-lv-list { display: flex; flex-direction: column; }
-.mp-lv { cursor: pointer; padding-bottom: 16px; }
+/* 롱판 = 16:9 동영상 가로 캐러셀(선반) */
+.mp-lshelf { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding: 0 14px 2px; scroll-padding-left: 14px; }
+.mp-lshelf::-webkit-scrollbar { display: none; }
+.mp-lv { flex: 0 0 auto; width: 76vw; max-width: 340px; scroll-snap-align: start; cursor: pointer; padding-bottom: 2px; }
 .mp-lv-th { position: relative; aspect-ratio: 16/9; background: #0d0d0f; overflow: hidden; }
 .mp-lv-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mp-lv-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
@@ -99,13 +103,16 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .mp-lv-meta { font-size: 12.5px; color: #8b8b93; margin: 4px 12px 0; }
 
-/* 갈라·예측·광장 = 리스트 행(작은 16:9 썸네일 + 제목 + 메타) */
-.mp-yt-rows { display: flex; flex-direction: column; }
-.mp-yt-row { display: flex; gap: 10px; padding: 8px 12px; cursor: pointer; align-items: flex-start; }
-.mp-yt-th { position: relative; flex: 0 0 auto; width: 168px; max-width: 44vw; aspect-ratio: 16/9;
-  border-radius: 10px; overflow: hidden; background: #0d0d0f; }
-.mp-yt-th img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.mp-yt-info { min-width: 0; flex: 1; padding-top: 1px; }
-.mp-yt-tt { font-size: 14.5px; font-weight: 800; color: #eef1f8; line-height: 1.36;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.mp-yt-meta { margin-top: 5px; font-size: 12px; color: #8b8b93; }
+/* 예측·광장 = 애플 뮤직식 컴팩트 리스트(작은 아트워크 + 제목 + 서브) */
+.mp-am-list { display: flex; flex-direction: column; padding: 0 8px; }
+.mp-am-row { display: flex; align-items: center; gap: 12px; padding: 8px 6px; cursor: pointer; }
+.mp-am-row + .mp-am-row { border-top: 1px solid rgba(255,255,255,.06); }
+.mp-am-art { flex: 0 0 auto; width: 52px; height: 52px; border-radius: 9px; overflow: hidden; background: #16171d; }
+.mp-am-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mp-am-ph { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(150deg, #242631, #14151b); color: #7f8aa8; }
+.mp-am-ph svg { width: 24px; height: 24px; }
+.mp-am-info { min-width: 0; flex: 1; }
+.mp-am-tt { font-size: 15px; font-weight: 700; color: #f0f2f8; line-height: 1.32;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mp-am-sub { margin-top: 3px; font-size: 12.5px; color: #8b8b93; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

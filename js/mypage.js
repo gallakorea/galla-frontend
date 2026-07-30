@@ -1370,16 +1370,23 @@ async function GALLA_mypageInit(root, spaParams) {
                     ${subOf ? `<span class="mp-sh-v">${esc(subOf(r))}</span>` : ""}
                 </div>`;
             }).join("");
-            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-sh-grid">${cells}</div></section>`;
+            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-shelf">${cells}</div></section>`;
         };
-        // 리스트 행(작은 16:9) — 예측·광장 공용
+        // 애플 뮤직식 리스트 — 예측·광장 공용(작은 아트워크 + 제목 + 서브). 썸네일 없으면 유형 글리프.
+        const GLYPH = {
+            predict: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/></svg>',
+            plaza: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>',
+        };
         const listRows = (label, tab, t, rows, titleOf, metaOf) => {
-            const html = rows.map(r =>
-                `<div class="mp-yt-row" data-t="${t}" data-id="${r.id}">
-                    <div class="mp-yt-th">${thumbOf(r) ? `<img src="${esc(thumbOf(r))}" loading="lazy">` : `<div class="mp-yt-ph"></div>`}</div>
-                    <div class="mp-yt-info"><div class="mp-yt-tt">${esc(titleOf(r) || "제목 없음")}</div><div class="mp-yt-meta">${esc(metaOf(r))}</div></div>
-                </div>`).join("");
-            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-yt-rows">${html}</div></section>`;
+            const html = rows.map(r => {
+                const th = thumbOf(r);
+                const art = th ? `<img src="${esc(th)}" loading="lazy">` : `<div class="mp-am-ph">${GLYPH[t] || ""}</div>`;
+                return `<div class="mp-am-row" data-t="${t}" data-id="${r.id}">
+                    <div class="mp-am-art">${art}</div>
+                    <div class="mp-am-info"><div class="mp-am-tt">${esc(titleOf(r) || "제목 없음")}</div><div class="mp-am-sub">${esc(metaOf(r))}</div></div>
+                </div>`;
+            }).join("");
+            return `<section class="mp-yt-sec">${head(label, tab)}<div class="mp-am-list">${html}</div></section>`;
         };
 
         const sections = [];
@@ -1393,7 +1400,7 @@ async function GALLA_mypageInit(root, spaParams) {
                     <div class="mp-lv-tt">${esc(r.title || r.caption || "제목 없음")}</div>
                     <div class="mp-lv-meta">${views(r.view_count)} · ${ago(r.created_at)}</div>
                 </div>`).join("");
-            sections.push(`<section class="mp-yt-sec">${head("롱판", "long")}<div class="mp-lv-list">${rows}</div></section>`);
+            sections.push(`<section class="mp-yt-sec">${head("롱판", "long")}<div class="mp-lshelf">${rows}</div></section>`);
         }
         if (markets.length) sections.push(listRows("예측", "predict", "predict", markets, r => r.question, r => ago(r.created_at)));
         if (plazas.length) sections.push(listRows("광장", "plaza", "plaza", plazas, r => r.title, r => views(r.view_count) + " · " + ago(r.created_at)));
@@ -1404,7 +1411,7 @@ async function GALLA_mypageInit(root, spaParams) {
             const tb = D.querySelector('.tab[data-tab="' + el.dataset.gototab + '"]');
             if (tb) tb.click();
         }));
-        tabContent.querySelectorAll(".mp-sh-cell[data-id], .mp-lv[data-id], .mp-yt-row[data-id]").forEach(el => el.addEventListener("click", () =>
+        tabContent.querySelectorAll(".mp-sh-cell[data-id], .mp-lv[data-id], .mp-am-row[data-id]").forEach(el => el.addEventListener("click", () =>
             (window.GALLA_nav || function (u) { location.href = u; })(ALL_TYPES[el.dataset.t].dest(el.dataset.id))));
     };
 
