@@ -51,6 +51,39 @@
 
     document.getElementById('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '갈라리') : (author?.nickname || '갈라리');
 
+    // ⋯ 소유자/관리자 관리 메뉴(수정·삭제) — 공용 owner-actions 재사용
+    const moreBtn = document.getElementById('glp-more');
+    if (moreBtn && window.GALLA_canManage) {
+      window.GALLA_canManage(post.user_id).then((can) => {
+        if (!can) return;
+        moreBtn.hidden = false;
+        moreBtn.onclick = () => window.GALLA_openOwnerMenu({
+          table: 'posts', id: post.id, ownerId: post.user_id, label: '갈라리',
+          editFields: post.kind === 'horizontal'
+            ? [{ key: 'title', label: '제목', type: 'text', value: post.title || '' },
+               { key: 'caption', label: '설명', type: 'textarea', value: post.caption || '' }]
+            : [{ key: 'caption', label: '내용', type: 'textarea', value: post.caption || '' }],
+          onSaved: (patch) => {
+            if (patch.title != null && post.kind === 'horizontal') {
+              post.title = patch.title;
+              const tEl = document.querySelector('.glp-title'); if (tEl) tEl.textContent = patch.title;
+              document.getElementById('glp-top-title').textContent = patch.title || '갈라리';
+            }
+            if (patch.caption != null) {
+              post.caption = patch.caption;
+              const cEl = document.querySelector('.glp-caption');
+              if (cEl) cEl.innerHTML = post.kind === 'horizontal' ? esc(patch.caption)
+                : `<b>${esc(author?.nickname || '')}</b>  ${esc(patch.caption)}`;
+            }
+          },
+          onDeleted: () => {
+            if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop && window.GALLA_SPA.pop()) return;
+            nav('gallari.html');
+          },
+        });
+      }).catch(() => {});
+    }
+
     // ---- 미디어 ----
     let mediaHtml = '';
     if (post.video_url) {

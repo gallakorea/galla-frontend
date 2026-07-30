@@ -209,7 +209,7 @@
         const client = sb();
         if (!client) throw new Error('연결 준비 중이에요. 잠시 후 다시 시도해주세요.');
         // 자식 행까지 정리하는 SECURITY DEFINER RPC 사용(FK 제약 회피)
-        const rpc = { issues: 'delete_issue', plaza_posts: 'delete_plaza_post', markets: 'delete_market' }[cfg.table];
+        const rpc = { issues: 'delete_issue', plaza_posts: 'delete_plaza_post', markets: 'delete_market', posts: 'delete_post' }[cfg.table];
         // 무한 스피너 방지: 8초 내 응답 없으면 실패 처리(토큰 갱신 스톨 등 대비)
         const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('응답이 지연되고 있어요. 다시 시도해주세요.')), 8000));
         const { error } = await Promise.race([client.rpc(rpc, { p_id: cfg.id }), timeout]);
