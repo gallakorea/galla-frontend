@@ -1,0 +1,38 @@
+/* ============================================================
+   갈라리 작성 — write.css 위에 얹는 전용 스타일(형태 탭·공유 버튼)
+   ============================================================ */
+.glr-kind {
+  display: flex; gap: 8px; margin: 14px 0 4px;
+}
+.glr-kind-tab {
+  flex: 1; padding: 14px 8px; border-radius: 14px;
+  background: #101116; border: 1px solid rgba(255,255,255,.09);
+  color: #9aa0ae; font-size: 14px; font-weight: 800; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.glr-kind-tab .glr-kind-ic { font-size: 22px; }
+.glr-kind-tab .glr-kind-sub { font-size: 10.5px; font-weight: 700; opacity: .7; }
+.glr-kind-tab.active {
+  color: #eef1f8;
+  border-color: rgba(74,158,255,.5);
+  background: linear-gradient(160deg, rgba(61,107,255,.14), rgba(59,130,246,.05)), #101116;
+}
+
+.glr-hint { font-size: 12px; color: #7f7f88; margin: 2px 2px 12px; line-height: 1.5; }
+
+.glr-submit {
+  appearance: none; -webkit-appearance: none; border: none; cursor: pointer;
+  padding: 8px 16px; border-radius: 999px;
+  background: #3b82f6; color: #fff; font-size: 14px; font-weight: 800;
+}
+.glr-submit:active { opacity: .85; }
+.glr-submit[disabled] { opacity: .5; cursor: default; }
+
+/* 가로영상 미리보기는 16:9 */
+#glrHVideoPrev video { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 12px; background:#000; }
+#glrVVideoPrev video { width: 100%; max-height: 62vh; aspect-ratio: 9/16; object-fit: cover; border-radius: 12px; background:#000; }
+
+/* 영상 업로드 상태 줄(재사용 vup-bar 없을 때 대비) */
+.glr-vbar { margin-top: 8px; font-size: 12px; font-weight: 700; color: #8fa6d8; }
+.glr-vbar.err { color: #ff6b78; }

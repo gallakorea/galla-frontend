@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>갈라리 만들기 - GALLA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <link rel="stylesheet" href="./css/write.css?v=072878" />
+  <link rel="stylesheet" href="./css/write-upload.css?v=072878">
+  <link rel="stylesheet" href="./css/gallari-write.css?v=072878">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="갈라">
+  <link rel="stylesheet" href="./css/theme.css?v=072878">
+<link rel="stylesheet" href="./css/desktop.css?v=072878">
+</head>
+
+<body data-page="gallari-write">
+<div id="app">
+  <div class="app-root">
+
+    <!-- TOP APP BAR -->
+    <header class="wr-appbar">
+      <button type="button" class="wr-back" data-back="index.html" aria-label="뒤로">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="wr-appbar-title">갈라리 만들기</div>
+      <button type="button" class="glr-submit" id="glrSubmit">공유</button>
+    </header>
+
+    <main class="wr-main">
+      <div class="wr-inner">
+
+        <!-- 형태 선택 -->
+        <div class="glr-kind seg">
+          <button type="button" class="glr-kind-tab active" data-kind="vertical">
+            <span class="glr-kind-ic">📱</span><span>세로</span><span class="glr-kind-sub">사진·세로영상 (인스타식)</span>
+          </button>
+          <button type="button" class="glr-kind-tab" data-kind="horizontal">
+            <span class="glr-kind-ic">🖥️</span><span>가로</span><span class="glr-kind-sub">가로영상 (유튜브식)</span>
+          </button>
+        </div>
+        <div class="glr-hint" id="glrHint">사진(최대 10장 캐러셀) 또는 세로 영상 한 편. 진영·배틀 없이 그냥 콘텐츠예요.</div>
+
+        <!-- ===== 세로형 미디어 (사진 캐러셀 / 세로영상) ===== -->
+        <section class="wcard" id="glr-vertical-media">
+          <div class="media-tabs seg">
+            <button type="button" class="media-tab active" data-media="photo">🖼️ 사진</button>
+            <button type="button" class="media-tab" data-media="video">🎬 세로영상</button>
+          </div>
+
+          <div class="media-pane" id="glr-pane-photo">
+            <input type="file" id="glrPhoto" class="visually-hidden-file" accept="image/*" multiple />
+            <label for="glrPhoto" id="glrPhotoBtn" class="media-drop">
+              <span class="media-drop-icon">＋</span>
+              <span class="media-drop-title">사진 올리기</span>
+              <span class="media-drop-sub">최대 10장 · 여러 장은 캐러셀 (첫 장이 대표)</span>
+            </label>
+            <div id="glrPhotoPrev" class="preview-box"></div>
+          </div>
+
+          <div class="media-pane" id="glr-pane-video" hidden>
+            <input type="file" id="glrVVideo" class="visually-hidden-file" accept="video/*" />
+            <label for="glrVVideo" id="glrVVideoBtn" class="media-drop">
+              <span class="media-drop-icon">＋</span>
+              <span class="media-drop-title">세로영상 올리기</span>
+              <span class="media-drop-sub">세로 9:16 권장 · 최대 1분</span>
+            </label>
+            <div id="glrVVideoPrev" class="preview-box"></div>
+          </div>
+        </section>
+
+        <!-- ===== 가로형 미디어 (가로영상) ===== -->
+        <section class="wcard" id="glr-horizontal-media" hidden>
+          <input type="file" id="glrHVideo" class="visually-hidden-file" accept="video/*" />
+          <label for="glrHVideo" id="glrHVideoBtn" class="media-drop">
+            <span class="media-drop-icon">＋</span>
+            <span class="media-drop-title">가로영상 올리기</span>
+            <span class="media-drop-sub">가로 16:9 권장 · 최대 1분</span>
+          </label>
+          <div id="glrHVideoPrev" class="preview-box"></div>
+        </section>
+
+        <!-- ===== 내용 ===== -->
+        <div class="wcard">
+          <div class="field-block" id="glr-title-block" hidden>
+            <label class="field-label" for="glrTitle">제목 <span class="required">필수</span></label>
+            <input id="glrTitle" class="input-field" maxlength="100" placeholder="영상 제목을 적어주세요" />
+          </div>
+
+          <div class="field-block">
+            <label class="field-label" for="glrCaption" id="glrCapLabel">내용</label>
+            <textarea id="glrCaption" class="input-field" rows="4" maxlength="2000"
+              placeholder="무슨 이야기를 나눌까요? (해시태그 #도 인식돼요)"></textarea>
+          </div>
+
+          <div class="field-block">
+            <label class="field-label" for="glrTags">태그</label>
+            <input id="glrTags" class="input-field" placeholder="#태그  공백이나 쉼표로 구분" />
+          </div>
+        </div>
+
+        <div class="glr-hint">🎁 공개되면 이 콘텐츠에 <b>갈라코인(GC) 후원</b>을 받을 수 있어요.</div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Supabase 싱글턴 + 미디어 파이프라인 -->
+<script src="/js/error-logger.js?v=072878"></script>
+<script src="./vendor/supabase.js?v=072878"></script>
+<script src="./js/supabase.js?v=072878"></script>
+<script src="js/back.js?v=072878"></script>
+<script src="./js/video-compress.js?v=072878"></script>
+<script src="./js/media-upload.js?v=072878"></script>
+<script src="./js/bg-video-upload.js?v=072878"></script>
+<script src="./js/img-crop.js?v=072878"></script>
+<script src="./js/write-media.js?v=072878"></script>
+<script src="./js/gallari-write.js?v=072878"></script>
+</body>
+</html>

@@ -12,6 +12,7 @@
 (function () {
   const ROUTE = {
     galla:   "write.html",
+    gallari: "gallari-write.html",
     predict: "galla-predict.html?compose=1",
     plaza:   "search.html?tab=plaza&compose=1",
     report:  "report.html",
@@ -62,6 +63,20 @@
         "지금은 갈라 팀이 발제 중 · 곧 모두에게 열립니다";
     }
 
+    // 갈라리(콘텐츠)는 아직 비공개 — 플래그(gallari_enabled) 켜졌거나 운영진일 때만 노출
+    const glrCard = scope.querySelector('.cr-card[data-type="gallari"]');
+    if (glrCard) {
+      let gallariOn = false;
+      try {
+        const sb = window.supabaseClient;
+        if (sb) {
+          const { data } = await sb.from("app_settings").select("v").eq("k", "gallari_enabled").maybeSingle();
+          gallariOn = !!data && (data.v === true || data.v === "true");
+        }
+      } catch (_) {}
+      if (admin || gallariOn) glrCard.hidden = false;
+    }
+
     list.addEventListener("click", (e) => {
       const card = e.target.closest(".cr-card");
       if (!card) return;
@@ -80,6 +95,7 @@
       //   예측·광장 → 해당 탭 활성 후 compose 모달(뒤로가기=모달 닫기)
       if (isSpa() && window.GALLA_SPA) {
         if (type === "galla")   { window.GALLA_SPA.push("write");   return; }
+        if (type === "gallari") { window.GALLA_SPA.push("gallari-write"); return; }
         if (type === "report")  { window.GALLA_SPA.push("report");  return; }
         if (type === "predict") { window.GALLA_SPA.compose("predict"); return; }
         if (type === "plaza")   { window.GALLA_SPA.compose("plaza");   return; }
