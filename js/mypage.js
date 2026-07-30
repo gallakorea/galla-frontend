@@ -1392,16 +1392,29 @@ async function GALLA_mypageInit(root, spaParams) {
         items.sort((a, b) => new Date(b.ts) - new Date(a.ts));
         moaItems = items;
         if (!items.length) { tabContent.innerHTML = emptyMsg("아직 올린 콘텐츠가 없어요."); return; }
-        tabContent.innerHTML = '<div class="mp-all">' + items.map(it => {
+        // 몬드리안 모자이크 — 크기 제각각 직사각형 패턴(4열 기준). 롱판=가로 넓게, 숏판=세로 길게.
+        const SHAPES = [[2, 2], [1, 1], [1, 2], [2, 1], [1, 1], [2, 2], [1, 1], [1, 2], [2, 1], [1, 1], [2, 1], [1, 1]];
+        const BLOCK_COLOR = { predict: "y", plaza: "b", issue: "r" };  // 예측=노랑·광장=파랑·이슈=빨강
+        const CYCLE = ["r", "b", "y", "w"];
+        tabContent.innerHTML = '<div class="mp-mond">' + items.map((it, idx) => {
             const lab = ALL_TYPES[it.t].label;
-            // 하이브리드: 가로(롱판=2칸 16:9) · 세로(3:4) · 텍스트(사진 없음=넓은 카드)
-            const shape = !it.thumb ? "text" : (it.t === "long" ? "wide" : "tall");
-            const inner = (shape === "text")
-                ? `<div class="mp-all-text"><b class="t-${it.t}">${esc(lab)}</b><span>${esc((it.title || "").slice(0, 90))}</span></div>`
-                : `<img src="${esc(it.thumb)}" loading="lazy">
-                   <span class="mp-all-badge">${esc(lab)}</span>
-                   ${it.video ? `<span class="${shape === "wide" ? "glf-play-lg" : "glf-play"}">${PLAY_SVG}</span>` : ""}`;
-            return `<div class="mp-all-tile is-${shape}" data-t="${it.t}" data-id="${it.id}">${inner}</div>`;
+            let [c, r] = SHAPES[idx % SHAPES.length];
+            if (it.t === "long") { c = 2; r = r > 1 ? 1 : r; }      // 가로형 → 폭 넓게
+            else if (it.t === "short") { r = Math.max(r, 2); c = 1; } // 세로형 → 길게
+            if (!it.thumb) { c = 2; r = Math.max(r, 1); }            // 텍스트 색면 → 폭 넓게(글자 안 쪼개지게)
+            const span = `--c:${c};--r:${r}`;
+            if (it.thumb) {
+                return `<div class="mp-all-tile is-media" style="${span}" data-t="${it.t}" data-id="${it.id}">
+                    <img src="${esc(it.thumb)}" loading="lazy">
+                    <span class="mp-all-badge">${esc(lab)}</span>
+                    ${it.video ? `<span class="${c >= 2 && r >= 2 ? "glf-play-lg" : "glf-play"}">${PLAY_SVG}</span>` : ""}
+                </div>`;
+            }
+            const col = BLOCK_COLOR[it.t] || CYCLE[idx % CYCLE.length];
+            return `<div class="mp-all-tile is-block col-${col}" style="${span}" data-t="${it.t}" data-id="${it.id}">
+                <span class="mp-all-badge">${esc(lab)}</span>
+                <span class="mp-btext">${esc((it.title || "").slice(0, 70))}</span>
+            </div>`;
         }).join("") + "</div>";
         tabContent.querySelectorAll(".mp-all-tile").forEach((el, i) => el.addEventListener("click", () => openMoaFeed(i)));
     };
