@@ -1,0 +1,94 @@
+/* ============================================================
+   갈라리 상세 — 세로=쓰레드/인스타식, 가로=유튜브식 + 일반 댓글
+   ============================================================ */
+.glp { max-width: 640px; margin: 0 auto; min-height: 100dvh;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom,0)); }
+
+.glp-top {
+  position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 8px;
+  height: calc(52px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 10px 0;
+  background: rgba(10,10,11,.86); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.glp-back { width: 38px; height: 38px; border: none; background: transparent; color: #eaeaf0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.glp-back svg { width: 22px; height: 22px; }
+.glp-top-title { font-size: 15px; font-weight: 800; color: #f0f2f8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 작성자 헤드 */
+.glp-head { display: flex; align-items: center; gap: 10px; padding: 12px; }
+.glp-ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #222; }
+.glp-hinfo { flex: 1; min-width: 0; }
+.glp-nick { font-size: 14px; font-weight: 800; color: #f0f2f8; }
+.glp-time { font-size: 11.5px; color: #8b8b93; margin-top: 1px; }
+
+/* 미디어 */
+.glp-media { background: #000; }
+.glp-media.vertical video, .glp-media.vertical img { width: 100%; max-height: 78vh; object-fit: contain; display: block; }
+.glp-media.horizontal video, .glp-media.horizontal img { width: 100%; aspect-ratio: 16/9; object-fit: contain; display: block; }
+/* 캐러셀 */
+.glp-carousel { position: relative; }
+.glp-slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.glp-slides::-webkit-scrollbar { display: none; }
+.glp-slides img { flex: 0 0 100%; scroll-snap-align: center; width: 100%; max-height: 78vh; object-fit: contain; }
+.glp-dots { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 5px; }
+.glp-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.4); }
+.glp-dots i.on { background: #fff; }
+
+/* 제목(가로형) */
+.glp-title { font-size: 18px; font-weight: 900; color: #f4f6fb; padding: 12px 12px 4px; line-height: 1.35; }
+
+/* 액션바 */
+.glp-actions { display: flex; align-items: center; gap: 18px; padding: 10px 14px; }
+.glp-act { display: flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer;
+  color: #cfd5e0; font-size: 14px; font-weight: 800; }
+.glp-act svg { width: 24px; height: 24px; }
+.glp-act.on { color: #ff4d67; }
+.glp-act.on svg { fill: #ff4d67; }
+.glp-support {
+  margin-left: auto; display: flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 8px 16px; border-radius: 999px; border: none;
+  background: linear-gradient(135deg, #f5cf6b, #e8a33d); color: #201700; font-size: 13.5px; font-weight: 900;
+}
+.glp-support:active { opacity: .9; }
+
+/* 캡션/설명 */
+.glp-caption { padding: 4px 14px 14px; color: #dfe3ec; font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.glp-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
+.glp-tags span { font-size: 12px; font-weight: 800; color: #a9c2ff; }
+
+.glp-div { height: 8px; background: rgba(255,255,255,.03); }
+
+/* 댓글 */
+.glp-csec { padding: 12px 0 0; }
+.glp-ctitle { font-size: 13px; font-weight: 900; color: #9a9aa0; padding: 0 14px 8px; }
+.glp-clist { }
+.glp-c { display: flex; gap: 10px; padding: 10px 14px; }
+.glp-c.reply { padding-left: 46px; }
+.glp-cava { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #222; flex: 0 0 auto; }
+.glp-cmain { flex: 1; min-width: 0; }
+.glp-cnick { font-size: 13px; font-weight: 800; color: #eef1f8; }
+.glp-cnick .glp-ctime { font-size: 11px; color: #8b8b93; font-weight: 600; margin-left: 6px; }
+.glp-cbody { font-size: 14px; color: #dfe3ec; line-height: 1.5; margin-top: 2px; white-space: pre-wrap; word-break: break-word; }
+.glp-cfoot { display: flex; gap: 14px; margin-top: 5px; font-size: 12px; color: #8b8b93; font-weight: 700; }
+.glp-cfoot button { background: none; border: none; color: #8b8b93; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
+.glp-cfoot button.on { color: #ff8595; }
+.glp-cempty { text-align: center; color: #8b8b93; padding: 30px; font-size: 13.5px; }
+
+/* 댓글 입력 (하단 고정) */
+.glp-cbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; gap: 8px; align-items: center; padding: 10px 12px calc(10px + env(safe-area-inset-bottom,0));
+  background: rgba(14,14,17,.96); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+.glp-cbar input {
+  flex: 1; padding: 11px 14px; border-radius: 999px; font-size: 15px;
+  background: #0d0d0f; border: 1px solid #1c1c1c; color: #fff;
+}
+.glp-cbar button {
+  border: none; background: #3b82f6; color: #fff; font-weight: 800; font-size: 14px;
+  padding: 10px 16px; border-radius: 999px; cursor: pointer;
+}
+.glp-cbar button[disabled] { opacity: .5; }
+
+.glp-loading { text-align: center; color: #8b8b93; padding: 80px 20px; }

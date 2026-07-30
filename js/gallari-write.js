@@ -227,10 +227,10 @@
       if (error) { console.error('[갈라리 insert]', error); alert('올리기에 실패했어요.'); return; }
 
       try { window.GALLA_toast && window.GALLA_toast('갈라리에 올렸어요'); } catch (_) {}
-      // 뒤로 (피드/상세는 이후 단계에서 연결)
-      if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop) window.GALLA_SPA.pop();
-      else if (window.GALLA_nav) window.GALLA_nav('index.html');
-      else history.back();
+      // 올린 뒤 피드로 — 작성 스택은 닫고 갈라리 피드로 이동
+      const goFeed = () => (window.GALLA_nav || function (u) { location.href = u; })('gallari.html');
+      if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop) { try { window.GALLA_SPA.pop(); } catch (_) {} setTimeout(goFeed, 60); }
+      else goFeed();
     });
 
     setKind('vertical'); setVMode('photo');
