@@ -32,6 +32,26 @@ async function GALLA_mypageInit(root, spaParams) {
         item.classList.toggle("active", item.dataset.page === currentPage);
     });
 
+    // 🩹 자가치유 — CF/SW가 이 문서에만 옛 HTML(모아 탭 없는 버전)을 주는 경우가 있다.
+    //   (내비게이션엔 옛 HTML, page fetch엔 최신 — 광장 ensurePlazaPanel과 동일 증상, 사장님 확정.)
+    //   최신 HTML을 page fetch로 받아 탭바를 통째 교체하고 gallari.css를 보장한다. MPA에서만.
+    if (D === document && !D.querySelector('.tabs .tab[data-tab="all"]')) {
+        try {
+            const html = await fetch(location.pathname + '?mh=' + Date.now(), { cache: 'reload' }).then(r => r.text());
+            const fdoc = new DOMParser().parseFromString(html, 'text/html');
+            const fresh = fdoc.querySelector('.tabs');
+            const cur = D.querySelector('.tabs');
+            if (fresh && cur && fresh.querySelector('.tab[data-tab="all"]')) {
+                cur.innerHTML = fresh.innerHTML;
+                if (!document.querySelector('link[href*="gallari.css"]')) {
+                    const link = fdoc.querySelector('link[href*="gallari.css"]');
+                    if (link) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = link.getAttribute("href"); document.head.appendChild(l); }
+                }
+                console.info("[mypage] 탭바 자가치유 완료(모아 탭 복원)");
+            }
+        } catch (e) { console.warn("[mypage] tab heal skip:", e); }
+    }
+
     // ---------------------------
     // 탭 요소
     // ---------------------------
