@@ -54,6 +54,15 @@ function initWritePage(ctx) {
       if (descEl && !descEl.value) {
         descEl.value = '이 영상을 두고 의견이 갈립니다.\n\n출처: ' + (seed.source || '유튜브') + '\n' + seed.url;
       }
+    } else if (seed && seed.from === 'jarvis') {
+      // 🤖 갈라비스 초안 프리필(제목·한줄·본문·카테고리)
+      sessionStorage.removeItem('GALLA_SEED');
+      if (titleEl && !titleEl.value) titleEl.value = seed.title || '';
+      if (oneLineEl && !oneLineEl.value) oneLineEl.value = seed.oneLine || '';
+      if (descEl && !descEl.value) descEl.value = seed.description || '';
+      if (categoryEl && seed.category && !categoryEl.value) {
+        try { categoryEl.value = seed.category; } catch (_) {}
+      }
     }
   } catch (_) {}
 

@@ -1,0 +1,95 @@
+/* 갈라비스 — 유저 개인 AI 에이전트. 상주 오브 + 대화 시트. SPA(앱) 전용. */
+:root{
+  --jv-accent: var(--accent, #6366f1);
+  --jv-bg: #0d0d10;
+  --jv-panel: #141419;
+  --jv-line: rgba(255,255,255,.08);
+  --jv-txt: #f2f2f5;
+  --jv-dim: #9a9aa6;
+}
+
+/* 상주 오브 — 우하단, 하단탭 위 */
+#jvOrb{
+  position: fixed; right: 14px; z-index: 940;
+  bottom: calc(env(safe-area-inset-bottom,0px) + 74px);
+  width: 52px; height: 52px; border-radius: 50%;
+  border: none; padding: 0; cursor: pointer;
+  background: radial-gradient(120% 120% at 30% 25%, #7c7cff 0%, var(--jv-accent) 55%, #3f3fae 100%);
+  box-shadow: 0 6px 22px rgba(70,70,200,.45), inset 0 1px 0 rgba(255,255,255,.35);
+  display: grid; place-items: center;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), opacity .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+#jvOrb:active{ transform: scale(.9); }
+#jvOrb .jv-core{ width: 26px; height: 26px; }
+#jvOrb.jv-hidden{ opacity: 0; pointer-events: none; transform: scale(.6); }
+/* 숨쉬는 링 */
+#jvOrb::after{
+  content:""; position:absolute; inset:-4px; border-radius:50%;
+  border:2px solid rgba(124,124,255,.5); animation: jvPulse 2.6s ease-out infinite;
+}
+@keyframes jvPulse{ 0%{transform:scale(.9);opacity:.6} 70%{opacity:0} 100%{transform:scale(1.35);opacity:0} }
+
+/* 시트 */
+#jvSheet{
+  position: fixed; inset: 0; z-index: 950; display: none;
+}
+#jvSheet.jv-open{ display: block; }
+#jvSheet .jv-scrim{ position:absolute; inset:0; background: rgba(0,0,0,.5); backdrop-filter: blur(2px); opacity:0; transition:opacity .22s; }
+#jvSheet.jv-open .jv-scrim{ opacity:1; }
+#jvSheet .jv-panel{
+  position:absolute; left:0; right:0; bottom:0;
+  height: min(86vh, 720px);
+  background: var(--jv-bg); color: var(--jv-txt);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--jv-line);
+  display: flex; flex-direction: column;
+  transform: translateY(102%); transition: transform .3s cubic-bezier(.2,.85,.2,1);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+#jvSheet.jv-open .jv-panel{ transform: translateY(0); }
+
+.jv-head{ display:flex; align-items:center; gap:10px; padding:14px 16px 10px; border-bottom:1px solid var(--jv-line); }
+.jv-head .jv-av{ width:30px; height:30px; border-radius:50%; background: radial-gradient(120% 120% at 30% 25%, #7c7cff, var(--jv-accent)); flex:0 0 auto; }
+.jv-head .jv-name{ font-weight:700; font-size:15px; }
+.jv-head .jv-sub{ font-size:11px; color:var(--jv-dim); margin-top:1px; }
+.jv-head .jv-x{ margin-left:auto; background:none; border:none; color:var(--jv-dim); font-size:22px; line-height:1; padding:4px 8px; cursor:pointer; }
+
+.jv-log{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; -webkit-overflow-scrolling:touch; }
+.jv-msg{ max-width:86%; font-size:14.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
+.jv-msg.jv-a{ align-self:flex-start; color:var(--jv-txt); }
+.jv-msg.jv-u{ align-self:flex-end; background:var(--jv-accent); color:#fff; padding:9px 13px; border-radius:16px 16px 4px 16px; }
+.jv-msg.jv-a .jv-bubble{ background:var(--jv-panel); padding:10px 13px; border-radius:16px 16px 16px 4px; border:1px solid var(--jv-line); }
+
+/* 행동 칩(이동/작성) */
+.jv-acts{ display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+.jv-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(124,124,255,.14); border:1px solid rgba(124,124,255,.4);
+  color:#c9c9ff; font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px; cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.jv-chip:active{ transform:scale(.95); }
+.jv-chip svg{ width:14px; height:14px; }
+
+/* 타이핑 */
+.jv-typing{ align-self:flex-start; display:flex; gap:4px; padding:12px 14px; background:var(--jv-panel); border:1px solid var(--jv-line); border-radius:16px; }
+.jv-typing i{ width:6px; height:6px; border-radius:50%; background:var(--jv-dim); animation: jvBlink 1.2s infinite; }
+.jv-typing i:nth-child(2){ animation-delay:.2s } .jv-typing i:nth-child(3){ animation-delay:.4s }
+@keyframes jvBlink{ 0%,60%,100%{opacity:.25;transform:translateY(0)} 30%{opacity:1;transform:translateY(-3px)} }
+
+/* 프롬프트 예시 */
+.jv-hints{ display:flex; flex-wrap:wrap; gap:7px; padding:0 16px 6px; }
+.jv-hint{ background:var(--jv-panel); border:1px solid var(--jv-line); color:var(--jv-dim); font-size:12.5px; padding:7px 11px; border-radius:999px; cursor:pointer; }
+
+/* 입력 */
+.jv-input{ display:flex; align-items:flex-end; gap:8px; padding:10px 12px 12px; border-top:1px solid var(--jv-line); }
+.jv-input textarea{
+  flex:1; resize:none; max-height:120px; min-height:22px;
+  background:var(--jv-panel); border:1px solid var(--jv-line); border-radius:18px;
+  color:var(--jv-txt); font-size:16px; line-height:1.4; padding:10px 14px; outline:none; font-family:inherit;
+}
+.jv-input textarea::placeholder{ color:var(--jv-dim); }
+.jv-send{ width:40px; height:40px; flex:0 0 auto; border:none; border-radius:50%; background:var(--jv-accent); color:#fff; cursor:pointer; display:grid; place-items:center; }
+.jv-send:disabled{ opacity:.4; }
+.jv-send svg{ width:18px; height:18px; }

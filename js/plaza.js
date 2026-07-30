@@ -91,6 +91,21 @@ async function openPlazaWriteModal() {
   if (!user) return;
   modal.classList.remove("hidden");   // composer-page(웹·앱 공용)가 전체화면 페이지화 + 뒤로가기 처리
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
+  jarvisSeedPrefill();   // 🤖 갈라비스 초안이 있으면 채움(본문 해시태그는 GALLA_collectTags가 자동 수집)
+}
+// 🤖 갈라비스가 심은 광장 초안 프리필
+function jarvisSeedPrefill() {
+  try {
+    const seed = JSON.parse(sessionStorage.getItem("GALLA_SEED") || "null");
+    if (!seed || seed.from !== "jarvis" || seed.kind !== "plaza") return;
+    sessionStorage.removeItem("GALLA_SEED");
+    const t = document.getElementById("plaza-title");
+    const b = document.getElementById("plaza-body");
+    const c = document.getElementById("plaza-category");
+    if (t && !t.value) t.value = seed.title || "";
+    if (b && !b.value) { b.value = seed.description || ""; b.dispatchEvent(new Event("input", { bubbles: true })); }
+    if (c && seed.category && !c.value) { try { c.value = seed.category; } catch (_) {} }
+  } catch (_) {}
 }
 // expose for inline HTML handlers
 window.openPlazaWriteModal = openPlazaWriteModal;
