@@ -12,7 +12,7 @@
    ========================================================= */
 (function () {
   const PREFIX = 'galla_draft_';
-  const MAX_AGE = 30 * 24 * 3600 * 1000;   // 30일 보관(인스타 초안 방식)
+  const MAX_AGE = 7 * 24 * 3600 * 1000;   // 7일 보관
 
   function css() {
     if (document.getElementById('galla-draft-css')) return;

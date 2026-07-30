@@ -15,7 +15,7 @@
 (function () {
   /* ─────────────── 미디어 캐시 (localStorage) ─────────────── */
   const K = 'galla_write_media';
-  const RETENTION_DAYS = 30;                       // 인스타 초안처럼 30일 보관
+  const RETENTION_DAYS = 7;                        // 임시저장 7일 보관
   const MAX_AGE = RETENTION_DAYS * 24 * 3600 * 1000;
 
   function read() {

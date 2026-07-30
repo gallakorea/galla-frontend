@@ -432,7 +432,7 @@ function initWritePage(ctx) {
     const isVid = !thumb && !!c.video_url;
     let draftTitle = '';
     try { const d = JSON.parse(localStorage.getItem('galla_draft_write') || 'null'); if (d && d.v) draftTitle = d.v.title || d.v.oneLine || d.v.category || ''; } catch (_) {}
-    const days = (window.GALLA_WriteMedia && window.GALLA_WriteMedia.daysLeft && window.GALLA_WriteMedia.daysLeft()) || 30;
+    const days = (window.GALLA_WriteMedia && window.GALLA_WriteMedia.daysLeft && window.GALLA_WriteMedia.daysLeft()) || 7;
     const safe = s => String(s || '').replace(/[<>&]/g, m => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[m]));
     const el = document.createElement('div');
     el.className = 'wr-resume'; el.id = 'wrResume';
@@ -899,10 +899,10 @@ window.GALLA_PAGE_WRITE = {
           if (!has || !window.GALLA_ActionSheet) { pop(); return; }
           window.GALLA_ActionSheet({
             title: '작성을 멈출까요?',
-            message: "임시 저장하면 30일간 보관돼요. 다시 들어오면 사진·영상 고르는 화면에서 이어서 쓸 수 있어요.",
+            message: "임시 저장하면 7일간 보관돼요. 다시 들어오면 사진·영상 고르는 화면에서 이어서 쓸 수 있어요.",
             actions: [
               { label: '다시 시작', style: 'destructive', onClick: () => { try { window.GALLA_WRITE_discardDraft && window.GALLA_WRITE_discardDraft(); } catch (_) {} pop(); } },
-              { label: '임시 저장', onClick: () => { try { window.GALLA_WRITE_saveDraftNow && window.GALLA_WRITE_saveDraftNow(); } catch (_) {} try { window.GALLA_toast && window.GALLA_toast('임시 저장됨 · 30일간 보관'); } catch (_) {} pop(); } },
+              { label: '임시 저장', onClick: () => { try { window.GALLA_WRITE_saveDraftNow && window.GALLA_WRITE_saveDraftNow(); } catch (_) {} try { window.GALLA_toast && window.GALLA_toast('임시 저장됨 · 7일간 보관'); } catch (_) {} pop(); } },
               { label: '계속 수정하기', style: 'cancel', onClick: () => {} },
             ],
           });
