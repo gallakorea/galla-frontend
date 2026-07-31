@@ -34,9 +34,9 @@
           '<div><div class="fr-name">'+friendName+'</div><div class="fr-sub">너의 갈라 친구</div></div>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
+        // 🎙 음성입력은 iOS 키보드 내장 받아쓰기(키보드 🎤)로 — 무료·정확. 커스텀 마이크 불필요.
         '<div class="fr-input">'+
-          '<textarea rows="1" placeholder="친구한테 아무 말이나 해봐"></textarea>'+
-          '<button class="fr-mic" aria-label="음성">'+ICON.mic+'</button>'+
+          '<textarea rows="1" placeholder="친구한테 아무 말이나 해봐 (키보드 🎤로 말해도 돼)"></textarea>'+
           '<button class="fr-send">'+ICON.send+'</button>'+
         '</div>'+
       '</div></div>');
