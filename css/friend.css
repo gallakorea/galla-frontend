@@ -26,21 +26,20 @@
   background:#39d98a; border:2px solid #0e0d10; display:none; }
 #frOrb.fr-ping .fr-dot{ display:block; }
 
-/* 하단 내비 높이(플로팅 캡슐+여백+safe-area) — 채팅창을 이 위로 올려 내비를 안 가린다 */
-:root{ --fr-nav: calc(76px + env(safe-area-inset-bottom,0px)); }
-/* 컨테이너는 클릭 통과(pointer-events:none) — 내비/화면이동 살림. 스크림·패널만 클릭 받음 */
-#frSheet{ position:fixed; inset:0; z-index:950; display:none; pointer-events:none; }
+#frSheet{ position:fixed; inset:0; z-index:950; display:none; }
 #frSheet.fr-open{ display:block; }
-#frSheet .fr-scrim{ position:absolute; left:0; right:0; top:0; bottom:var(--fr-nav); background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; pointer-events:auto; }
+/* 스크림·패널이 화면을 '완전히' 덮는다 → 뒤 화면 안 눌림. 내비는 열려있는 동안 숨긴다(아래). */
+#frSheet .fr-scrim{ position:absolute; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; }
 #frSheet.fr-open .fr-scrim{ opacity:1; }
 #frSheet .fr-panel{
-  position:absolute; left:0; right:0; bottom:var(--fr-nav);   /* 🔑 내비 위에 앉힘 */
-  height:min(72vh,620px);
+  position:absolute; left:0; right:0; bottom:0; height:min(82vh,700px);
   background:var(--fr-bg); color:var(--fr-txt); border-radius:20px 20px 0 0;
   border-top:1px solid var(--fr-line); display:flex; flex-direction:column;
-  transform:translateY(120%); transition:transform .3s cubic-bezier(.2,.85,.2,1);
-  padding-bottom:8px; pointer-events:auto; overflow:hidden;
+  transform:translateY(102%); transition:transform .3s cubic-bezier(.2,.85,.2,1);
+  padding-bottom:env(safe-area-inset-bottom,0px); overflow:hidden;
 }
+/* 🫥 친구 대화 중엔 하단 내비 숨김 — 채팅창이 가리지도, 뒤가 눌리지도 않게 */
+body.fr-chatting nav.nav{ display:none !important; }
 #frSheet.fr-open .fr-panel{ transform:translateY(0); }
 
 .fr-head{ display:flex; align-items:center; gap:10px; padding:14px 16px 10px; border-bottom:1px solid var(--fr-line); }

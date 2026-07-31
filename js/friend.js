@@ -55,12 +55,17 @@
   function open(){
     if(!sheet) build();
     orb && orb.classList.remove("fr-ping");
+    document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
     if(!logEl.children.length) greet();      // 열면 친구가 먼저 반겨줌(기억 기반)
     setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
     setTimeout(scrollBottom, 600);
   }
-  function close(){ sheet && sheet.classList.remove("fr-open"); }
+  function close(){
+    if(sheet) sheet.classList.remove("fr-open");
+    document.body.classList.remove("fr-chatting");   // 내비 복원
+    try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}  // 닫으면 음성 정지
+  }
 
   async function greet(){
     // 빈 메시지 → 서버가 첫만남/재방문 판단해 반겨줌(기억 리콜)
