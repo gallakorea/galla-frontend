@@ -140,15 +140,33 @@ const TOOLS = [
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
   // ⚔️ 함께 창작 — 대화에서 뜨거워진 화제를 갈라 이슈 초안으로 잡아 작성폼에 프리필(관계 사다리 3단계)
-  { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
+  { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" }, differentiated: { type: "boolean", description: "중복주의 안내를 받고 '기존과 분명히 다른 각도'로 바꿔 재호출할 때만 true" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
 ];
 async function runTool(name: string, args: any): Promise<{ result?: any; action?: any }> {
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "draft_issue") {
+    const title = String(args?.title || "").slice(0, 80);
+    // 🔁 중복 가드 — 초안 확정 전에 기존 이슈를 검색해 비슷한 판이 있으면 모델에게 판단을 돌려준다:
+    //    ①기존 판 참전 권유(point_to) ②분명히 다른 각도로 차별화 재시도(differentiated:true).
+    if (!args?.differentiated && title) {
+      const stop = new Set(["얼마", "어떻게", "무엇", "정말", "과연", "적정", "문제", "논쟁", "이슈", "인가", "할까", "있다", "없다", "대한", "관한"]);
+      const kws = title.replace(/[^\w가-힣 ]/g, " ").split(/\s+/).filter((w) => w.length >= 2 && !stop.has(w)).slice(0, 4);
+      if (kws.length) {
+        const ors = kws.map((k) => `title.ilike.%${k}%,one_line.ilike.%${k}%`).join(",");
+        const { data: sim } = await supa.from("issues").select("id,title,one_line,pro_count,con_count")
+          .eq("status", "normal").or(ors).limit(4);
+        if (sim && sim.length) {
+          return { result: {
+            중복주의: sim.map((s) => ({ id: s.id, 제목: s.title, 참여: (s.pro_count || 0) + (s.con_count || 0) })),
+            지침: "갈라에 비슷한 이슈가 이미 있다. 판단해라 — ①주제가 사실상 겹치면 새로 만들지 말고 **반드시 point_to 툴을 호출**(mode:view, type:issue, id는 위 중복주의의 id)해 기존 판에 데려가 참전을 권해라('이미 판 섰던데? 가서 붙자'). 본문에 링크·URL을 직접 쓰는 건 금지 — 칩은 앱이 붙여준다. ②그래도 만들 가치가 있으면 기존과 '분명히 다른 각도'(대상·세대·조건·상황 한정, 다른 쟁점)로 제목·프레임을 바꿔 draft_issue를 differentiated:true로 다시 호출해라. 제목만 살짝 바꾼 재탕은 금지.",
+          } };
+        }
+      }
+    }
     return { action: { kind: "draft",
-      title: String(args?.title || "").slice(0, 80), oneLine: String(args?.one_line || "").slice(0, 120),
+      title, oneLine: String(args?.one_line || "").slice(0, 120),
       description: String(args?.description || "").slice(0, 1000), category: String(args?.category || "").slice(0, 20),
       factionA: String(args?.faction_a || "").slice(0, 20), factionB: String(args?.faction_b || "").slice(0, 20),
       label: "이슈 초안 올리러 가기" } };
@@ -236,6 +254,8 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 ━━ ⚔️ 함께 창작(대화가 콘텐츠가 된다) — 내 '가능 영역'을 정확히 안다 ━━
 갈라 콘텐츠는 다양하다: 이슈(찬반배틀)·광장(롱판 글)·예측·숏판(릴스 영상)·갈라리(사진/영상). 나는 **텍스트만** 만들 수 있다. 영역별로:
 - ✅ **이슈 초안**: 화제가 뜨거워지면 "갈라에 이슈로 올려보자" 제안 → 상대가 ㄱㄱ 하면 **draft_issue**(중립 제목·한줄·배경 3~4문장·찰진 찬반 라벨). 앱이 작성폼에 채워주고 발행은 상대가 직접.
+  🔁 **중복 방지**: draft_issue가 '중복주의'를 돌려주면(비슷한 이슈가 이미 있음) 재탕 금지 — ①사실상 같은 주제면 "야 이미 판 섰던데? 가서 붙자"며 point_to(view)로 기존 판에 데려가고, ②새로 만들 가치가 있으면 **분명히 다른 각도**(대상·세대·조건 한정, 다른 쟁점·다른 프레임)로 바꿔 differentiated:true로 다시 잡아라. 차별화가 뭔지 상대에게도 한 줄로 설명해줘라("기존 건 금액 얘기고 우린 '안 가는 게 예의냐'로 가자").
+  ⚡ 상대가 이미 "그 판 말고, ~쟁점으로 새로 만들자"고 **각도를 지정**하면 기존 판 권유를 반복하지 말고 **그 각도로 즉시 draft_issue(differentiated:true)**를 호출해 초안을 잡아라.
 - ✅ **광장(롱판) 글 초안**: "광장에 쓸 글 잡아줘" 하면 대화체로 초안 텍스트를 통으로 잡아준다(복붙해서 다듬어 올리게). 툴 없이 그냥 잘 써주면 된다.
 - ⚠️ **예측**: 아이디어 제안까지만("이거 예측 판 서면 재밌겠다"). 예측 등록은 갈라 운영 영역이라 내가 못 만든다 — 솔직히 말해라.
 - ❌ **숏판·갈라리(영상·사진)**: 나는 영상·이미지를 만들 수 없다. "그건 네가 찍어야지 ㅋㅋ 대신 대본·캡션·제목은 내가 잡아줄게" — 텍스트 파트(대본·후킹 문구·캡션·해시태그)는 최고로 도와줘라. (AI 이미지·영상 생성은 나중에 유료 기능으로 들어올 예정 — 지금은 안 된다고만.)
@@ -457,9 +477,9 @@ Deno.serve(async (req) => {
     if (!reply) reply = "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
     // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
     reply = reply
-      .replace(/\[([^\]]+)\]\(https?:[^)]+\)/g, "$1")
-      .replace(/https?:\/\/\S+/g, "")
-      .replace(/\(\s*\)/g, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")            // 마크다운 링크 → 텍스트만(스킴 무관: https·galla:// 등)
+      .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")          // raw URL 제거(커스텀 스킴 포함)
+      .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
     // 🌐 검색으로 답했으면 링크 칩 '보장' — 모델이 open_link를 깜빡해도 서버가 첨부.
     //    답변에 '실제 언급된' 결과를 우선 매칭(불일치 칩 방지), 없으면 상위 결과.
     if (searchHits.length && !actions.some((a) => a.kind === "open")) {
