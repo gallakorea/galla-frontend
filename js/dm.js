@@ -1560,17 +1560,32 @@
         window.__dmKbBound = true;
         const setVvhTo = px => document.documentElement.style.setProperty('--dm-vvh', Math.round(px) + 'px');
         const stickBottom = () => { const m = ROOT?.querySelector('#dm-msgs'); if (m && document.activeElement?.id === 'dm-input') m.scrollTop = m.scrollHeight; };
+        // 하단 safe-area(홈 인디케이터) 크기 — Capacitor keyboardHeight엔 이게 포함되는데
+        // resize:native의 웹뷰 축소엔 빠져서, (fullH - kh)만 쓰면 그만큼 입력바가 더 높이 떴다
+        // 뒤늦게 내려붙는다(사장님 '한 칸 더' 증상). 이 값을 더해 willShow 추정을 맞춘다.
+        let safeB = 0;
+        try {
+          const p = document.createElement('div');
+          p.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none;';
+          document.body.appendChild(p); safeB = p.getBoundingClientRect().height || 0; p.remove();
+        } catch (_) {}
         let fullH = window.innerHeight;   // 키보드 내려간 상태의 전체 높이
         KB.addListener('keyboardWillShow', ev => {
           window.__dmKbShowing = true;    // 애니 중 visualViewport 중간값 차단(위 fit 가드)
           const kh = (ev && ev.keyboardHeight) || 0;
-          setVvhTo(kh ? (fullH - kh) : window.innerHeight);
+          setVvhTo(kh ? (fullH - kh + safeB) : window.innerHeight);   // 키보드와 동시에 최종 위치로
         });
         KB.addListener('keyboardDidShow', ev => {
           window.__dmKbShowing = false;
           const kh = (ev && ev.keyboardHeight) || 0;
-          setVvhTo(kh ? (fullH - kh) : window.innerHeight);   // 애니 끝 정밀 보정
+          const ih = window.innerHeight;
+          // resize:native 완료면 innerHeight가 실측 정답. 혹 아직 안 줄었으면(≈fullH) 추정값 유지.
+          setVvhTo(ih < fullH - 10 ? ih : (kh ? (fullH - kh + safeB) : ih));
           stickBottom();
+        });
+        KB.addListener('keyboardWillHide', () => {
+          window.__dmKbShowing = false;
+          setVvhTo(fullH);                // 내려가는 애니와 '동시에' 입력바를 바닥으로(타이밍 맞춤)
         });
         KB.addListener('keyboardDidHide', () => {
           window.__dmKbShowing = false;
