@@ -9,6 +9,27 @@
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
   var history = [], busy = false, friendName = "갈라친구";
 
+  /* 💾 대화 이어가기 — 나갔다 와도(SPA 이동·앱 재시작) 전사(history)를 유저별 localStorage에 저장/복원.
+     DM처럼 초기화되지 않고 계속 이어진다. history엔 user/assistant 텍스트가 다 있어 재렌더로 복구. */
+  var _uid = null;
+  async function uid(){
+    if(_uid) return _uid;
+    try{ var sb=window.supabaseClient; var r=await sb.auth.getUser(); if(r&&r.data&&r.data.user){ _uid=r.data.user.id; } }catch(e){}
+    return _uid;
+  }
+  function chatKey(u){ return "frChat:"+(u||_uid||"anon"); }
+  async function saveChat(){
+    try{ var u=await uid(); if(!u) return;
+      localStorage.setItem(chatKey(u), JSON.stringify({ v:1, name:friendName, history:history.slice(-20), t:Date.now() }));
+    }catch(e){}
+  }
+  async function loadChat(){
+    try{ var u=await uid(); if(!u) return null;
+      var raw=localStorage.getItem(chatKey(u)); if(!raw) return null;
+      var d=JSON.parse(raw); return (d&&d.history&&d.history.length)? d : null;
+    }catch(e){ return null; }
+  }
+
   var ICON = {
     face: '<svg class="fr-face" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#fff" fill-opacity=".15"/><circle cx="8.5" cy="10.5" r="1.5" fill="#fff"/><circle cx="15.5" cy="10.5" r="1.5" fill="#fff"/><path d="M8 15c1.2 1.3 6.8 1.3 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>',
     go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -46,7 +67,14 @@
     var micEl=sheet.querySelector(".fr-mic");
     sheet.querySelector(".fr-scrim").addEventListener("click", close);
     sheet.querySelector(".fr-x").addEventListener("click", close);
-    sendEl.addEventListener("click", submit);
+    /* ⌨️ 카톡/DM식 — 전송을 눌러도 키보드 유지(다른 영역 터치 전까지). 버튼 터치의 기본동작이
+       textarea를 blur시켜 키보드가 닫히므로, touch 기본동작을 막아 blur 자체를 차단하고 전송은 직접 호출.
+       touchend의 preventDefault가 합성 click도 억제하므로 모바일에선 중복 전송 없음.
+       데스크톱(마우스)은 touch가 없으니 mousedown 포커스차단 + click→submit. */
+    sendEl.addEventListener("mousedown", function(e){ e.preventDefault(); });
+    sendEl.addEventListener("touchstart", function(e){ e.preventDefault(); }, {passive:false});
+    sendEl.addEventListener("touchend", function(e){ e.preventDefault(); submit(); }, {passive:false});
+    sendEl.addEventListener("click", submit);   // 데스크톱용(모바일은 touchend가 click 억제)
     if(micEl) micEl.addEventListener("click", toggleVoice);
     taEl.addEventListener("keydown", function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); submit(); } });
     taEl.addEventListener("input", function(){ taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; });
@@ -59,7 +87,7 @@
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
-    if(!logEl.children.length) greet();      // 열면 친구가 먼저 반겨줌(기억 기반)
+    if(!logEl.children.length) restoreOrGreet();   // 저장된 대화 있으면 이어서, 없으면 인사
     setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
     setTimeout(scrollBottom, 600);
   }
@@ -116,6 +144,18 @@
     });
   }
 
+  // 저장된 대화가 있으면 그대로 이어서 렌더(DM식), 없으면 새로 인사.
+  async function restoreOrGreet(){
+    var d = await loadChat();
+    if(d && d.history && d.history.length){
+      if(d.name){ friendName=d.name; var nm=sheet.querySelector(".fr-name"); if(nm) nm.textContent=friendName; }
+      history = d.history.slice(-20);
+      history.forEach(function(msg){ addMsg(msg && msg.role==="user" ? "u" : "a", (msg&&msg.content)||""); });
+      scrollBottom();
+      return;
+    }
+    greet();
+  }
   async function greet(){
     // 빈 메시지 → 서버가 첫만남/재방문 판단해 반겨줌(기억 리콜)
     typing(true);
@@ -124,7 +164,7 @@
     if(r && r.friendName){ friendName=r.friendName; var nm=sheet.querySelector(".fr-name"); if(nm) nm.textContent=friendName; }
     var m = addMsg("a", (r&&r.reply) || "안녕! 나 여기 있는 갈라 친구야. 심심할 때 놀러 와.");
     if(r&&r.actions) addActions(m, r.actions);
-    if(r&&r.reply) history.push({role:"assistant",content:r.reply});
+    if(r&&r.reply){ history.push({role:"assistant",content:r.reply}); saveChat(); }
     // 첫 만남이고 이름 없으면 이름 짓기 배너
     if(r&&r.firstMeet) askName();
   }
@@ -141,7 +181,8 @@
         var r=await callFriend("", history, nm);
         typing(false);
         if(r&&r.friendName){ friendName=r.friendName; var h=sheet.querySelector(".fr-name"); if(h) h.textContent=friendName; }
-        addMsg("a", (r&&r.reply)||("좋아, 이제부터 나 "+nm+"야!"));
+        var rep=(r&&r.reply)||("좋아, 이제부터 나 "+nm+"야!");
+        addMsg("a", rep); history.push({role:"assistant",content:rep}); saveChat();
       }
     });
     logEl.appendChild(banner); logEl.scrollTop=logEl.scrollHeight;
@@ -215,6 +256,7 @@
     addActions(m, r.actions);
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; var h=sheet.querySelector(".fr-name"); if(h) h.textContent=friendName; }
     if(speakReply && r.reply) speak(r.reply);
+    saveChat();                                  // 대화 이어가기 — 매 턴 저장
     busy=false; sendEl.disabled=false;
   }
   function submit(){
