@@ -240,8 +240,10 @@
       typing(false);
       var text=(j&&j.text||"").trim();
       if(!text){ addMsg("a","음... 잘 안 들렸어 ㅋㅋ 다시 말해줄래?"); return; }
-      voiceMode=true;
-      await sendText(text, true);   // 음성으로 왔으니 음성으로 답
+      // 🎙 음성 = '입력(받아쓰기)' 전용. 답은 텍스트로(TTS 비용·기계음·공공장소 불편 회피). speak는 필요시 재활성.
+      taEl.value=text;                 // 받아쓴 걸 입력창에 넣어 보여주고(확인 가능)
+      await sendText(text, false);     // 친구는 텍스트로 답
+      taEl.value="";
     }catch(e){ typing(false); addMsg("a","목소리 못 알아들었어 ㅠㅠ 다시 한 번만"); }
   }
 
