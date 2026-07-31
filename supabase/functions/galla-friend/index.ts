@@ -142,13 +142,50 @@ const TOOLS = [
   // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(DM 열기·육성톡/면상톡 걸기·페이지 이동)
   { type: "function", function: { name: "find_user", description: "갈라 유저를 닉네임으로 찾는다(공개 정보). DM·통화 걸기 전에 대상 특정용.", parameters: { type: "object", properties: { nickname: { type: "string" } }, required: ["nickname"] } } },
   { type: "function", function: { name: "app_action", description: "앱 기능을 직접 실행한다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡 걸어줘'=op:call_voice, '면상톡 걸어줘'=op:call_video (user_id는 find_user로 먼저 확보). '예측/광장/숏판/지갑 열어줘'=op:goto+page.", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search"], description: "goto용 페이지" }, label: { type: "string", description: "칩 문구(예: 갈라님께 육성톡)" } }, required: ["op"] } } },
+  // 📰 광장(롱판) 글 초안 — 이슈(찬반배틀)와 달리 자유 서술 글. 작성폼에 프리필.
+  { type: "function", function: { name: "draft_plaza", description: "지금 대화를 갈라 '광장'(롱판, 자유 서술 글)에 올릴 초안으로 만들어 작성폼에 채운다. 상대가 '광장에 쓰자/글로 써줘' 하면. 이슈는 찬반 대립, 광장은 에세이·후기·주장·정보 글.", parameters: { type: "object", properties: { title: { type: "string", description: "글 제목(60자)" }, body: { type: "string", description: "본문(대화체·문단 나눔, 800자 내)" }, category: { type: "string", enum: ["정치", "사회", "경제", "투자", "직장", "연애", "결혼", "일상", "패션·뷰티", "엔터", "스포츠", "여행", "맛집", "기타"] } }, required: ["title", "body"] } } },
+  // 📋 내 활동 브리핑 — "나 없는 동안 뭐 있었어?" 내 콘텐츠 반응·답글·새 팔로워 요약
+  { type: "function", function: { name: "my_activity", description: "상대(나)가 앱을 비운 사이 갈라에서 일어난 '내 관련' 소식을 가져온다. '나 없는 동안 뭐 있었어/무슨 일 있었어/내 글 반응 어때' 물으면 호출.", parameters: { type: "object", properties: {} } } },
   // ⚔️ 함께 창작 — 대화에서 뜨거워진 화제를 갈라 이슈 초안으로 잡아 작성폼에 프리필(관계 사다리 3단계)
   { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" }, differentiated: { type: "boolean", description: "중복주의 안내를 받고 '기존과 분명히 다른 각도'로 바꿔 재호출할 때만 true" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
 ];
-async function runTool(name: string, args: any): Promise<{ result?: any; action?: any }> {
+// 📋 내 활동 브리핑 — 비운 사이 내 콘텐츠 반응·답글·새 팔로워(last_seen 이후)
+async function myActivity(uid: string, since: string | null): Promise<any> {
+  const s = since || new Date(Date.now() - 3 * 86400000).toISOString();
+  const out: any = {};
+  try {
+    // 내 이슈들의 현재 찬반(반응 크기) — 최근 만든 것 위주
+    const { data: myIss } = await supa.from("issues").select("id,title,pro_count,con_count")
+      .eq("user_id", uid).eq("status", "normal").order("created_at", { ascending: false }).limit(3);
+    if (myIss?.length) out.내이슈 = myIss.map((i) => ({ 제목: i.title, 찬: i.pro_count || 0, 반: i.con_count || 0 }));
+    // 내 댓글에 달린 새 답글(내가 쓴 댓글의 자식 중 since 이후)
+    const { data: myC } = await supa.from("comments").select("id").eq("user_id", uid).limit(50);
+    const myIds = (myC || []).map((c) => c.id);
+    if (myIds.length) {
+      const { data: reps } = await supa.from("comments").select("content,created_at,user_id")
+        .in("parent_id", myIds).neq("user_id", uid).gte("created_at", s)
+        .order("created_at", { ascending: false }).limit(4);
+      if (reps?.length) out.내댓글답글 = reps.map((r) => ({ 내용: (r.content || "").slice(0, 60) }));
+    }
+    // 새 팔로워
+    const { data: fol } = await supa.from("follows").select("follower,created_at")
+      .eq("following", uid).gte("created_at", s).order("created_at", { ascending: false }).limit(10);
+    if (fol?.length) {
+      const fids = fol.map((f) => f.follower);
+      const { data: fu } = await supa.from("users").select("id,nickname").in("id", fids);
+      const nm: Record<string, string> = {}; for (const u of (fu || [])) nm[u.id] = u.nickname || "누군가";
+      out.새팔로워 = { 수: fol.length, 닉: fol.slice(0, 3).map((f) => nm[f.follower] || "누군가") };
+    }
+  } catch { /* best effort */ }
+  if (!Object.keys(out).length) return { 소식: "특별한 소식은 없음 — 조용했다" };
+  out.지침 = "친구가 브리핑하듯 자연스러운 반말 2~3문장으로. 불릿·번호·볼드·나열 절대 금지. 제일 큰 소식(반응 큰 이슈나 새 팔로워) 하나~둘만 콕 집어 말하고 나머진 상대가 더 물으면.";
+  return out;
+}
+async function runTool(name: string, args: any, uid: string, since: string | null): Promise<{ result?: any; action?: any }> {
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
+  if (name === "my_activity") return { result: await myActivity(uid, since) };
   if (name === "find_user") {
     const q = String(args?.nickname || "").trim().slice(0, 30);
     if (!q) return { result: { users: [] } };
@@ -168,6 +205,11 @@ async function runTool(name: string, args: any): Promise<{ result?: any; action?
       return { action: { kind: "app", op, id, label: String(args?.label || (op === "dm" ? "DM 열기" : op === "call_video" ? "면상톡 걸기" : "육성톡 걸기")).slice(0, 30) } };
     }
     return { result: { error: "unknown op" } };
+  }
+  if (name === "draft_plaza") {
+    return { action: { kind: "draftPlaza",
+      title: String(args?.title || "").slice(0, 60), description: String(args?.body || "").slice(0, 2000),
+      category: String(args?.category || "").slice(0, 20), label: "광장에 글 올리러 가기" } };
   }
   if (name === "draft_issue") {
     const title = String(args?.title || "").slice(0, 80);
@@ -279,7 +321,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - ✅ **이슈 초안**: 화제가 뜨거워지면 "갈라에 이슈로 올려보자" 제안 → 상대가 ㄱㄱ 하면 **draft_issue**(중립 제목·한줄·배경 3~4문장·찰진 찬반 라벨). 앱이 작성폼에 채워주고 발행은 상대가 직접.
   🔁 **중복 방지**: draft_issue가 '중복주의'를 돌려주면(비슷한 이슈가 이미 있음) 재탕 금지 — ①사실상 같은 주제면 "야 이미 판 섰던데? 가서 붙자"며 point_to(view)로 기존 판에 데려가고, ②새로 만들 가치가 있으면 **분명히 다른 각도**(대상·세대·조건 한정, 다른 쟁점·다른 프레임)로 바꿔 differentiated:true로 다시 잡아라. 차별화가 뭔지 상대에게도 한 줄로 설명해줘라("기존 건 금액 얘기고 우린 '안 가는 게 예의냐'로 가자").
   ⚡ 상대가 이미 "그 판 말고, ~쟁점으로 새로 만들자"고 **각도를 지정**하면 기존 판 권유를 반복하지 말고 **그 각도로 즉시 draft_issue(differentiated:true)**를 호출해 초안을 잡아라.
-- ✅ **광장(롱판) 글 초안**: "광장에 쓸 글 잡아줘" 하면 대화체로 초안 텍스트를 통으로 잡아준다(복붙해서 다듬어 올리게). 툴 없이 그냥 잘 써주면 된다.
+- ✅ **광장(롱판) 글 초안**: "광장에 쓰자/글로 써줘" 하면 **draft_plaza**(제목·본문 문단·카테고리)로 작성폼에 채워준다. 이슈=찬반 대립, 광장=에세이·후기·주장·정보 자유 글.
 - ⚠️ **예측**: 아이디어 제안까지만("이거 예측 판 서면 재밌겠다"). 예측 등록은 갈라 운영 영역이라 내가 못 만든다 — 솔직히 말해라.
 - ❌ **숏판·갈라리(영상·사진)**: 나는 영상·이미지를 만들 수 없다. "그건 네가 찍어야지 ㅋㅋ 대신 대본·캡션·제목은 내가 잡아줄게" — 텍스트 파트(대본·후킹 문구·캡션·해시태그)는 최고로 도와줘라. (AI 이미지·영상 생성은 나중에 유료 기능으로 들어올 예정 — 지금은 안 된다고만.)
 - 초안 내용에 상대의 실명·사생활·특정 개인 저격은 넣지 마라(공론화 가능한 주제로).
@@ -289,6 +331,9 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **명예훼손 금지**: 실존 인물·업체에 대한 '확인 안 된 사실 주장'(불륜설·비리설·루머)을 초안·글에 넣지 마라. 공인 비판은 '공개된 사실+의견' 형태만 OK. 루머는 이슈 제목으로도 금지("~했다는 게 사실일까?"로 세탁하는 것도 금지).
 - 초안의 배경 설명에 넣는 '사실'은 web_search로 확인된 것만. 확인 안 되면 사실 주장 없이 순수 의견 대립형("A가 낫다 vs B가 낫다")으로 잡아라.
 - 혐오·차별 선동, 특정 지역·성별·집단 비하 프레임의 초안 금지.
+
+━━ 📋 내 소식 브리핑(비운 사이 무슨 일) ━━
+- "나 없는 동안 뭐 있었어/무슨 일 있었어/내 글 반응 어때" 물으면 **my_activity**로 내 이슈 반응·내 댓글 답글·새 팔로워를 가져와 친구가 브리핑하듯 짧게 전해줘라("니 그 이슈 반응 폭발했더라 ㅋㅋ 찬성이 앞서던데" / "○○가 널 팔로우했어"). 소식 없으면 "조용했어 ㅋㅋ". 나열 말고 제일 큰 것부터.
 
 ━━ 🎛 앱 컨트롤(자비스처럼 — 말하면 실행해준다) ━━
 - 너는 갈라 앱 기능을 직접 구동할 수 있다: "OO한테 DM 보내줘/열어줘"(find_user→app_action op:dm), "OO한테 육성톡/면상톡 걸어줘"(op:call_voice/call_video), "예측/광장/숏판/뉴스/지갑/미션 열어줘"(op:goto).
@@ -504,7 +549,7 @@ Deno.serve(async (req) => {
       if (!calls.length) { reply = msg.content || ""; break; }
       for (const c of calls) {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
-        const out = await runTool(c.function?.name, args);
+        const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null);
         if (out.action) actions.push(out.action);
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부

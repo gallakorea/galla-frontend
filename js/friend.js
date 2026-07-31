@@ -302,11 +302,18 @@
       return;
     }
     if(a.kind==="draft"){
-      // ⚔️ 함께 창작 — 초안을 작성폼 시드(GALLA_SEED, write.js의 jarvis 분기)로 넘기고 미니 보드로 접힘
+      // ⚔️ 함께 창작(이슈) — 초안을 작성폼 시드(GALLA_SEED, write.js의 jarvis 분기)로 넘기고 미니 보드로 접힘
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis",
         title:a.title||"", oneLine:a.oneLine||"", description:a.description||"",
         category:a.category||"", factionA:a.factionA||"", factionB:a.factionB||"" })); }catch(e){}
       minimize(); nav("write.html");
+      return;
+    }
+    if(a.kind==="draftPlaza"){
+      // 📰 광장 글 초안 — plaza.js jarvisSeedPrefill(kind:plaza)이 받아 폼에 채움
+      try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"plaza",
+        title:a.title||"", description:a.description||"", category:a.category||"" })); }catch(e){}
+      minimize(); nav("plaza.html?compose=1");
       return;
     }
     if(a.kind==="share"){
