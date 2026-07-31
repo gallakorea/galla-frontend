@@ -110,7 +110,8 @@
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
-    if(!logEl.children.length) restoreOrGreet();   // 저장된 대화 있으면 이어서, 없으면 인사
+    // askGalvis가 첫 말을 책임질 땐 인사 억제(경합 방지) — 저장된 대화는 렌더, 빈 상태면 아무것도 안 함
+    if(!logEl.children.length) restoreOrGreet(window.__frSuppressGreet===true);
     setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
     setTimeout(scrollBottom, 600);
   }
@@ -192,7 +193,7 @@
     }catch(e){ return null; }
   }
   // 저장된 대화가 있으면 그대로 이어서 렌더(DM식), 없으면 새로 인사. 선톡이 있으면 그 말이 곧 인사.
-  async function restoreOrGreet(){
+  async function restoreOrGreet(suppressGreet){
     var pingP = consumePing();          // 병렬로 선톡 확인
     var d = await loadChat();
     if(d && d.history && d.history.length){
@@ -209,6 +210,7 @@
     }
     var ping2=await pingP;
     if(ping2){ addMsg("a", ping2); history.push({role:"assistant",content:ping2}); saveChat(); return; }
+    if(suppressGreet) return;      // askGalvis가 콘텐츠 오프너를 대신 낸다
     greet();
   }
   async function greet(){
@@ -424,13 +426,17 @@
   /* 🔗 콘텐츠 → 갈비스 파이프라인 — 모든 콘텐츠 액션바(좋아요·공유 줄)의 갈비스 아이콘.
      탭하면 그 콘텐츠 맥락을 들고 챗이 열리고, 갈비스가 그 얘기로 먼저 말을 건다. */
   async function askGalvis(ctx){
+    window.__frSuppressGreet = true;      // 콘텐츠 오프너를 내가 낸다(기본 인사 억제)
     open();
     var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content";
-    var jwt=await token(); if(!jwt || !title) return;
+    var jwt=await token();
+    if(!jwt || !title){ window.__frSuppressGreet=false; if(!logEl.children.length) greet(); return; }
     typing(true);
     var r=await callFriend("(상대가 갈라 콘텐츠 '"+title+"'("+type+")에서 나를 불렀다. 그 콘텐츠 얘기로 짧게 먼저 말을 걸어라 — 네 평 한마디+어느 편인지 묻거나, 재밌는 포인트 하나 콕. 리스트 금지.)", history, null, true);
     typing(false);
+    window.__frSuppressGreet = false;
     if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }
+    else if(!logEl.children.length){ addMsg("a","이 얘기 나랑 해볼까? 어떻게 생각해?"); }
   }
   window.GALLA_askGalvis = askGalvis;
   // 전역 위임 — 각 화면은 <button data-galvis data-gv-type data-gv-id data-gv-title> 만 심으면 됨
