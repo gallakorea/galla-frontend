@@ -69,30 +69,51 @@
     try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}  // 닫으면 음성 정지
   }
 
-  /* ⌨️ 키보드에 입력창이 딱 붙어 움직이게(DM과 동일 원리). 네이티브 resize와 따로 놀던 것 수정.
-     키보드 열림=패널 높이를 '보이는 높이'로(입력창이 키보드 위에 붙음), 닫힘=원래 시트 높이로. 같은 곡선 트랜지션. */
+  /* ⌨️ 키보드 트래킹 = DM(사장님 승인)과 완전 동일 로직 이식. 에뮬 프레임분석으로 검증한 방식.
+     - willShow: 이벤트가 주는 keyboardHeight로 --fr-vvh=(fullH-kh+safeB)를 '즉시' 확정 → 입력창이 키보드와
+       동시에 최종 위치로 오름(네이티브 resize가 innerHeight 줄이는 타이밍보다 빨라 '시간차 튐' 없음).
+     - safeB(홈인디케이터): keyboardHeight엔 포함되나 웹뷰 축소엔 빠져서 안 더하면 입력창이 한 칸 더 떴다 붙음.
+     - pinBottom(rAF): 애니 내내 로그를 바닥 고정 → 메시지가 입력창과 '한 몸'으로 오르내림.
+     - __frKbShowing: 애니 중 visualViewport 중간값이 끼어들어 바운스 나는 것 차단.
+     - fr-kb-anim: 높이 트랜지션을 애니 동안만 ON(평상시 즉답). */
   function bindKb(){
     if(window.__frKbBound) return; window.__frKbBound=true;
     var root=document.documentElement, vv=window.visualViewport;
-    var fullH=window.innerHeight, khLast=0, animating=false;
-    // 학습 보정값 — willShow 즉시높이(fullH-kh)와 실측(vv.height)의 차이. 저장해 다음부턴 첫 판부터 정확.
-    var KDELTA=parseFloat(localStorage.getItem("frKbDelta")); if(isNaN(KDELTA)) KDELTA=40;
-    function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); scrollBottom(); }
-    function anim(on){ document.body.classList.toggle("fr-kb-anim", on); }
-    setVvh(vv?vv.height:fullH);
-    // 🔑 애니 '도중'엔 vv를 무시(바운스 방지). willShow가 이미 최종값을 잡음. 평상시엔 vv로 정확히.
-    if(vv) vv.addEventListener("resize", function(){ if(animating) return; setVvh(vv.height); });
+    function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); }
+    // 평상시(비애니)엔 vv 실측으로 정확히. 애니 중엔 차단.
+    if(vv){ vv.addEventListener("resize", function(){ if(window.__frKbShowing) return; setVvh(vv.height); scrollBottom(); }); setVvh(vv.height); }
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
-    if(KB){
-      KB.addListener("keyboardWillShow", function(ev){ animating=true; anim(true); var kh=(ev&&ev.keyboardHeight)||0; khLast=kh; if(kh) setVvh(fullH-kh+KDELTA); });
-      KB.addListener("keyboardDidShow", function(){
-        // 애니 끝: 실측으로 KDELTA 학습(다음판 정확) + 위치를 실측값으로 딱 맞춤(첫판만 미세보정, 이후 무보정).
-        if(vv && khLast){ var d=Math.round(vv.height-(fullH-khLast)); if(d>-10 && d<90){ if(Math.abs(d-KDELTA)>1){ KDELTA=d; try{ localStorage.setItem("frKbDelta", String(d)); }catch(e){} } setVvh(vv.height); } }
-        setTimeout(function(){ animating=false; anim(false); }, 60);
-      });
-      KB.addListener("keyboardWillHide", function(){ animating=true; anim(true); setVvh(fullH); });
-      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(fullH); setTimeout(function(){ animating=false; anim(false); }, 60); });
-    }
+    if(!KB) return;
+    // 홈 인디케이터(safe-area-bottom) 실측
+    var safeB=0;
+    try{ var p=document.createElement("div"); p.style.cssText="position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none;"; document.body.appendChild(p); safeB=p.getBoundingClientRect().height||0; p.remove(); }catch(e){}
+    function anim(on){ document.body.classList.toggle("fr-kb-anim", on); }
+    var kbRaf=0;
+    function pinBottom(){ scrollBottom(); kbRaf = window.__frKbShowing ? requestAnimationFrame(pinBottom) : 0; }
+    function startPin(){ if(kbRaf) cancelAnimationFrame(kbRaf); kbRaf=requestAnimationFrame(pinBottom); }
+    var fullH=window.innerHeight;   // 키보드 내려간 전체 높이
+    KB.addListener("keyboardWillShow", function(ev){
+      window.__frKbShowing=true; anim(true);
+      var kh=(ev&&ev.keyboardHeight)||0;
+      setVvh(kh ? (fullH - kh + safeB) : window.innerHeight);   // 키보드와 동시에 최종 위치로
+      startPin();
+    });
+    KB.addListener("keyboardDidShow", function(ev){
+      window.__frKbShowing=false;
+      var kh=(ev&&ev.keyboardHeight)||0, ih=window.innerHeight;
+      setVvh(ih < fullH-10 ? ih : (kh ? (fullH - kh + safeB) : ih));   // resize 완료면 실측이 정답
+      scrollBottom();
+      setTimeout(function(){ anim(false); }, 60);
+    });
+    KB.addListener("keyboardWillHide", function(){
+      window.__frKbShowing=true; anim(true);
+      setVvh(fullH); startPin();                 // 내려가는 애니와 동시에 바닥으로
+    });
+    KB.addListener("keyboardDidHide", function(){
+      window.__frKbShowing=false;
+      fullH=window.innerHeight; setVvh(fullH);
+      setTimeout(function(){ anim(false); }, 60);
+    });
   }
 
   async function greet(){

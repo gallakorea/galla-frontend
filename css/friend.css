@@ -32,19 +32,23 @@
 #frSheet .fr-scrim{ position:absolute; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; }
 #frSheet.fr-open .fr-scrim{ opacity:1; }
 :root{ --fr-top: calc(env(safe-area-inset-top,0px) + 84px); --fr-vvh: 100dvh; }
-/* 🔑 DM식 키보드 트래킹 — 상단(로고 아래) 고정 + 높이=--fr-vvh(JS가 키보드에 맞춰 세팅).
-   패널 '아랫변(입력창)'이 곧 --fr-vvh라, willShow에서 즉시 세팅되면 키보드와 동시에 붙어 오른다.
-   컨테이너(#frSheet) 리사이즈에 안 휘둘려서 '줄었다 늘었다' jitter 없음. */
+/* 🔑 키보드 트래킹 = DM(사장님 승인)과 '완전 동일' 로직.
+   패널을 상단(--fr-top, 로고 아래)에 고정하고 높이=(--fr-vvh - --fr-top). --fr-vvh는 JS가 키보드 이벤트로
+   '보이는 높이(fullH-kh+safeB)'를 즉시 세팅 → 패널 아랫변(입력창)이 키보드와 동시에 확정 위치로 오른다.
+   ⚠️ bottom:0 앵커는 네이티브 resize와 리레이아웃 타이밍이 어긋나 상승 중 입력창이 '사라졌다 툭 나타남'(스냅) —
+   에뮬 프레임분석으로 확인해 폐기. 높이 트랜지션은 '애니 중에만'(.fr-kb-anim) 켠다(평상시 즉답). */
 #frSheet .fr-panel{
   position:absolute; left:0; right:0; top:var(--fr-top); bottom:auto;
   height:calc(var(--fr-vvh) - var(--fr-top));
   background:var(--fr-bg); color:var(--fr-txt); border-radius:20px 20px 0 0;
   border-top:1px solid var(--fr-line); display:flex; flex-direction:column;
   transform:translateY(102%);
-  /* 🔑 높이 트랜지션을 '항상' 켜둔다 — 클래스 토글+값변경이 같은 틱이면 코얼레싱돼 애니가 무효(점프)라,
-     입력창이 키보드와 같이 글라이드하려면 트랜지션이 상시 걸려 있어야 한다. */
-  transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1);
+  transition:transform .3s cubic-bezier(.2,.85,.2,1);   /* 열기/닫기 슬라이드 */
   padding-bottom:env(safe-area-inset-bottom,0px); overflow:hidden;
+}
+/* 키보드 애니 동안만 높이 트랜지션 ON → 입력창이 키보드와 같은 곡선으로 글라이드(카톡식). */
+body.fr-kb-anim #frSheet .fr-panel{
+  transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1);
 }
 /* 로고 보이게 — 스크림 헤더 위쪽 옅게 */
 #frSheet .fr-scrim{ background:linear-gradient(to bottom, rgba(0,0,0,.28) 0, rgba(0,0,0,.5) 84px); }
