@@ -88,7 +88,7 @@
     tabMountP[tab] = (async () => {
       try {
         const v = await L.fetchView(TAB_URL[tab] + "?spa=1");
-        L.injectStyles(v.styles);
+        await L.injectStyles(v.styles);   // ⏳ CSS 적용까지 대기 — FOUC 방지
         const host = document.createElement("div");
         host.className = "view-host";
         host.dataset.page = v.dataPage || tab;
@@ -191,7 +191,7 @@
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
     try {
       const v = await L.fetchView(url.indexOf("?") === -1 ? url + "?spa=1" : url + "&spa=1");
-      L.injectStyles(v.styles);
+      await L.injectStyles(v.styles);   // ⏳ CSS 적용까지 기다린 뒤 노출 — FOUC(날 HTML 번쩍) 방지
       const host = document.createElement("div");
       host.className = "view-host";
       host.dataset.page = v.dataPage || name;

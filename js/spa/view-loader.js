@@ -96,7 +96,11 @@
     for (const fn of captured) { try { fn(new Event("DOMContentLoaded")); } catch (_) {} }
   }
 
+  /* CSS 주입 — 새로 붙는 <link>의 onload까지 '기다리는' Promise를 돌려준다.
+     라우터가 이걸 await한 뒤 콘텐츠를 노출해야 FOUC(스타일 미적용 날 HTML 번쩍)가 안 난다.
+     이미 주입된 CSS는 즉시 통과. 느리거나 실패한 CSS가 노출을 영영 막지 않게 안전 타임아웃(1.5s). */
   function injectStyles(styles) {
+    const pending = [];
     (styles || []).forEach(href => {
       const key = stripV(href);
       if (injectedCss.has(key)) return;
@@ -104,8 +108,15 @@
       const l = document.createElement("link");
       l.rel = "stylesheet";
       l.href = href;
+      pending.push(new Promise(res => {
+        let done = false;
+        const fin = () => { if (!done) { done = true; res(); } };
+        l.onload = fin; l.onerror = fin;
+        setTimeout(fin, 1500);
+      }));
       document.head.appendChild(l);
     });
+    return Promise.all(pending);
   }
 
   // 뷰 모듈(P1+) — js/spa/views/<name>.js 의 mount/unmount. 없으면 null(정적 표시).
