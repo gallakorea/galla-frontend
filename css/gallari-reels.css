@@ -73,9 +73,12 @@
   border: 1px solid rgba(255,255,255,.85); background: transparent; color: #fff;
   font-size: 13px; font-weight: 700; cursor: pointer; line-height: 1; }
 .grl-follow2.following { border-color: rgba(255,255,255,.4); color: rgba(255,255,255,.8); }
-.grl-cap { margin-top: 7px; font-size: 13.5px; line-height: 1.45; text-shadow: 0 1px 3px rgba(0,0,0,.6);
+.grl-cap-box { margin-top: 7px; }
+.grl-cap { font-size: 13.5px; line-height: 1.45; text-shadow: 0 1px 3px rgba(0,0,0,.6);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.grl-cap.open { -webkit-line-clamp: unset; }
+.grl-cap.open { -webkit-line-clamp: unset; overflow: visible; }
+.grl-cap-more { margin-top: 3px; background: none; border: none; padding: 0; cursor: pointer;
+  color: #fff; opacity: .82; font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
 .grl-title { margin-top: 4px; font-size: 15px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
 
 /* 이슈 항목 — 진영바 + 참전 CTA */

@@ -129,7 +129,7 @@
           <span class="grl-uname" data-prof="${esc(x.user_id)}">${esc(nick(x.user_id))}</span>
           ${ME && x.user_id !== ME ? `<button class="grl-follow2 js-follow" data-uid="${esc(x.user_id)}">팔로우</button>` : ''}
         </div>
-        ${x.caption ? `<div class="grl-cap">${esc(x.caption)}</div>` : ''}
+        ${x.caption ? `<div class="grl-cap-box"><div class="grl-cap">${esc(x.caption)}</div><button class="grl-cap-more" type="button" hidden>… 더보기</button></div>` : ''}
       </div>
     </section>`;
   }
@@ -149,8 +149,16 @@
     const car = el.querySelector('.grl-carousel');
     if (car) { const dots = el.querySelectorAll('.grl-cdots i');
       car.addEventListener('scroll', () => { const i = Math.round(car.scrollLeft / car.clientWidth); dots.forEach((d, k) => d.classList.toggle('on', k === i)); }, { passive: true }); }
-    // 캡션 펼치기
-    const cap = el.querySelector('.grl-cap'); if (cap) cap.addEventListener('click', () => cap.classList.toggle('open'));
+    // 캡션 펼치기(인스타식 "… 더보기" / "접기") — 넘칠 때만 더보기 노출
+    const capBox = el.querySelector('.grl-cap-box');
+    if (capBox) {
+      const cap = capBox.querySelector('.grl-cap');
+      const more = capBox.querySelector('.grl-cap-more');
+      requestAnimationFrame(() => { if (more && cap.scrollHeight - cap.clientHeight > 2) more.hidden = false; });
+      const toggle = () => { const open = cap.classList.toggle('open'); if (more) more.textContent = open ? '접기' : '… 더보기'; };
+      cap.addEventListener('click', toggle);
+      more?.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+    }
     // 프로필
     el.querySelectorAll('[data-prof]').forEach(a => a.addEventListener('click', () => { const u = a.dataset.prof; if (u) nav('mypage.html?user=' + u); }));
     // 공유
@@ -276,7 +284,7 @@
     bar.id = 'grl-chrome';
     // 좌상단 버튼: 갈라리 피드 진입(user 없음)=+ (숏판 올리기) / 마이페이지·프로필 진입=‹ (뒤로)
     const feed = ENTRY === 'feed';
-    bar.innerHTML = `<button class="grl-nav" id="grl-back" aria-label="${feed ? '숏판 올리기' : '뒤로'}">${feed ? IC.plus : IC.back}</button><span class="grl-chrome-title">릴스</span><button class="grl-mute" id="grl-mute" aria-label="소리">${MUTED ? IC.muteOn : IC.muteOff}</button>`;
+    bar.innerHTML = `<button class="grl-nav" id="grl-back" aria-label="${feed ? '숏판 올리기' : '뒤로'}">${feed ? IC.plus : IC.back}</button><span class="grl-chrome-title">숏판</span><button class="grl-mute" id="grl-mute" aria-label="소리">${MUTED ? IC.muteOn : IC.muteOff}</button>`;
     bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:3100;display:flex;align-items:center;gap:6px;height:calc(50px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;pointer-events:none';
     bar.querySelectorAll('button').forEach(b => b.style.pointerEvents = 'auto');
     document.body.appendChild(bar);
