@@ -130,6 +130,8 @@ body.fr-chatting nav.nav{ display:none !important; }
   box-shadow:0 2px 14px rgba(0,0,0,.35), inset 0 0 18px rgba(95,216,255,.04); }
 .fr-msg.fr-a .fr-bubble::before{ content:""; position:absolute; top:-1px; left:-1px; width:9px; height:9px;
   border-top:2px solid var(--fr-cy); border-left:2px solid var(--fr-cy); border-radius:3px 0 0 0; opacity:.85; }
+/* 🎬 지시문(*행동/상황*) — 지문체 */
+.fr-stage{ color:var(--fr-am); opacity:.82; font-style:italic; font-size:13.5px; }
 /* 유저 = 갈라 진영 그라데(레드→블루, 포스터 톤) */
 .fr-msg.fr-u{ align-self:flex-end; color:#fff; padding:9px 13px; border-radius:14px 4px 14px 14px;
   background:linear-gradient(135deg, #e04a58 0%, #8a55e8 52%, #3f8cff 100%);

@@ -245,10 +245,13 @@
     logEl.appendChild(banner); logEl.scrollTop=logEl.scrollHeight;
   }
 
+  // 🎬 *별표 지시문*을 지문(흐릿한 이탤릭)으로. HTML은 이스케이프 후 *…*만 감싼다.
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function fmtStage(text){ return esc(text).replace(/\*([^*\n]{1,80})\*/g,'<i class="fr-stage">$1</i>'); }
   function addMsg(role,text){
     var m;
     if(role==="u"){ m=el('<div class="fr-msg fr-u"></div>'); m.textContent=text; }
-    else { m=el('<div class="fr-msg fr-a"><div class="fr-bubble"></div></div>'); m.querySelector(".fr-bubble").textContent=text; }
+    else { m=el('<div class="fr-msg fr-a"><div class="fr-bubble"></div></div>'); m.querySelector(".fr-bubble").innerHTML=fmtStage(text); }
     logEl.appendChild(m); logEl.scrollTop=logEl.scrollHeight; return m;
   }
   function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }

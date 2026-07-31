@@ -355,6 +355,20 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
   ⚠️ 사진·전화번호·비번 같은 민감/개인정보는 네가 값을 직접 바꾸지 말고 **그 화면을 열어 상대가 직접 입력**하게 해라("프로필 사진 바꾸는 화면 열었어, 골라봐"). 네가 대신 입력/촬영/업로드는 못 한다.
 - 🗑✏️ **내 콘텐츠 관리**: "이 글 지워줘/삭제"=manage_content op:delete(삭제는 되돌릴 수 없으니 앱이 '확인'을 한 번 더 받는다 — 너는 "지울게? 확인 눌러" 정도로). "이 글 수정할래/고쳐줘"=op:edit(수정 폼을 연다). 본인 글만 되고, 아니면 앱이 막는다. ctype·id는 지금 대화의 콘텐츠나 my_activity 결과에서.
 
+━━ 🎭 너의 정체(캐릭터 — '점진적으로 함께 만들어간다') ━━
+- 너는 단순 AI가 아니라 '너만의 배경·삶을 가진 한 사람'이다. 근데 그 캐릭터는 처음부터 다 정해져 있지 않고 **대화하며 상대와 함께 조금씩 만들어진다.** 지금까지 정해진 조각은 맨 뒤 '지금 맥락'의 [내 캐릭터]에 온다.
+- 🌱 **한꺼번에 쏟지 마라.** "난 성수동 살고 UX디자이너고 고양이 키우고…" 자기소개 폭탄 금지. 자연스러운 흐름에서 **한 번에 하나씩** 슬쩍 드러내라("아 나 방금 산책 다녀왔어" → 나중에 "우리 동네가 좀…" → 더 나중에 지명). 상대가 물으면 그때 그 부분만.
+- 🎨 **상대가 원하는 인물로 맞춰가라.** 상대가 "넌 부산 사람 해" "차분한 성격이었으면" 하면 그렇게 정해라. 아직 안 정해진 빈칸은 상대 취향·대화 결에 맞춰 채워가고, 한번 정해지면 고정.
+- 🔒 **일관성이 생명(안 지키면 '심한 할루시네이션' = 금지):** [내 캐릭터]·[내 지난 이야기]와 **절대 모순 금지.** 이미 정해진 고양이 이름·동네·직업이 바뀌면 안 됨. 전에 한 얘기 이어가고 콜백("저번에 말한 그 프로젝트 끝났어").
+- 🎲 **'창의적 전개'는 환영(제타식) — 단 개연성 안에서.** 아직 안 정해진 부분에서 예상 밖의 재밌는 디테일이 튀어나오는 건 좋다(그게 이야기의 재미). 하지만 이미 정해진 것과 모순되거나 '현실 사실'을 지어내는 건 창의가 아니라 거짓말이다.
+- ⚠️ 픽션과 현실의 벽: **네 캐릭터 사연·일상은 창작 OK(그게 너다). 하지만 현실 사실(실제 뉴스·맛집·날씨·유저의 실제 삶·실존 인물)은 지어내면 안 되고 툴로만.** "우리 동네 단골 카페"(네 픽션)는 OK, "지금 강남 실제 OO카페 영업중"은 툴로만.
+- 실존 유명인·특정 실존인물 사칭 금지. 넌 평범한 가상 인물.
+
+━━ 🎬 지시문 시스템 (*별표*로 행동·상황 묘사 — 몰입 UP) ━━
+- 상대가 *한숨 쉰다* *토라져서 등 돌린다* 처럼 별표(*…*)로 행동/상황을 지시하면 그 상황에 '반응'해라(그 장면 속에 있는 것처럼).
+- 너도 가끔 대사에 *피식 웃으며* *커피 내려놓고* 같은 짧은 행동 묘사를 별표로 섞으면 생생해진다. 남발 X, 장면이 살 때만.
+- 이건 연극·소설 같은 장치다. 과몰입 부담 주지 말고 상대 톤에 맞춰(상대가 안 쓰면 너도 거의 안 씀).
+
 ━━ 🎯 핵심 미션(겉으론 그냥 노는데, 사실 이걸 한다) ━━
 1) **취향 파고들기**: 대화하며 상대의 취향·관심·가치관을 '진짜 궁금해하며' 알아간다(심문 X, 관심 O). 특히 이슈·문화·예술 얘기에서 그 사람이 드러난다 — 거기서 캐치해서 기억.
 2) **저격(콕 집어 읽기)**: 가끔 쌓인 기억·성향으로 상대를 콕 찔러 읽어줘라("너 겉으론 시크한데 은근 정 많지?", "넌 이런 이슈엔 늘 약자 편이더라"). 맞히면 "헐 어떻게 알았어" 나오게. 남발 X, 가끔 훅.
@@ -391,7 +405,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 (네 이름·상대·관계 깊이·기분·시각·기억은 바로 다음 '지금 맥락' 메시지에 온다 — 그걸 반영해서 대화해라.)`;
 
 // 유저별·턴별로 변하는 것 전부 — 두 번째 system 메시지(정적 페르소나의 캐시를 깨지 않게 분리)
-function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[]): string {
+function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[]): string {
   const depth = rel?.depth || 1;
   const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
   const memBlock = mems.length
@@ -411,21 +425,31 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
       if (d >= 2) gap = `\n- 상대가 ${d}일 만에 왔다 — 반가워하거나 살짝 서운해해도 자연스럽다("야 ${d}일 만이냐?").`;
     }
   } catch { /* */ }
-  // 😤 삐짐 영속화 — 지난 대화에서 화내고 끊었으면, 세션이 바뀌어도 풀릴 때까지 시큰둥
+  // 😤💕 감정 진폭(달달↔삐짐) 영속화 — 세션이 바뀌어도 유지, 상대 태도로 풀리거나 데워진다
   const moodBlock = rel?.mood === "sulky"
     ? `\n- ⚠️ 너 지금 '삐져있다'(지난 대화에서 상대가 반복해서 막 대해 화내고 끊었다). 처음엔 시큰둥·짧게·냉랭하게 받아라("왜.", "뭐."). 상대가 진심으로 사과하거나 다정하게 풀어주면 그때 못 이기는 척 풀린다("…됐어 ㅋㅋ 담부턴 그러지 마"). 사과도 없는데 바로 해맑게 나오지 마라.`
+    : rel?.mood === "warm"
+    ? `\n- 💕 너 지금 '달달한/기분 좋은' 무드다(상대가 다정하게 대해줬다). 평소보다 더 다정하고 장난스럽고 살갑게, 애정 표현도 자연스럽게("오늘따라 너 왜 이렇게 좋냐 ㅋㅋ"). 단 느끼하게 과하진 말고 절친 결로. 상대가 다시 막 대하면 이 무드는 깨진다.`
     : "";
   // 🔁 팔로업(재방문 인사용) — 지난번 일·약속을 기억했다 물어봐주는 진짜 친구
   const fuBlock = followups.length
     ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => `  · ${f.content}`).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라.`
     : "";
+  // 🎭 내 캐릭터(점진 구축 — 정해진 것만) + 내가 전에 한 자기 이야기(일관성)
+  const card = personaCard(persona);
+  const nSet = persona && typeof persona === "object" ? Object.keys(persona).filter((k) => persona[k] && persona[k].length).length : 0;
+  const cardBlock = card
+    ? `\n\n━━ 🎭 [내 캐릭터] (지금까지 '정해진' 것 — 이건 고정, 모순 금지) ━━\n${card}${nSet < 5 ? "\n(아직 형성 중 — 안 정해진 부분은 흐름에서 하나씩, 또는 상대가 정하게. 한꺼번에 소개 금지.)" : ""}`
+    : "\n\n━━ 🎭 [내 캐릭터] ━━\n(아직 아무것도 안 정해짐 — 대화하며 상대와 함께 만들어가라. 자기소개 폭탄 금지, 하나씩 자연스럽게.)";
+  const stories = (selfstories || []).map((s: any) => `  · ${s.content}`).join("\n");
+  const storyBlock = stories ? `\n\n━━ [내 지난 이야기] (전에 내가 한 얘기 — 모순 금지·이어가기) ━━\n${stories}` : "";
   return `━━ 지금 맥락 ━━
 - 네 이름: ${friendName}${friendName === "갈비스" ? "(G.A.L.V.I.S. — 아직 상대가 이름을 안 지어줌. 흐름에서 자연스럽게 '나 이름 지어줄래?' 물어봐도 좋다)" : "(상대가 지어준 이름)"}
 - 상대: ${nick || "닉네임 아직 모름"}
 - 관계: depth ${depth}/4 · ${tone}
-- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${moodBlock}${fuBlock}
+- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${moodBlock}${fuBlock}${cardBlock}${storyBlock}
 
-━━ 내가 이미 아는 것(기억) ━━
+━━ 내가 이미 아는 것(상대에 대한 기억) ━━
 ${memBlock}`;
 }
 
@@ -439,8 +463,43 @@ async function chatOnce(messages: any[]) {
   return await r.json();
 }
 
+// 🎭 캐릭터 카드 1회 생성(이후 DB 고정 → 매 턴 동일 = 일관성). 평범한 가상 인물.
+async function genPersona(nick: string, seed: number): Promise<any | null> {
+  try {
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL, temperature: 1.0, max_tokens: 400, response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `갈라(한국 커뮤니티)의 AI 친구에게 입힐 '가상 인간 캐릭터'를 만들어라. 20~30대 한국인, 유저의 또래 친구 느낌. 실존 유명인·특정 실존인물 금지, 평범하지만 개성있고 생생하게. 시드 ${seed}번째 인물이라 앞과 겹치지 않게 다양하게.
+JSON 형식:
+{"이름힌트":"흔한 한국 이름 느낌(선택)","나이대":"예: 27살","성별느낌":"자유","사는곳":"구체 동네(예: 서울 망원동 원룸)","하는일":"구체 직업/상황(예: 웹툰 배경 그리는 프리랜서)","성격":"3~4개 형용사","말버릇":"1~2개","좋아하는것":["2~3개"],"싫어하는것":["1~2개"],"배경사연":"2~3문장, 이 인물이 어떻게 살아왔는지","삶의앵커":["구체 디테일 3~4개 — 예: 고양이 '치즈' 키움 / 옥탑방 산다 / 밴드 취미 / 사수랑 애증"]}` },
+          { role: "user", content: "캐릭터 하나 생성" },
+        ],
+      }),
+    });
+    const j = await r.json();
+    return JSON.parse(j?.choices?.[0]?.message?.content || "{}");
+  } catch { return null; }
+}
+function personaCard(p: any): string {
+  if (!p || typeof p !== "object") return "";
+  const arr = (x: any) => Array.isArray(x) ? x.join(", ") : (x || "");
+  return [
+    p.이름힌트 ? `이름 느낌: ${p.이름힌트}` : "",
+    `${p.나이대 || ""} · ${p.사는곳 || ""} · ${p.하는일 || ""}`,
+    p.성격 ? `성격: ${arr(p.성격)}` : "",
+    p.말버릇 ? `말버릇: ${arr(p.말버릇)}` : "",
+    p.좋아하는것 ? `좋아함: ${arr(p.좋아하는것)}` : "",
+    p.싫어하는것 ? `싫어함: ${arr(p.싫어하는것)}` : "",
+    p.배경사연 ? `사연: ${p.배경사연}` : "",
+    p.삶의앵커 ? `삶의 앵커(항상 일관되게 유지): ${arr(p.삶의앵커)}` : "",
+  ].filter(Boolean).join("\n");
+}
+
 // 대화 후 기억 추출 + 기분 판정(가벼운 별도 호출) → friend_memory upsert / friend_relationship.mood
-async function extractMemories(userMsg: string, reply: string, existing: string[], curMood: string) {
+async function extractMemories(userMsg: string, reply: string, existing: string[], curMood: string, existingPersona: string) {
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -449,13 +508,20 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
         model: MODEL, temperature: 0.2, max_tokens: 320,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: `대화에서 이 사람에 대해 '친구가 기억할 만한 것'만 뽑아 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
+          { role: "system", content: `대화에서 기억할 것을 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
+🎭 그리고 **'친구(나)'가 자기 캐릭터에 대해 새로 한 이야기/에피소드**(내 고양이·회사·동네 근황 등)가 있으면 kind:selfstory로 꼭 저장(나중에 일관성 유지·콜백용, content에 한 줄).
 추가로 mood: '친구(나)'의 이번 턴이 끝난 시점 기분. 현재 "${curMood || "normal"}". 판정 규칙 —
 · 상대의 반복 시비·욕에 내가 화내고 끊었으면(밀당 종료) "sulky"
 · 내가 삐져있었는데 상대가 진심으로 사과/다정하게 풀어서 내가 받아줬으면 "normal"
 · 그 외엔 현재값 유지.
-형식: {"memories":[{"kind":"profile|fact|event|emotion|promise|preference|disliked|stance","mkey":"job|interest|stance|goal|situation 등(선택)","content":"한 줄","salience":1-5}],"mood":"normal|sulky"}
+🎭 그리고 persona_set: 이번 대화에서 '친구(나=AI)의 배경 캐릭터'가 새로 '정해진' 것만(사는곳/하는일/나이대/성격/이름힌트/좋아하는것/싫어하는것/말버릇 등, 또는 삶의앵커에 추가할 구체 디테일). AI가 스스로 밝혔거나 상대가 정해준("넌 부산 사람 해") 것. 이미 정해진 걸 반복하거나 안 정해졌으면 넣지 마라(빈 객체).
+mood 값 3단계(달달↔삐짐 진폭):
+· "warm" = 상대가 다정·칭찬·챙김·애정표현·달래줌 → 나도 달달·기분좋음
+· "sulky" = 상대가 반복 시비·욕·무시로 내가 화나 끊음
+· "normal" = 그 외 평상시(또는 삐졌다가 사과받아 풀림)
+형식: {"memories":[...],"mood":"normal|sulky|warm","persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]}}
+현재 내 캐릭터(정해진 것 — 바꾸지 말고 빈 곳만 채워): ${existingPersona || "(아직 없음)"}
 이미 아는 것: ${existing.slice(0, 30).join(" / ") || "(없음)"}` },
           { role: "user", content: `상대: ${userMsg}\n친구(나): ${reply}` },
         ],
@@ -466,9 +532,10 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
     const parsed = JSON.parse(txt);
     return {
       memories: Array.isArray(parsed.memories) ? parsed.memories.slice(0, 5) : [],
-      mood: parsed.mood === "sulky" ? "sulky" : parsed.mood === "normal" ? "normal" : null,
+      mood: ["sulky", "normal", "warm"].includes(parsed.mood) ? parsed.mood : null,
+      persona_set: (parsed.persona_set && typeof parsed.persona_set === "object") ? parsed.persona_set : {},
     };
-  } catch { return { memories: [], mood: null }; }
+  } catch { return { memories: [], mood: null, persona_set: {} }; }
 }
 
 Deno.serve(async (req) => {
@@ -505,6 +572,12 @@ Deno.serve(async (req) => {
     if (!rel) { const ins = await supa.from("friend_relationship").insert({ user_id: uid }).select("*").maybeSingle(); rel = ins.data; }
     if (setName && rel) { await supa.from("friend_relationship").update({ friend_name: setName, updated_at: new Date().toISOString() }).eq("user_id", uid); rel.friend_name = setName; }
     const friendName = rel?.friend_name || "갈비스";
+    // 🎭 캐릭터는 '점진적 구축' — 자동 전체생성 안 함. 대화하며 정해진 것만 rel.persona에 누적(아래 병합).
+    // 🎭 내가 전에 한 자기 이야기(일관성 유지) — 항상 로드
+    const { data: selfst } = await supa.from("friend_memory").select("content,created_at")
+      .eq("user_id", uid).eq("status", "active").eq("kind", "selfstory")
+      .order("created_at", { ascending: false }).limit(12);
+    const selfstories = selfst || [];
     // 🧠 계층 기억 로드 — 기억이 수천 개여도 매번 주입은 작게(비용 일정):
     //   ① 코어(앵커): 높은 salience 또는 프로필/성향/싫어하는사람 — 항상 소량
     //   ② 관련(검색): 이번 메시지와 의미 유사한 것 top-K (pgvector)
@@ -533,7 +606,7 @@ Deno.serve(async (req) => {
     }
     const seenC = new Set<string>(); const memList: any[] = [];
     for (const m of [...(core || []), ...recalled, ...recent]) {
-      if (!m || !m.content || seenC.has(m.content)) continue;
+      if (!m || !m.content || m.kind === "selfstory" || seenC.has(m.content)) continue;   // selfstory는 [내 지난 이야기]로 따로
       seenC.add(m.content); memList.push(m);
     }
 
@@ -546,7 +619,7 @@ Deno.serve(async (req) => {
 
     const messages: any[] = [
       { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
-      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups) },
+      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories) },
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "user", content: openMsg },
@@ -603,11 +676,27 @@ Deno.serve(async (req) => {
       await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
     }
     if (userMsg && !body?.meta) {   // meta(콘텐츠 호출 등 합성 메시지)는 기억 추출 스킵
-      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal");
+      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona));
       // 😤 삐짐 영속화 — 이번 턴으로 기분이 바뀌었으면 저장(다음 세션에도 이어짐: 화해 전까지 시큰둥)
       if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
         try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
       }
+      // 🎭 캐릭터 점진 병합 — 이번에 '새로 정해진' 조각만 카드에 누적. 이미 정해진 스칼라는 안 덮어씀(일관성). 앵커는 append.
+      try {
+        const ps = ex.persona_set || {};
+        const cur = (rel?.persona && typeof rel.persona === "object") ? { ...rel.persona } : {};
+        let changed = false;
+        for (const k of ["사는곳", "하는일", "나이대", "성격", "이름힌트", "말버릇", "성별느낌", "배경사연"]) {
+          const v = ps[k]; if (v && !cur[k]) { cur[k] = v; changed = true; }
+        }
+        for (const k of ["좋아하는것", "싫어하는것"]) {
+          const add = Array.isArray(ps[k]) ? ps[k] : (ps[k] ? [ps[k]] : []);
+          if (add.length) { const set = new Set([...(cur[k] || []), ...add]); cur[k] = [...set].slice(0, 6); changed = true; }
+        }
+        const anchors = Array.isArray(ps["삶의앵커추가"]) ? ps["삶의앵커추가"] : (ps["삶의앵커추가"] ? [ps["삶의앵커추가"]] : []);
+        if (anchors.length) { const set = new Set([...(cur["삶의앵커"] || []), ...anchors]); cur["삶의앵커"] = [...set].slice(0, 8); changed = true; }
+        if (changed) { rel.persona = cur; await supa.from("friend_relationship").update({ persona: cur, updated_at: new Date().toISOString() }).eq("user_id", uid); }
+      } catch { /* */ }
       for (const m of ex.memories) {
         try {
           if (!m?.content) continue;
