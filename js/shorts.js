@@ -817,7 +817,10 @@ function wireSlideControls(section, item) {
   section.querySelectorAll(".shorts-goto").forEach(g => onTap(g, () => {
     const cv = document.querySelectorAll("#shortsTrack video")[currentIndex];
     const t = (cv && cv.currentTime > 0.3) ? "&t=" + cv.currentTime.toFixed(1) : "";   // 보던 위치 이어보기
-    location.href = "issue.html?id=" + item.id + t;
+    const url = "issue.html?id=" + item.id + t;
+    // SPA(앱): 릴스 닫고 스택 push로 진입 — location.href 하드내비는 MPA로 이탈해 스크롤이 죽는다(프로필 열기와 동일 규약)
+    if (document.body.dataset.page === "spa" && window.GALLA_nav) { try { closeShorts(); } catch (_) {} window.GALLA_nav(url); return; }
+    location.href = url;
   }));
   section.querySelectorAll("[data-profile-uid]").forEach(p => onTap(p, () => {
     const uid = p.getAttribute("data-profile-uid");
@@ -1090,7 +1093,10 @@ document.addEventListener("click", e => {
   e.stopPropagation();
   const cv = document.querySelectorAll("#shortsTrack video")[currentIndex];
   const t = (cv && cv.currentTime > 0.3) ? `&t=${cv.currentTime.toFixed(1)}` : "";
-  location.href = `issue.html?id=${go.dataset.goto}${t}`;
+  const url = `issue.html?id=${go.dataset.goto}${t}`;
+  // SPA(앱): 스택 push로 — 하드내비는 MPA 이탈로 스크롤 죽음
+  if (document.body.dataset.page === "spa" && window.GALLA_nav) { try { closeShorts(); } catch (_) {} window.GALLA_nav(url); return; }
+  location.href = url;
 });
 
 document.addEventListener("click", e => {
