@@ -5785,7 +5785,20 @@
       // 딥링크 파라미터(#/dm?dm=…·room=…·pager=1·tab=…) — dm.html 쿼리 규약 계승
       try {
         if (params) {
-          if (params.dm && params.dm !== '1') await startDM(params.dm, null);
+          if (params.dm && params.dm !== '1') {
+            await startDM(params.dm, null);
+            // 🤖 갈비스 앱컨트롤 — "OO한테 육성톡/면상톡 걸어줘" 딥링크(&call=voice|video)면 방 열고 바로 발신
+            if (params.call === 'voice' || params.call === 'video') {
+              const vid = params.call === 'video';
+              setTimeout(() => {
+                try {
+                  if (!window.GALLA_call?.supported()) { toastMini('이 기기에선 통화를 지원하지 않아요'); return; }
+                  window.__callTrig = 'galvis';
+                  window.GALLA_call.start(params.dm, nickCache[params.dm] || null, vid);
+                } catch (_) {}
+              }, 700);
+            }
+          }
           else if (params.room) openRoomById(params.room);
           else if (params.pager) setTimeout(() => window.GALLA_dmSetTab('pager'), 80);
           else if (params.tab) setTimeout(() => window.GALLA_dmSetTab(params.tab), 80);

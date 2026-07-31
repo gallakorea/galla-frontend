@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=073142";
-import { loadAiNews } from "./issue-news.js?v=073142";
-import { loadStats } from "./issue.stats.js?v=073142";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073142";
+import { loadAiArguments } from "./issue-argument.js?v=073143";
+import { loadAiNews } from "./issue-news.js?v=073143";
+import { loadStats } from "./issue.stats.js?v=073143";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073143";
 
 
 console.log("[issue.js] loaded");
@@ -517,6 +517,9 @@ async function wireIssueActions(issue) {
     if (window.GALLA_share) window.GALLA_share({ url, title, text: "찬성이냐 반대냐, 당신의 진영은?" });
     else if (navigator.share) navigator.share({ title, url }).catch(() => {});
   };
+  // 🤖 갈비스 진입 — 이 이슈 맥락으로 대화(버튼은 issue.html 정적, 여기서 id·제목 채움)
+  const gvBtn = document.getElementById("issue-galvis-btn");
+  if (gvBtn) { gvBtn.setAttribute("data-gv-id", issue.id || ""); gvBtn.setAttribute("data-gv-title", issue.title || ""); }
   if (!supabase) return;
 
   const { data: sess } = await supabase.auth.getSession();

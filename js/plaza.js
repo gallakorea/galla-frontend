@@ -668,6 +668,9 @@ function renderPlazaPosts(posts) {
             <button class="plaza-share-btn" data-id="${post.id}" data-title="${(post.title || "").replace(/"/g, "&quot;")}" aria-label="공유">
               <svg class="ic-share" viewBox="0 0 24 24"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>
             </button>
+            <button class="plaza-galvis-btn" data-galvis data-gv-type="plaza" data-gv-id="${post.id}" data-gv-title="${(post.title || "").replace(/"/g, "&quot;").slice(0, 120)}" aria-label="갈비스와 얘기">
+              <svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>
+            </button>
           </div>
         </div>
 

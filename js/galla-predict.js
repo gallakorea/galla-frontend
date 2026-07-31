@@ -343,6 +343,7 @@ function renderMarkets(){
         <span class="pm-card-stats">
           <button class="pm-card-act mc-act ${MY_SAVED[m.id]?'on':''}" data-act="save" data-id="${m.id}" aria-label="저장">${IC_SAVE}</button>
           <button class="pm-card-act mc-act" data-act="share" data-id="${m.id}" data-title="${esc(m.question)}" aria-label="공유">${IC_SHARE}</button>
+          <button class="pm-card-act" data-galvis data-gv-type="predict" data-gv-id="${m.id}" data-gv-title="${esc(m.question)}" aria-label="갈비스와 얘기"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></button>
         </span>
       </div>
     </div>`;

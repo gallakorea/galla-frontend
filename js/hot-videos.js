@@ -489,6 +489,7 @@
     const p = $("#hv-player");
     $("#hvTitle").textContent = title;
     $("#hvCh").textContent = ch || "";
+    const gv = $("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", title || ""); }
     $("#hvOpen").href = `https://www.youtube.com/watch?v=${id}`;
     // youtube-nocookie: 재생 전 추적 쿠키를 심지 않음
     $("#hvFrame").innerHTML =

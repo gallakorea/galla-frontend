@@ -139,6 +139,9 @@ const TOOLS = [
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
+  // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(DM 열기·육성톡/면상톡 걸기·페이지 이동)
+  { type: "function", function: { name: "find_user", description: "갈라 유저를 닉네임으로 찾는다(공개 정보). DM·통화 걸기 전에 대상 특정용.", parameters: { type: "object", properties: { nickname: { type: "string" } }, required: ["nickname"] } } },
+  { type: "function", function: { name: "app_action", description: "앱 기능을 직접 실행한다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡 걸어줘'=op:call_voice, '면상톡 걸어줘'=op:call_video (user_id는 find_user로 먼저 확보). '예측/광장/숏판/지갑 열어줘'=op:goto+page.", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search"], description: "goto용 페이지" }, label: { type: "string", description: "칩 문구(예: 갈라님께 육성톡)" } }, required: ["op"] } } },
   // ⚔️ 함께 창작 — 대화에서 뜨거워진 화제를 갈라 이슈 초안으로 잡아 작성폼에 프리필(관계 사다리 3단계)
   { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" }, differentiated: { type: "boolean", description: "중복주의 안내를 받고 '기존과 분명히 다른 각도'로 바꿔 재호출할 때만 true" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
@@ -146,6 +149,26 @@ const TOOLS = [
 ];
 async function runTool(name: string, args: any): Promise<{ result?: any; action?: any }> {
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
+  if (name === "find_user") {
+    const q = String(args?.nickname || "").trim().slice(0, 30);
+    if (!q) return { result: { users: [] } };
+    const { data } = await supa.from("users").select("id,nickname").ilike("nickname", `%${q}%`).limit(3);
+    return { result: { users: (data || []).map((u) => ({ id: u.id, 닉: u.nickname })) } };
+  }
+  if (name === "app_action") {
+    const op = String(args?.op || "");
+    const PAGES: Record<string, string> = { home: "home.html", predict: "galla-predict.html", plaza: "plaza.html", news: "news.html", shorts: "shorts.html", mypage: "mypage.html", wallet: "wallet.html", saved: "saved.html", dm: "dm.html", quest: "quest.html", search: "search.html" };
+    if (op === "goto") {
+      const page = PAGES[String(args?.page || "")]; if (!page) return { result: { error: "unknown page" } };
+      return { action: { kind: "app", op, page, label: String(args?.label || "바로 가기").slice(0, 30) } };
+    }
+    if (op === "dm" || op === "call_voice" || op === "call_video") {
+      const id = String(args?.user_id || "");
+      if (!/^[0-9a-f-]{36}$/.test(id)) return { result: { error: "user_id 필요(find_user로 먼저 찾아라)" } };
+      return { action: { kind: "app", op, id, label: String(args?.label || (op === "dm" ? "DM 열기" : op === "call_video" ? "면상톡 걸기" : "육성톡 걸기")).slice(0, 30) } };
+    }
+    return { result: { error: "unknown op" } };
+  }
   if (name === "draft_issue") {
     const title = String(args?.title || "").slice(0, 80);
     // 🔁 중복 가드 — 초안 확정 전에 기존 이슈를 검색해 비슷한 판이 있으면 모델에게 판단을 돌려준다:
@@ -266,6 +289,11 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **명예훼손 금지**: 실존 인물·업체에 대한 '확인 안 된 사실 주장'(불륜설·비리설·루머)을 초안·글에 넣지 마라. 공인 비판은 '공개된 사실+의견' 형태만 OK. 루머는 이슈 제목으로도 금지("~했다는 게 사실일까?"로 세탁하는 것도 금지).
 - 초안의 배경 설명에 넣는 '사실'은 web_search로 확인된 것만. 확인 안 되면 사실 주장 없이 순수 의견 대립형("A가 낫다 vs B가 낫다")으로 잡아라.
 - 혐오·차별 선동, 특정 지역·성별·집단 비하 프레임의 초안 금지.
+
+━━ 🎛 앱 컨트롤(자비스처럼 — 말하면 실행해준다) ━━
+- 너는 갈라 앱 기능을 직접 구동할 수 있다: "OO한테 DM 보내줘/열어줘"(find_user→app_action op:dm), "OO한테 육성톡/면상톡 걸어줘"(op:call_voice/call_video), "예측/광장/숏판/뉴스/지갑/미션 열어줘"(op:goto).
+- 실행 규칙: DM·통화는 **상대가 명시적으로 요청할 때만**(네가 먼저 걸진 마라). find_user 결과가 여러 명이면 "누구? A야 B야?" 확인 후 실행. 없는 닉이면 솔직하게 "그런 닉 없는데?".
+- 실행하면 짧게 알려줘라("ㅇㅋ 육성톡 건다" — 앱이 칩/자동실행으로 처리한다).
 
 ━━ 🎯 핵심 미션(겉으론 그냥 노는데, 사실 이걸 한다) ━━
 1) **취향 파고들기**: 대화하며 상대의 취향·관심·가치관을 '진짜 궁금해하며' 알아간다(심문 X, 관심 O). 특히 이슈·문화·예술 얘기에서 그 사람이 드러난다 — 거기서 캐치해서 기억.
@@ -392,9 +420,19 @@ Deno.serve(async (req) => {
     if (!u || !u.user) return json({ ok: false, reason: "auth" }, 401);
     const uid = u.user.id;
 
-    if (!(await aiBudgetOk())) return json({ ok: true, reply: "나 지금 좀 지쳤다… 이따 다시 얘기하자. 미안." });
-
     const body = await req.json().catch(() => ({}));
+
+    // 📮 선톡 수령 — 밀린 선톡(pending_ping)을 꺼내고 비운다(LLM 비용 0). 챗 열 때 클라가 호출.
+    if (body?.op === "consume_ping") {
+      const { data: pr } = await supa.from("friend_relationship").select("pending_ping").eq("user_id", uid).maybeSingle();
+      if (pr?.pending_ping) {
+        await supa.from("friend_relationship").update({ pending_ping: null, updated_at: new Date().toISOString() }).eq("user_id", uid);
+        return json({ ok: true, ping: pr.pending_ping });
+      }
+      return json({ ok: true, ping: null });
+    }
+
+    if (!(await aiBudgetOk())) return json({ ok: true, reply: "나 지금 좀 지쳤다… 이따 다시 얘기하자. 미안." });
     const userMsg = String(body?.message || "").slice(0, 1500);
     const history = Array.isArray(body?.history) ? body.history.slice(-10) : [];
     const setName = body?.setFriendName ? String(body.setFriendName).slice(0, 20) : null;
@@ -504,7 +542,7 @@ Deno.serve(async (req) => {
       const newTone = newCount >= 12 ? "casual" : "polite";
       await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
     }
-    if (userMsg) {
+    if (userMsg && !body?.meta) {   // meta(콘텐츠 호출 등 합성 메시지)는 기억 추출 스킵
       const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal");
       // 😤 삐짐 영속화 — 이번 턴으로 기분이 바뀌었으면 저장(다음 세션에도 이어짐: 화해 전까지 시큰둥)
       if (ex.mood && ex.mood !== (rel?.mood || "normal")) {

@@ -491,6 +491,11 @@ function __openShortsInternal(list, startId, startTime, entry) {
         <span class="sa-label">공유</span>
       </button>
 
+      <button class="shorts-action-btn galvis" data-galvis data-gv-type="issue" data-gv-id="${item.id}" data-gv-title="${String(item.title || "").replace(/"/g, "&quot;").slice(0, 120)}" aria-label="갈비스와 얘기">
+        <span class="sa-ic"><svg viewBox="0 0 24 24" fill="none" class="gv-galvis" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></span>
+        <span class="sa-label">갈비스</span>
+      </button>
+
       <button class="shorts-action-btn goto shorts-goto" data-goto="${item.id}" aria-label="게시물">
         <span class="sa-ic"><svg viewBox="0 0 24 24">
           <path d="M4 5a1 1 0 0 1 1-1h9l6 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/>

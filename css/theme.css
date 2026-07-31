@@ -259,3 +259,7 @@ input, textarea, select,
   -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
   -webkit-touch-callout: default;
 }
+
+/* 🤖 갈비스 진입 아이콘 — 앱(SPA) 전용 기능. 웹(MPA)에선 숨김(friend.js가 SPA에서만 위임 처리) */
+body:not([data-page="spa"]) [data-galvis]{ display:none !important; }
+[data-galvis] .gv-galvis, .galvis-btn .gv-galvis{ color:#5fd8ff; }

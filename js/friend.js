@@ -181,8 +181,19 @@
     });
   }
 
-  // 저장된 대화가 있으면 그대로 이어서 렌더(DM식), 없으면 새로 인사.
+  // 📮 밀린 선톡 수령 — 갈비스가 먼저 보낸 말(푸시 무시했어도 여기서 보임). LLM 비용 0.
+  async function consumePing(){
+    var jwt=await token(); if(!jwt) return null;
+    try{
+      var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({op:"consume_ping"}) });
+      var d=await res.json(); return (d&&d.ping)||null;
+    }catch(e){ return null; }
+  }
+  // 저장된 대화가 있으면 그대로 이어서 렌더(DM식), 없으면 새로 인사. 선톡이 있으면 그 말이 곧 인사.
   async function restoreOrGreet(){
+    var pingP = consumePing();          // 병렬로 선톡 확인
     var d = await loadChat();
     if(d && d.history && d.history.length){
       if(d.name){ friendName=d.name; setTitle(); }
@@ -192,8 +203,12 @@
         else { splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); }); }  // 복원도 버블 단위
       });
       scrollBottom();
+      var ping=await pingP;
+      if(ping){ addMsg("a", ping); history.push({role:"assistant",content:ping}); saveChat(); }
       return;
     }
+    var ping2=await pingP;
+    if(ping2){ addMsg("a", ping2); history.push({role:"assistant",content:ping2}); saveChat(); return; }
     greet();
   }
   async function greet(){
@@ -276,6 +291,14 @@
   }
   function runAction(a){
     if(a.kind==="open"){ openInApp(a.url); return; }
+    if(a.kind==="app"){
+      // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(미니 보드로 접히고 실행)
+      minimize();
+      if(a.op==="dm" && a.id) nav("dm.html?dm="+a.id);
+      else if((a.op==="call_voice"||a.op==="call_video") && a.id) nav("dm.html?dm="+a.id+"&call="+(a.op==="call_video"?"video":"voice"));
+      else if(a.op==="goto" && a.page) nav(a.page);
+      return;
+    }
     if(a.kind==="draft"){
       // ⚔️ 함께 창작 — 초안을 작성폼 시드(GALLA_SEED, write.js의 jarvis 분기)로 넘기고 미니 보드로 접힘
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis",
@@ -306,10 +329,10 @@
     if(on&&!t){ logEl.appendChild(el('<div class="fr-typing"><i></i><i></i><i></i></div>')); logEl.scrollTop=logEl.scrollHeight; }
     if(!on&&t) t.remove();
   }
-  async function callFriend(message, hist, setName){
+  async function callFriend(message, hist, setName, meta){
     var jwt=await token(); if(!jwt) return null;
     try{
-      var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName;
+      var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
       var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
         headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"}, body:JSON.stringify(body) });
       return await res.json();
@@ -327,10 +350,17 @@
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
     if(history.length>20) history=history.slice(-20);
     addActions(m, r.actions);
-    // ⚡ "보여줘/열어줘"라고 했으면 칩 탭 기다리지 말고 바로 오픈(잠깐 답 보여주고) — 갈라 내부(view) 우선
-    if(r.actions && r.actions.length && /보여|열어|보자|가보자|띄워|틀어/.test(text)){
-      var auto = r.actions.filter(function(a){ return a.kind==="view"; })[0] || r.actions.filter(function(a){ return a.kind==="open"; })[0];
-      if(auto) setTimeout(function(){ runAction(auto); }, 700);
+    // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
+    //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
+    //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈
+    if(r.actions && r.actions.length){
+      var appA = r.actions.filter(function(a){ return a.kind==="app"; })[0];
+      if(appA && (appA.op==="goto" || /걸어|전화|톡|디엠|dm|보내|열어/i.test(text))){
+        setTimeout(function(){ runAction(appA); }, 700);
+      } else if(/보여|열어|보자|가보자|띄워|틀어/.test(text)){
+        var auto = r.actions.filter(function(a){ return a.kind==="view"; })[0] || r.actions.filter(function(a){ return a.kind==="open"; })[0];
+        if(auto) setTimeout(function(){ runAction(auto); }, 700);
+      }
     }
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
     if(speakReply && r.reply) speak(r.reply);
@@ -391,10 +421,32 @@
     }catch(e){ typing(false); addMsg("a","목소리 못 알아들었어 ㅠㅠ 다시 한 번만"); }
   }
 
+  /* 🔗 콘텐츠 → 갈비스 파이프라인 — 모든 콘텐츠 액션바(좋아요·공유 줄)의 갈비스 아이콘.
+     탭하면 그 콘텐츠 맥락을 들고 챗이 열리고, 갈비스가 그 얘기로 먼저 말을 건다. */
+  async function askGalvis(ctx){
+    open();
+    var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content";
+    var jwt=await token(); if(!jwt || !title) return;
+    typing(true);
+    var r=await callFriend("(상대가 갈라 콘텐츠 '"+title+"'("+type+")에서 나를 불렀다. 그 콘텐츠 얘기로 짧게 먼저 말을 걸어라 — 네 평 한마디+어느 편인지 묻거나, 재밌는 포인트 하나 콕. 리스트 금지.)", history, null, true);
+    typing(false);
+    if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }
+  }
+  window.GALLA_askGalvis = askGalvis;
+  // 전역 위임 — 각 화면은 <button data-galvis data-gv-type data-gv-id data-gv-title> 만 심으면 됨
+  document.addEventListener("click", function(e){
+    var b=e.target.closest && e.target.closest("[data-galvis]");
+    if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    askGalvis({ type:b.getAttribute("data-gv-type")||"", id:b.getAttribute("data-gv-id")||"", title:b.getAttribute("data-gv-title")||"" });
+  }, true);
+
   function boot(){
     if(!document.body || document.body.dataset.page!=="spa") return;
     build();
     window.GALLA_openFriend = open;
+    // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)
+    try{ if(/[?&]frping=1/.test(location.search)) setTimeout(open, 900); }catch(e){}
   }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", boot); else boot();
 })();

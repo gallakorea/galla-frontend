@@ -295,6 +295,11 @@ const heartSvg = `<svg viewBox="0 0 24 24" class="fi-ic lk-ic" aria-hidden="true
 const commentSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>`;
 const bookmarkSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M18 21l-6-4.3L6 21V5.5A2.5 2.5 0 0 1 8.5 3h7A2.5 2.5 0 0 1 18 5.5V21z"/></svg>`;
 const shareSvg = `<svg viewBox="0 0 24 24" class="fi-ic" aria-hidden="true"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>`;
+// 🤖 갈비스 아이콘(미니 아크 리액터) — 액션바 끝, 탭하면 이 콘텐츠 얘기로 갈비스와 대화(SPA 전용, friend.js가 위임 처리)
+const galvisSvg = `<svg viewBox="0 0 24 24" class="fi-ic gv-galvis" aria-hidden="true" fill="none"><circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>`;
+const galvisBtn = (type, id, title) => (document.body && document.body.dataset.page === 'spa')
+  ? `<button type="button" class="fi-btn galvis-btn" data-galvis data-gv-type="${type}" data-gv-id="${id}" data-gv-title="${String(title || '').replace(/"/g, '&quot;').slice(0, 120)}" aria-label="갈비스와 얘기">${galvisSvg}</button>`
+  : '';
 
 function renderCard(data) {
     const total = (data.pro + data.con) || 1;
@@ -365,6 +370,7 @@ function renderCard(data) {
                     <button type="button" class="fi-btn goto-comments" aria-label="댓글">${commentSvg}</button>
                     <button type="button" class="fi-btn bookmark-btn" data-id="${data.id}" aria-label="저장">${bookmarkSvg}</button>
                     <button type="button" class="fi-btn share-btn" data-id="${data.id}" aria-label="공유">${shareSvg}</button>
+                    ${galvisBtn('issue', data.id, data.title)}
                 </div>
                 <button class="more-btn card-more" data-id="${data.id}" data-uid="${data.user_id || ''}" aria-label="더보기">${moreIcon}</button>
             </div>

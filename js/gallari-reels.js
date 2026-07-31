@@ -121,6 +121,7 @@
         <button class="grl-act grl-like"><span class="ic">${IC.heart}</span><b class="c">${x.like_count || 0}</b></button>
         <button class="grl-act grl-comment">${IC.chat}<b class="cc">${x.comment_count || 0}</b></button>
         <button class="grl-act grl-share">${IC.send}<b>공유</b></button>
+        <button class="grl-act" data-galvis data-gv-type="shorts" data-gv-id="${x.id}" data-gv-title="${String(x.caption || '숏판 영상').replace(/"/g, '&quot;').slice(0, 120)}" aria-label="갈비스와 얘기"><span class="ic"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></span><b>갈비스</b></button>
         <button class="grl-act support grl-support">${IC.gift}<b>후원</b></button>
       </div>
       <div class="grl-bottom">

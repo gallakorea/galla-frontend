@@ -155,7 +155,8 @@
       <button class="gn-act ${n.myReact === -1 ? "on dislike" : ""}" data-act="dislike">${GN_DISLIKE_ICON} <span>${n.dislikes}</span></button>
       <button class="gn-act" data-act="comment">${GN_CMT_ICON} <span>${n.cCount}</span></button>
       <button class="gn-act gn-icon ${n.saved ? "on save" : ""}" data-act="save" aria-label="저장">${GN_BM_ICON}</button>
-      <button class="gn-act gn-icon" data-act="share" aria-label="공유">${GN_SHARE_ICON}</button>`;
+      <button class="gn-act gn-icon" data-act="share" aria-label="공유">${GN_SHARE_ICON}</button>
+      <button class="gn-act gn-icon" data-galvis data-gv-type="news" data-gv-id="${n.id || ""}" data-gv-title="${String(n.title || "").replace(/"/g, "&quot;").slice(0, 120)}" aria-label="갈비스와 얘기"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8.2" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></button>`;
     bar.querySelectorAll(".gn-act").forEach((b) => b.addEventListener("click", () => {
       const act = b.dataset.act;
       if (act === "like") reactGn(1);
