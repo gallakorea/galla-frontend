@@ -1766,7 +1766,14 @@ body[data-page="spa"] .tab-pane[data-tab="dm"] .view-host {
   overflow: hidden; overscroll-behavior: none;
 }
 body[data-page="spa"].dm-detail .dm-root.page {
-  position: fixed; top: 0; left: 0; right: 0;
+  /* ⚠️ position:absolute (NOT fixed) — 판(.tab-pane)이 transform 컨테이너라
+     fixed든 absolute든 '판 기준 고정'으로 동일하게 렌더된다. 그런데 iOS WKWebView는
+     transform된 조상 안의 position:fixed 서브트리에서 내부 overflow(.dm-msgs) '터치'
+     스크롤을 죽인다(프로그램 스크롤·웹은 정상, 실기기 손가락만 꿈쩍 안 함 = 사장님 재현).
+     absolute로 바꾸면 같은 레이아웃·같은 '검은 띠' 방지(view-host가 스크롤 불가라 flow
+     오프셋 0)면서 내부 터치 스크롤이 살아난다. .view-host(absolute inset:0)가 positioned
+     조상이라 top/height가 판 기준으로 정확히 잡힌다. */
+  position: absolute; top: 0; left: 0; right: 0;
   height: var(--dm-vvh, 100dvh);
   z-index: 5;   /* 판 안 잔여 콘텐츠 위 — 판이 자체 스택 컨텍스트라 셸 네비(9999)·스택(#stack-root)엔 못 오른다 */
 }
