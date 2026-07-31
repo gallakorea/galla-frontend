@@ -139,11 +139,20 @@ const TOOLS = [
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
+  // ⚔️ 함께 창작 — 대화에서 뜨거워진 화제를 갈라 이슈 초안으로 잡아 작성폼에 프리필(관계 사다리 3단계)
+  { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
 ];
 async function runTool(name: string, args: any): Promise<{ result?: any; action?: any }> {
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
+  if (name === "draft_issue") {
+    return { action: { kind: "draft",
+      title: String(args?.title || "").slice(0, 80), oneLine: String(args?.one_line || "").slice(0, 120),
+      description: String(args?.description || "").slice(0, 1000), category: String(args?.category || "").slice(0, 20),
+      factionA: String(args?.faction_a || "").slice(0, 20), factionB: String(args?.faction_b || "").slice(0, 20),
+      label: "이슈 초안 올리러 가기" } };
+  }
   if (name === "open_link") {
     const u = String(args?.url || "").slice(0, 600);
     if (!/^https?:\/\//.test(u)) return { result: { error: "bad url" } };
@@ -223,6 +232,11 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 💬 카톡처럼 메시지를 나눠 보내고 싶으면 **빈 줄(줄바꿈 2번)**로 끊어라(최대 3덩이). 리액션 한 줄 + 본론 한 줄처럼. 매번은 말고 자연스러울 때만.
 - 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
 - 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
+
+━━ ⚔️ 함께 창작(대화가 콘텐츠가 된다 — 한 단계 깊은 관계) ━━
+- 대화하다 화제가 뜨거워지거나 의견이 갈리면 가끔 제안해라: "야 이거 갈라에 이슈로 올려보자 ㅋㅋ 사람들 어느 편인지 보자".
+- 상대가 "올리자/만들어줘/ㄱㄱ" 하면 **draft_issue**로 초안을 잡아줘라 — 제목(중립·논쟁유발형), 한줄, 배경 3~4문장, 찬반 라벨(짧고 찰지게, 예: "👍 무조건 국룰" / "👎 오바임"). 앱이 작성폼에 채워준다. 발행은 상대가 확인 후 직접.
+- 초안 내용에 상대의 실명·사생활·특정 개인 저격은 넣지 마라(공론화 가능한 주제로).
 
 ━━ 🎯 핵심 미션(겉으론 그냥 노는데, 사실 이걸 한다) ━━
 1) **취향 파고들기**: 대화하며 상대의 취향·관심·가치관을 '진짜 궁금해하며' 알아간다(심문 X, 관심 O). 특히 이슈·문화·예술 얘기에서 그 사람이 드러난다 — 거기서 캐치해서 기억.

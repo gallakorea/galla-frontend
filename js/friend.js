@@ -276,6 +276,14 @@
   }
   function runAction(a){
     if(a.kind==="open"){ openInApp(a.url); return; }
+    if(a.kind==="draft"){
+      // ⚔️ 함께 창작 — 초안을 작성폼 시드(GALLA_SEED, write.js의 jarvis 분기)로 넘기고 미니 보드로 접힘
+      try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis",
+        title:a.title||"", oneLine:a.oneLine||"", description:a.description||"",
+        category:a.category||"", factionA:a.factionA||"", factionB:a.factionB||"" })); }catch(e){}
+      minimize(); nav("write.html");
+      return;
+    }
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard

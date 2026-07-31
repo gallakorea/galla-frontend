@@ -63,6 +63,10 @@ function initWritePage(ctx) {
       if (categoryEl && seed.category && !categoryEl.value) {
         try { categoryEl.value = seed.category; } catch (_) {}
       }
+      // ⚔️ 갈비스 초안 — 진영(찬/반) 라벨까지 프리필
+      const fA = document.getElementById('factionA'), fB = document.getElementById('factionB');
+      if (fA && seed.factionA && !fA.value) fA.value = seed.factionA;
+      if (fB && seed.factionB && !fB.value) fB.value = seed.factionB;
     }
   } catch (_) {}
 
