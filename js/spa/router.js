@@ -88,7 +88,8 @@
     tabMountP[tab] = (async () => {
       try {
         const v = await L.fetchView(TAB_URL[tab] + "?spa=1");
-        await L.injectStyles(v.styles);   // ⏳ CSS 적용까지 대기 — FOUC 방지
+        L.injectStyles(v.styles);   // 탭은 await 안 함 — 첫 탭은 스플래시가 FOUC를 가리고, await하면
+                                    // 네이티브에서 link.onload 지연으로 콜드스타트가 느려진다(부팅 크리티컬 패스).
         const host = document.createElement("div");
         host.className = "view-host";
         host.dataset.page = v.dataPage || tab;

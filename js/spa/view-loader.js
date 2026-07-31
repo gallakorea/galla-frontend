@@ -112,7 +112,7 @@
         let done = false;
         const fin = () => { if (!done) { done = true; res(); } };
         l.onload = fin; l.onerror = fin;
-        setTimeout(fin, 1500);
+        setTimeout(fin, 300);   // 네이티브(capacitor://)는 link.onload가 안 뜰 때가 있어 짧게 폴백 — 로컬 번들 CSS는 그 안에 적용됨
       }));
       document.head.appendChild(l);
     });
