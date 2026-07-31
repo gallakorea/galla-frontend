@@ -23,7 +23,7 @@
   if (!window.GALLA_SFX && !document.querySelector('script[data-galla-sfx]')) {
     try {
       const s = document.createElement('script');
-      s.src = '/js/dm-sound.js?v=073119'; s.async = true; s.setAttribute('data-galla-sfx', '1');
+      s.src = '/js/dm-sound.js?v=073120'; s.async = true; s.setAttribute('data-galla-sfx', '1');
       document.head.appendChild(s);
     } catch (_) {}
   }
@@ -1025,8 +1025,9 @@
     }
     // 렌더러 위치/크기 동기화(리페인트 직후 좌표 반영)
     setTimeout(() => { try { window.__iosrtc && window.__iosrtc.refreshVideos && window.__iosrtc.refreshVideos(); } catch (_) {} }, 300);
-    // 🔬 면상톡 렌더러 진단(1회) — iosrtc 네이티브 렌더러가 실제로 붙는지 3초 뒤 확인
-    if (CUR?.video && !CUR._vidDiag && CUR.connectedAt) {
+    // 🔬 통화 진단(1회) — 영상은 렌더러, 음성/영상 공통으로 오디오 트랙·싱크·RTP 유입을 3초 뒤 확인.
+    //    (육성톡 '발신자 소리 안남' 규명 위해 음성통화에도 켠다 — APKT pkts로 전송 vs 재생 판별)
+    if (CUR && CUR.connectedAt && !CUR._vidDiag) {
       CUR._vidDiag = true;
       setTimeout(() => {
         try {
