@@ -286,10 +286,11 @@ Deno.serve(async (req) => {
     }
 
     // 인사만(빈 메시지)이면 반겨주기 컨텍스트로 한마디
-    const recentMem = memList.slice(0, 5).map((m: any) => m.content).filter(Boolean);
     const openMsg = userMsg || (firstMeet
       ? "(처음 만남 — 부담 없이 짧게 반겨줘. 이름을 안 지어줬으면 어떻게 부를지 물어봐도 좋아)"
-      : `(다시 왔다. 일반적인 인사 금지 — 아래 '내가 아는 것' 중 최근·중요한 걸 '콕 집어' 안부를 물어라. 예: 저번에 힘들다던 그거 어떻게 됐어? / 그 팀장은 좀 어때?${recentMem.length ? "\n지금 떠올릴 것: " + recentMem.join(" / ") : ""})`);
+      : `(다시 왔다. 짧고 자연스럽게 반겨줘 — '매번 다르게'. 대부분은 그냥 "왔어? 뭐하다 왔어 ㅋㅋ" 정도로 가볍게.
+⚠️ 매번 기억을 캐묻지 마라. 특히 부장·싫은사람·힘든일 같은 '무겁고 부정적인 걸 먼저 꺼내지 마라'(매번 그러면 질린다). 같은 주제(예: 부장) 반복 금지.
+가끔(항상 X) 떠올린다면 '가볍거나 긍정적인 것' 위주로(취미·관심사 등). 오늘은 그냥 편하게 인사만 해도 된다.)`);
 
     const messages: any[] = [
       { role: "system", content: persona(nick, friendName, rel, memList) },

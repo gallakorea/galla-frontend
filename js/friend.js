@@ -72,21 +72,22 @@
      키보드 열림=패널 높이를 '보이는 높이'로(입력창이 키보드 위에 붙음), 닫힘=원래 시트 높이로. 같은 곡선 트랜지션. */
   function bindKb(){
     if(window.__frKbBound) return; window.__frKbBound=true;
-    var panel=sheet.querySelector(".fr-panel"); if(!panel) return;
-    var CURVE="height .25s cubic-bezier(.38,.7,.125,1)";
+    var root=document.documentElement;
     var safeB=0; try{ var p=document.createElement("div"); p.style.cssText="position:fixed;bottom:0;left:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden"; document.body.appendChild(p); safeB=p.getBoundingClientRect().height||0; p.remove(); }catch(e){}
     var fullH=window.innerHeight;
-    var base=function(){ return Math.min(Math.round(window.innerHeight*0.82), 700); };
-    function setH(px, anim){ panel.style.transition=anim?CURVE:""; panel.style.height=Math.round(px)+"px"; scrollBottom(); }
+    function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); scrollBottom(); }
+    function anim(on){ document.body.classList.toggle("fr-kb-anim", on); }
+    setVvh(fullH);  // 초기: 전체 높이
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
     if(KB){
-      KB.addListener("keyboardWillShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; setH(kh?(fullH-kh+safeB):window.innerHeight, true); });
-      KB.addListener("keyboardDidShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; var ih=window.innerHeight; setH(ih<fullH-10?ih:(kh?fullH-kh+safeB:ih), true); setTimeout(function(){ panel.style.transition=""; }, 60); });
-      KB.addListener("keyboardWillHide", function(){ setH(base(), true); });
-      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setH(base(), true); setTimeout(function(){ panel.style.transition=""; panel.style.height=""; }, 280); });
+      // willShow에서 이벤트의 keyboardHeight로 '즉시' 최종 높이 → 입력창이 키보드와 동시에 붙어 오름(지연 없음)
+      KB.addListener("keyboardWillShow", function(ev){ anim(true); var kh=(ev&&ev.keyboardHeight)||0; setVvh(kh?(fullH-kh+safeB):window.innerHeight); });
+      KB.addListener("keyboardDidShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; var ih=window.innerHeight; setVvh(ih<fullH-10?ih:(kh?fullH-kh+safeB:ih)); setTimeout(function(){ anim(false); }, 80); });
+      KB.addListener("keyboardWillHide", function(){ anim(true); setVvh(fullH); });
+      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(fullH); setTimeout(function(){ anim(false); }, 280); });
     } else if(window.visualViewport){
       var vv=window.visualViewport;
-      vv.addEventListener("resize", function(){ var kb=Math.max(0, window.innerHeight-vv.height); setH(kb>60?vv.height:base(), true); });
+      vv.addEventListener("resize", function(){ setVvh(vv.height); });
     }
   }
 

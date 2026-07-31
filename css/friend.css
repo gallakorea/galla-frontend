@@ -31,16 +31,21 @@
 /* 스크림·패널이 화면을 '완전히' 덮는다 → 뒤 화면 안 눌림. 내비는 열려있는 동안 숨긴다(아래). */
 #frSheet .fr-scrim{ position:absolute; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; }
 #frSheet.fr-open .fr-scrim{ opacity:1; }
+:root{ --fr-top: calc(env(safe-area-inset-top,0px) + 84px); --fr-vvh: 100dvh; }
+/* 🔑 DM식 키보드 트래킹 — 상단(로고 아래) 고정 + 높이=--fr-vvh(JS가 키보드에 맞춰 세팅).
+   패널 '아랫변(입력창)'이 곧 --fr-vvh라, willShow에서 즉시 세팅되면 키보드와 동시에 붙어 오른다.
+   컨테이너(#frSheet) 리사이즈에 안 휘둘려서 '줄었다 늘었다' jitter 없음. */
 #frSheet .fr-panel{
-  position:absolute; left:0; right:0; bottom:0; height:min(82vh,700px);
-  /* 🔑 헤더(갈라 로고)는 안 넘게 — 패널 top이 로고 아래에서 멈춘다. 키보드로 커져도 이 한계 유지 */
-  max-height:calc(100dvh - env(safe-area-inset-top,0px) - 84px);
+  position:absolute; left:0; right:0; top:var(--fr-top); bottom:auto;
+  height:calc(var(--fr-vvh) - var(--fr-top));
   background:var(--fr-bg); color:var(--fr-txt); border-radius:20px 20px 0 0;
   border-top:1px solid var(--fr-line); display:flex; flex-direction:column;
   transform:translateY(102%); transition:transform .3s cubic-bezier(.2,.85,.2,1);
   padding-bottom:env(safe-area-inset-bottom,0px); overflow:hidden;
 }
-/* 로고 보이게 — 스크림도 헤더 위쪽은 살짝 옅게(로고 식별) */
+/* 키보드 애니 동안만 높이 트랜지션(같은 곡선) — 평상시엔 즉답 */
+body.fr-kb-anim #frSheet .fr-panel{ transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1); }
+/* 로고 보이게 — 스크림 헤더 위쪽 옅게 */
 #frSheet .fr-scrim{ background:linear-gradient(to bottom, rgba(0,0,0,.28) 0, rgba(0,0,0,.5) 84px); }
 /* 🫥 친구 대화 중엔 하단 내비 숨김 — 채팅창이 가리지도, 뒤가 눌리지도 않게 */
 body.fr-chatting nav.nav{ display:none !important; }
