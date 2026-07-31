@@ -18,7 +18,7 @@
     muteOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16 8l5 5M21 8l-5 5" stroke="currentColor" stroke-width="2"/></svg>',
     muteOff: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M15 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+    plus: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
     // 인스타식 공유(종이비행기) — 숏판 전용(이슈는 기존 share 유지)
     send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
   };
@@ -112,23 +112,23 @@
         </div>
       </section>`;
     }
-    // 숏판(post) — 인스타 릴스식 UI
-    const navBtn = ENTRY === 'profile'
-      ? `<button class="grl-navbtn grl-back" data-back="mypage.html" aria-label="뒤로">${IC.back}</button>`
-      : `<button class="grl-navbtn grl-add" aria-label="숏판 올리기">${IC.plus}</button>`;
+    // 숏판(post) — 인스타 릴스식 UI. 상단 +/‹·릴스 타이틀은 글로벌 chrome 바(chrome())에서 처리
     return `<section class="grl-slide" data-type="post" data-id="${x.id}">
       ${mediaInner}
       <div class="grl-playpause">${IC.play}</div>
-      <div class="grl-top grl-top--reels">${navBtn}<span class="grl-top-title">릴스</span></div>
+      <div class="grl-top"></div>
       <div class="grl-rail">
-        ${railTop}
         <button class="grl-act grl-like"><span class="ic">${IC.heart}</span><b class="c">${x.like_count || 0}</b></button>
         <button class="grl-act grl-comment">${IC.chat}<b class="cc">${x.comment_count || 0}</b></button>
         <button class="grl-act grl-share">${IC.send}<b>공유</b></button>
         <button class="grl-act support grl-support">${IC.gift}<b>후원</b></button>
       </div>
       <div class="grl-bottom">
-        <div class="grl-author">${esc(nick(x.user_id))}${ME && x.user_id !== ME ? '<span class="grl-follow js-follow" data-uid="' + esc(x.user_id) + '">+ 팔로우</span>' : ''}</div>
+        <div class="grl-userrow">
+          <img class="grl-bava" src="${esc(ava(x.user_id))}" data-prof="${esc(x.user_id)}" onerror="this.style.visibility='hidden'">
+          <span class="grl-uname" data-prof="${esc(x.user_id)}">${esc(nick(x.user_id))}</span>
+          ${ME && x.user_id !== ME ? `<button class="grl-follow2 js-follow" data-uid="${esc(x.user_id)}">팔로우</button>` : ''}
+        </div>
         ${x.caption ? `<div class="grl-cap">${esc(x.caption)}</div>` : ''}
       </div>
     </section>`;
@@ -190,8 +190,6 @@
       if (window.openDonatePost) window.openDonatePost(x.id, nick(x.user_id));
       else (window.GALLA_toast || alert)('후원 준비 중');
     });
-    // 상단 + (피드 진입) = 숏판 올리기 / ‹ (프로필 진입)은 back.js [data-back] 위임이 처리
-    el.querySelector('.grl-add')?.addEventListener('click', () => nav('gallari-write.html'));
     // 팔로우 버튼(공용 follow.js가 바인딩)
     if (window.GALLA_bindFollow) setTimeout(() => window.GALLA_bindFollow(el), 0);
   }
@@ -276,11 +274,14 @@
     if (!root || document.getElementById('grl-chrome')) return;
     const bar = document.createElement('div');
     bar.id = 'grl-chrome';
-    bar.innerHTML = `<button class="grl-back" id="grl-back" aria-label="뒤로">${IC.back}</button><button class="grl-mute" id="grl-mute" aria-label="소리">${MUTED ? IC.muteOn : IC.muteOff}</button>`;
-    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:3100;display:flex;align-items:center;gap:10px;height:calc(50px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;pointer-events:none';
+    // 좌상단 버튼: 갈라리 피드 진입(user 없음)=+ (숏판 올리기) / 마이페이지·프로필 진입=‹ (뒤로)
+    const feed = ENTRY === 'feed';
+    bar.innerHTML = `<button class="grl-nav" id="grl-back" aria-label="${feed ? '숏판 올리기' : '뒤로'}">${feed ? IC.plus : IC.back}</button><span class="grl-chrome-title">릴스</span><button class="grl-mute" id="grl-mute" aria-label="소리">${MUTED ? IC.muteOn : IC.muteOff}</button>`;
+    bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:3100;display:flex;align-items:center;gap:6px;height:calc(50px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;pointer-events:none';
     bar.querySelectorAll('button').forEach(b => b.style.pointerEvents = 'auto');
     document.body.appendChild(bar);
     bar.querySelector('#grl-back').onclick = () => {
+      if (feed) { nav('gallari-write.html'); return; }   // + = 숏판 올리기
       navHide(false);
       document.getElementById('grl-chrome')?.remove();
       if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop && window.GALLA_SPA.pop()) return;

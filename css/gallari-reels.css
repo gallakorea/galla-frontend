@@ -37,15 +37,14 @@
   background: rgba(0,0,0,.4); color: #fff; display: flex; align-items: center; justify-content: center; }
 .grl-mute svg { width: 20px; height: 20px; }
 
-/* 숏판 릴스 상단(인스타식): 좌 진입버튼(+ 또는 ‹) + '릴스' 타이틀 */
-.grl-top--reels { gap: 4px; }
-.grl-navbtn { width: 40px; height: 40px; margin-left: -8px; border: none; background: transparent;
+/* 숏판 릴스 상단 chrome(인스타식): 좌 진입버튼(+ 또는 ‹) + '릴스' 타이틀 + (우)음소거 */
+#grl-chrome { background: linear-gradient(rgba(0,0,0,.5), transparent); }
+.grl-nav { width: 40px; height: 40px; margin-left: -8px; border: none; background: transparent;
   color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  -webkit-tap-highlight-color: transparent; }
-.grl-navbtn:active { opacity: .55; }
-.grl-navbtn svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 4px rgba(0,0,0,.55)); }
-.grl-navbtn.grl-add svg { width: 30px; height: 30px; }
-.grl-top-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.2px;
+  -webkit-tap-highlight-color: transparent; flex: none; }
+.grl-nav:active { opacity: .55; }
+.grl-nav svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 4px rgba(0,0,0,.55)); }
+.grl-chrome-title { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: -.2px;
   text-shadow: 0 1px 4px rgba(0,0,0,.55); }
 
 /* 우측 액션 레일 */
@@ -64,6 +63,16 @@
   background: linear-gradient(transparent, rgba(0,0,0,.55)); color: #fff; }
 .grl-author { font-size: 15px; font-weight: 900; text-shadow: 0 1px 3px rgba(0,0,0,.6); display: flex; align-items: center; gap: 6px; }
 .grl-author .grl-follow { font-size: 11px; font-weight: 800; border: 1px solid rgba(255,255,255,.7); border-radius: 999px; padding: 2px 9px; }
+/* 숏판(인스타식) 하단: 아바타 + 아이디 + 팔로우 한 줄 */
+.grl-userrow { display: flex; align-items: center; gap: 9px; }
+.grl-bava { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none;
+  border: 1.5px solid rgba(255,255,255,.9); background: #333; }
+.grl-uname { font-size: 15px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grl-follow2 { flex: none; margin-left: 2px; padding: 5px 14px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.85); background: transparent; color: #fff;
+  font-size: 13px; font-weight: 700; cursor: pointer; line-height: 1; }
+.grl-follow2.following { border-color: rgba(255,255,255,.4); color: rgba(255,255,255,.8); }
 .grl-cap { margin-top: 7px; font-size: 13.5px; line-height: 1.45; text-shadow: 0 1px 3px rgba(0,0,0,.6);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .grl-cap.open { -webkit-line-clamp: unset; }
