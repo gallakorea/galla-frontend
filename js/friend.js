@@ -73,24 +73,24 @@
      키보드 열림=패널 높이를 '보이는 높이'로(입력창이 키보드 위에 붙음), 닫힘=원래 시트 높이로. 같은 곡선 트랜지션. */
   function bindKb(){
     if(window.__frKbBound) return; window.__frKbBound=true;
-    var root=document.documentElement;
+    var root=document.documentElement, vv=window.visualViewport;
+    var fullH=window.innerHeight, khLast=0, kbUp=false;
+    // 학습 보정값 — willShow 즉시 높이(fullH-kh)와 실측(vv.height)의 차이. 저장해서 다음부턴 첫 판부터 정확.
+    var KDELTA=parseFloat(localStorage.getItem("frKbDelta")); if(isNaN(KDELTA)) KDELTA=40;
     function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); scrollBottom(); }
     function anim(on){ document.body.classList.toggle("fr-kb-anim", on); }
-    var vv=window.visualViewport;
-    // 🔑 실측 진리값 = visualViewport.height(키보드 제외한 '실제 보이는 높이'). 안전영역 추측 없이 입력창이 키보드에 정확히 붙는다.
-    if(vv){
-      var apply=function(){ setVvh(vv.height); };
-      vv.addEventListener("resize", apply);
-      vv.addEventListener("scroll", apply);
-      apply();
-    } else { setVvh(window.innerHeight); }
-    // Capacitor Keyboard는 '부드러운 트랜지션'만 켜고(글라이드), 값은 vv가 몬다. didShow/Hide에서 실측 재확정.
+    setVvh(vv?vv.height:fullH);
+    if(vv) vv.addEventListener("resize", function(){
+      setVvh(vv.height);                                   // 실측으로 정확히(지연 있지만 아래 willShow가 즉시 올려둠)
+      if(kbUp && khLast){ var d=Math.round(vv.height-(fullH-khLast)); if(d>-10 && d<90 && Math.abs(d-KDELTA)>=1){ KDELTA=d; try{ localStorage.setItem("frKbDelta", String(d)); }catch(e){} } }
+    });
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
     if(KB){
-      KB.addListener("keyboardWillShow", function(){ anim(true); if(vv) setVvh(vv.height); });
+      // 🔑 willShow에서 '즉시' 올린다(지연 0) — 학습된 KDELTA로 실측에 근접. vv가 곧 미세 보정.
+      KB.addListener("keyboardWillShow", function(ev){ anim(true); kbUp=true; var kh=(ev&&ev.keyboardHeight)||0; khLast=kh; if(kh) setVvh(fullH-kh+KDELTA); });
       KB.addListener("keyboardDidShow", function(){ if(vv) setVvh(vv.height); setTimeout(function(){ anim(false); }, 120); });
-      KB.addListener("keyboardWillHide", function(){ anim(true); });
-      KB.addListener("keyboardDidHide", function(){ if(vv) setVvh(vv.height); else setVvh(window.innerHeight); setTimeout(function(){ anim(false); }, 300); });
+      KB.addListener("keyboardWillHide", function(){ anim(true); kbUp=false; setVvh(fullH); });
+      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(vv?vv.height:fullH); setTimeout(function(){ anim(false); }, 300); });
     }
   }
 
