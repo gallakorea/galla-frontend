@@ -80,10 +80,10 @@
     setVvh(fullH);  // 초기: 전체 높이
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
     if(KB){
-      // willShow에서 이벤트의 keyboardHeight로 '즉시' 최종 높이 → 입력창이 키보드와 동시에 붙어 오름(지연 없음).
-      // ⚠️ +safeB 안 함 — 키보드 올라오면 safe-area-inset-bottom이 0이 돼(패딩 사라짐), +safeB하면 입력창이 그만큼 키보드에 파묻힌다.
-      KB.addListener("keyboardWillShow", function(ev){ anim(true); var kh=(ev&&ev.keyboardHeight)||0; setVvh(kh?(fullH-kh):window.innerHeight); });
-      KB.addListener("keyboardDidShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; var ih=window.innerHeight; setVvh(ih<fullH-10?ih:(kh?fullH-kh:ih)); setTimeout(function(){ anim(false); }, 80); });
+      // willShow에서 keyboardHeight로 '즉시' 최종높이(fullH-kh) → 키보드와 한 번에 글라이드(카톡식).
+      // ⚠️ didShow도 '같은 값'으로 — window.innerHeight로 재조정하면 두 번 튀어(올라갔다 붙음) 오버슈트난다.
+      KB.addListener("keyboardWillShow", function(ev){ anim(true); var kh=(ev&&ev.keyboardHeight)||0; if(kh) setVvh(fullH-kh); });
+      KB.addListener("keyboardDidShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; if(kh) setVvh(fullH-kh); setTimeout(function(){ anim(false); }, 80); });
       KB.addListener("keyboardWillHide", function(){ anim(true); setVvh(fullH); });
       KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(fullH); setTimeout(function(){ anim(false); }, 280); });
     } else if(window.visualViewport){
