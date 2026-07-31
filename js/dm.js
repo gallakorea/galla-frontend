@@ -1057,6 +1057,15 @@
     ROOT.querySelector('#dm-room-form').addEventListener('submit', onCreateRoom);
     ROOT.querySelector('#dm-room-cancel').addEventListener('click', () => roomFormShow(false));
     ROOT.querySelector('#dm-room-send').addEventListener('submit', onRoomSend);
+    /* ⌨️ 카톡식 — 전송 버튼을 눌러도 키보드가 유지되게. 버튼이 포커스를 뺏으면(type=submit)
+       textarea가 blur돼 iOS 키보드가 닫힌다. mousedown 기본동작(포커스 이동)만 막는다 —
+       클릭·submit은 그대로 발생하고 입력창 포커스는 유지된다.
+       (touchstart/pointerdown preventDefault는 iOS에서 클릭까지 취소할 위험이 있어 안 씀.
+        대신 onSend/onRoomSend가 전송 후 textarea를 동기 재포커스해 확실히 유지한다.
+        다른 화면·메시지 목록을 누르면 자연스럽게 blur돼 닫힘 — 원하는 동작 그대로) */
+    ROOT.querySelectorAll('#dm-form .dm-send, #dm-room-send .dm-send').forEach(btn => {
+      btn.addEventListener('mousedown', e => e.preventDefault());
+    });
     bindPollDelegation();
     // + 버튼 → 투표/약속 메뉴
     ROOT.querySelector('#dm-room-plus')?.addEventListener('click', (e) => {
@@ -3894,6 +3903,7 @@
     const body = ta.value.trim();
     if (!body || !curRoom) return;
     ta.value = ''; ta.style.height = 'auto';
+    try { ta.focus({ preventScroll: true }); } catch (_) { try { ta.focus(); } catch (__) {} }   // ⌨️ 카톡식 키보드 유지(await 전 동기 재포커스)
     const btn = ROOT.querySelector('#dm-room-send .dm-send');
     if (btn) { btn.classList.remove('fly'); void btn.offsetWidth; btn.classList.add('fly'); }
     const { data, error } = await supabase.from('open_messages')
@@ -4952,6 +4962,9 @@
     const body = ta.value.trim();
     if (!body || !curThread) return;
     ta.value = ''; ta.style.height = 'auto';
+    // ⌨️ 카톡식 키보드 유지 — 전송 제스처(같은 user gesture) 안에서 동기 재포커스.
+    //    이후 await(DB전송)가 오므로 반드시 await '전에' 호출해야 iOS가 키보드를 안 내린다.
+    try { ta.focus({ preventScroll: true }); } catch (_) { try { ta.focus(); } catch (__) {} }
     const sendBtn = ROOT.querySelector('.dm-send');
     if (sendBtn) { sendBtn.classList.remove('fly'); void sendBtn.offsetWidth; sendBtn.classList.add('fly'); }
     const reply_to = REPLY?.id || null;
