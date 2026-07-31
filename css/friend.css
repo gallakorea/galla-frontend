@@ -40,11 +40,12 @@
   height:calc(var(--fr-vvh) - var(--fr-top));
   background:var(--fr-bg); color:var(--fr-txt); border-radius:20px 20px 0 0;
   border-top:1px solid var(--fr-line); display:flex; flex-direction:column;
-  transform:translateY(102%); transition:transform .3s cubic-bezier(.2,.85,.2,1);
+  transform:translateY(102%);
+  /* 🔑 높이 트랜지션을 '항상' 켜둔다 — 클래스 토글+값변경이 같은 틱이면 코얼레싱돼 애니가 무효(점프)라,
+     입력창이 키보드와 같이 글라이드하려면 트랜지션이 상시 걸려 있어야 한다. */
+  transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1);
   padding-bottom:env(safe-area-inset-bottom,0px); overflow:hidden;
 }
-/* 키보드 애니 동안만 높이 트랜지션(같은 곡선) — 평상시엔 즉답 */
-body.fr-kb-anim #frSheet .fr-panel{ transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1); }
 /* 로고 보이게 — 스크림 헤더 위쪽 옅게 */
 #frSheet .fr-scrim{ background:linear-gradient(to bottom, rgba(0,0,0,.28) 0, rgba(0,0,0,.5) 84px); }
 /* 🫥 친구 대화 중엔 하단 내비 숨김 — 채팅창이 가리지도, 뒤가 눌리지도 않게 */
