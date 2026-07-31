@@ -1057,14 +1057,23 @@
     ROOT.querySelector('#dm-room-form').addEventListener('submit', onCreateRoom);
     ROOT.querySelector('#dm-room-cancel').addEventListener('click', () => roomFormShow(false));
     ROOT.querySelector('#dm-room-send').addEventListener('submit', onRoomSend);
-    /* ⌨️ 카톡식 — 전송 버튼을 눌러도 키보드가 유지되게. 버튼이 포커스를 뺏으면(type=submit)
-       textarea가 blur돼 iOS 키보드가 닫힌다. mousedown 기본동작(포커스 이동)만 막는다 —
-       클릭·submit은 그대로 발생하고 입력창 포커스는 유지된다.
-       (touchstart/pointerdown preventDefault는 iOS에서 클릭까지 취소할 위험이 있어 안 씀.
-        대신 onSend/onRoomSend가 전송 후 textarea를 동기 재포커스해 확실히 유지한다.
-        다른 화면·메시지 목록을 누르면 자연스럽게 blur돼 닫힘 — 원하는 동작 그대로) */
+    /* ⌨️ 카톡식 — 전송 버튼을 눌러도 키보드가 유지되게.
+       iOS는 '입력창 밖(버튼)을 터치'하는 순간 textarea를 blur시켜 키보드를 닫는다.
+       이 blur는 터치 기본동작이라 mousedown(합성·늦게 발생)으론 못 막는다 → touchstart/touchend를
+       preventDefault로 막아 blur 자체를 차단하고, 전송은 우리가 직접 form.requestSubmit()으로 부른다.
+       (touch로 네이티브 click이 취소돼도, 혹 이중발화돼도 onSend가 전송 즉시 입력값을 비워
+        빈 값이면 no-op이라 이중전송은 자연 방지. 다른 화면·목록을 누르면 정상 blur로 닫힘.)
+       데스크톱(마우스)은 touch가 없으니 mousedown 포커스차단 + 기본 click→submit 그대로. */
     ROOT.querySelectorAll('#dm-form .dm-send, #dm-room-send .dm-send').forEach(btn => {
       btn.addEventListener('mousedown', e => e.preventDefault());
+      const submitForm = () => {
+        const f = btn.closest('form');
+        if (!f) return;
+        if (f.requestSubmit) f.requestSubmit();
+        else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      };
+      btn.addEventListener('touchstart', e => { e.preventDefault(); }, { passive: false });
+      btn.addEventListener('touchend', e => { e.preventDefault(); submitForm(); }, { passive: false });
     });
     bindPollDelegation();
     // + 버튼 → 투표/약속 메뉴
