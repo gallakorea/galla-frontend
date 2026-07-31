@@ -1587,9 +1587,11 @@
           setTimeout(() => anim(false), 60);   // 애니 끝난 뒤 트랜지션 해제(평상시 즉답 복귀)
         });
         KB.addListener('keyboardWillHide', () => {
-          window.__dmKbShowing = false;
-          anim(true);                     // 내려갈 때도 키보드와 같이 부드럽게
-          setVvhTo(fullH);                // 내려가는 애니와 '동시에' 입력바를 바닥으로(타이밍 맞춤)
+          window.__dmKbShowing = true;    // ⬇️ 내려가는 애니 '동안'에도 vv 중간값 차단 유지 —
+                                          //    안 그러면 vv가 성장하는 중간 높이로 끼어들어 트랜지션과
+                                          //    싸워 입력바·채팅방이 시간차로 버벅인다(사장님 '내려갈 때' 증상).
+          anim(true);                     // 내려갈 때도 키보드와 같은 곡선으로 부드럽게
+          setVvhTo(fullH);                // 내려가는 애니와 '동시에' 패널 전체(입력바+메시지)를 바닥으로
         });
         KB.addListener('keyboardDidHide', () => {
           window.__dmKbShowing = false;
