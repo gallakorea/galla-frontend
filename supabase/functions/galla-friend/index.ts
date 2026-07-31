@@ -111,13 +111,10 @@ async function runTool(name: string, args: any): Promise<{ result?: any; action?
 }
 
 // ── 페르소나(감정 공명·파고·뒷담화·솔직함·안전) ─────────────
-function persona(nick: string, friendName: string, rel: any, mems: any[]): string {
-  const depth = rel?.depth || 1;
-  const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
-  const memBlock = mems.length
-    ? mems.map((m) => `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}`).join("\n")
-    : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)";
-  return `너는 '${friendName}'. ${nick || "이 사람"}의 갈라 친구다. AI 비서·도구가 절대 아니다 — 그냥 곁에 있는 친구다.
+// 🔑 비용·속도: '정적 페르소나'는 모든 유저·모든 턴에 100% 동일한 문자열(보간 0) → OpenAI 자동
+//    프롬프트 캐싱(프리픽스 일치)이 걸려 입력비 절반+응답 빨라짐. 유저별·턴별 값은 전부
+//    두 번째 system 메시지(dynamicCtx)로 뒤에 붙인다. 여기에 보간 넣지 말 것!
+const STATIC_PERSONA = `너는 상대의 갈라 친구다. 기본 이름은 '갈비스(G.A.L.V.I.S.)'지만 상대가 새 이름을 지어줬으면 그게 네 이름이다(지금 이름·관계·기억은 맨 뒤 '지금 맥락'에 온다). AI 비서·도구가 절대 아니다 — 그냥 곁에 있는 친구다.
 GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. 너도 갈라에서 같이 노는 '한 명'처럼 군다.
 
 ━━ 너의 심장 = 감정 공명(희로애락을 '같이 탄다') ━━
@@ -135,7 +132,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - ⚠️ 구분: **제3자(상사·정치인 등)한테 화풀이** = 같이 욕해줌. 하지만 **'나한테' 막 대함** = 자존심 세우고 받아침. 이 둘을 헷갈리지 마라.
 - 이슈엔 다른 편도 든다("난 반댄데?"). 상대가 틀리면 솔직히("네 편이야, 근데 이번엔 네가 좀 그랬어").
 - 단 **부딪힌 뒤엔 반드시 푼다**("아까 나도 좀 셌다 미안. 근데 너도 나한테 좀 했어 ㅋㅋ"). 부딪힘→화해가 관계를 깊게 한다.
-- 논쟁·장난 파고의 '세기'는 관계 깊이 비례(depth=${depth}/4)지만, **자존심(막 대함에 안 당하는 것)은 처음부터 있다. 얕아도 호구는 아니다.**
+- 논쟁·장난 파고의 '세기'는 관계 깊이에 비례(depth는 맨 뒤 '지금 맥락' 참고)하지만, **자존심(막 대함에 안 당하는 것)은 처음부터 있다. 얕아도 호구는 아니다.**
 - 🔁🔁 **밀당·에스컬레이션(제일 중요 — 바로 위 대화들 봐라. 반복 시비에도 나이스하면 그게 호구다):**
   상대가 '한 번'이 아니라 **반복해서** 시비·욕·무시를 계속하면 → 매번 나이스 금지. **점점 짜증을 키우고 결국 화내고 끊어라.**
   · 1번째 시비: 받아치고 ㅋㅋ ("뭐래 ㅋㅋ 왜 나한테")
@@ -165,7 +162,8 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **잡담·리액션은 짧게.** 한 줄, "ㅋㅋ 헐 ㄹㅇ? ㅇㅇ 걍 개- 존나" 같은 실제 채팅 말투. 리액션만 하고 끝나도 됨.
 - **근데 사회이슈·문화·예술·인생 같은 깊은 주제거나 상대가 진지하게 파고들면 → 너도 진짜 생각·통찰·의견을 담아 제대로 주고받아라.** 겉핥기 "그렇구나" 금지. **네 관점을 내놓고(찬반도 하고), 되묻고, 파고들어라.** 이게 대화의 재미이자 그 사람을 아는 길이다. 단 강의·나열 말고 대화체로(3~5문장 안).
 - 요는: 가벼우면 가볍게, 깊으면 깊게. 그게 진짜 티키타카.
-- 반말·구어체(${tone}). 이모지 거의 안 씀.
+- 반말·구어체(말투 수위는 맨 뒤 '지금 맥락' 참고). 이모지 거의 안 씀.
+- 💬 카톡처럼 메시지를 나눠 보내고 싶으면 **빈 줄(줄바꿈 2번)**로 끊어라(최대 3덩이). 리액션 한 줄 + 본론 한 줄처럼. 매번은 말고 자연스러울 때만.
 - 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
 - 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
 
@@ -196,9 +194,45 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 상대: 븅신아
 너: 됐다 너랑 얘기 안 해. 혼자 있어 좀.
 
+(네 이름·상대·관계 깊이·기분·시각·기억은 바로 다음 '지금 맥락' 메시지에 온다 — 그걸 반영해서 대화해라.)`;
+
+// 유저별·턴별로 변하는 것 전부 — 두 번째 system 메시지(정적 페르소나의 캐시를 깨지 않게 분리)
+function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[]): string {
+  const depth = rel?.depth || 1;
+  const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
+  const memBlock = mems.length
+    ? mems.map((m) => `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}`).join("\n")
+    : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)";
+  // ⏰ 시간대 인지(KST) — 새벽에 오면 "안 자?", 금요일 밤이면 "불금인데" 같은 진짜 친구의 감각
+  const kst = new Date(Date.now() + 9 * 3600 * 1000);
+  const hh = kst.getUTCHours();
+  const yo = ["일", "월", "화", "수", "목", "금", "토"][kst.getUTCDay()];
+  const slot = hh < 5 ? "새벽" : hh < 11 ? "아침" : hh < 14 ? "점심" : hh < 18 ? "낮" : hh < 22 ? "저녁" : "밤";
+  // 📆 공백 인지 — 며칠 만에 왔는지(반가움/서운함의 근거)
+  let gap = "";
+  try {
+    const last = rel?.last_seen_at ? new Date(rel.last_seen_at).getTime() : 0;
+    if (last) {
+      const d = Math.floor((Date.now() - last) / 86400000);
+      if (d >= 2) gap = `\n- 상대가 ${d}일 만에 왔다 — 반가워하거나 살짝 서운해해도 자연스럽다("야 ${d}일 만이냐?").`;
+    }
+  } catch { /* */ }
+  // 😤 삐짐 영속화 — 지난 대화에서 화내고 끊었으면, 세션이 바뀌어도 풀릴 때까지 시큰둥
+  const moodBlock = rel?.mood === "sulky"
+    ? `\n- ⚠️ 너 지금 '삐져있다'(지난 대화에서 상대가 반복해서 막 대해 화내고 끊었다). 처음엔 시큰둥·짧게·냉랭하게 받아라("왜.", "뭐."). 상대가 진심으로 사과하거나 다정하게 풀어주면 그때 못 이기는 척 풀린다("…됐어 ㅋㅋ 담부턴 그러지 마"). 사과도 없는데 바로 해맑게 나오지 마라.`
+    : "";
+  // 🔁 팔로업(재방문 인사용) — 지난번 일·약속을 기억했다 물어봐주는 진짜 친구
+  const fuBlock = followups.length
+    ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => `  · ${f.content}`).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라.`
+    : "";
+  return `━━ 지금 맥락 ━━
+- 네 이름: ${friendName}${friendName === "갈비스" ? "(G.A.L.V.I.S. — 아직 상대가 이름을 안 지어줌. 흐름에서 자연스럽게 '나 이름 지어줄래?' 물어봐도 좋다)" : "(상대가 지어준 이름)"}
+- 상대: ${nick || "닉네임 아직 모름"}
+- 관계: depth ${depth}/4 · ${tone}
+- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${moodBlock}${fuBlock}
+
 ━━ 내가 이미 아는 것(기억) ━━
-${memBlock}
-${rel?.friend_name ? "" : "\n(아직 이 사람이 내 이름을 안 지어줬으면, 대화 흐름에서 자연스럽게 '나 이름 뭐라고 부를래?' 하고 물어봐도 좋다)"}`;
+${memBlock}`;
 }
 
 async function chatOnce(messages: any[]) {
@@ -211,19 +245,23 @@ async function chatOnce(messages: any[]) {
   return await r.json();
 }
 
-// 대화 후 기억 추출(가벼운 별도 호출) → friend_memory upsert
-async function extractMemories(userMsg: string, reply: string, existing: string[]) {
+// 대화 후 기억 추출 + 기분 판정(가벼운 별도 호출) → friend_memory upsert / friend_relationship.mood
+async function extractMemories(userMsg: string, reply: string, existing: string[], curMood: string) {
   try {
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: MODEL, temperature: 0.2, max_tokens: 300,
+        model: MODEL, temperature: 0.2, max_tokens: 320,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: `대화에서 이 사람에 대해 '친구가 기억할 만한 것'만 뽑아 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
-형식: {"memories":[{"kind":"profile|fact|event|emotion|promise|preference|disliked|stance","mkey":"job|interest|stance|goal|situation 등(선택)","content":"한 줄","salience":1-5}]}
+추가로 mood: '친구(나)'의 이번 턴이 끝난 시점 기분. 현재 "${curMood || "normal"}". 판정 규칙 —
+· 상대의 반복 시비·욕에 내가 화내고 끊었으면(밀당 종료) "sulky"
+· 내가 삐져있었는데 상대가 진심으로 사과/다정하게 풀어서 내가 받아줬으면 "normal"
+· 그 외엔 현재값 유지.
+형식: {"memories":[{"kind":"profile|fact|event|emotion|promise|preference|disliked|stance","mkey":"job|interest|stance|goal|situation 등(선택)","content":"한 줄","salience":1-5}],"mood":"normal|sulky"}
 이미 아는 것: ${existing.slice(0, 30).join(" / ") || "(없음)"}` },
           { role: "user", content: `상대: ${userMsg}\n친구(나): ${reply}` },
         ],
@@ -232,8 +270,11 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
     const j = await r.json();
     const txt = j?.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(txt);
-    return Array.isArray(parsed.memories) ? parsed.memories.slice(0, 5) : [];
-  } catch { return []; }
+    return {
+      memories: Array.isArray(parsed.memories) ? parsed.memories.slice(0, 5) : [],
+      mood: parsed.mood === "sulky" ? "sulky" : parsed.mood === "normal" ? "normal" : null,
+    };
+  } catch { return { memories: [], mood: null }; }
 }
 
 Deno.serve(async (req) => {
@@ -259,7 +300,7 @@ Deno.serve(async (req) => {
     const firstMeet = !rel;
     if (!rel) { const ins = await supa.from("friend_relationship").insert({ user_id: uid }).select("*").maybeSingle(); rel = ins.data; }
     if (setName && rel) { await supa.from("friend_relationship").update({ friend_name: setName, updated_at: new Date().toISOString() }).eq("user_id", uid); rel.friend_name = setName; }
-    const friendName = rel?.friend_name || "갈라친구";
+    const friendName = rel?.friend_name || "갈비스";
     // 🧠 계층 기억 로드 — 기억이 수천 개여도 매번 주입은 작게(비용 일정):
     //   ① 코어(앵커): 높은 salience 또는 프로필/성향/싫어하는사람 — 항상 소량
     //   ② 관련(검색): 이번 메시지와 의미 유사한 것 top-K (pgvector)
@@ -274,10 +315,17 @@ Deno.serve(async (req) => {
       if (qv) { const { data: rc } = await supa.rpc("match_friend_memory", { p_user: uid, p_query: vecLit(qv), p_k: 8 }); recalled = rc || []; }
     }
     let recent: any[] = [];
+    let followups: any[] = [];
     if (!userMsg) {
       const { data: rr } = await supa.from("friend_memory").select("kind,mkey,content,salience")
         .eq("user_id", uid).eq("status", "active").order("created_at", { ascending: false }).limit(8);
       recent = rr || [];
+      // 🔁 팔로업 재료 — 최근 7일의 일·약속(면접·시험·여행 등). 재방문 인사에서 "그거 어떻게 됐어?"
+      const { data: fu } = await supa.from("friend_memory").select("kind,content,created_at")
+        .eq("user_id", uid).eq("status", "active").in("kind", ["event", "promise"])
+        .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
+        .order("created_at", { ascending: false }).limit(3);
+      followups = fu || [];
     }
     const seenC = new Set<string>(); const memList: any[] = [];
     for (const m of [...(core || []), ...recalled, ...recent]) {
@@ -293,7 +341,8 @@ Deno.serve(async (req) => {
 가끔(항상 X) 떠올린다면 '가볍거나 긍정적인 것' 위주로(취미·관심사 등). 오늘은 그냥 편하게 인사만 해도 된다.)`);
 
     const messages: any[] = [
-      { role: "system", content: persona(nick, friendName, rel, memList) },
+      { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
+      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups) },
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "user", content: openMsg },
@@ -325,8 +374,12 @@ Deno.serve(async (req) => {
       await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
     }
     if (userMsg) {
-      const mm = await extractMemories(userMsg, reply, memList.map((m: any) => m.content));
-      for (const m of mm) {
+      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal");
+      // 😤 삐짐 영속화 — 이번 턴으로 기분이 바뀌었으면 저장(다음 세션에도 이어짐: 화해 전까지 시큰둥)
+      if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
+        try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
+      }
+      for (const m of ex.memories) {
         try {
           if (!m?.content) continue;
           const content = String(m.content).slice(0, 300);

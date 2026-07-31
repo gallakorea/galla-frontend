@@ -1,97 +1,183 @@
-/* 🫂 갈라 친구 — 상주 오브 + 대화 시트. SPA(앱) 전용. 도구가 아니라 친구. */
+/* ⚡ G.A.L.V.I.S. — Galla's A Little Very Intelligent System. 마블 자비스 HUD 오마주(시안 링+앰버 코어)
+   + GALLA 진영(레드vs블루) 톤. SPA(앱) 전용. 페르소나는 '친구', 껍데기는 홀로그램 HUD.
+   ⚠️ 레이아웃·키보드 규칙(--fr-vvh, fr-kb-anim, fr-chatting)은 검증된 것 — 스킨만 바꾸고 건드리지 말 것. */
 :root{
-  --fr-accent:#ff7a59;         /* 따뜻한 코랄(도구=인디고와 구분 — 친구는 온기) */
-  --fr-accent2:#ff5c7a;
-  --fr-bg:#0e0d10; --fr-panel:#17151a; --fr-line:rgba(255,255,255,.08);
-  --fr-txt:#f3f1f2; --fr-dim:#9a9299;
+  --fr-cy:#5fd8ff;                 /* HUD 시안 */
+  --fr-cy-dim:rgba(95,216,255,.22);
+  --fr-am:#ffb45c;                 /* 아크 코어 앰버 */
+  --fr-bg:#04070d; --fr-glass:rgba(10,16,26,.92);
+  --fr-txt:#eaf6ff; --fr-dim:#7f97a8;
 }
+
+/* ── 아크 리액터 오브(런처) ───────────────────────────── */
 #frOrb{
   position:fixed; right:14px; z-index:940;
   bottom:calc(env(safe-area-inset-bottom,0px) + 74px);
-  width:54px; height:54px; border-radius:50%; border:none; padding:0; cursor:pointer;
-  background:radial-gradient(120% 120% at 30% 25%, #ffb199 0%, var(--fr-accent) 55%, var(--fr-accent2) 100%);
-  box-shadow:0 6px 22px rgba(255,110,90,.45), inset 0 1px 0 rgba(255,255,255,.4);
+  width:56px; height:56px; border-radius:50%; border:none; padding:0; cursor:pointer;
+  background:radial-gradient(circle at 50% 45%, rgba(18,32,48,.96) 0%, rgba(6,10,18,.98) 70%);
+  box-shadow:0 0 18px rgba(95,216,255,.45), 0 0 46px rgba(95,216,255,.18), inset 0 0 14px rgba(95,216,255,.25);
   display:grid; place-items:center;
   transition:transform .18s cubic-bezier(.2,.8,.2,1), opacity .2s;
   -webkit-tap-highlight-color:transparent;
 }
 #frOrb:active{ transform:scale(.9); }
 #frOrb.fr-hidden{ opacity:0; pointer-events:none; transform:scale(.6); }
-#frOrb .fr-face{ width:30px; height:30px; }
-#frOrb::after{ content:""; position:absolute; inset:-4px; border-radius:50%;
-  border:2px solid rgba(255,140,120,.5); animation:frPulse 2.8s ease-out infinite; }
-@keyframes frPulse{ 0%{transform:scale(.9);opacity:.55} 70%{opacity:0} 100%{transform:scale(1.35);opacity:0} }
-/* 안읽음/부르는 점 */
+/* 회전 틱 링(자비스 다이얼) + 카운터 링 + 앰버 코어 */
+.fr-ring{ position:absolute; border-radius:50%; pointer-events:none; }
+.fr-r1{
+  inset:3px;
+  background:repeating-conic-gradient(rgba(95,216,255,.95) 0deg 5deg, transparent 5deg 13deg);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+          mask:radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  animation:frSpin 9s linear infinite; opacity:.9;
+}
+.fr-r2{
+  inset:10px; border:1px solid rgba(95,216,255,.55);
+  background:repeating-conic-gradient(rgba(142,233,255,.8) 0deg 2deg, transparent 2deg 26deg);
+  -webkit-mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+          mask:radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2px));
+  animation:frSpinR 14s linear infinite; opacity:.8;
+}
+.fr-core{
+  position:absolute; inset:17px; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, #fff 0%, #ffe3b8 22%, var(--fr-am) 52%, rgba(255,140,60,0) 78%);
+  filter:drop-shadow(0 0 8px rgba(255,180,92,.85));
+  animation:frCore 2.6s ease-in-out infinite;
+}
+@keyframes frSpin{ to{ transform:rotate(360deg); } }
+@keyframes frSpinR{ to{ transform:rotate(-360deg); } }
+@keyframes frCore{ 0%,100%{ opacity:.85; transform:scale(1); } 50%{ opacity:1; transform:scale(1.1); } }
+/* 부르는 점(안읽음) */
 #frOrb .fr-dot{ position:absolute; top:2px; right:2px; width:12px; height:12px; border-radius:50%;
-  background:#39d98a; border:2px solid #0e0d10; display:none; }
+  background:var(--fr-am); border:2px solid #04070d; display:none; }
 #frOrb.fr-ping .fr-dot{ display:block; }
 
+/* ── 시트/패널(레이아웃·키보드 = 검증된 규칙 그대로) ───── */
 #frSheet{ position:fixed; inset:0; z-index:950; display:none; }
 #frSheet.fr-open{ display:block; }
-/* 스크림·패널이 화면을 '완전히' 덮는다 → 뒤 화면 안 눌림. 내비는 열려있는 동안 숨긴다(아래). */
-#frSheet .fr-scrim{ position:absolute; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; }
+#frSheet .fr-scrim{ position:absolute; inset:0; backdrop-filter:blur(2px); opacity:0; transition:opacity .22s;
+  background:linear-gradient(to bottom, rgba(2,6,12,.30) 0, rgba(2,6,12,.62) 84px); }  /* 로고는 보이게 */
 #frSheet.fr-open .fr-scrim{ opacity:1; }
 :root{ --fr-top: calc(env(safe-area-inset-top,0px) + 84px); --fr-vvh: 100dvh; }
-/* 🔑 키보드 트래킹 = DM(사장님 승인)과 '완전 동일' 로직.
-   패널을 상단(--fr-top, 로고 아래)에 고정하고 높이=(--fr-vvh - --fr-top). --fr-vvh는 JS가 키보드 이벤트로
-   '보이는 높이(fullH-kh+safeB)'를 즉시 세팅 → 패널 아랫변(입력창)이 키보드와 동시에 확정 위치로 오른다.
-   ⚠️ bottom:0 앵커는 네이티브 resize와 리레이아웃 타이밍이 어긋나 상승 중 입력창이 '사라졌다 툭 나타남'(스냅) —
-   에뮬 프레임분석으로 확인해 폐기. 높이 트랜지션은 '애니 중에만'(.fr-kb-anim) 켠다(평상시 즉답). */
+/* 🔑 키보드 트래킹 = DM 검증 로직(높이=--fr-vvh, JS가 willShow에서 즉시 확정). bottom:0 앵커는
+   네이티브 resize와 타이밍이 어긋나 스냅(에뮬 프레임분석으로 확인) — 다시 시도하지 말 것. */
 #frSheet .fr-panel{
   position:absolute; left:0; right:0; top:var(--fr-top); bottom:auto;
   height:calc(var(--fr-vvh) - var(--fr-top));
-  background:var(--fr-bg); color:var(--fr-txt); border-radius:20px 20px 0 0;
-  border-top:1px solid var(--fr-line); display:flex; flex-direction:column;
+  color:var(--fr-txt); border-radius:18px 18px 0 0;
+  display:flex; flex-direction:column;
+  background:
+    repeating-linear-gradient(0deg,  rgba(95,216,255,.030) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(95,216,255,.030) 0 1px, transparent 1px 24px),
+    linear-gradient(180deg, rgba(9,15,25,.97) 0%, rgba(4,7,13,.985) 100%);
+  border-top:1px solid rgba(95,216,255,.4);
+  box-shadow:0 -6px 34px rgba(95,216,255,.14);
   transform:translateY(102%);
   transition:transform .3s cubic-bezier(.2,.85,.2,1);   /* 열기/닫기 슬라이드 */
   padding-bottom:env(safe-area-inset-bottom,0px); overflow:hidden;
 }
-/* 키보드 애니 동안만 높이 트랜지션 ON → 입력창이 키보드와 같은 곡선으로 글라이드(카톡식). */
+/* 키보드 애니 동안만 높이 트랜지션 ON → 입력창이 키보드와 같은 곡선으로 글라이드(카톡식) */
 body.fr-kb-anim #frSheet .fr-panel{
   transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1);
 }
-/* 로고 보이게 — 스크림 헤더 위쪽 옅게 */
-#frSheet .fr-scrim{ background:linear-gradient(to bottom, rgba(0,0,0,.28) 0, rgba(0,0,0,.5) 84px); }
-/* 🫥 친구 대화 중엔 하단 내비 숨김 — 채팅창이 가리지도, 뒤가 눌리지도 않게 */
-body.fr-chatting nav.nav{ display:none !important; }
 #frSheet.fr-open .fr-panel{ transform:translateY(0); }
+/* HUD 코너 브래킷 */
+#frSheet .fr-panel::before, #frSheet .fr-panel::after{
+  content:""; position:absolute; top:8px; width:16px; height:16px; pointer-events:none; opacity:.75;
+}
+#frSheet .fr-panel::before{ left:8px;  border-top:2px solid var(--fr-cy); border-left:2px solid var(--fr-cy);  border-radius:6px 0 0 0; }
+#frSheet .fr-panel::after { right:8px; border-top:2px solid var(--fr-cy); border-right:2px solid var(--fr-cy); border-radius:0 6px 0 0; }
+/* 상단 스캔 라인(은은하게 좌↔우) */
+.fr-hud-line{ position:absolute; top:0; left:-40%; width:40%; height:2px; pointer-events:none; opacity:.5;
+  background:linear-gradient(90deg, transparent, var(--fr-cy), transparent);
+  animation:frScan 4.2s ease-in-out infinite; }
+@keyframes frScan{ 0%{ left:-40%; } 55%{ left:100%; } 100%{ left:100%; } }
+/* 🫥 대화 중 하단 내비 숨김 + 당겨새로고침은 pull-refresh.js 가드(fr-chatting)로 차단 */
+body.fr-chatting nav.nav{ display:none !important; }
 
-.fr-head{ display:flex; align-items:center; gap:10px; padding:14px 16px 10px; border-bottom:1px solid var(--fr-line); }
-.fr-head .fr-av{ width:34px; height:34px; border-radius:50%; background:radial-gradient(120% 120% at 30% 25%, #ffb199, var(--fr-accent)); flex:0 0 auto; }
-.fr-head .fr-name{ font-weight:800; font-size:15px; }
-.fr-head .fr-sub{ font-size:11px; color:var(--fr-dim); margin-top:1px; }
-.fr-head .fr-x{ margin-left:auto; background:none; border:none; color:var(--fr-dim); font-size:22px; line-height:1; padding:4px 8px; cursor:pointer; }
+/* ── 헤더 ─────────────────────────────────────────── */
+.fr-head{ display:flex; align-items:center; gap:11px; padding:13px 14px 11px; border-bottom:1px solid rgba(95,216,255,.15); }
+.fr-head .fr-av{ position:relative; width:38px; height:38px; border-radius:50%; flex:0 0 auto;
+  background:radial-gradient(circle at 50% 45%, rgba(18,32,48,.96), rgba(6,10,18,.98) 72%);
+  box-shadow:0 0 10px rgba(95,216,255,.4), inset 0 0 8px rgba(95,216,255,.25); }
+.fr-head .fr-av .fr-r1{ inset:2px; animation-duration:11s; }
+.fr-head .fr-av .fr-r2{ inset:7px; animation-duration:16s; }
+.fr-head .fr-av .fr-core{ inset:12px; }
+.fr-idwrap{ min-width:0; }
+.fr-head .fr-name{ font-weight:800; font-size:15px; letter-spacing:.14em; color:#dff4ff;
+  text-shadow:0 0 10px rgba(95,216,255,.55); white-space:nowrap; }
+#frSheet.fr-open .fr-name{ animation:frBoot .9s ease-out 1; }
+@keyframes frBoot{ 0%{ opacity:0; } 35%{ opacity:1; } 50%{ opacity:.35; } 65%{ opacity:1; } 78%{ opacity:.6; } 100%{ opacity:1; } }
+.fr-head .fr-sub{ font-size:8px; letter-spacing:.06em; text-transform:uppercase; color:var(--fr-dim); margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fr-status{ margin-left:auto; display:inline-flex; align-items:center; gap:5px; flex:0 0 auto;
+  font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--fr-am); }
+.fr-status i{ width:6px; height:6px; border-radius:50%; background:var(--fr-am);
+  box-shadow:0 0 8px rgba(255,180,92,.9); animation:frStat 1.8s ease-in-out infinite; }
+@keyframes frStat{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+.fr-head .fr-x{ background:none; border:none; color:var(--fr-dim); font-size:22px; line-height:1; padding:4px 6px 4px 10px; cursor:pointer; flex:0 0 auto; }
 
-.fr-log{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+/* ── 로그/말풍선 ───────────────────────────────────── */
+.fr-log{ flex:1; overflow-y:auto; padding:16px 14px; display:flex; flex-direction:column; gap:10px;
+  -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
 #frSheet .fr-panel{ overscroll-behavior:contain; }
 .fr-msg{ max-width:86%; font-size:14.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 .fr-msg.fr-a{ align-self:flex-start; }
-.fr-msg.fr-u{ align-self:flex-end; background:var(--fr-accent); color:#fff; padding:9px 13px; border-radius:16px 16px 4px 16px; }
-.fr-msg.fr-a .fr-bubble{ background:var(--fr-panel); padding:10px 13px; border-radius:16px 16px 16px 4px; border:1px solid var(--fr-line); }
+.fr-msg.fr-a .fr-bubble{ position:relative;
+  background:linear-gradient(180deg, rgba(20,31,46,.88), rgba(12,19,30,.88));
+  border:1px solid var(--fr-cy-dim); border-radius:4px 14px 14px 14px;
+  padding:10px 13px; color:#e6f3fc;
+  box-shadow:0 2px 14px rgba(0,0,0,.35), inset 0 0 18px rgba(95,216,255,.04); }
+.fr-msg.fr-a .fr-bubble::before{ content:""; position:absolute; top:-1px; left:-1px; width:9px; height:9px;
+  border-top:2px solid var(--fr-cy); border-left:2px solid var(--fr-cy); border-radius:3px 0 0 0; opacity:.85; }
+/* 유저 = 갈라 진영 그라데(레드→블루, 포스터 톤) */
+.fr-msg.fr-u{ align-self:flex-end; color:#fff; padding:9px 13px; border-radius:14px 4px 14px 14px;
+  background:linear-gradient(135deg, #e04a58 0%, #8a55e8 52%, #3f8cff 100%);
+  box-shadow:0 2px 14px rgba(63,140,255,.25); }
 
+/* 액션 칩(보러가기/공유) — 홀로 아웃라인 */
 .fr-acts{ display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
-.fr-chip{ display:inline-flex; align-items:center; gap:6px; background:rgba(255,122,89,.15); border:1px solid rgba(255,122,89,.42);
-  color:#ffc7b5; font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.fr-chip:active{ transform:scale(.95); }
+.fr-chip{ display:inline-flex; align-items:center; gap:6px;
+  background:rgba(95,216,255,.08); border:1px solid rgba(95,216,255,.45);
+  color:#9fe3ff; font-size:12.5px; font-weight:600; padding:7px 12px; border-radius:999px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  box-shadow:0 0 10px rgba(95,216,255,.10); }
+.fr-chip:active{ transform:scale(.95); box-shadow:0 0 14px rgba(95,216,255,.35); }
 .fr-chip svg{ width:14px; height:14px; }
 
-.fr-typing{ align-self:flex-start; display:flex; gap:4px; padding:12px 14px; background:var(--fr-panel); border:1px solid var(--fr-line); border-radius:16px; }
-.fr-typing i{ width:6px; height:6px; border-radius:50%; background:var(--fr-dim); animation:frBlink 1.2s infinite; }
-.fr-typing i:nth-child(2){ animation-delay:.2s } .fr-typing i:nth-child(3){ animation-delay:.4s }
-@keyframes frBlink{ 0%,60%,100%{opacity:.25;transform:translateY(0)} 30%{opacity:1;transform:translateY(-3px)} }
+/* 타이핑 = HUD 웨이브폼 */
+.fr-typing{ align-self:flex-start; display:flex; align-items:center; gap:4px; padding:12px 14px;
+  background:linear-gradient(180deg, rgba(20,31,46,.88), rgba(12,19,30,.88));
+  border:1px solid var(--fr-cy-dim); border-radius:4px 14px 14px 14px; }
+.fr-typing i{ width:3px; height:13px; border-radius:2px; background:var(--fr-cy);
+  box-shadow:0 0 6px rgba(95,216,255,.7); animation:frWave 1.05s ease-in-out infinite; transform-origin:center; }
+.fr-typing i:nth-child(2){ animation-delay:.18s } .fr-typing i:nth-child(3){ animation-delay:.36s }
+@keyframes frWave{ 0%,100%{ transform:scaleY(.35); opacity:.5; } 50%{ transform:scaleY(1); opacity:1; } }
 
-.fr-input{ display:flex; align-items:flex-end; gap:8px; padding:10px 12px 12px; border-top:1px solid var(--fr-line); }
-.fr-input textarea{ flex:1; resize:none; max-height:120px; min-height:22px; background:var(--fr-panel); border:1px solid var(--fr-line);
-  border-radius:18px; color:var(--fr-txt); font-size:16px; line-height:1.4; padding:10px 14px; outline:none; font-family:inherit; }
+/* ── 입력부 ───────────────────────────────────────── */
+.fr-input{ display:flex; align-items:flex-end; gap:8px; padding:10px 12px 12px; border-top:1px solid rgba(95,216,255,.15); }
+.fr-input textarea{ flex:1; resize:none; max-height:120px; min-height:22px;
+  background:rgba(13,22,34,.92); border:1px solid var(--fr-cy-dim);
+  border-radius:16px; color:var(--fr-txt); caret-color:var(--fr-cy);
+  font-size:16px; line-height:1.4; padding:10px 14px; outline:none; font-family:inherit;
+  transition:border-color .18s, box-shadow .18s; }
+.fr-input textarea:focus{ border-color:rgba(95,216,255,.6); box-shadow:0 0 0 2px rgba(95,216,255,.12), 0 0 14px rgba(95,216,255,.12); }
 .fr-input textarea::placeholder{ color:var(--fr-dim); }
-.fr-mic{ width:40px; height:40px; flex:0 0 auto; border:none; border-radius:50%; background:var(--fr-panel); border:1px solid var(--fr-line); color:var(--fr-dim); cursor:pointer; display:grid; place-items:center; }
+.fr-mic{ width:40px; height:40px; flex:0 0 auto; border-radius:50%;
+  background:rgba(13,22,34,.92); border:1px solid var(--fr-cy-dim); color:var(--fr-dim);
+  cursor:pointer; display:grid; place-items:center; }
 .fr-mic svg{ width:19px; height:19px; }
 .fr-mic.fr-rec{ background:#e23b3b; color:#fff; border-color:#e23b3b; animation:frRec 1s ease-in-out infinite; }
-@keyframes frRec{ 0%,100%{ box-shadow:0 0 0 0 rgba(226,59,59,.5) } 50%{ box-shadow:0 0 0 8px rgba(226,59,59,0) } }
-.fr-send{ width:40px; height:40px; flex:0 0 auto; border:none; border-radius:50%; background:var(--fr-accent); color:#fff; cursor:pointer; display:grid; place-items:center; }
-.fr-send:disabled{ opacity:.4; }
+@keyframes frRec{ 0%,100%{ box-shadow:0 0 0 0 rgba(226,59,59,.5); } 50%{ box-shadow:0 0 0 8px rgba(226,59,59,0); } }
+.fr-send{ width:40px; height:40px; flex:0 0 auto; border:none; border-radius:50%; color:#03121f;
+  background:radial-gradient(120% 120% at 30% 25%, #c9f2ff 0%, #5fd8ff 55%, #1f8fdc 100%);
+  cursor:pointer; display:grid; place-items:center;
+  box-shadow:0 0 14px rgba(95,216,255,.5); }
+.fr-send:disabled{ opacity:.4; box-shadow:none; }
 .fr-send svg{ width:18px; height:18px; }
 
-/* 이름 짓기 배너 */
-.fr-name-ask{ margin:0 16px 8px; padding:10px 12px; background:var(--fr-panel); border:1px solid var(--fr-line); border-radius:12px; font-size:13px; color:var(--fr-dim); }
-.fr-name-ask input{ margin-top:6px; width:100%; background:var(--fr-bg); border:1px solid var(--fr-line); border-radius:8px; color:var(--fr-txt); font-size:15px; padding:8px 10px; outline:none; }
+/* 이름 짓기 배너 — 앰버 헤어라인 */
+.fr-name-ask{ margin:0 16px 8px; padding:10px 12px; background:rgba(13,22,34,.92);
+  border:1px solid rgba(255,180,92,.4); border-radius:12px; font-size:13px; color:var(--fr-dim); }
+.fr-name-ask input{ margin-top:6px; width:100%; background:var(--fr-bg); border:1px solid var(--fr-cy-dim);
+  border-radius:8px; color:var(--fr-txt); font-size:15px; padding:8px 10px; outline:none; }

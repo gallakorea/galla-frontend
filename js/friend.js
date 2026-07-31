@@ -7,7 +7,15 @@
 
   var SB = "https://bidqauputnhkqepvdzrr.supabase.co";
   var ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
-  var history = [], busy = false, friendName = "갈라친구";
+  var history = [], busy = false, friendName = "갈비스";
+  var BACKRONYM = "Galla's A Little Very Intelligent System";   // J.A.R.V.I.S. 오마주
+  function isDefaultName(n){ return !n || n==="갈비스" || n==="갈라친구"; }
+  function setTitle(){
+    if(!sheet) return;
+    var nm=sheet.querySelector(".fr-name"), sb=sheet.querySelector(".fr-sub");
+    if(nm) nm.textContent = isDefaultName(friendName) ? "G.A.L.V.I.S." : friendName;
+    if(sb) sb.textContent = BACKRONYM;
+  }
 
   /* 💾 대화 이어가기 — 나갔다 와도(SPA 이동·앱 재시작) 전사(history)를 유저별 localStorage에 저장/복원.
      DM처럼 초기화되지 않고 계속 이어진다. history엔 user/assistant 텍스트가 다 있어 재렌더로 복구. */
@@ -44,15 +52,21 @@
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
 
   function build(){
-    orb = el('<button id="frOrb" aria-label="갈라 친구">'+ICON.face+'<span class="fr-dot"></span></button>');
+    // 🔵 아크 리액터 오브 — 회전 틱 링 + 카운터 링 + 앰버 코어(자비스 HUD 오마주)
+    orb = el('<button id="frOrb" aria-label="G.A.L.V.I.S.">'+
+      '<span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span>'+
+      '<span class="fr-dot"></span></button>');
     document.body.appendChild(orb);
     orb.addEventListener("click", open);
 
-    sheet = el('<div id="frSheet" role="dialog" aria-label="갈라 친구">'+
+    sheet = el('<div id="frSheet" role="dialog" aria-label="G.A.L.V.I.S.">'+
       '<div class="fr-scrim"></div>'+
       '<div class="fr-panel">'+
-        '<div class="fr-head"><div class="fr-av"></div>'+
-          '<div><div class="fr-name">'+friendName+'</div><div class="fr-sub">너의 갈라 친구</div></div>'+
+        '<div class="fr-hud-line"></div>'+
+        '<div class="fr-head">'+
+          '<div class="fr-av"><span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span></div>'+
+          '<div class="fr-idwrap"><div class="fr-name">G.A.L.V.I.S.</div><div class="fr-sub">'+BACKRONYM+'</div></div>'+
+          '<span class="fr-status"><i></i>ONLINE</span>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
         // 🎙 마이크 버튼을 UI에 눈에 띄게 — 사람들이 키보드 받아쓰기를 잘 몰라서, 우리가 대신 쉽게.
@@ -148,9 +162,12 @@
   async function restoreOrGreet(){
     var d = await loadChat();
     if(d && d.history && d.history.length){
-      if(d.name){ friendName=d.name; var nm=sheet.querySelector(".fr-name"); if(nm) nm.textContent=friendName; }
+      if(d.name){ friendName=d.name; setTitle(); }
       history = d.history.slice(-20);
-      history.forEach(function(msg){ addMsg(msg && msg.role==="user" ? "u" : "a", (msg&&msg.content)||""); });
+      history.forEach(function(msg){
+        if(msg && msg.role==="user"){ addMsg("u", msg.content||""); }
+        else { splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); }); }  // 복원도 버블 단위
+      });
       scrollBottom();
       return;
     }
@@ -161,8 +178,8 @@
     typing(true);
     var r = await callFriend("", []);
     typing(false);
-    if(r && r.friendName){ friendName=r.friendName; var nm=sheet.querySelector(".fr-name"); if(nm) nm.textContent=friendName; }
-    var m = addMsg("a", (r&&r.reply) || "안녕! 나 여기 있는 갈라 친구야. 심심할 때 놀러 와.");
+    if(r && r.friendName){ friendName=r.friendName; setTitle(); }
+    var m = await addFriendReply((r&&r.reply) || "안녕! 나 갈비스야. 심심할 때 놀러 와.");
     if(r&&r.actions) addActions(m, r.actions);
     if(r&&r.reply){ history.push({role:"assistant",content:r.reply}); saveChat(); }
     // 첫 만남이고 이름 없으면 이름 짓기 배너
@@ -180,7 +197,7 @@
         typing(true);
         var r=await callFriend("", history, nm);
         typing(false);
-        if(r&&r.friendName){ friendName=r.friendName; var h=sheet.querySelector(".fr-name"); if(h) h.textContent=friendName; }
+        if(r&&r.friendName){ friendName=r.friendName; setTitle(); }
         var rep=(r&&r.reply)||("좋아, 이제부터 나 "+nm+"야!");
         addMsg("a", rep); history.push({role:"assistant",content:rep}); saveChat();
       }
@@ -193,6 +210,21 @@
     if(role==="u"){ m=el('<div class="fr-msg fr-u"></div>'); m.textContent=text; }
     else { m=el('<div class="fr-msg fr-a"><div class="fr-bubble"></div></div>'); m.querySelector(".fr-bubble").textContent=text; }
     logEl.appendChild(m); logEl.scrollTop=logEl.scrollHeight; return m;
+  }
+  function sleep(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+  // 💬 카톡식 멀티 버블 — 빈 줄로 나뉜 답을 여러 말풍선으로, 사이사이 타이핑 표시(진짜 친구가 연타로 보내듯)
+  function splitBubbles(text){
+    var parts=String(text||"").split(/\n{2,}/).map(function(s){ return s.trim(); }).filter(Boolean);
+    if(parts.length>3){ parts=[parts[0], parts[1], parts.slice(2).join("\n\n")]; }  // 최대 3덩이
+    return parts.length?parts:[String(text||"")];
+  }
+  async function addFriendReply(text, instant){
+    var parts=splitBubbles(text), last=null;
+    for(var i=0;i<parts.length;i++){
+      if(i>0 && !instant){ typing(true); await sleep(380+Math.min(parts[i].length*6,420)); typing(false); }
+      last=addMsg("a", parts[i]);
+    }
+    return last;
   }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
@@ -251,10 +283,10 @@
     var r=await callFriend(text, history.slice(0,-1));
     typing(false);
     if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
-    var m=addMsg("a", r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
+    var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
     if(history.length>20) history=history.slice(-20);
     addActions(m, r.actions);
-    if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; var h=sheet.querySelector(".fr-name"); if(h) h.textContent=friendName; }
+    if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
     if(speakReply && r.reply) speak(r.reply);
     saveChat();                                  // 대화 이어가기 — 매 턴 저장
     busy=false; sendEl.disabled=false;
