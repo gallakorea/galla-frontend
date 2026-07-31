@@ -34,9 +34,10 @@
           '<div><div class="fr-name">'+friendName+'</div><div class="fr-sub">너의 갈라 친구</div></div>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
-        // 🎙 음성입력은 iOS 키보드 내장 받아쓰기(키보드 🎤)로 — 무료·정확. 커스텀 마이크 불필요.
+        // 🎙 마이크 버튼을 UI에 눈에 띄게 — 사람들이 키보드 받아쓰기를 잘 몰라서, 우리가 대신 쉽게.
         '<div class="fr-input">'+
-          '<textarea rows="1" placeholder="친구한테 아무 말이나 해봐 (키보드 🎤로 말해도 돼)"></textarea>'+
+          '<textarea rows="1" placeholder="친구한테 아무 말이나 해봐"></textarea>'+
+          '<button class="fr-mic" aria-label="음성으로 말하기">'+ICON.mic+'</button>'+
           '<button class="fr-send">'+ICON.send+'</button>'+
         '</div>'+
       '</div></div>');
@@ -73,22 +74,23 @@
   function bindKb(){
     if(window.__frKbBound) return; window.__frKbBound=true;
     var root=document.documentElement;
-    var safeB=0; try{ var p=document.createElement("div"); p.style.cssText="position:fixed;bottom:0;left:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden"; document.body.appendChild(p); safeB=p.getBoundingClientRect().height||0; p.remove(); }catch(e){}
-    var fullH=window.innerHeight;
     function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); scrollBottom(); }
     function anim(on){ document.body.classList.toggle("fr-kb-anim", on); }
-    setVvh(fullH);  // 초기: 전체 높이
+    var vv=window.visualViewport;
+    // 🔑 실측 진리값 = visualViewport.height(키보드 제외한 '실제 보이는 높이'). 안전영역 추측 없이 입력창이 키보드에 정확히 붙는다.
+    if(vv){
+      var apply=function(){ setVvh(vv.height); };
+      vv.addEventListener("resize", apply);
+      vv.addEventListener("scroll", apply);
+      apply();
+    } else { setVvh(window.innerHeight); }
+    // Capacitor Keyboard는 '부드러운 트랜지션'만 켜고(글라이드), 값은 vv가 몬다. didShow/Hide에서 실측 재확정.
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
     if(KB){
-      // willShow에서 keyboardHeight로 '즉시' 최종높이(fullH-kh) → 키보드와 한 번에 글라이드(카톡식).
-      // ⚠️ didShow도 '같은 값'으로 — window.innerHeight로 재조정하면 두 번 튀어(올라갔다 붙음) 오버슈트난다.
-      KB.addListener("keyboardWillShow", function(ev){ anim(true); var kh=(ev&&ev.keyboardHeight)||0; if(kh) setVvh(fullH-kh); });
-      KB.addListener("keyboardDidShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; if(kh) setVvh(fullH-kh); setTimeout(function(){ anim(false); }, 80); });
-      KB.addListener("keyboardWillHide", function(){ anim(true); setVvh(fullH); });
-      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(fullH); setTimeout(function(){ anim(false); }, 280); });
-    } else if(window.visualViewport){
-      var vv=window.visualViewport;
-      vv.addEventListener("resize", function(){ setVvh(vv.height); });
+      KB.addListener("keyboardWillShow", function(){ anim(true); if(vv) setVvh(vv.height); });
+      KB.addListener("keyboardDidShow", function(){ if(vv) setVvh(vv.height); setTimeout(function(){ anim(false); }, 120); });
+      KB.addListener("keyboardWillHide", function(){ anim(true); });
+      KB.addListener("keyboardDidHide", function(){ if(vv) setVvh(vv.height); else setVvh(window.innerHeight); setTimeout(function(){ anim(false); }, 300); });
     }
   }
 
