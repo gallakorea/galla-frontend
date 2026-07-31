@@ -1378,7 +1378,9 @@ async function GALLA_mypageInit(root, spaParams) {
         }
 
         const firstImg = v => Array.isArray(v) ? (typeof v[0] === "string" ? v[0] : (v[0] && (v[0].url || v[0].src))) : "";
-        const thumbOf = r => r.thumbnail_url || r.card_thumb_url || r.image_url || r.thumbnail || r.cover_image || firstImg(r.images) || "";
+        // ⚠️ card_thumb_url(작성 때 고른 '대표 썸네일 3:4 — 마이페이지 카드에 노출') 최우선.
+        //    thumbnail_url은 영상 자동프레임이라 대표썸네일이 있으면 그게 아니라 대표썸네일을 써야 한다.
+        const thumbOf = r => r.card_thumb_url || r.thumbnail_url || r.image_url || r.thumbnail || r.cover_image || firstImg(r.images) || "";
         // 썸네일 <img> — CDN 리사이즈(GALLA_thumb) + 로드 실패 시 자동 제거(placeholder 배경 노출)
         const art = (url, w) => `<img src="${esc(window.GALLA_thumb ? window.GALLA_thumb(url, w || 640) : url)}" loading="lazy" onerror="this.remove()">`;
         // 섹션 헤더 — 누르면 해당 탭으로 이동(› 표시). tab = .tab[data-tab] 키
