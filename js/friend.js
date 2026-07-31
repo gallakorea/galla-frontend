@@ -49,7 +49,7 @@
   var STT = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-stt";
   var rec = null, recChunks = [], recording = false, voiceMode = false;
 
-  var orb, sheet, logEl, taEl, sendEl;
+  var orb, sheet, mini, logEl, taEl, sendEl;
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
 
   function build(){
@@ -78,6 +78,13 @@
         '</div>'+
       '</div></div>');
     document.body.appendChild(sheet);
+    // 🔽 미니 보드 — 콘텐츠 보러 갈 때 챗이 여기로 '접힌다'(대화 유지). 탭하면 복귀.
+    mini = el('<button id="frMini" aria-label="갈비스로 돌아가기">'+
+      '<span class="fr-mav"><span class="fr-ring fr-r1"></span><span class="fr-core"></span></span>'+
+      '<span class="fr-mini-txt">갈비스</span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 14l6-6 6 6"/></svg></button>');
+    document.body.appendChild(mini);
+    mini.addEventListener("click", function(){ restoreFromMini(); });
     logEl=sheet.querySelector(".fr-log"); taEl=sheet.querySelector("textarea"); sendEl=sheet.querySelector(".fr-send");
     var micEl=sheet.querySelector(".fr-mic");
     sheet.querySelector(".fr-scrim").addEventListener("click", close);
@@ -99,6 +106,7 @@
   function open(){
     if(!sheet) build();
     bindKb();                                     // 키보드 트래킹(1회 등록)
+    if(mini) mini.classList.remove("on");
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
@@ -108,8 +116,22 @@
   }
   function close(){
     if(sheet) sheet.classList.remove("fr-open");
+    if(mini) mini.classList.remove("on");
+    orb && orb.classList.remove("fr-hidden");
     document.body.classList.remove("fr-chatting");   // 내비 복원
     try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}  // 닫으면 음성 정지
+  }
+  /* 🔽 미니 보드로 접기 — 콘텐츠를 보여줄 때 챗은 닫는 게 아니라 '접힌다'(대화·입력 그대로 유지).
+     패널이 슬라이드 다운되는 동안 미니 필이 스프링으로 팝인 — 다시 탭하면 그 자리에서 대화 복귀. */
+  function minimize(){
+    if(sheet) sheet.classList.remove("fr-open");         // 패널 슬라이드 다운(기존 트랜지션)
+    document.body.classList.remove("fr-chatting");       // 내비 복원(콘텐츠 탐색 가능)
+    orb && orb.classList.add("fr-hidden");               // 런처 오브와 중복 방지
+    if(mini){ mini.classList.remove("pop"); void mini.offsetWidth; mini.classList.add("on","pop"); }
+  }
+  function restoreFromMini(){
+    if(mini) mini.classList.remove("on");
+    open();                                              // 로그·입력 보존된 채 그대로 복귀
   }
 
   /* ⌨️ 키보드 트래킹 = DM(사장님 승인)과 완전 동일 로직 이식. 에뮬 프레임분석으로 검증한 방식.
@@ -264,7 +286,7 @@
       addMsg("a","링크 복사했어 — 친구들한테 붙여넣어 ㅋㅋ");
       return;
     }
-    close(); nav(contentUrl(a));
+    minimize(); nav(contentUrl(a));   // 챗은 미니 보드로 접히고 콘텐츠가 뜬다(대화 유지)
   }
 
   async function token(){
@@ -297,6 +319,11 @@
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
     if(history.length>20) history=history.slice(-20);
     addActions(m, r.actions);
+    // ⚡ "보여줘/열어줘"라고 했으면 칩 탭 기다리지 말고 바로 오픈(잠깐 답 보여주고) — 갈라 내부(view) 우선
+    if(r.actions && r.actions.length && /보여|열어|보자|가보자|띄워|틀어/.test(text)){
+      var auto = r.actions.filter(function(a){ return a.kind==="view"; })[0] || r.actions.filter(function(a){ return a.kind==="open"; })[0];
+      if(auto) setTimeout(function(){ runAction(auto); }, 700);
+    }
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
     if(speakReply && r.reply) speak(r.reply);
     saveChat();                                  // 대화 이어가기 — 매 턴 저장

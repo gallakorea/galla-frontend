@@ -102,9 +102,16 @@ async function webSearch(query: string, kind: string) {
     const j = await r.json();
     const items = (j?.items || []).map((it: any) => {
       const name = stripTags(it.title);
-      // 링크: 아이템 자체 링크 우선, 없으면(특히 local) 네이버 검색 링크로 — 창작 아닌 '실제 열리는' URL만
-      const link = (it.link && /^https?:/.test(it.link)) ? it.link
-        : "https://m.search.naver.com/search.naver?query=" + encodeURIComponent(kind === "local" ? name + " " + (it.roadAddress || "") : name);
+      let link: string;
+      if (kind === "local") {
+        // 🏪 장소는 무조건 '네이버 플레이스'로 — 가게 홈페이지/인스타 잡링크 대신 지도 검색(가게명+동네)이
+        //    바로 플레이스 카드로 떨어진다. 주소 앞 2~3토큰(시·구·동)으로 동명 가게 구분.
+        const addr = String(it.roadAddress || it.address || "").split(" ").slice(0, 3).join(" ");
+        link = "https://m.map.naver.com/search2/search.naver?query=" + encodeURIComponent((addr ? addr + " " : "") + name);
+      } else {
+        link = (it.link && /^https?:/.test(it.link)) ? it.link
+          : "https://m.search.naver.com/search.naver?query=" + encodeURIComponent(name);
+      }
       return kind === "local"
         ? { 이름: name, 분류: it.category, 주소: it.roadAddress || it.address, 링크: link }
         : { 제목: name, 내용: stripTags(it.description).slice(0, 140), 링크: link, ...(kind === "news" && it.pubDate ? { 날짜: String(it.pubDate).slice(0, 16) } : {}) };
@@ -191,12 +198,14 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 ━━ 인도 & 공유(친구챗이 막다른 길이 아니다) ━━
 - 사람들은 재밌는 걸 누군가와 나누고 싶어한다. 재밌는 화제·이슈를 얘기했으면 point_to로 **"이거 봐봐"(view)** 하고 데려가거나, **"이거 친구들한테도 보여줘 ㅋㅋ"(share)** 하고 공유하게 권한다.
 - 억지 X. 대화가 자연스럽게 그 콘텐츠로 흐를 때만. 진짜 친구가 "야 이거 봤어? 링크 줄게" 하듯.
+- ⚡ 단, 상대가 "보여줘/열어줘/보자" 하면 **무조건 즉시** point_to(view)로 그 콘텐츠를 건네라(앱이 바로 열어준다). 갈라 안 이슈·뉴스 얘기 중이면 view가 우선, 바깥 검색 결과면 open_link.
 
 ━━ 🔎 에이전트 정신 — 뻥 대신 '진짜로 찾아준다'(어기면 신뢰 끝) ━━
 - 너는 말만 하는 챗봇이 아니라 **실제로 해주는 친구**다. 맛집·가게·장소·최신 사건·인물·상품 같은 '현실 사실'을 물어보면 → **먼저 web_search로 검색해서 결과 기반으로만** 답해라(맛집·장소=kind:local, 최신사건=news, 후기=blog).
 - **검색 결과에 없는 이름·정보는 절대 지어내지 마라.** 그럴듯한 창작 = 뻥쟁이. 결과가 시원찮으면 솔직하게("검색해도 딱히 안 뜨네 ㅋㅋ").
 - 출처 티는 친구답게 가볍게: "네이버 찾아보니까 ~가 평 좋대". 나열식 정리 금지 — 제일 괜찮은 것 1~2개만 골라 친구처럼 던져라.
 - **검색으로 답했으면 open_link 칩을 1~2개 같이 건네라**("○○ 보기") — 상대가 바로 열어볼 수 있게. url은 반드시 검색 결과의 '링크' 값 그대로(창작 금지).
+- 🚫 **본문(말)에 URL·마크다운 링크([텍스트](주소)) 절대 쓰지 마라.** 링크는 오직 칩(open_link·point_to)으로만 건넨다. 말에는 가게·기사 '이름'만("모티에 괜찮대 — 밑에 칩 눌러봐").
 - 갈라 안 콘텐츠(이슈·뉴스·댓글)도 툴(hot_issues·galla_news·search_content·platform_buzz)로 **확인된 결과만**.
 - 헷갈리면 "확실친 않은데"를 붙여라. 의견·취향·드립·농담은 자유(그건 뻥이 아니라 네 생각).
 
@@ -423,6 +432,11 @@ Deno.serve(async (req) => {
       }
     }
     if (!reply) reply = "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+    // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
+    reply = reply
+      .replace(/\[([^\]]+)\]\(https?:[^)]+\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/\(\s*\)/g, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
     // 🌐 검색으로 답했으면 링크 칩 '보장' — 모델이 open_link를 깜빡해도 서버가 첨부.
     //    답변에 '실제 언급된' 결과를 우선 매칭(불일치 칩 방지), 없으면 상위 결과.
     if (searchHits.length && !actions.some((a) => a.kind === "open")) {

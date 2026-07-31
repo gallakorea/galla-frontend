@@ -176,6 +176,38 @@ body.fr-chatting nav.nav{ display:none !important; }
 .fr-send:disabled{ opacity:.4; box-shadow:none; }
 .fr-send svg{ width:18px; height:18px; }
 
+/* ── 🔽 미니 보드 — 콘텐츠 보는 동안 갈비스가 접혀 대기(탭하면 대화 복귀) ── */
+#frMini{
+  position:fixed; right:12px; z-index:945;
+  bottom:calc(env(safe-area-inset-bottom,0px) + 78px);
+  display:none; align-items:center; gap:8px;
+  height:42px; padding:0 13px 0 6px; border:1px solid rgba(95,216,255,.45); border-radius:999px;
+  background:linear-gradient(180deg, rgba(14,23,36,.96), rgba(7,12,20,.97));
+  color:#cfeeff; font-size:13px; font-weight:700; letter-spacing:.05em; cursor:pointer;
+  box-shadow:0 0 16px rgba(95,216,255,.35), 0 4px 18px rgba(0,0,0,.5);
+  -webkit-tap-highlight-color:transparent;
+  transform-origin:100% 100%;
+}
+#frMini.on{ display:inline-flex; }
+#frMini.pop{ animation:frMiniPop .55s cubic-bezier(.34,1.56,.64,1) both; }  /* 스프링 팝인 */
+@keyframes frMiniPop{
+  0%{ transform:translateY(26px) scale(.3); opacity:0; }
+  60%{ transform:translateY(-4px) scale(1.06); opacity:1; }
+  100%{ transform:translateY(0) scale(1); opacity:1; }
+}
+#frMini:active{ transform:scale(.94); }
+#frMini .fr-mav{ position:relative; width:30px; height:30px; border-radius:50%; flex:0 0 auto; display:block;
+  background:radial-gradient(circle at 50% 45%, rgba(18,32,48,.96), rgba(6,10,18,.98) 72%);
+  box-shadow:inset 0 0 6px rgba(95,216,255,.3); }
+#frMini .fr-mav .fr-r1{ inset:1px; animation-duration:10s; }
+#frMini .fr-mav .fr-core{ inset:9px; }
+#frMini svg{ width:15px; height:15px; color:#7f97a8; }
+#frMini .fr-mini-txt{ text-shadow:0 0 8px rgba(95,216,255,.5); }
+/* 대기 중 은은한 링 펄스 — "나 여기 있어" */
+#frMini::after{ content:""; position:absolute; inset:-3px; border-radius:999px;
+  border:1px solid rgba(95,216,255,.4); opacity:0; animation:frMiniPing 2.6s ease-out .6s infinite; pointer-events:none; }
+@keyframes frMiniPing{ 0%{ transform:scale(.97); opacity:.6; } 70%{ opacity:0; } 100%{ transform:scale(1.12); opacity:0; } }
+
 /* 이름 짓기 배너 — 앰버 헤어라인 */
 .fr-name-ask{ margin:0 16px 8px; padding:10px 12px; background:rgba(13,22,34,.92);
   border:1px solid rgba(255,180,92,.4); border-radius:12px; font-size:13px; color:var(--fr-dim); }
