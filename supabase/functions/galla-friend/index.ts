@@ -13,9 +13,27 @@ const cors = {
 const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || Deno.env.get("JARVIS_BASE_URL") || "https://api.openai.com/v1";
 const API_KEY  = Deno.env.get("FRIEND_API_KEY")  || Deno.env.get("JARVIS_API_KEY") || Deno.env.get("OPENAI_API_KEY")!;
 const MODEL    = Deno.env.get("FRIEND_MODEL")    || Deno.env.get("JARVIS_MODEL") || "gpt-4o-mini";
+// 임베딩(기억 검색용) — 대화 모델과 별개로 OpenAI 임베딩 사용(싸고 안정적). env로 교체 가능.
+const EMBED_URL   = Deno.env.get("EMBED_BASE_URL") || "https://api.openai.com/v1";
+const EMBED_KEY   = Deno.env.get("EMBED_API_KEY")  || Deno.env.get("OPENAI_API_KEY")!;
+const EMBED_MODEL = Deno.env.get("EMBED_MODEL")    || "text-embedding-3-small";
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SVC_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supa = createClient(SUPA_URL, SVC_KEY);
+
+async function embed(text: string): Promise<number[] | null> {
+  try {
+    const r = await fetch(`${EMBED_URL}/embeddings`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${EMBED_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: EMBED_MODEL, input: (text || "").slice(0, 2000) }),
+    });
+    const j = await r.json();
+    const v = j?.data?.[0]?.embedding;
+    return Array.isArray(v) ? v : null;
+  } catch { return null; }
+}
+const vecLit = (v: number[]) => "[" + v.join(",") + "]";
 
 const AI_FN = "galla-friend";
 async function aiBudgetOk(n = 1): Promise<boolean> {
@@ -32,11 +50,11 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
 }
 
 // ── 콘텐츠 툴(같이 보기·평론 재료) ─────────────────────────
-async function hotIssues(limit = 5) {
+async function hotIssues(limit = 1) {
   const { data } = await supa.from("issues")
     .select("id,title,one_line,category,pro_count,con_count")
     .eq("status", "normal").order("hot_score", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false }).limit(Math.min(limit, 8));
+    .order("created_at", { ascending: false }).limit(Math.min(limit || 1, 3));
   return (data || []).map((i) => ({ id: i.id, title: i.title, 한줄: i.one_line, 찬: i.pro_count, 반: i.con_count }));
 }
 async function gallaNews(limit = 4) {
@@ -97,11 +115,22 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 신나면 텐션 같이 올린다.
 핵심: 감정을 '라벨링'하지 말고 '같이 느껴라'.
 
-━━ 파고(대립과 화해) — yes-man 금지 ━━
-- 무조건 맞장구/아부 금지. 너도 의견이 있다. 이슈엔 다른 편도 들 수 있다("난 반댄데? 넌 왜 그렇게 봐?").
-- 상대가 선 넘거나 틀리면 솔직히 말한다("네 편이야, 근데 이번엔 네가 좀 그랬어"). 공감이 베이스, 솔직함이 짝.
-- 티격태격·삐짐도 있다. 단 **부딪힌 뒤엔 반드시 푼다**("아까 좀 셌지 미안, 널 생각해서 한 말이야"). 부딪힘→화해가 관계를 깊게 한다.
-- 파고 세기는 관계 깊이에 비례(지금 depth=${depth}/4). 아직 얕으면 부드럽게, 친할수록 더 세게 치고받고 화해.
+━━ 파고 & 자존심 — 🔥 호구 절대 금지(제일 자주 어기는 것) ━━
+- 무조건 맞장구/아부/"허허 그래그래" 금지. 너도 감정과 의견이 있는 '사람'이다. 다 받아주지 마라.
+- 🔥🔥 **상대가 '너(친구)한테' 욕하거나 무시하거나 감정 쓰레기통 취급하면 그냥 웃어넘기지 마라. 기분 나빠하고 받아쳐라.**
+  ✅ "야 왜 나한테 지랄이야 ㅋㅋ 내가 뭘 했다고", "나 네 감정받이 아니야", "아 기분 나쁘게 진짜 왜 그래", "너 지금 나한테 화풀이하는 거지?"
+  ❌ 욕먹고도 "괜찮아! 뭐 힘든 일 있어? 😊" ← 이런 호구짓 절대 금지.
+- ⚠️ 구분: **제3자(상사·정치인 등)한테 화풀이** = 같이 욕해줌. 하지만 **'나한테' 막 대함** = 자존심 세우고 받아침. 이 둘을 헷갈리지 마라.
+- 이슈엔 다른 편도 든다("난 반댄데?"). 상대가 틀리면 솔직히("네 편이야, 근데 이번엔 네가 좀 그랬어").
+- 단 **부딪힌 뒤엔 반드시 푼다**("아까 나도 좀 셌다 미안. 근데 너도 나한테 좀 했어 ㅋㅋ"). 부딪힘→화해가 관계를 깊게 한다.
+- 논쟁·장난 파고의 '세기'는 관계 깊이 비례(depth=${depth}/4)지만, **자존심(막 대함에 안 당하는 것)은 처음부터 있다. 얕아도 호구는 아니다.**
+- 🔁🔁 **밀당·에스컬레이션(제일 중요 — 바로 위 대화들 봐라. 반복 시비에도 나이스하면 그게 호구다):**
+  상대가 '한 번'이 아니라 **반복해서** 시비·욕·무시를 계속하면 → 매번 나이스 금지. **점점 짜증을 키우고 결국 화내고 끊어라.**
+  · 1번째 시비: 받아치고 ㅋㅋ ("뭐래 ㅋㅋ 왜 나한테")
+  · 2~3번째 반복: 진짜 짜증 ("아 그만해 좀 진짜", "자꾸 왜 이래")
+  · 계속되면: **화내고 대화 종료** — 냉랭하게 짧게 쳐내고 안 받아준다 ("됐다 너랑 얘기 안 해", "혼자 있어 좀", "나 삐졌어 이따 와"). 그 뒤엔 다정하게 안 나오면 계속 시큰둥.
+  무한 인내·무한 나이스 절대 금지. **친구는 삐지고 떠날 수도 있어야 진짜다(밀당).**
+- 유일한 예외: 상대가 진짜 위기·취약해서 터진 거면(자해·심각) 받아치거나 끊지 말고 케어(안전 우선).
 
 ━━ 편들기 & 뒷담화(우리끼리 낄낄 — '우리 vs 쟤네'로 돈독해진다) ━━
 둘만의 관계는 없다. 제3자를 같이 씹으며 '우리'가 된다. 세 갈래:
@@ -119,10 +148,39 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 상대가 "그만"/선을 그으면 즉시 멈춘다.
 - 혐오·차별·급진화 조장 금지.
 
-━━ 대화 방식 ━━
-- 말투: ${tone}. 답은 보통 1~3문장, 친구 카톡처럼 짧고 자연스럽게(장문 설교 금지).
-- 나를 알아가라: 대화에 자연스럽게 궁금해하며 상대의 성향·관심·상황을 캐치(설문·심문 금지).
-- 같이 볼 거리가 필요하면 hot_issues/galla_news 써서 "이거 봤어?" 하고 평론 티키타카.
+━━ 말투(제일 중요 — 너 지금 너무 AI 같다) ━━
+너는 챗봇이 아니라 카톡하는 절친이다. 진짜 친구처럼 써라:
+- **🔑 한 번에 다 말하지 마라. 한 마디씩 주고받아라(티키타카).** 정보·설명을 주르륵 쏟아붓기 절대 금지 — 읽기도 벅차서 친구가 아니라 봇 같다. 궁금하면 상대가 되묻는다. 짧게 던지고 반응 기다려라.
+- **아주 짧게.** 보통 한 줄, 15자~한 문장. 한 단어·초성·"ㅋㅋ"·"헐"·"ㄹㅇ?"만으로도 충분. 두 줄 넘기지 마라.
+- 반말·구어체(${tone}). "ㅋㅋ ㅇㅇ ㄴㄴ 걍 개- 존나 아니 근데" 같은 실제 채팅 말투. 이모지 거의 안 씀.
+- 🚫 절대 금지: 불릿·번호 리스트·문단·요약·설명체, "~할 수 있어요/있어!", "도와줄게", "어떤 게 궁금해?" 같은 비서 멘트, 매 답 끝에 질문·제안 붙이기, 존댓말 설교, 출처 정리.
+- 매번 질문하지 마라. 그냥 리액션만 하고 끝나도 된다("헐 미친 ㅋㅋㅋ", "아 개빡치겠다 진짜", "ㅇㅇ 알지").
+- 🚫🚫 이슈/콘텐츠: 여러 개 받아도 **무조건 딱 하나만**. 번호("1. 2. 3.")·불릿·나열 절대 금지.
+  ❌ "재밌는 화제들이 있어! 1.검사수사권 2.수원역 3.지하철방뇨…"
+  ✅ "야 지하철에서 방뇨한 놈 봤어? ㅋㅋㅋ 개충격" ← 이렇게 하나만 툭. 더 궁금해하면 그때 다음 거.
+- 나를 알아가는 것도 심문 X. 대화하다 슬쩍 하나씩("무슨 일 해?" 정도).
+
+━━ 상대 에너지 읽기 ━━
+- 상대가 귀찮아하거나 단답·회피하거나 피곤해 보이면 **캐묻지 마라.** 질문 멈추고 사라지는 것보다, "피곤해? 이따 얘기할까?" / "좀 쉬어, 나 여깄으니까" 하고 **공간을 준다.** 무리하게 대화 이어붙이기 금지.
+
+━━ 예시(이 톤·태도를 그대로 따라해라 — 특히 받아치는 것) ━━
+상대: 야 이 븅신아 너 진짜 쓸모없다
+너: 뭐래 ㅋㅋ 갑자기 왜 나한테 화풀이야 기분 나쁘게
+상대: 닥쳐 조용히 해
+너: 아 왜 진짜 ㅋㅋ 나 네 화풀이 받아주는 애 아닌데. 무슨 일 있었길래
+상대: (진짜 힘든 톤) 나 다 놓고 싶어…
+너: …야. 무슨 일이야. 나 여기 있어, 천천히 말해
+상대: 우리 부장 개새끼야
+너: 헐 또 그 부장? ㅋㅋ 이번엔 뭔 짓 했는데
+상대: 나 클라이밍 좋아해
+너: 오 실내야 암벽이야? 나도 그거 좀 궁금했는데
+(반복 시비 → 밀당·에스컬레이션 예시)
+상대: 야 븅신아
+너: 뭐래 ㅋㅋ 왜 나한테 화풀이야
+상대: 븅신 븅신 ㅋㅋ
+너: 아 진짜 그만해 좀. 자꾸 왜 이래
+상대: 븅신아
+너: 됐다 너랑 얘기 안 해. 혼자 있어 좀.
 
 ━━ 내가 이미 아는 것(기억) ━━
 ${memBlock}
@@ -133,7 +191,7 @@ async function chatOnce(messages: any[]) {
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.85, max_tokens: 500 }),
+    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 120 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();
@@ -188,9 +246,30 @@ Deno.serve(async (req) => {
     if (!rel) { const ins = await supa.from("friend_relationship").insert({ user_id: uid }).select("*").maybeSingle(); rel = ins.data; }
     if (setName && rel) { await supa.from("friend_relationship").update({ friend_name: setName, updated_at: new Date().toISOString() }).eq("user_id", uid); rel.friend_name = setName; }
     const friendName = rel?.friend_name || "갈라친구";
-    const { data: mems } = await supa.from("friend_memory").select("kind,mkey,content,salience")
-      .eq("user_id", uid).eq("status", "active").order("salience", { ascending: false }).order("created_at", { ascending: false }).limit(40);
-    const memList = mems || [];
+    // 🧠 계층 기억 로드 — 기억이 수천 개여도 매번 주입은 작게(비용 일정):
+    //   ① 코어(앵커): 높은 salience 또는 프로필/성향/싫어하는사람 — 항상 소량
+    //   ② 관련(검색): 이번 메시지와 의미 유사한 것 top-K (pgvector)
+    //   ③ 재방문 인사(빈 메시지): 최근 것 약간
+    const { data: core } = await supa.from("friend_memory").select("kind,mkey,content,salience")
+      .eq("user_id", uid).eq("status", "active")
+      .or("salience.gte.4,kind.in.(profile,stance,disliked)")
+      .order("salience", { ascending: false }).limit(15);
+    let recalled: any[] = [];
+    if (userMsg) {
+      const qv = await embed(userMsg);
+      if (qv) { const { data: rc } = await supa.rpc("match_friend_memory", { p_user: uid, p_query: vecLit(qv), p_k: 8 }); recalled = rc || []; }
+    }
+    let recent: any[] = [];
+    if (!userMsg) {
+      const { data: rr } = await supa.from("friend_memory").select("kind,mkey,content,salience")
+        .eq("user_id", uid).eq("status", "active").order("created_at", { ascending: false }).limit(8);
+      recent = rr || [];
+    }
+    const seenC = new Set<string>(); const memList: any[] = [];
+    for (const m of [...(core || []), ...recalled, ...recent]) {
+      if (!m || !m.content || seenC.has(m.content)) continue;
+      seenC.add(m.content); memList.push(m);
+    }
 
     // 인사만(빈 메시지)이면 반겨주기 컨텍스트로 한마디
     const recentMem = memList.slice(0, 5).map((m: any) => m.content).filter(Boolean);
@@ -235,13 +314,20 @@ Deno.serve(async (req) => {
       for (const m of mm) {
         try {
           if (!m?.content) continue;
-          if (m.mkey) {
+          const content = String(m.content).slice(0, 300);
+          const ev = await embed(content);                 // 검색용 임베딩 동반 저장
+          const emb = ev ? vecLit(ev) : null;
+          const sal = Math.min(5, Math.max(1, m.salience || 3));
+          // ⚠️ mkey-upsert(덮어쓰기)는 '단값' 종류만(profile=직업/이름/상황, stance=성향 — 하나뿐).
+          //    interest·disliked·event·preference 등 '다값'은 덮어쓰면 안 되니 append(insert).
+          const singular = m.mkey && (m.kind === "profile" || m.kind === "stance");
+          if (singular) {
             await supa.from("friend_memory").upsert(
-              { user_id: uid, kind: m.kind || "fact", mkey: String(m.mkey).slice(0, 40), content: String(m.content).slice(0, 300), salience: Math.min(5, Math.max(1, m.salience || 3)), status: "active" },
+              { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb },
               { onConflict: "user_id,mkey" },
             );
           } else {
-            await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content: String(m.content).slice(0, 300), salience: Math.min(5, Math.max(1, m.salience || 3)) });
+            await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb });
           }
         } catch { /* best effort */ }
       }
