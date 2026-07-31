@@ -130,8 +130,14 @@ body.fr-chatting nav.nav{ display:none !important; }
   box-shadow:0 2px 14px rgba(0,0,0,.35), inset 0 0 18px rgba(95,216,255,.04); }
 .fr-msg.fr-a .fr-bubble::before{ content:""; position:absolute; top:-1px; left:-1px; width:9px; height:9px;
   border-top:2px solid var(--fr-cy); border-left:2px solid var(--fr-cy); border-radius:3px 0 0 0; opacity:.85; }
-/* 🎬 지시문(*행동/상황*) — 지문체 */
+/* 🎬 지문(((행동))) — 지문체 */
 .fr-stage{ color:var(--fr-am); opacity:.82; font-style:italic; font-size:13.5px; }
+/* 😎 갈라 짤(이미지 이모티콘) — 인라인 중간 크기 */
+.fr-emo{ display:inline-block; width:74px; height:74px; object-fit:contain; vertical-align:middle; margin:2px 0; }
+/* 🐎 이모지 스티커([stk:]) — 큰 애니 스티커, 한 줄 단독일 때 특히 크게 */
+.fr-stk{ display:inline-block; width:88px; height:88px; object-fit:contain; vertical-align:middle; }
+.fr-msg.fr-a .fr-bubble:has(> .fr-stk:only-child){ background:transparent; border:none; box-shadow:none; padding:2px; }
+.fr-msg.fr-a .fr-bubble:has(> .fr-stk:only-child)::before{ display:none; }
 /* 유저 = 갈라 진영 그라데(레드→블루, 포스터 톤) */
 .fr-msg.fr-u{ align-self:flex-end; color:#fff; padding:9px 13px; border-radius:14px 4px 14px 14px;
   background:linear-gradient(135deg, #e04a58 0%, #8a55e8 52%, #3f8cff 100%);
