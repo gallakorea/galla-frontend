@@ -37,6 +37,17 @@
   background: rgba(0,0,0,.4); color: #fff; display: flex; align-items: center; justify-content: center; }
 .grl-mute svg { width: 20px; height: 20px; }
 
+/* 숏판 릴스 상단(인스타식): 좌 진입버튼(+ 또는 ‹) + '릴스' 타이틀 */
+.grl-top--reels { gap: 4px; }
+.grl-navbtn { width: 40px; height: 40px; margin-left: -8px; border: none; background: transparent;
+  color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; }
+.grl-navbtn:active { opacity: .55; }
+.grl-navbtn svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 4px rgba(0,0,0,.55)); }
+.grl-navbtn.grl-add svg { width: 30px; height: 30px; }
+.grl-top-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -.2px;
+  text-shadow: 0 1px 4px rgba(0,0,0,.55); }
+
 /* 우측 액션 레일 */
 .grl-rail { position: absolute; right: 10px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 5;
   display: flex; flex-direction: column; align-items: center; gap: 18px; }

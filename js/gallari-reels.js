@@ -18,9 +18,12 @@
     muteOn: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M16 8l5 5M21 8l-5 5" stroke="currentColor" stroke-width="2"/></svg>',
     muteOff: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3z"/><path d="M15 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
     back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>',
+    // 인스타식 공유(종이비행기) — 숏판 전용(이슈는 기존 share 유지)
+    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
   };
 
-  let MUTED = true, ME = null, sb = null, PROF = {};
+  let MUTED = true, ME = null, sb = null, PROF = {}, ENTRY = 'feed';
 
   function getStart() {
     const g = (k) => { let v = new URLSearchParams(location.search).get(k); if (!v) { const h = location.hash || ''; const qi = h.indexOf('?'); if (qi >= 0) v = new URLSearchParams(h.slice(qi + 1)).get(k); } return v; };
@@ -36,6 +39,8 @@
     ME = sess?.session?.user?.id || null;
 
     const st = getStart();
+    // 진입 구분(사장님 지시): user 파라미터 있으면 마이페이지/프로필 진입(‹ 뒤로), 없으면 갈라리 피드 진입(+ 올리기)
+    ENTRY = st.user ? 'profile' : 'feed';
     let feed = [];
     if (st.user) {
       // 👤 특정 유저의 숏판만 순차 (마이페이지/프로필에서 진입) — 이슈 섞지 않음
@@ -107,16 +112,19 @@
         </div>
       </section>`;
     }
-    // 숏판(post)
+    // 숏판(post) — 인스타 릴스식 UI
+    const navBtn = ENTRY === 'profile'
+      ? `<button class="grl-navbtn grl-back" data-back="mypage.html" aria-label="뒤로">${IC.back}</button>`
+      : `<button class="grl-navbtn grl-add" aria-label="숏판 올리기">${IC.plus}</button>`;
     return `<section class="grl-slide" data-type="post" data-id="${x.id}">
       ${mediaInner}
       <div class="grl-playpause">${IC.play}</div>
-      <div class="grl-top"><span class="grl-tag">⚡ 숏판</span></div>
+      <div class="grl-top grl-top--reels">${navBtn}<span class="grl-top-title">릴스</span></div>
       <div class="grl-rail">
         ${railTop}
         <button class="grl-act grl-like"><span class="ic">${IC.heart}</span><b class="c">${x.like_count || 0}</b></button>
         <button class="grl-act grl-comment">${IC.chat}<b class="cc">${x.comment_count || 0}</b></button>
-        <button class="grl-act grl-share">${IC.share}<b>공유</b></button>
+        <button class="grl-act grl-share">${IC.send}<b>공유</b></button>
         <button class="grl-act support grl-support">${IC.gift}<b>후원</b></button>
       </div>
       <div class="grl-bottom">
@@ -182,6 +190,8 @@
       if (window.openDonatePost) window.openDonatePost(x.id, nick(x.user_id));
       else (window.GALLA_toast || alert)('후원 준비 중');
     });
+    // 상단 + (피드 진입) = 숏판 올리기 / ‹ (프로필 진입)은 back.js [data-back] 위임이 처리
+    el.querySelector('.grl-add')?.addEventListener('click', () => nav('gallari-write.html'));
     // 팔로우 버튼(공용 follow.js가 바인딩)
     if (window.GALLA_bindFollow) setTimeout(() => window.GALLA_bindFollow(el), 0);
   }
