@@ -1559,7 +1559,7 @@
       if (KB && !window.__dmKbBound) {
         window.__dmKbBound = true;
         const setVvhTo = px => document.documentElement.style.setProperty('--dm-vvh', Math.round(px) + 'px');
-        const stickBottom = () => { const m = ROOT?.querySelector('#dm-msgs'); if (m && document.activeElement?.id === 'dm-input') m.scrollTop = m.scrollHeight; };
+        const stickBottom = () => { const m = (typeof activeMsgsWrap === 'function' ? activeMsgsWrap() : null) || ROOT?.querySelector('#dm-msgs'); if (m) m.scrollTop = m.scrollHeight; };  // 1:1·난장 공용
         // 하단 safe-area(홈 인디케이터) 크기 — Capacitor keyboardHeight엔 이게 포함되는데
         // resize:native의 웹뷰 축소엔 빠져서, (fullH - kh)만 쓰면 그만큼 입력바가 더 높이 떴다
         // 뒤늦게 내려붙는다(사장님 '한 칸 더' 증상). 이 값을 더해 willShow 추정을 맞춘다.
@@ -1570,12 +1570,23 @@
           document.body.appendChild(p); safeB = p.getBoundingClientRect().height || 0; p.remove();
         } catch (_) {}
         const anim = on => document.body.classList.toggle('dm-kb-anim', on);  // 카톡식 부드러운 높이 트랜지션 ON/OFF
+        /* 🔗 메시지 '한 몸' 이동 — 패널 높이가 트랜지션으로 줄/늘 때, 스크롤영역은 scrollTop이 고정이라
+           마지막 메시지가 입력창을 안 따라오고 따로 논다(사장님 '채팅방이 따로 움직임'). 애니 동안
+           매 프레임 바닥에 고정해 메시지가 입력창과 같이 오르내리게 한다. __dmKbShowing이 꺼지면 자동 종료. */
+        let kbRaf = 0;
+        const pinBottom = () => {
+          const m = (typeof activeMsgsWrap === 'function' ? activeMsgsWrap() : null) || ROOT?.querySelector('#dm-msgs');
+          if (m) m.scrollTop = m.scrollHeight;
+          kbRaf = window.__dmKbShowing ? requestAnimationFrame(pinBottom) : 0;
+        };
+        const startPin = () => { if (kbRaf) cancelAnimationFrame(kbRaf); kbRaf = requestAnimationFrame(pinBottom); };
         let fullH = window.innerHeight;   // 키보드 내려간 상태의 전체 높이
         KB.addListener('keyboardWillShow', ev => {
           window.__dmKbShowing = true;    // 애니 중 visualViewport 중간값 차단(위 fit 가드)
           anim(true);                     // 키보드와 같은 곡선으로 부드럽게 붙어 오르게
           const kh = (ev && ev.keyboardHeight) || 0;
           setVvhTo(kh ? (fullH - kh + safeB) : window.innerHeight);   // 키보드와 동시에 최종 위치로
+          startPin();                     // 메시지(1:1·난장)를 애니 내내 바닥에 고정 — 입력창과 한 몸
         });
         KB.addListener('keyboardDidShow', ev => {
           window.__dmKbShowing = false;
@@ -1592,6 +1603,7 @@
                                           //    싸워 입력바·채팅방이 시간차로 버벅인다(사장님 '내려갈 때' 증상).
           anim(true);                     // 내려갈 때도 키보드와 같은 곡선으로 부드럽게
           setVvhTo(fullH);                // 내려가는 애니와 '동시에' 패널 전체(입력바+메시지)를 바닥으로
+          startPin();                     // 내려갈 때도 메시지를 바닥 고정해 입력창과 함께 하강
         });
         KB.addListener('keyboardDidHide', () => {
           window.__dmKbShowing = false;
