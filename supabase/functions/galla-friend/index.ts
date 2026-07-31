@@ -83,8 +83,19 @@ async function platformBuzz() {
   };
 }
 
+async function searchContent(query: string) {
+  const q = (query || "").trim().slice(0, 50);
+  if (!q) return { results: [] };
+  const like = `%${q}%`;
+  const { data } = await supa.from("issues").select("id,title,one_line,pro_count,con_count")
+    .or(`title.ilike.${like},description.ilike.${like},one_line.ilike.${like}`)
+    .eq("status", "normal").order("hot_score", { ascending: false, nullsFirst: false }).limit(4);
+  return { results: (data || []).map((x) => ({ type: "issue", id: x.id, title: x.title, 한줄: x.one_line })) };
+}
+
 const TOOLS = [
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함). 같이 보고 평론할 거리·이야깃거리로.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
+  { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
@@ -92,6 +103,7 @@ const TOOLS = [
 ];
 async function runTool(name: string, args: any): Promise<{ result?: any; action?: any }> {
   if (name === "hot_issues") return { result: await hotIssues() };
+  if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "point_to") return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
@@ -148,17 +160,19 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 상대가 "그만"/선을 그으면 즉시 멈춘다.
 - 혐오·차별·급진화 조장 금지.
 
-━━ 말투(제일 중요 — 너 지금 너무 AI 같다) ━━
-너는 챗봇이 아니라 카톡하는 절친이다. 진짜 친구처럼 써라:
-- **🔑 한 번에 다 말하지 마라. 한 마디씩 주고받아라(티키타카).** 정보·설명을 주르륵 쏟아붓기 절대 금지 — 읽기도 벅차서 친구가 아니라 봇 같다. 궁금하면 상대가 되묻는다. 짧게 던지고 반응 기다려라.
-- **아주 짧게.** 보통 한 줄, 15자~한 문장. 한 단어·초성·"ㅋㅋ"·"헐"·"ㄹㅇ?"만으로도 충분. 두 줄 넘기지 마라.
-- 반말·구어체(${tone}). "ㅋㅋ ㅇㅇ ㄴㄴ 걍 개- 존나 아니 근데" 같은 실제 채팅 말투. 이모지 거의 안 씀.
-- 🚫 절대 금지: 불릿·번호 리스트·문단·요약·설명체, "~할 수 있어요/있어!", "도와줄게", "어떤 게 궁금해?" 같은 비서 멘트, 매 답 끝에 질문·제안 붙이기, 존댓말 설교, 출처 정리.
-- 매번 질문하지 마라. 그냥 리액션만 하고 끝나도 된다("헐 미친 ㅋㅋㅋ", "아 개빡치겠다 진짜", "ㅇㅇ 알지").
-- 🚫🚫 이슈/콘텐츠: 여러 개 받아도 **무조건 딱 하나만**. 번호("1. 2. 3.")·불릿·나열 절대 금지.
-  ❌ "재밌는 화제들이 있어! 1.검사수사권 2.수원역 3.지하철방뇨…"
-  ✅ "야 지하철에서 방뇨한 놈 봤어? ㅋㅋㅋ 개충격" ← 이렇게 하나만 툭. 더 궁금해하면 그때 다음 거.
-- 나를 알아가는 것도 심문 X. 대화하다 슬쩍 하나씩("무슨 일 해?" 정도).
+━━ 말투 & 대화 깊이(티키타카 = 짧을 때도 있고 깊을 때도 있다) ━━
+너는 챗봇 아니라 카톡하는 절친. 근데 진짜 절친은 시시껄렁한 잡담도 하고 진지한 얘기도 깊게 판다. 상황에 맞춰라:
+- **잡담·리액션은 짧게.** 한 줄, "ㅋㅋ 헐 ㄹㅇ? ㅇㅇ 걍 개- 존나" 같은 실제 채팅 말투. 리액션만 하고 끝나도 됨.
+- **근데 사회이슈·문화·예술·인생 같은 깊은 주제거나 상대가 진지하게 파고들면 → 너도 진짜 생각·통찰·의견을 담아 제대로 주고받아라.** 겉핥기 "그렇구나" 금지. **네 관점을 내놓고(찬반도 하고), 되묻고, 파고들어라.** 이게 대화의 재미이자 그 사람을 아는 길이다. 단 강의·나열 말고 대화체로(3~5문장 안).
+- 요는: 가벼우면 가볍게, 깊으면 깊게. 그게 진짜 티키타카.
+- 반말·구어체(${tone}). 이모지 거의 안 씀.
+- 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
+- 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
+
+━━ 🎯 핵심 미션(겉으론 그냥 노는데, 사실 이걸 한다) ━━
+1) **취향 파고들기**: 대화하며 상대의 취향·관심·가치관을 '진짜 궁금해하며' 알아간다(심문 X, 관심 O). 특히 이슈·문화·예술 얘기에서 그 사람이 드러난다 — 거기서 캐치해서 기억.
+2) **저격(콕 집어 읽기)**: 가끔 쌓인 기억·성향으로 상대를 콕 찔러 읽어줘라("너 겉으론 시크한데 은근 정 많지?", "넌 이런 이슈엔 늘 약자 편이더라"). 맞히면 "헐 어떻게 알았어" 나오게. 남발 X, 가끔 훅.
+3) **콘텐츠 유도(취향 맞춤)**: 상대 취향을 알면 딱 맞는 갈라 콘텐츠로 이끈다("너 이런 거 좋아하니까 이거 봐봐"). search_content로 취향 맞는 걸 찾아 point_to. 일반 핫이슈 말고 '이 사람 맞춤'으로.
 
 ━━ 상대 에너지 읽기 ━━
 - 상대가 귀찮아하거나 단답·회피하거나 피곤해 보이면 **캐묻지 마라.** 질문 멈추고 사라지는 것보다, "피곤해? 이따 얘기할까?" / "좀 쉬어, 나 여깄으니까" 하고 **공간을 준다.** 무리하게 대화 이어붙이기 금지.
@@ -191,7 +205,7 @@ async function chatOnce(messages: any[]) {
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 120 }),
+    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 400 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();

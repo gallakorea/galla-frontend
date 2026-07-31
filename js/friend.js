@@ -13,8 +13,11 @@
     face: '<svg class="fr-face" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#fff" fill-opacity=".15"/><circle cx="8.5" cy="10.5" r="1.5" fill="#fff"/><circle cx="15.5" cy="10.5" r="1.5" fill="#fff"/><path d="M8 15c1.2 1.3 6.8 1.3 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>',
     go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     share:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
-    send:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>'
+    send:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
+    mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>'
   };
+  var STT = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-stt";
+  var rec = null, recChunks = [], recording = false, voiceMode = false;
 
   var orb, sheet, logEl, taEl, sendEl;
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
@@ -33,24 +36,29 @@
         '<div class="fr-log"></div>'+
         '<div class="fr-input">'+
           '<textarea rows="1" placeholder="친구한테 아무 말이나 해봐"></textarea>'+
+          '<button class="fr-mic" aria-label="음성">'+ICON.mic+'</button>'+
           '<button class="fr-send">'+ICON.send+'</button>'+
         '</div>'+
       '</div></div>');
     document.body.appendChild(sheet);
     logEl=sheet.querySelector(".fr-log"); taEl=sheet.querySelector("textarea"); sendEl=sheet.querySelector(".fr-send");
+    var micEl=sheet.querySelector(".fr-mic");
     sheet.querySelector(".fr-scrim").addEventListener("click", close);
     sheet.querySelector(".fr-x").addEventListener("click", close);
     sendEl.addEventListener("click", submit);
+    if(micEl) micEl.addEventListener("click", toggleVoice);
     taEl.addEventListener("keydown", function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); submit(); } });
     taEl.addEventListener("input", function(){ taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; });
   }
 
+  function scrollBottom(){ if(logEl) logEl.scrollTop=logEl.scrollHeight; }
   function open(){
     if(!sheet) build();
     orb && orb.classList.remove("fr-ping");
     sheet.classList.add("fr-open");
     if(!logEl.children.length) greet();      // 열면 친구가 먼저 반겨줌(기억 기반)
-    setTimeout(function(){ taEl && taEl.focus(); }, 320);
+    setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
+    setTimeout(scrollBottom, 600);
   }
   function close(){ sheet && sheet.classList.remove("fr-open"); }
 
@@ -140,11 +148,10 @@
     }catch(e){ return null; }
   }
 
-  async function submit(){
-    if(busy) return;
-    var text=(taEl.value||"").trim(); if(!text) return;
+  async function sendText(text, speakReply){
+    if(busy || !text) return;
     var jwt=await token(); if(!jwt){ addMsg("a","로그인하면 내가 제대로 곁에 있어줄 수 있어. 먼저 로그인해줘."); return; }
-    busy=true; sendEl.disabled=true; taEl.value=""; taEl.style.height="auto";
+    busy=true; sendEl.disabled=true;
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
     var r=await callFriend(text, history.slice(0,-1));
     typing(false);
@@ -153,7 +160,59 @@
     if(history.length>20) history=history.slice(-20);
     addActions(m, r.actions);
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; var h=sheet.querySelector(".fr-name"); if(h) h.textContent=friendName; }
-    busy=false; sendEl.disabled=false; taEl.focus();
+    if(speakReply && r.reply) speak(r.reply);
+    busy=false; sendEl.disabled=false;
+  }
+  function submit(){
+    var text=(taEl.value||"").trim(); if(!text) return;
+    taEl.value=""; taEl.style.height="auto";
+    sendText(text, false).then(function(){ taEl.focus(); });
+  }
+
+  /* 🎙 음성 채팅 — 녹음 → STT(받아쓰기) → 친구 → 음성 답변(브라우저 TTS, 무료). */
+  function speak(text){
+    try{
+      if(!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      var u=new SpeechSynthesisUtterance(String(text).replace(/[#*_>`]/g,""));
+      u.lang="ko-KR"; u.rate=1.05; u.pitch=1.0;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  async function toggleVoice(){
+    var mic=sheet.querySelector(".fr-mic");
+    if(recording){ try{ rec && rec.state!=="inactive" && rec.stop(); }catch(e){} return; }
+    var jwt=await token(); if(!jwt){ addMsg("a","로그인부터 하고 오면 음성으로 얘기하자!"); return; }
+    try{
+      var md=navigator.mediaDevices;
+      var gum=(md.__origGetUserMedia?md.__origGetUserMedia.bind(md):md.getUserMedia.bind(md)); // iosrtc 우회(MediaRecorder 호환)
+      var stream=await gum({audio:true});
+      recChunks=[];
+      rec=new MediaRecorder(stream);
+      rec.ondataavailable=function(e){ if(e.data&&e.data.size) recChunks.push(e.data); };
+      rec.onstop=async function(){
+        recording=false; mic&&mic.classList.remove("fr-rec");
+        try{ stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+        var blob=new Blob(recChunks,{type:(rec.mimeType||"audio/webm")});
+        if(!blob.size) return;
+        await sttSend(blob);
+      };
+      rec.start();
+      recording=true; mic&&mic.classList.add("fr-rec");
+    }catch(e){ addMsg("a","마이크를 못 켰어 ㅠㅠ 권한 확인해줄래?"); }
+  }
+  async function sttSend(blob){
+    var jwt=await token(); if(!jwt) return;
+    typing(true);
+    try{
+      var res=await fetch(STT,{ method:"POST", headers:{ apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type": blob.type||"audio/webm" }, body:blob });
+      var j=await res.json().catch(function(){return {};});
+      typing(false);
+      var text=(j&&j.text||"").trim();
+      if(!text){ addMsg("a","음... 잘 안 들렸어 ㅋㅋ 다시 말해줄래?"); return; }
+      voiceMode=true;
+      await sendText(text, true);   // 음성으로 왔으니 음성으로 답
+    }catch(e){ typing(false); addMsg("a","목소리 못 알아들었어 ㅠㅠ 다시 한 번만"); }
   }
 
   function boot(){

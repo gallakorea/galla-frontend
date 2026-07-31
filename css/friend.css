@@ -26,16 +26,20 @@
   background:#39d98a; border:2px solid #0e0d10; display:none; }
 #frOrb.fr-ping .fr-dot{ display:block; }
 
-#frSheet{ position:fixed; inset:0; z-index:950; display:none; }
+/* 하단 내비 높이(플로팅 캡슐+여백+safe-area) — 채팅창을 이 위로 올려 내비를 안 가린다 */
+:root{ --fr-nav: calc(76px + env(safe-area-inset-bottom,0px)); }
+/* 컨테이너는 클릭 통과(pointer-events:none) — 내비/화면이동 살림. 스크림·패널만 클릭 받음 */
+#frSheet{ position:fixed; inset:0; z-index:950; display:none; pointer-events:none; }
 #frSheet.fr-open{ display:block; }
-#frSheet .fr-scrim{ position:absolute; inset:0; background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; }
+#frSheet .fr-scrim{ position:absolute; left:0; right:0; top:0; bottom:var(--fr-nav); background:rgba(0,0,0,.5); backdrop-filter:blur(2px); opacity:0; transition:opacity .22s; pointer-events:auto; }
 #frSheet.fr-open .fr-scrim{ opacity:1; }
 #frSheet .fr-panel{
-  position:absolute; left:0; right:0; bottom:0; height:min(86vh,720px);
+  position:absolute; left:0; right:0; bottom:var(--fr-nav);   /* 🔑 내비 위에 앉힘 */
+  height:min(72vh,620px);
   background:var(--fr-bg); color:var(--fr-txt); border-radius:20px 20px 0 0;
   border-top:1px solid var(--fr-line); display:flex; flex-direction:column;
-  transform:translateY(102%); transition:transform .3s cubic-bezier(.2,.85,.2,1);
-  padding-bottom:env(safe-area-inset-bottom,0px);
+  transform:translateY(120%); transition:transform .3s cubic-bezier(.2,.85,.2,1);
+  padding-bottom:8px; pointer-events:auto; overflow:hidden;
 }
 #frSheet.fr-open .fr-panel{ transform:translateY(0); }
 
@@ -66,6 +70,10 @@
 .fr-input textarea{ flex:1; resize:none; max-height:120px; min-height:22px; background:var(--fr-panel); border:1px solid var(--fr-line);
   border-radius:18px; color:var(--fr-txt); font-size:16px; line-height:1.4; padding:10px 14px; outline:none; font-family:inherit; }
 .fr-input textarea::placeholder{ color:var(--fr-dim); }
+.fr-mic{ width:40px; height:40px; flex:0 0 auto; border:none; border-radius:50%; background:var(--fr-panel); border:1px solid var(--fr-line); color:var(--fr-dim); cursor:pointer; display:grid; place-items:center; }
+.fr-mic svg{ width:19px; height:19px; }
+.fr-mic.fr-rec{ background:#e23b3b; color:#fff; border-color:#e23b3b; animation:frRec 1s ease-in-out infinite; }
+@keyframes frRec{ 0%,100%{ box-shadow:0 0 0 0 rgba(226,59,59,.5) } 50%{ box-shadow:0 0 0 8px rgba(226,59,59,0) } }
 .fr-send{ width:40px; height:40px; flex:0 0 auto; border:none; border-radius:50%; background:var(--fr-accent); color:#fff; cursor:pointer; display:grid; place-items:center; }
 .fr-send:disabled{ opacity:.4; }
 .fr-send svg{ width:18px; height:18px; }
