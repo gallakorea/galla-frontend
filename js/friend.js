@@ -43,7 +43,8 @@
     go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     share:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
     send:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
-    mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>'
+    mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>',
+    globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.9 5.7 3.9 9S14.5 18.4 12 21c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z"/></svg>'
   };
   var STT = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-stt";
   var rec = null, recChunks = [], recording = false, voiceMode = false;
@@ -231,9 +232,9 @@
     var wrap=el('<div class="fr-acts"></div>');
     actions.forEach(function(a){
       var chip=el('<button class="fr-chip"></button>');
-      var share = a.kind==="share";
-      chip.innerHTML=(share?ICON.share:ICON.go)+"<span></span>";
-      chip.querySelector("span").textContent = a.label || (share ? "친구들한테 공유" : "이거 보러가기");
+      var share = a.kind==="share", opn = a.kind==="open";
+      chip.innerHTML=(share?ICON.share:opn?ICON.globe:ICON.go)+"<span></span>";
+      chip.querySelector("span").textContent = a.label || (share ? "친구들한테 공유" : opn ? "바로 열어보기" : "이거 보러가기");
       chip.addEventListener("click", function(){ runAction(a); });
       wrap.appendChild(chip);
     });
@@ -242,7 +243,17 @@
   }
   function nav(u){ (window.GALLA_nav||function(x){location.href=x;})(u); }
   function contentUrl(a){ return a.ctype==="news" ? ("news.html?gn="+a.id) : ("issue.html?id="+a.id); }
+  // 🌐 자비스 내부 브라우저 — 검색으로 찾아준 가게·기사를 앱 안에서 바로 연다(Capacitor Browser=인앱 사파리 시트)
+  function openInApp(url){
+    if(!/^https?:\/\//.test(url||"")) return;
+    try{
+      var B=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+      if(B && B.open){ B.open({ url:url, presentationStyle:"popover" }); return; }
+    }catch(e){}
+    try{ window.open(url, "_blank", "noopener"); }catch(e){ location.href=url; }
+  }
   function runAction(a){
+    if(a.kind==="open"){ openInApp(a.url); return; }
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard

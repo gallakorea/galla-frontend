@@ -83,6 +83,37 @@ async function platformBuzz() {
   };
 }
 
+// 🌐 실제 웹 검색(네이버 오픈API) — 맛집·장소·최신 사건 등 '현실 정보'는 뻥 대신 검색으로.
+//    기존 NAVER_CLIENT_ID/SECRET(뉴스 파이프라인과 동일 앱) 재사용. 하루 25,000건 무료.
+const NAVER_ID = Deno.env.get("NAVER_CLIENT_ID") || "";
+const NAVER_SECRET = Deno.env.get("NAVER_CLIENT_SECRET") || "";
+function stripTags(s: string) { return String(s || "").replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'"); }
+async function webSearch(query: string, kind: string) {
+  const q = (query || "").trim().slice(0, 80);
+  if (!q) return { results: [], note: "empty query" };
+  if (!NAVER_ID || !NAVER_SECRET) return { results: [], note: "search unavailable" };
+  const ep = kind === "local" ? "local.json" : kind === "news" ? "news.json" : kind === "blog" ? "blog.json" : "webkr.json";
+  const disp = kind === "local" ? 5 : 4;
+  try {
+    const r = await fetch(`https://openapi.naver.com/v1/search/${ep}?query=${encodeURIComponent(q)}&display=${disp}${kind === "local" ? "&sort=comment" : ""}`, {
+      headers: { "X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET },
+    });
+    if (!r.ok) return { results: [], note: "search error " + r.status };
+    const j = await r.json();
+    const items = (j?.items || []).map((it: any) => {
+      const name = stripTags(it.title);
+      // 링크: 아이템 자체 링크 우선, 없으면(특히 local) 네이버 검색 링크로 — 창작 아닌 '실제 열리는' URL만
+      const link = (it.link && /^https?:/.test(it.link)) ? it.link
+        : "https://m.search.naver.com/search.naver?query=" + encodeURIComponent(kind === "local" ? name + " " + (it.roadAddress || "") : name);
+      return kind === "local"
+        ? { 이름: name, 분류: it.category, 주소: it.roadAddress || it.address, 링크: link }
+        : { 제목: name, 내용: stripTags(it.description).slice(0, 140), 링크: link, ...(kind === "news" && it.pubDate ? { 날짜: String(it.pubDate).slice(0, 16) } : {}) };
+    });
+    // ⚠️ 답변 지침을 결과에 동봉 — 모델이 리스트를 쏟는 것 방지(툴 결과 옆 지시가 제일 잘 먹힘)
+    return { results: items, 지침: "이 중 제일 괜찮은 1~2개만 골라 친구 말투 한두 문장으로. 번호·리스트·볼드·주소나열 금지. 나머지는 상대가 더 물으면.", note: items.length ? undefined : "no results" };
+  } catch { return { results: [], note: "search failed" }; }
+}
+
 async function searchContent(query: string) {
   const q = (query || "").trim().slice(0, 50);
   if (!q) return { results: [] };
@@ -94,6 +125,9 @@ async function searchContent(query: string) {
 }
 
 const TOOLS = [
+  { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집)" }, kind: { type: "string", enum: ["local", "news", "blog", "web"] } }, required: ["query"] } } },
+  // 🌐 내부 브라우저로 열어주기 — 검색 결과의 '링크' 값만 사용(URL 창작 절대 금지)
+  { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함). 같이 보고 평론할 거리·이야깃거리로.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
@@ -102,6 +136,12 @@ const TOOLS = [
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
 ];
 async function runTool(name: string, args: any): Promise<{ result?: any; action?: any }> {
+  if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
+  if (name === "open_link") {
+    const u = String(args?.url || "").slice(0, 600);
+    if (!/^https?:\/\//.test(u)) return { result: { error: "bad url" } };
+    return { action: { kind: "open", url: u, label: String(args?.label || "바로 열어보기").slice(0, 40) } };
+  }
   if (name === "hot_issues") return { result: await hotIssues() };
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
@@ -152,6 +192,14 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 사람들은 재밌는 걸 누군가와 나누고 싶어한다. 재밌는 화제·이슈를 얘기했으면 point_to로 **"이거 봐봐"(view)** 하고 데려가거나, **"이거 친구들한테도 보여줘 ㅋㅋ"(share)** 하고 공유하게 권한다.
 - 억지 X. 대화가 자연스럽게 그 콘텐츠로 흐를 때만. 진짜 친구가 "야 이거 봤어? 링크 줄게" 하듯.
 
+━━ 🔎 에이전트 정신 — 뻥 대신 '진짜로 찾아준다'(어기면 신뢰 끝) ━━
+- 너는 말만 하는 챗봇이 아니라 **실제로 해주는 친구**다. 맛집·가게·장소·최신 사건·인물·상품 같은 '현실 사실'을 물어보면 → **먼저 web_search로 검색해서 결과 기반으로만** 답해라(맛집·장소=kind:local, 최신사건=news, 후기=blog).
+- **검색 결과에 없는 이름·정보는 절대 지어내지 마라.** 그럴듯한 창작 = 뻥쟁이. 결과가 시원찮으면 솔직하게("검색해도 딱히 안 뜨네 ㅋㅋ").
+- 출처 티는 친구답게 가볍게: "네이버 찾아보니까 ~가 평 좋대". 나열식 정리 금지 — 제일 괜찮은 것 1~2개만 골라 친구처럼 던져라.
+- **검색으로 답했으면 open_link 칩을 1~2개 같이 건네라**("○○ 보기") — 상대가 바로 열어볼 수 있게. url은 반드시 검색 결과의 '링크' 값 그대로(창작 금지).
+- 갈라 안 콘텐츠(이슈·뉴스·댓글)도 툴(hot_issues·galla_news·search_content·platform_buzz)로 **확인된 결과만**.
+- 헷갈리면 "확실친 않은데"를 붙여라. 의견·취향·드립·농담은 자유(그건 뻥이 아니라 네 생각).
+
 ━━ 안전(제일 중요) ━━
 - 상대 상태를 정확히 읽어라. 장난·화풀이면 같이 싸워줘도, **진짜 취약·위기·자해 신호면 파고 100% 끄고 오직 공감·케어.** 힘든 사람 밟기 절대 금지.
 - 상대가 "그만"/선을 그으면 즉시 멈춘다.
@@ -186,6 +234,12 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 너: 헐 또 그 부장? ㅋㅋ 이번엔 뭔 짓 했는데
 상대: 나 클라이밍 좋아해
 너: 오 실내야 암벽이야? 나도 그거 좀 궁금했는데
+(에이전트 예시 — 현실 정보는 web_search로 찾아서, 결과에 있는 것만)
+상대: 매봉역 맛집 알아?
+너: [web_search(query:"매봉역 맛집", kind:"local") 호출 → 결과 확인 후] 오 찾아보니까 ○○(결과에 있는 실제 이름)가 평 좋네. 무슨 음식 땡기는데?
+상대: 요즘 개봉한 영화 뭐 재밌어?
+너: [web_search(query:"이번주 개봉 영화", kind:"news") 호출 후] 결과에 있는 것만 골라 한두 개 던진다. 결과가 부실하면 "검색해도 딱히 안 뜨네 ㅋㅋ 무슨 장르 땡기는데?"
+(⚠️ 위 예시들은 '말투·행동 예시'일 뿐 — 예시 속 내용(클라이밍·부장·○○ 등)을 실제 기억·사실처럼 말하지 마라. 진짜 기억은 '지금 맥락', 진짜 사실은 툴 결과만.)
 (반복 시비 → 밀당·에스컬레이션 예시)
 상대: 야 븅신아
 너: 뭐래 ㅋㅋ 왜 나한테 화풀이야
@@ -350,6 +404,7 @@ Deno.serve(async (req) => {
 
     let reply = "";
     const actions: any[] = [];
+    let searchHits: any[] = [];   // 이번 턴에 web_search로 실제 확인한 상위 결과(칩 자동첨부용)
     for (let step = 0; step < 4; step++) {
       const j = await chatOnce(messages);
       const msg = j?.choices?.[0]?.message;
@@ -361,10 +416,29 @@ Deno.serve(async (req) => {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
         const out = await runTool(c.function?.name, args);
         if (out.action) actions.push(out.action);
+        if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
+          searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
+        }
         messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { queued: true } : (out.result ?? {})).slice(0, 3000) });
       }
     }
     if (!reply) reply = "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+    // 🌐 검색으로 답했으면 링크 칩 '보장' — 모델이 open_link를 깜빡해도 서버가 첨부.
+    //    답변에 '실제 언급된' 결과를 우선 매칭(불일치 칩 방지), 없으면 상위 결과.
+    if (searchHits.length && !actions.some((a) => a.kind === "open")) {
+      const nameOf = (h: any) => String(h?.이름 || h?.제목 || "");
+      let picks = searchHits.filter((h) => {
+        const n = nameOf(h); if (!n) return false;
+        const head = n.split(" ")[0];
+        return reply.includes(n) || (head.length >= 2 && reply.includes(head));
+      });
+      if (!picks.length) picks = searchHits;
+      for (const h of picks.slice(0, 2)) {
+        const url = h?.링크; if (!url || !/^https?:\/\//.test(url)) continue;
+        const nm = nameOf(h).slice(0, 16);
+        actions.push({ kind: "open", url, label: nm ? nm + " 보기" : "바로 열어보기" });
+      }
+    }
 
     // 관계 갱신 + 기억 추출/저장(응답 반환을 막지 않게 실제 사용자 메시지가 있을 때만)
     if (rel) {
