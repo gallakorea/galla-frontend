@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=073116";
-import { loadAiNews } from "./issue-news.js?v=073116";
-import { loadStats } from "./issue.stats.js?v=073116";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073116";
+import { loadAiArguments } from "./issue-argument.js?v=073117";
+import { loadAiNews } from "./issue-news.js?v=073117";
+import { loadStats } from "./issue.stats.js?v=073117";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073117";
 
 
 console.log("[issue.js] loaded");
@@ -465,7 +465,7 @@ window.issueOpenReels = function() {
     const startTime = v && !isNaN(v.currentTime) ? v.currentTime : 0;   // 보던 위치 이어보기
     if (v) v.pause();
     if (typeof window.openShorts === 'function') {
-        window.openShorts([item], i.id, startTime);
+        window.openShorts([item], i.id, startTime, 'detail');
     }
 };
 

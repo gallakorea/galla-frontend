@@ -20,6 +20,7 @@ function isScrollableTarget(el) {
 let shortsList = [];
 let currentIndex = 0;
 let overlay, track;
+let SHORTS_ENTRY = 'detail';   // 진입: 'feed'(인덱스=+ 만들기) / 'detail'(상세=‹ 닫기)
 
 let isDragging = false;
 let startX = 0;
@@ -60,16 +61,16 @@ if (window.visualViewport) {
 ========================= */
 window.__SHORTS_ENGINE_READY__ = false;
 
-window.openShorts = function (list, startId, startTime) {
+window.openShorts = function (list, startId, startTime, entry) {
   try {
     if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-      window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime);
+      window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime, entry);
     } else {
       console.warn("[SHORTS] __OPEN_SHORTS_INTERNAL__ missing, queueing");
-      window.__SHORTS_OPEN_QUEUE__.push({ list, startId, startTime });
+      window.__SHORTS_OPEN_QUEUE__.push({ list, startId, startTime, entry });
       document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.__OPEN_SHORTS_INTERNAL__ === "function") {
-          window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime);
+          window.__OPEN_SHORTS_INTERNAL__(list, startId, startTime, entry);
         }
       }, { once: true });
     }
@@ -81,7 +82,8 @@ window.openShorts = function (list, startId, startTime) {
 /* =========================
    CORE OPEN
 ========================= */
-function __openShortsInternal(list, startId, startTime) {
+function __openShortsInternal(list, startId, startTime, entry) {
+  SHORTS_ENTRY = entry === 'feed' ? 'feed' : 'detail';   // 인덱스=+ / 상세(기본)=‹
   // 이어보기: 시작 아이템을 이 위치(초)부터 재생 (인덱스 인라인에서 넘어옴)
   window.__SHORTS_PENDING_SEEK__ = (startTime && startTime > 0.3) ? { id: Number(startId), time: startTime } : null;
   // 🔥 HARD FIX: 항상 video_url 있는 항목만, 순서 고정
@@ -118,8 +120,10 @@ function __openShortsInternal(list, startId, startTime) {
       <div class="shorts-scrim shorts-scrim-top"></div>
       <div class="shorts-scrim shorts-scrim-bottom"></div>
       <div class="shorts-top">
-        <button id="shortsCloseBtn" class="sh-icon-btn" aria-label="닫기">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        <button id="shortsCloseBtn" class="sh-icon-btn" aria-label="${SHORTS_ENTRY === 'feed' ? '만들기' : '닫기'}">
+          ${SHORTS_ENTRY === 'feed'
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'}
         </button>
         <!-- 상단 음성 버튼 제거(사장님 확정) — 음소거는 화면 탭으로 토글, 상태는 중앙 배지로 안내 -->
       </div>
@@ -414,7 +418,10 @@ function __openShortsInternal(list, startId, startTime) {
     padding: "6px 10px",
     borderRadius: "10px",
   });
-  closeBtn.onclick = closeShorts;
+  // 인덱스 진입(+) = 이슈 만들기(작성 허브) / 상세 진입(‹) = 닫기
+  closeBtn.onclick = SHORTS_ENTRY === 'feed'
+    ? () => { closeShorts(); if (window.openWriteHub) window.openWriteHub('galla'); else (window.GALLA_nav || function (u) { location.href = u; })('write.html'); }
+    : closeShorts;
 
   /* ===== track ===== */
   Object.assign(track.style, {
@@ -1059,7 +1066,7 @@ console.info("[SHORTS] engine ready");
 
 if (window.__SHORTS_ENGINE_READY__ && window.__SHORTS_OPEN_QUEUE__.length) {
   window.__SHORTS_OPEN_QUEUE__.forEach(x =>
-    window.__OPEN_SHORTS_INTERNAL__(x.list, x.startId)
+    window.__OPEN_SHORTS_INTERNAL__(x.list, x.startId, x.startTime, x.entry)
   );
   window.__SHORTS_OPEN_QUEUE__ = [];
 }

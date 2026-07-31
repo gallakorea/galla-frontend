@@ -409,7 +409,7 @@ window.openReels = function (startId) {
     // 인라인 미리보기 정지 (소리 중복 방지)
     IDXROOT.querySelectorAll('.card-media video').forEach(v => v.pause());
     if (typeof window.openShorts === 'function') {
-        window.openShorts(vids, Number(startId), startTime);
+        window.openShorts(vids, Number(startId), startTime, 'feed');
     } else {
         window.GALLA_goto(`issue.html?id=${startId}`);
     }
