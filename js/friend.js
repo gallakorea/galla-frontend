@@ -74,23 +74,24 @@
   function bindKb(){
     if(window.__frKbBound) return; window.__frKbBound=true;
     var root=document.documentElement, vv=window.visualViewport;
-    var fullH=window.innerHeight, khLast=0, kbUp=false;
-    // 학습 보정값 — willShow 즉시 높이(fullH-kh)와 실측(vv.height)의 차이. 저장해서 다음부턴 첫 판부터 정확.
+    var fullH=window.innerHeight, khLast=0, animating=false;
+    // 학습 보정값 — willShow 즉시높이(fullH-kh)와 실측(vv.height)의 차이. 저장해 다음부턴 첫 판부터 정확.
     var KDELTA=parseFloat(localStorage.getItem("frKbDelta")); if(isNaN(KDELTA)) KDELTA=40;
     function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); scrollBottom(); }
     function anim(on){ document.body.classList.toggle("fr-kb-anim", on); }
     setVvh(vv?vv.height:fullH);
-    if(vv) vv.addEventListener("resize", function(){
-      setVvh(vv.height);                                   // 실측으로 정확히(지연 있지만 아래 willShow가 즉시 올려둠)
-      if(kbUp && khLast){ var d=Math.round(vv.height-(fullH-khLast)); if(d>-10 && d<90 && Math.abs(d-KDELTA)>=1){ KDELTA=d; try{ localStorage.setItem("frKbDelta", String(d)); }catch(e){} } }
-    });
+    // 🔑 애니 '도중'엔 vv를 무시(바운스 방지). willShow가 이미 최종값을 잡음. 평상시엔 vv로 정확히.
+    if(vv) vv.addEventListener("resize", function(){ if(animating) return; setVvh(vv.height); });
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
     if(KB){
-      // 🔑 willShow에서 '즉시' 올린다(지연 0) — 학습된 KDELTA로 실측에 근접. vv가 곧 미세 보정.
-      KB.addListener("keyboardWillShow", function(ev){ anim(true); kbUp=true; var kh=(ev&&ev.keyboardHeight)||0; khLast=kh; if(kh) setVvh(fullH-kh+KDELTA); });
-      KB.addListener("keyboardDidShow", function(){ if(vv) setVvh(vv.height); setTimeout(function(){ anim(false); }, 120); });
-      KB.addListener("keyboardWillHide", function(){ anim(true); kbUp=false; setVvh(fullH); });
-      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(vv?vv.height:fullH); setTimeout(function(){ anim(false); }, 300); });
+      KB.addListener("keyboardWillShow", function(ev){ animating=true; anim(true); var kh=(ev&&ev.keyboardHeight)||0; khLast=kh; if(kh) setVvh(fullH-kh+KDELTA); });
+      KB.addListener("keyboardDidShow", function(){
+        // 애니 끝: 실측으로 KDELTA 학습(다음판 정확) + 위치를 실측값으로 딱 맞춤(첫판만 미세보정, 이후 무보정).
+        if(vv && khLast){ var d=Math.round(vv.height-(fullH-khLast)); if(d>-10 && d<90){ if(Math.abs(d-KDELTA)>1){ KDELTA=d; try{ localStorage.setItem("frKbDelta", String(d)); }catch(e){} } setVvh(vv.height); } }
+        setTimeout(function(){ animating=false; anim(false); }, 60);
+      });
+      KB.addListener("keyboardWillHide", function(){ animating=true; anim(true); setVvh(fullH); });
+      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setVvh(fullH); setTimeout(function(){ animating=false; anim(false); }, 60); });
     }
   }
 
