@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=073145";
-import { loadAiNews } from "./issue-news.js?v=073145";
-import { loadStats } from "./issue.stats.js?v=073145";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073145";
+import { loadAiArguments } from "./issue-argument.js?v=073146";
+import { loadAiNews } from "./issue-news.js?v=073146";
+import { loadStats } from "./issue.stats.js?v=073146";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073146";
 
 
 console.log("[issue.js] loaded");
@@ -610,6 +610,13 @@ function renderIssue(issue) {
         });
       }
     };
+    // 🤖 갈비스 딥링크(&manage=edit) — 내 이슈면 수정 시트 자동 오픈
+    try {
+      if (pageQuery().get("manage") === "edit") {
+        const canM = window.GALLA_canManage ? await window.GALLA_canManage(issue.user_id) : false;
+        if (canM) setTimeout(() => moreBtn.click(), 500);
+      }
+    } catch (_) {}
   }
 
   // 액션바: 좋아요 / 저장 / 공유 (실동작)

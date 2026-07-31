@@ -144,6 +144,8 @@ body.fr-chatting nav.nav{ display:none !important; }
   box-shadow:0 0 10px rgba(95,216,255,.10); }
 .fr-chip:active{ transform:scale(.95); box-shadow:0 0 14px rgba(95,216,255,.35); }
 .fr-chip svg{ width:14px; height:14px; }
+.fr-chip.fr-danger{ background:rgba(226,59,59,.14); border-color:rgba(226,59,59,.6); color:#ff9b9b; box-shadow:0 0 10px rgba(226,59,59,.15); }
+.fr-chip.fr-danger:disabled{ opacity:.5; }
 
 /* 타이핑 = HUD 웨이브폼 */
 .fr-typing{ align-self:flex-start; display:flex; align-items:center; gap:4px; padding:12px 14px;

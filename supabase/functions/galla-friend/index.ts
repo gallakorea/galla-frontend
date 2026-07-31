@@ -141,7 +141,9 @@ const TOOLS = [
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
   // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(DM 열기·육성톡/면상톡 걸기·페이지 이동)
   { type: "function", function: { name: "find_user", description: "갈라 유저를 닉네임으로 찾는다(공개 정보). DM·통화 걸기 전에 대상 특정용.", parameters: { type: "object", properties: { nickname: { type: "string" } }, required: ["nickname"] } } },
-  { type: "function", function: { name: "app_action", description: "앱 기능을 직접 실행한다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡 걸어줘'=op:call_voice, '면상톡 걸어줘'=op:call_video (user_id는 find_user로 먼저 확보). '예측/광장/숏판/지갑 열어줘'=op:goto+page.", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search"], description: "goto용 페이지" }, label: { type: "string", description: "칩 문구(예: 갈라님께 육성톡)" } }, required: ["op"] } } },
+  { type: "function", function: { name: "app_action", description: "앱 기능·설정을 직접 열어준다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡/면상톡 걸어줘'=op:call_voice/call_video(user_id는 find_user로 먼저). '예측/광장/지갑/설정/프로필 열어줘'=op:goto+page. '프로필 사진 바꿔줘/닉네임 바꿔줘/소개 수정/전화번호 바꿔줘/비번 바꿔줘'=op:goto,page:account,focus:photo|nickname|bio|phone|password(해당 화면·필드를 바로 연다).", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search", "settings", "account", "password", "notifications", "login-history", "creator", "grade", "season", "shop", "duel", "withdraw"], description: "goto용 페이지(account=프로필 수정, settings=설정 홈)" }, focus: { type: "string", enum: ["photo", "nickname", "bio", "phone", "password"], description: "account 페이지에서 특정 항목을 바로 열/포커스" }, label: { type: "string", description: "칩 문구" } }, required: ["op"] } } },
+  // 🗑✏️ 내 콘텐츠 관리 — 삭제(확인 후)·수정(폼으로). 본인 것만.
+  { type: "function", function: { name: "manage_content", description: "상대 '본인'의 갈라 콘텐츠를 삭제(op:delete)하거나 수정(op:edit)하게 해준다. '이거 지워줘/삭제해줘/수정할래/고칠래' 하면. id는 지금 대화의 콘텐츠(맥락에 온 것)거나 my_activity 결과의 것. ctype: issue|plaza|gallari|predict.", parameters: { type: "object", properties: { op: { type: "string", enum: ["delete", "edit"] }, ctype: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] }, id: { type: "string" }, title: { type: "string", description: "어떤 글인지 확인용 제목(있으면)" } }, required: ["op", "ctype", "id"] } } },
   // 📰 광장(롱판) 글 초안 — 이슈(찬반배틀)와 달리 자유 서술 글. 작성폼에 프리필.
   { type: "function", function: { name: "draft_plaza", description: "지금 대화를 갈라 '광장'(롱판, 자유 서술 글)에 올릴 초안으로 만들어 작성폼에 채운다. 상대가 '광장에 쓰자/글로 써줘' 하면. 이슈는 찬반 대립, 광장은 에세이·후기·주장·정보 글.", parameters: { type: "object", properties: { title: { type: "string", description: "글 제목(60자)" }, body: { type: "string", description: "본문(대화체·문단 나눔, 800자 내)" }, category: { type: "string", enum: ["정치", "사회", "경제", "투자", "직장", "연애", "결혼", "일상", "패션·뷰티", "엔터", "스포츠", "여행", "맛집", "기타"] } }, required: ["title", "body"] } } },
   // 📋 내 활동 브리핑 — "나 없는 동안 뭐 있었어?" 내 콘텐츠 반응·답글·새 팔로워 요약
@@ -194,10 +196,13 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   }
   if (name === "app_action") {
     const op = String(args?.op || "");
-    const PAGES: Record<string, string> = { home: "home.html", predict: "galla-predict.html", plaza: "plaza.html", news: "news.html", shorts: "shorts.html", mypage: "mypage.html", wallet: "wallet.html", saved: "saved.html", dm: "dm.html", quest: "quest.html", search: "search.html" };
+    const PAGES: Record<string, string> = { home: "home.html", predict: "galla-predict.html", plaza: "plaza.html", news: "news.html", shorts: "shorts.html", mypage: "mypage.html", wallet: "wallet.html", saved: "saved.html", dm: "dm.html", quest: "quest.html", search: "search.html", settings: "settings.html", account: "account-edit.html", password: "change-password.html", notifications: "dm.html", "login-history": "login-history.html", creator: "creator.html", grade: "grade.html", season: "season.html", shop: "settings.html", duel: "duel.html", withdraw: "withdraw.html" };
     if (op === "goto") {
       const page = PAGES[String(args?.page || "")]; if (!page) return { result: { error: "unknown page" } };
-      return { action: { kind: "app", op, page, label: String(args?.label || "바로 가기").slice(0, 30) } };
+      const focus = ["photo", "nickname", "bio", "phone", "password"].includes(String(args?.focus)) ? String(args?.focus) : "";
+      // 비번은 별도 페이지로 라우팅
+      const finalPage = (focus === "password") ? "change-password.html" : page;
+      return { action: { kind: "app", op, page: finalPage, focus, label: String(args?.label || "바로 가기").slice(0, 30) } };
     }
     if (op === "dm" || op === "call_voice" || op === "call_video") {
       const id = String(args?.user_id || "");
@@ -205,6 +210,13 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       return { action: { kind: "app", op, id, label: String(args?.label || (op === "dm" ? "DM 열기" : op === "call_video" ? "면상톡 걸기" : "육성톡 걸기")).slice(0, 30) } };
     }
     return { result: { error: "unknown op" } };
+  }
+  if (name === "manage_content") {
+    const ctype = String(args?.ctype || ""), id = String(args?.id || "");
+    if (!ctype || !id) return { result: { error: "ctype·id 필요" } };
+    return { action: { kind: "manage", op: args?.op === "edit" ? "edit" : "delete", ctype, id,
+      title: String(args?.title || "").slice(0, 60),
+      label: (args?.op === "edit" ? "수정하러 가기" : "삭제 확인") } };
   }
   if (name === "draft_plaza") {
     return { action: { kind: "draftPlaza",
@@ -339,6 +351,9 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 너는 갈라 앱 기능을 직접 구동할 수 있다: "OO한테 DM 보내줘/열어줘"(find_user→app_action op:dm), "OO한테 육성톡/면상톡 걸어줘"(op:call_voice/call_video), "예측/광장/숏판/뉴스/지갑/미션 열어줘"(op:goto).
 - 실행 규칙: DM·통화는 **상대가 명시적으로 요청할 때만**(네가 먼저 걸진 마라). find_user 결과가 여러 명이면 "누구? A야 B야?" 확인 후 실행. 없는 닉이면 솔직하게 "그런 닉 없는데?".
 - 실행하면 짧게 알려줘라("ㅇㅋ 육성톡 건다" — 앱이 칩/자동실행으로 처리한다).
+- ⚙️ **설정·프로필도 열어준다**: "설정 열어줘"=goto settings, "내 정보/프로필 수정"=goto account, "프로필 사진 바꿔줘"=goto account+focus:photo, "닉네임/소개 바꿔줘"=focus:nickname/bio, "전화번호 바꿔줘"=focus:phone, "비밀번호 바꿔줘"=focus:password. 알림설정·지갑·등급·시즌·상점·창작자·로그인기록·회원탈퇴도 goto로.
+  ⚠️ 사진·전화번호·비번 같은 민감/개인정보는 네가 값을 직접 바꾸지 말고 **그 화면을 열어 상대가 직접 입력**하게 해라("프로필 사진 바꾸는 화면 열었어, 골라봐"). 네가 대신 입력/촬영/업로드는 못 한다.
+- 🗑✏️ **내 콘텐츠 관리**: "이 글 지워줘/삭제"=manage_content op:delete(삭제는 되돌릴 수 없으니 앱이 '확인'을 한 번 더 받는다 — 너는 "지울게? 확인 눌러" 정도로). "이 글 수정할래/고쳐줘"=op:edit(수정 폼을 연다). 본인 글만 되고, 아니면 앱이 막는다. ctype·id는 지금 대화의 콘텐츠나 my_activity 결과에서.
 
 ━━ 🎯 핵심 미션(겉으론 그냥 노는데, 사실 이걸 한다) ━━
 1) **취향 파고들기**: 대화하며 상대의 취향·관심·가치관을 '진짜 궁금해하며' 알아간다(심문 X, 관심 O). 특히 이슈·문화·예술 얘기에서 그 사람이 드러난다 — 거기서 캐치해서 기억.

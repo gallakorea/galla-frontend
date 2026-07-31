@@ -282,6 +282,30 @@
   }
   function nav(u){ (window.GALLA_nav||function(x){location.href=x;})(u); }
   function contentUrl(a){ return a.ctype==="news" ? ("news.html?gn="+a.id) : ("issue.html?id="+a.id); }
+  // 🗑 삭제 확인 — 챗 안에 위험 확인 UI. 확정 시 유저 세션으로 삭제 RPC(서버가 소유권 재검증).
+  function confirmDelete(a){
+    var rpc={issue:"delete_issue",plaza:"delete_plaza_post",gallari:"delete_post",predict:"delete_market"}[a.ctype];
+    if(!rpc){ addMsg("a","그건 내가 못 지워."); return; }
+    var wrap=el('<div class="fr-msg fr-a"><div class="fr-bubble"></div></div>');
+    var b=wrap.querySelector(".fr-bubble");
+    b.textContent = (a.title? '"'+a.title+'" ':"이 글 ") + "진짜 지울까? 되돌릴 수 없어.";
+    var row=el('<div class="fr-acts"></div>');
+    var yes=el('<button class="fr-chip fr-danger"><span>🗑 삭제 확정</span></button>');
+    var no=el('<button class="fr-chip"><span>취소</span></button>');
+    no.addEventListener("click", function(){ row.remove(); addMsg("a","ㅇㅋ 안 지웠어."); });
+    yes.addEventListener("click", async function(){
+      yes.disabled=true; yes.querySelector("span").textContent="지우는 중…";
+      try{
+        var sb=window.supabaseClient; if(!sb) throw new Error("연결 준비 중");
+        var pid = (a.ctype==="issue"||a.ctype==="predict") ? Number(a.id) : a.id;
+        var r=await sb.rpc(rpc, { p_id: pid });
+        if(r.error){ throw new Error((r.error.message||"").indexOf("not_authorized")>=0 ? "네 글이 아니라 못 지워." : "삭제 실패"); }
+        row.remove(); addMsg("a","🗑 지웠어. 깔끔하게 정리됐다.");
+      }catch(e){ yes.disabled=false; yes.querySelector("span").textContent="🗑 삭제 확정"; addMsg("a", String(e.message||e)); }
+    });
+    row.appendChild(yes); row.appendChild(no); b.appendChild(row);
+    logEl.appendChild(wrap); scrollBottom();
+  }
   // 🌐 자비스 내부 브라우저 — 검색으로 찾아준 가게·기사를 앱 안에서 바로 연다(Capacitor Browser=인앱 사파리 시트)
   function openInApp(url){
     if(!/^https?:\/\//.test(url||"")) return;
@@ -294,11 +318,19 @@
   function runAction(a){
     if(a.kind==="open"){ openInApp(a.url); return; }
     if(a.kind==="app"){
-      // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(미니 보드로 접히고 실행)
+      // 🎛 앱 컨트롤 — 갈비스가 앱 기능·설정을 직접 구동(미니 보드로 접히고 실행)
       minimize();
       if(a.op==="dm" && a.id) nav("dm.html?dm="+a.id);
       else if((a.op==="call_voice"||a.op==="call_video") && a.id) nav("dm.html?dm="+a.id+"&call="+(a.op==="call_video"?"video":"voice"));
-      else if(a.op==="goto" && a.page) nav(a.page);
+      else if(a.op==="goto" && a.page) nav(a.page + (a.focus ? (a.page.indexOf("?")>=0?"&":"?")+"focus="+a.focus : ""));
+      return;
+    }
+    if(a.kind==="manage"){
+      // 🗑✏️ 내 콘텐츠 관리 — 삭제=유저 세션 RPC(서버 소유권 검증) / 수정=해당 콘텐츠 수정폼(?manage=edit)
+      var pg={issue:"issue.html?id=",plaza:"plaza_detail.html?id=",gallari:"gallari-post.html?id=",predict:"predict-market.html?id="}[a.ctype];
+      if(!pg){ addMsg("a","음 그 콘텐츠는 내가 못 건드려."); return; }
+      if(a.op==="edit"){ minimize(); nav(pg+encodeURIComponent(a.id)+"&manage=edit"); return; }
+      confirmDelete(a);   // 삭제는 챗 안에서 확인 한 번 더
       return;
     }
     if(a.kind==="draft"){

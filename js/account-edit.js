@@ -45,6 +45,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const emailField = document.getElementById("emailField");
   const phoneField = document.getElementById("phoneField");
 
+  // 🤖 갈비스 딥링크(?focus=) — 프로필 항목을 바로 열/포커스(사진은 파일 선택창까지)
+  try {
+    const focus = new URLSearchParams(location.search).get("focus");
+    if (focus) setTimeout(() => {
+      if (focus === "photo") { fileInput && fileInput.click(); }
+      else if (focus === "nickname") { nicknameInput && (nicknameInput.focus(), nicknameInput.scrollIntoView({ block: "center" })); }
+      else if (focus === "bio") { bioInput && (bioInput.focus(), bioInput.scrollIntoView({ block: "center" })); }
+      else if (focus === "phone") { phoneField && (phoneField.focus(), phoneField.scrollIntoView({ block: "center" })); }
+    }, 500);
+  } catch (_) {}
+
   let selectedFile = null;
 
   // 글자수 카운터
