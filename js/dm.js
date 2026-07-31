@@ -1533,6 +1533,9 @@
     window.__dmVvBound = true;
     const vv = window.visualViewport;
     const fit = () => {
+      // 키보드가 '올라오는 중'엔 Capacitor willShow가 최종 높이를 즉시 몰고 있으니
+      // visualViewport의 애니메이션 중간값이 끼어들어 입력바가 튀지 않게 건너뛴다.
+      if (window.__dmKbShowing) return;
       document.documentElement.style.setProperty('--dm-vvh', Math.round(vv.height) + 'px');
       // 패널 높이를 vvh에 맞췄으니 문서는 반드시 원점 — iOS가 밀어올린 스크롤을 되돌려야
       // 보이는 영역[0..vvh]과 패널이 일치한다(안 그러면 입력바가 붕 뜬다).
@@ -1544,18 +1547,36 @@
     vv.addEventListener('resize', fit);
     vv.addEventListener('scroll', fit);
     fit();
-    // ⌨️ 깜빡임 제거 — resize:native가 키보드 열릴 때 웹뷰를 이미 줄여 window.innerHeight가 '키보드 제외 높이'다.
-    //    그런데 --dm-vvh는 visualViewport 이벤트가 애니메이션 도중에야 갱신돼, 그 사이 옛 전체높이가 남아
-    //    입력바가 잠깐 키보드 뒤로 숨었다 나온다. willShow(애니 시작)에서 --dm-vvh를 '현재 innerHeight'로 즉시
-    //    맞추면 입력바가 처음부터 제자리다. (⚠️ innerHeight는 이미 줄어든 값이라 keyboardHeight를 또 빼면 이중차감 → 붕 뜸)
+    /* ⌨️ 입력바 '시간차 튐' 근본수정 (네이티브 전용):
+       resize:native가 window.innerHeight를 줄이는 타이밍이 keyboardWillShow보다 늦어,
+       willShow에서 innerHeight를 읽으면 아직 '전체 높이'라 입력바가 바닥(키보드 뒤)에 있다가
+       didShow(애니 끝)에 뒤늦게 튀어오른다. → 키보드 없을 때의 전체높이(fullH)를 저장해두고,
+       willShow에서 이벤트가 주는 keyboardHeight로 (fullH - kh) 최종 높이를 '즉시' 잡는다.
+       그러면 --dm-vvh가 애니 시작과 함께 확정돼 입력바가 키보드와 동시에 올라온다.
+       (innerHeight를 안 쓰므로 '이중차감' 문제도 없음 — fullH는 키보드 제외 전 전체값이다.) */
     try {
       const KB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
       if (KB && !window.__dmKbBound) {
         window.__dmKbBound = true;
-        const setVvh = () => document.documentElement.style.setProperty('--dm-vvh', Math.round(window.innerHeight) + 'px');
-        KB.addListener('keyboardWillShow', setVvh);
-        KB.addListener('keyboardDidShow', setVvh);
-        KB.addListener('keyboardDidHide', setVvh);
+        const setVvhTo = px => document.documentElement.style.setProperty('--dm-vvh', Math.round(px) + 'px');
+        const stickBottom = () => { const m = ROOT?.querySelector('#dm-msgs'); if (m && document.activeElement?.id === 'dm-input') m.scrollTop = m.scrollHeight; };
+        let fullH = window.innerHeight;   // 키보드 내려간 상태의 전체 높이
+        KB.addListener('keyboardWillShow', ev => {
+          window.__dmKbShowing = true;    // 애니 중 visualViewport 중간값 차단(위 fit 가드)
+          const kh = (ev && ev.keyboardHeight) || 0;
+          setVvhTo(kh ? (fullH - kh) : window.innerHeight);
+        });
+        KB.addListener('keyboardDidShow', ev => {
+          window.__dmKbShowing = false;
+          const kh = (ev && ev.keyboardHeight) || 0;
+          setVvhTo(kh ? (fullH - kh) : window.innerHeight);   // 애니 끝 정밀 보정
+          stickBottom();
+        });
+        KB.addListener('keyboardDidHide', () => {
+          window.__dmKbShowing = false;
+          fullH = window.innerHeight;     // 키보드 내려간 전체높이 재캡처(회전·기기변화 대비)
+          setVvhTo(fullH);
+        });
       }
     } catch (_) {}
   }
