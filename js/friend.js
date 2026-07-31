@@ -54,6 +54,7 @@
   function scrollBottom(){ if(logEl) logEl.scrollTop=logEl.scrollHeight; }
   function open(){
     if(!sheet) build();
+    bindKb();                                     // 키보드 트래킹(1회 등록)
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
@@ -65,6 +66,28 @@
     if(sheet) sheet.classList.remove("fr-open");
     document.body.classList.remove("fr-chatting");   // 내비 복원
     try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}  // 닫으면 음성 정지
+  }
+
+  /* ⌨️ 키보드에 입력창이 딱 붙어 움직이게(DM과 동일 원리). 네이티브 resize와 따로 놀던 것 수정.
+     키보드 열림=패널 높이를 '보이는 높이'로(입력창이 키보드 위에 붙음), 닫힘=원래 시트 높이로. 같은 곡선 트랜지션. */
+  function bindKb(){
+    if(window.__frKbBound) return; window.__frKbBound=true;
+    var panel=sheet.querySelector(".fr-panel"); if(!panel) return;
+    var CURVE="height .25s cubic-bezier(.38,.7,.125,1)";
+    var safeB=0; try{ var p=document.createElement("div"); p.style.cssText="position:fixed;bottom:0;left:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden"; document.body.appendChild(p); safeB=p.getBoundingClientRect().height||0; p.remove(); }catch(e){}
+    var fullH=window.innerHeight;
+    var base=function(){ return Math.min(Math.round(window.innerHeight*0.82), 700); };
+    function setH(px, anim){ panel.style.transition=anim?CURVE:""; panel.style.height=Math.round(px)+"px"; scrollBottom(); }
+    var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
+    if(KB){
+      KB.addListener("keyboardWillShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; setH(kh?(fullH-kh+safeB):window.innerHeight, true); });
+      KB.addListener("keyboardDidShow", function(ev){ var kh=(ev&&ev.keyboardHeight)||0; var ih=window.innerHeight; setH(ih<fullH-10?ih:(kh?fullH-kh+safeB:ih), true); setTimeout(function(){ panel.style.transition=""; }, 60); });
+      KB.addListener("keyboardWillHide", function(){ setH(base(), true); });
+      KB.addListener("keyboardDidHide", function(){ fullH=window.innerHeight; setH(base(), true); setTimeout(function(){ panel.style.transition=""; panel.style.height=""; }, 280); });
+    } else if(window.visualViewport){
+      var vv=window.visualViewport;
+      vv.addEventListener("resize", function(){ var kb=Math.max(0, window.innerHeight-vv.height); setH(kb>60?vv.height:base(), true); });
+    }
   }
 
   async function greet(){
