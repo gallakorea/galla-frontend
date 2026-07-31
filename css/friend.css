@@ -62,7 +62,8 @@ body.fr-chatting nav.nav{ display:none !important; }
 .fr-head .fr-sub{ font-size:11px; color:var(--fr-dim); margin-top:1px; }
 .fr-head .fr-x{ margin-left:auto; background:none; border:none; color:var(--fr-dim); font-size:22px; line-height:1; padding:4px 8px; cursor:pointer; }
 
-.fr-log{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; -webkit-overflow-scrolling:touch; }
+.fr-log{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:12px; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+#frSheet .fr-panel{ overscroll-behavior:contain; }
 .fr-msg{ max-width:86%; font-size:14.5px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
 .fr-msg.fr-a{ align-self:flex-start; }
 .fr-msg.fr-u{ align-self:flex-end; background:var(--fr-accent); color:#fff; padding:9px 13px; border-radius:16px 16px 4px 16px; }

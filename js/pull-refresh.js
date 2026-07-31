@@ -40,6 +40,7 @@ if (!window.gallaHardReload) {
     if (document.getElementById("shortsOverlay")) return true;      // 릴스
     if (document.getElementById("lv-stage")) return true;          // 🎙 라이브 무대 — 당겨서 새로고침 시 로비로 튕김 방지
     if (document.body.classList.contains("dm-detail")) return true; // 💬 대화방(1:1·난장) — 리로드하면 로비로 튕김(사장님 재현)
+    if (document.body.classList.contains("fr-chatting")) return true; // 🫂 갈라 친구 챗 — 당겨서 새로고침하면 대화 닫힘/유실 방지
     // 리로드하면 상태가 날아가는 오버레이 전부(통화·삐삐·조그·시트·모달) — nav.js 스와이프 차단과 동일 기준
     if (document.querySelector(
       "#dm-call.on, #pager-call.on, #pager-book.on, #nav-jog, " +
