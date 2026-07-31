@@ -1569,9 +1569,11 @@
           p.style.cssText = 'position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);visibility:hidden;pointer-events:none;';
           document.body.appendChild(p); safeB = p.getBoundingClientRect().height || 0; p.remove();
         } catch (_) {}
+        const anim = on => document.body.classList.toggle('dm-kb-anim', on);  // 카톡식 부드러운 높이 트랜지션 ON/OFF
         let fullH = window.innerHeight;   // 키보드 내려간 상태의 전체 높이
         KB.addListener('keyboardWillShow', ev => {
           window.__dmKbShowing = true;    // 애니 중 visualViewport 중간값 차단(위 fit 가드)
+          anim(true);                     // 키보드와 같은 곡선으로 부드럽게 붙어 오르게
           const kh = (ev && ev.keyboardHeight) || 0;
           setVvhTo(kh ? (fullH - kh + safeB) : window.innerHeight);   // 키보드와 동시에 최종 위치로
         });
@@ -1582,15 +1584,18 @@
           // resize:native 완료면 innerHeight가 실측 정답. 혹 아직 안 줄었으면(≈fullH) 추정값 유지.
           setVvhTo(ih < fullH - 10 ? ih : (kh ? (fullH - kh + safeB) : ih));
           stickBottom();
+          setTimeout(() => anim(false), 60);   // 애니 끝난 뒤 트랜지션 해제(평상시 즉답 복귀)
         });
         KB.addListener('keyboardWillHide', () => {
           window.__dmKbShowing = false;
+          anim(true);                     // 내려갈 때도 키보드와 같이 부드럽게
           setVvhTo(fullH);                // 내려가는 애니와 '동시에' 입력바를 바닥으로(타이밍 맞춤)
         });
         KB.addListener('keyboardDidHide', () => {
           window.__dmKbShowing = false;
           fullH = window.innerHeight;     // 키보드 내려간 전체높이 재캡처(회전·기기변화 대비)
           setVvhTo(fullH);
+          setTimeout(() => anim(false), 60);
         });
       }
     } catch (_) {}

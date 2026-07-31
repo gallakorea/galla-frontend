@@ -1496,6 +1496,11 @@ body[data-page="dm"].dm-detail .dm-root.page .dm-panel {
   height: var(--dm-vvh, calc(100dvh - env(safe-area-inset-top, 0px)));
 }
 
+/* ⌨️ 카톡식 무빙 — 키보드 애니메이션 '동안'만 패널 높이에 iOS 키보드 곡선의 트랜지션을 걸어
+   입력창이 키보드에 딱 붙어 같은 속도로 미끄러져 오르내리게 한다. JS가 willShow/willHide에
+   .dm-kb-anim을 켜고 didShow/didHide에 끈다(평상시엔 트랜지션 없이 즉답 — 스크롤 방해 방지). */
+body.dm-kb-anim .dm-panel { transition: height .25s cubic-bezier(.38,.7,.125,1); }
+
 
 /* 배경 미리보기 — 실제 대화방처럼 헤더·말풍선·입력창까지 흉내낸다 */
 .dm-prev-label { font-size: 11.5px; font-weight: 900; color: #7f8695; padding: 0 2px 7px; }
