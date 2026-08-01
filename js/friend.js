@@ -473,12 +473,16 @@
       var d=await res.json();
       if(!d||!d.ok||!d.audio) return;
       hushSpeak();
+      // 🔊 재생 직전 네이티브 플레이백 세션(스피커·제볼륨) — 웹뷰 기본 세션이 수화부/저볼륨으로 흘러 소리 작던 것 수정
+      if(nsrAvail()){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"ttsOn"}); }catch(e){} }
       frAudio=new Audio("data:audio/mp3;base64,"+d.audio);
+      frAudio.volume=1.0;
+      frAudio.onended=function(){ if(nsrAvail()){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"ttsOff"}); }catch(e){} } frAudio=null; };
       frAudio.play().catch(function(){});
     }catch(e){}
   }
   function hushSpeak(){
-    try{ if(frAudio){ frAudio.pause(); frAudio=null; } }catch(e){}
+    try{ if(frAudio){ frAudio.pause(); frAudio=null; if(nsrAvail()){ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"ttsOff"}); } } }catch(e){}
     try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
   }
   /* 🎙 네이티브(iOS) = 애플 온디바이스 실시간 인식(GallaSpeech 브릿지) — 말하는 동안 입력창에 글자가 차오르고,
