@@ -12,6 +12,20 @@
    트렌드 조그는 사용자가 저장한 탭 순서(galla_trend_tab_order)를 그대로 따른다.
    ========================================================= */
 (function () {
+  /* 📳 햅틱 — iOS WKWebView는 navigator.vibrate가 안 먹으므로 Capacitor Haptics로. 웹은 vibrate 폴백.
+     조그 열림/항목 이동마다 진동을 '전부' 느끼게(사장님). */
+  function hapt(kind) {
+    try {
+      const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (H) {
+        if (kind === "open" && H.impact) return void H.impact({ style: "Medium" });
+        if (H.selectionChanged) return void H.selectionChanged();
+        if (H.impact) return void H.impact({ style: "Light" });
+        return;
+      }
+    } catch (_) {}
+    try { navigator.vibrate?.(kind === "open" ? 14 : 8); } catch (_) {}
+  }
   const I = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 
@@ -175,9 +189,12 @@
        넘쳐 항목이 잘린다(사장님 재현). 버튼의 가로 위치(frac)에 따라 부채꼴을
        화면 '안쪽'으로 기울이고, 가장자리일수록 좁게 펴 잘림을 막는다. */
     const vw = window.innerWidth || document.documentElement.clientWidth || 400;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
     const frac = Math.max(0, Math.min(1, ox / vw));   // 0=좌단 · 1=우단
     const lean = 0.5 - frac;                          // 우측 버튼일수록 음수
-    const centerDeg = 270 + lean * 80;                // 위(270) 기준 안쪽으로 기울임
+    // 🔽 버튼이 화면 상단(＋ 등)이면 아래로, 하단(네비)이면 위로 펼친다 — 잘림 방지.
+    const fanDown = oy < vh * 0.4;
+    const centerDeg = fanDown ? (90 - lean * 80) : (270 + lean * 80);  // 아래(90)/위(270) 기준, 안쪽으로 기울임
     const spanDeg = Math.max(95, 150 - Math.abs(lean) * 110);  // 가장자리일수록 좁게
     const startDeg = centerDeg - spanDeg / 2;
     const bd = badges ? badges() : {};
@@ -225,7 +242,7 @@
     }
     void layer.getBoundingClientRect();
     layer.classList.add('on');
-    try { navigator.vibrate?.(14); } catch (_) {}
+    hapt("open");
     return { layer, items, ring, hint };
   }
 
@@ -290,7 +307,7 @@
         ui.hint.textContent = best
           ? best.querySelector('b').textContent + ' — 손을 떼면 이동'
           : '방향으로 고르세요 · 가운데는 취소';
-        try { navigator.vibrate?.(8); } catch (_) {}
+        hapt("pick");
       }
     };
     const queue = (x, y) => {

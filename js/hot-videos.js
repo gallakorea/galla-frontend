@@ -495,33 +495,13 @@
     const gv = $("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", title || ""); }
     const watchUrl = `https://www.youtube.com/watch?v=${id}`;
     $("#hvOpen").href = watchUrl;
-    // 🎬 재생 경로 분기 — 네이티브 앱은 capacitor://localhost 출처라 유튜브 임베드가 '오류 153(구성 오류)'로
-    //    거부(특히 음악 Topic 영상). 그래서 네이티브는 포스터+재생버튼 → 인앱 브라우저(실제 유튜브)로 재생.
-    //    웹(galla.im)은 정상 출처라 인라인 임베드 그대로.
-    const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-    if (isNative) {
-      $("#hvFrame").innerHTML =
-        `<button type="button" class="hv-play-native" data-yt="${esc(id)}" style="position:absolute;inset:0;width:100%;height:100%;border:none;padding:0;cursor:pointer;background:#000 center/cover no-repeat;background-image:url('https://i.ytimg.com/vi/${esc(id)}/hqdefault.jpg')">
-           <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35)">
-             <span style="width:74px;height:74px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center">
-               <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
-             </span>
-           </span>
-         </button>`;
-      const pb = $("#hvFrame").querySelector(".hv-play-native");
-      if (pb) pb.onclick = () => {
-        try {
-          const B = window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
-          if (B && B.open) { B.open({ url: watchUrl, presentationStyle: "fullscreen" }); return; }
-        } catch (_) {}
-        window.open(watchUrl, "_blank");
-      };
-    } else {
-      $("#hvFrame").innerHTML =
-        `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1"
-                 title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
-                 encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
-    }
+    // 🎬 우리 페이지 안에서 인라인 재생(유튜브로 이탈 X). youtube.com/embed + playsinline.
+    //    ⚠️ 음악 'Topic'/임베드 차단 영상은 유튜브 정책상 어디서도 임베드가 막혀(오류 150/153),
+    //       그때만 프레임 안에 '유튜브에서 보기' 폴백이 뜬다(하단 링크도 항상 제공).
+    $("#hvFrame").innerHTML =
+      `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1&fs=1&modestbranding=1"
+               title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
+               referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
     $("#hvCmtWrap").classList.add("hidden");
     setReply(null);
     p.classList.remove("hidden");

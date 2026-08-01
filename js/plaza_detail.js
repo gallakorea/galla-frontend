@@ -200,6 +200,8 @@ async function fetchPostDetail() {
 
   if (postTitleEl) postTitleEl.textContent = data.title;
   if (postContentEl) postContentEl.innerHTML = renderPostBody(data.body);
+  // 🤖 갈비스 — 이 글 맥락 채우기
+  { const gb = D.querySelector("#plazaGalvisBtn"); if (gb) { gb.setAttribute("data-gv-id", String(postId || "")); gb.setAttribute("data-gv-title", data.title || ""); } }
   if (postMetaEl) {
     postMetaEl.textContent = `${data.category} · 조회 ${(data.view_count || 0) + 1}`;
   }

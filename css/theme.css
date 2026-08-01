@@ -262,4 +262,6 @@ input, textarea, select,
 
 /* 🤖 갈비스 진입 아이콘 — 앱(SPA) 전용 기능. 웹(MPA)에선 숨김(friend.js가 SPA에서만 위임 처리) */
 body:not([data-page="spa"]) [data-galvis]{ display:none !important; }
-[data-galvis] .gv-galvis, .galvis-btn .gv-galvis{ color:#5fd8ff; }
+/* 🤖 갈비스 아이콘 — 전역 크기·색. 각 페이지 버튼이 SVG 크기를 안 줘서 얇은 선으로 찌그러지던 것 방지(전 화면 공통). */
+.gv-galvis{ width:22px; height:22px; flex:0 0 auto; color:#5fd8ff; }
+[data-galvis]{ align-items:center; }
