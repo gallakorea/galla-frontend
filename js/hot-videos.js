@@ -490,12 +490,35 @@
     $("#hvTitle").textContent = title;
     $("#hvCh").textContent = ch || "";
     const gv = $("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", title || ""); }
-    $("#hvOpen").href = `https://www.youtube.com/watch?v=${id}`;
-    // youtube-nocookie: 재생 전 추적 쿠키를 심지 않음
-    $("#hvFrame").innerHTML =
-      `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1"
-               title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
-               encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    const watchUrl = `https://www.youtube.com/watch?v=${id}`;
+    $("#hvOpen").href = watchUrl;
+    // 🎬 재생 경로 분기 — 네이티브 앱은 capacitor://localhost 출처라 유튜브 임베드가 '오류 153(구성 오류)'로
+    //    거부(특히 음악 Topic 영상). 그래서 네이티브는 포스터+재생버튼 → 인앱 브라우저(실제 유튜브)로 재생.
+    //    웹(galla.im)은 정상 출처라 인라인 임베드 그대로.
+    const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isNative) {
+      $("#hvFrame").innerHTML =
+        `<button type="button" class="hv-play-native" data-yt="${esc(id)}" style="position:absolute;inset:0;width:100%;height:100%;border:none;padding:0;cursor:pointer;background:#000 center/cover no-repeat;background-image:url('https://i.ytimg.com/vi/${esc(id)}/hqdefault.jpg')">
+           <span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.35)">
+             <span style="width:74px;height:74px;border-radius:50%;background:rgba(0,0,0,.6);display:grid;place-items:center">
+               <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"/></svg>
+             </span>
+           </span>
+         </button>`;
+      const pb = $("#hvFrame").querySelector(".hv-play-native");
+      if (pb) pb.onclick = () => {
+        try {
+          const B = window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
+          if (B && B.open) { B.open({ url: watchUrl, presentationStyle: "fullscreen" }); return; }
+        } catch (_) {}
+        window.open(watchUrl, "_blank");
+      };
+    } else {
+      $("#hvFrame").innerHTML =
+        `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1"
+                 title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write;
+                 encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    }
     $("#hvCmtWrap").classList.add("hidden");
     setReply(null);
     p.classList.remove("hidden");

@@ -274,7 +274,8 @@
   /* 헤더(sticky 64px)를 뺀 화면 높이 — 뷰들이 이 안에서 absolute로 선다 */
   height: calc(100dvh - 64px - env(safe-area-inset-top, 0px));
 }
-.dm-root.page .dm-view .dm-head .dm-x { visibility: hidden; }   /* 닫기 없음 — 네비가 출구 */
+/* 페이지(앱) 모드: '닫기 X'는 숨김(네비가 출구)지만, 같은 .dm-x 클래스인 '+ 글쓰기'(data-write-hub)는 유지 */
+.dm-root.page .dm-view .dm-head .dm-x:not([data-write-hub]) { visibility: hidden; }
 /* 목록 화면: 플로팅 네비에 가리지 않게 바닥 여백 */
 .dm-root.page .dm-list { padding-bottom: 110px; }
 /* 몰입 뷰(대화방 등)에선 네비 숨김 — showView가 body에 dm-immersive를 단다 */
