@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=073152";
-import { loadAiNews } from "./issue-news.js?v=073152";
-import { loadStats } from "./issue.stats.js?v=073152";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073152";
+import { loadAiArguments } from "./issue-argument.js?v=073153";
+import { loadAiNews } from "./issue-news.js?v=073153";
+import { loadStats } from "./issue.stats.js?v=073153";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073153";
 
 
 console.log("[issue.js] loaded");
@@ -611,10 +611,12 @@ function renderIssue(issue) {
       }
     };
     // 🤖 갈비스 딥링크(&manage=edit) — 내 이슈면 수정 시트 자동 오픈
+    // ⚠️ 여긴 async 함수 밖 — 모듈에선 await가 예약어라 쓰면 파스 에러(이슈 페이지 전체 사망). Promise 체인으로.
     try {
       if (pageQuery().get("manage") === "edit") {
-        const canM = window.GALLA_canManage ? await window.GALLA_canManage(issue.user_id) : false;
-        if (canM) setTimeout(() => moreBtn.click(), 500);
+        Promise.resolve(window.GALLA_canManage ? window.GALLA_canManage(issue.user_id) : false)
+          .then((ok) => { if (ok) setTimeout(() => moreBtn.click(), 500); })
+          .catch(() => {});
       }
     } catch (_) {}
   }
