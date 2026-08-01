@@ -163,6 +163,9 @@ function render(){
       <button class="pb-act" id="pmdShareBtn">
         <svg viewBox="0 0 24 24"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg> 공유
       </button>
+      <button class="pb-act" data-galvis data-gv-type="predict" data-gv-id="${esc(String(m.id))}" data-gv-title="${esc(m.question||'')}">
+        <svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg> 갈비스
+      </button>
     </div>
 
     <div class="pb-live">
