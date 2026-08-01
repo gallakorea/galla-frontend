@@ -22,6 +22,39 @@
 })();
 
 /* ============================================================
+   🫂 갈비스 웹 주입 (전 MPA 페이지) + 📲 앱 다운로드 트리거
+   웹(galla.im)은 페이지마다 friend.js를 안 싣는다 → nav.js가 전 페이지에 있으니 여기서 한 번에 주입.
+   앱(app.html, data-page="spa")은 이미 직접 로드하므로 제외. 로그인/약관 등 방해되는 페이지는 스킵.
+============================================================ */
+(function injectGalvisWeb() {
+  // body가 아직이면 DOM 준비 후 재시도(nav.js가 head/이른 위치에 실려도 주입되게)
+  if (!document.body) { document.addEventListener("DOMContentLoaded", injectGalvisWeb, { once: true }); return; }
+  try {
+    if (document.body.dataset.page === "spa") return;                 // 앱(SPA)은 제외
+    if (window.__friendInit || document.getElementById("frOrb")) return;
+    // 방해 페이지 스킵(로그인·가입·약관·개인정보·관리자·인증 콜백)
+    var path = (location.pathname || "").toLowerCase();
+    if (/(login|signup|auth|privacy|terms|admin)/.test(path)) {
+      // 그래도 다운로드 트리거는 쓸 수 있게 app-download는 로드
+    }
+    var skipOrb = /(login|signup|auth|privacy|terms|admin)/.test(path);
+    // nav.js 자신의 ?v= 버전 상속
+    var me = document.currentScript || document.querySelector('script[src*="nav.js"]');
+    var ver = (me && (me.getAttribute("src") || "").match(/[?&]v=([0-9]+)/) || [])[1];
+    var q = ver ? ("?v=" + ver) : "";
+    function load(src, css) {
+      if (css) { var l = document.createElement("link"); l.rel = "stylesheet"; l.href = src + q; document.head.appendChild(l); }
+      else { var s = document.createElement("script"); s.src = src + q; s.async = false; document.body.appendChild(s); }
+    }
+    load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
+    if (!skipOrb) {
+      load("/css/friend.css", true);
+      load("/js/friend.js");                        // 상주 오브 → 갈비스 대화
+    }
+  } catch (e) {}
+})();
+
+/* ============================================================
    마이페이지 탭 아이콘 (인스타식)
    - 로그인 + 프로필 사진 있음: 내 사진(원형)
    - 비로그인 / 아바타 없음: 기본 사람 아이콘(nav-user.svg) 그대로 유지

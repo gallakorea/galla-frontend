@@ -22,6 +22,21 @@
 }
 #frOrb:active{ transform:scale(.9); }
 #frOrb.fr-hidden{ opacity:0; pointer-events:none; transform:scale(.6); }
+
+/* 🌐 웹 전용 — 헤더 '앱 받기'(다운로드 트리거). 앱(=fr-web 아님)에선 숨김. */
+.fr-getapp{ display:none; }
+body.fr-web .fr-getapp{
+  display:inline-flex; align-items:center; height:28px; padding:0 12px; margin:0 4px 0 2px;
+  border:1px solid var(--fr-cy); background:rgba(95,216,255,.12); color:var(--fr-cy);
+  font-size:12.5px; font-weight:800; border-radius:999px; cursor:pointer; white-space:nowrap;
+}
+body.fr-web .fr-getapp:active{ transform:scale(.95); }
+
+/* 🖥 데스크톱(≥1100px) — 하단 내비가 없어 오브를 화면 코너로(모바일은 내비 위 74px 유지). */
+@media(min-width:1100px){
+  #frOrb{ right:26px; bottom:26px; width:62px; height:62px; z-index:960; }
+  #frMini{ right:26px; bottom:26px; z-index:960; }
+}
 /* 회전 틱 링(자비스 다이얼) + 카운터 링 + 앰버 코어 */
 .fr-ring{ position:absolute; border-radius:50%; pointer-events:none; }
 .fr-r1{

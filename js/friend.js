@@ -70,6 +70,8 @@
           '<div class="fr-idwrap"><div class="fr-name">G.A.L.V.I.S.</div><div class="fr-sub">'+BACKRONYM+'</div></div>'+
           '<button class="fr-voice" aria-label="리얼보이스 켜기/끄기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="fr-vw1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="fr-vw2" d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/></svg></button>'+
           '<span class="fr-status"><i></i>ONLINE</span>'+
+          // 🌐 웹 전용 — 앱 받기(다운로드 트리거). CSS로 웹(fr-web)에서만 노출.
+          '<button class="fr-getapp" aria-label="갈라 앱 받기">앱 받기</button>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
         // 🎙 마이크 버튼을 UI에 눈에 띄게 — 사람들이 키보드 받아쓰기를 잘 몰라서, 우리가 대신 쉽게.
@@ -100,6 +102,8 @@
     sendEl.addEventListener("touchend", function(e){ e.preventDefault(); submit(); }, {passive:false});
     sendEl.addEventListener("click", submit);   // 데스크톱용(모바일은 touchend가 click 억제)
     if(micEl) micEl.addEventListener("click", toggleVoice);
+    var getApp=sheet.querySelector(".fr-getapp");
+    if(getApp) getApp.addEventListener("click", function(){ window.GALLA_appDownload && window.GALLA_appDownload("getapp"); });
     // 🔊 리얼보이스 토글(유료 아이템 voice_pack) — 미보유면 askShop 규약대로 즉시 상점(문구 금지)
     var vBtn=sheet.querySelector(".fr-voice");
     if(vBtn){
@@ -356,6 +360,10 @@
   function runAction(a){
     if(a.kind==="open"){ openInApp(a.url); return; }
     if(a.kind==="app"){
+      // 🌐 웹에선 통화(음성/영상)는 앱 전용 → 다운로드 트리거로 전환
+      if(!window.GALLA_IS_APP && (a.op==="call_voice"||a.op==="call_video")){
+        window.GALLA_appDownload && window.GALLA_appDownload("call"); return;
+      }
       // 🎛 앱 컨트롤 — 갈비스가 앱 기능·설정을 직접 구동(미니 보드로 접히고 실행)
       minimize();
       if(a.op==="dm" && a.id) nav("dm.html?dm="+a.id);
@@ -579,7 +587,11 @@
   }, true);
 
   function boot(){
-    if(!document.body || document.body.dataset.page!=="spa") return;
+    if(!document.body) return;
+    // 🌐 앱(SPA)이면 그대로, 웹(MPA)이면 웹모드. 웹에도 상주 오브를 띄우고 앱 전용 기능은 다운로드 트리거로.
+    var IS_APP = document.body.dataset.page==="spa";
+    window.GALLA_IS_APP = IS_APP;
+    if(!IS_APP) document.body.classList.add("fr-web");
     build();
     window.GALLA_openFriend = open;
     // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)
