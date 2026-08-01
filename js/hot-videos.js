@@ -498,24 +498,17 @@
     const gv = $("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", title || ""); }
     const watchUrl = `https://www.youtube.com/watch?v=${id}`;
     $("#hvOpen").href = watchUrl;
-    // 🎬 우리 페이지 안에서 인라인 재생(유튜브로 이탈 X). youtube.com/embed + playsinline.
-    //    ⚠️ 음악 'Topic'/임베드 차단 영상은 유튜브 정책상 어디서도 임베드가 막혀(오류 150/153).
-    //       그런 채널은 애초에 피드에서 걸러지지만(검색·캐시 유입 방어) 여기서도 프레임 대신
-    //       깔끔한 폴백 카드를 띄운다(흉한 YT '오류 153' 화면 노출 방지).
-    const isTopic = /-\s*Topic\s*$/i.test(String(ch || ""));
-    if (isTopic) {
-      $("#hvFrame").innerHTML =
-        `<div class="hv-blocked">
-           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-           <p>이 음원은 저작권 정책상<br>앱 안에서 재생할 수 없어요.</p>
-           <a class="hv-blocked-go" href="${watchUrl}" target="_blank" rel="noopener">유튜브에서 듣기 ↗</a>
-         </div>`;
-    } else {
-      $("#hvFrame").innerHTML =
-        `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&rel=0&playsinline=1&fs=1&modestbranding=1"
-                 title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share"
-                 referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
-    }
+    // 🎬 우리 페이지 안에서 인라인 재생(유튜브 이탈 X).
+    //    ⚠️ 근본원인: 네이티브 앱은 출처가 capacitor://localhost 라, 유튜브 임베드를 직접 심으면
+    //       거의 모든 영상이 '오류 153(플레이어 구성 오류)'로 거부된다(정상 크리에이터 영상 포함).
+    //    ✅ 해법(오픈소스 정석): 임베드를 우리 실도메인(galla.im)의 프록시 페이지 안에서 로드해
+    //       origin/referrer 를 정식 https 도메인으로 만든다 → 153 소멸. 소유자 임베드차단 영상만
+    //       yt.html 내부에서 자체 폴백 카드로 처리(+ 하단 '유튜브에서 보기' 링크는 항상 제공).
+    const YT_PROXY = "https://galla.im/yt.html";
+    $("#hvFrame").innerHTML =
+      `<iframe src="${YT_PROXY}?v=${encodeURIComponent(id)}"
+               title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+               allowfullscreen></iframe>`;
     $("#hvCmtWrap").classList.add("hidden");
     setReply(null);
     // 🔙 스택 페이지처럼 — 처음 열 때만 history에 얹어 '뒤로가기(제스처·버튼)'로 닫히게(제자리 교체 땐 유지)

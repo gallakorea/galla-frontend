@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>재생 · GALLA</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  #p,#p iframe{width:100%;height:100%;border:0;display:block}
+  /* 임베드 자체가 소유자에 의해 막힌 영상용 폴백 */
+  #err{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+       gap:12px;padding:20px;text-align:center;color:#aeb6c6;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",sans-serif}
+  #err.on{display:flex}
+  #err svg{width:40px;height:40px;color:#5fd8ff;opacity:.9}
+  #err p{margin:0;color:#cfd6e6}
+  #err a{margin-top:4px;padding:9px 16px;border-radius:999px;background:#1e2532;color:#fff;font-weight:700;text-decoration:none}
+</style>
+</head>
+<body>
+<div id="p"></div>
+<div id="err">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  <p>이 영상은 저작권자 설정으로<br>앱 안에서 재생할 수 없어요.</p>
+  <a id="errGo" href="#" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>
+</div>
+<script>
+(function(){
+  var id = (new URLSearchParams(location.search).get("v") || "").trim();
+  var watch = "https://www.youtube.com/watch?v=" + encodeURIComponent(id);
+  document.getElementById("errGo").href = watch;
+  if(!id){ document.getElementById("err").classList.add("on"); return; }
+
+  function showErr(){ document.getElementById("err").classList.add("on"); var pp=document.getElementById("p"); if(pp) pp.style.display="none"; }
+
+  // YouTube IFrame Player API — 정식 origin(https://galla.im 등)으로 handshake 하므로
+  // capacitor://localhost 오리진에서 나던 '오류 153'을 회피한다. onError는 소유자 임베드차단만.
+  window.onYouTubeIframeAPIReady = function(){
+    try{
+      new YT.Player("p", {
+        videoId: id, width: "100%", height: "100%",
+        playerVars: {
+          autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1, fs: 1,
+          origin: location.origin, enablejsapi: 1
+        },
+        events: {
+          onReady: function(e){ try{ e.target.playVideo(); }catch(_){} },
+          // 2/5/100/101/150 = 잘못된 id·삭제·비공개·임베드차단 → 폴백
+          onError: function(){ showErr(); }
+        }
+      });
+    }catch(_){ showErr(); }
+  };
+  var s = document.createElement("script");
+  s.src = "https://www.youtube.com/iframe_api";
+  s.onerror = showErr;
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

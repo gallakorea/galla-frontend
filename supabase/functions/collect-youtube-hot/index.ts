@@ -110,7 +110,8 @@ function toRow(v: any, feed: string, rank: number, now: string, shorts: Set<stri
 
 async function fetchChart(cat: string | null, max: number): Promise<any[]> {
   const url = new URL("https://www.googleapis.com/youtube/v3/videos");
-  url.searchParams.set("part", "snippet,statistics,contentDetails");
+  // status 추가 → status.embeddable 로 '임베드 차단'(디즈니·방송사·음원 Topic 등) 영상을 걸러낸다.
+  url.searchParams.set("part", "snippet,statistics,contentDetails,status");
   url.searchParams.set("chart", "mostPopular");
   url.searchParams.set("regionCode", REGION);
   url.searchParams.set("maxResults", String(max));
@@ -121,7 +122,9 @@ async function fetchChart(cat: string | null, max: number): Promise<any[]> {
   const data = await res.json();
   // 카테고리에 따라 KR 차트가 비어 있을 수 있다 → 그냥 건너뛴다.
   if (!res.ok || !Array.isArray(data.items)) return [];
-  return data.items;
+  // 🚫 임베드 차단 영상 제외 — 앱 안에서 재생 불가(오류 150/153)라 목록에 넣지 않는다.
+  //    status.embeddable===false 인 것만 걸러내고, 값이 없으면(구버전 응답) 통과시킨다.
+  return data.items.filter((v: any) => v?.status?.embeddable !== false);
 }
 
 const views = (v: any) => Number(v.statistics?.viewCount ?? 0);
