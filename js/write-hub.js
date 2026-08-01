@@ -172,6 +172,7 @@
     const el = e.target.closest && e.target.closest('[data-write-hub], #hdrWrite');
     if (!el) return;
     e.preventDefault(); e.stopImmediatePropagation();   // 같은 버튼의 구식 시트 바인딩까지 차단
+    if (el._skipClick) { el._skipClick = false; return; }   // 🕹 조그(꾹) 제스처 직후의 click은 무시 — 조그가 이동 처리
     nav('create.html');
   }, true);
 })();

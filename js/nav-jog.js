@@ -76,6 +76,36 @@
     return out;
   }
 
+  /* ➕ 글쓰기(＋) 조그 — 갈라/갈라리/예측/광장. 짧게 탭=create.html(기존), 꾹=조그로 바로 선택. */
+  const WRITE_ICONS = {
+    galla:   I('<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>'),
+    gallari: I('<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="12" cy="12" r="3.5"/><circle cx="17" cy="7" r="1.2"/>'),
+    predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
+    plaza:   I('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
+  };
+  const WRITE_ROUTE = { galla: 'write.html', gallari: 'gallari-write.html', predict: 'galla-predict.html?compose=1', plaza: 'plaza.html?compose=1' };
+  const WRITE_TABS = [
+    { id: 'galla', label: '갈라', icon: WRITE_ICONS.galla },
+    { id: 'gallari', label: '갈라리', icon: WRITE_ICONS.gallari },
+    { id: 'predict', label: '예측', icon: WRITE_ICONS.predict },
+    { id: 'plaza', label: '광장', icon: WRITE_ICONS.plaza },
+  ];
+  const WRITE_CFG = {
+    tabs: () => WRITE_TABS,
+    go(type) {
+      // 가운데/취소(null) → 전체 선택 페이지(기존 짧은탭 동작과 동일). 선택 → 해당 작성 화면으로.
+      //   갈라(발제)·갈라리는 권한/피처 게이팅이 있어 create.html이 안전(잠금 표시) — 거기로 보낸다.
+      //   예측·광장은 바로.
+      const go = (u) => (window.GALLA_nav || function (x) { location.href = x; })(u);
+      if (!type || type === 'galla' || type === 'gallari') { go('create.html'); return; }
+      go(WRITE_ROUTE[type] || 'create.html');
+    },
+  };
+  // ＋(글쓰기) 버튼에 조그를 건다. 페이지마다 새로 생기므로 신규 버튼도 관찰해 바인딩.
+  function bindWriteJogs() {
+    document.querySelectorAll('[data-write-hub], #hdrWrite').forEach(b => bindJog(b, WRITE_CFG));
+  }
+
   const HOLD_MS = 380;      // 이보다 길게 눌러야 펼쳐진다
   const RADIUS = 104;       // 부채꼴 반지름
   const DEAD_R = 14;        // 이 안쪽만 취소. 나머지는 거리와 무관하게 '방향'으로 다 잡힌다
@@ -401,6 +431,14 @@
         location.href = 'mypage.html';
       },
     });
+
+    /* ➕ 글쓰기 조그 — 현재 + 버튼들 바인딩 + 이후 뷰 전환으로 새로 생기는 것도 관찰해 바인딩(SPA) */
+    bindWriteJogs();
+    try {
+      let moRaf = 0;
+      const mo = new MutationObserver(() => { if (moRaf) return; moRaf = requestAnimationFrame(() => { moRaf = 0; bindWriteJogs(); }); });
+      mo.observe(document.body, { childList: true, subtree: true });
+    } catch (_) {}
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
