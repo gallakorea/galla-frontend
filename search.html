@@ -8,15 +8,15 @@
   <meta name="keywords" content="갈라 검색, 실시간 검색어, 실시간 뉴스, 갈라뉴스, 급상승 키워드, 핫이슈, 핫영상, 트렌드, GALLA">
   <link rel="canonical" href="https://galla.im/search.html">
   <meta property="og:type" content="website"><meta property="og:site_name" content="GALLA 갈라"><meta property="og:title" content="통합검색 · 실시간 뜨는 뉴스·이슈·핫영상"><meta property="og:description" content="실시간 급상승 키워드·갈라뉴스·핫이슈를 한 곳에서."><meta property="og:image" content="https://galla.im/assets/og/og-default.png"><meta property="og:url" content="https://galla.im/search.html">
-  <link rel="stylesheet" href="./css/search.css?v=073170" />
-  <link rel="stylesheet" href="css/plaza.css?v=073170"><!-- 광장 패널(통합) -->
-  <link rel="stylesheet" href="./css/composer-page.css?v=073170">
-  <link rel="stylesheet" href="./css/header.css?v=073170">
-  <link rel="stylesheet" href="./css/nav.css?v=073170">
-  <link rel="stylesheet" href="./css/write-hub.css?v=073170">
+  <link rel="stylesheet" href="./css/search.css?v=073171" />
+  <link rel="stylesheet" href="css/plaza.css?v=073171"><!-- 광장 패널(통합) -->
+  <link rel="stylesheet" href="./css/composer-page.css?v=073171">
+  <link rel="stylesheet" href="./css/header.css?v=073171">
+  <link rel="stylesheet" href="./css/nav.css?v=073171">
+  <link rel="stylesheet" href="./css/write-hub.css?v=073171">
   <!-- DM 패널 스타일 — 없으면 dm-root가 fixed를 못 받아 페이지에 그대로 쏟아진다 -->
-  <link rel="stylesheet" href="./css/dm.css?v=073170">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=073170">
+  <link rel="stylesheet" href="./css/dm.css?v=073171">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=073171">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -26,14 +26,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/items.css?v=073170">
-  <link rel="stylesheet" href="./css/user-sheet.css?v=073170">
-  <link rel="stylesheet" href="./css/theme.css?v=073170">
-<link rel="stylesheet" href="css/auth.css?v=073170">
-<link rel="stylesheet" href="./css/desktop.css?v=073170">
+  <link rel="stylesheet" href="./css/items.css?v=073171">
+  <link rel="stylesheet" href="./css/user-sheet.css?v=073171">
+  <link rel="stylesheet" href="./css/theme.css?v=073171">
+<link rel="stylesheet" href="css/auth.css?v=073171">
+<link rel="stylesheet" href="./css/desktop.css?v=073171">
   <!-- 앱 스플래시(로딩) 화면 — 세션 1회, head 동기 로드로 즉시 페인트 -->
-  <script src="/js/splash-boot.js?v=073170"></script>
-<link rel="stylesheet" href="./css/guide-banner.css?v=073170">
+  <script src="/js/splash-boot.js?v=073171"></script>
+<link rel="stylesheet" href="./css/guide-banner.css?v=073171">
 </head>
 
 <body data-page="trend">
@@ -323,65 +323,8 @@
 </div>
 
 <!-- 영상 재생 (공식 유튜브 플레이어 임베드) + 갈라 소셜 -->
-<div id="hv-player" class="hv-player hidden">
-  <div class="hv-dim"></div>
-  <div class="hv-box">
-    <div class="hv-grab"></div>
-    <div class="hv-frame" id="hvFrame"></div>
-
-    <div class="hv-head">
-      <span class="hv-title" id="hvTitle"></span>
-      <span class="hv-chname" id="hvCh"></span>
-      <button type="button" class="hv-close" id="hvClose" aria-label="닫기">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-
-    <!-- 좋아요 · 댓글 · 공유 (갈라 자체 소셜 — 유튜브 지표와 별개) -->
-    <div class="hv-social">
-      <button type="button" class="hv-sb" id="hvLike">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3l-1.4-1.3C5.4 14.4 2 11.3 2 7.5 2 4.4 4.4 2 7.5 2c1.7 0 3.4.8 4.5 2.1C13.1 2.8 14.8 2 16.5 2 19.6 2 22 4.4 22 7.5c0 3.8-3.4 6.9-8.6 11.5L12 20.3z"/></svg>
-        <span id="hvLikeN">좋아요</span>
-      </button>
-      <button type="button" class="hv-sb" id="hvComment">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
-        <span id="hvCommentN">0</span>
-      </button>
-      <button type="button" class="hv-sb" id="hvShare">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2.5L10.8 13.2"/><path d="M21.5 2.5l-6.8 19-3.9-8.3-8.3-3.9 19-6.8z"/></svg>
-        <span>공유</span>
-      </button>
-      <button type="button" class="hv-sb" id="hvGalvis" data-galvis data-gv-type="hottube" data-gv-id="" data-gv-title="" aria-label="갈비스와 얘기">
-        <svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg>
-        <span>갈비스</span>
-      </button>
-    </div>
-
-    <!-- 댓글 (댓글 버튼으로 토글) -->
-    <div class="hv-cmt-wrap hidden" id="hvCmtWrap">
-      <div class="hv-cmt-list" id="hvCmtList"></div>
-      <!-- 답글 대상 표시 -->
-      <div class="hv-replyto" id="hvReplyTo" hidden>
-        <span><b id="hvReplyNick"></b>님에게 답글</span>
-        <button type="button" id="hvReplyX" aria-label="취소">✕</button>
-      </div>
-      <div class="hv-cmt-bar">
-        <input id="hvCmtInput" class="hv-cmt-in" placeholder="댓글 남기기…" maxlength="1000" autocomplete="off">
-        <button type="button" class="ghost-toggle sm" id="hvGhost" title="유령으로 활동"><span class="gt-ic">👻</span></button>
-        <button type="button" class="hv-cmt-send" id="hvCmtSend">게시</button>
-      </div>
-    </div>
-
-    <div class="hv-actions">
-      <a class="hv-yt" id="hvOpen" href="#" target="_blank" rel="noopener noreferrer">유튜브에서 보기 ↗</a>
-      <!-- 발제 연동(embed 이슈)은 준비 중 — 지금은 안내만 -->
-      <button type="button" class="hv-galla" id="hvGalla" disabled>⚔️ 갈라 <em>준비 중</em></button>
-    </div>
-
-    <!-- 🎬 다음 영상 — 페이지 안 벗어나고 여기서 골라 보기(제자리 교체, 유튜브식) -->
-    <div class="hv-related" id="hvRelated"></div>
-  </div>
-</div>
+<!-- 🎬 핫튜브 시청은 이제 '진짜 SPA 페이지'(watch.html · 스택 라우트)가 담당한다.
+     예전 오버레이(#hv-player)는 폐기 — 카드 탭 시 hot-videos.js가 GALLA_nav('watch.html?v=..')로 push. -->
 
 <!-- 기사 읽기는 news.html '진짜 페이지'가 담당한다 (예전의 뷰어 모달은 제거).
      모달을 pushState로 페이지 흉내내면 사파리 스와이프 뒤로가기가 목록을 스치고
@@ -417,35 +360,35 @@
 </nav>
 
 <!-- 📸 지난 화면 즉시 복원(셸 모드) -->
-<script src="js/snapshot.js?v=073170"></script>
-<script src="/js/error-logger.js?v=073170"></script>
-  <script src="./vendor/supabase.js?v=073170"></script>
-<script src="js/supabase.js?v=073170"></script>
-<script src="js/social-auth.js?v=073170"></script>
-<script src="js/comment-actions.js?v=073170"></script>
-<script src="js/write-hub.js?v=073170"></script>
-<script src="js/dm.js?v=073170"></script>
-<script src="js/noti-icons.js?v=073170"></script>
-<script src="js/notifications.js?v=073170"></script>
-<script src="./js/search.js?v=073170"></script>
+<script src="js/snapshot.js?v=073171"></script>
+<script src="/js/error-logger.js?v=073171"></script>
+  <script src="./vendor/supabase.js?v=073171"></script>
+<script src="js/supabase.js?v=073171"></script>
+<script src="js/social-auth.js?v=073171"></script>
+<script src="js/comment-actions.js?v=073171"></script>
+<script src="js/write-hub.js?v=073171"></script>
+<script src="js/dm.js?v=073171"></script>
+<script src="js/noti-icons.js?v=073171"></script>
+<script src="js/notifications.js?v=073171"></script>
+<script src="./js/search.js?v=073171"></script>
 <!-- 광장(통합) — plaza.html에서 이관한 피드·글쓰기 엔진 -->
-<script src="js/plaza-render.js?v=073170"></script>
-<script src="js/share-sheet.js?v=073170"></script>
-<script src="js/report-block.js?v=073170"></script>
-<script src="js/draft.js?v=073170"></script>
-<script type="module" src="js/plaza.js?v=073170"></script>
-<script src="js/composer-page.js?v=073170"></script>
-<script src="./js/trend-tab-order.js?v=073170" defer></script>
-<script src="js/hot-videos.js?v=073170"></script>
-<script src="js/fx.js?v=073170"></script>
-<script src="js/follow.js?v=073170"></script>
-<script src="js/user-sheet.js?v=073170"></script>
-<script src="js/ghost.js?v=073170"></script>
-<script src="js/items.js?v=073170"></script>
-<script src="./js/nav.js?v=073170"></script>
-<script src="./js/desktop-pc.js?v=073170" defer></script>
-<script src="./js/nav-jog.js?v=073170" defer></script>
-<script src="./js/dm-call.js?v=073170" defer></script>
+<script src="js/plaza-render.js?v=073171"></script>
+<script src="js/share-sheet.js?v=073171"></script>
+<script src="js/report-block.js?v=073171"></script>
+<script src="js/draft.js?v=073171"></script>
+<script type="module" src="js/plaza.js?v=073171"></script>
+<script src="js/composer-page.js?v=073171"></script>
+<script src="./js/trend-tab-order.js?v=073171" defer></script>
+<script src="js/hot-videos.js?v=073171"></script>
+<script src="js/fx.js?v=073171"></script>
+<script src="js/follow.js?v=073171"></script>
+<script src="js/user-sheet.js?v=073171"></script>
+<script src="js/ghost.js?v=073171"></script>
+<script src="js/items.js?v=073171"></script>
+<script src="./js/nav.js?v=073171"></script>
+<script src="./js/desktop-pc.js?v=073171" defer></script>
+<script src="./js/nav-jog.js?v=073171" defer></script>
+<script src="./js/dm-call.js?v=073171" defer></script>
 <script>
   // 헤더 DM 버튼 연결(광장과 동일)
   (function () {
@@ -456,12 +399,12 @@
 </script>
 
 </div>
-<script src="/js/analytics.js?v=073170"></script>
-<script src="js/duel-alert.js?v=073170"></script>
-<script src="js/bug-report.js?v=073170"></script>
-<script src="/js/pwa.js?v=073170"></script>
-<script src="js/a2hs.js?v=073170"></script>
-  <script src="/js/pull-refresh.js?v=073170"></script>
+<script src="/js/analytics.js?v=073171"></script>
+<script src="js/duel-alert.js?v=073171"></script>
+<script src="js/bug-report.js?v=073171"></script>
+<script src="/js/pwa.js?v=073171"></script>
+<script src="js/a2hs.js?v=073171"></script>
+  <script src="/js/pull-refresh.js?v=073171"></script>
 <script>
   /* 🔥 트렌드 앱유도 CTA — 이미 앱/설치형이면 감춤, 아니면 노출 + 클릭 시 설치 플로우 */
   (function () {
@@ -480,8 +423,8 @@
   })();
 </script>
 <!-- 📈 트렌드 상단 안내 배너(접기/더 이상 안 보기) -->
-<script src="js/trend-guide.js?v=073170"></script>
+<script src="js/trend-guide.js?v=073171"></script>
 <!-- 📈 트렌드 첫 진입 코치마크 투어(병맛 스포트라이트) -->
-<script src="js/trend-tour.js?v=073170"></script>
+<script src="js/trend-tour.js?v=073171"></script>
 </body>
 </html>

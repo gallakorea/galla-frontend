@@ -486,41 +486,16 @@
     setTimeout(() => t.remove(), 1800);
   }
 
-  /* ---------- 플레이어 ---------- */
+  /* ---------- 플레이어 진입 ----------
+     ⚠️ 재생 화면은 이제 '진짜 SPA 라우트 페이지'(watch.html · js/watch-page.js)가 담당한다.
+        예전 오버레이(#hv-player)를 폐기하고, 카드 탭 → GALLA_nav('watch.html?v=..') 로 라우터에
+        push → 슬라이드인·엣지 스와이프 백·pop 이 전부 라우터 스택으로 관리된다(사장님: "느낌 말고 SPA로"). */
   function openPlayer(id, title, ch) {
-    vid = id; vtitle = title;
-    const p = $("#hv-player");
-    // 🩹 SPA 클리핑 방지 — 플레이어(position:fixed)가 transform 걸린 트렌드 뷰 안에 있으면
-    //    뷰포트가 아닌 변형 조상 기준이라 상단이 잘린다. body 최상위로 올려 진짜 전체화면으로.
-    if (p && p.parentElement !== document.body) document.body.appendChild(p);
-    $("#hvTitle").textContent = title;
-    $("#hvCh").textContent = ch || "";
-    const gv = $("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", title || ""); }
-    const watchUrl = `https://www.youtube.com/watch?v=${id}`;
-    $("#hvOpen").href = watchUrl;
-    // 🎬 우리 페이지 안에서 인라인 재생(유튜브 이탈 X).
-    //    ⚠️ 근본원인: 네이티브 앱은 출처가 capacitor://localhost 라, 유튜브 임베드를 직접 심으면
-    //       거의 모든 영상이 '오류 153(플레이어 구성 오류)'로 거부된다(정상 크리에이터 영상 포함).
-    //    ✅ 해법(오픈소스 정석): 임베드를 우리 실도메인(galla.im)의 프록시 페이지 안에서 로드해
-    //       origin/referrer 를 정식 https 도메인으로 만든다 → 153 소멸. 소유자 임베드차단 영상만
-    //       yt.html 내부에서 자체 폴백 카드로 처리(+ 하단 '유튜브에서 보기' 링크는 항상 제공).
-    const YT_PROXY = "https://galla.im/yt";   // Cloudflare Pages가 .html 제거 → 리다이렉트 홉 없이 바로
-    $("#hvFrame").innerHTML =
-      `<iframe src="${YT_PROXY}?v=${encodeURIComponent(id)}"
-               title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-               allowfullscreen></iframe>`;
-    $("#hvCmtWrap").classList.add("hidden");
-    setReply(null);
-    // 🔙 스택 페이지처럼 — 처음 열 때만 history에 얹어 '뒤로가기(제스처·버튼)'로 닫히게(제자리 교체 땐 유지)
-    const wasHidden = p.classList.contains("hidden");
-    p.classList.remove("hidden");
-    if (wasHidden) { try { history.pushState({ hvOpen: 1 }, ""); } catch (_) {} }
-    // 🎬 상단으로 스크롤 리셋(제자리 교체 시 새 영상이 위에서 보이게) + 다음 영상 목록
-    try { const box = p.querySelector(".hv-box"); if (box) box.scrollTop = 0; } catch (_) {}
-    loadRelated(id);
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("hv-playing");   // 🤖 갈비스 오브와 겹침 방지(오브 숨김)
-    loadSocial();
+    if (!id) return;
+    const u = `watch.html?v=${encodeURIComponent(id)}`
+      + (title ? `&t=${encodeURIComponent(title)}` : "")
+      + (ch ? `&c=${encodeURIComponent(ch)}` : "");
+    (window.GALLA_nav || function (x) { location.href = x; })(u);
   }
 
   function closePlayer(fromPop) {
