@@ -934,14 +934,17 @@ img.gnc-av {
 
 /* 갈라뉴스 리더 액션바 */
 .gn-actions {
-  display: flex; gap: 8px; flex-wrap: wrap;
+  display: flex; gap: 6px; flex-wrap: nowrap; justify-content: space-between;
   margin: 22px 0 4px; padding: 14px 0; border-top: 1px solid #1b1e28;
 }
 .gn-act {
-  display: inline-flex; align-items: center; gap: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
   border: 1px solid #262a38; background: #12141c; color: #cfd6e6;
-  border-radius: 999px; padding: 9px 15px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  border-radius: 999px; padding: 8px 11px; font-size: 13px; font-weight: 700; cursor: pointer;
+  white-space: nowrap; flex: 0 1 auto; min-width: 0;
 }
+.gn-act.gn-icon { padding: 8px 10px; }   /* 아이콘만(저장·공유·갈비스) 더 좁게 */
+.gn-act .gv-galvis { width: 17px; height: 17px; color: #5fd8ff; }
 .gn-act span { font-variant-numeric: tabular-nums; }
 .gn-act.on.like { border-color: #3356ff; color: #6d8bff; background: rgba(51,86,255,.12); }
 .gn-act.on.dislike { border-color: #ff4f6e; color: #ff6f86; background: rgba(255,79,110,.12); }
