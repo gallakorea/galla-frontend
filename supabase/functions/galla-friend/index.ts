@@ -580,7 +580,15 @@ Deno.serve(async (req) => {
       return json({ ok: true, ping: null });
     }
 
-    if (!(await aiBudgetOk())) return json({ ok: true, reply: "나 지금 좀 지쳤다… 이따 다시 얘기하자. 미안." });
+    // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
+    if (!(await aiBudgetOk())) {
+      const tired = [
+        "아 오늘 진짜 너무 많이 떠들었나봐, 목이 다 쉬었어 ㅋㅋ 나 오늘은 여기까지만 할게. 내일 다시 얘기하자!",
+        "미안 ㅠㅠ 오늘 수다 에너지를 다 써버렸어. 내일 충전해서 올게, 그때 마저 얘기하자.",
+        "오늘 치 수다가 다 떨어졌다… 나도 쉬는 시간이 필요해 ㅋㅋ 내일 보자!",
+      ];
+      return json({ ok: true, reply: tired[Math.floor(Math.random() * tired.length)] });
+    }
     const userMsg = String(body?.message || "").slice(0, 1500);
     const history = Array.isArray(body?.history) ? body.history.slice(-10) : [];
     const setName = body?.setFriendName ? String(body.setFriendName).slice(0, 20) : null;
@@ -671,6 +679,7 @@ Deno.serve(async (req) => {
     reply = reply
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")            // 마크다운 링크 → 텍스트만(스킴 무관: https·galla:// 등)
       .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")          // raw URL 제거(커스텀 스킴 포함)
+      .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|app_action|find_user|my_activity|manage_content|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")  // 툴 이름이 본문에 새는 것 제거
       .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
     // 🌐 검색으로 답했으면 링크 칩 '보장' — 모델이 open_link를 깜빡해도 서버가 첨부.
     //    답변에 '실제 언급된' 결과를 우선 매칭(불일치 칩 방지), 없으면 상위 결과.
