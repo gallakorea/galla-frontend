@@ -441,8 +441,37 @@
       window.speechSynthesis.speak(u);
     }catch(e){}
   }
+  /* 🎙 네이티브(iOS) = 애플 온디바이스 실시간 인식(GallaSpeech 브릿지) — 말하는 동안 입력창에 글자가 차오르고,
+     다시 탭하면 확정→전송. iosrtc의 getUserMedia 점거와 무관·무료·저지연. 웹은 기존 Whisper 폴백. */
+  function nsrAvail(){ try{ return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.gallaSpeech); }catch(e){ return false; } }
+  function nsrPost(op){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:op}); }catch(e){} }
+  window.__gallaSpeechEvt = function(type, text){
+    var mic=sheet && sheet.querySelector(".fr-mic");
+    if(type==="listening"){
+      recording=true; mic&&mic.classList.add("fr-rec");
+      if(taEl){ taEl.value=""; taEl.placeholder="듣는 중… 말해봐 🎙"; }
+    } else if(type==="partial"){
+      if(taEl){ taEl.value=text||""; taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; }
+    } else if(type==="end"){
+      recording=false; mic&&mic.classList.remove("fr-rec");
+      var t=(text||(taEl&&taEl.value)||"").trim();
+      if(taEl){ taEl.value=""; taEl.style.height="auto"; taEl.placeholder="친구한테 아무 말이나 해봐"; }
+      if(t) sendText(t, false);
+    } else { // error
+      recording=false; mic&&mic.classList.remove("fr-rec");
+      if(taEl) taEl.placeholder="친구한테 아무 말이나 해봐";
+      addMsg("a", text==="perm" ? "음성인식 권한이 꺼져 있어! 설정 > 갈라에서 '음성 인식'을 켜줘" :
+                  text==="mic" ? "마이크 권한을 허용해줘야 음성으로 대화할 수 있어!" :
+                  "마이크를 못 켰어 ㅠㅠ 다시 한 번 눌러볼래?");
+    }
+  };
   async function toggleVoice(){
     var mic=sheet.querySelector(".fr-mic");
+    if(nsrAvail()){
+      if(recording){ nsrPost("stop"); return; }
+      var jwt0=await token(); if(!jwt0){ addMsg("a","로그인부터 하고 오면 음성으로 얘기하자!"); return; }
+      nsrPost("start"); return;
+    }
     if(recording){ try{ rec && rec.state!=="inactive" && rec.stop(); }catch(e){} return; }
     var jwt=await token(); if(!jwt){ addMsg("a","로그인부터 하고 오면 음성으로 얘기하자!"); return; }
     try{
