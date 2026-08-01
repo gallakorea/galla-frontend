@@ -13,6 +13,8 @@ const cors = {
 const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || Deno.env.get("JARVIS_BASE_URL") || "https://api.openai.com/v1";
 const API_KEY  = Deno.env.get("FRIEND_API_KEY")  || Deno.env.get("JARVIS_API_KEY") || Deno.env.get("OPENAI_API_KEY")!;
 const MODEL    = Deno.env.get("FRIEND_MODEL")    || Deno.env.get("JARVIS_MODEL") || "gpt-4o-mini";
+// 💬 대화 답변 전용 모델(품질) — 백그라운드(추출·요약·리플렉션)는 싼 MODEL, 답변만 좋은 걸로 분리해 비용 최적화.
+const CHAT_MODEL = Deno.env.get("FRIEND_CHAT_MODEL") || MODEL;
 // 임베딩(기억 검색용) — 대화 모델과 별개로 OpenAI 임베딩 사용(싸고 안정적). env로 교체 가능.
 const EMBED_URL   = Deno.env.get("EMBED_BASE_URL") || "https://api.openai.com/v1";
 const EMBED_KEY   = Deno.env.get("EMBED_API_KEY")  || Deno.env.get("OPENAI_API_KEY")!;
@@ -475,7 +477,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 (네 이름·상대·관계 깊이·기분·시각·기억은 바로 다음 '지금 맥락' 메시지에 온다 — 그걸 반영해서 대화해라.)`;
 
 // 유저별·턴별로 변하는 것 전부 — 두 번째 system 메시지(정적 페르소나의 캐시를 깨지 않게 분리)
-function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string): string {
+function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[]): string {
   const depth = rel?.depth || 1;
   const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
   const memBlock = mems.length
@@ -517,11 +519,15 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
   const sumBlock = (profileSummary && profileSummary.trim())
     ? `\n\n━━ 🧠 [상대 프로필 — 핵심 요약] (항상 기억하는 것, 최우선. 여기서 벗어난 소리 하지 마라) ━━\n${profileSummary.trim()}`
     : "";
+  // 🎞 지난 대화들(에피소드) — "저번에 우리 그 얘기했잖아" 연속성
+  const epBlock = (episodes && episodes.length)
+    ? `\n\n━━ 🎞 [지난 우리 대화들] (이어서 얘기하듯 자연스럽게 참고) ━━\n${episodes.map((e: any) => "  · " + e.content).join("\n")}`
+    : "";
   return `━━ 지금 맥락 ━━
 - 네 이름: ${friendName}${friendName === "갈비스" ? "(G.A.L.V.I.S. — 아직 상대가 이름을 안 지어줌. 흐름에서 자연스럽게 '나 이름 지어줄래?' 물어봐도 좋다)" : "(상대가 지어준 이름)"}
 - 상대: ${nick || "닉네임 아직 모름"}
 - 관계: depth ${depth}/4 · ${tone}
-- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${moodBlock}${fuBlock}${sumBlock}${cardBlock}${storyBlock}
+- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
 
 ━━ 내가 이미 아는 것(상대에 대한 기억 — 이번 대화와 관련해 떠오른 것) ━━
 ${memBlock}`;
@@ -550,7 +556,7 @@ async function chatOnce(messages: any[]) {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
     // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 240 }),
+    body: JSON.stringify({ model: CHAT_MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 240 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();
@@ -616,7 +622,8 @@ mood 값 3단계(달달↔삐짐 진폭):
 · "normal" = 그 외 평상시(또는 삐졌다가 사과받아 풀림)
 🔄 supersede(모순 갱신): 이번 대화로 '이미 아는 것' 중 바뀌거나 틀린 게 있으면(이사·이직·헤어짐·취향 변화 등) 그 옛 문장을 supersede 배열에 '거의 그대로' 넣어라(그걸 폐기하고 새 memory로 대체). 없으면 빈 배열.
 각 memory엔 salience(1~5) 넣어라 — 이름·직업·핵심 인간관계·강한 성향=4~5, 사소한 취향·일시적 감정=1~2.
-형식: {"memories":[{"kind":"","mkey":"","content":"","salience":3}],"mood":"normal|sulky|warm","persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]},"supersede":[]}
+⏰ 시간: 시점이 있으면 content에 자연어로 꼭 넣어라("작년 여름 제주여행 감", "다음주 화요일 면접"). 날짜를 특정할 수 있으면 happened_at에 ISO 날짜(예: "2025-08-12"). 오늘은 ${new Date().toISOString().slice(0, 10)}(KST 기준 상대날짜 환산).
+형식: {"memories":[{"kind":"","mkey":"","content":"","salience":3,"happened_at":""}],"mood":"normal|sulky|warm","persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]},"supersede":[]}
 현재 내 캐릭터(정해진 것 — 바꾸지 말고 빈 곳만 채워): ${existingPersona || "(아직 없음)"}
 이미 아는 것: ${existing.slice(0, 40).join(" / ") || "(없음)"}` },
           { role: "user", content: `${context ? "최근 대화 흐름:\n" + context + "\n\n" : ""}이번 턴 —\n상대: ${userMsg}\n친구(나): ${reply}` },
@@ -701,6 +708,29 @@ JSON: {"insights":["..."],"supersede":["..."]}
   } catch { /* best effort */ }
 }
 
+// 🎞 에피소드 기억 — 대화 세션을 '사건 한 줄'로 요약해 저장. 나중에 "저번에 우리 그 얘기했잖아"로 회상.
+async function summarizeEpisode(uid: string, hist: any[]) {
+  try {
+    const convo = (hist || []).slice(-20).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 140)).join("\n");
+    if (convo.length < 80) return;
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL, temperature: 0.3, max_tokens: 120,
+        messages: [
+          { role: "system", content: `이 대화 조각을 나중에 "저번에 우리 그 얘기했잖아" 하고 떠올릴 '에피소드 한 줄'로 요약해라. 무슨 얘기를 나눴고 분위기가 어땠는지 1~2문장. '~에 대해 얘기함 / ~해서 같이 웃음 / ~로 위로해줌' 식. 사실 나열 말고 '그때 그 대화'가 뭐였는지.` },
+          { role: "user", content: convo },
+        ],
+      }),
+    });
+    const j = await r.json();
+    const ep = String(j?.choices?.[0]?.message?.content || "").trim().slice(0, 200);
+    if (ep.length < 6) return;
+    const ev = await embed(ep);
+    await supa.from("friend_memory").insert({ user_id: uid, kind: "episode", content: ep, salience: 2, embedding: ev ? vecLit(ev) : null, happened_at: new Date().toISOString() });
+  } catch { /* best effort */ }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -773,6 +803,11 @@ Deno.serve(async (req) => {
       .eq("user_id", uid).eq("status", "active").eq("kind", "selfstory")
       .order("created_at", { ascending: false }).limit(12);
     const selfstories = selfst || [];
+    // 🎞 지난 대화(에피소드) 최근 몇 개 — 연속성 주입
+    const { data: epData } = await supa.from("friend_memory").select("content,happened_at")
+      .eq("user_id", uid).eq("status", "active").eq("kind", "episode")
+      .order("happened_at", { ascending: false, nullsFirst: false }).limit(4);
+    const episodes = epData || [];
     // 🧠 계층 기억 로드 — 기억이 수천 개여도 매번 주입은 작게(비용 일정):
     //   ① 코어(앵커): 높은 salience 또는 프로필/성향/싫어하는사람 — 항상 소량
     //   ② 관련(검색): 이번 메시지와 의미 유사한 것 top-K (pgvector)
@@ -806,7 +841,7 @@ Deno.serve(async (req) => {
     }
     const seenC = new Set<string>(); const memList: any[] = [];
     for (const m of [...(core || []), ...recalled, ...recent]) {
-      if (!m || !m.content || m.kind === "selfstory" || seenC.has(m.content)) continue;   // selfstory는 [내 지난 이야기]로 따로
+      if (!m || !m.content || m.kind === "selfstory" || m.kind === "episode" || seenC.has(m.content)) continue;   // selfstory·episode는 별도 블록으로
       seenC.add(m.content); memList.push(m);
     }
 
@@ -819,7 +854,7 @@ Deno.serve(async (req) => {
 
     const messages: any[] = [
       { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
-      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary) },
+      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "user", content: openMsg },
@@ -924,17 +959,20 @@ Deno.serve(async (req) => {
               const ev = await embed(content);
               const emb = ev ? vecLit(ev) : null;
               const sal = Math.min(5, Math.max(floor(m.kind), m.salience || 3));
+              const hpd = (m.happened_at && !isNaN(Date.parse(m.happened_at))) ? new Date(m.happened_at).toISOString() : null;
               const singular = m.mkey && (m.kind === "profile" || m.kind === "stance" || m.kind === "person");
               if (singular) {
                 await supa.from("friend_memory").upsert(
-                  { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb },
+                  { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb, happened_at: hpd },
                   { onConflict: "user_id,mkey" },
                 );
               } else {
-                await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb });
+                await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb, happened_at: hpd });
               }
             } catch { /* */ }
           }
+          // 🎞 에피소드 기억(20턴마다) — 이번 대화 뭉치를 '사건 한 줄'로
+          if (newCount % 20 === 0) { await summarizeEpisode(uid, history); }
           // 🧠✨ 리플렉션(15턴마다) — 사실들에서 통찰 종합 → 요약 전에 돌려 요약에도 반영
           if (newCount % 15 === 0) { await reflect(uid, nick); }
           // 🧠 프로필 요약 주기 재생성(8턴마다 / 아직 없고 4턴 넘으면) — 항상 주입되는 장기기억
