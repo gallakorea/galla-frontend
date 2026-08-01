@@ -525,6 +525,9 @@
     $("#hvCmtWrap").classList.add("hidden");
     setReply(null);
     p.classList.remove("hidden");
+    // 🎬 상단으로 스크롤 리셋(제자리 교체 시 새 영상이 위에서 보이게) + 다음 영상 목록
+    try { const box = p.querySelector(".hv-box"); if (box) box.scrollTop = 0; } catch (_) {}
+    loadRelated(id);
     document.body.style.overflow = "hidden";
     document.body.classList.add("hv-playing");   // 🤖 갈비스 오브와 겹침 방지(오브 숨김)
     loadSocial();
@@ -536,6 +539,51 @@
     document.body.style.overflow = "";
     document.body.classList.remove("hv-playing");
     vid = null;
+  }
+
+  /* 🎬 다음 영상 — 현재 영상 아래에 다른 핫튜브를 목록으로. 탭하면 '페이지 안 벗어나고' 제자리 교체(유튜브식). */
+  const fmtDur = (iso) => {
+    const m = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso || "");
+    if (!m) return "";
+    const h = +(m[1] || 0), mi = +(m[2] || 0), s = +(m[3] || 0);
+    return h ? `${h}:${String(mi).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${mi}:${String(s).padStart(2, "0")}`;
+  };
+  let relatedBound = false;
+  async function loadRelated(curId) {
+    const box = $("#hvRelated");
+    if (!box) return;
+    try {
+      const c = await sb();
+      if (!c) return;
+      const { data } = await c.from("youtube_hot")
+        .select("video_id,title,channel_title,thumbnail,view_count,duration")
+        .neq("video_id", curId)
+        .order("view_count", { ascending: false, nullsFirst: false })
+        .limit(40);
+      const seen = new Set([curId]);
+      const list = (data || []).filter(v => v && v.video_id && !seen.has(v.video_id) && seen.add(v.video_id)).slice(0, 15);
+      if (!list.length) { box.innerHTML = ""; return; }
+      box.innerHTML = '<div class="hv-related-h">다음 영상</div>' + list.map(v => `
+        <div class="hv-rel" data-id="${esc(v.video_id)}" data-title="${esc(v.title || "")}" data-ch="${esc(v.channel_title || "")}">
+          <div class="hv-rel-thumb">
+            ${v.thumbnail ? `<img src="${esc(v.thumbnail)}" loading="lazy" onerror="this.style.display='none'">` : ""}
+            ${v.duration ? `<span class="hv-rel-dur">${esc(fmtDur(v.duration))}</span>` : ""}
+          </div>
+          <div class="hv-rel-info">
+            <div class="hv-rel-t">${esc(v.title || "(제목 없음)")}</div>
+            <div class="hv-rel-m">${esc(v.channel_title || "")}${v.view_count ? " · 조회 " + shortNum(v.view_count) : ""}</div>
+          </div>
+        </div>`).join("");
+      // 위임(1회) — 탭 시 제자리 교체(닫지 않고 openPlayer만 다시)
+      if (!relatedBound) {
+        relatedBound = true;
+        box.addEventListener("click", (e) => {
+          const el = e.target.closest(".hv-rel");
+          if (!el) return;
+          openPlayer(el.dataset.id, el.dataset.title || "", el.dataset.ch || "");
+        });
+      }
+    } catch (_) { box.innerHTML = ""; }
   }
 
   // 통합 검색의 유튜브 결과에서도 같은 플레이어를 연다
