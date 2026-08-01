@@ -67,6 +67,10 @@
           ${n.key === 'dm' ? '<em class="pcl-badge" id="pclDmBadge" hidden></em>' : ''}
         </a>`).join('')}
       <button class="pcl-write" type="button">글쓰기</button>
+      <button class="pcl-galvis" type="button" aria-label="갈비스와 대화">
+        ${I('<circle cx="12" cy="12" r="8.2" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/>')}
+        <span>갈비스</span></button>
+      <button class="pcl-getapp" type="button" aria-label="갈라 앱 받기">📲 <span>앱 받기</span></button>
       <div class="pcl-foot">
         여론이 에너지가 되는 곳<br>
         <a href="help-permissions.html">도움말</a> · <a href="#" id="pclBug">버그 신고</a>
@@ -77,6 +81,8 @@
       if (window.openWriteHub) window.openWriteHub('galla');
       else (window.GALLA_nav||function(u){location.href=u})('write.html');
     };
+    el.querySelector('.pcl-galvis').onclick = () => { window.GALLA_openFriend ? window.GALLA_openFriend() : (window.GALLA_askGalvis && window.GALLA_askGalvis({})); };
+    el.querySelector('.pcl-getapp').onclick = () => { window.GALLA_appDownload && window.GALLA_appDownload('getapp'); };
     el.querySelector('#pclBug').onclick = async e => {
       e.preventDefault();
       if (!window.GALLA_openBugReport) {
@@ -125,9 +131,15 @@
     el.id = 'pc-right';
     el.innerHTML =
       card('pcr-battle', '실시간 전황', true) +
+      card('pcr-hot', '지금 뜨는 영상') +
       card('pcr-predict', '오늘의 예측') +
-      card('pcr-rooms', '난장 라이브', true);
+      card('pcr-rooms', '난장 라이브', true) +
+      // 📲 앱 다운로드 프로모(정적) — 갈비스와 함께 핵심 전환 트리거
+      `<section class="pcr-card pcr-getapp"><h3>📲 갈라 앱</h3>
+        <div class="pcr-body"><p class="pcr-dl-t">알림·통화·오프라인까지 — <b>앱으로 더 크게</b></p>
+        <button class="pcr-dl" type="button">앱 받기</button></div></section>`;
     document.body.appendChild(el);
+    el.querySelector('.pcr-dl')?.addEventListener('click', () => { window.GALLA_appDownload && window.GALLA_appDownload('getapp'); });
 
     const supa = await sb();
     if (!supa) { el.remove(); return; }
@@ -149,6 +161,21 @@
         </a>`;
       }).join(''), 'index.html', '전장 전체 보기');
     } catch (_) { fill('pcr-battle', ''); }
+
+    // ①.5 지금 뜨는 영상 — 핫튜브(유튜브 인기 급상승, 롱폼 상위). 임베드 재생은 트렌드 탭에서.
+    try {
+      const { data } = await supa.from('youtube_hot')
+        .select('video_id,title,channel_title,view_count')
+        .eq('feed', 'all').eq('is_short', false)
+        .not('channel_title', 'ilike', '%- Topic')
+        .order('rank', { ascending: true }).limit(4);
+      const sN = n => { n = Number(n) || 0; return n >= 100000000 ? (n/1e8).toFixed(1).replace(/\.0$/,'')+'억' : n >= 10000 ? (n/1e4).toFixed(1).replace(/\.0$/,'')+'만' : String(n); };
+      fill('pcr-hot', (data || []).map(v => `
+        <a class="pcr-row" href="search.html?video=${encodeURIComponent(v.video_id)}">
+          <b>${esc(v.title)}</b>
+          <i>${esc(v.channel_title || '')}${v.view_count ? ' · 조회 ' + sN(v.view_count) : ''}</i>
+        </a>`).join(''), 'search.html', '핫튜브 전체 보기');
+    } catch (_) { fill('pcr-hot', ''); }
 
     // ② 오늘의 예측 — 마감 임박 순(살아있는 마켓)
     try {

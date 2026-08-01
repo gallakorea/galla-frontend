@@ -110,6 +110,27 @@
   #pc-left .pcl-foot a { color: #6a7182; text-decoration: none; }
   #pc-left .pcl-foot a:hover { color: #9aa2b5; }
 
+  /* 갈비스 진입(레일) — 시안 액센트 */
+  #pc-left .pcl-galvis {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 8px; padding: 11px 14px;
+    border: 1px solid rgba(95,216,255,.35); border-radius: 14px; cursor: pointer;
+    background: rgba(95,216,255,.08); color: #bfeeff;
+    font-size: 14.5px; font-weight: 800; font-family: inherit; text-align: left; width: 100%;
+    transition: background .14s;
+  }
+  #pc-left .pcl-galvis svg { width: 20px; height: 20px; flex: none; color: #5fd8ff; }
+  #pc-left .pcl-galvis:hover { background: rgba(95,216,255,.15); }
+  /* 앱 받기(레일) — 다운로드 트리거 */
+  #pc-left .pcl-getapp {
+    display: flex; align-items: center; gap: 8px; justify-content: center;
+    margin-top: 8px; padding: 11px; border: 1px dashed rgba(255,255,255,.22);
+    border-radius: 14px; cursor: pointer; background: none; color: #c3c9d4;
+    font-size: 14px; font-weight: 800; font-family: inherit;
+    transition: background .14s, color .14s;
+  }
+  #pc-left .pcl-getapp:hover { background: rgba(255,255,255,.05); color: #fff; }
+
   /* ── 우측 라이브 패널 ── */
   #pc-right {
     position: fixed;
@@ -168,11 +189,27 @@
   .pcr-more:hover { color: #9aa2b5; }
   .pcr-empty { padding: 12px 2px; font-size: 12.5px; color: #5d6472; }
 
+  /* 📲 다운로드 프로모(우측) */
+  .pcr-getapp {
+    background: linear-gradient(135deg, rgba(67,97,255,.14), rgba(95,216,255,.10));
+    border-color: rgba(95,216,255,.22);
+  }
+  .pcr-dl-t { margin: 0 0 12px; font-size: 12.5px; line-height: 1.5; color: #c3c9d4; }
+  .pcr-dl-t b { color: #fff; }
+  .pcr-dl {
+    width: 100%; padding: 11px; border: 0; border-radius: 12px; cursor: pointer;
+    background: linear-gradient(135deg, #4361ff, #5b8cff); color: #fff;
+    font-size: 14px; font-weight: 800; font-family: inherit; transition: transform .12s;
+  }
+  .pcr-dl:active { transform: scale(.98); }
+
   /* 레일이 겹치는 애매한 폭(1100~1279px)에서는 우측 패널만 유지하고 레일 라벨 축소 */
   @media (max-width: 1279px) {
     :root { --pc-left: 68px; }
-    #pc-left .pcl-item span, #pc-left .pcl-logo b, #pc-left .pcl-foot { display: none; }
+    #pc-left .pcl-item span, #pc-left .pcl-logo b, #pc-left .pcl-foot,
+    #pc-left .pcl-galvis span, #pc-left .pcl-getapp span { display: none; }
     #pc-left .pcl-item { justify-content: center; padding: 13px 0; }
+    #pc-left .pcl-galvis, #pc-left .pcl-getapp { justify-content: center; padding: 12px 0; }
     #pc-left .pcl-badge { position: absolute; top: 4px; right: 8px; margin: 0; }
     #pc-left .pcl-write { font-size: 0; padding: 13px 0; }
     #pc-left .pcl-write::before { content: '✎'; font-size: 17px; }
