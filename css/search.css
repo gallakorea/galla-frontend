@@ -1152,6 +1152,11 @@ img.gnc-av {
   animation: hvIn .26s cubic-bezier(.2,.85,.2,1);   /* 스택 페이지처럼 우→좌 슬라이드인(모달 느낌 제거) */
 }
 @keyframes hvIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+/* 🔙 닫힘(뒤로가기) — SPA 페이지처럼 우로 슬라이드 아웃 + 딤 페이드로 뒤 페이지가 드러난다. */
+.hv-player.hv-out .hv-box { animation: hvOut .24s cubic-bezier(.4,0,.2,1) forwards; }
+.hv-player.hv-out .hv-dim { animation: hvDimOut .24s ease forwards; }
+@keyframes hvOut { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes hvDimOut { from { opacity: 1; } to { opacity: 0; } }
 .hv-grab { display: none; }   /* 페이지化 — 시트 손잡이 제거(닫기 버튼이 출구) */
 
 /* 플레이어는 스크롤해도 상단에 붙어있게(유튜브처럼) */

@@ -928,6 +928,7 @@ async function initTrendPage() {
                   data-gid="${n.id}" aria-label="저장">${ST.saved}</button>
           <button type="button" class="gnc-act gn-share-btn"
                   data-gid="${n.id}" data-title="${esc(n.title)}" aria-label="공유">${ST.share}</button>
+          <button type="button" class="gnc-act gn-galvis-btn" data-galvis data-gv-type="news" data-gv-id="${n.id}" data-gv-title="${esc(n.title)}" aria-label="갈비스와 얘기"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="8.2" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></button>
         </div>
       </div>
     </div>`;
@@ -1206,6 +1207,8 @@ async function initTrendPage() {
     if (save) { e.stopPropagation(); toggleSaveGnCard(save); return; }
     const share = e.target.closest(".gn-share-btn");
     if (share) { e.stopPropagation(); shareGnCard(share); return; }
+    // 🤖 갈비스 — stopPropagation 하지 않는다(friend.js 문서 위임이 받아야 하므로). 기사만 안 열고 통과.
+    if (e.target.closest(".gn-galvis-btn")) return;
 
     // 홈 '더보기' → 그 카테고리 필터로
     const more = e.target.closest(".nh-more");
@@ -1267,8 +1270,13 @@ async function initTrendPage() {
   }
 
   async function shareGnCard(btn) {
-    const url = new URL(`news.html?gn=${btn.dataset.gid}`, location.href).href;
     const title = btn.dataset.title || "GALLA 뉴스";
+    // 공유 URL은 콘텐츠형 OG 카드가 붙는 규약(/share/<type>/<id>) 우선, 없으면 news.html 딥링크.
+    const url = window.GALLA_shareUrl
+      ? window.GALLA_shareUrl("news", btn.dataset.gid)
+      : new URL(`news.html?gn=${btn.dataset.gid}`, location.href).href;
+    // 앱 웹뷰(capacitor)에선 navigator.share 가 없거나 조용히 실패 → 네이티브 공유를 감싼 공용 유틸 사용.
+    if (window.GALLA_share) { window.GALLA_share({ url, title, text: "여러 기사를 AI가 3줄로 정리한 갈라뉴스" }); return; }
     if (navigator.share) {
       try { await navigator.share({ title, url }); return; }
       catch (err) { if (err.name === "AbortError") return; }

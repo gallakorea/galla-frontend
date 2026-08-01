@@ -523,17 +523,28 @@
     loadSocial();
   }
 
-  let hvClosing = false;
   function closePlayer(fromPop) {
     const p = $("#hv-player");
-    if (p.classList.contains("hidden")) return;
-    $("#hvFrame").innerHTML = "";   // 재생 중지
-    p.classList.add("hidden");
-    document.body.style.overflow = "";
-    document.body.classList.remove("hv-playing");
-    vid = null;
-    // 뒤로가기로 닫힌 게 아니면(X·딤 탭) history에서 우리 항목을 정리
-    if (!fromPop) { try { if (history.state && history.state.hvOpen) history.back(); } catch (_) {} }
+    if (!p || p.classList.contains("hidden") || p.__closing) return;
+    p.__closing = true;
+    const box = p.querySelector(".hv-box");
+    const finish = () => {
+      $("#hvFrame").innerHTML = "";   // 재생 중지
+      p.classList.add("hidden");
+      p.classList.remove("hv-out");
+      p.__closing = false;
+      document.body.style.overflow = "";
+      document.body.classList.remove("hv-playing");
+      vid = null;
+      // 뒤로가기로 닫힌 게 아니면(X·딤·스와이프) history에서 우리 항목을 정리
+      if (!fromPop) { try { if (history.state && history.state.hvOpen) history.back(); } catch (_) {} }
+    };
+    // 🔙 SPA 페이지처럼 우로 슬라이드 아웃(뒤 페이지가 드러남) → 끝나면 정리
+    p.classList.add("hv-out");
+    let done = false;
+    const fin = () => { if (done) return; done = true; finish(); };
+    if (box) box.addEventListener("animationend", fin, { once: true });
+    setTimeout(fin, 300);   // animationend 미발화 폴백
   }
   // 🔙 뒤로가기 제스처/버튼 → 플레이어 닫기(문서 이탈 대신)
   window.addEventListener("popstate", () => {
@@ -641,8 +652,9 @@
       if (g) { document.querySelector(`.tab-item[data-tab="${g.dataset.tabGoto}"]`)?.click(); return; }
     });
 
-    $("#hvClose")?.addEventListener("click", closePlayer);
-    $("#hv-player")?.querySelector(".hv-dim")?.addEventListener("click", closePlayer);
+    // ⚠️ closePlayer 를 직접 리스너로 넣으면 click 이벤트가 fromPop 인자로 들어가 history 정리를 건너뛴다 → 감싼다.
+    $("#hvClose")?.addEventListener("click", () => closePlayer());
+    $("#hv-player")?.querySelector(".hv-dim")?.addEventListener("click", () => closePlayer());
 
     /* 🔙 플레이어 전용 '좌→우 스와이프로 닫기(페이지 뒤로)'.
        앱은 네이티브 엣지제스처를 끄고 nav.js 커스텀 스와이프로 뒤로가기를 처리하는데,
