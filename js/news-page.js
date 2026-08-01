@@ -400,22 +400,28 @@
   }
 
   /* ================= 시작 ================= */
-  document.addEventListener("DOMContentLoaded", async () => {
+  /* 🔀 이중 모드 — MPA(단독 news.html)면 DCL로 location.search 읽어 자동 실행,
+     SPA(app.html)면 어댑터(js/spa/views/news.js)가 GALLA_PAGE_NEWS.mount(root, params)로 부른다.
+     params: { gn } 또는 { url, title, press }. (IDs가 고유해 전역 $로도 뷰 격리됨) */
+  async function boot(p) {
     supabase = await waitForSupabaseClient();
     const { data } = await supabase.auth.getUser();
     ME = data?.user || null;
-
-    const qs = new URLSearchParams(location.search);
-    const gn = qs.get("gn");
-    const url = qs.get("url");
-
+    const gn = p && p.gn, url = p && p.url;
     if (gn) {
-      $("#np-ext").style.display = "none";
+      const ext = $("#np-ext"); if (ext) ext.style.display = "none";
       await loadGallaNews(gn);
     } else if (url) {
-      await loadArticle(url, qs.get("title") || "", qs.get("press") || "");
+      await loadArticle(url, (p && p.title) || "", (p && p.press) || "");
     } else {
       readerEl().innerHTML = `<div class="reader-loading">기사를 찾을 수 없어요.</div>`;
     }
+  }
+  window.GALLA_PAGE_NEWS = { mount: async (_root, params) => { await boot(params || {}); } };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (document.body && document.body.dataset.page === "spa") return;   // SPA는 어댑터가 mount
+    const qs = new URLSearchParams(location.search);
+    boot({ gn: qs.get("gn"), url: qs.get("url"), title: qs.get("title"), press: qs.get("press") });
   });
 })();

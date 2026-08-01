@@ -146,13 +146,13 @@ async function initTrendPage() {
   /* 기사 읽기는 news.html '진짜 페이지'로 이동한다.
      예전엔 이 페이지 위의 모달이었는데, 모달을 pushState로 페이지 흉내내면
      사파리 스와이프 뒤로가기가 목록을 스치고 이전 문서(예측 등)까지 튕겨 나갔다. */
-  const openGallaNews = (id) =>
-    (location.href = `news.html?gn=${encodeURIComponent(id)}`);
-
+  // 앱(SPA)에선 스택 뷰로 push(스크롤·갈비스 정상), 웹(MPA)에선 기존 풀페이지 이동 — GALLA_nav가 분기.
+  const goNews = (url) => (window.GALLA_nav ? window.GALLA_nav(url) : (location.href = url));
+  const openGallaNews = (id) => goNews(`news.html?gn=${encodeURIComponent(id)}`);
   const openNewsViewer = (url, title, press) => {
     if (!url) return;
     const qs = new URLSearchParams({ url, title: title || "", press: press || "" });
-    location.href = `news.html?${qs}`;
+    goNews(`news.html?${qs}`);
   };
 
   /* ================= 탭 ================= */
@@ -1297,7 +1297,7 @@ async function initTrendPage() {
   const qs = new URLSearchParams(location.search);
   const gnParam = qs.get("gn");
   if (gnParam) {
-    location.replace(`news.html?gn=${encodeURIComponent(gnParam)}`);
+    goNews(`news.html?gn=${encodeURIComponent(gnParam)}`);
   } else if (qs.get("video")) {
     // 핫영상 공유 랜딩(/share/video/<id>)에서 들어온 경우 — 재생은 hot-videos.js가 맡는다
     activateTab("hot", false);
