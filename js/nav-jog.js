@@ -48,9 +48,13 @@
     predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
     plaza:   I('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'),
   };
+  // 마이페이지 탭바가 아직 렌더 전이면(첫 조그) 이 기본값을 쓴다 — 탭 전체(숏판·롱판 포함)를 담아
+  // '두 번째에야 다 뜨는' 버그 방지. (탭바가 뜨면 live가 우선이라 숨김 탭은 자동 반영된다.)
   const MY_DEFAULT = [
     { id: 'all', label: '모아', icon: MY_ICONS.all },
     { id: 'galla', label: '갈라', icon: MY_ICONS.galla },
+    { id: 'short', label: '숏판', icon: MY_ICONS.short },
+    { id: 'long', label: '롱판', icon: MY_ICONS.long },
     { id: 'predict', label: '예측', icon: MY_ICONS.predict },
     { id: 'plaza', label: '광장', icon: MY_ICONS.plaza },
   ];
