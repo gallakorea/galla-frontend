@@ -58,6 +58,49 @@
     return loadLocalChat(u);
   }
 
+  // 🔄 실시간 미러링 — 다른 기기서 대화가 이어지면(친구 답 포함) 켜져있는 이 기기에도 즉시 반영.
+  //    Supabase realtime으로 내 friend_relationship.chat_log 변경 구독(RLS로 본인 행만 수신).
+  var _syncChan=null, _lastSig="";
+  function chatSig(log){                 // 마지막 유저·친구 발화 내용으로 시그니처(길이 무관 — 에코 오탐 방지)
+    if(!log||!log.length) return "0";
+    var a=log[log.length-1]||{}, b=log[log.length-2]||{};
+    return String(a.content||"").slice(-60)+"§"+String(b.content||"").slice(-40);
+  }
+  function renderHistory(log){
+    if(!logEl) return;
+    logEl.innerHTML="";
+    history = log.slice(-30);
+    history.forEach(function(msg){
+      if(msg && msg.role==="user") addMsg("u", msg.content||"");
+      else splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); });
+    });
+    scrollBottom();
+  }
+  function applyRemoteChat(remoteLog){
+    try{
+      if(!Array.isArray(remoteLog)||!remoteLog.length) return;
+      if(busy) return;                                     // 이 기기가 전송 중 = 곧 내 것으로 정리됨(에코)
+      var sig=chatSig(remoteLog);
+      if(sig===chatSig(history)){ _lastSig=sig; return; }   // 내가 이미 가진 것과 동일(내 에코) → 무시
+      if(sig===_lastSig) return;
+      _lastSig=sig;
+      try{ if(_uid) localStorage.setItem(chatKey(_uid), JSON.stringify({v:1,name:friendName,history:remoteLog.slice(-30),t:Date.now()})); }catch(e){}
+      if(logEl && logEl.children.length) renderHistory(remoteLog);   // 챗이 열려 렌더된 상태면 즉시 미러링. 닫혀있으면 다음 오픈시 서버로드가 처리.
+      else history=remoteLog.slice(-30);
+    }catch(e){}
+  }
+  async function subscribeSync(){
+    try{
+      if(_syncChan) return;
+      var u=await uid(); if(!u) return;
+      var sb=window.supabaseClient; if(!sb||!sb.channel) return;
+      _syncChan=sb.channel("frsync:"+u)
+        .on("postgres_changes",{event:"UPDATE",schema:"public",table:"friend_relationship",filter:"user_id=eq."+u},
+          function(p){ applyRemoteChat(p&&p.new&&p.new.chat_log); })
+        .subscribe();
+    }catch(e){}
+  }
+
   var ICON = {
     face: '<svg class="fr-face" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#fff" fill-opacity=".15"/><circle cx="8.5" cy="10.5" r="1.5" fill="#fff"/><circle cx="15.5" cy="10.5" r="1.5" fill="#fff"/><path d="M8 15c1.2 1.3 6.8 1.3 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>',
     go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -658,6 +701,8 @@
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
     window.GALLA_openFriend = open;
+    // 🔄 실시간 미러링 구독(supabaseClient 준비되면) — 여러 기기 동시 켜둬도 대화가 살아 흐른다.
+    (function trySync(n){ if(window.supabaseClient){ subscribeSync(); } else if(n>0){ setTimeout(function(){ trySync(n-1); }, 500); } })(24);
     // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)
     try{ if(/[?&]frping=1/.test(location.search)) setTimeout(open, 900); }catch(e){}
   }
