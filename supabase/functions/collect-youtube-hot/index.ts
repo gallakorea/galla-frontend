@@ -108,23 +108,86 @@ function toRow(v: any, feed: string, rank: number, now: string, shorts: Set<stri
   };
 }
 
-async function fetchChart(cat: string | null, max: number): Promise<any[]> {
-  const url = new URL("https://www.googleapis.com/youtube/v3/videos");
-  // status 추가 → status.embeddable 로 '임베드 차단'(디즈니·방송사·음원 Topic 등) 영상을 걸러낸다.
-  url.searchParams.set("part", "snippet,statistics,contentDetails,status");
-  url.searchParams.set("chart", "mostPopular");
-  url.searchParams.set("regionCode", REGION);
-  url.searchParams.set("maxResults", String(max));
-  if (cat) url.searchParams.set("videoCategoryId", cat);
-  url.searchParams.set("key", KEY!);
+const embeddable = (v: any) => v?.status?.embeddable !== false;
 
+// 인기 급상승 차트 — pageToken으로 여러 장 이어받아 더 깊게(50→최대 max). 각 콜 1유닛으로 저렴.
+async function fetchChart(cat: string | null, max: number): Promise<any[]> {
+  const out: any[] = [];
+  let pageToken = "";
+  while (out.length < max) {
+    const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+    url.searchParams.set("part", "snippet,statistics,contentDetails,status");
+    url.searchParams.set("chart", "mostPopular");
+    url.searchParams.set("regionCode", REGION);
+    url.searchParams.set("maxResults", String(Math.min(50, max - out.length)));
+    if (cat) url.searchParams.set("videoCategoryId", cat);
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    url.searchParams.set("key", KEY!);
+    const res = await fetch(url.toString());
+    const data = await res.json();
+    if (!res.ok || !Array.isArray(data.items)) break;   // 카테고리 KR 차트가 비면 중단
+    out.push(...data.items.filter(embeddable));          // 임베드 차단(디즈니·방송사·음원 Topic) 제외
+    pageToken = data.nextPageToken || "";
+    if (!pageToken) break;                                // 차트 끝(보통 ~200)
+  }
+  return out;
+}
+
+// 채널명/핸들 → 채널ID. 결과는 youtube_channels에 캐시해 재해석 안 함.
+//  · '@핸들'  → channels.list?forHandle (1유닛, 정확)
+//  · 그냥 이름 → search.list?type=channel (100유닛, 근접매칭)
+async function resolveChannelId(nameOrHandle: string): Promise<string | null> {
+  if (nameOrHandle.startsWith("@")) {
+    const u = new URL("https://www.googleapis.com/youtube/v3/channels");
+    u.searchParams.set("part", "id");
+    u.searchParams.set("forHandle", nameOrHandle);
+    u.searchParams.set("key", KEY!);
+    const r = await fetch(u.toString());
+    const d = await r.json();
+    if (r.ok && Array.isArray(d.items) && d.items.length) return d.items[0].id || null;
+    return null;
+  }
+  const name = nameOrHandle;
+  const url = new URL("https://www.googleapis.com/youtube/v3/search");
+  url.searchParams.set("part", "snippet");
+  url.searchParams.set("type", "channel");
+  url.searchParams.set("q", name);
+  url.searchParams.set("maxResults", "1");
+  url.searchParams.set("regionCode", REGION);
+  url.searchParams.set("relevanceLanguage", "ko");
+  url.searchParams.set("key", KEY!);
   const res = await fetch(url.toString());
   const data = await res.json();
-  // 카테고리에 따라 KR 차트가 비어 있을 수 있다 → 그냥 건너뛴다.
+  if (!res.ok || !Array.isArray(data.items) || !data.items.length) return null;
+  return data.items[0]?.id?.channelId || data.items[0]?.snippet?.channelId || null;
+}
+
+// 채널 업로드 재생목록(UU…)의 최신 영상 id 목록(1콜=1유닛).
+async function playlistRecent(uploads: string, n: number): Promise<string[]> {
+  const url = new URL("https://www.googleapis.com/youtube/v3/playlistItems");
+  url.searchParams.set("part", "contentDetails");
+  url.searchParams.set("playlistId", uploads);
+  url.searchParams.set("maxResults", String(n));
+  url.searchParams.set("key", KEY!);
+  const res = await fetch(url.toString());
+  const data = await res.json();
   if (!res.ok || !Array.isArray(data.items)) return [];
-  // 🚫 임베드 차단 영상 제외 — 앱 안에서 재생 불가(오류 150/153)라 목록에 넣지 않는다.
-  //    status.embeddable===false 인 것만 걸러내고, 값이 없으면(구버전 응답) 통과시킨다.
-  return data.items.filter((v: any) => v?.status?.embeddable !== false);
+  return data.items.map((i: any) => i?.contentDetails?.videoId).filter(Boolean);
+}
+
+// 영상 id들 → 상세(snippet/stats/contentDetails/status), 50개씩. 임베드 가능만.
+async function hydrate(ids: string[]): Promise<any[]> {
+  const out: any[] = [];
+  for (let i = 0; i < ids.length; i += 50) {
+    const url = new URL("https://www.googleapis.com/youtube/v3/videos");
+    url.searchParams.set("part", "snippet,statistics,contentDetails,status");
+    url.searchParams.set("id", ids.slice(i, i + 50).join(","));
+    url.searchParams.set("key", KEY!);
+    const res = await fetch(url.toString());
+    const data = await res.json();
+    if (res.ok && Array.isArray(data.items)) out.push(...data.items.filter(embeddable));
+  }
+  return out;
 }
 
 const views = (v: any) => Number(v.statistics?.viewCount ?? 0);
@@ -136,17 +199,54 @@ Deno.serve(async () => {
   const pool = new Map<string, any>();          // 전체 풀(키워드 매칭용)
   const byCat = new Map<string, any[]>();       // 카테고리별 원본
 
-  // 1) 전체 인기차트
-  const allItems = await fetchChart(null, 50);
+  // 1) 전체 인기차트 (페이지네이션 — 50→최대 200)
+  const allItems = await fetchChart(null, 200);
   allItems.forEach((v) => pool.set(v.id, v));
 
-  // 2) 필요한 카테고리만 한 번씩
+  // 2) 카테고리 차트 (각 최대 100)
   const cats = [...new Set(FEEDS.flatMap((f) => f.cats))];
   for (const c of cats) {
-    const items = await fetchChart(c, 45);
+    const items = await fetchChart(c, 100);
     byCat.set(c, items);
     items.forEach((v) => pool.set(v.id, v));
   }
+
+  // 2.5) 🌟 상위 유튜버 채널의 최신 업로드 — 급상승 차트에 안 걸리는 유명 크리에이터
+  //      (빠니보틀·곽튜브·침착맨·슈카월드 등)까지 폭넓게. 업로드 재생목록=1유닛으로 저렴.
+  const creatorFeed = new Map<string, string>();   // videoId → feed
+  let resolvedNow = 0, harvested = 0;
+  try {
+    const { data: chans } = await supa.from("youtube_channels")
+      .select("name,feed,channel_id,uploads_playlist,ok");
+    const chanList = chans || [];
+    // (a) 미해석 채널 해석(런당 최대 12개 — 검색 100유닛이라 여러 런에 분산). 결과는 캐시.
+    for (const c of chanList) {
+      if (c.uploads_playlist || c.ok === false) continue;
+      if (resolvedNow >= 12) break;
+      resolvedNow++;
+      const cid = await resolveChannelId(c.name);
+      if (cid) {
+        c.uploads_playlist = "UU" + cid.slice(2);   // 업로드 재생목록 = UC…→UU…
+        await supa.from("youtube_channels")
+          .update({ channel_id: cid, uploads_playlist: c.uploads_playlist, resolved_at: now, ok: true })
+          .eq("name", c.name);
+      } else {
+        await supa.from("youtube_channels").update({ ok: false, resolved_at: now }).eq("name", c.name);
+      }
+    }
+    // (b) 해석된 채널의 최신 업로드 id 수확
+    const idFeed = new Map<string, string>();
+    const creatorIds: string[] = [];
+    for (const c of chanList) {
+      if (!c.uploads_playlist) continue;
+      const ids = await playlistRecent(c.uploads_playlist, 6);
+      for (const id of ids) { if (!idFeed.has(id)) { idFeed.set(id, c.feed); creatorIds.push(id); } }
+    }
+    // (c) 상세 수화 + 임베드 필터 → 풀·피드맵 반영
+    const vids = await hydrate([...new Set(creatorIds)]);
+    for (const v of vids) { pool.set(v.id, v); creatorFeed.set(v.id, idFeed.get(v.id) || ""); }
+    harvested = vids.length;
+  } catch (_) { /* 크리에이터 수확 실패해도 차트 수집은 계속 */ }
 
   // 3) 쇼츠 판별 (세로 썸네일 존재 여부)
   const shorts = await markShorts(pool);
@@ -155,8 +255,13 @@ Deno.serve(async () => {
   const rows: any[] = [];
   const counts: Record<string, number> = {};
 
-  allItems.forEach((v, i) => rows.push(toRow(v, "all", i + 1, now, shorts)));
-  counts["all"] = allItems.length;
+  // 전체(all) = 급상승 + 크리에이터 최신, 조회수 순 상위 150
+  const allMerged = new Map<string, any>();
+  allItems.forEach((v) => allMerged.set(v.id, v));
+  for (const id of creatorFeed.keys()) { const v = pool.get(id); if (v) allMerged.set(id, v); }
+  const allSorted = [...allMerged.values()].sort((a, b) => views(b) - views(a)).slice(0, 150);
+  allSorted.forEach((v, i) => rows.push(toRow(v, "all", i + 1, now, shorts)));
+  counts["all"] = allSorted.length;
 
   const all = [...pool.values()];
   for (const f of FEEDS) {
@@ -172,9 +277,11 @@ Deno.serve(async () => {
         picked.set(v.id, v);
       }
     }
-    const list = [...picked.values()].sort((a, b) => views(b) - views(a));
-    list.forEach((v, i) => rows.push(toRow(v, f.feed, i + 1, now, shorts)));
-    counts[f.feed] = list.length;
+    // 🌟 이 피드로 지정된 크리에이터 영상 추가
+    for (const [id, ff] of creatorFeed) { if (ff === f.feed) { const v = pool.get(id); if (v) picked.set(id, v); } }
+    const listv = [...picked.values()].sort((a, b) => views(b) - views(a));
+    listv.forEach((v, i) => rows.push(toRow(v, f.feed, i + 1, now, shorts)));
+    counts[f.feed] = listv.length;
   }
 
   if (!rows.length) return json({ ok: false, error: "youtube_api_failed" }, 502);
@@ -192,6 +299,7 @@ Deno.serve(async () => {
     total: rows.length,
     uniqueVideos: pool.size,
     shorts: shorts.size,
+    creators: { harvested, resolvedThisRun: resolvedNow },
     feeds: counts,
     region: REGION,
   });
