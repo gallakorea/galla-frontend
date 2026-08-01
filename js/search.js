@@ -160,6 +160,8 @@ async function initTrendPage() {
 
   // 현재 탭을 URL에 남긴다 — 기사(news.html)에서 뒤로 오면 보던 탭으로 복귀해야 한다
   function rememberTab(name) {
+    // 🔄 PTR 새로고침(?_r=) 후에도 보던 탭 복원 — SPA에선 주소에 못 남기니 sessionStorage에.
+    try { sessionStorage.setItem("galla_trend_tab", name); } catch (_) {}
     if (GALLA_TREND_SPA) return;   // SPA에선 주소가 app.html#/trend — 판이 살아있어 복귀 기억 불필요
     const qs = new URLSearchParams(location.search);
     if (name === "search") qs.delete("tab"); else qs.set("tab", name);
@@ -1303,7 +1305,9 @@ async function initTrendPage() {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
   } else {
-    activateTab("search");
+    // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 search)
+    let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}
+    activateTab(["trending", "news", "hot", "plaza"].includes(saved) ? saved : "search", false);
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
   }
 }

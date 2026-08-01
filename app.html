@@ -13,15 +13,15 @@
   <!-- 📞 콜드스타트 대비 — CallKit '받기'가 통화엔진 로드 전에 와도 유실 없게 아주 일찍 stash -->
   <script>window.GALLA_callKitAnswer = function(id){ try{ window.__ckAnswer = { callerId: id||'', at: Date.now() }; }catch(e){} };</script>
   <!-- ⚠️ 레거시 app-shell 폴백 제거 — MPA/SPA 혼합·부팅 이중로드 방지(사장님 지시). SPA가 유일 경로. -->
-  <script>window.GALLA_V = "073155";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
+  <script>window.GALLA_V = "073156";</script><!-- 뷰 모듈 캐시버스터(버전 전파 스크립트가 갱신) -->
   <!-- 🚀 앱 스플래시 — SPA 부팅/버전리로드의 CSS 미적용 번쩍임(FOUC)을 가리고 galla:ready에 내려감 -->
-  <script src="/js/splash-boot.js?v=073155&wait=ready"></script>
-  <link rel="stylesheet" href="./css/theme.css?v=073155">
-  <link rel="stylesheet" href="./css/nav.css?v=073155">
+  <script src="/js/splash-boot.js?v=073156&wait=ready"></script>
+  <link rel="stylesheet" href="./css/theme.css?v=073156">
+  <link rel="stylesheet" href="./css/nav.css?v=073156">
   <!-- 📞 통화 UI — 엔진이 이 문서(최상위)에서 돌므로 스타일도 여기 -->
-  <link rel="stylesheet" href="./css/dm.css?v=073155">
-  <link rel="stylesheet" href="./css/dm-quiet.css?v=073155">
-  <link rel="stylesheet" href="./css/friend.css?v=073155"><!-- 🫂 갈라 친구 — SPA 전용 -->
+  <link rel="stylesheet" href="./css/dm.css?v=073156">
+  <link rel="stylesheet" href="./css/dm-quiet.css?v=073156">
+  <link rel="stylesheet" href="./css/friend.css?v=073156"><!-- 🫂 갈라 친구 — SPA 전용 -->
   <style>
     /* ═══ 🚀 갈라 SPA 셸 — 단일 문서. 탭 5개 keep-alive 판 + 상세 스택. iframe 없음 ═══ */
     html, body { height: 100%; margin: 0; background: #0a0a0b; overflow: hidden; overscroll-behavior: none; }
@@ -120,33 +120,33 @@
 </nav>
 
 <!-- 에러 로거 — SPA 부팅/런타임 에러를 client_errors에 남겨 실기기 진단 가능하게 -->
-<script src="/js/error-logger.js?v=073155"></script>
+<script src="/js/error-logger.js?v=073156"></script>
 <!-- 📦 OTA(무선 업데이트) — 네이티브 번들 앱에서만. notifyAppReady(롤백방지)+백그라운드 업데이트 확인 -->
-<script src="/js/ota.js?v=073155"></script>
+<script src="/js/ota.js?v=073156"></script>
 <!-- 공유 싱글턴 — 단일 문서라 세션·실시간·통화가 딱 1개 인스턴스로 돈다 -->
-<script src="./vendor/supabase.js?v=073155"></script>
-<script src="./js/supabase.js?v=073155"></script>
-<script src="./js/dm-sound.js?v=073155" data-galla-sfx="1"></script>
+<script src="./vendor/supabase.js?v=073156"></script>
+<script src="./js/supabase.js?v=073156"></script>
+<script src="./js/dm-sound.js?v=073156" data-galla-sfx="1"></script>
 <!-- 📞 통화 미디어 = DIY iosrtc(네이티브). Agora 웹SDK는 CallKit 잠금답변 오디오세션 충돌로 미사용(로드 제거 → GALLA_agora 없음 → dm-call.js가 iosrtc 경로). -->
-<!-- <script src="./js/agora-media.js?v=073155"></script> -->
-<script src="./js/dm-call.js?v=073155"></script>
+<!-- <script src="./js/agora-media.js?v=073156"></script> -->
+<script src="./js/dm-call.js?v=073156"></script>
 
 <!-- 공용 헤더 기능 — ＋ 글쓰기 허브·알림 벨/뱃지(문서 위임이라 어느 판 헤더든 동작) -->
-<script src="./js/write-hub.js?v=073155"></script>
+<script src="./js/write-hub.js?v=073156"></script>
 <!-- 🤖 갈라비스(도구형) 폐기 → 🫂 갈라 친구(관계형)로 재탄생. (구 jarvis.js/css는 미사용) -->
-<script src="./js/friend.js?v=073155" defer></script><!-- 🫂 갈라 친구 AI -->
+<script src="./js/friend.js?v=073156" defer></script><!-- 🫂 갈라 친구 AI -->
 
-<script src="./js/notifications.js?v=073155"></script>
+<script src="./js/notifications.js?v=073156"></script>
 <!-- 웹푸시 발송 트리거(GALLA_pushSend) — 팔로우 등 앱 전역에서 사용 -->
-<script src="./js/push.js?v=073155"></script>
+<script src="./js/push.js?v=073156"></script>
 
 <!-- SPA 코어 -->
-<script src="./js/spa/view-loader.js?v=073155"></script>
-<script src="./js/spa/router.js?v=073155"></script>
+<script src="./js/spa/view-loader.js?v=073156"></script>
+<script src="./js/spa/router.js?v=073156"></script>
 <!-- 🎛 네비 조그셔틀(DM·트렌드 꾹눌러 부채꼴 선택) — SPA에 빠져 있어 조그가 안 먹던 것 추가. GALLA_shellGo(router) 정의 후 로드 -->
-<script src="./js/nav-jog.js?v=073155"></script>
+<script src="./js/nav-jog.js?v=073156"></script>
 <!-- ⬇️ 당겨서 새로고침 — SPA 전역(그동안 DM 등 일부 뷰만 로드돼 메인 탭에선 안 됐음). 싱글턴 가드 있음 -->
-<script src="./js/pull-refresh.js?v=073155"></script>
+<script src="./js/pull-refresh.js?v=073156"></script>
 <script>
 /* 알림 초기화 — supabase 준비되면 1회(뱃지·실시간 구독). 판들이 재호출해도 idempotent */
 (function boot(){
