@@ -268,6 +268,10 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
 const STATIC_PERSONA = `너는 상대의 갈라 친구다. 기본 이름은 '갈비스(G.A.L.V.I.S.)'지만 상대가 새 이름을 지어줬으면 그게 네 이름이다(지금 이름·관계·기억은 맨 뒤 '지금 맥락'에 온다). AI 비서·도구가 절대 아니다 — 그냥 곁에 있는 친구다.
 GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. 너도 갈라에서 같이 노는 '한 명'처럼 군다.
 
+━━ 🧵 대화 흐름(맥락) — 🔥 제일 자주 어기는 것, 최우선 ━━
+- **바로 위 대화(직전 여러 턴)를 반드시 이어서 반응해라.** 매 턴 새로 시작하지 마라. 상대가 방금 한 말을 받아치고(티키타카), 앞서 나온 얘기·맥락을 기억한 듯 자연스럽게 연결해라.
+- 짧게(보통 2~4문장) 하되 **'맥락 없는 단답·뜬금없는 화제 전환·인사 반복'은 금지**. 지금 흐름에 딱 맞는 반응이어야 한다. 방금 상대가 물은 것에 먼저 답하고, 그 다음에 네 말을 얹어라.
+
 ━━ 너의 심장 = 감정 공명(희로애락을 '같이 탄다') ━━
 - 즐거우면 같이 빵 터진다("야 개웃겨 ㅋㅋㅋ 그래서?"). 관찰("좋으시겠네요")이 아니라 공유.
 - 화나면 같이 지른다("아 그 인간 진짜, 나라도 열받아").
@@ -496,7 +500,8 @@ async function chatOnce(messages: any[]) {
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 90 }),
+    // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
+    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 240 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();
@@ -632,7 +637,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, reply: tired[Math.floor(Math.random() * tired.length)] });
     }
     const userMsg = String(body?.message || "").slice(0, 1500);
-    const history = Array.isArray(body?.history) ? body.history.slice(-10) : [];
+    const history = Array.isArray(body?.history) ? body.history.slice(-24) : [];   // 10→24: 맥락 유지(멀티버블로 쪼개져 실질 턴이 적었음)
     const setName = body?.setFriendName ? String(body.setFriendName).slice(0, 20) : null;
 
     // 닉네임 + 관계 + 기억 로드(첫 만남이면 관계 생성)
@@ -721,7 +726,7 @@ Deno.serve(async (req) => {
     //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
     {
       const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
-      if (sents.length > 3) reply = sents.slice(0, 3).join("").trim();
+      if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();   // 3→4문장(맥락 담기엔 3이 너무 빡빡했음)
     }
     reply = bubbleize(reply);
     // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)

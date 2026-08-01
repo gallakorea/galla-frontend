@@ -28,7 +28,7 @@
   function chatKey(u){ return "frChat:"+(u||_uid||"anon"); }
   async function saveChat(){
     try{ var u=await uid(); if(!u) return;
-      localStorage.setItem(chatKey(u), JSON.stringify({ v:1, name:friendName, history:history.slice(-20), t:Date.now() }));
+      localStorage.setItem(chatKey(u), JSON.stringify({ v:1, name:friendName, history:history.slice(-30), t:Date.now() }));
     }catch(e){}
   }
   async function loadChat(){
@@ -223,7 +223,7 @@
     var d = await loadChat();
     if(d && d.history && d.history.length){
       if(d.name){ friendName=d.name; setTitle(); }
-      history = d.history.slice(-20);
+      history = d.history.slice(-30);
       history.forEach(function(msg){
         if(msg && msg.role==="user"){ addMsg("u", msg.content||""); }
         else { splitBubbles((msg&&msg.content)||"").forEach(function(p){ addMsg("a", p); }); }  // 복원도 버블 단위
@@ -435,7 +435,7 @@
     typing(false);
     if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
-    if(history.length>20) history=history.slice(-20);
+    if(history.length>30) history=history.slice(-30);
     addActions(m, r.actions);
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
