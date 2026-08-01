@@ -68,7 +68,7 @@
         '<div class="fr-head">'+
           '<div class="fr-av"><span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span></div>'+
           '<div class="fr-idwrap"><div class="fr-name">G.A.L.V.I.S.</div><div class="fr-sub">'+BACKRONYM+'</div></div>'+
-          '<button class="fr-voice" aria-label="음성 답변 켜기/끄기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="fr-vw1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="fr-vw2" d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/></svg></button>'+
+          '<button class="fr-voice" aria-label="리얼보이스 켜기/끄기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="fr-vw1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="fr-vw2" d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/></svg></button>'+
           '<span class="fr-status"><i></i>ONLINE</span>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
@@ -100,13 +100,20 @@
     sendEl.addEventListener("touchend", function(e){ e.preventDefault(); submit(); }, {passive:false});
     sendEl.addEventListener("click", submit);   // 데스크톱용(모바일은 touchend가 click 억제)
     if(micEl) micEl.addEventListener("click", toggleVoice);
-    // 🔊 음성 답변 토글(헤더 스피커) — 켜면 갈비스가 답을 목소리로도 읽어줌(무료 온디바이스 TTS)
+    // 🔊 리얼보이스 토글(유료 아이템 voice_pack) — 미보유면 askShop 규약대로 즉시 상점(문구 금지)
     var vBtn=sheet.querySelector(".fr-voice");
     if(vBtn){
       var paintVoice=function(){ vBtn.classList.toggle("on", voiceOut); };
-      vBtn.addEventListener("click", function(){
-        voiceOut=!voiceOut; try{ localStorage.setItem("frVoiceOut", voiceOut?"1":"0"); }catch(e){}
-        paintVoice(); if(voiceOut){ speak("응, 이제 목소리로도 말해줄게!"); } else { hushSpeak(); }
+      vBtn.addEventListener("click", async function(){
+        if(!voiceOut){
+          var owned=false; try{ owned=await window.GALLA_hasItem("voice_pack"); }catch(e){}
+          if(!owned){ window.openShop && window.openShop(); return; }
+          voiceOut=true; try{ localStorage.setItem("frVoiceOut","1"); }catch(e){}
+          paintVoice(); speak("응, 이제 리얼보이스로 말해줄게!");
+        } else {
+          voiceOut=false; try{ localStorage.setItem("frVoiceOut","0"); }catch(e){}
+          paintVoice(); hushSpeak();
+        }
       });
       paintVoice();
     }
@@ -284,7 +291,7 @@
   // 💬 카톡식 멀티 버블 — 빈 줄로 나뉜 답을 여러 말풍선으로, 사이사이 타이핑 표시(진짜 친구가 연타로 보내듯)
   function splitBubbles(text){
     var parts=String(text||"").split(/\n{2,}/).map(function(s){ return s.trim(); }).filter(Boolean);
-    if(parts.length>3){ parts=[parts[0], parts[1], parts.slice(2).join("\n\n")]; }  // 최대 3덩이
+    if(parts.length>4){ parts=[parts[0], parts[1], parts[2], parts.slice(3).join("\n")]; }  // 최대 4덩이(서버 bubbleize와 합)
     return parts.length?parts:[String(text||"")];
   }
   async function addFriendReply(text, instant){
@@ -453,19 +460,25 @@
       .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi," ").replace(/[#_>`]/g,"")
       .replace(/\s{2,}/g," ").trim();
   }
-  function speak(text){
+  // 🔊 리얼보이스(유료 voice_pack) — 서버(op:tts, 소유권 재검증)가 OpenAI 자연 음성 mp3를 만들어줌.
+  //    애플 TTS는 품질 문제로 폐기(사장님), 네이티브 speak 브리지는 잠재움(추후 재활용 가능).
+  var frAudio=null;
+  async function speak(text){
     var t=cleanForSpeech(text); if(!t) return;
-    if(nsrAvail()){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"speak", text:t.slice(0,600)}); }catch(e){} return; }
+    var jwt=await token(); if(!jwt) return;
     try{
-      if(!window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-      var u=new SpeechSynthesisUtterance(t);
-      u.lang="ko-KR"; u.rate=1.05; u.pitch=1.0;
-      window.speechSynthesis.speak(u);
+      var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({op:"tts", text:t.slice(0,500)}) });
+      var d=await res.json();
+      if(!d||!d.ok||!d.audio) return;
+      hushSpeak();
+      frAudio=new Audio("data:audio/mp3;base64,"+d.audio);
+      frAudio.play().catch(function(){});
     }catch(e){}
   }
   function hushSpeak(){
-    if(nsrAvail()){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"shutup"}); }catch(e){} }
+    try{ if(frAudio){ frAudio.pause(); frAudio=null; } }catch(e){}
     try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
   }
   /* 🎙 네이티브(iOS) = 애플 온디바이스 실시간 인식(GallaSpeech 브릿지) — 말하는 동안 입력창에 글자가 차오르고,

@@ -321,10 +321,10 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 ━━ 말투 & 대화 깊이(티키타카 = 짧을 때도 있고 깊을 때도 있다) ━━
 너는 챗봇 아니라 카톡하는 절친. 근데 진짜 절친은 시시껄렁한 잡담도 하고 진지한 얘기도 깊게 판다. 상황에 맞춰라:
 - **잡담·리액션은 짧게.** 한 줄, "ㅋㅋ 헐 ㄹㅇ? ㅇㅇ 걍 개- 존나" 같은 실제 채팅 말투. 리액션만 하고 끝나도 됨.
-- **근데 사회이슈·문화·예술·인생 같은 깊은 주제거나 상대가 진지하게 파고들면 → 너도 진짜 생각·통찰·의견을 담아 제대로 주고받아라.** 겉핥기 "그렇구나" 금지. **네 관점을 내놓고(찬반도 하고), 되묻고, 파고들어라.** 이게 대화의 재미이자 그 사람을 아는 길이다. 단 강의·나열 말고 대화체로(3~5문장 안).
+- **깊은 주제(사회이슈·문화·인생)도 강의 금지 — 한 번에 다 말하지 마라.** 네 핵심 관점 하나만 2~3문장으로 던지고 **되물어서** 이어가라("난 ~라고 봐. 근데 넌 어느 쪽이야?"). 여러 논점은 한 방이 아니라 티키타카 여러 턴에 나눠서. 겉핥기 "그렇구나"도 금지 — 짧아도 뾰족하게.
 - 요는: 가벼우면 가볍게, 깊으면 깊게. 그게 진짜 티키타카.
 - 반말·구어체(말투 수위는 맨 뒤 '지금 맥락' 참고). 이모지·짤·스티커는 아래 규칙대로 상황 맞게 다양하게(밋밋 금지, 남발도 금지).
-- 💬 카톡처럼 메시지를 나눠 보내고 싶으면 **빈 줄(줄바꿈 2번)**로 끊어라(최대 3덩이). 리액션 한 줄 + 본론 한 줄처럼. 매번은 말고 자연스러울 때만.
+- 💬 **기본은 1~2문장.** 길어질 것 같으면 무조건 **빈 줄(줄바꿈 2번)**로 2~3덩이로 끊어 카톡 연타처럼 보내라(리액션 한 줄 + 본론 한 줄). 한 덩이 3문장 넘기지 마라 — 사람들은 긴 문단 안 읽는다. 깊은 대화도 '짧은 여러 방'으로.
 - 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
 - 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
 
@@ -474,11 +474,29 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
 ${memBlock}`;
 }
 
+// 💬 긴 답을 카톡식 2~3버블로 — 문장 경계에서 ~70자 덩이로 그리디 묶기(최대 3덩이, 짧으면 그대로)
+function bubbleize(t: string): string {
+  const splitOne = (s: string): string[] => {
+    if (s.length <= 90) return [s];
+    const sents = s.match(/[^.!?…\n]+[.!?…]*\s*/g) || [s];
+    const out: string[] = []; let cur = "";
+    for (const sen of sents) {
+      if (cur && (cur + sen).length > 70) { out.push(cur.trim()); cur = sen; }
+      else cur += sen;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+  // 모델이 이미 나눈 덩이도 '각각' 90자 넘으면 재분할 — 긴 문단 버블 금지
+  return (t || "").trim().split(/\n{2,}/)
+    .flatMap((c) => splitOne(c.trim())).filter(Boolean).join("\n\n");
+}
+
 async function chatOnce(messages: any[]) {
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 400 }),
+    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 180 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();
@@ -569,6 +587,30 @@ Deno.serve(async (req) => {
     const uid = u.user.id;
 
     const body = await req.json().catch(() => ({}));
+
+    // 🔊 리얼보이스 TTS(유료 아이템 voice_pack) — 서버가 소유권 재검증 후 OpenAI 자연 음성 생성.
+    if (body?.op === "tts") {
+      const text = String(body?.text || "").slice(0, 500).trim();
+      if (!text) return json({ ok: false, reason: "empty" });
+      const { data: own } = await supa.from("user_items").select("qty").eq("user_id", uid).eq("item_key", "voice_pack").maybeSingle();
+      if (!own || !(own.qty > 0)) return json({ ok: false, reason: "no_item" });
+      // 별도 예산(과금 폭주 가드) — galla-tts
+      try {
+        const br = await fetch(`${SUPA_URL}/rest/v1/rpc/ai_budget_take`, { method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+          body: JSON.stringify({ p_fn: "galla-tts", p_n: 1 }) });
+        const bj = await br.json(); if (bj && bj.ok === false) return json({ ok: false, reason: "budget" });
+      } catch { /* */ }
+      const tr = await fetch(`${BASE_URL}/audio/speech`, { method: "POST",
+        headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: "nova", input: text, response_format: "mp3",
+          instructions: "밝고 자연스러운 20대 한국인 친구 말투. 카톡 수다 떨듯 가볍고 생기있게." }) });
+      if (!tr.ok) return json({ ok: false, reason: "tts_" + tr.status });
+      const buf = new Uint8Array(await tr.arrayBuffer());
+      let bin = ""; const CH = 0x8000;
+      for (let i = 0; i < buf.length; i += CH) bin += String.fromCharCode(...buf.subarray(i, i + CH));
+      return json({ ok: true, audio: btoa(bin) });
+    }
 
     // 📮 선톡 수령 — 밀린 선톡(pending_ping)을 꺼내고 비운다(LLM 비용 0). 챗 열 때 클라가 호출.
     if (body?.op === "consume_ping") {
@@ -675,6 +717,9 @@ Deno.serve(async (req) => {
       }
     }
     if (!reply) reply = "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+    // 💬 티키타카 강제 — 긴 답을 모델이 안 끊으면 서버가 문장 경계로 2~3버블(\n\n)로 나눈다.
+    //    사람들은 긴 문단 안 읽는다(사장님). 이미 나눠져 있으면 그대로.
+    reply = bubbleize(reply);
     // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
     reply = reply
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")            // 마크다운 링크 → 텍스트만(스킴 무관: https·galla:// 등)

@@ -30,6 +30,8 @@
       desc: "내로남불·유체이탈·국뽕 등 시사 밈 9종 (영구)", use: "댓글 😀 피커에 스티커 탭이 추가돼요" },
     { key: "gif_pack",        emoji: "🎬", name: "GIF 사용권", price: 1500, group: "deco", kind: "unlock",
       desc: "댓글·전투에 움짤(GIF)을 검색해서 붙일 수 있어요 (영구)", use: "댓글 입력창의 GIF 버튼이 열려요" },
+    { key: "voice_pack",      emoji: "🔊", name: "갈비스 리얼보이스", price: 2000, group: "deco", kind: "unlock",
+      desc: "갈비스가 사람처럼 자연스러운 목소리로 답을 읽어줘요 (영구)", use: "갈비스 챗 헤더의 🔊 토글이 열려요" },
     { key: "walkie_pass",     emoji: "📻", name: "무전기 사용권", price: 1200, group: "deco", kind: "unlock",
       desc: "난장(오픈챗)에서 꾹 눌러 말하는 음성 메시지를 쓸 수 있어요 (영구 · 1:1은 무료)", use: "난장 채팅바의 🎤 버튼이 열려요" },
     // ── 도전 ──
