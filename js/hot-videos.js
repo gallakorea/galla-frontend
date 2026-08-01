@@ -504,7 +504,7 @@
     //    ✅ 해법(오픈소스 정석): 임베드를 우리 실도메인(galla.im)의 프록시 페이지 안에서 로드해
     //       origin/referrer 를 정식 https 도메인으로 만든다 → 153 소멸. 소유자 임베드차단 영상만
     //       yt.html 내부에서 자체 폴백 카드로 처리(+ 하단 '유튜브에서 보기' 링크는 항상 제공).
-    const YT_PROXY = "https://galla.im/yt.html";
+    const YT_PROXY = "https://galla.im/yt";   // Cloudflare Pages가 .html 제거 → 리다이렉트 홉 없이 바로
     $("#hvFrame").innerHTML =
       `<iframe src="${YT_PROXY}?v=${encodeURIComponent(id)}"
                title="${esc(title)}" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
