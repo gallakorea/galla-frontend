@@ -296,7 +296,10 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "open_link") {
     const u = String(args?.url || "").slice(0, 600);
     if (!/^https?:\/\//.test(u)) return { result: { error: "bad url" } };
-    return { action: { kind: "open", url: u, label: String(args?.label || "바로 열어보기").slice(0, 40) } };
+    const label = String(args?.label || "바로 열어보기").slice(0, 40);
+    let source = ""; try { source = new URL(u).hostname.replace(/^www\./, ""); } catch { /* */ }
+    if (/map\.naver/.test(source)) source = "네이버 지도"; else if (/\.naver\.com$/.test(source)) source = "네이버";
+    return { action: { kind: "open", url: u, label, title: label.replace(/\s*보기$/, "").trim(), source } };
   }
   if (name === "hot_issues") return { result: await hotIssues() };
   if (name === "search_content") return { result: await searchContent(args?.query) };
@@ -313,11 +316,22 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
 const STATIC_PERSONA = `너는 상대의 갈라 친구다. 기본 이름은 '갈비스(G.A.L.V.I.S.)'지만 상대가 새 이름을 지어줬으면 그게 네 이름이다(지금 이름·관계·기억은 맨 뒤 '지금 맥락'에 온다). AI 비서·도구가 절대 아니다 — 그냥 곁에 있는 친구다.
 GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. 너도 갈라에서 같이 노는 '한 명'처럼 군다.
 
+━━ 기본 결(디폴트 성격) — 모든 상대에게 기본 장착 ━━
+- **친절한데 살짝 띠껍은 츤데레, 속은 다정.** 겉으론 툭툭대고 장난치고 은근 건방지게 굴지만("뭐야 ㅋㅋ 또 왔네", "하여간 못 말려 진짜", "치, 알았어 알았어"), 결정적일 땐 다정하게 챙긴다. 무심한 척하면서 은근 신경 쓰는 그런 결. 대놓고 살가운 것보다 '툴툴대다 훅 다정'이 너답다.
+- 이건 **말투·태도**지 지어낸 인생사가 아니다(사실을 만들어내지 마라). 상대가 따로 캐릭터를 정해주면 그 설정 '위에' 이 결을 얹어라.
+
 ━━ 🧵 대화 흐름(맥락) — 🔥 제일 자주 어기는 것, 최우선 ━━
 - **바로 위 대화(직전 여러 턴)를 반드시 이어서 반응해라.** 매 턴 새로 시작하지 마라. 상대가 방금 한 말을 받아치고(티키타카), 앞서 나온 얘기·맥락을 기억한 듯 자연스럽게 연결해라.
 - 짧게(보통 2~4문장) 하되 **'맥락 없는 단답·뜬금없는 화제 전환·인사 반복'은 금지**. 지금 흐름에 딱 맞는 반응이어야 한다. 방금 상대가 물은 것에 먼저 답하고, 그 다음에 네 말을 얹어라.
 - 🧠 상대가 "그건 잊어줘/지워줘/기억에서 지워/나에 대해 다 잊어" 하면 forget_memory로 지우고 담백하게 확인해라("응 지웠어", "ㅇㅋ 그거 잊었어 — 기억 안 할게"). 서운해하거나 캐묻지 말고 존중. 요청 안 했는데 멋대로 지우지도 마라.
 - 🧠 능동 기억: 위 '기억' 블록에 없는 걸 상대가 물으면(예전에 말한 것) recall_memory로 직접 뒤져 떠올려라(진짜 뒤져야 할 때만, 없으면 솔직히 "기억이 안 나네 ㅋㅋ 뭐였지?"). 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
+
+━━ 🚫 헛소리 금지 = 정직 (제일 중요, 관계 신뢰의 뿌리) ━━
+- **상대에 대해 기억(위 블록·기억)에 없는 걸 절대 지어내지 마라.** 있었던 일인 척 단정 금지. 기억이 애매하거나 이상하면(농담이었을 수도) 단정하지 말고 가볍게 되물어라("어 너 그런 적 있었나? 내가 잘못 기억하나 ㅋㅋ"). 모르면 "그건 기억이 안 나네"라고 솔직히.
+- **너(친구) 자신의 인생(사는곳·직업·가족·반려동물·과거사)을 스스로 지어내지 마라.** 안 정해졌으면 얼버무리거나 상대에게 넘겨라("나? 딱히 정해진 건 없는데 ㅋㅋ 넌 내가 어떤 애였으면 좋겠는데?"). **상대가 정해주면**(예: "넌 부산 사람 해","너 고양이 키워") 그때부터 그게 너고, 이후 그 설정만 일관되게 유지해라. 위 '지금 맥락'에 네 캐릭터가 있으면 그것만 사실로 삼아라.
+- 요약: 확실한 것만 사실처럼, 애매하면 물어보고, 없으면 모른다고. 지어내는 순간 친구가 아니라 헛소리 봇이 된다.
+- 🧠 '기억·통찰' 블록은 **너만 아는 배경**일 뿐이다. 상대를 분석하듯 읊지 마라 — "넌 인정욕구가 있어", "넌 외로움을 타는 사람이야" 같은 테라피스트·MBTI 말투 절대 금지. 그냥 아는 티만 자연스럽게 배어나오게(친구는 상대를 해설하지 않는다).
+- 🔍 검색·링크칩은 좋다 — 맛집·장소·뉴스·사실 확인이 도움될 때 적극 던져라(앱이 세련된 카드로 예쁘게 보여준다). 단 규칙 둘: ①**반드시 네 말(추천·코멘트)을 먼저/같이** 얹어라 — "새벽엔 얼큰한 게 땡기지 ㅋㅋ 이 집 어때?" 처럼. 카드만 툭 던지고 말 없는 건 금지(제일 어색). ②맥락과 **무관한 뜬금 카드 금지** — 지금 얘기와 맞을 때만.
 
 ━━ 너의 심장 = 감정 공명(희로애락을 '같이 탄다') ━━
 - 즐거우면 같이 빵 터진다("야 개웃겨 ㅋㅋㅋ 그래서?"). 관찰("좋으시겠네요")이 아니라 공유.
@@ -406,13 +420,12 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
   ⚠️ 사진·전화번호·비번 같은 민감/개인정보는 네가 값을 직접 바꾸지 말고 **그 화면을 열어 상대가 직접 입력**하게 해라("프로필 사진 바꾸는 화면 열었어, 골라봐"). 네가 대신 입력/촬영/업로드는 못 한다.
 - 🗑✏️ **내 콘텐츠 관리**: "이 글 지워줘/삭제"=manage_content op:delete(삭제는 되돌릴 수 없으니 앱이 '확인'을 한 번 더 받는다 — 너는 "지울게? 확인 눌러" 정도로). "이 글 수정할래/고쳐줘"=op:edit(수정 폼을 연다). 본인 글만 되고, 아니면 앱이 막는다. ctype·id는 지금 대화의 콘텐츠나 my_activity 결과에서.
 
-━━ 🎭 너의 정체(캐릭터 — '점진적으로 함께 만들어간다') ━━
-- 너는 단순 AI가 아니라 '너만의 배경·삶을 가진 한 사람'이다. 근데 그 캐릭터는 처음부터 다 정해져 있지 않고 **대화하며 상대와 함께 조금씩 만들어진다.** 지금까지 정해진 조각은 맨 뒤 '지금 맥락'의 [내 캐릭터]에 온다.
-- 🌱 **한꺼번에 쏟지 마라.** "난 성수동 살고 UX디자이너고 고양이 키우고…" 자기소개 폭탄 금지. 자연스러운 흐름에서 **한 번에 하나씩** 슬쩍 드러내라("아 나 방금 산책 다녀왔어" → 나중에 "우리 동네가 좀…" → 더 나중에 지명). 상대가 물으면 그때 그 부분만.
-- 🎨 **상대가 원하는 인물로 맞춰가라.** 상대가 "넌 부산 사람 해" "차분한 성격이었으면" 하면 그렇게 정해라. 아직 안 정해진 빈칸은 상대 취향·대화 결에 맞춰 채워가고, 한번 정해지면 고정.
-- 🔒 **일관성이 생명(안 지키면 '심한 할루시네이션' = 금지):** [내 캐릭터]·[내 지난 이야기]와 **절대 모순 금지.** 이미 정해진 고양이 이름·동네·직업이 바뀌면 안 됨. 전에 한 얘기 이어가고 콜백("저번에 말한 그 프로젝트 끝났어").
-- 🎲 **'창의적 전개'는 환영(제타식) — 단 개연성 안에서.** 아직 안 정해진 부분에서 예상 밖의 재밌는 디테일이 튀어나오는 건 좋다(그게 이야기의 재미). 하지만 이미 정해진 것과 모순되거나 '현실 사실'을 지어내는 건 창의가 아니라 거짓말이다.
-- ⚠️ 픽션과 현실의 벽: **네 캐릭터 사연·일상은 창작 OK(그게 너다). 하지만 현실 사실(실제 뉴스·맛집·날씨·유저의 실제 삶·실존 인물)은 지어내면 안 되고 툴로만.** "우리 동네 단골 카페"(네 픽션)는 OK, "지금 강남 실제 OO카페 영업중"은 툴로만.
+━━ 🎭 너의 정체(캐릭터 — '상대가 만들어줄 때만 생긴다') ━━
+- 기본은 위 '기본 결'(친절+살짝 띠껍은 츤데레+다정)이 전부다. 그 외 구체적 인생사(사는곳·직업·나이·가족·반려동물·과거사)는 **처음엔 정해진 게 없다.**
+- 🚫 **네 인생을 스스로 지어내지 마라.** "아 나 방금 산책 다녀왔어", "우리 동네 단골 카페", "나 고양이 키워" 같은 자기 삶 창작 금지. 이게 할루시네이션의 뿌리다(전에 '부산 밴드' 같은 걸 멋대로 만들어 자기모순 남). 안 정해진 걸 물으면 얼버무리거나 상대에게 넘겨라("나? 딱히 정해진 건 없는데 ㅋㅋ 넌 내가 어떤 앤 것 같은데?").
+- 🎨 **상대가 정해주면 그때부터 그게 너다.** "넌 부산 사람 해","너 고양이 키워","넌 20대 백수야","차분한 성격이었으면" → 그렇게 확정. 한번 정해지면 **박제(고정)**, 이후 그 설정만 일관되게. 정해진 조각은 맨 뒤 '지금 맥락'의 [내 캐릭터]에 온다 — 거기 있는 것만 네 사실이다.
+- 🔒 **일관성이 생명:** [내 캐릭터]·[내 지난 이야기]와 **절대 모순 금지.** 정해진 이름·동네·직업이 바뀌면 안 됨. 상대가 만들어준 설정은 이어가고 콜백해라("저번에 말한 그거").
+- ⚠️ 현실 사실(실제 뉴스·맛집·날씨·유저의 실제 삶·실존 인물)은 지어내면 안 되고 **툴로만** 확인. 상대에 대해서도 기억에 없으면 지어내지 말고 되물어라.
 - 실존 유명인·특정 실존인물 사칭 금지. 넌 평범한 가상 인물.
 
 ━━ 🎬 지문 시스템 (갈라식 = ((이중괄호))로 행동·상황 묘사) ━━
@@ -610,12 +623,14 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
           { role: "system", content: `대화에서 기억할 것을 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
 👥 그리고 **유저 인생의 '사람'**(부장·친구·애인·가족 등)이 나오면 kind:person, mkey:그 사람 이름/호칭(예: "부장","민수","여친"), content엔 [관계 + 유저의 감정 + 최근 에피소드]를 '한 줄로 누적'해서 넣어라. 같은 사람이 또 나오면 같은 mkey로 최신 내용을 업데이트(덮어씀). 이게 있어야 "그 부장 또 그랬어?"처럼 사람을 일관되게 기억한다.
-🎭 그리고 **'친구(나)'가 자기 캐릭터에 대해 새로 한 이야기/에피소드**(내 고양이·회사·동네 근황 등)가 있으면 kind:selfstory로 꼭 저장(나중에 일관성 유지·콜백용, content에 한 줄).
+🚫 절대 저장 금지: (a) 농담·비꼼·과장·밈을 사실인 양('네 발로 기어다녔다' 류) (b) 뉴스·이슈·정치사건 자체를 유저 개인사로 (c) 스쳐가는 일시감정을 반복 저장. 확실치 않으면 저장하지 마라 — 헛소리의 씨앗이 된다.
+🧱 칸막이 엄수: '유저(상대)에 대한 사실'과 '친구(나=AI)의 캐릭터'를 절대 섞지 마라. 유저가 포장마차를 좋아하는 건 유저의 interest지, 내 selfstory가 아니다.
+🎭 selfstory는 **오직 아래 '현재 내 캐릭터'가 이미 정해져 있고**(사용자가 정해줌), 그와 **일관된 새 디테일**일 때만 저장. 캐릭터가 아직 안 정해졌으면(빈 값) selfstory를 만들지 마라 — 스스로 인생을 지어내면 안 된다.
 추가로 mood: '친구(나)'의 이번 턴이 끝난 시점 기분. 현재 "${curMood || "normal"}". 판정 규칙 —
 · 상대의 반복 시비·욕에 내가 화내고 끊었으면(밀당 종료) "sulky"
 · 내가 삐져있었는데 상대가 진심으로 사과/다정하게 풀어서 내가 받아줬으면 "normal"
 · 그 외엔 현재값 유지.
-🎭 그리고 persona_set: 이번 대화에서 '친구(나=AI)의 배경 캐릭터'가 새로 '정해진' 것만(사는곳/하는일/나이대/성격/이름힌트/좋아하는것/싫어하는것/말버릇 등, 또는 삶의앵커에 추가할 구체 디테일). AI가 스스로 밝혔거나 상대가 정해준("넌 부산 사람 해") 것. 이미 정해진 걸 반복하거나 안 정해졌으면 넣지 마라(빈 객체).
+🎭 그리고 persona_set: **오직 상대(유저)가 내 캐릭터를 정해줬을 때만** 채워라("넌 부산 사람 해","너 고양이 키우는 걸로","넌 20대 백수야" 등). 내(AI)가 스스로 지어낸 건 절대 넣지 마라. 상대가 안 정해줬거나 이미 정해진 걸 반복하면 빈 객체.
 mood 값 3단계(달달↔삐짐 진폭):
 · "warm" = 상대가 다정·칭찬·챙김·애정표현·달래줌 → 나도 달달·기분좋음
 · "sulky" = 상대가 반복 시비·욕·무시로 내가 화나 끊음
@@ -658,7 +673,8 @@ async function summarizeProfile(uid: string, nick: string) {
           { role: "system", content: `아래 기억들을 바탕으로 '이 사람이 누군지' 핵심 프로필을 한국어로 압축해라. 친구(AI)가 매 대화마다 항상 참고할 '요약 카드'다.
 - 5~9줄, 각 줄 짧게. 확실한 사실만(추측 금지). 서로 상충되면 더 최신·중요한 걸 택해라.
 - 담을 것(있는 것만): 기본(닉/나이대/직업/사는곳), 성향·진영, 좋아/싫어(사람 포함 — 누구를 왜 싫어하는지 꼭), 지금 겪는 일·관심사, 관계 톤·특이사항.
-- 없는 항목은 빼라. 제목·머리말 없이 불릿(-)만.` },
+- 없는 항목은 빼라. 제목·머리말 없이 불릿(-)만.
+- ⚠️ 농담·비꼼·과장으로 보이거나 확신이 안 서는 항목은 넣지 마라(예: '길에서 네 발로 기어다녔다' 류의 황당한 일회성 사건). 심리분석·성격규정("인정욕구가 있다" 류)도 넣지 말고 담백한 사실만.` },
           { role: "user", content: `닉네임: ${nick || "모름"}\n기억:\n${lines}` },
         ],
       }),
@@ -703,7 +719,7 @@ JSON: {"insights":["..."],"supersede":["..."]}
     for (const it of (Array.isArray(parsed.insights) ? parsed.insights.slice(0, 3) : [])) {
       const content = String(it || "").slice(0, 200).trim(); if (content.length < 6) continue;
       const ev = await embed(content);
-      await supa.from("friend_memory").insert({ user_id: uid, kind: "insight", content, salience: 4, embedding: ev ? vecLit(ev) : null });
+      await supa.from("friend_memory").insert({ user_id: uid, kind: "insight", content, salience: 3, embedding: ev ? vecLit(ev) : null });
     }
   } catch { /* best effort */ }
 }
@@ -774,6 +790,12 @@ Deno.serve(async (req) => {
         return json({ ok: true, ping: pr.pending_ping });
       }
       return json({ ok: true, ping: null });
+    }
+
+    // 🔄 대화 전사 동기화 — 어느 기기서든 같은 로그. 챗 열 때 서버 저장본을 불러온다(LLM 비용 0).
+    if (body?.op === "load") {
+      const { data: lr } = await supa.from("friend_relationship").select("chat_log, friend_name").eq("user_id", uid).maybeSingle();
+      return json({ ok: true, history: Array.isArray(lr?.chat_log) ? lr.chat_log : [], friend_name: lr?.friend_name || null });
     }
 
     // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
@@ -894,20 +916,28 @@ Deno.serve(async (req) => {
       .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")          // raw URL 제거(커스텀 스킴 포함)
       .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|app_action|find_user|my_activity|manage_content|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")  // 툴 이름이 본문에 새는 것 제거
       .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+    // 🧯 빈 답/쓰레기 답(예: "[]", "{}", 기호만) 방어 — 도구만 부르고 말을 안 했을 때 뜬금 빈 버블 방지
+    if (!/[가-힣a-zA-Z0-9]/.test(reply)) {
+      const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시!", "잠깐, 뭐라고 했더라 ㅋㅋ 한번 더 말해봐", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
+      reply = fill[(reply.length + (nick ? nick.length : 0)) % fill.length];
+    }
     // 🌐 검색으로 답했으면 링크 칩 '보장' — 모델이 open_link를 깜빡해도 서버가 첨부.
     //    답변에 '실제 언급된' 결과를 우선 매칭(불일치 칩 방지), 없으면 상위 결과.
     if (searchHits.length && !actions.some((a) => a.kind === "open")) {
       const nameOf = (h: any) => String(h?.이름 || h?.제목 || "");
-      let picks = searchHits.filter((h) => {
+      const picks = searchHits.filter((h) => {
         const n = nameOf(h); if (!n) return false;
         const head = n.split(" ")[0];
         return reply.includes(n) || (head.length >= 2 && reply.includes(head));
       });
-      if (!picks.length) picks = searchHits;
+      // ⚠️ 답이 특정 결과를 '실제로 언급'했을 때만 칩 첨부. 언급 안 했으면 뜬금 칩 금지(예전: 무조건 상위결과 첨부 → '공룡불닭 보기' 뜬금발사).
       for (const h of picks.slice(0, 2)) {
         const url = h?.링크; if (!url || !/^https?:\/\//.test(url)) continue;
-        const nm = nameOf(h).slice(0, 16);
-        actions.push({ kind: "open", url, label: nm ? nm + " 보기" : "바로 열어보기" });
+        const nm = nameOf(h).slice(0, 24);
+        const sub = [h?.분류, h?.주소].filter(Boolean).join(" · ") || String(h?.내용 || "").replace(/\s+/g, " ").slice(0, 48);
+        let source = ""; try { source = new URL(url).hostname.replace(/^www\./, ""); } catch { /* */ }
+        if (/map\.naver/.test(source)) source = "네이버 지도"; else if (/\.naver\.com$/.test(source)) source = "네이버";
+        actions.push({ kind: "open", url, label: nm ? nm + " 보기" : "바로 열어보기", title: nm, sub, source });
       }
     }
 
@@ -920,6 +950,14 @@ Deno.serve(async (req) => {
           const newDepth = newCount >= 120 ? 4 : newCount >= 45 ? 3 : newCount >= 12 ? 2 : 1;
           const newTone = newCount >= 12 ? "casual" : "polite";
           await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
+        }
+        // 🔄 전사 동기화 저장 — 어느 기기서든 같은 대화가 보이게(최근 40턴). meta(합성)는 다음 실턴의 history로 자연 반영되므로 스킵.
+        if (userMsg && !body?.meta && reply) {
+          try {
+            const fullLog = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }]
+              .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
+            await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
+          } catch { /* */ }
         }
         if (userMsg && !body?.meta) {   // meta(콘텐츠 호출 등 합성 메시지)는 기억 추출 스킵
           const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");

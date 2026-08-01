@@ -31,11 +31,31 @@
       localStorage.setItem(chatKey(u), JSON.stringify({ v:1, name:friendName, history:history.slice(-30), t:Date.now() }));
     }catch(e){}
   }
-  async function loadChat(){
-    try{ var u=await uid(); if(!u) return null;
-      var raw=localStorage.getItem(chatKey(u)); if(!raw) return null;
+  function loadLocalChat(u){
+    try{ var raw=localStorage.getItem(chatKey(u)); if(!raw) return null;
       var d=JSON.parse(raw); return (d&&d.history&&d.history.length)? d : null;
     }catch(e){ return null; }
+  }
+  // 🔄 서버 우선 로드 — 어느 기기서든 같은 대화. 서버 저장본이 있으면 그걸 정본으로(PC↔앱↔웹 동기화).
+  //    서버 실패/빈값이면 로컬 캐시로 폴백(오프라인·초기).
+  async function loadChat(){
+    var u=await uid(); if(!u) return null;
+    try{
+      var jwt=await token();
+      if(jwt){
+        var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+          headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+          body:JSON.stringify({op:"load"}) });
+        var j=await res.json();
+        if(j&&j.ok&&Array.isArray(j.history)&&j.history.length){
+          var d={ v:1, name:(j.friend_name||friendName), history:j.history.slice(-30), t:Date.now() };
+          try{ localStorage.setItem(chatKey(u), JSON.stringify(d)); }catch(e){}   // 로컬 캐시 갱신
+          return d;
+        }
+        // 서버에 로그 없음(첫 사용/구계정) → 로컬에 있으면 그걸로(다음 턴에 서버로 올라감)
+      }
+    }catch(e){}
+    return loadLocalChat(u);
   }
 
   var ICON = {
@@ -308,10 +328,29 @@
     }
     return last;
   }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
   function addActions(msgEl, actions){
     if(!actions||!actions.length) return;
     var wrap=el('<div class="fr-acts"></div>');
     actions.forEach(function(a){
+      var isLink = (a.kind==="open"||a.kind==="view");
+      // 🔗 링크/콘텐츠 = 세련된 리치 카드(제목·부제·출처). 그 외(공유·앱·관리)는 알약칩.
+      if(isLink && (a.title||a.sub)){
+        var title = a.title || (a.label||"").replace(/\s*보기$/,"") || "바로 열어보기";
+        var card=el(
+          '<button class="fr-card">'+
+            '<span class="fr-card-ic">'+ICON.globe+'</span>'+
+            '<span class="fr-card-body">'+
+              '<span class="fr-card-t">'+esc(title)+'</span>'+
+              (a.sub?'<span class="fr-card-s">'+esc(a.sub)+'</span>':'')+
+              (a.source?'<span class="fr-card-src">'+esc(a.source)+'</span>':'')+
+            '</span>'+
+            '<span class="fr-card-go">'+ICON.go+'</span>'+
+          '</button>');
+        card.addEventListener("click", function(){ runAction(a); });
+        wrap.appendChild(card);
+        return;
+      }
       var chip=el('<button class="fr-chip"></button>');
       var share = a.kind==="share", opn = a.kind==="open";
       chip.innerHTML=(share?ICON.share:opn?ICON.globe:ICON.go)+"<span></span>";
