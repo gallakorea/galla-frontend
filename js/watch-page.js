@@ -46,11 +46,12 @@
   function render(title, ch) {
     return `
     <div class="hv-box watch-box">
-      <div class="hv-frame" id="hvFrame">
+      <div class="watch-topbar">
         <button type="button" class="hv-back" id="hvBack" aria-label="뒤로">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
       </div>
+      <div class="hv-frame" id="hvFrame"></div>
 
       <div class="hv-head">
         <span class="hv-title" id="hvTitle">${esc(title)}</span>
@@ -107,10 +108,7 @@
     const open = q("#hvOpen"); if (open) open.href = `https://www.youtube.com/watch?v=${id}`;
     const frame = q("#hvFrame");
     if (frame) {
-      // 기존 back 버튼은 보존하고 iframe만 교체
-      const back = frame.querySelector(".hv-back");
       frame.innerHTML = "";
-      if (back) frame.appendChild(back);
       const ifr = document.createElement("iframe");
       ifr.src = `${YT_PROXY}?v=${encodeURIComponent(id)}`;
       ifr.title = vtitle;
