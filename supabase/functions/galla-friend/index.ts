@@ -558,6 +558,7 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
         messages: [
           { role: "system", content: `대화에서 기억할 것을 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
+👥 그리고 **유저 인생의 '사람'**(부장·친구·애인·가족 등)이 나오면 kind:person, mkey:그 사람 이름/호칭(예: "부장","민수","여친"), content엔 [관계 + 유저의 감정 + 최근 에피소드]를 '한 줄로 누적'해서 넣어라. 같은 사람이 또 나오면 같은 mkey로 최신 내용을 업데이트(덮어씀). 이게 있어야 "그 부장 또 그랬어?"처럼 사람을 일관되게 기억한다.
 🎭 그리고 **'친구(나)'가 자기 캐릭터에 대해 새로 한 이야기/에피소드**(내 고양이·회사·동네 근황 등)가 있으면 kind:selfstory로 꼭 저장(나중에 일관성 유지·콜백용, content에 한 줄).
 추가로 mood: '친구(나)'의 이번 턴이 끝난 시점 기분. 현재 "${curMood || "normal"}". 판정 규칙 —
 · 상대의 반복 시비·욕에 내가 화내고 끊었으면(밀당 종료) "sulky"
@@ -613,6 +614,45 @@ async function summarizeProfile(uid: string, nick: string) {
     const j = await r.json();
     const sum = String(j?.choices?.[0]?.message?.content || "").trim().slice(0, 1200);
     if (sum) await supa.from("friend_relationship").update({ profile_summary: sum, summary_at: new Date().toISOString() }).eq("user_id", uid);
+  } catch { /* best effort */ }
+}
+
+// 🧠✨ 리플렉션 — 사실 기억들에서 '한 단계 위 통찰'을 종합(성격·패턴·욕구·가치관). Generative Agents 방식.
+//    팩트 나열이 아니라 '이 사람을 이해'하게 만드는 층. 주기적으로만 돌려 비용 최소.
+async function reflect(uid: string, nick: string) {
+  try {
+    const { data: mm } = await supa.from("friend_memory")
+      .select("content").eq("user_id", uid).eq("status", "active").neq("kind", "insight").neq("kind", "selfstory")
+      .order("salience", { ascending: false }).order("last_ref_at", { ascending: false, nullsFirst: false }).limit(50);
+    if (!mm || mm.length < 6) return;
+    const { data: ins } = await supa.from("friend_memory").select("content").eq("user_id", uid).eq("status", "active").eq("kind", "insight").limit(20);
+    const existing = (ins || []).map((x: any) => x.content);
+    const facts = mm.map((m: any) => `- ${m.content}`).join("\n");
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: MODEL, temperature: 0.4, max_tokens: 260, response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `아래 '사실 기억들'에서 이 사람에 대한 '한 단계 위 통찰' 1~3개를 종합해라. 사실 나열이 아니라 해석/패턴이다.
+예: "직장 스트레스가 크고 인정욕구가 있다", "정치적으로 진보 성향이고 불의에 민감", "혼자 있는 걸 좋아하지만 외로움도 탄다".
+이미 있는 통찰과 겹치면 넣지 마라. 기존 통찰을 더 정확히 다듬을 거면 옛 문장을 supersede에.
+JSON: {"insights":["..."],"supersede":["..."]}
+이미 있는 통찰: ${existing.slice(0, 15).join(" / ") || "(없음)"}` },
+          { role: "user", content: `닉: ${nick || "모름"}\n사실 기억:\n${facts}` },
+        ],
+      }),
+    });
+    const j = await r.json();
+    const parsed = JSON.parse(j?.choices?.[0]?.message?.content || "{}");
+    for (const s of (Array.isArray(parsed.supersede) ? parsed.supersede.slice(0, 3) : [])) {
+      const f = String(s || "").slice(0, 60).trim(); if (f.length < 4) continue;
+      try { await supa.from("friend_memory").update({ status: "superseded" }).eq("user_id", uid).eq("status", "active").eq("kind", "insight").ilike("content", "%" + f + "%"); } catch { /* */ }
+    }
+    for (const it of (Array.isArray(parsed.insights) ? parsed.insights.slice(0, 3) : [])) {
+      const content = String(it || "").slice(0, 200).trim(); if (content.length < 6) continue;
+      const ev = await embed(content);
+      await supa.from("friend_memory").insert({ user_id: uid, kind: "insight", content, salience: 4, embedding: ev ? vecLit(ev) : null });
+    }
   } catch { /* best effort */ }
 }
 
@@ -831,7 +871,7 @@ Deno.serve(async (req) => {
             }
           }
           // 💾 새 기억 저장 — 중요도 바닥값(프로필·성향·핵심인물 = 최소 4)
-          const floor = (kind: string) => (kind === "profile" || kind === "stance" || kind === "disliked") ? 4 : 1;
+          const floor = (kind: string) => (kind === "profile" || kind === "stance" || kind === "disliked" || kind === "person") ? 4 : 1;
           for (const m of ex.memories) {
             try {
               if (!m?.content) continue;
@@ -839,7 +879,7 @@ Deno.serve(async (req) => {
               const ev = await embed(content);
               const emb = ev ? vecLit(ev) : null;
               const sal = Math.min(5, Math.max(floor(m.kind), m.salience || 3));
-              const singular = m.mkey && (m.kind === "profile" || m.kind === "stance");
+              const singular = m.mkey && (m.kind === "profile" || m.kind === "stance" || m.kind === "person");
               if (singular) {
                 await supa.from("friend_memory").upsert(
                   { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb },
@@ -850,6 +890,8 @@ Deno.serve(async (req) => {
               }
             } catch { /* */ }
           }
+          // 🧠✨ 리플렉션(15턴마다) — 사실들에서 통찰 종합 → 요약 전에 돌려 요약에도 반영
+          if (newCount % 15 === 0) { await reflect(uid, nick); }
           // 🧠 프로필 요약 주기 재생성(8턴마다 / 아직 없고 4턴 넘으면) — 항상 주입되는 장기기억
           if (newCount % 8 === 0 || (!rel?.profile_summary && newCount >= 4)) { await summarizeProfile(uid, nick); }
         }
