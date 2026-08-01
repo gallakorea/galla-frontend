@@ -504,7 +504,10 @@
                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
     $("#hvCmtWrap").classList.add("hidden");
     setReply(null);
+    // 🔙 스택 페이지처럼 — 처음 열 때만 history에 얹어 '뒤로가기(제스처·버튼)'로 닫히게(제자리 교체 땐 유지)
+    const wasHidden = p.classList.contains("hidden");
     p.classList.remove("hidden");
+    if (wasHidden) { try { history.pushState({ hvOpen: 1 }, ""); } catch (_) {} }
     // 🎬 상단으로 스크롤 리셋(제자리 교체 시 새 영상이 위에서 보이게) + 다음 영상 목록
     try { const box = p.querySelector(".hv-box"); if (box) box.scrollTop = 0; } catch (_) {}
     loadRelated(id);
@@ -513,13 +516,23 @@
     loadSocial();
   }
 
-  function closePlayer() {
-    $("#hv-player").classList.add("hidden");
+  let hvClosing = false;
+  function closePlayer(fromPop) {
+    const p = $("#hv-player");
+    if (p.classList.contains("hidden")) return;
     $("#hvFrame").innerHTML = "";   // 재생 중지
+    p.classList.add("hidden");
     document.body.style.overflow = "";
     document.body.classList.remove("hv-playing");
     vid = null;
+    // 뒤로가기로 닫힌 게 아니면(X·딤 탭) history에서 우리 항목을 정리
+    if (!fromPop) { try { if (history.state && history.state.hvOpen) history.back(); } catch (_) {} }
   }
+  // 🔙 뒤로가기 제스처/버튼 → 플레이어 닫기(문서 이탈 대신)
+  window.addEventListener("popstate", () => {
+    const p = $("#hv-player");
+    if (p && !p.classList.contains("hidden")) closePlayer(true);
+  });
 
   /* 🎬 다음 영상 — 현재 영상 아래에 다른 핫튜브를 목록으로. 탭하면 '페이지 안 벗어나고' 제자리 교체(유튜브식). */
   const fmtDur = (iso) => {

@@ -1149,9 +1149,9 @@ img.gnc-av {
   border-radius: 0;
   border: 0;
   padding-top: env(safe-area-inset-top);
-  animation: hvUp .24s cubic-bezier(.22,1,.36,1);
+  animation: hvIn .26s cubic-bezier(.2,.85,.2,1);   /* 스택 페이지처럼 우→좌 슬라이드인(모달 느낌 제거) */
 }
-@keyframes hvUp { from { transform: translateY(18px); opacity: .6; } }
+@keyframes hvIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .hv-grab { display: none; }   /* 페이지化 — 시트 손잡이 제거(닫기 버튼이 출구) */
 
 /* 플레이어는 스크롤해도 상단에 붙어있게(유튜브처럼) */
