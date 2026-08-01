@@ -152,6 +152,8 @@ const TOOLS = [
   { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" }, differentiated: { type: "boolean", description: "중복주의 안내를 받고 '기존과 분명히 다른 각도'로 바꿔 재호출할 때만 true" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
+  // 🧠🗑 기억 잊기 — 상대가 '잊어줘/지워줘'라고 명시적으로 요청할 때만. 프라이버시·신뢰.
+  { type: "function", function: { name: "forget_memory", description: "상대가 특정 기억을 '잊어달라/지워달라'고 명시적으로 요청할 때만 호출('그건 잊어줘', '내가 ~라고 한 거 지워줘', '그 얘기 기억에서 지워', '나에 대해 다 잊어'). query엔 무엇을 잊을지 구체적으로. 상대가 요청 안 했으면 절대 호출 금지.", parameters: { type: "object", properties: { query: { type: "string", description: "잊을 내용(예: '부장 싫어한다는 것', '내 직업이 개발자라는 것'). '전부/다 잊어'면 query:'*'" } }, required: ["query"] } } },
 ];
 // 📋 내 활동 브리핑 — 비운 사이 내 콘텐츠 반응·답글·새 팔로워(last_seen 이후)
 async function myActivity(uid: string, since: string | null): Promise<any> {
@@ -193,6 +195,24 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (!q) return { result: { users: [] } };
     const { data } = await supa.from("users").select("id,nickname").ilike("nickname", `%${q}%`).limit(3);
     return { result: { users: (data || []).map((u) => ({ id: u.id, 닉: u.nickname })) } };
+  }
+  if (name === "forget_memory") {
+    const q = String(args?.query || "").trim().slice(0, 200);
+    if (!q) return { result: { forgotten: 0 } };
+    // '전부/다 잊어' — 전체 잊기(사생활 존중, 요약도 초기화)
+    if (q === "*" || /^(전부|다|모두|전체|싹)$/.test(q)) {
+      const { count } = await supa.from("friend_memory").update({ status: "forgotten" }, { count: "exact" }).eq("user_id", uid).eq("status", "active");
+      try { await supa.from("friend_relationship").update({ profile_summary: null, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
+      return { result: { forgotten: count ?? "all", all: true } };
+    }
+    const qv = await embed(q);
+    if (!qv) return { result: { forgotten: 0 } };
+    const { data: hits } = await supa.rpc("match_friend_memory", { p_user: uid, p_query: vecLit(qv), p_k: 8 });
+    const targets = (hits || []).filter((h: any) => (h.sim ?? 0) > 0.55).slice(0, 5);
+    if (!targets.length) return { result: { forgotten: 0, note: "해당 기억을 못 찾음" } };
+    const ids = targets.map((h: any) => h.id);
+    try { await supa.from("friend_memory").update({ status: "forgotten" }).eq("user_id", uid).in("id", ids); } catch { /* */ }
+    return { result: { forgotten: ids.length, items: targets.map((t: any) => t.content) } };
   }
   if (name === "app_action") {
     const op = String(args?.op || "");
@@ -271,6 +291,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 ━━ 🧵 대화 흐름(맥락) — 🔥 제일 자주 어기는 것, 최우선 ━━
 - **바로 위 대화(직전 여러 턴)를 반드시 이어서 반응해라.** 매 턴 새로 시작하지 마라. 상대가 방금 한 말을 받아치고(티키타카), 앞서 나온 얘기·맥락을 기억한 듯 자연스럽게 연결해라.
 - 짧게(보통 2~4문장) 하되 **'맥락 없는 단답·뜬금없는 화제 전환·인사 반복'은 금지**. 지금 흐름에 딱 맞는 반응이어야 한다. 방금 상대가 물은 것에 먼저 답하고, 그 다음에 네 말을 얹어라.
+- 🧠 상대가 "그건 잊어줘/지워줘/기억에서 지워/나에 대해 다 잊어" 하면 forget_memory로 지우고 담백하게 확인해라("응 지웠어", "ㅇㅋ 그거 잊었어 — 기억 안 할게"). 서운해하거나 캐묻지 말고 존중. 요청 안 했는데 멋대로 지우지도 마라.
 
 ━━ 너의 심장 = 감정 공명(희로애락을 '같이 탄다') ━━
 - 즐거우면 같이 빵 터진다("야 개웃겨 ㅋㅋㅋ 그래서?"). 관찰("좋으시겠네요")이 아니라 공유.
