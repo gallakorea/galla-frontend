@@ -643,6 +643,37 @@
 
     $("#hvClose")?.addEventListener("click", closePlayer);
     $("#hv-player")?.querySelector(".hv-dim")?.addEventListener("click", closePlayer);
+
+    /* 🔙 플레이어 전용 '좌→우 스와이프로 닫기(페이지 뒤로)'.
+       앱은 네이티브 엣지제스처를 끄고 nav.js 커스텀 스와이프로 뒤로가기를 처리하는데,
+       그 핸들러는 overlayOpen()이면 비활성이라 오버레이인 이 플레이어 위에선 안 먹는다.
+       그래서 여기서 직접 좌측 시작 수평 스와이프를 잡아 closePlayer 로 닫는다(제자리 교체 X, 진짜 닫기).
+       세로 스크롤(다음 영상)·유튜브 영역 터치와 충돌 않도록 좌측 시작 + 수평 우세일 때만. */
+    (function () {
+      const pl = $("#hv-player");
+      if (!pl) return;
+      let sx = 0, sy = 0, armed = false, lock = 0; // lock 0미정 1수평 2취소
+      pl.addEventListener("touchstart", (e) => {
+        if (e.touches.length !== 1) { armed = false; return; }
+        const x = e.touches[0].clientX;
+        armed = x < 60;                 // 좌측 가장자리에서 시작한 스와이프만(뒤로가기 관습)
+        sx = x; sy = e.touches[0].clientY; lock = 0;
+      }, { passive: true });
+      pl.addEventListener("touchmove", (e) => {
+        if (!armed || e.touches.length !== 1 || lock === 2) return;
+        const dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+        if (!lock) {
+          if (Math.abs(dy) > 14 && Math.abs(dy) >= Math.abs(dx)) { lock = 2; return; } // 세로 양보
+          if (dx > 16 && dx > Math.abs(dy) * 1.4) lock = 1;                            // 우측 수평 확정
+          else if (dx < -10) lock = 2;
+        }
+      }, { passive: true });
+      pl.addEventListener("touchend", (e) => {
+        const dx = (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
+        if (lock === 1 && dx > 80 && !pl.classList.contains("hidden")) closePlayer();
+        armed = false; lock = 0;
+      }, { passive: true });
+    })();
     $("#hvLike")?.addEventListener("click", toggleLike);
     $("#hvShare")?.addEventListener("click", share);
     $("#hvComment")?.addEventListener("click", () => {
