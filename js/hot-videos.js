@@ -487,6 +487,9 @@
   function openPlayer(id, title, ch) {
     vid = id; vtitle = title;
     const p = $("#hv-player");
+    // 🩹 SPA 클리핑 방지 — 플레이어(position:fixed)가 transform 걸린 트렌드 뷰 안에 있으면
+    //    뷰포트가 아닌 변형 조상 기준이라 상단이 잘린다. body 최상위로 올려 진짜 전체화면으로.
+    if (p && p.parentElement !== document.body) document.body.appendChild(p);
     $("#hvTitle").textContent = title;
     $("#hvCh").textContent = ch || "";
     const gv = $("#hvGalvis"); if (gv) { gv.setAttribute("data-gv-id", id || ""); gv.setAttribute("data-gv-title", title || ""); }
