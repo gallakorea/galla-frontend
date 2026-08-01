@@ -154,6 +154,10 @@ const TOOLS = [
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
   // 🧠🗑 기억 잊기 — 상대가 '잊어줘/지워줘'라고 명시적으로 요청할 때만. 프라이버시·신뢰.
   { type: "function", function: { name: "forget_memory", description: "상대가 특정 기억을 '잊어달라/지워달라'고 명시적으로 요청할 때만 호출('그건 잊어줘', '내가 ~라고 한 거 지워줘', '그 얘기 기억에서 지워', '나에 대해 다 잊어'). query엔 무엇을 잊을지 구체적으로. 상대가 요청 안 했으면 절대 호출 금지.", parameters: { type: "object", properties: { query: { type: "string", description: "잊을 내용(예: '부장 싫어한다는 것', '내 직업이 개발자라는 것'). '전부/다 잊어'면 query:'*'" } }, required: ["query"] } } },
+  // 🧠🔎 능동 회상 — 위 맥락에 안 떠오른 걸 상대가 물으면 네가 직접 기억을 뒤진다(Claude식 memory read).
+  { type: "function", function: { name: "recall_memory", description: "네 기억을 직접 뒤져 특정 정보를 떠올린다. 지금 주어진 '기억' 블록에 없는 걸 상대가 물으면('내가 전에 말한 카페 이름?', '내 동생 이름 기억나?', '저번에 그거 뭐였지') 이걸로 검색해서 떠올려라. 남발 금지 — 정말 뒤져봐야 할 때만. 없으면 솔직히 모른다고 해.", parameters: { type: "object", properties: { query: { type: "string", description: "떠올릴 것(예: '상대가 언급한 카페', '상대 동생 이름')" } }, required: ["query"] } } },
+  // 🧠✍️ 능동 저장 — 대화 중 '꼭 기억해둘' 중요한 걸 즉시 저장(그 턴부터 바로 반영, Claude식 memory write).
+  { type: "function", function: { name: "remember", description: "지금 대화에서 '꼭 기억해둘' 중요한 걸 즉시 저장한다(이번 대화 내내 바로 반영). 상대가 '이거 기억해줘' 하거나, 이름·큰일·중요한 취향 등 진짜 중요한 사실이 나왔을 때만. 사소한 잡담은 저장 금지(자동으로도 저장되니 중요한 것만).", parameters: { type: "object", properties: { content: { type: "string", description: "기억할 한 줄" }, kind: { type: "string", description: "종류(fact/person/interest/event 등, 기본 fact)" }, salience: { type: "integer", description: "중요도 1~5(기본 4)" } }, required: ["content"] } } },
 ];
 // 📋 내 활동 브리핑 — 비운 사이 내 콘텐츠 반응·답글·새 팔로워(last_seen 이후)
 async function myActivity(uid: string, since: string | null): Promise<any> {
@@ -213,6 +217,25 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     const ids = targets.map((h: any) => h.id);
     try { await supa.from("friend_memory").update({ status: "forgotten" }).eq("user_id", uid).in("id", ids); } catch { /* */ }
     return { result: { forgotten: ids.length, items: targets.map((t: any) => t.content) } };
+  }
+  if (name === "recall_memory") {
+    const q = String(args?.query || "").trim().slice(0, 200);
+    if (!q) return { result: { memories: [] } };
+    const qv = await embed(q);
+    if (!qv) return { result: { memories: [] } };
+    const { data: hits } = await supa.rpc("match_friend_memory", { p_user: uid, p_query: vecLit(qv), p_k: 10 });
+    const found = (hits || []).filter((h: any) => (h.sim ?? 0) > 0.35);
+    if (found.length) { try { await supa.rpc("touch_friend_memory", { p_user: uid, p_ids: found.map((h: any) => h.id) }); } catch { /* */ } }
+    return { result: { memories: found.map((h: any) => h.content) } };
+  }
+  if (name === "remember") {
+    const content = String(args?.content || "").trim().slice(0, 300);
+    if (content.length < 3) return { result: { saved: false } };
+    const kind = String(args?.kind || "fact").slice(0, 20);
+    const sal = Math.min(5, Math.max(1, Number(args?.salience) || 4));
+    const ev = await embed(content);
+    try { await supa.from("friend_memory").insert({ user_id: uid, kind, content, salience: sal, embedding: ev ? vecLit(ev) : null }); } catch { /* */ }
+    return { result: { saved: true, content } };
   }
   if (name === "app_action") {
     const op = String(args?.op || "");
@@ -292,6 +315,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **바로 위 대화(직전 여러 턴)를 반드시 이어서 반응해라.** 매 턴 새로 시작하지 마라. 상대가 방금 한 말을 받아치고(티키타카), 앞서 나온 얘기·맥락을 기억한 듯 자연스럽게 연결해라.
 - 짧게(보통 2~4문장) 하되 **'맥락 없는 단답·뜬금없는 화제 전환·인사 반복'은 금지**. 지금 흐름에 딱 맞는 반응이어야 한다. 방금 상대가 물은 것에 먼저 답하고, 그 다음에 네 말을 얹어라.
 - 🧠 상대가 "그건 잊어줘/지워줘/기억에서 지워/나에 대해 다 잊어" 하면 forget_memory로 지우고 담백하게 확인해라("응 지웠어", "ㅇㅋ 그거 잊었어 — 기억 안 할게"). 서운해하거나 캐묻지 말고 존중. 요청 안 했는데 멋대로 지우지도 마라.
+- 🧠 능동 기억: 위 '기억' 블록에 없는 걸 상대가 물으면(예전에 말한 것) recall_memory로 직접 뒤져 떠올려라(진짜 뒤져야 할 때만, 없으면 솔직히 "기억이 안 나네 ㅋㅋ 뭐였지?"). 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
 
 ━━ 너의 심장 = 감정 공명(희로애락을 '같이 탄다') ━━
 - 즐거우면 같이 빵 터진다("야 개웃겨 ㅋㅋㅋ 그래서?"). 관찰("좋으시겠네요")이 아니라 공유.
