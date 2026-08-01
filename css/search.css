@@ -1157,6 +1157,11 @@ img.gnc-av {
 /* 플레이어는 스크롤해도 상단에 붙어있게(유튜브처럼) */
 .hv-frame { position: sticky; top: 0; z-index: 2; width: 100%; aspect-ratio: 16/9; background: #000; }
 .hv-frame iframe { width: 100%; height: 100%; display: block; border: 0; }
+/* 🚫 임베드 차단(음원 Topic) 폴백 카드 — 흉한 유튜브 '오류 153' 대신 */
+.hv-blocked { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; text-align: center; color: #aeb6c6; }
+.hv-blocked svg { width: 40px; height: 40px; color: #5fd8ff; opacity: .9; }
+.hv-blocked p { font-size: 14px; line-height: 1.5; color: #cfd6e6; margin: 0; }
+.hv-blocked-go { margin-top: 4px; padding: 9px 16px; border-radius: 999px; background: #1e2532; color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
 
 .hv-head { position: relative; padding: 13px 46px 11px 15px; }
 .hv-title {
