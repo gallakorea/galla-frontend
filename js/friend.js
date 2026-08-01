@@ -452,7 +452,32 @@
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
     if((voiceOut || speakReply) && r.reply) speak(r.reply);   // 🔊 토글 켜져 있으면 답을 읽어준다(무료 온디바이스)
     saveChat();                                  // 대화 이어가기 — 매 턴 저장
+    if(!window.GALLA_IS_APP) maybeWebNudge();     // 🌐 웹: 몇 번 대화하면 자연스럽게 앱 다운로드 유도
     busy=false; sendEl.disabled=false;
+  }
+
+  /* 🌐 웹 전용 — 몇 번 대화가 오가면 갈비스가 슬쩍 앱 설치를 권한다(세션당 몇 번, 단계적).
+     대화 흐름을 끊지 않게 답 뒤에 붙이고, 다운로드 칩 하나. history엔 안 남김(합성 넛지). */
+  var _webMsgs = 0, _webNudgeIdx = 0;
+  var _webThresholds = [3, 9];   // 3번째·9번째 유저 메시지 후 한 번씩
+  function maybeWebNudge(){
+    _webMsgs++;
+    if(_webNudgeIdx >= _webThresholds.length || _webMsgs < _webThresholds[_webNudgeIdx]) return;
+    _webNudgeIdx++;
+    setTimeout(function(){
+      if(!logEl) return;
+      var lines = [
+        "우리 은근 자주 얘기하네 ㅎㅎ ((눈웃음)) 앱으로 받으면 알림도 오고 음성·통화까지 다 돼 — 훨씬 편해!",
+        "이럴 거면 앱이 낫지 않아? ((씨익)) 홈에 두고 바로 켜자. 알림·통화·오프라인 다 되니까."
+      ];
+      var m = addMsg("a", lines[Math.min(_webNudgeIdx-1, lines.length-1)]);
+      var wrap = el('<div class="fr-acts"></div>');
+      var chip = el('<button class="fr-chip fr-getapp-chip"><span>📲 앱 받기</span></button>');
+      chip.addEventListener("click", function(){ window.GALLA_appDownload && window.GALLA_appDownload("getapp"); });
+      wrap.appendChild(chip);
+      (m.querySelector(".fr-bubble")||m).appendChild(wrap);
+      scrollBottom();
+    }, 900);
   }
   function submit(){
     var text=(taEl.value||"").trim(); if(!text) return;

@@ -31,6 +31,9 @@ body.fr-web .fr-getapp{
   font-size:12.5px; font-weight:800; border-radius:999px; cursor:pointer; white-space:nowrap;
 }
 body.fr-web .fr-getapp:active{ transform:scale(.95); }
+/* 📲 대화 중 앱 설치 유도 칩 — 다른 칩보다 도드라지게(그라데이션 채움) */
+.fr-getapp-chip{ background:linear-gradient(135deg,#4361ff,#5b8cff)!important; border-color:transparent!important; color:#fff!important; font-weight:800!important; }
+.fr-getapp-chip svg{ display:none; }
 
 /* 🖥 데스크톱(≥1100px) — 하단 내비가 없어 오브를 화면 코너로(모바일은 내비 위 74px 유지). */
 @media(min-width:1100px){
