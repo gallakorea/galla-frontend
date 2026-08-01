@@ -48,6 +48,7 @@
   };
   var STT = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-stt";
   var rec = null, recChunks = [], recording = false, voiceMode = false;
+  var voiceOut = false; try{ voiceOut = localStorage.getItem("frVoiceOut")==="1"; }catch(e){}   // 🔊 음성 답변 토글(기억)
 
   var orb, sheet, mini, logEl, taEl, sendEl;
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
@@ -67,6 +68,7 @@
         '<div class="fr-head">'+
           '<div class="fr-av"><span class="fr-ring fr-r1"></span><span class="fr-ring fr-r2"></span><span class="fr-core"></span></div>'+
           '<div class="fr-idwrap"><div class="fr-name">G.A.L.V.I.S.</div><div class="fr-sub">'+BACKRONYM+'</div></div>'+
+          '<button class="fr-voice" aria-label="음성 답변 켜기/끄기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path class="fr-vw1" d="M15.5 8.5a5 5 0 0 1 0 7"/><path class="fr-vw2" d="M18.5 5.5a9.5 9.5 0 0 1 0 13"/></svg></button>'+
           '<span class="fr-status"><i></i>ONLINE</span>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
@@ -98,6 +100,16 @@
     sendEl.addEventListener("touchend", function(e){ e.preventDefault(); submit(); }, {passive:false});
     sendEl.addEventListener("click", submit);   // 데스크톱용(모바일은 touchend가 click 억제)
     if(micEl) micEl.addEventListener("click", toggleVoice);
+    // 🔊 음성 답변 토글(헤더 스피커) — 켜면 갈비스가 답을 목소리로도 읽어줌(무료 온디바이스 TTS)
+    var vBtn=sheet.querySelector(".fr-voice");
+    if(vBtn){
+      var paintVoice=function(){ vBtn.classList.toggle("on", voiceOut); };
+      vBtn.addEventListener("click", function(){
+        voiceOut=!voiceOut; try{ localStorage.setItem("frVoiceOut", voiceOut?"1":"0"); }catch(e){}
+        paintVoice(); if(voiceOut){ speak("응, 이제 목소리로도 말해줄게!"); } else { hushSpeak(); }
+      });
+      paintVoice();
+    }
     taEl.addEventListener("keydown", function(e){ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); submit(); } });
     taEl.addEventListener("input", function(){ taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; });
   }
@@ -120,7 +132,7 @@
     if(mini) mini.classList.remove("on");
     orb && orb.classList.remove("fr-hidden");
     document.body.classList.remove("fr-chatting");   // 내비 복원
-    try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}  // 닫으면 음성 정지
+    hushSpeak();   // 닫으면 음성 정지(네이티브 TTS 포함)
   }
   /* 🔽 미니 보드로 접기 — 콘텐츠를 보여줄 때 챗은 닫는 게 아니라 '접힌다'(대화·입력 그대로 유지).
      패널이 슬라이드 다운되는 동안 미니 필이 스프링으로 팝인 — 다시 탭하면 그 자리에서 대화 복귀. */
@@ -421,7 +433,7 @@
       }
     }
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
-    if(speakReply && r.reply) speak(r.reply);
+    if((voiceOut || speakReply) && r.reply) speak(r.reply);   // 🔊 토글 켜져 있으면 답을 읽어준다(무료 온디바이스)
     saveChat();                                  // 대화 이어가기 — 매 턴 저장
     busy=false; sendEl.disabled=false;
   }
@@ -432,14 +444,29 @@
   }
 
   /* 🎙 음성 채팅 — 녹음 → STT(받아쓰기) → 친구 → 음성 답변(브라우저 TTS, 무료). */
+  /* 🔊 갈비스 목소리(무료) — 네이티브=AVSpeechSynthesizer(기기 최고 한국어 보이스), 웹=speechSynthesis 폴백.
+     낭독 전 정리: 짤/스티커 마커·지문((…))·URL 제거(말로 읽으면 이상한 것들). */
+  function cleanForSpeech(text){
+    return String(text||"")
+      .replace(/\[emo:[a-z0-9_]+\]/g," ").replace(/\[stk:[^\]]+\]/g," ")
+      .replace(/\(\([^()\n]*\)\)/g," ").replace(/\*[^*\n]*\*/g," ")
+      .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi," ").replace(/[#_>`]/g,"")
+      .replace(/\s{2,}/g," ").trim();
+  }
   function speak(text){
+    var t=cleanForSpeech(text); if(!t) return;
+    if(nsrAvail()){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"speak", text:t.slice(0,600)}); }catch(e){} return; }
     try{
       if(!window.speechSynthesis) return;
       window.speechSynthesis.cancel();
-      var u=new SpeechSynthesisUtterance(String(text).replace(/[#*_>`]/g,""));
+      var u=new SpeechSynthesisUtterance(t);
       u.lang="ko-KR"; u.rate=1.05; u.pitch=1.0;
       window.speechSynthesis.speak(u);
     }catch(e){}
+  }
+  function hushSpeak(){
+    if(nsrAvail()){ try{ window.webkit.messageHandlers.gallaSpeech.postMessage({op:"shutup"}); }catch(e){} }
+    try{ window.speechSynthesis && window.speechSynthesis.cancel(); }catch(e){}
   }
   /* 🎙 네이티브(iOS) = 애플 온디바이스 실시간 인식(GallaSpeech 브릿지) — 말하는 동안 입력창에 글자가 차오르고,
      다시 탭하면 확정→전송. iosrtc의 getUserMedia 점거와 무관·무료·저지연. 웹은 기존 Whisper 폴백. */

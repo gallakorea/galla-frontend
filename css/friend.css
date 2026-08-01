@@ -110,7 +110,13 @@ body.fr-chatting nav.nav{ display:none !important; }
 @keyframes frBoot{ 0%{ opacity:0; } 35%{ opacity:1; } 50%{ opacity:.35; } 65%{ opacity:1; } 78%{ opacity:.6; } 100%{ opacity:1; } }
 .fr-head .fr-sub{ font-size:8px; letter-spacing:.06em; text-transform:uppercase; color:var(--fr-dim); margin-top:2px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.fr-status{ margin-left:auto; display:inline-flex; align-items:center; gap:5px; flex:0 0 auto;
+/* 🔊 음성 답변 토글 — 꺼짐=흐림, 켜짐=시안 글로우+웨이브 표시 */
+.fr-voice{ margin-left:auto; background:none; border:none; padding:5px 6px; cursor:pointer; color:var(--fr-dim); flex:0 0 auto; -webkit-tap-highlight-color:transparent; }
+.fr-voice svg{ width:19px; height:19px; display:block; }
+.fr-voice .fr-vw1, .fr-voice .fr-vw2{ opacity:.25; }
+.fr-voice.on{ color:var(--fr-cy); filter:drop-shadow(0 0 6px rgba(95,216,255,.6)); }
+.fr-voice.on .fr-vw1, .fr-voice.on .fr-vw2{ opacity:1; }
+.fr-status{ display:inline-flex; align-items:center; gap:5px; flex:0 0 auto;
   font-size:9px; font-weight:700; letter-spacing:.14em; color:var(--fr-am); }
 .fr-status i{ width:6px; height:6px; border-radius:50%; background:var(--fr-am);
   box-shadow:0 0 8px rgba(255,180,92,.9); animation:frStat 1.8s ease-in-out infinite; }
