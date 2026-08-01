@@ -94,6 +94,10 @@ body.fr-kb-anim #frSheet .fr-panel{
 @keyframes frScan{ 0%{ left:-40%; } 55%{ left:100%; } 100%{ left:100%; } }
 /* 🫥 대화 중 하단 내비 숨김 + 당겨새로고침은 pull-refresh.js 가드(fr-chatting)로 차단 */
 body.fr-chatting nav.nav{ display:none !important; }
+/* 🚫 오브·미니보드를 숨겨야 하는 몰입/상세 화면 — DM채팅방·난장방(dm-detail), 핫튜브 플레이어(hv-playing).
+   (숏판·릴스는 자체 오버레이가 오브 위를 덮음). 겹침·오작동 방지. */
+body.dm-detail #frOrb, body.dm-detail #frMini,
+body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 
 /* ── 헤더 ─────────────────────────────────────────── */
 .fr-head{ display:flex; align-items:center; gap:11px; padding:13px 14px 11px; border-bottom:1px solid rgba(95,216,255,.15); }

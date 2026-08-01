@@ -500,6 +500,7 @@
     setReply(null);
     p.classList.remove("hidden");
     document.body.style.overflow = "hidden";
+    document.body.classList.add("hv-playing");   // 🤖 갈비스 오브와 겹침 방지(오브 숨김)
     loadSocial();
   }
 
@@ -507,6 +508,7 @@
     $("#hv-player").classList.add("hidden");
     $("#hvFrame").innerHTML = "";   // 재생 중지
     document.body.style.overflow = "";
+    document.body.classList.remove("hv-playing");
     vid = null;
   }
 

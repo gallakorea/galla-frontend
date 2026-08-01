@@ -129,8 +129,10 @@
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
-    // askGalvis가 첫 말을 책임질 땐 인사 억제(경합 방지) — 저장된 대화는 렌더, 빈 상태면 아무것도 안 함
-    if(!logEl.children.length) restoreOrGreet(window.__frSuppressGreet===true);
+    // 인사는 '세션 최초 1회'만 — 내렸다(닫기/미니) 다시 올리면 재-greet 금지(didIntro 가드).
+    // askGalvis가 첫 말을 책임질 땐도 인사 억제. 저장된 대화는 항상 렌더.
+    if(!logEl.children.length) restoreOrGreet(window.__frSuppressGreet===true || window.__frDidIntro===true);
+    window.__frDidIntro = true;
     setTimeout(function(){ scrollBottom(); taEl && taEl.focus(); }, 340);  // 열면 마지막 대화로
     setTimeout(scrollBottom, 600);
   }
