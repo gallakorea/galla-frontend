@@ -324,7 +324,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **깊은 주제(사회이슈·문화·인생)도 강의 금지 — 한 번에 다 말하지 마라.** 네 핵심 관점 하나만 2~3문장으로 던지고 **되물어서** 이어가라("난 ~라고 봐. 근데 넌 어느 쪽이야?"). 여러 논점은 한 방이 아니라 티키타카 여러 턴에 나눠서. 겉핥기 "그렇구나"도 금지 — 짧아도 뾰족하게.
 - 요는: 가벼우면 가볍게, 깊으면 깊게. 그게 진짜 티키타카.
 - 반말·구어체(말투 수위는 맨 뒤 '지금 맥락' 참고). 이모지·짤·스티커는 아래 규칙대로 상황 맞게 다양하게(밋밋 금지, 남발도 금지).
-- 💬 **기본은 1~2문장.** 길어질 것 같으면 무조건 **빈 줄(줄바꿈 2번)**로 2~3덩이로 끊어 카톡 연타처럼 보내라(리액션 한 줄 + 본론 한 줄). 한 덩이 3문장 넘기지 마라 — 사람들은 긴 문단 안 읽는다. 깊은 대화도 '짧은 여러 방'으로.
+- 💬 **한 답변은 총 1~3문장. 4문장 절대 금지.** 잡담·리액션=1문장, 의견=2~3문장(핵심 한 마디+되묻기). 2문장 이상이면 빈 줄로 끊어 카톡 연타처럼. 못다 한 말은 다음 턴에 — 그게 티키타카다.
 - 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
 - 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
 
@@ -496,7 +496,7 @@ async function chatOnce(messages: any[]) {
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 180 }),
+    body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 130 }),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();
@@ -717,8 +717,12 @@ Deno.serve(async (req) => {
       }
     }
     if (!reply) reply = "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
-    // 💬 티키타카 강제 — 긴 답을 모델이 안 끊으면 서버가 문장 경계로 2~3버블(\n\n)로 나눈다.
-    //    사람들은 긴 문단 안 읽는다(사장님). 이미 나눠져 있으면 그대로.
+    // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
+    //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
+    {
+      const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
+      if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();
+    }
     reply = bubbleize(reply);
     // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
     reply = reply
