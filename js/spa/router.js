@@ -167,6 +167,18 @@
     }, 600);
   }
 
+  /* ✍️ 전체화면 작성/확인 뷰(하단에 '다음 단계·발행' 같은 CTA가 있는 폼)가 스택 최상단이면
+     하단 탭 네비를 숨긴다. 네비(z-index 9999)가 스택 뷰(#stack-root, z 40) 위에 떠서
+     CTA 버튼을 덮어 '다음 단계'를 눌러도 네비(DM)로 새던 버그의 근본 수정. 상세 뷰(이슈·예측
+     상세 등)는 네비 유지, 에디터만 숨김. pop으로 에디터가 빠지면 자동 복구. */
+  const FULL_EDITORS = new Set(["write", "gallari-write", "report", "bug", "confirm", "preview"]);
+  function syncEditorNav() {
+    try {
+      const top = stack[stack.length - 1];
+      document.body.classList.toggle("spa-editing", !!(top && FULL_EDITORS.has(top.name)));
+    } catch (_) {}
+  }
+
   /* ── 스택 push/pop(상세 뷰) ────────────────────────────────── */
   async function push(name, params, opts) {
     opts = opts || {};
@@ -188,6 +200,7 @@
     }
     const entry = { el: layer, name, mod: null };
     stack.push(entry);
+    syncEditorNav();
     pauseOutside();
     if (!opts.silent) { try { history.pushState(null, "", "#/" + name + qs(params)); } catch (_) {} }
     try {
@@ -212,6 +225,7 @@
     opts = opts || {};
     const entry = stack.pop();
     if (!entry) return false;
+    syncEditorNav();   // ✍️ 에디터가 빠지면 하단 네비 복구(발행 버튼 덮던 것 해제)
     if (entry.mod && entry.mod.unmount) { try { entry.mod.unmount(); } catch (_) {} }
     pauseOutside();   // 🔇 pop된 상세의 미디어 정지(표면이 아래 탭/스택으로 바뀜)
     // onPop: compose 스택은 '이동해온 모달'을 원래 탭으로 되돌린다(슬라이드 아웃 후 실행 → 레이어 제거 직전).
