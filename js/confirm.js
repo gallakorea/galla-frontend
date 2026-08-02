@@ -261,9 +261,17 @@ async function initConfirmPage(ctx) {
       }
 
       /* ---------- DB 발행: issues INSERT ---------- */
+      // 📈 브레인 성과 역연결 — 갈비스 제목 공식으로 만든 거면 기록(크론이 이 이슈 반응을 측정해 공식 점수화)
+      let __titlePattern = null;
+      try {
+        const ps = JSON.parse(sessionStorage.getItem('GALLA_PICKED_STYLE') || 'null');
+        if (ps && ps.style && (Date.now() - (ps.at || 0)) < 30 * 60 * 1000) __titlePattern = String(ps.style).slice(0, 40);
+        sessionStorage.removeItem('GALLA_PICKED_STYLE');
+      } catch (_) {}
       const { data: published, error: insertError } = await supabase
         .from('issues')
         .insert([{
+          title_pattern: __titlePattern,
           user_id: draft.user_id,
           category: draft.category,
           title: draft.title,

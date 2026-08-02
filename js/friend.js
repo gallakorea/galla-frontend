@@ -421,6 +421,8 @@
     }catch(e){}
     // 📈 성과 피드백 — 고른 제목의 공식(style) 선택수↑ → 잘 먹히는 공식이 다음에 더 자주 뽑힌다(브레인 자가학습)
     try{ if(style && window.supabaseClient) window.supabaseClient.rpc("pattern_feedback",{p_kind:"title",p_style:style,p_signal:"pick"}).then(function(){},function(){}); }catch(e){}
+    // 🔗 실제 성과 역연결 — 이 공식으로 발행되면 콘텐츠에 기록(confirm.js가 첨부) → 크론이 반응 측정
+    try{ if(style) sessionStorage.setItem("GALLA_PICKED_STYLE", JSON.stringify({ style:style, at:Date.now() })); }catch(e){}
     addMsg("a", applied ? "'"+text+"' 로 넣었어 👍 별로면 다른 것도 골라봐" : "'"+text+"' — 이걸로 가자! (편집기에서 제목칸에 넣어줘)");
   }
   // 📜 대본 카드 — 스크롤 블록 + 복사
