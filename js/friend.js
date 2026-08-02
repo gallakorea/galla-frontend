@@ -127,7 +127,7 @@
     bindKb();
     if(mini) mini.classList.remove("on");
     orb && orb.classList.add("fr-hidden");
-    sheet.classList.add("fr-dock"); sheet.classList.remove("fr-dock-min");
+    sheet.classList.add("fr-dock"); sheet.classList.remove("fr-dock-min","fr-hasform");   // 에이전트 도킹=편집기 폼 없음(올리기 버튼 숨김)
     document.body.classList.add("fr-docked");
     sheet.classList.add("fr-open");
     setTimeout(scrollBottom, 60);
@@ -320,7 +320,7 @@
     bindKb();
     if(mini) mini.classList.remove("on");
     orb && orb.classList.add("fr-hidden");               // 도킹 중엔 런처 오브 숨김
-    sheet.classList.add("fr-dock"); sheet.classList.remove("fr-dock-min");
+    sheet.classList.add("fr-dock", "fr-hasform"); sheet.classList.remove("fr-dock-min");   // fr-hasform=편집기폼 있음(올리기 버튼 노출)
     document.body.classList.add("fr-docked");
     sheet.classList.add("fr-open");                      // 편집기는 위에서 그대로 사용(스크림 pass-through)
     if(!logEl.children.length) restoreOrGreet(true);     // 인사 억제 — 작업 오프너가 첫 말
@@ -344,7 +344,7 @@
   }
   function exitDock(){
     _dock=false; _work=null;
-    if(sheet) sheet.classList.remove("fr-dock","fr-dock-min","fr-open");
+    if(sheet) sheet.classList.remove("fr-dock","fr-dock-min","fr-open","fr-hasform");
     orb && orb.classList.remove("fr-hidden");
     document.body.classList.remove("fr-chatting","fr-docked");
     hushSpeak();
