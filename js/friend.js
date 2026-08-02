@@ -604,6 +604,14 @@
       minimize(); nav("gallari-write.html");
       return;
     }
+    if(a.kind==="draftPredict"){
+      // 🎲 예측 마켓 초안 — 질문·정산기준·카테고리·마감 프리필 + 작업모드. 발행은 사람이 확인.
+      try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"predict",
+        question:a.question||"", description:a.description||"", category:a.category||"", closeDays:a.closeDays||7 })); }catch(e){}
+      try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"predict" })); }catch(e){}
+      minimize(); nav("galla-predict.html?compose=1");
+      return;
+    }
     if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;

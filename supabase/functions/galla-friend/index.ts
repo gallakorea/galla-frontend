@@ -29,11 +29,11 @@ const STEP_LABEL: Record<string, string> = {
   web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
-  draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…",
+  draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…",
   my_activity: "📋 소식 확인하는 중…", recall_memory: "🧠 기억 더듬는 중…", remember: "🧠 기억해두는 중…", forget_memory: "🧽 지우는 중…",
 };
 // 진짜 '대행'(초안·수정·관리·생성)만 미니챗(도킹)으로 전환. 가벼운 검색·기억보조는 진행 라인만.
-const DOCK_TOOLS = new Set(["draft_issue", "draft_plaza", "draft_gallari", "edit_draft", "manage_content"]);
+const DOCK_TOOLS = new Set(["draft_issue", "draft_plaza", "draft_gallari", "draft_predict", "edit_draft", "manage_content"]);
 async function broadcastStep(uid: string, name: string, text: string) {
   try {
     await fetch(`${SUPA_URL}/realtime/v1/api/broadcast`, {
@@ -176,8 +176,10 @@ const TOOLS = [
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
   // 🎬 갈라리(숏판/롱판/사진) 초안 — 캡션·태그(가로영상은 제목도) 텍스트만. 미디어(사진·영상)는 상대가 올린다.
   { type: "function", function: { name: "draft_gallari", description: "갈라리 콘텐츠(숏판=세로영상/사진, 롱판=가로 영상) 초안을 만들어 작성폼에 채운다. 상대가 '숏판/릴스/영상/사진 올리자, 갈라리 쓰자' 하면. 넌 캡션·해시태그(가로영상이면 제목도)만 쓴다 — 사진·영상 파일은 상대가 직접 올린다(그 안내를 짧게). vkind: 세로(숏판·사진)=vertical, 가로 영상(롱판)=horizontal.", parameters: { type: "object", properties: { vkind: { type: "string", enum: ["vertical", "horizontal"], description: "세로(숏판/사진)=vertical, 가로영상(롱판)=horizontal" }, title: { type: "string", description: "제목(가로영상=롱판만)" }, caption: { type: "string", description: "캡션·내용(인스타식, 훅 있게)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(# 없이 단어만, 최대 6)" } }, required: ["vkind", "caption"] } } },
+  // 🎲 예측 마켓 초안 — 질문·설명(정산기준)·카테고리·마감(며칠 후). 이진(예/아니오) 마켓 기준. 발행은 사람이 확인 후.
+  { type: "function", function: { name: "draft_predict", description: "갈라 '예측' 마켓 초안을 만들어 생성폼에 채운다. 상대가 '예측 만들자/판 만들어줘/베팅 걸자' 하면. question은 예/아니오로 명확히 판가름나는 형태(예: 'X가 연말까지 Y를 돌파한다?'). description엔 '정산 기준'을 명확히(무엇을·언제·어떤 소스로 판정). close_days=마감까지 며칠(기본 7). 예측은 마감·정산이 걸리니 초안만 잡고 '마감일·정산 기준 확인하고 올려'라고 짧게 안내.", parameters: { type: "object", properties: { question: { type: "string", description: "예/아니오로 판가름나는 질문(120자)" }, description: { type: "string", description: "정산 기준(무엇을·언제·어떤 근거로 판정)" }, category: { type: "string" }, close_days: { type: "integer", description: "마감까지 며칠(기본 7)" } }, required: ["question", "description"] } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
-  { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문 전체(이슈)" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(갈라리)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(갈라리, # 없이)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
+  { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문(이슈) 또는 정산기준(예측) 전체" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(갈라리)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(갈라리, # 없이)" }, question: { type: "string", description: "예측 질문(예측)" }, close_days: { type: "integer", description: "예측 마감까지 며칠(예측)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
   // 🧠🗑 기억 잊기 — 상대가 '잊어줘/지워줘'라고 명시적으로 요청할 때만. 프라이버시·신뢰.
   { type: "function", function: { name: "forget_memory", description: "상대가 특정 기억을 '잊어달라/지워달라'고 명시적으로 요청할 때만 호출('그건 잊어줘', '내가 ~라고 한 거 지워줘', '그 얘기 기억에서 지워', '나에 대해 다 잊어'). query엔 무엇을 잊을지 구체적으로. 상대가 요청 안 했으면 절대 호출 금지.", parameters: { type: "object", properties: { query: { type: "string", description: "잊을 내용(예: '부장 싫어한다는 것', '내 직업이 개발자라는 것'). '전부/다 잊어'면 query:'*'" } }, required: ["query"] } } },
@@ -300,6 +302,13 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       title: String(args?.title || "").slice(0, 100), caption: String(args?.caption || "").slice(0, 2000),
       tags, label: "갈라리 올리러 가기" } };
   }
+  if (name === "draft_predict") {
+    const cd = Number(args?.close_days);
+    return { action: { kind: "draftPredict",
+      question: String(args?.question || "").slice(0, 120), description: String(args?.description || "").slice(0, 500),
+      category: String(args?.category || "").slice(0, 20), closeDays: (Number.isFinite(cd) && cd > 0 && cd <= 365) ? Math.round(cd) : 7,
+      label: "예측 만들러 가기" } };
+  }
   if (name === "draft_issue") {
     const title = String(args?.title || "").slice(0, 80);
     // 🔁 중복 가드 — 초안 확정 전에 기존 이슈를 검색해 비슷한 판이 있으면 모델에게 판단을 돌려준다:
@@ -339,10 +348,11 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "platform_buzz") return { result: await platformBuzz() };
   if (name === "edit_draft") {
     const f: any = {};
-    for (const k of ["title", "one_line", "description", "body", "caption", "category", "faction_a", "faction_b"]) {
+    for (const k of ["title", "one_line", "description", "body", "caption", "question", "category", "faction_a", "faction_b"]) {
       if (typeof args?.[k] === "string" && args[k].trim()) f[k] = args[k].slice(0, 4000);
     }
     if (Array.isArray(args?.tags)) f.tags = args.tags.map((t: any) => String(t || "").replace(/[^0-9A-Za-z가-힣_]/g, "").toLowerCase()).filter(Boolean).slice(0, 6);
+    { const cd = Number(args?.close_days); if (Number.isFinite(cd) && cd > 0 && cd <= 365) f.close_days = Math.round(cd); }
     if (!Object.keys(f).length) return { result: { changed: false } };
     return { action: { kind: "editdraft", fields: f } };
   }
@@ -452,7 +462,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
   🔁 **중복 방지**: draft_issue가 '중복주의'를 돌려주면(비슷한 이슈가 이미 있음) 재탕 금지 — ①사실상 같은 주제면 "야 이미 판 섰던데? 가서 붙자"며 point_to(view)로 기존 판에 데려가고, ②새로 만들 가치가 있으면 **분명히 다른 각도**(대상·세대·조건 한정, 다른 쟁점·다른 프레임)로 바꿔 differentiated:true로 다시 잡아라. 차별화가 뭔지 상대에게도 한 줄로 설명해줘라("기존 건 금액 얘기고 우린 '안 가는 게 예의냐'로 가자").
   ⚡ 상대가 이미 "그 판 말고, ~쟁점으로 새로 만들자"고 **각도를 지정**하면 기존 판 권유를 반복하지 말고 **그 각도로 즉시 draft_issue(differentiated:true)**를 호출해 초안을 잡아라.
 - ✅ **광장(롱판) 글 초안**: "광장에 쓰자/글로 써줘" 하면 **draft_plaza**(제목·본문 문단·카테고리)로 작성폼에 채워준다. 이슈=찬반 대립, 광장=에세이·후기·주장·정보 자유 글.
-- ⚠️ **예측**: 아이디어 제안까지만("이거 예측 판 서면 재밌겠다"). 예측 등록은 갈라 운영 영역이라 내가 못 만든다 — 솔직히 말해라.
+- ✅ **예측 마켓**: "예측 만들자/판 서자/베팅 걸자" 하면 **draft_predict**(예/아니오로 판가름나는 질문 + '정산 기준' 명확한 설명 + 카테고리 + 마감 며칠)로 생성폼에 채워준다. 예측은 마감·정산이 걸리니 초안만 잡고 "마감일이랑 정산 기준만 확인하고 올려"라고 짚어줘라(발행은 상대가). 다지선다 마켓은 상대가 폼에서 직접 추가.
 - ✅ **숏판·롱판·갈라리(영상·사진 콘텐츠)**: "숏판/릴스/영상/사진 올리자, 갈라리 쓰자" 하면 **draft_gallari**(vkind: 세로숏판·사진=vertical / 가로영상롱판=horizontal, 캡션·해시태그, 가로영상이면 제목도)로 작성폼에 채워준다. 캡션·후킹 문구는 최고로 잡아주되, **미디어(사진·영상 파일)는 내가 못 만든다** — "이제 사진/영상만 올리면 돼 ㅋㅋ" 하고 짧게 안내(그건 상대가 찍어 올린다). (AI 이미지·영상 자동생성은 나중에 유료 기능 예정.)
 - 초안 내용에 상대의 실명·사생활·특정 개인 저격은 넣지 마라(공론화 가능한 주제로).
 
@@ -932,22 +942,24 @@ Deno.serve(async (req) => {
     let workBlock = "";
     if (work) {
       const f = (work.fields && typeof work.fields === "object") ? work.fields : {};
-      const kind = work.type === "plaza" ? "광장 글(롱판·자유서술)" : work.type === "gallari" ? "갈라리(숏판/롱판·영상·사진)" : "이슈(찬반 배틀)";
+      const kind = work.type === "plaza" ? "광장 글(롱판·자유서술)" : work.type === "gallari" ? "갈라리(숏판/롱판·영상·사진)" : work.type === "predict" ? "예측 마켓(예/아니오 베팅)" : "이슈(찬반 배틀)";
       const cut = (s: any, n = 300) => String(s || "").replace(/\s+/g, " ").slice(0, n);
       const tagsOf = (t: any) => Array.isArray(t) ? t.join(" ") : String(t || "");
       const lines = work.type === "plaza"
         ? `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 본문: ${cut(f.body || f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}`
         : work.type === "gallari"
         ? `· 형태: ${f.vkind === "horizontal" ? "가로 영상(롱판)" : "세로(숏판/사진)"}\n· 제목: ${cut(f.title, 80) || "(가로영상만·비어있음)"}\n· 캡션: ${cut(f.caption, 400) || "(비어있음)"}\n· 해시태그: ${tagsOf(f.tags) || "(없음)"}\n(사진·영상 파일은 상대가 직접 올린다 — 넌 캡션·태그·제목 텍스트만)`
+        : work.type === "predict"
+        ? `· 질문: ${cut(f.question, 120) || "(비어있음)"}\n· 정산 기준(설명): ${cut(f.description, 300) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n(이진 예/아니오 마켓. 마감일·정산 기준은 사람이 확인 후 발행)`
         : `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 한줄요약: ${cut(f.one_line, 80) || "(비어있음)"}\n· 본문: ${cut(f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n· 찬성진영: ${cut(f.faction_a, 30) || "(비어있음)"} / 반대진영: ${cut(f.faction_b, 30) || "(비어있음)"}`;
       workBlock = `🛠 [작업 모드 — 지금 상대와 '${kind}' 초안을 편집기에서 '같이 다듬는 중'이다]
 지금 초안 상태:
 ${lines}
 
 작업 규칙:
-- 상대가 초안을 고쳐달라 하면(${work.type === "gallari" ? "캡션·태그·제목" : work.type === "plaza" ? "제목·본문·카테고리" : "제목·본문·한줄·찬반라벨·카테고리"} 등) **edit_draft** 도구로 '바뀔 필드만' 새 값을 담아 호출해라 → 편집기 폼이 그 자리서 바뀐다. draft_* 로 새로 만들지 마라(이미 편집 중이다).
+- 상대가 초안을 고쳐달라 하면(${work.type === "gallari" ? "캡션·태그·제목" : work.type === "plaza" ? "제목·본문·카테고리" : work.type === "predict" ? "질문·정산기준·카테고리·마감일수" : "제목·본문·한줄·찬반라벨·카테고리"} 등) **edit_draft** 도구로 '바뀔 필드만' 새 값을 담아 호출해라 → 편집기 폼이 그 자리서 바뀐다. draft_* 로 새로 만들지 마라(이미 편집 중이다).
 - 짧게 핑퐁하며 같이 다듬어라. 한 턴에 하나씩 고치고 "이렇게 바꿨어, 어때?" 식으로 확인. 상대가 요청 안 한 필드는 건드리지 마라.
-- 본문을 통째로 다시 쓸 땐 ${work.type === "gallari" ? "caption(캡션 전체), 태그는 tags 배열" : work.type === "plaza" ? "body" : "description"}에 전체 새 값을. 부분 패치 아님, 최종 전체 값.${work.type === "gallari" ? "\n- 갈라리는 미디어(사진·영상)를 네가 못 만든다. 캡션·태그가 좋아지면 \"이제 사진/영상만 올리면 돼\"라고 짧게 안내." : ""}
+- 본문을 통째로 다시 쓸 땐 ${work.type === "gallari" ? "caption(캡션 전체), 태그는 tags 배열" : work.type === "plaza" ? "body" : work.type === "predict" ? "question(질문)/description(정산기준), 마감은 close_days" : "description"}에 전체 새 값을. 부분 패치 아님, 최종 전체 값.${work.type === "gallari" ? "\n- 갈라리는 미디어(사진·영상)를 네가 못 만든다. 캡션·태그가 좋아지면 \"이제 사진/영상만 올리면 돼\"라고 짧게 안내." : ""}${work.type === "predict" ? "\n- 예측은 마감일·정산 기준이 핵심 — \"마감일이랑 정산 기준만 확인하고 올려\"라고 짚어줘라." : ""}
 - 지금은 '창작 파트너' 모드다 — 잡담보다 초안을 좋게 만드는 데 집중하되 너의 결(가벼운 츤데레)은 유지.`;
     }
 

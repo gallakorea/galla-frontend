@@ -448,6 +448,33 @@ function openCreateModal(){
   // 공용 임시저장 — 예측 질문·설명·카테고리 복원
   if(!__predDraft && window.GALLA_draft) __predDraft=window.GALLA_draft('predict',['mQuestion','mDesc','mCategory']);
   if(__predDraft) __predDraft.restore();
+  // 🤖 갈비스 예측 초안 프리필 + 🛠 작업모드 브리지
+  try{
+    const seed=JSON.parse(sessionStorage.getItem('GALLA_SEED')||'null');
+    if(seed && seed.from==='jarvis' && seed.kind==='predict'){
+      sessionStorage.removeItem('GALLA_SEED');
+      if($('mQuestion')&&!$('mQuestion').value) $('mQuestion').value=seed.question||'';
+      if($('mDesc')&&!$('mDesc').value) $('mDesc').value=seed.description||'';
+      if(seed.category && $('mCategory')){ try{ $('mCategory').value=seed.category; }catch(_){} }
+      if(seed.closeDays>0 && $('mCloseAt')){ const cd=new Date(Date.now()+seed.closeDays*86400000); cd.setMinutes(cd.getMinutes()-cd.getTimezoneOffset()); $('mCloseAt').value=cd.toISOString().slice(0,16); }
+    }
+  }catch(_){}
+  exposePredictWorkform();
+}
+// 🛠 작업 모드 브리지 — 갈비스가 예측 초안(질문·정산기준·카테고리·마감)을 실시간 수정
+function exposePredictWorkform(){
+  const setVal=(elm,v)=>{ if(!elm||v==null) return; elm.value=String(v); try{ elm.dispatchEvent(new Event('input',{bubbles:true})); }catch(_){}};
+  window.GALLA_WORKFORM={
+    type:'predict',
+    getFields(){ return { question: $('mQuestion')?$('mQuestion').value:'', description: $('mDesc')?$('mDesc').value:'', category: $('mCategory')?$('mCategory').value:'' }; },
+    setFields(f){ if(!f) return;
+      if('question' in f) setVal($('mQuestion'), f.question);
+      if('description' in f) setVal($('mDesc'), f.description);
+      if('category' in f && f.category){ try{ $('mCategory').value=f.category; }catch(_){} }
+      if(f.close_days>0 && $('mCloseAt')){ const cd=new Date(Date.now()+f.close_days*86400000); cd.setMinutes(cd.getMinutes()-cd.getTimezoneOffset()); setVal($('mCloseAt'), cd.toISOString().slice(0,16)); }
+    },
+    summary(){ return '질문:'+String(($('mQuestion')&&$('mQuestion').value)||'-').slice(0,40); }
+  };
 }
 function addOutcomeRow(val=''){
   const row=document.createElement('div');
