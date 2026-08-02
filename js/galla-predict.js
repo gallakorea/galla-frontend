@@ -7,6 +7,7 @@ let allMarkets = [], OUT_BY_M = {}, curCat = '', curSort = 'volume';
 let MY_STREAK = 0;
 
 const $ = id => document.getElementById(id);
+let predPreImageUrl = null;   // 🖼 갈비스가 만든 예측 커버(사전호스팅 R2 url) — 파일 업로드 없이 그대로
 /* 🔖 해시태그 공용 헬퍼(가드) — 전용칸 + 질문/설명 #태그 자동추출을 tags[]로. */
 if (!window.GALLA_collectTags) {
   window.GALLA_extractHashtags = t => { const o=[]; (String(t||'').match(/#([0-9A-Za-z가-힣_]{1,30})/g)||[]).forEach(m=>{const x=m.slice(1).toLowerCase(); if(x&&!o.includes(x))o.push(x);}); return o; };
@@ -441,6 +442,7 @@ function openCreateModal(){
     return;
   }
   openCreateModal._t=0;
+  predPreImageUrl=null;   // 새 모달 열 때 갈비스 커버 초기화
   const d=new Date(Date.now()+7*86400000);
   d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
   $('mCloseAt').value=d.toISOString().slice(0,16);
@@ -473,6 +475,12 @@ function exposePredictWorkform(){
       if('category' in f && f.category){ try{ $('mCategory').value=f.category; }catch(_){} }
       if(f.close_days>0 && $('mCloseAt')){ const cd=new Date(Date.now()+f.close_days*86400000); cd.setMinutes(cd.getMinutes()-cd.getTimezoneOffset()); setVal($('mCloseAt'), cd.toISOString().slice(0,16)); }
     },
+    // 🖼 갈비스 AI 썸네일 → 예측 커버 이미지로(사전호스팅, 업로드 스킵)
+    setThumbnail(url){
+      if(!url) return;
+      predPreImageUrl=url;
+      const p=$('mImagePreview'); if(p) p.innerHTML=`<img src="${url}">`;
+    },
     submit(){ const b=$('createSubmit'); if(b && !b.disabled) b.click(); },
     summary(){ return '질문:'+String(($('mQuestion')&&$('mQuestion').value)||'-').slice(0,40); }
   };
@@ -504,9 +512,9 @@ async function submitMarket(){
   const btn=$('createSubmit');
   btn.disabled=true; btn.textContent='만드는 중…';
   try{
-    let imageUrl=null;
+    let imageUrl=predPreImageUrl;   // 🖼 갈비스가 만든 커버가 있으면 그걸(업로드 없이)
     const f=$('mImage').files[0];
-    if(f){ btn.textContent='이미지 업로드 중…'; imageUrl=await window.GALLA_UPLOAD_MEDIA(f,'image'); }
+    if(!imageUrl && f){ btn.textContent='이미지 업로드 중…'; imageUrl=await window.GALLA_UPLOAD_MEDIA(f,'image'); }
     const { data, error } = await supa.rpc('create_market',{
       p_question:q, p_description:$('mDesc').value.trim()||null,
       p_category:$('mCategory').value, p_image_url:imageUrl,
