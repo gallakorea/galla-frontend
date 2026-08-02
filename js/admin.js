@@ -49,7 +49,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, upload: renderUpload, ops: renderOps };
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
@@ -729,6 +729,79 @@
       const r = await rpc("admin_publish_news", { p_title: t, p_summary: $("#n-sum").value.trim(), p_body: b, p_category: $("#n-cat").value.trim() || "사회", p_hero: $("#n-hero").value.trim() });
       if (r?.ok) { toast("뉴스 게시됨"); } else alert("게시 실패");
     };
+  }
+
+  // ─────────── 🧠 브레인 엔진 (크리에이터 패턴) ───────────
+  let brainKind = "title";
+  const BRAIN_KINDS = [["title", "🔥 제목"], ["thumbnail", "🖼 썸네일"], ["hook", "🎣 훅"], ["script", "📜 대본"]];
+  const BRAIN_CT = ["general", "issue", "plaza", "gallari", "predict"];
+  async function renderBrain() {
+    const inp = "width:100%;box-sizing:border-box;padding:8px 10px;background:#0d1420;border:1px solid #26364c;border-radius:8px;color:#e6f0fb;font-size:13px;font-family:inherit";
+    main().innerHTML = `<h1 class="ad-h1">🧠 브레인 엔진 <span style="font-size:13px;color:#7d8ba0;font-weight:600">— 성공 유형 패턴(AI에 주입돼 제목·썸네일·대본 생성). 계속 쌓을수록 똑똑해집니다.</span></h1>
+      <div style="background:#111a28;border:1px solid #223047;border-radius:14px;padding:14px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
+          <label style="font-size:11px;color:#8fa0b5">종류<select id="bf-kind" style="${inp}">${BRAIN_KINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>
+          <label style="font-size:11px;color:#8fa0b5">콘텐츠 타입<select id="bf-ct" style="${inp}">${BRAIN_CT.map(c => `<option value="${c}">${c}</option>`).join("")}</select></label>
+          <label style="font-size:11px;color:#8fa0b5">스타일(유형 이름)<input id="bf-style" style="${inp}" placeholder="예: 손실회피 / 신사임당형"></label>
+          <label style="font-size:11px;color:#8fa0b5">유형 설명<input id="bf-sd" style="${inp}" placeholder="한 줄 설명"></label>
+        </div>
+        <label style="font-size:11px;color:#8fa0b5">공식(필수) — 패턴/템플릿<textarea id="bf-formula" rows="2" style="${inp};resize:vertical" placeholder="예: '이거 모르면 ~한다' — 손실·후회 프레임 + 명령형"></textarea></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+          <label style="font-size:11px;color:#8fa0b5">예시(| 로 구분)<input id="bf-ex" style="${inp}" placeholder="예1|예2|예3"></label>
+          <label style="font-size:11px;color:#8fa0b5">가이드(주의/언제)<input id="bf-guide" style="${inp}" placeholder="언제 쓰는지·주의점"></label>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:11px">
+          <label style="font-size:12px;color:#c3ccda">중요도 <input id="bf-weight" type="number" min="1" max="5" value="3" style="width:56px;padding:6px;background:#0d1420;border:1px solid #26364c;border-radius:8px;color:#e6f0fb"></label>
+          <label style="font-size:12px;color:#c3ccda"><input id="bf-active" type="checkbox" checked> 활성</label>
+          <span style="flex:1"></span>
+          <button class="ad-btn" id="bf-reset">초기화</button>
+          <button class="ad-btn primary" id="bf-save">저장</button>
+        </div>
+        <input type="hidden" id="bf-id">
+      </div>
+      <div class="ad-segs" id="b-filter" style="margin-bottom:12px">${BRAIN_KINDS.map(([k, l]) => `<button data-v="${k}" class="${brainKind === k ? "on" : ""}">${l}</button>`).join("")}</div>
+      <div id="b-list"><div class="ad-loading">불러오는 중…</div></div>`;
+
+    const g = id => document.getElementById(id);
+    const fillForm = (p) => {
+      g("bf-id").value = p?.id || ""; g("bf-kind").value = p?.kind || brainKind; g("bf-ct").value = p?.content_type || "general";
+      g("bf-style").value = p?.style || ""; g("bf-sd").value = p?.style_desc || ""; g("bf-formula").value = p?.formula || "";
+      g("bf-ex").value = p?.examples || ""; g("bf-guide").value = p?.guide || ""; g("bf-weight").value = p?.weight || 3; g("bf-active").checked = p ? !!p.active : true;
+      g("bf-save").textContent = p?.id ? "수정 저장" : "저장";
+    };
+    fillForm(null); g("bf-kind").value = brainKind;
+    g("bf-reset").onclick = () => fillForm(null);
+    g("bf-save").onclick = async () => {
+      const args = { p_id: g("bf-id").value ? Number(g("bf-id").value) : null, p_kind: g("bf-kind").value, p_content_type: g("bf-ct").value,
+        p_style: g("bf-style").value.trim() || null, p_style_desc: g("bf-sd").value.trim() || null, p_formula: g("bf-formula").value.trim(),
+        p_examples: g("bf-ex").value.trim() || null, p_guide: g("bf-guide").value.trim() || null, p_weight: Number(g("bf-weight").value) || 3, p_active: g("bf-active").checked };
+      if (args.p_formula.length < 2) { alert("공식을 입력해줘"); return; }
+      const r = await rpc("admin_pattern_save", args);
+      if (r?.ok) { toast("저장됨"); fillForm(null); loadList(); } else alert("저장 실패: " + (r?.reason || ""));
+    };
+    $("#b-filter").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; brainKind = b.dataset.v; $("#b-filter").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.v === brainKind)); loadList(); };
+
+    let ALL = [];
+    async function loadList() {
+      const d = await rpc("admin_patterns_list");
+      ALL = (d?.rows) || [];
+      const rows = ALL.filter(p => p.kind === brainKind);
+      $("#b-list").innerHTML = rows.length ? rows.map(p => `<div class="ad-tip" data-id="${p.id}" style="${p.active ? "" : "opacity:.5"}">
+        <div class="ad-tip-h"><b>${esc(p.style || "(무명)")}</b> <span class="ad-tag st-done">${esc(p.content_type)}</span>
+          <span class="ad-tk-m">중요도 ${p.weight} · ${p.active ? "활성" : "비활성"}${p.style_desc ? " · " + esc(p.style_desc) : ""}</span></div>
+        <div class="ad-tip-b">${esc(p.formula)}</div>
+        ${p.examples ? `<div class="ad-tk-m" style="margin-top:4px">예: ${esc(p.examples)}</div>` : ""}
+        ${p.guide ? `<div class="ad-tk-m">⚠ ${esc(p.guide)}</div>` : ""}
+        <div class="ad-tip-acts"><button class="ad-btn" data-act="edit">✏️ 수정</button><button class="ad-btn danger" data-act="del">🗑 삭제</button></div>
+      </div>`).join("") : `<div class="ad-soon">이 종류의 패턴이 없어요. 위에서 추가해보세요.</div>`;
+    }
+    $("#b-list").onclick = async e => {
+      const b = e.target.closest("[data-act]"); if (!b) return;
+      const id = Number(b.closest(".ad-tip").dataset.id); const p = ALL.find(x => x.id === id);
+      if (b.dataset.act === "edit") { fillForm(p); window.scrollTo({ top: 0, behavior: "smooth" }); }
+      else if (b.dataset.act === "del") { if (!confirm("이 패턴을 삭제할까요?")) return; const r = await rpc("admin_pattern_delete", { p_id: id }); if (r?.ok) { toast("삭제됨"); loadList(); } else alert("삭제 실패"); }
+    };
+    loadList();
   }
 
   // ─────────── 운영·감사 ───────────
