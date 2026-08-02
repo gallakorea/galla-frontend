@@ -324,6 +324,31 @@
   function flashDock(){
     try{ if(sheet){ sheet.classList.remove("fr-flash"); void sheet.offsetWidth; sheet.classList.add("fr-flash"); } }catch(e){}
   }
+  // 🖼 AI 썸네일 생성 — generate-thumbnail 엣지 호출(몇 초) → 편집기에 대표이미지로 자동 첨부 + 챗 미리보기.
+  async function genThumbnail(a){
+    showProgress("🎨 썸네일 그리는 중… (몇 초 걸려)");
+    try{
+      var jwt=await token(); if(!jwt){ clearProgress(); addMsg("a","로그인해야 그려줄 수 있어 ㅜ"); return; }
+      var res=await fetch(SB+"/functions/v1/generate-thumbnail",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({ prompt:a.prompt||"", ratio:a.ratio||"portrait" }) });
+      var d=await res.json(); clearProgress();
+      if(d && d.ok && d.url){
+        var applied=false;
+        try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.setThumbnail){ window.GALLA_WORKFORM.setThumbnail(d.url); applied=true; flashDock(); } }catch(e){}
+        var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><img class="fr-thumb" alt="썸네일"></div></div>');
+        m.querySelector("img").src=d.url; logEl.appendChild(m); scrollBottom();
+        addMsg("a", applied ? "이 느낌 어때? 대표 이미지로 붙여놨어 — 별로면 다시 그려줄게" : "그려봤어! 맘에 들면 길게 눌러 저장해서 써 ㅋㅋ");
+      } else {
+        var why=(d&&d.error)||"fail";
+        addMsg("a",
+          (why==="blocked_moderation"||why==="blocked_ip") ? "그건 좀 위험한 소재라 못 그려 ㅋㅋ 다른 컨셉으로 가자" :
+          why==="user_daily_limit" ? "오늘 썸네일 많이 그렸다 ㅋㅋ 내일 또 그려줄게" :
+          why==="ai_daily_cap" ? "지금 그림 요청이 몰려서 잠깐 막혔어 — 좀따 다시" :
+          "앗 그리다 삐끗했어 ㅜ 다시 해볼까?");
+      }
+    }catch(e){ clearProgress(); addMsg("a","앗 그리다 문제 생겼어 ㅜ 다시 해볼까?"); }
+  }
   // 편집기가 준비되면(GALLA_WORKFORM 노출) 도킹 자동 오픈. 최대 ~6s 폴링.
   function tryOpenDockForWork(){
     var raw; try{ raw=sessionStorage.getItem("GALLA_WORK"); }catch(e){}
@@ -613,6 +638,7 @@
       return;
     }
     if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
+    if(a.kind==="genThumbnail"){ genThumbnail(a); return; }         // 🖼 AI 썸네일 생성
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -659,10 +685,11 @@
     if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
     if(history.length>30) history=history.slice(-30);
-    // ✍️ 작업모드 폼 수정(editdraft)은 칩이 아니라 그 자리서 즉시 반영. 나머지 액션만 칩으로.
-    var acts=r.actions||[], edits=acts.filter(function(a){return a.kind==="editdraft";});
-    edits.forEach(function(a){ applyDraftEdit(a.fields); });
-    addActions(m, acts.filter(function(a){return a.kind!=="editdraft";}));
+    // ✍️ 작업모드 폼수정(editdraft)·🖼 썸네일생성(genThumbnail)은 칩이 아니라 즉시 실행. 나머지만 칩으로.
+    var acts=r.actions||[];
+    acts.filter(function(a){return a.kind==="editdraft";}).forEach(function(a){ applyDraftEdit(a.fields); });
+    acts.filter(function(a){return a.kind==="genThumbnail";}).forEach(function(a){ genThumbnail(a); });
+    addActions(m, acts.filter(function(a){return a.kind!=="editdraft"&&a.kind!=="genThumbnail";}));
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈

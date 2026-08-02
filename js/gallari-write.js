@@ -272,6 +272,14 @@
           if ('caption' in f) setVal(cap, f.caption);
           if ('tags' in f) { const arr = Array.isArray(f.tags) ? f.tags : String(f.tags || '').split(/[\s,]+/); setVal(tg, arr.filter(Boolean).map(t => '#' + String(t).replace(/^#/, '')).join(' ')); }
         },
+        // 🖼 갈비스 AI 썸네일 → 세로 사진 '대표(첫 장)'로 추가(URL-only 아이템은 렌더·발행 모두 지원)
+        setThumbnail(url) {
+          if (!url) return;
+          setKind('vertical'); setVMode('photo');
+          imgItems.unshift({ file: null, url: url, up: false });
+          if (imgItems.length > MAX_IMAGES) imgItems = imgItems.slice(0, MAX_IMAGES);
+          renderPhotos();
+        },
         summary() { return '캡션:' + String((cap && cap.value) || '-').slice(0, 30); }
       };
     })();

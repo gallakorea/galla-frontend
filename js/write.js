@@ -97,6 +97,15 @@ function initWritePage(ctx) {
         if ('faction_a' in f) setVal(fA, f.faction_a);
         if ('faction_b' in f) setVal(fB, f.faction_b);
       },
+      // 🖼 갈비스 AI 썸네일 → 대표 3:4 카드썸네일로 자동 첨부(요소는 지연 조회 — 정의 순서 무관)
+      setThumbnail(url) {
+        if (!url) return;
+        const img = document.getElementById('cardThumbImg'), prev = document.getElementById('cardThumbPreview'), lab = document.getElementById('cardThumbLabel');
+        if (img) img.src = url;
+        if (prev) prev.hidden = false;
+        if (lab) lab.hidden = true;
+        try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.setCardThumb && window.GALLA_WriteMedia.setCardThumb(url); } catch (_) {}
+      },
       summary() { const g = this.getFields(); return `제목:${g.title || '-'} / 찬:${g.faction_a || '-'} vs 반:${g.faction_b || '-'}`; }
     };
     onCleanup(() => { try { if (window.GALLA_WORKFORM && window.GALLA_WORKFORM.type === 'issue') window.GALLA_WORKFORM = null; } catch (_) {} });

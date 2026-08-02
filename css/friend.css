@@ -141,6 +141,9 @@ body.fr-docked #frMini{ display:none !important; }
 @keyframes frSpin{ to{ transform:rotate(360deg); } }
 .fr-prog-t{ animation:frProgPulse 1.4s ease-in-out infinite; }
 @keyframes frProgPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.6; } }
+/* 🖼 갈비스가 그린 썸네일 미리보기 */
+.fr-thumb{ display:block; max-width:180px; width:100%; border-radius:12px; border:1px solid var(--fr-cy-dim);
+  box-shadow:0 4px 18px rgba(0,0,0,.4); }
 /* HUD 코너 브래킷 */
 #frSheet .fr-panel::before, #frSheet .fr-panel::after{
   content:""; position:absolute; top:8px; width:16px; height:16px; pointer-events:none; opacity:.75;
