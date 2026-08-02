@@ -399,6 +399,28 @@
     });
     logEl.appendChild(wrap); scrollBottom();
   }
+  // 🔥 어그로 제목 후보 카드 — 탭하면 초안 제목으로 적용.
+  function renderTitles(titles){
+    if(!titles || !titles.length || !logEl) return;
+    var wrap=el('<div class="fr-titles"></div>');
+    wrap.appendChild(el('<div class="fr-titles-h">🔥 제목 골라봐 — 탭하면 적용</div>'));
+    titles.forEach(function(t){
+      var card=el('<button class="fr-title-card"><span class="fr-title-t"></span><span class="fr-title-s"></span></button>');
+      card.querySelector(".fr-title-t").textContent=t.text;
+      var s=card.querySelector(".fr-title-s"); if(t.style) s.textContent=t.style; else s.style.display="none";
+      card.addEventListener("click", function(){ applyTitle(t.text); });
+      wrap.appendChild(card);
+    });
+    logEl.appendChild(wrap); scrollBottom();
+  }
+  function applyTitle(text){
+    var applied=false;
+    try{
+      var wf=window.GALLA_WORKFORM;
+      if(wf && wf.setFields){ wf.setFields(wf.type==="predict"?{question:text}:{title:text}); applied=true; flashDock(); }
+    }catch(e){}
+    addMsg("a", applied ? "'"+text+"' 로 넣었어 👍 별로면 다른 것도 골라봐" : "'"+text+"' — 이걸로 가자! (편집기에서 제목칸에 넣어줘)");
+  }
   // 🖼 AI 썸네일 생성 — generate-thumbnail 엣지 호출(몇 초) → 편집기에 대표이미지로 자동 첨부 + 챗 미리보기.
   async function genThumbnail(a){
     showProgress("🎨 썸네일 그리는 중… (몇 초 걸려)");
@@ -777,6 +799,7 @@
     if(a.kind==="genThumbnail"){ genThumbnail(a); return; }         // 🖼 AI 썸네일 생성
     if(a.kind==="genVideo"){ genVideo(a); return; }                 // 🎬 자동편집형 영상 생성
     if(a.kind==="plan"){ renderPlan(a.ideas); return; }             // 🗂 콘텐츠 기획안 카드
+    if(a.kind==="titles"){ renderTitles(a.titles); return; }        // 🔥 어그로 제목 카드
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -833,7 +856,8 @@
     acts.filter(function(a){return a.kind==="genThumbnail";}).forEach(function(a){ genThumbnail(a); });
     acts.filter(function(a){return a.kind==="genVideo";}).forEach(function(a){ genVideo(a); });
     acts.filter(function(a){return a.kind==="plan";}).forEach(function(a){ renderPlan(a.ideas); });
-    addActions(m, acts.filter(function(a){return a.kind!=="editdraft"&&a.kind!=="genThumbnail"&&a.kind!=="genVideo"&&a.kind!=="plan";}));
+    acts.filter(function(a){return a.kind==="titles";}).forEach(function(a){ renderTitles(a.titles); });
+    addActions(m, acts.filter(function(a){return ["editdraft","genThumbnail","genVideo","plan","titles"].indexOf(a.kind)<0;}));
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈

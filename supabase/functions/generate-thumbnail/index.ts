@@ -109,13 +109,21 @@ Deno.serve(async (req) => {
   // 플랫폼 일일 캡
   if (!(await aiBudgetOk())) return j({ error: "ai_daily_cap" }, 429);
 
+  // 🧠 크리에이터 브레인 — 검증된 썸네일 구도 공식 주입(어그로 클릭률↑). 없으면 기본 STYLE만.
+  let patternText = "";
+  try {
+    const { data: pats } = await sb.from("creator_patterns").select("formula")
+      .eq("kind", "thumbnail").eq("active", true).order("weight", { ascending: false }).limit(2);
+    if (pats && pats.length) patternText = " Composition rules: " + pats.map((p: any) => p.formula).join("; ") + ".";
+  } catch { /* */ }
+
   try {
     const r = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-image-1",
-        prompt: `${prompt}. ${STYLE}`,
+        prompt: `${prompt}.${patternText} ${STYLE}`,
         n: 1, size, quality: "medium", output_format: "png", moderation: "auto",
       }),
     });

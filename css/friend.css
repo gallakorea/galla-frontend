@@ -167,6 +167,17 @@ body.fr-docked #frMini{ display:none !important; }
   -webkit-tap-highlight-color:transparent; transition:transform .12s; }
 .fr-plan-make:active{ transform:scale(.98); }
 
+/* 🔥 어그로 제목 후보 카드 */
+.fr-titles{ align-self:stretch; display:flex; flex-direction:column; gap:6px; margin-top:2px; }
+.fr-titles-h{ font-size:11.5px; font-weight:800; color:#ffb45c; padding:2px 2px 3px; }
+.fr-title-card{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; text-align:left; width:100%;
+  background:rgba(255,180,92,.07); border:1px solid rgba(255,180,92,.28); border-radius:12px; padding:10px 12px;
+  cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .1s, background .14s; }
+.fr-title-card:active{ transform:scale(.99); }
+.fr-title-card:hover{ background:rgba(255,180,92,.13); }
+.fr-title-t{ font-size:14px; font-weight:800; color:#ffe9cf; line-height:1.35; }
+.fr-title-s{ font-size:10.5px; font-weight:700; color:#b98a52; }
+
 /* 📎 근거 창구 — 칩 + 입력 패널 + 클립 버튼 */
 .fr-clip{ background:none; border:none; color:var(--fr-dim); padding:6px; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent; }
 .fr-clip svg{ width:20px; height:20px; display:block; }
