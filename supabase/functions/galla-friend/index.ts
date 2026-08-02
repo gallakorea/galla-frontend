@@ -111,6 +111,30 @@ async function platformBuzz() {
 const NAVER_ID = Deno.env.get("NAVER_CLIENT_ID") || "";
 const NAVER_SECRET = Deno.env.get("NAVER_CLIENT_SECRET") || "";
 function stripTags(s: string) { return String(s || "").replace(/<[^>]+>/g, "").replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'"); }
+
+// 📎 근거(링크) 읽기 — 기사/페이지는 본문 추출, 유튜브·비메오는 oEmbed로 제목·작성자. 베스트에포트.
+async function fetchSource(url: string): Promise<{ title?: string; text?: string; ok: boolean }> {
+  try {
+    if (!/^https?:\/\//.test(url)) return { ok: false };
+    if (/youtube\.com|youtu\.be|vimeo\.com/.test(url)) {
+      const oe = /vimeo/.test(url) ? `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}` : `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+      try { const ry = await fetch(oe); if (ry.ok) { const y = await ry.json(); return { ok: true, title: y.title, text: `영상 "${y.title}" (채널: ${y.author_name || "?"})` }; } } catch { /* */ }
+    }
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 8000);
+    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; GallaBot/1.0)" }, redirect: "follow", signal: ctrl.signal });
+    clearTimeout(to);
+    if (!r.ok) return { ok: false };
+    if (!/text\/html|xml/.test(r.headers.get("content-type") || "")) return { ok: true, text: `(링크: ${url})` };
+    let html = (await r.text()).slice(0, 500000);
+    const tM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const title = tM ? stripTags(tM[1]).replace(/\s+/g, " ").trim().slice(0, 150) : "";
+    const dM = html.match(/<meta[^>]+(?:name|property)=["'](?:description|og:description)["'][^>]+content=["']([^"']+)["']/i);
+    const desc = dM ? stripTags(dM[1]).slice(0, 300) : "";
+    let bodyTxt = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ");
+    bodyTxt = bodyTxt.replace(/&[a-z#0-9]+;/gi, " ").replace(/\s+/g, " ").trim().slice(0, 2200);
+    return { ok: true, title, text: (desc ? desc + " " : "") + bodyTxt };
+  } catch { return { ok: false }; }
+}
 async function webSearch(query: string, kind: string) {
   const q = (query || "").trim().slice(0, 80);
   if (!q) return { results: [], note: "empty query" };
@@ -181,7 +205,7 @@ const TOOLS = [
   // 🖼 썸네일/커버 AI 생성 — 작업 모드에서 지금 만드는 콘텐츠의 대표 이미지를 그려 편집기에 자동 첨부.
   { type: "function", function: { name: "gen_thumbnail", description: "작업 모드에서 지금 만드는 콘텐츠의 '썸네일/커버 이미지'를 AI로 그려 편집기에 대표 이미지로 자동 첨부한다. 상대가 '썸네일도 만들어줘/커버 그려줘/이미지도' 하면. prompt엔 콘텐츠 주제를 살린 '그림 묘사'를 생생하게(글자·실존인물·유명 캐릭터·로고는 넣지 마라 — 자동 차단됨). ratio: 이슈 카드·세로 숏판=portrait, 가로 영상(롱판)=landscape, 정사각=square. 생성은 몇 초 걸린다 — 호출 후 \"썸네일 그려줄게 잠깐만\" 정도로 짧게.", parameters: { type: "object", properties: { prompt: { type: "string", description: "그림 묘사(주제 살려 생생하게, 글자 없이)" }, ratio: { type: "string", enum: ["portrait", "landscape", "square"] } }, required: ["prompt"] } } },
   // 🎬 자동편집형 숏판 영상 — 이미지+자막+음악 → mp4. 작업 모드(갈라리)에서.
-  { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(가로영상은 3~8개, 세로숏판 3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] }, ratio: { type: "string", enum: ["9:16", "16:9"], description: "9:16=세로 숏판, 16:9=가로 롱판(유튜브식)" }, title: { type: "string", description: "가로영상(롱판=16:9)일 때 제목(필수)" } } } } },
+  { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] } } } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
   { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문(이슈) 또는 정산기준(예측) 전체" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(갈라리)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(갈라리, # 없이)" }, question: { type: "string", description: "예측 질문(예측)" }, close_days: { type: "integer", description: "예측 마감까지 며칠(예측)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
@@ -366,15 +390,13 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       ratio: ["portrait", "landscape", "square"].includes(args?.ratio) ? args.ratio : "portrait" } };
   }
   if (name === "gen_video") {
-    const ratio = args?.ratio === "16:9" ? "16:9" : "9:16";
-    const maxScenes = ratio === "16:9" ? 8 : 6;   // 가로 롱판은 장면 더 허용(길이↑)
+    // 자동 영상은 세로 숏판(9:16)만 — 롱판(가로)은 사용자 촬영·업로드로 유도(정책)
     return { action: { kind: "genVideo",
       useUserPhotos: !!args?.use_user_photos,
-      imagePrompts: Array.isArray(args?.image_prompts) ? args.image_prompts.map((s: any) => String(s || "").slice(0, 300)).filter(Boolean).slice(0, maxScenes) : [],
-      captions: Array.isArray(args?.captions) ? args.captions.map((s: any) => String(s || "").slice(0, 90)).slice(0, maxScenes) : [],
+      imagePrompts: Array.isArray(args?.image_prompts) ? args.image_prompts.map((s: any) => String(s || "").slice(0, 300)).filter(Boolean).slice(0, 6) : [],
+      captions: Array.isArray(args?.captions) ? args.captions.map((s: any) => String(s || "").slice(0, 90)).slice(0, 6) : [],
       music: ["upbeat", "chill", "dramatic"].includes(args?.music) ? args.music : "upbeat",
-      ratio, title: String(args?.title || "").slice(0, 100),
-      per: ratio === "16:9" ? 5 : 3 } };   // 가로는 장면당 좀 더 길게(롱폼 느낌)
+      ratio: "9:16", per: 3 } };
   }
   if (name === "point_to") return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
   return { result: { error: "unknown" } };
@@ -477,7 +499,9 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
 
 ━━ ⚔️ 함께 창작(대화가 콘텐츠가 된다) — 내 '가능 영역'을 정확히 안다 ━━
-갈라 콘텐츠는 다양하다: 이슈(찬반배틀)·광장(롱판 글)·예측·숏판(릴스 영상)·갈라리(사진/영상). 나는 **텍스트만** 만들 수 있다. 영역별로:
+갈라 콘텐츠는 다양하다: 이슈(찬반배틀)·광장(롱판 글)·예측·숏판(릴스 영상)·갈라리(사진/영상).
+📎 **근거 먼저**: 콘텐츠(이슈·예측·숏판·글 등)를 만들려 하면, 재료가 있는지 물어봐라 — "뭐 근거될 거 있어? 기사 링크나 글, 이미지 있으면 아래 📎로 넣어줘. 그거 보고 만들게." 상대가 근거를 주면(위 '📎 근거' 블록으로 온다) 그 자료를 바탕으로 상대 의견을 반영해 초안을 잡아라(없는 사실 지어내기 금지). 근거 없이도 대화 맥락만으로 만들 수 있으면 그냥 만들어도 된다(근거 강요 X).
+영역별로:
 - ✅ **이슈 초안**: 화제가 뜨거워지면 "갈라에 이슈로 올려보자" 제안 → 상대가 ㄱㄱ 하면 **draft_issue**(중립 제목·한줄·배경 3~4문장·찰진 찬반 라벨). 앱이 작성폼에 채워주고 발행은 상대가 직접.
   🔁 **중복 방지**: draft_issue가 '중복주의'를 돌려주면(비슷한 이슈가 이미 있음) 재탕 금지 — ①사실상 같은 주제면 "야 이미 판 섰던데? 가서 붙자"며 point_to(view)로 기존 판에 데려가고, ②새로 만들 가치가 있으면 **분명히 다른 각도**(대상·세대·조건 한정, 다른 쟁점·다른 프레임)로 바꿔 differentiated:true로 다시 잡아라. 차별화가 뭔지 상대에게도 한 줄로 설명해줘라("기존 건 금액 얘기고 우린 '안 가는 게 예의냐'로 가자").
   ⚡ 상대가 이미 "그 판 말고, ~쟁점으로 새로 만들자"고 **각도를 지정**하면 기존 판 권유를 반복하지 말고 **그 각도로 즉시 draft_issue(differentiated:true)**를 호출해 초안을 잡아라.
@@ -485,8 +509,8 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - ✅ **예측 마켓**: "예측 만들자/판 서자/베팅 걸자" 하면 **draft_predict**(예/아니오로 판가름나는 질문 + '정산 기준' 명확한 설명 + 카테고리 + 마감 며칠)로 생성폼에 채워준다. 예측은 마감·정산이 걸리니 초안만 잡고 "마감일이랑 정산 기준만 확인하고 올려"라고 짚어줘라(발행은 상대가). 다지선다 마켓은 상대가 폼에서 직접 추가.
 - ✅ **숏판·롱판·갈라리(영상·사진 콘텐츠)**: "숏판/릴스/영상/사진 올리자, 갈라리 쓰자" 하면 **draft_gallari**(vkind: 세로숏판·사진=vertical / 가로영상롱판=horizontal, 캡션·해시태그, 가로영상이면 제목도)로 작성폼에 채워준다. 캡션·후킹 문구는 최고로 잡아주되, **영상 파일은 내가 못 만든다** — "영상만 올리면 돼 ㅋㅋ" 하고 짧게 안내(그건 상대가 찍어 올린다).
 - 🖼 **썸네일/커버 이미지 생성**: 작업 모드(초안 편집 중)에서 상대가 "썸네일도/커버 그려줘/이미지도 만들어줘" 하면 **gen_thumbnail**로 AI가 대표 이미지를 그려 편집기에 자동 첨부한다. 콘텐츠 주제를 살린 생생한 그림 묘사를 넣되 글자·실존인물·유명 캐릭터·로고는 넣지 마라(자동 차단). 이슈 카드·세로 숏판=portrait, 가로 영상=landscape.
-- 🎬 **자동편집형 영상 생성(갈라리)**: 작업 모드(갈라리)에서 "영상/숏판/롱폼 만들어줘" 하면 **gen_video**로 이미지+자막+음악을 합쳐 mp4를 만들어 편집기에 자동 첨부한다. 이미지는 use_user_photos(상대가 올린 사진) 또는 image_prompts(AI 장면 그리기). captions(장면 자막 짧게)·music(upbeat/chill/dramatic) 정하고 — **ratio: 세로 숏판=9:16, 가로 롱폼(유튜브식)=16:9**. **16:9(롱폼)이면 title(제목)을 반드시** 넣어라(가로영상은 제목 필수). 롱폼은 장면을 더 많이(최대 8개) 넣으면 길어진다. **렌더 수십 초** — "영상 뽑아줄게, 좀 걸려 ㅋㅋ" 하고 호출.
-  ⚠️ 지금 영상은 '이미지 슬라이드+자막+음악'이라 길이가 짧다(대략 세로 15~20초, 가로 40초 안팎). 진짜 긴 유튜브 영상(실사 촬영)은 못 만든다 — 그건 상대가 찍어 올려야 한다고 솔직히.
+- 🎬 **자동 숏판 영상 생성(세로 9:16만)**: 작업 모드(갈라리)에서 "숏판/영상 만들어줘" 하면 **gen_video**(ratio는 항상 9:16 세로)로 이미지+자막+음악을 합쳐 짧은 숏판(~15~20초)을 만들어 편집기에 자동 첨부한다. 이미지는 use_user_photos(상대 사진) 또는 image_prompts(AI 장면). captions(짧게)·music(upbeat/chill/dramatic). "숏판 뽑아줄게, 좀 걸려 ㅋㅋ".
+- 🎥 **롱판(가로 유튜브식 영상)은 '상대가 직접 촬영·업로드'로 유도**한다 — 자동생성 하지 마라(슬라이드쇼로 롱폼 흉내는 어색하다). 대신 draft_gallari(horizontal)로 제목·설명을 잡아주고 gen_thumbnail로 썸네일을 그려준 뒤 "영상만 찍어서 올리면 돼 — 제목·썸네일은 내가 준비해놨어" 하고 밀어줘라(창작 부담 확 줄여주는 게 핵심).
 - 초안 내용에 상대의 실명·사생활·특정 개인 저격은 넣지 마라(공론화 가능한 주제로).
 
 ━━ 🚫 창작 하드가드(법적 — 어떤 부탁이어도 절대 예외 없음) ━━
@@ -986,13 +1010,38 @@ ${lines}
 - 지금은 '창작 파트너' 모드다 — 잡담보다 초안을 좋게 만드는 데 집중하되 너의 결(가벼운 츤데레)은 유지.`;
     }
 
+    // 📎 근거 창구 — 상대가 준 기사·링크·글·이미지를 읽어 '근거'로 주입(콘텐츠 창작의 재료).
+    const rawSources = Array.isArray(body?.sources) ? body.sources.slice(0, 6) : [];
+    let srcBlock = "";
+    const imageUrls: string[] = [];
+    if (rawSources.length) {
+      await broadcastStep(uid, "read_source", "📎 근거 읽는 중…").catch(() => {});
+      const parts: string[] = [];
+      for (const s of rawSources) {
+        if (s?.type === "image" && typeof s.url === "string" && /^https?:\/\//.test(s.url)) { imageUrls.push(s.url); parts.push("• [첨부 이미지] (아래 이미지를 직접 보고 참고)"); }
+        else if (s?.type === "link" && typeof s.value === "string") {
+          const f = await fetchSource(s.value);
+          parts.push(`• [링크] ${s.value}\n  ${f.ok ? (f.title ? "제목: " + f.title + "\n  " : "") + String(f.text || "").slice(0, 1500) : "(읽기 실패 — 링크만 참고)"}`);
+        } else if (s?.type === "text" && typeof s.value === "string" && s.value.trim()) {
+          parts.push(`• [붙여넣은 글]\n  ${s.value.slice(0, 1800)}`);
+        }
+      }
+      if (parts.length) srcBlock = `📎 [상대가 '근거'로 준 자료] — 상대는 이걸 바탕으로 갈라 콘텐츠(이슈·광장·갈라리·예측 등)를 만들고 싶어한다.
+이 자료를 근거로, 상대의 관점·의견을 반영해 초안(제목·본문·찬반 등)을 잡아라. **근거에 있는 사실만 쓰고, 없는 사실은 지어내지 마라.** 출처가 한쪽으로 치우쳤을 수 있으니 단정보다 '쟁점'으로 잡아라. 상대가 아직 뭘 만들지 안 정했으면 "이거 이슈로 세울까, 아니면 숏판/글로?" 하고 방향부터 짧게 물어라.
+${parts.join("\n")}`;
+    }
+    const userContent = imageUrls.length
+      ? [{ type: "text", text: openMsg }, ...imageUrls.slice(0, 4).map((u) => ({ type: "image_url", image_url: { url: u } }))]
+      : openMsg;
+
     const messages: any[] = [
       { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
+      ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
-      { role: "user", content: openMsg },
+      { role: "user", content: userContent },
     ];
 
     let reply = "";

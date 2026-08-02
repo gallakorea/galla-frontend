@@ -149,7 +149,8 @@
     share:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
     send:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>',
     mic:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4"/></svg>',
-    globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.9 5.7 3.9 9S14.5 18.4 12 21c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z"/></svg>'
+    globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.9 5.7 3.9 9S14.5 18.4 12 21c-2.5-2.6-3.9-5.7-3.9-9S9.5 5.6 12 3z"/></svg>',
+    clip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>'
   };
   var STT = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-stt";
   var rec = null, recChunks = [], recording = false, voiceMode = false;
@@ -157,6 +158,7 @@
 
   var orb, sheet, mini, logEl, taEl, sendEl;
   var _dock=false, _work=null;   // 🛠 작업 모드(도킹 미니챗) — 편집기 옆에서 같이 창작
+  var _sources=[];               // 📎 근거 창구 — 콘텐츠 만들 재료(기사·링크·글·이미지)
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
 
   function build(){
@@ -183,8 +185,17 @@
           '<button class="fr-dockmin" aria-label="접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 10l6 6 6-6"/></svg></button>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
+        // 📎 근거 창구 — 콘텐츠 만들 때 기사·링크·글·이미지를 근거로 넣는 칩/입력
+        '<div class="fr-srcchips"></div>'+
+        '<div class="fr-srcadd" hidden>'+
+          '<input class="fr-src-inp" placeholder="기사 링크나 글을 붙여넣어">'+
+          '<button class="fr-src-img" aria-label="이미지 첨부">🖼</button>'+
+          '<button class="fr-src-ok">담기</button>'+
+          '<input type="file" class="fr-src-file" accept="image/*" hidden>'+
+        '</div>'+
         // 🎙 마이크 버튼을 UI에 눈에 띄게 — 사람들이 키보드 받아쓰기를 잘 몰라서, 우리가 대신 쉽게.
         '<div class="fr-input">'+
+          '<button class="fr-clip" aria-label="근거 첨부">'+ICON.clip+'</button>'+
           '<textarea rows="1" placeholder="친구한테 아무 말이나 해봐"></textarea>'+
           '<button class="fr-mic" aria-label="음성으로 말하기">'+ICON.mic+'</button>'+
           '<button class="fr-send">'+ICON.send+'</button>'+
@@ -206,6 +217,27 @@
     var exBtn=sheet.querySelector(".fr-expand"); if(exBtn) exBtn.addEventListener("click", toggleDockSize);
     var pubBtn=sheet.querySelector(".fr-publish"); if(pubBtn) pubBtn.addEventListener("click", function(){
       try{ if(window.GALLA_WORKFORM && typeof window.GALLA_WORKFORM.submit==="function"){ window.GALLA_WORKFORM.submit(); } }catch(e){}
+    });
+    // 📎 근거 창구 배선
+    var clip=sheet.querySelector(".fr-clip"), srcAdd=sheet.querySelector(".fr-srcadd"),
+        srcInp=sheet.querySelector(".fr-src-inp"), srcOk=sheet.querySelector(".fr-src-ok"),
+        srcImg=sheet.querySelector(".fr-src-img"), srcFile=sheet.querySelector(".fr-src-file");
+    if(clip) clip.addEventListener("click", function(){ if(srcAdd){ srcAdd.hidden=!srcAdd.hidden; if(!srcAdd.hidden){ srcInp&&srcInp.focus(); } } });
+    function commitSrcText(){
+      var v=(srcInp&&srcInp.value||"").trim(); if(!v) return;
+      if(/^https?:\/\/\S+$/i.test(v)){ var host=v; try{ host=new URL(v).hostname.replace(/^www\./,""); }catch(e){} addSource({type:"link", value:v, label:host}); }
+      else addSource({type:"text", value:v, label:"글 "+v.slice(0,12)+(v.length>12?"…":"")});
+      if(srcInp) srcInp.value=""; if(srcAdd) srcAdd.hidden=true;
+    }
+    if(srcOk) srcOk.addEventListener("click", commitSrcText);
+    if(srcInp) srcInp.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); commitSrcText(); } });
+    if(srcImg) srcImg.addEventListener("click", function(){ srcFile&&srcFile.click(); });
+    if(srcFile) srcFile.addEventListener("change", async function(e){
+      var f=e.target.files&&e.target.files[0]; if(!f) return; srcFile.value="";
+      if(typeof window.GALLA_UPLOAD_MEDIA!=="function"){ addMsg("a","이미지는 글쓰기 화면에서 넣어줘 ㅜ (여긴 링크·글만)"); return; }
+      var id="src"+Date.now(); addSource({type:"image", url:"", label:"이미지 올리는 중…", pending:id});
+      try{ var url=await window.GALLA_UPLOAD_MEDIA(f,"image"); updateSource(id,{url:url, label:"이미지", pending:null}); }
+      catch(err){ removeSourceByPending(id); addMsg("a","이미지 올리다 삐끗했어 ㅜ 다시?"); }
     });
     // 접힘(바) 상태에서 헤더 아무데나 탭하면 펼침
     var headEl=sheet.querySelector(".fr-head");
@@ -327,6 +359,23 @@
   }
   function flashDock(){
     try{ if(sheet){ sheet.classList.remove("fr-flash"); void sheet.offsetWidth; sheet.classList.add("fr-flash"); } }catch(e){}
+  }
+  // 📎 근거 소스 관리 — 콘텐츠 만들 재료(기사·링크·글·이미지). 다음 메시지에 실려 서버가 읽는다.
+  function srcIcon(t){ return t==="image"?"🖼":t==="link"?"🔗":"📝"; }
+  function addSource(s){ if(_sources.length>=6){ addMsg("a","근거는 한 번에 6개까지만 ㅋㅋ"); return; } _sources.push(s); renderSrcChips(); }
+  function updateSource(id, patch){ for(var i=0;i<_sources.length;i++){ if(_sources[i].pending===id){ for(var k in patch) _sources[i][k]=patch[k]; break; } } renderSrcChips(); }
+  function removeSourceByPending(id){ _sources=_sources.filter(function(s){ return s.pending!==id; }); renderSrcChips(); }
+  function clearSources(){ _sources=[]; renderSrcChips(); }
+  function renderSrcChips(){
+    var box=sheet&&sheet.querySelector(".fr-srcchips"); if(!box) return;
+    box.innerHTML="";
+    _sources.forEach(function(s,i){
+      var c=el('<span class="fr-srcchip'+(s.pending?" pend":"")+'"><b>'+srcIcon(s.type)+'</b><i></i><button aria-label="빼기">×</button></span>');
+      c.querySelector("i").textContent=s.label||s.type;
+      c.querySelector("button").addEventListener("click", function(){ _sources.splice(i,1); renderSrcChips(); });
+      box.appendChild(c);
+    });
+    box.style.display=_sources.length?"flex":"none";
   }
   // 🖼 AI 썸네일 생성 — generate-thumbnail 엣지 호출(몇 초) → 편집기에 대표이미지로 자동 첨부 + 챗 미리보기.
   async function genThumbnail(a){
@@ -731,6 +780,8 @@
     var jwt=await token(); if(!jwt) return null;
     try{
       var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
+      // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
+      if(_sources && _sources.length){ body.sources=_sources.filter(function(s){ return !s.pending; }).map(function(s){ return s.type==="image"?{type:"image",url:s.url}:{type:s.type,value:s.value}; }); }
       // 🛠 작업 모드면 현재 편집 중인 초안 상태를 동봉 → 갈비스가 폼을 알고 실시간 수정(edit_draft)
       if(_dock && _work && window.GALLA_WORKFORM){
         try{ body.work={ type:_work.type||window.GALLA_WORKFORM.type||"issue", fields:window.GALLA_WORKFORM.getFields() }; }catch(e){}
@@ -746,7 +797,9 @@
     var jwt=await token(); if(!jwt){ addMsg("a","로그인하면 내가 제대로 곁에 있어줄 수 있어. 먼저 로그인해줘."); return; }
     busy=true; sendEl.disabled=true;
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
+    var hadSources=_sources.length>0;
     var r=await callFriend(text, history.slice(0,-1));
+    if(hadSources) clearSources();   // 근거는 이 메시지에 소비됨
     typing(false); clearProgress();
     if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
