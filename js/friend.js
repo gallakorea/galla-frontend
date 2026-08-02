@@ -114,6 +114,7 @@
   var voiceOut = false; try{ voiceOut = localStorage.getItem("frVoiceOut")==="1"; }catch(e){}   // 🔊 음성 답변 토글(기억)
 
   var orb, sheet, mini, logEl, taEl, sendEl;
+  var _dock=false, _work=null;   // 🛠 작업 모드(도킹 미니챗) — 편집기 옆에서 같이 창작
   function el(h){ var d=document.createElement("div"); d.innerHTML=h.trim(); return d.firstChild; }
 
   function build(){
@@ -135,6 +136,7 @@
           '<span class="fr-status"><i></i>ONLINE</span>'+
           // 🌐 웹 전용 — 앱 받기(다운로드 트리거). CSS로 웹(fr-web)에서만 노출.
           '<button class="fr-getapp" aria-label="갈라 앱 받기">앱 받기</button>'+
+          '<button class="fr-dockmin" aria-label="접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 10l6 6 6-6"/></svg></button>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
         // 🎙 마이크 버튼을 UI에 눈에 띄게 — 사람들이 키보드 받아쓰기를 잘 몰라서, 우리가 대신 쉽게.
@@ -154,8 +156,14 @@
     mini.addEventListener("click", function(){ restoreFromMini(); });
     logEl=sheet.querySelector(".fr-log"); taEl=sheet.querySelector("textarea"); sendEl=sheet.querySelector(".fr-send");
     var micEl=sheet.querySelector(".fr-mic");
-    sheet.querySelector(".fr-scrim").addEventListener("click", close);
-    sheet.querySelector(".fr-x").addEventListener("click", close);
+    sheet.querySelector(".fr-scrim").addEventListener("click", function(){ if(_dock) return; close(); });   // 도킹 중 스크림은 편집기로 pass-through
+    sheet.querySelector(".fr-x").addEventListener("click", function(){ if(_dock) exitDock(); else close(); });
+    var dmBtn=sheet.querySelector(".fr-dockmin"); if(dmBtn) dmBtn.addEventListener("click", toggleDockMin);
+    // 접힘(바) 상태에서 헤더 아무데나 탭하면 펼침
+    var headEl=sheet.querySelector(".fr-head");
+    if(headEl) headEl.addEventListener("click", function(e){
+      if(_dock && sheet.classList.contains("fr-dock-min") && !e.target.closest("button")){ sheet.classList.remove("fr-dock-min"); setTimeout(scrollBottom,260); }
+    });
     /* ⌨️ 카톡/DM식 — 전송을 눌러도 키보드 유지(다른 영역 터치 전까지). 버튼 터치의 기본동작이
        textarea를 blur시켜 키보드가 닫히므로, touch 기본동작을 막아 blur 자체를 차단하고 전송은 직접 호출.
        touchend의 preventDefault가 합성 click도 억제하므로 모바일에선 중복 전송 없음.
@@ -221,6 +229,57 @@
   function restoreFromMini(){
     if(mini) mini.classList.remove("on");
     open();                                              // 로그·입력 보존된 채 그대로 복귀
+  }
+
+  /* 🛠 작업 모드(도킹 미니챗) — 편집기 위에 작은 라이브 대화창으로 붙어 같이 다듬는다.
+     키보드 트래킹(top 앵커+--fr-vvh)을 그대로 재활용(fr-dock이 top만 하단쪽으로 밀어 반쪽 시트로). */
+  function openDock(work){
+    if(!sheet) build();
+    _dock=true; _work=work||_work||{type:"issue"};
+    bindKb();
+    if(mini) mini.classList.remove("on");
+    orb && orb.classList.add("fr-hidden");               // 도킹 중엔 런처 오브 숨김
+    sheet.classList.add("fr-dock"); sheet.classList.remove("fr-dock-min");
+    document.body.classList.add("fr-docked");
+    sheet.classList.add("fr-open");                      // 편집기는 위에서 그대로 사용(스크림 pass-through)
+    if(!logEl.children.length) restoreOrGreet(true);     // 인사 억제 — 작업 오프너가 첫 말
+    window.__frDidIntro=true;
+    setTimeout(function(){ scrollBottom(); }, 300);
+  }
+  function toggleDockMin(){ if(sheet){ sheet.classList.toggle("fr-dock-min"); setTimeout(scrollBottom,260); } }
+  function exitDock(){
+    _dock=false; _work=null;
+    if(sheet) sheet.classList.remove("fr-dock","fr-dock-min","fr-open");
+    orb && orb.classList.remove("fr-hidden");
+    document.body.classList.remove("fr-chatting","fr-docked");
+    hushSpeak();
+  }
+  // ✍️ 갈비스가 낸 필드 수정을 편집기 폼에 실시간 반영(편집기가 노출한 GALLA_WORKFORM 브리지 사용)
+  function applyDraftEdit(fields){
+    try{
+      if(window.GALLA_WORKFORM && fields && typeof window.GALLA_WORKFORM.setFields==="function"){
+        window.GALLA_WORKFORM.setFields(fields); flashDock();
+      }
+    }catch(e){}
+  }
+  function flashDock(){
+    try{ if(sheet){ sheet.classList.remove("fr-flash"); void sheet.offsetWidth; sheet.classList.add("fr-flash"); } }catch(e){}
+  }
+  // 편집기가 준비되면(GALLA_WORKFORM 노출) 도킹 자동 오픈. 최대 ~6s 폴링.
+  function tryOpenDockForWork(){
+    var raw; try{ raw=sessionStorage.getItem("GALLA_WORK"); }catch(e){}
+    if(!raw) return;
+    var work; try{ work=JSON.parse(raw); }catch(e){ work=null; }
+    if(!work) { try{ sessionStorage.removeItem("GALLA_WORK"); }catch(e){} return; }
+    var tries=0;
+    (function wait(){
+      if(window.GALLA_WORKFORM){
+        try{ sessionStorage.removeItem("GALLA_WORK"); }catch(e){}
+        openDock(work); return;
+      }
+      if(tries++ < 40) setTimeout(wait, 150);
+      else { try{ sessionStorage.removeItem("GALLA_WORK"); }catch(e){} }
+    })();
   }
 
   /* ⌨️ 키보드 트래킹 = DM(사장님 승인)과 완전 동일 로직 이식. 에뮬 프레임분석으로 검증한 방식.
@@ -462,20 +521,23 @@
       return;
     }
     if(a.kind==="draft"){
-      // ⚔️ 함께 창작(이슈) — 초안을 작성폼 시드(GALLA_SEED, write.js의 jarvis 분기)로 넘기고 미니 보드로 접힘
+      // ⚔️ 함께 창작(이슈) — 초안 시드 + 작업모드 플래그 → 편집기 도착 후 도킹 미니챗으로 같이 다듬기
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis",
         title:a.title||"", oneLine:a.oneLine||"", description:a.description||"",
         category:a.category||"", factionA:a.factionA||"", factionB:a.factionB||"" })); }catch(e){}
+      try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"issue" })); }catch(e){}
       minimize(); nav("write.html");
       return;
     }
     if(a.kind==="draftPlaza"){
-      // 📰 광장 글 초안 — plaza.js jarvisSeedPrefill(kind:plaza)이 받아 폼에 채움
+      // 📰 광장 글 초안 — plaza.js jarvisSeedPrefill(kind:plaza)이 받아 폼에 채움 + 작업모드
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"plaza",
         title:a.title||"", description:a.description||"", category:a.category||"" })); }catch(e){}
+      try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"plaza" })); }catch(e){}
       minimize(); nav("plaza.html?compose=1");
       return;
     }
+    if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -502,6 +564,10 @@
     var jwt=await token(); if(!jwt) return null;
     try{
       var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
+      // 🛠 작업 모드면 현재 편집 중인 초안 상태를 동봉 → 갈비스가 폼을 알고 실시간 수정(edit_draft)
+      if(_dock && _work && window.GALLA_WORKFORM){
+        try{ body.work={ type:_work.type||window.GALLA_WORKFORM.type||"issue", fields:window.GALLA_WORKFORM.getFields() }; }catch(e){}
+      }
       var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
         headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"}, body:JSON.stringify(body) });
       return await res.json();
@@ -518,7 +584,10 @@
     if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
     if(history.length>30) history=history.slice(-30);
-    addActions(m, r.actions);
+    // ✍️ 작업모드 폼 수정(editdraft)은 칩이 아니라 그 자리서 즉시 반영. 나머지 액션만 칩으로.
+    var acts=r.actions||[], edits=acts.filter(function(a){return a.kind==="editdraft";});
+    edits.forEach(function(a){ applyDraftEdit(a.fields); });
+    addActions(m, acts.filter(function(a){return a.kind!=="editdraft";}));
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈
@@ -701,6 +770,9 @@
     if(!IS_APP) document.body.classList.add("fr-web");
     build();
     window.GALLA_openFriend = open;
+    window.GALLA_openDock = openDock;   // 편집기에서 직접 작업모드 열기(글쓰기 허브 등에서 재사용 가능)
+    // 🛠 작업 모드 — 갈비스가 초안 넘겨 편집기로 왔으면(GALLA_WORK) 편집기 준비 후 도킹 미니챗 자동 오픈.
+    tryOpenDockForWork();
     // 🔄 실시간 미러링 구독(supabaseClient 준비되면) — 여러 기기 동시 켜둬도 대화가 살아 흐른다.
     (function trySync(n){ if(window.supabaseClient){ subscribeSync(); } else if(n>0){ setTimeout(function(){ trySync(n-1); }, 500); } })(24);
     // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)

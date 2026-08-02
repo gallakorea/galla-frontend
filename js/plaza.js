@@ -92,6 +92,25 @@ async function openPlazaWriteModal() {
   modal.classList.remove("hidden");   // composer-page(웹·앱 공용)가 전체화면 페이지화 + 뒤로가기 처리
   if (__plazaDraft) __plazaDraft.restore();   // 이어쓰기 복원
   jarvisSeedPrefill();   // 🤖 갈라비스 초안이 있으면 채움(본문 해시태그는 GALLA_collectTags가 자동 수집)
+  exposePlazaWorkform();   // 🛠 작업 모드 브리지(갈비스 도킹 미니챗이 광장 폼을 실시간 수정)
+}
+// 🛠 작업 모드 브리지 — 갈비스가 광장 초안을 알고 실시간으로 필드 수정(edit_draft → setFields)
+function exposePlazaWorkform() {
+  const t = document.getElementById("plaza-title");
+  const b = document.getElementById("plaza-body");
+  const c = document.getElementById("plaza-category");
+  const setVal = (elm, v) => { if (elm == null || v == null) return; elm.value = String(v); try { elm.dispatchEvent(new Event("input", { bubbles: true })); elm.dispatchEvent(new Event("change", { bubbles: true })); } catch (_) {} };
+  window.GALLA_WORKFORM = {
+    type: "plaza",
+    getFields() { return { title: t ? t.value : "", body: b ? b.value : "", category: c ? c.value : "" }; },
+    setFields(f) {
+      if (!f) return;
+      if ("title" in f) setVal(t, f.title);
+      if ("body" in f) setVal(b, f.body); else if ("description" in f) setVal(b, f.description);
+      if ("category" in f && f.category) setVal(c, f.category);
+    },
+    summary() { const g = this.getFields(); return `제목:${g.title || "-"}`; }
+  };
 }
 // 🤖 갈라비스가 심은 광장 초안 프리필
 function jarvisSeedPrefill() {

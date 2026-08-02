@@ -99,6 +99,32 @@ body.fr-kb-anim #frSheet .fr-panel{
   transition:transform .3s cubic-bezier(.2,.85,.2,1), height .25s cubic-bezier(.38,.7,.125,1);
 }
 #frSheet.fr-open .fr-panel{ transform:translateY(0); }
+
+/* ── 🛠 작업 모드(도킹 미니챗) ── 편집기 위에 하단 반쪽 시트로 붙어 같이 창작.
+   키보드 로직(top 앵커 + --fr-vvh) 그대로: fr-dock은 top을 하단쪽으로 밀 뿐. */
+#frSheet.fr-dock{ --fr-dock-h: min(46vh, 440px); }
+#frSheet.fr-dock .fr-scrim{ background:transparent; backdrop-filter:none; pointer-events:none; }  /* 편집기 클릭 통과 */
+#frSheet.fr-dock .fr-panel{
+  top: max(var(--fr-top), calc(var(--fr-vvh) - var(--fr-dock-h)));   /* 하단 dock-h만 차지 · 키보드 뜨면 clamp */
+  box-shadow:0 -8px 40px rgba(0,0,0,.5), 0 -2px 0 rgba(95,216,255,.55);
+}
+/* 접힘(바) — 헤더만 남기고 로그·입력 숨김 → 편집기 최대 노출 */
+#frSheet.fr-dock.fr-dock-min{ --fr-dock-h: 54px; }
+#frSheet.fr-dock.fr-dock-min .fr-log,
+#frSheet.fr-dock.fr-dock-min .fr-input,
+#frSheet.fr-dock.fr-dock-min .fr-hud-line{ display:none; }
+#frSheet.fr-dock.fr-dock-min .fr-head{ border-bottom:none; cursor:pointer; }
+/* 접기 버튼 — dock에서만 노출, 접히면 화살표 반전 */
+.fr-dockmin{ display:none; background:none; border:none; color:var(--fr-dim); padding:4px 4px; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent; }
+.fr-dockmin svg{ width:20px; height:20px; display:block; transition:transform .22s; }
+#frSheet.fr-dock .fr-dockmin{ display:block; }
+#frSheet.fr-dock.fr-dock-min .fr-dockmin svg{ transform:rotate(180deg); }
+/* 폼 반영 플래시 — 갈비스가 폼을 고쳤을 때 상단 라인 반짝 */
+#frSheet.fr-flash .fr-panel{ animation:frFlash .6s ease-out 1; }
+@keyframes frFlash{ 0%,100%{ box-shadow:0 -8px 40px rgba(0,0,0,.5), 0 -2px 0 rgba(95,216,255,.55); }
+  32%{ box-shadow:0 -8px 46px rgba(95,216,255,.55), 0 -2px 0 rgba(95,216,255,1); } }
+/* 도킹 중엔 미니 필 숨김(중복 방지) */
+body.fr-docked #frMini{ display:none !important; }
 /* HUD 코너 브래킷 */
 #frSheet .fr-panel::before, #frSheet .fr-panel::after{
   content:""; position:absolute; top:8px; width:16px; height:16px; pointer-events:none; opacity:.75;

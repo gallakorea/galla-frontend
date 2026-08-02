@@ -153,6 +153,8 @@ const TOOLS = [
   // ⚔️ 함께 창작 — 대화에서 뜨거워진 화제를 갈라 이슈 초안으로 잡아 작성폼에 프리필(관계 사다리 3단계)
   { type: "function", function: { name: "draft_issue", description: "지금 대화의 화제를 갈라 '이슈' 초안으로 만들어 작성폼에 채워준다. 상대가 '올리자/만들어줘/ㄱㄱ' 하면 호출. 제목은 중립적 논쟁 유발형, 진영 라벨은 짧고 찰지게, 본문은 배경 3~4문장.", parameters: { type: "object", properties: { title: { type: "string", description: "이슈 제목(80자, 중립·논쟁유발)" }, one_line: { type: "string", description: "한 줄 요약" }, description: { type: "string", description: "배경 설명 3~4문장" }, category: { type: "string", enum: ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"] }, faction_a: { type: "string", description: "찬성 진영 라벨(20자, 찰지게)" }, faction_b: { type: "string", description: "반대 진영 라벨(20자)" }, differentiated: { type: "boolean", description: "중복주의 안내를 받고 '기존과 분명히 다른 각도'로 바꿔 재호출할 때만 true" } }, required: ["title", "one_line", "faction_a", "faction_b"] } } },
   // 🔗 콘텐츠로 인도/공유 — 재밌는 거 던지고 "이거 봐봐"(view) 또는 "친구들한테도 보여줘"(share) 링크를 건넨다.
+  // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
+  { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문 전체(이슈)" }, body: { type: "string", description: "본문 전체(광장 글)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
   // 🧠🗑 기억 잊기 — 상대가 '잊어줘/지워줘'라고 명시적으로 요청할 때만. 프라이버시·신뢰.
   { type: "function", function: { name: "forget_memory", description: "상대가 특정 기억을 '잊어달라/지워달라'고 명시적으로 요청할 때만 호출('그건 잊어줘', '내가 ~라고 한 거 지워줘', '그 얘기 기억에서 지워', '나에 대해 다 잊어'). query엔 무엇을 잊을지 구체적으로. 상대가 요청 안 했으면 절대 호출 금지.", parameters: { type: "object", properties: { query: { type: "string", description: "잊을 내용(예: '부장 싫어한다는 것', '내 직업이 개발자라는 것'). '전부/다 잊어'면 query:'*'" } }, required: ["query"] } } },
@@ -305,6 +307,14 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
+  if (name === "edit_draft") {
+    const f: any = {};
+    for (const k of ["title", "one_line", "description", "body", "category", "faction_a", "faction_b"]) {
+      if (typeof args?.[k] === "string" && args[k].trim()) f[k] = args[k].slice(0, 4000);
+    }
+    if (!Object.keys(f).length) return { result: { changed: false } };
+    return { action: { kind: "editdraft", fields: f } };
+  }
   if (name === "point_to") return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
   return { result: { error: "unknown" } };
 }
@@ -886,9 +896,31 @@ Deno.serve(async (req) => {
 ⚠️ 매번 기억을 캐묻지 마라. 특히 부장·싫은사람·힘든일 같은 '무겁고 부정적인 걸 먼저 꺼내지 마라'(매번 그러면 질린다). 같은 주제(예: 부장) 반복 금지.
 가끔(항상 X) 떠올린다면 '가볍거나 긍정적인 것' 위주로(취미·관심사 등). 오늘은 그냥 편하게 인사만 해도 된다.)`);
 
+    // 🛠 작업 모드 — 편집기에서 왔으면(body.work) 지금 편집 중인 초안 상태·수정규칙을 주입.
+    const work = (body?.work && typeof body.work === "object") ? body.work : null;
+    let workBlock = "";
+    if (work) {
+      const f = (work.fields && typeof work.fields === "object") ? work.fields : {};
+      const kind = work.type === "plaza" ? "광장 글(롱판·자유서술)" : "이슈(찬반 배틀)";
+      const cut = (s: any, n = 300) => String(s || "").replace(/\s+/g, " ").slice(0, n);
+      const lines = work.type === "plaza"
+        ? `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 본문: ${cut(f.body || f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}`
+        : `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 한줄요약: ${cut(f.one_line, 80) || "(비어있음)"}\n· 본문: ${cut(f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n· 찬성진영: ${cut(f.faction_a, 30) || "(비어있음)"} / 반대진영: ${cut(f.faction_b, 30) || "(비어있음)"}`;
+      workBlock = `🛠 [작업 모드 — 지금 상대와 '${kind}' 초안을 편집기에서 '같이 다듬는 중'이다]
+지금 초안 상태:
+${lines}
+
+작업 규칙:
+- 상대가 초안을 고쳐달라 하면(제목·본문·${work.type === "plaza" ? "카테고리" : "한줄·찬반라벨·카테고리"} 등) **edit_draft** 도구로 '바뀔 필드만' 새 값을 담아 호출해라 → 편집기 폼이 그 자리서 바뀐다. draft_issue/draft_plaza로 새로 만들지 마라(이미 편집 중이다).
+- 짧게 핑퐁하며 같이 다듬어라. 한 턴에 하나씩 고치고 "이렇게 바꿨어, 어때?" 식으로 확인. 상대가 요청 안 한 필드는 건드리지 마라.
+- 본문을 통째로 다시 쓸 땐 ${work.type === "plaza" ? "body" : "description"}에 전체 새 본문을. 살짝 다듬는 거면 고친 버전 전체를 넣어라(부분 패치 아님, 최종 전체 값).
+- 지금은 '창작 파트너' 모드다 — 잡담보다 초안을 좋게 만드는 데 집중하되 너의 결(가벼운 츤데레)은 유지.`;
+    }
+
     const messages: any[] = [
       { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
+      ...(workBlock ? [{ role: "system", content: workBlock }] : []),
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "user", content: openMsg },

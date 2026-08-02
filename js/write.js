@@ -70,6 +70,38 @@ function initWritePage(ctx) {
     }
   } catch (_) {}
 
+  /* 🛠 작업 모드 브리지 — 갈비스 도킹 미니챗이 이 이슈 폼을 '알고' 실시간으로 필드를 고칠 수 있게 노출.
+     ("제목 더 자극적으로", "본문 3문단으로", "찬반 라벨 바꿔" → edit_draft → setFields). */
+  (function () {
+    const fA = document.getElementById('factionA'), fB = document.getElementById('factionB');
+    const setVal = (elm, v) => {
+      if (elm == null || v == null) return;
+      elm.value = String(v);
+      try { elm.dispatchEvent(new Event('input', { bubbles: true })); elm.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+    };
+    window.GALLA_WORKFORM = {
+      type: 'issue',
+      getFields() {
+        return {
+          title: titleEl ? titleEl.value : '', one_line: oneLineEl ? oneLineEl.value : '',
+          description: descEl ? descEl.value : '', category: categoryEl ? categoryEl.value : '',
+          faction_a: fA ? fA.value : '', faction_b: fB ? fB.value : ''
+        };
+      },
+      setFields(f) {
+        if (!f) return;
+        if ('title' in f) setVal(titleEl, f.title);
+        if ('one_line' in f) setVal(oneLineEl, f.one_line);
+        if ('description' in f) setVal(descEl, f.description);
+        if ('category' in f && f.category) setVal(categoryEl, f.category);
+        if ('faction_a' in f) setVal(fA, f.faction_a);
+        if ('faction_b' in f) setVal(fB, f.faction_b);
+      },
+      summary() { const g = this.getFields(); return `제목:${g.title || '-'} / 찬:${g.faction_a || '-'} vs 반:${g.faction_b || '-'}`; }
+    };
+    onCleanup(() => { try { if (window.GALLA_WORKFORM && window.GALLA_WORKFORM.type === 'issue') window.GALLA_WORKFORM = null; } catch (_) {} });
+  })();
+
   /* ================= FILE ================= */
   const thumbInput = document.getElementById('thumbnail');
   const thumbBtn = document.getElementById('thumbnailBtn');
