@@ -600,7 +600,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 📎 **근거 먼저**: 콘텐츠(이슈·예측·숏판·글 등)를 만들려 하면, 재료가 있는지 물어봐라 — "뭐 근거될 거 있어? 기사 링크나 글, 이미지 있으면 아래 📎로 넣어줘. 그거 보고 만들게." 상대가 근거를 주면(위 '📎 근거' 블록으로 온다) 그 자료를 바탕으로 상대 의견을 반영해 초안을 잡아라(없는 사실 지어내기 금지). 근거 없이도 대화 맥락만으로 만들 수 있으면 그냥 만들어도 된다(근거 강요 X).
 영역별로:
 - ✅ **이슈 초안**: 화제가 뜨거워지면 "갈라에 이슈로 올려보자" 제안 → 상대가 ㄱㄱ 하면 **draft_issue**(중립 제목·한줄·배경 3~4문장·찰진 찬반 라벨). 앱이 작성폼에 채워주고 발행은 상대가 직접.
-  🚫🚫 **가짜 생성 금지(제일 중요)**: "만들어줘/만들자" 하면 **반드시 draft_issue 도구를 실제로 호출**해라. 도구 안 부르고 "만들어놨어/판 만들었어"라고 **말로만 때우는 건 거짓말 = 절대 금지**(도구를 불러야 앱이 초안 카드·편집기를 띄운다). 초안 낼 준비가 됐으면 되묻지 말고 바로 draft_issue.
+  🚫🚫 **가짜 생성 금지(제일 중요)**: "만들어줘/만들자" 하면 **반드시 draft_issue 도구를 실제로 호출**해라. 도구 안 부르고 "만들어놨어/판 만들었어"라고 **말로만 때우는 건 거짓말 = 절대 금지**(도구를 불러야 앱이 초안 카드·편집기를 띄운다). 초안 낼 준비가 됐으면 되묻지 말고 바로 draft_issue. ⚠️ **반복 요청도 매번 실제 호출**: 앞 대화에서 이미 만들었어도(이력에 '만들어놨어'가 있어도) 상대가 또 "만들어줘" 하면 **'이미 만들었잖아'로 넘기지 말고 그때마다 도구를 다시 호출**해라 — 초안 카드는 매 요청마다 새로 띄워줘야 상대가 편집기로 갈 수 있다.
   🎯 **주제 고정**: 초안은 **상대가 방금 지정한 그 주제로만** 잡아라. **직전 대화의 다른 화제를 섞지 마라**(예: '민초 vs 반민초로 만들어줘'인데 앞서 얘기한 주4일제를 섞어 '주4일제 찬성 민초 vs 반대 반민초' 같은 잡탕 금지). 새 주제 = 새 초안.
   🔁 **중복 방지**: draft_issue가 '중복주의'를 돌려주면(비슷한 이슈가 이미 있음) 재탕 금지 — ①사실상 같은 주제면 "야 이미 판 섰던데? 가서 붙자"며 point_to(view)로 기존 판에 데려가고, ②새로 만들 가치가 있으면 **분명히 다른 각도**(대상·세대·조건 한정, 다른 쟁점·다른 프레임)로 바꿔 differentiated:true로 다시 잡아라. 차별화가 뭔지 상대에게도 한 줄로 설명해줘라("기존 건 금액 얘기고 우린 '안 가는 게 예의냐'로 가자").
   ⚡ 상대가 이미 "그 판 말고, ~쟁점으로 새로 만들자"고 **각도를 지정**하면 기존 판 권유를 반복하지 말고 **그 각도로 즉시 draft_issue(differentiated:true)**를 호출해 초안을 잡아라.
@@ -776,12 +776,14 @@ function bubbleize(t: string): string {
     .flatMap((c) => splitOne(c.trim())).filter(Boolean).join("\n\n");
 }
 
-async function chatOnce(messages: any[]) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any }) {
+  // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
+  const reqBody: any = { model: CHAT_MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 240 };
+  if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-    // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
-    body: JSON.stringify({ model: CHAT_MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 240 }),
+    body: JSON.stringify(reqBody),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
   return await r.json();
@@ -1168,6 +1170,26 @@ ${parts.join("\n")}`;
       }
     }
     if (!reply) reply = "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+    // 🛡 '가짜 생성' 방어(bug#5 재발 근본수정) — 답이 "만들어놨어/판 세웠다"류 창작완료를 주장하는데
+    //    실제 draft 액션이 없으면(모델이 대화이력의 옛 '만들어놨어'를 보고 '이미 했다' 착각 → 도구 미호출),
+    //    도구 호출을 강제(tool_choice:required)해 한 번 재시도 → 진짜 초안 카드가 붙게 한다.
+    {
+      const DRAFT_KINDS = new Set(["draft", "draftPredict", "draftPlaza", "draftGallari"]);
+      const claimsCreate = /만들어?\s*놨|만들었|초안.*(잡|만들|썼)|판\s*(만들|열었|세웠|섰|올)|올려놨|생성했|마켓.*만들|이슈.*만들/.test(reply);
+      if (userMsg && !body?.meta && claimsCreate && !actions.some((a) => DRAFT_KINDS.has(a.kind))) {
+        try {
+          messages.push({ role: "system", content: "너는 방금 '만들었다/만들어놨다'고 말했지만 실제로 생성 도구를 호출하지 않았다(= 지금 거짓말 상태). 이전에 만든 적 있어도 상관없다 — 상대가 다시 요청했으면 지금 즉시 실제로 도구를 호출해라. 상대의 마지막 요청에 맞는 도구 하나만: 이슈=draft_issue, 예측=draft_predict, 광장=draft_plaza, 숏판/갈라리=draft_gallari. 잡담·질문 금지, 도구만 호출." });
+          const jf = await chatOnce(messages, { toolChoice: "required" });
+          const cf = jf?.choices?.[0]?.message?.tool_calls || [];
+          for (const c of cf) {
+            let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+            await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");
+            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null);
+            if (out2.action && DRAFT_KINDS.has(out2.action.kind)) actions.push(out2.action);
+          }
+        } catch { /* best effort — 실패해도 원래 답 유지 */ }
+      }
+    }
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
     //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
     {
