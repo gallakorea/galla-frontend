@@ -349,6 +349,65 @@
       }
     }catch(e){ clearProgress(); addMsg("a","앗 그리다 문제 생겼어 ㅜ 다시 해볼까?"); }
   }
+  // 이미지 한 장 생성(URL만 반환, UI 없음) — 영상 조립용
+  async function genImageOnce(prompt, ratio){
+    try{
+      var jwt=await token(); if(!jwt) return null;
+      var d=await (await fetch(SB+"/functions/v1/generate-thumbnail",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({ prompt:prompt||"", ratio:ratio||"portrait" }) })).json();
+      return (d && d.ok && d.url) ? d.url : null;
+    }catch(e){ return null; }
+  }
+  // 영상 렌더 폴링 — done이면 mp4 url, 실패/타임아웃이면 null
+  async function pollVideo(jwt, id){
+    for(var i=0;i<40;i++){
+      try{
+        var d=await (await fetch(SB+"/functions/v1/generate-video",{ method:"POST",
+          headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+          body:JSON.stringify({ op:"status", id:id }) })).json();
+        if(d && d.status==="done" && d.url) return d.url;
+        if(d && (d.status==="failed" || d.ok===false)) return null;
+      }catch(e){}
+      await sleep(3000);
+    }
+    return null;
+  }
+  // 🎬 자동편집형 숏판 영상 — 이미지 확보(상대사진 or AI생성) → 렌더 제출 → 폴링 → 편집기에 자동 첨부.
+  async function genVideo(a){
+    var images=[];
+    try{ if(a.useUserPhotos && window.GALLA_WORKFORM && window.GALLA_WORKFORM.getPhotos) images=window.GALLA_WORKFORM.getPhotos()||[]; }catch(e){}
+    if(!images.length && a.imagePrompts && a.imagePrompts.length){
+      for(var k=0;k<a.imagePrompts.length && k<6;k++){
+        showProgress("🎨 장면 그리는 중… ("+(k+1)+"/"+a.imagePrompts.length+")");
+        var u=await genImageOnce(a.imagePrompts[k], a.ratio==="16:9"?"landscape":"portrait");
+        if(u) images.push(u);
+      }
+    }
+    if(images.length<1){ clearProgress(); addMsg("a","영상 만들 이미지가 없네 ㅋㅋ 사진을 올리거나 '그림도 그려서 영상 만들어줘' 해줘"); return; }
+    showProgress("🎬 영상 합치는 중… (렌더링, 좀 걸려)");
+    try{
+      var jwt=await token(); if(!jwt){ clearProgress(); addMsg("a","로그인해야 만들어줄 수 있어 ㅜ"); return; }
+      var sub=await (await fetch(SB+"/functions/v1/generate-video",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({ op:"submit", images:images, captions:a.captions||[], music:a.music||"upbeat", ratio:a.ratio||"9:16", per:3 }) })).json();
+      if(!sub || !sub.ok || !sub.id){
+        clearProgress();
+        addMsg("a", (sub&&sub.error==="user_daily_limit") ? "오늘 영상 많이 뽑았다 ㅋㅋ 내일 또 만들어줄게" :
+          (sub&&sub.error==="no_shotstack_key") ? "영상 기능이 아직 준비 중이야 ㅜ 곧!" : "앗 영상 시작이 안 되네 ㅜ 다시 해볼까?");
+        return;
+      }
+      var url=await pollVideo(jwt, sub.id);
+      clearProgress();
+      if(url){
+        var vk=a.ratio==="16:9"?"horizontal":"vertical", thumb=images[0], applied=false;
+        try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.setVideo){ window.GALLA_WORKFORM.setVideo(url, thumb, vk); applied=true; flashDock(); } }catch(e){}
+        var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline muted></video></div></div>');
+        m.querySelector("video").src=url; logEl.appendChild(m); scrollBottom();
+        addMsg("a", applied ? "영상 뽑았어! 편집기에 넣어놨으니 보고 맘에 들면 올려 🎬" : "영상 완성! 맘에 들면 저장해서 써 ㅋㅋ");
+      } else { addMsg("a","영상 만들다 삐끗했어 ㅜ 다시 해볼까?"); }
+    }catch(e){ clearProgress(); addMsg("a","영상 만들다 문제 생겼어 ㅜ 다시?"); }
+  }
   // 편집기가 준비되면(GALLA_WORKFORM 노출) 도킹 자동 오픈. 최대 ~6s 폴링.
   function tryOpenDockForWork(){
     var raw; try{ raw=sessionStorage.getItem("GALLA_WORK"); }catch(e){}
@@ -639,6 +698,7 @@
     }
     if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
     if(a.kind==="genThumbnail"){ genThumbnail(a); return; }         // 🖼 AI 썸네일 생성
+    if(a.kind==="genVideo"){ genVideo(a); return; }                 // 🎬 자동편집형 영상 생성
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -689,7 +749,8 @@
     var acts=r.actions||[];
     acts.filter(function(a){return a.kind==="editdraft";}).forEach(function(a){ applyDraftEdit(a.fields); });
     acts.filter(function(a){return a.kind==="genThumbnail";}).forEach(function(a){ genThumbnail(a); });
-    addActions(m, acts.filter(function(a){return a.kind!=="editdraft"&&a.kind!=="genThumbnail";}));
+    acts.filter(function(a){return a.kind==="genVideo";}).forEach(function(a){ genVideo(a); });
+    addActions(m, acts.filter(function(a){return a.kind!=="editdraft"&&a.kind!=="genThumbnail"&&a.kind!=="genVideo";}));
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈
