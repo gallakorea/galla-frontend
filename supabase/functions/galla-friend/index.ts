@@ -134,11 +134,17 @@ async function genTitles(topic: string, contentType = "general") {
   try {
     const pats = await getPatterns("title", contentType, 12);
     if (!pats.length) return [];
-    const sys = `너는 한국 최고의 유튜브 썸네일 카피라이터다. 아래 '검증된 제목 공식'을 활용해, 주어진 주제로 클릭을 부르는 자극적('어그로') 제목을 8개 뽑아라.
-규칙: 서로 다른 공식/스타일로 다양하게, 각 12~40자. 과장·후킹은 OK지만 **허위사실·혐오·특정 실존인 명예훼손·차별은 절대 금지**. 낚시만 하고 알맹이 없는 건 금지.
-[검증된 제목 공식]
+    const sys = `너는 지무비·주언규·침착맨·MrBeast 급 조회수를 뽑는 한국 최고의 유튜브 제목 카피라이터다. 주어진 주제로 '스크롤을 멈추게 하는' 어그로 제목 8개를 뽑아라.
+[top 크리에이터 공통 원칙]
+- 호기심 갭: 결론을 숨기고 '왜/어떻게'를 궁금하게(지무비식 "~한 진짜 이유", "결말 보고 소름").
+- 구체성: 두루뭉술 금지 — 숫자·고유명사·기간으로 선명하게(주언규식 "월 500 버는").
+- 감정 자극어(미쳤다·소름·충격·역대급·실화)는 딱 맞을 때만, 남발 금지.
+- 첫경험·리액션(영국남자·MarkWiens식 "처음 X한 반응"), 극한 스케일(MrBeast·고재영식 "N시간 동안 X").
+- 서로 다른 공식으로 다양하게, 각 12~40자. 낚시만 하고 알맹이 없는 건 금지.
+🚫 허위사실·혐오·특정 실존인 명예훼손·차별은 절대 금지.
+[검증된 제목 공식(성과순)]
 ${pats.map((p: any) => `- [${p.style}] ${p.formula}${p.examples ? " (예: " + p.examples + ")" : ""}`).join("\n")}
-출력 JSON: {"titles":[{"text":"제목","style":"쓴 공식 이름"}, ...]} (8개)`;
+출력 JSON: {"titles":[{"text":"제목","style":"쓴 공식 이름"}, ...]} (8개, 서로 다른 스타일로)`;
     const r = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: MODEL, temperature: 0.95, max_tokens: 500, response_format: { type: "json_object" },
