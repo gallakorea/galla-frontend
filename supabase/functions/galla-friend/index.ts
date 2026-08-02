@@ -126,7 +126,7 @@ async function getPatterns(kind: string, contentType = "general", limit = 12) {
   const { data } = await supa.from("creator_patterns")
     .select("style,formula,examples,guide").eq("kind", kind).eq("active", true)
     .or(`content_type.eq.${contentType},content_type.eq.general`)
-    .order("weight", { ascending: false }).order("id", { ascending: false }).limit(limit);
+    .order("eff_score", { ascending: false }).order("id", { ascending: false }).limit(limit);   // eff_score = weight*8 + 선택수(성과 피드백)
   return data || [];
 }
 // 🔥 제목 엔진 — 검증된 공식으로 '어그로' 제목 후보 생성(작은 모델 = 비용 최적화, 브레인은 DB 공식).

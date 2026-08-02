@@ -408,17 +408,19 @@
       var card=el('<button class="fr-title-card"><span class="fr-title-t"></span><span class="fr-title-s"></span></button>');
       card.querySelector(".fr-title-t").textContent=t.text;
       var s=card.querySelector(".fr-title-s"); if(t.style) s.textContent=t.style; else s.style.display="none";
-      card.addEventListener("click", function(){ applyTitle(t.text); });
+      card.addEventListener("click", function(){ applyTitle(t.text, t.style); });
       wrap.appendChild(card);
     });
     logEl.appendChild(wrap); scrollBottom();
   }
-  function applyTitle(text){
+  function applyTitle(text, style){
     var applied=false;
     try{
       var wf=window.GALLA_WORKFORM;
       if(wf && wf.setFields){ wf.setFields(wf.type==="predict"?{question:text}:{title:text}); applied=true; flashDock(); }
     }catch(e){}
+    // 📈 성과 피드백 — 고른 제목의 공식(style) 선택수↑ → 잘 먹히는 공식이 다음에 더 자주 뽑힌다(브레인 자가학습)
+    try{ if(style && window.supabaseClient) window.supabaseClient.rpc("pattern_feedback",{p_kind:"title",p_style:style,p_signal:"pick"}).then(function(){},function(){}); }catch(e){}
     addMsg("a", applied ? "'"+text+"' 로 넣었어 👍 별로면 다른 것도 골라봐" : "'"+text+"' — 이걸로 가자! (편집기에서 제목칸에 넣어줘)");
   }
   // 📜 대본 카드 — 스크롤 블록 + 복사

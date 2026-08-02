@@ -788,7 +788,7 @@
       const rows = ALL.filter(p => p.kind === brainKind);
       $("#b-list").innerHTML = rows.length ? rows.map(p => `<div class="ad-tip" data-id="${p.id}" style="${p.active ? "" : "opacity:.5"}">
         <div class="ad-tip-h"><b>${esc(p.style || "(무명)")}</b> <span class="ad-tag st-done">${esc(p.content_type)}</span>
-          <span class="ad-tk-m">중요도 ${p.weight} · ${p.active ? "활성" : "비활성"}${p.style_desc ? " · " + esc(p.style_desc) : ""}</span></div>
+          <span class="ad-tk-m">중요도 ${p.weight} · 🏆선택 ${p.picked_count || 0}회 · ${p.active ? "활성" : "비활성"}${p.style_desc ? " · " + esc(p.style_desc) : ""}</span></div>
         <div class="ad-tip-b">${esc(p.formula)}</div>
         ${p.examples ? `<div class="ad-tk-m" style="margin-top:4px">예: ${esc(p.examples)}</div>` : ""}
         ${p.guide ? `<div class="ad-tk-m">⚠ ${esc(p.guide)}</div>` : ""}
