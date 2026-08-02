@@ -1190,6 +1190,26 @@ ${parts.join("\n")}`;
         } catch { /* best effort — 실패해도 원래 답 유지 */ }
       }
     }
+    // 🛡 이미지/영상 '가짜 생성' 방어(bug#5 확장) — "그려줄게/커버 그려줘/영상 뽑아줄게"류 생성 주장인데
+    //    genThumbnail/genVideo 액션이 없으면(도구 미호출 → 진행줄·이미지·에러 아무것도 안 뜸), 도구 호출을
+    //    강제해 실제 생성이 걸리게 한다. (예측 커버 요청에서 "그려볼게"만 하고 gen_thumbnail 미호출 재현됨)
+    {
+      const GEN_KINDS = new Set(["genThumbnail", "genVideo"]);
+      const claimsGen = /그려\s*(줄게|볼게|놓을게|줄까|줄테)|그리는\s*중|그려\s*놨|그렸어|커버.*그려|썸네일.*그려|영상\s*(으로)?.*(만들|뽑|합쳐)|뽑아\s*(줄게|볼게|줄까)/.test(reply);
+      if (userMsg && !body?.meta && claimsGen && !actions.some((a) => GEN_KINDS.has(a.kind))) {
+        try {
+          messages.push({ role: "system", content: "너는 방금 '그려줄게/영상 만들어줄게'라고 말했지만 실제 생성 도구를 호출하지 않았다(= 진행줄·이미지 아무것도 안 뜬다). 지금 즉시 실제로 호출해라 — 이미지/커버/썸네일=gen_thumbnail(prompt에 주제 살린 그림 묘사, 글자·실존인물·유명캐릭터·로고 금지 / ratio: 예측·롱판 커버=landscape, 이슈·세로숏판=portrait), 자동편집 영상=gen_video. 잡담·질문 금지, 도구만 호출." });
+          const jg = await chatOnce(messages, { toolChoice: "required" });
+          const cg = jg?.choices?.[0]?.message?.tool_calls || [];
+          for (const c of cg) {
+            let a3: any = {}; try { a3 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+            await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");
+            const out3 = await runTool(c.function?.name, a3, uid, rel?.last_seen_at || null);
+            if (out3.action && GEN_KINDS.has(out3.action.kind)) actions.push(out3.action);
+          }
+        } catch { /* best effort */ }
+      }
+    }
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
     //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
     {
