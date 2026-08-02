@@ -23,6 +23,27 @@ const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SVC_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supa = createClient(SUPA_URL, SVC_KEY);
 
+// 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
+//    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
+const STEP_LABEL: Record<string, string> = {
+  web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…",
+  search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
+  find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
+  edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…",
+  my_activity: "📋 소식 확인하는 중…", recall_memory: "🧠 기억 더듬는 중…", remember: "🧠 기억해두는 중…", forget_memory: "🧽 지우는 중…",
+};
+// 진짜 '대행'(초안·수정·관리·생성)만 미니챗(도킹)으로 전환. 가벼운 검색·기억보조는 진행 라인만.
+const DOCK_TOOLS = new Set(["draft_issue", "draft_plaza", "edit_draft", "manage_content"]);
+async function broadcastStep(uid: string, name: string, text: string) {
+  try {
+    await fetch(`${SUPA_URL}/realtime/v1/api/broadcast`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+      body: JSON.stringify({ messages: [{ topic: `frwork:${uid}`, event: "step", payload: { text, dock: DOCK_TOOLS.has(name) } }] }),
+    });
+  } catch { /* best effort */ }
+}
+
 async function embed(text: string): Promise<number[] | null> {
   try {
     const r = await fetch(`${EMBED_URL}/embeddings`, {
@@ -938,6 +959,7 @@ ${lines}
       if (!calls.length) { reply = msg.content || ""; break; }
       for (const c of calls) {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+        await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");   // 📡 대행 진행 라이브
         const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null);
         if (out.action) actions.push(out.action);
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {

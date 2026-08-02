@@ -125,6 +125,22 @@ body.fr-kb-anim #frSheet .fr-panel{
   32%{ box-shadow:0 -8px 46px rgba(95,216,255,.55), 0 -2px 0 rgba(95,216,255,1); } }
 /* 도킹 중엔 미니 필 숨김(중복 방지) */
 body.fr-docked #frMini{ display:none !important; }
+/* 확대/축소 버튼 — dock에서만 노출 */
+.fr-expand{ display:none; background:none; border:none; color:var(--fr-dim); padding:4px 4px; cursor:pointer; flex:0 0 auto; -webkit-tap-highlight-color:transparent; }
+.fr-expand svg{ width:17px; height:17px; display:block; }
+#frSheet.fr-dock .fr-expand{ display:block; }
+#frSheet.fr-dock.fr-dock-min .fr-expand{ display:none; }
+
+/* 📡 대행 진행 라인 — 말풍선 아닌 라이브 상태(스피너+라벨) */
+.fr-prog{ align-self:flex-start; display:flex; align-items:center; gap:9px; padding:9px 13px;
+  border:1px solid var(--fr-cy-dim); border-radius:4px 14px 14px 14px;
+  background:linear-gradient(180deg, rgba(20,31,46,.7), rgba(12,19,30,.7));
+  color:#bfeeff; font-size:13.5px; font-weight:600; letter-spacing:.01em; }
+.fr-prog-spin{ width:14px; height:14px; flex:none; border-radius:50%;
+  border:2px solid rgba(95,216,255,.25); border-top-color:var(--fr-cy); animation:frSpin .7s linear infinite; }
+@keyframes frSpin{ to{ transform:rotate(360deg); } }
+.fr-prog-t{ animation:frProgPulse 1.4s ease-in-out infinite; }
+@keyframes frProgPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.6; } }
 /* HUD 코너 브래킷 */
 #frSheet .fr-panel::before, #frSheet .fr-panel::after{
   content:""; position:absolute; top:8px; width:16px; height:16px; pointer-events:none; opacity:.75;

@@ -101,6 +101,48 @@
     }catch(e){}
   }
 
+  /* 📡 대행 진행상황 실시간 — 엣지 툴 루프가 단계마다 broadcast(frwork:uid). 대행 중이면
+     미니챗(도킹)으로 전환하고 "🔍 검색하는 중…" 라이브 라인 표시(진행 상황을 같이 본다). */
+  var _workChan=null;
+  async function subscribeWork(){
+    try{
+      if(_workChan) return;
+      var u=await uid(); if(!u) return;
+      var sb=window.supabaseClient; if(!sb||!sb.channel) return;
+      _workChan=sb.channel("frwork:"+u)
+        .on("broadcast",{event:"step"}, function(p){ onAgentStep(p && p.payload); })
+        .subscribe();
+    }catch(e){}
+  }
+  function onAgentStep(pl){
+    if(!pl || !pl.text || !busy) return;   // 진행 중인 요청일 때만
+    if(pl.dock) enterAgentDock();          // 🛠 진짜 '대행'(초안·수정·관리)만 미니챗 도킹으로 전환해 같이 본다
+    showProgress(pl.text);                 // 진행 라인은 항상(가벼운 검색도 라이브로 보이게)
+  }
+  // 대행 시작 → 풀시트/오브 상태를 도킹 미니챗으로 전환(편집기 도킹 openDock과 공유하는 표면)
+  function enterAgentDock(){
+    if(!sheet) build();
+    if(_dock && sheet.classList.contains("fr-dock")) return;   // 이미 도킹
+    _dock=true;
+    bindKb();
+    if(mini) mini.classList.remove("on");
+    orb && orb.classList.add("fr-hidden");
+    sheet.classList.add("fr-dock"); sheet.classList.remove("fr-dock-min");
+    document.body.classList.add("fr-docked");
+    sheet.classList.add("fr-open");
+    setTimeout(scrollBottom, 60);
+  }
+  // 진행 라인(말풍선 아님, 라이브 상태) — 타이핑 점 대신 라벨+스피너
+  function showProgress(text){
+    if(!logEl) return;
+    typing(false);
+    var p=logEl.querySelector(".fr-prog");
+    if(!p){ p=el('<div class="fr-prog"><span class="fr-prog-spin"></span><span class="fr-prog-t"></span></div>'); logEl.appendChild(p); }
+    p.querySelector(".fr-prog-t").textContent=text;
+    scrollBottom();
+  }
+  function clearProgress(){ var p=logEl&&logEl.querySelector(".fr-prog"); if(p) p.remove(); }
+
   var ICON = {
     face: '<svg class="fr-face" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#fff" fill-opacity=".15"/><circle cx="8.5" cy="10.5" r="1.5" fill="#fff"/><circle cx="15.5" cy="10.5" r="1.5" fill="#fff"/><path d="M8 15c1.2 1.3 6.8 1.3 8 0" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/></svg>',
     go:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -136,6 +178,7 @@
           '<span class="fr-status"><i></i>ONLINE</span>'+
           // 🌐 웹 전용 — 앱 받기(다운로드 트리거). CSS로 웹(fr-web)에서만 노출.
           '<button class="fr-getapp" aria-label="갈라 앱 받기">앱 받기</button>'+
+          '<button class="fr-expand" aria-label="크게/작게"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v6h6M20 10V4h-6M14 4h6v6M10 20H4v-6"/></svg></button>'+
           '<button class="fr-dockmin" aria-label="접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 10l6 6 6-6"/></svg></button>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
         '<div class="fr-log"></div>'+
@@ -159,6 +202,7 @@
     sheet.querySelector(".fr-scrim").addEventListener("click", function(){ if(_dock) return; close(); });   // 도킹 중 스크림은 편집기로 pass-through
     sheet.querySelector(".fr-x").addEventListener("click", function(){ if(_dock) exitDock(); else close(); });
     var dmBtn=sheet.querySelector(".fr-dockmin"); if(dmBtn) dmBtn.addEventListener("click", toggleDockMin);
+    var exBtn=sheet.querySelector(".fr-expand"); if(exBtn) exBtn.addEventListener("click", toggleDockSize);
     // 접힘(바) 상태에서 헤더 아무데나 탭하면 펼침
     var headEl=sheet.querySelector(".fr-head");
     if(headEl) headEl.addEventListener("click", function(e){
@@ -221,7 +265,8 @@
   /* 🔽 미니 보드로 접기 — 콘텐츠를 보여줄 때 챗은 닫는 게 아니라 '접힌다'(대화·입력 그대로 유지).
      패널이 슬라이드 다운되는 동안 미니 필이 스프링으로 팝인 — 다시 탭하면 그 자리에서 대화 복귀. */
   function minimize(){
-    if(sheet) sheet.classList.remove("fr-open");         // 패널 슬라이드 다운(기존 트랜지션)
+    if(sheet) sheet.classList.remove("fr-open","fr-dock","fr-dock-min");   // 패널 슬라이드 다운 + 도킹 해제
+    _dock=false; document.body.classList.remove("fr-docked");
     document.body.classList.remove("fr-chatting");       // 내비 복원(콘텐츠 탐색 가능)
     orb && orb.classList.add("fr-hidden");               // 런처 오브와 중복 방지
     if(mini){ mini.classList.remove("pop"); void mini.offsetWidth; mini.classList.add("on","pop"); }
@@ -247,6 +292,20 @@
     setTimeout(function(){ scrollBottom(); }, 300);
   }
   function toggleDockMin(){ if(sheet){ sheet.classList.toggle("fr-dock-min"); setTimeout(scrollBottom,260); } }
+  // 도킹(반쪽) ↔ 풀시트(크게) 토글 — 대행/작업 중에도 필요하면 크게 볼 수 있게
+  function toggleDockSize(){
+    if(!sheet) return;
+    if(sheet.classList.contains("fr-dock")){
+      sheet.classList.remove("fr-dock","fr-dock-min");
+      document.body.classList.remove("fr-docked");
+      document.body.classList.add("fr-chatting");          // 풀시트: 하단 내비 숨김
+    } else {
+      sheet.classList.add("fr-dock");
+      document.body.classList.add("fr-docked");
+      document.body.classList.remove("fr-chatting");
+    }
+    setTimeout(scrollBottom,260);
+  }
   function exitDock(){
     _dock=false; _work=null;
     if(sheet) sheet.classList.remove("fr-dock","fr-dock-min","fr-open");
@@ -580,7 +639,7 @@
     busy=true; sendEl.disabled=true;
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
     var r=await callFriend(text, history.slice(0,-1));
-    typing(false);
+    typing(false); clearProgress();
     if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
     var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
     if(history.length>30) history=history.slice(-30);
@@ -773,8 +832,8 @@
     window.GALLA_openDock = openDock;   // 편집기에서 직접 작업모드 열기(글쓰기 허브 등에서 재사용 가능)
     // 🛠 작업 모드 — 갈비스가 초안 넘겨 편집기로 왔으면(GALLA_WORK) 편집기 준비 후 도킹 미니챗 자동 오픈.
     tryOpenDockForWork();
-    // 🔄 실시간 미러링 구독(supabaseClient 준비되면) — 여러 기기 동시 켜둬도 대화가 살아 흐른다.
-    (function trySync(n){ if(window.supabaseClient){ subscribeSync(); } else if(n>0){ setTimeout(function(){ trySync(n-1); }, 500); } })(24);
+    // 🔄 실시간 미러링 + 📡 대행 진행상황 구독(supabaseClient 준비되면).
+    (function trySync(n){ if(window.supabaseClient){ subscribeSync(); subscribeWork(); } else if(n>0){ setTimeout(function(){ trySync(n-1); }, 500); } })(24);
     // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)
     try{ if(/[?&]frping=1/.test(location.search)) setTimeout(open, 900); }catch(e){}
   }
