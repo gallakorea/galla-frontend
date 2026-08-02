@@ -28,7 +28,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 const STEP_LABEL: Record<string, string> = {
   web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
-  content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…",
+  content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
   draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…",
   my_activity: "📋 소식 확인하는 중…", recall_memory: "🧠 기억 더듬는 중…", remember: "🧠 기억해두는 중…", forget_memory: "🧽 지우는 중…",
@@ -151,6 +151,30 @@ ${pats.map((p: any) => `- [${p.style}] ${p.formula}${p.examples ? " (예: " + p.
   } catch { return []; }
 }
 
+// 📜 대본 엔진 — 검증된 대본 구조(훅→전개→CTA) + 훅 공식으로 촬영/낭독 가능한 대본 생성.
+async function genScript(topic: string, contentType = "gallari", format = "short") {
+  try {
+    const pats = await getPatterns("script", contentType, 6);
+    const hooks = await getPatterns("hook", contentType, 4);
+    const fmtLabel = format === "long" ? "롱판(유튜브 가로영상) 대본" : contentType === "issue" ? "이슈 토론 대본" : contentType === "plaza" ? "정보 글 대본" : "숏판(세로 짧은영상) 대본";
+    const sys = `너는 한국 최고의 콘텐츠 대본 작가다. 아래 '검증된 대본 구조'와 '훅 공식'으로 주어진 주제의 '${fmtLabel}'을 써라.
+- 구조 단계(①②③…)를 소제목으로 나눠 실제 '말할 내용/대사'를 구체적으로 — 바로 읽거나 촬영할 수 있게.
+- ${format === "long" ? "파트마다 소제목 + 대략 소요시간 표기." : "자막 한 줄 단위로 끊어서."} 군더더기 없이.
+- 자극·후킹은 세게, 단 허위사실·혐오·특정 실존인 저격은 금지.
+[검증된 대본 구조]
+${pats.map((p: any) => `- [${p.style}] ${p.formula}`).join("\n") || "- 훅→전개→CTA"}
+[훅 공식]
+${hooks.map((h: any) => `- ${h.formula}`).join("\n")}`;
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: MODEL, temperature: 0.85, max_tokens: 900,
+        messages: [{ role: "system", content: sys }, { role: "user", content: `주제: ${topic}` }] }),
+    });
+    const j = await r.json();
+    return String(j?.choices?.[0]?.message?.content || "").trim().slice(0, 2800);
+  } catch { return ""; }
+}
+
 // 🌐 실제 웹 검색(네이버 오픈API) — 맛집·장소·최신 사건 등 '현실 정보'는 뻥 대신 검색으로.
 //    기존 NAVER_CLIENT_ID/SECRET(뉴스 파이프라인과 동일 앱) 재사용. 하루 25,000건 무료.
 const NAVER_ID = Deno.env.get("NAVER_CLIENT_ID") || "";
@@ -247,6 +271,8 @@ const TOOLS = [
   { type: "function", function: { name: "draft_gallari", description: "갈라리 콘텐츠(숏판=세로영상/사진, 롱판=가로 영상) 초안을 만들어 작성폼에 채운다. 상대가 '숏판/릴스/영상/사진 올리자, 갈라리 쓰자' 하면. 넌 캡션·해시태그(가로영상이면 제목도)만 쓴다 — 사진·영상 파일은 상대가 직접 올린다(그 안내를 짧게). vkind: 세로(숏판·사진)=vertical, 가로 영상(롱판)=horizontal.", parameters: { type: "object", properties: { vkind: { type: "string", enum: ["vertical", "horizontal"], description: "세로(숏판/사진)=vertical, 가로영상(롱판)=horizontal" }, title: { type: "string", description: "제목(가로영상=롱판만)" }, caption: { type: "string", description: "캡션·내용(인스타식, 훅 있게)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(# 없이 단어만, 최대 6)" } }, required: ["vkind", "caption"] } } },
   // 🎲 예측 마켓 초안 — 질문·설명(정산기준)·카테고리·마감(며칠 후). 이진(예/아니오) 마켓 기준. 발행은 사람이 확인 후.
   { type: "function", function: { name: "draft_predict", description: "갈라 '예측' 마켓 초안을 만들어 생성폼에 채운다. 상대가 '예측 만들자/판 만들어줘/베팅 걸자' 하면. question은 예/아니오로 명확히 판가름나는 형태(예: 'X가 연말까지 Y를 돌파한다?'). description엔 '정산 기준'을 명확히(무엇을·언제·어떤 소스로 판정). close_days=마감까지 며칠(기본 7). 예측은 마감·정산이 걸리니 초안만 잡고 '마감일·정산 기준 확인하고 올려'라고 짧게 안내.", parameters: { type: "object", properties: { question: { type: "string", description: "예/아니오로 판가름나는 질문(120자)" }, description: { type: "string", description: "정산 기준(무엇을·언제·어떤 근거로 판정)" }, category: { type: "string" }, close_days: { type: "integer", description: "마감까지 며칠(기본 7)" } }, required: ["question", "description"] } } },
+  // 📜 대본 엔진 — 검증된 구조로 촬영/낭독 가능한 대본 생성.
+  { type: "function", function: { name: "gen_script", description: "콘텐츠 '대본/스크립트'를 검증된 구조(훅→전개→CTA)로 써준다. 숏판/롱판 영상 대본, 이슈 토론 대본, 정보글 대본 등. 상대가 '대본 써줘/스크립트/뭐라고 말하지/촬영 대본/멘트 짜줘' 하면. 특히 롱판(가로영상)은 상대가 직접 찍어야 하니 대본을 주면 촬영이 쉬워진다. topic=주제, content_type=gallari(영상)/issue/plaza, format=short(숏판)/long(롱판).", parameters: { type: "object", properties: { topic: { type: "string" }, content_type: { type: "string", enum: ["gallari", "issue", "plaza"] }, format: { type: "string", enum: ["short", "long"] } }, required: ["topic"] } } },
   // 🔥 어그로 제목 엔진 — 검증된 유튜브 제목 공식으로 자극적 제목 후보를 카드로.
   { type: "function", function: { name: "gen_titles", description: "'어그로(자극적) 제목' 후보를 여러 개 뽑아 카드로 제시한다(성공 유튜버들의 검증된 제목 공식 기반 — 크리에이터 브레인 엔진). 상대가 '제목 뽑아줘/자극적으로/어그로 제목/제목 추천/클릭 잘되게' 하거나, 작업 모드에서 제목이 밋밋할 때. topic=콘텐츠 핵심 주제(한 줄), content_type=issue/plaza/gallari/predict.", parameters: { type: "object", properties: { topic: { type: "string", description: "제목 뽑을 콘텐츠 핵심 주제(한 줄)" }, content_type: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] } }, required: ["topic"] } } },
   // 🖼 썸네일/커버 AI 생성 — 작업 모드에서 지금 만드는 콘텐츠의 대표 이미지를 그려 편집기에 자동 첨부.
@@ -449,6 +475,11 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (!titles.length) return { result: { ok: false } };
     return { action: { kind: "titles", titles } };
   }
+  if (name === "gen_script") {
+    const text = await genScript(String(args?.topic || "").slice(0, 200), ["gallari", "issue", "plaza"].includes(args?.content_type) ? args.content_type : "gallari", args?.format === "long" ? "long" : "short");
+    if (!text) return { result: { ok: false } };
+    return { action: { kind: "script", text } };
+  }
   if (name === "gen_thumbnail") {
     return { action: { kind: "genThumbnail",
       prompt: String(args?.prompt || "").slice(0, 300),
@@ -575,6 +606,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - ✅ **예측 마켓**: "예측 만들자/판 서자/베팅 걸자" 하면 **draft_predict**(예/아니오로 판가름나는 질문 + '정산 기준' 명확한 설명 + 카테고리 + 마감 며칠)로 생성폼에 채워준다. 예측은 마감·정산이 걸리니 초안만 잡고 "마감일이랑 정산 기준만 확인하고 올려"라고 짚어줘라(발행은 상대가). 다지선다 마켓은 상대가 폼에서 직접 추가.
 - ✅ **숏판·롱판·갈라리(영상·사진 콘텐츠)**: "숏판/릴스/영상/사진 올리자, 갈라리 쓰자" 하면 **draft_gallari**(vkind: 세로숏판·사진=vertical / 가로영상롱판=horizontal, 캡션·해시태그, 가로영상이면 제목도)로 작성폼에 채워준다. 캡션·후킹 문구는 최고로 잡아주되, **영상 파일은 내가 못 만든다** — "영상만 올리면 돼 ㅋㅋ" 하고 짧게 안내(그건 상대가 찍어 올린다).
 - 🔥 **제목이 승부처 — 어그로 제목 엔진**: 콘텐츠는 '제목·썸네일'에서 성패가 갈린다(사람들이 제일 어려워하는 부분). 상대가 "제목 뽑아줘/자극적으로/클릭 잘되게/어그로" 하거나, 초안 제목이 밋밋하면 → **gen_titles**로 검증된 공식(성공 유튜버 유형) 기반 자극적 제목 후보를 카드로 뽑아줘라. 상대가 카드에서 고르면 그 제목으로. 초안 만들 때도 "제목 여러 개 뽑아볼까?" 하고 먼저 권해라. (자극·후킹은 세게, 단 허위·혐오·특정인 저격은 금지.)
+- 📜 **대본 엔진**: "대본 써줘/스크립트/뭐라고 말하지/촬영 대본/멘트" 하면 **gen_script**로 검증된 구조(훅→전개→CTA)의 대본을 써준다. 특히 **롱판(가로영상)은 상대가 직접 찍어야 하니** 대본을 주면 촬영 부담이 확 준다 — 롱판 유도할 때 "대본도 짜줄게" 하고 같이 밀어줘라.
 - 🖼 **썸네일/커버 이미지 생성**: 작업 모드(초안 편집 중)에서 상대가 "썸네일도/커버 그려줘/이미지도 만들어줘" 하면 **gen_thumbnail**로 AI가 대표 이미지를 그려 편집기에 자동 첨부한다. 콘텐츠 주제를 살린 생생한 그림 묘사를 넣되 글자·실존인물·유명 캐릭터·로고는 넣지 마라(자동 차단). 이슈 카드·세로 숏판=portrait, 가로 영상=landscape, **예측 마켓 커버=landscape**(예측 작업 중에도 "커버 그려줄까?" 하고 gen_thumbnail 가능).
 - 🎬 **자동 숏판 영상 생성(세로 9:16만)**: 작업 모드(갈라리)에서 "숏판/영상 만들어줘" 하면 **gen_video**(ratio는 항상 9:16 세로)로 이미지+자막+음악을 합쳐 짧은 숏판(~15~20초)을 만들어 편집기에 자동 첨부한다. 이미지는 use_user_photos(상대 사진) 또는 image_prompts(AI 장면). captions(짧게)·music(upbeat/chill/dramatic). "숏판 뽑아줄게, 좀 걸려 ㅋㅋ".
 - 🎥 **롱판(가로 유튜브식 영상)은 '상대가 직접 촬영·업로드'로 유도**한다 — 자동생성 하지 마라(슬라이드쇼로 롱폼 흉내는 어색하다). 대신 draft_gallari(horizontal)로 제목·설명을 잡아주고 gen_thumbnail로 썸네일을 그려준 뒤 "영상만 찍어서 올리면 돼 — 제목·썸네일은 내가 준비해놨어" 하고 밀어줘라(창작 부담 확 줄여주는 게 핵심).
