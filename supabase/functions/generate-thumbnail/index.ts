@@ -57,9 +57,16 @@ async function moderate(text: string): Promise<boolean> {
   } catch { return false; }
 }
 
-// 썸네일 톤 — 스티커(투명 다이컷)와 달리 '표지/포스터' 느낌. 글자 없음, 실존인물·로고 없음.
-const STYLE = "editorial poster-style illustration, bold eye-catching composition, vivid dramatic lighting, "
-  + "clean modern graphic design, high contrast, no text, no letters, no watermark, no real logos, no real people faces";
+// 썸네일 톤 — '스크롤을 멈추게 하는' 프리미엄 표지 아트. 글자 없음, 실존 유명인·로고 없음.
+//   매력 천장을 올리려 아트디렉션 강화: 단일 강한 주제 + 과장된 감정/순간, 시네마틱 라이팅,
+//   쨍한 채도·고대비·깊이감·샤프한 디테일. gpt-image-1 quality=high와 함께 씀.
+const STYLE = "Ultra high-quality, scroll-stopping viral thumbnail art. "
+  + "One bold focal subject with an exaggerated dramatic expression or a high-tension moment. "
+  + "Dynamic composition with strong depth, leading lines, and a clear center of attention. "
+  + "Cinematic rim lighting and moody key light, vivid saturated punchy color grade, high contrast, "
+  + "glossy premium finish, razor-sharp crisp detail, subtle bokeh background. "
+  + "Trending magnetic social-media cover aesthetic that stops the scroll. "
+  + "No text, no letters, no words, no numbers, no watermark, no real brand logos, no real celebrity faces.";
 
 const SIZES: Record<string, string> = { portrait: "1024x1536", landscape: "1536x1024", square: "1024x1024" };
 
@@ -124,7 +131,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: "gpt-image-1",
         prompt: `${prompt}.${patternText} ${STYLE}`,
-        n: 1, size, quality: "medium", output_format: "png", moderation: "auto",
+        n: 1, size, quality: "high", output_format: "png", moderation: "auto",
       }),
     });
     const d = await r.json();
