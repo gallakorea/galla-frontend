@@ -248,6 +248,33 @@
     });
 
     setKind('vertical'); setVMode('photo');
+
+    /* 🤖 갈비스 초안 프리필 + 🛠 작업모드 브리지 — 갈비스 도킹 미니챗이 갈라리 폼(캡션·태그·제목)을 실시간 수정.
+       미디어(사진·영상)는 상대가 직접. */
+    (function () {
+      const cap = $('glrCaption'), tit = $('glrTitle'), tg = $('glrTags');
+      let seed = null; try { seed = JSON.parse(sessionStorage.getItem('GALLA_SEED') || 'null'); } catch (_) {}
+      if (seed && seed.from === 'jarvis' && seed.kind === 'gallari') {
+        try { sessionStorage.removeItem('GALLA_SEED'); } catch (_) {}
+        setKind(seed.vkind === 'horizontal' ? 'horizontal' : 'vertical');
+        if (cap && !cap.value) cap.value = seed.caption || '';
+        if (tit && seed.title && !tit.value) tit.value = seed.title;
+        if (tg && Array.isArray(seed.tags) && seed.tags.length && !tg.value) tg.value = seed.tags.map(t => '#' + t).join(' ');
+      }
+      const setVal = (elm, v) => { if (elm == null || v == null) return; elm.value = String(v); try { elm.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} };
+      window.GALLA_WORKFORM = {
+        type: 'gallari',
+        getFields() { return { vkind: KIND, title: tit ? tit.value : '', caption: cap ? cap.value : '', tags: tg ? (window.GALLA_parseTagInput ? window.GALLA_parseTagInput(tg.value) : tg.value) : [] }; },
+        setFields(f) {
+          if (!f) return;
+          if (f.vkind) setKind(f.vkind === 'horizontal' ? 'horizontal' : 'vertical');
+          if ('title' in f) setVal(tit, f.title);
+          if ('caption' in f) setVal(cap, f.caption);
+          if ('tags' in f) { const arr = Array.isArray(f.tags) ? f.tags : String(f.tags || '').split(/[\s,]+/); setVal(tg, arr.filter(Boolean).map(t => '#' + String(t).replace(/^#/, '')).join(' ')); }
+        },
+        summary() { return '캡션:' + String((cap && cap.value) || '-').slice(0, 30); }
+      };
+    })();
   }
 
   // 이중 모드

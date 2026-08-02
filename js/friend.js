@@ -596,6 +596,14 @@
       minimize(); nav("plaza.html?compose=1");
       return;
     }
+    if(a.kind==="draftGallari"){
+      // 🎬 갈라리(숏판/롱판/사진) 초안 — 캡션·태그·(가로)제목 프리필 + 작업모드. 미디어는 상대가.
+      try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"gallari",
+        vkind:a.vkind||"vertical", title:a.title||"", caption:a.caption||"", tags:a.tags||[] })); }catch(e){}
+      try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"gallari" })); }catch(e){}
+      minimize(); nav("gallari-write.html");
+      return;
+    }
     if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
