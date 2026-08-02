@@ -28,6 +28,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 const STEP_LABEL: Record<string, string> = {
   web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
+  content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
   draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…",
   my_activity: "📋 소식 확인하는 중…", recall_memory: "🧠 기억 더듬는 중…", remember: "🧠 기억해두는 중…", forget_memory: "🧽 지우는 중…",
@@ -103,6 +104,20 @@ async function platformBuzz() {
   return {
     화제댓글: (cmts || []).map((c) => ({ 닉: nick[c.user_id] || "익명", 진영: c.faction, 내용: (c.content || "").slice(0, 90), 공감: c.support_count })),
     뜨거운판: (hotIss || []).map((i) => ({ 이슈: i.title, 찬: i.pro_count, 반: i.con_count })),
+  };
+}
+
+// 🛰 콘텐츠 기획 레이더 — '뭐 만들까' 기획용 재료: 뜨는 이슈·최신 뉴스·화제 + 내가 이미 만든 것(중복 방지).
+async function contentRadar(uid: string) {
+  const [hot, news, buzz, myIss, myPosts] = await Promise.all([
+    hotIssues(3), gallaNews(4), platformBuzz(),
+    supa.from("issues").select("title").eq("user_id", uid).eq("status", "normal").order("created_at", { ascending: false }).limit(8),
+    supa.from("posts").select("caption,title").eq("user_id", uid).order("created_at", { ascending: false }).limit(6),
+  ]);
+  const mine = [...((myIss.data || []).map((x: any) => x.title)), ...((myPosts.data || []).map((x: any) => x.title || x.caption))].filter(Boolean).map((s: string) => String(s).slice(0, 50)).slice(0, 12);
+  return {
+    뜨거운이슈: hot, 최신뉴스: news, 플랫폼화제: buzz, 내가_이미_만든_것: mine,
+    지침: "위 재료 + 이 사람의 관심사·성향·기억을 근거로 '지금 만들면 좋을 콘텐츠 아이디어'를 구체적으로 뽑아라. '내가 이미 만든 것'과 주제가 겹치지 마라. 그다음 propose_plan으로 아이디어 3~5개를 카드로 제시(각 idea에 type·title·angle·why). 억지로 다 채우지 말고 진짜 괜찮은 것만.",
   };
 }
 
@@ -204,6 +219,10 @@ const TOOLS = [
   { type: "function", function: { name: "draft_predict", description: "갈라 '예측' 마켓 초안을 만들어 생성폼에 채운다. 상대가 '예측 만들자/판 만들어줘/베팅 걸자' 하면. question은 예/아니오로 명확히 판가름나는 형태(예: 'X가 연말까지 Y를 돌파한다?'). description엔 '정산 기준'을 명확히(무엇을·언제·어떤 소스로 판정). close_days=마감까지 며칠(기본 7). 예측은 마감·정산이 걸리니 초안만 잡고 '마감일·정산 기준 확인하고 올려'라고 짧게 안내.", parameters: { type: "object", properties: { question: { type: "string", description: "예/아니오로 판가름나는 질문(120자)" }, description: { type: "string", description: "정산 기준(무엇을·언제·어떤 근거로 판정)" }, category: { type: "string" }, close_days: { type: "integer", description: "마감까지 며칠(기본 7)" } }, required: ["question", "description"] } } },
   // 🖼 썸네일/커버 AI 생성 — 작업 모드에서 지금 만드는 콘텐츠의 대표 이미지를 그려 편집기에 자동 첨부.
   { type: "function", function: { name: "gen_thumbnail", description: "작업 모드에서 지금 만드는 콘텐츠의 '썸네일/커버 이미지'를 AI로 그려 편집기에 대표 이미지로 자동 첨부한다. 상대가 '썸네일도 만들어줘/커버 그려줘/이미지도' 하면. prompt엔 콘텐츠 주제를 살린 '그림 묘사'를 생생하게(글자·실존인물·유명 캐릭터·로고는 넣지 마라 — 자동 차단됨). ratio: 이슈 카드·세로 숏판=portrait, 가로 영상(롱판)=landscape, 정사각=square. 생성은 몇 초 걸린다 — 호출 후 \"썸네일 그려줄게 잠깐만\" 정도로 짧게.", parameters: { type: "object", properties: { prompt: { type: "string", description: "그림 묘사(주제 살려 생생하게, 글자 없이)" }, ratio: { type: "string", enum: ["portrait", "landscape", "square"] } }, required: ["prompt"] } } },
+  // 🛰 콘텐츠 기획 — '뭐 만들까' 재료 수집
+  { type: "function", function: { name: "content_radar", description: "'뭐 만들지' 기획할 때 재료를 모은다 — 지금 갈라에서 뜨는 이슈·최신 갈라뉴스·플랫폼 화제 + 상대가 이미 만든 콘텐츠(중복 방지용). 상대가 '뭐 만들까/콘텐츠 기획해줘/아이디어 줘/이번주 뭐 올릴까/소재 추천' 하면 이걸로 재료 모아 맞춤 기획안을 짜라.", parameters: { type: "object", properties: {} } } },
+  // 🗂 기획안 카드 — 모은 재료로 뽑은 아이디어를 '만들기' 카드로 제시
+  { type: "function", function: { name: "propose_plan", description: "content_radar로 재료를 본 뒤, 이 사람에게 맞는 '만들 콘텐츠 아이디어'를 카드로 제시한다. ideas 3~5개, 각 idea={type: issue|plaza|gallari|predict, title(제목/훅), angle(한 줄 각도), why(왜 지금·근거)}. 카드의 '만들기'를 누르면 그 자리서 초안 작성으로 이어진다. 진짜 괜찮은 것만(억지로 채우지 마라).", parameters: { type: "object", properties: { ideas: { type: "array", items: { type: "object", properties: { type: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] }, title: { type: "string" }, angle: { type: "string", description: "한 줄 각도/훅" }, why: { type: "string", description: "왜 지금(근거·트렌드)" } }, required: ["type", "title"] } } }, required: ["ideas"] } } },
   // 🎬 자동편집형 숏판 영상 — 이미지+자막+음악 → mp4. 작업 모드(갈라리)에서.
   { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] } } } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
@@ -370,6 +389,15 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (/map\.naver/.test(source)) source = "네이버 지도"; else if (/\.naver\.com$/.test(source)) source = "네이버";
     return { action: { kind: "open", url: u, label, title: label.replace(/\s*보기$/, "").trim(), source } };
   }
+  if (name === "content_radar") return { result: await contentRadar(uid) };
+  if (name === "propose_plan") {
+    const ideas = Array.isArray(args?.ideas) ? args.ideas.slice(0, 6).map((it: any) => ({
+      type: ["issue", "plaza", "gallari", "predict"].includes(it?.type) ? it.type : "issue",
+      title: String(it?.title || "").slice(0, 100), angle: String(it?.angle || "").slice(0, 140), why: String(it?.why || "").slice(0, 140),
+    })).filter((it: any) => it.title) : [];
+    if (!ideas.length) return { result: { ok: false } };
+    return { action: { kind: "plan", ideas } };
+  }
   if (name === "hot_issues") return { result: await hotIssues() };
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
@@ -500,6 +528,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 
 ━━ ⚔️ 함께 창작(대화가 콘텐츠가 된다) — 내 '가능 영역'을 정확히 안다 ━━
 갈라 콘텐츠는 다양하다: 이슈(찬반배틀)·광장(롱판 글)·예측·숏판(릴스 영상)·갈라리(사진/영상).
+🗂 **콘텐츠 기획(무엇을 만들까 — 우리의 강점을 살려라)**: 상대가 "뭐 만들까/콘텐츠 기획해줘/아이디어 줘/이번주 뭐 올리지/소재 추천" 하거나, 만들고 싶은데 주제를 못 정하면 → **content_radar**로 지금 갈라에서 뜨는 이슈·뉴스·화제 + 상대가 이미 만든 것을 훑고, 상대의 관심사·성향에 맞는 아이디어를 뽑아 **반드시 propose_plan으로 '만들기 카드'를 내밀어라**(말로만 나열하지 마라 — 카드가 있어야 상대가 원탭으로 고른다). 3~5개, 유형+제목/훅+각도+왜 지금. 카드 위에 한 줄 코멘트만 얹어("이번주 딱 이런 거 어때?"). 상대가 카드에서 고르면 그때 초안(draft)으로. 억지 추천 금지 — 진짜 만들 만한 것만(2~3개여도 됨). 이게 창작의 '기획' 단계다.
 📎 **근거 먼저**: 콘텐츠(이슈·예측·숏판·글 등)를 만들려 하면, 재료가 있는지 물어봐라 — "뭐 근거될 거 있어? 기사 링크나 글, 이미지 있으면 아래 📎로 넣어줘. 그거 보고 만들게." 상대가 근거를 주면(위 '📎 근거' 블록으로 온다) 그 자료를 바탕으로 상대 의견을 반영해 초안을 잡아라(없는 사실 지어내기 금지). 근거 없이도 대화 맥락만으로 만들 수 있으면 그냥 만들어도 된다(근거 강요 X).
 영역별로:
 - ✅ **이슈 초안**: 화제가 뜨거워지면 "갈라에 이슈로 올려보자" 제안 → 상대가 ㄱㄱ 하면 **draft_issue**(중립 제목·한줄·배경 3~4문장·찰진 찬반 라벨). 앱이 작성폼에 채워주고 발행은 상대가 직접.

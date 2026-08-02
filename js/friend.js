@@ -377,6 +377,28 @@
     });
     box.style.display=_sources.length?"flex":"none";
   }
+  // 🗂 콘텐츠 기획안 카드 — '무엇을 만들까' 아이디어를 카드로. '만들기'→그 아이디어로 초안 요청.
+  var PLAN_TYPE={ issue:"⚔️ 이슈", plaza:"📝 광장", gallari:"🎬 갈라리", predict:"🎲 예측" };
+  function renderPlan(ideas){
+    if(!ideas || !ideas.length || !logEl) return;
+    var wrap=el('<div class="fr-plan"></div>');
+    ideas.forEach(function(idea){
+      var card=el('<div class="fr-plan-card">'+
+        '<span class="fr-plan-type"></span>'+
+        '<div class="fr-plan-title"></div>'+
+        '<div class="fr-plan-angle"></div>'+
+        '<button class="fr-plan-make">만들기 →</button></div>');
+      card.querySelector(".fr-plan-type").textContent=PLAN_TYPE[idea.type]||idea.type||"";
+      card.querySelector(".fr-plan-title").textContent=idea.title||"";
+      var ang=card.querySelector(".fr-plan-angle"), at=idea.angle||idea.why||"";
+      if(at) ang.textContent=at; else ang.style.display="none";
+      card.querySelector(".fr-plan-make").addEventListener("click", function(){
+        sendText("이 아이디어로 만들어줘 — ["+(PLAN_TYPE[idea.type]||idea.type)+"] "+idea.title+(idea.angle?" / 각도: "+idea.angle:""));
+      });
+      wrap.appendChild(card);
+    });
+    logEl.appendChild(wrap); scrollBottom();
+  }
   // 🖼 AI 썸네일 생성 — generate-thumbnail 엣지 호출(몇 초) → 편집기에 대표이미지로 자동 첨부 + 챗 미리보기.
   async function genThumbnail(a){
     showProgress("🎨 썸네일 그리는 중… (몇 초 걸려)");
@@ -754,6 +776,7 @@
     if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
     if(a.kind==="genThumbnail"){ genThumbnail(a); return; }         // 🖼 AI 썸네일 생성
     if(a.kind==="genVideo"){ genVideo(a); return; }                 // 🎬 자동편집형 영상 생성
+    if(a.kind==="plan"){ renderPlan(a.ideas); return; }             // 🗂 콘텐츠 기획안 카드
     if(a.kind==="share"){
       var path = "/share/"+(a.ctype==="news"?"news":"issue")+"/"+a.id;
       var url = SB.replace("bidqauputnhkqepvdzrr.supabase.co","galla.im").replace("https://","https://").replace("galla.im","galla.im"); // no-op guard
@@ -809,7 +832,8 @@
     acts.filter(function(a){return a.kind==="editdraft";}).forEach(function(a){ applyDraftEdit(a.fields); });
     acts.filter(function(a){return a.kind==="genThumbnail";}).forEach(function(a){ genThumbnail(a); });
     acts.filter(function(a){return a.kind==="genVideo";}).forEach(function(a){ genVideo(a); });
-    addActions(m, acts.filter(function(a){return a.kind!=="editdraft"&&a.kind!=="genThumbnail"&&a.kind!=="genVideo";}));
+    acts.filter(function(a){return a.kind==="plan";}).forEach(function(a){ renderPlan(a.ideas); });
+    addActions(m, acts.filter(function(a){return a.kind!=="editdraft"&&a.kind!=="genThumbnail"&&a.kind!=="genVideo"&&a.kind!=="plan";}));
     // ⚡ 자동 실행 — 명시 요청은 칩 탭 안 기다린다(답 잠깐 보여주고 0.7s 후):
     //   ① 앱 컨트롤(DM·통화·페이지)은 요청받아 나온 것이므로 바로 실행
     //   ② "보여줘/열어줘"면 콘텐츠(view→open) 자동 오픈
