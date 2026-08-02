@@ -824,7 +824,9 @@
       addMsg("a","링크 복사했어 — 친구들한테 붙여넣어 ㅋㅋ");
       return;
     }
-    minimize(); nav(contentUrl(a));   // 챗은 미니 보드로 접히고 콘텐츠가 뜬다(대화 유지)
+    // 🛡 방어 — 콘텐츠 이동은 유효한 id가 있을 때만(없으면 issue.html?id=undefined='잘못된 이슈 접근' 방지)
+    if(a && a.id && String(a.id)!=="undefined"){ minimize(); nav(contentUrl(a)); }
+    // id 없는 미지의 액션은 조용히 무시(옛 클라가 새 액션 만나도 깨진 이동 안 함)
   }
 
   async function token(){
