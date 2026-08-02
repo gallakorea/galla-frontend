@@ -394,7 +394,7 @@
       var jwt=await token(); if(!jwt){ clearProgress(); addMsg("a","로그인해야 만들어줄 수 있어 ㅜ"); return; }
       var sub=await (await fetch(SB+"/functions/v1/generate-video",{ method:"POST",
         headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
-        body:JSON.stringify({ op:"submit", images:images, captions:a.captions||[], music:a.music||"upbeat", ratio:a.ratio||"9:16", per:3 }) })).json();
+        body:JSON.stringify({ op:"submit", images:images, captions:a.captions||[], music:a.music||"upbeat", ratio:a.ratio||"9:16", per:a.per||3 }) })).json();
       if(!sub || !sub.ok || !sub.id){
         clearProgress();
         addMsg("a", (sub&&sub.error==="user_daily_limit") ? "오늘 영상 많이 뽑았다 ㅋㅋ 내일 또 만들어줄게" :
@@ -406,6 +406,8 @@
       if(url){
         var vk=a.ratio==="16:9"?"horizontal":"vertical", thumb=images[0], applied=false;
         try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.setVideo){ window.GALLA_WORKFORM.setVideo(url, thumb, vk); applied=true; flashDock(); } }catch(e){}
+        // 가로 롱판은 제목 필수 — 갈비스가 준 제목을 폼에 세팅
+        try{ if(vk==="horizontal" && a.title && window.GALLA_WORKFORM && window.GALLA_WORKFORM.setFields){ window.GALLA_WORKFORM.setFields({ title:a.title }); } }catch(e){}
         var m=el('<div class="fr-msg fr-a"><div class="fr-bubble"><video class="fr-thumb" controls playsinline muted></video></div></div>');
         m.querySelector("video").src=url; logEl.appendChild(m); scrollBottom();
         addMsg("a", applied ? "영상 뽑았어! 편집기에 넣어놨으니 보고 맘에 들면 올려 🎬" : "영상 완성! 맘에 들면 저장해서 써 ㅋㅋ");

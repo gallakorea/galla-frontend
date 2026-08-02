@@ -181,7 +181,7 @@ const TOOLS = [
   // 🖼 썸네일/커버 AI 생성 — 작업 모드에서 지금 만드는 콘텐츠의 대표 이미지를 그려 편집기에 자동 첨부.
   { type: "function", function: { name: "gen_thumbnail", description: "작업 모드에서 지금 만드는 콘텐츠의 '썸네일/커버 이미지'를 AI로 그려 편집기에 대표 이미지로 자동 첨부한다. 상대가 '썸네일도 만들어줘/커버 그려줘/이미지도' 하면. prompt엔 콘텐츠 주제를 살린 '그림 묘사'를 생생하게(글자·실존인물·유명 캐릭터·로고는 넣지 마라 — 자동 차단됨). ratio: 이슈 카드·세로 숏판=portrait, 가로 영상(롱판)=landscape, 정사각=square. 생성은 몇 초 걸린다 — 호출 후 \"썸네일 그려줄게 잠깐만\" 정도로 짧게.", parameters: { type: "object", properties: { prompt: { type: "string", description: "그림 묘사(주제 살려 생생하게, 글자 없이)" }, ratio: { type: "string", enum: ["portrait", "landscape", "square"] } }, required: ["prompt"] } } },
   // 🎬 자동편집형 숏판 영상 — 이미지+자막+음악 → mp4. 작업 모드(갈라리)에서.
-  { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] }, ratio: { type: "string", enum: ["9:16", "16:9"] } } } } },
+  { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(가로영상은 3~8개, 세로숏판 3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] }, ratio: { type: "string", enum: ["9:16", "16:9"], description: "9:16=세로 숏판, 16:9=가로 롱판(유튜브식)" }, title: { type: "string", description: "가로영상(롱판=16:9)일 때 제목(필수)" } } } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
   { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문(이슈) 또는 정산기준(예측) 전체" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(갈라리)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(갈라리, # 없이)" }, question: { type: "string", description: "예측 질문(예측)" }, close_days: { type: "integer", description: "예측 마감까지 며칠(예측)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
@@ -366,12 +366,15 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       ratio: ["portrait", "landscape", "square"].includes(args?.ratio) ? args.ratio : "portrait" } };
   }
   if (name === "gen_video") {
+    const ratio = args?.ratio === "16:9" ? "16:9" : "9:16";
+    const maxScenes = ratio === "16:9" ? 8 : 6;   // 가로 롱판은 장면 더 허용(길이↑)
     return { action: { kind: "genVideo",
       useUserPhotos: !!args?.use_user_photos,
-      imagePrompts: Array.isArray(args?.image_prompts) ? args.image_prompts.map((s: any) => String(s || "").slice(0, 300)).filter(Boolean).slice(0, 6) : [],
-      captions: Array.isArray(args?.captions) ? args.captions.map((s: any) => String(s || "").slice(0, 90)).slice(0, 6) : [],
+      imagePrompts: Array.isArray(args?.image_prompts) ? args.image_prompts.map((s: any) => String(s || "").slice(0, 300)).filter(Boolean).slice(0, maxScenes) : [],
+      captions: Array.isArray(args?.captions) ? args.captions.map((s: any) => String(s || "").slice(0, 90)).slice(0, maxScenes) : [],
       music: ["upbeat", "chill", "dramatic"].includes(args?.music) ? args.music : "upbeat",
-      ratio: args?.ratio === "16:9" ? "16:9" : "9:16" } };
+      ratio, title: String(args?.title || "").slice(0, 100),
+      per: ratio === "16:9" ? 5 : 3 } };   // 가로는 장면당 좀 더 길게(롱폼 느낌)
   }
   if (name === "point_to") return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
   return { result: { error: "unknown" } };
@@ -482,7 +485,8 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - ✅ **예측 마켓**: "예측 만들자/판 서자/베팅 걸자" 하면 **draft_predict**(예/아니오로 판가름나는 질문 + '정산 기준' 명확한 설명 + 카테고리 + 마감 며칠)로 생성폼에 채워준다. 예측은 마감·정산이 걸리니 초안만 잡고 "마감일이랑 정산 기준만 확인하고 올려"라고 짚어줘라(발행은 상대가). 다지선다 마켓은 상대가 폼에서 직접 추가.
 - ✅ **숏판·롱판·갈라리(영상·사진 콘텐츠)**: "숏판/릴스/영상/사진 올리자, 갈라리 쓰자" 하면 **draft_gallari**(vkind: 세로숏판·사진=vertical / 가로영상롱판=horizontal, 캡션·해시태그, 가로영상이면 제목도)로 작성폼에 채워준다. 캡션·후킹 문구는 최고로 잡아주되, **영상 파일은 내가 못 만든다** — "영상만 올리면 돼 ㅋㅋ" 하고 짧게 안내(그건 상대가 찍어 올린다).
 - 🖼 **썸네일/커버 이미지 생성**: 작업 모드(초안 편집 중)에서 상대가 "썸네일도/커버 그려줘/이미지도 만들어줘" 하면 **gen_thumbnail**로 AI가 대표 이미지를 그려 편집기에 자동 첨부한다. 콘텐츠 주제를 살린 생생한 그림 묘사를 넣되 글자·실존인물·유명 캐릭터·로고는 넣지 마라(자동 차단). 이슈 카드·세로 숏판=portrait, 가로 영상=landscape.
-- 🎬 **자동편집형 영상 생성(갈라리)**: 작업 모드(갈라리)에서 "영상 만들어줘/숏판 뽑아줘/영상으로 해줘" 하면 **gen_video**로 이미지+자막+음악을 합쳐 mp4 숏판을 만들어 편집기에 자동 첨부한다. 이미지는 use_user_photos(상대가 올린 사진) 또는 image_prompts(AI로 장면 그리기 3~6개). captions(장면 자막 짧게)·music(upbeat/chill/dramatic)·ratio(9:16 숏판)도 정해라. **렌더에 수십 초** 걸리니 "영상 뽑아줄게, 좀 걸려 ㅋㅋ" 하고 호출.
+- 🎬 **자동편집형 영상 생성(갈라리)**: 작업 모드(갈라리)에서 "영상/숏판/롱폼 만들어줘" 하면 **gen_video**로 이미지+자막+음악을 합쳐 mp4를 만들어 편집기에 자동 첨부한다. 이미지는 use_user_photos(상대가 올린 사진) 또는 image_prompts(AI 장면 그리기). captions(장면 자막 짧게)·music(upbeat/chill/dramatic) 정하고 — **ratio: 세로 숏판=9:16, 가로 롱폼(유튜브식)=16:9**. **16:9(롱폼)이면 title(제목)을 반드시** 넣어라(가로영상은 제목 필수). 롱폼은 장면을 더 많이(최대 8개) 넣으면 길어진다. **렌더 수십 초** — "영상 뽑아줄게, 좀 걸려 ㅋㅋ" 하고 호출.
+  ⚠️ 지금 영상은 '이미지 슬라이드+자막+음악'이라 길이가 짧다(대략 세로 15~20초, 가로 40초 안팎). 진짜 긴 유튜브 영상(실사 촬영)은 못 만든다 — 그건 상대가 찍어 올려야 한다고 솔직히.
 - 초안 내용에 상대의 실명·사생활·특정 개인 저격은 넣지 마라(공론화 가능한 주제로).
 
 ━━ 🚫 창작 하드가드(법적 — 어떤 부탁이어도 절대 예외 없음) ━━
