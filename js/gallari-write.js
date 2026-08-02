@@ -312,11 +312,17 @@
     })();
   }
 
-  // 이중 모드
-  window.GALLA_PAGE_GALLARI_WRITE = { init: initGallariWrite };
-  if (document.body && document.body.dataset.page === 'spa') {
-    // SPA: 로더가 DCL을 캡처해 부름(아래 DCL 리스너) — 별도 mount 훅 없이 동작
+  // 이중 모드 — MPA(단독 문서)는 자동 초기화 / SPA(app.html)는 어댑터가 mount 호출(중복 init 방지).
+  //   ⚠️ 예전엔 SPA도 auto-init(아래)에 의존했으나, gallari-write만 전용 어댑터가 없어 라우터
+  //      loadPageScripts 폴백+auto-init에 기대다 네이티브서 리스너·WORKFORM 배선이 불안정했다.
+  //      → predict-market 방식(SPA는 어댑터 mount만)으로 통일해 결정적으로 초기화.
+  window.GALLA_PAGE_GALLARI_WRITE = {
+    init: initGallariWrite,
+    mount(root) { return initGallariWrite(root); },
+    unmount() { try { if (window.GALLA_WORKFORM && window.GALLA_WORKFORM.type === 'gallari') window.GALLA_WORKFORM = null; } catch (_) {} },
+  };
+  if (!(document.body && document.body.dataset.page === 'spa')) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGallariWrite);
+    else initGallariWrite();
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initGallariWrite);
-  else initGallariWrite();
 })();
