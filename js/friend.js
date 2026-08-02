@@ -789,7 +789,9 @@
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"plaza",
         title:a.title||"", description:a.description||"", category:a.category||"" })); }catch(e){}
       try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"plaza" })); }catch(e){}
-      minimize(); nav("plaza.html?compose=1");
+      minimize();
+      if(window.GALLA_SPA && window.GALLA_SPA.compose){ try{ window.GALLA_SPA.compose("plaza"); return; }catch(e){} }
+      nav("plaza.html?compose=1");
       return;
     }
     if(a.kind==="draftGallari"){
@@ -805,7 +807,10 @@
       try{ sessionStorage.setItem("GALLA_SEED", JSON.stringify({ from:"jarvis", kind:"predict",
         question:a.question||"", description:a.description||"", category:a.category||"", closeDays:a.closeDays||7 })); }catch(e){}
       try{ sessionStorage.setItem("GALLA_WORK", JSON.stringify({ type:"predict" })); }catch(e){}
-      minimize(); nav("galla-predict.html?compose=1");
+      minimize();
+      // 앱(SPA)은 ?compose=1 URL로 모달이 안 열림 → SPA compose 직접 호출. 웹은 URL nav.
+      if(window.GALLA_SPA && window.GALLA_SPA.compose){ try{ window.GALLA_SPA.compose("predict"); return; }catch(e){} }
+      nav("galla-predict.html?compose=1");
       return;
     }
     if(a.kind==="editdraft"){ applyDraftEdit(a.fields); return; }   // ✍️ 작업모드 실시간 폼 수정
