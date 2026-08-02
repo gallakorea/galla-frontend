@@ -178,6 +178,7 @@
           '<span class="fr-status"><i></i>ONLINE</span>'+
           // 🌐 웹 전용 — 앱 받기(다운로드 트리거). CSS로 웹(fr-web)에서만 노출.
           '<button class="fr-getapp" aria-label="갈라 앱 받기">앱 받기</button>'+
+          '<button class="fr-publish" aria-label="올리기">올리기 ↑</button>'+
           '<button class="fr-expand" aria-label="크게/작게"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v6h6M20 10V4h-6M14 4h6v6M10 20H4v-6"/></svg></button>'+
           '<button class="fr-dockmin" aria-label="접기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 10l6 6 6-6"/></svg></button>'+
           '<button class="fr-x" aria-label="닫기">×</button></div>'+
@@ -203,6 +204,9 @@
     sheet.querySelector(".fr-x").addEventListener("click", function(){ if(_dock) exitDock(); else close(); });
     var dmBtn=sheet.querySelector(".fr-dockmin"); if(dmBtn) dmBtn.addEventListener("click", toggleDockMin);
     var exBtn=sheet.querySelector(".fr-expand"); if(exBtn) exBtn.addEventListener("click", toggleDockSize);
+    var pubBtn=sheet.querySelector(".fr-publish"); if(pubBtn) pubBtn.addEventListener("click", function(){
+      try{ if(window.GALLA_WORKFORM && typeof window.GALLA_WORKFORM.submit==="function"){ window.GALLA_WORKFORM.submit(); } }catch(e){}
+    });
     // 접힘(바) 상태에서 헤더 아무데나 탭하면 펼침
     var headEl=sheet.querySelector(".fr-head");
     if(headEl) headEl.addEventListener("click", function(e){

@@ -106,6 +106,8 @@ function initWritePage(ctx) {
         if (lab) lab.hidden = true;
         try { window.GALLA_WriteMedia && window.GALLA_WriteMedia.setCardThumb && window.GALLA_WriteMedia.setCardThumb(url); } catch (_) {}
       },
+      // ⬆️ 도킹 '올리기' → 이슈는 미리보기 단계로(폼 제출)
+      submit() { const f = document.getElementById('writeForm'); if (!f) return; if (f.requestSubmit) f.requestSubmit(); else { const b = f.querySelector('[type=submit]'); b && b.click(); } },
       summary() { const g = this.getFields(); return `제목:${g.title || '-'} / 찬:${g.faction_a || '-'} vs 반:${g.faction_b || '-'}`; }
     };
     onCleanup(() => { try { if (window.GALLA_WORKFORM && window.GALLA_WORKFORM.type === 'issue') window.GALLA_WORKFORM = null; } catch (_) {} });

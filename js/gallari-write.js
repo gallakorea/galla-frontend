@@ -306,6 +306,7 @@
           const btn = document.getElementById(horiz ? 'glrHVideoBtn' : 'glrVVideoBtn');
           if (btn) btn.style.display = 'none';
         },
+        submit() { const b = document.getElementById('glrSubmit'); b && b.click(); },
         summary() { return '캡션:' + String((cap && cap.value) || '-').slice(0, 30); }
       };
     })();

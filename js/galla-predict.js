@@ -473,6 +473,7 @@ function exposePredictWorkform(){
       if('category' in f && f.category){ try{ $('mCategory').value=f.category; }catch(_){} }
       if(f.close_days>0 && $('mCloseAt')){ const cd=new Date(Date.now()+f.close_days*86400000); cd.setMinutes(cd.getMinutes()-cd.getTimezoneOffset()); setVal($('mCloseAt'), cd.toISOString().slice(0,16)); }
     },
+    submit(){ const b=$('createSubmit'); if(b && !b.disabled) b.click(); },
     summary(){ return '질문:'+String(($('mQuestion')&&$('mQuestion').value)||'-').slice(0,40); }
   };
 }

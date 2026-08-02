@@ -109,6 +109,7 @@ function exposePlazaWorkform() {
       if ("body" in f) setVal(b, f.body); else if ("description" in f) setVal(b, f.description);
       if ("category" in f && f.category) setVal(c, f.category);
     },
+    submit() { const b = document.getElementById("plaza-submit"); if (b && !b.disabled) b.click(); else try { window.GALLA_toast && window.GALLA_toast("제목·본문을 채워줘"); } catch (_) {} },
     summary() { const g = this.getFields(); return `제목:${g.title || "-"}`; }
   };
 }
