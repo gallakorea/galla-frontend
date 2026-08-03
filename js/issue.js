@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=080314";
-import { loadAiNews } from "./issue-news.js?v=080314";
-import { loadStats } from "./issue.stats.js?v=080314";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=080314";
+import { loadAiArguments } from "./issue-argument.js?v=080315";
+import { loadAiNews } from "./issue-news.js?v=080315";
+import { loadStats } from "./issue.stats.js?v=080315";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=080315";
 
 
 console.log("[issue.js] loaded");
@@ -85,10 +85,16 @@ function qs(id) {
    요소가 없으면 즉시 실행(안전 폴백). */
 function whenNear(el, fn, margin = "600px") {
   if (!el || !("IntersectionObserver" in window)) { fn(); return; }
-  const io = new IntersectionObserver((ents, obs) => {
-    if (ents.some(e => e.isIntersecting)) { obs.disconnect(); fn(); }
-  }, { rootMargin: margin });
+  let done = false;
+  const run = () => { if (done) return; done = true; try { io.disconnect(); } catch (_) {} try { clearTimeout(t); } catch (_) {} fn(); };
+  // ⚠️ SPA(네이티브)는 스크롤 컨테이너가 .view-host(PAGE_ROOT)라 뷰포트 기준 IO가 안 터진다 →
+  //    스크롤 root를 PAGE_ROOT로. 그래도 안 터지는 환경(transform 등) 대비 안전 폴백(2.5s).
+  const root = (PAGE_ROOT && PAGE_ROOT !== document && PAGE_ROOT.querySelector) ? PAGE_ROOT : null;
+  const io = new IntersectionObserver((ents) => {
+    if (ents.some(e => e.isIntersecting)) run();
+  }, { root, rootMargin: margin });
   io.observe(el);
+  const t = setTimeout(run, 2500);
 }
 
 let issueAuthorId = null;
@@ -189,34 +195,30 @@ checkLiveDuel(issue.id);
 //    await로 앞을 막으면 댓글 표시가 그만큼 늦어져서, 백그라운드로 돌린다.
 forceInitialVoteSync(issue.id);
 
-await initCommentSystem(issue.id);
-forceBattleScrollWithRetry();
+/* ⚠️ 독립 로더(논점·관련링크·후원·뉴스·통계)는 댓글 초기화(await initCommentSystem)보다 '먼저'.
+   예전엔 뒤에 있어, 댓글 세션 대기/실패가 뉴스·통계까지 통째로 막았다(사장님 "뉴스 안 붙는다"). */
 
-/* ===============================
-  AI ARGUMENT (논점)
-=============================== */
+/* AI ARGUMENT (논점) */
 if (typeof loadAiArguments === "function") {
   loadAiArguments(issue);
 }
 
-/* ===============================
-  관련 뉴스 (직접 등록 외부 링크)
-=============================== */
+/* 관련 뉴스 (직접 등록 외부 링크) */
 renderRelatedLinks(issue.related_links);
 
-/* ===============================
-  발의자 후원 (슈퍼챗형)
-=============================== */
+/* 발의자 후원 (슈퍼챗형) */
 if (window.GALLA_initDonations) window.GALLA_initDonations(issue);
 
-/* ===============================
-  AI NEWS (뉴스) — ⚡ 하단이라 뷰포트 접근 시 로드
-=============================== */
+/* AI NEWS (관련 보도) — whenNear가 SPA 스크롤root+폴백으로 확실히 로드 */
 if (typeof loadAiNews === "function") {
   whenNear(PAGE_ROOT.querySelector(".ai-news"), () => loadAiNews(issue));
 }
-/* 🔥 통계 — ⚡ 최하단이라 스크롤 접근 시 로드(스켈레톤→집계) */
-  whenNear(document.getElementById("stats-section"), () => loadStats(issue.id));
+/* 🔥 통계 — 스크롤 접근 시(또는 폴백) 로드 */
+whenNear(document.getElementById("stats-section"), () => loadStats(issue.id));
+
+/* 댓글 — 세션을 기다릴 수 있어(느림/실패 가능) 독립 로더들 뒤로 뺀다(차단 방지) */
+await initCommentSystem(issue.id);
+forceBattleScrollWithRetry();
 
   /* ===============================
     REST
