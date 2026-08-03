@@ -51,10 +51,62 @@
 
     /* ---------- 숏판(세로) 혼합 미디어: 사진+영상 캐러셀 (이슈와 동일 구조) ---------- */
     const mediaBtn = $('glrMediaBtn'), mediaInput = $('glrMedia'), mediaPrev = $('glrMediaPrev');
+
+    /* 업로드 모드 — 🖼캐러셀 / 🎬영상+표지 (이슈 write와 동일). 영상 모드=영상1+표지(thumb) → 단일 영상 저장. */
+    let vMode = 'carousel';
+    const glrModeTabs = $('glrModeTabs'), glrCover = $('glrCover'),
+      glrDropTitle = $('glrDropTitle'), glrDropSub = $('glrDropSub');
+    function setVMode(mode, opts) {
+      opts = opts || {};
+      if (mode !== 'video' && mode !== 'carousel') return;
+      if (mode === vMode && !opts.force) return;
+      if (!opts.silent && vItems.length && mode !== vMode) {
+        const keep = mode === 'video' ? (vItems.length === 1 && vItems[0].kind === 'video') : true;
+        if (!keep) { if (!confirm('모드를 바꾸면 담은 미디어가 지워져요. 계속할까요?')) return; vItems = []; }
+      }
+      vMode = mode;
+      if (glrModeTabs) glrModeTabs.querySelectorAll('.mm-tab').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      if (mode === 'video') {
+        mediaInput.setAttribute('accept', 'video/*'); mediaInput.removeAttribute('multiple');
+        if (glrDropTitle) glrDropTitle.textContent = '영상 올리기';
+        if (glrDropSub) glrDropSub.textContent = '영상 1개 · 표지(썸네일)는 따로 고를 수 있어요';
+      } else {
+        mediaInput.setAttribute('accept', 'image/*,video/*'); mediaInput.setAttribute('multiple', '');
+        if (glrDropTitle) glrDropTitle.textContent = '사진·영상 올리기';
+        if (glrDropSub) glrDropSub.textContent = '여러 개는 캐러셀로 넘겨서 노출 · 첫 항목이 표지';
+      }
+      renderVMedia();
+    }
+    if (glrModeTabs) glrModeTabs.addEventListener('click', e => { const t = e.target.closest('.mm-tab'); if (t) setVMode(t.dataset.mode); });
+    if (glrCover) glrCover.addEventListener('change', async e => {
+      const f = e.target.files && e.target.files[0]; glrCover.value = '';
+      const v = vItems[0]; if (!f || !v || v.kind !== 'video') return;
+      v.up = true; renderVMedia();
+      try {
+        let file = f;
+        if (window.GALLA_PROCESS_IMAGES) { const pr = await window.GALLA_PROCESS_IMAGES([f]); if (pr && pr[0]) file = pr[0]; }
+        if (window.GALLA_UPLOAD_MEDIA) v.thumb = await window.GALLA_UPLOAD_MEDIA(file, 'image');
+      } catch (err) { console.warn('[갈라리] 표지 업로드 실패', err); }
+      finally { v.up = false; renderVMedia(); }
+    });
+
     function vSrc(it) { return it.kind === 'video' ? (it.thumb || '') : (it.url || (it.file ? URL.createObjectURL(it.file) : '')); }
     function renderVMedia() {
       if (!vItems.length) { mediaPrev.innerHTML = ''; if (mediaBtn) mediaBtn.style.display = ''; return; }
       if (mediaBtn) mediaBtn.style.display = 'none';
+      // 🎬 영상 모드 — 영상 1개 + 표지(=영상 thumb, 별도 슬라이드 아님)
+      if (vMode === 'video') {
+        const v = vItems[0] || {};
+        mediaPrev.innerHTML = `<div class="multi-img-strip vmode-strip">
+          <div class="multi-img-item is-video${v.up ? ' uploading' : ''}">
+            ${v.thumb ? `<img src="${v.thumb}">` : `<div class="mi-vidph">🎬</div>`}<span class="multi-img-play">▶</span>
+            ${v.up ? '<span class="multi-img-up"><i></i></span>' : ''}<span class="multi-img-badge">표지</span>
+            <button type="button" class="multi-img-del" data-idx="0" aria-label="삭제">✕</button>
+          </div></div>
+          <button type="button" class="vmode-cover-btn" id="glrPickCover">🖼 표지(썸네일) 바꾸기</button>
+          <div class="guide-text">영상 1개 · 표지 안 고르면 첫 장면이 표지 · 피드에선 <b>영상만</b> 재생</div>`;
+        return;
+      }
       mediaPrev.innerHTML = `<div class="multi-img-strip">${vItems.map((it, i) => `
         <div class="multi-img-item${it.up ? ' uploading' : ''}${it.kind === 'video' ? ' is-video' : ''}">
           ${it.kind === 'video' ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="mi-vidph">🎬</div>`) + `<span class="multi-img-play">▶</span>` : `<img src="${vSrc(it)}">`}
@@ -86,6 +138,16 @@
     async function addVMedia(files) {
       files = [...(files || [])].filter(Boolean);
       if (!files.length) return;
+      // 🎬 영상 모드 — 영상 1개만(기존 것 교체). 표지는 glrCover로 따로.
+      if (vMode === 'video') {
+        const vf = files.find(f => /^video\//.test(f.type));
+        if (!vf) { alert('영상 파일을 선택해주세요.'); return; }
+        const dur = await videoDuration(vf);
+        if (dur && dur > MAX_VID_DUR + 1) { alert(`영상이 너무 길어요 (${Math.round(dur)}초) — 최대 ${MAX_VID_DUR}초까지예요.`); return; }
+        const it = { kind: 'video', file: vf, url: null, thumb: null, up: true };
+        vItems = [it]; renderVMedia(); uploadVVideo(it);
+        return;
+      }
       let room = MAX_IMAGES - vItems.length;
       if (room <= 0) { alert(`미디어는 최대 ${MAX_IMAGES}개예요.`); return; }
       if (files.length > room) files = files.slice(0, room);
@@ -116,7 +178,8 @@
         if (j >= 0 && j < vItems.length) { const t = vItems[i]; vItems[i] = vItems[j]; vItems[j] = t; renderVMedia(); }
         return;
       }
-      if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); }
+      if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); return; }
+      if (e.target.closest('#glrPickCover')) { if (glrCover) { glrCover.value = ''; glrCover.click(); } return; }
     });
 
     /* ---------- 영상 공용 (세로/가로) ---------- */
