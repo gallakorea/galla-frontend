@@ -288,6 +288,7 @@ function renderMedia(data) {
             // 활성 슬라이드만 인라인 자동재생(단일영상 카드와 동일 감성). 탭=릴스 풀스크린.
             return `<div class="carousel-slide carousel-slide--video"
                  onclick="event.stopPropagation();openReels(${data.id})">
+                ${m.thumb ? `<img class="cvid-bg" src="${T(m.thumb, 480)}" aria-hidden="true" alt="">` : ''}
                 <video id="${vid}" class="carousel-vid vp-fade" data-src="${m.url}"
                     ${m.thumb ? `poster="${T(m.thumb)}"` : ''}
                     loop playsinline webkit-playsinline muted preload="none"></video>
