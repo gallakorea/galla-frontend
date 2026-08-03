@@ -116,6 +116,15 @@ select.input-field option { background: #16171c; color: #fff; }
   border: 1px solid var(--line); }
 .multi-img-badge { position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 800; color: #0a0a0b;
   background: var(--g-gold); padding: 2px 7px; border-radius: 99px; }
+/* 순서 번호(표지 외) */
+.multi-img-num { position: absolute; top: 6px; left: 6px; min-width: 18px; height: 18px; padding: 0 4px; font-size: 10px; font-weight: 800;
+  color: #fff; background: rgba(0,0,0,.6); border-radius: 99px; display: flex; align-items: center; justify-content: center; }
+/* 순서 이동 ‹ › */
+.multi-img-move { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; }
+.multi-img-move button { width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer; background: rgba(0,0,0,.62);
+  color: #fff; font-size: 13px; font-weight: 800; line-height: 1; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+.multi-img-move button:disabled { opacity: .3; cursor: default; }
+.multi-img-move button:active:not(:disabled) { transform: scale(.9); }
 /* 개별 삭제(✕) */
 .multi-img-del { position: absolute; top: 5px; right: 5px; width: 22px; height: 22px; border-radius: 50%;
   border: none; cursor: pointer; background: rgba(0,0,0,.66); color: #fff; font-size: 11px; font-weight: 800;

@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=080306";
-import { loadAiNews } from "./issue-news.js?v=080306";
-import { loadStats } from "./issue.stats.js?v=080306";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=080306";
+import { loadAiArguments } from "./issue-argument.js?v=080307";
+import { loadAiNews } from "./issue-news.js?v=080307";
+import { loadStats } from "./issue.stats.js?v=080307";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=080307";
 
 
 console.log("[issue.js] loaded");
@@ -292,7 +292,8 @@ function renderIssueMedia(issue) {
                 <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
             </div>`;
         }
-        return `<div class="issue-slide" data-i="${i}"><img src="${m.url}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async"></div>`;
+        // ⚠️ 캐러셀은 lazy 금지 — 가로 오프스크린이라 lazy면 안 불러와져 넘기면 빈 슬라이드가 된다.
+        return `<div class="issue-slide" data-i="${i}"><img src="${m.url}" loading="eager" decoding="async"></div>`;
     }).join('');
     const dots = multi ? media.map((_, i) => `<div class="issue-c-dot ${i === 0 ? 'on' : ''}"></div>`).join('') : '';
 

@@ -161,15 +161,19 @@ function initWritePage(ctx) {
               ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="mi-vidph">🎬</div>`) + `<span class="multi-img-play">▶</span>`
               : `<img src="${mediaThumbSrc(it)}">`}
             ${it.up ? '<span class="multi-img-up"><i></i></span>' : ''}
-            ${i === 0 ? '<span class="multi-img-badge">표지</span>' : ''}
+            ${i === 0 ? '<span class="multi-img-badge">표지</span>' : '<span class="multi-img-num">' + (i + 1) + '</span>'}
             <button type="button" class="multi-img-del" data-idx="${i}" aria-label="삭제">✕</button>
+            ${mediaItems.length > 1 ? `<div class="multi-img-move">
+              <button type="button" class="mim-mv" data-mv="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="앞으로">‹</button>
+              <button type="button" class="mim-mv" data-mv="${i}" data-dir="1" ${i === mediaItems.length - 1 ? 'disabled' : ''} aria-label="뒤로">›</button>
+            </div>` : ''}
           </div>
         `).join('')}
         ${mediaItems.length < MAX_MEDIA
           ? `<button type="button" class="multi-img-add" id="mediaAddMore" aria-label="미디어 추가">＋</button>`
           : ''}
       </div>
-      <div class="guide-text">${mediaItems.length}/${MAX_MEDIA} · 첫 항목이 표지${mediaItems.length > 1 ? ' · 캐러셀로 노출' : ''}</div>
+      <div class="guide-text">${mediaItems.length}/${MAX_MEDIA} · 첫 항목이 표지 · ‹ ›로 순서 변경${mediaItems.length > 1 ? ' · 캐러셀로 노출' : ''}</div>
     `;
   }
 
@@ -246,10 +250,16 @@ function initWritePage(ctx) {
   mediaInput.addEventListener('click', () => { mediaInput.value = ''; });
   mediaInput.addEventListener('change', e => { addMediaFiles(e.target.files); });
 
-  // 스트립 내 삭제(✕) / 추가(＋) 위임
+  // 스트립 내 삭제(✕) / 순서이동(‹ ›) / 추가(＋) 위임
   mediaPreview.addEventListener('click', e => {
     const del = e.target.closest('.multi-img-del');
     if (del) { mediaItems.splice(Number(del.dataset.idx), 1); renderMedia(); persistMedia(); return; }
+    const mv = e.target.closest('.mim-mv');
+    if (mv) {
+      const i = Number(mv.dataset.mv), j = i + Number(mv.dataset.dir);
+      if (j >= 0 && j < mediaItems.length) { const t = mediaItems[i]; mediaItems[i] = mediaItems[j]; mediaItems[j] = t; renderMedia(); persistMedia(); }
+      return;
+    }
     if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); }
   });
 
