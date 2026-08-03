@@ -68,6 +68,12 @@ function ensureVideoSrc(vid) {
         const vis = r.height ? (Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height) : 0;
         if (vis > 0.5 && vid.paused && !document.body.classList.contains('shorts-open')) playWithSound(vid);
     }, { once: true });
+    // 캐러셀 영상: HLS가 늦게 붙어 첫 play()가 거부되던 문제 → 재생 가능 시점에 '활성 슬라이드면' 재시도.
+    if (vid.classList.contains('carousel-vid')) {
+        vid.addEventListener('canplay', () => {
+            if (vid.__wantPlay && vid.paused && !document.body.classList.contains('shorts-open')) playWithSound(vid);
+        });
+    }
     // Cloudflare Stream HLS(.m3u8): iOS 네이티브 / 그 외 hls.js. 일반 mp4는 src.
     if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
     else { vid.setAttribute('src', vid.dataset.src); try { vid.load(); } catch (e) {} }
@@ -210,6 +216,7 @@ function syncCarouselVideos() {
             const v = s.querySelector('video.carousel-vid');
             if (!v) return;
             const active = st && st.idx === i && vis > 0.5 && !shortsOpen;
+            v.__wantPlay = active;   // canplay 재시도용(HLS 늦게 붙어도 준비되면 재생)
             if (active) { ensureVideoSrc(v); if (v.paused) playWithSound(v); }
             else if (!v.paused) { v.pause(); }
         });
