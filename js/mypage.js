@@ -382,6 +382,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 thumbnail_url,
                 card_thumb_url,
                 images,
+                media,
                 video_url
             `)
             .eq("user_id", viewUserId)
@@ -414,7 +415,7 @@ async function GALLA_mypageInit(root, spaParams) {
                 // 이미지 변환이 켜진 지금은 igCard 쪽 GALLA_thumb가 480px로 줄여 받아 무겁지 않다.
                 thumb: issue.card_thumb_url || issue.thumbnail_url || firstImg || null,
                 title: issue.title,
-                badge: issue.video_url ? "▶" : "",
+                badge: mediaBadge(issue),
                 onClick: () => openQvList(qvItems, myIdx)   // 이탈 금지 — 마이페이지 내 퀵뷰로 소비
             }));
         });
@@ -843,6 +844,17 @@ async function GALLA_mypageInit(root, spaParams) {
         });
     }
 
+    // 그리드 배지 — 인스타식: 영상=▶, 캐러셀(여러 장)=⧉, 단일 사진=무.
+    // GALLA_issueMedia로 판정(피드와 동일 규칙 — 영상+썸네일은 단일 영상으로 셈).
+    const mediaBadge = (row) => {
+        try {
+            const m = (window.GALLA_issueMedia ? window.GALLA_issueMedia(row) : []) || [];
+            if (m.length > 1) return "⧉";
+            if (m.length === 1 && m[0].type === "video") return "▶";
+        } catch (_) {}
+        return row && row.video_url ? "▶" : "";
+    };
+
     // =====================================================
     // 인스타 그리드 카드 (정사각 썸네일 + 하단 타이틀 오버레이)
     // =====================================================
@@ -916,7 +928,7 @@ async function GALLA_mypageInit(root, spaParams) {
         const issueIds = ibm.map(b => b.issue_id);
         const { data: issues } = await supabase
             .from("issues")
-            .select("id, title, thumbnail_url, video_url, images")
+            .select("id, title, thumbnail_url, video_url, images, media")
             .in("id", issueIds);
 
         const iMap = {};
@@ -933,7 +945,7 @@ async function GALLA_mypageInit(root, spaParams) {
             tabContent.appendChild(igCard({
                 thumb: i.thumbnail_url || (Array.isArray(i.images) && i.images[0]) || null,
                 title: i.title,
-                badge: i.video_url ? "▶" : "",
+                badge: mediaBadge(i),
                 onClick: () => openQvList(qvItems, myIdx)
             }));
         });
@@ -1323,8 +1335,12 @@ async function GALLA_mypageInit(root, spaParams) {
         const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
         const thumb = p => p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || "";
         // 🎠 캐러셀(미디어 2개+) = 릴스 제외 → 상세로. 단일은 릴스로.
-        const mcount = p => (Array.isArray(p.media) && p.media.length) ? p.media.length
-            : (Array.isArray(p.images) && p.images.length ? p.images.length + (p.video_url ? 1 : 0) : ((p.video_url || p.thumbnail_url) ? 1 : 0));
+        // 피드와 동일 규칙(GALLA_issueMedia) — 영상+썸네일은 단일로 셈(썸네일이 images에 섞여도).
+        const mcount = p => {
+            try { const m = window.GALLA_issueMedia ? window.GALLA_issueMedia(p) : null; if (m && m.length) return m.length; } catch (_) {}
+            return (Array.isArray(p.media) && p.media.length) ? p.media.length
+                : (Array.isArray(p.images) && p.images.length ? p.images.length + (p.video_url ? 1 : 0) : ((p.video_url || p.thumbnail_url) ? 1 : 0));
+        };
         const isCar = p => mcount(p) > 1;
         let inner;
         if (!items.length) inner = `<div class="glf-empty">아직 ${kind === "vertical" ? "⚡ 숏판" : "🎬 롱판"} 콘텐츠가 없어요.</div>`;
