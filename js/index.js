@@ -62,6 +62,8 @@ function ensureVideoSrc(vid) {
     }, { once: true });
     // 데이터가 준비된 순간, 화면에 충분히 보이면 즉시 자동재생(정지프레임=검은화면 iOS 대응).
     vid.addEventListener('loadeddata', () => {
+        // 캐러셀 영상은 syncCarouselVideos가 활성 슬라이드만 재생 → 여기선 자동재생 안 함
+        if (vid.classList.contains('carousel-vid')) return;
         const r = vid.getBoundingClientRect(), vh = window.innerHeight || 0;
         const vis = r.height ? (Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height) : 0;
         if (vis > 0.5 && vid.paused && !document.body.classList.contains('shorts-open')) playWithSound(vid);
@@ -86,11 +88,13 @@ function resumeVisibleVideo() {
     const vh = window.innerHeight || document.documentElement.clientHeight;
     let best = null, bestVis = 0;
     IDXROOT.querySelectorAll('.card-media video').forEach(v => {
+        if (v.classList.contains('carousel-vid')) return;
         const r = v.getBoundingClientRect(); if (!r.height) return;
         const ratio = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height;
         if (ratio > 0.5 && ratio > bestVis) { bestVis = ratio; best = v; }
     });
     if (best) { ensureVideoSrc(best); if (best.paused) playWithSound(best); }
+    syncCarouselVideos();
 }
 window.addEventListener('message', (e) => {
     const m = e.data;
@@ -129,6 +133,7 @@ function ensureFeedVideoFallback() {
         const vh = window.innerHeight || document.documentElement.clientHeight;
         let best = null, bestVis = 0;
         IDXROOT.querySelectorAll('.card-media video').forEach(v => {
+            if (v.classList.contains('carousel-vid')) return;   // 캐러셀 영상=syncCarouselVideos 전담
             const r = v.getBoundingClientRect();
             if (!r.height) return;
             if (r.top < vh + 700 && r.bottom > -700) ensureVideoSrc(v);        // 넉넉히 미리 버퍼(깜빡임 방지)
@@ -138,6 +143,7 @@ function ensureFeedVideoFallback() {
             if (ratio > 0.5 && ratio > bestVis) { bestVis = ratio; best = v; }
         });
         if (best && best.paused && !document.body.classList.contains('shorts-open')) playWithSound(best);
+        syncCarouselVideos();
     };
     if (!__feedVideoFallbackBound) {
         __feedVideoFallbackBound = true;
@@ -186,6 +192,28 @@ function carouselGo(issueId, dir) {
             d.style.width = idx === i ? '14px' : '5px';
         });
     }
+    syncCarouselVideos();   // 활성 슬라이드 영상만 재생/나머지 정지
+}
+
+/* 캐러셀 영상 재생 단일 제어 — 각 캐러셀에서 '현재 활성 슬라이드'가 영상이고
+   카드가 세로로 충분히 보일 때만 재생. 오프스크린(가로로 밀린) 슬라이드·비활성 카드는 정지.
+   (일반 피드 영상 sweep은 .carousel-vid를 건드리지 않음 → 이중제어/전부재생 방지) */
+function syncCarouselVideos() {
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const shortsOpen = document.body.classList.contains('shorts-open');
+    IDXROOT.querySelectorAll('.carousel-wrap').forEach(wrap => {
+        const card = wrap.closest('.card');
+        const st = carouselState[Number(card && card.dataset.id)];
+        const r = wrap.getBoundingClientRect();
+        const vis = r.height ? (Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0)) / r.height) : 0;
+        wrap.querySelectorAll('.carousel-slide').forEach((s, i) => {
+            const v = s.querySelector('video.carousel-vid');
+            if (!v) return;
+            const active = st && st.idx === i && vis > 0.5 && !shortsOpen;
+            if (active) { ensureVideoSrc(v); if (v.paused) playWithSound(v); }
+            else if (!v.paused) { v.pause(); }
+        });
+    });
 }
 
 /* 슬라이드 폭을 측정한 px로 못박음 — 모바일 사파리/크롬에서 flex-basis:100% 순환 참조로
@@ -247,11 +275,18 @@ function renderMedia(data) {
     const total = media.length;
     carouselState[data.id] = { idx: 0, total };
     const dotsHtml = media.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'on' : ''}"></div>`).join('');
-    const slidesHtml = media.map(m => {
+    const slidesHtml = media.map((m, i) => {
         if (m.type === 'video') {
-            return `<div class="carousel-slide carousel-slide--video" onclick="event.stopPropagation();GALLA_goto('issue.html?id=${data.id}')">
-                ${m.thumb ? `<img src="${T(m.thumb)}" loading="eager" decoding="async">` : `<div class="cs-vidph">🎬</div>`}
-                <span class="carousel-play">▶</span>
+            const vid = `cvid-${data.id}-${i}`, mid = `cmute-${data.id}-${i}`;
+            // 활성 슬라이드만 인라인 자동재생(단일영상 카드와 동일 감성). 탭=릴스 풀스크린.
+            return `<div class="carousel-slide carousel-slide--video"
+                 onclick="event.stopPropagation();openReels(${data.id})">
+                <video id="${vid}" class="carousel-vid vp-fade" data-src="${m.url}"
+                    ${m.thumb ? `poster="${T(m.thumb)}"` : ''}
+                    loop playsinline webkit-playsinline muted preload="none"></video>
+                <button class="vid-mute" id="${mid}"
+                        onclick="event.stopPropagation();toggleFeedMute('${vid}','${mid}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
+                <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
             </div>`;
         }
         return `<div class="carousel-slide"><img src="${T(m.url)}" loading="eager" decoding="async"></div>`;
@@ -780,6 +815,7 @@ function attachEvents() {
 
     // 비디오 자동재생 옵저버 등록
     IDXROOT.querySelectorAll('.card-media video').forEach(v => {
+        if (v.classList.contains('carousel-vid')) return;   // 캐러셀 영상=활성 슬라이드만 syncCarouselVideos가 버퍼
         // 재생/정지는 sweep(ensureFeedVideoFallback) 단일 제어 → 관찰자와 경쟁 제거(깜빡임 방지).
         videoPreloader.observe(v);   // 미리 버퍼링만
         v.addEventListener('loadedmetadata', () => {
