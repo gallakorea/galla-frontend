@@ -159,8 +159,8 @@ function initWritePage(ctx) {
       mediaInput.setAttribute('accept', 'video/*');
       mediaInput.removeAttribute('multiple');
       if (dropTitle) dropTitle.textContent = '영상 올리기';
-      if (dropSub) dropSub.textContent = '영상 1개 · 표지(썸네일)는 따로 고를 수 있어요';
-      if (mediaHint) mediaHint.textContent = '영상 1개 + 표지';
+      if (dropSub) dropSub.textContent = '영상 1개 · 썸네일은 따로 고를 수 있어요';
+      if (mediaHint) mediaHint.textContent = '영상 1개 + 썸네일';
     } else {
       mediaInput.setAttribute('accept', 'image/*,video/*');
       mediaInput.setAttribute('multiple', '');
@@ -195,31 +195,49 @@ function initWritePage(ctx) {
 
   // 미리보기 스트립 — 사진·영상 섞임, 각 항목 삭제(✕) + 추가(＋), 첫 항목 '표지'
   function renderMedia() {
+    // 🎬 영상 모드 — 비어있어도 항상 '영상 슬롯 / 표지 슬롯' 두 개를 표시(각각 독립 선택).
+    if (mediaMode === 'video') {
+      if (mediaBtn) mediaBtn.style.display = 'none';
+      const v = mediaItems[0];
+      const hasVid = !!(v && v.kind === 'video');
+      const poster = hasVid ? (v.poster || v.thumb || '') : '';
+      const custom = !!(hasVid && v.coverCustom && v.thumb);
+      mediaPreview.innerHTML = `
+        <div class="vmode-slots">
+          <div class="vmode-slot">
+            <div class="vmode-slot-h">🎬 영상 <em class="req">필수</em></div>
+            ${hasVid
+              ? `<div class="vmode-thumb is-video${v.up ? ' uploading' : ''}">
+                   ${poster ? `<img src="${poster}">` : `<div class="mi-vidph">🎬</div>`}
+                   <span class="multi-img-play">▶</span>
+                   ${v.up ? '<span class="multi-img-up"><i></i></span>' : ''}
+                   <button type="button" class="vmode-del" data-del="video" aria-label="영상 삭제">✕</button>
+                 </div>`
+              : `<button type="button" class="vmode-pick" id="pickVideo"><span class="vmode-plus">＋</span><span>영상 선택</span></button>`}
+          </div>
+          <div class="vmode-slot">
+            <div class="vmode-slot-h">🖼 썸네일 <em class="opt">선택</em></div>
+            ${custom
+              ? `<div class="vmode-thumb${v.coverUp ? ' uploading' : ''}">
+                   <img src="${v.thumb}">
+                   ${v.coverUp ? '<span class="multi-img-up"><i></i></span>' : ''}
+                   <button type="button" class="vmode-del" data-del="cover" aria-label="썸네일 삭제">✕</button>
+                 </div>`
+              : `<button type="button" class="vmode-pick vmode-pick--cover" id="pickCover" ${hasVid ? '' : 'disabled'}><span class="vmode-plus">＋</span><span>썸네일 선택</span><em>안 고르면 첫 장면</em></button>`}
+          </div>
+        </div>
+        <div class="guide-text">영상 필수 · 썸네일은 선택(안 고르면 영상 첫 장면) · 피드에선 <b>영상만</b> 재생</div>
+      `;
+      return;
+    }
+
+    // 캐러셀 모드 — 비어있으면 드롭존
     if (!mediaItems.length) {
       mediaPreview.innerHTML = '';
       if (mediaBtn) mediaBtn.style.display = '';
       return;
     }
     if (mediaBtn) mediaBtn.style.display = 'none';
-
-    // 🎬 영상 모드 — 영상 1개 + 표지(썸네일). 표지는 별도 슬라이드가 아니라 영상 포스터.
-    if (mediaMode === 'video') {
-      const v = mediaItems[0] || {};
-      mediaPreview.innerHTML = `
-        <div class="multi-img-strip vmode-strip">
-          <div class="multi-img-item is-video${v.up ? ' uploading' : ''}">
-            ${v.thumb ? `<img src="${v.thumb}">` : `<div class="mi-vidph">🎬</div>`}
-            <span class="multi-img-play">▶</span>
-            ${v.up ? '<span class="multi-img-up"><i></i></span>' : ''}
-            <span class="multi-img-badge">표지</span>
-            <button type="button" class="multi-img-del" data-idx="0" aria-label="삭제">✕</button>
-          </div>
-        </div>
-        <button type="button" class="vmode-cover-btn" id="pickCover">🖼 표지(썸네일) 바꾸기</button>
-        <div class="guide-text">영상 1개 · 표지 안 고르면 영상 첫 장면이 표지 · 피드에선 <b>영상만</b> 재생</div>
-      `;
-      return;
-    }
 
     mediaPreview.innerHTML = `
       <div class="multi-img-strip">
@@ -269,7 +287,12 @@ function initWritePage(ctx) {
     it.up = true; renderMedia();
     try {
       const up = window.GALLA_UPLOAD_VIDEO || window.GALLA_UPLOAD_VIDEO_STREAM;
-      if (up) { const out = await up(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; }
+      if (up) {
+        const out = await up(it.file);
+        it.url = out.url || out.hls;
+        it.poster = out.thumbnail || it.poster || null;   // 영상 자동 프레임(영상 슬롯 표시 + 기본 표지)
+        if (!it.coverCustom) it.thumb = it.poster;         // 커스텀 표지 없으면 자동 프레임을 표지로
+      }
     } catch (err) { console.warn('[write] 영상 업로드 실패 — 발행 때 재시도', err); }
     finally { it.up = false; renderMedia(); persistMedia(); }
   }
@@ -340,7 +363,7 @@ function initWritePage(ctx) {
     coverInput.value = '';
     const v = mediaItems[0];
     if (!f || !v || v.kind !== 'video') return;
-    v.up = true; renderMedia();
+    v.coverCustom = true; v.coverUp = true; renderMedia();
     try {
       let file = f;
       if (typeof window.GALLA_PROCESS_IMAGES === 'function') {
@@ -348,13 +371,22 @@ function initWritePage(ctx) {
         if (pr && pr[0]) file = pr[0];
       }
       const url = await window.GALLA_UPLOAD_MEDIA(file, 'image');
-      if (url) v.thumb = url;
-    } catch (err) { console.warn('[write] 표지 업로드 실패', err); }
-    finally { v.up = false; renderMedia(); persistMedia(); }
+      if (url) v.thumb = url; else v.coverCustom = false;
+    } catch (err) { console.warn('[write] 표지 업로드 실패', err); v.coverCustom = false; }
+    finally { v.coverUp = false; renderMedia(); persistMedia(); }
   });
 
   // 스트립 내 삭제(✕) / 순서이동(‹ ›) / 추가(＋) 위임
   mediaPreview.addEventListener('click', e => {
+    // 🎬 영상 모드 두 슬롯
+    if (e.target.closest('#pickVideo')) { mediaInput.value = ''; mediaInput.click(); return; }
+    const vdel = e.target.closest('.vmode-del');
+    if (vdel) {
+      const v = mediaItems[0];
+      if (vdel.dataset.del === 'cover') { if (v) { v.coverCustom = false; v.thumb = v.poster || null; } }
+      else { mediaItems = []; }           // 영상 삭제 → 전체 리셋
+      renderMedia(); persistMedia(); return;
+    }
     const del = e.target.closest('.multi-img-del');
     if (del) { mediaItems.splice(Number(del.dataset.idx), 1); renderMedia(); persistMedia(); return; }
     const mv = e.target.closest('.mim-mv');

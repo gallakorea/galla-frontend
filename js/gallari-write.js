@@ -69,7 +69,7 @@
       if (mode === 'video') {
         mediaInput.setAttribute('accept', 'video/*'); mediaInput.removeAttribute('multiple');
         if (glrDropTitle) glrDropTitle.textContent = '영상 올리기';
-        if (glrDropSub) glrDropSub.textContent = '영상 1개 · 표지(썸네일)는 따로 고를 수 있어요';
+        if (glrDropSub) glrDropSub.textContent = '영상 1개 · 썸네일은 따로 고를 수 있어요';
       } else {
         mediaInput.setAttribute('accept', 'image/*,video/*'); mediaInput.setAttribute('multiple', '');
         if (glrDropTitle) glrDropTitle.textContent = '사진·영상 올리기';
@@ -81,32 +81,52 @@
     if (glrCover) glrCover.addEventListener('change', async e => {
       const f = e.target.files && e.target.files[0]; glrCover.value = '';
       const v = vItems[0]; if (!f || !v || v.kind !== 'video') return;
-      v.up = true; renderVMedia();
+      v.coverCustom = true; v.coverUp = true; renderVMedia();
       try {
         let file = f;
         if (window.GALLA_PROCESS_IMAGES) { const pr = await window.GALLA_PROCESS_IMAGES([f]); if (pr && pr[0]) file = pr[0]; }
-        if (window.GALLA_UPLOAD_MEDIA) v.thumb = await window.GALLA_UPLOAD_MEDIA(file, 'image');
-      } catch (err) { console.warn('[갈라리] 표지 업로드 실패', err); }
-      finally { v.up = false; renderVMedia(); }
+        if (window.GALLA_UPLOAD_MEDIA) { const u = await window.GALLA_UPLOAD_MEDIA(file, 'image'); if (u) v.thumb = u; else v.coverCustom = false; }
+      } catch (err) { console.warn('[갈라리] 썸네일 업로드 실패', err); v.coverCustom = false; }
+      finally { v.coverUp = false; renderVMedia(); }
     });
 
     function vSrc(it) { return it.kind === 'video' ? (it.thumb || '') : (it.url || (it.file ? URL.createObjectURL(it.file) : '')); }
     function renderVMedia() {
-      if (!vItems.length) { mediaPrev.innerHTML = ''; if (mediaBtn) mediaBtn.style.display = ''; return; }
-      if (mediaBtn) mediaBtn.style.display = 'none';
-      // 🎬 영상 모드 — 영상 1개 + 표지(=영상 thumb, 별도 슬라이드 아님)
+      // 🎬 영상 모드 — 비어있어도 항상 '영상 슬롯 / 썸네일 슬롯' 두 개(각각 독립 선택)
       if (vMode === 'video') {
-        const v = vItems[0] || {};
-        mediaPrev.innerHTML = `<div class="multi-img-strip vmode-strip">
-          <div class="multi-img-item is-video${v.up ? ' uploading' : ''}">
-            ${v.thumb ? `<img src="${v.thumb}">` : `<div class="mi-vidph">🎬</div>`}<span class="multi-img-play">▶</span>
-            ${v.up ? '<span class="multi-img-up"><i></i></span>' : ''}<span class="multi-img-badge">표지</span>
-            <button type="button" class="multi-img-del" data-idx="0" aria-label="삭제">✕</button>
-          </div></div>
-          <button type="button" class="vmode-cover-btn" id="glrPickCover">🖼 표지(썸네일) 바꾸기</button>
-          <div class="guide-text">영상 1개 · 표지 안 고르면 첫 장면이 표지 · 피드에선 <b>영상만</b> 재생</div>`;
+        if (mediaBtn) mediaBtn.style.display = 'none';
+        const v = vItems[0];
+        const hasVid = !!(v && v.kind === 'video');
+        const poster = hasVid ? (v.poster || v.thumb || '') : '';
+        const custom = !!(hasVid && v.coverCustom && v.thumb);
+        mediaPrev.innerHTML = `
+          <div class="vmode-slots">
+            <div class="vmode-slot">
+              <div class="vmode-slot-h">🎬 영상 <em class="req">필수</em></div>
+              ${hasVid
+                ? `<div class="vmode-thumb is-video${v.up ? ' uploading' : ''}">
+                     ${poster ? `<img src="${poster}">` : `<div class="mi-vidph">🎬</div>`}<span class="multi-img-play">▶</span>
+                     ${v.up ? '<span class="multi-img-up"><i></i></span>' : ''}
+                     <button type="button" class="vmode-del" data-del="video" aria-label="영상 삭제">✕</button>
+                   </div>`
+                : `<button type="button" class="vmode-pick" id="glrPickVideo"><span class="vmode-plus">＋</span><span>영상 선택</span></button>`}
+            </div>
+            <div class="vmode-slot">
+              <div class="vmode-slot-h">🖼 썸네일 <em class="opt">선택</em></div>
+              ${custom
+                ? `<div class="vmode-thumb${v.coverUp ? ' uploading' : ''}">
+                     <img src="${v.thumb}">
+                     ${v.coverUp ? '<span class="multi-img-up"><i></i></span>' : ''}
+                     <button type="button" class="vmode-del" data-del="cover" aria-label="썸네일 삭제">✕</button>
+                   </div>`
+                : `<button type="button" class="vmode-pick vmode-pick--cover" id="glrPickCover" ${hasVid ? '' : 'disabled'}><span class="vmode-plus">＋</span><span>썸네일 선택</span><em>안 고르면 첫 장면</em></button>`}
+            </div>
+          </div>
+          <div class="guide-text">영상 필수 · 썸네일은 선택(안 고르면 영상 첫 장면) · 피드에선 <b>영상만</b> 재생</div>`;
         return;
       }
+      if (!vItems.length) { mediaPrev.innerHTML = ''; if (mediaBtn) mediaBtn.style.display = ''; return; }
+      if (mediaBtn) mediaBtn.style.display = 'none';
       mediaPrev.innerHTML = `<div class="multi-img-strip">${vItems.map((it, i) => `
         <div class="multi-img-item${it.up ? ' uploading' : ''}${it.kind === 'video' ? ' is-video' : ''}">
           ${it.kind === 'video' ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="mi-vidph">🎬</div>`) + `<span class="multi-img-play">▶</span>` : `<img src="${vSrc(it)}">`}
@@ -131,7 +151,15 @@
     async function uploadVVideo(it) {
       if (!it.file || it.url) return;
       it.up = true; renderVMedia();
-      try { const up = window.GALLA_UPLOAD_VIDEO || window.GALLA_UPLOAD_VIDEO_STREAM; if (up) { const out = await up(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; } }
+      try {
+        const up = window.GALLA_UPLOAD_VIDEO || window.GALLA_UPLOAD_VIDEO_STREAM;
+        if (up) {
+          const out = await up(it.file);
+          it.url = out.url || out.hls;
+          it.poster = out.thumbnail || it.poster || null;
+          if (!it.coverCustom) it.thumb = it.poster;
+        }
+      }
       catch (e) { console.warn('[갈라리] 영상 업로드 실패', e); }
       finally { it.up = false; renderVMedia(); }
     }
@@ -177,6 +205,14 @@
         const i = Number(mv.dataset.mv), j = i + Number(mv.dataset.dir);
         if (j >= 0 && j < vItems.length) { const t = vItems[i]; vItems[i] = vItems[j]; vItems[j] = t; renderVMedia(); }
         return;
+      }
+      if (e.target.closest('#glrPickVideo')) { mediaInput.value = ''; mediaInput.click(); return; }
+      const vdel = e.target.closest('.vmode-del');
+      if (vdel) {
+        const v = vItems[0];
+        if (vdel.dataset.del === 'cover') { if (v) { v.coverCustom = false; v.thumb = v.poster || null; } }
+        else { vItems = []; }
+        renderVMedia(); return;
       }
       if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); return; }
       if (e.target.closest('#glrPickCover')) { if (glrCover) { glrCover.value = ''; glrCover.click(); } return; }

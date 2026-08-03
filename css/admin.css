@@ -263,6 +263,26 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-mode-tabs{ display:flex; gap:6px; margin:6px 0 8px; background:rgba(255,255,255,.04); padding:4px; border-radius:10px; }
 .ad-mode-tabs .ad-mm{ flex:1; padding:8px; border:none; border-radius:8px; cursor:pointer; background:transparent; color:#8a93a6; font-size:12.5px; font-weight:800; }
 .ad-mode-tabs .ad-mm.on{ background:#3d6bff; color:#fff; }
+/* 🎬 영상 모드 두 슬롯(영상/썸네일) */
+.vmode-slots{ display:flex; gap:10px; }
+.vmode-slot{ flex:1; min-width:0; }
+.vmode-slot-h{ font-size:12px; font-weight:800; color:#cfd3dc; margin-bottom:6px; display:flex; align-items:center; gap:5px; }
+.vmode-slot-h em{ font-style:normal; font-size:10px; font-weight:800; padding:1px 6px; border-radius:999px; }
+.vmode-slot-h em.req{ background:rgba(255,86,86,.16); color:#ff7a7a; }
+.vmode-slot-h em.opt{ background:rgba(255,255,255,.08); color:#8a93a6; }
+.vmode-pick{ width:100%; aspect-ratio:4/5; border-radius:11px; cursor:pointer; background:rgba(255,255,255,.03);
+  border:1.5px dashed rgba(255,255,255,.18); display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; color:#fff; font-size:12.5px; font-weight:800; }
+.vmode-pick:hover{ border-color:#3d6bff; background:rgba(61,107,255,.06); }
+.vmode-pick[disabled]{ opacity:.45; cursor:not-allowed; }
+.vmode-pick .vmode-plus{ font-size:24px; line-height:1; color:#3d6bff; }
+.vmode-pick em{ font-style:normal; font-size:10px; font-weight:700; color:#8a93a6; }
+.vmode-thumb{ position:relative; width:100%; aspect-ratio:4/5; border-radius:11px; overflow:hidden; background:#16181d; border:1px solid rgba(255,255,255,.1); }
+.vmode-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+.vmode-thumb .ad-mvph{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:30px; }
+.vmode-thumb .ad-mplay{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:38px; height:38px; border-radius:50%; background:rgba(0,0,0,.5); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; pointer-events:none; }
+.vmode-thumb.uploading{ opacity:.6; }
+.vmode-del{ position:absolute; top:6px; right:6px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(0,0,0,.6); color:#fff; font-size:11px; cursor:pointer; }
 .ad-mstrip{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
 .ad-mstrip:empty{ margin-top:0; }
 .ad-mitem{ position:relative; width:78px; height:98px; border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,.14); background:#16181d; flex:0 0 auto; }

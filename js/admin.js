@@ -628,7 +628,7 @@
       <label>🖼 미디어 <span style="opacity:.6;font-weight:400">— 업로드 방식을 고르세요</span></label>
       <div class="ad-mode-tabs" id="i-mode-tabs">
         <button type="button" class="ad-mm on" data-mode="carousel">🖼 여러 장 · 캐러셀</button>
-        <button type="button" class="ad-mm" data-mode="video">🎬 영상 + 표지</button>
+        <button type="button" class="ad-mm" data-mode="video">🎬 영상 + 썸네일</button>
       </div>
       <input id="i-media" type="file" accept="image/*,video/*" multiple class="ad-file">
       <input id="i-cover" type="file" accept="image/*" class="ad-file" style="display:none">
@@ -674,30 +674,41 @@
       }
       iMode = mode;
       iModeTabs.querySelectorAll(".ad-mm").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
-      if (mode === "video") { iInput.setAttribute("accept", "video/*"); iInput.removeAttribute("multiple"); }
-      else { iInput.setAttribute("accept", "image/*,video/*"); iInput.setAttribute("multiple", ""); }
+      if (mode === "video") { iInput.setAttribute("accept", "video/*"); iInput.removeAttribute("multiple"); iInput.style.display = "none"; }
+      else { iInput.setAttribute("accept", "image/*,video/*"); iInput.setAttribute("multiple", ""); iInput.style.display = ""; }
       renderIMedia();
     };
     if (iModeTabs) iModeTabs.onclick = e => { const b = e.target.closest(".ad-mm"); if (b) setIMode(b.dataset.mode); };
     if (iCover) iCover.onchange = async () => {
       const f = iCover.files && iCover.files[0]; iCover.value = "";
       const v = iMedia[0]; if (!f || !v || v.kind !== "video") return;
-      v.up = true; renderIMedia();
-      try { v.thumb = await window.GALLA_UPLOAD_MEDIA(f, "image"); } catch (e) {}
-      finally { v.up = false; renderIMedia(); }
+      v.coverCustom = true; v.coverUp = true; renderIMedia();
+      try { const u = await window.GALLA_UPLOAD_MEDIA(f, "image"); if (u) v.thumb = u; else v.coverCustom = false; } catch (e) { v.coverCustom = false; }
+      finally { v.coverUp = false; renderIMedia(); }
     };
     const renderIMedia = () => {
-      // 🎬 영상 모드 — 영상 1개 + 표지(=영상 thumb, 별도 슬라이드 아님)
+      // 🎬 영상 모드 — 영상 슬롯 / 썸네일 슬롯 '따로' 두 개(각각 독립 선택)
       if (iMode === "video") {
         const v = iMedia[0];
-        iStrip.innerHTML = v ? `
-          <div class="ad-mstrip-row"><div class="ad-mitem${v.up ? " up" : ""}" data-i="0">
-            ${v.thumb ? `<img src="${v.thumb}">` : `<div class="ad-mvph">🎬</div>`}<span class="ad-mplay">▶</span>
-            ${v.up ? '<span class="ad-mup"></span>' : ""}<span class="ad-mbadge">표지</span>
-            <button type="button" class="ad-mdel" data-i="0">✕</button>
-          </div></div>
-          <button type="button" class="ad-btn ghost" id="i-pick-cover" style="margin-top:8px">🖼 표지(썸네일) 바꾸기</button>
-          <div class="ad-mnote">영상 1개 · 표지 안 고르면 첫 장면이 표지 · 피드에선 영상만 재생</div>` : "";
+        const hasVid = !!(v && v.kind === "video");
+        const poster = hasVid ? (v.poster || v.thumb || "") : "";
+        const custom = !!(hasVid && v.coverCustom && v.thumb);
+        iStrip.innerHTML = `
+          <div class="vmode-slots">
+            <div class="vmode-slot">
+              <div class="vmode-slot-h">🎬 영상 <em class="req">필수</em></div>
+              ${hasVid
+                ? `<div class="vmode-thumb is-video${v.up ? " uploading" : ""}">${poster ? `<img src="${poster}">` : `<div class="ad-mvph">🎬</div>`}<span class="ad-mplay">▶</span>${v.up ? '<span class="ad-mup"></span>' : ""}<button type="button" class="vmode-del" data-del="video">✕</button></div>`
+                : `<button type="button" class="vmode-pick" id="i-pick-video"><span class="vmode-plus">＋</span><span>영상 선택</span></button>`}
+            </div>
+            <div class="vmode-slot">
+              <div class="vmode-slot-h">🖼 썸네일 <em class="opt">선택</em></div>
+              ${custom
+                ? `<div class="vmode-thumb${v.coverUp ? " uploading" : ""}"><img src="${v.thumb}">${v.coverUp ? '<span class="ad-mup"></span>' : ""}<button type="button" class="vmode-del" data-del="cover">✕</button></div>`
+                : `<button type="button" class="vmode-pick vmode-pick--cover" id="i-pick-cover" ${hasVid ? "" : "disabled"}><span class="vmode-plus">＋</span><span>썸네일 선택</span><em>안 고르면 첫 장면</em></button>`}
+            </div>
+          </div>
+          <div class="ad-mnote">영상 필수 · 썸네일은 선택(안 고르면 첫 장면) · 피드에선 영상만 재생</div>`;
         return;
       }
       iStrip.innerHTML = iMedia.map((it, i) => `
@@ -710,7 +721,7 @@
         </div>`).join("") + (iMedia.length ? `<div class="ad-mnote">${iMedia.length}개 · 첫 항목이 표지 · ‹ ›로 순서 변경${iMedia.length > 1 ? " · 캐러셀" : ""}</div>` : "");
     };
     const upIImg = async (it) => { if (!it.file || it.url) return; it.up = true; try { it.url = await window.GALLA_UPLOAD_MEDIA(it.file, "image"); } catch (e) {} finally { it.up = false; renderIMedia(); } };
-    const upIVid = async (it) => { if (!it.file || it.url) return; it.up = true; renderIMedia(); try { const out = await window.GALLA_UPLOAD_VIDEO(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; } catch (e) {} finally { it.up = false; renderIMedia(); } };
+    const upIVid = async (it) => { if (!it.file || it.url) return; it.up = true; renderIMedia(); try { const out = await window.GALLA_UPLOAD_VIDEO(it.file); it.url = out.url || out.hls; it.poster = out.thumbnail || it.poster || null; if (!it.coverCustom) it.thumb = it.poster; } catch (e) {} finally { it.up = false; renderIMedia(); } };
     iInput.onchange = () => {
       const files = [...(iInput.files || [])];
       iInput.value = "";
@@ -728,7 +739,15 @@
       added.forEach(it => it.kind === "video" ? upIVid(it) : upIImg(it));
     };
     iStrip.onclick = e => {
+      if (e.target.closest("#i-pick-video")) { iInput.value = ""; iInput.click(); return; }
       if (e.target.closest("#i-pick-cover")) { if (iCover) { iCover.value = ""; iCover.click(); } return; }
+      const vdel = e.target.closest(".vmode-del");
+      if (vdel) {
+        const v = iMedia[0];
+        if (vdel.dataset.del === "cover") { if (v) { v.coverCustom = false; v.thumb = v.poster || null; } }
+        else { iMedia = []; }
+        renderIMedia(); return;
+      }
       const d = e.target.closest(".ad-mdel"); if (d) { iMedia.splice(Number(d.dataset.i), 1); renderIMedia(); return; }
       const mv = e.target.closest(".ad-mmv");
       if (mv) { const i = Number(mv.dataset.mv), j = i + Number(mv.dataset.dir); if (j >= 0 && j < iMedia.length) { const t = iMedia[i]; iMedia[i] = iMedia[j]; iMedia[j] = t; renderIMedia(); } }
