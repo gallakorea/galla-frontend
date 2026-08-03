@@ -437,10 +437,14 @@
     setKind('vertical');
 
     // 진입 형식 프리셋 — 숏판(vertical)/롱판(horizontal). SPA params 또는 URL ?kind=
+    // ⚠️ 이미 진입 단계(글쓰기 허브)에서 숏판/롱판이 분리됨 → kind가 지정돼 들어오면 형태 토글은 숨긴다(중복 제거).
     try {
       let wantKind = params && params.kind;
       if (!wantKind) { try { wantKind = new URLSearchParams(location.search).get('kind'); } catch (_) {} }
       if (wantKind === 'horizontal') setKind('horizontal');
+      if (wantKind === 'vertical' || wantKind === 'horizontal') {
+        const seg = root.querySelector('.glr-kind'); if (seg) seg.style.display = 'none';
+      }
     } catch (_) {}
 
     /* 🤖 갈비스 초안 프리필 + 🛠 작업모드 브리지 — 갈비스 도킹 미니챗이 갈라리 폼(캡션·태그·제목)을 실시간 수정.
