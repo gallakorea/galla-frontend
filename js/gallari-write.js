@@ -59,11 +59,15 @@
         <div class="multi-img-item${it.up ? ' uploading' : ''}${it.kind === 'video' ? ' is-video' : ''}">
           ${it.kind === 'video' ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="mi-vidph">🎬</div>`) + `<span class="multi-img-play">▶</span>` : `<img src="${vSrc(it)}">`}
           ${it.up ? '<span class="multi-img-up"><i></i></span>' : ''}
-          ${i === 0 ? '<span class="multi-img-badge">표지</span>' : ''}
+          ${i === 0 ? '<span class="multi-img-badge">표지</span>' : '<span class="multi-img-num">' + (i + 1) + '</span>'}
           <button type="button" class="multi-img-del" data-idx="${i}" aria-label="삭제">✕</button>
+          ${vItems.length > 1 ? `<div class="multi-img-move">
+            <button type="button" class="mim-mv" data-mv="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="앞으로">‹</button>
+            <button type="button" class="mim-mv" data-mv="${i}" data-dir="1" ${i === vItems.length - 1 ? 'disabled' : ''} aria-label="뒤로">›</button>
+          </div>` : ''}
         </div>`).join('')}
         ${vItems.length < MAX_IMAGES ? '<button type="button" class="multi-img-add" aria-label="추가">＋</button>' : ''}
-      </div><div class="guide-text">${vItems.length}/${MAX_IMAGES} · 첫 항목이 표지${vItems.length > 1 ? ' · 캐러셀로 노출' : ''}</div>`;
+      </div><div class="guide-text">${vItems.length}/${MAX_IMAGES} · 첫 항목이 표지 · ‹ ›로 순서 변경${vItems.length > 1 ? ' · 캐러셀로 노출' : ''}</div>`;
     }
     async function uploadVImage(it) {
       if (!it.file || it.url) return;
@@ -106,6 +110,12 @@
     mediaPrev.addEventListener('click', e => {
       const del = e.target.closest('.multi-img-del');
       if (del) { vItems.splice(Number(del.dataset.idx), 1); renderVMedia(); return; }
+      const mv = e.target.closest('.mim-mv');
+      if (mv) {
+        const i = Number(mv.dataset.mv), j = i + Number(mv.dataset.dir);
+        if (j >= 0 && j < vItems.length) { const t = vItems[i]; vItems[i] = vItems[j]; vItems[j] = t; renderVMedia(); }
+        return;
+      }
       if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); }
     });
 

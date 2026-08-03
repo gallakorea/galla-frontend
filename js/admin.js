@@ -665,9 +665,10 @@
         <div class="ad-mitem${it.up ? " up" : ""}" data-i="${i}">
           ${it.kind === "video" ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="ad-mvph">🎬</div>`) + `<span class="ad-mplay">▶</span>` : `<img src="${it.url || (it.file ? URL.createObjectURL(it.file) : "")}">`}
           ${it.up ? '<span class="ad-mup"></span>' : ""}
-          ${i === 0 ? '<span class="ad-mbadge">표지</span>' : ""}
+          ${i === 0 ? '<span class="ad-mbadge">표지</span>' : '<span class="ad-mnum">' + (i + 1) + '</span>'}
           <button type="button" class="ad-mdel" data-i="${i}">✕</button>
-        </div>`).join("") + (iMedia.length ? `<div class="ad-mnote">${iMedia.length}개 · 첫 항목이 표지${iMedia.length > 1 ? " · 캐러셀" : ""}</div>` : "");
+          ${iMedia.length > 1 ? `<div class="ad-mmove"><button type="button" class="ad-mmv" data-mv="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""}>‹</button><button type="button" class="ad-mmv" data-mv="${i}" data-dir="1" ${i === iMedia.length - 1 ? "disabled" : ""}>›</button></div>` : ""}
+        </div>`).join("") + (iMedia.length ? `<div class="ad-mnote">${iMedia.length}개 · 첫 항목이 표지 · ‹ ›로 순서 변경${iMedia.length > 1 ? " · 캐러셀" : ""}</div>` : "");
     };
     const upIImg = async (it) => { if (!it.file || it.url) return; it.up = true; try { it.url = await window.GALLA_UPLOAD_MEDIA(it.file, "image"); } catch (e) {} finally { it.up = false; renderIMedia(); } };
     const upIVid = async (it) => { if (!it.file || it.url) return; it.up = true; renderIMedia(); try { const out = await window.GALLA_UPLOAD_VIDEO(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; } catch (e) {} finally { it.up = false; renderIMedia(); } };
@@ -679,7 +680,11 @@
       added.forEach(it => it.kind === "video" ? upIVid(it) : upIImg(it));
       iInput.value = "";
     };
-    iStrip.onclick = e => { const d = e.target.closest(".ad-mdel"); if (d) { iMedia.splice(Number(d.dataset.i), 1); renderIMedia(); } };
+    iStrip.onclick = e => {
+      const d = e.target.closest(".ad-mdel"); if (d) { iMedia.splice(Number(d.dataset.i), 1); renderIMedia(); return; }
+      const mv = e.target.closest(".ad-mmv");
+      if (mv) { const i = Number(mv.dataset.mv), j = i + Number(mv.dataset.dir); if (j >= 0 && j < iMedia.length) { const t = iMedia[i]; iMedia[i] = iMedia[j]; iMedia[j] = t; renderIMedia(); } }
+    };
 
     const addLink = async () => {
       const u = $("#i-link-url").value.trim(); if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL을 입력하세요.");
