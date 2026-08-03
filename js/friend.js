@@ -378,7 +378,7 @@
     box.style.display=_sources.length?"flex":"none";
   }
   // 🗂 콘텐츠 기획안 카드 — '무엇을 만들까' 아이디어를 카드로. '만들기'→그 아이디어로 초안 요청.
-  var PLAN_TYPE={ issue:"⚔️ 이슈", plaza:"📝 광장", gallari:"🎬 갈라리", predict:"🎲 예측" };
+  var PLAN_TYPE={ issue:"⚔️ 이슈", plaza:"📝 광장", gallari:"🎬 숏판·롱판", predict:"🎲 예측" };
   function renderPlan(ideas){
     if(!ideas || !ideas.length || !logEl) return;
     var wrap=el('<div class="fr-plan"></div>');
@@ -451,6 +451,11 @@
         addMsg("a", applied ? "이 느낌 어때? 대표 이미지로 붙여놨어 — 별로면 다시 그려줄게" : "그려봤어! 맘에 들면 길게 눌러 저장해서 써 ㅋㅋ");
       } else {
         var why=(d&&d.error)||"fail";
+        if(why==="insufficient"||why==="charge_failed"){
+          addMsg("a","GP가 모자라서 못 그렸어 ㅜ 썸네일 한 장에 200 GP거든 — 충전하고 다시 가자");
+          try{ window.openShop && window.openShop(); }catch(e){}
+          return;
+        }
         addMsg("a",
           (why==="blocked_moderation"||why==="blocked_ip") ? "그건 좀 위험한 소재라 못 그려 ㅋㅋ 다른 컨셉으로 가자" :
           why==="user_daily_limit" ? "오늘 썸네일 많이 그렸다 ㅋㅋ 내일 또 그려줄게" :
@@ -503,8 +508,14 @@
         body:JSON.stringify({ op:"submit", images:images, captions:a.captions||[], music:a.music||"upbeat", ratio:a.ratio||"9:16", per:a.per||3 }) })).json();
       if(!sub || !sub.ok || !sub.id){
         clearProgress();
+        if(sub && (sub.error==="insufficient" || sub.error==="charge_failed")){
+          addMsg("a","GP가 모자라서 영상은 못 만들었어 ㅜ 자동편집 영상 한 편에 1000 GP거든 — 충전하고 다시 가자");
+          try{ window.openShop && window.openShop(); }catch(e){}
+          return;
+        }
         addMsg("a", (sub&&sub.error==="user_daily_limit") ? "오늘 영상 많이 뽑았다 ㅋㅋ 내일 또 만들어줄게" :
-          (sub&&sub.error==="no_shotstack_key") ? "영상 기능이 아직 준비 중이야 ㅜ 곧!" : "앗 영상 시작이 안 되네 ㅜ 다시 해볼까?");
+          (sub&&(sub.error==="no_shotstack_key"||sub.error==="feature_locked")) ? "자동편집 영상은 아직 준비 중이야 ㅜ 곧 열게! 대신 제목·썸네일·대본은 내가 지금 다 뽑아줄 수 있어 — 영상은 직접 찍어 올리면 돼" :
+          "앗 영상 시작이 안 되네 ㅜ 다시 해볼까?");
         return;
       }
       var url=await pollVideo(jwt, sub.id);

@@ -285,6 +285,7 @@ async function initConfirmPage(ctx) {
           thumbnail_url: updates.thumbnail_url ?? draft.thumbnail_url,
           video_url: updates.video_url ?? draft.video_url,
           images: draft.images ?? null,
+          media: draft.media ?? null,   // 🎠 혼합 캐러셀(순서 있는 사진+영상)
           card_thumb_url: draft.card_thumb_url ?? null,
           faction_a: draft.faction_a ?? null,
           faction_b: draft.faction_b ?? null,

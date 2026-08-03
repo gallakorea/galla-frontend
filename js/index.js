@@ -215,17 +215,22 @@ let __carouselResizeBound = false;
  * 미디어 렌더러
  * =========================== */
 function renderMedia(data) {
-    // 영상 — iOS 인라인 자동재생: src를 처음부터 넣고 preload=metadata로 첫 프레임 표시.
-    if (data.video_url) {
+    const T = (u, w) => (window.GALLA_thumb ? window.GALLA_thumb(u, w || 1080) : u);
+    const media = (window.GALLA_issueMedia ? window.GALLA_issueMedia(data) : []) || [];
+
+    if (!media.length) {
+        return `<div class="card-media"><span class="card-media-empty">이미지 없음</span></div>`;
+    }
+
+    // 단일 영상 — 기존 인라인 자동재생 카드 그대로(회귀 방지)
+    if (media.length === 1 && media[0].type === 'video') {
+        const m = media[0];
         return `
         <div class="card-media card-media--video"
              onclick="event.stopPropagation();openReels(${data.id})">
-            <video
-                id="vid-${data.id}"
-                class="vp-fade"
-                data-src="${data.video_url}"
-                autoplay loop playsinline webkit-playsinline muted preload="none">
-            </video>
+            <video id="vid-${data.id}" class="vp-fade" data-src="${m.url}"
+                ${m.thumb ? `poster="${T(m.thumb)}"` : ''}
+                autoplay loop playsinline webkit-playsinline muted preload="none"></video>
             <div class="vid-dur" id="dur-${data.id}">-:--</div>
             <button class="vid-mute" id="mute-${data.id}"
                     onclick="event.stopPropagation();toggleFeedMute('vid-${data.id}','mute-${data.id}')">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
@@ -233,43 +238,35 @@ function renderMedia(data) {
         </div>`;
     }
 
-    // 사진 캐러셀
-    if (data.images && data.images.length > 0) {
-        const imgs = data.images;
-        const total = imgs.length;
-        carouselState[data.id] = { idx: 0, total };
-        const dotsHtml = imgs.map((_, i) =>
-            `<div class="carousel-dot ${i === 0 ? 'on' : ''}"></div>`).join('');
-        // 캐러셀은 lazy 금지 — 가로 오프스크린이라 안 불러와져 넘기면 빈 슬라이드가 됨
-        // 4:5 세로 프레임에 꽉 채움(cover). 가로 사진은 업로드 때 크롭 영역을 선택하므로 이미 세로임.
-        const slidesHtml = imgs.map(url =>
-            `<div class="carousel-slide"><img src="${window.GALLA_thumb ? window.GALLA_thumb(url, 1080) : url}" loading="eager" decoding="async"></div>`).join('');
-        return `
-        <div class="card-media" onclick="event.stopPropagation()">
-            <div class="carousel-wrap">
-                <div class="carousel-slides" id="slides-${data.id}">${slidesHtml}</div>
-                ${total > 1 ? `
-                <button class="carousel-arr l" onclick="carouselGo(${data.id},-1)">‹</button>
-                <button class="carousel-arr r" onclick="carouselGo(${data.id},1)">›</button>
-                <div class="carousel-cnt" id="cnt-${data.id}">1 / ${total}</div>
-                <div class="carousel-dots" id="dots-${data.id}">${dotsHtml}</div>
-                ` : ''}
-            </div>
-        </div>`;
+    // 단일 사진
+    if (media.length === 1 && media[0].type === 'image') {
+        return `<div class="card-media"><img src="${T(media[0].url)}" loading="lazy" alt=""></div>`;
     }
 
-    // 썸네일 단일 이미지
-    if (data.thumb) {
-        return `
-        <div class="card-media">
-            <img src="${window.GALLA_thumb ? window.GALLA_thumb(data.thumb, 1080) : data.thumb}" loading="lazy" alt="">
-        </div>`;
-    }
-
-    // 없음
+    // 혼합/다중 → 캐러셀 (영상 슬라이드는 포스터+▶, 탭하면 이슈 상세에서 재생)
+    const total = media.length;
+    carouselState[data.id] = { idx: 0, total };
+    const dotsHtml = media.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'on' : ''}"></div>`).join('');
+    const slidesHtml = media.map(m => {
+        if (m.type === 'video') {
+            return `<div class="carousel-slide carousel-slide--video" onclick="event.stopPropagation();GALLA_goto('issue.html?id=${data.id}')">
+                ${m.thumb ? `<img src="${T(m.thumb)}" loading="eager" decoding="async">` : `<div class="cs-vidph">🎬</div>`}
+                <span class="carousel-play">▶</span>
+            </div>`;
+        }
+        return `<div class="carousel-slide"><img src="${T(m.url)}" loading="eager" decoding="async"></div>`;
+    }).join('');
     return `
-    <div class="card-media">
-        <span class="card-media-empty">이미지 없음</span>
+    <div class="card-media" onclick="event.stopPropagation()">
+        <div class="carousel-wrap">
+            <div class="carousel-slides" id="slides-${data.id}">${slidesHtml}</div>
+            ${total > 1 ? `
+            <button class="carousel-arr l" onclick="carouselGo(${data.id},-1)">‹</button>
+            <button class="carousel-arr r" onclick="carouselGo(${data.id},1)">›</button>
+            <div class="carousel-cnt" id="cnt-${data.id}">1 / ${total}</div>
+            <div class="carousel-dots" id="dots-${data.id}">${dotsHtml}</div>
+            ` : ''}
+        </div>
     </div>`;
 }
 
@@ -867,7 +864,7 @@ async function loadData() {
         .select(`
             id, title, one_line, category, created_at,
             pro_count, con_count, sup_pro, sup_con, view_count, like_count,
-            user_id, thumbnail_url, video_url, images,
+            user_id, thumbnail_url, video_url, images, media,
             faction_a, faction_b
         `)
         .order('created_at', { ascending: false })
@@ -913,6 +910,8 @@ async function loadData() {
         likes: row.like_count || 0,
         thumb: row.thumbnail_url,
         video_url: row.video_url,
+        media: row.media,   // 🎠 혼합 캐러셀(정규화기가 소비)
+        thumbnail_url: row.thumbnail_url,
         faction_a: row.faction_a,
         faction_b: row.faction_b,
         images: Array.isArray(row.images) && row.images.length > 0

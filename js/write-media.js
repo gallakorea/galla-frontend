@@ -33,12 +33,14 @@
     return next;
   }
   function hasAnyMedia(d) {
-    return !!(d && ((Array.isArray(d.images) && d.images.length) || d.video_url));
+    return !!(d && ((Array.isArray(d.media) && d.media.length) || (Array.isArray(d.images) && d.images.length) || d.video_url));
   }
 
   window.GALLA_WriteMedia = {
     get: read,
     hasMedia: () => hasAnyMedia(read()),
+    // 🎠 혼합 캐러셀 — 사진·영상 섞인 순서 있는 미디어. [{type:'image'|'video', url, thumb?}]
+    setMedia(arr) { write({ media: Array.isArray(arr) ? arr : [] }); },
     setImages(urls) { write({ images: Array.isArray(urls) ? urls : [] }); },
     setVideo(url, name) { write({ video_url: url || null, video_name: name || null }); },
     clearVideo() { write({ video_url: null, video_name: null }); },

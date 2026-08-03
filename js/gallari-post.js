@@ -49,7 +49,7 @@
     const ava = (u) => window.GALLA_avatarSrc ? window.GALLA_avatarSrc((u || {}).avatar_url, 96) : ((u || {}).avatar_url || (window.GALLA_DEFAULT_AVATAR || ''));
     let liked = !!myLike, likeCount = post.like_count || 0;
 
-    document.getElementById('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '갈라리') : (author?.nickname || '갈라리');
+    document.getElementById('glp-top-title').textContent = post.kind === 'horizontal' ? (post.title || '롱판') : (author?.nickname || '숏판');
 
     // ⋯ 소유자/관리자 관리 메뉴(수정·삭제) — 공용 owner-actions 재사용
     const moreBtn = document.getElementById('glp-more');
@@ -58,7 +58,7 @@
         if (!can) return;
         moreBtn.hidden = false;
         moreBtn.onclick = () => window.GALLA_openOwnerMenu({
-          table: 'posts', id: post.id, ownerId: post.user_id, label: '갈라리',
+          table: 'posts', id: post.id, ownerId: post.user_id, label: post.kind === 'horizontal' ? '롱판' : '숏판',
           editFields: post.kind === 'horizontal'
             ? [{ key: 'title', label: '제목', type: 'text', value: post.title || '' },
                { key: 'caption', label: '설명', type: 'textarea', value: post.caption || '' }]
@@ -67,7 +67,7 @@
             if (patch.title != null && post.kind === 'horizontal') {
               post.title = patch.title;
               const tEl = document.querySelector('.glp-title'); if (tEl) tEl.textContent = patch.title;
-              document.getElementById('glp-top-title').textContent = patch.title || '갈라리';
+              document.getElementById('glp-top-title').textContent = patch.title || '롱판';
             }
             if (patch.caption != null) {
               post.caption = patch.caption;
@@ -86,14 +86,20 @@
 
     // ---- 미디어 ----
     let mediaHtml = '';
-    if (post.video_url) {
-      mediaHtml = `<div class="glp-media ${post.kind}"><video src="${esc(post.video_url)}" controls playsinline ${post.kind === 'vertical' ? 'muted' : ''} preload="metadata" poster="${esc(post.thumbnail_url || '')}"></video></div>`;
-    } else if (Array.isArray(post.images) && post.images.length) {
-      if (post.images.length === 1) {
-        mediaHtml = `<div class="glp-media ${post.kind}"><img src="${esc(post.images[0])}"></div>`;
-      } else {
-        mediaHtml = `<div class="glp-carousel"><div class="glp-slides">${post.images.map(u => `<img src="${esc(u)}">`).join('')}</div>
-          <div class="glp-dots">${post.images.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div></div>`;
+    if (post.kind === 'horizontal') {
+      // 롱판 — 단일 가로영상
+      if (post.video_url) mediaHtml = `<div class="glp-media horizontal"><video src="${esc(post.video_url)}" controls playsinline preload="metadata" poster="${esc(post.thumbnail_url || '')}"></video></div>`;
+    } else {
+      // 🎠 숏판 — 혼합 캐러셀(사진+영상). 정규화기로 media[]/레거시 모두 처리.
+      const media = (window.GALLA_issueMedia ? window.GALLA_issueMedia(post) : []) || [];
+      const vSlide = (m) => `<video data-hls="${esc(m.url)}" controls playsinline muted preload="none" poster="${esc(m.thumb || '')}"></video>`;
+      if (media.length === 1) {
+        const m = media[0];
+        mediaHtml = `<div class="glp-media vertical">${m.type === 'video' ? vSlide(m) : `<img src="${esc(m.url)}">`}</div>`;
+      } else if (media.length > 1) {
+        const slides = media.map(m => m.type === 'video' ? vSlide(m) : `<img src="${esc(m.url)}">`).join('');
+        mediaHtml = `<div class="glp-carousel"><div class="glp-slides">${slides}</div>
+          <div class="glp-dots">${media.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div></div>`;
       }
     }
 
@@ -106,7 +112,7 @@
       <button class="glp-act glp-like${liked ? ' on' : ''}" id="glp-like">${HEART}<span id="glp-likec">${likeCount}</span></button>
       <button class="glp-act" id="glp-cfocus">${CHAT}<span>${post.comment_count || 0}</span></button>
       <button class="glp-act" id="glp-share">${SHARE}</button>
-      <button class="glp-act" data-galvis data-gv-type="gallari" data-gv-id="${esc(post.id)}" data-gv-title="${esc((post.caption || post.title || '갈라리 게시물').slice(0, 120))}" aria-label="갈비스와 얘기"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></button>
+      <button class="glp-act" data-galvis data-gv-type="gallari" data-gv-id="${esc(post.id)}" data-gv-title="${esc((post.caption || post.title || '게시물').slice(0, 120))}" aria-label="갈비스와 얘기"><svg class="gv-galvis" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="8.2" stroke-width="1.5" stroke-dasharray="2.3 2.2"/><circle cx="12" cy="12" r="4.7" stroke-width="1.3"/><circle cx="12" cy="12" r="1.9" fill="currentColor" stroke="none"/></svg></button>
       <button class="glp-support" id="glp-support">🎁 후원</button>
     </div>`;
 
@@ -143,6 +149,12 @@
       + (post.kind === 'horizontal' ? '<div class="glp-div"></div><div id="glp-related" class="glp-related"></div>' : '')
       + '<div class="glp-cbar"><input id="glp-cinput" placeholder="' + (me ? '댓글 달기…' : '로그인하고 댓글 달기') + '" ' + (me ? '' : 'disabled') + '><button id="glp-csend" ' + (me ? '' : 'disabled') + '>게시</button></div>';
 
+    // 🎬 영상 슬라이드 HLS 부착(Cloudflare Stream .m3u8) — 탭하면 재생(controls)
+    root.querySelectorAll('video[data-hls]').forEach(v => {
+      const src = v.getAttribute('data-hls'); if (!src) return;
+      if (window.GALLA_attachHls) window.GALLA_attachHls(v, src); else v.src = src;
+    });
+
     // 캐러셀 도트
     const slides = root.querySelector('.glp-slides');
     if (slides) {
@@ -177,8 +189,8 @@
     // 공유 — /share/post/<id> OG 엣지 렌더 링크로
     document.getElementById('glp-share').addEventListener('click', () => {
       const shareUrl = location.origin + '/share/post/' + id;
-      const text = post.title || post.caption || '갈라리 콘텐츠';
-      if (window.GALLA_share) window.GALLA_share({ url: shareUrl, title: 'GALLA 갈라리', text });
+      const text = post.title || post.caption || '콘텐츠';
+      if (window.GALLA_share) window.GALLA_share({ url: shareUrl, title: 'GALLA', text });
       else if (navigator.share) navigator.share({ title: 'GALLA', text, url: shareUrl }).catch(() => {});
       else { try { navigator.clipboard.writeText(shareUrl); } catch (_) {} (window.GALLA_toast || alert)('링크를 복사했어요'); }
     });

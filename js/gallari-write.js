@@ -9,21 +9,20 @@
   const MAX_VIDEO_SEC = 60;          // 초기 1분 제한
   const MAX_IMAGES = 10;
 
-  function initGallariWrite() {
+  function initGallariWrite(_pRoot, params) {
     const root = document.getElementById('app') || document;
     const $ = (id) => document.getElementById(id);
     const supa = () => window.supabaseClient;
 
     let KIND = 'vertical';           // 'vertical' | 'horizontal'
-    let VMODE = 'photo';             // 세로형 미디어: 'photo' | 'video'
-    let imgItems = [];               // [{file,url,up}]  (세로 사진)
-    let vVideoFile = null, vVideoUrl = null;   // 세로영상
-    let hVideoFile = null, hVideoUrl = null;   // 가로영상
+    // 🎠 숏판(세로) 혼합 미디어 — 이슈와 동일: [{kind:'image'|'video', file, url, thumb, up}] (순서=캐러셀, 첫=표지)
+    let vItems = [];
+    let hVideoFile = null, hVideoUrl = null;   // 롱판 가로영상
     let preVideoUrl = null, preVideoThumb = null;   // 🎬 갈비스가 만든 사전호스팅 영상(R2 mp4) — 업로드 없이 그대로 발행
 
     const kindTabs = root.querySelectorAll('.glr-kind-tab');
-    const mediaTabs = root.querySelectorAll('#glr-vertical-media .media-tab');
     const O = () => window.GALLA_UploadOverlay;
+    const MAX_VID_DUR = (window.GALLA_bgVideo && window.GALLA_bgVideo.MAX_DURATION) || MAX_VIDEO_SEC;
 
     /* ---------- 태그 파싱 ---------- */
     const parseTags = (v, ...texts) => {
@@ -46,60 +45,68 @@
       $('glrHint').textContent = kind === 'horizontal'
         ? '🎬 롱판 — 가로 영상(16:9, 최대 1분). 유튜브처럼 제목·설명과 함께 몰입해서 봐요.'
         : '⚡ 숏판 — 세로영상 또는 사진(최대 10장 캐러셀). 릴스처럼 훅, 진영·배틀 없이 그냥 콘텐츠예요.';
+      try { const _hd = document.querySelector('.wr-appbar-title'); if (_hd) _hd.textContent = (kind === 'horizontal' ? '롱판' : '숏판') + ' 만들기'; } catch (_) {}
     }
     kindTabs.forEach(t => t.addEventListener('click', () => setKind(t.dataset.kind)));
 
-    /* ---------- 세로형: 사진/영상 탭 ---------- */
-    function setVMode(mode) {
-      VMODE = mode;
-      mediaTabs.forEach(t => t.classList.toggle('active', t.dataset.media === mode));
-      $('glr-pane-photo').hidden = mode !== 'photo';
-      $('glr-pane-video').hidden = mode !== 'video';
-    }
-    mediaTabs.forEach(t => t.addEventListener('click', () => setVMode(t.dataset.media)));
-
-    /* ---------- 사진 (즉시 업로드 + 캐러셀 스트립) ---------- */
-    const photoBtn = $('glrPhotoBtn'), photoInput = $('glrPhoto'), photoPrev = $('glrPhotoPrev');
-    function renderPhotos() {
-      if (!imgItems.length) { photoPrev.innerHTML = ''; if (photoBtn) photoBtn.style.display = ''; return; }
-      if (photoBtn) photoBtn.style.display = 'none';
-      photoPrev.innerHTML = `<div class="multi-img-strip">${imgItems.map((it, i) => `
-        <div class="multi-img-item${it.up ? ' uploading' : ''}">
-          <img src="${it.url || (it.file ? URL.createObjectURL(it.file) : '')}">
+    /* ---------- 숏판(세로) 혼합 미디어: 사진+영상 캐러셀 (이슈와 동일 구조) ---------- */
+    const mediaBtn = $('glrMediaBtn'), mediaInput = $('glrMedia'), mediaPrev = $('glrMediaPrev');
+    function vSrc(it) { return it.kind === 'video' ? (it.thumb || '') : (it.url || (it.file ? URL.createObjectURL(it.file) : '')); }
+    function renderVMedia() {
+      if (!vItems.length) { mediaPrev.innerHTML = ''; if (mediaBtn) mediaBtn.style.display = ''; return; }
+      if (mediaBtn) mediaBtn.style.display = 'none';
+      mediaPrev.innerHTML = `<div class="multi-img-strip">${vItems.map((it, i) => `
+        <div class="multi-img-item${it.up ? ' uploading' : ''}${it.kind === 'video' ? ' is-video' : ''}">
+          ${it.kind === 'video' ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="mi-vidph">🎬</div>`) + `<span class="multi-img-play">▶</span>` : `<img src="${vSrc(it)}">`}
           ${it.up ? '<span class="multi-img-up"><i></i></span>' : ''}
-          ${i === 0 ? '<span class="multi-img-badge">대표</span>' : ''}
+          ${i === 0 ? '<span class="multi-img-badge">표지</span>' : ''}
           <button type="button" class="multi-img-del" data-idx="${i}" aria-label="삭제">✕</button>
         </div>`).join('')}
-        ${imgItems.length < MAX_IMAGES ? '<button type="button" class="multi-img-add" aria-label="추가">＋</button>' : ''}
-      </div><div class="guide-text">${imgItems.length}/${MAX_IMAGES}장 · 첫 장이 대표</div>`;
+        ${vItems.length < MAX_IMAGES ? '<button type="button" class="multi-img-add" aria-label="추가">＋</button>' : ''}
+      </div><div class="guide-text">${vItems.length}/${MAX_IMAGES} · 첫 항목이 표지${vItems.length > 1 ? ' · 캐러셀로 노출' : ''}</div>`;
     }
-    async function uploadPhoto(it) {
+    async function uploadVImage(it) {
       if (!it.file || it.url) return;
       it.up = true;
       try { if (window.GALLA_UPLOAD_MEDIA) it.url = await window.GALLA_UPLOAD_MEDIA(it.file, 'image'); }
       catch (e) { console.warn('[갈라리] 사진 업로드 실패', e); }
-      finally { it.up = false; renderPhotos(); }
+      finally { it.up = false; renderVMedia(); }
     }
-    async function addPhotos(files) {
+    async function uploadVVideo(it) {
+      if (!it.file || it.url) return;
+      it.up = true; renderVMedia();
+      try { const up = window.GALLA_UPLOAD_VIDEO || window.GALLA_UPLOAD_VIDEO_STREAM; if (up) { const out = await up(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; } }
+      catch (e) { console.warn('[갈라리] 영상 업로드 실패', e); }
+      finally { it.up = false; renderVMedia(); }
+    }
+    async function addVMedia(files) {
       files = [...(files || [])].filter(Boolean);
       if (!files.length) return;
-      const room = MAX_IMAGES - imgItems.length;
-      if (room <= 0) { alert(`사진은 최대 ${MAX_IMAGES}장이에요.`); return; }
-      files = files.slice(0, room);
-      let processed;
-      try { processed = window.GALLA_PROCESS_IMAGES ? await window.GALLA_PROCESS_IMAGES(files) : files; }
-      catch (e) { processed = files; }
-      const added = processed.map(f => ({ file: f, url: null, up: true }));
-      imgItems = imgItems.concat(added);
-      renderPhotos();
-      added.forEach(uploadPhoto);
+      let room = MAX_IMAGES - vItems.length;
+      if (room <= 0) { alert(`미디어는 최대 ${MAX_IMAGES}개예요.`); return; }
+      if (files.length > room) files = files.slice(0, room);
+      const imgFiles = files.filter(f => /^image\//.test(f.type));
+      let processed = imgFiles;
+      if (imgFiles.length) { try { processed = window.GALLA_PROCESS_IMAGES ? (await window.GALLA_PROCESS_IMAGES(imgFiles) || imgFiles) : imgFiles; } catch (e) { processed = imgFiles; } }
+      let pi = 0; const added = [];
+      for (const f of files) {
+        if (vItems.length + added.length >= MAX_IMAGES) break;
+        if (/^video\//.test(f.type)) {
+          const dur = await videoDuration(f);
+          if (dur && dur > MAX_VID_DUR + 1) { alert(`영상이 너무 길어요 (${Math.round(dur)}초) — 최대 ${MAX_VID_DUR}초까지예요.`); continue; }
+          added.push({ kind: 'video', file: f, url: null, thumb: null, up: true });
+        } else if (/^image\//.test(f.type)) {
+          added.push({ kind: 'image', file: processed[pi++] || f, url: null, thumb: null, up: true });
+        }
+      }
+      if (added.length) { vItems = vItems.concat(added); renderVMedia(); added.forEach(it => it.kind === 'video' ? uploadVVideo(it) : uploadVImage(it)); }
     }
-    photoInput.addEventListener('click', () => { photoInput.value = ''; });
-    photoInput.addEventListener('change', e => addPhotos(e.target.files));
-    photoPrev.addEventListener('click', e => {
+    mediaInput.addEventListener('click', () => { mediaInput.value = ''; });
+    mediaInput.addEventListener('change', e => addVMedia(e.target.files));
+    mediaPrev.addEventListener('click', e => {
       const del = e.target.closest('.multi-img-del');
-      if (del) { imgItems.splice(Number(del.dataset.idx), 1); renderPhotos(); return; }
-      if (e.target.closest('.multi-img-add')) { photoInput.value = ''; photoInput.click(); }
+      if (del) { vItems.splice(Number(del.dataset.idx), 1); renderVMedia(); return; }
+      if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); }
     });
 
     /* ---------- 영상 공용 (세로/가로) ---------- */
@@ -138,17 +145,8 @@
       } else { bar.textContent = '선택됨'; }
       return true;
     }
-    // 세로영상
-    const vv = $('glrVVideo'), vvBtn = $('glrVVideoBtn'), vvPrev = $('glrVVideoPrev');
-    vv.addEventListener('click', () => { vv.value = ''; });
-    vv.addEventListener('change', async e => {
-      const f = e.target.files[0]; if (!f) return;
-      window.GALLA_bgVideo && window.GALLA_bgVideo.clear();
-      const ok = await pickVideo(f, vvPrev);
-      if (ok) { vVideoFile = f; vVideoUrl = null; if (vvBtn) vvBtn.style.display = 'none'; }
-      else { vVideoFile = null; if (vvBtn) vvBtn.style.display = ''; }
-    });
-    // 가로영상
+    // (세로영상은 위 숏판 혼합 미디어에서 함께 처리 — 별도 핸들러 없음)
+    // 가로영상(롱판)
     const hv = $('glrHVideo'), hvBtn = $('glrHVideoBtn'), hvPrev = $('glrHVideoPrev');
     hv.addEventListener('click', () => { hv.value = ''; });
     hv.addEventListener('change', async e => {
@@ -173,11 +171,12 @@
       const tags = parseTags($('glrTags').value, title, caption);
 
       // 검증
-      const videoFile = KIND === 'horizontal' ? hVideoFile : (VMODE === 'video' ? vVideoFile : null);
-      const hasPhoto = KIND === 'vertical' && VMODE === 'photo' && imgItems.length > 0;
-      const hasPreVideo = !!preVideoUrl && (KIND === 'horizontal' || VMODE === 'video');   // 🎬 갈비스가 만든 영상
-      if (KIND === 'horizontal' && !title) { alert('제목을 입력해주세요.'); return; }
-      if (!videoFile && !hasPhoto && !hasPreVideo) { alert(KIND === 'horizontal' ? '가로 영상을 올려주세요.' : (VMODE === 'video' ? '세로 영상을 올려주세요.' : '사진을 1장 이상 올려주세요.')); return; }
+      const isH = KIND === 'horizontal';
+      const videoFile = isH ? hVideoFile : null;      // 롱판만 단독 영상 파일. 숏판은 vItems 혼합.
+      const hasVMedia = !isH && vItems.length > 0;    // 숏판 혼합 미디어
+      if (isH && !title) { alert('제목을 입력해주세요.'); return; }
+      if (isH) { if (!videoFile && !preVideoUrl) { alert('가로 영상을 올려주세요.'); return; } }
+      else { if (!hasVMedia) { alert('사진이나 영상을 1개 이상 올려주세요.'); return; } }
 
       // 발행 전 자동 모더레이션(check-issue 재사용) — 위험 표현은 업로드 전에 빠르게 차단.
       let modStatus = 'ok';
@@ -193,32 +192,43 @@
         } catch (_) { modStatus = 'pending'; }   // 검사 실패는 발행을 막지 않되 검토 대기(pending)
       }
 
-      let images = null, video_url = null, thumbnail_url = null;
-      const needUp = (hasPhoto && imgItems.some(it => !it.url)) || !!videoFile;
+      let images = null, video_url = null, thumbnail_url = null, media = null;
+      const pending = isH ? null : vItems.find(it => !it.url && it.file);
+      const needUp = isH ? !!videoFile : !!pending;
       try {
         submitBtn.disabled = true; submitBtn.textContent = '올리는 중…';
-        if (needUp && O()) O().show({ label: '올리는 중…', thumb: videoFile ? { file: videoFile } : { file: imgItems[0].file } });
+        if (needUp && O()) O().show({ label: '올리는 중…', thumb: isH ? { file: videoFile } : { file: pending.file } });
 
-        if (hasPhoto) {
-          images = [];
-          for (let i = 0; i < imgItems.length; i++) {
-            const it = imgItems[i];
-            if (it.url) { images.push(it.url); continue; }
-            if (O() && needUp) { O().thumb({ file: it.file }); O().label(`사진 올리는 중… (${i + 1}/${imgItems.length})`); }
-            const u = await window.GALLA_UPLOAD_MEDIA(it.file, 'image', p => { if (O() && needUp) O().progress(p == null ? 0 : p); });
-            it.url = u; images.push(u);
+        if (isH) {
+          // 롱판 — 단일 가로영상(또는 갈비스 사전영상)
+          if (preVideoUrl) { video_url = preVideoUrl; if (preVideoThumb) thumbnail_url = preVideoThumb; }
+          else if (videoFile) {
+            if (O() && needUp) { O().thumb({ file: videoFile }); O().label('영상 올리는 중…'); }
+            const onP = p => { if (O() && needUp) O().progress(p == null ? 0 : p); };
+            const out = window.GALLA_bgVideo ? await window.GALLA_bgVideo.result(videoFile, onP) : await window.GALLA_UPLOAD_VIDEO(videoFile, onP);
+            video_url = (out && (out.url || out.hls)) || null;
+            if (out && out.thumbnail) thumbnail_url = out.thumbnail;
           }
-          thumbnail_url = images[0];
-        }
-        if (preVideoUrl) {   // 🎬 갈비스가 만든 mp4(R2) — 이미 호스팅됨, 업로드 없이 그대로
-          video_url = preVideoUrl;
-          if (preVideoThumb) thumbnail_url = preVideoThumb;
-        } else if (videoFile) {
-          if (O() && needUp) { O().thumb({ file: videoFile }); O().label('영상 올리는 중…'); }
-          const onP = p => { if (O() && needUp) O().progress(p == null ? 0 : p); };
-          const out = window.GALLA_bgVideo ? await window.GALLA_bgVideo.result(videoFile, onP) : await window.GALLA_UPLOAD_VIDEO(videoFile, onP);
-          video_url = (out && (out.url || out.hls)) || null;
-          if (out && out.thumbnail) thumbnail_url = out.thumbnail;
+        } else {
+          // 🎠 숏판 — 혼합 캐러셀(사진+영상). 순서대로 업로드 → media[] + 하위호환 필드.
+          media = []; const imgUrls = []; let firstVideoUrl = null; const total = vItems.length;
+          for (let i = 0; i < vItems.length; i++) {
+            const it = vItems[i];
+            if (!it.url && it.file) {
+              if (O() && needUp) { O().thumb({ file: it.file }); O().label(`올리는 중… (${i + 1}/${total})`); }
+              const onP = p => { if (O() && needUp) O().progress(p == null ? 0 : p); };
+              if (it.kind === 'video') { const up = window.GALLA_UPLOAD_VIDEO || window.GALLA_UPLOAD_VIDEO_STREAM; const out = await up(it.file, onP); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; }
+              else { it.url = await window.GALLA_UPLOAD_MEDIA(it.file, 'image', onP); }
+            }
+            if (!it.url) continue;
+            media.push({ type: it.kind, url: it.url, thumb: it.thumb || null });
+            if (it.kind === 'image') imgUrls.push(it.url); else if (!firstVideoUrl) firstVideoUrl = it.url;
+          }
+          images = imgUrls.length ? imgUrls : null;
+          video_url = firstVideoUrl;
+          const c0 = vItems[0];
+          thumbnail_url = c0 ? (c0.kind === 'video' ? (c0.thumb || null) : c0.url) : null;
+          if (!media.length) media = null;
         }
         if (O() && needUp) { O().done('완료'); await new Promise(r => setTimeout(r, 420)); O().hide(); }
       } catch (err) {
@@ -232,9 +242,10 @@
       const payload = {
         user_id: me,
         kind: KIND,
-        title: KIND === 'horizontal' ? title : (title || null),
+        title: isH ? title : (title || null),
         caption: caption || null,
-        images: (KIND === 'vertical' && VMODE === 'photo') ? images : null,
+        images: isH ? null : images,
+        media: isH ? null : media,   // 🎠 숏판 혼합 캐러셀
         video_url,
         thumbnail_url,
         tags: tags.length ? tags : null,
@@ -245,14 +256,21 @@
       submitBtn.disabled = false; submitBtn.textContent = '공유';
       if (error) { console.error('[갈라리 insert]', error); alert('올리기에 실패했어요.'); return; }
 
-      try { window.GALLA_toast && window.GALLA_toast('갈라리에 올렸어요'); } catch (_) {}
+      try { window.GALLA_toast && window.GALLA_toast((KIND === 'horizontal' ? '롱판' : '숏판') + '에 올렸어요'); } catch (_) {}
       // 올린 뒤 피드로 — 작성 스택은 닫고 갈라리 피드로 이동
       const goFeed = () => (window.GALLA_nav || function (u) { location.href = u; })('gallari.html');
       if (document.body.dataset.page === 'spa' && window.GALLA_SPA && window.GALLA_SPA.pop) { try { window.GALLA_SPA.pop(); } catch (_) {} setTimeout(goFeed, 60); }
       else goFeed();
     });
 
-    setKind('vertical'); setVMode('photo');
+    setKind('vertical');
+
+    // 진입 형식 프리셋 — 숏판(vertical)/롱판(horizontal). SPA params 또는 URL ?kind=
+    try {
+      let wantKind = params && params.kind;
+      if (!wantKind) { try { wantKind = new URLSearchParams(location.search).get('kind'); } catch (_) {} }
+      if (wantKind === 'horizontal') setKind('horizontal');
+    } catch (_) {}
 
     /* 🤖 갈비스 초안 프리필 + 🛠 작업모드 브리지 — 갈비스 도킹 미니챗이 갈라리 폼(캡션·태그·제목)을 실시간 수정.
        미디어(사진·영상)는 상대가 직접. */
@@ -277,34 +295,38 @@
           if ('caption' in f) setVal(cap, f.caption);
           if ('tags' in f) { const arr = Array.isArray(f.tags) ? f.tags : String(f.tags || '').split(/[\s,]+/); setVal(tg, arr.filter(Boolean).map(t => '#' + String(t).replace(/^#/, '')).join(' ')); }
         },
-        // 🖼 갈비스 AI 썸네일 → 세로 사진 '대표(첫 장)'로 추가(URL-only 아이템은 렌더·발행 모두 지원)
+        // 🖼 갈비스 AI 썸네일 → 숏판 미디어 첫 항목(표지)으로 추가
         setThumbnail(url) {
           if (!url) return;
-          setKind('vertical'); setVMode('photo');
-          imgItems.unshift({ file: null, url: url, up: false });
-          if (imgItems.length > MAX_IMAGES) imgItems = imgItems.slice(0, MAX_IMAGES);
-          renderPhotos();
+          setKind('vertical');
+          if (vItems.some(it => it.url === url)) return;
+          vItems.unshift({ kind: 'image', file: null, url: url, thumb: null, up: false });
+          if (vItems.length > MAX_IMAGES) vItems = vItems.slice(0, MAX_IMAGES);
+          renderVMedia();
         },
         // 이미 올린 사진 URL들(영상 소재로)
-        getPhotos() { return imgItems.filter(it => it.url).map(it => it.url); },
-        // 🎬 갈비스가 만든 mp4(R2) → 영상 슬롯에 사전호스팅으로 세팅(업로드 없이 발행). vk: vertical|horizontal
+        getPhotos() { return vItems.filter(it => it.kind === 'image' && it.url).map(it => it.url); },
+        // 🎬 갈비스가 만든 mp4(R2) → 사전호스팅 영상 세팅(업로드 없이 발행). vk: vertical|horizontal
         setVideo(url, thumb, vk) {
           if (!url) return;
           const horiz = vk === 'horizontal';
           setKind(horiz ? 'horizontal' : 'vertical');
-          if (!horiz) setVMode('video');
-          preVideoUrl = url; preVideoThumb = thumb || null;
-          vVideoFile = null; hVideoFile = null;   // 파일 업로드와 충돌 방지
-          const box = horiz ? document.getElementById('glrHVideoPrev') : document.getElementById('glrVVideoPrev');
-          if (box) {
-            box.innerHTML = '';
-            const v = document.createElement('video'); v.src = url; v.controls = true; v.playsInline = true; v.muted = true;
-            box.appendChild(v);
-            const bar = document.createElement('div'); bar.className = 'glr-vbar'; bar.textContent = '✅ 갈비스가 만든 영상 — 확인하고 공유';
-            box.appendChild(bar);
+          if (horiz) {
+            preVideoUrl = url; preVideoThumb = thumb || null; hVideoFile = null;
+            const box = document.getElementById('glrHVideoPrev');
+            if (box) {
+              box.innerHTML = '';
+              const v = document.createElement('video'); v.src = url; v.controls = true; v.playsInline = true; v.muted = true;
+              box.appendChild(v);
+              const bar = document.createElement('div'); bar.className = 'glr-vbar'; bar.textContent = '✅ 갈비스가 만든 영상 — 확인하고 공유';
+              box.appendChild(bar);
+            }
+            const btn = document.getElementById('glrHVideoBtn'); if (btn) btn.style.display = 'none';
+          } else {
+            // 숏판 — 혼합 캐러셀 첫 항목(영상)으로 추가
+            if (!vItems.some(it => it.url === url)) vItems.unshift({ kind: 'video', file: null, url: url, thumb: thumb || null, up: false });
+            renderVMedia();
           }
-          const btn = document.getElementById(horiz ? 'glrHVideoBtn' : 'glrVVideoBtn');
-          if (btn) btn.style.display = 'none';
         },
         submit() { const b = document.getElementById('glrSubmit'); b && b.click(); },
         summary() { return '캡션:' + String((cap && cap.value) || '-').slice(0, 30); }
@@ -318,7 +340,7 @@
   //      → predict-market 방식(SPA는 어댑터 mount만)으로 통일해 결정적으로 초기화.
   window.GALLA_PAGE_GALLARI_WRITE = {
     init: initGallariWrite,
-    mount(root) { return initGallariWrite(root); },
+    mount(root, params) { return initGallariWrite(root, params); },
     unmount() { try { if (window.GALLA_WORKFORM && window.GALLA_WORKFORM.type === 'gallari') window.GALLA_WORKFORM = null; } catch (_) {} },
   };
   if (!(document.body && document.body.dataset.page === 'spa')) {

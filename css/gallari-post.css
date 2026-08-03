@@ -29,7 +29,7 @@
 .glp-carousel { position: relative; }
 .glp-slides { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
 .glp-slides::-webkit-scrollbar { display: none; }
-.glp-slides img { flex: 0 0 100%; scroll-snap-align: center; width: 100%; max-height: 78vh; object-fit: contain; }
+.glp-slides img, .glp-slides video { flex: 0 0 100%; scroll-snap-align: center; width: 100%; max-height: 78vh; object-fit: contain; background: #000; display: block; }
 .glp-dots { position: absolute; left: 0; right: 0; bottom: 8px; display: flex; justify-content: center; gap: 5px; }
 .glp-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.4); }
 .glp-dots i.on { background: #fff; }

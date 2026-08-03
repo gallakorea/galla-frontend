@@ -21,6 +21,9 @@ const EMBED_KEY   = Deno.env.get("EMBED_API_KEY")  || Deno.env.get("OPENAI_API_K
 const EMBED_MODEL = Deno.env.get("EMBED_MODEL")    || "text-embedding-3-small";
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SVC_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+// 🔒 자동편집 영상(gen_video) 노출 게이트 — 유료 프로덕션(v1) 키 전까지는 워터마크가 박혀 잠금(사장님 지시).
+//    SHOTSTACK_ENV=v1로 바꾸면 도구가 자동 노출되고 갈비스가 다시 영상을 제안한다.
+const VIDEO_ON = (Deno.env.get("SHOTSTACK_ENV") || "stage") === "v1";
 const supa = createClient(SUPA_URL, SVC_KEY);
 
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
@@ -795,7 +798,9 @@ function bubbleize(t: string): string {
 
 async function chatOnce(messages: any[], opts?: { toolChoice?: any }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
-  const reqBody: any = { model: CHAT_MODEL, messages, tools: TOOLS, temperature: 0.8, max_tokens: 240 };
+  // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
+  const activeTools = VIDEO_ON ? TOOLS : TOOLS.filter((t: any) => t?.function?.name !== "gen_video");
+  const reqBody: any = { model: CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: 240 };
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -1159,6 +1164,7 @@ ${parts.join("\n")}`;
       { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
+      ...(VIDEO_ON ? [] : [{ role: "system", content: "🔒 [지금 자동편집 영상 기능은 준비 중이라 잠겨 있다] 상대가 '영상 만들어줘/숏판 뽑아줘' 하면 — 만들어준다고 약속하지 마라. 대신 '자동편집 영상은 곧 열려, 지금은 제목·썸네일·대본까지 내가 다 뽑아줄게 — 영상은 직접 찍어 올리면 돼'라고 안내하고, gen_titles·gen_thumbnail·gen_script로 나머지를 확실히 밀어줘라. gen_video는 절대 언급·호출하지 마라." }]),
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
@@ -1212,10 +1218,14 @@ ${parts.join("\n")}`;
     //    강제해 실제 생성이 걸리게 한다. (예측 커버 요청에서 "그려볼게"만 하고 gen_thumbnail 미호출 재현됨)
     {
       const GEN_KINDS = new Set(["genThumbnail", "genVideo"]);
-      const claimsGen = /그려\s*(줄게|볼게|놓을게|줄까|줄테)|그리는\s*중|그려\s*놨|그렸어|커버.*그려|썸네일.*그려|영상\s*(으로)?.*(만들|뽑|합쳐)|뽑아\s*(줄게|볼게|줄까)/.test(reply);
+      // 🔒 영상 잠금 시엔 '영상 만들기' 주장은 방어 대상에서 제외(도구가 없어 강제하면 엉뚱한 도구를 부름).
+      const claimRe = VIDEO_ON
+        ? /그려\s*(줄게|볼게|놓을게|줄까|줄테)|그리는\s*중|그려\s*놨|그렸어|커버.*그려|썸네일.*그려|영상\s*(으로)?.*(만들|뽑|합쳐)|뽑아\s*(줄게|볼게|줄까)/
+        : /그려\s*(줄게|볼게|놓을게|줄까|줄테)|그리는\s*중|그려\s*놨|그렸어|커버.*그려|썸네일.*그려/;
+      const claimsGen = claimRe.test(reply);
       if (userMsg && !body?.meta && claimsGen && !actions.some((a) => GEN_KINDS.has(a.kind))) {
         try {
-          messages.push({ role: "system", content: "너는 방금 '그려줄게/영상 만들어줄게'라고 말했지만 실제 생성 도구를 호출하지 않았다(= 진행줄·이미지 아무것도 안 뜬다). 지금 즉시 실제로 호출해라 — 이미지/커버/썸네일=gen_thumbnail(prompt에 주제 살린 그림 묘사, 글자·실존인물·유명캐릭터·로고 금지 / ratio: 예측·롱판 커버=landscape, 이슈·세로숏판=portrait), 자동편집 영상=gen_video. 잡담·질문 금지, 도구만 호출." });
+          messages.push({ role: "system", content: "너는 방금 '그려줄게'라고 말했지만 실제 생성 도구를 호출하지 않았다(= 진행줄·이미지 아무것도 안 뜬다). 지금 즉시 실제로 호출해라 — 이미지/커버/썸네일=gen_thumbnail(prompt에 주제 살린 그림 묘사, 글자·실존인물·유명캐릭터·로고 금지 / ratio: 예측·롱판 커버=landscape, 이슈·세로숏판=portrait)." + (VIDEO_ON ? " 자동편집 영상=gen_video." : "") + " 잡담·질문 금지, 도구만 호출." });
           const jg = await chatOnce(messages, { toolChoice: "required" });
           const cg = jg?.choices?.[0]?.message?.tool_calls || [];
           for (const c of cg) {

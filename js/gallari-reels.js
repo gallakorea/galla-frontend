@@ -41,23 +41,33 @@
     const st = getStart();
     // 진입 구분(사장님 지시): user 파라미터 있으면 마이페이지/프로필 진입(‹ 뒤로), 없으면 갈라리 피드 진입(+ 올리기)
     ENTRY = st.user ? 'profile' : 'feed';
+    // 🎠 캐러셀형(사진·영상 여러 개) 숏판은 릴스에서 제외 — 릴스는 '단일 미디어(주로 영상)'만.
+    //    미디어가 2개 이상이면 캐러셀 → 상세/그리드에서 본다.
+    const mediaCount = (p) => {
+      try { const m = window.GALLA_issueMedia && window.GALLA_issueMedia(p); if (m) return m.length; } catch (_) {}
+      if (Array.isArray(p.media) && p.media.length) return p.media.length;
+      if (Array.isArray(p.images) && p.images.length) return p.images.length + (p.video_url ? 1 : 0);
+      return (p.video_url || p.thumbnail_url) ? 1 : 0;
+    };
+    const notCarousel = (p) => mediaCount(p) <= 1;
+
     let feed = [];
     if (st.user) {
       // 👤 특정 유저의 숏판만 순차 (마이페이지/프로필에서 진입) — 이슈 섞지 않음
-      const { data: posts } = await sb.from('posts').select('id,user_id,caption,images,video_url,thumbnail_url,like_count,comment_count,created_at')
+      const { data: posts } = await sb.from('posts').select('id,user_id,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
         .eq('kind', 'vertical').eq('user_id', st.user).eq('is_published', true).neq('moderation_status', 'blocked')
         .order('created_at', { ascending: false }).limit(60);
-      feed = (posts || []).map(p => ({ _type: 'post', ...p }));
+      feed = (posts || []).filter(notCarousel).map(p => ({ _type: 'post', ...p }));
     } else {
       // 🌐 통합(숏판 + 이슈 영상) 인터리브 2:1
       const [{ data: posts }, { data: issues }] = await Promise.all([
-        sb.from('posts').select('id,user_id,caption,images,video_url,thumbnail_url,like_count,comment_count,created_at')
+        sb.from('posts').select('id,user_id,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
           .eq('kind', 'vertical').eq('is_published', true).neq('moderation_status', 'blocked')
           .order('created_at', { ascending: false }).limit(24),
         sb.from('issues').select('id,user_id,title,video_url,thumbnail_url,category,faction_a,faction_b,pro_count,con_count,created_at')
           .not('video_url', 'is', null).eq('status', 'normal').order('created_at', { ascending: false }).limit(24),
       ]);
-      const P = (posts || []).map(p => ({ _type: 'post', ...p }));
+      const P = (posts || []).filter(notCarousel).map(p => ({ _type: 'post', ...p }));
       const I = (issues || []).map(i => ({ _type: 'issue', ...i }));
       let pi = 0, ii = 0;
       while (pi < P.length || ii < I.length) {

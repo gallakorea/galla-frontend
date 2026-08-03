@@ -303,6 +303,27 @@
     return url;
   };
 
+  /* 🎠 이슈 미디어 정규화 — 혼합 캐러셀(사진+영상)의 단일 진실.
+     새 스키마(row.media[])가 있으면 그대로, 없으면 레거시(images[] + video_url)를 순서 있는
+     항목으로 승격. 반환: [{ type:'image'|'video', url, thumb? }]. 모든 렌더러가 이걸 쓴다. */
+  window.GALLA_issueMedia = function (row) {
+    try {
+      if (!row) return [];
+      if (Array.isArray(row.media) && row.media.length) {
+        return row.media
+          .filter(function (m) { return m && m.url; })
+          .map(function (m) { return { type: m.type === "video" ? "video" : "image", url: m.url, thumb: m.thumb || null }; });
+      }
+      var out = [];
+      var imgs = row.images;
+      if (typeof imgs === "string") { try { imgs = JSON.parse(imgs); } catch (_) { imgs = null; } }
+      if (Array.isArray(imgs)) imgs.forEach(function (u) { if (u) out.push({ type: "image", url: u, thumb: null }); });
+      if (row.video_url) out.push({ type: "video", url: row.video_url, thumb: row.thumbnail_url || row.card_thumb_url || null });
+      if (!out.length && row.thumbnail_url) out.push({ type: "image", url: row.thumbnail_url, thumb: null });
+      return out;
+    } catch (_) { return []; }
+  };
+
   window.GALLA_isApp = function () {
     try {
       if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) return true;

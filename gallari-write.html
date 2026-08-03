@@ -2,19 +2,19 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>갈라리 만들기 - GALLA</title>
+  <title>숏판·롱판 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <link rel="stylesheet" href="./css/write.css?v=073200" />
-  <link rel="stylesheet" href="./css/write-upload.css?v=073200">
-  <link rel="stylesheet" href="./css/gallari-write.css?v=073200">
+  <link rel="stylesheet" href="./css/write.css?v=080305" />
+  <link rel="stylesheet" href="./css/write-upload.css?v=080305">
+  <link rel="stylesheet" href="./css/gallari-write.css?v=080305">
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="apple-touch-icon" href="/assets/app-icons/apple-touch-icon.png">
   <meta name="theme-color" content="#0a0a0b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=073200">
-<link rel="stylesheet" href="./css/desktop.css?v=073200">
+  <link rel="stylesheet" href="./css/theme.css?v=080305">
+<link rel="stylesheet" href="./css/desktop.css?v=080305">
 </head>
 
 <body data-page="gallari-write">
@@ -26,7 +26,7 @@
       <button type="button" class="wr-back" data-back="index.html" aria-label="뒤로">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <div class="wr-appbar-title">갈라리 만들기</div>
+      <div class="wr-appbar-title">숏판·롱판 만들기</div>
       <button type="button" class="glr-submit" id="glrSubmit">공유</button>
     </header>
 
@@ -44,32 +44,15 @@
         </div>
         <div class="glr-hint" id="glrHint">⚡ 숏판 — 세로영상 또는 사진(최대 10장 캐러셀). 릴스처럼 훅, 진영·배틀 없이 그냥 콘텐츠예요.</div>
 
-        <!-- ===== 세로형 미디어 (사진 캐러셀 / 세로영상) ===== -->
+        <!-- ===== 세로형 미디어 (사진·영상 혼합 캐러셀, 첫 항목이 표지) ===== -->
         <section class="wcard" id="glr-vertical-media">
-          <div class="media-tabs seg">
-            <button type="button" class="media-tab active" data-media="photo">🖼️ 사진</button>
-            <button type="button" class="media-tab" data-media="video">🎬 세로영상</button>
-          </div>
-
-          <div class="media-pane" id="glr-pane-photo">
-            <input type="file" id="glrPhoto" class="visually-hidden-file" accept="image/*" multiple />
-            <label for="glrPhoto" id="glrPhotoBtn" class="media-drop">
-              <span class="media-drop-icon">＋</span>
-              <span class="media-drop-title">사진 올리기</span>
-              <span class="media-drop-sub">최대 10장 · 여러 장은 캐러셀 (첫 장이 대표)</span>
-            </label>
-            <div id="glrPhotoPrev" class="preview-box"></div>
-          </div>
-
-          <div class="media-pane" id="glr-pane-video" hidden>
-            <input type="file" id="glrVVideo" class="visually-hidden-file" accept="video/*" />
-            <label for="glrVVideo" id="glrVVideoBtn" class="media-drop">
-              <span class="media-drop-icon">＋</span>
-              <span class="media-drop-title">세로영상 올리기</span>
-              <span class="media-drop-sub">세로 9:16 권장 · 최대 1분</span>
-            </label>
-            <div id="glrVVideoPrev" class="preview-box"></div>
-          </div>
+          <input type="file" id="glrMedia" class="visually-hidden-file" accept="image/*,video/*" multiple />
+          <label for="glrMedia" id="glrMediaBtn" class="media-drop">
+            <span class="media-drop-icon">＋</span>
+            <span class="media-drop-title">사진·영상 올리기</span>
+            <span class="media-drop-sub">여러 개는 캐러셀로 넘겨서 노출 · 첫 항목이 표지</span>
+          </label>
+          <div id="glrMediaPrev" class="preview-box"></div>
         </section>
 
         <!-- ===== 가로형 미디어 (가로영상) ===== -->
@@ -110,15 +93,15 @@
 </div>
 
 <!-- Supabase 싱글턴 + 미디어 파이프라인 -->
-<script src="/js/error-logger.js?v=073200"></script>
-<script src="./vendor/supabase.js?v=073200"></script>
-<script src="./js/supabase.js?v=073200"></script>
-<script src="js/back.js?v=073200"></script>
-<script src="./js/video-compress.js?v=073200"></script>
-<script src="./js/media-upload.js?v=073200"></script>
-<script src="./js/bg-video-upload.js?v=073200"></script>
-<script src="./js/img-crop.js?v=073200"></script>
-<script src="./js/write-media.js?v=073200"></script>
-<script src="./js/gallari-write.js?v=073200"></script>
+<script src="/js/error-logger.js?v=080305"></script>
+<script src="./vendor/supabase.js?v=080305"></script>
+<script src="./js/supabase.js?v=080305"></script>
+<script src="js/back.js?v=080305"></script>
+<script src="./js/video-compress.js?v=080305"></script>
+<script src="./js/media-upload.js?v=080305"></script>
+<script src="./js/bg-video-upload.js?v=080305"></script>
+<script src="./js/img-crop.js?v=080305"></script>
+<script src="./js/write-media.js?v=080305"></script>
+<script src="./js/gallari-write.js?v=080305"></script>
 </body>
 </html>

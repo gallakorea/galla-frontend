@@ -97,10 +97,11 @@
     predict: I('<path d="M3 17l6-6 4 4 7-7"/><path d="M17 7h4v4"/>'),
     plaza:   I('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.6 8.6 0 0 1-3.9-.9L3.5 20.5l1.4-5.1a8.4 8.4 0 0 1-.9-3.9A8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/>'),
   };
-  const WRITE_ROUTE = { galla: 'write.html', gallari: 'gallari-write.html', predict: 'galla-predict.html?compose=1', plaza: 'plaza.html?compose=1' };
+  const WRITE_ROUTE = { galla: 'write.html', short: 'gallari-write.html?kind=vertical', long: 'gallari-write.html?kind=horizontal', predict: 'galla-predict.html?compose=1', plaza: 'plaza.html?compose=1' };
   const WRITE_TABS = [
     { id: 'galla', label: '갈라', icon: WRITE_ICONS.galla },
-    { id: 'gallari', label: '갈라리', icon: WRITE_ICONS.gallari },
+    { id: 'short', label: '숏판', icon: WRITE_ICONS.gallari },
+    { id: 'long', label: '롱판', icon: WRITE_ICONS.gallari },
     { id: 'predict', label: '예측', icon: WRITE_ICONS.predict },
     { id: 'plaza', label: '광장', icon: WRITE_ICONS.plaza },
   ];
@@ -108,10 +109,10 @@
     tabs: () => WRITE_TABS,
     go(type) {
       // 가운데/취소(null) → 전체 선택 페이지(기존 짧은탭 동작과 동일). 선택 → 해당 작성 화면으로.
-      //   갈라(발제)·갈라리는 권한/피처 게이팅이 있어 create.html이 안전(잠금 표시) — 거기로 보낸다.
+      //   갈라(발제)·숏판·롱판은 권한/피처 게이팅이 있어 create.html이 안전(잠금 표시) — 거기로 보낸다.
       //   예측·광장은 바로.
       const go = (u) => (window.GALLA_nav || function (x) { location.href = x; })(u);
-      if (!type || type === 'galla' || type === 'gallari') { go('create.html'); return; }
+      if (!type || type === 'galla' || type === 'short' || type === 'long') { go('create.html'); return; }
       go(WRITE_ROUTE[type] || 'create.html');
     },
   };

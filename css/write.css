@@ -126,6 +126,12 @@ select.input-field option { background: #16171c; color: #fff; }
   background: rgba(255,255,255,.03); border: 1.5px dashed rgba(255,255,255,.18); color: var(--g-blue);
   font-size: 30px; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .multi-img-add:hover { border-color: var(--g-blue); background: rgba(61,107,255,.06); }
+/* 🎬 영상 항목 — 포스터 위 ▶, 포스터 없으면 플레이스홀더 */
+.mi-vidph { width: 92px; height: 115px; border-radius: 10px; border: 1px solid var(--line);
+  background: #16181d; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+.multi-img-play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 28px; height: 28px; border-radius: 50%; background: rgba(0,0,0,.55); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-size: 12px; pointer-events: none; }
 
 /* 대표 썸네일 3:4 */
 .card-thumb-head { margin-bottom: 12px; }

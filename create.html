@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>새로 만들기 - GALLA</title>
-  <link rel="stylesheet" href="./css/header.css?v=073200">
-  <link rel="stylesheet" href="./css/nav.css?v=073200">
-  <link rel="stylesheet" href="./css/create.css?v=073200">
+  <link rel="stylesheet" href="./css/header.css?v=080305">
+  <link rel="stylesheet" href="./css/nav.css?v=080305">
+  <link rel="stylesheet" href="./css/create.css?v=080305">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -16,10 +16,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/theme.css?v=073200">
-  <link rel="stylesheet" href="./css/guide-banner.css?v=073200">
-<link rel="stylesheet" href="css/auth.css?v=073200">
-<link rel="stylesheet" href="./css/desktop.css?v=073200">
+  <link rel="stylesheet" href="./css/theme.css?v=080305">
+  <link rel="stylesheet" href="./css/guide-banner.css?v=080305">
+<link rel="stylesheet" href="css/auth.css?v=080305">
+<link rel="stylesheet" href="./css/desktop.css?v=080305">
 </head>
 
 <!-- data-page는 비워둔다 — "index"로 두면 nav.js가 홈 버튼을 '현재 페이지'로 보고 이동을 막는다 -->
@@ -58,14 +58,28 @@
         </span>
       </button>
 
-      <!-- 갈라리 (콘텐츠) — 진영 없는 일반 콘텐츠. 기본 숨김(운영진/플래그 때만 노출) -->
-      <button class="cr-card" data-type="gallari" style="--cr:#a855f7" hidden>
+      <!-- 숏판 (세로 릴스) — 진영 없는 일반 콘텐츠. 기본 숨김(운영진/플래그 때만 노출) -->
+      <button class="cr-card" data-type="short" style="--cr:#a855f7" hidden>
         <span class="cr-ico">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zM4 13h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm3.5 5.5v7l6-3.5-6-3.5z"/></svg>
         </span>
         <span class="cr-tx">
-          <span class="cr-t">갈라리</span>
-          <span class="cr-d">⚡숏판(릴스)·🎬롱판(유튜브) — 콘텐츠 올려 소통하고 후원받아요</span>
+          <span class="cr-t">숏판</span>
+          <span class="cr-d">⚡ 세로 릴스 — 사진·짧은 세로영상 올려 소통하고 후원받아요</span>
+        </span>
+        <span class="cr-go">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </button>
+
+      <!-- 롱판 (가로 유튜브식) — 진영 없는 일반 콘텐츠. 기본 숨김(운영진/플래그 때만 노출) -->
+      <button class="cr-card" data-type="long" style="--cr:#a855f7" hidden>
+        <span class="cr-ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm7 3.5v7l6-3.5-6-3.5z"/></svg>
+        </span>
+        <span class="cr-tx">
+          <span class="cr-t">롱판</span>
+          <span class="cr-d">🎬 가로 유튜브식 — 가로 영상 올려 소통하고 후원받아요</span>
         </span>
         <span class="cr-go">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -156,21 +170,21 @@
   </div>
 </nav>
 
-<script src="/js/error-logger.js?v=073200"></script>
-  <script src="./vendor/supabase.js?v=073200"></script>
-<script src="js/supabase.js?v=073200"></script>
-<script src="js/social-auth.js?v=073200"></script>
-<script src="js/back.js?v=073200"></script>
-<script src="js/bug-report.js?v=073200"></script>
-<script src="js/create.js?v=073200"></script>
-<script src="./js/nav.js?v=073200"></script>
-<script src="./js/desktop-pc.js?v=073200" defer></script>
-<script src="./js/nav-jog.js?v=073200" defer></script>
-<script src="./js/dm-call.js?v=073200" defer></script>
+<script src="/js/error-logger.js?v=080305"></script>
+  <script src="./vendor/supabase.js?v=080305"></script>
+<script src="js/supabase.js?v=080305"></script>
+<script src="js/social-auth.js?v=080305"></script>
+<script src="js/back.js?v=080305"></script>
+<script src="js/bug-report.js?v=080305"></script>
+<script src="js/create.js?v=080305"></script>
+<script src="./js/nav.js?v=080305"></script>
+<script src="./js/desktop-pc.js?v=080305" defer></script>
+<script src="./js/nav-jog.js?v=080305" defer></script>
+<script src="./js/dm-call.js?v=080305" defer></script>
 
-<script src="/js/analytics.js?v=073200"></script>
-<script src="/js/pwa.js?v=073200"></script>
+<script src="/js/analytics.js?v=080305"></script>
+<script src="/js/pwa.js?v=080305"></script>
 <!-- ✍️ 쓰기 선택 안내(상단 배너 + 첫 진입 코치마크) -->
-<script src="js/create-guide.js?v=073200"></script>
+<script src="js/create-guide.js?v=080305"></script>
 </body>
 </html>

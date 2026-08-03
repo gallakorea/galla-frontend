@@ -96,6 +96,10 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return j({ error: "bad_json" }, 400); }
   const op = body?.op || "submit";
 
+  // 🔒 영상 기능 잠금(사장님 지시): 유료 프로덕션(v1) 키 전까지는 워터마크가 박히므로 신규 제출을 막는다.
+  //    SHOTSTACK_ENV=v1(유료)로 바꾸는 순간 자동 해제. status 폴링은 허용(진행 중 렌더 마무리용).
+  if (op === "submit" && SHOTSTACK_ENV !== "v1") return j({ error: "feature_locked" }, 503);
+
   if (op === "submit") {
     const images: string[] = Array.isArray(body.images) ? body.images.filter((u: any) => typeof u === "string" && /^https?:\/\//.test(u)).slice(0, 10) : [];
     if (images.length < 1) return j({ error: "no_images" }, 400);
@@ -110,10 +114,19 @@ Deno.serve(async (req) => {
     if ((count || 0) >= 6) return j({ error: "user_daily_limit", limit: 6 }, 429);
     if (!(await aiBudgetOk())) return j({ error: "ai_daily_cap" }, 429);
 
+    // 💰 GP 선차감 (호출자 권한) — 제출 실패 시 환불
+    const asUser = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: req.headers.get("Authorization")! } },
+    });
+    const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge", { p_kind: "video", p_n: 1 });
+    if (cErr || !charge?.ok) return j({ error: charge?.reason || "charge_failed", detail: charge }, 402);
+    const paid = (charge.charged as number) || 0;
+    const refund = async () => { if (paid > 0) { try { await sb.rpc("ai_creation_refund", { p_user: me, p_amount: paid }); } catch (_) {} } };
+
     const edit = buildTimeline(images, captions, music, size, per);
     const r = await fetch(`${SS_BASE}/render`, { method: "POST", headers: { "x-api-key": SHOTSTACK_KEY, "Content-Type": "application/json" }, body: JSON.stringify(edit) });
     const d = await r.json();
-    if (!r.ok || !d?.response?.id) { console.error("[video] submit", r.status, JSON.stringify(d).slice(0, 300)); return j({ error: "submit_failed", detail: d?.message || `http_${r.status}` }, 502); }
+    if (!r.ok || !d?.response?.id) { console.error("[video] submit", r.status, JSON.stringify(d).slice(0, 300)); await refund(); return j({ error: "submit_failed", detail: d?.message || `http_${r.status}` }, 502); }
     return j({ ok: true, id: d.response.id });
   }
 

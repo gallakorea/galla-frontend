@@ -1316,25 +1316,29 @@ async function GALLA_mypageInit(root, spaParams) {
         tabContent.className = "content-area";
         tabContent.innerHTML = MP_SPINNER;
         const { data: posts } = await supabase.from("posts")
-            .select("id,kind,title,caption,images,video_url,thumbnail_url,like_count,comment_count")
+            .select("id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count")
             .eq("user_id", viewUserId).eq("kind", kind).eq("is_published", true)
             .order("created_at", { ascending: false }).limit(60);
         const items = posts || [];
         const esc = s => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])));
         const thumb = p => p.thumbnail_url || (Array.isArray(p.images) && p.images[0]) || "";
+        // 🎠 캐러셀(미디어 2개+) = 릴스 제외 → 상세로. 단일은 릴스로.
+        const mcount = p => (Array.isArray(p.media) && p.media.length) ? p.media.length
+            : (Array.isArray(p.images) && p.images.length ? p.images.length + (p.video_url ? 1 : 0) : ((p.video_url || p.thumbnail_url) ? 1 : 0));
+        const isCar = p => mcount(p) > 1;
         let inner;
         if (!items.length) inner = `<div class="glf-empty">아직 ${kind === "vertical" ? "⚡ 숏판" : "🎬 롱판"} 콘텐츠가 없어요.</div>`;
         else if (kind === "vertical") inner = '<div class="glf-grid">' + items.map(p =>
-            `<div class="glf-tile" data-id="${p.id}">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
-             ${p.video_url ? '<span class="glf-play">▶</span>' : ''}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
+            `<div class="glf-tile" data-id="${p.id}" data-car="${isCar(p) ? 1 : 0}">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
+             ${isCar(p) ? '<span class="glf-play">⧉</span>' : (p.video_url ? '<span class="glf-play">▶</span>' : '')}<div class="glf-meta"><span>♥ ${p.like_count || 0}</span></div></div>`).join("") + "</div>";
         else inner = '<div class="glf-list">' + items.map(p =>
             `<div class="glf-card" data-id="${p.id}"><div class="glf-thumb">${thumb(p) ? `<img src="${esc(thumb(p))}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}</div>
              <div class="glf-cbody"><div class="glf-cinfo"><div class="glf-ctitle">${esc(p.title || p.caption || "(제목 없음)")}</div><div class="glf-cmeta">♥ ${p.like_count || 0} · 💬 ${p.comment_count || 0}</div></div></div></div>`).join("") + "</div>";
         tabContent.innerHTML = inner;
         tabContent.querySelectorAll("[data-id]").forEach(el => el.addEventListener("click", () =>
-            // 숏판 = 릴스로(이 사람 숏판만 순차), 롱판 = 유튜브식 상세로
+            // 숏판 단일 = 릴스로(이 사람 숏판만 순차), 캐러셀 숏판·롱판 = 상세로
             (window.GALLA_nav || function (u) { location.href = u; })(
-                kind === "vertical" ? "gallari-reels.html?start=" + el.dataset.id + "&t=post&user=" + viewUserId : "gallari-post.html?id=" + el.dataset.id)));
+                (kind === "vertical" && el.dataset.car !== "1") ? "gallari-reels.html?start=" + el.dataset.id + "&t=post&user=" + viewUserId : "gallari-post.html?id=" + el.dataset.id)));
     };
 
     // ---------------------------
@@ -1343,6 +1347,8 @@ async function GALLA_mypageInit(root, spaParams) {
     const ALL_TYPES = {
         issue:   { label: "갈라", dest: id => "issue.html?id=" + id },
         short:   { label: "숏판", dest: id => "gallari-reels.html?user=" + viewUserId + "&start=" + id + "&t=post" },
+        // 🎠 캐러셀형 숏판(미디어 여러 개)은 릴스가 아니라 상세로 — 릴스는 단일 미디어만
+        "short-carousel": { label: "숏판", dest: id => "gallari-post.html?id=" + id },
         long:    { label: "롱판", dest: id => "gallari-post.html?id=" + id },
         predict: { label: "예측", dest: id => "predict-market.html?id=" + id },
         plaza:   { label: "광장", dest: id => "plaza_detail.html?id=" + id },
@@ -1365,7 +1371,7 @@ async function GALLA_mypageInit(root, spaParams) {
         };
         const [iss, pst, mkt, plz] = await Promise.all([
             supabase.from("issues").select("id,title,thumbnail_url,card_thumb_url,images,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
-            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,video_url,view_count,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
+            supabase.from("posts").select("id,kind,title,caption,thumbnail_url,images,media,video_url,view_count,created_at").eq("user_id", viewUserId).eq("is_published", true).order("created_at", { ascending: false }).limit(40),
             supabase.from("markets").select("id,question,image_url,created_at").eq("created_by", viewUserId).order("created_at", { ascending: false }).limit(6),
             supabase.from("plaza_posts").select("id,title,thumbnail,cover_image,view_count,created_at").eq("user_id", viewUserId).order("created_at", { ascending: false }).limit(6),
         ]);
@@ -1386,10 +1392,17 @@ async function GALLA_mypageInit(root, spaParams) {
         // 섹션 헤더 — 누르면 해당 탭으로 이동(› 표시). tab = .tab[data-tab] 키
         const head = (label, tab) => `<h3 class="mp-yt-h" data-gototab="${tab}">${label}<span class="mp-yt-more">›</span></h3>`;
         // 세로폼 그리드(9:16) — 갈라·숏판 공용. sub는 선택(조회수 등)
+        // 🎠 캐러셀 판별 — 미디어가 2개 이상이면 캐러셀(릴스 제외, 상세로)
+        const mediaCount = r => {
+            if (Array.isArray(r.media) && r.media.length) return r.media.length;
+            if (Array.isArray(r.images) && r.images.length) return r.images.length + (r.video_url ? 1 : 0);
+            return (r.video_url || r.thumbnail_url) ? 1 : 0;
+        };
         const vGrid = (label, tab, t, rows, capOf, subOf) => {
             const cells = rows.map(r => {
                 const th = thumbOf(r);
-                return `<div class="mp-sh-cell" data-t="${t}" data-id="${r.id}">
+                const tt = typeof t === "function" ? t(r) : t;   // 행별 타입(캐러셀 숏판→상세)
+                return `<div class="mp-sh-cell" data-t="${tt}" data-id="${r.id}">
                     ${th ? art(th) : `<div class="mp-yt-ph"></div>`}
                     <span class="mp-sh-cap">${esc(capOf(r) || "")}</span>
                     ${subOf ? `<span class="mp-sh-v">${esc(subOf(r))}</span>` : ""}
@@ -1417,7 +1430,7 @@ async function GALLA_mypageInit(root, spaParams) {
         const sections = [];
         // 순서: 갈라 → 숏판 → 롱판 → 예측 → 광장 (각 최신 6개)
         if (issues.length) sections.push(vGrid("갈라", "galla", "issue", issues, r => r.title));
-        if (shorts.length) sections.push(vGrid("숏판", "short", "short", shorts, r => r.title || r.caption, r => views(r.view_count)));
+        if (shorts.length) sections.push(vGrid("숏판", "short", r => mediaCount(r) > 1 ? "short-carousel" : "short", shorts, r => r.title || r.caption, r => views(r.view_count)));
         if (longs.length) {
             const rows = longs.map(r =>
                 `<div class="mp-lv" data-t="long" data-id="${r.id}">

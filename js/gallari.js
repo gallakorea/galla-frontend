@@ -29,14 +29,14 @@
       if (!sb) { box.innerHTML = '<div class="glf-empty">연결 오류</div>'; loading = false; return; }
 
       const { data: posts, error } = await sb.from('posts')
-        .select('id,user_id,kind,title,caption,images,video_url,thumbnail_url,like_count,comment_count,created_at')
+        .select('id,user_id,kind,title,caption,images,media,video_url,thumbnail_url,like_count,comment_count,created_at')
         .eq('kind', kind).eq('is_published', true)
         .neq('moderation_status', 'blocked')
         .order('created_at', { ascending: false }).limit(30);
 
       if (error) { box.innerHTML = '<div class="glf-empty">불러오기 실패</div>'; loading = false; return; }
       if (!posts || !posts.length) {
-        box.innerHTML = `<div class="glf-empty"><b>아직 ${kind === 'vertical' ? '⚡ 숏판' : '🎬 롱판'} 콘텐츠가 없어요.</b><br>첫 갈라리를 올려보세요.</div>`;
+        box.innerHTML = `<div class="glf-empty"><b>아직 ${kind === 'vertical' ? '⚡ 숏판' : '🎬 롱판'} 콘텐츠가 없어요.</b><br>첫 ${kind === 'vertical' ? '숏판' : '롱판'}을 올려보세요.</div>`;
         loading = false; return;
       }
 
@@ -54,11 +54,13 @@
       if (kind === 'vertical') {
         html = '<div class="glf-grid">' + posts.map(p => {
           const t = thumb(p);
-          const isVid = !!p.video_url;
-          const isMulti = Array.isArray(p.images) && p.images.length > 1;
-          return `<div class="glf-tile" data-id="${p.id}">
+          const mc = (Array.isArray(p.media) && p.media.length) ? p.media.length
+            : (Array.isArray(p.images) && p.images.length ? p.images.length + (p.video_url ? 1 : 0) : ((p.video_url || p.thumbnail_url) ? 1 : 0));
+          const isCar = mc > 1;   // 캐러셀 = 미디어 2개+ (릴스 제외 → 상세)
+          const isVid = !!p.video_url && !isCar;
+          return `<div class="glf-tile" data-id="${p.id}" data-car="${isCar ? 1 : 0}">
             ${t ? `<img src="${esc(t)}" loading="lazy">` : '<div style="width:100%;height:100%;background:#141420"></div>'}
-            ${isVid ? `<span class="glf-play">${PLAY}</span>` : (isMulti ? `<span class="glf-multi">${MULTI}</span>` : '')}
+            ${isCar ? `<span class="glf-multi">${MULTI}</span>` : (isVid ? `<span class="glf-play">${PLAY}</span>` : '')}
             <div class="glf-meta"><span>♥ ${p.like_count || 0}</span><span>💬 ${p.comment_count || 0}</span></div>
           </div>`;
         }).join('') + '</div>';
@@ -90,8 +92,8 @@
     function bindItems() {
       box.querySelectorAll('[data-id]').forEach(el => {
         el.addEventListener('click', () => {
-          // 숏판(세로) = 상세 없이 릴스로 / 롱판(가로) = 유튜브식 상세로
-          if (KIND === 'vertical') nav('gallari-reels.html?start=' + el.dataset.id + '&t=post');
+          // 숏판 단일(세로) = 릴스로 / 숏판 캐러셀·롱판 = 상세로
+          if (KIND === 'vertical' && el.dataset.car !== '1') nav('gallari-reels.html?start=' + el.dataset.id + '&t=post');
           else nav('gallari-post.html?id=' + el.dataset.id);
         });
       });

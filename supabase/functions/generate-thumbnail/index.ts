@@ -116,6 +116,15 @@ Deno.serve(async (req) => {
   // 플랫폼 일일 캡
   if (!(await aiBudgetOk())) return j({ error: "ai_daily_cap" }, 429);
 
+  // 💰 GP 선차감 (호출자 권한으로 auth.uid()) — 실패 시 아래서 환불
+  const asUser = createClient(SUPA_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: req.headers.get("Authorization")! } },
+  });
+  const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge", { p_kind: "thumbnail", p_n: 1 });
+  if (cErr || !charge?.ok) return j({ error: charge?.reason || "charge_failed", detail: charge }, 402);
+  const paid = (charge.charged as number) || 0;
+  const refund = async () => { if (paid > 0) { try { await sb.rpc("ai_creation_refund", { p_user: me, p_amount: paid }); } catch (_) {} } };
+
   // 🧠 크리에이터 브레인 — 검증된 썸네일 구도 공식 주입(어그로 클릭률↑). 없으면 기본 STYLE만.
   let patternText = "";
   try {
@@ -137,6 +146,7 @@ Deno.serve(async (req) => {
     const d = await r.json();
     if (!r.ok || !d?.data?.length) {
       console.error("[thumb] openai", r.status, JSON.stringify(d?.error || d).slice(0, 300));
+      await refund();
       return j({ error: "generate_failed", detail: d?.error?.message || `http_${r.status}` }, 502);
     }
     const b64 = d.data[0].b64_json as string;
@@ -147,6 +157,7 @@ Deno.serve(async (req) => {
     return j({ ok: true, url });
   } catch (e) {
     console.error("[thumb]", e);
+    await refund();
     return j({ error: "server", detail: String(e).slice(0, 200) }, 500);
   }
 });

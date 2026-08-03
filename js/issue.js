@@ -1,7 +1,7 @@
-import { loadAiArguments } from "./issue-argument.js?v=073200";
-import { loadAiNews } from "./issue-news.js?v=073200";
-import { loadStats } from "./issue.stats.js?v=073200";
-import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=073200";
+import { loadAiArguments } from "./issue-argument.js?v=080305";
+import { loadAiNews } from "./issue-news.js?v=080305";
+import { loadStats } from "./issue.stats.js?v=080305";
+import { initCommentSystem, destroyCommentSystem } from "./issue.comments.js?v=080305";
 
 
 console.log("[issue.js] loaded");
@@ -275,138 +275,123 @@ function renderIssueMedia(issue) {
     const wrap = document.getElementById('issue-media-wrap');
     if (!wrap) return;
 
-    // 영상
-    if (issue.video_url) {
-        wrap.innerHTML = `
-        <div class="issue-media issue-media--video" onclick="issueOpenReels()">
-            <video id="issue-vid" data-src="${issue.video_url}"
-                   ${issue.thumbnail_url ? `poster="${issue.thumbnail_url}"` : ""}
-                   loop playsinline webkit-playsinline muted preload="none"></video>
-            <div class="issue-vid-dur" id="issue-vid-dur">-:--</div>
-            <button class="vid-mute" id="issue-vid-mute"
-                    onclick="event.stopPropagation();var _v=document.getElementById('issue-vid');window.GALLA_setSound(_v?_v.muted:!window.GALLA_soundOn())">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
-            <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
-        </div>`;
+    // 🎠 혼합 캐러셀 — 사진·영상을 순서대로 한 캐러셀에(정규화기: 새 media[] / 레거시 자동승격)
+    const media = (window.GALLA_issueMedia ? window.GALLA_issueMedia(issue) : []) || [];
+    if (!media.length) { wrap.innerHTML = ''; return; }
 
-        const vid = document.getElementById('issue-vid');
-        if (vid) {
-            // 이슈 진입 = 몰입 뷰 → 소리 ON (인스타 로직, 전역 통일). 음소거는 버튼/전역으로.
-            if (window.GALLA_enterImmersive) window.GALLA_enterImmersive();
-            // HLS(.m3u8) 부착 — iOS 네이티브 / 그 외 hls.js
-            if (window.GALLA_attachHls) window.GALLA_attachHls(vid, vid.dataset.src);
-            else vid.src = vid.dataset.src;
-            // 릴스/인덱스에서 보던 위치 이어보기(?t=초) — SPA는 mount params에서
-            const seekT = parseFloat(pageQuery().get('t')) || 0;
-            if (seekT > 0.3) {
-                const applySeek = () => { try { if (vid.duration && seekT < vid.duration - 0.3) vid.currentTime = seekT; } catch (e) {} };
-                if (vid.readyState >= 1) applySeek(); else vid.addEventListener('loadedmetadata', applySeek, { once: true });
+    issueCarouselTotal = media.length;
+    issueCarouselIdx = 0;
+    const multi = media.length > 1;
+
+    const slides = media.map((m, i) => {
+        if (m.type === 'video') {
+            return `<div class="issue-slide issue-slide--video" data-i="${i}">
+                <video class="issue-cvid" data-src="${m.url}" ${m.thumb ? `poster="${m.thumb}"` : ''}
+                       loop playsinline webkit-playsinline muted preload="none"></video>
+                <button class="vid-mute issue-cvid-mute" type="button">${window.GALLA_muteIcon ? window.GALLA_muteIcon(!(window.GALLA_soundOn && window.GALLA_soundOn())) : "🔇"}</button>
+                <span class="vid-reels-badge">▶︎ 릴스로 보기</span>
+            </div>`;
+        }
+        return `<div class="issue-slide" data-i="${i}"><img src="${m.url}" loading="${i === 0 ? 'eager' : 'lazy'}" decoding="async"></div>`;
+    }).join('');
+    const dots = multi ? media.map((_, i) => `<div class="issue-c-dot ${i === 0 ? 'on' : ''}"></div>`).join('') : '';
+
+    wrap.innerHTML = `
+    <div class="issue-media">
+        <div class="issue-carousel">
+            <div class="issue-slides" id="issue-slides">${slides}</div>
+            ${multi ? `
+            <button class="issue-arr l" onclick="issueCarouselGo(-1)">‹</button>
+            <button class="issue-arr r" onclick="issueCarouselGo(1)">›</button>
+            <div class="issue-c-cnt" id="issue-c-cnt">1 / ${media.length}</div>
+            <div class="issue-c-dots" id="issue-c-dots">${dots}</div>
+            ` : ''}
+        </div>
+    </div>`;
+
+    const carousel = wrap.querySelector('.issue-carousel');
+    const slidesEl = carousel.querySelector('.issue-slides');
+    const vids = Array.from(carousel.querySelectorAll('.issue-cvid'));
+
+    // 영상 슬라이드: 활성 슬라이드(+뷰포트 안)만 재생. HLS는 활성 될 때 lazy attach.
+    let inView = true;
+    function attachOnce(v) {
+        if (v.dataset.attached) return;
+        v.dataset.attached = '1';
+        if (window.GALLA_attachHls) window.GALLA_attachHls(v, v.dataset.src);
+        else v.src = v.dataset.src;
+    }
+    function syncActiveVideo() {
+        vids.forEach(v => {
+            const idx = Number(v.closest('.issue-slide').dataset.i);
+            if (idx === issueCarouselIdx && inView) {
+                attachOnce(v);
+                const wantSound = window.GALLA_soundOn && window.GALLA_soundOn();
+                v.muted = !wantSound;
+                v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+            } else {
+                v.pause();
             }
-            vid.addEventListener('loadedmetadata', () => {
-                const t = Math.floor(vid.duration);
-                const dur = document.getElementById('issue-vid-dur');
-                if (dur) dur.textContent = `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;
-            });
+        });
+        window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns();
+    }
+    window.__issueSyncActiveVideo = syncActiveVideo;   // issueCarouselGo에서 호출
 
-            // 스크롤 자동재생
-            const observer = new IntersectionObserver(entries => {
-                entries.forEach(e => {
-                    if (e.isIntersecting && e.intersectionRatio > 0.5) {
-                        // 전역 사운드 선호면 바로 소리 재생 시도(실패 시 음소거 폴백 → 첫 제스처에 켜짐)
-                        const wantSound = window.GALLA_soundOn && window.GALLA_soundOn();
-                        vid.muted = !wantSound;
-                        vid.play().catch(() => { vid.muted = true; vid.play().catch(() => {}); });
-                        window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns();
-                        document.getElementById('issue-play-ov')?.classList.add('hidden');
-                    } else {
-                        vid.pause();
-                        document.getElementById('issue-play-ov')?.classList.remove('hidden');
-                    }
-                });
-            }, { threshold: 0.5 });
-            observer.observe(vid);
-            onCleanup(() => observer.disconnect());   // SPA unmount 시 옵저버 해제
-            // 전역 사운드 동기화 — mount마다 다시 걸리므로 unmount에서 반드시 제거(누적 방지)
-            const onGallaSound = () => window.GALLA_syncSoundBtns && window.GALLA_syncSoundBtns();
-            document.addEventListener('galla:sound', onGallaSound);
-            onCleanup(() => document.removeEventListener('galla:sound', onGallaSound));
-        }
-        return;
+    if (vids.length) {
+        // 음소거 버튼 / 릴스 진입(영상 슬라이드 탭) 위임
+        carousel.addEventListener('click', e => {
+            const mute = e.target.closest('.issue-cvid-mute');
+            if (mute) { e.stopPropagation(); const v = mute.closest('.issue-slide').querySelector('.issue-cvid'); window.GALLA_setSound(v ? v.muted : !(window.GALLA_soundOn && window.GALLA_soundOn())); return; }
+            const vslide = e.target.closest('.issue-slide--video');
+            if (vslide) issueOpenReelsAt(Number(vslide.dataset.i));
+        });
+        if (window.GALLA_enterImmersive) window.GALLA_enterImmersive();
+        const io = new IntersectionObserver(es => {
+            es.forEach(en => { inView = en.isIntersecting && en.intersectionRatio > 0.4; syncActiveVideo(); });
+        }, { threshold: 0.4 });
+        io.observe(carousel);
+        onCleanup(() => io.disconnect());
+        const onGallaSound = () => syncActiveVideo();
+        document.addEventListener('galla:sound', onGallaSound);
+        onCleanup(() => document.removeEventListener('galla:sound', onGallaSound));
     }
 
-    // 사진 (thumbnail_url 단일 or 배열)
-    const images = issue.images || (issue.thumbnail_url ? [issue.thumbnail_url] : []);
-    if (images.length > 0) {
-        issueCarouselTotal = images.length;
-        issueCarouselIdx = 0;
-        const dots = images.map((_, i) => `<div class="issue-c-dot ${i===0?'on':''}"></div>`).join('');
-        const slides = images.map(url => `<div class="issue-slide"><img src="${url}" loading="eager" decoding="async"></div>`).join('');
-        wrap.innerHTML = `
-        <div class="issue-media">
-            <div class="issue-carousel">
-                <div class="issue-slides" id="issue-slides">${slides}</div>
-                ${images.length > 1 ? `
-                <button class="issue-arr l" onclick="issueCarouselGo(-1)">‹</button>
-                <button class="issue-arr r" onclick="issueCarouselGo(1)">›</button>
-                <div class="issue-c-cnt" id="issue-c-cnt">1 / ${images.length}</div>
-                <div class="issue-c-dots" id="issue-c-dots">${dots}</div>
-                ` : ''}
-            </div>
-        </div>`;
-
-        // 터치 스와이프 — 손가락 추적 라이브 드래그(인스타 스타일)
-        if (images.length > 1) {
-            const carousel = wrap.querySelector('.issue-carousel');
-            const slidesEl = carousel.querySelector('.issue-slides');
-            let startX = 0, startY = 0, W = 0, dragging = false, decided = false, horiz = false;
-
-            carousel.addEventListener('touchstart', e => {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                W = carousel.offsetWidth;
-                dragging = true; decided = false; horiz = false;
-                slidesEl.style.transition = 'none';
-            }, { passive: true });
-
-            carousel.addEventListener('touchmove', e => {
-                if (!dragging) return;
-                const dx = e.touches[0].clientX - startX;
-                const dy = e.touches[0].clientY - startY;
-                if (!decided) {
-                    if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-                    decided = true;
-                    horiz = Math.abs(dx) > Math.abs(dy);
-                }
-                if (!horiz) return;
-                let d = dx;
-                if ((issueCarouselIdx === 0 && dx > 0) ||
-                    (issueCarouselIdx === issueCarouselTotal - 1 && dx < 0)) d = dx * 0.35;
-                slidesEl.style.transform = `translateX(${-issueCarouselIdx * W + d}px)`;
-            }, { passive: true });
-
-            carousel.addEventListener('touchend', e => {
-                if (!dragging) return;
-                dragging = false;
-                if (!horiz) return;
-                const dx = e.changedTouches[0].clientX - startX;
-                const THRESH = Math.min(60, W * 0.2);
-                if (dx <= -THRESH) issueCarouselGo(1);
-                else if (dx >= THRESH) issueCarouselGo(-1);
-                else issueCarouselGo(0);
-            }, { passive: true });
-        }
-
-        // 슬라이드 폭 px 고정 (모바일 flex-basis:100% 순환 참조 방지)
-        sizeIssueCarousel();
-        requestAnimationFrame(sizeIssueCarousel);
-        if (!window.__issueCarouselResizeBound) {
-            window.__issueCarouselResizeBound = true;
-            window.addEventListener('resize', sizeIssueCarousel);
-        }
-        return;
+    // 터치 스와이프 — 손가락 추적 라이브 드래그(인스타 스타일)
+    if (multi) {
+        let startX = 0, startY = 0, W = 0, dragging = false, decided = false, horiz = false;
+        carousel.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+            W = carousel.offsetWidth; dragging = true; decided = false; horiz = false;
+            slidesEl.style.transition = 'none';
+        }, { passive: true });
+        carousel.addEventListener('touchmove', e => {
+            if (!dragging) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            if (!decided) { if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; decided = true; horiz = Math.abs(dx) > Math.abs(dy); }
+            if (!horiz) return;
+            let d = dx;
+            if ((issueCarouselIdx === 0 && dx > 0) || (issueCarouselIdx === issueCarouselTotal - 1 && dx < 0)) d = dx * 0.35;
+            slidesEl.style.transform = `translateX(${-issueCarouselIdx * W + d}px)`;
+        }, { passive: true });
+        carousel.addEventListener('touchend', e => {
+            if (!dragging) return; dragging = false;
+            if (!horiz) return;
+            const dx = e.changedTouches[0].clientX - startX;
+            const THRESH = Math.min(60, W * 0.2);
+            if (dx <= -THRESH) issueCarouselGo(1);
+            else if (dx >= THRESH) issueCarouselGo(-1);
+            else issueCarouselGo(0);
+        }, { passive: true });
     }
 
-    // 없음
-    wrap.innerHTML = '';
+    sizeIssueCarousel();
+    requestAnimationFrame(sizeIssueCarousel);
+    if (!window.__issueCarouselResizeBound) {
+        window.__issueCarouselResizeBound = true;
+        window.addEventListener('resize', sizeIssueCarousel);
+    }
+    syncActiveVideo();
 }
 
 window.issueTogglePlay = function() {
@@ -501,6 +486,28 @@ window.issueCarouselGo = function(dir) {
         d.classList.toggle('on', idx === i);
         d.style.width = idx === i ? '14px' : '5px';
     });
+    // 슬라이드 넘어가면 활성 슬라이드 영상만 재생/그 외 정지
+    if (typeof window.__issueSyncActiveVideo === 'function') window.__issueSyncActiveVideo();
+};
+
+/* 캐러셀의 특정 영상 슬라이드 탭 → 그 영상으로 전체화면 릴스 */
+window.issueOpenReelsAt = function(i) {
+    const issue = currentIssue;
+    if (!issue) return;
+    const media = (window.GALLA_issueMedia ? window.GALLA_issueMedia(issue) : []) || [];
+    const m = media[i];
+    if (!m || m.type !== 'video') return;
+    const item = {
+        id: issue.id, video_url: m.url, title: issue.title || "",
+        author: issue.author || "익명", level: issue.level != null ? issue.level : "",
+        avatar_url: issue.author_avatar || null,
+        category: issue.category || "", user_id: issue.user_id || "",
+        faction_a: issue.faction_a || "", faction_b: issue.faction_b || ""
+    };
+    const v = document.querySelector(`.issue-slide[data-i="${i}"] .issue-cvid`);
+    const startTime = v && !isNaN(v.currentTime) ? v.currentTime : 0;
+    if (v) v.pause();
+    if (typeof window.openShorts === 'function') window.openShorts([item], issue.id, startTime, 'detail');
 };
 
 async function wireIssueActions(issue) {

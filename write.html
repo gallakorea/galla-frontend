@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <title>갈라 이슈 만들기 - GALLA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <link rel="stylesheet" href="./css/write.css?v=073200" />
-  <link rel="stylesheet" href="./css/header.css?v=073200">
-  <link rel="stylesheet" href="./css/nav.css?v=073200">
+  <link rel="stylesheet" href="./css/write.css?v=080305" />
+  <link rel="stylesheet" href="./css/header.css?v=080305">
+  <link rel="stylesheet" href="./css/nav.css?v=080305">
   <!-- GALLA 앱 아이콘 / PWA (auto-injected) -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/app-icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/assets/app-icons/favicon-16.png">
@@ -16,10 +16,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="갈라">
-  <link rel="stylesheet" href="./css/vote-bar.css?v=073200">
-  <link rel="stylesheet" href="./css/write-upload.css?v=073200">
-  <link rel="stylesheet" href="./css/theme.css?v=073200">
-<link rel="stylesheet" href="./css/desktop.css?v=073200">
+  <link rel="stylesheet" href="./css/vote-bar.css?v=080305">
+  <link rel="stylesheet" href="./css/write-upload.css?v=080305">
+  <link rel="stylesheet" href="./css/theme.css?v=080305">
+<link rel="stylesheet" href="./css/desktop.css?v=080305">
 </head>
 
 <body data-page="write">
@@ -55,58 +55,20 @@
         <!-- ============ STEP 1 : 미디어 ============ -->
         <section class="wizard-panel" id="panel-1">
 
+          <!-- 미디어 : 사진·영상을 섞어 하나의 캐러셀로 (인스타식) · 첫 항목이 표지 -->
           <div class="wcard">
             <div class="wcard-head">
-              <span class="wcard-title">대표 미디어</span>
-              <span class="wcard-hint">사진 또는 영상 중 하나</span>
+              <span class="wcard-title">미디어</span>
+              <span class="wcard-hint">사진·영상 최대 10개</span>
             </div>
 
-            <!-- 미디어 타입 세그먼트 -->
-            <div class="media-tabs seg">
-              <button type="button" class="media-tab active" data-media="photo">🖼️ 사진</button>
-              <button type="button" class="media-tab" data-media="video">🎬 동영상</button>
-            </div>
-
-            <!-- 사진 모드 -->
-            <div class="media-pane" id="pane-photo">
-              <input type="file" id="thumbnail" class="visually-hidden-file" accept="image/*" multiple />
-              <label for="thumbnail" id="thumbnailBtn" class="media-drop">
-                <span class="media-drop-icon">＋</span>
-                <span class="media-drop-title">사진 올리기</span>
-                <span class="media-drop-sub">최대 10장 · 여러 장은 캐러셀 (첫 장이 대표)</span>
-              </label>
-              <div id="thumbPreview" class="preview-box"></div>
-            </div>
-
-            <!-- 동영상 모드 -->
-            <div class="media-pane" id="pane-video" hidden>
-              <input type="file" id="video" class="visually-hidden-file" accept="video/*" />
-              <label for="video" id="videoBtn" class="media-drop">
-                <span class="media-drop-icon">＋</span>
-                <span class="media-drop-title">동영상 올리기</span>
-                <span class="media-drop-sub">세로 4:5 권장 · 핵심은 중앙에 배치</span>
-              </label>
-              <div id="videoPreview" class="preview-box"></div>
-            </div>
-          </div>
-
-          <!-- 대표 썸네일 (3:4) -->
-          <div class="wcard card-thumb-block">
-            <div class="card-thumb-head">
-              <span class="card-thumb-title">대표 썸네일 <span class="ct-badge">3:4</span> <span class="ct-opt">선택</span></span>
-              <span class="card-thumb-sub">마이페이지 카드에 노출돼요 · 없으면 사진·영상으로 대체</span>
-            </div>
-            <div class="card-thumb-row">
-              <input type="file" id="cardThumb" class="visually-hidden-file" accept="image/*" />
-              <label for="cardThumb" id="cardThumbLabel" class="card-thumb-drop">
-                <span class="card-thumb-plus">＋</span>
-                <span>세로형 올리기</span>
-              </label>
-              <div id="cardThumbPreview" class="card-thumb-preview" hidden>
-                <img id="cardThumbImg" alt="썸네일 미리보기" />
-                <button type="button" id="cardThumbClear" class="card-thumb-clear" aria-label="삭제">✕</button>
-              </div>
-            </div>
+            <input type="file" id="mediaInput" class="visually-hidden-file" accept="image/*,video/*" multiple />
+            <label for="mediaInput" id="mediaBtn" class="media-drop">
+              <span class="media-drop-icon">＋</span>
+              <span class="media-drop-title">사진·영상 올리기</span>
+              <span class="media-drop-sub">여러 개는 캐러셀로 넘겨서 노출 · 첫 항목이 표지</span>
+            </label>
+            <div id="mediaPreview" class="preview-box"></div>
           </div>
 
           <div class="wizard-nav">
@@ -269,10 +231,10 @@
       </button>
     </div>
   </nav>
-  <script src="./js/nav.js?v=073200"></script>
-<script src="./js/desktop-pc.js?v=073200" defer></script>
-<script src="./js/nav-jog.js?v=073200" defer></script>
-  <script src="./js/dm-call.js?v=073200" defer></script>
+  <script src="./js/nav.js?v=080305"></script>
+<script src="./js/desktop-pc.js?v=080305" defer></script>
+<script src="./js/nav-jog.js?v=080305" defer></script>
+  <script src="./js/dm-call.js?v=080305" defer></script>
 
 <!-- 🎥 SPEECH MODAL -->
 <div id="speechModal" class="speech-modal" style="display:none;">
@@ -332,23 +294,23 @@
   </div>
 </div>
 
-<script src="/js/error-logger.js?v=073200"></script>
-  <script src="./vendor/supabase.js?v=073200"></script>
-<script src="./js/supabase.js?v=073200"></script>
-<script src="js/back.js?v=073200"></script>
-<script src="./js/video-compress.js?v=073200"></script>
-<script src="./js/media-upload.js?v=073200"></script>
-<script src="./js/bg-video-upload.js?v=073200"></script>
-<script src="./js/img-crop.js?v=073200"></script>
+<script src="/js/error-logger.js?v=080305"></script>
+  <script src="./vendor/supabase.js?v=080305"></script>
+<script src="./js/supabase.js?v=080305"></script>
+<script src="js/back.js?v=080305"></script>
+<script src="./js/video-compress.js?v=080305"></script>
+<script src="./js/media-upload.js?v=080305"></script>
+<script src="./js/bg-video-upload.js?v=080305"></script>
+<script src="./js/img-crop.js?v=080305"></script>
 
-<script src="./js/draft.js?v=073200"></script>
-<script src="./js/write-media.js?v=073200"></script>
-<script src="./js/vote-bar.js?v=073200"></script>
-<script src="./js/write.js?v=073200"></script>
-<script src="./js/write.ai.js?v=073200"></script>
+<script src="./js/draft.js?v=080305"></script>
+<script src="./js/write-media.js?v=080305"></script>
+<script src="./js/vote-bar.js?v=080305"></script>
+<script src="./js/write.js?v=080305"></script>
+<script src="./js/write.ai.js?v=080305"></script>
 <!-- draft 관련은 반드시 아래 -->
-<script src="./js/write.draft.restore.js?v=073200"></script>
-<script src="./js/write.draft.save.js?v=073200"></script>
+<script src="./js/write.draft.restore.js?v=080305"></script>
+<script src="./js/write.draft.save.js?v=080305"></script>
 
 <!-- 부가 UX: 글자수 카운터 · 스텝칩 동기화 (기존 로직 비침습) -->
 <script>
@@ -365,8 +327,8 @@
 })();
 </script>
 
-<script src="/js/analytics.js?v=073200"></script>
-<script src="/js/pwa.js?v=073200"></script>
-  <script src="/js/pull-refresh.js?v=073200"></script>
+<script src="/js/analytics.js?v=080305"></script>
+<script src="/js/pwa.js?v=080305"></script>
+  <script src="/js/pull-refresh.js?v=080305"></script>
 </body>
 </html>

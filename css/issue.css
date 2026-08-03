@@ -200,7 +200,8 @@ body {
     border-radius: 5px;
 }
 .issue-vid-mute,
-.issue-media--video .vid-mute {
+.issue-media--video .vid-mute,
+.issue-slide--video .vid-mute {
     position: absolute;
     bottom: 10px;
     left: 10px;
@@ -220,8 +221,12 @@ body {
     backdrop-filter: blur(4px);
     transition: transform .12s ease;
 }
-.issue-media--video .vid-mute:active { transform: scale(.88); }
-.issue-media--video .vid-mute svg { width: 17px; height: 17px; display: block; }
+.issue-media--video .vid-mute:active,
+.issue-slide--video .vid-mute:active { transform: scale(.88); }
+.issue-media--video .vid-mute svg,
+.issue-slide--video .vid-mute svg { width: 17px; height: 17px; display: block; }
+/* 캐러셀 영상 슬라이드 — 영상이 슬라이드를 꽉 채움 */
+.issue-slide .issue-cvid { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; }
 
 /* 캐러셀 */
 .issue-carousel {

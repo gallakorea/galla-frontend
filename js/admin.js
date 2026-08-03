@@ -531,12 +531,12 @@
   const IN = (id, label, ph, val) => `<label>${label}</label><input id="${id}" class="ad-input" placeholder="${ph || ""}" value="${val || ""}">`;
   const TA = (id, label, ph, rows) => `<label>${label}</label><textarea id="${id}" class="ad-input" rows="${rows || 4}" placeholder="${ph || ""}"></textarea>`;
   function renderUpload() {
-    const tabs = [["issue", "📝 이슈"], ["plaza", "💬 광장"], ["market", "📈 예측"], ["news", "📰 뉴스"]];
+    const tabs = [["issue", "📝 이슈"], ["short", "📱 숏판"], ["long", "🖥 롱판"], ["plaza", "💬 광장"], ["market", "📈 예측"], ["news", "📰 뉴스"]];
     main().innerHTML = `<h1 class="ad-h1">⬆️ 직접 업로드</h1>
       <div class="ad-segs" id="u-tab" style="margin-bottom:14px">${tabs.map(([k, l]) => `<button data-v="${k}" class="${upTab === k ? "on" : ""}">${l}</button>`).join("")}</div>
       <div class="ad-card ad-form" id="u-form"></div>`;
     $("#u-tab").onclick = e => { const b = e.target.closest("[data-v]"); if (!b) return; upTab = b.dataset.v; renderUpload(); };
-    ({ issue: upIssue, plaza: upPlaza, market: upMarket, news: upNews }[upTab])();
+    ({ issue: upIssue, short: () => upGallari("vertical"), long: () => upGallari("horizontal"), plaza: upPlaza, market: upMarket, news: upNews }[upTab])();
   }
   let issueLinks = [];
   function renderIssueLinks() {
@@ -555,10 +555,14 @@
     // sum = '핵심요약:'으로 이름표가 붙은 줄 / free = 이름표 없는 줄. 이 둘을 반드시 구분해야 한다.
     // 예전엔 한 배열에 섞고 "제목이 없으면 첫 줄을 제목으로" 했는데, '제목:' 줄이 없는 원문에서는
     // 핵심요약 문단이 통째로 제목으로 끌려갔다(제목은 문단 하나, 본문엔 👍 줄만 남음).
-    let title = "", one = ""; const sum = [], free = [], facs = [];
+    let title = "", one = ""; const sum = [], free = [], facs = [], tags = [];
+    // #해시태그는 삭제하지 말고 추출한다(원문 어디에 있든 전부)
+    (String(raw || "").match(/#[^\s#,.!?()\[\]{}"']+/g) || []).forEach(h => {
+      const t = h.replace(/^#/, "").trim(); if (t && !tags.includes(t) && tags.length < 10) tags.push(t);
+    });
     for (const ln of lines) {
       if (!ln) continue;
-      if (/^#/.test(ln) || /^(#[^\s#]+\s*)+$/.test(ln)) continue;               // 해시태그 줄 삭제
+      if (/^#/.test(ln) || /^(#[^\s#]+\s*)+$/.test(ln)) continue;               // 해시태그 전용 줄은 본문에서 제외(태그는 위에서 이미 추출)
       let m;
       if ((m = ln.match(/^제목\s*[:：]\s*(.+)$/))) { if (!title) title = m[1].trim(); continue; }
       if ((m = ln.match(/^(?:한\s*줄\s*평|한\s*줄\s*요약)\s*[:：]\s*(.+)$/))) { if (!one) one = m[1].trim(); continue; }
@@ -582,7 +586,17 @@
       desc: parts.join("\n\n").trim(),
       fa: facs[0] ? label(facs[0]) : "",
       fb: facs[1] ? label(facs[1]) : "",
+      tags: tags,
     };
+  }
+
+  // 해시태그 수집 — 입력칸("#a #b" or "a b") + 제목·본문에서 추출, 최대 10개 (관리자 자체 구현)
+  function adCollectTags(inputVal, ...texts) {
+    const out = [];
+    const add = x => { x = String(x || "").replace(/^#/, "").trim(); if (x && !out.includes(x) && out.length < 10) out.push(x); };
+    String(inputVal || "").split(/[\s,#]+/).forEach(add);
+    texts.forEach(t => (String(t || "").match(/#[^\s#,.!?()\[\]{}"']+/g) || []).forEach(add));
+    return out;
   }
 
   const CATS = ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "19금", "기타"];
@@ -609,6 +623,7 @@
         <div><label>카테고리 *</label><select id="i-cat" class="ad-input"><option value="">선택</option>${optList(CATS)}</select></div>
         <div><label>기부처 *</label><select id="i-don" class="ad-input"><option value="">선택</option>${optList(DONS)}</select></div>
       </div>
+      ${IN("i-tags", "🔖 해시태그", "#정치 #선거 — 공백으로 구분, 자동 채움됩니다 (최대 10개)")}
       <hr class="ad-hr">
       <div class="ad-3col">
         <div><label>🖼 사진(여러 장)</label><input id="i-photos" type="file" accept="image/*" multiple class="ad-file"><div class="ad-file-n" id="i-photos-n"></div></div>
@@ -640,6 +655,7 @@
       if (p.desc) $("#i-desc").value = p.desc;
       if (p.fa) $("#i-fa").value = p.fa;
       if (p.fb) $("#i-fb").value = p.fb;
+      if (p.tags && p.tags.length && $("#i-tags")) $("#i-tags").value = p.tags.map(t => "#" + t).join(" ");
       syncStance();
       toast("자동 채움 완료 — 확인 후 발행하세요");
     };
@@ -674,19 +690,102 @@
         if (vf) { set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`)); video_url = out.url || out.hls; vthumb = out.thumbnail; }
         const cf = $("#i-card").files[0];
         if (cf) { set("📇 썸네일 업로드…"); card_thumb = await window.GALLA_UPLOAD_MEDIA(cf, "image"); }
-        const thumb = images[0] || vthumb || card_thumb || null;
+        // 🎠 혼합 캐러셀 media[] — 사진들(순서) + 영상. 첫 항목이 표지.
+        const media = [];
+        images.forEach(u => media.push({ type: "image", url: u, thumb: null }));
+        if (video_url) media.push({ type: "video", url: video_url, thumb: vthumb || null });
+        const first = media[0];
+        const thumb = (first ? (first.type === "video" ? first.thumb : first.url) : null) || card_thumb || null;
+        // 🔖 해시태그 — 입력칸 + 제목·본문에서 추출
+        const tags = adCollectTags($("#i-tags") ? $("#i-tags").value : "", t, $("#i-desc").value);
         set("🚀 발행 중…");
         const r = await rpc("admin_publish_issue", {
           p_title: t, p_desc: $("#i-desc").value.trim(), p_category: $("#i-cat").value,
           p_one_line: one, p_faction_a: $("#i-fa").value.trim(), p_faction_b: $("#i-fb").value.trim(),
           p_thumb: thumb, p_links: issueLinks, p_video: video_url, p_images: images,
           p_card_thumb: card_thumb, p_donation: $("#i-don").value, p_stance: stance,
+          p_media: media.length ? media : null, p_tags: tags.length ? tags : null,
         });
         if (r?.ok) { toast("이슈 발행됨"); location.href = "issue.html?id=" + r.id; }
         else { alert("발행 실패: " + (r?.reason || "알 수 없음")); btn.disabled = false; btn.textContent = "🚀 이슈 발행"; }
       } catch (e) { console.error(e); alert("업로드/발행 중 오류: " + (e?.message || e)); btn.disabled = false; btn.textContent = "🚀 이슈 발행"; }
     };
   }
+
+  // 📱 숏판(세로 릴스: 사진 캐러셀/세로영상) · 🖥 롱판(가로 유튜브식: 가로영상+제목)
+  function upGallari(fixedKind) {
+    const isH = fixedKind === "horizontal";
+    $("#u-form").innerHTML = `
+      <div id="g-title-block" ${isH ? "" : "hidden"}>${IN("g-title", "제목 * (롱판)", "가로 영상 제목")}</div>
+      ${TA("g-caption", "내용 / 설명", "숏판=내용, 롱판=설명", 4)}
+      ${IN("g-tags", "🔖 해시태그", "#여행 #맛집 — 공백으로 구분 (최대 10개)")}
+      <hr class="ad-hr">
+      <div id="g-vertical-media">
+        <div class="ad-3col">
+          <div><label>🖼 사진(여러 장·캐러셀)</label><input id="g-photos" type="file" accept="image/*" multiple class="ad-file"><div class="ad-file-n" id="g-photos-n"></div></div>
+          <div><label>📹 세로 영상</label><input id="g-vvideo" type="file" accept="video/*" class="ad-file"><div class="ad-file-n" id="g-vvideo-n"></div></div>
+          <div><label>📇 표지(선택)</label><input id="g-vthumb" type="file" accept="image/*" class="ad-file"><div class="ad-file-n" id="g-vthumb-n"></div></div>
+        </div>
+        <div class="ad-note" style="margin-top:8px">숏판: 사진 여러 장(캐러셀) 또는 세로 영상 하나. 사진이 있으면 사진 캐러셀로 나갑니다.</div>
+      </div>
+      <div id="g-horizontal-media" ${isH ? "" : "hidden"}>
+        <div class="ad-2col">
+          <div><label>🎬 가로 영상 *</label><input id="g-hvideo" type="file" accept="video/*" class="ad-file"><div class="ad-file-n" id="g-hvideo-n"></div></div>
+          <div><label>📇 표지 썸네일(선택)</label><input id="g-hthumb" type="file" accept="image/*" class="ad-file"><div class="ad-file-n" id="g-hthumb-n"></div></div>
+        </div>
+      </div>
+      <button class="ad-btn primary" id="g-go" style="margin-top:14px">🚀 ${isH ? "롱판" : "숏판"} 발행</button>
+      <div class="ad-note">${isH ? "롱판 — 가로 플레이어 노출" : "숏판 — 릴스 탭 노출"}. 관리자 발행은 자동 승인됩니다.</div>`;
+
+    const gkind = isH ? "horizontal" : "vertical";
+    const goLabel = "🚀 " + (isH ? "롱판" : "숏판") + " 발행";
+    $("#g-vertical-media").hidden = isH;
+    if ($("#g-caption")) $("#g-caption").previousElementSibling.textContent = isH ? "설명" : "내용";
+    const fn = (inp, out) => { const el = $(inp); if (el) el.onchange = () => { const fs = el.files; $(out).textContent = fs.length ? (fs.length > 1 ? `${fs.length}개 선택됨` : fs[0].name) : ""; }; };
+    ["g-photos", "g-vvideo", "g-vthumb", "g-hvideo", "g-hthumb"].forEach(id => fn("#" + id, "#" + id + "-n"));
+
+    $("#g-go").onclick = async () => {
+      const title = ($("#g-title") ? $("#g-title").value : "").trim();
+      const caption = ($("#g-caption") ? $("#g-caption").value : "").trim();
+      if (gkind === "horizontal" && !title) return toast("롱판은 제목이 필요해요.");
+      const btn = $("#g-go"); btn.disabled = true;
+      const set = m => btn.textContent = m;
+      try {
+        let images = null, video_url = null, thumbnail_url = null, media = null;
+        if (gkind === "vertical") {
+          // 🎠 숏판 혼합 캐러셀 — 사진들(순서) + 세로영상. 첫 항목이 표지.
+          media = []; const imgUrls = [];
+          const photos = [...($("#g-photos").files || [])];
+          for (let i = 0; i < photos.length; i++) { set(`🖼 사진 ${i + 1}/${photos.length}…`); const u = await window.GALLA_UPLOAD_MEDIA(photos[i], "image"); imgUrls.push(u); media.push({ type: "image", url: u, thumb: null }); }
+          const vf = $("#g-vvideo").files[0];
+          if (vf) { set("📹 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO(vf, p => set(p == null ? "📹 영상 업로드…" : `📹 영상 ${p}%`)); video_url = out.url || out.hls; media.push({ type: "video", url: video_url, thumb: out.thumbnail || null }); }
+          if (!media.length) { toast("사진 또는 세로 영상을 올려주세요."); btn.disabled = false; btn.textContent = goLabel; return; }
+          images = imgUrls.length ? imgUrls : null;
+          const first = media[0];
+          thumbnail_url = first.type === "video" ? first.thumb : first.url;
+          const tf = $("#g-vthumb").files[0];
+          if (tf) { set("📇 표지 업로드…"); thumbnail_url = await window.GALLA_UPLOAD_MEDIA(tf, "image"); }
+        } else {
+          const vf = $("#g-hvideo").files[0];
+          if (!vf) { toast("가로 영상을 올려주세요."); btn.disabled = false; btn.textContent = goLabel; return; }
+          set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`));
+          video_url = out.url || out.hls; thumbnail_url = out.thumbnail || null;
+          const tf = $("#g-hthumb").files[0];
+          if (tf) { set("📇 표지 업로드…"); thumbnail_url = await window.GALLA_UPLOAD_MEDIA(tf, "image"); }
+        }
+        const tags = adCollectTags($("#g-tags") ? $("#g-tags").value : "", title, caption);
+        set("🚀 발행 중…");
+        const r = await rpc("admin_publish_post", {
+          p_kind: gkind, p_title: title || null, p_caption: caption || null,
+          p_images: images, p_video: video_url, p_thumbnail: thumbnail_url,
+          p_tags: tags.length ? tags : null, p_media: (media && media.length) ? media : null,
+        });
+        if (r?.ok) { toast((isH ? "롱판" : "숏판") + " 발행됨"); location.href = "gallari-post.html?id=" + r.id; }
+        else { alert("발행 실패: " + (r?.reason || "알 수 없음")); btn.disabled = false; btn.textContent = goLabel; }
+      } catch (e) { console.error(e); alert("업로드/발행 중 오류: " + (e?.message || e)); btn.disabled = false; btn.textContent = goLabel; }
+    };
+  }
+
   function upPlaza() {
     $("#u-form").innerHTML =
       IN("p-title", "제목 *", "광장 글 제목") + TA("p-body", "본문 *", "자유롭게 작성", 7) +
@@ -738,6 +837,7 @@
   async function renderBrain() {
     const inp = "width:100%;box-sizing:border-box;padding:8px 10px;background:#0d1420;border:1px solid #26364c;border-radius:8px;color:#e6f0fb;font-size:13px;font-family:inherit";
     main().innerHTML = `<h1 class="ad-h1">🧠 브레인 엔진 <span style="font-size:13px;color:#7d8ba0;font-weight:600">— 성공 유형 패턴(AI에 주입돼 제목·썸네일·대본 생성). 계속 쌓을수록 똑똑해집니다.</span></h1>
+      <div id="b-stats" style="margin-bottom:16px"></div>
       <div style="background:#111a28;border:1px solid #223047;border-radius:14px;padding:14px;margin-bottom:16px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
           <label style="font-size:11px;color:#8fa0b5">종류<select id="bf-kind" style="${inp}">${BRAIN_KINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>
@@ -770,6 +870,26 @@
       g("bf-save").textContent = p?.id ? "수정 저장" : "저장";
     };
     fillForm(null); g("bf-kind").value = brainKind;
+
+    // 📊 창작 대행 계측(클로즈드 베타 실사용·실결제) — 30일
+    (async () => {
+      const s = await rpc("admin_creation_stats", { p_days: 30 });
+      const box = g("b-stats"); if (!box) return;
+      if (!s || s.error) { box.innerHTML = ""; return; }
+      const rev = (s.gp_spent_thumbnail || 0) + (s.gp_spent_video || 0) - Math.abs(s.gp_refunded || 0);
+      const cell = (label, val, sub) => `<div style="flex:1;min-width:96px;background:#111a28;border:1px solid #223047;border-radius:12px;padding:11px 13px">
+        <div style="font-size:11px;color:#7d8ba0;margin-bottom:3px">${label}</div>
+        <div style="font-size:20px;font-weight:800;color:#e6f0fb">${val}</div>${sub ? `<div style="font-size:10px;color:#5f6c80;margin-top:2px">${sub}</div>` : ""}</div>`;
+      box.innerHTML = `<div style="font-size:12px;color:#7d8ba0;font-weight:700;margin-bottom:7px">📊 창작 대행 실사용 · 실결제 (최근 30일)</div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          ${cell("제작", (s.thumbnails || 0) + (s.videos || 0), `썸네일 ${s.thumbnails || 0} · 영상 ${s.videos || 0}`)}
+          ${cell("제작 유저", s.creators || 0, "생성 경험")}
+          ${cell("창작 매출(GP)", rev.toLocaleString(), `환불 ${Math.abs(s.gp_refunded || 0)}`)}
+          ${cell("결제 유저", s.paying_users || 0, "GP 실차감")}
+          ${cell("발행 콘텐츠", s.published_posts || 0, "숏판·롱판")}
+        </div>`;
+    })();
+
     g("bf-reset").onclick = () => fillForm(null);
     g("bf-save").onclick = async () => {
       const args = { p_id: g("bf-id").value ? Number(g("bf-id").value) : null, p_kind: g("bf-kind").value, p_content_type: g("bf-ct").value,
