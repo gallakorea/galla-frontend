@@ -131,6 +131,8 @@ select.input-field option { background: #16171c; color: #fff; }
   border: none; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; }
 .vmode-thumb.uploading { opacity: .6; }
+/* 롱판(가로) 슬롯 — 16:9 */
+.vmode-pick--wide, .vmode-thumb--wide { aspect-ratio: 16/9; }
 
 /* 업로드 드롭존 */
 .media-drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;

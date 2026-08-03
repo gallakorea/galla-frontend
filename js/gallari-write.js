@@ -18,6 +18,7 @@
     // 🎠 숏판(세로) 혼합 미디어 — 이슈와 동일: [{kind:'image'|'video', file, url, thumb, up}] (순서=캐러셀, 첫=표지)
     let vItems = [];
     let hVideoFile = null, hVideoUrl = null;   // 롱판 가로영상
+    let hThumbUrl = null, hVideoPoster = null, hCoverUp = false;   // 롱판 썸네일(따로) + 영상 포스터
     let preVideoUrl = null, preVideoThumb = null;   // 🎬 갈비스가 만든 사전호스팅 영상(R2 mp4) — 업로드 없이 그대로 발행
 
     const kindTabs = root.querySelectorAll('.glr-kind-tab');
@@ -255,16 +256,76 @@
       return true;
     }
     // (세로영상은 위 숏판 혼합 미디어에서 함께 처리 — 별도 핸들러 없음)
-    // 가로영상(롱판)
-    const hv = $('glrHVideo'), hvBtn = $('glrHVideoBtn'), hvPrev = $('glrHVideoPrev');
-    hv.addEventListener('click', () => { hv.value = ''; });
+    // 가로영상(롱판) — 영상 슬롯 / 썸네일 슬롯 '따로' 두 개
+    const hv = $('glrHVideo'), hCover = $('glrHCover'), hPrev = $('glrHPrev');
+    function captureVideoPoster(file) {
+      return new Promise(res => {
+        try {
+          const v = document.createElement('video'); v.muted = true; v.preload = 'metadata';
+          const u = URL.createObjectURL(file);
+          v.onloadeddata = () => { try { v.currentTime = Math.min(0.1, (v.duration || 1) * 0.1); } catch (_) {} };
+          v.onseeked = () => {
+            try { const c = document.createElement('canvas'); c.width = v.videoWidth || 320; c.height = v.videoHeight || 180; c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.7)); }
+            catch (_) { res(null); } finally { URL.revokeObjectURL(u); }
+          };
+          v.onerror = () => { res(null); URL.revokeObjectURL(u); };
+          v.src = u; setTimeout(() => res(null), 4000);
+        } catch (_) { res(null); }
+      });
+    }
+    function renderHMedia() {
+      if (!hPrev) return;
+      const hasVid = !!(hVideoFile || preVideoUrl);
+      const custom = !!hThumbUrl;
+      const vposter = hVideoPoster || preVideoThumb || '';
+      hPrev.innerHTML = `
+        <div class="vmode-slots">
+          <div class="vmode-slot">
+            <div class="vmode-slot-h">🎬 가로영상 <em class="req">필수</em></div>
+            ${hasVid
+              ? `<div class="vmode-thumb is-video vmode-thumb--wide">${vposter ? `<img src="${vposter}">` : `<div class="mi-vidph">🎬</div>`}<span class="multi-img-play">▶</span><button type="button" class="vmode-del" data-del="hvideo" aria-label="영상 삭제">✕</button></div>`
+              : `<button type="button" class="vmode-pick vmode-pick--wide" id="glrPickHVideo"><span class="vmode-plus">＋</span><span>영상 선택</span></button>`}
+          </div>
+          <div class="vmode-slot">
+            <div class="vmode-slot-h">🖼 썸네일 <em class="opt">선택</em></div>
+            ${custom
+              ? `<div class="vmode-thumb vmode-thumb--wide${hCoverUp ? ' uploading' : ''}"><img src="${hThumbUrl}">${hCoverUp ? '<span class="multi-img-up"><i></i></span>' : ''}<button type="button" class="vmode-del" data-del="hcover" aria-label="썸네일 삭제">✕</button></div>`
+              : `<button type="button" class="vmode-pick vmode-pick--cover vmode-pick--wide" id="glrPickHCover" ${hasVid ? '' : 'disabled'}><span class="vmode-plus">＋</span><span>썸네일 선택</span><em>안 고르면 첫 장면</em></button>`}
+          </div>
+        </div>
+        <div class="guide-text">가로 16:9 권장 · 영상 필수 · 썸네일 선택(안 고르면 영상 첫 장면)</div>`;
+    }
     hv.addEventListener('change', async e => {
-      const f = e.target.files[0]; if (!f) return;
+      const f = e.target.files[0]; hv.value = ''; if (!f) return;
+      const dur = await videoDuration(f);
+      if (dur && dur > MAX_VIDEO_SEC + 1) { alert(`영상이 너무 길어요 (${Math.round(dur)}초) — 최대 ${MAX_VIDEO_SEC}초까지예요.`); return; }
       window.GALLA_bgVideo && window.GALLA_bgVideo.clear();
-      const ok = await pickVideo(f, hvPrev);
-      if (ok) { hVideoFile = f; hVideoUrl = null; if (hvBtn) hvBtn.style.display = 'none'; }
-      else { hVideoFile = null; if (hvBtn) hvBtn.style.display = ''; }
+      hVideoFile = f; hVideoUrl = null; preVideoUrl = null; preVideoThumb = null; hVideoPoster = null;
+      renderHMedia();
+      captureVideoPoster(f).then(p => { hVideoPoster = p; renderHMedia(); });
+      if (window.GALLA_bgVideo) { try { await window.GALLA_bgVideo.pick(f); } catch (_) {} }
     });
+    if (hCover) hCover.addEventListener('change', async e => {
+      const f = e.target.files && e.target.files[0]; hCover.value = ''; if (!f) return;
+      hCoverUp = true; renderHMedia();
+      try {
+        let file = f;
+        if (window.GALLA_PROCESS_IMAGES) { const pr = await window.GALLA_PROCESS_IMAGES([f]); if (pr && pr[0]) file = pr[0]; }
+        if (window.GALLA_UPLOAD_MEDIA) { const u = await window.GALLA_UPLOAD_MEDIA(file, 'image'); if (u) hThumbUrl = u; }
+      } catch (err) { console.warn('[갈라리] 롱판 썸네일 업로드 실패', err); }
+      finally { hCoverUp = false; renderHMedia(); }
+    });
+    if (hPrev) hPrev.addEventListener('click', e => {
+      if (e.target.closest('#glrPickHVideo')) { hv.value = ''; hv.click(); return; }
+      if (e.target.closest('#glrPickHCover')) { if (hCover) { hCover.value = ''; hCover.click(); } return; }
+      const vdel = e.target.closest('.vmode-del');
+      if (vdel) {
+        if (vdel.dataset.del === 'hcover') { hThumbUrl = null; }
+        else { hVideoFile = null; hVideoUrl = null; hVideoPoster = null; preVideoUrl = null; preVideoThumb = null; try { window.GALLA_bgVideo && window.GALLA_bgVideo.clear(); } catch (_) {} }
+        renderHMedia(); return;
+      }
+    });
+    renderHMedia();
 
     /* ---------- 발행 ---------- */
     const submitBtn = $('glrSubmit');
@@ -318,6 +379,7 @@
             video_url = (out && (out.url || out.hls)) || null;
             if (out && out.thumbnail) thumbnail_url = out.thumbnail;
           }
+          if (hThumbUrl) thumbnail_url = hThumbUrl;   // 롱판 커스텀 썸네일 우선
         } else {
           // 🎠 숏판 — 혼합 캐러셀(사진+영상). 순서대로 업로드 → media[] + 하위호환 필드.
           media = []; const imgUrls = []; let firstVideoUrl = null; const total = vItems.length;
@@ -421,16 +483,8 @@
           const horiz = vk === 'horizontal';
           setKind(horiz ? 'horizontal' : 'vertical');
           if (horiz) {
-            preVideoUrl = url; preVideoThumb = thumb || null; hVideoFile = null;
-            const box = document.getElementById('glrHVideoPrev');
-            if (box) {
-              box.innerHTML = '';
-              const v = document.createElement('video'); v.src = url; v.controls = true; v.playsInline = true; v.muted = true;
-              box.appendChild(v);
-              const bar = document.createElement('div'); bar.className = 'glr-vbar'; bar.textContent = '✅ 갈비스가 만든 영상 — 확인하고 공유';
-              box.appendChild(bar);
-            }
-            const btn = document.getElementById('glrHVideoBtn'); if (btn) btn.style.display = 'none';
+            preVideoUrl = url; preVideoThumb = thumb || null; hVideoFile = null; hVideoPoster = thumb || null;
+            renderHMedia();
           } else {
             // 숏판 — 혼합 캐러셀 첫 항목(영상)으로 추가
             if (!vItems.some(it => it.url === url)) vItems.unshift({ kind: 'video', file: null, url: url, thumb: thumb || null, up: false });

@@ -816,18 +816,18 @@
       ${IN("g-tags", "🔖 해시태그", "#여행 #맛집 — 공백으로 구분 (최대 10개)")}
       <hr class="ad-hr">
       <div id="g-vertical-media">
-        <div class="ad-3col">
-          <div><label>🖼 사진(여러 장·캐러셀)</label><input id="g-photos" type="file" accept="image/*" multiple class="ad-file"><div class="ad-file-n" id="g-photos-n"></div></div>
-          <div><label>📹 세로 영상</label><input id="g-vvideo" type="file" accept="video/*" class="ad-file"><div class="ad-file-n" id="g-vvideo-n"></div></div>
-          <div><label>📇 표지(선택)</label><input id="g-vthumb" type="file" accept="image/*" class="ad-file"><div class="ad-file-n" id="g-vthumb-n"></div></div>
-        </div>
-        <div class="ad-note" style="margin-top:8px">숏판: 사진 여러 장(캐러셀) 또는 세로 영상 하나. 사진이 있으면 사진 캐러셀로 나갑니다.</div>
+        <label>🖼 사진(여러 장·캐러셀)</label>
+        <input id="g-photos" type="file" accept="image/*" multiple class="ad-file"><div class="ad-file-n" id="g-photos-n"></div>
+        <div class="ad-note" style="margin:10px 0 6px">— 또는 세로 영상 + 썸네일 (따로) —</div>
+        <input id="g-vvideo" type="file" accept="video/*" style="display:none">
+        <input id="g-vthumb" type="file" accept="image/*" style="display:none">
+        <div id="g-vslots"></div>
+        <div class="ad-note" style="margin-top:8px">숏판: 사진 캐러셀 '또는' 세로 영상+썸네일. 사진이 있으면 사진 캐러셀로 나갑니다.</div>
       </div>
       <div id="g-horizontal-media" ${isH ? "" : "hidden"}>
-        <div class="ad-2col">
-          <div><label>🎬 가로 영상 *</label><input id="g-hvideo" type="file" accept="video/*" class="ad-file"><div class="ad-file-n" id="g-hvideo-n"></div></div>
-          <div><label>📇 표지 썸네일(선택)</label><input id="g-hthumb" type="file" accept="image/*" class="ad-file"><div class="ad-file-n" id="g-hthumb-n"></div></div>
-        </div>
+        <input id="g-hvideo" type="file" accept="video/*" style="display:none">
+        <input id="g-hthumb" type="file" accept="image/*" style="display:none">
+        <div id="g-hslots"></div>
       </div>
       <button class="ad-btn primary" id="g-go" style="margin-top:14px">🚀 ${isH ? "롱판" : "숏판"} 발행</button>
       <div class="ad-note">${isH ? "롱판 — 가로 플레이어 노출" : "숏판 — 릴스 탭 노출"}. 관리자 발행은 자동 승인됩니다.</div>`;
@@ -837,7 +837,38 @@
     $("#g-vertical-media").hidden = isH;
     if ($("#g-caption")) $("#g-caption").previousElementSibling.textContent = isH ? "설명" : "내용";
     const fn = (inp, out) => { const el = $(inp); if (el) el.onchange = () => { const fs = el.files; $(out).textContent = fs.length ? (fs.length > 1 ? `${fs.length}개 선택됨` : fs[0].name) : ""; }; };
-    ["g-photos", "g-vvideo", "g-vthumb", "g-hvideo", "g-hthumb"].forEach(id => fn("#" + id, "#" + id + "-n"));
+    fn("#g-photos", "#g-photos-n");
+
+    // 🎬 영상 + 썸네일 = 슬롯 '따로' 두 개(관리자). 숨긴 native 입력을 슬롯이 트리거, 발행은 입력을 그대로 읽음.
+    function renderGSlots() {
+      [["v", $("#g-vslots"), false], ["h", $("#g-hslots"), true]].forEach(([k, cont, wide]) => {
+        if (!cont) return;
+        const vIn = $("#g-" + k + "video"), tIn = $("#g-" + k + "thumb");
+        const vFile = vIn && vIn.files[0], tFile = tIn && tIn.files[0];
+        const W = wide ? " vmode-thumb--wide" : "", PW = wide ? " vmode-pick--wide" : "";
+        cont.innerHTML = `
+          <div class="vmode-slots">
+            <div class="vmode-slot">
+              <div class="vmode-slot-h">🎬 ${wide ? "가로영상" : "세로영상"} <em class="${wide ? "req" : "opt"}">${wide ? "필수" : "선택"}</em></div>
+              ${vFile
+                ? `<div class="vmode-thumb is-video${W}"><div class="ad-mvph">🎬</div><span class="ad-mplay">▶</span><button type="button" class="vmode-del" data-gdel="g-${k}video">✕</button></div>`
+                : `<button type="button" class="vmode-pick${PW}" data-gpick="g-${k}video"><span class="vmode-plus">＋</span><span>영상 선택</span></button>`}
+            </div>
+            <div class="vmode-slot">
+              <div class="vmode-slot-h">🖼 썸네일 <em class="opt">선택</em></div>
+              ${tFile
+                ? `<div class="vmode-thumb${W}"><img src="${URL.createObjectURL(tFile)}"><button type="button" class="vmode-del" data-gdel="g-${k}thumb">✕</button></div>`
+                : `<button type="button" class="vmode-pick vmode-pick--cover${PW}" data-gpick="g-${k}thumb"><span class="vmode-plus">＋</span><span>썸네일 선택</span></button>`}
+            </div>
+          </div>`;
+      });
+    }
+    ["g-vvideo", "g-vthumb", "g-hvideo", "g-hthumb"].forEach(id => { const el = $("#" + id); if (el) el.onchange = renderGSlots; });
+    ["#g-vslots", "#g-hslots"].forEach(sel => { const c = $(sel); if (c) c.onclick = e => {
+      const pick = e.target.closest("[data-gpick]"); if (pick) { const el = $("#" + pick.dataset.gpick); if (el) { el.value = ""; el.click(); } return; }
+      const del = e.target.closest("[data-gdel]"); if (del) { const el = $("#" + del.dataset.gdel); if (el) el.value = ""; renderGSlots(); return; }
+    }; });
+    renderGSlots();
 
     $("#g-go").onclick = async () => {
       const title = ($("#g-title") ? $("#g-title").value : "").trim();
@@ -859,14 +890,14 @@
           const first = media[0];
           thumbnail_url = first.type === "video" ? first.thumb : first.url;
           const tf = $("#g-vthumb").files[0];
-          if (tf) { set("📇 표지 업로드…"); thumbnail_url = await window.GALLA_UPLOAD_MEDIA(tf, "image"); }
+          if (tf) { set("📇 썸네일 업로드…"); thumbnail_url = await window.GALLA_UPLOAD_MEDIA(tf, "image"); }
         } else {
           const vf = $("#g-hvideo").files[0];
           if (!vf) { toast("가로 영상을 올려주세요."); btn.disabled = false; btn.textContent = goLabel; return; }
           set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`));
           video_url = out.url || out.hls; thumbnail_url = out.thumbnail || null;
           const tf = $("#g-hthumb").files[0];
-          if (tf) { set("📇 표지 업로드…"); thumbnail_url = await window.GALLA_UPLOAD_MEDIA(tf, "image"); }
+          if (tf) { set("📇 썸네일 업로드…"); thumbnail_url = await window.GALLA_UPLOAD_MEDIA(tf, "image"); }
         }
         const tags = adCollectTags($("#g-tags") ? $("#g-tags").value : "", title, caption);
         set("🚀 발행 중…");

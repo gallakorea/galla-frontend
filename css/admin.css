@@ -311,3 +311,5 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-stance button b{ font-weight:700; }
 .ad-stance button[data-st="pro"].on{ border-color:#3d6bff; background:rgba(61,107,255,.16); color:#fff; }
 .ad-stance button[data-st="con"].on{ border-color:#ff4d67; background:rgba(255,77,103,.16); color:#fff; }
+
+.vmode-pick--wide, .vmode-thumb--wide{ aspect-ratio:16/9; }
