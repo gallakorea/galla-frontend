@@ -258,6 +258,19 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-file{ display:block; width:100%; font-size:12px; color:#c9d1e0; margin-top:4px; }
 .ad-file::file-selector-button{ background:#20242e; color:#c9d1e0; border:1px solid rgba(255,255,255,.14); border-radius:8px; padding:6px 10px; margin-right:8px; cursor:pointer; font-size:12px; }
 .ad-file-n{ font-size:11px; color:#7c86f5; margin-top:4px; min-height:14px; word-break:break-all; }
+/* 🎠 이슈 혼합 캐러셀 스트립 */
+.ad-mstrip{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.ad-mstrip:empty{ margin-top:0; }
+.ad-mitem{ position:relative; width:78px; height:98px; border-radius:9px; overflow:hidden; border:1px solid rgba(255,255,255,.14); background:#16181d; flex:0 0 auto; }
+.ad-mitem img{ width:100%; height:100%; object-fit:cover; display:block; }
+.ad-mitem.up{ opacity:.55; }
+.ad-mvph{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:26px; }
+.ad-mplay{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:24px; height:24px; border-radius:50%; background:rgba(0,0,0,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; pointer-events:none; }
+.ad-mbadge{ position:absolute; top:5px; left:5px; font-size:9px; font-weight:800; color:#0a0a0b; background:#f5c542; padding:2px 6px; border-radius:99px; }
+.ad-mdel{ position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:50%; border:none; cursor:pointer; background:rgba(0,0,0,.66); color:#fff; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+.ad-mup{ position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(124,134,245,.35),transparent); animation:ad-mshine 1s linear infinite; }
+@keyframes ad-mshine{ 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+.ad-mnote{ width:100%; font-size:11px; color:#7c86f5; margin-top:2px; }
 .ad-more{ margin:12px 0; }
 .ad-more summary{ cursor:pointer; font-size:13px; color:#9aa3b5; padding:6px 0; }
 @media (max-width:640px){ .ad-3col{ grid-template-columns:1fr; } }

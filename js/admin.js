@@ -625,18 +625,16 @@
       </div>
       ${IN("i-tags", "🔖 해시태그", "#정치 #선거 — 공백으로 구분, 자동 채움됩니다 (최대 10개)")}
       <hr class="ad-hr">
-      <div class="ad-3col">
-        <div><label>🖼 사진(여러 장)</label><input id="i-photos" type="file" accept="image/*" multiple class="ad-file"><div class="ad-file-n" id="i-photos-n"></div></div>
-        <div><label>🎬 영상</label><input id="i-video" type="file" accept="video/*" class="ad-file"><div class="ad-file-n" id="i-video-n"></div></div>
-        <div><label>📇 카드 썸네일(3:4)</label><input id="i-card" type="file" accept="image/*" class="ad-file"><div class="ad-file-n" id="i-card-n"></div></div>
-      </div>
+      <label>🖼 미디어 — 사진·영상 캐러셀 <span style="opacity:.6;font-weight:400">(여러 개 = 캐러셀 · 첫 항목이 표지)</span></label>
+      <input id="i-media" type="file" accept="image/*,video/*" multiple class="ad-file">
+      <div id="i-media-strip" class="ad-mstrip"></div>
       <details class="ad-more"><summary>관련 링크 · 근거 (선택)</summary>
         <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="URL 붙여넣기 → 추가" style="margin:0">
         <button class="ad-btn ghost" id="i-link-go" type="button">추가</button></div>
         <div id="i-links" class="ad-links"></div>
       </details>
       <button class="ad-btn primary" id="i-go">🚀 이슈 발행</button>
-      <div class="ad-note">사진·영상·썸네일은 파일로 올리면 자동 업로드됩니다. 진영명 비우면 기본(찬성이오/난 반댈세).</div>`;
+      <div class="ad-note">사진·영상을 한 입력에서 섞어 캐러셀로 — 고르면 바로 업로드, 첫 항목이 표지. 진영명 비우면 기본(찬성이오/난 반댈세).</div>`;
     renderIssueLinks();
 
     // 작성자 입장 토글 + 진영 라벨 동기화
@@ -659,8 +657,29 @@
       syncStance();
       toast("자동 채움 완료 — 확인 후 발행하세요");
     };
-    const fileName = (inp, out) => $(inp).onchange = () => { const fs = $(inp).files; $(out).textContent = fs.length ? (fs.length > 1 ? `${fs.length}개 선택됨` : fs[0].name) : ""; };
-    fileName("#i-photos", "#i-photos-n"); fileName("#i-video", "#i-video-n"); fileName("#i-card", "#i-card-n");
+    // 🎠 이슈 혼합 캐러셀 — 사진·영상 하나의 입력으로(순서 보존, 첫 항목 표지). admin은 crop 없이 원본 업로드.
+    let iMedia = [];   // [{kind:'image'|'video', file, url, thumb, up}]
+    const iStrip = $("#i-media-strip"), iInput = $("#i-media");
+    const renderIMedia = () => {
+      iStrip.innerHTML = iMedia.map((it, i) => `
+        <div class="ad-mitem${it.up ? " up" : ""}" data-i="${i}">
+          ${it.kind === "video" ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="ad-mvph">🎬</div>`) + `<span class="ad-mplay">▶</span>` : `<img src="${it.url || (it.file ? URL.createObjectURL(it.file) : "")}">`}
+          ${it.up ? '<span class="ad-mup"></span>' : ""}
+          ${i === 0 ? '<span class="ad-mbadge">표지</span>' : ""}
+          <button type="button" class="ad-mdel" data-i="${i}">✕</button>
+        </div>`).join("") + (iMedia.length ? `<div class="ad-mnote">${iMedia.length}개 · 첫 항목이 표지${iMedia.length > 1 ? " · 캐러셀" : ""}</div>` : "");
+    };
+    const upIImg = async (it) => { if (!it.file || it.url) return; it.up = true; try { it.url = await window.GALLA_UPLOAD_MEDIA(it.file, "image"); } catch (e) {} finally { it.up = false; renderIMedia(); } };
+    const upIVid = async (it) => { if (!it.file || it.url) return; it.up = true; renderIMedia(); try { const out = await window.GALLA_UPLOAD_VIDEO(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; } catch (e) {} finally { it.up = false; renderIMedia(); } };
+    iInput.onchange = () => {
+      const files = [...(iInput.files || [])];
+      const added = files.map(f => /^video\//.test(f.type) ? { kind: "video", file: f, url: null, thumb: null, up: true } : { kind: "image", file: f, url: null, thumb: null, up: true });
+      iMedia = iMedia.concat(added).slice(0, 10);
+      renderIMedia();
+      added.forEach(it => it.kind === "video" ? upIVid(it) : upIImg(it));
+      iInput.value = "";
+    };
+    iStrip.onclick = e => { const d = e.target.closest(".ad-mdel"); if (d) { iMedia.splice(Number(d.dataset.i), 1); renderIMedia(); } };
 
     const addLink = async () => {
       const u = $("#i-link-url").value.trim(); if (!/^https?:\/\//i.test(u)) return alert("http(s):// 로 시작하는 URL을 입력하세요.");
@@ -683,19 +702,23 @@
       const btn = $("#i-go"); btn.disabled = true;
       try {
         const set = m => btn.textContent = m;
-        let images = [], video_url = null, card_thumb = null, vthumb = null;
-        const photos = [...($("#i-photos").files || [])];
-        for (let i = 0; i < photos.length; i++) { set(`🖼 사진 업로드 ${i + 1}/${photos.length}…`); images.push(await window.GALLA_UPLOAD_MEDIA(photos[i], "image")); }
-        const vf = $("#i-video").files[0];
-        if (vf) { set("🎬 영상 업로드…"); const out = await window.GALLA_UPLOAD_VIDEO(vf, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`)); video_url = out.url || out.hls; vthumb = out.thumbnail; }
-        const cf = $("#i-card").files[0];
-        if (cf) { set("📇 썸네일 업로드…"); card_thumb = await window.GALLA_UPLOAD_MEDIA(cf, "image"); }
-        // 🎠 혼합 캐러셀 media[] — 사진들(순서) + 영상. 첫 항목이 표지.
-        const media = [];
-        images.forEach(u => media.push({ type: "image", url: u, thumb: null }));
-        if (video_url) media.push({ type: "video", url: video_url, thumb: vthumb || null });
+        // 🎠 혼합 캐러셀 — iMedia(사진·영상 순서)를 순서대로 업로드 → media[] + 하위호환.
+        const media = [], images = [];
+        let video_url = null;
+        for (let i = 0; i < iMedia.length; i++) {
+          const it = iMedia[i];
+          if (!it.url && it.file) {
+            set(`⬆️ 미디어 ${i + 1}/${iMedia.length}…`);
+            if (it.kind === "video") { const out = await window.GALLA_UPLOAD_VIDEO(it.file, p => set(p == null ? "🎬 영상 업로드…" : `🎬 영상 ${p}%`)); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; }
+            else { it.url = await window.GALLA_UPLOAD_MEDIA(it.file, "image"); }
+          }
+          if (!it.url) continue;
+          media.push({ type: it.kind, url: it.url, thumb: it.thumb || null });
+          if (it.kind === "image") images.push(it.url); else if (!video_url) video_url = it.url;
+        }
         const first = media[0];
-        const thumb = (first ? (first.type === "video" ? first.thumb : first.url) : null) || card_thumb || null;
+        const thumb = first ? (first.type === "video" ? first.thumb : first.url) : null;
+        const card_thumb = thumb;   // 마이페이지 카드 표지 = 첫 항목
         // 🔖 해시태그 — 입력칸 + 제목·본문에서 추출
         const tags = adCollectTags($("#i-tags") ? $("#i-tags").value : "", t, $("#i-desc").value);
         set("🚀 발행 중…");
