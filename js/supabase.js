@@ -317,9 +317,17 @@
       var out = [];
       var imgs = row.images;
       if (typeof imgs === "string") { try { imgs = JSON.parse(imgs); } catch (_) { imgs = null; } }
-      if (Array.isArray(imgs)) imgs.forEach(function (u) { if (u) out.push({ type: "image", url: u, thumb: null }); });
-      if (row.video_url) out.push({ type: "video", url: row.video_url, thumb: row.thumbnail_url || row.card_thumb_url || null });
-      if (!out.length && row.thumbnail_url) out.push({ type: "image", url: row.thumbnail_url, thumb: null });
+      var vthumb = row.thumbnail_url || row.card_thumb_url || null;
+      // ⚠️ '영상+썸네일'을 캐러셀로 오인 방지 — 영상이 있으면 그 영상의 썸네일(포스터)이
+      //    images[]에 섞여 들어온 경우가 있다(레거시/자동생성). 그건 별도 슬라이드가 아니라
+      //    영상의 표지이므로 이미지 항목에서 제외 → 단일 영상으로 렌더된다.
+      if (Array.isArray(imgs)) imgs.forEach(function (u) {
+        if (!u) return;
+        if (row.video_url && vthumb && u === vthumb) return;   // 영상 표지 → 슬라이드 아님
+        out.push({ type: "image", url: u, thumb: null });
+      });
+      if (row.video_url) out.push({ type: "video", url: row.video_url, thumb: vthumb });
+      if (!out.length && vthumb) out.push({ type: "image", url: vthumb, thumb: null });
       return out;
     } catch (_) { return []; }
   };

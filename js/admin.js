@@ -625,8 +625,13 @@
       </div>
       ${IN("i-tags", "🔖 해시태그", "#정치 #선거 — 공백으로 구분, 자동 채움됩니다 (최대 10개)")}
       <hr class="ad-hr">
-      <label>🖼 미디어 — 사진·영상 캐러셀 <span style="opacity:.6;font-weight:400">(여러 개 = 캐러셀 · 첫 항목이 표지)</span></label>
+      <label>🖼 미디어 <span style="opacity:.6;font-weight:400">— 업로드 방식을 고르세요</span></label>
+      <div class="ad-mode-tabs" id="i-mode-tabs">
+        <button type="button" class="ad-mm on" data-mode="carousel">🖼 여러 장 · 캐러셀</button>
+        <button type="button" class="ad-mm" data-mode="video">🎬 영상 + 표지</button>
+      </div>
       <input id="i-media" type="file" accept="image/*,video/*" multiple class="ad-file">
+      <input id="i-cover" type="file" accept="image/*" class="ad-file" style="display:none">
       <div id="i-media-strip" class="ad-mstrip"></div>
       <details class="ad-more"><summary>관련 링크 · 근거 (선택)</summary>
         <div class="ad-link-add"><input id="i-link-url" class="ad-input" placeholder="URL 붙여넣기 → 추가" style="margin:0">
@@ -659,8 +664,42 @@
     };
     // 🎠 이슈 혼합 캐러셀 — 사진·영상 하나의 입력으로(순서 보존, 첫 항목 표지). admin은 crop 없이 원본 업로드.
     let iMedia = [];   // [{kind:'image'|'video', file, url, thumb, up}]
-    const iStrip = $("#i-media-strip"), iInput = $("#i-media");
+    let iMode = "carousel";   // 'carousel'(여러 장) | 'video'(영상1+표지)
+    const iStrip = $("#i-media-strip"), iInput = $("#i-media"), iCover = $("#i-cover"), iModeTabs = $("#i-mode-tabs");
+    const setIMode = (mode) => {
+      if (mode === iMode) return;
+      if (iMedia.length) {
+        const keep = mode === "video" ? (iMedia.length === 1 && iMedia[0].kind === "video") : true;
+        if (!keep) { if (!confirm("모드를 바꾸면 담은 미디어가 지워져요. 계속할까요?")) return; iMedia = []; }
+      }
+      iMode = mode;
+      iModeTabs.querySelectorAll(".ad-mm").forEach(b => b.classList.toggle("on", b.dataset.mode === mode));
+      if (mode === "video") { iInput.setAttribute("accept", "video/*"); iInput.removeAttribute("multiple"); }
+      else { iInput.setAttribute("accept", "image/*,video/*"); iInput.setAttribute("multiple", ""); }
+      renderIMedia();
+    };
+    if (iModeTabs) iModeTabs.onclick = e => { const b = e.target.closest(".ad-mm"); if (b) setIMode(b.dataset.mode); };
+    if (iCover) iCover.onchange = async () => {
+      const f = iCover.files && iCover.files[0]; iCover.value = "";
+      const v = iMedia[0]; if (!f || !v || v.kind !== "video") return;
+      v.up = true; renderIMedia();
+      try { v.thumb = await window.GALLA_UPLOAD_MEDIA(f, "image"); } catch (e) {}
+      finally { v.up = false; renderIMedia(); }
+    };
     const renderIMedia = () => {
+      // 🎬 영상 모드 — 영상 1개 + 표지(=영상 thumb, 별도 슬라이드 아님)
+      if (iMode === "video") {
+        const v = iMedia[0];
+        iStrip.innerHTML = v ? `
+          <div class="ad-mstrip-row"><div class="ad-mitem${v.up ? " up" : ""}" data-i="0">
+            ${v.thumb ? `<img src="${v.thumb}">` : `<div class="ad-mvph">🎬</div>`}<span class="ad-mplay">▶</span>
+            ${v.up ? '<span class="ad-mup"></span>' : ""}<span class="ad-mbadge">표지</span>
+            <button type="button" class="ad-mdel" data-i="0">✕</button>
+          </div></div>
+          <button type="button" class="ad-btn ghost" id="i-pick-cover" style="margin-top:8px">🖼 표지(썸네일) 바꾸기</button>
+          <div class="ad-mnote">영상 1개 · 표지 안 고르면 첫 장면이 표지 · 피드에선 영상만 재생</div>` : "";
+        return;
+      }
       iStrip.innerHTML = iMedia.map((it, i) => `
         <div class="ad-mitem${it.up ? " up" : ""}" data-i="${i}">
           ${it.kind === "video" ? (it.thumb ? `<img src="${it.thumb}">` : `<div class="ad-mvph">🎬</div>`) + `<span class="ad-mplay">▶</span>` : `<img src="${it.url || (it.file ? URL.createObjectURL(it.file) : "")}">`}
@@ -674,13 +713,22 @@
     const upIVid = async (it) => { if (!it.file || it.url) return; it.up = true; renderIMedia(); try { const out = await window.GALLA_UPLOAD_VIDEO(it.file); it.url = out.url || out.hls; it.thumb = it.thumb || out.thumbnail || null; } catch (e) {} finally { it.up = false; renderIMedia(); } };
     iInput.onchange = () => {
       const files = [...(iInput.files || [])];
+      iInput.value = "";
+      // 🎬 영상 모드 — 영상 1개만(기존 것 교체)
+      if (iMode === "video") {
+        const vf = files.find(f => /^video\//.test(f.type));
+        if (!vf) { alert("영상 파일을 선택해주세요."); return; }
+        const it = { kind: "video", file: vf, url: null, thumb: null, up: true };
+        iMedia = [it]; renderIMedia(); upIVid(it);
+        return;
+      }
       const added = files.map(f => /^video\//.test(f.type) ? { kind: "video", file: f, url: null, thumb: null, up: true } : { kind: "image", file: f, url: null, thumb: null, up: true });
       iMedia = iMedia.concat(added).slice(0, 10);
       renderIMedia();
       added.forEach(it => it.kind === "video" ? upIVid(it) : upIImg(it));
-      iInput.value = "";
     };
     iStrip.onclick = e => {
+      if (e.target.closest("#i-pick-cover")) { if (iCover) { iCover.value = ""; iCover.click(); } return; }
       const d = e.target.closest(".ad-mdel"); if (d) { iMedia.splice(Number(d.dataset.i), 1); renderIMedia(); return; }
       const mv = e.target.closest(".ad-mmv");
       if (mv) { const i = Number(mv.dataset.mv), j = i + Number(mv.dataset.dir); if (j >= 0 && j < iMedia.length) { const t = iMedia[i]; iMedia[i] = iMedia[j]; iMedia[j] = t; renderIMedia(); } }
