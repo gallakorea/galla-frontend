@@ -220,16 +220,11 @@ body { display: block; }
 }
 /* 🎠 캐러셀 영상 슬라이드 — 활성 슬라이드 인라인 자동재생(단일영상 카드와 동일 감성) */
 .carousel-slide--video { cursor: pointer; background: #000; }
-/* 인스타식 블러 채움 — iOS 네이티브 HLS가 object-fit:cover를 무시하고 레터박스(검은 밴드)를
-   넣는 quirk 대응: 블러 포스터를 슬라이드 전체에 깔고, 영상은 contain으로 얹어 밴드=블러로 채움 */
-.carousel-slide--video .cvid-bg {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    filter: blur(22px) brightness(.55); transform: scale(1.2); z-index: 0; pointer-events: none;
-}
+/* 캐러셀 영상 슬라이드 — 원본(cover, iOS 밴드 있어도 그대로. 사장님 지시로 블러 채움 폐기) */
 .carousel-slide--video video.carousel-vid {
     position: absolute; inset: 0;
-    width: 100%; height: 100%; object-fit: contain; display: block;
-    background: transparent; z-index: 1;
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    background: #000; z-index: 1;
 }
 /* 재생 시작 전 검은 번쩍임 방지(포스터가 이미 커버) */
 .carousel-slide--video .carousel-vid.vp-fade { opacity: 1; }

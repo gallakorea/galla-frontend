@@ -128,6 +128,54 @@ function initWritePage(ctx) {
      순서 그대로 캐러셀. 첫 항목이 표지. 나갔다 와도 url로 복원, 발행 땐 재업로드 안 함. */
   let mediaItems = [];
 
+  /* 업로드 모드 — 인스타식으로 '캐러셀'과 '영상+표지'를 명확히 분리.
+     · carousel: 사진·영상 여러 개(혼합) → media[] 다중 → 피드 캐러셀
+     · video   : 영상 1개 + 표지(=영상의 thumb, 별도 슬라이드 아님) → 단일 영상 저장 → 피드 영상만 */
+  let mediaMode = 'carousel';
+  const modeTabs = document.getElementById('mediaModeTabs');
+  const coverInput = document.getElementById('coverInput');
+  const dropTitle = document.getElementById('mediaDropTitle');
+  const dropSub = document.getElementById('mediaDropSub');
+  const mediaHint = document.getElementById('mediaHint');
+
+  function setMediaMode(mode, opts) {
+    opts = opts || {};
+    if (mode !== 'video' && mode !== 'carousel') return;
+    if (mode === mediaMode && !opts.force) return;
+    // 영상 모드로 전환 시 기존 선택이 '영상 1개' 아니면 비움(모드 혼선 방지)
+    if (!opts.silent && mediaItems.length && mode !== mediaMode) {
+      const keep = (mode === 'video')
+        ? (mediaItems.length === 1 && mediaItems[0].kind === 'video')
+        : true; // 캐러셀은 기존 항목 그대로 수용
+      if (!keep) {
+        if (!confirm('모드를 바꾸면 지금 담은 미디어가 지워져요. 계속할까요?')) return;
+        mediaItems = [];
+      }
+    }
+    mediaMode = mode;
+    if (modeTabs) modeTabs.querySelectorAll('.mm-tab').forEach(b =>
+      b.classList.toggle('active', b.dataset.mode === mode));
+    if (mode === 'video') {
+      mediaInput.setAttribute('accept', 'video/*');
+      mediaInput.removeAttribute('multiple');
+      if (dropTitle) dropTitle.textContent = '영상 올리기';
+      if (dropSub) dropSub.textContent = '영상 1개 · 표지(썸네일)는 따로 고를 수 있어요';
+      if (mediaHint) mediaHint.textContent = '영상 1개 + 표지';
+    } else {
+      mediaInput.setAttribute('accept', 'image/*,video/*');
+      mediaInput.setAttribute('multiple', '');
+      if (dropTitle) dropTitle.textContent = '사진·영상 올리기';
+      if (dropSub) dropSub.textContent = '여러 개는 캐러셀로 넘겨서 노출 · 첫 항목이 표지';
+      if (mediaHint) mediaHint.textContent = '사진·영상 최대 10개';
+    }
+    renderMedia();
+    persistMedia();
+  }
+  if (modeTabs) modeTabs.addEventListener('click', e => {
+    const t = e.target.closest('.mm-tab'); if (!t) return;
+    setMediaMode(t.dataset.mode);
+  });
+
   // 표지(첫 항목) — 이미지면 url, 영상이면 포스터 thumb
   function coverUrl() {
     const f = mediaItems[0];
@@ -153,6 +201,26 @@ function initWritePage(ctx) {
       return;
     }
     if (mediaBtn) mediaBtn.style.display = 'none';
+
+    // 🎬 영상 모드 — 영상 1개 + 표지(썸네일). 표지는 별도 슬라이드가 아니라 영상 포스터.
+    if (mediaMode === 'video') {
+      const v = mediaItems[0] || {};
+      mediaPreview.innerHTML = `
+        <div class="multi-img-strip vmode-strip">
+          <div class="multi-img-item is-video${v.up ? ' uploading' : ''}">
+            ${v.thumb ? `<img src="${v.thumb}">` : `<div class="mi-vidph">🎬</div>`}
+            <span class="multi-img-play">▶</span>
+            ${v.up ? '<span class="multi-img-up"><i></i></span>' : ''}
+            <span class="multi-img-badge">표지</span>
+            <button type="button" class="multi-img-del" data-idx="0" aria-label="삭제">✕</button>
+          </div>
+        </div>
+        <button type="button" class="vmode-cover-btn" id="pickCover">🖼 표지(썸네일) 바꾸기</button>
+        <div class="guide-text">영상 1개 · 표지 안 고르면 영상 첫 장면이 표지 · 피드에선 <b>영상만</b> 재생</div>
+      `;
+      return;
+    }
+
     mediaPreview.innerHTML = `
       <div class="multi-img-strip">
         ${mediaItems.map((it, i) => `
@@ -209,6 +277,22 @@ function initWritePage(ctx) {
   async function addMediaFiles(files) {
     files = [...(files || [])].filter(Boolean);
     if (!files.length) return;
+
+    // 🎬 영상 모드 — 영상 1개만(기존 것 교체). 표지는 coverInput으로 따로.
+    if (mediaMode === 'video') {
+      const vf = files.find(f => /^video\//.test(f.type));
+      if (!vf) { alert('영상 파일을 선택해주세요.'); return; }
+      const dur = await videoDuration(vf);
+      if (dur && dur > MAX_VID_DUR + 1) { alert(`영상이 너무 길어요 (${Math.round(dur)}초) — 최대 ${MAX_VID_DUR}초까지 올릴 수 있어요.`); return; }
+      const it = { kind: 'video', file: vf, url: null, thumb: null, up: true };
+      mediaItems = [it];
+      renderMedia();
+      uploadVideoItem(it);
+      if (typeof removeResumeBanner === 'function') removeResumeBanner();
+      persistMedia();
+      return;
+    }
+
     let room = MAX_MEDIA - mediaItems.length;
     if (room <= 0) { alert(`미디어는 최대 ${MAX_MEDIA}개까지 올릴 수 있어요.`); return; }
     if (files.length > room) { alert(`${room}개만 더 추가할 수 있어 처음 ${room}개만 담았어요.`); files = files.slice(0, room); }
@@ -250,6 +334,25 @@ function initWritePage(ctx) {
   mediaInput.addEventListener('click', () => { mediaInput.value = ''; });
   mediaInput.addEventListener('change', e => { addMediaFiles(e.target.files); });
 
+  // 🎬 영상 모드 표지(썸네일) 선택 — 영상 아이템의 thumb만 교체(슬라이드 추가 아님)
+  if (coverInput) coverInput.addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0];
+    coverInput.value = '';
+    const v = mediaItems[0];
+    if (!f || !v || v.kind !== 'video') return;
+    v.up = true; renderMedia();
+    try {
+      let file = f;
+      if (typeof window.GALLA_PROCESS_IMAGES === 'function') {
+        const pr = await window.GALLA_PROCESS_IMAGES([f]);
+        if (pr && pr[0]) file = pr[0];
+      }
+      const url = await window.GALLA_UPLOAD_MEDIA(file, 'image');
+      if (url) v.thumb = url;
+    } catch (err) { console.warn('[write] 표지 업로드 실패', err); }
+    finally { v.up = false; renderMedia(); persistMedia(); }
+  });
+
   // 스트립 내 삭제(✕) / 순서이동(‹ ›) / 추가(＋) 위임
   mediaPreview.addEventListener('click', e => {
     const del = e.target.closest('.multi-img-del');
@@ -260,7 +363,8 @@ function initWritePage(ctx) {
       if (j >= 0 && j < mediaItems.length) { const t = mediaItems[i]; mediaItems[i] = mediaItems[j]; mediaItems[j] = t; renderMedia(); persistMedia(); }
       return;
     }
-    if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); }
+    if (e.target.closest('.multi-img-add')) { mediaInput.value = ''; mediaInput.click(); return; }
+    if (e.target.closest('#pickCover')) { coverInput && (coverInput.value = '', coverInput.click()); return; }
   });
 
   /* ================= 진영 이름 → 입장 라벨 연동 ================= */
@@ -335,7 +439,9 @@ function initWritePage(ctx) {
       mediaItems = arr.filter(m => m && m.url).map(m => ({
         kind: m.type === 'video' ? 'video' : 'image', file: null, url: m.url, thumb: m.thumb || null, up: false,
       }));
-      renderMedia();
+      // 모드 추론 — 영상 1개뿐이면 '영상+표지', 그 외 '캐러셀'
+      const inferred = (mediaItems.length === 1 && mediaItems[0].kind === 'video') ? 'video' : 'carousel';
+      setMediaMode(inferred, { silent: true, force: true });
     }
     if (mediaItems.length && Number(c.step) === 2) goStep(2);
   }
