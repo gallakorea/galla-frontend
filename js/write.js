@@ -858,10 +858,12 @@ function initWritePage(ctx) {
       }
     };
 
-    if (videoEl) {
-      document.getElementById('openSpeech').onclick = () => {
-        openSpeech(videoEl.src);
-      };
+    // 후시대본(openSpeech) — 미리보기에 영상이 있을 때만. ⚠️ 예전 단일영상 코드의 잔재로
+    //    write.js엔 videoEl 정의가 없어 ReferenceError→발행 흐름이 깨졌음(2026-08-03 수정).
+    const __speechVid = issuePreview.querySelector('video');
+    const __speechBtn = document.getElementById('openSpeech');
+    if (__speechVid && __speechBtn) {
+      __speechBtn.onclick = () => openSpeech(__speechVid.currentSrc || __speechVid.src);
     }
 
     issuePreview.scrollIntoView({ behavior: 'smooth' });
