@@ -4,7 +4,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
-const OPENAI = Deno.env.get("OPENAI_API_KEY");
+// 💸 DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 자동 전환(OpenAI 호환).
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const CHAT_URL = _DS ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
+const MODEL = _DS ? "deepseek-chat" : "gpt-4o-mini";
+const OPENAI = _DS || Deno.env.get("OPENAI_API_KEY");
 
 const CATS = ["정치·사회", "경제·투자", "직장·경력", "연애·결혼", "생활·일상", "패션·뷰티", "엔터·스포츠", "세계·여행", "음식·맛집", "기타"];
 
@@ -42,11 +46,11 @@ async function gen(headlines: string[]) {
   const newsBlock = headlines.length
     ? `\n\n[참고: 최근 인기 뉴스 헤드라인 — 이 중 '베팅으로 즐길 만하고 근시일 내 판가름 나는' 주제를 골라 시의성 있게 활용해라(민감·비극·특정인 사건 헤드라인은 피하고, 경제지표·스포츠·날씨·연예·테크·트렌드 위주로)]\n- ${headlines.join("\n- ")}`
     : "";
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch(CHAT_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini", temperature: 0.9, response_format: { type: "json_object" },
+      model: MODEL, temperature: 0.9, response_format: { type: "json_object" },
       messages: [{ role: "system", content: SYS }, { role: "user", content: `오늘 날짜: ${new Date().toISOString().slice(0, 10)}. 오늘의 예측 5개를 만들어줘.${newsBlock}` }],
     }),
   });

@@ -115,6 +115,19 @@
     onDone && onDone();
   };
 
+  // 댓글 테이블 → 공유 scope (엣지 /share/comment/<scope>/<id>)
+  const CMT_SCOPE = { comments: "issue", galla_news_comments: "news", market_comments: "market", plaza_comments: "plaza", post_comments: "post", video_comments: "video" };
+  function cmtShare(opts) {
+    const scope = CMT_SCOPE[opts.table] || "issue";
+    const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl(scope, opts.id) : (location.origin + "/share/comment/" + scope + "/" + opts.id);
+    const raw = String(opts.current || "").replace(/\s+/g, " ").trim();
+    const title = "🗯️ " + (raw ? `“${raw.slice(0, 40)}”` : "이 댓글");
+    const text = "갈라에서 이 댓글에 받아쳐봐";
+    if (window.GALLA_share) window.GALLA_share({ url, title, text });
+    else if (navigator.share) navigator.share({ title, text, url }).catch(() => {});
+    else { try { navigator.clipboard.writeText(url); window.GALLA_toast && GALLA_toast("🔗 댓글 링크 복사됨"); } catch (_) {} }
+  }
+
   window.GALLA_openCommentMenu = async function (opts) {
     css();
     document.getElementById("cmt-sheet")?.remove();
@@ -127,6 +140,7 @@
     } else {
       rows.push(`<button class="opt" data-a="report">🚨 신고</button>`);
     }
+    rows.push(`<button class="opt" data-a="share">🔗 이 댓글 공유</button>`);
     sheet.innerHTML = `<div class="dim"></div><div class="card">${rows.join("")}<button class="cancel">닫기</button></div>`;
     document.body.appendChild(sheet);
     const close = () => sheet.remove();
@@ -137,6 +151,7 @@
       if (a === "edit") GALLA_cmtEdit({ table: opts.table, id: opts.id, bodyCol: opts.bodyCol, current: opts.current, onSaved: opts.onEdited });
       else if (a === "del") GALLA_cmtDelete({ table: opts.table, id: opts.id, soft: opts.soft, onDone: opts.onDeleted });
       else if (a === "report") window.GALLA_openReportMenu?.({ contentType: "comment", contentId: opts.id, authorId: opts.uid });
+      else if (a === "share") cmtShare(opts);
     });
   };
 

@@ -7,8 +7,11 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
 };
-const OPENAI = Deno.env.get("OPENAI_API_KEY")!;
-const MODEL = "gpt-4o-mini";
+// 💸 DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 자동 전환(OpenAI 호환).
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const CHAT_URL = _DS ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
+const OPENAI = _DS || Deno.env.get("OPENAI_API_KEY")!;
+const MODEL = _DS ? "deepseek-chat" : "gpt-4o-mini";
 const supa = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -78,7 +81,7 @@ Deno.serve(async (req) => {
       'JSON만 출력: {"winner":"challenger|opponent|draw","reason":"한국어 한 문장 판정평(존댓말, 40자 이내)"}';
     const user = `주제: ${d.topic}\n도전자=${cName}(challenger), 응전자=${oName}(opponent)\n\n대화록:\n${transcript}`;
 
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch(CHAT_URL, {
       method: "POST",
       headers: { "Authorization": `Bearer ${OPENAI}`, "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -85,16 +85,24 @@ async function markShorts(pool: Map<string, any>): Promise<Set<string>> {
   return shorts;
 }
 
+// 🧹 깨진 유니코드 제거 — 고립 서로게이트(이모지 반쪽)·널문자가 있으면 PostgREST의 jsonb 파싱이
+//    "invalid input syntax for type json"으로 upsert 전체를 깨뜨린다(YouTube 제목/설명 + slice가 이모지 반절).
+function sane(s: any): string {
+  return String(s ?? "")
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")   // 짝 없는 상위 서로게이트
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")   // 짝 없는 하위 서로게이트
+    .replace(/\u0000/g, "");                                 // 널문자
+}
 function toRow(v: any, feed: string, rank: number, now: string, shorts: Set<string>) {
   const sec = durSec(v.contentDetails?.duration ?? null);
   return {
     feed,
     video_id: v.id,
-    title: v.snippet?.title ?? "",
-    channel_title: v.snippet?.channelTitle ?? null,
+    title: sane(v.snippet?.title),
+    channel_title: sane(v.snippet?.channelTitle) || null,
     channel_id: v.snippet?.channelId ?? null,
     thumbnail: bestThumb(v.snippet?.thumbnails),
-    description: (v.snippet?.description ?? "").slice(0, 500),
+    description: sane((v.snippet?.description ?? "").slice(0, 500)),
     published_at: v.snippet?.publishedAt ?? null,
     view_count: Number(v.statistics?.viewCount ?? 0),
     like_count: Number(v.statistics?.likeCount ?? 0),

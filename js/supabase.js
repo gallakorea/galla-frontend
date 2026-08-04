@@ -160,10 +160,20 @@
     setTimeout(() => { t.classList.remove("on"); setTimeout(() => t.remove(), 260); }, ms || 1900);
   };
 
-  // 공유 URL: /share/<type>/<id> (엣지에서 OG 카드 렌더). type: issue|predict|plaza
+  // 공유 URL: /share/<type>/<id> (엣지에서 OG 카드 렌더). type: issue|predict|plaza|post|video|news
   window.GALLA_shareUrl = function (type, id) {
     return `${location.origin}/share/${type}/${encodeURIComponent(id)}`;
   };
+  // 댓글·대댓글 인용 카드. scope: issue|news|market|plaza|post|video
+  window.GALLA_shareCommentUrl = function (scope, id) {
+    return `${location.origin}/share/comment/${encodeURIComponent(scope)}/${encodeURIComponent(id)}`;
+  };
+  // 실시간 트렌드 순위 랜딩
+  window.GALLA_shareTrendUrl = function () { return `${location.origin}/share/trend`; };
+  // 육성 난장 입장 초대(방 딥링크)
+  window.GALLA_shareRoomUrl = function (id) { return `${location.origin}/share/room/${encodeURIComponent(id)}`; };
+  // 말 걸기(오픈프로필) — 1:1 DM 초대
+  window.GALLA_shareUserUrl = function (id) { return `${location.origin}/share/u/${encodeURIComponent(id)}`; };
 
   /* ═══ 📳 전역 햅틱 — 네이티브(iOS) Capacitor Haptics 우선, 없으면 웹 vibrate(안드로이드).
      kind: light | medium | heavy | rigid | soft | success | warning | error | selection ═══ */

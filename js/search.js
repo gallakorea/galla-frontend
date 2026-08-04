@@ -780,13 +780,23 @@ async function initTrendPage() {
           <span class="tm-cnt" data-to="${r.count}">0</span>
         </button>`);
       hotWrap.innerHTML =
-        `<div class="tm-live"><span class="tm-live-dot"></span>LIVE · 실시간 집계</div>
+        `<div class="tm-live"><span class="tm-live-dot"></span>LIVE · 실시간 집계<button class="tm-share" type="button" aria-label="트렌드 순위 공유" style="float:right;margin-top:-2px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#c9d1e0;font-size:11px;font-weight:800;cursor:pointer">🔗 순위 공유</button></div>
          <div class="tm-board">${trMore(rows, "키워드 더보기")}</div>`;
       countUp(hotWrap);
     } else {
       hotWrap.innerHTML = `<p class="se-muted">최근 6시간 내 뜨는 키워드가 없어요.</p>`;
     }
     hotWrap.onclick = e => {
+      // 🔗 실시간 트렌드 순위 공유 — /share/trend 랜딩(TOP 순위 + 가입 유도)
+      if (e.target.closest(".tm-share")) {
+        const url = window.GALLA_shareTrendUrl ? window.GALLA_shareTrendUrl() : (location.origin + "/share/trend");
+        const title = "🔥 지금 갈라 실시간 트렌드";
+        const text = "지금 갈라에서 제일 뜨거운 이슈 TOP — 넌 어느 편?";
+        if (window.GALLA_share) window.GALLA_share({ url, title, text });
+        else if (navigator.share) navigator.share({ title, text, url }).catch(() => {});
+        else { try { navigator.clipboard.writeText(url); (window.GALLA_toast || alert)("🔗 트렌드 링크 복사됨"); } catch (_) {} }
+        return;
+      }
       trMoreClick(e);
       const b = e.target.closest("[data-kw]");
       if (b) {

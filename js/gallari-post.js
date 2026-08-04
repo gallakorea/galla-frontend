@@ -287,6 +287,7 @@
           <div class="glp-cfoot">
             <button class="glp-clike${on ? ' on' : ''}" data-cid="${c.id}">♥ <span>${c.like_count || 0}</span></button>
             ${isReply ? '' : `<button class="glp-creply" data-cid="${c.id}" data-nick="${esc(u.nickname || '익명')}">답글</button>`}
+            <button class="glp-cshare" data-cid="${c.id}" data-body="${esc(c.body || '')}" aria-label="댓글 공유">🔗</button>
           </div>
         </div>
       </div>`;
@@ -307,6 +308,17 @@
       REPLY_TO = Number(b.dataset.cid);
       const el = document.getElementById('glp-cinput');
       if (el) { el.placeholder = `@${b.dataset.nick} 님에게 답글…`; el.focus(); }
+    }));
+    // 🔗 댓글 공유 — 인용 카드(/share/comment/post/<cid>)
+    list.querySelectorAll('.glp-cshare').forEach(b => b.addEventListener('click', () => {
+      const cid = b.dataset.cid;
+      const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl('post', cid) : (location.origin + '/share/comment/post/' + cid);
+      const raw = String(b.dataset.body || '').replace(/\s+/g, ' ').trim();
+      const title = '🗯️ ' + (raw ? `“${raw.slice(0, 40)}”` : '이 댓글');
+      const text = '갈라에서 이 댓글에 받아쳐봐';
+      if (window.GALLA_share) window.GALLA_share({ url, title, text });
+      else if (navigator.share) navigator.share({ title, text, url }).catch(() => {});
+      else { try { navigator.clipboard.writeText(url); window.GALLA_toast && GALLA_toast('🔗 댓글 링크 복사됨'); } catch (_) {} }
     }));
     wireInput(sb, postId, me, ava);
   }

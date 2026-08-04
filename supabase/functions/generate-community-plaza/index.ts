@@ -4,7 +4,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, apikey, content-type" };
-const OPENAI = Deno.env.get("OPENAI_API_KEY");
+// 💸 DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 자동 전환(OpenAI 호환).
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const CHAT_URL = _DS ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
+const MODEL = _DS ? "deepseek-chat" : "gpt-4o-mini";
+const OPENAI = _DS || Deno.env.get("OPENAI_API_KEY");
 const BOT_NICK = "🔥 커뮤 HOT";
 
 // 갈라 광장 공식 카테고리 (owner-actions.js GALLA_CATEGORIES 와 반드시 동일)
@@ -52,11 +56,11 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
 async function rewrite(title: string, source?: string) {
   if (!(await aiBudgetOk())) return { ok: false, cap: true, reason: "ai_daily_cap" };
   const hint = source && SRC_HINT[source] ? `\n(출처 커뮤니티: ${source} — 성격상 '${SRC_HINT[source]}'일 확률이 높으나 제목이 우선)` : "";
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch(CHAT_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini", temperature: 0.7, response_format: { type: "json_object" },
+      model: MODEL, temperature: 0.7, response_format: { type: "json_object" },
       messages: [{ role: "system", content: SYS }, { role: "user", content: `인기글 제목: ${title}${hint}` }],
     }),
   });

@@ -287,6 +287,7 @@ async function GALLA_settingsInit(root) {
     } catch (_) {}
 
     // 3) 칭호·가챠·상점 타일
+    byId("notifyTile")?.addEventListener("click", () => { window.GALLA_openNotifySettings && window.GALLA_openNotifySettings(); });
     byId("titlesTile")?.addEventListener("click", () => { window.GALLA_openTitles && window.GALLA_openTitles(); });
     byId("gachaTile")?.addEventListener("click", () => { window.GALLA_openGacha && window.GALLA_openGacha(); });
     byId("shopTile")?.addEventListener("click", (e) => { e.stopPropagation(); window.openShop && window.openShop(); });

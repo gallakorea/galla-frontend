@@ -237,6 +237,8 @@ async function paintInviteLb(sb) {
   };
   shareBtn.onclick = async () => {
     const msg = "오늘의 이슈로 한판 붙는 커뮤니티, 갈라(GALLA). 내 링크로 가입하면 +500 GP! " + url;
+    // 🟦 커스텀 공유 시트 우선(네이티브 iOS 시트 대신 우리 브랜드 UI)
+    if (window.GALLA_share) { window.GALLA_share({ url, title: "GALLA 갈라", text: msg }); return; }
     if (navigator.share) { try { await navigator.share({ title: "GALLA 갈라", text: msg, url }); } catch (e) {} }
     else { try { await navigator.clipboard.writeText(msg); flash(shareBtn, "복사됨!"); } catch (e) {} }
   };

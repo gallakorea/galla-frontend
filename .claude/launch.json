@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "galla-static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "8791"], "port": 8791 }
+    { "name": "galla-web", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4507"], "port": 4507 }
   ]
 }

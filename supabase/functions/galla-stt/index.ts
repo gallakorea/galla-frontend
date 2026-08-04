@@ -8,7 +8,34 @@ const cors = {
 const OPENAI = Deno.env.get("STT_API_KEY") || Deno.env.get("OPENAI_API_KEY")!;
 const STT_URL = Deno.env.get("STT_BASE_URL") || "https://api.openai.com/v1";
 const STT_MODEL = Deno.env.get("STT_MODEL") || "whisper-1";
+// 💸 Cloudflare Workers AI whisper(near-free) — CF_AI_TOKEN 있으면 우선, 실패 시 OpenAI 폴백.
+const CF_AI_TOKEN = Deno.env.get("CF_AI_TOKEN") || Deno.env.get("CF_WORKERS_AI_TOKEN") || "";
+const CF_ACCOUNT = Deno.env.get("CF_ACCOUNT_ID") || "";
+const CF_STT_MODEL = Deno.env.get("CF_STT_MODEL") || "@cf/openai/whisper-large-v3-turbo";
 const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+// 오디오 바이트 → base64(청크로 안전 인코딩, 스택 폭주 방지)
+function toB64(bytes: Uint8Array): string {
+  let bin = "";
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+// Cloudflare Workers AI whisper — base64 오디오 → 텍스트. 실패 시 null(→OpenAI 폴백).
+async function cfWhisper(bytes: Uint8Array): Promise<string | null> {
+  if (!CF_AI_TOKEN || !CF_ACCOUNT) return null;
+  try {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/${CF_STT_MODEL}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${CF_AI_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ audio: toB64(bytes), task: "transcribe", language: "ko" }),
+    });
+    const d = await r.json().catch(() => null);
+    const text = d?.result?.text;
+    if (!r.ok || text == null) { console.error("[stt] cf", r.status, JSON.stringify(d?.errors || d).slice(0, 200)); return null; }
+    return String(text).trim();
+  } catch (e) { console.error("[stt] cf ex", String(e).slice(0, 120)); return null; }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -22,6 +49,10 @@ Deno.serve(async (req) => {
     const ct = req.headers.get("Content-Type") || "audio/webm";
     const ext = ct.includes("mp4") || ct.includes("m4a") ? "m4a" : ct.includes("wav") ? "wav" : ct.includes("mpeg") ? "mp3" : "webm";
 
+    // 1순위: Cloudflare Workers AI whisper(near-free). 실패 시 OpenAI 폴백.
+    const cfText = await cfWhisper(new Uint8Array(buf));
+    if (cfText != null) return json({ ok: true, text: cfText, via: "cf" });
+
     const form = new FormData();
     form.append("file", new Blob([buf], { type: ct }), "a." + ext);
     form.append("model", STT_MODEL);
@@ -33,7 +64,7 @@ Deno.serve(async (req) => {
     });
     if (!r.ok) return json({ ok: false, reason: "stt_" + r.status, detail: (await r.text()).slice(0, 200) }, 200);
     const j = await r.json();
-    return json({ ok: true, text: (j?.text || "").trim() });
+    return json({ ok: true, text: (j?.text || "").trim(), via: "openai" });
   } catch (e) {
     return json({ ok: false, reason: "error", detail: String(e).slice(0, 200) }, 500);
   }

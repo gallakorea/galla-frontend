@@ -1461,6 +1461,7 @@ function openCommentMoreMenu({ uid, nick, cid }) {
       ${isOther ? opt("🚫", "이 사용자 차단", "block") : opt("✏️", "댓글 수정", "edit")}
       ${isOther ? "" : opt("✨", "하이라이트 (800GP · 24h)", "hl")}
       ${isOther ? "" : opt("🗑️", "댓글 삭제", "del")}
+      ${opt("🔗", "이 댓글 공유", "share")}
       <button class="cmm-opt cancel" style="width:100%;padding:15px;border:none;background:transparent;color:#8a8f9a;font-weight:800;cursor:pointer">닫기</button>
     </div>`;
   if (!document.getElementById("cmm-css")) {
@@ -1483,6 +1484,17 @@ function openCommentMoreMenu({ uid, nick, cid }) {
   };
   sheet.querySelector(".report")?.addEventListener("click", goReport);
   sheet.querySelector(".block")?.addEventListener("click", goReport);
+  // 🔗 댓글·대댓글 공유 — 인용 카드(/share/comment/issue/<cid>) + 자동 초대링크
+  sheet.querySelector(".share")?.addEventListener("click", () => {
+    close();
+    const raw = allRows.find(r => String(r.id) === String(cid))?.content || "";
+    const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("issue", cid) : (location.origin + "/share/comment/issue/" + cid);
+    const title = "🗯️ " + (raw ? `“${String(raw).replace(/\s+/g, " ").trim().slice(0, 40)}”` : "이 댓글");
+    const text = `${nick || "누군가"}의 한마디 — 갈라에서 받아쳐봐`;
+    if (window.GALLA_share) window.GALLA_share({ url, title, text });
+    else if (navigator.share) navigator.share({ title, text, url }).catch(() => {});
+    else { try { navigator.clipboard.writeText(url); (window.GALLA_toast || alert)("🔗 댓글 링크 복사됨"); } catch (_) {} }
+  });
   // 내 댓글 수정/삭제 (소프트삭제: status='deleted')
   sheet.querySelector(".edit")?.addEventListener("click", () => {
     close();

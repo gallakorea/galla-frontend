@@ -436,12 +436,18 @@
   }
   // 🖼 AI 썸네일 생성 — generate-thumbnail 엣지 호출(몇 초) → 편집기에 대표이미지로 자동 첨부 + 챗 미리보기.
   async function genThumbnail(a){
-    showProgress("🎨 썸네일 그리는 중… (몇 초 걸려)");
+    // 🧑‍🎨 내 사진 반영 모드 — 작업모드(갈라리)에 올린 사진을 레퍼런스로
+    var refUrls=[];
+    if(a && a.useUserPhotos){
+      try{ if(window.GALLA_WORKFORM && window.GALLA_WORKFORM.getPhotos) refUrls=(window.GALLA_WORKFORM.getPhotos()||[]).slice(0,4); }catch(e){}
+      if(!refUrls.length){ addMsg("a","앗 내 사진으로 하려면 먼저 사진을 올려줘 — 작업창에 사진 넣고 다시 '내 사진으로 썸네일 그려줘' 해줘 ㅋㅋ"); return; }
+    }
+    showProgress(refUrls.length ? "🎨 네 사진으로 썸네일 뽑는 중… (몇 초)" : "🎨 썸네일 그리는 중… (몇 초 걸려)");
     try{
       var jwt=await token(); if(!jwt){ clearProgress(); addMsg("a","로그인해야 그려줄 수 있어 ㅜ"); return; }
       var res=await fetch(SB+"/functions/v1/generate-thumbnail",{ method:"POST",
         headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
-        body:JSON.stringify({ prompt:a.prompt||"", ratio:a.ratio||"portrait" }) });
+        body:JSON.stringify({ prompt:a.prompt||"", ratio:a.ratio||"portrait", image_urls:refUrls }) });
       var d=await res.json(); clearProgress();
       if(d && d.ok && d.url){
         var applied=false;
@@ -764,8 +770,36 @@
     }catch(e){}
     try{ window.open(url, "_blank", "noopener"); }catch(e){ location.href=url; }
   }
+  // 📲 외부 앱 핸드오프 — 친구가 카카오T·지도·배민 등을 열어준다(실제 호출·결제는 유저가 그 앱에서 확정).
+  //    네이티브: 앱 스킴 우선(AppLauncher canOpenUrl→openUrl), 미설치/웹이면 https(설치 시 OS가 앱으로 라우팅).
+  var EXT_SERVICES = {
+    taxi:     { name:"카카오 T",   app:function(){ return "kakaot://"; },
+                web:function(){ return "https://kakaot.kakao.com/"; } },
+    navi:     { name:"길찾기",     app:function(q){ return q?("kakaomap://search?q="+encodeURIComponent(q)):"kakaomap://open"; },
+                web:function(q){ return q?("https://map.kakao.com/?q="+encodeURIComponent(q)+"&target=car"):"https://map.kakao.com/"; } },
+    map:      { name:"카카오맵",   app:function(q){ return q?("kakaomap://search?q="+encodeURIComponent(q)):"kakaomap://open"; },
+                web:function(q){ return q?("https://map.kakao.com/?q="+encodeURIComponent(q)):"https://map.kakao.com/"; } },
+    delivery: { name:"배달의민족", app:function(){ return "baemin://"; },
+                web:function(){ return "https://www.baemin.com/"; } }
+  };
+  async function openExternal(a){
+    var svc = EXT_SERVICES[a.service];
+    if(!svc){ addMsg("a","그 앱은 아직 못 열어 ㅜ"); return; }
+    var q = a.query||"";
+    var appUrl = svc.app(q), webUrl = svc.web(q);
+    var AL = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AppLauncher;
+    if(window.GALLA_IS_APP && AL && AL.openUrl){
+      try{
+        if(AL.canOpenUrl){ var c=await AL.canOpenUrl({url:appUrl}); if(c && c.value){ await AL.openUrl({url:appUrl}); return; } }
+        else { await AL.openUrl({url:appUrl}); return; }
+      }catch(e){}
+      openInApp(webUrl); return;   // 앱 미설치 → 웹/스토어
+    }
+    openInApp(webUrl);   // 웹: https(설치돼 있으면 앱으로 라우팅)
+  }
   function runAction(a){
     if(a.kind==="open"){ openInApp(a.url); return; }
+    if(a.kind==="external"){ openExternal(a); return; }
     if(a.kind==="app"){
       // 🌐 웹에선 통화(음성/영상)는 앱 전용 → 다운로드 트리거로 전환
       if(!window.GALLA_IS_APP && (a.op==="call_voice"||a.op==="call_video")){

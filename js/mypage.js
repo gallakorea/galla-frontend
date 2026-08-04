@@ -242,6 +242,10 @@ async function GALLA_mypageInit(root, spaParams) {
         const open = () => {
             const big = window.GALLA_avatarSrc(avatarUrl, 720);
             const profileUrl = location.origin + "/mypage.html?user=" + encodeURIComponent(uid);
+            // 말 걸기(오픈프로필) 공유 링크 — 받는 사람이 이 사람에게 1:1 DM으로 바로 연결(+ 미가입이면 가입 유도)
+            const talkUrl = window.GALLA_shareUserUrl ? window.GALLA_shareUserUrl(uid) : profileUrl;
+            const talkTitle = "💬 " + (nick || "갈라 친구") + "에게 말 걸기";
+            const talkText = "갈라에서 " + (nick || "갈라 친구") + "와 1:1 대화 시작 — 오픈프로필";
             const ov = document.createElement("div");
             ov.className = "av-viewer";
             ov.innerHTML =
@@ -270,14 +274,15 @@ async function GALLA_mypageInit(root, spaParams) {
             ov.querySelector(".av-scrim").onclick = close;
             const penEl = ov.querySelector(".av-pen"); if (penEl) penEl.onclick = () => { (window.GALLA_nav||function(u){location.href=u})("account-edit.html"); };
             const copyLink = () => {
-                try { navigator.clipboard.writeText(profileUrl); } catch (_) { }
-                (window.GALLA_toast || alert)("🔗 프로필 링크 복사됨");
+                try { navigator.clipboard.writeText(talkUrl); } catch (_) { }
+                (window.GALLA_toast || alert)("🔗 말 걸기 링크 복사됨");
             };
             ov.querySelectorAll(".av-act").forEach(b => {
                 b.onclick = () => {
                     const a = b.dataset.act;
                     if (a === "share") {
-                        if (navigator.share) navigator.share({ title: nick || "GALLA", url: profileUrl }).catch(() => { });
+                        if (window.GALLA_share) window.GALLA_share({ url: talkUrl, title: talkTitle, text: talkText });
+                        else if (navigator.share) navigator.share({ title: talkTitle, text: talkText, url: talkUrl }).catch(() => { });
                         else copyLink();
                     } else if (a === "copy") { copyLink(); }
                     else if (a === "edit") { (window.GALLA_nav||function(u){location.href=u})("account-edit.html"); }
@@ -627,6 +632,8 @@ async function GALLA_mypageInit(root, spaParams) {
         shareBtn.innerHTML = SHARE_ICON + '<span class="qv-act-txt">공유</span>';
         shareBtn.onclick = async () => {
             const url = new URL(goHref, location.href).href;
+            // 🟦 커스텀 공유 시트 우선(네이티브 iOS 시트 대신 우리 브랜드 UI) — GALLA_share 안에 '더보기'로 네이티브도 있음
+            if (window.GALLA_share) { window.GALLA_share({ url, title: title || "GALLA" }); return; }
             if (navigator.share) {
                 try { await navigator.share({ title: title || "GALLA", url }); return; }
                 catch (err) { if (err.name === "AbortError") return; }

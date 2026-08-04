@@ -64,12 +64,27 @@
       if (code) localStorage.setItem("galla_my_ref", code);
     } catch (e) {}
   })();
+  // 공유 링크의 공개 도메인. 네이티브 앱은 origin이 capacitor://localhost 라 외부(카톡·SNS)에서
+  // 절대 안 열린다 → 반드시 https://galla.im 으로 치환한다. (웹 로컬개발 http는 테스트 편의로 유지)
+  const PUBLIC_ORIGIN = "https://galla.im";
+  function publicizeOrigin(u) {
+    try {
+      const url = new URL(u, location.origin);
+      const isHttp = url.protocol === "http:" || url.protocol === "https:";
+      const isGalla = /(^|\.)galla\.im$/.test(url.hostname);
+      const isDev = /^(localhost|127\.0\.0\.1)$/.test(url.hostname);
+      if (isHttp && (isGalla || isDev)) return url.toString();
+      // capacitor://localhost·file:// 등 → 공개 도메인으로 경로·쿼리·해시 이관
+      return PUBLIC_ORIGIN + url.pathname + url.search + url.hash;
+    } catch (_) { return u; }
+  }
   function withRef(u) {
     try {
+      u = publicizeOrigin(u);
       const code = localStorage.getItem("galla_my_ref");
       if (!code) return u;
-      const url = new URL(u, location.origin);
-      if (!/(^|\.)galla\.im$|localhost/.test(url.hostname)) return u;
+      const url = new URL(u, PUBLIC_ORIGIN);
+      if (!/(^|\.)galla\.im$|^(localhost|127\.0\.0\.1)$/.test(url.hostname)) return u;
       if (url.searchParams.get("ref")) return u;
       url.searchParams.set("ref", code);
       return url.toString();

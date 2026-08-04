@@ -8,7 +8,7 @@
      ※ 자원 URL이 ?v=NNN 으로 버전되므로 배포 시 새 URL → 자동 최신화(stale 없음)
    - 민감 페이지(설정·계정·인증·관리자)는 캐시 제외
    ========================================================= */
-const SW_VERSION = 'galla-sw-v594';   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
+const SW_VERSION = 'galla-sw-v598';   // v420: 계정폼(비번변경·문의) SPA 스타일 스코프화 + 갈라성향 간격 / v419: 리로드 확실화(캐시버스터)+pull-refresh SPA전역
 const STATIC_CACHE = 'galla-static-' + SW_VERSION;
 const PAGE_CACHE = 'galla-pages-' + SW_VERSION;
 
@@ -126,14 +126,18 @@ self.addEventListener('fetch', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) {}
-  e.waitUntil(self.registration.showNotification(d.title || 'GALLA', {
-    body: d.body || '새 메시지가 도착했어요',
+  // 프리뷰: 부제가 오면 본문 위에 헤드라인처럼 얹고, image가 오면 big-picture(뉴스 히어로)로 보여준다
+  const bodyLines = [d.subtitle, d.body].filter(Boolean).join('\n');
+  const opts = {
+    body: bodyLines || '새 메시지가 도착했어요',
     icon: '/assets/logo.png',
     badge: '/assets/logo.png',
     tag: d.tag || 'galla',       // 같은 방 알림은 갱신(도배 방지)
     renotify: true,
     data: { url: d.url || '/dm.html' },
-  }));
+  };
+  if (d.image) opts.image = d.image;   // 잠금화면/알림 big-picture 프리뷰
+  e.waitUntil(self.registration.showNotification(d.title || 'GALLA', opts));
 });
 
 self.addEventListener('notificationclick', (e) => {

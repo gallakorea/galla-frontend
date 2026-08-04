@@ -381,6 +381,7 @@
               <span>${Number(m.likes) || ""}</span>
             </button>
             ${isReply ? "" : `<button type="button" class="hv-cr" data-reply="${m.id}" data-nick="${esc(gh ? gh.name : m.nickname)}">답글</button>`}
+            <button type="button" class="hv-cshare" data-cshare="${m.id}" data-body="${esc(m.body || "")}" aria-label="댓글 공유">🔗</button>
             ${m.mine ? `<button type="button" class="hv-cx" data-del="${m.id}">삭제</button>` : ""}
           </div>
         </div>
@@ -471,6 +472,8 @@
       text: `지금 갈라에서 가장 뜨거운 영상 — ${vtitle}`,
       url,
     };
+    // 🟦 커스텀 공유 시트 우선(네이티브 iOS 시트 대신 우리 브랜드 UI)
+    if (window.GALLA_share) { window.GALLA_share(payload); return; }
     try {
       if (navigator.share) { await navigator.share(payload); return; }
       await navigator.clipboard.writeText(url);
@@ -682,6 +685,18 @@
       if (r) { setReply(Number(r.dataset.reply), r.dataset.nick); return; }
       const d = e.target.closest("[data-del]");
       if (d) { delComment(Number(d.dataset.del)); return; }
+      const s = e.target.closest("[data-cshare]");
+      if (s) {
+        const cid = s.dataset.cshare;
+        const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("video", cid) : (location.origin + "/share/comment/video/" + cid);
+        const raw = String(s.dataset.body || "").replace(/\s+/g, " ").trim();
+        const title = "🗯️ " + (raw ? `“${raw.slice(0, 40)}”` : "이 댓글");
+        const text = "갈라에서 이 댓글에 받아쳐봐";
+        if (window.GALLA_share) window.GALLA_share({ url, title, text });
+        else if (navigator.share) navigator.share({ title, text, url }).catch(() => {});
+        else { try { navigator.clipboard.writeText(url); window.GALLA_toast && GALLA_toast("🔗 댓글 링크 복사됨"); } catch (_) {} }
+        return;
+      }
     });
 
     // 공유 랜딩에서 들어온 경우 — /search.html?video=<id> → 그 영상 바로 열기

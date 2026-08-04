@@ -10,10 +10,15 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
 };
-const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || Deno.env.get("JARVIS_BASE_URL") || "https://api.openai.com/v1";
-const API_KEY  = Deno.env.get("FRIEND_API_KEY")  || Deno.env.get("JARVIS_API_KEY") || Deno.env.get("OPENAI_API_KEY")!;
-const MODEL    = Deno.env.get("FRIEND_MODEL")    || Deno.env.get("JARVIS_MODEL") || "gpt-4o-mini";
-// 💬 대화 답변 전용 모델(품질) — 백그라운드(추출·요약·리플렉션)는 싼 MODEL, 답변만 좋은 걸로 분리해 비용 최적화.
+// 💸 DeepSeek 자동 전환 — DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 감(OpenAI 호환).
+//    ⚠️ v4-flash/v4-pro는 '추론형'이라 짧은 답변을 잘라먹고(추론이 토큰 소진) 추론토큰까지 과금돼 오히려 비쌈.
+//    비추론 deepseek-chat이 우리 용도(빠른 대화·짧은 답)엔 최적(1.6s·안정). FRIEND_* env로 언제든 교체 가능.
+//    임베딩·검열·이미지·TTS는 DeepSeek에 없어 OpenAI 유지.
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || Deno.env.get("JARVIS_BASE_URL") || (_DS ? "https://api.deepseek.com" : "https://api.openai.com/v1");
+const API_KEY  = Deno.env.get("FRIEND_API_KEY")  || Deno.env.get("JARVIS_API_KEY") || (_DS || Deno.env.get("OPENAI_API_KEY")!);
+const MODEL    = Deno.env.get("FRIEND_MODEL")    || Deno.env.get("JARVIS_MODEL") || (_DS ? "deepseek-chat" : "gpt-4o-mini");
+// 💬 대화 답변 전용 모델 — 필요시 FRIEND_CHAT_MODEL로만 상향(기본은 MODEL과 동일 deepseek-chat).
 const CHAT_MODEL = Deno.env.get("FRIEND_CHAT_MODEL") || MODEL;
 // 임베딩(기억 검색용) — 대화 모델과 별개로 OpenAI 임베딩 사용(싸고 안정적). env로 교체 가능.
 const EMBED_URL   = Deno.env.get("EMBED_BASE_URL") || "https://api.openai.com/v1";
@@ -33,7 +38,7 @@ const STEP_LABEL: Record<string, string> = {
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
-  draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…",
+  draft_gallari: "🎬 콘텐츠 초안 쓰는 중…", draft_predict: "🎲 예측 초안 잡는 중…", edit_draft: "✍️ 초안 고치는 중…", manage_content: "🛠 콘텐츠 정리하는 중…", app_action: "⚙️ 앱 여는 중…", open_external: "📲 앱 여는 중…",
   my_activity: "📋 소식 확인하는 중…", recall_memory: "🧠 기억 더듬는 중…", remember: "🧠 기억해두는 중…", forget_memory: "🧽 지우는 중…",
 };
 // 진짜 '대행'(초안·수정·관리·생성)만 미니챗(도킹)으로 전환. 가벼운 검색·기억보조는 진행 라인만.
@@ -271,6 +276,7 @@ const TOOLS = [
   // 🎛 앱 컨트롤 — 갈비스가 앱 기능을 직접 구동(DM 열기·육성톡/면상톡 걸기·페이지 이동)
   { type: "function", function: { name: "find_user", description: "갈라 유저를 닉네임으로 찾는다(공개 정보). DM·통화 걸기 전에 대상 특정용.", parameters: { type: "object", properties: { nickname: { type: "string" } }, required: ["nickname"] } } },
   { type: "function", function: { name: "app_action", description: "앱 기능·설정을 직접 열어준다. 상대가 명시적으로 요청할 때만: 'OO한테 DM 보내줘'=op:dm, '육성톡/면상톡 걸어줘'=op:call_voice/call_video(user_id는 find_user로 먼저). '예측/광장/지갑/설정/프로필 열어줘'=op:goto+page. '프로필 사진 바꿔줘/닉네임 바꿔줘/소개 수정/전화번호 바꿔줘/비번 바꿔줘'=op:goto,page:account,focus:photo|nickname|bio|phone|password(해당 화면·필드를 바로 연다).", parameters: { type: "object", properties: { op: { type: "string", enum: ["dm", "call_voice", "call_video", "goto"] }, user_id: { type: "string", description: "dm/call 대상(find_user 결과의 id)" }, page: { type: "string", enum: ["home", "predict", "plaza", "news", "shorts", "mypage", "wallet", "saved", "dm", "quest", "search", "settings", "account", "password", "notifications", "login-history", "creator", "grade", "season", "shop", "duel", "withdraw"], description: "goto용 페이지(account=프로필 수정, settings=설정 홈)" }, focus: { type: "string", enum: ["photo", "nickname", "bio", "phone", "password"], description: "account 페이지에서 특정 항목을 바로 열/포커스" }, label: { type: "string", description: "칩 문구" } }, required: ["op"] } } },
+  { type: "function", function: { name: "open_external", description: "외부 앱을 열어 상대의 볼일을 도와준다(핸드오프). ⚠️ 넌 앱을 '열어주기'만 한다 — 실제 호출·결제·예약은 상대가 그 앱에서 직접 확정한다. 그러니 '내가 택시 불러줄게'가 아니라 '카카오T 열어줄게, 거기서 호출 눌러' 식으로 안내해라. 상대가 명시적으로 요청할 때만. 매핑: '택시 불러줘/잡아줘'=service:taxi(카카오T). '길찾기/거기 어떻게 가/네비 켜줘'=service:navi(+query=목적지). '지도에서 찾아줘/근처 OO'=service:map(+query=장소·검색어). '배달 시켜줘/뭐 시켜먹자'=service:delivery(배민).", parameters: { type: "object", properties: { service: { type: "string", enum: ["taxi", "navi", "map", "delivery"] }, query: { type: "string", description: "목적지·장소·검색어(navi/map용, 없으면 그냥 앱만 연다)" }, label: { type: "string", description: "칩 문구(예: '카카오T 열기')" } }, required: ["service"] } } },
   // 🗑✏️ 내 콘텐츠 관리 — 삭제(확인 후)·수정(폼으로). 본인 것만.
   { type: "function", function: { name: "manage_content", description: "상대 '본인'의 갈라 콘텐츠를 삭제(op:delete)하거나 수정(op:edit)하게 해준다. '이거 지워줘/삭제해줘/수정할래/고칠래' 하면. id는 지금 대화의 콘텐츠(맥락에 온 것)거나 my_activity 결과의 것. ctype: issue|plaza|gallari|predict.", parameters: { type: "object", properties: { op: { type: "string", enum: ["delete", "edit"] }, ctype: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] }, id: { type: "string" }, title: { type: "string", description: "어떤 글인지 확인용 제목(있으면)" } }, required: ["op", "ctype", "id"] } } },
   // 📰 광장(롱판) 글 초안 — 이슈(찬반배틀)와 달리 자유 서술 글. 작성폼에 프리필.
@@ -289,7 +295,7 @@ const TOOLS = [
   // 🔥 어그로 제목 엔진 — 검증된 유튜브 제목 공식으로 자극적 제목 후보를 카드로.
   { type: "function", function: { name: "gen_titles", description: "'어그로(자극적) 제목' 후보를 여러 개 뽑아 카드로 제시한다(성공 유튜버들의 검증된 제목 공식 기반 — 크리에이터 브레인 엔진). 상대가 '제목 뽑아줘/자극적으로/어그로 제목/제목 추천/클릭 잘되게' 하거나, 작업 모드에서 제목이 밋밋할 때. topic=콘텐츠 핵심 주제(한 줄), content_type=issue/plaza/gallari/predict.", parameters: { type: "object", properties: { topic: { type: "string", description: "제목 뽑을 콘텐츠 핵심 주제(한 줄)" }, content_type: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] } }, required: ["topic"] } } },
   // 🖼 썸네일/커버 AI 생성 — 작업 모드에서 지금 만드는 콘텐츠의 대표 이미지를 그려 편집기에 자동 첨부.
-  { type: "function", function: { name: "gen_thumbnail", description: "작업 모드에서 콘텐츠 '썸네일/커버'를 AI로 그려 편집기 대표 이미지로 자동 첨부. '썸네일/커버 그려줘' 하면. ⭐**프롬프트는 반드시 영어**로, 세계 최고 유튜버 썸네일 캘리버로 아트디렉션해라 — 콘텐츠·톤에 맞는 아키타입 하나를 골라 그 에너지로 생생하게(구체적 피사체·표정·조명·색·구도까지):\n• spectacle(도전·챌린지·숏판, MrBeast/고재영式): ONE hyper-expressive shocked open-mouth face + a huge focal object or high-stakes scene, ultra-saturated electric primary colors, extreme contrast, explosive energy.\n• reaction(음식·리액션·후기, 영국남자式): a genuine delighted/shocked reaction face, warm inviting food or moment, cozy natural light, appetizing rich colors, candid heartfelt.\n• drama(이슈·논쟁·사건, 지무비式): moody cinematic high-tension scene, deep shadows + one bold accent color(blood red/cold blue), suspenseful film-still, leave clean negative space (top or side) for a headline later.\n• info(예측·돈·정보, 주언규式): a confident trustworthy subject or a single symbolic object(stacks of money/chart/key item), clean premium studio look, credible, one clear focal point, space for a headline.\n• info(예측·돈·경제·시사, 슈카월드式도 여기): 위 info와 동일 — 신뢰감 + 뉴스/데이터 호기심.\n• aesthetic(여행·감성·라이프, 꾸준式): a serene cinematic wanderlust scene, soft golden natural light, calm understated elegant composition, muted filmic mood — NOT flashy.\n• humor(밈·드립·병맛·웃긴 이슈, 침착맨式): a playful absurd exaggerated funny scene, bold simple comic composition, silly relatable meme energy, punchy bright, deliberately over-the-top and laugh-out-loud.\n**글자·실존 유명인 얼굴·브랜드 로고는 절대 넣지 마라**(자동 차단+품질저하). ratio: 이슈카드·세로숏판=portrait / 가로롱판·예측커버=landscape / 정사각=square. 호출 후 \"썸네일 그려줄게 잠깐만\" 정도로 짧게.", parameters: { type: "object", properties: { prompt: { type: "string", description: "영어 아트디렉션 프롬프트(아키타입 에너지 살려 피사체·표정·조명·색·구도까지 구체적으로, 글자·실존유명인·로고 없이)" }, ratio: { type: "string", enum: ["portrait", "landscape", "square"] } }, required: ["prompt"] } } },
+  { type: "function", function: { name: "gen_thumbnail", description: "작업 모드에서 콘텐츠 '썸네일/커버'를 AI로 그려 편집기 대표 이미지로 자동 첨부. '썸네일/커버 그려줘' 하면. ⭐**프롬프트는 반드시 영어**로, 세계 최고 유튜버 썸네일 캘리버로 아트디렉션해라 — 콘텐츠·톤에 맞는 아키타입 하나를 골라 그 에너지로 생생하게(구체적 피사체·표정·조명·색·구도까지):\n• spectacle(도전·챌린지·숏판, MrBeast/고재영式): ONE hyper-expressive shocked open-mouth face + a huge focal object or high-stakes scene, ultra-saturated electric primary colors, extreme contrast, explosive energy.\n• reaction(음식·리액션·후기, 영국남자式): a genuine delighted/shocked reaction face, warm inviting food or moment, cozy natural light, appetizing rich colors, candid heartfelt.\n• drama(이슈·논쟁·사건, 지무비式): moody cinematic high-tension scene, deep shadows + one bold accent color(blood red/cold blue), suspenseful film-still, leave clean negative space (top or side) for a headline later.\n• info(예측·돈·정보, 주언규式): a confident trustworthy subject or a single symbolic object(stacks of money/chart/key item), clean premium studio look, credible, one clear focal point, space for a headline.\n• info(예측·돈·경제·시사, 슈카월드式도 여기): 위 info와 동일 — 신뢰감 + 뉴스/데이터 호기심.\n• aesthetic(여행·감성·라이프, 꾸준式): a serene cinematic wanderlust scene, soft golden natural light, calm understated elegant composition, muted filmic mood — NOT flashy.\n• humor(밈·드립·병맛·웃긴 이슈, 침착맨式): a playful absurd exaggerated funny scene, bold simple comic composition, silly relatable meme energy, punchy bright, deliberately over-the-top and laugh-out-loud.\n**글자·실존 유명인 얼굴·브랜드 로고는 절대 넣지 마라**(자동 차단+품질저하). ratio: 이슈카드·세로숏판=portrait / 가로롱판·예측커버=landscape / 정사각=square.\n🧑‍🎨 **use_my_photo:true** — 상대가 '내 사진/얼굴/제품 넣어서/나 넣어서 그려줘' 하면 이걸 켜라. 그러면 상대가 작업모드(갈라리)에 올린 사진을 레퍼런스로 써서 '그 사람/사물'을 실제로 넣은 썸네일이 나온다(얼굴·생김새 유지). 이때 prompt엔 '그 인물/사물을 어떤 컨셉·표정·배경으로 재연출할지'를 적어라(가상의 다른 사람 묘사 말고). ⚠️ 작업모드에 사진이 없으면 소용없으니, 사진 먼저 올리라고 안내. 호출 후 \"내 사진으로 썸네일 뽑아줄게 잠깐만\" 정도로 짧게.", parameters: { type: "object", properties: { prompt: { type: "string", description: "영어 아트디렉션 프롬프트(아키타입 에너지 살려 피사체·표정·조명·색·구도까지 구체적으로, 글자·실존유명인·로고 없이). use_my_photo면 '레퍼런스 인물/사물을 어떤 컨셉으로 재연출할지'." }, ratio: { type: "string", enum: ["portrait", "landscape", "square"] }, use_my_photo: { type: "boolean", description: "상대가 올린 사진(얼굴·제품)을 레퍼런스로 실제 반영. '내 사진/얼굴 넣어서' 요청 시 true." } }, required: ["prompt"] } } },
   // 🛰 콘텐츠 기획 — '뭐 만들까' 재료 수집
   { type: "function", function: { name: "content_radar", description: "'뭐 만들지' 기획할 때 재료를 모은다 — 지금 갈라에서 뜨는 이슈·최신 갈라뉴스·플랫폼 화제 + 상대가 이미 만든 콘텐츠(중복 방지용). 상대가 '뭐 만들까/콘텐츠 기획해줘/아이디어 줘/이번주 뭐 올릴까/소재 추천' 하면 이걸로 재료 모아 맞춤 기획안을 짜라.", parameters: { type: "object", properties: {} } } },
   // 🗂 기획안 카드 — 모은 재료로 뽑은 아이디어를 '만들기' 카드로 제시
@@ -401,6 +407,12 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     }
     return { result: { error: "unknown op" } };
   }
+  if (name === "open_external") {
+    const svc = String(args?.service || "");
+    if (!["taxi", "navi", "map", "delivery"].includes(svc)) return { result: { error: "unknown service" } };
+    const labels: Record<string, string> = { taxi: "🚕 카카오T 열기", navi: "🗺 길찾기 열기", map: "🗺 지도에서 찾기", delivery: "🍔 배민 열기" };
+    return { action: { kind: "external", service: svc, query: String(args?.query || "").slice(0, 80), label: String(args?.label || labels[svc]).slice(0, 30) } };
+  }
   if (name === "manage_content") {
     const ctype = String(args?.ctype || ""), id = String(args?.id || "");
     if (!ctype || !id) return { result: { error: "ctype·id 필요" } };
@@ -496,7 +508,8 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "gen_thumbnail") {
     return { action: { kind: "genThumbnail",
       prompt: String(args?.prompt || "").slice(0, 300),
-      ratio: ["portrait", "landscape", "square"].includes(args?.ratio) ? args.ratio : "portrait" } };
+      ratio: ["portrait", "landscape", "square"].includes(args?.ratio) ? args.ratio : "portrait",
+      useUserPhotos: !!args?.use_my_photo } };
   }
   if (name === "gen_video") {
     // 자동 영상은 세로 숏판(9:16)만 — 롱판(가로)은 사용자 촬영·업로드로 유도(정책)
@@ -603,7 +616,10 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **깊은 주제(사회이슈·문화·인생)도 강의 금지 — 한 번에 다 말하지 마라.** 네 핵심 관점 하나만 2~3문장으로 던지고 **되물어서** 이어가라("난 ~라고 봐. 근데 넌 어느 쪽이야?"). 여러 논점은 한 방이 아니라 티키타카 여러 턴에 나눠서. 겉핥기 "그렇구나"도 금지 — 짧아도 뾰족하게.
 - 요는: 가벼우면 가볍게, 깊으면 깊게. 그게 진짜 티키타카.
 - 반말·구어체(말투 수위는 맨 뒤 '지금 맥락' 참고). 이모지·짤·스티커는 아래 규칙대로 상황 맞게 다양하게(밋밋 금지, 남발도 금지).
-- 💬 **한 답변 총 1~2문장이 기본(최대 3문장, 절대 넘기지 마). 카톡 한 줄처럼 짧게.** 잡담·리액션=한 줄("ㅋㅋ 왜?"). 의견도 핵심 한 마디+되묻기로 끝. 길게 설명하고 싶어도 참고 다음 턴에 나눠라 — 짧은 게 티키타카다.
+- 💬 **한 말풍선 = 카톡 한 줄(최대 한 줄 반, ~40자). 절대 길게 쓰지 마.** 잡담·리액션=한 줄("ㅋㅋ 왜?"). 의견도 핵심 한 마디+되묻기로 끝.
+- 💬 **더 할 말이 있으면 한 덩어리로 쓰지 말고 빈 줄(엔터 두 번)로 나눠 짧은 말풍선 2~3개로 보내라** — 카톡처럼 톡톡. 한 버블에 두 문장 몰아넣기 금지. 각 버블도 한 줄 반 넘기지 마. 그래도 길면 다음 턴으로 미뤄라 — 짧은 게 티키타카다.
+- 🚫 **네 속마음·전략·연출·지문을 절대 쓰지 마라.** 괄호()로 "(이럴 땐 들어주는 게 맞지)" "(공감부터 하자)" 같은 네 판단·계획을 적는 건 금지 — 그건 속으로만 하고 겉으론 친구가 실제로 할 '말'만 내보내라. 상대 상황 분석·설명하지 말고 그냥 반응해라.
+- 🚫 **매 턴 지난 화제 반복 금지.** "아까 시험 얘기하다 갑자기~", "방금 네가 ~라고 했잖아" 식으로 이전 대화를 되짚는 건 아주 가끔(정말 콕 집을 때)만. 보통은 지금 말에 바로 반응해라.
 - 🚫 금지: 불릿·번호 리스트("1. 2. 3."), "~할 수 있어요/도와줄게" 비서멘트, 매 답 끝 형식적 질문, 존댓말 설교, 출처 정리, 정보 주르륵 나열.
 - 이슈/콘텐츠 얘기할 때 여러 개 나열 X — 하나 깊게 파고 대화. 더 궁금해하면 다음 거.
 
@@ -778,22 +794,35 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
 ${memBlock}`;
 }
 
-// 💬 긴 답을 카톡식 2~3버블로 — 문장 경계에서 ~70자 덩이로 그리디 묶기(최대 3덩이, 짧으면 그대로)
+// 💬 카톡식 짧은 말풍선 — 한 버블 '최대 한 줄 반(~40자)'. 넘으면 문장/어절 경계에서 잘라 여러 버블로(최대 4).
+const BUBBLE_MAX = 40;   // 한 버블 목표 상한(한 줄 반)
 function bubbleize(t: string): string {
+  // 한 어절 못 자르는 긴 덩이는 공백 기준으로 하드 랩(~46자)
+  const hardWrap = (s: string): string[] => {
+    if (s.length <= 46) return [s];
+    const words = s.split(/\s+/); const out: string[] = []; let cur = "";
+    for (const w of words) {
+      if (cur && (cur + " " + w).length > BUBBLE_MAX) { out.push(cur); cur = w; }
+      else cur = cur ? cur + " " + w : w;
+    }
+    if (cur) out.push(cur);
+    return out;
+  };
   const splitOne = (s: string): string[] => {
-    if (s.length <= 90) return [s];
+    if (s.length <= 46) return [s];
     const sents = s.match(/[^.!?…\n]+[.!?…]*\s*/g) || [s];
     const out: string[] = []; let cur = "";
     for (const sen of sents) {
-      if (cur && (cur + sen).length > 70) { out.push(cur.trim()); cur = sen; }
+      if (cur && (cur + sen).length > BUBBLE_MAX) { out.push(cur.trim()); cur = sen; }
       else cur += sen;
     }
     if (cur.trim()) out.push(cur.trim());
-    return out;
+    return out.flatMap(hardWrap);
   };
-  // 모델이 이미 나눈 덩이도 '각각' 90자 넘으면 재분할 — 긴 문단 버블 금지
-  return (t || "").trim().split(/\n{2,}/)
-    .flatMap((c) => splitOne(c.trim())).filter(Boolean).join("\n\n");
+  // 모델이 이미 나눈 덩이도 각각 재분할 → 긴 문단 버블 금지. 최대 4버블(초과분은 마지막에 합치지 말고 버림 방지 위해 4번째에 흡수).
+  const parts = (t || "").trim().split(/\n{2,}/).flatMap((c) => splitOne(c.trim())).filter(Boolean);
+  if (parts.length <= 4) return parts.join("\n\n");
+  return [...parts.slice(0, 3), parts.slice(3).join(" ")].join("\n\n");
 }
 
 async function chatOnce(messages: any[], opts?: { toolChoice?: any }) {
@@ -1160,14 +1189,16 @@ ${parts.join("\n")}`;
       ? [{ type: "text", text: openMsg }, ...imageUrls.slice(0, 4).map((u) => ({ type: "image_url", image_url: { url: u } }))]
       : openMsg;
 
+    // 💸 프롬프트 캐싱 최적 순서: [전역고정] → [앱설정고정] → [history(append-only)] → [유저·턴별] → [유저메시지]
+    //   고정·history를 앞에 모아 캐시 프리픽스를 최대화(긴 대화일수록 이득). dynamicCtx는 유저메시지 직전=최신성도 ↑.
     const messages: any[] = [
-      { role: "system", content: STATIC_PERSONA },   // 100% 동일 프리픽스 → 프롬프트 캐싱(비용↓·속도↑)
-      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
-      ...(workBlock ? [{ role: "system", content: workBlock }] : []),
+      { role: "system", content: STATIC_PERSONA },   // 전 유저 공통·불변 → 전역 프롬프트 캐시(99% 히트 실측)
       ...(VIDEO_ON ? [] : [{ role: "system", content: "🔒 [지금 자동편집 영상 기능은 준비 중이라 잠겨 있다] 상대가 '영상 만들어줘/숏판 뽑아줘' 하면 — 만들어준다고 약속하지 마라. 대신 '자동편집 영상은 곧 열려, 지금은 제목·썸네일·대본까지 내가 다 뽑아줄게 — 영상은 직접 찍어 올리면 돼'라고 안내하고, gen_titles·gen_thumbnail·gen_script로 나머지를 확실히 밀어줘라. gen_video는 절대 언급·호출하지 마라." }]),
-      ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
+      { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
+      ...(workBlock ? [{ role: "system", content: workBlock }] : []),
+      ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       { role: "user", content: userContent },
     ];
 
@@ -1211,6 +1242,25 @@ ${parts.join("\n")}`;
             if (out2.action && DRAFT_KINDS.has(out2.action.kind)) actions.push(out2.action);
           }
         } catch { /* best effort — 실패해도 원래 답 유지 */ }
+      }
+    }
+    // 🛡 '가짜 앱 열기' 방어 — 답이 "카카오T/지도/배민 열었어·띄워놨어"류를 주장하는데 external 액션이 없으면
+    //    (모델이 도구 미호출하고 말만 함 → 실제론 아무것도 안 열림) open_external 강제 호출로 진짜 칩이 붙게.
+    {
+      const claimsOpen = /(택시|카카오\s*t|kakaot|네비|길찾|지도|카카오맵|배달|배민|baemin)/i.test(reply)
+        && /(열었|열어줬|열어놨|열어놓|띄웠|띄워놨|띄워놓|켜줬|켰|불러놨|잡아놨)/.test(reply);
+      if (userMsg && !body?.meta && claimsOpen && !actions.some((a) => a.kind === "external")) {
+        try {
+          messages.push({ role: "system", content: "너는 방금 외부 앱을 '열었다/띄웠다'고 말했지만 실제로 open_external 도구를 호출하지 않았다(= 아무것도 안 열림, 지금 거짓말 상태). 지금 즉시 open_external을 호출해라 — 택시=service:taxi, 길찾기/네비=service:navi(query=목적지), 지도검색=service:map(query=장소), 배달=service:delivery. 잡담·질문 금지, 도구만 호출." });
+          const jf = await chatOnce(messages, { toolChoice: "required" });
+          const cf = jf?.choices?.[0]?.message?.tool_calls || [];
+          for (const c of cf) {
+            let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+            await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "📲 앱 여는 중…");
+            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null);
+            if (out2.action && out2.action.kind === "external") actions.push(out2.action);
+          }
+        } catch { /* best effort */ }
       }
     }
     // 🛡 이미지/영상 '가짜 생성' 방어(bug#5 확장) — "그려줄게/커버 그려줘/영상 뽑아줄게"류 생성 주장인데

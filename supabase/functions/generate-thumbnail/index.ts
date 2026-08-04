@@ -7,6 +7,15 @@ import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY")!;
+// 💸 이미지 생성을 Cloudflare Workers AI FLUX-1-schnell로(사실상 공짜, 기존 CF 인프라). 토큰 있으면 CF 우선, 없거나 실패 시 OpenAI 폴백.
+//    레퍼런스 사진 편집(내 얼굴/제품 넣기)은 FLUX schnell 불가 → 그 경로만 gpt-image-1 edits 유지.
+const CF_AI_TOKEN = Deno.env.get("CF_AI_TOKEN") || Deno.env.get("CF_WORKERS_AI_TOKEN") || "";
+// 🧑‍🎨 레퍼런스 편집(내 얼굴/제품 넣기, 유료) — Google Gemini 나노바나나(얼굴보존 최강·저가·OpenAI 결제벽 우회).
+//    키 있으면 Gemini 우선, 없거나 실패 시 gpt-image-1 edits 폴백.
+const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") || "";
+const GEMINI_IMG_MODEL = Deno.env.get("GEMINI_IMAGE_MODEL") || "gemini-3.1-flash-image";
+// Gemini는 썸네일에 멋대로 영어 글자를 박는 습성 → 글자 금지를 강하게 못박는다(앱이 한글을 따로 덧씌움).
+const GEMINI_NOTEXT = " ABSOLUTELY NO text, no letters, no words, no captions, no typography, no numbers, no watermark, no logo anywhere in the image. The image must be 100% text-free — leave clean empty space instead of any text.";
 const R2_PUBLIC_URL = Deno.env.get("R2_PUBLIC_URL")!;
 const r2 = new AwsClient({
   accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID")!,
@@ -68,13 +77,89 @@ const STYLE = "Ultra high-quality, scroll-stopping viral thumbnail art. "
   + "Trending magnetic social-media cover aesthetic that stops the scroll. "
   + "No text, no letters, no words, no numbers, no watermark, no real brand logos, no real celebrity faces.";
 
-const SIZES: Record<string, string> = { portrait: "1024x1536", landscape: "1536x1024", square: "1024x1024" };
+// 레퍼런스(유저 사진) 모드 — 그 사람/사물의 '얼굴·생김새·특징을 유지'하면서 어그로 썸네일로 재연출.
+const REF_STYLE = "Use the person/subject in the provided reference photo(s) as the MAIN focal subject of the thumbnail, "
+  + "keeping their real face, likeness, hairstyle, body and key features clearly recognizable (do NOT swap to a different person). "
+  + "Re-stage them into a scroll-stopping viral thumbnail: exaggerated dramatic expression or high-tension moment, "
+  + "cinematic rim lighting and moody key light, vivid saturated punchy color grade, high contrast, strong depth and bokeh, "
+  + "razor-sharp premium finish, dynamic composition with a clear center of attention. "
+  + "No added text, no letters, no words, no numbers, no watermark, no brand logos.";
 
-async function uploadR2(bytes: Uint8Array, key: string) {
+const SIZES: Record<string, string> = { portrait: "1024x1536", landscape: "1536x1024", square: "1024x1024" };
+// Cloudflare FLUX 치수(FLUX 친화 배수). schnell은 steps 1~8.
+const FLUX_SIZES: Record<string, { w: number; h: number }> = {
+  portrait: { w: 896, h: 1152 }, landscape: { w: 1152, h: 896 }, square: { w: 1024, h: 1024 },
+};
+// 🖼 Cloudflare Workers AI FLUX-1-schnell — 프롬프트→이미지(base64 JPEG). 토큰 없거나 실패 시 null(→OpenAI 폴백).
+async function genCloudflareFlux(prompt: string, ratio: string): Promise<Uint8Array | null> {
+  if (!CF_AI_TOKEN) return null;
+  const sz = FLUX_SIZES[ratio] || FLUX_SIZES.portrait;
+  const call = (extra: Record<string, unknown>) => fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT}/ai/run/@cf/black-forest-labs/flux-1-schnell`,
+    { method: "POST", headers: { Authorization: `Bearer ${CF_AI_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: prompt.slice(0, 2048), steps: 8, ...extra }) });
+  const once = async (): Promise<Uint8Array | null> => {
+    let r = await call({ width: sz.w, height: sz.h });
+    if (r.status === 400) r = await call({});   // 일부 버전은 width/height 미지원 → 정사각 폴백
+    const d = await r.json().catch(() => null);
+    const b64 = d?.result?.image;
+    if (!r.ok || !b64) { console.error("[thumb] cf-flux", r.status, JSON.stringify(d?.errors || d).slice(0, 200)); return null; }
+    return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  };
+  // CF는 가끔 일시 실패 → 2회까지 재시도(그래야 막힌 OpenAI 폴백으로 안 샌다)
+  for (let i = 0; i < 2; i++) {
+    try { const out = await once(); if (out) return out; } catch (e) { console.error("[thumb] cf-flux ex", String(e).slice(0, 120)); }
+  }
+  return null;
+}
+function sniffImage(b: Uint8Array): { ct: string; ext: string } {
+  if (b[0] === 0xFF && b[1] === 0xD8) return { ct: "image/jpeg", ext: "jpg" };
+  if (b[0] === 0x89 && b[1] === 0x50) return { ct: "image/png", ext: "png" };
+  return { ct: "image/png", ext: "png" };
+}
+// 바이트 → base64(청크 인코딩, 스택 폭주 방지)
+function toB64(bytes: Uint8Array): string {
+  let bin = ""; const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) bin += String.fromCharCode(...bytes.subarray(i, i + CH));
+  return btoa(bin);
+}
+// 🧑‍🎨 Gemini 나노바나나 — 레퍼런스 사진(얼굴·제품) 유지하며 어그로 썸네일로 재연출. 실패 시 null(→gpt-image-1 폴백).
+const GEMINI_AR: Record<string, string> = { portrait: "3:4", landscape: "4:3", square: "1:1" };
+async function genGeminiEdit(prompt: string, refs: { bytes: Uint8Array; mime: string }[], ratio: string): Promise<Uint8Array | null> {
+  if (!GEMINI_KEY || !refs.length) return null;
+  try {
+    const parts: any[] = [{ text: prompt + GEMINI_NOTEXT }];
+    for (const rf of refs) parts.push({ inline_data: { mime_type: rf.mime, data: toB64(rf.bytes) } });
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMG_MODEL}:generateContent?key=${GEMINI_KEY}`,
+      { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: GEMINI_AR[ratio] || "3:4" } } }) });
+    const d = await r.json().catch(() => null);
+    const outParts = d?.candidates?.[0]?.content?.parts || [];
+    const img = outParts.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
+    const b64 = img?.inlineData?.data || img?.inline_data?.data;
+    if (!r.ok || !b64) { console.error("[thumb] gemini", r.status, JSON.stringify(d?.error || d).slice(0, 200)); return null; }
+    return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  } catch (e) { console.error("[thumb] gemini ex", String(e).slice(0, 120)); return null; }
+}
+// 레퍼런스 이미지 바이트 가져오기(외부/R2 URL → Uint8Array + mime)
+async function fetchRef(url: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const buf = new Uint8Array(await r.arrayBuffer());
+    if (buf.byteLength < 100 || buf.byteLength > 20 * 1024 * 1024) return null;   // 100B~20MB
+    let mime = (r.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!/^image\/(png|jpe?g|webp)$/.test(mime)) mime = "image/png";
+    return { bytes: buf, mime };
+  } catch { return null; }
+}
+
+async function uploadR2(bytes: Uint8Array, key: string, contentType = "image/png") {
   const url = `https://${CF_ACCOUNT}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`;
   const res = await r2.fetch(url, {
     method: "PUT",
-    headers: { "content-type": "image/png", "cache-control": "public, max-age=31536000, immutable" },
+    headers: { "content-type": contentType, "cache-control": "public, max-age=31536000, immutable" },
     body: bytes,
   });
   if (!res.ok) throw new Error(`r2_${res.status}`);
@@ -98,11 +183,15 @@ Deno.serve(async (req) => {
   const me = callerUid(req);
   if (!me) return j({ error: "auth" }, 401);
 
-  let body: { prompt?: string; ratio?: string };
+  let body: { prompt?: string; ratio?: string; image_urls?: string[] };
   try { body = await req.json(); } catch { return j({ error: "bad_json" }, 400); }
   const prompt = String(body.prompt || "").trim().slice(0, 300);
   const size = SIZES[String(body.ratio || "portrait")] || SIZES.portrait;
   if (prompt.length < 2) return j({ error: "prompt_short" }, 400);
+  // 🧑‍🎨 레퍼런스 이미지(유저 사진·얼굴·제품) — 있으면 gpt-image-1 edits로 '그 사람/사물'을 실제로 넣는다(최대 4장).
+  const refUrls = Array.isArray(body.image_urls)
+    ? body.image_urls.filter((u) => typeof u === "string" && /^https?:\/\//i.test(u)).slice(0, 4)
+    : [];
 
   const ip = ipGuard(prompt);
   if (ip) return j({ error: "blocked_ip", word: ip }, 400);
@@ -133,28 +222,72 @@ Deno.serve(async (req) => {
     if (pats && pats.length) patternText = " Composition rules: " + pats.map((p: any) => p.formula).join("; ") + ".";
   } catch { /* */ }
 
-  try {
-    const r = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: `${prompt}.${patternText} ${STYLE}`,
-        n: 1, size, quality: "high", output_format: "png", moderation: "auto",
-      }),
-    });
+  // 레퍼런스 이미지 로드(있으면) — 유저 얼굴/제품을 실제로 넣는 edits 경로용
+  const refs: { bytes: Uint8Array; mime: string }[] = [];
+  if (refUrls.length) {
+    for (const u of refUrls) { const rr = await fetchRef(u); if (rr) refs.push(rr); }
+  }
+  const useEdit = refs.length > 0;
+
+  // OpenAI 경로(레퍼런스 편집 / CF 폴백)에서 b64 이미지 하나 얻기
+  async function openaiImage(): Promise<Uint8Array | null> {
+    let r: Response;
+    if (useEdit) {
+      // 🧑‍🎨 gpt-image-1 edits — 레퍼런스 사진의 인물/사물을 유지하며 어그로 썸네일로 재연출(FLUX schnell 불가)
+      const form = new FormData();
+      form.append("model", "gpt-image-1");
+      form.append("prompt", `${prompt}.${patternText} ${REF_STYLE}`);
+      form.append("size", size);
+      form.append("quality", "high");
+      form.append("n", "1");
+      refs.forEach((rf, i) => {
+        const ext = rf.mime.includes("png") ? "png" : rf.mime.includes("webp") ? "webp" : "jpg";
+        form.append("image[]", new Blob([rf.bytes], { type: rf.mime }), `ref${i}.${ext}`);
+      });
+      r = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_KEY}` },   // ⚠️ multipart는 Content-Type 수동 설정 금지(boundary 자동)
+        body: form,
+      });
+    } else {
+      r = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${OPENAI_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "gpt-image-1",
+          prompt: `${prompt}.${patternText} ${STYLE}`,
+          n: 1, size, quality: "high", output_format: "png", moderation: "auto",
+        }),
+      });
+    }
     const d = await r.json();
     if (!r.ok || !d?.data?.length) {
-      console.error("[thumb] openai", r.status, JSON.stringify(d?.error || d).slice(0, 300));
-      await refund();
-      return j({ error: "generate_failed", detail: d?.error?.message || `http_${r.status}` }, 502);
+      console.error("[thumb] openai", useEdit ? "edit" : "gen", r.status, JSON.stringify(d?.error || d).slice(0, 300));
+      return null;
     }
-    const b64 = d.data[0].b64_json as string;
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const key = `thumbnails/${me}/${crypto.randomUUID()}.png`;
-    const url = await uploadR2(bytes, key);
+    return Uint8Array.from(atob(d.data[0].b64_json as string), (c) => c.charCodeAt(0));
+  }
+
+  try {
+    let bytes: Uint8Array | null = null;
+    let via = "openai";
+    if (useEdit) {
+      // 🧑‍🎨 레퍼런스 편집: Gemini 나노바나나 우선(얼굴보존·저가·결제벽 우회), 폴백 gpt-image-1 edits
+      bytes = await genGeminiEdit(`${prompt}.${patternText} ${REF_STYLE}`, refs, String(body.ratio || "portrait"));
+      if (bytes) via = "gemini";
+    } else {
+      // 💸 일반 생성 1순위: Cloudflare FLUX(near-free). 실패면 OpenAI 폴백.
+      bytes = await genCloudflareFlux(`${prompt}.${patternText} ${STYLE}`, String(body.ratio || "portrait"));
+      if (bytes) via = "cf-flux";
+    }
+    if (!bytes) { bytes = await openaiImage(); if (bytes) via = useEdit ? "openai-edit" : "openai"; }
+    if (!bytes) { await refund(); return j({ error: "generate_failed" }, 502); }
+
+    const { ct, ext } = sniffImage(bytes);
+    const key = `thumbnails/${me}/${crypto.randomUUID()}.${ext}`;
+    const url = await uploadR2(bytes, key, ct);
     try { await sb.from("my_thumbnails").insert({ user_id: me, url, prompt, kind: "thumbnail" }); } catch (_) {}
-    return j({ ok: true, url });
+    return j({ ok: true, url, ref: useEdit, via });
   } catch (e) {
     console.error("[thumb]", e);
     await refund();

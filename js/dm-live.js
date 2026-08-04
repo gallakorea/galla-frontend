@@ -509,7 +509,11 @@
   }
   function shareRoom() {
     const title = (document.getElementById("lv-title")?.textContent || "GALLA 육성 난장").trim();
-    const url = (location.origin && /^https?:/.test(location.origin) ? location.origin : "https://galla.im") + "/dm.html";
+    // 방 딥링크 — 받는 사람이 그 방으로 바로 유입(전엔 그냥 /dm.html이라 특정 방 유입 불가)
+    const rid = (CUR && CUR.roomId) || "";
+    const url = rid && window.GALLA_shareRoomUrl
+      ? window.GALLA_shareRoomUrl(rid)
+      : (location.origin && /^https?:/.test(location.origin) ? location.origin : "https://galla.im") + "/dm.html";
     const text = title + " — 지금 육성 난장 중! 들으러 와요 🎧";
     if (window.GALLA_share) { window.GALLA_share({ url, title: "🎙 " + title, text }); return; }
     if (navigator.share) { navigator.share({ title: "🎙 " + title, text, url }).catch(() => {}); return; }

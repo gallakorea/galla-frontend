@@ -34,6 +34,8 @@
       .chg-pkg .b{font-size:12px;font-weight:800;color:#5ce09a;margin-left:6px}
       .chg-pkg .fb{font-size:11px;font-weight:800;color:#ff8fa3;margin-left:6px}
       .chg-pkg .p{margin-left:auto;font-weight:900;font-size:15px;color:#c9d1e0;white-space:nowrap}
+      .chg-soon{background:rgba(201,209,224,.1);border:1px solid rgba(201,209,224,.22);border-radius:14px;
+        padding:20px 16px;text-align:center;font-size:14px;font-weight:800;color:#c9d1e0;line-height:1.7}
       .chg-note{font-size:11px;color:#6c7280;text-align:center;margin-top:12px;line-height:1.5}
       .chg-done{text-align:center;padding:18px 8px}
       .chg-done .ic{font-size:42px} .chg-done h4{font-size:17px;font-weight:900;color:#fff;margin:10px 0 6px}
@@ -52,28 +54,41 @@
     dim.addEventListener("click", close);
   }
   async function render(ctx) {
-    const { data } = await sb().rpc("charge_packages");
-    const pkgs = data?.packages || []; firstBonus = !!data?.first_charge;
+    // 🍎 앱스토어/플레이 anti-steering: 네이티브에선 원화 가격·패키지를 절대 렌더하지 않는다(IAP 붙기 전까지).
+    //    실제 결제만 막는 게 아니라 '원화 표시' 자체가 외부결제 유도로 거절 사유가 된다.
+    const isApp = window.GALLA_isApp && window.GALLA_isApp();
+    firstBonus = false;
+    let bodyHTML;
+    if (isApp) {
+      bodyHTML = `
+        <div class="chg-soon">📱 앱 내 충전은 <b>다음 업데이트</b>에서 열려요.<br>
+          지금은 <b>출석·데일리 미션·예측</b>으로 GP를 모을 수 있어요!</div>`;
+    } else {
+      const { data } = await sb().rpc("charge_packages");
+      const pkgs = data?.packages || []; firstBonus = !!data?.first_charge;
+      bodyHTML = `
+        ${firstBonus ? `<div class="chg-first">🎉 첫 충전 한정 +50% 보너스!</div>` : ""}
+        <div class="chg-grid">${pkgs.map(p => {
+          const first = firstBonus ? Math.round(p.gp * 0.5) : 0;
+          const total = p.gp + p.bonus + first;
+          return `<button class="chg-pkg" data-key="${p.key}">
+            <span><span class="g">${gp(total)}</span>${p.bonus ? `<span class="b">${p.label || "+보너스"}</span>` : ""}${first ? `<span class="fb">첫충전 +${first.toLocaleString()}</span>` : ""}</span>
+            <span class="p">${won(p.krw)}</span>
+          </button>`;
+        }).join("")}</div>`;
+    }
     sheet.innerHTML = `
       <div class="chg-grip"></div>
       <div class="chg-title">💳 GP 충전</div>
       <div class="chg-sub">GP로 아이템·꾸미기·밀어주기·가챠를 이용해요</div>
       ${ctx?.need ? `<div class="chg-need">${ctx.label || "GP가 부족해요"} · ${gp(ctx.need)} 필요</div>` : ""}
-      ${firstBonus ? `<div class="chg-first">🎉 첫 충전 한정 +50% 보너스!</div>` : ""}
-      <div class="chg-grid">${pkgs.map(p => {
-        const first = firstBonus ? Math.round(p.gp * 0.5) : 0;
-        const total = p.gp + p.bonus + first;
-        return `<button class="chg-pkg" data-key="${p.key}">
-          <span><span class="g">${gp(total)}</span>${p.bonus ? `<span class="b">${p.label || "+보너스"}</span>` : ""}${first ? `<span class="fb">첫충전 +${first.toLocaleString()}</span>` : ""}</span>
-          <span class="p">${won(p.krw)}</span>
-        </button>`;
-      }).join("")}</div>
+      ${bodyHTML}
       <div class="chg-note">갈라포인트(GP)는 서비스 내 놀이 재화로 <b>환급·환전·양도가 불가</b>하며,
         크리에이터 후원 재화인 갈라코인(GC)과 <b>상호 전환되지 않습니다</b>.<br>
         충전 GP는 <b>아이템·꾸미기·가챠·밀어주기</b>에 사용되며 <b>예측·일기토에는 사용할 수 없어요</b>
         (게임은 출석·미션으로 받는 무료 GP로!).<br>
-        충전 GP는 랭킹(누적 획득)에 반영되지 않아요. · 결제 연동은 준비 중입니다.</div>`;
-    sheet.querySelectorAll(".chg-pkg").forEach(b => b.addEventListener("click", () => begin(b.dataset.key)));
+        충전 GP는 랭킹(누적 획득)에 반영되지 않아요.${isApp ? "" : " · 결제 연동은 준비 중입니다."}</div>`;
+    if (!isApp) sheet.querySelectorAll(".chg-pkg").forEach(b => b.addEventListener("click", () => begin(b.dataset.key)));
   }
   async function begin(key) {
     window.BattleFX?.haptic?.("tap");

@@ -12,9 +12,10 @@ webpush.setVapidDetails(
   Deno.env.get("VAPID_PUBLIC_KEY")!,
   Deno.env.get("VAPID_PRIVATE_KEY")!,
 );
-const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || "https://api.openai.com/v1";
-const API_KEY = Deno.env.get("FRIEND_API_KEY") || Deno.env.get("OPENAI_API_KEY")!;
-const MODEL = Deno.env.get("FRIEND_MODEL") || "gpt-4o-mini";
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const BASE_URL = Deno.env.get("FRIEND_BASE_URL") || (_DS ? "https://api.deepseek.com" : "https://api.openai.com/v1");
+const API_KEY = Deno.env.get("FRIEND_API_KEY") || (_DS || Deno.env.get("OPENAI_API_KEY")!);
+const MODEL = Deno.env.get("FRIEND_MODEL") || (_DS ? "deepseek-chat" : "gpt-4o-mini");
 const CRON_KEY = Deno.env.get("CRON_SECRET") || "";   // 있으면 헤더 검증(없으면 스킵)
 
 const MAX_PER_RUN = 40;   // 런당 상한(비용·스팸 통제)

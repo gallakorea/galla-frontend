@@ -8,8 +8,11 @@ const cors = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type",
 };
-const OPENAI = Deno.env.get("OPENAI_API_KEY")!;
-const MODEL = "gpt-4o-mini";
+// 💸 DEEPSEEK_API_KEY 시크릿만 넣으면 채팅이 DeepSeek(deepseek-chat)로 자동 전환(OpenAI 호환).
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const CHAT_URL = _DS ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
+const OPENAI = _DS || Deno.env.get("OPENAI_API_KEY")!;
+const MODEL = _DS ? "deepseek-chat" : "gpt-4o-mini";
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 
 const supa = createClient(
@@ -37,7 +40,7 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
 
 async function chat(messages: unknown[], maxTokens = 900): Promise<any> {
   if (!(await aiBudgetOk())) throw new Error("ai_daily_cap");
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch(CHAT_URL, {
     method: "POST",
     headers: { "Authorization": `Bearer ${OPENAI}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -207,7 +210,7 @@ Deno.serve(async (req) => {
         title: m.title, thumbnail_url: m.thumbnail_url, published_at: m.published_at,
       })),
     );
-    return { topic: t.topic, id: ins.id, sources: rel.length };
+    return { topic: t.topic, id: ins.id, title: gen.title, sources: rel.length };
   }
 
   // 병렬 처리(시간 단축) — 토픽 수 늘려도 타임아웃 방지
@@ -216,7 +219,37 @@ Deno.serve(async (req) => {
     .map((s) => (s.status === "fulfilled" ? s.value : null))
     .filter(Boolean);
 
-  return new Response(JSON.stringify({ ok: true, generated: results.length, results }), {
+  // 📰 뉴스 속보 푸시 — 퍼플렉시티식 텀(하루 1~2회). 매 크론마다 X, 최소 간격 지난 뒤 '가장 뉴스가치 큰' 1건만.
+  let newsPush: unknown = null;
+  if (results.length) {
+    try {
+      const GAP_H = Number(Deno.env.get("NEWS_PUSH_GAP_HOURS") || "10");
+      const { data: last } = await supa.from("app_settings")
+        .select("updated_at").eq("k", "news_push_last").maybeSingle();
+      const lastAt = last?.updated_at ? new Date(last.updated_at as string).getTime() : 0;
+      if (Date.now() - lastAt >= GAP_H * 3600 * 1000) {
+        const top = results.slice().sort((a, b) => (b?.sources || 0) - (a?.sources || 0))[0];
+        const headline = top?.title || top?.topic;
+        if (top?.id && headline) {
+          const brg = Deno.env.get("PUSH_BRIDGE_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+          const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${brg}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ kind: "news", id: top.id, title: headline }),
+          });
+          newsPush = { headline, res: await r.json().catch(() => null) };
+          await supa.from("app_settings").upsert(
+            { k: "news_push_last", v: { at: new Date().toISOString(), headline }, updated_at: new Date().toISOString() },
+            { onConflict: "k" },
+          );
+        }
+      } else {
+        newsPush = { skipped: "throttled", gapHours: GAP_H };
+      }
+    } catch (e) { newsPush = { error: String(e) }; } // 푸시 실패는 뉴스 생성에 영향 없음
+  }
+
+  return new Response(JSON.stringify({ ok: true, generated: results.length, results, newsPush }), {
     headers: { ...cors, "Content-Type": "application/json" },
   });
 });

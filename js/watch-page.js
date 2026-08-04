@@ -180,6 +180,7 @@
               <span>${Number(m.likes) || ""}</span>
             </button>
             ${isReply ? "" : `<button type="button" class="hv-cr" data-reply="${m.id}" data-nick="${esc(gh ? gh.name : m.nickname)}">답글</button>`}
+            <button type="button" class="hv-cshare" data-cshare="${m.id}" data-body="${esc(m.body || "")}" aria-label="댓글 공유">🔗</button>
             ${m.mine ? `<button type="button" class="hv-cx" data-del="${m.id}">삭제</button>` : ""}
           </div>
         </div>
@@ -301,6 +302,18 @@
       const l = e.target.closest("[data-like]"); if (l) { toggleCmtLike(Number(l.dataset.like), l); return; }
       const r = e.target.closest("[data-reply]"); if (r) { setReply(Number(r.dataset.reply), r.dataset.nick); return; }
       const d = e.target.closest("[data-del]"); if (d) { delComment(Number(d.dataset.del)); return; }
+      const s = e.target.closest("[data-cshare]");
+      if (s) {
+        const cid = s.dataset.cshare;
+        const url = window.GALLA_shareCommentUrl ? window.GALLA_shareCommentUrl("video", cid) : (location.origin + "/share/comment/video/" + cid);
+        const raw = String(s.dataset.body || "").replace(/\s+/g, " ").trim();
+        const title = "🗯️ " + (raw ? `“${raw.slice(0, 40)}”` : "이 댓글");
+        const text = "갈라에서 이 댓글에 받아쳐봐";
+        if (window.GALLA_share) window.GALLA_share({ url, title, text });
+        else if (navigator.share) navigator.share({ title, text, url }).catch(() => {});
+        else { try { navigator.clipboard.writeText(url); window.GALLA_toast && GALLA_toast("🔗 댓글 링크 복사됨"); } catch (_) {} }
+        return;
+      }
     });
     // 다음 영상 — 페이지 안 벗어나고 제자리 교체(유튜브식). 스택 유지(뒤로가기=목록).
     q("#hvRelated")?.addEventListener("click", (e) => {

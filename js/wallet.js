@@ -169,13 +169,17 @@ async function openGcCharge(){
   const isNative = channel!=='web';
   const { data } = await supa.rpc('gc_charge_packages', { p_channel: channel });
   const pkgs = data?.packages||[];
+  // 🍎 네이티브에선 원화 패키지/가격을 렌더하지 않는다(anti-steering) — 안내만.
+  const pkgsHTML = isNative
+    ? `<div class="wl-soon">📱 앱 내 코인 충전은 <b>다음 업데이트</b>에서 열려요.</div>`
+    : `<div class="wl-pkgs">${pkgs.map(p=>`
+        <button class="wl-pkg" data-key="${esc(p.key)}">
+          <span class="wl-pkg-g">💝 ${fmt(p.gc)} GC</span>
+          <span class="wl-pkg-k">₩${fmt(p.krw)}</span>
+        </button>`).join('')}</div>`;
   gcSheet.innerHTML=`<div class="wl-grip"></div><div class="wl-sheet-t">💝 갈라코인 충전</div>
     <div class="wl-sheet-s">1코인 = 1원 · 크리에이터 후원 전용 · 갈라포인트와 상호 전환 불가</div>
-    <div class="wl-pkgs">${pkgs.map(p=>`
-      <button class="wl-pkg" data-key="${esc(p.key)}">
-        <span class="wl-pkg-g">💝 ${fmt(p.gc)} GC</span>
-        <span class="wl-pkg-k">₩${fmt(p.krw)}</span>
-      </button>`).join('')}</div>
+    ${pkgsHTML}
     <div class="wl-sheet-note">갈라코인은 후원 외에 사용할 수 없고, 갈라포인트와 서로 바꿀 수 없습니다.<br>${isNative ? '앱스토어 결제 연동은 준비 중이에요.' : '결제(PG) 연동은 준비 중 — 지금은 충전 요청까지 접수됩니다.'}</div>`;
   gcSheet.querySelectorAll('.wl-pkg').forEach(b=>b.onclick=async ()=>{
     // 네이티브(iOS/안드로이드)에서는 우리 PG로 인앱 판매하면 스토어 심사에 걸린다.

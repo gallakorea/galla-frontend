@@ -13,9 +13,10 @@ const cors = {
 };
 
 // ── 모델 백엔드(OpenAI-호환) — env로 저가 API 교체 가능 ──
-const BASE_URL = Deno.env.get("JARVIS_BASE_URL") || "https://api.openai.com/v1";
-const API_KEY  = Deno.env.get("JARVIS_API_KEY")  || Deno.env.get("OPENAI_API_KEY")!;
-const MODEL    = Deno.env.get("JARVIS_MODEL")    || "gpt-4o-mini";
+const _DS = Deno.env.get("DEEPSEEK_API_KEY") || "";
+const BASE_URL = Deno.env.get("JARVIS_BASE_URL") || (_DS ? "https://api.deepseek.com" : "https://api.openai.com/v1");
+const API_KEY  = Deno.env.get("JARVIS_API_KEY")  || (_DS || Deno.env.get("OPENAI_API_KEY")!);
+const MODEL    = Deno.env.get("JARVIS_MODEL")    || (_DS ? "deepseek-chat" : "gpt-4o-mini");
 
 const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SVC_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
