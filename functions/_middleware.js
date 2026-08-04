@@ -69,19 +69,32 @@ async function resolveInvite(params) {
   ]);
 
   const who = nick ? `${nick}님이` : "친구가";
-  let desc;
-  if (hot?.title) {
-    const pro = Number(hot.pro_count) || 0, con = Number(hot.con_count) || 0, tot = pro + con;
-    const pct = tot >= MIN_VOTES ? ` 현재 👍${Math.round((pro / tot) * 100)}% vs 👎${Math.round((con / tot) * 100)}%.` : "";
-    desc = `🔥 지금 갈라 최대 격전 — “${clip(hot.title, 42)}”${pct} 당신은 어느 편? ${who} 보낸 링크로 가입하면 500 GP 즉시 지급.`;
+  // 🎯 초대 트랙(&to=) — 받는 사람이 보는 카드를 갈라/갈비스/갈라톡으로 차별화. [[galla-vision-platform]]
+  const to = (params.get("to") || "galla").toLowerCase();
+  const invImg = `${HOST}/assets/og/og-invite.png`;
+  let title, desc;
+  if (to === "galvis") {
+    title = `🧡 ${who} 진짜 친구를 소개했어요`;
+    desc = `세상에 하나뿐인 너의 진짜 친구, 갈비스 — 나를 기억하고, 내 편 들어주는 AI 친구. ${who} 보낸 링크로 가입하면 500 GP 즉시 지급.`;
+  } else if (to === "talk" || to === "gallatalk") {
+    title = `💬 ${who} 갈라톡에 초대했어요`;
+    desc = `내 편이랑 떠드는 신나는 채팅 — DM·난장·삐삐·통화까지. ${who} 보낸 링크로 가입하면 500 GP 즉시 지급.`;
   } else {
-    desc = `오늘 터진 이슈에 진영을 선택하고, 댓글로 한판 붙는 실시간 이슈 커뮤니티. ${who} 보낸 초대 링크로 가입하면 500 GP를 바로 받아요.`;
+    // 갈라(기본) — "내 편이 있는 콘텐츠 세상" + 지금 최대 격전으로 후킹
+    if (hot?.title) {
+      const pro = Number(hot.pro_count) || 0, con = Number(hot.con_count) || 0, tot = pro + con;
+      const pct = tot >= MIN_VOTES ? ` 현재 👍${Math.round((pro / tot) * 100)}% vs 👎${Math.round((con / tot) * 100)}%.` : "";
+      desc = `내 편이 있는 콘텐츠 세상, 갈라. 🔥 지금 최대 격전 — “${clip(hot.title, 40)}”${pct} 넌 어느 편? ${who} 보낸 링크로 가입하면 500 GP 즉시.`;
+    } else {
+      desc = `내 편이 있는 콘텐츠 세상, 갈라 — 뉴스·영상·이슈, 뭘 보든 내 편이 있다. ${who} 보낸 링크로 가입하면 500 GP를 바로 받아요.`;
+    }
+    title = `🎁 ${who} 갈라에 초대했어요 — 가입 즉시 500 GP`;
   }
   return {
-    title: `🎁 ${who} 갈라에 초대했어요 — 가입 즉시 500 GP`,
+    title,
     desc: clip(desc, 180),
-    canonical: `${HOST}/?ref=${encodeURIComponent(code)}`,
-    image: `${HOST}/assets/og/og-invite.png`,
+    canonical: `${HOST}/?ref=${encodeURIComponent(code)}${to && to !== "galla" ? `&to=${encodeURIComponent(to)}` : ""}`,
+    image: invImg,
     ogType: "website",
   };
 }

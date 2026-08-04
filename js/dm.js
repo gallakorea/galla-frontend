@@ -3405,7 +3405,9 @@
       try { await navigator.clipboard.writeText(myCode || ''); codeEl.classList.add('flash'); setTimeout(() => codeEl.classList.remove('flash'), 600); } catch (_) {}
     };
     ROOT.querySelector('#dm-code-share').onclick = () => {
-      const msg = `갈라에서 친구해요! 내 친구 코드: ${myCode} — ` + inviteUrl;
+      // 🎁 초대 허브(갈라/갈비스/갈라톡) — DM 친구추가에선 갈라톡 트랙을 우선 노출
+      if (window.GALLA_openInvite) { window.GALLA_openInvite(); return; }
+      const msg = `내 편이랑 떠드는 신나는 채팅, 갈라톡. 내 친구 코드: ${myCode} — ` + inviteUrl;
       if (window.GALLA_share) window.GALLA_share({ url: inviteUrl, title: 'GALLA 친구 추가', text: msg });
       else if (navigator.share) navigator.share({ title: 'GALLA', text: msg, url: inviteUrl }).catch(() => {});
       else navigator.clipboard?.writeText(msg);

@@ -593,10 +593,14 @@
       console.log("[supabase] client ready");
       // 🎁 친구 초대(추천인) — ?ref=코드 캡처 → 첫 로그인 세션에서 1회 적용(+GP 양쪽 보상)
       try {
-        const rp = new URLSearchParams(location.search).get("ref");
+        const qs = new URLSearchParams(location.search);
+        const rp = qs.get("ref");
         if (rp && /^[A-Z0-9]{4,12}$/i.test(rp) && !localStorage.getItem("galla_ref_done")) {
           localStorage.setItem("galla_ref", rp.toUpperCase());
         }
+        // 🎯 초대 트랙(&to=galla|galvis|talk) 캡처 → 온보딩이 트랙에 맞춰 첫인상 강조
+        const to = (qs.get("to") || "").toLowerCase();
+        if (/^(galla|galvis|talk)$/.test(to)) localStorage.setItem("galla_invite_to", to);
       } catch (e) {}
       // 📊 활동 계측 핑 — 세션·시간당 1회(로그인 유저). DAU/MAU/실시간용
       try {
