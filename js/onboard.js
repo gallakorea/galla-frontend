@@ -67,6 +67,8 @@
       '</div>';
     document.body.appendChild(ov);
     requestAnimationFrame(function () { ov.classList.add("show"); });
+    // ✅ 뜨는 즉시 '봤음' 표시 — 선택/닫기 안 하고 나가도 다시는 안 뜬다.
+    try { localStorage.setItem(DONE, "1"); } catch (e) {}
 
     function finish() {
       try { localStorage.setItem(DONE, "1"); } catch (e) {}

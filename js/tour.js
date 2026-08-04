@@ -124,7 +124,11 @@
   var idx = 0;
 
   /* ── 부팅: 스플래시/첫 페인트 후 살짝 지연해서 등장 ──────────────────────── */
+  var _booted = false;
   function boot() {
+    if (_booted) return; _booted = true;
+    // ✅ 뜨는 즉시 '봤음' 표시 — 완주/건너뛰기 안 하고 나가도 다시는 안 뜬다("계속 뜸" 원천 차단).
+    try { localStorage.setItem(KEY, "1"); localStorage.setItem("galla_onboarded", "1"); } catch (e) {}
     injectCSS();
     buildBgm();   // BGM 미리 렌더(첫 제스처에 바로 재생되도록)
     var ov = document.createElement("div");

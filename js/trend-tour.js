@@ -35,6 +35,7 @@
   var idx = 0, OV = null;
 
   function boot() {
+    try { localStorage.setItem(KEY, "1"); } catch (e) {}   // ✅ 뜨는 즉시 '봤음' — 중간에 나가도 재발 안 함
     injectCSS();
     OV = document.createElement("div");
     OV.className = "dmt";

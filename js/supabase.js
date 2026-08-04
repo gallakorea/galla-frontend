@@ -645,6 +645,23 @@
         }
       } catch (e) {}
 
+      // 🚪 온보딩 봉인(계정 단위) — 오리엔테이션/투어가 웹·앱·재설치 넘나들며 또 뜨는 걸 근본 차단.
+      //    mark_onboarded()는 '이전에 온보딩했는지'를 반환하고(true=이미 봄) 없으면 지금 기록.
+      //    이미 온보딩된 계정이면 모든 로컬 투어 플래그를 세팅해 어떤 오리엔테이션도 안 뜨게 한다.
+      //    (localStorage가 기기/오리진마다 분리·초기화돼도 서버 진실이 봉인을 보장.)
+      try {
+        const { data: s } = await window.supabaseClient.auth.getSession();
+        if (s?.session && !localStorage.getItem("galla_fresh_signup")) {
+          const { data: already } = await window.supabaseClient.rpc("mark_onboarded");
+          if (already === true) {
+            ["galla_tour_v2", "galla_onboarded", "galla_dm_tour_v2", "galla_trend_tour_v1", "galla_create_tour_v1"]
+              .forEach((k) => { try { localStorage.setItem(k, "1"); } catch (e) {} });
+            // 진행 중인 오버레이가 있으면 즉시 제거(막 로그인해 부트 중 뜬 경우)
+            try { document.querySelectorAll(".gtour, .obd").forEach((el) => el.remove()); } catch (e) {}
+          }
+        }
+      } catch (e) {}
+
       // 🟢 실시간 presence 하트비트 — 회원/비회원(anon) 모두. 화면 표시 중 45초마다.
       try {
         let sid = localStorage.getItem("galla_sid");
