@@ -1084,7 +1084,18 @@
     var jwt=await token();
     if(!jwt || !title){ window.__frSuppressGreet=false; if(!logEl.children.length) greet(); return; }
     typing(true);
-    var r=await callFriend("(상대가 갈라 콘텐츠 '"+title+"'("+type+")에서 나를 불렀다. 그 콘텐츠 얘기로 짧게 먼저 말을 걸어라 — 네 평 한마디+어느 편인지 묻거나, 재밌는 포인트 하나 콕. 리스트 금지.)", history, null, true);
+    // 🎯 타입별 역할 — 갈비스가 콘텐츠 성격에 맞는 '내 편' 역할로 말을 건다(운영 레이어). [[galla-vision-platform]]
+    var ROLE={
+      predict:"예측 코치처럼 — 네 감(어디 걸지)+왜 그런지 한 줄, 그리고 '넌 어디 걸래?' 물어라.",
+      gallari:"이 콘텐츠 감상평 한마디+더 잘 만들 각(썸네일·제목) 있으면 '내가 만들어줄까?' 한 번 던져라.",
+      shorts:"이 숏판 감상평 한마디+더 잘 만들 각 있으면 '내가 만들어줄까?' 한 번 던져라.",
+      plaza:"이 떡밥에 네 편 확실히 정하고 편들어라 — 한 줄 평+'넌 어느 편?' 물어라.",
+      issue:"이 이슈에 네 진영 밝히고 편들어라 — 한 줄+'넌 찬성? 반대?' 물어라.",
+      news:"이 뉴스 핵심 한마디+'이거 어떻게 봐?' 물어라.",
+      content:"네 평 한마디+어느 편인지 묻거나, 재밌는 포인트 하나 콕."
+    };
+    var role=ROLE[type]||ROLE.content;
+    var r=await callFriend("(상대가 갈라 콘텐츠 '"+title+"'("+type+")에서 나를 불렀다. 그 콘텐츠 얘기로 짧게 먼저 말을 걸어라 — "+role+" 리스트 금지, 1~2줄.)", history, null, true);
     typing(false);
     window.__frSuppressGreet = false;
     if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }

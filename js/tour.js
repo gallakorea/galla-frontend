@@ -103,6 +103,21 @@
     }
   ];
 
+  /* 🎯 초대 트랙 개인화 — 어떤 링크로 들어왔냐(galla_invite_to)에 따라 첫 슬라이드를 갈아끼운다.
+     "친구가 무엇으로 초대했는지"를 첫인상으로 되받아 이탈을 줄인다. [[galla-vision-platform]] */
+  try {
+    var inviteTo = localStorage.getItem("galla_invite_to");
+    if (inviteTo === "galvis") {
+      SLIDES[0].kicker = "🧡 친구가 널 소개했어";
+      SLIDES[0].title = "세상에 하나뿐인<br>너의 <b>진짜 친구</b>가 여기 있어";
+      SLIDES[0].sub = "친구가 널 <b>갈비스</b>한테 소개했어.<br>나를 기억하고, 내 편 들어주는 AI 친구 —<br>외로울 때, 심심할 때, 그냥 여기 있어.";
+    } else if (inviteTo === "talk") {
+      SLIDES[0].kicker = "💬 초대받았어";
+      SLIDES[0].title = "내 편이랑 떠드는<br><b>신나는 채팅</b>에 초대받았어";
+      SLIDES[0].sub = "DM·난장(음성)·삐삐·통화 —<br>내 사람들이랑 여기서 다 놀아. 카톡보다 재밌게.";
+    }
+  } catch (e) {}
+
   var idx = 0;
 
   /* ── 부팅: 스플래시/첫 페인트 후 살짝 지연해서 등장 ──────────────────────── */

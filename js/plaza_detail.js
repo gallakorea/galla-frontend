@@ -824,6 +824,13 @@ async function initPlazaBookmark() {
     if (navigator.share) { navigator.share({ title, url }).catch(() => {}); return; }
     navigator.clipboard?.writeText(url).then(() => alert("링크가 복사되었습니다."));
   });
+  // 🧡 갈비스 — 이 광장 글로 말 걸기(내 편 AI가 편들어줌). 실시간 제목으로 시드.
+  D.querySelector(".galvis-btn")?.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const t = (postTitleEl && postTitleEl.textContent || "광장 글").slice(0, 120);
+    if (window.GALLA_askGalvis) window.GALLA_askGalvis({ type: "plaza", id: postId, title: t });
+    else if (window.GALLA_openFriend) window.GALLA_openFriend();
+  });
 }
 
 /* =========================
