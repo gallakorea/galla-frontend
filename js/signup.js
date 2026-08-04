@@ -142,8 +142,11 @@ async function waitForClient() {
             console.log("[signup.js] Auth 성공 — userId:", userId);
 
             // 가입 후 '첫 로그인' 때 특별 환영을 띄우기 위한 플래그
+            //  + 이 플래그는 tour.js/onboard.js가 '가입 직후 로그아웃 상태'를 감지해 오리엔테이션을
+            //    띄우지 않도록 하는 가드로도 쓰인다(인증 대기 중 투어→signup 되돌림 루프 차단).
             try { localStorage.setItem("galla_fresh_signup", "1"); } catch (e) {}
-            alert("회원가입 완료! 이메일 인증 후 로그인해주세요.");
+            try { localStorage.setItem("galla_last_email", email); } catch (e) {}
+            alert("회원가입 완료! ✉️\n인증 메일을 보냈어요 — 메일함(스팸함도) 확인하고 링크를 누르면 바로 로그인돼요.");
             // 앱/PWA(셸 환경)는 셸로 복귀 — index.html로 가면 셸 밖(MPA)에서 돌게 된다
             {
                 const isAppEnv = (window.GALLA_isApp && GALLA_isApp()) ||

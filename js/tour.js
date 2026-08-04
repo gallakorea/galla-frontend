@@ -19,6 +19,9 @@
   // 셸 iframe 안(자식)에서는 투어 표시 안 함 — top 문서(app-shell/직접 index)만
   try { if (window.self !== window.top) return; } catch (e) { return; }
   try { if (localStorage.getItem(KEY)) return; } catch (e) { return; }
+  // 🚫 가입 직후(이메일 인증 대기) 상태면 투어 금지. 인증 전 로그아웃으로 index/셸에 착지해도
+  //    투어가 떠서 가입 흐름을 끊고 다시 signup으로 되돌리는 무한 루프를 막는다.
+  try { if (localStorage.getItem("galla_fresh_signup")) return; } catch (e) {}
 
   var NATIVE = false;
   try { NATIVE = !!(window.Capacitor && (window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : window.Capacitor.isNative)); } catch (e) {}

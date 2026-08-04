@@ -32,6 +32,8 @@
   /* ── 온보딩 본체 ── */
   (async function run() {
     try { if (localStorage.getItem(DONE)) return; } catch (e) { return; }
+    // 🚫 가입 직후(이메일 인증 대기)면 온보딩 금지 — 가입 흐름을 끊고 signup으로 되돌리는 루프 방지.
+    try { if (localStorage.getItem("galla_fresh_signup")) return; } catch (e) {}
 
     var sb = await sbReady();
     // 오늘 최대 격전 이슈
