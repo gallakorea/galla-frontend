@@ -154,6 +154,15 @@
   };
   var STT = "https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/galla-stt";
   var rec = null, recChunks = [], recording = false, voiceMode = false;
+  // 🎙 네이티브 STT는 '세션 전체'를 누적 반환 → 이미 보낸 부분을 접두어로 빼서 재전송·중복 방지.
+  var sttBase = "";
+  function sttStrip(full){
+    full = (full||"").trim();
+    if(!sttBase) return full;
+    if(full.indexOf(sttBase)===0) return full.slice(sttBase.length).replace(/^[\s,.·]+/,"").trim();   // 정확 접두어
+    var bw = sttBase.split(/\s+/).length, fw = full.split(/\s+/);                                       // 재구두점 등 폴백=단어수
+    return fw.length > bw ? fw.slice(bw).join(" ").trim() : full;
+  }
   var voiceOut = false; try{ voiceOut = localStorage.getItem("frVoiceOut")==="1"; }catch(e){}   // 🔊 음성 답변 토글(기억)
 
   var orb, sheet, mini, logEl, taEl, sendEl;
@@ -1017,16 +1026,19 @@
     var mic=sheet && sheet.querySelector(".fr-mic");
     if(type==="listening"){
       recording=true; mic&&mic.classList.add("fr-rec");
+      sttBase="";   // 새 세션 시작 → 누적 접두어 리셋
       if(taEl){ taEl.value=""; taEl.placeholder="듣는 중… 말해봐 🎙"; }
     } else if(type==="partial"){
-      if(taEl){ taEl.value=text||""; taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; }
+      var pt=sttStrip(text);   // 이미 보낸 앞 발화 제거
+      if(taEl){ taEl.value=pt; taEl.style.height="auto"; taEl.style.height=Math.min(taEl.scrollHeight,120)+"px"; }
     } else if(type==="end"){
       recording=false; mic&&mic.classList.remove("fr-rec");
-      var t=(text||(taEl&&taEl.value)||"").trim();
+      var t=sttStrip(text||(taEl&&taEl.value)||"");   // 누적분 빼고 '새로 말한 것'만
+      sttBase=(text||"").trim();                       // 세션이 안 꺼져도 다음 발화 땐 이번 전체가 접두어
       if(taEl){ taEl.value=""; taEl.style.height="auto"; taEl.placeholder="친구한테 아무 말이나 해봐"; }
       if(t) sendText(t, false);
     } else { // error
-      recording=false; mic&&mic.classList.remove("fr-rec");
+      recording=false; mic&&mic.classList.remove("fr-rec"); sttBase="";
       if(taEl) taEl.placeholder="친구한테 아무 말이나 해봐";
       addMsg("a", text==="perm" ? "음성인식 권한이 꺼져 있어! 설정 > 갈라에서 '음성 인식'을 켜줘" :
                   text==="mic" ? "마이크 권한을 허용해줘야 음성으로 대화할 수 있어!" :
