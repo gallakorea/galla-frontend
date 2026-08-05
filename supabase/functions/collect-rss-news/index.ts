@@ -139,6 +139,8 @@ async function parseFeed(name: string, url: string) {
 }
 
 Deno.serve(async (req) => {
+  const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   const started = Date.now();
   const all = (await Promise.all(FEEDS.map(([n, u]) => parseFeed(n, u)))).flat();
 

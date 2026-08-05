@@ -93,6 +93,8 @@ async function replace(source: string, rows: Row[]) {
 }
 
 Deno.serve(async (req) => {
+  const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const result: Record<string, unknown> = {};
   // 한 소스가 실패해도 다른 소스는 살린다

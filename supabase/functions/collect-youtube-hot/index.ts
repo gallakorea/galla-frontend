@@ -200,7 +200,9 @@ async function hydrate(ids: string[]): Promise<any[]> {
 
 const views = (v: any) => Number(v.statistics?.viewCount ?? 0);
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (!KEY) return json({ ok: false, error: "YOUTUBE_API_KEY 미설정" }, 500);
 
   const now = new Date().toISOString();

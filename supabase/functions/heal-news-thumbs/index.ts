@@ -48,6 +48,8 @@ async function ogImage(pageUrl: string): Promise<string | null> {
 }
 
 Deno.serve(async (req) => {
+  const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const body = req.method === "POST" ? await req.json().catch(() => ({})) : {};
   const LIMIT = Math.min(body.limit ?? 40, 100);
