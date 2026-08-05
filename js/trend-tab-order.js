@@ -8,7 +8,7 @@
 (function () {
   const KEY = 'galla_trend_tab_order';
   const OV_KEY = 'galla_trend_tab_order_v';   // 마이그레이션 버전
-  const ORDER_V = 2;                          // ↑ 올리면 1회성 재정렬 트리거(광장 맨 앞)
+  const ORDER_V = 3;                          // v3: 광장 다시 맨 뒤로(사장님 재지시). v2에서 앞으로 뺐던 것 원복
   const header = () => document.querySelector('.tabs-header');
 
   function label(el) {
@@ -20,14 +20,14 @@
   function restore() {
     const h = header(); if (!h) return;
     let saved; try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (_) {}
-    // 🔁 1회성 마이그레이션 — 광장 디폴트 맨 앞(사장님 지시).
-    //    기존 저장순서가 있으면 나머지 배치는 유지한 채 'plaza'만 맨 앞으로 당긴다.
-    //    저장순서가 없으면 HTML 기본(광장 우선)이 그대로 적용되게 그냥 통과.
+    // 🔁 1회성 마이그레이션 — 광장 다시 맨 뒤로(사장님 재지시, v3).
+    //    v2에서 'plaza'를 맨 앞으로 당겼던 걸 원복: 저장순서가 있으면 나머지 배치는 유지한 채
+    //    'plaza'만 맨 뒤로 보낸다. 저장순서가 없으면 HTML 기본(광장 맨 뒤)이 그대로 적용되게 통과.
     try {
       const ov = parseInt(localStorage.getItem(OV_KEY) || '0', 10);
       if (ov < ORDER_V) {
         if (Array.isArray(saved) && saved.length) {
-          saved = saved.filter(k => k !== 'plaza'); saved.unshift('plaza');
+          saved = saved.filter(k => k !== 'plaza'); saved.push('plaza');
           localStorage.setItem(KEY, JSON.stringify(saved));
         }
         localStorage.setItem(OV_KEY, String(ORDER_V));

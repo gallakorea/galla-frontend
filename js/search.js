@@ -1323,9 +1323,9 @@ async function initTrendPage() {
     // 기사(news.html)에서 뒤로 온 경우 — 보던 탭 그대로
     activateTab(qs.get("tab"), false);
   } else {
-    // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 광장 — 디폴트 맨 앞, 사장님 지시)
+    // 🔄 PTR 새로고침 등으로 재마운트 시, 직전에 보던 탭 복원(없으면 검색 — 디폴트, 사장님 재지시)
     let saved = ""; try { saved = sessionStorage.getItem("galla_trend_tab") || ""; } catch (_) {}
-    activateTab(["search", "trending", "news", "hot", "plaza"].includes(saved) ? saved : "plaza", false);
+    activateTab(["search", "trending", "news", "hot", "plaza"].includes(saved) ? saved : "search", false);
     // 첫 진입에도 자동 포커스하지 않는다 — 탐색 먼저, 키보드는 탭할 때
   }
 }
