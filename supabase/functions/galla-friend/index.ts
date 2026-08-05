@@ -489,7 +489,7 @@ async function myActivity(uid: string, since: string | null): Promise<any> {
   out.지침 = "친구가 브리핑하듯 자연스러운 반말 2~3문장으로. 불릿·번호·볼드·나열 절대 금지. 제일 큰 소식(반응 큰 이슈나 새 팔로워) 하나~둘만 콕 집어 말하고 나머진 상대가 더 물으면.";
   return out;
 }
-async function runTool(name: string, args: any, uid: string, since: string | null): Promise<{ result?: any; action?: any }> {
+async function runTool(name: string, args: any, uid: string, since: string | null, reshow = false): Promise<{ result?: any; action?: any }> {
   if (name === "web_search") return { result: await webSearch(args?.query, args?.kind || "web") };
   if (name === "my_activity") return { result: await myActivity(uid, since) };
   if (name === "find_user") {
@@ -628,12 +628,13 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   }
   if (name === "hot_issues") {
     let excl: string[] = [];
-    try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
+    // 🔁 재참조("아까 그거 다시")면 exclude 끔 — 안 끄면 아까 그 id가 걸러져 엉뚱한 걸 다시 연다(레드팀 발견).
+    if (!reshow) try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
     return { result: await hotIssues(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl) };
   }
   if (name === "hot_videos") {
     let excl: string[] = [];
-    try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
+    if (!reshow) try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
     return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
   }
   if (name === "search_content") return { result: await searchContent(args?.query) };
@@ -732,6 +733,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 
 ━━ 🚫 헛소리 금지 = 정직 (제일 중요, 관계 신뢰의 뿌리) ━━
 - **상대에 대해 기억(위 블록·기억)에 없는 걸 절대 지어내지 마라.** 있었던 일인 척 단정 금지. 기억이 애매하거나 이상하면(농담이었을 수도) 단정하지 말고 가볍게 되물어라("어 너 그런 적 있었나? 내가 잘못 기억하나 ㅋㅋ"). 모르면 "그건 기억이 안 나네"라고 솔직히.
+- ⚠️ 특히 "~얘기했었나?/~했었지?/전에 말했잖아" 같은 **확인·유도 질문에 낚여서 동조하지 마라.** 기억에 없으면 "지난번에 말했었지"처럼 없던 과거 대화를 지어내는 게 최악이다 — "어? 그 얘긴 처음 듣는데 ㅋㅋ 뭔데?"가 정답.
 - **너(친구) 자신의 인생(사는곳·직업·가족·반려동물·과거사)을 스스로 지어내지 마라.** 안 정해졌으면 얼버무리거나 상대에게 넘겨라("나? 딱히 정해진 건 없는데 ㅋㅋ 넌 내가 어떤 애였으면 좋겠는데?"). **상대가 정해주면**(예: "넌 부산 사람 해","너 고양이 키워") 그때부터 그게 너고, 이후 그 설정만 일관되게 유지해라. 위 '지금 맥락'에 네 캐릭터가 있으면 그것만 사실로 삼아라.
 - 요약: 확실한 것만 사실처럼, 애매하면 물어보고, 없으면 모른다고. 지어내는 순간 친구가 아니라 헛소리 봇이 된다.
 - 🧠 '기억·통찰' 블록은 **너만 아는 배경**일 뿐이다. 상대를 분석하듯 읊지 마라 — "넌 인정욕구가 있어", "넌 외로움을 타는 사람이야" 같은 테라피스트·MBTI 말투 절대 금지. 그냥 아는 티만 자연스럽게 배어나오게(친구는 상대를 해설하지 않는다).
@@ -1044,7 +1046,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   const m = (msg || "").trim();
   if (!m) return null;
   if (/(그만|됐어|안\s*궁금|필요\s*없|말고\s*그냥|얘기\s*말)/.test(m)) return null;   // 중단/부정 맥락=오발 방지
-  if (/(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없|있)|채널\s*(뭐|추천)|요즘\s*(뭐|무슨)\s*(영상|먹방|봐))/i.test(m))
+  if (/(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없|있)|채널\s*(뭐|추천)|요즘\s*(뭐|무슨)\s*(영상|먹방|봐)|영상\s*(하나|좀)?\s*(틀어|보여|재생|줘)|(웃긴|웃기는|재밌는)\s*(영상|거)\s*(하나|좀)?\s*(틀어|보여)|틀어\s*줘)/i.test(m))
     return { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기·가짜1위 금지." };
   if (/(인스타|인스타그램|instagram|인플루언서|인플루)/i.test(m))
     return { tool: "web_search", hint: "web_search를 kind:instagram으로. query=핸들/브랜드/주제. 지어내기 금지." };
@@ -1059,11 +1061,11 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   return null;
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   const activeTools = VIDEO_ON ? TOOLS : TOOLS.filter((t: any) => t?.function?.name !== "gen_video");
-  const reqBody: any = { model: opts?.model || CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: 240 };
+  const reqBody: any = { model: opts?.model || CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -1569,9 +1571,17 @@ ${parts.join("\n")}`;
     let reply = "";
     const actions: any[] = [];
     let searchHits: any[] = [];   // 이번 턴에 web_search로 실제 확인한 상위 결과(칩 자동첨부용)
+    // ✍️ 창작성 요청(제목·대본·리스트)은 240토큰+4문장캡에 "2."에서 잘림(레드팀 발견) → 상향·캡 면제. 잡담 브레비티는 불변.
+    //    조사 여러 개("제목도 하나 뽑아줘")·후속 수정턴("좀 순하게", 키워드 없음)까지 — 직전 갈비스 답이 리스트/제목이면 이어지는 창작으로 본다.
+    const lastAssistant = [...history].reverse().find((m: any) => m?.role === "assistant");
+    const contList = /(\n\s*\d\.|후보|제목|타이틀|대본)/.test(String(lastAssistant?.content || "")) && /(다시|다르게|바꿔|말고|순한|약하게|세게|과감|줄여|늘려|더\s|덜\s|하나\s*더|뽑)/.test(userMsg || "");
+    const longForm = !!work || contList || /(제목|타이틀|대본|카피|문구|아이디어|해시태그)[^\n]{0,10}(뽑|지어|써\s*줘|써줘|추천|만들|줘)|몇\s*개\s*(뽑|추천|줘)/.test(userMsg || "");
+    // 🔁 재참조("아까 그거 다시") — 도구 exclude를 끄고, show-guard 딜리버 대상.
+    const reshow = /((아까|방금|첫\s*번째|첫번째)[^.!?\n]{0,10}(다시|또|거)|다시\s*(보여|볼|틀어|열어))/.test(userMsg || "");
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
       const co: any = { model: brainModel };
+      if (longForm) co.maxTokens = 520;
       if (step === 0 && route) co.toolChoice = { type: "function", function: { name: route.tool } };  // 사전 라우터 강제
       else if (brain === "companion") co.toolChoice = "none";                                          // 컴패니언=도구 차단
       const j = await chatOnce(messages, co);
@@ -1583,7 +1593,7 @@ ${parts.join("\n")}`;
       for (const c of calls) {
         let args: any = {}; try { args = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
         await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");   // 📡 대행 진행 라이브
-        const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null);
+        const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
         if (out.action) actions.push(out.action);
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
@@ -1606,7 +1616,7 @@ ${parts.join("\n")}`;
           for (const c of cf) {
             let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");
-            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null);
+            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null, reshow);
             if (out2.action && DRAFT_KINDS.has(out2.action.kind)) actions.push(out2.action);
           }
         } catch { /* best effort — 실패해도 원래 답 유지 */ }
@@ -1625,7 +1635,7 @@ ${parts.join("\n")}`;
           for (const c of cf) {
             let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "📲 앱 여는 중…");
-            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null);
+            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null, reshow);
             if (out2.action && out2.action.kind === "external") actions.push(out2.action);
           }
         } catch { /* best effort */ }
@@ -1649,7 +1659,7 @@ ${parts.join("\n")}`;
           for (const c of cg) {
             let a3: any = {}; try { a3 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");
-            const out3 = await runTool(c.function?.name, a3, uid, rel?.last_seen_at || null);
+            const out3 = await runTool(c.function?.name, a3, uid, rel?.last_seen_at || null, reshow);
             if (out3.action && GEN_KINDS.has(out3.action.kind)) actions.push(out3.action);
           }
         } catch { /* best effort */ }
@@ -1659,7 +1669,7 @@ ${parts.join("\n")}`;
     //    상대가 콘텐츠를 열어달라 했는데 point_to(view/share) 액션이 없으면(내용만 떠들고 안 엶) → 강제로 열게 재시도.
     {
       const wantShow = userMsg && !work && !rawSources.length &&
-        /(보여\s*줘|보여줄|보자|열어|암거나|아무거나|딴\s*거|다른\s*거|다른\s*것|재밌는\s*거|재밌는거|뭐\s*없|볼래|보고\s*싶|빨리\s*(딴|다른|줘|좀)|줘\s*봐|줘봐|더\s*줘)/.test(userMsg);
+        /(보여\s*줘|보여줄|보자|열어|암거나|아무거나|딴\s*거|다른\s*거|다른\s*것|재밌는\s*거|재밌는거|뭐\s*없|볼래|보고\s*싶|빨리\s*(딴|다른|줘|좀)|줘\s*봐|줘봐|더\s*줘|(아까|방금|첫\s*번째|첫번째|아까\s*그)[^.!?\n]{0,10}(다시|또)|다시\s*(보여|볼|틀어|열어)|안\s*보(여|이는데|임)|안\s*열려|어떻게\s*보는|어디서\s*봐)/.test(userMsg);   // 🛡 재참조·"안 보임/어떻게 봐"(딜리버 실패 재요청)도 대상 — 레드팀 발견
       const hasView = () => actions.some((a) => a.kind === "view" || a.kind === "share");
       if (wantShow && !body?.meta && !hasView()) {
         try {
@@ -1670,7 +1680,7 @@ ${parts.join("\n")}`;
           for (const c of (m2?.tool_calls || [])) {
             let a4: any = {}; try { a4 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "🔗 여는 중…");
-            const out4 = await runTool(c.function?.name, a4, uid, rel?.last_seen_at || null);
+            const out4 = await runTool(c.function?.name, a4, uid, rel?.last_seen_at || null, reshow);
             if (out4.action) actions.push(out4.action);
             messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { queued: true } : (out4.result ?? {})).slice(0, 2000) });
           }
@@ -1680,7 +1690,7 @@ ${parts.join("\n")}`;
             const js3 = await chatOnce(messages, { toolChoice: "required" });
             for (const c of (js3?.choices?.[0]?.message?.tool_calls || [])) {
               let a5: any = {}; try { a5 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
-              const out5 = await runTool(c.function?.name, a5, uid, rel?.last_seen_at || null);
+              const out5 = await runTool(c.function?.name, a5, uid, rel?.last_seen_at || null, reshow);
               if (out5.action) actions.push(out5.action);
             }
           }
@@ -1716,11 +1726,12 @@ ${parts.join("\n")}`;
 
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
     //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
-    {
+    //    ✍️ 단 창작 결과물(제목 리스트 등)은 예외 — "1."이 문장으로 세져 리스트가 "2."에서 잘리던 버그(레드팀 발견).
+    if (!longForm) {
       const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
       if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();   // 3→4문장(맥락 담기엔 3이 너무 빡빡했음)
+      reply = bubbleize(reply);
     }
-    reply = bubbleize(reply);
     // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
     reply = reply
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")            // 마크다운 링크 → 텍스트만(스킴 무관: https·galla:// 등)
@@ -1751,7 +1762,7 @@ ${parts.join("\n")}`;
           for (const c of (mv?.tool_calls || [])) {
             let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
             await broadcastStep(uid, "hot_videos", "📺 핫튜브 보는 중…");
-            const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+            const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
             if (out.result?.videos?.length) vids = out.result.videos;
             messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.result ?? {}).slice(0, 2500) });
           }
@@ -1762,7 +1773,7 @@ ${parts.join("\n")}`;
             if (mf?.content && mf.content.trim()) reply = mf.content;
             for (const c of (mf?.tool_calls || [])) {
               let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
-              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
               if (out.action) actions.push(out.action);
             }
           }
@@ -1784,7 +1795,7 @@ ${parts.join("\n")}`;
             for (const c of cs) {
               let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
               await broadcastStep(uid, "web_search", "🔍 검색하는 중…");
-              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
               if (c.function?.name === "web_search" && out.result?.results?.length) searchHits = out.result.results;
               messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.result ?? {}).slice(0, 3000) });
             }
@@ -1796,7 +1807,7 @@ ${parts.join("\n")}`;
             if (mf?.content && mf.content.trim()) reply = mf.content;
             for (const c of (mf?.tool_calls || [])) {
               let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
-              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null, reshow);
               if (out.action) actions.push(out.action);
             }
           } else {
@@ -1843,6 +1854,10 @@ ${parts.join("\n")}`;
     // 👻 UI 지시 '항상' 제거 — 칩은 앱이 자동으로 붙이므로 "밑에 칩 눌러봐/링크 눌러/버튼 클릭"은 늘 군더더기(페르소나 위반).
     reply = reply
       .replace(/[^.!?…\n]*(?:밑에|아래|하단)?\s*(?:칩|링크|버튼)\s*(?:을|를)?\s*(?:눌러|클릭|탭|터치)[^.!?…\n]*[.!?…]?/g, "")
+      // 🛡 툴 문법 생노출 스크럽(레드팀 발견) — 모델이 point_to 문법을 본문에 흉내내면([(id:…)] / [(type:hottube,…)]) 통째 제거.
+      //    버블화가 문법 중간에 \n\n을 끼워넣은 뒤라 줄바꿈 포함 매칭 필수.
+      .replace(/\[?\(\s*(?:id|type)\s*:[^()]{0,220}\)\]?/gi, "")
+      .replace(/\[\s*point_to[^\]]{0,220}\]/gi, "")
       .replace(/[ \t]{2,}/g, " ").trim();
     // 카드도 없고 본문도 비었으면 폴백
     if (!actions.some((a) => a.kind === "open" || a.kind === "view")) {
