@@ -1562,6 +1562,42 @@ ${parts.join("\n")}`;
         reply = fill[(bare.length + (nick ? nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
       }
     }
+    // 🛡🔎 '찾아줄게/기다려봐' 미래약속 방어(사장님 맛집 참사 재현) — 검색을 지금 안 하고 약속만 하면
+    //    (페르소나 금지: 다음 턴에 못 돌아옴) 그 자리서 web_search를 강제 호출→진짜 추천으로 답을 다시 만든다.
+    {
+      const promisesSearch = /(찾아\s*(줄게|줄께|볼게|볼께|봐줄게|드릴게)|알아\s*(볼게|봐줄게)|검색\s*(해볼게|해줄게|해보고|해서)|다시\s*(찾|검색)|기다려|잠깐만|잠시만|이따|곧\s*(줄|찾|알려)|금방\s*찾)/.test(reply);
+      if (userMsg && !body?.meta && promisesSearch && !searchHits.length && !actions.some((a) => a.kind === "open")) {
+        try {
+          messages.push({ role: "system", content: "너는 방금 '찾아줄게/기다려봐/검색해볼게'라고 '약속만' 했다 — 넌 다음 턴에 스스로 못 돌아온다(= 상대는 영원히 못 받는다, 페르소나 명백 위반). 지금 이 턴에 즉시 web_search를 호출해 실제로 찾아라(맛집·장소=kind:local, 최신사건=news, 후기=blog). 상대가 말한 지역·메뉴로 쿼리를 만들고, 없으면 지역·키워드를 바꿔 한 번 더. 잡담·약속·질문 금지, web_search만." });
+          for (let gs = 0; gs < 2 && !searchHits.length; gs++) {
+            const js = await chatOnce(messages, { toolChoice: { type: "function", function: { name: "web_search" } } });
+            const m = js?.choices?.[0]?.message; if (!m) break; messages.push(m);
+            const cs = m.tool_calls || []; if (!cs.length) break;
+            for (const c of cs) {
+              let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+              await broadcastStep(uid, "web_search", "🔍 검색하는 중…");
+              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+              if (c.function?.name === "web_search" && out.result?.results?.length) searchHits = out.result.results;
+              messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.result ?? {}).slice(0, 3000) });
+            }
+          }
+          if (searchHits.length) {
+            messages.push({ role: "system", content: "이제 위 검색 결과로 답해라 — 제일 괜찮은 1~2개만 골라 친구 말투 한두 문장으로(나열·번호·주소 금지). '기다려/찾아줄게' 다시 말하지 마라. 그 가게는 open_link로 열어줘라(url은 결과의 링크 그대로)." });
+            const jf = await chatOnce(messages);
+            const mf = jf?.choices?.[0]?.message;
+            if (mf?.content && mf.content.trim()) reply = mf.content;
+            for (const c of (mf?.tool_calls || [])) {
+              let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+              if (out.action) actions.push(out.action);
+            }
+          } else {
+            reply = "지금 딱 뜨는 데가 없네 ㅋㅋ 지역이나 메뉴 좀 더 좁혀줄래?";
+          }
+        } catch { /* best effort */ }
+      }
+    }
+
     // 🌐 검색으로 답했으면 링크 칩 '보장' — 모델이 open_link를 깜빡해도 서버가 첨부.
     //    답변에 '실제 언급된' 결과를 우선 매칭(불일치 칩 방지), 없으면 상위 결과.
     if (searchHits.length && !actions.some((a) => a.kind === "open")) {
