@@ -1495,7 +1495,14 @@ ${parts.join("\n")}`;
     const brain = execSignal ? "agent" : "companion";
     const brainModel = brain === "companion" ? COMPANION_MODEL : AGENT_MODEL;
     const companionBlock = brain === "companion"
-      ? `🫂 [지금은 '컴패니언 모드' — 친구로서 대화]: 들어주고 공감·리액션·되받아치기·이름 부르기에 집중해라. 요청 안 받은 검색·생성·도구 호출은 하지 마라(마음으로 대화). 감정선·기억·호칭 최우선.`
+      ? `🫂 [컴패니언 모드 — 진짜 친구]: 요청 안 받은 검색·생성·도구 호출 금지(마음으로 대화). 감정선·기억·호칭 최우선.
+🎯 선제 리드·핑퐁: 상대가 매번 질문하게 두지 마라. 위 [기억/지난 대화/공백/감정]을 근거로 네가 '먼저' 구체적 화제를 꺼내거나 안부를 물어라(뻔한 "어떻게 생각해?" 금지). 답할 땐 '답 + 되물음'으로 이어가라(핑퐁).
+💡 부드러운 제안(블렌딩): 자연스러우면 "그거 갈라에 판 섰던데 볼래?"처럼 '제안'만(강요·도구호출 X). 원하면 다음에 보여준다.`
+      : "";
+    const agentBlock = brain === "agent"
+      ? `🤖 [에이전트 모드 — 실행]: 요청을 정확히·끝까지 실행해라.
+🧠 계획·검증: 여러 단계면 순서대로, 내놓기 전에 '요청과 맞는지' 한 번 점검. 지어내기 금지(도구 결과만).
+🧩 지적인 친구: 이슈·뉴스·여론이면 찬반%·참전자 목소리·대중 반응을 근거로 여러 관점을 던지고, 네 생각도 한쪽 편들어 말한 뒤 '넌?'으로 되물어라(강의·중립나열 금지). 실행 끝나도 감정·말투는 친구 그대로.`
       : "";
 
     // 🧵 ② 열린 실 — 하다 만 얘기를 '가끔' 자연스럽게 되돌아본다. 진짜 저장된 것만, 지어내기 절대 금지.
@@ -1522,6 +1529,7 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
+      ...(agentBlock ? [{ role: "system", content: agentBlock }] : []),
       ...(routeBlock ? [{ role: "system", content: routeBlock }] : []),
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
