@@ -1300,9 +1300,32 @@ Deno.serve(async (req) => {
       return json({ ok: true, ping: null });
     }
 
+    // 🏆 라이브 반응 로거 — 클라 실행동(칩 오픈 등)을 직접 계측해 직전 주입 기억에 보상(LLM 0).
+    //    텍스트 반응·감정델타보다 강한 신호: 딜리버를 '실제로 소비'한 행동이라 그라운드트루스에 가장 가깝다.
+    if (body?.op === "react") {
+      const RW: Record<string, number> = { chip_open: 3 };
+      const rwd = RW[String(body?.kind || "")] || 0;
+      if (rwd) {
+        try {
+          const { data: rr } = await supa.from("friend_relationship").select("last_mem_ids").eq("user_id", uid).maybeSingle();
+          const ids = Array.isArray(rr?.last_mem_ids) ? rr.last_mem_ids.filter((n: any) => Number.isFinite(Number(n))) : [];
+          if (ids.length) await supa.rpc("reward_friend_memory", { p_user: uid, p_ids: ids, p_reward: rwd });
+        } catch { /* */ }
+      }
+      return json({ ok: true });
+    }
+
     // 🔄 대화 전사 동기화 — 어느 기기서든 같은 로그. 챗 열 때 서버 저장본을 불러온다(LLM 비용 0).
     if (body?.op === "load") {
-      const { data: lr } = await supa.from("friend_relationship").select("chat_log, friend_name").eq("user_id", uid).maybeSingle();
+      const { data: lr } = await supa.from("friend_relationship").select("chat_log, friend_name, last_seen_at, last_mem_ids").eq("user_id", uid).maybeSingle();
+      // 🏆 리텐션 신호(피기백, 클라 변경 불필요) — 지난 대화 30분~72시간 뒤 다시 찾아옴 = 그 대화(에 쓰인 기억)가 좋았다는 행동.
+      try {
+        const gap = lr?.last_seen_at ? Date.now() - Date.parse(lr.last_seen_at) : 0;
+        const ids = Array.isArray(lr?.last_mem_ids) ? lr.last_mem_ids.filter((n: any) => Number.isFinite(Number(n))) : [];
+        if (ids.length && gap > 30 * 60000 && gap < 72 * 3600000) {
+          await supa.rpc("reward_friend_memory", { p_user: uid, p_ids: ids, p_reward: 1 });
+        }
+      } catch { /* */ }
       return json({ ok: true, history: Array.isArray(lr?.chat_log) ? lr.chat_log : [], friend_name: lr?.friend_name || null });
     }
 
@@ -1344,7 +1367,7 @@ Deno.serve(async (req) => {
     //   ① 코어(앵커): 높은 salience 또는 프로필/성향/싫어하는사람 — 항상 소량
     //   ② 관련(검색): 이번 메시지와 의미 유사한 것 top-K (pgvector)
     //   ③ 재방문 인사(빈 메시지): 최근 것 약간
-    const { data: core } = await supa.from("friend_memory").select("kind,mkey,content,salience")
+    const { data: core } = await supa.from("friend_memory").select("id,kind,mkey,content,salience")
       .eq("user_id", uid).eq("status", "active")
       .or("salience.gte.4,kind.in.(profile,stance)")
       .neq("kind", "disliked")   // 🚫 싫어하는 사람(부장 등)은 '상시 주입' 금지 — 관련 있을 때만 회상(recalled)으로. 매턴 부장 꺼내는 강박 차단.
@@ -1377,6 +1400,12 @@ Deno.serve(async (req) => {
       if (!m || !m.content || m.kind === "selfstory" || m.kind === "episode" || seenC.has(m.content)) continue;   // selfstory·episode는 별도 블록으로
       seenC.add(m.content); memList.push(m);
     }
+    // 🏆 보상 연동 — 이번 턴에 '실제로 주입한' 기억 id 집합(코어+회상). 다음 턴 유저 반응으로 이걸 신용/문책한다.
+    const injectedIds = [...(core || []), ...recalled]
+      .map((m: any) => Number(m?.id)).filter((n) => Number.isFinite(n) && n > 0);
+    const injectedUniq = [...new Set(injectedIds)].slice(0, 24);
+    // 직전 턴에 주입했던 기억(=지금 유저 메시지가 그 응답에 대한 반응). rel 로드 시점 값(아래 update로 덮이기 전에 캡처).
+    const prevMemIds: number[] = Array.isArray(rel?.last_mem_ids) ? rel.last_mem_ids.map(Number).filter((n: number) => Number.isFinite(n)) : [];
 
     // 인사만(빈 메시지)이면 반겨주기 컨텍스트로 한마디
     const openMsg = userMsg || (firstMeet
@@ -1829,7 +1858,8 @@ ${parts.join("\n")}`;
           newCount = (rel.msg_count || 0) + (userMsg ? 1 : 0);
           const newDepth = newCount >= 120 ? 4 : newCount >= 45 ? 3 : newCount >= 12 ? 2 : 1;
           const newTone = newCount >= 12 ? "casual" : "polite";
-          await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
+          // 🏆 last_mem_ids: 이번 턴에 주입한 기억 집합을 기록 → 다음 턴 유저 반응으로 크레딧 배분.
+          await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_mem_ids: injectedUniq, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
         }
         // 🔄 전사 동기화 저장 — 어느 기기서든 같은 대화가 보이게(최근 40턴). meta(합성)는 다음 실턴의 history로 자연 반영되므로 스킵.
         if (userMsg && !body?.meta && reply) {
@@ -1850,6 +1880,18 @@ ${parts.join("\n")}`;
             const newEmo = applyEmotion(rel?.emotion, ex.emotion);
             await supa.from("friend_relationship").update({ emotion: newEmo, updated_at: new Date().toISOString() }).eq("user_id", uid);
           } catch { /* */ }
+          // 🏆 보상 연동 — 지금 유저 발화(=직전 응답에 대한 반응, 행동)로 그때 주입했던 기억들을 신용/문책.
+          //    텍스트 반응(sft reward와 동일 신호군) + 이번 턴 감정델타(이미 계산됨, 추가 LLM 0). reward_ema로 누적.
+          if (prevMemIds.length) {
+            try {
+              let rwd = 0;
+              if (/(ㅋㅋ|ㅎㅎ|고마워|고맙|좋아|좋다|대박|헐|짱|최고|맞아|재밌|웃겨|사랑|굿|오오|우와|와\s|딱\s)/.test(userMsg)) rwd += 2;   // 긍정 반응
+              if (/(뭐야|뭔\s*개소리|그게\s*아니|답답|짜증|왜\s*그래|아까\s*(말|한|보여|줬)|틀렸|또\s*그|하\s세월|그만|됐어|노잼|재미없)/.test(userMsg)) rwd -= 3;   // 불만/실패
+              const dv = Number(ex?.emotion?.dValence) || 0;   // 감정델타(반응의 결)
+              if (dv >= 15) rwd += 1; else if (dv <= -15) rwd -= 1;
+              if (rwd !== 0) await supa.rpc("reward_friend_memory", { p_user: uid, p_ids: prevMemIds, p_reward: rwd });
+            } catch { /* */ }
+          }
           // 🎭 캐릭터 점진 병합
           try {
             const ps = ex.persona_set || {};

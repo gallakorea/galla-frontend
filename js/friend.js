@@ -807,6 +807,8 @@
     openInApp(webUrl);   // 웹: https(설치돼 있으면 앱으로 라우팅)
   }
   function runAction(a){
+    // 🏆 딜리버 실소비 신호 — 콘텐츠성 칩(링크·갈라 콘텐츠·외부앱)을 '실제로 열면' 최강 긍정. 액션당 1회(연타 스팸 방지).
+    if((a.kind==="open"||a.kind==="view"||a.kind==="external") && !a._reacted){ a._reacted=true; logReact("chip_open"); }
     if(a.kind==="open"){ openInApp(a.url); return; }
     if(a.kind==="external"){ openExternal(a); return; }
     if(a.kind==="app"){
@@ -892,6 +894,14 @@
     try{ var sb=window.supabaseClient; var r=await sb.auth.getSession(); if(r&&r.data&&r.data.session) return r.data.session.access_token; }catch(e){}
     return null;
   }
+  // 🏆 라이브 반응 로거 — 칩 실사용(오픈)을 서버에 신호. 직전 주입 기억 보상 정밀화(실패 무시, 비용 0).
+  function logReact(kind){
+    token().then(function(jwt){ if(!jwt) return;
+      fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"},
+        body:JSON.stringify({op:"react", kind:kind}) }).catch(function(){});
+    }).catch(function(){});
+  }
   function typing(on){
     var t=logEl.querySelector(".fr-typing");
     if(on&&!t){ logEl.appendChild(el('<div class="fr-typing"><i></i><i></i><i></i></div>')); logEl.scrollTop=logEl.scrollHeight; }
@@ -941,10 +951,11 @@
     if(r.actions && r.actions.length){
       var appA = r.actions.filter(function(a){ return a.kind==="app"; })[0];
       if(appA && (appA.op==="goto" || /걸어|전화|톡|디엠|dm|보내|열어/i.test(text))){
+        appA._reacted=true;   // 🏆 자동실행은 유저 행동 아님 — 보상신호 스킵(가짜 +3 방지)
         setTimeout(function(){ runAction(appA); }, 700);
       } else if(/보여|열어|보자|가보자|띄워|틀어/.test(text)){
         var auto = r.actions.filter(function(a){ return a.kind==="view"; })[0] || r.actions.filter(function(a){ return a.kind==="open"; })[0];
-        if(auto) setTimeout(function(){ runAction(auto); }, 700);
+        if(auto){ auto._reacted=true; setTimeout(function(){ runAction(auto); }, 700); }   // 🏆 동일 — 자동오픈 보상 제외
       }
     }
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
