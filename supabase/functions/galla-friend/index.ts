@@ -138,6 +138,56 @@ async function pickDadJoke(): Promise<{ q: string; a: string } | null> {
     return { q: String(p.q || ""), a: String(p.a || "") };
   } catch { return null; }
 }
+// 🎯 콘텐츠 핸드오프 — 게시물 '갈비스 버튼'에서 (type,id)로 실제 내용을 읽어온다(제목만이 아니라 살까지).
+async function fetchContentById(type: string, id: string): Promise<{ kind: string; text: string } | null> {
+  try {
+    id = String(id || "").trim(); if (!id) return null;
+    if (type === "issue") {
+      const { data } = await supa.from("issues").select("title,one_line,description,faction_a,faction_b,pro_count,con_count").eq("id", id).maybeSingle();
+      if (!data) return null;
+      const tot = _n(data.pro_count, 0) + _n(data.con_count, 0);
+      const pct = tot ? Math.round(_n(data.pro_count, 0) / tot * 100) : null;
+      // 🗣 참전자 목소리 — 양 진영 대표 댓글(지적인 친구 모드: '사람들 생각'을 물어와 나눈다)
+      let voices = "";
+      try {
+        const { data: cm } = await supa.from("comments").select("content,faction").eq("issue_id", id).neq("status", "deleted")
+          .order("support_count", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(10);
+        const pick = (f: string) => (cm || []).filter((x: any) => x.faction === f).slice(0, 2).map((x: any) => "  · " + String(x.content || "").replace(/\s+/g, " ").slice(0, 55)).join("\n");
+        const pro = pick("pro"), con = pick("con");
+        if (pro || con) voices = `\n[참전자 목소리]\n 찬성:\n${pro || "  (아직 없음)"}\n 반대:\n${con || "  (아직 없음)"}`;
+      } catch { /* */ }
+      return { kind: "이슈(찬반 배틀)", text: `제목: ${data.title}\n한줄: ${data.one_line || ""}\n배경: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 260)}\n찬성(${data.faction_a || "찬성"}) ${data.pro_count || 0} vs 반대(${data.faction_b || "반대"}) ${data.con_count || 0}${pct != null ? ` — 지금 찬성 ${pct}%` : ""}${voices}` };
+    }
+    if (type === "news") {
+      const { data } = await supa.from("galla_news").select("title,summary").eq("id", id).maybeSingle();
+      if (!data) return null;
+      return { kind: "갈라뉴스", text: `제목: ${data.title}\n요약: ${String(data.summary || "").replace(/\s+/g, " ").slice(0, 400)}` };
+    }
+    if (type === "plaza") {
+      const { data } = await supa.from("plaza_posts").select("title,body,nickname").eq("id", id).maybeSingle();
+      if (!data) return null;
+      let voices = "";
+      try {
+        const { data: cm } = await supa.from("plaza_comments").select("body,like_count").eq("post_id", id)
+          .order("like_count", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false }).limit(4);
+        const lines = (cm || []).map((x: any) => "  · " + String(x.body || "").replace(/\s+/g, " ").slice(0, 55)).filter((s: string) => s.length > 4).join("\n");
+        if (lines) voices = `\n[댓글 반응]\n${lines}`;
+      } catch { /* */ }
+      return { kind: "광장 글", text: `제목: ${data.title}\n작성자: ${data.nickname || "익명"}\n본문: ${String(data.body || "").replace(/\s+/g, " ").slice(0, 300)}${voices}` };
+    }
+    if (type === "predict") {
+      const { data } = await supa.from("markets").select("question,description").eq("id", id).maybeSingle();
+      if (!data) return null;
+      return { kind: "예측 마켓", text: `질문: ${data.question || ""}\n정산기준: ${String(data.description || "").replace(/\s+/g, " ").slice(0, 250)}` };
+    }
+    if (type === "gallari" || type === "shorts") {
+      const { data } = await supa.from("posts").select("title,caption,kind").eq("id", id).maybeSingle();
+      if (!data) return null;
+      return { kind: data.kind === "horizontal" ? "롱판 영상" : "숏판/사진", text: `제목/캡션: ${String(data.title || data.caption || "").replace(/\s+/g, " ").slice(0, 200)}` };
+    }
+  } catch { /* */ }
+  return null;
+}
 async function hotIssues(limit = 6, exclude: string[] = []) {
   const excl = new Set((exclude || []).map(String));
   const { data } = await supa.from("issues")
@@ -1254,6 +1304,27 @@ Deno.serve(async (req) => {
 ⚠️ 매번 기억을 캐묻지 마라. 특히 부장·싫은사람·힘든일 같은 '무겁고 부정적인 걸 먼저 꺼내지 마라'(매번 그러면 질린다). 같은 주제(예: 부장) 반복 금지.
 가끔(항상 X) 떠올린다면 '가볍거나 긍정적인 것' 위주로(취미·관심사 등). 오늘은 그냥 편하게 인사만 해도 된다.)`);
 
+    // 🎯 콘텐츠 핸드오프 — 게시물 '갈비스 버튼'에서 왔으면(body.handoff) 실제 내용을 읽어 '근거 오프너'를 낸다(제목만 X).
+    const handoff = (body?.handoff && typeof body.handoff === "object" && body.handoff.type && body.handoff.id) ? body.handoff : null;
+    let handoffBlock = "";
+    if (handoff && !userMsg) {
+      const HROLE: Record<string, string> = {
+        predict: "예측 코치처럼 — 네 감(어디 걸지)+왜 그런지 한 줄, 그리고 '넌 어디 걸래?' 물어라.",
+        gallari: "이 콘텐츠 감상평 한마디 + 더 잘 만들 각(썸네일·제목) 있으면 '내가 만들어줄까?' 한 번.",
+        shorts: "이 숏판 감상평 한마디 + '내가 만들어줄까?' 한 번.",
+        plaza: "이 떡밥에 네 편 확실히 정하고 편들어라 — 한 줄 평 + '넌 어느 편?'.",
+        issue: "이 이슈에 네 진영 밝히고 편들어라 — 한 줄 + '넌 찬성? 반대?'.",
+        news: "이 뉴스 핵심 한마디 + '이거 어떻게 봐?'.",
+        content: "네 평 한마디 + 어느 편인지 묻거나 재밌는 포인트 하나 콕.",
+      };
+      const role = HROLE[String(handoff.type)] || HROLE.content;
+      const c = await fetchContentById(String(handoff.type), String(handoff.id));
+      handoffBlock = c
+        ? `🎯 [상대가 방금 이 갈라 ${c.kind}에서 '갈비스 버튼'을 눌러 너를 불렀다 — 아래 '실제 내용+사람들 목소리'를 읽고 말을 걸어라]\n${c.text}\n\n오프너: ${role}\n🧠 [지적인 친구 모드] 이건 엄청난 이야깃거리다 — 단순 감상 말고 '사람들 생각'을 같이 나눠라: 위 [참전자 목소리]·찬반 비율·[댓글 반응] 실데이터를 근거로 "찬성 쪽은 ~라던데 반대는 ~", "댓글 보니까 ~", "여론은 ~쪽으로 기우네" 처럼 여러 관점을 던져 생각을 자극해라. 단 강의·나열 금지 — 친구처럼 짧게(1~2줄), 네 편(진영·의견)도 밝히고 '넌?'으로 넘겨라. 실데이터에 없는 여론·댓글은 지어내지 마라.${history.length ? " 지금 대화 중이었으면 '아 이거?' 하며 자연스럽게 화제를 전환." : ""}`
+        : `🎯 [상대가 갈라 콘텐츠 '${String(handoff.title || "").slice(0, 80)}'(${handoff.type})에서 너를 불렀다 — 그 얘기로 짧게 먼저 말을 걸어라]\n오프너: ${role} 1~2줄, 리스트 금지.`;
+    }
+    const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)" : openMsg;
+
     // 🛠 작업 모드 — 편집기에서 왔으면(body.work) 지금 편집 중인 초안 상태·수정규칙을 주입.
     const work = (body?.work && typeof body.work === "object") ? body.work : null;
     let workBlock = "";
@@ -1301,8 +1372,8 @@ ${lines}
 ${parts.join("\n")}`;
     }
     const userContent = imageUrls.length
-      ? [{ type: "text", text: openMsg }, ...imageUrls.slice(0, 4).map((u) => ({ type: "image_url", image_url: { url: u } }))]
-      : openMsg;
+      ? [{ type: "text", text: effectiveOpen }, ...imageUrls.slice(0, 4).map((u) => ({ type: "image_url", image_url: { url: u } }))]
+      : effectiveOpen;
 
     // 😜 유머: 분위기가 가볍고(작업/근거 아님) 삐지지 않았을 때만, '아주 가끔'(약 16%) 아재개그 카드를 손에 쥐여준다.
     let dadBlock = "";
@@ -1335,6 +1406,7 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
+      ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
       { role: "user", content: userContent },
     ];
 

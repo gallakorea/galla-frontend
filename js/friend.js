@@ -888,10 +888,11 @@
     if(on&&!t){ logEl.appendChild(el('<div class="fr-typing"><i></i><i></i><i></i></div>')); logEl.scrollTop=logEl.scrollHeight; }
     if(!on&&t) t.remove();
   }
-  async function callFriend(message, hist, setName, meta){
+  async function callFriend(message, hist, setName, meta, handoff){
     var jwt=await token(); if(!jwt) return null;
     try{
       var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
+      if(handoff) body.handoff=handoff;   // 🎯 게시물 갈비스 버튼 핸드오프 — 서버가 {type,id}로 실제 내용 읽어 오프너
       // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
       if(_sources && _sources.length){ body.sources=_sources.filter(function(s){ return !s.pending; }).map(function(s){ return s.type==="image"?{type:"image",url:s.url}:{type:s.type,value:s.value}; }); }
       // 🛠 작업 모드면 현재 편집 중인 초안 상태를 동봉 → 갈비스가 폼을 알고 실시간 수정(edit_draft)
@@ -1080,22 +1081,12 @@
   async function askGalvis(ctx){
     window.__frSuppressGreet = true;      // 콘텐츠 오프너를 내가 낸다(기본 인사 억제)
     open();
-    var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content";
+    var title=(ctx&&ctx.title||"").slice(0,120), type=(ctx&&ctx.type)||"content", id=(ctx&&ctx.id)||"";
     var jwt=await token();
-    if(!jwt || !title){ window.__frSuppressGreet=false; if(!logEl.children.length) greet(); return; }
+    if(!jwt || (!title && !id)){ window.__frSuppressGreet=false; if(!logEl.children.length) greet(); return; }
     typing(true);
-    // 🎯 타입별 역할 — 갈비스가 콘텐츠 성격에 맞는 '내 편' 역할로 말을 건다(운영 레이어). [[galla-vision-platform]]
-    var ROLE={
-      predict:"예측 코치처럼 — 네 감(어디 걸지)+왜 그런지 한 줄, 그리고 '넌 어디 걸래?' 물어라.",
-      gallari:"이 콘텐츠 감상평 한마디+더 잘 만들 각(썸네일·제목) 있으면 '내가 만들어줄까?' 한 번 던져라.",
-      shorts:"이 숏판 감상평 한마디+더 잘 만들 각 있으면 '내가 만들어줄까?' 한 번 던져라.",
-      plaza:"이 떡밥에 네 편 확실히 정하고 편들어라 — 한 줄 평+'넌 어느 편?' 물어라.",
-      issue:"이 이슈에 네 진영 밝히고 편들어라 — 한 줄+'넌 찬성? 반대?' 물어라.",
-      news:"이 뉴스 핵심 한마디+'이거 어떻게 봐?' 물어라.",
-      content:"네 평 한마디+어느 편인지 묻거나, 재밌는 포인트 하나 콕."
-    };
-    var role=ROLE[type]||ROLE.content;
-    var r=await callFriend("(상대가 갈라 콘텐츠 '"+title+"'("+type+")에서 나를 불렀다. 그 콘텐츠 얘기로 짧게 먼저 말을 걸어라 — "+role+" 리스트 금지, 1~2줄.)", history, null, true);
+    // 🎯 서버가 {type,id}로 실제 콘텐츠(찬반수·요약·본문)를 읽어 근거 오프너를 낸다 — 클라는 제목만 넘기던 것 폐지.
+    var r=await callFriend("", history, null, true, { type:type, id:id, title:title });
     typing(false);
     window.__frSuppressGreet = false;
     if(r&&r.reply){ var m=await addFriendReply(r.reply); history.push({role:"assistant",content:r.reply}); addActions(m, r.actions); saveChat(); }
