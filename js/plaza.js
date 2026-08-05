@@ -557,8 +557,11 @@ async function fetchPlazaPosts() {
       score,
       up_count,
       view_count,
-      plaza_comments(count)
+      plaza_comments(id)
     `)
+  // ⚠️ plaza_comments(count) 금지 — count 집계는 테이블級 SELECT를 요구해 user_id(유령보호 잠금)까지
+  //    열려야 통과된다. 컬럼級 권한만 있는 상태에선 'permission denied for table'로 광장 전체가 깨진다.
+  //    → (id)만 임베드해 프론트에서 length로 센다. DB 권한/보안 무변경.
   // 정렬: 후끈(score→최신) / 최신 / 조회
   if (currentSort === "new") {
     query = query.order("created_at", { ascending: false });
@@ -652,7 +655,7 @@ function renderPlazaPosts(posts) {
     const li = document.createElement("li");
     li.className = "plaza-post";
     const thumb = (window.GALLA_thumb ? window.GALLA_thumb(proxifyThumb(post.thumbnail) || extractFirstImage(post.body), 480) : (proxifyThumb(post.thumbnail) || extractFirstImage(post.body)));
-    const cmtCount = post.plaza_comments?.[0]?.count ?? 0;
+    const cmtCount = post.plaza_comments?.length ?? 0;
     const saved = !!MY_PLAZA_SAVED[post.id];
     const excerpt = plazaExcerpt(post.body);
     li.innerHTML = `
