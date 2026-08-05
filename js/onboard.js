@@ -49,6 +49,9 @@
     var B = iss.faction_b || "난 반댈세";
     var img = iss.thumbnail_url || (Array.isArray(iss.images) && iss.images[0]) || "/assets/og/og-default.png";
 
+    // 🚫 비동기 조회 사이에 메인 투어(tour.js)가 떠서 galla_onboarded를 세팅했으면 중복 노출 금지(레이스 차단).
+    try { if (localStorage.getItem(DONE) || localStorage.getItem("galla_tour_v2")) return; } catch (e) {}
+
     css();
     var ov = document.createElement("div");
     ov.className = "obd";
