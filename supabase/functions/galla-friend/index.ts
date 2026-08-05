@@ -1037,6 +1037,10 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "web_search", hint: "web_search를 kind:instagram으로. query=핸들/브랜드/주제. 지어내기 금지." };
   if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페))/.test(m))
     return { tool: "web_search", hint: "web_search를 kind:local으로. query=지역+메뉴. 없으면 지역/키워드 바꿔 재검색. 지어내기 금지." };
+  if (/(뜨거운\s*이슈|이슈\s*(뭐|있|없|보여|추천|하나|거리)|무슨\s*이슈|요즘\s*이슈|논란\s*(거리|뭐|되는)|찬반|갈라\s*(에서\s*뭐|무슨|뜨거운))/.test(m))
+    return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
+  if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
+    return { tool: "galla_news", hint: "galla_news로 '실제' 뉴스만 요약해 얘기. 없는 뉴스 지어내기 금지." };
   return null;
 }
 
