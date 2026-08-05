@@ -343,6 +343,29 @@ async function webSearch(query: string, kind: string) {
   const q = (query || "").trim().slice(0, 80);
   if (!q) return { results: [], note: "empty query" };
   if (!NAVER_ID || !NAVER_SECRET) return { results: [], note: "search unavailable" };
+  // 📸 인스타 검색 — 메타는 일반 검색 API가 없어(해시태그API는 앱심사·비즈계정 필요), 실용형으로:
+  //    네이버 웹검색에서 instagram.com 링크 우선 + 핸들/해시태그면 인스타 직행 링크.
+  if (kind === "instagram") {
+    try {
+      const r = await fetch(`https://openapi.naver.com/v1/search/webkr.json?query=${encodeURIComponent(q + " 인스타그램")}&display=8`, {
+        headers: { "X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET },
+      });
+      let items: any[] = [];
+      if (r.ok) {
+        const j = await r.json();
+        items = (j?.items || []).map((it: any) => ({ 제목: stripTags(it.title), 내용: stripTags(it.description).slice(0, 120), 링크: (it.link && /^https?:/.test(it.link)) ? it.link : "" }))
+          .filter((x: any) => x.링크)
+          .sort((a: any, b: any) => (b.링크.includes("instagram.com") ? 1 : 0) - (a.링크.includes("instagram.com") ? 1 : 0));
+      }
+      const handle = q.replace(/^@/, "").replace(/\s+/g, "").toLowerCase();
+      if (/^[a-z0-9._]{2,30}$/.test(handle)) items.unshift({ 제목: "@" + handle, 내용: "인스타 프로필", 링크: "https://www.instagram.com/" + handle + "/" });
+      if (!items.some((x: any) => x.링크.includes("instagram.com"))) {
+        const tag = q.replace(/[^가-힣a-z0-9]/gi, "");
+        if (tag) items.unshift({ 제목: "#" + q, 내용: "인스타 해시태그", 링크: "https://www.instagram.com/explore/tags/" + encodeURIComponent(tag) + "/" });
+      }
+      return { results: items.slice(0, 5), 지침: "인스타 계정·게시물이면 이름/핸들만 말하고(본문에 url 금지) open_link 칩으로 열어줘라. 1~2개만. 로그인 벽 있을 수 있으니 단정 말고 '인스타에 있더라' 정도로.", note: items.length ? undefined : "no results" };
+    } catch { return { results: [], note: "search failed" }; }
+  }
   const ep = kind === "local" ? "local.json" : kind === "news" ? "news.json" : kind === "blog" ? "blog.json" : "webkr.json";
   const disp = kind === "local" ? 5 : 4;
   try {
@@ -383,7 +406,7 @@ async function searchContent(query: string) {
 }
 
 const TOOLS = [
-  { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집)" }, kind: { type: "string", enum: ["local", "news", "blog", "web"] } }, required: ["query"] } } },
+  { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 인스타 계정·게시물(kind:instagram — '○○ 인스타/인스타 찾아줘/인플루언서'), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집 / 인스타는 핸들이나 브랜드명·주제)" }, kind: { type: "string", enum: ["local", "news", "blog", "web", "instagram"] } }, required: ["query"] } } },
   // 🌐 내부 브라우저로 열어주기 — 검색 결과의 '링크' 값만 사용(URL 창작 절대 금지)
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
