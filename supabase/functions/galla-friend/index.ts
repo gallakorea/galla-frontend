@@ -20,6 +20,10 @@ const API_KEY  = Deno.env.get("FRIEND_API_KEY")  || Deno.env.get("JARVIS_API_KEY
 const MODEL    = Deno.env.get("FRIEND_MODEL")    || Deno.env.get("JARVIS_MODEL") || (_DS ? "deepseek-chat" : "gpt-4o-mini");
 // 💬 대화 답변 전용 모델 — 필요시 FRIEND_CHAT_MODEL로만 상향(기본은 MODEL과 동일 deepseek-chat).
 const CHAT_MODEL = Deno.env.get("FRIEND_CHAT_MODEL") || MODEL;
+// 🧠 이중 브레인 모델 훅 — 컴패니언(친구 대화)과 에이전트(창작·실행)를 각각 다른 모델로 지정 가능(기본 동일).
+//    미래: FRIEND_COMPANION_MODEL을 자체 컴팩트 SFT 모델로 갈아끼우면 '대화'만 저비용 전환(에이전트는 검증모델 유지).
+const COMPANION_MODEL = Deno.env.get("FRIEND_COMPANION_MODEL") || CHAT_MODEL;
+const AGENT_MODEL     = Deno.env.get("FRIEND_AGENT_MODEL")     || CHAT_MODEL;
 // 임베딩(기억 검색용) — 대화 모델과 별개로 OpenAI 임베딩 사용(싸고 안정적). env로 교체 가능.
 const EMBED_URL   = Deno.env.get("EMBED_BASE_URL") || "https://api.openai.com/v1";
 const EMBED_KEY   = Deno.env.get("EMBED_API_KEY")  || Deno.env.get("OPENAI_API_KEY")!;
@@ -1055,11 +1059,11 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   return null;
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   const activeTools = VIDEO_ON ? TOOLS : TOOLS.filter((t: any) => t?.function?.name !== "gen_video");
-  const reqBody: any = { model: CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: 240 };
+  const reqBody: any = { model: opts?.model || CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: 240 };
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const r = await fetch(`${BASE_URL}/chat/completions`, {
     method: "POST",
@@ -1483,6 +1487,17 @@ ${parts.join("\n")}`;
       ? `🧭 [의도 감지 — 이 도구를 '먼저' 써라]: ${route.hint} 아는 척 지어내지 말고 반드시 도구 결과로만 답해라.`
       : "";
 
+    // 🧠 이중 브레인 — 이 턴이 '에이전트(창작·검색·실행)'냐 '컴패니언(친구 대화)'이냐.
+    //    실행/창작 신호가 있으면 agent(도구+라우터), 없으면 companion(도구 끄고 감정·공감·호칭 최우선).
+    //    브레인별 모델 훅 → 미래엔 companion만 컴팩트 SFT 모델로 갈아끼움. work/handoff는 항상 agent.
+    const execSignal = !!(route || work || handoff || deliverMode || rawSources.length ||
+      (userMsg && /(만들어|만들|썸네일|영상\s*(만|편집|뽑)|대본|숏판|롱판|짜줘|짜서|그려|생성|검색|찾아\s*줘|찾아줘|열어\s*줘|보여\s*줘|예측|글\s*(써|올려)|올려\s*줘|dm|디엠|메시지\s*보내|전화\s*걸|통화\s*걸|설정\s*(열|바꿔)|프로필\s*(수정|바꿔)|닉네임\s*바꿔|비번\s*바꿔)/.test(userMsg)));
+    const brain = execSignal ? "agent" : "companion";
+    const brainModel = brain === "companion" ? COMPANION_MODEL : AGENT_MODEL;
+    const companionBlock = brain === "companion"
+      ? `🫂 [지금은 '컴패니언 모드' — 친구로서 대화]: 들어주고 공감·리액션·되받아치기·이름 부르기에 집중해라. 요청 안 받은 검색·생성·도구 호출은 하지 마라(마음으로 대화). 감정선·기억·호칭 최우선.`
+      : "";
+
     // 🧵 ② 열린 실 — 하다 만 얘기를 '가끔' 자연스럽게 되돌아본다. 진짜 저장된 것만, 지어내기 절대 금지.
     let openLoopBlock = "";
     try {
@@ -1506,6 +1521,7 @@ ${parts.join("\n")}`;
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
+      ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
       ...(routeBlock ? [{ role: "system", content: routeBlock }] : []),
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
@@ -1517,9 +1533,11 @@ ${parts.join("\n")}`;
     const actions: any[] = [];
     let searchHits: any[] = [];   // 이번 턴에 web_search로 실제 확인한 상위 결과(칩 자동첨부용)
     for (let step = 0; step < 4; step++) {
-      // 🧭 사전 라우터가 지목한 도구를 '첫 스텝에 강제' → 모델이 지어낼 틈을 원천 차단(사후 가드보다 앞단).
-      const forceFirst = (step === 0 && route) ? { toolChoice: { type: "function", function: { name: route.tool } } } : undefined;
-      const j = await chatOnce(messages, forceFirst);
+      // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
+      const co: any = { model: brainModel };
+      if (step === 0 && route) co.toolChoice = { type: "function", function: { name: route.tool } };  // 사전 라우터 강제
+      else if (brain === "companion") co.toolChoice = "none";                                          // 컴패니언=도구 차단
+      const j = await chatOnce(messages, co);
       const msg = j?.choices?.[0]?.message;
       if (!msg) break;
       messages.push(msg);
