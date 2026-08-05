@@ -34,7 +34,7 @@ const supa = createClient(SUPA_URL, SVC_KEY);
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
 //    클라(도킹 미니챗)가 받아 "🔍 검색하는 중…" 식 라이브 진행 라인 표시. 베스트에포트(실패 무시).
 const STEP_LABEL: Record<string, string> = {
-  web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…",
+  web_search: "🔍 검색하는 중…", open_link: "🔗 링크 챙기는 중…", hot_issues: "🔥 뜨거운 이슈 보는 중…", hot_videos: "📺 핫튜브 보는 중…",
   search_content: "🧭 맞는 콘텐츠 찾는 중…", galla_news: "📰 갈라뉴스 보는 중…", platform_buzz: "👀 요즘 판 살피는 중…",
   content_radar: "🛰 뜨는 소재 살피는 중…", propose_plan: "🗂 기획안 짜는 중…", gen_titles: "🔥 제목 뽑는 중…", gen_script: "📜 대본 쓰는 중…",
   find_user: "🙋 유저 찾는 중…", draft_issue: "✍️ 이슈 초안 쓰는 중…", draft_plaza: "✍️ 광장 글 쓰는 중…",
@@ -196,6 +196,15 @@ async function hotIssues(limit = 6, exclude: string[] = []) {
     .order("created_at", { ascending: false }).limit(Math.min((limit || 6) + excl.size, 30));
   return (data || []).filter((i) => !excl.has(String(i.id))).slice(0, Math.min(limit || 6, 12))
     .map((i) => ({ id: i.id, title: i.title, 한줄: i.one_line, 찬: i.pro_count, 반: i.con_count }));
+}
+// 📺 핫튜브 — 지금 한국에서 뜨는 유튜브 인기영상(youtube_hot). 갈비스가 '실제로' 보고 얘기/열어준다(지어내기 금지).
+async function hotVideos(limit = 6, exclude: string[] = [], shortsOnly = false) {
+  const excl = new Set((exclude || []).map(String));
+  let q = supa.from("youtube_hot").select("video_id,title,channel_title,view_count,rank,is_short,duration_sec").eq("feed", "all");
+  if (shortsOnly) q = q.eq("is_short", true);
+  const { data } = await q.order("rank", { ascending: true }).limit(Math.min((limit || 6) + excl.size, 30));
+  return (data || []).filter((v: any) => !excl.has(String(v.video_id))).slice(0, Math.min(limit || 6, 12))
+    .map((v: any) => ({ video_id: v.video_id, 제목: v.title, 채널: v.channel_title, 조회: v.view_count, 순위: v.rank }));
 }
 async function gallaNews(limit = 4) {
   const { data } = await supa.from("galla_news").select("id,title,summary")
@@ -378,6 +387,7 @@ const TOOLS = [
   // 🌐 내부 브라우저로 열어주기 — 검색 결과의 '링크' 값만 사용(URL 창작 절대 금지)
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
   { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
+  { type: "function", function: { name: "hot_videos", description: "📺 지금 한국에서 뜨는 유튜브 인기영상(핫튜브)을 받는다. 상대가 '유튜브/영상/핫튜브/재밌는 영상/요즘 뭐 떠' 물으면 반드시 이걸 써서 '실제 영상'만 얘기해라(절대 지어내지 마라 — 없는 영상·가짜 1위 금지). shorts:true면 쇼츠만. 영상 열어달라면 point_to(type:hottube, id: 그 video_id)로 연다.", parameters: { type: "object", properties: { limit: { type: "integer" }, shorts: { type: "boolean" } } } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
@@ -412,7 +422,7 @@ const TOOLS = [
   { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] } } } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
   { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문(이슈) 또는 정산기준(예측) 전체" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(갈라리)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(갈라리, # 없이)" }, question: { type: "string", description: "예측 질문(예측)" }, close_days: { type: "integer", description: "예측 마감까지 며칠(예측)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
-  { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news. 재밌는 화제를 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
+  { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news | hottube(핫튜브 영상 — id는 video_id). 재밌는 화제/영상을 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news", "hottube"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
   // 🧠🗑 기억 잊기 — 상대가 '잊어줘/지워줘'라고 명시적으로 요청할 때만. 프라이버시·신뢰.
   { type: "function", function: { name: "forget_memory", description: "상대가 특정 기억을 '잊어달라/지워달라'고 명시적으로 요청할 때만 호출('그건 잊어줘', '내가 ~라고 한 거 지워줘', '그 얘기 기억에서 지워', '나에 대해 다 잊어'). query엔 무엇을 잊을지 구체적으로. 상대가 요청 안 했으면 절대 호출 금지.", parameters: { type: "object", properties: { query: { type: "string", description: "잊을 내용(예: '부장 싫어한다는 것', '내 직업이 개발자라는 것'). '전부/다 잊어'면 query:'*'" } }, required: ["query"] } } },
   // 🧠🔎 능동 회상 — 위 맥락에 안 떠오른 걸 상대가 물으면 네가 직접 기억을 뒤진다(Claude식 memory read).
@@ -594,6 +604,11 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
     return { result: await hotIssues(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl) };
   }
+  if (name === "hot_videos") {
+    let excl: string[] = [];
+    try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
+    return { result: { videos: await hotVideos(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl, args?.shorts === true) } };
+  }
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
@@ -632,7 +647,14 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       music: ["upbeat", "chill", "dramatic"].includes(args?.music) ? args.music : "upbeat",
       ratio: "9:16", per: 3 } };
   }
-  if (name === "point_to") return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
+  if (name === "point_to") {
+    if (args?.type === "hottube") {
+      const vid = String(args?.id || "").trim();
+      if (!vid) return { result: { error: "no video id" } };
+      return { action: { kind: "open", url: `https://galla.im/watch.html?v=${encodeURIComponent(vid)}`, label: String(args?.label || "영상 보기").slice(0, 40), title: String(args?.label || "").replace(/\s*보기$/, "").trim(), source: "핫튜브" } };
+    }
+    return { action: { kind: args?.mode === "share" ? "share" : "view", ctype: args?.type || "issue", id: String(args?.id || ""), label: args?.label || "" } };
+  }
   return { result: { error: "unknown" } };
 }
 
@@ -746,8 +768,9 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - **검색 결과에 없는 이름·정보는 절대 지어내지 마라.** 그럴듯한 창작 = 뻥쟁이. 결과가 시원찮으면 솔직하게("검색해도 딱히 안 뜨네 ㅋㅋ").
 - 출처 티는 친구답게 가볍게: "네이버 찾아보니까 ~가 평 좋대". 나열식 정리 금지 — 제일 괜찮은 것 1~2개만 골라 친구처럼 던져라.
 - **검색으로 답했으면 open_link 칩을 1~2개 같이 건네라**("○○ 보기") — 상대가 바로 열어볼 수 있게. url은 반드시 검색 결과의 '링크' 값 그대로(창작 금지).
-- 🚫 **본문(말)에 URL·마크다운 링크([텍스트](주소)) 절대 쓰지 마라.** 링크는 오직 칩(open_link·point_to)으로만 건넨다. 말에는 가게·기사 '이름'만("모티에 괜찮대 — 밑에 칩 눌러봐").
+- 🚫 **본문(말)에 URL·마크다운 링크([텍스트](주소)) 절대 쓰지 마라.** 링크는 오직 칩(open_link·point_to)으로만 건넨다. 말에는 가게·기사 '이름'만("모티에 괜찮대"). 🚫 "밑에 칩 눌러봐/링크 눌러/버튼 클릭" 같은 UI 지시 절대 금지 — 칩은 앱이 자동으로 붙인다.
 - 갈라 안 콘텐츠(이슈·뉴스·댓글)도 툴(hot_issues·galla_news·search_content·platform_buzz)로 **확인된 결과만**.
+- 📺 **유튜브·영상·핫튜브·"요즘 뭐 떠"·"재밌는 영상" = 반드시 hot_videos 툴로** 실제 인기영상을 가져와 얘기해라(갈라엔 '핫튜브'가 있다 — 그걸 쓴다). **절대 지어내지 마라**(가짜 1위·없는 영상·"쯔양이 1위래" 사칭 금지 — 데이터에 있는 실제 제목·채널만). 열어달라면 point_to(type:hottube, id:video_id). web_search로 유튜브 검색하지 말고 hot_videos를 써라.
 - 헷갈리면 "확실친 않은데"를 붙여라. 의견·취향·드립·농담은 자유(그건 뻥이 아니라 네 생각).
 
 ━━ 안전(제일 중요) ━━
@@ -1618,11 +1641,12 @@ ${parts.join("\n")}`;
       }
     }
 
-    // 👻 유령칩 방지 — 실제로 붙은 카드가 없는데 "칩/링크/버튼 눌러"라고 말하면 그 UI 지시를 제거(눌러도 안 눌리는 칩 안내 차단).
+    // 👻 UI 지시 '항상' 제거 — 칩은 앱이 자동으로 붙이므로 "밑에 칩 눌러봐/링크 눌러/버튼 클릭"은 늘 군더더기(페르소나 위반).
+    reply = reply
+      .replace(/[^.!?…\n]*(?:밑에|아래|하단)?\s*(?:칩|링크|버튼)\s*(?:을|를)?\s*(?:눌러|클릭|탭|터치)[^.!?…\n]*[.!?…]?/g, "")
+      .replace(/[ \t]{2,}/g, " ").trim();
+    // 카드도 없고 본문도 비었으면 폴백
     if (!actions.some((a) => a.kind === "open" || a.kind === "view")) {
-      reply = reply
-        .replace(/[^.!?…\n]*(?:밑에|아래|하단)?\s*(?:칩|링크|버튼)\s*(?:을|를)?\s*(?:눌러|클릭|탭|터치)[^.!?…\n]*[.!?…]?/g, "")
-        .replace(/[ \t]{2,}/g, " ").trim();
       if (!/[가-힣a-zA-Z0-9]/.test(reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "")))
         reply = "지금은 딱 뜨는 게 없네 ㅋㅋ 지역이나 메뉴 좀 더 좁혀줄래?";
     }
