@@ -10,9 +10,11 @@ $$;
 revoke all on function public.sft_mark_distilled(bigint) from anon, authenticated;
 
 -- 크론: 매일 UTC 20:00 (보상 갱신 curate-sft-daily 19:30 이후 = 신선한 reward로 선별)
+-- ⚠️ x-cron-key는 반드시 vault 'cron_secret' 현재값으로(하드코딩 금지 — 로테이트되면 403으로 조용히 죽는다. job93 선톡이 실제로 6일 죽었음).
+--    엣지 함수는 --no-verify-jwt 배포 필수(크론 http_post엔 Authorization 헤더가 없어 게이트웨이에서 401).
 select cron.schedule('distill-failures-daily', '0 20 * * *', $$
 select net.http_post(
   url:='https://bidqauputnhkqepvdzrr.supabase.co/functions/v1/distill-failures',
-  headers:=jsonb_build_object('x-cron-secret',(select decrypted_secret from vault.decrypted_secrets where name='cron_secret'),'Content-Type','application/json','x-cron-key','7d84c125549b3d0e31782d7a57e657aab613bb16ba1b4e27'),
+  headers:=jsonb_build_object('x-cron-key',(select decrypted_secret from vault.decrypted_secrets where name='cron_secret'),'Content-Type','application/json'),
   body:='{}'::jsonb)
 $$);
