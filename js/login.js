@@ -237,7 +237,10 @@
                 location.replace(dest);
             } else {
                 // 웹 브라우저(MPA): next 페이지로 그대로, 없으면 홈.
-                location.replace(next || "index.html");
+                // 🔒 오픈 리다이렉트 차단 — 외부 URL·프로토콜상대(//)·javascript: 등은 무시하고 홈으로.
+                //    같은 사이트 상대경로(dm.html, /dm.html?x)만 허용.
+                const safeNext = (next && !/^https?:/i.test(next) && !/^\/\//.test(next) && !/^[a-z]+:/i.test(next)) ? next : "index.html";
+                location.replace(safeNext);
             }
         }
 

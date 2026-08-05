@@ -365,10 +365,10 @@ function renderCard(data) {
                 <div class="mah-avatar"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${avatarImg}</div>
                 <div class="mah-info">
                     <div class="mah-line1">
-                        <span class="author-name"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${data.author}</span>
+                        <span class="author-name"${data.user_id ? ` data-profile-uid="${data.user_id}"` : ''}>${escHtml(data.author)}</span>
                         <span class="level-badge">Lv.${data.level}</span>
                     </div>
-                    <div class="mah-line2">${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${data.category} · ${data.time} · 조회 ${formatK(data.views)}</div>
+                    <div class="mah-line2">${data.pinned ? '<span class="pin-chip">📌 부스트</span> ' : ''}${escHtml(data.category)} · ${data.time} · 조회 ${formatK(data.views)}</div>
                 </div>
             </div>
             ${data.user_id ? `<button class="follow-btn" data-uid="${data.user_id}">+ 팔로우</button>` : ''}
@@ -377,8 +377,8 @@ function renderCard(data) {
         ${renderMedia(data)}
 
         <div class="card-body">
-            <div class="card-title">${data.title}</div>
-            ${data.oneLine ? `<div class="card-desc">${data.oneLine}</div>` : ''}
+            <div class="card-title">${escHtml(data.title)}</div>
+            ${data.oneLine ? `<div class="card-desc">${escHtml(data.oneLine)}</div>` : ''}
 
             <div class="gv">${window.GALLA_VoteBar ? window.GALLA_VoteBar.html({ factionA, factionB, pro: data.pro, con: data.con, proClass: 'vote-btn', conClass: 'vote-btn', proAttr: 'data-type="pro"', conAttr: 'data-type="con"' }) : ''}</div>
 

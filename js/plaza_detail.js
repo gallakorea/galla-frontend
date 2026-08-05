@@ -320,7 +320,7 @@ function commentHeaderHtml(c) {
     // 아바타+닉+레벨 배지, 탭하면 유저시트(프로필/메시지)
     nick = window.GALLA_userBadge(c.user_id, c.nickname);
   } else {
-    nick = `<span class="cm-nick">${c.nickname || "익명"}</span>`;
+    nick = `<span class="cm-nick">${esc(c.nickname || "익명")}</span>`;
   }
   return `<div class="comment-meta">${nick}<span class="cm-time">${timeAgoK(c.created_at)}</span>${menu}</div>`;
 }
@@ -372,7 +372,7 @@ function renderComments(list) {
 
     rootLi.innerHTML = `
       ${commentHeaderHtml(root)}
-      <div class="comment-body" data-cmt-text>${root.body}</div>
+      <div class="comment-body" data-cmt-text>${esc(root.body)}</div>
 
       <div class="comment-actions">
         ${commentVoteHtml(root)}
@@ -531,7 +531,7 @@ function renderReplies(replies, container) {
 
     li.innerHTML = `
       ${commentHeaderHtml(reply)}
-      <div class="comment-body" data-cmt-text>${reply.body}</div>
+      <div class="comment-body" data-cmt-text>${esc(reply.body)}</div>
       <div class="comment-actions">
         ${commentVoteHtml(reply)}
         <button class="reply-btn">답글 달기</button>

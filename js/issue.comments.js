@@ -1421,8 +1421,8 @@ function nameSpan(c) {
     return `<span class="user-name ghost-nick" style="color:${g.color}">${g.name}</span>`;
   }
   const nm = displayName(c);
-  if (!c.user_id) return `<span class="user-name">${nm}</span>`;
-  return `<span class="user-name userlink" data-user-id="${c.user_id}" data-user-nick="${nm.replace(/"/g, "&quot;")}">${nm}</span>`;
+  if (!c.user_id) return `<span class="user-name">${escT(nm)}</span>`;
+  return `<span class="user-name userlink" data-user-id="${c.user_id}" data-user-nick="${escT(nm).replace(/"/g, "&quot;")}">${escT(nm)}</span>`;
 }
 
 /* 프로필 사진 — 클릭 시 마이페이지 이동(data-profile-uid 전역 핸들러가 처리).
@@ -1439,7 +1439,7 @@ function avatarHTML(c, size) {
     ? (window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/default-avatar.png")
     : (window.GALLA_avatarSrc ? window.GALLA_avatarSrc(url) : (url || ""));
   const fallback = window.GALLA_DEFAULT_AVATAR || "/assets/app-icons/default-avatar.png";
-  const img = `<img src="${src}" alt="프로필" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
+  const img = `<img src="${escT(src).replace(/"/g, "&quot;")}" alt="프로필" loading="lazy" onerror="this.onerror=null;this.src='${fallback}'">`;
   if (!c.user_id) return `<span class="${cls} anon-av">${img}</span>`;
   return `<span class="${cls}" data-profile-uid="${c.user_id}" role="button" aria-label="프로필 보기">${img}</span>`;
 }

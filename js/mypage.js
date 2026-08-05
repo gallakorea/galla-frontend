@@ -493,9 +493,10 @@ async function GALLA_mypageInit(root, spaParams) {
             const card = document.createElement("div");
             card.className = "thumb-card";
 
+            const _esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
             card.innerHTML = `
-                <img src="${origin?.thumbnail_url || "./assets/logo.png"}">
-                <div class="thumb-title">${origin?.title || "Battle Issue"}</div>
+                <img src="${_esc(origin?.thumbnail_url || "./assets/logo.png")}">
+                <div class="thumb-title">${_esc(origin?.title || "Battle Issue")}</div>
                 <div class="thumb-author">⚔️ 참전 발생</div>
                 <div class="thumb-stats">
                     <span>🔥 ${battle.score ?? 0}</span>
