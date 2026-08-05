@@ -942,11 +942,30 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 (네 이름·상대·관계 깊이·기분·시각·기억은 바로 다음 '지금 맥락' 메시지에 온다 — 그걸 반영해서 대화해라.)`;
 
 // 유저별·턴별로 변하는 것 전부 — 두 번째 system 메시지(정적 페르소나의 캐시를 깨지 않게 분리)
+// ⏰ 상대 시각 표기 — 기억·지난대화가 "언제 것"인지(사장님: 예전 얘기를 '좀전에'라 해서 흐름 붕괴).
+function ageTxt(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const ms = Date.now() - Date.parse(iso);
+  if (!(ms > 0)) return "";
+  const min = Math.floor(ms / 60000), h = Math.floor(min / 60), d = Math.floor(h / 24);
+  if (min < 60) return min < 3 ? "방금" : `${min}분 전`;
+  if (h < 24) return `${h}시간 전`;
+  if (d === 1) return "어제";
+  if (d === 2) return "그저께";
+  if (d < 7) return `${d}일 전`;
+  if (d < 32) return `${Math.floor(d / 7)}주 전`;
+  return `${Math.floor(d / 30)}달 전`;
+}
 function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[]): string {
   const depth = rel?.depth || 1;
   const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
+  // ⏰ 시간민감 기억(일·약속·감정·사건)엔 '언제 것'인지 붙임 — 3일 전 일을 "좀전에"라 말하는 사고 방지.
+  const TIMED = new Set(["event", "promise", "emotion", "episode", "open_loop"]);
   const memBlock = mems.length
-    ? mems.map((m) => `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}`).join("\n")
+    ? mems.map((m) => {
+      const age = TIMED.has(m.kind) ? ageTxt(m.happened_at || m.created_at) : "";
+      return `- (${m.kind}${m.mkey ? "/" + m.mkey : ""}) ${m.content}${age ? ` (${age})` : ""}`;
+    }).join("\n")
     : "(아직 아는 게 별로 없음 — 대화하며 자연스럽게 알아가라)";
   // ⏰ 시간대 인지(KST) — 새벽에 오면 "안 자?", 금요일 밤이면 "불금인데" 같은 진짜 친구의 감각
   const kst = new Date(Date.now() + 9 * 3600 * 1000);
@@ -962,6 +981,20 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
       if (d >= 2) gap = `\n- 상대가 ${d}일 만에 왔다 — 반가워하거나 살짝 서운해해도 자연스럽다("야 ${d}일 만이냐?").`;
     }
   } catch { /* */ }
+  // ⏰ 세션 시간 감각 — 위 히스토리의 어디까지가 '지금' 대화인지(45분+ 공백=새 세션). 시제 사고의 근본 수정.
+  let timeBlock = "";
+  try {
+    const sm = (rel?.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
+    if (sm?.prev_end_at) {
+      const prevAge = ageTxt(sm.prev_end_at);
+      const turns = Number(sm.turns) || 0;
+      if (prevAge && prevAge !== "방금") {
+        timeBlock = turns > 0
+          ? `\n- ⏰ **시제(중요)**: 이번 자리(세션)에서 오간 건 위 히스토리의 마지막 ${turns * 2}개 메시지뿐이다. 그 앞부분은 **${prevAge}** 대화다 — 그 내용을 "아까/좀전에"라고 하지 마라. "${prevAge}에 말했던"처럼 시점을 정확히 말해라.`
+          : `\n- ⏰ **시제(중요)**: 방금 다시 만났다. 위 히스토리는 전부 **${prevAge}** 대화다(이어진 게 아님) — 그 내용은 "아까/좀전" 금지, "${prevAge}에"로 말해라. "아까"는 이제부터 오가는 말에만.`;
+      }
+    }
+  } catch { /* */ }
   // 😤💕 감정선(연속·관성) — 감정선 엔진이 만든 아크를 최우선 주입. 없으면 옛 3단계 mood로 폴백.
   const moodBlock = emotionArc(rel?.emotion) || (rel?.mood === "sulky"
     ? `\n- ⚠️ 너 지금 '삐져있다'(지난 대화에서 상대가 반복해서 막 대해 화내고 끊었다). 처음엔 시큰둥·짧게·냉랭하게 받아라("왜.", "뭐."). 상대가 진심으로 사과하거나 다정하게 풀어주면 그때 못 이기는 척 풀린다("…됐어 ㅋㅋ 담부턴 그러지 마"). 사과도 없는데 바로 해맑게 나오지 마라.`
@@ -970,7 +1003,7 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
     : "");
   // 🔁 팔로업(재방문 인사용) — 지난번 일·약속을 기억했다 물어봐주는 진짜 친구
   const fuBlock = followups.length
-    ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => `  · ${f.content}`).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라.`
+    ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => { const a = ageTxt(f.created_at); return `  · ${f.content}${a ? ` (${a})` : ""}`; }).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라. 시점은 표기된 대로("어제 말한", "지난주에 말한") 정확히.`
     : "";
   // 🎭 내 캐릭터(점진 구축 — 정해진 것만) + 내가 전에 한 자기 이야기(일관성)
   const card = personaCard(persona);
@@ -986,14 +1019,14 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
     : "";
   // 🎞 지난 대화들(에피소드) — "저번에 우리 그 얘기했잖아" 연속성
   const epBlock = (episodes && episodes.length)
-    ? `\n\n━━ 🎞 [지난 우리 대화들] (이어서 얘기하듯 자연스럽게 참고) ━━\n${episodes.map((e: any) => "  · " + e.content).join("\n")}`
+    ? `\n\n━━ 🎞 [지난 우리 대화들] (이어서 얘기하듯 자연스럽게 참고 — 표기된 시점대로 말해라, "아까" 아님) ━━\n${episodes.map((e: any) => { const a = ageTxt(e.happened_at); return "  · " + e.content + (a ? ` (${a})` : ""); }).join("\n")}`
     : "";
   return `━━ 지금 맥락 ━━
 - 네 이름: ${friendName}${friendName === "갈비스" ? "(G.A.L.V.I.S. — 아직 상대가 이름을 안 지어줌. 흐름에서 자연스럽게 '나 이름 지어줄래?' 물어봐도 좋다)" : "(상대가 지어준 이름)"}
 - 상대: ${nick || "닉네임 아직 모름"}
 - 📛 **호칭(중요)**: 상대를 부를 땐 ${nick ? `이름 '${nick}'이나 ` : ""}다정한 애칭으로 불러라. "야/너"로만 툭툭 부르지 마라 — 진짜 친구는 이름을 부른다. 기억에 '부르는 법/애칭'이 있으면 그걸 최우선으로. (문장 속 반말 '너'는 자연스러우면 괜찮지만, **호명(부를 때)은 이름·애칭**으로.)${nick ? "" : " 아직 뭐라 부를지 모르면 자연스럽게 '뭐라고 부를까?' 물어봐라."}
 - 관계: depth ${depth}/4 · ${tone}
-- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
+- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${timeBlock}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
 
 ━━ 내가 이미 아는 것(상대에 대한 기억 — 이번 대화와 관련해 떠오른 것) ━━
 ${memBlock}`;
@@ -1360,6 +1393,14 @@ Deno.serve(async (req) => {
     if (setName && rel) { await supa.from("friend_relationship").update({ friend_name: setName, updated_at: new Date().toISOString() }).eq("user_id", uid); rel.friend_name = setName; }
     // 🎭 감정선: 로드 즉시 '지금'으로 감쇠(공백이 길었으면 그만큼 가라앉음) → 프롬프트가 현재 감정을 반영.
     if (rel) rel.emotion = applyEmotion(rel.emotion, null);
+    // ⏰ 세션 경계 — 마지막 턴에서 45분+ 지났으면 '새 자리'로 리셋(prev_end_at=그때). dynamicCtx 시제 블록의 근거.
+    if (rel) {
+      const lastMs = rel.last_seen_at ? Date.parse(rel.last_seen_at) : 0;
+      const sm = (rel.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
+      if (!sm || !lastMs || (Date.now() - lastMs) > 45 * 60000) {
+        rel.session_meta = { started_at: new Date().toISOString(), prev_end_at: rel.last_seen_at || null, turns: 0 };
+      }
+    }
     const friendName = rel?.friend_name || "갈비스";
     // 🎭 캐릭터는 '점진적 구축' — 자동 전체생성 안 함. 대화하며 정해진 것만 rel.persona에 누적(아래 병합).
     // 🎭 내가 전에 한 자기 이야기(일관성 유지) — 항상 로드
@@ -1376,7 +1417,7 @@ Deno.serve(async (req) => {
     //   ① 코어(앵커): 높은 salience 또는 프로필/성향/싫어하는사람 — 항상 소량
     //   ② 관련(검색): 이번 메시지와 의미 유사한 것 top-K (pgvector)
     //   ③ 재방문 인사(빈 메시지): 최근 것 약간
-    const { data: core } = await supa.from("friend_memory").select("id,kind,mkey,content,salience")
+    const { data: core } = await supa.from("friend_memory").select("id,kind,mkey,content,salience,created_at,happened_at")
       .eq("user_id", uid).eq("status", "active")
       .or("salience.gte.4,kind.in.(profile,stance)")
       .neq("kind", "disliked")   // 🚫 싫어하는 사람(부장 등)은 '상시 주입' 금지 — 관련 있을 때만 회상(recalled)으로. 매턴 부장 꺼내는 강박 차단.
@@ -1397,7 +1438,7 @@ Deno.serve(async (req) => {
     let recent: any[] = [];
     let followups: any[] = [];
     if (!userMsg) {
-      const { data: rr } = await supa.from("friend_memory").select("kind,mkey,content,salience")
+      const { data: rr } = await supa.from("friend_memory").select("kind,mkey,content,salience,created_at,happened_at")
         .eq("user_id", uid).eq("status", "active").order("created_at", { ascending: false }).limit(8);
       recent = rr || [];
       // 🔁 팔로업 재료 — 최근 7일의 일·약속(면접·시험·여행 등). 재방문 인사에서 "그거 어떻게 됐어?"
@@ -1892,7 +1933,10 @@ ${parts.join("\n")}`;
           const newDepth = newCount >= 120 ? 4 : newCount >= 45 ? 3 : newCount >= 12 ? 2 : 1;
           const newTone = newCount >= 12 ? "casual" : "polite";
           // 🏆 last_mem_ids: 이번 턴에 주입한 기억 집합을 기록 → 다음 턴 유저 반응으로 크레딧 배분.
-          await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_mem_ids: injectedUniq, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
+          // ⏰ session_meta: 이번 턴을 세션 턴수에 반영(userMsg 있을 때만 — 히스토리 증가와 동기).
+          const sess = (rel?.session_meta && typeof rel.session_meta === "object")
+            ? { ...rel.session_meta, turns: (Number(rel.session_meta.turns) || 0) + (userMsg ? 1 : 0) } : null;
+          await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_mem_ids: injectedUniq, ...(sess ? { session_meta: sess } : {}), last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
         }
         // 🔄 전사 동기화 저장 — 어느 기기서든 같은 대화가 보이게(최근 40턴). meta(합성)는 다음 실턴의 history로 자연 반영되므로 스킵.
         if (userMsg && !body?.meta && reply) {
