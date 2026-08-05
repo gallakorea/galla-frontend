@@ -1789,6 +1789,20 @@ ${parts.join("\n")}`;
       }
     }
 
+    // 🧭 급전환 딜리버 보장 — 라우터가 '명시적으로' 검색시킨 건데(유저가 대놓고 요청) 답이 가게명을 안 언급해
+    //    칩이 하나도 안 붙었으면 상위 결과를 강제 첨부. (감정대화 직후 "맛집 찾아줘" 급전환에서 딜리버 누락 방지.)
+    //    route가 있을 때만 = 유저가 명시 요청한 경우라 '뜬금 칩'이 아님.
+    if (route && route.tool === "web_search" && searchHits.length && !actions.some((a) => a.kind === "open")) {
+      for (const h of searchHits.slice(0, 2)) {
+        const url = h?.링크; if (!url || !/^https?:\/\//.test(url)) continue;
+        const nm = String(h?.이름 || h?.제목 || "").slice(0, 24); if (!nm) continue;
+        const sub = [h?.분류, h?.주소].filter(Boolean).join(" · ") || String(h?.내용 || "").replace(/\s+/g, " ").slice(0, 48);
+        let source = ""; try { source = new URL(url).hostname.replace(/^www\./, ""); } catch { /* */ }
+        if (/map\.naver/.test(source)) source = "네이버 지도"; else if (/\.naver\.com$/.test(source)) source = "네이버";
+        actions.push({ kind: "open", url, label: nm + " 보기", title: nm, sub, source });
+      }
+    }
+
     // 👻 UI 지시 '항상' 제거 — 칩은 앱이 자동으로 붙이므로 "밑에 칩 눌러봐/링크 눌러/버튼 클릭"은 늘 군더더기(페르소나 위반).
     reply = reply
       .replace(/[^.!?…\n]*(?:밑에|아래|하단)?\s*(?:칩|링크|버튼)\s*(?:을|를)?\s*(?:눌러|클릭|탭|터치)[^.!?…\n]*[.!?…]?/g, "")
