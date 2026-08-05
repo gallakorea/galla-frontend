@@ -533,7 +533,7 @@ async function loadComments(body){
   } else CMT_SIDE=null;
 
   const { data: rows } = await supa.from('market_comments')
-    .select('id,user_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed').eq('market_id',marketId)
+    .select('id,user_id:author_id,side,content,created_at,parent_id,outcome_id,is_anonymous,ghost_seed').eq('market_id',marketId)
     .order('created_at',{ascending:true}).limit(500);
   // 베팅을 안 했어도, 이미 이 예측에 댓글을 남겼다면 '그때 입장'으로 고정한다(한 예측=한 입장, 사장님 요청).
   if(!isMulti() && !MY_POS_SIDE && ME){

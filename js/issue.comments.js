@@ -1287,7 +1287,7 @@ async function loadComments(issueId) {
 
   const { data: rows, error } = await supabase
     .from("comments")
-    .select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action")
+    .select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action")
     .eq("issue_id", issueId)
     .neq("status", "deleted")
     .order("created_at", { ascending: false });
@@ -2151,7 +2151,7 @@ function bindComposerEls() {
         faction: side,
         content: text,
         is_anonymous: GHOST_ON     // 👻 유령 참전 (seed는 서버 트리거가 강제 주입)
-      }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
+      }).select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
       if (error) {
         if (String(error.message || "").includes("no_ghost_pass")) {
           askShop("👻 유령권이 만료됐어요.");
@@ -2321,7 +2321,7 @@ async function submitBattleReply(type, targetId, targetUser, text) {
     content,
     battle_action: type,
     is_anonymous: GHOST_ON     // 👻 유령 답글
-  }).select("id,user_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
+  }).select("id,user_id:author_id,content,created_at,faction,hp,attack_count,defense_count,support_count,parent_id,is_anonymous,ghost_seed,battle_action").single();
   if (insertErr) {
     if (String(insertErr.message || "").includes("no_ghost_pass")) {
       askShop("👻 유령권이 만료됐어요.");

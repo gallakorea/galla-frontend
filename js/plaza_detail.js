@@ -243,7 +243,7 @@ let myCommentVotes = {};
 async function fetchComments(commentCountEl) {
   const { data, error } = await supabase
     .from("plaza_comments")
-    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id, is_anonymous, ghost_seed")
+    .select("id, parent_id, body, anon_name, created_at, like_count, dislike_count, user_id:author_id, is_anonymous, ghost_seed")
     .eq("post_id", postId)
     .order("created_at", { ascending: true });
 

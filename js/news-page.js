@@ -224,7 +224,7 @@
   async function loadGnComments(newsId) {
     GNC_NEWS = newsId; GNC_TOP_LIMIT = 8; GNC_EXPANDED.clear();
     const { data: rows } = await supabase.from("galla_news_comments")
-      .select("id,user_id,content,created_at,parent_id,is_anonymous,ghost_seed").eq("news_id", newsId)
+      .select("id,user_id:author_id,content,created_at,parent_id,is_anonymous,ghost_seed").eq("news_id", newsId)
       .order("created_at", { ascending: true }).limit(500);
     const profs = await fetchProfiles((rows || []).map((c) => c.user_id));
     const ids = (rows || []).map((c) => c.id);

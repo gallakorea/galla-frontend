@@ -26,9 +26,9 @@
     ] = await Promise.all([
       supabase.from("votes").select("type, issue_id").eq("user_id", userId),
       supabase.from("comment_actions").select("action_type").eq("user_id", userId),
-      supabase.from("comments").select("content, issue_id").eq("user_id", userId).limit(1000),
+      supabase.from("comments").select("content, issue_id").eq("author_id", userId).limit(1000),
       supabase.from("plaza_posts").select("id", { count: "exact", head: true }).eq("user_id", userId),
-      supabase.from("plaza_comments").select("id", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("plaza_comments").select("id", { count: "exact", head: true }).eq("author_id", userId),
       supabase.from("market_trades").select("id", { count: "exact", head: true }).eq("user_id", userId),
     ]);
 

@@ -167,7 +167,7 @@ async function GALLA_settingsInit(root) {
   const { count: commentCount } = await supabase
     .from("comments")
     .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
+    .eq("author_id", userId);
 
   setText("statComments", commentCount ?? 0);
 

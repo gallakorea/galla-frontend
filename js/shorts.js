@@ -1356,7 +1356,7 @@ async function loadShortsComments() {
     supabase.from("issues")
       .select("pro_count,con_count,faction_a,faction_b").eq("id", issueId).single(),
     supabase.from("comments")
-      .select("id,user_id,content,created_at,faction,parent_id,is_anonymous")
+      .select("id,user_id:author_id,content,created_at,faction,parent_id,is_anonymous")
       .eq("issue_id", issueId).neq("status", "deleted")
       .order("created_at", { ascending: false }).limit(300)
   ]);
