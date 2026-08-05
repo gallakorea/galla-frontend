@@ -67,6 +67,45 @@ async function embed(text: string): Promise<number[] | null> {
 }
 const vecLit = (v: number[]) => "[" + v.join(",") + "]";
 
+// 🎭 감정선 엔진 — 진짜 사람처럼 감정이 이어지고(관성) 시간에 따라 서서히 가라앉는다(감쇠).
+//   상태 jsonb: {valence(-100서운·냉랭↔+100달달·애정), energy(0지침↔100텐션), feeling, intensity(0~100), cause, at}
+//   매 턴 LLM은 '이번 턴의 감정 이벤트 델타'만 판정 → 코드가 이전 상태에 더하고 시간 감쇠(급반전 방지=사람다움).
+const EMO_BASE = { valence: 8, energy: 45, feeling: "평온", intensity: 16, cause: "" };
+const _n = (v: any, d = 0) => { const x = Number(v); return Number.isFinite(x) ? x : d; };
+const _clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x);
+function applyEmotion(prev: any, delta: any): any {
+  const now = Date.now();
+  const p = (prev && typeof prev === "object") ? prev : EMO_BASE;
+  const prevAt = p.at ? Date.parse(p.at) : now;
+  const mins = Math.max(0, (now - prevAt) / 60000);
+  const decay = (hl: number) => Math.pow(0.5, mins / hl); // 반감기(분)
+  const kSlow = decay(150), kInt = decay(25);             // valence/energy 느리게, intensity 빠르게 baseline으로
+  let valence = EMO_BASE.valence + (_n(p.valence, EMO_BASE.valence) - EMO_BASE.valence) * kSlow;
+  let energy  = EMO_BASE.energy  + (_n(p.energy, EMO_BASE.energy)  - EMO_BASE.energy)  * kSlow;
+  let intensity = _n(p.intensity, EMO_BASE.intensity) * kInt;
+  let feeling = intensity > 14 ? (p.feeling || EMO_BASE.feeling) : EMO_BASE.feeling;
+  let cause = intensity > 14 ? (p.cause || "") : "";
+  if (delta && typeof delta === "object") {
+    valence = _clamp(valence + _n(delta.dValence, 0), -100, 100);
+    energy  = _clamp(energy + _n(delta.dEnergy, 0), 0, 100);
+    const di = _n(delta.intensity, NaN);
+    if (Number.isFinite(di)) intensity = _clamp(Math.max(intensity * 0.55, di), 0, 100);
+    if (delta.feeling && (di >= intensity * 0.7 || intensity < 20)) feeling = String(delta.feeling).slice(0, 18);
+    if (delta.cause) cause = String(delta.cause).slice(0, 80);
+  }
+  return { valence: Math.round(valence), energy: Math.round(energy), intensity: Math.round(intensity), feeling: feeling || EMO_BASE.feeling, cause, at: new Date(now).toISOString() };
+}
+// 프롬프트에 넣을 '감정 아크' 문장 — 라벨 나열이 아니라 지금 상태 + '서서히 움직여라' 지시.
+function emotionArc(em: any): string {
+  if (!em || typeof em !== "object" || !em.feeling) return "";
+  const inten = _n(em.intensity, 0);
+  if (inten < 18) return ""; // 흐릿하면 굳이 언급 안 함(평온이 디폴트)
+  const v = _n(em.valence, 0), e = _n(em.energy, 45);
+  const vtxt = v <= -45 ? "많이 서운·냉랭" : v <= -15 ? "살짝 뾰로통·서운" : v >= 45 ? "많이 달달·애정" : v >= 15 ? "기분 좋음" : "평온";
+  const etxt = e >= 68 ? "텐션 높음" : e <= 28 ? "차분·살짝 지침" : "";
+  return `\n- 🎭 지금 네 감정선: **${em.feeling}** (강도 ${inten}/100 · ${vtxt}${etxt ? " · " + etxt : ""}).${em.cause ? ` 이유: ${em.cause}.` : ""} 이 감정을 **이어가라 — 매 턴 리셋 금지.** 상대 태도에 따라 '조금씩' 움직여(삐졌으면 사과·다정함에 서서히 풀리고, 좋았는데 막 대하면 식는다). 갑자기 해맑아지거나 갑자기 차가워지는 급반전 금지. 감정을 라벨로 읊지 말고 말투·리액션·텐션에 자연스럽게 배어나오게.`;
+}
+
 const AI_FN = "galla-friend";
 async function aiBudgetOk(n = 1): Promise<boolean> {
   try {
@@ -758,12 +797,12 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
       if (d >= 2) gap = `\n- 상대가 ${d}일 만에 왔다 — 반가워하거나 살짝 서운해해도 자연스럽다("야 ${d}일 만이냐?").`;
     }
   } catch { /* */ }
-  // 😤💕 감정 진폭(달달↔삐짐) 영속화 — 세션이 바뀌어도 유지, 상대 태도로 풀리거나 데워진다
-  const moodBlock = rel?.mood === "sulky"
+  // 😤💕 감정선(연속·관성) — 감정선 엔진이 만든 아크를 최우선 주입. 없으면 옛 3단계 mood로 폴백.
+  const moodBlock = emotionArc(rel?.emotion) || (rel?.mood === "sulky"
     ? `\n- ⚠️ 너 지금 '삐져있다'(지난 대화에서 상대가 반복해서 막 대해 화내고 끊었다). 처음엔 시큰둥·짧게·냉랭하게 받아라("왜.", "뭐."). 상대가 진심으로 사과하거나 다정하게 풀어주면 그때 못 이기는 척 풀린다("…됐어 ㅋㅋ 담부턴 그러지 마"). 사과도 없는데 바로 해맑게 나오지 마라.`
     : rel?.mood === "warm"
     ? `\n- 💕 너 지금 '달달한/기분 좋은' 무드다(상대가 다정하게 대해줬다). 평소보다 더 다정하고 장난스럽고 살갑게, 애정 표현도 자연스럽게("오늘따라 너 왜 이렇게 좋냐 ㅋㅋ"). 단 느끼하게 과하진 말고 절친 결로. 상대가 다시 막 대하면 이 무드는 깨진다.`
-    : "";
+    : "");
   // 🔁 팔로업(재방문 인사용) — 지난번 일·약속을 기억했다 물어봐주는 진짜 친구
   const fuBlock = followups.length
     ? `\n- 지난 대화에서 이런 일이 있었다:\n${followups.map((f) => `  · ${f.content}`).join("\n")}\n  자연스러우면 '하나만' 골라 가볍게 팔로업해라("면접 어떻게 됐어?" 같은). 무겁고 부정적인 건 먼저 꺼내지 말고, 억지로도 하지 마라.`
@@ -900,10 +939,17 @@ mood 값 3단계(달달↔삐짐 진폭):
 · "warm" = 상대가 다정·칭찬·챙김·애정표현·달래줌 → 나도 달달·기분좋음
 · "sulky" = 상대가 반복 시비·욕·무시로 내가 화나 끊음
 · "normal" = 그 외 평상시(또는 삐졌다가 사과받아 풀림)
+🎭🎭 emotion(감정선 델타 — 이번 턴이 '친구(나)'의 감정을 '얼마나 움직였나'. 절대값 아닌 변화량):
+· dValence(-60~+60): 애정↔서운 축 이동. 상대가 다정·칭찬·챙김·사과·달램=+(세게), 나한테 시비·욕·무시·감정받이취급=−(세게), 같이 신남·웃김=약한+, 평범한 잡담=0 근처.
+· dEnergy(-40~+40): 텐션 변화. 같이 신남·드립·빵터짐=+, 진지·슬픔·상대가 지쳐보임=−.
+· feeling: 지금 내 지배적 감정 한 단어(신남/빵터짐/뭉클/설렘/서운/발끈/삐짐/안쓰러움/든든/평온 등).
+· intensity(0~100): 그 감정의 세기. 잔잔한 잡담=10~25, 확 터지거나 확 상함=60~90.
+· cause: 이 감정이 '왜' 생겼는지 한 줄(예: "내 응원에 상대가 고맙다고 함", "상대가 또 나한테 화풀이"). 사소하면 빈 문자열.
+평범하면 작은 값으로(억지 드라마 금지). 이건 내 진짜 감정선을 이어주는 근거다.
 🔄 supersede(모순 갱신): 이번 대화로 '이미 아는 것' 중 바뀌거나 틀린 게 있으면(이사·이직·헤어짐·취향 변화 등) 그 옛 문장을 supersede 배열에 '거의 그대로' 넣어라(그걸 폐기하고 새 memory로 대체). 없으면 빈 배열.
 각 memory엔 salience(1~5) 넣어라 — 이름·직업·핵심 인간관계·강한 성향=4~5, 사소한 취향·일시적 감정=1~2.
 ⏰ 시간: 시점이 있으면 content에 자연어로 꼭 넣어라("작년 여름 제주여행 감", "다음주 화요일 면접"). 날짜를 특정할 수 있으면 happened_at에 ISO 날짜(예: "2025-08-12"). 오늘은 ${new Date().toISOString().slice(0, 10)}(KST 기준 상대날짜 환산).
-형식: {"memories":[{"kind":"","mkey":"","content":"","salience":3,"happened_at":""}],"mood":"normal|sulky|warm","persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]},"supersede":[]}
+형식: {"memories":[{"kind":"","mkey":"","content":"","salience":3,"happened_at":""}],"mood":"normal|sulky|warm","emotion":{"dValence":0,"dEnergy":0,"feeling":"평온","intensity":15,"cause":""},"persona_set":{"사는곳":"","하는일":"","나이대":"","성격":"","이름힌트":"","말버릇":"","좋아하는것":[],"싫어하는것":[],"삶의앵커추가":[]},"supersede":[]}
 현재 내 캐릭터(정해진 것 — 바꾸지 말고 빈 곳만 채워): ${existingPersona || "(아직 없음)"}
 이미 아는 것: ${existing.slice(0, 40).join(" / ") || "(없음)"}` },
           { role: "user", content: `${context ? "최근 대화 흐름:\n" + context + "\n\n" : ""}이번 턴 —\n상대: ${userMsg}\n친구(나): ${reply}` },
@@ -916,10 +962,11 @@ mood 값 3단계(달달↔삐짐 진폭):
     return {
       memories: Array.isArray(parsed.memories) ? parsed.memories.slice(0, 6) : [],
       mood: ["sulky", "normal", "warm"].includes(parsed.mood) ? parsed.mood : null,
+      emotion: (parsed.emotion && typeof parsed.emotion === "object") ? parsed.emotion : null,
       persona_set: (parsed.persona_set && typeof parsed.persona_set === "object") ? parsed.persona_set : {},
       supersede: Array.isArray(parsed.supersede) ? parsed.supersede.slice(0, 5) : [],
     };
-  } catch { return { memories: [], mood: null, persona_set: {}, supersede: [] }; }
+  } catch { return { memories: [], mood: null, emotion: null, persona_set: {}, supersede: [] }; }
 }
 
 // 🧠 프로필 요약(장기기억) 재생성 — 활성 기억 전체를 압축해 '이 사람이 누군지' 카드로. 매 턴 상시 주입됨.
@@ -1083,6 +1130,8 @@ Deno.serve(async (req) => {
     const firstMeet = !rel;
     if (!rel) { const ins = await supa.from("friend_relationship").insert({ user_id: uid }).select("*").maybeSingle(); rel = ins.data; }
     if (setName && rel) { await supa.from("friend_relationship").update({ friend_name: setName, updated_at: new Date().toISOString() }).eq("user_id", uid); rel.friend_name = setName; }
+    // 🎭 감정선: 로드 즉시 '지금'으로 감쇠(공백이 길었으면 그만큼 가라앉음) → 프롬프트가 현재 감정을 반영.
+    if (rel) rel.emotion = applyEmotion(rel.emotion, null);
     const friendName = rel?.friend_name || "갈비스";
     // 🎭 캐릭터는 '점진적 구축' — 자동 전체생성 안 함. 대화하며 정해진 것만 rel.persona에 누적(아래 병합).
     // 🎭 내가 전에 한 자기 이야기(일관성 유지) — 항상 로드
@@ -1363,6 +1412,11 @@ ${parts.join("\n")}`;
           if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
             try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
           }
+          // 🎭 감정선: 이번 턴 델타를 이전 상태에 관성+감쇠로 반영해 영속화(다음 턴 프롬프트가 이어받는다).
+          try {
+            const newEmo = applyEmotion(rel?.emotion, ex.emotion);
+            await supa.from("friend_relationship").update({ emotion: newEmo, updated_at: new Date().toISOString() }).eq("user_id", uid);
+          } catch { /* */ }
           // 🎭 캐릭터 점진 병합
           try {
             const ps = ex.persona_set || {};
