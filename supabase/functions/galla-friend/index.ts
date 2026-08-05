@@ -1064,6 +1064,7 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
         messages: [
           { role: "system", content: `대화에서 기억할 것을 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
+⑥ 🧵 **하다 만 얘기(미완결 스레드) — kind:open_loop**: 이번 대화에서 상대가 꺼냈다 딴 데로 샌 화제, 상대가 답을 기다리는 것, "나중에/이따 하자"고 미룬 것, 결론 안 난 것. content에 '무엇을 하다 말았는지' 한 줄(예: "상대가 이직 고민 꺼냈다 다른 얘기로 샘", "새 카페 가보기로 함"). **진짜 명확히 미완인 것만**(억지로 만들지 마라 — 없으면 넣지 마라). salience 2.
 👥 그리고 **유저 인생의 '사람'**(부장·친구·애인·가족 등)이 나오면 kind:person, mkey:그 사람 이름/호칭(예: "부장","민수","여친"), content엔 [관계 + 유저의 감정 + 최근 에피소드]를 '한 줄로 누적'해서 넣어라. 같은 사람이 또 나오면 같은 mkey로 최신 내용을 업데이트(덮어씀). 이게 있어야 "그 부장 또 그랬어?"처럼 사람을 일관되게 기억한다.
 🚫 절대 저장 금지: (a) 농담·비꼼·과장·밈을 사실인 양('네 발로 기어다녔다' 류) (b) 뉴스·이슈·정치사건 자체를 유저 개인사로 (c) 스쳐가는 일시감정을 반복 저장. 확실치 않으면 저장하지 마라 — 헛소리의 씨앗이 된다.
 🧱 칸막이 엄수: '유저(상대)에 대한 사실'과 '친구(나=AI)의 캐릭터'를 절대 섞지 마라. 유저가 포장마차를 좋아하는 건 유저의 interest지, 내 selfstory가 아니다.
@@ -1417,6 +1418,18 @@ ${parts.join("\n")}`;
       ? `👁 [지금은 '딜리버' 타이밍 — 상대가 콘텐츠를 '보여달라/달라'고 했다]: 하나 골라서 point_to(view)로 '실제로 열고', 그것에 대한 네 반응·코멘트 한두 마디만. 🚫 절대 금지: "어떤 거 좋아해?/무슨 취향이야?/연예인? 스포츠?/다른 거 볼래?/뭐 보고 싶어?" 같은 '되묻기·카테고리 물어보기'로 끝내지 마라 — 상대는 이미 '아무거나 재밌는 거 달라'고 했다. 되묻지 말고 그냥 하나 던지고 반응해라.`
       : "";
 
+    // 🧵 ② 열린 실 — 하다 만 얘기를 '가끔' 자연스럽게 되돌아본다. 진짜 저장된 것만, 지어내기 절대 금지.
+    let openLoopBlock = "";
+    try {
+      if (userMsg && !work && !handoff && !deliverMode && Math.random() < 0.3) {
+        const { data: loops } = await supa.from("friend_memory").select("content")
+          .eq("user_id", uid).eq("status", "active").eq("kind", "open_loop")
+          .order("created_at", { ascending: false }).limit(2);
+        const lines = (loops || []).map((l: any) => "· " + String(l.content || "").slice(0, 70)).filter((s: string) => s.length > 3);
+        if (lines.length) openLoopBlock = `🧵 [하다 만 얘기 — 아래 '실제 저장된 것'만, 지어내기 절대 금지]:\n${lines.join("\n")}\n지금 흐름에 자연스럽고 분위기 맞으면 '가끔' 이 중 하나를 되돌아가 가볍게 물어봐("아 맞다, 아까 ~하다 말았지 — 그건 어떻게 됐어?"). 억지·매번 금지, 이미 끝난 얘기면 넘어가. ⚠️ 여기 없는 걸 지어내서 "아까 ~했잖아" 하는 건 절대 금지(그게 제일 최악 — 없는 기억 만들기).`;
+      }
+    } catch { /* */ }
+
     // 💸 프롬프트 캐싱 최적 순서: [전역고정] → [앱설정고정] → [history(append-only)] → [유저·턴별] → [유저메시지]
     //   고정·history를 앞에 모아 캐시 프리픽스를 최대화(긴 대화일수록 이득). dynamicCtx는 유저메시지 직전=최신성도 ↑.
     const messages: any[] = [
@@ -1429,6 +1442,7 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
+      ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
       { role: "user", content: userContent },
     ];
