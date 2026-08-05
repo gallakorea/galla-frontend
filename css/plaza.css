@@ -779,6 +779,16 @@ html, body {
   display: inline-flex; align-items: center; color: #8a8f99;
 }
 .plaza-share-btn .ic-share { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+/* 목록 카드 갈비스 버튼 — 형제 액션버튼과 동일 규약(투명 배경·무테). 없으면 기본 버튼=흰 네모로 깨진다.
+   갈비스 아이덴티티 색(#5fd8ff) 유지, 아이콘은 행 크기에 맞춰 16px(테마 22px 오버라이드). */
+/* 갈비스 버튼 — 형제(.plaza-share-btn)와 동일 규약. 버튼에 명시 크기를 줘 어떤 캐스케이드에도
+   0x0로 접히지 않게 고정(예전엔 svg가 inline→0x0로 '사라짐'). */
+.plaza-galvis-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; flex: 0 0 auto; color: #5fd8ff;
+}
+.plaza-galvis-btn .gv-galvis { width: 16px !important; height: 16px !important; display: block; flex: 0 0 auto; }
 
 /* 목록 카드 업/다운 투표 (레딧식) */
 .pv-vote { display: inline-flex; align-items: center; gap: 4px; }
