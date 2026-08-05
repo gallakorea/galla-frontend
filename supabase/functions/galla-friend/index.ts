@@ -965,7 +965,7 @@ ${memBlock}`;
 // 💬 카톡식 짧은 말풍선 — 한 버블 '최대 한 줄 반(~40자)'. 넘으면 문장/어절 경계에서 잘라 여러 버블로(최대 4).
 const BUBBLE_MAX = 40;   // 한 버블 목표 상한(한 줄 반)
 // 👁 콘텐츠를 실제로 열어줬는데 답 끝에 '취향 되묻기'가 붙으면(딜리버 후 또 되묻기=답답) 그 꼬리를 잘라낸다.
-const DEFLECT_RE = /(무슨\s*취향|취향이?\s*(야|뭐|어때|궁금)|취향\s*(알?면|모르)|뭐\s*보고\s*싶|뭐가?\s*보고\s*싶|뭐\s*재밌게\s*보|어떤\s*(거|걸|게)\s*(좋아|보고|원|볼)|웃긴\s*밈|밈\s*쪽|병맛\s*쪽|어느\s*쪽이?\s*(좋|낫)|뭐\s*좋아해|정확히\s*뭘\s*원|딱\s*맞는\s*거\s*찾|다른\s*거?\s*볼래|네?\s*스타일(이야|이냐)?|이런\s*거?\s*(좋아|네\s*스타일|스타일이)|연예인\s*얘기|스포츠\s*얘기|골라\s*(줄까|봐)|원하는?\s*(거|게)\s*(있|뭐))/;
+const DEFLECT_RE = /(무슨\s*취향|취향이?\s*(야|뭐|어때|궁금)|취향\s*(알?면|모르)|뭐\s*보고\s*싶|뭐가?\s*보고\s*싶|뭐\s*재밌게\s*보|어떤\s*(거|걸|게)\s*(좋아|보고|원|볼)|웃긴\s*밈|밈\s*쪽|병맛\s*쪽|어느\s*쪽이?\s*(좋|낫)|뭐\s*좋아(해|하는)|좋아하는\s*(편|거)\s*(이야|야|뭐|있)|뭐\s*보는\s*(거|게)\s*좋아|정확히\s*뭘\s*원|딱\s*맞는\s*거\s*찾|다른\s*거?\s*볼래|네?\s*스타일(이야|이냐)?|이런\s*거?\s*(좋아|네\s*스타일|스타일이)|연예인\s*얘기|스포츠\s*얘기|골라\s*(줄까|봐)|원하는?\s*(거|게)\s*(있|뭐)|(먹방|여행|예능|게임|밈|영화)\s*(이야|아님|쪽)\??|뭐가?\s*(좋아|땡)|어떤\s*쪽)/;
 function stripDeflect(reply: string): string {
   const parts = reply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
   while (parts.length > 1 && DEFLECT_RE.test(parts[parts.length - 1]) && parts[parts.length - 1].length <= 64) parts.pop();
@@ -1552,14 +1552,23 @@ ${parts.join("\n")}`;
     }
     // 👁 딜리버 후 처리 — 콘텐츠를 실제로 열었으면(view/share): ①'취향 되묻기' 꼬리 제거 ②보여준 id 추적('딴거'=새것 보장).
     {
-      const viewIds = actions.filter((a) => a.kind === "view" || a.kind === "share").map((a) => String(a.id)).filter(Boolean);
-      if (viewIds.length) {
-        reply = stripDeflect(reply);
-        try {
-          const prev = Array.isArray(rel?.recent_shown) ? rel.recent_shown : [];
-          const merged = [...viewIds, ...prev.filter((x: string) => !viewIds.includes(x))].slice(0, 25);
-          await supa.from("friend_relationship").update({ recent_shown: merged }).eq("user_id", uid);
-        } catch { /* */ }
+      const shownIds: string[] = [];
+      for (const a of actions) {
+        if ((a.kind === "view" || a.kind === "share") && a.id) shownIds.push(String(a.id));
+        else if (a.kind === "open" && typeof a.url === "string") {
+          const m = a.url.match(/[?&]v=([A-Za-z0-9_-]{6,})/); if (m) shownIds.push(m[1]); // 핫튜브 video_id
+        }
+      }
+      const delivered = actions.some((a) => a.kind === "view" || a.kind === "share" || a.kind === "open");
+      if (delivered) {
+        reply = stripDeflect(reply);   // 딜리버(영상·이슈·맛집 다 포함) 후 '되묻기' 꼬리 제거
+        if (shownIds.length) {
+          try {
+            const prev = Array.isArray(rel?.recent_shown) ? rel.recent_shown : [];
+            const merged = [...shownIds, ...prev.filter((x: string) => !shownIds.includes(x))].slice(0, 30);
+            await supa.from("friend_relationship").update({ recent_shown: merged }).eq("user_id", uid);
+          } catch { /* */ }
+        }
       }
     }
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
