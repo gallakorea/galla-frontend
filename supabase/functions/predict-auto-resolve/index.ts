@@ -84,6 +84,12 @@ ${evidence.length ? evidence.map((e) => "- " + e).join("\n") : "(관련 뉴스 �
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // 🔒 크론 전용 게이트 — pg_cron이 보내는 x-cron-secret과 불일치면 거부(anon의 비용·무결성 남용 차단).
+  //    ⚠️ CRON_SECRET env 미설정 시엔 통과(안전망): 시크릿 유실로 크론이 통째로 죽는 사고 방지.
+  const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) {
+    return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
+  }
   const now = Date.now();
   const { data: due } = await sb.from("markets")
     .select("id,question,description,close_at,issue_id,market_type")

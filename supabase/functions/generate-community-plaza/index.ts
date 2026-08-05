@@ -70,6 +70,9 @@ async function rewrite(title: string, source?: string) {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  // 🔒 크론 전용 — x-cron-secret 불일치 거부(anon의 AI 비용남용 차단). env 미설정 시 통과(안전망).
+  const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+  if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { ...cors, "Content-Type": "application/json" } });
   if (!OPENAI) return new Response(JSON.stringify({ ok: false, reason: "no_openai_key" }), { headers: { ...cors, "Content-Type": "application/json" } });
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
