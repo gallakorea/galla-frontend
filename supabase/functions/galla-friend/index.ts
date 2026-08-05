@@ -138,12 +138,14 @@ async function pickDadJoke(): Promise<{ q: string; a: string } | null> {
     return { q: String(p.q || ""), a: String(p.a || "") };
   } catch { return null; }
 }
-async function hotIssues(limit = 1) {
+async function hotIssues(limit = 6, exclude: string[] = []) {
+  const excl = new Set((exclude || []).map(String));
   const { data } = await supa.from("issues")
     .select("id,title,one_line,category,pro_count,con_count")
     .eq("status", "normal").order("hot_score", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false }).limit(Math.min(limit || 1, 3));
-  return (data || []).map((i) => ({ id: i.id, title: i.title, 한줄: i.one_line, 찬: i.pro_count, 반: i.con_count }));
+    .order("created_at", { ascending: false }).limit(Math.min((limit || 6) + excl.size, 30));
+  return (data || []).filter((i) => !excl.has(String(i.id))).slice(0, Math.min(limit || 6, 12))
+    .map((i) => ({ id: i.id, title: i.title, 한줄: i.one_line, 찬: i.pro_count, 반: i.con_count }));
 }
 async function gallaNews(limit = 4) {
   const { data } = await supa.from("galla_news").select("id,title,summary")
@@ -537,7 +539,11 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (!ideas.length) return { result: { ok: false } };
     return { action: { kind: "plan", ideas } };
   }
-  if (name === "hot_issues") return { result: await hotIssues(Math.min(Math.max(_n(args?.limit, 6), 3), 10)) };
+  if (name === "hot_issues") {
+    let excl: string[] = [];
+    try { const { data } = await supa.from("friend_relationship").select("recent_shown").eq("user_id", uid).maybeSingle(); if (Array.isArray(data?.recent_shown)) excl = data.recent_shown; } catch { /* */ }
+    return { result: await hotIssues(Math.min(Math.max(_n(args?.limit, 6), 3), 10), excl) };
+  }
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
@@ -885,6 +891,15 @@ ${memBlock}`;
 
 // 💬 카톡식 짧은 말풍선 — 한 버블 '최대 한 줄 반(~40자)'. 넘으면 문장/어절 경계에서 잘라 여러 버블로(최대 4).
 const BUBBLE_MAX = 40;   // 한 버블 목표 상한(한 줄 반)
+// 👁 콘텐츠를 실제로 열어줬는데 답 끝에 '취향 되묻기'가 붙으면(딜리버 후 또 되묻기=답답) 그 꼬리를 잘라낸다.
+const DEFLECT_RE = /(무슨\s*취향|취향이?\s*(야|뭐|어때|궁금)|취향\s*(알?면|모르)|뭐\s*보고\s*싶|뭐가?\s*보고\s*싶|뭐\s*재밌게\s*보|어떤\s*(거|걸|게)\s*(좋아|보고|원|볼)|웃긴\s*밈|밈\s*쪽|병맛\s*쪽|어느\s*쪽이?\s*(좋|낫)|뭐\s*좋아해|정확히\s*뭘\s*원|딱\s*맞는\s*거\s*찾|다른\s*거?\s*볼래|네?\s*스타일(이야|이냐)?|이런\s*거?\s*(좋아|네\s*스타일|스타일이)|연예인\s*얘기|스포츠\s*얘기|골라\s*(줄까|봐)|원하는?\s*(거|게)\s*(있|뭐))/;
+function stripDeflect(reply: string): string {
+  const parts = reply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+  while (parts.length > 1 && DEFLECT_RE.test(parts[parts.length - 1]) && parts[parts.length - 1].length <= 64) parts.pop();
+  let r = parts.join("\n\n").trim();
+  r = r.replace(/(?:\s|^)[^.!?\n]{0,50}(?:무슨 취향|뭐 보고 싶|뭐 재밌게 보|웃긴 밈|밈 쪽|병맛 쪽|어느 쪽이|정확히 뭘 원|딱 맞는 거 찾)[^?\n]*\?\s*$/, "").trim();
+  return r || reply;
+}
 function bubbleize(t: string): string {
   // 한 어절 못 자르는 긴 덩이는 공백 기준으로 하드 랩(~46자)
   const hardWrap = (s: string): string[] => {
@@ -1301,6 +1316,13 @@ ${parts.join("\n")}`;
       }
     } catch { /* */ }
 
+    // 👁 딜리버 모드 — 상대가 '보여줘/딴거/재밌는거/뭐없냐'로 콘텐츠를 원하면, 생성 '전에' 되묻기를 원천 차단.
+    const deliverMode = userMsg && !work && !rawSources.length &&
+      /(보여\s*줘|보여줄|보자|열어|암거나|아무거나|딴\s*거|다른\s*거|다른\s*것|재밌는\s*거|재밌는거|뭐\s*없|볼래|보고\s*싶|빨리\s*(딴|다른|줘|좀)|줘\s*봐|줘봐|더\s*줘)/.test(userMsg);
+    const deliverBlock = deliverMode
+      ? `👁 [지금은 '딜리버' 타이밍 — 상대가 콘텐츠를 '보여달라/달라'고 했다]: 하나 골라서 point_to(view)로 '실제로 열고', 그것에 대한 네 반응·코멘트 한두 마디만. 🚫 절대 금지: "어떤 거 좋아해?/무슨 취향이야?/연예인? 스포츠?/다른 거 볼래?/뭐 보고 싶어?" 같은 '되묻기·카테고리 물어보기'로 끝내지 마라 — 상대는 이미 '아무거나 재밌는 거 달라'고 했다. 되묻지 말고 그냥 하나 던지고 반응해라.`
+      : "";
+
     // 💸 프롬프트 캐싱 최적 순서: [전역고정] → [앱설정고정] → [history(append-only)] → [유저·턴별] → [유저메시지]
     //   고정·history를 앞에 모아 캐시 프리픽스를 최대화(긴 대화일수록 이득). dynamicCtx는 유저메시지 직전=최신성도 ↑.
     const messages: any[] = [
@@ -1312,6 +1334,7 @@ ${parts.join("\n")}`;
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
+      ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       { role: "user", content: userContent },
     ];
 
@@ -1430,6 +1453,18 @@ ${parts.join("\n")}`;
             }
           }
         } catch { /* best effort */ }
+      }
+    }
+    // 👁 딜리버 후 처리 — 콘텐츠를 실제로 열었으면(view/share): ①'취향 되묻기' 꼬리 제거 ②보여준 id 추적('딴거'=새것 보장).
+    {
+      const viewIds = actions.filter((a) => a.kind === "view" || a.kind === "share").map((a) => String(a.id)).filter(Boolean);
+      if (viewIds.length) {
+        reply = stripDeflect(reply);
+        try {
+          const prev = Array.isArray(rel?.recent_shown) ? rel.recent_shown : [];
+          const merged = [...viewIds, ...prev.filter((x: string) => !viewIds.includes(x))].slice(0, 25);
+          await supa.from("friend_relationship").update({ recent_shown: merged }).eq("user_id", uid);
+        } catch { /* */ }
       }
     }
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
@@ -1569,7 +1604,9 @@ ${parts.join("\n")}`;
     try { const ER = (globalThis as any).EdgeRuntime; if (ER && typeof ER.waitUntil === "function") ER.waitUntil(persist()); else await persist(); }
     catch { try { await persist(); } catch { /* */ } }
 
-    return json({ ok: true, reply, actions, friendName, depth: rel?.depth || 1, firstMeet });
+    // view/share 액션은 id가 비면 '안 열리는 유령칩'이라 제거
+    const cleanActions = actions.filter((a) => !((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()));
+    return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet });
   } catch (e) {
     return json({ ok: false, reason: "error", detail: String(e).slice(0, 300) }, 500);
   }
