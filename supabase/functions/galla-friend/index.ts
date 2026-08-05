@@ -325,7 +325,7 @@ const TOOLS = [
   { type: "function", function: { name: "web_search", description: "네이버 실시간 웹 검색. 맛집·가게·장소(kind:local), 최신 뉴스·사건(kind:news), 후기·정보(kind:blog), 그 외(kind:web). 현실 세계 사실을 물어보면 아는 척 뻥치지 말고 반드시 이걸로 확인해라.", parameters: { type: "object", properties: { query: { type: "string", description: "검색어(예: 매봉역 맛집)" }, kind: { type: "string", enum: ["local", "news", "blog", "web"] } }, required: ["query"] } } },
   // 🌐 내부 브라우저로 열어주기 — 검색 결과의 '링크' 값만 사용(URL 창작 절대 금지)
   { type: "function", function: { name: "open_link", description: "검색으로 찾은 가게·기사·페이지를 '바로 열어보기' 칩으로 건넨다(앱 내부 브라우저로 열림). url은 반드시 web_search 결과의 '링크' 값 그대로. 검색 기반 답변엔 이 칩을 1~2개 같이 건네라.", parameters: { type: "object", properties: { url: { type: "string" }, label: { type: "string", description: "칩 문구(예: 양심장어 보기)" } }, required: ["url"] } } },
-  { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함). 같이 보고 평론할 거리·이야깃거리로.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
+  { type: "function", function: { name: "hot_issues", description: "지금 갈라에서 뜨거운 이슈들(찬반 포함) 여러 개를 받는다. 같이 보고 평론할 거리로. ⚠️ 말할 땐 이 결과에 '실제로 있는' 이슈만 언급하고(로또·연예 등 없는 걸 지어내지 마라), 상대가 '딴거' 하면 방금 언급 안 한 '다른 id'를 골라라. point_to도 그 실제 id로.", parameters: { type: "object", properties: { limit: { type: "integer", description: "기본 6개" } } } } },
   { type: "function", function: { name: "search_content", description: "상대 취향·관심사에 '맞는' 갈라 콘텐츠를 키워드로 찾는다. 취향 파악 후 맞춤 콘텐츠로 이끌 때(일반 핫이슈 말고).", parameters: { type: "object", properties: { query: { type: "string" } }, required: ["query"] } } },
   { type: "function", function: { name: "galla_news", description: "최신 갈라뉴스. 같이 볼 화젯거리.", parameters: { type: "object", properties: { limit: { type: "integer" } } } } },
   { type: "function", function: { name: "platform_buzz", description: "갈라에서 요즘 화제인 공개 댓글·활발한 논객·뜨거운 판. 친구끼리 '뒷담화'하듯 사람들 얘기할 재료(공개활동만).", parameters: { type: "object", properties: {} } } },
@@ -537,7 +537,7 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
     if (!ideas.length) return { result: { ok: false } };
     return { action: { kind: "plan", ideas } };
   }
-  if (name === "hot_issues") return { result: await hotIssues() };
+  if (name === "hot_issues") return { result: await hotIssues(Math.min(Math.max(_n(args?.limit, 6), 3), 10)) };
   if (name === "search_content") return { result: await searchContent(args?.query) };
   if (name === "galla_news") return { result: await gallaNews() };
   if (name === "platform_buzz") return { result: await platformBuzz() };
@@ -1396,6 +1396,38 @@ ${parts.join("\n")}`;
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");
             const out3 = await runTool(c.function?.name, a3, uid, rel?.last_seen_at || null);
             if (out3.action && GEN_KINDS.has(out3.action.kind)) actions.push(out3.action);
+          }
+        } catch { /* best effort */ }
+      }
+    }
+    // 🛡👁 '보여줘/딴거' → 실제로 안 여는 '눈치없는 딴소리' 방어(사장님 실사용 재현).
+    //    상대가 콘텐츠를 열어달라 했는데 point_to(view/share) 액션이 없으면(내용만 떠들고 안 엶) → 강제로 열게 재시도.
+    {
+      const wantShow = userMsg && !work && !rawSources.length &&
+        /(보여\s*줘|보여줄|보자|열어|암거나|아무거나|딴\s*거|다른\s*거|다른\s*것|재밌는\s*거|재밌는거|뭐\s*없|볼래|보고\s*싶|빨리\s*(딴|다른|줘|좀)|줘\s*봐|줘봐|더\s*줘)/.test(userMsg);
+      const hasView = () => actions.some((a) => a.kind === "view" || a.kind === "share");
+      if (wantShow && !body?.meta && !hasView()) {
+        try {
+          const another = /(딴\s*거|다른\s*거|다른\s*것|또|더\s*줘|더\s*재밌)/.test(userMsg);
+          messages.push({ role: "system", content: `상대가 지금 '보여줘/딴거/줘'로 콘텐츠를 '열어달라'고 했는데 너는 내용만 말하고 point_to로 실제로 열지 않았다(= 눈치없는 딴소리, 아무것도 안 열림). 지금 즉시 도구를 호출해라: ${another ? "방금과 '다른' 새 콘텐츠를 hot_issues 또는 galla_news로 하나 찾아 그 id로 point_to(mode:view). 방금 얘기한 것과 같은 걸 또 열지 마라." : "방금 얘기한 그 갈라 콘텐츠를 point_to(mode:view, type, id)로 열어라. id를 모르면 hot_issues 또는 galla_news 또는 search_content로 그 콘텐츠를 다시 찾아 그 id로 point_to."} 잡담·감상·되묻기('어떻게 생각해' 등) 금지, 도구만 호출.` });
+          const js2 = await chatOnce(messages, { toolChoice: "required" });
+          const m2 = js2?.choices?.[0]?.message; if (m2) messages.push(m2);
+          for (const c of (m2?.tool_calls || [])) {
+            let a4: any = {}; try { a4 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+            await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "🔗 여는 중…");
+            const out4 = await runTool(c.function?.name, a4, uid, rel?.last_seen_at || null);
+            if (out4.action) actions.push(out4.action);
+            messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { queued: true } : (out4.result ?? {})).slice(0, 2000) });
+          }
+          // hot_issues/news만 부르고 아직 point_to 안 했으면, 그 id로 point_to까지 한 번 더 강제
+          if (!hasView()) {
+            messages.push({ role: "system", content: "이제 방금 찾은 콘텐츠 중 하나의 id로 point_to(mode:view, type, id)를 즉시 호출해 실제로 열어라. 도구만 호출." });
+            const js3 = await chatOnce(messages, { toolChoice: "required" });
+            for (const c of (js3?.choices?.[0]?.message?.tool_calls || [])) {
+              let a5: any = {}; try { a5 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+              const out5 = await runTool(c.function?.name, a5, uid, rel?.last_seen_at || null);
+              if (out5.action) actions.push(out5.action);
+            }
           }
         } catch { /* best effort */ }
       }
