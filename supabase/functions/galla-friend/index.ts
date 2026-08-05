@@ -1313,7 +1313,8 @@ Deno.serve(async (req) => {
     //   ③ 재방문 인사(빈 메시지): 최근 것 약간
     const { data: core } = await supa.from("friend_memory").select("kind,mkey,content,salience")
       .eq("user_id", uid).eq("status", "active")
-      .or("salience.gte.4,kind.in.(profile,stance,disliked)")
+      .or("salience.gte.4,kind.in.(profile,stance)")
+      .neq("kind", "disliked")   // 🚫 싫어하는 사람(부장 등)은 '상시 주입' 금지 — 관련 있을 때만 회상(recalled)으로. 매턴 부장 꺼내는 강박 차단.
       .order("salience", { ascending: false }).limit(15);
     let recalled: any[] = [];
     if (userMsg) {
@@ -1423,13 +1424,19 @@ ${parts.join("\n")}`;
       : effectiveOpen;
 
     // 😜 유머: 분위기가 가볍고(작업/근거 아님) 삐지지 않았을 때만, '아주 가끔'(약 16%) 아재개그 카드를 손에 쥐여준다.
+    // (a) 상대가 '웃겨달라/농담해달라' 명시 → DB 개그 강제(모델이 무시하면 아래 후처리 가드가 답에 박음). (b) 아니면 잡담에 아주 가끔.
+    const wantsFunny = !!(userMsg && /(웃겨\s*(봐|줘|바|보라)|웃기\s*게|웃긴\s*(얘기|거|말|농담|개그|드립)|재밌는\s*(얘기)\s*(해|없)|개그\s*(해|쳐|날려|하나|한번)|농담\s*(해|하나|한번)|드립\s*(쳐|날려|해))/.test(userMsg));
     let dadBlock = "";
+    let humorJoke: { q: string; a: string } | null = null;
     try {
       const emoV = _n(rel?.emotion?.valence, 8);
-      if (!work && !rawSources.length && userMsg && emoV > -12 && Math.random() < 0.16) {
+      if (wantsFunny || (!work && !rawSources.length && userMsg && emoV > -12 && Math.random() < 0.16)) {
         const dj = await pickDadJoke();
         if (dj && dj.q && dj.a) {
-          dadBlock = `😜 [유머 카드 — 지금 분위기 가벼우면 '아주 가끔' 이 아재개그를 자연스럽게 툭 던져도 좋다(억지 X, 안 어울리면 그냥 무시)]: "${dj.q} → ${dj.a}". 던질 거면 정색 퀴즈처럼 X, 네 말투로 자연스럽게("아 맞다 이거 앎? ${dj.q} ㅋㅋㅋ ${dj.a}" / "갑자기 생각났는데 ${dj.q} … ${dj.a} ㅋㅋ" 식으로). 상대가 진지하거나 너한테 삐졌으면 절대 쓰지 마라.`;
+          if (wantsFunny) humorJoke = dj;
+          dadBlock = wantsFunny
+            ? `😜🔥 [상대가 '웃겨달라/농담해달라'고 했다. 🚫 즉흥으로 안 웃긴 개그를 지어내지 마라(그게 제일 최악). 아래 '검증된 아재개그'를 네 말투로 툭 던져라 — 정색 퀴즈처럼 X, "야 이거 앎? ${dj.q} ㅋㅋㅋ ... ${dj.a}" 식으로 답까지 다 말해라. 앞 대화(영상 등) 얘기 말고 이 개그를 던져라.]: "${dj.q} → ${dj.a}"`
+            : `😜 [유머 카드 — 지금 분위기 가벼우면 '아주 가끔' 이 아재개그를 자연스럽게 툭(억지 X, 안 어울리면 무시)]: "${dj.q} → ${dj.a}". 정색 퀴즈 X, "아 맞다 이거 앎? ${dj.q} ㅋㅋㅋ ${dj.a}" 식. 진지·삐짐이면 절대 금지.`;
         }
       }
     } catch { /* */ }
@@ -1608,6 +1615,12 @@ ${parts.join("\n")}`;
         }
       }
     }
+    // 😜 유머 가드 — '웃겨달라' 했는데 모델이 DB개그를 무시하고 딴소리(영상 등)하면 → 그 검증된 개그로 답을 강제(즉흥 병맛 개그 방지).
+    if (wantsFunny && humorJoke && !reply.includes(humorJoke.a)) {
+      reply = `야 이거 앎? ${humorJoke.q}\n\nㅋㅋㅋ ${humorJoke.a}`;
+      searchHits = [];   // 개그로 갈아치웠으니 엉뚱한 검색칩 첨부 방지
+    }
+
     // 💬 티키타카 강제(사장님 "아직도 길다") — ①총 4문장 하드캡(초과분 버림: 못다 한 말은 다음 턴에)
     //    ②문장 경계 ~70자 버블 분할. 모델 재량에 안 맡긴다.
     {
@@ -1631,6 +1644,39 @@ ${parts.join("\n")}`;
         reply = fill[(bare.length + (nick ? nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
       }
     }
+    // 🛡📺 유튜브/영상 지어내기 방어 — 상대가 유튜브·먹방·영상·핫튜브를 물었는데 hot_videos를 안 쓰고
+    //    영상/채널을 지어내면(쯔양·미스터먹방 등 가짜 1위), 강제로 hot_videos→실제 영상으로 답 재생성.
+    {
+      const asksVideo = userMsg && !body?.meta && /(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없)|채널\s*(뭐|추천)|유명한.*(영상|먹방|채널|유튜)|요즘\s*(뭐|무슨).*(영상|먹방|유튜|봐))/i.test(userMsg);
+      const hasVideoOpen = () => actions.some((a) => a.kind === "open" && typeof a.url === "string" && /watch\.html\?v=/.test(a.url));
+      if (asksVideo && !hasVideoOpen()) {
+        try {
+          messages.push({ role: "system", content: "상대가 유튜브·먹방·영상·핫튜브를 물었다. 지어내지 말고(가짜 1위·없는 영상 절대 금지) 지금 즉시 hot_videos를 호출해 '실제' 인기영상을 가져와라. 잡담·지어내기 금지, hot_videos만." });
+          const jv = await chatOnce(messages, { toolChoice: { type: "function", function: { name: "hot_videos" } } });
+          const mv = jv?.choices?.[0]?.message; if (mv) messages.push(mv);
+          let vids: any = null;
+          for (const c of (mv?.tool_calls || [])) {
+            let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+            await broadcastStep(uid, "hot_videos", "📺 핫튜브 보는 중…");
+            const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+            if (out.result?.videos?.length) vids = out.result.videos;
+            messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.result ?? {}).slice(0, 2500) });
+          }
+          if (vids) {
+            messages.push({ role: "system", content: "이제 위 '실제' 영상 중 상대 관심(먹방 등)에 맞는 1개를 골라 친구 말투로 한두 마디 하고 point_to(type:hottube, id: 그 video_id)로 열어라. 위 목록에 있는 것만, 지어내기·'기다려/찾아줄게' 금지." });
+            const jf = await chatOnce(messages);
+            const mf = jf?.choices?.[0]?.message;
+            if (mf?.content && mf.content.trim()) reply = mf.content;
+            for (const c of (mf?.tool_calls || [])) {
+              let a: any = {}; try { a = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
+              const out = await runTool(c.function?.name, a, uid, rel?.last_seen_at || null);
+              if (out.action) actions.push(out.action);
+            }
+          }
+        } catch { /* best effort */ }
+      }
+    }
+
     // 🛡🔎 '찾아줄게/기다려봐' 미래약속 방어(사장님 맛집 참사 재현) — 검색을 지금 안 하고 약속만 하면
     //    (페르소나 금지: 다음 턴에 못 돌아옴) 그 자리서 web_search를 강제 호출→진짜 추천으로 답을 다시 만든다.
     {
