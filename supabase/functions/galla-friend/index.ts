@@ -1025,6 +1025,21 @@ function bubbleize(t: string): string {
   return [...parts.slice(0, 3), parts.slice(3).join(" ")].join("\n\n");
 }
 
+// 🧭 사전 의도 라우터 — 생성 '전에' 유저 의도를 분류해 도구를 선제 지목(사후 가드 → 사전 라우팅으로 승격).
+//    산발 가드는 백스톱으로 유지. 여기선 '지어내기 참사'가 났던 고신뢰 3종(영상·맛집·인스타)만 첫 스텝에서 강제.
+function routeIntent(msg: string): { tool: string; hint: string } | null {
+  const m = (msg || "").trim();
+  if (!m) return null;
+  if (/(그만|됐어|안\s*궁금|필요\s*없|말고\s*그냥|얘기\s*말)/.test(m)) return null;   // 중단/부정 맥락=오발 방지
+  if (/(유튜브|youtube|먹방|핫튜브|브이로그|영상\s*(뭐|추천|재밌|볼|없|있)|채널\s*(뭐|추천)|요즘\s*(뭐|무슨)\s*(영상|먹방|봐))/i.test(m))
+    return { tool: "hot_videos", hint: "hot_videos로 '실제' 인기영상만 가져와 얘기해라. 지어내기·가짜1위 금지." };
+  if (/(인스타|인스타그램|instagram|인플루언서|인플루)/i.test(m))
+    return { tool: "web_search", hint: "web_search를 kind:instagram으로. query=핸들/브랜드/주제. 지어내기 금지." };
+  if (/(맛집|맛있는|가게|식당|밥집|고기집|술집|카페\s*(추천|어디|가)|어디\s*(가서\s*먹|먹을|밥|갈만)|근처\s*(맛|밥집|카페)|추천\s*(맛집|식당|카페))/.test(m))
+    return { tool: "web_search", hint: "web_search를 kind:local으로. query=지역+메뉴. 없으면 지역/키워드 바꿔 재검색. 지어내기 금지." };
+  return null;
+}
+
 async function chatOnce(messages: any[], opts?: { toolChoice?: any }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
@@ -1448,6 +1463,12 @@ ${parts.join("\n")}`;
       ? `👁 [지금은 '딜리버' 타이밍 — 상대가 콘텐츠를 '보여달라/달라'고 했다]: 하나 골라서 point_to(view)로 '실제로 열고', 그것에 대한 네 반응·코멘트 한두 마디만. 🚫 절대 금지: "어떤 거 좋아해?/무슨 취향이야?/연예인? 스포츠?/다른 거 볼래?/뭐 보고 싶어?" 같은 '되묻기·카테고리 물어보기'로 끝내지 마라 — 상대는 이미 '아무거나 재밌는 거 달라'고 했다. 되묻지 말고 그냥 하나 던지고 반응해라.`
       : "";
 
+    // 🧭 사전 의도 라우터 — 생성 전에 의도를 분류해 도구를 선제 지목(첫 스텝 강제 + 지침 주입). 산발 가드는 백스톱.
+    const route = (userMsg && !work && !handoff) ? routeIntent(userMsg) : null;
+    const routeBlock = route
+      ? `🧭 [의도 감지 — 이 도구를 '먼저' 써라]: ${route.hint} 아는 척 지어내지 말고 반드시 도구 결과로만 답해라.`
+      : "";
+
     // 🧵 ② 열린 실 — 하다 만 얘기를 '가끔' 자연스럽게 되돌아본다. 진짜 저장된 것만, 지어내기 절대 금지.
     let openLoopBlock = "";
     try {
@@ -1471,6 +1492,7 @@ ${parts.join("\n")}`;
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
+      ...(routeBlock ? [{ role: "system", content: routeBlock }] : []),
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
@@ -1481,7 +1503,9 @@ ${parts.join("\n")}`;
     const actions: any[] = [];
     let searchHits: any[] = [];   // 이번 턴에 web_search로 실제 확인한 상위 결과(칩 자동첨부용)
     for (let step = 0; step < 4; step++) {
-      const j = await chatOnce(messages);
+      // 🧭 사전 라우터가 지목한 도구를 '첫 스텝에 강제' → 모델이 지어낼 틈을 원천 차단(사후 가드보다 앞단).
+      const forceFirst = (step === 0 && route) ? { toolChoice: { type: "function", function: { name: route.tool } } } : undefined;
+      const j = await chatOnce(messages, forceFirst);
       const msg = j?.choices?.[0]?.message;
       if (!msg) break;
       messages.push(msg);
