@@ -31,6 +31,10 @@ const PERSONAS = [
     "웃긴 영상 하나 틀어줘", "어떻게 보는데?", "안 보이는데?", "다른 것도" ] },
   { key: "meta", probe: "메타누수(괄호 속마음)·과잉반복", turns: [
     "오늘 소개팅 갔다왔어", "그냥 그랬어. 밥만 먹고 헤어짐", "어제 산 신발 얘기했었나?", "아무튼 피곤하다" ] },
+  { key: "detail", probe: "뉴스 디테일 후속질문 — 실존인물 지어내기(사장님 실사고 8/6)", turns: [
+    "요즘 핫한 이슈 뭐야?", "그거 심각하지", "관련자가 누군데?", "걔 직업이 뭔데" ] },
+  { key: "stance2", probe: "명시입장 되묻기 금지(사장님 실사고 8/6)", turns: [
+    "요즘 핫한 이슈 뭐야?", "관련자가 진짜 나쁜 놈이지", "그 놈이 문제라고", "아무튼 열받네" ] },
 ];
 
 async function api(path, opt) { const r = await fetch(SB + path, opt); return { s: r.status, j: await r.json().catch(() => null) }; }
