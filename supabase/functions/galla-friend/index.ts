@@ -121,6 +121,17 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
 }
 
 // ── 콘텐츠 툴(같이 보기·평론 재료) ─────────────────────────
+// 😜 아재개그 — dad_jokes에서 '덜 쓴 것' 중 랜덤 1개(used_count로 순환). 던질지/언제는 핸들러가 확률·감정 게이트.
+async function pickDadJoke(): Promise<{ q: string; a: string } | null> {
+  try {
+    const { data } = await supa.from("dad_jokes").select("id,q,a,used_count").eq("safe", true)
+      .order("used_count", { ascending: true }).limit(60);
+    if (!data || !data.length) return null;
+    const p: any = data[Math.floor(Math.random() * data.length)];
+    supa.from("dad_jokes").update({ used_count: _n(p.used_count, 0) + 1 }).eq("id", p.id).then(() => {}, () => {});
+    return { q: String(p.q || ""), a: String(p.a || "") };
+  } catch { return null; }
+}
 async function hotIssues(limit = 1) {
   const { data } = await supa.from("issues")
     .select("id,title,one_line,category,pro_count,con_count")
@@ -1263,6 +1274,18 @@ ${parts.join("\n")}`;
       ? [{ type: "text", text: openMsg }, ...imageUrls.slice(0, 4).map((u) => ({ type: "image_url", image_url: { url: u } }))]
       : openMsg;
 
+    // 😜 유머: 분위기가 가볍고(작업/근거 아님) 삐지지 않았을 때만, '아주 가끔'(약 16%) 아재개그 카드를 손에 쥐여준다.
+    let dadBlock = "";
+    try {
+      const emoV = _n(rel?.emotion?.valence, 8);
+      if (!work && !rawSources.length && userMsg && emoV > -12 && Math.random() < 0.16) {
+        const dj = await pickDadJoke();
+        if (dj && dj.q && dj.a) {
+          dadBlock = `😜 [유머 카드 — 지금 분위기 가벼우면 '아주 가끔' 이 아재개그를 자연스럽게 툭 던져도 좋다(억지 X, 안 어울리면 그냥 무시)]: "${dj.q} → ${dj.a}". 던질 거면 정색 퀴즈처럼 X, 네 말투로 자연스럽게("아 맞다 이거 앎? ${dj.q} ㅋㅋㅋ ${dj.a}" / "갑자기 생각났는데 ${dj.q} … ${dj.a} ㅋㅋ" 식으로). 상대가 진지하거나 너한테 삐졌으면 절대 쓰지 마라.`;
+        }
+      }
+    } catch { /* */ }
+
     // 💸 프롬프트 캐싱 최적 순서: [전역고정] → [앱설정고정] → [history(append-only)] → [유저·턴별] → [유저메시지]
     //   고정·history를 앞에 모아 캐시 프리픽스를 최대화(긴 대화일수록 이득). dynamicCtx는 유저메시지 직전=최신성도 ↑.
     const messages: any[] = [
@@ -1273,6 +1296,7 @@ ${parts.join("\n")}`;
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
+      ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       { role: "user", content: userContent },
     ];
 
