@@ -964,6 +964,7 @@
     const inp = "width:100%;box-sizing:border-box;padding:8px 10px;background:#0d1420;border:1px solid #26364c;border-radius:8px;color:#e6f0fb;font-size:13px;font-family:inherit";
     main().innerHTML = `<h1 class="ad-h1">🧠 브레인 엔진 <span style="font-size:13px;color:#7d8ba0;font-weight:600">— 성공 유형 패턴(AI에 주입돼 제목·썸네일·대본 생성). 계속 쌓을수록 똑똑해집니다.</span></h1>
       <div id="b-stats" style="margin-bottom:16px"></div>
+      <div id="b-learn" style="margin-bottom:16px"></div>
       <div style="background:#111a28;border:1px solid #223047;border-radius:14px;padding:14px;margin-bottom:16px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
           <label style="font-size:11px;color:#8fa0b5">종류<select id="bf-kind" style="${inp}">${BRAIN_KINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>
@@ -1014,6 +1015,29 @@
           ${cell("결제 유저", s.paying_users || 0, "GP 실차감")}
           ${cell("발행 콘텐츠", s.published_posts || 0, "숏판·롱판")}
         </div>`;
+    })();
+
+    // 🏆 학습엔진 현황 — 자가개선 루프(수집→보상→기억개선→증류)가 실제로 도는지(집계만, 기억내용 미노출)
+    (async () => {
+      const s = await rpc("admin_learning_stats", {});
+      const box = g("b-learn"); if (!box) return;
+      if (!s || s.error) { box.innerHTML = ""; return; }
+      const cell = (label, val, sub) => `<div style="flex:1;min-width:96px;background:#111a28;border:1px solid #223047;border-radius:12px;padding:11px 13px">
+        <div style="font-size:11px;color:#7d8ba0;margin-bottom:3px">${label}</div>
+        <div style="font-size:20px;font-weight:800;color:#e6f0fb">${val}</div>${sub ? `<div style="font-size:10px;color:#5f6c80;margin-top:2px">${sub}</div>` : ""}</div>`;
+      const sft = s.sft || {}, rw = s.reward || {}, di = s.distill || {}, mem = s.memory || {}, cr = s.crons || {};
+      const srcTxt = Object.entries(sft.by_source || {}).map(([k, n]) => `${k} ${n}`).join(" · ");
+      const cronBad = Object.entries(cr).filter(([, v]) => v && v.status !== "succeeded");
+      box.innerHTML = `<div style="font-size:12px;color:#7d8ba0;font-weight:700;margin-bottom:7px">🏆 학습엔진(자가개선 루프) — 대화가 곧 학습데이터</div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          ${cell("SFT 축적", (sft.total || 0).toLocaleString(), srcTxt || "-")}
+          ${cell("최근 7일", sft.added_7d || 0, "새 샘플")}
+          ${cell("보상 평균", `${rw.avg_companion ?? "-"} / ${rw.avg_agent ?? "-"}`, "컴패니언/에이전트")}
+          ${cell("증류", di.teacher_total || 0, `자동 ${di.auto_total || 0} · 대기 ${rw.distill_queue || 0}`)}
+          ${cell("기억 학습", `${mem.winners || 0}👍 ${mem.losers || 0}👎`, `활성 ${mem.active || 0} · 보상반영 ${mem.rewarded || 0}`)}
+        </div>
+        ${cronBad.length ? `<div style="margin-top:8px;font-size:11px;color:#ff8a8a">⚠️ 크론 이상: ${cronBad.map(([k, v]) => `${k}(${v.status})`).join(", ")}</div>`
+          : `<div style="margin-top:8px;font-size:10px;color:#5f6c80">크론 정상 — ${Object.entries(cr).map(([k, v]) => `${k.replace(/-daily|_daily|_job/g, "")} ${v?.at || ""}`).join(" · ")}</div>`}`;
     })();
 
     g("bf-reset").onclick = () => fillForm(null);
