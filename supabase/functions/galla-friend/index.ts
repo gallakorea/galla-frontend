@@ -276,7 +276,7 @@ ${pats.map((p: any) => `- [${p.style}] ${p.formula}${p.examples ? " (예: " + p.
         messages: [{ role: "system", content: sys }, { role: "user", content: `주제: ${topic}` }] }),
     });
     const j = await r.json();
-    const parsed = JSON.parse(j?.choices?.[0]?.message?.content || "{}");
+    const parsed = safeJson(j?.choices?.[0]?.message?.content || "{}");
     const titles = Array.isArray(parsed.titles) ? parsed.titles : [];
     return titles.map((t: any) => ({ text: String(t?.text || "").slice(0, 80), style: String(t?.style || "").slice(0, 30) })).filter((t: any) => t.text).slice(0, 8);
   } catch { return []; }
@@ -1025,6 +1025,14 @@ function bubbleize(t: string): string {
   return [...parts.slice(0, 3), parts.slice(3).join(" ")].join("\n\n");
 }
 
+// 🛡 견고한 JSON 파서 — response_format:json_object로 이미 강제되지만, 드물게 코드펜스/앞뒤 잡소리 섞여도 안 죽게.
+function safeJson(text: string): any {
+  if (!text || !text.trim()) return {};
+  try { return JSON.parse(text); } catch { /* */ }
+  try { const m = text.replace(/```(?:json)?/gi, "").match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); } catch { /* */ }
+  return {};
+}
+
 // 🧭 사전 의도 라우터 — 생성 '전에' 유저 의도를 분류해 도구를 선제 지목(사후 가드 → 사전 라우팅으로 승격).
 //    산발 가드는 백스톱으로 유지. 여기선 '지어내기 참사'가 났던 고신뢰 3종(영상·맛집·인스타)만 첫 스텝에서 강제.
 function routeIntent(msg: string): { tool: string; hint: string } | null {
@@ -1041,6 +1049,8 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
     return { tool: "hot_issues", hint: "hot_issues로 '실제' 뜨거운 이슈만(찬반 포함). 없는 이슈·로또/연예 지어내기 금지." };
   if (/(뉴스\s*(뭐|있|없|보여|추천|하나|줘)|무슨\s*(일|뉴스)|오늘\s*(뉴스|무슨)|요즘\s*무슨\s*일|속보|갈라뉴스)/.test(m))
     return { tool: "galla_news", hint: "galla_news로 '실제' 뉴스만 요약해 얘기. 없는 뉴스 지어내기 금지." };
+  if (/(광장\s*(뭐|무슨|글|재밌|화제|판)|무슨\s*썰|재밌는\s*썰|화제\s*(글|되는)|사람들\s*(뭐\s*)?(얘기|해|하는)|요즘\s*(무슨\s*)?판|뜨거운\s*판)/.test(m))
+    return { tool: "platform_buzz", hint: "platform_buzz로 '실제' 화제 판·공개댓글·논객만. 없는 썰 지어내기 금지." };
   return null;
 }
 
@@ -1139,8 +1149,7 @@ mood 값 3단계(달달↔삐짐 진폭):
       }),
     });
     const j = await r.json();
-    const txt = j?.choices?.[0]?.message?.content || "{}";
-    const parsed = JSON.parse(txt);
+    const parsed = safeJson(j?.choices?.[0]?.message?.content || "{}");
     return {
       memories: Array.isArray(parsed.memories) ? parsed.memories.slice(0, 6) : [],
       mood: ["sulky", "normal", "warm"].includes(parsed.mood) ? parsed.mood : null,
@@ -1205,7 +1214,7 @@ JSON: {"insights":["..."],"supersede":["..."]}
       }),
     });
     const j = await r.json();
-    const parsed = JSON.parse(j?.choices?.[0]?.message?.content || "{}");
+    const parsed = safeJson(j?.choices?.[0]?.message?.content || "{}");
     for (const s of (Array.isArray(parsed.supersede) ? parsed.supersede.slice(0, 3) : [])) {
       const f = String(s || "").slice(0, 60).trim(); if (f.length < 4) continue;
       try { await supa.from("friend_memory").update({ status: "superseded" }).eq("user_id", uid).eq("status", "active").eq("kind", "insight").ilike("content", "%" + f + "%"); } catch { /* */ }
