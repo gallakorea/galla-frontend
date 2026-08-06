@@ -1059,7 +1059,9 @@
     if(r.friendName&&r.friendName!==friendName){ friendName=r.friendName; setTitle(); }
     if((voiceOut || speakReply) && r.reply) speak(r.reply);   // 🔊 토글 켜져 있으면 답을 읽어준다(무료 온디바이스)
     saveChat();                                  // 대화 이어가기 — 매 턴 저장
-    if(!window.GALLA_IS_APP) maybeWebNudge();     // 🌐 웹: 몇 번 대화하면 자연스럽게 앱 다운로드 유도
+    // 🌐 웹 앱 넛지 — 단 '창작 흐름'(초안·썸네일 등 액션 나온 턴)엔 끼어들지 않는다(몰입 깨짐, 실사용 마찰).
+    var creating = acts.some(function(a){ return /^draft|^gen|^editdraft|^plan|^titles|^script/.test(a.kind); });
+    if(!window.GALLA_IS_APP && !creating && !_dock) maybeWebNudge();
     busy=false; sendEl.disabled=false;
   }
 

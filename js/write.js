@@ -97,6 +97,30 @@ function initWritePage(ctx) {
         if ('faction_a' in f) setVal(fA, f.faction_a);
         if ('faction_b' in f) setVal(fB, f.faction_b);
       },
+      // 🚀 도킹 [올리기↑] — 스텝 인지: 1단계면 다음으로, 2단계면 필수(입장·기부처) 점검 후 미리보기로.
+      //    이전엔 submit 자체가 없어 버튼이 '무반응'이었음(실사용 E2E 마찰#6) + 필수 미충족이 조용히 실패(#7).
+      submit() {
+        try {
+          const nextBtn = [...document.querySelectorAll('button')].find(b => b.offsetParent && /다음 단계/.test(b.textContent));
+          if (nextBtn) { nextBtn.click(); return; }   // 스텝1 → 스텝2
+          // 스텝2 — 필수 미충족이면 정확히 짚고 스크롤(조용한 실패 방지)
+          const need = [];
+          if (categoryEl && !categoryEl.value) need.push(['카테고리를 골라주세요', categoryEl]);
+          const st = document.querySelector('input[name="authorStance"]:checked');
+          if (!st) need.push(['내 입장(찬성/반대)을 골라주세요 — 발의자도 참전!', document.querySelector('input[name="authorStance"]')]);
+          const don = document.getElementById('donationTarget');
+          if (don && !don.value) need.push(['기부처를 골라주세요', don]);
+          if (need.length) {
+            const [msg, el] = need[0];
+            try { (el.closest('label,fieldset,div') || el).scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+            (window.GALLA_toast || alert)(msg);
+            return;
+          }
+          const prevBtn = [...document.querySelectorAll('button')].find(b => b.offsetParent && /미리보기/.test(b.textContent));
+          if (prevBtn) { prevBtn.click(); return; }
+          if (form && form.requestSubmit) form.requestSubmit();
+        } catch (_) {}
+      },
       // 🖼 갈비스 AI 썸네일 → 미디어 캐러셀 첫 항목(표지)으로 자동 첨부
       setThumbnail(url) {
         if (!url) return;
