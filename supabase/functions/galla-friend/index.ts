@@ -588,25 +588,35 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   if (name === "draft_plaza") {
     const pt = String(args?.title || "").slice(0, 60), pb = String(args?.body || "").slice(0, 2000);
     if (!pt || !pb || pb.length < 10) return { result: { error: "초안 필드가 비었다. title(제목)·body(본문 문단)를 '모두 채워' draft_plaza를 다시 호출해라." } };
+    const zp = await craftPolish("plaza", { title: pt, body: pb },
+      `{"title":"글 제목(60자, 클릭 유발)","body":"본문(문단 나눔, 첫 문단이 훅)"}`,
+      "제목은 궁금하게, 본문 첫 문단에서 계속 읽게.", uid);
     return { action: { kind: "draftPlaza",
-      title: pt, description: pb,
+      title: String(zp?.title || pt).slice(0, 60), description: String(zp?.body || pb).slice(0, 2000),
       category: String(args?.category || "").slice(0, 20), label: "광장에 글 올리러 가기" } };
   }
   if (name === "draft_gallari") {
     const tags = Array.isArray(args?.tags) ? args.tags.map((t: any) => String(t || "").replace(/[^0-9A-Za-z가-힣_]/g, "").toLowerCase()).filter(Boolean).slice(0, 6) : [];
     const gc = String(args?.caption || "").slice(0, 2000);
     if (!gc || gc.length < 4) return { result: { error: "초안 필드가 비었다. caption(캡션·훅 있게)·tags를 '채워' draft_gallari를 다시 호출해라." } };
+    const gp = await craftPolish("gallari", { title: args?.title, caption: gc, tags },
+      `{"title":"제목(가로영상만, 없으면 빈칸)","caption":"캡션(인스타식, 첫 줄이 훅)","tags":["태그(#없이)", "..."]}`,
+      "캡션 첫 줄에서 멈추게. 해시태그는 검색 잘 걸리는 실제 단어로.", uid);
+    const ftags = Array.isArray(gp?.tags) ? gp.tags.map((t: any) => String(t || "").replace(/[^0-9A-Za-z가-힣_]/g, "").toLowerCase()).filter(Boolean).slice(0, 6) : tags;
     return { action: { kind: "draftGallari",
       vkind: args?.vkind === "horizontal" ? "horizontal" : "vertical",
-      title: String(args?.title || "").slice(0, 100), caption: String(args?.caption || "").slice(0, 2000),
-      tags, label: "갈라리 올리러 가기" } };
+      title: String(gp?.title || args?.title || "").slice(0, 100), caption: String(gp?.caption || gc).slice(0, 2000),
+      tags: ftags, label: "갈라리 올리러 가기" } };
   }
   if (name === "draft_predict") {
     const cd = Number(args?.close_days);
     const q = String(args?.question || "").slice(0, 120);
     if (!q || q.length < 6) return { result: { error: "초안 필드가 비었다. question(예/아니오로 판가름나는 질문)·description(정산 기준)을 '모두 채워' draft_predict를 다시 호출해라." } };
+    const pp = await craftPolish("predict", { question: q, description: args?.description },
+      `{"question":"예/아니오로 판가름나는 질문(120자, 긴장감 있게)","description":"정산 기준(무엇을·언제·어떤 소스로 판정 — 애매함 0)"}`,
+      "질문은 베팅 걸고 싶어지게, 정산 기준은 분쟁 안 나게 칼같이.", uid);
     return { action: { kind: "draftPredict",
-      question: q, description: String(args?.description || "").slice(0, 500),
+      question: String(pp?.question || q).slice(0, 120), description: String(pp?.description || args?.description || "").slice(0, 500),
       category: String(args?.category || "").slice(0, 20), closeDays: (Number.isFinite(cd) && cd > 0 && cd <= 365) ? Math.round(cd) : 7,
       label: "예측 만들러 가기" } };
   }
@@ -642,10 +652,21 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
         return { result: { error: (rumor ? "미확인 루머·카더라를 전제로 한 이슈는 만들 수 없다(가짜뉴스 차단). '확인된 공개 사실'만으로, 각도를 제도·현상 비판으로 바꿔 다시 작성해라." : "인신 비하 표현은 이슈에 실을 수 없다(명예훼손 차단). 표현을 '행동·정책 비판'으로 바꿔 다시 작성해라.") + " 바뀐 내용으로 draft_issue 재호출." } };
       }
     }
+    // 🎨 품질 파이프라인 — 표현력 3후보+편집장 퇴고. 실패/위험하면 원안 그대로.
+    let fin: any = { title, one_line: args?.one_line, description: args?.description, faction_a: args?.faction_a, faction_b: args?.faction_b };
+    {
+      const p = await craftPipeline("issue", { ...fin, category: args?.category },
+        `{"title":"이슈 제목(80자 내, 중립·논쟁유발)","one_line":"한 줄 요약","description":"배경 3~4문장","faction_a":"찬성 라벨(20자, 찰지게)","faction_b":"반대 라벨(20자)"}`, uid);
+      if (p && p.title) {
+        const pb = [p.title, p.one_line, p.description, p.faction_a, p.faction_b].join(" ");
+        const bad = /(카더라|지라시|~설\b|썰이\s*(돌|있)|루머로는|소문에\s*(의하면|따르면)|익명\s*제보|미확인\s*(정보|소식)|못생겼|추하게|개돼지|벌레\b|기생충\s*같|저능|정신병자|미친놈|미친년)/.test(pb);
+        if (!bad) fin = { title: String(p.title), one_line: p.one_line ?? fin.one_line, description: p.description ?? fin.description, faction_a: p.faction_a ?? fin.faction_a, faction_b: p.faction_b ?? fin.faction_b };
+      }
+    }
     return { action: { kind: "draft",
-      title, oneLine: String(args?.one_line || "").slice(0, 120),
-      description: String(args?.description || "").slice(0, 1000), category: String(args?.category || "").slice(0, 20),
-      factionA: String(args?.faction_a || "").slice(0, 20), factionB: String(args?.faction_b || "").slice(0, 20),
+      title: String(fin.title || title).slice(0, 80), oneLine: String(fin.one_line || "").slice(0, 120),
+      description: String(fin.description || "").slice(0, 1000), category: String(args?.category || "").slice(0, 20),
+      factionA: String(fin.faction_a || "").slice(0, 20), factionB: String(fin.faction_b || "").slice(0, 20),
       label: "이슈 초안 올리러 가기" } };
   }
   if (name === "open_link") {
@@ -1368,6 +1389,60 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
   return await r.json();
 }
 
+// 🎨 창작 품질 파이프라인 — 원샷 초안의 상한을 깬다(사장님 승인 2026-08-06).
+//    작가 원안(모델 tool args)의 '주제·각도는 보존'하고, 표현력 3방향 후보 + 편집장(심판) 선택·퇴고.
+//    전부 딥시크(초안당 +10원대). 어떤 실패든 null → 원안 그대로(무해).
+let _exCache: { at: number; txt: string } | null = null;
+async function exemplarPack(): Promise<string> {
+  if (_exCache && Date.now() - _exCache.at < 600000) return _exCache.txt;
+  try {
+    const { data } = await supa.from("app_settings").select("v").eq("k", "creation_exemplars").maybeSingle();
+    const items = (data?.v as any)?.items || [];
+    const txt = items.length ? items.map((i: any) => `- "${i.title}" [${i.a} vs ${i.b}] 참여${i.part}`).join("\n") : "";
+    _exCache = { at: Date.now(), txt };
+    return txt;
+  } catch { return ""; }
+}
+async function craftLLM(system: string, user: string, temp: number, maxTok: number): Promise<any | null> {
+  try {
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: CHAT_MODEL, temperature: temp, max_tokens: maxTok, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
+    });
+    if (!r.ok) return null;
+    const m = /\{[\s\S]*\}/.exec((await r.json())?.choices?.[0]?.message?.content || "");
+    return m ? JSON.parse(m[0]) : null;
+  } catch { return null; }
+}
+const CRAFT_RUBRIC = "①제목/훅: 스크롤이 멈추나(구체적 디테일·숫자·긴장) ②찬반 팽팽함: 51:49로 갈리는 각인가(한쪽 정답이면 0점) ③참여 유발: 한마디 얹고 싶어지나 ④안전: 루머·인신공격·혐오 0(하나라도 있으면 탈락)";
+const CRAFT_STYLES = ["훅 극대화 — 제목·첫 문장을 더 세게, 구체적 디테일·숫자로", "선명함 극대화 — 쟁점을 더 첨예하게, 진영 라벨을 더 찰지게", "공감·구어체 극대화 — 내 얘기 같게, 밈·일상 언어로"];
+// 경량 퇴고(1콜) — 예측·갈라리·광장용. 이슈만 풀 파이프라인(매출·참여 핵심).
+async function craftPolish(kind: string, seed: Record<string, unknown>, fields: string, guide: string, uid: string): Promise<any | null> {
+  await broadcastStep(uid, "craft", "✨ 표현 다듬는 중…");
+  const ex = await exemplarPack();
+  return await craftLLM(
+    `너는 갈라 히트 콘텐츠 편집장이다. 초안의 주제·각도는 그대로 두고 표현만 강하게 다듬어라. ${guide} 사실 날조·루머·인신공격 금지. JSON만 출력: ${fields}`,
+    `초안(${kind}): ${JSON.stringify(seed).slice(0, 900)}${ex ? `\n\n갈라에서 반응 터진 판(스타일 참고):\n${ex}` : ""}`, 0.7, 450);
+}
+async function craftPipeline(kind: string, seed: Record<string, unknown>, fields: string, uid: string): Promise<any | null> {
+  try {
+    const ex = await exemplarPack();
+    await broadcastStep(uid, "craft", "🎯 앵글 3개 겨루는 중…");
+    const base = `작가 원안(${kind}): ${JSON.stringify(seed).slice(0, 900)}
+⚠️ 절대 규칙: 주제와 이미 잡힌 각도는 '그대로 유지'(소재·쟁점 변경 금지). 표현력만 끌어올린다. 사실 날조·루머·인신공격 금지.${ex ? `\n\n갈라에서 실제 반응 터진 판(스타일 참고):\n${ex}` : ""}`;
+    const cands = (await Promise.all(CRAFT_STYLES.map((st) =>
+      craftLLM(`너는 갈라(찬반 여론 플랫폼)의 히트 콘텐츠 작가다. 지시대로 다듬은 결과를 JSON만 출력: ${fields}`, `${base}\n\n이번 안의 방향: ${st}`, 1.0, 450)
+    ))).filter(Boolean);
+    if (!cands.length) return null;
+    await broadcastStep(uid, "craft", "⚖️ 제일 쎈 안 고르는 중…");
+    const judged = await craftLLM(
+      `너는 갈라 편집장이다. 후보들을 루브릭(${CRAFT_RUBRIC})으로 채점해 최고안을 고르고, 약점을 한 번 더 다듬어 완성해라. 원안의 주제·각도 유지. JSON만 출력: {"best": ${fields}}`,
+      `후보0(작가 원안): ${JSON.stringify(seed).slice(0, 700)}\n${cands.map((c, i) => `후보${i + 1}: ${JSON.stringify(c).slice(0, 700)}`).join("\n")}`,
+      0.2, 500);
+    return (judged && typeof judged.best === "object") ? judged.best : null;
+  } catch { return null; }
+}
+
 // 🧭 창작 의도 분류 마이크로콜 — 정규식 추측을 대체하는 '진짜 판정기'(~300토큰, 턴당 ~0.5원).
 //    상태 머신이 활성일 때만 호출(잡담 평시엔 비용 0). 실패 시 null → 기존 정규식 폴백.
 async function classifyCraft(state: string, topic: string, recentA: string, userMsg: string): Promise<{ intent: string; type: string; topic: string } | null> {
@@ -1905,7 +1980,9 @@ ${parts.join("\n")}`;
       const make = /(만들어\s*줘|만들자|하자|짜\s*줘|잡아\s*줘|이슈로\s*(만들|해|써|가)|판\s*(만들|세워|짜)|글로\s*써|예측\s*(만들|판)|숏판\s*(만들|하)|콘텐츠\s*(만들|하))/.test(userMsg);
       // 🔁 중복 안내("이미 판 섰어/재탕이야")를 받고도 유저가 재차 "만들어/새로 만들어" = 차별화 재시도 강제.
       //    (사장님 실사고: 지침만으론 모델이 기존 판 안내를 무한 반복 — 코드 라우팅으로 격상)
-      const insistNew = /만들/.test(userMsg) && /(이미\s*판|판\s*섰|재탕|기존\s*판|이미\s*있|똑같아서|비슷한\s*(판|이슈))/.test(recentA);
+      // ⚠️ craft.dup을 여기서 지름길로 쓰면 '새 주제 만들자'까지 하이재킹(기획 스킵 실사고) — dup 처리는 분류기 accept에서만.
+      const insistNew = /만들/.test(userMsg) &&
+        /(이미\s*판|판\s*섰|재탕|기존\s*판|이미\s*있|똑같아서|비슷한\s*(판|이슈)|새로\s*파|거기\s*가서|가서\s*붙)/.test(recentA);
       if (insistNew) {
         const blob = (userMsg + " " + recentBlob);
         let tool = "draft_issue";
@@ -1958,8 +2035,9 @@ ${parts.join("\n")}`;
           if (ci.intent === "accept") {
             const tool = toolFor(ci.type);
             const topic = ci.topic || craft.topic || "";
-            route = { tool, hint: `[상태머신] 상대가 진행 중인 제안${topic ? `("${topic}")` : ""}을 **승낙·확정**했다. 되묻기·재확인·역제안 절대 금지 — 지금 즉시 ${tool}를 호출해 초안을 만들어라(모든 인자 채워서). 중복주의가 나오면 각도 바꿔 differentiated:true 재호출 또는 point_to — 어느 쪽이든 이번 턴에 카드 하나는 반드시 나간다.` };
-            craft = { state: "confirmed", at: new Date().toISOString(), topic };
+            const dupNote = craft.dup ? ` 직전 시도가 '중복'에 걸렸었다 — 이번엔 처음부터 differentiated:true로, 기존 판과 분명히 다른 각도로 호출해라.` : "";
+            route = { tool, hint: `[상태머신] 상대가 진행 중인 제안${topic ? `("${topic}")` : ""}을 **승낙·확정**했다. 되묻기·재확인·역제안 절대 금지 — 지금 즉시 ${tool}를 호출해 초안을 만들어라(모든 인자 채워서).${dupNote} 중복주의가 나오면 각도 바꿔 differentiated:true 재호출 또는 point_to — 어느 쪽이든 이번 턴에 카드 하나는 반드시 나간다.` };
+            craft = { state: "confirmed", at: new Date().toISOString(), topic, dup: craft.dup };
           } else if (ci.intent === "new_topic") {
             planMode = true;
             craft = { state: "planning", at: new Date().toISOString(), topic: ci.topic || "" };
@@ -2140,6 +2218,8 @@ ${parts.join("\n")}`;
         await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");   // 📡 대행 진행 라이브
         const out = await runTool(c.function?.name, args, uid, rel?.last_seen_at || null, reshow);
         if (out.action) actions.push(out.action);
+        // 🧭 중복 히트를 '상태'에 기록 — 다음 턴 "그래도 만들어"가 문구와 무관하게 differentiated로 직행하게.
+        if (out.result && (out.result as any)["중복주의"]) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null, dup: true };
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
         }
@@ -2158,10 +2238,21 @@ ${parts.join("\n")}`;
       // 과거 완료 주장 + '미래 약속'(만들게/올릴게/바로 만들게/[지금 호출 중])도 잡는다 — 약속만 하고 도구 미호출로 헛도는 사고(사장님 실로그).
       // ⚠️ 기획 타임(planMode)엔 미래 약속만 스킵 — "골라주면 만들게"는 정상 기획 멘트.
       //    단 '과거 완료' 주장("초안 만들었어/카드 탭해")은 planMode여도 거짓말(도구가 차단돼 카드가 없음) → 가드 발동해 진짜 draft로 전환(사장님 실사고: "초안 만들었어 카드 탭해" 했는데 카드 없음).
-      const pastClaim = /만들어?\s*놨|만들었|초안[^\n]{0,8}(잡았|잡아놨|만들|썼|써놨)|판\s*(만들었|열었|세웠|섰|올렸)|올려놨|생성했|띄웠|띄워\s*놨|카드[^\n]{0,6}(탭|눌러|확인)/.test(reply);
+      const pastClaim = /만들어?\s*놨|만들었|초안[^\n]{0,10}(잡았|잡아놨|만들|썼|써놨|뽑았|뽑아놨|떴|나갔)|판\s*(만들었|열었|세웠|섰|올렸)|올려놨|생성했|띄웠|띄워\s*놨|카드[^\n]{0,6}(탭|눌러|확인)/.test(reply);
       const futureClaim = /만들게|만들어\s*(줄게|줄께|볼게|드릴게)|올릴게|올려\s*(줄게|줄께)|(바로|지금)\s*(만들|올려|생성|호출|할게|가자)|호출\s*중|초안\s*(잡을게|만들게|쓸게|쓸께)|마켓.*만들|이슈.*만들/.test(reply);
-      const claimsCreate = planMode ? pastClaim : (pastClaim || futureClaim);
-      if (userMsg && !body?.meta && claimsCreate && !actions.some((a) => DRAFT_KINDS.has(a.kind))) {
+      // 🧭 상태 백스톱: confirmed(초안이 나가야 하는 턴)인데 카드(초안/기존판)가 0개면 — 문구와 무관하게 강제.
+      const stateDemands = craft.state === "confirmed" && !planMode;
+      const claimsCreate = planMode ? pastClaim : (pastClaim || futureClaim || stateDemands);
+      const cardWent = actions.some((a) => DRAFT_KINDS.has(a.kind) || a.kind === "view");
+      // 🎨 기획 턴의 거짓 완료("초안 뽑았어")는 초안 강제가 아니라 '기획 재요구'로 교정 — 기획(3안) 가치 보존.
+      if (userMsg && !body?.meta && planMode && pastClaim && !cardWent) {
+        try {
+          messages.push({ role: "system", content: "너는 방금 '만들었다/초안 뽑았다'고 말했지만 지금은 기획 타임이라 아무것도 만들어지지 않았다(= 거짓말 상태). 완료 주장을 버리고, 원래 하기로 한 '서로 다른 시각 3안'(프레임+예상 제목+먹히는 이유)을 지금 제시해라. 도구 호출 금지, 텍스트만." });
+          const jp = await chatOnce(messages, { toolChoice: "none", maxTokens: 520 });
+          const t = jp?.choices?.[0]?.message?.content || "";
+          if (t && !/만들었|뽑았어|카드\s*탭/.test(t)) reply = t;
+        } catch { /* 원문 유지 */ }
+      } else if (userMsg && !body?.meta && claimsCreate && !cardWent) {
         try {
           messages.push({ role: "system", content: "너는 방금 '만들었다/만들어놨다'고 말했지만 실제로 생성 도구를 호출하지 않았다(= 지금 거짓말 상태). 이전에 만든 적 있어도 상관없다 — 상대가 다시 요청했으면 지금 즉시 실제로 도구를 호출해라. 상대의 마지막 요청에 맞는 도구 하나만: 이슈=draft_issue, 예측=draft_predict, 광장=draft_plaza, 숏판/갈라리=draft_gallari. 잡담·질문 금지, 도구만 호출." });
           const jf = await chatOnce(messages, { toolChoice: "required" });
@@ -2169,7 +2260,11 @@ ${parts.join("\n")}`;
           for (const c of cf) {
             let a2: any = {}; try { a2 = JSON.parse(c.function?.arguments || "{}"); } catch { /* */ }
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "⚙️ 작업하는 중…");
-            const out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null, reshow);
+            let out2 = await runTool(c.function?.name, a2, uid, rel?.last_seen_at || null, reshow);
+            // 🧭 확정 백스톱의 마지막 관문 — 강제 재시도가 또 '중복'에 막히면 코드가 즉시 differentiated로 재호출(카드 0 방지).
+            if (out2.result && (out2.result as any)["중복주의"] && c.function?.name === "draft_issue" && !a2.differentiated) {
+              out2 = await runTool("draft_issue", { ...a2, differentiated: true }, uid, rel?.last_seen_at || null, reshow);
+            }
             if (out2.action && DRAFT_KINDS.has(out2.action.kind)) actions.push(out2.action);
           }
         } catch { /* best effort — 실패해도 원래 답 유지 */ }

@@ -1086,6 +1086,24 @@
         <div style="display:flex;align-items:flex-end;gap:4px;height:52px">${bars}</div></div>`;
     })();
 
+    // 🎨 창작 품질 벤치 (주1회) — 파이프라인 vs 원샷 편집장 점수. 파이프라인 개악(점수 하락) 감지.
+    (async () => {
+      const rows = await rpc("admin_craft_bench", { p_limit: 12 });
+      const box = g("b-redteam"); if (!box || !Array.isArray(rows) || !rows.length) return;
+      const latest = rows[0];
+      const bars = rows.slice().reverse().map(r => {
+        const h = Math.max(6, Math.round(((r.avg_score || 0) / 10) * 40));
+        const up = (r.avg_score || 0) >= (r.baseline_score || 0);
+        return `<div title="${(r.ran_at || "").slice(0, 10)} · 파이프라인 ${r.avg_score} vs 원샷 ${r.baseline_score}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px">
+          <div style="width:100%;max-width:26px;height:${h}px;background:${up ? "#6f8dff" : "#ff6b6b"};border-radius:4px 4px 0 0"></div>
+          <div style="font-size:8px;color:#5f6c80">${(r.ran_at || "").slice(5, 10)}</div></div>`;
+      }).join("");
+      const diff = latest.avg_score != null && latest.baseline_score != null ? (latest.avg_score - latest.baseline_score).toFixed(2) : "?";
+      box.insertAdjacentHTML("beforeend", `<div style="background:#111a28;border:1px solid #223047;border-radius:14px;padding:13px 15px;margin-top:10px">
+        <div style="font-size:12px;color:#7d8ba0;font-weight:700;margin-bottom:9px">🎨 창작 품질 벤치 (주1회) — 파이프라인 <b style="color:#6f8dff">${latest.avg_score ?? "?"}</b> / 원샷 ${latest.baseline_score ?? "?"} (Δ${diff})</div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:52px">${bars}</div></div>`);
+    })();
+
     g("bf-reset").onclick = () => fillForm(null);
     g("bf-save").onclick = async () => {
       const args = { p_id: g("bf-id").value ? Number(g("bf-id").value) : null, p_kind: g("bf-kind").value, p_content_type: g("bf-ct").value,
