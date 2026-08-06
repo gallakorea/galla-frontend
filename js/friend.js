@@ -566,6 +566,16 @@
       else { try{ sessionStorage.removeItem("GALLA_WORK"); }catch(e){} }
     })();
   }
+  // 🎉 검사·발행(confirm) 페이지 동행 — 편집기 폼은 없지만 갈비스가 접힌 바로 남아 마지막까지 응원(동행 끊김 마찰#10).
+  function tryCheerForConfirm(){
+    var cheer=null; try{ cheer=sessionStorage.getItem("GALLA_WORK_CHEER"); }catch(e){}
+    if(!cheer) return;
+    if(!/confirm/.test(location.pathname)) return;
+    try{ sessionStorage.removeItem("GALLA_WORK_CHEER"); }catch(e){}
+    enterAgentDock();
+    if(sheet){ sheet.classList.add("fr-dock-min"); document.body.classList.add("fr-docked-min"); }   // 접힌 바(검사 화면 가리지 않게)
+    addMsg("a","거의 다 왔어! 검사 통과하면 [최종 발행]만 누르면 끝이야 🎉");
+  }
 
   /* ⌨️ 키보드 트래킹 = DM(사장님 승인)과 완전 동일 로직 이식. 에뮬 프레임분석으로 검증한 방식.
      - willShow: 이벤트가 주는 keyboardHeight로 --fr-vvh=(fullH-kh+safeB)를 '즉시' 확정 → 입력창이 키보드와
@@ -645,11 +655,14 @@
     if(suppressGreet) return;      // askGalvis가 콘텐츠 오프너를 대신 낸다
     greet();
   }
+  var _greetStale=false;   // 🔐 greet race — 인사 응답 오기 전에 유저가 먼저 말 걸면 인사를 버린다(요청 씹힘 방지, 실사용 E2E 마찰#1)
   async function greet(){
     // 빈 메시지 → 서버가 첫만남/재방문 판단해 반겨줌(기억 리콜)
+    _greetStale=false;
     typing(true);
     var r = await callFriend("", []);
     typing(false);
+    if(_greetStale){ if(r&&r.friendName){ friendName=r.friendName; setTitle(); } return; }   // 유저가 이미 용건을 말함 — 인사 폐기
     if(r && r.friendName){ friendName=r.friendName; setTitle(); }
     var m = await addFriendReply((r&&r.reply) || "안녕! 나 갈비스야. 심심할 때 놀러 와.");
     if(r&&r.actions) addActions(m, r.actions);
@@ -987,6 +1000,7 @@
     if(busy || !text) return;
     var jwt=await token(); if(!jwt){ addMsg("a","로그인하면 내가 제대로 곁에 있어줄 수 있어. 먼저 로그인해줘."); return; }
     busy=true; sendEl.disabled=true;
+    _greetStale=true;   // 🔐 진행 중인 인사(greet)가 있으면 폐기 — 유저 용건이 우선
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
     var hadSources=_sources.length>0;
     // 🌊 스트리밍 시도 — 서버가 컴패니언 턴이면 SSE로 토큰을 흘린다(첫 글자 ~2초). 에이전트/작업/핸드오프면 서버가 JSON 반환.
@@ -1235,6 +1249,7 @@
     window.GALLA_openDock = openDock;   // 편집기에서 직접 작업모드 열기(글쓰기 허브 등에서 재사용 가능)
     // 🛠 작업 모드 — 갈비스가 초안 넘겨 편집기로 왔으면(GALLA_WORK) 편집기 준비 후 도킹 미니챗 자동 오픈.
     tryOpenDockForWork();
+    tryCheerForConfirm();   // 🎉 검사·발행 페이지 응원 바
     // 🔄 실시간 미러링 + 📡 대행 진행상황 구독.
     // ⚠️ 버그였던 것: supabaseClient 존재만 보고 1회 호출 → 세션 복원이 부팅보다 늦으면 uid()=null로
     //    조용히 포기하고 영영 미구독(특히 앱 콜드스타트). → '구독 성공까지' 재시도.

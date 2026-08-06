@@ -117,6 +117,7 @@ function initWritePage(ctx) {
             return;
           }
           const prevBtn = [...document.querySelectorAll('button')].find(b => b.offsetParent && /미리보기/.test(b.textContent));
+          try { sessionStorage.setItem('GALLA_WORK_CHEER', 'issue'); } catch (_) {}   // 🎉 검사·발행 페이지에서도 갈비스 동행(응원 바)
           if (prevBtn) { prevBtn.click(); return; }
           if (form && form.requestSubmit) form.requestSubmit();
         } catch (_) {}
