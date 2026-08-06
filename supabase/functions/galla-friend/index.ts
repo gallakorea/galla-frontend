@@ -566,12 +566,16 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
       label: (args?.op === "edit" ? "수정하러 가기" : "삭제 확인") } };
   }
   if (name === "draft_plaza") {
+    const pt = String(args?.title || "").slice(0, 60), pb = String(args?.body || "").slice(0, 2000);
+    if (!pt || !pb || pb.length < 10) return { result: { error: "초안 필드가 비었다. title(제목)·body(본문 문단)를 '모두 채워' draft_plaza를 다시 호출해라." } };
     return { action: { kind: "draftPlaza",
-      title: String(args?.title || "").slice(0, 60), description: String(args?.body || "").slice(0, 2000),
+      title: pt, description: pb,
       category: String(args?.category || "").slice(0, 20), label: "광장에 글 올리러 가기" } };
   }
   if (name === "draft_gallari") {
     const tags = Array.isArray(args?.tags) ? args.tags.map((t: any) => String(t || "").replace(/[^0-9A-Za-z가-힣_]/g, "").toLowerCase()).filter(Boolean).slice(0, 6) : [];
+    const gc = String(args?.caption || "").slice(0, 2000);
+    if (!gc || gc.length < 4) return { result: { error: "초안 필드가 비었다. caption(캡션·훅 있게)·tags를 '채워' draft_gallari를 다시 호출해라." } };
     return { action: { kind: "draftGallari",
       vkind: args?.vkind === "horizontal" ? "horizontal" : "vertical",
       title: String(args?.title || "").slice(0, 100), caption: String(args?.caption || "").slice(0, 2000),
@@ -579,8 +583,10 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
   }
   if (name === "draft_predict") {
     const cd = Number(args?.close_days);
+    const q = String(args?.question || "").slice(0, 120);
+    if (!q || q.length < 6) return { result: { error: "초안 필드가 비었다. question(예/아니오로 판가름나는 질문)·description(정산 기준)을 '모두 채워' draft_predict를 다시 호출해라." } };
     return { action: { kind: "draftPredict",
-      question: String(args?.question || "").slice(0, 120), description: String(args?.description || "").slice(0, 500),
+      question: q, description: String(args?.description || "").slice(0, 500),
       category: String(args?.category || "").slice(0, 20), closeDays: (Number.isFinite(cd) && cd > 0 && cd <= 365) ? Math.round(cd) : 7,
       label: "예측 만들러 가기" } };
   }
@@ -602,6 +608,10 @@ async function runTool(name: string, args: any, uid: string, since: string | nul
           } };
         }
       }
+    }
+    // 🛡 빈 초안 방어 — tool_choice 강제 시 모델이 인자 없이 빈 콜을 날리면 빈 초안 카드가 나가 편집기가 백지가 된다(실앱 재현).
+    if (!title || title.length < 4) {
+      return { result: { error: "초안 필드가 비었다. title(제목)·one_line(한줄)·faction_a/faction_b(찬반 라벨)·description(배경 3~4문장)을 '모두 채워' draft_issue를 다시 호출해라. 주제는 상대가 방금 지정한 것." } };
     }
     return { action: { kind: "draft",
       title, oneLine: String(args?.one_line || "").slice(0, 120),
@@ -841,7 +851,7 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
   • **예측(마켓)**: ①질문 기획(예/아니오 판가름) → ②draft_predict(정산기준·마감) → ③커버(gen_thumbnail info, landscape) → ④발행.
   • **광장(에세이·글)**: ①주제·앵글 → ②제목(gen_titles) → ③draft_plaza(제목·본문) → ④인라인 이미지(선택) → ⑤발행.
   순서는 유형마다 고정. "그냥 다 알아서 해줘" 하면 순서대로 쭉 진행하되 각 산출물은 확인받으며. 상대가 특정 단계만 원하면(예: "썸네일만") 그것만. 지금 어느 단계인지 상대가 알게 짧게 짚어줘("좋아, 이제 ②제목·썸네일 갈게").
-🏁 **라스트 마일(제일 중요 — 초안 던지고 방치 금지)**: 초안(draft_*)을 만든 직후엔 **반드시 '남은 게 뭐고 내가 뭘 도와줄지'를 한 줄로** 알려라 — "가서 알아서 올려"로 끝내는 건 최악(사용자는 사진·발행 버튼에서 막힌다). 유형별로: **갈라리=사진/영상이 남았다** → "직접 올릴래, 아니면 내가 표지 그려줄까/영상 만들어줄까?"(gen_thumbnail·gen_video 즉시 가능) / **이슈·예측=표지 이미지** "하나 그려줄까?" 제안 + "발행 버튼만 누르면 끝" / **광장=바로 올려도 돼**. 상대가 편집기에서 '뭘 해야 해/어디 눌러' 하면 정확히 짚어줘라(발행 버튼 = 화면의 [올리기]/[공유]). 콘텐츠는 '발행까지' 가야 완성이다.
+🏁 **라스트 마일(제일 중요 — 초안 던지고 방치 금지)**: 초안(draft_*)을 만든 직후엔 **"밑에 초안 카드 탭해서 편집기로 가자 — 같이 다듬어줄게"를 한 줄로** 알려라(카드 탭=편집기 이동, 넌 미니챗으로 따라간다). "가서 알아서 올려"로 끝내는 건 최악. ⚠️ **채팅에선 표지 이미지를 바로 그리지 마라** — 이미지가 붙을 편집기가 아직 없다. 표지·썸네일·미디어 제안은 **편집기(작업 모드)에 도착한 뒤에** 해라. 편집기에서 '뭘 해야 해/어디 눌러' 하면 정확히 짚어줘라(발행 = 화면의 [올리기]/[공유] 버튼). 콘텐츠는 '발행까지' 가야 완성이다.
 영역별로(각 단계 도구 상세):
 - ✅ **이슈 초안**: 화제가 뜨거워지면 "갈라에 이슈로 올려보자" 제안 → 상대가 ㄱㄱ 하면 **draft_issue**(중립 제목·한줄·배경 3~4문장·찰진 찬반 라벨). 앱이 작성폼에 채워주고 발행은 상대가 직접.
   🚫🚫 **가짜 생성 금지(제일 중요)**: "만들어줘/만들자" 하면 **반드시 draft_issue 도구를 실제로 호출**해라. 도구 안 부르고 "만들어놨어/판 만들었어"라고 **말로만 때우는 건 거짓말 = 절대 금지**(도구를 불러야 앱이 초안 카드·편집기를 띄운다). 초안 낼 준비가 됐으면 되묻지 말고 바로 draft_issue. ⚠️ **반복 요청도 매번 실제 호출**: 앞 대화에서 이미 만들었어도(이력에 '만들어놨어'가 있어도) 상대가 또 "만들어줘" 하면 **'이미 만들었잖아'로 넘기지 말고 그때마다 도구를 다시 호출**해라 — 초안 카드는 매 요청마다 새로 띄워줘야 상대가 편집기로 갈 수 있다.
@@ -1293,10 +1303,17 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   return null;
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
-  const activeTools = VIDEO_ON ? TOOLS : TOOLS.filter((t: any) => t?.function?.name !== "gen_video");
+  // 🖼 gen_thumbnail은 편집기(작업모드)에서만 노출 — 채팅에서 초안 만들 땐 이미지가 붙을 편집기가 없어 '저장해서 써' 클렁크 + draft 칩 유실.
+  //    inWork가 명시적으로 false(채팅 창작)면 gen_thumbnail 제거. undefined(가드 등)면 유지.
+  const activeTools = TOOLS.filter((t: any) => {
+    const n = t?.function?.name;
+    if (n === "gen_video" && !VIDEO_ON) return false;
+    if (n === "gen_thumbnail" && opts?.inWork === false) return false;
+    return true;
+  });
   const reqBody: any = { model: opts?.model || CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
   if (opts?.toolChoice) reqBody.tool_choice = opts.toolChoice;   // 🛡 특정 상황(가짜 생성 방어)에서 도구 호출 강제
   const r = await fetch(`${BASE_URL}/chat/completions`, {
@@ -1925,8 +1942,11 @@ ${parts.join("\n")}`;
 
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
-      const co: any = { model: brainModel };
+      const co: any = { model: brainModel, inWork: !!work };   // 🖼 채팅(work 없음)에선 gen_thumbnail 미노출(편집기 가서)
       if (longForm) co.maxTokens = 520;
+      // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려
+      //    JSON 파싱 실패→빈 초안 카드(실앱 재현: 이슈만 실패, 인자 짧은 예측은 성공). 도구 인자 여유 확보.
+      if (brain === "agent" && !co.maxTokens) co.maxTokens = 700;
       if (step === 0 && route) co.toolChoice = { type: "function", function: { name: route.tool } };  // 사전 라우터 강제
       else if (brain === "companion") co.toolChoice = "none";                                          // 컴패니언=도구 차단
       const j = await chatOnce(messages, co);

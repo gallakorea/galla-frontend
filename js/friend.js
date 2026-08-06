@@ -118,7 +118,9 @@
   }
   function onAgentStep(pl){
     if(!pl || !pl.text || !busy) return;   // 진행 중인 요청일 때만
-    if(pl.dock) enterAgentDock();          // 🛠 진짜 '대행'(초안·수정·관리)만 미니챗 도킹으로 전환해 같이 본다
+    // 🛠 도킹은 '편집기가 이미 열려있을 때만'(작업모드에서 edit_draft 등). 채팅에서 초안을 '새로 만드는 중'엔 도킹 금지 —
+    //    편집기도 없는데 창만 반쪽으로 작아지면 UX 개판(사장님 지적). 초안 카드 탭→편집기 이동 후 tryOpenDockForWork가 도킹한다.
+    if(pl.dock && (window.GALLA_WORKFORM || _work || _dock)) enterAgentDock();
     showProgress(pl.text);                 // 진행 라인은 항상(가벼운 검색도 라이브로 보이게)
   }
   // 대행 시작 → 풀시트/오브 상태를 도킹 미니챗으로 전환(편집기 도킹 openDock과 공유하는 표면)
