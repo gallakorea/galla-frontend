@@ -71,3 +71,5 @@ end $$;
 -- 🔒 보안(발견 즉시 봉쇄): ai_creation_refund가 anon/authenticated에서 직접 호출 가능했음(p_user 임의 지정 = GC 무한 발행 구멍).
 --    엣지(service_role)만 호출 — 전부 회수. charge는 auth.uid() 기반 자기차감이라 authenticated 유지.
 revoke all on function public.ai_creation_refund(uuid, integer) from public, anon, authenticated;
+revoke all on function public.ai_creation_charge(text, integer) from public, anon;
+grant execute on function public.ai_creation_charge(text, integer) to authenticated;
