@@ -49,6 +49,24 @@ const STEP_LABEL: Record<string, string> = {
 };
 // 진짜 '대행'(초안·수정·관리·생성)만 미니챗(도킹)으로 전환. 가벼운 검색·기억보조는 진행 라인만.
 const DOCK_TOOLS = new Set(["draft_issue", "draft_plaza", "draft_gallari", "draft_predict", "edit_draft", "manage_content"]);
+// 🧭 도구 실행 결과 브리핑 — 모델에게 '방금 앱에서 실제로 일어난 일'을 알려준다.
+//    모델이 시스템 동작을 추측해 내레이션("초안은 편집기에서 만들어지는 거더라" 류 헛소리)하는 공간 자체를 없앰.
+const ACTION_BRIEF: Record<string, string> = {
+  draft: "이슈 초안 카드가 방금 채팅에 '실제로' 붙었다(탭하면 편집기). '밑에 카드 탭해서 편집기 가자, 같이 다듬어줄게' 식 한 줄 안내만. 시스템 동작 설명·추측 금지.",
+  draftPredict: "예측 초안 카드가 방금 채팅에 실제로 붙었다. '카드 탭해서 마감일·정산 기준만 확인하고 올리자' 한 줄 안내만. 시스템 설명 금지.",
+  draftPlaza: "광장 글 초안 카드가 방금 채팅에 실제로 붙었다. '카드 탭해서 다듬으러 가자' 한 줄 안내만. 시스템 설명 금지.",
+  draftGallari: "갈라리 초안 카드가 방금 채팅에 실제로 붙었다. '카드 탭해서 사진/영상 붙이러 가자' 한 줄 안내만. 시스템 설명 금지.",
+  view: "그 콘텐츠 카드가 채팅에 붙었고 탭하면 바로 열린다. 그 내용에 대한 네 반응 한두 마디만.",
+  open: "링크 칩이 채팅에 붙었고 탭하면 앱 안 브라우저로 열린다. 짧게 안내만.",
+  share: "공유 칩이 채팅에 붙었다. 짧게 안내만.",
+  external: "외부 앱 열기 칩이 채팅에 붙었다(탭=이동). '눌러봐' 한 줄이면 된다.",
+  genThumbnail: "이미지가 생성돼 편집기에 자동 첨부됐다. '표지 붙여놨어' 한 줄 안내만.",
+  genVideo: "영상 생성이 시작됐다(완성되면 편집기에 자동 첨부). '좀 걸려, 다 되면 붙여놓을게' 한 줄만.",
+  editdraft: "편집기 폼에 수정 내용이 '실제로' 반영됐다(화면이 반짝임). '고쳐놨어, 화면 봐봐' 한 줄 안내만.",
+  titles: "제목 후보 카드가 채팅에 붙었다(탭=그 제목 적용). '골라봐' 한 줄만.",
+  script: "대본 카드가 채팅에 붙었다. 짧게 안내만.",
+  plan: "기획안 카드가 채팅에 붙었다. 짧게 안내만.",
+};
 async function broadcastStep(uid: string, name: string, text: string) {
   try {
     await fetch(`${SUPA_URL}/realtime/v1/api/broadcast`, {
@@ -1350,6 +1368,37 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
   return await r.json();
 }
 
+// 🧭 창작 의도 분류 마이크로콜 — 정규식 추측을 대체하는 '진짜 판정기'(~300토큰, 턴당 ~0.5원).
+//    상태 머신이 활성일 때만 호출(잡담 평시엔 비용 0). 실패 시 null → 기존 정규식 폴백.
+async function classifyCraft(state: string, topic: string, recentA: string, userMsg: string): Promise<{ intent: string; type: string; topic: string } | null> {
+  try {
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: CHAT_MODEL, temperature: 0, max_tokens: 80,
+        messages: [
+          { role: "system", content: `너는 대화 상태 분류기다. AI친구가 콘텐츠 제작 흐름 중이다(상태=${state}${topic ? `, 주제=${topic}` : ""}). AI의 직전 말과 유저의 지금 말을 보고 유저 의도를 판정해 JSON만 출력해라.
+{"intent":"accept|reject|new_topic|modify|chat","type":"issue|predict|gallari|plaza|any","topic":"핵심 주제 한 구절"}
+- accept: 제안/안을 승낙·확정("만들어","그걸로 가","ㄱㄱ","어 좋다 해줘","방금 그걸로") — 만들라는 뜻이면 전부 accept
+- reject: 그 소재 거부·재미없다·다른 거 하자
+- new_topic: 다른 주제를 '직접 지정'하며 만들자
+- modify: 안·초안의 내용 수정 요구
+- chat: 제작과 무관한 잡담·질문
+type은 대화상 콘텐츠 유형(이슈=찬반, predict=베팅/예측, gallari=숏판/영상/사진, plaza=자유글), 불명확하면 any.` },
+          { role: "user", content: `AI 직전 말: ${recentA.slice(0, 500)}\n유저 지금 말: ${userMsg.slice(0, 300)}` },
+        ],
+      }),
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const m = /\{[\s\S]*\}/.exec(j?.choices?.[0]?.message?.content || "");
+    if (!m) return null;
+    const o = JSON.parse(m[0]);
+    return { intent: String(o.intent || "chat"), type: String(o.type || "any"), topic: String(o.topic || "").slice(0, 120) };
+  } catch { return null; }
+}
+
 // 🎭 캐릭터 카드 1회 생성(이후 DB 고정 → 매 턴 동일 = 일관성). 평범한 가상 인물.
 async function genPersona(nick: string, seed: number): Promise<any | null> {
   try {
@@ -1632,9 +1681,13 @@ Deno.serve(async (req) => {
       const lastMs = rel.last_seen_at ? Date.parse(rel.last_seen_at) : 0;
       const sm = (rel.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
       if (!sm || !lastMs || (Date.now() - lastMs) > 45 * 60000) {
-        rel.session_meta = { started_at: new Date().toISOString(), prev_end_at: rel.last_seen_at || null, turns: 0 };
+        rel.session_meta = { started_at: new Date().toISOString(), prev_end_at: rel.last_seen_at || null, turns: 0, craft: sm?.craft || null };
       }
     }
+    // 🧭 창작 상태 머신 로드 — "제안됨→기획중→확정" 진행 상태를 서버가 기억(정규식 추측 폐지의 근간).
+    //    2시간 지난 상태는 자연 소멸(옛 제안에 "만들어"가 오발되는 것 방지).
+    let craft: any = (rel?.session_meta?.craft && typeof rel.session_meta.craft === "object") ? { ...rel.session_meta.craft } : { state: "idle" };
+    if (craft.state !== "idle" && (!craft.at || (Date.now() - Date.parse(craft.at)) > 2 * 3600000)) craft = { state: "idle" };
     const friendName = rel?.friend_name || "갈비스";
     // 🎭 캐릭터는 '점진적 구축' — 자동 전체생성 안 함. 대화하며 정해진 것만 rel.persona에 누적(아래 병합).
     // 🎭 내가 전에 한 자기 이야기(일관성 유지) — 항상 로드
@@ -1877,7 +1930,60 @@ ${parts.join("\n")}`;
       } else if (make || /(프레임|앵글|각도?)[^\n]{0,6}(제안|잡|뽑|짜|줘|봐)|기획\s*(해|부터|하자)/.test(userMsg)) {
         planMode = true;   // 기획 1턴 — planBlock이 지침 주입(아래). 기획 '연장'("프레임 제안해봐")도 여기(컴패니언으로 새면 3안이 4문장캡에 잘림 — 실사고)
       }
+      // 🧭 상태 머신 판정 — 정규식이 못 정했는데 창작 흐름이 '진행 중'(제안됨/기획중/확정)이면
+      //    초소형 분류콜로 유저 의도를 '진짜로' 판정한다. "만들어 봐"×4에도 헛돌던 근본 원인(무기억 정규식 추측) 제거.
+      if (!route && !planMode && (craft.state === "proposed" || craft.state === "planning" || craft.state === "confirmed")) {
+        // 분류기에 '직전 한 턴'만 주면 잡담이 끼었을 때 제안 맥락을 놓친다 → 최근 6개 발화를 준다.
+        const ctxBlob = history.slice(-6).map((m: any) => (m?.role === "user" ? "유저: " : "AI: ") + String(m?.content || "").slice(0, 160)).join("\n");
+        const ci = await classifyCraft(craft.state, craft.topic || "", ctxBlob, userMsg);
+        if (ci) {
+          // 타입 판정은 '가까운 발화 우선' — 전체 blob 한방 검사는 옛 턴의 "숏폼" 한 단어에 이슈 흐름이 낚임(실프로브 재현).
+          const typeOf = (s: string) => {
+            if (/예측|베팅|마켓|판돈|배당/.test(s)) return "draft_predict";
+            if (/숏판|갈라리|릴스|숏폼|브이로그/.test(s)) return "draft_gallari";
+            if (/광장|자유\s*글|에세이|후기|썰\s*(올|풀|써)/.test(s) && !/이슈|찬반/.test(s)) return "draft_plaza";
+            if (/이슈|찬반|진영|논쟁/.test(s)) return "draft_issue";
+            return null;
+          };
+          const toolFor = (ty: string) => {
+            if (ty === "predict") return "draft_predict";
+            if (ty === "gallari") return "draft_gallari";
+            if (ty === "plaza") return "draft_plaza";
+            if (ty === "issue") return "draft_issue";
+            for (const m of [userMsg, ...[...history].reverse().map((h: any) => String(h?.content || ""))]) {
+              const t = typeOf(m); if (t) return t;
+            }
+            return "draft_issue";
+          };
+          if (ci.intent === "accept") {
+            const tool = toolFor(ci.type);
+            const topic = ci.topic || craft.topic || "";
+            route = { tool, hint: `[상태머신] 상대가 진행 중인 제안${topic ? `("${topic}")` : ""}을 **승낙·확정**했다. 되묻기·재확인·역제안 절대 금지 — 지금 즉시 ${tool}를 호출해 초안을 만들어라(모든 인자 채워서). 중복주의가 나오면 각도 바꿔 differentiated:true 재호출 또는 point_to — 어느 쪽이든 이번 턴에 카드 하나는 반드시 나간다.` };
+            craft = { state: "confirmed", at: new Date().toISOString(), topic };
+          } else if (ci.intent === "new_topic") {
+            planMode = true;
+            craft = { state: "planning", at: new Date().toISOString(), topic: ci.topic || "" };
+          } else if (ci.intent === "modify") {
+            planMode = craft.state === "planning";   // 기획 중 수정 = 기획 계속. 제안 단계 수정 = 대화로.
+          } else if (ci.intent === "reject") {
+            craft = { state: "idle" };
+          }
+          // chat = 상태 유지(잡담 한두 턴 끼어도 흐름 안 잃음 — 2h 감쇠가 정리)
+        }
+      }
+      // 정규식 fast-path가 확정/기획을 정했으면 상태도 동기화
+      if (route) craft = { state: "confirmed", at: new Date().toISOString(), topic: craft.topic || null };
+      else if (planMode) craft = { state: "planning", at: new Date().toISOString(), topic: craft.topic || null };
     }
+    // 🧭 턴 종료 시 상태 갱신 — 초안이 나갔으면 idle, 갈비스가 새로 '제안'했으면 proposed. rel.session_meta에 실어 persistTurn이 저장.
+    const settleCraft = (finalReply: string, acts: any[]) => {
+      const now = new Date().toISOString();
+      if (acts.some((a) => ["draft", "draftPredict", "draftPlaza", "draftGallari"].includes(a?.kind))) craft = { state: "idle" };
+      else if (craft.state !== "planning" && /(만들어\s*볼래|만들\s*까|만들어볼까|이슈로\s*만들|판\s*깔아\s*볼|어때|볼래\?)/.test(finalReply) && /(이슈|숏판|예측|광장|콘텐츠|판)/.test(finalReply)) {
+        craft = { state: "proposed", at: now, topic: craft.topic || null };
+      }
+      if (rel) rel.session_meta = { ...(rel.session_meta || {}), craft };
+    };
     // 🎨 기획 커뮤니케이션 블록 — 일방 제작 금지, PD처럼 앵글을 '같이' 정한다(수준 = 여기서 갈린다).
     const planBlock = planMode
       ? `🎨 [기획 타임 — 바로 초안 박지 마라, 같이 정한다]: 상대가 콘텐츠를 만들자고 했다. 이번 턴엔 draft_* 호출 금지. **"만들었어/초안 잡아놨어/카드 탭해" 같은 완료 멘트도 절대 금지** — 아직 아무것도 안 만들어졌다(거짓말 됨). 이번 턴은 오직 '안 제시'만. **좋은 PD처럼 '서로 다른 시각' 3안**을 제시해라:
@@ -2003,6 +2109,7 @@ ${parts.join("\n")}`;
             sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
             const bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             send("done", { bubbles, actions: [], friendName, depth: rel?.depth || 1, firstMeet });
+            settleCraft(sreply, []);
             runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
           } catch (e) {
             send("done", { bubbles: ["어 미안, 잠깐 버벅였어 ㅋㅋ 다시 말해줄래?"], actions: [], friendName, depth: rel?.depth || 1, firstMeet, error: String(e).slice(0, 120) });
@@ -2036,7 +2143,7 @@ ${parts.join("\n")}`;
         if (c.function?.name === "web_search" && out.result && Array.isArray(out.result.results) && out.result.results.length) {
           searchHits = out.result.results;   // 전체 보관 — 답변에 실제 언급된 것과 매칭해 칩 첨부
         }
-        messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { queued: true } : (out.result ?? {})).slice(0, 3000) });
+        messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out.action ? { ok: true, 실행됨: ACTION_BRIEF[out.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out.result ?? {})).slice(0, 3000) });
       }
     }
     // 빈 답 폴백 — 초안 카드가 붙어있으면 "헷갈렸어"가 아니라 라스트마일 안내(모델이 도구만 부르고 텍스트를 안 쓴 케이스).
@@ -2128,7 +2235,7 @@ ${parts.join("\n")}`;
             await broadcastStep(uid, c.function?.name || "", STEP_LABEL[c.function?.name || ""] || "🔗 여는 중…");
             const out4 = await runTool(c.function?.name, a4, uid, rel?.last_seen_at || null, reshow);
             if (out4.action) actions.push(out4.action);
-            messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { queued: true } : (out4.result ?? {})).slice(0, 2000) });
+            messages.push({ role: "tool", tool_call_id: c.id, content: JSON.stringify(out4.action ? { ok: true, 실행됨: ACTION_BRIEF[out4.action.kind] || "카드가 채팅에 실제로 붙었다. 한 줄로만 안내해라." } : (out4.result ?? {})).slice(0, 2000) });
           }
           // hot_issues/news만 부르고 아직 point_to 안 했으면, 그 id로 point_to까지 한 번 더 강제
           if (!hasView()) {
@@ -2327,6 +2434,7 @@ ${parts.join("\n")}`;
     }
 
     // 🧠 관계 갱신 + 기억(추출·저장·요약)은 '응답을 막지 않게' 백그라운드로 — 갈비스 답이 즉시 나가고 기억은 뒤에서.
+    settleCraft(reply, actions);
     runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
