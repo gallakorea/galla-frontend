@@ -1830,11 +1830,13 @@ ${parts.join("\n")}`;
     let planMode = false;
     if (userMsg && !work && !handoff && !crisis) {
       const recentA = String((([...history].reverse().find((m: any) => m?.role === "assistant")) || {}).content || "");
+      // 타입 추론은 '최근 여러 턴'을 봐야(마지막 1턴만 보면 대화 주제[숏판 등]를 놓치고 default 이슈로 오발 — 실앱 재현)
+      const recentBlob = history.slice(-8).map((m: any) => String(m?.content || "")).join(" ");
       const pub = /(올려\s*(봐|줘|보|줄|주라|라|놔)|올려봐|발의(해|하|할|해줘)|발행(해|하)|게시\s*해|이대로\s*(올|가|만들)|이걸로\s*(올|가|발행|해|만들)|그걸로\s*(가|해|만들|올)|그대로\s*(가|만들|올려)|[ABab1-3][안번]?\s*으?로\s*(가|해|만들|올))/.test(userMsg)
         || (/(좋아|ㅇㅋ|오케이|그래|응|고+)\s*(그걸로|그렇게|가자|만들어|해줘)?$/.test(userMsg.trim()) && /(안|앵글|각도|프레임|방향|어느|뭐로)/.test(recentA));   // 기획 제안에 대한 승낙
       const make = /(만들어\s*줘|만들자|하자|짜\s*줘|잡아\s*줘|이슈로\s*(만들|해|써|가)|판\s*(만들|세워|짜)|글로\s*써|예측\s*(만들|판)|숏판\s*(만들|하)|콘텐츠\s*(만들|하))/.test(userMsg);
       if (pub) {
-        const blob = (userMsg + " " + recentA);
+        const blob = (userMsg + " " + recentBlob);
         let tool = "draft_issue";
         if (/예측|베팅|마켓|얼마\s*걸|판돈|배당/.test(blob)) tool = "draft_predict";
         else if (/숏판|갈라리|릴스|숏폼|영상\s*올|사진\s*올|브이로그/.test(blob)) tool = "draft_gallari";
@@ -1842,7 +1844,7 @@ ${parts.join("\n")}`;
         route = { tool, hint: `상대가 '확정' 신호를 줬다(올려/이대로/그걸로/N안) — '뭐로 갈래?/주제 확정하고' 같은 되묻기·확인 절대 금지. 즉시 ${tool}를 호출해 초안을 만들어라. 직전 대화에서 상대가 고른 앵글·프레임 그대로. 제목·찬반라벨·본문 모든 인자를 채워라(애매하면 합리적으로 채워 일단 초안 — 상대가 폼에서 고친다).` };
       } else if (make && /(빨리|그냥|알아서|아무|바로|대충)/.test(userMsg)) {
         // 빨리 신호 = 기획 스킵, 최선 1안으로 즉시
-        const blob = (userMsg + " " + recentA);
+        const blob = (userMsg + " " + recentBlob);
         let tool = "draft_issue";
         if (/예측|베팅|마켓/.test(blob)) tool = "draft_predict";
         else if (/숏판|갈라리|릴스|숏폼/.test(blob)) tool = "draft_gallari";
