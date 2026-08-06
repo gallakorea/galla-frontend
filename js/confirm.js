@@ -337,7 +337,14 @@ async function initConfirmPage(ctx) {
 
     } catch (err) {
       console.error('[PUBLISH ERROR]', err);
-      alert('발행 중 오류가 발생했습니다.');
+      // 서버가 준 진짜 원인을 보여준다 — "발행 중 오류" 한 줄로 뭉개면 유저는 버튼 고장으로 오해(침묵 실패).
+      var emsg = (err && (err.message || err.hint)) || '';
+      if ((err && err.hint === 'onboard_required') || /닉네임|프로필/.test(emsg)) {
+        alert('발행하려면 프로필(닉네임)을 먼저 완성해야 해요. 홈에서 프로필부터 만들고 다시 올려줘요!');
+        location.href = 'index.html';   // 홈 진입 시 온보딩 오버레이(js/onboard.js)가 닉네임 설정을 띄운다
+        return;
+      }
+      alert('발행 중 오류가 발생했습니다.' + (emsg ? '\n\n' + emsg : ''));
       publishBtn.disabled = false;
       publishBtn.textContent = '최종 발행';
       __USER_CONFIRMED_PUBLISH__ = false;

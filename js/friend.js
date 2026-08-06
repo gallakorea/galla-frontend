@@ -128,7 +128,7 @@
     if(!sheet) build();
     if(_dock && sheet.classList.contains("fr-dock")) return;   // 이미 도킹
     _dock=true;
-    bindKb();
+    bindKb(); bindStick(); _stick=true;
     if(mini) mini.classList.remove("on");
     orb && orb.classList.add("fr-hidden");
     sheet.classList.add("fr-dock"); sheet.classList.remove("fr-dock-min","fr-hasform");   // 에이전트 도킹=편집기 폼 없음(올리기 버튼 숨김)
@@ -290,9 +290,25 @@
   }
 
   function scrollBottom(){ if(logEl) logEl.scrollTop=logEl.scrollHeight; }
+  /* 📌 하단 고정 감시자 — "밑에 글 안 보임"의 근본 수정.
+     append 순간의 scrollTop만으론 부족: 스트리밍으로 버블이 자라거나, 카드·이미지가 '나중에' 로드되면
+     로그가 다시 바닥 밑으로 자란다. 유저가 바닥 근처(<80px)에 있는 동안엔 어떤 성장에도 자동 재고정.
+     (유저가 위로 스크롤해 과거를 읽는 중이면 건드리지 않는다.) */
+  var _stick=true;
+  function bindStick(){
+    if(!logEl || logEl.__stickBound) return; logEl.__stickBound=true;
+    logEl.addEventListener("scroll", function(){
+      _stick = (logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight) < 80;
+    }, {passive:true});
+    function restick(){ if(_stick) logEl.scrollTop=logEl.scrollHeight; }
+    try{ new MutationObserver(restick).observe(logEl, {childList:true, subtree:true, characterData:true}); }catch(e){}
+    logEl.addEventListener("load", restick, true);                       // 이미지·미디어 늦은 로드
+    try{ new ResizeObserver(restick).observe(logEl); }catch(e){}          // 로그 영역 자체가 줄 때(키보드)
+  }
   function open(){
     if(!sheet) build();
     bindKb();                                     // 키보드 트래킹(1회 등록)
+    bindStick(); _stick=true;                     // 하단 고정 감시자(1회 등록) — 열 때는 항상 바닥부터
     if(mini) mini.classList.remove("on");
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
@@ -330,7 +346,7 @@
   function openDock(work){
     if(!sheet) build();
     _dock=true; _work=work||_work||{type:"issue"};
-    bindKb();
+    bindKb(); bindStick(); _stick=true;   // 📌 도킹도 하단 고정 — 진입 직후 카드·이미지 늦은 성장에 밀리던 것
     if(mini) mini.classList.remove("on");
     orb && orb.classList.add("fr-hidden");               // 도킹 중엔 런처 오브 숨김
     sheet.classList.add("fr-dock", "fr-hasform"); sheet.classList.remove("fr-dock-min");   // fr-hasform=편집기폼 있음(올리기 버튼 노출)
@@ -607,8 +623,20 @@
     if(window.__frKbBound) return; window.__frKbBound=true;
     var root=document.documentElement, vv=window.visualViewport;
     function setVvh(px){ root.style.setProperty("--fr-vvh", Math.round(px)+"px"); }
+    // 🌐 웹 전용: 키보드가 페이지를 밀어올리면(vv.offsetTop>0) fixed 패널이 어긋난다 — 오프셋만큼 같이 이동.
+    function setOff(){ if(vv) root.style.setProperty("--fr-off", Math.round(vv.offsetTop||0)+"px"); }
     // 평상시(비애니)엔 vv 실측으로 정확히. 애니 중엔 차단.
-    if(vv){ vv.addEventListener("resize", function(){ if(window.__frKbShowing) return; setVvh(vv.height); scrollBottom(); }); setVvh(vv.height); }
+    if(vv){
+      vv.addEventListener("resize", function(){ if(window.__frKbShowing) return; setVvh(vv.height); setOff(); scrollBottom(); });
+      vv.addEventListener("scroll", function(){ if(window.__frKbShowing) return; setOff(); });
+      setVvh(vv.height); setOff();
+    }
+    // 🛟 키보드 이벤트 유실 복구 — 어떤 이유로든(플러그인 미로드·이벤트 누락) vvh가 갱신 안 되면
+    //    입력창이 키보드에 가린다. 포커스 후 실측으로 한 번 더 보정(정상 동작이면 같은 값이라 무해).
+    document.addEventListener("focusin", function(e){
+      if(!e.target || !e.target.closest || !e.target.closest("#frSheet")) return;
+      setTimeout(function(){ if(window.__frKbShowing) return; if(vv){ setVvh(vv.height); setOff(); } scrollBottom(); }, 450);
+    });
     var KB=window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Keyboard;
     if(!KB) return;
     // 홈 인디케이터(safe-area-bottom) 실측
