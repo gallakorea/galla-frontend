@@ -822,6 +822,7 @@
     openInApp(webUrl);   // 웹: https(설치돼 있으면 앱으로 라우팅)
   }
   function runAction(a){
+    if(a.kind==="reload"){ try{ location.reload(); }catch(e){} return; }   // 🔐 세션 풀림 복구
     // 🏆 딜리버 실소비 신호 — 콘텐츠성 칩(링크·갈라 콘텐츠·외부앱)을 '실제로 열면' 최강 긍정. 액션당 1회(연타 스팸 방지).
     if((a.kind==="open"||a.kind==="view"||a.kind==="external") && !a._reacted){ a._reacted=true; logReact("chip_open"); }
     if(a.kind==="open"){ openInApp(a.url); return; }
@@ -909,6 +910,24 @@
     try{ var sb=window.supabaseClient; var r=await sb.auth.getSession(); if(r&&r.data&&r.data.session) return r.data.session.access_token; }catch(e){}
     return null;
   }
+  // 🔐 갈비스 호출 — 401(세션 만료/손상)이면 세션 갱신 후 1회 재시도. res.__authFail=true면 재로그인 필요.
+  //    (이 처리 없으면 세션 풀렸을 때 갈비스가 "정신 팔렸다"만 반복 = 바보처럼 보임 — 실유저 이탈 원인.)
+  async function friendFetch(body){
+    var jwt=await token();
+    var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+      headers:{apikey:ANON, Authorization:"Bearer "+(jwt||""), "Content-Type":"application/json"}, body:JSON.stringify(body) });
+    if(res.status===401){
+      var jwt2=null;
+      try{ var rf=await window.supabaseClient.auth.refreshSession(); if(rf&&rf.data&&rf.data.session) jwt2=rf.data.session.access_token; }catch(e){}
+      if(!jwt2) jwt2=await token();
+      if(jwt2 && jwt2!==jwt){
+        res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+          headers:{apikey:ANON, Authorization:"Bearer "+jwt2, "Content-Type":"application/json"}, body:JSON.stringify(body) });
+      }
+      if(res.status===401) res.__authFail=true;   // 갱신해도 여전히 401 = 재로그인 필요
+    }
+    return res;
+  }
   // 🏆 라이브 반응 로거 — 칩 실사용(오픈)을 서버에 신호. 직전 주입 기억 보상 정밀화(실패 무시, 비용 0).
   function logReact(kind){
     token().then(function(jwt){ if(!jwt) return;
@@ -935,10 +954,9 @@
     return body;
   }
   async function callFriend(message, hist, setName, meta, handoff){
-    var jwt=await token(); if(!jwt) return null;
     try{
-      var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
-        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"}, body:JSON.stringify(fbBody(message,hist,setName,meta,handoff)) });
+      var res=await friendFetch(fbBody(message,hist,setName,meta,handoff));   // 401→세션갱신·재시도
+      if(res.__authFail) return { ok:false, reason:"auth" };
       return await res.json();
     }catch(e){ return null; }
   }
@@ -970,26 +988,34 @@
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
     var hadSources=_sources.length>0;
     // 🌊 스트리밍 시도 — 서버가 컴패니언 턴이면 SSE로 토큰을 흘린다(첫 글자 ~2초). 에이전트/작업/핸드오프면 서버가 JSON 반환.
-    var r=null, streamed=false, liveEl=null;
+    var r=null, streamed=false, liveEl=null, authFail=false;
     try{
-      var jwt2=await token();
       var body=fbBody(text, history.slice(0,-1)); body.stream=true;
-      var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
-        headers:{apikey:ANON, Authorization:"Bearer "+jwt2, "Content-Type":"application/json"}, body:JSON.stringify(body) });
-      var ctype=(res.headers.get("content-type")||"");
-      if(ctype.indexOf("text/event-stream")>=0 && res.body && res.body.getReader){
-        r=await consumeStream(res, function(full){
-          if(!liveEl){ typing(false); liveEl=addMsg("a",""); }
-          var bub=liveEl.querySelector(".fr-bubble"); if(bub) bub.innerHTML=fmtStage(full);
-          logEl.scrollTop=logEl.scrollHeight;
-        });
-        streamed=true;
-      } else {
-        r=await res.json();
+      var res=await friendFetch(body);
+      if(res.__authFail){ authFail=true; }
+      else {
+        var ctype=(res.headers.get("content-type")||"");
+        if(ctype.indexOf("text/event-stream")>=0 && res.body && res.body.getReader){
+          r=await consumeStream(res, function(full){
+            if(!liveEl){ typing(false); liveEl=addMsg("a",""); }
+            var bub=liveEl.querySelector(".fr-bubble"); if(bub) bub.innerHTML=fmtStage(full);
+            logEl.scrollTop=logEl.scrollHeight;
+          });
+          streamed=true;
+        } else {
+          r=await res.json();
+        }
       }
     }catch(e){ r=null; }
     if(hadSources) clearSources();   // 근거는 이 메시지에 소비됨
     typing(false); clearProgress();
+    // 🔐 세션 풀림 — 바보 폴백 대신 '재로그인' 명확 안내 + 원탭 새로고침 칩.
+    if(authFail || (r&&r.reason==="auth")){
+      if(liveEl){ try{ liveEl.remove(); }catch(e){} }
+      var am=addMsg("a","어 로그인이 풀렸나봐 ㅠㅠ 새로고침하면 바로 돌아올게!");
+      try{ addActions(am, [{ kind:"reload", label:"새로고침하고 이어가기" }]); }catch(e){}
+      busy=false; sendEl.disabled=false; return;
+    }
     if(!r||!r.ok){ if(liveEl){ try{ liveEl.remove(); }catch(e){} } addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
     // 렌더: 스트리밍이면 라이브 버블을 최종 버블로 정리(1버블이면 제자리 확정, 여러 버블이면 재렌더).
     var m;
