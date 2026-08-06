@@ -1202,6 +1202,13 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
           .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
         await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
       } catch { /* */ }
+    } else if (!userMsg && body?.work && reply) {
+      // 🎬 작업 오프너(편집기 도착 첫 말)도 전사에 저장 — 안 하면 실시간 미러링 재렌더가 지워버림(실앱 재현) + 타 기기에도 보여야.
+      try {
+        const fullLog = [...history, { role: "assistant", content: reply }]
+          .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
+        await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
+      } catch { /* */ }
     }
     if (userMsg && !body?.meta) {
       const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");
@@ -1710,7 +1717,9 @@ Deno.serve(async (req) => {
         ? `🎯 [상대가 방금 이 갈라 ${c.kind}에서 '갈비스 버튼'을 눌러 너를 불렀다 — 아래 '실제 내용+사람들 목소리'를 읽고 말을 걸어라]\n${c.text}\n\n오프너: ${role}\n🧠 [지적인 친구 모드] 이건 엄청난 이야깃거리다 — 단순 감상 말고 '사람들 생각'을 같이 나눠라: 위 [참전자 목소리]·찬반 비율·[댓글 반응] 실데이터를 근거로 "찬성 쪽은 ~라던데 반대는 ~", "댓글 보니까 ~", "여론은 ~쪽으로 기우네" 처럼 여러 관점을 던져 생각을 자극해라. 단 강의·나열 금지 — 친구처럼 짧게(1~2줄), 네 편(진영·의견)도 밝히고 '넌?'으로 넘겨라. 실데이터에 없는 여론·댓글은 지어내지 마라.${history.length ? " 지금 대화 중이었으면 '아 이거?' 하며 자연스럽게 화제를 전환." : ""}`
         : `🎯 [상대가 갈라 콘텐츠 '${String(handoff.title || "").slice(0, 80)}'(${handoff.type})에서 너를 불렀다 — 그 얘기로 짧게 먼저 말을 걸어라]\n오프너: ${role} 1~2줄, 리스트 금지.`;
     }
-    const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)" : openMsg;
+    const effectiveOpen = (handoff && !userMsg) ? "(방금 위 콘텐츠에서 너를 불렀어 — 그거 보고 자연스럽게 말 걸어줘)"
+      : (body?.work && !userMsg) ? "(상대가 방금 편집기에 도착했다 — 네가 먼저 말해라. 위 [작업 모드] 초안 상태를 보고: ①뭘 채워놨는지 반 줄 ②지금 화면에서 남은 것(특히 미디어/표지가 없으면 그걸 콕) ③네가 해줄 수 있는 것(표지 그리기·제목 뽑기 등) 제안. 2~3줄, 인사·질문공세 금지, 바로 실무.)"
+      : openMsg;
 
     // 🛠 작업 모드 — 편집기에서 왔으면(body.work) 지금 편집 중인 초안 상태·수정규칙을 주입.
     const work = (body?.work && typeof body.work === "object") ? body.work : null;

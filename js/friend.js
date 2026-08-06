@@ -336,9 +336,28 @@
     sheet.classList.add("fr-dock", "fr-hasform"); sheet.classList.remove("fr-dock-min");   // fr-hasform=편집기폼 있음(올리기 버튼 노출)
     document.body.classList.add("fr-docked");
     sheet.classList.add("fr-open");                      // 편집기는 위에서 그대로 사용(스크림 pass-through)
-    if(!logEl.children.length) restoreOrGreet(true);     // 인사 억제 — 작업 오프너가 첫 말
     window.__frDidIntro=true;
     setTimeout(function(){ scrollBottom(); }, 300);
+    // 🎬 작업 오프너 — 편집기 도착하면 갈비스가 '먼저' 말한다(침묵=방치 UX, 사장님 지적).
+    //    복원(restoreOrGreet) '완료 후' 실행해 순서 보장. 서버가 workBlock(초안·미디어 유무) 보고
+    //    "초안 채워놨어, 표지가 없어서 못 넘어가 — 내가 그려줄까?"식으로 리드.
+    (async function(){
+      var st=window.__frOpener={step:"start"};
+      try{
+        if(window.__frWorkOpened){ st.step="dup"; return; } window.__frWorkOpened=true;
+        // 🔐 콜드스타트 세션 대기 — boot 직후 세션 복원 전이면 401로 오프너가 조용히 버려짐(미러링과 동일 레이스)
+        for(var w=0; w<20 && !(await token()); w++){ await sleep(400); }
+        st.step="token:"+w;
+        if(!logEl.children.length){ try{ await restoreOrGreet(true); }catch(e){ st.restoreErr=String(e).slice(0,80); } }
+        st.step="restored";
+        typing(true);
+        var r=await callFriend("", history, null, true);   // meta=기억오염 방지, fbBody가 work 상태 동봉
+        if(r && r.reason==="auth"){ await sleep(1500); r=await callFriend("", history, null, true); }
+        typing(false);
+        st.step="called"; st.r = r ? {ok:r.ok, reason:r.reason, len:(r.reply||"").length} : null;
+        if(r&&r.ok&&r.reply){ var m=await addFriendReply(r.reply, true); if(r.actions) addActions(m, r.actions); history.push({role:"assistant",content:r.reply}); saveChat(); scrollBottom(); st.step="done"; }
+      }catch(e){ typing(false); st.err=String(e).slice(0,120); }
+    })();
   }
   function toggleDockMin(){ if(sheet){ sheet.classList.toggle("fr-dock-min"); document.body.classList.toggle("fr-docked-min", sheet.classList.contains("fr-dock-min")); setTimeout(scrollBottom,260); } }
   // 도킹(반쪽) ↔ 풀시트(크게) 토글 — 대행/작업 중에도 필요하면 크게 볼 수 있게

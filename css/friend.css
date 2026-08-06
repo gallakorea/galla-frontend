@@ -102,7 +102,9 @@ body.fr-kb-anim #frSheet .fr-panel{
 
 /* ── 🛠 작업 모드(도킹 미니챗) ── 편집기 위에 하단 반쪽 시트로 붙어 같이 창작.
    키보드 로직(top 앵커 + --fr-vvh) 그대로: fr-dock은 top을 하단쪽으로 밀 뿐. */
-#frSheet.fr-dock{ --fr-dock-h: min(46vh, 440px); }
+/* ⌨️ 키보드 인지 높이 — 46vh(고정 vh)는 키보드가 떠도 안 줄어 최신 글이 키보드 밑으로 깔렸음(사장님 실기기 지적).
+   vvh(비주얼 뷰포트) 비례로: 키보드 뜨면 도킹도 축소 → 마지막 메시지·입력창이 항상 보인다. */
+#frSheet.fr-dock{ --fr-dock-h: min(calc(var(--fr-vvh, 100vh) * 0.46), 440px); }
 #frSheet.fr-dock .fr-scrim{ background:transparent; backdrop-filter:none; pointer-events:none; }  /* 편집기 클릭 통과 */
 #frSheet.fr-dock .fr-panel{
   top: max(var(--fr-top), calc(var(--fr-vvh) - var(--fr-dock-h)));   /* 하단 dock-h만 차지 · 키보드 뜨면 clamp */
