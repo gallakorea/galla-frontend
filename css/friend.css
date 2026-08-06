@@ -309,6 +309,24 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
 .fr-card-go{ flex:none; color:#5fd8ff; opacity:.7; }
 .fr-card-go svg{ width:17px; height:17px; }
 
+/* 🆘 위기 상담 카드 — 자극 없는 차분한 톤(경보색 아님, 따뜻한 보살핌). 탭=바로 전화. */
+.fr-crisis{ width:100%; max-width:320px; display:flex; flex-direction:column; gap:7px;
+  background:linear-gradient(180deg,rgba(140,160,210,.10),rgba(140,160,210,.04));
+  border:1px solid rgba(150,170,220,.28); border-radius:16px; padding:12px 12px 11px; margin-top:3px; }
+.fr-crisis-t{ font-size:12.5px; font-weight:700; color:#dfe6f5; line-height:1.4; padding:1px 2px 3px; }
+.fr-crisis-call{ display:flex; align-items:center; gap:10px; text-decoration:none;
+  background:rgba(150,170,220,.10); border:1px solid rgba(150,170,220,.22); border-radius:12px; padding:9px 11px;
+  -webkit-tap-highlight-color:transparent; transition:background .14s, border-color .14s, transform .12s; }
+.fr-crisis-call:active{ transform:scale(.985); }
+.fr-crisis-call:hover{ background:rgba(150,170,220,.16); border-color:rgba(150,170,220,.4); }
+.fr-crisis-ph{ flex:none; width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+  background:rgba(150,170,220,.16); color:#aebbe0; }
+.fr-crisis-ph svg{ width:16px; height:16px; }
+.fr-crisis-body{ flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.fr-crisis-body b{ font-size:13px; font-weight:700; color:#eef2fb; }
+.fr-crisis-body i{ font-style:normal; font-size:10.5px; color:#94a0bd; }
+.fr-crisis-num{ flex:none; font-size:14px; font-weight:800; color:#c7d2ee; letter-spacing:.02em; }
+
 /* 타이핑 = HUD 웨이브폼 */
 .fr-typing{ align-self:flex-start; display:flex; align-items:center; gap:4px; padding:12px 14px;
   background:linear-gradient(180deg, rgba(20,31,46,.88), rgba(12,19,30,.88));

@@ -718,6 +718,19 @@
     if(!actions||!actions.length) return;
     var wrap=el('<div class="fr-acts"></div>');
     actions.forEach(function(a){
+      // 🆘 위기 상담 카드 — 차분한 전용 카드 + 탭하면 바로 전화(tel:). 지어낸 번호 아님(서버가 고정 첨부).
+      if(a.kind==="crisis"){
+        var box=el('<div class="fr-crisis"></div>');
+        if(a.title) box.appendChild(el('<div class="fr-crisis-t"></div>')).textContent=a.title;
+        (a.lines||[]).forEach(function(ln){
+          var row=el('<a class="fr-crisis-call"></a>');
+          row.setAttribute("href","tel:"+String(ln.tel||"").replace(/[^0-9]/g,""));
+          row.innerHTML='<span class="fr-crisis-ph">'+ICON.globe+'</span><span class="fr-crisis-body"><b>'+esc(ln.label||"")+'</b>'+(ln.sub?'<i>'+esc(ln.sub)+'</i>':'')+'</span><span class="fr-crisis-num">'+esc(ln.tel||"")+'</span>';
+          box.appendChild(row);
+        });
+        wrap.appendChild(box);
+        return;
+      }
       var isLink = (a.kind==="open"||a.kind==="view");
       // 🔗 링크/콘텐츠 = 세련된 리치 카드(제목·부제·출처). 그 외(공유·앱·관리)는 알약칩.
       if(isLink && (a.title||a.sub)){

@@ -66,6 +66,7 @@
     const kpi = (l, id, h, a, go) => `<div class="ad-kpi ${a || ""}${go ? " clickable" : ""}"${go ? ` data-go="${go}"` : ""}><div class="ad-kpi-l">${l}</div><div class="ad-kpi-v" id="${id}">0</div><div class="ad-kpi-h">${h || ""}</div></div>`;
     const mini = (l, v, go) => `<div class="ad-mini-i${go ? " clickable" : ""}"${go ? ` data-go="${go}"` : ""}><div class="ad-mini-v">${fmt(v)}</div><div class="ad-mini-l">${l}</div></div>`;
     main().innerHTML = `<h1 class="ad-h1">📊 대시보드</h1>
+      <div id="ad-crisis"></div>
       <div class="ad-kpis">
         ${kpi("실시간 접속 (1h)", "k-rt", `최근 5분 ${fmt(t.online5m)}명`, "live")}
         ${kpi("DAU (오늘)", "k-dau", "오늘 활동 유저", "", "members")}${kpi("WAU (7일)", "k-wau", "주간", "", "members")}${kpi("MAU (30일)", "k-mau", "월간", "", "members")}
@@ -81,12 +82,35 @@
         <div id="ga-body"><div class="ad-loading">GA 지표 집계 중…</div></div></div>`;
     countUp($("#k-rt"), t.realtime); countUp($("#k-dau"), t.dau); countUp($("#k-wau"), t.wau); countUp($("#k-mau"), t.mau); countUp($("#k-total"), t.total_users);
     paintGA();
+    paintCrisis();
     // 카드 클릭 → 해당 모듈로 즉시 이동 (영속 #ad-main에 1회만 위임 등록)
     if (!main().__goWired) { main().__goWired = true; main().addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) navTo(g.dataset.go); }); }
     // 실시간 접속 현황(회원 명단/비회원 수/지역) — 최초 렌더 + 20초 자동 갱신
     paintPresence();
     clearInterval(dashPresenceTimer);
     dashPresenceTimer = setInterval(() => { if ($("#ad-presence")) paintPresence(); else clearInterval(dashPresenceTimer); }, 20000);
+  }
+  // 🆘 위기 안전망 관제 — 자살·자해 신호 감지 이력. 미처리 있으면 상단에 강조, 없으면 조용히.
+  async function paintCrisis() {
+    const box = $("#ad-crisis"); if (!box) return;
+    const s = await rpc("admin_crisis_stats", { p_days: 30 });
+    if (!s || s.error) { box.innerHTML = ""; return; }
+    if (!s.total) { box.innerHTML = `<div class="ad-crisis-ok">🆘 위기 안전망 가동 중 · 최근 30일 감지 0건</div>`; return; }
+    const rows = (s.recent || []).map(r => `<div class="ad-crisis-row${r.handled ? " done" : ""}">
+      <span class="ad-crisis-when">${r.at}</span>
+      <span class="ad-crisis-term">${esc(r.term || "")}</span>
+      <span class="ad-crisis-ex">${esc(r.excerpt || "")}</span>
+      ${r.handled ? `<span class="ad-crisis-badge">확인됨</span>` : `<button class="ad-crisis-hbtn" data-crisis="${r.id}">확인 처리</button>`}
+    </div>`).join("");
+    box.innerHTML = `<div class="ad-crisis-card${s.unhandled ? " alert" : ""}">
+      <div class="ad-crisis-h">🆘 위기 감지 <b>${s.unhandled ? `미처리 ${s.unhandled}건` : "모두 확인됨"}</b>
+        <span class="ad-crisis-sub">최근 30일 ${s.total}건 · ${s.users}명 · 자살/자해 신호</span></div>
+      <div class="ad-crisis-list">${rows}</div></div>`;
+    box.querySelectorAll("[data-crisis]").forEach(b => b.addEventListener("click", async () => {
+      b.disabled = true; b.textContent = "처리 중…";
+      await rpc("admin_crisis_handle", { p_id: Number(b.dataset.crisis) });
+      paintCrisis();
+    }));
   }
   // 🌐 Google Analytics 패널 — 캐시된 GA4 지표(admin_ga). 미연동이면 안내.
   async function paintGA() {

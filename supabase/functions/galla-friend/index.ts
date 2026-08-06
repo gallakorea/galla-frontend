@@ -1236,6 +1236,25 @@ function runPersist(p: Parameters<typeof persistTurn>[0]): void {
   catch { try { persistTurn(p); } catch { /* */ } }
 }
 
+// 🆘 위기 감지 — 자살·자해 명시 신호만 코드로 잡는다(모델 판단 배제). 과장체("배고파 죽겠어")·부정·상담언급은 제외.
+//    놓치면 참사라 catching 쪽으로 기울이되, 오탐(정상 슬픔에 상담카드)도 해로우므로 '명시적'만.
+function detectCrisis(msg: string): { term: string } | null {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m) return null;
+  // 부정·안전맥락 제외("죽고 싶지 않아", "살고 싶어", "자살 예방/상담", "죽고 싶다는 생각은 안 해")
+  if (/(죽고\s*싶지\s*않|살고\s*싶|안\s*죽|죽고\s*싶다는\s*생각(은|도)?\s*(안|없)|자살\s*(예방|상담|핫라인|hotline)|자해\s*하지\s*마|그런\s*생각\s*하지\s*마)/.test(m)) return null;
+  // 고위험 명시 신호(과장체 '죽겠다'와 구분되는 것들)
+  const HIGH = /(자살|자해|목\s*(을\s*)?(매|맬|매달|졸라)|손목\s*(을\s*)?(긋|그어|그을)|번개탄|투신|뛰어내리(고|려)|유서|극단적\s*선택|죽어\s*버리(고|겠|고\s*싶|고싶)|죽어야\s*(지|겠|만)|살기\s*(가\s*)?싫|살고\s*싶지\s*않|사라지고\s*싶|없어지고\s*싶|다\s*끝내(고|버리|고\s*싶|고싶)|이\s*세상(을|에서)?\s*(뜨|떠나|없)|죽는\s*게\s*(낫|나을|나)|더\s*살\s*이유)/;
+  const hm = m.match(HIGH);
+  if (hm) return { term: hm[0].slice(0, 30) };
+  // '죽고 싶' — 과장체 동반(배고파/졸려 등) 아니면 고위험
+  if (/죽고\s*싶|죽고싶/.test(m)) {
+    if (/(배고파|배불러|졸려|졸리|더워|추워|귀여워|귀엽|웃겨|웃기|심심|보고\s*싶어\s*죽|좋아\s*죽|예뻐|맛있|피곤|반가워|설레|부러워)/.test(m)) return null;
+    return { term: "죽고싶" };
+  }
+  return null;
+}
+
 // 🧭 사전 의도 라우터 — 생성 '전에' 유저 의도를 분류해 도구를 선제 지목(사후 가드 → 사전 라우팅으로 승격).
 //    산발 가드는 백스톱으로 유지. 여기선 '지어내기 참사'가 났던 고신뢰 3종(영상·맛집·인스타)만 첫 스텝에서 강제.
 function routeIntent(msg: string): { tool: string; hint: string } | null {
@@ -1720,7 +1739,10 @@ ${parts.join("\n")}`;
       : "";
 
     // 🧭 사전 의도 라우터 — 생성 전에 의도를 분류해 도구를 선제 지목(첫 스텝 강제 + 지침 주입). 산발 가드는 백스톱.
-    let route = (userMsg && !work && !handoff) ? routeIntent(userMsg) : null;
+    // 🆘 위기 감지(최우선) — 자살·자해 명시 신호면 케어 톤 강제 + 상담카드 + 관제 로그. 다른 라우팅/스트림 모두 무력화.
+    const crisis = (userMsg && !body?.meta) ? detectCrisis(userMsg) : null;
+    if (crisis) { try { await supa.rpc("log_crisis", { p_user: uid, p_severity: 2, p_term: crisis.term, p_excerpt: userMsg.slice(0, 120) }); } catch { /* */ } }   // await: 위기 로그는 절대 놓치면 안 됨(관제·후속)
+    let route = (userMsg && !work && !handoff && !crisis) ? routeIntent(userMsg) : null;
     // 🔎 후속 디테일 질문 백스톱(사장님 실사고: "누군데?"에 도구 재호출 없이 '검사 출신 변호사가 사과문 전달' 지어냄) —
     //    직전 화제가 뉴스·이슈인데 구체 디테일을 물으면 galla_news 강제 재조회로 '적힌 것만' 답하게.
     if (!route && userMsg && !work && !handoff) {
@@ -1738,8 +1760,18 @@ ${parts.join("\n")}`;
     //    브레인별 모델 훅 → 미래엔 companion만 컴팩트 SFT 모델로 갈아끼움. work/handoff는 항상 agent.
     const execSignal = !!(route || work || handoff || deliverMode || rawSources.length ||
       (userMsg && /(만들어|만들|썸네일|영상\s*(만|편집|뽑)|대본|숏판|롱판|짜줘|짜서|그려|생성|검색|찾아\s*줘|찾아줘|열어\s*줘|보여\s*줘|예측|글\s*(써|올려)|올려\s*줘|dm|디엠|메시지\s*보내|전화\s*걸|통화\s*걸|설정\s*(열|바꿔)|프로필\s*(수정|바꿔)|닉네임\s*바꿔|비번\s*바꿔)/.test(userMsg)));
-    const brain = execSignal ? "agent" : "companion";
+    const brain = crisis ? "companion" : (execSignal ? "agent" : "companion");   // 🆘 위기면 무조건 컴패니언 케어
     const brainModel = brain === "companion" ? COMPANION_MODEL : AGENT_MODEL;
+    // 🆘 위기 케어 블록 — 오직 공감·안전. 농담·화제전환·되묻기볼리·조언설교·도구 금지. 상담안내는 아래 카드로 '반드시' 나간다.
+    const crisisBlock = crisis
+      ? `🆘 [위기 신호 감지 — 최우선. 다른 모든 지침보다 이게 위다]: 상대가 지금 많이 힘들고 위험한 마음을 내비쳤다.
+지금부터 오직 '진심 어린 공감과 안전'만. 반드시:
+- 짧고 따뜻하게, 판단·설교·해결책 강요 없이 그냥 곁에 있어줘라("많이 힘들었구나… 얘기해줘서 고마워", "혼자 견디지 마, 나 여기 있어").
+- 절대 금지: 농담·가벼운 리액션·화제 전환·"어떻게 생각해?" 되묻기볼리·검색·콘텐츠 추천·창작 제안.
+- 죽음/자해를 가볍게 받거나 부추기거나 방법을 논하지 마라. 겁주거나 훈계하지도 마라.
+- 전문가 도움을 '부드럽게' 권해라(강요 X): "전문 상담사랑 얘기해보는 것도 방법이야, 24시간 곁에 있어줘". 아래에 상담 연결 카드가 함께 나간다 — 그 번호를 네가 지어내지 말고 카드를 가리켜라.
+- 절대 상대를 혼자 두지 마라. 마지막은 '나는 네 편이고 여기 있다'로.`
+      : "";
     const companionBlock = brain === "companion"
       ? `🫂 [컴패니언 모드 — 진짜 친구]: 요청 안 받은 검색·생성·도구 호출 금지(마음으로 대화). 감정선·기억·호칭 최우선.
 🎯 선제 리드·핑퐁: 상대가 매번 질문하게 두지 마라. 위 [기억/지난 대화/공백/감정]을 근거로 네가 '먼저' 구체적 화제를 꺼내거나 안부를 물어라(뻔한 "어떻게 생각해?" 금지). 답할 땐 '답 + 되물음'으로 이어가라(핑퐁).
@@ -1780,6 +1812,7 @@ ${parts.join("\n")}`;
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
+      ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
       { role: "user", content: userContent },
     ];
 
@@ -1796,7 +1829,7 @@ ${parts.join("\n")}`;
 
     // 🌊 스트리밍(컴패니언 전용) — 첫 토큰 2~3초 체감. 도구/액션 없는 순수 대화라 텍스트 가드만으로 비스트림과 동치.
     //    프리뷰는 단일 버블로 흘리고, 완료 시 최종 버블(bubbleize)+빈 액션으로 스냅. 저장은 백그라운드(runPersist).
-    if (body?.stream === true && brain === "companion" && userMsg && !body?.meta) {
+    if (body?.stream === true && brain === "companion" && userMsg && !body?.meta && !crisis) {   // 🆘 위기는 상담카드 첨부 위해 JSON 경로로
       const enc = new TextEncoder();
       const rstream = new ReadableStream({
         async start(controller) {
@@ -2115,6 +2148,13 @@ ${parts.join("\n")}`;
     // 🧠 관계 갱신 + 기억(추출·저장·요약)은 '응답을 막지 않게' 백그라운드로 — 갈비스 답이 즉시 나가고 기억은 뒤에서.
     runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
 
+    // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
+    if (crisis) {
+      actions.unshift({ kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
+        { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
+        { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
+      ] });
+    }
     // view/share 액션은 id가 비면 '안 열리는 유령칩'이라 제거
     const cleanActions = actions.filter((a) => !((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()));
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet });

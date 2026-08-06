@@ -313,3 +313,21 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-stance button[data-st="con"].on{ border-color:#ff4d67; background:rgba(255,77,103,.16); color:#fff; }
 
 .vmode-pick--wide, .vmode-thumb--wide{ aspect-ratio:16/9; }
+
+/* 🆘 위기 안전망 관제 */
+.ad-crisis-ok{ font-size:12px; color:#5f6c80; padding:8px 12px; border:1px dashed #223047; border-radius:10px; margin-bottom:14px; }
+.ad-crisis-card{ border:1px solid #2a3550; border-radius:14px; padding:13px 14px; margin-bottom:16px; background:#12131c; }
+.ad-crisis-card.alert{ border-color:#e0555f; background:linear-gradient(180deg,rgba(224,85,95,.10),rgba(224,85,95,.03)); }
+.ad-crisis-h{ font-size:13px; color:#c3ccda; font-weight:700; margin-bottom:9px; display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.ad-crisis-h b{ color:#ff8a8a; font-weight:800; }
+.ad-crisis-card:not(.alert) .ad-crisis-h b{ color:#5fd39a; }
+.ad-crisis-sub{ font-size:11px; color:#7d8ba0; font-weight:500; }
+.ad-crisis-list{ display:flex; flex-direction:column; gap:6px; }
+.ad-crisis-row{ display:flex; align-items:center; gap:10px; font-size:12px; padding:7px 9px; background:#0d1420; border:1px solid #1e2a3d; border-radius:9px; }
+.ad-crisis-row.done{ opacity:.5; }
+.ad-crisis-when{ flex:none; color:#7d8ba0; font-variant-numeric:tabular-nums; font-size:11px; }
+.ad-crisis-term{ flex:none; color:#ffb3b3; font-weight:700; background:rgba(224,85,95,.12); padding:1px 7px; border-radius:6px; font-size:11px; }
+.ad-crisis-ex{ flex:1; min-width:0; color:#c3ccda; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ad-crisis-badge{ flex:none; font-size:10px; color:#5fd39a; font-weight:700; }
+.ad-crisis-hbtn{ flex:none; font-size:11px; padding:4px 10px; border-radius:7px; border:1px solid #3a4a66; background:#182338; color:#dbe6fb; cursor:pointer; }
+.ad-crisis-hbtn:hover{ border-color:#5b8cff; }
