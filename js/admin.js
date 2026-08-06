@@ -989,6 +989,7 @@
     main().innerHTML = `<h1 class="ad-h1">🧠 브레인 엔진 <span style="font-size:13px;color:#7d8ba0;font-weight:600">— 성공 유형 패턴(AI에 주입돼 제목·썸네일·대본 생성). 계속 쌓을수록 똑똑해집니다.</span></h1>
       <div id="b-stats" style="margin-bottom:16px"></div>
       <div id="b-learn" style="margin-bottom:16px"></div>
+      <div id="b-redteam" style="margin-bottom:16px"></div>
       <div style="background:#111a28;border:1px solid #223047;border-radius:14px;padding:14px;margin-bottom:16px">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
           <label style="font-size:11px;color:#8fa0b5">종류<select id="bf-kind" style="${inp}">${BRAIN_KINDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join("")}</select></label>
@@ -1062,6 +1063,27 @@
         </div>
         ${cronBad.length ? `<div style="margin-top:8px;font-size:11px;color:#ff8a8a">⚠️ 크론 이상: ${cronBad.map(([k, v]) => `${k}(${v.status})`).join(", ")}</div>`
           : `<div style="margin-top:8px;font-size:10px;color:#5f6c80">크론 정상 — ${Object.entries(cr).map(([k, v]) => `${k.replace(/-daily|_daily|_job/g, "")} ${v?.at || ""}`).join(" · ")}</div>`}`;
+    })();
+
+    // 🤖 레드팀 자동화 — 주1회 회귀 스캔 건강도 추이(퇴행 감지). 100=클린, 낮을수록 고친 게 재발.
+    (async () => {
+      const s = await rpc("admin_redteam_runs", { p_limit: 12 });
+      const box = g("b-redteam"); if (!box) return;
+      if (!s || s.error || !(s.runs || []).length) { box.innerHTML = ""; return; }
+      const runs = s.runs;
+      const latest = runs[0];
+      const bars = runs.slice().reverse().map(r => {
+        const h = Math.max(6, Math.round((r.health / 100) * 40));
+        const col = r.health >= 90 ? "#5fd39a" : r.health >= 70 ? "#f4c15d" : "#ff6b6b";
+        return `<div title="${r.at} · health ${r.health} · flags ${r.flags}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px">
+          <div style="width:100%;max-width:26px;height:${h}px;background:${col};border-radius:4px 4px 0 0"></div>
+          <div style="font-size:8px;color:#5f6c80">${(r.at || "").slice(0, 5)}</div></div>`;
+      }).join("");
+      const bd = Object.entries(latest.breakdown || {}).map(([k, n]) => `${k} ${n}`).join(" · ") || "레드플래그 0 (클린)";
+      const hcol = latest.health >= 90 ? "#5fd39a" : latest.health >= 70 ? "#f4c15d" : "#ff6b6b";
+      box.innerHTML = `<div style="background:#111a28;border:1px solid #223047;border-radius:14px;padding:13px 15px">
+        <div style="font-size:12px;color:#7d8ba0;font-weight:700;margin-bottom:9px">🤖 레드팀 자동 회귀 (주1회) — 최신 <b style="color:${hcol}">health ${latest.health}</b> · ${latest.turns}턴 스캔 · <span style="color:#8fa0b5">${bd}</span></div>
+        <div style="display:flex;align-items:flex-end;gap:4px;height:52px">${bars}</div></div>`;
     })();
 
     g("bf-reset").onclick = () => fillForm(null);
