@@ -238,7 +238,8 @@ function waitForSupabaseClient() {
       else if(a < 14){ ageHint.textContent='✕ 만 14세 미만은 가입할 수 없습니다'; ageHint.className='pw-hint no'; ageAgree.checked=false; }
       /* 만 나이 숫자는 표시하지 않는다 — 세는 나이와 달라 '계산이 틀렸다'는
          인상을 주고, 본인 나이를 되비추는 것도 불쾌 요소 (사장님 지적) */
-      else { ageHint.textContent='✓ 가입 가능한 나이예요'; ageHint.className='pw-hint ok'; ageAgree.checked=true; }
+      /* ⚠️ 필수 약관 '사전 체크' 금지 — 나이가 확인돼도 동의는 유저가 직접 누른다(사전선택은 법적 리스크 + "왜 미리 체크돼 있지?" 불신) */
+      else { ageHint.textContent='✓ 가입 가능한 나이예요'; ageHint.className='pw-hint ok'; }
       syncAgreeAll(); refreshSignupBtn();
     });
   }

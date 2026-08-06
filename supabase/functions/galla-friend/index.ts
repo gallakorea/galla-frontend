@@ -1728,7 +1728,7 @@ Deno.serve(async (req) => {
         ? `· 형태: ${f.vkind === "horizontal" ? "가로 영상(롱판)" : "세로(숏판/사진)"}\n· 제목: ${cut(f.title, 80) || "(가로영상만·비어있음)"}\n· 캡션: ${cut(f.caption, 400) || "(비어있음)"}\n· 해시태그: ${tagsOf(f.tags) || "(없음)"}\n· 🖼 미디어(사진/영상): ${mediaLine}`
         : work.type === "predict"
         ? `· 질문: ${cut(f.question, 120) || "(비어있음)"}\n· 정산 기준(설명): ${cut(f.description, 300) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n(이진 예/아니오 마켓. 마감일·정산 기준은 사람이 확인 후 발행)`
-        : `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 한줄요약: ${cut(f.one_line, 80) || "(비어있음)"}\n· 본문: ${cut(f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n· 찬성진영: ${cut(f.faction_a, 30) || "(비어있음)"} / 반대진영: ${cut(f.faction_b, 30) || "(비어있음)"}`;
+        : `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 한줄요약: ${cut(f.one_line, 80) || "(비어있음)"}\n· 본문: ${cut(f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n· 찬성진영: ${cut(f.faction_a, 30) || "(비어있음)"} / 반대진영: ${cut(f.faction_b, 30) || "(비어있음)"}\n· 🖼 표지(사진/영상): ${gMedia > 0 ? `${gMedia}개 첨부됨` : "❗아직 없음 — 1개 이상 있어야 다음 단계로 넘어간다(필수)"}`;
       // 🏁 라스트 마일 — 유형별 '남은 것 + 내가 도울 것(특히 미디어) + 발행 버튼'. 초안 던지고 방치 금지, 끝까지 손잡기.
       const lastMile = work.type === "gallari"
         ? (gHasMedia
@@ -1738,7 +1738,9 @@ Deno.serve(async (req) => {
         ? `🏁 남은 건 **마감일·정산 기준 확인**뿐 — "마감일이랑 정산 기준만 확인하고 [올리기] 누르면 돼"라고 짚어줘라. 커버 이미지 원하면 "내가 하나 그려줄까?"(gen_thumbnail landscape) 제안.`
         : work.type === "plaza"
         ? `🏁 글 다 되면 "이제 화면의 **[올리기] 버튼**만 누르면 발행!"이라고 짚어줘라. 사진 넣고 싶다 하면 본문에 직접 넣는 법 안내.`
-        : `🏁 이슈 초안 텍스트가 다 되면 **발행 요건을 짚어줘라**(실유저가 여기서 조용히 막힌다): "이제 ①카테고리 ②**네 입장(찬성/반대)** ③기부처만 고르고 [미리보기→최종 발행] 누르면 끝!" — 특히 '내 입장' 미선택이면 발행이 안 되는데 화면 피드백이 없어서 네가 꼭 말해줘야 한다. 눈길 끌 **표지 이미지**는 "내가 하나 그려줄까?"(gen_thumbnail drama, portrait) 먼저 제안 — 원하면 즉시 호출.`;
+        : (gMedia > 0
+          ? `🏁 표지까지 있다! 이제 **발행 요건**만: "①카테고리 ②**네 입장(찬성/반대)** ③기부처 고르고 [미리보기→최종 발행] 누르면 끝!" — '내 입장' 미선택이면 발행이 안 되니 꼭 짚어줘라.`
+          : `🏁 **이슈는 표지(사진/영상) 1개가 '필수'다 — 없으면 다음 단계로 못 넘어간다.** 텍스트가 다 되면 방치 말고 **네가 먼저 제안**: "표지가 필요해 — 직접 올릴래, 아니면 내가 어그로 표지 그려줄까?"(gen_thumbnail drama, portrait — 원하면 즉시 호출, 자동 첨부됨). 표지 붙으면 "①카테고리 ②네 입장(찬/반) ③기부처 고르고 [미리보기→최종 발행]!"까지 안내.`);
       workBlock = `🛠 [작업 모드 — 지금 상대와 '${kind}' 초안을 편집기에서 '같이 다듬는 중'이다]
 지금 초안 상태:
 ${lines}
@@ -2193,7 +2195,10 @@ ${parts.join("\n")}`;
     //    (페르소나 금지: 다음 턴에 못 돌아옴) 그 자리서 web_search를 강제 호출→진짜 추천으로 답을 다시 만든다.
     {
       const promisesSearch = /(찾아\s*(줄게|줄께|볼게|볼께|봐줄게|드릴게)|알아\s*(볼게|봐줄게)|검색\s*(해볼게|해줄게|해보고|해서)|다시\s*(찾|검색)|기다려|잠깐만|잠시만|이따|곧\s*(줄|찾|알려)|금방\s*찾)/.test(reply);
-      if (userMsg && !body?.meta && promisesSearch && !searchHits.length && !actions.some((a) => a.kind === "open")) {
+      // ⚠️ 작업모드(work)·창작 액션(genThumbnail 등) 턴엔 오발 금지 — "잠깐만, 그려줄게"가 검색 약속으로 오인돼
+      //    web_search 강제→실패→맛집 폴백이 답을 덮어쓰던 사고(실앱 재현).
+      const creatingNow = actions.some((a) => /^(genThumbnail|genVideo|draft|editdraft|titles|script|plan)/.test(a.kind));
+      if (userMsg && !body?.meta && !work && !creatingNow && promisesSearch && !searchHits.length && !actions.some((a) => a.kind === "open")) {
         try {
           messages.push({ role: "system", content: "너는 방금 '찾아줄게/기다려봐/검색해볼게'라고 '약속만' 했다 — 넌 다음 턴에 스스로 못 돌아온다(= 상대는 영원히 못 받는다, 페르소나 명백 위반). 지금 이 턴에 즉시 web_search를 호출해 실제로 찾아라(맛집·장소=kind:local, 최신사건=news, 후기=blog). 상대가 말한 지역·메뉴로 쿼리를 만들고, 없으면 지역·키워드를 바꿔 한 번 더. 잡담·약속·질문 금지, web_search만." });
           for (let gs = 0; gs < 2 && !searchHits.length; gs++) {

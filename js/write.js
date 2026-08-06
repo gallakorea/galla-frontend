@@ -85,7 +85,8 @@ function initWritePage(ctx) {
         return {
           title: titleEl ? titleEl.value : '', one_line: oneLineEl ? oneLineEl.value : '',
           description: descEl ? descEl.value : '', category: categoryEl ? categoryEl.value : '',
-          faction_a: fA ? fA.value : '', faction_b: fB ? fB.value : ''
+          faction_a: fA ? fA.value : '', faction_b: fB ? fB.value : '',
+          mediaCount: (typeof mediaItems !== 'undefined' && mediaItems) ? mediaItems.length : 0   // 🖼 미디어 필수 — 갈비스가 알고 선제안
         };
       },
       setFields(f) {
