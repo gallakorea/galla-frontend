@@ -1036,8 +1036,8 @@
         <div style="display:flex;gap:9px;flex-wrap:wrap">
           ${cell("제작", (s.thumbnails || 0) + (s.videos || 0), `썸네일 ${s.thumbnails || 0} · 영상 ${s.videos || 0}`)}
           ${cell("제작 유저", s.creators || 0, "생성 경험")}
-          ${cell("창작 매출(GP)", rev.toLocaleString(), `환불 ${Math.abs(s.gp_refunded || 0)}`)}
-          ${cell("결제 유저", s.paying_users || 0, "GP 실차감")}
+          ${cell("창작 매출(GC)", rev.toLocaleString(), `환불 ${Math.abs(s.gp_refunded || 0)}`)}
+          ${cell("결제 유저", s.paying_users || 0, "GC 실차감")}
           ${cell("발행 콘텐츠", s.published_posts || 0, "숏판·롱판")}
         </div>`;
     })();

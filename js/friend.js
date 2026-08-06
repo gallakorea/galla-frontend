@@ -471,7 +471,7 @@
       } else {
         var why=(d&&d.error)||"fail";
         if(why==="insufficient"||why==="charge_failed"){
-          addMsg("a","GP가 모자라서 못 그렸어 ㅜ 썸네일 한 장에 200 GP거든 — 충전하고 다시 가자");
+          addMsg("a","GC가 모자라서 못 그렸어 ㅜ 썸네일 한 장에 200 GC거든 — 후원받거나 충전하고 다시 가자");
           try{ window.openShop && window.openShop(); }catch(e){}
           return;
         }
@@ -528,7 +528,7 @@
       if(!sub || !sub.ok || !sub.id){
         clearProgress();
         if(sub && (sub.error==="insufficient" || sub.error==="charge_failed")){
-          addMsg("a","GP가 모자라서 영상은 못 만들었어 ㅜ 자동편집 영상 한 편에 1000 GP거든 — 충전하고 다시 가자");
+          addMsg("a","GC가 모자라서 영상은 못 만들었어 ㅜ 자동편집 영상 한 편에 1000 GC거든 — 후원받거나 충전하고 다시 가자");
           try{ window.openShop && window.openShop(); }catch(e){}
           return;
         }
