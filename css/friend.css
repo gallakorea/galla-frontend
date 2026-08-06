@@ -125,6 +125,13 @@ body.fr-kb-anim #frSheet .fr-panel{
   32%{ box-shadow:0 -8px 46px rgba(95,216,255,.55), 0 -2px 0 rgba(95,216,255,1); } }
 /* 도킹 중엔 미니 필 숨김(중복 방지) */
 body.fr-docked #frMini{ display:none !important; }
+/* 🛠 도킹 공간 예약 — 미니챗(46vh)이 편집기 하단(본문·발행버튼)을 가리던 것 수정: 페이지가 그만큼 아래 여백을 갖고
+   스크롤하면 모든 폼이 도킹 위로 올라온다. 접힘(fr-docked-min)이면 바 높이만. */
+body.fr-docked{ padding-bottom: calc(min(46vh, 440px) + 24px) !important; }
+body.fr-docked.fr-docked-min{ padding-bottom: 78px !important; }
+/* SPA(view-host 스크롤 컨테이너)도 동일 예약 */
+body.fr-docked .view-host{ padding-bottom: calc(min(46vh, 440px) + 24px) !important; }
+body.fr-docked.fr-docked-min .view-host{ padding-bottom: 78px !important; }
 /* ✅ 올리기(발행) 버튼 — dock 작업모드에서만. 대화→다듬기→발행을 한 곳에서 */
 .fr-publish{ display:none; margin-left:auto; background:linear-gradient(135deg,#4361ff,#5b8cff); border:none;
   color:#fff; font-size:12px; font-weight:800; padding:6px 11px; border-radius:999px; cursor:pointer;

@@ -1303,15 +1303,17 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   return null;
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   // 🖼 gen_thumbnail은 편집기(작업모드)에서만 노출 — 채팅에서 초안 만들 땐 이미지가 붙을 편집기가 없어 '저장해서 써' 클렁크 + draft 칩 유실.
   //    inWork가 명시적으로 false(채팅 창작)면 gen_thumbnail 제거. undefined(가드 등)면 유지.
+  // 🎨 기획 타임(noDraft)엔 draft_* 자체를 미노출 — "기획 먼저" 지침을 모델이 무시하고 바로 초안 박는 것 코드로 차단.
   const activeTools = TOOLS.filter((t: any) => {
     const n = t?.function?.name;
     if (n === "gen_video" && !VIDEO_ON) return false;
     if (n === "gen_thumbnail" && opts?.inWork === false) return false;
+    if (opts?.noDraft && /^draft_/.test(n || "")) return false;
     return true;
   });
   const reqBody: any = { model: opts?.model || CHAT_MODEL, messages, tools: activeTools, temperature: 0.8, max_tokens: opts?.maxTokens || 240 };
@@ -1803,20 +1805,38 @@ ${parts.join("\n")}`;
         route = { tool: "galla_news", hint: "상대가 방금 화제의 '구체 디테일'(누구·무슨 일)을 물었다. galla_news 실데이터에서 그 사건을 찾아 **적힌 내용만** 답해라. 인물의 직업·소속·만남·발언을 데이터에 없는데 이어붙이지 마라(실존인물 디테일 지어내기=명예훼손급 최악 사고). 데이터에 없으면 '기사엔 거기까진 안 나와있네'라고 솔직히." };
       }
     }
-    // 🛠 발행 라우터(사장님 실사고: "올려봐"에 갈비스가 '뭐로 갈래?' 확인만 반복하고 실제 생성 안 함) —
-    //    명확한 발행 의도면 확인 루프에 안 맡기고 draft 도구를 '첫 스텝에 강제'. 타입은 최근 맥락에서 추론.
+    // 🛠 발행 라우터 + 🎨 기획 모드(사장님 2대 지적의 균형) —
+    //    ①"올려봐/발의/이대로 가/그걸로/B안" 같은 '확정' 신호 = 즉시 draft 강제(무한 확인루프 방지).
+    //    ②"만들어줘/하자" 같은 '제작 요청' = 바로 박지 말고 기획 1턴(앵글 2~3안 제시→상대가 고름). 일방적 제작 금지.
+    let planMode = false;
     if (userMsg && !work && !handoff && !crisis) {
-      const pub = /(올려\s*(봐|줘|보|줄|주라|라|놔)|올려봐|발의(해|하|할|해줘)|이슈로\s*(올|만들|가|해|써)|판\s*(올|세워|짜|만들)|글로\s*(올|써)|이걸로\s*(올|가|만들|발행|해)|발행(해|하)|게시\s*해|이대로\s*(올|가|만들))/.test(userMsg);
+      const recentA = String((([...history].reverse().find((m: any) => m?.role === "assistant")) || {}).content || "");
+      const pub = /(올려\s*(봐|줘|보|줄|주라|라|놔)|올려봐|발의(해|하|할|해줘)|발행(해|하)|게시\s*해|이대로\s*(올|가|만들)|이걸로\s*(올|가|발행|해|만들)|그걸로\s*(가|해|만들|올)|그대로\s*(가|만들|올려)|[ABab1-3][안번]?\s*으?로\s*(가|해|만들|올))/.test(userMsg)
+        || (/(좋아|ㅇㅋ|오케이|그래|응|고+)\s*(그걸로|그렇게|가자|만들어|해줘)?$/.test(userMsg.trim()) && /(안|앵글|각도|프레임|방향|어느|뭐로)/.test(recentA));   // 기획 제안에 대한 승낙
+      const make = /(만들어\s*줘|만들자|하자|짜\s*줘|잡아\s*줘|이슈로\s*(만들|해|써|가)|판\s*(만들|세워|짜)|글로\s*써|예측\s*(만들|판)|숏판\s*(만들|하)|콘텐츠\s*(만들|하))/.test(userMsg);
       if (pub) {
-        const recentA = String((([...history].reverse().find((m: any) => m?.role === "assistant")) || {}).content || "");
         const blob = (userMsg + " " + recentA);
         let tool = "draft_issue";
         if (/예측|베팅|마켓|얼마\s*걸|판돈|배당/.test(blob)) tool = "draft_predict";
         else if (/숏판|갈라리|릴스|숏폼|영상\s*올|사진\s*올|브이로그/.test(blob)) tool = "draft_gallari";
         else if (/광장|자유\s*글|에세이|후기|일상\s*글|썰\s*(올|풀|써)/.test(blob) && !/이슈|찬반|진영/.test(blob)) tool = "draft_plaza";
-        route = { tool, hint: `상대가 '지금 올려/만들어'라고 명확히 지시했다 — '뭐로 갈래?/주제 확정하고' 같은 되묻기·확인 절대 금지. 즉시 ${tool}를 호출해 초안을 만들어라. 제목·찬반라벨·본문은 방금까지 나눈 대화에서 정해진 주제로 채워라(애매하면 합리적으로 채워 일단 초안을 만든다 — 상대가 폼에서 고친다).` };
+        route = { tool, hint: `상대가 '확정' 신호를 줬다(올려/이대로/그걸로/N안) — '뭐로 갈래?/주제 확정하고' 같은 되묻기·확인 절대 금지. 즉시 ${tool}를 호출해 초안을 만들어라. 직전 대화에서 상대가 고른 앵글·프레임 그대로. 제목·찬반라벨·본문 모든 인자를 채워라(애매하면 합리적으로 채워 일단 초안 — 상대가 폼에서 고친다).` };
+      } else if (make && /(빨리|그냥|알아서|아무|바로|대충)/.test(userMsg)) {
+        // 빨리 신호 = 기획 스킵, 최선 1안으로 즉시
+        const blob = (userMsg + " " + recentA);
+        let tool = "draft_issue";
+        if (/예측|베팅|마켓/.test(blob)) tool = "draft_predict";
+        else if (/숏판|갈라리|릴스|숏폼/.test(blob)) tool = "draft_gallari";
+        else if (/광장|에세이|후기/.test(blob) && !/이슈|찬반/.test(blob)) tool = "draft_plaza";
+        route = { tool, hint: `상대가 '빨리/알아서'라고 했다 — 기획 생략, 네가 제일 쎈 앵글 하나로 즉시 ${tool} 호출(모든 인자 채워서).` };
+      } else if (make) {
+        planMode = true;   // 기획 1턴 — planBlock이 지침 주입(아래)
       }
     }
+    // 🎨 기획 커뮤니케이션 블록 — 일방 제작 금지, PD처럼 앵글을 '같이' 정한다(수준 = 여기서 갈린다).
+    const planBlock = planMode
+      ? `🎨 [기획 타임 — 바로 초안 박지 마라, 같이 정한다]: 상대가 콘텐츠를 만들자고 했다. 이번 턴엔 draft_* 호출 금지. 대신 **PD처럼 '어떻게 만들지'를 2~3안으로** 제시해라 — 각 안은 [앵글(프레임)·타깃·훅 한 줄]이 다르게(예: A안 "돈 문제로 프레임: 직장인 지갑 얘기라 참여 폭발" / B안 "세대 갈등 각: 2030 vs 5060 붙는 구도" / C안 "병맛·밈 각: 가볍게 웃기면서 공유각"). 근거 있으면(핫이슈·뉴스 데이터) 왜 이 앵글이 먹히는지도 한 줄. 마지막에 "몇 번으로 갈까? 아니면 섞어도 되고 — 그냥 맡기면 내가 젤 쎈 걸로 간다 ㅋㅋ"로 넘겨라. 상대가 고르면(다음 턴) 그 앵글로 즉시 draft_*. 나열은 짧게(안당 1~2줄), 강의 금지.`
+      : "";
     const routeBlock = route
       ? `🧭 [의도 감지 — 이 도구를 '먼저' 써라]: ${route.hint} 아는 척 지어내지 말고 반드시 도구 결과로만 답해라.`
       : "";
@@ -1893,6 +1913,7 @@ ${parts.join("\n")}`;
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
+      ...(planBlock ? [{ role: "system", content: planBlock }] : []),   // 🎨 기획 타임(일방 제작 금지)
       ...(freshStartBlock ? [{ role: "system", content: freshStartBlock }] : []),   // 🌤 시간차 재개 환기(유저 직전=최신 우선, 생생한 히스토리 이겨야)
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
       { role: "user", content: userContent },
@@ -1942,7 +1963,7 @@ ${parts.join("\n")}`;
 
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
-      const co: any = { model: brainModel, inWork: !!work };   // 🖼 채팅(work 없음)에선 gen_thumbnail 미노출(편집기 가서)
+      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (longForm) co.maxTokens = 520;
       // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려
       //    JSON 파싱 실패→빈 초안 카드(실앱 재현: 이슈만 실패, 인자 짧은 예측은 성공). 도구 인자 여유 확보.
@@ -1973,8 +1994,9 @@ ${parts.join("\n")}`;
     {
       const DRAFT_KINDS = new Set(["draft", "draftPredict", "draftPlaza", "draftGallari"]);
       // 과거 완료 주장 + '미래 약속'(만들게/올릴게/바로 만들게/[지금 호출 중])도 잡는다 — 약속만 하고 도구 미호출로 헛도는 사고(사장님 실로그).
+      // ⚠️ 기획 타임(planMode)엔 스킵 — "골라주면 만들게"는 정상 기획 멘트지 가짜 약속이 아님(여기서 강제하면 기획이 무력화).
       const claimsCreate = /만들어?\s*놨|만들었|초안.*(잡|만들|썼)|판\s*(만들|열었|세웠|섰|올)|올려놨|생성했|마켓.*만들|이슈.*만들|만들게|만들어\s*(줄게|줄께|볼게|드릴게)|올릴게|올려\s*(줄게|줄께)|(바로|지금)\s*(만들|올려|생성|호출|할게|가자)|호출\s*중|초안\s*(잡을게|만들게|쓸게|쓸께)/.test(reply);
-      if (userMsg && !body?.meta && claimsCreate && !actions.some((a) => DRAFT_KINDS.has(a.kind))) {
+      if (userMsg && !body?.meta && !planMode && claimsCreate && !actions.some((a) => DRAFT_KINDS.has(a.kind))) {
         try {
           messages.push({ role: "system", content: "너는 방금 '만들었다/만들어놨다'고 말했지만 실제로 생성 도구를 호출하지 않았다(= 지금 거짓말 상태). 이전에 만든 적 있어도 상관없다 — 상대가 다시 요청했으면 지금 즉시 실제로 도구를 호출해라. 상대의 마지막 요청에 맞는 도구 하나만: 이슈=draft_issue, 예측=draft_predict, 광장=draft_plaza, 숏판/갈라리=draft_gallari. 잡담·질문 금지, 도구만 호출." });
           const jf = await chatOnce(messages, { toolChoice: "required" });

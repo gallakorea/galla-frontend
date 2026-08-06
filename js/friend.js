@@ -340,7 +340,7 @@
     window.__frDidIntro=true;
     setTimeout(function(){ scrollBottom(); }, 300);
   }
-  function toggleDockMin(){ if(sheet){ sheet.classList.toggle("fr-dock-min"); setTimeout(scrollBottom,260); } }
+  function toggleDockMin(){ if(sheet){ sheet.classList.toggle("fr-dock-min"); document.body.classList.toggle("fr-docked-min", sheet.classList.contains("fr-dock-min")); setTimeout(scrollBottom,260); } }
   // 도킹(반쪽) ↔ 풀시트(크게) 토글 — 대행/작업 중에도 필요하면 크게 볼 수 있게
   function toggleDockSize(){
     if(!sheet) return;
