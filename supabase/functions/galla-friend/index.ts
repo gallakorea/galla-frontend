@@ -1080,6 +1080,162 @@ function safeJson(text: string): any {
   return {};
 }
 
+// 🌊 스트리밍 생성(컴패니언 전용) — 토큰 델타를 onDelta로 흘린다. 도구 없음(tool_choice:none) 단발.
+//    실패(비스트림 응답·에러)면 null 반환 → 호출부가 chatOnce 폴백. 전체 텍스트를 반환.
+async function chatStream(messages: any[], opts: { model?: string; maxTokens?: number }, onDelta: (full: string) => void): Promise<string | null> {
+  try {
+    const r = await fetch(`${BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: opts?.model || CHAT_MODEL, messages, temperature: 0.8, max_tokens: opts?.maxTokens || 240, stream: true, tool_choice: "none" }),
+    });
+    if (!r.ok || !r.body) return null;
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = ""; let full = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl: number;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line.startsWith("data:")) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        try { const j = JSON.parse(data); const d = j?.choices?.[0]?.delta?.content || ""; if (d) { full += d; onDelta(full); } } catch { /* */ }
+      }
+    }
+    return full;
+  } catch { return null; }
+}
+
+// 프리뷰용 마커 제거 — 스트리밍 중엔 [stk:]/[emo:]/((지문))/툴이름/URL을 안 보이게(최종은 finalize가 처리).
+function stripForPreview(t: string): string {
+  return (t || "")
+    .replace(/\[(?:stk|emo):[^\]]*\]/gi, "")
+    .replace(/\(\([^)]*\)\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")
+    .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")
+    .replace(/[ \t]{2,}/g, " ").replace(/[ \t]+\n/g, "\n");
+}
+
+// 🌊 컴패니언 최종 정제 — 비스트림 컴패니언 경로와 '동일한' 텍스트 가드(휴머·4문장캡·버블·새니타이즈·빈답).
+//    컴패니언은 도구/액션/검색결과가 없으므로 텍스트 가드만 적용하면 동치.
+function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null }): string {
+  reply = stripDeflect(reply);
+  if (o.wantsFunny && o.humorJoke && !reply.includes(o.humorJoke.a)) reply = `야 이거 앎? ${o.humorJoke.q}\n\nㅋㅋㅋ ${o.humorJoke.a}`;
+  if (!o.longForm) {
+    const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
+    if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();
+    reply = bubbleize(reply);
+  }
+  reply = reply
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")
+    .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|app_action|find_user|my_activity|manage_content|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")
+    .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
+  const bare = reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
+  if (!/[가-힣a-zA-Z0-9]/.test(bare)) {
+    const fill = ["아 뭐라 하려다 까먹었네 ㅋㅋ 다시 말해봐", "잠깐, 뭐라고 했지 ㅋㅋ 한번 더!", "어 미안 딴 데 봤다 ㅋㅋ 뭐라 했어?"];
+    const kept = (reply.match(/\[(?:stk|emo):[^\]]*\]/gi) || []).slice(0, 1).join("");
+    reply = fill[(bare.length + (o.nick ? o.nick.length : 0)) % fill.length] + (kept ? " " + kept : "");
+  }
+  return reply;
+}
+
+// 🧠 관계 갱신 + 기억(추출·저장·요약) — 응답을 막지 않게 백그라운드로 실행(스트리밍·비스트림 공용).
+async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: string; history: any[]; memList: any[]; injectedUniq: number[]; prevMemIds: number[]; nick: string; body: any }): Promise<void> {
+  const { uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body } = p;
+  try {
+    let newCount = rel?.msg_count || 0;
+    if (rel) {
+      newCount = (rel.msg_count || 0) + (userMsg ? 1 : 0);
+      const newDepth = newCount >= 120 ? 4 : newCount >= 45 ? 3 : newCount >= 12 ? 2 : 1;
+      const newTone = newCount >= 12 ? "casual" : "polite";
+      const sess = (rel?.session_meta && typeof rel.session_meta === "object")
+        ? { ...rel.session_meta, turns: (Number(rel.session_meta.turns) || 0) + (userMsg ? 1 : 0) } : null;
+      await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_mem_ids: injectedUniq, ...(sess ? { session_meta: sess } : {}), last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
+    }
+    if (userMsg && !body?.meta && reply) {
+      try {
+        const fullLog = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }]
+          .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
+        await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
+      } catch { /* */ }
+    }
+    if (userMsg && !body?.meta) {
+      const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");
+      const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx);
+      if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
+        try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
+      }
+      try {
+        const newEmo = applyEmotion(rel?.emotion, ex.emotion);
+        await supa.from("friend_relationship").update({ emotion: newEmo, updated_at: new Date().toISOString() }).eq("user_id", uid);
+      } catch { /* */ }
+      if (prevMemIds.length) {
+        try {
+          let rwd = 0;
+          if (/(ㅋㅋ|ㅎㅎ|고마워|고맙|좋아|좋다|대박|헐|짱|최고|맞아|재밌|웃겨|사랑|굿|오오|우와|와\s|딱\s)/.test(userMsg)) rwd += 2;
+          if (/(뭐야|뭔\s*개소리|그게\s*아니|답답|짜증|왜\s*그래|아까\s*(말|한|보여|줬)|틀렸|또\s*그|하\s세월|그만|됐어|노잼|재미없)/.test(userMsg)) rwd -= 3;
+          const dv = Number(ex?.emotion?.dValence) || 0;
+          if (dv >= 15) rwd += 1; else if (dv <= -15) rwd -= 1;
+          if (rwd !== 0) await supa.rpc("reward_friend_memory", { p_user: uid, p_ids: prevMemIds, p_reward: rwd });
+        } catch { /* */ }
+      }
+      try {
+        const ps = ex.persona_set || {};
+        const cur = (rel?.persona && typeof rel.persona === "object") ? { ...rel.persona } : {};
+        let changed = false;
+        for (const k of ["사는곳", "하는일", "나이대", "성격", "이름힌트", "말버릇", "성별느낌", "배경사연"]) {
+          const v = ps[k]; if (v && !cur[k]) { cur[k] = v; changed = true; }
+        }
+        for (const k of ["좋아하는것", "싫어하는것"]) {
+          const add = Array.isArray(ps[k]) ? ps[k] : (ps[k] ? [ps[k]] : []);
+          if (add.length) { const set = new Set([...(cur[k] || []), ...add]); cur[k] = [...set].slice(0, 6); changed = true; }
+        }
+        const anchors = Array.isArray(ps["삶의앵커추가"]) ? ps["삶의앵커추가"] : (ps["삶의앵커추가"] ? [ps["삶의앵커추가"]] : []);
+        if (anchors.length) { const set = new Set([...(cur["삶의앵커"] || []), ...anchors]); cur["삶의앵커"] = [...set].slice(0, 8); changed = true; }
+        if (changed) { rel.persona = cur; await supa.from("friend_relationship").update({ persona: cur, updated_at: new Date().toISOString() }).eq("user_id", uid); }
+      } catch { /* */ }
+      if (Array.isArray(ex.supersede) && ex.supersede.length) {
+        for (const s of ex.supersede) {
+          const frag = String(s || "").slice(0, 60).trim(); if (frag.length < 4) continue;
+          try { await supa.from("friend_memory").update({ status: "superseded" }).eq("user_id", uid).eq("status", "active").ilike("content", "%" + frag + "%"); } catch { /* */ }
+        }
+      }
+      const floor = (kind: string) => (kind === "profile" || kind === "stance" || kind === "disliked" || kind === "person") ? 4 : 1;
+      for (const m of ex.memories) {
+        try {
+          if (!m?.content) continue;
+          const content = String(m.content).slice(0, 300);
+          const ev = await embed(content);
+          const emb = ev ? vecLit(ev) : null;
+          const sal = Math.min(5, Math.max(floor(m.kind), m.salience || 3));
+          const hpd = (m.happened_at && !isNaN(Date.parse(m.happened_at))) ? new Date(m.happened_at).toISOString() : null;
+          const singular = m.mkey && (m.kind === "profile" || m.kind === "stance" || m.kind === "person");
+          if (singular) {
+            await supa.from("friend_memory").upsert(
+              { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb, happened_at: hpd },
+              { onConflict: "user_id,mkey" },
+            );
+          } else {
+            await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb, happened_at: hpd });
+          }
+        } catch { /* */ }
+      }
+      if (newCount % 20 === 0) { await summarizeEpisode(uid, history); }
+      if (newCount % 15 === 0) { await reflect(uid, nick); }
+      if (newCount % 8 === 0 || (!rel?.profile_summary && newCount >= 4)) { await summarizeProfile(uid, nick); }
+    }
+  } catch { /* */ }
+}
+// 백그라운드 실행 래퍼(응답 반환을 막지 않음).
+function runPersist(p: Parameters<typeof persistTurn>[0]): void {
+  try { const ER = (globalThis as any).EdgeRuntime; if (ER && typeof ER.waitUntil === "function") ER.waitUntil(persistTurn(p)); else persistTurn(p); }
+  catch { try { persistTurn(p); } catch { /* */ } }
+}
+
 // 🧭 사전 의도 라우터 — 생성 '전에' 유저 의도를 분류해 도구를 선제 지목(사후 가드 → 사전 라우팅으로 승격).
 //    산발 가드는 백스톱으로 유지. 여기선 '지어내기 참사'가 났던 고신뢰 3종(영상·맛집·인스타)만 첫 스텝에서 강제.
 function routeIntent(msg: string): { tool: string; hint: string } | null {
@@ -1637,6 +1793,38 @@ ${parts.join("\n")}`;
     const longForm = !!work || contList || /(제목|타이틀|대본|카피|문구|아이디어|해시태그)[^\n]{0,10}(뽑|지어|써\s*줘|써줘|추천|만들|줘)|몇\s*개\s*(뽑|추천|줘)/.test(userMsg || "");
     // 🔁 재참조("아까 그거 다시") — 도구 exclude를 끄고, show-guard 딜리버 대상.
     const reshow = /((아까|방금|첫\s*번째|첫번째)[^.!?\n]{0,10}(다시|또|거)|다시\s*(보여|볼|틀어|열어))/.test(userMsg || "");
+
+    // 🌊 스트리밍(컴패니언 전용) — 첫 토큰 2~3초 체감. 도구/액션 없는 순수 대화라 텍스트 가드만으로 비스트림과 동치.
+    //    프리뷰는 단일 버블로 흘리고, 완료 시 최종 버블(bubbleize)+빈 액션으로 스냅. 저장은 백그라운드(runPersist).
+    if (body?.stream === true && brain === "companion" && userMsg && !body?.meta) {
+      const enc = new TextEncoder();
+      const rstream = new ReadableStream({
+        async start(controller) {
+          const send = (event: string, data: any) => { try { controller.enqueue(enc.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch { /* */ } };
+          try {
+            // 🚿 버퍼 강제 플러시 — 일부 프록시는 ~2KB 전엔 첫 바이트를 안 흘린다. 패딩 코멘트로 즉시 헤더+연결 오픈.
+            controller.enqueue(enc.encode(":" + " ".repeat(2048) + "\n\n"));
+            send("meta", { friendName, depth: rel?.depth || 1, firstMeet });
+            const mt = longForm ? 520 : 240;
+            let full = await chatStream(messages, { model: brainModel, maxTokens: mt }, (f) => send("text", { full: stripForPreview(f) }));
+            if (full == null) {   // 스트림 실패 → 비스트림 1회 폴백
+              const j = await chatOnce(messages, { model: brainModel, toolChoice: "none", maxTokens: mt });
+              full = j?.choices?.[0]?.message?.content || "";
+              send("text", { full: stripForPreview(full) });
+            }
+            let sreply = full || "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
+            sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
+            const bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+            send("done", { bubbles, actions: [], friendName, depth: rel?.depth || 1, firstMeet });
+            runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
+          } catch (e) {
+            send("done", { bubbles: ["어 미안, 잠깐 버벅였어 ㅋㅋ 다시 말해줄래?"], actions: [], friendName, depth: rel?.depth || 1, firstMeet, error: String(e).slice(0, 120) });
+          } finally { try { controller.close(); } catch { /* */ } }
+        },
+      });
+      return new Response(rstream, { headers: { ...cors, "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache" } });
+    }
+
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
       const co: any = { model: brainModel };
@@ -1925,105 +2113,7 @@ ${parts.join("\n")}`;
     }
 
     // 🧠 관계 갱신 + 기억(추출·저장·요약)은 '응답을 막지 않게' 백그라운드로 — 갈비스 답이 즉시 나가고 기억은 뒤에서.
-    const persist = async () => {
-      try {
-        let newCount = rel?.msg_count || 0;
-        if (rel) {
-          newCount = (rel.msg_count || 0) + (userMsg ? 1 : 0);
-          const newDepth = newCount >= 120 ? 4 : newCount >= 45 ? 3 : newCount >= 12 ? 2 : 1;
-          const newTone = newCount >= 12 ? "casual" : "polite";
-          // 🏆 last_mem_ids: 이번 턴에 주입한 기억 집합을 기록 → 다음 턴 유저 반응으로 크레딧 배분.
-          // ⏰ session_meta: 이번 턴을 세션 턴수에 반영(userMsg 있을 때만 — 히스토리 증가와 동기).
-          const sess = (rel?.session_meta && typeof rel.session_meta === "object")
-            ? { ...rel.session_meta, turns: (Number(rel.session_meta.turns) || 0) + (userMsg ? 1 : 0) } : null;
-          await supa.from("friend_relationship").update({ msg_count: newCount, depth: newDepth, tone: newTone, last_mem_ids: injectedUniq, ...(sess ? { session_meta: sess } : {}), last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("user_id", uid);
-        }
-        // 🔄 전사 동기화 저장 — 어느 기기서든 같은 대화가 보이게(최근 40턴). meta(합성)는 다음 실턴의 history로 자연 반영되므로 스킵.
-        if (userMsg && !body?.meta && reply) {
-          try {
-            const fullLog = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }]
-              .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
-            await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
-          } catch { /* */ }
-        }
-        if (userMsg && !body?.meta) {   // meta(콘텐츠 호출 등 합성 메시지)는 기억 추출 스킵
-          const ctx = history.slice(-6).map((m: any) => (m.role === "user" ? "상대: " : "친구: ") + String(m.content || "").slice(0, 120)).join("\n");
-          const ex = await extractMemories(userMsg, reply, memList.map((m: any) => m.content), rel?.mood || "normal", personaCard(rel?.persona), ctx);
-          if (ex.mood && ex.mood !== (rel?.mood || "normal")) {
-            try { await supa.from("friend_relationship").update({ mood: ex.mood, updated_at: new Date().toISOString() }).eq("user_id", uid); } catch { /* */ }
-          }
-          // 🎭 감정선: 이번 턴 델타를 이전 상태에 관성+감쇠로 반영해 영속화(다음 턴 프롬프트가 이어받는다).
-          try {
-            const newEmo = applyEmotion(rel?.emotion, ex.emotion);
-            await supa.from("friend_relationship").update({ emotion: newEmo, updated_at: new Date().toISOString() }).eq("user_id", uid);
-          } catch { /* */ }
-          // 🏆 보상 연동 — 지금 유저 발화(=직전 응답에 대한 반응, 행동)로 그때 주입했던 기억들을 신용/문책.
-          //    텍스트 반응(sft reward와 동일 신호군) + 이번 턴 감정델타(이미 계산됨, 추가 LLM 0). reward_ema로 누적.
-          if (prevMemIds.length) {
-            try {
-              let rwd = 0;
-              if (/(ㅋㅋ|ㅎㅎ|고마워|고맙|좋아|좋다|대박|헐|짱|최고|맞아|재밌|웃겨|사랑|굿|오오|우와|와\s|딱\s)/.test(userMsg)) rwd += 2;   // 긍정 반응
-              if (/(뭐야|뭔\s*개소리|그게\s*아니|답답|짜증|왜\s*그래|아까\s*(말|한|보여|줬)|틀렸|또\s*그|하\s세월|그만|됐어|노잼|재미없)/.test(userMsg)) rwd -= 3;   // 불만/실패
-              const dv = Number(ex?.emotion?.dValence) || 0;   // 감정델타(반응의 결)
-              if (dv >= 15) rwd += 1; else if (dv <= -15) rwd -= 1;
-              if (rwd !== 0) await supa.rpc("reward_friend_memory", { p_user: uid, p_ids: prevMemIds, p_reward: rwd });
-            } catch { /* */ }
-          }
-          // 🎭 캐릭터 점진 병합
-          try {
-            const ps = ex.persona_set || {};
-            const cur = (rel?.persona && typeof rel.persona === "object") ? { ...rel.persona } : {};
-            let changed = false;
-            for (const k of ["사는곳", "하는일", "나이대", "성격", "이름힌트", "말버릇", "성별느낌", "배경사연"]) {
-              const v = ps[k]; if (v && !cur[k]) { cur[k] = v; changed = true; }
-            }
-            for (const k of ["좋아하는것", "싫어하는것"]) {
-              const add = Array.isArray(ps[k]) ? ps[k] : (ps[k] ? [ps[k]] : []);
-              if (add.length) { const set = new Set([...(cur[k] || []), ...add]); cur[k] = [...set].slice(0, 6); changed = true; }
-            }
-            const anchors = Array.isArray(ps["삶의앵커추가"]) ? ps["삶의앵커추가"] : (ps["삶의앵커추가"] ? [ps["삶의앵커추가"]] : []);
-            if (anchors.length) { const set = new Set([...(cur["삶의앵커"] || []), ...anchors]); cur["삶의앵커"] = [...set].slice(0, 8); changed = true; }
-            if (changed) { rel.persona = cur; await supa.from("friend_relationship").update({ persona: cur, updated_at: new Date().toISOString() }).eq("user_id", uid); }
-          } catch { /* */ }
-          // 🔄 모순 갱신 — 바뀐 옛 기억은 폐기(status=superseded)해 혼선 방지(이사·이직·헤어짐 등)
-          if (Array.isArray(ex.supersede) && ex.supersede.length) {
-            for (const s of ex.supersede) {
-              const frag = String(s || "").slice(0, 60).trim(); if (frag.length < 4) continue;
-              try { await supa.from("friend_memory").update({ status: "superseded" }).eq("user_id", uid).eq("status", "active").ilike("content", "%" + frag + "%"); } catch { /* */ }
-            }
-          }
-          // 💾 새 기억 저장 — 중요도 바닥값(프로필·성향·핵심인물 = 최소 4)
-          const floor = (kind: string) => (kind === "profile" || kind === "stance" || kind === "disliked" || kind === "person") ? 4 : 1;
-          for (const m of ex.memories) {
-            try {
-              if (!m?.content) continue;
-              const content = String(m.content).slice(0, 300);
-              const ev = await embed(content);
-              const emb = ev ? vecLit(ev) : null;
-              const sal = Math.min(5, Math.max(floor(m.kind), m.salience || 3));
-              const hpd = (m.happened_at && !isNaN(Date.parse(m.happened_at))) ? new Date(m.happened_at).toISOString() : null;
-              const singular = m.mkey && (m.kind === "profile" || m.kind === "stance" || m.kind === "person");
-              if (singular) {
-                await supa.from("friend_memory").upsert(
-                  { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb, happened_at: hpd },
-                  { onConflict: "user_id,mkey" },
-                );
-              } else {
-                await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb, happened_at: hpd });
-              }
-            } catch { /* */ }
-          }
-          // 🎞 에피소드 기억(20턴마다) — 이번 대화 뭉치를 '사건 한 줄'로
-          if (newCount % 20 === 0) { await summarizeEpisode(uid, history); }
-          // 🧠✨ 리플렉션(15턴마다) — 사실들에서 통찰 종합 → 요약 전에 돌려 요약에도 반영
-          if (newCount % 15 === 0) { await reflect(uid, nick); }
-          // 🧠 프로필 요약 주기 재생성(8턴마다 / 아직 없고 4턴 넘으면) — 항상 주입되는 장기기억
-          if (newCount % 8 === 0 || (!rel?.profile_summary && newCount >= 4)) { await summarizeProfile(uid, nick); }
-        }
-      } catch { /* */ }
-    };
-    try { const ER = (globalThis as any).EdgeRuntime; if (ER && typeof ER.waitUntil === "function") ER.waitUntil(persist()); else await persist(); }
-    catch { try { await persist(); } catch { /* */ } }
+    runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
 
     // view/share 액션은 id가 비면 '안 열리는 유령칩'이라 제거
     const cleanActions = actions.filter((a) => !((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()));

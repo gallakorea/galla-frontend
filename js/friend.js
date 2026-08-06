@@ -909,21 +909,45 @@
     if(on&&!t){ logEl.appendChild(el('<div class="fr-typing"><i></i><i></i><i></i></div>')); logEl.scrollTop=logEl.scrollHeight; }
     if(!on&&t) t.remove();
   }
+  // 요청 body 조립(callFriend·스트리밍 공용)
+  function fbBody(message, hist, setName, meta, handoff){
+    var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
+    if(handoff) body.handoff=handoff;   // 🎯 게시물 갈비스 버튼 핸드오프 — 서버가 {type,id}로 실제 내용 읽어 오프너
+    // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
+    if(_sources && _sources.length){ body.sources=_sources.filter(function(s){ return !s.pending; }).map(function(s){ return s.type==="image"?{type:"image",url:s.url}:{type:s.type,value:s.value}; }); }
+    // 🛠 작업 모드면 현재 편집 중인 초안 상태를 동봉 → 갈비스가 폼을 알고 실시간 수정(edit_draft)
+    if(_dock && _work && window.GALLA_WORKFORM){
+      try{ body.work={ type:_work.type||window.GALLA_WORKFORM.type||"issue", fields:window.GALLA_WORKFORM.getFields() }; }catch(e){}
+    }
+    return body;
+  }
   async function callFriend(message, hist, setName, meta, handoff){
     var jwt=await token(); if(!jwt) return null;
     try{
-      var body={message:message, history:hist||[]}; if(setName) body.setFriendName=setName; if(meta) body.meta=true;
-      if(handoff) body.handoff=handoff;   // 🎯 게시물 갈비스 버튼 핸드오프 — 서버가 {type,id}로 실제 내용 읽어 오프너
-      // 📎 근거(기사·링크·글·이미지)가 담겨있으면 이번 메시지에 실어 보낸다(서버가 읽어 근거로 창작)
-      if(_sources && _sources.length){ body.sources=_sources.filter(function(s){ return !s.pending; }).map(function(s){ return s.type==="image"?{type:"image",url:s.url}:{type:s.type,value:s.value}; }); }
-      // 🛠 작업 모드면 현재 편집 중인 초안 상태를 동봉 → 갈비스가 폼을 알고 실시간 수정(edit_draft)
-      if(_dock && _work && window.GALLA_WORKFORM){
-        try{ body.work={ type:_work.type||window.GALLA_WORKFORM.type||"issue", fields:window.GALLA_WORKFORM.getFields() }; }catch(e){}
-      }
       var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
-        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"}, body:JSON.stringify(body) });
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt, "Content-Type":"application/json"}, body:JSON.stringify(fbBody(message,hist,setName,meta,handoff)) });
       return await res.json();
     }catch(e){ return null; }
+  }
+  /* 🌊 스트리밍 소비 — 서버가 SSE(text/event-stream)로 답하면 토큰을 흘려 라이브 렌더.
+     onText(full): 누적 프리뷰 텍스트. 반환: 최종 r({ok,reply,_bubbles,actions,friendName,...}) 또는 null(폴백). */
+  async function consumeStream(res, onText){
+    var reader=res.body.getReader(), dec=new TextDecoder(), buf="", done=null;
+    for(;;){
+      var rr=await reader.read(); if(rr.done) break;
+      buf+=dec.decode(rr.value,{stream:true});
+      var idx;
+      while((idx=buf.indexOf("\n\n"))>=0){
+        var chunk=buf.slice(0,idx); buf=buf.slice(idx+2);
+        var em=/event: (\w+)/.exec(chunk); var dm=/data: ([\s\S]+)/.exec(chunk);
+        if(!em||!dm) continue;
+        var data; try{ data=JSON.parse(dm[1]); }catch(e){ continue; }
+        if(em[1]==="text"){ if(data.full!=null) onText(data.full); }
+        else if(em[1]==="done"){ done=data; }
+      }
+    }
+    if(!done) return null;
+    return { ok:true, reply:(done.bubbles||[]).join("\n\n"), _bubbles:done.bubbles||[], actions:done.actions||[], friendName:done.friendName, depth:done.depth, firstMeet:done.firstMeet, streamed:true };
   }
 
   async function sendText(text, speakReply){
@@ -932,11 +956,42 @@
     busy=true; sendEl.disabled=true;
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
     var hadSources=_sources.length>0;
-    var r=await callFriend(text, history.slice(0,-1));
+    // 🌊 스트리밍 시도 — 서버가 컴패니언 턴이면 SSE로 토큰을 흘린다(첫 글자 ~2초). 에이전트/작업/핸드오프면 서버가 JSON 반환.
+    var r=null, streamed=false, liveEl=null;
+    try{
+      var jwt2=await token();
+      var body=fbBody(text, history.slice(0,-1)); body.stream=true;
+      var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
+        headers:{apikey:ANON, Authorization:"Bearer "+jwt2, "Content-Type":"application/json"}, body:JSON.stringify(body) });
+      var ctype=(res.headers.get("content-type")||"");
+      if(ctype.indexOf("text/event-stream")>=0 && res.body && res.body.getReader){
+        r=await consumeStream(res, function(full){
+          if(!liveEl){ typing(false); liveEl=addMsg("a",""); }
+          var bub=liveEl.querySelector(".fr-bubble"); if(bub) bub.innerHTML=fmtStage(full);
+          logEl.scrollTop=logEl.scrollHeight;
+        });
+        streamed=true;
+      } else {
+        r=await res.json();
+      }
+    }catch(e){ r=null; }
     if(hadSources) clearSources();   // 근거는 이 메시지에 소비됨
     typing(false); clearProgress();
-    if(!r||!r.ok){ addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
-    var m=await addFriendReply(r.reply||"…"); history.push({role:"assistant",content:r.reply||""});
+    if(!r||!r.ok){ if(liveEl){ try{ liveEl.remove(); }catch(e){} } addMsg("a",(r&&r.reply)||"잠깐 딴 데 정신 팔렸다 ㅋㅋ 다시 말해줄래?"); busy=false; sendEl.disabled=false; return; }
+    // 렌더: 스트리밍이면 라이브 버블을 최종 버블로 정리(1버블이면 제자리 확정, 여러 버블이면 재렌더).
+    var m;
+    if(streamed){
+      var bubbles=r._bubbles && r._bubbles.length ? r._bubbles : splitBubbles(r.reply||"…");
+      if(liveEl && bubbles.length<=1){
+        var lb=liveEl.querySelector(".fr-bubble"); if(lb) lb.innerHTML=fmtStage(bubbles[0]||r.reply||"…"); m=liveEl;
+      } else {
+        if(liveEl){ try{ liveEl.remove(); }catch(e){} }
+        m=await addFriendReply(r.reply||"…", true);   // instant — 이미 스트리밍으로 보여줬으니 인위적 딜레이 X
+      }
+    } else {
+      m=await addFriendReply(r.reply||"…");
+    }
+    history.push({role:"assistant",content:r.reply||""});
     if(history.length>30) history=history.slice(-30);
     // ✍️ 작업모드 폼수정(editdraft)·🖼 썸네일생성(genThumbnail)은 칩이 아니라 즉시 실행. 나머지만 칩으로.
     var acts=r.actions||[];
