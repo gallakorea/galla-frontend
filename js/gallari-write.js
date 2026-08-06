@@ -462,7 +462,12 @@
       const setVal = (elm, v) => { if (elm == null || v == null) return; elm.value = String(v); try { elm.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {} };
       window.GALLA_WORKFORM = {
         type: 'gallari',
-        getFields() { return { vkind: KIND, title: tit ? tit.value : '', caption: cap ? cap.value : '', tags: tg ? (window.GALLA_parseTagInput ? window.GALLA_parseTagInput(tg.value) : tg.value) : [] }; },
+        getFields() {
+          // 🖼 미디어 상태도 보고 → 갈비스가 "사진 있나/없나" 알고 라스트마일 안내(선제 미디어 제안·발행 유도).
+          var photos = (vItems || []).filter(function (it) { return it && it.url; }).length;
+          var hasVid = !!(typeof preVideoUrl !== 'undefined' && preVideoUrl) || !!(typeof hVideoFile !== 'undefined' && hVideoFile);
+          return { vkind: KIND, title: tit ? tit.value : '', caption: cap ? cap.value : '', tags: tg ? (window.GALLA_parseTagInput ? window.GALLA_parseTagInput(tg.value) : tg.value) : [], mediaCount: photos, hasVideo: hasVid };
+        },
         setFields(f) {
           if (!f) return;
           if (f.vkind) setKind(f.vkind === 'horizontal' ? 'horizontal' : 'vertical');
