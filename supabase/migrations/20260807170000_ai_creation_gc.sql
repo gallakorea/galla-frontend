@@ -25,9 +25,11 @@ create or replace function public.ai_creation_refund(p_user uuid, p_amount integ
 returns void language plpgsql security definer set search_path = public as $$
 begin
   if p_amount is null or p_amount <= 0 then return; end if;
-  insert into gc_balances(user_id, balance) values (p_user, p_amount)
-    on conflict (user_id) do update set balance = gc_balances.balance + p_amount, updated_at = now();
-  insert into gc_ledger(user_id,delta,reason) values (p_user,p_amount,'ai_creation:refund');
+  -- ⚠️ GC=실화폐: update만(차감된 유저는 행이 반드시 있음) — upsert로 '무에서 GC 생성'되는 경로 봉쇄.
+  update gc_balances set balance = balance + p_amount, updated_at = now() where user_id = p_user;
+  if found then
+    insert into gc_ledger(user_id,delta,reason) values (p_user,p_amount,'ai_creation:refund');
+  end if;
 end $$;
 
 -- 관제 창작 계측 — 지출을 gc_ledger(신규 GC) + point_ledger(과거 GP분) 합산으로. 필드명은 admin.js 호환 유지.
@@ -65,3 +67,7 @@ begin
   ) into v;
   return v;
 end $$;
+
+-- 🔒 보안(발견 즉시 봉쇄): ai_creation_refund가 anon/authenticated에서 직접 호출 가능했음(p_user 임의 지정 = GC 무한 발행 구멍).
+--    엣지(service_role)만 호출 — 전부 회수. charge는 auth.uid() 기반 자기차감이라 authenticated 유지.
+revoke all on function public.ai_creation_refund(uuid, integer) from public, anon, authenticated;
