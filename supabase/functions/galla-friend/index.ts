@@ -32,7 +32,9 @@ const SUPA_URL = Deno.env.get("SUPABASE_URL")!;
 const SVC_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 // 🔒 자동편집 영상(gen_video) 노출 게이트 — 유료 프로덕션(v1) 키 전까지는 워터마크가 박혀 잠금(사장님 지시).
 //    SHOTSTACK_ENV=v1로 바꾸면 도구가 자동 노출되고 갈비스가 다시 영상을 제안한다.
-const VIDEO_ON = (Deno.env.get("SHOTSTACK_ENV") || "stage") === "v1";
+// 🎬 숏폼 자동영상(사장님 2026-08-07): Shotstack 키만 있으면 stage(sandbox)에서도 오픈 — '세로 숏폼 10초 이내' 전용.
+//    (가로 롱폼 자동생성은 계속 없음: 롱폼=기획·제목·썸네일·대본까지 지원, 영상은 사용자 촬영 — 자동편집은 추후.)
+const VIDEO_ON = !!Deno.env.get("SHOTSTACK_API_KEY");
 const supa = createClient(SUPA_URL, SVC_KEY);
 
 // 📡 대행 진행상황 실시간 방송 — 툴 루프 각 단계를 유저 채널(frwork:uid)로 브로드캐스트.
@@ -446,7 +448,7 @@ const TOOLS = [
   // 🗂 기획안 카드 — 모은 재료로 뽑은 아이디어를 '만들기' 카드로 제시
   { type: "function", function: { name: "propose_plan", description: "content_radar로 재료를 본 뒤, 이 사람에게 맞는 '만들 콘텐츠 아이디어'를 카드로 제시한다. ideas 3~5개, 각 idea={type: issue|plaza|gallari|predict, title(제목/훅), angle(한 줄 각도), why(왜 지금·근거)}. 카드의 '만들기'를 누르면 그 자리서 초안 작성으로 이어진다. 진짜 괜찮은 것만(억지로 채우지 마라).", parameters: { type: "object", properties: { ideas: { type: "array", items: { type: "object", properties: { type: { type: "string", enum: ["issue", "plaza", "gallari", "predict"] }, title: { type: "string" }, angle: { type: "string", description: "한 줄 각도/훅" }, why: { type: "string", description: "왜 지금(근거·트렌드)" } }, required: ["type", "title"] } } }, required: ["ideas"] } } },
   // 🎬 자동편집형 숏판 영상 — 이미지+자막+음악 → mp4. 작업 모드(갈라리)에서.
-  { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리)에서 '자동편집형 숏판 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘/영상으로 해줘' 하면. 이미지 두 방법: ①상대 사진 사용=use_user_photos:true(갈라리에 이미 올린 사진들로) ②AI로 그리기=image_prompts에 장면별 그림묘사 3~6개(글자·실존인물·유명캐릭터 금지). captions=장면별 자막(이미지 수에 맞춰 짧게), music=upbeat/chill/dramatic, ratio=9:16(숏판)/16:9. 렌더에 수십 초 걸린다 — \"영상 만들어줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] } } } } },
+  { type: "function", function: { name: "gen_video", description: "작업 모드(갈라리 '세로 숏판' 전용)에서 '10초 이내 자동편집 숏폼 영상'을 만든다(이미지+자막+음악 → mp4, 편집기에 자동 첨부). 상대가 '영상 만들어줘/숏판 뽑아줘' 하면. ⚠️ 세로 숏폼만 — 가로 롱폼 영상은 자동생성 안 됨(그건 대본·썸네일로 지원). 이미지 두 방법: ①상대 사진 사용=use_user_photos:true ②AI로 그리기=image_prompts에 장면별 그림묘사 '정확히 3개'(글자·실존인물·유명캐릭터 금지 — 총 10초라 3장면이 최적). captions=장면별 자막 3개(짧고 훅 있게), music=upbeat/chill/dramatic. 렌더에 수십 초 걸린다 — \"10초짜리 숏폼 뽑아줄게, 좀 걸려 ㅋㅋ\" 하고 호출.", parameters: { type: "object", properties: { use_user_photos: { type: "boolean", description: "상대가 올린 갈라리 사진으로 만들기" }, image_prompts: { type: "array", items: { type: "string" }, description: "AI 이미지 장면묘사(3~6개, 글자 없이)" }, captions: { type: "array", items: { type: "string" }, description: "장면별 자막(짧게)" }, music: { type: "string", enum: ["upbeat", "chill", "dramatic"] } } } } },
   // 🛠 작업 모드 — 편집 중인 초안 필드를 실시간 수정(편집기 폼에 즉시 반영). 작업맥락(🛠) 있을 때만.
   { type: "function", function: { name: "edit_draft", description: "작업 모드에서 '지금 편집 중인 초안'의 필드를 실시간 수정한다. 상대가 '제목 바꿔/본문·캡션 줄여·늘려·다시 써/한줄 바꿔/찬반 라벨 다르게/카테고리 바꿔/태그 바꿔' 등 초안을 고쳐달라 하면 '바뀔 필드만' 새 값으로 호출. 값은 '최종 전체 값'(부분 패치 아님). 작업맥락(🛠 블록)이 없으면 절대 쓰지 마라.", parameters: { type: "object", properties: { title: { type: "string", description: "제목(전체)" }, one_line: { type: "string", description: "한 줄 요약(이슈)" }, description: { type: "string", description: "본문(이슈) 또는 정산기준(예측) 전체" }, body: { type: "string", description: "본문 전체(광장 글)" }, caption: { type: "string", description: "캡션·내용(갈라리)" }, tags: { type: "array", items: { type: "string" }, description: "해시태그(갈라리, # 없이)" }, question: { type: "string", description: "예측 질문(예측)" }, close_days: { type: "integer", description: "예측 마감까지 며칠(예측)" }, category: { type: "string" }, faction_a: { type: "string", description: "찬성 진영 라벨(이슈)" }, faction_b: { type: "string", description: "반대 진영 라벨(이슈)" } } } } },
   { type: "function", function: { name: "point_to", description: "특정 갈라 콘텐츠로 데려가거나 공유하게 링크를 건넨다. mode: view(가서 보기) | share(남한테 공유). type: issue | news | hottube(핫튜브 영상 — id는 video_id). 재밌는 화제/영상을 얘기한 뒤 자연스럽게 인도할 때.", parameters: { type: "object", properties: { mode: { type: "string", enum: ["view", "share"] }, type: { type: "string", enum: ["issue", "news", "hottube"] }, id: { type: "string" }, label: { type: "string", description: "칩에 보일 짧은 문구" } }, required: ["mode", "type", "id"] } } },
@@ -871,7 +873,8 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - ✅ **광장(롱판) 글 초안**: "광장에 쓰자/글로 써줘" 하면 **draft_plaza**(제목·본문 문단·카테고리)로 작성폼에 채워준다. 이슈=찬반 대립, 광장=에세이·후기·주장·정보 자유 글.
 - ✅ **예측 마켓**: "예측 만들자/판 서자/베팅 걸자" 하면 **draft_predict**(예/아니오로 판가름나는 질문 + '정산 기준' 명확한 설명 + 카테고리 + 마감 며칠)로 생성폼에 채워준다. 예측은 마감·정산이 걸리니 초안만 잡고 "마감일이랑 정산 기준만 확인하고 올려"라고 짚어줘라(발행은 상대가). 다지선다 마켓은 상대가 폼에서 직접 추가.
 - ✅ **숏판·롱판·갈라리(영상·사진 콘텐츠)**: "숏판/릴스/영상/사진 올리자, 갈라리 쓰자" 하면 **draft_gallari**(vkind: 세로숏판·사진=vertical / 가로영상롱판=horizontal, 캡션·해시태그, 가로영상이면 제목도)로 작성폼에 채워준다.
-  🏁 **미디어까지 책임져라(방치 금지)**: 캡션 잡은 뒤 "남은 건 사진/영상뿐"인데 **그냥 '올려'로 끝내지 말고 선택지를 먼저 제안**: ①직접 찍은 사진/영상 올리기(📎) ②표지 이미지 내가 AI로 그려줄까?(**gen_thumbnail**) → 상대가 원하면 즉시 호출·자동첨부.${VIDEO_ON ? " ③소재 없으면 자동편집 영상 만들어줄까?(**gen_video**, 세로 숏판)." : " ⚠️ **자동편집 영상 생성은 지금 잠겨있다 — 'AI로 영상 만들어줄게' 절대 약속 금지**. 영상은 '폰으로 세로 15~20초 직접 찍어 올려(자동편집도 곧 열려)'로 정직하게."} 미디어 붙으면 "이제 올리기 버튼만!"까지 안내.
+  🏁 **미디어까지 책임져라(방치 금지)**: 캡션 잡은 뒤 "남은 건 사진/영상뿐"인데 **그냥 '올려'로 끝내지 말고 선택지를 먼저 제안**: ①직접 찍은 사진/영상 올리기(📎) ②표지 이미지 내가 AI로 그려줄까?(**gen_thumbnail**)${VIDEO_ON ? " ③**세로 숏판이면 '10초 숏폼 영상'으로 자동 제작 제안**(**gen_video** — 3장면, 내가 이미지·자막·음악까지 다 만들어 붙임)" : ""} → 상대가 원하면 즉시 호출·자동첨부.
+  🎬 **롱판(가로 영상)은 자동 생성 안 됨(추후 제공)** — 대신 기획·제목(gen_titles)·썸네일(gen_thumbnail landscape)·**시나리오 대본(gen_script)까지 전부** 해줘라: "대본까지 다 준비해줄게, 넌 찍기만 해". 미디어 붙으면 "이제 올리기 버튼만!"까지 안내.
 - 🔥 **제목이 승부처 — 어그로 제목 엔진**: 콘텐츠는 '제목·썸네일'에서 성패가 갈린다(사람들이 제일 어려워하는 부분). 상대가 "제목 뽑아줘/자극적으로/클릭 잘되게/어그로" 하거나, 초안 제목이 밋밋하면 → **gen_titles**로 검증된 공식(성공 유튜버 유형) 기반 자극적 제목 후보를 카드로 뽑아줘라. 상대가 카드에서 고르면 그 제목으로. 초안 만들 때도 "제목 여러 개 뽑아볼까?" 하고 먼저 권해라. (자극·후킹은 세게, 단 허위·혐오·특정인 저격은 금지.)
 - 📜 **대본 엔진**: "대본 써줘/스크립트/뭐라고 말하지/촬영 대본/멘트" 하면 **gen_script**로 검증된 구조(훅→전개→CTA)의 대본을 써준다. 특히 **롱판(가로영상)은 상대가 직접 찍어야 하니** 대본을 주면 촬영 부담이 확 준다 — 롱판 유도할 때 "대본도 짜줄게" 하고 같이 밀어줘라.
 - 🖼 **썸네일/커버 이미지 생성**: 작업 모드(초안 편집 중)에서 상대가 "썸네일도/커버 그려줘/이미지도 만들어줘" 하면 **gen_thumbnail**로 AI가 대표 이미지를 그려 편집기에 자동 첨부한다. 콘텐츠 주제를 살린 생생한 그림 묘사를 넣되 글자·실존인물·유명 캐릭터·로고는 넣지 마라(자동 차단). 이슈 카드·세로 숏판=portrait, 가로 영상=landscape, **예측 마켓 커버=landscape**(예측 작업 중에도 "커버 그려줄까?" 하고 gen_thumbnail 가능).
@@ -1730,10 +1733,13 @@ Deno.serve(async (req) => {
         ? `· 질문: ${cut(f.question, 120) || "(비어있음)"}\n· 정산 기준(설명): ${cut(f.description, 300) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n(이진 예/아니오 마켓. 마감일·정산 기준은 사람이 확인 후 발행)`
         : `· 제목: ${cut(f.title, 80) || "(비어있음)"}\n· 한줄요약: ${cut(f.one_line, 80) || "(비어있음)"}\n· 본문: ${cut(f.description, 400) || "(비어있음)"}\n· 카테고리: ${cut(f.category, 30) || "(미정)"}\n· 찬성진영: ${cut(f.faction_a, 30) || "(비어있음)"} / 반대진영: ${cut(f.faction_b, 30) || "(비어있음)"}\n· 🖼 표지(사진/영상): ${gMedia > 0 ? `${gMedia}개 첨부됨` : "❗아직 없음 — 1개 이상 있어야 다음 단계로 넘어간다(필수)"}`;
       // 🏁 라스트 마일 — 유형별 '남은 것 + 내가 도울 것(특히 미디어) + 발행 버튼'. 초안 던지고 방치 금지, 끝까지 손잡기.
+      const gHoriz = f.vkind === "horizontal";
       const lastMile = work.type === "gallari"
         ? (gHasMedia
           ? `🏁 미디어까지 다 있다! 이제 화면의 **[공유]/[올리기] 버튼**만 누르면 발행 끝 — "이제 올리기만 누르면 돼!"라고 짚어줘라.`
-          : `🏁 **미디어(사진/영상)가 이 콘텐츠의 핵심인데 아직 없다** — 절대 방치 마라. 캡션이 괜찮아지면 '남은 건 사진/영상뿐'을 알리고 **네가 먼저 선택지를 제안**해라: ①직접 찍은 사진/영상 올리기(📎) ②내가 표지 이미지 AI로 그려줄까?(gen_thumbnail).${VIDEO_ON ? " ③소재 없으면 자동편집 영상 만들어줄까?(gen_video)." : " ⚠️ **자동편집 영상 생성은 지금 잠겨있다 — 'AI로 영상 만들어줄게' 절대 약속 금지**(못 지킨다). 영상은 '폰으로 세로 15~20초 직접 찍어 올리면 돼(곧 자동편집도 열려)'로 정직하게 안내."} 상대가 '그려줘' 하면 **즉시 gen_thumbnail 호출**(말만 하지 말고). 미디어 붙으면 "이제 올리기 버튼만!"까지 안내.`)
+          : gHoriz
+          ? `🏁 **롱판(가로 영상)은 '네가 찍은 영상'이 본체다 — 자동 생성은 추후 제공.** 대신 그 전 단계를 전부 네가 해줘라(방치 금지): ①**기획**(주제·앵글·타깃) ②**제목**(gen_titles) ③**썸네일**(gen_thumbnail landscape) ④**시나리오 대본**(gen_script — 인트로 훅→본론 구성→아웃트로까지, 촬영 샷 가이드 포함). "대본까지 다 준비해줄게, 넌 폰으로 찍기만 해"로 리드. 영상 업로드되면 "[공유] 버튼만!"까지.`
+          : `🏁 **미디어(사진/영상)가 이 콘텐츠의 핵심인데 아직 없다** — 절대 방치 마라. 캡션이 괜찮아지면 **네가 먼저 선택지를 제안**해라: ①직접 찍은 사진/영상 올리기(📎) ②내가 표지 이미지 AI로 그려줄까?(gen_thumbnail)${VIDEO_ON ? " ③**10초 숏폼 영상으로 자동 제작해줄까?**(gen_video — 3장면 이미지+자막+음악, 내가 다 만들어 붙임)" : ""}. 상대가 원하면 **즉시 해당 도구 호출**(말만 하지 말고). 미디어 붙으면 "이제 올리기 버튼만!"까지 안내.`)
         : work.type === "predict"
         ? `🏁 남은 건 **마감일·정산 기준 확인**뿐 — "마감일이랑 정산 기준만 확인하고 [올리기] 누르면 돼"라고 짚어줘라. 커버 이미지 원하면 "내가 하나 그려줄까?"(gen_thumbnail landscape) 제안.`
         : work.type === "plaza"

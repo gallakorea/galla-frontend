@@ -512,7 +512,7 @@
     var images=[];
     try{ if(a.useUserPhotos && window.GALLA_WORKFORM && window.GALLA_WORKFORM.getPhotos) images=window.GALLA_WORKFORM.getPhotos()||[]; }catch(e){}
     if(!images.length && a.imagePrompts && a.imagePrompts.length){
-      for(var k=0;k<a.imagePrompts.length && k<6;k++){
+      for(var k=0;k<a.imagePrompts.length && k<3;k++){   // ⏱ 10초 숏폼 정책 — 장면 3개까지
         showProgress("🎨 장면 그리는 중… ("+(k+1)+"/"+a.imagePrompts.length+")");
         var u=await genImageOnce(a.imagePrompts[k], a.ratio==="16:9"?"landscape":"portrait");
         if(u) images.push(u);

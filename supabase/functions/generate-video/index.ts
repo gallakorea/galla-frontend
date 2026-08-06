@@ -96,16 +96,18 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return j({ error: "bad_json" }, 400); }
   const op = body?.op || "submit";
 
-  // 🔒 영상 기능 잠금(사장님 지시): 유료 프로덕션(v1) 키 전까지는 워터마크가 박히므로 신규 제출을 막는다.
-  //    SHOTSTACK_ENV=v1(유료)로 바꾸는 순간 자동 해제. status 폴링은 허용(진행 중 렌더 마무리용).
-  if (op === "submit" && SHOTSTACK_ENV !== "v1") return j({ error: "feature_locked" }, 503);
+  // 🎬 숏폼 자동영상 오픈(사장님 2026-08-07): stage(sandbox)에서도 제출 허용(워터마크 감수) — 단 '세로 숏폼 10초 이내'만.
+  //    가로(16:9) 자동생성은 계속 잠금(롱폼은 사용자 촬영 + 기획·대본 지원 정책).
+  if (op === "submit" && String(body.ratio || "9:16") !== "9:16" && SHOTSTACK_ENV !== "v1") return j({ error: "feature_locked_horizontal" }, 503);
 
   if (op === "submit") {
-    const images: string[] = Array.isArray(body.images) ? body.images.filter((u: any) => typeof u === "string" && /^https?:\/\//.test(u)).slice(0, 10) : [];
+    // ⏱ 10초 캡(숏폼 정책): 장면 최대 3개 × 장면당 초 클램프 → 총 길이 ≤ 10s.
+    const images: string[] = Array.isArray(body.images) ? body.images.filter((u: any) => typeof u === "string" && /^https?:\/\//.test(u)).slice(0, 3) : [];
     if (images.length < 1) return j({ error: "no_images" }, 400);
-    const captions: string[] = Array.isArray(body.captions) ? body.captions.map((c: any) => String(c || "")).slice(0, 10) : [];
+    const captions: string[] = Array.isArray(body.captions) ? body.captions.map((c: any) => String(c || "")).slice(0, 3) : [];
     const size = SIZES[String(body.ratio || "9:16")] || SIZES["9:16"];
-    const per = Math.min(Math.max(Number(body.per) || 3, 2), 6);
+    let per = Math.min(Math.max(Number(body.per) || 3, 2), 6);
+    per = Math.min(per, +(9.9 / images.length).toFixed(2));   // 총합 ≤ 10초 강제(인코딩 오버헤드 ~0.1s 마진, 실측 10.005s→9.9x)
     const music = String(body.music || "upbeat");
 
     // 유저 24h 영상 한도(썸네일 테이블 재사용, kind='video')
@@ -146,7 +148,7 @@ Deno.serve(async (req) => {
         return j({ ok: true, status, url: d.response.url, r2: false, warn: String(e).slice(0, 80) });   // R2 실패 시 임시 url이라도
       }
     }
-    if (status === "failed") return j({ ok: false, status, error: "render_failed" });
+    if (status === "failed") return j({ ok: false, status, error: "render_failed", detail: String(d?.response?.error || "").slice(0, 200) });   // Shotstack 원인 노출(디버깅)
     return j({ ok: true, status });   // queued | fetching | rendering | saving
   }
 
