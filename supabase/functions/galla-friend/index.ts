@@ -1129,6 +1129,7 @@ function stripForPreview(t: string): string {
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")
     .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")
+    .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1").replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")   // 마크다운 강조 스트립(프리뷰)
     .replace(/[ \t]{2,}/g, " ").replace(/[ \t]+\n/g, "\n");
 }
 
@@ -1146,6 +1147,7 @@ function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; 
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, "")
     .replace(/\b(point_to|open_link|web_search|draft_issue|draft_plaza|app_action|find_user|my_activity|manage_content|hot_issues|galla_news|search_content|platform_buzz)\b/g, "")
+    .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1").replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")   // 마크다운 강조 스트립
     .replace(/\(\s*\)/g, "").replace(/\s*→\s*$/gm, "").replace(/[ \t]+\n/g, "\n").replace(/[ \t]{2,}/g, " ").trim();
   const bare = reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "").trim();
   if (!/[가-힣a-zA-Z0-9]/.test(bare)) {
@@ -2192,6 +2194,10 @@ ${parts.join("\n")}`;
       // 🛡 상태 흉내 스크럽(사장님 "코드 쿼리 뜬다") — "[지금 호출 중...]" "[생성 중]" "[작업 중]"류 가짜 시스템 라벨 제거.
       .replace(/\[[^\]\n]{0,20}(호출|생성|작업|처리|검색|로딩|불러오)\s*중[^\]\n]{0,6}\]/gi, "")
       .replace(/\[(로딩|처리|생성|작업|호출)\.*\]/gi, "")
+      // 🛡 마크다운 강조 스트립(실앱 테스트 발견: "*굵게*됐대"가 raw 별표로 노출 = "코드 뜨는" 느낌) — 클라는 마크다운 렌더 안 함.
+      //    쌍(*..* / **..**) 제거 후, 글자·따옴표에 '붙은' 잔여 별표(마크다운 잔재)까지 정리. 독립 " * "(불릿)은 보존.
+      .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1")
+      .replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")
       .replace(/[ \t]{2,}/g, " ").trim();
     // 카드도 없고 본문도 비었으면 폴백
     if (!actions.some((a) => a.kind === "open" || a.kind === "view")) {
