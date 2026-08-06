@@ -94,10 +94,12 @@
       if(_syncChan) return;
       var u=await uid(); if(!u) return;
       var sb=window.supabaseClient; if(!sb||!sb.channel) return;
+      // ⚠️ CHANNEL_ERROR는 재연결 중 '일시' 상태고 클라가 스스로 SUBSCRIBED로 복구한다(파괴 금지).
+      //    CLOSED만 영구 종료 → 참조 비워 재구독 가능하게. 놓친 이벤트는 visibility의 loadChat 따라잡기가 메꾼다.
       _syncChan=sb.channel("frsync:"+u)
         .on("postgres_changes",{event:"UPDATE",schema:"public",table:"friend_relationship",filter:"user_id=eq."+u},
           function(p){ applyRemoteChat(p&&p.new&&p.new.chat_log); })
-        .subscribe();
+        .subscribe(function(status){ if(status==="CLOSED"){ _syncChan=null; } });
     }catch(e){}
   }
 
@@ -1135,8 +1137,22 @@
     window.GALLA_openDock = openDock;   // 편집기에서 직접 작업모드 열기(글쓰기 허브 등에서 재사용 가능)
     // 🛠 작업 모드 — 갈비스가 초안 넘겨 편집기로 왔으면(GALLA_WORK) 편집기 준비 후 도킹 미니챗 자동 오픈.
     tryOpenDockForWork();
-    // 🔄 실시간 미러링 + 📡 대행 진행상황 구독(supabaseClient 준비되면).
-    (function trySync(n){ if(window.supabaseClient){ subscribeSync(); subscribeWork(); } else if(n>0){ setTimeout(function(){ trySync(n-1); }, 500); } })(24);
+    // 🔄 실시간 미러링 + 📡 대행 진행상황 구독.
+    // ⚠️ 버그였던 것: supabaseClient 존재만 보고 1회 호출 → 세션 복원이 부팅보다 늦으면 uid()=null로
+    //    조용히 포기하고 영영 미구독(특히 앱 콜드스타트). → '구독 성공까지' 재시도.
+    (function trySync(n){
+      if(window.supabaseClient){ subscribeSync(); subscribeWork(); }
+      if((!_syncChan || !_workChan) && n>0) setTimeout(function(){ trySync(n-1); }, 800);
+    })(40);
+    // 📲 복귀 수렴 — 백그라운드에서 소켓이 죽어 이벤트를 놓쳤어도, 화면 복귀 시 서버 전사로 따라잡는다(+미구독이면 재구독).
+    document.addEventListener("visibilitychange", function(){
+      if(document.visibilityState!=="visible") return;
+      try{
+        if(!_syncChan) subscribeSync();
+        if(!_workChan) subscribeWork();
+        if(logEl && logEl.children.length && !busy) loadChat().then(function(d){ if(d&&d.history) applyRemoteChat(d.history); }).catch(function(){});
+      }catch(e){}
+    });
     // 📮 선톡 푸시 탭으로 들어왔으면(?frping=1) 부팅 후 갈비스 챗 자동 오픈(선톡이 첫 말이 됨)
     try{ if(/[?&]frping=1/.test(location.search)) setTimeout(open, 900); }catch(e){}
   }
