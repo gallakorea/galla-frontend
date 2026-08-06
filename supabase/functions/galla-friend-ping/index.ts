@@ -50,15 +50,17 @@ Deno.serve(async (req) => {
   }
   try {
     // 대상 선별
+    // 🕐 친구다운 케이던스: 반나절(10h)~3주 미접속이면 대상. 2일 창은 너무 보수적이라 대상이 늘 0명이었음(사장님 "선톡 작동 안함").
+    //    쿨다운 20h로 하루 1회 상한(스팸 방지). 저녁 크론(19:30 KST)이 '오늘 안 온 사람'에게 안부.
     const { data: rels } = await sb.from("friend_relationship")
       .select("user_id,friend_name,msg_count,mood,last_seen_at,last_ping_at,ping_off")
       .gte("msg_count", 3)
-      .lt("last_seen_at", new Date(Date.now() - 2 * 86400000).toISOString())
-      .gt("last_seen_at", new Date(Date.now() - 7 * 86400000).toISOString())
+      .lt("last_seen_at", new Date(Date.now() - 10 * 3600000).toISOString())
+      .gt("last_seen_at", new Date(Date.now() - 21 * 86400000).toISOString())
       .limit(200);
     const targets = (rels || []).filter((r) =>
       !r.ping_off && r.mood !== "sulky" &&
-      (!r.last_ping_at || new Date(r.last_ping_at).getTime() < Date.now() - 3 * 86400000)
+      (!r.last_ping_at || new Date(r.last_ping_at).getTime() < Date.now() - 20 * 3600000)
     ).slice(0, MAX_PER_RUN);
 
     let sent = 0;

@@ -998,6 +998,16 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
       }
     }
   } catch { /* */ }
+  // 🌤 시간차 재개 = '환기'(사장님: 지난 화제 곧바로 이어가지 말고 새롭게 시작). 새 세션 첫 턴 + 몇 시간+ 공백일 때만.
+  let freshStart = "";
+  try {
+    const sm = (rel?.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
+    const turns = Number(sm?.turns) || 0;
+    const gapH = sm?.prev_end_at ? (Date.now() - Date.parse(sm.prev_end_at)) / 3600000 : 0;
+    if (turns === 0 && gapH >= 3) {
+      freshStart = `\n- 🌤 **시간차 재개 = 환기(중요)**: ${gapH >= 20 ? "오랜만에" : "시간이 좀 지나"} 다시 왔다. 반갑게 맞으며 **네가 먼저 가볍게 새로 열어라** — 안부·지금 기분·그동안 어땠는지("오 왔어? 그동안 뭐하고 지냈어 ㅋㅋ"). ⚠️ 지난 대화 화제(직전에 하던 얘기)를 곧바로 이어가지 마라 — 지난 얘기는 상대가 먼저 다시 꺼낼 때만. 단 '너 화제 돌리네/갑자기 왜' 처럼 상대를 지적하지 말고, 그냥 자연스럽게 반가워하며 새로 시작. 한두 줄로 짧게.`;
+    }
+  } catch { /* */ }
   // 😤💕 감정선(연속·관성) — 감정선 엔진이 만든 아크를 최우선 주입. 없으면 옛 3단계 mood로 폴백.
   const moodBlock = emotionArc(rel?.emotion) || (rel?.mood === "sulky"
     ? `\n- ⚠️ 너 지금 '삐져있다'(지난 대화에서 상대가 반복해서 막 대해 화내고 끊었다). 처음엔 시큰둥·짧게·냉랭하게 받아라("왜.", "뭐."). 상대가 진심으로 사과하거나 다정하게 풀어주면 그때 못 이기는 척 풀린다("…됐어 ㅋㅋ 담부턴 그러지 마"). 사과도 없는데 바로 해맑게 나오지 마라.`
@@ -1029,7 +1039,7 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
 - 상대: ${nick || "닉네임 아직 모름"}
 - 📛 **호칭(중요)**: 상대를 부를 땐 ${nick ? `이름 '${nick}'이나 ` : ""}다정한 애칭으로 불러라. "야/너"로만 툭툭 부르지 마라 — 진짜 친구는 이름을 부른다. 기억에 '부르는 법/애칭'이 있으면 그걸 최우선으로. (문장 속 반말 '너'는 자연스러우면 괜찮지만, **호명(부를 때)은 이름·애칭**으로.)${nick ? "" : " 아직 뭐라 부를지 모르면 자연스럽게 '뭐라고 부를까?' 물어봐라."}
 - 관계: depth ${depth}/4 · ${tone}
-- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${timeBlock}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
+- 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${timeBlock}${freshStart}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
 
 ━━ 내가 이미 아는 것(상대에 대한 기억 — 이번 대화와 관련해 떠오른 것) ━━
 ${memBlock}`;
@@ -1781,6 +1791,17 @@ ${parts.join("\n")}`;
     const execSignal = !!(route || work || handoff || deliverMode || rawSources.length ||
       (userMsg && /(만들어|만들|썸네일|영상\s*(만|편집|뽑)|대본|숏판|롱판|짜줘|짜서|그려|생성|검색|찾아\s*줘|찾아줘|열어\s*줘|보여\s*줘|예측|글\s*(써|올려)|올려\s*(줘|봐|보|줄|주라|라|놔)|올려봐|발의|이슈로\s*(올|만들|가|해|써)|판\s*(올|만들|세워|짜|가)|글로\s*(올|써)|예측으로|이걸로\s*(올|가|만들|해)|dm|디엠|메시지\s*보내|전화\s*걸|통화\s*걸|설정\s*(열|바꿔)|프로필\s*(수정|바꿔)|닉네임\s*바꿔|비번\s*바꿔)/.test(userMsg)));
     const brain = crisis ? "companion" : (execSignal ? "agent" : "companion");   // 🆘 위기면 무조건 컴패니언 케어
+    // 🌤 시간차 재개 환기(강) — 새 세션 첫 턴 + 3h+ 공백이면, 유저 직전 시스템블록으로 '직전 화제 곧바로 꺼내기'를 강하게 막는다.
+    //    (dynamicCtx 안 지침만으론 생생한 직전 히스토리에 밀려 "아까 그 얘기…"가 새어나옴 — 사장님 지적.)
+    let freshStartBlock = "";
+    try {
+      const sm = (rel?.session_meta && typeof rel.session_meta === "object") ? rel.session_meta : null;
+      const turns = Number(sm?.turns) || 0;
+      const gapH = sm?.prev_end_at ? (Date.now() - Date.parse(sm.prev_end_at)) / 3600000 : 0;
+      if (turns === 0 && gapH >= 3 && !work && !handoff && !crisis) {
+        freshStartBlock = `🌤 [재개 환기 — 이번 턴 최우선]: 상대가 ${gapH >= 20 ? "오랜만에" : "한참 만에"} 다시 왔다(직전 대화는 ${ageTxt(sm.prev_end_at)} 전에 끝난 것). **네 첫 반응에서 위 히스토리의 '직전 화제'를 먼저 입에 올리지 마라** — "아까/저번에 그 ○○ 얘기…"로 시작하는 것 절대 금지. 반갑게 맞고 안부·근황·지금 기분으로 '새로' 열어라("오 왔어? ㅋㅋ 그동안 뭐 하고 지냈어?"). 그 화제는 상대가 먼저 다시 꺼내면 그때만. 상대를 지적("왜 갑자기/화제 돌리네")하지 말고 그냥 반가워해라.`;
+      }
+    } catch { /* */ }
     const brainModel = brain === "companion" ? COMPANION_MODEL : AGENT_MODEL;
     // 🆘 위기 케어 블록 — 오직 공감·안전. 농담·화제전환·되묻기볼리·조언설교·도구 금지. 상담안내는 아래 카드로 '반드시' 나간다.
     const crisisBlock = crisis
@@ -1820,7 +1841,10 @@ ${parts.join("\n")}`;
     const messages: any[] = [
       { role: "system", content: STATIC_PERSONA },   // 전 유저 공통·불변 → 전역 프롬프트 캐시(99% 히트 실측)
       ...(VIDEO_ON ? [] : [{ role: "system", content: "🔒 [지금 자동편집 영상 기능은 준비 중이라 잠겨 있다] 상대가 '영상 만들어줘/숏판 뽑아줘' 하면 — 만들어준다고 약속하지 마라. 대신 '자동편집 영상은 곧 열려, 지금은 제목·썸네일·대본까지 내가 다 뽑아줄게 — 영상은 직접 찍어 올리면 돼'라고 안내하고, gen_titles·gen_thumbnail·gen_script로 나머지를 확실히 밀어줘라. gen_video는 절대 언급·호출하지 마라." }]),
+      // 🌤 시간차 재개 첫 턴이면 히스토리를 마지막 2개로 잘라 '직전 화제 앵커'를 약화(장기 연속성은 profile_summary·에피소드가 유지).
+      //    지침만으론 생생한 히스토리에 밀려 옛 화제가 새어나옴 → 기계적으로 앵커 제거(사장님 지적 근본수정).
       ...history.filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+                .slice(freshStartBlock ? -2 : undefined)
                 .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 700) })),
       { role: "system", content: dynamicCtx(nick, friendName, rel, memList, followups, rel?.persona, selfstories, rel?.profile_summary, episodes) },
       ...(workBlock ? [{ role: "system", content: workBlock }] : []),
@@ -1832,6 +1856,7 @@ ${parts.join("\n")}`;
       ...(deliverBlock ? [{ role: "system", content: deliverBlock }] : []),
       ...(openLoopBlock ? [{ role: "system", content: openLoopBlock }] : []),
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
+      ...(freshStartBlock ? [{ role: "system", content: freshStartBlock }] : []),   // 🌤 시간차 재개 환기(유저 직전=최신 우선, 생생한 히스토리 이겨야)
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
       { role: "user", content: userContent },
     ];
