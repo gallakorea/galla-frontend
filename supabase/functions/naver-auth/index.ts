@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (!NAVER_ID || !NAVER_SECRET) return j({ error: "naver_not_configured" }, 503);
 
-  let body: { action?: string; code?: string; state?: string; redirect_uri?: string };
+  let body: { action?: string; code?: string; state?: string; redirect_uri?: string; reprompt?: boolean };
   try { body = await req.json(); } catch { return j({ error: "bad json" }, 400); }
 
   // 🔗 1단계: 인가 URL 발급 — client_id를 프론트에 박지 않기 위해 서버가 만들어 준다.
@@ -37,10 +37,13 @@ Deno.serve(async (req) => {
     const redirect = String(body.redirect_uri || "");
     if (!/^https?:\/\//.test(redirect)) return j({ error: "redirect_uri required" }, 400);
     const state = crypto.randomUUID().replace(/-/g, "");
+    // auth_type=reprompt — 이미 연동한 유저에게 '동의 항목이 늘었을 때' 재동의를 강제한다.
+    // (네이버는 기존 연동자에게 새 scope 동의를 자동으로 다시 묻지 않아 이메일이 계속 안 넘어옴)
     const url = "https://nid.naver.com/oauth2.0/authorize?response_type=code"
       + `&client_id=${encodeURIComponent(NAVER_ID)}`
       + `&redirect_uri=${encodeURIComponent(redirect)}`
-      + `&state=${state}`;
+      + `&state=${state}`
+      + (body.reprompt ? "&auth_type=reprompt" : "");
     return j({ ok: true, url, state });
   }
 
