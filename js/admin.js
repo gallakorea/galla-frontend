@@ -24,13 +24,46 @@
     return w;
   }
 
+  /* 🔁 리다이렉트 핑퐁 차단 — admin↔admin-login이 서로를 보내며 무한 새로고침 되던 사고(2026-08-08).
+     원인: 권한 조회가 '실패'해도 '권한 없음'으로 오판해 튕겨냈고, 반대편은 세션이 있으니 도로 보냄.
+     ① 조회 오류는 재시도(권한 없음과 구분) ② 그래도 안 되면 리다이렉트 대신 화면에 상태 표시 ③ 왕복 횟수 상한. */
+  function bounce(to) {
+    let n = 0;
+    try { n = Number(sessionStorage.getItem("__adminBounce") || "0"); } catch (_) {}
+    if (n >= 3) {
+      try { sessionStorage.removeItem("__adminBounce"); } catch (_) {}
+      const g = document.getElementById("admin-gate");
+      if (g) g.innerHTML = '<div style="padding:28px;color:#c9d3e3;font:600 14px/1.7 system-ui;text-align:center">' +
+        '관리자 확인이 반복 실패했어요.<br>세션을 정리하고 다시 로그인해 주세요.' +
+        '<br><br><button id="ad-reset" style="padding:10px 16px;border-radius:10px;border:0;background:#4361ff;color:#fff;font-weight:800">세션 정리하고 로그인</button></div>';
+      const b = document.getElementById("ad-reset");
+      if (b) b.onclick = async () => {
+        try { await sb.auth.signOut(); } catch (_) {}
+        try { Object.keys(localStorage).filter(k => /^sb-.*-auth-token$/.test(k)).forEach(k => localStorage.removeItem(k)); } catch (_) {}
+        location.href = "admin-login.html";
+      };
+      return;
+    }
+    try { sessionStorage.setItem("__adminBounce", String(n + 1)); } catch (_) {}
+    location.href = to;
+  }
+
   async function boot() {
     sb = await waitForSupabaseClient();
     const { data: s } = await sb.auth.getSession();
-    if (!s?.session) { location.href = "admin-login.html"; return; }
+    if (!s?.session) { bounce("admin-login.html"); return; }
     ME = s.session.user.id;
-    const { data: prof } = await sb.from("user_profiles").select("admin_flag").eq("user_id", ME).maybeSingle();
-    if (!prof?.admin_flag) { location.href = "admin-login.html"; return; }
+    // 권한 조회 — 오류(네트워크·만료세션)면 재시도, '없음'이 확정될 때만 튕긴다
+    let prof = null, lastErr = null;
+    for (let i = 0; i < 3; i++) {
+      const r = await sb.from("user_profiles").select("admin_flag").eq("user_id", ME).maybeSingle();
+      if (!r.error) { prof = r.data; lastErr = null; break; }
+      lastErr = r.error;
+      await new Promise((res) => setTimeout(res, 400 * (i + 1)));
+    }
+    if (lastErr) { bounce("admin-login.html"); return; }
+    if (!prof?.admin_flag) { bounce("admin-login.html"); return; }
+    try { sessionStorage.removeItem("__adminBounce"); } catch (_) {}   // 정상 진입 = 카운터 리셋
     document.getElementById("admin-gate").remove();
     document.getElementById("admin-app").hidden = false;
     wireShell(); route("dashboard"); pollOnline();

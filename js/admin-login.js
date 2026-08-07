@@ -4,10 +4,15 @@
   let sb;
   (async function () {
     sb = await waitForSupabaseClient();
-    // 이미 관리자 세션이면 바로 입장
+    // 이미 관리자 세션이면 바로 입장 — 단, admin.html과 핑퐁 중이면 자동 이동 금지(무한 새로고침 차단, 2026-08-08)
+    let bounced = 0;
+    try { bounced = Number(sessionStorage.getItem("__adminBounce") || "0"); } catch (_) {}
+    if (bounced >= 2) return;   // 로그인 폼을 그대로 보여주고 사용자가 직접 진행하게
     const { data: s } = await sb.auth.getSession();
     if (s?.session) {
-      const { data: p } = await sb.from("user_profiles").select("admin_flag").eq("user_id", s.session.user.id).maybeSingle();
+      const { data: p, error } = await sb.from("user_profiles").select("admin_flag").eq("user_id", s.session.user.id).maybeSingle();
+      // 조회 오류(만료·삭제된 세션 등)면 좀비 세션을 정리하고 폼을 보여준다 — 도로 admin.html로 보내면 루프
+      if (error) { try { await sb.auth.signOut(); } catch (_) {} return; }
       if (p?.admin_flag) { location.href = "admin.html"; return; }
     }
   })();

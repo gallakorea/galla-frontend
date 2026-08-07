@@ -591,6 +591,24 @@
         }
       );
       console.log("[supabase] client ready");
+      // 🧟 좀비 세션 정리 — 계정이 삭제(탈퇴·관리자 삭제)됐는데 기기에 토큰이 남으면
+      //    JWT는 만료 전까지 유효해 보여 '로그인된 척'하지만 모든 조회가 실패한다.
+      //    → 페이지들이 로그인/게이트로 서로 튕겨 무한 새로고침(2026-08-08 관제센터 사고). 한 번에 정리.
+      (async () => {
+        try {
+          const { data: s } = await window.supabaseClient.auth.getSession();
+          if (!s?.session) return;
+          const { error } = await window.supabaseClient.auth.getUser();   // 서버 검증
+          const msg = String(error?.message || "");
+          if (error && /user.*not.*found|does not exist|invalid claim|sub claim|forbidden/i.test(msg)) {
+            console.warn("[supabase] 좀비 세션 정리:", msg.slice(0, 60));
+            try { await window.supabaseClient.auth.signOut(); } catch (_) {}
+            try {
+              Object.keys(localStorage).filter((k) => /^sb-.*-auth-token$/.test(k)).forEach((k) => localStorage.removeItem(k));
+            } catch (_) {}
+          }
+        } catch (_) { /* 네트워크 문제면 건드리지 않는다(오탐 로그아웃 방지) */ }
+      })();
       // 🎁 친구 초대(추천인) — ?ref=코드 캡처 → 첫 로그인 세션에서 1회 적용(+GP 양쪽 보상)
       try {
         const qs = new URLSearchParams(location.search);
