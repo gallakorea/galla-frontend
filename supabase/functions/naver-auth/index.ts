@@ -63,38 +63,66 @@ Deno.serve(async (req) => {
     const p = me?.response;
     if (!p?.id) return j({ error: "naver_profile" }, 401);
 
-    // 안정 식별: 네이버 이메일 있으면 사용, 없으면 합성(우리 소유 도메인) — 유저는 못 보는 값
-    const email = (p.email && String(p.email)) || `naver_${p.id}@galla.social`;
+    // 이메일: 네이버가 주면 진짜, 안 주면 합성(우리 도메인). 사람 식별은 아래 naver id가 담당.
+    const realEmail = p.email ? String(p.email) : null;
+    const email = realEmail || `naver_${p.id}@galla.social`;
+    const naverUid = String(p.id);
 
-    // 3) find-or-create — 이메일로 직접 조회(listUsers 전체 스캔은 유저가 늘면 못 찾아 로그인 실패)
+    // 3) find-or-create — ①네이버 id(불변) ②이메일 순으로 찾는다.
+    //    이메일만 보면 '이메일 권한을 나중에 켠 순간' 같은 사람이 새 계정으로 갈라진다(1인 1계정 위반).
     let isNew = false;
     let userId: string | null = null;
     {
-      const { data: found } = await sb.rpc("auth_uid_by_email", { p_email: email });
-      userId = (found as string | null) ?? null;
+      const { data: byId } = await sb.rpc("social_identity_uid", { p_provider: "naver", p_uid: naverUid });
+      userId = (byId as string | null) ?? null;
+    }
+    if (!userId) {
+      const { data: byEmail } = await sb.rpc("auth_uid_by_email", { p_email: email });
+      userId = (byEmail as string | null) ?? null;
     }
     if (!userId) {
       const created = await sb.auth.admin.createUser({
         email,
         email_confirm: true,
-        user_metadata: { provider_naver_id: String(p.id), avatar_url: p.profile_image || null, full_name: p.nickname || null },
+        user_metadata: { provider_naver_id: naverUid, avatar_url: p.profile_image || null, full_name: p.nickname || null },
       });
       userId = created.data?.user?.id ?? null;
       isNew = !!created.data?.user;
-      // 동시 로그인 경합으로 그 사이 생겼으면 다시 조회
-      if (!userId) {
+      if (!userId) {   // 동시 로그인 경합
         const { data: again } = await sb.rpc("auth_uid_by_email", { p_email: email });
         userId = (again as string | null) ?? null;
       }
     }
     if (!userId) return j({ error: "user_upsert" }, 500);
 
+    // 네이버 id ↔ 유저 매핑 고정(다음 로그인부터 이메일과 무관하게 이 사람을 찾는다)
+    await sb.rpc("social_identity_link", { p_provider: "naver", p_uid: naverUid, p_user: userId });
+
+    // 🔁 합성 이메일 → 진짜 이메일 승격: 나중에 이메일 권한을 켜면 계정을 새로 만들지 않고 기존 계정을 갱신
+    if (realEmail) {
+      try {
+        const { data: cur } = await sb.auth.admin.getUserById(userId);
+        const curEmail = cur?.user?.email || "";
+        if (curEmail.endsWith("@galla.social") && curEmail !== realEmail) {
+          const { data: taken } = await sb.rpc("auth_uid_by_email", { p_email: realEmail });
+          // 진짜 이메일이 아직 아무에게도 없을 때만 승격(있으면 계정 병합 문제라 건드리지 않음)
+          if (!taken) await sb.auth.admin.updateUserById(userId, { email: realEmail, email_confirm: true });
+        }
+      } catch { /* 승격 실패해도 로그인은 진행 */ }
+    }
+
     // 4) magiclink 발급 → token_hash를 프론트로 (verifyOtp로 세션 확립)
-    const link = await sb.auth.admin.generateLink({ type: "magiclink", email });
+    //    ⚠️ 이메일 승격이 일어났을 수 있으니 '지금 계정의 이메일'로 발급해야 한다(옛 주소로 내면 링크 무효).
+    let loginEmail = email;
+    try {
+      const { data: fresh } = await sb.auth.admin.getUserById(userId);
+      if (fresh?.user?.email) loginEmail = fresh.user.email;
+    } catch { /* 조회 실패 시 원래 값 */ }
+    const link = await sb.auth.admin.generateLink({ type: "magiclink", email: loginEmail });
     const th = (link.data as any)?.properties?.hashed_token;
     if (!th) return j({ error: "link" }, 500);
 
-    return j({ ok: true, email, token_hash: th, is_new: isNew });
+    return j({ ok: true, email: loginEmail, token_hash: th, is_new: isNew });
   } catch (e) {
     return j({ error: "server", detail: String((e as Error).message) }, 500);
   }

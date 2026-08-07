@@ -94,7 +94,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     syncCounts();
 
     if (emailField) {
-      emailField.textContent = session.user.email || "-";
+      // 🟢 소셜 로그인이 이메일을 안 주면 내부용 합성 주소(naver_xxx@galla.social)를 쓴다 —
+      //    유저에겐 의미 없는 문자열이라 그대로 보여주면 "가입 이메일이 이상하다"가 된다. 연결 표시로 대체.
+      const em = session.user.email || "";
+      emailField.textContent = /@galla\.social$/.test(em) ? "네이버 계정으로 로그인 중" : (em || "-");
     }
 
     if (phoneField) {
