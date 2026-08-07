@@ -62,6 +62,65 @@
   }
   window.GALLA_signInSocial = signInSocial;
 
+  /* ══════════ 🟢 네이버 로그인 (커스텀 — Supabase 기본 provider 아님) ══════════
+     흐름: naver-auth(action:authorize)로 인가URL 발급(client_id는 서버 보관) → 네이버 동의 →
+     /auth-callback.html?code=&state= 복귀 → naver-auth로 code 교환 → token_hash → verifyOtp로 세션.
+     state는 sessionStorage에 저장했다가 콜백에서 대조(CSRF 방어). */
+  const NAVER_FN = "/functions/v1/naver-auth";
+  const NAVER_STATE_KEY = "galla_naver_state";
+  const SB_URL = "https://bidqauputnhkqepvdzrr.supabase.co";
+  const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpZHFhdXB1dG5oa3FlcHZkenJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyNzg1NDIsImV4cCI6MjA4MDg1NDU0Mn0.D-UGDPuBaNO8v-ror5-SWgUNLRvkOO-yrf2wDVZtyEM";
+  function fnUrl(path) {
+    const base = (window.GALLA_SUPABASE_URL || (sb() && sb().supabaseUrl) || SB_URL).replace(/\/$/, "");
+    return base + path;
+  }
+  async function naverFetch(payload) {
+    const key = window.GALLA_SUPABASE_ANON || (sb() && sb().supabaseKey) || SB_ANON;
+    const res = await fetch(fnUrl(NAVER_FN), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: key, Authorization: "Bearer " + key },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  }
+  async function signInNaver() {
+    try {
+      const redirect = isNativeApp() ? NATIVE_REDIRECT : CALLBACK;
+      const r = await naverFetch({ action: "authorize", redirect_uri: redirect });
+      if (!r || !r.url) {
+        alert(r && r.error === "naver_not_configured" ? "네이버 로그인은 준비 중이에요." : "네이버 로그인을 시작하지 못했어요.");
+        return;
+      }
+      try { sessionStorage.setItem(NAVER_STATE_KEY, r.state); } catch (_) {}
+      if (isNativeApp()) {
+        setupNativeAuthListener();
+        await window.Capacitor.Plugins.Browser.open({ url: r.url, presentationStyle: "popover" });
+        return;
+      }
+      location.href = r.url;
+    } catch (e) { alert("네이버 로그인 실패 — " + (e?.message || "잠시 후 다시 시도해 주세요.")); }
+  }
+  window.GALLA_signInNaver = signInNaver;
+
+  /* 콜백에서 호출: ?code=&state= 있으면 세션까지 확립하고 true 반환 */
+  async function handleNaverCallback() {
+    const q = new URLSearchParams(location.search);
+    const code = q.get("code"), state = q.get("state");
+    if (!code || !state) return false;
+    // 구글 등 Supabase OAuth는 해시 토큰으로 오므로 code가 있으면 네이버 경로
+    let saved = null;
+    try { saved = sessionStorage.getItem(NAVER_STATE_KEY); } catch (_) {}
+    if (saved && saved !== state) { alert("로그인 검증에 실패했어요. 다시 시도해 주세요."); return false; }
+    try { sessionStorage.removeItem(NAVER_STATE_KEY); } catch (_) {}
+    const r = await naverFetch({ code, state, redirect_uri: CALLBACK });
+    if (!r || !r.ok || !r.token_hash) return false;
+    const c = sb();
+    if (!c) return false;
+    const { error } = await c.auth.verifyOtp({ token_hash: r.token_hash, type: "magiclink" });
+    return !error;
+  }
+  window.GALLA_handleNaverCallback = handleNaverCallback;
+
   /* ══════════ 패스키(WebAuthn) ══════════ */
   const hasPasskey = () => !!(window.PublicKeyCredential && navigator.credentials);
 
@@ -139,13 +198,16 @@
     const APPLE_SVG = '<svg class="soc-ic soc-a" viewBox="0 0 17 20" fill="currentColor" aria-hidden="true"><path d="M14.06 15.53c-.26.6-.57 1.16-.93 1.67-.5.71-.9 1.2-1.22 1.47-.49.45-1.02.68-1.59.7-.41 0-.9-.12-1.48-.35-.58-.24-1.11-.35-1.6-.35-.51 0-1.06.11-1.65.35-.59.24-1.06.36-1.42.38-.55.02-1.09-.22-1.62-.72-.34-.29-.76-.79-1.26-1.51-.53-.76-.97-1.65-1.31-2.66C.44 13.86.25 12.8.25 11.78c0-1.17.25-2.18.76-3.02a4.5 4.5 0 0 1 1.6-1.61c.66-.39 1.38-.59 2.15-.6.44 0 1.01.14 1.72.4.71.27 1.16.4 1.36.4.15 0 .65-.16 1.5-.47.8-.29 1.48-.41 2.03-.36 1.5.12 2.62.71 3.37 1.77-1.34.81-2 1.95-1.99 3.41.01 1.14.42 2.09 1.24 2.84.37.35.79.62 1.25.81-.1.29-.21.57-.33.83zM11.6.4c0 .87-.32 1.69-.95 2.44-.77.9-1.7 1.42-2.7 1.34a2.7 2.7 0 0 1-.02-.33c0-.84.36-1.73 1-2.47.32-.37.73-.68 1.22-.93.49-.24.96-.38 1.4-.4.02.12.05.24.05.35z"/></svg>';
     let html = '<div class="social-div"><span>간편 로그인</span></div>' +
       '<button type="button" class="soc-btn soc-google" data-act="google"><span class="soc-ic soc-g">G</span> 구글로 계속하기</button>' +
-      '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>';
+      '<button type="button" class="soc-btn soc-apple" data-act="apple">' + APPLE_SVG + ' Apple로 계속하기</button>' +
+      '<button type="button" class="soc-btn soc-naver" data-act="naver"><span class="soc-ic soc-n">N</span> 네이버로 계속하기</button>';
     if (hasPasskey())
       html += '<button type="button" class="soc-btn soc-passkey" data-act="passkey"><span class="soc-ic">🔑</span> 패스키로 로그인</button>';
     box.innerHTML = html;
     host.appendChild(box);
     box.querySelector('[data-act="google"]').onclick = () => signInSocial("google");
     box.querySelector('[data-act="apple"]').onclick = () => signInSocial("apple");
+    const nv = box.querySelector('[data-act="naver"]');
+    if (nv) nv.onclick = () => signInNaver();
     const pk = box.querySelector('[data-act="passkey"]');
     if (pk) pk.onclick = () => passkeyLogin();
   }

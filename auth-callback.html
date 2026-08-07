@@ -20,7 +20,7 @@
 
   <script src="./vendor/supabase.js?v=080412"></script>
   <script src="js/supabase.js?v=080412"></script>
-  <script src="js/social-auth.js?v=080412"></script>
+  <script src="js/social-auth.js?v=0806132"></script>
   <script>
     (async function () {
       const T = document.getElementById("cbT");
@@ -28,6 +28,15 @@
       let sb = null;
       for (let i = 0; i < 40 && !sb; i++) { sb = window.supabaseClient; if (!sb) await new Promise(r => setTimeout(r, 100)); }
       if (!sb) { location.replace("login.html"); return; }
+
+      // 🟢 네이버 복귀(?code=&state=) — Supabase OAuth(해시 토큰)와 달리 code 교환이 필요
+      if (new URLSearchParams(location.search).get("code")) {
+        T.textContent = "네이버 계정 확인 중…";
+        try {
+          const ok = window.GALLA_handleNaverCallback && await window.GALLA_handleNaverCallback();
+          if (!ok) { location.replace("login.html?err=naver"); return; }
+        } catch (_) { location.replace("login.html?err=naver"); return; }
+      }
 
       // 세션 확립 대기
       let user = null;

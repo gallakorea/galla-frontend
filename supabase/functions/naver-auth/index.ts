@@ -28,8 +28,22 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (!NAVER_ID || !NAVER_SECRET) return j({ error: "naver_not_configured" }, 503);
 
-  let body: { code?: string; state?: string; redirect_uri?: string };
+  let body: { action?: string; code?: string; state?: string; redirect_uri?: string };
   try { body = await req.json(); } catch { return j({ error: "bad json" }, 400); }
+
+  // 🔗 1단계: 인가 URL 발급 — client_id를 프론트에 박지 않기 위해 서버가 만들어 준다.
+  //    state는 CSRF 방어용(프론트가 sessionStorage에 저장했다가 콜백에서 대조).
+  if (body.action === "authorize") {
+    const redirect = String(body.redirect_uri || "");
+    if (!/^https?:\/\//.test(redirect)) return j({ error: "redirect_uri required" }, 400);
+    const state = crypto.randomUUID().replace(/-/g, "");
+    const url = "https://nid.naver.com/oauth2.0/authorize?response_type=code"
+      + `&client_id=${encodeURIComponent(NAVER_ID)}`
+      + `&redirect_uri=${encodeURIComponent(redirect)}`
+      + `&state=${state}`;
+    return j({ ok: true, url, state });
+  }
+
   const { code, state } = body;
   if (!code || !state) return j({ error: "code/state required" }, 400);
 
@@ -52,23 +66,26 @@ Deno.serve(async (req) => {
     // 안정 식별: 네이버 이메일 있으면 사용, 없으면 합성(우리 소유 도메인) — 유저는 못 보는 값
     const email = (p.email && String(p.email)) || `naver_${p.id}@galla.social`;
 
-    // 3) find-or-create
+    // 3) find-or-create — 이메일로 직접 조회(listUsers 전체 스캔은 유저가 늘면 못 찾아 로그인 실패)
+    let isNew = false;
     let userId: string | null = null;
-    // 이메일로 조회(있으면 연결 — 같은 이메일 이메일가입 계정과 자연 연결)
-    const { data: list } = await sb.auth.admin.listUsers({ page: 1, perPage: 1 });
-    void list; // (대량 목록 스캔 대신 아래 createUser 충돌로 판정)
-    const created = await sb.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { provider_naver_id: String(p.id), avatar_url: p.profile_image || null, full_name: p.nickname || null },
-    });
-    if (created.data?.user) {
-      userId = created.data.user.id;
-    } else {
-      // 이미 있으면 이메일로 재조회
-      const { data: byEmail } = await sb.auth.admin.listUsers();
-      const u = byEmail?.users?.find((x) => x.email === email);
-      userId = u?.id ?? null;
+    {
+      const { data: found } = await sb.rpc("auth_uid_by_email", { p_email: email });
+      userId = (found as string | null) ?? null;
+    }
+    if (!userId) {
+      const created = await sb.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { provider_naver_id: String(p.id), avatar_url: p.profile_image || null, full_name: p.nickname || null },
+      });
+      userId = created.data?.user?.id ?? null;
+      isNew = !!created.data?.user;
+      // 동시 로그인 경합으로 그 사이 생겼으면 다시 조회
+      if (!userId) {
+        const { data: again } = await sb.rpc("auth_uid_by_email", { p_email: email });
+        userId = (again as string | null) ?? null;
+      }
     }
     if (!userId) return j({ error: "user_upsert" }, 500);
 
@@ -77,7 +94,7 @@ Deno.serve(async (req) => {
     const th = (link.data as any)?.properties?.hashed_token;
     if (!th) return j({ error: "link" }, 500);
 
-    return j({ ok: true, email, token_hash: th, is_new: !!created.data?.user });
+    return j({ ok: true, email, token_hash: th, is_new: isNew });
   } catch (e) {
     return j({ error: "server", detail: String((e as Error).message) }, 500);
   }
