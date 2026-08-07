@@ -150,6 +150,21 @@ async function aiBudgetOk(n = 1): Promise<boolean> {
   } catch { return true; }
 }
 
+// 🛡 유저별 일일 쿼터 — 한 명의 남용이 전체 예산을 태우는 것 차단(글로벌 aiBudgetOk의 앞단).
+//    실패(네트워크·함수없음)면 통과시킨다 — 쿼터 장애로 서비스가 죽는 게 더 나쁘다.
+async function aiUserQuotaOk(uid: string, n = 1): Promise<boolean> {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/rpc/ai_user_take`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+      body: JSON.stringify({ p_fn: AI_FN, p_uid: uid, p_n: n }),
+    });
+    if (!r.ok) return true;
+    const j = await r.json();
+    return !(j && j.ok === false);
+  } catch { return true; }
+}
+
 // ── 콘텐츠 툴(같이 보기·평론 재료) ─────────────────────────
 // 😜 아재개그 — dad_jokes에서 '덜 쓴 것' 중 랜덤 1개(used_count로 순환). 던질지/언제는 핸들러가 확률·감정 게이트.
 async function pickDadJoke(): Promise<{ q: string; a: string } | null> {
@@ -1729,6 +1744,11 @@ Deno.serve(async (req) => {
       return json({ ok: true, history: Array.isArray(lr?.chat_log) ? lr.chat_log : [], friend_name: lr?.friend_name || null });
     }
 
+    // 🛡 유저별 일일 쿼터 — 글로벌 캡만 있으면 한 명이 전체 예산을 태워 '모든 유저의 갈비스'가 죽는다(2026-08-08 QA7).
+    //    남용을 그 유저에게만 격리. 정상 유저는 닿지 않는 상한(기본 300/일, app_settings.ai_user_daily_caps로 조정).
+    if (!(await aiUserQuotaOk(uid))) {
+      return json({ ok: true, reply: "야 우리 오늘 진짜 많이 떠들었다 ㅋㅋ 나 목 좀 쉬고 올게 — 내일 또 얘기하자!" });
+    }
     // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
     if (!(await aiBudgetOk())) {
       const tired = [
