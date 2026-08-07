@@ -26,11 +26,13 @@
 
   window.GALLA_gallianOf = async function (supabase, userId) {
     const cnt = (t, col) => supabase.from(t).select(col || "id", { count: "exact", head: true }).eq("user_id", userId);
+    // ⚠️ comments·plaza_comments는 컬럼잠금 테이블에서 user_id 컬럼이 grant 밖 — user_id 필터는 42501(댓글 GI가 항상 0으로 빠지던 조용한 버그, 2026-08-08 QA). author_id로 필터해야 한다.
+    const cntByAuthor = (t) => supabase.from(t).select("id", { count: "exact", head: true }).eq("author_id", userId);
     const [
       issuesR, commentsR, votesR, ppR, pcR, actsR, tradesR, balR, meritR, cstatR
     ] = await Promise.all([
-      cnt("issues"), cnt("comments"), cnt("votes"),
-      cnt("plaza_posts"), cnt("plaza_comments"),
+      cnt("issues"), cntByAuthor("comments"), cnt("votes"),
+      cnt("plaza_posts"), cntByAuthor("plaza_comments"),
       cnt("comment_actions"), cnt("predict_bets"),   // 파리뮤추얼 전환: market_trades → predict_bets
       supabase.from("point_balances").select("balance").eq("user_id", userId).maybeSingle(),
       supabase.rpc("battle_merit_stats", { p_user: userId }),  // 전공(격파·어시·수호)

@@ -163,13 +163,14 @@ async function GALLA_settingsInit(root) {
     setText("statCon", 0);
   }
 
-  // 4) 댓글 수 (comments 테이블 기준)
-  const { count: commentCount } = await supabase
+  // 4) 댓글 수 — 컬럼잠금 테이블이라 head-count는 403((id)+length 패턴, 2026-08-08 QA)
+  const { data: myCmts } = await supabase
     .from("comments")
-    .select("id", { count: "exact", head: true })
-    .eq("author_id", userId);
+    .select("id")
+    .eq("author_id", userId)
+    .limit(5000);
 
-  setText("statComments", commentCount ?? 0);
+  setText("statComments", (myCmts || []).length);
 
   /* =====================
      ⚔️ 전투 전적 (공격/방어/지원) + 오늘 침투

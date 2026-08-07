@@ -15,6 +15,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 let supabase = null;
 
+// XSS 이스케이프 — 파일 전역 공용(함수 로컬로만 있던 것을 승격: renderComments가 미정의 esc 참조로 크래시해 '댓글이 저장돼도 안 보이는' 전면 장애, 2026-08-08 QA 발견)
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
 // 조회 루트 — MPA면 document, SPA면 view-host(#app 추출분)
 let D = document;
 const byId = (id) => (D === document) ? document.getElementById(id) : D.querySelector("#" + id);
