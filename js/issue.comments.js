@@ -2125,6 +2125,12 @@ function bindComposerEls() {
     submitBtn.__bound = true;
     submitBtn.addEventListener("click", async () => {
       if (!requireLogin()) return;
+      // 🔒 중복 제출 잠금 — 연타하면 같은 댓글이 여러 개 올라갔다(2026-08-08 QA: 3연타=3개 생성)
+      if (submitBtn.__busy) return;
+      submitBtn.__busy = true;
+      submitBtn.disabled = true;
+      const unlock = () => { submitBtn.__busy = false; submitBtn.disabled = false; };
+      try {
 
       const input = document.getElementById("battle-comment-input");
       if (!input) return;
@@ -2141,6 +2147,11 @@ function bindComposerEls() {
       const text = input.value.trim();
       if (!text) {
         alert("의견을 입력하세요.");
+        return;
+      }
+      // 📏 길이 상한 — 서버(comments_body_len)도 강제하지만 여기서 먼저 친절하게(2026-08-08 QA: 5천자 그대로 저장됐음)
+      if (text.length > 1000) {
+        alert(`너무 길어요 (${text.length}자). 1,000자 이내로 줄여주세요.`);
         return;
       }
 
@@ -2218,6 +2229,7 @@ function bindComposerEls() {
       }
       renderWarDashboard();
       renderMorale();
+      } finally { unlock(); }   // 🔒 중복 제출 잠금 해제(성공·실패·early return 모두)
     });
   }
 }
