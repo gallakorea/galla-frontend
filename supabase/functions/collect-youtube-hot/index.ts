@@ -237,6 +237,23 @@ async function hydrate(ids: string[]): Promise<any[]> {
 
 const views = (v: any) => Number(v.statistics?.viewCount ?? 0);
 
+/* 🔥 급상승 점수 = 조회수 ÷ 게시 후 경과시간 (2026-08-08)
+   기존엔 '누적 조회수'로 정렬해 **14주 전 영상이 실시간 급상승 상단**에 올라왔다(사장님 지적).
+   급상승의 정의는 '지금 빠르게 오르는 것'이므로 속도로 매긴다.
+   · 최소 1시간으로 클램프 — 갓 올라온 영상이 분모 0에 가까워 폭주하는 것 방지
+   · 조회수 자체도 신뢰도라 완전 무시하진 않게 로그 가중(속도×log10(조회수)) */
+const ageHours = (v: any) => {
+  const t = Date.parse(v?.snippet?.publishedAt || "");
+  if (!Number.isFinite(t)) return 24 * 30;                 // 게시일 불명 → 오래된 것으로 취급
+  return Math.max(1, (Date.now() - t) / 3600000);
+};
+const hotScore = (v: any) => {
+  const n = views(v);
+  if (n <= 0) return 0;
+  return (n / ageHours(v)) * Math.log10(n + 10);
+};
+const AGE_LIMIT_H = 14 * 24;   // '전체(실시간 급상승)'에 넣을 크리에이터 업로드 최대 나이
+
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
   if (CRON_SECRET && req.headers.get("x-cron-secret") !== CRON_SECRET) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Access-Control-Allow-Origin": "*", "Content-Type": "application/json" } });
@@ -309,8 +326,12 @@ Deno.serve(async (req) => {
   // 전체(all) = 급상승 + 크리에이터 최신, 조회수 순 상위 150
   const allMerged = new Map<string, any>();
   allItems.forEach((v) => allMerged.set(v.id, v));
-  for (const id of creatorFeed.keys()) { const v = pool.get(id); if (v) allMerged.set(id, v); }
-  const allSorted = [...allMerged.values()].sort((a, b) => views(b) - views(a)).slice(0, 150);
+  // 🔥 크리에이터 최신 업로드는 '신선한 것만' 급상승에 섞는다 — 나이 제한이 없어 14주 전 영상이 올라왔었다
+  for (const id of creatorFeed.keys()) {
+    const v = pool.get(id);
+    if (v && ageHours(v) <= AGE_LIMIT_H) allMerged.set(id, v);
+  }
+  const allSorted = [...allMerged.values()].sort((a, b) => hotScore(b) - hotScore(a)).slice(0, 150);
   allSorted.forEach((v, i) => rows.push(toRow(v, "all", i + 1, now, shorts)));
   counts["all"] = allSorted.length;
 
@@ -327,7 +348,8 @@ Deno.serve(async (req) => {
     (buckets.get(feed) || buckets.get("life"))!.push(v);
   }
   for (const f of FEEDS) {
-    const listv = (buckets.get(f.feed) || []).sort((a, b) => views(b) - views(a));
+    // 카테고리 탭도 같은 기준 — 오래됐지만 조회수 많은 영상이 상단을 막던 것 해소(나이 필터는 안 검, 편수 확보 우선)
+    const listv = (buckets.get(f.feed) || []).sort((a, b) => hotScore(b) - hotScore(a));
     listv.forEach((v, i) => rows.push(toRow(v, f.feed, i + 1, now, shorts)));
     counts[f.feed] = listv.length;
   }
