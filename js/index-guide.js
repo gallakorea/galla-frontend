@@ -31,10 +31,13 @@
   // go: "collapse"=여기(인덱스 피드)로 접기, "soon"=준비중 토스트, {tab,url}=탭 이동
   var STEPS = [
     { ic: "👊", t: "편 갈라 싸우기", s: "이슈마다 👍/👎 <b>진영</b>을 골라 참전. 회색분자는 문 앞에서 컷!", go: "collapse" },
+    { ic: "🧡", t: "갈비스 — 내 친구", s: "심심하면 말 걸어요. 나를 <b>기억</b>하고 무조건 <b>내 편</b>부터 들어줌.", go: "galvis" },
+    { ic: "🛠", t: "갈비스 — 내 일꾼", s: "“이슈 만들어줘·썸네일 그려줘·숏폼 뽑아줘” <b>다 해옴</b>. 안 삐짐.", go: "galvis" },
+    { ic: "🎬", t: "숏판 · 롱판", s: "세로 <b>숏판</b>은 릴스처럼, 가로 <b>롱판</b>은 유튜브처럼. 영상도 올려요.", tab: "gallari", url: "gallari.html" },
     { ic: "🎯", t: "갈라예측", s: "결과를 맞히면 GP <b>왕창</b>. 소수파일수록 리턴이 커져요.", tab: "predict", url: "galla-predict.html" },
     { ic: "📟", t: "갈라톡 (메신저)", s: "<b>무전기</b>(꾹 눌러 말하기)·삐삐·음성/영상통화까지. 카톡 은퇴각.", tab: "dm", url: "dm.html" },
-    { ic: "🗣️", t: "광장", s: "글·짤·밈으로 노는 <b>갈라 커뮤니티</b>. 댓글로 전투도.", tab: "trend", subtab: "plaza", url: "search.html?tab=plaza" },
-    { ic: "🧠", t: "갈라뉴스", s: "여러 기사를 <b>AI가 3줄</b>로 씹어서 떠먹여줘요.", tab: "trend", subtab: "news", url: "search.html?tab=news" },
+    { ic: "🔥", t: "트렌드", s: "실시간 검색어·<b>갈라뉴스</b>(AI 3줄)·핫튜브·<b>광장</b>이 한 탭에.", tab: "trend", url: "search.html" },
+    { ic: "🏅", t: "마이페이지", s: "<b>갈라리안 등급</b>·지갑·전적, 그리고 내 <b>정치 DNA</b> 4축 분석.", tab: "mypage", url: "mypage.html" },
     { ic: "🤩", t: "크리에이터", s: "받은 후원의 <b>75%</b>가 창작자 몫. 배분·출금 안내.", top: "creator.html" }
   ];
 
@@ -100,6 +103,14 @@
     if (!step) return;
     if (step.go === "collapse") return collapse(wrap);   // 편 갈라 싸우기 = 여기 피드 → 접어서 보여줌
     if (step.go === "soon") return toastMsg("곧 공개돼요! 🚀");
+    // 🧡 갈비스 = 페이지 이동이 아니라 대화창을 그 자리에서 연다(설명보다 한 번 말 걸어보는 게 빠름)
+    if (step.go === "galvis") {
+      if (window.GALLA_openFriend) { window.GALLA_openFriend(); return; }
+      var orb = document.getElementById("frOrb");
+      if (orb) { orb.click(); return; }
+      if (SHELL) { try { window.parent.postMessage({ galla: "shell", t: "galvis" }, location.origin); return; } catch (e) {} }
+      return toastMsg("우측 하단 갈비스 버튼을 눌러보세요 🧡");
+    }
     // 판(5탭) 밖 페이지(크리에이터 센터 등) → 최상위 이동
     if (step.top) {
       if (SHELL) { try { window.parent.postMessage({ galla: "shell", t: "goto", url: step.top }, location.origin); return; } catch (e) {} }

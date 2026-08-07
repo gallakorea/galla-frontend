@@ -38,11 +38,39 @@
       art: artFight
     },
     {
+      bg: "radial-gradient(120% 90% at 50% 8%, #101a2e, #070d18 62%, #04070d)",
+      kicker: "홈 화면",
+      title: "켜자마자 <b>싸울 거리</b>가 쏟아짐",
+      sub: "이슈 · 숏판 · 뉴스 · 예측이 한 줄로 내려와요.<br>관심 없는 건 카테고리 칩으로 잘라내면 끝.<br><small>알고리즘이 아니라 <b>내 편</b>이 골라주는 피드.</small>",
+      art: artHome
+    },
+    {
       bg: "radial-gradient(120% 90% at 50% 8%, #10233a, #060e18 62%, #05080d)",
       kicker: "룰 #1",
       title: "편을 골라야 입장",
       sub: "👍 찬성이냐 👎 반대냐, 딱 하나만 고르면 끝.<br>당신이 누른 순간 <b>진영바가 요동칩니다.</b>",
       art: artVoteBar
+    },
+    {
+      bg: "radial-gradient(120% 90% at 50% 8%, #2a1338, #150920 62%, #0a0512)",
+      kicker: "★ 갈비스 1편 · 친구 모드 ★",
+      title: "말 걸면 받아주는 놈이<br>하나쯤은 있어야지",
+      sub: "심심하면 말 걸어요. 안 심심해도 말 걸어요.<br><b>갈비스</b>는 나를 기억하고, 무조건 <b>내 편</b>부터 들어줍니다.<br><small>“오늘 상사 진짜 미친 거 같지 않냐” → “미친 거 맞아. 계속 말해봐.”</small>",
+      art: artGalvisFriend
+    },
+    {
+      bg: "radial-gradient(120% 90% at 50% 8%, #10322a, #071b17 62%, #040e0c)",
+      kicker: "★ 갈비스 2편 · 일꾼 모드 ★",
+      title: "친구인데, 일도 시킬 수 있음 🛠",
+      sub: "“이거 이슈로 만들어줘” → 초안 뚝딱<br>“썸네일 그려줘” → 그려옴 · “영상 뽑아줘” → 뽑아옴<br><small>친구한테 일 시켜도 안 삐집니다. 오히려 좋아함.</small>",
+      art: artGalvisAgent
+    },
+    {
+      bg: "radial-gradient(120% 90% at 50% 8%, #123a10, #08210a 60%, #041206)",
+      kicker: "★ 신규 ★",
+      title: "숏판 · 롱판 —<br>이제 <b>영상</b>도 올려요 🎬",
+      sub: "세로 <b>숏판</b>은 릴스처럼 슥슥, 가로 <b>롱판</b>은 유튜브처럼 진득하게.<br>기획·제목·썸네일·대본은 갈비스가 다 해줘요.<br><small>당신은 찍기만. 아니 사진만 줘도 됨.</small>",
+      art: artShorts
     },
     {
       bg: "radial-gradient(120% 90% at 50% 8%, #2a2306, #140f04 62%, #0a0803)",
@@ -55,36 +83,22 @@
       bg: "radial-gradient(120% 90% at 50% 8%, #06281f, #04140f 62%, #030a08)",
       kicker: "★ 이게 진짜 무기 ★",
       title: "카톡 대신, 여기서 다 해요",
-      sub: "1:1 · 난장 오픈챗 · <b>음성·영상통화</b> · 그리고 삐삐📟<br><small>90년대 삐삐 쳐본 적 있어요? 없으면 지금 쳐보세요.</small>",
+      sub: "1:1 · <b>난장</b> 오픈챗 · <b>음성·영상통화</b> · 그리고 삐삐📟<br>목소리로 떠드는 <b>라이브 난장</b>까지.<br><small>90년대 삐삐 쳐본 적 있어요? 없으면 지금 쳐보세요.</small>",
       art: artMessenger
     },
     {
-      bg: "radial-gradient(120% 90% at 50% 8%, #06263a, #041019 62%, #030a10)",
-      kicker: "떠들고 싶을 땐",
-      title: "광장 — 갈라 커뮤니티 🗣️",
-      sub: "글·짤·밈 다 받아주는 커뮤니티.<br>레딧처럼 글 쓰고, 댓글로 <b>전투</b>하고, 유령으로 뒷담화 😎",
-      art: artPlaza
-    },
-    {
       bg: "radial-gradient(120% 90% at 50% 8%, #0a2036, #05121e 62%, #030a12)",
-      kicker: "뉴스 볼 시간 없지?",
-      title: "갈라뉴스 — AI가 씹어서 떠먹여줌 🥄",
-      sub: "여러 언론 기사를 AI가 <b>싹 종합</b>해 3줄 요약.<br>편파보도 걸러내고, 남들 헤드라인 볼 때 넌 이미 다 앎 🧠",
+      kicker: "지금 뭐가 터졌나",
+      title: "트렌드 한 탭에 다 있음 🔥",
+      sub: "실시간 검색어 · <b>갈라뉴스</b>(AI가 3줄로 씹어줌) ·<br><b>핫튜브</b> 인기영상 · <b>광장</b> 커뮤니티까지.<br><small>남들 헤드라인 볼 때 넌 이미 다 앎 🧠</small>",
       art: artNews
     },
     {
       bg: "radial-gradient(120% 90% at 50% 8%, #1e0c33, #0e0518 62%, #08040e)",
-      kicker: "이런 것도 됩니다",
-      title: "유령 변신 · AI 이모티콘 · 성향 까발리기",
-      sub: "익명 <b>유령</b>으로 뒷담화, 나만의 <b>AI 스티커</b>,<br>당신의 '정치 DNA' 4축 분석 😳",
+      kicker: "내 방도 챙겨야지",
+      title: "마이페이지 — 내 전적이 쌓인다",
+      sub: "<b>갈라리안 등급</b>이 오르고, 지갑에 GP가 쌓이고,<br>내 <b>정치 DNA</b> 4축이 까발려집니다 😳<br><small>유령 변신 · AI 스티커도 여기서.</small>",
       art: artFun
-    },
-    {
-      bg: "radial-gradient(120% 90% at 50% 8%, #123a10, #08210a 60%, #041206)",
-      kicker: "★ 진짜 핵심 ★",
-      title: "유튜브처럼, 크리에이터가 되세요",
-      sub: "이슈를 터뜨리고 팬을 모으는 <b>크리에이터 활동</b>.<br>구경만 하지 말고 판을 만드는 사람이 되세요.<br><small>크리에이터·리워드 자세한 안내는 따로 준비 중이에요.</small>",
-      art: artCreator
     },
     {
       bg: "radial-gradient(120% 90% at 50% 8%, #0b1c3a, #050c19 62%, #04070d)",
@@ -571,18 +585,6 @@
       '<g class="gt-cam"><circle cx="52" cy="112" r="20" fill="#ff4d67"/><text x="52" y="119" font-size="17" text-anchor="middle">📷</text></g>' +
       "</svg>";
   }
-  function artPlaza() {
-    return '<svg class="gt-art" viewBox="0 0 260 160" aria-hidden="true">' +
-      '<g class="gt-bub1"><rect x="24" y="30" width="118" height="46" rx="14" fill="#2b6bff"/>' +
-        '<path d="M44 76 l-6 16 22 -16 z" fill="#2b6bff"/>' +
-        '<text x="40" y="59" font-size="17" fill="#fff" font-weight="900">아 ㅋㅋㅋ 인정</text></g>' +
-      '<g class="gt-bub2"><rect x="120" y="70" width="120" height="44" rx="14" fill="#ff4d67"/>' +
-        '<path d="M214 114 l8 16 -24 -16 z" fill="#ff4d67"/>' +
-        '<text x="136" y="98" font-size="16" fill="#fff" font-weight="900">그건 좀 아니지 😤</text></g>' +
-      '<g class="gt-bub3"><rect x="60" y="112" width="96" height="38" rx="13" fill="#242938" stroke="rgba(255,255,255,.14)"/>' +
-        '<text x="76" y="137" font-size="17" fill="#e9edff" font-weight="800">🤡 짤 투척</text></g>' +
-      "</svg>";
-  }
   function artNews() {
     return '<svg class="gt-art" viewBox="0 0 260 160" aria-hidden="true">' +
       '<g class="gt-paper"><rect x="66" y="26" width="128" height="112" rx="8" fill="#f4f1e8" stroke="#c9c3b2" stroke-width="2"/>' +
@@ -596,20 +598,6 @@
       '<g class="gt-airobot"><circle cx="210" cy="60" r="26" fill="#33d17a"/>' +
         '<text x="210" y="69" font-size="24" text-anchor="middle">🤖</text>' +
         '<text x="210" y="98" font-size="11" fill="#7ef0ae" font-weight="900" text-anchor="middle">3줄 요약</text></g>' +
-      "</svg>";
-  }
-  function artCreator() {
-    return '<svg class="gt-art" viewBox="0 0 260 168" aria-hidden="true">' +
-      '<g class="gt-rise"><polyline points="34,138 84,104 124,116 210,52" fill="none" stroke="#33d17a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>' +
-        '<path d="M210 52 l-17 1 8 15 z" fill="#33d17a"/></g>' +
-      '<g class="gt-star2"><circle cx="70" cy="82" r="30" fill="#ffd166"/>' +
-        '<text x="70" y="92" font-size="28" text-anchor="middle">🤩</text>' +
-        '<text x="70" y="52" font-size="20" text-anchor="middle">👑</text></g>' +
-      '<g class="gt-wallet"><rect x="150" y="98" width="80" height="56" rx="12" fill="#101a12" stroke="#ffd166" stroke-width="2"/>' +
-        '<text x="190" y="134" font-size="22" text-anchor="middle">💰</text></g>' +
-      '<text class="gt-c2 gt-c2a" x="118" y="92" font-size="18">🪙</text>' +
-      '<text class="gt-c2 gt-c2b" x="146" y="84" font-size="15">🪙</text>' +
-      '<text class="gt-c2 gt-c2c" x="132" y="74" font-size="17">🪙</text>' +
       "</svg>";
   }
   function artFun() {
@@ -626,6 +614,76 @@
         '<text x="193" y="135" fill="#8a6bff" font-size="10" text-anchor="middle">4축 분석</text></g>' +
       "</svg>";
   }
+  /* 🏠 홈 — 피드 카드가 위로 흘러가고 카테고리 칩이 반짝 */
+  function artHome() {
+    return '<svg class="gt-art" viewBox="0 0 260 168" aria-hidden="true">' +
+      '<g class="gt-float">' +
+        '<rect x="24" y="16" width="46" height="16" rx="8" fill="#3d6bff"/>' +
+        '<rect x="76" y="16" width="52" height="16" rx="8" fill="#1a1d27" stroke="rgba(255,255,255,.14)"/>' +
+        '<rect x="134" y="16" width="52" height="16" rx="8" fill="#1a1d27" stroke="rgba(255,255,255,.14)"/>' +
+        '<rect x="192" y="16" width="44" height="16" rx="8" fill="#1a1d27" stroke="rgba(255,255,255,.14)"/>' +
+      "</g>" +
+      '<g class="gt-bub1"><rect x="24" y="44" width="212" height="46" rx="12" fill="#141824" stroke="rgba(255,255,255,.12)"/>' +
+        '<text x="38" y="66" font-size="13" fill="#e8ecf6" font-weight="800">⚔️ 이슈 · 찬반 팽팽</text>' +
+        '<rect x="38" y="74" width="120" height="8" rx="4" fill="#3d6bff"/><rect x="158" y="74" width="64" height="8" rx="4" fill="#ff4d67"/></g>' +
+      '<g class="gt-bub2"><rect x="24" y="98" width="100" height="56" rx="12" fill="#141824" stroke="rgba(255,255,255,.12)"/>' +
+        '<text x="74" y="132" font-size="24" text-anchor="middle">🎬</text></g>' +
+      '<g class="gt-bub3"><rect x="132" y="98" width="104" height="56" rx="12" fill="#141824" stroke="rgba(255,255,255,.12)"/>' +
+        '<text x="184" y="124" font-size="20" text-anchor="middle">📰</text>' +
+        '<text x="184" y="144" font-size="10" fill="#8fa0b5" text-anchor="middle">갈라뉴스</text></g>' +
+      "</svg>";
+  }
+
+  /* 🧡 갈비스 · 친구 모드 — 코랄 오브가 두근거리고 하트 말풍선 */
+  function artGalvisFriend() {
+    return '<svg class="gt-art" viewBox="0 0 260 168" aria-hidden="true">' +
+      '<g class="gt-star2">' +
+        '<circle cx="80" cy="88" r="40" fill="#0d1420" stroke="#5fd8ff" stroke-width="2"/>' +
+        '<circle cx="80" cy="88" r="20" fill="#ff8a5b"/>' +
+        '<circle cx="80" cy="88" r="30" fill="none" stroke="#5fd8ff" stroke-width="1.5" opacity=".5"/>' +
+      "</g>" +
+      '<g class="gt-bub1"><rect x="128" y="34" width="108" height="34" rx="12" fill="#1b2334" stroke="rgba(255,255,255,.14)"/>' +
+        '<text x="142" y="56" font-size="12" fill="#e8ecf6" font-weight="700">오늘 진짜 별로였어…</text></g>' +
+      '<g class="gt-bub2"><rect x="112" y="78" width="124" height="34" rx="12" fill="#2a3550" stroke="#5fd8ff"/>' +
+        '<text x="126" y="100" font-size="12" fill="#cfe9ff" font-weight="800">야 그건 걔가 잘못했지</text></g>' +
+      '<g class="gt-bub3"><text x="150" y="140" font-size="18">🧡</text>' +
+        '<text x="176" y="146" font-size="14">🧡</text>' +
+        '<text x="200" y="136" font-size="12">🧡</text></g>' +
+      "</svg>";
+  }
+
+  /* 🛠 갈비스 · 일꾼 모드 — 오브가 결과물을 뱉어낸다 */
+  function artGalvisAgent() {
+    return '<svg class="gt-art" viewBox="0 0 260 168" aria-hidden="true">' +
+      '<g class="gt-rise">' +
+        '<circle cx="60" cy="84" r="34" fill="#0d1420" stroke="#33d17a" stroke-width="2"/>' +
+        '<circle cx="60" cy="84" r="16" fill="#33d17a"/>' +
+        '<text x="60" y="90" font-size="16" text-anchor="middle">🛠</text>' +
+      "</g>" +
+      '<g class="gt-c2 gt-c2a"><rect x="118" y="26" width="118" height="34" rx="10" fill="#141d18" stroke="#33d17a" stroke-width="1.5"/>' +
+        '<text x="132" y="48" font-size="12" fill="#8ff0bd" font-weight="800">📝 이슈 초안 완성</text></g>' +
+      '<g class="gt-c2 gt-c2b"><rect x="118" y="68" width="118" height="34" rx="10" fill="#141d18" stroke="#33d17a" stroke-width="1.5"/>' +
+        '<text x="132" y="90" font-size="12" fill="#8ff0bd" font-weight="800">🖼 썸네일 뽑음</text></g>' +
+      '<g class="gt-c2 gt-c2c"><rect x="118" y="110" width="118" height="34" rx="10" fill="#141d18" stroke="#33d17a" stroke-width="1.5"/>' +
+        '<text x="132" y="132" font-size="12" fill="#8ff0bd" font-weight="800">🎬 숏폼 편집 끝</text></g>' +
+      "</svg>";
+  }
+
+  /* 🎬 숏판(세로) · 롱판(가로) */
+  function artShorts() {
+    return '<svg class="gt-art" viewBox="0 0 260 168" aria-hidden="true">' +
+      '<g class="gt-phone"><rect x="34" y="20" width="72" height="128" rx="14" fill="#0f1420" stroke="#ffd166" stroke-width="2.5"/>' +
+        '<rect x="42" y="30" width="56" height="96" rx="8" fill="#241a06"/>' +
+        '<text x="70" y="88" font-size="26" text-anchor="middle">⚡</text>' +
+        '<text x="70" y="142" font-size="10" fill="#ffd166" font-weight="900" text-anchor="middle">숏판</text></g>' +
+      '<g class="gt-float"><rect x="126" y="42" width="110" height="66" rx="10" fill="#0f1420" stroke="#5fd8ff" stroke-width="2.5"/>' +
+        '<rect x="134" y="50" width="94" height="50" rx="6" fill="#0a1a24"/>' +
+        '<path d="M170 66 l18 10 -18 10 z" fill="#5fd8ff"/>' +
+        '<text x="181" y="124" font-size="10" fill="#5fd8ff" font-weight="900" text-anchor="middle">롱판</text></g>' +
+      '<text class="gt-spark" style="--tx:-18px;--ty:-16px" x="112" y="34" font-size="14">✨</text>' +
+      "</svg>";
+  }
+
   function artPerms() {
     return '<svg class="gt-art" viewBox="0 0 260 150" aria-hidden="true">' +
       '<g class="gt-p1"><circle cx="66" cy="75" r="34" fill="#2b6bff"/><text x="66" y="86" font-size="30" text-anchor="middle">🎙</text></g>' +
@@ -748,6 +806,7 @@
       "@keyframes gtDart{0%{opacity:0;transform:translate(40px,-30px) rotate(30deg)}40%{opacity:1;transform:translate(0,0) rotate(0)}100%{opacity:1;transform:translate(0,0)}}",
       ".gt-hit{transform-origin:130px 42px}.gt-slide.live .gt-hit{animation:gtVs .6s ease-in-out infinite}",
       ".gt-slide.live .gt-phone{animation:gtFloat 2.6s ease-in-out infinite}",
+      ".gt-slide.live .gt-float{animation:gtFloat 3s ease-in-out infinite}",
       "@keyframes gtFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}",
       ".gt-pager{transform-origin:185px 133px}.gt-slide.live .gt-pager{animation:gtBuzz .22s linear infinite}",
       "@keyframes gtBuzz{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-2px,1px) rotate(-3deg)}75%{transform:translate(2px,-1px) rotate(3deg)}}",
