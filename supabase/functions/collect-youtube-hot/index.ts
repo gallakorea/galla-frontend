@@ -25,21 +25,58 @@ const KW = {
 };
 
 /* ── 피드 정의 ─────────────────────────────────────────
-   cats: 유튜브 videoCategoryId · kw: 전체 풀에서 걸러낼 키워드
-   편수가 얇던 분류(드라마·취미·경제·교육·여행)를 큰 축에 통폐합했다. */
+   cats: 유튜브 videoCategoryId(폴백) · kw: 제목·설명·채널명 키워드(우선)
+   2026-08-08 재편: 편수가 얇던 '드라마'는 예능에 통합, 'life'를 지배하던 여행을 '여행'으로 분리. */
 type Feed = { feed: string; cats: string[]; kw?: RegExp[]; kwCh?: RegExp };
 const FEEDS: Feed[] = [
-  { feed: "news",   cats: ["25"],       kw: [KW.money] },              // 뉴스·경제
-  { feed: "ent",    cats: ["24", "23"] },                              // 예능·코믹
-  { feed: "drama",  cats: ["1"],        kw: [KW.drama], kwCh: KW.dramaCh }, // 드라마·영화
-  { feed: "music",  cats: ["10"] },                                    // 음악
-  { feed: "game",   cats: ["20", "17"] },                              // 게임·스포츠
-  { feed: "food",   cats: [],           kw: [KW.food] },               // 맛집·먹방
-  { feed: "life",   cats: ["22"],       kw: [KW.travel, KW.hobby] },   // 라이프·여행·취미
-  { feed: "beauty", cats: ["26"] },                                    // 뷰티·패션
-  { feed: "animal", cats: ["15"] },                                    // 동물
-  { feed: "tech",   cats: ["28"],       kw: [KW.edu] },                // IT·과학·교육
+  { feed: "news",   cats: ["25"],       kw: [KW.money] },                       // 뉴스·시사·경제
+  { feed: "ent",    cats: ["24", "23", "1"], kw: [KW.drama] },                  // 예능·코믹·드라마
+  { feed: "music",  cats: ["10"] },                                             // 음악
+  { feed: "game",   cats: ["20", "17"] },                                       // 게임·스포츠
+  { feed: "food",   cats: [],           kw: [KW.food] },                        // 맛집·먹방
+  { feed: "travel", cats: ["19"],       kw: [KW.travel] },                      // 여행 (신설 — life에서 분리)
+  { feed: "life",   cats: ["22"],       kw: [KW.hobby] },                       // 일상·취미
+  { feed: "beauty", cats: ["26"] },                                             // 뷰티·패션
+  { feed: "animal", cats: ["15"] },                                             // 동물
+  { feed: "tech",   cats: ["28"],       kw: [KW.edu] },                         // IT·과학·교육
 ];
+
+/* ── 🎯 단일 배정 라우터 (2026-08-08 신설) ─────────────────
+   기존 문제: 각 피드가 독립적으로 cats/kw를 긁어가 **한 영상이 여러 피드에 중복**되고,
+   특히 '잡탕' 카테고리 22(People&Blogs, 전체의 25%)를 life가 통째로 먹어
+   life 탭이 여행 브이로그로 도배됐다(실측).
+   해결: 영상 하나당 **가장 잘 맞는 피드 하나**를 정한다.
+     ① 구체적 키워드가 먼저(먹방·여행·뷰티·게임…) — 카테고리보다 정확
+     ② 없으면 videoCategoryId로 폴백
+   ※ 카테고리 차트로 '직접' 뽑힌 영상은 그 카테고리 신뢰도가 높아 폴백을 우선 적용. */
+const KW_ROUTE: Array<[string, RegExp]> = [
+  ["food",   KW.food],
+  ["travel", KW.travel],
+  ["news",   KW.money],
+  ["beauty", /뷰티|메이크업|화장|스킨케어|코스메틱|립스틱|쿠션|헤어|염색|패션|코디|옷\s*추천|하울|겟레디위드미|GRWM/i],
+  ["animal", /강아지|고양이|냥이|댕댕|반려|puppy|kitten|수달|햄스터|앵무|물고기\s*키우|파충류|유기견|유기묘/i],
+  ["music",  /뮤직비디오|MV\b|음원|커버곡|노래\s*불러|버스킹|작곡|피아노|기타\s*연주|앨범|컴백|무대\s*직캠|라이브\s*클립/i],
+  ["game",   /게임|플레이|공략|롤\b|리그오브레전드|배그|피파|메이플|던파|마크\b|마인크래프트|스팀\b|콘솔|e스포츠|롤드컵/i],
+  ["tech",   /아이폰|갤럭시|노트북|리뷰\s*테크|언박싱\s*IT|AI\b|인공지능|챗GPT|코딩|프로그래밍|과학|우주|물리|화학/i],
+  ["ent",    KW.drama],
+  ["life",   KW.hobby],
+];
+const CAT_ROUTE: Record<string, string> = {
+  "25": "news", "24": "ent", "23": "ent", "1": "ent", "10": "music",
+  "20": "game", "17": "game", "19": "travel", "22": "life",
+  "26": "beauty", "15": "animal", "28": "tech", "27": "tech", "2": "life",
+};
+function routeFeed(v: any, fromCat: string | null): string {
+  const t = v?.snippet?.title ?? "";
+  const d = (v?.snippet?.description ?? "").slice(0, 200);
+  const ch = v?.snippet?.channelTitle ?? "";
+  const blob = `${t} ${d} ${ch}`;
+  // 카테고리 차트에서 직접 뽑힌 건 그 카테고리가 곧 정답(단, 잡탕 22는 키워드로 재판정)
+  if (fromCat && fromCat !== "22" && CAT_ROUTE[fromCat]) return CAT_ROUTE[fromCat];
+  for (const [feed, re] of KW_ROUTE) if (re.test(blob)) return feed;
+  const cid = String(v?.snippet?.categoryId ?? "");
+  return CAT_ROUTE[cid] || "life";
+}
 
 function bestThumb(t: any): string | null {
   if (!t) return null;
@@ -230,10 +267,14 @@ Deno.serve(async (req) => {
       .select("name,feed,channel_id,uploads_playlist,ok");
     const chanList = chans || [];
     // (a) 미해석 채널 해석(런당 최대 12개 — 검색 100유닛이라 여러 런에 분산). 결과는 캐시.
+    // ⚡ 핸들(@)은 channels.list=1유닛이라 사실상 공짜 → 런당 상한을 넉넉히.
+    //    이름 검색은 search.list=100유닛이라 12개로 계속 분산(쿼터 보호).
+    let handleNow = 0;
     for (const c of chanList) {
       if (c.uploads_playlist || c.ok === false) continue;
-      if (resolvedNow >= 12) break;
-      resolvedNow++;
+      const isHandle = String(c.name || "").startsWith("@");
+      if (isHandle) { if (handleNow >= 40) continue; handleNow++; }
+      else { if (resolvedNow >= 12) continue; resolvedNow++; }
       const cid = await resolveChannelId(c.name);
       if (cid) {
         c.uploads_playlist = "UU" + cid.slice(2);   // 업로드 재생목록 = UC…→UU…
@@ -273,23 +314,20 @@ Deno.serve(async (req) => {
   allSorted.forEach((v, i) => rows.push(toRow(v, "all", i + 1, now, shorts)));
   counts["all"] = allSorted.length;
 
-  const all = [...pool.values()];
+  /* 🎯 단일 배정 — 영상 하나당 피드 하나(중복 배정·잡탕 도배 제거).
+     우선순위: ①크리에이터 채널이 명시한 피드 ②카테고리 차트 출처 ③키워드/카테고리 라우터 */
+  const catOf = new Map<string, string>();      // videoId → 뽑혀온 카테고리
+  for (const [c, items] of byCat) for (const v of items) if (!catOf.has(v.id)) catOf.set(v.id, c);
+
+  const buckets = new Map<string, any[]>();
+  FEEDS.forEach((f) => buckets.set(f.feed, []));
+  for (const v of pool.values()) {
+    const explicit = creatorFeed.get(v.id);                 // 채널 시드가 지정한 피드
+    const feed = (explicit && buckets.has(explicit)) ? explicit : routeFeed(v, catOf.get(v.id) || null);
+    (buckets.get(feed) || buckets.get("life"))!.push(v);
+  }
   for (const f of FEEDS) {
-    const picked = new Map<string, any>();
-    for (const c of f.cats) (byCat.get(c) || []).forEach((v) => picked.set(v.id, v));
-    for (const re of f.kw || []) {
-      for (const v of all) {
-        const t = v.snippet?.title ?? "";
-        const d = (v.snippet?.description ?? "").slice(0, 200);
-        const ch = v.snippet?.channelTitle ?? "";
-        if (!re.test(`${t} ${d} ${ch}`)) continue;
-        if (f.kwCh && !f.kwCh.test(`${t} ${ch}`)) continue;
-        picked.set(v.id, v);
-      }
-    }
-    // 🌟 이 피드로 지정된 크리에이터 영상 추가
-    for (const [id, ff] of creatorFeed) { if (ff === f.feed) { const v = pool.get(id); if (v) picked.set(id, v); } }
-    const listv = [...picked.values()].sort((a, b) => views(b) - views(a));
+    const listv = (buckets.get(f.feed) || []).sort((a, b) => views(b) - views(a));
     listv.forEach((v, i) => rows.push(toRow(v, f.feed, i + 1, now, shorts)));
     counts[f.feed] = listv.length;
   }

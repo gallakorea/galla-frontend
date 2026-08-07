@@ -13,20 +13,20 @@
   // (수집기 FEEDS와 id가 1:1로 맞아야 한다)
   const CATS = [
     { id: "all",    label: "전체",         emoji: "🔥" },
-    { id: "news",   label: "뉴스·경제",     emoji: "📰" },
-    { id: "ent",    label: "예능·코믹",     emoji: "🎭" },
-    { id: "drama",  label: "드라마·영화",   emoji: "🎬" },
-    { id: "music",  label: "음악",         emoji: "🎵" },
-    { id: "game",   label: "게임·스포츠",   emoji: "🎮" },
+    { id: "ent",    label: "예능·드라마",   emoji: "🎭" },
     { id: "food",   label: "맛집·먹방",     emoji: "🍜" },
-    { id: "life",   label: "라이프·여행·취미", emoji: "🏠" },
+    { id: "game",   label: "게임·스포츠",   emoji: "🎮" },
+    { id: "travel", label: "여행",         emoji: "✈️" },
+    { id: "news",   label: "뉴스·시사",     emoji: "📰" },
+    { id: "tech",   label: "IT·과학",      emoji: "💻" },
+    { id: "music",  label: "음악",         emoji: "🎵" },
     { id: "beauty", label: "뷰티·패션",     emoji: "💄" },
     { id: "animal", label: "동물",         emoji: "🐾" },
-    { id: "tech",   label: "IT·과학·교육",  emoji: "💻" },
+    { id: "life",   label: "일상·취미",     emoji: "🏠" },
   ];
-  // '전체' 화면에 선반으로 깔 카테고리 순서
-  const SHELVES = ["news", "ent", "drama", "music", "game",
-                   "food", "life", "beauty", "animal", "tech"];
+  // '전체' 화면에 선반으로 깔 카테고리 순서 — 편수 많은 축을 위로(빈 선반이 먼저 보이지 않게)
+  const SHELVES = ["ent", "food", "game", "travel", "news",
+                   "tech", "music", "beauty", "animal", "life"];
 
   const cache = new Map();      // feed → rows (롱폼+쇼츠 전부)
   let current = "all";
