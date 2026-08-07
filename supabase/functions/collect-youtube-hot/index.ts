@@ -150,6 +150,10 @@ function toRow(v: any, feed: string, rank: number, now: string, shorts: Set<stri
     category_id: v.snippet?.categoryId ?? null,
     rank,
     collected_at: now,
+    // 📈 다음 런에서 '지금 얼마나 오르는 중인지'를 재기 위한 스냅샷(직전 수집치 보존)
+    prev_view_count: PREV.get(v.id)?.views ?? null,
+    prev_collected_at: PREV.get(v.id) ? new Date(PREV.get(v.id)!.at).toISOString() : null,
+    velocity: Math.round(velocityOf(v)),
   };
 }
 
@@ -237,22 +241,38 @@ async function hydrate(ids: string[]): Promise<any[]> {
 
 const views = (v: any) => Number(v.statistics?.viewCount ?? 0);
 
-/* 🔥 급상승 점수 = 조회수 ÷ 게시 후 경과시간 (2026-08-08)
-   기존엔 '누적 조회수'로 정렬해 **14주 전 영상이 실시간 급상승 상단**에 올라왔다(사장님 지적).
-   급상승의 정의는 '지금 빠르게 오르는 것'이므로 속도로 매긴다.
-   · 최소 1시간으로 클램프 — 갓 올라온 영상이 분모 0에 가까워 폭주하는 것 방지
-   · 조회수 자체도 신뢰도라 완전 무시하진 않게 로그 가중(속도×log10(조회수)) */
+/* 🔥 급상승 점수 (2026-08-08 2차 수정)
+   1차: 조회수 ÷ **평생 나이** → 14주 전 영상이 상단을 막던 건 고쳤지만,
+        **옛날 영상이 지금 다시 터지는 경우**(재발견·밈화·관련 이슈)를 영영 못 잡는다(사장님 지적).
+   2차: 30분마다 수집하므로 **직전 조회수와의 증가분**으로 매긴다 — 이게 진짜 '지금 오르는 중'.
+     · 델타를 아는 영상 → (Δ조회수 ÷ Δ시간) × log10(조회수)  ← 옛 영상도 다시 뜨면 상위로
+     · 처음 본 영상(델타 없음) → 평생 평균 속도로 대체(신규 급상승을 놓치지 않게)
+   prevMap은 DB에 저장된 직전 수집치(youtube_hot.view_count/collected_at). */
 const ageHours = (v: any) => {
   const t = Date.parse(v?.snippet?.publishedAt || "");
   if (!Number.isFinite(t)) return 24 * 30;                 // 게시일 불명 → 오래된 것으로 취급
   return Math.max(1, (Date.now() - t) / 3600000);
 };
+type Prev = { views: number; at: number };
+let PREV = new Map<string, Prev>();                        // videoId → 직전 수집치
+function velocityOf(v: any): number {
+  const n = views(v);
+  if (n <= 0) return 0;
+  const p = PREV.get(v.id);
+  if (p && p.views > 0) {
+    const dh = Math.max(0.25, (Date.now() - p.at) / 3600000);   // 최소 15분
+    const dv = n - p.views;
+    if (dv >= 0) return dv / dh;                            // 시간당 증가 (음수=집계 정정이면 폴백)
+  }
+  return n / ageHours(v);                                   // 처음 본 영상 → 평생 평균
+}
 const hotScore = (v: any) => {
   const n = views(v);
   if (n <= 0) return 0;
-  return (n / ageHours(v)) * Math.log10(n + 10);
+  return velocityOf(v) * Math.log10(n + 10);
 };
-const AGE_LIMIT_H = 14 * 24;   // '전체(실시간 급상승)'에 넣을 크리에이터 업로드 최대 나이
+/* 🕰 나이 상한을 없앤다 — '옛날 영상의 재급상승'을 살리려면 나이로 자르면 안 된다.
+   대신 델타 속도가 낮으면 자연스럽게 아래로 밀린다(코스팅 중인 옛 히트작은 알아서 탈락). */
 
 Deno.serve(async (req) => {
   const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
@@ -329,8 +349,24 @@ Deno.serve(async (req) => {
   // 🔥 크리에이터 최신 업로드는 '신선한 것만' 급상승에 섞는다 — 나이 제한이 없어 14주 전 영상이 올라왔었다
   for (const id of creatorFeed.keys()) {
     const v = pool.get(id);
-    if (v && ageHours(v) <= AGE_LIMIT_H) allMerged.set(id, v);
+    if (v) allMerged.set(id, v);   // 나이로 자르지 않는다 — 재급상승한 옛 영상도 후보에 둔다(점수가 판정)
   }
+  /* 📈 직전 수집치 로드 — 점수를 매기기 전에 반드시 채운다(델타 = 지금 오르는 속도).
+     같은 video_id가 여러 피드에 있을 수 있으나 조회수는 동일하니 가장 최근 것 하나만 쓴다. */
+  {
+    // .in()으로 수백 개 id를 넘기면 URL 길이 한계에 걸려 조용히 빈 결과가 온다 → 통째로 읽는다(~2천 행).
+    const { data, error: perr } = await supa.from("youtube_hot")
+      .select("video_id,view_count,collected_at").limit(5000);
+    if (perr) console.warn("prev_load_failed", perr.message);
+    for (const r of (data || [])) {
+      const at = Date.parse(r.collected_at || "");
+      if (!Number.isFinite(at)) continue;
+      const cur = PREV.get(r.video_id);
+      if (!cur || at > cur.at) PREV.set(r.video_id, { views: Number(r.view_count || 0), at });
+    }
+    console.log("prev_loaded", PREV.size);
+  }
+
   const allSorted = [...allMerged.values()].sort((a, b) => hotScore(b) - hotScore(a)).slice(0, 150);
   allSorted.forEach((v, i) => rows.push(toRow(v, "all", i + 1, now, shorts)));
   counts["all"] = allSorted.length;
