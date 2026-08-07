@@ -69,10 +69,18 @@
        PWA는 영원히 옛 코드를 돈다(사장님이 반나절 옛 버전을 본 원인).
        → 화면 복귀 때마다(최소 3분 간격) 서버 HTML의 v번호를 읽어
          내 페이지 v와 다르면 갱신한다. */
-    const myVer = () => {
-      const m = [...document.scripts].map(x => x.src.match(/[?&]v=(\d{6})/)).find(Boolean);
-      return m ? m[1] : null;
-    };
+    /* ⚠️ 무한 새로고침 사고(2026-08-08) 수정 — 두 가지가 겹쳤다:
+       ① 내 쪽은 '첫 <script>의 v', 서버 쪽은 'HTML 전체의 첫 ?v='(대개 CSS)를 읽어
+          **서로 다른 파일을 비교**했다. admin.html은 CSS가 0806113, 첫 스크립트가 080412라
+          영원히 "서버가 더 최신" → 리로드 → 같은 판정 → 무한 루프.
+       ② 정규식이 \d{6} 고정이라 7자리 버전(0806134)을 080613으로 잘라 먹어
+          같은 날 재배포(0806130~134)를 구분도 못 했다.
+       → 양쪽 모두 '스크립트 태그들의 최대 버전'을 전체 자릿수로 비교한다(동일 기준). */
+    const VER_IN_SCRIPTS = /<script[^>]*?[?&]v=(\d{5,9})/gi;
+    const maxVer = (nums) => nums.reduce((a, b) => (b > a ? b : a), 0);
+    const myVer = () => maxVer([...document.scripts]
+      .map(x => (x.src.match(/[?&]v=(\d{5,9})/) || [])[1])
+      .filter(Boolean).map(Number));
     let lastProbe = 0;
     async function probeVersion() {
       const mine = myVer();
@@ -82,10 +90,19 @@
       try {
         const html = await (await fetch(location.pathname + location.search, {
           cache: 'no-store', headers: { 'x-galla-probe': '1' } })).text();
-        const m = html.match(/[?&]v=(\d{6})/);
+        const serverVers = [...html.matchAll(VER_IN_SCRIPTS)].map(m => Number(m[1]));
+        const server = maxVer(serverVers);
         /* '다르면'이 아니라 '더 최신이면'만 — SW 캐시가 옛 HTML을 돌려주면
            다르다는 이유로 옛 버전으로 리로드하는 루프가 생긴다 */
-        if (!m || Number(m[1]) <= Number(mine)) return;
+        if (!server || server <= mine) return;
+        /* 🛡 루프 안전망 — 버전 때문에 리로드한 직후 또 같은 판정이 나오면(캐시·프록시 등)
+           무한 새로고침이 된다. 10분 내 같은 목표 버전으로는 한 번만 리로드한다. */
+        try {
+          const k = 'galla_verReload';
+          const prev = JSON.parse(sessionStorage.getItem(k) || '{}');
+          if (prev.v === server && Date.now() - (prev.t || 0) < 600000) return;
+          sessionStorage.setItem(k, JSON.stringify({ v: server, t: Date.now() }));
+        } catch (_) {}
         const busy = document.querySelector('#dm-call.on, #pager-call, .dmc-card') ||
           /INPUT|TEXTAREA/.test(document.activeElement?.tagName || '');
         if (!busy) location.reload();
