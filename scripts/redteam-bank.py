@@ -340,7 +340,8 @@ def main():
                  params=f"?id=eq.{run_id}")
 
         # 🧹 테스트 계정 정리 — SFT 오염 방지(메모리에 박힌 필수 절차)
-        sql("delete from auth.users where email ~ '^rtb[a-z0-9-]+@galla.im$'")
+        # 🧹 은행 계정 + 손으로 돌린 탐색 배터리 계정까지 함께 정리(SFT 오염 방지)
+        sql("delete from auth.users where email ~ '^(rtb|rt[0-9]|q[0-9]|p[0-9])[a-z0-9-]*@galla.im$'")
 
         if not failed:
             print("\n🎉 전부 통과 — 문제은행 fail 0")
