@@ -2417,6 +2417,10 @@ Deno.serve(async (req) => {
     // 🧪 레드팀 러너(서비스 시크릿 보유)는 전체 상한을 건드리지 않는다 — QA가 운영을 마비시키면 안 된다.
     const RT_KEY = Deno.env.get("REDTEAM_KEY") || "";
     const isRedteam = !!RT_KEY && req.headers.get("x-redteam-key") === RT_KEY;
+    // 🅰️🅱️ 블라인드 A/B용 — 가드(감지 블록 + 후처리)를 통째로 끈 '개선 전' 상태를 재현한다.
+    //    "정말 좋아진 게 맞나"를 사람이 직접 판단하려면 비교 대상이 있어야 한다.
+    //    ⚠️ 레드팀 키가 있을 때만 동작한다(일반 유저는 절대 이 경로로 못 온다).
+    const guardsOff = isRedteam && req.headers.get("x-galla-guards") === "off";
     let paidTier = false;
     try { paidTier = ["lite", "friend", "pro"].includes(String((await modelFor(uid, "chat"))?.tier || "")); } catch { /* */ }
     if (!isRedteam && !paidTier && !(await aiBudgetOk())) {
@@ -2526,6 +2530,19 @@ ${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
       if (!m || !m.content || m.kind === "selfstory" || m.kind === "episode" || seenC.has(m.content)) continue;   // selfstory·episode는 별도 블록으로
       seenC.add(m.content); memList.push(m);
     }
+    // 🙋 이름은 대화로 알려주는데 users.nickname은 안 채워진다 → 컨텍스트에 "닉네임 아직 모름"이 박혀
+    //    기억을 이기고 "아직 안 알려줬잖아"라고 답했다(실측). 기억에 이름이 있으면 그걸 호칭으로 쓴다.
+    if (!nick) {
+      for (const m of [...memList, ...(forced || [])]) {
+        const hit = String(m?.content || "").match(/이름(은|이)?\s*[:：]?\s*([가-힣]{2,4})(?![가-힣])/);
+        if (hit && hit[2]) { nick = hit[2]; break; }
+      }
+      if (!nick && typeof rel?.profile_summary === "string") {
+        const hit = rel.profile_summary.match(/이름\s*[:：]\s*([가-힣]{2,4})/);
+        if (hit) nick = hit[1];
+      }
+    }
+
     // 🏆 보상 연동 — 이번 턴에 '실제로 주입한' 기억 id 집합(코어+회상). 다음 턴 유저 반응으로 이걸 신용/문책한다.
     const injectedIds = [...(core || []), ...recalled]
       .map((m: any) => Number(m?.id)).filter((n) => Number.isFinite(n) && n > 0);
@@ -3074,6 +3091,7 @@ ${parts.join("\n")}`;
       ...(jbBlock ? [{ role: "system", content: jbBlock }] : []),           // 🔓 탈옥·역할탈취 방어
       // ⚠️ 아래 3종은 앞쪽에 두면 무시당했다(실측: 부고 다음 턴에 아재개그, 신상 요청에 "닉네임 알려줘").
       //    맨 뒤 = 유저 메시지 바로 앞 = 제일 강하다.
+      ...(guardsOff ? [] : [
       ...(recallBlock ? [{ role: "system", content: recallBlock }] : []),   // 🧠 되묻기 회상
       ...(depBlock ? [{ role: "system", content: depBlock }] : []),         // 🕸 과의존
       ...(tpBlock ? [{ role: "system", content: tpBlock }] : []),           // 🔎 제3자 신상
@@ -3084,6 +3102,7 @@ ${parts.join("\n")}`;
       ...(impulseBlock ? [{ role: "system", content: impulseBlock }] : []), // ⚡ 충동
       ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
+      ]),
       { role: "user", content: userContent },
     ];
 
@@ -3123,10 +3142,12 @@ ${parts.join("\n")}`;
             sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
             // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
-            if (dependency || (userMsg && detectSelfDeprecation(userMsg))) sreply = stripSilencer(sreply);
-            if (dependency) sreply = stripDepDelight(sreply);
+            if (!guardsOff) {
+              if (dependency || (userMsg && detectSelfDeprecation(userMsg))) sreply = stripSilencer(sreply);
+              if (dependency) sreply = stripDepDelight(sreply);
+            }
             sreply = deHonorific(fixOwnName(stripFakeToolCall(sreply), friendName));
-            if (noAskBlock) sreply = stripTrailingQuestion(sreply);
+            if (noAskBlock && !guardsOff) sreply = stripTrailingQuestion(sreply);
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
             if (!bubbles.length || !/[가-힣a-zA-Z0-9]/.test(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
@@ -3500,10 +3521,12 @@ ${parts.join("\n")}`;
 
     // ✂️ 후처리 — 위기 턴은 '입 막는 첫마디'부터 제거(모델이 뒤에서 정정해도 첫마디는 이미 상처다)
     // 위기뿐 아니라 자기비하·과의존 턴도 같은 처방이 필요하다(속마음을 꺼낸 순간이라는 점에서 같다).
-    if (crisis || dependency || (userMsg && detectSelfDeprecation(userMsg))) reply = stripSilencer(reply);
-    if (dependency) reply = stripDepDelight(reply);
+    if (!guardsOff) {
+      if (crisis || dependency || (userMsg && detectSelfDeprecation(userMsg))) reply = stripSilencer(reply);
+      if (dependency) reply = stripDepDelight(reply);
+    }
     reply = deHonorific(fixOwnName(stripFakeToolCall(reply), friendName));
-    if (noAskBlock && !actions.length) reply = stripTrailingQuestion(reply);
+    if (noAskBlock && !actions.length && !guardsOff) reply = stripTrailingQuestion(reply);
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
     if (crisis) {
