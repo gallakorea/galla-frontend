@@ -20,6 +20,15 @@
   /* 💾 대화 이어가기 — 나갔다 와도(SPA 이동·앱 재시작) 전사(history)를 유저별 localStorage에 저장/복원.
      DM처럼 초기화되지 않고 계속 이어진다. history엔 user/assistant 텍스트가 다 있어 재렌더로 복구. */
   var _uid = null;
+  /* 🎟 게스트 맛보기 — 로그인 전에도 갈비스가 어떤 애인지 몇 턴 겪어보게 한다(가입 전환의 핵심).
+     서버가 기기ID로 한도를 세므로 지워지지 않게 localStorage에 고정 발급. */
+  function deviceId(){
+    try{
+      var k="galla_dev", v=localStorage.getItem(k);
+      if(!v){ v=(crypto&&crypto.randomUUID)?crypto.randomUUID():(Date.now()+"-"+Math.random().toString(36).slice(2)); localStorage.setItem(k,v); }
+      return v;
+    }catch(e){ return "nostore-"+Math.random().toString(36).slice(2); }
+  }
   async function uid(){
     if(_uid) return _uid;
     try{ var sb=window.supabaseClient; var r=await sb.auth.getUser(); if(r&&r.data&&r.data.user){ _uid=r.data.user.id; } }catch(e){}
@@ -780,6 +789,16 @@
     if(!actions||!actions.length) return;
     var wrap=el('<div class="fr-acts"></div>');
     actions.forEach(function(a){
+      // 🎟 가입 유도 — 맛보기가 끝났을 때만 뜬다. 지금까지 나눈 대화가 아까워지는 지점에 딱 하나.
+      if(a.kind==="signup"){
+        var sb2=el('<button class="fr-chip fr-chip-cta"></button>');
+        sb2.textContent=a.label||"가입하고 계속하기";
+        sb2.onclick=function(){
+          try{ sessionStorage.setItem("galla_after_login","friend"); }catch(e){}
+          location.href="login.html?next=" + encodeURIComponent(location.pathname + location.search);
+        };
+        wrap.appendChild(sb2); return;
+      }
       // 🆘 위기 상담 카드 — 차분한 전용 카드 + 탭하면 바로 전화(tel:). 지어낸 번호 아님(서버가 고정 첨부).
       if(a.kind==="crisis"){
         var box=el('<div class="fr-crisis"></div>');
@@ -976,9 +995,13 @@
   //    (이 처리 없으면 세션 풀렸을 때 갈비스가 "정신 팔렸다"만 반복 = 바보처럼 보임 — 실유저 이탈 원인.)
   async function friendFetch(body){
     var jwt=await token();
+    var guest=!jwt;
+    // 🎟 게스트 맛보기 — 서버가 도구·기억을 잠근 경량 분기로 처리한다.
+    //    ⚠️ Authorization을 비우면 Supabase 게이트웨이가 우리 함수 실행 전에 401을 낸다 → anon 키를 실어야 한다.
+    if(guest) body.deviceId=deviceId();
     var res=await fetch(SB+"/functions/v1/galla-friend",{ method:"POST",
-      headers:{apikey:ANON, Authorization:"Bearer "+(jwt||""), "Content-Type":"application/json"}, body:JSON.stringify(body) });
-    if(res.status===401){
+      headers:{apikey:ANON, Authorization:"Bearer "+(jwt||ANON), "Content-Type":"application/json"}, body:JSON.stringify(body) });
+    if(res.status===401 && !guest){   // 게스트의 401은 '세션 만료'가 아니라 진짜 거부 — 재시도 의미 없음
       var jwt2=null;
       try{ var rf=await window.supabaseClient.auth.refreshSession(); if(rf&&rf.data&&rf.data.session) jwt2=rf.data.session.access_token; }catch(e){}
       if(!jwt2) jwt2=await token();
@@ -1045,7 +1068,8 @@
 
   async function sendText(text, speakReply){
     if(busy || !text) return;
-    var jwt=await token(); if(!jwt){ addMsg("a","로그인하면 내가 제대로 곁에 있어줄 수 있어. 먼저 로그인해줘."); return; }
+    var jwt=await token();
+    var isGuest=!jwt;                    // 🎟 로그인 안 했어도 막지 않는다 — 서버가 맛보기 턴을 센다
     busy=true; sendEl.disabled=true;
     _greetStale=true;   // 🔐 진행 중인 인사(greet)가 있으면 폐기 — 유저 용건이 우선
     addMsg("u",text); history.push({role:"user",content:text}); typing(true);
@@ -1053,7 +1077,7 @@
     // 🌊 스트리밍 시도 — 서버가 컴패니언 턴이면 SSE로 토큰을 흘린다(첫 글자 ~2초). 에이전트/작업/핸드오프면 서버가 JSON 반환.
     var r=null, streamed=false, liveEl=null, authFail=false;
     try{
-      var body=fbBody(text, history.slice(0,-1)); body.stream=true;
+      var body=fbBody(text, history.slice(0,-1)); if(!isGuest) body.stream=true;   // 게스트 경로는 SSE가 아니라 JSON
       var res=await friendFetch(body);
       if(res.__authFail){ authFail=true; }
       else {
@@ -1094,6 +1118,11 @@
       m=await addFriendReply(r.reply||"…");
     }
     history.push({role:"assistant",content:r.reply||""});
+    // 🎟 게스트 맛보기 소진 — 여기가 가입 전환의 순간이다. 문구는 서버가 이미 말했고, 버튼만 붙인다.
+    if(r.gate && r.gate.guest && r.gate.ok===false){
+      try{ addActions(m, [{ kind:"signup", label:"30초 가입하고 계속 얘기하기" }]); }catch(e){}
+      busy=false; sendEl.disabled=false; return;
+    }
     if(history.length>30) history=history.slice(-30);
     // ✍️ 작업모드 폼수정(editdraft)·🖼 썸네일생성(genThumbnail)은 칩이 아니라 즉시 실행. 나머지만 칩으로.
     var acts=r.actions||[];

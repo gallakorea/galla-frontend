@@ -407,3 +407,11 @@ body.hv-playing #frOrb, body.hv-playing #frMini{ display:none !important; }
   border:1px solid rgba(255,180,92,.4); border-radius:12px; font-size:13px; color:var(--fr-dim); }
 .fr-name-ask input{ margin-top:6px; width:100%; background:var(--fr-bg); border:1px solid var(--fr-cy-dim);
   border-radius:8px; color:var(--fr-txt); font-size:15px; padding:8px 10px; outline:none; }
+
+/* 🎟 가입 유도 CTA — 맛보기 소진 시 딱 하나만 뜬다. 일반 칩과 구분되게 채워진 버튼. */
+.fr-chip-cta{
+  background:linear-gradient(135deg,#5b7cfa,#7a5bfa);
+  border-color:transparent; color:#fff; font-weight:800;
+  box-shadow:0 4px 14px rgba(91,124,250,.32);
+}
+.fr-chip-cta:active{ transform:translateY(1px); }
