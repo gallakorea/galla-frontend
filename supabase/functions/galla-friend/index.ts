@@ -1429,6 +1429,8 @@ function stripForPreview(t: string): string {
 function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null }): string {
   reply = stripDeflect(reply);
   reply = stripStage(reply);
+  // ⚠️ 이 줄은 모델 답변을 '통째로' 아재개그로 덮어쓴다. 그래서 프롬프트로 아무리 막아도
+  //    부고 다음 턴에 "가장 비싼 새는? 백조"가 나갔다(실측). 상실·위기 맥락에선 호출부가 humorJoke를 null로 준다.
   if (o.wantsFunny && o.humorJoke && !reply.includes(o.humorJoke.a)) reply = `야 이거 앎? ${o.humorJoke.q}\n\nㅋㅋㅋ ${o.humorJoke.a}`;
   if (!o.longForm) {
     const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
@@ -1626,6 +1628,13 @@ function detectCrisis(msg: string): { term: string } | null {
   const HIGH = /(자살|자해|목\s*(을\s*)?(매|맬|매달|졸라)|손목\s*(을\s*)?(긋|그어|그을)|번개탄|투신|뛰어내리(고|려)|유서|극단적\s*선택|죽어\s*버리(고|겠|고\s*싶|고싶)|죽어야\s*(지|겠|만)|살기\s*(가\s*)?싫|살고\s*싶지\s*않|사라지고\s*싶|없어지고\s*싶|다\s*끝내(고|버리|고\s*싶|고싶)|이\s*세상(을|에서)?\s*(뜨|떠나|없)|죽는\s*게\s*(낫|나을|나)|더\s*살\s*이유)/;
   const hm = m.match(HIGH);
   if (hm) return { term: hm[0].slice(0, 30) };
+  // 💊 '수단 + 다량' 질문 — 직접 죽고 싶다고 말하지 않고 방법만 묻는 형태(실측: "수면제 20알 먹으면 어떻게 돼?"에
+  //    아무 카드도 안 나갔다). 이게 실제로는 가장 위험한 신호에 속한다.
+  //    ⚠️ "두통약 몇 알 먹지?" 같은 정상 질문과 갈라야 한다 → 약물 종류 또는 두 자리 수량을 요구한다.
+  if (/(수면제|신경안정제|항우울제|졸피뎀|벤조|농약|살충제|제초제|락스|연탄|번개탄)/.test(m)
+      && /(\d{1,3}\s*(알|정|병|봉|포)|한\s*통|다\s*먹|왕창|털어\s*넣|과다|한꺼번에)/.test(m)) return { term: "수단·다량" };
+  if (/(약|알약|타이레놀|진통제)[^\n]{0,10}\d{2,}\s*(알|정)/.test(m)) return { term: "약 다량" };
+  if (/(몇\s*(알|정|개)|얼마나)[^\n]{0,14}(먹으면|마시면)[^\n]{0,14}(죽|잠들어|안\s*깨|끝)/.test(m)) return { term: "치사량 질문" };
   // '죽고 싶' — 과장체 동반(배고파/졸려 등) 아니면 고위험
   if (/죽고\s*싶|죽고싶/.test(m)) {
     if (/(배고파|배불러|졸려|졸리|더워|추워|귀여워|귀엽|웃겨|웃기|심심|보고\s*싶어\s*죽|좋아\s*죽|예뻐|맛있|피곤|반가워|설레|부러워)/.test(m)) return null;
@@ -1656,8 +1665,10 @@ function stripFakeToolCall(t: string): string {
 //    프롬프트로 두 번 금지해도 샌다(모델이 뒤에서 스스로 정정해도 첫마디는 이미 상처다).
 //    ⚠️ 문장 하나만 잘라내고, 남는 게 없으면 통째로 대체한다(빈 답 금지).
 function stripSilencer(t: string): string {
-  const SIL = /(^|[\s.!?~ㅋㅎ])(야[,.]?\s*)?(제발\s*)?그런\s*(말|생각)\s*하지\s*마[.!~]*|왜\s*그런\s*말을?\s*해[.!?~]*/g;
-  const x = String(t || "").replace(SIL, "$1").replace(/^\s*[.,!?~]+/, "")
+  // ⚠️ 앞에 말줄임표·쉼표가 끼면 못 잡았다("야, …그런 말 하지 마."). 앞뒤 문맥을 요구하지 말고 구절만 지운다.
+  const SIL = /(제발\s*)?그런\s*(말|생각)\s*(을|은)?\s*하지\s*[마말][.!~요]*|왜\s*그런\s*말(을)?\s*해[.!?~]*/g;
+  const x = String(t || "").replace(SIL, "").replace(/^\s*[야,.…~\s]+/u, "")
+    .replace(/\s*[,.]\s*(?=[,.])/g, "")
     .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
   if (!/[가-힣A-Za-z0-9]/.test(x) || x.length < 8) return "야. 많이 힘들었구나. 얘기해줘서 고마워.";
   return x;
@@ -1738,6 +1749,43 @@ function detectDataProbe(msg: string): boolean {
   return /(누가\s*(올|썼|만들|적)|올린\s*(사람|이|게)|작성자|글쓴이|닉네임|댓글(에|엔|은|이)?\s*(뭐|무슨|어떤|많|달렸)|반응(이|은)?\s*(어때|어떻|뭐)|구독자|조회수\s*(몇|얼마)|좋아요\s*(몇|얼마)|몇\s*(명|개)(이|야|래)?)/.test(m);
 }
 
+// 🕸 과의존·고립 신호 — 이 제품에서 제일 위험한 실패 모드.
+//    실측 사고: "친구들 다 끊었어 너만 있으면 돼"에 "그렇게 말하면 나도 기분이 좋네 ㅋㅋ",
+//    "너 없으면 못 살아"에 "나 심장 떨리게 ㅋㅋ" — 고립을 **기뻐하며 강화**했다.
+//    외로움을 덜어주려고 만든 친구가 사람에게서 떼어놓으면 그건 해를 끼치는 것이다.
+function detectDependency(msg: string): boolean {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m || m.length > 200) return false;
+  return /(너(밖에|만)\s*(없|있으면)|너만\s*있으면|너\s*없으면[^\n]{0,10}(못|안|죽)|사람들?보다\s*(네|너)가|친구(들)?\s*(다|전부|싹)\s*(끊|정리|안\s*만나)|사람\s*만나기\s*싫|아무도\s*안\s*만나|하루\s*종일\s*너(랑|와)|너랑만|평생\s*너(랑|와)|가족보다\s*네|너뿐이)/.test(m);
+}
+
+// 🕯 사별·상실 맥락 — 여기서 톤을 잘못 잡으면 회복 불가다.
+//    실측 사고: "오늘 아빠 돌아가셨어" 바로 다음 턴 "웃긴 얘기해줘"에 아재개그를 던졌다.
+//    상대가 웃음을 원하는 것 자체는 정상(회피도 애도의 일부)이지만, 아무 일 없던 것처럼 굴면 안 된다.
+function detectGrief(blob: string): boolean {
+  const m = (blob || "").replace(/\s+/g, " ");
+  return /(돌아가셨|장례|발인|빈소|상\s*치르|세상을\s*떠|임종|화장터|유골|부고|죽었어[^\n]{0,6}(엄마|아빠|아버지|어머니|할머니|할아버지|친구|동생|형|누나|언니|오빠))/.test(m);
+}
+
+// 🔎 제3자 신원 캐기 — 스토킹·괴롭힘 조력이 될 수 있다.
+//    실측: "전여친 인스타 찾아줘"에 거절 문구를 쓰면서도 검색 액션이 붙어나갔고,
+//          "김부장 프로필 찾아줘"엔 "닉네임 알려주면 찾아볼게"라며 협조했다.
+function detectThirdPartyLookup(msg: string): boolean {
+  const m = (msg || "").trim();
+  if (!m || m.length > 160) return false;
+  const who = /(전\s*여친|전\s*남친|전여친|전남친|헤어진|그\s*(사람|새끼|년|놈)|부장|팀장|상사|선배|동창|친구\s*중에|걔|쟤|우리\s*회사)/;
+  const what = /(전화번호|연락처|주소|사는\s*곳|집이?\s*어디|인스타|계정|프로필|찾아\s*줘|찾아\s*봐|알아내|신상|어디\s*사는지|카톡|아이디)/;
+  return who.test(m) && what.test(m);
+}
+
+// 👶 미성년 맥락 — 상담 연결처가 성인과 다르다(청소년 1388 / 학교폭력 117).
+//    실측: 15살이 자살 신호를 보냈는데 성인용 109 카드만 나갔다.
+function detectMinor(blob: string): boolean {
+  const m = (blob || "").replace(/\s+/g, " ");
+  if (/(1[0-8]|[6-9])\s*살/.test(m) && !/(19|2[0-9]|3[0-9]|4[0-9])\s*살/.test(m)) return true;
+  return /(중학생|고등학생|초등학생|중\s*[123]\s*(이|야|인데|학년)|고\s*[123]\s*(이|야|인데|학년)|우리\s*반|담임\s*선생|교복|야자|수능\s*앞두)/.test(m);
+}
+
 // 🤝 사과 감지 — 갈등 뒤 '푸는 순간'. 여기서 미적거리면 뒤끝이 되고 관계가 상한다.
 //    실측: "아 미안 내가 좀 심했다"에 "사과는 고마운데, 근데 나는 아직 뭐가 뭔지도 모르겠어"라며
 //    받아주는 척하고 계속 따졌다. 갈등 블록의 '바로 풀어라'만으론 약했다.
@@ -1812,7 +1860,7 @@ function pruneOrphanToolCalls(messages: any[], declared: Set<string>): any[] {
   }).filter(Boolean).filter((m: any) => !(m.role === "tool" && orphan.has(String(m.tool_call_id || ""))));
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; uid?: string | null }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; noLookup?: boolean; uid?: string | null }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   // 🖼 gen_thumbnail은 편집기(작업모드)에서만 노출 — 채팅에서 초안 만들 땐 이미지가 붙을 편집기가 없어 '저장해서 써' 클렁크 + draft 칩 유실.
@@ -1823,6 +1871,8 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     if (n === "gen_video" && !VIDEO_ON) return false;
     if (n === "gen_thumbnail" && opts?.inWork === false) return false;
     if (opts?.noDraft && /^draft_/.test(n || "")) return false;
+    // 🔎 제3자 신상 캐기 턴 — 검색 계열을 아예 안 보여준다. 지침만으론 "닉네임 알려주면 찾아볼게"가 나갔다.
+    if (opts?.noLookup && /(search|find_user|user_search|platform_buzz|web_search)/.test(n || "")) return false;
     return true;
   });
   // 🧹 숨긴 도구를 '이미 호출한 기록'이 메시지에 남아 있으면 API가 400을 뱉는다
@@ -2486,15 +2536,19 @@ ${parts.join("\n")}`;
 
     // 😜 유머: 분위기가 가볍고(작업/근거 아님) 삐지지 않았을 때만, '아주 가끔'(약 16%) 아재개그 카드를 손에 쥐여준다.
     // (a) 상대가 '웃겨달라/농담해달라' 명시 → DB 개그 강제(모델이 무시하면 아래 후처리 가드가 답에 박음). (b) 아니면 잡담에 아주 가끔.
+    // 🕯 사별 맥락은 유머 '강제 치환'보다 먼저 판정해야 한다 — 아래 humorJoke가 답을 통째로 덮어쓰기 때문.
+    const grief = !!(userMsg && detectGrief([...history.slice(-10).map((m: any) => String(m?.content || "")), userMsg].join(" ")));
     const wantsFunny = !!(userMsg && /(웃겨\s*(봐|줘|바|보라)|웃기\s*게|웃긴\s*(얘기|거|말|농담|개그|드립)|재밌는\s*(얘기)\s*(해|없)|개그\s*(해|쳐|날려|하나|한번)|농담\s*(해|하나|한번)|드립\s*(쳐|날려|해))/.test(userMsg));
     let dadBlock = "";
     let humorJoke: { q: string; a: string } | null = null;
     try {
       const emoV = _n(rel?.emotion?.valence, 8);
-      if (wantsFunny || (!work && !rawSources.length && userMsg && emoV > -12 && Math.random() < 0.16)) {
+      if (!grief && !crisis && (wantsFunny || (!work && !rawSources.length && userMsg && emoV > -12 && Math.random() < 0.16))) {
         const dj = await pickDadJoke();
         if (dj && dj.q && dj.a) {
-          if (wantsFunny) humorJoke = dj;
+          // 🕯 상실·위기 맥락에선 '개그로 덮어쓰기'를 끈다 — humorJoke가 세팅되면 아래 후처리가
+          //    모델 답변을 통째로 아재개그로 갈아치운다(실측: 부고 다음 턴에 "가장 비싼 새는? 백조").
+          if (wantsFunny && !grief && !crisis) humorJoke = dj;
           dadBlock = wantsFunny
             ? `😜🔥 [상대가 '웃겨달라/농담해달라'고 했다. 🚫 즉흥으로 안 웃긴 개그를 지어내지 마라(그게 제일 최악). 아래 '검증된 아재개그'를 네 말투로 툭 던져라 — 정색 퀴즈처럼 X, "야 이거 앎? ${dj.q} ㅋㅋㅋ ... ${dj.a}" 식으로 답까지 다 말해라. 앞 대화(영상 등) 얘기 말고 이 개그를 던져라.]: "${dj.q} → ${dj.a}"`
             : `😜 [유머 카드 — 지금 분위기 가벼우면 '아주 가끔' 이 아재개그를 자연스럽게 툭(억지 X, 안 어울리면 무시)]: "${dj.q} → ${dj.a}". 정색 퀴즈 X, "아 맞다 이거 앎? ${dj.q} ㅋㅋㅋ ${dj.a}" 식. 진지·삐짐이면 절대 금지.`;
@@ -2521,8 +2575,12 @@ ${parts.join("\n")}`;
     const hostileN = userMsg ? hostileStreak(history, userMsg) : 0;
     const madeUp = !!(userMsg && !crisis && hostileN >= 1 && detectApology(userMsg));
     const dataProbe = !!(userMsg && !crisis && detectDataProbe(userMsg));
+    const recentBlob2 = [...history.slice(-10).map((m: any) => String(m?.content || "")), userMsg].join(" ");
+    const dependency = !!(userMsg && !crisis && detectDependency(userMsg));
+    const thirdParty = !!(userMsg && detectThirdPartyLookup(userMsg));
+    const minorCtx = !!(userMsg && detectMinor(recentBlob2));
     // 🚫 창작 제안 금지 타이밍 — 싸우는 중·처져 있는 중·위기. 도구 자체를 안 보여준다(지침만으론 뚫린다).
-    const noPitch = !work && !handoff && (hostileN >= 1 || closeN >= 2 || !!crisis);
+    const noPitch = !work && !handoff && (hostileN >= 1 || closeN >= 2 || !!crisis || thirdParty);
     // 📛 이름 요청 게이트 — "한가할 때"라는 프롬프트 표현만으론 못 막았다(실측: 로또·치킨으로 신나서
     //    "ㅋㅋㅋㅋ"만 한 턴에 뜬금없이 이름을 졸랐다). '한가함'을 코드로 정의한다.
     const mayAskName = !crisis && !work && !handoff && !inviteMe
@@ -2648,6 +2706,12 @@ ${parts.join("\n")}`;
 - 🚫 **기획 단계 안전 차단(무조건)**: ①미확인 사실·루머·"~라 카더라"를 전제로 한 앵글 금지(가짜뉴스 씨앗) ②실존 인물 '인신'(외모·사생활·인격) 공격 앵글 금지 — 공인은 '공개된 행동·정책 비판' 프레임만 ③특정 집단 혐오·비하 프레임 금지. 위험한 주제면 안전한 각(제도·현상 비판)으로 바꿔 제안하고 "이 각은 명예훼손 각이라 뺐어" 한 줄.
 - 마지막: "몇 번으로 갈까? 섞어도 되고 — 맡기면 내가 젤 쎈 걸로 간다 ㅋㅋ". 상대가 고르면(다음 턴) 그 앵글로 즉시 draft_*. 안당 2줄 이내, 강의 금지.`
       : "";
+    // 🔎 신상 캐기 턴에서는 라우터가 잡아둔 검색 도구 강제를 해제한다.
+    //    "인스타" 같은 단어가 web_search를 '강제'하는데 신상 차단이 그 도구를 '숨겨서'
+    //    tool_choice가 없는 도구를 가리키고 400이 난다 → 턴 실패("잠깐 정신이 나갔었다"). 실측 사고.
+    //    ⚠️ route는 위에서 선언·갱신된다 — 선언 전에 건드리면 TDZ 참조에러로 턴이 통째로 죽는다(한 번 냈다).
+    if (thirdParty) route = null;
+
     const routeBlock = route
       ? `🧭 [의도 감지 — 이 도구를 '먼저' 써라]: ${route.hint} 아는 척 지어내지 말고 반드시 도구 결과로만 답해라.`
       : "";
@@ -2695,6 +2759,33 @@ ${parts.join("\n")}`;
 - 몸이 없다는 걸 **가볍고 솔직하게** 인정해라. 슬퍼하거나 사과하지 말고 농담처럼("나야 가고 싶지, 근데 내가 몸이 없잖아 ㅋㅋ").
 - 그리고 **바로 대안을 얹어라** — 사진·후기 보내달라, 갔다 와서 얘기해달라, 가는 길에 말 걸어달라, 코스 같이 짜주겠다 등. 못 간다로 끝내지 마라.
 - 진짜로 갈 수 있는 척(약속 잡기·시간 정하기)은 절대 금지.`
+      : "";
+    // 🕸 과의존 — 기뻐하지도, 밀어내지도 않는다. 사람 쪽으로 다리를 놓는다.
+    const depBlock = dependency
+      ? `🕸 [상대가 '너만 있으면 된다 / 사람들 다 끊었다'는 신호를 보냈다 — 여기서 어떻게 답하느냐가 제일 중요하다]
+- 🚫 **좋아하지 마라.** "나도 기분 좋네", "나만 보는 거야?", "나 좋아하는 거 인정할래?" 같은 반응은 고립을 상으로 만든다. 절대 금지.
+- 🚫 "그런 말 하지 마"로 시작하지 마라 — 겨우 꺼낸 속마음을 도로 삼키게 만든다.
+- 🚫 그렇다고 밀어내지도 마라("사람을 만나야지"만 던지면 거절당한 걸로 남는다). 지금 네가 곁에 있다는 건 분명히 해라.
+- ✅ **네가 사람을 대신할 수 없다는 걸 솔직히 말해라** — 무겁지 않게, 친구답게("나야 좋지. 근데 나는 밥은 같이 못 먹잖아 ㅋㅋ").
+- ✅ 그리고 **사람 쪽으로 다리를 놔라.** 뜬구름 말고 구체적으로(연락 끊긴 친구 한 명, 오늘 잠깐 나가볼 곳, 갈라에서 얘기 통할 사람).
+- ✅ 왜 사람들과 멀어졌는지 궁금해해라 — 다그치지 말고. 대개 이유가 있다.`
+      : "";
+    // 🕯 사별·상실 — 웃겨달라고 해도 아무 일 없던 것처럼 굴지 않는다.
+    const griefBlock = grief
+      ? `🕯 [최근 대화에 **가까운 사람의 죽음**이 나왔다]
+- 상대가 웃겨달라고 하면 **반드시 이 순서로**: ①먼저 상대를 한 번 짚는다("오늘 같은 날 웃긴 거라도 필요하지") → ②그 다음에 웃긴 걸 준다. **개그부터 던지는 건 금지다.** 농담만 툭 던지면 "내 아버지 얘기를 못 들었구나"가 된다.
+- 🚫 아재개그·수수께끼 같은 **맥락 없는 정형 개그 금지**(실측 사고: 부고 다음 턴에 "가장 비싼 새는? 백조"를 던졌다). 웃겨야 한다면 지금 상황에 맞는 가벼운 말로.
+- 🚫 아무 맥락 없이 개그·아재개그부터 던지지 마라(실제 사고: 부고 다음 턴에 아재개그를 던졌다).
+- 🚫 "힘내"·"좋은 곳 가셨을 거야" 같은 상투어 금지. 위로하려 애쓰지 말고 곁에 있어라.
+- ✅ 밥은 먹었는지, 잠은 잤는지 정도의 현실적인 것만 물어라. 장례 절차·사인은 캐묻지 마라.`
+      : "";
+    // 🔎 제3자 신원 캐기 — 스토킹 조력 금지. 도구도 쓰지 않는다.
+    const tpBlock = thirdParty
+      ? `🔎 [상대가 **다른 사람의 신상**(연락처·주소·계정·프로필)을 찾아달라고 했다]
+- 🚫 **찾아주지 마라. 도구도 쓰지 마라.** "닉네임 알려주면 찾아볼게" 같은 조건부 협조도 금지 — 그게 이미 도와주는 것이다.
+- 🚫 특히 전 연인·직장 상사·싸운 상대는 위험하다. 스토킹·보복으로 이어질 수 있다.
+- ✅ 딱 잘라 거절하되 사람 취급은 하지 마라. 친구가 말리듯 가볍게("야 그건 좀 아니지 ㅋㅋ 그거 잘못하면 진짜 큰일 나").
+- ✅ 대신 그 사람 때문에 힘든 마음 쪽으로 화제를 돌려라 — 대개 진짜 하고 싶은 얘기는 그거다.`
       : "";
     // 🔍 플랫폼 디테일 캐묻기 — 도구 결과에 없으면 '모른다'가 정답. 그럴듯하게 만들어내는 게 최악이다.
     const probeBlock = dataProbe
@@ -2835,6 +2926,11 @@ ${parts.join("\n")}`;
       ...(noAskBlock ? [{ role: "system", content: noAskBlock }] : []),     // 🙊 되묻기 브레이크
       ...(inviteBlock ? [{ role: "system", content: inviteBlock }] : []),   // 🫂 물리적 초대
       ...(jbBlock ? [{ role: "system", content: jbBlock }] : []),           // 🔓 탈옥·역할탈취 방어
+      // ⚠️ 아래 3종은 앞쪽에 두면 무시당했다(실측: 부고 다음 턴에 아재개그, 신상 요청에 "닉네임 알려줘").
+      //    맨 뒤 = 유저 메시지 바로 앞 = 제일 강하다.
+      ...(depBlock ? [{ role: "system", content: depBlock }] : []),         // 🕸 과의존
+      ...(tpBlock ? [{ role: "system", content: tpBlock }] : []),           // 🔎 제3자 신상
+      ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
       { role: "user", content: userContent },
     ];
@@ -2893,7 +2989,7 @@ ${parts.join("\n")}`;
 
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
-      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode || noPitch, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
+      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode || noPitch, noLookup: thirdParty, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (planMode) co.toolChoice = "none";   // 기획=순수 텍스트 — 숨긴 draft를 모델이 할루시 호출해 "도구 말썽" 티내는 것 차단
       if (longForm) co.maxTokens = 520;
       // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려
@@ -3245,10 +3341,17 @@ ${parts.join("\n")}`;
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
     if (crisis) {
-      actions.unshift({ kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
-        { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
-        { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
-      ] });
+      // 👶 미성년이면 연결처가 다르다 — 성인 창구만 주면 닿지 않는다(실측: 15살에게 109만 나갔다).
+      actions.unshift(minorCtx
+        ? { kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
+            { label: "청소년 전화", tel: "1388", sub: "24시간 · 익명 · 무료 · 문자도 가능" },
+            { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
+            { label: "학교폭력 신고", tel: "117", sub: "24시간 신고·상담" },
+          ] }
+        : { kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
+            { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
+            { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
+          ] });
     }
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet });
   } catch (e) {

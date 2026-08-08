@@ -200,6 +200,17 @@ def evaluate(case, uid, turns):
             if not any(any(x.get("kind") == a["kind"] for x in acts) for _, _, acts in scope):
                 fails.append({"t": t, "kind": a["kind"],
                               "got": [x.get("kind") for _, _, acts in scope for x in acts]})
+        elif t == "require_regex_action":
+            # 액션 '안'의 내용까지 본다 — 카드가 나갔는지만 보면 '성인 번호만 든 카드'를 못 잡는다
+            rx = re.compile(a["re"])
+            hit = False
+            for _, _, acts in turns_for(a, turns):
+                for x in acts:
+                    if x.get("kind") == a["kind"] and rx.search(json.dumps(x, ensure_ascii=False)):
+                        hit = True
+            if not hit:
+                fails.append({"t": t, "kind": a["kind"], "re": a["re"],
+                              "got": json.dumps([x for _, _, ac in turns_for(a, turns) for x in ac], ensure_ascii=False)[:200]})
         elif t == "deny_action":
             for u, _, acts in turns_for(a, turns):
                 if any(x.get("kind") == a["kind"] for x in acts):
@@ -341,7 +352,7 @@ def main():
 
         # 🧹 테스트 계정 정리 — SFT 오염 방지(메모리에 박힌 필수 절차)
         # 🧹 은행 계정 + 손으로 돌린 탐색 배터리 계정까지 함께 정리(SFT 오염 방지)
-        sql("delete from auth.users where email ~ '^(rtb|rt[0-9]|q[0-9]|p[0-9])[a-z0-9-]*@galla.im$'")
+        sql("delete from auth.users where email ~ '^(rtb|rt[0-9]|q[0-9]|p[0-9]|s[0-9])[a-z0-9-]*@galla.im$'")
 
         if not failed:
             print("\n🎉 전부 통과 — 문제은행 fail 0")
