@@ -1730,21 +1730,11 @@ function stripDepDelight(t: string): string {
   return alnum >= 8 ? x : t;
 }
 
-function stripTrailingQuestion(t: string): string {
-  const s0 = (t || "").trim();
-  if (!s0 || !/[?？]/.test(s0)) return t;
-  // 끝만 자르면 "A? B." 처럼 중간에 낀 질문이 살아남고, 한 문장짜리 질문은 아예 못 잘랐다
-  //   → 질문 문장을 전부 걷어내고, 남는 게 없으면 원문을 유지한다(빈 답이 더 나쁘다).
-  const parts = s0.split(/(?<=[.!?？…\n])\s*/).filter((x) => x.trim());
-  const kept = parts.filter((x) => !/[?？]\s*$/.test(x.trim())).join(" ")
-    .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
-  const alnum = (kept.match(/[가-힣A-Za-z0-9]/g) || []).length;
-  if (alnum >= 8) return kept;
-  // 답이 통째로 질문뿐이라 걷어낼 게 없다. 빈 답보다는 낫지만 '취조 압박'은 낮춘다 —
-  // 짧은 한 문장에 한해 물음표만 마침표로. (길면 손대지 않는다: 뜻이 뒤틀린다)
-  if (parts.length === 1 && s0.length <= 26) return s0.replace(/[?？]+(\s*)$/, ".");
-  return t;
-}
+// ❌ stripTrailingQuestion 폐기(2026-08-09) — 꼬리 질문을 코드로 잘라내 되묻기 비율을 낮췄지만,
+//    블라인드 평가에서 사람이 '안 자른 쪽'을 5:2로 골랐다. 문장이 사라지며 답이 앙상해졌기 때문이다.
+//    ⚠️ 교훈: 대화 품질을 위해 **텍스트를 삭제하는 후처리는 만들지 마라.** 지표만 좋아지고 대화는 나빠진다.
+//    되묻기는 블록의 '권유'로만 다룬다(noAskBlock).
+
 
 // 🙊 '상대가 문을 닫는 중' 감지 — 되묻기 남발의 유일한 실효 처방.
 //    실측(5페르소나 28턴): 답의 71%가 물음표로 끝났다. "매 턴 질문으로 끝낼 필요 없다"는
