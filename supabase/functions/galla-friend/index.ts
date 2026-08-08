@@ -1519,14 +1519,62 @@ async function exemplarPack(): Promise<string> {
     return txt;
   } catch { return ""; }
 }
-async function craftLLM(system: string, user: string, temp: number, maxTok: number): Promise<any | null> {
+const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") || "";
+
+/* 🎚 이 유저의 '무거운 작업(창작)' 모델 — 등급이 높으면 상위 모델, 예산을 넘겼으면 자동 강등.
+   ANTHROPIC_API_KEY가 없으면 클로드로 배정돼도 조용히 기본 모델로 돌아간다(키 없다고 기능이 죽으면 안 된다). */
+async function heavyModel(uid: string): Promise<string> {
   try {
-    const r = await fetch(`${BASE_URL}/chat/completions`, {
-      method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: CHAT_MODEL, temperature: temp, max_tokens: maxTok, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
-    });
-    if (!r.ok) return null;
-    const m = /\{[\s\S]*\}/.exec((await r.json())?.choices?.[0]?.message?.content || "");
+    const mf = await modelFor(uid, "heavy");
+    const m = String(mf?.model || "");
+    if (!m) return CHAT_MODEL;
+    // 클로드 키가 아직 없을 때 기본 모델로 떨어뜨리면 유료 등급이 무료와 똑같아진다 = 상품이 아니다.
+    // 키가 붙기 전까지는 한 단계 위 모델로 폴백해서 '유료는 확실히 다르다'를 유지한다.
+    if (m.startsWith("claude-") && !ANTHROPIC_KEY) return Deno.env.get("HEAVY_FALLBACK_MODEL") || "deepseek-reasoner";
+    return m;
+  } catch { return CHAT_MODEL; }
+}
+
+/* 단발 JSON 생성 — 모델에 따라 두 API를 갈아탄다.
+   클로드는 OpenAI 호환이 아니다: system이 별도 필드, 응답이 content 블록 배열, usage 필드명도 다르다.
+   ⚠️ 클로드 최신 모델은 temperature 등 샘플링 파라미터를 거부한다 → 아예 보내지 않는다.
+   ⚠️ Sonnet 5/Opus 5는 사고(thinking)가 기본 ON이라 max_tokens를 사고가 먹어치운다.
+      우리는 짧은 JSON만 필요하므로 명시적으로 끈다(비용·지연 둘 다 절감). */
+async function craftLLM(system: string, user: string, temp: number, maxTok: number, uid?: string, model?: string): Promise<any | null> {
+  const mdl = model || CHAT_MODEL;
+  try {
+    let text = "";
+    if (mdl.startsWith("claude-")) {
+      const body: any = {
+        model: mdl, max_tokens: maxTok, system,
+        messages: [{ role: "user", content: user }],
+      };
+      if (/^claude-(sonnet-5|opus-5|opus-4-8|opus-4-7)/.test(mdl)) body.thinking = { type: "disabled" };
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) return null;
+      const j = await r.json();
+      text = (j?.content || []).filter((b: any) => b?.type === "text").map((b: any) => b.text).join("");
+      // 클로드 usage → 공통 형태로 환산해 원장에 기록(캐시 읽기는 입력가의 0.1배라 따로 센다)
+      logSpend(AI_FN, mdl, uid ?? null, {
+        prompt_tokens: (j?.usage?.input_tokens || 0) + (j?.usage?.cache_read_input_tokens || 0) + (j?.usage?.cache_creation_input_tokens || 0),
+        prompt_cache_hit_tokens: j?.usage?.cache_read_input_tokens || 0,
+        completion_tokens: j?.usage?.output_tokens || 0,
+      });
+    } else {
+      const r = await fetch(`${BASE_URL}/chat/completions`, {
+        method: "POST", headers: { Authorization: `Bearer ${API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: mdl, temperature: temp, max_tokens: maxTok, messages: [{ role: "system", content: system }, { role: "user", content: user }] }),
+      });
+      if (!r.ok) return null;
+      const j = await r.json();
+      text = j?.choices?.[0]?.message?.content || "";
+      logSpend(AI_FN, mdl, uid ?? null, j?.usage);
+    }
+    const m = /\{[\s\S]*\}/.exec(text);
     return m ? JSON.parse(m[0]) : null;
   } catch { return null; }
 }
@@ -1538,23 +1586,25 @@ async function craftPolish(kind: string, seed: Record<string, unknown>, fields: 
   const ex = await exemplarPack();
   return await craftLLM(
     `너는 갈라 히트 콘텐츠 편집장이다. 초안의 주제·각도는 그대로 두고 표현만 강하게 다듬어라. ${guide} 사실 날조·루머·인신공격 금지. JSON만 출력: ${fields}`,
-    `초안(${kind}): ${JSON.stringify(seed).slice(0, 900)}${ex ? `\n\n갈라에서 반응 터진 판(스타일 참고):\n${ex}` : ""}`, 0.7, 450);
+    `초안(${kind}): ${JSON.stringify(seed).slice(0, 900)}${ex ? `\n\n갈라에서 반응 터진 판(스타일 참고):\n${ex}` : ""}`,
+    0.7, 450, uid, await heavyModel(uid));
 }
 async function craftPipeline(kind: string, seed: Record<string, unknown>, fields: string, uid: string): Promise<any | null> {
   try {
     const ex = await exemplarPack();
+    const mdl = await heavyModel(uid);   // 🎚 등급별 상위 모델(예산 초과 시 자동 강등) — RPC 1회만
     await broadcastStep(uid, "craft", "🎯 앵글 3개 겨루는 중…");
     const base = `작가 원안(${kind}): ${JSON.stringify(seed).slice(0, 900)}
 ⚠️ 절대 규칙: 주제와 이미 잡힌 각도는 '그대로 유지'(소재·쟁점 변경 금지). 표현력만 끌어올린다. 사실 날조·루머·인신공격 금지.${ex ? `\n\n갈라에서 실제 반응 터진 판(스타일 참고):\n${ex}` : ""}`;
     const cands = (await Promise.all(CRAFT_STYLES.map((st) =>
-      craftLLM(`너는 갈라(찬반 여론 플랫폼)의 히트 콘텐츠 작가다. 지시대로 다듬은 결과를 JSON만 출력: ${fields}`, `${base}\n\n이번 안의 방향: ${st}`, 1.0, 450)
+      craftLLM(`너는 갈라(찬반 여론 플랫폼)의 히트 콘텐츠 작가다. 지시대로 다듬은 결과를 JSON만 출력: ${fields}`, `${base}\n\n이번 안의 방향: ${st}`, 1.0, 450, uid, mdl)
     ))).filter(Boolean);
     if (!cands.length) return null;
     await broadcastStep(uid, "craft", "⚖️ 제일 쎈 안 고르는 중…");
     const judged = await craftLLM(
       `너는 갈라 편집장이다. 후보들을 루브릭(${CRAFT_RUBRIC})으로 채점해 최고안을 고르고, 약점을 한 번 더 다듬어 완성해라. 원안의 주제·각도 유지. JSON만 출력: {"best": ${fields}}`,
       `후보0(작가 원안): ${JSON.stringify(seed).slice(0, 700)}\n${cands.map((c, i) => `후보${i + 1}: ${JSON.stringify(c).slice(0, 700)}`).join("\n")}`,
-      0.2, 500);
+      0.2, 500, uid, mdl);
     return (judged && typeof judged.best === "object") ? judged.best : null;
   } catch { return null; }
 }
