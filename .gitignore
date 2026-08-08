@@ -11,3 +11,4 @@ supabase/.temp/
 # 레드팀·벤치 산출물 — 합성 대화 전사라 코드에 섞이면 안 된다(SFT 오염·노이즈)
 scripts/redteam_out.json
 scripts/*_out.json
+.redteam-key
