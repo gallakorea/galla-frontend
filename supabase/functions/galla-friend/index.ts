@@ -222,6 +222,13 @@ function gateReply(g: Gate, guest: boolean): string {
   const t = g.resets_at ? new Date(g.resets_at) : null;
   const hhmm = t ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }).format(t) : null;
   if (g.reason === "tier_locked") return "이건 아직 내가 못 해주는 거야 ㅠㅠ 이용권 올리면 바로 열려.";
+  // 💰 결제주기 사용량 소진 — 막연히 끊지 않고 '언제 다시 열리는지'를 말해준다.
+  if (g.reason === "budget") {
+    const d = (g as any).resets_on ? new Date(String((g as any).resets_on)) : null;
+    const md = d && !isNaN(+d) ? new Intl.DateTimeFormat("ko-KR", { month: "long", day: "numeric", timeZone: "Asia/Seoul" }).format(d) : null;
+    return md ? `이번 주기 대화량을 우리가 다 썼어 ㅋㅋ ${md}에 새로 채워져. 그때 또 실컷 떠들자!`
+              : "이번 주기 대화량을 다 썼어 ㅠㅠ 곧 새로 채워지니까 조금만 기다려줘!";
+  }
   return hhmm
     ? `아 목이 좀 쉬었다 ㅋㅋ ${hhmm}쯤이면 다시 쌩쌩해져서 올게. 그때 마저 얘기하자!`
     : "오늘 수다 에너지를 다 써버렸어 ㅋㅋ 좀 있다 다시 오면 또 떠들자!";
