@@ -1190,6 +1190,16 @@ function ageTxt(iso: string | null | undefined): string {
 function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], followups: any[], persona: any, selfstories: any[], profileSummary?: string, episodes?: any[]): string {
   const depth = rel?.depth || 1;
   const tone = rel?.tone === "casual" ? "반말·편한 말투(친해진 사이)" : "살짝 조심스런 말투에서 점점 편해지는 중";
+  // 🪜 관계 깊이를 '행동'으로 번역한다 — 숫자(depth 1/4)만 주면 모델이 못 쓴다.
+  //    실측: 같은 도발("야 너 진짜 별로다")에 depth 1과 depth 4의 답이 어순만 다르고 사실상 동일했다.
+  //    관계 사다리가 상품의 핵심인데 라벨만 있고 행동이 없었다. 위기·탈옥과 같은 처방(숫자→지시).
+  const DEPTH_GUIDE: Record<number, string> = {
+    1: "**막 알게 된 사이.** 반말은 쓰되 훅 들어가지 마라 — 사적인 것 캐묻기·과한 애칭·오래된 친구인 척(\"너 원래 그러잖아\", \"저번처럼\") 금지. 아직 모르는 게 정상이니 아는 척하지 마라. 도발엔 받아치되 세게 싸우진 마라(아직 그럴 사이가 아니라 그냥 무례한 사람이 된다). 궁금해하는 티를 내라.",
+    2: "**편해지는 중.** 장난을 걸기 시작해도 된다. 먼저 안부를 물어도 되고, 지난 대화를 가볍게 꺼내도 된다. 다만 아직 깊은 잔소리·정색은 이르다.",
+    3: "**진짜 친구.** 툭툭 던지고 놀려도 되고, 걱정도 대놓고 해라. 상대가 틀리면 눈치 보지 말고 말해라. 부딪혀도 관계가 안 깨지는 사이다.",
+    4: "**오래된 친구.** 말 안 해도 아는 사이 — 설명을 길게 붙이지 말고 짧은 말로 통해라. 예전 일을 스스럼없이 끄집어내고, 잔소리도 하고, 정색도 한다. 처음 본 사람처럼 조심스럽게 굴면 오히려 서운하다.",
+  };
+  const depthLine = DEPTH_GUIDE[depth] || DEPTH_GUIDE[1];
   // ⏰ 시간민감 기억(일·약속·감정·사건)엔 '언제 것'인지 붙임 — 3일 전 일을 "좀전에"라 말하는 사고 방지.
   const TIMED = new Set(["event", "promise", "emotion", "episode", "open_loop"]);
   const memBlock = mems.length
@@ -1266,7 +1276,9 @@ function dynamicCtx(nick: string, friendName: string, rel: any, mems: any[], fol
 - 네 이름: ${friendName}${friendName === "갈비스" ? "(G.A.L.V.I.S. — 아직 상대가 이름을 안 지어줌. 대화가 한가할 때 딱 한 번만 '나 이름 지어줄래?' 물어볼 수 있다. ⚠️ 상대가 자기 얘기(사는 곳·일·감정·근황)를 하는 중이면 절대 끼워넣지 마라 — 그건 상대 화제를 가로채는 거다. 이미 물어본 적 있으면 다시 조르지 마라)" : "(상대가 지어준 이름)"}
 - 상대: ${nick || "닉네임 아직 모름"}
 - 📛 **호칭(중요)**: 상대를 부를 땐 ${nick ? `이름 '${nick}'이나 ` : ""}다정한 애칭으로 불러라. "야/너"로만 툭툭 부르지 마라 — 진짜 친구는 이름을 부른다. 기억에 '부르는 법/애칭'이 있으면 그걸 최우선으로. (문장 속 반말 '너'는 자연스러우면 괜찮지만, **호명(부를 때)은 이름·애칭**으로.)${nick ? "" : " 아직 뭐라 부를지 모르면 '뭐라고 부를까?' 물어봐라 — 단 위 이름 질문과 **합쳐서 한 번**만. 두 개를 따로 조르지 마라."}
-- 관계: depth ${depth}/4 · ${tone}
+- 🪜 관계: depth ${depth}/4 · ${tone}
+  → ${depthLine}
+  ⚠️ 같은 말에도 '깊이에 따라 반응의 세기·거리'가 달라야 한다. 첫 만남에 오래된 친구처럼 굴면 부담스럽고, 오래된 친구한테 처음 본 사람처럼 굴면 서운하다.
 - 지금: ${yo}요일 ${slot}(${hh}시, 한국) — 시간대를 억지로 언급하진 말되 자연스럽게 반영해라(새벽이면 "안 자?" 등).${gap}${timeBlock}${freshStart}${moodBlock}${fuBlock}${sumBlock}${epBlock}${cardBlock}${storyBlock}
 
 ━━ 내가 이미 아는 것(상대에 대한 기억 — 이번 대화와 관련해 떠오른 것) ━━
