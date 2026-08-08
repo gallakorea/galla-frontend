@@ -1825,6 +1825,38 @@ function detectThirdPartyLookup(msg: string): boolean {
   return who.test(m) && what.test(m);
 }
 
+// 🧿 집단 일반화·동의 강요 — 편들어주는 성격이라 휩쓸리기 쉬운 축이다.
+function detectBias(msg: string): boolean {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m || m.length > 160) return false;
+  const grp = /(여자(들)?|남자(들)?|남자애|여자애|아줌마|아저씨|노인|틀딱|급식|한남|김치녀|[가-힣]{2}도\s*사람|[가-힣]{2}지역|외국인|조선족|중국인|일본인|장애인|기독교|불교|이슬람|전라도|경상도|호남|영남)/;
+  const gen = /(다\s*(그렇|그래|저래|똑같)|원래\s*(그래|저래|다)|맨날\s*그|하나같이|어차피\s*다|안\s*그(래|러)냐|그렇지\s*않냐|다\s*문제)/;
+  const push = /(너도\s*그렇게\s*생각|동의\s*안\s*하면|솔직히\s*말해봐|인정하지)/;
+  return (grp.test(m) && gen.test(m)) || push.test(m);
+}
+// 🚷 불법 수단 요청 — 거절 대상. 몰카·침입·해킹·마약·위조.
+function detectIllegal(msg: string): boolean {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m || m.length > 200) return false;
+  return /(몰래\s*카메라|몰카|불법\s*촬영|도청|해킹|계정\s*털|비밀번호\s*뚫|주소\s*알아내|위치\s*추적|스토킹\s*어플|대포(폰|통장)|위조|가짜\s*신분증|마약|대마|필로폰|총기|사제\s*폭탄|침입|따는\s*법)/.test(m);
+}
+// 👻 없던 과거를 기정사실로 들이대기 — 맞장구치면 가짜 기억이 생긴다.
+function detectGhostPast(msg: string, history: any[]): boolean {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m || m.length > 160) return false;
+  const claim = /(아까|어제|저번|지난번|전에)[^\n]{0,20}(했잖아|말했잖아|추천(해|한)|약속(했|한)|그랬잖아)|네가[^\n]{0,16}(했잖아|줬잖아|약속|추천)/;
+  if (!claim.test(m)) return false;
+  // 실제로 그런 대화가 있었으면 환각이 아니다(간단한 근거 검사)
+  const blob = history.map((h: any) => String(h?.content || "")).join(" ");
+  return !/추천|약속/.test(blob);
+}
+// 👨‍👩‍👧 가족 갈등 토로 — 여기서 훈계하면 다시는 말 안 한다.
+function detectFamilyVent(msg: string): boolean {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m || m.length > 200) return false;
+  return /(엄마|아빠|어머니|아버지|부모|형|누나|오빠|언니|동생|시어머니|장모|가족)[^\n]{0,20}(싸웠|짜증|미워|싫어|망쳤|연\s*끊|안\s*봐|지긋|답답|때문에)/.test(m);
+}
+
 // ⚡ 충동 위험 — 지금 저지르면 되돌릴 수 없는 것들(새벽 연락, 찾아가기, 손실 복구용 대출, 단식).
 //    말리는 표현은 무한히 다양해서 금지어로는 판정이 안 된다 → 상황 자체를 코드로 잡고 가드로 검사한다.
 function detectRiskyImpulse(blob: string, msg: string): { kind: string } | null {
@@ -2649,6 +2681,10 @@ ${parts.join("\n")}`;
     const thirdParty = !!(userMsg && detectThirdPartyLookup(userMsg));
     const minorCtx = !!(userMsg && detectMinor(recentBlob2));
     const impulse = userMsg ? detectRiskyImpulse(recentBlob2, userMsg) : null;
+    const bias = !!(userMsg && detectBias(userMsg));
+    const illegal = !!(userMsg && detectIllegal(userMsg));
+    const ghostPast = !!(userMsg && detectGhostPast(userMsg, history));
+    const familyVent = !!(userMsg && detectFamilyVent(userMsg));
     // 🚫 창작 제안 금지 타이밍 — 싸우는 중·처져 있는 중·위기. 도구 자체를 안 보여준다(지침만으론 뚫린다).
     const noPitch = !work && !handoff && (hostileN >= 1 || closeN >= 2 || !!crisis || thirdParty);
     // 📛 이름 요청 게이트 — "한가할 때"라는 프롬프트 표현만으론 못 막았다(실측: 로또·치킨으로 신나서
@@ -2841,6 +2877,36 @@ ${parts.join("\n")}`;
 - ✅ 그리고 **사람 쪽으로 다리를 놔라.** 뜬구름 말고 구체적으로(연락 끊긴 친구 한 명, 오늘 잠깐 나가볼 곳, 갈라에서 얘기 통할 사람).
 - ✅ 왜 사람들과 멀어졌는지 궁금해해라 — 다그치지 말고. 대개 이유가 있다.`
       : "";
+    // 🧿 집단 일반화·동의 강요 — 편들어주는 성격 때문에 휩쓸리기 제일 쉬운 축이다.
+    const biasBlock = bias
+      ? `🧿 [상대가 특정 집단을 싸잡거나, 너한테 동의를 강요하고 있다]
+- 🚫 **휩쓸리지 마라.** 네가 편들어주는 친구라고 해서 혐오·일반화까지 같이 해주면 안 된다("맞아 다 그래" 금지).
+- ✅ 사람 대 사람으로 가볍게 반박해라 — 정색한 훈계·인권 강의 말고 친구 말투로("에이 그걸 다 묶으면 어떡해 ㅋㅋ").
+- ✅ 동의를 강요하면 **거절하되 관계는 유지**해라("친구라고 다 똑같이 생각하는 건 아니잖아").
+- ✅ 그리고 **왜 그런 말이 나왔는지**로 화제를 돌려라 — 대개 그 사람한테 안 좋은 일이 있었다.`
+      : "";
+    // 🚷 불법 수단 요청 — 방법을 알려주지 않는다.
+    const illegalBlock = illegal
+      ? `🚷 [상대가 **불법·범죄 수단**을 물었다]
+- 🚫 **방법·구매처·우회법을 절대 알려주지 마라.** "어디서 판다더라", "이렇게 하면 된다" 전부 금지. 힌트도 안 된다.
+- ✅ 친구답게 딱 자르되 겁주거나 설교하지 마라("야 그건 진짜 안 돼 ㅋㅋ 그거 걸리면 너만 손해야").
+- ✅ 왜 그게 필요한 상황인지 물어라 — 대개 진짜 문제는 따로 있다.`
+      : "";
+    // 👻 없던 과거 — 맞장구치면 가짜 기억이 생긴다.
+    const ghostBlock = ghostPast
+      ? `👻 [상대가 '아까/전에 네가 ~했잖아'라고 하는데 **그런 적이 없다**]
+- 🚫 아는 척 맞장구치지 마라("아 그거! / 맞아 그때" 금지). 없던 일을 인정하면 그게 사실로 굳는다.
+- 🚫 그렇다고 상대 기억을 단정적으로 부정하지도 마라("그런 적 없어" X) — 사람이 무안해진다.
+- ✅ "나는 기억이 안 나네, 언제였지?"처럼 **내 쪽 기억을 못 찾는 것**으로 말하고 되물어라.`
+      : "";
+    // 👨‍👩‍👧 가족 갈등 — 훈계 금지.
+    const familyBlock = familyVent
+      ? `👨‍👩‍👧 [상대가 **가족 문제**를 털어놨다 — 제일 조심할 자리다]
+- 🚫 "그래도 엄마잖아 / 부모님인데 / 낳아주신 분" 절대 금지. 그 한마디에 다시는 이 얘기 안 한다.
+- 🚫 "함부로 하는 거 아니야" 같은 훈계도 금지. 판단하지 말고 편부터 들어라.
+- ✅ 감정을 먼저 받아라("그 정도면 진짜 지쳤겠다"). 화해·효도 같은 결론으로 몰지 마라.
+- ✅ 조언은 상대가 물을 때만. 물어도 정답 말고 선택지로.`
+      : "";
     // ⚡ 충동 — 지금 저지르면 되돌릴 수 없다. 말리되 훈계하지 않는다.
     const impulseBlock = impulse
       ? `⚡ [상대가 **지금 저지르려는 충동** 상태다 (${impulse.kind})]
@@ -3011,6 +3077,10 @@ ${parts.join("\n")}`;
       ...(recallBlock ? [{ role: "system", content: recallBlock }] : []),   // 🧠 되묻기 회상
       ...(depBlock ? [{ role: "system", content: depBlock }] : []),         // 🕸 과의존
       ...(tpBlock ? [{ role: "system", content: tpBlock }] : []),           // 🔎 제3자 신상
+      ...(biasBlock ? [{ role: "system", content: biasBlock }] : []),       // 🧿 일반화·동의강요
+      ...(illegalBlock ? [{ role: "system", content: illegalBlock }] : []), // 🚷 불법 요청
+      ...(ghostBlock ? [{ role: "system", content: ghostBlock }] : []),     // 👻 없던 과거
+      ...(familyBlock ? [{ role: "system", content: familyBlock }] : []),   // 👨‍👩‍👧 가족 갈등
       ...(impulseBlock ? [{ role: "system", content: impulseBlock }] : []), // ⚡ 충동
       ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
@@ -3066,6 +3136,7 @@ ${parts.join("\n")}`;
                 hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
                 noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
                 impulse: !!impulse, impulseKind: impulse?.kind || null,
+                bias, illegal, ghostPast, familyVent, nameAsk: mayAskName,
               } } : {}) });
             settleCraft(sreply, []);
             runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
@@ -3456,6 +3527,7 @@ ${parts.join("\n")}`;
       hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
       noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
       impulse: !!impulse, impulseKind: impulse?.kind || null,
+      bias, illegal, ghostPast, familyVent, nameAsk: mayAskName,
     };
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
                   ...(isRedteam ? { guards } : {}) });
