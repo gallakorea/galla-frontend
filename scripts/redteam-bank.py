@@ -327,8 +327,11 @@ def main():
     for attempt in range(1, args.loop + 1):
         run_id = None
         if not args.no_save:
-            r = rest("POST", "redteam_runs", [{"note": f"auto attempt {attempt}"}])
+            r = rest("POST", "redteam_bank_runs", [{"note": f"auto attempt {attempt}"}])
             run_id = r[0]["id"] if isinstance(r, list) and r else None
+            if not run_id:
+                # 조용히 넘어가면 이력이 안 쌓이는 걸 몇 회차 동안 모른다(실제로 그랬다).
+                print(f"⚠️ 실행 이력 기록 실패 — 결과가 저장되지 않는다: {str(r)[:200]}")
 
         with cf.ThreadPoolExecutor(args.jobs) as ex:
             out = list(ex.map(run_case, cases))
@@ -350,7 +353,7 @@ def main():
                      "failures": f, "transcript": [{"u": u, "a": r} for u, r, _ in t]}
                     for c, _, f, t in out]
             rest("POST", "redteam_results", rows)
-            rest("PATCH", "redteam_runs",
+            rest("PATCH", "redteam_bank_runs",
                  {"finished_at": "now()", "total": len(out), "passed": len(passed), "failed": len(failed)},
                  params=f"?id=eq.{run_id}")
 
