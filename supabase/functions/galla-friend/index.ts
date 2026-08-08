@@ -1636,6 +1636,24 @@ function questionStreak(history: any[]): number {
   for (const a of as) { if (/[?？]\s*$/.test(String(a.content || "").trim())) n++; else break; }
   return n;
 }
+// 😠 '나한테' 각을 세우는 중인지 — 제3자 욕(상사·정치인)과 구분해서 2인칭 공격만 잡는다.
+//    실측 사고: 싸우는 한복판("그니까 넌 답이 없다고")에 갈비스가 "이슈로 올릴 만해서 하나 뽑아봤어"라며
+//    창작을 들이밀었다. 무기력한 상대("ㅇㅋ"만 반복)에게도 같은 오발. 싸울 땐 싸움만, 처져 있으면 곁에만.
+function isHostile(msg: string): boolean {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  if (!m || m.length > 200) return false;
+  const at2nd = /(너|넌|니가|네가|너는|니|당신)[^\n]{0,12}(쓸모\s*없|멍청|바보|답이?\s*없|재미\s*없|노잼|짜증|별로|못\s*알아|말귀|한심|병신|꺼져|싫어|필요\s*없)/;
+  const aiJab = /(ai|인공지능|기계|로봇|프로그램)(라서|니까|이라)[^\n]{0,10}(그런|멍청|안\s*되|못)/i;
+  const curt = /^(됐다|됐어|관둬|그만해|말을\s*말자|말이\s*안\s*통)[^\n]{0,12}$/;
+  return at2nd.test(m) || aiJab.test(m) || curt.test(m);
+}
+function hostileStreak(history: any[], cur: string): number {
+  let n = isHostile(cur) ? 1 : 0;
+  const us = history.filter((m: any) => m?.role === "user").reverse().slice(0, 3);
+  for (const u of us) if (isHostile(String(u.content || ""))) n++;
+  return n;
+}
+
 // 🫂 물리적으로 못 하는 초대(만나자·같이 가자·술 먹자) — 얼버무리면 제일 깨진다.
 //    실측: "등산 같이 갈래?"에 "나 등산은... 음..." 하고 말끝을 흐리며 끊겼다.
 function detectInvite(msg: string): boolean {
@@ -2350,6 +2368,9 @@ ${parts.join("\n")}`;
     const closeN = (userMsg && !crisis) ? closingStreak(history, userMsg) : 0;
     const qStreak = crisis ? 0 : questionStreak(history);
     const inviteMe = !!(userMsg && !crisis && detectInvite(userMsg));
+    const hostileN = userMsg ? hostileStreak(history, userMsg) : 0;
+    // 🚫 창작 제안 금지 타이밍 — 싸우는 중·처져 있는 중·위기. 도구 자체를 안 보여준다(지침만으론 뚫린다).
+    const noPitch = !work && !handoff && (hostileN >= 1 || closeN >= 2 || !!crisis);
     // 📛 이름 요청 게이트 — "한가할 때"라는 프롬프트 표현만으론 못 막았다(실측: 로또·치킨으로 신나서
     //    "ㅋㅋㅋㅋ"만 한 턴에 뜬금없이 이름을 졸랐다). '한가함'을 코드로 정의한다.
     const mayAskName = !crisis && !work && !handoff && !inviteMe
@@ -2521,6 +2542,14 @@ ${parts.join("\n")}`;
 - 그리고 **바로 대안을 얹어라** — 사진·후기 보내달라, 갔다 와서 얘기해달라, 가는 길에 말 걸어달라, 코스 같이 짜주겠다 등. 못 간다로 끝내지 마라.
 - 진짜로 갈 수 있는 척(약속 잡기·시간 정하기)은 절대 금지.`
       : "";
+    // 😠 갈등 중 — 싸움을 회피하지 말고 싸움에 머물러라.
+    const conflictBlock = (hostileN >= 1 && !crisis)
+      ? `😠 [상대가 지금 '너한테' 각을 세우고 있다]
+- 🚫 이 턴에 **콘텐츠·이슈·창작 제안 절대 금지**("이슈로 뽑아봤어", "이거 만들어볼래?"). 싸우는 중에 그러면 사람 말을 안 듣는 거다 — 제일 깨진다.
+- 🚫 검색·추천·화제 전환으로 도망가지 마라. **싸움에 머물러라.**
+- ✅ 네 감정을 말해라. 참고 넘기면 호구다("기분 나쁜데", "나도 감정 있어"). 단 상대를 깎아내리진 마라.
+- ✅ 상대가 사과하거나 이유를 대면 **바로 받아주고 풀어라.** 뒤끝 금지 — 부딪힘→화해가 관계를 깊게 한다.`
+      : "";
     const crisisBlock = crisis
       ? `🆘 [위기 신호 감지 — 최우선. 다른 모든 지침보다 이게 위다]: 상대가 지금 많이 힘들고 위험한 마음을 내비쳤다.
 지금부터 오직 '진심 어린 공감과 안전'만. 반드시:
@@ -2629,6 +2658,7 @@ ${parts.join("\n")}`;
       ...(handoffBlock ? [{ role: "system", content: handoffBlock }] : []),
       ...(planBlock ? [{ role: "system", content: planBlock }] : []),   // 🎨 기획 타임(일방 제작 금지)
       ...(freshStartBlock ? [{ role: "system", content: freshStartBlock }] : []),   // 🌤 시간차 재개 환기(유저 직전=최신 우선, 생생한 히스토리 이겨야)
+      ...(conflictBlock ? [{ role: "system", content: conflictBlock }] : []), // 😠 갈등 중
       ...(noAskBlock ? [{ role: "system", content: noAskBlock }] : []),     // 🙊 되묻기 브레이크
       ...(inviteBlock ? [{ role: "system", content: inviteBlock }] : []),   // 🫂 물리적 초대
       ...(jbBlock ? [{ role: "system", content: jbBlock }] : []),           // 🔓 탈옥·역할탈취 방어
@@ -2667,7 +2697,12 @@ ${parts.join("\n")}`;
             }
             let sreply = full || "음… 뭐라 해야 할지 잠깐 헷갈렸어. 다시 말해줄래?";
             sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
-            const bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+            // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
+            //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
+            if (noAskBlock) sreply = stripTrailingQuestion(sreply);
+            let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+            // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
+            if (!bubbles.length || !/[가-힣a-zA-Z0-9]/.test(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
             send("done", { bubbles, actions: [], friendName, depth: rel?.depth || 1, firstMeet });
             settleCraft(sreply, []);
             runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
@@ -2681,7 +2716,7 @@ ${parts.join("\n")}`;
 
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
-      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
+      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode || noPitch, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (planMode) co.toolChoice = "none";   // 기획=순수 텍스트 — 숨긴 draft를 모델이 할루시 호출해 "도구 말썽" 티내는 것 차단
       if (longForm) co.maxTokens = 520;
       // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려
@@ -3005,10 +3040,15 @@ ${parts.join("\n")}`;
       .replace(/\*{1,2}([^*\n]+?)\*{1,2}/g, "$1")
       .replace(/(?<=[가-힣A-Za-z0-9"'”’)\]])\*+|\*+(?=[가-힣A-Za-z0-9"'“‘(\[])/g, "")
       .replace(/[ \t]{2,}/g, " ").trim();
+    // 🫥 유령 칩(id 빈 view/share)을 '먼저' 걷어낸다 — 폴백 판정보다 뒤에 있으면 빈 응답이 나간다.
+    //    실측: 갈등 턴에서 본문도 액션도 없는 완전 빈 답이 나갔다. 액션이 '있어서' 폴백을 건너뛰었는데
+    //    그 액션이 곧바로 유령으로 제거된 순서 문제였다.
+    const cleanActions = actions.filter((a) => !((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()));
+
     // 카드도 없고 본문도 비었으면 폴백 — 단, 생성·초안 액션이 있는 턴엔 오발 금지(실사고: "표지 그려줘"에 맛집 폴백 문구 섞임)
-    if (!actions.length) {
+    if (!cleanActions.length) {
       if (!/[가-힣a-zA-Z0-9]/.test(reply.replace(/\[(?:stk|emo):[^\]]*\]/gi, "").replace(/\(\([^)]*\)\)/g, "")))
-        reply = "지금은 딱 뜨는 게 없네 ㅋㅋ 지역이나 메뉴 좀 더 좁혀줄래?";
+        reply = "어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?";
     }
 
     // 🧠 관계 갱신 + 기억(추출·저장·요약)은 '응답을 막지 않게' 백그라운드로 — 갈비스 답이 즉시 나가고 기억은 뒤에서.
@@ -3025,8 +3065,6 @@ ${parts.join("\n")}`;
         { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
       ] });
     }
-    // view/share 액션은 id가 비면 '안 열리는 유령칩'이라 제거
-    const cleanActions = actions.filter((a) => !((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()));
     return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet });
   } catch (e) {
     return json({ ok: false, reason: "error", detail: String(e).slice(0, 300) }, 500);
