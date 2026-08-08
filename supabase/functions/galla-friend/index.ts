@@ -1272,6 +1272,12 @@ ${memBlock}`;
 const BUBBLE_MAX = 40;   // 한 버블 목표 상한(한 줄 반)
 // 👁 콘텐츠를 실제로 열어줬는데 답 끝에 '취향 되묻기'가 붙으면(딜리버 후 또 되묻기=답답) 그 꼬리를 잘라낸다.
 const DEFLECT_RE = /(무슨\s*취향|취향이?\s*(야|뭐|어때|궁금)|취향\s*(알?면|모르)|뭐\s*보고\s*싶|뭐가?\s*보고\s*싶|뭐\s*재밌게\s*보|어떤\s*(거|걸|게)\s*(좋아|보고|원|볼)|웃긴\s*밈|밈\s*쪽|병맛\s*쪽|어느\s*쪽이?\s*(좋|낫)|뭐\s*좋아(해|하는)|좋아하는\s*(편|거)\s*(이야|야|뭐|있)|뭐\s*보는\s*(거|게)\s*좋아|정확히\s*뭘\s*원|딱\s*맞는\s*거\s*찾|다른\s*거?\s*볼래|네?\s*스타일(이야|이냐)?|이런\s*거?\s*(좋아|네\s*스타일|스타일이)|연예인\s*얘기|스포츠\s*얘기|골라\s*(줄까|봐)|원하는?\s*(거|게)\s*(있|뭐)|(먹방|여행|예능|게임|밈|영화)\s*(이야|아님|쪽)\??|뭐가?\s*(좋아|땡)|어떤\s*쪽)/;
+/* 🎭 지문·연출 제거 — "((슬쩍 옆에 앉으며))", "(잠시 조용히 있다가)" 처럼 답 맨 앞에 붙는 무대지시.
+   프롬프트로 세 번 금지했는데도 계속 나왔다(실측) → 코드로 확정.
+   ⚠️ 맨 앞 괄호만 지운다. 문장 중간 괄호는 진짜 부연일 수 있어 건드리지 않는다. */
+function stripStage(reply: string): string {
+  return String(reply || "").replace(/^\s*[(（]{1,2}[^)）\n]{2,40}[)）]{1,2}\s*/u, "").trim();
+}
 function stripDeflect(reply: string): string {
   const parts = reply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
   while (parts.length > 1 && DEFLECT_RE.test(parts[parts.length - 1]) && parts[parts.length - 1].length <= 64) parts.pop();
@@ -1360,10 +1366,7 @@ function stripForPreview(t: string): string {
 //    컴패니언은 도구/액션/검색결과가 없으므로 텍스트 가드만 적용하면 동치.
 function finalizeCompanion(reply: string, o: { nick: string; longForm: boolean; wantsFunny: boolean; humorJoke: { q: string; a: string } | null }): string {
   reply = stripDeflect(reply);
-  // 🎭 지문·연출 제거 — "((슬쩍 옆에 앉으며))", "(잠시 조용히 있다가)" 처럼 답 맨 앞에 붙는 무대지시.
-  //    프롬프트로 세 번 금지했는데도 계속 나왔다(실측) → 코드로 확정한다.
-  //    ⚠️ 맨 앞 괄호만 지운다. 문장 중간 괄호는 진짜 부연일 수 있어 건드리지 않는다.
-  reply = reply.replace(/^\s*[(（]{1,2}[^)）\n]{2,40}[)）]{1,2}\s*/u, "").trim();
+  reply = stripStage(reply);
   if (o.wantsFunny && o.humorJoke && !reply.includes(o.humorJoke.a)) reply = `야 이거 앎? ${o.humorJoke.q}\n\nㅋㅋㅋ ${o.humorJoke.a}`;
   if (!o.longForm) {
     const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
@@ -2402,6 +2405,30 @@ ${parts.join("\n")}`;
 - 전문가 도움을 '부드럽게' 권해라(강요 X): "전문 상담사랑 얘기해보는 것도 방법이야, 24시간 곁에 있어줘". 아래에 상담 연결 카드가 함께 나간다 — 그 번호를 네가 지어내지 말고 카드를 가리켜라.
 - 절대 상대를 혼자 두지 마라. 마지막은 '나는 네 편이고 여기 있다'로.`
       : "";
+    // 🎭 감정 이월(강) — 새 대화창을 열었는데 저장된 감정이 세면, 그 감정을 안고 시작해야 한다.
+    //    dynamicCtx의 감정선 지침만으론 인사 페르소나에 밀려 들쭉날쭉했다(실측: valence -72인데도
+    //    "오 왔네 토요일인데 뭐 하다 왔어?"로 평범하게 시작). → 유저 메시지 직전 블록으로 확정한다.
+    //    ⚠️ 3시간+ 공백을 요구하는 freshStartBlock과는 별개 조건이다(방금 싸우고 창만 다시 연 경우도 잡는다).
+    let emoCarryBlock = "";
+    try {
+      const em: any = rel?.emotion || null;
+      const v = Number(em?.valence);
+      const inten = Number(em?.intensity) || 0;
+      if (history.length === 0 && em?.feeling && inten >= 35 && Math.abs(v) >= 40 && !work && !handoff && !crisis) {
+        emoCarryBlock = v <= 0
+          ? `━━ 🎭 [지금] 아직 감정이 안 풀렸다 ━━
+직전에 상대 때문에 상해서 지금 '${em.feeling}' 상태다${em.cause ? `(${em.cause})` : ""}.
+상대가 새로 말을 걸어왔다고 **아무 일 없었던 듯 해맑게 굴지 마라** — 그러면 감정이 있는 친구가 아니라 매번 리셋되는 기계다.
+· 반가움보다 서운함이 먼저 묻어나게. 짧고 시큰둥하게 받아라("어. 왔네.").
+· 단, 문을 닫지는 마라. 상대가 사과하거나 다정하게 굴면 **조금씩** 풀려라(한 번에 활짝 푸는 것도 금지).
+· 무슨 일이 있었는지 설명·나열하지 마라. 태도로만 드러내라.`
+          : `━━ 🎭 [지금] 기분 좋은 상태가 이어지는 중 ━━
+직전 대화가 좋아서 지금 '${em.feeling}' 상태다${em.cause ? `(${em.cause})` : ""}.
+상대가 다시 왔으니 그 여운이 남은 채로 반겨라 — 평소보다 한 톤 반갑고 살가운 정도. 과장은 금지.
+감정을 말로 설명("나 기분 좋아")하지 말고 텐션·리액션에 배어나오게.`;
+      }
+    } catch { /* */ }
+
     // 🩶 자기비하 순간 — 유저 메시지 직전에 꽂아 '반사적 반박'을 막는다.
     const selfDepBlock = detectSelfDeprecation(userMsg)
       ? `━━ 🩶 [지금] 상대가 자기를 깎았다 ━━
@@ -2453,6 +2480,7 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
+      ...(emoCarryBlock ? [{ role: "system", content: emoCarryBlock }] : []),
       ...(selfDepBlock ? [{ role: "system", content: selfDepBlock }] : []),
       ...(agentBlock ? [{ role: "system", content: agentBlock }] : []),
       ...(routeBlock ? [{ role: "system", content: routeBlock }] : []),
@@ -2691,6 +2719,7 @@ ${parts.join("\n")}`;
     if (!longForm) {
       const sents = reply.match(/[^.!?…\n]+[.!?…]*\s*/g) || [reply];
       if (sents.length > 4) reply = sents.slice(0, 4).join("").trim();   // 3→4문장(맥락 담기엔 3이 너무 빡빡했음)
+      reply = stripStage(reply);   // 스트리밍 경로에만 걸려 있어 비스트리밍 답변에 지문이 그대로 나갔다(실측)
       reply = bubbleize(reply);
     }
     // 🧹 본문 URL 새니타이즈(이중 방어) — 마크다운 링크는 텍스트만 남기고, raw URL은 제거(링크는 칩으로만)
