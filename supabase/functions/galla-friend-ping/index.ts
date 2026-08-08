@@ -30,7 +30,14 @@ async function genPing(nick: string, name: string, mems: { kind: string; content
         model: MODEL, temperature: 0.9, max_tokens: 60,
         messages: [
           { role: "system", content: `너는 '${name}'(갈라의 AI 친구). ${nick || "친구"}한테 먼저 카톡 보내듯 짧은 선톡 '한 줄'을 쓴다.
-규칙: 반말, 1문장(최대 2문장), 이모지 X, 비서멘트 X. 기억에 일·약속(면접·시험 등)이 있으면 그 안부를 물어라("면접 어떻게 됐어? 궁금해서 ㅋㅋ"). 없으면 가볍게("야 살아있냐 ㅋㅋ 요즘 뭐함"). 무겁고 부정적인 건(싫은사람·힘든일) 먼저 꺼내지 마라. URL·링크 금지.
+규칙: 반말, 1문장(최대 2문장), 이모지 X, 비서멘트 X, URL·링크 금지.
+· 기억에 일·약속·하다 만 얘기가 있으면 **그걸 콕 집어** 물어라(면접·시험·이사·새로 시작한 것 등).
+· 기억에 관심사·취향이 있으면 그걸 실마리로 걸어라(예: 클라이밍을 시작했다면 그 근황).
+· 무겁고 부정적인 건(싫은 사람·힘든 일) 먼저 꺼내지 마라.
+⚠️ **아래 보기를 글자 그대로 베끼지 마라** — 여러 사람에게 똑같은 문자가 가면 봇 티가 난다.
+   말투 감만 잡고 이 사람한테만 맞는 문장을 새로 써라. 기억이 하나도 없을 때만 안부형으로 가되,
+   그때도 표현은 매번 다르게(살아있냐/뭐하고 지내/얼굴 잊겠다/요즘 조용하네… 식으로 매번 새로).
+보기(베끼지 말 것): "면접 어떻게 됐어? 궁금해서 ㅋㅋ" / "야 살아있냐 ㅋㅋ 요즘 뭐함"
 기억:\n${memTxt}` },
           { role: "user", content: "선톡 한 줄 생성" },
         ],
@@ -69,11 +76,17 @@ Deno.serve(async (req) => {
       // 닉 + 기억(팔로업 우선, 다음 관심사)
       const [{ data: u }, { data: fu }, { data: core }] = await Promise.all([
         sb.from("users").select("nickname").eq("id", uid).maybeSingle(),
+        // 📌 팔로업 — 실제로 쌓이는 kind에 맞춘다. open_loop(하다 만 얘기)가 56건으로 두 번째로 많은데
+        //    조회에서 빠져 있었다. 선톡은 원래 "그거 어떻게 됐어?"가 제일 자연스럽다.
         sb.from("friend_memory").select("kind,content").eq("user_id", uid).eq("status", "active")
-          .in("kind", ["event", "promise"]).gte("created_at", new Date(Date.now() - 10 * 86400000).toISOString())
+          .in("kind", ["event", "promise", "open_loop"]).gte("created_at", new Date(Date.now() - 10 * 86400000).toISOString())
           .order("created_at", { ascending: false }).limit(2),
+        // 📌 코어 — preference/profile만 보던 탓에 개인화가 거의 불가능했다(실측: preference 2건 vs interest 61건).
+        //    가장 많이 쌓이는 interest를 포함한다. disliked(싫은 사람·힘든 일)는 의도적으로 제외 —
+        //    먼저 거는 말에 부정적인 걸 꺼내면 안 된다.
         sb.from("friend_memory").select("kind,content").eq("user_id", uid).eq("status", "active")
-          .in("kind", ["preference", "profile"]).order("salience", { ascending: false }).limit(2),
+          .in("kind", ["interest", "preference", "profile", "person", "job", "fact"])
+          .order("salience", { ascending: false }).limit(3),
       ]);
       const ping = await genPing(u?.nickname || "", rel.friend_name || "갈비스", [...(fu || []), ...(core || [])]);
       if (!ping) continue;
