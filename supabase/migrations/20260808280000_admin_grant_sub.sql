@@ -8,7 +8,7 @@ create or replace function public.admin_grant_subscription(
 returns jsonb language plpgsql security definer set search_path to 'public' as $$
 declare v_base timestamptz; v_exp timestamptz;
 begin
-  if not exists (select 1 from users where id = auth.uid() and coalesce(admin_flag, false)) then
+  if not _is_admin() then
     return jsonb_build_object('ok', false, 'reason', 'forbidden');
   end if;
   if p_tier is null then                      -- 회수: 즉시 만료

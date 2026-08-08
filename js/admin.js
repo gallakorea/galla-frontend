@@ -82,7 +82,7 @@
     const paint = async () => { const d = await rpc("admin_traffic"); const el = $("#ad-online"); if (el && d?.ok) el.innerHTML = `<span class="dotlive"></span> 실시간 ${fmt(d.realtime)}명`; };
     paint(); setInterval(paint, 60000);
   }
-  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps };
+  const MODS = { dashboard: renderDashboard, content: renderContent, members: renderMembers, reports: renderReports, tips: renderTips, bugs: renderBugs, bughunter: renderBugHunter, errors: renderErrors, settle: renderSettle, support: renderSupport, brain: renderBrain, upload: renderUpload, ops: renderOps, margin: renderMargin };
   function route(mod) { (MODS[mod] || renderDashboard)(); }
   // 사이드바 하이라이트 동기화 + 라우팅 (대시보드 카드 클릭 등에서 사용)
   function navTo(mod) {
@@ -1172,6 +1172,54 @@
   }
 
   // ─────────── 운영·감사 ───────────
+
+  /* 💰 AI 원가·마진 — "얼마 벌어서 얼마 태우고 얼마 남았나"를 한 화면에.
+     원가만 보면 판단이 안 된다(많이 쓰는 게 나쁜 게 아니라, 매출 대비 많이 쓰는 게 문제).
+     모델별·유저별을 같이 보여주는 이유: 돈이 새는 지점과 남용 계정을 눈으로 잡기 위해. */
+  let marginDays = 30;
+  async function renderMargin() {
+    main().innerHTML = `<h1 class="ad-h1">💰 AI 원가·마진</h1>
+      <div class="ad-card"><div class="ad-card-h">기간
+        <span style="float:right">${[7, 30, 90].map(d => `<button class="ad-btn${d === marginDays ? " primary" : ""}" data-days="${d}">${d}일</button>`).join(" ")}</span>
+      </div><div id="mg-sum"><div class="ad-loading">불러오는 중…</div></div></div>
+      <div class="ad-card"><div class="ad-card-h">등급별</div><div id="mg-tier"></div></div>
+      <div class="ad-grid2">
+        <div class="ad-card"><div class="ad-card-h">모델별 원가</div><div id="mg-model"></div></div>
+        <div class="ad-card"><div class="ad-card-h">원가 상위 유저</div><div id="mg-top"></div></div>
+      </div>`;
+    main().querySelectorAll("[data-days]").forEach(b => b.onclick = () => { marginDays = Number(b.dataset.days); renderMargin(); });
+
+    const d = await rpc("admin_ai_margin", { p_days: marginDays });
+    if (!d || !d.ok) { $("#mg-sum").innerHTML = `<div class="ad-soon">권한이 없거나 불러오지 못했어요.</div>`; return; }
+
+    const w = n => fmt(Math.round(n || 0)) + "원";
+    const sign = n => (n >= 0 ? "" : "-") + w(Math.abs(n));
+    // 마진율이 음수면 그 자체가 경보다 — 색으로 즉시 구분되게.
+    const neg = d.total_margin_krw < 0;
+    $("#mg-sum").innerHTML = `<div class="ad-kpis k3">
+      <div class="ad-kpi"><div class="ad-kpi-l">매출(실수령 추정)</div><div class="ad-kpi-v">${w(d.total_revenue_krw)}</div></div>
+      <div class="ad-kpi"><div class="ad-kpi-l">AI 원가</div><div class="ad-kpi-v">${w(d.total_cost_krw)}</div></div>
+      <div class="ad-kpi"><div class="ad-kpi-l">마진</div><div class="ad-kpi-v" style="color:${neg ? "#ff6b6b" : "#5fd8ff"}">${sign(d.total_margin_krw)}${d.total_margin_pct != null ? ` <small>(${d.total_margin_pct}%)</small>` : ""}</div></div>
+    </div>${neg ? `<div class="ad-note" style="color:#ff9c9c;margin-top:10px">⚠️ 원가가 매출을 넘었어요. app_settings의 ai_tiers 한도 또는 ai_margin.ai_share를 조정하세요.</div>` : ""}`;
+
+    const tiers = d.by_tier || [];
+    $("#mg-tier").innerHTML = `<table class="ad-table"><thead><tr><th>등급</th><th>인원</th><th>호출</th><th>원가</th><th>매출</th><th>마진</th></tr></thead><tbody>
+      ${tiers.map(t => `<tr><td><span class="ad-tag">${esc(t.tier)}</span></td><td>${fmt(t.users)}</td><td>${fmt(t.calls)}</td>
+        <td>${w(t.cost_krw)}</td><td>${w(t.revenue_krw)}</td>
+        <td style="color:${t.margin_krw < 0 ? "#ff6b6b" : "inherit"}">${sign(t.margin_krw)}${t.margin_pct != null ? ` (${t.margin_pct}%)` : ""}</td></tr>`).join("")}
+    </tbody></table>`;
+
+    const bm = d.by_model || [];
+    $("#mg-model").innerHTML = bm.length ? `<table class="ad-table"><thead><tr><th>모델</th><th>호출</th><th>원가</th></tr></thead><tbody>
+      ${bm.map(m => `<tr><td>${esc(m.model)}</td><td>${fmt(m.calls)}</td><td>${w(m.cost_krw)}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="ad-soon">기록이 없어요.</div>`;
+
+    const tu = d.top_users || [];
+    $("#mg-top").innerHTML = tu.length ? `<table class="ad-table"><thead><tr><th>회원</th><th>등급</th><th>호출</th><th>원가</th></tr></thead><tbody>
+      ${tu.map(u => `<tr><td>${esc(u.nickname || "-")}</td><td><span class="ad-tag">${esc(u.tier)}</span></td><td>${fmt(u.calls)}</td><td>${w(u.cost_krw)}</td></tr>`).join("")}</tbody></table>`
+      : `<div class="ad-soon">기록이 없어요.</div>`;
+  }
+
   async function renderOps() {
     main().innerHTML = `<h1 class="ad-h1">⚙️ 운영·감사</h1>
       <div class="ad-grid2">

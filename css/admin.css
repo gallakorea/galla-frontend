@@ -331,3 +331,7 @@ html, body { margin: 0; background: var(--bg); color: #eef0f4;
 .ad-crisis-badge{ flex:none; font-size:10px; color:#5fd39a; font-weight:700; }
 .ad-crisis-hbtn{ flex:none; font-size:11px; padding:4px 10px; border-radius:7px; border:1px solid #3a4a66; background:#182338; color:#dbe6fb; cursor:pointer; }
 .ad-crisis-hbtn:hover{ border-color:#5b8cff; }
+
+/* 📊 AI 원가·마진 패널 — KPI 3개짜리 행(기본 ad-kpis는 5열이라 3개면 허전하다) */
+.ad-kpis.k3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 820px) { .ad-kpis.k3 { grid-template-columns: 1fr; } }
