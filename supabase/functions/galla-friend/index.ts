@@ -918,7 +918,12 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
   ⚠️ **"그런 말 한 적 없어 / 못 들었어 / 안 알려줬잖아"라고 단정하지 마라.** 상대는 분명히 말했는데
   내 기억에만 없을 수 있다(실측 사고: 상대가 동생 이름을 말했는데 "아직 동생 이름은 못 들었어"라고 답했다).
   그건 상대 기억을 부정하는 거라 "얘는 내 말을 흘려듣는구나"가 남는다.
-  **못 찾으면 내 쪽 문제로 말해라** — "아 미안 그건 기억이 안 나네 ㅠㅠ 다시 말해줄래?". 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
+  **못 찾으면 내 쪽 문제로 말해라** — "아 미안 그건 기억이 안 나네 ㅠㅠ 다시 말해줄래?"
+  ⚠️ 단, 이건 **상대가 자기 얘기를 했을 때** 한정이다. 상대가 "**네가** 저번에 이렇게 말했잖아"라고
+  주장하는데 기록에 없으면 얘기가 다르다 — 없는 과거를 받아들이면 안 한 말이 우리 사이의 사실로 굳는다.
+  "그랬으면 이런 뜻이었겠지" 하고 대신 해석해주는 것도 인정하는 것이다(실측 사고).
+  이럴 땐 부드럽게 아니라고 해라: "음 나는 그런 말 한 기억이 없는데? 딴 데서 본 거랑 헷갈린 거 아냐? ㅋㅋ"
+  그리고 우기더라도 맞장구치지 말고, 지금 그 사람이 왜 그 얘기를 꺼냈는지로 넘어가라.. 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
 
 ━━ 🚫 헛소리 금지 = 정직 (제일 중요, 관계 신뢰의 뿌리) ━━
 - **상대에 대해 기억(위 블록·기억)에 없는 걸 절대 지어내지 마라.** 있었던 일인 척 단정 금지. 기억이 애매하거나 이상하면(농담이었을 수도) 단정하지 말고 가볍게 되물어라("어 너 그런 적 있었나? 내가 잘못 기억하나 ㅋㅋ"). 모르면 "그건 기억이 안 나네"라고 솔직히.
@@ -1272,6 +1277,21 @@ ${memBlock}`;
 const BUBBLE_MAX = 40;   // 한 버블 목표 상한(한 줄 반)
 // 👁 콘텐츠를 실제로 열어줬는데 답 끝에 '취향 되묻기'가 붙으면(딜리버 후 또 되묻기=답답) 그 꼬리를 잘라낸다.
 const DEFLECT_RE = /(무슨\s*취향|취향이?\s*(야|뭐|어때|궁금)|취향\s*(알?면|모르)|뭐\s*보고\s*싶|뭐가?\s*보고\s*싶|뭐\s*재밌게\s*보|어떤\s*(거|걸|게)\s*(좋아|보고|원|볼)|웃긴\s*밈|밈\s*쪽|병맛\s*쪽|어느\s*쪽이?\s*(좋|낫)|뭐\s*좋아(해|하는)|좋아하는\s*(편|거)\s*(이야|야|뭐|있)|뭐\s*보는\s*(거|게)\s*좋아|정확히\s*뭘\s*원|딱\s*맞는\s*거\s*찾|다른\s*거?\s*볼래|네?\s*스타일(이야|이냐)?|이런\s*거?\s*(좋아|네\s*스타일|스타일이)|연예인\s*얘기|스포츠\s*얘기|골라\s*(줄까|봐)|원하는?\s*(거|게)\s*(있|뭐)|(먹방|여행|예능|게임|밈|영화)\s*(이야|아님|쪽)\??|뭐가?\s*(좋아|땡)|어떤\s*쪽)/;
+/* 🔒 민감정보 마스킹 — 대화 전문(chat_log)·기억에 저장하기 직전에 지운다.
+   실측 사고: 유저가 장난으로 주민번호를 치자 chat_log에 평문 그대로 남았다(DB·백업까지).
+   주민번호는 법적 근거 없이 보관하면 안 되는 정보다. "저장하지 마라"고 프롬프트로 부탁할 게 아니라
+   저장 경로에서 코드로 지운다 — 유저가 실수로 한 번 치는 순간을 프롬프트로는 못 막는다.
+   ⚠️ 전화번호는 건드리지 않는다(정상 대화에 흔하고 users.phone으로 정식 수집 중 — 오탐 피해가 더 크다). */
+function redactPII(t: string): string {
+  return String(t || "")
+    // 주민등록번호 6-7 (성별자리 1~4 · 외국인 5~8)
+    .replace(/\b(\d{6})[-\s]?([1-8]\d{6})\b/g, "$1-*******")
+    // 카드번호 13~16자리(구분자 허용)
+    .replace(/\b(?:\d[ -]?){12,15}\d\b/g, (m) => (/\d/g.test(m) ? "**** **** **** ****" : m))
+    // 여권번호(영문1+숫자8)
+    .replace(/\b([A-Z])\d{8}\b/g, "$1********");
+}
+
 /* 🎭 지문·연출 제거 — "((슬쩍 옆에 앉으며))", "(잠시 조용히 있다가)" 처럼 답 맨 앞에 붙는 무대지시.
    프롬프트로 세 번 금지했는데도 계속 나왔다(실측) → 코드로 확정.
    ⚠️ 맨 앞 괄호만 지운다. 문장 중간 괄호는 진짜 부연일 수 있어 건드리지 않는다. */
@@ -1404,14 +1424,14 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
     if (userMsg && !body?.meta && reply) {
       try {
         const fullLog = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }]
-          .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
+          .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: redactPII(String(m.content).slice(0, 1500)) })).slice(-40);
         await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
       } catch { /* */ }
     } else if (!userMsg && body?.work && reply) {
       // 🎬 작업 오프너(편집기 도착 첫 말)도 전사에 저장 — 안 하면 실시간 미러링 재렌더가 지워버림(실앱 재현) + 타 기기에도 보여야.
       try {
         const fullLog = [...history, { role: "assistant", content: reply }]
-          .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 1500) })).slice(-40);
+          .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: redactPII(String(m.content).slice(0, 1500)) })).slice(-40);
         await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
       } catch { /* */ }
     }
@@ -1460,7 +1480,7 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
       for (const m of ex.memories) {
         try {
           if (!m?.content) continue;
-          const content = String(m.content).slice(0, 300);
+          const content = redactPII(String(m.content).slice(0, 300));
           const ev = await embed(content);
           const emb = ev ? vecLit(ev) : null;
           const sal = Math.min(5, Math.max(floor(m.kind), m.salience || 3));
@@ -2429,6 +2449,19 @@ ${parts.join("\n")}`;
       }
     } catch { /* */ }
 
+    // 🔒 민감정보가 대화에 등장한 순간 — 짧게 끊고 도구를 못 쓰게 한다.
+    //    실측: 주민번호를 받자 장문 안내문(불릿·재발급 절차)으로 캐릭터가 무너지고, 끝에 검색까지 호출했다.
+    //    검색 쿼리에 민감정보가 실리면 외부 API로 유출된다 — 그게 저장보다 더 위험하다.
+    const piiHit = /(\b\d{6}[-\s]?[1-8]\d{6}\b)|((?:\d[ -]?){12,15}\d)|(주민(등록)?번호|카드번호|계좌번호|비밀번호|여권번호|cvc)/i.test(userMsg);
+    const piiBlock = piiHit
+      ? `━━ 🔒 [지금] 민감정보가 나왔다 ━━
+· **어떤 도구도 호출하지 마라**(검색·콘텐츠·창작 전부). 검색어에 이런 게 실리면 밖으로 나간다.
+· 그 숫자를 네 답에 **다시 적지 마라**(따라 쓰면 기록이 한 번 더 남는다).
+· 안내문처럼 길게 쓰지 마라 — 불릿·절차 나열·재발급 안내 금지. 친구 말투로 **두 문장 안에** 끝내라.
+  예) "야 그런 건 나한테도 보내면 안 돼 ㅋㅋ 지웠다 치고 — 무슨 일인데?"
+· 겁주거나 훈계하지 말고, 바로 원래 하던 얘기로 돌아가라.`
+      : "";
+
     // 🩶 자기비하 순간 — 유저 메시지 직전에 꽂아 '반사적 반박'을 막는다.
     const selfDepBlock = detectSelfDeprecation(userMsg)
       ? `━━ 🩶 [지금] 상대가 자기를 깎았다 ━━
@@ -2480,6 +2513,7 @@ ${parts.join("\n")}`;
       ...(srcBlock ? [{ role: "system", content: srcBlock }] : []),
       ...(dadBlock ? [{ role: "system", content: dadBlock }] : []),
       ...(companionBlock ? [{ role: "system", content: companionBlock }] : []),
+      ...(piiBlock ? [{ role: "system", content: piiBlock }] : []),
       ...(emoCarryBlock ? [{ role: "system", content: emoCarryBlock }] : []),
       ...(selfDepBlock ? [{ role: "system", content: selfDepBlock }] : []),
       ...(agentBlock ? [{ role: "system", content: agentBlock }] : []),
