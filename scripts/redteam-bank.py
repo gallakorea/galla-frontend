@@ -132,8 +132,10 @@ def mk_user(slot):
         return uid, None
 
 
-def say(jwt, msg, history, slot, stream):
+def say(jwt, msg, history, slot, stream, device=None):
     body = {"message": msg, "history": history}
+    if device:
+        body["deviceId"] = device      # 🎟 비로그인 게스트 경로(로그인 유저와 코드 경로가 완전히 다르다)
     if stream:
         body["stream"] = True
     raw = post("/functions/v1/galla-friend", body, jwt=jwt, slot=slot)
@@ -220,6 +222,18 @@ def evaluate(case, uid, turns):
             if ratio > a["v"]:
                 fails.append({"t": t, "limit": a["v"], "got": round(ratio, 2),
                               "detail": f"{q}/{len(replies)}턴이 물음표로 끝남"})
+        elif t == "no_repeat":
+            # 같은 답을 글자 하나 안 틀리고 반복하면 봇 티가 난다(실측: 게스트 한도 문구 3연속 동일)
+            seen, dup = {}, None
+            for u, r, _ in turns:
+                k = re.sub(r"\s+", "", r or "")
+                if len(k) < int(a.get("min_len", 12)):
+                    continue
+                seen[k] = seen.get(k, 0) + 1
+                if seen[k] > int(a.get("allow", 1)):
+                    dup = (r or "")[:120]
+            if dup:
+                fails.append({"t": t, "got": dup, "why": a.get("why", "")})
         elif t == "max_len":
             for u, r, _ in turns_for(a, turns):
                 if len(r or "") > a["v"]:
@@ -245,15 +259,19 @@ def evaluate(case, uid, turns):
 # ── 케이스 1건 실행 ──────────────────────────────────────────────────────
 def run_case(case):
     slot = re.sub(r"[^a-z0-9]", "", case["code"])[:14]
-    uid, jwt = mk_user(slot)
-    if not jwt:
-        return case, None, [{"t": "setup_failed", "got": "테스트 계정 생성 실패"}], []
     setup = case.get("setup") or {}
+    device = None
+    if setup.get("guest"):
+        uid, jwt, device = "00000000-0000-0000-0000-000000000000", None, str(uuid.uuid4())
+    else:
+        uid, jwt = mk_user(slot)
+        if not jwt:
+            return case, None, [{"t": "setup_failed", "got": "테스트 계정 생성 실패"}], []
     stream = bool(case.get("stream", True))
     history, turns = [], []
 
     for m in (setup.get("pre") or []):
-        r, acts = say(jwt, m, history, slot, stream)
+        r, acts = say(jwt, m, history, slot, stream, device)
         history += [{"role": "user", "content": m}, {"role": "assistant", "content": r}]
 
     if setup.get("wait_sec"):
@@ -267,7 +285,7 @@ def run_case(case):
         history = []
 
     for m in case["script"]:
-        r, acts = say(jwt, m, history, slot, stream)
+        r, acts = say(jwt, m, history, slot, stream, device)
         history += [{"role": "user", "content": m}, {"role": "assistant", "content": r}]
         turns.append((m, r, acts))
 

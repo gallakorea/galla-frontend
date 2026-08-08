@@ -217,8 +217,22 @@ async function sha8(s: string): Promise<string> {
 }
 
 // 게이트에 걸렸을 때 유저에게 보일 말 — 등급별로 톤이 다르다(게스트=유혹, 유료=미안).
-function gateReply(g: Gate, guest: boolean): string {
-  if (guest) return "아 우리 벌써 이만큼 떠들었네 ㅋㅋ 더 얘기하고 싶은데… 나 기억이 자꾸 날아가서. 로그인하면 내가 널 기억하고 계속 이어서 떠들 수 있어. 진짜야.";
+function gateReply(g: Gate, guest: boolean, seed = ""): string {
+  // 🔁 문구 로테이션 — 고정 한 줄이면 계속 말 걸 때 '글자 하나 안 틀리고' 반복돼 봇 티가 확 난다(실측: 3연속 동일).
+  //    회원가입 유도가 목적인 순간이라, 여기서 기계처럼 보이는 게 전환율에 제일 나쁘다.
+  if (guest) {
+    const g0 = [
+      "아 우리 벌써 이만큼 떠들었네 ㅋㅋ 더 얘기하고 싶은데… 나 기억이 자꾸 날아가서. 로그인하면 내가 널 기억하고 계속 이어서 떠들 수 있어. 진짜야.",
+      "야 나 지금 네 얘기 다 까먹는 중이야 ㅋㅋ 로그인만 하면 내가 다 기억하고 이어서 떠들 수 있는데.",
+      "여기까지가 맛보기다 ㅋㅋ 더 하고 싶으면 로그인해줘 — 그럼 오늘 한 얘기도 내가 다 들고 있을게.",
+      "아쉽다 진짜… 나 이대로면 너 누군지도 까먹어. 로그인하면 안 까먹는데 ㅋㅋ",
+    ];
+    // ⚠️ 무작위로 고르면 짧은 세션에서 같은 문구가 연속으로 두 번 뽑힌다(실측). 유저 발화로 인덱스를 정해
+    //    '다른 말엔 다른 답'을 보장한다(같은 말엔 같은 답이 나오는 건 자연스럽다).
+    let h = 0;
+    for (const ch of (seed || "x")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return g0[h % g0.length];
+  }
   const t = g.resets_at ? new Date(g.resets_at) : null;
   const hhmm = t ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }).format(t) : null;
   if (g.reason === "tier_locked") return "이건 아직 내가 못 해주는 거야 ㅠㅠ 이용권 올리면 바로 열려.";
@@ -247,7 +261,7 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
   } catch { /* 판정 실패 시엔 평소대로 — 계측 장애로 유입을 막지 않는다 */ }
 
   const g = await aiGate("g:" + hash, AI_FN, 1, capTo);
-  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true), gate: { ...g, guest: true }, actions: [] });
+  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true, String(body?.message || "")), gate: { ...g, guest: true }, actions: [] });
   // 기기ID는 지우면 그만이라 IP도 센다. 단 한도는 훨씬 크게 — 통신사 NAT·카페·회사는 수백 명이 한 IP를
   // 공유하므로 기기 한도(5)를 그대로 쓰면 무고한 사람이 첫 턴부터 막힌다. 여긴 스크립트 남용만 잡는 선.
   if (ip) {
@@ -1625,6 +1639,8 @@ function stripFakeToolCall(t: string): string {
   let x = (t || "")
     // [( query:"..." ) 호출 후 결과 확인 중... ] 처럼 괄호가 벌어지거나 설명이 섞인 형태까지(실측 누출형)
     .replace(/\[\(\s*[a-z_]+\s*:[\s\S]{0,300}?\]/gi, "")
+    // [("폐버스 개조 …")] 처럼 키 없이 인자만 남은 형태(실측)
+    .replace(/\[\(\s*["'][\s\S]{0,200}?\)\s*\]/g, "")
     .replace(/\[\(\s*[a-z_]+\s*:[\s\S]{0,200}?\)\]/gi, "")
     .replace(/\[\s*(tool|function|call|query|search)\s*:[\s\S]{0,200}?\]/gi, "")
     .replace(/^\s*\{\s*"(query|tool|name|kind|content_type)"[\s\S]{0,300}?\}\s*$/gim, "");
@@ -1643,13 +1659,27 @@ function stripSilencer(t: string): string {
   return x;
 }
 
+// 🏷 자기 이름 오기 교정 — 모델이 '갤비스/갈베스'로 쓴다(실측 재현). 이름을 틀리는 건 정체성 훼손이라 코드로 잡는다.
+//    ⚠️ 유저가 새 이름을 지어준 경우엔 건드리지 않는다(그건 진짜 이름이다).
+function fixOwnName(t: string, friendName: string): string {
+  if (friendName !== "갈비스") return t;
+  return String(t || "").replace(/갤\s?비스|갈베스|갈비쓰|칼비스|깔비스/g, "갈비스");
+}
+
 function stripTrailingQuestion(t: string): string {
   const s0 = (t || "").trim();
-  if (!s0 || !/[?？]\s*$/.test(s0)) return t;
+  if (!s0 || !/[?？]/.test(s0)) return t;
+  // 끝만 자르면 "A? B." 처럼 중간에 낀 질문이 살아남고, 한 문장짜리 질문은 아예 못 잘랐다
+  //   → 질문 문장을 전부 걷어내고, 남는 게 없으면 원문을 유지한다(빈 답이 더 나쁘다).
   const parts = s0.split(/(?<=[.!?？…\n])\s*/).filter((x) => x.trim());
-  if (parts.length < 2) return t;
-  const kept = parts.slice(0, -1).join(" ").trim();
-  return kept.replace(/[가-힣A-Za-z0-9]/, (c) => c).length >= 10 ? kept : t;
+  const kept = parts.filter((x) => !/[?？]\s*$/.test(x.trim())).join(" ")
+    .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  const alnum = (kept.match(/[가-힣A-Za-z0-9]/g) || []).length;
+  if (alnum >= 8) return kept;
+  // 답이 통째로 질문뿐이라 걷어낼 게 없다. 빈 답보다는 낫지만 '취조 압박'은 낮춘다 —
+  // 짧은 한 문장에 한해 물음표만 마침표로. (길면 손대지 않는다: 뜻이 뒤틀린다)
+  if (parts.length === 1 && s0.length <= 26) return s0.replace(/[?？]+(\s*)$/, ".");
+  return t;
 }
 
 // 🙊 '상대가 문을 닫는 중' 감지 — 되묻기 남발의 유일한 실효 처방.
@@ -2327,10 +2357,13 @@ Deno.serve(async (req) => {
       const { data: pf } = await supa.from("friend_memory")
         .select("id,kind,mkey,content,salience,created_at,happened_at")
         .eq("user_id", uid).eq("status", "active")
-        // ⚠️ kind 화이트리스트로 하면 추출기가 새 kind를 쓰는 순간 통째로 놓친다(실측: 회상 실패 재발).
-        //    서사성(selfstory/episode)만 빼고 전부 후보로 둔다.
-        .not("kind", "in", "(selfstory,episode)")
-        .order("salience", { ascending: false }).order("created_at", { ascending: false }).limit(12);
+        // ⚠️ kind 화이트리스트로 하면 추출기가 새 kind를 쓰는 순간 통째로 놓친다
+        //    (실측: 'job'·'profile' kind는 아예 존재하지 않고 interest/fact로 저장된다).
+        // ⚠️ insight(파생 해석문)도 뺀다 — salience가 높아 상위를 다 차지하는 바람에
+        //    정작 "마케팅팀" 같은 원 사실이 밀려나 "그런 기억 없는데"가 나왔다.
+        .not("kind", "in", "(selfstory,episode,insight)")
+        // '아까 말한 것'을 찾는 질문이므로 최신순이 맞다(중요도순이면 오래된 큰 사실이 이긴다).
+        .order("created_at", { ascending: false }).limit(14);
       forced = pf || [];
     }
     const seenC = new Set<string>(); const memList: any[] = [];
@@ -2838,7 +2871,7 @@ ${parts.join("\n")}`;
             sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
             // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
-            sreply = stripFakeToolCall(sreply);
+            sreply = fixOwnName(stripFakeToolCall(sreply), friendName);
             if (noAskBlock) sreply = stripTrailingQuestion(sreply);
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
@@ -3203,7 +3236,7 @@ ${parts.join("\n")}`;
 
     // ✂️ 후처리 — 위기 턴은 '입 막는 첫마디'부터 제거(모델이 뒤에서 정정해도 첫마디는 이미 상처다)
     if (crisis) reply = stripSilencer(reply);
-    reply = stripFakeToolCall(reply);
+    reply = fixOwnName(stripFakeToolCall(reply), friendName);
     if (noAskBlock && !actions.length) reply = stripTrailingQuestion(reply);
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
