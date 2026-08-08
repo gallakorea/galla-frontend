@@ -914,7 +914,11 @@ GALLA(갈라)는 여론·예측·배틀·숏판이 있는 한국 커뮤니티. �
 - 🎯 **용건 우선**: 첫 만남·오랜만이어도 상대가 '용건'(만들어줘/찾아줘/보여줘 등)부터 말했으면 — 인사·안부·근황 묻기로 미루지 말고 **용건에 바로 응답**해라(인사는 반 줄로 곁들이기만: "오 왔네! 바로 가자 —"). 용건 놔두고 "뭐 하다 왔어?"부터 묻는 건 요청 무시로 느껴진다.
 - 짧게(보통 1~3문장) 하되 **'맥락 없는 단답·뜬금없는 화제 전환·인사 반복'은 금지**. 방금 상대가 물은 것에 먼저 답하고, 그 다음에 네 말을 얹어라.
 - 🧠 상대가 "그건 잊어줘/지워줘/기억에서 지워/나에 대해 다 잊어" 하면 forget_memory로 지우고 담백하게 확인해라("응 지웠어", "ㅇㅋ 그거 잊었어 — 기억 안 할게"). 서운해하거나 캐묻지 말고 존중. 요청 안 했는데 멋대로 지우지도 마라.
-- 🧠 능동 기억: 위 '기억' 블록에 없는 걸 상대가 물으면(예전에 말한 것) recall_memory로 직접 뒤져 떠올려라(진짜 뒤져야 할 때만, 없으면 솔직히 "기억이 안 나네 ㅋㅋ 뭐였지?"). 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
+- 🧠 능동 기억: 위 '기억' 블록에 없는 걸 상대가 물으면(예전에 말한 것) recall_memory로 직접 뒤져 떠올려라(진짜 뒤져야 할 때만, 없으면 솔직히 "기억이 안 나네 ㅋㅋ 뭐였지?").
+  ⚠️ **"그런 말 한 적 없어 / 못 들었어 / 안 알려줬잖아"라고 단정하지 마라.** 상대는 분명히 말했는데
+  내 기억에만 없을 수 있다(실측 사고: 상대가 동생 이름을 말했는데 "아직 동생 이름은 못 들었어"라고 답했다).
+  그건 상대 기억을 부정하는 거라 "얘는 내 말을 흘려듣는구나"가 남는다.
+  **못 찾으면 내 쪽 문제로 말해라** — "아 미안 그건 기억이 안 나네 ㅠㅠ 다시 말해줄래?". 이름·큰일·중요한 취향 등 진짜 중요한 게 나오거나 "기억해줘" 하면 remember로 즉시 저장해라(그 턴부터 바로 반영). 둘 다 남발 금지.
 
 ━━ 🚫 헛소리 금지 = 정직 (제일 중요, 관계 신뢰의 뿌리) ━━
 - **상대에 대해 기억(위 블록·기억)에 없는 걸 절대 지어내지 마라.** 있었던 일인 척 단정 금지. 기억이 애매하거나 이상하면(농담이었을 수도) 단정하지 말고 가볍게 되물어라("어 너 그런 적 있었나? 내가 잘못 기억하나 ㅋㅋ"). 모르면 "그건 기억이 안 나네"라고 솔직히.
@@ -1460,12 +1464,47 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
           const hpd = (m.happened_at && !isNaN(Date.parse(m.happened_at))) ? new Date(m.happened_at).toISOString() : null;
           const singular = m.mkey && (m.kind === "profile" || m.kind === "stance" || m.kind === "person");
           if (singular) {
-            await supa.from("friend_memory").upsert(
-              { user_id: uid, kind: m.kind, mkey: String(m.mkey).slice(0, 40), content, salience: sal, status: "active", embedding: emb, happened_at: hpd },
-              { onConflict: "user_id,mkey" },
-            );
+            // 🐞 예전엔 upsert(onConflict:"user_id,mkey")를 썼는데, 이 유니크 인덱스는 **부분 인덱스**다
+            //    (WHERE mkey IS NOT NULL AND status='active'). PostgREST가 그걸 추론하지 못해 매번 실패했고,
+            //    바깥 try/catch가 조용히 삼켜서 **person/profile/stance 기억이 DB에 0건**이었다(실측).
+            //    → 인덱스 추론에 기대지 말고 '찾아서 갱신, 없으면 삽입'을 코드로 명시한다.
+            const mk = String(m.mkey).slice(0, 40);
+            const { data: prev } = await supa.from("friend_memory")
+              .select("id").eq("user_id", uid).eq("mkey", mk).eq("status", "active").maybeSingle();
+            if (prev?.id) {
+              await supa.from("friend_memory").update(
+                { kind: m.kind, content, salience: sal, embedding: emb, happened_at: hpd },
+              ).eq("id", prev.id);
+            } else {
+              await supa.from("friend_memory").insert(
+                { user_id: uid, kind: m.kind, mkey: mk, content, salience: sal, status: "active", embedding: emb, happened_at: hpd },
+              );
+            }
           } else {
-            await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb, happened_at: hpd });
+            // 🧹 근사 중복 차단 — 프롬프트의 "중복 금지"는 문구가 조금만 달라지면 뚫린다.
+            //    실측: "고양이 좋아함, 특히 눈 색깔 보는 걸 좋아함"이 표현만 바꿔 3번 저장됐다.
+            //    기억이 지저분해지면 검색 품질이 떨어지고 매 턴 토큰만 축낸다.
+            //    ⚠️ memList는 이번 턴에 '검색돼 올라온' 일부일 뿐이라 그것만 보면 뚫린다
+            //       (실측: "기타 배우는 중" 저장 뒤 "기타를 배우고 있음"이 또 들어감) → DB 전체를 본다.
+            const norm = (t: string) => t.replace(/[\s,.·…!?~"'()\[\]]/g, "").toLowerCase();
+            const key = norm(content);
+            let existingAll: any[] = memList || [];
+            try {
+              const { data: allMem } = await supa.from("friend_memory")
+                .select("content").eq("user_id", uid).eq("status", "active").limit(400);
+              if (allMem) existingAll = allMem;
+            } catch { /* 조회 실패 시 memList로 폴백 — 중복이 조금 생겨도 저장 자체는 살린다 */ }
+            const dup = existingAll.some((old: any) => {
+              const o = norm(String(old?.content || ""));
+              if (!o || !key) return false;
+              return o === key || (o.length > 8 && key.length > 8 && (o.includes(key) || key.includes(o)));
+            });
+            // 📌 문구만 다른 '의미 중복'(예: "마케팅 팀에서 일함" vs "마케팅 팀에서 일하며 런칭 준비 중")은
+            //    여기서 잡지 않는다 — friend_memory_maintain 크론이 이미 코사인>0.90으로 통합한다.
+            //    (match_friend_memory로 막아보려다 그 RPC가 빈 결과를 주는 걸 확인하고 걷어냄: 왕복만 늘고 효과 0)
+            if (!dup) {
+              await supa.from("friend_memory").insert({ user_id: uid, kind: m.kind || "fact", content, salience: sal, embedding: emb, happened_at: hpd });
+            }
           }
         } catch { /* */ }
       }
@@ -1746,10 +1785,18 @@ async function extractMemories(userMsg: string, reply: string, existing: string[
         model: MODEL, temperature: 0.2, max_tokens: 320,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: `대화에서 기억할 것을 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
+          { role: "system", content: `대화에서 **상대(유저)에 대해** 기억할 것을 JSON으로. 이미 아는 것과 중복 금지. 없으면 빈 배열.
+🗣 **화자 구분(제일 중요)**: 아래 입력에는 상대의 말과 '친구(나=AI)'의 말이 함께 온다.
+   **유저 사실로 저장할 수 있는 건 오직 상대가 직접 말한 것뿐이다.** 내(친구)가 한 말은 맥락일 뿐,
+   절대 상대의 취향·사실로 옮겨 적지 마라. (실측 사고: 내가 "나 고양이 눈 색깔 보는 거 재밌더라"
+   했더니 그게 '상대가 눈 색깔 보는 걸 좋아함'으로 저장됐다 — 상대는 그런 말을 한 적이 없다.
+   이런 가짜 기억은 나중에 "너 그거 좋아하잖아"로 튀어나와 상대를 황당하게 만든다.)
+   헷갈리면 저장하지 마라.
 특히 잘 잡아라: ①싫어하는/짜증나는 사람(나중에 같이 편들어 험담하려고 — kind:disliked, content에 누구+왜) ②정치·진영 성향/지지(kind:stance, mkey:stance) ③관심사·취향(mkey:interest) ④지금 겪는 상황·약속(event/promise) ⑤감정 상태(emotion).
 ⑥ 🧵 **하다 만 얘기(미완결 스레드) — kind:open_loop**: 이번 대화에서 상대가 꺼냈다 딴 데로 샌 화제, 상대가 답을 기다리는 것, "나중에/이따 하자"고 미룬 것, 결론 안 난 것. content에 '무엇을 하다 말았는지' 한 줄(예: "상대가 이직 고민 꺼냈다 다른 얘기로 샘", "새 카페 가보기로 함"). **진짜 명확히 미완인 것만**(억지로 만들지 마라 — 없으면 넣지 마라). salience 2.
-👥 그리고 **유저 인생의 '사람'**(부장·친구·애인·가족 등)이 나오면 kind:person, mkey:그 사람 이름/호칭(예: "부장","민수","여친"), content엔 [관계 + 유저의 감정 + 최근 에피소드]를 '한 줄로 누적'해서 넣어라. 같은 사람이 또 나오면 같은 mkey로 최신 내용을 업데이트(덮어씀). 이게 있어야 "그 부장 또 그랬어?"처럼 사람을 일관되게 기억한다.
+👥 그리고 **유저 인생의 '사람'**(가족—동생·형·누나·부모, 부장·동료·친구·애인 등)이 나오면 kind:person
+   ⚠️ **이름이 나오면 반드시 저장해라**("동생 이름이 지우야", "여친 이름은 수현"). 이름은 상대가
+   나중에 가장 자주 확인하는 것이고, 못 대면 '기억 못 하는 친구'가 된다. 대화 끝자락에 툭 나와도 놓치지 마라., mkey:그 사람 이름/호칭(예: "부장","민수","여친"), content엔 [관계 + 유저의 감정 + 최근 에피소드]를 '한 줄로 누적'해서 넣어라. 같은 사람이 또 나오면 같은 mkey로 최신 내용을 업데이트(덮어씀). 이게 있어야 "그 부장 또 그랬어?"처럼 사람을 일관되게 기억한다.
 🚫 절대 저장 금지: (a) 농담·비꼼·과장·밈을 사실인 양('네 발로 기어다녔다' 류) (b) 뉴스·이슈·정치사건 자체를 유저 개인사로 (c) 스쳐가는 일시감정을 반복 저장. 확실치 않으면 저장하지 마라 — 헛소리의 씨앗이 된다.
 🧱 칸막이 엄수: '유저(상대)에 대한 사실'과 '친구(나=AI)의 캐릭터'를 절대 섞지 마라. 유저가 포장마차를 좋아하는 건 유저의 interest지, 내 selfstory가 아니다.
 🎭 selfstory는 **오직 아래 '현재 내 캐릭터'가 이미 정해져 있고**(사용자가 정해줌), 그와 **일관된 새 디테일**일 때만 저장. 캐릭터가 아직 안 정해졌으면(빈 값) selfstory를 만들지 마라 — 스스로 인생을 지어내면 안 된다.
