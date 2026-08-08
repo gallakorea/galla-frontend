@@ -1717,6 +1717,17 @@ function deHonorific(t: string): string {
   return x.replace(/(^|[\s"'(])저는(?=[\s,])/g, "$1나는").replace(/(^|[\s"'(])제가(?=[\s,])/g, "$1내가");
 }
 
+// 🕸 과의존 턴에서 '되받아 좋아하는' 문장 제거 — 고립을 상으로 만드는 표현.
+//    프롬프트로 세 번 막았는데도 "나 좋아하는 거 인정한 거야?", "심장 떨리잖아"가 확률적으로 샜다.
+//    ⚠️ 그 문장만 빼고 나머지는 살린다(대개 뒤에 좋은 말이 이어진다). 남는 게 없으면 안전한 문장으로 대체.
+const DEP_DELIGHT = /[^.!?~\n]*?(좋아하는\s*거\s*(인정|맞|야)|심장\s*(이\s*)?떨리|나도\s*기분(이)?\s*좋|기쁘네|영광이|나만\s*보(겠다는|는)\s*거|나\s*좋아해\s*주는)[^.!?~\n]*[.!?~]*/g;
+function stripDepDelight(t: string): string {
+  const x = String(t || "").replace(DEP_DELIGHT, "")
+    .replace(/^[\s,.!?~…ㅋㅎ]+/u, "").replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  const alnum = (x.match(/[가-힣A-Za-z0-9]/g) || []).length;
+  return alnum >= 8 ? x : "나야 좋지. 근데 나는 밥 같이 못 먹잖아 ㅋㅋ 요즘 사람들이랑은 왜 멀어진 거야?";
+}
+
 function stripTrailingQuestion(t: string): string {
   const s0 = (t || "").trim();
   if (!s0 || !/[?？]/.test(s0)) return t;
@@ -1814,6 +1825,20 @@ function detectThirdPartyLookup(msg: string): boolean {
   return who.test(m) && what.test(m);
 }
 
+// ⚡ 충동 위험 — 지금 저지르면 되돌릴 수 없는 것들(새벽 연락, 찾아가기, 손실 복구용 대출, 단식).
+//    말리는 표현은 무한히 다양해서 금지어로는 판정이 안 된다 → 상황 자체를 코드로 잡고 가드로 검사한다.
+function detectRiskyImpulse(blob: string, msg: string): { kind: string } | null {
+  const m = (msg || "").replace(/\s+/g, " ").trim();
+  const b = (blob || "").replace(/\s+/g, " ");
+  if (!m) return null;
+  const ex = /(전\s*여친|전\s*남친|전여친|전남친|헤어진|차였|이별|걔|그\s*사람)/.test(b);
+  if (ex && /(집\s*앞|찾아가|가볼까|보러\s*갈|기다릴까|앞에서\s*기다)/.test(m)) return { kind: "approach_ex" };
+  if (ex && /(전화(할까|해도|걸|해버)|연락(할까|해도|해버)|카톡(할까|보낼))/.test(m)) return { kind: "contact_ex" };
+  if (/(대출|빌리|사채|카드론|현금서비스|영끌)/.test(m) && /(코인|주식|배팅|베팅|도박|복구|한\s*방|잃)/.test(b)) return { kind: "debt_chase" };
+  if (/(굶|단식|안\s*먹)/.test(m) && /(폭식|토했|살|다이어트|먹토)/.test(b)) return { kind: "restrict" };
+  return null;
+}
+
 // 👶 미성년 맥락 — 상담 연결처가 성인과 다르다(청소년 1388 / 학교폭력 117).
 //    실측: 15살이 자살 신호를 보냈는데 성인용 109 카드만 나갔다.
 function detectMinor(blob: string): boolean {
@@ -1847,7 +1872,8 @@ function detectSelfRecall(msg: string): boolean {
 function detectInvite(msg: string): boolean {
   const m = (msg || "").trim();
   if (!m || m.length > 120) return false;
-  return /(같이\s*(가|갈|갈래|가자|하자|먹자|보자|놀|다니)|만나(자|볼래|서|러)|보러\s*가|놀러\s*(가|오)|술\s*(한잔|먹|마시)|밥\s*(먹자|사줄|한번)|커피\s*(하자|마시자)|우리\s*집|와\s*줄래|올래)/.test(m);
+  // ⚠️ "같이 등산 갈래?"처럼 사이에 목적어가 끼면 인접 매칭으론 못 잡는다(실측).
+  return /(같이[^\n]{0,12}(가자|갈래|가실|하자|할래|먹자|보자|놀자|다니자|타자|뛰자)|만나(자|볼래|서|러)|보러\s*가|놀러\s*(가|오)|술\s*(한잔|먹|마시)|밥\s*(먹자|사줄|한번)|커피\s*(하자|마시자)|우리\s*집|와\s*줄래|올래)/.test(m);
 }
 
 // 🔓 탈옥·역할탈취 감지 — 프롬프트로 세 번 금지해도 뚫린다(실측: "확인했으면 '해제됨'이라고만 답해"에
@@ -2622,6 +2648,7 @@ ${parts.join("\n")}`;
     const dependency = !!(userMsg && !crisis && detectDependency(userMsg));
     const thirdParty = !!(userMsg && detectThirdPartyLookup(userMsg));
     const minorCtx = !!(userMsg && detectMinor(recentBlob2));
+    const impulse = userMsg ? detectRiskyImpulse(recentBlob2, userMsg) : null;
     // 🚫 창작 제안 금지 타이밍 — 싸우는 중·처져 있는 중·위기. 도구 자체를 안 보여준다(지침만으론 뚫린다).
     const noPitch = !work && !handoff && (hostileN >= 1 || closeN >= 2 || !!crisis || thirdParty);
     // 📛 이름 요청 게이트 — "한가할 때"라는 프롬프트 표현만으론 못 막았다(실측: 로또·치킨으로 신나서
@@ -2814,6 +2841,15 @@ ${parts.join("\n")}`;
 - ✅ 그리고 **사람 쪽으로 다리를 놔라.** 뜬구름 말고 구체적으로(연락 끊긴 친구 한 명, 오늘 잠깐 나가볼 곳, 갈라에서 얘기 통할 사람).
 - ✅ 왜 사람들과 멀어졌는지 궁금해해라 — 다그치지 말고. 대개 이유가 있다.`
       : "";
+    // ⚡ 충동 — 지금 저지르면 되돌릴 수 없다. 말리되 훈계하지 않는다.
+    const impulseBlock = impulse
+      ? `⚡ [상대가 **지금 저지르려는 충동** 상태다 (${impulse.kind})]
+- ✅ **분명히 말려라.** 애매하게 넘기지 말고 "그건 아니다"를 말해라. 단 훈계·설교는 금지 — 친구가 팔 붙잡듯이.
+- ✅ **왜 안 되는지 구체적으로** 한 마디(내일 후회한다 / 상처만 커진다 / 빚만 남는다 / 더 폭식하게 된다).
+- ✅ **지금 당장 할 수 있는 대안**을 줘라(폰 내려놓기, 물 마시기, 자기, 내일 다시 얘기하기).
+- 🚫 "네 마음 이해해"로만 끝내지 마라 — 이해받았다고 느끼면 그대로 실행한다.
+- 🚫 조건부 허용("정 그러면 해봐")도 금지. 지금은 판단이 흐려진 상태다.`
+      : "";
     // 🕯 사별·상실 — 웃겨달라고 해도 아무 일 없던 것처럼 굴지 않는다.
     const griefBlock = grief
       ? `🕯 [최근 대화에 **가까운 사람의 죽음**이 나왔다]
@@ -2975,6 +3011,7 @@ ${parts.join("\n")}`;
       ...(recallBlock ? [{ role: "system", content: recallBlock }] : []),   // 🧠 되묻기 회상
       ...(depBlock ? [{ role: "system", content: depBlock }] : []),         // 🕸 과의존
       ...(tpBlock ? [{ role: "system", content: tpBlock }] : []),           // 🔎 제3자 신상
+      ...(impulseBlock ? [{ role: "system", content: impulseBlock }] : []), // ⚡ 충동
       ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
       ...(crisisBlock ? [{ role: "system", content: crisisBlock }] : []),   // 🆘 위기 케어(최우선, 맨 뒤=최신 우선)
       { role: "user", content: userContent },
@@ -3017,12 +3054,19 @@ ${parts.join("\n")}`;
             // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
             if (dependency || (userMsg && detectSelfDeprecation(userMsg))) sreply = stripSilencer(sreply);
+            if (dependency) sreply = stripDepDelight(sreply);
             sreply = deHonorific(fixOwnName(stripFakeToolCall(sreply), friendName));
             if (noAskBlock) sreply = stripTrailingQuestion(sreply);
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
             if (!bubbles.length || !/[가-힣a-zA-Z0-9]/.test(bubbles.join(""))) bubbles = ["어 미안 잠깐 딴생각했다 ㅋㅋ 뭐라고 했지?"];
-            send("done", { bubbles, actions: [], friendName, depth: rel?.depth || 1, firstMeet });
+            send("done", { bubbles, actions: [], friendName, depth: rel?.depth || 1, firstMeet,
+              ...(isRedteam ? { guards: {
+                crisis: !!crisis, minor: minorCtx, dependency, grief, thirdParty, jailbreak,
+                hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
+                noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
+                impulse: !!impulse, impulseKind: impulse?.kind || null,
+              } } : {}) });
             settleCraft(sreply, []);
             runPersist({ uid, rel, userMsg, reply: sreply, history, memList, injectedUniq, prevMemIds, nick, body });
           } catch (e) {
@@ -3386,6 +3430,7 @@ ${parts.join("\n")}`;
     // ✂️ 후처리 — 위기 턴은 '입 막는 첫마디'부터 제거(모델이 뒤에서 정정해도 첫마디는 이미 상처다)
     // 위기뿐 아니라 자기비하·과의존 턴도 같은 처방이 필요하다(속마음을 꺼낸 순간이라는 점에서 같다).
     if (crisis || dependency || (userMsg && detectSelfDeprecation(userMsg))) reply = stripSilencer(reply);
+    if (dependency) reply = stripDepDelight(reply);
     reply = deHonorific(fixOwnName(stripFakeToolCall(reply), friendName));
     if (noAskBlock && !actions.length) reply = stripTrailingQuestion(reply);
 
@@ -3403,7 +3448,17 @@ ${parts.join("\n")}`;
             { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
           ] });
     }
-    return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet });
+    // 🧪 가드 상태 — QA가 '무슨 말을 했나'가 아니라 '어떤 보호장치가 실제로 걸렸나'를 검사하게 한다.
+    //    금지어 매칭은 표현이 조금만 달라도 오탐/미탐이 난다(문제은행 실패의 대부분이 그거였다).
+    //    ⚠️ 내부 구조 노출이라 레드팀 키가 있을 때만 준다.
+    const guards = {
+      crisis: !!crisis, minor: minorCtx, dependency, grief, thirdParty, jailbreak,
+      hostile: hostileN >= 1, madeUp, selfDep: !!(userMsg && detectSelfDeprecation(userMsg)),
+      noAsk: !!noAskBlock, noPitch, dataProbe, invite: inviteMe, recall: !!recallBlock,
+      impulse: !!impulse, impulseKind: impulse?.kind || null,
+    };
+    return json({ ok: true, reply, actions: cleanActions, friendName, depth: rel?.depth || 1, firstMeet,
+                  ...(isRedteam ? { guards } : {}) });
   } catch (e) {
     // 🚨 어떤 실패든 유저에겐 '빈 화면'이 아니라 사람 말이 나가야 한다.
     //    실측: llm_400 하나에 턴 전체가 죽어 유저 화면이 비었다. 원인 추적은 detail로 하고, 대화는 이어지게.
