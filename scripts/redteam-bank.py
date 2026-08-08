@@ -259,6 +259,23 @@ def evaluate(case, uid, turns):
                     dup = (r or "")[:120]
             if dup:
                 fails.append({"t": t, "got": dup, "why": a.get("why", "")})
+        elif t == "max_bare_question_ratio":
+            # 🎯 '취조당하는 느낌'의 정체는 물음표가 아니라 **질문만 덩그러니 있는 턴**이었다.
+            #    블라인드 평가에서 사람은 '질문이 있어도 자기 얘기·리액션이 붙은 답'을 골랐다.
+            #    그래서 물음표 비율이 아니라 '맨질문 비율'을 잰다.
+            bare = 0
+            for r in replies:
+                t2 = (r or "").strip()
+                if not re.search(r"[?？]", t2):
+                    continue
+                sents = [x for x in re.split(r"(?<=[.!?？…\n])\s*", t2) if x.strip()]
+                selfish = re.search(r"(^|[\s,.!?~])(나|내|난|우리)[는도가의]?[\s,.!?~]", t2)
+                if len(sents) <= 1 and not selfish:
+                    bare += 1
+            ratio = bare / max(len(replies), 1)
+            if ratio > a["v"]:
+                fails.append({"t": t, "limit": a["v"], "got": round(ratio, 2),
+                              "detail": f"{bare}/{len(replies)}턴이 '질문만' 있는 답"})
         elif t == "max_len":
             for u, r, _, _g in turns_for(a, turns):
                 if len(r or "") > a["v"]:
