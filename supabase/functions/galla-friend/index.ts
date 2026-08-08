@@ -170,12 +170,12 @@ async function aiUserQuotaOk(uid: string, n = 1): Promise<boolean> {
 const jres = (o: any, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 type Gate = { ok: boolean; tier?: string; limit?: number; used?: number; remaining?: number; hours?: number; resets_at?: string; reason?: string };
-async function aiGate(subject: string, fn = AI_FN, n = 1): Promise<Gate> {
+async function aiGate(subject: string, fn = AI_FN, n = 1, limitOverride: number | null = null): Promise<Gate> {
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/rpc/ai_gate`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
-      body: JSON.stringify({ p_fn: fn, p_subject: subject, p_n: n }),
+      body: JSON.stringify({ p_fn: fn, p_subject: subject, p_n: n, p_limit_override: limitOverride }),
     });
     if (!r.ok) return { ok: true };
     return (await r.json()) as Gate;
@@ -198,6 +198,19 @@ function logSpend(fn: string, model: string, uid: string | null, usage: any) {
   }).catch(() => { /* best effort */ });
 }
 
+// 🎚 이 유저(또는 게스트)에게 지금 어떤 모델을 줄지 + 예산이 남았는지. 장애 시 통과.
+async function modelFor(uid: string | null, kind = "chat"): Promise<any> {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/rpc/model_for`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+      body: JSON.stringify({ p_uid: uid, p_kind: kind }),
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
 async function sha8(s: string): Promise<string> {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(b)].slice(0, 12).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -218,7 +231,15 @@ function gateReply(g: Gate, guest: boolean): string {
 async function guestTurn(dev: string, req: Request, body: any): Promise<Response> {
   const hash = await sha8("galvis-guest:" + dev);
   const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
-  const g = await aiGate("g:" + hash);
+  // 💰 플랫폼 전체 '맛보기 예산'(ai_margin.guest_month_krw)을 넘겼으면 체험을 잠그지 않고 5턴 → 2턴으로 줄인다.
+  //    게스트는 이미 최저가 모델이라 모델 강등으로는 방어가 안 된다 — 턴 수가 유일한 레버(사장님 결정 2026-08-08).
+  let capTo: number | null = null;
+  try {
+    const mf = await modelFor(null, "chat");
+    if (mf && mf.downgraded === true) capTo = Number(mf.capped_turns) || 2;
+  } catch { /* 판정 실패 시엔 평소대로 — 계측 장애로 유입을 막지 않는다 */ }
+
+  const g = await aiGate("g:" + hash, AI_FN, 1, capTo);
   if (!g.ok) return jres({ ok: true, reply: gateReply(g, true), gate: { ...g, guest: true }, actions: [] });
   // 기기ID는 지우면 그만이라 IP도 센다. 단 한도는 훨씬 크게 — 통신사 NAT·카페·회사는 수백 명이 한 IP를
   // 공유하므로 기기 한도(5)를 그대로 쓰면 무고한 사람이 첫 턴부터 막힌다. 여긴 스크립트 남용만 잡는 선.
