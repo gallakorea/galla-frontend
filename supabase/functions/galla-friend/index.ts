@@ -1858,8 +1858,16 @@ Deno.serve(async (req) => {
     }
     // 🎟 등급 게이트(5시간 롤링) — 위 일일 캡은 '남용 격리'용 최후 방어, 이건 상품 규칙이다.
     //    막히면 언제 열리는지와 등급 정보를 함께 내려 프론트가 업그레이드 카드를 띄운다.
-    const gate = await aiGate("u:" + uid);
-    if (!gate.ok) return json({ ok: true, reply: gateReply(gate, false), gate, actions: [] });
+    //
+    //    ⚠️ 빈 메시지 = 창을 열 때 우리가 먼저 거는 인사(greet). 유저가 한 마디도 안 했는데
+    //       할당량을 깎으면 "열기만 12번 하면 끝"이 된다 — 우리가 시작한 말을 유저에게 청구하는 꼴.
+    //       그래서 인사는 별도의 넉넉한 창으로 센다(공짜는 아니고, 폭주만 막는다).
+    const isGreeting = !String(body?.message || "").trim();
+    const gate = await aiGate("u:" + uid, isGreeting ? AI_FN + "-ambient" : AI_FN);
+    if (!gate.ok) {
+      if (isGreeting) return json({ ok: true, reply: "", actions: [] });   // 인사는 조용히 생략(에러처럼 보이면 안 된다)
+      return json({ ok: true, reply: gateReply(gate, false), gate, actions: [] });
+    }
     // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
     if (!(await aiBudgetOk())) {
       const tired = [

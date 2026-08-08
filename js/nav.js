@@ -47,6 +47,7 @@
       else { var s = document.createElement("script"); s.src = src + q; s.async = false; document.body.appendChild(s); }
     }
     load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
+    load("/js/plans.js");                           // 이용권(등급·잔여 대화) — GALLA_openPlans / GALLA_planPill
     if (!skipOrb) {
       load("/css/friend.css", true);
       load("/js/friend.js");                        // 상주 오브 → 갈비스 대화

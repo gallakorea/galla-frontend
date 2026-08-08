@@ -322,6 +322,14 @@
     orb && orb.classList.remove("fr-ping");
     document.body.classList.add("fr-chatting");   // 하단 내비 숨김
     sheet.classList.add("fr-open");
+    // 🎟 남은 대화 pill — 열 때마다 갱신(쓴 만큼 줄어드는 게 보여야 업그레이드가 설득된다)
+    try{
+      var hd=sheet.querySelector(".fr-head");
+      if(hd && window.GALLA_planPill){
+        var old=hd.querySelector(".gpl-pill"); if(old) old.remove();
+        window.GALLA_planPill(hd);
+      }
+    }catch(e){}
     // 인사는 '세션 최초 1회'만 — 내렸다(닫기/미니) 다시 올리면 재-greet 금지(didIntro 가드).
     // askGalvis가 첫 말을 책임질 땐도 인사 억제. 저장된 대화는 항상 렌더.
     if(!logEl.children.length) restoreOrGreet(window.__frSuppressGreet===true || window.__frDidIntro===true);
