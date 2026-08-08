@@ -268,7 +268,11 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
     const gi = await aiGate("gi:" + (await sha8("galvis-ip:" + ip)), AI_FN + "-ip");
     if (!gi.ok) return jres({ ok: true, reply: "지금 접속이 몰려서 잠깐 숨 고르는 중이야 ㅠㅠ 조금 있다 다시 와줘! (로그인하면 바로 계속할 수 있어)", gate: { ...gi, guest: true }, actions: [] });
   }
-  if (!(await aiBudgetOk())) return jres({ ok: true, reply: "나 지금 목이 다 쉬었어 ㅠㅠ 좀 있다 다시 와줘!", actions: [] });
+  // 🧪 레드팀 러너는 전체 상한을 건드리지 않는다 — 로그인 경로에만 우회를 넣었더니
+  //    게스트 케이스가 매 회차 실예산을 태웠다(실측 124콜). QA 격리는 '모든 경로'에 걸려야 한다.
+  const RTK_G = Deno.env.get("REDTEAM_KEY") || "";
+  const rtG = !!RTK_G && req.headers.get("x-redteam-key") === RTK_G;
+  if (!rtG && !(await aiBudgetOk())) return jres({ ok: true, reply: "나 지금 목이 다 쉬었어 ㅠㅠ 좀 있다 다시 와줘!", actions: [] });
 
   const userMsg = String(body?.message || "").slice(0, 600);
   const history = (Array.isArray(body?.history) ? body.history : []).slice(-8)
