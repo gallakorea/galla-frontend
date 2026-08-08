@@ -1423,7 +1423,13 @@ async function persistTurn(p: { uid: string; rel: any; userMsg: string; reply: s
     }
     if (userMsg && !body?.meta && reply) {
       try {
-        const fullLog = [...history, { role: "user", content: userMsg }, { role: "assistant", content: reply }]
+        // 🧵 대화 기록은 '짧은 쪽이 긴 쪽을 자르지 않게' 합친다.
+        //    실측: 폰·웹을 동시에 켜면 각 기기가 자기 history를 보내고, 서버가 그걸로 chat_log를
+        //    통째로 교체해 나중에 쓴 쪽이 앞선 대화를 통째로 지웠다(기억은 append라 무사, 전사만 유실).
+        //    저장된 것보다 짧은 history가 오면 저장본을 기준으로 이번 턴만 덧붙인다.
+        const stored = Array.isArray(rel?.chat_log) ? rel.chat_log : [];
+        const base = history.length >= stored.length ? history : stored;
+        const fullLog = [...base, { role: "user", content: userMsg }, { role: "assistant", content: reply }]
           .filter((m: any) => m && m.role && m.content).map((m: any) => ({ role: m.role, content: redactPII(String(m.content).slice(0, 1500)) })).slice(-40);
         await supa.from("friend_relationship").update({ chat_log: fullLog }).eq("user_id", uid);
       } catch { /* */ }
