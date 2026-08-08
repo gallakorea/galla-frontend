@@ -165,6 +165,84 @@ async function aiUserQuotaOk(uid: string, n = 1): Promise<boolean> {
   } catch { return true; }
 }
 
+// 🎟 등급 게이트 — 5시간 롤링 윈도우. 막히면 '언제 다시 열리는지'까지 돌려준다(막연한 차단이 제일 나쁘다).
+//    장애 시엔 통과 — 게이트가 죽어서 서비스가 멈추는 게 더 나쁘다(글로벌 캡이 최후 방어).
+const jres = (o: any, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
+type Gate = { ok: boolean; tier?: string; limit?: number; used?: number; remaining?: number; hours?: number; resets_at?: string; reason?: string };
+async function aiGate(subject: string, fn = AI_FN, n = 1): Promise<Gate> {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/rpc/ai_gate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+      body: JSON.stringify({ p_fn: fn, p_subject: subject, p_n: n }),
+    });
+    if (!r.ok) return { ok: true };
+    return (await r.json()) as Gate;
+  } catch { return { ok: true }; }
+}
+
+// 💰 원가 계측 — 모든 LLM 응답의 usage를 원장에 적는다. 마진 가드(model_for)가 이 숫자로 판단한다.
+//    OpenAI 호환 응답의 usage 필드명은 공급자마다 조금씩 다르다(딥시크는 prompt_cache_hit_tokens).
+function logSpend(fn: string, model: string, uid: string | null, usage: any) {
+  if (!usage) return;
+  const cache = Number(usage.prompt_cache_hit_tokens ?? usage.prompt_tokens_details?.cached_tokens ?? 0) || 0;
+  const inTok = Math.max(0, (Number(usage.prompt_tokens ?? 0) || 0) - cache);
+  const outTok = Number(usage.completion_tokens ?? 0) || 0;
+  if (!inTok && !cache && !outTok) return;
+  // await 하지 않는다 — 계측이 응답을 늦추면 안 된다.
+  fetch(`${SUPA_URL}/rest/v1/rpc/ai_spend_add`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+    body: JSON.stringify({ p_fn: fn, p_model: model, p_uid: uid, p_in: inTok, p_cache: cache, p_out: outTok }),
+  }).catch(() => { /* best effort */ });
+}
+
+async function sha8(s: string): Promise<string> {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].slice(0, 12).map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+// 게이트에 걸렸을 때 유저에게 보일 말 — 등급별로 톤이 다르다(게스트=유혹, 유료=미안).
+function gateReply(g: Gate, guest: boolean): string {
+  if (guest) return "아 우리 벌써 이만큼 떠들었네 ㅋㅋ 더 얘기하고 싶은데… 나 기억이 자꾸 날아가서. 로그인하면 내가 널 기억하고 계속 이어서 떠들 수 있어. 진짜야.";
+  const t = g.resets_at ? new Date(g.resets_at) : null;
+  const hhmm = t ? new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Seoul" }).format(t) : null;
+  if (g.reason === "tier_locked") return "이건 아직 내가 못 해주는 거야 ㅠㅠ 이용권 올리면 바로 열려.";
+  return hhmm
+    ? `아 목이 좀 쉬었다 ㅋㅋ ${hhmm}쯤이면 다시 쌩쌩해져서 올게. 그때 마저 얘기하자!`
+    : "오늘 수다 에너지를 다 써버렸어 ㅋㅋ 좀 있다 다시 오면 또 떠들자!";
+}
+
+// 🎟 게스트 맛보기 턴 — 도구·기억·DB쓰기 전면 차단. 순수 대화만.
+async function guestTurn(dev: string, req: Request, body: any): Promise<Response> {
+  const hash = await sha8("galvis-guest:" + dev);
+  const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
+  const g = await aiGate("g:" + hash);
+  if (!g.ok) return jres({ ok: true, reply: gateReply(g, true), gate: { ...g, guest: true }, actions: [] });
+  // 기기ID는 지우면 그만이라 IP도 센다. 단 한도는 훨씬 크게 — 통신사 NAT·카페·회사는 수백 명이 한 IP를
+  // 공유하므로 기기 한도(5)를 그대로 쓰면 무고한 사람이 첫 턴부터 막힌다. 여긴 스크립트 남용만 잡는 선.
+  if (ip) {
+    const gi = await aiGate("gi:" + (await sha8("galvis-ip:" + ip)), AI_FN + "-ip");
+    if (!gi.ok) return jres({ ok: true, reply: "지금 접속이 몰려서 잠깐 숨 고르는 중이야 ㅠㅠ 조금 있다 다시 와줘! (로그인하면 바로 계속할 수 있어)", gate: { ...gi, guest: true }, actions: [] });
+  }
+  if (!(await aiBudgetOk())) return jres({ ok: true, reply: "나 지금 목이 다 쉬었어 ㅠㅠ 좀 있다 다시 와줘!", actions: [] });
+
+  const userMsg = String(body?.message || "").slice(0, 600);
+  const history = (Array.isArray(body?.history) ? body.history : []).slice(-8)
+    .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+    .map((m: any) => ({ role: m.role, content: String(m.content).slice(0, 500) }));
+  const messages = [
+    { role: "system", content: STATIC_PERSONA },
+    ...history,
+    { role: "system", content: `━━ 🎟 [지금 상황] ━━\n상대는 아직 로그인을 안 한 '처음 온 사람'이다. 너는 이 사람을 기억하지 못하고, 갈라 안의 어떤 것도 찾아주거나 만들어줄 수 없다.\n· 이름·과거·기억을 아는 척하지 마라. 처음 만난 게 맞다.\n· 이슈/영상/맛집을 "찾아줄게","만들어줄게" 하고 약속하지 마라 — 지금은 못 한다.\n· 대신 사람 자체에 관심을 보이고 수다로 붙잡아라. 짧고 생기있게, 2~3문장.\n· 로그인 얘기는 상대가 아쉬워할 때만 한 번, 가볍게. 영업사원처럼 굴지 마라.` },
+    { role: "user", content: userMsg || "안녕" },
+  ];
+  const j = await chatOnce(messages, { toolChoice: "none", maxTokens: 320 });
+  const reply = String(j?.choices?.[0]?.message?.content || "").trim() || "오 안녕! 무슨 얘기 하고 싶어?";
+  return jres({ ok: true, reply, actions: [], gate: { ...g, guest: true } });
+}
+
 // ── 콘텐츠 툴(같이 보기·평론 재료) ─────────────────────────
 // 😜 아재개그 — dad_jokes에서 '덜 쓴 것' 중 랜덤 1개(used_count로 순환). 던질지/언제는 핸들러가 확률·감정 게이트.
 async function pickDadJoke(): Promise<{ q: string; a: string } | null> {
@@ -1380,7 +1458,7 @@ function routeIntent(msg: string): { tool: string; hint: string } | null {
   return null;
 }
 
-async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean }) {
+async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: string; maxTokens?: number; inWork?: boolean; noDraft?: boolean; uid?: string | null }) {
   // max_tokens 90은 답을 문장 중간에 끊어 '맥락 없음'을 유발했다 → 240으로(브레비티는 프롬프트+문장캡이 담당).
   // 🔒 영상 잠금 시 gen_video 도구를 아예 노출하지 않는다(모델이 호출 자체를 못 함).
   // 🖼 gen_thumbnail은 편집기(작업모드)에서만 노출 — 채팅에서 초안 만들 땐 이미지가 붙을 편집기가 없어 '저장해서 써' 클렁크 + draft 칩 유실.
@@ -1401,7 +1479,9 @@ async function chatOnce(messages: any[], opts?: { toolChoice?: any; model?: stri
     body: JSON.stringify(reqBody),
   });
   if (!r.ok) throw new Error("llm_" + r.status + ":" + (await r.text()).slice(0, 160));
-  return await r.json();
+  const out = await r.json();
+  logSpend(AI_FN, reqBody.model, opts?.uid ?? null, out?.usage);
+  return out;
 }
 
 // 🎨 창작 품질 파이프라인 — 원샷 초안의 상한을 깬다(사장님 승인 2026-08-06).
@@ -1676,10 +1756,16 @@ Deno.serve(async (req) => {
     const auth = req.headers.get("Authorization") || "";
     const jwt = auth.replace(/^Bearer\s+/i, "");
     const { data: u } = await supa.auth.getUser(jwt);
-    if (!u || !u.user) return json({ ok: false, reason: "auth" }, 401);
-    const uid = u.user.id;
-
     const body = await req.json().catch(() => ({}));
+
+    // 🎟 게스트 맛보기 — 로그인 전에도 갈비스가 어떤 애인지 5턴 겪어보게 한다(가입 전환의 핵심).
+    //    도구·기억·DB 쓰기는 전부 잠근 별도 경량 경로. uid를 전제한 본 경로에 null을 흘리지 않는다.
+    if (!u || !u.user) {
+      const dev = String(body?.deviceId || "").slice(0, 80);
+      if (!dev) return json({ ok: false, reason: "auth" }, 401);
+      return await guestTurn(dev, req, body);
+    }
+    const uid = u.user.id;
 
     // 🔊 리얼보이스 TTS(유료 아이템 voice_pack) — 서버가 소유권 재검증 후 OpenAI 자연 음성 생성.
     if (body?.op === "tts") {
@@ -1749,6 +1835,10 @@ Deno.serve(async (req) => {
     if (!(await aiUserQuotaOk(uid))) {
       return json({ ok: true, reply: "야 우리 오늘 진짜 많이 떠들었다 ㅋㅋ 나 목 좀 쉬고 올게 — 내일 또 얘기하자!" });
     }
+    // 🎟 등급 게이트(5시간 롤링) — 위 일일 캡은 '남용 격리'용 최후 방어, 이건 상품 규칙이다.
+    //    막히면 언제 열리는지와 등급 정보를 함께 내려 프론트가 업그레이드 카드를 띄운다.
+    const gate = await aiGate("u:" + uid);
+    if (!gate.ok) return json({ ok: true, reply: gateReply(gate, false), gate, actions: [] });
     // 예산 소진 — 같은 문구 반복으로 '고장/문맥상실'처럼 보이던 것 개선: 상태를 솔직히 + 문구 로테이션
     if (!(await aiBudgetOk())) {
       const tired = [
@@ -2199,7 +2289,7 @@ ${parts.join("\n")}`;
             const mt = longForm ? 520 : 240;
             let full = await chatStream(messages, { model: brainModel, maxTokens: mt }, (f) => send("text", { full: stripForPreview(f) }));
             if (full == null) {   // 스트림 실패 → 비스트림 1회 폴백
-              const j = await chatOnce(messages, { model: brainModel, toolChoice: "none", maxTokens: mt });
+              const j = await chatOnce(messages, { model: brainModel, toolChoice: "none", maxTokens: mt, uid });
               full = j?.choices?.[0]?.message?.content || "";
               send("text", { full: stripForPreview(full) });
             }
@@ -2219,7 +2309,7 @@ ${parts.join("\n")}`;
 
     for (let step = 0; step < 4; step++) {
       // 🧠 이중 브레인: 컴패니언=도구 끄고 순수 대화(단발), 에이전트=라우터 강제(첫 스텝) 또는 자동 도구.
-      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
+      const co: any = { model: brainModel, inWork: !!work, noDraft: planMode, uid };   // 🖼 채팅 창작=썸네일 미노출 · 🎨 기획 타임=draft 미노출(코드 강제)
       if (planMode) co.toolChoice = "none";   // 기획=순수 텍스트 — 숨긴 draft를 모델이 할루시 호출해 "도구 말썽" 티내는 것 차단
       if (longForm) co.maxTokens = 520;
       // ✍️ 에이전트 턴은 tool arguments가 김(draft_issue=제목+한줄+본문3~4문장+진영) — 240이면 args가 잘려

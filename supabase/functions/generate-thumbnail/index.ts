@@ -5,6 +5,19 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AwsClient } from "https://esm.sh/aws4fetch@1.0.20";
 
+// 🎟 등급 게이트 — app_settings.ai_tiers 의 롤링 윈도우. 장애 시 통과(게이트가 서비스를 죽이면 안 된다).
+async function aiGate(subject: string, fn: string, n = 1): Promise<any> {
+  try {
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/rpc/ai_gate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!}` },
+      body: JSON.stringify({ p_fn: fn, p_subject: subject, p_n: n }),
+    });
+    if (!r.ok) return { ok: true };
+    return await r.json();
+  } catch { return { ok: true }; }
+}
+
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY")!;
 // 💸 이미지 생성을 Cloudflare Workers AI FLUX-1-schnell로(사실상 공짜, 기존 CF 인프라). 토큰 있으면 CF 우선, 없거나 실패 시 OpenAI 폴백.
@@ -209,6 +222,9 @@ Deno.serve(async (req) => {
   const asUser = createClient(SUPA_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
     global: { headers: { Authorization: req.headers.get("Authorization")! } },
   });
+  // 🎟 등급 게이트 — 무료/프렌드/프로별 생성 한도(app_settings.ai_tiers). GP 차감보다 먼저 본다.
+  { const g = await aiGate("u:" + me, "generate-thumbnail");
+    if (g && g.ok === false) return j({ error: "tier_limit", gate: g }, 429); }
   const { data: charge, error: cErr } = await asUser.rpc("ai_creation_charge", { p_kind: "thumbnail", p_n: 1 });
   if (cErr || !charge?.ok) return j({ error: charge?.reason || "charge_failed", detail: charge }, 402);
   const paid = (charge.charged as number) || 0;
