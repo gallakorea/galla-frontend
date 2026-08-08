@@ -292,6 +292,12 @@ async function GALLA_settingsInit(root) {
     byId("titlesTile")?.addEventListener("click", () => { window.GALLA_openTitles && window.GALLA_openTitles(); });
     byId("gachaTile")?.addEventListener("click", () => { window.GALLA_openGacha && window.GALLA_openGacha(); });
     byId("shopTile")?.addEventListener("click", (e) => { e.stopPropagation(); window.openShop && window.openShop(); });
+    // 🎟 이용권 — 내 등급·남은 대화·업그레이드(plans.js는 nav.js가 전 페이지에 로드)
+    byId("plansTile")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.GALLA_openPlans) window.GALLA_openPlans();
+      else alert("잠시 후 다시 눌러주세요.");
+    });
 
     // 4) 관리자 관제센터 링크 노출
     try {

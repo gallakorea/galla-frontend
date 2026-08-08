@@ -120,9 +120,16 @@ async function GALLA_mypageInit(root, spaParams) {
         shopBtn.textContent = "🛒 상점";
         shopBtn.onclick = () => window.openShop ? window.openShop() : ((window.GALLA_nav||function(u){location.href=u})("settings.html"));
 
+        /* 🎟 이용권 — 갈비스 등급·남은 대화. 상점(GP)과 성격이 달라 별도 진입점이 필요하다. */
+        const planBtn = document.createElement("button");
+        planBtn.className = "action-btn secondary";
+        planBtn.textContent = "🎟️ 이용권";
+        planBtn.onclick = () => window.GALLA_openPlans && window.GALLA_openPlans();
+
         profileActions.appendChild(editBtn);
         profileActions.appendChild(missionBtn);
         profileActions.appendChild(shopBtn);
+        profileActions.appendChild(planBtn);
     } else {
         const followBtn = document.createElement("button");
         followBtn.className = "action-btn primary";

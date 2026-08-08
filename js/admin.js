@@ -460,6 +460,7 @@
         <button class="ad-btn ghost" data-a="warn+">⚠️ 경고 +1</button>
         <button class="ad-btn ghost" data-a="warn-">경고 -1</button>
         <button class="ad-btn ghost" data-a="gp">💰 GP 지급</button>
+        <button class="ad-btn ghost" data-a="plan">🎟️ 이용권</button>
         ${d.banned ? `<button class="ad-btn primary" data-a="unban">✅ 정지 해제</button>` : `<button class="ad-btn danger" data-a="ban">⛔ 정지</button>`}
         <button class="ad-btn ${d.admin ? "danger" : "primary"}" data-a="role">${d.admin ? "관리자 해제" : "관리자 지정"}</button>
         ${d.admin ? "" : `<button class="ad-btn danger" data-a="delete">🗑 회원 삭제</button>`}
@@ -535,6 +536,15 @@
       if (a === "warn+") await rpc("admin_adjust_warning", { p_user: uid, p_delta: 1 });
       else if (a === "warn-") await rpc("admin_adjust_warning", { p_user: uid, p_delta: -1 });
       else if (a === "gp") { const amt = parseInt(prompt("지급할 GP (음수=차감)", "1000") || "0"); if (amt) await rpc("admin_grant_gp", { p_user: uid, p_amount: amt, p_reason: "admin_grant" }); }
+      // 🎟 이용권 수동 부여 — 체험판·보상·환불 대응·내부 테스트. 결제 웹훅과 별개 경로.
+      else if (a === "plan") {
+        const t = (prompt("부여할 이용권: lite / friend / pro\n(비우면 회수)", "pro") || "").trim();
+        if (t === null) return;
+        if (t && !["lite", "friend", "pro"].includes(t)) { alert("lite / friend / pro 중에서 입력해주세요."); return; }
+        const days = t ? parseInt(prompt("며칠간?", "30") || "30", 10) : 0;
+        const r = await rpc("admin_grant_subscription", { p_uid: uid, p_tier: t || null, p_days: days || 30 });
+        if (!r || r.ok === false) { alert("실패: " + ((r && r.reason) || "unknown")); return; }
+      }
       else if (a === "ban") { const reason = prompt("정지 사유", "커뮤니티 규정 위반"); if (reason != null) await rpc("admin_set_ban", { p_user: uid, p_reason: reason, p_days: null }); }
       else if (a === "unban") await rpc("admin_unban", { p_user: uid });
       else if (a === "role") await rpc("admin_set_role", { p_user: uid, p_admin: !d.admin });
