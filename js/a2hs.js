@@ -31,7 +31,18 @@
   const ua = navigator.userAgent;
   const isIOS = /iP(hone|ad|od)/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
   const isAndroid = /Android/.test(ua);
-  if (!isIOS && !isAndroid) return;   // 데스크톱 등은 스킵
+  // 🖥 데스크톱은 홈화면 추가가 의미 없다 → 대신 'QR로 폰에서 받기' 시트로 넘긴다.
+  //    (웹 접속이면 어떤 기기든 앱을 권한다 — 사장님 지시 2026-08-08. 쿨다운·방문횟수 규칙은 동일 적용.)
+  if (!isIOS && !isAndroid) {
+    setTimeout(function () {
+      try {
+        if (typeof window.GALLA_appDownload !== "function") return;
+        cooldown(14);                       // 한 번 보여줬으면 2주는 조용히
+        window.GALLA_appDownload("getapp"); // 미출시=QR, 출시되면 스토어 배지로 자동 전환
+      } catch (e) {}
+    }, 6000);
+    return;
+  }
 
   let deferredPrompt = null;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredPrompt = e; });

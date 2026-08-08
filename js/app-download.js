@@ -122,7 +122,7 @@
         body +
       '</div>';
     document.body.appendChild(scrim);
-    requestAnimationFrame(function () { scrim.classList.add("on"); });
+    setTimeout(function () { scrim.classList.add("on"); }, 20);   // rAF는 백그라운드 탭에서 멈춘다
 
     function bye() { scrim.classList.remove("on"); setTimeout(function () { scrim.remove(); }, 240); }
     scrim.addEventListener("click", function (e) { if (e.target === scrim) bye(); });
@@ -134,4 +134,5 @@
       b.addEventListener("click", function (e) { e.preventDefault(); pwaInstall(); bye(); });
     });
   };
+
 })();
