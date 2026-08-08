@@ -139,6 +139,10 @@ def say(jwt, msg, history, slot, stream, device=None):
     if stream:
         body["stream"] = True
     raw = post("/functions/v1/galla-friend", body, jwt=jwt, slot=slot)
+    # 게이트웨이 일시 오류(502/HTML)는 제품 결함이 아니다 — 한 번 재시도하고, 그래도 실패면 그때 실패로 본다.
+    if raw.lstrip().startswith("<") or "502 Bad Gateway" in raw:
+        time.sleep(3)
+        raw = post("/functions/v1/galla-friend", body, jwt=jwt, slot=slot)
     if stream:
         last = None
         for line in raw.split("\n"):

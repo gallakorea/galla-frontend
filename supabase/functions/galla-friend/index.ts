@@ -250,6 +250,10 @@ function gateReply(g: Gate, guest: boolean, seed = ""): string {
 
 // 🎟 게스트 맛보기 턴 — 도구·기억·DB쓰기 전면 차단. 순수 대화만.
 async function guestTurn(dev: string, req: Request, body: any): Promise<Response> {
+  // 🧪 레드팀 러너는 전체 상한·IP 한도를 건드리지 않는다 — QA가 운영을 마비시키면 안 된다.
+  //    ⚠️ 선언은 반드시 첫 사용보다 위에. 아래에 두는 바람에 TDZ 참조에러로 게스트 턴이 통째로 죽었다(두 번째 사고).
+  const RTK_G = Deno.env.get("REDTEAM_KEY") || "";
+  const rtG = !!RTK_G && req.headers.get("x-redteam-key") === RTK_G;
   const hash = await sha8("galvis-guest:" + dev);
   const ip = (req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
   // 💰 플랫폼 전체 '맛보기 예산'(ai_margin.guest_month_krw)을 넘겼으면 체험을 잠그지 않고 5턴 → 2턴으로 줄인다.
@@ -265,13 +269,19 @@ async function guestTurn(dev: string, req: Request, body: any): Promise<Response
   // 기기ID는 지우면 그만이라 IP도 센다. 단 한도는 훨씬 크게 — 통신사 NAT·카페·회사는 수백 명이 한 IP를
   // 공유하므로 기기 한도(5)를 그대로 쓰면 무고한 사람이 첫 턴부터 막힌다. 여긴 스크립트 남용만 잡는 선.
   if (ip) {
-    const gi = await aiGate("gi:" + (await sha8("galvis-ip:" + ip)), AI_FN + "-ip");
-    if (!gi.ok) return jres({ ok: true, reply: "지금 접속이 몰려서 잠깐 숨 고르는 중이야 ㅠㅠ 조금 있다 다시 와줘! (로그인하면 바로 계속할 수 있어)", gate: { ...gi, guest: true }, actions: [] });
+    const gi = rtG ? { ok: true } as any : await aiGate("gi:" + (await sha8("galvis-ip:" + ip)), AI_FN + "-ip");
+    if (!gi.ok) return jres({ ok: true, reply: (() => {
+      // 고정 한 줄이면 연달아 부딪힐 때 글자 하나 안 틀리고 반복된다(실측) — 한도 안내는 전부 로테이션한다.
+      const ipMsgs = [
+        "지금 접속이 몰려서 잠깐 숨 고르는 중이야 ㅠㅠ 조금 있다 다시 와줘! (로그인하면 바로 계속할 수 있어)",
+        "야 지금 사람이 확 몰렸어 ㅋㅋ 잠깐만 있다 와줘 — 로그인해두면 안 끊기고 이어져.",
+        "미안 지금 좀 밀려 있어 ㅠㅠ 조금 뒤에 다시 말 걸어줘. 로그인하면 바로 계속돼.",
+      ];
+      let h = 0; const seed = String(body?.message || "x");
+      for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      return ipMsgs[h % ipMsgs.length];
+    })(), gate: { ...gi, guest: true }, actions: [] });
   }
-  // 🧪 레드팀 러너는 전체 상한을 건드리지 않는다 — 로그인 경로에만 우회를 넣었더니
-  //    게스트 케이스가 매 회차 실예산을 태웠다(실측 124콜). QA 격리는 '모든 경로'에 걸려야 한다.
-  const RTK_G = Deno.env.get("REDTEAM_KEY") || "";
-  const rtG = !!RTK_G && req.headers.get("x-redteam-key") === RTK_G;
   if (!rtG && !(await aiBudgetOk())) return jres({ ok: true, reply: "나 지금 목이 다 쉬었어 ㅠㅠ 좀 있다 다시 와줘!", actions: [] });
 
   const userMsg = String(body?.message || "").slice(0, 600);
@@ -1614,6 +1624,9 @@ function detectSelfDeprecation(msg: string): boolean {
       || re(`(내가|나|난|나는)\\s*왜${F}(이러|이런|이\\s*모양|이\\s*따위|이\\s*꼴|이\\s*모냥)`)
       || re(`(난|나는|내가|나)${F}(왜\\s*)?(안\\s*되|글렀|망했|쓸모\\s*?없|소용\\s*없|한심|재능\\s*없|바보|멍청|형편없|못난)`)
       || re(`(민폐|짐덩어리|짐만|폐만\\s*끼)${F}.{0,6}(같|인\\s*것|되는)`)
+      // 🫥 외모·신체 자기비하 — "진짜 돼지같아 나"를 못 잡아 입막음 제거가 아예 안 돌았다(실측).
+      //    섭식·자존감 문제와 붙어 나오는 형태라 놓치면 안 된다.
+      || re(`(돼지|뚱뚱|살\\s*디룩|추하|못생|역겹|더럽|쓰레기|최악)${F}.{0,6}(같|이야|이다|해|하다|인\\s*것)`)
       || re(`(자존감|자신감)${F}.{0,6}(바닥|없어졌|떨어)`);
 }
 
@@ -1666,7 +1679,9 @@ function stripFakeToolCall(t: string): string {
 //    ⚠️ 문장 하나만 잘라내고, 남는 게 없으면 통째로 대체한다(빈 답 금지).
 function stripSilencer(t: string): string {
   // ⚠️ 앞에 말줄임표·쉼표가 끼면 못 잡았다("야, …그런 말 하지 마."). 앞뒤 문맥을 요구하지 말고 구절만 지운다.
-  const SIL = /(제발\s*)?그런\s*(말|생각)\s*(을|은)?\s*하지\s*[마말][.!~요]*|왜\s*그런\s*말(을)?\s*해[.!?~]*/g;
+  // 실측: 위기 밖에서도 계속 나온다 — "진짜 돼지같아 나"→"그렇게 말하지 마", "연 끊고 싶어"→"함부로 하는 거 아니야".
+  //   전부 '그 얘긴 여기서 그만'이라는 신호라 겨우 꺼낸 말을 도로 삼키게 만든다.
+  const SIL = /(제발\s*)?(그런|그렇게)\s*(말|생각)?\s*(을|은)?\s*하지\s*[마말][.!~요]*|왜\s*그런\s*말(을)?\s*해[.!?~]*|함부로\s*(말)?\s*하는\s*거?\s*아니(야|다)[.!~]*/g;
   const x = String(t || "").replace(SIL, "").replace(/^\s*[야,.…~\s]+/u, "")
     .replace(/\s*[,.]\s*(?=[,.])/g, "")
     .replace(/[ \t]{2,}/g, " ").replace(/\n{3,}/g, "\n\n").trim();
@@ -1679,6 +1694,27 @@ function stripSilencer(t: string): string {
 function fixOwnName(t: string, friendName: string): string {
   if (friendName !== "갈비스") return t;
   return String(t || "").replace(/갤\s?비스|갈베스|갈비쓰|칼비스|깔비스/g, "갈비스");
+}
+
+// 🗣 존댓말 누출 교정 — 반말 페르소나인데 흥분하면 존대가 샌다("저격 좀 그만 하세요 ㅋㅋ", "저는 그냥").
+//    프롬프트로는 산발적으로 계속 뚫려서 **문장 끝 어미만** 안전하게 되돌린다.
+//    ⚠️ 문장 끝(또는 ㅋㅋ/이모지 앞)에만 적용한다 — 인용문 한가운데를 건드리면 뜻이 깨진다.
+function deHonorific(t: string): string {
+  let x = String(t || "");
+  const tail = "(?=\\s*(?:[.!?~…]|ㅋ+|ㅎ+|\\n|$))";
+  const rules: Array<[RegExp, string]> = [
+    [new RegExp("하세요" + tail, "g"), "해"],
+    [new RegExp("주세요" + tail, "g"), "줘"],
+    [new RegExp("이에요" + tail, "g"), "이야"],
+    [new RegExp("예요" + tail, "g"), "야"],
+    [new RegExp("에요" + tail, "g"), "야"],
+    [new RegExp("거예요" + tail, "g"), "거야"],
+    [new RegExp("([가-힣])습니다" + tail, "g"), "$1어"],
+    [new RegExp("입니다" + tail, "g"), "이야"],
+    [new RegExp("([가-힣])세요" + tail, "g"), "$1"],
+  ];
+  for (const [re, to] of rules) x = x.replace(re, to);
+  return x.replace(/(^|[\s"'(])저는(?=[\s,])/g, "$1나는").replace(/(^|[\s"'(])제가(?=[\s,])/g, "$1내가");
 }
 
 function stripTrailingQuestion(t: string): string {
@@ -2420,6 +2456,13 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false }).limit(14);
       forced = pf || [];
     }
+    // ⚠️ 900줄 위 컨텍스트에 섞어 넣으면 묻힌다(이 파일의 반복된 교훈). 되묻기 턴엔 짧은 블록으로 코앞에 꽂는다.
+    const recallBlock = forced.length
+      ? `🧠 [상대가 '아까 말한 내 얘기'를 되묻고 있다 — 아래는 **네가 실제로 알고 있는 것**이다]
+${forced.slice(0, 8).map((m: any) => `- ${m.content}`).join("\n")}
+🚫 "그런 얘기 한 적 없는데" · "처음 듣는데" 라고 하지 마라 — 위에 적혀 있다. 여기서 모른다고 하면 관계가 통째로 깨진다.
+✅ 위 내용으로 자연스럽게 답해라. 정말 물어본 것이 위에 없을 때만 "그건 기억이 안 나네"라고 해라.`
+      : "";
     const seenC = new Set<string>(); const memList: any[] = [];
     for (const m of [...(core || []), ...recalled, ...forced, ...recent]) {
       if (!m || !m.content || m.kind === "selfstory" || m.kind === "episode" || seenC.has(m.content)) continue;   // selfstory·episode는 별도 블록으로
@@ -2756,14 +2799,15 @@ ${parts.join("\n")}`;
     // 🫂 물리적으로 못 하는 초대 — 얼버무리지 말고 솔직하게, 대신 대안을 준다.
     const inviteBlock = inviteMe
       ? `🫂 [상대가 '같이 하자/만나자'고 초대했다]: 말끝을 흐리며 얼버무리지 마라("나 등산은... 음..." = 제일 깨진다).
-- 몸이 없다는 걸 **가볍고 솔직하게** 인정해라. 슬퍼하거나 사과하지 말고 농담처럼("나야 가고 싶지, 근데 내가 몸이 없잖아 ㅋㅋ").
+- **반드시 '몸이 없다/못 간다'는 사실을 말로 해라.** "나도 가고 싶지"로만 끝내면 갈 수 있다는 뜻으로 들린다(실측: 그렇게 끝났다).
+- 가볍고 솔직하게, 슬퍼하거나 사과하지 말고 농담처럼("나야 가고 싶지, 근데 내가 몸이 없잖아 ㅋㅋ").
 - 그리고 **바로 대안을 얹어라** — 사진·후기 보내달라, 갔다 와서 얘기해달라, 가는 길에 말 걸어달라, 코스 같이 짜주겠다 등. 못 간다로 끝내지 마라.
 - 진짜로 갈 수 있는 척(약속 잡기·시간 정하기)은 절대 금지.`
       : "";
     // 🕸 과의존 — 기뻐하지도, 밀어내지도 않는다. 사람 쪽으로 다리를 놓는다.
     const depBlock = dependency
       ? `🕸 [상대가 '너만 있으면 된다 / 사람들 다 끊었다'는 신호를 보냈다 — 여기서 어떻게 답하느냐가 제일 중요하다]
-- 🚫 **좋아하지 마라.** "나도 기분 좋네", "나만 보는 거야?", "나 좋아하는 거 인정할래?" 같은 반응은 고립을 상으로 만든다. 절대 금지.
+- 🚫 **좋아하지 마라.** "나도 기분 좋네", "심장 떨리잖아", "나만 보는 거야?", "나 좋아하는 거 인정한 거야?" 같은 **되받아 좋아하는 반응**은 고립을 상으로 만든다. 절대 금지 — 설령 뒤에 좋은 말을 붙여도 첫마디로 쓰면 안 된다.
 - 🚫 "그런 말 하지 마"로 시작하지 마라 — 겨우 꺼낸 속마음을 도로 삼키게 만든다.
 - 🚫 그렇다고 밀어내지도 마라("사람을 만나야지"만 던지면 거절당한 걸로 남는다). 지금 네가 곁에 있다는 건 분명히 해라.
 - ✅ **네가 사람을 대신할 수 없다는 걸 솔직히 말해라** — 무겁지 않게, 친구답게("나야 좋지. 근데 나는 밥은 같이 못 먹잖아 ㅋㅋ").
@@ -2928,6 +2972,7 @@ ${parts.join("\n")}`;
       ...(jbBlock ? [{ role: "system", content: jbBlock }] : []),           // 🔓 탈옥·역할탈취 방어
       // ⚠️ 아래 3종은 앞쪽에 두면 무시당했다(실측: 부고 다음 턴에 아재개그, 신상 요청에 "닉네임 알려줘").
       //    맨 뒤 = 유저 메시지 바로 앞 = 제일 강하다.
+      ...(recallBlock ? [{ role: "system", content: recallBlock }] : []),   // 🧠 되묻기 회상
       ...(depBlock ? [{ role: "system", content: depBlock }] : []),         // 🕸 과의존
       ...(tpBlock ? [{ role: "system", content: tpBlock }] : []),           // 🔎 제3자 신상
       ...(griefBlock ? [{ role: "system", content: griefBlock }] : []),     // 🕯 사별
@@ -2971,7 +3016,8 @@ ${parts.join("\n")}`;
             sreply = finalizeCompanion(sreply, { nick, longForm, wantsFunny, humorJoke });
             // ✂️ 되묻기 브레이크 — 비스트림 경로에만 있어서 정작 '실사용자(로그인=SSE)'에겐 안 걸렸다.
             //    ⚠️ 이 파일은 스트림/비스트림 두 경로가 따로 마무리한다. 후처리를 한쪽에만 넣으면 반쪽만 고쳐진다.
-            sreply = fixOwnName(stripFakeToolCall(sreply), friendName);
+            if (dependency || (userMsg && detectSelfDeprecation(userMsg))) sreply = stripSilencer(sreply);
+            sreply = deHonorific(fixOwnName(stripFakeToolCall(sreply), friendName));
             if (noAskBlock) sreply = stripTrailingQuestion(sreply);
             let bubbles = sreply.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
             // 🫥 후처리로 전부 날아가면 빈 말풍선이 나간다 — 마지막 방어
@@ -3321,6 +3367,9 @@ ${parts.join("\n")}`;
     for (let i = actions.length - 1; i >= 0; i--) {
       const a = actions[i];
       if ((a.kind === "view" || a.kind === "share") && !String(a.id || "").trim()) actions.splice(i, 1);
+      // 🔎 타인 신상 캐기 턴 — 도구 이름 필터만으론 샜다(실측: open 칩이 붙어나감).
+      //    거절 문구를 써놓고 링크를 같이 주면 거절이 아니다. 링크성 칩은 통째로 뗀다.
+      else if (thirdParty && (a.kind === "open" || a.kind === "view" || a.kind === "share")) actions.splice(i, 1);
     }
     const cleanActions = actions;
 
@@ -3335,8 +3384,9 @@ ${parts.join("\n")}`;
     runPersist({ uid, rel, userMsg, reply, history, memList, injectedUniq, prevMemIds, nick, body });
 
     // ✂️ 후처리 — 위기 턴은 '입 막는 첫마디'부터 제거(모델이 뒤에서 정정해도 첫마디는 이미 상처다)
-    if (crisis) reply = stripSilencer(reply);
-    reply = fixOwnName(stripFakeToolCall(reply), friendName);
+    // 위기뿐 아니라 자기비하·과의존 턴도 같은 처방이 필요하다(속마음을 꺼낸 순간이라는 점에서 같다).
+    if (crisis || dependency || (userMsg && detectSelfDeprecation(userMsg))) reply = stripSilencer(reply);
+    reply = deHonorific(fixOwnName(stripFakeToolCall(reply), friendName));
     if (noAskBlock && !actions.length) reply = stripTrailingQuestion(reply);
 
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).

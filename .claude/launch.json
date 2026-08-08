@@ -1,6 +1,7 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "galla-web", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4507"], "port": 4507 }
+    { "name": "galla-web", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4507"], "port": 4507 },
+    { "name": "quant-dashboard", "url": "http://localhost:8787", "port": 8787 }
   ]
 }
