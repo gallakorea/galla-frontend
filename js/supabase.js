@@ -263,6 +263,14 @@
 .nick-gold::after{content:" 👑";-webkit-text-fill-color:initial;color:#c9d1e0;font-size:.82em;text-shadow:none}
 @keyframes nickGoldShine{0%{background-position:0% 0}100%{background-position:220% 0}}
 .nick-tier{display:inline-block;font-size:.9em;margin-right:4px;vertical-align:baseline;-webkit-text-fill-color:initial!important;color:initial!important;background:none!important;-webkit-background-clip:initial!important;background-clip:initial!important;animation:none!important;text-shadow:none!important;filter:saturate(1.1)}
+/* 🎫 이용권 배지 — 이름 뒤. 닉네임 그라디언트가 배지까지 먹지 않게 클립을 리셋한다
+   (nick-tier와 같은 이유). 과시가 아니라 '구독자'라는 조용한 표식이라 톤을 낮게 잡았다. */
+.sub-badge{display:inline-block;margin-left:4px;font-size:.78em;line-height:1;vertical-align:baseline;
+  -webkit-text-fill-color:initial!important;background:none!important;-webkit-background-clip:initial!important;
+  background-clip:initial!important;animation:none!important;text-shadow:none!important}
+.sub-badge.sub-lite{color:#9aa4bf}
+.sub-badge.sub-friend{color:#7c8cff}
+.sub-badge.sub-pro{color:#a78bfa;text-shadow:0 0 6px rgba(167,139,250,.45)!important}
 .nick-title{display:inline-block;font-size:.72em;font-weight:900;vertical-align:middle;color:#c9d1e0;background:rgba(201,209,224,.14);border:1px solid rgba(201,209,224,.35);border-radius:99px;padding:1px 7px;margin-right:5px;line-height:1.5;white-space:nowrap}
 .ns-neon,.ns-ice,.ns-fire,.ns-toxic,.ns-royal,.ns-rainbow{-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;font-weight:900!important;background-size:200% 100%}
 .ns-neon{background-image:linear-gradient(92deg,#00e5ff,#3d6bff,#00e5ff);text-shadow:0 0 10px rgba(0,229,255,.5);animation:nsShine 3s linear infinite}
@@ -358,13 +366,24 @@
     try {
       // 등급 아이콘은 갈라리안 등급표(GI 기반)와 일치시킨다 — level이 아니라 GI.
       // gi_of_users 배치 RPC로 need 전체의 갈라 지수를 한 번에 받는다.
-      const [{ data }, giRes] = await Promise.all([
+      // 🎫 이용권 등급도 같이 받는다 — 배지는 남의 것도 봐야 해서 전용 RPC(tiers_of).
+      //    등급 문자열만 온다(만료일·결제정보 없음). 무료·게스트는 아예 결과에 없다.
+      const [{ data }, giRes, tierRes, nsRes] = await Promise.all([
         window.supabaseClient.from("user_cosmetics").select("user_id,nick_gold,emoticon,title,nick_style").in("user_id", need),
         window.supabaseClient.rpc("gi_of_users", { p_uids: need }),
+        window.supabaseClient.rpc("tiers_of", { p_uids: need }).then(r => r, () => ({ data: null })),
+        window.supabaseClient.rpc("nickstyles_of", { p_uids: need }).then(r => r, () => ({ data: null })),
       ]);
       (data || []).forEach(r => { cache[r.user_id] = { nick_gold: r.nick_gold, emoticon: r.emoticon, title: r.title, nick_style: r.nick_style }; });
       const giMap = giRes && giRes.data ? giRes.data : {};
-      need.forEach(u => { cache[u] = Object.assign(cache[u] || {}, { gi: Number(giMap[u]) || 0 }); });
+      const tierMap = tierRes && tierRes.data ? tierRes.data : {};
+      const nsMap = nsRes && nsRes.data ? nsRes.data : null;
+      need.forEach(u => { cache[u] = Object.assign(cache[u] || {}, { gi: Number(giMap[u]) || 0, sub: tierMap[u] || null }); });
+      /* 🎫 스타일은 '유효 스타일'로 덮어쓴다 — user_cosmetics 값은 장착 기록일 뿐이고,
+         구독으로 빌려 쓰던 스타일은 만료되면 기본으로 떨어져야 한다.
+         ⚠️ RPC가 실패하면 덮어쓰지 않는다(장착 기록 그대로) — 일시 장애로 남의 꾸미기가
+            통째로 사라지는 것보다는 낫다. */
+      if (nsMap) need.forEach(u => { cache[u].nick_style = nsMap[u] || null; });
     } catch (e) { /* 무해 */ }
     need.forEach(u => { if (!cache[u]) cache[u] = {}; });
   };
@@ -416,6 +435,17 @@
           tb.textContent = t.icon;
           el.insertBefore(tb, el.firstChild);
         }
+        /* 🎫 이용권 배지 — 이름 '뒤'에 붙인다. 앞은 갈라리안 등급 아이콘 자리다.
+           등급 아이콘(활동)과 이용권 배지(결제)는 성격이 달라 붙는 위치로 구분한다.
+           ⚠️ 무료·게스트는 tiers_of 결과에 아예 없으므로 배지도 안 붙는다
+              — "이 사람 무과금"이라는 정보를 흘리지 않기 위해서다. */
+        if (d.sub && !(el.lastElementChild && el.lastElementChild.classList.contains("sub-badge"))) {
+          const sb = document.createElement("span");
+          sb.className = "sub-badge sub-" + d.sub;
+          sb.title = { lite: "라이트 이용권", friend: "프렌드 이용권", pro: "프로 이용권" }[d.sub] || "이용권";
+          sb.textContent = d.sub === "lite" ? "◇" : "◆";
+          el.appendChild(sb);
+        }
         // 장착 칭호 배지 — 폐지(2026-07-20 사장님: 장착식 칭호는 등급과 어긋나 혼란만).
         //   등급 표시는 등급 화면·레벨 칩이 담당한다.
         if (false && d.title && el.parentNode && !(el.previousElementSibling && el.previousElementSibling.classList.contains("nick-title"))) {
@@ -449,6 +479,9 @@
       // 등급 아이콘은 이름 '안쪽' 첫 자식 — 여기서 제거
       const ch = el.firstElementChild;
       if (ch && ch.classList.contains("nick-tier")) ch.remove();
+      // 🎫 이용권 배지는 이름 '뒤' — 안 지우면 재도색마다 겹겹이 쌓인다
+      const sb = el.lastElementChild;
+      if (sb && sb.classList.contains("sub-badge")) sb.remove();
       // 레거시(이전 형제로 넣던 버전) 잔재도 청소
       const t = el.previousElementSibling;
       if (t && (t.classList.contains("nick-title") || t.classList.contains("nick-tier"))) t.remove();
