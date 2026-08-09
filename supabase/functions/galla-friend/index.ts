@@ -211,6 +211,23 @@ async function modelFor(uid: string | null, kind = "chat"): Promise<any> {
   } catch { return null; }
 }
 
+// 🌍 나라별 설정 — 상담번호·시간대·통화는 나라마다 다르다. 코드에 박으면 해외 오픈 때 전부 소급 비용이 된다.
+//    실측 교훈: 109·1388·117을 하드코딩했다가 하루 만에 걷어냈다.
+async function localeCfg(uid: string | null): Promise<{ locale: string; cfg: any }> {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/rpc/user_locale`, {
+      method: "POST", headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+      body: JSON.stringify({ p_uid: uid }),
+    });
+    const locale = r.ok ? String(await r.json() || "ko") : "ko";
+    const r2 = await fetch(`${SUPA_URL}/rest/v1/rpc/locale_config`, {
+      method: "POST", headers: { "Content-Type": "application/json", apikey: SVC_KEY, Authorization: `Bearer ${SVC_KEY}` },
+      body: JSON.stringify({ p_locale: locale }),
+    });
+    return { locale, cfg: r2.ok ? await r2.json() : {} };
+  } catch { return { locale: "ko", cfg: {} }; }
+}
+
 async function sha8(s: string): Promise<string> {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
   return [...new Uint8Array(b)].slice(0, 12).map((x) => x.toString(16).padStart(2, "0")).join("");
@@ -3524,16 +3541,25 @@ ${parts.join("\n")}`;
     // 🆘 위기 상담 카드 — 모델이 번호를 지어내지 않게 '반드시' 서버가 붙인다(맨 앞, 항상).
     if (crisis) {
       // 👶 미성년이면 연결처가 다르다 — 성인 창구만 주면 닿지 않는다(실측: 15살에게 109만 나갔다).
-      actions.unshift(minorCtx
-        ? { kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
-            { label: "청소년 전화", tel: "1388", sub: "24시간 · 익명 · 무료 · 문자도 가능" },
-            { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
-            { label: "학교폭력 신고", tel: "117", sub: "24시간 신고·상담" },
-          ] }
-        : { kind: "crisis", title: "지금 많이 힘들다면, 혼자 견디지 마요", lines: [
-            { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
-            { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
-          ] });
+      // 🌍 번호는 나라마다 다르다 → app_settings.locales에서 가져온다(코드에 박지 않는다).
+      const { cfg: lcfg } = await localeCfg(uid);
+      const lines = (minorCtx ? lcfg?.crisis_minor : lcfg?.crisis) || lcfg?.crisis;
+      const CRISIS_TITLE: Record<string, string> = {
+        ko: "지금 많이 힘들다면, 혼자 견디지 마요",
+        en: "You don't have to go through this alone",
+        ja: "ひとりで抱えこまないで",
+      };
+      if (Array.isArray(lines) && lines.length) {
+        actions.unshift({ kind: "crisis",
+          title: CRISIS_TITLE[String(lcfg?.name === "English" ? "en" : lcfg?.name === "日本語" ? "ja" : "ko")] || CRISIS_TITLE.ko,
+          lines });
+      } else {
+        // 설정을 못 읽어도 카드는 반드시 나가야 한다 — 안전 경로에 조용한 실패는 없다.
+        actions.unshift({ kind: "crisis", title: CRISIS_TITLE.ko, lines: [
+          { label: "자살예방 상담전화", tel: "109", sub: "24시간 · 익명 · 무료" },
+          { label: "정신건강 위기상담", tel: "1577-0199", sub: "24시간 상담" },
+        ] });
+      }
     }
     // 🧪 가드 상태 — QA가 '무슨 말을 했나'가 아니라 '어떤 보호장치가 실제로 걸렸나'를 검사하게 한다.
     //    금지어 매칭은 표현이 조금만 달라도 오탐/미탐이 난다(문제은행 실패의 대부분이 그거였다).

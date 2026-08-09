@@ -46,6 +46,7 @@
       if (css) { var l = document.createElement("link"); l.rel = "stylesheet"; l.href = src + q; document.head.appendChild(l); }
       else { var s = document.createElement("script"); s.src = src + q; s.async = false; document.body.appendChild(s); }
     }
+    load("/js/i18n.js");                            // 🌍 국제화 기반 — GALLA_t / GALLA_money / GALLA_when
     load("/js/app-download.js");                    // 다운로드 트리거(전 페이지)
     load("/js/plans.js");                           // 이용권(등급·잔여 대화) — GALLA_openPlans / GALLA_planPill
     if (!skipOrb) {
