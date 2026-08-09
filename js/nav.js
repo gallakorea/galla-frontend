@@ -109,6 +109,20 @@
         // avatar_url은 users 테이블에만 공개 허용(user_profiles는 PII 잠금)
         const { data: u } = await sb.from("users").select("avatar_url").eq("id", uid).maybeSingle();
         if (u?.avatar_url && window.GALLA_avatarSrc) photo = window.GALLA_avatarSrc(u.avatar_url);
+
+        /* 🛟 재기 지원금 — GP가 바닥나면 하루 한 번 채워준다.
+           GP는 판매하지 않는 재화라, 다 잃으면 다음 출석까지 예측을 못 한다. 그게 이탈이다.
+           서버가 '임계 미만 + 하루 1회'를 강제하므로 매 진입마다 불러도 안전하다.
+           ⚠️ 실패해도 조용히 넘어간다 — 지원금 때문에 네비가 막히면 안 된다. */
+        try {
+          const key = "galla_relief_" + new Date().toISOString().slice(0, 10);
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            const { data: rel } = await sb.rpc("gp_relief");
+            if (rel?.granted > 0 && window.GALLA_toast)
+              window.GALLA_toast(`🛟 재기 지원금 ${Math.round(rel.granted).toLocaleString()} GP 지급! 다시 붙어보자`);
+          }
+        } catch (_) {}
       }
     }
   } catch (_) { /* 실패 시 캐시/기본 아이콘 유지 */ }

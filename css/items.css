@@ -68,3 +68,9 @@
 
 /* 시트 닫기 — ✕ 버튼 + 상단부 드래그 */
 .shop-grip, .shop-head, .shop-tabs { touch-action: none; }  /* 드래그 제스처 전용 영역 */
+
+/* 💱 두 재화를 눈으로 구분한다 — 같은 색이면 "0 GP 0 GC"가 한 덩어리로 읽힌다.
+   GP는 기본색(벌어서 얻는 재화), GC는 금색(돈 주고 산 재화). */
+.shop-bal-gc{ color:#f2c14e; margin-left:6px; padding-left:6px; border-left:1px solid rgba(255,255,255,.18); }
+.si-buy.cur-gc{ color:#f2c14e; border-color:rgba(242,193,78,.42); }
+.si-buy.cur-gc.no{ color:rgba(242,193,78,.5); }

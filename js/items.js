@@ -89,10 +89,10 @@
     sheet.className = "shop-sheet";
     sheet.innerHTML = `
       <div class="shop-dim"></div>
-      <div class="shop-card" role="dialog" aria-label="GP 상점">
+      <div class="shop-card" role="dialog" aria-label="상점">
         <div class="shop-grip"></div>
         <div class="shop-head">
-          <span class="shop-title">🛒 GP 상점</span>
+          <span class="shop-title">🛒 상점</span>
           <span class="shop-head-right"><span class="shop-bal" id="shopBal">– GP</span><button class="shop-charge" id="shopCharge">＋ 충전</button></span>
         </div>
         <div class="shop-tabs">
@@ -101,7 +101,7 @@
         </div>
         <div class="shop-list" id="shopList"></div>
         <div class="shop-list shop-inv off" id="shopInv"></div>
-        <div class="shop-note">GP는 출석·데일리 미션·예측으로 모을 수 있어요<br><span style="opacity:.7;font-size:11px">※ GP는 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
+        <div class="shop-note"><b>GP</b>는 출석·미션·활동으로 모아요 (판매하지 않아요) · <b>GC</b>는 충전해서 써요<br><span style="opacity:.7;font-size:11px">※ GP·GC 모두 서비스 내 재화이며 현금으로 환전·환급되지 않습니다.</span></div>
       </div>`;
     document.body.appendChild(sheet);
     sheet.querySelector(".shop-dim").addEventListener("click", () => sheet.classList.remove("open"));
@@ -179,15 +179,23 @@
     return sheet;
   }
 
+  /* 💱 품목이 어느 재화로 팔리는지 — 서버 _item_currency와 같은 기준.
+     싸움에 쓰는 건 GP(벌어서 얻는 재화), 꾸미는 건 GC(돈).
+     ⚠️ battle·duel을 GC로 옮기지 마라. 승패를 돈으로 사는 게 되고, GP 소각기도 사라진다. */
+  const curOf = (it) => (it.group === "deco" || it.group === "ghost") ? "GC" : "GP";
+
   async function refresh() {
-    const [balR, inv, gh] = await Promise.all([
+    const [balR, inv, gh, gcR] = await Promise.all([
       sb().rpc("ensure_balance"),
       window.GALLA_myItems(),
       sb().rpc("ghost_status").then(r => r.data).catch(() => null),
+      sb().rpc("gc_balance").then(r => r.data).catch(() => null),
     ]);
     const bal = Math.round(balR.data || 0);
+    const gcBal = Math.round((typeof gcR === "number" ? gcR : gcR?.balance) || 0);
     const balEl = sheet.querySelector("#shopBal");
-    if (balEl) balEl.textContent = bal.toLocaleString() + " GP";
+    if (balEl) balEl.innerHTML =
+      `${bal.toLocaleString()} GP <span class="shop-bal-gc">${gcBal.toLocaleString()} GC</span>`;
     // 유령권 남은 기간
     const ghostDays = (gh?.active && gh.until)
       ? Math.max(0, Math.ceil((new Date(gh.until) - Date.now()) / 86400000)) : 0;
@@ -197,7 +205,8 @@
       const isUnlock = it.kind === "unlock";
       const isGhost = it.kind === "ghost";
       const ownedUnlock = isUnlock && owned > 0;
-      const afford = bal >= it.price;
+      const cur = curOf(it);
+      const afford = (cur === "GC" ? gcBal : bal) >= it.price;
       const ownedBadge = owned
         ? ` <b class="si-owned">${isUnlock ? "보유 중" : "보유 " + owned}</b>`
         : (isGhost && ghostDays > 0 && it.days === Math.min(...CATALOG.filter(x => x.kind === "ghost").map(x => x.days))
@@ -206,7 +215,7 @@
       if (ownedUnlock) {
         btn = `<button class="si-buy owned" disabled>보유 중</button>`;
       } else {
-        btn = `<button class="si-buy${afford ? "" : " no"}" data-key="${it.key}" data-owned="${owned}" ${afford ? "" : "disabled"}>${it.price.toLocaleString()} GP</button>`;
+        btn = `<button class="si-buy${afford ? "" : " no"} cur-${cur.toLowerCase()}" data-key="${it.key}" data-cur="${cur}" data-owned="${owned}" ${afford ? "" : "disabled"}>${it.price.toLocaleString()} ${cur}</button>`;
       }
       return `
         <div class="shop-item${owned ? " has-owned" : ""}">
@@ -262,11 +271,15 @@
           : await window.GALLA_buyItem(b.dataset.key);
         if (r?.ok && it?.kind === "ghost") window.BattleFX?.banner?.(`👻 유령권 ${it.days}일 활성화!`, "cheer");
         if (!r?.ok) {
-          if (r?.reason === "insufficient" && window.GALLA_needGP) {
+          /* 💱 부족한 재화에 맞는 곳으로 보낸다 — GC는 충전, GP는 벌러 가기.
+             엉뚱한 곳으로 보내면 유저는 "충전했는데 왜 안 사져?"가 된다. */
+          if (r?.reason === "insufficient" && r?.currency === "GC") {
+            if (confirm("GC가 부족해요. 충전할까요?")) window.GALLA_openCharge?.();
+          } else if (r?.reason === "insufficient" && window.GALLA_needGP) {
             const need = (r.cost || 0) - (r.balance || 0);
             window.GALLA_needGP(need > 0 ? need : (r.cost || 0), "아이템 구매에 GP가 부족해요");
           } else {
-            alert(r?.reason === "insufficient" ? "GP가 부족해요." : "구매에 실패했어요.");
+            alert(r?.reason === "insufficient" ? "잔액이 부족해요." : "구매에 실패했어요.");
           }
         } else {
           window.BattleFX?.haptic?.("tap");
